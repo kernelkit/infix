@@ -1322,6 +1322,56 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#rip-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RIP Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rip-interface-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP interface settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rip-global-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP global settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-ripv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug RIPv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#view-routing-table" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3053,6 +3103,56 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#rip-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RIP Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rip-interface-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP interface settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rip-global-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP global settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-ripv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug RIPv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#view-routing-table" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4565,6 +4665,10 @@ setting control when it is <em>Enabled</em> or *Disabled:</p>
 <td style="text-align: left;">OSPF routing</td>
 </tr>
 <tr>
+<td style="text-align: left;">ietf-rip</td>
+<td style="text-align: left;">RIP routing</td>
+</tr>
+<tr>
 <td style="text-align: left;">infix-routing</td>
 <td style="text-align: left;">Infix deviations and extensions</td>
 </tr>
@@ -4742,6 +4846,104 @@ YANG model for the complete list of available debug options.</p>
 all options back to <code>false</code>:</p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
 admin@example:/config/&gt; delete routing control-plane-protocol ospfv2 name default ospf debug
+admin@example:/config/&gt; leave
+admin@example:/&gt;
+</code></pre></div>
+<h3 id="rip-routing">RIP Routing<a class="headerlink" href="#rip-routing" title="Permanent link">¶</a></h3>
+<p>The system supports RIP dynamic routing for IPv4, i.e., RIPv2.  To enable
+RIP and set active interfaces:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ripv2 name default rip
+admin@example:/config/routing/…/rip/&gt; set interfaces interface e0
+admin@example:/config/routing/…/rip/&gt; set interfaces interface e1
+admin@example:/config/routing/…/rip/&gt; leave
+admin@example:/&gt;
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Remember to enable <a href="#ipv4-forwarding">IPv4 forwarding</a> for all the
+interfaces you want to route between.</p>
+</div>
+<h4 id="rip-interface-settings">RIP interface settings<a class="headerlink" href="#rip-interface-settings" title="Permanent link">¶</a></h4>
+<p>By default, interfaces send and receive RIPv2 packets.  To control the
+RIP version per interface:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/routing/…/rip/&gt; edit interfaces interface e0
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; set send-version 1
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; set receive-version 1-2
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; leave
+admin@example:/&gt;
+</code></pre></div>
+<p>Valid version values are <code>1</code>, <code>2</code>, or <code>1-2</code> (both versions).</p>
+<p>To configure a passive interface (advertise network but don't send/receive
+RIP updates):</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/routing/…/rip/&gt; edit interfaces interface e0
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; set passive
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; leave
+admin@example:/&gt;
+</code></pre></div>
+<h4 id="rip-global-settings">RIP global settings<a class="headerlink" href="#rip-global-settings" title="Permanent link">¶</a></h4>
+<p>RIP supports redistribution of connected and static routes:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/routing/…/rip/&gt; set redistribute connected
+admin@example:/config/routing/…/rip/&gt; set redistribute static
+admin@example:/config/routing/…/rip/&gt; leave
+admin@example:/&gt;
+</code></pre></div>
+<h4 id="debug-ripv2">Debug RIPv2<a class="headerlink" href="#debug-ripv2" title="Permanent link">¶</a></h4>
+<p>The CLI provides various RIP status commands:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; show ip rip
+
+Default version control: send version 2, receive version 2
+  Interface        Send  Recv   Key-chain
+  e0               2     2
+  e1               2     2
+
+Routing for Networks:
+  e0
+  e1
+
+Routing Information Sources:
+  Gateway          BadPackets BadRoutes  Distance Last Update
+  10.0.1.2                  0         0       120   00:00:16
+Distance: (default is 120)
+
+admin@example:/&gt; show ip rip neighbor
+
+ADDRESS          BAD-PACKETS    BAD-ROUTES
+10.0.1.2         0              0
+
+admin@example:/&gt;
+</code></pre></div>
+<p>For more detailed troubleshooting, RIP debug logging can be enabled to
+capture specific protocol events. Debug messages are written to the
+routing log file (<code>/var/log/routing</code>).</p>
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>Debug logging significantly increases log output and may impact
+performance. Only enable debug categories needed for troubleshooting,
+and disable them when done.</p>
+</div>
+<p>To enable specific RIP debug categories:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config/&gt; edit routing control-plane-protocol ripv2 name default rip debug
+admin@example:/config/routing/…/rip/debug/&gt; set events true
+admin@example:/config/routing/…/rip/debug/&gt; set packet true
+admin@example:/config/routing/…/rip/debug/&gt; leave
+admin@example:/&gt;
+</code></pre></div>
+<p>Available debug categories include:</p>
+<ul>
+<li><code>events</code>: RIP events (sending/receiving packets, timers, interface changes)</li>
+<li><code>packet</code>: Detailed packet debugging (packet dumps with origin and port)</li>
+<li><code>kernel</code>: Kernel routing table updates (route add/delete, interface updates)</li>
+</ul>
+<p>All debug options are disabled by default. Refer to the <code>infix-routing</code>
+YANG model for the complete list of available debug options.</p>
+<p>To view current debug settings:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; show running-config routing control-plane-protocol
+</code></pre></div>
+<p>To disable all debug logging, simply delete the debug settings or set
+all options back to <code>false</code>:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config/&gt; delete routing control-plane-protocol ripv2 name default rip debug
 admin@example:/config/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
