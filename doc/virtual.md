@@ -18,11 +18,11 @@ QEMU
 > relevant Qemu packages are pulled in as well.  This trick, installing
 > [virt-manager][virt], helps set up Qemu networking on your system.
 
-A virtualized Infix x86_64 instance can easily be launched from a Linux
-system, with [Qemu][] installed, by issuing:
+A virtualized Infix x86_64 instance can be launched from a Linux system,
+with [Qemu][] installed, by issuing:
 
 ```
-$ ./qemu.sh
+$ ./qemu/run.sh
 ...
 ```
 
@@ -35,7 +35,7 @@ $ make run
 ```
 
 To change settings, e.g. networking, <kbd>make run-menuconfig</kbd>, or
-from a pre-built Infix release tarball, using <kbd>./qemu.sh -c</kbd>
+from a pre-built Infix release tarball, using <kbd>./qemu/run.sh -c</kbd>
 
 The Infix test suite is built around Qemu and [Qeneth][qeth], see:
 

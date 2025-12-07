@@ -34,7 +34,7 @@ Depending on how your Linux installation is set up, the following may
 require being run with superuser privileges, i.e., you may need to
 repend the command with 'sudo'.
 
-    $ ./qemu.sh
+    $ ./qemu/run.sh
 
 You should now see the Infix init system booting up.  When the final
 "Please press Enter to activate this console." is shown, press Enter
@@ -75,13 +75,13 @@ interface, which requires the following extra package:
 
 We can now enter the configuration:
 
-    $ ./qemu.sh -c
+    $ ./qemu/run.sh -c
 
 Go down to *Networking*, select *TAP*, now you can change the *Number of
 TAPs*, e.g. to 10.  Exit and save the configuration, then you can start
 Qemu again:
 
-   ./qemu.sh
+    $ ./qemu/run.sh
 
 > Make sure to do a factory reset from the CLI, otherwise you will be
 > stuck with that single interface from before.
