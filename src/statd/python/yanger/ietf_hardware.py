@@ -1,6 +1,8 @@
 import datetime
 import os
 import glob
+import re
+import sys
 
 from .common import insert, YangDate
 from .host import HOST
@@ -150,65 +152,44 @@ def normalize_sensor_name(name):
 
 def get_wifi_phy_info():
     """
-    Discover WiFi PHYs and map them to bands and interface names.
+    Discover WiFi PHYs using iw list command.
     Returns dict: {phy_name: {band: str, iface: str, description: str}}
 
-    Example: {"phy0": {"band": "2.4 GHz", "iface": "wlan0", "description": "WiFi Radio (2.4 GHz)"}}
+    Example: {"radio0": {"band": "2.4 GHz", "iface": "wlan0", "description": "WiFi Radio (2.4 GHz)"}}
     """
     phy_info = {}
 
     try:
-        # Enumerate PHYs from /sys/class/ieee80211/
-        ieee80211_path = "/sys/class/ieee80211"
-        if not os.path.exists(ieee80211_path):
+        # Use iw.py to list all PHYs
+        phys = HOST.run_json(("/usr/libexec/infix/iw.py", "list"), default=[])
+        if not phys:
             return phy_info
 
-        for phy in os.listdir(ieee80211_path):
-            if not phy.startswith("phy"):
-                continue
+        # Initialize PHY info for each PHY
+        for phy in phys:
+            phy_info[phy] = {"band": "Unknown", "iface": None, "description": None}
 
-            phy_path = os.path.join(ieee80211_path, phy)
-            info = {"band": "Unknown", "iface": None, "description": None}
+        # Create a mapping from PHY number to PHY name
+        phy_num_to_name = {}
+        for phy_name in phy_info.keys():
+            # Extract number from radio/phy name (e.g., "0" from "radio0" or "phy0")
+            num_match = re.search(r'(\d+)$', phy_name)
+            if num_match:
+                phy_num = num_match.group(1)
+                phy_num_to_name[phy_num] = phy_name
 
-            # Try to determine band from device path or hwmon name
-            # The hwmon device usually tells us: mt7915_phy0, mt7915_phy1, etc.
-            # We'll check supported frequencies to determine band
-            try:
-                # Read supported bands - check if device supports 5 GHz
-                # Most dual-band chips expose phy0 as 2.4 GHz and phy1 as 5 GHz
-                device_path = os.path.join(phy_path, "device")
-                if os.path.exists(device_path):
-                    # Simple heuristic: phy0 is usually 2.4 GHz, phy1 is 5 GHz
-                    # This works for most MediaTek chips (mt7915, mt7921, etc.)
-                    if phy == "phy0":
-                        info["band"] = "2.4 GHz"
-                    elif phy == "phy1":
-                        info["band"] = "5 GHz"
-                    elif phy == "phy2":
-                        info["band"] = "6 GHz"  # WiFi 6E
-            except:
-                pass
+        # Find associated virtual interfaces using iw.py dev
+        dev_map = HOST.run_json(("/usr/libexec/infix/iw.py", "dev"), default={})
 
-            # Find associated interface by checking which interface has a phy80211 link to this PHY
-            try:
-                net_path = "/sys/class/net"
-                if os.path.exists(net_path):
-                    for iface in os.listdir(net_path):
-                        phy_link = os.path.join(net_path, iface, "phy80211")
-                        if os.path.islink(phy_link):
-                            # Read the link target and extract PHY name
-                            try:
-                                link_target = os.readlink(phy_link)
-                                linked_phy = os.path.basename(link_target)
-                                if linked_phy == phy:
-                                    info["iface"] = iface
-                                    break
-                            except:
-                                continue
-            except:
-                pass
+        # dev_map is a dict mapping PHY numbers to list of interfaces
+        for phy_num, interfaces in dev_map.items():
+            phy_name = phy_num_to_name.get(phy_num)
+            if phy_name and phy_name in phy_info and interfaces:
+                # Use the first interface
+                phy_info[phy_name]["iface"] = interfaces[0]
 
-            # Build description
+        # Build descriptions
+        for phy, info in phy_info.items():
             if info["iface"] and info["band"] != "Unknown":
                 info["description"] = f"WiFi Radio {info['iface']} ({info['band']})"
             elif info["band"] != "Unknown":
@@ -217,8 +198,6 @@ def get_wifi_phy_info():
                 info["description"] = f"WiFi Radio {info['iface']}"
             else:
                 info["description"] = "WiFi Radio"
-
-            phy_info[phy] = info
 
     except Exception:
         pass
@@ -257,6 +236,12 @@ def hwmon_sensor_components():
                     continue
 
                 device_name = HOST.read(name_path).strip()
+
+                # Check if device/name exists (e.g., for WiFi radios) and use that instead
+                device_name_path = os.path.join(hwmon_path, "device", "name")
+                if HOST.exists(device_name_path):
+                    device_name = HOST.read(device_name_path).strip()
+
                 base_name = normalize_sensor_name(device_name)
 
                 # Helper to create sensor component with human-readable description
@@ -426,8 +411,8 @@ def hwmon_sensor_components():
     wifi_info = get_wifi_phy_info()
     for component in components:
         name = component.get("name", "")
-        # Match phy0, phy1, etc. sensors
-        if name.startswith("phy") and name in wifi_info:
+        # Match radio0, radio1, etc. sensors
+        if name.startswith("radio") and name in wifi_info:
             phy = wifi_info[name]
             # Add WiFi-specific description
             component["description"] = phy["description"]
@@ -496,6 +481,179 @@ def thermal_sensor_components():
     return components
 
 
+def get_survey_data(ifname):
+    """Get channel survey data using iw.py script"""
+    channels = []
+
+    try:
+        survey_data = HOST.run_json(("/usr/libexec/infix/iw.py", "survey", ifname), default=[])
+
+        for entry in survey_data:
+            channel = {
+                "frequency": entry.get("frequency"),
+                "in-use": entry.get("in_use", False)
+            }
+
+            # Add optional fields if present
+            if "noise" in entry:
+                channel["noise"] = entry["noise"]
+            if "active_time" in entry:
+                channel["active-time"] = entry["active_time"]
+            if "busy_time" in entry:
+                channel["busy-time"] = entry["busy_time"]
+            if "receive_time" in entry:
+                channel["receive-time"] = entry["receive_time"]
+            if "transmit_time" in entry:
+                channel["transmit-time"] = entry["transmit_time"]
+
+            channels.append(channel)
+
+    except Exception:
+        pass
+
+    return channels
+
+
+def get_phy_info(phy_name):
+    """Get complete PHY information using iw.py script"""
+    try:
+        return HOST.run_json(("/usr/libexec/infix/iw.py", "info", phy_name), default={})
+    except Exception:
+        return {}
+
+
+def convert_iw_phy_info_for_yanger(phy_info):
+    """
+    Convert iw.py phy_info format to yanger format.
+    Input: iw.py format with 'bands', 'driver', 'manufacturer', 'interface_combinations'
+    Output: yanger format with renamed/restructured fields
+    """
+    result = {"bands": [], "driver": None, "manufacturer": "Unknown", "max-interfaces": {}}
+
+    # Convert bands - iw.py already uses snake_case for capabilities
+    for band in phy_info.get("bands", []):
+        band_data = {
+            "band": str(band.get("band", 0)),
+            "name": band.get("name", "Unknown")
+        }
+
+        # Add capability flags (iw.py uses snake_case: ht_capable, vht_capable, he_capable)
+        if band.get("ht_capable"):
+            band_data["ht-capable"] = True
+        if band.get("vht_capable"):
+            band_data["vht-capable"] = True
+        if band.get("he_capable"):
+            band_data["he-capable"] = True
+
+        result["bands"].append(band_data)
+
+    # Copy driver and manufacturer
+    if phy_info.get("driver"):
+        result["driver"] = phy_info["driver"]
+    if phy_info.get("manufacturer"):
+        result["manufacturer"] = phy_info["manufacturer"]
+
+    # Convert interface combinations to max-interfaces
+    # Find max AP interfaces from combinations
+    for comb in phy_info.get("interface_combinations", []):
+        for limit in comb.get("limits", []):
+            if "AP" in limit.get("types", []):
+                ap_max = limit.get("max", 0)
+                if "ap" not in result["max-interfaces"] or ap_max > result["max-interfaces"]["ap"]:
+                    result["max-interfaces"]["ap"] = ap_max
+
+    return result
+
+
+def wifi_radio_components():
+    """
+    Create WiFi radio components with complete operational data.
+    Returns a list of hardware components for WiFi radios.
+    """
+    components = []
+    wifi_info = get_wifi_phy_info()
+
+    for phy_name, phy_data in wifi_info.items():
+        component = {
+            "name": phy_name,
+            "class": "infix-hardware:wifi",
+            "description": phy_data.get("description", "WiFi Radio")
+        }
+
+        # Initialize wifi-radio data structure
+        wifi_radio_data = {}
+
+        # Get complete PHY information from iw.py script
+        iw_info = get_phy_info(phy_name)
+
+        # Convert iw.py format to yanger format
+        phy_details = convert_iw_phy_info_for_yanger(iw_info)
+
+        # Add manufacturer to component
+        if phy_details.get("manufacturer") and phy_details["manufacturer"] != "Unknown":
+            component["mfg-name"] = phy_details["manufacturer"]
+
+        # Add bands
+        if phy_details.get("bands"):
+            wifi_radio_data["bands"] = phy_details["bands"]
+
+        # Add driver
+        if phy_details.get("driver"):
+            wifi_radio_data["driver"] = phy_details["driver"]
+
+        # Add max-interfaces
+        if phy_details.get("max-interfaces"):
+            wifi_radio_data["max-interfaces"] = phy_details["max-interfaces"]
+
+        # Add max TX power from iw info
+        if iw_info.get("max_txpower"):
+            wifi_radio_data["max-txpower"] = iw_info["max_txpower"]
+
+        # Add supported channels from band frequencies
+        supported_channels = []
+        for band in iw_info.get("bands", []):
+            for freq in band.get("frequencies", []):
+                # Convert frequency to channel number
+                if 2412 <= freq <= 2484:
+                    channel = (freq - 2407) // 5
+                elif 5170 <= freq <= 5825:
+                    channel = (freq - 5000) // 5
+                elif 5955 <= freq <= 7115:
+                    channel = (freq - 5950) // 5
+                else:
+                    continue
+                supported_channels.append(channel)
+
+        if supported_channels:
+            wifi_radio_data['supported-channels'] = sorted(set(supported_channels))
+
+        # Count virtual interfaces from iw info
+        num_ifaces = iw_info.get('num_virtual_interfaces', 0)
+        wifi_radio_data['num-virtual-interfaces'] = num_ifaces
+
+        # Get survey data if we have an interface
+        iface = phy_data.get("iface")
+        if iface:
+            try:
+                channels = get_survey_data(iface)
+
+                if channels:
+                    wifi_radio_data["survey"] = {
+                        "channel": channels
+                    }
+            except Exception:
+                # If survey fails, continue without survey data
+                pass
+
+        # Add wifi-radio data to component
+        if wifi_radio_data:
+            component["infix-hardware:wifi-radio"] = wifi_radio_data
+
+        components.append(component)
+
+    return components
+
+
 def operational():
     systemjson = HOST.read_json("/run/system.json")
 
@@ -507,6 +665,7 @@ def operational():
             usb_port_components(systemjson) +
             hwmon_sensor_components() +
             thermal_sensor_components() +
+            wifi_radio_components() +
             [],
         },
     }
