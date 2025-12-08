@@ -6,6 +6,8 @@ if jq -e '.["usb-ports"]' /run/system.json > /dev/null; then
 else
     usb_ports=""
 fi
+wifi_radios=$(iw list 2>/dev/null | grep 'Wiphy radio' | sed 's/.*Wiphy \(radio[0-9]*\).*/\1/' || "")
+
 
 gen_port()
 {
@@ -20,6 +22,49 @@ gen_port()
 }
 EOF
 }
+
+gen_radio()
+{
+    radio="$1"
+
+    # Try to detect a reasonable default country code
+    # First check if there's already a regulatory domain set
+    country=$(iw reg get 2>/dev/null | grep 'country' | sed -n 's/^country \([A-Z0-9][A-Z0-9]\):.*/\1/p' | head -1)
+    [ -z "$country" ] && country="00"
+
+    # Detect supported bands by checking for 2.4GHz and 5GHz channels
+    phy_info=$(iw phy "$radio" info 2>/dev/null)
+    # 2.4GHz: 2412-2484 MHz (channels 1-14)
+    has_2ghz=$(echo "$phy_info" | grep -cE '\* 24[0-9][0-9](\.[0-9])? MHz' || true)
+    # 5GHz: 5000-5999 MHz
+    has_5ghz=$(echo "$phy_info" | grep -cE '\* 5[0-9][0-9][0-9](\.[0-9])? MHz' || true)
+
+    # Determine band setting
+    if [ "$has_2ghz" -gt 0 ] && [ "$has_5ghz" -gt 0 ]; then
+        band="auto"
+    elif [ "$has_5ghz" -gt 0 ]; then
+        band="5GHz"
+    elif [ "$has_2ghz" -gt 0 ]; then
+        band="2.4GHz"
+    else
+        band="auto"  # Fallback to auto if detection fails
+    fi
+
+    cat <<EOF
+{
+    "name": "$radio",
+    "class": "infix-hardware:wifi",
+    "infix-hardware:wifi-radio": {
+        "country-code": "$country",
+        "band": "$band",
+        "channel": "auto",
+        "channel-width": "20",
+        "txpower": "auto"
+    }
+}
+EOF
+}
+
 first=1
 cat <<EOF
 {
@@ -32,6 +77,13 @@ for port in $usb_ports; do
     fi
     first=0;
     gen_port "$port"
+done
+for radio in $wifi_radios; do
+    if [ $first -eq 0 ]; then
+	echo -n ','
+    fi
+    first=0;
+    gen_radio $radio
 done
 cat <<EOF
 ]}
