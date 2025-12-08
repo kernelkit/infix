@@ -107,6 +107,7 @@ gen_factory_cfg()
     gen-hostname                                            >"$FACTORY_D/20-hostname.json"
     gen-motd                                                >"$FACTORY_D/20-motd.json"
     gen-hardware                                            >"$FACTORY_D/20-hardware.json"
+    gen-wifi-radio                                          >"$FACTORY_D/20-wifi-radio.json"
     # shellcheck disable=SC2086
     gen-interfaces $GEN_IFACE_OPTS                          >"$FACTORY_D/20-interfaces.json"
     gen-version                                             >"$FACTORY_D/20-version.json"

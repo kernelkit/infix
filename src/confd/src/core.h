@@ -242,6 +242,8 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 #define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
 int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
+/* Note: WiFi radio handling is now integrated into hardware.c/hardware_change() */
+
 /* firewall.c */
 int firewall_rpc_init(struct confd *confd);
 int firewall_candidate_init(struct confd *confd);
