@@ -10,8 +10,14 @@
 #include <limits.h>
 
 #include "core.h"
+#include "interfaces.h"
+#include "dagger.h"
 
-#define XPATH_BASE_ "/ietf-hardware:hardware"
+#define XPATH_BASE_              "/ietf-hardware:hardware"
+#define HOSTAPD_CONF             "/etc/hostapd-%s.conf"
+#define HOSTAPD_CONF_NEXT        HOSTAPD_CONF"+"
+#define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
+#define WPA_SUPPLICANT_CONF_NEXT WPA_SUPPLICANT_CONF"+"
 
 static int dir_cb(const char *fpath, const struct stat *sb,
 		  int typeflag, struct FTW *ftwbuf)
@@ -150,6 +156,452 @@ out_free_xpath:
 	free(xpath);
 	return err;
 }
+
+
+static int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio_name,
+					  struct lyd_node ***iface_list, int *count)
+{
+	struct lyd_node *iface, *wifi;
+	const char *radio;
+	struct lyd_node **list = NULL;
+	int n = 0;
+
+	if (!ifs)
+		return 0;
+
+	LYX_LIST_FOR_EACH(ifs, iface, "interface") {
+		wifi = lydx_get_child(iface, "wifi");
+		if (!wifi)
+			continue;
+
+		radio = lydx_get_cattr(wifi, "radio");
+		if (!radio || strcmp(radio, radio_name))
+			continue;
+
+		if (lydx_get_op(iface) == LYDX_OP_DELETE)
+			continue;
+		list = realloc(list, sizeof(struct lyd_node *) * n + 1);
+		list[n++] = iface;
+	}
+
+	*iface_list = list;
+	*count = n;
+	return 0;
+}
+
+static int wifi_gen_station(const char *ifname, struct lyd_node *station,
+			    const char *radio, struct lyd_node *config)
+{
+	const char *ssid, *secret_name, *secret, *security_mode;
+	struct lyd_node *security, *secret_node, *radio_node;
+	FILE *wpa_supplicant = NULL;
+	char *security_str = NULL;
+	const char *country;
+	int rc = SR_ERR_OK;
+
+	/* If station is NULL, we're in scan-only mode (no station container) */
+	if (station) {
+		ssid = lydx_get_cattr(station, "ssid");
+		security = lydx_get_child(station, "security");
+		security_mode = lydx_get_cattr(security, "mode");
+		secret_name = lydx_get_cattr(security, "secret");
+	} else {
+		ssid = NULL;
+		security = NULL;
+		security_mode = "disabled";
+		secret_name = NULL;
+	}
+
+	radio_node = lydx_get_xpathf(config,
+		"/hardware/component[name='%s']/wifi-radio", radio);
+	country = radio_node ? lydx_get_cattr(radio_node, "country-code") : NULL;
+
+	if (secret_name && strcmp(security_mode, "disabled") != 0) {
+		secret_node = lydx_get_xpathf(config,
+			"/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key",
+			secret_name);
+		secret = secret_node ? lyd_get_value(secret_node) : NULL;
+	} else {
+		secret = NULL;
+	}
+
+	wpa_supplicant = fopenf("w", WPA_SUPPLICANT_CONF_NEXT, ifname);
+	if (!wpa_supplicant) {
+		rc = SR_ERR_INTERNAL;
+		goto out;
+	}
+
+	fprintf(wpa_supplicant,
+		"ctrl_interface=/run/wpa_supplicant\n"
+		"autoscan=periodic:10\n"
+		"ap_scan=1\n");
+
+	if (country)
+		fprintf(wpa_supplicant, "country=%s\n", country);
+
+	/* If SSID is present, create network block. Otherwise, scan-only mode */
+	if (ssid) {
+		/* Station mode with network configured */
+		if (!strcmp(security_mode, "disabled")) {
+			asprintf(&security_str, "key_mgmt=NONE");
+		} else if (secret) {
+			asprintf(&security_str, "key_mgmt=SAE WPA-PSK\npsk=\"%s\"", secret);
+		}
+		fprintf(wpa_supplicant,
+			"network={\n"
+			"bgscan=\"simple: 30:-45:300\"\n"
+			"ssid=\"%s\"\n"
+			"%s\n"
+			"}\n", ssid, security_str);
+		free(security_str);
+	} else {
+		/* Scan-only mode - no station container configured */
+		fprintf(wpa_supplicant, "# Scan-only mode - no network configured\n");
+	}
+
+out:
+	if (wpa_supplicant)
+		fclose(wpa_supplicant);
+	return rc;
+}
+
+/* Helper: Find all AP interfaces on a specific radio */
+static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
+				char ***ap_list, int *count)
+{
+	struct lyd_node *cif, *wifi, *ap;
+	const char *ifname, *radio;
+	char **list = NULL;
+	int n = 0;
+
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		wifi = lydx_get_child(cif, "wifi");
+		if (!wifi)
+			continue;
+
+		radio = lydx_get_cattr(wifi, "radio");
+		if (!radio || strcmp(radio, radio_name))
+			continue;
+
+		ap = lydx_get_child(wifi, "access-point");
+		if (!ap)
+			continue;
+		list = realloc(list, sizeof(char *) *n+1);
+
+
+		ifname = lydx_get_cattr(cif, "name");
+		list[n++] = strdup(ifname);
+	}
+
+	/* Sort alphabetically for consistent primary selection */
+	for (int i = 0; i < n - 1; i++) {
+		for (int j = i + 1; j < n; j++) {
+			if (strcmp(list[i], list[j]) > 0) {
+				char *tmp = list[i];
+				list[i] = list[j];
+				list[j] = tmp;
+			}
+		}
+	}
+
+	*ap_list = list;
+	*count = n;
+	return 0;
+}
+
+/* Generate BSS section for secondary AP (multi-SSID) */
+static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char *ifname, struct lyd_node *config)
+{
+	const char *ssid, *hidden, *security_mode, *secret_name, *secret;
+	struct lyd_node *cif, *wifi, *ap, *security, *secret_node;
+
+	/* Find the interface node for this BSS */
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		const char *name = lydx_get_cattr(cif, "name");
+		if (strcmp(name, ifname) == 0)
+			break;
+	}
+
+	if (!cif) {
+		ERROR("Failed to find interface %s for BSS section", ifname);
+		return SR_ERR_INVAL_ARG;
+	}
+
+	wifi = lydx_get_child(cif, "wifi");
+	ap = lydx_get_child(wifi, "access-point");
+
+	fprintf(hostapd, "\n# BSS %s\n", ifname);
+	fprintf(hostapd, "bss=%s\n", ifname);
+
+	/* SSID configuration */
+	ssid = lydx_get_cattr(ap, "ssid");
+	hidden = lydx_get_cattr(ap, "hidden");
+
+	if (ssid)
+		fprintf(hostapd, "ssid=%s\n", ssid);
+	if (hidden && !strcmp(hidden, "true"))
+		fprintf(hostapd, "ignore_broadcast_ssid=1\n");
+
+	/* Security configuration */
+	security = lydx_get_child(ap, "security");
+	security_mode = lydx_get_cattr(security, "mode");
+
+	if (!security_mode)
+		security_mode = "open";
+
+	/* Get secret from keystore if needed */
+	secret = NULL;
+	if (strcmp(security_mode, "open") != 0) {
+		secret_name = lydx_get_cattr(security, "secret");
+		if (secret_name) {
+			secret_node = lydx_get_xpathf(config,
+				"/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key",
+				secret_name);
+			if (secret_node)
+				secret = lyd_get_value(secret_node);
+		}
+	}
+
+	if (!strcmp(security_mode, "open")) {
+		fprintf(hostapd, "# Open network\n");
+		fprintf(hostapd, "auth_algs=1\n");
+	} else if (!strcmp(security_mode, "wpa2-personal")) {
+		fprintf(hostapd, "# WPA2-Personal\n");
+		fprintf(hostapd, "wpa=2\n");
+		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
+		fprintf(hostapd, "wpa_pairwise=CCMP\n");
+		if (secret)
+			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
+	} else if (!strcmp(security_mode, "wpa3-personal")) {
+		fprintf(hostapd, "# WPA3-Personal\n");
+		fprintf(hostapd, "wpa=2\n");
+		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
+		fprintf(hostapd, "rsn_pairwise=CCMP\n");
+		if (secret)
+			fprintf(hostapd, "sae_password=%s\n", secret);
+		fprintf(hostapd, "ieee80211w=2\n");
+	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
+		fprintf(hostapd, "# WPA2/WPA3 Mixed\n");
+		fprintf(hostapd, "wpa=2\n");
+		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
+		fprintf(hostapd, "rsn_pairwise=CCMP\n");
+		if (secret) {
+			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
+			fprintf(hostapd, "sae_password=%s\n", secret);
+		}
+		fprintf(hostapd, "ieee80211w=1\n");
+	}
+
+	return 0;
+}
+
+/* Generate hostapd config for all APs on a radio (multi-SSID support) */
+static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
+				  struct lyd_node *radio_node, struct lyd_node *config)
+{
+	const char *ssid, *hidden, *security_mode, *secret_name, *secret;
+	struct lyd_node *primary_cif, *cif;
+	struct lyd_node *primary_wifi, *primary_ap;
+	struct lyd_node *security, *secret_node;
+	const char *country, *channel, *band;
+	const char *primary_ifname;
+	char hostapd_conf[256];
+	char **ap_list = NULL;
+	FILE *hostapd = NULL;
+	bool wifi6_enabled;
+	int ap_count = 0;
+	int i;
+
+	int rc = SR_ERR_OK;
+
+	wifi_find_radio_aps(cifs, radio_name, &ap_list, &ap_count);
+
+	if (ap_count == 0) {
+		DEBUG("No APs found on radio %s", radio_name);
+		goto cleanup;
+	}
+
+	DEBUG("Generating hostapd config for radio %s (%d APs)", radio_name, ap_count);
+
+	primary_ifname = ap_list[0];
+	primary_cif = NULL;
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		if (!strcmp(lydx_get_cattr(cif, "name"), primary_ifname)) {
+			primary_cif = cif;
+			break;
+		}
+	}
+
+	if (!primary_cif) {
+		ERROR("Failed to find primary AP interface %s", primary_ifname);
+		rc = SR_ERR_INVAL_ARG;
+		goto cleanup;
+	}
+
+	primary_wifi = lydx_get_child(primary_cif, "wifi");
+	primary_ap = lydx_get_child(primary_wifi, "access-point");
+
+	/* Get AP configuration */
+	ssid = lydx_get_cattr(primary_ap, "ssid");
+	hidden = lydx_get_cattr(primary_ap, "hidden");
+	security = lydx_get_child(primary_ap, "security");
+	security_mode = lydx_get_cattr(security, "mode");
+	secret_name = lydx_get_cattr(security, "secret");
+	secret = NULL;
+
+	/* Get radio configuration */
+	country = lydx_get_cattr(radio_node, "country-code");
+	band = lydx_get_cattr(radio_node, "band");
+	channel = lydx_get_cattr(radio_node, "channel");
+	wifi6_enabled = lydx_get_bool(radio_node, "enable_wifi6");
+
+	/* Get secret from keystore if not open network */
+	if (secret_name && strcmp(security_mode, "open") != 0) {
+		secret_node = lydx_get_xpathf(config,
+			"/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key",
+			secret_name);
+		if (secret_node) {
+			secret = lyd_get_value(secret_node);
+
+		}
+	}
+
+	snprintf(hostapd_conf, sizeof(hostapd_conf), HOSTAPD_CONF_NEXT, radio_name);
+
+	hostapd = fopen(hostapd_conf, "w");
+	if (!hostapd) {
+		ERROR("Failed to create hostapd config: %s", hostapd_conf);
+		rc = SR_ERR_INTERNAL;
+		goto cleanup;
+	}
+
+	fprintf(hostapd, "# Generated by Infix confd - WiFi Radio %s\n", radio_name);
+	fprintf(hostapd, "# Primary BSS: %s", primary_ifname);
+	if (ap_count > 1)
+		fprintf(hostapd, " (%d total APs)\n\n", ap_count);
+	else
+		fprintf(hostapd, "\n\n");
+
+	fprintf(hostapd, "interface=%s\n", primary_ifname);
+	fprintf(hostapd, "driver=nl80211\n");
+	fprintf(hostapd, "ctrl_interface=/run/hostapd\n\n");
+
+	fprintf(hostapd, "ssid=%s\n", ssid);
+	if (hidden && !strcmp(hidden, "true"))
+		fprintf(hostapd, "ignore_broadcast_ssid=1\n");
+	fprintf(hostapd, "\n");
+
+	if (country)
+		fprintf(hostapd, "country_code=%s\n", country);
+
+	/* Enable 802.11d (regulatory domain) and 802.11h (spectrum management/DFS) */
+	fprintf(hostapd, "ieee80211d=1\n");
+	fprintf(hostapd, "ieee80211h=1\n");
+
+	/* Band and channel configuration */
+	if (band) {
+		/* Set hardware mode based on band */
+		if (!strcmp(band, "2.4GHz")) {
+			fprintf(hostapd, "hw_mode=g\n");
+		} else if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz")) {
+			fprintf(hostapd, "hw_mode=a\n");
+		}
+
+		/* Set channel */
+		if (channel) {
+			if (strcmp(channel, "auto") == 0) {
+				/*
+				  Use default channels: 6 for 2.4GHz, 36 for 5GHz, 109 for 6GHz, this
+				  is a temporary hack, replace with logic for finding best free channel.
+				 */
+				if (!strcmp(band, "2.4GHz")) {
+					fprintf(hostapd, "channel=6\n");
+				} else if (!strcmp(band, "5GHz")) {
+					fprintf(hostapd, "channel=36\n");
+				} else if (!strcmp(band, "6GHz")) {
+					fprintf(hostapd, "channel=109\n");
+				} else {
+					/* Unknown band - use ACS */
+					fprintf(hostapd, "channel=0\n");
+				}
+			} else {
+				fprintf(hostapd, "channel=%s\n", channel);
+			}
+		}
+	}
+
+
+	if (band) {
+		if (!strcmp(band, "2.4GHz")) {
+			/* 2.4GHz: Enable 802.11n (HT), optionally WiFi 6 */
+			fprintf(hostapd, "ieee80211n=1\n");
+			if (wifi6_enabled) {
+				fprintf(hostapd, "ieee80211ax=1\n");
+			}
+		} else if (!strcmp(band, "5GHz")) {
+			/* 5GHz: Enable 802.11n and 802.11ac, optionally WiFi 6 */
+			fprintf(hostapd, "ieee80211n=1\n");
+			fprintf(hostapd, "ieee80211ac=1\n");
+			if (wifi6_enabled) {
+				fprintf(hostapd, "ieee80211ax=1\n");
+			}
+		} else if (!strcmp(band, "6GHz")) {
+			/* 6GHz: Enable 802.11ax (WiFi 6E required) */
+			fprintf(hostapd, "ieee80211n=1\n");
+			fprintf(hostapd, "ieee80211ac=1\n");
+			fprintf(hostapd, "ieee80211ax=1\n");
+		}
+	}
+	fprintf(hostapd, "\n");
+
+	/* Security configuration */
+	if (!strcmp(security_mode, "open")) {
+		fprintf(hostapd, "# Open network (no encryption)\n");
+		fprintf(hostapd, "auth_algs=1\n");
+	} else if (!strcmp(security_mode, "wpa2-personal")) {
+		fprintf(hostapd, "# WPA2-Personal\n");
+		fprintf(hostapd, "wpa=2\n");
+		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
+		fprintf(hostapd, "wpa_pairwise=CCMP\n");
+		fprintf(hostapd, "wpa_passphrase=%s\n", secret);
+	} else if (!strcmp(security_mode, "wpa3-personal")) {
+		fprintf(hostapd, "# WPA3-Personal\n");
+		fprintf(hostapd, "wpa=2\n");
+		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
+		fprintf(hostapd, "rsn_pairwise=CCMP\n");
+		fprintf(hostapd, "sae_password=%s\n", secret);
+		fprintf(hostapd, "ieee80211w=2\n");
+	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
+		fprintf(hostapd, "# WPA2/WPA3 Mixed Mode\n");
+		fprintf(hostapd, "wpa=2\n");
+		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
+		fprintf(hostapd, "rsn_pairwise=CCMP\n");
+		fprintf(hostapd, "wpa_passphrase=%s\n", secret);
+		fprintf(hostapd, "sae_password=%s\n", secret);
+		fprintf(hostapd, "ieee80211w=1\n");
+	}
+
+	/* Add BSS sections for secondary APs (multi-SSID) */
+	for (i = 1; i < ap_count; i++) {
+		DEBUG("Adding BSS section for secondary AP %s", ap_list[i]);
+		rc = wifi_gen_bss_section(hostapd, cifs, ap_list[i], config);
+		if (rc != SR_ERR_OK) {
+			ERROR("Failed to generate BSS section for %s", ap_list[i]);
+			fclose(hostapd);
+			goto cleanup;
+		}
+	}
+
+	fclose(hostapd);
+
+cleanup:
+	for (i = 0; i < ap_count; i++)
+		free(ap_list[i]);
+	free(ap_list);
+
+	return rc;
+}
+
 static int hardware_cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -187,49 +639,186 @@ static int hardware_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 
 int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct lyd_node  *difs = NULL, *dif = NULL, *cifs = NULL, *cif = NULL;
+	struct lyd_node  *difs = NULL, *dif = NULL;
 	int rc = SR_ERR_OK;
 
-	if (event != SR_EV_DONE || !lydx_find_xpathf(diff, XPATH_BASE_))
+	if (!lydx_find_xpathf(diff, XPATH_BASE_))
 		return SR_ERR_OK;
 
-	cifs = lydx_get_descendant(config, "hardware", "component", NULL);
 	difs = lydx_get_descendant(diff, "hardware", "component", NULL);
 
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
 		enum lydx_op op;
-		struct lyd_node *state;
+		struct lyd_node *state, *cif;
 		const char *admin_state;
 		const char *class, *name;
 
 		op = lydx_get_op(dif);
 		name = lydx_get_cattr(dif, "name");
-		if (op == LYDX_OP_DELETE) {
-			if (usb_authorize(confd->root, name, 0)) {
-				rc = SR_ERR_INTERNAL;
-				goto err;;
-			}
-			continue;
-		}
 
-		LYX_LIST_FOR_EACH(cifs, cif, "component") {
-			if (strcmp(name, lydx_get_cattr(cif, "name")))
+		/* Get the current config node for this component */
+		cif = lydx_get_xpathf(config, "/hardware/component[name='%s']", name);
+		if (!cif)
+			continue;
+
+		class = lydx_get_cattr(cif, "class");
+
+		/* Handle USB components */
+		if (!strcmp(class, "infix-hardware:usb")) {
+			if (event != SR_EV_DONE)
 				continue;
 
-			class = lydx_get_cattr(cif, "class");
-			if (strcmp(class, "infix-hardware:usb")) {
+			if (op == LYDX_OP_DELETE) {
+				/* Handle USB deletion */
+				if (usb_authorize(confd->root, name, 0)) {
+					rc = SR_ERR_INTERNAL;
+					goto err;
+				}
 				continue;
 			}
 			state = lydx_get_child(dif, "state");
 			admin_state = lydx_get_cattr(state, "admin-state");
 			if (usb_authorize(confd->root, name, !strcmp(admin_state, "unlocked"))) {
 				rc = SR_ERR_INTERNAL;
-				goto err;;
+				goto err;
 			}
+		} else if (!strcmp(class, "infix-hardware:wifi")) {
+			struct lyd_node *interfaces_config, *interfaces_diff;
+			struct lyd_node **wifi_iface_list = NULL;
+			struct lyd_node *station, *ap;
+			struct lyd_node *cwifi_radio;
+			int wifi_iface_count = 0;
+			char src[40], dst[40];
+			int ap_interfaces = 0;
+
+			switch (event) {
+			case SR_EV_ABORT:
+				continue;
+			case SR_EV_CHANGE:
+				break;
+			case SR_EV_DONE:
+				interfaces_diff = lydx_get_descendant(diff, "interfaces", "interface", NULL);
+
+				wifi_find_interfaces_on_radio(interfaces_diff, name,
+							      &wifi_iface_list, &wifi_iface_count);
+				if (wifi_iface_count > 0) {
+					bool running, enabled;
+					station = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "station", NULL);
+					ap = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "access-point", NULL);
+
+					if (station || !ap || lydx_get_op(ap) == LYDX_OP_DELETE) {
+						const char *ifname = lydx_get_cattr(wifi_iface_list[0], "name");
+						running = !systemf("initctl -bfq status wpa_supplicant:%s", ifname);
+						if (lydx_get_op(station) == LYDX_OP_DELETE) {
+							erasef(WPA_SUPPLICANT_CONF, ifname);
+							erasef(WPA_SUPPLICANT_CONF_NEXT, ifname);
+							systemf("initctl -bfq disable wifi@%s", ifname);
+						} else {
+							snprintf(src, sizeof(src), WPA_SUPPLICANT_CONF_NEXT, ifname);
+							snprintf(dst, sizeof(dst), WPA_SUPPLICANT_CONF, ifname);
+							running = !systemf("initctl -bfq status wpa_supplicant:%s", ifname);
+							enabled = fexistf(WPA_SUPPLICANT_CONF_NEXT, ifname);
+
+							if (enabled) {
+								(void)rename(src, dst);
+								if (running)
+									systemf("initctl -bfq touch wifi@%s", ifname);
+								else
+									systemf("initctl -bfq enable wifi@%s", ifname);
+							}
+						}
+					} else if (wifi_iface_count > 0) {
+						/* AP mode - activate hostapd for radio */
+						snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
+						snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
+
+						running = !systemf("initctl -bfq status hostapd:%s", name);
+						enabled = fexistf(HOSTAPD_CONF_NEXT, name);
+
+						if (enabled) {
+							(void)rename(src, dst);
+							ap_interfaces++;
+
+							if (running)
+								systemf("initctl -bfq touch hostapd@%s", name);
+							else
+								systemf("initctl -bfq enable hostapd@%s", name);
+						}
+					}
+				}
+				if (!ap_interfaces) {
+					systemf("initctl -bfq disable hostapd@%s", name);
+					erasef(HOSTAPD_CONF, name);
+					erasef(HOSTAPD_CONF_NEXT, name);
+				}
+				free(wifi_iface_list);
+				continue;
+			default:
+				continue;
+
+			}
+
+			cwifi_radio = lydx_get_child(cif, "wifi-radio");
+
+			interfaces_config = lydx_get_descendant(config, "interfaces", "interface", NULL);
+
+			wifi_find_interfaces_on_radio(interfaces_config, name,
+						       &wifi_iface_list, &wifi_iface_count);
+
+
+			if (!wifi_iface_count)
+				continue;
+			/*
+			 * A radio operates in one of three modes:
+			 * 1. Station mode: One station interface (client mode)
+			 * 2. AP mode: One or more AP interfaces (hostapd multi-SSID)
+			 * 3. Scan-only mode: WiFi interface with radio but no mode configured
+			 *
+			 * Check for station first - there can be at most one per radio.
+			 * If no station or AP is configured, default to scan-only mode.
+			 */
+			station = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "station", NULL);
+			ap = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "access-point", NULL);
+			if (wifi_iface_count == 1 && station) {
+				/* Station mode (with or without SSID for scan-only) */
+				struct lyd_node *iface = wifi_iface_list[0];
+				if (lydx_is_enabled(iface, "enabled")) {
+					const char *ifname = lydx_get_cattr(iface, "name");
+					rc = wifi_gen_station(ifname, station, name, config);
+					if (rc != SR_ERR_OK) {
+						ERROR("Failed to generate station config for %s", ifname);
+						goto next;
+					}
+				}
+			} else if (!station && !ap) {
+				/* No station/AP configured - default to scan-only mode */
+				struct lyd_node *iface = wifi_iface_list[0];
+				if (lydx_is_enabled(iface, "enabled")) {
+					const char *ifname = lydx_get_cattr(iface, "name");
+					rc = wifi_gen_station(ifname, NULL, name, config);
+					if (rc != SR_ERR_OK) {
+						ERROR("Failed to generate scan-only config for %s", ifname);
+						goto next;
+					}
+				}
+			} else {
+				/* Multiple interfaces or APs */
+				rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config);
+				if (rc != SR_ERR_OK) {
+					ERROR("Failed to generate AP config for radio %s", name);
+					goto next;
+				}
+			}
+		next:
+			/* Free the interface list */
+			free(wifi_iface_list);
+			wifi_iface_list = NULL;
+			wifi_iface_count = 0;
 		}
 	}
 
 err:
+
 	return rc;
 }
 int hardware_candidate_init(struct confd *confd)

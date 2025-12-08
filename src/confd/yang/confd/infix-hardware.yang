@@ -13,10 +13,18 @@ module infix-hardware {
     prefix yang;
   }
 
+  import infix-wifi-country-codes {
+    prefix iwcc;
+  }
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2025-12-04 {
+    description "Add WiFi radio survey container for channel utilization data.";
+    reference "internal";
+  }
   revision 2025-10-30 {
     description "Add phys-address leaf for hardware components and enable sensor support.";
     reference "internal";
@@ -37,6 +45,38 @@ module infix-hardware {
     }
     description "A two-letter country code.";
   }
+
+  /*
+   * WiFi-specific typedefs
+   */
+
+  typedef wifi-radio-ref {
+    type leafref {
+      path "/iehw:hardware/iehw:component/iehw:name";
+    }
+    description
+      "Reference to a WiFi radio hardware component.
+       WiFi radios are hardware components with class 'ih:wifi'.";
+  }
+
+  typedef wifi-band {
+    type enumeration {
+      enum "2.4GHz" {
+        description "2.4 GHz band (channels 1-14, maximum compatibility)";
+      }
+      enum "5GHz" {
+        description "5 GHz band (less congestion, higher throughput, recommended)";
+      }
+      enum "6GHz" {
+        description "6 GHz band (WiFi 6E, requires compatible hardware)";
+      }
+    }
+    description "WiFi frequency band selection.";
+  }
+
+  /*
+   * Hardware class identities
+   */
 
   identity usb {
     base iahw:hardware-class;
@@ -141,6 +181,336 @@ module infix-hardware {
 	leaf extension-data {
 	  type string;
 	}
+      }
+    }
+
+    /*
+     * WiFi Radio configuration (when class = 'ih:wifi')
+     */
+
+    container wifi-radio {
+      when "derived-from-or-self(../iehw:class, 'ih:wifi')";
+      presence "WiFi radio configuration";
+      description
+        "WiFi radio/PHY configuration and operational data.
+
+         This container is present when the hardware component represents
+         a WiFi radio (class 'ih:wifi'). WiFi radios are physical devices
+         that can host multiple virtual WiFi interfaces (APs or Stations).";
+
+      leaf country-code {
+        type iwcc:country-code;
+        mandatory true;
+        description
+          "Two-letter ISO 3166-1 country code for regulatory compliance.
+
+           Sets the regulatory domain for this radio, determining:
+           - Allowed channels and frequencies
+           - Maximum transmit power
+           - DFS (Dynamic Frequency Selection) requirements
+
+           Examples: 'US', 'DE', 'JP'.
+
+           WARNING: Incorrect values may violate local laws and regulations.";
+      }
+
+      leaf channel {
+        type union {
+          type uint16 {
+            range "1..196";
+          }
+          type enumeration {
+            enum "auto" {
+              description "Automatic channel selection (ACS)";
+            }
+          }
+        }
+        default "auto";
+        description
+          "Operating channel number.
+
+           Required for Access Point mode.
+           Not used in Station mode (station uses AP's channel).
+
+           Channel availability depends on:
+           - Configured band (2.4/5/6 GHz)
+           - Regulatory domain (country-code)
+           - Hardware capabilities
+
+           Common channels:
+           - 2.4 GHz: 1-14 (channels 12-14 restricted in some countries)
+           - 5 GHz: 36, 40, 44, 48, 149, 153, 157, 161, 165 (varies by region)
+           - 6 GHz: 1-233 (WiFi 6E, where permitted)
+
+           Set to 'auto' for automatic channel selection.";
+      }
+
+      leaf band {
+        type wifi-band;
+        description
+          "Frequency band selection.
+
+           Required for Access Point mode.
+           Not used in Station mode (station uses AP's band).
+
+           Constraints:
+           - Hardware must support the selected band
+           - Regulatory domain affects channel availability
+           - PHY mode must be compatible with selected band
+
+           Recommendation: Use 5GHz for better performance and less
+           congestion in most environments.";
+      }
+
+      leaf enable-wifi6 {
+        type boolean;
+        default false;
+        description
+          "Enable WiFi 6 (802.11ax) on 2.4GHz and 5GHz bands.
+
+           By default, WiFi 6 is enabled only on 6GHz (WiFi 6E).
+           Set to 'true' to enable WiFi 6 on 2.4GHz and 5GHz bands.
+
+           WiFi 6 provides:
+           - OFDMA (better multi-user efficiency)
+           - Target Wake Time (better battery life)
+           - 1024-QAM (higher throughput)
+           - BSS Coloring (reduced interference)
+
+           Requires:
+           - Hardware support for 802.11ax
+           - Compatible clients for full benefits
+
+           Note: 6GHz band always uses WiFi 6 regardless of this setting.";
+      }
+
+      /*
+       * Operational state
+       */
+
+      leaf frequency {
+        config false;
+        type uint32;
+        units "MHz";
+        description
+          "Current operating frequency in MHz.
+
+           Derived from the configured channel and band.
+
+           Example values:
+           - 2412 MHz (channel 1, 2.4 GHz)
+           - 5180 MHz (channel 36, 5 GHz)
+           - 5955 MHz (channel 1, 6 GHz)";
+      }
+
+      leaf noise {
+        config false;
+        type int16;
+        units "dBm";
+        description
+          "Background noise level on current channel in dBm.
+
+           Lower (more negative) values indicate a cleaner RF environment.
+
+           Typical values:
+           - -95 to -100 dBm: Very low noise (excellent)
+           - -85 to -95 dBm: Low noise (good)
+           - -75 to -85 dBm: Moderate noise
+           - -65 to -75 dBm: High noise (congested)";
+      }
+
+      leaf-list supported-channels {
+        config false;
+        type uint16;
+        description
+          "List of channels supported by this radio in the current
+           regulatory domain.
+
+           Channels depend on:
+           - Hardware capabilities
+           - Configured country-code
+           - Band selection
+
+           This list reflects actual usable channels after applying
+           regulatory constraints.";
+      }
+
+      leaf max-txpower {
+        config false;
+        type uint8;
+        units "dBm";
+        description
+          "Maximum transmit power allowed by the regulatory domain
+           for the current channel.
+
+           This is the regulatory limit for the current band and channel.";
+      }
+
+      leaf num-virtual-interfaces {
+        config false;
+        type uint8;
+        description
+          "Number of virtual interfaces (AP/Station) currently
+           configured on this radio.";
+      }
+
+      leaf driver {
+        config false;
+        type string;
+        description
+          "WiFi driver name (e.g., mt798x-wmac, ath10k).";
+      }
+
+      container max-interfaces {
+        config false;
+        description
+          "Maximum number of virtual interfaces supported by this radio.";
+
+        leaf ap {
+          type uint8;
+          description
+            "Maximum number of AP interfaces.";
+        }
+
+        leaf station {
+          type uint8;
+          description
+            "Maximum number of station interfaces.";
+        }
+      }
+
+      list bands {
+        config false;
+        key "band";
+        description
+          "Supported frequency bands and their capabilities.";
+
+        leaf band {
+          type string;
+          description
+            "Band identifier from iw (e.g., '1' for 2.4GHz, '2' for 5GHz).";
+        }
+
+        leaf name {
+          type string;
+          description
+            "Human-readable band name (e.g., '2.4GHz', '5GHz', '6GHz').";
+        }
+
+        leaf ht-capable {
+          type boolean;
+          description
+            "High Throughput (802.11n) support.";
+        }
+
+        leaf vht-capable {
+          type boolean;
+          description
+            "Very High Throughput (802.11ac) support.";
+        }
+
+        leaf he-capable {
+          type boolean;
+          description
+            "High Efficiency (802.11ax/WiFi 6) support.";
+        }
+      }
+
+      /*
+       * Channel survey data (operational state)
+       */
+
+      container survey {
+        config false;
+        description
+          "WiFi channel survey data providing channel utilization
+           and interference information.
+
+           This data is collected from the WiFi driver and provides
+           insights into channel occupancy, noise levels, and RF activity.";
+
+        list channel {
+          key "frequency";
+          description
+            "Per-channel survey information.
+
+             Includes utilization metrics for all channels scanned by
+             the radio, not just the currently active channel.";
+
+          leaf frequency {
+            type uint32;
+            units "MHz";
+            description
+              "Channel center frequency in MHz.
+
+               Examples:
+               - 2412 MHz (2.4 GHz channel 1)
+               - 5180 MHz (5 GHz channel 36)
+               - 5955 MHz (6 GHz channel 1)";
+          }
+
+          leaf in-use {
+            type boolean;
+            description
+              "Whether this channel is currently in use by the radio.
+
+               Only one channel will have this set to true at a time.";
+          }
+
+          leaf noise {
+            type int16;
+            units "dBm";
+            description
+              "Background noise level on this channel in dBm.
+
+               Lower (more negative) values indicate cleaner RF environment.
+
+               Typical values:
+               - -95 to -100 dBm: Very low noise (excellent)
+               - -85 to -95 dBm: Low noise (good)
+               - -75 to -85 dBm: Moderate noise
+               - -65 to -75 dBm: High noise (congested)";
+          }
+
+          leaf active-time {
+            type uint32;
+            units "milliseconds";
+            description
+              "Total time the radio was active on this channel.
+
+               This is the survey measurement period for this channel.";
+          }
+
+          leaf busy-time {
+            type uint32;
+            units "milliseconds";
+            description
+              "Time the channel was detected as busy.
+
+               Includes time spent receiving frames, transmitting frames,
+               and time the channel was busy due to other sources.
+
+               Channel utilization = (busy-time / active-time) * 100%";
+          }
+
+          leaf receive-time {
+            type uint32;
+            units "milliseconds";
+            description
+              "Time spent receiving frames on this channel.
+
+               Subset of busy-time spent on frame reception.";
+          }
+
+          leaf transmit-time {
+            type uint32;
+            units "milliseconds";
+            description
+              "Time spent transmitting frames on this channel.
+
+               Subset of busy-time spent on frame transmission.";
+          }
+        }
       }
     }
   }

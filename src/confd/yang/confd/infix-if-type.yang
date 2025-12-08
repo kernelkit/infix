@@ -110,6 +110,6 @@ module infix-if-type {
     if-feature wifi;
     base infix-interface-type;
     base ianaift:ieee80211;
-    description "WiFi interface";
+    description "WiFi (802.11) interface";
   }
 }

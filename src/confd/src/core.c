@@ -138,6 +138,128 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		}
 	}
 
+	/* When WiFi interfaces change, add their radios to the diff */
+	struct lyd_node *difs = lydx_get_descendant(*diff, "interfaces", "interface", NULL);
+	if (difs) {
+		struct lyd_node *dif;
+
+		LYX_LIST_FOR_EACH(difs, dif, "interface") {
+			struct lyd_node *dwifi, *radio_node;
+			const char *ifname, *radio_name;
+			char xpath[256];
+
+			/* Check if this interface has a wifi container in the diff */
+			dwifi = lydx_get_child(dif, "wifi");
+			if (!dwifi)
+				continue;
+
+			/* Get the interface name */
+			ifname = lydx_get_cattr(dif, "name");
+			if (!ifname)
+				continue;
+
+			/* Get radio reference from config tree using xpath */
+			radio_node = lydx_get_xpathf(config,
+				"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
+				ifname);
+			if (!radio_node)
+				continue;
+
+			radio_name = lyd_get_value(radio_node);
+			if (!radio_name)
+				continue;
+
+			/* Add the radio to the diff */
+			snprintf(xpath, sizeof(xpath), "/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio_name);
+			result = add_dependencies(diff, xpath, radio_name);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add radio %s to diff for WiFi interface %s", radio_name, ifname);
+				return result;
+			}
+
+			DEBUG("Added radio %s to diff for WiFi interface %s", radio_name, ifname);
+		}
+	}
+
+	/* When WiFi radios change, add all interfaces using that radio to the diff */
+	struct ly_set *radios = lydx_find_xpathf(*diff,
+		"/ietf-hardware:hardware/component[infix-hardware:wifi-radio]");
+	if (radios && radios->count > 0) {
+		for (uint32_t i = 0; i < radios->count; i++) {
+			struct lyd_node *hradio = radios->dnodes[i];
+			const char *radio_name = lydx_get_cattr(hradio, "name");
+			struct ly_set *ifaces;
+			uint32_t j;
+			char xpath[256];
+
+			if (!radio_name)
+				continue;
+
+			/* Find all interfaces that reference this radio */
+			ifaces = lydx_find_xpathf(config,
+				"/ietf-interfaces:interfaces/interface[infix-interfaces:wifi/radio='%s']",
+				radio_name);
+			if (ifaces && ifaces->count > 0) {
+				for (j = 0; j < ifaces->count; j++) {
+					const char *ifname = lydx_get_cattr(ifaces->dnodes[j], "name");
+
+					/* Add the wifi container */
+					snprintf(xpath, sizeof(xpath),
+						"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
+						ifname);
+					result = add_dependencies(diff, xpath, ifname);
+					if (result == CONFD_DEP_ERROR) {
+						ERROR("Failed to add interface wifi for %s (radio %s)", ifname, radio_name);
+						ly_set_free(ifaces, NULL);
+						ly_set_free(radios, NULL);
+						return result;
+					}
+
+					/* Add the radio leaf */
+					snprintf(xpath, sizeof(xpath),
+						"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
+						ifname);
+					result = add_dependencies(diff, xpath, radio_name);
+					if (result == CONFD_DEP_ERROR) {
+						ERROR("Failed to add radio leaf for interface %s (radio %s)", ifname, radio_name);
+						ly_set_free(ifaces, NULL);
+						ly_set_free(radios, NULL);
+						return result;
+					}
+
+					/* Add station or access-point container depending on mode */
+					if (lydx_get_descendant(ifaces->dnodes[j], "interface", "wifi", "station", NULL)) {
+						snprintf(xpath, sizeof(xpath),
+							"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/station",
+							ifname);
+						result = add_dependencies(diff, xpath, ifname);
+						if (result == CONFD_DEP_ERROR) {
+							ERROR("Failed to add station for interface %s (radio %s)", ifname, radio_name);
+							ly_set_free(ifaces, NULL);
+							ly_set_free(radios, NULL);
+							return result;
+						}
+					} else if (lydx_get_descendant(ifaces->dnodes[j], "interface", "wifi", "access-point", NULL)) {
+						snprintf(xpath, sizeof(xpath),
+							"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/access-point",
+							ifname);
+						result = add_dependencies(diff, xpath, ifname);
+						if (result == CONFD_DEP_ERROR) {
+							ERROR("Failed to add access-point for interface %s (radio %s)", ifname, radio_name);
+							ly_set_free(ifaces, NULL);
+							ly_set_free(radios, NULL);
+							return result;
+						}
+					}
+
+					DEBUG("Added interface %s to diff for radio %s", ifname, radio_name);
+				}
+				ly_set_free(ifaces, NULL);
+			}
+		}
+		ly_set_free(radios, NULL);
+	}
+
 	return result;
 }
 

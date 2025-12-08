@@ -21,8 +21,11 @@ submodule infix-if-wifi {
   import infix-if-type {
     prefix infixift;
   }
-  import infix-wifi-country-codes {
-    prefix iwcc;
+  import ietf-hardware {
+    prefix iehw;
+  }
+  import infix-hardware {
+    prefix ih;
   }
 
   organization "KernelKit";
@@ -30,12 +33,30 @@ submodule infix-if-wifi {
   description
     "WiFi-specific extensions to the standard IETF interfaces model.
 
-     This submodule defines configuration and operational data relevant to
-     WiFi interfaces, including security settings, network
-     discovery, and regulatory compliance.
+     This submodule defines configuration and operational data for WiFi
+     virtual interfaces, supporting both Access Point (AP) and Station
+     (client) modes.
 
-     It supports WiFi client mode and enables comprehensive management of
-     wireless connections, including encryption, country codes, and scanning.";
+     WiFi virtual interfaces are created on top of WiFi radios (PHYs)
+     defined in the infix-wifi-radio module. The radio provides physical
+     layer configuration (channel, power, PHY mode), while virtual
+     interfaces provide network-layer configuration (SSID, security).
+
+     Key features:
+     - Dual mode support: AP and Station
+     - Multi-SSID: Multiple APs on same radio
+     - Security: WPA2/WPA3 with keystore integration
+     - Operational state: Connection status, RSSI, client lists";
+
+  revision 2025-12-17 {
+    description
+      "Major refactoring for AP mode support (BREAKING CHANGE):
+       - Added radio reference (parent PHY)
+       - Added wifi-mode choice (AP vs Station)
+       - Reorganized configuration hierarchy
+       - Old configurations must be migrated manually";
+    reference "internal";
+  }
 
   revision 2025-12-12 {
     description "Adapt to new revision of model ietf-keystore.";
@@ -43,36 +64,13 @@ submodule infix-if-wifi {
   }
 
   revision 2025-05-27 {
-    description "Initial revision.";
+    description "Initial revision (Station mode only).";
     reference "internal";
   }
 
   feature wifi {
     description "WiFi support is an optional build-time feature in Infix.";
   }
-
-  typedef encryption {
-    type enumeration {
-      enum auto {
-        description
-          "Enables WPA/WPA2/WPA3 encryption with automatic protocol
-           negotiation. The system uses the strongest supported variant supported by Access Point.";
-      }
-      enum disabled {
-        description
-          "Disables encryption for an open network.
-
-           WARNING: Open networks transmit data unencrypted and should only
-           be used in trusted environments.";
-      }
-    }
-    description
-      "Encryption modes available for WiFi connections.
-
-       - auto: Secure connection using WPA3/WPA2/WPA (auto-selected)
-       - disabled: Open network (unencrypted)";
-  }
-
 
   augment "/if:interfaces/if:interface" {
     when "derived-from-or-self(if:type, 'infixift:wifi')" {
@@ -82,107 +80,370 @@ submodule infix-if-wifi {
 
     container wifi {
       if-feature wifi;
-      presence "Configure Wi-Fi settings";
+      presence "Configure Wi-Fi virtual interface";
 
       description
-        "WiFi-specific configuration and operational data.";
+        "WiFi virtual interface configuration.
 
-      leaf country-code {
-        type iwcc:country-code;
-        mandatory true;
-        description
-          "Two-letter ISO 3166-1 country code for regulatory compliance.
+         Each WiFi interface represents a virtual interface (VAP - Virtual
+         Access Point, or Station) created on a physical radio.
 
-           Examples: 'US', 'DE', 'JP'.
+         The interface must reference a radio defined in infix-wifi-radio
+         module, which provides the physical layer configuration.";
 
-           WARNING: Incorrect values may violate local laws.";
-
-
-      }
-
-      leaf encryption {
-        default auto;
-        type encryption;
-
-        description
-          "WiFi encryption method.
-
-           - auto (default): Enables WPA2/WPA3 auto-negotiation
-           - disabled: Disables encryption (open network)";
-      }
-
-      leaf ssid {
-        type string {
-          length "1..32";
+      leaf radio {
+        type leafref {
+          path "/iehw:hardware/iehw:component/iehw:name";
         }
         mandatory true;
+        must "derived-from-or-self(/iehw:hardware/iehw:component[iehw:name=current()]/iehw:class, 'ih:wifi')" {
+          error-message "Referenced hardware component must be a WiFi radio (class 'ih:wifi')";
+        }
 
         description
-          "WiFi network name (SSID).
+          "Reference to parent WiFi radio (PHY).
 
-           Case-sensitive, must match the target network.
+           References a hardware component with class 'ih:wifi'.
+           The radio must exist and be configured before creating
+           virtual interfaces.
 
-           Length: 1–32 characters.";
+           Example: 'phy0' for the first WiFi radio.
+
+           All physical layer settings (channel, power, regulatory)
+           are inherited from the radio configuration.";
       }
 
-      leaf secret {
-        type ks:central-symmetric-key-ref;
-        mandatory true;
-        must "../encryption != 'disabled'" {
-           error-message
-            "Pre-shared key required unless encryption is disabled.";
-        }
-
+      choice wifi-mode {
         description
-          "Pre-shared key (PSK) for WPA-secured networks.";
-      }
+          "WiFi interface operating mode.
 
-      leaf rssi {
-        config false;
-        type int16;
-        units "dBm";
-        description
-          "Current received signal strength (RSSI) in dBm.
+           When no mode is configured, the interface operates in scan-only
+           mode, allowing discovery of available WiFi networks.
 
-           Lower (more negative) values indicate stronger signals.";
-      }
+           Once you've identified a network, configure either:
+           - Station mode: Connect to an existing WiFi network
+           - Access Point mode: Create a WiFi network for clients
 
-      list scan-results {
-        config false;
-        key ssid;
-        description
-          "List of discovered networks.";
+           Note: A radio can host either:
+           - Multiple AP interfaces (multi-SSID), OR
+           - A single Station interface
 
-        leaf ssid {
-          type string;
-          description
-            "SSID of the discovered network.";
+           Mixing AP and Station on the same radio is not supported.";
+
+        case station {
+          container station {
+            presence "Configure WiFi station (client) mode";
+
+            description
+              "WiFi Station mode configuration.
+
+               In station mode, the interface acts as a WiFi client,
+               connecting to an existing Access Point.
+
+               Only one station interface is allowed per radio.
+
+               Example use case: Connect to upstream WiFi network.";
+
+            leaf ssid {
+              type string {
+                length "1..32";
+              }
+              mandatory true;
+              description
+                "WiFi network name (SSID) to connect to.
+
+                 Case-sensitive, must match the target network exactly.
+
+                 Length: 1–32 characters.";
+            }
+
+            container security {
+              description
+                "WiFi security configuration.";
+
+              leaf mode {
+                type enumeration {
+                  enum auto {
+                    description
+                      "Automatic security negotiation.
+                       Tries WPA3-SAE, then WPA2-PSK, in that order.
+                       Recommended for maximum compatibility and security.";
+                  }
+                  enum disabled {
+                    description
+                      "Open network (no security).
+
+                       WARNING: All traffic is transmitted unencrypted!
+                       Only use in trusted environments.";
+                  }
+                }
+                default auto;
+                description
+                  "Security mode for WiFi connection.
+
+                   - auto (default): WPA3/WPA2 auto-negotiation (secure)
+                   - disabled: Open network (insecure)";
+              }
+
+              leaf secret {
+                when "../mode != 'disabled'";
+                type ks:central-symmetric-key-ref;
+                mandatory true;
+                description
+                  "Pre-shared key (PSK) reference.
+
+                   References a symmetric key in the keystore.
+
+                   For WPA2/WPA3 networks, this is the WiFi password.";
+              }
+            }
+
+            /* Operational state */
+
+            leaf rssi {
+              config false;
+              type int16;
+              units "dBm";
+              description
+                "Current received signal strength indication (RSSI) in dBm.
+
+                 More negative values indicate weaker signal.
+
+                 Typical values:
+                 - -30 to -50 dBm: Excellent
+                 - -50 to -60 dBm: Good
+                 - -60 to -70 dBm: Fair
+                 - -70 to -80 dBm: Weak
+                 - Below -80 dBm: Very weak";
+            }
+
+            list scan-results {
+              config false;
+              key ssid;
+              description
+                "List of discovered WiFi networks.
+
+                 Updated periodically by background scanning.";
+
+              leaf ssid {
+                type string;
+                description "SSID of the discovered network.";
+              }
+
+              leaf bssid {
+                type yang:mac-address;
+                description "BSSID (MAC address) of the AP.";
+              }
+
+              leaf rssi {
+                type int16;
+                units "dBm";
+                description "Signal strength of the network.";
+              }
+
+              leaf channel {
+                type uint16;
+                description "Channel on which the network was detected.";
+              }
+
+              leaf-list encryption {
+                ordered-by user;
+                type string;
+                description
+                  "Human-readable security information.
+
+                   Examples: 'WPA2-Personal', 'WPA3-SAE', 'Open'";
+              }
+            }
+          }
         }
 
-        leaf bssid {
-          type string;
-          description
-            "BSSID of the discovered network.";
-        }
+        case access-point {
+          container access-point {
+            presence "Configure WiFi Access Point mode";
 
-        leaf rssi {
-          type int16;
-          units "dBm";
-          description
-            "Signal strength of the network.";
-        }
+            description
+              "WiFi Access Point mode configuration.
 
-        leaf channel {
-          type int16;
-          description
-            "Channel on which the network was detected.";
-        }
+               In AP mode, the interface provides a WiFi network that
+               clients can connect to.
 
-        leaf-list encryption {
-          ordered-by user;
-          type string;
-          description
-            "Human-readable description of the detected security.";
+               Multiple AP interfaces can be created on the same radio
+               for multi-SSID support (Guest network, IoT network, etc.).
+
+               Example use case: Create WiFi hotspot.";
+
+            must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:band" {
+              error-message "Parent radio must have 'band' configured for Access Point mode";
+            }
+
+            must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:channel" {
+              error-message "Parent radio must have 'channel' configured for Access Point mode";
+            }
+
+            must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:country-code != '00'" {
+              error-message "Country code '00' (world regulatory domain) is not allowed for Access Point mode. Please configure a specific country code on the radio.";
+            }
+
+            leaf ssid {
+              type string {
+                length "1..32";
+              }
+              mandatory true;
+              description
+                "WiFi network name (SSID) to broadcast.
+
+                 This is the network name that clients will see when
+                 scanning for WiFi networks.
+
+                 Length: 1–32 characters.";
+            }
+
+            leaf hidden {
+              type boolean;
+              default false;
+              description
+                "Hide the SSID from broadcast beacons.
+
+                 When true, the network will not appear in WiFi scans.
+                 Clients must know the exact SSID to connect.
+
+                 Note: This provides minimal security benefit and may
+                 cause compatibility issues with some clients.";
+            }
+
+            container security {
+              description
+                "WiFi security configuration.";
+
+              leaf mode {
+                type enumeration {
+                  enum open {
+                    description
+                      "Open network (no encryption).
+
+                       WARNING: All client traffic is unencrypted!
+                       Only use in controlled environments (captive portal, etc.).";
+                  }
+                  enum wpa2-personal {
+                    description
+                      "WPA2-Personal (WPA2-PSK).
+                       Widely compatible, secure for most use cases.";
+                  }
+                  enum wpa3-personal {
+                    description
+                      "WPA3-Personal (WPA3-SAE).
+                       Enhanced security with forward secrecy.
+                       Requires WPA3-capable clients.";
+                  }
+                  enum wpa2-wpa3-personal {
+                    description
+                      "WPA2/WPA3 transitional mode.
+                       Accepts both WPA2 and WPA3 clients.
+                       Recommended for maximum compatibility + security.";
+                  }
+                }
+                default wpa2-wpa3-personal;
+                description
+                  "WiFi security mode.
+
+                   Determines authentication and encryption methods.
+
+                   Recommended: wpa2-wpa3-personal for best security
+                   and compatibility.";
+              }
+
+              leaf secret {
+                when "../mode != 'open'";
+                type ks:central-symmetric-key-ref;
+                mandatory true;
+                description
+                  "Pre-shared key (PSK) reference.
+
+                   References a symmetric key in the keystore.
+
+                   This is the WiFi password that clients must provide
+                   to connect to the network.
+
+                   Requirements:
+                   - WPA2/WPA3: 8-63 characters (configured in keystore)";
+              }
+            }
+
+            /* Operational state */
+
+            container stations {
+              list station {
+                config false;
+                key mac-address;
+                description
+                  "List of currently connected clients (stations).";
+
+                leaf mac-address {
+                  type yang:mac-address;
+                  description "Client MAC address.";
+                }
+
+                leaf rssi {
+                  type int16;
+                  units "dBm";
+                  description "Client signal strength in dBm.";
+                }
+
+                leaf connected-time {
+                  type uint32;
+                  units "seconds";
+                  description "Time since client connected, in seconds.";
+                }
+
+                leaf rx-packets {
+                  type uint32;
+                  description "Packets received from this client.";
+                }
+
+                leaf tx-packets {
+                  type uint32;
+                  description "Packets transmitted to this client.";
+                }
+
+                leaf rx-bytes {
+                  type uint32;
+                  units "octets";
+                  description "Bytes received from this client.";
+                }
+
+                leaf tx-bytes {
+                  type uint32;
+                  units "octets";
+                  description "Bytes transmitted to this client.";
+                }
+
+                leaf rx-speed {
+                  type uint32;
+                  units "100 kbit/s";
+                  description
+                    "Last received data rate from this client in 100 kbit/s.
+
+                     Examples:
+                     - 10 = 1 Mbit/s
+                     - 65 = 6.5 Mbit/s
+                     - 866 = 86.6 Mbit/s";
+                }
+
+                leaf tx-speed {
+                  type uint32;
+                  units "100 kbit/s";
+                  description
+                    "Last transmitted data rate to this client in 100 kbit/s.
+
+                     Examples:
+                     - 10 = 1 Mbit/s
+                     - 65 = 6.5 Mbit/s
+                     - 866 = 86.6 Mbit/s";
+                }
+              }
+            }
+          }
         }
       }
     }

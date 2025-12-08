@@ -6,6 +6,8 @@ if jq -e '.["usb-ports"]' /run/system.json > /dev/null; then
 else
     usb_ports=""
 fi
+wifi_radios=$(/usr/libexec/infix/iw.py list 2>/dev/null | jq -r '.[]' || echo "")
+
 
 gen_port()
 {
@@ -20,6 +22,43 @@ gen_port()
 }
 EOF
 }
+
+gen_radio()
+{
+    radio="$1"
+
+    # Detect supported bands from iw.py info JSON output
+    phy_info=$(/usr/libexec/infix/iw.py info "$radio" 2>/dev/null || echo '{"bands":[]}')
+    # Check if 2.4GHz band exists (band name "2.4GHz")
+    has_2ghz=$(echo "$phy_info" | jq '[.bands[] | select(.name == "2.4GHz")] | length')
+    # Check if 5GHz band exists (band name "5GHz")
+    has_5ghz=$(echo "$phy_info" | jq '[.bands[] | select(.name == "5GHz")] | length')
+
+    # Determine band setting
+    # If both bands supported, prefer 5GHz for better performance
+    if [ "$has_2ghz" -gt 0 ] && [ "$has_5ghz" -gt 0 ]; then
+        band="5GHz"
+    elif [ "$has_5ghz" -gt 0 ]; then
+        band="5GHz"
+    elif [ "$has_2ghz" -gt 0 ]; then
+        band="2.4GHz"
+    else
+        band="2.4GHz"  # Fallback to 2.4GHz for maximum compatibility
+    fi
+
+    cat <<EOF
+{
+    "name": "$radio",
+    "class": "infix-hardware:wifi",
+    "infix-hardware:wifi-radio": {
+        "country-code": "00",
+        "band": "$band",
+        "channel": "auto"
+    }
+}
+EOF
+}
+
 first=1
 cat <<EOF
 {
@@ -32,6 +71,13 @@ for port in $usb_ports; do
     fi
     first=0;
     gen_port "$port"
+done
+for radio in $wifi_radios; do
+    if [ $first -eq 0 ]; then
+	echo -n ','
+    fi
+    first=0;
+    gen_radio $radio
 done
 cat <<EOF
 ]}

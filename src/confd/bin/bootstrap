@@ -3,8 +3,8 @@
 #
 ########################################################################
 # The system factory-config, failure-config and test-config are derived
-# from default settings snippets, from /usr/share/confd/factory.d, and 
-# some generated snippets, e.g., hostname (based on base MAC address) 
+# from default settings snippets, from /usr/share/confd/factory.d, and
+# some generated snippets, e.g., hostname (based on base MAC address)
 # and number of interfaces.
 #
 # The resulting factory-config is used to create the syrepo db (below)
@@ -147,7 +147,7 @@ gen_test_cfg()
 
 # Both factory-config and failure-config are generated every boot
 # regardless if there is a static /etc/factory-config.cfg or not.
-gen_factory_cfg 
+gen_factory_cfg
 gen_failure_cfg
 
 if [ -f "/mnt/aux/test-mode" ]; then

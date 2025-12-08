@@ -18,6 +18,12 @@ module infix-interfaces {
   import infix-if-type {
     prefix infix-ift;
   }
+  import ietf-hardware {
+    prefix iehw;
+  }
+  import infix-hardware {
+    prefix ih;
+  }
 
   include infix-if-base;
   include infix-if-bridge;

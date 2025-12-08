@@ -1,0 +1,3 @@
+# Rename WiFi PHY devices from phy0 to radio0 to avoid name clashes
+SUBSYSTEM=="ieee80211", ACTION=="add", KERNEL=="phy*", \
+  RUN+="/bin/sh -c '/usr/sbin/iw phy %k set name radio%n'"
