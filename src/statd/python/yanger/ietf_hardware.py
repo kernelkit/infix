@@ -1,6 +1,7 @@
 import datetime
 import os
 import glob
+import re
 
 from .common import insert, YangDate
 from .host import HOST
@@ -150,65 +151,57 @@ def normalize_sensor_name(name):
 
 def get_wifi_phy_info():
     """
-    Discover WiFi PHYs and map them to bands and interface names.
+    Discover WiFi PHYs using iw list command.
     Returns dict: {phy_name: {band: str, iface: str, description: str}}
 
-    Example: {"phy0": {"band": "2.4 GHz", "iface": "wlan0", "description": "WiFi Radio (2.4 GHz)"}}
+    Example: {"wifi-phy0": {"band": "2.4 GHz", "iface": "wlan0", "description": "WiFi Radio (2.4 GHz)"}}
     """
     phy_info = {}
 
     try:
-        # Enumerate PHYs from /sys/class/ieee80211/
-        ieee80211_path = "/sys/class/ieee80211"
-        if not os.path.exists(ieee80211_path):
+        # Use iw to list all PHYs
+        output = HOST.run(("iw", "list"), default="")
+        if not output:
             return phy_info
 
-        for phy in os.listdir(ieee80211_path):
-            if not phy.startswith("phy"):
-                continue
+        # Parse PHY names from 'Wiphy wifi-phy0' or 'Wiphy phy0' lines
+        current_phy = None
+        for line in output.splitlines():
+            match = re.match(r'Wiphy ((?:wifi-)?phy\d+)', line)
+            if match:
+                phy = match.group(1)
+                current_phy = phy
+                phy_info[phy] = {"band": "Unknown", "iface": None, "description": None}
 
-            phy_path = os.path.join(ieee80211_path, phy)
-            info = {"band": "Unknown", "iface": None, "description": None}
+        # Create a mapping from PHY number to PHY name
+        phy_num_to_name = {}
+        for phy_name in phy_info.keys():
+            # Extract number from phy name (e.g., "0" from "wifi-phy0" or "phy0")
+            num_match = re.search(r'(\d+)$', phy_name)
+            if num_match:
+                phy_num = num_match.group(1)
+                phy_num_to_name[phy_num] = phy_name
 
-            # Try to determine band from device path or hwmon name
-            # The hwmon device usually tells us: mt7915_phy0, mt7915_phy1, etc.
-            # We'll check supported frequencies to determine band
-            try:
-                # Read supported bands - check if device supports 5 GHz
-                # Most dual-band chips expose phy0 as 2.4 GHz and phy1 as 5 GHz
-                device_path = os.path.join(phy_path, "device")
-                if os.path.exists(device_path):
-                    # Simple heuristic: phy0 is usually 2.4 GHz, phy1 is 5 GHz
-                    # This works for most MediaTek chips (mt7915, mt7921, etc.)
-                    if phy == "phy0":
-                        info["band"] = "2.4 GHz"
-                    elif phy == "phy1":
-                        info["band"] = "5 GHz"
-                    elif phy == "phy2":
-                        info["band"] = "6 GHz"  # WiFi 6E
-            except:
-                pass
+        # Find associated virtual interfaces using iw dev
+        dev_output = HOST.run(("iw", "dev"), default="")
+        current_phy = None
 
-            # Find associated interface by checking which interface has a phy80211 link to this PHY
-            try:
-                net_path = "/sys/class/net"
-                if os.path.exists(net_path):
-                    for iface in os.listdir(net_path):
-                        phy_link = os.path.join(net_path, iface, "phy80211")
-                        if os.path.islink(phy_link):
-                            # Read the link target and extract PHY name
-                            try:
-                                link_target = os.readlink(phy_link)
-                                linked_phy = os.path.basename(link_target)
-                                if linked_phy == phy:
-                                    info["iface"] = iface
-                                    break
-                            except:
-                                continue
-            except:
-                pass
+        for line in dev_output.splitlines():
+            # Match phy line (e.g., "phy#0")
+            if line.startswith("phy#"):
+                phy_num = line.replace("phy#", "").strip()
+                # Map PHY number to actual PHY name
+                current_phy = phy_num_to_name.get(phy_num)
+            elif current_phy and line.strip().startswith("Interface"):
+                # Extract interface name
+                parts = line.split()
+                if len(parts) >= 2:
+                    iface = parts[1]
+                    if current_phy in phy_info and not phy_info[current_phy]["iface"]:
+                        phy_info[current_phy]["iface"] = iface
 
-            # Build description
+        # Build descriptions
+        for phy, info in phy_info.items():
             if info["iface"] and info["band"] != "Unknown":
                 info["description"] = f"WiFi Radio {info['iface']} ({info['band']})"
             elif info["band"] != "Unknown":
@@ -217,8 +210,6 @@ def get_wifi_phy_info():
                 info["description"] = f"WiFi Radio {info['iface']}"
             else:
                 info["description"] = "WiFi Radio"
-
-            phy_info[phy] = info
 
     except Exception:
         pass
@@ -496,6 +487,338 @@ def thermal_sensor_components():
     return components
 
 
+def parse_survey_dump(output):
+    """Parse iw survey dump output to get channel utilization data"""
+    channels = []
+    current_channel = None
+
+    for line in output.splitlines():
+        line = line.strip()
+
+        # Start of new survey entry
+        if line.startswith("Survey data from"):
+            if current_channel:
+                channels.append(current_channel)
+            current_channel = None
+
+        # Frequency line with optional [in use] marker
+        elif line.startswith("frequency:"):
+            parts = line.split()
+            try:
+                freq = int(parts[1])
+                in_use = "[in use]" in line
+
+                current_channel = {
+                    "frequency": freq,
+                    "in-use": in_use
+                }
+            except (ValueError, IndexError):
+                continue
+
+        # Parse channel metrics
+        elif current_channel:
+            try:
+                if line.startswith("noise:"):
+                    # Extract noise value: "noise: -95 dBm"
+                    noise_str = line.split()[1]
+                    current_channel["noise"] = int(noise_str)
+
+                elif line.startswith("channel active time:"):
+                    # Extract time: "channel active time: 1234 ms"
+                    time_str = line.split()[3]
+                    current_channel["active-time"] = int(time_str)
+
+                elif line.startswith("channel busy time:"):
+                    time_str = line.split()[3]
+                    current_channel["busy-time"] = int(time_str)
+
+                elif line.startswith("channel receive time:"):
+                    time_str = line.split()[3]
+                    current_channel["receive-time"] = int(time_str)
+
+                elif line.startswith("channel transmit time:"):
+                    time_str = line.split()[3]
+                    current_channel["transmit-time"] = int(time_str)
+
+            except (ValueError, IndexError):
+                # Skip malformed lines
+                continue
+
+    # Add last channel
+    if current_channel:
+        channels.append(current_channel)
+
+    return channels
+
+
+def parse_phy_info(phy_name):
+    """Parse 'iw phy <name> info' output to extract operational data"""
+    radio_data = {}
+
+    try:
+        output = HOST.run(tuple(f"iw phy {phy_name} info".split()), default="")
+        if not output:
+            return radio_data
+
+        lines = output.splitlines()
+        supported_channels = []
+        max_txpower = None
+        current_freq = None
+        current_phy_mode = None
+
+        for i, line in enumerate(lines):
+            line = line.strip()
+
+            # Parse frequencies/channels
+            # Example: "* 2412 MHz [1] (20.0 dBm)"
+            freq_match = re.match(r'\* (\d+) MHz \[(\d+)\].*\(([0-9.]+) dBm\)', line)
+            if freq_match:
+                freq_mhz = int(freq_match.group(1))
+                channel = int(freq_match.group(2))
+                power_dbm = float(freq_match.group(3))
+
+                supported_channels.append(channel)
+
+                # Track maximum power across all channels
+                if max_txpower is None or power_dbm > max_txpower:
+                    max_txpower = int(power_dbm)
+
+            # Parse current channel/frequency (from survey data or interface info)
+            # This might not be available if no interface is active
+            channel_match = re.search(r'channel (\d+).*\((\d+) MHz\)', line)
+            if channel_match:
+                current_freq = int(channel_match.group(2))
+
+            # Detect PHY modes from capabilities
+            if 'HE RX/TX' in line or '802.11ax' in line:
+                current_phy_mode = 'ieee80211ax'
+            elif 'VHT Capabilities' in line or '802.11ac' in line:
+                current_phy_mode = 'ieee80211ac'
+            elif 'HT Capabilities' in line or '802.11n' in line:
+                if current_phy_mode != 'ieee80211ax' and \
+                   current_phy_mode != 'ieee80211ac':
+                    current_phy_mode = 'ieee80211n'
+
+        # Add parsed data
+        if supported_channels:
+            radio_data['supported-channels'] = sorted(set(supported_channels))
+
+        if max_txpower is not None:
+            radio_data['max-txpower'] = max_txpower
+
+        if current_freq is not None:
+            radio_data['frequency'] = current_freq
+
+        if current_phy_mode:
+            radio_data['current-phy-mode'] = current_phy_mode
+
+    except Exception:
+        # If parsing fails, return partial data
+        pass
+
+    return radio_data
+
+
+def count_virtual_interfaces(phy_name):
+    """Count number of virtual interfaces on this radio"""
+    try:
+        output = HOST.run(("iw", "dev"), default="")
+        phy_num = phy_name[3:]  # Remove 'phy' prefix
+        count = 0
+
+        current_phy = None
+        for line in output.splitlines():
+            # Match "phy#0" or "wiphy 0"
+            phy_match = re.match(r'(phy|wiphy)\s*#?(\d+)', line)
+            if phy_match:
+                current_phy = phy_match.group(2)
+
+            # Count interfaces on this PHY
+            if current_phy == phy_num and 'Interface' in line:
+                count += 1
+
+        return count
+    except Exception:
+        return 0
+
+
+def parse_wifi_phy_details(phy_name):
+    """
+    Parse complete PHY information from iw including bands, driver, manufacturer, max interfaces.
+    Returns dict with bands, driver, manufacturer, max-interfaces.
+    """
+    result = {"bands": [], "driver": None, "manufacturer": "Unknown", "max-interfaces": {}}
+
+    try:
+        output = HOST.run(("iw", "phy", phy_name, "info"), default="")
+        if not output:
+            return result
+
+        current_band = None
+        band_id = 0
+        in_combinations = False
+
+        for line in output.splitlines():
+            stripped = line.strip()
+
+            # Detect band sections
+            if stripped.startswith("Band "):
+                if current_band and current_band.get("channels"):
+                    result["bands"].append(current_band)
+                band_id += 1
+                current_band = {"band": str(band_id), "channels": []}
+                in_combinations = False
+
+            # Parse frequencies/channels
+            elif current_band and not in_combinations and "MHz" in stripped and "*" in stripped:
+                parts = stripped.split()
+                if len(parts) >= 2:
+                    try:
+                        freq = int(float(parts[1]))
+                        current_band["channels"].append(freq)
+                    except (ValueError, IndexError):
+                        pass
+
+            # Parse capabilities within band
+            elif current_band and not in_combinations:
+                if "HT" in stripped or "High Throughput" in stripped:
+                    current_band["ht-capable"] = True
+                if "VHT" in stripped or "Very High Throughput" in stripped:
+                    current_band["vht-capable"] = True
+                if "HE " in stripped or "High Efficiency" in stripped:
+                    current_band["he-capable"] = True
+
+            # Detect interface combinations section
+            if "valid interface combinations" in stripped.lower():
+                in_combinations = True
+
+            # Parse max interfaces from combinations
+            # Format: "* #{ IBSS } <= 1, #{ AP } <= 16, #{ managed } <= 19,"
+            if in_combinations and "#{ AP }" in stripped:
+                try:
+                    # Find "AP" and get the number after "<="
+                    parts = stripped.split()
+                    ap_idx = parts.index("AP")
+                    # After "AP" comes "}", "<=", then the number with possible comma
+                    if ap_idx + 3 < len(parts):
+                        ap_limit_str = parts[ap_idx + 3].rstrip(',')
+                        result["max-interfaces"]["ap"] = int(ap_limit_str)
+                except (ValueError, IndexError):
+                    pass
+
+        # Add last band
+        if current_band and current_band.get("channels"):
+            result["bands"].append(current_band)
+
+        # Determine band names from frequencies
+        for band in result["bands"]:
+            if band.get("channels"):
+                freq = band["channels"][0]
+                if 2400 <= freq <= 2500:
+                    band["name"] = "2.4GHz"
+                elif 5150 <= freq <= 5900:
+                    band["name"] = "5GHz"
+                elif 5955 <= freq <= 7115:
+                    band["name"] = "6GHz"
+            del band["channels"]  # Remove temp channel list
+
+        # Get driver name from sysfs
+        try:
+            driver_path = f"/sys/class/ieee80211/{phy_name}/device/driver"
+            driver_link = HOST.run(("readlink", "-f", driver_path), default="").strip()
+            if driver_link:
+                driver_name = driver_link.split("/")[-1]
+                result["driver"] = driver_name
+
+                # Map driver to manufacturer
+                if "mt" in driver_name.lower() or "mediatek" in driver_name.lower():
+                    result["manufacturer"] = "MediaTek Inc."
+                elif "rtw" in driver_name.lower() or "realtek" in driver_name.lower():
+                    result["manufacturer"] = "Realtek Semiconductor Corp."
+                elif "ath" in driver_name.lower() or "qca" in driver_name.lower():
+                    result["manufacturer"] = "Qualcomm Atheros"
+                elif "iwl" in driver_name.lower() or "intel" in driver_name.lower():
+                    result["manufacturer"] = "Intel Corporation"
+                elif "brcm" in driver_name.lower() or "broadcom" in driver_name.lower():
+                    result["manufacturer"] = "Broadcom Inc."
+        except Exception:
+            pass
+
+    except Exception:
+        pass
+
+    return result
+
+
+def wifi_radio_components():
+    """
+    Create WiFi radio components with complete operational data.
+    Returns a list of hardware components for WiFi radios.
+    """
+    components = []
+    wifi_info = get_wifi_phy_info()
+
+    for phy_name, phy_data in wifi_info.items():
+        component = {
+            "name": phy_name,
+            "class": "infix-hardware:wifi",
+            "description": phy_data.get("description", "WiFi Radio")
+        }
+
+        # Initialize wifi-radio data structure
+        wifi_radio_data = {}
+
+        # Parse complete PHY details (bands, driver, manufacturer, max-interfaces)
+        phy_details = parse_wifi_phy_details(phy_name)
+
+        # Add manufacturer to component
+        if phy_details.get("manufacturer") and phy_details["manufacturer"] != "Unknown":
+            component["mfg-name"] = phy_details["manufacturer"]
+
+        # Add bands
+        if phy_details.get("bands"):
+            wifi_radio_data["bands"] = phy_details["bands"]
+
+        # Add driver
+        if phy_details.get("driver"):
+            wifi_radio_data["driver"] = phy_details["driver"]
+
+        # Add max-interfaces
+        if phy_details.get("max-interfaces"):
+            wifi_radio_data["max-interfaces"] = phy_details["max-interfaces"]
+
+        # Get PHY info (supported channels, max TX power, PHY mode, etc.)
+        phy_info = parse_phy_info(phy_name)
+        wifi_radio_data.update(phy_info)
+
+        # Count virtual interfaces
+        num_ifaces = count_virtual_interfaces(phy_name)
+        wifi_radio_data['num-virtual-interfaces'] = num_ifaces
+
+        # Get survey data if we have an interface
+        iface = phy_data.get("iface")
+        if iface:
+            try:
+                survey_output = HOST.run(tuple(f"iw dev {iface} survey dump".split()), default="")
+                channels = parse_survey_dump(survey_output)
+
+                if channels:
+                    wifi_radio_data["survey"] = {
+                        "channel": channels
+                    }
+            except Exception:
+                # If survey fails, continue without survey data
+                pass
+
+        # Add wifi-radio data to component
+        if wifi_radio_data:
+            component["infix-hardware:wifi-radio"] = wifi_radio_data
+
+        components.append(component)
+
+    return components
+
+
 def operational():
     systemjson = HOST.read_json("/run/system.json")
 
@@ -507,6 +830,7 @@ def operational():
             usb_port_components(systemjson) +
             hwmon_sensor_components() +
             thermal_sensor_components() +
+            wifi_radio_components() +
             [],
         },
     }

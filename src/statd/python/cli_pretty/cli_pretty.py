@@ -201,6 +201,29 @@ class PadWifiScan:
     ssid  = 40
     encryption = 30
     signal = 9
+    channel = 8
+
+
+class PadWifiRadio:
+    name = 10
+    phy_mode = 14
+    channel = 9
+    frequency = 12
+    max_txpower = 12
+    noise = 8
+    num_ifaces = 12
+
+
+class PadWifiStations:
+    mac = 18
+    signal = 8
+    time = 8
+    rx_packets = 12
+    tx_packets = 12
+    rx_bytes = 12
+    tx_bytes = 12
+    rx_speed = 10
+    tx_speed = 10
 
 
 class PadLldp:
@@ -284,7 +307,7 @@ class Decore():
 
     @staticmethod
     def bright_green(txt):
-        return Decore.decorate("1;32", txt, "39")
+        return Decore.decorate("1;32", txt, "0")
 
     @staticmethod
     def yellow(txt):
@@ -990,16 +1013,82 @@ class Iface:
     def pr_wifi_ssids(self):
         hdr = (f"{'SSID':<{PadWifiScan.ssid}}"
                f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
-               f"{'SIGNAL':<{PadWifiScan.signal}}")
+               f"{'SIGNAL':<{PadWifiScan.signal}}"
+               f"{'CHANNEL':<{PadWifiScan.channel}}")
 
+        print("\nAVAILABLE NETWORKS:")
         print(Decore.invert(hdr))
-        results = self.wifi.get("scan-results", {})
+        station = self.wifi.get("station", {})
+        results = station.get("scan-results", {})
         for result in results:
-            encstr = ", ".join(result["encryption"])
-            status = rssi_to_status(result["rssi"])
-            row = f"{result['ssid']:<{PadWifiScan.ssid}}"
+            encstr = ", ".join(result.get("encryption", ["Unknown"]))
+            status = rssi_to_status(result.get("rssi", -100))
+            channel = result.get("channel", "?")
+
+            row = f"{result.get('ssid', 'Hidden'):<{PadWifiScan.ssid}}"
             row += f"{encstr:<{PadWifiScan.encryption}}"
             row += f"{status:<{PadWifiScan.signal}}"
+            row += f"{channel:<{PadWifiScan.channel}}"
+
+            print(row)
+
+    def pr_wifi_stations(self):
+        """Display connected stations for AP mode"""
+        if not self.wifi:
+            return
+
+        # Get stations from access-point container
+        ap = self.wifi.get("access-point", {})
+        stations_data = ap.get("stations", {})
+        stations = stations_data.get("station", [])
+
+        if not stations:
+            print("No connected stations")
+            return
+
+        # Header
+        hdr = (f"{'MAC':<{PadWifiStations.mac}}"
+               f"{'SIGNAL':<{PadWifiStations.signal}}"
+               f"{'TIME':<{PadWifiStations.time}}"
+               f"{'RX PKT':<{PadWifiStations.rx_packets}}"
+               f"{'TX PKT':<{PadWifiStations.tx_packets}}"
+               f"{'RX BYTES':<{PadWifiStations.rx_bytes}}"
+               f"{'TX BYTES':<{PadWifiStations.tx_bytes}}"
+               f"{'RX SPEED':<{PadWifiStations.rx_speed}}"
+               f"{'TX SPEED':<{PadWifiStations.tx_speed}}")
+
+        print("\nCONNECTED STATIONS:")
+        print(Decore.invert(hdr))
+
+        # Station rows
+        for station in stations:
+            mac = station.get("mac-address", "unknown")
+            rssi = station.get("rssi")
+            signal_str = rssi_to_status(rssi) if rssi is not None else "------"
+
+            conn_time = station.get("connected-time", 0)
+            time_str = f"{conn_time}s"
+
+            rx_pkt = station.get("rx-packets", 0)
+            tx_pkt = station.get("tx-packets", 0)
+            rx_bytes = station.get("rx-bytes", 0)
+            tx_bytes = station.get("tx-bytes", 0)
+
+            # Speed in 100 kbit/s units, convert to Mbps for display
+            rx_speed = station.get("rx-speed", 0)
+            tx_speed = station.get("tx-speed", 0)
+            rx_speed_str = f"{rx_speed / 10:.1f}" if rx_speed else "-"
+            tx_speed_str = f"{tx_speed / 10:.1f}" if tx_speed else "-"
+
+            row = (f"{mac:<{PadWifiStations.mac}}"
+                   f"{signal_str:<{PadWifiStations.signal}}"
+                   f"{time_str:<{PadWifiStations.time}}"
+                   f"{rx_pkt:<{PadWifiStations.rx_packets}}"
+                   f"{tx_pkt:<{PadWifiStations.tx_packets}}"
+                   f"{rx_bytes:<{PadWifiStations.rx_bytes}}"
+                   f"{tx_bytes:<{PadWifiStations.tx_bytes}}"
+                   f"{rx_speed_str:<{PadWifiStations.rx_speed}}"
+                   f"{tx_speed_str:<{PadWifiStations.tx_speed}}")
 
             print(row)
 
@@ -1009,18 +1098,30 @@ class Iface:
         print(row)
         ssid = None
         rssi = None
+        mode = None
 
         if self.wifi:
-            rssi=self.wifi.get("rssi")
-            ssid=self.wifi.get("ssid")
-        if ssid is None:
-            ssid="------"
-
-        if rssi is None:
-            signal="------"
+            # Detect mode: AP has "stations", Station has "rssi" or "scan-results"
+            ap=self.wifi.get("access-point", {})
+            if ap:
+                ssid = ap.get("ssid", "------")
+                mode = "AP"
+                stations_data = ap.get("stations", {})
+                stations = stations_data.get("station", [])
+                station_count = len(stations)
+                data_str = f"{mode}, ssid: {ssid}, stations: {station_count}"
+            else:
+                station=self.wifi.get("station", {})
+                ssid = station.get("ssid", "------")
+                rssi = station.get("rssi")
+                mode = "Station"
+                if rssi is not None:
+                    signal = rssi_to_status(rssi)
+                    data_str = f"{mode}, ssid: {ssid}, signal: {signal}"
+                else:
+                    data_str = f"{mode}, ssid: {ssid}"
         else:
-            signal=rssi_to_status(rssi)
-        data_str = f"ssid: {ssid}, signal: {signal}"
+            data_str = "ssid: ------"
 
         row =  f"{'':<{Pad.iface}}"
         row += f"{'wifi':<{Pad.proto}}"
@@ -1291,12 +1392,29 @@ class Iface:
                 print(f"{'ipv6 addresses':<{20}}:")
 
         if self.wifi:
-            ssid=self.wifi.get('ssid', "----")
-            rssi=self.wifi.get('rssi', "----")
-            print(f"{'SSID':<{20}}: {ssid}")
-            print(f"{'Signal':<{20}}: {rssi}")
-            print("")
-            self.pr_wifi_ssids()
+            # Detect mode: AP has "stations", Station has "rssi" or "scan-results"
+            ap = self.wifi.get('access-point')
+            if ap:
+                mode = "access-point"
+                ssid = ap.get('ssid', "----")
+                stations_data = ap.get("stations", {})
+                stations = stations_data.get("station", [])
+                print(f"{'mode':<{20}}: {mode}")
+                print(f"{'ssid':<{20}}: {ssid}")
+                print(f"{'connected stations':<{20}}: {len(stations)}")
+                self.pr_wifi_stations()
+            else:
+                mode = "station"
+                station = self.wifi.get('station', {})
+                rssi = station.get('rssi')
+                ssid = station.get('ssid', "----")
+                print(f"{'mode':<{20}}: {mode}")
+                print(f"{'ssid':<{20}}: {ssid}")
+                if rssi is not None:
+                    signal_status = rssi_to_status(rssi)
+                    print(f"{'signal':<{20}}: {rssi} dBm ({signal_status})")
+                if "scan-results" in station:
+                    self.pr_wifi_ssids()
 
         if self.gre:
             print(f"{'local address':<{20}}: {self.gre['local']}")
@@ -1731,9 +1849,10 @@ def show_hardware(json):
     motherboard = [c for c in components if c.get("class") == "iana-hardware:chassis"]
     usb_ports = [c for c in components if c.get("class") == "infix-hardware:usb"]
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
+    wifi_radios = [c for c in components if c.get("class") == "infix-hardware:wifi"]
 
     # Determine overall width (use the wider of the two sections)
-    width = max(PadUsbPort.table_width(), PadSensor.table_width())
+    width = max(PadUsbPort.table_width(), PadSensor.table_width(), 100)
 
     # Display full-width inverted heading
     print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
@@ -1752,6 +1871,57 @@ def show_hardware(json):
             print(f"Base MAC Address    : {board['infix-hardware:phys-address']}")
         if board.get("hardware-rev"):
             print(f"Hardware Revision   : {board['hardware-rev']}")
+
+    if wifi_radios:
+        Decore.title("WiFi PHYs", width)
+
+        # Print header
+        hdr = f"{'PHY':<14}{'MANUFACTURER':<20}{'BANDS':<18}{'STANDARD':<13}MAX-AP"
+        print(Decore.invert(hdr))
+
+        for component in wifi_radios:
+            phy = component.get("name", "")
+            manufacturer = component.get("mfg-name", "Unknown")
+
+            # Get WiFi radio data
+            radio_data = component.get("infix-hardware:wifi-radio", {})
+
+            # Get band names from WiFi radio data
+            bands = radio_data.get("bands", [])
+            band_names = []
+            has_ht = False
+            has_vht = False
+            has_he = False
+
+            for band in bands:
+                if band.get("name"):
+                    band_names.append(band["name"])
+                if band.get("ht-capable"):
+                    has_ht = True
+                if band.get("vht-capable"):
+                    has_vht = True
+                if band.get("he-capable"):
+                    has_he = True
+
+            # Format bands
+            bands_str = "/".join(band_names) if band_names else "Unknown"
+
+            # Determine WiFi standard
+            standards = []
+            if has_ht:
+                standards.append("11n")
+            if has_vht:
+                standards.append("11ac")
+            if has_he:
+                standards.append("11ax")
+            standard_str = "/".join(standards) if standards else "Unknown"
+
+            # Max AP interfaces
+            max_if = radio_data.get("max-interfaces", {})
+            max_ap = max_if.get('ap', 'N/A') if max_if else 'N/A'
+
+            # Print row
+            print(f"{phy:<14}{manufacturer:<20}{bands_str:<18}{standard_str:<13}{max_ap}")
 
     if usb_ports:
         Decore.title("USB Ports", width)
@@ -1828,6 +1998,72 @@ def show_ntp(json):
         row += f"{source['state'] if source['state'] != 'not-combined' else 'not combined':<{PadNtpSource.state}}"
         row += f"{source['stratum']:>{PadNtpSource.stratum}}"
         row += f"{source['poll']:>{PadNtpSource.poll}}"
+        print(row)
+
+
+def show_wifi_radio(json):
+    """Display WiFi radio operational status"""
+    radios_data = json.get("infix-wifi-radio:wifi-radios", {})
+    radios = radios_data.get("wifi-radio", [])
+
+    if not radios:
+        print("No WiFi radios found.")
+        return
+
+    # Header
+    hdr = (f"{'NAME':<{PadWifiRadio.name}}"
+           f"{'PHY MODE':<{PadWifiRadio.phy_mode}}"
+           f"{'CHANNEL':<{PadWifiRadio.channel}}"
+           f"{'FREQUENCY':<{PadWifiRadio.frequency}}"
+           f"{'MAX POWER':<{PadWifiRadio.max_txpower}}"
+           f"{'NOISE':<{PadWifiRadio.noise}}"
+           f"{'INTERFACES':<{PadWifiRadio.num_ifaces}}")
+    print(Decore.invert(hdr))
+
+    # Rows
+    for radio in radios:
+        name = radio.get('name', 'N/A')
+
+        # PHY mode - extract just the mode name after colon
+        phy_mode = radio.get('current-phy-mode', 'N/A')
+        if ':' in phy_mode:
+            phy_mode = phy_mode.split(':')[-1]  # e.g., "ieee80211ac"
+
+        # Channel calculation from frequency (if frequency available)
+        frequency = radio.get('frequency', None)
+        if frequency:
+            freq_str = f"{frequency} MHz"
+            # Calculate channel from frequency
+            if 2412 <= frequency <= 2484:
+                channel = (frequency - 2407) // 5
+            elif 5170 <= frequency <= 5825:
+                channel = (frequency - 5000) // 5
+            else:
+                channel = "?"
+        else:
+            freq_str = "N/A"
+            channel = "N/A"
+
+        # Power
+        max_power = radio.get('max-txpower', None)
+        power_str = f"{max_power} dBm" if max_power is not None else "N/A"
+
+        # Noise
+        noise = radio.get('noise', None)
+        noise_str = f"{noise} dBm" if noise is not None else "N/A"
+
+        # Number of interfaces
+        num_ifaces = radio.get('num-virtual-interfaces', 0)
+
+        # Build row
+        row = f"{name:<{PadWifiRadio.name}}"
+        row += f"{phy_mode:<{PadWifiRadio.phy_mode}}"
+        row += f"{str(channel):<{PadWifiRadio.channel}}"
+        row += f"{freq_str:<{PadWifiRadio.frequency}}"
+        row += f"{power_str:<{PadWifiRadio.max_txpower}}"
+        row += f"{noise_str:<{PadWifiRadio.noise}}"
+        row += f"{num_ifaces:<{PadWifiRadio.num_ifaces}}"
+
         print(row)
 
 
@@ -3780,6 +4016,8 @@ def main():
         show_firewall_service(json_data, args.name)
     elif args.command == "show-ntp":
         show_ntp(json_data)
+    elif args.command == "show-wifi-radio":
+        show_wifi_radio(json_data)
     elif args.command == "show-bfd":
         show_bfd(json_data)
     elif args.command == "show-bfd-status":

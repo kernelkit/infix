@@ -378,6 +378,17 @@ def wifi(args: List[str]):
     else:
         print(f"Invalid interface name: {iface}")
 
+def wifi_radio(args: List[str]) -> None:
+    data = run_sysrepocfg("/infix-wifi-radio:wifi-radios")
+    if not data:
+        print("No WiFi radio data retrieved.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+    cli_pretty(data, "show-wifi-radio")
+
 def system(args: List[str]) -> None:
     # Get system state from sysrepo
     data = run_sysrepocfg("/ietf-system:system-state")
@@ -498,7 +509,8 @@ def execute_command(command: str, args: List[str]):
         'software': software,
         'stp': stp,
         'system': system,
-        'wifi': wifi
+        'wifi': wifi,
+        'wifi-radio': wifi_radio
     }
 
     if command in command_mapping:
