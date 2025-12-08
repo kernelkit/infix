@@ -57,6 +57,7 @@ nav:
       - Developing with Buildroot: override-package.md
       - Netboot HowTo: netboot.md
       - Regression Testing: testing.md
+      - System Tuning Guide: system-tuning.md
       - Test System Architecture: test-arch.md
       - Virtual Environments: virtual.md
       - Vital Product Data (VPD): vpd.md
