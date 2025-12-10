@@ -1969,9 +1969,9 @@ complex network setups, verifying interoperability between vendors, etc.</p>
 relevant Qemu packages are pulled in as well.  This trick, installing
 <a href="https://virt-manager.org/">virt-manager</a>, helps set up Qemu networking on your system.</p>
 </div>
-<p>A virtualized Infix x86_64 instance can easily be launched from a Linux
-system, with <a href="https://www.qemu.org/">Qemu</a> installed, by issuing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$ ./qemu.sh
+<p>A virtualized Infix x86_64 instance can be launched from a Linux system,
+with <a href="https://www.qemu.org/">Qemu</a> installed, by issuing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$ ./qemu/run.sh
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>...
 </code></pre></div>
 <p>from an unpacked <a href="https://github.com/kernelkit/infix/releases">release tarball</a>.  From a built source tree of
@@ -1980,7 +1980,7 @@ Infix the same functionality is bundled as:</p>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>...
 </code></pre></div>
 <p>To change settings, e.g. networking, <kbd>make run-menuconfig</kbd>, or
-from a pre-built Infix release tarball, using <kbd>./qemu.sh -c</kbd></p>
+from a pre-built Infix release tarball, using <kbd>./qemu/run.sh -c</kbd></p>
 <p>The Infix test suite is built around Qemu and <a href="https://github.com/wkz/qeneth">Qeneth</a>, see:</p>
 <ul>
 <li><a href="../testing/">Regression Testing with Infamy</a></li>
