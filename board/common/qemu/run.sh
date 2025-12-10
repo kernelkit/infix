@@ -10,12 +10,12 @@
 #
 # and then call this script with:
 #
-#    ./qemu.sh -c
+#    ./run.sh -c
 #
 # To bring up a menuconfig dialog.  Select `Exit` and save the changes.
 # For more help, see:_
 #
-#    ./qemu.sh -h
+#    ./run.sh -h
 #
 # shellcheck disable=SC3037
 
@@ -40,7 +40,7 @@ usage()
     echo "         Also, qemu.cfg has QEMU_APPEND which can affect this."
     echo
     echo "Example:"
-    echo "  qemu.sh -- finit.debug"
+    echo "  $prognm -- finit.debug"
     echo "___________________________________________________________________"
     echo "Note: 'kconfig-frontends' package (Debian/Ubuntu) must be installed"
     echo "      for -c to work: sudo apt install kconfig-frontents"
