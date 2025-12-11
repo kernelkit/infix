@@ -5,5 +5,7 @@
   name: "containers"
 - case: interfaces-all/test
   name: "interfaces-all"
+- case: journal-retention/test.py
+  name: "journal-retention"
 - case: system/test
   name: "system"
