@@ -9,6 +9,7 @@ from . import tun
 from . import veth
 from . import vlan
 from . import wifi
+from . import wireguard
 
 
 def statistics(iplink):
@@ -27,6 +28,7 @@ def statistics(iplink):
 
 def iplink2yang_type(iplink):
     ifname=iplink["ifname"]
+
     match iplink["link_type"]:
         case "loopback":
             return "infix-if-type:loopback"
@@ -36,6 +38,8 @@ def iplink2yang_type(iplink):
             data = HOST.run(tuple(f"ls /sys/class/net/{ifname}/wireless/".split()), default="no")
             if data != "no":
                 return "infix-if-type:wifi"
+        case "none":
+            pass # WireGuard interfaces is for some reason link_type none
         case _:
             return "infix-if-type:other"
 
@@ -54,6 +58,8 @@ def iplink2yang_type(iplink):
             return "infix-if-type:veth"
         case "vlan":
             return "infix-if-type:vlan"
+        case "wireguard":
+            return "infix-if-type:wireguard"
 
     return "infix-if-type:ethernet"
 
@@ -141,6 +147,9 @@ def interface(iplink, ipaddr):
         case "infix-if-type:wifi":
             if w := wifi.wifi(iplink["ifname"]):
                 interface["infix-interfaces:wifi"] = w
+        case "infix-if-type:wireguard":
+            if wg := wireguard.wireguard(iplink):
+                interface["infix-interfaces:wireguard"] = wg
 
     match iplink2yang_lower(iplink):
         case "infix-interfaces:bridge-port":
