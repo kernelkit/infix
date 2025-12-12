@@ -184,7 +184,7 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		/* Debug: print diff to file */
 		FILE *f = fopen("/tmp/confd-diff.json", "w");
 		if (f) {
-			lyd_print_file(f, diff, LYD_JSON, LYD_PRINT_WITHSIBLINGS);
+			lyd_print_file(f, diff, LYD_JSON, LYD_PRINT_SIBLINGS);
 			fclose(f);
 		}
 #endif

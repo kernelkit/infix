@@ -149,7 +149,7 @@ bool srx_isset(sr_session_ctx_t *session, const char *fmt, ...)
 	return isset;
 }
 
-static int set_vaitem(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
+static int set_vaitem(sr_session_ctx_t *session, const sr_val_t *val, uint32_t opts,
 		      const char *fmt, va_list ap)
 {
 	va_list apdup;
@@ -171,7 +171,7 @@ static int set_vaitem(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_op
 	return sr_set_item(session, xpath, val, opts);
 }
 
-int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
+int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, uint32_t opts,
 		 const char *fmt, ...)
 {
 	va_list ap;
@@ -184,7 +184,7 @@ int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options
 	return rc;
 }
 
-int srx_set_bool(sr_session_ctx_t *session, bool ena, sr_edit_options_t opts,
+int srx_set_bool(sr_session_ctx_t *session, bool ena, uint32_t opts,
 		 const char *fmt, ...)
 {
 	sr_val_t val = {
@@ -202,7 +202,7 @@ int srx_set_bool(sr_session_ctx_t *session, bool ena, sr_edit_options_t opts,
 }
 
 
-int srx_set_str(sr_session_ctx_t *session, const char *str, sr_edit_options_t opts,
+int srx_set_str(sr_session_ctx_t *session, const char *str, uint32_t opts,
 		const char *fmt, ...)
 {
 	char *xpath;
