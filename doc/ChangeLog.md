@@ -16,6 +16,8 @@ All notable changes to the project are documented in this file.
   production environments. See the documentation for usage examples
 - Add support for "routing interfaces", issue #647.  Lists interfaces with IP
   forwarding.  Inspect from CLI using `show interface`, look for `⇅` flag
+- Add memory tuning configuration for embedded network devices with aggressive
+  dirty page writeback and OOM panic for deterministic recovery
 
 ### Fixes
 
