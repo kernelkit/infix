@@ -59,3 +59,9 @@
 		XSWP(a, "e13", 13, &sfp0);
 	};
 };
+
+&cp0_spi1 {
+	spi-flash@0 {
+		broken-flash-reset;
+	};
+};
