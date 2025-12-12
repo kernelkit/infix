@@ -3,6 +3,13 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v25.11.0][UNRELEASED] - 
+-------------------------
+
+### Fixes
+
+- #1281: Remove debug from OSPF log and make it configured instead
+
 [v25.11.0][] - 2025-12-02
 -------------------------
 
