@@ -1,4 +1,4 @@
-From f0d3d8ff5eaee0ff1ea6af33f4233fa457e37ba8 Mon Sep 17 00:00:00 2001
+From be06695b7896ba896db7e159bc18fd0acc242e0c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 21 Nov 2023 20:15:24 +0100
 Subject: [PATCH 15/30] net: phy: marvell10g: Fix power-up when strapped to
