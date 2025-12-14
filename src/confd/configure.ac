@@ -23,7 +23,6 @@ AC_CONFIG_FILES([
 	yang/Makefile
 	yang/confd/Makefile
 	yang/test-mode/Makefile
-	yang/rousette/Makefile
 	src/Makefile
 ])
 
