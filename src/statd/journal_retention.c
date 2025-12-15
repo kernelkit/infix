@@ -30,7 +30,7 @@ static int parse_timestamp_filename(const char *filename, time_t *ts)
 	struct tm tm = {0};
 	int year, mon, day, hour, min, sec;
 
-	if (sscanf(filename, "%4d%2d%2d-%2d%2d%2d.json",
+	if (sscanf(filename, "%4d%2d%2d-%2d%2d%2d.json.gz",
 		   &year, &mon, &day, &hour, &min, &sec) != 6)
 		return -1;
 
@@ -76,7 +76,7 @@ int journal_scan_snapshots(const char *dir, struct snapshot **out_snapshots, int
 
 		if (strcmp(entry->d_name, "operational.json") == 0)
 			continue;
-		if (!strstr(entry->d_name, ".json"))
+		if (!strstr(entry->d_name, ".json.gz"))
 			continue;
 
 		if (parse_timestamp_filename(entry->d_name, &ts) != 0)

@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <pthread.h>
 #include <dirent.h>
+#include <zlib.h>
 
 #include <srx/common.h>
 
@@ -30,12 +31,48 @@ static void get_timestamp_filename(char *buf, size_t len, time_t ts)
 {
 	struct tm *tm = gmtime(&ts);
 
-	snprintf(buf, len, "%04d%02d%02d-%02d%02d%02d.json",
+	snprintf(buf, len, "%04d%02d%02d-%02d%02d%02d.json.gz",
 		 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
 		 tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
-/* Create timestamped snapshot and update operational.json symlink */
+/* Compress a file using gzip */
+static int gzip_file(const char *src, const char *dst)
+{
+	FILE *in;
+	gzFile gz;
+	char buf[4096];
+	size_t n;
+
+	in = fopen(src, "r");
+	if (!in) {
+		ERROR("Error, opening %s: %s", src, strerror(errno));
+		return -1;
+	}
+
+	gz = gzopen(dst, "wb");
+	if (!gz) {
+		ERROR("Error, opening %s: %s", dst, strerror(errno));
+		fclose(in);
+		return -1;
+	}
+
+	while ((n = fread(buf, 1, sizeof(buf), in)) > 0) {
+		if (gzwrite(gz, buf, n) != (int)n) {
+			ERROR("Error, writing to %s", dst);
+			gzclose(gz);
+			fclose(in);
+			unlink(dst);
+			return -1;
+		}
+	}
+
+	gzclose(gz);
+	fclose(in);
+	return 0;
+}
+
+/* Create timestamped snapshot and update operational.json */
 static int create_snapshot(const struct lyd_node *tree)
 {
 	char timestamp_file[300];
@@ -43,25 +80,22 @@ static int create_snapshot(const struct lyd_node *tree)
 	time_t now;
 	int ret;
 
+	/* Write latest snapshot as uncompressed operational.json for easy access */
+	ret = lyd_print_path(DUMP_FILE, tree, LYD_JSON, LYD_PRINT_WITHSIBLINGS);
+	if (ret != LY_SUCCESS) {
+		ERROR("Error, writing operational.json: %d", ret);
+		return -1;
+	}
+
+	/* Compress operational.json to timestamped archive */
 	now = time(NULL);
 	get_timestamp_filename(timestamp_file, sizeof(timestamp_file), now);
 	snprintf(timestamp_path, sizeof(timestamp_path), "%s/%s",
 		 JOURNAL_DIR, timestamp_file);
 
-	/* Write timestamped snapshot directly */
-	ret = lyd_print_path(timestamp_path, tree, LYD_JSON,
-			     LYD_PRINT_WITHSIBLINGS);
-	if (ret != LY_SUCCESS) {
-		ERROR("Error, writing snapshot %s: %d", timestamp_file, ret);
-		unlink(timestamp_path);  /* Clean up incomplete file */
+	if (gzip_file(DUMP_FILE, timestamp_path) != 0) {
+		ERROR("Error, compressing snapshot to %s", timestamp_file);
 		return -1;
-	}
-
-	/* Update operational.json symlink to point to latest */
-	unlink(DUMP_FILE);  /* Remove old symlink/file */
-	if (symlink(timestamp_file, DUMP_FILE) != 0) {
-		ERROR("Error, creating symlink to %s: %s",
-		      timestamp_file, strerror(errno));
 	}
 
 	DEBUG("Created snapshot %s", timestamp_file);

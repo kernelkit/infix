@@ -8,7 +8,7 @@ statd_CFLAGS        = -W -Wall -Wextra
 statd_CFLAGS       += $(jansson_CFLAGS) $(libyang_CFLAGS) $(sysrepo_CFLAGS)
 statd_CFLAGS       += $(libsrx_CFLAGS) $(libite_CFLAGS)
 statd_LDADD         = $(jansson_LIBS) $(libyang_LIBS) $(sysrepo_LIBS)
-statd_LDADD        += $(libsrx_LIBS) $(libite_LIBS) $(EV_LIBS)
+statd_LDADD        += $(libsrx_LIBS) $(libite_LIBS) $(EV_LIBS) -lz
 
 # Test stub for journal retention policy (no dependencies, standalone)
 noinst_PROGRAMS     = journal_retention_stub

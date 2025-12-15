@@ -23,14 +23,14 @@ from infamy.tap import Test
 def create_snapshot(test_dir, timestamp):
     """Create an empty snapshot file with the given timestamp"""
     dt = datetime.utcfromtimestamp(timestamp)
-    filename = dt.strftime("%Y%m%d-%H%M%S.json")
+    filename = dt.strftime("%Y%m%d-%H%M%S.json.gz")
     path = os.path.join(test_dir, filename)
     open(path, 'w').close()
     return filename
 
 def count_snapshots(test_dir):
-    """Count JSON snapshot files in directory"""
-    return len([f for f in os.listdir(test_dir) if f.endswith('.json')])
+    """Count compressed snapshot files in directory"""
+    return len([f for f in os.listdir(test_dir) if f.endswith('.json.gz')])
 
 def count_snapshots_by_age(test_dir, now):
     """Count snapshots by age bucket"""
@@ -50,12 +50,12 @@ def count_snapshots_by_age(test_dir, now):
     }
 
     for filename in os.listdir(test_dir):
-        if not filename.endswith('.json'):
+        if not filename.endswith('.json.gz'):
             continue
 
-        # Parse timestamp from filename (YYYYMMDD-HHMMSS.json)
+        # Parse timestamp from filename (YYYYMMDD-HHMMSS.json.gz)
         try:
-            ts_str = filename.replace('.json', '')
+            ts_str = filename.replace('.json.gz', '')
             dt = datetime.strptime(ts_str, "%Y%m%d-%H%M%S")
             ts = int(dt.timestamp())
             age = now - ts
