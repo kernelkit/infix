@@ -81,6 +81,9 @@ module infix-if-type {
   identity vxlan {
     base infix-interface-type;
   }
+  identity wireguard {
+    base infix-interface-type;
+  }
   identity lag {
     base infix-interface-type;
     base ianaift:ieee8023adLag;
