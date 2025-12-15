@@ -4,3 +4,6 @@
 
 - name: USB configuration with two USB ports
   case: usb_two_ports/test.py
+
+- name: Watchdog reset on system lockup
+  case: watchdog/test.py

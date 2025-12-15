@@ -1,0 +1,28 @@
+=== Watchdog reset on system lockup
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/hardware/watchdog]
+
+==== Description
+
+Verify that a system's watchdog trips and successfully reboots the
+system back to a working state if a lockup occurs.
+
+This is tested by using the Linux kernel's `test_lockup` module to
+inject a hard lockup (i.e., blocking servicing of all interrupts) on
+all CPU cores that lasts for twice as long as the watchdog's reported
+timeout.
+
+==== Topology
+
+image::topology.svg[Watchdog reset on system lockup topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Verify the presence of a watchdog device
+. Verify the presence of the test_lockup module
+. Trigger a hard lockup on all CPU cores
+. Wait for the watchdog to trip
+. Verify that the system reboots
+
+
