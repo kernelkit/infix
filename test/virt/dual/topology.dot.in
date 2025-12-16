@@ -24,7 +24,7 @@ graph "dual" {
         dut1 [
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut1 | { <e4> e4 | <e5> e5 | <e6> e6 }",
 	    pos="10,18!",
-	    provides="infix",
+	    provides="infix watchdog",
 	    expected_boot="primary",
 	    qn_console=9001,
 	    qn_mem="384M",
@@ -33,7 +33,7 @@ graph "dual" {
         dut2 [
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6 }",
 	    pos="10,12!",
-	    provides="infix",
+	    provides="infix watchdog",
 	    expected_boot="primary",
 	    qn_console=9002,
 	    qn_mem="384M",

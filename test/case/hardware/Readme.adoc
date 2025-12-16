@@ -5,7 +5,10 @@ Tests verifying hardware monitoring and management:
 
  - USB device detection and enumeration
  - Multiple USB port management and device handling
+ - Watchdog reset capability
 
 include::usb/Readme.adoc[]
 
 include::usb_two_ports/Readme.adoc[]
+
+include::watchdog/Readme.adoc[]
