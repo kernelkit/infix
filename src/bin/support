@@ -383,6 +383,17 @@ cmd_collect()
         collect system/netstat.txt ss -tunlp
     fi
 
+    for script in $(find "/etc/support.d" -type f -executable 2>/dev/null | sort); do
+        echo "[$(date -Iseconds)] Running ${script}..." >> "${EXEC_LOG}" 2>&1
+
+	if "${script}" "${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1; then
+            echo "[$(date -Iseconds)] Success: ${script}" >> "${EXEC_LOG}" 2>&1
+        else
+            exit_code=$?
+            echo "[$(date -Iseconds)] Failed (exit ${exit_code}): ${script}" >> "${EXEC_LOG}" 2>&1
+        fi
+    done
+
     # Completion timestamp in log
     echo "" >> "${EXEC_LOG}"
     echo "Completed: $(date -Iseconds)" >> "${EXEC_LOG}"
