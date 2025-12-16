@@ -18,7 +18,7 @@ MODULES=(
 	"ietf-bfd-ip-sh@2022-09-22.yang"
 	"iana-if-type@2023-01-26.yang"
         # NOTE: ietf-tls-client must be version matched with ietf-tls-server, used by netopeer2!
-	"ietf-tls-client@2023-12-28.yang"
+#	"ietf-tls-client@2023-12-28.yang"
 	"ietf-syslog@2024-03-21.yang -e file-action -e file-limit-size -e remote-action -e select-adv-compare -e select-match"
 	"infix-syslog@2025-11-17.yang"
 	"iana-hardware@2018-03-13.yang"
@@ -39,7 +39,7 @@ MODULES=(
 	"infix-firewall-icmp-types@2025-04-26.yang"
 	"infix-meta@2024-10-18.yang"
 	"infix-system@2025-10-18.yang"
-	"infix-services@2024-12-03.yang"
+	"infix-services@2025-12-10.yang"
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
@@ -47,5 +47,5 @@ MODULES=(
 	"ietf-crypto-types -e cleartext-symmetric-keys"
 	"infix-crypto-types@2025-06-17.yang"
 	"ietf-keystore -e symmetric-keys"
-	"infix-keystore@2025-06-17.yang"
+	"infix-keystore@2025-12-10.yang"
 )

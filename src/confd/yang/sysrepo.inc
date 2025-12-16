@@ -2,7 +2,7 @@
 # Modules from sysrepo
 
 MODULES=(
-	"sysrepo@2024-10-25.yang"
+	"sysrepo@2025-04-04.yang"
 	"sysrepo-factory-default@2025-03-18.yang"
 	"sysrepo-monitoring@2023-08-11.yang"
 	"sysrepo-notifications@2025-01-10.yang"
