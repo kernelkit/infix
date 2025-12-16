@@ -20,6 +20,7 @@ AC_CONFIG_FILES([
 	share/migrate/1.4/Makefile
 	share/migrate/1.5/Makefile
 	share/migrate/1.6/Makefile
+	share/migrate/1.7/Makefile
 	yang/Makefile
 	yang/confd/Makefile
 	yang/test-mode/Makefile
