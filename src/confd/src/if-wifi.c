@@ -87,7 +87,7 @@ int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net)
 	country     = lydx_get_cattr(wifi, "country-code");
 	encryption  = lydx_get_cattr(wifi, "encryption");
 	secret_node = lydx_get_xpathf(cif, "../../keystore/symmetric-keys/symmetric-key[name='%s']", secret_name);
-	secret      = lydx_get_cattr(secret_node, "cleartext-key");
+	secret      = lydx_get_cattr(secret_node, "cleartext-symmetric-key");
 
 	if (!enabled)
 		return wifi_gen_del(cif, net);

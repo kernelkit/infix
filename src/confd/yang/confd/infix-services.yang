@@ -25,6 +25,10 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2025-12-10 {
+    description "Adapt to changes in final version of ietf-keystore";
+    reference "internal";
+  }
   revision 2024-12-03 {
     description "Add support for SSH server configuration";
     reference "internal";
@@ -143,7 +147,7 @@ module infix-services {
         + "derived-from-or-self(deref(.)/../ks:private-key-format,  'infix-ct:rsa-private-key-format'))" {
         error-message "Only RSA hostkeys are supported.";
       }
-      type ks:asymmetric-key-ref;
+      type ks:central-asymmetric-key-ref;
     }
 
     list listen {
