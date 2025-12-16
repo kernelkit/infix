@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-PYTHON_LIBYANG_VERSION = 3.0.1
+PYTHON_LIBYANG_VERSION = 3.3.0
 PYTHON_LIBYANG_SOURCE = libyang-$(PYTHON_LIBYANG_VERSION).tar.gz
-PYTHON_LIBYANG_SITE = https://files.pythonhosted.org/packages/91/2e/ff13ee16c874d232d5d3fdff83f629cbc9ac47f9aaf2b59256b6a1bdbc16
+PYTHON_LIBYANG_SITE = https://files.pythonhosted.org/packages/34/d8/ebe9de6d29eaf62a684b34d30118294e48a05d7fbd1bb0af002b7627140d
 PYTHON_LIBYANG_SETUP_TYPE = setuptools
 PYTHON_LIBYANG_LICENSE = MIT
 PYTHON_LIBYANG_LICENSE_FILES = LICENSE
