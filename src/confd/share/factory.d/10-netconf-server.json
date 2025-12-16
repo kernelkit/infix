@@ -21,7 +21,11 @@
 			"name": "default-ssh",
 			"ssh": {
 			    "tcp-server-parameters": {
-				"local-address": "::"
+				"local-bind": [
+				    {
+					"local-address": "::"
+				    }
+				]
 			    },
 			    "ssh-server-parameters": {
 				"server-identity": {
