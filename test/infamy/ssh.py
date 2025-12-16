@@ -1,7 +1,7 @@
 import subprocess
 
 from dataclasses import dataclass
-from . import env
+from . import env, netutil, util
 
 
 @dataclass
@@ -14,6 +14,9 @@ class Location:
 
 import subprocess
 import os
+
+def ssh_syn(addr, port=22):
+    return netutil.tcp_port_is_open(addr, port)
 
 def fetch_file(remote_user, remote_address, remote_file, local_file, key_file, check=False, remove=False):
     """
@@ -62,9 +65,12 @@ def fetch_file(remote_user, remote_address, remote_file, local_file, key_file, c
             print(f"Error removing fetched file {local_file}: {e}")
 
 class Device(object):
-    def __init__(self, name: str, location: Location):
+    def __init__(self, name: str, location: Location, wait: bool=True):
         self.name = name
         self.location = location
+        if wait:
+            util.until(lambda: ssh_syn(location.host, location.port))
+
     def __str__(self):
         nm = f"{self.name}"
         if env.ENV.ltop:
