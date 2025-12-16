@@ -1,0 +1,232 @@
+From c5558b12ee67280b6281b639c3d8652cec3c7fa6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 19 Mar 2025 14:39:05 +0100
+Subject: [PATCH 32/38] restconf: add subscribed notifications filtering
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Implement filtering of subscribed notifications using xpath and subtree
+filters.
+
+Change-Id: Iee973a6a2d03b4a0d90f952afe5436ce701787ae
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                              |  2 +-
+ src/restconf/DynamicSubscriptions.cpp       | 13 ++++-
+ src/restconf/Server.cpp                     |  2 +-
+ tests/restconf-subscribed-notifications.cpp | 65 ++++++++++++++++++---
+ 4 files changed, 70 insertions(+), 12 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 5d3b7ce..28696b3 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -217,7 +217,7 @@ if(BUILD_TESTING)
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-interfaces@2018-02-20.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-ip@2018-02-22.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-network-instance@2019-01-21.yang
+-        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-subscribed-notifications@2019-09-09.yang --enable-feature replay --enable-feature encode-xml --enable-feature encode-json
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-subscribed-notifications@2019-09-09.yang --enable-feature replay --enable-feature encode-xml --enable-feature encode-json --enable-feature xpath --enable-feature subtree
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-restconf-subscribed-notifications@2019-11-17.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example.yang --enable-feature f1
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-delete.yang
+diff --git a/src/restconf/DynamicSubscriptions.cpp b/src/restconf/DynamicSubscriptions.cpp
+index fabc226..a13d344 100644
+--- a/src/restconf/DynamicSubscriptions.cpp
++++ b/src/restconf/DynamicSubscriptions.cpp
+@@ -59,13 +59,22 @@ sysrepo::DynamicSubscription makeStreamSubscription(sysrepo::Session& session, c
+     }
+ 
+     if (rpcInput.findPath("stream-filter-name")) {
+-        throw rousette::restconf::ErrorResponse(400, "application", "invalid-attribute", "Stream filtering is not supported");
++        /* TODO: This requires support for modifying subscriptions first; a change of entry in filters container must change all
++         * subscriptions using this stream-filter, see for instance https://datatracker.ietf.org/doc/html/rfc8639.html#section-2.7.2 */
++        throw rousette::restconf::ErrorResponse(400, "application", "invalid-attribute", "Stream filtering with predefined filters is not supported");
+     }
+ 
+     auto stopTime = optionalTime(rpcInput, "stop-time");
+ 
++    std::optional<std::variant<std::string, libyang::DataNodeAny>> filter;
++    if (auto node = rpcInput.findPath("stream-xpath-filter")) {
++        filter = node->asTerm().valueStr();
++    } else if (auto node = rpcInput.findPath("stream-subtree-filter")) {
++        filter = node->asAny();
++    }
++
+     return session.subscribeNotifications(
+-        std::nullopt /* TODO xpath filter */,
++        filter,
+         streamNode->asTerm().valueStr(),
+         stopTime,
+         std::nullopt /* TODO replayStart */);
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 04cdf56..76603b3 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -932,7 +932,7 @@ Server::Server(
+              {"ietf-netconf", "", {}},
+              {"ietf-yang-library", "2019-01-04", {}},
+              {"ietf-yang-patch", "2017-02-22", {}},
+-             {"ietf-subscribed-notifications", "2019-09-09", {"encode-xml", "encode-json"}},
++             {"ietf-subscribed-notifications", "2019-09-09", {"encode-xml", "encode-json", "xpath", "subtree"}},
+              {"ietf-restconf-subscribed-notifications", "2019-11-17", {}},
+          }) {
+         if (auto mod = m_monitoringSession.getContext().getModuleImplemented(module)) {
+diff --git a/tests/restconf-subscribed-notifications.cpp b/tests/restconf-subscribed-notifications.cpp
+index 7c7de4b..7fcf549 100644
+--- a/tests/restconf-subscribed-notifications.cpp
++++ b/tests/restconf-subscribed-notifications.cpp
+@@ -34,7 +34,8 @@ EstablishSubscriptionResult establishSubscription(
+     const libyang::Context& ctx,
+     const libyang::DataFormat rpcEncoding,
+     const std::optional<std::pair<std::string, std::string>>& rpcRequestAuthHeader,
+-    const std::optional<std::string>& encodingLeafValue)
++    const std::optional<std::string>& encodingLeafValue,
++    const std::variant<std::monostate, std::string, libyang::XML>& filter)
+ {
+     constexpr auto jsonPrefix = "ietf-subscribed-notifications";
+     constexpr auto xmlNamespace = "urn:ietf:params:xml:ns:yang:ietf-subscribed-notifications";
+@@ -56,6 +57,14 @@ EstablishSubscriptionResult establishSubscription(
+         rpcTree.newPath("encoding", *encodingLeafValue);
+     }
+ 
++    if (std::holds_alternative<std::string>(filter)) {
++        rpcTree.newPath("stream-xpath-filter", std::get<std::string>(filter));
++    }
++
++    if (std::holds_alternative<libyang::XML>(filter)) {
++        rpcTree.newPath2("stream-subtree-filter", std::get<libyang::XML>(filter));
++    }
++
+     switch (rpcEncoding) {
+     case libyang::DataFormat::JSON:
+         requestHeaders.insert(CONTENT_TYPE_JSON);
+@@ -128,6 +137,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+ 
+     libyang::DataFormat rpcRequestEncoding = libyang::DataFormat::JSON;
+     std::optional<std::string> rpcSubscriptionEncoding;
++    std::variant<std::monostate, std::string, libyang::XML> rpcFilter;
+     std::optional<std::pair<std::string, std::string>> rpcRequestAuthHeader;
+ 
+     SECTION("NACM authorization")
+@@ -161,7 +171,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+         SECTION("User DWDM establishes subscription")
+         {
+             std::pair<std::string, std::string> user = AUTH_DWDM;
+-            auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, user, std::nullopt);
++            auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, user, std::nullopt, rpcFilter);
+ 
+             std::map<std::string, std::string> headers;
+ 
+@@ -277,6 +287,23 @@ TEST_CASE("RESTCONF subscribed notifications")
+     ]
+   }
+ }
++)###"});
++
++        srSess.switchDatastore(sysrepo::Datastore::Operational);
++        srSess.setItem("/ietf-subscribed-notifications:filters/stream-filter[name='xyz']/stream-xpath-filter", "/example:eventA");
++        srSess.applyChanges();
++        REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:establish-subscription", {CONTENT_TYPE_JSON}, R"###({ "ietf-subscribed-notifications:input": { "stream": "NETCONF", "stream-filter-name": "xyz" } })###")
++                == Response{400, jsonHeaders, R"###({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-attribute",
++        "error-message": "Stream filtering with predefined filters is not supported"
++      }
++    ]
++  }
++}
+ )###"});
+     }
+ 
+@@ -330,6 +357,28 @@ TEST_CASE("RESTCONF subscribed notifications")
+                 EXPECT_NOTIFICATION(notificationsJSON[4], seq1);
+             }
+ 
++            SECTION("XPath filter set")
++            {
++                rpcRequestAuthHeader = AUTH_ROOT;
++                rpcRequestEncoding = libyang::DataFormat::JSON;
++                rpcFilter = "/example:eventA | /example:eventB";
++                rpcSubscriptionEncoding = "encode-json";
++                EXPECT_NOTIFICATION(notificationsJSON[0], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[1], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[3], seq1);
++            }
++
++            SECTION("Subtree filter set")
++            {
++                rpcRequestAuthHeader = AUTH_ROOT;
++                rpcRequestEncoding = libyang::DataFormat::JSON;
++                // Constructing the filter as XML is only an implementation detail. The tree is then constructed as JSON in establishSubscription
++                rpcFilter = libyang::XML{"<eventA xmlns='http://example.tld/example' />"};
++                rpcSubscriptionEncoding = "encode-json";
++                EXPECT_NOTIFICATION(notificationsJSON[0], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[3], seq1);
++            }
++
+             SECTION("Content-type with set encode leaf")
+             {
+                 rpcRequestAuthHeader = AUTH_ROOT;
+@@ -361,7 +410,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+             }
+         }
+ 
+-        auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++        auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter);
+         REQUIRE(std::regex_match(uri, std::regex("/streams/subscribed/"s + uuidV4Regex)));
+ 
+         PREPARE_LOOP_WITH_EXCEPTIONS
+@@ -474,7 +523,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+ )"};
+             }
+ 
+-            auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++            auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter);
+             auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
+             REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:delete-subscription", headers, body) == expectedResponse);
+         }
+@@ -482,7 +531,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+         SECTION("Anonymous user cannot delete subscription craeted by anonymous user")
+         {
+             rpcRequestAuthHeader = std::nullopt;
+-            auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++            auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter);
+             auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
+             REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:delete-subscription", headers, body) == Response{403, jsonHeaders, R"({
+   "ietf-restconf:errors": {
+@@ -538,7 +587,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+             expectedResponse = Response{204, noContentTypeHeaders, ""};
+         }
+ 
+-        auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++        auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter);
+         auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
+         REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:kill-subscription", headers, body) == expectedResponse);
+     }
+@@ -582,7 +631,7 @@ TEST_CASE("Terminating server under notification load")
+     std::optional<std::pair<std::string, std::string>> rpcRequestAuthHeader;
+ 
+     std::pair<std::string, std::string> auth = AUTH_ROOT;
+-    auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, auth, std::nullopt);
++    auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, auth, std::nullopt, {});
+ 
+     PREPARE_LOOP_WITH_EXCEPTIONS;
+ 
+@@ -633,7 +682,7 @@ TEST_CASE("Cleaning up inactive subscriptions")
+     constexpr auto inactivityTimeout = 2s;
+     auto server = rousette::restconf::Server{srConn, SERVER_ADDRESS, SERVER_PORT, 0ms, 55s, inactivityTimeout};
+ 
+-    auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, {AUTH_ROOT}, std::nullopt);
++    auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, {AUTH_ROOT}, std::nullopt, {});
+ 
+     SECTION("Client connects and disconnects")
+     {
+-- 
+2.43.0
+

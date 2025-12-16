@@ -1,0 +1,61 @@
+From ffc52b2e454ae4ac4fa1948cb76a9469026d453e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Mon, 6 Oct 2025 22:35:27 +0200
+Subject: [PATCH 19/38] ping: use a monotonic timer
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The deadline_timer uses system's UTC clock which is not monotonic (i.e.,
+it jumps when the wall clock is adjusted). Let's switch to a monotonic
+timer.
+
+Given that boost::asio::steady_timer::expires_from_now() is marked as
+deprecated, use the other function.
+
+Change-Id: I40383721ecb0f12bfcb3f638124a32150a29bf48
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/http/EventStream.cpp | 2 +-
+ src/http/EventStream.h   | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/http/EventStream.cpp b/src/http/EventStream.cpp
+index f97d953..280addd 100644
+--- a/src/http/EventStream.cpp
++++ b/src/http/EventStream.cpp
+@@ -180,7 +180,7 @@ void EventStream::enqueue(const std::string& fieldName, const std::string& what)
+ 
+ void EventStream::start_ping()
+ {
+-    ping.expires_from_now(boost::posix_time::seconds(m_keepAlivePingInterval.count()));
++    ping.expires_after(m_keepAlivePingInterval);
+     ping.async_wait([weak = weak_from_this()](const boost::system::error_code& ec) {
+         auto myself = weak.lock();
+         if (!myself) {
+diff --git a/src/http/EventStream.h b/src/http/EventStream.h
+index 87d8c82..f9f0dd6 100644
+--- a/src/http/EventStream.h
++++ b/src/http/EventStream.h
+@@ -7,7 +7,7 @@
+ 
+ #pragma once
+ 
+-#include <boost/asio/deadline_timer.hpp>
++#include <boost/asio/steady_timer.hpp>
+ #include <boost/signals2.hpp>
+ #include <list>
+ #include <memory>
+@@ -50,7 +50,7 @@ private:
+     };
+ 
+     State state = WaitingForEvents;
+-    boost::asio::deadline_timer ping;
++    boost::asio::steady_timer ping;
+     std::list<std::string> queue;
+     mutable std::mutex mtx; // for `state` and `queue`
+     boost::signals2::scoped_connection eventSub, terminateSub;
+-- 
+2.43.0
+

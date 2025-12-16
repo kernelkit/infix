@@ -1,0 +1,52 @@
+From fff342945eb3c8deb6f7aa67aca54f9c9f87f3ec Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 11 Sep 2025 18:56:31 +0200
+Subject: [PATCH 18/38] Use a working version of nghttp2-asio
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The latest upstream version does not build on Boost 1.87, and there's a
+nasty crash in the destructor which led to a nice little heap of hair on
+our desks. It's time to fork that thing.
+
+Link: https://github.com/nghttp2/nghttp2-asio/pull/9
+Link: https://github.com/nghttp2/nghttp2-asio/pull/25
+Change-Id: Iec9619ce45e7e76f0781d39966d0b6c7cc6fa778
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .zuul.yaml | 2 +-
+ README.md  | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index e5a87b6..a994f34 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -6,7 +6,7 @@
+     required-projects: &projects
+       - CzechLight/dependencies
+       - name: github/nghttp2/nghttp2-asio
+-        override-checkout: main
++        override-checkout: cesnet/main
+     vars:
+       zuul_work_dir: "{{ zuul.projects[zuul.project.canonical_hostname + '/CzechLight/rousette'].src_dir }}"
+ 
+diff --git a/README.md b/README.md
+index a42c64d..437afd3 100644
+--- a/README.md
++++ b/README.md
+@@ -84,7 +84,8 @@ In practical terms, this means that the NACM access rules for the following XPat
+ 
+ ## Dependencies
+ 
+-- [nghttp2-asio](https://github.com/nghttp2/nghttp2-asio) - asynchronous C++ library for HTTP/2
++- [nghttp2-asio](https://github.com/CESNET/nghttp2-asio) - asynchronous C++ library for HTTP/2
++  - we strongly recommend using [our fork](https://github.com/CESNET/nghttp2-asio) which appears to be better maintained, and which contains important bugfixes which have not been merged upstream yet
+ - [sysrepo-cpp](https://github.com/sysrepo/sysrepo-cpp) - object-oriented bindings of the [*sysrepo*](https://github.com/sysrepo/sysrepo) library
+ - [libyang-cpp](https://github.com/CESNET/libyang-cpp) - C++ bindings for *libyang*
+ - [PAM](http://www.linux-pam.org/) - for authentication
+-- 
+2.43.0
+

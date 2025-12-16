@@ -1,7 +1,7 @@
 From 22b41e7ed8268b94ccc139138e2037c390a3a616 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Bed=C5=99ich=20Schindler?= <bedrich.schindler@gmail.com>
 Date: Thu, 10 Jul 2025 15:00:45 +0200
-Subject: [PATCH] Implement `SchemaNode::actionRpcs()`
+Subject: [PATCH 1/7] Implement `SchemaNode::actionRpcs()`
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

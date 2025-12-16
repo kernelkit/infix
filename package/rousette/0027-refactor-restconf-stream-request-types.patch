@@ -1,0 +1,165 @@
+From e2c8036130a2265476579ffa9f4354741b54bbd5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 13 Oct 2025 16:10:51 +0200
+Subject: [PATCH 27/38] refactor: restconf stream request types
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+In commit 97ceef1 ("restconf: refactor uri parser for stream URIs") we
+prepared the URI parser for the new subscribed stream notifications.
+What I did not think through was that the subscribed notifications do
+not have query parameters. However, I refactored the types in a way
+that the query parameters member is now in the common base type.
+
+This patch fixes that by editing the types in a way that only the
+stream notifications will have the query parameters member. The
+type for subscribed notifications (which will come in a followup patch)
+will not have it.
+
+See-also: 97ceef119c900c37bbaa27860c3b43cfa6d69f95 ("restconf: refactor uri parser for stream URIs")
+Change-Id: Idc1e05f7ff05cea84b5806f60e217605f75e7a9f
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp |  2 +-
+ src/restconf/uri.cpp    | 15 ++++++++-------
+ src/restconf/uri.h      | 14 +++++++-------
+ src/restconf/uri_impl.h |  2 +-
+ tests/uri-parser.cpp    | 12 ++++++------
+ 5 files changed, 23 insertions(+), 22 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 7287976..616d7d4 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -1020,7 +1020,7 @@ Server::Server(
+                 shutdownRequested,
+                 keepAlivePingInterval,
+                 sess,
+-                streamRequest.type.encoding,
++                streamRequest.encoding,
+                 xpathFilter,
+                 startTime,
+                 stopTime);
+diff --git a/src/restconf/uri.cpp b/src/restconf/uri.cpp
+index 956c155..6ee011c 100644
+--- a/src/restconf/uri.cpp
++++ b/src/restconf/uri.cpp
+@@ -58,11 +58,11 @@ const auto resources = x3::rule<class resources, URIPath>{"resources"} =
+ const auto uriGrammar = x3::rule<class grammar, URIPath>{"grammar"} = x3::lit("/restconf") >> resources;
+ 
+ 
+-const auto netconfStream = x3::rule<class netconfStream, RestconfStreamRequest::NetconfStream>{"netconfStream"} =
++const auto netconfStream = x3::rule<class netconfStream, NetconfStreamRequest>{"netconfStream"} =
+     x3::lit("/NETCONF") >>
+     ((x3::lit("/XML") >> x3::attr(libyang::DataFormat::XML)) |
+      (x3::lit("/JSON") >> x3::attr(libyang::DataFormat::JSON)));
+-const auto streamUriGrammar = x3::rule<class grammar, RestconfStreamRequest::NetconfStream>{"streamsGrammar"} = x3::lit("/streams") >> netconfStream;
++const auto streamUriGrammar = x3::rule<class grammar, NetconfStreamRequest>{"streamsGrammar"} = x3::lit("/streams") >> netconfStream;
+ 
+ // clang-format on
+ }
+@@ -204,9 +204,9 @@ std::optional<queryParams::QueryParams> parseQueryParams(const std::string& quer
+     return ret;
+ }
+ 
+-std::optional<RestconfStreamRequest::NetconfStream> parseStreamUri(const std::string& uriPath)
++std::optional<RestconfStreamRequest> parseStreamUri(const std::string& uriPath)
+ {
+-    std::optional<RestconfStreamRequest::NetconfStream> ret;
++    std::optional<RestconfStreamRequest> ret;
+ 
+     if (!x3::parse(std::begin(uriPath), std::end(uriPath), streamUriGrammar >> x3::eoi, ret)) {
+         return std::nullopt;
+@@ -668,8 +668,8 @@ std::optional<std::variant<libyang::Module, libyang::SubmoduleParsed>> asYangMod
+     return std::nullopt;
+ }
+ 
+-RestconfStreamRequest::NetconfStream::NetconfStream() = default;
+-RestconfStreamRequest::NetconfStream::NetconfStream(const libyang::DataFormat& encoding)
++NetconfStreamRequest::NetconfStreamRequest() = default;
++NetconfStreamRequest::NetconfStreamRequest(const libyang::DataFormat& encoding)
+     : encoding(encoding)
+ {
+ }
+@@ -692,7 +692,8 @@ RestconfStreamRequest asRestconfStreamRequest(const std::string& httpMethod, con
+ 
+     validateQueryParametersForStream(*queryParameters);
+ 
+-    return {*type, *queryParameters};
++    type->queryParams = *queryParameters;
++    return *type;
+ }
+ 
+ /** @brief Returns a set of allowed HTTP methods for given URI. Usable for the 'allow' header */
+diff --git a/src/restconf/uri.h b/src/restconf/uri.h
+index d9dd29f..f6c63a7 100644
+--- a/src/restconf/uri.h
++++ b/src/restconf/uri.h
+@@ -197,16 +197,16 @@ struct RestconfRequest {
+     RestconfRequest(Type type, const boost::optional<ApiIdentifier>& datastore, const std::string& path, const queryParams::QueryParams& queryParams);
+ };
+ 
+-struct RestconfStreamRequest {
+-    struct NetconfStream {
+-        libyang::DataFormat encoding;
+-
+-        NetconfStream();
+-        NetconfStream(const libyang::DataFormat& encoding);
+-    } type;
++struct NetconfStreamRequest {
++    libyang::DataFormat encoding;
+     queryParams::QueryParams queryParams;
++
++    NetconfStreamRequest();
++    NetconfStreamRequest(const libyang::DataFormat& encoding);
+ };
+ 
++using RestconfStreamRequest = NetconfStreamRequest;
++
+ RestconfRequest asRestconfRequest(const libyang::Context& ctx, const std::string& httpMethod, const std::string& uriPath, const std::string& uriQueryString = "");
+ std::optional<libyang::SchemaNode> asLibyangSchemaNode(const libyang::Context& ctx, const std::vector<PathSegment>& pathSegments);
+ std::pair<std::string, PathSegment> asLibyangPathSplit(const libyang::Context& ctx, const std::string& uriPath);
+diff --git a/src/restconf/uri_impl.h b/src/restconf/uri_impl.h
+index 00b22f6..bc36cca 100644
+--- a/src/restconf/uri_impl.h
++++ b/src/restconf/uri_impl.h
+@@ -66,7 +66,7 @@ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::impl::YangModule, name, revision);
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::PathSegment, apiIdent, keys);
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::ApiIdentifier, prefix, identifier);
+ 
+-BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::RestconfStreamRequest::NetconfStream, encoding);
++BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::NetconfStreamRequest, encoding);
+ 
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::queryParams::fields::ParenExpr, lhs, rhs);
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::queryParams::fields::SlashExpr, lhs, rhs);
+diff --git a/tests/uri-parser.cpp b/tests/uri-parser.cpp
+index 23c2b79..38ca80f 100644
+--- a/tests/uri-parser.cpp
++++ b/tests/uri-parser.cpp
+@@ -1082,15 +1082,15 @@ TEST_CASE("URI path parser")
+         using rousette::restconf::RestconfStreamRequest;
+ 
+         {
+-            auto [type, queryParams] = asRestconfStreamRequest("GET", "/streams/NETCONF/XML", "");
+-            REQUIRE(type.encoding == libyang::DataFormat::XML);
+-            REQUIRE(queryParams.empty());
++            auto req = asRestconfStreamRequest("GET", "/streams/NETCONF/XML", "");
++            REQUIRE(req.encoding == libyang::DataFormat::XML);
++            REQUIRE(req.queryParams.empty());
+         }
+ 
+         {
+-            auto [type, queryParams] = asRestconfStreamRequest("GET", "/streams/NETCONF/JSON", "");
+-            REQUIRE(type.encoding == libyang::DataFormat::JSON);
+-            REQUIRE(queryParams.empty());
++            auto req = asRestconfStreamRequest("GET", "/streams/NETCONF/JSON", "");
++            REQUIRE(req.encoding == libyang::DataFormat::JSON);
++            REQUIRE(req.queryParams.empty());
+         }
+ 
+         REQUIRE_THROWS_WITH_AS(asRestconfStreamRequest("GET", "/streams/NETCONF", ""),
+-- 
+2.43.0
+

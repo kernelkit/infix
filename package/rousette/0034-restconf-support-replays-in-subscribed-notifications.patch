@@ -1,0 +1,322 @@
+From 817debab72d10f2f30e83f1630bebdcdf3ec9455 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 10 Mar 2025 15:33:08 +0100
+Subject: [PATCH 34/38] restconf: support replays in subscribed notifications
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: Idfc3ceb99c8111c5575c1c8b94d539f234fa43be
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                              |   1 +
+ src/restconf/DynamicSubscriptions.cpp       |  24 ++++-
+ src/restconf/Server.cpp                     |   2 +-
+ tests/restconf-subscribed-notifications.cpp | 102 ++++++++++++++++++--
+ 4 files changed, 115 insertions(+), 14 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3d79dad..f98a64b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -223,6 +223,7 @@ if(BUILD_TESTING)
+             --enable-feature encode-json
+             --enable-feature xpath
+             --enable-feature subtree
++            --enable-feature replay
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-restconf-subscribed-notifications@2019-11-17.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example.yang --enable-feature f1
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-delete.yang
+diff --git a/src/restconf/DynamicSubscriptions.cpp b/src/restconf/DynamicSubscriptions.cpp
+index a13d344..9be3e92 100644
+--- a/src/restconf/DynamicSubscriptions.cpp
++++ b/src/restconf/DynamicSubscriptions.cpp
+@@ -50,7 +50,7 @@ libyang::DataFormat getEncoding(const libyang::DataNode& rpcInput, const libyang
+     return requestEncoding;
+ }
+ 
+-sysrepo::DynamicSubscription makeStreamSubscription(sysrepo::Session& session, const libyang::DataNode& rpcInput)
++sysrepo::DynamicSubscription makeStreamSubscription(sysrepo::Session& session, const libyang::DataNode& rpcInput, libyang::DataNode& rpcOutput)
+ {
+     auto streamNode = rpcInput.findPath("stream");
+ 
+@@ -73,11 +73,27 @@ sysrepo::DynamicSubscription makeStreamSubscription(sysrepo::Session& session, c
+         filter = node->asAny();
+     }
+ 
+-    return session.subscribeNotifications(
++    std::optional<sysrepo::NotificationTimeStamp> replayStartTime;
++    if (auto node = rpcInput.findPath("replay-start-time")) {
++        replayStartTime = libyang::fromYangTimeFormat<sysrepo::NotificationTimeStamp::clock>(node->asTerm().valueStr());
++    }
++
++    auto sub = session.subscribeNotifications(
+         filter,
+         streamNode->asTerm().valueStr(),
+         stopTime,
+-        std::nullopt /* TODO replayStart */);
++        replayStartTime);
++
++    /* Node replay-start-time-revision should be set only if time was revised to be different than the requested start time,
++     * i.e. when the "replay-start-time" contains a value that is earlier than what a publisher's retained history.
++     * Then the actual publisher's revised start time MUST be set in the returned "replay-start-time-revision" object.
++     * (RFC 8639, 2.4.2.1)
++     * */
++    if (auto replayStartTimeRevision = sub.replayStartTime(); replayStartTimeRevision && replayStartTime) {
++        rpcOutput.newPath("replay-start-time-revision", libyang::yangTimeFormat(*replayStartTimeRevision, libyang::TimezoneInterpretation::Local), libyang::CreationOptions::Output);
++    }
++
++    return sub;
+ }
+ }
+ 
+@@ -109,7 +125,7 @@ void DynamicSubscriptions::establishSubscription(sysrepo::Session& session, cons
+     auto dataFormat = getEncoding(rpcInput, requestEncoding);
+ 
+     try {
+-        auto sub = makeStreamSubscription(session, rpcInput);
++        auto sub = makeStreamSubscription(session, rpcInput, rpcOutput);
+ 
+         rpcOutput.newPath("id", std::to_string(sub.subscriptionId()), libyang::CreationOptions::Output);
+         rpcOutput.newPath("ietf-restconf-subscribed-notifications:uri", m_restconfStreamUri + "subscribed/" + boost::uuids::to_string(uuid), libyang::CreationOptions::Output);
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 76603b3..d166236 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -932,7 +932,7 @@ Server::Server(
+              {"ietf-netconf", "", {}},
+              {"ietf-yang-library", "2019-01-04", {}},
+              {"ietf-yang-patch", "2017-02-22", {}},
+-             {"ietf-subscribed-notifications", "2019-09-09", {"encode-xml", "encode-json", "xpath", "subtree"}},
++             {"ietf-subscribed-notifications", "2019-09-09", {"encode-xml", "encode-json", "xpath", "subtree", "replay"}},
+              {"ietf-restconf-subscribed-notifications", "2019-11-17", {}},
+          }) {
+         if (auto mod = m_monitoringSession.getContext().getModuleImplemented(module)) {
+diff --git a/tests/restconf-subscribed-notifications.cpp b/tests/restconf-subscribed-notifications.cpp
+index 7fcf549..d42fa96 100644
+--- a/tests/restconf-subscribed-notifications.cpp
++++ b/tests/restconf-subscribed-notifications.cpp
+@@ -18,7 +18,7 @@ static const auto SERVER_PORT = "10092";
+ #include "tests/pretty_printers.h"
+ 
+ #define SEND_NOTIFICATION(DATA) notifSession.sendNotification(*ctx.parseOp(DATA, libyang::DataFormat::JSON, libyang::OperationType::NotificationYang).op, sysrepo::Wait::No);
+-
++#define REPLAY_COMPLETED trompeloeil::re(R"(^\{"ietf-subscribed-notifications:replay-completed":\{"id":[0-9]+\}\}$)")
+ constexpr auto uuidV4Regex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}";
+ 
+ using namespace std::chrono_literals;
+@@ -27,6 +27,7 @@ using namespace std::string_literals;
+ struct EstablishSubscriptionResult {
+     uint32_t id;
+     std::string url;
++    std::optional<sysrepo::NotificationTimeStamp> replayStartTimeRevision;
+ };
+ 
+ /** @brief Calls establish-subscription rpc, returns the url of the stream associated with the created subscription */
+@@ -35,7 +36,8 @@ EstablishSubscriptionResult establishSubscription(
+     const libyang::DataFormat rpcEncoding,
+     const std::optional<std::pair<std::string, std::string>>& rpcRequestAuthHeader,
+     const std::optional<std::string>& encodingLeafValue,
+-    const std::variant<std::monostate, std::string, libyang::XML>& filter)
++    const std::variant<std::monostate, std::string, libyang::XML>& filter,
++    const std::optional<sysrepo::NotificationTimeStamp>& replayStartTime)
+ {
+     constexpr auto jsonPrefix = "ietf-subscribed-notifications";
+     constexpr auto xmlNamespace = "urn:ietf:params:xml:ns:yang:ietf-subscribed-notifications";
+@@ -65,6 +67,10 @@ EstablishSubscriptionResult establishSubscription(
+         rpcTree.newPath2("stream-subtree-filter", std::get<libyang::XML>(filter));
+     }
+ 
++    if (replayStartTime) {
++        rpcTree.newPath("replay-start-time", libyang::yangTimeFormat(*replayStartTime, libyang::TimezoneInterpretation::Local));
++    }
++
+     switch (rpcEncoding) {
+     case libyang::DataFormat::JSON:
+         requestHeaders.insert(CONTENT_TYPE_JSON);
+@@ -99,9 +105,15 @@ EstablishSubscriptionResult establishSubscription(
+     auto urlNode = reply.findPath("ietf-restconf-subscribed-notifications:uri", libyang::InputOutputNodes::Output);
+     REQUIRE(urlNode);
+ 
++    std::optional<sysrepo::NotificationTimeStamp> replayStartTimeRevision;
++    if (auto node = reply.findPath("ietf-subscribed-notifications:replay-start-time-revision", libyang::InputOutputNodes::Output)) {
++        replayStartTimeRevision = libyang::fromYangTimeFormat<sysrepo::NotificationTimeStamp::clock>(node->asTerm().valueStr());
++    }
++
+     return {
+         std::get<uint32_t>(idNode->asTerm().value()),
+         urlNode->asTerm().valueStr(),
++        replayStartTimeRevision
+     };
+ }
+ 
+@@ -131,6 +143,8 @@ TEST_CASE("RESTCONF subscribed notifications")
+         R"({"example:eventA":{"message":"almost finished","progress":99}})",
+         R"({"example:tlc":{"list":[{"name":"k1","notif":{"message":"nested"}}]}})",
+     };
++    const std::string notificationForReplayJSON = R"({"example:eventA":{"message":"this-should-be-sent-very-early","progress":0}})";
++
+     std::vector<std::unique_ptr<trompeloeil::expectation>> expectations;
+ 
+     RestconfNotificationWatcher netconfWatcher(srConn.sessionStart().getContext());
+@@ -138,7 +152,10 @@ TEST_CASE("RESTCONF subscribed notifications")
+     libyang::DataFormat rpcRequestEncoding = libyang::DataFormat::JSON;
+     std::optional<std::string> rpcSubscriptionEncoding;
+     std::variant<std::monostate, std::string, libyang::XML> rpcFilter;
++    std::optional<sysrepo::NotificationTimeStamp> rpcReplayStart;
+     std::optional<std::pair<std::string, std::string>> rpcRequestAuthHeader;
++    std::pair<sysrepo::NotificationTimeStamp, sysrepo::NotificationTimeStamp> replayedNotificationSendInterval; // bounds for replayed notification event time
++    bool shouldReviseStartTime = false;
+ 
+     SECTION("NACM authorization")
+     {
+@@ -171,7 +188,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+         SECTION("User DWDM establishes subscription")
+         {
+             std::pair<std::string, std::string> user = AUTH_DWDM;
+-            auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, user, std::nullopt, rpcFilter);
++            auto [id, uri, replayStartTimeRevision] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, user, std::nullopt, rpcFilter, rpcReplayStart);
+ 
+             std::map<std::string, std::string> headers;
+ 
+@@ -304,6 +321,23 @@ TEST_CASE("RESTCONF subscribed notifications")
+     ]
+   }
+ }
++)###"});
++
++        // replay-start-time > stop-time
++        REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:establish-subscription",
++                     {CONTENT_TYPE_JSON},
++                     R"###({ "ietf-subscribed-notifications:input": { "stream": "NETCONF", "replay-start-time": "2000-11-11T11:22:33Z", "stop-time": "2000-01-01T00:00:00Z" } })###")
++                == Response{400, jsonHeaders, R"###({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-attribute",
++        "error-message": "Couldn't create notification subscription: SR_ERR_INVAL_ARG\u000A Specified \"stop-time\" is earlier than \"start-time\". (SR_ERR_INVAL_ARG)"
++      }
++    ]
++  }
++}
+ )###"});
+     }
+ 
+@@ -379,6 +413,48 @@ TEST_CASE("RESTCONF subscribed notifications")
+                 EXPECT_NOTIFICATION(notificationsJSON[3], seq1);
+             }
+ 
++            SECTION("Replays")
++            {
++                // Announce replay support and send one notification before the client connects
++                srConn.setModuleReplaySupport("example", true);
++
++                {
++                    auto notifSession = sysrepo::Connection{}.sessionStart();
++                    auto ctx = notifSession.getContext();
++                    replayedNotificationSendInterval.first = std::chrono::system_clock::now();
++                    SEND_NOTIFICATION(notificationForReplayJSON);
++                    replayedNotificationSendInterval.second = std::chrono::system_clock::now();
++                }
++
++                rpcRequestAuthHeader = AUTH_ROOT;
++                rpcRequestEncoding = libyang::DataFormat::JSON;
++                rpcSubscriptionEncoding = "encode-json";
++
++                SECTION("replay-start-time-revision is announced to the client")
++                {
++                    rpcReplayStart = std::chrono::system_clock::now() - 666s /* Reasonable time in the past, earlier than the replayed notification was sent */;
++
++                    EXPECT_NOTIFICATION(notificationForReplayJSON, seq1);
++                    EXPECT_NOTIFICATION(REPLAY_COMPLETED, seq1);
++                    shouldReviseStartTime = true;
++                }
++
++                SECTION("replay-start-time-revision not announced")
++                {
++                    /* Ask for replay since the time when the first notification was sent. This should not revise the start time
++                     * because we are not asking for the start *before* our history. (RFC 8639, 2.4.2.1) */
++                    rpcReplayStart = replayedNotificationSendInterval.second;
++
++                    EXPECT_NOTIFICATION(REPLAY_COMPLETED, seq1);
++                }
++
++                EXPECT_NOTIFICATION(notificationsJSON[0], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[1], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[2], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[3], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[4], seq1);
++            }
++
+             SECTION("Content-type with set encode leaf")
+             {
+                 rpcRequestAuthHeader = AUTH_ROOT;
+@@ -410,9 +486,17 @@ TEST_CASE("RESTCONF subscribed notifications")
+             }
+         }
+ 
+-        auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter);
++        auto [id, uri, replayStartTimeRevision] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter, rpcReplayStart);
+         REQUIRE(std::regex_match(uri, std::regex("/streams/subscribed/"s + uuidV4Regex)));
+ 
++        if (shouldReviseStartTime) {
++            REQUIRE(replayStartTimeRevision);
++            REQUIRE(replayedNotificationSendInterval.first <= *replayStartTimeRevision);
++            REQUIRE(*replayStartTimeRevision <= replayedNotificationSendInterval.second);
++        } else {
++            REQUIRE(!replayStartTimeRevision);
++        }
++
+         PREPARE_LOOP_WITH_EXCEPTIONS
+ 
+         // Here's how these two threads work together.
+@@ -523,7 +607,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+ )"};
+             }
+ 
+-            auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter);
++            auto [id, uri, replayStartTimeRevision] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter, rpcReplayStart);
+             auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
+             REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:delete-subscription", headers, body) == expectedResponse);
+         }
+@@ -531,7 +615,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+         SECTION("Anonymous user cannot delete subscription craeted by anonymous user")
+         {
+             rpcRequestAuthHeader = std::nullopt;
+-            auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter);
++            auto [id, uri, replayStartTimeRevision] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter, rpcReplayStart);
+             auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
+             REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:delete-subscription", headers, body) == Response{403, jsonHeaders, R"({
+   "ietf-restconf:errors": {
+@@ -587,7 +671,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+             expectedResponse = Response{204, noContentTypeHeaders, ""};
+         }
+ 
+-        auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter);
++        auto [id, uri, replayStartTimeRevision] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding, rpcFilter, rpcReplayStart);
+         auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
+         REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:kill-subscription", headers, body) == expectedResponse);
+     }
+@@ -631,7 +715,7 @@ TEST_CASE("Terminating server under notification load")
+     std::optional<std::pair<std::string, std::string>> rpcRequestAuthHeader;
+ 
+     std::pair<std::string, std::string> auth = AUTH_ROOT;
+-    auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, auth, std::nullopt, {});
++    auto [id, uri, replayStartTimeRevision] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, auth, std::nullopt, {}, std::nullopt);
+ 
+     PREPARE_LOOP_WITH_EXCEPTIONS;
+ 
+@@ -682,7 +766,7 @@ TEST_CASE("Cleaning up inactive subscriptions")
+     constexpr auto inactivityTimeout = 2s;
+     auto server = rousette::restconf::Server{srConn, SERVER_ADDRESS, SERVER_PORT, 0ms, 55s, inactivityTimeout};
+ 
+-    auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, {AUTH_ROOT}, std::nullopt, {});
++    auto [id, uri, replayStartTimeRevision] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, {AUTH_ROOT}, std::nullopt, {}, std::nullopt);
+ 
+     SECTION("Client connects and disconnects")
+     {
+-- 
+2.43.0
+

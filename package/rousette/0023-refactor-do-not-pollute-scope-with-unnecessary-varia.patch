@@ -1,0 +1,39 @@
+From 27cbe6750bdfc9f346421e55ebe555b8c036d77c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 11 Nov 2025 15:01:21 +0100
+Subject: [PATCH 23/38] refactor: do not pollute scope with unnecessary
+ variables
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The parent variable was not used in the function, it contributed
+nothing.
+
+Change-Id: I5b9b1a077d44d088084c3b2b93359ab7464ec8aa
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 633f0bb..77ae1be 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -446,9 +446,9 @@ std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, cons
+     const auto rpcPath = rpcInput.path();
+ 
+     // Is the user authorized to call the operation?
+-    auto [parent, rpcNode] = sess.getContext().newPath2(rpcPath, std::nullopt);
+-    if (!sess.checkNacmOperation(*rpcNode)) {
+-        throw ErrorResponse(403, "application", "access-denied", "Access denied.", rpcNode->path());
++    auto rpcNode = sess.getContext().newPath2(rpcPath, std::nullopt);
++    if (!sess.checkNacmOperation(*rpcNode.createdNode)) {
++        throw ErrorResponse(403, "application", "access-denied", "Access denied.", rpcNode.createdNode->path());
+     }
+ 
+     if (auto it = handlers.find(rpcPath); it != handlers.end()) {
+-- 
+2.43.0
+

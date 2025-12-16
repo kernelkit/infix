@@ -1,0 +1,156 @@
+From ed62a496744de0e0dc31171167d5d6f69f54af93 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 21 Nov 2025 12:54:44 +0100
+Subject: [PATCH 37/38] remove obsolete targets
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: Idde217a4ae1bc6f03657d9609e0ec1b0a47a9747
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt |  9 --------
+ src/clock.cpp  | 62 --------------------------------------------------
+ src/events.cpp | 33 ---------------------------
+ 3 files changed, 104 deletions(-)
+ delete mode 100644 src/clock.cpp
+ delete mode 100644 src/events.cpp
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3d79dad..4a91128 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -125,14 +125,6 @@ target_link_libraries(rousette-restconf PUBLIC rousette-http rousette-sysrepo ro
+ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/auth/NacmIdentities.h.in ${CMAKE_CURRENT_BINARY_DIR}/NacmIdentities.h @ONLY)
+ include_directories(${CMAKE_CURRENT_BINARY_DIR})
+ 
+-add_executable(clock-demo src/clock.cpp)
+-target_link_libraries(clock-demo rousette-http Boost::system Threads::Threads)
+-
+-add_executable(watch-operational-ds
+-    src/events.cpp
+-)
+-target_link_libraries(watch-operational-ds PUBLIC rousette-sysrepo)
+-
+ add_executable(rousette src/restconf/main.cpp)
+ target_link_libraries(rousette PUBLIC rousette-restconf PkgConfig::DOCOPT)
+ if(SYSTEMD_FOUND)
+@@ -140,7 +132,6 @@ if(SYSTEMD_FOUND)
+ endif()
+ 
+ install(TARGETS
+-    # clock-demo
+     # watch-operational-ds
+     rousette
+     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/)
+diff --git a/src/clock.cpp b/src/clock.cpp
+deleted file mode 100644
+index aa72849..0000000
+--- a/src/clock.cpp
++++ /dev/null
+@@ -1,62 +0,0 @@
+-/*
+- * Copyright (C) 2016-2021 CESNET, https://photonics.cesnet.cz/
+- *
+- * Written by Jan Kundrát <jan.kundrat@cesnet.cz>
+- *
+-*/
+-
+-#include <boost/lexical_cast.hpp>
+-#include <chrono>
+-#include <nghttp2/asio_http2_server.h>
+-#include <spdlog/spdlog.h>
+-#include <thread>
+-#include "http/EventStream.h"
+-
+-using namespace std::literals;
+-
+-constexpr auto keepAlivePingInterval = std::chrono::seconds{55};
+-
+-int main(int argc [[maybe_unused]], char** argv [[maybe_unused]])
+-{
+-    spdlog::set_level(spdlog::level::trace);
+-
+-    rousette::http::EventStream::Termination shutdown;
+-    rousette::http::EventStream::EventSignal sig;
+-    std::jthread timer{[&sig]() {
+-        for (int i = 0; /* forever */; ++i) {
+-            std::this_thread::sleep_for(666ms);
+-            spdlog::info("tick: {}", i);
+-            sig("ping #" + std::to_string(i));
+-        }
+-    }};
+-
+-    nghttp2::asio_http2::server::http2 server;
+-    server.num_threads(4);
+-
+-    server.handle("/events", [&shutdown, &sig](const auto& req, const auto& res) {
+-        rousette::http::EventStream::create(req, res, shutdown, sig, keepAlivePingInterval);
+-    });
+-
+-    server.handle("/", [](const auto& req, const auto& resp) {
+-        spdlog::info("{}: {} {}", boost::lexical_cast<std::string>(req.remote_endpoint()), req.method(), req.uri().raw_path);
+-        resp.write_head(200, {{"content-type", {"text/html", false}}});
+-        resp.end(R"(<html><head><title>nghttp2 event stream</title></head>
+-<body><h1>events</h1><ul id="x"></ul>
+-<script type="text/javascript">
+-const ev = new EventSource("/events");
+-ev.onmessage = function(event) {
+-  const li = document.createElement("li");
+-  li.textContent = event.data;
+-  document.getElementById("x").appendChild(li);
+-};
+-</script>
+-</body>
+-</html>)");
+-    });
+-
+-    boost::system::error_code ec;
+-    if (server.listen_and_serve(ec, "::", "10080")) {
+-        return 1;
+-    }
+-    return 0;
+-}
+diff --git a/src/events.cpp b/src/events.cpp
+deleted file mode 100644
+index dc0477a..0000000
+--- a/src/events.cpp
++++ /dev/null
+@@ -1,33 +0,0 @@
+-/*
+- * Copyright (C) 2016-2021 CESNET, https://photonics.cesnet.cz/
+- *
+- * Written by Jan Kundrát <jan.kundrat@cesnet.cz>
+- *
+-*/
+-
+-#include <csignal>
+-#include <spdlog/spdlog.h>
+-#include <sysrepo-cpp/Session.hpp>
+-#include <unistd.h>
+-#include "sr/AllEvents.h"
+-
+-using namespace rousette::sr;
+-
+-int main(int argc [[maybe_unused]], char* argv [[maybe_unused]] [])
+-{
+-    spdlog::set_level(spdlog::level::trace);
+-
+-    auto sess = sysrepo::Connection{}.sessionStart();
+-    auto e = AllEvents{
+-        sess,
+-        /* AllEvents::WithAttributes::All, */
+-        AllEvents::WithAttributes::RemoveEmptyOperationAndOrigin,
+-        /* AllEvents::WithAttributes::None, */
+-    };
+-
+-    signal(SIGTERM, [](int) {});
+-    signal(SIGINT, [](int) {});
+-    pause();
+-
+-    return 0;
+-}
+-- 
+2.43.0
+

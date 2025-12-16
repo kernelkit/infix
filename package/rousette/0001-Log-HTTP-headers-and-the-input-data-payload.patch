@@ -1,7 +1,7 @@
-From c0d13b8e426608a30b1eea382f908fb6447fd01d Mon Sep 17 00:00:00 2001
+From a4136d889237dadb9253ea7eb668a525dd779e6d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Thu, 12 Jun 2025 10:33:42 +0100
-Subject: [PATCH 01/13] Log HTTP headers and the input data payload
+Subject: [PATCH 01/38] Log HTTP headers and the input data payload
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -11,7 +11,7 @@ Organization: Wires
 Hažlinský just found.
 
 Change-Id: I2a930a02c7d30c051390fe73e6af9849edd580b4
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  src/restconf/Server.cpp | 10 ++++++++--
  1 file changed, 8 insertions(+), 2 deletions(-)

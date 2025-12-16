@@ -1,0 +1,41 @@
+From a44103219029ba70b67a87d5a33cfb8aec1e03f3 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 11 Dec 2025 12:05:51 +0100
+Subject: [PATCH 4/6] bits BUGFIX operator priority
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Refs #2455
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/plugins_types/bits.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/plugins_types/bits.c b/src/plugins_types/bits.c
+index ab7acb527..f5fa6dccb 100644
+--- a/src/plugins_types/bits.c
++++ b/src/plugins_types/bits.c
+@@ -61,7 +61,7 @@ lyplg_type_bits_is_bit_set(const char *bitmap, uint32_t size_bits, uint32_t bit_
+     uint32_t size;
+ 
+     /* get size in bytes */
+-    size = size_bits / 8 + (size_bits % 8) ? 1 : 0;
++    size = size_bits / 8 + ((size_bits % 8) ? 1 : 0);
+ 
+     /* find the byte with our bit */
+     (void)size;
+@@ -93,7 +93,7 @@ bits_bit_set(char *bitmap, uint32_t size_bits, uint32_t bit_position)
+     uint32_t size;
+ 
+     /* get size in bytes */
+-    size = size_bits / 8 + (size_bits % 8) ? 1 : 0;
++    size = size_bits / 8 + ((size_bits % 8) ? 1 : 0);
+ 
+     /* find the byte with our bit */
+     (void)size;
+-- 
+2.43.0
+

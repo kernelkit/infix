@@ -1,0 +1,319 @@
+From 3154d9209dc876fee43d9e83907ab44e06008c65 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 14 Oct 2025 12:25:20 +0200
+Subject: [PATCH 30/38] restconf: terminate subsc. notification streams after
+ 60s with no client
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+We allow anonymous users to create notification streams. However, such
+users will not have permissions to delete the subscriptions which opens
+a potential for resource exhaustion. To prevent this, we now terminate
+the notification streams after 60 seconds of inactivity.
+
+The period is configurable via the Server constructor, but the default
+is 60 seconds.
+
+Change-Id: Id399d108069704fa8ab79b9ef6ab855dd62cfc8d
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/DynamicSubscriptions.cpp       | 72 ++++++++++++++++++---
+ src/restconf/DynamicSubscriptions.h         | 22 ++++++-
+ src/restconf/Server.cpp                     |  5 +-
+ src/restconf/Server.h                       |  3 +-
+ tests/restconf-subscribed-notifications.cpp | 34 ++++++++++
+ 5 files changed, 122 insertions(+), 14 deletions(-)
+
+diff --git a/src/restconf/DynamicSubscriptions.cpp b/src/restconf/DynamicSubscriptions.cpp
+index 9c195f4..f6defb4 100644
+--- a/src/restconf/DynamicSubscriptions.cpp
++++ b/src/restconf/DynamicSubscriptions.cpp
+@@ -74,9 +74,11 @@ sysrepo::DynamicSubscription makeStreamSubscription(sysrepo::Session& session, c
+ 
+ namespace rousette::restconf {
+ 
+-DynamicSubscriptions::DynamicSubscriptions(const std::string& streamRootUri)
++DynamicSubscriptions::DynamicSubscriptions(const std::string& streamRootUri, const nghttp2::asio_http2::server::http2& server, const std::chrono::seconds inactivityTimeout)
+     : m_restconfStreamUri(streamRootUri)
++    , m_server(server)
+     , m_uuidGenerator(boost::uuids::random_generator())
++    , m_inactivityTimeout(inactivityTimeout)
+ {
+ }
+ 
+@@ -86,9 +88,7 @@ void DynamicSubscriptions::stop()
+ {
+     std::lock_guard lock(m_mutex);
+     for (const auto& [uuid, subscriptionData] : m_subscriptions) {
+-        // We are already terminating and will destroy via destructor, calls to terminate() will do nothing
+-        std::lock_guard lock(subscriptionData->mutex);
+-        subscriptionData->state = SubscriptionData::State::Terminating;
++        subscriptionData->stop();
+     }
+ }
+ 
+@@ -110,7 +110,10 @@ void DynamicSubscriptions::establishSubscription(sysrepo::Session& session, cons
+             std::move(sub),
+             dataFormat,
+             uuid,
+-            *session.getNacmUser());
++            *session.getNacmUser(),
++            *m_server.io_services().at(0),
++            m_inactivityTimeout,
++            [this, subId = sub.subscriptionId()]() { terminateSubscription(subId); });
+     } catch (const sysrepo::ErrorWithCode& e) {
+         throw ErrorResponse(400, "application", "invalid-attribute", e.what());
+     }
+@@ -161,18 +164,29 @@ DynamicSubscriptions::SubscriptionData::SubscriptionData(
+     sysrepo::DynamicSubscription sub,
+     libyang::DataFormat format,
+     boost::uuids::uuid uuid,
+-    const std::string& user)
++    const std::string& user,
++    boost::asio::io_context& io,
++    std::chrono::seconds inactivityTimeout,
++    std::function<void()> onClientInactiveCallback)
+     : subscription(std::move(sub))
+     , dataFormat(format)
+     , uuid(uuid)
+     , user(user)
+     , state(State::Start)
++    , inactivityTimeout(inactivityTimeout)
++    , clientInactiveTimer(io)
++    , onClientInactiveCallback(std::move(onClientInactiveCallback))
+ {
+     spdlog::debug("{}: created", fmt::streamed(*this));
++
++    std::lock_guard lock(mutex);
++    inactivityStart();
+ }
+ 
+ DynamicSubscriptions::SubscriptionData::~SubscriptionData()
+ {
++    std::lock_guard lock(mutex);
++    inactivityCancel();
+     terminate();
+ }
+ 
+@@ -186,12 +200,14 @@ void DynamicSubscriptions::SubscriptionData::clientDisconnected()
+     }
+ 
+     state = State::Start;
++    inactivityStart();
+ }
+ 
+ void DynamicSubscriptions::SubscriptionData::clientConnected()
+ {
+     spdlog::debug("{}: client connected", fmt::streamed(*this));
+     std::lock_guard lock(mutex);
++    inactivityCancel();
+     state = State::ReceiverActive;
+ }
+ 
+@@ -201,10 +217,37 @@ bool DynamicSubscriptions::SubscriptionData::isReadyToAcceptClient() const
+     return state == State::Start;
+ }
+ 
+-void DynamicSubscriptions::SubscriptionData::terminate(const std::optional<std::string>& reason)
++/** @pre The mutex must be locked by the caller. */
++void DynamicSubscriptions::SubscriptionData::inactivityStart()
+ {
+-    std::lock_guard lock(mutex);
++    if (state == State::Terminating) {
++        return;
++    }
++
++    spdlog::trace("{}: starting inactivity timer", fmt::streamed(*this));
++
++    clientInactiveTimer.expires_after(inactivityTimeout);
++    clientInactiveTimer.async_wait([weakThis = weak_from_this()](const boost::system::error_code& err) {
++        auto self = weakThis.lock();
++        if (!self || err == boost::asio::error::operation_aborted) {
++            return;
++        }
+ 
++        spdlog::trace("{}: client inactive, perform inactivity callback", fmt::streamed(*self));
++        self->onClientInactiveCallback();
++    });
++}
++
++/** @pre The mutex must be locked by the caller. */
++void DynamicSubscriptions::SubscriptionData::inactivityCancel()
++{
++    spdlog::trace("{}: cancelling inactivity timer", fmt::streamed(*this));
++    clientInactiveTimer.cancel();
++}
++
++/** @pre The mutex must be locked by the caller. */
++void DynamicSubscriptions::SubscriptionData::terminate(const std::optional<std::string>& reason)
++{
+     // already terminating, do nothing
+     if (state == State::Terminating) {
+         return;
+@@ -219,6 +262,14 @@ void DynamicSubscriptions::SubscriptionData::terminate(const std::optional<std::
+     }
+ }
+ 
++void DynamicSubscriptions::SubscriptionData::stop()
++{
++    std::lock_guard lock(mutex);
++    inactivityCancel();
++    // We are already terminating and will destroy via destructor, calls to terminate() will do nothing
++    state = SubscriptionData::State::Terminating;
++}
++
+ std::ostream& operator<<(std::ostream& os, const DynamicSubscriptions::SubscriptionData& sub)
+ {
+     return os << "dynamic subscription (id " << sub.subscription.subscriptionId()
+@@ -241,7 +292,10 @@ DynamicSubscriptionHttpStream::DynamicSubscriptionHttpStream(
+           *signal,
+           keepAlivePingInterval,
+           std::nullopt /* no initial event */,
+-          [this]() { m_subscriptionData->terminate("ietf-subscribed-notifications:no-such-subscription"); },
++          [this]() {
++              std::lock_guard lock(m_subscriptionData->mutex);
++              m_subscriptionData->terminate("ietf-subscribed-notifications:no-such-subscription");
++          },
+           [this]() { m_subscriptionData->clientDisconnected(); })
+     , m_subscriptionData(subscriptionData)
+     , m_signal(signal)
+diff --git a/src/restconf/DynamicSubscriptions.h b/src/restconf/DynamicSubscriptions.h
+index 0309cad..0422947 100644
+--- a/src/restconf/DynamicSubscriptions.h
++++ b/src/restconf/DynamicSubscriptions.h
+@@ -18,6 +18,10 @@ namespace libyang {
+ enum class DataFormat;
+ }
+ 
++namespace nghttp2::asio_http2::server {
++class http2;
++}
++
+ namespace rousette::restconf {
+ 
+ /** Dynamic subscriptions manager.
+@@ -39,19 +43,31 @@ public:
+             Terminating, ///< Subscription is being terminated by the server shutdown
+         } state;
+ 
++        std::chrono::seconds inactivityTimeout; ///< Time after which the subscription is considered inactive and can be removed if no client is connected
++        boost::asio::steady_timer clientInactiveTimer; ///< Timer used for auto-destruction of subscriptions that are unused
++        std::function<void()> onClientInactiveCallback;
++
+         SubscriptionData(
+             sysrepo::DynamicSubscription sub,
+             libyang::DataFormat format,
+             boost::uuids::uuid uuid,
+-            const std::string& user);
++            const std::string& user,
++            boost::asio::io_context& io,
++            std::chrono::seconds inactivityTimeout,
++            std::function<void()> onClientInactiveCallback);
+         ~SubscriptionData();
+         void clientDisconnected();
+         void clientConnected();
+         void terminate(const std::optional<std::string>& reason = std::nullopt);
+         bool isReadyToAcceptClient() const;
++        void stop();
++
++    private:
++        void inactivityStart();
++        void inactivityCancel();
+     };
+ 
+-    DynamicSubscriptions(const std::string& streamRootUri);
++    DynamicSubscriptions(const std::string& streamRootUri, const nghttp2::asio_http2::server::http2& server, const std::chrono::seconds inactivityTimeout);
+     ~DynamicSubscriptions();
+     std::shared_ptr<SubscriptionData> getSubscriptionForUser(const boost::uuids::uuid& uuid, const std::optional<std::string>& user);
+     void establishSubscription(sysrepo::Session& session, const libyang::DataFormat requestEncoding, const libyang::DataNode& rpcInput, libyang::DataNode& rpcOutput);
+@@ -60,8 +76,10 @@ public:
+ private:
+     std::mutex m_mutex; ///< Lock for shared data (subscriptions storage and uuid generator)
+     std::string m_restconfStreamUri;
++    const nghttp2::asio_http2::server::http2& m_server;
+     std::map<boost::uuids::uuid, std::shared_ptr<SubscriptionData>> m_subscriptions;
+     boost::uuids::random_generator m_uuidGenerator;
++    std::chrono::seconds m_inactivityTimeout;
+ 
+     void terminateSubscription(const uint32_t subId);
+ 
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 5486e99..0c7e855 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -911,11 +911,12 @@ Server::Server(
+     const std::string& address,
+     const std::string& port,
+     const std::chrono::milliseconds timeout,
+-    const std::chrono::seconds keepAlivePingInterval)
++    const std::chrono::seconds keepAlivePingInterval,
++    const std::chrono::seconds subNotifInactivityTimeout)
+     : m_monitoringSession(conn.sessionStart(sysrepo::Datastore::Operational))
+     , nacm(conn)
+     , server{std::make_unique<nghttp2::asio_http2::server::http2>()}
+-    , m_dynamicSubscriptions(netconfStreamRoot)
++    , m_dynamicSubscriptions(netconfStreamRoot, *server, subNotifInactivityTimeout)
+     , dwdmEvents{std::make_unique<sr::OpticalEvents>(conn.sessionStart())}
+ {
+     server->num_threads(1); // we only use one thread for the server, so we can call join() right away
+diff --git a/src/restconf/Server.h b/src/restconf/Server.h
+index c98f736..b4db948 100644
+--- a/src/restconf/Server.h
++++ b/src/restconf/Server.h
+@@ -33,7 +33,8 @@ public:
+                     const std::string& address,
+                     const std::string& port,
+                     const std::chrono::milliseconds timeout = std::chrono::milliseconds{0},
+-                    const std::chrono::seconds keepAlivePingInterval = std::chrono::seconds{55});
++                    const std::chrono::seconds keepAlivePingInterval = std::chrono::seconds{55},
++                    const std::chrono::seconds subNotifInactivityTimeout = std::chrono::seconds{60});
+     ~Server();
+     void join();
+     void stop();
+diff --git a/tests/restconf-subscribed-notifications.cpp b/tests/restconf-subscribed-notifications.cpp
+index 11dd992..68e9286 100644
+--- a/tests/restconf-subscribed-notifications.cpp
++++ b/tests/restconf-subscribed-notifications.cpp
+@@ -450,3 +450,37 @@ TEST_CASE("Terminating server under notification load")
+     SSEClient cli(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, uri, {auth});
+     RUN_LOOP_WITH_EXCEPTIONS;
+ }
++
++TEST_CASE("Cleaning up inactive subscriptions")
++{
++    trompeloeil::sequence seq1, seq2;
++    sysrepo::setLogLevelStderr(sysrepo::LogLevel::Information);
++    spdlog::set_level(spdlog::level::trace);
++
++    auto srConn = sysrepo::Connection{};
++    auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
++    srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
++
++    RestconfNotificationWatcher netconfWatcher(srConn.sessionStart().getContext());
++
++    auto nacmGuard = manageNacm(srSess);
++    constexpr auto inactivityTimeout = 2s;
++    auto server = rousette::restconf::Server{srConn, SERVER_ADDRESS, SERVER_PORT, 0ms, 55s, inactivityTimeout};
++
++    auto uri = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, {AUTH_ROOT}, std::nullopt);
++
++    SECTION("Client connects and disconnects")
++    {
++        PREPARE_LOOP_WITH_EXCEPTIONS
++        auto thr = std::jthread(wrap_exceptions_and_asio(bg, io, [&]() {
++            WAIT_UNTIL_SSE_CLIENT_REQUESTS;
++            std::this_thread::sleep_for(1s);
++        }));
++
++        SSEClient cli(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, uri, {AUTH_ROOT});
++        RUN_LOOP_WITH_EXCEPTIONS;
++    }
++
++    std::this_thread::sleep_for(inactivityTimeout + 1500ms);
++    REQUIRE(get(uri, {AUTH_ROOT}) == Response{404, plaintextHeaders, "Subscription not found."});
++}
+-- 
+2.43.0
+

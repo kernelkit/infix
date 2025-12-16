@@ -1,0 +1,36 @@
+From fe91af1eb38888d7eacb36cb5a299bd3163f7c60 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 14 Oct 2025 17:22:00 +0200
+Subject: [PATCH 33/38] cmake: wrap long line
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: Id94e18d581dbfbe2e6d386be6a232544f9344eec
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 28696b3..3d79dad 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -217,7 +217,12 @@ if(BUILD_TESTING)
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-interfaces@2018-02-20.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-ip@2018-02-22.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-network-instance@2019-01-21.yang
+-        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-subscribed-notifications@2019-09-09.yang --enable-feature replay --enable-feature encode-xml --enable-feature encode-json --enable-feature xpath --enable-feature subtree
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-subscribed-notifications@2019-09-09.yang
++            --enable-feature replay
++            --enable-feature encode-xml
++            --enable-feature encode-json
++            --enable-feature xpath
++            --enable-feature subtree
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-restconf-subscribed-notifications@2019-11-17.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example.yang --enable-feature f1
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-delete.yang
+-- 
+2.43.0
+

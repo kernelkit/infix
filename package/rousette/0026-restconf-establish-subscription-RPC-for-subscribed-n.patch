@@ -1,0 +1,679 @@
+From aa04b0a99fb51aed998aa9f1ab0a527cc09e647f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 19 May 2025 12:11:09 +0200
+Subject: [PATCH 26/38] restconf: establish-subscription RPC for subscribed
+ notifications
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+This is a very bare-bones implementation of the subscribed
+notifications concept from RFC 8639 [1]. We only support the
+establish-subscription RPC to the NETCONF event stream.
+
+This patch *does not* ship the code which implements the endpoint for
+client connection because this patch is already too large and the
+endpoint is not strictly necessary for the RPC to work. It will come in
+the follow-up patch.
+
+[1] https://datatracker.ietf.org/doc/rfc8639/
+
+Change-Id: I0217e5abc56cfd73859dbcc610fb1f342dc33a10
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                              |   8 +-
+ src/restconf/DynamicSubscriptions.cpp       | 177 ++++++++++++++
+ src/restconf/DynamicSubscriptions.h         |  57 +++++
+ src/restconf/Server.cpp                     |  25 +-
+ src/restconf/Server.h                       |   2 +
+ tests/restconf-subscribed-notifications.cpp | 253 ++++++++++++++++++++
+ 6 files changed, 513 insertions(+), 9 deletions(-)
+ create mode 100644 src/restconf/DynamicSubscriptions.cpp
+ create mode 100644 src/restconf/DynamicSubscriptions.h
+ create mode 100644 tests/restconf-subscribed-notifications.cpp
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1223ded..18af5ba 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -110,6 +110,7 @@ add_library(rousette-auth STATIC
+ target_link_libraries(rousette-auth PUBLIC spdlog::spdlog PkgConfig::SYSREPO-CPP PkgConfig::PAM rousette-auth-pam PkgConfig::nghttp2)
+ 
+ add_library(rousette-restconf STATIC
++    src/restconf/DynamicSubscriptions.cpp
+     src/restconf/NotificationStream.cpp
+     src/restconf/Server.cpp
+     src/restconf/YangSchemaLocations.cpp
+@@ -211,7 +212,11 @@ if(BUILD_TESTING)
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-restconf@2017-01-26.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-restconf-monitoring@2017-01-26.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-yang-patch@2017-02-22.yang
+-        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-subscribed-notifications@2019-09-09.yang
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/iana-if-type@2014-05-08.yang
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-interfaces@2018-02-20.yang
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-ip@2018-02-22.yang
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-network-instance@2019-01-21.yang
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-subscribed-notifications@2019-09-09.yang --enable-feature replay --enable-feature encode-xml --enable-feature encode-json
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-restconf-subscribed-notifications@2019-11-17.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example.yang --enable-feature f1
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-delete.yang
+@@ -228,6 +233,7 @@ if(BUILD_TESTING)
+     rousette_test(NAME restconf-plain-patch LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+     rousette_test(NAME restconf-yang-patch LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+     rousette_test(NAME restconf-eventstream LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
++    rousette_test(NAME restconf-subscribed-notifications LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+     set(nested-models
+         ${common-models}
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/root-mod.yang)
+diff --git a/src/restconf/DynamicSubscriptions.cpp b/src/restconf/DynamicSubscriptions.cpp
+new file mode 100644
+index 0000000..7b13990
+--- /dev/null
++++ b/src/restconf/DynamicSubscriptions.cpp
+@@ -0,0 +1,177 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
++ *
++*/
++#include <boost/uuid/uuid_io.hpp>
++#include <fmt/ostream.h>
++#include <libyang-cpp/Time.hpp>
++#include <nghttp2/asio_http2_server.h>
++#include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/exception.hpp>
++#include "restconf/DynamicSubscriptions.h"
++#include "restconf/Exceptions.h"
++
++namespace {
++
++/** @brief Parses the YANG date-and-time attribute from the RPC input, if present
++ *
++ * @param rpcInput The RPC input node.
++ * @param path The path to the YANG leaf.
++ */
++std::optional<sysrepo::NotificationTimeStamp> optionalTime(const libyang::DataNode& rpcInput, const std::string& path)
++{
++    if (auto stopTimeNode = rpcInput.findPath(path)) {
++        return libyang::fromYangTimeFormat<sysrepo::NotificationTimeStamp::clock>(stopTimeNode->asTerm().valueStr());
++    }
++
++    return std::nullopt;
++}
++
++libyang::DataFormat getEncoding(const libyang::DataNode& rpcInput, const libyang::DataFormat requestEncoding)
++{
++    /* FIXME: So far we allow only encode-json or encode-xml encoding values and not their derived values.
++     * We do not know what those derived values might mean and how do they change the meaning of the encoding leaf.
++     */
++    if (auto encodingNode = rpcInput.findPath("encoding")) {
++        const auto encodingStr = encodingNode->asTerm().valueStr();
++        if (encodingStr == "ietf-subscribed-notifications:encode-json") {
++            return libyang::DataFormat::JSON;
++        } else if (encodingStr == "ietf-subscribed-notifications:encode-xml") {
++            return libyang::DataFormat::XML;
++        } else {
++            throw rousette::restconf::ErrorResponse(400, "application", "invalid-attribute", "Unsupported encoding in establish-subscription: '" + encodingStr + "'. Currently we support only 'encode-xml' and 'encode-json' identities.");
++        }
++    }
++
++    return requestEncoding;
++}
++
++sysrepo::DynamicSubscription makeStreamSubscription(sysrepo::Session& session, const libyang::DataNode& rpcInput)
++{
++    auto streamNode = rpcInput.findPath("stream");
++
++    if (!streamNode) {
++        throw rousette::restconf::ErrorResponse(400, "application", "invalid-attribute", "Stream is required");
++    }
++
++    if (rpcInput.findPath("stream-filter-name")) {
++        throw rousette::restconf::ErrorResponse(400, "application", "invalid-attribute", "Stream filtering is not supported");
++    }
++
++    auto stopTime = optionalTime(rpcInput, "stop-time");
++
++    return session.subscribeNotifications(
++        std::nullopt /* TODO xpath filter */,
++        streamNode->asTerm().valueStr(),
++        stopTime,
++        std::nullopt /* TODO replayStart */);
++}
++}
++
++namespace rousette::restconf {
++
++DynamicSubscriptions::DynamicSubscriptions(const std::string& streamRootUri)
++    : m_restconfStreamUri(streamRootUri)
++    , m_uuidGenerator(boost::uuids::random_generator())
++{
++}
++
++DynamicSubscriptions::~DynamicSubscriptions() = default;
++
++void DynamicSubscriptions::establishSubscription(sysrepo::Session& session, const libyang::DataFormat requestEncoding, const libyang::DataNode& rpcInput, libyang::DataNode& rpcOutput)
++{
++    // Generate a new UUID associated with the subscription. The UUID will be used as a part of the URI so that the URI is not predictable (RFC 8650, section 5)
++    auto uuid = makeUUID();
++
++    auto dataFormat = getEncoding(rpcInput, requestEncoding);
++
++    try {
++        auto sub = makeStreamSubscription(session, rpcInput);
++
++        rpcOutput.newPath("id", std::to_string(sub.subscriptionId()), libyang::CreationOptions::Output);
++        rpcOutput.newPath("ietf-restconf-subscribed-notifications:uri", m_restconfStreamUri + "subscribed/" + boost::uuids::to_string(uuid), libyang::CreationOptions::Output);
++
++        std::lock_guard lock(m_mutex);
++        m_subscriptions[uuid] = std::make_shared<SubscriptionData>(
++            std::move(sub),
++            dataFormat,
++            uuid,
++            *session.getNacmUser());
++    } catch (const sysrepo::ErrorWithCode& e) {
++        throw ErrorResponse(400, "application", "invalid-attribute", e.what());
++    }
++}
++
++void DynamicSubscriptions::terminateSubscription(const uint32_t subId)
++{
++    std::lock_guard lock(m_mutex);
++
++    auto it = std::find_if(m_subscriptions.begin(), m_subscriptions.end(), [subId](const auto& entry) {
++        return entry.second->subscription.subscriptionId() == subId;
++    });
++
++    if (it == m_subscriptions.end()) {
++        spdlog::warn("Requested termination of subscription with id {}, but subscription not found", subId);
++        return;
++    }
++
++    const auto& [uuid, subscriptionData] = *it;
++    spdlog::debug("{}: termination requested", fmt::streamed(*subscriptionData));
++    subscriptionData->subscription.terminate("ietf-subscribed-notifications:no-such-subscription");
++    m_subscriptions.erase(uuid);
++}
++
++/** @brief Returns the subscription data for the given UUID and user.
++ *
++ * @param uuid The UUID of the subscription.
++ * @return A shared pointer to the SubscriptionData object if found and user is the one who established the subscription (or NACM recovery user), otherwise nullptr.
++ */
++std::shared_ptr<DynamicSubscriptions::SubscriptionData> DynamicSubscriptions::getSubscriptionForUser(const boost::uuids::uuid& uuid, const std::optional<std::string>& user)
++{
++    std::lock_guard lock(m_mutex);
++    if (auto it = m_subscriptions.find(uuid); it != m_subscriptions.end() && (it->second->user == user || user == sysrepo::Session::getNacmRecoveryUser())) {
++        return it->second;
++    }
++
++    return nullptr;
++}
++
++boost::uuids::uuid DynamicSubscriptions::makeUUID()
++{
++    // uuid generator instance accesses must be synchronized (https://www.boost.org/doc/libs/1_88_0/libs/uuid/doc/html/uuid.html#design_notes)
++    std::lock_guard lock(m_mutex);
++    return m_uuidGenerator();
++}
++
++DynamicSubscriptions::SubscriptionData::SubscriptionData(
++    sysrepo::DynamicSubscription sub,
++    libyang::DataFormat format,
++    boost::uuids::uuid uuid,
++    const std::string& user)
++    : subscription(std::move(sub))
++    , dataFormat(format)
++    , uuid(uuid)
++    , user(user)
++{
++    spdlog::debug("{}: created", fmt::streamed(*this));
++}
++
++DynamicSubscriptions::SubscriptionData::~SubscriptionData()
++{
++    try {
++        subscription.terminate();
++    } catch (const sysrepo::ErrorWithCode& e) { // Maybe it was already terminated (stop-time).
++        spdlog::warn("Failed to terminate {}: {}", fmt::streamed(*this), e.what());
++    }
++}
++
++std::ostream& operator<<(std::ostream& os, const DynamicSubscriptions::SubscriptionData& sub)
++{
++    return os << "dynamic subscription (id " << sub.subscription.subscriptionId()
++              << ", user " << sub.user
++              << ", uuid " << boost::uuids::to_string(sub.uuid)
++              << ")";
++}
++}
+diff --git a/src/restconf/DynamicSubscriptions.h b/src/restconf/DynamicSubscriptions.h
+new file mode 100644
+index 0000000..366d1a1
+--- /dev/null
++++ b/src/restconf/DynamicSubscriptions.h
+@@ -0,0 +1,57 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
++ *
++*/
++#pragma once
++
++#include <boost/asio.hpp>
++#include <boost/asio/io_context.hpp>
++#include <boost/uuid/random_generator.hpp>
++#include <map>
++#include <memory>
++#include <sysrepo-cpp/Subscription.hpp>
++
++namespace libyang {
++enum class DataFormat;
++}
++
++namespace rousette::restconf {
++
++/** Dynamic subscriptions manager.
++ *
++ * Stores all dynamic subscriptions and provides a way to retrieve them by the UUID.
++ * */
++class DynamicSubscriptions {
++public:
++    struct SubscriptionData : public std::enable_shared_from_this<SubscriptionData> {
++        sysrepo::DynamicSubscription subscription;
++        libyang::DataFormat dataFormat; ///< Encoding of the notification stream
++        boost::uuids::uuid uuid; ///< UUID is part of the GET URI, it identifies subscriptions for clients
++        std::string user; ///< User who initiated the establish-subscription RPC
++
++        SubscriptionData(
++            sysrepo::DynamicSubscription sub,
++            libyang::DataFormat format,
++            boost::uuids::uuid uuid,
++            const std::string& user);
++        ~SubscriptionData();
++    };
++
++    DynamicSubscriptions(const std::string& streamRootUri);
++    ~DynamicSubscriptions();
++    std::shared_ptr<SubscriptionData> getSubscriptionForUser(const boost::uuids::uuid& uuid, const std::optional<std::string>& user);
++    void establishSubscription(sysrepo::Session& session, const libyang::DataFormat requestEncoding, const libyang::DataNode& rpcInput, libyang::DataNode& rpcOutput);
++
++private:
++    std::mutex m_mutex; ///< Lock for shared data (subscriptions storage and uuid generator)
++    std::string m_restconfStreamUri;
++    std::map<boost::uuids::uuid, std::shared_ptr<SubscriptionData>> m_subscriptions;
++    boost::uuids::random_generator m_uuidGenerator;
++
++    void terminateSubscription(const uint32_t subId);
++
++    boost::uuids::uuid makeUUID();
++};
++}
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 7e8db58..7287976 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -438,13 +438,16 @@ libyang::CreatedNodes createEditForPutAndPatch(libyang::Context& ctx, const std:
+     return {editNode, replacementNode};
+ }
+ 
+-std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, libyang::DataNode& rpcInput, const libyang::DataFormat requestEncoding)
++std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, libyang::DataNode& rpcInput, const libyang::DataFormat requestEncoding, DynamicSubscriptions& dynamicSubscriptions)
+ {
+     struct InternalRPCHandler {
+         std::optional<std::string> validationDataXPath; ///< XPath to data used for RPC input validation
+         std::function<void(sysrepo::Session&, const libyang::DataFormat, const libyang::DataNode&, libyang::DataNode&)> rpcHandler; // The function that processes the RPC
+     };
+-    const std::map<std::string, InternalRPCHandler> handlers;
++    const std::map<std::string, InternalRPCHandler> handlers{
++        {"/ietf-subscribed-notifications:establish-subscription",
++         {"/ietf-subscribed-notifications:filters", [&dynamicSubscriptions](auto&&... args) { return dynamicSubscriptions.establishSubscription(std::forward<decltype(args)>(args)...); }}},
++    };
+ 
+     const auto rpcPath = rpcInput.path();
+ 
+@@ -482,7 +485,7 @@ std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, liby
+     return *parent;
+ }
+ 
+-void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::chrono::milliseconds timeout)
++void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::chrono::milliseconds timeout, DynamicSubscriptions& dynamicSubscriptions)
+ {
+     requestCtx->sess.switchDatastore(sysrepo::Datastore::Operational);
+     auto ctx = requestCtx->sess.getContext();
+@@ -516,7 +519,7 @@ void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::c
+     if (requestCtx->restconfRequest.type == RestconfRequest::Type::Execute) {
+         rpcReply = requestCtx->sess.sendRPC(*rpcNode, timeout);
+     } else if (requestCtx->restconfRequest.type == RestconfRequest::Type::ExecuteInternal) {
+-        rpcReply = processInternalRPC(requestCtx->sess, *rpcNode, *requestCtx->dataFormat.request);
++        rpcReply = processInternalRPC(requestCtx->sess, *rpcNode, *requestCtx->dataFormat.request, dynamicSubscriptions);
+     }
+ 
+     if (!rpcReply || rpcReply->immediateChildren().empty()) {
+@@ -902,10 +905,16 @@ std::vector<std::shared_ptr<boost::asio::io_context>> Server::io_services() cons
+     return server->io_services();
+ }
+ 
+-Server::Server(sysrepo::Connection conn, const std::string& address, const std::string& port, const std::chrono::milliseconds timeout, const std::chrono::seconds keepAlivePingInterval)
++Server::Server(
++    sysrepo::Connection conn,
++    const std::string& address,
++    const std::string& port,
++    const std::chrono::milliseconds timeout,
++    const std::chrono::seconds keepAlivePingInterval)
+     : m_monitoringSession(conn.sessionStart(sysrepo::Datastore::Operational))
+     , nacm(conn)
+     , server{std::make_unique<nghttp2::asio_http2::server::http2>()}
++    , m_dynamicSubscriptions(netconfStreamRoot)
+     , dwdmEvents{std::make_unique<sr::OpticalEvents>(conn.sessionStart())}
+ {
+     server->num_threads(1); // we only use one thread for the server, so we can call join() right away
+@@ -917,7 +926,7 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+              {"ietf-netconf", "", {}},
+              {"ietf-yang-library", "2019-01-04", {}},
+              {"ietf-yang-patch", "2017-02-22", {}},
+-             {"ietf-subscribed-notifications", "2019-09-09", {}},
++             {"ietf-subscribed-notifications", "2019-09-09", {"encode-xml", "encode-json"}},
+              {"ietf-restconf-subscribed-notifications", "2019-11-17", {}},
+          }) {
+         if (auto mod = m_monitoringSession.getContext().getModuleImplemented(module)) {
+@@ -1217,12 +1226,12 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+                 case RestconfRequest::Type::ExecuteInternal: {
+                     auto requestCtx = std::make_shared<RequestContext>(req, res, dataFormat, sess, restconfRequest);
+ 
+-                    req.on_data([requestCtx, timeout, peer=http::peer_from_request(req)](const uint8_t* data, std::size_t length) {
++                    req.on_data([this, requestCtx, timeout, peer=http::peer_from_request(req)](const uint8_t* data, std::size_t length) {
+                         if (length > 0) {
+                             requestCtx->payload.append(reinterpret_cast<const char*>(data), length);
+                         } else {
+                             spdlog::trace("{}: HTTP payload: {}", peer, requestCtx->payload);
+-                            WITH_RESTCONF_EXCEPTIONS(processActionOrRPC, rejectWithError)(requestCtx, timeout);
++                            WITH_RESTCONF_EXCEPTIONS(processActionOrRPC, rejectWithError)(requestCtx, timeout, m_dynamicSubscriptions);
+                         }
+                     });
+                     break;
+diff --git a/src/restconf/Server.h b/src/restconf/Server.h
+index 0720c8d..c98f736 100644
+--- a/src/restconf/Server.h
++++ b/src/restconf/Server.h
+@@ -10,6 +10,7 @@
+ #include <sysrepo-cpp/Subscription.hpp>
+ #include "auth/Nacm.h"
+ #include "http/EventStream.h"
++#include "restconf/DynamicSubscriptions.h"
+ 
+ namespace nghttp2::asio_http2::server {
+ class http2;
+@@ -43,6 +44,7 @@ private:
+     std::optional<sysrepo::Subscription> m_monitoringOperSub;
+     auth::Nacm nacm;
+     std::unique_ptr<nghttp2::asio_http2::server::http2> server;
++    DynamicSubscriptions m_dynamicSubscriptions;
+     std::unique_ptr<sr::OpticalEvents> dwdmEvents;
+     using JsonDiffSignal = boost::signals2::signal<void(const std::string& json)>;
+     JsonDiffSignal opticsChange;
+diff --git a/tests/restconf-subscribed-notifications.cpp b/tests/restconf-subscribed-notifications.cpp
+new file mode 100644
+index 0000000..3e8e011
+--- /dev/null
++++ b/tests/restconf-subscribed-notifications.cpp
+@@ -0,0 +1,253 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
++ *
++ */
++
++#include "trompeloeil_doctest.h"
++static const auto SERVER_PORT = "10092";
++#include <libyang-cpp/Time.hpp>
++#include <nghttp2/asio_http2.h>
++#include <regex>
++#include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
++#include "restconf/Server.h"
++#include "tests/aux-utils.h"
++#include "tests/event_watchers.h"
++#include "tests/pretty_printers.h"
++
++#define SEND_NOTIFICATION(DATA) notifSession.sendNotification(*ctx.parseOp(DATA, libyang::DataFormat::JSON, libyang::OperationType::NotificationYang).op, sysrepo::Wait::No);
++
++constexpr auto uuidV4Regex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}";
++
++using namespace std::chrono_literals;
++using namespace std::string_literals;
++
++/** @brief Calls establish-subscription rpc, returns the url of the stream associated with the created subscription */
++std::string establishSubscription(
++    const libyang::Context& ctx,
++    const libyang::DataFormat rpcEncoding,
++    const std::optional<std::pair<std::string, std::string>>& rpcRequestAuthHeader,
++    const std::optional<std::string>& encodingLeafValue)
++{
++    constexpr auto jsonPrefix = "ietf-subscribed-notifications";
++    constexpr auto xmlNamespace = "urn:ietf:params:xml:ns:yang:ietf-subscribed-notifications";
++
++    auto stopTime = libyang::yangTimeFormat(std::chrono::system_clock::now() + 5s, libyang::TimezoneInterpretation::Local);
++    std::map<std::string, std::string> requestHeaders;
++    ng::header_map expectedHeaders;
++
++    if (rpcRequestAuthHeader) {
++        requestHeaders.insert(*rpcRequestAuthHeader);
++    }
++
++    std::optional<libyang::DataNode> envelope;
++    auto rpcTree = ctx.newPath("/ietf-subscribed-notifications:establish-subscription");
++    rpcTree.newPath("stream", "NETCONF");
++    rpcTree.newPath("stop-time", stopTime);
++
++    if (encodingLeafValue) {
++        rpcTree.newPath("encoding", *encodingLeafValue);
++    }
++
++    switch (rpcEncoding) {
++    case libyang::DataFormat::JSON:
++        requestHeaders.insert(CONTENT_TYPE_JSON);
++        expectedHeaders = jsonHeaders;
++        envelope = ctx.newOpaqueJSON({jsonPrefix, jsonPrefix, "input"}, std::nullopt);
++        break;
++    case libyang::DataFormat::XML:
++        requestHeaders.insert(CONTENT_TYPE_XML);
++        expectedHeaders = xmlHeaders;
++        envelope = ctx.newOpaqueXML({xmlNamespace, jsonPrefix, "input"}, std::nullopt);
++        break;
++    default:
++        FAIL("Unhandled libyang DataFormat");
++        break;
++    }
++
++    // reconnect everything
++    auto data = rpcTree.child();
++    data->unlinkWithSiblings();
++    envelope->insertChild(*data);
++
++    auto body = *envelope->printStr(rpcEncoding, libyang::PrintFlags::WithSiblings);
++    auto resp = post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:establish-subscription", requestHeaders, body);
++    REQUIRE(resp.equalStatusCodeAndHeaders(Response{200, expectedHeaders, ""}));
++
++    auto reply = ctx.newPath("/ietf-subscribed-notifications:establish-subscription");
++    REQUIRE(reply.parseOp(resp.data, rpcEncoding, libyang::OperationType::ReplyRestconf).tree);
++
++    auto urlNode = reply.findPath("ietf-restconf-subscribed-notifications:uri", libyang::InputOutputNodes::Output);
++    REQUIRE(urlNode);
++
++    return urlNode->asTerm().valueStr();
++}
++
++TEST_CASE("RESTCONF subscribed notifications")
++{
++    trompeloeil::sequence seq1, seq2;
++    sysrepo::setLogLevelStderr(sysrepo::LogLevel::Information);
++    spdlog::set_level(spdlog::level::trace);
++
++    auto srConn = sysrepo::Connection{};
++    auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
++    srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
++
++    auto nacmGuard = manageNacm(srSess);
++    auto server = rousette::restconf::Server{srConn, SERVER_ADDRESS, SERVER_PORT};
++    setupRealNacm(srSess);
++
++    RestconfNotificationWatcher netconfWatcher(srConn.sessionStart().getContext());
++
++    libyang::DataFormat rpcRequestEncoding = libyang::DataFormat::JSON;
++    std::optional<std::string> rpcSubscriptionEncoding;
++    std::optional<std::pair<std::string, std::string>> rpcRequestAuthHeader;
++
++    SECTION("NACM authorization")
++    {
++        SECTION("Anonymous access for establish-subscription is disabled")
++        {
++            /* Remove anonymous user's permission to execute RPCs in ietf-subscribed-notifications.
++             * Intentionally a SECTION. We can remove NACM rule for a while in order to test access denied.
++             * The rule gets automatically restored for the rest of the tests.
++             */
++            srSess.switchDatastore(sysrepo::Datastore::Running);
++            srSess.deleteItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='16']");
++            srSess.applyChanges();
++
++            REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:establish-subscription", {CONTENT_TYPE_JSON}, R"###({ "ietf-subscribed-notifications:input": { "stream": "NETCONF" } })###")
++                    == Response{403, jsonHeaders, R"###({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "access-denied",
++        "error-path": "/ietf-subscribed-notifications:establish-subscription",
++        "error-message": "Access denied."
++      }
++    ]
++  }
++}
++)###"});
++        }
++    }
++
++    SECTION("Invalid establish-subscription requests")
++    {
++        // stop-time in the past
++        REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:establish-subscription", {CONTENT_TYPE_JSON}, R"###({ "ietf-subscribed-notifications:input": { "stream": "NETCONF", "stop-time": "1999-09-09T09:09:09Z" } })###")
++                == Response{400, jsonHeaders, R"###({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-attribute",
++        "error-message": "Couldn't create notification subscription: SR_ERR_INVAL_ARG\u000A Specified \"stop-time\" is in the past. (SR_ERR_INVAL_ARG)"
++      }
++    ]
++  }
++}
++)###"});
++
++        // invalid stream
++        REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:establish-subscription", {CONTENT_TYPE_JSON}, R"###({ "ietf-subscribed-notifications:input": { "stream": "ajsdhauisds" } })###")
++                == Response{400, jsonHeaders, R"###({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-attribute",
++        "error-message": "Couldn't create notification subscription: SR_ERR_NOT_FOUND\u000A Failed to collect modules to subscribe to, invalid stream and/or XPath filter (Item not found). (SR_ERR_NOT_FOUND)"
++      }
++    ]
++  }
++}
++)###"});
++
++        // stream-filter-name is unsupported, but leafref validation triggers first
++        REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:establish-subscription", {CONTENT_TYPE_JSON}, R"###({ "ietf-subscribed-notifications:input": { "stream": "NETCONF", "stream-filter-name": "xyz" } })###")
++                == Response{400, jsonHeaders, R"###({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "protocol",
++        "error-tag": "invalid-value",
++        "error-path": "/ietf-subscribed-notifications:establish-subscription/stream-filter-name",
++        "error-message": "Invalid leafref value \"xyz\" - no target instance \"/sn:filters/sn:stream-filter/sn:name\" with the same value."
++      }
++    ]
++  }
++}
++)###"});
++    }
++
++    SECTION("Valid requests")
++    {
++        SECTION("XML stream")
++        {
++            netconfWatcher.setDataFormat(libyang::DataFormat::XML);
++            rpcRequestAuthHeader = AUTH_ROOT;
++
++            SECTION("Stream encoding inferred from request content-type")
++            {
++                rpcRequestEncoding = libyang::DataFormat::XML;
++            }
++
++            SECTION("Explicitly asked for XML stream encoding")
++            {
++                rpcSubscriptionEncoding = "encode-xml";
++
++                SECTION("Request content-type JSON")
++                {
++                    rpcRequestEncoding = libyang::DataFormat::JSON;
++                }
++
++                SECTION("Request content-type XML")
++                {
++                    rpcRequestEncoding = libyang::DataFormat::XML;
++                }
++            }
++        }
++
++        SECTION("JSON stream")
++        {
++            netconfWatcher.setDataFormat(libyang::DataFormat::JSON);
++
++            SECTION("NACM: anonymous user cannot read example-notif module")
++            {
++                rpcRequestAuthHeader = std::nullopt;
++                rpcRequestEncoding = libyang::DataFormat::JSON;
++                rpcSubscriptionEncoding = "encode-json";
++            }
++
++            SECTION("Content-type with set encode leaf")
++            {
++                rpcRequestAuthHeader = AUTH_ROOT;
++
++                SECTION("Stream encoding inferred from request content-type")
++                {
++                    rpcRequestEncoding = libyang::DataFormat::JSON;
++                }
++
++                SECTION("Explicitly asked for JSON stream encoding")
++                {
++                    rpcSubscriptionEncoding = "encode-json";
++                    SECTION("Request content-type JSON")
++                    {
++                        rpcRequestEncoding = libyang::DataFormat::JSON;
++                    }
++
++                    SECTION("Request content-type XML")
++                    {
++                        rpcRequestEncoding = libyang::DataFormat::XML;
++                    }
++                }
++            }
++        }
++
++        auto uri = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++        REQUIRE(std::regex_match(uri, std::regex("/streams/subscribed/"s + uuidV4Regex)));
++    }
++}
+-- 
+2.43.0
+

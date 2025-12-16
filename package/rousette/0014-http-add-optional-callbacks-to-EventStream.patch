@@ -1,0 +1,115 @@
+From 6bca750f866b5b14c4d9c3da68e5c8f1e4eee36c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 19 May 2025 12:11:09 +0200
+Subject: [PATCH 14/38] http: add optional callbacks to EventStream
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+In some cases, it might be useful to have a callback that is called when
+the client disconnects or when the connection is lost.
+For us, this will be useful in the future subscribed notifications
+implementation where we would like to clean up stuff after client
+disconnects.
+
+Change-Id: Icfc2959e38b812b7c18f45976415209b29151c7b
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/http/EventStream.cpp | 18 +++++++++++++++---
+ src/http/EventStream.h   | 10 ++++++++--
+ 2 files changed, 23 insertions(+), 5 deletions(-)
+
+diff --git a/src/http/EventStream.cpp b/src/http/EventStream.cpp
+index 8703dad..0a974d4 100644
+--- a/src/http/EventStream.cpp
++++ b/src/http/EventStream.cpp
+@@ -25,11 +25,15 @@ EventStream::EventStream(const server::request& req,
+                          Termination& termination,
+                          EventSignal& signal,
+                          const std::chrono::seconds keepAlivePingInterval,
+-                         const std::optional<std::string>& initialEvent)
++                         const std::optional<std::string>& initialEvent,
++                         const std::function<void()>& onTerminationCb,
++                         const std::function<void()>& onClientDisconnectedCb)
+     : res{res}
+     , ping{res.io_service()}
+     , peer{peer_from_request(req)}
+     , m_keepAlivePingInterval(keepAlivePingInterval)
++    , onTerminationCb(onTerminationCb)
++    , onClientDisconnectedCb(onClientDisconnectedCb)
+ {
+     if (initialEvent) {
+         enqueue(FIELD_DATA, *initialEvent);
+@@ -41,6 +45,9 @@ EventStream::EventStream(const server::request& req,
+ 
+     terminateSub = termination.connect([this]() {
+         spdlog::trace("{}: will terminate", peer);
++        if (this->onTerminationCb) {
++            this->onTerminationCb();
++        }
+         std::lock_guard lock{mtx};
+         if (state == Closed) { // we are late to the party, res is already gone
+             return;
+@@ -80,6 +87,9 @@ void EventStream::activate()
+         myself->eventSub.disconnect();
+         myself->terminateSub.disconnect();
+         myself->state = Closed;
++        if (myself->onClientDisconnectedCb) {
++            myself->onClientDisconnectedCb();
++        }
+     });
+ 
+     res.end([myself](uint8_t* destination, std::size_t len, uint32_t* data_flags) {
+@@ -187,9 +197,11 @@ std::shared_ptr<EventStream> EventStream::create(const nghttp2::asio_http2::serv
+                                                  Termination& terminate,
+                                                  EventSignal& signal,
+                                                  const std::chrono::seconds keepAlivePingInterval,
+-                                                 const std::optional<std::string>& initialEvent)
++                                                 const std::optional<std::string>& initialEvent,
++                                                 const std::function<void()>& onTerminationCb,
++                                                 const std::function<void()>& onClientDisconnectedCb)
+ {
+-    auto stream = std::shared_ptr<EventStream>(new EventStream(req, res, terminate, signal, keepAlivePingInterval, initialEvent));
++    auto stream = std::shared_ptr<EventStream>(new EventStream(req, res, terminate, signal, keepAlivePingInterval, initialEvent, onTerminationCb, onClientDisconnectedCb));
+     stream->activate();
+     return stream;
+ }
+diff --git a/src/http/EventStream.h b/src/http/EventStream.h
+index ef0a002..87d8c82 100644
+--- a/src/http/EventStream.h
++++ b/src/http/EventStream.h
+@@ -36,7 +36,9 @@ public:
+                                                Termination& terminate,
+                                                EventSignal& signal,
+                                                const std::chrono::seconds keepAlivePingInterval,
+-                                               const std::optional<std::string>& initialEvent = std::nullopt);
++                                               const std::optional<std::string>& initialEvent = std::nullopt,
++                                               const std::function<void()>& onTerminationCb = std::function<void()>(),
++                                               const std::function<void()>& onClientDisconnectedCb = std::function<void()>());
+ 
+ private:
+     const nghttp2::asio_http2::server::response& res;
+@@ -54,6 +56,8 @@ private:
+     boost::signals2::scoped_connection eventSub, terminateSub;
+     const std::string peer;
+     const std::chrono::seconds m_keepAlivePingInterval;
++    std::function<void()> onTerminationCb; ///< optional callback when the stream is terminated
++    std::function<void()> onClientDisconnectedCb; ///< optional callback invoked in client.on_close()
+ 
+     size_t send_chunk(uint8_t* destination, std::size_t len, uint32_t* data_flags);
+     ssize_t process(uint8_t* destination, std::size_t len, uint32_t* data_flags);
+@@ -66,7 +70,9 @@ protected:
+                 Termination& terminate,
+                 EventSignal& signal,
+                 const std::chrono::seconds keepAlivePingInterval,
+-                const std::optional<std::string>& initialEvent = std::nullopt);
++                const std::optional<std::string>& initialEvent = std::nullopt,
++                const std::function<void()>& onTerminationCb = std::function<void()>(),
++                const std::function<void()>& onClientDisconnectedCb = std::function<void()>());
+     void activate();
+ };
+ }
+-- 
+2.43.0
+

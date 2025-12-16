@@ -1,0 +1,360 @@
+From 22cfcbf52be604afe0caafc892f4b7befe03b9db Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 8 Apr 2025 17:00:59 +0200
+Subject: [PATCH 31/38] restconf: add {kill,delete}-subscription RPCs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Add implementations for deleting and killing subscriptions [1,2].
+
+Rousette allows establishing subscriptions by anonymous users. Anonymous
+users can not call delete-subscription RPC though because we do not know
+if it is the same anonymous user who initiated the subscription.
+The subscriptions are killed after a minute of inactivity, so the
+subscription will get deleted by rousette automatically after the client
+disconnects.
+
+[1] https://datatracker.ietf.org/doc/html/rfc8639.html#section-2.4.4
+[2] https://datatracker.ietf.org/doc/html/rfc8639.html#section-2.4.5
+
+Change-Id: I443d6fd88f2797045b5ae0a7d7e1a761fe74e7cb
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/DynamicSubscriptions.cpp       |  44 +++++
+ src/restconf/DynamicSubscriptions.h         |   2 +
+ src/restconf/Server.cpp                     |   4 +
+ tests/restconf-subscribed-notifications.cpp | 178 +++++++++++++++++++-
+ 4 files changed, 222 insertions(+), 6 deletions(-)
+
+diff --git a/src/restconf/DynamicSubscriptions.cpp b/src/restconf/DynamicSubscriptions.cpp
+index f6defb4..fabc226 100644
+--- a/src/restconf/DynamicSubscriptions.cpp
++++ b/src/restconf/DynamicSubscriptions.cpp
+@@ -119,6 +119,32 @@ void DynamicSubscriptions::establishSubscription(sysrepo::Session& session, cons
+     }
+ }
+ 
++void DynamicSubscriptions::deleteSubscription(sysrepo::Session& session, const libyang::DataFormat, const libyang::DataNode& rpcInput, libyang::DataNode&)
++{
++    const auto isKill = rpcInput.findPath("/ietf-subscribed-notifications:kill-subscription") != std::nullopt;
++    const auto subId = std::get<uint32_t>(rpcInput.findPath("id")->asTerm().value());
++
++    // The RPC is already NACM-checked. Now, retrieve the subscription, if the current user has permission for it
++    auto subscriptionData = getSubscriptionForUser(subId, session.getNacmUser());
++    if (!subscriptionData) {
++        throw ErrorResponse(404, "application", "invalid-value", "Subscription not found.", rpcInput.path());
++    }
++
++    /* I *think* the RFC 8639 says that root can use delete-subscription only for subscriptions created by root.
++     * This checks if the current user is root and the subscription was created by a different user. If so, reject the request.
++     */
++    if (!isKill && session.getNacmUser() == session.getNacmRecoveryUser() && subscriptionData->user != session.getNacmRecoveryUser()) {
++        //FIXME: pass additional error info (rc:yang-data delete-subscription-error-info from RFC 8639)
++        throw ErrorResponse(400, "application", "invalid-attribute", "Trying to delete subscription not created by root. Use kill-subscription instead.", rpcInput.path());
++    }
++
++    spdlog::debug("Terminating subscription id {}", subId);
++    subscriptionData->subscription.terminate("ietf-subscribed-notifications:no-such-subscription");
++
++    std::unique_lock lock(m_mutex);
++    m_subscriptions.erase(subscriptionData->uuid);
++}
++
+ void DynamicSubscriptions::terminateSubscription(const uint32_t subId)
+ {
+     std::lock_guard lock(m_mutex);
+@@ -153,6 +179,24 @@ std::shared_ptr<DynamicSubscriptions::SubscriptionData> DynamicSubscriptions::ge
+     return nullptr;
+ }
+ 
++/** @brief Returns the subscription data for the given subscription id and user.
++ *
++ * @param id The ID of the subscription.
++ * @return A shared pointer to the SubscriptionData object if found and user is the one who established the subscription (or NACM recovery user), otherwise nullptr.
++ */
++std::shared_ptr<DynamicSubscriptions::SubscriptionData> DynamicSubscriptions::getSubscriptionForUser(const uint32_t subId, const std::optional<std::string>& user)
++{
++    std::unique_lock lock(m_mutex);
++
++    // FIXME: This is linear search. Maybe use something like boost::multi_index?
++    if (auto it = std::find_if(m_subscriptions.begin(), m_subscriptions.end(), [subId](const auto& entry) { return entry.second->subscription.subscriptionId() == subId; });
++        it != m_subscriptions.end() && (it->second->user == user || user == sysrepo::Session::getNacmRecoveryUser())) {
++        return it->second;
++    }
++
++    return nullptr;
++}
++
+ boost::uuids::uuid DynamicSubscriptions::makeUUID()
+ {
+     // uuid generator instance accesses must be synchronized (https://www.boost.org/doc/libs/1_88_0/libs/uuid/doc/html/uuid.html#design_notes)
+diff --git a/src/restconf/DynamicSubscriptions.h b/src/restconf/DynamicSubscriptions.h
+index 0422947..8057b17 100644
+--- a/src/restconf/DynamicSubscriptions.h
++++ b/src/restconf/DynamicSubscriptions.h
+@@ -70,8 +70,10 @@ public:
+     DynamicSubscriptions(const std::string& streamRootUri, const nghttp2::asio_http2::server::http2& server, const std::chrono::seconds inactivityTimeout);
+     ~DynamicSubscriptions();
+     std::shared_ptr<SubscriptionData> getSubscriptionForUser(const boost::uuids::uuid& uuid, const std::optional<std::string>& user);
++    std::shared_ptr<SubscriptionData> getSubscriptionForUser(const uint32_t subId, const std::optional<std::string>& user);
+     void establishSubscription(sysrepo::Session& session, const libyang::DataFormat requestEncoding, const libyang::DataNode& rpcInput, libyang::DataNode& rpcOutput);
+     void stop();
++    void deleteSubscription(sysrepo::Session& session, const libyang::DataFormat, const libyang::DataNode& rpcInput, libyang::DataNode&);
+ 
+ private:
+     std::mutex m_mutex; ///< Lock for shared data (subscriptions storage and uuid generator)
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 0c7e855..04cdf56 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -447,6 +447,10 @@ std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, liby
+     const std::map<std::string, InternalRPCHandler> handlers{
+         {"/ietf-subscribed-notifications:establish-subscription",
+          {"/ietf-subscribed-notifications:filters", [&dynamicSubscriptions](auto&&... args) { return dynamicSubscriptions.establishSubscription(std::forward<decltype(args)>(args)...); }}},
++        {"/ietf-subscribed-notifications:kill-subscription",
++         {std::nullopt, [&dynamicSubscriptions](auto&&... args) { return dynamicSubscriptions.deleteSubscription(std::forward<decltype(args)>(args)...); }}},
++        {"/ietf-subscribed-notifications:delete-subscription",
++         {std::nullopt, [&dynamicSubscriptions](auto&&... args) { return dynamicSubscriptions.deleteSubscription(std::forward<decltype(args)>(args)...); }}},
+     };
+ 
+     const auto rpcPath = rpcInput.path();
+diff --git a/tests/restconf-subscribed-notifications.cpp b/tests/restconf-subscribed-notifications.cpp
+index 68e9286..7c7de4b 100644
+--- a/tests/restconf-subscribed-notifications.cpp
++++ b/tests/restconf-subscribed-notifications.cpp
+@@ -24,8 +24,13 @@ constexpr auto uuidV4Regex = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[89a
+ using namespace std::chrono_literals;
+ using namespace std::string_literals;
+ 
++struct EstablishSubscriptionResult {
++    uint32_t id;
++    std::string url;
++};
++
+ /** @brief Calls establish-subscription rpc, returns the url of the stream associated with the created subscription */
+-std::string establishSubscription(
++EstablishSubscriptionResult establishSubscription(
+     const libyang::Context& ctx,
+     const libyang::DataFormat rpcEncoding,
+     const std::optional<std::pair<std::string, std::string>>& rpcRequestAuthHeader,
+@@ -79,10 +84,16 @@ std::string establishSubscription(
+     auto reply = ctx.newPath("/ietf-subscribed-notifications:establish-subscription");
+     REQUIRE(reply.parseOp(resp.data, rpcEncoding, libyang::OperationType::ReplyRestconf).tree);
+ 
++    auto idNode = reply.findPath("id", libyang::InputOutputNodes::Output);
++    REQUIRE(idNode);
++
+     auto urlNode = reply.findPath("ietf-restconf-subscribed-notifications:uri", libyang::InputOutputNodes::Output);
+     REQUIRE(urlNode);
+ 
+-    return urlNode->asTerm().valueStr();
++    return {
++        std::get<uint32_t>(idNode->asTerm().value()),
++        urlNode->asTerm().valueStr(),
++    };
+ }
+ 
+ TEST_CASE("RESTCONF subscribed notifications")
+@@ -150,7 +161,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+         SECTION("User DWDM establishes subscription")
+         {
+             std::pair<std::string, std::string> user = AUTH_DWDM;
+-            auto uri = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, user, std::nullopt);
++            auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, user, std::nullopt);
+ 
+             std::map<std::string, std::string> headers;
+ 
+@@ -350,7 +361,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+             }
+         }
+ 
+-        auto uri = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++        auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
+         REQUIRE(std::regex_match(uri, std::regex("/streams/subscribed/"s + uuidV4Regex)));
+ 
+         PREPARE_LOOP_WITH_EXCEPTIONS
+@@ -393,6 +404,161 @@ TEST_CASE("RESTCONF subscribed notifications")
+         SSEClient cli(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, uri, streamHeaders);
+         RUN_LOOP_WITH_EXCEPTIONS;
+     }
++
++    SECTION("delete-subscription")
++    {
++        std::optional<Response> expectedResponse;
++        std::map<std::string, std::string> headers;
++        headers.insert(CONTENT_TYPE_JSON);
++
++        SECTION("Subscription created by dwdm")
++        {
++            rpcRequestAuthHeader = AUTH_DWDM;
++
++            SECTION("dwdm (author) can delete")
++            {
++                headers.insert(AUTH_DWDM);
++                expectedResponse = Response{204, noContentTypeHeaders, ""};
++            }
++
++            SECTION("Anonymous cannot delete anything because of NACM")
++            {
++                expectedResponse = Response{403, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "access-denied",
++        "error-path": "/ietf-subscribed-notifications:delete-subscription",
++        "error-message": "Access denied."
++      }
++    ]
++  }
++}
++)"};
++            }
++
++            SECTION("norules user")
++            {
++                headers.insert(AUTH_NORULES);
++                expectedResponse = Response{404, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-value",
++        "error-path": "/ietf-subscribed-notifications:delete-subscription",
++        "error-message": "Subscription not found."
++      }
++    ]
++  }
++}
++)"};
++            }
++
++            SECTION("root user")
++            {
++                headers.insert(AUTH_ROOT);
++                expectedResponse = Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-attribute",
++        "error-path": "/ietf-subscribed-notifications:delete-subscription",
++        "error-message": "Trying to delete subscription not created by root. Use kill-subscription instead."
++      }
++    ]
++  }
++}
++)"};
++            }
++
++            auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++            auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
++            REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:delete-subscription", headers, body) == expectedResponse);
++        }
++
++        SECTION("Anonymous user cannot delete subscription craeted by anonymous user")
++        {
++            rpcRequestAuthHeader = std::nullopt;
++            auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++            auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
++            REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:delete-subscription", headers, body) == Response{403, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "access-denied",
++        "error-path": "/ietf-subscribed-notifications:delete-subscription",
++        "error-message": "Access denied."
++      }
++    ]
++  }
++}
++)"});
++        }
++    }
++
++    SECTION("kill-subscription")
++    {
++        std::optional<Response> expectedResponse;
++        std::map<std::string, std::string> headers;
++        headers.insert(CONTENT_TYPE_JSON);
++
++        SECTION("User cannot kill")
++        {
++            SECTION("dwdm (author)")
++            {
++                headers.insert(AUTH_DWDM);
++            }
++
++            SECTION("anonymous")
++            {
++            }
++
++            expectedResponse = Response{403, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "access-denied",
++        "error-path": "/ietf-subscribed-notifications:kill-subscription",
++        "error-message": "Access denied."
++      }
++    ]
++  }
++}
++)"};
++        }
++
++        SECTION("root")
++        {
++            headers.insert(AUTH_ROOT);
++            expectedResponse = Response{204, noContentTypeHeaders, ""};
++        }
++
++        auto [id, uri] = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
++        auto body = R"({"ietf-subscribed-notifications:input": { "id": )" + std::to_string(id) + "}}";
++        REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:kill-subscription", headers, body) == expectedResponse);
++    }
++
++    SECTION("Invalid kill/delete-subscription requests")
++    {
++        REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:kill-subscription", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"ietf-subscribed-notifications:input": {}})") == Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "protocol",
++        "error-tag": "invalid-value",
++        "error-path": "/ietf-subscribed-notifications:kill-subscription",
++        "error-message": "Mandatory node \"id\" instance does not exist."
++      }
++    ]
++  }
++}
++)"});
++    }
+ }
+ 
+ TEST_CASE("Terminating server under notification load")
+@@ -416,7 +582,7 @@ TEST_CASE("Terminating server under notification load")
+     std::optional<std::pair<std::string, std::string>> rpcRequestAuthHeader;
+ 
+     std::pair<std::string, std::string> auth = AUTH_ROOT;
+-    auto uri = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, auth, std::nullopt);
++    auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, auth, std::nullopt);
+ 
+     PREPARE_LOOP_WITH_EXCEPTIONS;
+ 
+@@ -467,7 +633,7 @@ TEST_CASE("Cleaning up inactive subscriptions")
+     constexpr auto inactivityTimeout = 2s;
+     auto server = rousette::restconf::Server{srConn, SERVER_ADDRESS, SERVER_PORT, 0ms, 55s, inactivityTimeout};
+ 
+-    auto uri = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, {AUTH_ROOT}, std::nullopt);
++    auto [id, uri] = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, {AUTH_ROOT}, std::nullopt);
+ 
+     SECTION("Client connects and disconnects")
+     {
+-- 
+2.43.0
+

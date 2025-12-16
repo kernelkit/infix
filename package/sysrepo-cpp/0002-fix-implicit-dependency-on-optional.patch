@@ -1,0 +1,33 @@
+From e49463aba8b44b932fdd342d1c1d117e70414aba Mon Sep 17 00:00:00 2001
+From: Edoardo Bortolozzo <edoardo.bortolozzo@thinkquantum.com>
+Date: Fri, 17 Oct 2025 18:08:47 +0200
+Subject: [PATCH 2/9] fix: implicit dependency on optional
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+chrono imports optional in gcc >=13.
+added the explicit include to compile in gcc <=12.
+
+Change-Id: I18cc1a45ab522ee6738d4bc7080696cba8284903
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/sysrepo-cpp/Connection.hpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/sysrepo-cpp/Connection.hpp b/include/sysrepo-cpp/Connection.hpp
+index bf72bcd..a469a2c 100644
+--- a/include/sysrepo-cpp/Connection.hpp
++++ b/include/sysrepo-cpp/Connection.hpp
+@@ -7,6 +7,7 @@
+ */
+ #pragma once
+ 
++#include <optional>
+ #include <chrono>
+ #include <memory>
+ #include <string>
+-- 
+2.43.0
+

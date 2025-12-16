@@ -1,0 +1,69 @@
+From 9c39cdd8a8a6bb8fb94d4f943313ec8c4a1823d7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 10 Nov 2025 19:58:36 +0100
+Subject: [PATCH 29/38] restconf: dynamic subscriptions shutdown method
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Dynamic subscriptions now have a proper shutdown method that sets a
+Terminating state on all the subscriptions so that each subscription
+cannot call its terminate() method.
+
+Change-Id: I4532bbafff7c7386a18ed0636f1102842d2749fa
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/DynamicSubscriptions.cpp | 10 ++++++++++
+ src/restconf/DynamicSubscriptions.h   |  1 +
+ src/restconf/Server.cpp               |  1 +
+ 3 files changed, 12 insertions(+)
+
+diff --git a/src/restconf/DynamicSubscriptions.cpp b/src/restconf/DynamicSubscriptions.cpp
+index 7f4b171..9c195f4 100644
+--- a/src/restconf/DynamicSubscriptions.cpp
++++ b/src/restconf/DynamicSubscriptions.cpp
+@@ -82,6 +82,16 @@ DynamicSubscriptions::DynamicSubscriptions(const std::string& streamRootUri)
+ 
+ DynamicSubscriptions::~DynamicSubscriptions() = default;
+ 
++void DynamicSubscriptions::stop()
++{
++    std::lock_guard lock(m_mutex);
++    for (const auto& [uuid, subscriptionData] : m_subscriptions) {
++        // We are already terminating and will destroy via destructor, calls to terminate() will do nothing
++        std::lock_guard lock(subscriptionData->mutex);
++        subscriptionData->state = SubscriptionData::State::Terminating;
++    }
++}
++
+ void DynamicSubscriptions::establishSubscription(sysrepo::Session& session, const libyang::DataFormat requestEncoding, const libyang::DataNode& rpcInput, libyang::DataNode& rpcOutput)
+ {
+     // Generate a new UUID associated with the subscription. The UUID will be used as a part of the URI so that the URI is not predictable (RFC 8650, section 5)
+diff --git a/src/restconf/DynamicSubscriptions.h b/src/restconf/DynamicSubscriptions.h
+index 1874390..0309cad 100644
+--- a/src/restconf/DynamicSubscriptions.h
++++ b/src/restconf/DynamicSubscriptions.h
+@@ -55,6 +55,7 @@ public:
+     ~DynamicSubscriptions();
+     std::shared_ptr<SubscriptionData> getSubscriptionForUser(const boost::uuids::uuid& uuid, const std::optional<std::string>& user);
+     void establishSubscription(sysrepo::Session& session, const libyang::DataFormat requestEncoding, const libyang::DataNode& rpcInput, libyang::DataNode& rpcOutput);
++    void stop();
+ 
+ private:
+     std::mutex m_mutex; ///< Lock for shared data (subscriptions storage and uuid generator)
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 2a8ad33..5486e99 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -884,6 +884,7 @@ void Server::stop()
+     });
+ 
+     shutdownRequested();
++    m_dynamicSubscriptions.stop();
+ }
+ 
+ void Server::join()
+-- 
+2.43.0
+

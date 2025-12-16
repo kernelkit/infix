@@ -1,0 +1,102 @@
+From 51f257fe100adde66efc4d93a5e40b2e5a9a9fab Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 11 Dec 2025 12:05:02 +0100
+Subject: [PATCH 3/6] lyb BUGFIX big-endian fixes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Refs #2455
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/parser_lyb.c  |  8 +++++++-
+ src/printer_lyb.c | 18 ++++++++++++------
+ 2 files changed, 19 insertions(+), 7 deletions(-)
+
+diff --git a/src/parser_lyb.c b/src/parser_lyb.c
+index 43ab02f95..82c759c3d 100644
+--- a/src/parser_lyb.c
++++ b/src/parser_lyb.c
+@@ -1425,7 +1425,10 @@ lyb_parse_node(struct lyd_lyb_ctx *lybctx, struct lyd_node *parent, struct lyd_n
+     char *mod_name = NULL, mod_rev[LY_REV_SIZE];
+ 
+     /* read node type */
+-    lyb_read((uint64_t *)&lyb_type, LYB_NODE_TYPE_BITS, lybctx->parse_ctx);
++    lyb_read(&lyb_type, LYB_NODE_TYPE_BITS, lybctx->parse_ctx);
++
++    /* correct byte order */
++    lyb_type = le32toh(lyb_type);
+ 
+     switch (lyb_type) {
+     case LYB_NODE_END:
+@@ -1543,6 +1546,9 @@ lyb_parse_header(struct lyd_lyb_ctx *lybctx)
+     data_hash = 0;
+     lyb_read((uint8_t *)&data_hash, LYB_HEADER_CTX_HASH_BITS, pctx);
+ 
++    /* correct byte order */
++    data_hash = le32toh(data_hash);
++
+     if (!data_hash) {
+         /* fine for no data */
+         pctx->empty_hash = 1;
+diff --git a/src/printer_lyb.c b/src/printer_lyb.c
+index b35d3c0fe..7094467a7 100644
+--- a/src/printer_lyb.c
++++ b/src/printer_lyb.c
+@@ -447,12 +447,12 @@ lyb_write_count(uint32_t count, struct lylyb_print_ctx *lybctx)
+         return LY_EINT;
+     }
+ 
+-    /* correct byte order */
+-    count = htole32(count);
+-
+     /* copy count to buf */
+     buf |= count << prefix_b;
+ 
++    /* correct byte order */
++    buf = htole32(buf);
++
+     return lyb_write(&buf, prefix_b + num_b, lybctx);
+ }
+ 
+@@ -492,12 +492,12 @@ lyb_write_size(uint32_t size, struct lylyb_print_ctx *lybctx)
+         num_b = 32;
+     }
+ 
+-    /* correct byte order */
+-    size = htole32(size);
+-
+     /* copy size to buf */
+     buf |= size << prefix_b;
+ 
++    /* correct byte order */
++    buf = htole32(buf);
++
+     return lyb_write(&buf, prefix_b + num_b, lybctx);
+ }
+ 
+@@ -635,6 +635,9 @@ lyb_print_header(struct lylyb_print_ctx *lybctx)
+     /* context hash (is truncated), if not printing empty data */
+     if (lybctx->ctx) {
+         hash = lyb_truncate_hash_nonzero(ly_ctx_get_modules_hash(lybctx->ctx), LYB_HEADER_CTX_HASH_BITS);
++
++        /* correct byte order */
++        hash = htole32(hash);
+     } else {
+         hash = 0;
+     }
+@@ -1019,6 +1022,9 @@ lyb_print_lyb_type(const struct lyd_node *node, struct lylyb_print_ctx *lybctx)
+         lyb_type = LYB_NODE_CHILD;
+     }
+ 
++    /* correct byte order */
++    lyb_type = htole32(lyb_type);
++
+     LY_CHECK_RET(lyb_write(&lyb_type, LYB_NODE_TYPE_BITS, lybctx));
+ 
+     return LY_SUCCESS;
+-- 
+2.43.0
+

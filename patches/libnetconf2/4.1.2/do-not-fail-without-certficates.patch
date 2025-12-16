@@ -1,0 +1,22 @@
+diff --git a/src/server_config.c b/src/server_config.c
+index 48d362e..dc9f59d 100644
+--- a/src/server_config.c
++++ b/src/server_config.c
+@@ -4151,6 +4151,8 @@ config_asymmetric_key_certs(const struct lyd_node *node, enum nc_operation paren
+     struct lyd_node *n;
+     enum nc_operation op;
+ 
++    if (!node)
++      return 0;
+     NC_NODE_GET_OP(node, parent_op, &op);
+ 
+     /* configure all certificates */
+@@ -4225,7 +4227,7 @@ config_asymmetric_key(const struct lyd_node *node, enum nc_operation parent_op,
+     }
+ 
+     /* config asymmetric key certificates */
+-    NC_CHECK_RET(nc_lyd_find_child(node, "certificates", 1, &n));
++    NC_CHECK_RET(nc_lyd_find_child(node, "certificates", 0, &n));
+     NC_CHECK_RET(config_asymmetric_key_certs(n, op, entry));
+ 
+     /* config generate csr */
