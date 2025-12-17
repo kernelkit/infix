@@ -1,0 +1,89 @@
+From 5592ae49cd7607fdcb2c9e554a521b53545e761b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 21 Oct 2025 17:23:44 +0200
+Subject: [PATCH 24/38] restconf: validate input for internal rpcs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Jan found an issue where invalid input to internal rpcs was accepted. It
+turns out that the issue was in parsing, but not validating input for
+internally processed RPCs (those RPCs for subscribed notifications).
+
+This patch adds the validation using a wrapper for lyd_validate_op from
+libyang-cpp.
+
+I shuffled a little bit of the code around together with this change to
+make it cleaner.
+Also, to make the code generic, we store the name of the internal RPC
+and a XPath for fetching data required for validation (see
+lyd_validate_op docs). The code validates the input data before processing
+the RPC.
+
+Change-Id: I55296895e6993b4ca27d21ce2a64ec2d159a35fc
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 36 +++++++++++++++++++++++++++++-------
+ 1 file changed, 29 insertions(+), 7 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 77ae1be..7e8db58 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -438,9 +438,12 @@ libyang::CreatedNodes createEditForPutAndPatch(libyang::Context& ctx, const std:
+     return {editNode, replacementNode};
+ }
+ 
+-std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, const libyang::DataNode& rpcInput, const libyang::DataFormat requestEncoding)
++std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, libyang::DataNode& rpcInput, const libyang::DataFormat requestEncoding)
+ {
+-    using InternalRPCHandler = std::function<void(sysrepo::Session&, const libyang::DataFormat, const libyang::DataNode&, libyang::DataNode&)>;
++    struct InternalRPCHandler {
++        std::optional<std::string> validationDataXPath; ///< XPath to data used for RPC input validation
++        std::function<void(sysrepo::Session&, const libyang::DataFormat, const libyang::DataNode&, libyang::DataNode&)> rpcHandler; // The function that processes the RPC
++    };
+     const std::map<std::string, InternalRPCHandler> handlers;
+ 
+     const auto rpcPath = rpcInput.path();
+@@ -451,13 +454,32 @@ std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, cons
+         throw ErrorResponse(403, "application", "access-denied", "Access denied.", rpcNode.createdNode->path());
+     }
+ 
+-    if (auto it = handlers.find(rpcPath); it != handlers.end()) {
+-        auto [parent, rpcOutput] = sess.getContext().newPath2(rpcPath, std::nullopt);
+-        it->second(sess, requestEncoding, rpcInput, *rpcOutput);
+-        return *parent;
++    auto handlerIt = handlers.find(rpcPath);
++    if (handlerIt == handlers.end()) {
++        throw ErrorResponse(501, "application", "operation-not-supported", "Unsupported RPC call to " + rpcPath, rpcPath);
++    }
++
++    // RPC input validation.
++    sess.switchDatastore(sysrepo::Datastore::Operational);
++    auto validationData = handlerIt->second.validationDataXPath ? sess.getData(*handlerIt->second.validationDataXPath) : std::nullopt;
++
++    try {
++        libyang::validateOp(rpcInput, validationData, libyang::OperationType::RpcRestconf);
++    } catch (const libyang::ErrorWithCode& exc) {
++        const auto errors = sess.getContext().getErrors();
++
++        if (!errors.empty()) {
++            const auto& error = errors.back();
++            throw ErrorResponse(400, "protocol", "invalid-value", error.message, error.dataPath.value_or(rpcInput.path()));
++        } else {
++            // Fallback if no detailed error is available
++            throw ErrorResponse(400, "protocol", "invalid-value", "Input validation failed"s, rpcInput.path());
++        }
+     }
+ 
+-    throw ErrorResponse(501, "application", "operation-not-supported", "Unsupported RPC call to " + rpcPath, rpcPath);
++    auto [parent, rpcOutput] = sess.getContext().newPath2(rpcPath, std::nullopt);
++    handlerIt->second.rpcHandler(sess, requestEncoding, rpcInput, *rpcOutput);
++    return *parent;
+ }
+ 
+ void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::chrono::milliseconds timeout)
+-- 
+2.43.0
+

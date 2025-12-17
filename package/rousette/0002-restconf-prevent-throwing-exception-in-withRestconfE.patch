@@ -1,8 +1,11 @@
-From 027a47ac3ff6c369caab7c007a5a171a68270829 Mon Sep 17 00:00:00 2001
+From 6c5b482ea5c9fbc1149a0864b05d1bb1fa7100bf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Fri, 13 Jun 2025 10:47:55 +0200
-Subject: [PATCH 02/13] restconf: prevent throwing exception in
+Subject: [PATCH 02/38] restconf: prevent throwing exception in
  withRestconfExceptions wrapper
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 In case the catch block of withRestconfExceptions is reached and an
@@ -19,7 +22,7 @@ handle such situations.
 
 Bug: https://github.com/CESNET/rousette/issues/19
 Change-Id: Ifbd74b9bdc0ca66c4e5449a7673ef2f12ae9215e
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  src/restconf/Server.cpp        |  2 +-
  tests/restconf-plain-patch.cpp | 24 ++++++++++++++++++++++++

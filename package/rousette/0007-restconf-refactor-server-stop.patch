@@ -1,0 +1,54 @@
+From ca2894d4888c673d227fc196a25f83ded20e8f04 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 30 Jun 2025 15:38:02 +0200
+Subject: [PATCH 07/38] restconf: refactor server stop
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+In 94b24795 ("server: simplify listening/stopping") we needed to call
+server->stop() through event loop and it was proposed to use the
+approach introduced in [1], i.e., construct a timer, then cancel it
+right away which would invoke the timer handler.
+I find that quite complicated, why not just simply call post()? [2]
+
+(Also, by looking at the http2::asio_http2::server::http2::stop(), it
+does not seem like it should be called from *every* io_service.)
+
+[1] https://stackoverflow.com/questions/17005258/why-does-boost-asio-not-support-an-event-based-interface/17029022#17029022
+[2] https://www.boost.org/doc/libs/1_85_0/doc/html/boost_asio/reference/post.html
+
+Change-Id: I2f33c38a78dce4081a03326c9a9bb25817fc9d2f
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 13 +++++--------
+ 1 file changed, 5 insertions(+), 8 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 2f495f9..bd2ce0d 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -837,14 +837,11 @@ Server::~Server()
+ void Server::stop()
+ {
+     // notification to stop has to go through the asio io_context
+-    for (const auto& service : server->io_services()) {
+-        boost::asio::deadline_timer t{*service, boost::posix_time::pos_infin};
+-        t.async_wait([server = this->server.get()](const boost::system::error_code&) {
+-                spdlog::trace("Stoping HTTP/2 server");
+-                server->stop();
+-                });
+-        t.cancel();
+-    }
++    boost::asio::post(*server->io_services().front(), [server = this->server.get()]() {
++        spdlog::trace("Stoping HTTP/2 server");
++        server->stop();
++    });
++
+     shutdownRequested();
+ }
+ 
+-- 
+2.43.0
+

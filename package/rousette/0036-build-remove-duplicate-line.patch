@@ -1,0 +1,31 @@
+From c1d5d143020ddc51c3886b82e87d463cf3211fca Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 21 Nov 2025 10:44:47 +0100
+Subject: [PATCH 36/38] build: remove duplicate line
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Fixes: 817debab restconf: support replays in subscribed notifications
+Change-Id: I4d2ea8429a4cb7b77f8739aff7a26a03cf535756
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f98a64b..3d79dad 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -223,7 +223,6 @@ if(BUILD_TESTING)
+             --enable-feature encode-json
+             --enable-feature xpath
+             --enable-feature subtree
+-            --enable-feature replay
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/yang/ietf-restconf-subscribed-notifications@2019-11-17.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example.yang --enable-feature f1
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-delete.yang
+-- 
+2.43.0
+

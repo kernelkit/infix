@@ -1,0 +1,32 @@
+From 0e911b67177252160f7f1361e2481a88200debc3 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 11 Dec 2025 15:20:28 +0100
+Subject: [PATCH 6/6] context BUGFIX unexpected context node
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Fixes #2457
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/context.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/context.c b/src/context.c
+index 52a4ae46d..1c287d9f2 100644
+--- a/src/context.c
++++ b/src/context.c
+@@ -370,7 +370,7 @@ ly_ctx_new_yl_legacy(struct ly_ctx *ctx, const struct lyd_node *yltree)
+     LY_ERR ret = LY_SUCCESS;
+     uint32_t i, j;
+ 
+-    LY_CHECK_RET(ret = lyd_find_xpath(yltree, "modules-state/module", &set));
++    LY_CHECK_RET(ret = lyd_find_xpath(yltree, "/ietf-yang-library:modules-state/module", &set));
+ 
+     if (!set->count) {
+         ret = LY_ENOTFOUND;
+-- 
+2.43.0
+

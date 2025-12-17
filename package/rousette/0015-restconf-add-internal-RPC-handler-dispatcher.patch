@@ -1,0 +1,95 @@
+From f6ee629de8abef42a24c42b185052b0c8e78bd6b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 19 May 2025 12:23:16 +0200
+Subject: [PATCH 15/38] restconf: add internal RPC handler dispatcher
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+This code adds a new internal RPC handler dispatcher that checks if user
+is authorized to call the RPC (we are bypassing sysrepo, so we have to
+check this manually) and then calls the RPC handler.
+So far, there are no RPCs processed, but support for the
+ietf-subscribed-notifications:establish-subscription RPC is coming soon.
+
+Change-Id: I99121a511011229e4098f95e91601b39d333444a
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 24 ++++++++++++++++++++----
+ tests/restconf-rpc.cpp  | 18 ++++++++++++++++++
+ 2 files changed, 38 insertions(+), 4 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 8544210..74c06f7 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -438,10 +438,26 @@ libyang::CreatedNodes createEditForPutAndPatch(libyang::Context& ctx, const std:
+     return {editNode, replacementNode};
+ }
+ 
+-std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session&, const libyang::DataNode&)
++std::optional<libyang::DataNode> processInternalRPC(sysrepo::Session& sess, const libyang::DataNode& rpcInput, const libyang::DataFormat requestEncoding)
+ {
+-    // TODO: Implement internal RPCs
+-    throw ErrorResponse(501, "application", "operation-not-supported", "Internal RPCs are not yet supported.");
++    using InternalRPCHandler = std::function<void(sysrepo::Session&, const libyang::DataFormat, const libyang::DataNode&, libyang::DataNode&)>;
++    const std::map<std::string, InternalRPCHandler> handlers;
++
++    const auto rpcPath = rpcInput.path();
++
++    // Is the user authorized to call the operation?
++    auto [parent, rpcNode] = sess.getContext().newPath2(rpcPath, std::nullopt);
++    if (!sess.checkNacmOperation(*rpcNode)) {
++        throw ErrorResponse(403, "application", "access-denied", "Access denied.", rpcNode->path());
++    }
++
++    if (auto it = handlers.find(rpcPath); it != handlers.end()) {
++        auto [parent, rpcOutput] = sess.getContext().newPath2(rpcPath, std::nullopt);
++        it->second(sess, requestEncoding, rpcInput, *rpcOutput);
++        return *parent;
++    }
++
++    throw ErrorResponse(501, "application", "operation-not-supported", "Unsupported RPC call to " + rpcPath, rpcPath);
+ }
+ 
+ void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::chrono::milliseconds timeout)
+@@ -478,7 +494,7 @@ void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::c
+     if (requestCtx->restconfRequest.type == RestconfRequest::Type::Execute) {
+         rpcReply = requestCtx->sess.sendRPC(*rpcNode, timeout);
+     } else if (requestCtx->restconfRequest.type == RestconfRequest::Type::ExecuteInternal) {
+-        rpcReply = processInternalRPC(requestCtx->sess, *rpcNode);
++        rpcReply = processInternalRPC(requestCtx->sess, *rpcNode, *requestCtx->dataFormat.request);
+     }
+ 
+     if (!rpcReply || rpcReply->immediateChildren().empty()) {
+diff --git a/tests/restconf-rpc.cpp b/tests/restconf-rpc.cpp
+index a3e9309..43aaed4 100644
+--- a/tests/restconf-rpc.cpp
++++ b/tests/restconf-rpc.cpp
+@@ -420,4 +420,22 @@ TEST_CASE("invoking actions and rpcs")
+ )"});
+         }
+     }
++
++    SECTION("Internal RPC handlers")
++    {
++        // check NACM access
++        REQUIRE(post(RESTCONF_OPER_ROOT "/ietf-subscribed-notifications:kill-subscription", {CONTENT_TYPE_JSON}, R"({"ietf-subscribed-notifications:input": {}})") == Response{403, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "access-denied",
++        "error-path": "/ietf-subscribed-notifications:kill-subscription",
++        "error-message": "Access denied."
++      }
++    ]
++  }
++}
++)"});
++    }
+ }
+-- 
+2.43.0
+

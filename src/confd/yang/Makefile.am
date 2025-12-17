@@ -1,1 +1,1 @@
-SUBDIRS             = confd test-mode rousette
+SUBDIRS             = confd test-mode

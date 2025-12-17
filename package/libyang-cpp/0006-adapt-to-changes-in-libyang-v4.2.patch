@@ -1,0 +1,364 @@
+From 38d5c10009df602594e1b9a53bac41111a9ba430 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 20 Nov 2025 15:32:03 +0100
+Subject: [PATCH 6/7] adapt to changes in libyang v4.2
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+I was *so* tempted to leave the C++ enums as-is, just to save us from
+this needless sed exercise, but hey, let's not start confusing any
+possible downstream consumers now that upstream has changed these
+identifiers.
+
+Change-Id: I9b34585822b41be0ca1578051f1c0eb8588a0a51
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt               |  4 +--
+ README.md                    |  2 +-
+ include/libyang-cpp/Enum.hpp |  4 +--
+ src/utils/enum.hpp           |  4 +--
+ tests/context.cpp            | 10 +++----
+ tests/data_node.cpp          | 58 ++++++++++++++++++------------------
+ 6 files changed, 41 insertions(+), 41 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 90f9aaa..cbaf82a 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,7 +20,7 @@ add_custom_target(libyang-cpp-version-cmake
+         cmake/ProjectGitVersionRunner.cmake
+         )
+ include(cmake/ProjectGitVersion.cmake)
+-set(LIBYANG_CPP_PKG_VERSION "5")
++set(LIBYANG_CPP_PKG_VERSION "6")
+ prepare_git_version(LIBYANG_CPP_VERSION ${LIBYANG_CPP_PKG_VERSION})
+ 
+ find_package(Doxygen)
+@@ -28,7 +28,7 @@ option(WITH_DOCS "Create and install internal documentation (needs Doxygen)" ${D
+ option(BUILD_SHARED_LIBS "By default, shared libs are enabled. Turn off for a static build." ON)
+ 
+ find_package(PkgConfig REQUIRED)
+-pkg_check_modules(LIBYANG REQUIRED libyang>=4.1.0 IMPORTED_TARGET)
++pkg_check_modules(LIBYANG REQUIRED libyang>=4.2.1 IMPORTED_TARGET)
+ 
+ # FIXME from gcc 14.1 on we should be able to use the calendar/time from libstdc++ and thus remove the date dependency
+ find_package(date)
+diff --git a/README.md b/README.md
+index 0cef2ff..842573f 100644
+--- a/README.md
++++ b/README.md
+@@ -8,7 +8,7 @@
+ Object lifetimes are managed automatically via RAII.
+ 
+ ## Dependencies
+-- [libyang v4](https://github.com/CESNET/libyang) - the `devel` branch (even for the `master` branch of *libyang-cpp*)
++- [libyang v4.2+](https://github.com/CESNET/libyang) - the `devel` branch (even for the `master` branch of *libyang-cpp*)
+ - C++20 compiler (e.g., GCC 10.x+, clang 10+)
+ - CMake 3.19+
+ - optionally for built-in tests, [Doctest](https://github.com/doctest/doctest/) as a C++ unit test framework
+diff --git a/include/libyang-cpp/Enum.hpp b/include/libyang-cpp/Enum.hpp
+index 32142f9..096e030 100644
+--- a/include/libyang-cpp/Enum.hpp
++++ b/include/libyang-cpp/Enum.hpp
+@@ -67,9 +67,9 @@ enum class OperationType : uint32_t {
+  */
+ enum class PrintFlags : uint32_t {
+     WithDefaultsExplicit = 0x00,
+-    WithSiblings = 0x01,
++    Siblings = 0x01,
+     Shrink = 0x02,
+-    KeepEmptyCont = 0x04,
++    EmptyContainers = 0x04,
+     WithDefaultsTrim = 0x10,
+     WithDefaultsAll = 0x20,
+     WithDefaultsAllTag = 0x40,
+diff --git a/src/utils/enum.hpp b/src/utils/enum.hpp
+index 0b2e2d7..a8902ff 100644
+--- a/src/utils/enum.hpp
++++ b/src/utils/enum.hpp
+@@ -33,7 +33,7 @@ constexpr uint32_t toPrintFlags(const PrintFlags flags)
+ }
+ // These tests ensure that I used the right numbers when defining my enum.
+ // TODO: add asserts for operator|(PrintFlags, PrintFlags)
+-static_assert(LYD_PRINT_KEEPEMPTYCONT == toPrintFlags(PrintFlags::KeepEmptyCont));
++static_assert(LYD_PRINT_EMPTY_CONT == toPrintFlags(PrintFlags::EmptyContainers));
+ static_assert(LYD_PRINT_SHRINK == toPrintFlags(PrintFlags::Shrink));
+ static_assert(LYD_PRINT_WD_ALL == toPrintFlags(PrintFlags::WithDefaultsAll));
+ static_assert(LYD_PRINT_WD_ALL_TAG == toPrintFlags(PrintFlags::WithDefaultsAllTag));
+@@ -41,7 +41,7 @@ static_assert(LYD_PRINT_WD_EXPLICIT == toPrintFlags(PrintFlags::WithDefaultsExpl
+ static_assert(LYD_PRINT_WD_IMPL_TAG == toPrintFlags(PrintFlags::WithDefaultsImplicitTag));
+ static_assert(LYD_PRINT_WD_MASK == toPrintFlags(PrintFlags::WithDefaultsMask));
+ static_assert(LYD_PRINT_WD_TRIM == toPrintFlags(PrintFlags::WithDefaultsTrim));
+-static_assert(LYD_PRINT_WITHSIBLINGS == toPrintFlags(PrintFlags::WithSiblings));
++static_assert(LYD_PRINT_SIBLINGS == toPrintFlags(PrintFlags::Siblings));
+ 
+ #ifndef _MSC_VER
+ // MSVC doesn't respect the underlying enum size
+diff --git a/tests/context.cpp b/tests/context.cpp
+index eaedebf..355860b 100644
+--- a/tests/context.cpp
++++ b/tests/context.cpp
+@@ -502,7 +502,7 @@ TEST_CASE("context")
+             auto errorsNode = node->findXPath("/ietf-restconf:errors");
+             REQUIRE(errorsNode.size() == 1);
+             REQUIRE(errorsNode.begin()->path() == "/ietf-restconf:errors");
+-            REQUIRE(*errorsNode.begin()->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont) == R"({
++            REQUIRE(*errorsNode.begin()->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings | libyang::PrintFlags::EmptyContainers) == R"({
+   "ietf-restconf:errors": {
+     "error": [
+       {
+@@ -589,7 +589,7 @@ TEST_CASE("context")
+ 
+             auto firstValue = edits.begin()->findPath("value");
+             REQUIRE(firstValue);
+-            REQUIRE(*firstValue->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::KeepEmptyCont) == R"({
++            REQUIRE(*firstValue->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::EmptyContainers) == R"({
+   "ietf-yang-patch:value": {
+     "example-schema:person": {
+       "name": "John"
+@@ -597,7 +597,7 @@ TEST_CASE("context")
+   }
+ }
+ )");
+-            REQUIRE(*firstValue->printStr(libyang::DataFormat::XML, libyang::PrintFlags::KeepEmptyCont) == R"(<value xmlns="urn:ietf:params:xml:ns:yang:ietf-yang-patch">
++            REQUIRE(*firstValue->printStr(libyang::DataFormat::XML, libyang::PrintFlags::EmptyContainers) == R"(<value xmlns="urn:ietf:params:xml:ns:yang:ietf-yang-patch">
+   <person xmlns="http://example.com/coze">
+     <name>John</name>
+   </person>
+@@ -607,8 +607,8 @@ TEST_CASE("context")
+             auto secondValueNode = (edits.begin() + 1)->findPath("value");
+             REQUIRE(secondValueNode);
+             auto secondValue = std::get<libyang::DataNode>(secondValueNode->asAny().releaseValue().value());
+-            REQUIRE(*secondValue.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::KeepEmptyCont) == "{\n  \"example-schema:dummy\": \"I am a dummy\"\n}\n");
+-            REQUIRE(*secondValue.printStr(libyang::DataFormat::XML, libyang::PrintFlags::KeepEmptyCont) == "<dummy xmlns=\"http://example.com/coze\">I am a dummy</dummy>\n");
++            REQUIRE(*secondValue.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::EmptyContainers) == "{\n  \"example-schema:dummy\": \"I am a dummy\"\n}\n");
++            REQUIRE(*secondValue.printStr(libyang::DataFormat::XML, libyang::PrintFlags::EmptyContainers) == "<dummy xmlns=\"http://example.com/coze\">I am a dummy</dummy>\n");
+         }
+     }
+ 
+diff --git a/tests/data_node.cpp b/tests/data_node.cpp
+index 88ca5b9..3f874de 100644
+--- a/tests/data_node.cpp
++++ b/tests/data_node.cpp
+@@ -137,7 +137,7 @@ TEST_CASE("Data Node manipulation")
+     DOCTEST_SUBCASE("Printing")
+     {
+         auto node = ctx.parseData(data, libyang::DataFormat::JSON);
+-        auto str = node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont);
++        auto str = node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings | libyang::PrintFlags::EmptyContainers);
+         const auto expected = R"({
+   "example-schema:leafInt32": 420,
+   "example-schema:first": {
+@@ -158,7 +158,7 @@ TEST_CASE("Data Node manipulation")
+         REQUIRE(str == expected);
+ 
+         auto emptyCont = ctx.newPath("/example-schema:first");
+-        REQUIRE(emptyCont.printStr(libyang::DataFormat::XML, libyang::PrintFlags::WithSiblings) == std::nullopt);
++        REQUIRE(emptyCont.printStr(libyang::DataFormat::XML, libyang::PrintFlags::Siblings) == std::nullopt);
+     }
+ 
+     DOCTEST_SUBCASE("Overwriting a tree with a different tree")
+@@ -504,7 +504,7 @@ TEST_CASE("Data Node manipulation")
+     {
+         auto node = std::optional{ctx.newPath("/example-schema:leafInt32", "420")};
+         libyang::validateAll(node, libyang::ValidationOptions::NoState);
+-        auto str = node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont);
++        auto str = node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings | libyang::PrintFlags::EmptyContainers);
+         REQUIRE(str == data);
+     }
+ 
+@@ -725,7 +725,7 @@ TEST_CASE("Data Node manipulation")
+             }
+ 
+             // The original tree should still be accesible.
+-            node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings);
++            node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings);
+         }
+     }
+ 
+@@ -855,7 +855,7 @@ TEST_CASE("Data Node manipulation")
+         auto cont = ctx.newPath2("/example-schema2:contWithTwoNodes").createdNode;
+         data->unlinkWithSiblings();
+         cont->insertChild(*data);
+-        REQUIRE(*cont->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings) == R"({
++        REQUIRE(*cont->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings) == R"({
+   "example-schema2:contWithTwoNodes": {
+     "one": 333,
+     "two": 666
+@@ -1501,9 +1501,9 @@ TEST_CASE("Data Node manipulation")
+                 REQUIRE(std::holds_alternative<libyang::DataNode>(rawVal));
+                 auto retrieved = std::get<libyang::DataNode>(rawVal);
+                 REQUIRE(retrieved.path() == "/key");
+-                REQUIRE(*retrieved.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++                REQUIRE(*retrieved.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                         == R"|({"key":"value"})|");
+-                REQUIRE(*retrieved.printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++                REQUIRE(*retrieved.printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                         == R"|(<key>value</key>)|");
+             }
+         }
+@@ -1525,9 +1525,9 @@ TEST_CASE("Data Node manipulation")
+                 REQUIRE(std::holds_alternative<libyang::DataNode>(rawVal));
+                 auto retrieved = std::get<libyang::DataNode>(rawVal);
+                 REQUIRE(retrieved.path() == "/something");
+-                REQUIRE(*retrieved.printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++                REQUIRE(*retrieved.printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                         == R"|(<something>lol</something>)|");
+-                REQUIRE(*retrieved.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++                REQUIRE(*retrieved.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                         == R"|({"something":"lol"})|");
+             }
+         }
+@@ -1572,9 +1572,9 @@ TEST_CASE("Data Node manipulation")
+                     val = jsonAnyXmlNode.createdNode->asAny().releaseValue();
+                 }
+ 
+-                REQUIRE(*jsonAnyXmlNode.createdNode->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++                REQUIRE(*jsonAnyXmlNode.createdNode->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                         == R"|({"example-schema:ax":[1,2,3]})|"s);
+-                REQUIRE(*jsonAnyXmlNode.createdNode->printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++                REQUIRE(*jsonAnyXmlNode.createdNode->printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                         == R"|(<ax xmlns="http://example.com/coze">)|"s + origJSON + "</ax>");
+             }
+ 
+@@ -1603,9 +1603,9 @@ TEST_CASE("Data Node manipulation")
+             }
+ 
+             REQUIRE(root);
+-            REQUIRE(*root->printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++            REQUIRE(*root->printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                     == origXML);
+-            REQUIRE(*root->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++            REQUIRE(*root->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                     == origJSON);
+ 
+             auto node = root->findPath("/example-schema:ax");
+@@ -1665,9 +1665,9 @@ TEST_CASE("Data Node manipulation")
+             auto retrieved = std::get<libyang::DataNode>(*val);
+             val.reset();
+             REQUIRE(retrieved.path() == "/a");
+-            REQUIRE(*retrieved.printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++            REQUIRE(*retrieved.printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                     == origXML);
+-            REQUIRE(*retrieved.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
++            REQUIRE(*retrieved.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::Siblings)
+                     == origJSON);
+         }
+     }
+@@ -1806,7 +1806,7 @@ TEST_CASE("Data Node manipulation")
+ 
+             nodeX.parseSubtree(data, libyang::DataFormat::JSON,
+                     libyang::ParseOptions::Strict | libyang::ParseOptions::NoState | libyang::ParseOptions::ParseOnly);
+-            REQUIRE(*nodeX.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings) == R"({
++            REQUIRE(*nodeX.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings) == R"({
+   "example-schema5:x": {
+     "x_b": {
+       "x_b_leaf": 666
+@@ -1948,7 +1948,7 @@ TEST_CASE("Data Node manipulation")
+         {
+             netconfDeletePresenceCont.newMeta(netconf, "operation", "delete");
+             netconfDeletePresenceCont.newMeta(ietfOrigin, "origin", "ietf-origin:default");
+-            REQUIRE(*netconfDeletePresenceCont.printStr(libyang::DataFormat::XML, libyang::PrintFlags::WithSiblings)
++            REQUIRE(*netconfDeletePresenceCont.printStr(libyang::DataFormat::XML, libyang::PrintFlags::Siblings)
+                     == R"(<presenceContainer xmlns="http://example.com/coze" xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0" nc:operation="delete" xmlns:or="urn:ietf:params:xml:ns:yang:ietf-origin" or:origin="or:default"/>)" "\n");
+         }
+ 
+@@ -1957,7 +1957,7 @@ TEST_CASE("Data Node manipulation")
+             auto opaqueLeaf = ctx.newPath("/example-schema:leafInt32", std::nullopt, libyang::CreationOptions::Opaque);
+             REQUIRE_THROWS(opaqueLeaf.newMeta(netconf, "operation", "delete"));
+             opaqueLeaf.newAttrOpaqueJSON("ietf-netconf", "operation", "delete");
+-            REQUIRE(*opaqueLeaf.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings)
++            REQUIRE(*opaqueLeaf.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings)
+                     == R"({
+   "example-schema:leafInt32": "",
+   "@example-schema:leafInt32": {
+@@ -1976,7 +1976,7 @@ TEST_CASE("Data Node manipulation")
+             auto discard2 = ctx.newOpaqueJSON(libyang::OpaqueName{"sysrepo", "sysrepo", "discard-items"}, libyang::JSON{"/example-schema:b"});
+             REQUIRE(!!discard2);
+             discard1->insertSibling(*discard2);
+-            REQUIRE(*discard1->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings)
++            REQUIRE(*discard1->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings)
+                     == R"({
+   "sysrepo:discard-items": "/example-schema:a",
+   "sysrepo:discard-items": "/example-schema:b"
+@@ -1991,7 +1991,7 @@ TEST_CASE("Data Node manipulation")
+ 
+             auto leafInt16 = ctx.newPath("/example-schema:leafInt16", "666");
+             leafInt16.insertSibling(*discard1);
+-            REQUIRE(*discard1->firstSibling().printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings)
++            REQUIRE(*discard1->firstSibling().printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings)
+                     == R"({
+   "example-schema:leafInt16": 666,
+   "sysrepo:discard-items": "/example-schema:a",
+@@ -2020,7 +2020,7 @@ TEST_CASE("Data Node manipulation")
+ 
+             dummy.insertSibling(*discard3);
+             leafInt16.insertSibling(dummy);
+-            REQUIRE(*discard1->firstSibling().printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings)
++            REQUIRE(*discard1->firstSibling().printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings)
+                     == R"({
+   "example-schema:dummy": "blah",
+   "example-schema:leafInt16": 666,
+@@ -2112,8 +2112,8 @@ TEST_CASE("Data Node manipulation")
+             data->unlinkWithSiblings();
+             out->insertChild(*data);
+ 
+-            REQUIRE(*out->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings) == expectedJson);
+-            REQUIRE(*out->printStr(libyang::DataFormat::XML, libyang::PrintFlags::WithSiblings) == expectedXml);
++            REQUIRE(*out->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings) == expectedJson);
++            REQUIRE(*out->printStr(libyang::DataFormat::XML, libyang::PrintFlags::Siblings) == expectedXml);
+         }
+ 
+         DOCTEST_SUBCASE("libyang internal metadata")
+@@ -2148,7 +2148,7 @@ TEST_CASE("Data Node manipulation")
+         auto node = ctx.newExtPath(ext, "/ietf-restconf:errors", std::nullopt, std::nullopt);
+         REQUIRE(node);
+         REQUIRE(node->schema().name() == "errors");
+-        REQUIRE(*node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont) == R"({
++        REQUIRE(*node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings | libyang::PrintFlags::EmptyContainers) == R"({
+   "ietf-restconf:errors": {}
+ }
+ )");
+@@ -2157,7 +2157,7 @@ TEST_CASE("Data Node manipulation")
+         REQUIRE(node->newPath("ietf-restconf:error[1]/error-tag", "invalid-attribute"));
+         REQUIRE(node->newExtPath(ext, "/ietf-restconf:errors/error[1]/error-message", "ahoj"));
+         REQUIRE_THROWS_WITH(node->newPath("ietf-restconf:error[1]/error-message", "duplicate create"), "Couldn't create a node with path 'ietf-restconf:error[1]/error-message': LY_EEXIST");
+-        REQUIRE(*node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont) == R"({
++        REQUIRE(*node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings | libyang::PrintFlags::EmptyContainers) == R"({
+   "ietf-restconf:errors": {
+     "error": [
+       {
+@@ -2173,7 +2173,7 @@ TEST_CASE("Data Node manipulation")
+         REQUIRE(node->newExtPath(ext, "/ietf-restconf:errors/error[2]/error-type", "transport"));
+         REQUIRE(node->newExtPath(ext, "/ietf-restconf:errors/error[2]/error-tag", "invalid-attribute"));
+         REQUIRE(node->newPath("ietf-restconf:error[2]/error-message", "aaa"));
+-        REQUIRE(*node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont) == R"({
++        REQUIRE(*node->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings | libyang::PrintFlags::EmptyContainers) == R"({
+   "ietf-restconf:errors": {
+     "error": [
+       {
+@@ -2397,8 +2397,8 @@ TEST_CASE("Data Node manipulation")
+             REQUIRE(response.tree->path() == "/example-schema:output");
+             REQUIRE(response.tree->isOpaque());
+             REQUIRE(!response.tree->child()); // nothing gets "parsed" here, the result is put into the tree that parseOp() operated on (!)
+-            CAPTURE(*response.tree->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont));
+-            CAPTURE(*replyTree.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont));
++            CAPTURE(*response.tree->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings | libyang::PrintFlags::EmptyContainers));
++            CAPTURE(*replyTree.printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings | libyang::PrintFlags::EmptyContainers));
+ 
+             node = replyTree.findPath("/example-schema:myRpc/outputLeaf", libyang::InputOutputNodes::Output);
+             REQUIRE(!!node);
+@@ -2472,7 +2472,7 @@ TEST_CASE("Data Node manipulation")
+                 REQUIRE(rpcOp.tree);
+ 
+                 libyang::validateOp(*rpcTree, depTree, libyang::OperationType::RpcRestconf);
+-                REQUIRE(*rpcTree->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::KeepEmptyCont) == expected);
++                REQUIRE(*rpcTree->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::EmptyContainers) == expected);
+             }
+ 
+             DOCTEST_SUBCASE("Nodes in disjunctive cases defined together")
+-- 
+2.43.0
+

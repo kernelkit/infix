@@ -1,0 +1,34 @@
+From dbf08c67d8f17bdf98466b18fd72a230269e5d46 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 23 Aug 2024 12:22:06 +0200
+Subject: [PATCH 7/8] On error in sr_shmsub_listen_thread(), exit process
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+If processing callback events in, e.g., sysrepo-plugind, make sure to
+log the error and exit(1) the entire process so the system can decide
+to handle the problem.  For example, restart all dependent services.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/shm_sub.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/shm_sub.c b/src/shm_sub.c
+index f64b85d6..c1a4b960 100644
+--- a/src/shm_sub.c
++++ b/src/shm_sub.c
+@@ -5061,5 +5061,7 @@ error:
+     /* free our own resources */
+     ATOMIC_STORE_RELAXED(subscr->thread_running, 0);
+     pthread_detach(pthread_self());
++    exit(1);
++
+     return NULL;
+ }
+-- 
+2.43.0
+

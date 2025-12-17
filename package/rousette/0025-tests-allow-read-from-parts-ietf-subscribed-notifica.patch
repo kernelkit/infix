@@ -1,0 +1,71 @@
+From c2413237501eea3125fe31a9701919d14402737f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 11 Nov 2025 17:30:33 +0100
+Subject: [PATCH 25/38] tests: allow read from parts
+ ietf-subscribed-notifications for anonymous user
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The subsequent commits will add more tests for subscribed notifications.
+Because the validation of
+ietf-subscribed-notifications:establish-subscription will require read
+access to ietf-subscribed-notifications:filters, we need to allow the
+access for users.
+
+Change-Id: I50e49c8c60b7e6be47c51f3d8cd546fbb6f49294
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf-reading.cpp | 5 ++++-
+ tests/restconf_utils.cpp   | 4 ++++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/tests/restconf-reading.cpp b/tests/restconf-reading.cpp
+index b32a598..b11bc48 100644
+--- a/tests/restconf-reading.cpp
++++ b/tests/restconf-reading.cpp
+@@ -110,6 +110,7 @@ TEST_CASE("reading data")
+       ]
+     }
+   },
++  "ietf-subscribed-notifications:filters": {},
+   "ietf-system:system": {
+     "contact": "contact",
+     "hostname": "hostname",
+@@ -168,6 +169,7 @@ TEST_CASE("reading data")
+       ]
+     }
+   },
++  "ietf-subscribed-notifications:filters": {},
+   "ietf-system:system": {
+     "contact": "contact",
+     "hostname": "hostname",
+@@ -195,7 +197,8 @@ TEST_CASE("reading data")
+   "example:config-nonconfig": {
+     "config-node": "foo-config-true"
+   },
+-  "example:ordered-lists": {}
++  "example:ordered-lists": {},
++  "ietf-subscribed-notifications:filters": {}
+ }
+ )"});
+     }
+diff --git a/tests/restconf_utils.cpp b/tests/restconf_utils.cpp
+index cb4e26a..80dca05 100644
+--- a/tests/restconf_utils.cpp
++++ b/tests/restconf_utils.cpp
+@@ -156,6 +156,10 @@ void setupRealNacm(sysrepo::Session session)
+     session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='16']/action", "permit");
+     session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='16']/access-operations", "exec");
+     session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='16']/rpc-name", "establish-subscription");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='17']/module-name", "ietf-subscribed-notifications");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='17']/action", "permit");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='17']/access-operations", "read");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='17']/path", "/ietf-subscribed-notifications:filters");
+     session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='99']/module-name", "*");
+     session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='99']/action", "deny");
+     session.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/group[.='optics']", "");
+-- 
+2.43.0
+

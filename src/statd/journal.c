@@ -81,7 +81,7 @@ static int create_snapshot(const struct lyd_node *tree)
 	int ret;
 
 	/* Write latest snapshot as uncompressed operational.json for easy access */
-	ret = lyd_print_path(DUMP_FILE, tree, LYD_JSON, LYD_PRINT_WITHSIBLINGS);
+	ret = lyd_print_path(DUMP_FILE, tree, LYD_JSON, LYD_PRINT_SIBLINGS);
 	if (ret != LY_SUCCESS) {
 		ERROR("Error, writing operational.json: %d", ret);
 		return -1;

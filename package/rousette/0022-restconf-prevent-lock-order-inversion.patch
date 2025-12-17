@@ -1,0 +1,63 @@
+From b4bf655502d949a5f351e6acd313f47eecefb062 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 13 Oct 2025 12:26:46 +0200
+Subject: [PATCH 22/38] restconf: prevent lock order inversion
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The locked section in EventStream's implementation of nghttp's on_close
+callback. Without doing that, we might get a lock order inversion in
+case somebody tries to lock the mutex inside onClientDisconnectedCb. And
+this would indeed happen with the next patch. If that is applied, then
+there are indeed two different mutexes involved and the lock order
+inversion might happen.
+
+- Case 1: A thread acquires the mutex (let's call it M1) in
+DynamicNotificationHTTPStream::awaitNextNotification and
+then sends the notification signal, which acquires the mutex inside
+EventStream (mutex M2).
+
+- Case 2: the nghttp's on_close callback acquired M2 and
+then proceeds to call onClientDisconnectedCb which, in our case,
+acquires M1.
+
+One can view this as a fixup of commit 6bca750 ("http: add optional
+callbacks to EventStream"), I am not sure.
+
+See-also: 6bca750f866b5b14c4d9c3da68e5c8f1e4eee36c ("http: add optional callbacks to EventStream")
+Change-Id: Ib6626c127ff2eb5feb1d17dece28e70265749df4
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/http/EventStream.cpp | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/src/http/EventStream.cpp b/src/http/EventStream.cpp
+index 280addd..9f19030 100644
+--- a/src/http/EventStream.cpp
++++ b/src/http/EventStream.cpp
+@@ -82,11 +82,15 @@ void EventStream::activate()
+ 
+     res.on_close([myself](const auto ec) {
+         spdlog::debug("{}: closed ({})", myself->peer, nghttp2_http2_strerror(ec));
+-        std::lock_guard lock{myself->mtx};
+-        myself->ping.cancel();
+-        myself->eventSub.disconnect();
+-        myself->terminateSub.disconnect();
+-        myself->state = Closed;
++
++        {
++            std::lock_guard lock{myself->mtx};
++            myself->ping.cancel();
++            myself->eventSub.disconnect();
++            myself->terminateSub.disconnect();
++            myself->state = Closed;
++        }
++
+         if (myself->onClientDisconnectedCb) {
+             myself->onClientDisconnectedCb();
+         }
+-- 
+2.43.0
+

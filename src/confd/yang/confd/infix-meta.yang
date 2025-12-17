@@ -12,6 +12,10 @@ module infix-meta {
   description  "Infix metadata.";
 
 
+  revision 2025-12-10 {
+    description "Remove the obsolete, not allowed in libyang.";
+    reference "internal";
+  }
   revision 2024-10-18 {
     description "Mark entire meta container obsolete.";
     reference "internal";
@@ -29,10 +33,8 @@ module infix-meta {
 
   container meta {
     description "Meta data";
-    status obsolete;
 
     leaf version {
-      status obsolete; // Ensure frontends don't show this, used for migration.
       description "Configuration file format version, automatically generated.";
       type string;
     }

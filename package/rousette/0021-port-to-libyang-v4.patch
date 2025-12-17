@@ -1,0 +1,360 @@
+From 8077a63ac97529d56782d2315f23c44f6036b85f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 23 Oct 2025 18:17:37 +0200
+Subject: [PATCH 21/38] port to libyang v4
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+- the prefix of the "ietf-netconf-with-defaults" module has changed,
+- RPC parsing needs a flag to reject unknown input data nodes,
+- due to the "printed context" mess, we now need an extra flag to ensure
+  that we can still access the YANG schema source.
+
+The last item is interesting. We could also read directly from the
+on-disk location, but that looks a bit meh. It's also a bit annoying
+that one has to change this thing over a lot of places, but I think that
+this is much nicer than trying to force a change over an existing
+connection (e.g., via a connection-specific call in the Server::Server
+ctor which might hit some internal locks depending on how the sysrepo
+state look like).
+
+I was considering adding a wrapper for `ly_ctx_get_options()` and a
+check in Server::Server, but then I decided that I won't bother.
+
+Oh, and this "disable printed context" is also needed for the RESTCONF
+*client* which is used in the unit test. The `lyd_parse_op` cannot parse
+notifications *iff* the `notifications` module from RFC 5277 is missing
+*and* when the libyang context does not have the "parsed" info from the
+`ietf-yang-types` available. The printed context, as provided by
+sysrepo, does not have that data available. This is all papered over as
+long as the context flag setting works, which is the case with
+post-4.2.4 version of sysrepo (still untagged). Yay.
+
+We still set these flags to a single value in all of the unit tests and
+in the main() as well to maintain the remaining bits of our sanity, of
+course.
+
+Change-Id: I142f650affb53411b5c1dd81311400a2aa6dec20
+Depends-on: https://gerrit.cesnet.cz/c/CzechLight/dependencies/+/8990
+Bug: https://github.com/CESNET/libyang/pull/2448
+Depends-on: https://github.com/sysrepo/sysrepo/commit/6dc5641762962b93d54a54443e2fd43aa319a7a6
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                   |  6 +++---
+ src/restconf/Server.cpp          |  2 +-
+ src/restconf/main.cpp            |  4 ++++
+ tests/restconf-defaults.cpp      |  2 ++
+ tests/restconf-delete.cpp        |  2 ++
+ tests/restconf-eventstream.cpp   |  1 +
+ tests/restconf-nacm.cpp          |  2 ++
+ tests/restconf-notifications.cpp |  1 +
+ tests/restconf-plain-patch.cpp   |  2 ++
+ tests/restconf-reading.cpp       | 12 +++++++-----
+ tests/restconf-rpc.cpp           |  2 ++
+ tests/restconf-writing.cpp       |  2 ++
+ tests/restconf-yang-patch.cpp    |  2 ++
+ tests/restconf-yang-schema.cpp   |  2 ++
+ 14 files changed, 33 insertions(+), 9 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c0304af..1223ded 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -74,9 +74,9 @@ find_package(PkgConfig)
+ pkg_check_modules(nghttp2 REQUIRED IMPORTED_TARGET libnghttp2_asio>=0.0.90 libnghttp2) # To compile under boost 1.87 you have to patch nghttp2-asio using https://github.com/nghttp2/nghttp2-asio/issues/23
+ find_package(Boost 1.66 REQUIRED CONFIG COMPONENTS system thread)
+ 
+-pkg_check_modules(SYSREPO REQUIRED sysrepo>=3.6.5 IMPORTED_TARGET)
+-pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=6)
+-pkg_check_modules(LIBYANG-CPP REQUIRED IMPORTED_TARGET libyang-cpp>=4)
++pkg_check_modules(SYSREPO REQUIRED sysrepo IMPORTED_TARGET)
++pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=7)
++pkg_check_modules(LIBYANG-CPP REQUIRED IMPORTED_TARGET libyang-cpp>=5)
+ pkg_check_modules(SYSTEMD IMPORTED_TARGET libsystemd)
+ pkg_check_modules(PAM REQUIRED IMPORTED_TARGET pam)
+ pkg_check_modules(DOCOPT REQUIRED IMPORTED_TARGET docopt)
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 74c06f7..633f0bb 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -487,7 +487,7 @@ void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::c
+     auto [parent, rpcNode] = ctx.newPath2(requestCtx->restconfRequest.path);
+ 
+     if (!requestCtx->payload.empty()) {
+-        rpcNode->parseOp(requestCtx->payload, *requestCtx->dataFormat.request, libyang::OperationType::RpcRestconf);
++        rpcNode->parseOp(requestCtx->payload, *requestCtx->dataFormat.request, libyang::OperationType::RpcRestconf, libyang::ParseOptions::Strict);
+     }
+ 
+     std::optional<libyang::DataNode> rpcReply;
+diff --git a/src/restconf/main.cpp b/src/restconf/main.cpp
+index 477e846..b1e2bc6 100644
+--- a/src/restconf/main.cpp
++++ b/src/restconf/main.cpp
+@@ -22,6 +22,7 @@
+ #include <docopt.h>
+ #include <spdlog/spdlog.h>
+ #include <sysrepo-cpp/Session.hpp>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ static const char usage[] =
+   R"(Rousette - RESTCONF server
+@@ -103,6 +104,9 @@ int main(int argc, char* argv [])
+         throw std::runtime_error("Could not set locale C.UTF-8");
+     }
+ 
++    // schema access is required
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
++
+     auto conn = sysrepo::Connection{};
+     auto server = rousette::restconf::Server{conn, "::1", "10080", timeout};
+ 
+diff --git a/tests/restconf-defaults.cpp b/tests/restconf-defaults.cpp
+index 89083f1..e783e59 100644
+--- a/tests/restconf-defaults.cpp
++++ b/tests/restconf-defaults.cpp
+@@ -9,6 +9,7 @@
+ static const auto SERVER_PORT = "10087";
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+ #include "tests/event_watchers.h"
+@@ -18,6 +19,7 @@ TEST_CASE("default handling")
+     trompeloeil::sequence seq1;
+ 
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     auto nacmGuard = manageNacm(srSess);
+diff --git a/tests/restconf-delete.cpp b/tests/restconf-delete.cpp
+index 4818ff3..3b716bd 100644
+--- a/tests/restconf-delete.cpp
++++ b/tests/restconf-delete.cpp
+@@ -8,6 +8,7 @@
+ static const auto SERVER_PORT = "10086";
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+ #include "tests/event_watchers.h"
+@@ -16,6 +17,7 @@ static const auto SERVER_PORT = "10086";
+ TEST_CASE("deleting data")
+ {
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     auto nacmGuard = manageNacm(srSess);
+diff --git a/tests/restconf-eventstream.cpp b/tests/restconf-eventstream.cpp
+index ecb86e3..a099f54 100644
+--- a/tests/restconf-eventstream.cpp
++++ b/tests/restconf-eventstream.cpp
+@@ -29,6 +29,7 @@ TEST_CASE("Event stream tests")
+ 
+     std::vector<std::unique_ptr<trompeloeil::expectation>> expectations;
+ 
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
+diff --git a/tests/restconf-nacm.cpp b/tests/restconf-nacm.cpp
+index 7799fe8..0e06d56 100644
+--- a/tests/restconf-nacm.cpp
++++ b/tests/restconf-nacm.cpp
+@@ -10,11 +10,13 @@ static const auto SERVER_PORT = "10082";
+ #include "tests/aux-utils.h"
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ 
+ TEST_CASE("NACM")
+ {
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     auto nacmGuard = manageNacm(srSess);
+diff --git a/tests/restconf-notifications.cpp b/tests/restconf-notifications.cpp
+index 04131d7..ac355d8 100644
+--- a/tests/restconf-notifications.cpp
++++ b/tests/restconf-notifications.cpp
+@@ -29,6 +29,7 @@ TEST_CASE("NETCONF notification streams")
+ 
+     std::vector<std::unique_ptr<trompeloeil::expectation>> expectations;
+ 
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
+diff --git a/tests/restconf-plain-patch.cpp b/tests/restconf-plain-patch.cpp
+index 34813d1..c7e035d 100644
+--- a/tests/restconf-plain-patch.cpp
++++ b/tests/restconf-plain-patch.cpp
+@@ -8,6 +8,7 @@
+ static const auto SERVER_PORT = "10089";
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+ #include "tests/event_watchers.h"
+@@ -16,6 +17,7 @@ static const auto SERVER_PORT = "10089";
+ TEST_CASE("Plain patch")
+ {
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     auto nacmGuard = manageNacm(srSess);
+diff --git a/tests/restconf-reading.cpp b/tests/restconf-reading.cpp
+index 4f0d2ee..b32a598 100644
+--- a/tests/restconf-reading.cpp
++++ b/tests/restconf-reading.cpp
+@@ -10,12 +10,14 @@ static const auto SERVER_PORT = "10081";
+ #include "tests/aux-utils.h"
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ #include "tests/event_watchers.h"
+ 
+ TEST_CASE("reading data")
+ {
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
+@@ -794,7 +796,7 @@ TEST_CASE("reading data")
+       "c": {
+         "enabled": true,
+         "@enabled": {
+-          "ietf-netconf-with-defaults:default": true
++          "default:default": true
+         }
+       }
+     },
+@@ -803,7 +805,7 @@ TEST_CASE("reading data")
+       "c": {
+         "enabled": true,
+         "@enabled": {
+-          "ietf-netconf-with-defaults:default": true
++          "default:default": true
+         }
+       }
+     }
+@@ -868,7 +870,7 @@ TEST_CASE("reading data")
+       "c": {
+         "enabled": true,
+         "@enabled": {
+-          "ietf-netconf-with-defaults:default": true
++          "default:default": true
+         }
+       }
+     },
+@@ -877,7 +879,7 @@ TEST_CASE("reading data")
+       "c": {
+         "enabled": true,
+         "@enabled": {
+-          "ietf-netconf-with-defaults:default": true
++          "default:default": true
+         }
+       }
+     }
+@@ -932,7 +934,7 @@ TEST_CASE("reading data")
+       "c": {
+         "enabled": true,
+         "@enabled": {
+-          "ietf-netconf-with-defaults:default": true
++          "default:default": true
+         }
+       }
+     }
+diff --git a/tests/restconf-rpc.cpp b/tests/restconf-rpc.cpp
+index 43aaed4..bcbd397 100644
+--- a/tests/restconf-rpc.cpp
++++ b/tests/restconf-rpc.cpp
+@@ -8,6 +8,7 @@
+ static const auto SERVER_PORT = "10084";
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+ #include "tests/event_watchers.h"
+@@ -33,6 +34,7 @@ std::map<std::string, std::string> nodesToMap(libyang::DataNode node)
+ TEST_CASE("invoking actions and rpcs")
+ {
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     SUBSCRIBE_MODULE(sub1, srSess, "example");
+diff --git a/tests/restconf-writing.cpp b/tests/restconf-writing.cpp
+index d37ab03..3797b72 100644
+--- a/tests/restconf-writing.cpp
++++ b/tests/restconf-writing.cpp
+@@ -8,6 +8,7 @@
+ static const auto SERVER_PORT = "10083";
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+ #include "tests/event_watchers.h"
+@@ -16,6 +17,7 @@ static const auto SERVER_PORT = "10083";
+ TEST_CASE("writing data")
+ {
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     auto nacmGuard = manageNacm(srSess);
+diff --git a/tests/restconf-yang-patch.cpp b/tests/restconf-yang-patch.cpp
+index 2b35c59..19e0405 100644
+--- a/tests/restconf-yang-patch.cpp
++++ b/tests/restconf-yang-patch.cpp
+@@ -8,6 +8,7 @@
+ static const auto SERVER_PORT = "10090";
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+ #include "tests/event_watchers.h"
+@@ -16,6 +17,7 @@ static const auto SERVER_PORT = "10090";
+ TEST_CASE("YANG patch")
+ {
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     auto nacmGuard = manageNacm(srSess);
+diff --git a/tests/restconf-yang-schema.cpp b/tests/restconf-yang-schema.cpp
+index 6e374b1..b56367d 100644
+--- a/tests/restconf-yang-schema.cpp
++++ b/tests/restconf-yang-schema.cpp
+@@ -9,12 +9,14 @@
+ static const auto SERVER_PORT = "10085";
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+ 
+ TEST_CASE("obtaining YANG schemas")
+ {
+     spdlog::set_level(spdlog::level::trace);
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
+-- 
+2.43.0
+

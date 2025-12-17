@@ -1,0 +1,46 @@
+From 4d32b003a7aaad5ecca9a013db2dbaa36ef79692 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Wed, 10 Dec 2025 10:13:54 +0100
+Subject: [PATCH 2/6] printer context BUGFIX missing mem alignment
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Refs #2455
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/context.c         | 2 +-
+ src/printer_context.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/context.c b/src/context.c
+index 88f4678b3..52a4ae46d 100644
+--- a/src/context.c
++++ b/src/context.c
+@@ -1459,7 +1459,7 @@ ly_ctx_compiled_print(const struct ly_ctx *ctx, void *mem, void **mem_end)
+ 
+     /* context, referenced */
+     pctx = mem;
+-    mem = (char *)mem + sizeof *pctx;
++    mem = (char *)mem + LY_CTXP_MEM_SIZE(sizeof *pctx);
+     ly_ctx_compiled_addr_ht_add(addr_ht, ctx, pctx);
+ 
+     /* members */
+diff --git a/src/printer_context.c b/src/printer_context.c
+index 3fb50ac0a..ade0a210d 100644
+--- a/src/printer_context.c
++++ b/src/printer_context.c
+@@ -33,7 +33,7 @@
+  * @return Size of @p ARRAY.
+  */
+ #define CTXS_SIZED_ARRAY(ARRAY) \
+-        (ARRAY ? sizeof(LY_ARRAY_COUNT_TYPE) : 0) + LY_ARRAY_COUNT(ARRAY) * sizeof *ARRAY
++        (ARRAY ? LY_CTXP_MEM_SIZE(sizeof(LY_ARRAY_COUNT_TYPE)) : 0) + LY_CTXP_MEM_SIZE(LY_ARRAY_COUNT(ARRAY) * sizeof *ARRAY)
+ 
+ /**
+  * @brief Print (serialize) a sized array.
+-- 
+2.43.0
+

@@ -1,0 +1,31 @@
+From b8e349aacae4c7063517a1bc652e9e93f90e28ba Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 24 Oct 2025 17:05:52 +0200
+Subject: [PATCH 3/9] fix #include for for our public headers
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: Idcbfe38348e3ca2e4331fc1fad542ae759b8d0f1
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/utils/utils.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/utils/utils.cpp b/src/utils/utils.cpp
+index ff4a32c..c13b394 100644
+--- a/src/utils/utils.cpp
++++ b/src/utils/utils.cpp
+@@ -7,7 +7,7 @@
+ */
+ 
+ #include <sysrepo-cpp/Connection.hpp>
+-#include "sysrepo-cpp/utils/exception.hpp"
++#include <sysrepo-cpp/utils/exception.hpp>
+ extern "C" {
+ #include <sysrepo.h>
+ }
+-- 
+2.43.0
+

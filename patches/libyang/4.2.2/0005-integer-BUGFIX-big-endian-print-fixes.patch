@@ -1,0 +1,223 @@
+From e2c06476b886642411181e0a236b95de14145940 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 11 Dec 2025 12:06:15 +0100
+Subject: [PATCH 5/6] integer BUGFIX big-endian print fixes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Refs #2455
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/plugins_types/integer.c | 96 ++++++++++---------------------------
+ 1 file changed, 24 insertions(+), 72 deletions(-)
+
+diff --git a/src/plugins_types/integer.c b/src/plugins_types/integer.c
+index 945d93f86..f05096970 100644
+--- a/src/plugins_types/integer.c
++++ b/src/plugins_types/integer.c
+@@ -291,64 +291,6 @@ lyplg_type_sort_int(const struct ly_ctx *UNUSED(ctx), const struct lyd_value *va
+     return 0;
+ }
+ 
+-static const void *
+-lyplg_type_print_int(const struct ly_ctx *UNUSED(ctx), const struct lyd_value *value, LY_VALUE_FORMAT format,
+-        void *UNUSED(prefix_data), ly_bool *dynamic, uint32_t *value_size_bits)
+-{
+-    int64_t prev_num = 0, num = 0;
+-    void *buf;
+-
+-    if (format == LY_VALUE_LYB) {
+-        switch (value->realtype->basetype) {
+-        case LY_TYPE_INT8:
+-            prev_num = num = value->int8;
+-            break;
+-        case LY_TYPE_INT16:
+-            prev_num = num = value->int16;
+-            break;
+-        case LY_TYPE_INT32:
+-            prev_num = num = value->int32;
+-            break;
+-        case LY_TYPE_INT64:
+-            prev_num = num = value->int64;
+-            break;
+-        default:
+-            break;
+-        }
+-
+-        num = htole64(num);
+-        if (num == prev_num) {
+-            /* values are equal, little-endian or int8 */
+-            *dynamic = 0;
+-            if (value_size_bits) {
+-                /* the least amount of bits that can hold the number */
+-                *value_size_bits = lyplg_type_get_highest_set_bit_pos(num);
+-            }
+-            return &value->int64;
+-        } else {
+-            /* values differ, big-endian */
+-            buf = calloc(1, LYPLG_BITS2BYTES(lyplg_type_get_highest_set_bit_pos(num)));
+-            LY_CHECK_RET(!buf, NULL);
+-
+-            *dynamic = 1;
+-            if (value_size_bits) {
+-                *value_size_bits = lyplg_type_get_highest_set_bit_pos(num);
+-            }
+-            memcpy(buf, &num, LYPLG_BITS2BYTES(lyplg_type_get_highest_set_bit_pos(num)));
+-            return buf;
+-        }
+-    }
+-
+-    /* use the cached canonical value */
+-    if (dynamic) {
+-        *dynamic = 0;
+-    }
+-    if (value_size_bits) {
+-        *value_size_bits = strlen(value->_canonical) * 8;
+-    }
+-    return value->_canonical;
+-}
+-
+ static LY_ERR
+ lyplg_type_store_uint(const struct ly_ctx *ctx, const struct lysc_type *type, const void *value, uint32_t value_size_bits,
+         uint32_t options, LY_VALUE_FORMAT format, void *UNUSED(prefix_data), uint32_t hints,
+@@ -573,31 +515,37 @@ lyplg_type_sort_uint(const struct ly_ctx *UNUSED(ctx), const struct lyd_value *v
+ }
+ 
+ static const void *
+-lyplg_type_print_uint(const struct ly_ctx *UNUSED(ctx), const struct lyd_value *value, LY_VALUE_FORMAT format,
++lyplg_type_print_u_int(const struct ly_ctx *UNUSED(ctx), const struct lyd_value *value, LY_VALUE_FORMAT format,
+         void *UNUSED(prefix_data), ly_bool *dynamic, uint32_t *value_size_bits)
+ {
+     uint64_t num = 0;
++    uint8_t bytes_used;
++    uint16_t bits_used;
+     void *buf;
+ 
+     if (format == LY_VALUE_LYB) {
+         switch (value->realtype->basetype) {
+         case LY_TYPE_UINT8:
++        case LY_TYPE_INT8:
+             num = value->uint8;
+             break;
+         case LY_TYPE_UINT16:
++        case LY_TYPE_INT16:
+             num = value->uint16;
+             break;
+         case LY_TYPE_UINT32:
++        case LY_TYPE_INT32:
+             num = value->uint32;
+             break;
+         case LY_TYPE_UINT64:
++        case LY_TYPE_INT64:
+             num = value->uint64;
+             break;
+         default:
+             break;
+         }
+-        num = htole64(num);
+-        if (num == value->uint64) {
++
++        if (htole64(num) == value->uint64) {
+             /* values are equal, little-endian or uint8 */
+             *dynamic = 0;
+             if (value_size_bits) {
+@@ -607,14 +555,18 @@ lyplg_type_print_uint(const struct ly_ctx *UNUSED(ctx), const struct lyd_value *
+             return &value->uint64;
+         } else {
+             /* values differ, big-endian */
+-            buf = calloc(1, LYPLG_BITS2BYTES(lyplg_type_get_highest_set_bit_pos(num)));
++            bits_used = lyplg_type_get_highest_set_bit_pos(num);
++            bytes_used = LYPLG_BITS2BYTES(bits_used);
++
++            buf = calloc(1, bytes_used);
+             LY_CHECK_RET(!buf, NULL);
++            num = htole64(num);
++            memcpy(buf, &num, bytes_used);
+ 
+             *dynamic = 1;
+             if (value_size_bits) {
+-                *value_size_bits = lyplg_type_get_highest_set_bit_pos(num);
++                *value_size_bits = bits_used;
+             }
+-            memcpy(buf, &num, LYPLG_BITS2BYTES(lyplg_type_get_highest_set_bit_pos(num)));
+             return buf;
+         }
+     }
+@@ -649,7 +601,7 @@ const struct lyplg_type_record plugins_integer[] = {
+         .plugin.validate_tree = NULL,
+         .plugin.compare = lyplg_type_compare_uint,
+         .plugin.sort = lyplg_type_sort_uint,
+-        .plugin.print = lyplg_type_print_uint,
++        .plugin.print = lyplg_type_print_u_int,
+         .plugin.duplicate = lyplg_type_dup_simple,
+         .plugin.free = lyplg_type_free_simple,
+     }, {
+@@ -664,7 +616,7 @@ const struct lyplg_type_record plugins_integer[] = {
+         .plugin.validate_tree = NULL,
+         .plugin.compare = lyplg_type_compare_uint,
+         .plugin.sort = lyplg_type_sort_uint,
+-        .plugin.print = lyplg_type_print_uint,
++        .plugin.print = lyplg_type_print_u_int,
+         .plugin.duplicate = lyplg_type_dup_simple,
+         .plugin.free = lyplg_type_free_simple,
+     }, {
+@@ -679,7 +631,7 @@ const struct lyplg_type_record plugins_integer[] = {
+         .plugin.validate_tree = NULL,
+         .plugin.compare = lyplg_type_compare_uint,
+         .plugin.sort = lyplg_type_sort_uint,
+-        .plugin.print = lyplg_type_print_uint,
++        .plugin.print = lyplg_type_print_u_int,
+         .plugin.duplicate = lyplg_type_dup_simple,
+         .plugin.free = lyplg_type_free_simple,
+     }, {
+@@ -694,7 +646,7 @@ const struct lyplg_type_record plugins_integer[] = {
+         .plugin.validate_tree = NULL,
+         .plugin.compare = lyplg_type_compare_uint,
+         .plugin.sort = lyplg_type_sort_uint,
+-        .plugin.print = lyplg_type_print_uint,
++        .plugin.print = lyplg_type_print_u_int,
+         .plugin.duplicate = lyplg_type_dup_simple,
+         .plugin.free = lyplg_type_free_simple,
+     }, {
+@@ -709,7 +661,7 @@ const struct lyplg_type_record plugins_integer[] = {
+         .plugin.validate_tree = NULL,
+         .plugin.compare = lyplg_type_compare_int,
+         .plugin.sort = lyplg_type_sort_int,
+-        .plugin.print = lyplg_type_print_int,
++        .plugin.print = lyplg_type_print_u_int,
+         .plugin.duplicate = lyplg_type_dup_simple,
+         .plugin.free = lyplg_type_free_simple,
+     }, {
+@@ -724,7 +676,7 @@ const struct lyplg_type_record plugins_integer[] = {
+         .plugin.validate_tree = NULL,
+         .plugin.compare = lyplg_type_compare_int,
+         .plugin.sort = lyplg_type_sort_int,
+-        .plugin.print = lyplg_type_print_int,
++        .plugin.print = lyplg_type_print_u_int,
+         .plugin.duplicate = lyplg_type_dup_simple,
+         .plugin.free = lyplg_type_free_simple,
+     }, {
+@@ -739,7 +691,7 @@ const struct lyplg_type_record plugins_integer[] = {
+         .plugin.validate_tree = NULL,
+         .plugin.compare = lyplg_type_compare_int,
+         .plugin.sort = lyplg_type_sort_int,
+-        .plugin.print = lyplg_type_print_int,
++        .plugin.print = lyplg_type_print_u_int,
+         .plugin.duplicate = lyplg_type_dup_simple,
+         .plugin.free = lyplg_type_free_simple,
+     }, {
+@@ -754,7 +706,7 @@ const struct lyplg_type_record plugins_integer[] = {
+         .plugin.validate_tree = NULL,
+         .plugin.compare = lyplg_type_compare_int,
+         .plugin.sort = lyplg_type_sort_int,
+-        .plugin.print = lyplg_type_print_int,
++        .plugin.print = lyplg_type_print_u_int,
+         .plugin.duplicate = lyplg_type_dup_simple,
+         .plugin.free = lyplg_type_free_simple,
+     },
+-- 
+2.43.0
+

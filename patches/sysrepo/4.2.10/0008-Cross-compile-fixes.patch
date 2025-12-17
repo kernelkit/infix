@@ -1,0 +1,37 @@
+From 2549c966c090dd38a7a09907d27d13107d15aedd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Tue, 16 Dec 2025 08:18:32 +0100
+Subject: [PATCH 8/8] Cross compile fixes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeModules/SetupPrintedContext.cmake | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/CMakeModules/SetupPrintedContext.cmake b/CMakeModules/SetupPrintedContext.cmake
+index f31ddff6..bfce7a5f 100644
+--- a/CMakeModules/SetupPrintedContext.cmake
++++ b/CMakeModules/SetupPrintedContext.cmake
+@@ -59,6 +59,15 @@ function(SETUP_PRINTED_CONTEXT)
+             return()
+         endif()
+ 
++        # cannot run test programs when cross-compiling
++        if(CMAKE_CROSSCOMPILING)
++            message(WARNING "Cannot calculate printed context address when cross-compiling. "
++                            "Provide PRINTED_CONTEXT_ADDRESS manually to enable printed context.")
++            message(STATUS "Printed context: disabled")
++            set(PRINTED_CONTEXT_ADDRESS 0 CACHE STRING "${PRINTED_CONTEXT_ADDRESS_DOCSTRING}" FORCE)
++            return()
++        endif()
++
+         # compile and run the address calculator
+         try_run(
+             exec_result compile_result
+-- 
+2.43.0
+

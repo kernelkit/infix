@@ -167,6 +167,7 @@ module infix-routing {
     base infix-routing-type;
     description "Static route";
   }
+
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rt:type" {
     deviate replace {
       type identityref {
@@ -858,5 +859,4 @@ module infix-routing {
          This is useful for networks where multiple addresses exist on an interface.";
     }
   }
-
 }

@@ -1,0 +1,893 @@
+From b3a55ae0a1ef9e092b0c8f0d7c3dbd7baa708cc8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 29 Jul 2025 11:39:21 +0200
+Subject: [PATCH 28/38] restconf: endpoint for subscribed notifications
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+This patch creates a new endpoint for the subscribed notification
+streams in the RESTCONF server. The previous commit added the
+establish-subscription RPC [1], which returned a stream URI, that was
+not accessible in that patch. The patch was extra large even without
+that functionality so I have split it into two commits.
+
+There is one more catch worth mentioning both here and in the comments:
+In case sysrepo sends events fast enough it is possible that the
+function responsible for reading them blocks the event loop and the
+function responsible for sending the actual data to the client is not
+called. To mitigate that, I added limit to the number of events read
+in one go.
+However, we are not sure if that is enough. Is it possible that the
+reading function might get called several times in a row? My knowledge
+of boost::asio is not enough.
+
+[1] https://datatracker.ietf.org/doc/rfc8639/
+
+Change-Id: I07dcdd3fb9ef4f05f93ae6dda0e0d71094a0bbfc
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                              |   1 +
+ src/restconf/DynamicSubscriptions.cpp       | 127 ++++++++++++-
+ src/restconf/DynamicSubscriptions.h         |  46 +++++
+ src/restconf/Server.cpp                     |  51 +++--
+ src/restconf/uri.cpp                        |  46 ++++-
+ src/restconf/uri.h                          |  10 +-
+ src/restconf/uri_impl.h                     |   1 +
+ src/restconf/utils/io.cpp                   |  30 +++
+ src/restconf/utils/io.h                     |  12 ++
+ tests/restconf-subscribed-notifications.cpp | 199 ++++++++++++++++++++
+ tests/uri-parser.cpp                        |  41 +++-
+ 11 files changed, 527 insertions(+), 37 deletions(-)
+ create mode 100644 src/restconf/utils/io.cpp
+ create mode 100644 src/restconf/utils/io.h
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 18af5ba..5d3b7ce 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -116,6 +116,7 @@ add_library(rousette-restconf STATIC
+     src/restconf/YangSchemaLocations.cpp
+     src/restconf/uri.cpp
+     src/restconf/utils/dataformat.cpp
++    src/restconf/utils/io.cpp
+     src/restconf/utils/sysrepo.cpp
+     src/restconf/utils/yang.cpp
+ )
+diff --git a/src/restconf/DynamicSubscriptions.cpp b/src/restconf/DynamicSubscriptions.cpp
+index 7b13990..7f4b171 100644
+--- a/src/restconf/DynamicSubscriptions.cpp
++++ b/src/restconf/DynamicSubscriptions.cpp
+@@ -12,6 +12,8 @@
+ #include <sysrepo-cpp/utils/exception.hpp>
+ #include "restconf/DynamicSubscriptions.h"
+ #include "restconf/Exceptions.h"
++#include "restconf/utils/io.h"
++#include "restconf/utils/yang.h"
+ 
+ namespace {
+ 
+@@ -119,7 +121,7 @@ void DynamicSubscriptions::terminateSubscription(const uint32_t subId)
+ 
+     const auto& [uuid, subscriptionData] = *it;
+     spdlog::debug("{}: termination requested", fmt::streamed(*subscriptionData));
+-    subscriptionData->subscription.terminate("ietf-subscribed-notifications:no-such-subscription");
++    subscriptionData->terminate("ietf-subscribed-notifications:no-such-subscription");
+     m_subscriptions.erase(uuid);
+ }
+ 
+@@ -154,14 +156,54 @@ DynamicSubscriptions::SubscriptionData::SubscriptionData(
+     , dataFormat(format)
+     , uuid(uuid)
+     , user(user)
++    , state(State::Start)
+ {
+     spdlog::debug("{}: created", fmt::streamed(*this));
+ }
+ 
+ DynamicSubscriptions::SubscriptionData::~SubscriptionData()
+ {
++    terminate();
++}
++
++void DynamicSubscriptions::SubscriptionData::clientDisconnected()
++{
++    spdlog::debug("{}: client disconnected", fmt::streamed(*this));
++
++    std::lock_guard lock(mutex);
++    if (state == State::Terminating) {
++        return;
++    }
++
++    state = State::Start;
++}
++
++void DynamicSubscriptions::SubscriptionData::clientConnected()
++{
++    spdlog::debug("{}: client connected", fmt::streamed(*this));
++    std::lock_guard lock(mutex);
++    state = State::ReceiverActive;
++}
++
++bool DynamicSubscriptions::SubscriptionData::isReadyToAcceptClient() const
++{
++    std::lock_guard lock(mutex);
++    return state == State::Start;
++}
++
++void DynamicSubscriptions::SubscriptionData::terminate(const std::optional<std::string>& reason)
++{
++    std::lock_guard lock(mutex);
++
++    // already terminating, do nothing
++    if (state == State::Terminating) {
++        return;
++    }
++
++    state = State::Terminating;
++    spdlog::debug("{}: terminating subscription ({})", fmt::streamed(*this), reason.value_or("<no reason>"));
+     try {
+-        subscription.terminate();
++        subscription.terminate(reason);
+     } catch (const sysrepo::ErrorWithCode& e) { // Maybe it was already terminated (stop-time).
+         spdlog::warn("Failed to terminate {}: {}", fmt::streamed(*this), e.what());
+     }
+@@ -174,4 +216,85 @@ std::ostream& operator<<(std::ostream& os, const DynamicSubscriptions::Subscript
+               << ", uuid " << boost::uuids::to_string(sub.uuid)
+               << ")";
+ }
++
++DynamicSubscriptionHttpStream::DynamicSubscriptionHttpStream(
++    const nghttp2::asio_http2::server::request& req,
++    const nghttp2::asio_http2::server::response& res,
++    rousette::http::EventStream::Termination& termination,
++    std::shared_ptr<rousette::http::EventStream::EventSignal> signal,
++    const std::chrono::seconds keepAlivePingInterval,
++    const std::shared_ptr<DynamicSubscriptions::SubscriptionData>& subscriptionData)
++    : EventStream(
++          req,
++          res,
++          termination,
++          *signal,
++          keepAlivePingInterval,
++          std::nullopt /* no initial event */,
++          [this]() { m_subscriptionData->terminate("ietf-subscribed-notifications:no-such-subscription"); },
++          [this]() { m_subscriptionData->clientDisconnected(); })
++    , m_subscriptionData(subscriptionData)
++    , m_signal(signal)
++    , m_stream(res.io_service(), m_subscriptionData->subscription.fd())
++{
++}
++
++DynamicSubscriptionHttpStream::~DynamicSubscriptionHttpStream()
++{
++    // The stream does not own the file descriptor, sysrepo does. It will be closed when the subscription terminates.
++    m_stream.release();
++}
++
++/** @brief Waits for the next notifications and process them */
++void DynamicSubscriptionHttpStream::awaitNextNotification()
++{
++    constexpr auto MAX_EVENTS = 50;
++
++    m_stream.async_wait(boost::asio::posix::stream_descriptor::wait_read, [this](const boost::system::error_code& err) {
++        // Unfortunately wait_read does not return operation_aborted when the file descriptor is closed and poll results in POLLHUP
++        if (err == boost::asio::error::operation_aborted || utils::pipeIsClosedAndNoData(m_subscriptionData->subscription.fd())) {
++            return;
++        }
++
++        size_t eventsProcessed = 0;
++        /* Process all the available notifications, but at most N
++         * In case sysrepo is providing the events fast enough, this loop would still run inside the event loop
++         * and the event responsible for sending the data to the client would not get to be processed.
++         * TODO: Is this enough? What if this async_wait keeps getting called and nothing gets sent?
++         */
++        while (++eventsProcessed < MAX_EVENTS && utils::pipeHasData(m_subscriptionData->subscription.fd())) {
++            std::lock_guard lock(m_subscriptionData->mutex); // sysrepo-cpp's processEvent and terminate is not thread safe
++            m_subscriptionData->subscription.processEvent([&](const std::optional<libyang::DataNode>& notificationTree, const sysrepo::NotificationTimeStamp& time) {
++                (*m_signal)(rousette::restconf::as_restconf_notification(
++                    m_subscriptionData->subscription.getSession().getContext(),
++                    m_subscriptionData->dataFormat,
++                    *notificationTree,
++                    time));
++            });
++        }
++
++        // and wait for more
++        awaitNextNotification();
++    });
++}
++
++void DynamicSubscriptionHttpStream::activate()
++{
++    m_subscriptionData->clientConnected();
++    EventStream::activate();
++    awaitNextNotification();
++}
++
++std::shared_ptr<DynamicSubscriptionHttpStream> DynamicSubscriptionHttpStream::create(
++    const nghttp2::asio_http2::server::request& req,
++    const nghttp2::asio_http2::server::response& res,
++    rousette::http::EventStream::Termination& termination,
++    const std::chrono::seconds keepAlivePingInterval,
++    const std::shared_ptr<DynamicSubscriptions::SubscriptionData>& subscriptionData)
++{
++    auto signal = std::make_shared<rousette::http::EventStream::EventSignal>();
++    auto stream = std::shared_ptr<DynamicSubscriptionHttpStream>(new DynamicSubscriptionHttpStream(req, res, termination, signal, keepAlivePingInterval, subscriptionData));
++    stream->activate();
++    return stream;
++}
+ }
+diff --git a/src/restconf/DynamicSubscriptions.h b/src/restconf/DynamicSubscriptions.h
+index 366d1a1..1874390 100644
+--- a/src/restconf/DynamicSubscriptions.h
++++ b/src/restconf/DynamicSubscriptions.h
+@@ -12,6 +12,7 @@
+ #include <map>
+ #include <memory>
+ #include <sysrepo-cpp/Subscription.hpp>
++#include "http/EventStream.h"
+ 
+ namespace libyang {
+ enum class DataFormat;
+@@ -26,17 +27,28 @@ namespace rousette::restconf {
+ class DynamicSubscriptions {
+ public:
+     struct SubscriptionData : public std::enable_shared_from_this<SubscriptionData> {
++        mutable std::mutex mutex;
+         sysrepo::DynamicSubscription subscription;
+         libyang::DataFormat dataFormat; ///< Encoding of the notification stream
+         boost::uuids::uuid uuid; ///< UUID is part of the GET URI, it identifies subscriptions for clients
+         std::string user; ///< User who initiated the establish-subscription RPC
+ 
++        enum class State {
++            Start, ///< Subscription is ready to be consumed by a client
++            ReceiverActive, ///< Subscription is being consumed by a client
++            Terminating, ///< Subscription is being terminated by the server shutdown
++        } state;
++
+         SubscriptionData(
+             sysrepo::DynamicSubscription sub,
+             libyang::DataFormat format,
+             boost::uuids::uuid uuid,
+             const std::string& user);
+         ~SubscriptionData();
++        void clientDisconnected();
++        void clientConnected();
++        void terminate(const std::optional<std::string>& reason = std::nullopt);
++        bool isReadyToAcceptClient() const;
+     };
+ 
+     DynamicSubscriptions(const std::string& streamRootUri);
+@@ -54,4 +66,38 @@ private:
+ 
+     boost::uuids::uuid makeUUID();
+ };
++
++/** @brief Subscribes to sysrepo's subscribed notification and sends the notifications via HTTP/2 Event stream.
++ *
++ * @see rousette::http::EventStream
++ * @see rousette::http::NotificationStream
++ * */
++class DynamicSubscriptionHttpStream : public http::EventStream {
++public:
++    ~DynamicSubscriptionHttpStream();
++
++    static std::shared_ptr<DynamicSubscriptionHttpStream> create(
++        const nghttp2::asio_http2::server::request& req,
++        const nghttp2::asio_http2::server::response& res,
++        rousette::http::EventStream::Termination& termination,
++        const std::chrono::seconds keepAlivePingInterval,
++        const std::shared_ptr<DynamicSubscriptions::SubscriptionData>& subscriptionData);
++
++private:
++    std::shared_ptr<DynamicSubscriptions::SubscriptionData> m_subscriptionData;
++    std::shared_ptr<rousette::http::EventStream::EventSignal> m_signal;
++    boost::asio::posix::stream_descriptor m_stream;
++
++    void awaitNextNotification();
++
++protected:
++    DynamicSubscriptionHttpStream(
++        const nghttp2::asio_http2::server::request& req,
++        const nghttp2::asio_http2::server::response& res,
++        rousette::http::EventStream::Termination& termination,
++        std::shared_ptr<rousette::http::EventStream::EventSignal> signal,
++        const std::chrono::seconds keepAlivePingInterval,
++        const std::shared_ptr<DynamicSubscriptions::SubscriptionData>& subscriptionData);
++    void activate();
++};
+ }
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 616d7d4..2a8ad33 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -1003,27 +1003,40 @@ Server::Server(
+ 
+             auto streamRequest = asRestconfStreamRequest(req.method(), req.uri().path, req.uri().raw_query);
+ 
+-            if (auto it = streamRequest.queryParams.find("filter"); it != streamRequest.queryParams.end()) {
+-                xpathFilter = std::get<std::string>(it->second);
+-            }
++            if (auto *request = std::get_if<SubscribedStreamRequest>(&streamRequest)) {
++                if (auto sub = m_dynamicSubscriptions.getSubscriptionForUser(request->uuid, sess.getNacmUser())) {
++                    if (!sub->isReadyToAcceptClient()) {
++                        throw ErrorResponse(409, "application", "resource-denied", "There is already another GET request on this subscription.");
++                    }
+ 
+-            if (auto it = streamRequest.queryParams.find("start-time"); it != streamRequest.queryParams.end()) {
+-                startTime = libyang::fromYangTimeFormat<std::chrono::system_clock>(std::get<std::string>(it->second));
+-            }
+-            if (auto it = streamRequest.queryParams.find("stop-time"); it != streamRequest.queryParams.end()) {
+-                stopTime = libyang::fromYangTimeFormat<std::chrono::system_clock>(std::get<std::string>(it->second));
+-            }
++                    DynamicSubscriptionHttpStream::create(req, res, shutdownRequested, keepAlivePingInterval, sub);
++                } else {
++                    throw ErrorResponse(404, "application", "invalid-value", "Subscription not found.");
++                }
++            } else if (auto *request = std::get_if<NetconfStreamRequest>(&streamRequest)) {
++                if (auto it = request->queryParams.find("filter"); it != request->queryParams.end()) {
++                    xpathFilter = std::get<std::string>(it->second);
++                }
++                if (auto it = request->queryParams.find("start-time"); it != request->queryParams.end()) {
++                    startTime = libyang::fromYangTimeFormat<std::chrono::system_clock>(std::get<std::string>(it->second));
++                }
++                if (auto it = request->queryParams.find("stop-time"); it != request->queryParams.end()) {
++                    stopTime = libyang::fromYangTimeFormat<std::chrono::system_clock>(std::get<std::string>(it->second));
++                }
+ 
+-            NotificationStream::create(
+-                req,
+-                res,
+-                shutdownRequested,
+-                keepAlivePingInterval,
+-                sess,
+-                streamRequest.encoding,
+-                xpathFilter,
+-                startTime,
+-                stopTime);
++                NotificationStream::create(
++                    req,
++                    res,
++                    shutdownRequested,
++                    keepAlivePingInterval,
++                    sess,
++                    request->encoding,
++                    xpathFilter,
++                    startTime,
++                    stopTime);
++            } else {
++                throw ErrorResponse(500, "protocol", "invalid-value", "Invalid request."); // should not happen
++            }
+         } catch (const auth::Error& e) {
+             processAuthError(req, res, e, [&res]() {
+                 res.write_head(401, {TEXT_PLAIN, CORS});
+diff --git a/src/restconf/uri.cpp b/src/restconf/uri.cpp
+index 6ee011c..99c3d1f 100644
+--- a/src/restconf/uri.cpp
++++ b/src/restconf/uri.cpp
+@@ -8,6 +8,8 @@
+ #include <boost/fusion/adapted/struct/adapt_struct.hpp>
+ #include <boost/fusion/include/std_pair.hpp>
+ #include <boost/spirit/home/x3/support/ast/variant.hpp>
++#include <boost/uuid/nil_generator.hpp>
++#include <boost/uuid/string_generator.hpp>
+ #include <experimental/iterator>
+ #include <libyang-cpp/Enum.hpp>
+ #include <map>
+@@ -57,12 +59,30 @@ const auto resources = x3::rule<class resources, URIPath>{"resources"} =
+     ((x3::lit("/") | x3::eps) /* /restconf/ and /restconf */ >> x3::attr(URIPrefix{URIPrefix::Type::RestconfRoot}) >> x3::attr(std::vector<PathSegment>{}));
+ const auto uriGrammar = x3::rule<class grammar, URIPath>{"grammar"} = x3::lit("/restconf") >> resources;
+ 
++const auto string_to_uuid = [](auto& ctx) {
++    try {
++        _val(ctx) = boost::uuids::string_generator()(_attr(ctx));
++        _pass(ctx) = true;
++    } catch (const std::runtime_error&) {
++        _pass(ctx) = false;
++    }
++};
++
++const auto uuid_impl = x3::rule<class uuid_impl, std::string>{"uuid_impl"} =
++    x3::repeat(8)[x3::xdigit] >> x3::char_('-') >>
++    x3::repeat(4)[x3::xdigit] >> x3::char_('-') >>
++    x3::repeat(4)[x3::xdigit] >> x3::char_('-') >>
++    x3::repeat(4)[x3::xdigit] >> x3::char_('-') >>
++    x3::repeat(12)[x3::xdigit];
++const auto uuid = x3::rule<class uuid, boost::uuids::uuid>{"uuid"} = uuid_impl[string_to_uuid];
++const auto subscribedStream = x3::rule<class subscribedStream, SubscribedStreamRequest>{"subscribedStream"} = x3::lit("/subscribed") >> "/" >> uuid;
+ 
+ const auto netconfStream = x3::rule<class netconfStream, NetconfStreamRequest>{"netconfStream"} =
+     x3::lit("/NETCONF") >>
+     ((x3::lit("/XML") >> x3::attr(libyang::DataFormat::XML)) |
+      (x3::lit("/JSON") >> x3::attr(libyang::DataFormat::JSON)));
+-const auto streamUriGrammar = x3::rule<class grammar, NetconfStreamRequest>{"streamsGrammar"} = x3::lit("/streams") >> netconfStream;
++const auto streamUriGrammar = x3::rule<class grammar, std::variant<NetconfStreamRequest, SubscribedStreamRequest>>{"streamsGrammar"} =
++    x3::lit("/streams") >> (netconfStream | subscribedStream);
+ 
+ // clang-format on
+ }
+@@ -674,6 +694,16 @@ NetconfStreamRequest::NetconfStreamRequest(const libyang::DataFormat& encoding)
+ {
+ }
+ 
++SubscribedStreamRequest::SubscribedStreamRequest()
++    : uuid(boost::uuids::nil_uuid())
++{
++}
++
++SubscribedStreamRequest::SubscribedStreamRequest(const boost::uuids::uuid& uuid)
++    : uuid(uuid)
++{
++}
++
+ RestconfStreamRequest asRestconfStreamRequest(const std::string& httpMethod, const std::string& uriPath, const std::string& uriQueryString)
+ {
+     if (httpMethod != "GET" && httpMethod != "HEAD") {
+@@ -685,14 +715,16 @@ RestconfStreamRequest asRestconfStreamRequest(const std::string& httpMethod, con
+         throw ErrorResponse(404, "application", "invalid-value", "Invalid stream");
+     }
+ 
+-    auto queryParameters = impl::parseQueryParams(uriQueryString);
+-    if (!queryParameters) {
+-        throw ErrorResponse(400, "protocol", "invalid-value", "Query parameters syntax error");
+-    }
++    if (auto* request = std::get_if<NetconfStreamRequest>(&type.value())) {
++        auto queryParameters = impl::parseQueryParams(uriQueryString);
++        if (!queryParameters) {
++            throw ErrorResponse(400, "protocol", "invalid-value", "Query parameters syntax error");
++        }
+ 
+-    validateQueryParametersForStream(*queryParameters);
++        validateQueryParametersForStream(*queryParameters);
++        request->queryParams = *queryParameters;
++    }
+ 
+-    type->queryParams = *queryParameters;
+     return *type;
+ }
+ 
+diff --git a/src/restconf/uri.h b/src/restconf/uri.h
+index f6c63a7..7893c6f 100644
+--- a/src/restconf/uri.h
++++ b/src/restconf/uri.h
+@@ -6,6 +6,7 @@
+ 
+ #pragma once
+ #include <boost/optional.hpp>
++#include <boost/uuid/uuid.hpp>
+ #include <boost/variant.hpp>
+ #include <libyang-cpp/Module.hpp>
+ #include <libyang-cpp/SchemaNode.hpp>
+@@ -205,7 +206,14 @@ struct NetconfStreamRequest {
+     NetconfStreamRequest(const libyang::DataFormat& encoding);
+ };
+ 
+-using RestconfStreamRequest = NetconfStreamRequest;
++struct SubscribedStreamRequest {
++    boost::uuids::uuid uuid;
++
++    SubscribedStreamRequest();
++    SubscribedStreamRequest(const boost::uuids::uuid& uuid);
++};
++
++using RestconfStreamRequest = std::variant<NetconfStreamRequest, SubscribedStreamRequest>;
+ 
+ RestconfRequest asRestconfRequest(const libyang::Context& ctx, const std::string& httpMethod, const std::string& uriPath, const std::string& uriQueryString = "");
+ std::optional<libyang::SchemaNode> asLibyangSchemaNode(const libyang::Context& ctx, const std::vector<PathSegment>& pathSegments);
+diff --git a/src/restconf/uri_impl.h b/src/restconf/uri_impl.h
+index bc36cca..cf57859 100644
+--- a/src/restconf/uri_impl.h
++++ b/src/restconf/uri_impl.h
+@@ -67,6 +67,7 @@ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::PathSegment, apiIdent, keys);
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::ApiIdentifier, prefix, identifier);
+ 
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::NetconfStreamRequest, encoding);
++BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::SubscribedStreamRequest, uuid);
+ 
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::queryParams::fields::ParenExpr, lhs, rhs);
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::queryParams::fields::SlashExpr, lhs, rhs);
+diff --git a/src/restconf/utils/io.cpp b/src/restconf/utils/io.cpp
+new file mode 100644
+index 0000000..d657096
+--- /dev/null
++++ b/src/restconf/utils/io.cpp
+@@ -0,0 +1,30 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
++ */
++
++#include <poll.h>
++#include "restconf/utils/io.h"
++
++namespace rousette::restconf::utils {
++bool pipeHasData(const int fd)
++{
++    pollfd fds = {
++        .fd = fd,
++        .events = POLLIN | POLLHUP,
++        .revents = 0};
++
++    return poll(&fds, 1, 0) == 1 && fds.revents & POLLIN;
++}
++
++bool pipeIsClosedAndNoData(const int fd)
++{
++    pollfd fds = {
++        .fd = fd,
++        .events = POLLIN | POLLHUP,
++        .revents = 0};
++
++    return poll(&fds, 1, 0) == 1 && fds.revents & POLLHUP && !(fds.revents & POLLIN);
++}
++}
+diff --git a/src/restconf/utils/io.h b/src/restconf/utils/io.h
+new file mode 100644
+index 0000000..ac9f2f8
+--- /dev/null
++++ b/src/restconf/utils/io.h
+@@ -0,0 +1,12 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
++ */
++
++
++namespace rousette::restconf::utils {
++
++bool pipeHasData(const int fd);
++bool pipeIsClosedAndNoData(const int fd);
++}
+diff --git a/tests/restconf-subscribed-notifications.cpp b/tests/restconf-subscribed-notifications.cpp
+index 3e8e011..11dd992 100644
+--- a/tests/restconf-subscribed-notifications.cpp
++++ b/tests/restconf-subscribed-notifications.cpp
+@@ -91,6 +91,7 @@ TEST_CASE("RESTCONF subscribed notifications")
+     sysrepo::setLogLevelStderr(sysrepo::LogLevel::Information);
+     spdlog::set_level(spdlog::level::trace);
+ 
++    sysrepo::setGlobalContextOptions(sysrepo::ContextFlags::LibYangPrivParsed | sysrepo::ContextFlags::NoPrinted, sysrepo::GlobalContextEffect::Immediate);
+     auto srConn = sysrepo::Connection{};
+     auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
+     srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
+@@ -99,6 +100,19 @@ TEST_CASE("RESTCONF subscribed notifications")
+     auto server = rousette::restconf::Server{srConn, SERVER_ADDRESS, SERVER_PORT};
+     setupRealNacm(srSess);
+ 
++    // parent for nested notification
++    srSess.switchDatastore(sysrepo::Datastore::Operational);
++    srSess.setItem("/example:tlc/list[name='k1']/choice1", "something must me here");
++    srSess.applyChanges();
++    std::vector<std::string> notificationsJSON{
++        R"({"example:eventA":{"message":"blabla","progress":11}})",
++        R"({"example:eventB":{}})",
++        R"({"example-notif:something-happened":{}})",
++        R"({"example:eventA":{"message":"almost finished","progress":99}})",
++        R"({"example:tlc":{"list":[{"name":"k1","notif":{"message":"nested"}}]}})",
++    };
++    std::vector<std::unique_ptr<trompeloeil::expectation>> expectations;
++
+     RestconfNotificationWatcher netconfWatcher(srConn.sessionStart().getContext());
+ 
+     libyang::DataFormat rpcRequestEncoding = libyang::DataFormat::JSON;
+@@ -132,6 +146,78 @@ TEST_CASE("RESTCONF subscribed notifications")
+ }
+ )###"});
+         }
++
++        SECTION("User DWDM establishes subscription")
++        {
++            std::pair<std::string, std::string> user = AUTH_DWDM;
++            auto uri = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, user, std::nullopt);
++
++            std::map<std::string, std::string> headers;
++
++            SECTION("Users who cannot GET")
++            {
++                SECTION("anonymous") { }
++                SECTION("norules") { headers.insert(AUTH_NORULES); }
++                REQUIRE(get(uri, headers) == Response{404, plaintextHeaders, "Subscription not found."});
++            }
++
++            SECTION("Users who can GET")
++            {
++                SECTION("root") { headers.insert(AUTH_ROOT); }
++                SECTION("dwdm") { headers.insert(AUTH_DWDM); }
++                REQUIRE(head(uri, headers) == Response{200, eventStreamHeaders, ""});
++            }
++
++            SECTION("GET on the same subscription concurently")
++            {
++                std::map<std::string, std::string> headers;
++                std::string response;
++                int status;
++
++                SECTION("Allowed users")
++                {
++                    response = "There is already another GET request on this subscription.";
++                    status = 409;
++
++                    SECTION("Same user")
++                    {
++                        headers.insert(AUTH_DWDM);
++                    }
++                    SECTION("Different user")
++                    {
++                        headers.insert(AUTH_ROOT);
++                    }
++                }
++                SECTION("Disallowed user")
++                {
++                    headers.insert(AUTH_NORULES);
++                    response = "Subscription not found.";
++                    status = 404;
++                }
++
++                PREPARE_LOOP_WITH_EXCEPTIONS
++                auto thr = std::jthread(wrap_exceptions_and_asio(bg, io, [&]() {
++                    WAIT_UNTIL_SSE_CLIENT_REQUESTS;
++                    REQUIRE(get(uri, headers) == Response{status, plaintextHeaders, response});
++                }));
++
++                SSEClient cli(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, uri, {AUTH_DWDM});
++                RUN_LOOP_WITH_EXCEPTIONS;
++            }
++
++            SECTION("GET on the same subscription sequentially")
++            {
++                boost::asio::io_service io;
++                {
++                    std::binary_semaphore requestSent(0); // SSEClient needs to notify when the request is sent, but we don't care about it here.
++                    SSEClient cli(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, uri, {AUTH_DWDM});
++                }
++                {
++                    std::binary_semaphore requestSent(0);
++                    SSEClient cli(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, uri, {AUTH_DWDM});
++                }
++            }
++        }
+     }
+ 
+     SECTION("Invalid establish-subscription requests")
+@@ -209,6 +295,12 @@ TEST_CASE("RESTCONF subscribed notifications")
+                     rpcRequestEncoding = libyang::DataFormat::XML;
+                 }
+             }
++
++            EXPECT_NOTIFICATION(notificationsJSON[0], seq1);
++            EXPECT_NOTIFICATION(notificationsJSON[1], seq1);
++            EXPECT_NOTIFICATION(notificationsJSON[2], seq2);
++            EXPECT_NOTIFICATION(notificationsJSON[3], seq1);
++            EXPECT_NOTIFICATION(notificationsJSON[4], seq1);
+         }
+ 
+         SECTION("JSON stream")
+@@ -220,6 +312,11 @@ TEST_CASE("RESTCONF subscribed notifications")
+                 rpcRequestAuthHeader = std::nullopt;
+                 rpcRequestEncoding = libyang::DataFormat::JSON;
+                 rpcSubscriptionEncoding = "encode-json";
++
++                EXPECT_NOTIFICATION(notificationsJSON[0], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[1], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[3], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[4], seq1);
+             }
+ 
+             SECTION("Content-type with set encode leaf")
+@@ -244,10 +341,112 @@ TEST_CASE("RESTCONF subscribed notifications")
+                         rpcRequestEncoding = libyang::DataFormat::XML;
+                     }
+                 }
++
++                EXPECT_NOTIFICATION(notificationsJSON[0], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[1], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[2], seq2);
++                EXPECT_NOTIFICATION(notificationsJSON[3], seq1);
++                EXPECT_NOTIFICATION(notificationsJSON[4], seq1);
+             }
+         }
+ 
+         auto uri = establishSubscription(srSess.getContext(), rpcRequestEncoding, rpcRequestAuthHeader, rpcSubscriptionEncoding);
+         REQUIRE(std::regex_match(uri, std::regex("/streams/subscribed/"s + uuidV4Regex)));
++
++        PREPARE_LOOP_WITH_EXCEPTIONS
++
++        // Here's how these two threads work together.
++        //
++        // The main test thread (this one):
++        // - sets up all the expectations
++        // - has an HTTP client which calls/spends the expectations based on the incoming SSE data
++        // - blocks while it runs the ASIO event loop
++        //
++        // The auxiliary thread (the notificationThread):
++        // - waits for the HTTP client having issued its long-lived HTTP GET
++        // - sends a bunch of notifications to sysrepo
++        // - waits for all the expectations getting spent, and then terminates the ASIO event loop cleanly
++
++        std::jthread notificationThread = std::jthread(wrap_exceptions_and_asio(bg, io, [&]() {
++            auto notifSession = sysrepo::Connection{}.sessionStart();
++            auto ctx = notifSession.getContext();
++
++            WAIT_UNTIL_SSE_CLIENT_REQUESTS;
++
++            SEND_NOTIFICATION(notificationsJSON[0]);
++            SEND_NOTIFICATION(notificationsJSON[1]);
++            std::this_thread::sleep_for(500ms); // simulate some delays; server might be slow in creating notifications, client should still remain connected
++            SEND_NOTIFICATION(notificationsJSON[2]);
++            SEND_NOTIFICATION(notificationsJSON[3]);
++            std::this_thread::sleep_for(500ms);
++            SEND_NOTIFICATION(notificationsJSON[4]);
++
++            // once the main thread has processed all the notifications, stop the ASIO loop
++            waitForCompletionAndBitMore(seq1);
++            waitForCompletionAndBitMore(seq2);
++        }));
++
++        std::map<std::string, std::string> streamHeaders;
++        if (rpcRequestAuthHeader) {
++            streamHeaders.insert(*rpcRequestAuthHeader);
++        }
++        SSEClient cli(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, uri, streamHeaders);
++        RUN_LOOP_WITH_EXCEPTIONS;
+     }
+ }
++
++TEST_CASE("Terminating server under notification load")
++{
++    trompeloeil::sequence seq1;
++    sysrepo::setLogLevelStderr(sysrepo::LogLevel::Information);
++    spdlog::set_level(spdlog::level::trace);
++
++    auto srConn = sysrepo::Connection{};
++    auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
++    srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
++
++    auto nacmGuard = manageNacm(srSess);
++    auto server = std::make_unique<rousette::restconf::Server>(srConn, SERVER_ADDRESS, SERVER_PORT);
++    setupRealNacm(srSess);
++
++    RestconfNotificationWatcher netconfWatcher(srConn.sessionStart().getContext());
++    constexpr auto notif = R"({"example:eventB":{}})";
++
++    std::optional<std::string> rpcSubscriptionEncoding;
++    std::optional<std::pair<std::string, std::string>> rpcRequestAuthHeader;
++
++    std::pair<std::string, std::string> auth = AUTH_ROOT;
++    auto uri = establishSubscription(srSess.getContext(), libyang::DataFormat::JSON, auth, std::nullopt);
++
++    PREPARE_LOOP_WITH_EXCEPTIONS;
++
++    std::atomic<bool> serverRunning = true;
++    std::atomic<size_t> notificationsReceived = 0;
++    constexpr size_t NOTIFICATIONS_BEFORE_TERMINATE = 50;
++
++    auto notificationThread = std::jthread(wrap_exceptions_and_asio(bg, io, [&]() {
++        auto notifSession = sysrepo::Connection{}.sessionStart();
++        auto ctx = notifSession.getContext();
++
++        WAIT_UNTIL_SSE_CLIENT_REQUESTS;
++
++        while (serverRunning) {
++            SEND_NOTIFICATION(notif);
++        }
++    }));
++
++    auto serverShutdownThread = std::jthread([&]() {
++        while (notificationsReceived <= NOTIFICATIONS_BEFORE_TERMINATE) {
++            // A condition variable would be more elegant, but this is just a test...
++            std::this_thread::sleep_for(20ms);
++        }
++        server.reset();
++        serverRunning = false;
++    });
++
++    netconfWatcher.setDataFormat(libyang::DataFormat::JSON);
++    REQUIRE_CALL(netconfWatcher, data(notif)).IN_SEQUENCE(seq1).TIMES(AT_LEAST(NOTIFICATIONS_BEFORE_TERMINATE)).LR_SIDE_EFFECT(notificationsReceived++);
++    REQUIRE_CALL(netconfWatcher, data(R"({ietf-subscribed-notifications:subscription-terminated":{"id":1,"reason":"no-such-subscription"}})")).IN_SEQUENCE(seq1).TIMES(AT_MOST(1));
++    SSEClient cli(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, uri, {auth});
++    RUN_LOOP_WITH_EXCEPTIONS;
++}
+diff --git a/tests/uri-parser.cpp b/tests/uri-parser.cpp
+index 38ca80f..2ad244f 100644
+--- a/tests/uri-parser.cpp
++++ b/tests/uri-parser.cpp
+@@ -7,6 +7,7 @@
+  */
+ 
+ #include "trompeloeil_doctest.h"
++#include <boost/uuid/string_generator.hpp>
+ #include <experimental/iterator>
+ #include <string>
+ #include <sysrepo-cpp/Connection.hpp>
+@@ -1042,8 +1043,11 @@ TEST_CASE("URI path parser")
+ 
+             SECTION("filter")
+             {
++                using rousette::restconf::NetconfStreamRequest;
++
+                 auto resp = asRestconfStreamRequest("GET", "/streams/NETCONF/XML", "filter=/asd");
+-                REQUIRE(resp.queryParams == QueryParams({{"filter", "/asd"s}}));
++                REQUIRE(std::holds_alternative<NetconfStreamRequest>(resp));
++                REQUIRE(std::get<NetconfStreamRequest>(resp).queryParams == QueryParams({{"filter", "/asd"s}}));
+ 
+                 REQUIRE_THROWS_WITH_AS(asRestconfRequest(ctx, "GET", "/restconf/data/example:ordered-lists", "filter=something"),
+                                        serializeErrorResponse(400, "protocol", "invalid-value", "Query parameter 'filter' can be used only with streams").c_str(),
+@@ -1052,8 +1056,11 @@ TEST_CASE("URI path parser")
+ 
+             SECTION("start-time")
+             {
++                using rousette::restconf::NetconfStreamRequest;
++
+                 auto resp = asRestconfStreamRequest("GET", "/streams/NETCONF/XML", "start-time=2024-01-01T01:01:01Z");
+-                REQUIRE(resp.queryParams == QueryParams({{"start-time", "2024-01-01T01:01:01Z"s}}));
++                REQUIRE(std::holds_alternative<NetconfStreamRequest>(resp));
++                REQUIRE(std::get<NetconfStreamRequest>(resp).queryParams == QueryParams({{"start-time", "2024-01-01T01:01:01Z"s}}));
+ 
+                 REQUIRE_THROWS_WITH_AS(asRestconfRequest(ctx, "GET", "/restconf/data/example:ordered-lists", "start-time=2024-01-01T01:01:01Z"),
+                                        serializeErrorResponse(400, "protocol", "invalid-value", "Query parameter 'start-time' can be used only with streams").c_str(),
+@@ -1062,8 +1069,11 @@ TEST_CASE("URI path parser")
+ 
+             SECTION("stop-time")
+             {
++                using rousette::restconf::NetconfStreamRequest;
++
+                 auto resp = asRestconfStreamRequest("GET", "/streams/NETCONF/XML", "stop-time=2024-01-01T01:01:01Z");
+-                REQUIRE(resp.queryParams == QueryParams({{"stop-time", "2024-01-01T01:01:01Z"s}}));
++                REQUIRE(std::holds_alternative<NetconfStreamRequest>(resp));
++                REQUIRE(std::get<NetconfStreamRequest>(resp).queryParams == QueryParams({{"stop-time", "2024-01-01T01:01:01Z"s}}));
+ 
+                 REQUIRE_THROWS_WITH_AS(asRestconfRequest(ctx, "GET", "/restconf/data/example:ordered-lists", "stop-time=2024-01-01T01:01:01Z"),
+                                        serializeErrorResponse(400, "protocol", "invalid-value", "Query parameter 'stop-time' can be used only with streams").c_str(),
+@@ -1079,18 +1089,27 @@ TEST_CASE("URI path parser")
+     SECTION("Streams")
+     {
+         using rousette::restconf::asRestconfStreamRequest;
+-        using rousette::restconf::RestconfStreamRequest;
++        using rousette::restconf::NetconfStreamRequest;
++        using rousette::restconf::SubscribedStreamRequest;
+ 
+         {
+             auto req = asRestconfStreamRequest("GET", "/streams/NETCONF/XML", "");
+-            REQUIRE(req.encoding == libyang::DataFormat::XML);
+-            REQUIRE(req.queryParams.empty());
++            REQUIRE(std::holds_alternative<NetconfStreamRequest>(req));
++            REQUIRE(std::get<NetconfStreamRequest>(req).encoding == libyang::DataFormat::XML);
++            REQUIRE(std::get<NetconfStreamRequest>(req).queryParams.empty());
+         }
+ 
+         {
+             auto req = asRestconfStreamRequest("GET", "/streams/NETCONF/JSON", "");
+-            REQUIRE(req.encoding == libyang::DataFormat::JSON);
+-            REQUIRE(req.queryParams.empty());
++            REQUIRE(std::holds_alternative<NetconfStreamRequest>(req));
++            REQUIRE(std::get<NetconfStreamRequest>(req).encoding == libyang::DataFormat::JSON);
++            REQUIRE(std::get<NetconfStreamRequest>(req).queryParams.empty());
++        }
++
++        {
++            auto req = asRestconfStreamRequest("GET", "/streams/subscribed/a40f0a50-061a-4832-a6ac-c4db7df81a10", "");
++            REQUIRE(std::holds_alternative<SubscribedStreamRequest>(req));
++            REQUIRE(std::get<SubscribedStreamRequest>(req).uuid == boost::uuids::string_generator()("a40f0a50-061a-4832-a6ac-c4db7df81a10"));
+         }
+ 
+         REQUIRE_THROWS_WITH_AS(asRestconfStreamRequest("GET", "/streams/NETCONF", ""),
+@@ -1105,6 +1124,12 @@ TEST_CASE("URI path parser")
+         REQUIRE_THROWS_WITH_AS(asRestconfStreamRequest("GET", "/streams/NETCONF/XM", ""),
+                 serializeErrorResponse(404, "application", "invalid-value", "Invalid stream").c_str(),
+                 rousette::restconf::ErrorResponse);
++        REQUIRE_THROWS_WITH_AS(asRestconfStreamRequest("GET", "/streams/subscribed", ""),
++                serializeErrorResponse(404, "application", "invalid-value", "Invalid stream").c_str(),
++                rousette::restconf::ErrorResponse);
++        REQUIRE_THROWS_WITH_AS(asRestconfStreamRequest("GET", "/streams/subscribed/123-456-789", ""),
++                serializeErrorResponse(404, "application", "invalid-value", "Invalid stream").c_str(),
++                rousette::restconf::ErrorResponse);
+ 
+ 
+         for (const auto& httpMethod : {"OPTIONS", "PATCH", "DELETE", "POST", "PUT"}) {
+-- 
+2.43.0
+

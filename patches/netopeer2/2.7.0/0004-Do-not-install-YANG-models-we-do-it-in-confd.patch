@@ -1,0 +1,30 @@
+From d23806c941a16a8a12e006de240fd16afd963f47 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Tue, 16 Dec 2025 08:15:54 +0100
+Subject: [PATCH 4/4] Do not install YANG models, we do it in confd.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 594363f..d449230 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -86,7 +86,7 @@ set(YANG_MODULE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/yang/modul
+ set(DATA_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/netopeer2" CACHE STRING "Directory with shared netopeer2 data")
+ 
+ # script options
+-option(SYSREPO_SETUP "Install required modules with their default configuration into sysrepo using a script" ON)
++option(SYSREPO_SETUP "Install required modules with their default configuration into sysrepo using a script" OFF)
+ set(MODULES_PERMS 600 CACHE STRING "File access permissions set for all the server modules")
+ if(NOT MODULES_OWNER)
+     execute_process(COMMAND id -un RESULT_VARIABLE RET
+-- 
+2.43.0
+

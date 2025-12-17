@@ -1,0 +1,876 @@
+From 8c246567c03471e20cd9574f9c95a179712c3e3f Mon Sep 17 00:00:00 2001
+From: Stefan Gula <steweg@gmail.com>
+Date: Sun, 2 Nov 2025 21:26:55 +0100
+Subject: [PATCH] cffi: allows to usage of libyang v4.2.2
+
+This patch adjust cffi definitions and also all associated functions
+based on libyang v4.2.2.
+
+Signed-off-by: Stefan Gula <steweg@gmail.com>
+---
+ cffi/cdefs.h          | 61 ++++++++++++++++++++++-----------------
+ cffi/source.c         |  4 +--
+ libyang/context.py    | 25 ++++++++++------
+ libyang/data.py       |  7 ++---
+ libyang/extension.py  | 24 +++++++++++-----
+ libyang/schema.py     | 66 +++++++++++++++++++++++++++++++++---------
+ tests/test_context.py |  6 +++-
+ tests/test_data.py    | 67 ++++++++++++++++++++++++-------------------
+ tests/test_diff.py    |  4 ++-
+ tests/test_schema.py  |  4 +--
+ 10 files changed, 172 insertions(+), 96 deletions(-)
+
+diff --git a/cffi/cdefs.h b/cffi/cdefs.h
+index 8b6d426..82ec974 100644
+--- a/cffi/cdefs.h
++++ b/cffi/cdefs.h
+@@ -17,6 +17,7 @@ struct ly_ctx;
+ #define LY_CTX_LEAFREF_EXTENDED ...
+ #define LY_CTX_LEAFREF_LINKING ...
+ #define LY_CTX_BUILTIN_PLUGINS_ONLY ...
++#define LY_CTX_COMPILE_OBSOLETE ...
+ 
+ 
+ typedef enum {
+@@ -304,20 +305,19 @@ enum lyd_type {
+     LYD_TYPE_REPLY_RESTCONF
+ };
+ 
+-#define LYD_PRINT_KEEPEMPTYCONT ...
+ #define LYD_PRINT_SHRINK   ...
++#define LYD_PRINT_EMPTY_CONT ...
+ #define LYD_PRINT_WD_ALL ...
+ #define LYD_PRINT_WD_ALL_TAG ...
+ #define LYD_PRINT_WD_EXPLICIT ...
+ #define LYD_PRINT_WD_IMPL_TAG ...
+ #define LYD_PRINT_WD_MASK ...
+-#define LYD_PRINT_WITHSIBLINGS ...
++#define LYD_PRINT_SIBLINGS ...
+ #define LYD_PRINT_WD_TRIM ...
+ LY_ERR lyd_print_mem(char **, const struct lyd_node *, LYD_FORMAT, uint32_t);
+ LY_ERR lyd_print_tree(struct ly_out *, const struct lyd_node *, LYD_FORMAT, uint32_t);
+ LY_ERR lyd_print_all(struct ly_out *, const struct lyd_node *, LYD_FORMAT, uint32_t);
+ 
+-#define LYD_PARSE_LYB_MOD_UPDATE ...
+ #define LYD_PARSE_NO_STATE ...
+ #define LYD_PARSE_STORE_ONLY ...
+ #define LYD_PARSE_JSON_NULL ...
+@@ -351,7 +351,7 @@ LY_ERR ly_out_new_file(FILE *, struct ly_out **);
+ LY_ERR ly_out_new_fd(int, struct ly_out **);
+ 
+ LY_ERR lyd_parse_data(const struct ly_ctx *, struct lyd_node *, struct ly_in *, LYD_FORMAT, uint32_t, uint32_t, struct lyd_node **);
+-LY_ERR lyd_parse_op(const struct ly_ctx *, struct lyd_node *, struct ly_in *, LYD_FORMAT, enum lyd_type, struct lyd_node **, struct lyd_node **);
++LY_ERR lyd_parse_op(const struct ly_ctx *, struct lyd_node *, struct ly_in *, LYD_FORMAT, enum lyd_type, uint32_t, struct lyd_node **, struct lyd_node **);
+ 
+ typedef enum {
+    LYS_OUT_UNKNOWN,
+@@ -369,6 +369,7 @@ LY_ERR lys_print_module(struct ly_out *, const struct lys_module *, LYS_OUTFORMA
+ 
+ struct lysc_module {
+ 	struct lys_module *mod;
++	const char **features;
+ 	struct lysc_node *data;
+ 	struct lysc_node_action *rpcs;
+ 	struct lysc_node_notif *notifs;
+@@ -388,13 +389,15 @@ struct lys_module {
+     const char *ref;
+     struct lysp_module *parsed;
+     struct lysc_module *compiled;
++    struct lysc_ext *extensions;
+     struct lysc_ident *identities;
++    struct lysc_submodule *submodules;
+     struct lys_module **augmented_by;
+     struct lys_module **deviated_by;
+     ly_bool implemented;
+     ly_bool to_compile;
+-    uint8_t latest_revision;
+-    ...;
++    uint8_t version : 2;
++    uint8_t latest_revision : 4;
+ };
+ 
+ struct lysp_module {
+@@ -467,12 +470,11 @@ struct lysp_ext_instance {
+     const char *argument;
+     LY_VALUE_FORMAT format;
+     void *prefix_data;
+-    struct lysp_ext *def;
++    uintptr_t plugin_ref;
+     void *parent;
+     enum ly_stmt parent_stmt;
+     uint64_t parent_stmt_index;
+     uint16_t flags;
+-    const struct lyplg_ext_record *record;
+     struct lysp_ext_substmt *substmts;
+     void *parsed;
+     struct lysp_stmt *child;
+@@ -610,6 +612,11 @@ struct lysp_node_container {
+     ...;
+ };
+ 
++struct lysc_value {
++    const char *str;
++    struct lysc_prefix *prefixes;
++};
++
+ struct lysc_node_leaf {
+     union {
+         struct lysc_node node;
+@@ -623,7 +630,7 @@ struct lysc_node_leaf {
+     struct lysc_when **when;
+     struct lysc_type *type;
+     const char *units;
+-    struct lyd_value *dflt;
++    struct lysc_value dflt;
+     ...;
+ };
+ 
+@@ -653,7 +660,7 @@ struct lysc_node_leaflist {
+     struct lysc_when **when;
+     struct lysc_type *type;
+     const char *units;
+-    struct lyd_value **dflts;
++    struct lysc_value *dflts;
+     uint32_t min;
+     uint32_t max;
+     ...;
+@@ -783,7 +790,7 @@ struct lysp_node_augment {
+ struct lysc_type {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+ };
+@@ -859,7 +866,7 @@ struct lysc_ext {
+     const char *name;
+     const char *argname;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_ext *plugin;
++    uintptr_t plugin_ref;
+     struct lys_module *module;
+     uint16_t flags;
+ };
+@@ -982,7 +989,6 @@ typedef struct pcre2_real_code pcre2_code;
+ 
+ struct lysc_pattern {
+     const char *expr;
+-    pcre2_code *code;
+     const char *dsc;
+     const char *ref;
+     const char *emsg;
+@@ -1017,7 +1023,7 @@ struct lysc_ident {
+ struct lysc_type_num {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     struct lysc_range *range;
+@@ -1026,7 +1032,7 @@ struct lysc_type_num {
+ struct lysc_type_dec {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     uint8_t fraction_digits;
+@@ -1036,7 +1042,7 @@ struct lysc_type_dec {
+ struct lysc_type_str {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     struct lysc_range *length;
+@@ -1058,7 +1064,7 @@ struct lysc_type_bitenum_item {
+ struct lysc_type_enum {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     struct lysc_type_bitenum_item *enums;
+@@ -1067,7 +1073,7 @@ struct lysc_type_enum {
+ struct lysc_type_bits {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     struct lysc_type_bitenum_item *bits;
+@@ -1076,7 +1082,7 @@ struct lysc_type_bits {
+ struct lysc_type_leafref {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     struct lyxp_expr *path;
+@@ -1088,7 +1094,7 @@ struct lysc_type_leafref {
+ struct lysc_type_identityref {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     struct lysc_ident **bases;
+@@ -1097,7 +1103,7 @@ struct lysc_type_identityref {
+ struct lysc_type_instanceid {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     uint8_t require_instance;
+@@ -1106,7 +1112,7 @@ struct lysc_type_instanceid {
+ struct lysc_type_union {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     struct lysc_type **types;
+@@ -1115,7 +1121,7 @@ struct lysc_type_union {
+ struct lysc_type_bin {
+     const char *name;
+     struct lysc_ext_instance *exts;
+-    struct lyplg_type *plugin;
++    uintptr_t plugin_ref;
+     LY_DATA_TYPE basetype;
+     uint32_t refcount;
+     struct lysc_range *length;
+@@ -1159,8 +1165,7 @@ typedef enum {
+    LYD_ANYDATA_DATATREE,
+    LYD_ANYDATA_STRING,
+    LYD_ANYDATA_XML,
+-   LYD_ANYDATA_JSON,
+-   LYD_ANYDATA_LYB
++   LYD_ANYDATA_JSON
+ } LYD_ANYDATA_VALUETYPE;
+ 
+ union lyd_any_value {
+@@ -1168,7 +1173,6 @@ union lyd_any_value {
+     const char *str;
+     const char *xml;
+     const char *json;
+-    char *mem;
+ };
+ 
+ struct lyd_node_any {
+@@ -1320,6 +1324,8 @@ struct lyd_attr {
+ LY_ERR lyd_new_attr(struct lyd_node *, const char *, const char *, const char *, struct lyd_attr **);
+ void lyd_free_attr_single(const struct ly_ctx *ctx, struct lyd_attr *attr);
+ 
++LY_ERR lyd_value_validate_dflt(const struct lysc_node *, const char *, struct lysc_prefix *, const struct lyd_node *, const struct lysc_type **, const char **);
++
+ struct lyd_leafref_links_rec {
+     const struct lyd_node_term *node;
+     const struct lyd_node_term **leafref_nodes;
+@@ -1328,13 +1334,14 @@ struct lyd_leafref_links_rec {
+ 
+ LY_ERR lyd_leafref_get_links(const struct lyd_node_term *, const struct lyd_leafref_links_rec **);
+ LY_ERR lyd_leafref_link_node_tree(struct lyd_node *);
++struct lyplg_ext *lysc_get_ext_plugin(uintptr_t);
+ const char *lyplg_ext_stmt2str(enum ly_stmt stmt);
+ const struct lysp_module *lyplg_ext_parse_get_cur_pmod(const struct lysp_ctx *);
+ struct ly_ctx *lyplg_ext_compile_get_ctx(const struct lysc_ctx *);
+ void lyplg_ext_parse_log(const struct lysp_ctx *, const struct lysp_ext_instance *, LY_LOG_LEVEL, LY_ERR, const char *, ...);
+ void lyplg_ext_compile_log(const struct lysc_ctx *, const struct lysc_ext_instance *, LY_LOG_LEVEL, LY_ERR, const char *, ...);
+ LY_ERR lyplg_ext_parse_extension_instance(struct lysp_ctx *, struct lysp_ext_instance *);
+-LY_ERR lyplg_ext_compile_extension_instance(struct lysc_ctx *, const struct lysp_ext_instance *, struct lysc_ext_instance *);
++LY_ERR lyplg_ext_compile_extension_instance(struct lysc_ctx *, const struct lysp_ext_instance *, struct lysc_ext_instance *, struct lysc_node *);
+ void lyplg_ext_pfree_instance_substatements(const struct ly_ctx *ctx, struct lysp_ext_substmt *substmts);
+ void lyplg_ext_cfree_instance_substatements(const struct ly_ctx *ctx, struct lysc_ext_substmt *substmts);
+ typedef LY_ERR (*lyplg_ext_parse_clb)(struct lysp_ctx *, struct lysp_ext_instance *);
+diff --git a/cffi/source.c b/cffi/source.c
+index 34e18b0..3c76e98 100644
+--- a/cffi/source.c
++++ b/cffi/source.c
+@@ -6,6 +6,6 @@
+ #include <libyang/libyang.h>
+ #include <libyang/version.h>
+ 
+-#if LY_VERSION_MAJOR * 10000 + LY_VERSION_MINOR * 100 + LY_VERSION_MICRO < 30801
+-#error "This version of libyang bindings only works with libyang soversion 3.8.1+"
++#if LY_VERSION_MAJOR * 10000 + LY_VERSION_MINOR * 100 + LY_VERSION_MICRO < 40202
++#error "This version of libyang bindings only works with libyang soversion 4.2.2+"
+ #endif
+diff --git a/libyang/context.py b/libyang/context.py
+index 4489680..21db162 100644
+--- a/libyang/context.py
++++ b/libyang/context.py
+@@ -205,6 +205,7 @@ def __init__(
+         builtin_plugins_only: bool = False,
+         all_implemented: bool = False,
+         enable_imp_features: bool = False,
++        compile_obsolete: bool = False,
+         yanglib_path: Optional[str] = None,
+         yanglib_fmt: str = "json",
+         cdata=None,  # C type: "struct ly_ctx *"
+@@ -231,6 +232,8 @@ def __init__(
+             options |= lib.LY_CTX_ALL_IMPLEMENTED
+         if enable_imp_features:
+             options |= lib.LY_CTX_ENABLE_IMP_FEATURES
++        if compile_obsolete:
++            options |= lib.LY_CTX_COMPILE_OBSOLETE
+         # force priv parsed
+         options |= lib.LY_CTX_SET_PRIV_PARSED
+ 
+@@ -259,6 +262,7 @@ def __init__(
+                 fmt = lib.LYD_JSON
+             else:
+                 fmt = lib.LYD_XML
++            print("steweg", search_path, yanglib_path, yanglib_fmt, options)
+             ret = lib.ly_ctx_new_ylpath(
+                 str2c(search_path), str2c(yanglib_path), fmt, options, ctx
+             )
+@@ -542,6 +546,8 @@ def parse_op(
+         in_data: Union[IO, str],
+         dtype: DataType,
+         parent: DNode = None,
++        opaq: bool = False,
++        strict: bool = False,
+     ) -> DNode:
+         fmt = data_format(fmt)
+         data = ffi.new("struct ly_in **")
+@@ -551,13 +557,14 @@ def parse_op(
+         if ret != lib.LY_SUCCESS:
+             raise self.error("failed to read input data")
+ 
++        flags = parser_flags(opaq=opaq, strict=strict)
+         tree = ffi.new("struct lyd_node **", ffi.NULL)
+         op = ffi.new("struct lyd_node **", ffi.NULL)
+         par = ffi.new("struct lyd_node **", ffi.NULL)
+         if parent is not None:
+             par[0] = parent.cdata
+ 
+-        ret = lib.lyd_parse_op(self.cdata, par[0], data[0], fmt, dtype, tree, op)
++        ret = lib.lyd_parse_op(self.cdata, par[0], data[0], fmt, dtype, flags, tree, op)
+         lib.ly_in_free(data[0], 0)
+         if ret != lib.LY_SUCCESS:
+             raise self.error("failed to parse input data")
+@@ -570,9 +577,17 @@ def parse_op_mem(
+         data: str,
+         dtype: DataType = DataType.DATA_YANG,
+         parent: DNode = None,
++        opaq: bool = False,
++        strict: bool = False,
+     ):
+         return self.parse_op(
+-            fmt, in_type=IOType.MEMORY, in_data=data, dtype=dtype, parent=parent
++            fmt,
++            in_type=IOType.MEMORY,
++            in_data=data,
++            dtype=dtype,
++            parent=parent,
++            opaq=opaq,
++            strict=strict,
+         )
+ 
+     def parse_data(
+@@ -581,7 +596,6 @@ def parse_data(
+         in_type: IOType,
+         in_data: Union[str, bytes, IO],
+         parent: DNode = None,
+-        lyb_mod_update: bool = False,
+         no_state: bool = False,
+         parse_only: bool = False,
+         opaq: bool = False,
+@@ -596,7 +610,6 @@ def parse_data(
+         if self.cdata is None:
+             raise RuntimeError("context already destroyed")
+         parser_flgs = parser_flags(
+-            lyb_mod_update=lyb_mod_update,
+             no_state=no_state,
+             parse_only=parse_only,
+             opaq=opaq,
+@@ -640,7 +653,6 @@ def parse_data_mem(
+         data: Union[str, bytes],
+         fmt: str,
+         parent: DNode = None,
+-        lyb_mod_update: bool = False,
+         no_state: bool = False,
+         parse_only: bool = False,
+         opaq: bool = False,
+@@ -657,7 +669,6 @@ def parse_data_mem(
+             in_type=IOType.MEMORY,
+             in_data=data,
+             parent=parent,
+-            lyb_mod_update=lyb_mod_update,
+             no_state=no_state,
+             parse_only=parse_only,
+             opaq=opaq,
+@@ -675,7 +686,6 @@ def parse_data_file(
+         fileobj: IO,
+         fmt: str,
+         parent: DNode = None,
+-        lyb_mod_update: bool = False,
+         no_state: bool = False,
+         parse_only: bool = False,
+         opaq: bool = False,
+@@ -692,7 +702,6 @@ def parse_data_file(
+             in_type=IOType.FD,
+             in_data=fileobj,
+             parent=parent,
+-            lyb_mod_update=lyb_mod_update,
+             no_state=no_state,
+             parse_only=parse_only,
+             opaq=opaq,
+diff --git a/libyang/data.py b/libyang/data.py
+index 7a5887b..230c51a 100644
+--- a/libyang/data.py
++++ b/libyang/data.py
+@@ -53,11 +53,11 @@ def printer_flags(
+ ) -> int:
+     flags = 0
+     if with_siblings:
+-        flags |= lib.LYD_PRINT_WITHSIBLINGS
++        flags |= lib.LYD_PRINT_SIBLINGS
+     if not pretty:
+         flags |= lib.LYD_PRINT_SHRINK
+     if keep_empty_containers:
+-        flags |= lib.LYD_PRINT_KEEPEMPTYCONT
++        flags |= lib.LYD_PRINT_EMPTY_CONT
+     if trim_default_values:
+         flags |= lib.LYD_PRINT_WD_TRIM
+     if include_implicit_defaults:
+@@ -109,7 +109,6 @@ def newval_flags(
+ 
+ # -------------------------------------------------------------------------------------
+ def parser_flags(
+-    lyb_mod_update: bool = False,
+     no_state: bool = False,
+     parse_only: bool = False,
+     opaq: bool = False,
+@@ -120,8 +119,6 @@ def parser_flags(
+     json_string_datatypes: bool = False,
+ ) -> int:
+     flags = 0
+-    if lyb_mod_update:
+-        flags |= lib.LYD_PARSE_LYB_MOD_UPDATE
+     if no_state:
+         flags |= lib.LYD_PARSE_NO_STATE
+     if parse_only:
+diff --git a/libyang/extension.py b/libyang/extension.py
+index 57f7cb2..f7e4ba9 100644
+--- a/libyang/extension.py
++++ b/libyang/extension.py
+@@ -8,7 +8,7 @@
+ from _libyang import ffi, lib
+ from .context import Context
+ from .log import get_libyang_level
+-from .schema import ExtensionCompiled, ExtensionParsed, Module
++from .schema import ExtensionCompiled, ExtensionParsed, Module, SNode
+ from .util import LibyangError, c2str, str2c
+ 
+ 
+@@ -25,7 +25,7 @@ def __init__(self, message: str, ret: int, log_level: int) -> None:
+ 
+ @ffi.def_extern(name="lypy_lyplg_ext_parse_clb")
+ def libyang_c_lyplg_ext_parse_clb(pctx, pext):
+-    plugin = extensions_plugins[pext.record.plugin]
++    plugin = extensions_plugins[lib.lysc_get_ext_plugin(pext.plugin_ref)]
+     module_cdata = lib.lyplg_ext_parse_get_cur_pmod(pctx).mod
+     context = Context(cdata=module_cdata.ctx)
+     module = Module(context, module_cdata)
+@@ -46,7 +46,7 @@ def libyang_c_lyplg_ext_parse_clb(pctx, pext):
+ 
+ @ffi.def_extern(name="lypy_lyplg_ext_compile_clb")
+ def libyang_c_lyplg_ext_compile_clb(cctx, pext, cext):
+-    plugin = extensions_plugins[pext.record.plugin]
++    plugin = extensions_plugins[lib.lysc_get_ext_plugin(pext.plugin_ref)]
+     context = Context(cdata=lib.lyplg_ext_compile_get_ctx(cctx))
+     module = Module(context, cext.module)
+     parsed_ext = ExtensionParsed(context, pext, module)
+@@ -67,7 +67,7 @@ def libyang_c_lyplg_ext_compile_clb(cctx, pext, cext):
+ 
+ @ffi.def_extern(name="lypy_lyplg_ext_parse_free_clb")
+ def libyang_c_lyplg_ext_parse_free_clb(ctx, pext):
+-    plugin = extensions_plugins[pext.record.plugin]
++    plugin = extensions_plugins[lib.lysc_get_ext_plugin(pext.plugin_ref)]
+     context = Context(cdata=ctx)
+     parsed_ext = ExtensionParsed(context, pext, None)
+     plugin.parse_free_clb(parsed_ext)
+@@ -75,7 +75,9 @@ def libyang_c_lyplg_ext_parse_free_clb(ctx, pext):
+ 
+ @ffi.def_extern(name="lypy_lyplg_ext_compile_free_clb")
+ def libyang_c_lyplg_ext_compile_free_clb(ctx, cext):
+-    plugin = extensions_plugins[getattr(cext, "def").plugin]
++    plugin = extensions_plugins[
++        lib.lysc_get_ext_plugin(getattr(cext, "def").plugin_ref)
++    ]
+     context = Context(cdata=ctx)
+     compiled_ext = ExtensionCompiled(context, cext)
+     plugin.compile_free_clb(compiled_ext)
+@@ -200,9 +202,17 @@ def set_compile_ctx(self, cctx) -> None:
+     def parse_substmts(self, ext: ExtensionParsed) -> int:
+         return lib.lyplg_ext_parse_extension_instance(self._pctx, ext.cdata)
+ 
+-    def compile_substmts(self, pext: ExtensionParsed, cext: ExtensionCompiled) -> int:
++    def compile_substmts(
++        self,
++        pext: ExtensionParsed,
++        cext: ExtensionCompiled,
++        parent: Optional[SNode] = None,
++    ) -> int:
+         return lib.lyplg_ext_compile_extension_instance(
+-            self._cctx, pext.cdata, cext.cdata
++            self._cctx,
++            pext.cdata,
++            cext.cdata,
++            ffi.NULL if parent is None else parent.cdata,
+         )
+ 
+     def free_parse_substmts(self, ext: ExtensionParsed) -> None:
+diff --git a/libyang/schema.py b/libyang/schema.py
+index 23c1b1b..f104a87 100644
+--- a/libyang/schema.py
++++ b/libyang/schema.py
+@@ -1522,21 +1522,35 @@ def new(context: "libyang.Context", cdata) -> "SNode":
+ # -------------------------------------------------------------------------------------
+ @SNode.register(SNode.LEAF)
+ class SLeaf(SNode):
+-    __slots__ = ("cdata_leaf", "cdata_leaf_parsed")
++    __slots__ = ("cdata_leaf", "cdata_leaf_parsed", "cdata_default_realtype")
+ 
+     def __init__(self, context: "libyang.Context", cdata):
+         super().__init__(context, cdata)
+         self.cdata_leaf = ffi.cast("struct lysc_node_leaf *", cdata)
+         self.cdata_leaf_parsed = ffi.cast("struct lysp_node_leaf *", self.cdata_parsed)
++        self.cdata_default_realtype = None
+ 
+     def default(self) -> Union[None, bool, int, str, float]:
+-        if not self.cdata_leaf.dflt:
++        if not self.cdata_leaf.dflt.str:
+             return None
+-        val = lib.lyd_value_get_canonical(self.context.cdata, self.cdata_leaf.dflt)
+-        if not val:
+-            return None
+-        val = c2str(val)
+-        val_type = Type(self.context, self.cdata_leaf.dflt.realtype, None)
++
++        if self.cdata_default_realtype is None:
++            # calculate real type of default value just once
++            val_type_cdata = ffi.new("struct lysc_type **", ffi.NULL)
++            ret = lib.lyd_value_validate_dflt(
++                self.cdata,
++                self.cdata_leaf.dflt.str,
++                self.cdata_leaf.dflt.prefixes,
++                ffi.NULL,
++                val_type_cdata,
++                ffi.NULL,
++            )
++            if ret != lib.LY_SUCCESS:
++                raise self.context.error("Unable to get real type of default value")
++            self.cdata_default_realtype = Type(self.context, val_type_cdata[0], None)
++
++        val = c2str(self.cdata_leaf.dflt.str)
++        val_type = self.cdata_default_realtype
+         if val_type.base() == Type.BOOL:
+             return val == "true"
+         if val_type.base() in Type.NUM_TYPES:
+@@ -1563,7 +1577,7 @@ def __str__(self):
+ # -------------------------------------------------------------------------------------
+ @SNode.register(SNode.LEAFLIST)
+ class SLeafList(SNode):
+-    __slots__ = ("cdata_leaflist", "cdata_leaflist_parsed")
++    __slots__ = ("cdata_leaflist", "cdata_leaflist_parsed", "cdata_default_realtypes")
+ 
+     def __init__(self, context: "libyang.Context", cdata):
+         super().__init__(context, cdata)
+@@ -1571,6 +1585,7 @@ def __init__(self, context: "libyang.Context", cdata):
+         self.cdata_leaflist_parsed = ffi.cast(
+             "struct lysp_node_leaflist *", self.cdata_parsed
+         )
++        self.cdata_default_realtypes = None
+ 
+     def ordered(self) -> bool:
+         return bool(self.cdata_parsed.flags & lib.LYS_ORDBY_USER)
+@@ -1586,12 +1601,37 @@ def type(self) -> Type:
+     def defaults(self) -> Iterator[Union[None, bool, int, str, float]]:
+         if self.cdata_leaflist.dflts == ffi.NULL:
+             return
+-        for dflt in ly_array_iter(self.cdata_leaflist.dflts):
+-            val = lib.lyd_value_get_canonical(self.context.cdata, dflt)
+-            if not val:
++
++        if self.cdata_default_realtypes is None:
++            # calculate real types of default values just once
++            val_type_cdata = ffi.new("struct lysc_type **", ffi.NULL)
++            self.cdata_default_realtypes = []
++            for dflt in ly_array_iter(self.cdata_leaflist.dflts):
++                if not dflt.str:
++                    self.cdata_default_realtypes.append(None)
++                    continue
++                val_type_cdata[0] = ffi.NULL
++                ret = lib.lyd_value_validate_dflt(
++                    self.cdata,
++                    dflt.str,
++                    dflt.prefixes,
++                    ffi.NULL,
++                    val_type_cdata,
++                    ffi.NULL,
++                )
++                if ret != lib.LY_SUCCESS:
++                    raise self.context.error("Unable to get real type of default value")
++                self.cdata_default_realtypes.append(
++                    Type(self.context, val_type_cdata[0], None)
++                )
++
++        for dflt, val_type in zip(
++            ly_array_iter(self.cdata_leaflist.dflts), self.cdata_default_realtypes
++        ):
++            if not dflt.str:
+                 yield None
+-            val = c2str(val)
+-            val_type = Type(self.context, dflt.realtype, None)
++                continue
++            val = c2str(dflt.str)
+             if val_type.base() == Type.BOOL:
+                 yield val == "true"
+             elif val_type.base() in Type.NUM_TYPES:
+diff --git a/tests/test_context.py b/tests/test_context.py
+index 61c0ae8..8ffd045 100644
+--- a/tests/test_context.py
++++ b/tests/test_context.py
+@@ -20,7 +20,11 @@ def test_ctx_no_dir(self):
+             self.assertIsNot(ctx, None)
+ 
+     def test_ctx_yanglib(self):
+-        ctx = Context(YANG_DIR, yanglib_path=YANG_DIR + "/yang-library.json")
++        ctx = Context(
++            YANG_DIR,
++            yanglib_path=YANG_DIR + "/yang-library.json",
++            compile_obsolete=True,
++        )
+         ctx.load_module("yolo-system")
+         dnode = ctx.get_yanglib_data()
+         j = dnode.print_mem("json", with_siblings=True)
+diff --git a/tests/test_data.py b/tests/test_data.py
+index 430873a..8f56dc1 100644
+--- a/tests/test_data.py
++++ b/tests/test_data.py
+@@ -33,7 +33,7 @@
+ # -------------------------------------------------------------------------------------
+ class DataTest(unittest.TestCase):
+     def setUp(self):
+-        self.ctx = Context(YANG_DIR)
++        self.ctx = Context(YANG_DIR, compile_obsolete=True)
+         modules = [
+             self.ctx.load_module("ietf-netconf"),
+             self.ctx.load_module("yolo-system"),
+@@ -51,18 +51,18 @@ def tearDown(self):
+   "yolo-system:conf": {
+     "hostname": "foo",
+     "url": [
+-      {
+-        "proto": "https",
+-        "host": "github.com",
+-        "path": "/CESNET/libyang-python",
+-        "enabled": false
+-      },
+       {
+         "proto": "http",
+         "host": "foobar.com",
+         "port": 8080,
+         "path": "/index.html",
+         "enabled": true
++      },
++      {
++        "proto": "https",
++        "host": "github.com",
++        "path": "/CESNET/libyang-python",
++        "enabled": false
+       }
+     ],
+     "number": [
+@@ -76,7 +76,9 @@ def tearDown(self):
+ """
+ 
+     def test_data_parse_config_json(self):
+-        dnode = self.ctx.parse_data_mem(self.JSON_CONFIG, "json", no_state=True)
++        dnode = self.ctx.parse_data_mem(
++            self.JSON_CONFIG, "json", no_state=True, ordered=True
++        )
+         self.assertIsInstance(dnode, DContainer)
+         try:
+             j = dnode.print_mem("json", with_siblings=True)
+@@ -91,18 +93,18 @@ def test_data_parse_config_json(self):
+   "yolo-system:conf": {
+     "hostname": "foo",
+     "url": [
+-      {
+-        "proto": "https",
+-        "host": "github.com",
+-        "path": "/CESNET/libyang-python",
+-        "enabled": false
+-      },
+       {
+         "proto": "http",
+         "host": "foobar.com",
+         "port": 8080,
+         "path": "/index.html",
+         "enabled": true
++      },
++      {
++        "proto": "https",
++        "host": "github.com",
++        "path": "/CESNET/libyang-python",
++        "enabled": false
+       }
+     ],
+     "number": [
+@@ -128,12 +130,6 @@ def test_data_parse_config_json_without_yang_lib(self):
+   "yolo-system:conf": {
+     "hostname": "foo",
+     "url": [
+-      {
+-        "proto": "https",
+-        "host": "github.com",
+-        "path": "/CESNET/libyang-python",
+-        "enabled": false
+-      },
+       {
+         "proto": "http",
+         "host": "barfoo.com",
+@@ -145,6 +141,12 @@ def test_data_parse_config_json_without_yang_lib(self):
+         "port": 8080,
+         "path": "/index.html",
+         "enabled": true
++      },
++      {
++        "proto": "https",
++        "host": "github.com",
++        "path": "/CESNET/libyang-python",
++        "enabled": false
+       }
+     ],
+     "number": [
+@@ -254,7 +256,9 @@ def test_data_parse_state_json(self):
+ """
+ 
+     def test_data_parse_config_xml(self):
+-        dnode = self.ctx.parse_data_mem(self.XML_CONFIG, "xml", validate_present=True)
++        dnode = self.ctx.parse_data_mem(
++            self.XML_CONFIG, "xml", validate_present=True, ordered=True
++        )
+         self.assertIsInstance(dnode, DContainer)
+         try:
+             xml = dnode.print_mem("xml", with_siblings=True, trim_default_values=True)
+@@ -509,6 +513,7 @@ def test_data_from_dict_module_free_func(self):
+     }
+ 
+     def test_data_from_dict_module_with_prefix(self):
++        self.maxDiff = None
+         module = self.ctx.get_module("yolo-system")
+         dnode = module.parse_data_dict(
+             self.DICT_CONFIG_WITH_PREFIX, strict=True, validate_present=True
+@@ -853,17 +858,17 @@ def test_data_diff(self):
+     TREE = [
+         "/yolo-system:conf",
+         "/yolo-system:conf/hostname",
+-        "/yolo-system:conf/url[proto='https'][host='github.com']",
+-        "/yolo-system:conf/url[proto='https'][host='github.com']/proto",
+-        "/yolo-system:conf/url[proto='https'][host='github.com']/host",
+-        "/yolo-system:conf/url[proto='https'][host='github.com']/path",
+-        "/yolo-system:conf/url[proto='https'][host='github.com']/enabled",
+         "/yolo-system:conf/url[proto='http'][host='foobar.com']",
+         "/yolo-system:conf/url[proto='http'][host='foobar.com']/proto",
+         "/yolo-system:conf/url[proto='http'][host='foobar.com']/host",
+         "/yolo-system:conf/url[proto='http'][host='foobar.com']/port",
+         "/yolo-system:conf/url[proto='http'][host='foobar.com']/path",
+         "/yolo-system:conf/url[proto='http'][host='foobar.com']/enabled",
++        "/yolo-system:conf/url[proto='https'][host='github.com']",
++        "/yolo-system:conf/url[proto='https'][host='github.com']/proto",
++        "/yolo-system:conf/url[proto='https'][host='github.com']/host",
++        "/yolo-system:conf/url[proto='https'][host='github.com']/path",
++        "/yolo-system:conf/url[proto='https'][host='github.com']/enabled",
+         "/yolo-system:conf/number[.='1000']",
+         "/yolo-system:conf/number[.='2000']",
+         "/yolo-system:conf/number[.='3000']",
+@@ -906,7 +911,7 @@ def test_find_all(self):
+                     }
+                 ]
+             }
+-            self.assertEqual(urls[0].print_dict(absolute=False), expected_url)
++            self.assertEqual(urls[1].print_dict(absolute=False), expected_url)
+         finally:
+             dnode.free()
+ 
+@@ -1090,7 +1095,9 @@ def test_dnode_leafref_linking(self):
+             "yolo-leafref-extended:ref1": "val1"
+             }"""
+         self.ctx.destroy()
+-        self.ctx = Context(YANG_DIR, leafref_extended=True, leafref_linking=True)
++        self.ctx = Context(
++            YANG_DIR, leafref_extended=True, leafref_linking=True, compile_obsolete=True
++        )
+         mod = self.ctx.load_module("yolo-leafref-extended")
+         self.assertIsInstance(mod, Module)
+         dnode1 = self.ctx.parse_data_mem(MAIN, "json", parse_only=True)
+@@ -1121,7 +1128,7 @@ def test_dnode_builtin_plugins_only(self):
+         MAIN = {"yolo-nodetypes:ip-address": "test"}
+         self.tearDown()
+         gc.collect()
+-        self.ctx = Context(YANG_DIR, builtin_plugins_only=True)
++        self.ctx = Context(YANG_DIR, builtin_plugins_only=True, compile_obsolete=True)
+         module = self.ctx.load_module("yolo-nodetypes")
+         dnode = dict_to_dnode(MAIN, module, None, validate=False, store_only=True)
+         self.assertIsInstance(dnode, DLeaf)
+@@ -1140,7 +1147,7 @@ def test_merge_builtin_plugins_only(self):
+         MAIN = {"yolo-nodetypes:ip-address": "test"}
+         self.tearDown()
+         gc.collect()
+-        self.ctx = Context(YANG_DIR, builtin_plugins_only=True)
++        self.ctx = Context(YANG_DIR, builtin_plugins_only=True, compile_obsolete=True)
+         module = self.ctx.load_module("yolo-nodetypes")
+         dnode = module.parse_data_dict(MAIN, validate=False, store_only=True)
+         self.assertIsInstance(dnode, DLeaf)
+diff --git a/tests/test_diff.py b/tests/test_diff.py
+index d4b7e87..2263e34 100644
+--- a/tests/test_diff.py
++++ b/tests/test_diff.py
+@@ -97,7 +97,9 @@ class DiffTest(unittest.TestCase):
+     )
+ 
+     def test_diff(self):
+-        with Context(OLD_YANG_DIR) as ctx_old, Context(NEW_YANG_DIR) as ctx_new:
++        with Context(OLD_YANG_DIR, compile_obsolete=True) as ctx_old, Context(
++            NEW_YANG_DIR, compile_obsolete=True
++        ) as ctx_new:
+             mod = ctx_old.load_module("yolo-system")
+             mod.feature_enable_all()
+             mod = ctx_new.load_module("yolo-system")
+diff --git a/tests/test_schema.py b/tests/test_schema.py
+index b1862ab..a1ca412 100644
+--- a/tests/test_schema.py
++++ b/tests/test_schema.py
+@@ -272,7 +272,7 @@ def test_iffeature_dump(self):
+ # -------------------------------------------------------------------------------------
+ class ContainerTest(unittest.TestCase):
+     def setUp(self):
+-        self.ctx = Context(YANG_DIR)
++        self.ctx = Context(YANG_DIR, compile_obsolete=True)
+         mod = self.ctx.load_module("yolo-system")
+         mod.feature_enable_all()
+         self.container = next(self.ctx.find_path("/yolo-system:conf"))
+@@ -549,7 +549,7 @@ def test_rpc_parsed(self):
+ # -------------------------------------------------------------------------------------
+ class LeafTypeTest(unittest.TestCase):
+     def setUp(self):
+-        self.ctx = Context(YANG_DIR)
++        self.ctx = Context(YANG_DIR, compile_obsolete=True)
+         self.ctx.load_module("yolo-system")
+ 
+     def tearDown(self):

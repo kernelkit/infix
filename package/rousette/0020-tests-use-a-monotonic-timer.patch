@@ -1,0 +1,81 @@
+From 4493316404f31354ea18bc92a1706a3834ad972b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Mon, 6 Oct 2025 22:50:11 +0200
+Subject: [PATCH 20/38] tests: use a monotonic timer
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: I89cdd08082b025643dac81788ca174d3c2177089
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf-eventstream.cpp | 2 +-
+ tests/restconf_utils.cpp       | 6 +++---
+ tests/restconf_utils.h         | 4 ++--
+ 3 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/tests/restconf-eventstream.cpp b/tests/restconf-eventstream.cpp
+index ad1040d..ecb86e3 100644
+--- a/tests/restconf-eventstream.cpp
++++ b/tests/restconf-eventstream.cpp
+@@ -101,7 +101,7 @@ TEST_CASE("Event stream tests")
+             netconfWatcher,
+             "/streams/NETCONF/JSON",
+             std::map<std::string, std::string>{AUTH_ROOT},
+-            boost::posix_time::seconds{5},
++            std::chrono::seconds{5},
+             SSEClient::ReportIgnoredLines::Yes);
+ 
+         RUN_LOOP_WITH_EXCEPTIONS;
+diff --git a/tests/restconf_utils.cpp b/tests/restconf_utils.cpp
+index 740b1fa..cb4e26a 100644
+--- a/tests/restconf_utils.cpp
++++ b/tests/restconf_utils.cpp
+@@ -172,10 +172,10 @@ SSEClient::SSEClient(
+     const RestconfNotificationWatcher& eventWatcher,
+     const std::string& uri,
+     const std::map<std::string, std::string>& headers,
+-    const boost::posix_time::seconds silenceTimeout,
++    const std::chrono::seconds silenceTimeout,
+     const ReportIgnoredLines reportIgnoredLines)
+     : client(std::make_shared<ng_client::session>(io, server_address, server_port))
+-    , t(io, silenceTimeout)
++    , t(io, std::chrono::seconds(silenceTimeout))
+ {
+     ng::header_map reqHeaders;
+     for (const auto& [name, value] : headers) {
+@@ -201,7 +201,7 @@ SSEClient::SSEClient(
+             res.on_data([&, silenceTimeout, reportIgnoredLines](const uint8_t* data, std::size_t len) {
+                 dataBuffer.append(std::string(reinterpret_cast<const char*>(data), len));
+                 parseEvents(eventWatcher, reportIgnoredLines);
+-                t.expires_from_now(silenceTimeout);
++                t.expires_after(std::chrono::seconds(silenceTimeout));
+             });
+         });
+ 
+diff --git a/tests/restconf_utils.h b/tests/restconf_utils.h
+index c35df54..a5676f4 100644
+--- a/tests/restconf_utils.h
++++ b/tests/restconf_utils.h
+@@ -86,7 +86,7 @@ void setupRealNacm(sysrepo::Session session);
+ 
+ struct SSEClient {
+     std::shared_ptr<ng_client::session> client;
+-    boost::asio::deadline_timer t;
++    boost::asio::steady_timer t;
+     std::string dataBuffer;
+ 
+     enum class ReportIgnoredLines {
+@@ -102,7 +102,7 @@ struct SSEClient {
+         const RestconfNotificationWatcher& eventWatcher,
+         const std::string& uri,
+         const std::map<std::string, std::string>& headers,
+-        const boost::posix_time::seconds silenceTimeout = boost::posix_time::seconds(1), // test code; the server should respond "soon"
++        const std::chrono::seconds silenceTimeout = std::chrono::seconds{1}, // test code; the server should respond "soon"
+         const ReportIgnoredLines reportIgnoredLines = ReportIgnoredLines::No);
+ 
+     void parseEvents(const RestconfNotificationWatcher& eventWatcher, const ReportIgnoredLines reportIgnoredLines);
+-- 
+2.43.0
+

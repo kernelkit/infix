@@ -291,7 +291,7 @@ static int sysrepo_export(const struct infix_ds *ds, const char *path)
 		return err;
 	}
 
-	err = lyd_print_path(path, data->tree, LYD_JSON, LYD_PRINT_WITHSIBLINGS);
+	err = lyd_print_path(path, data->tree, LYD_JSON, LYD_PRINT_SIBLINGS);
 	sr_release_data(data);
 	if (err) {
 		sysrepo_print_error(sess);

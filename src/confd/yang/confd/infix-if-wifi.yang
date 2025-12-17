@@ -37,6 +37,11 @@ submodule infix-if-wifi {
      It supports WiFi client mode and enables comprehensive management of
      wireless connections, including encryption, country codes, and scanning.";
 
+  revision 2025-12-12 {
+    description "Adapt to new revision of model ietf-keystore.";
+    reference "internal";
+  }
+
   revision 2025-05-27 {
     description "Initial revision.";
     reference "internal";
@@ -121,7 +126,7 @@ submodule infix-if-wifi {
       }
 
       leaf secret {
-        type ks:symmetric-key-ref;
+        type ks:central-symmetric-key-ref;
         mandatory true;
         must "../encryption != 'disabled'" {
            error-message

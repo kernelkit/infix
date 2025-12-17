@@ -84,7 +84,7 @@ and 63 characters
 admin@example:/> configure
 admin@example:/config/> edit keystore symmetric-key example
 admin@example:/config/keystore/…/example/> set key-format wifi-preshared-key-format
-admin@example:/config/keystore/…/example/> set cleartext-key mysecret
+admin@example:/config/keystore/…/example/> set cleartext-symmetric-key mysecret
 admin@example:/config/keystore/…/example/> leave
 admin@example:/>
 ```
