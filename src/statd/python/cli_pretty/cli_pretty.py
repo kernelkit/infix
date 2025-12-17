@@ -283,17 +283,17 @@ class PadFirewall:
 
 class Column:
     """Column definition for SimpleTable"""
-    def __init__(self, name, length, align='left', formatter=None):
-        self.name = name          # Header text
-        self.width = length       # Max visible data length (excluding ANSI codes)
-        self.align = align        # 'left' or 'right' (defaults to 'left')
-        self.formatter = formatter # Optional function to format values
+    def __init__(self, name, align='left', formatter=None):
+        self.name = name
+        self.align = align
+        self.formatter = formatter
 
 class SimpleTable:
-    """Simple table formatter that handles ANSI colors correctly"""
+    """Simple table formatter that handles ANSI colors correctly and calculates dynamic column widths"""
 
     def __init__(self, columns):
         self.columns = columns
+        self.rows = []
 
     @staticmethod
     def visible_width(text):
@@ -302,12 +302,55 @@ class SimpleTable:
         clean_text = re.sub(ansi_pattern, '', str(text))
         return len(clean_text)
 
-    def _format_column(self, value, column):
-        """Format a single column value with proper alignment
+    def row(self, *values):
+        """Store row data for later formatting"""
+        if len(values) != len(self.columns):
+            raise ValueError(f"Expected {len(self.columns)} values, got {len(values)}")
+        self.rows.append(values)
 
-        The column length specifies max expected data length.
-        Framework automatically adds 1 space for column separation.
-        """
+    def print(self, styled=True):
+        """Calculate widths and print complete table"""
+        column_widths = self._calculate_column_widths()
+        print(self._format_header(column_widths, styled))
+        for row_data in self.rows:
+            print(self._format_row(row_data, column_widths))
+
+    def _calculate_column_widths(self):
+        """Calculate maximum width needed for each column"""
+        widths = [self.visible_width(col.name) for col in self.columns]
+
+        for row_data in self.rows:
+            for i, (value, column) in enumerate(zip(row_data, self.columns)):
+                formatted_value = column.formatter(value) if column.formatter else value
+                value_width = self.visible_width(str(formatted_value))
+                widths[i] = max(widths[i], value_width)
+
+        return widths
+
+    def _format_header(self, column_widths, styled=True):
+        """Generate formatted header row"""
+        header_parts = []
+        for i, column in enumerate(self.columns):
+            width = column_widths[i]
+            if column.align == 'right':
+                header_parts.append(f"{column.name:>{width}}  ")
+            else:
+                header_parts.append(f"{column.name:{width}}  ")
+
+        header_str = ''.join(header_parts).rstrip()
+        return Decore.invert(header_str) if styled else header_str
+
+    def _format_row(self, row_data, column_widths):
+        """Format a single data row"""
+        row_parts = []
+        for i, (value, column) in enumerate(zip(row_data, self.columns)):
+            formatted_value = self._format_column_value(value, column, column_widths[i])
+            row_parts.append(formatted_value)
+
+        return ''.join(row_parts).rstrip()
+
+    def _format_column_value(self, value, column, width):
+        """Format a single column value with proper alignment"""
         if column.formatter:
             value = column.formatter(value)
 
@@ -315,34 +358,11 @@ class SimpleTable:
         visible_len = self.visible_width(value_str)
 
         if column.align == 'right':
-            padding = column.width - visible_len
-            return ' ' * max(0, padding) + value_str + ' '
-        else:  # left alignment (default)
-            padding = column.width - visible_len
-            return value_str + ' ' * max(0, padding) + ' '
-
-    def header(self, styled=True):
-        """Generate formatted header row"""
-        header_parts = []
-        for column in self.columns:
-            if column.align == 'right':
-                header_parts.append(f"{column.name:>{column.width}} ")
-            else:  # left alignment (default)
-                header_parts.append(f"{column.name:{column.width}} ")
-
-        header_str = ''.join(header_parts)
-        return Decore.invert(header_str) if styled else header_str
-
-    def row(self, *values):
-        """Generate formatted data row"""
-        if len(values) != len(self.columns):
-            raise ValueError(f"Expected {len(self.columns)} values, got {len(values)}")
-
-        row_parts = []
-        for value, column in zip(values, self.columns):
-            row_parts.append(self._format_column(value, column))
-
-        return ''.join(row_parts).rstrip()
+            padding = width - visible_len
+            return ' ' * max(0, padding) + value_str + '  '
+        else:
+            padding = width - visible_len
+            return value_str + ' ' * max(0, padding) + '  '
 
 
 class Decore():
@@ -1781,16 +1801,14 @@ def show_services(json):
     # copied so I left a lot of comments. If you copy it feel free
     # to be less verbose..
     service_table = SimpleTable([
-        Column('NAME', 15, 'left'),        # Max service name length
-        Column('STATUS', 10, 'left'),      # Max status text length (e.g., "running")
-        Column('PID', 7, 'right'),         # Max PID digits
-        Column('MEM', 6, 'right'),         # Max memory string (e.g., "123.4M")
-        Column('UP', 4, 'right'),          # Max uptime string (e.g., "3d")
-        Column('RST', 3, 'right'),         # Max restart count digits
-        Column('DESCRIPTION', 30)           # Last column needs no padding
+        Column('NAME'),
+        Column('STATUS'),
+        Column('PID', 'right'),
+        Column('MEM', 'right'),
+        Column('UP', 'right'),
+        Column('RST', 'right'),
+        Column('DESCRIPTION')
     ])
-
-    print(service_table.header())
 
     for svc in services:
         name = svc.get('name', '')
@@ -1815,8 +1833,10 @@ def show_services(json):
         memory_str = format_memory_bytes(memory_bytes)
         uptime_str = format_uptime_seconds(uptime_secs)
 
-        print(service_table.row(name, status_str, pid_str, memory_str,
-                                uptime_str, restart_count, description))
+        service_table.row(name, status_str, pid_str, memory_str,
+                          uptime_str, restart_count, description)
+
+    service_table.print()
 
 
 def show_hardware(json):
