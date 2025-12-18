@@ -1267,6 +1267,56 @@ static sr_error_t change_auth_check(struct confd *confd, sr_session_ctx_t *sessi
 	return SR_ERR_OK;
 }
 
+static sr_error_t send_auth_change_notification(sr_session_ctx_t *session)
+{
+	struct lyd_node *notif;
+	const struct ly_ctx *ctx;
+	char timestamp[64];
+	time_t now;
+	struct tm tm;
+	int rc;
+
+	ctx = sr_acquire_context(sr_session_get_connection(session));
+	if (!ctx) {
+		ERROR("Failed to acquire libyang context for notification");
+		return SR_ERR_INTERNAL;
+	}
+
+	/* Create notification: system-authentication-changed */
+	rc = lyd_new_path(NULL, ctx, "/infix-system:system-authentication-changed", NULL, 0, &notif);
+	if (rc != LY_SUCCESS) {
+		ERROR("Failed to create authentication change notification: %d", rc);
+		sr_release_context(sr_session_get_connection(session));
+		return SR_ERR_INTERNAL;
+	}
+
+	/* Add timestamp */
+	now = time(NULL);
+	gmtime_r(&now, &tm);
+	strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &tm);
+
+	rc = lyd_new_path(notif, NULL, "event-time", timestamp, 0, NULL);
+	if (rc != LY_SUCCESS) {
+		ERROR("Failed to add timestamp to notification: %d", rc);
+		lyd_free_tree(notif);
+		sr_release_context(sr_session_get_connection(session));
+		return SR_ERR_INTERNAL;
+	}
+
+	/* Send the notification */
+	rc = sr_notif_send_tree(session, notif, 0, 0);
+	if (rc != SR_ERR_OK) {
+		ERROR("Failed to send authentication change notification: %s", sr_strerror(rc));
+	} else {
+		DEBUG("Authentication change notification sent successfully");
+	}
+
+	lyd_free_tree(notif);
+	sr_release_context(sr_session_get_connection(session));
+
+	return rc;
+}
+
 static sr_error_t change_auth_done(struct confd *confd, sr_session_ctx_t *session)
 {
 	sr_error_t err;
@@ -1290,6 +1340,10 @@ static sr_error_t change_auth_done(struct confd *confd, sr_session_ctx_t *sessio
 	}
 
 	DEBUG("Changes to authentication saved.");
+
+	/* Send notification about authentication changes */
+	send_auth_change_notification(session);
+
 cleanup:
 	return err;
 }
