@@ -24,7 +24,8 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
-N/A
+- Fix #1314: Raspberry Pi 4B with 1 or 8 GiB RAM does not boot.  This was due
+  newer EEPROM firmware in newer boards require a newer rpi-firmware package
 
 [v25.11.0][] - 2025-12-02
 -------------------------
