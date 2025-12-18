@@ -1,4 +1,4 @@
-From 37fc83e00b09a3dd65d01be3c0f1a73e45c4bcc4 Mon Sep 17 00:00:00 2001
+From 4cde6e8574c27bf2d1bb397c575e1d3a6d7c6e59 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 22 Apr 2024 23:18:01 +0200
 Subject: [PATCH 03/30] net: dsa: mv88e6xxx: Honor ports being managed via
