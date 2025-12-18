@@ -3,6 +3,17 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v25.08.2][] - 2025-12-19
+-------------------------
+
+### Changes
+
+- Upgrade Linux kernel to 6.12.63 (LTS)
+
+### Fixes
+
+- N/A
+
 [v25.08.1][] - 2025-10-03
 -------------------------
 

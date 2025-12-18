@@ -1,4 +1,4 @@
-From 630151bff3fa0f6ef64c326ca874ef9858bdcb8a Mon Sep 17 00:00:00 2001
+From 1874e05ed2d60863bc0d077596b4073f03fda1dc Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 10:38:42 +0200
 Subject: [PATCH 07/30] net: dsa: tag_dsa: Use tag priority as initial
