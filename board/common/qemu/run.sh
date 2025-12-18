@@ -19,6 +19,9 @@
 #
 # shellcheck disable=SC3037
 
+# Add /sbin to PATH for mkfs.ext4 and such (not default in debian)
+export PATH="/sbin:/usr/sbin:$PATH"
+
 qdir=$(dirname "$(readlink -f "$0")")
 imgdir=$(readlink -f "${qdir}/..")
 prognm=$(basename "$0")
@@ -173,6 +176,8 @@ usb_args()
 rw_args()
 {
     [ "$CONFIG_QEMU_RW" ] ||  return
+
+    command -v mkfs.ext4 >/dev/null || die "$prognm: cannot find mkfs.ext4"
 
     if ! [ -f "aux.ext4" ]; then
 	dd if=/dev/zero of="aux.ext4" bs=1M count=1 >/dev/null 2>&1
