@@ -114,13 +114,30 @@ cmd_collect()
     # persistent across user sessions). Fall back to $HOME if we can't create/write there
     if [ -z "$WORK_DIR" ]; then
         if [ -w /var/lib/support ] 2>/dev/null; then
+            # Already writable, use it
             WORK_DIR="/var/lib/support"
-        elif mkdir -p /var/lib/support 2>/dev/null; then
-            WORK_DIR="/var/lib/support"
-        elif [ -n "$SUDO" ] && $SUDO mkdir -p /var/lib/support 2>/dev/null && \
-             $SUDO chown "$(id -u):$(id -g)" /var/lib/support 2>/dev/null; then
-            WORK_DIR="/var/lib/support"
-        else
+        elif [ ! -e /var/lib/support ]; then
+            # Doesn't exist, try to create it
+            if mkdir -p /var/lib/support 2>/dev/null; then
+                WORK_DIR="/var/lib/support"
+            elif [ -n "$SUDO" ] && $SUDO mkdir -p /var/lib/support 2>/dev/null && \
+                 $SUDO chown "$(id -u):$(id -g)" /var/lib/support 2>/dev/null; then
+                WORK_DIR="/var/lib/support"
+            fi
+        elif [ -d /var/lib/support ]; then
+            # Exists but not writable, try to fix permissions with sudo
+            # Try chmod first (might just be permission issue), then chown if needed
+            if $SUDO chmod 755 /var/lib/support 2>/dev/null && \
+               $SUDO chown "$(id -u):$(id -g)" /var/lib/support 2>/dev/null; then
+                # Verify it's actually writable now
+                if [ -w /var/lib/support ] 2>/dev/null; then
+                    WORK_DIR="/var/lib/support"
+                fi
+            fi
+        fi
+
+        # Fall back to $HOME if we couldn't set up /var/lib/support
+        if [ -z "$WORK_DIR" ]; then
             WORK_DIR="${HOME}"
             echo "Warning: Cannot write to /var/lib/support, using home directory instead." >&2
             echo "         (This may fill up your home directory on systems with limited space)" >&2
@@ -145,7 +162,11 @@ cmd_collect()
     trap cleanup EXIT INT TERM
 
     # Create collection directory
-    mkdir -p "${COLLECT_DIR}"
+    if ! mkdir -p "${COLLECT_DIR}"; then
+        echo "Error: Cannot create collection directory: ${COLLECT_DIR}" >&2
+        echo "       Check permissions for ${WORK_DIR}" >&2
+        exit 1
+    fi
 
     # Helper function to run commands with output to specific file
     collect()
