@@ -34,7 +34,7 @@ def operational():
 
     port_data = defaultdict(lambda: {"remote-systems-data": [], "dest-mac-address": LLDP_MULTICAST_MAC})
 
-    data = HOST.run_json(["lldpcli", "show", "neighbors", "-f", "json"])
+    data = HOST.run_json(["lldpcli", "show", "neighbors", "-f", "json"], {})
 
     interfaces = data.get("lldp", {}).get("interface", [])
     
