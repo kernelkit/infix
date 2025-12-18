@@ -1,0 +1,7 @@
+menuconfig IMAGE_DDI_LVM
+	bool "LVM2 based provisioning disk (DDI)"
+	depends on IMAGE_DDI
+	help
+	  Compose a full disk image consisting of an EFI System
+	  Partition (ESP) containing Barebox, and an LVM PV in which
+	  Infix is installed as an LV.
