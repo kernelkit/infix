@@ -96,31 +96,37 @@ cmd_collect()
                 ;;
             *)
                 echo "Error: Unknown option '$1'" >&2
-                echo "Usage: $prognm collect [--log-sec|-s N] [--password|-p PASSWORD]" >&2
+                echo "Usage: $prognm collect [-s N] [-p PASSWORD]" >&2
                 exit 1
                 ;;
         esac
     done
 
-    # Determine if we need sudo and if it's available
-    SUDO=""
-    if [ "$(id -u)" -ne 0 ]; then
-        if command -v sudo >/dev/null 2>&1; then
-            SUDO="sudo"
-        fi
-    fi
-
     # If WORK_DIR not set globally, try /var/lib/support first (more space,
     # persistent across user sessions). Fall back to $HOME if we can't create/write there
     if [ -z "$WORK_DIR" ]; then
         if [ -w /var/lib/support ] 2>/dev/null; then
+            # Already writable, use it
             WORK_DIR="/var/lib/support"
-        elif mkdir -p /var/lib/support 2>/dev/null; then
-            WORK_DIR="/var/lib/support"
-        elif [ -n "$SUDO" ] && $SUDO mkdir -p /var/lib/support 2>/dev/null && \
-             $SUDO chown "$(id -u):$(id -g)" /var/lib/support 2>/dev/null; then
-            WORK_DIR="/var/lib/support"
-        else
+        elif [ ! -e /var/lib/support ]; then
+            # Doesn't exist, try to create it
+            if mkdir -p /var/lib/support 2>/dev/null; then
+                WORK_DIR="/var/lib/support"
+            fi
+        elif [ -d /var/lib/support ]; then
+            # Exists but not writable, try to fix permissions (requires root)
+            # Try chmod first (might just be permission issue), then chown if needed
+            if chmod 755 /var/lib/support 2>/dev/null && \
+               chown "$(id -u):$(id -g)" /var/lib/support 2>/dev/null; then
+                # Verify it's actually writable now
+                if [ -w /var/lib/support ] 2>/dev/null; then
+                    WORK_DIR="/var/lib/support"
+                fi
+            fi
+        fi
+
+        # Fall back to $HOME if we couldn't set up /var/lib/support
+        if [ -z "$WORK_DIR" ]; then
             WORK_DIR="${HOME}"
             echo "Warning: Cannot write to /var/lib/support, using home directory instead." >&2
             echo "         (This may fill up your home directory on systems with limited space)" >&2
@@ -145,7 +151,11 @@ cmd_collect()
     trap cleanup EXIT INT TERM
 
     # Create collection directory
-    mkdir -p "${COLLECT_DIR}"
+    if ! mkdir -p "${COLLECT_DIR}"; then
+        echo "Error: Cannot create collection directory: ${COLLECT_DIR}" >&2
+        echo "       Check permissions for ${WORK_DIR}" >&2
+        exit 1
+    fi
 
     # Helper function to run commands with output to specific file
     collect()
@@ -251,7 +261,7 @@ cmd_collect()
     fi
 
     # Kernel and system state
-    collect system/dmesg.txt    ${SUDO} dmesg
+    collect system/dmesg.txt    dmesg
     collect system/free.txt     free -h
     collect system/stat.txt     cat /proc/stat
     collect system/softirqs.txt cat /proc/softirqs
@@ -295,10 +305,10 @@ cmd_collect()
         ip -o link show | grep 'link/ether' | awk -F': ' '{print $2}' > "${COLLECT_DIR}/.iface-list" 2>> "${EXEC_LOG}"
         if [ -s "${COLLECT_DIR}/.iface-list" ]; then
             while IFS= read -r iface; do
-                # ethtool typically needs root/sudo
-                collect "network/ethtool/${iface}.txt"       ${SUDO} ethtool "$iface"
-                collect "network/ethtool/stats-${iface}.txt" ${SUDO} ethtool -S "$iface"
-                collect "network/ethtool/module-${iface}.txt" ${SUDO} ethtool -m "$iface"
+                # ethtool typically needs root
+                collect "network/ethtool/${iface}.txt"        ethtool    "$iface"
+                collect "network/ethtool/stats-${iface}.txt"  ethtool -S "$iface"
+                collect "network/ethtool/module-${iface}.txt" ethtool -m "$iface"
             done < "${COLLECT_DIR}/.iface-list"
         fi
         rm -f "${COLLECT_DIR}/.iface-list"
@@ -311,7 +321,7 @@ cmd_collect()
 
     # Firewall rules
     if command -v nft >/dev/null 2>&1; then
-        collect network/nftables.txt ${SUDO} nft list ruleset
+        collect network/nftables.txt nft list ruleset
     fi
 
     # FRR routing information
@@ -527,7 +537,10 @@ usage()
 {
     echo "Usage: $prognm [global-options] <command> [options]"
     echo ""
+    echo "Note: Run with 'sudo' for complete data collection (dmesg, ethtool, etc.)"
+    echo ""
     echo "Global options:"
+    echo "  -u, --unprivileged     Allow running without root (some data will be missing)"
     echo "  -w, --work-dir PATH    Use PATH as working directory for collection/cleanup"
     echo "                         (default: /var/lib/support with fallback to \$HOME)"
     echo ""
@@ -547,23 +560,29 @@ usage()
     echo "  -d, --days N           Remove directories older than N days (default: 7)"
     echo ""
     echo "Examples:"
-    echo "  $prognm collect                     > support-data.tar.gz"
-    echo "  $prognm collect -p                  > support-data.tar.gz.gpg"
-    echo "  $prognm collect --password mypass   > support-data.tar.gz.gpg"
-    echo "  $prognm --work-dir /tmp/ram collect > support-data.tar.gz"
-    echo "  ssh user@device $prognm collect     > support-data.tar.gz"
-    echo "  $prognm clean --dry-run"
-    echo "  $prognm clean --days 30"
-    echo "  $prognm --work-dir /tmp/ram clean"
+    echo "  sudo $prognm collect                        > support-data.tar.gz"
+    echo "  sudo $prognm collect -p                     > support-data.tar.gz.gpg"
+    echo "  sudo $prognm collect --password mypass      > support-data.tar.gz.gpg"
+    echo "  sudo $prognm --work-dir /tmp/ram collect    > support-data.tar.gz"
+    echo "  ssh user@device 'sudo $prognm collect'      > support-data.tar.gz"
+    echo "  $prognm -u collect                          > support-data.tar.gz (degraded)"
+    echo "  sudo $prognm clean --dry-run"
+    echo "  sudo $prognm clean --days 30"
+    echo "  sudo $prognm --work-dir /tmp/ram clean"
     exit 1
 }
 
 # Main command dispatcher
 # Parse global options first
 WORK_DIR=""
+ALLOW_UNPRIVILEGED=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        -u|--unprivileged)
+            ALLOW_UNPRIVILEGED=1
+            shift
+            ;;
         -w|--work-dir)
             if [ -z "$2" ]; then
                 echo "Error: --work-dir requires a path argument" >&2
@@ -591,11 +610,19 @@ command="$1"
 shift
 
 case "$command" in
-    collect)
-        cmd_collect "$@"
-        ;;
-    clean)
-        cmd_clean "$@"
+    collect|clean)
+        # Check if running as root (uid 0)
+        if [ "$(id -u)" -ne 0 ] && [ "$ALLOW_UNPRIVILEGED" -eq 0 ]; then
+            echo "Error: This command should be run with 'sudo' for complete data collection." >&2
+            echo "       Use -u/--unprivileged to run as a regular user in degraded mode." >&2
+            exit 1
+        fi
+
+        if [ "$command" = "collect" ]; then
+            cmd_collect "$@"
+        else
+            cmd_clean "$@"
+        fi
         ;;
     help|--help|-h)
         usage

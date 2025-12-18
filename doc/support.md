@@ -5,14 +5,20 @@ provides a convenient way to collect comprehensive system diagnostics.
 This command gathers configuration files, logs, network state, and other
 system information into a single compressed archive.
 
+> [!NOTE]
+> The `support collect` command should be run with `sudo` to collect
+> complete system information (kernel logs, hardware details, etc.).
+> Use the `--unprivileged` option to run as a regular user in degraded
+> data collection mode.
+
 ## Collecting Support Data
 
 To collect support data and save it to a file:
 
 ```bash
-admin@host:~$ support collect > support-data.tar.gz
-(admin@host) Password: ***********
+admin@host:~$ sudo support collect > support-data.tar.gz
 Starting support data collection from host...
+Collecting to: /var/lib/support
 This may take up to a minute. Please wait...
 Tailing /var/log/messages for 30 seconds (please wait)...
 Log tail complete.
@@ -24,7 +30,7 @@ admin@host:~$ ls -l support-data.tar.gz
 The command can also be run remotely via SSH from your workstation:
 
 ```bash
-$ ssh admin@host support collect > support-data.tar.gz
+$ ssh admin@host 'sudo support collect' > support-data.tar.gz
 ...
 ```
 
@@ -38,8 +44,9 @@ For secure transmission of support data, the archive can be encrypted
 with GPG using a password:
 
 ```bash
-admin@host:~$ support collect -p mypassword > support-data.tar.gz.gpg
+admin@host:~$ sudo support collect -p mypassword > support-data.tar.gz.gpg
 Starting support data collection from host...
+Collecting to: /var/lib/support
 This may take up to a minute. Please wait...
 ...
 Collection complete. Creating archive...
@@ -52,8 +59,8 @@ but the local ssh client may then echo the password.
 
 > [!TIP]
 > To hide the encryption password for an SSH session, the script supports
-> reading from stdin:  
-> `echo "$MYSECRET" | ssh user@device support collect -p >
+> reading from stdin:
+> `echo "$MYSECRET" | ssh user@device 'sudo support collect -p' >
 > file.tar.gz.gpg`
 
 After transferring the resulting file to your workstation, decrypt it
