@@ -294,6 +294,25 @@ static int add(const char *name, struct lyd_node *cif)
 			fprintf(fp, " --checksum sha512:%s", string);
 	}
 
+	/* Add resource limits for Podman to enforce via cgroups */
+	node = lydx_get_descendant(lyd_child(cif), "resource-limit", NULL);
+	if (node) {
+		struct lyd_node *mem_node, *cpu_node;
+
+		/* Memory limit in KiB, Podman accepts with 'k' suffix */
+		mem_node = lydx_get_descendant(lyd_child(node), "memory", NULL);
+		if (mem_node)
+			fprintf(fp, " --memory %sk", lyd_get_value(mem_node));
+
+		/* CPU limit in millicores, convert to quota (microseconds per 100ms) */
+		cpu_node = lydx_get_descendant(lyd_child(node), "cpu", NULL);
+		if (cpu_node) {
+			uint32_t millicores = strtoul(lyd_get_value(cpu_node), NULL, 10);
+			uint32_t quota = millicores * 100;  /* 1000m → 100000µs, 2000m → 200000µs */
+			fprintf(fp, " --cpu-limit %u", quota);
+		}
+	}
+
 	fprintf(fp, " create %s %s", name, image);
 
  	if ((string = lydx_get_cattr(cif, "command")))
