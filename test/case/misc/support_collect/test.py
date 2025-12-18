@@ -39,7 +39,7 @@ with infamy.Test() as test:
         # Note: timeout is generous to handle systems with many network ports
         # (ethtool collection scales with number of interfaces)
         with open(output_file, 'wb') as f:
-            result = tgtssh.run("support --work-dir /tmp collect --log-sec 2",
+            result = tgtssh.run("sudo support --work-dir /tmp collect --log-sec 2",
                                 stdout=f,
                                 stderr=subprocess.PIPE,
                                 timeout=120)
@@ -117,7 +117,7 @@ with infamy.Test() as test:
 
             # Run support collect with encryption
             with open(encrypted_file, 'wb') as f:
-                result = tgtssh.run(f"support --work-dir /tmp collect --log-sec 2 --password {test_password}",
+                result = tgtssh.run(f"sudo support --work-dir /tmp collect --log-sec 2 --password {test_password}",
                                     stdout=f,
                                     stderr=subprocess.PIPE,
                                     timeout=120)

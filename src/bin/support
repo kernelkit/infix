@@ -1,55 +1,16 @@
 #!/bin/sh
 # Support utilities for troubleshooting Infix systems
-
-# Program name for usage messages (supports being renamed by users)
-prognm=$(basename "$0")
-
 #
 # The collect command gathers system information and outputs a tarball.
 # Data is collected to /var/lib/support (or $HOME as fallback) and then
 # streamed to stdout. The temporary directory is cleaned up automatically.
 #
-# The following text is primarily intended for users of older Infix
-# systems that do not yet have this script in the root fileystems.
+# See: 'support help' for more information.
 #
-#   1. Copy this script to the target device's home directory:
-#
-#          scp support user@device:
-#
-#   2. SSH to the device and make it executable:
-#
-#          ssh user@device chmod +x support
-#
-#   3. Run the script from your home directory:
-#
-#          ./support collect > support-data.tar.gz
-#
-#      Or directly via SSH from your workstation:
-#
-#          ssh user@device './support collect' > support-data.tar.gz
-#
-# Optionally, the output can be encrypted with GPG using a password for
-# secure transmission to support personnel, see below.
-#
-# Examples:
-#   ./support collect                           > support-data.tar.gz
-#   ./support collect -s 5                      > support-data.tar.gz
-#   ./support collect -p                        > support-data.tar.gz.gpg
-#   ./support collect -p mypass                 > support-data.tar.gz.gpg
-#
-#   ssh user@device ./support collect           > support-data.tar.gz
-#   ssh user@device ./support collect -p mypass > support-data.tar.gz.gpg
-#
-# Note, interactive password prompt (-p without argument) may echo characters
-# over SSH due to local terminal echo.  Use -p PASSWORD for remote execution,
-# or pipe the password: echo "password" | ssh user@device ./support collect -p
-# meaning you can even: echo "$SECRET_VARIABLE" | ... which in some cases can
-# come in handy.
-#
-# TODO:
-#   Add more commands, e.g., verify (run health checks), upload <file>,
-#   test <network|disk|routing>, backup, watch (dashboard view), diff
-#
+# <<< THIS SCRIPT REQUIRES SUDO TO COLLECT RELEVANT LOGS >>>
+
+# Program name for usage messages (supports being renamed by users)
+prognm=$(basename "$0")
 
 cmd_collect()
 {
@@ -564,7 +525,7 @@ usage()
     echo "  sudo $prognm collect -p                     > support-data.tar.gz.gpg"
     echo "  sudo $prognm collect --password mypass      > support-data.tar.gz.gpg"
     echo "  sudo $prognm --work-dir /tmp/ram collect    > support-data.tar.gz"
-    echo "  ssh user@device 'sudo $prognm collect'      > support-data.tar.gz"
+    echo "  ssh admin@device 'sudo $prognm collect'     > support-data.tar.gz"
     echo "  $prognm -u collect                          > support-data.tar.gz (degraded)"
     echo "  sudo $prognm clean --dry-run"
     echo "  sudo $prognm clean --days 30"
