@@ -20,6 +20,13 @@ module infix-routing {
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing and ietf-ospf.";
 
+  revision 2025-12-02 {
+    description "Add configurable OSPF debug logging container.
+                 Allows users to enable specific OSPF debug categories
+                 (bfd, packet, ism, nsm, default-information, nssa) for troubleshooting.
+                 All debug options default to disabled to prevent log flooding.";
+    reference "Issue #1281";
+  }
   revision 2024-11-27 {
     description "Deviate address-family in OSPF";
     reference "internal";
@@ -275,6 +282,45 @@ module infix-routing {
           type infix-distribute-protocol;
           description "Set protocol to redistribute";
         }
+      }
+    }
+  }
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf" {
+    description "Add support for configurable OSPF debug logging.
+                 Allows users to enable specific OSPF debug categories for troubleshooting.
+                 All debug options default to disabled to prevent log flooding in
+                 production environments.";
+    container debug {
+      description "OSPF debug logging configuration";
+      leaf bfd {
+        type boolean;
+        default false;
+        description "Enable OSPF BFD (Bidirectional Forwarding Detection) debug messages";
+      }
+      leaf packet {
+        type boolean;
+        default false;
+        description "Enable detailed OSPF packet debug messages (all packet types)";
+      }
+      leaf ism {
+        type boolean;
+        default false;
+        description "Enable OSPF Interface State Machine debug messages";
+      }
+      leaf nsm {
+        type boolean;
+        default false;
+        description "Enable OSPF Neighbor State Machine debug messages";
+      }
+      leaf default-information {
+        type boolean;
+        default false;
+        description "Enable OSPF default route origination debug messages";
+      }
+      leaf nssa {
+        type boolean;
+        default false;
+        description "Enable OSPF NSSA (Not-So-Stubby Area) debug messages";
       }
     }
   }

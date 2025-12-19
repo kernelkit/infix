@@ -28,7 +28,7 @@
 const uint8_t kplugin_infix_major = 1;
 const uint8_t kplugin_infix_minor = 0;
 
-static void cd_home(kcontext_t *ctx)
+static const char *cd_home(kcontext_t *ctx)
 {
 	const char *user = "root";
 	ksession_t *session;
@@ -43,6 +43,8 @@ static void cd_home(kcontext_t *ctx)
 
 	pw = getpwnam(user);
 	chdir(pw->pw_dir);
+
+	return user;
 }
 
 static int systemf(const char *fmt, ...)
@@ -118,7 +120,7 @@ int infix_erase(kcontext_t *ctx)
 
 	cd_home(ctx);
 
-	return systemf("erase %s", path);
+	return systemf("erase -s %s", path);
 }
 
 int infix_files(kcontext_t *ctx)
@@ -146,8 +148,8 @@ int infix_copy(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
 	const char *src, *dst;
-	const char *username;
 	char user[256] = "";
+	char validate[8] = "";
 	kparg_t *parg;
 
 	src = kparg_value(kpargv_find(pargv, "src"));
@@ -159,25 +161,19 @@ int infix_copy(kcontext_t *ctx)
 	if (parg)
 		snprintf(user, sizeof(user), "-u %s", kparg_value(parg));
 
-	cd_home(ctx);
-	username = ksession_user(kcontext_session(ctx));
+	parg = kpargv_find(pargv, "validate");
+	if (parg)
+		strlcpy(validate, "-n", sizeof(validate));
 
-	return systemf("sudo -u %s copy %s %s %s", username, user, src, dst);
+	/* Ensure we run the copy command as the logged-in user, not root (klishd) */
+	return systemf("doas -u %s copy -s %s %s %s %s", cd_home(ctx), validate, user, src, dst);
 }
 
 int infix_shell(kcontext_t *ctx)
 {
-	const char *user = "root";
-	ksession_t *session;
+	const char *user = cd_home(ctx);
 	pid_t pid;
 	int rc;
-
-	session = kcontext_session(ctx);
-	if (session) {
-		user = ksession_user(session);
-		if (!user)
-			user = "root";
-	}
 
 	pid = fork();
 	if (pid == -1)

@@ -130,15 +130,7 @@ int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp
 
 int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 {
-	const char *static_debug = "! OSPF default debug\
-debug ospf bfd\n\
-debug ospf packet all detail\n\
-debug ospf ism\n\
-debug ospf nsm\n\
-debug ospf default-information\n\
-debug ospf nssa\n\
-! OSPF configuration\n";
-	struct lyd_node *areas, *default_route;
+	struct lyd_node *areas, *default_route, *debug;
 	const char *router_id;
 	int bfd_enabled = 0;
 	int num_areas = 0;
@@ -151,7 +143,40 @@ debug ospf nssa\n\
 	}
 
 	fputs(FRR_STATIC_CONFIG, fp);
-	fputs(static_debug, fp);
+
+	/* Handle OSPF debug configuration */
+	debug = lydx_get_child(ospf, "debug");
+	if (debug) {
+		int any_debug = 0;
+
+		if (lydx_get_bool(debug, "bfd")) {
+			fputs("debug ospf bfd\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "packet")) {
+			fputs("debug ospf packet all detail\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "ism")) {
+			fputs("debug ospf ism\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "nsm")) {
+			fputs("debug ospf nsm\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "default-information")) {
+			fputs("debug ospf default-information\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "nssa")) {
+			fputs("debug ospf nssa\n", fp);
+			any_debug = 1;
+		}
+
+		if (any_debug)
+			fputs("!\n", fp);
+	}
 
 	areas = lydx_get_child(ospf, "areas");
 	router_id = lydx_get_cattr(ospf, "explicit-router-id");

@@ -167,6 +167,7 @@
   <PARAM name="src" ptype="/DATASTORE"    help="Source datastore or file, e.g., tftp://ip/file"/>
   <PARAM name="dst" ptype="/RW_DATASTORE" help="Destination datastore or file, e.g., scp://ip/file"/>
   <SWITCH name="optional" min="0">
+    <COMMAND name="validate"              help="Validate configuration without applying"/>
     <PARAM name="user" ptype="/STRING"    help="Remote username (interactive password)"/>
   </SWITCH>
   <ACTION sym="copy@infix" in="tty" out="tty" interrupt="true"/>
