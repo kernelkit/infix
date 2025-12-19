@@ -9,10 +9,26 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.12.63 (LTS)
+- Enable workaround for issue #670 by disabling iitod on styx platform. This
+  prohibits software control of LEDs, leaving the default HW control, which
+  has proven more stable on this platform
+- Add support for configurable OSPF debug logging, issue #1281. Debug options
+  can now be enabled per category (bfd, packet, ism, nsm, default-information,
+  nssa). All debug options are disabled by default to prevent log flooding in
+  production environments. See the documentation for usage examples
+- Add support data collection script, useful when troubleshooting issues on
+  deployed systems. Gathers system information, logs, and more.  Issue #1287
+- Enable kernel panic on lockups + hung tasks => console log + reboot.  Also,
+  enable watchdogd resource monitors, logs: memory/file system + descriptor
+  usage.  Issue #1318
+- Enable CN9130 HW watchdog, and kernel `test_lockup` module, issue #1320
 
 ### Fixes
 
-- N/A
+- Fix #981: copying any file, including `running-config`, to the persistent
+  back-end store for `startup-config`, does not take
+- Fix #1203: copying any file, including `startup-config`, to `running-config`
+  does not take
 
 [v25.08.1][] - 2025-10-03
 -------------------------
