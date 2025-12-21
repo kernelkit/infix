@@ -476,6 +476,7 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_DUMMY:
 	case IFT_LO:
 	case IFT_WIFI:
+		return lydx_get_child(dif, "custom-phys-address") || lydx_get_descendant(dif, "wifi", "radio", NULL) || wifi_mode_changed(lydx_get_child(dif, "wifi"));
 		break;
 
 	case IFT_ETH:
@@ -737,7 +738,6 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_VETH:
 		return veth_add_deps(cif);
 	case IFT_WIFI:
-		return wifi_add_deps(cif);
 	case IFT_DUMMY:
 	case IFT_ETH:
 	case IFT_GRE:

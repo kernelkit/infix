@@ -6,7 +6,7 @@ if jq -e '.["usb-ports"]' /run/system.json > /dev/null; then
 else
     usb_ports=""
 fi
-wifi_radios=$(iw list 2>/dev/null | grep 'Wiphy radio' | sed 's/.*Wiphy \(radio[0-9]*\).*/\1/' || "")
+wifi_radios=$(/usr/libexec/infix/iw.py list 2>/dev/null | jq -r '.[]' || echo "")
 
 
 gen_port()
@@ -27,27 +27,23 @@ gen_radio()
 {
     radio="$1"
 
-    # Try to detect a reasonable default country code
-    # First check if there's already a regulatory domain set
-    country=$(iw reg get 2>/dev/null | grep 'country' | sed -n 's/^country \([A-Z0-9][A-Z0-9]\):.*/\1/p' | head -1)
-    [ -z "$country" ] && country="00"
-
-    # Detect supported bands by checking for 2.4GHz and 5GHz channels
-    phy_info=$(iw phy "$radio" info 2>/dev/null)
-    # 2.4GHz: 2412-2484 MHz (channels 1-14)
-    has_2ghz=$(echo "$phy_info" | grep -cE '\* 24[0-9][0-9](\.[0-9])? MHz' || true)
-    # 5GHz: 5000-5999 MHz
-    has_5ghz=$(echo "$phy_info" | grep -cE '\* 5[0-9][0-9][0-9](\.[0-9])? MHz' || true)
+    # Detect supported bands from iw.py info JSON output
+    phy_info=$(/usr/libexec/infix/iw.py info "$radio" 2>/dev/null || echo '{"bands":[]}')
+    # Check if 2.4GHz band exists (band name "2.4GHz")
+    has_2ghz=$(echo "$phy_info" | jq '[.bands[] | select(.name == "2.4GHz")] | length')
+    # Check if 5GHz band exists (band name "5GHz")
+    has_5ghz=$(echo "$phy_info" | jq '[.bands[] | select(.name == "5GHz")] | length')
 
     # Determine band setting
+    # If both bands supported, prefer 5GHz for better performance
     if [ "$has_2ghz" -gt 0 ] && [ "$has_5ghz" -gt 0 ]; then
-        band="auto"
+        band="5GHz"
     elif [ "$has_5ghz" -gt 0 ]; then
         band="5GHz"
     elif [ "$has_2ghz" -gt 0 ]; then
         band="2.4GHz"
     else
-        band="auto"  # Fallback to auto if detection fails
+        band="2.4GHz"  # Fallback to 2.4GHz for maximum compatibility
     fi
 
     cat <<EOF
@@ -55,11 +51,9 @@ gen_radio()
     "name": "$radio",
     "class": "infix-hardware:wifi",
     "infix-hardware:wifi-radio": {
-        "country-code": "$country",
+        "country-code": "00",
         "band": "$band",
-        "channel": "auto",
-        "channel-width": "20",
-        "txpower": "auto"
+        "channel": "auto"
     }
 }
 EOF

@@ -227,6 +227,31 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 						return result;
 					}
 
+					/* Add station or access-point container depending on mode */
+					if (lydx_get_descendant(ifaces->dnodes[j], "interface", "wifi", "station", NULL)) {
+						snprintf(xpath, sizeof(xpath),
+							"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/station",
+							ifname);
+						result = add_dependencies(diff, xpath, ifname);
+						if (result == CONFD_DEP_ERROR) {
+							ERROR("Failed to add station for interface %s (radio %s)", ifname, radio_name);
+							ly_set_free(ifaces, NULL);
+							ly_set_free(radios, NULL);
+							return result;
+						}
+					} else if (lydx_get_descendant(ifaces->dnodes[j], "interface", "wifi", "access-point", NULL)) {
+						snprintf(xpath, sizeof(xpath),
+							"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/access-point",
+							ifname);
+						result = add_dependencies(diff, xpath, ifname);
+						if (result == CONFD_DEP_ERROR) {
+							ERROR("Failed to add access-point for interface %s (radio %s)", ifname, radio_name);
+							ly_set_free(ifaces, NULL);
+							ly_set_free(radios, NULL);
+							return result;
+						}
+					}
+
 					DEBUG("Added interface %s to diff for radio %s", ifname, radio_name);
 				}
 				ly_set_free(ifaces, NULL);

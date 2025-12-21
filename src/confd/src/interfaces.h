@@ -124,7 +124,8 @@ int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 /* if-wifi.c */
 int wifi_add_iface(struct lyd_node *cif, struct dagger *net);
 int wifi_del_iface(struct lyd_node *dif, struct dagger *net);
-int wifi_add_deps(struct lyd_node *cif);
+int wifi_mode_changed(struct lyd_node *wifi);
+
 /* if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 

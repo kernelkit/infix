@@ -59,86 +59,19 @@ module infix-hardware {
        WiFi radios are hardware components with class 'ih:wifi'.";
   }
 
-  typedef channel-width {
-    type enumeration {
-      enum "20" {
-        description "20 MHz channel width (legacy, maximum compatibility)";
-      }
-      enum "40" {
-        description "40 MHz channel width (802.11n HT40)";
-      }
-      enum "80" {
-        description "80 MHz channel width (802.11ac VHT80)";
-      }
-      enum "160" {
-        description "160 MHz channel width (802.11ac VHT160/802.11ax HE160)";
-      }
-    }
-    description
-      "Channel width for WiFi transmissions.
-       Wider channels provide higher throughput but reduced range.";
-  }
-
   typedef wifi-band {
     type enumeration {
       enum "2.4GHz" {
         description "2.4 GHz band (channels 1-14, maximum compatibility)";
       }
       enum "5GHz" {
-        description "5 GHz band (less congestion, higher throughput)";
+        description "5 GHz band (less congestion, higher throughput, recommended)";
       }
       enum "6GHz" {
         description "6 GHz band (WiFi 6E, requires compatible hardware)";
       }
-      enum "auto" {
-        description "Automatic band selection based on hardware capabilities";
-      }
     }
     description "WiFi frequency band selection.";
-  }
-
-  /*
-   * WiFi PHY mode identities
-   */
-
-  identity phy-mode {
-    description
-      "Base identity for WiFi PHY modes (802.11 standards).";
-  }
-
-  identity ieee80211b {
-    base phy-mode;
-    description "802.11b (2.4 GHz, up to 11 Mbps, legacy)";
-  }
-
-  identity ieee80211g {
-    base phy-mode;
-    description "802.11g (2.4 GHz, up to 54 Mbps)";
-  }
-
-  identity ieee80211a {
-    base phy-mode;
-    description "802.11a (5 GHz, up to 54 Mbps)";
-  }
-
-  identity ieee80211n {
-    base phy-mode;
-    description "802.11n / WiFi 4 (HT, 2.4/5 GHz, up to 600 Mbps)";
-  }
-
-  identity ieee80211ac {
-    base phy-mode;
-    description "802.11ac / WiFi 5 (VHT, 5 GHz, up to 6.9 Gbps)";
-  }
-
-  identity ieee80211ax {
-    base phy-mode;
-    description "802.11ax / WiFi 6/6E (HE, 2.4/5/6 GHz, up to 9.6 Gbps)";
-  }
-
-  identity phy-mode-auto {
-    base phy-mode;
-    description "Automatic PHY mode selection (driver chooses best mode)";
   }
 
   /*
@@ -296,6 +229,9 @@ module infix-hardware {
         description
           "Operating channel number.
 
+           Required for Access Point mode.
+           Not used in Station mode (station uses AP's channel).
+
            Channel availability depends on:
            - Configured band (2.4/5/6 GHz)
            - Regulatory domain (country-code)
@@ -309,87 +245,43 @@ module infix-hardware {
            Set to 'auto' for automatic channel selection.";
       }
 
-      leaf channel-width {
-        type channel-width;
-        default "20";
-        description
-          "Channel bandwidth.
-
-           Wider channels provide higher throughput but:
-           - Reduce range
-           - Increase interference susceptibility
-           - May not be supported in all regulatory domains
-
-           Recommendations:
-           - 2.4 GHz: 20 MHz (40 MHz rarely practical due to congestion)
-           - 5 GHz: 40 or 80 MHz
-           - 6 GHz: 80 or 160 MHz";
-      }
-
       leaf band {
         type wifi-band;
-        default "auto";
         description
           "Frequency band selection.
+
+           Required for Access Point mode.
+           Not used in Station mode (station uses AP's band).
 
            Constraints:
            - Hardware must support the selected band
            - Regulatory domain affects channel availability
+           - PHY mode must be compatible with selected band
 
-           Auto mode selects based on:
-           - Hardware capabilities
-           - Configured channel (if not 'auto')
-           - Regulatory constraints";
+           Recommendation: Use 5GHz for better performance and less
+           congestion in most environments.";
       }
 
-      leaf txpower {
-        type union {
-          type uint8 {
-            range "1..30";
-          }
-          type enumeration {
-            enum "auto" {
-              description "Maximum power allowed by regulatory domain";
-            }
-          }
-        }
-        units "dBm";
-        default "auto";
+      leaf enable-wifi6 {
+        type boolean;
+        default false;
         description
-          "Transmit power in dBm.
+          "Enable WiFi 6 (802.11ax) on 2.4GHz and 5GHz bands.
 
-           Must not exceed regulatory limits for the configured
-           country-code and channel.
+           By default, WiFi 6 is enabled only on 6GHz (WiFi 6E).
+           Set to 'true' to enable WiFi 6 on 2.4GHz and 5GHz bands.
 
-           Typical values:
-           - 10 dBm: Low power (indoor, short range)
-           - 20 dBm: Medium power
-           - 27-30 dBm: High power (outdoor, regulatory permitting)
+           WiFi 6 provides:
+           - OFDMA (better multi-user efficiency)
+           - Target Wake Time (better battery life)
+           - 1024-QAM (higher throughput)
+           - BSS Coloring (reduced interference)
 
-           Set to 'auto' to use maximum allowed power.";
-      }
+           Requires:
+           - Hardware support for 802.11ax
+           - Compatible clients for full benefits
 
-      leaf phy-mode {
-        type identityref {
-          base phy-mode;
-        }
-        default "ih:phy-mode-auto";
-        description
-          "WiFi PHY mode (802.11 standard).
-
-           Determines supported data rates, modulation schemes,
-           and features (MIMO, beamforming, etc.).
-
-           Newer modes (802.11ax) provide:
-           - Higher throughput
-           - Better efficiency
-           - Improved multi-user performance
-
-           But require:
-           - Compatible hardware
-           - Client support for full performance
-
-           Auto mode selects the best supported standard.";
+           Note: 6GHz band always uses WiFi 6 regardless of this setting.";
       }
 
       /*
@@ -451,19 +343,7 @@ module infix-hardware {
           "Maximum transmit power allowed by the regulatory domain
            for the current channel.
 
-           This is the upper limit; actual configured txpower must
-           not exceed this value.";
-      }
-
-      leaf current-phy-mode {
-        config false;
-        type identityref {
-          base phy-mode;
-        }
-        description
-          "Currently active PHY mode.
-
-           When phy-mode is 'auto', this shows the selected mode.";
+           This is the regulatory limit for the current band and channel.";
       }
 
       leaf num-virtual-interfaces {

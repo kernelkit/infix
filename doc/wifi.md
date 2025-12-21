@@ -41,36 +41,91 @@ Wi-Fi support is primarily tested with Realtek chipset-based adapters.
 ## Radio Configuration
 
 Before configuring WiFi interfaces, you must first configure the WiFi radio.
-Radios are automatically discovered and named `phy0`, `phy1`, etc.
+Radios are automatically discovered and named `radio0`, `radio1`, etc.
+
+### Country Code and Regulatory Compliance
+
+> [!IMPORTANT]
+> The `country-code` setting is **legally required** and determines which WiFi channels and power levels are permitted in your location. Using an incorrect country code may violate local wireless regulations.
+
+**Factory default**: Systems may ship with a default country code (typically "DE" for Germany in European builds or "00" for World domain). **You must configure the correct country code for your deployment location.**
+
+**Common country codes**:
+- Europe: DE (Germany), SE (Sweden), GB (UK), FR (France), ES (Spain)
+- Americas: US (United States), CA (Canada), BR (Brazil)
+- Asia-Pacific: JP (Japan), AU (Australia), CN (China)
+
+See [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) for the complete list.
 
 ### Basic Radio Setup
 
-Configure the radio with channel, power, and regulatory domain:
+Configure the radio with channel, power, and regulatory domain.
 
+**For Station (client) mode:**
 ```
 admin@example:/> configure
-admin@example:/config/> edit wifi-radio phy0
-admin@example:/config/wifi-radio/phy0/> set country-code US
-admin@example:/config/wifi-radio/phy0/> set channel 6
-admin@example:/config/wifi-radio/phy0/> set channel-width 20
-admin@example:/config/wifi-radio/phy0/> set txpower auto
-admin@example:/config/wifi-radio/phy0/> set phy-mode auto
-admin@example:/config/wifi-radio/phy0/> leave
+admin@example:/config/> edit hardware component radio0 wifi-radio
+admin@example:/config/hardware/component/radio0/wifi-radio/> set country-code DE
+admin@example:/config/hardware/component/radio0/wifi-radio/> leave
+```
+
+**For Access Point mode:**
+```
+admin@example:/> configure
+admin@example:/config/> edit hardware component radio0 wifi-radio
+admin@example:/config/hardware/component/radio0/wifi-radio/> set country-code DE
+admin@example:/config/hardware/component/radio0/wifi-radio/> set band 5GHz
+admin@example:/config/hardware/component/radio0/wifi-radio/> set channel 36
+admin@example:/config/hardware/component/radio0/wifi-radio/> leave
 ```
 
 **Key radio parameters:**
-- `country-code`: Two-letter ISO 3166-1 code (mandatory) - determines allowed channels and power
-- `channel`: Channel number (1-196) or "auto" for automatic selection
-- `channel-width`: 20, 40, 80, or 160 MHz
-- `txpower`: Power in dBm (1-30) or "auto" for maximum allowed
-- `phy-mode`: PHY standard (ieee80211b/g/a/n/ac/ax) or "auto"
-- `band`: 2.4GHz, 5GHz, 6GHz, or "auto"
+- `country-code`: Two-letter ISO 3166-1 code - determines allowed channels and maximum power. Examples: US, DE, GB, SE, FR, JP. **Must match your physical location for legal compliance.**
+- `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Band selection automatically enables appropriate WiFi standards (2.4GHz: 802.11n, 5GHz: 802.11n/ac, 6GHz: 802.11n/ac/ax)
+- `channel`: Channel number (1-196) or "auto" (required for AP mode). When set to "auto", defaults to channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 109 for 6GHz
+- `enable-wifi6`: Boolean (default: false). Opt-in to enable WiFi 6 (802.11ax) on 2.4GHz and 5GHz bands. The 6GHz band always uses WiFi 6 regardless of this setting
+
+> [!NOTE]
+> TX power and channel width are automatically determined by the driver based on regulatory constraints, PHY mode, and hardware capabilities.
+
+### WiFi 6 (802.11ax) Support
+
+WiFi 6 (802.11ax) provides improved performance in congested environments through
+features like OFDMA, Target Wake Time, and BSS Coloring. By default, WiFi 6 is
+only enabled on the 6GHz band (WiFi 6E requirement).
+
+To enable WiFi 6 on 2.4GHz or 5GHz bands:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit hardware component radio0 wifi-radio
+admin@example:/config/hardware/component/radio0/wifi-radio/> set country-code DE
+admin@example:/config/hardware/component/radio0/wifi-radio/> set band 5GHz
+admin@example:/config/hardware/component/radio0/wifi-radio/> set channel 36
+admin@example:/config/hardware/component/radio0/wifi-radio/> set enable-wifi6 true
+admin@example:/config/hardware/component/radio0/wifi-radio/> leave
+```
+
+**WiFi 6 Benefits:**
+- **OFDMA**: Better multi-user efficiency in dense environments
+- **Target Wake Time**: Improved battery life for client devices
+- **1024-QAM**: Higher throughput with strong signal conditions
+- **BSS Coloring**: Reduced interference from neighboring networks
+
+**Requirements:**
+- Hardware must support 802.11ax
+- Client devices must support WiFi 6 for full benefits
+- Older WiFi 5/4 clients can still connect but won't use WiFi 6 features
+
+> [!NOTE]
+> The 6GHz band always uses WiFi 6 (802.11ax) regardless of the `enable-wifi6`
+> setting, as WiFi 6E requires 802.11ax support.
 
 ## Station Mode (Client)
 
 Station mode connects to an existing Wi-Fi network. To verify that a
-compatible adapter has been detected, look for a radio (e.g., `phy0`) in
-`show wifi-radio` or interfaces in `show interface`
+compatible adapter has been detected, look for a radio (e.g., `radio0`) in
+`show hardware` or interfaces in `show interface`
 
 ```
 admin@example:/>  show interface
@@ -95,7 +150,7 @@ see the result read the operational datastore for interface `wifi0` or
 use the CLI
 
 ```
-admin@infix-00-00-00:/> show interface wifi0
+admin@example:/> show interface wifi0
 name                : wifi0
 type                : wifi
 index               : 3
@@ -137,21 +192,21 @@ Configure the Wi-Fi interface to reference the radio and connect to a network:
 ```
 admin@example:/> configure
 admin@example:/config/> edit interface wifi0
-admin@example:/config/interface/wifi0/> set wifi radio phy0
+admin@example:/config/interface/wifi0/> set wifi radio radio0
 admin@example:/config/interface/wifi0/> set wifi station ssid ssid1
-admin@example:/config/interface/wifi0/> set wifi station encryption type preshared-key
-admin@example:/config/interface/wifi0/> set wifi station encryption secret example
+admin@example:/config/interface/wifi0/> set wifi station security secret example
 admin@example:/config/interface/wifi0/> leave
 ```
 
 **Station configuration parameters:**
-- `radio`: Reference to the WiFi radio (mandatory)
+- `radio`: Reference to the WiFi radio (mandatory) - must reference a hardware component with class 'wifi' (e.g., radio0)
 - `station ssid`: Network name to connect to
-- `station encryption type`: `preshared-key` or `disabled` (open network)
-- `station encryption secret`: Reference to keystore entry
+- `station security mode`: `auto` (default, WPA2/WPA3 auto-negotiation) or `disabled` (open network)
+- `station security secret`: Reference to keystore entry (required when security is not disabled)
 
-WPA2 or WPA3 encryption will be automatically selected based on what
-the access point supports. No manual selection is required.
+WPA2 or WPA3 security will be automatically selected based on what
+the access point supports. The default `auto` security mode tries WPA3-SAE first,
+then falls back to WPA2-PSK for maximum compatibility and security.
 
 > [!NOTE]  Certificate-based authentication (802.1X/EAP) is not yet supported.
 
@@ -188,14 +243,17 @@ create an AP interface:
 
 ```
 admin@example:/> configure
-admin@example:/config/> edit interface wlan0
-admin@example:/config/interface/wlan0/> set type wifi
-admin@example:/config/interface/wlan0/> set wifi radio phy0
-admin@example:/config/interface/wlan0/> set wifi access-point ssid MyNetwork
-admin@example:/config/interface/wlan0/> set wifi access-point security mode wpa2-personal
-admin@example:/config/interface/wlan0/> set wifi access-point security secret example
-admin@example:/config/interface/wlan0/> leave
+admin@example:/config/> edit interface wifi0
+admin@example:/config/interface/wifi0/> set wifi radio radio0
+admin@example:/config/interface/wifi0/> set wifi access-point ssid MyNetwork
+admin@example:/config/interface/wifi0/> set wifi access-point security mode wpa2-personal
+admin@example:/config/interface/wifi0/> set wifi access-point security secret example
+admin@example:/config/interface/wifi0/> leave
 ```
+
+> [!NOTE]
+> Using `wifiN` as the interface name automatically sets the type to WiFi.
+> Alternatively, you can use any name and explicitly set `type wifi`.
 
 **Access Point configuration parameters:**
 - `radio`: Reference to the WiFi radio (mandatory)
@@ -215,45 +273,92 @@ admin@example:/config/interface/wlan0/> leave
 To create a hidden network that doesn't broadcast its SSID:
 
 ```
-admin@example:/config/interface/wlan0/> set wifi access-point hidden true
+admin@example:/config/interface/wifi0/> set wifi access-point hidden true
 ```
 
 ### Multi-SSID Configuration
 
 Multiple AP interfaces on the same radio allow broadcasting multiple SSIDs,
-each with independent security settings. This is useful for guest networks
-or segregating traffic.
+each with independent security settings. This is useful for guest networks,
+IoT devices, or segregating traffic into different VLANs.
+
+**Step 1: Configure the radio** (shared by all APs)
 
 ```
 admin@example:/> configure
-# Primary AP - Main network
-admin@example:/config/> edit interface wlan0
-admin@example:/config/interface/wlan0/> set type wifi
-admin@example:/config/interface/wlan0/> set wifi radio phy0
-admin@example:/config/interface/wlan0/> set wifi access-point ssid MainNetwork
-admin@example:/config/interface/wlan0/> set wifi access-point security mode wpa3-personal
-admin@example:/config/interface/wlan0/> set wifi access-point security secret main-secret
-admin@example:/config/interface/wlan0/> up
-
-# Secondary AP - Guest network
-admin@example:/config/> edit interface wlan1
-admin@example:/config/interface/wlan1/> set type wifi
-admin@example:/config/interface/wlan1/> set wifi radio phy0
-admin@example:/config/interface/wlan1/> set wifi access-point ssid GuestNetwork
-admin@example:/config/interface/wlan1/> set wifi access-point security mode wpa2-personal
-admin@example:/config/interface/wlan1/> set wifi access-point security secret guest-secret
-admin@example:/config/interface/wlan1/> leave
+admin@example:/config/> edit hardware component radio0 wifi-radio
+admin@example:/config/hardware/component/radio0/wifi-radio/> set country-code DE
+admin@example:/config/hardware/component/radio0/wifi-radio/> set band 5GHz
+admin@example:/config/hardware/component/radio0/wifi-radio/> set channel 36
+admin@example:/config/hardware/component/radio0/wifi-radio/> leave
 ```
+
+**Step 2: Configure keystore secrets**
+
+```
+admin@example:/> configure
+admin@example:/config/> edit keystore symmetric-key main-secret
+admin@example:/config/keystore/…/main-secret/> set key-format wifi-preshared-key-format
+admin@example:/config/keystore/…/main-secret/> set cleartext-symmetric-key MyMainPassword
+admin@example:/config/keystore/…/main-secret/> up
+admin@example:/config/> edit keystore symmetric-key guest-secret
+admin@example:/config/keystore/…/guest-secret/> set key-format wifi-preshared-key-format
+admin@example:/config/keystore/…/guest-secret/> set cleartext-symmetric-key GuestPassword123
+admin@example:/config/keystore/…/guest-secret/> up
+admin@example:/config/> edit keystore symmetric-key iot-secret
+admin@example:/config/keystore/…/iot-secret/> set key-format wifi-preshared-key-format
+admin@example:/config/keystore/…/iot-secret/> set cleartext-symmetric-key IoTDevices2025
+admin@example:/config/keystore/…/iot-secret/> leave
+```
+
+**Step 3: Create multiple AP interfaces** (all on radio0)
+
+```
+admin@example:/> configure
+# Primary AP - Main network (WPA3 for maximum security)
+admin@example:/config/> edit interface wifi0
+admin@example:/config/interface/wifi0/> set wifi radio radio0
+admin@example:/config/interface/wifi0/> set wifi access-point ssid MainNetwork
+admin@example:/config/interface/wifi0/> set wifi access-point security mode wpa3-personal
+admin@example:/config/interface/wifi0/> set wifi access-point security secret main-secret
+admin@example:/config/interface/wifi0/> up
+
+# Guest AP - Guest network (WPA2/WPA3 mixed for compatibility)
+admin@example:/config/> edit interface wifi1
+admin@example:/config/interface/wifi1/> set wifi radio radio0
+admin@example:/config/interface/wifi1/> set wifi access-point ssid GuestNetwork
+admin@example:/config/interface/wifi1/> set wifi access-point security mode wpa2-wpa3-personal
+admin@example:/config/interface/wifi1/> set wifi access-point security secret guest-secret
+admin@example:/config/interface/wifi1/> up
+
+# IoT AP - IoT devices (WPA2 for older device compatibility)
+admin@example:/config/> edit interface wifi2
+admin@example:/config/interface/wifi2/> set wifi radio radio0
+admin@example:/config/interface/wifi2/> set wifi access-point ssid IoT-Devices
+admin@example:/config/interface/wifi2/> set wifi access-point security mode wpa2-personal
+admin@example:/config/interface/wifi2/> set wifi access-point security secret iot-secret
+admin@example:/config/interface/wifi2/> leave
+```
+
+**Result:** Three SSIDs broadcasting simultaneously on radio0:
+- `MainNetwork` (WPA3, most secure)
+- `GuestNetwork` (WPA2/WPA3 mixed mode)
+- `IoT-Devices` (WPA2 for compatibility)
 
 All APs on the same radio share the same channel and physical layer settings
 (configured at the radio level). Each AP can have its own:
-- SSID
+- SSID (network name)
 - Security mode and passphrase
+- Hidden/visible SSID setting
 - VLAN assignment
 - Bridge membership
 
-> [!IMPORTANT] AP and Station modes cannot be mixed on the same radio. All
-> virtual interfaces on a radio must be the same mode (all APs or all Stations).
+You can verify the configuration with `show hardware component radio0` to see
+radio settings, and `show interface` to see all active AP interfaces.
+
+> [!IMPORTANT]
+> AP and Station modes cannot be mixed on the same radio. All virtual interfaces
+> on a radio must be the same mode (all APs or all Stations).
 
 ### AP as Bridge Port
 
@@ -266,9 +371,9 @@ admin@example:/config/> edit interface br0
 admin@example:/config/interface/br0/> set type bridge
 admin@example:/config/interface/br0/> up
 
-admin@example:/config/> edit interface wlan0
-admin@example:/config/interface/wlan0/> set bridge-port bridge br0
-admin@example:/config/interface/wlan0/> leave
+admin@example:/config/> edit interface wifi0
+admin@example:/config/interface/wifi0/> set bridge-port bridge br0
+admin@example:/config/interface/wifi0/> leave
 ```
 
 ## Troubleshooting Connection Issues
@@ -284,112 +389,3 @@ troubleshooting steps:
 5. **Hardware detection**: Confirm the adapter appears in `show interface`
 
 If issues persist, check the system log for specific error messages that can help identify the root cause.
-
-## Migration Guide: Old to New WiFi Model
-
-> [!WARNING] This is a **breaking change**. The WiFi configuration model has been
-> completely redesigned and existing configurations must be manually migrated.
-
-### What Changed
-
-**Old Model (Station only):**
-```
-interface wifi0
-  wifi
-    ssid MyNetwork
-    country-code US
-    encryption
-      type preshared-key
-      secret my-secret
-```
-
-**New Model (Radio + Interface):**
-```
-wifi-radio phy0
-  country-code US
-  channel auto
-  channel-width 20
-
-interface wifi0
-  type wifi
-  wifi
-    radio phy0
-    station
-      ssid MyNetwork
-      encryption
-        type preshared-key
-        secret my-secret
-```
-
-### Key Differences
-
-1. **Radio Configuration Separated**: Physical layer settings (channel, power,
-   country-code) moved to `wifi-radio` module
-
-2. **Explicit Mode Selection**: Must choose `station` or `access-point` mode
-   (old model only supported station)
-
-3. **Radio Reference Required**: All WiFi interfaces must reference a radio
-   via the `radio` leaf
-
-4. **Country Code Location**: Moved from interface to radio configuration
-
-5. **Multi-SSID Support**: Multiple interfaces can share one radio
-
-### Migration Steps
-
-1. **Identify your WiFi adapters and radios:**
-   ```
-   admin@example:/> show interfaces
-   # Look for wifi interfaces (wifi0, wifi1, etc.)
-   # Radios are typically phy0, phy1, etc.
-   ```
-
-2. **Create radio configuration:**
-   ```
-   admin@example:/> configure
-   admin@example:/config/> edit wifi-radio phy0
-   admin@example:/config/wifi-radio/phy0/> set country-code <YOUR-CODE>
-   admin@example:/config/wifi-radio/phy0/> set channel auto
-   admin@example:/config/wifi-radio/phy0/> set channel-width 20
-   ```
-
-3. **Update interface configuration:**
-   ```
-   # For Station mode (client):
-   admin@example:/config/> edit interface wifi0
-   admin@example:/config/interface/wifi0/> delete wifi country-code
-   admin@example:/config/interface/wifi0/> set wifi radio phy0
-   # Move ssid and encryption under station:
-   admin@example:/config/interface/wifi0/> set wifi station ssid <SSID>
-   admin@example:/config/interface/wifi0/> set wifi station encryption type preshared-key
-   admin@example:/config/interface/wifi0/> set wifi station encryption secret <SECRET>
-
-   # For AP mode:
-   admin@example:/config/> edit interface wlan0
-   admin@example:/config/interface/wlan0/> set wifi radio phy0
-   admin@example:/config/interface/wlan0/> set wifi access-point ssid <SSID>
-   admin@example:/config/interface/wlan0/> set wifi access-point security mode wpa2-personal
-   admin@example:/config/interface/wlan0/> set wifi access-point security secret <SECRET>
-   ```
-
-4. **Apply configuration:**
-   ```
-   admin@example:/config/> leave
-   ```
-
-### Compatibility
-
-- **No automatic migration**: Existing WiFi configurations will fail validation
-  and must be manually updated
-- **CLI changes**: Commands have changed to reflect the new structure
-- **Operational data**: Station scan results and status available in same location
-- **AP operational data**: New - includes connected stations list
-
-### Benefits of New Model
-
-- **Access Point support**: Create WiFi networks
-- **Multi-SSID**: Multiple networks on one radio
-- **Better separation**: PHY and network layers properly separated
-- **Regulatory compliance**: Clearer country-code management
-- **Flexibility**: Easier to add new features (mesh, WDS, etc.)
