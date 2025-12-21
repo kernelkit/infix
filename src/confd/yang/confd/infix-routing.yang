@@ -791,7 +791,7 @@ module infix-routing {
    */
   augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
         + "ospf:ospf/ospf:local-rib/ospf:route" {
-    when "derived-from-or-self(../../rt:type, 'infix-routing:ospfv2')" {
+    when "derived-from-or-self(../../../rt:type, 'infix-routing:ospfv2')" {
       description
         "This augmentation is only valid for OSPFv2.";
     }
