@@ -1,0 +1,37 @@
+From 8b2f7f3b952b768a44d491258aba9f343686d546 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Sun, 21 Dec 2025 10:44:28 +0100
+Subject: [PATCH 9/9] Problem runnning from candidate datastore and init nacm
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+In this case the datastore will be switched and the caller
+will operate on runnning datastore.
+
+Revert "nacm BUGFIX always use the correct DS"
+
+This reverts commit 90ce1f7fbc444309f41a19e4c9fafe8a771c8a66.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/utils/nacm.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/src/utils/nacm.c b/src/utils/nacm.c
+index 3183cec1..138405e5 100644
+--- a/src/utils/nacm.c
++++ b/src/utils/nacm.c
+@@ -1021,8 +1021,6 @@ sr_nacm_init(sr_session_ctx_t *session, uint32_t opts, sr_subscription_ctx_t **s
+     pthread_mutex_init(&nacm.lock, NULL);
+ 
+     /* subscribe to all the relevant config data */
+-    sr_session_switch_ds(session, SR_DS_RUNNING);
+-
+     mod_name = "ietf-netconf-acm";
+     xpath = "/ietf-netconf-acm:nacm";
+     SR_CONFIG_SUBSCR(session, sub, mod_name, xpath, opts, sr_nacm_nacm_params_cb);
+-- 
+2.43.0
+
