@@ -17,10 +17,15 @@ All notable changes to the project are documented in this file.
   can now be enabled per category (bfd, packet, ism, nsm, default-information,
   nssa). All debug options are disabled by default to prevent log flooding in
   production environments. See the documentation for usage examples
+- Add support for configurable container resource limits, memory and CPU.
+  Resource usage is available through the operational datastore, where the
+  currently active resource limits in the container runtime are also available
 - Add support for "routing interfaces", issue #647.  Lists interfaces with IP
   forwarding.  Inspect from CLI using `show interface`, look for `⇅` flag
 - Add operational data journal to statd with hierarchical time-based retention
   policy, keeping snapshots from every 5 minutes (recent) to yearly (historical)
+- Add support data collection script, useful when troubleshooting issues on
+  deployed systems. Gathers system information, logs, and more.  Issue #1287
 
 ### Fixes
 
