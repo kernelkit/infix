@@ -1,24 +1,24 @@
-[7mNAME            STATUS      PID  DESCRIPTION[0m
-udevd           [32mrunning[39m    1185  Device event daemon (udev)
-dbus            [32mrunning[39m    2248  D-Bus message bus daemon
-confd           [32mrunning[39m    3039  Configuration daemon
-netopeer        [32mrunning[39m    3548  NETCONF server
-dnsmasq         [32mrunning[39m    2249  DHCP/DNS proxy
-tty:hvc0        [32mrunning[39m    3559  Getty on hvc0
-iitod           [32mrunning[39m    2340  LED daemon
-klishd          [32mrunning[39m    3560  CLI backend daemon
-mdns-alias      [32mrunning[39m    3617  mDNS alias advertiser 
-mstpd           [33mstopped[39m       -  Spanning Tree daemon
-rauc            [32mrunning[39m    3564  Software update service
-resolvconf      [32mdone[39m          -  Update DNS configuration
-statd           [32mrunning[39m    3472  Status daemon
-staticd         [32mrunning[39m    3653  Static routing daemon
-syslogd         [32mrunning[39m    2241  System log daemon
-watchdogd       [32mrunning[39m    2242  System watchdog daemon
-zebra           [32mrunning[39m    3587  Zebra routing daemon
-mdns            [32mrunning[39m    3616  Avahi mDNS-SD daemon
-chronyd         [32mrunning[39m    3618  Chrony NTP v3/v4 daemon
-lldpd           [32mrunning[39m    3633  LLDP daemon (IEEE 802.1ab)
-nginx           [32mrunning[39m    3635  Web server
-rousette        [32mrunning[39m    3636  RESTCONF server
-sshd            [32mrunning[39m    3641  OpenSSH daemon
+[7mNAME        STATUS    PID  MEM   UP  RST  DESCRIPTION[0m
+udevd       [32mrunning[39m  1185       23m    0  Device event daemon (udev)
+dbus        [32mrunning[39m  2248       23m    0  D-Bus message bus daemon
+confd       [32mrunning[39m  3039       23m    0  Configuration daemon
+netopeer    [32mrunning[39m  3548       23m    0  NETCONF server
+dnsmasq     [32mrunning[39m  2249       23m    0  DHCP/DNS proxy
+tty:hvc0    [32mrunning[39m  3559       23m    0  Getty on hvc0
+iitod       [32mrunning[39m  2340       23m    0  LED daemon
+klishd      [32mrunning[39m  3560       23m    0  CLI backend daemon
+mdns-alias  [32mrunning[39m  3617       23m    0  mDNS alias advertiser
+mstpd       [33mstopped[39m                    0  Spanning Tree daemon
+rauc        [32mrunning[39m  3564       23m    0  Software update service
+resolvconf  [32mdone[39m                       2  Update DNS configuration
+statd       [32mrunning[39m  3472       23m    0  Status daemon
+staticd     [32mrunning[39m  3653       23m    0  Static routing daemon
+syslogd     [32mrunning[39m  2241       23m    0  System log daemon
+watchdogd   [32mrunning[39m  2242       23m    0  System watchdog daemon
+zebra       [32mrunning[39m  3587       23m    0  Zebra routing daemon
+mdns        [32mrunning[39m  3616       23m    0  Avahi mDNS-SD daemon
+chronyd     [32mrunning[39m  3618       23m    0  Chrony NTP v3/v4 daemon
+lldpd       [32mrunning[39m  3633       23m    0  LLDP daemon (IEEE 802.1ab)
+nginx       [32mrunning[39m  3635       23m    0  Web server
+rousette    [32mrunning[39m  3636       23m    0  RESTCONF server
+sshd        [32mrunning[39m  3641       23m    0  OpenSSH daemon

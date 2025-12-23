@@ -190,13 +190,6 @@ class PadNtpSource:
     poll = 14
 
 
-class PadService:
-    name = 16
-    status = 8
-    pid = 8
-    description = 40
-
-
 class PadWifiScan:
     ssid  = 40
     encryption = 30
@@ -217,6 +210,34 @@ class PadDiskUsage:
     used = 12
     avail = 12
     percent = 6
+
+
+def format_memory_bytes(bytes_val):
+    """Convert bytes to human-readable format"""
+    if bytes_val == 0:
+        return " "
+    elif bytes_val < 1024:
+        return f"{bytes_val}B"
+    elif bytes_val < 1024 * 1024:
+        return f"{bytes_val // 1024}K"
+    elif bytes_val < 1024 * 1024 * 1024:
+        return f"{bytes_val // (1024 * 1024):.1f}M"
+    else:
+        return f"{bytes_val // (1024 * 1024 * 1024):.1f}G"
+
+
+def format_uptime_seconds(seconds):
+    """Convert seconds to compact time format"""
+    if seconds == 0:
+        return " "
+    elif seconds < 60:
+        return f"{seconds}s"
+    elif seconds < 3600:
+        return f"{seconds // 60}m"
+    elif seconds < 86400:
+        return f"{seconds // 3600}h"
+    else:
+        return f"{seconds // 86400}d"
 
     @classmethod
     def table_width(cls):
@@ -259,6 +280,89 @@ class PadFirewall:
         """Table width for zones/policies tables, used to center matrix"""
         return cls.zone_locked + cls.zone_name + cls.zone_type + cls.zone_data \
             + cls.zone_services
+
+class Column:
+    """Column definition for SimpleTable"""
+    def __init__(self, name, align='left', formatter=None):
+        self.name = name
+        self.align = align
+        self.formatter = formatter
+
+class SimpleTable:
+    """Simple table formatter that handles ANSI colors correctly and calculates dynamic column widths"""
+
+    def __init__(self, columns):
+        self.columns = columns
+        self.rows = []
+
+    @staticmethod
+    def visible_width(text):
+        """Return visible character count, excluding ANSI escape sequences"""
+        ansi_pattern = r'\x1b\[[0-9;]*m'
+        clean_text = re.sub(ansi_pattern, '', str(text))
+        return len(clean_text)
+
+    def row(self, *values):
+        """Store row data for later formatting"""
+        if len(values) != len(self.columns):
+            raise ValueError(f"Expected {len(self.columns)} values, got {len(values)}")
+        self.rows.append(values)
+
+    def print(self, styled=True):
+        """Calculate widths and print complete table"""
+        column_widths = self._calculate_column_widths()
+        print(self._format_header(column_widths, styled))
+        for row_data in self.rows:
+            print(self._format_row(row_data, column_widths))
+
+    def _calculate_column_widths(self):
+        """Calculate maximum width needed for each column"""
+        widths = [self.visible_width(col.name) for col in self.columns]
+
+        for row_data in self.rows:
+            for i, (value, column) in enumerate(zip(row_data, self.columns)):
+                formatted_value = column.formatter(value) if column.formatter else value
+                value_width = self.visible_width(str(formatted_value))
+                widths[i] = max(widths[i], value_width)
+
+        return widths
+
+    def _format_header(self, column_widths, styled=True):
+        """Generate formatted header row"""
+        header_parts = []
+        for i, column in enumerate(self.columns):
+            width = column_widths[i]
+            if column.align == 'right':
+                header_parts.append(f"{column.name:>{width}}  ")
+            else:
+                header_parts.append(f"{column.name:{width}}  ")
+
+        header_str = ''.join(header_parts).rstrip()
+        return Decore.invert(header_str) if styled else header_str
+
+    def _format_row(self, row_data, column_widths):
+        """Format a single data row"""
+        row_parts = []
+        for i, (value, column) in enumerate(zip(row_data, self.columns)):
+            formatted_value = self._format_column_value(value, column, column_widths[i])
+            row_parts.append(formatted_value)
+
+        return ''.join(row_parts).rstrip()
+
+    def _format_column_value(self, value, column, width):
+        """Format a single column value with proper alignment"""
+        if column.formatter:
+            value = column.formatter(value)
+
+        value_str = str(value)
+        visible_len = self.visible_width(value_str)
+
+        if column.align == 'right':
+            padding = width - visible_len
+            return ' ' * max(0, padding) + value_str + '  '
+        else:
+            padding = width - visible_len
+            return value_str + ' ' * max(0, padding) + '  '
 
 
 class Decore():
@@ -1693,17 +1797,25 @@ def show_services(json):
     services_data = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:services')
     services = services_data.get("service", [])
 
-    hdr = (f"{'NAME':<{PadService.name}}"
-           f"{'STATUS':<{PadService.status}}"
-           f"{'PID':>{PadService.pid -1}}"
-           f"  {'DESCRIPTION'}")
-    print(Decore.invert(hdr))
+    # This is the first usage of simple table. I assume this will be
+    # copied so I left a lot of comments. If you copy it feel free
+    # to be less verbose..
+    service_table = SimpleTable([
+        Column('NAME'),
+        Column('STATUS'),
+        Column('PID', 'right'),
+        Column('MEM', 'right'),
+        Column('UP', 'right'),
+        Column('RST', 'right'),
+        Column('DESCRIPTION')
+    ])
 
     for svc in services:
         name = svc.get('name', '')
         status = svc.get('status', '')
         pid = svc.get('pid', 0)
         description = svc.get('description', '')
+        stats = svc.get('statistics', {})
 
         if status in ('running', 'active', 'done'):
             status_str = Decore.green(status)
@@ -1712,13 +1824,19 @@ def show_services(json):
         else:
             status_str = Decore.yellow(status)
 
-        pid_str = str(pid) if pid > 0 else '-'
+        pid_str = str(pid) if pid > 0 else ' '
 
-        row  = f"{name:<{PadService.name}}"
-        row += f"{status_str:<{PadService.status + 9}}"
-        row += f"{pid_str:>{PadService.pid}}"
-        row += f"  {description}"
-        print(row)
+        memory_bytes = int(stats.get('memory-usage', 0))
+        uptime_secs = int(stats.get('uptime', 0))
+        restart_count = stats.get('restart-count', 0)
+
+        memory_str = format_memory_bytes(memory_bytes)
+        uptime_str = format_uptime_seconds(uptime_secs)
+
+        service_table.row(name, status_str, pid_str, memory_str,
+                          uptime_str, restart_count, description)
+
+    service_table.print()
 
 
 def show_hardware(json):
