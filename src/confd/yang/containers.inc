@@ -1,5 +1,5 @@
 # -*- sh -*-
 MODULES=(
     "infix-interfaces -e containers"
-    "infix-containers@2025-10-12.yang"
+    "infix-containers@2025-12-09.yang"
 )

@@ -22,6 +22,13 @@ module infix-containers {
     prefix infix-sys;
   }
 
+  revision 2025-12-09 {
+    description "Add resource management:
+                  - Add resource-limit container with memory and cpu configuration.
+                  - Add resource-usage operational data for live resource usage statistics.";
+    reference "internal";
+  }
+
   revision 2025-10-12 {
     description "Two major changes:
                   - Add dedicated 'ident' type for container and volume names.
@@ -338,6 +345,86 @@ module infix-containers {
 	leaf-list drop {
 	  type capabilities;
 	  description "List of capabilities to drop from (a privileged) container.";
+	}
+      }
+
+      container resource-limit {
+	description "Resource limits for the container.";
+
+	leaf memory {
+	  description "Maximum memory limit in kibibytes, default: unlimited.";
+	  type uint64;
+	  units "KiB";
+	}
+
+	leaf cpu {
+	  description "CPU limit in millicores, default: unlimited.
+
+                       Millicores represent thousandths of a CPU core:
+                         500  = 0.5 cores (50% of one core)
+                         1000 = 1.0 cores (one full core)
+                         2000 = 2.0 cores (two full cores)
+                         3500 = 3.5 cores
+
+                       This is converted to cgroup cpu.quota internally.";
+	  type uint32;
+	  units "millicores";
+	}
+      }
+
+      container resource-usage {
+	description "Runtime container resource usage statistics.";
+	config false;
+
+	leaf memory {
+	  description "Used memory in kibibytes.";
+	  type uint64;
+	  units "KiB";
+	}
+
+	leaf cpu {
+	  description "CPU usage percentage.";
+	  type decimal64 {
+	    fraction-digits 2;
+	  }
+	  units "percent";
+	}
+
+	container block-io {
+	  description "Block I/O statistics";
+
+	  leaf read {
+	    description "Block I/O read in kibibytes.";
+	    type uint64;
+	    units "KiB";
+	  }
+
+	  leaf write {
+	    description "Block I/O write in kibibytes.";
+	    type uint64;
+	    units "KiB";
+	  }
+	}
+
+	container net-io {
+	  description "Network I/O statistics";
+
+	  leaf received {
+	    description "Network I/O received in kibibytes.";
+	    type uint64;
+	    units "KiB";
+	  }
+
+	  leaf sent {
+	    description "Network I/O sent in kibibytes.";
+	    type uint64;
+	    units "KiB";
+	  }
+	}
+
+	leaf pids {
+	  description "Number of processes/threads.";
+	  type uint32;
 	}
       }
 

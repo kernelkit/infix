@@ -411,10 +411,20 @@ create()
 	logging="--log-driver syslog"
     fi
 
+    # Build resource limit arguments
+    resource=""
+    if [ -n "$memory" ]; then
+	resource="$resource --memory=$memory"
+    fi
+    if [ -n "$cpu_limit" ]; then
+	resource="$resource --cpu-quota=$cpu_limit"
+    fi
+
     # When we get here we've already fetched, or pulled, the image
-    args="$args --read-only --replace --quiet --cgroup-parent=containers $caps"
+    args="$args --read-only --replace --quiet $caps"
+    args="$args --cgroups=enabled --cgroupns=host --cgroup-parent=system/container@$name"
     args="$args --restart=$restart --systemd=false --tz=local $privileged"
-    args="$args $vol $mount $hostname $entrypoint $env $port $logging"
+    args="$args $vol $mount $hostname $entrypoint $env $port $logging $resource"
     pidfile=/run/container:${name}.pid
 
     [ -n "$quiet" ] || log "---------------------------------------"
@@ -716,6 +726,8 @@ options:
       --log-path PATH      Path for k8s-file log pipe
   -m, --mount HOST:DEST    Bind mount a read-only file inside a container
       --manual             Do not start container automatically after creation
+      --memory BYTES       Memory limit in bytes (supports K/M/G suffix)
+      --cpu-limit LIMIT    CPU limit in millicores (1000m = 100% of 1 core)
   -n, --name NAME          Alternative way of supplying name to start/stop/restart
       --privileged         Give container extended privileges
   -p, --publish PORT       Publish ports when creating container
@@ -835,6 +847,14 @@ while [ "$1" != "" ]; do
 	    ;;
 	--manual)
 	    manual=true
+	    ;;
+	--memory)
+	    shift
+	    memory="$1"
+	    ;;
+	--cpu-limit)
+	    shift
+	    cpu_limit="$1"
 	    ;;
 	-n | --name)
 	    shift

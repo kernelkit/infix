@@ -11,10 +11,10 @@ import infamy
 from infamy.util import until, curl
 
 
-def _verify(server):
+def _verify(server, silent=False):
     # TODO: Should really use mDNS here....
     url = f"http://[{server}]:91/index.html"
-    response = curl(url)
+    response = curl(url, silent=silent)
     return response is not None and "It works" in response
 
 
@@ -46,6 +46,10 @@ with infamy.Test() as test:
                         "command": "/usr/sbin/httpd -f -v -p 91",
                         "network": {
                             "host": True
+                        },
+                        "resource-limit": {
+                            "memory": 512,  # 512 KiB
+                            "cpu": 50000    # 50% of one CPU
                         }
                     }
                 ]
@@ -57,7 +61,23 @@ with infamy.Test() as test:
         until(lambda: c.running(NAME), attempts=60)
 
     with test.step("Verify container 'web' is reachable on http://container-host.local:91"):
-        until(lambda: _verify(addr), attempts=10)
+        until(lambda: _verify(addr, silent=True), attempts=10)
+
+    with test.step("Verify resource constraints and usage are available"):
+        data = target.get_data("/infix-containers:containers")
+        containers = data.get("containers", {}).get("container", [])
+        web = next((c for c in containers if c["name"] == NAME), None)
+
+        limits = web.get("resource-limit", {})
+        assert limits.get("memory") == 512, "Memory limit not set correctly"
+        assert limits.get("cpu") == 50000, "CPU limit not set correctly"
+
+        rusage = web.get("resource-usage", {})
+        assert rusage is not None, "Resource usage data not available"
+
+        mem_used = rusage.get("memory")
+        assert mem_used is not None, "Memory usage not reported"
+        print(f"Container using {mem_used} KiB memory")
 
     with test.step("Stop container 'web'"):
         c = infamy.Container(target)
@@ -71,5 +91,5 @@ with infamy.Test() as test:
 
     with test.step("Verify container 'web' is reachable on http://container-host.local:91"):
         # Wait for it to restart and respond, or fail
-        until(lambda: _verify(addr), attempts=60)
+        until(lambda: _verify(addr, silent=True), attempts=60)
     test.succeed()
