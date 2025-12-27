@@ -218,7 +218,7 @@ static int wifi_gen_station(const char *ifname, struct lyd_node *station,
 
 	if (secret_name && strcmp(security_mode, "disabled") != 0) {
 		secret_node = lydx_get_xpathf(config,
-			"/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key",
+			"/keystore/symmetric-keys/symmetric-key[name='%s']/symmetric-key",
 			secret_name);
 		secret = secret_node ? lyd_get_value(secret_node) : NULL;
 	} else {
@@ -355,7 +355,7 @@ static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char
 		secret_name = lydx_get_cattr(security, "secret");
 		if (secret_name) {
 			secret_node = lydx_get_xpathf(config,
-				"/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key",
+				"/keystore/symmetric-keys/symmetric-key[name='%s']/symmetric-key",
 				secret_name);
 			if (secret_node)
 				secret = lyd_get_value(secret_node);
@@ -458,7 +458,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	/* Get secret from keystore if not open network */
 	if (secret_name && strcmp(security_mode, "open") != 0) {
 		secret_node = lydx_get_xpathf(config,
-			"/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key",
+			"/keystore/symmetric-keys/symmetric-key[name='%s']/symmetric-key",
 			secret_name);
 		if (secret_node) {
 			secret = lyd_get_value(secret_node);
