@@ -5,7 +5,7 @@
         "name": "mainboard",
         "class": "iana-hardware:chassis",
         "mfg-name": "QEMU",
-        "model-name": "VM",
+        "model-name": "Standard PC (i440FX + PIIX, 1996)",
         "infix-hardware:phys-address": "00:a0:85:00:03:00",
         "state": {
           "admin-state": "unknown",
@@ -21,7 +21,7 @@
           "admin-state": "locked",
           "oper-state": "enabled"
         },
-        "name": "USB",
+        "name": "USB1",
         "class": "infix-hardware:usb"
       },
       {

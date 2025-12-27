@@ -1,0 +1,7 @@
+# Remove kernel-created WiFi interfaces
+# All WiFi interfaces are now virtual interfaces created by confd
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="wlan*", \
+  TEST=="/sys/class/net/$name/phy80211/name", \
+  PROGRAM="/bin/cat /sys/class/net/%k/phy80211/name", \
+  TEST!="/run/wifi-cleaned-%c", \
+  RUN+="/bin/sh -c '/usr/sbin/iw dev %k del && touch /run/wifi-cleaned-%c'"

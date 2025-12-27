@@ -1,0 +1,4 @@
+# Rename WiFi PHY devices from phy0 to wifi-phy0 to avoid name clashes
+# This must run before wlan interface cleanup (70-rename-wifi.rules)
+SUBSYSTEM=="ieee80211", ACTION=="add", KERNEL=="phy*", \
+  RUN+="/bin/sh -c '/usr/sbin/iw phy %k set name radio%n'"
