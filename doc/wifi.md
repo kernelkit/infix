@@ -182,7 +182,7 @@ and 63 characters
 admin@example:/> configure
 admin@example:/config/> edit keystore symmetric-key example
 admin@example:/config/keystore/…/example/> set key-format wifi-preshared-key-format
-admin@example:/config/keystore/…/example/> set cleartext-symmetric-key mysecret
+admin@example:/config/keystore/…/example/> set symmetric-key mysecret
 admin@example:/config/keystore/…/example/> leave
 admin@example:/>
 ```
@@ -299,15 +299,15 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> leave
 admin@example:/> configure
 admin@example:/config/> edit keystore symmetric-key main-secret
 admin@example:/config/keystore/…/main-secret/> set key-format wifi-preshared-key-format
-admin@example:/config/keystore/…/main-secret/> set cleartext-symmetric-key MyMainPassword
+admin@example:/config/keystore/…/main-secret/> set symmetric-key MyMainPassword
 admin@example:/config/keystore/…/main-secret/> up
 admin@example:/config/> edit keystore symmetric-key guest-secret
 admin@example:/config/keystore/…/guest-secret/> set key-format wifi-preshared-key-format
-admin@example:/config/keystore/…/guest-secret/> set cleartext-symmetric-key GuestPassword123
+admin@example:/config/keystore/…/guest-secret/> set symmetric-key GuestPassword123
 admin@example:/config/keystore/…/guest-secret/> up
 admin@example:/config/> edit keystore symmetric-key iot-secret
 admin@example:/config/keystore/…/iot-secret/> set key-format wifi-preshared-key-format
-admin@example:/config/keystore/…/iot-secret/> set cleartext-symmetric-key IoTDevices2025
+admin@example:/config/keystore/…/iot-secret/> set symmetric-key IoTDevices2025
 admin@example:/config/keystore/…/iot-secret/> leave
 ```
 
