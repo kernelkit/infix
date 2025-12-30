@@ -159,18 +159,6 @@ class PadDhcpServer:
     exp = 10
 
 
-class PadUsbPort:
-    title = 30
-    name = 20
-    state = 10
-    oper = 10
-
-    @classmethod
-    def table_width(cls):
-        """Total width of USB port table"""
-        return cls.name + cls.state + cls.oper
-
-
 class PadSensor:
     name = 30
     value = 20
@@ -840,12 +828,6 @@ class USBport:
         self.name = data.get('name', '')
         self.state = get_json_data('', self.data, 'state', 'admin-state')
         self.oper = get_json_data('', self.data, 'state', 'oper-state')
-
-    def print(self):
-        row = f"{self.name:<{PadUsbPort.name}}"
-        row += f"{self.state:<{PadUsbPort.state}}"
-        row += f"{self.oper:<{PadUsbPort.oper}}"
-        print(row)
 
 
 class Sensor:
@@ -2084,8 +2066,7 @@ def show_hardware(json):
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
     wifi_radios = [c for c in components if c.get("class") == "infix-hardware:wifi"]
 
-    # Determine overall width (use the wider of the two sections)
-    width = max(PadUsbPort.table_width(), PadSensor.table_width(), 100)
+    width = max(PadSensor.table_width(), 100)
 
     # Display full-width inverted heading
     print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
@@ -2157,16 +2138,18 @@ def show_hardware(json):
 
     if usb_ports:
         Decore.title("USB Ports", width)
-        hdr = (f"{'NAME':<{PadUsbPort.name}}"
-               f"{'STATE':<{PadUsbPort.state}}"
-               f"{'OPER':<{PadUsbPort.oper}}")
-        # Pad header to full width
-        hdr = f"{hdr:<{width}}"
-        print(Decore.invert(hdr))
+
+        usb_table = SimpleTable([
+            Column('NAME'),
+            Column('STATE'),
+            Column('OPER')
+        ])
 
         for component in usb_ports:
             port = USBport(component)
-            port.print()
+            usb_table.row(port.name, port.state, port.oper)
+
+        usb_table.print()
 
     if sensors:
         Decore.title("Sensors", width)
