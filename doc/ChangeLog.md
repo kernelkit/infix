@@ -6,6 +6,20 @@ All notable changes to the project are documented in this file.
 [v26.01.0][UNRELEASED]
 -------------------------
 
+> [!WARNING]
+> **BREAKING CHANGES:** This release includes breaking changes to WiFi configuration:
+>
+> - WiFi station/client configuration has been restructured. The `wifi` container
+>   now requires a `radio` reference, and station configuration has moved under a
+>   `wifi/station` container. Existing WiFi configurations must be manually updated.
+> - WiFi radios are now configured via `ietf-hardware` instead of the interfaces module.
+
+> [!NOTE]
+> Noteworthy changes and additions in this release:
+>
+> - WiFi Access Point (AP) mode support with multi-SSID capability
+> - RIPv2 routing support
+
 ### Changes
 
 - Upgrade Linux kernel to 6.12.63 (LTS)
@@ -26,11 +40,20 @@ All notable changes to the project are documented in this file.
   policy, keeping snapshots from every 5 minutes (recent) to yearly (historical)
 - Add support data collection script, useful when troubleshooting issues on
   deployed systems. Gathers system information, logs, and more.  Issue #1287
+- Add WiFi Access Point (AP) mode with multi-SSID support and WPA2/WPA3 security.
+  **BREAKING:** WiFi architecture refactored with radios configured via
+  `ietf-hardware` and interfaces requiring `radio` reference. Station config
+  moved to `wifi/station` container. Existing Wi-Fi interfaces will be
+  removed during upgrade (for the rest of the configuration to apply)
+  and you need to reconfigure them again. See [wifi.md](wifi.md) for details
 
 ### Fixes
 
 - Fix #1314: Raspberry Pi 4B with 1 or 8 GiB RAM does not boot.  This was due
   newer EEPROM firmware in newer boards require a newer rpi-firmware package
+- Fix #1082: Wi-Fi interfaces always scanned, introduce a  `scan-mode`
+  to the Wi-Fi concept in Infix.
+
 
 [v25.11.0][] - 2025-12-02
 -------------------------
