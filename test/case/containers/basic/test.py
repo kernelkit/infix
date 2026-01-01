@@ -49,7 +49,7 @@ with infamy.Test() as test:
                         },
                         "resource-limit": {
                             "memory": 512,  # 512 KiB
-                            "cpu": 50000    # 50% of one CPU
+                            "cpu": 500      # 50% of one CPU (0.5 cores)
                         }
                     }
                 ]
@@ -70,7 +70,7 @@ with infamy.Test() as test:
 
         limits = web.get("resource-limit", {})
         assert limits.get("memory") == 512, "Memory limit not set correctly"
-        assert limits.get("cpu") == 50000, "CPU limit not set correctly"
+        assert limits.get("cpu") == 500, "CPU limit not set correctly"
 
         rusage = web.get("resource-usage", {})
         assert rusage is not None, "Resource usage data not available"
