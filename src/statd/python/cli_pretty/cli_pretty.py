@@ -579,14 +579,14 @@ class Decore():
         return Decore.decorate("43", txt, "49")
 
     @staticmethod
-    def title(txt, len=None, bold=True):
+    def title(txt, width=None, bold=True):
         """Print section header with horizontal bar line above it
         Args:
             txt: The header text to display
-            len: Length of horizontal bar line (defaults to len(txt))
+            width: Length of horizontal bar line (defaults to len(txt))
             bold: Whether to make the text bold
         """
-        length = len if len is not None else len(txt)
+        length = width if width is not None else len(txt)
         underline = "─" * length
         print(underline)
         if bold:
@@ -2082,6 +2082,198 @@ def show_hardware(json):
             for component in sorted(standalone, key=lambda c: c.get("name", "")):
                 sensor = Sensor(component)
                 sensor.print()
+
+
+def resolve_container_network(network, all_ifaces):
+    """Resolve container network to bridge names or network type.
+
+    Args:
+        network: Container network dict from operational data
+        all_ifaces: List of all interface dicts
+
+    Returns:
+        str: Network description (bridge name, "host", interface name, or "-")
+    """
+    if network.get('host'):
+        return "host"
+
+    if 'interface' not in network:
+        return "-"
+
+    interfaces = network.get('interface', [])
+    if not interfaces:
+        return "-"
+
+    network_names = []
+    for iface in interfaces:
+        iface_name = iface.get('name', '')
+        iface_data = next((i for i in all_ifaces if i.get('name') == iface_name), None)
+
+        bridge_found = False
+        if iface_data:
+            # Check if this is a VETH with a peer (host-side veth)
+            veth = iface_data.get('infix-interfaces:veth', {})
+            peer_name = veth.get('peer')
+
+            if peer_name:
+                # Find the peer interface and check if it's a bridge port
+                peer_data = next((i for i in all_ifaces if i.get('name') == peer_name), None)
+                if peer_data:
+                    bridge_port = peer_data.get('infix-interfaces:bridge-port', {})
+                    bridge_name = bridge_port.get('bridge')
+                    if bridge_name:
+                        network_names.append(bridge_name)
+                        bridge_found = True
+
+        # If not found via veth peer, try reverse lookup
+        if not bridge_found:
+            for host_iface in all_ifaces:
+                container_net = host_iface.get('infix-interfaces:container-network', {})
+                containers_list = container_net.get('containers', [])
+
+                if iface_name in containers_list:
+                    bridge_port = host_iface.get('infix-interfaces:bridge-port', {})
+                    bridge_name = bridge_port.get('bridge')
+
+                    if bridge_name:
+                        network_names.append(bridge_name)
+                        bridge_found = True
+                        break
+
+        if not bridge_found:
+            network_names.append(iface_name)
+
+    return ', '.join(network_names)
+
+
+def show_container(json):
+    """Display container table view with resource usage."""
+    containers_data = json.get("infix-containers:containers", {})
+    containers = containers_data.get("container", [])
+
+    if not containers:
+        print("No containers configured.")
+        return
+
+    # Get interface data for network resolution
+    all_ifaces_data = json.get('ietf-interfaces:interfaces', {})
+    all_ifaces = all_ifaces_data.get('interface', [])
+
+    # Create table with column definitions
+    container_table = SimpleTable([
+        Column('NAME'),
+        Column('STATUS'),
+        Column('NETWORK'),
+        Column('MEMORY (KiB)', 'right'),
+        Column('CPU%', 'right')
+    ])
+
+    for container in containers:
+        name = container.get("name", "")
+        status = container.get("status", "")
+
+        # Get network information
+        network = container.get('network', {})
+        network_str = resolve_container_network(network, all_ifaces)
+
+        # Get resource limits and usage
+        resource_limit = container.get("resource-limit", {})
+        resource_usage = container.get("resource-usage", {})
+
+        mem_limit = resource_limit.get("memory")
+        mem_usage = resource_usage.get("memory")
+        cpu_usage = resource_usage.get("cpu", "0.0")
+
+        # Format memory display
+        if mem_usage is not None and mem_limit is not None:
+            memory_str = f"{mem_usage}/{mem_limit}"
+        elif mem_usage is not None:
+            memory_str = str(mem_usage)
+        else:
+            memory_str = "-"
+
+        # Format CPU display
+        cpu_str = str(cpu_usage)
+
+        # Color code status like in show_services
+        if status in ('running', 'active'):
+            status_str = Decore.green(status)
+        elif status in ('exited', 'stopped', 'created'):
+            status_str = Decore.yellow(status)
+        elif status in ('error', 'dead'):
+            status_str = Decore.red(status)
+        else:
+            status_str = status
+
+        container_table.row(name, status_str, network_str, memory_str, cpu_str)
+
+    container_table.print()
+
+
+def show_container_detail(json, name):
+    """Display detailed container view with full resource information."""
+    containers_data = json.get("infix-containers:containers", {})
+    containers = containers_data.get("container", [])
+
+    container = None
+    for c in containers:
+        if c.get("name") == name:
+            container = c
+            break
+
+    if not container:
+        print(f"Container '{name}' not found.")
+        return
+
+    print(f"Name            : {container.get('name', '-')}")
+    print(f"Container ID    : {container.get('id', '-')}")
+    print(f"Image           : {container.get('image', '-')}")
+    print(f"Image ID        : {container.get('image-id', '')}")
+
+    command = container.get('command')
+    if command:
+        print(f"Command         : {command}")
+
+    # Get network information
+    network = container.get('network', {})
+    all_ifaces_data = json.get('ietf-interfaces:interfaces', {})
+    all_ifaces = all_ifaces_data.get('interface', [])
+    network_str = resolve_container_network(network, all_ifaces)
+    print(f"Network         : {network_str}")
+
+    print(f"Status          : {container.get('status', '-')}")
+    print(f"Running         : {'yes' if container.get('running') else 'no'}")
+
+    resource_limit = container.get("resource-limit", {})
+    resource_usage = container.get("resource-usage", {})
+
+    pids = resource_usage.get("pids")
+    if pids is not None:
+        print(f"Processes       : {pids}")
+
+    mem_limit = resource_limit.get("memory")
+    if mem_limit is not None:
+        print(f"Memory Limit    : {mem_limit} KiB")
+
+    mem_usage = resource_usage.get("memory")
+    if mem_usage is not None:
+        mem_usage_int = int(mem_usage)
+        if mem_limit:
+            mem_limit_int = int(mem_limit)
+            percent = (mem_usage_int / mem_limit_int) * 100
+            print(f"Memory Usage    : {mem_usage_int} KiB ({percent:.1f}%)")
+        else:
+            print(f"Memory Usage    : {mem_usage_int} KiB")
+
+    cpu_limit = resource_limit.get("cpu")
+    if cpu_limit is not None:
+        cpu_limit_int = int(cpu_limit)
+        cores = cpu_limit_int / 1000.0
+        print(f"CPU Limit       : {cpu_limit_int} millicores ({cores:.1f} cores)")
+
+    cpu_usage = resource_usage.get("cpu")
+    if cpu_usage is not None:
+        print(f"CPU Usage       : {cpu_usage}%")
 
 
 def show_ntp(json):
@@ -4067,6 +4259,10 @@ def main():
     subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
               .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
 
+    subparsers.add_parser('show-container', help='Show containers table')
+    subparsers.add_parser('show-container-detail', help='Show container details') \
+              .add_argument('name', help='Container name')
+
     subparsers.add_parser('show-hardware', help='Show USB ports')
 
     subparsers.add_parser('show-interfaces', help='Show interfaces') \
@@ -4122,6 +4318,10 @@ def main():
         show_bridge_stp(json_data)
     elif args.command == "show-dhcp-server":
         show_dhcp_server(json_data, args.stats)
+    elif args.command == "show-container":
+        show_container(json_data)
+    elif args.command == "show-container-detail":
+        show_container_detail(json_data, args.name)
     elif args.command == "show-hardware":
         show_hardware(json_data)
     elif args.command == "show-interfaces":

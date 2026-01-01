@@ -186,14 +186,11 @@
 </COMMAND>
 
 <COMMAND name="show" help="Show system status and configuration files" mode="switch">
-  <COMMAND name="container" help="Show container status">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      doas container show |pager
-    </ACTION>
 
-    <SWITCH name="optional" min="0">
+  <COMMAND name="container" help="Show container status">
+    <SWITCH name="subcommands" min="0">
       <COMMAND name="all" help="Show all containers (default only running)">
-        <ACTION sym="script">doas container -a show</ACTION>
+        <ACTION sym="script">show container</ACTION>
       </COMMAND>
       <COMMAND name="log" help="Show container log (jumps to end), alias to 'show log container'">
 	<ACTION sym="script" in="tty" out="tty" interrupt="true">
@@ -231,7 +228,15 @@
 	</ACTION>
       </COMMAND>
     </SWITCH>
+
+    <SWITCH name="optional" min="0" max="1">
+      <PARAM name="name" ptype="/CONTAINERS" help="Container name for detailed view" />
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      show container $KLISH_PARAM_name |pager
+    </ACTION>
   </COMMAND>
+
 </COMMAND>
 
 </VIEW>
