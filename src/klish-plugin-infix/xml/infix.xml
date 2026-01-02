@@ -638,9 +638,17 @@
   <COMMAND name="firewall" help="Show firewall status and configuration">
     <SWITCH name="optional" min="0" max="1">
       <COMMAND name="log" help="Show firewall log (jumps to end), alias to 'show log firewall.log'">
+        <SWITCH name="optional" min="0">
+          <PARAM name="limit" ptype="/UINT" help="Last N lines, default: all"/>
+        </SWITCH>
 	<ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  doas -u $USER cat /log/firewall.log |pager +G
+	  sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-log $KLISH_PARAM_limit |pager +G
 	</ACTION>
+      </COMMAND>
+      <COMMAND name="matrix" help="Show firewall zone matrix">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-matrix
+        </ACTION>
       </COMMAND>
       <COMMAND name="zone" help="Show firewall zones">
         <SWITCH name="optional" min="0">

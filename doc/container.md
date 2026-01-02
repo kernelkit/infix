@@ -488,6 +488,46 @@ time and analysis of your container application to figure out which
 capabilities you need.
 
 
+Resource Limits
+---------------
+
+Containers can be configured with resource limits to control their memory
+and CPU usage. This helps prevent containers from consuming excessive system
+resources and ensures fair resource allocation across multiple containers.
+
+### Configuring Resource Limits
+
+Resource limits are set per container and include:
+
+ - **Memory:** Maximum memory usage in kibibytes (KiB)
+ - **CPU:** Maximum CPU usage in millicores (1000 millicores = 1 CPU core)
+
+Example configuration limiting a container to 512 MiB of memory and 1.5 CPU cores:
+
+    admin@example:/> configure
+    admin@example:/config/> edit container web
+    admin@example:/config/container/web/> edit resource-limit
+    admin@example:/config/container/web/resource-limit/> set memory 524288
+    admin@example:/config/container/web/resource-limit/> set cpu 1500
+    admin@example:/config/container/web/resource-limit/> leave
+
+Common CPU limit examples:
+
+ - `500` = 0.5 cores (50% of one core)
+ - `1000` = 1.0 cores (one full core)
+ - `2000` = 2.0 cores (two full cores)
+
+### Monitoring Resource Usage
+
+Runtime resource usage statistics are available in the operational datastore:
+
+    admin@example:/> show container web
+    ...
+
+Use `show container usage` to see resource consumption across all containers,
+including memory, CPU, block I/O, network I/O, and process counts.
+
+
 Networking and Containers
 -------------------------
 

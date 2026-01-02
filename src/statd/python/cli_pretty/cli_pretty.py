@@ -245,55 +245,22 @@ def format_uptime_seconds(seconds):
         return cls.mount + cls.size + cls.used + cls.avail + cls.percent
 
 
-class PadFirewall:
-    zone_locked = 2
-    zone_name = 21
-    zone_type = 6
-    zone_data = 34
-    zone_services = 38
-
-    zone_flow_to = 20
-    zone_flow_action = 14
-    zone_flow_policy = 20
-    zone_flow_services = 45
-
-    policy_locked = 2
-    policy_name = 21
-    policy_action = 9
-    policy_ingress = 33
-    policy_egress = 35
-
-    service_name = 20
-    service_ports = 69
-
-    # Firewall log display formatting
-    log_time = 15      # ISO format: MM-DD HH:MM:SS
-    log_action = 6     # REJECT/DROP + small buffer
-    log_iif = 11       # Input interface + small buffer
-    log_src = 26       # IPv6 addresses (shortened) or IPv4
-    log_dst = 26       # IPv6 addresses (shortened) or IPv4
-    log_proto = 5      # TCP/UDP/ICMP + small buffer
-    log_port = 5       # Port numbers + small buffer
-
-    @classmethod
-    def table_width(cls):
-        """Table width for zones/policies tables, used to center matrix"""
-        return cls.zone_locked + cls.zone_name + cls.zone_type + cls.zone_data \
-            + cls.zone_services
-
 class Column:
     """Column definition for SimpleTable"""
-    def __init__(self, name, align='left', formatter=None):
+    def __init__(self, name, align='left', formatter=None, flexible=False):
         self.name = name
         self.align = align
         self.formatter = formatter
+        self.flexible = flexible
 
 class SimpleTable:
     """Simple table formatter that handles ANSI colors correctly and calculates dynamic column widths"""
 
-    def __init__(self, columns):
+    def __init__(self, columns, min_width=None):
         self.columns = columns
         self.rows = []
+        self.min_width = min_width
+        self._column_widths = None  # Cache calculated widths
 
     @staticmethod
     def visible_width(text):
@@ -308,12 +275,58 @@ class SimpleTable:
             raise ValueError(f"Expected {len(self.columns)} values, got {len(values)}")
         self.rows.append(values)
 
+    def width(self):
+        """Calculate and return total table width"""
+        if self._column_widths is None:
+            self._column_widths = self._calculate_column_widths()
+
+        # Sum column widths + 2-char separator between columns
+        total = sum(self._column_widths)
+        if self._column_widths:
+            # Separators only between columns, not after the last one
+            total += (len(self._column_widths) - 1) * 2
+
+        return total
+
+    def adjust_padding(self, width):
+        """Distribute padding to width evenly across flexible columns"""
+        if self._column_widths is None:
+            self._column_widths = self._calculate_column_widths()
+
+        current_width = self.width()
+        extra_width = width - current_width
+
+        if extra_width <= 0:
+            return  # Already at or above target
+
+        # Find flexible columns
+        flex_indices = [i for i, col in enumerate(self.columns) if col.flexible]
+
+        if not flex_indices:
+            return  # No flexible columns to expand
+
+        # Distribute evenly
+        per_column = extra_width // len(flex_indices)
+        remainder = extra_width % len(flex_indices)
+
+        for i, idx in enumerate(flex_indices):
+            self._column_widths[idx] += per_column
+            # Give remainder to first columns
+            if i < remainder:
+                self._column_widths[idx] += 1
+
     def print(self, styled=True):
         """Calculate widths and print complete table"""
-        column_widths = self._calculate_column_widths()
-        print(self._format_header(column_widths, styled))
+        if self._column_widths is None:
+            self._column_widths = self._calculate_column_widths()
+
+        # Apply minimum width if specified
+        if self.min_width:
+            self.adjust_padding(self.min_width)
+
+        print(self._format_header(self._column_widths, styled))
         for row_data in self.rows:
-            print(self._format_row(row_data, column_widths))
+            print(self._format_row(row_data, self._column_widths))
 
     def _calculate_column_widths(self):
         """Calculate maximum width needed for each column"""
@@ -332,24 +345,29 @@ class SimpleTable:
         header_parts = []
         for i, column in enumerate(self.columns):
             width = column_widths[i]
-            if column.align == 'right':
-                header_parts.append(f"{column.name:>{width}}  ")
-            else:
-                header_parts.append(f"{column.name:{width}}  ")
+            # Add separator "  " only between columns, not after the last one
+            is_last = (i == len(self.columns) - 1)
+            separator = "" if is_last else "  "
 
-        header_str = ''.join(header_parts).rstrip()
+            if column.align == 'right':
+                header_parts.append(f"{column.name:>{width}}{separator}")
+            else:
+                header_parts.append(f"{column.name:{width}}{separator}")
+
+        header_str = ''.join(header_parts)
         return Decore.invert(header_str) if styled else header_str
 
     def _format_row(self, row_data, column_widths):
         """Format a single data row"""
         row_parts = []
         for i, (value, column) in enumerate(zip(row_data, self.columns)):
-            formatted_value = self._format_column_value(value, column, column_widths[i])
+            is_last = (i == len(self.columns) - 1)
+            formatted_value = self._format_column_value(value, column, column_widths[i], is_last)
             row_parts.append(formatted_value)
 
-        return ''.join(row_parts).rstrip()
+        return ''.join(row_parts)
 
-    def _format_column_value(self, value, column, width):
+    def _format_column_value(self, value, column, width, is_last=False):
         """Format a single column value with proper alignment"""
         if column.formatter:
             value = column.formatter(value)
@@ -357,12 +375,150 @@ class SimpleTable:
         value_str = str(value)
         visible_len = self.visible_width(value_str)
 
-        if column.align == 'right':
+        # Add separator "  " only between columns, not after the last one
+        separator = "" if is_last else "  "
+
+        # Don't pad the last column to avoid trailing spaces
+        if is_last:
+            return value_str
+        elif column.align == 'right':
             padding = width - visible_len
-            return ' ' * max(0, padding) + value_str + '  '
+            return ' ' * max(0, padding) + value_str + separator
         else:
             padding = width - visible_len
-            return value_str + ' ' * max(0, padding) + '  '
+            return value_str + ' ' * max(0, padding) + separator
+
+
+class Canvas:
+    """Multi-item rendering canvas for unified width alignment across tables and content.
+
+    Canvas coordinates the display of multiple SimpleTable instances and other content
+    types (text, titles, spacing, pre-rendered content) with consistent width alignment.
+    This creates professional-looking output where all table headers and content align
+    to the same width, with flexible columns distributing extra space evenly.
+
+    Purpose:
+        - Achieve visual alignment across heterogeneous content
+        - Minimize performance overhead with single-pass data traversal
+        - Support mixed content: tables, text, titles, matrices, spacing
+
+    How it works:
+        1. Buffer items in sequence (add_text, add_table, add_title, etc.)
+        2. Calculate maximum width from all SimpleTable instances
+        3. Apply flex padding to narrower tables via SimpleTable.adjust_padding()
+        4. Render all items sequentially with unified width
+
+    Interaction with SimpleTable:
+        - Calls SimpleTable.width() to determine natural table width
+        - Calls SimpleTable.adjust_padding(max_width) to expand flexible columns
+        - SimpleTable columns marked with flexible=True distribute extra width evenly
+        - Preserves table alignment (left/right) and formatting
+
+    Performance:
+        - Single data traversal: tables built once, widths calculated once
+        - Memory over CPU: buffers all items before rendering
+        - Optimized for embedded systems (ARM Cortex-A7)
+
+    Example:
+        See show_firewall() for a complete usage example demonstrating:
+        - Mixed content types (status text, matrix, tables)
+        - Multiple tables with different flexible columns
+        - Centered matrix using get_max_width()
+        - Proper spacing and titles
+
+    Args:
+        min_width: Optional minimum width for all tables (default: None)
+    """
+
+    def __init__(self, min_width=None):
+        self.min_width = min_width
+        self.items = []  # List of (type, content) tuples
+
+    def add_text(self, text):
+        """Add a plain text line"""
+        self.items.append(('text', text))
+
+    def add_title(self, text):
+        """Add a section title (will be centered to canvas width)"""
+        self.items.append(('title', text))
+
+    def add_raw(self, text):
+        """Add pre-rendered multi-line text (like zone matrix)"""
+        self.items.append(('raw', text))
+
+    def add_spacing(self, lines=1):
+        """Add blank lines for spacing"""
+        self.items.append(('spacing', lines))
+
+    def add_table(self, table):
+        """Add a SimpleTable instance"""
+        if not isinstance(table, SimpleTable):
+            raise ValueError("Expected SimpleTable instance")
+        self.items.append(('table', table))
+
+    def insert(self, index, item_type, content):
+        """Insert an item at a specific position"""
+        self.items.insert(index, (item_type, content))
+
+    def insert_text(self, index, text):
+        """Insert a plain text line at position"""
+        self.insert(index, 'text', text)
+
+    def insert_title(self, index, text):
+        """Insert a section title at position"""
+        self.insert(index, 'title', text)
+
+    def insert_raw(self, index, text):
+        """Insert pre-rendered text at position"""
+        self.insert(index, 'raw', text)
+
+    def insert_spacing(self, index, lines=1):
+        """Insert blank lines at position"""
+        self.insert(index, 'spacing', lines)
+
+    def insert_table(self, index, table):
+        """Insert a SimpleTable at position"""
+        if not isinstance(table, SimpleTable):
+            raise ValueError("Expected SimpleTable instance")
+        self.insert(index, 'table', table)
+
+    def get_max_width(self):
+        """Calculate and return the maximum width from all tables"""
+        max_width = self.min_width or 0
+
+        for item_type, content in self.items:
+            if item_type == 'table':
+                max_width = max(max_width, content.width())
+
+        return max_width
+
+    def render(self):
+        """Calculate widths, apply padding, and output all items"""
+        # First pass: find maximum width from all tables
+        max_width = self.get_max_width()
+
+        # Second pass: apply padding to all tables with flexible columns
+        for item_type, content in self.items:
+            if item_type == 'table':
+                content.adjust_padding(max_width)
+
+        # Third pass: render each item
+        for i, (item_type, content) in enumerate(self.items):
+            if item_type == 'text':
+                print(content)
+            elif item_type == 'title':
+                # Title with underline matching canvas width
+                underline = "─" * max_width
+                print(underline)
+                print(Decore.bold(content))
+            elif item_type == 'raw':
+                # Pre-rendered content (like matrix)
+                print(content)
+            elif item_type == 'spacing':
+                for _ in range(content):
+                    print()
+            elif item_type == 'table':
+                content.print()
 
 
 class Decore():
@@ -423,14 +579,14 @@ class Decore():
         return Decore.decorate("43", txt, "49")
 
     @staticmethod
-    def title(txt, len=None, bold=True):
+    def title(txt, width=None, bold=True):
         """Print section header with horizontal bar line above it
         Args:
             txt: The header text to display
-            len: Length of horizontal bar line (defaults to len(txt))
+            width: Length of horizontal bar line (defaults to len(txt))
             bold: Whether to make the text bold
         """
-        length = len if len is not None else len(txt)
+        length = width if width is not None else len(txt)
         underline = "─" * length
         print(underline)
         if bold:
@@ -1928,6 +2084,198 @@ def show_hardware(json):
                 sensor.print()
 
 
+def resolve_container_network(network, all_ifaces):
+    """Resolve container network to bridge names or network type.
+
+    Args:
+        network: Container network dict from operational data
+        all_ifaces: List of all interface dicts
+
+    Returns:
+        str: Network description (bridge name, "host", interface name, or "-")
+    """
+    if network.get('host'):
+        return "host"
+
+    if 'interface' not in network:
+        return "-"
+
+    interfaces = network.get('interface', [])
+    if not interfaces:
+        return "-"
+
+    network_names = []
+    for iface in interfaces:
+        iface_name = iface.get('name', '')
+        iface_data = next((i for i in all_ifaces if i.get('name') == iface_name), None)
+
+        bridge_found = False
+        if iface_data:
+            # Check if this is a VETH with a peer (host-side veth)
+            veth = iface_data.get('infix-interfaces:veth', {})
+            peer_name = veth.get('peer')
+
+            if peer_name:
+                # Find the peer interface and check if it's a bridge port
+                peer_data = next((i for i in all_ifaces if i.get('name') == peer_name), None)
+                if peer_data:
+                    bridge_port = peer_data.get('infix-interfaces:bridge-port', {})
+                    bridge_name = bridge_port.get('bridge')
+                    if bridge_name:
+                        network_names.append(bridge_name)
+                        bridge_found = True
+
+        # If not found via veth peer, try reverse lookup
+        if not bridge_found:
+            for host_iface in all_ifaces:
+                container_net = host_iface.get('infix-interfaces:container-network', {})
+                containers_list = container_net.get('containers', [])
+
+                if iface_name in containers_list:
+                    bridge_port = host_iface.get('infix-interfaces:bridge-port', {})
+                    bridge_name = bridge_port.get('bridge')
+
+                    if bridge_name:
+                        network_names.append(bridge_name)
+                        bridge_found = True
+                        break
+
+        if not bridge_found:
+            network_names.append(iface_name)
+
+    return ', '.join(network_names)
+
+
+def show_container(json):
+    """Display container table view with resource usage."""
+    containers_data = json.get("infix-containers:containers", {})
+    containers = containers_data.get("container", [])
+
+    if not containers:
+        print("No containers configured.")
+        return
+
+    # Get interface data for network resolution
+    all_ifaces_data = json.get('ietf-interfaces:interfaces', {})
+    all_ifaces = all_ifaces_data.get('interface', [])
+
+    # Create table with column definitions
+    container_table = SimpleTable([
+        Column('NAME'),
+        Column('STATUS'),
+        Column('NETWORK'),
+        Column('MEMORY (KiB)', 'right'),
+        Column('CPU%', 'right')
+    ])
+
+    for container in containers:
+        name = container.get("name", "")
+        status = container.get("status", "")
+
+        # Get network information
+        network = container.get('network', {})
+        network_str = resolve_container_network(network, all_ifaces)
+
+        # Get resource limits and usage
+        resource_limit = container.get("resource-limit", {})
+        resource_usage = container.get("resource-usage", {})
+
+        mem_limit = resource_limit.get("memory")
+        mem_usage = resource_usage.get("memory")
+        cpu_usage = resource_usage.get("cpu", "0.0")
+
+        # Format memory display
+        if mem_usage is not None and mem_limit is not None:
+            memory_str = f"{mem_usage}/{mem_limit}"
+        elif mem_usage is not None:
+            memory_str = str(mem_usage)
+        else:
+            memory_str = "-"
+
+        # Format CPU display
+        cpu_str = str(cpu_usage)
+
+        # Color code status like in show_services
+        if status in ('running', 'active'):
+            status_str = Decore.green(status)
+        elif status in ('exited', 'stopped', 'created'):
+            status_str = Decore.yellow(status)
+        elif status in ('error', 'dead'):
+            status_str = Decore.red(status)
+        else:
+            status_str = status
+
+        container_table.row(name, status_str, network_str, memory_str, cpu_str)
+
+    container_table.print()
+
+
+def show_container_detail(json, name):
+    """Display detailed container view with full resource information."""
+    containers_data = json.get("infix-containers:containers", {})
+    containers = containers_data.get("container", [])
+
+    container = None
+    for c in containers:
+        if c.get("name") == name:
+            container = c
+            break
+
+    if not container:
+        print(f"Container '{name}' not found.")
+        return
+
+    print(f"Name            : {container.get('name', '-')}")
+    print(f"Container ID    : {container.get('id', '-')}")
+    print(f"Image           : {container.get('image', '-')}")
+    print(f"Image ID        : {container.get('image-id', '')}")
+
+    command = container.get('command')
+    if command:
+        print(f"Command         : {command}")
+
+    # Get network information
+    network = container.get('network', {})
+    all_ifaces_data = json.get('ietf-interfaces:interfaces', {})
+    all_ifaces = all_ifaces_data.get('interface', [])
+    network_str = resolve_container_network(network, all_ifaces)
+    print(f"Network         : {network_str}")
+
+    print(f"Status          : {container.get('status', '-')}")
+    print(f"Running         : {'yes' if container.get('running') else 'no'}")
+
+    resource_limit = container.get("resource-limit", {})
+    resource_usage = container.get("resource-usage", {})
+
+    pids = resource_usage.get("pids")
+    if pids is not None:
+        print(f"Processes       : {pids}")
+
+    mem_limit = resource_limit.get("memory")
+    if mem_limit is not None:
+        print(f"Memory Limit    : {mem_limit} KiB")
+
+    mem_usage = resource_usage.get("memory")
+    if mem_usage is not None:
+        mem_usage_int = int(mem_usage)
+        if mem_limit:
+            mem_limit_int = int(mem_limit)
+            percent = (mem_usage_int / mem_limit_int) * 100
+            print(f"Memory Usage    : {mem_usage_int} KiB ({percent:.1f}%)")
+        else:
+            print(f"Memory Usage    : {mem_usage_int} KiB")
+
+    cpu_limit = resource_limit.get("cpu")
+    if cpu_limit is not None:
+        cpu_limit_int = int(cpu_limit)
+        cores = cpu_limit_int / 1000.0
+        print(f"CPU Limit       : {cpu_limit_int} millicores ({cores:.1f} cores)")
+
+    cpu_usage = resource_usage.get("cpu")
+    if cpu_usage is not None:
+        print(f"CPU Usage       : {cpu_usage}%")
+
+
 def show_ntp(json):
     if not json.get("ietf-system:system-state"):
         print("NTP client not enabled.")
@@ -2178,26 +2526,26 @@ def parse_firewall_log_line(line):
     return parsed
 
 
-def show_firewall_logs(limit=10):
-    """Show recent firewall log entries, tail -N equivalent"""
+def firewall_log_table(limit=None):
+    """Create firewall log table (returns None if no logs available)"""
     try:
-        hdr = (f"{'TIME':<{PadFirewall.log_time}} "
-               f"{'ACTION':>{PadFirewall.log_action}} "
-               f"{'IIF':>{PadFirewall.log_iif}} "
-               f"{'SOURCE':<{PadFirewall.log_src}} "
-               f"{'DEST':<{PadFirewall.log_dst}} "
-               f"{'PROTO':<{PadFirewall.log_proto}} "
-               f"{'PORT':>{PadFirewall.log_port}}")
-
-        Decore.title(f"Log (last {limit})", len(hdr))
-
         with open('/var/log/firewall.log', 'r', encoding='utf-8') as f:
             lines = deque(f, maxlen=limit)
 
         if not lines:
-            raise FileNotFoundError
+            return None
 
-        print(Decore.invert(hdr))
+        # Create table with column definitions - mark flexible columns
+        log_table = SimpleTable([
+            Column('TIME'),
+            Column('ACTION', 'right'),
+            Column('IIF', 'right'),
+            Column('SOURCE', flexible=True),
+            Column('DEST', flexible=True),
+            Column('PROTO'),
+            Column('PORT', 'right')
+        ])
+
         for line in lines:
             parsed = parse_firewall_log_line(line)
             if not parsed:
@@ -2214,26 +2562,30 @@ def show_firewall_logs(limit=10):
                         dt = datetime.strptime(ts, "%b %d %H:%M:%S")
                         time_str = dt.strftime("%b %d %H:%M:%S")
                 except Exception:
-                    time_str = parsed['timestamp'][:PadFirewall.log_time-1]
+                    time_str = parsed['timestamp'][:14]  # Truncate long timestamps
 
             if parsed['action'] == 'REJECT':
-                action_color = Decore.red
+                action_str = Decore.red(parsed['action'])
             else:
-                action_color = Decore.yellow
-            action = action_color(parsed['action'])
+                action_str = Decore.yellow(parsed['action'])
 
-            print(f"{time_str:<{PadFirewall.log_time}} "
-                  f"{action:>{PadFirewall.log_action + 10}} "
-                  f"{parsed['in_iface']:>{PadFirewall.log_iif}} "
-                  f"{parsed['src']:<{PadFirewall.log_src}} "
-                  f"{parsed['dst']:<{PadFirewall.log_dst}} "
-                  f"{parsed['proto']:<{PadFirewall.log_proto}} "
-                  f"{parsed['dpt']:>{PadFirewall.log_port}}")
+            log_table.row(time_str, action_str, parsed['in_iface'],
+                         parsed['src'], parsed['dst'], parsed['proto'],
+                         parsed['dpt'])
 
-    except FileNotFoundError:
+        return log_table
+
+    except (FileNotFoundError, Exception):
+        return None
+
+
+def show_firewall_logs(limit=None):
+    """Show recent firewall log entries, tail -N equivalent (legacy)"""
+    log_table = firewall_log_table(limit)
+    if log_table:
+        log_table.print()
+    else:
         print("No logs found (may be disabled or no denied traffic)")
-    except Exception as e:
-        print(f"Error reading firewall logs: {e}")
 
 
 def show_firewall(json):
@@ -2253,6 +2605,9 @@ def show_firewall(json):
         print("Firewall disabled.")
         return
 
+    # Create Canvas instance
+    canvas = Canvas()
+
     # Build firewall status with contextual alerts
     lockdown_state = fw.get('lockdown', False)
     logging_enabled = fw.get('logging', 'off') != 'off'
@@ -2263,22 +2618,54 @@ def show_firewall(json):
     elif logging_enabled:
         firewall_status += f" [ {Decore.bold_yellow('MONITORING')} ]"
 
-    # Adjust 20 + 8, where 8 is len(bold)
-    print(f"{Decore.bold('Firewall'):<28}: {firewall_status}")
+    # Add status information
+    canvas.add_text(f"{Decore.bold('Firewall'):<28}: {firewall_status}")
 
     lockdown_display = "active" if lockdown_state else "inactive"
-    print(f"{Decore.bold('Lockdown mode'):<28}: {lockdown_display}")
+    canvas.add_text(f"{Decore.bold('Lockdown mode'):<28}: {lockdown_display}")
+    canvas.add_text(f"{Decore.bold('Default zone'):<28}: {fw.get('default', 'unknown')}")
+    canvas.add_text(f"{Decore.bold('Log denied traffic'):<28}: {fw.get('logging', 'off')}")
 
-    print(f"{Decore.bold('Default zone'):<28}: {fw.get('default', 'unknown')}")
-    print(f"{Decore.bold('Log denied traffic'):<28}: {fw.get('logging', 'off')}")
+    canvas.add_spacing()
 
-    show_firewall_matrix(fw)
-    show_firewall_zone(json)
-    show_firewall_policy(json)
+    # Create tables
+    zone_table = firewall_zone_table(json)
+    policy_table = firewall_policy_table(json)
 
-    # Add firewall logs at the bottom if logging is enabled
-    if fw.get('logging', 'off') != 'off':
-        show_firewall_logs()
+    # Add zone table
+    if zone_table:
+        canvas.add_title("Zones")
+        canvas.add_table(zone_table)
+        canvas.add_spacing()
+
+    # Add policy table
+    if policy_table:
+        canvas.add_title("Policies")
+        canvas.add_table(policy_table)
+        canvas.add_spacing()
+
+    # Add firewall logs if logging is enabled
+    if logging_enabled:
+        log_table = firewall_log_table(limit=10)
+        if log_table:
+            canvas.add_title("Log (last 10)")
+            canvas.add_table(log_table)
+            canvas.add_spacing()
+
+    # Get max width for matrix centering
+    max_width = canvas.get_max_width()
+
+    # Render matrix centered to max table width
+    matrix_text = firewall_matrix(fw, width=max_width)
+    if matrix_text:
+        # Insert matrix after status lines and first spacing (index 5)
+        # Status: 4 lines + 1 spacing = index 5
+        canvas.insert_title(5, "Zone Matrix")
+        canvas.insert_raw(6, matrix_text)
+        canvas.insert_spacing(7)
+
+    # Render the canvas
+    canvas.render()
 
 
 def build_policy_map(policies):
@@ -2527,19 +2914,17 @@ def traffic_flow(from_zone, to_zone, policy_map, zones, policies, cell_width):
     return make_cell("✗", Decore.red_bg)
 
 
-def show_firewall_matrix(fw):
-    """Renders visual zone-to-zone traffic flow matrix.
+def firewall_matrix(fw, width=None):
+    """Render zone-to-zone traffic flow matrix as a multi-line string.
 
     Args:
-        fw: Firewall config dict with zones/policies
-
-    Algorithm:
-        1. Collect zones with interfaces/networks + implicit HOST
-        2. Build policy lookup map via build_policy_map()
-        3. Generate matrix cells using traffic_flow() logic
-        4. Render with box-drawing chars and colored symbols
+        fw:    Firewall config dict with zones/policies
+        width: Optional target width for centering (from Canvas)
 
     Symbols: ✓=allow, ✗=deny, ⚠=conditional, —=n/a
+
+    Returns:
+        Multi-line string containing the rendered matrix, or None if < 2 zones
     """
     zones = fw.get('zone', [])
     policies = fw.get('policy', [])
@@ -2587,21 +2972,20 @@ def show_firewall_matrix(fw):
     for zone in zone_names:
         hdr += f" {zone:^{col_width}} │"
 
-    # Calculate centering relative to zones/policies table width
+    # Build matrix rows
+    lines = []
+
+    # Calculate centering if width is provided
     matrix_width = len(top_border)
-    target_width = PadFirewall.table_width()
-    padding = max(0, (target_width - matrix_width) // 2)
-    indent = " " * padding
+    if width and width > matrix_width:
+        padding = (width - matrix_width) // 2
+        indent = " " * padding
+    else:
+        indent = ""
 
-    # Center the title underline to match table width
-    title_padding = max(0, (target_width - len("Zone Matrix")) // 2)
-    title_underline = "─" * target_width
-
-    print(title_underline)
-    print(f"{'':<{title_padding}}{Decore.bold('Zone Matrix')}")
-    print(f"{indent}{top_border}")
-    print(f"{indent}{hdr}")
-    print(f"{indent}{middle_border}")
+    lines.append(indent + top_border)
+    lines.append(indent + hdr)
+    lines.append(indent + middle_border)
 
     for from_zone in zone_names:
         row = f"│ {from_zone:>{left_col_width}} │"
@@ -2610,24 +2994,103 @@ def show_firewall_matrix(fw):
             symbol = traffic_flow(from_zone, to_zone, policy_map,
                                   zones, policies, col_width)
             row += f"{symbol}│"
-        print(f"{indent}{row}")
-    print(f"{indent}{bottom_border}")
+        lines.append(indent + row)
+    lines.append(indent + bottom_border)
 
-    # Center the legend - define parts first for length calculation
+    # Add legend
     legend_data = [
         ("✓ Allow", Decore.green_bg),
         ("✗ Deny", Decore.red_bg),
         ("⚠ Conditional", Decore.yellow_bg)
     ]
 
-    # Calculate visible length, then colorize the parts
-    visible_parts = [f" {text} " for text, _ in legend_data]
-    visible_legend = "   ".join(visible_parts)
     colorized_parts = [bg_func(f" {text} ") for text, bg_func in legend_data]
     legend = "   ".join(colorized_parts)
-    # Depending on taste and number of zones, but +1 works for me
-    legend_padding = max(0, (target_width - len(visible_legend)) // 2) + 1
-    print(f"{' ' * legend_padding}{legend}")
+
+    if width:
+        # Calculate legend centering
+        # Use visible width (without ANSI codes) for calculation
+        visible_legend = "   ".join([f" {text} " for text, _ in legend_data])
+        legend_padding = max(0, (width - len(visible_legend)) // 2)
+        lines.append(" " * legend_padding + legend)
+    else:
+        lines.append(indent + legend)
+
+    return "\n".join(lines)
+
+
+def show_firewall_matrix(json):
+    """Renders visual zone-to-zone traffic flow matrix."""
+    fw = json.get('infix-firewall:firewall', {})
+    if fw:
+        print(firewall_matrix(fw))
+
+
+def firewall_zone_table(json):
+    """Create firewall zones table (returns SimpleTable or None)"""
+    fw = json.get('infix-firewall:firewall', {})
+    zones = fw.get('zone', [])
+
+    if not zones:
+        return None
+
+    # Create zones table with flexible columns
+    zone_table = SimpleTable([
+        Column(''),  # Lock icon
+        Column('NAME', flexible=True),
+        Column('TYPE'),
+        Column('DATA', flexible=True),
+        Column('ALLOWED HOST SERVICES', flexible=True)
+    ])
+
+    for zone in zones:
+        name = zone.get('name', '')
+        action = zone.get('action', 'reject')
+        interface_list = zone.get('interface', [])
+        network_list = zone.get('network', [])
+        port_forwards = zone.get('port-forward', [])
+        services = zone.get('service', [])
+
+        if action == 'accept':
+            services_display = "ANY"
+        elif services:
+            services_display = ", ".join(services)
+        else:
+            services_display = "(none)"
+
+        immutable = zone.get('immutable', False)
+        locked = "⚷" if immutable else " "
+
+        # Build configuration strings
+        config_lines = []
+
+        # Interfaces
+        if interface_list:
+            interfaces = compress_interface_list(interface_list)
+            config_lines.append(("iif", interfaces))
+        else:
+            config_lines.append(("iif", "(none)"))
+
+        # Networks
+        if network_list:
+            networks = ", ".join(network_list)
+            config_lines.append(("net", networks))
+
+        # Port forwards
+        if port_forwards:
+            pf_display = format_port_forwards(port_forwards)
+            config_lines.append(("fwd", pf_display))
+
+        # Add first line with zone name and services
+        if config_lines:
+            first_type, first_data = config_lines[0]
+            zone_table.row(locked, name, first_type, first_data, services_display)
+
+            # Add additional configuration lines as separate rows
+            for config_type, config_data in config_lines[1:]:
+                zone_table.row('', '', config_type, config_data, '')
+
+    return zone_table
 
 
 def show_firewall_zone(json, zone_name=None):
@@ -2710,12 +3173,13 @@ def show_firewall_zone(json, zone_name=None):
                 to_display = f"{to_addr}:{to_port_str}"
                 print(f"{'  - ' + from_port:<18} → {to_display}")
 
-        hdr = (f"{'TO ZONE':<{PadFirewall.zone_flow_to}}"
-               f"{'ACTION':<{PadFirewall.zone_flow_action}}"
-               f"{'POLICY':<{PadFirewall.zone_flow_policy}}"
-               f"{'SERVICES':<{PadFirewall.zone_flow_services}}")
-        Decore.title(f"Traffic Flows: {zone_name} →", len(hdr))
-        print(Decore.invert(hdr))
+        # Create traffic flows table
+        flow_table = SimpleTable([
+            Column('TO ZONE'),
+            Column('ACTION'),
+            Column('POLICY'),
+            Column('SERVICES')
+        ])
 
         # Add HOST zone first
         current_zone = next((z for z in zones if z.get('name') == zone_name), None)
@@ -2734,10 +3198,7 @@ def show_firewall_zone(json, zone_name=None):
                 host_action = "✗ deny"
                 host_services = "(none)"
 
-            print(f"{'HOST':<{PadFirewall.zone_flow_to}}"
-                  f"{host_action:<{PadFirewall.zone_flow_action}}"
-                  f"{'(services)':<{PadFirewall.zone_flow_policy}}"
-                  f"{host_services}")
+            flow_table.row('HOST', host_action, '(services)', host_services)
 
         # Add other zones
         for other_zone in zones:
@@ -2768,75 +3229,48 @@ def show_firewall_zone(json, zone_name=None):
                         services_display = "(none)"
                     break
 
-            print(f"{other_name:<{PadFirewall.zone_flow_to}}"
-                  f"{action:<{PadFirewall.zone_flow_action}}"
-                  f"{policy_name:<{PadFirewall.zone_flow_policy}}"
-                  f"{services_display}")
+            flow_table.row(other_name, action, policy_name, services_display)
+
+        Decore.title(f"Traffic Flows: {zone_name} →")
+        flow_table.print()
     else:
-        hdr = (f"{'':<{PadFirewall.zone_locked}}"
-               f"{'NAME':<{PadFirewall.zone_name}}"
-               f"{'TYPE':<{PadFirewall.zone_type}}"
-               f"{'DATA':<{PadFirewall.zone_data}}"
-               f"{'ALLOWED HOST SERVICES':<{PadFirewall.zone_services}}")
-        Decore.title("Zones", len(hdr))
-        print(Decore.invert(hdr))
+        # Use helper to create and display zones table
+        zone_table = firewall_zone_table(json)
+        if zone_table:
+            zone_table.min_width = 72
+            zone_table.print()
 
-        for zone in zones:
-            name = zone.get('name', '')
-            action = zone.get('action', 'reject')
-            interface_list = zone.get('interface', [])
-            network_list = zone.get('network', [])
-            port_forwards = zone.get('port-forward', [])
-            services = zone.get('service', [])
 
-            if action == 'accept':
-                services_display = "ANY"
-            elif services:
-                services_display = ", ".join(services)
-            else:
-                services_display = "(none)"
+def firewall_policy_table(json):
+    """Create firewall policies table (returns SimpleTable or None)"""
+    fw = json.get('infix-firewall:firewall', {})
+    policies = fw.get('policy', [])
 
-            immutable = zone.get('immutable', False)
-            locked = "⚷" if immutable else " "
+    if not policies:
+        return None
 
-            # Build configuration strings
-            config_lines = []
+    # Create policies table with flexible columns
+    policy_table = SimpleTable([
+        Column(''),  # Lock icon
+        Column('NAME', flexible=True),
+        Column('ACTION'),
+        Column('INGRESS', flexible=True),
+        Column('EGRESS', flexible=True)
+    ])
 
-            # Interfaces
-            if interface_list:
-                interfaces = compress_interface_list(interface_list)
-                config_lines.append(("iif", interfaces))
-            else:
-                config_lines.append(("iif", "(none)"))
+    sorted_policies = sorted(policies, key=lambda p: p.get('priority', 32767))
+    for policy in sorted_policies:
+        name = policy.get('name', '')
+        ingress = ", ".join(policy.get('ingress', []))
+        egress = ", ".join(policy.get('egress', []))
+        action = policy.get('action', 'reject')
 
-            # Networks
-            if network_list:
-                networks = ", ".join(network_list)
-                config_lines.append(("net", networks))
+        immutable = policy.get('immutable', False)
+        locked = "⚷" if immutable else " "
 
-            # Port forwards
-            if port_forwards:
-                pf_display = format_port_forwards(port_forwards)
-                config_lines.append(("fwd", pf_display))
+        policy_table.row(locked, name, action, ingress, egress)
 
-            # Print first line with zone name and services
-            if config_lines:
-                first_type, first_data = config_lines[0]
-                print(f"{locked:<{PadFirewall.zone_locked}}"
-                      f"{name:<{PadFirewall.zone_name}}"
-                      f"{first_type:<{PadFirewall.zone_type}}"
-                      f"{first_data:<{PadFirewall.zone_data}}"
-                      f"{services_display}")
-
-                # Print additional configuration lines
-                for config_type, config_data in config_lines[1:]:
-                    print(f"{'':<{PadFirewall.zone_locked}}"
-                          f"{'':<{PadFirewall.zone_name}}"
-                          f"{config_type:<{PadFirewall.zone_type}}"
-                          f"{config_data}")
-
-            # if zone != zones[-1]:  # Don't add line after last zone
-            #     print()
+    return policy_table
 
 
 def show_firewall_policy(json, policy_name=None):
@@ -2903,35 +3337,11 @@ def show_firewall_policy(json, policy_name=None):
                 else:
                     print(f"{'  - ' + action:<6} {family} (unknown type)")
     else:
-        hdr = (f"{'':<{PadFirewall.policy_locked}}"
-               f"{'NAME':<{PadFirewall.policy_name}}"
-               f"{'ACTION':<{PadFirewall.policy_action}}"
-               f"{'INGRESS':<{PadFirewall.policy_ingress}}"
-               f"{'EGRESS':<{PadFirewall.policy_egress}}")
-        Decore.title("Policies", len(hdr))
-        print(Decore.invert(hdr))
-
-        sorted_policies = sorted(policies, key=lambda p: p.get('priority', 32767))
-        for policy in sorted_policies:
-            name = policy.get('name', '')
-            ingress = ", ".join(policy.get('ingress', []))
-            egress = ", ".join(policy.get('egress', []))
-            action = policy.get('action', 'reject')
-
-            # Check for custom filters
-            # custom = policy.get('custom', {})
-            # custom_filters = custom.get('filter', [])
-            # if custom_filters:
-            #     name += f" ({len(custom_filters)} filter(s))"
-
-            immutable = policy.get('immutable', False)
-            locked = "⚷" if immutable else " "
-
-            print(f"{locked:<{PadFirewall.policy_locked}}"
-                  f"{name:<{PadFirewall.policy_name}}"
-                  f"{action:<{PadFirewall.policy_action}}"
-                  f"{ingress:<{PadFirewall.policy_ingress}}"
-                  f"{egress:<{PadFirewall.policy_egress}}")
+        # Use helper to create and display policies table
+        policy_table = firewall_policy_table(json)
+        if policy_table:
+            policy_table.min_width = 72
+            policy_table.print()
 
 
 def format_port_list(ports):
@@ -2953,6 +3363,28 @@ def format_port_list(ports):
     return ", ".join(formatted)
 
 
+def firewall_service_table(json):
+    """Create firewall services table (returns SimpleTable or None)"""
+    fw = json.get('infix-firewall:firewall', {})
+    services = fw.get('service', [])
+
+    if not services:
+        return None
+
+    # Create services table with flexible columns
+    service_table = SimpleTable([
+        Column('NAME'),
+        Column('PORTS', flexible=True)
+    ])
+
+    for service in services:
+        name = service.get('name', '')
+        ports = format_port_list(service.get('port', []))
+        service_table.row(name, ports)
+
+    return service_table
+
+
 def show_firewall_service(json, name=None):
     """Show firewall services table or specific service details"""
     fw = json.get('infix-firewall:firewall', {})
@@ -2971,15 +3403,11 @@ def show_firewall_service(json, name=None):
         print(f"{'ports':<20}: {ports}")
         print(format_description('description', description))
     else:
-        hdr = (f"{'NAME':<{PadFirewall.service_name}}"
-               f"{'PORTS':<{PadFirewall.service_ports}}")
-        print(Decore.invert(hdr))
-        for service in services:
-            name = service.get('name', '')
-            ports = format_port_list(service.get('port', []))
-
-            print(f"{name:<{PadFirewall.service_name}}"
-                  f"{ports:<{PadFirewall.service_ports}}")
+        # Use helper to create and display services table
+        service_table = firewall_service_table(json)
+        if service_table:
+            service_table.min_width = 72
+            service_table.print()
 
 
 def show_ospf(json_data):
@@ -3831,19 +4259,27 @@ def main():
     subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
               .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
 
+    subparsers.add_parser('show-container', help='Show containers table')
+    subparsers.add_parser('show-container-detail', help='Show container details') \
+              .add_argument('name', help='Container name')
+
     subparsers.add_parser('show-hardware', help='Show USB ports')
 
     subparsers.add_parser('show-interfaces', help='Show interfaces') \
               .add_argument('-n', '--name', help='Interface name')
 
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
+
     subparsers.add_parser('show-firewall', help='Show firewall overview')
+    subparsers.add_parser('show-firewall-matrix', help='Show firewall matrix')
     subparsers.add_parser('show-firewall-zone', help='Show firewall zones') \
               .add_argument('name', nargs='?', help='Zone name')
     subparsers.add_parser('show-firewall-policy', help='Show firewall policies') \
               .add_argument('name', nargs='?', help='Policy name')
     subparsers.add_parser('show-firewall-service', help='Show firewall services') \
               .add_argument('name', nargs='?', help='Service name')
+    subparsers.add_parser('show-firewall-log', help='Show firewall log') \
+              .add_argument('limit', nargs='?', help='Last N lines, default: all')
 
     subparsers.add_parser('show-ntp', help='Show NTP sources')
 
@@ -3882,6 +4318,10 @@ def main():
         show_bridge_stp(json_data)
     elif args.command == "show-dhcp-server":
         show_dhcp_server(json_data, args.stats)
+    elif args.command == "show-container":
+        show_container(json_data)
+    elif args.command == "show-container-detail":
+        show_container_detail(json_data, args.name)
     elif args.command == "show-hardware":
         show_hardware(json_data)
     elif args.command == "show-interfaces":
@@ -3890,12 +4330,16 @@ def main():
         show_lldp(json_data)
     elif args.command == "show-firewall":
         show_firewall(json_data)
+    elif args.command == "show-firewall-matrix":
+        show_firewall_matrix(json_data)
     elif args.command == "show-firewall-zone":
         show_firewall_zone(json_data, args.name)
     elif args.command == "show-firewall-policy":
         show_firewall_policy(json_data, args.name)
     elif args.command == "show-firewall-service":
         show_firewall_service(json_data, args.name)
+    elif args.command == "show-firewall-log":
+        show_firewall_logs(args.limit)
     elif args.command == "show-ntp":
         show_ntp(json_data)
     elif args.command == "show-bfd":

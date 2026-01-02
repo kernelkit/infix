@@ -173,6 +173,64 @@ def services(args: List[str]) -> None:
 
     cli_pretty(data, f"show-services")
 
+def container(args: List[str]) -> None:
+    """Handle show container [name]
+
+    Arguments:
+        (none) - Show all containers in table format
+        name   - Show detailed view of specific container
+    """
+    data = run_sysrepocfg("/infix-containers:containers")
+    if not data:
+        print("No container data retrieved.")
+        return
+
+    # Fetch interface data for bridge resolution (both table and detailed views)
+    # Fetch operational interface data
+    iface_oper = run_sysrepocfg("/ietf-interfaces:interfaces")
+
+    # Also fetch config data for veth peer information (not in operational)
+    try:
+        result = subprocess.run([
+            "sysrepocfg", "-f", "json", "-X", "-d", "running", "-x", "/ietf-interfaces:interfaces"
+        ], capture_output=True, text=True, check=True)
+        iface_config = json.loads(result.stdout)
+
+        # Merge config veth peer info into operational data
+        if iface_oper and iface_config:
+            oper_ifaces = iface_oper.get('ietf-interfaces:interfaces', {}).get('interface', [])
+            config_ifaces = iface_config.get('ietf-interfaces:interfaces', {}).get('interface', [])
+
+            # Create a map of config interfaces
+            config_map = {iface['name']: iface for iface in config_ifaces}
+
+            # Merge veth peer info from config into operational
+            for oper_iface in oper_ifaces:
+                name = oper_iface.get('name')
+                if name in config_map:
+                    config_iface = config_map[name]
+                    # Add veth peer if it exists in config but not in operational
+                    if 'infix-interfaces:veth' in config_iface and 'infix-interfaces:veth' not in oper_iface:
+                        oper_iface['infix-interfaces:veth'] = config_iface['infix-interfaces:veth']
+
+            data.update(iface_oper)
+    except (subprocess.CalledProcessError, json.JSONDecodeError):
+        # If config fetch fails, just use operational data
+        if iface_oper:
+            data.update(iface_oper)
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    if len(args) == 0 or not args[0]:
+        cli_pretty(data, "show-container")
+    elif len(args) == 1:
+        name = args[0]
+        cli_pretty(data, "show-container-detail", name)
+    else:
+        print("Too many arguments provided. Expected: show container [name]")
+
 def bfd(args: List[str]) -> None:
     """Handle show bfd [subcommand] [peer] [brief]
 
@@ -486,6 +544,7 @@ def execute_command(command: str, args: List[str]):
     command_mapping = {
         'bfd': bfd,
         'boot-order': boot_order,
+        'container': container,
         'dhcp': dhcp,
         'hardware': hardware,
         'interface': interface,
