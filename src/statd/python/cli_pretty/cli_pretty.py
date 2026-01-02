@@ -425,6 +425,138 @@ class SimpleTable:
             return value_str + ' ' * max(0, padding) + separator
 
 
+class Canvas:
+    """Multi-item rendering canvas for unified width alignment across tables and content.
+
+    Canvas coordinates the display of multiple SimpleTable instances and other content
+    types (text, titles, spacing, pre-rendered content) with consistent width alignment.
+    This creates professional-looking output where all table headers and content align
+    to the same width, with flexible columns distributing extra space evenly.
+
+    Purpose:
+        - Achieve visual alignment across heterogeneous content
+        - Minimize performance overhead with single-pass data traversal
+        - Support mixed content: tables, text, titles, matrices, spacing
+
+    How it works:
+        1. Buffer items in sequence (add_text, add_table, add_title, etc.)
+        2. Calculate maximum width from all SimpleTable instances
+        3. Apply flex padding to narrower tables via SimpleTable.adjust_padding()
+        4. Render all items sequentially with unified width
+
+    Interaction with SimpleTable:
+        - Calls SimpleTable.width() to determine natural table width
+        - Calls SimpleTable.adjust_padding(max_width) to expand flexible columns
+        - SimpleTable columns marked with flexible=True distribute extra width evenly
+        - Preserves table alignment (left/right) and formatting
+
+    Performance:
+        - Single data traversal: tables built once, widths calculated once
+        - Memory over CPU: buffers all items before rendering
+        - Optimized for embedded systems (ARM Cortex-A7)
+
+    Example:
+        See show_firewall() for a complete usage example demonstrating:
+        - Mixed content types (status text, matrix, tables)
+        - Multiple tables with different flexible columns
+        - Centered matrix using get_max_width()
+        - Proper spacing and titles
+
+    Args:
+        min_width: Optional minimum width for all tables (default: None)
+    """
+
+    def __init__(self, min_width=None):
+        self.min_width = min_width
+        self.items = []  # List of (type, content) tuples
+
+    def add_text(self, text):
+        """Add a plain text line"""
+        self.items.append(('text', text))
+
+    def add_title(self, text):
+        """Add a section title (will be centered to canvas width)"""
+        self.items.append(('title', text))
+
+    def add_raw(self, text):
+        """Add pre-rendered multi-line text (like zone matrix)"""
+        self.items.append(('raw', text))
+
+    def add_spacing(self, lines=1):
+        """Add blank lines for spacing"""
+        self.items.append(('spacing', lines))
+
+    def add_table(self, table):
+        """Add a SimpleTable instance"""
+        if not isinstance(table, SimpleTable):
+            raise ValueError("Expected SimpleTable instance")
+        self.items.append(('table', table))
+
+    def insert(self, index, item_type, content):
+        """Insert an item at a specific position"""
+        self.items.insert(index, (item_type, content))
+
+    def insert_text(self, index, text):
+        """Insert a plain text line at position"""
+        self.insert(index, 'text', text)
+
+    def insert_title(self, index, text):
+        """Insert a section title at position"""
+        self.insert(index, 'title', text)
+
+    def insert_raw(self, index, text):
+        """Insert pre-rendered text at position"""
+        self.insert(index, 'raw', text)
+
+    def insert_spacing(self, index, lines=1):
+        """Insert blank lines at position"""
+        self.insert(index, 'spacing', lines)
+
+    def insert_table(self, index, table):
+        """Insert a SimpleTable at position"""
+        if not isinstance(table, SimpleTable):
+            raise ValueError("Expected SimpleTable instance")
+        self.insert(index, 'table', table)
+
+    def get_max_width(self):
+        """Calculate and return the maximum width from all tables"""
+        max_width = self.min_width or 0
+
+        for item_type, content in self.items:
+            if item_type == 'table':
+                max_width = max(max_width, content.width())
+
+        return max_width
+
+    def render(self):
+        """Calculate widths, apply padding, and output all items"""
+        # First pass: find maximum width from all tables
+        max_width = self.get_max_width()
+
+        # Second pass: apply padding to all tables with flexible columns
+        for item_type, content in self.items:
+            if item_type == 'table':
+                content.adjust_padding(max_width)
+
+        # Third pass: render each item
+        for i, (item_type, content) in enumerate(self.items):
+            if item_type == 'text':
+                print(content)
+            elif item_type == 'title':
+                # Title with underline matching canvas width
+                underline = "─" * max_width
+                print(underline)
+                print(Decore.bold(content))
+            elif item_type == 'raw':
+                # Pre-rendered content (like matrix)
+                print(content)
+            elif item_type == 'spacing':
+                for _ in range(content):
+                    print()
+            elif item_type == 'table':
+                content.print()
+
+
 class Decore():
     @staticmethod
     def decorate(sgr, txt, restore="0"):
