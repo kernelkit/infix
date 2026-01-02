@@ -9,13 +9,33 @@ lower=$1
 shift
 [ $# -gt 0 ] || set sh
 
+# Detect if we're running inside the infamy container or on the host
+# Inside the container, we can directly access the interfaces
+# On the host, we need to use docker/podman exec
+if ip link show "$lower" >/dev/null 2>&1; then
+    # We can see the lower interface directly, so we're in the right namespace
+    lookup_ifname() {
+        ip -j link show | jq -r ".[] | select(.ifindex == $1) | .ifname"
+    }
+else
+    # We're on the host, need to query the infamy container
+    infamy=$(infamy 2>/dev/null) || {
+        echo "ERROR: Cannot see interface '$lower' and no infamy container found" >&2
+        echo "       Run this script from inside the infamy container or from the host with docker/podman available" >&2
+        exit 1
+    }
+    lookup_ifname() {
+        $(runner) exec $infamy ip -j link show | jq -r ".[] | select(.ifindex == $1) | .ifname"
+    }
+fi
+
 for pid in $(pgrep -fx "sleep infinity"); do
     ifidxs=$(nsenter -t $pid -U -n ip -j link show | \
     		 jq '.[] | select(has("link_netnsid")) | .link_index')
     for ifidx in $ifidxs; do
-	ifname=$(ip -j link show | jq -r ".[] | select(.ifindex == $ifidx) | .ifname")
+	ifname=$(lookup_ifname $ifidx)
 	if [ "$ifname" = "$lower" ]; then
-	    exec nsenter -t $pid -U -n env PS1="$(build_ps1 "(netns:$ifname)")" "$@"
+	    exec nsenter -t $pid -U -n env PS1="(netns:$ifname) # " "$@"
 	fi
     done
 done
