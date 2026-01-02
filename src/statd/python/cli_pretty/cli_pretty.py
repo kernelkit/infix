@@ -245,42 +245,6 @@ def format_uptime_seconds(seconds):
         return cls.mount + cls.size + cls.used + cls.avail + cls.percent
 
 
-class PadFirewall:
-    zone_locked = 2
-    zone_name = 21
-    zone_type = 6
-    zone_data = 34
-    zone_services = 38
-
-    zone_flow_to = 20
-    zone_flow_action = 14
-    zone_flow_policy = 20
-    zone_flow_services = 45
-
-    policy_locked = 2
-    policy_name = 21
-    policy_action = 9
-    policy_ingress = 33
-    policy_egress = 35
-
-    service_name = 20
-    service_ports = 69
-
-    # Firewall log display formatting
-    log_time = 15      # ISO format: MM-DD HH:MM:SS
-    log_action = 6     # REJECT/DROP + small buffer
-    log_iif = 11       # Input interface + small buffer
-    log_src = 26       # IPv6 addresses (shortened) or IPv4
-    log_dst = 26       # IPv6 addresses (shortened) or IPv4
-    log_proto = 5      # TCP/UDP/ICMP + small buffer
-    log_port = 5       # Port numbers + small buffer
-
-    @classmethod
-    def table_width(cls):
-        """Table width for zones/policies tables, used to center matrix"""
-        return cls.zone_locked + cls.zone_name + cls.zone_type + cls.zone_data \
-            + cls.zone_services
-
 class Column:
     """Column definition for SimpleTable"""
     def __init__(self, name, align='left', formatter=None, flexible=False):
@@ -2370,26 +2334,26 @@ def parse_firewall_log_line(line):
     return parsed
 
 
-def show_firewall_logs(limit=10):
-    """Show recent firewall log entries, tail -N equivalent"""
+def firewall_log_table(limit=None):
+    """Create firewall log table (returns None if no logs available)"""
     try:
-        hdr = (f"{'TIME':<{PadFirewall.log_time}} "
-               f"{'ACTION':>{PadFirewall.log_action}} "
-               f"{'IIF':>{PadFirewall.log_iif}} "
-               f"{'SOURCE':<{PadFirewall.log_src}} "
-               f"{'DEST':<{PadFirewall.log_dst}} "
-               f"{'PROTO':<{PadFirewall.log_proto}} "
-               f"{'PORT':>{PadFirewall.log_port}}")
-
-        Decore.title(f"Log (last {limit})", len(hdr))
-
         with open('/var/log/firewall.log', 'r', encoding='utf-8') as f:
             lines = deque(f, maxlen=limit)
 
         if not lines:
-            raise FileNotFoundError
+            return None
 
-        print(Decore.invert(hdr))
+        # Create table with column definitions - mark flexible columns
+        log_table = SimpleTable([
+            Column('TIME'),
+            Column('ACTION', 'right'),
+            Column('IIF', 'right'),
+            Column('SOURCE', flexible=True),
+            Column('DEST', flexible=True),
+            Column('PROTO'),
+            Column('PORT', 'right')
+        ])
+
         for line in lines:
             parsed = parse_firewall_log_line(line)
             if not parsed:
@@ -2406,26 +2370,30 @@ def show_firewall_logs(limit=10):
                         dt = datetime.strptime(ts, "%b %d %H:%M:%S")
                         time_str = dt.strftime("%b %d %H:%M:%S")
                 except Exception:
-                    time_str = parsed['timestamp'][:PadFirewall.log_time-1]
+                    time_str = parsed['timestamp'][:14]  # Truncate long timestamps
 
             if parsed['action'] == 'REJECT':
-                action_color = Decore.red
+                action_str = Decore.red(parsed['action'])
             else:
-                action_color = Decore.yellow
-            action = action_color(parsed['action'])
+                action_str = Decore.yellow(parsed['action'])
 
-            print(f"{time_str:<{PadFirewall.log_time}} "
-                  f"{action:>{PadFirewall.log_action + 10}} "
-                  f"{parsed['in_iface']:>{PadFirewall.log_iif}} "
-                  f"{parsed['src']:<{PadFirewall.log_src}} "
-                  f"{parsed['dst']:<{PadFirewall.log_dst}} "
-                  f"{parsed['proto']:<{PadFirewall.log_proto}} "
-                  f"{parsed['dpt']:>{PadFirewall.log_port}}")
+            log_table.row(time_str, action_str, parsed['in_iface'],
+                         parsed['src'], parsed['dst'], parsed['proto'],
+                         parsed['dpt'])
 
-    except FileNotFoundError:
+        return log_table
+
+    except (FileNotFoundError, Exception):
+        return None
+
+
+def show_firewall_logs(limit=None):
+    """Show recent firewall log entries, tail -N equivalent (legacy)"""
+    log_table = firewall_log_table(limit)
+    if log_table:
+        log_table.print()
+    else:
         print("No logs found (may be disabled or no denied traffic)")
-    except Exception as e:
-        print(f"Error reading firewall logs: {e}")
 
 
 def show_firewall(json):
@@ -2445,6 +2413,9 @@ def show_firewall(json):
         print("Firewall disabled.")
         return
 
+    # Create Canvas instance
+    canvas = Canvas()
+
     # Build firewall status with contextual alerts
     lockdown_state = fw.get('lockdown', False)
     logging_enabled = fw.get('logging', 'off') != 'off'
@@ -2455,22 +2426,54 @@ def show_firewall(json):
     elif logging_enabled:
         firewall_status += f" [ {Decore.bold_yellow('MONITORING')} ]"
 
-    # Adjust 20 + 8, where 8 is len(bold)
-    print(f"{Decore.bold('Firewall'):<28}: {firewall_status}")
+    # Add status information
+    canvas.add_text(f"{Decore.bold('Firewall'):<28}: {firewall_status}")
 
     lockdown_display = "active" if lockdown_state else "inactive"
-    print(f"{Decore.bold('Lockdown mode'):<28}: {lockdown_display}")
+    canvas.add_text(f"{Decore.bold('Lockdown mode'):<28}: {lockdown_display}")
+    canvas.add_text(f"{Decore.bold('Default zone'):<28}: {fw.get('default', 'unknown')}")
+    canvas.add_text(f"{Decore.bold('Log denied traffic'):<28}: {fw.get('logging', 'off')}")
 
-    print(f"{Decore.bold('Default zone'):<28}: {fw.get('default', 'unknown')}")
-    print(f"{Decore.bold('Log denied traffic'):<28}: {fw.get('logging', 'off')}")
+    canvas.add_spacing()
 
-    show_firewall_matrix(fw)
-    show_firewall_zone(json)
-    show_firewall_policy(json)
+    # Create tables
+    zone_table = firewall_zone_table(json)
+    policy_table = firewall_policy_table(json)
 
-    # Add firewall logs at the bottom if logging is enabled
-    if fw.get('logging', 'off') != 'off':
-        show_firewall_logs()
+    # Add zone table
+    if zone_table:
+        canvas.add_title("Zones")
+        canvas.add_table(zone_table)
+        canvas.add_spacing()
+
+    # Add policy table
+    if policy_table:
+        canvas.add_title("Policies")
+        canvas.add_table(policy_table)
+        canvas.add_spacing()
+
+    # Add firewall logs if logging is enabled
+    if logging_enabled:
+        log_table = firewall_log_table(limit=10)
+        if log_table:
+            canvas.add_title("Log (last 10)")
+            canvas.add_table(log_table)
+            canvas.add_spacing()
+
+    # Get max width for matrix centering
+    max_width = canvas.get_max_width()
+
+    # Render matrix centered to max table width
+    matrix_text = firewall_matrix(fw, width=max_width)
+    if matrix_text:
+        # Insert matrix after status lines and first spacing (index 5)
+        # Status: 4 lines + 1 spacing = index 5
+        canvas.insert_title(5, "Zone Matrix")
+        canvas.insert_raw(6, matrix_text)
+        canvas.insert_spacing(7)
+
+    # Render the canvas
+    canvas.render()
 
 
 def build_policy_map(policies):
@@ -2719,19 +2722,17 @@ def traffic_flow(from_zone, to_zone, policy_map, zones, policies, cell_width):
     return make_cell("✗", Decore.red_bg)
 
 
-def show_firewall_matrix(fw):
-    """Renders visual zone-to-zone traffic flow matrix.
+def firewall_matrix(fw, width=None):
+    """Render zone-to-zone traffic flow matrix as a multi-line string.
 
     Args:
-        fw: Firewall config dict with zones/policies
-
-    Algorithm:
-        1. Collect zones with interfaces/networks + implicit HOST
-        2. Build policy lookup map via build_policy_map()
-        3. Generate matrix cells using traffic_flow() logic
-        4. Render with box-drawing chars and colored symbols
+        fw:    Firewall config dict with zones/policies
+        width: Optional target width for centering (from Canvas)
 
     Symbols: ✓=allow, ✗=deny, ⚠=conditional, —=n/a
+
+    Returns:
+        Multi-line string containing the rendered matrix, or None if < 2 zones
     """
     zones = fw.get('zone', [])
     policies = fw.get('policy', [])
@@ -2779,21 +2780,20 @@ def show_firewall_matrix(fw):
     for zone in zone_names:
         hdr += f" {zone:^{col_width}} │"
 
-    # Calculate centering relative to zones/policies table width
+    # Build matrix rows
+    lines = []
+
+    # Calculate centering if width is provided
     matrix_width = len(top_border)
-    target_width = PadFirewall.table_width()
-    padding = max(0, (target_width - matrix_width) // 2)
-    indent = " " * padding
+    if width and width > matrix_width:
+        padding = (width - matrix_width) // 2
+        indent = " " * padding
+    else:
+        indent = ""
 
-    # Center the title underline to match table width
-    title_padding = max(0, (target_width - len("Zone Matrix")) // 2)
-    title_underline = "─" * target_width
-
-    print(title_underline)
-    print(f"{'':<{title_padding}}{Decore.bold('Zone Matrix')}")
-    print(f"{indent}{top_border}")
-    print(f"{indent}{hdr}")
-    print(f"{indent}{middle_border}")
+    lines.append(indent + top_border)
+    lines.append(indent + hdr)
+    lines.append(indent + middle_border)
 
     for from_zone in zone_names:
         row = f"│ {from_zone:>{left_col_width}} │"
@@ -2802,24 +2802,103 @@ def show_firewall_matrix(fw):
             symbol = traffic_flow(from_zone, to_zone, policy_map,
                                   zones, policies, col_width)
             row += f"{symbol}│"
-        print(f"{indent}{row}")
-    print(f"{indent}{bottom_border}")
+        lines.append(indent + row)
+    lines.append(indent + bottom_border)
 
-    # Center the legend - define parts first for length calculation
+    # Add legend
     legend_data = [
         ("✓ Allow", Decore.green_bg),
         ("✗ Deny", Decore.red_bg),
         ("⚠ Conditional", Decore.yellow_bg)
     ]
 
-    # Calculate visible length, then colorize the parts
-    visible_parts = [f" {text} " for text, _ in legend_data]
-    visible_legend = "   ".join(visible_parts)
     colorized_parts = [bg_func(f" {text} ") for text, bg_func in legend_data]
     legend = "   ".join(colorized_parts)
-    # Depending on taste and number of zones, but +1 works for me
-    legend_padding = max(0, (target_width - len(visible_legend)) // 2) + 1
-    print(f"{' ' * legend_padding}{legend}")
+
+    if width:
+        # Calculate legend centering
+        # Use visible width (without ANSI codes) for calculation
+        visible_legend = "   ".join([f" {text} " for text, _ in legend_data])
+        legend_padding = max(0, (width - len(visible_legend)) // 2)
+        lines.append(" " * legend_padding + legend)
+    else:
+        lines.append(indent + legend)
+
+    return "\n".join(lines)
+
+
+def show_firewall_matrix(json):
+    """Renders visual zone-to-zone traffic flow matrix."""
+    fw = json.get('infix-firewall:firewall', {})
+    if fw:
+        print(firewall_matrix(fw))
+
+
+def firewall_zone_table(json):
+    """Create firewall zones table (returns SimpleTable or None)"""
+    fw = json.get('infix-firewall:firewall', {})
+    zones = fw.get('zone', [])
+
+    if not zones:
+        return None
+
+    # Create zones table with flexible columns
+    zone_table = SimpleTable([
+        Column(''),  # Lock icon
+        Column('NAME', flexible=True),
+        Column('TYPE'),
+        Column('DATA', flexible=True),
+        Column('ALLOWED HOST SERVICES', flexible=True)
+    ])
+
+    for zone in zones:
+        name = zone.get('name', '')
+        action = zone.get('action', 'reject')
+        interface_list = zone.get('interface', [])
+        network_list = zone.get('network', [])
+        port_forwards = zone.get('port-forward', [])
+        services = zone.get('service', [])
+
+        if action == 'accept':
+            services_display = "ANY"
+        elif services:
+            services_display = ", ".join(services)
+        else:
+            services_display = "(none)"
+
+        immutable = zone.get('immutable', False)
+        locked = "⚷" if immutable else " "
+
+        # Build configuration strings
+        config_lines = []
+
+        # Interfaces
+        if interface_list:
+            interfaces = compress_interface_list(interface_list)
+            config_lines.append(("iif", interfaces))
+        else:
+            config_lines.append(("iif", "(none)"))
+
+        # Networks
+        if network_list:
+            networks = ", ".join(network_list)
+            config_lines.append(("net", networks))
+
+        # Port forwards
+        if port_forwards:
+            pf_display = format_port_forwards(port_forwards)
+            config_lines.append(("fwd", pf_display))
+
+        # Add first line with zone name and services
+        if config_lines:
+            first_type, first_data = config_lines[0]
+            zone_table.row(locked, name, first_type, first_data, services_display)
+
+            # Add additional configuration lines as separate rows
+            for config_type, config_data in config_lines[1:]:
+                zone_table.row('', '', config_type, config_data, '')
+
+    return zone_table
 
 
 def show_firewall_zone(json, zone_name=None):
@@ -2902,12 +2981,13 @@ def show_firewall_zone(json, zone_name=None):
                 to_display = f"{to_addr}:{to_port_str}"
                 print(f"{'  - ' + from_port:<18} → {to_display}")
 
-        hdr = (f"{'TO ZONE':<{PadFirewall.zone_flow_to}}"
-               f"{'ACTION':<{PadFirewall.zone_flow_action}}"
-               f"{'POLICY':<{PadFirewall.zone_flow_policy}}"
-               f"{'SERVICES':<{PadFirewall.zone_flow_services}}")
-        Decore.title(f"Traffic Flows: {zone_name} →", len(hdr))
-        print(Decore.invert(hdr))
+        # Create traffic flows table
+        flow_table = SimpleTable([
+            Column('TO ZONE'),
+            Column('ACTION'),
+            Column('POLICY'),
+            Column('SERVICES')
+        ])
 
         # Add HOST zone first
         current_zone = next((z for z in zones if z.get('name') == zone_name), None)
@@ -2926,10 +3006,7 @@ def show_firewall_zone(json, zone_name=None):
                 host_action = "✗ deny"
                 host_services = "(none)"
 
-            print(f"{'HOST':<{PadFirewall.zone_flow_to}}"
-                  f"{host_action:<{PadFirewall.zone_flow_action}}"
-                  f"{'(services)':<{PadFirewall.zone_flow_policy}}"
-                  f"{host_services}")
+            flow_table.row('HOST', host_action, '(services)', host_services)
 
         # Add other zones
         for other_zone in zones:
@@ -2960,75 +3037,48 @@ def show_firewall_zone(json, zone_name=None):
                         services_display = "(none)"
                     break
 
-            print(f"{other_name:<{PadFirewall.zone_flow_to}}"
-                  f"{action:<{PadFirewall.zone_flow_action}}"
-                  f"{policy_name:<{PadFirewall.zone_flow_policy}}"
-                  f"{services_display}")
+            flow_table.row(other_name, action, policy_name, services_display)
+
+        Decore.title(f"Traffic Flows: {zone_name} →")
+        flow_table.print()
     else:
-        hdr = (f"{'':<{PadFirewall.zone_locked}}"
-               f"{'NAME':<{PadFirewall.zone_name}}"
-               f"{'TYPE':<{PadFirewall.zone_type}}"
-               f"{'DATA':<{PadFirewall.zone_data}}"
-               f"{'ALLOWED HOST SERVICES':<{PadFirewall.zone_services}}")
-        Decore.title("Zones", len(hdr))
-        print(Decore.invert(hdr))
+        # Use helper to create and display zones table
+        zone_table = firewall_zone_table(json)
+        if zone_table:
+            zone_table.min_width = 72
+            zone_table.print()
 
-        for zone in zones:
-            name = zone.get('name', '')
-            action = zone.get('action', 'reject')
-            interface_list = zone.get('interface', [])
-            network_list = zone.get('network', [])
-            port_forwards = zone.get('port-forward', [])
-            services = zone.get('service', [])
 
-            if action == 'accept':
-                services_display = "ANY"
-            elif services:
-                services_display = ", ".join(services)
-            else:
-                services_display = "(none)"
+def firewall_policy_table(json):
+    """Create firewall policies table (returns SimpleTable or None)"""
+    fw = json.get('infix-firewall:firewall', {})
+    policies = fw.get('policy', [])
 
-            immutable = zone.get('immutable', False)
-            locked = "⚷" if immutable else " "
+    if not policies:
+        return None
 
-            # Build configuration strings
-            config_lines = []
+    # Create policies table with flexible columns
+    policy_table = SimpleTable([
+        Column(''),  # Lock icon
+        Column('NAME', flexible=True),
+        Column('ACTION'),
+        Column('INGRESS', flexible=True),
+        Column('EGRESS', flexible=True)
+    ])
 
-            # Interfaces
-            if interface_list:
-                interfaces = compress_interface_list(interface_list)
-                config_lines.append(("iif", interfaces))
-            else:
-                config_lines.append(("iif", "(none)"))
+    sorted_policies = sorted(policies, key=lambda p: p.get('priority', 32767))
+    for policy in sorted_policies:
+        name = policy.get('name', '')
+        ingress = ", ".join(policy.get('ingress', []))
+        egress = ", ".join(policy.get('egress', []))
+        action = policy.get('action', 'reject')
 
-            # Networks
-            if network_list:
-                networks = ", ".join(network_list)
-                config_lines.append(("net", networks))
+        immutable = policy.get('immutable', False)
+        locked = "⚷" if immutable else " "
 
-            # Port forwards
-            if port_forwards:
-                pf_display = format_port_forwards(port_forwards)
-                config_lines.append(("fwd", pf_display))
+        policy_table.row(locked, name, action, ingress, egress)
 
-            # Print first line with zone name and services
-            if config_lines:
-                first_type, first_data = config_lines[0]
-                print(f"{locked:<{PadFirewall.zone_locked}}"
-                      f"{name:<{PadFirewall.zone_name}}"
-                      f"{first_type:<{PadFirewall.zone_type}}"
-                      f"{first_data:<{PadFirewall.zone_data}}"
-                      f"{services_display}")
-
-                # Print additional configuration lines
-                for config_type, config_data in config_lines[1:]:
-                    print(f"{'':<{PadFirewall.zone_locked}}"
-                          f"{'':<{PadFirewall.zone_name}}"
-                          f"{config_type:<{PadFirewall.zone_type}}"
-                          f"{config_data}")
-
-            # if zone != zones[-1]:  # Don't add line after last zone
-            #     print()
+    return policy_table
 
 
 def show_firewall_policy(json, policy_name=None):
@@ -3095,35 +3145,11 @@ def show_firewall_policy(json, policy_name=None):
                 else:
                     print(f"{'  - ' + action:<6} {family} (unknown type)")
     else:
-        hdr = (f"{'':<{PadFirewall.policy_locked}}"
-               f"{'NAME':<{PadFirewall.policy_name}}"
-               f"{'ACTION':<{PadFirewall.policy_action}}"
-               f"{'INGRESS':<{PadFirewall.policy_ingress}}"
-               f"{'EGRESS':<{PadFirewall.policy_egress}}")
-        Decore.title("Policies", len(hdr))
-        print(Decore.invert(hdr))
-
-        sorted_policies = sorted(policies, key=lambda p: p.get('priority', 32767))
-        for policy in sorted_policies:
-            name = policy.get('name', '')
-            ingress = ", ".join(policy.get('ingress', []))
-            egress = ", ".join(policy.get('egress', []))
-            action = policy.get('action', 'reject')
-
-            # Check for custom filters
-            # custom = policy.get('custom', {})
-            # custom_filters = custom.get('filter', [])
-            # if custom_filters:
-            #     name += f" ({len(custom_filters)} filter(s))"
-
-            immutable = policy.get('immutable', False)
-            locked = "⚷" if immutable else " "
-
-            print(f"{locked:<{PadFirewall.policy_locked}}"
-                  f"{name:<{PadFirewall.policy_name}}"
-                  f"{action:<{PadFirewall.policy_action}}"
-                  f"{ingress:<{PadFirewall.policy_ingress}}"
-                  f"{egress:<{PadFirewall.policy_egress}}")
+        # Use helper to create and display policies table
+        policy_table = firewall_policy_table(json)
+        if policy_table:
+            policy_table.min_width = 72
+            policy_table.print()
 
 
 def format_port_list(ports):
@@ -3145,6 +3171,28 @@ def format_port_list(ports):
     return ", ".join(formatted)
 
 
+def firewall_service_table(json):
+    """Create firewall services table (returns SimpleTable or None)"""
+    fw = json.get('infix-firewall:firewall', {})
+    services = fw.get('service', [])
+
+    if not services:
+        return None
+
+    # Create services table with flexible columns
+    service_table = SimpleTable([
+        Column('NAME'),
+        Column('PORTS', flexible=True)
+    ])
+
+    for service in services:
+        name = service.get('name', '')
+        ports = format_port_list(service.get('port', []))
+        service_table.row(name, ports)
+
+    return service_table
+
+
 def show_firewall_service(json, name=None):
     """Show firewall services table or specific service details"""
     fw = json.get('infix-firewall:firewall', {})
@@ -3163,15 +3211,11 @@ def show_firewall_service(json, name=None):
         print(f"{'ports':<20}: {ports}")
         print(format_description('description', description))
     else:
-        hdr = (f"{'NAME':<{PadFirewall.service_name}}"
-               f"{'PORTS':<{PadFirewall.service_ports}}")
-        print(Decore.invert(hdr))
-        for service in services:
-            name = service.get('name', '')
-            ports = format_port_list(service.get('port', []))
-
-            print(f"{name:<{PadFirewall.service_name}}"
-                  f"{ports:<{PadFirewall.service_ports}}")
+        # Use helper to create and display services table
+        service_table = firewall_service_table(json)
+        if service_table:
+            service_table.min_width = 72
+            service_table.print()
 
 
 def show_ospf(json_data):
@@ -4029,13 +4073,17 @@ def main():
               .add_argument('-n', '--name', help='Interface name')
 
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
+
     subparsers.add_parser('show-firewall', help='Show firewall overview')
+    subparsers.add_parser('show-firewall-matrix', help='Show firewall matrix')
     subparsers.add_parser('show-firewall-zone', help='Show firewall zones') \
               .add_argument('name', nargs='?', help='Zone name')
     subparsers.add_parser('show-firewall-policy', help='Show firewall policies') \
               .add_argument('name', nargs='?', help='Policy name')
     subparsers.add_parser('show-firewall-service', help='Show firewall services') \
               .add_argument('name', nargs='?', help='Service name')
+    subparsers.add_parser('show-firewall-log', help='Show firewall log') \
+              .add_argument('limit', nargs='?', help='Last N lines, default: all')
 
     subparsers.add_parser('show-ntp', help='Show NTP sources')
 
@@ -4082,12 +4130,16 @@ def main():
         show_lldp(json_data)
     elif args.command == "show-firewall":
         show_firewall(json_data)
+    elif args.command == "show-firewall-matrix":
+        show_firewall_matrix(json_data)
     elif args.command == "show-firewall-zone":
         show_firewall_zone(json_data, args.name)
     elif args.command == "show-firewall-policy":
         show_firewall_policy(json_data, args.name)
     elif args.command == "show-firewall-service":
         show_firewall_service(json_data, args.name)
+    elif args.command == "show-firewall-log":
+        show_firewall_logs(args.limit)
     elif args.command == "show-ntp":
         show_ntp(json_data)
     elif args.command == "show-bfd":
