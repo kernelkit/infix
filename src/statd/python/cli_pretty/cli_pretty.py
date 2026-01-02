@@ -283,17 +283,20 @@ class PadFirewall:
 
 class Column:
     """Column definition for SimpleTable"""
-    def __init__(self, name, align='left', formatter=None):
+    def __init__(self, name, align='left', formatter=None, flexible=False):
         self.name = name
         self.align = align
         self.formatter = formatter
+        self.flexible = flexible
 
 class SimpleTable:
     """Simple table formatter that handles ANSI colors correctly and calculates dynamic column widths"""
 
-    def __init__(self, columns):
+    def __init__(self, columns, min_width=None):
         self.columns = columns
         self.rows = []
+        self.min_width = min_width
+        self._column_widths = None  # Cache calculated widths
 
     @staticmethod
     def visible_width(text):
@@ -308,12 +311,58 @@ class SimpleTable:
             raise ValueError(f"Expected {len(self.columns)} values, got {len(values)}")
         self.rows.append(values)
 
+    def width(self):
+        """Calculate and return total table width"""
+        if self._column_widths is None:
+            self._column_widths = self._calculate_column_widths()
+
+        # Sum column widths + 2-char separator between columns
+        total = sum(self._column_widths)
+        if self._column_widths:
+            # Separators only between columns, not after the last one
+            total += (len(self._column_widths) - 1) * 2
+
+        return total
+
+    def adjust_padding(self, width):
+        """Distribute padding to width evenly across flexible columns"""
+        if self._column_widths is None:
+            self._column_widths = self._calculate_column_widths()
+
+        current_width = self.width()
+        extra_width = width - current_width
+
+        if extra_width <= 0:
+            return  # Already at or above target
+
+        # Find flexible columns
+        flex_indices = [i for i, col in enumerate(self.columns) if col.flexible]
+
+        if not flex_indices:
+            return  # No flexible columns to expand
+
+        # Distribute evenly
+        per_column = extra_width // len(flex_indices)
+        remainder = extra_width % len(flex_indices)
+
+        for i, idx in enumerate(flex_indices):
+            self._column_widths[idx] += per_column
+            # Give remainder to first columns
+            if i < remainder:
+                self._column_widths[idx] += 1
+
     def print(self, styled=True):
         """Calculate widths and print complete table"""
-        column_widths = self._calculate_column_widths()
-        print(self._format_header(column_widths, styled))
+        if self._column_widths is None:
+            self._column_widths = self._calculate_column_widths()
+
+        # Apply minimum width if specified
+        if self.min_width:
+            self.adjust_padding(self.min_width)
+
+        print(self._format_header(self._column_widths, styled))
         for row_data in self.rows:
-            print(self._format_row(row_data, column_widths))
+            print(self._format_row(row_data, self._column_widths))
 
     def _calculate_column_widths(self):
         """Calculate maximum width needed for each column"""
@@ -332,24 +381,29 @@ class SimpleTable:
         header_parts = []
         for i, column in enumerate(self.columns):
             width = column_widths[i]
-            if column.align == 'right':
-                header_parts.append(f"{column.name:>{width}}  ")
-            else:
-                header_parts.append(f"{column.name:{width}}  ")
+            # Add separator "  " only between columns, not after the last one
+            is_last = (i == len(self.columns) - 1)
+            separator = "" if is_last else "  "
 
-        header_str = ''.join(header_parts).rstrip()
+            if column.align == 'right':
+                header_parts.append(f"{column.name:>{width}}{separator}")
+            else:
+                header_parts.append(f"{column.name:{width}}{separator}")
+
+        header_str = ''.join(header_parts)
         return Decore.invert(header_str) if styled else header_str
 
     def _format_row(self, row_data, column_widths):
         """Format a single data row"""
         row_parts = []
         for i, (value, column) in enumerate(zip(row_data, self.columns)):
-            formatted_value = self._format_column_value(value, column, column_widths[i])
+            is_last = (i == len(self.columns) - 1)
+            formatted_value = self._format_column_value(value, column, column_widths[i], is_last)
             row_parts.append(formatted_value)
 
-        return ''.join(row_parts).rstrip()
+        return ''.join(row_parts)
 
-    def _format_column_value(self, value, column, width):
+    def _format_column_value(self, value, column, width, is_last=False):
         """Format a single column value with proper alignment"""
         if column.formatter:
             value = column.formatter(value)
@@ -357,12 +411,18 @@ class SimpleTable:
         value_str = str(value)
         visible_len = self.visible_width(value_str)
 
-        if column.align == 'right':
+        # Add separator "  " only between columns, not after the last one
+        separator = "" if is_last else "  "
+
+        # Don't pad the last column to avoid trailing spaces
+        if is_last:
+            return value_str
+        elif column.align == 'right':
             padding = width - visible_len
-            return ' ' * max(0, padding) + value_str + '  '
+            return ' ' * max(0, padding) + value_str + separator
         else:
             padding = width - visible_len
-            return value_str + ' ' * max(0, padding) + '  '
+            return value_str + ' ' * max(0, padding) + separator
 
 
 class Decore():
