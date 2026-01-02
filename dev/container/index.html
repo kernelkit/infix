@@ -832,6 +832,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#resource-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource Limits
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resource Limits">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuring-resource-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuring Resource Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoring-resource-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring Resource Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#networking-and-containers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2408,6 +2447,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#resource-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource Limits
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resource Limits">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuring-resource-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuring Resource Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoring-resource-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring Resource Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#networking-and-containers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3061,6 +3139,37 @@ capabilities {
 containers.  Please note, that this is an advanced topic that require
 time and analysis of your container application to figure out which
 capabilities you need.</p>
+<h2 id="resource-limits">Resource Limits<a class="headerlink" href="#resource-limits" title="Permanent link">¶</a></h2>
+<p>Containers can be configured with resource limits to control their memory
+and CPU usage. This helps prevent containers from consuming excessive system
+resources and ensures fair resource allocation across multiple containers.</p>
+<h3 id="configuring-resource-limits">Configuring Resource Limits<a class="headerlink" href="#configuring-resource-limits" title="Permanent link">¶</a></h3>
+<p>Resource limits are set per container and include:</p>
+<ul>
+<li><strong>Memory:</strong> Maximum memory usage in kibibytes (KiB)</li>
+<li><strong>CPU:</strong> Maximum CPU usage in millicores (1000 millicores = 1 CPU core)</li>
+</ul>
+<p>Example configuration limiting a container to 512 MiB of memory and 1.5 CPU cores:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config/&gt; edit container web
+admin@example:/config/container/web/&gt; edit resource-limit
+admin@example:/config/container/web/resource-limit/&gt; set memory 524288
+admin@example:/config/container/web/resource-limit/&gt; set cpu 1500
+admin@example:/config/container/web/resource-limit/&gt; leave
+</code></pre></div>
+<p>Common CPU limit examples:</p>
+<ul>
+<li><code>500</code> = 0.5 cores (50% of one core)</li>
+<li><code>1000</code> = 1.0 cores (one full core)</li>
+<li><code>2000</code> = 2.0 cores (two full cores)</li>
+</ul>
+<h3 id="monitoring-resource-usage">Monitoring Resource Usage<a class="headerlink" href="#monitoring-resource-usage" title="Permanent link">¶</a></h3>
+<p>Runtime resource usage statistics are available in the operational datastore:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; show container web
+...
+</code></pre></div>
+<p>Use <code>show container usage</code> to see resource consumption across all containers,
+including memory, CPU, block I/O, network I/O, and process counts.</p>
 <h2 id="networking-and-containers">Networking and Containers<a class="headerlink" href="#networking-and-containers" title="Permanent link">¶</a></h2>
 <p>By default, unlike other systems, persistent<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">2</a></sup> containers have no
 networking enabled.  All network access has to be set up explicitly.
