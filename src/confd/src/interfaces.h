@@ -25,15 +25,15 @@
 	_map(IFT_BRIDGE, "infix-if-type:bridge")	\
 	_map(IFT_DUMMY,  "infix-if-type:dummy")		\
 	_map(IFT_ETH,    "infix-if-type:ethernet")	\
-	_map(IFT_WIFI,   "infix-if-type:wifi")	        \
 	_map(IFT_GRE,    "infix-if-type:gre")		\
 	_map(IFT_GRETAP, "infix-if-type:gretap")	\
-	_map(IFT_LAG,    "infix-if-type:lag")	\
+	_map(IFT_LAG,    "infix-if-type:lag")		\
 	_map(IFT_LO,     "infix-if-type:loopback")	\
 	_map(IFT_VETH,   "infix-if-type:veth")		\
 	_map(IFT_VLAN,   "infix-if-type:vlan")		\
 	_map(IFT_VXLAN,  "infix-if-type:vxlan")		\
-	/*  */
+	_map(IFT_WIFI,   "infix-if-type:wifi")		\
+/*  */
 
 enum iftype {
 #define ift_enum(_enum, _str) _enum,
@@ -122,8 +122,9 @@ int bridge_mcd_gen(struct lyd_node *cifs);
 int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 /* if-wifi.c */
-int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net);
-int wifi_gen_del(struct lyd_node *dif,  struct dagger *net);
+int wifi_add_iface(struct lyd_node *cif, struct dagger *net);
+int wifi_del_iface(struct lyd_node *dif, struct dagger *net);
+int wifi_mode_changed(struct lyd_node *wifi);
 
 /* if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);

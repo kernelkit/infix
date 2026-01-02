@@ -120,13 +120,13 @@
       "search": []
     },
     "clock": {
-      "boot-datetime": "2025-04-30T09:47:32+00:00",
-      "current-datetime": "2025-04-30T09:48:01+00:00"
+      "boot-datetime": "2026-01-02T20:42:11+00:00",
+      "current-datetime": "2026-01-02T20:43:23+00:00"
     },
     "platform": {
       "os-name": "Infix",
-      "os-version": "v25.04.0-rc1-3-g8daf1571-dirty",
-      "os-release": "v25.04.0-rc1-3-g8daf1571-dirty",
+      "os-version": "v25.11.0-135-g44d2af57-dirty",
+      "os-release": "v25.11.0-135-g44d2af57-dirty",
       "machine": "x86_64"
     },
     "infix-system:services": {
@@ -383,6 +383,38 @@
             "uptime": "1388",
             "restart-count": 0
           }
+        }
+      ]
+    },
+    "infix-system:resource-usage": {
+      "memory": {
+        "total": "355076",
+        "free": "134936",
+        "available": "225652"
+      },
+      "load-average": {
+        "load-1min": "0.12",
+        "load-5min": "0.05",
+        "load-15min": "0.02"
+      },
+      "filesystem": [
+        {
+          "mount-point": "/",
+          "size": "142720",
+          "used": "142720",
+          "available": "0"
+        },
+        {
+          "mount-point": "/var",
+          "size": "86427",
+          "used": "281",
+          "available": "79270"
+        },
+        {
+          "mount-point": "/cfg",
+          "size": "14073",
+          "used": "67",
+          "available": "12860"
         }
       ]
     }

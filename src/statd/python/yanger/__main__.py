@@ -87,6 +87,9 @@ def main():
     elif args.model == 'ietf-bfd-ip-sh':
         from . import ietf_bfd_ip_sh
         yang_data = ietf_bfd_ip_sh.operational()
+    elif args.model == 'infix-wifi-radio':
+        from . import infix_wifi_radio
+        yang_data = infix_wifi_radio.operational()
     else:
         common.LOG.warning("Unsupported model %s", args.model)
         sys.exit(1)

@@ -16,7 +16,12 @@ module infix-wifi-country-codes {
 
      The regulatory domain configuration follows the principles
      established in IETF RFCs for wireless access point management.";
-
+  revision 2025-11-28 {
+    description
+      "Add support for 00 - World regulatory domain.";
+    reference
+      "Internal";    
+  }	
   revision 2025-06-02 {
     description
       "Initial revision for WiFi country code support.";
@@ -27,6 +32,7 @@ module infix-wifi-country-codes {
 
   typedef country-code {
     type enumeration {
+      enum "00" { description "World regulatory domain (no country restrictions)"; }
       enum "AD" { description "Andorra"; }
       enum "AE" { description "United Arab Emirates"; }
       enum "AF" { description "Afghanistan"; }

@@ -422,19 +422,6 @@ def lldp(args: List[str]):
         return
     cli_pretty(data, "show-lldp")
 
-def wifi(args: List[str]):
-    iface = args[0]
-    if len(args) == 0:
-        print("Illigal usage")
-        return
-    if is_valid_interface_name(iface):
-        if not os.path.exists(f"/sys/class/net/{iface}/wireless"):
-            print("Not a Wi-Fi interface")
-            return
-        data = run_sysrepocfg("/ietf-interfaces:interfaces")
-        cli_pretty(data, "show-wifi-scan", "-n", iface)
-    else:
-        print(f"Invalid interface name: {iface}")
 
 def system(args: List[str]) -> None:
     # Get system state from sysrepo
@@ -556,8 +543,7 @@ def execute_command(command: str, args: List[str]):
         'services': services,
         'software': software,
         'stp': stp,
-        'system': system,
-        'wifi': wifi
+        'system': system
     }
 
     if command in command_mapping:

@@ -418,7 +418,7 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
 	case IFT_WIFI:
-		return wifi_gen(NULL, cif, net);
+		return wifi_add_iface(cif, net);
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_LO:
@@ -448,7 +448,10 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_WIFI:
-		return wifi_gen(dif, cif, net);
+		/* WiFi daemon config (hostapd/wpa_supplicant) is handled by
+		 * hardware.c when the radio (phy) is configured. Interface
+		 * creation/deletion is handled in netdag_gen_afspec_add(). */
+		return 0;
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
@@ -472,9 +475,10 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_BRIDGE:
 	case IFT_DUMMY:
 	case IFT_LO:
+	case IFT_WIFI:
+		return lydx_get_child(dif, "custom-phys-address") || lydx_get_descendant(dif, "wifi", "radio", NULL) || wifi_mode_changed(lydx_get_child(dif, "wifi"));
 		break;
 
-	case IFT_WIFI:
 	case IFT_ETH:
 		return lydx_get_child(dif, "custom-phys-address");
 
@@ -562,12 +566,11 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_LO:
 		eth_gen_del(dif, ip);
 		break;
-	case IFT_WIFI:
-		eth_gen_del(dif, ip);
-		wifi_gen_del(dif, net);
-		break;
 	case IFT_VETH:
 		veth_gen_del(dif, ip);
+		break;
+	case IFT_WIFI:
+		wifi_del_iface(dif, net);
 		break;
 	case IFT_BRIDGE:
 	case IFT_DUMMY:
@@ -587,7 +590,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 static sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname, const char *iftype)
 {
-	if (!strcmp(iftype, "infix-if-type:ethernet") || !strcmp(iftype, "infix-if-type:wifi")) {
+	if (!strcmp(iftype, "infix-if-type:ethernet")) {
 		FILE *wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");
 		if (!wait) {
 			return -EIO;
@@ -734,10 +737,9 @@ static int netdag_init_iface(struct lyd_node *cif)
 		return vlan_add_deps(cif);
 	case IFT_VETH:
 		return veth_add_deps(cif);
-
+	case IFT_WIFI:
 	case IFT_DUMMY:
 	case IFT_ETH:
-	case IFT_WIFI:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_LO:
