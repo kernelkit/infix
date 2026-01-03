@@ -228,8 +228,8 @@ with infamy.Test() as test:
 
         with test.step("Remove all static routes from R1"):
             R1.delete_xpath("/ietf-routing:routing/control-plane-protocols")
-            parallel(until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32") is False),
-                     until(lambda: route.ipv6_route_exist(R1, "2001:db8:3c4d:200::1/128") is False))
+            parallel(lambda: until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32") is False),
+                     lambda: until(lambda: route.ipv6_route_exist(R1, "2001:db8:3c4d:200::1/128") is False))
 
         with test.step("Verify R2 is no longer reachable on either IPv4 or IPv6 from PC:data"):
             infamy.parallel(ns0.must_not_reach("192.168.200.1"),

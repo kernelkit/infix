@@ -630,17 +630,17 @@ with infamy.Test() as test:
 
     with test.step("Verify on R3, there are no routes beyond 10.0.23.1, just a default route"):
         # Should be only default route out of the area.
-        parallel(until(lambda: route.ipv4_route_exist(R3, "0.0.0.0/0"), attempts=200),
-                 until(lambda: route.ipv4_route_exist(R3, "10.0.12.0/30") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "10.0.12.0/30") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "11.0.8.0/24") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "11.0.9.0/24") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "11.0.10.0/24") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "11.0.11.0/24") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "11.0.12.0/24") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "11.0.13.0/24") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "11.0.14.0/24") is False, attempts=5),
-                 until(lambda: route.ipv4_route_exist(R3, "11.0.15.0/24") is False, attempts=5))
+        parallel(lambda: until(lambda: route.ipv4_route_exist(R3, "0.0.0.0/0"), attempts=200),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "10.0.12.0/30") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "10.0.12.0/30") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "11.0.8.0/24") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "11.0.9.0/24") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "11.0.10.0/24") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "11.0.11.0/24") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "11.0.12.0/24") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "11.0.13.0/24") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "11.0.14.0/24") is False, attempts=5),
+                 lambda: until(lambda: route.ipv4_route_exist(R3, "11.0.15.0/24") is False, attempts=5))
 
     _, hport0 = env.ltop.xlate("PC", "data3")
     with infamy.IsolatedMacVlan(hport0) as ns0:
