@@ -9,12 +9,13 @@ import infamy
 import infamy.ntp_server as ntp_server
 import infamy.ntp as ntp
 import infamy.util as util
+
+
 def config_target(dut, data1, data2, data3):
     dut.put_config_dicts({
         "ietf-interfaces": {
             "interfaces": {
-                "interface": [
-                {
+                "interface": [{
                     "name": data1,
                     "enabled": True,
                     "ipv4": {
@@ -23,8 +24,7 @@ def config_target(dut, data1, data2, data3):
                             "prefix-length": 24
                             }]
                     }
-                },
-                {
+                }, {
                     "name": data2,
                     "enabled": True,
                     "ipv4": {
@@ -33,8 +33,7 @@ def config_target(dut, data1, data2, data3):
                             "prefix-length": 24
                         }]
                     }
-                },
-                {
+                }, {
                     "name": data3,
                     "enabled": True,
                     "ipv4": {
@@ -57,13 +56,13 @@ def config_target(dut, data1, data2, data3):
                             "address": "192.168.1.1"
                         },
                         "iburst": True
-                    },{
+                    }, {
                         "name": "Server2",
                         "udp": {
                             "address": "192.168.2.1"
                         },
                         "iburst": True
-                    },{
+                    }, {
                         "name": "Server3",
                         "udp": {
                             "address": "192.168.3.1"
@@ -74,6 +73,7 @@ def config_target(dut, data1, data2, data3):
             }
         }
     })
+
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -104,6 +104,6 @@ with infamy.Test() as test:
             with test.step("Verify one source is in 'selected' state on 'target'"):
                 util.until(lambda: ntp.any_source_selected(target), attempts=200)
             with test.step("Verify three sources exist in NTP client on 'target'"):
-                assert(ntp.number_of_sources(target) == 3)
+                assert ntp.number_of_sources(target) == 3
 
     test.succeed()

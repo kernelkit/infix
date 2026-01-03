@@ -25,28 +25,23 @@ with infamy.Test() as test:
 
         target.put_config_dict("ietf-interfaces", {
             "interfaces": {
-                "interface": [
-                    {
-                        "name": "br0",
-                        "type": "infix-if-type:bridge",
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [
-                                {
-                                    "ip": "10.0.0.2",
-                                    "prefix-length": 24,
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        "name": tport,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "bridge": "br0"
-                        }
-                    },
-                ]
+                "interface": [{
+                    "name": "br0",
+                    "type": "infix-if-type:bridge",
+                    "enabled": True,
+                    "ipv4": {
+                        "address": [{
+                            "ip": "10.0.0.2",
+                            "prefix-length": 24,
+                        }]
+                    }
+                }, {
+                    "name": tport,
+                    "enabled": True,
+                    "infix-interfaces:bridge-port": {
+                        "bridge": "br0"
+                    }
+                }]
             }
         })
 
