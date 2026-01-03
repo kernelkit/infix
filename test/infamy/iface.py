@@ -98,6 +98,16 @@ def get_phys_address(target, iface):
     return get_param(target, iface, "phys-address")
 
 
+def get_oper_status(target, iface):
+    """Get interface operational status (up/down/etc)"""
+    return get_param(target, iface, "oper-status")
+
+
+def is_oper_up(target, iface):
+    """Check if interface operational status is 'up'"""
+    return get_oper_status(target, iface) == "up"
+
+
 def exist_bridge_multicast_filter(target, group, iface, bridge):
     """Check if a bridge has a multicast filter for group with iface"""
     # The interface array is different in restconf/netconf, netconf has
