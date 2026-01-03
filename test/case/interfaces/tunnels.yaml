@@ -7,3 +7,12 @@
 
 - name: Tunnel TTL verification
   suite: tunnel_ttl/test.yaml
+
+- name: WireGuard Point-to-Point
+  case: wireguard_p2p/test.py
+
+- name: WireGuard multipoint
+  case: wireguard_multipoint/test.py
+
+- name: WireGuard Roadwarrior
+  case: wireguard_roadwarrior/test.py

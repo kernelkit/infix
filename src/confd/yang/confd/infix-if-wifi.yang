@@ -58,7 +58,7 @@ submodule infix-if-wifi {
     reference "internal";
   }
 
-  revision 2025-12-12 {
+  revision 2025-12-10 {
     description "Adapt to new revision of model ietf-keystore.";
     reference "internal";
   }
