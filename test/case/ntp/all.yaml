@@ -1,0 +1,15 @@
+---
+- name: NTP server standalone mode
+  case: server_mode_standalone/test.py
+
+- name: NTP server mode
+  case: server_mode_server/test.py
+
+- name: NTP peer mode
+  case: server_mode_peer/test.py
+
+- name: NTP server and client interoperability
+  case: server_client/test.py
+
+- name: NTP client stratum selection
+  case: client_stratum_selection/test.py

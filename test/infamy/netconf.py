@@ -319,7 +319,12 @@ class Device(Transport):
         infer_put_dict(self.name, models)
 
         for model in models.keys():
-            mod = self.ly.get_module(model)
+            try:
+                mod = self.ly.get_module(model)
+            except libyang.util.LibyangError:
+                raise Exception(f"YANG model '{model}' not found on device. "
+                               f"Model may not be installed or enabled. "
+                               f"Available models can be checked with get_schema_list()") from None
             lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
             config += lyd.print_mem("xml", with_siblings=True, pretty=False) + "\n"
         # print(f"Send new XML config: {config}")
@@ -327,7 +332,12 @@ class Device(Transport):
 
     def put_config_dict(self, modname, edit):
         """Convert Python dictionary to XMl and send as configuration"""
-        mod = self.ly.get_module(modname)
+        try:
+            mod = self.ly.get_module(modname)
+        except libyang.util.LibyangError:
+            raise Exception(f"YANG model '{modname}' not found on device. "
+                           f"Model may not be installed or enabled. "
+                           f"Available models can be checked with get_schema_list()") from None
         lyd = mod.parse_data_dict(edit, no_state=True, validate=False)
         config = lyd.print_mem("xml", with_siblings=True, pretty=False)
         # print(f"Send new XML config: {config}")
@@ -339,7 +349,12 @@ class Device(Transport):
 
     def call_dict(self, modname, call):
         """Call RPC, Python dictionary version"""
-        mod = self.ly.get_module(modname)
+        try:
+            mod = self.ly.get_module(modname)
+        except libyang.util.LibyangError:
+            raise Exception(f"YANG model '{modname}' not found on device. "
+                           f"Model may not be installed or enabled. "
+                           f"Available models can be checked with get_schema_list()") from None
         lyd = mod.parse_data_dict(call, rpc=True)
         return self.call(lyd.print_mem("xml", with_siblings=True, pretty=False))
 

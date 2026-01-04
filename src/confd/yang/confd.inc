@@ -3,6 +3,10 @@
 MODULES=(
 	"ietf-system@2014-08-06.yang -e authentication -e local-users -e ntp -e ntp-udp-port -e timezone-name"
 	"iana-timezones@2013-11-19.yang"
+	"ietf-ntp@2022-07-05.yang -e ntp-port -e unicast-configuration"
+	"ietf-access-control-list@2019-03-04.yang"
+	"ietf-packet-fields@2019-03-04.yang"
+	"ietf-ethertypes@2019-03-04.yang"
 	"ietf-interfaces@2018-02-20.yang -e if-mib"
 	"ietf-ip@2018-02-22.yang -e ipv6-privacy-autoconf"
 	"ietf-network-instance@2019-01-21.yang"
@@ -48,4 +52,5 @@ MODULES=(
 	"infix-crypto-types@2025-06-17.yang"
 	"ietf-keystore -e symmetric-keys"
 	"infix-keystore@2025-12-10.yang"
+	"infix-ntp@2025-12-03.yang"
 )

@@ -1,0 +1,171 @@
+module infix-ntp {
+  yang-version 1.1;
+  namespace "urn:infix:ntp:ns:yang:1.0";
+  prefix infix-ntp;
+
+  import ietf-ntp {
+    prefix ntp;
+    reference
+      "RFC 9249: A YANG Data Model for NTP";
+  }
+
+  import ietf-inet-types {
+    prefix inet;
+    reference
+      "RFC 6991: Common YANG Data Types";
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix deviations and augments to ietf-ntp.";
+
+  revision 2025-12-03 {
+    description
+      "Initial release - NTP server support.
+
+       Implements NTP server functionality using chronyd as the
+       underlying daemon. Supports standalone, server, and peer modes
+       with configurable poll intervals, makestep for fast initial sync,
+       and rtcsync for hardware RTC synchronization. Mutual exclusion
+       with ietf-system:ntp enforced via YANG when statement.";
+    reference "internal";
+  }
+
+  /*
+   * Augments for Infix-specific features
+   */
+
+  augment "/ntp:ntp" {
+    container makestep {
+      presence "Enable clock stepping for large offsets";
+      description
+        "Allow system clock to step (jump) immediately when offset is large.
+         This is useful for fast initial synchronization on systems that boot
+         with incorrect time (e.g., epoch time when no RTC present).";
+
+      leaf threshold {
+        type decimal64 {
+          fraction-digits 1;
+          range "0.1..max";
+        }
+        default "1.0";
+        units "seconds";
+        description
+          "Threshold in seconds. If clock offset exceeds this value,
+           step the clock instead of slewing it slowly.";
+      }
+
+      leaf limit {
+        type int32 {
+          range "-1 | 0..max";
+        }
+        default "3";
+        description
+          "Number of clock updates during which stepping is allowed.
+           After this many updates, only slewing is used. Special values:
+           -1 = always allow stepping (not recommended)
+            0 = never step (defeats purpose of this directive)
+           1-N = allow stepping for first N updates (recommended: 3)";
+      }
+    }
+  }
+
+  /*
+   * Additional operational state fields from chronyd
+   * that are not part of the standard ietf-ntp model
+   */
+  augment "/ntp:ntp/ntp:clock-state/ntp:system-status" {
+    leaf last-offset {
+      type decimal64 {
+        fraction-digits 9;
+      }
+      config false;
+      units "seconds";
+      description
+        "Estimated offset of the last clock update.";
+    }
+
+    leaf rms-offset {
+      type decimal64 {
+        fraction-digits 9;
+      }
+      config false;
+      units "seconds";
+      description
+        "Long-term average of the offset value.";
+    }
+
+    leaf residual-freq {
+      type decimal64 {
+        fraction-digits 3;
+      }
+      config false;
+      units "ppm";
+      description
+        "Residual frequency indicating how much the frequency has
+         changed relative to the previous value.";
+    }
+
+    leaf skew {
+      type decimal64 {
+        fraction-digits 3;
+      }
+      config false;
+      units "ppm";
+      description
+        "Estimated error bound on the frequency.";
+    }
+
+    leaf update-interval {
+      type decimal64 {
+        fraction-digits 1;
+      }
+      config false;
+      units "seconds";
+      description
+        "Interval between the last two clock updates.";
+    }
+  }
+
+  /*
+   * Deviations for unsupported features
+   */
+
+  deviation "/ntp:ntp/ntp:access-rules" {
+    deviate not-supported;
+  }
+
+  deviation "/ntp:statistics-reset" {
+    deviate not-supported;
+  }
+
+  deviation "/ntp:ntp/ntp:interfaces" {
+    deviate not-supported;
+  }
+
+  deviation "/ntp:ntp/ntp:unicast-configuration/ntp:address" {
+    deviate replace {
+      type inet:host;
+    }
+  }
+
+  deviation "/ntp:ntp/ntp:unicast-configuration/ntp:iburst" {
+    deviate add {
+      must "not(ntp:iburst and ../type = 'ntp:uc-peer')" {
+        error-message "iburst option is not supported in peer mode";
+      }
+    }
+  }
+
+  deviation "/ntp:ntp/ntp:unicast-configuration/ntp:burst" {
+    deviate add {
+      must "not(ntp:burst and ../type = 'ntp:uc-peer')" {
+        error-message "burst option is not supported in peer mode";
+      }
+    }
+  }
+
+  deviation "/ntp:ntp/ntp:unicast-configuration/ntp:source" {
+    deviate not-supported;
+  }
+}

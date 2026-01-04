@@ -39,8 +39,9 @@ def parallel(*fns):
 
 def until(fn, attempts=10, interval=1):
     for attempt in range(attempts):
-        if fn():
-            return
+        result = fn()
+        if result:
+            return result
 
         time.sleep(interval)
 

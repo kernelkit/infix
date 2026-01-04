@@ -69,15 +69,84 @@ def hardware(args: List[str]) -> None:
     cli_pretty(data, "show-hardware")
 
 def ntp(args: List[str]) -> None:
-    data = run_sysrepocfg("/system-state/ntp")
+    # Create argument parser for ntp subcommands
+    parser = argparse.ArgumentParser(prog='show ntp', add_help=False)
+
+    # Add subparsers for source and tracking
+    subparsers = parser.add_subparsers(dest='subcommand', help='NTP subcommands')
+
+    # source subcommand
+    source_parser = subparsers.add_parser('source', help='Show NTP source(s)')
+    source_parser.add_argument('address', nargs='?', help='Show details for specific source address')
+
+    # tracking subcommand
+    tracking_parser = subparsers.add_parser('tracking', help='Show NTP tracking status')
+
+    # Parse the arguments
+    try:
+        parsed_args = parser.parse_args(args)
+    except SystemExit:
+        # argparse calls sys.exit on error, catch it
+        return
+
+    # Dispatch to appropriate handler
+    if parsed_args.subcommand == 'source':
+        return ntp_source([parsed_args.address] if parsed_args.address else [])
+    elif parsed_args.subcommand == 'tracking':
+        return ntp_tracking([])
+
+    # Default: show ntp (no subcommand or address)
+    # Fetch both client and server operational data
+    client_data = run_sysrepocfg("/system-state/ntp")
+    server_data = run_sysrepocfg("/ietf-ntp:ntp")
+
+    # Merge into single data structure
+    data = {}
+    if client_data:
+        data.update(client_data)
+    if server_data:
+        data.update(server_data)
+
+    if RAW_OUTPUT:
+        if not data:
+            print("No ntp data retrieved.")
+            return
+        print(json.dumps(data, indent=2))
+        return
+
+    # Always call cli_pretty, even with empty data, to show proper message
     if not data:
-        print("No ntp data retrieved.")
+        data = {}
+
+    # Default show ntp - summary view (no address support at top level)
+    cli_pretty(data, "show-ntp")
+
+def ntp_tracking(args: List[str]) -> None:
+    data = run_sysrepocfg("/ietf-ntp:ntp")
+    if not data:
+        print("No ntp server data retrieved.")
         return
 
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
-    cli_pretty(data, "show-ntp")
+    cli_pretty(data, "show-ntp-tracking")
+
+def ntp_source(args: List[str]) -> None:
+    data = run_sysrepocfg("/ietf-ntp:ntp")
+    if not data:
+        print("No ntp server data retrieved.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    # Pass address argument if provided
+    if len(args) > 0 and args[0]:
+        cli_pretty(data, "show-ntp-source", "-a", args[0])
+    else:
+        cli_pretty(data, "show-ntp-source")
 
 def is_valid_interface_name(interface_name: str) -> bool:
     """

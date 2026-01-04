@@ -149,7 +149,7 @@ class Env(object):
         cport, _ = self.ptop.get_mgmt_link(ctrl, node)
 
         print("Waiting for DUTs to become reachable...")
-        util.parallel(util.until(lambda: self.is_reachable(node, cport), 300))
+        util.parallel(lambda: util.until(lambda: self.is_reachable(node, cport), 300))
 
         print(f"Probing {node} on port {cport} for IPv6LL mgmt address ...")
         mgmtip = neigh.ll6ping(cport)

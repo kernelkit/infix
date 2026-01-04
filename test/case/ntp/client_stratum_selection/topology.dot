@@ -1,0 +1,34 @@
+graph "topology" {
+	layout="neato";
+	overlap="false";
+	esep="+20";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <srv1> srv1 | <> \n\n\n | <mgmt2> mgmt2 }",
+	    pos="0,15!",
+	    requires="controller",
+	];
+
+        srv2 [
+	    label="{ <mgmt> mgmt | <swp1> swp1 } | { srv2 |  <swp2> swp2 }",
+	    pos="2,15.25!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+        client [
+	    label="<mgmt> mgmt | { <eth0> eth0 | client }",
+	    pos="2,14.70!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	host:mgmt1  -- srv2:mgmt   [requires="mgmt", color="lightgray"]
+	host:mgmt2  -- client:mgmt [requires="mgmt" color="lightgrey"]
+
+	host:srv1   -- srv2:swp1   [taillabel="192.168.1.1", headlabel="192.168.1.2"]
+	srv2:swp2   -- client:eth0 [headlabel="192.168.1.3"]
+}

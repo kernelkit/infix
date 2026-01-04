@@ -37,6 +37,7 @@ nav:
   - Services:
       - Device Discovery: discovery.md
       - DHCP Server: dhcp.md
+      - NTP Server: ntp.md
   - System:
       - Boot Procedure: boot.md
       - Configuration: system.md

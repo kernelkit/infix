@@ -1,0 +1,35 @@
+graph "1x2" {
+	graph [bb="0,0,432.03,50.5",
+		esep="+80",
+		layout=neato,
+		overlap=false
+	];
+	node [fontname="DejaVu Sans Mono, Book",
+		label="\N",
+		shape=record
+	];
+	edge [color=cornflowerblue,
+		fontname="DejaVu Serif, Book",
+		penwidth=2
+	];
+	host	[height=0.65278,
+		label="host | { <mgmt> mgmt | <data1> data1 }",
+		pos="54,27",
+		rects="0,4,50,50 50,27,108,50 50,4,108,27",
+		requires=controller,
+		width=1.5];
+	target	[height=0.65278,
+		label="{ <mgmt> mgmt | <data1> data1 } | target",
+		pos="370.03,27",
+		rects="308.03,27,366.03,50 308.03,4,366.03,27 366.03,4,432.03,50",
+		requires=infix,
+		width=1.7222];
+	host:mgmt -- target:mgmt	[color=lightgray,
+		pos="108,39 108,39 308.03,39 308.03,39",
+		requires=mgmt];
+	host:data1 -- target:data1	[color=blue,
+		fontcolor=blue,
+		label="192.168.1.0/24",
+		lp="235.27,7.5",
+		pos="108,15 108,15 308.03,15 308.03,15"];
+}
