@@ -7,31 +7,31 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/cli/quick/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/ntp/">
       
       
-        <link rel="prev" href="../tcpdump/">
+        <link rel="prev" href="../dhcp/">
       
       
-        <link rel="next" href="../text-editor/">
+        <link rel="next" href="../boot/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
-        <title>Quickstart Guide - User's Guide</title>
+        <title>NTP Server - User's Guide</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -50,15 +50,15 @@
       
     
     
-      <link rel="stylesheet" href="../../extra.css">
+      <link rel="stylesheet" href="../extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
     
     
-  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
             html.glightbox-open { overflow: initial; height: 100%; }
             .gslide-title { margin-top: 0px; user-select: text; }
             .gslide-desc { color: #666; user-select: text; }
@@ -88,7 +88,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cli-quickstart-guide" class="md-skip">
+        <a href="#ntp-server" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +110,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="https://kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
-  <img src="../../logo-plain.png" alt="logo">
+  <img src="../logo-plain.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -127,7 +127,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Quickstart Guide
+              NTP Server
             
           </span>
         </div>
@@ -250,7 +250,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="https://kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
-  <img src="../../logo-plain.png" alt="logo">
+  <img src="../logo-plain.png" alt="logo">
 
     </a>
     User's Guide
@@ -277,7 +277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -301,10 +301,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -328,11 +326,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
@@ -353,7 +351,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -371,7 +369,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../introduction/" class="md-nav__link">
+      <a href="../cli/introduction/" class="md-nav__link">
         
   
   
@@ -399,7 +397,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configure/" class="md-nav__link">
+      <a href="../cli/configure/" class="md-nav__link">
         
   
   
@@ -427,7 +425,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../keybindings/" class="md-nav__link">
+      <a href="../cli/keybindings/" class="md-nav__link">
         
   
   
@@ -455,7 +453,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../netcalc/" class="md-nav__link">
+      <a href="../cli/netcalc/" class="md-nav__link">
         
   
   
@@ -483,7 +481,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tcpdump/" class="md-nav__link">
+      <a href="../cli/tcpdump/" class="md-nav__link">
         
   
   
@@ -508,19 +506,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../cli/quick/" class="md-nav__link">
         
   
   
@@ -536,7 +525,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -549,7 +537,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../text-editor/" class="md-nav__link">
+      <a href="../cli/text-editor/" class="md-nav__link">
         
   
   
@@ -577,7 +565,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../upgrade/" class="md-nav__link">
+      <a href="../cli/upgrade/" class="md-nav__link">
         
   
   
@@ -612,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../container/" class="md-nav__link">
+      <a href="../container/" class="md-nav__link">
         
   
   
@@ -700,7 +688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../networking/" class="md-nav__link">
+      <a href="../networking/" class="md-nav__link">
         
   
   
@@ -728,7 +716,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../firewall/" class="md-nav__link">
+      <a href="../firewall/" class="md-nav__link">
         
   
   
@@ -756,7 +744,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../qos/" class="md-nav__link">
+      <a href="../qos/" class="md-nav__link">
         
   
   
@@ -784,7 +772,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../eth-counters/" class="md-nav__link">
+      <a href="../eth-counters/" class="md-nav__link">
         
   
   
@@ -812,7 +800,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tunnels/" class="md-nav__link">
+      <a href="../tunnels/" class="md-nav__link">
         
   
   
@@ -840,7 +828,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../wifi/" class="md-nav__link">
+      <a href="../wifi/" class="md-nav__link">
         
   
   
@@ -872,8 +860,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -887,11 +877,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -912,7 +902,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -930,7 +920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../discovery/" class="md-nav__link">
+      <a href="../discovery/" class="md-nav__link">
         
   
   
@@ -958,7 +948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../dhcp/" class="md-nav__link">
+      <a href="../dhcp/" class="md-nav__link">
         
   
   
@@ -983,10 +973,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../ntp/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NTP Server
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1002,6 +1019,137 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#standalone-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standalone Mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#peer-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Peer Mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Peer Mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#peer-selection-in-symmetric-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Peer Selection in Symmetric Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timing-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timing Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Timing Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poll-intervals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Poll Intervals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fast-initial-synchronization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fast Initial Synchronization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ntp-stratum-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NTP Stratum Levels
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1084,7 +1232,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../boot/" class="md-nav__link">
+      <a href="../boot/" class="md-nav__link">
         
   
   
@@ -1112,7 +1260,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../system/" class="md-nav__link">
+      <a href="../system/" class="md-nav__link">
         
   
   
@@ -1140,7 +1288,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../hardware/" class="md-nav__link">
+      <a href="../hardware/" class="md-nav__link">
         
   
   
@@ -1168,7 +1316,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../management/" class="md-nav__link">
+      <a href="../management/" class="md-nav__link">
         
   
   
@@ -1196,7 +1344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../syslog/" class="md-nav__link">
+      <a href="../syslog/" class="md-nav__link">
         
   
   
@@ -1224,7 +1372,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../support/" class="md-nav__link">
+      <a href="../support/" class="md-nav__link">
         
   
   
@@ -1252,7 +1400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../upgrade/" class="md-nav__link">
+      <a href="../upgrade/" class="md-nav__link">
         
   
   
@@ -1346,7 +1494,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting/" class="md-nav__link">
+      <a href="../scripting/" class="md-nav__link">
         
   
   
@@ -1374,7 +1522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting-sysrepocfg/" class="md-nav__link">
+      <a href="../scripting-sysrepocfg/" class="md-nav__link">
         
   
   
@@ -1402,7 +1550,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting-prod/" class="md-nav__link">
+      <a href="../scripting-prod/" class="md-nav__link">
         
   
   
@@ -1430,7 +1578,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting-netconf/" class="md-nav__link">
+      <a href="../scripting-netconf/" class="md-nav__link">
         
   
   
@@ -1458,7 +1606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting-restconf/" class="md-nav__link">
+      <a href="../scripting-restconf/" class="md-nav__link">
         
   
   
@@ -1558,7 +1706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../branding/" class="md-nav__link">
+      <a href="../branding/" class="md-nav__link">
         
   
   
@@ -1586,7 +1734,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developers-guide/" class="md-nav__link">
+      <a href="../developers-guide/" class="md-nav__link">
         
   
   
@@ -1614,7 +1762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../override-package/" class="md-nav__link">
+      <a href="../override-package/" class="md-nav__link">
         
   
   
@@ -1642,7 +1790,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../netboot/" class="md-nav__link">
+      <a href="../netboot/" class="md-nav__link">
         
   
   
@@ -1670,7 +1818,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../testing/" class="md-nav__link">
+      <a href="../testing/" class="md-nav__link">
         
   
   
@@ -1698,7 +1846,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../test-arch/" class="md-nav__link">
+      <a href="../test-arch/" class="md-nav__link">
         
   
   
@@ -1726,7 +1874,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../virtual/" class="md-nav__link">
+      <a href="../virtual/" class="md-nav__link">
         
   
   
@@ -1754,7 +1902,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vpd/" class="md-nav__link">
+      <a href="../vpd/" class="md-nav__link">
         
   
   
@@ -1789,7 +1937,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../license/" class="md-nav__link">
+      <a href="../license/" class="md-nav__link">
         
   
   
@@ -1829,6 +1977,125 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#standalone-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standalone Mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#peer-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Peer Mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Peer Mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#peer-selection-in-symmetric-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Peer Selection in Symmetric Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timing-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timing Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Timing Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#poll-intervals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Poll Intervals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fast-initial-synchronization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fast Initial Synchronization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ntp-stratum-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NTP Stratum Levels
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1852,7 +2119,7 @@
   
   
     <li class="md-path__item">
-      <a href="../.." class="md-path__link">
+      <a href=".." class="md-path__link">
         
   <span class="md-ellipsis">
     Introduction
@@ -1870,10 +2137,10 @@
     
     
       <li class="md-path__item">
-        <a href="../introduction/" class="md-path__link">
+        <a href="../discovery/" class="md-path__link">
           
   <span class="md-ellipsis">
-    CLI
+    Services
   </span>
 
         </a>
@@ -1895,79 +2162,139 @@
   
 
 
-<h1 id="cli-quickstart-guide">CLI Quickstart Guide<a class="headerlink" href="#cli-quickstart-guide" title="Permanent link">¶</a></h1>
-<p>The question mark <code>?</code> key along with the <code>Tab</code> key are your best friends
-in the command line interface.  They provide context help and completion
-of commands you input.  See the table below for a handful of examples.</p>
-<table>
-<thead>
-<tr>
-<th><strong>Command</strong></th>
-<th><strong>Description</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>help</code></td>
-<td>Overview of topics/settings in the current context</td>
-</tr>
-<tr>
-<td><code>?</code></td>
-<td>Lists commands + brief help in the current context</td>
-</tr>
-<tr>
-<td><code>&lt;Tab&gt;</code></td>
-<td>Lists commands available in the current context</td>
-</tr>
-<tr>
-<td><code>partial&lt;Tab&gt;</code></td>
-<td>Completes a partial command name</td>
-</tr>
-<tr>
-<td><code>command &lt;Tab&gt;</code></td>
-<td>Lists keywords/arguments associated with a command</td>
-</tr>
-<tr>
-<td><code>command keyword ?</code></td>
-<td>Lists arguments associated with a keyword + help</td>
-</tr>
-</tbody>
-</table>
-<p>Explore the following topics for more information.  Note, the
-keybindings are really useful to learn!</p>
-<table>
-<thead>
-<tr>
-<th><strong>Command</strong></th>
-<th><strong>Description</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>help introduction</code></td>
-<td>An introduction to the CLI</td>
-</tr>
-<tr>
-<td><code>help configure</code></td>
-<td>How to use configure context</td>
-</tr>
-<tr>
-<td><code>help text-editor</code></td>
-<td>Help with the built-in text-editor command</td>
-</tr>
-<tr>
-<td><code>help keybindings</code></td>
-<td>Lists available keybindings &amp; other helpful tricks</td>
-</tr>
-</tbody>
-</table>
-<hr>
-<blockquote>
-<p>In <code>configure</code> context the <code>help setting</code> command shows the YANG
-description text for each node and container.  To reach the admin
-exec help from configure context, e.g., <code>do help text-editor</code></p>
-</blockquote>
-<hr>
+<h1 id="ntp-server">NTP Server<a class="headerlink" href="#ntp-server" title="Permanent link">¶</a></h1>
+<p>The NTP (Network Time Protocol) server provides accurate time synchronization
+for network clients.  It supports both standalone operation with a local
+reference clock and hybrid mode where it synchronizes with upstream servers
+while serving time to downstream clients.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The NTP server is mutually exclusive with the NTP client in system
+configuration context.</p>
+</div>
+<h2 id="standalone-mode">Standalone Mode<a class="headerlink" href="#standalone-mode" title="Permanent link">¶</a></h2>
+<p>Configure a standalone NTP server using only a local reference clock:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit ntp
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/ntp/&gt; leave
+</code></pre></div>
+<p>When setting up NTP via the CLI the system automatically configures a local
+reference clock. The default <a href="#ntp-stratum-levels">stratum</a> is 16 (unsynchronized),
+which is suitable for isolated networks. For production use, configure a specific
+stratum level:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/config/&gt; edit ntp
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>admin@example:/config/ntp/&gt; set refclock-master master-stratum 10
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/config/ntp/&gt; leave
+</code></pre></div>
+<h2 id="server-mode">Server Mode<a class="headerlink" href="#server-mode" title="Permanent link">¶</a></h2>
+<p>Synchronize from upstream NTP servers while serving time to clients:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/config/&gt; edit ntp
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/ntp/&gt; edit unicast-configuration 0.pool.ntp.org type uc-server
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; set iburst true
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; end
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>admin@example:/config/ntp/&gt; edit unicast-configuration 1.pool.ntp.org type uc-server
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/&gt; set iburst true
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/&gt; end
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>admin@example:/config/ntp/&gt; leave
+</code></pre></div>
+<p>The <code>unicast-configuration</code> uses a composite key with both address and type.
+Both hostnames and IP addresses are supported.  The <code>iburst</code> option enables
+fast initial synchronization.</p>
+<h2 id="peer-mode">Peer Mode<a class="headerlink" href="#peer-mode" title="Permanent link">¶</a></h2>
+<p>In peer mode, two NTP servers synchronize with each other bidirectionally.
+Each server acts as both client and server to the other:</p>
+<p><strong>First peer:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@peer1:/config/&gt; edit ntp
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@peer1:/config/ntp/&gt; edit unicast-configuration 192.168.1.2 type uc-peer
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@peer1:/config/ntp/…/192.168.1.2/type/uc-peer/&gt; end
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>admin@peer1:/config/ntp/&gt; set refclock-master master-stratum 8
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>admin@peer1:/config/ntp/&gt; leave
+</code></pre></div>
+<p><strong>Second peer:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@peer2:/config/&gt; edit ntp
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@peer2:/config/ntp/&gt; edit unicast-configuration 192.168.1.1 type uc-peer
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@peer2:/config/ntp/…/192.168.1.1/type/uc-peer/&gt; end
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>admin@peer2:/config/ntp/&gt; set refclock-master master-stratum 8
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>admin@peer2:/config/ntp/&gt; leave
+</code></pre></div>
+<p>This configuration provides mutual synchronization between peers. If one peer
+fails, the other continues to serve time to clients.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code>iburst</code> and <code>burst</code> options are not supported in peer mode.</p>
+</div>
+<h3 id="peer-selection-in-symmetric-mode">Peer Selection in Symmetric Mode<a class="headerlink" href="#peer-selection-in-symmetric-mode" title="Permanent link">¶</a></h3>
+<p>When both peers have the same stratum (as in the example above where both are
+stratum 8), NTP's clock selection algorithm uses the <strong>Reference ID</strong> as the
+tie-breaker. The Reference ID is typically derived from the peer's IP address
+when using a local reference clock.</p>
+<p>This means the peer with the <strong>numerically lower IP address</strong> will be selected
+as the sync source by the other peer. In the example above:</p>
+<ul>
+<li>peer1 (192.168.1.1) has a lower Reference ID</li>
+<li>peer2 (192.168.1.2) will select peer1 as sync source</li>
+</ul>
+<p>This behavior is deterministic and ensures stable clock selection. If you need
+a specific peer to be selected, configure it with a lower stratum level than
+the other peer.</p>
+<h2 id="timing-configuration">Timing Configuration<a class="headerlink" href="#timing-configuration" title="Permanent link">¶</a></h2>
+<h3 id="poll-intervals">Poll Intervals<a class="headerlink" href="#poll-intervals" title="Permanent link">¶</a></h3>
+<p>Control how often the NTP server polls upstream sources:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/config/ntp/&gt; edit unicast-configuration 0.pool.ntp.org type uc-server
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; set minpoll 4
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; set maxpoll 10
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; end
+</code></pre></div>
+<p>Poll intervals are specified as powers of 2:
+- <code>minpoll 4</code> = poll every 2^4 = 16 seconds (minimum polling rate)
+- <code>maxpoll 10</code> = poll every 2^10 = 1024 seconds (maximum polling rate)
+- Defaults: minpoll 6 (64 seconds), maxpoll 10 (1024 seconds)</p>
+<p>Use shorter intervals (minpoll 2-4) for faster convergence in test environments
+or peer configurations. Use defaults for production servers.</p>
+<h3 id="fast-initial-synchronization">Fast Initial Synchronization<a class="headerlink" href="#fast-initial-synchronization" title="Permanent link">¶</a></h3>
+<p>The <code>makestep</code> directive is automatically configured with safe defaults (1.0
+seconds threshold, 3 updates limit) when creating an NTP server. This is
+critical for embedded systems without RTC that boot with epoch time.</p>
+<p>To customize the values:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/config/ntp/&gt; edit makestep
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/ntp/makestep/&gt; set threshold 2.0
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@example:/config/ntp/makestep/&gt; set limit 1
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/ntp/makestep/&gt; end
+</code></pre></div>
+<ul>
+<li><strong>threshold</strong> - If clock offset exceeds this (in seconds), step immediately
+  instead of slewing slowly</li>
+<li><strong>limit</strong> - Number of updates during which stepping is allowed. After this,
+  only gradual slewing is used for security</li>
+</ul>
+<p>With these defaults, a device booting at epoch time (1970-01-01) will sync to
+correct time within seconds instead of hours.</p>
+<h2 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">¶</a></h2>
+<p>Check NTP server statistics:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/&gt; show ntp server
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>NTP SERVER CONFIGURATION
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Local Stratum       : 10
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>SERVER STATISTICS
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>Packets Received    : 142
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>Packets Sent        : 142
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>Packets Dropped     : 0
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>Send Failures       : 0
+</code></pre></div>
+<h2 id="ntp-stratum-levels">NTP Stratum Levels<a class="headerlink" href="#ntp-stratum-levels" title="Permanent link">¶</a></h2>
+<p>NTP uses a hierarchical system called <strong>stratum</strong> to indicate distance from
+authoritative time sources:</p>
+<ul>
+<li><strong>Stratum 0</strong>: Reference clocks (atomic clocks)</li>
+<li><strong>Stratum 1</strong>: Servers directly connected to stratum 0 (e.g., GPS receivers)</li>
+<li><strong>Stratum 2-15</strong>: Servers that sync from lower stratum (each hop adds one)</li>
+<li><strong>Stratum 16</strong>: Unsynchronized (invalid)</li>
+</ul>
+<p>The default stratum (16) is not suitable for distributing time in isolated
+networks, so when setting up an NTP server remember to adjust this value.
+Use, e.g., <code>10</code>, this is a safe, low-priority value that ensures clients will
+prefer upstream-synchronized servers (stratum 1-9) while still having a
+fallback time source in isolated networks.</p>
 
 
 
@@ -2018,10 +2345,10 @@ exec help from configure context, e.g., <code>do help text-editor</code></p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   
