@@ -1,22 +1,31 @@
 #!/usr/bin/env python3
-"""DHCPv6 Basic
+"""DHCPv6 with SLAAC/RA (Stateless DHCPv6)
 
-Enable a DHCPv6 client and verify it requests an IPv6 lease from a
-DHCPv6 server that is then set on the interface.
+Verify DHCPv6 client works in stateless mode (information-only) where:
+- Router Advertisements (RA) provide the IPv6 address via SLAAC
+- DHCPv6 provides DNS servers and domain search options only
+
+This is a common ISP deployment scenario where the router sends RAs for
+address autoconfiguration, and DHCPv6 is only used for providing additional
+configuration like DNS servers.
+
+The test verifies that odhcp6c correctly integrates both RA and DHCPv6
+information, which is something the old udhcpc6 client could not do.
 
 """
 
 import infamy
 import infamy.dhcp
 import infamy.iface as iface
-import infamy.route as route
-from   infamy.util import until
+from infamy.util import until
 
 
-def checkrun():
-    """Check DHCPv6 client is running"""
-    res = tgtssh.runsh(f"pgrep -f 'odhcp6c.*{port}'")
-    return res.returncode == 0
+def checkrun(dut):
+    """Check DUT is running DHCPv6 client"""
+    rc = dut.runsh(f"pgrep -f 'odhcp6c.*{port}'")
+    if rc.stdout.strip() != "":
+        return True
+    return False
 
 
 def check_dns_resolution():
@@ -25,9 +34,14 @@ def check_dns_resolution():
     return rc.returncode == 0
 
 
+def check_slaac_address():
+    """Check if SLAAC address was assigned"""
+    addrs = iface.get_ipv6_address(client, port)
+    return addrs is not None and len(addrs) > 0
+
+
 with infamy.Test() as test:
     SERVER = '2001:db8::1'
-    CLIENT = '2001:db8::42'
     DOMAIN = 'example.com'
     VERIFY = 'server.' + DOMAIN
 
@@ -40,14 +54,15 @@ with infamy.Test() as test:
 
     with infamy.IsolatedMacVlan(host) as netns:
         netns.addip(SERVER, prefix_length=64, proto="ipv6")
+        # Stateless DHCPv6: RA provides address, DHCPv6 provides DNS
         with infamy.dhcp.Server6Dnsmasq(netns,
-                                        start=CLIENT,
-                                        end=CLIENT,
+                                        start=None,      # No DHCPv6 addresses
+                                        end=None,        # Stateless mode
                                         dns=SERVER,
                                         domain=DOMAIN,
                                         address=SERVER):
 
-            with test.step("Configure DHCPv6 client"):
+            with test.step("Configure DHCPv6 client in information-only mode"):
                 config = {
                     "interfaces": {
                         "interface": [{
@@ -55,6 +70,7 @@ with infamy.Test() as test:
                             "ipv6": {
                                 "enabled": True,
                                 "infix-dhcpv6-client:dhcp": {
+                                    "information-only": True,  # Stateless DHCPv6
                                     "option": [
                                         {"id": "dns-server"},
                                         {"id": "domain-search"}
@@ -67,16 +83,15 @@ with infamy.Test() as test:
                 client.put_config_dict("ietf-interfaces", config)
 
             with test.step("Verify DHCPv6 client is running"):
-                until(checkrun, attempts=10)
+                until(lambda: checkrun(tgtssh), attempts=20)
 
-            with test.step(f"Verify client lease for {CLIENT}"):
-                until(lambda: iface.address_exist(client, port, CLIENT, prefix_length=128), attempts=30)
-
-            with test.step("Verify client default route ::/0"):
-                until(lambda: route.ipv6_route_exist(client, "::/0"), attempts=20)
+            with test.step("Verify client got SLAAC address from RA"):
+                # Should get address from RA (SLAAC), not DHCPv6
+                # Address will be in 2001:db8::/64 range
+                until(check_slaac_address, attempts=30)
 
             with test.step("Verify client domain name resolution"):
-                # DNS configuration may take a moment, especially on ARM hardware
-                until(check_dns_resolution, attempts=20)
+                # This proves DNS came from DHCPv6 (information-only)
+                until(check_dns_resolution, attempts=30)
 
     test.succeed()

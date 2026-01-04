@@ -15,8 +15,8 @@ import time
 
 def checkrun(dut):
     """Check DUT is running DHCPv6 client"""
-    res = dut.runsh(f"pgrep -f 'udhcpc6.*{port}'")
-    # print(f"Checking for udhcpc6: {res.stdout}")
+    res = dut.runsh(f"pgrep -f 'odhcp6c.*{port}'")
+    # print(f"Checking for odhcp6c: {res.stdout}")
     if res.stdout.strip() != "":
         return True
     return False
@@ -24,8 +24,8 @@ def checkrun(dut):
 
 def checklog(dut):
     """Check syslog for prefix delegation message"""
-    rc = dut.runsh("tail -10 /log/syslog | grep 'received delegated prefix'")
-    # print(f"DHCPv6 client logs:\n{res.stdout}")
+    rc = dut.runsh("tail -50 /log/syslog | grep 'received delegated prefix'")
+    # print(f"DHCPv6 client logs:\n{rc.stdout}")
     if rc.stdout.strip() != "":
         return True
     return False
@@ -74,9 +74,10 @@ with infamy.Test() as test:
                 client.put_config_dict("ietf-interfaces", config)
 
             with test.step("Verify DHCPv6 client is running"):
-                until(lambda: checkrun(tgtssh))
+                until(lambda: checkrun(tgtssh), attempts=20)
 
             with test.step("Verify prefix delegation in logs"):
-                until(lambda: checklog(tgtssh))
+                # Prefix delegation may take longer on ARM hardware
+                until(lambda: checklog(tgtssh), attempts=30)
 
     test.succeed()

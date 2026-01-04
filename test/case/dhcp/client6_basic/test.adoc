@@ -15,6 +15,7 @@ image::topology.svg[DHCPv6 Basic topology, align=center, scaledwidth=75%]
 
 . Set up topology and attach to target DUT
 . Configure DHCPv6 client
+. Verify DHCPv6 client is running
 . Verify client lease for {CLIENT}
 . Verify client default route ::/0
 . Verify client domain name resolution
