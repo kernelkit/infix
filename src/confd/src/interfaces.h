@@ -101,6 +101,7 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 
 /* interfaces.c */
 const char *get_chassis_addr(void);
+int interface_get_phys_addr(struct lyd_node *cif, char *mac);
 int link_gen_address(struct lyd_node *cif, FILE *ip);
 int interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces);
 
