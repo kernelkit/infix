@@ -314,6 +314,7 @@ static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char
 {
 	const char *ssid, *hidden, *security_mode, *secret_name, *secret;
 	struct lyd_node *cif, *wifi, *ap, *security, *secret_node;
+	char bssid[18];
 
 	/* Find the interface node for this BSS */
 	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
@@ -332,6 +333,10 @@ static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char
 
 	fprintf(hostapd, "\n# BSS %s\n", ifname);
 	fprintf(hostapd, "bss=%s\n", ifname);
+
+	/* Set BSSID if custom MAC is configured */
+	if (!interface_get_phys_addr(cif, bssid))
+		fprintf(hostapd, "bssid=%s\n", bssid);
 
 	/* SSID configuration */
 	ssid = lydx_get_cattr(ap, "ssid");
@@ -484,7 +489,13 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 
 	fprintf(hostapd, "interface=%s\n", primary_ifname);
 	fprintf(hostapd, "driver=nl80211\n");
-	fprintf(hostapd, "ctrl_interface=/run/hostapd\n\n");
+	fprintf(hostapd, "ctrl_interface=/run/hostapd\n");
+
+	/* Set BSSID if custom MAC is configured */
+	char bssid[18];
+	if (!interface_get_phys_addr(primary_cif, bssid))
+		fprintf(hostapd, "bssid=%s\n", bssid);
+	fprintf(hostapd, "\n");
 
 	fprintf(hostapd, "ssid=%s\n", ssid);
 	if (hidden && !strcmp(hidden, "true"))
