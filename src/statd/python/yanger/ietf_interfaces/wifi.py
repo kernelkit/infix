@@ -23,7 +23,7 @@ def detect_wifi_mode(ifname):
 def find_primary_interface_from_config(ifname):
     """Find primary interface by reading hostapd config files"""
     try:
-        file_list = HOST.run(tuple("ls /etc/hostapd-*.conf".split()), default="")
+        file_list = HOST.run(("sh", "-c", "ls /etc/hostapd-*.conf"), default="")
         if not file_list:
             return None
 

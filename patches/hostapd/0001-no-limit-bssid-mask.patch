@@ -1,0 +1,23 @@
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index 2406658da..23edf0349 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -949,18 +949,6 @@ skip_mask_ext:
+ 	if (!auto_addr)
+ 		return 0;
+ 
+-	for (i = 0; i < ETH_ALEN; i++) {
+-		if ((hapd->own_addr[i] & mask[i]) != hapd->own_addr[i]) {
+-			wpa_printf(MSG_ERROR, "Invalid BSSID mask " MACSTR
+-				   " for start address " MACSTR ".",
+-				   MAC2STR(mask), MAC2STR(hapd->own_addr));
+-			wpa_printf(MSG_ERROR, "Start address must be the "
+-				   "first address in the block (i.e., addr "
+-				   "AND mask == addr).");
+-			return -1;
+-		}
+-	}
+-
+ 	return 0;
+ }
+ 

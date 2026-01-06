@@ -78,7 +78,7 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		goto out;
 	}
 
-	if (!fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
+	if (!fnmatch("wifi+([0-9])*", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:wifi";
 	else if (iface_is_phys(ifname))
 		inferred.data.string_val = "infix-if-type:ethernet";
@@ -224,7 +224,7 @@ const char *get_chassis_addr(void)
 	return json_string_value(addr);
 }
 
-static int get_phys_addr(struct lyd_node *cif, char *mac)
+int interface_get_phys_addr(struct lyd_node *cif, char *mac)
 {
 	struct lyd_node *cpa, *chassis;
 	const char *base, *offs;
@@ -255,7 +255,7 @@ int link_gen_address(struct lyd_node *cif, FILE *ip)
 	char mac[18];
 	int err;
 
-	err = get_phys_addr(cif, mac);
+	err = interface_get_phys_addr(cif, mac);
 	if (err)
 		return err;
 
@@ -272,7 +272,7 @@ static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node 
 	if (!lydx_get_child(dif, "custom-phys-address"))
 		return 0;
 
-	err = get_phys_addr(cif, mac);
+	err = interface_get_phys_addr(cif, mac);
 	if (err)
 		return (err == -ENODATA) ? 0 : err;
 
