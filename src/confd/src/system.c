@@ -558,9 +558,9 @@ static void del_groups(const char *user, const char **groups)
 static void adjust_access(const char *user, const char *shell)
 {
 	if (strcmp(shell, "/bin/false"))
-		add_group(user, "sys-cli");
+		add_group(user, "klish");
 	else
-		del_group(user, "sys-cli");
+		del_group(user, "klish");
 }
 
 /* XXX: Currently Infix only has admin and non-admins as a group */
@@ -615,7 +615,7 @@ static int is_valid_username(const char *user)
 	return 1;
 }
 
-static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
+static char *sys_find_usable_shell(sr_session_ctx_t *sess, const char *name)
 {
 	const char *conf = NULL;
 	char *shell = NULL;
