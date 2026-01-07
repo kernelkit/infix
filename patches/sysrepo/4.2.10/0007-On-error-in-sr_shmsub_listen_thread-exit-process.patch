@@ -1,10 +1,7 @@
 From dbf08c67d8f17bdf98466b18fd72a230269e5d46 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 23 Aug 2024 12:22:06 +0200
-Subject: [PATCH 7/8] On error in sr_shmsub_listen_thread(), exit process
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 7/9] On error in sr_shmsub_listen_thread(), exit process
 Organization: Wires
 
 If processing callback events in, e.g., sysrepo-plugind, make sure to
@@ -12,7 +9,6 @@ log the error and exit(1) the entire process so the system can decide
 to handle the problem.  For example, restart all dependent services.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  src/shm_sub.c | 2 ++
  1 file changed, 2 insertions(+)
