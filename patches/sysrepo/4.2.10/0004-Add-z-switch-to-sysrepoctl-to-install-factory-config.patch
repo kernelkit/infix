@@ -1,16 +1,13 @@
 From e0c899ba266b959544d7cc08c917cebba7ac91c7 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Mon, 6 May 2024 14:49:32 +0200
-Subject: [PATCH 4/8] Add -z switch to sysrepoctl to install factory config
+Subject: [PATCH 4/9] Add -z switch to sysrepoctl to install factory config
  from a json file
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 This to be able to load the yang modules during build time instead on boot.
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/executables/sysrepoctl.c | 20 +++++++++++++--
  src/lyd_mods.h               |  7 ++++++

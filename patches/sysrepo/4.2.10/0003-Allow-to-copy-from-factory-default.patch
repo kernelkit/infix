@@ -1,13 +1,10 @@
 From 9e0267d4f20733b2a26df6d0ee0bc4019db8b13f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 8 May 2024 17:00:50 +0200
-Subject: [PATCH 3/8] Allow to copy from factory default
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 3/9] Allow to copy from factory default
 Organization: Wires
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/sysrepo.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
