@@ -17,6 +17,12 @@
 
 #include "util.h"
 
+#define err(rc, fmt, args...)   { fprintf(stderr, ERRMSG fmt ":%s\n", ##args, strerror(errno)); exit(rc); }
+#define errx(rc, fmt, args...)  { fprintf(stderr, ERRMSG fmt "\n", ##args);                     exit(rc); }
+#define warnx(fmt, args...)       fprintf(stderr, ERRMSG fmt "\n", ##args)
+#define warn(fmt, args...)        fprintf(stderr, ERRMSG fmt ":%s\n", ##args, strerror(errno))
+#define dbg(fmt, args...)       if (debug) fprintf(stderr, DBGMSG fmt "\n", ##args)
+
 struct infix_ds {
 	char *name;		/* startup-config, etc.  */
 	int   datastore;	/* sr_datastore_t and -1 */
@@ -48,10 +54,8 @@ static const char *getuser(void)
 
 	uid = getuid();
 	pw = getpwuid(uid);
-	if (!pw) {
-		perror("getpwuid");
-		exit(1);
-	}
+	if (!pw)
+		err(1, "failed querying user info for uid %d", uid);
 
 	return pw->pw_name;
 }
@@ -86,7 +90,7 @@ static int in_group(const char *user, const char *fn, gid_t *gid)
 	num = NGROUPS_MAX;
 	groups = malloc(num * sizeof(gid_t));
 	if (!groups) {
-		perror("in_group() malloc");
+		warn("failed in_group()");
 		return 0;
 	}
 
@@ -127,11 +131,10 @@ static void set_owner(const char *fn, const char *user)
 		return;	/* user not in parent directory's group */
 
 	if (chown(fn, -1, gid) && errno != EPERM) {
-		int _errno = errno;
 		const struct group *gr = getgrgid(gid);
 
-		fprintf(stderr, ERRMSG "setting group owner %s (%d) on %s: %s\n",
-			gr ? gr->gr_name : "<unknown>", gid, fn, strerror(_errno));
+		warn("setting group owner %s (%d) on %s",
+		     gr ? gr->gr_name : "<unknown>", gid, fn);
 	}
 }
 
@@ -185,7 +188,7 @@ static void rmtmp(const char *path)
 		if (errno == ENOENT)
 			return;
 
-		fprintf(stderr, ERRMSG "removal of temporary file %s failed\n", path);
+		warn("failed removing temporary file %s", path);
 	}
 }
 
@@ -199,7 +202,7 @@ static void sysrepo_print_error(sr_session_ctx_t *sess)
 	if (err || !erri || !erri->err_count)
 		return;
 
-	fprintf(stderr, ERRMSG "%s (%d)\n", erri->err->message, erri->err->err_code);
+	warnx("%s (%d)", erri->err->message, erri->err->err_code);
 }
 
 static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
@@ -225,7 +228,7 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 		err = sr_connect(0, &conn);
 		if (err != SR_ERR_OK) {
 			sysrepo_print_error(sess);
-			fprintf(stderr, ERRMSG "could not connect to %s\n", ds->name);
+			warnx(ERRMSG "failed connecting to %s", ds->name);
 			goto err;
 		}
 
@@ -235,21 +238,21 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 		err = sr_session_start(conn, SR_DS_RUNNING, &sess);
 		if (err != SR_ERR_OK) {
 			sysrepo_print_error(sess);
-			fprintf(stderr, ERRMSG "%s session setup failed\n", ds->name);
+			warnx(ERRMSG "%s session setup failed", ds->name);
 			goto err_disconnect;
 		}
 
 		err = sr_nacm_init(sess, 0, &sub);
 		if (err != SR_ERR_OK) {
 			sysrepo_print_error(sess);
-			fprintf(stderr, ERRMSG "%s NACM setup failed\n", ds->name);
+			warnx(ERRMSG "%s NACM setup failed", ds->name);
 			goto err_stop;
 		}
 
 		err = sr_nacm_set_user(sess, user);
 		if (err != SR_ERR_OK) {
 			sysrepo_print_error(sess);
-			fprintf(stderr, ERRMSG "%s NACM setup for %s failed\n", ds->name, user);
+			warnx(ERRMSG "%s NACM setup failed for user %s", ds->name, user);
 			goto err_nacm_destroy;
 		}
 	}
@@ -257,7 +260,7 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 	err = sr_session_switch_ds(sess, ds->datastore);
 	if (err) {
 		sysrepo_print_error(sess);
-		fprintf(stderr, ERRMSG "%s activation failed\n", ds->name);
+		warnx("%s activation failed", ds->name);
 		return NULL;
 	}
 
@@ -287,7 +290,7 @@ static int sysrepo_export(const struct infix_ds *ds, const char *path)
 	err = sr_get_data(sess, "/*", 0, timeout * 1000, SR_OPER_DEFAULT, &data);
 	if (err) {
 		sysrepo_print_error(sess);
-		fprintf(stderr, ERRMSG "retrieval of %s data failed\n", ds->name);
+		warnx("failed retrieving %s data", ds->name);
 		return err;
 	}
 
@@ -295,7 +298,7 @@ static int sysrepo_export(const struct infix_ds *ds, const char *path)
 	sr_release_data(data);
 	if (err) {
 		sysrepo_print_error(sess);
-		fprintf(stderr, ERRMSG "failed to store %s data\n", ds->name);
+		warnx("failed storing %s data", ds->name);
 		return err;
 	}
 
@@ -319,14 +322,14 @@ static int sysrepo_import(const struct infix_ds *ds, const char *path)
 				  LYD_PARSE_NO_STATE | LYD_PARSE_ONLY |
 				  LYD_PARSE_STORE_ONLY | LYD_PARSE_STRICT, 0, &data);
 	if (err) {
-		fprintf(stderr, ERRMSG "failed to parse %s data\n", ds->name);
+		warnx("failed parsing %s data", ds->name);
 		goto out;
 	}
 
 	err = dry_run ? 0 : sr_replace_config(sess, NULL, data, timeout * 1000);
 	if (err) {
 		sysrepo_print_error(sess);
-		fprintf(stderr, ERRMSG "failed import %s data\n", ds->name);
+		warnx("failed importing %s data, error %d", ds->name, err);
 	}
 
 out:
@@ -390,7 +393,7 @@ static int curl_upload(const char *srcpath, const char *uri)
 	char upload[] = "-T";
 
 	if (curl(upload, srcpath, uri)) {
-		fprintf(stderr, ERRMSG "upload to %s failed\n", uri);
+		warnx("upload to %s failed", uri);
 		return 1;
 	}
 
@@ -400,9 +403,10 @@ static int curl_upload(const char *srcpath, const char *uri)
 static int curl_download(const char *uri, const char *dstpath)
 {
 	char download[] = "-o";
+	int err;
 
-	if (curl(download, dstpath, uri)) {
-		fprintf(stderr, ERRMSG "download of %s failed\n", uri);
+	if ((err = curl(download, dstpath, uri))) {
+		warnx("download of %s failed, exit code %d", uri, err);
 		return 1;
 	}
 
@@ -423,7 +427,7 @@ static int cp(const char *srcpath, const char *dstpath)
 
 	err = subprocess(argv);
 	if (err)
-		fprintf(stderr, ERRMSG "failed to save %s\n", dstpath);
+		warnx("failed to save %s, exit code %d", dstpath, err);
 out:
 	free(argv[2]);
 	free(argv[1]);
@@ -480,7 +484,7 @@ static int resolve_src(const char **src, const struct infix_ds **ds, char **path
 	}
 
 	if (!*path) {
-		fprintf(stderr, ERRMSG "no such file %s.", *src);
+		warn("no such file %s", *src);
 		return 1;
 	}
 
@@ -494,7 +498,7 @@ static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path
 
 	if (*ds) {
 		if (!(*ds)->rw) {
-			fprintf(stderr, ERRMSG "%s is not writable", (*ds)->name);
+			warn("%s is not writable", (*ds)->name);
 			return 1;
 		}
 
@@ -509,12 +513,12 @@ static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path
 	}
 
 	if (!*path) {
-		fprintf(stderr, ERRMSG "no such file: %s", *dst);
+		warn("no such file: %s", *dst);
 		return 1;
 	}
 
 	if (!*ds && !access(*path, F_OK) && !yorn("Overwrite existing file %s", *path)) {
-		fprintf(stderr, "OK, aborting.\n");
+		warn("OK, aborting.");
 		return 1;
 	}
 
@@ -533,7 +537,7 @@ static int copy(const char *src, const char *dst)
 	oldmask = umask(0006);
 
 	if (!strcmp(src, dst)) {
-		fprintf(stderr, ERRMSG "source and destination are the same, aborting.\n");
+		warn("source and destination are the same, aborting.");
 		goto err;
 	}
 
