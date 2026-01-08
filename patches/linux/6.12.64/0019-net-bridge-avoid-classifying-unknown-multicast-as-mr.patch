@@ -1,4 +1,4 @@
-From a16724e0f5ad607c5a066005870fffc90f5954e3 Mon Sep 17 00:00:00 2001
+From 31ce30ed1ae6f15d18887c3fd39db5d19ce4f7dc Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 19/30] net: bridge: avoid classifying unknown multicast as
@@ -188,10 +188,10 @@ index 0a00c3f57815..1ae021be0a7b 100644
  		    ipv6_addr_is_all_snoopers(&ipv6_hdr(skb)->daddr))
  			br_ip6_multicast_mrd_rcv(brmctx, pmctx, skb);
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 741b0b8c4bab..ef4c44a6a32c 100644
+index a2e59108a5dc..6c5b1fad19c6 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
-@@ -485,6 +485,7 @@ enum net_bridge_opts {
+@@ -486,6 +486,7 @@ enum net_bridge_opts {
  	BROPT_VLAN_BRIDGE_BINDING,
  	BROPT_MCAST_VLAN_SNOOPING_ENABLED,
  	BROPT_MST_ENABLED,
@@ -199,7 +199,7 @@ index 741b0b8c4bab..ef4c44a6a32c 100644
  };
  
  struct net_bridge {
-@@ -889,8 +890,8 @@ void br_forward(const struct net_bridge_port *to, struct sk_buff *skb,
+@@ -890,8 +891,8 @@ void br_forward(const struct net_bridge_port *to, struct sk_buff *skb,
  		bool local_rcv, bool local_orig);
  int br_forward_finish(struct net *net, struct sock *sk, struct sk_buff *skb);
  void br_flood(struct net_bridge *br, struct sk_buff *skb,
@@ -210,7 +210,7 @@ index 741b0b8c4bab..ef4c44a6a32c 100644
  
  /* return true if both source port and dest port are isolated */
  static inline bool br_skb_isolated(const struct net_bridge_port *to,
-@@ -1412,6 +1413,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
+@@ -1413,6 +1414,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
  {
  }
  

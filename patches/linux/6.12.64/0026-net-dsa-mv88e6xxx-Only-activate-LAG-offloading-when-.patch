@@ -1,4 +1,4 @@
-From 5c939708c5195db4e0fc65f5e8d613cca5c6be26 Mon Sep 17 00:00:00 2001
+From f40426a4cbbc10a58218bee1a34e9b38ea753efd Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
 Subject: [PATCH 26/30] net: dsa: mv88e6xxx: Only activate LAG offloading when
