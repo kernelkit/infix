@@ -158,6 +158,16 @@ static bool is_uri(const char *str)
 	return strstr(str, "://") != NULL;
 }
 
+static bool is_stdout(const char *path)
+{
+	if (!path)
+		return 1;
+
+	return  !strcmp(path, "-") ||
+		!strcmp(path, "/dev/stdout") ||
+		!strcmp(path, "/dev/fd/1");
+}
+
 static char *mktmp(void)
 {
 	mode_t oldmask;
@@ -413,6 +423,23 @@ static int curl_download(const char *uri, const char *dstpath)
 	return 0;
 }
 
+static int cat(const char *srcpath)
+{
+	char *argv[] = { "cat", NULL, NULL };
+	int err;
+
+	argv[1] = strdup(srcpath);
+	if (!argv[1])
+		return 1;
+
+	err = subprocess(argv);
+	if (err)
+		warnx("failed writing to stdout, exit code %d", err);
+
+	free(argv[1]);
+	return err;
+}
+
 static int cp(const char *srcpath, const char *dstpath)
 {
 	char *argv[] =  {
@@ -441,6 +468,8 @@ static int put(const char *srcpath, const char *dst,
 
 	if (ds)
 		err = sysrepo_import(ds, srcpath);
+	else if (is_stdout(dst))
+		err = cat(srcpath);
 	else if (is_uri(dst))
 		err = curl_upload(srcpath, dst);
 
@@ -494,6 +523,9 @@ static int resolve_src(const char **src, const struct infix_ds **ds, char **path
 
 static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path)
 {
+	if (is_stdout(*dst) || is_uri(*dst))
+		return 0;
+
 	*dst = infix_ds(*dst, ds);
 
 	if (*ds) {
@@ -506,8 +538,6 @@ static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path
 			return 0;
 
 		*path = strdup((*ds)->path);
-	} else if (is_uri(*dst)) {
-		return 0;
 	} else {
 		*path = cfg_adjust(*dst, NULL, sanitize);
 	}
@@ -536,7 +566,7 @@ static int copy(const char *src, const char *dst)
 	/* rw for user and group only */
 	oldmask = umask(0006);
 
-	if (!strcmp(src, dst)) {
+	if (dst && !strcmp(src, dst)) {
 		warn("source and destination are the same, aborting.");
 		goto err;
 	}
@@ -562,7 +592,8 @@ err:
 	if (rmsrc)
 		rmtmp(srcpath);
 
-	free(dstpath);
+	if (dstpath)
+		free(dstpath);
 	free(srcpath);
 
 	sync();
@@ -572,7 +603,7 @@ err:
 
 static int usage(int rc)
 {
-	printf("Usage: %s [OPTIONS] SRC DST\n"
+	printf("Usage: %s [OPTIONS] SRC [DST]\n"
 	       "\n"
 	       "Options:\n"
 	       "  -h              This help text\n"
@@ -584,7 +615,8 @@ static int usage(int rc)
 	       "\n"
 	       "Files:\n"
 	       "  SRC             JSON configuration file, or a datastore\n"
-	       "  DST             A file or datastore, except factory-config\n"
+	       "  DST             Optiional file or datastore, except factory-config,\n"
+	       "                  when omitted output goes to stdout\n"
 	       "\n"
 	       "Datastores:\n"
 	       "  running-config  The running datastore, current active config\n"
@@ -627,7 +659,7 @@ int main(int argc, char *argv[])
 	if (timeout < 0)
 		timeout = 120;
 
-	if (argc - optind != 2)
+	if (argc - optind < 1)
 		return usage(1);
 
 	src = argv[optind++];

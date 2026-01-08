@@ -628,15 +628,15 @@
   </COMMAND>
 
   <COMMAND name="factory-config" help="Show factory-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /etc/factory-config.cfg |pager</ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy factory | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="running-config" help="Show running-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">sysrepocfg -X -f json | jq -C . |pager</ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy running | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="startup-config" help="Show startup-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /cfg/startup-config.cfg |pager</ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy startup | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="firewall" help="Show firewall status and configuration">
