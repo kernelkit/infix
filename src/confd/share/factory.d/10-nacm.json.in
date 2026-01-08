@@ -1,0 +1,129 @@
+{
+    "ietf-netconf-acm:nacm": {
+	"enable-nacm": true,
+	"read-default": "permit",
+	"write-default": "deny",
+	"exec-default": "permit",
+	"groups": {
+	    "group": [
+		{
+		    "name": "admin",
+		    "user-name": [
+			"admin"
+		    ]
+		},
+		{
+		    "name": "operator",
+		    "user-name": []
+		},
+		{
+		    "name": "guest",
+		    "user-name": []
+		}
+	    ]
+	},
+	"rule-list": [
+	    {
+		"name": "admin-acl",
+		"group": [
+		    "admin"
+		],
+		"rule": [
+		    {
+			"name": "permit-all",
+			"module-name": "*",
+			"access-operations": "*",
+			"action": "permit",
+			"comment": "Allow 'admin' group complete access to all operations and data."
+		    }
+		]
+	    },
+	    {
+		"name": "operator-acl",
+		"group": [
+		    "operator"
+		],
+		"rule": [
+		    {
+			"name": "permit-interfaces",
+			"path": "/ietf-interfaces:interfaces/interface",
+			"access-operations": "*",
+			"action": "permit",
+			"comment": "Operators can manage network interfaces."
+		    },
+		    {
+			"name": "permit-routing",
+			"path": "/ietf-routing:routing",
+			"access-operations": "*",
+			"action": "permit",
+			"comment": "Operators can manage routing protocols."
+		    },
+		    {
+			"name": "permit-firewall",
+			"path": "/infix-firewall:firewall",
+			"access-operations": "*",
+			"action": "permit",
+			"comment": "Operators can manage firewall rules."
+		    },
+#CONTAINERS#		    {
+#CONTAINERS#			"name": "permit-containers",
+#CONTAINERS#			"path": "/infix-containers:containers",
+#CONTAINERS#			"access-operations": "*",
+#CONTAINERS#			"action": "permit",
+#CONTAINERS#			"comment": "Operators can manage containers."
+#CONTAINERS#		    },
+		    {
+			"name": "permit-system-restart",
+			"module-name": "ietf-system",
+			"rpc-name": "system-restart",
+			"access-operations": "exec",
+			"action": "permit",
+			"comment": "Operators can restart the system."
+		    }
+		]
+	    },
+	    {
+		"name": "guest-acl",
+		"group": [
+		    "guest"
+		],
+		"rule": [
+		    {
+			"name": "deny-all-exec",
+			"module-name": "*",
+			"access-operations": "exec",
+			"action": "deny",
+			"comment": "Guests cannot execute any operations."
+		    }
+		]
+	    },
+	    {
+		"name": "default-deny-all",
+		"group": ["*"],
+		"rule": [
+		    {
+			"name": "deny-password-access",
+			"path": "/ietf-system:system/authentication/user/password",
+			"access-operations": "*",
+			"action": "deny",
+			"comment": "No user can access password hashes."
+		    },
+		    {
+			"name": "deny-keystore-access",
+			"module-name": "ietf-keystore",
+			"access-operations": "*",
+			"action": "deny",
+			"comment": "No user can access cryptographic keys."
+		    },
+		    {
+			"name": "deny-truststore-access",
+			"module-name": "ietf-truststore",
+			"access-operations": "*",
+			"action": "deny",
+			"comment": "No user can access trust store."
+		    }
+		]
+	    }
+	]
+    }
+}
