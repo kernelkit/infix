@@ -40,6 +40,7 @@ const struct infix_ds infix_config[] = {
 
 static const char *prognm = "copy";
 static const char *remote_user;
+static int debug;
 static int timeout;
 static int dry_run;
 static int sanitize;
@@ -259,6 +260,7 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 			goto err_stop;
 		}
 
+		dbg("Setting NACM user %s for session", user);
 		err = sr_nacm_set_user(sess, user);
 		if (err != SR_ERR_OK) {
 			sysrepo_print_error(sess);
@@ -606,6 +608,7 @@ static int usage(int rc)
 	printf("Usage: %s [OPTIONS] SRC [DST]\n"
 	       "\n"
 	       "Options:\n"
+	       "  -d              Enable debug mode, verbose output on stderr\n"
 	       "  -h              This help text\n"
 	       "  -n              Dry-run, validate configuration without applying\n"
 	       "  -s              Sanitize paths for CLI use (restrict path traversal)\n"
@@ -634,8 +637,11 @@ int main(int argc, char *argv[])
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "hnst:u:v")) != EOF) {
+	while ((c = getopt(argc, argv, "dhnst:u:v")) != EOF) {
 		switch(c) {
+		case 'd':
+			debug = 1;
+			break;
 		case 'h':
 			return usage(0);
 		case 'n':
