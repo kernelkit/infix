@@ -46,14 +46,15 @@ static int dry_run;
 static int sanitize;
 
 /*
- * Current system user, same as sysrepo user
+ * Current system user, same as sysrepo user.  We use getuid() here
+ * because `copy` is SUID root to work around sysrepo issues with a
+ * /dev/shm that's moounted 01777.
  */
 static const char *getuser(void)
 {
 	const struct passwd *pw;
-	uid_t uid;
+	uid_t uid = getuid();
 
-	uid = getuid();
 	pw = getpwuid(uid);
 	if (!pw)
 		err(1, "failed querying user info for uid %d", uid);
@@ -182,6 +183,7 @@ static char *mktmp(void)
 	oldmask = umask(0077);
 	fd = mkstemp(path);
 	umask(oldmask);
+	chown(path, getuid(), -1);
 
 	if (fd < 0)
 		goto err;
@@ -218,9 +220,8 @@ static void sysrepo_print_error(sr_session_ctx_t *sess)
 
 static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 {
+	static sr_subscription_ctx_t *sub = NULL;
 	static sr_session_ctx_t *sess;
-
-	sr_subscription_ctx_t *sub = NULL;
 	const char *user = getuser();
 	sr_conn_ctx_t *conn = NULL;
 	int err;
@@ -232,6 +233,8 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 		conn = sr_session_get_connection(sess);
 		sr_session_stop(sess);
 		sr_disconnect(conn);
+		sess = NULL;
+		sub = NULL;
 		return NULL;
 	}
 
@@ -280,6 +283,7 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 
 err_nacm_destroy:
 	sr_nacm_destroy();
+	sub = NULL;
 err_stop:
 	sr_session_stop(sess);
 err_disconnect:

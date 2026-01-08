@@ -18,4 +18,8 @@ define BIN_CONF_ENV
 CFLAGS="$(INFIX_CFLAGS)"
 endef
 
+define BIN_PERMISSIONS
+	/usr/bin/copy  d 04750 root sysrepo - - - - -
+endef
+
 $(eval $(autotools-package))
