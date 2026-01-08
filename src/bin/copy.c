@@ -40,6 +40,7 @@ const struct infix_ds infix_config[] = {
 
 static const char *prognm = "copy";
 static const char *remote_user;
+static char *xpath = "/*";
 static int debug;
 static int timeout;
 static int dry_run;
@@ -303,7 +304,7 @@ static int sysrepo_export(const struct infix_ds *ds, const char *path)
 	if (!sess)
 		return 1;
 
-	err = sr_get_data(sess, "/*", 0, timeout * 1000, SR_OPER_DEFAULT, &data);
+	err = sr_get_data(sess, xpath, 0, timeout * 1000, SR_OPER_DEFAULT, &data);
 	if (err) {
 		sysrepo_print_error(sess);
 		warnx("failed retrieving %s data", ds->name);
@@ -619,6 +620,7 @@ static int usage(int rc)
 	       "  -t SEC          Timeout for the operation, or default %d sec\n"
 	       "  -u USER         Username for remote commands, like scp\n"
 	       "  -v              Show version\n"
+	       "  -x PATH         XPath to copy, default: all\n"
 	       "\n"
 	       "Files:\n"
 	       "  SRC             JSON configuration file, or a datastore\n"
@@ -641,7 +643,7 @@ int main(int argc, char *argv[])
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "dhnst:u:v")) != EOF) {
+	while ((c = getopt(argc, argv, "dhnst:u:vx:")) != EOF) {
 		switch(c) {
 		case 'd':
 			debug = 1;
@@ -663,6 +665,9 @@ int main(int argc, char *argv[])
 		case 'v':
 			puts(PACKAGE_VERSION);
 			return 0;
+		case 'x':
+			xpath = optarg;
+			break;
 		}
 	}
 
