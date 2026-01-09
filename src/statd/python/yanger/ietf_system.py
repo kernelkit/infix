@@ -262,27 +262,74 @@ def add_timezone(out):
 
 
 def add_users(out):
-    shadow_output = HOST.run_multiline(["getent", "shadow"], [])
-    users = []
+    # Map shell paths to YANG identity names
+    shell_map = {
+        "/bin/bash": "infix-system:bash",
+        "/bin/sh": "infix-system:sh",
+        "/usr/bin/clish": "infix-system:clish",
+        "/bin/false": "infix-system:false",
+        "/sbin/nologin": "infix-system:false",
+        "/usr/sbin/nologin": "infix-system:false",
+    }
 
+    # Get users from /etc/passwd - include users with 1000 <= uid < 10000 (added by confd)
+    passwd_output = HOST.run_multiline(["getent", "passwd"], [])
+    passwd_users = {}
+    for line in passwd_output:
+        parts = line.split(':')
+        if len(parts) >= 7:
+            username = parts[0]
+            uid = int(parts[2]) if parts[2].isdigit() else 0
+            shell = parts[6].strip()
+            if 1000 <= uid < 10000:
+                passwd_users[username] = shell_map.get(shell, "infix-system:false")
+
+    # Get password hashes from shadow
+    shadow_output = HOST.run_multiline(["getent", "shadow"], [])
+    shadow_hashes = {}
     for line in shadow_output:
         parts = line.split(':')
-        if len(parts) < 2:
-            continue
-        username = parts[0]
-        password_hash = parts[1]
+        if len(parts) >= 2:
+            username = parts[0]
+            password_hash = parts[1]
+            # Only include valid password hashes (not locked/disabled)
+            if (password_hash and
+                not password_hash.startswith('*') and
+                not password_hash.startswith('!')):
+                shadow_hashes[username] = password_hash
 
-        # Skip any records that do not pass YANG validation
-        if (not password_hash or
-            password_hash.startswith('0') or
-            password_hash.startswith('*') or
-            password_hash.startswith('!')):
-            continue
-        user = {}
-        user["name"] = username
-        user["password"] = password_hash
+    # Build user list from passwd users (1000 <= uid < 10000)
+    users = []
+    for username, shell in passwd_users.items():
+        user = {"name": username}
+        if username in shadow_hashes:
+            user["password"] = shadow_hashes[username]
+        user["infix-system:shell"] = shell
+
+        # Read SSH authorized keys from /var/run/sshd/${user}.keys
+        keys_file = f"/var/run/sshd/{username}.keys"
+        keys_content = HOST.read(keys_file)
+        if keys_content:
+            authorized_keys = []
+            for line in keys_content.splitlines():
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                parts = line.split(None, 2)
+                if len(parts) >= 2:
+                    algorithm = parts[0]
+                    key_data = parts[1]
+                    # Use comment as key name, or generate one
+                    key_name = parts[2] if len(parts) > 2 else f"{username}-key-{len(authorized_keys)}"
+                    authorized_keys.append({
+                        "name": key_name,
+                        "algorithm": algorithm,
+                        "key-data": key_data
+                    })
+            if authorized_keys:
+                user["authorized-key"] = authorized_keys
+
         users.append(user)
-
 
     insert(out, "authentication", "user", users)
 

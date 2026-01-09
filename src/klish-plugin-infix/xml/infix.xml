@@ -324,6 +324,10 @@
     </ACTION>
   </COMMAND>
 
+  <COMMAND name="nacm" help="Show users and NACM status and groups">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">show nacm</ACTION>
+  </COMMAND>
+
   <COMMAND name="ntp" help="Show NTP status">
     <SWITCH name="subcommands" min="0">
       <COMMAND name="source" help="Show NTP source(s)">

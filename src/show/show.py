@@ -10,7 +10,7 @@ import argparse
 
 RAW_OUTPUT = False
 
-def run_sysrepocfg(xpath: str) -> dict:
+def run_sysrepocfg(xpath: str, datastore: str = "operational") -> dict:
     if not isinstance(xpath, str) or not xpath.startswith("/"):
         print("Invalid XPATH. It must be a valid string starting with '/'.")
         return {}
@@ -19,7 +19,7 @@ def run_sysrepocfg(xpath: str) -> dict:
 
     try:
         result = subprocess.run([
-            "sysrepocfg", "-f", "json", "-X", "-d", "operational", "-x", safe_xpath
+            "sysrepocfg", "-f", "json", "-X", "-d", datastore, "-x", safe_xpath
         ], capture_output=True, text=True, check=True)
         json_data = json.loads(result.stdout)
         return json_data
@@ -596,6 +596,24 @@ def system(args: List[str]) -> None:
 
     cli_pretty(data, "show-system")
 
+def nacm(args: List[str]) -> None:
+    data = run_sysrepocfg("/ietf-netconf-acm:nacm", "running")
+    if not data:
+        print("No NACM data retrieved.")
+        return
+
+    # Fetch user data from operational (includes shell and authorized-key from yanger)
+    user_oper = get_json("/ietf-system:system/authentication")
+
+    if user_oper:
+        oper_users = user_oper.get("ietf-system:system", {}).get("authentication", {}).get("user", [])
+        data["ietf-system:system"] = {"authentication": {"user": oper_users}}
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+    cli_pretty(data, "show-nacm")
+
 def execute_command(command: str, args: List[str]):
     command_mapping = {
         'bfd': bfd,
@@ -605,6 +623,7 @@ def execute_command(command: str, args: List[str]):
         'hardware': hardware,
         'interface': interface,
         'lldp': lldp,
+        'nacm': nacm,
         'ntp': ntp,
         'ospf': ospf,
         'rip': rip,
