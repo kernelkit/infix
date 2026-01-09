@@ -11,6 +11,11 @@ module infix-if-type {
   contact      "kernelkit@googlegroups.com";
   description  "Infix extensions to IANA interfaces types";
 
+  revision 2026-01-07 {
+    description "Add interface type wifi and wireguard";
+    reference "internal";
+  }
+
   revision 2025-02-12 {
     description "Remove interface type etherlike.";
     reference "internal";
@@ -79,6 +84,9 @@ module infix-if-type {
     base infix-interface-type;
   }
   identity vxlan {
+    base infix-interface-type;
+  }
+  identity wireguard {
     base infix-interface-type;
   }
   identity lag {

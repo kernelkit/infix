@@ -6,6 +6,9 @@ module infix-crypto-types {
     prefix ct;
   }
 
+  revision 2025-11-09 {
+    description "Add Wireguard public/private key and sha";
+  }
   revision 2025-06-17 {
     description "Add Wi-Fi secret support.";
   }
@@ -28,6 +31,7 @@ module infix-crypto-types {
     base public-key-format;
     base ct:ssh-public-key-format;
   }
+
   identity symmetric-key-format {
     description
       "Base for symmetric key format";
@@ -37,5 +41,30 @@ module infix-crypto-types {
     base symmetric-key-format;
     description
       "WiFi secret key";
+  }
+
+  identity x25519-public-key-format {
+    base public-key-format;
+    base ct:public-key-format;
+    description
+      "X25519 (Curve25519) public key format for Diffie-Hellman key exchange.
+       This is the format used by WireGuard.";
+  }
+
+  identity x25519-private-key-format {
+    base private-key-format;
+    base ct:private-key-format;
+    description
+      "X25519 (Curve25519) private key format for Diffie-Hellman key exchange.
+       This is the format used by WireGuard.";
+  }
+
+  identity wireguard-symmetric-key-format {
+    base ct:symmetric-key-format;
+    base symmetric-key-format;
+    description
+      "WireGuard pre-shared key format.
+       32-byte base64-encoded key used as an optional additional layer
+       of symmetric encryption for post-quantum resistance.";
   }
 }

@@ -668,7 +668,7 @@ def wifi_radio_components():
 
 
 def operational():
-    systemjson = HOST.read_json("/run/system.json")
+    systemjson = HOST.read_json("/run/system.json", {})
 
     return {
         "ietf-hardware:hardware": {

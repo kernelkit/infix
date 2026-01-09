@@ -38,6 +38,7 @@ confd_plugin_la_SOURCES =			\
 	  if-gre.c				\
 	  if-vxlan.c				\
 	  if-wifi.c				\
+          if-wireguard.c			\
 	keystore.c				\
 	system.c				\
 	ntp.c					\

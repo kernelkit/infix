@@ -1,0 +1,52 @@
+graph "roadwarrior" {
+    layout="neato";
+    overlap=false;
+    esep="+20";
+    splines=true;
+
+    node [shape=record, fontname="DejaVu Sans Mono, Book"];
+    edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+    host [
+        label="{ <mgmt1> mgmt1 | <data> data } | host | { <mgmt2> mgmt2 } | { <data2> data2 | <mgmt3> mgmt3 | <data1> data1 | <mgmt4> mgmt4 }",
+        pos="200,250!",
+        requires="controller",
+    ];
+
+    server [
+        label="{ <data> data | <mgmt> mgmt } | { server | 192.168.100.1 } | <wan> wan",
+        pos="50,150!",
+        requires="infix",
+    ];
+
+    router [
+        label="<wan> wan | { <mgmt> mgmt | router | (internet) } | { <lan1> lan1 | <lan2> lan2 }",
+        pos="200,150!",
+        requires="infix",
+    ];
+
+    client1 [
+        label="<link> link | { <data> data | <mgmt> mgmt } | { client1 | 192.168.50.2 }",
+        pos="325,175!",
+        requires="infix",
+    ];
+
+    client2 [
+        label="<link> link | { <mgmt> mgmt | <data> data } | { client2 | 192.168.51.2 }",
+        pos="325,125!",
+        requires="infix",
+    ];
+
+    host:mgmt1 -- server:mgmt [requires="mgmt", color="lightgray"];
+    host:mgmt2 -- router:mgmt [requires="mgmt", color="lightgray"];
+    host:mgmt3 -- client1:mgmt [requires="mgmt", color="lightgray"];
+    host:mgmt4 -- client2:mgmt [requires="mgmt", color="lightgray"];
+
+    server:wan -- router:wan [label="192.168.100.0/24", headlabel=".2", taillabel=".1", fontcolor="black", color="black"];
+    router:lan1 -- client1:link [label="192.168.50.0/24", headlabel=".2", taillabel=".1", fontcolor="black", color="black"];
+    router:lan2 -- client2:link [label="192.168.51.0/24", headlabel=".2", taillabel=".1", fontcolor="black", color="black"];
+
+    host:data  -- server:data   [headlabel=".1", label="192.168.0.0/24", taillabel=".2", labeldistance=1, fontcolor="black", color="black"];
+    host:data1 -- client1:data  [headlabel=".1", label="192.168.1.0/24", taillabel=".2", labeldistance=1, fontcolor="black", color="black"];
+    host:data2 -- client2:data  [headlabel=".1", label="192.168.2.0/24", taillabel=".2", labeldistance=1, fontcolor="black", color="black"];
+}

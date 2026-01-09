@@ -19,6 +19,7 @@ All notable changes to the project are documented in this file.
 >
 > - WiFi Access Point (AP) mode support with multi-SSID capability
 > - RIPv2 routing support
+> - WireGuard support
 
 ### Changes
 
@@ -47,6 +48,7 @@ All notable changes to the project are documented in this file.
   moved to `wifi/station` container. Existing Wi-Fi interfaces will be
   removed during upgrade (for the rest of the configuration to apply)
   and you need to reconfigure them again. See [wifi.md](wifi.md) for details
+- Add support for WireGuard VPN tunnels.
 
 ### Fixes
 

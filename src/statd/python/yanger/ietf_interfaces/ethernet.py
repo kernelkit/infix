@@ -89,6 +89,9 @@ def link(ifname):
 def ethernet(iplink):
     eth = link(iplink["ifname"])
 
+    if eth is None:
+        eth = {}
+
     if stats := statistics(iplink["ifname"]):
         eth["statistics"] = stats
 

@@ -1,0 +1,309 @@
+submodule infix-if-wireguard {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import infix-crypto-types {
+    prefix ixct;
+  }
+  import ietf-keystore {
+    prefix ks;
+  }
+  import infix-keystore {
+    prefix infix-ks;
+  }
+  import ietf-truststore {
+    prefix ts;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "WireGuard VPN tunnel interface";
+
+  revision 2025-11-09 {
+    description "Initial revision";
+    reference "internal";
+  }
+
+  typedef port {
+    type inet:port-number;
+    description
+      "WireGuard UDP port. Valid range: 0..65535.";
+  }
+
+  typedef keepalive-interval {
+    type uint16 {
+      range "1..65535";
+    }
+    units "seconds";
+    description
+      "Persistent keepalive interval in seconds.
+
+       A keepalive packet will be sent to the peer endpoint at this
+       interval if no traffic has been exchanged. This is useful for
+       traversing NAT and firewalls that may close the UDP connection
+       after a period of inactivity.
+
+       Recommended value is 25 seconds for peers behind NAT.";
+  }
+
+  grouping peer-settings {
+    description
+      "Common WireGuard peer configuration settings.
+
+       These settings can be applied at the key-bag level (affecting all
+       keys in the bag) or at individual peer level (overriding key-bag
+       settings for specific keys).";
+
+    leaf preshared-key {
+      type ks:central-symmetric-key-ref;
+      description
+        "Optional preshared key for additional layer of symmetric encryption.
+
+         This provides post-quantum resistance as an attacker would need
+         to break both the Curve25519 key exchange and this symmetric key.";
+      must "derived-from-or-self(deref(.)/../ks:key-format, 'ixct:wireguard-symmetric-key-format')" {
+        error-message "Preshared key must be in wireguard-symmetric-key-format";
+      }
+    }
+
+    leaf endpoint {
+      type inet:host;
+      description
+        "Peer endpoint address (IP address or DNS hostname).
+
+         If not specified, this peer can only be a responder and cannot
+         initiate connections. WireGuard will learn the endpoint from
+         incoming authenticated packets.";
+    }
+
+    leaf endpoint-port {
+      type port;
+      description "Peer endpoint UDP port";
+    }
+
+    leaf-list allowed-ips {
+      type inet:ip-prefix;
+      description
+        "List of IP address ranges (in CIDR notation) that are allowed
+         to be used as source addresses inside the tunnel from this peer.
+
+         This also controls which destination addresses will be routed
+         to this peer. For example:
+         - '10.0.0.2/32' allows only this single IP
+         - '10.0.0.0/24' allows the entire subnet
+         - '0.0.0.0/0, ::/0' routes all traffic through this peer
+
+         WireGuard uses this as a cryptographic routing table.
+
+         IMPORTANT: Allowed-IPs must be unique across all peers. If
+         multiple peers have overlapping allowed-ips, only the last
+         peer will be used for routing. When configuring at the
+         key-bag level, only use allowed-ips if all peers genuinely
+         need identical routing (rare). For typical hub-and-spoke
+         scenarios, use per-peer configuration with unique allowed-ips
+         for each client (e.g., 10.0.0.2/32, 10.0.0.3/32, etc.).";
+    }
+
+    leaf persistent-keepalive {
+      type keepalive-interval;
+      description
+        "Interval in seconds to send keepalive packets to this peer.
+
+         If not specified (or set to 0), keepalive is disabled.
+         Use this when the peer is behind NAT or a firewall that may
+         close the UDP connection after inactivity.";
+    }
+  }
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:wireguard')" {
+      description "Only shown for if:type infixift:wireguard";
+    }
+    container wireguard {
+      description "WireGuard VPN configuration";
+
+      leaf listen-port {
+        type port;
+        default 51820;
+        description "Local UDP port to listen on for incoming WireGuard traffic";
+      }
+
+      leaf private-key {
+        type ks:central-asymmetric-key-ref;
+        mandatory true;
+        description "Reference to WireGuard private key (X25519/Curve25519 format)";
+        must "not(deref(.)/ks:public-key-format) or "
+          + "(derived-from-or-self(deref(.)/ks:public-key-format,  'ixct:x25519-public-key-format') and "
+          + "derived-from-or-self(deref(.)/ks:private-key-format,  'ixct:x25519-private-key-format'))" {
+          error-message "Private key must be in WireGuard (X25519/Curve25519) format";
+        }
+      }
+
+      list peers {
+        key "public-key-bag";
+        description
+          "Peers from a public key bag with common settings.
+
+           If the bag contains a single key, bag-level settings (endpoint,
+           allowed-ips, etc.) apply to that peer. If the bag contains multiple
+           keys, individual peer configuration is required for each key - you
+           must provide a 'peer' entry for each public key in the bag with
+           unique settings like endpoint and allowed-ips.";
+
+        must "count(../../../../ts:truststore/ts:public-key-bags/ts:public-key-bag[ts:name=current()/public-key-bag]/ts:public-key) = 1 or "
+           + "count(./peer) = count(../../../../ts:truststore/ts:public-key-bags/ts:public-key-bag[ts:name=current()/public-key-bag]/ts:public-key)" {
+          error-message "When a key-bag contains multiple keys, individual peer "
+                      + "configuration is required for each key. Either use a "
+                      + "key-bag with a single key for shared settings, or provide "
+                      + "a 'peer' entry for each key in the bag with unique settings.";
+        }
+
+        leaf public-key-bag {
+          type ts:central-public-key-bag-ref;
+          must "not(deref(.)/ts:public-key-format) or "
+            + "(derived-from-or-self(deref(.)/ts:public-key-format,  'ixct:x25519-public-key-format'))" {
+            error-message "Public key must be in WireGuard (X25519/Curve25519) format";
+          }
+          description "Reference to public key bag containing peer public keys";
+        }
+
+        uses peer-settings {
+          refine endpoint-port {
+            default 51820;
+          }
+        }
+
+        list peer {
+          key "public-key";
+          description
+            "Individual peer with override settings.
+
+             Settings specified here override the key-bag level settings
+             for this specific peer.";
+
+          leaf public-key {
+            type leafref {
+              path "../../../../../../ts:truststore/ts:public-key-bags/" +
+                   "ts:public-key-bag[ts:name=current()/../../public-key-bag]/" +
+                   "ts:public-key/ts:name";
+            }
+            description "Name of the peer's public key within the referenced key-bag";
+          }
+
+          uses peer-settings;
+        }
+      }
+
+      container peer-status {
+        config false;
+        description "Operational state for WireGuard peers";
+
+        list peer {
+          key "public-key";
+          description "Per-peer operational statistics and status";
+
+          leaf public-key {
+            type string {
+              pattern '[A-Za-z0-9+/]{43}=';
+            }
+            description
+              "WireGuard public key of the peer in base64 encoding.
+
+               This is the actual key value, not a keystore reference.";
+          }
+
+          leaf latest-handshake {
+            type yang:date-and-time;
+            description
+              "Timestamp of the most recent successful handshake with this peer.
+
+               If no handshake has occurred yet, this leaf will not be present.
+               A successful handshake indicates that the peer is authenticated
+               and a secure session has been established.";
+          }
+
+          leaf endpoint-address {
+            type inet:ip-address;
+            description
+              "The actual IP address from which packets were last received
+               from this peer.
+
+               This may differ from the configured endpoint if:
+               - The peer is roaming (changed IP address)
+               - The configured endpoint is a DNS hostname
+               - No endpoint was configured (learned from incoming packets)
+
+               If no packets have been received, this leaf will not be present.";
+          }
+
+          leaf endpoint-port {
+            type port;
+            description
+              "The actual UDP port from which packets were last received
+               from this peer.
+
+               If no packets have been received, this leaf will not be present.";
+          }
+
+          container transfer {
+            description "Data transfer statistics for this peer";
+
+            leaf tx-bytes {
+              type yang:counter64;
+              units "bytes";
+              description
+                "Total number of bytes transmitted (sent) to this peer.
+
+                 This counts encrypted payload bytes sent through the tunnel.";
+            }
+
+            leaf rx-bytes {
+              type yang:counter64;
+              units "bytes";
+              description
+                "Total number of bytes received from this peer.
+
+                 This counts decrypted payload bytes received through the tunnel.";
+            }
+          }
+
+          leaf connection-status {
+            type enumeration {
+              enum down {
+                description
+                  "No handshake has occurred, or the last handshake is too old.
+
+                   The peer is not considered connected.";
+              }
+              enum up {
+                description
+                  "A recent handshake has occurred and the connection is active.
+
+                   Typically means a handshake within the last 2-3 minutes.";
+              }
+            }
+            description
+              "Current connection status with this peer.
+
+               This is derived from the latest-handshake timestamp and indicates
+               whether the tunnel is currently operational.";
+          }
+        }
+      }
+    }
+  }
+}

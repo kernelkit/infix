@@ -1,0 +1,595 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 800 300"
+   version="1.1"
+   id="svg178"
+   sodipodi:docname="vpn-site-to-site.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview180"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.6525"
+     inkscape:cx="400"
+     inkscape:cy="150.07564"
+     inkscape:window-width="2560"
+     inkscape:window-height="1374"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg178" />
+  <defs
+     id="defs42">
+    <linearGradient
+       id="bgGrad"
+       x1="0%"
+       y1="0%"
+       x2="100%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#fafbfc;stop-opacity:1"
+         id="stop2" />
+      <stop
+         offset="100%"
+         style="stop-color:#f3f4f6;stop-opacity:1"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       id="siteGrad"
+       x1="0%"
+       y1="0%"
+       x2="0%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#3b82f6;stop-opacity:1"
+         id="stop7" />
+      <stop
+         offset="100%"
+         style="stop-color:#2563eb;stop-opacity:1"
+         id="stop9" />
+    </linearGradient>
+    <linearGradient
+       id="routerGrad"
+       x1="0%"
+       y1="0%"
+       x2="0%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#ef4444;stop-opacity:1"
+         id="stop12" />
+      <stop
+         offset="100%"
+         style="stop-color:#dc2626;stop-opacity:1"
+         id="stop14" />
+    </linearGradient>
+    <radialGradient
+       id="cloudGrad"
+       cx="288.08009"
+       cy="175.75494"
+       gradientTransform="matrix(1.3416408,0,0,0.74535599,-11.528571,2.8295566)"
+       fx="288.08009"
+       fy="175.75494"
+       r="51.98858"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         offset="0%"
+         style="stop-color:#ffffff;stop-opacity:1"
+         id="stop17" />
+      <stop
+         offset="70%"
+         style="stop-color:#dbeafe;stop-opacity:1"
+         id="stop19" />
+      <stop
+         offset="100%"
+         style="stop-color:#93c5fd;stop-opacity:1"
+         id="stop21" />
+    </radialGradient>
+    <filter
+       id="shadow"
+       x="-0.061678832"
+       y="-0.11266667"
+       width="1.1233577"
+       height="1.252">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="3"
+         id="feGaussianBlur24" />
+      <feOffset
+         dx="0"
+         dy="2"
+         result="offsetblur"
+         id="feOffset26" />
+      <feComponentTransfer
+         id="feComponentTransfer30">
+        <feFuncA
+           type="linear"
+           slope="0.2"
+           id="feFuncA28" />
+      </feComponentTransfer>
+      <feMerge
+         id="feMerge36">
+        <feMergeNode
+           id="feMergeNode32" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode34" />
+      </feMerge>
+    </filter>
+    <marker
+       id="arrow"
+       markerWidth="8"
+       markerHeight="8"
+       refX="7"
+       refY="4"
+       orient="auto">
+      <path
+         d="M 0,0 V 8 L 8,4 Z"
+         fill="#10b981"
+         id="path39" />
+    </marker>
+  </defs>
+  <style
+     id="style27">
+    @media (prefers-color-scheme: dark) {
+      #bgGrad stop:first-child { stop-color: #1f2937; }
+      #bgGrad stop:last-child { stop-color: #111827; }
+      #siteGrad stop:first-child { stop-color: #2563eb; }
+      #siteGrad stop:last-child { stop-color: #1e40af; }
+      #routerGrad stop:first-child { stop-color: #dc2626; }
+      #routerGrad stop:last-child { stop-color: #b91c1c; }
+      #cloudGrad stop:first-child { stop-color: #374151; }
+      #cloudGrad stop:nth-child(2) { stop-color: #1e3a8a; }
+      #cloudGrad stop:last-child { stop-color: #1e40af; }
+      rect[fill=&quot;#fff&quot;], rect[fill=&quot;#ffffff&quot;] { fill: #374151; }
+      rect[stroke=&quot;#e5e7eb&quot;] { stroke: #4b5563; }
+      text[fill=&quot;#6b7280&quot;] { fill: #d1d5db; }
+      text[fill=&quot;#1e40af&quot;] { fill: #60a5fa; }
+      ellipse[fill=&quot;#ffffff&quot;] { fill: #4b5563; }
+      circle[fill=&quot;#60a5fa&quot;] { fill: #3b82f6; }
+      line[stroke=&quot;#94a3b8&quot;] { stroke: #6b7280; }
+      rect[fill=&quot;#1e40af&quot;] { fill: #1e3a8a; }
+      text[fill=&quot;#ef4444&quot;] { fill: #fca5a5; }
+    }
+  </style>
+  <!-- Internet Cloud -->
+  <!-- Physical Internet connections (solid lines) -->
+  <line
+     x1="169.96941"
+     y1="150.66559"
+     x2="308.03061"
+     y2="148.83441"
+     stroke="#6b7280"
+     stroke-width="2"
+     id="inet-left" />
+  <text
+     x="240"
+     y="145"
+     text-anchor="middle"
+     font-family="system-ui, -apple-system, sans-serif"
+     font-size="10"
+     font-weight="500"
+     fill="#ef4444"
+     id="text-inet-left">Unsecure</text>
+  <line
+     x1="630.02637"
+     y1="143.69931"
+     x2="437.97366"
+     y2="143.80069"
+     stroke="#6b7280"
+     stroke-width="2"
+     id="inet-right" />
+  <text
+     x="535"
+     y="138"
+     text-anchor="middle"
+     font-family="system-ui, -apple-system, sans-serif"
+     font-size="10"
+     font-weight="500"
+     fill="#ef4444"
+     id="text-inet-right">Unsecure</text>
+  <!-- VPN Tunnel through cloud -->
+  <g
+     transform="translate(191.99738,184.62118)"
+     id="g62">
+    <rect
+       width="10"
+       height="12"
+       rx="2"
+       fill="#10b981"
+       id="rect56"
+       x="0"
+       y="0" />
+    <path
+       d="m 2,0 v -3 a 3,3 0 0 1 6,0 v 3"
+       fill="none"
+       stroke="#10b981"
+       stroke-width="1.5"
+       id="path58" />
+    <circle
+       cx="5"
+       cy="7"
+       r="1.5"
+       fill="#ffffff"
+       id="circle60" />
+  </g>
+  <g
+     transform="translate(564.75904,184.3387)"
+     id="g70">
+    <rect
+       width="10"
+       height="12"
+       rx="2"
+       fill="#10b981"
+       id="rect64"
+       x="0"
+       y="0" />
+    <path
+       d="m 2,0 v -3 a 3,3 0 0 1 6,0 v 3"
+       fill="none"
+       stroke="#10b981"
+       stroke-width="1.5"
+       id="path66" />
+    <circle
+       cx="5"
+       cy="7"
+       r="1.5"
+       fill="#ffffff"
+       id="circle68" />
+  </g>
+  <text
+     x="513.77582"
+     y="161.37065"
+     text-anchor="middle"
+     font-family="system-ui, '-apple-system', sans-serif"
+     font-size="12px"
+     font-weight="600"
+     fill="#059669"
+     id="text72">Encrypted VPN Tunnel</text>
+  <!-- Site A (Left) -->
+  <g
+     filter="url(#shadow)"
+     id="g124">
+    <rect
+       x="20"
+       y="60"
+       width="170"
+       height="180"
+       rx="12"
+       fill="#fff"
+       stroke="#e5e7eb"
+       stroke-width="2"
+       id="rect76" />
+    <!-- Header -->
+    <rect
+       x="20"
+       y="60"
+       width="170"
+       height="45"
+       rx="12"
+       fill="url(#siteGrad)"
+       id="rect78" />
+    <rect
+       x="20"
+       y="85"
+       width="170"
+       height="20"
+       fill="url(#siteGrad)"
+       id="rect80" />
+    <text
+       x="105"
+       y="88"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="16"
+       font-weight="700"
+       fill="#fff"
+       id="text82">Main Office</text>
+    <rect
+       x="55"
+       y="95"
+       width="100"
+       height="18"
+       rx="9"
+       fill="#1e40af"
+       id="rect84" />
+    <text
+       x="105"
+       y="107"
+       text-anchor="middle"
+       font-family="'SF Mono', 'Monaco', monospace"
+       font-size="11"
+       font-weight="600"
+       fill="#fff"
+       id="text86">192.168.1.0/24</text>
+    <!-- Router -->
+    <rect
+       x="40"
+       y="125"
+       width="130"
+       height="45"
+       rx="8"
+       fill="url(#routerGrad)"
+       id="rect88" />
+    <rect
+       x="42"
+       y="127"
+       width="126"
+       height="20"
+       rx="6"
+       fill="#fca5a5"
+       opacity="0.3"
+       id="rect90" />
+    <text
+       x="105"
+       y="152"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="13"
+       font-weight="700"
+       fill="#fff"
+       id="text92">VPN Gateway</text>
+    <!-- Local Network -->
+    <line
+       x1="105"
+       y1="170"
+       x2="105"
+       y2="195"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line94" />
+    <line
+       x1="65"
+       y1="195"
+       x2="145"
+       y2="195"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line96" />
+    <circle
+       cx="70"
+       cy="204"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle98" />
+    <line
+       x1="70"
+       y1="195"
+       x2="70"
+       y2="202"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line100" />
+    <circle
+       cx="105"
+       cy="204"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle102" />
+    <line
+       x1="105"
+       y1="195"
+       x2="105"
+       y2="202"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line104" />
+    <circle
+       cx="140"
+       cy="204"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle106" />
+    <line
+       x1="140"
+       y1="195"
+       x2="140"
+       y2="202"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line108" />
+    <text
+       x="105"
+       y="218"
+       text-anchor="middle"
+       font-family="'SF Mono', 'Monaco', monospace"
+       font-size="8"
+       font-weight="600"
+       fill="#6b7280"
+       id="text122">192.168.1.0/24</text>
+  </g>
+  <!-- Site B (Right) -->
+  <g
+     filter="url(#shadow)"
+     id="g174">
+    <rect
+       x="610"
+       y="60"
+       width="170"
+       height="180"
+       rx="12"
+       fill="#fff"
+       stroke="#e5e7eb"
+       stroke-width="2"
+       id="rect126" />
+    <!-- Header -->
+    <rect
+       x="610"
+       y="60"
+       width="170"
+       height="45"
+       rx="12"
+       fill="url(#siteGrad)"
+       id="rect128" />
+    <rect
+       x="610"
+       y="85"
+       width="170"
+       height="20"
+       fill="url(#siteGrad)"
+       id="rect130" />
+    <text
+       x="695"
+       y="88"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="16"
+       font-weight="700"
+       fill="#fff"
+       id="text132">Branch Office</text>
+    <rect
+       x="645"
+       y="95"
+       width="100"
+       height="18"
+       rx="9"
+       fill="#1e40af"
+       id="rect134" />
+    <text
+       x="695"
+       y="107"
+       text-anchor="middle"
+       font-family="'SF Mono', 'Monaco', monospace"
+       font-size="11"
+       font-weight="600"
+       fill="#fff"
+       id="text136">192.168.2.0/24</text>
+    <!-- Router -->
+    <rect
+       x="630"
+       y="125"
+       width="130"
+       height="45"
+       rx="8"
+       fill="url(#routerGrad)"
+       id="rect138" />
+    <rect
+       x="632"
+       y="127"
+       width="126"
+       height="20"
+       rx="6"
+       fill="#fca5a5"
+       opacity="0.3"
+       id="rect140" />
+    <text
+       x="695"
+       y="152"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="13"
+       font-weight="700"
+       fill="#fff"
+       id="text142">VPN Gateway</text>
+    <!-- Local Network -->
+    <line
+       x1="695"
+       y1="170"
+       x2="695"
+       y2="195"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line144" />
+    <line
+       x1="655"
+       y1="195"
+       x2="735"
+       y2="195"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line146" />
+    <circle
+       cx="660"
+       cy="204"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle148" />
+    <line
+       x1="660"
+       y1="195"
+       x2="660"
+       y2="202"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line150" />
+    <circle
+       cx="695"
+       cy="204"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle152" />
+    <line
+       x1="695"
+       y1="195"
+       x2="695"
+       y2="202"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line154" />
+    <circle
+       cx="730"
+       cy="204"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle156" />
+    <line
+       x1="730"
+       y1="195"
+       x2="730"
+       y2="202"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line158" />
+    <text
+       x="695"
+       y="218"
+       text-anchor="middle"
+       font-family="'SF Mono', 'Monaco', monospace"
+       font-size="8"
+       font-weight="600"
+       fill="#6b7280"
+       id="text172">192.168.2.0/24</text>
+  </g>
+  <path
+     d="m 308.47143,152.82956 c 0,-13 8,-23 20,-23 2,-9 10,-15 20,-15 7,0 13,3 17,8 5,-7 13,-11 23,-11 16,0 30,11 32,26 13,1 23,12 23,25 0,13 -11,24 -25,24 h -88 c -13,0 -24,-11 -24,-24 0,-7 3,-13 7,-17 z"
+     fill="url(#cloudGrad)"
+     stroke="#3b82f6"
+     stroke-width="2.5"
+     stroke-linejoin="round"
+     id="path46"
+     style="fill:url(#cloudGrad);filter:url(#shadow)" />
+  <line
+     x1="188.49466"
+     y1="166.37616"
+     x2="604.93829"
+     y2="166.37616"
+     stroke="#10b981"
+     stroke-width="2.6"
+     stroke-dasharray="12, 8"
+     marker-end="url(#arrow)"
+     id="line54" />
+</svg>

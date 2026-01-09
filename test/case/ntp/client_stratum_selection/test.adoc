@@ -29,6 +29,7 @@ image::topology.svg[NTP client stratum selection topology, align=center, scaledw
 . Wait for srv2 to sync from srv1
 . Configure client to sync from both servers
 . Wait for client to see both servers
+. Wait for srv2 stratum to stabilize
 . Verify client selects srv1 (lower stratum)
 
 

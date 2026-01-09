@@ -1114,6 +1114,7 @@ class Iface:
         self.gre = self.data.get('infix-interfaces:gre')
         self.vxlan = self.data.get('infix-interfaces:vxlan')
         self.wifi = self.data.get('infix-interfaces:wifi')
+        self.wireguard = self.data.get('infix-interfaces:wireguard')
 
         if self.data.get('infix-interfaces:vlan'):
             self.lower_if = self.data.get('infix-interfaces:vlan', None).get('lower-layer-if',None)
@@ -1147,6 +1148,9 @@ class Iface:
 
     def is_gretap(self):
         return self.data['type'] == "infix-if-type:gretap"
+
+    def is_wireguard(self):
+        return self.data['type'] == "infix-if-type:wireguard"
 
     def oper(self, detail=False):
         """Remap in brief overview to fit column widths."""
@@ -1217,6 +1221,23 @@ class Iface:
 
     def pr_proto_vxlan(self, pipe=''):
         row = self._pr_proto_common("vxlan", True, pipe);
+        print(row)
+
+    def pr_proto_wireguard(self, pipe=''):
+        row = self._pr_proto_common("wireguard", False, pipe)
+
+        if self.wireguard:
+            peer_status = self.wireguard.get('peer-status', {})
+            peers = peer_status.get('peer', [])
+            total_peers = len(peers)
+            up_peers = sum(1 for p in peers if p.get('connection-status') == 'up')
+
+            if total_peers > 0:
+                row += f"{total_peers} peer"
+                if total_peers != 1:
+                    row += "s"
+                row += f" ({up_peers} up)"
+
         print(row)
 
     def pr_proto_loopack(self, pipe=''):
@@ -1471,6 +1492,12 @@ class Iface:
         self.pr_proto_ipv4()
         self.pr_proto_ipv6()
 
+    def pr_wireguard(self):
+        self.pr_name(pipe="")
+        self.pr_proto_wireguard()
+        self.pr_proto_ipv4()
+        self.pr_proto_ipv6()
+
     def pr_wifi(self):
         self.pr_name(pipe="")
         self.pr_proto_wifi()
@@ -1598,9 +1625,6 @@ class Iface:
             print(f"{'in-octets':<{20}}: {self.in_octets}")
             print(f"{'out-octets':<{20}}: {self.out_octets}")
 
-        frame = get_json_data([], self.data,'ieee802-ethernet-interface:ethernet',
-                              'statistics', 'frame')
-
         if self.wifi:
             # Detect mode: AP has "stations", Station has "rssi" or "scan-results"
             ap = self.wifi.get('access-point')
@@ -1635,6 +1659,46 @@ class Iface:
             print(f"{'remote address':<{20}}: {self.vxlan['remote']}")
             print(f"{'VxLAN id':<{20}}: {self.vxlan['vni']}")
 
+        if self.wireguard:
+            peer_status = self.wireguard.get('peer-status', {})
+            peers = peer_status.get('peer', [])
+            if peers:
+                print(f"{'peers':<{20}}: {len(peers)}")
+                for idx, peer in enumerate(peers, 1):
+                    print(f"\n  Peer {idx}:")
+
+                    # Public key (always 44 chars: 43 + '=')
+                    if pubkey := peer.get('public-key'):
+                        print(f"    {'public key':<{18}}: {pubkey}")
+
+                    # Connection status with color
+                    status = peer.get('connection-status', 'unknown')
+                    if status == 'up':
+                        status_str = Decore.green(status.upper())
+                    else:
+                        status_str = Decore.red(status.upper())
+                    print(f"    {'status':<{18}}: {status_str}")
+
+                    # Endpoint information
+                    if endpoint := peer.get('endpoint-address'):
+                        port = peer.get('endpoint-port', '')
+                        endpoint_str = f"{endpoint}:{port}" if port else endpoint
+                        print(f"    {'endpoint':<{18}}: {endpoint_str}")
+
+                    # Latest handshake
+                    if handshake := peer.get('latest-handshake'):
+                        print(f"    {'latest handshake':<{18}}: {handshake}")
+
+                    # Transfer statistics
+                    if transfer := peer.get('transfer'):
+                        tx = transfer.get('tx-bytes', '0')
+                        rx = transfer.get('rx-bytes', '0')
+                        print(f"    {'transfer tx':<{18}}: {tx} bytes")
+                        print(f"    {'transfer rx':<{18}}: {rx} bytes")
+
+
+        frame = get_json_data([], self.data,'ieee802-ethernet-interface:ethernet',
+                              'statistics', 'frame')
         if frame:
             print("")
             for key, val in frame.items():
@@ -1797,6 +1861,10 @@ def pr_interface_list(json):
 
         if iface.is_vxlan():
             iface.pr_vxlan()
+            continue
+
+        if iface.is_wireguard():
+            iface.pr_wireguard()
             continue
 
         if iface.is_wifi():
