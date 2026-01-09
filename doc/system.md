@@ -72,72 +72,221 @@ admin@example:/config/system/authentication/user/admin/authorized-key/example@ho
 > so there is no need to use the `text-editor` command, `set` does the
 > job.
 
-
 ## Multiple Users
 
-The system supports multiple users and multiple user levels, or groups,
-that a user can be a member of.  Access control is entirely handled by
-the NETCONF ["NACM"][3] YANG model, which provides granular access to
-configuration, data, and RPC commands over NETCONF.
+The factory configuration provides three hierarchical user group levels by
+default: **guest ⊂ operator ⊂ admin**.  These levels can be customized or
+extended to fit specific requirements.  The default levels provide different
+access to system resources and configuration:
 
-By default the system ships with a single group, `admin`, which the
-default user `admin` is a member of.  The broad permissions granted by
-the `admin` group is what gives its users full system administrator
-privileges.  There are no restrictions on the number of users with
-administrator privileges, nor is the `admin` user reserved or protected
-in any way -- it is completely possible to remove the default `admin`
-user from the configuration.  However, it is recommended to keep at
-least one user with administrator privileges in the system, otherwise
-the only way to regain full access is to perform a *factory reset*.
+- **Admin**: Full system access - can manage users, upgrade software,
+  restart the system, and modify all configuration including network
+  settings, routing, and firewall rules.
+
+- **Operator**: Network configuration access - can manage interfaces,
+  routing protocols, VLANs, containers, and firewall rules, and can
+  restart the system, but **cannot** manage users, software upgrades, or
+  shut down the system.
+
+- **Guest**: Read-only access - can view operational state and
+  configuration but cannot modify anything or execute operations.
+
+System access control is handled by the [ietf-netconf-acm][3] YANG model,
+usually referred to as [NACM](nacm.md), which provides granular access to
+configuration, data, and RPC commands.  The hierarchical levels in the system
+are determined by:
+
+1. **NACM permissions** - what the user can access
+2. **Shell setting** - which command-line interface the user can use
+
+By default the system ships with a single user, `admin`, in the `admin`
+group.  There are no restrictions on the number of users with admin
+privileges, nor is the `admin` user reserved or protected -- it can be
+removed from the configuration.  However, it is strongly recommended to
+keep at least one user with administrator privileges, otherwise the only
+way to regain full access is to perform a *factory reset*.
+
+For an overview of users and groups on the system, there is an admin-exec
+command:
+
+```
+admin@example:/> show nacm
+enabled                  : yes
+default read access      : permit
+default write access     : deny
+default exec access      : permit
+denied operations        : 0
+denied data writes       : 0
+denied notifications     : 0
+
+USER                   SHELL   LOGIN
+admin                  bash    password+key
+jacky                  bash    password
+monitor                false   key
+
+GROUP                  USERS
+admin                  admin
+operator               jacky
+guest                  monitor
+```
+
+> [!TIP] guest ⊂ operator ⊂ admin
+> As a general rule, think of *operator* as anything between full access
+> (admin) and read-only (guest).  However, read-only in this case does
+> not mean guests can see user passwords or secrets in the keystore.
 
 ### Adding a User
 
-Similar to how to change password, adding a new user is done using the
-same set of commands:
+Creating a new user starts with defining the user account in the system:
 
 ```
-admin@host:/config/> edit system authentication user jacky
-admin@host:/config/system/authentication/user/jacky/> change password
+admin@example:/config/> edit system authentication user jacky
+admin@example:/config/system/authentication/user/jacky/> change password
 New password:
 Retype password:
-admin@host:/config/system/authentication/user/jacky/> leave
+admin@example:/config/system/authentication/user/jacky/> leave
 ```
 
-An authorized SSH key is added the same way as presented previously.
+An authorized SSH key can be added the same way as described in the
+previous sections.
 
-### Adding a User to the Admin Group
-
-The following commands add user `jacky` to the `admin` group.
+By default, shell access is disabled (`shell false`).  To allow CLI/SSH
+access, set the shell:
 
 ```
-admin@host:/config/> edit nacm group admin
-admin@host:/config/nacm/group/admin/> set user-name jacky
-admin@host:/config/nacm/group/admin/> leave
+admin@example:/config/> edit system authentication user jacky
+admin@example:/config/system/authentication/user/jacky/> set shell clish
+admin@example:/config/system/authentication/user/jacky/> leave
 ```
+
+Available shells:
+
+- `bash` - Full Bourne-again shell (recommended for admins only)
+- `sh` - POSIX shell (recommended for admins only)
+- `clish` - Limited CLI-only shell (recommended for operators and guests)
+- `false` - No shell access (default)
+
+> [!WARNING] Security Notice
+> For security reasons, it is strongly recommended to limit non-admin users
+> to the `clish` shell, which provides CLI access without exposing the
+> underlying UNIX system.  Reserve `bash` and `sh` for administrators who
+> need full system access for debugging and maintenance.
+>
+> Note that shell and CLI access is not always necessary - the system
+> supports NETCONF and RESTCONF for remote management and automation.
+> Setting `shell false` for users who only need programmatic access
+> minimizes the attack surface and improves overall system security.
+
+### Adding a User to a Group
+
+To assign a user to a specific privilege level, add them to the
+corresponding NACM group:
+
+**Operator user:**
+
+```
+admin@example:/config/> edit nacm group operator
+admin@example:/config/nacm/group/operator/> set user-name jacky
+admin@example:/config/nacm/group/operator/> leave
+```
+
+**Adding another admin:**
+
+```
+admin@example:/config/> edit nacm group admin
+admin@example:/config/nacm/group/admin/> set user-name alice
+admin@example:/config/nacm/group/admin/> leave
+```
+
+**Guest user:**
+
+```
+admin@example:/config/> edit nacm group guest
+admin@example:/config/nacm/group/guest/> set user-name monitor
+admin@example:/config/nacm/group/guest/> leave
+```
+
+> [!TIP]
+> For technical details about NACM rule evaluation, module-name vs path
+> matching, and creating custom access control policies, see the
+> [NACM Technical Guide](nacm.md).
+
+### Access Control Matrix
+
+The following table shows what each user level can do based on the NACM rules
+and shell access configured for each user:
+
+- **Admin**: `bash` — full system access
+- **Operator**: `clish` — CLI-only access without UNIX system exposure
+- **Guest**: `false` — no shell access
+
+| Feature                 | Admin | Operator | Guest     |
+|-------------------------|-------|----------|-----------|
+| Network interfaces      | ✓     | ✓        | Read only |
+| Routing (FRR)           | ✓     | ✓        | Read only |
+| Firewall rules          | ✓     | ✓        | Read only |
+| VLANs/bridges           | ✓     | ✓        | Read only |
+| Containers              | ✓     | ✓        | Read only |
+| CLI/SSH access          | ✓     | ✓        | ✗         |
+| System restart          | ✓     | ✓        | ✗         |
+| User management         | ✓     | ✗        | ✗         |
+| Keystore (certs/keys)   | ✓     | ✗        | ✗         |
+| NACM rules              | ✓     | ✗        | ✗         |
+| Factory reset           | ✓     | ✗        | ✗         |
+| Software upgrade        | ✓     | ✗        | ✗         |
+| System shutdown         | ✓     | ✗        | ✗         |
+| Set date/time           | ✓     | ✗        | ✗         |
+| Read passwords/secrets  | ✓     | ✗        | ✗         |
 
 ### Security Aspects
 
-The NACM user levels apply primarily to NETCONF, with exception of the
-`admin` group which is granted full system administrator privileges to
-the underlying UNIX system with the following ACL rules:
+The three default user levels are implemented through a combination of NACM
+rules and UNIX group membership.  Access control is permission-based, not
+name-based - the system detects user levels by examining their NACM
+permissions and shell settings.
+
+**Admin users** have unrestricted NACM access with the following rule:
 
 ```json
-   ...
    "module-name": "*",
    "access-operations": "*",
-   "action": "permit",
-   ...
+   "action": "permit"
 ```
 
-A user in the `admin` group is allowed to also use a POSIX login shell
-and use the `sudo` command to perform system administrative commands.
-This makes it possible to use all the underlying UNIX tooling, which
-to many can be very useful, in particular when debugging a system, but
-please remember to use with care -- the system is not built to require
-managing from the shell.  The tools available in the CLI and automated
-services, started from the system's configuration, are the recommended
-way of using the system, in addition to NETCONF tooling.
+Admin users are automatically added to the UNIX `wheel` and `frrvty`
+groups, granting them `sudo` privileges and access to FRR routing
+protocols. This makes it possible to use all the underlying UNIX
+tooling, which can be very useful for debugging, but please use with
+care -- the system is designed to be managed through the CLI and
+NETCONF, not directly via shell commands.
 
+**Operator users** have restricted NACM access. With the deny-by-default
+configuration (`write-default: "deny"`), operators receive explicit permit
+rules for network and container operations:
+
+- Network interfaces (including IP addresses, VLANs, bridges, etc.)
+- Routing protocols (OSPF, RIP, static routes, etc.)
+- Containers (start, stop, configure)
+- Firewall rules (zones, policies, services)
+- System restart (explicit RPC permit)
+
+Sensitive operations like user management, software upgrades, factory reset,
+and system shutdown are protected by YANG-level `nacm:default-deny-all`
+annotations and remain restricted to administrators.
+
+Operators are automatically added to the UNIX `operator` and `frrvty`
+groups, granting them `sudo` privileges for network operations and FRR
+access.
+
+**Guest users** have read-only NACM access. The global `exec-default: "permit"`
+combined with an explicit deny rule blocks all RPC operations for guests,
+while `read-default: "permit"` allows viewing configuration and state.
+Guests receive no special UNIX group memberships. The shell setting
+determines whether guests can access the CLI (`clish`) or are restricted
+from shell access entirely (`false`).
+
+All users, regardless of level, are denied access to password hashes and
+cryptographic key material through global NACM rules.
 
 ## Changing Hostname
 
