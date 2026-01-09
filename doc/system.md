@@ -6,7 +6,7 @@ like Message of the Day (login message) and user login shell.  More
 on this later on in this document.
 
 For the sake of brevity, the hostname in the following examples has been
-shortened to `host`.  The default hostname is composed from a product
+shortened to `example`.  The default hostname is composed from a product
 specific string followed by the last three octets of the system base MAC
 address, e.g., `switch-12-34-56`.  An example of how to change the
 hostname is included below.
@@ -23,11 +23,11 @@ User management, including passwords, SSH keys, remote authentication is
 available in the system authentication configuration context.
 
 ```
-admin@host:/config/> edit system authentication user admin
-admin@host:/config/system/authentication/user/admin/> change password
+admin@example:/config/> edit system authentication user admin
+admin@example:/config/system/authentication/user/admin/> change password
 New password:
 Retype password:
-admin@host:/config/system/authentication/user/admin/> leave
+admin@example:/config/system/authentication/user/admin/> leave
 ```
 
 The `change password` command starts an interactive dialogue that asks
@@ -57,14 +57,14 @@ With SSH keys in place it is possible to disable password login, just
 remember to verify SSH login and network connectivity before doing so.
 
 ```
-admin@host:/config/> edit system authentication user admin
-admin@host:/config/system/authentication/user/admin/> edit authorized-key example@host
-admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> set algorithm ssh-rsa
-admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
-admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> show
+admin@example:/config/> edit system authentication user admin
+admin@example:/config/system/authentication/user/admin/> edit authorized-key admin@example
+admin@example:/config/system/authentication/user/admin/authorized-key/example@host/> set algorithm ssh-rsa
+admin@example:/config/system/authentication/user/admin/authorized-key/example@host/> set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
+admin@example:/config/system/authentication/user/admin/authorized-key/example@host/> show
 algorithm ssh-rsa;
 key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
-admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> leave
+admin@example:/config/system/authentication/user/admin/authorized-key/example@host/> leave
 ```
 
 > [!NOTE]
@@ -145,25 +145,25 @@ Notice how the hostname in the prompt does not change until the change
 is committed by issuing the `leave` command.
 
 ```
-admin@host:/config/> edit system
-admin@host:/config/system/> set hostname example
-admin@host:/config/system/> leave
-admin@example:/>
+admin@example:/config/> edit system
+admin@example:/config/system/> set hostname myrouter
+admin@example:/config/system/> leave
+admin@myrouter:/>
 ```
 
 The hostname is advertised over mDNS-SD in the `.local` domain.  If
-another device already has claimed the `example.local` CNAME, in our
+another device already has claimed the `myrouter.local` CNAME, in our
 case, mDNS will advertise a "uniqified" variant, usually suffixing with
-an index, e.g., `example-1.local`.  Use an mDNS browser to scan for
+an index, e.g., `myrouter-1.local`.  Use an mDNS browser to scan for
 available devices on your LAN.
 
 In some cases you may want to set the device's *domain name* as well.
 This is handled the same way:
 
 ```
-admin@host:/config/> edit system
-admin@host:/config/system/> set hostname foo.example.com
-admin@host:/config/system/> leave
+admin@example:/config/> edit system
+admin@example:/config/system/> set hostname foo.example.com
+admin@example:/config/system/> leave
 admin@foo:/>
 ```
 
@@ -188,10 +188,10 @@ built-in [`text-editor` command](cli/text-editor.md).
 > you may be more familiar with.
 
 ```
-admin@host:/config/> edit system
-admin@host:/config/system/> text-editor motd-banner
-admin@host:/config/system/> leave
-admin@host:/>
+admin@example:/config/> edit system
+admin@example:/config/system/> text-editor motd-banner
+admin@example:/config/system/> leave
+admin@example:/>
 ```
 
 Log out and log back in again to inspect the changes.
@@ -209,11 +209,11 @@ as the `text-editor` command:
 To change the editor to GNU Nano:
 
 ```
-admin@host:/> configure
-admin@host:/config/> edit system
-admin@host:/config/system/> set text-editor nano
-admin@host:/config/system/> leave
-admin@host:/>
+admin@example:/> configure
+admin@example:/config/> edit system
+admin@example:/config/system/> set text-editor nano
+admin@example:/config/system/> leave
+admin@example:/>
 ```
 
 > [!IMPORTANT]
@@ -229,16 +229,16 @@ locally configured (static) server is preferred over any acquired
 from a DHCP client.
 
 ```
-admin@host:/> configure
-admin@host:/config/> edit system dns-resolver
-admin@host:/config/system/dns-resolver/> set server google udp-and-tcp address 8.8.8.8
-admin@host:/config/system/dns-resolver/> show
+admin@example:/> configure
+admin@example:/config/> edit system dns-resolver
+admin@example:/config/system/dns-resolver/> set server google udp-and-tcp address 8.8.8.8
+admin@example:/config/system/dns-resolver/> show
 server google {
   udp-and-tcp {
     address 8.8.8.8;
   }
 }
-admin@host:/config/system/dns-resolver/> leave
+admin@example:/config/system/dns-resolver/> leave
 ```
 
 It is also possible to configure resolver options like timeout and
@@ -257,14 +257,14 @@ Below is an example configuration for enabling NTP with a specific
 server and the `iburst` option for faster initial synchronization.
 
 ```
-admin@host:/> configure
-admin@host:/config/> edit system ntp
-admin@host:/config/system/ntp/> set enabled
-admin@host:/config/system/ntp/> set server ntp-pool
-admin@host:/config/system/ntp/> set server ntp-pool udp address pool.ntp.org
-admin@host:/config/system/ntp/> set server ntp-pool iburst
-admin@host:/config/system/ntp/> set server ntp-pool prefer
-admin@host:/config/system/ntp/> leave
+admin@example:/> configure
+admin@example:/config/> edit system ntp
+admin@example:/config/system/ntp/> set enabled
+admin@example:/config/system/ntp/> set server ntp-pool
+admin@example:/config/system/ntp/> set server ntp-pool udp address pool.ntp.org
+admin@example:/config/system/ntp/> set server ntp-pool iburst
+admin@example:/config/system/ntp/> set server ntp-pool prefer
+admin@example:/config/system/ntp/> leave
 ```
 
 This configuration enables the NTP client and sets the NTP server to
@@ -299,7 +299,7 @@ To check the status of NTP synchronization (only availble in CLI), use
 the following command:
 
 ```
-admin@host:/> show ntp tracking
+admin@example:/> show ntp tracking
 Reference ID    : C0248F86 (192.36.143.134)
 Stratum         : 2
 Ref time (UTC)  : Mon Oct 21 10:06:45 2024
@@ -313,7 +313,7 @@ Root delay      : 1.024467230 seconds
 Root dispersion : 0.273462683 seconds
 Update interval : 0.0 seconds
 Leap status     : Normal
-admin@host:/>
+admin@example:/>
 ```
 
 This output provides detailed information about the NTP status, including
