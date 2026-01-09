@@ -185,33 +185,6 @@ In the CLI, signal strength is reported as: excellent, good, fair or bad.
 For precise RSSI values in dBm, use NETCONF or RESTCONF to access the
 operational datastore directly.
 
-### Connect to a Network
-
-Once you've identified the desired network from the scan results, configure
-station mode with the SSID and credentials. First, store your WiFi password
-in the keystore:
-
-```
-admin@example:/> configure
-admin@example:/config/> edit keystore symmetric-key my-wifi-key
-admin@example:/config/keystore/…/my-wifi-key/> set key-format wifi-preshared-key-format
-admin@example:/config/keystore/…/my-wifi-key/> set symmetric-key YourWiFiPassword
-admin@example:/config/keystore/…/my-wifi-key/> leave
-```
-
-Then configure the WiFi interface for station mode:
-
-```
-admin@example:/> configure
-admin@example:/config/> edit interface wifi0
-admin@example:/config/interface/wifi0/> set wifi station ssid MyNetwork
-admin@example:/config/interface/wifi0/> set wifi station security secret my-wifi-key
-admin@example:/config/interface/wifi0/> leave
-```
-
-The interface will transition from scan-only mode to station mode and
-attempt to connect to the specified network.
-
 ## Station Mode (Client)
 
 Station mode connects to an existing Wi-Fi network. Before configuring station
