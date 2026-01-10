@@ -75,7 +75,7 @@ submodule infix-if-wireguard {
 
          This provides post-quantum resistance as an attacker would need
          to break both the Curve25519 key exchange and this symmetric key.";
-      must "derived-from-or-self(deref(.)/../ks:key-format, 'ixct:wireguard-symmetric-key-format')" {
+      must "derived-from-or-self(deref(.)/../infix-ks:key-format, 'ixct:wireguard-symmetric-key-format')" {
         error-message "Preshared key must be in wireguard-symmetric-key-format";
       }
     }
