@@ -76,11 +76,11 @@ def configure_server(dut):
                     "symmetric-key": [{
                         "name": "psk-client1",
                         "infix-keystore:symmetric-key": psk_client1,
-                        "key-format": "infix-crypto-types:wireguard-symmetric-key-format"
+                        "infix-keystore:key-format": "infix-crypto-types:wireguard-symmetric-key-format"
                     }, {
                         "name": "psk-client2",
                         "infix-keystore:symmetric-key": psk_client2,
-                        "key-format": "infix-crypto-types:wireguard-symmetric-key-format"
+                        "infix-keystore:key-format": "infix-crypto-types:wireguard-symmetric-key-format"
                     }]
                 }
             }
@@ -227,7 +227,7 @@ def configure_client1(dut):
                     "symmetric-key": [{
                         "name": "psk-server",
                         "infix-keystore:symmetric-key": psk_client1,
-                        "key-format": "infix-crypto-types:wireguard-symmetric-key-format"
+                        "infix-keystore:key-format": "infix-crypto-types:wireguard-symmetric-key-format"
                     }]
                 }
             }
@@ -361,7 +361,7 @@ def configure_client2(dut):
                     "symmetric-key": [{
                         "name": "psk-server",
                         "infix-keystore:symmetric-key": psk_client2,
-                        "key-format": "infix-crypto-types:wireguard-symmetric-key-format"
+                        "infix-keystore:key-format": "infix-crypto-types:wireguard-symmetric-key-format"
                     }]
                 }
             }
