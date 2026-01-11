@@ -19,3 +19,6 @@
 
 - name: DHCPv6 Prefix Delegation
   case: client6_prefix_delegation/test.py
+
+- name: DHCPv6 SLAAC/RA (Stateless)
+  case: client6_slaac_ra/test.py

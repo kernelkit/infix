@@ -9,6 +9,7 @@ Tests verifying DHCPv4/DHCPv6 client and server functionality:
  - DHCPv4 client hostname management and priority
  - Basic DHCPv6 client operation with address assignment
  - DHCPv6 client with prefix delegation (IA_PD)
+ - DHCPv6 SLAAC/RA (Stateless)
  - Basic DHCPv4 server operation and lease assignment
  - DHCPv4 server with host-specific IP reservations
  - DHCPv4 server with multiple subnet configurations
@@ -34,6 +35,10 @@ include::client6_basic/Readme.adoc[]
 <<<
 
 include::client6_prefix_delegation/Readme.adoc[]
+
+<<<
+
+include::client6_slaac_ra/Readme.adoc[]
 
 <<<
 

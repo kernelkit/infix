@@ -212,16 +212,15 @@ static void infer_options_v4(sr_session_ctx_t *session, const char *xpath)
 
 /*
  * Default DHCPv6 options
- * Note: udhcpc6 only supports dns-server (dns) and domain-search (search) with string names.
- * Other options use numeric codes, which dhcp_compose_option() handles automatically.
+ * Note: odhcp6c uses numeric option codes for all options.
  */
 static void infer_options_v6(sr_session_ctx_t *session, const char *xpath)
 {
 	const char *opt[] = {
-		"dns-server",      /* option 23 - udhcpc6: -O dns */
-		"domain-search",   /* option 24 - udhcpc6: -O search */
-		"client-fqdn",     /* option 39 - udhcpc6: -O 39 (equivalent to DHCPv4 hostname) */
-		"ntp-server"       /* option 56 - udhcpc6: -O 56 */
+		"dns-server",      /* option 23 */
+		"domain-search",   /* option 24 */
+		"client-fqdn",     /* option 39 */
+		"ntp-server"       /* option 56 */
 	};
 	size_t i;
 
