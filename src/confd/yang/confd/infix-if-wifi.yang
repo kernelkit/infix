@@ -401,23 +401,23 @@ submodule infix-if-wifi {
                 }
 
                 leaf rx-packets {
-                  type uint32;
+                  type yang:counter64;
                   description "Packets received from this client.";
                 }
 
                 leaf tx-packets {
-                  type uint32;
+                  type yang:counter64;
                   description "Packets transmitted to this client.";
                 }
 
                 leaf rx-bytes {
-                  type uint32;
+                  type yang:counter64;
                   units "octets";
                   description "Bytes received from this client.";
                 }
 
                 leaf tx-bytes {
-                  type uint32;
+                  type yang:counter64;
                   units "octets";
                   description "Bytes transmitted to this client.";
                 }
