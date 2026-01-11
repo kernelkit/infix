@@ -415,6 +415,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	FILE *hostapd = NULL;
 	bool wifi6_enabled;
 	int ap_count = 0;
+	char bssid[18];
 	int i;
 
 	int rc = SR_ERR_OK;
@@ -492,7 +493,6 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "ctrl_interface=/run/hostapd\n");
 
 	/* Set BSSID if custom MAC is configured */
-	char bssid[18];
 	if (!interface_get_phys_addr(primary_cif, bssid))
 		fprintf(hostapd, "bssid=%s\n", bssid);
 	fprintf(hostapd, "\n");
