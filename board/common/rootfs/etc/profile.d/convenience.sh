@@ -4,14 +4,14 @@ alias ll='ls -alF'
 alias ls='ls --color=auto'
 
 export LANG=C.UTF-8
-export EDITOR=/usr/bin/edit
-export VISUAL=/usr/bin/edit
+export EDITOR=/usr/bin/editor
+export VISUAL=/usr/bin/editor
 export LESS="-P %f (press h for help or q to quit)"
 export LESSOPEN="|/usr/bin/lesspipe.sh %s"
 alias vim='vi'
 alias view='vi -R'
 alias emacs='mg'
-alias sensible-editor=edit
+alias sensible-editor=editor
 alias sensible-pager=pager
 alias hd="hexdump -C"
 
