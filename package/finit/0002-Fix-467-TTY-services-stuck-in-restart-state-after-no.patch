@@ -1,0 +1,86 @@
+From 34bf9a77765db4d963fc66dde29b415ecc8ab611 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 12 Jan 2026 19:31:39 +0100
+Subject: [PATCH 2/2] Fix #467: TTY services stuck in restart state after
+ non-zero exit
+Organization: Wires
+
+When a TTY exited with non-zero code (e.g., user with shell=/sbin/false),
+it would enter restart state but never recover, requiring manual restart.
+
+The throttling logic from commit f0032ab had two issues:
+
+  1. Duplicate exit code check in service_retry() created infinite timer loop
+  2. TTYs lacked default restart_tmo, causing timer to never start
+
+Fix by removing duplicate check and ensuring TTYs get a 2-second default
+restart_tmo for proper throttling.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/service.c | 31 ++++++++++++++-----------------
+ 1 file changed, 14 insertions(+), 17 deletions(-)
+
+diff --git a/src/service.c b/src/service.c
+index d45db40..ff8e180 100644
+--- a/src/service.c
++++ b/src/service.c
+@@ -2194,15 +2194,20 @@ int service_register(int type, char *cfg, struct rlimit rlimit[], char *file)
+ 		/* only set forking based on pidfile if user supplied pid: option */
+ 		if (pid && svc->pidfile[0] == '!')
+ 			svc->forking = 1;
++	}
+ 
+-		if (svc->restart_tmo == 0) {
+-			if (svc_is_forking(svc))
+-				svc->restart_tmo = 2000;
+-			else
+-				svc->restart_tmo = 1;
+-		}
++	/* Set default restart_tmo for services and TTYs that can restart */
++	if (svc_is_daemon(svc) && svc->restart_tmo == 0) {
++		if (svc_is_forking(svc))
++			svc->restart_tmo = 2000;
++		else
++			svc->restart_tmo = 1;
+ 	}
+ 
++	/* TTYs need a longer default to throttle errors (e.g., missing device) */
++	if (svc_is_tty(svc) && svc->restart_tmo == 0)
++		svc->restart_tmo = 2000;
++
+ 	/* Set configured limits */
+ 	memcpy(svc->rlimit, rlimit, sizeof(svc->rlimit));
+ 
+@@ -2631,7 +2636,6 @@ static void service_cleanup_script(svc_t *svc)
+ static void service_retry(svc_t *svc)
+ {
+ 	char *restart_cnt = (char *)&svc->restart_cnt;
+-	int rc = WEXITSTATUS(svc->status);
+ 	int timeout;
+ 
+ 	service_timeout_cancel(svc);
+@@ -2641,17 +2645,10 @@ static void service_retry(svc_t *svc)
+ 
+ 	if (svc->respawn) {
+ 		/*
+-		 * Non-zero exit indicates an error that may not be resolved
+-		 * by immediate retry. Add delay to prevent busy-loop and to
+-		 * rate-limit retries, e.g. when TTY device doesn't exist.
++		 * Respawn services (TTYs) that exited with non-zero status
++		 * have already been delayed in the SVC_RUNNING_STATE handler.
++		 * Just restart now.
+ 		 */
+-		if (WIFEXITED(svc->status) && rc != 0) {
+-			dbg("%s exited with error %d, delaying respawn ...",
+-			    svc_ident(svc, NULL, 0), rc);
+-			service_timeout_after(svc, svc->restart_tmo, service_retry);
+-			return;
+-		}
+-
+ 		dbg("%s crashed/exited, respawning ...", svc_ident(svc, NULL, 0));
+ 		svc_unblock(svc);
+ 		service_step(svc);
+-- 
+2.43.0
+
