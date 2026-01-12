@@ -15,7 +15,7 @@ static int startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	if (systemf("runlevel >/dev/null 2>&1"))
 		return SR_ERR_OK;
 
-	if (systemf("copy startup /cfg/startup-config.cfg"))
+	if (systemf("copy -f startup /cfg/startup-config.cfg"))
 		return SR_ERR_SYS;
 
 	return SR_ERR_OK;
