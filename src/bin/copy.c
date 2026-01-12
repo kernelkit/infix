@@ -43,6 +43,7 @@ static const char *prognm;
 static const char *remote_user;
 static char *xpath = "/*";
 static int debug;
+static int force;
 static int timeout;
 static int dry_run;
 static int sanitize;
@@ -565,8 +566,8 @@ static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path
 		return 1;
 	}
 
-	if (!*ds && !access(*path, F_OK) && !yorn("Overwrite existing file %s", *path)) {
-		warn("OK, aborting.");
+	if (!force && !*ds && !access(*path, F_OK) && !yorn("Overwrite existing file %s", *path)) {
+		warnx("OK, aborting.");
 		return 1;
 	}
 
@@ -625,6 +626,7 @@ static int usage(int rc)
 	       "\n"
 	       "Options:\n"
 	       "  -d                 Enable debug mode, verbose output on stderr\n"
+	       "  -f                 Force yes when copying to a file that exists already\n"
 	       "  -h                 This help text\n"
 	       "  -n                 Dry-run, validate configuration without applying\n"
 	       "  -s                 Sanitize paths for CLI use (restrict path traversal)\n"
@@ -764,10 +766,13 @@ static int copy_main(int argc, char *argv[])
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "dhnst:u:vx:")) != EOF) {
+	while ((c = getopt(argc, argv, "dfhnst:u:vx:")) != EOF) {
 		switch(c) {
 		case 'd':
 			debug = 1;
+			break;
+		case 'f':
+			force = 1;
 			break;
 		case 'h':
 			return usage(0);
