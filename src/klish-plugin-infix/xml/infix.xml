@@ -238,7 +238,7 @@
       <PARAM name="pwpass" ptype="/STRING" help="Optional clear text password (no spaces)"/>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      type=${KLISH_PARAM_pwhash:-sha512}
+      type=${KLISH_PARAM_pwhash:-yescrypt}
       salt=${KLISH_PARAM_pwsalt:+-S $KLISH_PARAM_pwsalt}
       mkpasswd -m $type $salt $KLISH_PARAM_pwpass
     </ACTION>
