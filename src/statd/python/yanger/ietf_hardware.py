@@ -190,11 +190,11 @@ def get_wifi_phy_info():
         # Build descriptions
         for phy, info in phy_info.items():
             if info["iface"] and info["band"] != "Unknown":
-                info["description"] = f"WiFi Radio {info['iface']} ({info['band']})"
+                info["description"] = f"WiFi Radio {phy}"
             elif info["band"] != "Unknown":
                 info["description"] = f"WiFi Radio ({info['band']})"
             elif info["iface"]:
-                info["description"] = f"WiFi Radio {info['iface']}"
+                info["description"] = f"WiFi Radio {phy}"
             else:
                 info["description"] = "WiFi Radio"
 
