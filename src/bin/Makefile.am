@@ -25,3 +25,7 @@ files_CPPFLAGS   = -D_DEFAULT_SOURCE -D_GNU_SOURCE
 files_CFLAGS     = -W -Wall -Wextra
 files_CFLAGS    += $(libite_CFLAGS) $(sysrepo_CFLAGS)
 files_LDADD      = $(libite_LIBS)   $(sysrepo_LIBS)
+
+# Create rpc symlink for multicall binary
+install-exec-hook:
+	cd $(DESTDIR)$(bindir) && $(LN_S) -f copy$(EXEEXT) rpc$(EXEEXT)

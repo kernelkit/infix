@@ -14,14 +14,15 @@
 
 #include <sysrepo.h>
 #include <sysrepo/netconf_acm.h>
+#include <sysrepo/values.h>
 
 #include "util.h"
 
-#define err(rc, fmt, args...)   { fprintf(stderr, ERRMSG fmt ":%s\n", ##args, strerror(errno)); exit(rc); }
-#define errx(rc, fmt, args...)  { fprintf(stderr, ERRMSG fmt "\n", ##args);                     exit(rc); }
-#define warnx(fmt, args...)       fprintf(stderr, ERRMSG fmt "\n", ##args)
-#define warn(fmt, args...)        fprintf(stderr, ERRMSG fmt ":%s\n", ##args, strerror(errno))
-#define dbg(fmt, args...)       if (debug) fprintf(stderr, DBGMSG fmt "\n", ##args)
+#define err(rc, fmt, args...)      { fprintf(stderr, ERRMSG fmt ":%s\n", ##args, strerror(errno)); exit(rc); }
+#define errx(rc, fmt, args...)     { fprintf(stderr, ERRMSG fmt "\n", ##args);                     exit(rc); }
+#define warnx(fmt, args...)          fprintf(stderr, ERRMSG fmt "\n", ##args)
+#define warn(fmt, args...)           fprintf(stderr, ERRMSG fmt ":%s\n", ##args, strerror(errno))
+#define dbg(fmt, args...) if (debug) fprintf(stderr, DBGMSG fmt "\n", ##args)
 
 struct infix_ds {
 	char *name;		/* startup-config, etc.  */
@@ -38,7 +39,7 @@ const struct infix_ds infix_config[] = {
 	{ "factory-config",    SR_DS_FACTORY_DEFAULT, false, NULL }
 };
 
-static const char *prognm = "copy";
+static const char *prognm;
 static const char *remote_user;
 static char *xpath = "/*";
 static int debug;
@@ -184,10 +185,12 @@ static char *mktmp(void)
 	oldmask = umask(0077);
 	fd = mkstemp(path);
 	umask(oldmask);
-	chown(path, getuid(), -1);
 
 	if (fd < 0)
 		goto err;
+
+	if (chown(path, getuid(), -1))
+		dbg("Failed to chown %s: %s", path, strerror(errno));
 
 	close(fd);
 	return path;
@@ -206,11 +209,13 @@ static void rmtmp(const char *path)
 	}
 }
 
-
 static void sysrepo_print_error(sr_session_ctx_t *sess)
 {
 	const sr_error_info_t *erri = NULL;
 	int err;
+
+	if (!sess)
+		return;
 
 	err = sr_session_get_error(sess, &erri);
 	if (err || !erri || !erri->err_count)
@@ -219,11 +224,54 @@ static void sysrepo_print_error(sr_session_ctx_t *sess)
 	warnx("%s (%d)", erri->err->message, erri->err->err_code);
 }
 
+/* Connect to sysrepo and create NACM-aware session on running datastore */
+static int sysrepo_init(sr_conn_ctx_t **conn, sr_session_ctx_t **sess,
+				    sr_subscription_ctx_t **sub)
+{
+	const char *user = getuser();
+	int err;
+
+	err = sr_connect(SR_CONN_DEFAULT, conn);
+	if (err != SR_ERR_OK) {
+		warnx("failed connecting to sysrepo: %s", sr_strerror(err));
+		return err;
+	}
+
+	/* Always open running, because sr_nacm_init() does not work
+	 * against the factory DS.
+	 */
+	err = sr_session_start(*conn, SR_DS_RUNNING, sess);
+	if (err != SR_ERR_OK) {
+		warnx("failed starting session: %s", sr_strerror(err));
+		goto fail;
+	}
+
+	err = sr_nacm_init(*sess, 0, sub);
+	if (err != SR_ERR_OK) {
+		warnx("NACM init failed: %s", sr_strerror(err));
+		goto fail;
+	}
+
+	dbg("Setting NACM user %s for session", user);
+	err = sr_nacm_set_user(*sess, user);
+	if (err != SR_ERR_OK) {
+		warnx("NACM setup failed for user %s: %s", user, sr_strerror(err));
+		goto fail;
+	}
+
+	return SR_ERR_OK;
+fail:
+	sysrepo_print_error(*sess);
+	sr_session_stop(*sess);
+	sr_disconnect(*conn);
+
+	return err;
+}
+
 static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 {
 	static sr_subscription_ctx_t *sub = NULL;
 	static sr_session_ctx_t *sess;
-	const char *user = getuser();
 	sr_conn_ctx_t *conn = NULL;
 	int err;
 
@@ -240,36 +288,10 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 	}
 
 	if (!sess) {
-		err = sr_connect(0, &conn);
+		err = sysrepo_init(&conn, &sess, &sub);
 		if (err != SR_ERR_OK) {
-			sysrepo_print_error(sess);
-			warnx(ERRMSG "failed connecting to %s", ds->name);
-			goto err;
-		}
-
-		/* Always open running, because sr_nacm_init() does not work
-		 * against the factory DS.
-		 */
-		err = sr_session_start(conn, SR_DS_RUNNING, &sess);
-		if (err != SR_ERR_OK) {
-			sysrepo_print_error(sess);
-			warnx(ERRMSG "%s session setup failed", ds->name);
-			goto err_disconnect;
-		}
-
-		err = sr_nacm_init(sess, 0, &sub);
-		if (err != SR_ERR_OK) {
-			sysrepo_print_error(sess);
-			warnx(ERRMSG "%s NACM setup failed", ds->name);
-			goto err_stop;
-		}
-
-		dbg("Setting NACM user %s for session", user);
-		err = sr_nacm_set_user(sess, user);
-		if (err != SR_ERR_OK) {
-			sysrepo_print_error(sess);
-			warnx(ERRMSG "%s NACM setup failed for user %s", ds->name, user);
-			goto err_nacm_destroy;
+			warnx("Failed to initialize session for %s", ds->name);
+			return NULL;
 		}
 	}
 
@@ -281,17 +303,6 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 	}
 
 	return sess;
-
-err_nacm_destroy:
-	sr_nacm_destroy();
-	sub = NULL;
-err_stop:
-	sr_session_stop(sess);
-err_disconnect:
-	sr_disconnect(conn);
-err:
-	sess = NULL;
-	return NULL;
 }
 
 static int sysrepo_export(const struct infix_ds *ds, const char *path)
@@ -613,32 +624,142 @@ static int usage(int rc)
 	printf("Usage: %s [OPTIONS] SRC [DST]\n"
 	       "\n"
 	       "Options:\n"
-	       "  -d              Enable debug mode, verbose output on stderr\n"
-	       "  -h              This help text\n"
-	       "  -n              Dry-run, validate configuration without applying\n"
-	       "  -s              Sanitize paths for CLI use (restrict path traversal)\n"
-	       "  -t SEC          Timeout for the operation, or default %d sec\n"
-	       "  -u USER         Username for remote commands, like scp\n"
-	       "  -v              Show version\n"
-	       "  -x PATH         XPath to copy, default: all\n"
+	       "  -d                 Enable debug mode, verbose output on stderr\n"
+	       "  -h                 This help text\n"
+	       "  -n                 Dry-run, validate configuration without applying\n"
+	       "  -s                 Sanitize paths for CLI use (restrict path traversal)\n"
+	       "  -t SEC             Timeout for the operation, or default %d sec\n"
+	       "  -u USER            Username for remote commands, like scp\n"
+	       "  -v                 Show version\n"
+	       "  -x PATH            XPath to copy, default: all\n"
 	       "\n"
 	       "Files:\n"
-	       "  SRC             JSON configuration file, or a datastore\n"
-	       "  DST             Optiional file or datastore, except factory-config,\n"
-	       "                  when omitted output goes to stdout\n"
+	       "  SRC                JSON configuration file, or a datastore\n"
+	       "  DST                Optiional file or datastore, except factory-config,\n"
+	       "                     when omitted output goes to stdout\n"
 	       "\n"
-	       "Datastores:\n"
-	       "  running-config  The running datastore, current active config\n"
-	       "  startup-config  The non-volatile config used at startup\n"
-	       "  factory-config  The device's factory default configuration\n"
-	       "\n", prognm, timeout);
+	       "Datastores (short forms possible):\n"
+	       "  running-config     The running datastore, current active config\n"
+	       "  startup-config     The non-volatile config used at startup\n"
+	       "  factory-config     The device's factory default configuration\n"
+	       "  operational-state  Operational status and state data"
+	       "\n"
+	       "Examples:\n"
+	       "  %s operational -x /system-state/software/boot-order\n"
+	       "\n", prognm, timeout, prognm);
 
 	return rc;
 }
 
-int main(int argc, char *argv[])
+static int usage_rpc(int rc)
 {
-	const char *src = NULL, *dst = NULL;
+	printf("Usage: %s [OPTIONS] <rpc-xpath> [key value ...]\n"
+	       "\n"
+	       "Execute a YANG RPC/action with NACM enforcement.\n"
+	       "\n"
+	       "Options:\n"
+	       "  -d                 Enable debug mode, verbose output on stderr\n"
+	       "  -h                 This help text\n"
+	       "  -t SEC             Timeout for the operation, or default %d sec\n"
+	       "  -v                 Show version\n"
+	       "\n"
+	       "Arguments:\n"
+	       "  rpc-xpath          RPC XPath (e.g., /ietf-system:set-current-datetime)\n"
+	       "  key value          Pairs of RPC argument names and values\n"
+	       "                     Values can be comma-separated for lists/leaf-lists\n"
+	       "\n"
+	       "Examples:\n"
+	       "  %s /ietf-system:set-current-datetime current-datetime \"2025-01-01T00:00:00Z\"\n"
+	       "  %s /infix-system:set-boot-order boot-order primary boot-order secondary\n"
+	       "  %s /infix-system:set-boot-order boot-order primary,secondary,net\n"
+	       "\n", prognm, timeout, prognm, prognm, prognm);
+
+	return rc;
+}
+
+/* Execute RPC from CLI arguments: xpath and key-value pairs */
+static int rpc_exec(const char *rpc_xpath, int argc, char *argv[])
+{
+	sr_subscription_ctx_t *sub = NULL;
+	sr_conn_ctx_t *conn = NULL;
+	sr_session_ctx_t *sess = NULL;
+	sr_val_t *input = NULL;
+	sr_val_t *output = NULL;
+	size_t icnt = 0, ocnt = 0;
+	int rc = 1, err, i;
+
+	dbg("Executing RPC %s with %d arguments", rpc_xpath, argc / 2);
+
+	err = sysrepo_init(&conn, &sess, &sub);
+	if (err != SR_ERR_OK)
+		return 1;
+
+	for (i = 0; i < argc - 1; i += 2) {
+		const char *key = argv[i];
+		const char *val = argv[i + 1];
+		char *val_copy, *token, *saveptr;
+
+		/* Check if value contains commas - split into multiple values */
+		if (strchr(val, ',')) {
+			val_copy = strdup(val);
+			if (!val_copy) {
+				warnx("Memory allocation failed");
+				goto cleanup;
+			}
+
+			token = strtok_r(val_copy, ",", &saveptr);
+			while (token) {
+				sr_realloc_values(icnt, icnt + 1, &input);
+				sr_val_build_xpath(&input[icnt], "%s/%s", rpc_xpath, key);
+				sr_val_set_str_data(&input[icnt], SR_STRING_T, token);
+				dbg("Adding RPC argument %zu: %s = %s", icnt, input[icnt].xpath, token);
+				icnt++;
+				token = strtok_r(NULL, ",", &saveptr);
+			}
+			free(val_copy);
+		} else {
+			/* Single value */
+			sr_realloc_values(icnt, icnt + 1, &input);
+			sr_val_build_xpath(&input[icnt], "%s/%s", rpc_xpath, key);
+			sr_val_set_str_data(&input[icnt], SR_STRING_T, val);
+			dbg("Adding RPC argument %zu: %s = %s", icnt, input[icnt].xpath, val);
+			icnt++;
+		}
+	}
+
+	dbg("Sending RPC %s (timeout: %d ms)", rpc_xpath, timeout * 1000);
+	err = sr_rpc_send(sess, rpc_xpath, input, icnt, timeout * 1000, &output, &ocnt);
+	if (err != SR_ERR_OK) {
+		sysrepo_print_error(sess);
+		warnx("RPC execution failed: %s", sr_strerror(err));
+		goto cleanup;
+	}
+
+	/* Print output if any */
+	for (i = 0; i < (int)ocnt; i++) {
+		sr_print_val(&output[i]);
+		puts("");
+	}
+
+	rc = 0;
+
+cleanup:
+	sr_free_values(input, icnt);
+	sr_free_values(output, ocnt);
+	if (sub)
+		sr_nacm_destroy();
+	if (sess)
+		sr_session_stop(sess);
+	if (conn)
+		sr_disconnect(conn);
+
+	return rc;
+}
+
+static int copy_main(int argc, char *argv[])
+{
+	const char *dst = "/dev/stdout";
+	const char *src = NULL;
 	int c;
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
@@ -674,11 +795,74 @@ int main(int argc, char *argv[])
 	if (timeout < 0)
 		timeout = 120;
 
-	if (argc - optind < 1)
+	switch (argc - optind) {
+	case 2:
+		src = argv[optind++];
+		dst = argv[optind++];
+		break;
+	case 1:
+		src = argv[optind++];
+		break;
+	default:
 		return usage(1);
-
-	src = argv[optind++];
-	dst = argv[optind++];
+	}
 
 	return copy(src, dst);
+}
+
+static int rpc_main(int argc, char *argv[])
+{
+	int c;
+
+	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
+
+	while ((c = getopt(argc, argv, "dht:v")) != EOF) {
+		switch(c) {
+		case 'd':
+			debug = 1;
+			break;
+		case 'h':
+			return usage_rpc(0);
+		case 't':
+			timeout = atoi(optarg);
+			break;
+		case 'v':
+			puts(PACKAGE_VERSION);
+			return 0;
+		}
+	}
+
+	if (timeout < 0)
+		timeout = 120;
+
+	/* Require at least RPC xpath */
+	if (optind >= argc) {
+		warnx("Missing RPC xpath");
+		return usage_rpc(1);
+	}
+
+	/* Validate RPC xpath starts with '/' */
+	if (argv[optind][0] != '/') {
+		warnx("RPC xpath must start with '/'");
+		return usage_rpc(1);
+	}
+
+	/* Validate argument count (must be key-value pairs) */
+	argc -= optind + 1;
+	if (argc % 2 != 0) {
+		warnx("Arguments must be key-value pairs after RPC xpath");
+		return usage_rpc(1);
+	}
+
+	return rpc_exec(argv[optind], argc, &argv[optind + 1]);
+}
+
+int main(int argc, char *argv[])
+{
+	prognm = basename(argv[0]);
+
+	if (!strcmp(prognm, "rpc"))
+		return rpc_main(argc, argv);
+
+	return copy_main(argc, argv);
 }
