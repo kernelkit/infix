@@ -557,10 +557,14 @@ static void del_groups(const char *user, const char **groups)
 /* Users with a valid shell are also allowed CLI access */
 static void adjust_access(const char *user, const char *shell)
 {
-	if (strcmp(shell, "/bin/false"))
+	if (strcmp(shell, "/bin/false")) {
 		add_group(user, "klish");
-	else
+		erasef("/home/%s/.hushlogin", user);
+	} else {
 		del_group(user, "klish");
+		/* prevent even motd from showing */
+		touchf("/home/%s/.hushlogin", user);
+	}
 }
 
 /* XXX: Currently Infix only has admin and non-admins as a group */
