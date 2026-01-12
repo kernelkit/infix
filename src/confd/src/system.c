@@ -579,17 +579,25 @@ static bool is_admin_user(sr_session_ctx_t *session, const char *user)
 		return false;	/* safe default */
 
 	for (size_t j = 0; j < group_count; j++) {
-		/* Fetch and check rules for each group */
+		const char *group = groups[j].data.string_val;
+
+		/*
+		 * Note: module-name has default="*", so we must explicitly exclude
+		 * rules with 'path' and 'rpc-name' to only match pure module-level
+		 * wildcard admin rules.
+		 */
 		snprintf(xpath, sizeof(xpath), NACM_BASE_"/rule-list[group='%s']/rule"
-			 "[module-name='*'][access-operations='*'][action='permit']",
-			 groups[j].data.string_val);
+			 "[module-name='*'][access-operations='*'][action='permit']"
+			 "[not(path)][not(rpc-name)]", group);
 		rc = sr_get_items(session, xpath, 0, 0, &rules, &rule_count);
 		if (rc)
 			continue; /* not found, this is OK */
 
 		/* At least one group grants full administrator permissions */
-		if (rule_count > 0)
+		if (rule_count > 0) {
+			DEBUG("User '%s' granted admin via group '%s'", user, group);
 			is_admin = true;
+		}
 
 		sr_free_values(rules, rule_count);
 	}
