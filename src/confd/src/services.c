@@ -238,7 +238,7 @@ static void mdns_conf(struct lyd_node *cfg)
 	fprintf(fp, "\n[reflector]\n");
 	ctx = lydx_get_descendant(lyd_child(cfg), "reflector", NULL);
 	if (ctx) {
-		fprintf(fp, "enable-reflector=%s\n", lydx_is_enabled(ctx, "enabled") ? "on" : "off");
+		fprintf(fp, "enable-reflector=%s\n", lydx_is_enabled(ctx, "enabled") ? "yes" : "no");
 		fput_list(fp, ctx, "service-filter", "reflect-filters=");
 	}
 
