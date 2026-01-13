@@ -549,9 +549,8 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		goto done;
 	}
 
-	if (lydx_get_descendant(diff, "firewall", "default", NULL) ||
-	    lydx_get_descendant(diff, "firewall", "logging", NULL))
-		generate_firewalld_conf(global);
+	/* Always generate firewalld.conf when firewall is enabled */
+	generate_firewalld_conf(global);
 
 	/*
 	 * Regenerate everything if anything in firewall changed, firewalld
