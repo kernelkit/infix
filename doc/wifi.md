@@ -476,6 +476,67 @@ radio settings, and `show interface` to see all active AP interfaces.
 > AP and Station modes cannot be mixed on the same radio. All virtual interfaces
 > on a radio must be the same mode (all APs or all Stations).
 
+## Fast Roaming Between Access Points
+
+Fast roaming enables seamless client handoff between access points through
+802.11k/r/v standards. These features can be enabled individually based on
+your requirements.
+
+### 802.11r - Fast BSS Transition
+
+Enable 802.11r for fast handoff (<50ms) between APs with the same SSID:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain 4f57
+```
+
+**Requirements:**
+- All APs in roaming group must have **identical** SSID
+- All APs must have **identical** passphrase (same keystore secret)
+- All APs must use the **same mobility-domain** identifier
+
+The mobility-domain defaults to `4f57` if not specified.
+
+### 802.11k - Radio Resource Management
+
+Enable 802.11k for client neighbor discovery and better roaming decisions:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211k true
+```
+
+Enables neighbor reports and beacon reports, allowing clients to discover
+nearby APs before roaming.
+
+### 802.11v - BSS Transition Management
+
+Enable 802.11v for network-assisted roaming:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
+```
+
+Allows APs to suggest better APs to clients, improving roaming decisions.
+
+### Recommended Configuration
+
+For optimal roaming experience, enable all three features:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211k true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain 4f57
+```
+
+Repeat for all APs that should participate in the roaming group.
+
+> [!NOTE]
+> Not all client devices support all roaming features. Modern devices typically
+> support 802.11k/r/v, but older devices may only support basic roaming without
+> fast transition.
+
 ### AP as Bridge Port
 
 WiFi AP interfaces can be added to bridges to integrate wireless devices
