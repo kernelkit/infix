@@ -112,6 +112,158 @@ command-line options or environment variables:
 The examples below show both raw `curl` commands and the equivalent using
 `curl.sh` where applicable.
 
+## HTTP Methods in RESTCONF
+
+RESTCONF uses standard HTTP methods to perform different operations on
+configuration and operational data. Understanding when to use each method is
+crucial for correct and safe operations.
+
+### GET - Read Data
+
+Retrieve configuration or operational data without making changes.
+
+**When to use:**
+
+- Reading current configuration
+- Querying operational state (interface statistics, routing tables, etc.)
+- Discovering what exists before making changes
+
+**Characteristics:**
+
+- Safe operation (no side effects)
+- Can be repeated without consequences
+- Works on both configuration and operational datastores
+
+**Example:**
+```bash
+~$ ./curl.sh -h example.local GET /ietf-interfaces:interfaces
+```
+
+### PUT - Replace Resource
+
+> [!DANGER] Heads-up!
+> PUT replaces everything - missing fields will be deleted!
+
+Replace an entire resource with new content.
+
+**When to use:**
+
+- Replacing entire datastore (backup/restore scenarios)
+- Complete reconfiguration of a container
+- When you want to ensure the resource matches exactly what you provide
+
+**Characteristics:**
+
+- Replaces all content at the target path
+- Any existing data not in the PUT request is **removed**
+- Requires complete, valid configuration
+- Dangerous if you don't include all necessary fields
+
+**Example:**
+```bash
+~$ ./curl.sh -h example.local PUT /ietf-system:system \
+     -d '{"ietf-system:system":{"hostname":"newhost","contact":"admin@example.com"}}'
+```
+
+### PATCH - Merge/Update Resource
+
+Partially update a resource by merging changes with existing data.
+
+**When to use:**
+
+- Modifying specific fields while preserving others
+- Working with path-based NACM permissions
+- Incremental configuration changes
+- Safer alternative to PUT for most use cases
+
+**Characteristics:**
+
+- Merges changes with existing configuration
+- Only specified fields are modified
+- Unspecified fields remain unchanged
+- Works with partial data structures
+- NACM-friendly (respects path-based permissions)
+
+**Example:**
+```bash
+~$ ./curl.sh -h example.local PATCH /ietf-interfaces:interfaces \
+     -d '{"ietf-interfaces:interfaces":{"interface":[{"name":"e0","description":"WAN"}]}}'
+```
+
+> [!TIP] Best practice
+> Use PATCH instead of PUT for most configuration updates.
+
+### POST - Create New Resource
+
+Create a new resource within a collection or invoke an RPC.
+
+**When to use:**
+
+- Adding new list entries (interfaces, users, routes, etc.)
+- Creating resources at specific paths
+- Invoking RPC operations (reboot, factory-reset, etc.)
+
+**Characteristics:**
+
+- Creates new resources
+- For lists: adds a new element
+- For RPCs: executes the operation
+- Returns error if resource already exists (for configuration)
+
+**Example - Add IP address:**
+```bash
+~$ ./curl.sh -h example.local POST \
+     /ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254 \
+     -d '{"prefix-length": 32}'
+```
+
+**Example - Invoke RPC:**
+```bash
+~$ curl -kX POST -u admin:admin \
+     -H "Content-Type: application/yang-data+json" \
+     https://example.local/restconf/operations/ietf-system:system-restart
+```
+
+### DELETE - Remove Resource
+
+Delete a resource or configuration element.
+
+**When to use:**
+
+- Removing interfaces, routes, users, etc.
+- Deleting specific configuration items
+- Cleaning up unwanted configuration
+
+**Characteristics:**
+
+- Removes the resource completely
+- Cannot be undone (except by reconfiguration)
+- Returns error if resource doesn't exist
+
+**Example:**
+```bash
+~$ ./curl.sh -h example.local DELETE \
+     /ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254
+```
+
+### Quick Reference
+
+| **Method** | **Use Case**            | **Safe?** | **Idempotent?** | **NACM Impact**          |
+|------------|-------------------------|-----------|-----------------|--------------------------|
+| GET        | Read data               | ✓         | ✓               | Read permissions         |
+| PUT        | Replace entire resource | ✗         | ✓               | Full write access needed |
+| PATCH      | Merge/update fields     | ✓         | ✓               | Path-specific write      |
+| POST       | Create new/invoke RPC   | ✗         | ✗               | Create/exec permissions  |
+| DELETE     | Remove resource         | ✗         | ✓               | Delete permissions       |
+
+**Key takeaways:**
+
+- **Use PATCH for updates** - Safer than PUT, works with NACM
+- **Use PUT sparingly** - Only when you need complete replacement
+- **GET is always safe** - Read as much as you need
+- **POST for creation/RPCs** - Creating new items or executing operations
+- **DELETE with care** - Cannot be undone
+
 ## Discovery & Common Patterns
 
 Before working with specific configuration items, you often need to discover
@@ -243,6 +395,68 @@ Example of updating configuration with inline JSON data:
 ```bash
 ~$ ./curl.sh -h example.local PATCH /ietf-system:system \
      -d '{"ietf-system:system":{"hostname":"bar"}}'
+```
+
+### Update Interface Description
+
+PATCH allows you to modify specific parts of the configuration without
+replacing the entire container. This is particularly useful when working
+with NACM (Network Access Control Model) permissions that grant access to
+specific paths.
+
+**Why use PATCH instead of PUT:**
+
+- **Partial updates**: Only changes specified fields, preserves others
+- **NACM-friendly**: Works with path-based access control rules
+- **Safer**: Reduces risk of accidentally removing unrelated configuration
+
+**Example - Modify an interface description:**
+
+```bash
+~$ curl -kX PATCH -u admin:admin \
+     -H 'Content-Type: application/yang-data+json' \
+     -d '{"ietf-interfaces:interfaces":{"interface":[{"name":"e0","description":"WAN Port"}]}}' \
+     https://example.local/restconf/data/ietf-interfaces:interfaces
+```
+
+**Using curl.sh:**
+
+```bash
+~$ ./curl.sh -h example.local PATCH /ietf-interfaces:interfaces \
+     -d '{"ietf-interfaces:interfaces":{"interface":[{"name":"e0","description":"WAN Port"}]}}'
+```
+
+**Formatted for readability:**
+
+```bash
+~$ curl -kX PATCH -u admin:admin \
+     -H 'Content-Type: application/yang-data+json' \
+     -d '{
+       "ietf-interfaces:interfaces": {
+         "interface": [
+           {
+             "name": "e0",
+             "description": "WAN Port"
+           }
+         ]
+       }
+     }' \
+     https://example.local/restconf/data/ietf-interfaces:interfaces
+```
+
+**Key points:**
+
+- PATCH URL targets the **container** (`/interfaces`), not a specific interface
+- JSON body includes the full structure with the interface array
+- Only specified fields are modified; other interface settings remain unchanged
+- The `name` field identifies which interface to update
+
+**Verify the change:**
+
+```bash
+~$ ./curl.sh -h example.local GET /ietf-interfaces:interfaces/interface=e0 2>/dev/null \
+     | jq '.["ietf-interfaces:interface"][0].description'
+"WAN Port"
 ```
 
 ### Add IP Address to Interface
