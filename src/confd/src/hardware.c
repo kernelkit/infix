@@ -4,6 +4,8 @@
 #include <jansson.h>
 #include <libgen.h>
 #include <limits.h>
+#include <unistd.h>
+#include <openssl/evp.h>
 
 #include <srx/common.h>
 #include <srx/lyx.h>
@@ -177,6 +179,45 @@ out_free_xpath:
 	return err;
 }
 
+/* Resolve mobility domain - if "hash", derive from SSID using MD5 (OpenWrt-compatible) */
+static const char *resolve_mobility_domain(const char *mobility_domain, const char *ssid)
+{
+	static char hash_result[5]; /* 4 hex chars + null */
+	unsigned char md5_digest[EVP_MAX_MD_SIZE];
+	unsigned int md5_len;
+	EVP_MD_CTX *ctx;
+
+	if (strcmp(mobility_domain, "hash"))
+		return mobility_domain;
+
+	if (!ssid) {
+		ERROR("Cannot derive mobility domain from NULL SSID");
+		return "4f57"; /* Fallback to default */
+	}
+
+	/* Compute MD5 hash using EVP API (OpenSSL 3.0+) */
+	ctx = EVP_MD_CTX_new();
+	if (!ctx) {
+		ERROR("Failed to create EVP context");
+		return "4f57";
+	}
+
+	if (EVP_DigestInit_ex(ctx, EVP_md5(), NULL) != 1 ||
+	    EVP_DigestUpdate(ctx, ssid, strlen(ssid)) != 1 ||
+	    EVP_DigestFinal_ex(ctx, md5_digest, &md5_len) != 1) {
+		ERROR("Failed to compute MD5 hash");
+		EVP_MD_CTX_free(ctx);
+		return "4f57";
+	}
+
+	EVP_MD_CTX_free(ctx);
+
+	/* Extract first 4 hex characters (first 2 bytes) */
+	snprintf(hash_result, sizeof(hash_result), "%02x%02x", md5_digest[0], md5_digest[1]);
+
+	DEBUG("Derived mobility domain '%s' from SSID '%s'", hash_result, ssid);
+	return hash_result;
+}
 
 static int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio_name,
 					  struct lyd_node ***iface_list, int *count)
@@ -256,10 +297,16 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 /* Helper: Write SSID and security configuration (shared between primary and BSS) */
 static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss, const char *band)
 {
+	struct lyd_node *wifi, *ap, *security, *secret_node, *roaming;
+	struct lyd_node *dot11k, *dot11r, *dot11v;
 	const char *ssid, *hidden, *security_mode, *secret_name;
-	struct lyd_node *wifi, *ap, *security, *secret_node;
+	const char *mobility_domain, *mobility_domain_raw;
+	const char *nas_identifier_cfg;
+	bool enable_80211k, enable_80211r, enable_80211v;
 	unsigned char *secret = NULL;
 	const char *ifname;
+	char nas_identifier_default[300];
+	char hostname[64] = "localhost";
 	char bssid[18];
 
 	ifname = lydx_get_cattr(cif, "name");
@@ -271,6 +318,16 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		fprintf(hostapd, "bss=%s\n", ifname);
 	}
 
+	/* Check 802.11k/r/v configuration */
+	roaming = lydx_get_child(ap, "roaming");
+	dot11k = roaming ? lydx_get_child(roaming, "dot11k") : NULL;
+	dot11r = roaming ? lydx_get_child(roaming, "dot11r") : NULL;
+	dot11v = roaming ? lydx_get_child(roaming, "dot11v") : NULL;
+	enable_80211k = dot11k != NULL;
+	enable_80211r = dot11r != NULL;
+	enable_80211v = dot11v != NULL;
+
+
 	/* Set BSSID if custom MAC is configured */
 	if (!interface_get_phys_addr(cif, bssid))
 		fprintf(hostapd, "bssid=%s\n", bssid);
@@ -279,6 +336,19 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	ssid = lydx_get_cattr(ap, "ssid");
 	hidden = lydx_get_cattr(ap, "hidden");
 
+	if (enable_80211r) {
+		mobility_domain_raw = lydx_get_cattr(dot11r, "mobility-domain");
+		mobility_domain = resolve_mobility_domain(mobility_domain_raw, ssid);
+		nas_identifier_cfg = lydx_get_cattr(dot11r, "nas-identifier");
+		if (!nas_identifier_cfg || !strcmp(nas_identifier_cfg, "auto")) {
+			if (gethostname(hostname, sizeof(hostname)) != 0)
+				snprintf(hostname, sizeof(hostname), "localhost");
+			hostname[sizeof(hostname) - 1] = '\0';
+			snprintf(nas_identifier_default, sizeof(nas_identifier_default),
+				 "%s-%s.%s", ifname, hostname, mobility_domain);
+			nas_identifier_cfg = nas_identifier_default;
+		}
+	}
 	if (ssid)
 		fprintf(hostapd, "ssid=%s\n", ssid);
 	if (hidden && !strcmp(hidden, "true"))
@@ -330,7 +400,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	} else if (!strcmp(security_mode, "wpa2-personal")) {
 		fprintf(hostapd, "wpa=2\n");
 		/* WPA-PSK: Pre-shared key authentication */
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
+		fprintf(hostapd, "wpa_key_mgmt=%sWPA-PSK\n", enable_80211r ? "FT-PSK " : "");
 		/* CCMP: AES-based encryption, mandatory for WPA2 */
 		fprintf(hostapd, "wpa_pairwise=CCMP\n");
 		if (secret)
@@ -338,7 +408,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	} else if (!strcmp(security_mode, "wpa3-personal")) {
 		fprintf(hostapd, "wpa=2\n");
 		/* SAE: Simultaneous Authentication of Equals, resistant to offline dictionary attacks */
-		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
+		fprintf(hostapd, "wpa_key_mgmt=%sSAE\n", enable_80211r ? "FT-SAE " : "");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "sae_password=%s\n", secret);
@@ -346,7 +416,8 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
 		fprintf(hostapd, "wpa=2\n");
 		/* Allow both PSK (WPA2) and SAE (WPA3) authentication */
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
+		fprintf(hostapd, "wpa_key_mgmt=%sWPA-PSK SAE\n",
+			enable_80211r ? "FT-PSK FT-SAE " : "");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret) {
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
@@ -354,6 +425,36 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		}
 		/* ieee80211w=1: MFP capable but optional, for WPA2 client compatibility */
 		fprintf(hostapd, "ieee80211w=1\n");
+	}
+
+	/* 802.11r: Fast BSS Transition */
+	if (enable_80211r) {
+		fprintf(hostapd, "# Fast BSS Transition (802.11r)\n");
+		fprintf(hostapd, "mobility_domain=%s\n", mobility_domain);
+		fprintf(hostapd, "ft_over_ds=1\n");
+		fprintf(hostapd, "ft_psk_generate_local=1\n");
+		fprintf(hostapd, "nas_identifier=%s\n", nas_identifier_cfg);
+	}
+
+	/* 802.11k: Radio Resource Management */
+	if (enable_80211k) {
+		fprintf(hostapd, "# Radio Resource Management (802.11k)\n");
+		fprintf(hostapd, "rrm_neighbor_report=1\n");
+		fprintf(hostapd, "rrm_beacon_report=1\n");
+	}
+
+	/* 802.11v: BSS Transition Management */
+	if (enable_80211v) {
+		fprintf(hostapd, "# BSS Transition Management (802.11v)\n");
+		fprintf(hostapd, "bss_transition=1\n");
+	}
+
+	/* OKC: Opportunistic Key Caching */
+	if (roaming) {
+		const char *okc = lydx_get_cattr(roaming, "okc");
+
+		if (!okc || !strcmp(okc, "true"))
+			fprintf(hostapd, "okc=1\n");
 	}
 
 	free(secret);

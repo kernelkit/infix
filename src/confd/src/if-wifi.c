@@ -190,7 +190,7 @@ int wifi_gen_station(struct lyd_node *cif)
 			asprintf(&security_str, "key_mgmt=NONE");
 		else if (secret)
 			asprintf(&security_str,
-				 "key_mgmt=SAE WPA-PSK\n"
+				 "key_mgmt=FT-SAE FT-PSK SAE WPA-PSK\n"
 				 "  psk=\"%s\"", secret);
 
 		fprintf(wpa_supplicant,
