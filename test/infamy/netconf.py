@@ -281,7 +281,7 @@ class Device(Transport):
         """Get Python dictionary version of XML configuration"""
         return self.get_config(xpath).print_dict()
 
-    def put_config(self, edit):
+    def put_config(self, edit, retries=3):
         """Send XML configuration over NETCONF"""
         yang2nc = {
             "none": None,
@@ -298,7 +298,7 @@ class Device(Transport):
                               f"nc:operation=\"{dst}\"" if dst else "")
 
         last_error = None
-        for _ in range(0, 3):
+        for _ in range(0, retries):
             try:
                 self.ncc.edit_config(xml, default_operation='merge')
                 last_error = None
@@ -313,7 +313,7 @@ class Device(Transport):
         if last_error is not None:
             raise last_error
 
-    def put_config_dicts(self, models):
+    def put_config_dicts(self, models, retries=3):
         """PUT full configuration of all models to running-config"""
         config = ""
         infer_put_dict(self.name, models)
@@ -328,9 +328,9 @@ class Device(Transport):
             lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
             config += lyd.print_mem("xml", with_siblings=True, pretty=False) + "\n"
         # print(f"Send new XML config: {config}")
-        return self.put_config(config)
+        return self.put_config(config, retries=retries)
 
-    def put_config_dict(self, modname, edit):
+    def put_config_dict(self, modname, edit, retries=3):
         """Convert Python dictionary to XMl and send as configuration"""
         try:
             mod = self.ly.get_module(modname)
@@ -341,7 +341,7 @@ class Device(Transport):
         lyd = mod.parse_data_dict(edit, no_state=True, validate=False)
         config = lyd.print_mem("xml", with_siblings=True, pretty=False)
         # print(f"Send new XML config: {config}")
-        return self.put_config(config)
+        return self.put_config(config, retries=retries)
 
     def call(self, call):
         """Call RPC, XML version"""
