@@ -86,7 +86,7 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> leave
 - `country-code`: Two-letter ISO 3166-1 code - determines allowed channels and maximum power. Examples: US, DE, GB, SE, FR, JP. **Must match your physical location for legal compliance.**
 - `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Band selection automatically enables appropriate WiFi standards (2.4GHz: 802.11n, 5GHz: 802.11n/ac, 6GHz: 802.11n/ac/ax)
 - `channel`: Channel number (1-196) or "auto" (required for AP mode). When set to "auto", defaults to channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 109 for 6GHz
-- `enable-wifi6`: Boolean (default: false). Opt-in to enable WiFi 6 (802.11ax) on 2.4GHz and 5GHz bands. The 6GHz band always uses WiFi 6 regardless of this setting
+- `enable-80211ax`: Boolean (default: false). Opt-in to enable 802.11ax (WiFi 6) on 2.4GHz and 5GHz bands. The 6GHz band always uses 802.11ax regardless of this setting
 
 > [!NOTE]
 > TX power and channel width are automatically determined by the driver based on regulatory constraints, PHY mode, and hardware capabilities.
@@ -105,7 +105,7 @@ admin@example:/config/> edit hardware component radio0 wifi-radio
 admin@example:/config/hardware/component/radio0/wifi-radio/> set country-code DE
 admin@example:/config/hardware/component/radio0/wifi-radio/> set band 5GHz
 admin@example:/config/hardware/component/radio0/wifi-radio/> set channel 36
-admin@example:/config/hardware/component/radio0/wifi-radio/> set enable-wifi6 true
+admin@example:/config/hardware/component/radio0/wifi-radio/> set enable-80211ax true
 admin@example:/config/hardware/component/radio0/wifi-radio/> leave
 ```
 
@@ -121,7 +121,7 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> leave
 - Older WiFi 5/4 clients can still connect but won't use WiFi 6 features
 
 > [!NOTE]
-> The 6GHz band always uses WiFi 6 (802.11ax) regardless of the `enable-wifi6`
+> The 6GHz band always uses WiFi 6 (802.11ax) regardless of the `enable-80211ax`
 > setting, as WiFi 6E requires 802.11ax support.
 
 ## Discovering Available Networks (Scanning)
@@ -378,6 +378,67 @@ radio settings, and `show interface` to see all active AP interfaces.
 > [!IMPORTANT]
 > AP and Station modes cannot be mixed on the same radio. All virtual interfaces
 > on a radio must be the same mode (all APs or all Stations).
+
+## Fast Roaming Between Access Points
+
+Fast roaming enables seamless client handoff between access points through
+802.11k/r/v standards. These features can be enabled individually based on
+your requirements.
+
+### 802.11r - Fast BSS Transition
+
+Enable 802.11r for fast handoff (<50ms) between APs with the same SSID:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain 4f57
+```
+
+**Requirements:**
+- All APs in roaming group must have **identical** SSID
+- All APs must have **identical** passphrase (same keystore secret)
+- All APs must use the **same mobility-domain** identifier
+
+The mobility-domain defaults to `4f57` if not specified.
+
+### 802.11k - Radio Resource Management
+
+Enable 802.11k for client neighbor discovery and better roaming decisions:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211k true
+```
+
+Enables neighbor reports and beacon reports, allowing clients to discover
+nearby APs before roaming.
+
+### 802.11v - BSS Transition Management
+
+Enable 802.11v for network-assisted roaming:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
+```
+
+Allows APs to suggest better APs to clients, improving roaming decisions.
+
+### Recommended Configuration
+
+For optimal roaming experience, enable all three features:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211k true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain 4f57
+```
+
+Repeat for all APs that should participate in the roaming group.
+
+> [!NOTE]
+> Not all client devices support all roaming features. Modern devices typically
+> support 802.11k/r/v, but older devices may only support basic roaming without
+> fast transition.
 
 ### AP as Bridge Port
 

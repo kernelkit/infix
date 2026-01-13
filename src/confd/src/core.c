@@ -3,6 +3,8 @@
 #include <srx/srx_val.h>
 #include <srx/common.h>
 #include <srx/lyx.h>
+
+#include "interfaces.h"
 #include "core.h"
 
 struct confd confd;
@@ -144,19 +146,36 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		struct lyd_node *dif;
 
 		LYX_LIST_FOR_EACH(difs, dif, "interface") {
-			struct lyd_node *dwifi, *radio_node;
+			struct lyd_node *dwifi, *dcustom_phys, *radio_node, *cwifi;
 			const char *ifname, *radio_name;
 			char xpath[256];
-
-			/* Check if this interface has a wifi container in the diff */
-			dwifi = lydx_get_child(dif, "wifi");
-			if (!dwifi)
-				continue;
+			bool is_wifi_change = false;
 
 			/* Get the interface name */
 			ifname = lydx_get_cattr(dif, "name");
 			if (!ifname)
 				continue;
+
+			if (iftype_from_iface(dif) != IFT_WIFI)
+				continue;
+
+			/* Check if this interface has a wifi container in the diff */
+			dwifi = lydx_get_child(dif, "wifi");
+			if (dwifi)
+				is_wifi_change = true;
+
+			/* Check if custom-phys-address changed on a WiFi interface */
+			if (!is_wifi_change) {
+				dcustom_phys = lydx_get_child(dif, "custom-phys-address");
+				if (dcustom_phys) {
+					/* Check if this interface is a WiFi interface in the config */
+					cwifi = lydx_get_xpathf(config,
+						"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
+						ifname);
+					if (cwifi)
+						is_wifi_change = true;
+				}
+			}
 
 			/* Get radio reference from config tree using xpath */
 			radio_node = lydx_get_xpathf(config,

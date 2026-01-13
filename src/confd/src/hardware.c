@@ -313,7 +313,9 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char *ifname, struct lyd_node *config)
 {
 	const char *ssid, *hidden, *security_mode, *secret_name, *secret;
-	struct lyd_node *cif, *wifi, *ap, *security, *secret_node;
+	const char *mobility_domain = NULL;
+	struct lyd_node *cif, *wifi, *ap, *security, *secret_node, *roaming;
+	bool enable_80211k, enable_80211r, enable_80211v;
 	char bssid[18];
 
 	/* Find the interface node for this BSS */
@@ -367,20 +369,35 @@ static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char
 		}
 	}
 
+	/* Check 802.11k/r/v configuration */
+	roaming = lydx_get_child(ap, "roaming");
+	enable_80211k = roaming && lydx_get_bool(roaming, "enable-80211k");
+	enable_80211r = roaming && lydx_get_bool(roaming, "enable-80211r");
+	enable_80211v = roaming && lydx_get_bool(roaming, "enable-80211v");
+
+	if (enable_80211r)
+		mobility_domain = lydx_get_cattr(roaming, "mobility-domain");
+
 	if (!strcmp(security_mode, "open")) {
 		fprintf(hostapd, "# Open network\n");
 		fprintf(hostapd, "auth_algs=1\n");
 	} else if (!strcmp(security_mode, "wpa2-personal")) {
 		fprintf(hostapd, "# WPA2-Personal\n");
 		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
+		if (enable_80211r)
+			fprintf(hostapd, "wpa_key_mgmt=FT-PSK WPA-PSK\n");
+		else
+			fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
 		fprintf(hostapd, "wpa_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 	} else if (!strcmp(security_mode, "wpa3-personal")) {
 		fprintf(hostapd, "# WPA3-Personal\n");
 		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
+		if (enable_80211r)
+			fprintf(hostapd, "wpa_key_mgmt=FT-SAE SAE\n");
+		else
+			fprintf(hostapd, "wpa_key_mgmt=SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "sae_password=%s\n", secret);
@@ -388,13 +405,38 @@ static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char
 	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
 		fprintf(hostapd, "# WPA2/WPA3 Mixed\n");
 		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
+		if (enable_80211r)
+			fprintf(hostapd, "wpa_key_mgmt=FT-PSK FT-SAE WPA-PSK SAE\n");
+		else
+			fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret) {
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 			fprintf(hostapd, "sae_password=%s\n", secret);
 		}
 		fprintf(hostapd, "ieee80211w=1\n");
+	}
+
+	/* 802.11r: Fast BSS Transition */
+	if (enable_80211r) {
+		fprintf(hostapd, "# Fast BSS Transition (802.11r)\n");
+		fprintf(hostapd, "mobility_domain=%s\n", mobility_domain);
+		fprintf(hostapd, "ft_over_ds=1\n");
+		fprintf(hostapd, "ft_psk_generate_local=1\n");
+		fprintf(hostapd, "nas_identifier=%s.%s\n", ifname, mobility_domain);
+	}
+
+	/* 802.11k: Radio Resource Management */
+	if (enable_80211k) {
+		fprintf(hostapd, "# Radio Resource Management (802.11k)\n");
+		fprintf(hostapd, "rrm_neighbor_report=1\n");
+		fprintf(hostapd, "rrm_beacon_report=1\n");
+	}
+
+	/* 802.11v: BSS Transition Management */
+	if (enable_80211v) {
+		fprintf(hostapd, "# BSS Transition Management (802.11v)\n");
+		fprintf(hostapd, "bss_transition=1\n");
 	}
 
 	return 0;
@@ -405,16 +447,19 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 				  struct lyd_node *radio_node, struct lyd_node *config)
 {
 	const char *ssid, *hidden, *security_mode, *secret_name, *secret;
+	const char *mobility_domain = NULL;
 	struct lyd_node *primary_cif, *cif;
 	struct lyd_node *primary_wifi, *primary_ap;
-	struct lyd_node *security, *secret_node;
+	struct lyd_node *security, *secret_node, *roaming;
 	const char *country, *channel, *band;
 	const char *primary_ifname;
+	bool enable_80211k, enable_80211r, enable_80211v;
 	char hostapd_conf[256];
 	char **ap_list = NULL;
 	FILE *hostapd = NULL;
-	bool wifi6_enabled;
+	bool ax_enabled;
 	int ap_count = 0;
+	char bssid[18];
 	int i;
 
 	int rc = SR_ERR_OK;
@@ -458,7 +503,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	country = lydx_get_cattr(radio_node, "country-code");
 	band = lydx_get_cattr(radio_node, "band");
 	channel = lydx_get_cattr(radio_node, "channel");
-	wifi6_enabled = lydx_get_bool(radio_node, "enable_wifi6");
+	ax_enabled = lydx_get_bool(radio_node, "enable-80211ax");
 
 	/* Get secret from keystore if not open network */
 	if (secret_name && strcmp(security_mode, "open") != 0) {
@@ -470,6 +515,15 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 
 		}
 	}
+
+	/* Check 802.11k/r/v configuration */
+	roaming = lydx_get_child(primary_ap, "roaming");
+	enable_80211k = roaming && lydx_get_bool(roaming, "enable-80211k");
+	enable_80211r = roaming && lydx_get_bool(roaming, "enable-80211r");
+	enable_80211v = roaming && lydx_get_bool(roaming, "enable-80211v");
+
+	if (enable_80211r)
+		mobility_domain = lydx_get_cattr(roaming, "mobility-domain");
 
 	snprintf(hostapd_conf, sizeof(hostapd_conf), HOSTAPD_CONF_NEXT, radio_name);
 
@@ -492,7 +546,6 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "ctrl_interface=/run/hostapd\n");
 
 	/* Set BSSID if custom MAC is configured */
-	char bssid[18];
 	if (!interface_get_phys_addr(primary_cif, bssid))
 		fprintf(hostapd, "bssid=%s\n", bssid);
 	fprintf(hostapd, "\n");
@@ -544,20 +597,20 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 
 	if (band) {
 		if (!strcmp(band, "2.4GHz")) {
-			/* 2.4GHz: Enable 802.11n (HT), optionally WiFi 6 */
+			/* 2.4GHz: Enable 802.11n (HT), optionally 802.11ax */
 			fprintf(hostapd, "ieee80211n=1\n");
-			if (wifi6_enabled) {
+			if (ax_enabled) {
 				fprintf(hostapd, "ieee80211ax=1\n");
 			}
 		} else if (!strcmp(band, "5GHz")) {
-			/* 5GHz: Enable 802.11n and 802.11ac, optionally WiFi 6 */
+			/* 5GHz: Enable 802.11n and 802.11ac, optionally 802.11ax */
 			fprintf(hostapd, "ieee80211n=1\n");
 			fprintf(hostapd, "ieee80211ac=1\n");
-			if (wifi6_enabled) {
+			if (ax_enabled) {
 				fprintf(hostapd, "ieee80211ax=1\n");
 			}
 		} else if (!strcmp(band, "6GHz")) {
-			/* 6GHz: Enable 802.11ax (WiFi 6E required) */
+			/* 6GHz: Enable 802.11ax (required for 6GHz) */
 			fprintf(hostapd, "ieee80211n=1\n");
 			fprintf(hostapd, "ieee80211ac=1\n");
 			fprintf(hostapd, "ieee80211ax=1\n");
@@ -572,25 +625,59 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	} else if (!strcmp(security_mode, "wpa2-personal")) {
 		fprintf(hostapd, "# WPA2-Personal\n");
 		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
+		if (enable_80211r)
+			fprintf(hostapd, "wpa_key_mgmt=FT-PSK WPA-PSK\n");
+		else
+			fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
 		fprintf(hostapd, "wpa_pairwise=CCMP\n");
 		fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 	} else if (!strcmp(security_mode, "wpa3-personal")) {
 		fprintf(hostapd, "# WPA3-Personal\n");
 		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
+		if (enable_80211r)
+			fprintf(hostapd, "wpa_key_mgmt=FT-SAE SAE\n");
+		else
+			fprintf(hostapd, "wpa_key_mgmt=SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		fprintf(hostapd, "sae_password=%s\n", secret);
 		fprintf(hostapd, "ieee80211w=2\n");
 	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
 		fprintf(hostapd, "# WPA2/WPA3 Mixed Mode\n");
 		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
+		if (enable_80211r)
+			fprintf(hostapd, "wpa_key_mgmt=FT-PSK FT-SAE WPA-PSK SAE\n");
+		else
+			fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 		fprintf(hostapd, "sae_password=%s\n", secret);
 		fprintf(hostapd, "ieee80211w=1\n");
 	}
+
+	/* 802.11r: Fast BSS Transition */
+	if (enable_80211r) {
+		fprintf(hostapd, "\n# Fast BSS Transition (802.11r)\n");
+		fprintf(hostapd, "mobility_domain=%s\n", mobility_domain);
+		fprintf(hostapd, "ft_over_ds=1\n");
+		fprintf(hostapd, "ft_psk_generate_local=1\n");
+		fprintf(hostapd, "nas_identifier=%s.%s\n", primary_ifname, mobility_domain);
+	}
+
+	/* 802.11k: Radio Resource Management */
+	if (enable_80211k) {
+		fprintf(hostapd, "\n# Radio Resource Management (802.11k)\n");
+		fprintf(hostapd, "rrm_neighbor_report=1\n");
+		fprintf(hostapd, "rrm_beacon_report=1\n");
+	}
+
+	/* 802.11v: BSS Transition Management */
+	if (enable_80211v) {
+		fprintf(hostapd, "\n# BSS Transition Management (802.11v)\n");
+		fprintf(hostapd, "bss_transition=1\n");
+	}
+
+	if (enable_80211k || enable_80211r || enable_80211v)
+		fprintf(hostapd, "\n");
 
 	/* Add BSS sections for secondary APs (multi-SSID) */
 	for (i = 1; i < ap_count; i++) {

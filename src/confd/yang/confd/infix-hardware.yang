@@ -262,16 +262,15 @@ module infix-hardware {
            congestion in most environments.";
       }
 
-      leaf enable-wifi6 {
+      leaf enable-80211ax {
         type boolean;
-        default false;
         description
-          "Enable WiFi 6 (802.11ax) on 2.4GHz and 5GHz bands.
+          "Enable 802.11ax (WiFi 6) on 2.4GHz and 5GHz bands.
 
-           By default, WiFi 6 is enabled only on 6GHz (WiFi 6E).
-           Set to 'true' to enable WiFi 6 on 2.4GHz and 5GHz bands.
+           By default, 802.11ax is enabled only on 6GHz (WiFi 6E).
+           Set to 'true' to enable 802.11ax on 2.4GHz and 5GHz bands.
 
-           WiFi 6 provides:
+           802.11ax provides:
            - OFDMA (better multi-user efficiency)
            - Target Wake Time (better battery life)
            - 1024-QAM (higher throughput)
@@ -281,7 +280,7 @@ module infix-hardware {
            - Hardware support for 802.11ax
            - Compatible clients for full benefits
 
-           Note: 6GHz band always uses WiFi 6 regardless of this setting.";
+           Note: 6GHz band always uses 802.11ax regardless of this setting.";
       }
 
       /*
