@@ -413,7 +413,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	char hostapd_conf[256];
 	char **ap_list = NULL;
 	FILE *hostapd = NULL;
-	bool wifi6_enabled;
+	bool ax_enabled;
 	int ap_count = 0;
 	char bssid[18];
 	int i;
@@ -459,7 +459,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	country = lydx_get_cattr(radio_node, "country-code");
 	band = lydx_get_cattr(radio_node, "band");
 	channel = lydx_get_cattr(radio_node, "channel");
-	wifi6_enabled = lydx_get_bool(radio_node, "enable_wifi6");
+	ax_enabled = lydx_get_bool(radio_node, "enable-80211ax");
 
 	/* Get secret from keystore if not open network */
 	if (secret_name && strcmp(security_mode, "open") != 0) {
@@ -544,20 +544,20 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 
 	if (band) {
 		if (!strcmp(band, "2.4GHz")) {
-			/* 2.4GHz: Enable 802.11n (HT), optionally WiFi 6 */
+			/* 2.4GHz: Enable 802.11n (HT), optionally 802.11ax */
 			fprintf(hostapd, "ieee80211n=1\n");
-			if (wifi6_enabled) {
+			if (ax_enabled) {
 				fprintf(hostapd, "ieee80211ax=1\n");
 			}
 		} else if (!strcmp(band, "5GHz")) {
-			/* 5GHz: Enable 802.11n and 802.11ac, optionally WiFi 6 */
+			/* 5GHz: Enable 802.11n and 802.11ac, optionally 802.11ax */
 			fprintf(hostapd, "ieee80211n=1\n");
 			fprintf(hostapd, "ieee80211ac=1\n");
-			if (wifi6_enabled) {
+			if (ax_enabled) {
 				fprintf(hostapd, "ieee80211ax=1\n");
 			}
 		} else if (!strcmp(band, "6GHz")) {
-			/* 6GHz: Enable 802.11ax (WiFi 6E required) */
+			/* 6GHz: Enable 802.11ax (required for 6GHz) */
 			fprintf(hostapd, "ieee80211n=1\n");
 			fprintf(hostapd, "ieee80211ac=1\n");
 			fprintf(hostapd, "ieee80211ax=1\n");
