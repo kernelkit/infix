@@ -1,4 +1,4 @@
-From c1c5b3a188573912a11d1e68ce4754e2d6f1ebfd Mon Sep 17 00:00:00 2001
+From bbc64101e7b46fe57f2ca84d746c607c164b7e3e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
 Subject: [PATCH 14/30] net: phy: marvell10g: Support firmware loading on

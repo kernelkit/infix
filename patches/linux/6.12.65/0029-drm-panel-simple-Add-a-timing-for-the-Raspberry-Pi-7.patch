@@ -1,4 +1,4 @@
-From 40cb43e3fdb305ec902e64cea3e62cb2ae5599d2 Mon Sep 17 00:00:00 2001
+From 1730b8e5736ba1d0a2d2aa388ef451c209048c46 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 20 Aug 2025 21:38:24 +0200
 Subject: [PATCH 29/30] drm/panel-simple: Add a timing for the Raspberry Pi 7"

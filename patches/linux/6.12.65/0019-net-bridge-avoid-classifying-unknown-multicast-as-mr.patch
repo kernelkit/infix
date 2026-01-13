@@ -1,4 +1,4 @@
-From 31ce30ed1ae6f15d18887c3fd39db5d19ce4f7dc Mon Sep 17 00:00:00 2001
+From 0f9335d37e9b56361179a6eeaa6929e4df274004 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 19/30] net: bridge: avoid classifying unknown multicast as
@@ -188,7 +188,7 @@ index 0a00c3f57815..1ae021be0a7b 100644
  		    ipv6_addr_is_all_snoopers(&ipv6_hdr(skb)->daddr))
  			br_ip6_multicast_mrd_rcv(brmctx, pmctx, skb);
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index a2e59108a5dc..6c5b1fad19c6 100644
+index b2e4e2d04f02..60e4a0e4dd63 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -486,6 +486,7 @@ enum net_bridge_opts {
@@ -210,7 +210,7 @@ index a2e59108a5dc..6c5b1fad19c6 100644
  
  /* return true if both source port and dest port are isolated */
  static inline bool br_skb_isolated(const struct net_bridge_port *to,
-@@ -1413,6 +1414,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
+@@ -1412,6 +1413,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
  {
  }
  
