@@ -6,35 +6,29 @@ All notable changes to the project are documented in this file.
 [v26.01.0][UNRELEASED]
 -------------------------
 
-> [!WARNING]
-> **BREAKING CHANGES:** This release includes breaking changes to WiFi configuration:
+> [!IMPORTANT]
+> This release includes **breaking changes** to WiFi configuration that will
+> result in existing configuration being disabled:
 >
 > - WiFi station/client configuration has been restructured. The `wifi` container
 >   now requires a `radio` reference, and station configuration has moved under a
->   `wifi/station` container. Existing WiFi configurations must be manually updated.
-> - WiFi radios are now configured via `ietf-hardware` instead of the interfaces module.
-
-> [!IMPORTANT]
-> **Users of Raspberry Pi must upgrade the bootloader of the system**
->   the easieast way to do it is to backup your startup-config.cfg and
->   reflash the SD card with a new [sd card image](https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi64-sdcard.img)
-
-> [!NOTE]
-> Noteworthy changes and additions in this release:
+>   `wifi/station` container. Existing WiFi configurations must be manually updated
+> - WiFi radios are now configured via `ietf-hardware` instead of the interfaces module
 >
-> - WiFi Access Point (AP) mode support with multi-SSID capability
-> - RIPv2 routing support
-> - WireGuard support
-> - New major version of linux kernel 6.18, previous 6.12
+> Also, **Raspberry Pi users must upgrade the bootloader** before upgrading to
+> this release.  We recommend backing up your `startup-config.cfg` and reflash
+> the SD card with a new [sd card image][].
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.6 (LTS)
+Noteworthy changes and additions in this release are marked below in bold text.
+
+- Upgrade **Linux kernel to 6.18.6** (LTS)
 - Upgrade libyang to 4.2.2
 - Upgrade sysrepo to 4.2.10
 - Upgrade netopeer2 (NETCONF) to 2.7.0
-- Add RIPv2 routing support, issue #582
-- Add NTP server support, issue #904
+- Add **RIPv2 routing support**, issue #582
+- Add **NTP server support**, issue #904
 - Migrate DHCPv6 client to odhcp6c for improved Router Advertisement
   integration.  Adds support for hybrid RA+DHCPv6 deployments where SLAAC
   assigns addresses and DHCPv6 provides DNS (common ISP scenario)
@@ -51,21 +45,36 @@ All notable changes to the project are documented in this file.
   policy, keeping snapshots from every 5 minutes (recent) to yearly (historical)
 - Add support data collection script, useful when troubleshooting issues on
   deployed systems. Gathers system information, logs, and more.  Issue #1287
-- Add WiFi Access Point (AP) mode with multi-SSID support and WPA2/WPA3 security.
-  **BREAKING:** WiFi architecture refactored with radios configured via
-  `ietf-hardware` and interfaces requiring `radio` reference. Station config
-  moved to `wifi/station` container. Existing Wi-Fi interfaces will be
-  removed during upgrade (for the rest of the configuration to apply)
-  and you need to reconfigure them again. See [wifi.md](wifi.md) for details
-- Add support for WireGuard VPN tunnels.
+- Add **WiFi Access Point (AP) mode with multi-SSID support and WPA2/WPA3**
+  security.  **BREAKING:** WiFi architecture refactored with radios configured
+  via `ietf-hardware` and interfaces requiring `radio` reference. Station
+  config moved to `wifi/station` container.  Existing Wi-Fi interfaces will be
+  removed during upgrade (for the rest of the configuration to apply) and you
+  need to reconfigure them again.  See the [WiFi][] documentation for details
+- Add support for **WireGuard VPN tunnels**.
+- New default NACM privilege levels (user levels) in `factory-config`:
+  `operator` (network & container manager) and `guest` (read-only).  For
+  details, see the updated system configuration documentation, as well as a
+  new dedicated NACM configuration guide
+- New `show nacm` admin-exec command to inspect access control rules
+- CLI now uses `copy` and `rpc` tools instead of deprecated `sysrepocfg`.  The
+  latter now also require the use of `sudo` for `admin` level users
+- Enhanced `copy` command with XPath filtering support
 
 ### Fixes
 
+- Fix #1082: Wi-Fi interfaces always scanned, introduce a `scan-mode` to the
+  Wi-Fi concept in Infix
 - Fix #1314: Raspberry Pi 4B with 1 or 8 GiB RAM does not boot.  This was due
   newer EEPROM firmware in newer boards require a newer rpi-firmware package
-- Fix #1082: Wi-Fi interfaces always scanned, introduce a  `scan-mode`
-  to the Wi-Fi concept in Infix.
+- Fix #1345: firewall not updating when interfaces become bridge/lag ports
+- Fix #1346: firewall complains in syslog, missing `/etc/firewalld/firewalld.conf`
+- Fix default password hash in `do password encrypt` command.  New hash is the
+  same as the more commonly used `change password` command, *yescrypt*
+- Prevent MOTD from showing on non-shell user login attempts
 
+[wifi]: https://kernelkit.org/infix/latest/wifi/
+[sd card image]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi64-sdcard.img
 
 [v25.11.0][] - 2025-12-02
 -------------------------
