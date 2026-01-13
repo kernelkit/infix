@@ -410,6 +410,59 @@ submodule infix-if-wifi {
               }
             }
 
+            container roaming {
+              description
+                "Fast roaming and seamless handoff configuration.
+
+                 802.11k: Radio Resource Management (neighbor discovery)
+                 802.11r: Fast BSS Transition (fast handoff)
+                 802.11v: BSS Transition Management (network-assisted roaming)";
+
+              leaf enable-80211k {
+                type boolean;
+                description
+                  "Enable 802.11k Radio Resource Management.
+
+                   Allows clients to discover neighboring APs for better
+                   roaming decisions. Enables:
+                   - Neighbor reports
+                   - Beacon reports";
+              }
+
+              leaf enable-80211r {
+                type boolean;
+                description
+                  "Enable 802.11r Fast BSS Transition.
+
+                   Reduces handoff latency from ~1s to <50ms through
+                   pre-authentication. Required for seamless roaming.";
+              }
+
+              leaf enable-80211v {
+                type boolean;
+                description
+                  "Enable 802.11v BSS Transition Management.
+
+                   Allows APs to suggest better APs to clients, improving
+                   network-assisted roaming decisions.";
+              }
+
+              leaf mobility-domain {
+                when "../enable-80211r = 'true'";
+                type string {
+                  pattern '[0-9a-fA-F]{4}';
+                }
+                default "4f57";
+                description
+                  "802.11r Mobility Domain identifier (4 hex digits).
+
+                   All APs that clients should roam between MUST use the
+                   same mobility domain ID.
+
+                   Only applicable when 802.11r is enabled.";
+              }
+            }
+
             /* Operational state */
 
             container stations {
