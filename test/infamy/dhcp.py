@@ -17,10 +17,14 @@ class Server:
         self._create_files(start, end, netmask, ip, router, prefix, hostname)
 
     def __del__(self):
-        #print(self.config_file)
-        #os.unlink(self.config_file)
-        #os.unlink(self.leases_file)
-        pass
+        """Clean up config and lease files"""
+        try:
+            if os.path.exists(self.config_file):
+                os.unlink(self.config_file)
+            if os.path.exists(self.leases_file):
+                os.unlink(self.leases_file)
+        except:
+            pass
 
     def __enter__(self):
         self.start()
