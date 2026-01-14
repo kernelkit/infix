@@ -88,7 +88,7 @@ with infamy.Test() as test:
         client2 = env.attach("client2", "mgmt")
         client3 = env.attach("client3", "mgmt")
 
-    with test.step("Configure DHCP server and clients"):
+    with test.step("Configure DHCP server"):
         server.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {
@@ -195,10 +195,44 @@ with infamy.Test() as test:
                 }
             }})
 
+    with test.step("Configure client hostnames"):
+        # Set hostnames first, before enabling DHCP clients
+        client1.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": HOSTNM1,
+                }
+            }})
+
+        client2.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": HOSTNM2,
+                }
+            }})
+
+        client3.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": HOSTNM3,
+                }
+            }})
+
+        # Wait for hostnames to be applied in operational datastore
+        print("Waiting for client hostnames to take ...")
+        until(lambda: client1.get_data("/ietf-system:system")
+              .get("system", {}).get("hostname") == HOSTNM1)
+        until(lambda: client2.get_data("/ietf-system:system")
+              .get("system", {}).get("hostname") == HOSTNM2)
+        until(lambda: client3.get_data("/ietf-system:system")
+              .get("system", {}).get("hostname") == HOSTNM3)
+
+    with test.step("Configure DHCP clients"):
         # All clients request/accept the same options.  We do this to
         # both keep fleet configuration simple but also to verify that
         # the server is behaving correctly.
 
+        print("Enable DHCP clients ...")
         client1.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {
@@ -220,7 +254,6 @@ with infamy.Test() as test:
             },
             "ietf-system": {
                 "system": {
-                    "hostname": HOSTNM1,
                     "ntp": {"enabled": True},
                 }
             }})
@@ -246,7 +279,6 @@ with infamy.Test() as test:
             },
             "ietf-system": {
                 "system": {
-                    "hostname": HOSTNM2,
                     "ntp": {"enabled": True},
                 }
             }})
@@ -272,7 +304,6 @@ with infamy.Test() as test:
             },
             "ietf-system": {
                 "system": {
-                    "hostname": HOSTNM3,
                     "ntp": {"enabled": True},
                     "dns-resolver": {
                         "search": [
