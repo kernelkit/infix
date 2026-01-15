@@ -69,6 +69,9 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 	int mbps, err = 0;
 	FILE *fp;
 
+	if (iface_has_quirk(ifname, "broken-autoneg"))
+		return SR_ERR_OK;
+
 	if (iface_has_quirk(ifname, "phy-detached-when-down"))
 		phase = NETDAG_INIT_POST;
 
