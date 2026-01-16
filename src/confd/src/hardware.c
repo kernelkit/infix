@@ -710,6 +710,29 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			case SR_EV_DONE:
 				interfaces_diff = lydx_get_descendant(diff, "interfaces", "interface", NULL);
 
+				/* Handle deleted WiFi interfaces - stop wpa_supplicant */
+				if (interfaces_diff) {
+					struct lyd_node *iface, *wifi;
+					const char *radio;
+
+					LYX_LIST_FOR_EACH(interfaces_diff, iface, "interface") {
+						const char *ifname;
+						if (lydx_get_op(iface) != LYDX_OP_DELETE)
+							continue;
+						wifi = lydx_get_child(iface, "wifi");
+						if (!wifi)
+							continue;
+						radio = lydx_get_cattr(wifi, "radio");
+						if (!radio || strcmp(radio, name))
+							continue;
+
+						ifname = lydx_get_cattr(iface, "name");
+						erasef(WPA_SUPPLICANT_CONF, ifname);
+						erasef(WPA_SUPPLICANT_CONF_NEXT, ifname);
+						systemf("initctl -bfq disable wifi@%s", ifname);
+					}
+				}
+
 				wifi_find_interfaces_on_radio(interfaces_diff, name,
 							      &wifi_iface_list, &wifi_iface_count);
 				if (wifi_iface_count > 0) {
