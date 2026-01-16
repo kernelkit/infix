@@ -134,6 +134,10 @@ submodule infix-if-wifi {
           container station {
             presence "Configure WiFi station (client) mode";
 
+            must "count(/if:interfaces/if:interface[wifi/radio = current()/../radio][wifi/station]) <= 1" {
+              error-message "Only one station interface is allowed per radio";
+            }
+
             description
               "WiFi Station mode configuration.
 
