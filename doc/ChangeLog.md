@@ -14,6 +14,11 @@ All notable changes to the project are documented in this file.
 >   `wifi/station` container. Existing WiFi configurations must be manually updated.
 > - WiFi radios are now configured via `ietf-hardware` instead of the interfaces module.
 
+> [!IMPORTANT]
+> **Users of Raspberry Pi must upgrade the bootloader of the system**
+>   the easieast way to do it is to backup your startup-config.cfg and
+>   reflash the SD card with a new [sd card image](https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi64-sdcard.img)
+
 > [!NOTE]
 > Noteworthy changes and additions in this release:
 >
