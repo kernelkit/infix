@@ -487,7 +487,15 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	sr_error_t err = SR_ERR_OK;
 	char **ifaces = NULL;
 
-	if (diff && !lydx_get_xpathf(diff, XPATH))
+	/*
+	 * Trigger firewall regeneration if:
+	 * 1. Firewall configuration changed, OR
+	 * 2. Interface membership changed (bridge-port/lag-port)
+	 *    which affects L3 interface enumeration
+	 */
+	if (diff && !lydx_get_xpathf(diff, XPATH) &&
+	    !lydx_get_xpathf(diff, "/ietf-interfaces:interfaces/interface/bridge-port") &&
+	    !lydx_get_xpathf(diff, "/ietf-interfaces:interfaces/interface/lag-port"))
 		return SR_ERR_OK;
 
 	switch (event) {
@@ -549,9 +557,8 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		goto done;
 	}
 
-	if (lydx_get_descendant(diff, "firewall", "default", NULL) ||
-	    lydx_get_descendant(diff, "firewall", "logging", NULL))
-		generate_firewalld_conf(global);
+	/* Always generate firewalld.conf when firewall is enabled */
+	generate_firewalld_conf(global);
 
 	/*
 	 * Regenerate everything if anything in firewall changed, firewalld
