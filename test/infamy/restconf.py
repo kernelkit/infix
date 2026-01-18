@@ -398,6 +398,68 @@ class Device(Transport):
         # Copy candidate to running (acts as "commit", triggers sysrepo callbacks)
         self.copy("candidate", "running")
 
+    def patch_config(self, modname, edit, retries=3):
+        """PATCH configuration directly to running datastore
+
+        This bypasses the candidate datastore, avoiding full datastore
+        copy operations. Useful for NACM-restricted users who only have
+        access to specific paths. Note: may not trigger sysrepo callbacks
+        for all configuration types.
+
+        Args:
+            modname: YANG module name
+            edit: Configuration dictionary
+            retries: Number of retry attempts on failure (default 3)
+        """
+        try:
+            mod = self.lyctx.get_module(modname)
+        except libyang.util.LibyangError:
+            raise Exception(f"YANG model '{modname}' not found on device. "
+                           f"Model may not be installed or enabled. "
+                           f"Available models can be checked with get_schema_list()") from None
+
+        # Parse and convert to get proper structure with module prefix
+        lyd = mod.parse_data_dict(edit, no_state=True, validate=False)
+        patch_data = json.loads(lyd.print_mem("json", with_siblings=True, pretty=False))
+
+        # PATCH directly to running datastore
+        url = f"{self.restconf_url}/ds/ietf-datastores:running"
+        last_error = None
+        for attempt in range(0, retries):
+            try:
+                response = requests_workaround_patch(
+                    url,
+                    json=patch_data,
+                    headers=self.headers,
+                    auth=self.auth,
+                    verify=False
+                )
+                response.raise_for_status()
+                last_error = None
+                break
+            except Exception as e:
+                last_error = e
+                # Try to extract detailed error message from response
+                error_detail = str(e)
+                if hasattr(e, 'response') and e.response is not None:
+                    try:
+                        err_json = e.response.json()
+                        if 'ietf-restconf:errors' in err_json:
+                            errors = err_json['ietf-restconf:errors'].get('error', [])
+                            if errors:
+                                error_detail = errors[0].get('error-message', str(e))
+                    except:
+                        pass
+                if attempt < retries - 1:
+                    print(f"Failed PATCH: {error_detail}  Retrying ...")
+                    time.sleep(1)
+                else:
+                    print(f"Failed PATCH: {error_detail}")
+                continue
+
+        if last_error is not None:
+            raise last_error
+
     def call_dict(self, model, call):
         pass # Need implementation
 
