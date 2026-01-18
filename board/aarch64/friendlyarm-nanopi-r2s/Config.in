@@ -4,6 +4,7 @@ config BR2_PACKAGE_FRIENDLYARM_NANOPI_R2S
 	select SDCARD_AUX
 	select BR2_PACKAGE_INPUT_EVENT_DAEMON
 	select BR2_PACKAGE_LINUX_FIRMWARE_RTL_815X
+	select BR2_PACKAGE_INPUT_EVENT_DAEMON
 	help
 	  FriendlyElec NanoPi R2S is a compact router board based on
 	  the Rockchip RK3328 SoC with dual Gigabit Ethernet ports.
