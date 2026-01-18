@@ -1,0 +1,131 @@
+From c4463ec64f9732bd67b8cfd2b73adc10e50d1178 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 18 Jan 2026 23:26:37 +0100
+Subject: [PATCH] initctl: escape special characters in JSON output
+Organization: Wires
+
+Strings like command, description, and environment may contain characters
+that need escaping for valid JSON, e.g., embedded quotes in command line
+arguments like -V "NanoPi R2S".
+
+Add json_escape() helper to handle quotes, backslashes, and control chars.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/initctl.c | 78 +++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 69 insertions(+), 9 deletions(-)
+
+diff --git a/src/initctl.c b/src/initctl.c
+index 25c52cf..435e2da 100644
+--- a/src/initctl.c
++++ b/src/initctl.c
+@@ -1036,6 +1036,62 @@ static int svc_compare(svc_t *svc, char *arg)
+ 	return 0;
+ }
+ 
++/*
++ * Escape a string for safe JSON output. Handles quotes, backslashes,
++ * and control characters.  Returns pointer to static buffer.
++ */
++static char *json_escape(const char *str)
++{
++	static char buf[1024];
++	char *ptr = buf;
++	size_t left = sizeof(buf) - 1;
++
++	if (!str)
++		return "";
++
++	while (*str && left > 1) {
++		char c = *str++;
++
++		switch (c) {
++		case '"':
++		case '\\':
++			*ptr++ = '\\';
++			*ptr++ = c;
++			left -= 2;
++			break;
++		case '\n':
++			*ptr++ = '\\';
++			*ptr++ = 'n';
++			left -= 2;
++			break;
++		case '\r':
++			*ptr++ = '\\';
++			*ptr++ = 'r';
++			left -= 2;
++			break;
++		case '\t':
++			*ptr++ = '\\';
++			*ptr++ = 't';
++			left -= 2;
++			break;
++		default:
++			if ((unsigned char)c < 0x20) {
++				/* Other control chars: use \uXXXX */
++				int n = snprintf(ptr, left, "\\u%04x", (unsigned char)c);
++				ptr += n;
++				left -= n;
++			} else {
++				*ptr++ = c;
++				left--;
++			}
++			break;
++		}
++	}
++	*ptr = '\0';
++
++	return buf;
++}
++
+ static int json_status_one(FILE *fp, svc_t *svc, char *indent, int prev)
+ {
+ 	long now = jiffies();
+@@ -1051,14 +1107,16 @@ static int json_status_one(FILE *fp, svc_t *svc, char *indent, int prev)
+ 	fprintf(fp,
+ 		"%s"
+ 		"%s{\n"
+-		"%s  \"identity\": \"%s\",\n"
+-		"%s  \"description\": \"%s\",\n"
++		"%s  \"identity\": \"%s\",\n",
++		prev ? ",\n" : indent, prev ? indent : "",
++		indent, svc_ident(svc, NULL, 0));
++	fprintf(fp,
++		"%s  \"description\": \"%s\",\n",
++		indent, json_escape(svc->desc));
++	fprintf(fp,
+ 		"%s  \"type\": \"%s\",\n"
+ 		"%s  \"forking\": %s,\n"
+ 		"%s  \"status\": \"%s\",\n",
+-		prev ? ",\n" : indent, prev ? indent : "",
+-		indent, svc_ident(svc, NULL, 0),
+-		indent, svc->desc,
+ 		indent, svc_typestr(svc),
+ 		indent, svc->forking ? "true" : "false",
+ 		indent, svc_status(svc));
+@@ -1080,15 +1138,17 @@ static int json_status_one(FILE *fp, svc_t *svc, char *indent, int prev)
+ 	}
+ 
+ 	fprintf(fp,
+-		"%s  \"origin\": \"%s\",\n"
++		"%s  \"origin\": \"%s\",\n",
++		indent, svc->file[0] ? svc->file : "built-in");
++	svc_command(svc, buf, sizeof(buf), 0);
++	fprintf(fp,
+ 		"%s  \"command\": \"%s\",\n",
+-		indent, svc->file[0] ? svc->file : "built-in",
+-		indent, svc_command(svc, buf, sizeof(buf), 0));
++		indent, json_escape(buf));
+ 
+ 	svc_environ(svc, buf, sizeof(buf), 0);
+ 	if (buf[0])
+ 		fprintf(fp,
+-			"%s  \"environment\": \"%s\",\n", indent, buf);
++			"%s  \"environment\": \"%s\",\n", indent, json_escape(buf));
+ 
+ 	svc_cond(svc, buf, sizeof(buf), 0);
+ 	if (buf[0])
+-- 
+2.43.0
+
