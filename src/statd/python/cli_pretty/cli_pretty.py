@@ -161,7 +161,7 @@ class PadDhcpServer:
 
 class PadSensor:
     name = 30
-    value = 20
+    value = 22
     status = 10
 
     @classmethod
@@ -2121,7 +2121,7 @@ def show_hardware(json):
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
     wifi_radios = [c for c in components if c.get("class") == "infix-hardware:wifi"]
 
-    width = max(PadSensor.table_width(), 100)
+    width = max(PadSensor.table_width(), 62)
 
     # Display full-width inverted heading
     print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
@@ -2145,12 +2145,12 @@ def show_hardware(json):
         Decore.title("WiFi radios", width)
 
         radios_table = SimpleTable([
-            Column('NAME'),
-            Column('MANUFACTURER'),
+            Column('NAME', flexible=True),
+            Column('MANUFACTURER', flexible=True),
             Column('BANDS', 'right'),
             Column('STANDARDS', 'right'),
             Column('MAX AP', 'right')
-        ])
+        ], min_width=width)
 
         for component in wifi_radios:
             phy = component.get("name", "")
@@ -2195,10 +2195,10 @@ def show_hardware(json):
         Decore.title("USB Ports", width)
 
         usb_table = SimpleTable([
-            Column('NAME'),
+            Column('NAME', flexible=True),
             Column('STATE'),
             Column('OPER')
-        ])
+        ], min_width=width)
 
         for component in usb_ports:
             port = USBport(component)
