@@ -216,11 +216,12 @@ def format_uptime_seconds(seconds):
 
 class Column:
     """Column definition for SimpleTable"""
-    def __init__(self, name, align='left', formatter=None, flexible=False):
+    def __init__(self, name, align='left', formatter=None, flexible=False, min_width=None):
         self.name = name
         self.align = align
         self.formatter = formatter
         self.flexible = flexible
+        self.min_width = min_width
 
 class SimpleTable:
     """Simple table formatter that handles ANSI colors correctly and calculates dynamic column widths"""
@@ -306,6 +307,11 @@ class SimpleTable:
                 formatted_value = column.formatter(value) if column.formatter else value
                 value_width = self.visible_width(str(formatted_value))
                 widths[i] = max(widths[i], value_width)
+
+        # Apply column minimum widths
+        for i, column in enumerate(self.columns):
+            if column.min_width:
+                widths[i] = max(widths[i], column.min_width)
 
         return widths
 
