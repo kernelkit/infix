@@ -301,11 +301,9 @@ static const char *valid_boot_target(const kparg_t *parg)
 
 int infix_set_boot_order(kcontext_t *ctx)
 {
-	char tmpfile[] = "/tmp/boot-order-XXXXXX";
 	kpargv_t *pargv = kcontext_pargv(ctx);
 	const char *targets[3];
-	int fd, rc = 0;
-	FILE *fp;
+	int rc;
 
 	targets[0] = valid_boot_target(kpargv_find(pargv, "first"));
 	targets[1] = valid_boot_target(kpargv_find(pargv, "second"));
@@ -316,32 +314,11 @@ int infix_set_boot_order(kcontext_t *ctx)
 		return -1;
 	}
 
-	fd = mkstemp(tmpfile);
-	if (fd == -1)
-		goto fail;
-
-	fp = fdopen(fd, "w");
-	if (!fp) {
-		close(fd);
-		unlink(tmpfile);
-	fail:
-		fprintf(stderr, ERRMSG "failed creating temporary file\n");
-		return -1;
-	}
-
-	fputs("{\"infix-system:set-boot-order\":{\"boot-order\":[", fp);
-	for (size_t i = 0; i < NELEMS(targets); i++) {
-		if (!targets[i])
-			continue;
-
-		fprintf(fp, "%s\"%s\"", i > 0 ? "," : "", targets[i]);
-	}
-	fputs("]}}", fp);
-
-	fclose(fp);
-
-	rc = systemf("sysrepocfg -R %s -fjson 2>&1", tmpfile);
-	unlink(tmpfile);
+	/* Build RPC command with CLI arguments */
+	rc = systemf("rpc /infix-system:set-boot-order%s%s%s%s%s%s 2>&1",
+		     targets[0] ? " boot-order " : "", targets[0] ? targets[0] : "",
+		     targets[1] ? " boot-order " : "", targets[1] ? targets[1] : "",
+		     targets[2] ? " boot-order " : "", targets[2] ? targets[2] : "");
 
 	return rc;
 }

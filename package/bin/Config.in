@@ -5,4 +5,8 @@ config BR2_PACKAGE_BIN
 	help
 	  Misc. tools for CLI and shell users.
 
+	  Includes show (show.py) copy (NACM-aware datastore operations),
+	  rpc (YANG RPC execution with NACM enforcement), erase, and files
+	  commands.
+
 	  https://github.com/kernelkit/infix

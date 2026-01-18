@@ -1,0 +1,39 @@
+=== Basic NACM permissions
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/nacm-basic]
+
+==== Description
+
+Test that NACM groups (admin, operator, guest) correctly enforce
+access control with path-based rules and default policies.
+
+Creates three user privilege levels from scratch:
+
+- admin: Full access (permit-all rule)
+- operator: Can manage interfaces/routing, cannot modify system config
+- guest: Read-only access (write-default: deny, exec deny rule)
+
+Verifies that:
+
+- All users can read configuration (read-default: permit)
+- Operators can modify interfaces (path-specific permit rule)
+- Operators cannot modify system configuration (write-default: deny)
+- Guests cannot modify any configuration (write-default: deny)
+- Admin can modify all configuration (permit-all rule bypasses defaults)
+
+==== Topology
+
+image::topology.svg[Basic NACM permissions topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target
+. Configure NACM groups, rules, and test users
+. Verify operator can read configuration
+. Verify operator can modify interface configuration
+. Verify operator cannot modify system configuration
+. Verify guest can read configuration
+. Verify guest cannot modify configuration
+. Verify admin can modify configuration
+
+

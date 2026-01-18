@@ -10,6 +10,7 @@ AC_CONFIG_FILES([
 
 AC_PROG_CC
 AC_PROG_INSTALL
+AC_PROG_LN_S
 
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG

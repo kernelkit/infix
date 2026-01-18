@@ -6,6 +6,7 @@
 #include <libite/lite.h>
 
 #define ERRMSG "Error: "
+#define DBGMSG "Debug: "
 #define INFMSG "Note: "
 
 int         yorn       (const char *fmt, ...);

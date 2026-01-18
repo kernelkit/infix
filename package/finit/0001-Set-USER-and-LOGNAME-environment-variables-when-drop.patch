@@ -1,0 +1,48 @@
+From abaad560f0bf1f7de832a55222e20e2a9a61986f Mon Sep 17 00:00:00 2001
+From: Aaron Andersen <aaron@fosslib.net>
+Date: Sat, 10 Jan 2026 18:57:52 -0500
+Subject: [PATCH 1/2] Set USER and LOGNAME environment variables when dropping
+ privileges
+Organization: Wires
+
+When a service is configured to run as a non-root user (@user), finit
+correctly drops privileges via setuid() and sets HOME and PATH, but
+does not set the USER and LOGNAME environment variables. They remain
+set to "root" from boot time.
+
+This causes problems for software that determines its identity from
+the environment rather than getuid(). For example, rootless Podman
+checks os.Getenv("USER") first when looking up subordinate UID/GID
+ranges in /etc/subuid and /etc/subgid.
+
+With USER=root but UID=1000, Podman looks up root's subuid entry
+instead of the actual user's, causing applications like newuidmap
+to fail. Setting USER and LOGNAME to match the actual user identity
+follows POSIX conventions and matches the behavior of su, sudo, and
+login.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/service.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/service.c b/src/service.c
+index 2c8fb6e..d45db40 100644
+--- a/src/service.c
++++ b/src/service.c
+@@ -627,8 +627,11 @@ static pid_t service_fork(svc_t *svc)
+ 			set_uid(uid, svc);
+ 
+ 			/* Set default path for regular users */
+-			if (uid > 0)
++			if (uid > 0) {
+ 				setenv("PATH", _PATH_DEFPATH, 1);
++				setenv("USER", svc->username, 1);
++				setenv("LOGNAME", svc->username, 1);
++			}
+ 			if (home) {
+ 				setenv("HOME", home, 1);
+ 				if (chdir(home)) {
+-- 
+2.43.0
+

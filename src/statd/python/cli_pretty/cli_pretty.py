@@ -229,11 +229,12 @@ def format_uptime_seconds(seconds):
 
 class Column:
     """Column definition for SimpleTable"""
-    def __init__(self, name, align='left', formatter=None, flexible=False):
+    def __init__(self, name, align='left', formatter=None, flexible=False, min_width=None):
         self.name = name
         self.align = align
         self.formatter = formatter
         self.flexible = flexible
+        self.min_width = min_width
 
 class SimpleTable:
     """Simple table formatter that handles ANSI colors correctly and calculates dynamic column widths"""
@@ -319,6 +320,11 @@ class SimpleTable:
                 formatted_value = column.formatter(value) if column.formatter else value
                 value_width = self.visible_width(str(formatted_value))
                 widths[i] = max(widths[i], value_width)
+
+        # Apply column minimum widths
+        for i, column in enumerate(self.columns):
+            if column.min_width:
+                widths[i] = max(widths[i], column.min_width)
 
         return widths
 
@@ -2913,6 +2919,73 @@ def show_ntp_source(json, address=None):
         print(row)
 
 
+def show_nacm(json):
+    """Display users and NACM (Network Configuration Access Control) groups"""
+    min_width = 62
+
+    nacm = json.get("ietf-netconf-acm:nacm", {})
+    if not nacm:
+        print("NACM not configured.")
+        print()
+
+    if nacm:
+        enabled = "yes" if nacm.get("enable-nacm", True) else "no"
+        print(f"{'enabled':<25}: {enabled}")
+        print(f"{'default read access':<25}: {nacm.get('read-default', 'permit')}")
+        print(f"{'default write access':<25}: {nacm.get('write-default', 'deny')}")
+        print(f"{'default exec access':<25}: {nacm.get('exec-default', 'permit')}")
+        print(f"{'denied operations':<25}: {nacm.get('denied-operations', 0)}")
+        print(f"{'denied data writes':<25}: {nacm.get('denied-data-writes', 0)}")
+        print(f"{'denied notifications':<25}: {nacm.get('denied-notifications', 0)}")
+        print()
+
+    # Users table
+    system = json.get("ietf-system:system", {})
+    users = system.get("authentication", {}).get("user", [])
+    if users:
+        user_table = SimpleTable([
+            Column('USER', min_width=12),
+            Column('SHELL'),
+            Column('LOGIN', flexible=True)
+        ], min_width=min_width)
+
+        for user in users:
+            name = user.get("name", "")
+            shell_data = user.get("infix-system:shell", "false")
+            shell = shell_data.split(":")[-1] if ":" in shell_data else shell_data
+
+            has_password = bool(user.get("password"))
+            has_keys = bool(user.get("authorized-key"))
+            if has_password and has_keys:
+                login = "password+key"
+            elif has_password:
+                login = "password"
+            elif has_keys:
+                login = "key"
+            else:
+                login = "-"
+
+            user_table.row(name, shell, login)
+
+        user_table.print()
+        print()
+
+    # Groups table
+    groups = nacm.get("groups", {}).get("group", []) if nacm else []
+    if groups:
+        group_table = SimpleTable([
+            Column('GROUP', min_width=12),
+            Column('USERS', flexible=True)
+        ], min_width=min_width)
+
+        for group in groups:
+            name = group.get("name", "")
+            members = " ".join(group.get("user-name", []))
+            group_table.row(name, members)
+
+        group_table.print()
+
+
 def show_system(json):
     """System information overivew"""
     if not json.get("ietf-system:system-state"):
@@ -4897,6 +4970,8 @@ def main():
     subparsers.add_parser('show-firewall-log', help='Show firewall log') \
               .add_argument('limit', nargs='?', help='Last N lines, default: all')
 
+    subparsers.add_parser('show-nacm', help='Show NACM status and groups')
+
     subparsers.add_parser('show-ntp', help='Show NTP status') \
               .add_argument('-a', '--address', help='Show details for specific address')
     subparsers.add_parser('show-ntp-tracking', help='Show NTP tracking status')
@@ -4960,6 +5035,8 @@ def main():
         show_firewall_service(json_data, args.name)
     elif args.command == "show-firewall-log":
         show_firewall_logs(args.limit)
+    elif args.command == "show-nacm":
+        show_nacm(json_data)
     elif args.command == "show-ntp":
         show_ntp(json_data, args.address)
     elif args.command == "show-ntp-tracking":

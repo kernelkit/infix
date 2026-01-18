@@ -24,8 +24,8 @@ with infamy.Test() as test:
         if not tgtssh.runsh("grep wheel /etc/group | grep 'admin'"):
             test.fail()
 
-    with test.step("Verify user admin is now in sys-cli group"):
-        if not tgtssh.runsh("grep sys-cli /etc/group | grep 'admin'"):
+    with test.step("Verify user admin is now in sysrepo group"):
+        if not tgtssh.runsh("grep sysrepo /etc/group | grep 'admin'"):
             test.fail()
 
     test.succeed()

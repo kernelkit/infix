@@ -1,6 +1,0 @@
-config BR2_PACKAGE_SHOW
-	bool "show"
-	help
-	  Tool to retrieve and present operational data from sysrepo.
-
-	  https://github.com/kernelkit/infix

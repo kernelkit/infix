@@ -557,10 +557,14 @@ static void del_groups(const char *user, const char **groups)
 /* Users with a valid shell are also allowed CLI access */
 static void adjust_access(const char *user, const char *shell)
 {
-	if (strcmp(shell, "/bin/false"))
-		add_group(user, "sys-cli");
-	else
-		del_group(user, "sys-cli");
+	if (strcmp(shell, "/bin/false")) {
+		add_group(user, "klish");
+		erasef("/home/%s/.hushlogin", user);
+	} else {
+		del_group(user, "klish");
+		/* prevent even motd from showing */
+		touchf("/home/%s/.hushlogin", user);
+	}
 }
 
 /* XXX: Currently Infix only has admin and non-admins as a group */
@@ -579,17 +583,25 @@ static bool is_admin_user(sr_session_ctx_t *session, const char *user)
 		return false;	/* safe default */
 
 	for (size_t j = 0; j < group_count; j++) {
-		/* Fetch and check rules for each group */
+		const char *group = groups[j].data.string_val;
+
+		/*
+		 * Note: module-name has default="*", so we must explicitly exclude
+		 * rules with 'path' and 'rpc-name' to only match pure module-level
+		 * wildcard admin rules.
+		 */
 		snprintf(xpath, sizeof(xpath), NACM_BASE_"/rule-list[group='%s']/rule"
-			 "[module-name='*'][access-operations='*'][action='permit']",
-			 groups[j].data.string_val);
+			 "[module-name='*'][access-operations='*'][action='permit']"
+			 "[not(path)][not(rpc-name)]", group);
 		rc = sr_get_items(session, xpath, 0, 0, &rules, &rule_count);
 		if (rc)
 			continue; /* not found, this is OK */
 
 		/* At least one group grants full administrator permissions */
-		if (rule_count > 0)
+		if (rule_count > 0) {
+			DEBUG("User '%s' granted admin via group '%s'", user, group);
 			is_admin = true;
+		}
 
 		sr_free_values(rules, rule_count);
 	}
@@ -615,7 +627,7 @@ static int is_valid_username(const char *user)
 	return 1;
 }
 
-static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
+static char *sys_find_usable_shell(sr_session_ctx_t *sess, const char *name)
 {
 	const char *conf = NULL;
 	char *shell = NULL;
