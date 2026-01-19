@@ -88,6 +88,7 @@ PKG_CHECK_MODULES([libite],  [libite >= 2.6.1])
 PKG_CHECK_MODULES([sysrepo], [sysrepo >= 4.2.10])
 PKG_CHECK_MODULES([libyang], [libyang >= 4.2.2])
 PKG_CHECK_MODULES([libsrx],  [libsrx >= 1.0.0])
+PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
 AC_CHECK_HEADER([ev.h],
     [saved_LIBS="$LIBS"
