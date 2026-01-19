@@ -1,18 +1,23 @@
-From aefc2e785ad0e6bbb1d0d19618ba48dd0acf91b1 Mon Sep 17 00:00:00 2001
+From f38ee70d9df5f42679937910f34068edc8c4e16a Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Mar 2024 19:12:15 +0100
-Subject: [PATCH 09/30] net: dsa: Support EtherType based priority overrides
+Subject: [PATCH 21/29] net: dsa: Support EtherType based priority overrides
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
 
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  include/net/dsa.h |  4 ++++
  net/dsa/user.c    | 56 +++++++++++++++++++++++++++++++++++++++++++++--
  2 files changed, 58 insertions(+), 2 deletions(-)
 
 diff --git a/include/net/dsa.h b/include/net/dsa.h
-index 877f9b270cf6..d86698e0e12c 100644
+index 5cb456bf4639..c31d4e910f07 100644
 --- a/include/net/dsa.h
 +++ b/include/net/dsa.h
-@@ -968,6 +968,10 @@ struct dsa_switch_ops {
+@@ -958,6 +958,10 @@ struct dsa_switch_ops {
  				     const u8 *sel, int nsel);
  	int	(*port_get_apptrust)(struct dsa_switch *ds, int port, u8 *sel,
  				     int *nsel);
@@ -24,10 +29,10 @@ index 877f9b270cf6..d86698e0e12c 100644
  	/*
  	 * Suspend and resume
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index 06267c526dc4..ee0e5cf3f6d8 100644
+index f59d66f0975d..58174ad612d2 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
-@@ -2302,6 +2302,34 @@ dsa_user_dcbnl_add_dscp_prio(struct net_device *dev, struct dcb_app *app)
+@@ -2336,6 +2336,34 @@ dsa_user_dcbnl_add_dscp_prio(struct net_device *dev, struct dcb_app *app)
  	return 0;
  }
  
@@ -62,7 +67,7 @@ index 06267c526dc4..ee0e5cf3f6d8 100644
  static int __maybe_unused dsa_user_dcbnl_ieee_setapp(struct net_device *dev,
  						     struct dcb_app *app)
  {
-@@ -2311,7 +2339,7 @@ static int __maybe_unused dsa_user_dcbnl_ieee_setapp(struct net_device *dev,
+@@ -2345,7 +2373,7 @@ static int __maybe_unused dsa_user_dcbnl_ieee_setapp(struct net_device *dev,
  		case 0:
  			return dsa_user_dcbnl_set_default_prio(dev, app);
  		default:
@@ -71,7 +76,7 @@ index 06267c526dc4..ee0e5cf3f6d8 100644
  		}
  		break;
  	case IEEE_8021QAZ_APP_SEL_DSCP:
-@@ -2384,6 +2412,30 @@ dsa_user_dcbnl_del_dscp_prio(struct net_device *dev, struct dcb_app *app)
+@@ -2418,6 +2446,30 @@ dsa_user_dcbnl_del_dscp_prio(struct net_device *dev, struct dcb_app *app)
  	return 0;
  }
  
@@ -102,7 +107,7 @@ index 06267c526dc4..ee0e5cf3f6d8 100644
  static int __maybe_unused dsa_user_dcbnl_ieee_delapp(struct net_device *dev,
  						     struct dcb_app *app)
  {
-@@ -2393,7 +2445,7 @@ static int __maybe_unused dsa_user_dcbnl_ieee_delapp(struct net_device *dev,
+@@ -2427,7 +2479,7 @@ static int __maybe_unused dsa_user_dcbnl_ieee_delapp(struct net_device *dev,
  		case 0:
  			return dsa_user_dcbnl_del_default_prio(dev, app);
  		default:
@@ -111,3 +116,6 @@ index 06267c526dc4..ee0e5cf3f6d8 100644
  		}
  		break;
  	case IEEE_8021QAZ_APP_SEL_DSCP:
+-- 
+2.43.0
+

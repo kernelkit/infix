@@ -1,7 +1,11 @@
-From bf99f6f1f565bc2eec38b2a7c6d70c1b3e069ad6 Mon Sep 17 00:00:00 2001
+From 1df613d51cd26250219870cd175324652adde99e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
-Subject: [PATCH 18/30] net: phy: Do not resume PHY when attaching
+Subject: [PATCH 05/29] net: phy: Do not resume PHY when attaching
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 The PHY should not start negotiating with its link-partner until
 explicitly instructed to do so.
@@ -14,15 +18,17 @@ Otherwise, drivers that attached to their PHYs during
 probing (e.g. DSA) would end up with a physical link being
 established, even though the corresponding interface was still
 administratively down.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/phy/phy_device.c | 1 -
  1 file changed, 1 deletion(-)
 
 diff --git a/drivers/net/phy/phy_device.c b/drivers/net/phy/phy_device.c
-index 834624a61060..d09872e1ac4e 100644
+index 7a67c900e79a..5c61faf4b10a 100644
 --- a/drivers/net/phy/phy_device.c
 +++ b/drivers/net/phy/phy_device.c
-@@ -1661,7 +1661,6 @@ int phy_attach_direct(struct net_device *dev, struct phy_device *phydev,
+@@ -1750,7 +1750,6 @@ int phy_attach_direct(struct net_device *dev, struct phy_device *phydev,
  	if (err)
  		goto error;
  
@@ -30,3 +36,6 @@ index 834624a61060..d09872e1ac4e 100644
  	if (!phydev->is_on_sfp_module)
  		phy_led_triggers_register(phydev);
  
+-- 
+2.43.0
+
