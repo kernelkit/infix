@@ -161,7 +161,7 @@ class PadDhcpServer:
 
 class PadSensor:
     name = 30
-    value = 20
+    value = 22
     status = 10
 
     @classmethod
@@ -184,14 +184,6 @@ class PadLldp:
     time = 12
     chassis_id = 20
     port_id = 20
-
-
-class PadDiskUsage:
-    mount = 18
-    size = 12
-    used = 12
-    avail = 12
-    percent = 6
 
 
 def format_memory_bytes(bytes_val):
@@ -220,11 +212,6 @@ def format_uptime_seconds(seconds):
         return f"{seconds // 3600}h"
     else:
         return f"{seconds // 86400}d"
-
-    @classmethod
-    def table_width(cls):
-        """Total width of disk usage table"""
-        return cls.mount + cls.size + cls.used + cls.avail + cls.percent
 
 
 class Column:
@@ -2134,7 +2121,7 @@ def show_hardware(json):
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
     wifi_radios = [c for c in components if c.get("class") == "infix-hardware:wifi"]
 
-    width = max(PadSensor.table_width(), 100)
+    width = max(PadSensor.table_width(), 62)
 
     # Display full-width inverted heading
     print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
@@ -2158,12 +2145,12 @@ def show_hardware(json):
         Decore.title("WiFi radios", width)
 
         radios_table = SimpleTable([
-            Column('NAME'),
-            Column('MANUFACTURER'),
+            Column('NAME', flexible=True),
+            Column('MANUFACTURER', flexible=True),
             Column('BANDS', 'right'),
             Column('STANDARDS', 'right'),
             Column('MAX AP', 'right')
-        ])
+        ], min_width=width)
 
         for component in wifi_radios:
             phy = component.get("name", "")
@@ -2208,10 +2195,10 @@ def show_hardware(json):
         Decore.title("USB Ports", width)
 
         usb_table = SimpleTable([
-            Column('NAME'),
+            Column('NAME', flexible=True),
             Column('STATE'),
             Column('OPER')
-        ])
+        ], min_width=width)
 
         for component in usb_ports:
             port = USBport(component)
@@ -2939,7 +2926,7 @@ def show_system(json):
         except (ValueError, KeyError):
             pass
 
-    width = PadDiskUsage.table_width()
+    width = 62
     print(Decore.invert(f"{'SYSTEM INFORMATION':<{width}}"))
     print(f"{'OS Name':<20}: {platform.get('os-name', 'Unknown')}")
     print(f"{'OS Version':<20}: {platform.get('os-version', 'Unknown')}")
@@ -3022,23 +3009,23 @@ def show_system(json):
     disk_filtered = [d for d in disk if d.get("mount") != "/"]
     if disk_filtered:
         Decore.title("Disk Usage", width)
-        hdr = (f"{'MOUNTPOINT':<{PadDiskUsage.mount}}"
-               f"{'SIZE':>{PadDiskUsage.size}}"
-               f"{'USED':>{PadDiskUsage.used}}"
-               f"{'AVAIL':>{PadDiskUsage.avail}}"
-               f"{'USE%':>{PadDiskUsage.percent}}")
-        print(Decore.invert(hdr))
+        disk_table = SimpleTable([
+            Column('MOUNTPOINT', flexible=True),
+            Column('SIZE', 'right'),
+            Column('USED', 'right'),
+            Column('AVAIL', 'right'),
+            Column('USE%', 'right')
+        ], min_width=width)
+
         for d in disk_filtered:
-            mount = d.get("mount", "?")
-            size = d.get("size", "?")
-            used = d.get("used", "?")
-            avail = d.get("available", "?")
-            percent = d.get("percent", "?")
-            print(f"{mount:<{PadDiskUsage.mount}}"
-                  f"{size:>{PadDiskUsage.size}}"
-                  f"{used:>{PadDiskUsage.used}}"
-                  f"{avail:>{PadDiskUsage.avail}}"
-                  f"{percent:>{PadDiskUsage.percent}}")
+            disk_table.row(
+                d.get("mount", "?"),
+                d.get("size", "?"),
+                d.get("used", "?"),
+                d.get("available", "?"),
+                d.get("percent", "?")
+            )
+        disk_table.print()
 
 
 def show_dhcp_server(json, stats):

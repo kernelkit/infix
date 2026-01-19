@@ -183,21 +183,20 @@ def add_services(out):
     services = []
 
     for d in data:
-        if "pid" not in d or "status" not in d or "identity" not in d or "description" not in d:
+        try:
+            services.append({
+                "pid": d["pid"],
+                "name": d["identity"],
+                "status": d["status"],
+                "description": d["description"],
+                "statistics": {
+                    "memory-usage": str(d.get("memory", 0)),
+                    "uptime": str(d.get("uptime", 0)),
+                    "restart-count": int(d.get("restarts", 0))
+                }
+            })
+        except KeyError:
             continue
-
-        entry = {
-            "pid": d["pid"],
-            "name": d["identity"],
-            "status": d["status"],
-            "description": d["description"],
-            "statistics": {
-                "memory-usage": str(d.get("memory", 0)),
-                "uptime": str(d.get("uptime", 0)),
-                "restart-count": int(d.get("restarts", 0))
-            }
-        }
-        services.append(entry)
 
     insert(out, "infix-system:services", "service", services)
 
