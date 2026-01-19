@@ -1,12 +1,8 @@
-From 2543c1537f5554d5467975e96f9a5ac1f48c1b9e Mon Sep 17 00:00:00 2001
+From d4a0fb4552b2a4db65e1e594f2d35b3ef4ea22b4 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
-Subject: [PATCH 09/29] net: bridge: Differentiate MDB additions from
+Subject: [PATCH 22/30] net: bridge: Differentiate MDB additions from
  modifications
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 Before this change, the reception of an IGMPv3 report (and analogously
 for MLDv2) that adds a new group, would trigger two MDB RTM_NEWMDB
@@ -24,8 +20,6 @@ generated.
 
 Therefore, discriminate new groups from changes to existing groups by
 introducing a RTM_SETMDB events to be used in the latter scenario.
-
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  include/uapi/linux/rtnetlink.h | 2 ++
  net/bridge/br_mdb.c            | 4 ++--
@@ -33,10 +27,10 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  3 files changed, 8 insertions(+), 6 deletions(-)
 
 diff --git a/include/uapi/linux/rtnetlink.h b/include/uapi/linux/rtnetlink.h
-index dab9493c791b..40a3534f0f1d 100644
+index db7254d52d93..63508279df47 100644
 --- a/include/uapi/linux/rtnetlink.h
 +++ b/include/uapi/linux/rtnetlink.h
-@@ -142,6 +142,8 @@ enum {
+@@ -134,6 +134,8 @@ enum {
  #define RTM_DELMDB RTM_DELMDB
  	RTM_GETMDB = 86,
  #define RTM_GETMDB RTM_GETMDB
@@ -46,21 +40,21 @@ index dab9493c791b..40a3534f0f1d 100644
  	RTM_NEWNSID = 88,
  #define RTM_NEWNSID RTM_NEWNSID
 diff --git a/net/bridge/br_mdb.c b/net/bridge/br_mdb.c
-index 400eb872b403..cd7a2cd0911a 100644
+index 7e1ad229e133..3b1873e7c499 100644
 --- a/net/bridge/br_mdb.c
 +++ b/net/bridge/br_mdb.c
-@@ -752,7 +752,7 @@ static int br_mdb_replace_group_sg(const struct br_mdb_config *cfg,
+@@ -734,7 +734,7 @@ static int br_mdb_replace_group_sg(const struct br_mdb_config *cfg,
  	else
- 		timer_delete(&pg->timer);
+ 		del_timer(&pg->timer);
  
 -	br_mdb_notify(cfg->br->dev, mp, pg, RTM_NEWMDB);
 +	br_mdb_notify(cfg->br->dev, mp, pg, RTM_SETMDB);
  
  	return 0;
  }
-@@ -973,7 +973,7 @@ static int br_mdb_replace_group_star_g(const struct br_mdb_config *cfg,
+@@ -955,7 +955,7 @@ static int br_mdb_replace_group_star_g(const struct br_mdb_config *cfg,
  	else
- 		timer_delete(&pg->timer);
+ 		del_timer(&pg->timer);
  
 -	br_mdb_notify(cfg->br->dev, mp, pg, RTM_NEWMDB);
 +	br_mdb_notify(cfg->br->dev, mp, pg, RTM_SETMDB);
@@ -68,7 +62,7 @@ index 400eb872b403..cd7a2cd0911a 100644
  	if (br_multicast_should_handle_mode(brmctx, cfg->group.proto))
  		br_multicast_star_g_handle_mode(pg, cfg->filter_mode);
 diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
-index 66d709f6b19d..4d1b27d2cdbc 100644
+index dd815b0fa8f8..41ab527953da 100644
 --- a/net/bridge/br_multicast.c
 +++ b/net/bridge/br_multicast.c
 @@ -619,7 +619,7 @@ static void br_multicast_fwd_src_handle(struct net_bridge_group_src *src)
@@ -89,7 +83,7 @@ index 66d709f6b19d..4d1b27d2cdbc 100644
  	}
  out:
  	spin_unlock(&br->multicast_lock);
-@@ -2958,7 +2958,7 @@ static int br_ip4_multicast_igmp3_report(struct net_bridge_mcast *brmctx,
+@@ -2948,7 +2948,7 @@ static int br_ip4_multicast_igmp3_report(struct net_bridge_mcast *brmctx,
  			break;
  		}
  		if (changed)
@@ -98,7 +92,7 @@ index 66d709f6b19d..4d1b27d2cdbc 100644
  unlock_continue:
  		spin_unlock(&brmctx->br->multicast_lock);
  	}
-@@ -3100,7 +3100,7 @@ static int br_ip6_multicast_mld2_report(struct net_bridge_mcast *brmctx,
+@@ -3090,7 +3090,7 @@ static int br_ip6_multicast_mld2_report(struct net_bridge_mcast *brmctx,
  			break;
  		}
  		if (changed)
@@ -107,6 +101,3 @@ index 66d709f6b19d..4d1b27d2cdbc 100644
  unlock_continue:
  		spin_unlock(&brmctx->br->multicast_lock);
  	}
--- 
-2.43.0
-

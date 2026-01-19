@@ -1,12 +1,8 @@
-From 673f624878aae8e2718995baf693ac352ea91a70 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+From 98fe2a91d9b613119ba1850c7134af4f5ad45f68 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 20 Aug 2025 21:38:24 +0200
-Subject: [PATCH 13/29] drm/panel-simple: Add a timing for the Raspberry Pi 7"
+Subject: [PATCH 29/30] drm/panel-simple: Add a timing for the Raspberry Pi 7"
  panel
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 The Raspberry Pi 7" 800x480 panel uses a Toshiba TC358762 DSI
 to DPI bridge chip, so there is a requirement for the timings
@@ -45,16 +41,15 @@ on Pi4.
 parent PLL).
 
 Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/gpu/drm/panel/panel-simple.c | 31 +++++++++++++++++++++++++++-
  1 file changed, 30 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/panel/panel-simple.c b/drivers/gpu/drm/panel/panel-simple.c
-index 0019de93be1b..3cddde5733ca 100644
+index 82db3daf4f81..3699cef24ea6 100644
 --- a/drivers/gpu/drm/panel/panel-simple.c
 +++ b/drivers/gpu/drm/panel/panel-simple.c
-@@ -400,7 +400,8 @@ static int panel_simple_get_modes(struct drm_panel *panel,
+@@ -391,7 +391,8 @@ static int panel_simple_get_modes(struct drm_panel *panel,
  	 * TODO: Remove once all drm drivers call
  	 * drm_connector_set_orientation_from_panel()
  	 */
@@ -64,7 +59,7 @@ index 0019de93be1b..3cddde5733ca 100644
  
  	return num;
  }
-@@ -4074,6 +4075,31 @@ static const struct panel_desc qishenglong_gopher2b_lcd = {
+@@ -3829,6 +3830,31 @@ static const struct panel_desc qishenglong_gopher2b_lcd = {
  	.connector_type = DRM_MODE_CONNECTOR_DPI,
  };
  
@@ -96,7 +91,7 @@ index 0019de93be1b..3cddde5733ca 100644
  static const struct display_timing rocktech_rk043fn48h_timing = {
  	.pixelclock = { 6000000, 9000000, 12000000 },
  	.hactive = { 480, 480, 480 },
-@@ -5344,6 +5370,9 @@ static const struct of_device_id platform_of_match[] = {
+@@ -4977,6 +5003,9 @@ static const struct of_device_id platform_of_match[] = {
  		.compatible = "qishenglong,gopher2b-lcd",
  		.data = &qishenglong_gopher2b_lcd,
  	}, {
@@ -106,6 +101,3 @@ index 0019de93be1b..3cddde5733ca 100644
  		.compatible = "rocktech,rk043fn48h",
  		.data = &rocktech_rk043fn48h,
  	}, {
--- 
-2.43.0
-

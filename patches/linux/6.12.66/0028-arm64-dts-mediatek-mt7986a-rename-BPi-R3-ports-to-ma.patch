@@ -1,12 +1,8 @@
-From 71b2cad84f563649512a1753ffd48e57c1cb0dab Mon Sep 17 00:00:00 2001
+From c8a22befda5de27a07a6456ab7e35ba8e5463d22 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 10 Aug 2025 18:52:54 +0200
-Subject: [PATCH 12/29] arm64: dts: mediatek: mt7986a: rename BPi R3 ports to
+Subject: [PATCH 28/30] arm64: dts: mediatek: mt7986a: rename BPi R3 ports to
  match case
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 For ref. see: https://wiki.banana-pi.org/File:Bpi-r3_Metal_case.jpg
 
@@ -14,13 +10,12 @@ Also, comment out gpio-keys (reset and wps) since they clash with with
 the PCIe controller.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  .../boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts  | 14 +++++++-------
  1 file changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts b/arch/arm64/boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts
-index e7654dc9a1c9..4cc6aff07225 100644
+index ed79ad1ae871..1c7c666e3173 100644
 --- a/arch/arm64/boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts
 +++ b/arch/arm64/boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts
 @@ -46,7 +46,7 @@ fan: pwm-fan {
@@ -39,9 +34,9 @@ index e7654dc9a1c9..4cc6aff07225 100644
 -
 +*/
  	/* i2c of the left SFP cage (wan) */
- 	i2c_sfp1: i2c-0 {
+ 	i2c_sfp1: i2c-gpio-0 {
  		compatible = "i2c-gpio";
-@@ -415,27 +415,27 @@ port@0 {
+@@ -418,27 +418,27 @@ port@0 {
  
  		port@1 {
  			reg = <1>;
@@ -74,6 +69,3 @@ index e7654dc9a1c9..4cc6aff07225 100644
  			phy-mode = "2500base-x";
  			sfp = <&sfp2>;
  			managed = "in-band-status";
--- 
-2.43.0
-
