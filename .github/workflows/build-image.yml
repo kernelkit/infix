@@ -12,10 +12,6 @@ on:
           - bananapi-bpi-r3
           - friendlyarm-nanopi-r2s
         default: 'raspberrypi-rpi64'
-      use_latest_release:
-        description: 'Use latest release artifacts instead of workflow artifacts'
-        type: boolean
-        default: false
 
 jobs:
   create-image:
@@ -54,19 +50,19 @@ jobs:
         run: |
           case "${{ inputs.board }}" in
             raspberrypi-rpi64)
-              echo "BOOTLOADER=rpi64_boot" >> $GITHUB_ENV
-              echo "TARGET=aarch64" >> $GITHUB_ENV
+              echo "BOOTLOADER=rpi64-boot" >> $GITHUB_ENV
+              echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=false" >> $GITHUB_ENV
               ;;
             bananapi-bpi-r3)
-              echo "BOOTLOADER_SD=bpi_r3_sd_boot" >> $GITHUB_ENV
-              echo "BOOTLOADER_EMMC=bpi_r3_emmc_boot" >> $GITHUB_ENV
-              echo "TARGET=aarch64" >> $GITHUB_ENV
+              echo "BOOTLOADER_SD=bpi-r3-sd-boot" >> $GITHUB_ENV
+              echo "BOOTLOADER_EMMC=bpi-r3-emmc_boot" >> $GITHUB_ENV
+              echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=true" >> $GITHUB_ENV
               ;;
             friendlyarm-nanopi-r2s)
-              echo "BOOTLOADER=nanopi_r2s_boot" >> $GITHUB_ENV
-              echo "TARGET=aarch64" >> $GITHUB_ENV
+              echo "BOOTLOADER=nanopi-r2s-boot" >> $GITHUB_ENV
+              echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=false" >> $GITHUB_ENV
               ;;
             *)
@@ -74,7 +70,7 @@ jobs:
               exit 1
               ;;
           esac
-          echo "Target: $TARGET for board: ${{ inputs.board }}"
+          echo "Arch: $ARCH for board: ${{ inputs.board }}"
           if [ "$BUILD_EMMC" = "true" ]; then
             echo "Building both SD and eMMC images"
             echo "SD Bootloader: $BOOTLOADER_SD"
@@ -85,16 +81,12 @@ jobs:
           fi
 
       - name: Download bootloader artifacts
-        if: ${{ !inputs.use_latest_release }}
         run: |
-          # Download from latest bootloader build workflow on main branch
-          gh run list --workflow=build-boot.yml --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_boot_run_id
-          BOOT_RUN_ID=$(cat latest_boot_run_id)
-
+          # Download bootloader from latest-boot release tag
           if [ "$BUILD_EMMC" = "true" ]; then
             # Download both SD and eMMC bootloaders for boards that support both
             echo "Downloading SD bootloader: ${BOOTLOADER_SD}"
-            gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER_SD} --dir temp_bootloader_sd/
+            gh release download latest-boot --pattern "*${BOOTLOADER_SD}*" --dir temp_bootloader_sd/
             mkdir -p output_sd/images
             cd temp_bootloader_sd/
             tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
@@ -102,7 +94,7 @@ jobs:
             rm -rf temp_bootloader_sd/
 
             echo "Downloading eMMC bootloader: ${BOOTLOADER_EMMC}"
-            gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER_EMMC} --dir temp_bootloader_emmc/
+            gh release download latest-boot --pattern "*${BOOTLOADER_EMMC}*" --dir temp_bootloader_emmc/
             mkdir -p output_emmc/images
             cd temp_bootloader_emmc/
             tar -xzf *.tar.gz --strip-components=1 -C ../output_emmc/images/
@@ -115,7 +107,7 @@ jobs:
             ls -la output_emmc/images/
           else
             # Single bootloader for boards that only support SD
-            gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER} --dir temp_bootloader/
+            gh release download latest-boot --pattern "*${BOOTLOADER}*" --dir temp_bootloader/
 
             # Extract bootloader directly to output/images
             cd temp_bootloader/
@@ -130,7 +122,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Infix artifacts
-        if: ${{ !inputs.use_latest_release }}
         run: |
           # Download from latest Kernelkit Trigger workflow for main branch
           gh run list --workflow=164295764 --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
@@ -138,7 +129,7 @@ jobs:
 
           if [ "$BUILD_EMMC" = "true" ]; then
             # Copy Infix artifacts to both SD and eMMC output directories
-            gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
+            gh run download ${INFIX_RUN_ID} --name artifact-${ARCH} --dir temp_infix/
 
             cd temp_infix/
             tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
@@ -152,7 +143,7 @@ jobs:
             ls -la output_emmc/images/
           else
             # Single output directory for SD-only boards
-            gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
+            gh run download ${INFIX_RUN_ID} --name artifact-${ARCH} --dir temp_infix/
 
             # Extract Infix directly to output/images
             cd temp_infix/
@@ -161,58 +152,6 @@ jobs:
             rm -rf temp_infix/
 
             echo "Infix files extracted to output/images:"
-            ls -la output/images/
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download from latest releases
-        if: ${{ inputs.use_latest_release }}
-        run: |
-          if [ "$BUILD_EMMC" = "true" ]; then
-            # Download both SD and eMMC bootloaders
-            gh release download latest-boot --pattern "*${BOOTLOADER_SD}*" --dir temp_bootloader_sd/
-            mkdir -p output_sd/images
-            cd temp_bootloader_sd/
-            tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
-            cd ../
-            rm -rf temp_bootloader_sd/
-
-            gh release download latest-boot --pattern "*${BOOTLOADER_EMMC}*" --dir temp_bootloader_emmc/
-            mkdir -p output_emmc/images
-            cd temp_bootloader_emmc/
-            tar -xzf *.tar.gz --strip-components=1 -C ../output_emmc/images/
-            cd ../
-            rm -rf temp_bootloader_emmc/
-
-            # Download Infix once and extract to both directories
-            gh release download latest --pattern "*${TARGET}*" --dir temp_infix/
-            cd temp_infix/
-            tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
-            tar -xzf *.tar.gz --strip-components=1 -C ../output_emmc/images/
-            cd ../
-            rm -rf temp_infix/
-
-            echo "SD files extracted to output_sd/images:"
-            ls -la output_sd/images/
-            echo "eMMC files extracted to output_emmc/images:"
-            ls -la output_emmc/images/
-          else
-            # Download latest bootloader release
-            gh release download latest-boot --pattern "*${BOOTLOADER}*" --dir temp_bootloader/
-            cd temp_bootloader/
-            tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
-            cd ../
-            rm -rf temp_bootloader/
-
-            # Download latest Infix release
-            gh release download latest --pattern "*${TARGET}*" --dir temp_infix/
-            cd temp_infix/
-            tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
-            cd ../
-            rm -rf temp_infix/
-
-            echo "All files extracted to output/images:"
             ls -la output/images/
           fi
         env:
@@ -249,7 +188,7 @@ jobs:
             export BR2_EXTERNAL_INFIX_PATH=$PWD
             export RELEASE=""
             export INFIX_ID="infix"
-            ./utils/mkimage.sh ${{ inputs.board }}
+            ./utils/mkimage.sh -t sdcard ${{ inputs.board }}
           fi
 
       - name: Create eMMC image
@@ -347,10 +286,11 @@ jobs:
           # SD Card & eMMC Image Build Complete! 🚀
 
           **Board:** ${{ inputs.board }}
-          **Target:** ${{ env.TARGET }}
+          **Arch:** ${{ env.ARCH }}
           **SD Bootloader:** ${{ env.BOOTLOADER_SD }}
           **eMMC Bootloader:** ${{ env.BOOTLOADER_EMMC }}
-          **Artifact Source:** ${{ inputs.use_latest_release && 'Latest Release' || 'Latest Workflow Run' }}
+          **Bootloader Source:** latest-boot release
+          **Infix Source:** Latest workflow run on main
 
           ## Created Images
           $(find output/images/ -name "*.img" -o -name "*.img.bmap" | xargs ls -lh 2>/dev/null | awk '{print "- " $9 " (" $5 ")"}' || echo "- No images found")
@@ -363,9 +303,10 @@ jobs:
           # SD Card Image Build Complete! 🚀
 
           **Board:** ${{ inputs.board }}
-          **Target:** ${{ env.TARGET }}
+          **Arch:** ${{ env.ARCH }}
           **Bootloader:** ${{ env.BOOTLOADER }}
-          **Artifact Source:** ${{ inputs.use_latest_release && 'Latest Release' || 'Latest Workflow Run' }}
+          **Bootloader Source:** latest-boot release
+          **Infix Source:** Latest workflow run on main
 
           ## Created Images
           $(find output/images/ -name "*.img" -o -name "*.img.bmap" | xargs ls -lh 2>/dev/null | awk '{print "- " $9 " (" $5 ")"}' || echo "- No images found")
