@@ -496,7 +496,16 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-d
 - All APs must have **identical** passphrase (same keystore secret)
 - All APs must use the **same mobility-domain** identifier
 
-The mobility-domain defaults to `4f57` if not specified.
+**Mobility Domain Options:**
+- Explicit 4-character hex value (e.g., `4f57`) - default if not specified
+- `hash` - Automatically derive from SSID using MD5 (OpenWrt-compatible)
+
+Using `hash` allows multiple APs with the same SSID to automatically share
+the same mobility domain without manual configuration:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain hash
+```
 
 ### 802.11k - Radio Resource Management
 
@@ -528,6 +537,15 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-802
 admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
 admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
 admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain 4f57
+```
+
+Or use `hash` for automatic mobility domain derivation from SSID:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211k true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain hash
 ```
 
 Repeat for all APs that should participate in the roaming group.

@@ -72,6 +72,27 @@ submodule infix-if-wifi {
     description "WiFi support is an optional build-time feature in Infix.";
   }
 
+  typedef mobility-domain {
+    type union {
+      type string {
+        pattern '[0-9a-fA-F]{4}';
+      }
+      type enumeration {
+        enum hash {
+          description
+            "Derive mobility domain by hashing the SSID.
+
+             OpenWrt-compatible: md5(ssid), first 4 hex chars.";
+        }
+      }
+    }
+    default "4f57";
+    description
+      "802.11r Mobility Domain identifier (4 hex digits).
+
+       Use 'hash' to automatically derive it from the SSID.";
+  }
+
   augment "/if:interfaces/if:interface" {
     when "derived-from-or-self(if:type, 'infixift:wifi')" {
       description
@@ -449,15 +470,16 @@ submodule infix-if-wifi {
 
               leaf mobility-domain {
                 when "../enable-80211r = 'true'";
-                type string {
-                  pattern '[0-9a-fA-F]{4}';
-                }
-                default "4f57";
+                type mobility-domain;
                 description
-                  "802.11r Mobility Domain identifier (4 hex digits).
+                  "802.11r Mobility Domain identifier.
 
                    All APs that clients should roam between MUST use the
                    same mobility domain ID.
+
+                   Can be either:
+                   - A 4-character hex string (e.g., '4f57')
+                   - 'hash' to auto-derive from SSID (OpenWrt-compatible)
 
                    Only applicable when 802.11r is enabled.";
               }

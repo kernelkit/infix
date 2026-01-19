@@ -73,12 +73,13 @@ AS_IF([test "x$with_crypt" != "xno"], [
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
-PKG_CHECK_MODULES([crypt],   [libxcrypt >= 4.4.27])
-PKG_CHECK_MODULES([glib],    [glib-2.0 >= 2.50 gio-2.0 gio-unix-2.0])
-PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
-PKG_CHECK_MODULES([libite],  [libite >= 2.6.1])
-PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
-PKG_CHECK_MODULES([libsrx],  [libsrx >= 1.0.0])
+PKG_CHECK_MODULES([crypt],     [libxcrypt >= 4.4.27])
+PKG_CHECK_MODULES([glib],      [glib-2.0 >= 2.50 gio-2.0 gio-unix-2.0])
+PKG_CHECK_MODULES([jansson],   [jansson >= 2.0.0])
+PKG_CHECK_MODULES([libite],    [libite >= 2.6.1])
+PKG_CHECK_MODULES([libcrypto], [libcrypto])
+PKG_CHECK_MODULES([sysrepo],   [sysrepo >= 2.2.36])
+PKG_CHECK_MODULES([libsrx],    [libsrx >= 1.0.0])
 
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
