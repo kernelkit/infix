@@ -1,4 +1,4 @@
-name: Check Kernel 6.12 Release
+name: Check Kernel 6.18 Release
 
 on:
   schedule:
@@ -17,12 +17,12 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
 
-      - name: Fetch kernel.org and check for 6.12 release
+      - name: Fetch kernel.org and check for 6.18 release
         id: check
         run: |
           set -e -o pipefail
-          # Fetch the kernel.org frontpage and extract 6.12 version
-          CURRENT_VERSION=$(curl -s https://www.kernel.org/ | grep -oP '6\.12\.\d+' | head -n1)
+          # Fetch the kernel.org frontpage and extract 6.18 version
+          CURRENT_VERSION=$(curl -s https://www.kernel.org/ | grep -oP '6\.18\.\d+' | head -n1)
 
           if [ -z "$CURRENT_VERSION" ]; then
             echo "Failed to fetch kernel version"
@@ -30,7 +30,7 @@ jobs:
           fi
 
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "Current 6.12 kernel version: $CURRENT_VERSION"
+          echo "Current 6.18 kernel version: $CURRENT_VERSION"
 
           # Get the version from infix defconfig
           INFIX_VERSION=$(grep 'BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=' configs/aarch64_defconfig | cut -d'"' -f2)
@@ -47,7 +47,7 @@ jobs:
               echo "PR already exists for kernel $CURRENT_VERSION, skipping"
             else
               echo "new_release=true" >> $GITHUB_OUTPUT
-              echo "🎉 New 6.12 kernel released: $CURRENT_VERSION (infix version: $INFIX_VERSION)"
+              echo "🎉 New 6.18 kernel released: $CURRENT_VERSION (infix version: $INFIX_VERSION)"
             fi
           else
             echo "new_release=false" >> $GITHUB_OUTPUT

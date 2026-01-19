@@ -1,0 +1,8 @@
+#!/bin/sh
+# Rename WiFi PHY to radio{N}, enumerating from 0
+phy="$1"
+n=0
+while [ -d "/sys/class/ieee80211/radio$n" ]; do
+    n=$((n + 1))
+done
+/usr/sbin/iw phy "$phy" set name "radio$n"

@@ -1,0 +1,11 @@
+{
+    "sfp1": {
+	"comment": "Reports it supports autoneg, but if setting it, dagger crashes",
+	"broken-autoneg": true
+    },
+    "sfp2": {
+	"comment": "Reports it supports autoneg, but if setting it, dagger crashes",
+	"broken-autoneg": true
+    }
+
+}

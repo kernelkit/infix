@@ -12,6 +12,15 @@
 			boot_targets = "mmc0";
 			ethprime = "eth0";
 
+			/* Memory layout for kernel boot:
+			 *   0x00200000: Kernel relocation address
+			 *   0x04000000: FDT (64MB, gives enough space for kernels up to ~60MB)
+			 *   0x10000000: Ramdisk (Memsize - 256MB)
+			 */
+			kernel_addr_r = "0x00200000";
+			fdt_addr_r = "0x04000000";
+			ramdisk_addr_r = "0x10000000";
+
 			stdout = "serial";
 			stderr = "serial";
 			stdin = "serial";
