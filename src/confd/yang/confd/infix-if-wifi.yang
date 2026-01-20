@@ -99,6 +99,9 @@ submodule infix-if-wifi {
         must "derived-from-or-self(/iehw:hardware/iehw:component[iehw:name=current()]/iehw:class, 'ih:wifi')" {
           error-message "Referenced hardware component must be a WiFi radio (class 'ih:wifi')";
         }
+        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)]) <= 1" {
+          error-message "Only one station or scan interface is allowed per radio";
+        }
 
         description
           "Reference to parent WiFi radio (PHY).
@@ -133,10 +136,6 @@ submodule infix-if-wifi {
         case station {
           container station {
             presence "Configure WiFi station (client) mode";
-
-            must "count(/if:interfaces/if:interface[wifi/radio = current()/../radio][wifi/station]) <= 1" {
-              error-message "Only one station interface is allowed per radio";
-            }
 
             description
               "WiFi Station mode configuration.
