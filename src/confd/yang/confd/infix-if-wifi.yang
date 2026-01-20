@@ -77,10 +77,8 @@ submodule infix-if-wifi {
       description
         "Applies only to interfaces of type 'wifi'.";
     }
-
     container wifi {
       if-feature wifi;
-      presence "Configure Wi-Fi virtual interface";
 
       description
         "WiFi virtual interface configuration.
