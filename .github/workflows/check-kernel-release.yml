@@ -99,7 +99,7 @@ jobs:
           BRANCH_NAME: ${{ steps.branch.outputs.name }}
         run: |
           set -e -o pipefail
-          ./utils/kernel-upgrade.sh linux "$BRANCH_NAME"
+          ./utils/kernel-upgrade.sh linux 6.18 "$BRANCH_NAME"
 
       - name: Create pull request
         if: steps.check.outputs.new_release == 'true'

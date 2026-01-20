@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Automated kernel upgrade test script for LTS 6.12.x
+# Automated kernel upgrade test script for stable kernels
 # Run from the infix directory and specify the path to the linux kernel tree
 #
 # Usage: ./utils/kernel-upgrade.sh <path-to-linux-dir>
@@ -9,17 +9,18 @@
 set -e -o pipefail
 
 # Parse arguments
-if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-    echo "Usage: $0 <path-to-linux-dir> [branch-name]"
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+    echo "Usage: $0 <path-to-linux-dir> <MAJOR> [branch-name]"
     exit 1
 fi
 
 LINUX_DIR="$1"
-INFIX_BRANCH="${2:-kernel-upgrade}"
+MAJOR="$2"
+INFIX_BRANCH="${3:-kernel-upgrade}"
 
 # Configuration
 INFIX_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
-LINUX_BRANCH="kkit-linux-6.12.y"
+LINUX_BRANCH="kkit-linux-$MAJOR.y"
 UPSTREAM_REMOTE="upstream"
 UPSTREAM_URL="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git"
 KKIT_REMOTE="origin"
@@ -31,7 +32,7 @@ else
     KKIT_URL="git@github.com:kernelkit/linux.git"
 fi
 
-KERNEL_VERSION_PATTERN="6.12"
+KERNEL_VERSION_PATTERN="$MAJOR"
 
 # Colors for output
 RED='\033[0;31m'
@@ -138,7 +139,7 @@ update_linux_kernel() {
 rebase_kernel() {
     log_info "Rebasing on new kernel release..."
 
-    # Find the latest v6.12.x tag from upstream
+    # Find the latest tag from upstream matching requested major
     LATEST_TAG=$(git -C "$LINUX_DIR" tag -l "v${KERNEL_VERSION_PATTERN}.*" | sort -V | tail -n1)
 
     if [ -z "$LATEST_TAG" ]; then
