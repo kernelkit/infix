@@ -1,11 +1,7 @@
-From 19c9739b06feceb9df4142fa7323a51fc8782113 Mon Sep 17 00:00:00 2001
+From e12b368dfff77e0741cb3d9d7636ec4dfbbfd0f9 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
-Subject: [PATCH 03/29] net: phy: marvell10g: Add LED support for 88X3310
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
+Subject: [PATCH 03/30] net: phy: marvell10g: Add LED support for 88X3310
 
 Pickup the LEDs from the state in which the hardware reset or
 bootloader left them, but also support further configuration via
@@ -20,8 +16,6 @@ Trigger support:
 	   software blinking
 - "netdev": Offload link or duplex information to the solid behavior;
   	    tx and/or rx activity to blink behavior.
-
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/phy/marvell10g.c | 422 +++++++++++++++++++++++++++++++++++
  1 file changed, 422 insertions(+)
@@ -515,6 +509,3 @@ index 40439db49601..7ae4744f147b 100644
  	},
  	{
  		.phy_id		= MARVELL_PHY_ID_88X3310,
--- 
-2.43.0
-

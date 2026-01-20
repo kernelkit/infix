@@ -1,12 +1,8 @@
-From 1ddc69f6f28652c29a8cbee0170cebc44b3cb4d9 Mon Sep 17 00:00:00 2001
+From 4d05f3f20eacca0786a13dc37fe223ce6a449d38 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
-Subject: [PATCH 20/29] net: dsa: Support MDB memberships whose L2 addresses
+Subject: [PATCH 20/30] net: dsa: Support MDB memberships whose L2 addresses
  overlap
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 Multiple IP multicast groups (32 for v4, 2^80 for v6) map to the same
 L2 address. This means that switchdev drivers may receive multiple MDB
@@ -32,8 +28,6 @@ as long as the count is positive. Fortunately, all the infrastructure
 needed to do this is already in place, since it is also needed on CPU
 and DSA ports. Thus, "implement" this by simply removing the guards
 which previously skipped reference countung on user ports.
-
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  net/dsa/switch.c | 16 ----------------
  1 file changed, 16 deletions(-)
@@ -72,6 +66,3 @@ index 3d2feeea897b..628e8a884dde 100644
  	mutex_lock(&dp->addr_lists_lock);
  
  	a = dsa_mac_addr_find(&dp->mdbs, mdb->addr, mdb->vid, db);
--- 
-2.43.0
-

@@ -1,11 +1,7 @@
-From 12212af51b5e14c53c473426eba96d87c0bfb9b6 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+From 3fe2afd5b90dfae465cf58a35eccc911eab684d6 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 14 Jan 2026 18:22:41 +0100
-Subject: [PATCH 28/29] net: dsa: mv88e6xxx: Add LED support for 6393X
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
+Subject: [PATCH 28/30] net: dsa: mv88e6xxx: Add LED support for 6393X
 
 Original commit:
 commit 462277b926140ee2d231317e92afb6cabf640268
@@ -18,8 +14,6 @@ Date:   Thu Nov 16 21:59:35 2023 +0100
     - "none"
     - "timer"
     - "netdev"
-
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c |   1 +
  drivers/net/dsa/mv88e6xxx/leds.c | 403 +++++++++++++++++++++++++++++++
@@ -28,10 +22,10 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  4 files changed, 450 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 2014a0958380..2e9737c5eb7d 100644
+index d379799c0a16..7bc3169839d3 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -5681,6 +5681,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+@@ -5658,6 +5658,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
  	.port_disable_pri_override = mv88e6xxx_port_disable_pri_override,
  	.port_get_cmode = mv88e6352_port_get_cmode,
  	.port_set_cmode = mv88e6393x_port_set_cmode,
@@ -545,6 +539,3 @@ index d2ba9ed1f23e..f4a56671fc4c 100644
  #endif
  int mv88e6xxx_port_drop_untagged(struct mv88e6xxx_chip *chip, int port,
  				 bool drop_untagged);
--- 
-2.43.0
-
