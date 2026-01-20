@@ -1,12 +1,8 @@
-From 673f624878aae8e2718995baf693ac352ea91a70 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+From ed41839c56eaaca89a8a6139f17c8a084d01be09 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 20 Aug 2025 21:38:24 +0200
-Subject: [PATCH 13/29] drm/panel-simple: Add a timing for the Raspberry Pi 7"
+Subject: [PATCH 13/30] drm/panel-simple: Add a timing for the Raspberry Pi 7"
  panel
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 The Raspberry Pi 7" 800x480 panel uses a Toshiba TC358762 DSI
 to DPI bridge chip, so there is a requirement for the timings
@@ -45,7 +41,6 @@ on Pi4.
 parent PLL).
 
 Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/gpu/drm/panel/panel-simple.c | 31 +++++++++++++++++++++++++++-
  1 file changed, 30 insertions(+), 1 deletion(-)
@@ -106,6 +101,3 @@ index 0019de93be1b..3cddde5733ca 100644
  		.compatible = "rocktech,rk043fn48h",
  		.data = &rocktech_rk043fn48h,
  	}, {
--- 
-2.43.0
-

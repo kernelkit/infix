@@ -1,12 +1,8 @@
-From 2cda5240aa8504deefb0a1758b2088136183cde4 Mon Sep 17 00:00:00 2001
+From 257b51fcd94ca99b13555354327ce2dbaaba4003 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
-Subject: [PATCH 01/29] net: phy: marvell10g: Support firmware loading on
+Subject: [PATCH 01/30] net: phy: marvell10g: Support firmware loading on
  88X3310
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 When probing, if a device is waiting for firmware to be loaded into
 its RAM, ask userspace for the binary and load it over XMDIO.
@@ -14,8 +10,6 @@ its RAM, ask userspace for the binary and load it over XMDIO.
 We have no choice but to bail out of the probe if firmware is not
 available, as the device does not have any built-in image on which to
 fall back.
-
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/phy/marvell10g.c | 161 +++++++++++++++++++++++++++++++++++
  1 file changed, 161 insertions(+)
@@ -239,6 +233,3 @@ index 8fd42131cdbf..44294519231e 100644
  MODULE_DESCRIPTION("Marvell Alaska X/M multi-gigabit Ethernet PHY driver");
 +MODULE_FIRMWARE("mrvl/x3310fw.hdr");
  MODULE_LICENSE("GPL");
--- 
-2.43.0
-

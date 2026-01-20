@@ -1,12 +1,8 @@
-From 4b0261a3a65f5f28b2d6e356b7a4740b939984fa Mon Sep 17 00:00:00 2001
+From fd03fe3161bf4f9d0d21eba97aa26602134ad573 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 06:44:41 +0100
-Subject: [PATCH 07/29] net: bridge: Ignore router ports when forwarding L2
+Subject: [PATCH 07/30] net: bridge: Ignore router ports when forwarding L2
  multicast
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 Multicast router ports are either statically configured or learned from
 control protocol traffic (IGMP/MLD/PIM).  These protocols regulate IP
@@ -15,7 +11,6 @@ of unknown multicast or using permanent MDB entries.
 
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  net/bridge/br_private.h | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
@@ -36,6 +31,3 @@ index ccbaaa96f7c7..d7187bead496 100644
  }
  
  static inline struct net_bridge_port *
--- 
-2.43.0
-

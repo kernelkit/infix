@@ -1,12 +1,8 @@
-From 582aea58b399dd70bab23a8313bc640096ca7c9d Mon Sep 17 00:00:00 2001
+From 4c15bcc33cacc54b17a46bf6407a44e3f9d400c0 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 22 Apr 2024 23:18:01 +0200
-Subject: [PATCH 17/29] net: dsa: mv88e6xxx: Honor ports being managed via
+Subject: [PATCH 17/30] net: dsa: mv88e6xxx: Honor ports being managed via
  in-band-status
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 Keep all link parameters in their unforced states when the port is
 declared as being managed via in-band-status, and let the MAC
@@ -16,14 +12,12 @@ USXGMII autoneg)
 This state is the default set up by mv88e6xxx_port_setup_mac(), so all
 we have to do is to make the phylink MAC callbacks no-ops in cases
 when in-band-status is being used.
-
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 6 ++++++
  1 file changed, 6 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 2a27e41a2dea..7da618978ba7 100644
+index c51588e74aed..de230df48545 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -965,6 +965,9 @@ static void mv88e6xxx_mac_link_down(struct phylink_config *config,
@@ -46,6 +40,3 @@ index 2a27e41a2dea..7da618978ba7 100644
  	ops = chip->info->ops;
  
  	mv88e6xxx_reg_lock(chip);
--- 
-2.43.0
-

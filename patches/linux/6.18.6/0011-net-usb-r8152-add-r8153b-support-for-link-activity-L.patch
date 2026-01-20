@@ -1,12 +1,8 @@
-From 28d1887a75ae6b46e96111a6cddc5efbd7d0e3b7 Mon Sep 17 00:00:00 2001
+From cb3ceebe0fc9510bc3ee2c707fa6bdca28ad749b Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 11 Aug 2024 11:27:35 +0200
-Subject: [PATCH 11/29] net: usb: r8152: add r8153b support for link/activity
+Subject: [PATCH 11/30] net: usb: r8152: add r8153b support for link/activity
  LEDs
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 This patch adds support for the link/activity LEDs on the NanoPi R2S
 and OrangePi R1 Plus.
@@ -17,7 +13,6 @@ https://github.com/friendlyarm/kernel-rockchip/
 Specifically commit be0b1939b271c307ab1fef5fb1478beaafc6de17
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/usb/r8152.c | 8 ++++++++
  1 file changed, 8 insertions(+)
@@ -48,6 +43,3 @@ index a22d4bb2cf3b..ae89323ade06 100644
  	rtl_tally_reset(tp);
  
  	tp->coalesce = 15000;	/* 15 us */
--- 
-2.43.0
-
