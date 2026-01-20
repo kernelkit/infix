@@ -16,8 +16,6 @@
 #define XPATH_BASE_              "/ietf-hardware:hardware"
 #define HOSTAPD_CONF             "/etc/hostapd-%s.conf"
 #define HOSTAPD_CONF_NEXT        HOSTAPD_CONF"+"
-#define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
-#define WPA_SUPPLICANT_CONF_NEXT WPA_SUPPLICANT_CONF"+"
 
 static int dir_cb(const char *fpath, const struct stat *sb,
 		  int typeflag, struct FTW *ftwbuf)
@@ -187,82 +185,6 @@ static int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio
 	*iface_list = list;
 	*count = n;
 	return 0;
-}
-
-static int wifi_gen_station(const char *ifname, struct lyd_node *station,
-			    const char *radio, struct lyd_node *config)
-{
-	const char *ssid, *secret_name, *secret, *security_mode;
-	struct lyd_node *security, *secret_node, *radio_node;
-	FILE *wpa_supplicant = NULL;
-	char *security_str = NULL;
-	const char *country;
-	int rc = SR_ERR_OK;
-
-	/* If station is NULL, we're in scan-only mode (no station container) */
-	if (station) {
-		ssid = lydx_get_cattr(station, "ssid");
-		security = lydx_get_child(station, "security");
-		security_mode = lydx_get_cattr(security, "mode");
-		secret_name = lydx_get_cattr(security, "secret");
-	} else {
-		ssid = NULL;
-		security = NULL;
-		security_mode = "disabled";
-		secret_name = NULL;
-	}
-
-	radio_node = lydx_get_xpathf(config,
-		"/hardware/component[name='%s']/wifi-radio", radio);
-	country = radio_node ? lydx_get_cattr(radio_node, "country-code") : NULL;
-
-	if (secret_name && strcmp(security_mode, "disabled") != 0) {
-		secret_node = lydx_get_xpathf(config,
-			"/keystore/symmetric-keys/symmetric-key[name='%s']/symmetric-key",
-			secret_name);
-		secret = secret_node ? lyd_get_value(secret_node) : NULL;
-	} else {
-		secret = NULL;
-	}
-
-	wpa_supplicant = fopenf("w", WPA_SUPPLICANT_CONF_NEXT, ifname);
-	if (!wpa_supplicant) {
-		rc = SR_ERR_INTERNAL;
-		goto out;
-	}
-
-	fprintf(wpa_supplicant,
-		"ctrl_interface=/run/wpa_supplicant\n"
-		"autoscan=periodic:10\n"
-		"ap_scan=1\n");
-
-	if (country)
-		fprintf(wpa_supplicant, "country=%s\n", country);
-
-	/* If SSID is present, create network block. Otherwise, scan-only mode */
-	if (ssid) {
-		/* Station mode with network configured */
-		if (!strcmp(security_mode, "disabled")) {
-			asprintf(&security_str, "key_mgmt=NONE");
-		} else if (secret) {
-			asprintf(&security_str, "key_mgmt=SAE WPA-PSK\npsk=\"%s\"", secret);
-		}
-		fprintf(wpa_supplicant,
-			"network={\n"
-			"bgscan=\"simple: 30:-45:300\"\n"
-			"ssid=\"%s\"\n"
-			"%s\n"
-			"}\n", ssid, security_str);
-		free(security_str);
-	} else {
-		/* Scan-only mode - no station container configured */
-		fprintf(wpa_supplicant, "# Scan-only mode - no network configured\n");
-	}
-
-out:
-	if (wpa_supplicant)
-		fclose(wpa_supplicant);
-	return rc;
 }
 
 /* Helper: Find all AP interfaces on a specific radio */
@@ -696,7 +618,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		} else if (!strcmp(class, "infix-hardware:wifi")) {
 			struct lyd_node *interfaces_config, *interfaces_diff;
 			struct lyd_node **wifi_iface_list = NULL;
-			struct lyd_node *station, *ap;
+			struct lyd_node *ap;
 			struct lyd_node *cwifi_radio;
 			int wifi_iface_count = 0;
 			char src[40], dst[40];
@@ -710,58 +632,13 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			case SR_EV_DONE:
 				interfaces_diff = lydx_get_descendant(diff, "interfaces", "interface", NULL);
 
-				/* Handle deleted WiFi interfaces - stop wpa_supplicant */
-				if (interfaces_diff) {
-					struct lyd_node *iface, *wifi;
-					const char *radio;
-
-					LYX_LIST_FOR_EACH(interfaces_diff, iface, "interface") {
-						const char *ifname;
-						if (lydx_get_op(iface) != LYDX_OP_DELETE)
-							continue;
-						wifi = lydx_get_child(iface, "wifi");
-						if (!wifi)
-							continue;
-						radio = lydx_get_cattr(wifi, "radio");
-						if (!radio || strcmp(radio, name))
-							continue;
-
-						ifname = lydx_get_cattr(iface, "name");
-						erasef(WPA_SUPPLICANT_CONF, ifname);
-						erasef(WPA_SUPPLICANT_CONF_NEXT, ifname);
-						systemf("initctl -bfq disable wifi@%s", ifname);
-					}
-				}
-
 				wifi_find_interfaces_on_radio(interfaces_diff, name,
 							      &wifi_iface_list, &wifi_iface_count);
 				if (wifi_iface_count > 0) {
 					bool running, enabled;
-					station = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "station", NULL);
+
 					ap = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "access-point", NULL);
-
-					if (station || !ap || lydx_get_op(ap) == LYDX_OP_DELETE) {
-						const char *ifname = lydx_get_cattr(wifi_iface_list[0], "name");
-						running = !systemf("initctl -bfq status wpa_supplicant:%s", ifname);
-						if (lydx_get_op(station) == LYDX_OP_DELETE) {
-							erasef(WPA_SUPPLICANT_CONF, ifname);
-							erasef(WPA_SUPPLICANT_CONF_NEXT, ifname);
-							systemf("initctl -bfq disable wifi@%s", ifname);
-						} else {
-							snprintf(src, sizeof(src), WPA_SUPPLICANT_CONF_NEXT, ifname);
-							snprintf(dst, sizeof(dst), WPA_SUPPLICANT_CONF, ifname);
-							running = !systemf("initctl -bfq status wpa_supplicant:%s", ifname);
-							enabled = fexistf(WPA_SUPPLICANT_CONF_NEXT, ifname);
-
-							if (enabled) {
-								(void)rename(src, dst);
-								if (running)
-									systemf("initctl -bfq touch wifi@%s", ifname);
-								else
-									systemf("initctl -bfq enable wifi@%s", ifname);
-							}
-						}
-					} else if (wifi_iface_count > 0) {
+					if (ap && lydx_get_op(ap) != LYDX_OP_DELETE) {
 						/* AP mode - activate hostapd for radio */
 						snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
 						snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
@@ -802,48 +679,11 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 
 			if (!wifi_iface_count)
 				continue;
-			/*
-			 * A radio operates in one of three modes:
-			 * 1. Station mode: One station interface (client mode)
-			 * 2. AP mode: One or more AP interfaces (hostapd multi-SSID)
-			 * 3. Scan-only mode: WiFi interface with radio but no mode configured
-			 *
-			 * Check for station first - there can be at most one per radio.
-			 * If no station or AP is configured, default to scan-only mode.
-			 */
-			station = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "station", NULL);
-			ap = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "access-point", NULL);
-			if (wifi_iface_count == 1 && station) {
-				/* Station mode (with or without SSID for scan-only) */
-				struct lyd_node *iface = wifi_iface_list[0];
-				if (lydx_is_enabled(iface, "enabled")) {
-					const char *ifname = lydx_get_cattr(iface, "name");
-					rc = wifi_gen_station(ifname, station, name, config);
-					if (rc != SR_ERR_OK) {
-						ERROR("Failed to generate station config for %s", ifname);
-						goto next;
-					}
-				}
-			} else if (!station && !ap) {
-				/* No station/AP configured - default to scan-only mode */
-				struct lyd_node *iface = wifi_iface_list[0];
-				if (lydx_is_enabled(iface, "enabled")) {
-					const char *ifname = lydx_get_cattr(iface, "name");
-					rc = wifi_gen_station(ifname, NULL, name, config);
-					if (rc != SR_ERR_OK) {
-						ERROR("Failed to generate scan-only config for %s", ifname);
-						goto next;
-					}
-				}
-			} else {
-				/* Multiple interfaces or APs */
-				rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config);
-				if (rc != SR_ERR_OK) {
-					ERROR("Failed to generate AP config for radio %s", name);
-					goto next;
-				}
-			}
-		next:
+
+			/* Generate AP config (hostapd) for all APs on this radio */
+			rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config);
+			if (rc != SR_ERR_OK)
+				ERROR("Failed to generate AP config for radio %s", name);
 			/* Free the interface list */
 			free(wifi_iface_list);
 			wifi_iface_list = NULL;
