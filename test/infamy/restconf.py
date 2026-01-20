@@ -256,19 +256,19 @@ class Device(Transport):
         # Raise exceptions for HTTP errors
         response.raise_for_status()
 
-    def get_config_dict(self, modname):
-        """Get all configuration for module @modname as dictionary"""
+    def get_config_dict(self, xpath):
+        """Get all configuration matching @xpath as dictionary"""
         # Strip leading slash if present (for compatibility with NETCONF xpath style)
-        modname = modname.lstrip('/')
+        xpath = xpath.lstrip('/')
 
         # Get the whole module's configuration by requesting the module root
-        # The modname parameter might be in format "module:container" or just "module"
-        if ":" in modname:
-            model, container = modname.split(":", 1)  # Split only on first colon
+        # The xpath parameter might be in format "module:container" or just "module"
+        if ":" in xpath:
+            model, container = xpath.split(":", 1)  # Split only on first colon
             path = f"/{model}:{container}"  # This creates something like /ietf-syslog:syslog
         else:
             # If no colon, assume the whole thing is the module name
-            model = modname
+            model = xpath
             path = f"/{model}"  # This creates something like /ietf-syslog
 
         ds = self.get_running(path)
@@ -276,8 +276,8 @@ class Device(Transport):
             return None
         ds = json.loads(ds.print_mem("json", with_siblings=True, pretty=False))
         # If we have module:container format, extract the container part from the result
-        if ":" in modname:
-            _, container = modname.split(":", 1)
+        if ":" in xpath:
+            _, container = xpath.split(":", 1)
             for k, v in ds.items():
                 return {container: v}
         else:
@@ -291,7 +291,7 @@ class Device(Transport):
         change callbacks, similar to how NETCONF edit-config + commit works.
 
         Args:
-            models: Dictionary of models to configure
+            models:  Dictionary of models to configure
             retries: Number of retry attempts on failure (default 3)
         """
         infer_put_dict(self.name, models)
@@ -343,23 +343,23 @@ class Device(Transport):
         # Copy candidate to running (acts as "commit", triggers sysrepo callbacks)
         self.copy("candidate", "running")
 
-    def put_config_dict(self, modname, edit, retries=3):
+    def put_config_dict(self, xpath, edit, retries=3):
         """PATCH configuration for a single model to running-config
 
         Uses candidate datastore + copy to running to trigger sysrepo
         change callbacks, similar to how NETCONF edit-config + commit works.
 
         Args:
-            modname: YANG module name
-            edit: Configuration dictionary
+            xpath:   YANG module name
+            edit:    Configuration dictionary
             retries: Number of retry attempts on failure (default 3)
         """
         try:
-            mod = self.lyctx.get_module(modname)
+            mod = self.lyctx.get_module(xpath)
         except libyang.util.LibyangError:
-            raise Exception(f"YANG model '{modname}' not found on device. "
-                           f"Model may not be installed or enabled. "
-                           f"Available models can be checked with get_schema_list()") from None
+            raise Exception(f"YANG model '{xpath}' not found on device. "
+                            f"Model may not be installed or enabled. "
+                            f"Available models can be checked with get_schema_list()") from None
 
         # Copy running to candidate first (to preserve existing config)
         self.copy("running", "candidate")
@@ -398,7 +398,7 @@ class Device(Transport):
         # Copy candidate to running (acts as "commit", triggers sysrepo callbacks)
         self.copy("candidate", "running")
 
-    def patch_config(self, modname, edit, retries=3):
+    def patch_config(self, xpath, edit, retries=3):
         """PATCH configuration directly to running datastore
 
         This bypasses the candidate datastore, avoiding full datastore
@@ -407,14 +407,14 @@ class Device(Transport):
         for all configuration types.
 
         Args:
-            modname: YANG module name
-            edit: Configuration dictionary
+            xpath:   YANG module name
+            edit:    Configuration dictionary
             retries: Number of retry attempts on failure (default 3)
         """
         try:
-            mod = self.lyctx.get_module(modname)
+            mod = self.lyctx.get_module(xpath)
         except libyang.util.LibyangError:
-            raise Exception(f"YANG model '{modname}' not found on device. "
+            raise Exception(f"YANG model '{xpath}' not found on device. "
                            f"Model may not be installed or enabled. "
                            f"Available models can be checked with get_schema_list()") from None
 
