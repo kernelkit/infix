@@ -269,6 +269,7 @@ static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char
 	if (hidden && !strcmp(hidden, "true"))
 		fprintf(hostapd, "ignore_broadcast_ssid=1\n");
 
+	fprintf(hostapd, "wmm_enabled=1\n");
 	/* Security configuration */
 	security = lydx_get_child(ap, "security");
 	security_mode = lydx_get_cattr(security, "mode");
@@ -430,6 +431,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	/* Enable 802.11d (regulatory domain) and 802.11h (spectrum management/DFS) */
 	fprintf(hostapd, "ieee80211d=1\n");
 	fprintf(hostapd, "ieee80211h=1\n");
+	fprintf(hostapd, "wmm_enabled=1\n");
 
 	/* Band and channel configuration */
 	if (band) {
