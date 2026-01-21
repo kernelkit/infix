@@ -436,6 +436,10 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 		/* Set hardware mode based on band */
 		if (!strcmp(band, "2.4GHz")) {
 			fprintf(hostapd, "hw_mode=g\n");
+
+			/* Disable 802.11b rates, ancient devices. This will improve range. */
+			fprintf(hostapd, "supported_rates=60 90 120 180 240 360 480 540\n");
+			fprintf(hostapd, "basic_rates=60 120 240\n");
 		} else if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz")) {
 			fprintf(hostapd, "hw_mode=a\n");
 		}
