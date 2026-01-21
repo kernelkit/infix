@@ -309,7 +309,7 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 static int sysrepo_export(const struct infix_ds *ds, const char *path)
 {
 	sr_session_ctx_t *sess;
-	sr_data_t *data;
+	sr_data_t *data = NULL;
 	int err;
 
 	sess = sysrepo_session(ds);
@@ -323,15 +323,18 @@ static int sysrepo_export(const struct infix_ds *ds, const char *path)
 		return err;
 	}
 
+	if (!data)
+		return 0;
+
 	err = lyd_print_path(path, data->tree, LYD_JSON, LYD_PRINT_SIBLINGS);
 	sr_release_data(data);
+
 	if (err) {
 		sysrepo_print_error(sess);
 		warnx("failed storing %s data", ds->name);
-		return err;
 	}
 
-	return 0;
+	return err;
 }
 
 static int sysrepo_import(const struct infix_ds *ds, const char *path)
