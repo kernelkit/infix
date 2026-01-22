@@ -360,7 +360,7 @@ static const char *valid_boot_target(const kparg_t *parg)
 	return NULL;
 }
 
-int infix_set_boot_order(kcontext_t *ctx)
+static int infix_set_boot_order(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
 	const char *targets[3];
@@ -399,6 +399,20 @@ int infix_set_boot_order(kcontext_t *ctx)
 	return run(argv);
 }
 
+int infix_users(kcontext_t *ctx)
+{
+	(void)ctx;
+	return shellf("copy oper -x /system/authentication/user/name "
+		      "| jq -r '.\"ietf-system:system\".authentication.user[].name'");
+}
+
+int infix_groups(kcontext_t *ctx)
+{
+	(void)ctx;
+	return shellf("copy oper -x /nacm/groups "
+		      "| jq -r '.\"ietf-netconf-acm:nacm\".groups.group[].name'");
+}
+
 int kplugin_infix_fini(kcontext_t *ctx)
 {
 	(void)ctx;
@@ -416,6 +430,8 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
+	kplugin_add_syms(plugin, ksym_new("users", infix_users));
+	kplugin_add_syms(plugin, ksym_new("groups", infix_groups));
 	kplugin_add_syms(plugin, ksym_new("firewall_zones", infix_firewall_zones));
 	kplugin_add_syms(plugin, ksym_new("firewall_policies", infix_firewall_policies));
 	kplugin_add_syms(plugin, ksym_new("firewall_services", infix_firewall_services));

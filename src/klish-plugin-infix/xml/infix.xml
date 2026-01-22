@@ -141,6 +141,20 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="USERS">
+  <COMPL>
+    <ACTION sym="users@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="GROUPS">
+  <COMPL>
+    <ACTION sym="groups@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
   <HOTKEY key="^D" cmd="exit"/>
 
@@ -325,6 +339,16 @@
   </COMMAND>
 
   <COMMAND name="nacm" help="Show users and NACM status and groups">
+    <SWITCH name="subcommands" min="0">
+      <COMMAND name="group" help="Show details for a specific NACM group">
+	<PARAM name="name" ptype="/GROUPS" help="Group name"/>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show nacm group $KLISH_PARAM_name</ACTION>
+      </COMMAND>
+      <COMMAND name="user" help="Show NACM details for a specific user">
+	<PARAM name="name" ptype="/USERS" help="User name"/>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show nacm user $KLISH_PARAM_name</ACTION>
+      </COMMAND>
+    </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">show nacm</ACTION>
   </COMMAND>
 

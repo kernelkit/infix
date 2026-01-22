@@ -11,21 +11,26 @@ import argparse
 RAW_OUTPUT = False
 
 
-def get_json(xpath: str, datastore: str = "operational") -> dict:
+def get_json(xpath: str, datastore: str = "operational", quiet: bool = False) -> dict:
     if not isinstance(xpath, str) or not xpath.startswith("/"):
-        print("Invalid XPATH. It must be a valid string starting with '/'.")
+        if not quiet:
+            print("Invalid XPATH. It must be a valid string starting with '/'.")
         return {}
 
     try:
         result = subprocess.run(["copy", datastore, "-x", shlex.quote(xpath)],
                                 capture_output=True, text=True, check=True)
+        if not result.stdout.strip():
+            return {}
         json_data = json.loads(result.stdout)
         return json_data
     except subprocess.CalledProcessError as e:
-        print(f"Error running copy: {e}")
+        if not quiet:
+            print(f"Error running copy: {e}")
         return {}
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON output: {e}")
+        if not quiet:
+            print(f"Error parsing JSON output: {e}")
         return {}
 
 
@@ -606,13 +611,21 @@ def system(args: List[str]) -> None:
 
 
 def nacm(args: List[str]) -> None:
-    data = get_json("/ietf-netconf-acm:nacm", "running")
+    """Handle show nacm [subcommand] [name]
+
+    Subcommands:
+        (none)      - Overview with users, groups, and permissions matrix
+        group NAME  - Detailed view of a specific group's rules
+        user NAME   - Detailed view of a specific user's permissions
+    """
+    data = get_json("/ietf-netconf-acm:nacm", "running", quiet=True)
     if not data:
-        print("No NACM data retrieved.")
+        user = os.environ.get('USER', 'unknown')
+        print(f'Error: Access denied because "{user}" NACM authorization failed.')
         return
 
     # Fetch user data from operational (includes shell and authorized-key from yanger)
-    user_oper = get_json("/ietf-system:system/authentication")
+    user_oper = get_json("/ietf-system:system/authentication", quiet=True)
 
     if user_oper:
         oper_users = user_oper.get("ietf-system:system", {}).get("authentication", {}).get("user", [])
@@ -621,7 +634,28 @@ def nacm(args: List[str]) -> None:
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
-    cli_pretty(data, "show-nacm")
+
+    # Parse arguments: subcommand and optional name
+    subcommand = args[0] if len(args) > 0 and args[0] else ""
+    name = args[1] if len(args) > 1 else None
+
+    # Route to appropriate formatter
+    if subcommand == "":
+        cli_pretty(data, "show-nacm")
+    elif subcommand == "group":
+        if not name:
+            print("Usage: show nacm group <name>")
+            return
+        data['_group_name'] = name
+        cli_pretty(data, "show-nacm-group")
+    elif subcommand == "user":
+        if not name:
+            print("Usage: show nacm user <name>")
+            return
+        data['_user_name'] = name
+        cli_pretty(data, "show-nacm-user")
+    else:
+        print(f"Unknown NACM subcommand: {subcommand}")
 
 
 def execute_command(command: str, args: List[str]):
