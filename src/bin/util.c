@@ -129,14 +129,19 @@ char *cfg_adjust(const char *path, const char *template, bool sanitize)
 			if (!path_allowed(path))
 				goto err;
 		}
+
+		/* CLI users save to /cfg by default, unless abs. path */
+		if (asprintf(&expanded, "%s%.*s/%s%s",
+			     path[0] == '/' ? "" : "/cfg/",
+			     dlen, path,
+			     basename,
+			     strchr(basename, '.') ? "" : ".cfg") < 0)
+			goto err;
+	} else {
+		/* Shell users expect copy to behave more like cp */
+		expanded = strdup(path);
 	}
 
-	if (asprintf(&expanded, "%s%.*s/%s%s",
-		     path[0] == '/' ? "" : "/cfg/",
-		     dlen, path,
-		     basename,
-		     strchr(basename, '.') ? "" : ".cfg") < 0)
-		goto err;
 
 	if (sanitize) {
 		resolved = realpath(expanded, NULL);
