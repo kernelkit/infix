@@ -1,0 +1,29 @@
+=== mDNS reflector
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/mdns/mdns_reflector]
+
+==== Description
+
+Verify the mDNS reflector functionality.  The reflector forwards mDNS
+requests and responses between different network interfaces, allowing
+service discovery across network segments.
+
+We verify operation with two scenarios:
+
+ 1. Reflector enabled: mDNS traffic from host:data1 SHOULD be reflected
+    to host:data2 and host:data3
+ 2. Reflector disabled: mDNS traffic from host:data1 should NOT be
+    reflected to host:data2 and host:data3
+
+==== Topology
+
+image::topology.svg[mDNS reflector topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure device interfaces and enable mDNS
+. Verify mDNS from host:data1 is reflected to host:data2 and host:data3
+. Verify mDNS from host:data1 is not reflected after disabling reflector
+
+

@@ -1,0 +1,26 @@
+graph "1x4" {
+	layout="neato";
+	overlap="false";
+	esep="+80";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt> mgmt | <data1> data1 | <data2> data2 | <data3> data3 }",
+	    pos="0,12!",
+	    requires="controller",
+	];
+
+        dut [
+	    label="{ <mgmt> mgmt | <data1> data1 | <data2> data2 | <data3> data3 } | dut \n\n10.0.X.1/24",
+	    pos="10,12!",
+
+	    requires="infix",
+	];
+
+	host:mgmt -- dut:mgmt [requires="mgmt", color="lightgray"]
+	host:data1 -- dut:data1 [color=black, fontcolor=black, taillabel="10.0.1.2/24"]
+	host:data2 -- dut:data2 [color=black, fontcolor=black, taillabel="10.0.2.2/24"]
+	host:data3 -- dut:data3 [color=black, fontcolor=black, taillabel="10.0.3.2/24"]
+}

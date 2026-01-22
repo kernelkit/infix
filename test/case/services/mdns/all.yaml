@@ -4,3 +4,6 @@
 
 - name: mDNS allow/deny interfaces
   case: mdns_allow_deny/test.py
+
+- name: mDNS reflector
+  case: mdns_reflector/test.py
