@@ -2576,7 +2576,7 @@ Radios are automatically discovered and named <code>radio0</code>, <code>radio1<
 - <code>country-code</code>: Two-letter ISO 3166-1 code - determines allowed channels and maximum power. Examples: US, DE, GB, SE, FR, JP. <strong>Must match your physical location for legal compliance.</strong>
 - <code>band</code>: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Band selection automatically enables appropriate WiFi standards (2.4GHz: 802.11n, 5GHz: 802.11n/ac, 6GHz: 802.11n/ac/ax)
 - <code>channel</code>: Channel number (1-196) or "auto" (required for AP mode). When set to "auto", defaults to channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 109 for 6GHz
-- <code>enable-wifi6</code>: Boolean (default: false). Opt-in to enable WiFi 6 (802.11ax) on 2.4GHz and 5GHz bands. The 6GHz band always uses WiFi 6 regardless of this setting</p>
+- <code>enable-80211ax</code>: Boolean (default: false). Opt-in to enable 802.11ax (WiFi 6) on 2.4GHz and 5GHz bands. The 6GHz band always uses 802.11ax regardless of this setting</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>TX power and channel width are automatically determined by the driver based on regulatory constraints, PHY mode, and hardware capabilities.</p>
@@ -2591,7 +2591,7 @@ only enabled on the 6GHz band (WiFi 6E requirement).</p>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set country-code DE
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set band 5GHz
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set channel 36
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set enable-wifi6 true
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set enable-80211ax true
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; leave
 </code></pre></div>
 <p><strong>WiFi 6 Benefits:</strong>
@@ -2605,7 +2605,7 @@ only enabled on the 6GHz band (WiFi 6E requirement).</p>
 - Older WiFi 5/4 clients can still connect but won't use WiFi 6 features</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The 6GHz band always uses WiFi 6 (802.11ax) regardless of the <code>enable-wifi6</code>
+<p>The 6GHz band always uses WiFi 6 (802.11ax) regardless of the <code>enable-80211ax</code>
 setting, as WiFi 6E requires 802.11ax support.</p>
 </div>
 <h2 id="discovering-available-networks-scanning">Discovering Available Networks (Scanning)<a class="headerlink" href="#discovering-available-networks-scanning" title="Permanent link">¶</a></h2>
