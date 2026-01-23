@@ -29,9 +29,11 @@ export INFAMY_ARGS := --transport=netconf
 endif
 
 test:
-	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) $(ninepm) -v $(TESTS)
-	$(ninepm_report) github   $(test-dir)/.log/last/result.json
-	$(ninepm_report) asciidoc $(test-dir)/.log/last/result.json
+	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) \
+		sh -c '$(ninepm) -v $(TESTS); \
+		       $(ninepm_report) github $(test-dir)/.log/last/result.json; \
+		       $(ninepm_report) asciidoc $(test-dir)/.log/last/result.json; \
+		       chmod -R 777 $(test-dir)/.log'
 
 test-sh:
 	$(test-dir)/env $(base) $(mode) $(binaries) $(pkg-$(ARCH)) -i /bin/sh
