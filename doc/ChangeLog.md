@@ -21,6 +21,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Upgrade Linux kernel to 6.18.7 (LTS)
 Noteworthy changes and additions in this release are marked below in bold text.
 
 - Upgrade **Linux kernel to 6.18.6** (LTS)
