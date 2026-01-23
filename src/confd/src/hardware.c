@@ -145,8 +145,13 @@ static int hardware_cand_infer_class(json_t *root, sr_session_ctx_t *session, co
 			inferred.data.string_val = "infix-hardware:usb";
 			err = srx_set_item(session, &inferred, 0,
 					   "%s/class", xpath);
-			break;
+			goto out_free_name;
 		}
+	}
+
+	if (!fnmatch("radio+([0-9])", name, FNM_EXTMATCH)) {
+		inferred.data.string_val = "infix-hardware:wifi";
+		err = srx_set_item(session, &inferred, 0, "%s/class", xpath);
 	}
 out_free_name:
 	free(name);
