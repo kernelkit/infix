@@ -39,7 +39,8 @@
       "user": [
         {
           "name": "admin",
-          "password": "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
+          "password": "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A",
+          "infix-system:shell": "infix-system:bash"
         }
       ]
     },

@@ -91,7 +91,7 @@ EOF
 
 is_dhcp_running()
 {
-    sysrepocfg -X -f json -m infix-dhcp-server | jq -r '
+    copy operational -x /infix-dhcp-server:dhcp-server | jq -r '
         ."infix-dhcp-server:dhcp-server".enabled as $global |
         if ."infix-dhcp-server:dhcp-server".subnet? then
                 (."infix-dhcp-server:dhcp-server".subnet[] |
@@ -110,15 +110,15 @@ dhcp()
 
     case $1 in
 	detail)
-	    sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
+	    copy operational -x /infix-dhcp-server:dhcp-server | \
 		jq -C .
 	    ;;
 	stat*)
-	    sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
+	    copy operational -x /infix-dhcp-server:dhcp-server | \
 		/usr/libexec/statd/cli-pretty "show-dhcp-server" -s
 	    ;;
 	*)
-	    sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
+	    copy operational -x /infix-dhcp-server:dhcp-server | \
 		/usr/libexec/statd/cli-pretty "show-dhcp-server"
 	    ;;
     esac
@@ -182,13 +182,13 @@ ifaces()
     else
 	if [ $# -gt 0 ]; then
 	    for iface in $*; do
-		sysrepocfg -f json -X -d operational -x \
+		copy operational -x \
 			   "/ietf-interfaces:interfaces/interface[name='$iface']" | \
 		    /usr/libexec/statd/cli-pretty "show-interfaces" -n "$iface"
 	    done
 	    return
 	fi
-        sysrepocfg -f json -X -d operational -m ietf-interfaces | \
+        copy operational -x /ietf-interfaces:interfaces | \
           /usr/libexec/statd/cli-pretty "show-interfaces"
     fi
 }
@@ -227,7 +227,7 @@ rstp()
 
 stp()
 {
-    sysrepocfg -f json -X -d operational -m ietf-interfaces | \
+    copy operational -x /ietf-interfaces:interfaces | \
         /usr/libexec/statd/cli-pretty "show-bridge-stp"
 }
 
@@ -248,7 +248,7 @@ routes()
     else
 	arg="-i ipv4"
     fi
-    sysrepocfg -f json -X -d operational -x "/ietf-routing:routing/ribs" | \
+    copy operational -x /ietf-routing:routing/ribs | \
 	/usr/libexec/statd/cli-pretty "show-routing-table" $arg
 }
 

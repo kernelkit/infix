@@ -10,25 +10,29 @@ import argparse
 
 RAW_OUTPUT = False
 
-def run_sysrepocfg(xpath: str) -> dict:
+
+def get_json(xpath: str, datastore: str = "operational", quiet: bool = False) -> dict:
     if not isinstance(xpath, str) or not xpath.startswith("/"):
-        print("Invalid XPATH. It must be a valid string starting with '/'.")
+        if not quiet:
+            print("Invalid XPATH. It must be a valid string starting with '/'.")
         return {}
 
-    safe_xpath = shlex.quote(xpath)
-
     try:
-        result = subprocess.run([
-            "sysrepocfg", "-f", "json", "-X", "-d", "operational", "-x", safe_xpath
-        ], capture_output=True, text=True, check=True)
+        result = subprocess.run(["copy", datastore, "-x", shlex.quote(xpath)],
+                                capture_output=True, text=True, check=True)
+        if not result.stdout.strip():
+            return {}
         json_data = json.loads(result.stdout)
         return json_data
     except subprocess.CalledProcessError as e:
-        print(f"Error running sysrepocfg: {e}")
+        if not quiet:
+            print(f"Error running copy: {e}")
         return {}
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON output: {e}")
+        if not quiet:
+            print(f"Error parsing JSON output: {e}")
         return {}
+
 
 def cli_pretty(json_data: dict, command: str, *args: str):
     if not command or not all(isinstance(arg, str) for arg in args):
@@ -46,8 +50,9 @@ def cli_pretty(json_data: dict, command: str, *args: str):
     except subprocess.CalledProcessError as e:
         print(f"Error running cli-pretty: {e}")
 
+
 def dhcp(args: List[str]) -> None:
-    data = run_sysrepocfg("/infix-dhcp-server:dhcp-server")
+    data = get_json("/infix-dhcp-server:dhcp-server")
     if not data:
         print("No interface data retrieved.")
         return
@@ -57,8 +62,9 @@ def dhcp(args: List[str]) -> None:
         return
     cli_pretty(data, "show-dhcp-server")
 
+
 def hardware(args: List[str]) -> None:
-    data = run_sysrepocfg("/ietf-hardware:hardware")
+    data = get_json("/ietf-hardware:hardware")
     if not data:
         print("No hardware data retrieved.")
         return
@@ -67,6 +73,7 @@ def hardware(args: List[str]) -> None:
         print(json.dumps(data, indent=2))
         return
     cli_pretty(data, "show-hardware")
+
 
 def ntp(args: List[str]) -> None:
     # Create argument parser for ntp subcommands
@@ -97,8 +104,8 @@ def ntp(args: List[str]) -> None:
 
     # Default: show ntp (no subcommand or address)
     # Fetch both client and server operational data
-    client_data = run_sysrepocfg("/system-state/ntp")
-    server_data = run_sysrepocfg("/ietf-ntp:ntp")
+    client_data = get_json("/system-state/ntp")
+    server_data = get_json("/ietf-ntp:ntp")
 
     # Merge into single data structure
     data = {}
@@ -121,8 +128,9 @@ def ntp(args: List[str]) -> None:
     # Default show ntp - summary view (no address support at top level)
     cli_pretty(data, "show-ntp")
 
+
 def ntp_tracking(args: List[str]) -> None:
-    data = run_sysrepocfg("/ietf-ntp:ntp")
+    data = get_json("/ietf-ntp:ntp")
     if not data:
         print("No ntp server data retrieved.")
         return
@@ -132,8 +140,9 @@ def ntp_tracking(args: List[str]) -> None:
         return
     cli_pretty(data, "show-ntp-tracking")
 
+
 def ntp_source(args: List[str]) -> None:
-    data = run_sysrepocfg("/ietf-ntp:ntp")
+    data = get_json("/ietf-ntp:ntp")
     if not data:
         print("No ntp server data retrieved.")
         return
@@ -148,6 +157,7 @@ def ntp_source(args: List[str]) -> None:
     else:
         cli_pretty(data, "show-ntp-source")
 
+
 def is_valid_interface_name(interface_name: str) -> bool:
     """
     Validates a Linux network interface name.
@@ -158,14 +168,15 @@ def is_valid_interface_name(interface_name: str) -> bool:
     pattern = r'^[a-zA-Z0-9._-]+$'
     return bool(re.match(pattern, interface_name))
 
+
 def interface(args: List[str]) -> None:
-    data = run_sysrepocfg("/ietf-interfaces:interfaces")
+    data = get_json("/ietf-interfaces:interfaces")
     if not data:
         print("No interface data retrieved.")
         return
 
     # Also fetch routing interface list for forwarding indication
-    routing_data = run_sysrepocfg("/ietf-routing:routing")
+    routing_data = get_json("/ietf-routing:routing")
     if routing_data:
         # Merge routing data into the main data structure
         data.update(routing_data)
@@ -185,8 +196,9 @@ def interface(args: List[str]) -> None:
     else:
         print("Too many arguments provided. Only one interface name is expected.")
 
+
 def stp(args: List[str]) -> None:
-    data = run_sysrepocfg("/ietf-interfaces:interfaces")
+    data = get_json("/ietf-interfaces:interfaces")
     if not data:
         print("No interface data retrieved.")
         return
@@ -196,8 +208,9 @@ def stp(args: List[str]) -> None:
         return
     cli_pretty(data, "show-bridge-stp")
 
+
 def software(args: List[str]) -> None:
-    data = run_sysrepocfg("/ietf-system:system-state/infix-system:software")
+    data = get_json("/ietf-system:system-state/infix-system:software")
     if not data:
         print("No software data retrieved.")
         return
@@ -217,8 +230,9 @@ def software(args: List[str]) -> None:
     else:
         print("Too many arguments provided. Only one name is expected.")
 
+
 def boot_order(args: List[str]) -> None:
-    data = run_sysrepocfg("/ietf-system:system-state/infix-system:software")
+    data = get_json("/ietf-system:system-state/infix-system:software")
     if not data:
         print("No software data retrieved.")
         return
@@ -230,8 +244,9 @@ def boot_order(args: List[str]) -> None:
     except (KeyError, TypeError):
         print("No boot order data available.")
 
+
 def services(args: List[str]) -> None:
-    data = run_sysrepocfg("/ietf-system:system-state/infix-system:services")
+    data = get_json("/ietf-system:system-state/infix-system:services")
     if not data:
         print("No service data retrieved.")
         return
@@ -240,7 +255,8 @@ def services(args: List[str]) -> None:
         print(json.dumps(data, indent=2))
         return
 
-    cli_pretty(data, f"show-services")
+    cli_pretty(data, "show-services")
+
 
 def container(args: List[str]) -> None:
     """Handle show container [name]
@@ -249,44 +265,39 @@ def container(args: List[str]) -> None:
         (none) - Show all containers in table format
         name   - Show detailed view of specific container
     """
-    data = run_sysrepocfg("/infix-containers:containers")
+    data = get_json("/infix-containers:containers")
     if not data:
         print("No container data retrieved.")
         return
 
-    # Fetch interface data for bridge resolution (both table and detailed views)
+    # Fetch interface data for bridge resolution (table and detailed views)
     # Fetch operational interface data
-    iface_oper = run_sysrepocfg("/ietf-interfaces:interfaces")
+    iface_oper = get_json("/ietf-interfaces:interfaces")
 
     # Also fetch config data for veth peer information (not in operational)
-    try:
-        result = subprocess.run([
-            "sysrepocfg", "-f", "json", "-X", "-d", "running", "-x", "/ietf-interfaces:interfaces"
-        ], capture_output=True, text=True, check=True)
-        iface_config = json.loads(result.stdout)
+    iface_config = get_json("/ietf-interfaces:interfaces", "running")
 
-        # Merge config veth peer info into operational data
-        if iface_oper and iface_config:
-            oper_ifaces = iface_oper.get('ietf-interfaces:interfaces', {}).get('interface', [])
-            config_ifaces = iface_config.get('ietf-interfaces:interfaces', {}).get('interface', [])
+    # Merge config veth peer info into operational data
+    if iface_oper and iface_config:
+        oper_ifaces = iface_oper.get('ietf-interfaces:interfaces', {}).get('interface', [])
+        config_ifaces = iface_config.get('ietf-interfaces:interfaces', {}).get('interface', [])
 
-            # Create a map of config interfaces
-            config_map = {iface['name']: iface for iface in config_ifaces}
+        # Create a map of config interfaces
+        config_map = {iface['name']: iface for iface in config_ifaces}
 
-            # Merge veth peer info from config into operational
-            for oper_iface in oper_ifaces:
-                name = oper_iface.get('name')
-                if name in config_map:
-                    config_iface = config_map[name]
-                    # Add veth peer if it exists in config but not in operational
-                    if 'infix-interfaces:veth' in config_iface and 'infix-interfaces:veth' not in oper_iface:
-                        oper_iface['infix-interfaces:veth'] = config_iface['infix-interfaces:veth']
+        # Merge veth peer info from config into operational
+        for oper_iface in oper_ifaces:
+            name = oper_iface.get('name')
+            if name in config_map:
+                config_iface = config_map[name]
+                # Add veth peer if it exists in config but not in operational
+                if 'infix-interfaces:veth' in config_iface and 'infix-interfaces:veth' not in oper_iface:
+                    oper_iface['infix-interfaces:veth'] = config_iface['infix-interfaces:veth']
 
-            data.update(iface_oper)
-    except (subprocess.CalledProcessError, json.JSONDecodeError):
+        data.update(iface_oper)
+    elif iface_oper:
         # If config fetch fails, just use operational data
-        if iface_oper:
-            data.update(iface_oper)
+        data.update(iface_oper)
 
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
@@ -300,6 +311,7 @@ def container(args: List[str]) -> None:
     else:
         print("Too many arguments provided. Expected: show container [name]")
 
+
 def bfd(args: List[str]) -> None:
     """Handle show bfd [subcommand] [peer] [brief]
 
@@ -309,8 +321,7 @@ def bfd(args: List[str]) -> None:
         peers brief - Show BFD peers in brief format
         peer <addr> - Show specific BFD peer details
     """
-    # Fetch operational data from sysrepocfg
-    data = run_sysrepocfg("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
+    data = get_json("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
     if not data:
         print("No BFD data retrieved.")
         return
@@ -344,7 +355,7 @@ def bfd(args: List[str]) -> None:
 
     # For brief view, fetch interface data to show interface:ip format
     if brief_flag:
-        ifaces_data = run_sysrepocfg("/ietf-interfaces:interfaces")
+        ifaces_data = get_json("/ietf-interfaces:interfaces")
         if ifaces_data:
             data['_interfaces'] = ifaces_data
 
@@ -361,6 +372,7 @@ def bfd(args: List[str]) -> None:
     else:
         print(f"Unknown BFD subcommand: {subcommand}")
 
+
 def ospf(args: List[str]) -> None:
     """Handle show ospf [subcommand] [ifname] [detail]
 
@@ -374,8 +386,7 @@ def ospf(args: List[str]) -> None:
         ifname      - Interface name (for interfaces subcommand)
         detail      - Show detailed information (Cisco-style)
     """
-    # Fetch operational data from sysrepocfg
-    data = run_sysrepocfg("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
+    data = get_json("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
     if not data:
         print("No OSPF data retrieved.")
         return
@@ -407,12 +418,12 @@ def ospf(args: List[str]) -> None:
         data['_ifname'] = ifname
         # For detailed interface view, fetch additional data (interfaces and BFD)
         if subcommand == "interface" or subcommand == "interfaces":
-            ifaces_data = run_sysrepocfg("/ietf-interfaces:interfaces")
+            ifaces_data = get_json("/ietf-interfaces:interfaces")
             if ifaces_data:
                 data['_interfaces'] = ifaces_data
 
             # Fetch BFD data for per-interface status
-            routing_data = run_sysrepocfg("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
+            routing_data = get_json("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
             if routing_data:
                 data['_routing'] = routing_data
 
@@ -428,6 +439,7 @@ def ospf(args: List[str]) -> None:
     else:
         print(f"Unknown OSPF subcommand: {subcommand}")
 
+
 def rip(args: List[str]) -> None:
     """Handle show rip [subcommand] [ifname]
 
@@ -440,8 +452,7 @@ def rip(args: List[str]) -> None:
     Optional:
         ifname      - Interface name (for interface subcommand)
     """
-    # Fetch operational data from sysrepocfg
-    data = run_sysrepocfg("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
+    data = get_json("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
     if not data:
         data = {}
 
@@ -469,10 +480,11 @@ def rip(args: List[str]) -> None:
     else:
         print(f"Unknown RIP subcommand: {subcommand}")
 
+
 def routes(args: List[str]):
     ip_version = args[0] if args and args[0] in ["ipv4", "ipv6"] else "ipv4"
 
-    data = run_sysrepocfg("/ietf-routing:routing/ribs")
+    data = get_json("/ietf-routing:routing/ribs")
     if not data:
         print("No route data retrieved.")
         return
@@ -481,8 +493,9 @@ def routes(args: List[str]):
         return
     cli_pretty(data, "show-routing-table", "-i", ip_version)
 
+
 def lldp(args: List[str]):
-    data = run_sysrepocfg("/ieee802-dot1ab-lldp:lldp")
+    data = get_json("/ieee802-dot1ab-lldp:lldp")
     if not data:
         print("No lldp data retrieved.")
         return
@@ -494,13 +507,13 @@ def lldp(args: List[str]):
 
 def system(args: List[str]) -> None:
     # Get system state from sysrepo
-    data = run_sysrepocfg("/ietf-system:system-state")
+    data = get_json("/ietf-system:system-state")
     if not data:
         print("No system data retrieved.")
         return
 
     # Get hardware data (including thermal sensors)
-    hardware_data = run_sysrepocfg("/ietf-hardware:hardware")
+    hardware_data = get_json("/ietf-hardware:hardware")
 
     # Augment with runtime data
     runtime = {}
@@ -596,6 +609,55 @@ def system(args: List[str]) -> None:
 
     cli_pretty(data, "show-system")
 
+
+def nacm(args: List[str]) -> None:
+    """Handle show nacm [subcommand] [name]
+
+    Subcommands:
+        (none)      - Overview with users, groups, and permissions matrix
+        group NAME  - Detailed view of a specific group's rules
+        user NAME   - Detailed view of a specific user's permissions
+    """
+    data = get_json("/ietf-netconf-acm:nacm", "running", quiet=True)
+    if not data:
+        user = os.environ.get('USER', 'unknown')
+        print(f'Error: Access denied because "{user}" NACM authorization failed.')
+        return
+
+    # Fetch user data from operational (includes shell and authorized-key from yanger)
+    user_oper = get_json("/ietf-system:system/authentication", quiet=True)
+
+    if user_oper:
+        oper_users = user_oper.get("ietf-system:system", {}).get("authentication", {}).get("user", [])
+        data["ietf-system:system"] = {"authentication": {"user": oper_users}}
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    # Parse arguments: subcommand and optional name
+    subcommand = args[0] if len(args) > 0 and args[0] else ""
+    name = args[1] if len(args) > 1 else None
+
+    # Route to appropriate formatter
+    if subcommand == "":
+        cli_pretty(data, "show-nacm")
+    elif subcommand == "group":
+        if not name:
+            print("Usage: show nacm group <name>")
+            return
+        data['_group_name'] = name
+        cli_pretty(data, "show-nacm-group")
+    elif subcommand == "user":
+        if not name:
+            print("Usage: show nacm user <name>")
+            return
+        data['_user_name'] = name
+        cli_pretty(data, "show-nacm-user")
+    else:
+        print(f"Unknown NACM subcommand: {subcommand}")
+
+
 def execute_command(command: str, args: List[str]):
     command_mapping = {
         'bfd': bfd,
@@ -605,6 +667,7 @@ def execute_command(command: str, args: List[str]):
         'hardware': hardware,
         'interface': interface,
         'lldp': lldp,
+        'nacm': nacm,
         'ntp': ntp,
         'ospf': ospf,
         'rip': rip,

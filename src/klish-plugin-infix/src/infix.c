@@ -47,7 +47,43 @@ static const char *cd_home(kcontext_t *ctx)
 	return user;
 }
 
-static int systemf(const char *fmt, ...)
+/*
+ * Safe subprocess execution without shell interpretation.
+ * Use this instead of system()/systemf() when arguments come from user input.
+ */
+static int run(char *const argv[])
+{
+	pid_t pid;
+	int status;
+
+	pid = fork();
+	if (pid == 0) {
+		execvp(argv[0], argv);
+		_exit(127);
+	}
+
+	if (pid < 0)
+		return -1;
+
+	if (waitpid(pid, &status, 0) < 0)
+		return -1;
+
+	if (WIFEXITED(status))
+		return WEXITSTATUS(status);
+
+	if (WIFSIGNALED(status)) {
+		errno = EINTR;
+		return -1;
+	}
+
+	return -1;
+}
+
+/*
+ * Shell command execution - only use with hardcoded commands or when
+ * shell features (pipes, redirects) are needed.  Never use with user input.
+ */
+static int shellf(const char *fmt, ...)
 {
 	va_list ap;
 	char *cmd;
@@ -68,8 +104,6 @@ static int systemf(const char *fmt, ...)
 	vsnprintf(cmd, len, fmt, ap);
 	va_end(ap);
 
-//	fprintf(stderr, INFMSG "CMD: '%s'\n", cmd);
-
 	rc = system(cmd);
 	if (rc == -1)
 		return -1;
@@ -87,6 +121,7 @@ static int systemf(const char *fmt, ...)
 
 int infix_datastore(kcontext_t *ctx)
 {
+	char *argv[] = { "files", "/cfg", NULL };
 	const char *ds;
 
 	ds = kcontext_script(ctx);
@@ -104,13 +139,14 @@ int infix_datastore(kcontext_t *ctx)
 	}
 
 done:
-	return systemf("files /cfg");
+	return run(argv);
 }
 
 int infix_erase(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
 	const char *path;
+	char *argv[4];
 
 	path = kparg_value(kpargv_find(pargv, "file"));
 	if (!path) {
@@ -120,12 +156,18 @@ int infix_erase(kcontext_t *ctx)
 
 	cd_home(ctx);
 
-	return systemf("erase -s %s", path);
+	argv[0] = "erase";
+	argv[1] = "-s";
+	argv[2] = (char *)path;
+	argv[3] = NULL;
+
+	return run(argv);
 }
 
 int infix_files(kcontext_t *ctx)
 {
 	const char *path;
+	char *argv[3];
 
 	cd_home(ctx);
 	path = kcontext_script(ctx);
@@ -134,7 +176,11 @@ int infix_files(kcontext_t *ctx)
 		return -1;
 	}
 
-	return systemf("files %s", path);
+	argv[0] = "files";
+	argv[1] = (char *)path;
+	argv[2] = NULL;
+
+	return run(argv);
 }
 
 int infix_ifaces(kcontext_t *ctx)
@@ -144,12 +190,13 @@ int infix_ifaces(kcontext_t *ctx)
 	return 0;
 }
 
+/* Note: uses shellf() for pipes, but all arguments are hardcoded by callers */
 static int firewall_dbus_completion(const char *interface, const char *method, const char *parser)
 {
-	return systemf("gdbus call --system --dest org.fedoraproject.FirewallD1 "
-		       "--object-path /org/fedoraproject/FirewallD1 "
-		       "--method org.fedoraproject.FirewallD1.%s.%s 2>/dev/null "
-		       "| %s", interface, method, parser);
+	return shellf("gdbus call --system --dest org.fedoraproject.FirewallD1 "
+		      "--object-path /org/fedoraproject/FirewallD1 "
+		      "--method org.fedoraproject.FirewallD1.%s.%s 2>/dev/null "
+		      "| %s", interface, method, parser);
 }
 
 /*
@@ -190,38 +237,52 @@ int infix_firewall_policies(kcontext_t *ctx)
  *   - tr converts single to double quotes
  *   - jq extracts array items
  */
+/* Note: uses shellf() for pipes, but command is hardcoded */
 int infix_firewall_services(kcontext_t *ctx)
 {
 	(void)ctx;
-	return systemf("gdbus call --system --dest org.fedoraproject.FirewallD1 "
-		       "--object-path /org/fedoraproject/FirewallD1 "
-		       "--method org.fedoraproject.FirewallD1.listServices 2>/dev/null "
-		       "| sed 's/^(//; s/,)$//' | tr \"'\" '\"' | jq -r '.[]' 2>/dev/null");
+	return shellf("gdbus call --system --dest org.fedoraproject.FirewallD1 "
+		      "--object-path /org/fedoraproject/FirewallD1 "
+		      "--method org.fedoraproject.FirewallD1.listServices 2>/dev/null "
+		      "| sed 's/^(//; s/,)$//' | tr \"'\" '\"' | jq -r '.[]' 2>/dev/null");
 }
 
 int infix_copy(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
-	const char *src, *dst;
-	char user[256] = "";
-	char validate[8] = "";
+	const char *src, *dst, *remote_user;
+	char *argv[12];
 	kparg_t *parg;
+	int i = 0;
 
 	src = kparg_value(kpargv_find(pargv, "src"));
 	dst = kparg_value(kpargv_find(pargv, "dst"));
 	if (!src || !dst)
 		return -1;
 
-	parg = kpargv_find(pargv, "user");
-	if (parg)
-		snprintf(user, sizeof(user), "-u %s", kparg_value(parg));
+	/* Ensure we run the copy command as the logged-in user, not root (klishd) */
+	argv[i++] = "doas";
+	argv[i++] = "-u";
+	argv[i++] = (char *)cd_home(ctx);
+	argv[i++] = "copy";
+	argv[i++] = "-s";
 
 	parg = kpargv_find(pargv, "validate");
 	if (parg)
-		strlcpy(validate, "-n", sizeof(validate));
+		argv[i++] = "-n";
 
-	/* Ensure we run the copy command as the logged-in user, not root (klishd) */
-	return systemf("doas -u %s copy -s %s %s %s %s", cd_home(ctx), validate, user, src, dst);
+	parg = kpargv_find(pargv, "user");
+	if (parg) {
+		remote_user = kparg_value(parg);
+		argv[i++] = "-u";
+		argv[i++] = (char *)remote_user;
+	}
+
+	argv[i++] = (char *)src;
+	argv[i++] = (char *)dst;
+	argv[i] = NULL;
+
+	return run(argv);
 }
 
 int infix_shell(kcontext_t *ctx)
@@ -299,13 +360,12 @@ static const char *valid_boot_target(const kparg_t *parg)
 	return NULL;
 }
 
-int infix_set_boot_order(kcontext_t *ctx)
+static int infix_set_boot_order(kcontext_t *ctx)
 {
-	char tmpfile[] = "/tmp/boot-order-XXXXXX";
 	kpargv_t *pargv = kcontext_pargv(ctx);
 	const char *targets[3];
-	int fd, rc = 0;
-	FILE *fp;
+	char *argv[16];
+	int i = 0;
 
 	targets[0] = valid_boot_target(kpargv_find(pargv, "first"));
 	targets[1] = valid_boot_target(kpargv_find(pargv, "second"));
@@ -316,34 +376,41 @@ int infix_set_boot_order(kcontext_t *ctx)
 		return -1;
 	}
 
-	fd = mkstemp(tmpfile);
-	if (fd == -1)
-		goto fail;
+	argv[i++] = "doas";
+	argv[i++] = "-u";
+	argv[i++] = (char *)cd_home(ctx);
+	argv[i++] = "rpc";
+	argv[i++] = "/infix-system:set-boot-order";
 
-	fp = fdopen(fd, "w");
-	if (!fp) {
-		close(fd);
-		unlink(tmpfile);
-	fail:
-		fprintf(stderr, ERRMSG "failed creating temporary file\n");
-		return -1;
+	if (targets[0]) {
+		argv[i++] = "boot-order";
+		argv[i++] = (char *)targets[0];
 	}
-
-	fputs("{\"infix-system:set-boot-order\":{\"boot-order\":[", fp);
-	for (size_t i = 0; i < NELEMS(targets); i++) {
-		if (!targets[i])
-			continue;
-
-		fprintf(fp, "%s\"%s\"", i > 0 ? "," : "", targets[i]);
+	if (targets[1]) {
+		argv[i++] = "boot-order";
+		argv[i++] = (char *)targets[1];
 	}
-	fputs("]}}", fp);
+	if (targets[2]) {
+		argv[i++] = "boot-order";
+		argv[i++] = (char *)targets[2];
+	}
+	argv[i] = NULL;
 
-	fclose(fp);
+	return run(argv);
+}
 
-	rc = systemf("sysrepocfg -R %s -fjson 2>&1", tmpfile);
-	unlink(tmpfile);
+int infix_users(kcontext_t *ctx)
+{
+	(void)ctx;
+	return shellf("copy oper -x /system/authentication/user/name "
+		      "| jq -r '.\"ietf-system:system\".authentication.user[].name'");
+}
 
-	return rc;
+int infix_groups(kcontext_t *ctx)
+{
+	(void)ctx;
+	return shellf("copy oper -x /nacm/groups "
+		      "| jq -r '.\"ietf-netconf-acm:nacm\".groups.group[].name'");
 }
 
 int kplugin_infix_fini(kcontext_t *ctx)
@@ -363,6 +430,8 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
+	kplugin_add_syms(plugin, ksym_new("users", infix_users));
+	kplugin_add_syms(plugin, ksym_new("groups", infix_groups));
 	kplugin_add_syms(plugin, ksym_new("firewall_zones", infix_firewall_zones));
 	kplugin_add_syms(plugin, ksym_new("firewall_policies", infix_firewall_policies));
 	kplugin_add_syms(plugin, ksym_new("firewall_services", infix_firewall_services));

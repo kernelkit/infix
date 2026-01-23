@@ -26,8 +26,8 @@ define CONFD_TEST_MODE_INSTALL_YANG_MODULES
 	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/test-mode.inc
 endef
 define CONFD_TEST_MODE_PERMISSIONS
-	/etc/sysrepo/data/ r 660 root wheel - - - - -
-	/etc/sysrepo/data  d 770 root wheel - - - - -
+	/etc/sysrepo/data/ r 660 root sysrepo - - - - -
+	/etc/sysrepo/data  d 770 root sysrepo - - - - -
 endef
 define CONFD_TEST_MODE_CLEANUP
         rm -f /dev/shm/$(CONFD_TEST_MODE_SYSREPO_SHM_PREFIX)*

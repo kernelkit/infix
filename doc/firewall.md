@@ -157,7 +157,7 @@ built-in help system can also be useful:
 <b>DESCRIPTION</b>
         Enable masquerading (SNAT) for traffic matching this policy.<br/>
         Matching traffic will have their source IP address changed on egress,
-        using the IP address of the interface the traffic egresses.";<br/>
+        using the IP address of the interface the traffic egresses.<br/>
 admin@example:/config/firewall/policy/lan-to-dmz/>
 </pre></code>
 

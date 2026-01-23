@@ -8,6 +8,9 @@
 - name: Add admin user
   case: user_admin/test.py
 
+- name: Basic NACM permissions
+  case: nacm-basic/test.py
+
 - name: Set timezone using timezone name
   case: timezone/test.py
 

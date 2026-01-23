@@ -27,6 +27,10 @@ class Transport(ABC):
         pass
 
     @abstractmethod
+    def patch_config(self, modname, edit):
+        pass
+
+    @abstractmethod
     def get_dict(self, xpath=None):
         pass
 

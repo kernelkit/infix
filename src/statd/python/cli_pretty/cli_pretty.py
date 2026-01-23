@@ -216,11 +216,12 @@ def format_uptime_seconds(seconds):
 
 class Column:
     """Column definition for SimpleTable"""
-    def __init__(self, name, align='left', formatter=None, flexible=False):
+    def __init__(self, name, align='left', formatter=None, flexible=False, min_width=None):
         self.name = name
         self.align = align
         self.formatter = formatter
         self.flexible = flexible
+        self.min_width = min_width
 
 class SimpleTable:
     """Simple table formatter that handles ANSI colors correctly and calculates dynamic column widths"""
@@ -306,6 +307,11 @@ class SimpleTable:
                 formatted_value = column.formatter(value) if column.formatter else value
                 value_width = self.visible_width(str(formatted_value))
                 widths[i] = max(widths[i], value_width)
+
+        # Apply column minimum widths
+        for i, column in enumerate(self.columns):
+            if column.min_width:
+                widths[i] = max(widths[i], column.min_width)
 
         return widths
 
@@ -2900,6 +2906,481 @@ def show_ntp_source(json, address=None):
         print(row)
 
 
+def _analyze_group_permissions(nacm):
+    """Analyze NACM rules to determine effective permissions per group.
+
+    NACM rule evaluation order:
+    1. Rule-lists are processed sequentially in configuration order
+    2. Within each rule-list, rules are evaluated sequentially
+    3. First matching rule wins - no further rules are evaluated
+    4. If no rule matches, global defaults apply
+    5. permit-all (module-name=*, access-operations=*) bypasses everything
+    """
+    read_default = nacm.get('read-default', 'permit') == 'permit'
+    write_default = nacm.get('write-default', 'permit') == 'permit'
+    exec_default = nacm.get('exec-default', 'permit') == 'permit'
+
+    rule_lists = nacm.get('rule-list', [])
+    groups_config = nacm.get('groups', {}).get('group', [])
+
+    # Collect all deny rules that apply to "*" (all groups)
+    # These create restrictions for groups without permit-all
+    global_denials = []
+    for rule_list in rule_lists:
+        if '*' in rule_list.get('group', []):
+            for rule in rule_list.get('rule', []):
+                if rule.get('action') == 'deny':
+                    global_denials.append(rule)
+
+    results = []
+
+    for group in groups_config:
+        group_name = group.get('name', '')
+
+        # Defaults
+        can_read = read_default
+        can_write = write_default
+        can_exec = exec_default
+        restrictions = []
+        has_permit_all = False
+
+        # Process rule-lists in order (first match wins)
+        for rule_list in rule_lists:
+            list_groups = rule_list.get('group', [])
+
+            # Check if this rule-list applies to this group specifically
+            if group_name not in list_groups:
+                continue
+
+            for rule in rule_list.get('rule', []):
+                action = rule.get('action')
+                access_ops = rule.get('access-operations', '')
+                module_name = rule.get('module-name', '')
+
+                # permit-all pattern: bypasses ALL other rules including global denials
+                if action == 'permit' and module_name == '*' and access_ops == '*':
+                    has_permit_all = True
+                    break
+
+                # deny pattern for write+exec (like guest)
+                if action == 'deny' and module_name == '*':
+                    ops = access_ops.lower()
+                    if all(op in ops for op in ['create', 'update', 'delete']):
+                        can_write = False
+                    if 'exec' in ops:
+                        can_exec = False
+
+            if has_permit_all:
+                break
+
+        # If not permit-all, global denials create restrictions
+        # These affect READ too (access-operations: "*" includes read)
+        if not has_permit_all:
+            for rule in global_denials:
+                path = rule.get('path', '')
+                module = rule.get('module-name', '')
+
+                if path:
+                    # Extract meaningful part: /ietf-system:system/.../password -> password
+                    restriction = path.rstrip('/').split('/')[-1]
+                elif module:
+                    # Remove ietf- prefix for brevity: ietf-keystore -> keystore
+                    restriction = module.replace('ietf-', '')
+                else:
+                    continue
+
+                if restriction and restriction not in restrictions:
+                    restrictions.append(restriction)
+
+        results.append({
+            'group': group_name,
+            'read': can_read,
+            'write': can_write,
+            'exec': can_exec,
+            'restrictions': restrictions,
+            'has_permit_all': has_permit_all
+        })
+
+    return results
+
+
+def _nacm_permissions_matrix(nacm, width=None):
+    """Render NACM group permissions as a colored matrix.
+
+    Symbols: ✓=full access, ⚠=restricted, ✗=denied
+
+    Returns:
+        Multi-line string containing the rendered matrix, or None if no groups
+    """
+    permissions = _analyze_group_permissions(nacm)
+    if not permissions:
+        return None
+
+    # Column widths
+    group_col_width = max(len(p['group']) for p in permissions)
+    group_col_width = max(group_col_width, 5)  # Minimum for "GROUP"
+    cell_width = 7  # Width for READ/WRITE/EXEC columns
+
+    # Box drawing
+    top_border = "┌" + "─" * (group_col_width + 2) + "┬"
+    top_border += "─" * (cell_width + 2) + "┬"
+    top_border += "─" * (cell_width + 2) + "┬"
+    top_border += "─" * (cell_width + 2) + "┐"
+
+    header_border = "├" + "─" * (group_col_width + 2) + "┼"
+    header_border += "─" * (cell_width + 2) + "┼"
+    header_border += "─" * (cell_width + 2) + "┼"
+    header_border += "─" * (cell_width + 2) + "┤"
+
+    bottom_border = "└" + "─" * (group_col_width + 2) + "┴"
+    bottom_border += "─" * (cell_width + 2) + "┴"
+    bottom_border += "─" * (cell_width + 2) + "┴"
+    bottom_border += "─" * (cell_width + 2) + "┘"
+
+    # Header row
+    header = f"│ {'GROUP':<{group_col_width}} │"
+    header += f" {'READ':^{cell_width}} │"
+    header += f" {'WRITE':^{cell_width}} │"
+    header += f" {'EXEC':^{cell_width}} │"
+
+    # Calculate centering
+    matrix_width = len(top_border)
+    if width and width > matrix_width:
+        padding = (width - matrix_width) // 2
+        indent = " " * padding
+    else:
+        indent = ""
+
+    lines = []
+    lines.append(indent + top_border)
+    lines.append(indent + header)
+    lines.append(indent + header_border)
+
+    # Data rows
+    for perm in permissions:
+        group_name = perm['group']
+        has_restrictions = bool(perm['restrictions'])
+
+        # Determine symbols and colors for each cell
+        def get_cell(has_access, has_restrictions):
+            if not has_access:
+                return Decore.red_bg(f" {'✗':^{cell_width}} ")
+            elif has_restrictions:
+                return Decore.yellow_bg(f" {'⚠':^{cell_width}} ")
+            else:
+                return Decore.green_bg(f" {'✓':^{cell_width}} ")
+
+        read_cell = get_cell(perm['read'], has_restrictions)
+        write_cell = get_cell(perm['write'], has_restrictions)
+        exec_cell = get_cell(perm['exec'], has_restrictions)
+
+        row = f"│ {group_name:<{group_col_width}} │{read_cell}│{write_cell}│{exec_cell}│"
+        lines.append(indent + row)
+
+    lines.append(indent + bottom_border)
+
+    # Legend
+    legend_data = [
+        ("✓ Full", Decore.green_bg),
+        ("⚠ Restricted", Decore.yellow_bg),
+        ("✗ Denied", Decore.red_bg)
+    ]
+    colorized_parts = [bg_func(f" {text} ") for text, bg_func in legend_data]
+    legend = "  ".join(colorized_parts)
+
+    if width:
+        visible_legend = "  ".join([f" {text} " for text, _ in legend_data])
+        legend_padding = max(0, (width - len(visible_legend)) // 2)
+        lines.append(" " * legend_padding + legend)
+    else:
+        lines.append(indent + legend)
+
+    return "\n".join(lines)
+
+
+def show_nacm(json):
+    """Display users and NACM (Network Configuration Access Control) groups"""
+    min_width = 62
+
+    nacm = json.get("ietf-netconf-acm:nacm", {})
+    if not nacm:
+        print("NACM not configured.")
+        print()
+
+    if nacm:
+        enabled = "yes" if nacm.get("enable-nacm", True) else "no"
+        print(f"{'enabled':<21}: {enabled}")
+        print(f"{'default read access':<21}: {nacm.get('read-default', 'permit')}")
+        print(f"{'default write access':<21}: {nacm.get('write-default', 'deny')}")
+        print(f"{'default exec access':<21}: {nacm.get('exec-default', 'permit')}")
+        print(f"{'denied operations':<21}: {nacm.get('denied-operations', 0)}")
+        print(f"{'denied data writes':<21}: {nacm.get('denied-data-writes', 0)}")
+        print(f"{'denied notifications':<21}: {nacm.get('denied-notifications', 0)}")
+        print()
+
+
+    # Group permissions matrix
+    if nacm:
+        matrix = _nacm_permissions_matrix(nacm, min_width)
+        if matrix:
+            print(matrix)
+            print()
+
+    # Users table
+    system = json.get("ietf-system:system", {})
+    users = system.get("authentication", {}).get("user", [])
+    if users:
+        user_table = SimpleTable([
+            Column('USER', min_width=12),
+            Column('SHELL'),
+            Column('LOGIN', flexible=True)
+        ], min_width=min_width)
+
+        for user in users:
+            name = user.get("name", "")
+            shell_data = user.get("infix-system:shell", "false")
+            shell = shell_data.split(":")[-1] if ":" in shell_data else shell_data
+
+            has_password = bool(user.get("password"))
+            has_keys = bool(user.get("authorized-key"))
+            if has_password and has_keys:
+                login = "password+key"
+            elif has_password:
+                login = "password"
+            elif has_keys:
+                login = "key"
+            else:
+                login = "-"
+
+            user_table.row(name, shell, login)
+
+        user_table.print()
+        print()
+
+    # Groups table
+    groups = nacm.get("groups", {}).get("group", []) if nacm else []
+    if groups:
+        group_table = SimpleTable([
+            Column('GROUP', min_width=12),
+            Column('USERS', flexible=True)
+        ], min_width=min_width)
+
+        for group in groups:
+            name = group.get("name", "")
+            members = " ".join(group.get("user-name", []))
+            group_table.row(name, members)
+
+        group_table.print()
+        print()
+
+
+def show_nacm_group(json):
+    """Display detailed information about a specific NACM group."""
+    group_name = json.get('_group_name')
+    nacm = json.get("ietf-netconf-acm:nacm", {})
+
+    if not nacm:
+        print("NACM not configured.")
+        return
+
+    # Find the group
+    groups = nacm.get("groups", {}).get("group", [])
+    group = None
+    for g in groups:
+        if g.get("name") == group_name:
+            group = g
+            break
+
+    if not group:
+        print(f"Group '{group_name}' not found.")
+        return
+
+    # Group info
+    members = group.get("user-name", [])
+    members_str = ", ".join(members) if members else "(none)"
+    print(f"{'members':<17}: {members_str}")
+
+    # Analyze permissions
+    permissions = _analyze_group_permissions(nacm)
+    group_perm = None
+    for p in permissions:
+        if p['group'] == group_name:
+            group_perm = p
+            break
+
+    if group_perm:
+        def perm_str(has_access, has_restrictions):
+            if not has_access:
+                return Decore.red("no")
+            elif has_restrictions:
+                return Decore.yellow("restricted")
+            else:
+                return Decore.green("yes")
+
+        has_restrictions = bool(group_perm['restrictions'])
+        print(f"{'read permission':<17}: {perm_str(group_perm['read'], has_restrictions)}")
+        print(f"{'write permission':<17}: {perm_str(group_perm['write'], has_restrictions)}")
+        print(f"{'exec permission':<17}: {perm_str(group_perm['exec'], has_restrictions)}")
+
+    # Find applicable rules, respecting NACM evaluation order
+    # Rule-lists are evaluated in order; first matching rule wins
+    # If a permit-all rule is found, no further rules would be evaluated
+    rule_lists = nacm.get("rule-list", [])
+    applicable_rules = []
+    has_permit_all = group_perm.get('has_permit_all', False) if group_perm else False
+
+    for rule_list in rule_lists:
+        list_groups = rule_list.get("group", [])
+
+        # Check if this rule-list applies to this group specifically (not via "*")
+        if group_name in list_groups:
+            list_name = rule_list.get("name", "")
+            for rule in rule_list.get("rule", []):
+                applicable_rules.append({
+                    'list': list_name,
+                    'rule': rule,
+                    'applies_via': group_name
+                })
+
+                # Check if this is a permit-all rule
+                action = rule.get('action')
+                module_name = rule.get('module-name', '')
+                access_ops = rule.get('access-operations', '')
+                if action == 'permit' and module_name == '*' and access_ops == '*':
+                    # permit-all matches everything, stop here
+                    break
+
+            if has_permit_all:
+                # Don't process any more rule-lists
+                break
+
+    # Only add rules from "*" group if we don't have permit-all
+    if not has_permit_all:
+        for rule_list in rule_lists:
+            list_groups = rule_list.get("group", [])
+            if "*" in list_groups and group_name not in list_groups:
+                list_name = rule_list.get("name", "")
+                for rule in rule_list.get("rule", []):
+                    applicable_rules.append({
+                        'list': list_name,
+                        'rule': rule,
+                        'applies_via': "*"
+                    })
+
+    if applicable_rules:
+        print(f"{'applicable rules':<17}: {len(applicable_rules)}")
+
+        for item in applicable_rules:
+            rule = item['rule']
+            rule_name = rule.get('name', '(unnamed)')
+            action = rule.get('action', 'permit')
+            access_ops = rule.get('access-operations', '*')
+            module_name = rule.get('module-name', '')
+            path = rule.get('path', '')
+            rpc_name = rule.get('rpc-name', '')
+            comment = rule.get('comment', '')
+
+            # Format action with color
+            if action == 'permit':
+                action_str = Decore.green("permit")
+            else:
+                action_str = Decore.red("deny")
+
+            # Build target description
+            target = ""
+            if path:
+                target = path
+            elif module_name:
+                target = module_name
+                if rpc_name:
+                    target += f" (rpc: {rpc_name})"
+
+            applies_note = f" (via '*')" if item['applies_via'] == '*' else ""
+
+            Decore.title(f"{rule_name}{applies_note}", width=70)
+            print(f"{'  action':<13}: {action_str}")
+            print(f"{'  operations':<13}: {access_ops}")
+            if target:
+                print(f"{'  target':<13}: {target}")
+            if comment:
+                print(f"{'  comment':<13}: {comment}")
+            print()
+
+
+def show_nacm_user(json):
+    """Display detailed information about a specific user's NACM permissions."""
+    user_name = json.get('_user_name')
+    nacm = json.get("ietf-netconf-acm:nacm", {})
+    system = json.get("ietf-system:system", {})
+
+    # Find the user
+    users = system.get("authentication", {}).get("user", [])
+    user = None
+    for u in users:
+        if u.get("name") == user_name:
+            user = u
+            break
+
+    if not user:
+        print(f"User '{user_name}' not found.")
+        return
+
+    # User details
+    shell_data = user.get("infix-system:shell", "false")
+    shell = shell_data.split(":")[-1] if ":" in shell_data else shell_data
+    print(f"{'shell':<17}: {shell}")
+
+    has_password = bool(user.get("password"))
+    has_keys = bool(user.get("authorized-key"))
+    if has_password and has_keys:
+        login = "password + SSH key"
+    elif has_password:
+        login = "password"
+    elif has_keys:
+        login = "SSH key"
+    else:
+        login = "(none configured)"
+    print(f"{'login':<17}: {login}")
+
+    # Find which NACM groups this user belongs to
+    if not nacm:
+        print("NACM not configured.")
+        return
+
+    groups = nacm.get("groups", {}).get("group", [])
+    user_groups = []
+    for group in groups:
+        if user_name in group.get("user-name", []):
+            user_groups.append(group.get("name"))
+
+    groups_str = ", ".join(user_groups) if user_groups else "(none)"
+    print(f"{'nacm group':<17}: {groups_str}")
+
+    # Show effective permissions for each group
+    if user_groups:
+        permissions = _analyze_group_permissions(nacm)
+
+        for group_name in user_groups:
+            for p in permissions:
+                if p['group'] == group_name:
+                    def perm_str(has_access, has_restrictions):
+                        if not has_access:
+                            return Decore.red("no")
+                        elif has_restrictions:
+                            return Decore.yellow("restricted")
+                        else:
+                            return Decore.green("yes")
+
+                    has_restrictions = bool(p['restrictions'])
+                    print(f"{'read permission':<17}: {perm_str(p['read'], has_restrictions)}")
+                    print(f"{'write permission':<17}: {perm_str(p['write'], has_restrictions)}")
+                    print(f"{'exec permission':<17}: {perm_str(p['exec'], has_restrictions)}")
+                    break
+
+    print()
+    print("For detailed rules, use: show nacm group <name>")
+
+
 def show_system(json):
     """System information overivew"""
     if not json.get("ietf-system:system-state"):
@@ -4884,6 +5365,10 @@ def main():
     subparsers.add_parser('show-firewall-log', help='Show firewall log') \
               .add_argument('limit', nargs='?', help='Last N lines, default: all')
 
+    subparsers.add_parser('show-nacm', help='Show NACM status and groups')
+    subparsers.add_parser('show-nacm-group', help='Show NACM group details')
+    subparsers.add_parser('show-nacm-user', help='Show NACM user details')
+
     subparsers.add_parser('show-ntp', help='Show NTP status') \
               .add_argument('-a', '--address', help='Show details for specific address')
     subparsers.add_parser('show-ntp-tracking', help='Show NTP tracking status')
@@ -4947,6 +5432,12 @@ def main():
         show_firewall_service(json_data, args.name)
     elif args.command == "show-firewall-log":
         show_firewall_logs(args.limit)
+    elif args.command == "show-nacm":
+        show_nacm(json_data)
+    elif args.command == "show-nacm-group":
+        show_nacm_group(json_data)
+    elif args.command == "show-nacm-user":
+        show_nacm_user(json_data)
     elif args.command == "show-ntp":
         show_ntp(json_data, args.address)
     elif args.command == "show-ntp-tracking":

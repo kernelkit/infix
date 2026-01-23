@@ -15,7 +15,7 @@ static int startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	if (systemf("runlevel >/dev/null 2>&1"))
 		return SR_ERR_OK;
 
-	if (systemf("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
+	if (systemf("copy -f startup /cfg/startup-config.cfg"))
 		return SR_ERR_SYS;
 
 	return SR_ERR_OK;

@@ -1,13 +1,10 @@
 From 2549c966c090dd38a7a09907d27d13107d15aedd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Tue, 16 Dec 2025 08:18:32 +0100
-Subject: [PATCH 8/8] Cross compile fixes
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 8/9] Cross compile fixes
 Organization: Wires
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeModules/SetupPrintedContext.cmake | 9 +++++++++
  1 file changed, 9 insertions(+)

@@ -141,6 +141,20 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="USERS">
+  <COMPL>
+    <ACTION sym="users@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="GROUPS">
+  <COMPL>
+    <ACTION sym="groups@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
   <HOTKEY key="^D" cmd="exit"/>
 
@@ -238,7 +252,7 @@
       <PARAM name="pwpass" ptype="/STRING" help="Optional clear text password (no spaces)"/>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      type=${KLISH_PARAM_pwhash:-sha512}
+      type=${KLISH_PARAM_pwhash:-yescrypt}
       salt=${KLISH_PARAM_pwsalt:+-S $KLISH_PARAM_pwsalt}
       mkpasswd -m $type $salt $KLISH_PARAM_pwpass
     </ACTION>
@@ -322,6 +336,20 @@
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       cat /etc/resolv.conf.head 2>/dev/null; resolvconf -l | sed 's/#.*//; /^\s*$/d' |pager
     </ACTION>
+  </COMMAND>
+
+  <COMMAND name="nacm" help="Show users and NACM status and groups">
+    <SWITCH name="subcommands" min="0">
+      <COMMAND name="group" help="Show details for a specific NACM group">
+	<PARAM name="name" ptype="/GROUPS" help="Group name"/>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show nacm group $KLISH_PARAM_name</ACTION>
+      </COMMAND>
+      <COMMAND name="user" help="Show NACM details for a specific user">
+	<PARAM name="name" ptype="/USERS" help="User name"/>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show nacm user $KLISH_PARAM_name</ACTION>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">show nacm</ACTION>
   </COMMAND>
 
   <COMMAND name="ntp" help="Show NTP status">
@@ -628,15 +656,15 @@
   </COMMAND>
 
   <COMMAND name="factory-config" help="Show factory-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /etc/factory-config.cfg |pager</ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy factory | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="running-config" help="Show running-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">sysrepocfg -X -f json | jq -C . |pager</ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy running | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="startup-config" help="Show startup-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /cfg/startup-config.cfg |pager</ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy startup | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="firewall" help="Show firewall status and configuration">
@@ -646,12 +674,12 @@
           <PARAM name="limit" ptype="/UINT" help="Last N lines, default: all"/>
         </SWITCH>
 	<ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-log $KLISH_PARAM_limit |pager +G
+	  copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall-log $KLISH_PARAM_limit |pager +G
 	</ACTION>
       </COMMAND>
       <COMMAND name="matrix" help="Show firewall zone matrix">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-matrix
+          copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall-matrix
         </ACTION>
       </COMMAND>
       <COMMAND name="zone" help="Show firewall zones">
@@ -659,7 +687,7 @@
           <PARAM name="name" ptype="/FIREWALL_ZONES" help="Zone name"/>
         </SWITCH>
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-zone "$KLISH_PARAM_name" |pager
+          copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall-zone "$KLISH_PARAM_name" |pager
         </ACTION>
       </COMMAND>
       <COMMAND name="policy" help="Show firewall policies">
@@ -667,7 +695,7 @@
           <PARAM name="name" ptype="/FIREWALL_POLICIES" help="Policy name"/>
         </SWITCH>
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-policy "$KLISH_PARAM_name" |pager
+          copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall-policy "$KLISH_PARAM_name" |pager
         </ACTION>
       </COMMAND>
       <COMMAND name="service" help="Show firewall services">
@@ -675,12 +703,12 @@
           <PARAM name="name" ptype="/FIREWALL_SERVICES" help="Service name"/>
         </SWITCH>
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-service "$KLISH_PARAM_name" |pager
+          copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall-service "$KLISH_PARAM_name" |pager
         </ACTION>
       </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall |pager
+      copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall |pager
     </ACTION>
   </COMMAND>
 </COMMAND>

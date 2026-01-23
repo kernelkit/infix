@@ -156,8 +156,8 @@ cmd_collect()
     collect uptime.txt uptime
 
     # Configuration files
-    collect running-config.json sysrepocfg -f json -d running -X
-    collect operational-config.json sysrepocfg -f json -d operational -X
+    collect running-config.json copy running
+    collect operational-config.json copy operational
 
     # Sysrepo YANG modules
     if command -v sysrepoctl >/dev/null 2>&1; then

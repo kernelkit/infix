@@ -1,6 +1,9 @@
-> [!NOTE]
-> This method is a legacy "simple and human-friendly" way to manage the
-> system.  These days we strongly recommend using [RESTCONF][1] instead.
+> [!WARNING] Deprecated - Use RESTCONF Instead
+>
+> This legacy interface requires elevated privileges (`sudo sysrepocfg`) even
+> for admin users and is no longer intended for production use.  All scripting
+> should use [RESTCONF][1] as the standard management interface.  There is
+> however an NACM compliant replacement `copy` that can be used without sudo.
 
 # Legacy Scripting
 

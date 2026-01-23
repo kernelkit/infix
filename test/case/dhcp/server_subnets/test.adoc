@@ -30,7 +30,9 @@ image::topology.svg[DHCP Server Multiple Subnets topology, align=center, scaledw
 ==== Sequence
 
 . Set up topology and attach to client and server DUTs
-. Configure DHCP server and clients
+. Configure DHCP server
+. Configure client hostnames
+. Configure DHCP clients
 . Verify DHCP client1 get correct lease
 . Verify DHCP client1 has default route via server
 . Verify DHCP client1 has correct DNS server(s)

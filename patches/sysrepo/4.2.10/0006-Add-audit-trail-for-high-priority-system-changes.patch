@@ -1,10 +1,7 @@
 From a86dfdd4a5cb74c1f8c90c8d5aea6f5505c1b88c Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:04:43 +0200
-Subject: [PATCH 6/8] Add audit trail for high priority system changes
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 6/9] Add audit trail for high priority system changes
 Organization: Wires
 
 Committing a change to running, copying to a datastore, or calling an
@@ -16,7 +13,6 @@ is when the system actually activates the changes.  Copying to startup
 or other datastores is handled separately.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  src/sysrepo.c | 12 ++++++++++++
  1 file changed, 12 insertions(+)
