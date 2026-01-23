@@ -72,9 +72,11 @@ Noteworthy changes and additions in this release are marked below in bold text.
 - Fix default password hash in `do password encrypt` command.  New hash is the
   same as the more commonly used `change password` command, *yescrypt*
 - Prevent MOTD from showing on non-shell user login attempts
+- Fix mDNS reflector.
 
 [wifi]: https://kernelkit.org/infix/latest/wifi/
 [sd card image]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi64-sdcard.img
+
 
 [v25.11.0][] - 2025-12-02
 -------------------------

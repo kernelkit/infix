@@ -150,6 +150,8 @@ int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, struct d
 
 	/* Create activation script */
 	wg_sh = dagger_fopen_net_init(net, ifname, NETDAG_INIT_POST, "enable-wireguard.sh");
+	if (!wg_sh)
+		return SR_ERR_INTERNAL;
 
 	fprintf(wg_sh, "wg setconf %s ", ifname);
 	fprintf(wg_sh, WIREGUARD_CONFIG, ifname);

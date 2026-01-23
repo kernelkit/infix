@@ -1,11 +1,12 @@
-From 6d6e9958d1066f53e1359c09ff3e92386244c89e Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From d571b8417741b2dbed814bc38c133dcf37055c66 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Thu, 15 Jan 2026 22:47:37 +0100
-Subject: [PATCH 29/30] wifi: brcmfmac: support deletion and recreation of
+Subject: [PATCH 29/32] wifi: brcmfmac: support deletion and recreation of
  primary interface
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 The Broadcom FullMAC firmware does not allow the primary interface
 (bsscfgidx 0) to be deleted - it always exists in firmware. However,
@@ -37,14 +38,14 @@ Add support for this by:
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
- .../broadcom/brcm80211/brcmfmac/cfg80211.c    | 177 ++++++++++++++++--
+ .../broadcom/brcm80211/brcmfmac/cfg80211.c    | 179 ++++++++++++++++--
  .../broadcom/brcm80211/brcmfmac/cfg80211.h    |   4 +-
  .../broadcom/brcm80211/brcmfmac/core.c        |   6 +-
  .../broadcom/brcm80211/brcmfmac/p2p.c         |  16 +-
- 4 files changed, 183 insertions(+), 20 deletions(-)
+ 4 files changed, 185 insertions(+), 20 deletions(-)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index bb96b87b2a6e..9c8128551072 100644
+index bb96b87b2a6e..41b75ebc9d4f 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -124,6 +124,9 @@ struct cca_msrmnt_query {
@@ -269,7 +270,16 @@ index bb96b87b2a6e..9c8128551072 100644
  		return brcmf_cfg80211_del_apsta_iface(wiphy, wdev);
  	case NL80211_IFTYPE_P2P_CLIENT:
  	case NL80211_IFTYPE_P2P_GO:
-@@ -8114,11 +8261,11 @@ brcmf_dump_obss(struct brcmf_if *ifp, struct cca_msrmnt_query req,
+@@ -7790,6 +7937,8 @@ static s32 brcmf_config_dongle(struct brcmf_cfg80211_info *cfg)
+ 		return err;
+ 
+ 	ndev = cfg_to_ndev(cfg);
++	if (!ndev)
++		return -ENODEV;
+ 	wdev = ndev->ieee80211_ptr;
+ 	ifp = netdev_priv(ndev);
+ 
+@@ -8114,11 +8263,11 @@ brcmf_dump_obss(struct brcmf_if *ifp, struct cca_msrmnt_query req,
  }
  
  static s32
@@ -283,7 +293,7 @@ index bb96b87b2a6e..9c8128551072 100644
  
  	if (chan->flags & IEEE80211_CHAN_DISABLED)
  		return -EINVAL;
-@@ -8144,7 +8291,7 @@ brcmf_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
+@@ -8144,7 +8293,7 @@ brcmf_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
  			   int idx, struct survey_info *info)
  {
  	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
@@ -292,7 +302,7 @@ index bb96b87b2a6e..9c8128551072 100644
  	struct brcmf_dump_survey survey = {};
  	struct ieee80211_supported_band *band;
  	enum nl80211_band band_id;
-@@ -8175,21 +8322,21 @@ brcmf_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
+@@ -8175,21 +8324,21 @@ brcmf_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
  	if (band_id == NUM_NL80211_BANDS)
  		return -ENOENT;
  
@@ -396,3 +406,6 @@ index e1752a513c73..2dc0fbba271d 100644
  	if (brcmf_cfg80211_vif_event_armed(cfg))
  		return ERR_PTR(-EBUSY);
  
+-- 
+2.43.0
+

@@ -152,13 +152,13 @@ def parse_iw_stations(output):
                     seconds = int(value.split()[0])
                     current_station["connected-time"] = seconds
                 elif key == "rx packets":
-                    current_station["rx-packets"] = int(value)
+                    current_station["rx-packets"] = value
                 elif key == "tx packets":
-                    current_station["tx-packets"] = int(value)
+                    current_station["tx-packets"] = value
                 elif key == "rx bytes":
-                    current_station["rx-bytes"] = int(value)
+                    current_station["rx-bytes"] = value
                 elif key == "tx bytes":
-                    current_station["tx-bytes"] = int(value)
+                    current_station["tx-bytes"] = value
                 elif key == "tx bitrate":
                     # Format: "866.7 MBit/s ..." - extract speed and convert to 100kbit/s units
                     speed_mbps = float(value.split()[0])

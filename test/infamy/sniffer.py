@@ -4,6 +4,7 @@ import signal
 import subprocess
 import tempfile
 import time
+import infamy.util as util
 
 class Sniffer:
     """Helper class for tcpdump"""
@@ -20,7 +21,13 @@ class Sniffer:
     def __enter__(self):
         cmd = f"tshark -lni iface -w {self.pcap.name} {self.expr}"
         arg = cmd.split(" ")
-        self.proc = self.netns.popen(arg, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.proc = self.netns.popen(arg,
+                                     stdin=subprocess.DEVNULL,
+                                     stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.PIPE,
+                                     text=True)
+
+        util.until(lambda: " -- Capture started." in self.proc.stderr.readline())
 
     def __exit__(self, _, __, ___):
         if not self.proc:

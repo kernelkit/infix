@@ -3,12 +3,14 @@
 
 #include "interfaces.h"
 
+#define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
+
 /*
  * WiFi Interface Management
  *
- * This file handles only virtual WiFi interface creation/deletion.
- * WiFi daemon configuration (hostapd/wpa_supplicant) is handled by
- * hardware.c when the WiFi radio (phy) is configured.
+ * This file handles virtual WiFi interface creation/deletion and
+ * station mode configuration (wpa_supplicant). Access point mode
+ * configuration (hostapd) is handled by hardware.c.
  */
 
 /*
@@ -19,9 +21,12 @@ typedef enum wifi_mode_t {
 	wifi_ap,
 	wifi_unknown
 } wifi_mode_t;
+
 static wifi_mode_t wifi_get_mode(struct lyd_node *wifi)
 {
-	if (lydx_get_child(wifi, "access-point"))
+	struct lyd_node *ap = lydx_get_child(wifi, "access-point");
+
+	if (ap && (lydx_get_op(ap) != LYDX_OP_DELETE))
 		return wifi_ap;
 	else
 		return wifi_station; /* Need to return station even if "station" also is false, since that is the default scanning mode */
@@ -29,20 +34,106 @@ static wifi_mode_t wifi_get_mode(struct lyd_node *wifi)
 
 int wifi_mode_changed(struct lyd_node *wifi)
 {
-	struct lyd_node *station, *ap;
-	enum lydx_op station_op, ap_op;
+	struct lyd_node *ap;
+	enum lydx_op ap_op;
 
 	if (!wifi)
 		return 0;
-	station = lydx_get_child(wifi, "station");
+
 	ap = lydx_get_child(wifi, "access-point");
-	if (station)
-		station_op = lydx_get_op(station);
+
 	if (ap)
 		ap_op = lydx_get_op(ap);
 
-	return ((station && station_op == LYDX_OP_DELETE) || (ap && ap_op == LYDX_OP_DELETE));
+	ERROR("MODE CHANGED: %d", ap && (ap_op == LYDX_OP_CREATE || ap_op == LYDX_OP_DELETE));
+	return (ap && (ap_op == LYDX_OP_CREATE || ap_op == LYDX_OP_DELETE));
 }
+
+/*
+ * Generate wpa_supplicant config for station mode
+ */
+static int wifi_gen_station(struct lyd_node *cif)
+{
+	const char *ifname, *ssid, *secret_name, *secret, *security_mode, *radio;
+	struct lyd_node *security, *secret_node, *radio_node, *station, *wifi;
+	FILE *wpa_supplicant = NULL;
+	char *security_str = NULL;
+	const char *country;
+	int rc = SR_ERR_OK;
+
+	ifname = lydx_get_cattr(cif, "name");
+	wifi = lydx_get_child(cif, "wifi");
+	if (!wifi)
+		return SR_ERR_OK;
+
+	radio = lydx_get_cattr(wifi, "radio");
+	station = lydx_get_child(wifi, "station");
+	/* If station is NULL, we're in scan-only mode (no station container) */
+	if (station) {
+		ssid = lydx_get_cattr(station, "ssid");
+		security = lydx_get_child(station, "security");
+		security_mode = lydx_get_cattr(security, "mode");
+		secret_name = lydx_get_cattr(security, "secret");
+	} else {
+		ssid = NULL;
+		security = NULL;
+		security_mode = "disabled";
+		secret_name = NULL;
+	}
+
+	radio_node = lydx_get_xpathf(cif,
+		"../../hardware/component[name='%s']/wifi-radio", radio);
+	country = lydx_get_cattr(radio_node, "country-code");
+
+	if (secret_name && strcmp(security_mode, "disabled") != 0) {
+		secret_node = lydx_get_xpathf(cif,
+			"../../keystore/symmetric-keys/symmetric-key[name='%s']",
+			secret_name);
+		secret = lydx_get_cattr(secret_node, "symmetric-key");
+	} else {
+		secret = NULL;
+	}
+
+	wpa_supplicant = fopenf("w", WPA_SUPPLICANT_CONF, ifname);
+	if (!wpa_supplicant) {
+		rc = SR_ERR_INTERNAL;
+		goto out;
+	}
+
+	fprintf(wpa_supplicant,
+		"ctrl_interface=/run/wpa_supplicant\n"
+		"autoscan=periodic:10\n"
+		"ap_scan=1\n");
+
+	if (country)
+		fprintf(wpa_supplicant, "country=%s\n", country);
+
+	/* If SSID is present, create network block. Otherwise, scan-only mode */
+	if (ssid) {
+		/* Station mode with network configured */
+		if (!strcmp(security_mode, "disabled")) {
+			asprintf(&security_str, "key_mgmt=NONE");
+		} else if (secret) {
+			asprintf(&security_str, "key_mgmt=SAE WPA-PSK\npsk=\"%s\"", secret);
+		}
+		fprintf(wpa_supplicant,
+			"network={\n"
+			"bgscan=\"simple: 30:-45:300\"\n"
+			"ssid=\"%s\"\n"
+			"%s\n"
+			"}\n", ssid, security_str);
+		free(security_str);
+	} else {
+		/* Scan-only mode - no station container configured */
+		fprintf(wpa_supplicant, "# Scan-only mode - no network configured\n");
+	}
+
+out:
+	if (wpa_supplicant)
+		fclose(wpa_supplicant);
+	return rc;
+}
+
 /*
  * Add WiFi virtual interface using iw
  */
@@ -83,6 +174,9 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 	switch(mode) {
 	case wifi_station:
 		fprintf(iw, "iw phy %s interface add %s type managed\n", radio, ifname);
+		wifi_gen_station(cif);
+		fprintf(iw, "initctl -bfq enable wifi@%s\n", ifname);
+		fprintf(iw, "initctl -bfq touch wifi@%s\n", ifname);
 		break;
 	case wifi_ap:
 		fprintf(iw, "iw phy %s interface add %s type __ap\n", radio, ifname);
@@ -102,6 +196,7 @@ out:
  */
 int wifi_del_iface(struct lyd_node *dif, struct dagger *net)
 {
+	struct lyd_node *wifi;
 	const char *ifname;
 	FILE *iw;
 
@@ -117,6 +212,13 @@ int wifi_del_iface(struct lyd_node *dif, struct dagger *net)
 	fprintf(iw, "ip link set %s down\n", ifname); /* Required to change modes. */
 	fprintf(iw, "iw dev %s disconnect\n", ifname);
 	fprintf(iw, "iw dev %s del\n", ifname);
+
+	wifi = lydx_get_child(dif, "wifi");
+	if (wifi && wifi_get_mode(wifi) == wifi_ap) { /* if not station or scanning mode */
+		erasef(WPA_SUPPLICANT_CONF, ifname);
+		fprintf(iw, "initctl -bfq disable wifi@%s\n", ifname);
+	}
+
 	fclose(iw);
 
 	return SR_ERR_OK;

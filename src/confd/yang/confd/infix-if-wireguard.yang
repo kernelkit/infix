@@ -81,7 +81,7 @@ submodule infix-if-wireguard {
     }
 
     leaf endpoint {
-      type inet:host;
+      type inet:ip-address;
       description
         "Peer endpoint address (IP address or DNS hostname).
 
