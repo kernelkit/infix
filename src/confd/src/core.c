@@ -354,6 +354,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 #endif
 	}
 
+	/* ietf-hardware */
+	if ((rc = hardware_change(session, config, diff, event, confd)))
+		goto free_diff;
+
 	/* ietf-interfaces */
 	if ((rc = interfaces_change(session, config, diff, event, confd)))
 		goto free_diff;
@@ -391,10 +395,6 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	if ((rc = containers_change(session, config, diff, event, confd)))
 		goto free_diff;
 #endif
-
-	/* ietf-hardware */
-	if ((rc = hardware_change(session, config, diff, event, confd)))
-		goto free_diff;
 
 	/* ietf-routing */
 	if ((rc = routing_change(session, config, diff, event, confd)))
