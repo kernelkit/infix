@@ -24,6 +24,7 @@ All notable changes to the project are documented in this file.
 Noteworthy changes and additions in this release are marked below in bold text.
 
 - Upgrade **Linux kernel to 6.18.6** (LTS)
+- Upgrade Buildroot to 2025.02.10 (LTS)
 - Upgrade libyang to 4.2.2
 - Upgrade sysrepo to 4.2.10
 - Upgrade netopeer2 (NETCONF) to 2.7.0
