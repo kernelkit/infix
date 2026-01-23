@@ -13,7 +13,7 @@
         <link rel="prev" href="../boot/">
       
       
-        <link rel="next" href="../hardware/">
+        <link rel="next" href="../nacm/">
       
       
         
@@ -1057,6 +1057,8 @@
       
         
       
+        
+      
     
     
     
@@ -1243,10 +1245,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#adding-a-user-to-the-admin-group" class="md-nav__link">
+  <a href="#adding-a-user-to-a-group" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adding a User to the Admin Group
+        Adding a User to a Group
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-control-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access Control Matrix
       
     </span>
   </a>
@@ -1356,6 +1369,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nacm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access Control (NACM)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1630,34 +1671,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../scripting-prod/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Production Testing
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../scripting-netconf/" class="md-nav__link">
         
   
@@ -1665,7 +1678,7 @@
   <span class="md-ellipsis">
     
   
-    With NETCONF
+    NETCONF Scripting
   
 
     
@@ -1693,7 +1706,35 @@
   <span class="md-ellipsis">
     
   
-    With RESTCONF
+    RESTCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Testing
   
 
     
@@ -2115,10 +2156,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#adding-a-user-to-the-admin-group" class="md-nav__link">
+  <a href="#adding-a-user-to-a-group" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adding a User to the Admin Group
+        Adding a User to a Group
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-control-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access Control Matrix
       
     </span>
   </a>
@@ -2298,7 +2350,7 @@ model, augmented with Linux specific extensions in <a href="https://github.com/k
 like Message of the Day (login message) and user login shell.  More
 on this later on in this document.</p>
 <p>For the sake of brevity, the hostname in the following examples has been
-shortened to <code>host</code>.  The default hostname is composed from a product
+shortened to <code>example</code>.  The default hostname is composed from a product
 specific string followed by the last three octets of the system base MAC
 address, e.g., <code>switch-12-34-56</code>.  An example of how to change the
 hostname is included below.</p>
@@ -2311,11 +2363,11 @@ Introduction</a> for a background.</p>
 <h2 id="changing-password">Changing Password<a class="headerlink" href="#changing-password" title="Permanent link">¶</a></h2>
 <p>User management, including passwords, SSH keys, remote authentication is
 available in the system authentication configuration context.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@host:/config/&gt; edit system authentication user admin
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@host:/config/system/authentication/user/admin/&gt; change password
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/config/&gt; edit system authentication user admin
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/system/authentication/user/admin/&gt; change password
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>New password:
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Retype password:
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>admin@host:/config/system/authentication/user/admin/&gt; leave
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>admin@example:/config/system/authentication/user/admin/&gt; leave
 </code></pre></div>
 <p>The <code>change password</code> command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
@@ -2338,14 +2390,14 @@ user.  Here we add the authorized key to the admin user, multiple keys
 are supported.</p>
 <p>With SSH keys in place it is possible to disable password login, just
 remember to verify SSH login and network connectivity before doing so.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@host:/config/&gt; edit system authentication user admin
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>admin@host:/config/system/authentication/user/admin/&gt; edit authorized-key example@host
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; set algorithm ssh-rsa
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; show
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/config/&gt; edit system authentication user admin
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>admin@example:/config/system/authentication/user/admin/&gt; edit authorized-key admin@example
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/config/system/authentication/user/admin/authorized-key/example@host/&gt; set algorithm ssh-rsa
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>admin@example:/config/system/authentication/user/admin/authorized-key/example@host/&gt; set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>admin@example:/config/system/authentication/user/admin/authorized-key/example@host/&gt; show
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>algorithm ssh-rsa;
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; leave
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>admin@example:/config/system/authentication/user/admin/authorized-key/example@host/&gt; leave
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -2354,72 +2406,371 @@ so there is no need to use the <code>text-editor</code> command, <code>set</code
 job.</p>
 </div>
 <h2 id="multiple-users">Multiple Users<a class="headerlink" href="#multiple-users" title="Permanent link">¶</a></h2>
-<p>The system supports multiple users and multiple user levels, or groups,
-that a user can be a member of.  Access control is entirely handled by
-the NETCONF <a href="https://www.rfc-editor.org/rfc/rfc8341">"NACM"</a> YANG model, which provides granular access to
-configuration, data, and RPC commands over NETCONF.</p>
-<p>By default the system ships with a single group, <code>admin</code>, which the
-default user <code>admin</code> is a member of.  The broad permissions granted by
-the <code>admin</code> group is what gives its users full system administrator
-privileges.  There are no restrictions on the number of users with
-administrator privileges, nor is the <code>admin</code> user reserved or protected
-in any way -- it is completely possible to remove the default <code>admin</code>
-user from the configuration.  However, it is recommended to keep at
-least one user with administrator privileges in the system, otherwise
-the only way to regain full access is to perform a <em>factory reset</em>.</p>
+<p>The factory configuration provides three hierarchical user group levels by
+default: <strong>guest ⊂ operator ⊂ admin</strong>.  These levels work out-of-the-box
+with sensible permissions - operators can configure the system immediately,
+while sensitive items (passwords, cryptographic keys) remain protected.</p>
+<p>The default levels provide different access to system resources and
+configuration:</p>
+<ul>
+<li>
+<p><strong>Admin</strong>: Full system access - can manage users, upgrade software,
+  restart the system, and modify all configuration including network
+  settings, routing, and firewall rules.</p>
+</li>
+<li>
+<p><strong>Operator</strong>: Configuration access - can modify most system settings
+  including network interfaces, routing, firewall, hostname, and more.
+  <em>Cannot access</em> password hashes, cryptographic keys, or perform
+  sensitive operations (factory reset, software upgrade).</p>
+</li>
+<li>
+<p><strong>Guest</strong>: Read-only access - can view operational state and
+  configuration but cannot modify anything or execute operations.</p>
+</li>
+</ul>
+<p>System access control is handled by the <a href="https://www.rfc-editor.org/rfc/rfc8341">ietf-netconf-acm</a> YANG model,
+usually referred to as <a href="../nacm/">NACM</a>, which provides granular access to
+configuration, data, and RPC commands.  The hierarchical levels in the system
+are determined by:</p>
+<ol>
+<li><strong>NACM permissions</strong> - what the user can access</li>
+<li><strong>Shell setting</strong> - which command-line interface the user can use</li>
+</ol>
+<p>By default the system ships with a single user, <code>admin</code>, in the <code>admin</code>
+group.  There are no restrictions on the number of users with admin
+privileges, nor is the <code>admin</code> user reserved or protected -- it can be
+removed from the configuration.  However, it is strongly recommended to
+keep at least one user with administrator privileges, otherwise the only
+way to regain full access is to perform a <em>factory reset</em>.</p>
+<p>For an overview of users and groups on the system, there is an admin-exec
+command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; show nacm
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>enabled              : yes
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>default read access  : permit
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>default write access : permit
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>default exec access  : permit
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>denied operations    : 0
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>denied data writes   : 0
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>denied notifications : 0
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>          ┌──────────┬─────────┬─────────┬─────────┐
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>          │ GROUP    │  READ   │  WRITE  │  EXEC   │
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>          ├──────────┼─────────┼─────────┼─────────┤
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>          │ admin    │    ✓    │    ✓    │    ✓    │
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>          │ operator │    ⚠    │    ⚠    │    ⚠    │
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>          │ guest    │    ⚠    │    ✗    │    ✗    │
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>          └──────────┴─────────┴─────────┴─────────┘
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>              ✓ Full    ⚠ Restricted    ✗ Denied
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>USER                   SHELL   LOGIN
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>admin                  bash    password+key
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>jacky                  clish   password
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>monitor                false   key
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>GROUP                  USERS
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>admin                  admin
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>operator               jacky
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>guest                  monitor
+</code></pre></div>
+<p>The permissions matrix shows effective access for each NACM group:</p>
+<ul>
+<li><strong>✓ Full</strong> (green) - unrestricted access</li>
+<li><strong>⚠ Restricted</strong> (yellow) - access with exceptions, use <code>show nacm group</code>
+  for details</li>
+<li><strong>✗ Denied</strong> (red) - no access</li>
+</ul>
+<p>For detailed information about a specific group's rules:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/&gt; show nacm group operator
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>members          : jacky
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>read permission  : restricted
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>write permission : restricted
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>exec permission  : restricted
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>applicable rules : 4
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>──────────────────────────────────────────────────────────────────────
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>permit-system-rpcs
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>  action     : permit
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>  operations : exec
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>  target     : ietf-system (rpc: *)
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>  comment    : Operators can reboot, shutdown, and set system time.
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>──────────────────────────────────────────────────────────────────────
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>deny-password-access (via '*')
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>  action     : deny
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>  operations : *
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>  target     : /ietf-system:system/authentication/user/password
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>  comment    : No user except admins can access password hashes.
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>──────────────────────────────────────────────────────────────────────
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>deny-keystore-access (via '*')
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>  action     : deny
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>  operations : *
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>  target     : ietf-keystore
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>  comment    : No user except admins can access cryptographic keys.
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>──────────────────────────────────────────────────────────────────────
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>deny-truststore-access (via '*')
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>  action     : deny
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>  operations : *
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>  target     : ietf-truststore
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>  comment    : No user except admins can access trust store.
+</code></pre></div>
+<p>For user details:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/&gt; show nacm user jacky
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>shell            : clish
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>login            : password
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>nacm group       : operator
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>read permission  : restricted
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>write permission : restricted
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>exec permission  : restricted
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>For detailed rules, use: show nacm group &lt;name&gt;
+</code></pre></div>
 <h3 id="adding-a-user">Adding a User<a class="headerlink" href="#adding-a-user" title="Permanent link">¶</a></h3>
-<p>Similar to how to change password, adding a new user is done using the
-same set of commands:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@host:/config/&gt; edit system authentication user jacky
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@host:/config/system/authentication/user/jacky/&gt; change password
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>New password:
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>Retype password:
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>admin@host:/config/system/authentication/user/jacky/&gt; leave
+<p>Creating a new user starts with defining the user account in the system:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/config/&gt; edit system authentication user jacky
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@example:/config/system/authentication/user/jacky/&gt; change password
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>New password:
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>Retype password:
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>admin@example:/config/system/authentication/user/jacky/&gt; leave
 </code></pre></div>
-<p>An authorized SSH key is added the same way as presented previously.</p>
-<h3 id="adding-a-user-to-the-admin-group">Adding a User to the Admin Group<a class="headerlink" href="#adding-a-user-to-the-admin-group" title="Permanent link">¶</a></h3>
-<p>The following commands add user <code>jacky</code> to the <code>admin</code> group.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@host:/config/&gt; edit nacm group admin
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@host:/config/nacm/group/admin/&gt; set user-name jacky
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@host:/config/nacm/group/admin/&gt; leave
+<p>An authorized SSH key can be added the same way as described in the
+previous sections.</p>
+<p>By default, shell access is disabled (<code>shell false</code>).  To allow CLI/SSH
+access, set the shell:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/config/&gt; edit system authentication user jacky
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/system/authentication/user/jacky/&gt; set shell clish
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@example:/config/system/authentication/user/jacky/&gt; leave
 </code></pre></div>
+<p>Available shells:</p>
+<ul>
+<li><code>bash</code> - Full Bourne-again shell (recommended for admins only)</li>
+<li><code>sh</code> - POSIX shell (recommended for admins only)</li>
+<li><code>clish</code> - Limited CLI-only shell (recommended for operators and guests)</li>
+<li><code>false</code> - No shell access (default)</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Security Notice</p>
+<p>For security reasons, it is strongly recommended to limit non-admin users
+to the <code>clish</code> shell, which provides CLI access without exposing the
+underlying UNIX system.  Reserve <code>bash</code> and <code>sh</code> for administrators who
+need full system access for debugging and maintenance.</p>
+<p>Note that shell and CLI access is not always necessary - the system
+supports NETCONF and RESTCONF for remote management and automation.
+Setting <code>shell false</code> for users who only need programmatic access
+minimizes the attack surface and improves overall system security.</p>
+</div>
+<h3 id="adding-a-user-to-a-group">Adding a User to a Group<a class="headerlink" href="#adding-a-user-to-a-group" title="Permanent link">¶</a></h3>
+<p>To assign a user to a specific privilege level, add them to the
+corresponding NACM group:</p>
+<p><strong>Operator user:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/config/&gt; edit nacm group operator
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>admin@example:/config/nacm/group/operator/&gt; set user-name jacky
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/nacm/group/operator/&gt; leave
+</code></pre></div>
+<p><strong>Adding another admin:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/config/&gt; edit nacm group admin
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@example:/config/nacm/group/admin/&gt; set user-name alice
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@example:/config/nacm/group/admin/&gt; leave
+</code></pre></div>
+<p><strong>Guest user:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@example:/config/&gt; edit nacm group guest
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@example:/config/nacm/group/guest/&gt; set user-name monitor
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>admin@example:/config/nacm/group/guest/&gt; leave
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>For technical details about NACM rule evaluation, module-name vs path
+matching, and creating custom access control policies, see the
+<a href="../nacm/">NACM Technical Guide</a>.</p>
+</div>
+<h3 id="access-control-matrix">Access Control Matrix<a class="headerlink" href="#access-control-matrix" title="Permanent link">¶</a></h3>
+<p>The following table shows what each user level can do based on the NACM rules
+and shell access configured for each user:</p>
+<ul>
+<li><strong>Admin</strong>: <code>bash</code> — full system access</li>
+<li><strong>Operator</strong>: <code>clish</code> — CLI-only access without UNIX system exposure</li>
+<li><strong>Guest</strong>: <code>false</code> — no shell access</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Admin</th>
+<th>Operator</th>
+<th>Guest</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Network interfaces</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Routing (FRR)</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Firewall rules</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>VLANs/bridges</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Containers</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Hostname/system config</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>CLI/SSH access</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>System restart</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Set date/time</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>System reboot</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>System shutdown</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>User management</td>
+<td>✓</td>
+<td>✗</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Keystore (certs/keys)</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Truststore</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Read passwords/secrets</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>NACM rules</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Factory reset</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Software upgrade</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+</tbody>
+</table>
 <h3 id="security-aspects">Security Aspects<a class="headerlink" href="#security-aspects" title="Permanent link">¶</a></h3>
-<p>The NACM user levels apply primarily to NETCONF, with exception of the
-<code>admin</code> group which is granted full system administrator privileges to
-the underlying UNIX system with the following ACL rules:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="w">   </span><span class="err">...</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">   </span><span class="nt">"module-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">   </span><span class="nt">"access-operations"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">   </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span><span class="p">,</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">   </span><span class="err">...</span>
+<p>The three default user levels are implemented through a combination of NACM
+rules and UNIX group membership.  Access control is permission-based, not
+name-based - the system detects user levels by examining their NACM
+permissions and shell settings.</p>
+<p><strong>Admin users</strong> have unrestricted NACM access with the following rule:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="w">   </span><span class="nt">"module-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">   </span><span class="nt">"access-operations"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">   </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span>
 </code></pre></div>
-<p>A user in the <code>admin</code> group is allowed to also use a POSIX login shell
-and use the <code>sudo</code> command to perform system administrative commands.
-This makes it possible to use all the underlying UNIX tooling, which
-to many can be very useful, in particular when debugging a system, but
-please remember to use with care -- the system is not built to require
-managing from the shell.  The tools available in the CLI and automated
-services, started from the system's configuration, are the recommended
-way of using the system, in addition to NETCONF tooling.</p>
+<p>Admin users are automatically added to the UNIX <code>wheel</code> and <code>frrvty</code>
+groups, granting them <code>sudo</code> privileges and access to FRR routing
+protocols. This makes it possible to use all the underlying UNIX
+tooling, which can be very useful for debugging, but please use with
+care -- the system is designed to be managed through the CLI and
+NETCONF, not directly via shell commands.</p>
+<p><strong>Operator users</strong> use the permit-by-default NACM model (<code>write-default:
+"permit"</code>), which means they can configure most system settings without
+explicit permit rules. This design is "future proof" - when new features
+are added, operators can immediately use them.</p>
+<p>The following are explicitly denied to operators through global NACM rules:</p>
+<ul>
+<li>Password hashes (<code>/ietf-system:system/authentication/user/password</code>)</li>
+<li>Cryptographic keys (<code>ietf-keystore</code> module)</li>
+<li>Trust store certificates (<code>ietf-truststore</code> module)</li>
+</ul>
+<p>Additionally, sensitive operations like factory reset, software upgrades,
+and system shutdown are protected by YANG-level <code>nacm:default-deny-all</code>
+annotations and remain restricted to administrators.</p>
+<p>Operators are automatically added to the UNIX <code>operator</code> and <code>frrvty</code>
+groups, granting them <code>sudo</code> privileges for network operations and FRR
+access.</p>
+<p><strong>Guest users</strong> have read-only NACM access through an explicit deny rule
+that blocks all write and exec operations (<code>create update delete exec</code>),
+while <code>read-default: "permit"</code> allows viewing configuration and state.
+Guests receive no special UNIX group memberships. The shell setting
+determines whether guests can access the CLI (<code>clish</code>) or are restricted
+from shell access entirely (<code>false</code>).</p>
+<p>All users, regardless of level, are denied access to password hashes and
+cryptographic key material through global NACM rules.</p>
 <h2 id="changing-hostname">Changing Hostname<a class="headerlink" href="#changing-hostname" title="Permanent link">¶</a></h2>
 <p>Notice how the hostname in the prompt does not change until the change
 is committed by issuing the <code>leave</code> command.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@host:/config/&gt; edit system
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@host:/config/system/&gt; set hostname example
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>admin@host:/config/system/&gt; leave
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>admin@example:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@example:/config/&gt; edit system
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>admin@example:/config/system/&gt; set hostname myrouter
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>admin@example:/config/system/&gt; leave
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>admin@myrouter:/&gt;
 </code></pre></div>
 <p>The hostname is advertised over mDNS-SD in the <code>.local</code> domain.  If
-another device already has claimed the <code>example.local</code> CNAME, in our
+another device already has claimed the <code>myrouter.local</code> CNAME, in our
 case, mDNS will advertise a "uniqified" variant, usually suffixing with
-an index, e.g., <code>example-1.local</code>.  Use an mDNS browser to scan for
+an index, e.g., <code>myrouter-1.local</code>.  Use an mDNS browser to scan for
 available devices on your LAN.</p>
 <p>In some cases you may want to set the device's <em>domain name</em> as well.
 This is handled the same way:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@host:/config/&gt; edit system
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@host:/config/system/&gt; set hostname foo.example.com
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@host:/config/system/&gt; leave
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@foo:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@example:/config/&gt; edit system
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>admin@example:/config/system/&gt; set hostname foo.example.com
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>admin@example:/config/system/&gt; leave
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>admin@foo:/&gt;
 </code></pre></div>
 <p>Both host and domain name are stored in the system files <code>/etc/hosts</code>
 and <code>/etc/hostname</code>.  The latter is exclusively for the host name.  The
@@ -2439,10 +2790,10 @@ built-in <a href="../cli/text-editor/"><code>text-editor</code> command</a>.</p>
 <p>See the next section for how to change the editor used to something
 you may be more familiar with.</p>
 </div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@host:/config/&gt; edit system
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>admin@host:/config/system/&gt; text-editor motd-banner
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@host:/config/system/&gt; leave
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@host:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@example:/config/&gt; edit system
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>admin@example:/config/system/&gt; text-editor motd-banner
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>admin@example:/config/system/&gt; leave
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>admin@example:/&gt;
 </code></pre></div>
 <p>Log out and log back in again to inspect the changes.</p>
 <h2 id="changing-the-editor">Changing the Editor<a class="headerlink" href="#changing-the-editor" title="Permanent link">¶</a></h2>
@@ -2454,11 +2805,11 @@ as the <code>text-editor</code> command:</p>
 <li><code>vi</code> (Visual Editor)</li>
 </ul>
 <p>To change the editor to GNU Nano:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@host:/&gt; configure
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@host:/config/&gt; edit system
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@host:/config/system/&gt; set text-editor nano
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>admin@host:/config/system/&gt; leave
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@host:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>admin@example:/config/&gt; edit system
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>admin@example:/config/system/&gt; set text-editor nano
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>admin@example:/config/system/&gt; leave
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>admin@example:/&gt;
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
@@ -2470,16 +2821,16 @@ configure context to use your editor of choice.</p>
 <p>The system supports both static and dynamic (DHCP) DNS setup.  The
 locally configured (static) server is preferred over any acquired
 from a DHCP client.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@host:/&gt; configure
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@host:/config/&gt; edit system dns-resolver
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>admin@host:/config/system/dns-resolver/&gt; set server google udp-and-tcp address 8.8.8.8
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>admin@host:/config/system/dns-resolver/&gt; show
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>server google {
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>  udp-and-tcp {
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    address 8.8.8.8;
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>  }
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>}
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>admin@host:/config/system/dns-resolver/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>admin@example:/config/&gt; edit system dns-resolver
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>admin@example:/config/system/dns-resolver/&gt; set server google udp-and-tcp address 8.8.8.8
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>admin@example:/config/system/dns-resolver/&gt; show
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>server google {
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>  udp-and-tcp {
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>    address 8.8.8.8;
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>  }
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>}
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>admin@example:/config/system/dns-resolver/&gt; leave
 </code></pre></div>
 <p>It is also possible to configure resolver options like timeout and
 retry attempts.  See the YANG model for details, or use the built-in
@@ -2493,14 +2844,14 @@ server.</p>
 <h2 id="ntp-client-configuration">NTP Client Configuration<a class="headerlink" href="#ntp-client-configuration" title="Permanent link">¶</a></h2>
 <p>Below is an example configuration for enabling NTP with a specific
 server and the <code>iburst</code> option for faster initial synchronization.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@host:/&gt; configure
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>admin@host:/config/&gt; edit system ntp
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>admin@host:/config/system/ntp/&gt; set enabled
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>admin@host:/config/system/ntp/&gt; set server ntp-pool
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>admin@host:/config/system/ntp/&gt; set server ntp-pool udp address pool.ntp.org
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>admin@host:/config/system/ntp/&gt; set server ntp-pool iburst
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>admin@host:/config/system/ntp/&gt; set server ntp-pool prefer
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>admin@host:/config/system/ntp/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>admin@example:/config/&gt; edit system ntp
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>admin@example:/config/system/ntp/&gt; set enabled
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>admin@example:/config/system/ntp/&gt; set server ntp-pool
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>admin@example:/config/system/ntp/&gt; set server ntp-pool udp address pool.ntp.org
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>admin@example:/config/system/ntp/&gt; set server ntp-pool iburst
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>admin@example:/config/system/ntp/&gt; set server ntp-pool prefer
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>admin@example:/config/system/ntp/&gt; leave
 </code></pre></div>
 <p>This configuration enables the NTP client and sets the NTP server to
 <code>pool.ntp.org</code> with the <code>iburst</code> and <code>prefer</code> options. The <code>iburst</code>
@@ -2517,30 +2868,30 @@ as the primary source unless it becomes unreachable or unusable.</li>
 <p>The status for NTP sources is availble in YANG and accessable with
 CLI/NETCONF/RESTCONF.</p>
 <p>To view the sources being used by the NTP client, run:
-</p><div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@target:/&gt; show ntp
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>ADDRESS         MODE         STATE            STRATUM POLL-INTERVAL
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>192.168.1.1     server       candidate              1             6
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>192.168.2.1     server       candidate              1             6
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>192.168.3.1     server       selected               1             6
+</p><div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>admin@target:/&gt; show ntp
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>ADDRESS         MODE         STATE            STRATUM POLL-INTERVAL
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>192.168.1.1     server       candidate              1             6
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>192.168.2.1     server       candidate              1             6
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>192.168.3.1     server       selected               1             6
 </code></pre></div><p></p>
 <h3 id="show-ntp-status">Show NTP Status<a class="headerlink" href="#show-ntp-status" title="Permanent link">¶</a></h3>
 <p>To check the status of NTP synchronization (only availble in CLI), use
 the following command:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@host:/&gt; show ntp tracking
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>Reference ID    : C0248F86 (192.36.143.134)
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Stratum         : 2
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>Ref time (UTC)  : Mon Oct 21 10:06:45 2024
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>System time     : 0.000000001 seconds slow of NTP time
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>Last offset     : -3845.151367188 seconds
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>RMS offset      : 3845.151367188 seconds
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>Frequency       : 4.599 ppm slow
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>Residual freq   : +1293.526 ppm
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>Skew            : 12.403 ppm
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>Root delay      : 1.024467230 seconds
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>Root dispersion : 0.273462683 seconds
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>Update interval : 0.0 seconds
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>Leap status     : Normal
-<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>admin@host:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>admin@example:/&gt; show ntp tracking
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>Reference ID    : C0248F86 (192.36.143.134)
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>Stratum         : 2
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>Ref time (UTC)  : Mon Oct 21 10:06:45 2024
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>System time     : 0.000000001 seconds slow of NTP time
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>Last offset     : -3845.151367188 seconds
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>RMS offset      : 3845.151367188 seconds
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>Frequency       : 4.599 ppm slow
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>Residual freq   : +1293.526 ppm
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>Skew            : 12.403 ppm
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>Root delay      : 1.024467230 seconds
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>Root dispersion : 0.273462683 seconds
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>Update interval : 0.0 seconds
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>Leap status     : Normal
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>admin@example:/&gt;
 </code></pre></div>
 <p>This output provides detailed information about the NTP status, including
 reference ID, stratum, time offsets, frequency, and root delay.</p>

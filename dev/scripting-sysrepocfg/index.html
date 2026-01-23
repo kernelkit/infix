@@ -13,7 +13,7 @@
         <link rel="prev" href="../scripting/">
       
       
-        <link rel="next" href="../scripting-prod/">
+        <link rel="next" href="../scripting-netconf/">
       
       
         
@@ -1055,6 +1055,8 @@
       
         
       
+        
+      
     
     
     
@@ -1138,6 +1140,34 @@
     
   
     Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nacm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access Control (NACM)
   
 
     
@@ -1590,34 +1620,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../scripting-prod/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Production Testing
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../scripting-netconf/" class="md-nav__link">
         
   
@@ -1625,7 +1627,7 @@
   <span class="md-ellipsis">
     
   
-    With NETCONF
+    NETCONF Scripting
   
 
     
@@ -1653,7 +1655,35 @@
   <span class="md-ellipsis">
     
   
-    With RESTCONF
+    RESTCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Testing
   
 
     
@@ -2212,10 +2242,12 @@
   
 
 
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>This method is a legacy "simple and human-friendly" way to manage the
-system.  These days we strongly recommend using <a href="../scripting-restconf/">RESTCONF</a> instead.</p>
+<div class="admonition warning">
+<p class="admonition-title">Deprecated - Use RESTCONF Instead</p>
+<p>This legacy interface requires elevated privileges (<code>sudo sysrepocfg</code>) even
+for admin users and is no longer intended for production use.  All scripting
+should use <a href="../scripting-restconf/">RESTCONF</a> as the standard management interface.  There is
+however an NACM compliant replacement <code>copy</code> that can be used without sudo.</p>
 </div>
 <h1 id="legacy-scripting">Legacy Scripting<a class="headerlink" href="#legacy-scripting" title="Permanent link">¶</a></h1>
 <p>Although not the primary interface for Infix, it is possible to interact
