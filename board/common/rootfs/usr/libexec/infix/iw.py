@@ -286,6 +286,73 @@ def parse_interface_info(ifname):
     return result
 
 
+def parse_stations(ifname):
+    """
+    Parse 'iw dev <name> station dump' output
+    Returns: list of connected stations with stats
+    """
+    output = run_iw('dev', ifname, 'station', 'dump')
+    if not output:
+        return []
+
+    stations = []
+    current = None
+
+    for line in output.splitlines():
+        stripped = line.strip()
+
+        # New station entry: "Station aa:bb:cc:dd:ee:ff (on wifiX)"
+        if stripped.startswith('Station '):
+            if current:
+                stations.append(current)
+            parts = stripped.split()
+            if len(parts) >= 2:
+                current = {'mac-address': parts[1].lower()}
+            else:
+                current = None
+            continue
+
+        if not current or ':' not in stripped:
+            continue
+
+        key, _, value = stripped.partition(':')
+        key = key.strip()
+        value = value.strip()
+
+        try:
+            if key == 'signal':
+                # Format: "-42 dBm" or "-42 [-44, -45] dBm"
+                current['rssi'] = int(value.split()[0])
+            elif key == 'connected time':
+                # Format: "123 seconds"
+                current['connected-time'] = int(value.split()[0])
+            elif key == 'rx bytes':
+                current['rx-bytes'] = value  # counter64: string-encoded
+            elif key == 'tx bytes':
+                current['tx-bytes'] = value  # counter64: string-encoded
+            elif key == 'rx packets':
+                current['rx-packets'] = value  # counter64: string-encoded
+            elif key == 'tx packets':
+                current['tx-packets'] = value  # counter64: string-encoded
+            elif key == 'tx bitrate':
+                # Format: "866.7 MBit/s ..." - convert to 100kbit/s units
+                speed_mbps = float(value.split()[0])
+                current['tx-speed'] = int(speed_mbps * 10)
+            elif key == 'rx bitrate':
+                speed_mbps = float(value.split()[0])
+                current['rx-speed'] = int(speed_mbps * 10)
+            elif key == 'inactive time':
+                # Format: "1234 ms"
+                current['inactive-time'] = int(value.split()[0])
+        except (ValueError, IndexError):
+            continue
+
+    if current:
+        stations.append(current)
+
+    return stations
+
+
 def parse_survey(ifname):
     """
     Parse 'iw dev <name> survey dump' output
@@ -396,6 +463,66 @@ def parse_dev():
     return result
 
 
+def parse_link(ifname):
+    """
+    Parse 'iw dev <name> link' output for station mode
+    Returns: {connected, bssid, ssid, frequency, signal, tx_bitrate, rx_bitrate}
+    """
+    output = run_iw('dev', ifname, 'link')
+    if not output:
+        return {'connected': False}
+
+    if 'Not connected' in output:
+        return {'connected': False}
+
+    result = {'connected': True}
+
+    for line in output.splitlines():
+        stripped = line.strip()
+
+        # Connected to aa:bb:cc:dd:ee:ff
+        if stripped.startswith('Connected to '):
+            parts = stripped.split()
+            if len(parts) >= 3:
+                result['bssid'] = parts[2].lower()
+
+        # SSID: NetworkName
+        elif stripped.startswith('SSID: '):
+            result['ssid'] = stripped[6:]
+
+        # freq: 5180
+        elif stripped.startswith('freq: '):
+            try:
+                result['frequency'] = int(stripped[6:])
+            except ValueError:
+                pass
+
+        # signal: -42 dBm
+        elif stripped.startswith('signal: '):
+            try:
+                result['rssi'] = int(stripped.split()[1])
+            except (ValueError, IndexError):
+                pass
+
+        # tx bitrate: 866.7 MBit/s ...
+        elif stripped.startswith('tx bitrate: '):
+            try:
+                speed = float(stripped.split()[2])
+                result['tx-speed'] = int(speed * 10)  # 100kbit/s units
+            except (ValueError, IndexError):
+                pass
+
+        # rx bitrate: 780.0 MBit/s ...
+        elif stripped.startswith('rx bitrate: '):
+            try:
+                speed = float(stripped.split()[2])
+                result['rx-speed'] = int(speed * 10)
+            except (ValueError, IndexError):
+                pass
+
+    return result
+
+
 def main():
     if len(sys.argv) < 2:
         print(json.dumps({
@@ -404,14 +531,17 @@ def main():
                 'list': 'List all PHY devices',
                 'dev': 'List all interfaces grouped by PHY',
                 'info': 'Get PHY or interface information (requires device)',
-                'survey': 'Get channel survey data (requires interface name)'
+                'survey': 'Get channel survey data (requires interface)',
+                'station': 'Get connected stations in AP mode (requires interface)',
+                'link': 'Get link info in station mode (requires interface)'
             },
             'examples': [
                 'iw.py list',
                 'iw.py dev',
                 'iw.py info radio0',
-                'iw.py info phy4',
                 'iw.py info wlan0',
+                'iw.py station wifi0',
+                'iw.py link wlan0',
                 'iw.py survey wlan0'
             ]
         }, indent=2))
@@ -434,12 +564,21 @@ def main():
                     data = parse_phy_info(device)
                 else:
                     data = parse_interface_info(device)
+        elif command == 'station':
+            if len(sys.argv) < 3:
+                data = {'error': 'station command requires interface argument'}
+            else:
+                data = parse_stations(sys.argv[2])
+        elif command == 'link':
+            if len(sys.argv) < 3:
+                data = {'error': 'link command requires interface argument'}
+            else:
+                data = parse_link(sys.argv[2])
         elif command == 'survey':
             if len(sys.argv) < 3:
-                data = {'error': 'survey command requires device argument'}
+                data = {'error': 'survey command requires interface argument'}
             else:
-                device = sys.argv[2]
-                data = parse_survey(device)
+                data = parse_survey(sys.argv[2])
         else:
             data = {'error': f'Unknown command: {command}'}
 
