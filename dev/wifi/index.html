@@ -2574,40 +2574,23 @@ Radios are automatically discovered and named <code>radio0</code>, <code>radio1<
 </code></pre></div><p></p>
 <p><strong>Key radio parameters:</strong>
 - <code>country-code</code>: Two-letter ISO 3166-1 code - determines allowed channels and maximum power. Examples: US, DE, GB, SE, FR, JP. <strong>Must match your physical location for legal compliance.</strong>
-- <code>band</code>: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Band selection automatically enables appropriate WiFi standards (2.4GHz: 802.11n, 5GHz: 802.11n/ac, 6GHz: 802.11n/ac/ax)
-- <code>channel</code>: Channel number (1-196) or "auto" (required for AP mode). When set to "auto", defaults to channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 109 for 6GHz
-- <code>enable-80211ax</code>: Boolean (default: false). Opt-in to enable 802.11ax (WiFi 6) on 2.4GHz and 5GHz bands. The 6GHz band always uses 802.11ax regardless of this setting</p>
+- <code>band</code>: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Automatically enables appropriate WiFi standards (2.4GHz: 802.11n/ax, 5GHz: 802.11n/ac/ax, 6GHz: 802.11ax)
+- <code>channel</code>: Channel number (1-196) or "auto" (required for AP mode). When set to "auto", defaults to channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 109 for 6GHz</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>TX power and channel width are automatically determined by the driver based on regulatory constraints, PHY mode, and hardware capabilities.</p>
 </div>
 <h3 id="wifi-6-80211ax-support">WiFi 6 (802.11ax) Support<a class="headerlink" href="#wifi-6-80211ax-support" title="Permanent link">¶</a></h3>
-<p>WiFi 6 (802.11ax) provides improved performance in congested environments through
-features like OFDMA, Target Wake Time, and BSS Coloring. By default, WiFi 6 is
-only enabled on the 6GHz band (WiFi 6E requirement).</p>
-<p>To enable WiFi 6 on 2.4GHz or 5GHz bands:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/&gt; edit hardware component radio0 wifi-radio
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set country-code DE
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set band 5GHz
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set channel 36
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set enable-80211ax true
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; leave
-</code></pre></div>
-<p><strong>WiFi 6 Benefits:</strong>
+<p>WiFi 6 (802.11ax) is always enabled in AP mode on all bands, providing improved
+performance through features like OFDMA, BSS Coloring, and beamforming.</p>
+<p><strong>WiFi 6 Features (always enabled):</strong>
 - <strong>OFDMA</strong>: Better multi-user efficiency in dense environments
-- <strong>Target Wake Time</strong>: Improved battery life for client devices
-- <strong>1024-QAM</strong>: Higher throughput with strong signal conditions
-- <strong>BSS Coloring</strong>: Reduced interference from neighboring networks</p>
+- <strong>BSS Coloring</strong>: Reduced interference from neighboring networks
+- <strong>Beamforming</strong>: Improved signal quality and range</p>
 <p><strong>Requirements:</strong>
 - Hardware must support 802.11ax
 - Client devices must support WiFi 6 for full benefits
 - Older WiFi 5/4 clients can still connect but won't use WiFi 6 features</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The 6GHz band always uses WiFi 6 (802.11ax) regardless of the <code>enable-80211ax</code>
-setting, as WiFi 6E requires 802.11ax support.</p>
-</div>
 <h2 id="discovering-available-networks-scanning">Discovering Available Networks (Scanning)<a class="headerlink" href="#discovering-available-networks-scanning" title="Permanent link">¶</a></h2>
 <p>Before connecting to a WiFi network, you need to discover which networks
 are available. Infix automatically scans for networks when a WiFi interface
@@ -2616,39 +2599,39 @@ is created with a radio reference.</p>
 <p>To enable scanning without connecting, configure the radio and create a WiFi
 interface referencing it:</p>
 <p><strong>Step 1: Configure the radio</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@example:/config/&gt; edit hardware component radio0 wifi-radio
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set country-code DE
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/&gt; edit hardware component radio0 wifi-radio
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set country-code DE
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; leave
 </code></pre></div>
 <p><strong>Step 2: Create WiFi interface with radio reference only</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/&gt; edit interface wifi0
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:/config/interface/wifi0/&gt; set wifi radio radio0
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>admin@example:/config/interface/wifi0/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@example:/config/&gt; edit interface wifi0
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/interface/wifi0/&gt; set wifi radio radio0
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>admin@example:/config/interface/wifi0/&gt; leave
 </code></pre></div>
 <p>The system will now start scanning in the background. The interface will
 operate in scan-only mode until you configure a specific mode (station or
 access-point).</p>
 <h3 id="view-available-networks">View Available Networks<a class="headerlink" href="#view-available-networks" title="Permanent link">¶</a></h3>
 <p>Use <code>show interface</code> to see discovered networks and their signal strength:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; show interface wifi0
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>name                : wifi0
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>type                : wifi
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>index               : 3
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>mtu                 : 1500
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>operational status  : down
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>physical address    : f0:09:0d:36:5f:86
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>ipv4 addresses      :
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>ipv6 addresses      :
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>SSID                : ----
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>Signal              : ----
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>SSID                                    SECURITY                      SIGNAL
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>MyNetwork                               WPA2-Personal                 excellent
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>GuestWiFi                               WPA2-WPA3-Personal            good
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>CoffeeShop                              Open                          fair
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>IoT-Devices                             WPA2-Personal                 good
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/&gt; show interface wifi0
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>name                : wifi0
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>type                : wifi
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>index               : 3
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>mtu                 : 1500
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>operational status  : down
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>physical address    : f0:09:0d:36:5f:86
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>ipv4 addresses      :
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>ipv6 addresses      :
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>SSID                : ----
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>Signal              : ----
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>SSID                                    SECURITY                      SIGNAL
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>MyNetwork                               WPA2-Personal                 excellent
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>GuestWiFi                               WPA2-WPA3-Personal            good
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>CoffeeShop                              Open                          fair
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>IoT-Devices                             WPA2-Personal                 good
 </code></pre></div>
 <p>In the CLI, signal strength is reported as: excellent, good, fair or bad.
 For precise RSSI values in dBm, use NETCONF or RESTCONF to access the
@@ -2659,28 +2642,28 @@ mode, follow the "Discovering Available Networks (Scanning)" section above to
 scan for available networks and identify the SSID you want to connect to.</p>
 <h3 id="step-1-configure-wifi-password">Step 1: Configure WiFi Password<a class="headerlink" href="#step-1-configure-wifi-password" title="Permanent link">¶</a></h3>
 <p>Create a keystore entry for your WiFi password (8-63 characters):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/&gt; edit keystore symmetric-key my-wifi-key
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@example:/config/keystore/…/my-wifi-key/&gt; set key-format wifi-preshared-key-format
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/keystore/…/my-wifi-key/&gt; set symmetric-key MyPassword123
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>admin@example:/config/keystore/…/my-wifi-key/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@example:/config/&gt; edit keystore symmetric-key my-wifi-key
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>admin@example:/config/keystore/…/my-wifi-key/&gt; set key-format wifi-preshared-key-format
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>admin@example:/config/keystore/…/my-wifi-key/&gt; set symmetric-key MyPassword123
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>admin@example:/config/keystore/…/my-wifi-key/&gt; leave
 </code></pre></div>
 <h3 id="step-2-connect-to-network">Step 2: Connect to Network<a class="headerlink" href="#step-2-connect-to-network" title="Permanent link">¶</a></h3>
 <p>Configure station mode with the SSID and password to connect:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>admin@example:/config/&gt; edit interface wifi0
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/interface/wifi0/&gt; set wifi station ssid MyHomeNetwork
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/interface/wifi0/&gt; set wifi station security secret my-wifi-key
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>admin@example:/config/interface/wifi0/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/&gt; edit interface wifi0
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@example:/config/interface/wifi0/&gt; set wifi station ssid MyHomeNetwork
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/interface/wifi0/&gt; set wifi station security secret my-wifi-key
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>admin@example:/config/interface/wifi0/&gt; leave
 </code></pre></div>
 <p>The connection attempt will start immediately. You can verify the connection status:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/&gt; show interface wifi0
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>name                : wifi0
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>type                : wifi
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>operational status  : up
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>physical address    : f0:09:0d:36:5f:86
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>SSID                : MyHomeNetwork
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>Signal              : excellent
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/&gt; show interface wifi0
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>name                : wifi0
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>type                : wifi
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>operational status  : up
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>physical address    : f0:09:0d:36:5f:86
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>SSID                : MyHomeNetwork
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>Signal              : excellent
 </code></pre></div>
 <p><strong>Station configuration parameters:</strong>
 - <code>radio</code>: Reference to the WiFi radio (mandatory) - already set during scanning
@@ -2700,13 +2683,13 @@ a WiFi radio.</p>
 <h3 id="basic-ap-configuration">Basic AP Configuration<a class="headerlink" href="#basic-ap-configuration" title="Permanent link">¶</a></h3>
 <p>First, ensure the radio is configured (see Radio Configuration above). Then
 create an AP interface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@example:/config/&gt; edit interface wifi0
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>admin@example:/config/interface/wifi0/&gt; set wifi radio radio0
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point ssid MyNetwork
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point security mode wpa2-personal
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point security secret example
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>admin@example:/config/interface/wifi0/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@example:/config/&gt; edit interface wifi0
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@example:/config/interface/wifi0/&gt; set wifi radio radio0
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point ssid MyNetwork
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point security mode wpa2-personal
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point security secret example
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>admin@example:/config/interface/wifi0/&gt; leave
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -2726,58 +2709,58 @@ Alternatively, you can use any name and explicitly set <code>type wifi</code>.</
 - <code>wpa2-wpa3-personal</code>: Mixed mode (maximum compatibility)</p>
 <h3 id="hidden-network-ssid-hiding">Hidden Network (SSID Hiding)<a class="headerlink" href="#hidden-network-ssid-hiding" title="Permanent link">¶</a></h3>
 <p>To create a hidden network that doesn't broadcast its SSID:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point hidden true
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point hidden true
 </code></pre></div>
 <h3 id="multi-ssid-configuration">Multi-SSID Configuration<a class="headerlink" href="#multi-ssid-configuration" title="Permanent link">¶</a></h3>
 <p>Multiple AP interfaces on the same radio allow broadcasting multiple SSIDs,
 each with independent security settings. This is useful for guest networks,
 IoT devices, or segregating traffic into different VLANs.</p>
 <p><strong>Step 1: Configure the radio</strong> (shared by all APs)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>admin@example:/config/&gt; edit hardware component radio0 wifi-radio
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set country-code DE
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set band 5GHz
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set channel 36
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>admin@example:/config/&gt; edit hardware component radio0 wifi-radio
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set country-code DE
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set band 5GHz
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; set channel 36
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>admin@example:/config/hardware/component/radio0/wifi-radio/&gt; leave
 </code></pre></div>
 <p><strong>Step 2: Configure keystore secrets</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>admin@example:/config/&gt; edit keystore symmetric-key main-secret
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>admin@example:/config/keystore/…/main-secret/&gt; set key-format wifi-preshared-key-format
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>admin@example:/config/keystore/…/main-secret/&gt; set symmetric-key MyMainPassword
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>admin@example:/config/&gt; edit keystore symmetric-key guest-secret
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>admin@example:/config/keystore/…/guest-secret/&gt; set key-format wifi-preshared-key-format
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>admin@example:/config/keystore/…/guest-secret/&gt; set symmetric-key GuestPassword123
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>admin@example:/config/&gt; edit keystore symmetric-key iot-secret
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>admin@example:/config/keystore/…/iot-secret/&gt; set key-format wifi-preshared-key-format
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>admin@example:/config/keystore/…/iot-secret/&gt; set symmetric-key IoTDevices2025
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>admin@example:/config/keystore/…/iot-secret/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>admin@example:/config/&gt; edit keystore symmetric-key main-secret
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>admin@example:/config/keystore/…/main-secret/&gt; set key-format wifi-preshared-key-format
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>admin@example:/config/keystore/…/main-secret/&gt; set symmetric-key MyMainPassword
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>admin@example:/config/&gt; edit keystore symmetric-key guest-secret
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>admin@example:/config/keystore/…/guest-secret/&gt; set key-format wifi-preshared-key-format
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>admin@example:/config/keystore/…/guest-secret/&gt; set symmetric-key GuestPassword123
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>admin@example:/config/&gt; edit keystore symmetric-key iot-secret
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>admin@example:/config/keystore/…/iot-secret/&gt; set key-format wifi-preshared-key-format
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>admin@example:/config/keystore/…/iot-secret/&gt; set symmetric-key IoTDevices2025
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>admin@example:/config/keystore/…/iot-secret/&gt; leave
 </code></pre></div>
 <p><strong>Step 3: Create multiple AP interfaces</strong> (all on radio0)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a># Primary AP - Main network (WPA3 for maximum security)
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>admin@example:/config/&gt; edit interface wifi0
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>admin@example:/config/interface/wifi0/&gt; set wifi radio radio0
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point ssid MainNetwork
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point security mode wpa3-personal
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point security secret main-secret
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a># Guest AP - Guest network (WPA2/WPA3 mixed for compatibility)
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>admin@example:/config/&gt; edit interface wifi1
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>admin@example:/config/interface/wifi1/&gt; set wifi radio radio0
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>admin@example:/config/interface/wifi1/&gt; set wifi access-point ssid GuestNetwork
-<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>admin@example:/config/interface/wifi1/&gt; set wifi access-point security mode wpa2-wpa3-personal
-<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>admin@example:/config/interface/wifi1/&gt; set wifi access-point security secret guest-secret
-<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>admin@example:/config/interface/wifi1/&gt; set custom-phys-address static 00:0c:43:26:60:01
-<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>
-<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a># IoT AP - IoT devices (WPA2 for older device compatibility)
-<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>admin@example:/config/&gt; edit interface wifi2
-<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>admin@example:/config/interface/wifi2/&gt; set wifi radio radio0
-<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a>admin@example:/config/interface/wifi2/&gt; set wifi access-point ssid IoT-Devices
-<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a>admin@example:/config/interface/wifi2/&gt; set wifi access-point security mode wpa2-personal
-<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a>admin@example:/config/interface/wifi2/&gt; set wifi access-point security secret iot-secret
-<a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a>admin@example:/config/interface/wifi2/&gt; set custom-phys-address static 00:0c:43:26:60:02
-<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a>admin@example:/config/interface/wifi2/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a># Primary AP - Main network (WPA3 for maximum security)
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>admin@example:/config/&gt; edit interface wifi0
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>admin@example:/config/interface/wifi0/&gt; set wifi radio radio0
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point ssid MainNetwork
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point security mode wpa3-personal
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>admin@example:/config/interface/wifi0/&gt; set wifi access-point security secret main-secret
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a># Guest AP - Guest network (WPA2/WPA3 mixed for compatibility)
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>admin@example:/config/&gt; edit interface wifi1
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>admin@example:/config/interface/wifi1/&gt; set wifi radio radio0
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>admin@example:/config/interface/wifi1/&gt; set wifi access-point ssid GuestNetwork
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>admin@example:/config/interface/wifi1/&gt; set wifi access-point security mode wpa2-wpa3-personal
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>admin@example:/config/interface/wifi1/&gt; set wifi access-point security secret guest-secret
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>admin@example:/config/interface/wifi1/&gt; set custom-phys-address static 00:0c:43:26:60:01
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a># IoT AP - IoT devices (WPA2 for older device compatibility)
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>admin@example:/config/&gt; edit interface wifi2
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>admin@example:/config/interface/wifi2/&gt; set wifi radio radio0
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>admin@example:/config/interface/wifi2/&gt; set wifi access-point ssid IoT-Devices
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>admin@example:/config/interface/wifi2/&gt; set wifi access-point security mode wpa2-personal
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>admin@example:/config/interface/wifi2/&gt; set wifi access-point security secret iot-secret
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>admin@example:/config/interface/wifi2/&gt; set custom-phys-address static 00:0c:43:26:60:02
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>admin@example:/config/interface/wifi2/&gt; leave
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
@@ -2815,13 +2798,13 @@ on a radio must be the same mode (all APs or all Stations).</p>
 <h3 id="ap-as-bridge-port">AP as Bridge Port<a class="headerlink" href="#ap-as-bridge-port" title="Permanent link">¶</a></h3>
 <p>WiFi AP interfaces can be added to bridges to integrate wireless devices
 into your LAN:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>admin@example:/config/&gt; edit interface br0
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>admin@example:/config/interface/br0/&gt; set type bridge
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>admin@example:/config/&gt; edit interface wifi0
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>admin@example:/config/interface/wifi0/&gt; set bridge-port bridge br0
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>admin@example:/config/interface/wifi0/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>admin@example:/config/&gt; edit interface br0
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>admin@example:/config/interface/br0/&gt; set type bridge
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>admin@example:/config/&gt; edit interface wifi0
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>admin@example:/config/interface/wifi0/&gt; set bridge-port bridge br0
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>admin@example:/config/interface/wifi0/&gt; leave
 </code></pre></div>
 <h2 id="troubleshooting-connection-issues">Troubleshooting Connection Issues<a class="headerlink" href="#troubleshooting-connection-issues" title="Permanent link">¶</a></h2>
 <p>Use <code>show interface wifi0</code> to verify signal strength and connection status.
