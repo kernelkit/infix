@@ -16,10 +16,12 @@ if something goes wrong.  Deploy once, trust forever.
 
 **🤝 Friendly**  
 Actually easy to use. Auto-generated CLI from standard YANG models comes
-with built-in help for every command — just hit `?` or TAB for
-context-aware assistance.  Familiar NETCONF/RESTCONF APIs and
-[comprehensive documentation][4] mean you're never stuck.  Whether
-you're learning networking or managing enterprise infrastructure.
+with built-in help for every command — just hit <kbd>?</kbd> or
+<kbd>TAB</kbd> for context-aware assistance.
+
+Familiar NETCONF & RESTCONF APIs and [comprehensive documentation][4]
+mean you're never stuck.  Whether you're learning networking or managing
+enterprise infrastructure.
 
 **🛡️ Secure**  
 Built with security as a foundation, not an afterthought.  Minimal
@@ -53,27 +55,24 @@ your device, your rules.
    Consistent tooling from development to production deployment.  
    How about a digital twin using raw Qemu or [GNS3](https://gns3.com/infix)!
 
-## See It In Action
+## Quick Example
 
 Configure an interface in seconds - the CLI guides you with built-in help:
 
-<details><summary><b>Click Here for an example CLI Session</b></summary>
-
-```bash
-admin@infix-12-34-56:/> configure
-admin@infix-12-34-56:/config/> edit interface eth0
-admin@infix-12-34-56:/config/interface/eth0/> set ipv4 <TAB>
-      address     autoconf bind-ni-name      enabled
-      forwarding  mtu      neighbor
-admin@infix-12-34-56:/config/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
-admin@infix-12-34-56:/config/interface/eth0/> show
+<pre><code>admin@infix-12-34-56:/> <b>configure</b>
+admin@infix-12-34-56:/config/> <b>edit interface eth0</b>
+admin@infix-12-34-56:/config/interface/eth0/> <b>set ipv4</b> <kbd>TAB</kbd>
+      address     autoconf      bind-ni-name     dhcp 
+      enabled     forwarding    mtu              neighbor
+admin@infix-12-34-56:/config/interface/eth0/> <b>set ipv4 address 192.168.2.200 prefix-length 24</b>
+admin@infix-12-34-56:/config/interface/eth0/> <b>show</b>
 type ethernet;
 ipv4 {
   address 192.168.2.200 {
     prefix-length 24;
   }
 }
-admin@infix-12-34-56:/config/interface/eth0/> diff
+admin@infix-12-34-56:/config/interface/eth0/> <b>diff</b>
 interfaces {
   interface eth0 {
 +    ipv4 {
@@ -83,25 +82,23 @@ interfaces {
 +    }
   }
 }
-admin@infix-12-34-56:/config/interface/eth0/> leave
-admin@infix-12-34-56:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+admin@infix-12-34-56:/config/interface/eth0/> <b>leave</b>
+admin@infix-12-34-56:/> <b>show interfaces</b>
+<u>INTERFACE       PROTOCOL   STATE       DATA                                  </u>
 eth0            ethernet   UP          52:54:00:12:34:56
                 ipv4                   192.168.2.200/24 (static)
                 ipv6                   fe80::5054:ff:fe12:3456/64 (link-layer)
 lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-admin@infix-12-34-56:/> copy running-config startup-config
-```
+admin@infix-12-34-56:/> <b>copy running startup</b>
+</code></pre>
 
-Notice how TAB completion shows available options, `show` displays
-current config, and `diff` shows exactly what changed before you
-commit your changes with the `leave` command.
+Notice how <kbd>TAB</kbd> completion shows available options, `show`
+displays current config, and `diff` shows exactly what changed before
+you commit your changes with the `leave` command.
 
-</details>
-
-> [Full CLI documentation →][3]
+For more information, see [CLI documentation][3].
 
 ## Get Started
 
@@ -111,7 +108,7 @@ containers for any custom functionality you need.
 
 ### Supported Platforms
 
-- **Raspberry Pi 4B** - Perfect for home labs, learning, and prototyping
+- **Raspberry Pi 2B/3B/4B/CM4** - Perfect for home labs, learning, and prototyping
 - **Banana Pi-R3** - Your next home router and gateway
 - **NanoPi R2S** - Compact dual-port router in a tiny package
 - **x86_64** - Run in VMs or on mini PCs for development and testing
