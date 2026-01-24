@@ -231,30 +231,22 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 	return 0;
 }
 
-/* Generate BSS section for secondary AP (multi-SSID) */
-static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char *ifname, struct lyd_node *config)
+/* Helper: Write SSID and security configuration (shared between primary and BSS) */
+static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss)
 {
 	const char *ssid, *hidden, *security_mode, *secret_name, *secret;
-	struct lyd_node *cif, *wifi, *ap, *security, *secret_node;
+	struct lyd_node *wifi, *ap, *security, *secret_node;
+	const char *ifname;
 	char bssid[18];
 
-	/* Find the interface node for this BSS */
-	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
-		const char *name = lydx_get_cattr(cif, "name");
-		if (strcmp(name, ifname) == 0)
-			break;
-	}
-
-	if (!cif) {
-		ERROR("Failed to find interface %s for BSS section", ifname);
-		return SR_ERR_INVAL_ARG;
-	}
-
+	ifname = lydx_get_cattr(cif, "name");
 	wifi = lydx_get_child(cif, "wifi");
 	ap = lydx_get_child(wifi, "access-point");
 
-	fprintf(hostapd, "\n# BSS %s\n", ifname);
-	fprintf(hostapd, "bss=%s\n", ifname);
+	if (is_bss) {
+		fprintf(hostapd, "\n# BSS %s\n", ifname);
+		fprintf(hostapd, "bss=%s\n", ifname);
+	}
 
 	/* Set BSSID if custom MAC is configured */
 	if (!interface_get_phys_addr(cif, bssid))
@@ -269,8 +261,31 @@ static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char
 	if (hidden && !strcmp(hidden, "true"))
 		fprintf(hostapd, "ignore_broadcast_ssid=1\n");
 
+	/*
+	 * Sane defaults for AP operation
+	 */
+
+	/* WMM (Wi-Fi Multimedia) required for 802.11n/ac/ax and proper QoS */
 	fprintf(hostapd, "wmm_enabled=1\n");
-	/* Security configuration */
+
+	/* Allow UTF-8 characters in SSID for international network names */
+	fprintf(hostapd, "utf8_ssid=1\n");
+
+	/* Use short preamble for better throughput on modern clients */
+	fprintf(hostapd, "preamble=1\n");
+
+	/* Disconnect clients with poor link quality to free up airtime */
+	fprintf(hostapd, "disassoc_low_ack=1\n");
+
+	/* Poll inactive clients before disconnecting to detect sleepy devices */
+	fprintf(hostapd, "skip_inactivity_poll=0\n");
+
+	/* Disable opportunistic key caching, reduces roaming attack surface */
+	fprintf(hostapd, "okc=0\n");
+
+	/* Disable PMKSA caching, forces fresh authentication for better security */
+	fprintf(hostapd, "disable_pmksa_caching=1\n");
+
 	security = lydx_get_child(ap, "security");
 	security_mode = lydx_get_cattr(security, "mode");
 
@@ -291,57 +306,160 @@ static int wifi_gen_bss_section(FILE *hostapd, struct lyd_node *cifs, const char
 	}
 
 	if (!strcmp(security_mode, "open")) {
-		fprintf(hostapd, "# Open network\n");
+		/* auth_algs=1: Open System authentication (unencrypted) */
 		fprintf(hostapd, "auth_algs=1\n");
 	} else if (!strcmp(security_mode, "wpa2-personal")) {
-		fprintf(hostapd, "# WPA2-Personal\n");
+		/* wpa=2: WPA2 only (RSN), no legacy WPA1 */
 		fprintf(hostapd, "wpa=2\n");
+		/* WPA-PSK: Pre-shared key authentication */
 		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
+		/* CCMP: AES-based encryption, mandatory for WPA2 */
 		fprintf(hostapd, "wpa_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 	} else if (!strcmp(security_mode, "wpa3-personal")) {
-		fprintf(hostapd, "# WPA3-Personal\n");
+		/* wpa=2: Uses RSN (WPA2) frame format for WPA3 */
 		fprintf(hostapd, "wpa=2\n");
+		/* SAE: Simultaneous Authentication of Equals, resistant to offline dictionary attacks */
 		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "sae_password=%s\n", secret);
+		/* ieee80211w=2: Management Frame Protection required for WPA3 */
 		fprintf(hostapd, "ieee80211w=2\n");
 	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
-		fprintf(hostapd, "# WPA2/WPA3 Mixed\n");
+		/* Transition mode: supports both WPA2 and WPA3 clients */
 		fprintf(hostapd, "wpa=2\n");
+		/* Allow both PSK (WPA2) and SAE (WPA3) authentication */
 		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret) {
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 			fprintf(hostapd, "sae_password=%s\n", secret);
 		}
+		/* ieee80211w=1: MFP capable but optional, for WPA2 client compatibility */
 		fprintf(hostapd, "ieee80211w=1\n");
 	}
+}
 
-	return 0;
+/* Helper: Write radio-specific configuration */
+static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
+{
+	const char *country, *channel, *band;
+
+	country = lydx_get_cattr(radio_node, "country-code");
+	band = lydx_get_cattr(radio_node, "band");
+	channel = lydx_get_cattr(radio_node, "channel");
+
+	if (country)
+		fprintf(hostapd, "country_code=%s\n", country);
+
+	/*
+	 * 802.11d broadcasts country info in beacons, required for clients
+	 * to know which channels/power levels are legal in this region.
+	 */
+	fprintf(hostapd, "ieee80211d=1\n");
+
+	/*
+	 * 802.11h enables DFS (radar detection) and TPC (power control),
+	 * required for 5GHz operation in most regulatory domains.
+	 */
+	fprintf(hostapd, "ieee80211h=1\n");
+
+	fprintf(hostapd, "beacon_int=100\n");
+
+	if (band) {
+		if (!strcmp(band, "2.4GHz")) {
+			/* hw_mode=g: 2.4GHz with 802.11g (OFDM) as baseline */
+			fprintf(hostapd, "hw_mode=g\n");
+
+			/*
+			 * Disable legacy 802.11b rates (1, 2, 5.5, 11 Mbps).
+			 * Slow clients using these rates consume excessive
+			 * airtime, degrading performance for all clients.
+			 * Rates in 0.5 Mbps units: 60=6M, 90=9M, etc.
+			 */
+			fprintf(hostapd, "supported_rates=60 90 120 180 240 360 480 540\n");
+			fprintf(hostapd, "basic_rates=60 120 240\n");
+		} else if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz")) {
+			/* hw_mode=a: 5GHz/6GHz with 802.11a (OFDM) as baseline */
+			fprintf(hostapd, "hw_mode=a\n");
+		}
+
+		if (channel) {
+			if (strcmp(channel, "auto") == 0) {
+				/*
+				 * Default channels when "auto" selected:
+				 * - Ch 6: Center of 2.4GHz, least overlap with 1 and 11
+				 * - Ch 36: First UNII-1 channel, indoor use, no DFS
+				 * - Ch 109: 6GHz PSC channel, preferred for discovery
+				 * TODO: Replace with ACS (channel=acs_survey) when driver support is verified.
+				 */
+				/* set to channel=acs_survey, if succeed to find a survey:
+				   iw dev wlan0 survey dump
+				   good:
+				      Survey data from wlan0
+ 				       frequency:                      2412 MHz
+				       noise:                          -95 dBm
+				       channel active time:            154 ms
+				       channel busy time:              0 ms
+				       channel receive time:           0 ms
+				       channel transmit time:          0 ms
+				   bad:
+				      Survey data from wlan0
+  				       frequency:                      2412 MHz
+				       [in use]
+
+				 */
+				if (!strcmp(band, "2.4GHz")) {
+					fprintf(hostapd, "channel=6\n");
+				} else if (!strcmp(band, "5GHz")) {
+					fprintf(hostapd, "channel=36\n");
+				} else if (!strcmp(band, "6GHz")) {
+					fprintf(hostapd, "channel=109\n");
+				} else {
+					fprintf(hostapd, "channel=0\n");
+				}
+			} else {
+				fprintf(hostapd, "channel=%s\n", channel);
+			}
+		}
+
+		/*
+		 * Enable high-throughput modes per band:
+		 * - 802.11n (HT): Required for speeds >54Mbps, all bands
+		 * - 802.11ac (VHT): 5GHz only, enables 80/160MHz and MU-MIMO
+		 * - 802.11ax (HE): Always enabled, improves dense deployments with OFDMA
+		 */
+		if (!strcmp(band, "2.4GHz")) {
+			fprintf(hostapd, "ieee80211n=1\n");
+		} else if (!strcmp(band, "5GHz")) {
+			fprintf(hostapd, "ieee80211n=1\n");
+			fprintf(hostapd, "ieee80211ac=1\n");
+		}
+		/* 802.11ax (WiFi 6) always enabled for better performance */
+		fprintf(hostapd, "ieee80211ax=1\n");
+		/* BSS coloring reduces interference in dense deployments */
+		fprintf(hostapd, "he_bss_color=1\n");
+		/* Beamforming improves signal quality and range */
+		fprintf(hostapd, "he_su_beamformer=1\n");
+		fprintf(hostapd, "he_su_beamformee=1\n");
+	}
+	fprintf(hostapd, "\n");
 }
 
 /* Generate hostapd config for all APs on a radio (multi-SSID support) */
 static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 				  struct lyd_node *radio_node, struct lyd_node *config)
 {
-	const char *ssid, *hidden, *security_mode, *secret_name, *secret;
 	struct lyd_node *primary_cif, *cif;
-	struct lyd_node *primary_wifi, *primary_ap;
-	struct lyd_node *security, *secret_node;
-	const char *country, *channel, *band;
 	const char *primary_ifname;
 	char hostapd_conf[256];
 	char **ap_list = NULL;
 	FILE *hostapd = NULL;
-	bool ax_enabled;
 	int ap_count = 0;
-	char bssid[18];
-	int i;
-
 	int rc = SR_ERR_OK;
+	int i;
 
 	wifi_find_radio_aps(cifs, radio_name, &ap_list, &ap_count);
 
@@ -367,34 +485,6 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 		goto cleanup;
 	}
 
-	primary_wifi = lydx_get_child(primary_cif, "wifi");
-	primary_ap = lydx_get_child(primary_wifi, "access-point");
-
-	/* Get AP configuration */
-	ssid = lydx_get_cattr(primary_ap, "ssid");
-	hidden = lydx_get_cattr(primary_ap, "hidden");
-	security = lydx_get_child(primary_ap, "security");
-	security_mode = lydx_get_cattr(security, "mode");
-	secret_name = lydx_get_cattr(security, "secret");
-	secret = NULL;
-
-	/* Get radio configuration */
-	country = lydx_get_cattr(radio_node, "country-code");
-	band = lydx_get_cattr(radio_node, "band");
-	channel = lydx_get_cattr(radio_node, "channel");
-	ax_enabled = lydx_get_bool(radio_node, "enable-80211ax");
-
-	/* Get secret from keystore if not open network */
-	if (secret_name && strcmp(security_mode, "open") != 0) {
-		secret_node = lydx_get_xpathf(config,
-			"/keystore/symmetric-keys/symmetric-key[name='%s']/symmetric-key",
-			secret_name);
-		if (secret_node) {
-			secret = lyd_get_value(secret_node);
-
-		}
-	}
-
 	snprintf(hostapd_conf, sizeof(hostapd_conf), HOSTAPD_CONF_NEXT, radio_name);
 
 	hostapd = fopen(hostapd_conf, "w");
@@ -413,122 +503,35 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 
 	fprintf(hostapd, "interface=%s\n", primary_ifname);
 	fprintf(hostapd, "driver=nl80211\n");
-	fprintf(hostapd, "ctrl_interface=/run/hostapd\n");
+	fprintf(hostapd, "ctrl_interface=/run/hostapd\n\n");
 
-	/* Set BSSID if custom MAC is configured */
-	if (!interface_get_phys_addr(primary_cif, bssid))
-		fprintf(hostapd, "bssid=%s\n", bssid);
+	/* Primary AP SSID and security configuration */
+	wifi_gen_ssid_config(hostapd, primary_cif, config, false);
 	fprintf(hostapd, "\n");
 
-	fprintf(hostapd, "ssid=%s\n", ssid);
-	if (hidden && !strcmp(hidden, "true"))
-		fprintf(hostapd, "ignore_broadcast_ssid=1\n");
-	fprintf(hostapd, "\n");
-
-	if (country)
-		fprintf(hostapd, "country_code=%s\n", country);
-
-	/* Enable 802.11d (regulatory domain) and 802.11h (spectrum management/DFS) */
-	fprintf(hostapd, "ieee80211d=1\n");
-	fprintf(hostapd, "ieee80211h=1\n");
-	fprintf(hostapd, "wmm_enabled=1\n");
-
-	/* Band and channel configuration */
-	if (band) {
-		/* Set hardware mode based on band */
-		if (!strcmp(band, "2.4GHz")) {
-			fprintf(hostapd, "hw_mode=g\n");
-
-			/* Disable 802.11b rates, ancient devices. This will improve range. */
-			fprintf(hostapd, "supported_rates=60 90 120 180 240 360 480 540\n");
-			fprintf(hostapd, "basic_rates=60 120 240\n");
-		} else if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz")) {
-			fprintf(hostapd, "hw_mode=a\n");
-		}
-
-		/* Set channel */
-		if (channel) {
-			if (strcmp(channel, "auto") == 0) {
-				/*
-				  Use default channels: 6 for 2.4GHz, 36 for 5GHz, 109 for 6GHz, this
-				  is a temporary hack, replace with logic for finding best free channel.
-				 */
-				if (!strcmp(band, "2.4GHz")) {
-					fprintf(hostapd, "channel=6\n");
-				} else if (!strcmp(band, "5GHz")) {
-					fprintf(hostapd, "channel=36\n");
-				} else if (!strcmp(band, "6GHz")) {
-					fprintf(hostapd, "channel=109\n");
-				} else {
-					/* Unknown band - use ACS */
-					fprintf(hostapd, "channel=0\n");
-				}
-			} else {
-				fprintf(hostapd, "channel=%s\n", channel);
-			}
-		}
-	}
-
-
-	if (band) {
-		if (!strcmp(band, "2.4GHz")) {
-			/* 2.4GHz: Enable 802.11n (HT), optionally 802.11ax */
-			fprintf(hostapd, "ieee80211n=1\n");
-			if (ax_enabled) {
-				fprintf(hostapd, "ieee80211ax=1\n");
-			}
-		} else if (!strcmp(band, "5GHz")) {
-			/* 5GHz: Enable 802.11n and 802.11ac, optionally 802.11ax */
-			fprintf(hostapd, "ieee80211n=1\n");
-			fprintf(hostapd, "ieee80211ac=1\n");
-			if (ax_enabled) {
-				fprintf(hostapd, "ieee80211ax=1\n");
-			}
-		} else if (!strcmp(band, "6GHz")) {
-			/* 6GHz: Enable 802.11ax (required for 6GHz) */
-			fprintf(hostapd, "ieee80211n=1\n");
-			fprintf(hostapd, "ieee80211ac=1\n");
-			fprintf(hostapd, "ieee80211ax=1\n");
-		}
-	}
-	fprintf(hostapd, "\n");
-
-	/* Security configuration */
-	if (!strcmp(security_mode, "open")) {
-		fprintf(hostapd, "# Open network (no encryption)\n");
-		fprintf(hostapd, "auth_algs=1\n");
-	} else if (!strcmp(security_mode, "wpa2-personal")) {
-		fprintf(hostapd, "# WPA2-Personal\n");
-		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
-		fprintf(hostapd, "wpa_pairwise=CCMP\n");
-		fprintf(hostapd, "wpa_passphrase=%s\n", secret);
-	} else if (!strcmp(security_mode, "wpa3-personal")) {
-		fprintf(hostapd, "# WPA3-Personal\n");
-		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
-		fprintf(hostapd, "rsn_pairwise=CCMP\n");
-		fprintf(hostapd, "sae_password=%s\n", secret);
-		fprintf(hostapd, "ieee80211w=2\n");
-	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
-		fprintf(hostapd, "# WPA2/WPA3 Mixed Mode\n");
-		fprintf(hostapd, "wpa=2\n");
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
-		fprintf(hostapd, "rsn_pairwise=CCMP\n");
-		fprintf(hostapd, "wpa_passphrase=%s\n", secret);
-		fprintf(hostapd, "sae_password=%s\n", secret);
-		fprintf(hostapd, "ieee80211w=1\n");
-	}
+	/* Radio-specific configuration */
+	wifi_gen_radio_config(hostapd, radio_node);
 
 	/* Add BSS sections for secondary APs (multi-SSID) */
 	for (i = 1; i < ap_count; i++) {
-		DEBUG("Adding BSS section for secondary AP %s", ap_list[i]);
-		rc = wifi_gen_bss_section(hostapd, cifs, ap_list[i], config);
-		if (rc != SR_ERR_OK) {
-			ERROR("Failed to generate BSS section for %s", ap_list[i]);
+		struct lyd_node *bss_cif = NULL;
+
+		LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+			if (!strcmp(lydx_get_cattr(cif, "name"), ap_list[i])) {
+				bss_cif = cif;
+				break;
+			}
+		}
+
+		if (!bss_cif) {
+			ERROR("Failed to find interface %s for BSS section", ap_list[i]);
 			fclose(hostapd);
+			rc = SR_ERR_INVAL_ARG;
 			goto cleanup;
 		}
+
+		DEBUG("Adding BSS section for secondary AP %s", ap_list[i]);
+		wifi_gen_ssid_config(hostapd, bss_cif, config, true);
 	}
 
 	fclose(hostapd);
