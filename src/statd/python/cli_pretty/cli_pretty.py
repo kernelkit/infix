@@ -345,8 +345,11 @@ class SimpleTable:
         # Add separator "  " only between columns, not after the last one
         separator = "" if is_last else "  "
 
-        # Don't pad the last column to avoid trailing spaces
+        # Don't add trailing spaces to the last column
         if is_last:
+            if column.align == 'right':
+                padding = width - visible_len
+                return ' ' * max(0, padding) + value_str
             return value_str
         elif column.align == 'right':
             padding = width - visible_len
@@ -1230,22 +1233,26 @@ class Iface:
         print(row)
 
     def pr_wifi_ssids(self):
-        print("\nAVAILABLE NETWORKS:")
+        width = 70
+        Decore.title("Available Networks", width)
         ssid_table = SimpleTable([
-            Column('SSID'),
+            Column('SSID', flexible=True),
+            Column('BSSID'),
             Column('SECURITY'),
             Column('SIGNAL'),
-            Column('CHANNEL')
-        ])
+            Column('CHANNEL', 'right')
+        ], min_width=width)
 
         station = self.wifi.get("station", {})
         results = station.get("scan-results", {})
         for result in results:
+            ssid = result.get('ssid', 'Hidden')
+            bssid = result.get("bssid", "unknown")
             encstr = ", ".join(result.get("encryption", ["Unknown"]))
             status = rssi_to_status(result.get("rssi", -100))
             channel = result.get("channel", "?")
 
-            ssid_table.row(result.get('ssid', 'Hidden'), encstr, status, channel)
+            ssid_table.row(ssid, bssid, encstr, status, channel)
         ssid_table.print()
 
     def pr_wifi_stations(self):
