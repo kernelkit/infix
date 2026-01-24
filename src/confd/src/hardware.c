@@ -261,9 +261,31 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	if (hidden && !strcmp(hidden, "true"))
 		fprintf(hostapd, "ignore_broadcast_ssid=1\n");
 
+	/*
+	 * Sane defaults for AP operation
+	 */
+
+	/* WMM (Wi-Fi Multimedia) required for 802.11n/ac/ax and proper QoS */
 	fprintf(hostapd, "wmm_enabled=1\n");
 
-	/* Security configuration */
+	/* Allow UTF-8 characters in SSID for international network names */
+	fprintf(hostapd, "utf8_ssid=1\n");
+
+	/* Use short preamble for better throughput on modern clients */
+	fprintf(hostapd, "preamble=1\n");
+
+	/* Disconnect clients with poor link quality to free up airtime */
+	fprintf(hostapd, "disassoc_low_ack=1\n");
+
+	/* Poll inactive clients before disconnecting to detect sleepy devices */
+	fprintf(hostapd, "skip_inactivity_poll=0\n");
+
+	/* Disable opportunistic key caching, reduces roaming attack surface */
+	fprintf(hostapd, "okc=0\n");
+
+	/* Disable PMKSA caching, forces fresh authentication for better security */
+	fprintf(hostapd, "disable_pmksa_caching=1\n");
+
 	security = lydx_get_child(ap, "security");
 	security_mode = lydx_get_cattr(security, "mode");
 
@@ -284,32 +306,38 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	}
 
 	if (!strcmp(security_mode, "open")) {
-		fprintf(hostapd, "# Open network\n");
+		/* auth_algs=1: Open System authentication (unencrypted) */
 		fprintf(hostapd, "auth_algs=1\n");
 	} else if (!strcmp(security_mode, "wpa2-personal")) {
-		fprintf(hostapd, "# WPA2-Personal\n");
+		/* wpa=2: WPA2 only (RSN), no legacy WPA1 */
 		fprintf(hostapd, "wpa=2\n");
+		/* WPA-PSK: Pre-shared key authentication */
 		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
+		/* CCMP: AES-based encryption, mandatory for WPA2 */
 		fprintf(hostapd, "wpa_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 	} else if (!strcmp(security_mode, "wpa3-personal")) {
-		fprintf(hostapd, "# WPA3-Personal\n");
+		/* wpa=2: Uses RSN (WPA2) frame format for WPA3 */
 		fprintf(hostapd, "wpa=2\n");
+		/* SAE: Simultaneous Authentication of Equals, resistant to offline dictionary attacks */
 		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "sae_password=%s\n", secret);
+		/* ieee80211w=2: Management Frame Protection required for WPA3 */
 		fprintf(hostapd, "ieee80211w=2\n");
 	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
-		fprintf(hostapd, "# WPA2/WPA3 Mixed\n");
+		/* Transition mode: supports both WPA2 and WPA3 clients */
 		fprintf(hostapd, "wpa=2\n");
+		/* Allow both PSK (WPA2) and SAE (WPA3) authentication */
 		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret) {
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 			fprintf(hostapd, "sae_password=%s\n", secret);
 		}
+		/* ieee80211w=1: MFP capable but optional, for WPA2 client compatibility */
 		fprintf(hostapd, "ieee80211w=1\n");
 	}
 }
@@ -328,29 +356,62 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 	if (country)
 		fprintf(hostapd, "country_code=%s\n", country);
 
-	/* Enable 802.11d (regulatory domain) and 802.11h (spectrum management/DFS) */
+	/*
+	 * 802.11d broadcasts country info in beacons, required for clients
+	 * to know which channels/power levels are legal in this region.
+	 */
 	fprintf(hostapd, "ieee80211d=1\n");
+
+	/*
+	 * 802.11h enables DFS (radar detection) and TPC (power control),
+	 * required for 5GHz operation in most regulatory domains.
+	 */
 	fprintf(hostapd, "ieee80211h=1\n");
 
-	/* Band and channel configuration */
+	fprintf(hostapd, "beacon_int=100\n");
+
 	if (band) {
-		/* Set hardware mode based on band */
 		if (!strcmp(band, "2.4GHz")) {
+			/* hw_mode=g: 2.4GHz with 802.11g (OFDM) as baseline */
 			fprintf(hostapd, "hw_mode=g\n");
 
-			/* Disable 802.11b rates, ancient devices. This will improve range. */
+			/*
+			 * Disable legacy 802.11b rates (1, 2, 5.5, 11 Mbps).
+			 * Slow clients using these rates consume excessive
+			 * airtime, degrading performance for all clients.
+			 * Rates in 0.5 Mbps units: 60=6M, 90=9M, etc.
+			 */
 			fprintf(hostapd, "supported_rates=60 90 120 180 240 360 480 540\n");
 			fprintf(hostapd, "basic_rates=60 120 240\n");
 		} else if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz")) {
+			/* hw_mode=a: 5GHz/6GHz with 802.11a (OFDM) as baseline */
 			fprintf(hostapd, "hw_mode=a\n");
 		}
 
-		/* Set channel */
 		if (channel) {
 			if (strcmp(channel, "auto") == 0) {
 				/*
-				  Use default channels: 6 for 2.4GHz, 36 for 5GHz, 109 for 6GHz, this
-				  is a temporary hack, replace with logic for finding best free channel.
+				 * Default channels when "auto" selected:
+				 * - Ch 6: Center of 2.4GHz, least overlap with 1 and 11
+				 * - Ch 36: First UNII-1 channel, indoor use, no DFS
+				 * - Ch 109: 6GHz PSC channel, preferred for discovery
+				 * TODO: Replace with ACS (channel=acs_survey) when driver support is verified.
+				 */
+				/* set to channel=acs_survey, if succeed to find a survey:
+				   iw dev wlan0 survey dump
+				   good:
+				      Survey data from wlan0
+ 				       frequency:                      2412 MHz
+				       noise:                          -95 dBm
+				       channel active time:            154 ms
+				       channel busy time:              0 ms
+				       channel receive time:           0 ms
+				       channel transmit time:          0 ms
+				   bad:
+				      Survey data from wlan0
+  				       frequency:                      2412 MHz
+				       [in use]
+
 				 */
 				if (!strcmp(band, "2.4GHz")) {
 					fprintf(hostapd, "channel=6\n");
@@ -359,7 +420,6 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 				} else if (!strcmp(band, "6GHz")) {
 					fprintf(hostapd, "channel=109\n");
 				} else {
-					/* Unknown band - use ACS */
 					fprintf(hostapd, "channel=0\n");
 				}
 			} else {
@@ -367,23 +427,29 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			}
 		}
 
-		/* 802.11n/ac/ax configuration */
+		/*
+		 * Enable high-throughput modes per band:
+		 * - 802.11n (HT): Required for speeds >54Mbps, all bands
+		 * - 802.11ac (VHT): 5GHz only, enables 80/160MHz and MU-MIMO
+		 * - 802.11ax (HE): Improves dense deployments with OFDMA
+		 */
 		if (!strcmp(band, "2.4GHz")) {
-			/* 2.4GHz: Enable 802.11n (HT), optionally 802.11ax */
 			fprintf(hostapd, "ieee80211n=1\n");
-			if (ax_enabled)
-				fprintf(hostapd, "ieee80211ax=1\n");
 		} else if (!strcmp(band, "5GHz")) {
-			/* 5GHz: Enable 802.11n and 802.11ac, optionally 802.11ax */
 			fprintf(hostapd, "ieee80211n=1\n");
 			fprintf(hostapd, "ieee80211ac=1\n");
-			if (ax_enabled)
-				fprintf(hostapd, "ieee80211ax=1\n");
 		} else if (!strcmp(band, "6GHz")) {
-			/* 6GHz: Enable 802.11ax (required for 6GHz) */
-			fprintf(hostapd, "ieee80211n=1\n");
-			fprintf(hostapd, "ieee80211ac=1\n");
+			/* 6GHz mandates 802.11ax, no legacy modes allowed */
+			ax_enabled = true;
+		}
+		if (ax_enabled) {
 			fprintf(hostapd, "ieee80211ax=1\n");
+			/* Enable BSS coloring for congestion mitigation */
+			fprintf(hostapd, "he_bss_color=1\n");
+			/* AP sends focused beams to clients */
+			fprintf(hostapd, "he_su_beamformer=1\n");
+			/* AP receives beamformed signals from clients*/
+			fprintf(hostapd, "he_su_beamformee=1\n");
 		}
 	}
 	fprintf(hostapd, "\n");
