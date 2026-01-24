@@ -21,10 +21,9 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.7 (LTS)
 Noteworthy changes and additions in this release are marked below in bold text.
 
-- Upgrade **Linux kernel to 6.18.6** (LTS)
+- Upgrade **Linux kernel to 6.18.7** (LTS)
 - Upgrade Buildroot to 2025.02.10 (LTS)
 - Upgrade libyang to 4.2.2
 - Upgrade sysrepo to 4.2.10
@@ -59,9 +58,11 @@ Noteworthy changes and additions in this release are marked below in bold text.
   details, see the updated system configuration documentation, as well as a
   new dedicated NACM configuration guide
 - New `show nacm` admin-exec command to inspect access control rules
+- CLI now supports Ctrl-@ and Ctrl-w/Meta-w to mark and copy test regions
 - CLI now uses `copy` and `rpc` tools instead of deprecated `sysrepocfg`.  The
   latter now also require the use of `sudo` for `admin` level users
 - Enhanced `copy` command with XPath filtering support
+- Kernel now announces details of new USB devices
 
 ### Fixes
 
