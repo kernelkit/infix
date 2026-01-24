@@ -84,45 +84,26 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> leave
 
 **Key radio parameters:**
 - `country-code`: Two-letter ISO 3166-1 code - determines allowed channels and maximum power. Examples: US, DE, GB, SE, FR, JP. **Must match your physical location for legal compliance.**
-- `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Band selection automatically enables appropriate WiFi standards (2.4GHz: 802.11n, 5GHz: 802.11n/ac, 6GHz: 802.11n/ac/ax)
+- `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Automatically enables appropriate WiFi standards (2.4GHz: 802.11n/ax, 5GHz: 802.11n/ac/ax, 6GHz: 802.11ax)
 - `channel`: Channel number (1-196) or "auto" (required for AP mode). When set to "auto", defaults to channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 109 for 6GHz
-- `enable-80211ax`: Boolean (default: false). Opt-in to enable 802.11ax (WiFi 6) on 2.4GHz and 5GHz bands. The 6GHz band always uses 802.11ax regardless of this setting
 
 > [!NOTE]
 > TX power and channel width are automatically determined by the driver based on regulatory constraints, PHY mode, and hardware capabilities.
 
 ### WiFi 6 (802.11ax) Support
 
-WiFi 6 (802.11ax) provides improved performance in congested environments through
-features like OFDMA, Target Wake Time, and BSS Coloring. By default, WiFi 6 is
-only enabled on the 6GHz band (WiFi 6E requirement).
+WiFi 6 (802.11ax) is always enabled in AP mode on all bands, providing improved
+performance through features like OFDMA, BSS Coloring, and beamforming.
 
-To enable WiFi 6 on 2.4GHz or 5GHz bands:
-
-```
-admin@example:/> configure
-admin@example:/config/> edit hardware component radio0 wifi-radio
-admin@example:/config/hardware/component/radio0/wifi-radio/> set country-code DE
-admin@example:/config/hardware/component/radio0/wifi-radio/> set band 5GHz
-admin@example:/config/hardware/component/radio0/wifi-radio/> set channel 36
-admin@example:/config/hardware/component/radio0/wifi-radio/> set enable-80211ax true
-admin@example:/config/hardware/component/radio0/wifi-radio/> leave
-```
-
-**WiFi 6 Benefits:**
+**WiFi 6 Features (always enabled):**
 - **OFDMA**: Better multi-user efficiency in dense environments
-- **Target Wake Time**: Improved battery life for client devices
-- **1024-QAM**: Higher throughput with strong signal conditions
 - **BSS Coloring**: Reduced interference from neighboring networks
+- **Beamforming**: Improved signal quality and range
 
 **Requirements:**
 - Hardware must support 802.11ax
 - Client devices must support WiFi 6 for full benefits
 - Older WiFi 5/4 clients can still connect but won't use WiFi 6 features
-
-> [!NOTE]
-> The 6GHz band always uses WiFi 6 (802.11ax) regardless of the `enable-80211ax`
-> setting, as WiFi 6E requires 802.11ax support.
 
 ## Discovering Available Networks (Scanning)
 

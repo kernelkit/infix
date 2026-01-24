@@ -346,12 +346,10 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 {
 	const char *country, *channel, *band;
-	bool ax_enabled;
 
 	country = lydx_get_cattr(radio_node, "country-code");
 	band = lydx_get_cattr(radio_node, "band");
 	channel = lydx_get_cattr(radio_node, "channel");
-	ax_enabled = lydx_get_bool(radio_node, "enable-80211ax");
 
 	if (country)
 		fprintf(hostapd, "country_code=%s\n", country);
@@ -431,26 +429,21 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 		 * Enable high-throughput modes per band:
 		 * - 802.11n (HT): Required for speeds >54Mbps, all bands
 		 * - 802.11ac (VHT): 5GHz only, enables 80/160MHz and MU-MIMO
-		 * - 802.11ax (HE): Improves dense deployments with OFDMA
+		 * - 802.11ax (HE): Always enabled, improves dense deployments with OFDMA
 		 */
 		if (!strcmp(band, "2.4GHz")) {
 			fprintf(hostapd, "ieee80211n=1\n");
 		} else if (!strcmp(band, "5GHz")) {
 			fprintf(hostapd, "ieee80211n=1\n");
 			fprintf(hostapd, "ieee80211ac=1\n");
-		} else if (!strcmp(band, "6GHz")) {
-			/* 6GHz mandates 802.11ax, no legacy modes allowed */
-			ax_enabled = true;
 		}
-		if (ax_enabled) {
-			fprintf(hostapd, "ieee80211ax=1\n");
-			/* Enable BSS coloring for congestion mitigation */
-			fprintf(hostapd, "he_bss_color=1\n");
-			/* AP sends focused beams to clients */
-			fprintf(hostapd, "he_su_beamformer=1\n");
-			/* AP receives beamformed signals from clients*/
-			fprintf(hostapd, "he_su_beamformee=1\n");
-		}
+		/* 802.11ax (WiFi 6) always enabled for better performance */
+		fprintf(hostapd, "ieee80211ax=1\n");
+		/* BSS coloring reduces interference in dense deployments */
+		fprintf(hostapd, "he_bss_color=1\n");
+		/* Beamforming improves signal quality and range */
+		fprintf(hostapd, "he_su_beamformer=1\n");
+		fprintf(hostapd, "he_su_beamformee=1\n");
 	}
 	fprintf(hostapd, "\n");
 }

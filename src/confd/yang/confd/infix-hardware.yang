@@ -262,27 +262,6 @@ module infix-hardware {
            congestion in most environments.";
       }
 
-      leaf enable-80211ax {
-        type boolean;
-        description
-          "Enable 802.11ax (WiFi 6) on 2.4GHz and 5GHz bands.
-
-           By default, 802.11ax is enabled only on 6GHz (WiFi 6E).
-           Set to 'true' to enable 802.11ax on 2.4GHz and 5GHz bands.
-
-           802.11ax provides:
-           - OFDMA (better multi-user efficiency)
-           - Target Wake Time (better battery life)
-           - 1024-QAM (higher throughput)
-           - BSS Coloring (reduced interference)
-
-           Requires:
-           - Hardware support for 802.11ax
-           - Compatible clients for full benefits
-
-           Note: 6GHz band always uses 802.11ax regardless of this setting.";
-      }
-
       /*
        * Operational state
        */
