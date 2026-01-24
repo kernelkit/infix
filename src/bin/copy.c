@@ -580,7 +580,7 @@ static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path
 static int copy(const char *src, const char *dst)
 {
 	char *srcpath = NULL, *dstpath = NULL;
-	const struct infix_ds *srcds, *dstds;
+	const struct infix_ds *srcds = NULL, *dstds = NULL;
 	bool rmsrc = false;
 	mode_t oldmask;
 	int err = 1;
