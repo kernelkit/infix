@@ -20,6 +20,7 @@ cleanup()
 {
     rm -f "$LED_FILE"
     rm -f "$PID_FILE"
+    kill %% 2>/dev/null
     exit 0
 }
 
@@ -31,11 +32,13 @@ remaining_time=$((1800 - $(awk '{print int($1)}' /proc/uptime)))
 
 while [ "$remaining_time" -gt 0 ]; do
     check_wan
-    sleep 1
+    sleep 1 &
+    wait $!
     remaining_time=$((remaining_time - 1))
 done
 
 while :; do
     check_wan
-    sleep 5
+    sleep 5 &
+    wait $!
 done
