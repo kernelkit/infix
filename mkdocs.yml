@@ -33,7 +33,9 @@ nav:
       - Quality of Service: qos.md
       - RMON Counters: eth-counters.md
       - Tunneling (L2/L3): tunnels.md
-      - VPN Tunnels: vpn.md
+      - VPN Tunnels:
+          - Overview: vpn.md
+          - WireGuard: vpn-wireguard.md
       - Wireless LAN (WiFi): wifi.md
   - Services:
       - Device Discovery: discovery.md
