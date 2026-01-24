@@ -70,6 +70,10 @@ def wifi_station(ifname):
             station_data['ssid'] = link['ssid']
         if link.get('rssi') is not None:
             station_data['rssi'] = link['rssi']
+        if link.get('rx-speed') is not None:
+            station_data['rx-speed'] = link['rx-speed']
+        if link.get('tx-speed') is not None:
+            station_data['tx-speed'] = link['tx-speed']
 
     # Get scan results from wpa_supplicant (better scan support)
     try:

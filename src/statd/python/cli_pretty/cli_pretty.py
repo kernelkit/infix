@@ -1295,7 +1295,7 @@ class Iface:
             rx_bytes = station.get("rx-bytes", 0)
             tx_bytes = station.get("tx-bytes", 0)
 
-            # Speed in 100 kbit/s units, convert to Mbps for display
+            # Speed in 100 kbps units, convert to Mbps for display
             rx_speed = station.get("rx-speed", 0)
             tx_speed = station.get("tx-speed", 0)
             rx_speed_str = f"{rx_speed / 10:.1f}" if rx_speed else "-"
@@ -1640,6 +1640,12 @@ class Iface:
                 if rssi is not None:
                     signal_status = rssi_to_status(rssi)
                     print(f"{'signal':<{20}}: {rssi} dBm ({signal_status})")
+                rx_speed = station.get('rx-speed')
+                tx_speed = station.get('tx-speed')
+                if rx_speed is not None:
+                    print(f"{'rx bitrate':<{20}}: {rx_speed / 10:.1f} Mbps")
+                if tx_speed is not None:
+                    print(f"{'tx bitrate':<{20}}: {tx_speed / 10:.1f} Mbps")
                 if "scan-results" in station:
                     self.pr_wifi_ssids()
 
