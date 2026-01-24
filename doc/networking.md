@@ -112,37 +112,37 @@ for remote debugging, e.g., using the operational datastore.
 
 #### Fixed custom MAC
 
-```
-admin@example:/config/> edit interface veth0a
-admin@example:/config/interface/veth0a/> set custom-phys-address static 00:ab:00:11:22:33
+Use a fixed custom MAC address when the interface must present a
+specific, deterministic identity on the network.  This option bypasses
+any chassis-derived logic and applies the configured address verbatim.
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/> <b>set custom-phys-address static 00:ab:00:11:22:33</b>
 
 => 00:ab:00:11:22:33
-```
+</code></pre>
 
 #### Chassis MAC
 
 Chassis MAC, sometimes also referred to as base MAC.  In these two
 examples it is `00:53:00:c0:ff:ee`.
 
-```
-admin@example:/config/> edit interface veth0a
-admin@example:/config/interface/veth0a/> set custom-phys-address chassis
+<pre class="cli"><code>admin@example:/config/> <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/> <b>set custom-phys-address chassis</b>
 
 => 00:53:00:c0:ff:ee
-```
+</code></pre>
 
 #### Chassis MAC, with offset
 
 When constructing a derived address it is recommended to set the locally
 administered bit.  Same chassis MAC as before.
 
-```
-admin@example:/config/> edit interface veth0a
-admin@example:/config/interface/veth0a/> set custom-phys-address chassis offset 02:00:00:00:00:02
+<pre class="cli"><code>admin@example:/config/> <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/> <b>set custom-phys-address chassis offset 02:00:00:00:00:02</b>
 
 => 02:53:00:c0:ff:f0
-```
-
+</code></pre>
 
 ### Bridging
 
@@ -158,14 +158,13 @@ specific factory config sets it up this way.  To enable switching, with
 offloading if you have a switch chipset, between ports you create a
 bridge and then add ports to that bridge.  Like this:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface br0
-admin@example:/config/interface/br0/> up
-admin@example:/config/> set interface eth0 bridge-port bridge br0
-admin@example:/config/> set interface eth1 bridge-port bridge br0
-admin@example:/config/> leave
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface br0</b>
+admin@example:/config/interface/br0/> <b>up</b>
+admin@example:/config/> <b>set interface eth0 bridge-port bridge br0</b>
+admin@example:/config/> <b>set interface eth1 bridge-port bridge br0</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
 
 Here we add two ports to bridge `br0`: `eth0` and `eth1`.
 
@@ -195,17 +194,16 @@ or untagged member.  Use the port default VID (PVID) setting to control
 VLAN association for traffic ingressing a port untagged (default PVID:
 1).
 
-```
-admin@example:/config/> edit interface br0
-admin@example:/config/interface/br0/> up
-admin@example:/config/> set interface eth0 bridge-port bridge br0
-admin@example:/config/> set interface eth0 bridge-port pvid 10
-admin@example:/config/> set interface eth1 bridge-port bridge br0
-admin@example:/config/> set interface eth1 bridge-port pvid 20
-admin@example:/config/> edit interface br0
-admin@example:/config/interface/br0/> set bridge vlans vlan 10 untagged eth0
-admin@example:/config/interface/br0/> set bridge vlans vlan 20 untagged eth1
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit interface br0</b>
+admin@example:/config/interface/br0/> <b>up</b>
+admin@example:/config/> <b>set interface eth0 bridge-port bridge br0</b>
+admin@example:/config/> <b>set interface eth0 bridge-port pvid 10</b>
+admin@example:/config/> <b>set interface eth1 bridge-port bridge br0</b>
+admin@example:/config/> <b>set interface eth1 bridge-port pvid 20</b>
+admin@example:/config/> <b>edit interface br0</b>
+admin@example:/config/interface/br0/> <b>set bridge vlans vlan 10 untagged eth0</b>
+admin@example:/config/interface/br0/> <b>set bridge vlans vlan 20 untagged eth1</b>
+</code></pre>
 
 This sets `eth0` as an untagged member of VLAN 10 and `eth1` as an
 untagged member of VLAN 20.  Switching between these ports is thus
@@ -216,10 +214,9 @@ prohibited.
 To terminate a VLAN in the switch itself, either for switch management
 or for routing, the bridge must become a (tagged) member of the VLAN.
 
-```
-admin@example:/config/interface/br0/> set bridge vlans vlan 10 tagged br0
-admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
-```
+<pre class="cli"><code>admin@example:/config/interface/br0/> <b>set bridge vlans vlan 10 tagged br0</b>
+admin@example:/config/interface/br0/> <b>set bridge vlans vlan 20 tagged br0</b>
+</code></pre>
 
 To route or to manage via a VLAN, a VLAN interface needs to be created
 on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces)
@@ -255,21 +252,19 @@ settings in this operating mode.
 In the following example we have a regular 8-port bridge without VLAN
 filtering.  We focus on the multicast specific settings:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface br0
-admin@example:/config/interface/br0/> set bridge multicast snooping
-admin@example:/config/interface/br0/> set ipv4 address 192.168.2.1 prefix-length 24
-admin@example:/config/interface/br0/> leave
-admin@example:/> copy running-config startup-config
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface br0</b>
+admin@example:/config/interface/br0/> <b>set bridge multicast snooping</b>
+admin@example:/config/interface/br0/> <b>set ipv4 address 192.168.2.1 prefix-length 24</b>
+admin@example:/config/interface/br0/> <b>leave</b>
+admin@example:/> <b>copy running-config startup-config</b>
+</code></pre>
 
 Here we enable snooping and set a static IPv4 address so that the switch
 can take part in IGMP querier elections.  (MLD querier election
 currently not supported.)  We can inspect the current state:
 
-```
-admin@example:/> show ip multicast
+<pre class="cli"><code>admin@example:/> <b>show ip multicast</b>
 Multicast Overview
 Query Interval (default): 125 sec
 Router Timeout          : 255
@@ -277,13 +272,13 @@ Fast Leave Ports        :
 Router Ports            :
 Flood Ports             : e0, e1, e2, e3, e4, e5, e6, e7
 
-Interface       VID  Querier                     State  Interval  Timeout  Ver
+<span class="header">Interface       VID  Querier                     State  Interval  Timeout  Ver</span>
 br0                  192.168.2.1                    Up       125     None    3
 
-Bridge          VID  Multicast Group       Ports
+<span class="header">Bridge          VID  Multicast Group       Ports                              </span>
 br0                  224.1.1.1             e3, e2
 br0                  ff02::6a              br0
-```
+</code></pre>
 
 This is a rather small LAN, so our bridge has already become the elected
 IGMP querier.  We see it is ours because the timeout is `None`, and we
@@ -296,19 +291,17 @@ VLAN filtering enabled.  We skip the boring parts about how to move
 ports e4-e7 to `br1` and assign them to VLANs, and again, focus on the
 multicast bits only:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface br1
-admin@example:/config/interface/br1/> set bridge vlans vlan 1 multicast snooping
-admin@example:/config/interface/br1/> set bridge vlans vlan 2 multicast snooping
-admin@example:/config/interface/br1/> leave
-admin@example:/> copy running-config startup-config
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface br1</b>
+admin@example:/config/interface/br1/> <b>set bridge vlans vlan 1 multicast snooping</b>
+admin@example:/config/interface/br1/> <b>set bridge vlans vlan 2 multicast snooping</b>
+admin@example:/config/interface/br1/> <b>leave</b>
+admin@example:/> <b>copy running-config startup-config</b>
+</code></pre>
 
 Let us see what we get:
 
-```
-admin@example:/> show ip multicast
+<pre class="cli"><code>admin@example:/> <b>show ip multicast</b>
 Multicast Overview
 Query Interval (default): 125 sec
 Router Timeout          : 255
@@ -316,12 +309,12 @@ Fast Leave Ports        : e5
 Router Ports            : e1, e2, e5, e6, e7
 Flood Ports             : e1, e2, e3, e4, e5, e6, e7, e8
 
-Interface       VID  Querier                     State  Interval  Timeout  Ver
+<span class="header">Interface       VID  Querier                     State  Interval  Timeout  Ver</span>
 br0                  192.168.2.1                    Up       125     None    3
 br1               1  0.0.0.0                        Up       125     None    3
 br1               2  0.0.0.0                        Up       125     None    3
 
-Bridge          VID  Multicast Group       Ports
+<span class="header">Bridge          VID  Multicast Group       Ports                              </span>
 br0                  224.1.1.1             e2
 br0                  ff02::fb              br0
 br0                  ff02::6a              br0
@@ -330,7 +323,7 @@ br1               1  224.1.1.1             e5
 br1               2  224.1.1.1             e7
 br1               1  ff02::fb              br1
 br1               1  ff02::1:ff00:0        br1
-```
+</code></pre>
 
 In this setup we have a lot more going on.  Multiple multicast router
 ports have been detected, and behind the scenes someone has also added
@@ -412,23 +405,21 @@ sometimes useful to let the bridge forward such packets, this can be
 done by specifying protocol names or the last address *nibble* as
 decimal value `0..15`:
 
-```
-admin@example:/config/> edit interface br0 bridge
-admin@example:/config/interface/br0/bridge/> set ieee-group-forward     # Tap the ? ley for alternatives
+<pre class="cli"><code>admin@example:/config/> <b>edit interface br0 bridge</b>
+admin@example:/config/interface/br0/bridge/> <b>set ieee-group-forward</b>     # Tap the ? key for alternatives
   [0..15]  List of IEEE link-local protocols to forward, e.g., STP, LLDP
   dot1x    802.1X Port-Based Network Access Control.
   lacp     802.3 Slow Protocols, e.g., LACP.
   lldp     802.1AB Link Layer Discovery Protocol (LLDP).
   stp      Spanning Tree (STP/RSPT/MSTP).
-admin@example:/config/interface/br0/bridge/> set ieee-group-forward
-```
+admin@example:/config/interface/br0/bridge/> <b>set ieee-group-forward</b>
+</code></pre>
 
 The following example configures bridge *br0* to forward LLDP packets.
 
-```
-admin@example:/config/interface/br0/bridge/> set ieee-group-forward lldp
+<pre class="cli"><code>admin@example:/config/interface/br0/bridge/> <b>set ieee-group-forward lldp</b>
 admin@example:/config/interface/br0/bridge/>
-```
+</code></pre>
 
 
 ### Link Aggregation
@@ -462,15 +453,14 @@ for communication between two specific devices.
 
 Creating a link aggregate interface and adding member ports:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface lag0
-admin@example:/config/interface/lag0/> set lag mode static
-admin@example:/config/interface/lag0/> end
-admin@example:/config/> set interface eth7 lag-port lag lag0
-admin@example:/config/> set interface eth8 lag-port lag lag0
-admin@example:/config/> leave
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface lag0</b>
+admin@example:/config/interface/lag0/> <b>set lag mode static</b>
+admin@example:/config/interface/lag0/> <b>end</b>
+admin@example:/config/> <b>set interface eth7 lag-port lag lag0</b>
+admin@example:/config/> <b>set interface eth8 lag-port lag lag0</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
 
 A static lag responds only to link (carrier) changes of member ports.
 E.g., in this example egressing traffic is continuously distributed over
@@ -483,14 +473,13 @@ traffic to be steered to the sole remaining link.
 LACP mode provides dynamic negotiation of the link aggregate.  Key
 settings include:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface lag0
-admin@example:/config/interface/lag0/> set lag mode lacp
-admin@example:/config/interface/lag0/> set lag lacp mode passive
-admin@example:/config/interface/lag0/> set lag lacp rate fast
-admin@example:/config/interface/lag0/> set lag lacp system-priority 100
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface lag0</b>
+admin@example:/config/interface/lag0/> <b>set lag mode lacp</b>
+admin@example:/config/interface/lag0/> <b>set lag lacp mode passive</b>
+admin@example:/config/interface/lag0/> <b>set lag lacp rate fast</b>
+admin@example:/config/interface/lag0/> <b>set lag lacp system-priority 100</b>
+</code></pre>
 
 LACP mode supports two operational modes:
 
@@ -511,11 +500,10 @@ The LACP rate setting controls protocol timing:
 To protect against link flapping, debounce timers can be configured to
 delay link qualification.  Usually only the `up` delay is needed:
 
-```
-admin@example:/config/interface/lag0/lag/link-monitor/> edit debounce
-admin@example:/config/interface/lag0/lag/link-monitor/debounce/> set up 500
-admin@example:/config/interface/lag0/lag/link-monitor/debounce/> set down 200
-```
+<pre class="cli"><code>admin@example:/config/interface/lag0/lag/link-monitor/> <b>edit debounce</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> <b>set up 500</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> <b>set down 200</b>
+</code></pre>
 
 #### Operational Status, Overview
 
@@ -523,9 +511,8 @@ Like other interfaces, link aggregates are also available in the general
 interfaces overview in the CLI admin-exec context.  Here is the above
 static mode aggregate:
 
-```
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
 lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
@@ -536,13 +523,12 @@ lag0            lag        UP          static: balance-xor, hash: layer2
 │               ethernet   UP          00:a0:85:00:02:00
 ├ eth7          lag        ACTIVE
 └ eth8          lag        ACTIVE
-```
+</code></pre>
 
 Same aggregate, but in LACP mode:
 
-```
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
 lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
@@ -553,7 +539,7 @@ lag0            lag        UP          lacp: active, rate: fast (1s), hash: laye
 │               ethernet   UP          00:a0:85:00:02:00
 ├ eth7          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
 └ eth8          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
-```
+</code></pre>
 
 
 #### Operational Status, Detail
@@ -561,8 +547,7 @@ lag0            lag        UP          lacp: active, rate: fast (1s), hash: laye
 In addition to basic status shown in the interface overview, detailed
 LAG status can be inspected:
 
-```
-admin@example:/> show interface lag0
+<pre class="cli"><code>admin@example:/> <b>show interface lag0</b>
 name                : lag0
 index               : 25
 mtu                 : 1500
@@ -577,12 +562,11 @@ ipv4 addresses      :
 ipv6 addresses      :
 in-octets           : 0
 out-octets          : 2142
-```
+</code></pre>
 
 Same aggregate, but in LACP mode:
 
-```
-admin@example:/> show interface lag0
+<pre class="cli"><code>admin@example:/> <b>show interface lag0</b>
 name                : lag0
 index               : 24
 mtu                 : 1500
@@ -603,7 +587,7 @@ ipv4 addresses      :
 ipv6 addresses      :
 in-octets           : 100892
 out-octets          : 111776
-```
+</code></pre>
 
 Member ports provide additional status information:
 
@@ -623,8 +607,7 @@ Member ports provide additional status information:
 
 Example member port status:
 
-```
-admin@example:/> show interface eth7
+<pre class="cli"><code>admin@example:/> <b>show interface eth7</b>
 name                : eth7
 index               : 8
 mtu                 : 1500
@@ -640,7 +623,7 @@ ipv4 addresses      :
 ipv6 addresses      :
 in-octets           : 473244
 out-octets          : 499037
-```
+</code></pre>
 
 
 #### Example: Switch Uplink with LACP
@@ -650,43 +633,38 @@ the link aggregate and detecting configuration mismatches.
 
 A common use case is connecting a switch to an upstream device:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface lag0
-admin@example:/config/interface/lag0/> set lag mode lacp
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface lag0</b>
+admin@example:/config/interface/lag0/> <b>set lag mode lacp</b>
+</code></pre>
 
 Enable fast LACP for quicker fail-over:
 
-```
-admin@example:/config/interface/lag0/> set lag lacp rate fast
-```
+<pre class="cli"><code>admin@example:/config/interface/lag0/> <b>set lag lacp rate fast</b>
+</code></pre>
 
 Add uplink ports
 
-```
-admin@example:/config/interface/lag0/> end
-admin@example:/config/> set interface eth7 lag-port lag lag0
-admin@example:/config/> set interface eth8 lag-port lag lag0
-```
+<pre class="cli"><code>admin@example:/config/interface/lag0/> <b>end</b>
+admin@example:/config/> <b>set interface eth7 lag-port lag lag0</b>
+admin@example:/config/> <b>set interface eth8 lag-port lag lag0</b>
+</code></pre>
 
 Enable protection against "link flapping".
 
-```
-admin@example:/config/interface/lag0/> edit lag link-monitor
-admin@example:/config/interface/lag0/lag/link-monitor/> edit debounce
-admin@example:/config/interface/lag0/lag/link-monitor/debounce/> set up 500
-admin@example:/config/interface/lag0/lag/link-monitor/debounce/> set down 200
-admin@example:/config/interface/lag0/lag/link-monitor/debounce/> top
-```
+<pre class="cli"><code>admin@example:/config/interface/lag0/> <b>edit lag link-monitor</b>
+admin@example:/config/interface/lag0/lag/link-monitor/> <b>edit debounce</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> <b>set up 500</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> <b>set down 200</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> <b>top</b>
+</code></pre>
 
 Add to bridge for switching
 
-```
-admin@example:/config/interface/lag0/lag/link-monitor/debounce/> end
-admin@example:/config/> set interface lag0 bridge-port bridge br0
-admin@example:/config/> leave
-```
+<pre class="cli"><code>admin@example:/config/interface/lag0/lag/link-monitor/debounce/> <b>end</b>
+admin@example:/config/> <b>set interface lag0 bridge-port bridge br0</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
 
 
 ### VLAN Interfaces
@@ -703,29 +681,27 @@ A VLAN interface is basically a filtering abstraction. When you run
 VLAN ID of the interface, compared to *all* the VLAN IDs if you run
 `tcpdump` on the lower-layer interface.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface eth0.20
-admin@example:/config/interface/eth0.20/> show
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0.20</b>
+admin@example:/config/interface/eth0.20/> <b>show</b>
 type vlan;
 vlan {
   tag-type c-vlan;
   id 20;
   lower-layer-if eth0;
 }
-admin@example:/config/interface/eth0.20/> leave
-```
+admin@example:/config/interface/eth0.20/> <b>leave</b>
+</code></pre>
 
 The example below assumes bridge br0 is already created, see [VLAN
 Filtering Bridge](#vlan-filtering-bridge).
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface vlan10
-admin@example:/config/interface/vlan10/> set vlan id 10
-admin@example:/config/interface/vlan10/> set vlan lower-layer-if br0
-admin@example:/config/interface/vlan10/> leave
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface vlan10</b>
+admin@example:/config/interface/vlan10/> <b>set vlan id 10</b>
+admin@example:/config/interface/vlan10/> <b>set vlan lower-layer-if br0</b>
+admin@example:/config/interface/vlan10/> <b>leave</b>
+</code></pre>
 
 As conventions, a VLAN interface for VID 20 on top of an Ethernet
 interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on
@@ -754,8 +730,7 @@ highest speeds supported by H1 and H2 respectively.
 The speed and duplex status for the links can be listed as shown
 below, assuming the link operational status is 'up'. 
 
-```
-admin@example:/> show interface eth1
+<pre class="cli"><code>admin@example:/> <b>show interface eth1</b>
 name                : eth1
 index               : 2
 mtu                 : 1500
@@ -765,11 +740,11 @@ duplex              : full
 speed               : 1000
 physical address    : 00:53:00:06:11:01
 ipv4 addresses      :
-ipv6 addresses      : 
+ipv6 addresses      :
 in-octets           : 75581
 out-octets          : 43130
 ...
-admin@example:/> show interface eth4
+admin@example:/> <b>show interface eth4</b>
 name                : eth4
 index               : 5
 mtu                 : 1500
@@ -779,12 +754,12 @@ duplex              : full
 speed               : 100
 physical address    : 00:53:00:06:11:04
 ipv4 addresses      :
-ipv6 addresses      : 
+ipv6 addresses      :
 in-octets           : 75439
 out-octets          : 550704
 ...
 admin@example:/>
-```
+</code></pre>
 
 #### Configuring fixed speed and duplex
 
@@ -801,21 +776,20 @@ a fixed speed and duplex mode.
 The example below configures port eth3 to fixed speed 100 Mbit/s
 half-duplex mode. 
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface eth3 ethernet
-admin@example:/config/interface/eth3/ethernet/> set speed 0.1
-admin@example:/config/interface/eth3/ethernet/> set duplex half
-admin@example:/config/interface/eth3/ethernet/> set auto-negotiation enable false
-admin@example:/config/interface/eth3/ethernet/> show
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth3 ethernet</b>
+admin@example:/config/interface/eth3/ethernet/> <b>set speed 0.1</b>
+admin@example:/config/interface/eth3/ethernet/> <b>set duplex half</b>
+admin@example:/config/interface/eth3/ethernet/> <b>set auto-negotiation enable false</b>
+admin@example:/config/interface/eth3/ethernet/> <b>show</b>
 auto-negotiation {
   enable false;
 }
 duplex half;
 speed 0.1;
-admin@example:/config/interface/eth3/ethernet/> leave
-admin@example:/> 
-```
+admin@example:/config/interface/eth3/ethernet/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 Speed metric is in Gbit/s.  Auto-negotiation needs to be disabled in
 order for fixed speed/duplex to apply. Only speeds `0.1`(100 Mbit/s)
@@ -826,8 +800,7 @@ require auto-negotiation to be enabled.
 
 Ethernet packet statistics[^6] can be listed as shown below.
 
-```
-admin@example:/> show interface eth1
+<pre class="cli"><code>admin@example:/> <b>show interface eth1</b>
 name                : eth1
 index               : 2
 mtu                 : 1500
@@ -837,7 +810,7 @@ duplex              : full
 speed               : 1000
 physical address    : 00:53:00:06:11:0a
 ipv4 addresses      :
-ipv6 addresses      : 
+ipv6 addresses      :
 in-octets           : 75581
 out-octets          : 43130
 
@@ -851,8 +824,8 @@ eth-out-multicast-frames     : 310
 eth-out-broadcast-frames     : 0
 eth-out-good-octets          : 76821
 eth-in-good-octets           : 60598
-admin@example:/> 
-```
+admin@example:/>
+</code></pre>
 
 
 ### VETH Pairs
@@ -865,12 +838,11 @@ The latter example is useful if you have multiple bridges in the system
 with different properties (VLAN filtering, IEEE group forwarding, etc.),
 but still want some way of communicating between these domains.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface veth0a
-admin@example:/config/interface/veth0a/> set veth peer veth0b
-admin@example:/config/interface/veth0a/> end
-admin@example:/config/> diff
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/> <b>set veth peer veth0b</b>
+admin@example:/config/interface/veth0a/> <b>end</b>
+admin@example:/config/> <b>diff</b>
 interfaces {
 +  interface veth0a {
 +    type veth;
@@ -886,7 +858,7 @@ interfaces {
 +  }
 }
 admin@example:/config/>
-```
+</code></pre>
 
 > [!TIP]
 > This is another example of the automatic inference of the interface
@@ -1013,14 +985,15 @@ will be ignored. For details on how to enable the NTP client, see the
 
 ![Switch example (eth0 and lo)](img/ip-address-example-switch.svg)
 
-    admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 To illustrate IP address configuration, the examples below uses a
 switch with a single Ethernet interface (eth0) and a loopback
@@ -1032,32 +1005,33 @@ default.
 
 ![Setting static IPv4 (and link-local IPv4)](img/ip-address-example-ipv4-static.svg)
 
-    admin@example:/> configure
-    admin@example:/config/> edit interface eth0 ipv4
-    admin@example:/config/interface/eth0/ipv4/> set address 10.0.1.1 prefix-length 24
-    admin@example:/config/interface/eth0/ipv4/> set autoconf
-	admin@example:/config/interface/eth0/ipv4/> diff
-    +interfaces {
-    +  interface eth0 {
-    +    ipv4 {
-    +      address 10.0.1.1 {
-    +        prefix-length 24;
-    +      }
-    +      autoconf;
-    +    }
-    +  }
-    +}
-    admin@example:/config/interface/eth0/ipv4/> leave
-    admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv4                   169.254.1.3/16 (random)
-                    ipv4                   10.0.1.1/24 (static)
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv4</b>
+admin@example:/config/interface/eth0/ipv4/> <b>set address 10.0.1.1 prefix-length 24</b>
+admin@example:/config/interface/eth0/ipv4/> <b>set autoconf</b>
+admin@example:/config/interface/eth0/ipv4/> <b>diff</b>
++interfaces {
++  interface eth0 {
++    ipv4 {
++      address 10.0.1.1 {
++        prefix-length 24;
++      }
++      autoconf;
++    }
++  }
++}
+admin@example:/config/interface/eth0/ipv4/> <b>leave</b>
+admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv4                   169.254.1.3/16 (random)
+                ipv4                   10.0.1.1/24 (static)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 As shown, the link-local IPv4 address is configured with `set autoconf`.
 The presence of the `autoconf` container enables IPv4 link-local address
@@ -1068,45 +1042,46 @@ The IPv4LL client also supports a `request-address` setting which can be
 used to "seed" the client's starting address.  If the address is free it
 will be used, otherwise it falls back to the default algorithm.
 
-    admin@example:/config/interface/eth0/ipv4/> edit autoconf
-    admin@example:/config/interface/eth0/ipv4/autoconf/> set request-address 169.254.1.2
-    admin@example:/config/interface/eth0/ipv4/autoconf/> leave
+<pre class="cli"><code>admin@example:/config/interface/eth0/ipv4/> <b>edit autoconf</b>
+admin@example:/config/interface/eth0/ipv4/autoconf/> <b>set request-address 169.254.1.2</b>
+admin@example:/config/interface/eth0/ipv4/autoconf/> <b>leave</b>
+</code></pre>
 
 
 #### Use of DHCP for IPv4 address assignment
 
 ![Using DHCP for IPv4 address assignment](img/ip-address-example-ipv4-dhcp.svg)
 
-    admin@example:/> configure
-    admin@example:/config/> edit interface eth0 ipv4
-    admin@example:/config/interface/eth0/ipv4/> set dhcp
-    admin@example:/config/interface/eth0/ipv4/> leave
-    admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv4                   10.1.2.100/24 (dhcp)
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv4</b>
+admin@example:/config/interface/eth0/ipv4/> <b>set dhcp</b>
+admin@example:/config/interface/eth0/ipv4/> <b>leave</b>
+admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv4                   10.1.2.100/24 (dhcp)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 The resulting address (10.1.2.100/24) is of type *dhcp*.
 
 To configure DHCP client options, such as sending a specific hostname to the
 server, you can specify options with values:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface eth0 ipv4 dhcp
-admin@example:/config/interface/eth0/ipv4/dhcp/> set option hostname value myhost
-admin@example:/config/interface/eth0/ipv4/dhcp/> show
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv4 dhcp</b>
+admin@example:/config/interface/eth0/ipv4/dhcp/> <b>set option hostname value myhost</b>
+admin@example:/config/interface/eth0/ipv4/dhcp/> <b>show</b>
 option hostname {
   value myhost;
 }
-admin@example:/config/interface/eth0/ipv4/dhcp/> leave
+admin@example:/config/interface/eth0/ipv4/dhcp/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 > [!TIP]
 > The special value `auto` can be used with the hostname option to
@@ -1123,50 +1098,49 @@ For advanced usage with vendor-specific options, see the YANG model.
 
 ![Using DHCPv6 for IPv6 address assignment](img/ip-address-example-ipv6-dhcp.svg)
 
-    admin@example:/> configure
-    admin@example:/config/> edit interface eth0 ipv6
-    admin@example:/config/interface/eth0/ipv6/> set dhcp
-    admin@example:/config/interface/eth0/ipv6/> leave
-    admin@example:/> show interface
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv6                   2001:db8::42/128 (dhcp)
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/> <b>set dhcp</b>
+admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
+admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8::42/128 (dhcp)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 The resulting address (2001:db8::42/128) is of type *dhcp*.
 
 To configure DHCPv6 client options, such as requesting prefix delegation
 for downstream networks, you can specify options:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface eth0 ipv6 dhcp
-admin@example:/config/interface/eth0/ipv6/dhcp/> set option ia-pd
-admin@example:/config/interface/eth0/ipv6/dhcp/> set option dns-server
-admin@example:/config/interface/eth0/ipv6/dhcp/> show
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv6 dhcp</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/> <b>set option ia-pd</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/> <b>set option dns-server</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/> <b>show</b>
 option dns-server;
 option ia-pd;
-admin@example:/config/interface/eth0/ipv6/dhcp/> leave
+admin@example:/config/interface/eth0/ipv6/dhcp/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 For stateless DHCPv6 (used with SLAAC to get only configuration information):
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface eth0 ipv6 dhcp
-admin@example:/config/interface/eth0/ipv6/dhcp/> set information-only true
-admin@example:/config/interface/eth0/ipv6/dhcp/> show
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv6 dhcp</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/> <b>set information-only true</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/> <b>show</b>
 information-only true;
 option dns-server;
 option domain-search;
-admin@example:/config/interface/eth0/ipv6/dhcp/> leave
+admin@example:/config/interface/eth0/ipv6/dhcp/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 Other useful DHCPv6 options include:
 
@@ -1181,37 +1155,37 @@ For advanced usage with vendor-specific options, see the YANG model.
 The (only) way to disable IPv6 link-local addresses is by disabling IPv6
 on the interface.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface eth0 ipv6
-admin@example:/config/interface/eth0/ipv6/> set enabled false
-admin@example:/config/interface/eth0/ipv6/> leave
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/> <b>set enabled false</b>
+admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
+admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
 eth0            ethernet   UP          02:00:00:00:00:00
 lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
-```
+</code></pre>
 
 #### Static IPv6 address
 
 ![Setting static IPv6](img/ip-address-example-ipv6-static.svg)
 
-    admin@example:/> configure
-    admin@example:/config/> edit interface eth0 ipv6
-    admin@example:/config/interface/eth0/ipv6/> set address 2001:db8::1 prefix-length 64
-    admin@example:/config/interface/eth0/ipv6/> leave
-    admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv6                   2001:db8::1/64 (static)
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/> <b>set address 2001:db8::1 prefix-length 64</b>
+admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
+admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8::1/64 (static)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 
 #### Stateless Auto-configuration of Global IPv6 Address
@@ -1224,31 +1198,33 @@ advertised by the router (here 2001:db8:0:1::0/64) and the interface
 identifier.  The resulting address is of type *link-layer*, as it is
 formed based on the interface identifier ([ietf-ip.yang][2]).
 
-    admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 Disabling auto-configuration of global IPv6 addresses can be done as shown
 below.
 
-    admin@example:/> configure
-    admin@example:/config/> edit interface eth0 ipv6
-    admin@example:/config/interface/eth0/ipv6/> set autoconf create-global-addresses false
-    admin@example:/config/interface/eth0/ipv6/> leave
-    admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/> <b>set autoconf create-global-addresses false</b>
+admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
+admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 
 #### Random Link Identifiers for IPv6 Stateless Autoconfiguration
@@ -1258,33 +1234,35 @@ below.
 By default, the auto-configured link-local and global IPv6 addresses
 are formed from a link-identifier based on the MAC address.
 
-    admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 To avoid revealing identity information in the IPv6 address, it is
 possible to specify use of a random identifier ([ietf-ip.yang][2] and
 [RFC8981][3]).
 
-    admin@example:/> configure
-    admin@example:/config/> edit interface eth0 ipv6
-    admin@example:/config/interface/eth0/ipv6/> set autoconf create-temporary-addresses true
-    admin@example:/config/interface/eth0/ipv6/> leave
-    admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA
-    eth0            ethernet   UP          02:00:00:00:00:00
-                    ipv6                   2001:db8:0:1:b705:8374:638e:74a8/64 (random)
-                    ipv6                   fe80::ad3d:b274:885a:9ffb/64 (random)
-    lo              ethernet   UP          00:00:00:00:00:00
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/> <b>set autoconf create-temporary-addresses true</b>
+admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
+admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8:0:1:b705:8374:638e:74a8/64 (random)
+                ipv6                   fe80::ad3d:b274:885a:9ffb/64 (random)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/>
+</code></pre>
 
 Both the link-local address (fe80::) and the global address (2001:)
 have changed type to *random*.
@@ -1296,12 +1274,11 @@ To be able to route (static or dynamic) on the interface it is
 required to enable forwarding. This setting controls if packets
 received on this interface can be forwarded.
 
-```
-admin@example:/config/> edit interface eth0
-admin@example:/config/interface/eth0/> set ipv4 forwarding
-admin@example:/config/interface/eth0/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit interface eth0</b>
+admin@example:/config/interface/eth0/> <b>set ipv4 forwarding</b>
+admin@example:/config/interface/eth0/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 
 ### IPv6 forwarding
@@ -1321,12 +1298,11 @@ setting control when it is *Enabled* or *Disabled:
 | Router Advertisements are ignored        | Yes         | Yes          |
 | Accept Redirects                         | No          | Yes          |
 
-```
-admin@example:/config/> edit interface eth0
-admin@example:/config/interface/eth0/> set ipv6 forwarding
-admin@example:/config/interface/eth0/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit interface eth0</b>
+admin@example:/config/interface/eth0/> <b>set ipv6 forwarding</b>
+admin@example:/config/interface/eth0/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 
 ## Routing support
@@ -1360,20 +1336,22 @@ control plane protocol.  For our examples we use the instance name
 
 For a route with destination 192.168.200.0/24 via 192.168.1.1:
 
-    admin@example:/> configure
-    admin@example:/config/> edit routing control-plane-protocol static name default ipv4
-    admin@example:/config/routing/…/ipv4/> set route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1
-    admin@example:/config/routing/…/ipv4/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit routing control-plane-protocol static name default ipv4</b>
+admin@example:/config/routing/…/ipv4/> <b>set route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1</b>
+admin@example:/config/routing/…/ipv4/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 For a "floating" static route with destination 10.0.0.0/16 via a backup
 router 192.168.1.1, using the highest possible distance:
 
-    admin@example:/> configure
-    admin@example:/config/> edit routing control-plane-protocol static name default ipv4
-    admin@example:/config/routing/…/ipv4/> set route 10.0.0.0/16 next-hop next-hop-address 192.168.1.1 route-preference 254
-    admin@example:/config/routing/…/ipv4/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit routing control-plane-protocol static name default ipv4</b>
+admin@example:/config/routing/…/ipv4/> <b>set route 10.0.0.0/16 next-hop next-hop-address 192.168.1.1 route-preference 254</b>
+admin@example:/config/routing/…/ipv4/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 > [!TIP]
 > Remember to enable [IPv4 forwarding](#ipv4-forwarding) for the
@@ -1382,11 +1360,12 @@ router 192.168.1.1, using the highest possible distance:
 
 ### IPv6 Static routes
 
-    admin@example:/> configure
-    admin@example:/config/> edit routing control-plane-protocol static name default ipv6
-    admin@example:/config/routing/…/ipv6/> set route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1
-    admin@example:/config/routing/…/ipv6/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit routing control-plane-protocol static name default ipv6</b>
+admin@example:/config/routing/…/ipv6/> <b>set route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1</b>
+admin@example:/config/routing/…/ipv6/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 
 ### OSPFv2 Routing
@@ -1394,10 +1373,11 @@ router 192.168.1.1, using the highest possible distance:
 The system supports OSPF dynamic routing for IPv4, i.e., OSPFv2.  To
 enable OSPF and set one active interface in area 0:
 
-    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
-    admin@example:/config/routing/…/ospf/> set area 0.0.0.0 interface e0 enabled
-    admin@example:/config/routing/…/ospf/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 enabled</b>
+admin@example:/config/routing/…/ospf/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 > [!TIP]
 > Remember to enable [IPv4 forwarding](#ipv4-forwarding) for all the
@@ -1409,11 +1389,12 @@ enable OSPF and set one active interface in area 0:
 In addition to *regular* OSPF areas, area types *NSSA* and *Stub* are
 also supported.  To configure an NSSA area with summary routes:
 
-    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
-    admin@example:/config/routing/…/ospf/> set area 0.0.0.1 area-type nssa-area
-    admin@example:/config/routing/…/ospf/> set area 0.0.0.1 summary true
-    admin@example:/config/routing/…/ospf/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.1 area-type nssa-area</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.1 summary true</b>
+admin@example:/config/routing/…/ospf/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 
 #### Bidirectional Forwarding Detection (BFD)
@@ -1421,10 +1402,11 @@ also supported.  To configure an NSSA area with summary routes:
 It is possible to enable BFD per OSPF interface to speed up detection of
 link loss.
 
-    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
-    admin@example:/config/routing/…/ospf/> set area 0.0.0.0 interface e0 bfd enabled true
-    admin@example:/config/routing/…/ospf/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 bfd enabled true</b>
+admin@example:/config/routing/…/ospf/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 
 #### OSPF interface settings
@@ -1434,40 +1416,41 @@ and BFD for OSPF per interface (*bfd enabled true*).  These and other
 OSPF interface settings are done in context of an OSFP area, e.g., *area
 0.0.0.0*.  Available commands can be listed using the `?` mark.
 
-    admin@example:/config/routing/…/> edit ospf area 0.0.0.0
-    admin@example:/config/routing/…/ospf/area/0.0.0.0/> edit interface e0
-    admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> set ?
-      bfd                  BFD interface configuration.
-      cost                 Interface's cost.
-      dead-interval        Interval after which a neighbor is declared down
-      enabled              Enables/disables the OSPF protocol on the interface.
-      hello-interval       Interval between Hello packets (seconds).  It must
-      interface-type       Interface type.
-      passive              Enables/disables a passive interface.  A passive
-      retransmit-interval  Interval between retransmitting unacknowledged Link
-      transmit-delay       Estimated time needed to transmit Link State Update
-    admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> set
+<pre class="cli"><code>admin@example:/config/routing/…/> <b>edit ospf area 0.0.0.0</b>
+admin@example:/config/routing/…/ospf/area/0.0.0.0/> <b>edit interface e0</b>
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> <b>set ?</b>
+  bfd                  BFD interface configuration.
+  cost                 Interface's cost.
+  dead-interval        Interval after which a neighbor is declared down
+  enabled              Enables/disables the OSPF protocol on the interface.
+  hello-interval       Interval between Hello packets (seconds).  It must
+  interface-type       Interface type.
+  passive              Enables/disables a passive interface.  A passive
+  retransmit-interval  Interval between retransmitting unacknowledged Link
+  transmit-delay       Estimated time needed to transmit Link State Update
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> set
+</code></pre>
 
 For example, setting the OSPF *interface type* to *point-to-point* for
 an Ethernet interface can be done as follows.
 
-    admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> set interface-type point-to-point
-    admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/>
+<pre class="cli"><code>admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> <b>set interface-type point-to-point</b>
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/>
+</code></pre>
 
 #### OSPF global settings
 
 In addition to *area* and *interface* specific settings, OSPF provides
 global settings for route redistribution and OSPF router identifier.
 
-```
-admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
-admin@example:/config/routing/…/ospf/> set ?
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set ?</b>
   area                     List of OSPF areas.
   default-route-advertise  Distribute default route to network
   explicit-router-id       Defined in RFC 2328.  A 32-bit number
   redistribute             Redistribute protocols into OSPF
 admin@example:/config/routing/…/ospf/> set
-```
+</code></pre>
 
 - Explicit router ID: By default the router will pick an IP address
   from one of its OSPF interfaces as OSPF router ID. An explicit ID is
@@ -1495,13 +1478,12 @@ debugging the OSPFv2 setup. The CLI has various OSPF status commands
 such as `show ospf neighbor`, `show ospf interface` and `show ospf
 routes`.
 
-    admin@example:/> show ospf neighbor
-
-    Neighbor ID     Pri State           Up Time         Dead Time Address         Interface                        RXmtL RqstL DBsmL
-    10.1.1.2          1 Full/-          3h46m59s          30.177s 10.1.1.2        e0:10.1.1.1                          0     0     0
-    10.1.1.3          1 Full/-          3h46m55s          34.665s 10.1.1.3        e1:10.1.1.1                          0     0     0
-
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>show ospf neighbor</b>
+<span class="header">Neighbor ID     Pri State           Up Time         Dead Time Address         Interface                        RXmtL RqstL DBsmL</span>
+10.1.1.2          1 Full/-          3h46m59s          30.177s 10.1.1.2        e0:10.1.1.1                          0     0     0
+10.1.1.3          1 Full/-          3h46m55s          34.665s 10.1.1.3        e1:10.1.1.1                          0     0     0
+admin@example:/>
+</code></pre>
 
 For more detailed troubleshooting, OSPF debug logging can be enabled to
 capture specific protocol events. Debug messages are written to the
@@ -1514,12 +1496,13 @@ routing log file (`/var/log/routing`).
 
 To enable specific OSPF debug categories:
 
-    admin@example:/> configure
-    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf debug
-    admin@example:/config/routing/…/ospf/debug/> set bfd true
-    admin@example:/config/routing/…/ospf/debug/> set nsm true
-    admin@example:/config/routing/…/ospf/debug/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf debug</b>
+admin@example:/config/routing/…/ospf/debug/> <b>set bfd true</b>
+admin@example:/config/routing/…/ospf/debug/> <b>set nsm true</b>
+admin@example:/config/routing/…/ospf/debug/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 Available debug categories include:
 
@@ -1535,15 +1518,17 @@ YANG model for the complete list of available debug options.
 
 To view current debug settings:
 
-    admin@example:/> show running-config routing control-plane-protocol
+<pre class="cli"><code>admin@example:/> <b>show running-config routing control-plane-protocol</b>
+</code></pre>
 
 To disable all debug logging, simply delete the debug settings or set
 all options back to `false`:
 
-    admin@example:/> configure
-    admin@example:/config/> delete routing control-plane-protocol ospfv2 name default ospf debug
-    admin@example:/config/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>delete routing control-plane-protocol ospfv2 name default ospf debug</b>
+admin@example:/config/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 
 ### RIP Routing
@@ -1551,11 +1536,12 @@ all options back to `false`:
 The system supports RIP dynamic routing for IPv4, i.e., RIPv2.  To enable
 RIP and set active interfaces:
 
-    admin@example:/config/> edit routing control-plane-protocol ripv2 name default rip
-    admin@example:/config/routing/…/rip/> set interfaces interface e0
-    admin@example:/config/routing/…/rip/> set interfaces interface e1
-    admin@example:/config/routing/…/rip/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ripv2 name default rip</b>
+admin@example:/config/routing/…/rip/> <b>set interfaces interface e0</b>
+admin@example:/config/routing/…/rip/> <b>set interfaces interface e1</b>
+admin@example:/config/routing/…/rip/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 > [!TIP]
 > Remember to enable [IPv4 forwarding](#ipv4-forwarding) for all the
@@ -1567,59 +1553,60 @@ RIP and set active interfaces:
 By default, interfaces send and receive RIPv2 packets.  To control the
 RIP version per interface:
 
-    admin@example:/config/routing/…/rip/> edit interfaces interface e0
-    admin@example:/config/routing/…/rip/interfaces/interface/e0/> set send-version 1
-    admin@example:/config/routing/…/rip/interfaces/interface/e0/> set receive-version 1-2
-    admin@example:/config/routing/…/rip/interfaces/interface/e0/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/config/routing/…/rip/> <b>edit interfaces interface e0</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>set send-version 1</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>set receive-version 1-2</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 Valid version values are `1`, `2`, or `1-2` (both versions).
 
 To configure a passive interface (advertise network but don't send/receive
 RIP updates):
 
-    admin@example:/config/routing/…/rip/> edit interfaces interface e0
-    admin@example:/config/routing/…/rip/interfaces/interface/e0/> set passive
-    admin@example:/config/routing/…/rip/interfaces/interface/e0/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/config/routing/…/rip/> <b>edit interfaces interface e0</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>set passive</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 
 #### RIP global settings
 
 RIP supports redistribution of connected and static routes:
 
-    admin@example:/config/routing/…/rip/> set redistribute connected
-    admin@example:/config/routing/…/rip/> set redistribute static
-    admin@example:/config/routing/…/rip/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/config/routing/…/rip/> <b>set redistribute connected</b>
+admin@example:/config/routing/…/rip/> <b>set redistribute static</b>
+admin@example:/config/routing/…/rip/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 
 #### Debug RIPv2
 
 The CLI provides various RIP status commands:
 
-    admin@example:/> show ip rip
+<pre class="cli"><code>admin@example:/> <b>show ip rip</b>
+Default version control: send version 2, receive version 2
+<span class="header">  Interface        Send  Recv   Key-chain                    </span>
+  e0               2     2
+  e1               2     2
 
-    Default version control: send version 2, receive version 2
-      Interface        Send  Recv   Key-chain
-      e0               2     2
-      e1               2     2
+Routing for Networks:
+  e0
+  e1
 
-    Routing for Networks:
-      e0
-      e1
+Routing Information Sources:
+<span class="header">  Gateway          BadPackets BadRoutes  Distance Last Update</span>
+  10.0.1.2                  0         0       120    00:00:16
+Distance: (default is 120)
 
-    Routing Information Sources:
-      Gateway          BadPackets BadRoutes  Distance Last Update
-      10.0.1.2                  0         0       120   00:00:16
-    Distance: (default is 120)
-
-    admin@example:/> show ip rip neighbor
-
-    ADDRESS          BAD-PACKETS    BAD-ROUTES
-    10.0.1.2         0              0
-
-    admin@example:/>
+admin@example:/> <b>show ip rip neighbor</b>
+<span class="header">ADDRESS          BAD-PACKETS    BAD-ROUTES                   </span>
+10.0.1.2         0              0
+admin@example:/>
+</code></pre>
 
 For more detailed troubleshooting, RIP debug logging can be enabled to
 capture specific protocol events. Debug messages are written to the
@@ -1632,12 +1619,13 @@ routing log file (`/var/log/routing`).
 
 To enable specific RIP debug categories:
 
-    admin@example:/> configure
-    admin@example:/config/> edit routing control-plane-protocol ripv2 name default rip debug
-    admin@example:/config/routing/…/rip/debug/> set events true
-    admin@example:/config/routing/…/rip/debug/> set packet true
-    admin@example:/config/routing/…/rip/debug/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit routing control-plane-protocol ripv2 name default rip debug</b>
+admin@example:/config/routing/…/rip/debug/> <b>set events true</b>
+admin@example:/config/routing/…/rip/debug/> <b>set packet true</b>
+admin@example:/config/routing/…/rip/debug/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 Available debug categories include:
 
@@ -1650,15 +1638,17 @@ YANG model for the complete list of available debug options.
 
 To view current debug settings:
 
-    admin@example:/> show running-config routing control-plane-protocol
+<pre class="cli"><code>admin@example:/> <b>show running-config routing control-plane-protocol</b>
+</code></pre>
 
 To disable all debug logging, simply delete the debug settings or set
 all options back to `false`:
 
-    admin@example:/> configure
-    admin@example:/config/> delete routing control-plane-protocol ripv2 name default rip debug
-    admin@example:/config/> leave
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>delete routing control-plane-protocol ripv2 name default rip debug</b>
+admin@example:/config/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 
 ### View routing table
@@ -1678,38 +1668,40 @@ model referred to as *active*), if there are more than one route with
 the same destination the `*` marks the next-hop used and installed in
 the kernel FIB (the YANG model refers to this as *installed*).
 
-    admin@example:/> show ip route
-       DESTINATION            PREF NEXT-HOP         PROTO     UPTIME
-    >* 0.0.0.0/0             110/2 10.0.23.1        ospfv2   4h2m43s
-    >* 10.0.0.1/32        110/4000 10.0.13.1        ospfv2   4h2m43s
-       10.0.0.3/32           110/0 lo               ospfv2   4h2m57s
-    >* 10.0.0.3/32             0/0 lo               direct   4h2m58s
-       10.0.13.0/30       110/2000 e5               ospfv2   4h2m57s
-    >* 10.0.13.0/30            0/0 e5               direct   4h2m58s
-       10.0.23.0/30          110/1 e6               ospfv2   4h2m57s
-    >* 10.0.23.0/30            0/0 e6               direct   4h2m58s
-       192.168.3.0/24        110/1 e2               ospfv2   4h2m57s
-    >* 192.168.3.0/24          0/0 e2               direct   4h2m58s
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>show ip route</b>
+<span class="header">   DESTINATION            PREF NEXT-HOP         PROTO     UPTIME</span>
+>* 0.0.0.0/0             110/2 10.0.23.1        ospfv2   4h2m43s
+>* 10.0.0.1/32        110/4000 10.0.13.1        ospfv2   4h2m43s
+   10.0.0.3/32           110/0 lo               ospfv2   4h2m57s
+>* 10.0.0.3/32             0/0 lo               direct   4h2m58s
+   10.0.13.0/30       110/2000 e5               ospfv2   4h2m57s
+>* 10.0.13.0/30            0/0 e5               direct   4h2m58s
+   10.0.23.0/30          110/1 e6               ospfv2   4h2m57s
+>* 10.0.23.0/30            0/0 e6               direct   4h2m58s
+   192.168.3.0/24        110/1 e2               ospfv2   4h2m57s
+>* 192.168.3.0/24          0/0 e2               direct   4h2m58s
+admin@example:/>
+</code></pre>
 
 
 #### IPv6 routing table
 
 This CLI example show the IPv6 routing table.
 
-    admin@example:/> show ipv6 route
-       DESTINATION                      PREF NEXT-HOP              PROTO     UPTIME
-    >* ::/0                              1/0 2001:db8:3c4d:50::1   static   0h1m20s
-    >* 2001:db8:3c4d:50::/64             0/0 e6                    direct   0h1m20s
-    >* 2001:db8:3c4d:200::1/128          0/0 lo                    direct   0h1m20s
-     * fe80::/64                         0/0 e7                    direct   0h1m20s
-     * fe80::/64                         0/0 e6                    direct   0h1m20s
-     * fe80::/64                         0/0 e5                    direct   0h1m20s
-     * fe80::/64                         0/0 e4                    direct   0h1m20s
-     * fe80::/64                         0/0 e3                    direct   0h1m20s
-     * fe80::/64                         0/0 e2                    direct   0h1m20s
-    >* fe80::/64                         0/0 e1                    direct   0h1m20s
-    admin@example:/>
+<pre class="cli"><code>admin@example:/> <b>show ipv6 route</b>
+<span class="header">   DESTINATION                      PREF NEXT-HOP              PROTO     UPTIME</span>
+>* ::/0                              1/0 2001:db8:3c4d:50::1   static   0h1m20s
+>* 2001:db8:3c4d:50::/64             0/0 e6                    direct   0h1m20s
+>* 2001:db8:3c4d:200::1/128          0/0 lo                    direct   0h1m20s
+ * fe80::/64                         0/0 e7                    direct   0h1m20s
+ * fe80::/64                         0/0 e6                    direct   0h1m20s
+ * fe80::/64                         0/0 e5                    direct   0h1m20s
+ * fe80::/64                         0/0 e4                    direct   0h1m20s
+ * fe80::/64                         0/0 e3                    direct   0h1m20s
+ * fe80::/64                         0/0 e2                    direct   0h1m20s
+>* fe80::/64                         0/0 e1                    direct   0h1m20s
+admin@example:/>
+</code></pre>
 
 
 #### Route Preference
