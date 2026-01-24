@@ -458,12 +458,14 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	char hostapd_conf[256];
 	char **ap_list = NULL;
 	FILE *hostapd = NULL;
-	int ap_count = 0;
 	int rc = SR_ERR_OK;
+	int ap_count = 0;
+	mode_t oldmask;
 	int i;
 
-	wifi_find_radio_aps(cifs, radio_name, &ap_list, &ap_count);
+	oldmask = umask(0077);
 
+	wifi_find_radio_aps(cifs, radio_name, &ap_list, &ap_count);
 	if (ap_count == 0) {
 		DEBUG("No APs found on radio %s", radio_name);
 		goto cleanup;
@@ -538,6 +540,8 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fclose(hostapd);
 
 cleanup:
+	umask(oldmask);
+
 	for (i = 0; i < ap_count; i++)
 		free(ap_list[i]);
 	free(ap_list);

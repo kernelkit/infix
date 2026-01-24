@@ -61,6 +61,7 @@ static int wifi_gen_station(struct lyd_node *cif)
 	char *security_str = NULL;
 	const char *country;
 	int rc = SR_ERR_OK;
+	mode_t oldmask;
 
 	ifname = lydx_get_cattr(cif, "name");
 	wifi = lydx_get_child(cif, "wifi");
@@ -95,6 +96,7 @@ static int wifi_gen_station(struct lyd_node *cif)
 		secret = NULL;
 	}
 
+	oldmask = umask(0077);
 	wpa_supplicant = fopenf("w", WPA_SUPPLICANT_CONF, ifname);
 	if (!wpa_supplicant) {
 		rc = SR_ERR_INTERNAL;
@@ -132,6 +134,8 @@ static int wifi_gen_station(struct lyd_node *cif)
 out:
 	if (wpa_supplicant)
 		fclose(wpa_supplicant);
+	umask(oldmask);
+
 	return rc;
 }
 
