@@ -93,7 +93,7 @@ about this in the [example below](#end-device-protection).
 > [!IMPORTANT] Remember IP forwarding on interfaces!
 > Firewall policies only control whether traffic is allowed on input, to be
 > forwarded, or blocked (default).  For the actual routing between interfaces
-> to work, you must also enable [IP forwarding](networking.md#ipv4-forwarding)
+> to work, you must also enable [IP forwarding](ip.md#ipv4-forwarding)
 > on the relevant interfaces.
 
 ### Intra-Zone Traffic
@@ -461,4 +461,4 @@ You can check the current lockdown state:
 }
 ```
 
-[1]: networking.md#bridging
+[1]: bridging.md

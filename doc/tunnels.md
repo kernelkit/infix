@@ -55,7 +55,7 @@ admin@example:/>
 ```
 
 GRETAP interfaces can be added to a bridge, bridging local and remote Ethernet
-segments.  See the [Bridge Configuration](networking.md#bridging)
+segments.  See the [Bridge Configuration](bridging.md)
 for more on bridges.
 
 ### OSPF over GRE
@@ -99,7 +99,7 @@ admin@siteB:/>
 
 Once configured, OSPF will establish a neighbor relationship through the
 tunnel and exchange routes between the sites.  For more info on OSPF
-configuration, see [OSPFv2 Routing](networking.md#ospfv2-routing).
+configuration, see [OSPFv2 Routing](routing.md#ospfv2-routing).
 
 > [!NOTE]
 > Consider adjusting MTU on the tunnel interface to account for GRE

@@ -141,7 +141,7 @@ for 192.168.2.0/24 through this peer.
 > [!NOTE]
 > When routing traffic to networks behind WireGuard peers, you also need
 > to configure static routes pointing to the WireGuard interface.  See
-> [Static Routes](networking.md#routing-support) for more information.
+> [Static Routes](routing.md) for more information.
 
 ## Peer Configuration and Key Bags
 
