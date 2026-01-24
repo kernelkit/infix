@@ -96,7 +96,6 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 	if (err) {
 		ERROR("Error, running yanger");
 		fclose(stream);
-		close(fd);
 		return SR_ERR_SYS;
 	}
 
@@ -105,7 +104,6 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 	if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
 		ERROR("Error, unable reset stream (seek)");
 		fclose(stream);
-		close(fd);
 		return SR_ERR_SYS;
 	}
 
@@ -114,7 +112,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 		ERROR("Error, parsing yanger data (%d)", err);
 
 	fclose(stream);
-	close(fd);
+	/* Note: fclose() already closes the underlying fd from fdopen() */
 
 	return err;
 }
