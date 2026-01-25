@@ -714,6 +714,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -768,7 +780,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -900,9 +1080,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -916,7 +1113,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2112,6 +2381,16 @@ CLI has several keybindings, most significant first:</p>
 <td>Move cursor to beginning of line</td>
 </tr>
 <tr>
+<td>Ctrl-@</td>
+<td>Ctrl-Space</td>
+<td>Mark current position for region operations</td>
+</tr>
+<tr>
+<td>Meta w</td>
+<td></td>
+<td>Copy region to kill buffer without deleting</td>
+</tr>
+<tr>
 <td>Ctrl-k</td>
 <td></td>
 <td>Kill (cut) text from cursor to end of line</td>
@@ -2133,6 +2412,11 @@ CLI has several keybindings, most significant first:</p>
 </tr>
 <tr>
 <td>Ctrl-w</td>
+<td></td>
+<td>Kill region if mark set, else kill word backward</td>
+</tr>
+<tr>
+<td></td>
 <td>Meta-Backspace</td>
 <td>Delete (cut) word to the left</td>
 </tr>
@@ -2157,9 +2441,19 @@ CLI has several keybindings, most significant first:</p>
 <td>History, next command</td>
 </tr>
 <tr>
+<td>Ctrl-q</td>
+<td>Ctrl-v</td>
+<td>Insert next character literally</td>
+</tr>
+<tr>
 <td>Ctrl-r</td>
 <td></td>
 <td>History, reversed interactive search (i-search)</td>
+</tr>
+<tr>
+<td>Ctrl-t</td>
+<td></td>
+<td>Transpose/Swap characters before and at cursor</td>
 </tr>
 </tbody>
 </table>

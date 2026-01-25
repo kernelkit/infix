@@ -7,13 +7,13 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/vpn/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/lag/">
       
       
-        <link rel="prev" href="../tunnels/">
+        <link rel="prev" href="../bridging/">
       
       
-        <link rel="next" href="../vpn-wireguard/">
+        <link rel="next" href="../ethernet/">
       
       
         
@@ -24,7 +24,7 @@
     
     
       
-        <title>Overview - User's Guide</title>
+        <title>Link Aggregation - User's Guide</title>
       
     
     
@@ -88,7 +88,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vpn-configuration" class="md-skip">
+        <a href="#link-aggregation" class="md-skip">
           Skip to content
         </a>
       
@@ -127,7 +127,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Link Aggregation
             
           </span>
         </div>
@@ -785,10 +785,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../lag/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -804,6 +831,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#basic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lacp-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LACP Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#link-flapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Flapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-status-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational Status, Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-status-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational Status, Detail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-switch-uplink-with-lacp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Switch Uplink with LACP
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1009,10 +1122,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1024,11 +1135,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
         
           
           <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
@@ -1049,7 +1160,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_12">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1064,37 +1175,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
         
   
   
@@ -1110,76 +1194,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-vpn" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring VPN
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#understanding-vpn-tunnels" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Understanding VPN Tunnels
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Understanding VPN Tunnels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vpn-deployment-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Deployment Models
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#vpn-protocol-comparison" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Protocol Comparison
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2254,10 +2268,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuring-vpn" class="md-nav__link">
+  <a href="#basic-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring VPN
+        Basic Configuration
       
     </span>
   </a>
@@ -2265,41 +2279,57 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#understanding-vpn-tunnels" class="md-nav__link">
+  <a href="#lacp-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Understanding VPN Tunnels
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Understanding VPN Tunnels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vpn-deployment-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Deployment Models
+        LACP Configuration
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#vpn-protocol-comparison" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#link-flapping" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VPN Protocol Comparison
+        Link Flapping
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#operational-status-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational Status, Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-status-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational Status, Detail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-switch-uplink-with-lacp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Switch Uplink with LACP
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2358,24 +2388,6 @@
   
 
       
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="./" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    VPN Tunnels
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
     </ol>
   </nav>
 
@@ -2389,97 +2401,231 @@
   
 
 
-<h1 id="vpn-configuration">VPN Configuration<a class="headerlink" href="#vpn-configuration" title="Permanent link">¶</a></h1>
-<p>A Virtual Private Network (VPN) creates encrypted tunnels over public networks,
-enabling secure communication between remote locations or users.  Unlike plain
-tunnels (GRE, VXLAN) that only provide encapsulation, VPNs add authentication
-and encryption to protect data confidentiality and integrity.</p>
-<h2 id="configuring-vpn">Configuring VPN<a class="headerlink" href="#configuring-vpn" title="Permanent link">¶</a></h2>
-<p>For detailed configuration instructions and examples, see:</p>
+<h1 id="link-aggregation">Link Aggregation<a class="headerlink" href="#link-aggregation" title="Permanent link">¶</a></h1>
+<p>A link aggregate, or <em>lag</em>, allows multiple physical interfaces to be
+combined into a single logical interface, providing increased bandwidth
+(in some cases) and redundancy (primarily).  Two modes of qualifying lag
+member ports are available:</p>
+<ol>
+<li><strong>static</strong>: Active members selected based on link status (carrier)</li>
+<li><strong>lacp:</strong> IEEE 802.3ad Link Aggregation Control Protocol</li>
+</ol>
+<p>In LACP mode, LACPDUs are exchanged by the link partners to qualify each
+lag member, while in static mode only carrier is used.  This additional
+exchange in LACP ensures traffic can be forwarded in both directions.</p>
+<p>Traffic distribution, for both modes, across the active lag member ports
+is determined by the hash policy<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>.  It uses an XOR of the source,
+destination MAC addresses and the EtherType field.  This, IEEE
+802.3ad-compliant, algorithm will place all traffic to a particular
+network peer on the same link.  Meaning there is no increased bandwidth
+for communication between two specific devices.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Similar to other interface types, naming your interface <code>lagN</code>, where
+<code>N</code> is a number, allows the CLI to automatically infer the interface
+type as LAG.</p>
+</div>
+<h2 id="basic-configuration">Basic Configuration<a class="headerlink" href="#basic-configuration" title="Permanent link">¶</a></h2>
+<p>Creating a link aggregate interface and adding member ports:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface lag0</b>
+admin@example:/config/interface/lag0/&gt; <b>set lag mode static</b>
+admin@example:/config/interface/lag0/&gt; <b>end</b>
+admin@example:/config/&gt; <b>set interface eth7 lag-port lag lag0</b>
+admin@example:/config/&gt; <b>set interface eth8 lag-port lag lag0</b>
+admin@example:/config/&gt; <b>leave</b>
+</code></pre>
+
+<p>A static lag responds only to link (carrier) changes of member ports.
+E.g., in this example egressing traffic is continuously distributed over
+the two links until link down on one link is detected, triggering all
+traffic to be steered to the sole remaining link.</p>
+<h2 id="lacp-configuration">LACP Configuration<a class="headerlink" href="#lacp-configuration" title="Permanent link">¶</a></h2>
+<p>LACP mode provides dynamic negotiation of the link aggregate.  Key
+settings include:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface lag0</b>
+admin@example:/config/interface/lag0/&gt; <b>set lag mode lacp</b>
+admin@example:/config/interface/lag0/&gt; <b>set lag lacp mode passive</b>
+admin@example:/config/interface/lag0/&gt; <b>set lag lacp rate fast</b>
+admin@example:/config/interface/lag0/&gt; <b>set lag lacp system-priority 100</b>
+</code></pre>
+
+<p>LACP mode supports two operational modes:</p>
 <ul>
-<li><strong><a href="../vpn-wireguard/">WireGuard VPN</a></strong> - Complete guide to configuring
-  WireGuard tunnels, including site-to-site, road warrior, and hub-and-spoke
-  topologies.</li>
+<li><strong>active:</strong> Initiates negotiation by sending LACPDUs (default)</li>
+<li><strong>passive:</strong> Waits for peer to initiate negotiation</li>
 </ul>
-<h2 id="understanding-vpn-tunnels">Understanding VPN Tunnels<a class="headerlink" href="#understanding-vpn-tunnels" title="Permanent link">¶</a></h2>
-<p>VPN tunnels establish secure connections across untrusted networks by:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>At least one end of the link must be in active mode for negotiation to occur.</p>
+</div>
+<p>The LACP rate setting controls protocol timing:</p>
 <ul>
-<li><strong>Authentication:</strong> Verifying the identity of tunnel endpoints using
-  cryptographic keys or certificates</li>
-<li><strong>Encryption:</strong> Protecting data confidentiality with strong ciphers</li>
-<li><strong>Integrity:</strong> Detecting tampering through message authentication codes</li>
+<li><strong>slow:</strong> LACPDUs sent every 30 seconds, with 90 second timeout (default)</li>
+<li><strong>fast:</strong> LACPDUs sent every second, with 3 second timeout</li>
 </ul>
-<p>This makes VPNs essential for connecting sites over the internet, enabling
-remote access for mobile users, and securing traffic in untrusted environments.</p>
-<h3 id="vpn-deployment-models">VPN Deployment Models<a class="headerlink" href="#vpn-deployment-models" title="Permanent link">¶</a></h3>
-<p>VPNs are typically deployed in one of several models:</p>
-<p><strong>Site-to-Site VPN</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-site-to-site.svg" data-desc-position="bottom"><img alt="Site-to-Site VPN Topology" src="../img/vpn-site-to-site.svg"></a>
-<em>Figure: Site-to-Site VPN connecting two office networks</em></p>
-<p>Connects entire networks across locations, creating a unified private network
-over the internet.  Routers or firewalls at each site maintain persistent
-tunnels, allowing seamless access between locations.</p>
+<h2 id="link-flapping">Link Flapping<a class="headerlink" href="#link-flapping" title="Permanent link">¶</a></h2>
+<p>To protect against link flapping, debounce timers can be configured to
+delay link qualification.  Usually only the <code>up</code> delay is needed:</p>
+<pre class="cli"><code>admin@example:/config/interface/lag0/lag/link-monitor/&gt; <b>edit debounce</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; <b>set up 500</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; <b>set down 200</b>
+</code></pre>
+
+<h2 id="operational-status-overview">Operational Status, Overview<a class="headerlink" href="#operational-status-overview" title="Permanent link">¶</a></h2>
+<p>Like other interfaces, link aggregates are also available in the general
+interfaces overview in the CLI admin-exec context.  Here is the above
+static mode aggregate:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+.
+.
+.
+lag0            lag        UP          static: balance-xor, hash: layer2
+│               ethernet   UP          00:a0:85:00:02:00
+├ eth7          lag        ACTIVE
+└ eth8          lag        ACTIVE
+</code></pre>
+
+<p>Same aggregate, but in LACP mode:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+.
+.
+.
+lag0            lag        UP          lacp: active, rate: fast (1s), hash: layer2
+│               ethernet   UP          00:a0:85:00:02:00
+├ eth7          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+└ eth8          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+</code></pre>
+
+<h2 id="operational-status-detail">Operational Status, Detail<a class="headerlink" href="#operational-status-detail" title="Permanent link">¶</a></h2>
+<p>In addition to basic status shown in the interface overview, detailed
+LAG status can be inspected:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interface lag0</b>
+name                : lag0
+index               : 25
+mtu                 : 1500
+operational status  : up
+physical address    : 00:a0:85:00:02:00
+lag mode            : static
+lag type            : balance-xor
+lag hash            : layer2
+link debounce up    : 0 msec
+link debounce down  : 0 msec
+ipv4 addresses      :
+ipv6 addresses      :
+in-octets           : 0
+out-octets          : 2142
+</code></pre>
+
+<p>Same aggregate, but in LACP mode:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interface lag0</b>
+name                : lag0
+index               : 24
+mtu                 : 1500
+operational status  : up
+physical address    : 00:a0:85:00:02:00
+lag mode            : lacp
+lag hash            : layer2
+lacp mode           : active
+lacp rate           : fast (1s)
+lacp aggregate id   : 1
+lacp system priority: 65535
+lacp actor key      : 9
+lacp partner key    : 9
+lacp partner mac    : 00:a0:85:00:03:00
+link debounce up    : 0 msec
+link debounce down  : 0 msec
+ipv4 addresses      :
+ipv6 addresses      :
+in-octets           : 100892
+out-octets          : 111776
+</code></pre>
+
+<p>Member ports provide additional status information:</p>
 <ul>
-<li>Use case: Connecting branch offices to headquarters</li>
-<li>Characteristics: Always-on, connects networks not individual devices</li>
-<li>Example: Main office (192.168.1.0/24) ↔ Branch office (192.168.2.0/24)</li>
+<li>Link failure counter: number of detected link failures</li>
+<li>LACP state flags: various states of LACP negotiation:</li>
+<li><code>active</code>: port is actively sending LACPDUs</li>
+<li><code>short_timeout</code>: using fast rate (1s) vs. slow rate (30s)</li>
+<li><code>aggregating</code>: port is allowed to aggregate in this LAG</li>
+<li><code>in_sync</code>: port is synchronized with partner</li>
+<li><code>collecting</code>: port is allowed to receive traffic</li>
+<li><code>distributing</code>: port is allowed to send traffic</li>
+<li><code>defaulted</code>: using default partner info (partner not responding)</li>
+<li><code>expired</code>: partner info has expired (no LACPDUs received)</li>
+<li>Aggregator ID: unique identifier for this LAG group</li>
+<li>Actor state: LACP state flags for this port (local)</li>
+<li>Partner state: LACP state flags from the remote port</li>
 </ul>
-<p><strong>Remote Access VPN (Road Warrior)</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-roadwarrior.svg" data-desc-position="bottom"><img alt="Road Warrior VPN Topology" src="../img/vpn-roadwarrior.svg"></a>
-<em>Figure: Mobile clients connecting to corporate network</em></p>
-<p>Enables individual users to securely access a private network from remote
-locations.  Clients initiate connections as needed from dynamic IP addresses.</p>
-<ul>
-<li>Use case: Remote employees accessing corporate resources</li>
-<li>Characteristics: On-demand, handles dynamic endpoints and roaming</li>
-<li>Example: Mobile laptop ↔ Corporate network</li>
-</ul>
-<p><strong>Hub-and-Spoke VPN</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-hub-spoke.svg" data-desc-position="bottom"><img alt="Hub-and-Spoke VPN Topology" src="../img/vpn-hub-spoke.svg"></a>
-<em>Figure: Hub-and-Spoke topology with central hub routing traffic between spokes</em></p>
-<p>A central hub connects to multiple remote sites (spokes), routing traffic
-between them.  Spokes don't connect directly to each other but communicate
-through the hub.</p>
-<ul>
-<li>Use case: Central office connecting multiple remote locations</li>
-<li>Characteristics: Centralized control, simplified management</li>
-<li>Example: HQ ↔ (Branch A, Branch B, Branch C)</li>
-</ul>
-<h3 id="vpn-protocol-comparison">VPN Protocol Comparison<a class="headerlink" href="#vpn-protocol-comparison" title="Permanent link">¶</a></h3>
-<p>Different VPN protocols offer varying trade-offs between security, performance,
-and complexity:</p>
-<table>
-<thead>
-<tr>
-<th>Protocol</th>
-<th>Complexity</th>
-<th>Performance</th>
-<th>Use Case</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>WireGuard</td>
-<td>Simple</td>
-<td>Very High</td>
-<td>Modern deployments, all models</td>
-</tr>
-<tr>
-<td>IPsec</td>
-<td>Complex</td>
-<td>High</td>
-<td>Legacy systems, compliance reqs</td>
-</tr>
-<tr>
-<td>OpenVPN</td>
-<td>Moderate</td>
-<td>Moderate</td>
-<td>Maximum compatibility</td>
-</tr>
-</tbody>
-</table>
-<p>Infix supports WireGuard as its primary VPN solution, offering the best
-balance of simplicity, security, and performance for modern networks.</p>
+<p>Example member port status:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interface eth7</b>
+name                : eth7
+index               : 8
+mtu                 : 1500
+operational status  : up
+physical address    : 00:a0:85:00:02:00
+lag member          : lag0
+lag member state    : active
+lacp aggregate id   : 1
+lacp actor state    : active, short_timeout, aggregating, in_sync, collecting, distributing
+lacp partner state  : active, short_timeout, aggregating, in_sync, collecting, distributing
+link failure count  : 0
+ipv4 addresses      :
+ipv6 addresses      :
+in-octets           : 473244
+out-octets          : 499037
+</code></pre>
+
+<h2 id="example-switch-uplink-with-lacp">Example: Switch Uplink with LACP<a class="headerlink" href="#example-switch-uplink-with-lacp" title="Permanent link">¶</a></h2>
+<p>LACP mode provides the most robust operation, automatically negotiating
+the link aggregate and detecting configuration mismatches.</p>
+<p>A common use case is connecting a switch to an upstream device:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface lag0</b>
+admin@example:/config/interface/lag0/&gt; <b>set lag mode lacp</b>
+</code></pre>
+
+<p>Enable fast LACP for quicker fail-over:</p>
+<pre class="cli"><code>admin@example:/config/interface/lag0/&gt; <b>set lag lacp rate fast</b>
+</code></pre>
+
+<p>Add uplink ports</p>
+<pre class="cli"><code>admin@example:/config/interface/lag0/&gt; <b>end</b>
+admin@example:/config/&gt; <b>set interface eth7 lag-port lag lag0</b>
+admin@example:/config/&gt; <b>set interface eth8 lag-port lag lag0</b>
+</code></pre>
+
+<p>Enable protection against "link flapping".</p>
+<pre class="cli"><code>admin@example:/config/interface/lag0/&gt; <b>edit lag link-monitor</b>
+admin@example:/config/interface/lag0/lag/link-monitor/&gt; <b>edit debounce</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; <b>set up 500</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; <b>set down 200</b>
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; <b>top</b>
+</code></pre>
+
+<p>Add to bridge for switching</p>
+<pre class="cli"><code>admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; <b>end</b>
+admin@example:/config/&gt; <b>set interface lag0 bridge-port bridge br0</b>
+admin@example:/config/&gt; <b>leave</b>
+</code></pre>
+
+<div class="footnote">
+<hr>
+<ol>
+<li id="fn:1">
+<p><code>(source MAC XOR destination MAC XOR EtherType) MODULO num_links</code>&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
+</li>
+</ol>
+</div>
 
 
 

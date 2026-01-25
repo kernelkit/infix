@@ -7,13 +7,13 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/vpn/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/ip/">
       
       
-        <link rel="prev" href="../tunnels/">
+        <link rel="prev" href="../ethernet/">
       
       
-        <link rel="next" href="../vpn-wireguard/">
+        <link rel="next" href="../routing/">
       
       
         
@@ -24,7 +24,7 @@
     
     
       
-        <title>Overview - User's Guide</title>
+        <title>IP Addressing - User's Guide</title>
       
     
     
@@ -88,7 +88,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vpn-configuration" class="md-skip">
+        <a href="#ip-address-configuration" class="md-skip">
           Skip to content
         </a>
       
@@ -127,7 +127,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              IP Addressing
             
           </span>
         </div>
@@ -841,10 +841,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../ip/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -860,6 +887,164 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ipv4-address-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv4 Address Assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6-address-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6 Address Assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-and-link-local-ipv4-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static and link-local IPv4 addresses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-of-dhcp-for-ipv4-address-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use of DHCP for IPv4 address assignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-of-dhcpv6-for-ipv6-address-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use of DHCPv6 for IPv6 address assignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disabling-ipv6-link-local-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabling IPv6 link-local address(es)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-ipv6-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static IPv6 address
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stateless-auto-configuration-of-global-ipv6-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stateless Auto-configuration of Global IPv6 Address
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#random-link-identifiers-for-ipv6-stateless-autoconfiguration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random Link Identifiers for IPv6 Stateless Autoconfiguration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv4-forwarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv4 forwarding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6-forwarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6 forwarding
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1009,10 +1194,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1024,11 +1207,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
         
           
           <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
@@ -1049,7 +1232,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_12">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1064,37 +1247,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
         
   
   
@@ -1110,76 +1266,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-vpn" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring VPN
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#understanding-vpn-tunnels" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Understanding VPN Tunnels
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Understanding VPN Tunnels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vpn-deployment-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Deployment Models
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#vpn-protocol-comparison" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Protocol Comparison
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2254,10 +2340,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuring-vpn" class="md-nav__link">
+  <a href="#ipv4-address-assignment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring VPN
+        IPv4 Address Assignment
       
     </span>
   </a>
@@ -2265,22 +2351,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#understanding-vpn-tunnels" class="md-nav__link">
+  <a href="#ipv6-address-assignment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Understanding VPN Tunnels
+        IPv6 Address Assignment
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Understanding VPN Tunnels">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#vpn-deployment-models" class="md-nav__link">
+  <a href="#static-and-link-local-ipv4-addresses" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VPN Deployment Models
+        Static and link-local IPv4 addresses
       
     </span>
   </a>
@@ -2288,10 +2385,65 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#vpn-protocol-comparison" class="md-nav__link">
+  <a href="#use-of-dhcp-for-ipv4-address-assignment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VPN Protocol Comparison
+        Use of DHCP for IPv4 address assignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-of-dhcpv6-for-ipv6-address-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use of DHCPv6 for IPv6 address assignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disabling-ipv6-link-local-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabling IPv6 link-local address(es)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-ipv6-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static IPv6 address
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stateless-auto-configuration-of-global-ipv6-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stateless Auto-configuration of Global IPv6 Address
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#random-link-identifiers-for-ipv6-stateless-autoconfiguration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random Link Identifiers for IPv6 Stateless Autoconfiguration
       
     </span>
   </a>
@@ -2300,6 +2452,28 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv4-forwarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv4 forwarding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6-forwarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6 forwarding
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2358,24 +2532,6 @@
   
 
       
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="./" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    VPN Tunnels
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
     </ol>
   </nav>
 
@@ -2389,97 +2545,607 @@
   
 
 
-<h1 id="vpn-configuration">VPN Configuration<a class="headerlink" href="#vpn-configuration" title="Permanent link">¶</a></h1>
-<p>A Virtual Private Network (VPN) creates encrypted tunnels over public networks,
-enabling secure communication between remote locations or users.  Unlike plain
-tunnels (GRE, VXLAN) that only provide encapsulation, VPNs add authentication
-and encryption to protect data confidentiality and integrity.</p>
-<h2 id="configuring-vpn">Configuring VPN<a class="headerlink" href="#configuring-vpn" title="Permanent link">¶</a></h2>
-<p>For detailed configuration instructions and examples, see:</p>
-<ul>
-<li><strong><a href="../vpn-wireguard/">WireGuard VPN</a></strong> - Complete guide to configuring
-  WireGuard tunnels, including site-to-site, road warrior, and hub-and-spoke
-  topologies.</li>
-</ul>
-<h2 id="understanding-vpn-tunnels">Understanding VPN Tunnels<a class="headerlink" href="#understanding-vpn-tunnels" title="Permanent link">¶</a></h2>
-<p>VPN tunnels establish secure connections across untrusted networks by:</p>
-<ul>
-<li><strong>Authentication:</strong> Verifying the identity of tunnel endpoints using
-  cryptographic keys or certificates</li>
-<li><strong>Encryption:</strong> Protecting data confidentiality with strong ciphers</li>
-<li><strong>Integrity:</strong> Detecting tampering through message authentication codes</li>
-</ul>
-<p>This makes VPNs essential for connecting sites over the internet, enabling
-remote access for mobile users, and securing traffic in untrusted environments.</p>
-<h3 id="vpn-deployment-models">VPN Deployment Models<a class="headerlink" href="#vpn-deployment-models" title="Permanent link">¶</a></h3>
-<p>VPNs are typically deployed in one of several models:</p>
-<p><strong>Site-to-Site VPN</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-site-to-site.svg" data-desc-position="bottom"><img alt="Site-to-Site VPN Topology" src="../img/vpn-site-to-site.svg"></a>
-<em>Figure: Site-to-Site VPN connecting two office networks</em></p>
-<p>Connects entire networks across locations, creating a unified private network
-over the internet.  Routers or firewalls at each site maintain persistent
-tunnels, allowing seamless access between locations.</p>
-<ul>
-<li>Use case: Connecting branch offices to headquarters</li>
-<li>Characteristics: Always-on, connects networks not individual devices</li>
-<li>Example: Main office (192.168.1.0/24) ↔ Branch office (192.168.2.0/24)</li>
-</ul>
-<p><strong>Remote Access VPN (Road Warrior)</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-roadwarrior.svg" data-desc-position="bottom"><img alt="Road Warrior VPN Topology" src="../img/vpn-roadwarrior.svg"></a>
-<em>Figure: Mobile clients connecting to corporate network</em></p>
-<p>Enables individual users to securely access a private network from remote
-locations.  Clients initiate connections as needed from dynamic IP addresses.</p>
-<ul>
-<li>Use case: Remote employees accessing corporate resources</li>
-<li>Characteristics: On-demand, handles dynamic endpoints and roaming</li>
-<li>Example: Mobile laptop ↔ Corporate network</li>
-</ul>
-<p><strong>Hub-and-Spoke VPN</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-hub-spoke.svg" data-desc-position="bottom"><img alt="Hub-and-Spoke VPN Topology" src="../img/vpn-hub-spoke.svg"></a>
-<em>Figure: Hub-and-Spoke topology with central hub routing traffic between spokes</em></p>
-<p>A central hub connects to multiple remote sites (spokes), routing traffic
-between them.  Spokes don't connect directly to each other but communicate
-through the hub.</p>
-<ul>
-<li>Use case: Central office connecting multiple remote locations</li>
-<li>Characteristics: Centralized control, simplified management</li>
-<li>Example: HQ ↔ (Branch A, Branch B, Branch C)</li>
-</ul>
-<h3 id="vpn-protocol-comparison">VPN Protocol Comparison<a class="headerlink" href="#vpn-protocol-comparison" title="Permanent link">¶</a></h3>
-<p>Different VPN protocols offer varying trade-offs between security, performance,
-and complexity:</p>
+<h1 id="ip-address-configuration">IP Address Configuration<a class="headerlink" href="#ip-address-configuration" title="Permanent link">¶</a></h1>
+<p>This section details IP Addresses And Other Per-Interface IP settings.</p>
+<p>Infix support several network interface types, each can be assigned one
+or more IP addresses, both IPv4 and IPv6 are supported.  (There is no
+concept of a "primary" address.)</p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-iface-examples.svg" data-desc-position="bottom"><img alt="IP on top of network interface examples" src="../img/ip-iface-examples.svg"></a></p>
+<h2 id="ipv4-address-assignment">IPv4 Address Assignment<a class="headerlink" href="#ipv4-address-assignment" title="Permanent link">¶</a></h2>
+<p>Multiple address assignment methods are available:</p>
 <table>
 <thead>
 <tr>
-<th>Protocol</th>
-<th>Complexity</th>
-<th>Performance</th>
-<th>Use Case</th>
+<th style="text-align: left;"><strong>Type</strong></th>
+<th style="text-align: left;"><strong>Yang Model</strong></th>
+<th style="text-align: left;"><strong>Description</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>WireGuard</td>
-<td>Simple</td>
-<td>Very High</td>
-<td>Modern deployments, all models</td>
+<td style="text-align: left;">static</td>
+<td style="text-align: left;">ietf-ip</td>
+<td style="text-align: left;">Static assignment of IPv4 address, e.g., <em>10.0.1.1/24</em></td>
 </tr>
 <tr>
-<td>IPsec</td>
-<td>Complex</td>
-<td>High</td>
-<td>Legacy systems, compliance reqs</td>
+<td style="text-align: left;">link-local</td>
+<td style="text-align: left;">infix-ip</td>
+<td style="text-align: left;">Auto-assignment of IPv4 address in 169.254.x.x/16 range</td>
 </tr>
 <tr>
-<td>OpenVPN</td>
-<td>Moderate</td>
-<td>Moderate</td>
-<td>Maximum compatibility</td>
+<td style="text-align: left;">dhcp</td>
+<td style="text-align: left;">infix-dhcp-client</td>
+<td style="text-align: left;">Assignment of IPv4 address by DHCP server, e.g., <em>10.0.1.1/24</em></td>
 </tr>
 </tbody>
 </table>
-<p>Infix supports WireGuard as its primary VPN solution, offering the best
-balance of simplicity, security, and performance for modern networks.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The DHCP address method is only available for <em>LAN</em> interfaces
+(Ethernet, virtual Ethernet (veth), bridge, link aggregates, etc.)</p>
+</div>
+<p>Supported DHCP (request) options, configurability (Cfg) and defaults,
+are listed below.  Configurable options can be disabled on a per client
+interface basis, some options, like <code>clientid</code> and option 81, are
+possible to set the value of as well.</p>
+<table>
+<thead>
+<tr>
+<th><strong>Opt</strong></th>
+<th><strong>Name</strong></th>
+<th><strong>Cfg</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>netmask</code></td>
+<td>No</td>
+<td>Request IP address and netmask</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>router</code></td>
+<td>Yes</td>
+<td>Default route(s), see also option 121 and 249</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>dns-server</code></td>
+<td>Yes</td>
+<td>DNS server(s), static ones take precedence</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>hostname</code></td>
+<td>Yes</td>
+<td>DHCP cannot set hostname, only for informing server</td>
+</tr>
+<tr>
+<td>15</td>
+<td><code>domain</code></td>
+<td>Yes</td>
+<td>Default domain name, for name resolution</td>
+</tr>
+<tr>
+<td>28</td>
+<td><code>broadcast</code></td>
+<td>Yes</td>
+<td>Broadcast address, calculated if disabled</td>
+</tr>
+<tr>
+<td>42</td>
+<td><code>ntp-server</code></td>
+<td>Yes</td>
+<td>NTP server(s), static ones take precedence</td>
+</tr>
+<tr>
+<td>50</td>
+<td><code>address</code></td>
+<td>Yes</td>
+<td>Request (previously cached) address</td>
+</tr>
+<tr>
+<td>61</td>
+<td><code>client-id</code></td>
+<td>Yes</td>
+<td>Default MAC address (and option 12)</td>
+</tr>
+<tr>
+<td>81</td>
+<td><code>fqdn</code></td>
+<td>Yes</td>
+<td>Similar to option 12, request FQDN update in DNS</td>
+</tr>
+<tr>
+<td>119</td>
+<td><code>search</code></td>
+<td>Yes</td>
+<td>Request domain search list</td>
+</tr>
+<tr>
+<td>121</td>
+<td><code>classless-static-route</code></td>
+<td>Yes</td>
+<td>Classless static routes</td>
+</tr>
+<tr>
+<td>249</td>
+<td><code>ms-classless-static-route</code></td>
+<td>Yes</td>
+<td>Microsoft static route, same as option 121</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Default:</strong> <code>router</code>, <code>dns-server</code>, <code>domain</code>, <code>broadcast</code>, <code>ntp-server</code>, <code>search</code>,
+             <code>address</code>, <code>classless-static-route</code>, <code>ms-classless-static-route</code></p>
+<p>When configuring a DHCP client, ensure that the NTP client is enabled
+for the <code>ntp-server</code> DHCP option to be processed correctly.  If the NTP
+client is not enabled, any NTP servers provided by the DHCP server will
+be ignored. For details on how to enable the NTP client, see the <a href="../system/#ntp-client-configuration">NTP
+Client Configuration</a> section.</p>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Per <a href="https://www.rfc-editor.org/rfc/rfc3442">RFC3442</a>, if the DHCP server returns both a Classless Static
+Routes option (121) and Router option (3), the DHCP client <em>must</em>
+ignore the latter.</p>
+</div>
+<h2 id="ipv6-address-assignment">IPv6 Address Assignment<a class="headerlink" href="#ipv6-address-assignment" title="Permanent link">¶</a></h2>
+<p>Multiple address assignment methods are available:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Type</strong></th>
+<th style="text-align: left;"><strong>Yang Model</strong></th>
+<th style="text-align: left;"><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">static</td>
+<td style="text-align: left;">ietf-ip</td>
+<td style="text-align: left;">Static assignment of IPv6 address, e.g., <em>2001:db8:0:1::1/64</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">link-local</td>
+<td style="text-align: left;">ietf-ip<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup></td>
+<td style="text-align: left;">(RFC4862) Auto-configured link-local IPv6 address (<em>fe80::0</em> prefix + interface identifier, e.g., <em>fe80::ccd2:82ff:fe52:728b/64</em>)</td>
+</tr>
+<tr>
+<td style="text-align: left;">global auto-conf</td>
+<td style="text-align: left;">ietf-ip</td>
+<td style="text-align: left;">(RFC4862) Auto-configured (stateless) global IPv6 address (prefix from router + interface identifier, e.g., <em>2001:db8:0:1:ccd2:82ff:fe52:728b/64</em></td>
+</tr>
+<tr>
+<td style="text-align: left;">dhcp</td>
+<td style="text-align: left;">infix-dhcpv6-client</td>
+<td style="text-align: left;">Assignment of IPv6 address by DHCPv6 server, e.g., <em>2001:db8::42/128</em></td>
+</tr>
+</tbody>
+</table>
+<p>Both for <em>link-local</em> and <em>global auto-configuration</em>, it is possible
+to auto-configure using a random suffix instead of the interface
+identifier.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The DHCPv6 address method is only available for <em>LAN</em> interfaces
+(Ethernet, virtual Ethernet (veth), bridge, link aggregates, etc.)</p>
+</div>
+<p>Supported DHCPv6 (request) options, configurability (Cfg) and defaults,
+are listed below.  Configurable options can be disabled on a per client
+interface basis, some options, like <code>client-id</code> and <code>client-fqdn</code>, are
+possible to set the value of as well.</p>
+<table>
+<thead>
+<tr>
+<th><strong>Opt</strong></th>
+<th><strong>Name</strong></th>
+<th><strong>Cfg</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>client-id</code></td>
+<td>Yes</td>
+<td>Client identifier (DUID), auto-generated by default</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>server-id</code></td>
+<td>Yes</td>
+<td>Server identifier (DUID)</td>
+</tr>
+<tr>
+<td>23</td>
+<td><code>dns-server</code></td>
+<td>Yes</td>
+<td>DNS recursive name servers, static ones take precedence</td>
+</tr>
+<tr>
+<td>24</td>
+<td><code>domain-search</code></td>
+<td>Yes</td>
+<td>Domain search list</td>
+</tr>
+<tr>
+<td>25</td>
+<td><code>ia-pd</code></td>
+<td>Yes</td>
+<td>Prefix delegation for downstream networks</td>
+</tr>
+<tr>
+<td>31</td>
+<td><code>sntp-server</code></td>
+<td>Yes</td>
+<td>Simple Network Time Protocol servers</td>
+</tr>
+<tr>
+<td>32</td>
+<td><code>information-refresh-time</code></td>
+<td>Yes</td>
+<td>Refresh time for stateless DHCPv6</td>
+</tr>
+<tr>
+<td>39</td>
+<td><code>client-fqdn</code></td>
+<td>Yes</td>
+<td>Client FQDN, request DNS update from server</td>
+</tr>
+<tr>
+<td>56</td>
+<td><code>ntp-server</code></td>
+<td>Yes</td>
+<td>NTP time servers, static ones take precedence</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Default:</strong> <code>dns-server</code>, <code>domain-search</code>, <code>ntp-server</code></p>
+<p>DHCPv6 supports both <strong>stateful</strong> (address assignment) and <strong>stateless</strong>
+(information-only) modes:</p>
+<ul>
+<li><strong>Stateful DHCPv6</strong>: The server assigns IPv6 addresses to clients. This is
+  the default mode when enabling the DHCPv6 client.</li>
+<li><strong>Stateless DHCPv6</strong>: Used with SLAAC (Stateless Address Autoconfiguration)
+  when only configuration information (DNS, NTP, etc.) is needed. Enable with
+  the <code>information-only</code> setting.</li>
+</ul>
+<p>When configuring a DHCPv6 client, ensure that the NTP client is enabled
+for the <code>ntp-server</code> DHCPv6 option to be processed correctly.  If the
+NTP client is not enabled, any NTP servers provided by the DHCPv6 server
+will be ignored. For details on how to enable the NTP client, see the
+<a href="../system/#ntp-client-configuration">NTP Client Configuration</a> section.</p>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h2>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-switch.svg" data-desc-position="bottom"><img alt="Switch example (eth0 and lo)" src="../img/ip-address-example-switch.svg"></a></p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<p>To illustrate IP address configuration, the examples below uses a
+switch with a single Ethernet interface (eth0) and a loopback
+interface (lo). As shown above, these examples assume <em>eth0</em> has an
+IPv6 link-local address and <em>lo</em> has static IPv4 and IPv6 addresses by
+default.</p>
+<h3 id="static-and-link-local-ipv4-addresses">Static and link-local IPv4 addresses<a class="headerlink" href="#static-and-link-local-ipv4-addresses" title="Permanent link">¶</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv4-static.svg" data-desc-position="bottom"><img alt="Setting static IPv4 (and link-local IPv4)" src="../img/ip-address-example-ipv4-static.svg"></a></p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv4</b>
+admin@example:/config/interface/eth0/ipv4/&gt; <b>set address 10.0.1.1 prefix-length 24</b>
+admin@example:/config/interface/eth0/ipv4/&gt; <b>set autoconf</b>
+admin@example:/config/interface/eth0/ipv4/&gt; <b>diff</b>
++interfaces {
++  interface eth0 {
++    ipv4 {
++      address 10.0.1.1 {
++        prefix-length 24;
++      }
++      autoconf;
++    }
++  }
++}
+admin@example:/config/interface/eth0/ipv4/&gt; <b>leave</b>
+admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv4                   169.254.1.3/16 (random)
+                ipv4                   10.0.1.1/24 (static)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<p>As shown, the link-local IPv4 address is configured with <code>set autoconf</code>.
+The presence of the <code>autoconf</code> container enables IPv4 link-local address
+assignment. The resulting address (169.254.1.3/16) is of type <em>random</em>
+(<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip.yang</a>).</p>
+<p>The IPv4LL client also supports a <code>request-address</code> setting which can be
+used to "seed" the client's starting address.  If the address is free it
+will be used, otherwise it falls back to the default algorithm.</p>
+<pre class="cli"><code>admin@example:/config/interface/eth0/ipv4/&gt; <b>edit autoconf</b>
+admin@example:/config/interface/eth0/ipv4/autoconf/&gt; <b>set request-address 169.254.1.2</b>
+admin@example:/config/interface/eth0/ipv4/autoconf/&gt; <b>leave</b>
+</code></pre>
+
+<h3 id="use-of-dhcp-for-ipv4-address-assignment">Use of DHCP for IPv4 address assignment<a class="headerlink" href="#use-of-dhcp-for-ipv4-address-assignment" title="Permanent link">¶</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv4-dhcp.svg" data-desc-position="bottom"><img alt="Using DHCP for IPv4 address assignment" src="../img/ip-address-example-ipv4-dhcp.svg"></a></p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv4</b>
+admin@example:/config/interface/eth0/ipv4/&gt; <b>set dhcp</b>
+admin@example:/config/interface/eth0/ipv4/&gt; <b>leave</b>
+admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv4                   10.1.2.100/24 (dhcp)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<p>The resulting address (10.1.2.100/24) is of type <em>dhcp</em>.</p>
+<p>To configure DHCP client options, such as sending a specific hostname to the
+server, you can specify options with values:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv4 dhcp</b>
+admin@example:/config/interface/eth0/ipv4/dhcp/&gt; <b>set option hostname value myhost</b>
+admin@example:/config/interface/eth0/ipv4/dhcp/&gt; <b>show</b>
+option hostname {
+  value myhost;
+}
+admin@example:/config/interface/eth0/ipv4/dhcp/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The special value <code>auto</code> can be used with the hostname option to
+automatically use the configured system hostname.</p>
+</div>
+<p>Other useful DHCP options include:</p>
+<ul>
+<li><code>client-id</code> - Send a specific client identifier to the server</li>
+<li><code>route-preference</code> - Set the administrative distance for DHCP-learned routes (default: 5)</li>
+</ul>
+<p>For advanced usage with vendor-specific options, see the YANG model.</p>
+<h3 id="use-of-dhcpv6-for-ipv6-address-assignment">Use of DHCPv6 for IPv6 address assignment<a class="headerlink" href="#use-of-dhcpv6-for-ipv6-address-assignment" title="Permanent link">¶</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-dhcp.svg" data-desc-position="bottom"><img alt="Using DHCPv6 for IPv6 address assignment" src="../img/ip-address-example-ipv6-dhcp.svg"></a></p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>set dhcp</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
+admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8::42/128 (dhcp)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<p>The resulting address (2001:db8::42/128) is of type <em>dhcp</em>.</p>
+<p>To configure DHCPv6 client options, such as requesting prefix delegation
+for downstream networks, you can specify options:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv6 dhcp</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/&gt; <b>set option ia-pd</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/&gt; <b>set option dns-server</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/&gt; <b>show</b>
+option dns-server;
+option ia-pd;
+admin@example:/config/interface/eth0/ipv6/dhcp/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>For stateless DHCPv6 (used with SLAAC to get only configuration information):</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv6 dhcp</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/&gt; <b>set information-only true</b>
+admin@example:/config/interface/eth0/ipv6/dhcp/&gt; <b>show</b>
+information-only true;
+option dns-server;
+option domain-search;
+admin@example:/config/interface/eth0/ipv6/dhcp/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>Other useful DHCPv6 options include:</p>
+<ul>
+<li><code>duid</code> - Set a specific DHCPv6 Unique Identifier (auto-generated by default)</li>
+<li><code>client-fqdn</code> - Request the server to update DNS records with client's FQDN</li>
+<li><code>route-preference</code> - Set the administrative distance for DHCPv6-learned routes (default: 5)</li>
+</ul>
+<p>For advanced usage with vendor-specific options, see the YANG model.</p>
+<h3 id="disabling-ipv6-link-local-addresses">Disabling IPv6 link-local address(es)<a class="headerlink" href="#disabling-ipv6-link-local-addresses" title="Permanent link">¶</a></h3>
+<p>The (only) way to disable IPv6 link-local addresses is by disabling IPv6
+on the interface.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>set enabled false</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
+admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="static-ipv6-address">Static IPv6 address<a class="headerlink" href="#static-ipv6-address" title="Permanent link">¶</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-static.svg" data-desc-position="bottom"><img alt="Setting static IPv6" src="../img/ip-address-example-ipv6-static.svg"></a></p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>set address 2001:db8::1 prefix-length 64</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
+admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8::1/64 (static)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="stateless-auto-configuration-of-global-ipv6-address">Stateless Auto-configuration of Global IPv6 Address<a class="headerlink" href="#stateless-auto-configuration-of-global-ipv6-address" title="Permanent link">¶</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-auto-global.svg" data-desc-position="bottom"><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg"></a></p>
+<p>Stateless address auto-configuration of global addresses is enabled by
+default. The address is formed by concatenating the network prefix
+advertised by the router (here 2001:db8:0:1::0/64) and the interface
+identifier.  The resulting address is of type <em>link-layer</em>, as it is
+formed based on the interface identifier (<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip.yang</a>).</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<p>Disabling auto-configuration of global IPv6 addresses can be done as shown
+below.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>set autoconf create-global-addresses false</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
+admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="random-link-identifiers-for-ipv6-stateless-autoconfiguration">Random Link Identifiers for IPv6 Stateless Autoconfiguration<a class="headerlink" href="#random-link-identifiers-for-ipv6-stateless-autoconfiguration" title="Permanent link">¶</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-auto-global.svg" data-desc-position="bottom"><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg"></a></p>
+<p>By default, the auto-configured link-local and global IPv6 addresses
+are formed from a link-identifier based on the MAC address.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
+                ipv6                   fe80::ff:fe00:0/64 (link-layer)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<p>To avoid revealing identity information in the IPv6 address, it is
+possible to specify use of a random identifier (<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip.yang</a> and
+<a href="https://www.rfc-editor.org/rfc/rfc8981">RFC8981</a>).</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>set autoconf create-temporary-addresses true</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
+admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv6                   2001:db8:0:1:b705:8374:638e:74a8/64 (random)
+                ipv6                   fe80::ad3d:b274:885a:9ffb/64 (random)
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/&gt;
+</code></pre>
+
+<p>Both the link-local address (fe80::) and the global address (2001:)
+have changed type to <em>random</em>.</p>
+<h2 id="ipv4-forwarding">IPv4 forwarding<a class="headerlink" href="#ipv4-forwarding" title="Permanent link">¶</a></h2>
+<p>To be able to route (static or dynamic) on the interface it is
+required to enable forwarding. This setting controls if packets
+received on this interface can be forwarded.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface eth0</b>
+admin@example:/config/interface/eth0/&gt; <b>set ipv4 forwarding</b>
+admin@example:/config/interface/eth0/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h2 id="ipv6-forwarding">IPv6 forwarding<a class="headerlink" href="#ipv6-forwarding" title="Permanent link">¶</a></h2>
+<p>Due to how the Linux kernel manages IPv6 forwarding, we can not fully
+control it per interface via this setting like how IPv4 works.  Instead,
+IPv6 forwarding is globally enabled when at least one interface enable
+forwarding, otherwise it is disabled.</p>
+<p>The following table shows the system IPv6 features that the <code>forwarding</code>
+setting control when it is <em>Enabled</em> or *Disabled:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>IPv6 Feature</strong></th>
+<th style="text-align: left;"><strong>Enabled</strong></th>
+<th style="text-align: left;"><strong>Disabled</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">IsRouter set in Neighbour Advertisements</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No</td>
+</tr>
+<tr>
+<td style="text-align: left;">Transmit Router Solicitations</td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;">Router Advertisements are ignored</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;">Accept Redirects</td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+</tbody>
+</table>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface eth0</b>
+admin@example:/config/interface/eth0/&gt; <b>set ipv6 forwarding</b>
+admin@example:/config/interface/eth0/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="footnote">
+<hr>
+<ol>
+<li id="fn:1">
+<p>Link-local IPv6 addresses are implicitly enabled when enabling
+IPv6.  IPv6 can be enabled/disabled per interface in the
+<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip</a> YANG model.&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
+</li>
+</ol>
+</div>
 
 
 

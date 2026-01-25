@@ -7,13 +7,13 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/vpn/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/routing/">
       
       
-        <link rel="prev" href="../tunnels/">
+        <link rel="prev" href="../ip/">
       
       
-        <link rel="next" href="../vpn-wireguard/">
+        <link rel="next" href="../firewall/">
       
       
         
@@ -24,7 +24,7 @@
     
     
       
-        <title>Overview - User's Guide</title>
+        <title>Routing - User's Guide</title>
       
     
     
@@ -88,7 +88,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vpn-configuration" class="md-skip">
+        <a href="#routing" class="md-skip">
           Skip to content
         </a>
       
@@ -127,7 +127,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Routing
             
           </span>
         </div>
@@ -869,10 +869,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../routing/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -888,6 +915,231 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ipv4-static-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv4 Static routes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6-static-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6 Static routes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ospfv2-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPFv2 Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OSPFv2 Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ospf-area-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPF area types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bidirectional-forwarding-detection-bfd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bidirectional Forwarding Detection (BFD)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ospf-interface-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPF interface settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ospf-global-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPF global settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-ospfv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug OSPFv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rip-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RIP Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rip-interface-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP interface settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rip-global-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP global settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-ripv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug RIPv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#view-routing-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        View routing table
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="View routing table">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ipv4-routing-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv4 routing table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipv6-routing-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6 routing table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#route-preference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Route Preference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1009,10 +1261,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1024,11 +1274,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
         
           
           <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
@@ -1049,7 +1299,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_12">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1064,37 +1314,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
         
   
   
@@ -1110,76 +1333,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-vpn" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring VPN
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#understanding-vpn-tunnels" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Understanding VPN Tunnels
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Understanding VPN Tunnels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vpn-deployment-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Deployment Models
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#vpn-protocol-comparison" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Protocol Comparison
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2254,10 +2407,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuring-vpn" class="md-nav__link">
+  <a href="#ipv4-static-routes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring VPN
+        IPv4 Static routes
       
     </span>
   </a>
@@ -2265,22 +2418,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#understanding-vpn-tunnels" class="md-nav__link">
+  <a href="#ipv6-static-routes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Understanding VPN Tunnels
+        IPv6 Static routes
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Understanding VPN Tunnels">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ospfv2-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPFv2 Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OSPFv2 Routing">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#vpn-deployment-models" class="md-nav__link">
+  <a href="#ospf-area-types" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VPN Deployment Models
+        OSPF area types
       
     </span>
   </a>
@@ -2288,10 +2452,154 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#vpn-protocol-comparison" class="md-nav__link">
+  <a href="#bidirectional-forwarding-detection-bfd" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VPN Protocol Comparison
+        Bidirectional Forwarding Detection (BFD)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ospf-interface-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPF interface settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ospf-global-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPF global settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-ospfv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug OSPFv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rip-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RIP Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rip-interface-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP interface settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rip-global-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIP global settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-ripv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug RIPv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#view-routing-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        View routing table
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="View routing table">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ipv4-routing-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv4 routing table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipv6-routing-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6 routing table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#route-preference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Route Preference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source protocol
       
     </span>
   </a>
@@ -2358,24 +2666,6 @@
   
 
       
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="./" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    VPN Tunnels
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
     </ol>
   </nav>
 
@@ -2389,97 +2679,459 @@
   
 
 
-<h1 id="vpn-configuration">VPN Configuration<a class="headerlink" href="#vpn-configuration" title="Permanent link">¶</a></h1>
-<p>A Virtual Private Network (VPN) creates encrypted tunnels over public networks,
-enabling secure communication between remote locations or users.  Unlike plain
-tunnels (GRE, VXLAN) that only provide encapsulation, VPNs add authentication
-and encryption to protect data confidentiality and integrity.</p>
-<h2 id="configuring-vpn">Configuring VPN<a class="headerlink" href="#configuring-vpn" title="Permanent link">¶</a></h2>
-<p>For detailed configuration instructions and examples, see:</p>
-<ul>
-<li><strong><a href="../vpn-wireguard/">WireGuard VPN</a></strong> - Complete guide to configuring
-  WireGuard tunnels, including site-to-site, road warrior, and hub-and-spoke
-  topologies.</li>
-</ul>
-<h2 id="understanding-vpn-tunnels">Understanding VPN Tunnels<a class="headerlink" href="#understanding-vpn-tunnels" title="Permanent link">¶</a></h2>
-<p>VPN tunnels establish secure connections across untrusted networks by:</p>
-<ul>
-<li><strong>Authentication:</strong> Verifying the identity of tunnel endpoints using
-  cryptographic keys or certificates</li>
-<li><strong>Encryption:</strong> Protecting data confidentiality with strong ciphers</li>
-<li><strong>Integrity:</strong> Detecting tampering through message authentication codes</li>
-</ul>
-<p>This makes VPNs essential for connecting sites over the internet, enabling
-remote access for mobile users, and securing traffic in untrusted environments.</p>
-<h3 id="vpn-deployment-models">VPN Deployment Models<a class="headerlink" href="#vpn-deployment-models" title="Permanent link">¶</a></h3>
-<p>VPNs are typically deployed in one of several models:</p>
-<p><strong>Site-to-Site VPN</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-site-to-site.svg" data-desc-position="bottom"><img alt="Site-to-Site VPN Topology" src="../img/vpn-site-to-site.svg"></a>
-<em>Figure: Site-to-Site VPN connecting two office networks</em></p>
-<p>Connects entire networks across locations, creating a unified private network
-over the internet.  Routers or firewalls at each site maintain persistent
-tunnels, allowing seamless access between locations.</p>
-<ul>
-<li>Use case: Connecting branch offices to headquarters</li>
-<li>Characteristics: Always-on, connects networks not individual devices</li>
-<li>Example: Main office (192.168.1.0/24) ↔ Branch office (192.168.2.0/24)</li>
-</ul>
-<p><strong>Remote Access VPN (Road Warrior)</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-roadwarrior.svg" data-desc-position="bottom"><img alt="Road Warrior VPN Topology" src="../img/vpn-roadwarrior.svg"></a>
-<em>Figure: Mobile clients connecting to corporate network</em></p>
-<p>Enables individual users to securely access a private network from remote
-locations.  Clients initiate connections as needed from dynamic IP addresses.</p>
-<ul>
-<li>Use case: Remote employees accessing corporate resources</li>
-<li>Characteristics: On-demand, handles dynamic endpoints and roaming</li>
-<li>Example: Mobile laptop ↔ Corporate network</li>
-</ul>
-<p><strong>Hub-and-Spoke VPN</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-hub-spoke.svg" data-desc-position="bottom"><img alt="Hub-and-Spoke VPN Topology" src="../img/vpn-hub-spoke.svg"></a>
-<em>Figure: Hub-and-Spoke topology with central hub routing traffic between spokes</em></p>
-<p>A central hub connects to multiple remote sites (spokes), routing traffic
-between them.  Spokes don't connect directly to each other but communicate
-through the hub.</p>
-<ul>
-<li>Use case: Central office connecting multiple remote locations</li>
-<li>Characteristics: Centralized control, simplified management</li>
-<li>Example: HQ ↔ (Branch A, Branch B, Branch C)</li>
-</ul>
-<h3 id="vpn-protocol-comparison">VPN Protocol Comparison<a class="headerlink" href="#vpn-protocol-comparison" title="Permanent link">¶</a></h3>
-<p>Different VPN protocols offer varying trade-offs between security, performance,
-and complexity:</p>
+<h1 id="routing">Routing<a class="headerlink" href="#routing" title="Permanent link">¶</a></h1>
+<p>Currently supported YANG models:</p>
 <table>
 <thead>
 <tr>
-<th>Protocol</th>
-<th>Complexity</th>
-<th>Performance</th>
-<th>Use Case</th>
+<th style="text-align: left;"><strong>YANG Model</strong></th>
+<th style="text-align: left;"><strong>Description</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>WireGuard</td>
-<td>Simple</td>
-<td>Very High</td>
-<td>Modern deployments, all models</td>
+<td style="text-align: left;">ietf-routing</td>
+<td style="text-align: left;">Base model for all other models</td>
 </tr>
 <tr>
-<td>IPsec</td>
-<td>Complex</td>
-<td>High</td>
-<td>Legacy systems, compliance reqs</td>
+<td style="text-align: left;">ietf-ipv4-unicast-routing</td>
+<td style="text-align: left;">Static IPv4 unicast routing</td>
 </tr>
 <tr>
-<td>OpenVPN</td>
-<td>Moderate</td>
-<td>Moderate</td>
-<td>Maximum compatibility</td>
+<td style="text-align: left;">ietf-ipv6-unicast-routing</td>
+<td style="text-align: left;">Static IPv6 unicast routing</td>
+</tr>
+<tr>
+<td style="text-align: left;">ietf-ospf</td>
+<td style="text-align: left;">OSPF routing</td>
+</tr>
+<tr>
+<td style="text-align: left;">ietf-rip</td>
+<td style="text-align: left;">RIP routing</td>
+</tr>
+<tr>
+<td style="text-align: left;">infix-routing</td>
+<td style="text-align: left;">Infix deviations and extensions</td>
 </tr>
 </tbody>
 </table>
-<p>Infix supports WireGuard as its primary VPN solution, offering the best
-balance of simplicity, security, and performance for modern networks.</p>
+<p>The base model, ietf-routing, is where all the other models hook in.  It
+is used to set configuration and read operational status (RIB tables) in
+the other models.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The standard IETF routing models allows multiple instances, but Infix
+currently <em>only support one instance</em> per routing protocol!  In the
+examples presented here, the instance name <code>default</code> is used.</p>
+</div>
+<h2 id="ipv4-static-routes">IPv4 Static routes<a class="headerlink" href="#ipv4-static-routes" title="Permanent link">¶</a></h2>
+<p>The standard IETF model for static routes reside under the <code>static</code>
+control plane protocol.  For our examples we use the instance name
+<code>default</code>, you can use any name.</p>
+<p>For a route with destination 192.168.200.0/24 via 192.168.1.1:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit routing control-plane-protocol static name default ipv4</b>
+admin@example:/config/routing/…/ipv4/&gt; <b>set route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1</b>
+admin@example:/config/routing/…/ipv4/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>For a "floating" static route with destination 10.0.0.0/16 via a backup
+router 192.168.1.1, using the highest possible distance:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit routing control-plane-protocol static name default ipv4</b>
+admin@example:/config/routing/…/ipv4/&gt; <b>set route 10.0.0.0/16 next-hop next-hop-address 192.168.1.1 route-preference 254</b>
+admin@example:/config/routing/…/ipv4/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Remember to enable <a href="../ip/#ipv4-forwarding">IPv4 forwarding</a> for the
+interfaces you want to route between.</p>
+</div>
+<h2 id="ipv6-static-routes">IPv6 Static routes<a class="headerlink" href="#ipv6-static-routes" title="Permanent link">¶</a></h2>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit routing control-plane-protocol static name default ipv6</b>
+admin@example:/config/routing/…/ipv6/&gt; <b>set route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1</b>
+admin@example:/config/routing/…/ipv6/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h2 id="ospfv2-routing">OSPFv2 Routing<a class="headerlink" href="#ospfv2-routing" title="Permanent link">¶</a></h2>
+<p>The system supports OSPF dynamic routing for IPv4, i.e., OSPFv2.  To
+enable OSPF and set one active interface in area 0:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface e0 enabled</b>
+admin@example:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Remember to enable <a href="../ip/#ipv4-forwarding">IPv4 forwarding</a> for all the
+interfaces you want to route between.</p>
+</div>
+<h3 id="ospf-area-types">OSPF area types<a class="headerlink" href="#ospf-area-types" title="Permanent link">¶</a></h3>
+<p>In addition to <em>regular</em> OSPF areas, area types <em>NSSA</em> and <em>Stub</em> are
+also supported.  To configure an NSSA area with summary routes:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.1 area-type nssa-area</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.1 summary true</b>
+admin@example:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="bidirectional-forwarding-detection-bfd">Bidirectional Forwarding Detection (BFD)<a class="headerlink" href="#bidirectional-forwarding-detection-bfd" title="Permanent link">¶</a></h3>
+<p>It is possible to enable BFD per OSPF interface to speed up detection of
+link loss.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface e0 bfd enabled true</b>
+admin@example:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="ospf-interface-settings">OSPF interface settings<a class="headerlink" href="#ospf-interface-settings" title="Permanent link">¶</a></h3>
+<p>We have already seen how to enable OSPF per interface (<em>enabled true</em>)
+and BFD for OSPF per interface (<em>bfd enabled true</em>).  These and other
+OSPF interface settings are done in context of an OSFP area, e.g., <em>area
+0.0.0.0</em>.  Available commands can be listed using the <code>?</code> mark.</p>
+<pre class="cli"><code>admin@example:/config/routing/…/&gt; <b>edit ospf area 0.0.0.0</b>
+admin@example:/config/routing/…/ospf/area/0.0.0.0/&gt; <b>edit interface e0</b>
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt; <b>set ?</b>
+  bfd                  BFD interface configuration.
+  cost                 Interface's cost.
+  dead-interval        Interval after which a neighbor is declared down
+  enabled              Enables/disables the OSPF protocol on the interface.
+  hello-interval       Interval between Hello packets (seconds).  It must
+  interface-type       Interface type.
+  passive              Enables/disables a passive interface.  A passive
+  retransmit-interval  Interval between retransmitting unacknowledged Link
+  transmit-delay       Estimated time needed to transmit Link State Update
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt; set
+</code></pre>
+
+<p>For example, setting the OSPF <em>interface type</em> to <em>point-to-point</em> for
+an Ethernet interface can be done as follows.</p>
+<pre class="cli"><code>admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt; <b>set interface-type point-to-point</b>
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt;
+</code></pre>
+
+<h3 id="ospf-global-settings">OSPF global settings<a class="headerlink" href="#ospf-global-settings" title="Permanent link">¶</a></h3>
+<p>In addition to <em>area</em> and <em>interface</em> specific settings, OSPF provides
+global settings for route redistribution and OSPF router identifier.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set ?</b>
+  area                     List of OSPF areas.
+  default-route-advertise  Distribute default route to network
+  explicit-router-id       Defined in RFC 2328.  A 32-bit number
+  redistribute             Redistribute protocols into OSPF
+admin@example:/config/routing/…/ospf/&gt; set
+</code></pre>
+
+<ul>
+<li>Explicit router ID: By default the router will pick an IP address
+  from one of its OSPF interfaces as OSPF router ID. An explicit ID is
+  used to get a deterministic behavior, e.g., <code>set explicit-router-id
+  1.1.1.1</code>.</li>
+<li>Redistribution: <code>set redistribute static</code> and <code>set redistribute connected</code>
+  can be used to include static or connected routes into the OSPF routing
+  domain. These routes are redistributed as <em>external type-2</em> (E2)
+  routes.</li>
+<li>Advertising default route: An OSPF router can be made to distribute
+  a default route into the OSPF domain by command <code>set
+  default-route-advertise enabled</code>. This route is distributed as long
+  as the router itself has an <em>active</em> default route in its routing
+  table. By adding command <code>set default-route-advertise always</code> the
+  router will distribute a default route even when it lacks a default
+  route. The default route will be distributed as an <em>external type-2</em>
+  (E2) route.</li>
+</ul>
+<h3 id="debug-ospfv2">Debug OSPFv2<a class="headerlink" href="#debug-ospfv2" title="Permanent link">¶</a></h3>
+<p>Using NETCONF and the YANG model <em>ietf-routing</em> it is possible to read
+the OSPF routing table, neighbors and more, that may be useful for
+debugging the OSPFv2 setup. The CLI has various OSPF status commands
+such as <code>show ospf neighbor</code>, <code>show ospf interface</code> and <code>show ospf
+routes</code>.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ospf neighbor</b>
+<span class="header">Neighbor ID     Pri State           Up Time         Dead Time Address         Interface                        RXmtL RqstL DBsmL</span>
+10.1.1.2          1 Full/-          3h46m59s          30.177s 10.1.1.2        e0:10.1.1.1                          0     0     0
+10.1.1.3          1 Full/-          3h46m55s          34.665s 10.1.1.3        e1:10.1.1.1                          0     0     0
+admin@example:/&gt;
+</code></pre>
+
+<p>For more detailed troubleshooting, OSPF debug logging can be enabled to
+capture specific protocol events. Debug messages are written to the
+routing log file (<code>/var/log/routing</code>).</p>
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>Debug logging significantly increases log output and may impact
+performance. Only enable debug categories needed for troubleshooting,
+and disable them when done.</p>
+</div>
+<p>To enable specific OSPF debug categories:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf debug</b>
+admin@example:/config/routing/…/ospf/debug/&gt; <b>set bfd true</b>
+admin@example:/config/routing/…/ospf/debug/&gt; <b>set nsm true</b>
+admin@example:/config/routing/…/ospf/debug/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>Available debug categories include:</p>
+<ul>
+<li><code>bfd</code>: BFD (Bidirectional Forwarding Detection) events</li>
+<li><code>packet</code>: Detailed packet debugging (all OSPF packets)</li>
+<li><code>ism</code>: Interface State Machine events</li>
+<li><code>nsm</code>: Neighbor State Machine events</li>
+<li><code>default-information</code>: Default route origination</li>
+<li><code>nssa</code>: Not-So-Stubby Area events</li>
+</ul>
+<p>All debug options are disabled by default. Refer to the <code>infix-routing</code>
+YANG model for the complete list of available debug options.</p>
+<p>To view current debug settings:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show running-config routing control-plane-protocol</b>
+</code></pre>
+
+<p>To disable all debug logging, simply delete the debug settings or set
+all options back to <code>false</code>:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>delete routing control-plane-protocol ospfv2 name default ospf debug</b>
+admin@example:/config/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h2 id="rip-routing">RIP Routing<a class="headerlink" href="#rip-routing" title="Permanent link">¶</a></h2>
+<p>The system supports RIP dynamic routing for IPv4, i.e., RIPv2.  To enable
+RIP and set active interfaces:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ripv2 name default rip</b>
+admin@example:/config/routing/…/rip/&gt; <b>set interfaces interface e0</b>
+admin@example:/config/routing/…/rip/&gt; <b>set interfaces interface e1</b>
+admin@example:/config/routing/…/rip/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Remember to enable <a href="../ip/#ipv4-forwarding">IPv4 forwarding</a> for all the
+interfaces you want to route between.</p>
+</div>
+<h3 id="rip-interface-settings">RIP interface settings<a class="headerlink" href="#rip-interface-settings" title="Permanent link">¶</a></h3>
+<p>By default, interfaces send and receive RIPv2 packets.  To control the
+RIP version per interface:</p>
+<pre class="cli"><code>admin@example:/config/routing/…/rip/&gt; <b>edit interfaces interface e0</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; <b>set send-version 1</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; <b>set receive-version 1-2</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>Valid version values are <code>1</code>, <code>2</code>, or <code>1-2</code> (both versions).</p>
+<p>To configure a passive interface (advertise network but don't send/receive
+RIP updates):</p>
+<pre class="cli"><code>admin@example:/config/routing/…/rip/&gt; <b>edit interfaces interface e0</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; <b>set passive</b>
+admin@example:/config/routing/…/rip/interfaces/interface/e0/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="rip-global-settings">RIP global settings<a class="headerlink" href="#rip-global-settings" title="Permanent link">¶</a></h3>
+<p>RIP supports redistribution of connected and static routes:</p>
+<pre class="cli"><code>admin@example:/config/routing/…/rip/&gt; <b>set redistribute connected</b>
+admin@example:/config/routing/…/rip/&gt; <b>set redistribute static</b>
+admin@example:/config/routing/…/rip/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="debug-ripv2">Debug RIPv2<a class="headerlink" href="#debug-ripv2" title="Permanent link">¶</a></h3>
+<p>The CLI provides various RIP status commands:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ip rip</b>
+Default version control: send version 2, receive version 2
+<span class="header">  Interface        Send  Recv   Key-chain                    </span>
+  e0               2     2
+  e1               2     2
+
+Routing for Networks:
+  e0
+  e1
+
+Routing Information Sources:
+<span class="header">  Gateway          BadPackets BadRoutes  Distance Last Update</span>
+  10.0.1.2                  0         0       120    00:00:16
+Distance: (default is 120)
+
+admin@example:/&gt; <b>show ip rip neighbor</b>
+<span class="header">ADDRESS          BAD-PACKETS    BAD-ROUTES                   </span>
+10.0.1.2         0              0
+admin@example:/&gt;
+</code></pre>
+
+<p>For more detailed troubleshooting, RIP debug logging can be enabled to
+capture specific protocol events. Debug messages are written to the
+routing log file (<code>/var/log/routing</code>).</p>
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>Debug logging significantly increases log output and may impact
+performance. Only enable debug categories needed for troubleshooting,
+and disable them when done.</p>
+</div>
+<p>To enable specific RIP debug categories:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit routing control-plane-protocol ripv2 name default rip debug</b>
+admin@example:/config/routing/…/rip/debug/&gt; <b>set events true</b>
+admin@example:/config/routing/…/rip/debug/&gt; <b>set packet true</b>
+admin@example:/config/routing/…/rip/debug/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>Available debug categories include:</p>
+<ul>
+<li><code>events</code>: RIP events (sending/receiving packets, timers, interface changes)</li>
+<li><code>packet</code>: Detailed packet debugging (packet dumps with origin and port)</li>
+<li><code>kernel</code>: Kernel routing table updates (route add/delete, interface updates)</li>
+</ul>
+<p>All debug options are disabled by default. Refer to the <code>infix-routing</code>
+YANG model for the complete list of available debug options.</p>
+<p>To view current debug settings:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show running-config routing control-plane-protocol</b>
+</code></pre>
+
+<p>To disable all debug logging, simply delete the debug settings or set
+all options back to <code>false</code>:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>delete routing control-plane-protocol ripv2 name default rip debug</b>
+admin@example:/config/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h2 id="view-routing-table">View routing table<a class="headerlink" href="#view-routing-table" title="Permanent link">¶</a></h2>
+<p>The routing table can be inspected from the operational datastore, XPath
+<code>/routing/ribs</code>, using sysrepocfg, NETCONF/RESTCONF, or using the CLI.</p>
+<h3 id="ipv4-routing-table">IPv4 routing table<a class="headerlink" href="#ipv4-routing-table" title="Permanent link">¶</a></h3>
+<p>This CLI example shows the IPv4 routing table with a few connected
+routes and some routes learned from OSPF.  See the next section for
+an explanation of route preferences (PREF).</p>
+<p>The <code>&gt;</code> at the start of a line marks a selected route (in the IETF YANG
+model referred to as <em>active</em>), if there are more than one route with
+the same destination the <code>*</code> marks the next-hop used and installed in
+the kernel FIB (the YANG model refers to this as <em>installed</em>).</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ip route</b>
+<span class="header">   DESTINATION            PREF NEXT-HOP         PROTO     UPTIME</span>
+&gt;* 0.0.0.0/0             110/2 10.0.23.1        ospfv2   4h2m43s
+&gt;* 10.0.0.1/32        110/4000 10.0.13.1        ospfv2   4h2m43s
+   10.0.0.3/32           110/0 lo               ospfv2   4h2m57s
+&gt;* 10.0.0.3/32             0/0 lo               direct   4h2m58s
+   10.0.13.0/30       110/2000 e5               ospfv2   4h2m57s
+&gt;* 10.0.13.0/30            0/0 e5               direct   4h2m58s
+   10.0.23.0/30          110/1 e6               ospfv2   4h2m57s
+&gt;* 10.0.23.0/30            0/0 e6               direct   4h2m58s
+   192.168.3.0/24        110/1 e2               ospfv2   4h2m57s
+&gt;* 192.168.3.0/24          0/0 e2               direct   4h2m58s
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="ipv6-routing-table">IPv6 routing table<a class="headerlink" href="#ipv6-routing-table" title="Permanent link">¶</a></h3>
+<p>This CLI example show the IPv6 routing table.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ipv6 route</b>
+<span class="header">   DESTINATION                      PREF NEXT-HOP              PROTO     UPTIME</span>
+&gt;* ::/0                              1/0 2001:db8:3c4d:50::1   static   0h1m20s
+&gt;* 2001:db8:3c4d:50::/64             0/0 e6                    direct   0h1m20s
+&gt;* 2001:db8:3c4d:200::1/128          0/0 lo                    direct   0h1m20s
+ * fe80::/64                         0/0 e7                    direct   0h1m20s
+ * fe80::/64                         0/0 e6                    direct   0h1m20s
+ * fe80::/64                         0/0 e5                    direct   0h1m20s
+ * fe80::/64                         0/0 e4                    direct   0h1m20s
+ * fe80::/64                         0/0 e3                    direct   0h1m20s
+ * fe80::/64                         0/0 e2                    direct   0h1m20s
+&gt;* fe80::/64                         0/0 e1                    direct   0h1m20s
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="route-preference">Route Preference<a class="headerlink" href="#route-preference" title="Permanent link">¶</a></h3>
+<p>The operating system leverages FRRouting (<a href="https://frrouting.org/">Frr</a>) as routing engine
+for both static and dynamic routing.  Even routes injected from a DHCP
+client, and IPv4 link-local (IPv4) routes, are injected into Frr to let
+it weigh all routes before installing them into the kernel routing table
+(sometimes referred to as FIB).</p>
+<p>Routes have different weights made up from a <em>distance</em> and a <em>metric</em>.
+The kernel routing table only talks about <em>metric</em>, which unfortunately
+is <strong>not the same</strong> -- this is one of the reasons why the term <em>route
+preference</em> is used instead.  It is recommended to use the CLI, or any
+of the other previously mentioned YANG based front-ends, to inspect the
+routing table.</p>
+<p>Default distances used (lower numeric value wins):</p>
+<table>
+<thead>
+<tr>
+<th><strong>Distance</strong></th>
+<th><strong>Protocol</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Kernel routes, i.e., connected routes</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Static routes</td>
+</tr>
+<tr>
+<td>5</td>
+<td>DHCP routes</td>
+</tr>
+<tr>
+<td>110</td>
+<td>OSPF</td>
+</tr>
+<tr>
+<td>254</td>
+<td>IPv4LL (ZeroConf) device routes</td>
+</tr>
+<tr>
+<td>255</td>
+<td>Route will not be used or redistributed</td>
+</tr>
+</tbody>
+</table>
+<p>Hence, a route learned from OSPF may be overridden by a static route set
+locally.  By default, even a route to the same destination, but with a
+different next-hop, learned from a DHCP server wins over an OSPF route.</p>
+<p>The distance used for static routes and DHCP routes can be changed by
+setting a different <em>routing preference</em> value.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The kernel metric is an unsigned 32-bit value, which is read by Frr as
+(upper) 8 bits distance and 24 bits metric.  But it does not write it
+back to the kernel FIB this way, only selected routes are candidates
+to be installed in the FIB by Frr.</p>
+</div>
+<h3 id="source-protocol">Source protocol<a class="headerlink" href="#source-protocol" title="Permanent link">¶</a></h3>
+<p>The source protocol describes the origin of the route.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Protocol</strong></th>
+<th style="text-align: left;"><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">kernel</td>
+<td style="text-align: left;">Added when setting a subnet address on an interface</td>
+</tr>
+<tr>
+<td style="text-align: left;">static</td>
+<td style="text-align: left;">User created, learned from DHCP, or IPv4LL</td>
+</tr>
+<tr>
+<td style="text-align: left;">ospfv2</td>
+<td style="text-align: left;">Routes learned from OSPFv2</td>
+</tr>
+</tbody>
+</table>
+<p>The YANG model <em>ietf-routing</em> support multiple ribs but only two are
+currently supported, namely <code>ipv4</code> and <code>ipv6</code>.</p>
 
 
 

@@ -10,7 +10,7 @@
         <link rel="canonical" href="https://kernelkit.github.io/infix/dev/firewall/">
       
       
-        <link rel="prev" href="../networking/">
+        <link rel="prev" href="../routing/">
       
       
         <link rel="next" href="../qos/">
@@ -645,6 +645,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -699,7 +711,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -1161,9 +1341,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -1177,7 +1374,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2650,14 +2919,14 @@ about this in the <a href="#end-device-protection">example below</a>.</p>
 <p class="admonition-title">Remember IP forwarding on interfaces!</p>
 <p>Firewall policies only control whether traffic is allowed on input, to be
 forwarded, or blocked (default).  For the actual routing between interfaces
-to work, you must also enable <a href="../networking/#ipv4-forwarding">IP forwarding</a>
+to work, you must also enable <a href="../ip/#ipv4-forwarding">IP forwarding</a>
 on the relevant interfaces.</p>
 </div>
 <h3 id="intra-zone-traffic">Intra-Zone Traffic<a class="headerlink" href="#intra-zone-traffic" title="Permanent link">¶</a></h3>
 <p>Traffic between different interfaces, or networks, in the same zone is not
 forwarded by default.  In most cases, if devices on separate interfaces need
 to communicate, they should be in different zones with a policy between them.
-Alternatively, if you want true LAN-like behavior, <a href="../networking/#bridging">bridge the interfaces</a>
+Alternatively, if you want true LAN-like behavior, <a href="../bridging/">bridge the interfaces</a>
 at layer-2 instead of routing between them at layer-3.</p>
 <p><em>Intra-zone</em> forwarding — routing traffic within a single zone — is rarely
 needed.  But if you do require it, create a policy where both ingress and
@@ -2697,8 +2966,8 @@ your <code>running-config</code> to <code>startup-config</code>, then exit to th
 the file with <code>edit /cfg/startup-config.cfg</code>.</p>
 </div>
 <p>See the <a href="#enterprise-gateway">examples below</a> for how to set up a policy.  The
-built-in help system can also be useful:
-<code></code></p><pre><code>admin@example:/config/firewall/policy/lan-to-dmz/&gt; <b>help masquerade</b>
+built-in help system can also be useful:</p>
+<pre class="cli"><code>admin@example:/config/firewall/policy/lan-to-dmz/&gt; <b>help masquerade</b>
 <b>NAME</b>
         masquerade <true false><br>
 <b>DESCRIPTION</b>
@@ -2706,7 +2975,8 @@ built-in help system can also be useful:
         Matching traffic will have their source IP address changed on egress,
         using the IP address of the interface the traffic egresses.<br>
 admin@example:/config/firewall/policy/lan-to-dmz/&gt;
-</true></code></pre><p></p>
+</true></code></pre>
+
 <h3 id="symbolic-names">Symbolic Names<a class="headerlink" href="#symbolic-names" title="Permanent link">¶</a></h3>
 <p>The symbolic names <code>HOST</code> and <code>ANY</code> are available for use in both <code>ingress</code>
 and <code>egress</code> zones.  In fact, the CLI uses inference when first enabling the
@@ -2763,8 +3033,8 @@ when setting up an allowed host service in a zone <code>set service</code></p>
 <h3 id="end-device-protection">End Device Protection<a class="headerlink" href="#end-device-protection" title="Permanent link">¶</a></h3>
 <p>This is the default firewall setup, useful for end devices on untrusted
 networks.  It provides maximum protection while allowing essential
-connectivity.
-<code></code></p><pre><code>admin@example:/&gt; <b>configure</b>
+connectivity.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit firewall</b>
 admin@example:/config/firewall/&gt; <b>show</b>
 default public;
@@ -2775,17 +3045,20 @@ zone public {
   service ssh;
 }
 admin@example:/config/firewall/&gt; <b>leave</b>
-</code></pre><p></p>
+</code></pre>
+
 <p>The <code>reject</code> action differs from <code>drop</code> in that it responds to ICMP messages,
-although maybe not how you may think.  Pinging the device we may<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> see this:
-<code></code></p><pre><code><b>$</b> ping 192.168.122.161
+although maybe not how you may think.  Pinging the device we may<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> see this:</p>
+<pre class="cli"><code><b>$</b> ping 192.168.122.161
 From 192.168.122.161 icmp_seq=1 <u>Packet filtered</u>
-</code></pre><p></p>
-<p>If we run <code>tcpdump</code> it shows us why:
-<code></code></p><pre><code><b>$</b> tcpdump -lni eth0
+</code></pre>
+
+<p>If we run <code>tcpdump</code> it shows us why:</p>
+<pre class="cli"><code><b>$</b> tcpdump -lni eth0
 20:10:40.245707 IP 192.168.122.1 &gt; 192.168.122.161: ICMP echo request, id 56838, seq 1, length 64
 20:10:40.245961 IP 192.168.122.161 &gt; 192.168.122.1: ICMP <u>host 192.168.122.161 unreachable - admin prohibited filter</u>, length 92
-</code></pre><p></p>
+</code></pre>
+
 <p>The key here is that, yes the device responds, but not with <code>ICMP reply</code> but
 <code>ICMP unreachable</code>, and a little helpful message.</p>
 <p>The default zone is <code>public</code>, so all interfaces that are not explicitly
@@ -2808,8 +3081,8 @@ firewall using NETCONF/RESTCONF will not yield the same results.</p>
 <h3 id="homeoffice-router">Home/Office Router<a class="headerlink" href="#homeoffice-router" title="Permanent link">¶</a></h3>
 <p>For typical routers that need to protect internal devices while providing
 internet access.  The LAN zone trusts internal devices, while the WAN zone
-blocks external threats.
-<code></code></p><pre><code>admin@example:/&gt; <b>configure</b>
+blocks external threats.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit firewall</b>
 admin@example:/config/firewall/&gt; <b>set default wan</b>
 admin@example:/config/firewall/&gt; <b>edit zone lan</b>
@@ -2832,12 +3105,13 @@ admin@example:/config/firewall/…/loc-to-wan/&gt; <b>set egress wan</b>
 admin@example:/config/firewall/…/loc-to-wan/&gt; <b>set action accept</b>
 admin@example:/config/firewall/…/loc-to-wan/&gt; <b>set masquerade</b>
 admin@example:/config/firewall/…/loc-to-wan/&gt; <b>leave</b>
-</code></pre><p></p>
+</code></pre>
+
 <h3 id="enterprise-gateway">Enterprise Gateway<a class="headerlink" href="#enterprise-gateway" title="Permanent link">¶</a></h3>
 <p>For businesses that need to host public services while protecting internal
 resources.  We can build upon the Home/Office Router example above and add
-a DMZ zone with additional policies for controlled access.
-<code></code></p><pre><code>admin@example:/&gt; <b>configure</b>
+a DMZ zone with additional policies for controlled access.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit firewall zone dmz</b>
 admin@example:/config/firewall/…/dmz/&gt; <b>set description "Semi-trusted public services"</b>
 admin@example:/config/firewall/…/dmz/&gt; <b>set action drop</b>
@@ -2861,18 +3135,20 @@ admin@example:/config/firewall/&gt; <b>edit zone wan port-forward 8080 tcp</b>
 admin@example:/config/firewall/…/tcp/&gt; <b>set to addr 192.168.2.10</b>
 admin@example:/config/firewall/…/tcp/&gt; <b>set to port 80</b>
 admin@example:/config/firewall/…/tcp/&gt; <b>leave</b>
-</code></pre><p></p>
+</code></pre>
+
 <p>This adds a DMZ zone for public services, updates the internet access policy
 to include DMZ traffic, allows LAN management of DMZ services, and forwards
 external web traffic to the DMZ server.</p>
 <h2 id="logging-and-monitoring">Logging and Monitoring<a class="headerlink" href="#logging-and-monitoring" title="Permanent link">¶</a></h2>
 <p>Different log levels are available to monitor and debug firewall behavior.
-Configure logging using the CLI:
-<code></code></p><pre><code>admin@example:/&gt; <b>configure</b>
+Configure logging using the CLI:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit firewall</b>
 admin@example:/config/firewall/&gt; <b>set logging all</b>
 admin@example:/config/firewall/&gt; <b>leave</b>
-</code></pre><p></p>
+</code></pre>
+
 <p>Firewall logs help you understand traffic patterns and security events.  The
 CLI admin-exec command <kbd>show firewall</kbd> shows the last 10 log messages in the
 overview:</p>

@@ -7,13 +7,13 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/vpn/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/iface/">
       
       
-        <link rel="prev" href="../tunnels/">
+        <link rel="prev" href="../networking/">
       
       
-        <link rel="next" href="../vpn-wireguard/">
+        <link rel="next" href="../bridging/">
       
       
         
@@ -24,7 +24,7 @@
     
     
       
-        <title>Overview - User's Guide</title>
+        <title>Common Settings - User's Guide</title>
       
     
     
@@ -88,7 +88,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vpn-configuration" class="md-skip">
+        <a href="#common-interface-settings" class="md-skip">
           Skip to content
         </a>
       
@@ -127,7 +127,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Common Settings
             
           </span>
         </div>
@@ -729,10 +729,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../iface/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -748,6 +775,120 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#interface-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Name
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interface-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Type
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enabledisable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable/Disable
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-mac-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom MAC Address
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom MAC Address">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed-custom-mac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed custom MAC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chassis-mac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chassis MAC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chassis-mac-with-offset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chassis MAC, with offset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1009,10 +1150,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1024,11 +1163,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
         
           
           <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
@@ -1049,7 +1188,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_12">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1064,37 +1203,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
         
   
   
@@ -1110,76 +1222,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-vpn" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring VPN
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#understanding-vpn-tunnels" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Understanding VPN Tunnels
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Understanding VPN Tunnels">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vpn-deployment-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Deployment Models
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#vpn-protocol-comparison" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        VPN Protocol Comparison
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2254,10 +2296,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuring-vpn" class="md-nav__link">
+  <a href="#interface-name" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring VPN
+        Interface Name
       
     </span>
   </a>
@@ -2265,22 +2307,55 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#understanding-vpn-tunnels" class="md-nav__link">
+  <a href="#interface-type" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Understanding VPN Tunnels
+        Interface Type
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Understanding VPN Tunnels">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enabledisable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable/Disable
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-mac-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom MAC Address
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom MAC Address">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#vpn-deployment-models" class="md-nav__link">
+  <a href="#fixed-custom-mac" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VPN Deployment Models
+        Fixed custom MAC
       
     </span>
   </a>
@@ -2288,10 +2363,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#vpn-protocol-comparison" class="md-nav__link">
+  <a href="#chassis-mac" class="md-nav__link">
     <span class="md-ellipsis">
       
-        VPN Protocol Comparison
+        Chassis MAC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chassis-mac-with-offset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chassis MAC, with offset
       
     </span>
   </a>
@@ -2358,24 +2444,6 @@
   
 
       
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="./" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    VPN Tunnels
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
     </ol>
   </nav>
 
@@ -2389,97 +2457,131 @@
   
 
 
-<h1 id="vpn-configuration">VPN Configuration<a class="headerlink" href="#vpn-configuration" title="Permanent link">¶</a></h1>
-<p>A Virtual Private Network (VPN) creates encrypted tunnels over public networks,
-enabling secure communication between remote locations or users.  Unlike plain
-tunnels (GRE, VXLAN) that only provide encapsulation, VPNs add authentication
-and encryption to protect data confidentiality and integrity.</p>
-<h2 id="configuring-vpn">Configuring VPN<a class="headerlink" href="#configuring-vpn" title="Permanent link">¶</a></h2>
-<p>For detailed configuration instructions and examples, see:</p>
-<ul>
-<li><strong><a href="../vpn-wireguard/">WireGuard VPN</a></strong> - Complete guide to configuring
-  WireGuard tunnels, including site-to-site, road warrior, and hub-and-spoke
-  topologies.</li>
-</ul>
-<h2 id="understanding-vpn-tunnels">Understanding VPN Tunnels<a class="headerlink" href="#understanding-vpn-tunnels" title="Permanent link">¶</a></h2>
-<p>VPN tunnels establish secure connections across untrusted networks by:</p>
-<ul>
-<li><strong>Authentication:</strong> Verifying the identity of tunnel endpoints using
-  cryptographic keys or certificates</li>
-<li><strong>Encryption:</strong> Protecting data confidentiality with strong ciphers</li>
-<li><strong>Integrity:</strong> Detecting tampering through message authentication codes</li>
-</ul>
-<p>This makes VPNs essential for connecting sites over the internet, enabling
-remote access for mobile users, and securing traffic in untrusted environments.</p>
-<h3 id="vpn-deployment-models">VPN Deployment Models<a class="headerlink" href="#vpn-deployment-models" title="Permanent link">¶</a></h3>
-<p>VPNs are typically deployed in one of several models:</p>
-<p><strong>Site-to-Site VPN</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-site-to-site.svg" data-desc-position="bottom"><img alt="Site-to-Site VPN Topology" src="../img/vpn-site-to-site.svg"></a>
-<em>Figure: Site-to-Site VPN connecting two office networks</em></p>
-<p>Connects entire networks across locations, creating a unified private network
-over the internet.  Routers or firewalls at each site maintain persistent
-tunnels, allowing seamless access between locations.</p>
-<ul>
-<li>Use case: Connecting branch offices to headquarters</li>
-<li>Characteristics: Always-on, connects networks not individual devices</li>
-<li>Example: Main office (192.168.1.0/24) ↔ Branch office (192.168.2.0/24)</li>
-</ul>
-<p><strong>Remote Access VPN (Road Warrior)</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-roadwarrior.svg" data-desc-position="bottom"><img alt="Road Warrior VPN Topology" src="../img/vpn-roadwarrior.svg"></a>
-<em>Figure: Mobile clients connecting to corporate network</em></p>
-<p>Enables individual users to securely access a private network from remote
-locations.  Clients initiate connections as needed from dynamic IP addresses.</p>
-<ul>
-<li>Use case: Remote employees accessing corporate resources</li>
-<li>Characteristics: On-demand, handles dynamic endpoints and roaming</li>
-<li>Example: Mobile laptop ↔ Corporate network</li>
-</ul>
-<p><strong>Hub-and-Spoke VPN</strong></p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vpn-hub-spoke.svg" data-desc-position="bottom"><img alt="Hub-and-Spoke VPN Topology" src="../img/vpn-hub-spoke.svg"></a>
-<em>Figure: Hub-and-Spoke topology with central hub routing traffic between spokes</em></p>
-<p>A central hub connects to multiple remote sites (spokes), routing traffic
-between them.  Spokes don't connect directly to each other but communicate
-through the hub.</p>
-<ul>
-<li>Use case: Central office connecting multiple remote locations</li>
-<li>Characteristics: Centralized control, simplified management</li>
-<li>Example: HQ ↔ (Branch A, Branch B, Branch C)</li>
-</ul>
-<h3 id="vpn-protocol-comparison">VPN Protocol Comparison<a class="headerlink" href="#vpn-protocol-comparison" title="Permanent link">¶</a></h3>
-<p>Different VPN protocols offer varying trade-offs between security, performance,
-and complexity:</p>
-<table>
-<thead>
-<tr>
-<th>Protocol</th>
-<th>Complexity</th>
-<th>Performance</th>
-<th>Use Case</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>WireGuard</td>
-<td>Simple</td>
-<td>Very High</td>
-<td>Modern deployments, all models</td>
-</tr>
-<tr>
-<td>IPsec</td>
-<td>Complex</td>
-<td>High</td>
-<td>Legacy systems, compliance reqs</td>
-</tr>
-<tr>
-<td>OpenVPN</td>
-<td>Moderate</td>
-<td>Moderate</td>
-<td>Maximum compatibility</td>
-</tr>
-</tbody>
-</table>
-<p>Infix supports WireGuard as its primary VPN solution, offering the best
-balance of simplicity, security, and performance for modern networks.</p>
+<h1 id="common-interface-settings">Common Interface Settings<a class="headerlink" href="#common-interface-settings" title="Permanent link">¶</a></h1>
+<p>Common interface settings include <code>name</code>, <code>type</code>, <code>enabled</code>, <code>description</code>,
+and custom MAC address.  Type-specific settings are covered in the dedicated
+sections for <a href="../bridging/">Bridging</a>, <a href="../lag/">Link Aggregation</a>,
+<a href="../ethernet/">Ethernet</a>, <a href="../ip/">IP Addressing</a>, and <a href="../routing/">Routing</a>.</p>
+<h2 id="interface-name">Interface Name<a class="headerlink" href="#interface-name" title="Permanent link">¶</a></h2>
+<p>The interface name is limited to 1-15 characters due to Linux kernel
+constraints.  Physical interfaces use their system-assigned names (e.g.,
+<code>eth0</code>, <code>eth1</code>), while user-created interfaces can be named freely within
+this limit.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Naming conventions like <code>br0</code>, <code>lag0</code>, <code>vlan10</code>, or <code>eth0.20</code> allow
+the CLI to automatically infer the interface type.</p>
+</div>
+<h2 id="interface-type">Interface Type<a class="headerlink" href="#interface-type" title="Permanent link">¶</a></h2>
+<p>The <code>type</code> setting defines what kind of interface this is: <code>bridge</code>, <code>lag</code>,
+<code>vlan</code>, <code>veth</code>, etc.  When configuring via the CLI, the type is often
+inferred from the interface name.  However, when configuring remotely via
+NETCONF or RESTCONF, the type <em>must</em> be set explicitly.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface br0</b>
+admin@example:/config/interface/br0/&gt; <b>set type bridge</b>
+</code></pre>
+
+<p>Available types can be listed from the CLI:</p>
+<pre class="cli"><code>admin@example:/config/interface/br0/&gt; <b>set type ?</b>
+  bridge     IEEE bridge interface.
+  dummy      Linux dummy interface.  Useful mostly for testing.
+  ethernet   Any Ethernet interfaces, regardless of speed, RFC 3635.
+  gre        GRE tunnel interface.
+  gretap     GRETAP (Ethernet over GRE) tunnel interface.
+  lag        IEEE link aggregate interface.
+  loopback   Linux loopback interface.
+  other      Other interface, i.e., unknown.
+  veth       Linux virtual Ethernet pair.
+  vlan       Layer 2 Virtual LAN using 802.1Q.
+  vxlan      Virtual eXtensible LAN tunnel interface.
+  wifi       WiFi (802.11) interface
+  wireguard  WireGuard VPN tunnel interface.
+</code></pre>
+
+<h2 id="enabledisable">Enable/Disable<a class="headerlink" href="#enabledisable" title="Permanent link">¶</a></h2>
+<p>An interface can be administratively disabled using the <code>enabled</code> setting.
+By default, interfaces are enabled (<code>true</code>).</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface eth0</b>
+admin@example:/config/interface/eth0/&gt; <b>set enabled false</b>
+admin@example:/config/interface/eth0/&gt; <b>leave</b>
+</code></pre>
+
+<p>The operational status can be inspected to see both administrative and
+actual link state:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
+INTERFACE       PROTOCOL   STATE       DATA
+eth0            ethernet   <b>DISABLED</b>    02:00:00:00:00:00
+eth1            ethernet   UP          02:00:00:00:00:01
+...
+</code></pre>
+
+<h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">¶</a></h2>
+<p>The <code>description</code> is a free-form text string (max 64 characters) saved
+as the Linux interface alias (<code>ifalias</code>).  Use it to document an interface's
+purpose or add notes for remote debugging.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface eth0</b>
+admin@example:/config/interface/eth0/&gt; <b>set description "Uplink to core switch"</b>
+admin@example:/config/interface/eth0/&gt; <b>leave</b>
+</code></pre>
+
+<p>The description is visible in the operational datastore and in <code>show</code>
+commands:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interface eth0</b>
+name                : eth0
+description         : Uplink to core switch
+index               : 2
+...
+</code></pre>
+
+<h2 id="custom-mac-address">Custom MAC Address<a class="headerlink" href="#custom-mac-address" title="Permanent link">¶</a></h2>
+<p>The <code>custom-phys-address</code> can be used to set an interface's MAC address.
+This is an extension to the ietf-interfaces YANG model, which defines
+<code>phys-address</code> as read-only<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>There is no validation or safety checks performed by the system when
+using <code>custom-phys-address</code>.  In particular the <code>offset</code> variant can
+be dangerous to use -- pay attention to the meaning of bits in the
+upper-most octet: local bit, multicast/group, etc.</p>
+</div>
+<h3 id="fixed-custom-mac">Fixed custom MAC<a class="headerlink" href="#fixed-custom-mac" title="Permanent link">¶</a></h3>
+<p>Use a fixed custom MAC address when the interface must present a
+specific, deterministic identity on the network.  This option bypasses
+any chassis-derived logic and applies the configured address verbatim.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/&gt; <b>set custom-phys-address static 00:ab:00:11:22:33</b>
+
+=&gt; 00:ab:00:11:22:33
+</code></pre>
+
+<h3 id="chassis-mac">Chassis MAC<a class="headerlink" href="#chassis-mac" title="Permanent link">¶</a></h3>
+<p>Chassis MAC, sometimes also referred to as base MAC.  In these two
+examples it is <code>00:53:00:c0:ff:ee</code>.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/&gt; <b>set custom-phys-address chassis</b>
+
+=&gt; 00:53:00:c0:ff:ee
+</code></pre>
+
+<h3 id="chassis-mac-with-offset">Chassis MAC, with offset<a class="headerlink" href="#chassis-mac-with-offset" title="Permanent link">¶</a></h3>
+<p>When constructing a derived address it is recommended to set the locally
+administered bit.  Same chassis MAC as before.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface veth0a</b>
+admin@example:/config/interface/veth0a/&gt; <b>set custom-phys-address chassis offset 02:00:00:00:00:02</b>
+
+=&gt; 02:53:00:c0:ff:f0
+</code></pre>
+
+<div class="footnote">
+<hr>
+<ol>
+<li id="fn:1">
+<p>A YANG deviation was previously used to make it possible to set
+<code>phys-address</code>, but this has been replaced with the more flexible
+<code>custom-phys-address</code>.&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
+</li>
+</ol>
+</div>
 
 
 

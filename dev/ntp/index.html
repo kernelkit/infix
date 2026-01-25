@@ -643,6 +643,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -697,7 +709,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -829,9 +1009,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -845,7 +1042,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2234,29 +2503,32 @@ configuration context.</p>
 </div>
 <h2 id="standalone-mode">Standalone Mode<a class="headerlink" href="#standalone-mode" title="Permanent link">¶</a></h2>
 <p>Configure a standalone NTP server using only a local reference clock:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit ntp
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/ntp/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit ntp</b>
+admin@example:/config/ntp/&gt; <b>leave</b>
+</code></pre>
+
 <p>When setting up NTP via the CLI the system automatically configures a local
 reference clock. The default <a href="#ntp-stratum-levels">stratum</a> is 16 (unsynchronized),
 which is suitable for isolated networks. For production use, configure a specific
 stratum level:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/config/&gt; edit ntp
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>admin@example:/config/ntp/&gt; set refclock-master master-stratum 10
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/config/ntp/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ntp</b>
+admin@example:/config/ntp/&gt; <b>set refclock-master master-stratum 10</b>
+admin@example:/config/ntp/&gt; <b>leave</b>
+</code></pre>
+
 <h2 id="server-mode">Server Mode<a class="headerlink" href="#server-mode" title="Permanent link">¶</a></h2>
 <p>Synchronize from upstream NTP servers while serving time to clients:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/config/&gt; edit ntp
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/ntp/&gt; edit unicast-configuration 0.pool.ntp.org type uc-server
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; set iburst true
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; end
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>admin@example:/config/ntp/&gt; edit unicast-configuration 1.pool.ntp.org type uc-server
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/&gt; set iburst true
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/&gt; end
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>admin@example:/config/ntp/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ntp</b>
+admin@example:/config/ntp/&gt; <b>edit unicast-configuration 0.pool.ntp.org type uc-server</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; <b>set iburst true</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; <b>end</b>
+admin@example:/config/ntp/&gt; <b>edit unicast-configuration 1.pool.ntp.org type uc-server</b>
+admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/&gt; <b>set iburst true</b>
+admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/&gt; <b>end</b>
+admin@example:/config/ntp/&gt; <b>leave</b>
+</code></pre>
+
 <p>The <code>unicast-configuration</code> uses a composite key with both address and type.
 Both hostnames and IP addresses are supported.  The <code>iburst</code> option enables
 fast initial synchronization.</p>
@@ -2264,19 +2536,21 @@ fast initial synchronization.</p>
 <p>In peer mode, two NTP servers synchronize with each other bidirectionally.
 Each server acts as both client and server to the other:</p>
 <p><strong>First peer:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@peer1:/config/&gt; edit ntp
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@peer1:/config/ntp/&gt; edit unicast-configuration 192.168.1.2 type uc-peer
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@peer1:/config/ntp/…/192.168.1.2/type/uc-peer/&gt; end
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>admin@peer1:/config/ntp/&gt; set refclock-master master-stratum 8
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>admin@peer1:/config/ntp/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@peer1:/config/&gt; <b>edit ntp</b>
+admin@peer1:/config/ntp/&gt; <b>edit unicast-configuration 192.168.1.2 type uc-peer</b>
+admin@peer1:/config/ntp/…/192.168.1.2/type/uc-peer/&gt; <b>end</b>
+admin@peer1:/config/ntp/&gt; <b>set refclock-master master-stratum 8</b>
+admin@peer1:/config/ntp/&gt; <b>leave</b>
+</code></pre>
+
 <p><strong>Second peer:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@peer2:/config/&gt; edit ntp
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@peer2:/config/ntp/&gt; edit unicast-configuration 192.168.1.1 type uc-peer
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@peer2:/config/ntp/…/192.168.1.1/type/uc-peer/&gt; end
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>admin@peer2:/config/ntp/&gt; set refclock-master master-stratum 8
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>admin@peer2:/config/ntp/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@peer2:/config/&gt; <b>edit ntp</b>
+admin@peer2:/config/ntp/&gt; <b>edit unicast-configuration 192.168.1.1 type uc-peer</b>
+admin@peer2:/config/ntp/…/192.168.1.1/type/uc-peer/&gt; <b>end</b>
+admin@peer2:/config/ntp/&gt; <b>set refclock-master master-stratum 8</b>
+admin@peer2:/config/ntp/&gt; <b>leave</b>
+</code></pre>
+
 <p>This configuration provides mutual synchronization between peers. If one peer
 fails, the other continues to serve time to clients.</p>
 <div class="admonition note">
@@ -2300,11 +2574,12 @@ the other peer.</p>
 <h2 id="timing-configuration">Timing Configuration<a class="headerlink" href="#timing-configuration" title="Permanent link">¶</a></h2>
 <h3 id="poll-intervals">Poll Intervals<a class="headerlink" href="#poll-intervals" title="Permanent link">¶</a></h3>
 <p>Control how often the NTP server polls upstream sources:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/config/ntp/&gt; edit unicast-configuration 0.pool.ntp.org type uc-server
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; set minpoll 4
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; set maxpoll 10
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; end
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/ntp/&gt; <b>edit unicast-configuration 0.pool.ntp.org type uc-server</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; <b>set minpoll 4</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; <b>set maxpoll 10</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/&gt; <b>end</b>
+</code></pre>
+
 <p>Poll intervals are specified as powers of 2:
 - <code>minpoll 4</code> = poll every 2^4 = 16 seconds (minimum polling rate)
 - <code>maxpoll 10</code> = poll every 2^10 = 1024 seconds (maximum polling rate)
@@ -2316,11 +2591,12 @@ or peer configurations. Use defaults for production servers.</p>
 seconds threshold, 3 updates limit) when creating an NTP server. This is
 critical for embedded systems without RTC that boot with epoch time.</p>
 <p>To customize the values:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/config/ntp/&gt; edit makestep
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/ntp/makestep/&gt; set threshold 2.0
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@example:/config/ntp/makestep/&gt; set limit 1
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/ntp/makestep/&gt; end
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/ntp/&gt; <b>edit makestep</b>
+admin@example:/config/ntp/makestep/&gt; <b>set threshold 2.0</b>
+admin@example:/config/ntp/makestep/&gt; <b>set limit 1</b>
+admin@example:/config/ntp/makestep/&gt; <b>end</b>
+</code></pre>
+
 <ul>
 <li><strong>threshold</strong> - If clock offset exceeds this (in seconds), step immediately
   instead of slewing slowly</li>
@@ -2330,17 +2606,41 @@ critical for embedded systems without RTC that boot with epoch time.</p>
 <p>With these defaults, a device booting at epoch time (1970-01-01) will sync to
 correct time within seconds instead of hours.</p>
 <h2 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">¶</a></h2>
-<p>Check NTP server statistics:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/&gt; show ntp server
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>NTP SERVER CONFIGURATION
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Local Stratum       : 10
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>SERVER STATISTICS
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>Packets Received    : 142
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>Packets Sent        : 142
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>Packets Dropped     : 0
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>Send Failures       : 0
-</code></pre></div>
+<p>For a quick overview:</p>
+<p>To view the sources being used by the NTP client, run:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ntp</b>
+Mode                : Client
+Stratum             : 3
+Ref time (UTC)      : Sat Jan 24 23:41:42 2026
+
+<span class="header">ADDRESS         MODE    STATE     STRATUM  POLL</span>
+147.78.228.41   server  outlier         2   64s
+192.168.0.1     server  unusable        0  128s
+176.126.86.247  server  selected        2   64s
+</code></pre>
+
+<p>Check NTP source status:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ntp source</b>
+<span class="header">MS  Name/IP address  Stratum  Poll  Reach  LastRx          Last sample</span>
+^+  147.78.228.41          2     6    007      15  -431us +/- 33.573ms
+^*  176.126.86.247         2     6    007      14   -389us +/- 4.307ms
+</code></pre>
+
+<p>For detailed information about a specific source:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ntp source 176.126.86.247</b>
+Address             : 176.126.86.247
+Mode                : Server (client mode) [^]
+State               : Selected sync source [*]
+Configured          : Yes
+Stratum             : 2
+Poll interval       : 7 (2^7 seconds = 128s)
+Reachability        : 377 (octal) = 11111111b
+Last RX             : 75s ago
+Offset              : +2.0us (+0.002000ms)
+Delay               : 4.270ms (0.004270s)
+Dispersion          : 205.0us (0.205000ms)
+</code></pre>
+
 <h2 id="ntp-stratum-levels">NTP Stratum Levels<a class="headerlink" href="#ntp-stratum-levels" title="Permanent link">¶</a></h2>
 <p>NTP uses a hierarchical system called <strong>stratum</strong> to indicate distance from
 authoritative time sources:</p>

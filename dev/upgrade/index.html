@@ -643,6 +643,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -697,7 +709,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -829,9 +1009,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -845,7 +1042,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2151,15 +2420,15 @@ bootloaders support <a href="../netboot/">netbooting</a>.</p>
 <p>The <em>boot order</em> defines which image is tried first, and is listed with
 the CLI <code>show software</code> command. It also shows Infix version installed
 per partition, and which image was used when booting (<code>STATE booted</code>).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; show software
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>BOOT ORDER
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>primary secondary net
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>NAME      STATE     VERSION                DATE
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>primary   booted    v25.01.0               2025-04-25T10:15:00+00:00
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>secondary inactive  v25.01.0               2025-04-25T10:07:20+00:00
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show software</b>
+Boot order : primary secondary net
+
+<span class="header">NAME       STATE     VERSION                DATE                     </span>
+primary    booted    v25.01.0               2025-04-25T10:15:00+00:00
+secondary  inactive  v25.01.0               2025-04-25T10:07:20+00:00
+admin@example:/&gt;
+</code></pre>
+
 <p>YANG support for upgrading Infix, inspecting and <em>modifying</em> the
 boot-order, is defined in <a href="https://github.com/kernelkit/infix/blob/main/src/confd/yang/confd/infix-system-software.yang">infix-system-software</a>.</p>
 <h2 id="changing-boot-order">Changing Boot Order<a class="headerlink" href="#changing-boot-order" title="Permanent link">¶</a></h2>
@@ -2176,42 +2445,45 @@ desired boot order. Valid boot targets are:</p>
 <p>The CLI provides tab-completion for boot targets, making it easy to enter
 valid values.</p>
 <p>Example: View current boot order and change it:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/&gt; show boot-order
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>primary secondary net
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/&gt; set boot-order secondary primary net
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>admin@example:/&gt; show boot-order
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>secondary primary net
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show boot-order</b>
+primary secondary net
+admin@example:/&gt; <b>set boot-order secondary primary net</b>
+admin@example:/&gt; <b>show boot-order</b>
+secondary primary net
+admin@example:/&gt;
+</code></pre>
+
 <p>Example: Set boot order to only try primary partition:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; show boot-order
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>secondary primary net
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/&gt; set boot-order primary
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/&gt; show boot-order
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>primary
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show boot-order</b>
+secondary primary net
+admin@example:/&gt; <b>set boot-order primary</b>
+admin@example:/&gt; <b>show boot-order</b>
+primary
+admin@example:/&gt;
+</code></pre>
+
 <p>Example: Using tab-completion (press TAB to see available options):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/&gt; set boot-order &lt;TAB&gt;
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>net        primary    secondary
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/&gt; set boot-order secondary &lt;TAB&gt;
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>net        primary    secondary
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>admin@example:/&gt; set boot-order secondary primary
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>admin@example:/&gt; show boot-order
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>secondary primary
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>set boot-order </b><kbd>TAB</kbd>
+net        primary    secondary
+admin@example:/&gt; <b>set boot-order secondary </b><kbd>TAB</kbd>
+net        primary    secondary
+admin@example:/&gt; <b>set boot-order secondary primary</b>
+admin@example:/&gt; <b>show boot-order</b>
+secondary primary
+admin@example:/&gt;
+</code></pre>
+
 <p>The new boot order takes effect on the next reboot and can be verified
 with <code>show boot-order</code> or <code>show software</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/&gt; show software
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>BOOT ORDER
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>secondary primary
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>NAME      STATE     VERSION                DATE
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>primary   booted    v25.01.0               2025-04-25T10:15:00+00:00
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>secondary inactive  v25.01.0               2025-04-25T10:07:20+00:00
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show software</b>
+Boot order : secondary primary
+
+<span class="header">NAME       STATE     VERSION                DATE                     </span>
+primary    booted    v25.01.0               2025-04-25T10:15:00+00:00
+secondary  inactive  v25.01.0               2025-04-25T10:07:20+00:00
+admin@example:/&gt;
+</code></pre>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The boot order is automatically updated when performing an upgrade.
@@ -2248,67 +2520,72 @@ after reboot, of course after having verified your setup.</p>
 configuration before performing an upgrade. The backup is useful if the
 upgrade fails, and makes a later <a href="#downgrading">downgrade</a> a smoother
 process.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; dir /cfg
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>/cfg directory
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>backup/             ssl/                startup-config.cfg
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>admin@example:/&gt; copy /cfg/startup-config.cfg /cfg/v25.01.0-startup-config.cfg
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>admin@example:/&gt; dir /cfg
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>/cfg directory
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>backup/             ssl/                startup-config.cfg           v25.01.0-startup-config.cfg
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>admin@example:/&gt; 
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>dir /cfg</b>
+/cfg directory
+backup/             ssl/                startup-config.cfg
+
+admin@example:/&gt; <b>copy /cfg/startup-config.cfg /cfg/v25.01.0-startup-config.cfg</b>
+admin@example:/&gt; <b>dir /cfg</b>
+/cfg directory
+backup/             ssl/                startup-config.cfg           v25.01.0-startup-config.cfg
+
+admin@example:/&gt;
+</code></pre>
+
 <p><em>Upgrade:</em> Here the image <em>pkg bundle</em> was made available via TFTP.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt; upgrade tftp://198.18.117.1/infix-aarch64-25.03.1.pkg
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>installing
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  0% Installing
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  0% Determining slot states
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a> 10% Determining slot states done.
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>...
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a> 98% Copying image to rootfs.1
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a> 99% Copying image to rootfs.1
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a> 99% Copying image to rootfs.1 done.
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a> 99% Updating slots done.
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>100% Installing done.
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>Installing `tftp://198.18.117.1/infix-aarch64-25.03.1.pkg` succeeded
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>upgrade tftp://198.18.117.1/infix-aarch64-25.03.1.pkg</b>
+installing
+  0% Installing
+  0% Determining slot states
+ 10% Determining slot states done.
+...
+ 40% Checking slot rootfs.1 (secondary)
+ 46% Checking slot rootfs.1 (secondary) done.
+...
+ 98% Copying image to rootfs.1
+ 99% Copying image to rootfs.1
+ 99% Copying image to rootfs.1 done.
+ 99% Updating slots done.
+100% Installing done.
+Installing `tftp://198.18.117.1/infix-aarch64-25.03.1.pkg` succeeded
+admin@example:/&gt;
+</code></pre>
+
 <p><em>Reboot:</em> The unit will boot on the other partition, with the newly
 installed image. The <code>Loading startup-config</code> step conducts migration
 of startup configuration if applicable.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/&gt; reboot
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>[ OK ] Stopping Static routing daemon
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>[ OK ] Stopping Zebra routing daemon
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>...
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>[ OK ] Loading startup-config
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>[ OK ] Verifying self-signed https certificate
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>[ OK ] Update DNS configuration
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>[ OK ] Starting Status daemon
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>Infix OS — Immutable.Friendly.Secure v25.03.1 (ttyS0)
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>example login: admin
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>Password:
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>.-------.
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>|  . .  | Infix OS — Immutable.Friendly.Secure
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>|-. v .-| https://kernelkit.org
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>'-'---'-'
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
-<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>Run the command 'cli' for interactive OAM
-<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
-<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>admin@example:~$ cli
-<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
-<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>See the 'help' command for an introduction to the system
-<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>
-<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>admin@example:/&gt; show software
-<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>BOOT ORDER
-<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>secondary primary net
-<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>
-<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>NAME      STATE     VERSION                DATE
-<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>primary   inactive  v25.01.0               2025-04-25T10:15:00+00:00
-<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>secondary booted    v25.03.1               2025-04-25T10:24:31+00:00
-<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>reboot</b>
+[ OK ] Stopping Static routing daemon
+[ OK ] Stopping Zebra routing daemon
+...
+[ OK ] Loading startup-config
+[ OK ] Verifying self-signed https certificate
+[ OK ] Update DNS configuration
+[ OK ] Starting Status daemon
+
+Infix OS — Immutable.Friendly.Secure v25.03.1 (ttyS0)
+example login: <b>admin</b>
+Password:
+.-------.
+|  . .  | Infix OS — Immutable.Friendly.Secure
+|-. v .-| https://kernelkit.org
+'-'---'-'
+
+Run the command 'cli' for interactive OAM
+
+admin@example:~$ <b>cli</b>
+
+See the 'help' command for an introduction to the system
+
+admin@example:/&gt; <b>show software</b>
+Boot order : secondary primary net
+
+<span class="header">NAME       STATE     VERSION                DATE                     </span>
+primary    inactive  v25.01.0               2025-04-25T10:15:00+00:00
+secondary  booted    v25.03.1               2025-04-25T10:24:31+00:00
+admin@example:/&gt;
+</code></pre>
+
 <p>As shown, the <em>boot order</em> has been updated, so that <em>secondary</em> is
 now the preferred boot source.</p>
 <p>To upgrade the remaining partition (<code>primary</code>), run the <code>upgrade URL</code>
@@ -2325,30 +2602,32 @@ configuration version numbering differs from the Infix image version
 numbering).  The startup configuration is migrated to <code>1.5</code>
 definitions and stored, while a backup previous startup configuration
 is stored in directory <code>/cfg/backup/</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/&gt; dir /cfg/backup/
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>/cfg/backup/ directory
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>startup-config-1.4.cfg
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>dir /cfg/backup/</b>
+/cfg/backup/ directory
+startup-config-1.4.cfg
+
+admin@example:/&gt;
+</code></pre>
+
 <p>The modifications made to the startup configuration can be viewed by
 comparing the files from the <em>shell</em>. An example is shown below.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@example:/&gt; exit
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@example:~$ diff /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>--- /cfg/backup/startup-config-1.4.cfg
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>+++ /cfg/startup-config.cfg
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>...
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>-          "public-key-format": "ietf-crypto-types:ssh-public-key-format",
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>+          "public-key-format": "infix-crypto-types:ssh-public-key-format",
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>...
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>-          "private-key-format": "ietf-crypto-types:rsa-private-key-format",
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>+          "private-key-format": "infix-crypto-types:rsa-private-key-format",
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>...
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>-    "version": "1.4"
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>+    "version": "1.5"
-<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>...
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>admin@example:~$
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>exit</b>
+admin@example:~$ <b>diff /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg</b>
+--- /cfg/backup/startup-config-1.4.cfg
++++ /cfg/startup-config.cfg
+...
+-          "public-key-format": "ietf-crypto-types:ssh-public-key-format",
++          "public-key-format": "infix-crypto-types:ssh-public-key-format",
+...
+-          "private-key-format": "ietf-crypto-types:rsa-private-key-format",
++          "private-key-format": "infix-crypto-types:rsa-private-key-format",
+...
+-    "version": "1.4"
++    "version": "1.5"
+...
+admin@example:~$
+</code></pre>
+
 <h2 id="downgrading">Downgrading<a class="headerlink" href="#downgrading" title="Permanent link">¶</a></h2>
 <p>Downgrading to an earlier version is possible, however, downgrading is
 <strong>not</strong> guaranteed to work smoothly.  In particular, when the unit boots
@@ -2358,15 +2637,15 @@ config</em>, and instead apply its <a href="../boot/#system-boot">failure config
 startup configuration before rebooting.</p>
 <p>In both cases we start out with a unit running Infix v25.03.1, and
 wish to downgrade to v25.01.0.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@example:/&gt; show software
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>BOOT ORDER
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>primary secondary net
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>NAME      STATE     VERSION                DATE
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>primary   booted    v25.03.1               2025-04-25T11:36:26+00:00
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>secondary inactive  v25.03.1               2025-04-25T10:24:31+00:00
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show software</b>
+Boot order : primary secondary net
+
+<span class="header">NAME       STATE     VERSION                DATE                     </span>
+primary    booted    v25.03.1               2025-04-25T11:36:26+00:00
+secondary  inactive  v25.03.1               2025-04-25T10:24:31+00:00
+admin@example:/&gt;
+</code></pre>
+
 <h3 id="with-backup-startup-config">With Backup <code>startup-config</code><a class="headerlink" href="#with-backup-startup-config" title="Permanent link">¶</a></h3>
 <p>This is the recommended approach to downgrade, given that you have a
 backup configuration available.  The objective is to avoid ending up
@@ -2385,20 +2664,22 @@ downgrade to (here Infix v25.01.0, config <code>version 1.4</code>).</p>
 running Infix v25.01.0 on the unit.  See section <a href="#upgrading">Upgrading</a>
 above for more information.  In the following example, there is a backup
 file available named <code>v25.01.0-startup-config.cfg</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@example:/&gt; dir /cfg
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>/cfg directory
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>backup/       ssl/       startup-config.cfg    v25.01.0-startup-config.cfg
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>admin@example:/&gt; 
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>dir /cfg</b>
+/cfg directory
+backup/       ssl/       startup-config.cfg    v25.01.0-startup-config.cfg
+
+admin@example:/&gt;
+</code></pre>
+
 <p>The alternative is to use a startup config implicitly backed up by the
 system as part of <a href="#configuration-migration">Configuration Migration</a>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@example:/&gt; dir /cfg/backup/
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>/cfg/backup/ directory
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>startup-config-1.4.cfg
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>dir /cfg/backup/</b>
+/cfg/backup/ directory
+startup-config-1.4.cfg
+
+admin@example:/&gt;
+</code></pre>
+
 <div class="admonition warning">
 <p class="admonition-title">Caution</p>
 <p>Using a backup configuration file stored when the unit was running the
@@ -2417,49 +2698,53 @@ longer be compatible with the previous <em>Infix version</em>. A downgrade
 after enabling new features risks ending up with the unit in <em>failure
 config</em>.</p>
 <p><em>Use <code>upgrade</code> command to downgrade:</em></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@example:/&gt; upgrade tftp://198.18.117.1/infix-aarch64-25.01.0.pkg
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>installing
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>  0% Installing
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>  0% Determining slot states
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a> 10% Determining slot states done.
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a> ...
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a> 99% Copying image to rootfs.1 done.
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a> 99% Updating slots done.
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>100% Installing done.
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>Installing `tftp://198.18.117.1/infix-aarch64-25.01.0.pkg` succeeded
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>upgrade tftp://198.18.117.1/infix-aarch64-25.01.0.pkg</b>
+installing
+  0% Installing
+  0% Determining slot states
+ 10% Determining slot states done.
+ ...
+ 99% Copying image to rootfs.1 done.
+ 99% Updating slots done.
+100% Installing done.
+Installing `tftp://198.18.117.1/infix-aarch64-25.01.0.pkg` succeeded
+admin@example:/&gt;
+</code></pre>
+
 <p><em>Apply the backup configuration file:</em></p>
 <p>It is recommended to use a backup configuration file for the Infix version to
 downgrade to, if there is one available.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>admin@example:/&gt; copy /cfg/v25.01.0-startup-config.cfg /cfg/startup-config.cfg
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>Overwrite existing file /cfg/startup-config.cfg (y/N)? y
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>copy /cfg/v25.01.0-startup-config.cfg /cfg/startup-config.cfg</b>
+Overwrite existing file /cfg/startup-config.cfg (y/N)? <b>y</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>An alternative is to use a backup file stored when the system
 conducted a <a href="#configuration-migration">configuration migration</a>. See
 the <em>caution</em> note above.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>admin@example:/&gt; copy /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>Overwrite existing file /cfg/startup-config.cfg (y/N)? y
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>copy /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg</b>
+Overwrite existing file /cfg/startup-config.cfg (y/N)? <b>y</b>
+admin@example:/&gt;
+</code></pre>
+
 <p><em>Reboot:</em></p>
 <p>The unit will come up with the applied backup configuration.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>admin@example:/&gt; reboot
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>[ OK ] Saving system clock to file
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>[ OK ] Stopping Software update service
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>[ OK ] Stopping Status daemon
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>...
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>[ OK ] Bootstrapping YANG datastore
-<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>[ OK ] Starting Configuration daemon
-<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>[ OK ] Loading startup-config
-<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>[ OK ] Update DNS configuration
-<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>[ OK ] Verifying self-signed https certificate
-<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>[ OK ] Starting Status daemon
-<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>
-<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
-<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>example login:
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>reboot</b>
+[ OK ] Saving system clock to file
+[ OK ] Stopping Software update service
+[ OK ] Stopping Status daemon
+...
+[ OK ] Bootstrapping YANG datastore
+[ OK ] Starting Configuration daemon
+[ OK ] Loading startup-config
+[ OK ] Update DNS configuration
+[ OK ] Verifying self-signed https certificate
+[ OK ] Starting Status daemon
+
+Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
+example login:
+</code></pre>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>If the unit despite these measures ends up in <em>failure config</em>, see
@@ -2476,18 +2761,19 @@ its default login credentials<sup id="fnref:1"><a class="footnote-ref" href="#fn
 <li>(Then go on configure the unit as you wish)</li>
 </ol>
 <p><em>Use <code>upgrade</code> command to downgrade:</em></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>admin@example:/&gt; upgrade tftp://198.18.117.1/infix-aarch64-25.01.0.pkg
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>installing
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>  0% Installing
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>  0% Determining slot states
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a> 10% Determining slot states done.
-<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a> ...
-<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a> 99% Copying image to rootfs.1 done.
-<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a> 99% Updating slots done.
-<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>100% Installing done.
-<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>Installing `tftp://198.18.117.1/infix-aarch64-25.01.0.pkg` succeeded
-<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>upgrade tftp://198.18.117.1/infix-aarch64-25.01.0.pkg</b>
+installing
+  0% Installing
+  0% Determining slot states
+ 10% Determining slot states done.
+ ...
+ 99% Copying image to rootfs.1 done.
+ 99% Updating slots done.
+100% Installing done.
+Installing `tftp://198.18.117.1/infix-aarch64-25.01.0.pkg` succeeded
+admin@example:/&gt;
+</code></pre>
+
 <p><em>Reboot:</em></p>
 <p>Conduct a reboot. During boot, the unit fails to apply the existing
 startup configuration (config version <code>1.5</code> while software expects
@@ -2495,59 +2781,62 @@ version <code>1.4</code> or earlier), and instead applies its <a href="../boot/#
 config</a>. This is what is seen on the console when this situation
 occurs. Note that the login prompt displays <code>failed</code> as part of the
 <em>hostname</em>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>admin@example:/&gt; reboot
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>[ OK ] Saving system clock to file
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>[ OK ] Stopping Software update service
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>[ OK ] Stopping Status daemon
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>...
-<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>[ OK ] Verifying SSH host keys
-<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>[ OK ] Bootstrapping YANG datastore
-<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>[ OK ] Starting Configuration daemon
-<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>[FAIL] Loading startup-config
-<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>[ OK ] Loading failure-config
-<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>[ OK ] Verifying self-signed https certificate
-<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>[ OK ] Starting Status daemon
-<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>
-<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
-<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>
-<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>ERROR: Corrupt startup-config, system has reverted to default login credentials
-<a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>failed-00-00-00 login:
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>reboot</b>
+[ OK ] Saving system clock to file
+[ OK ] Stopping Software update service
+[ OK ] Stopping Status daemon
+...
+[ OK ] Verifying SSH host keys
+[ OK ] Bootstrapping YANG datastore
+[ OK ] Starting Configuration daemon
+[FAIL] Loading startup-config
+[ OK ] Loading failure-config
+[ OK ] Verifying self-signed https certificate
+[ OK ] Starting Status daemon
+
+Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
+
+ERROR: Corrupt startup-config, system has reverted to default login credentials
+failed-00-00-00 login:
+</code></pre>
+
 <p>To remedy a situation like this, you can login with the unit's <em>default
 login credentials</em>, preferrably via a <a href="../management/#console-port">console port</a>.
 The unit's default credentials are typically printed on a sticker on
 the unit.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>failed-00-00-00 login: admin
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>Password:
-<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
-<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>Run the command 'cli' for interactive OAM
-<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
-<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>admin@failed-00-00-00:~$
-</code></pre></div>
+<pre class="cli"><code>failed-00-00-00 login: <b>admin</b>
+Password:
+
+Run the command 'cli' for interactive OAM
+
+admin@failed-00-00-00:~$
+</code></pre>
+
 <p>When it is <em>safe</em> from a network operations perspective, you can
 conduct a factory reset and reboot. It is recommended to remove the
 unit from any production network before doing this, as a factory reset
 may enable undesired connectivity between the unit's ports.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>admin@failed-00-00-00:~$ factory
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>Factory reset device (y/N)? y
-<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>factory: scheduled factory reset on next boot.
-<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>Reboot now to perform reset, (y/N)? y
-<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>[ OK ] Saving system time (UTC) to RTC
-<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>[ OK ] Stopping mDNS alias advertiser
-<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>...
-<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>[ OK ] Starting Configuration daemon
-<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>[ OK ] Loading startup-config
-<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>[ OK ] Update DNS configuration
-<a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>[ OK ] Verifying self-signed https certificate
-<a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>[ OK ] Starting Status daemon
-<a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>[ OK ] Starting Status daemon
-<a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>
-<a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>
-<a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a>Please press Enter to activate this console.
-<a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>
-<a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
-<a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a>example login:
-</code></pre></div>
+<pre class="cli"><code>admin@failed-00-00-00:~$ <b>factory</b>
+Factory reset device (y/N)? <b>y</b>
+factory: scheduled factory reset on next boot.
+Reboot now to perform reset, (y/N)? <b>y</b>
+[ OK ] Saving system time (UTC) to RTC
+[ OK ] Stopping mDNS alias advertiser
+...
+[ OK ] Starting Configuration daemon
+[ OK ] Loading startup-config
+[ OK ] Update DNS configuration
+[ OK ] Verifying self-signed https certificate
+[ OK ] Starting Status daemon
+[ OK ] Starting Status daemon
+
+
+Please press Enter to activate this console.
+
+Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
+example login:
+</code></pre>
+
 <p>Continued configuration is done as with any unit after factory reset.</p>
 <div class="footnote">
 <hr>

@@ -643,6 +643,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -697,7 +709,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -829,9 +1009,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -845,7 +1042,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2106,31 +2375,45 @@ hardware</a>, with deviations and augmentations in <em>infix-hardware</em>.</p>
 <h2 id="usb-ports">USB Ports<a class="headerlink" href="#usb-ports" title="Permanent link">¶</a></h2>
 <p>For Infix to be able to control USB port(s), a device tree modification
 is needed (see <em>alder.dtsi</em> for full example).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a> chosen {
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>   infix {
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>     usb-ports = &lt;&amp;cp0_usb3_1&gt;;
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>     usb-port-names = "USB";
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   };
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a> };
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="w"> </span><span class="err">chose</span><span class="kc">n</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">   </span><span class="err">i</span><span class="kc">nf</span><span class="err">ix</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">ts</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="err">&lt;&amp;cp</span><span class="mi">0</span><span class="err">_usb</span><span class="mi">3</span><span class="err">_</span><span class="mi">1</span><span class="err">&gt;;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">t</span><span class="mi">-</span><span class="kc">na</span><span class="err">mes</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="s2">"USB"</span><span class="err">;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">   </span><span class="p">}</span><span class="err">;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w"> </span><span class="p">}</span><span class="err">;</span>
 </code></pre></div>
 <p>Two USB ports are also exposed in QEMU for test purpose.</p>
 <p>All USB ports in the system will be disabled during boot due to the file
 <code>board/common/rootfs/etc/modprobe.d/usbcore.conf</code>.  If you do not want
 Infix to control USB port(s), remove the file or manually enable the USB
 bus, here is an example:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a># Enable the bus
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>echo 1 &gt; /sys/bus/usb/devices/usb1/authorized
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Enable the bus</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/bus/usb/devices/usb1/authorized
 </code></pre></div>
 <p>And then enable sub-devices (e.g. USB memory)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a># Enable a device plugged into usb1
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>echo 1 &gt;  /sys/bus/usb/devices/usb1/1-1/authorized
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Enable a device plugged into usb1</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w">  </span>/sys/bus/usb/devices/usb1/1-1/authorized
 </code></pre></div>
 <h3 id="current-status">Current status<a class="headerlink" href="#current-status" title="Permanent link">¶</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/&gt; show hardware
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a> USB PORTS
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a> NAME                STATE
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a> USB                 unlocked
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show hardware</b>
+<span class="header">HARDWARE COMPONENTS                                           </span>
+──────────────────────────────────────────────────────────────
+<span class="title">Board Information                                            </span>
+Model               : FriendlyElec NanoPi R2S
+Manufacturer        : FriendlyElec
+Serial Number       : 9d1fbfdab6d171ce
+Base MAC Address    : 4a:dc:d8:20:0d:85
+──────────────────────────────────────────────────────────────
+<span class="title">USB Ports                                                    </span>
+<span class="header">NAME                                         STATE     OPER   </span>
+USB                                          unlocked  enabled
+──────────────────────────────────────────────────────────────
+<span class="title">Sensors                                                      </span>
+<span class="header">NAME                          VALUE                 STATUS    </span>
+soc                           44.1 °C               ok        
+soc                           44.5 °C               ok        
+</code></pre>
+
 <p>An USB port can be in two states <em>unlocked</em> and <em>locked</em>. When a port is
 locked, all connected devices will get power, but never authorized by
 Linux to use.</p>
@@ -2141,11 +2424,12 @@ Linux to use.</p>
 command <code>show hardware</code> in admin-exec context.  (Use <code>do</code> prefix in
 configure context.)</p>
 </div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/&gt; set hardware component USB state admin-state unlocked
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:/config/&gt; leave
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>set hardware component USB state admin-state unlocked</b>
+admin@example:/config/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <h3 id="using-a-usb-stick">Using a USB Stick<a class="headerlink" href="#using-a-usb-stick" title="Permanent link">¶</a></h3>
 <p>With the USB port unlocked, a memory stick can be used to expand the
 storage of the device.  Plug it in, either directly, or via a USB hub.
@@ -2160,8 +2444,8 @@ yanking out a device before file(s) have been written to it.</p>
 <p>The only way currently to safely "eject" a USB memory stick is to use
 <code>umount</code> command from a UNIX shell, which explicitly synchronizes any
 cached data to disk before returning the prompt:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:~$ sudo umount /media/log
-</code></pre></div>
+<pre class="cli"><code>admin@example:~$ <b>sudo umount /media/log</b>
+</code></pre>
 
 
 

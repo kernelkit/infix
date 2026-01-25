@@ -1124,6 +1124,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -1178,7 +1190,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -1310,9 +1490,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -1326,7 +1523,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2901,7 +3170,7 @@ virtualization, containers reuse the host's CPU and kernel.</p>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/docker-hello-world.svg" data-desc-position="bottom"><img align="right" alt="Hello World" src="../img/docker-hello-world.svg" width="200"></a></p>
 <h3 id="example-hello-world">Example: Hello World<a class="headerlink" href="#example-hello-world" title="Permanent link">¶</a></h3>
 <p>Classic Hello World:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; container run docker://hello-world
+<pre class="cli"><code>admin@example:/&gt; <b>container run docker://hello-world</b>
 Starting docker://hello-world :: use Ctrl-p Ctrl-q to detach
 Trying to pull docker.io/library/hello-world:latest...
 Getting image source signatures
@@ -2912,27 +3181,30 @@ Storing signatures
 
 Hello from Docker!
 This message shows that your installation appears to be working correctly.
-</code></pre></div>
+</code></pre>
+
 <h3 id="example-web-server">Example: Web Server<a class="headerlink" href="#example-web-server" title="Permanent link">¶</a></h3>
 <p>A web server with <a href="https://hub.docker.com/_/nginx">nginx</a>, using standard docker bridge.  Podman will
 automatically create a VETH pair for us, connecting the container to the
 <code>docker0</code> bridge:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config/&gt; edit interface docker0
-admin@example:/config/interface/docker0/&gt; set container-network
-admin@example:/config/interface/docker0/&gt; end
-admin@example:/config/&gt; edit container web
-admin@example:/config/container/web/&gt; set image docker://nginx:alpine
-admin@example:/config/container/web/&gt; set network publish 8080:80
-admin@example:/config/container/web/&gt; set network interface docker0
-admin@example:/config/container/web/&gt; set volume cache target /var/cache
-admin@example:/config/container/web/&gt; leave
-admin@example:/&gt; show container
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface docker0</b>
+admin@example:/config/interface/docker0/&gt; <b>set container-network</b>
+admin@example:/config/interface/docker0/&gt; <b>end</b>
+admin@example:/config/&gt; <b>edit container web</b>
+admin@example:/config/container/web/&gt; <b>set image docker://nginx:alpine</b>
+admin@example:/config/container/web/&gt; <b>set network publish 8080:80</b>
+admin@example:/config/container/web/&gt; <b>set network interface docker0</b>
+admin@example:/config/container/web/&gt; <b>set volume cache target /var/cache</b>
+admin@example:/config/container/web/&gt; <b>leave</b>
+admin@example:/&gt; <b>show container</b>
+</code></pre>
+
 <p>Exit to the shell and verify the service with curl, or try to attach
 to your device's IP address using your browser:</p>
-<div class="highlight"><pre><span></span><code>admin@example:~$ curl http://localhost:8080
-</code></pre></div>
+<pre class="cli"><code>admin@example:~$ <b>curl http://localhost:8080</b>
+</code></pre>
+
 <p>or connect to port 8080 of your running Infix system with a browser.
 See the following sections for how to add more interfaces and manage
 your container at runtime.</p>
@@ -2942,11 +3214,11 @@ a variety of ways, the most common ones are also supported by Infix.  In
 this section we present how to use them and in the next section we show
 how to upgrade to a newer base image.</p>
 <p>The CLI help shows:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; help image
-NAME
+<pre class="cli"><code>admin@example:/config/container/system/&gt; <b>help image</b>
+<b>NAME</b>
     image &lt;string&gt;
 
-DESCRIPTION
+<b>DESCRIPTION</b>
     Docker image for the container: [transport]name[:tag|@digest]
 
     quay.io/username/myimage     -- Pull myimage:latest
@@ -2967,7 +3239,8 @@ DESCRIPTION
     Note: if a remote repository cannot be reached, the creation of the
           container will be put on a queue that retries pull every time
           there is a route change in the host's system.
-</code></pre></div>
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The built-in help system in the CLI is generated from the YANG model,
@@ -2993,26 +3266,28 @@ format.  Infix supports loading both <code>.tar</code> or <code>.tar.gz</code> f
 but many others exist, tools like <code>wget</code>, <code>curl</code>, and <code>scp</code> come to
 mind.</p>
 <p><strong>Shell OCI Example:</strong></p>
-<div class="highlight"><pre><span></span><code>admin@example:~$ cd /var/tmp/
-admin@example:/var/tmp$ sudo wget https://github.com/kernelkit/curiOS/releases/download/edge/curios-oci-amd64.tar.gz
+<pre class="cli"><code>admin@example:~$ <b>cd /var/tmp/</b>
+admin@example:/var/tmp$ <b>sudo wget https://github.com/kernelkit/curiOS/releases/download/edge/curios-oci-amd64.tar.gz</b>
 Connecting to github.com (140.82.121.3:443)
 wget: note: TLS certificate validation not implemented
 Connecting to objects.githubusercontent.com (185.199.109.133:443)
 saving to 'curios-oci-amd64.tar.gz'
 curios-oci-amd64.tar 100% |*********************************| 7091k  0:00:00 ETA
 'curios-oci-amd64.tar.gz' saved
-admin@example:/var/tmp$ ll
+admin@example:/var/tmp$ <b>ll</b>
 total 7104
 drwxr-xr-x    3 root     root          4096 Mar 27 14:22 ./
 drwxr-xr-x   14 root     root          4096 Mar 27 11:57 ../
 -rw-r--r--    1 root     root       7261785 Mar 27 14:22 curios-oci-amd64.tar.gz
 drwx------    6 frr      frr           4096 Mar 27 11:57 frr/
-</code></pre></div>
+</code></pre>
+
 <p>Importing the image into Podman can be done either from the CLI
 admin-exec context ...</p>
-<div class="highlight"><pre><span></span><code>admin@example:/var/tmp$ cli
-admin@example:/&gt; container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge
-</code></pre></div>
+<pre class="cli"><code>admin@example:/var/tmp$ <b>cli</b>
+admin@example:/&gt; <b>container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge</b>
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The <code>name curios:edge</code> is the tag you give the imported (raw) archive
@@ -3021,23 +3296,24 @@ which you can then reference in your container image configuration:
 </div>
 <p>... or by giving the container configuration the full path to the OCI
 archive, which helps greatly with container upgrades (see below):</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; set image oci-archive:/var/tmp/curios-oci-amd64.tar.gz
-</code></pre></div>
-<p><strong>Checksum Example:</strong></p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config/&gt; edit container sys
-admin@example:/config/container/sys/&gt; set hostname sys
-admin@example:/config/container/sys/&gt; set image ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
-admin@example:/config/container/sys/&gt; set checksum
-    md5 sha256 sha512
-admin@example:/config/container/sys/&gt; set checksum sha256 4f01077036527498ed910f1a3e80645ae3eff629d10043cf80ebc6850c99c629
-admin@example:/config/container/sys/&gt; leave
-admin@example:/&gt; copy running-config startup-config
-admin@example:/&gt; show container
-CONTAINER ID  IMAGE                                             COMMAND               CREATED         STATUS        PORTS       NAMES
-b02e945c43c9  localhost/curios-oci-amd64-v24.05.0:latest                              5 seconds ago   Up 5 seconds              sys
+<pre class="cli"><code>admin@example:/config/container/system/&gt; <b>set image oci-archive:/var/tmp/curios-oci-amd64.tar.gz</b>
+</code></pre>
 
-admin@example:/&gt; show log
+<p><strong>Checksum Example:</strong></p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit container sys</b>
+admin@example:/config/container/sys/&gt; <b>set hostname sys</b>
+admin@example:/config/container/sys/&gt; <b>set image ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz</b>
+admin@example:/config/container/sys/&gt; <b>set checksum</b>
+    md5 sha256 sha512
+admin@example:/config/container/sys/&gt; <b>set checksum sha256 4f01077036527498ed910f1a3e80645ae3eff629d10043cf80ebc6850c99c629</b>
+admin@example:/config/container/sys/&gt; <b>leave</b>
+admin@example:/&gt; <b>copy running-config startup-config</b>
+admin@example:/&gt; <b>show container</b>
+<span class="header">NAME  STATUS         NETWORK  MEMORY (KiB)  CPU%</span>
+sys   Up 5 seconds                  72/512  0.02
+
+admin@example:/&gt; <b>show log</b>
 ...
 Nov 20 07:24:56 example container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
 Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
@@ -3045,7 +3321,8 @@ Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz checks
 Nov 20 07:24:57 example container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
 Nov 20 07:24:57 example container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
 Nov 20 07:24:57 example container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
-</code></pre></div>
+</code></pre>
+
 <h2 id="understanding-image-tags">Understanding Image Tags<a class="headerlink" href="#understanding-image-tags" title="Permanent link">¶</a></h2>
 <p>Docker images use tags to identify different versions of the same image.
 Understanding the difference between <em>mutable</em> and <em>immutable</em> tags is
@@ -3127,11 +3404,12 @@ writable paths provided by Podman (<code>/dev</code>, <code>/dev/shm</code>, <co
 <h3 id="method-1-upgrading-immutable-tags">Method 1: Upgrading Immutable Tags<a class="headerlink" href="#method-1-upgrading-immutable-tags" title="Permanent link">¶</a></h3>
 <p>When using version-specific tags, you upgrade by explicitly changing the
 image reference in your configuration:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/&gt; edit container web
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/container/web/&gt; set image docker://nginx:1.25.3
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/container/web/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit container web</b>
+admin@example:/config/container/web/&gt; <b>set image docker://nginx:1.25.3</b>
+admin@example:/config/container/web/&gt; <b>leave</b>
+</code></pre>
+
 <p><strong>What happens:</strong></p>
 <ol>
 <li>Podman pulls the new image in the background (if not already present)</li>
@@ -3140,24 +3418,26 @@ image reference in your configuration:</p>
 <li>The container is started with your existing volumes intact</li>
 </ol>
 <p><strong>Example:</strong> Upgrading from one version to another:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@example:/config/&gt; edit container system
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/container/system/&gt; show image
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>image ghcr.io/kernelkit/curios:v24.11.0;
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>admin@example:/config/container/system/&gt; set image ghcr.io/kernelkit/curios:v24.12.0
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>admin@example:/config/container/system/&gt; leave
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>admin@example:/&gt; show log
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>...
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>Dec 13 14:32:15 example container[1523]: Pulling ghcr.io/kernelkit/curios:v24.12.0...
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>Dec 13 14:32:18 example container[1523]: Stopping old container instance...
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>Dec 13 14:32:19 example container[1523]: Creating new container with updated image...
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>Dec 13 14:32:20 example container[1523]: Container system started successfully
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit container system</b>
+admin@example:/config/container/system/&gt; <b>show image</b>
+image ghcr.io/kernelkit/curios:v24.11.0;
+admin@example:/config/container/system/&gt; <b>set image ghcr.io/kernelkit/curios:v24.12.0</b>
+admin@example:/config/container/system/&gt; <b>leave</b>
+admin@example:/&gt; <b>show log</b>
+...
+Dec 13 14:32:15 example container[1523]: Pulling ghcr.io/kernelkit/curios:v24.12.0...
+Dec 13 14:32:18 example container[1523]: Stopping old container instance...
+Dec 13 14:32:19 example container[1523]: Creating new container with updated image...
+Dec 13 14:32:20 example container[1523]: Container system started successfully
+</code></pre>
+
 <h3 id="method-2-upgrading-mutable-tags">Method 2: Upgrading Mutable Tags<a class="headerlink" href="#method-2-upgrading-mutable-tags" title="Permanent link">¶</a></h3>
 <p>For images using mutable tags like <code>:latest</code> or <code>:edge</code>, use the
 <code>container upgrade</code> command:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/&gt; container upgrade NAME
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>container upgrade NAME</b>
+</code></pre>
+
 <p>This command:</p>
 <ol>
 <li>Stops the running container</li>
@@ -3166,27 +3446,29 @@ image reference in your configuration:</p>
 <li>Starts the container automatically</li>
 </ol>
 <p><strong>Example using registry:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; container upgrade system
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>system
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Trying to pull ghcr.io/kernelkit/curios:edge...
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>Getting image source signatures
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>Copying blob 07bfba95fe93 done
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>Copying config 0cb6059c0f done
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>Writing manifest to image destination
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>Storing signatures
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>system: not running.
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>container upgrade system</b>
+system
+Trying to pull ghcr.io/kernelkit/curios:edge...
+Getting image source signatures
+Copying blob 07bfba95fe93 done
+Copying config 0cb6059c0f done
+Writing manifest to image destination
+Storing signatures
+0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
+system: not running.
+59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
+</code></pre>
+
 <p><strong>Example using local OCI archive:</strong></p>
 <p>An OCI archive image can be upgraded in a similar manner. First, get the
 new archive onto the system (see Container Images section above), then,
 provided the <code>oci-archive:/path/to/archive</code> format is used in your
 configuration, call the upgrade command:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt; container upgrade system
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>container upgrade system</b>
+Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
+7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
+</code></pre>
+
 <p>OCI archives can also be fetched from ftp/http/https URLs. In that case,
 the upgrade works the same way as a registry image — Infix downloads the
 new archive and recreates the container.</p>
@@ -3215,16 +3497,17 @@ version without any manual intervention.</p>
 occasions where they are too restricted and users start looking for the
 <code>privileged</code> flag.  Capabilities offers a middle ground.</p>
 <p>For example, a system container from which <code>ping</code> does not work:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; edit capabilities
-admin@example:/config/container/system/capabilities/&gt; set add net_raw
-admin@example:/config/container/system/capabilities/&gt; end
-admin@infix-00-00-00:/config/container/system/&gt; show
+<pre class="cli"><code>admin@example:/config/container/system/&gt; <b>edit capabilities</b>
+admin@example:/config/container/system/capabilities/&gt; <b>set add net_raw</b>
+admin@example:/config/container/system/capabilities/&gt; <b>end</b>
+admin@infix-00-00-00:/config/container/system/&gt; <b>show</b>
 ...
 capabilities {
   add net_raw;
 }
 ...
-</code></pre></div>
+</code></pre>
+
 <p>Infix supports a subset of all <a href="https://man7.org/linux/man-pages/man7/capabilities.7.html">capabilities</a> that are relevant for
 containers.  Please note, that this is an advanced topic that require
 time and analysis of your container application to figure out which
@@ -3240,13 +3523,14 @@ resources and ensures fair resource allocation across multiple containers.</p>
 <li><strong>CPU:</strong> Maximum CPU usage in millicores (1000 millicores = 1 CPU core)</li>
 </ul>
 <p>Example configuration limiting a container to 512 MiB of memory and 1.5 CPU cores:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config/&gt; edit container web
-admin@example:/config/container/web/&gt; edit resource-limit
-admin@example:/config/container/web/resource-limit/&gt; set memory 524288
-admin@example:/config/container/web/resource-limit/&gt; set cpu 1500
-admin@example:/config/container/web/resource-limit/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit container web</b>
+admin@example:/config/container/web/&gt; <b>edit resource-limit</b>
+admin@example:/config/container/web/resource-limit/&gt; <b>set memory 524288</b>
+admin@example:/config/container/web/resource-limit/&gt; <b>set cpu 1500</b>
+admin@example:/config/container/web/resource-limit/&gt; <b>leave</b>
+</code></pre>
+
 <p>Common CPU limit examples:</p>
 <ul>
 <li><code>500</code> = 0.5 cores (50% of one core)</li>
@@ -3255,9 +3539,10 @@ admin@example:/config/container/web/resource-limit/&gt; leave
 </ul>
 <h3 id="monitoring-resource-usage">Monitoring Resource Usage<a class="headerlink" href="#monitoring-resource-usage" title="Permanent link">¶</a></h3>
 <p>Runtime resource usage statistics are available in the operational datastore:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; show container web
+<pre class="cli"><code>admin@example:/&gt; <b>show container web</b>
 ...
-</code></pre></div>
+</code></pre>
+
 <p>Use <code>show container usage</code> to see resource consumption across all containers,
 including memory, CPU, block I/O, network I/O, and process counts.</p>
 <h2 id="networking-and-containers">Networking and Containers<a class="headerlink" href="#networking-and-containers" title="Permanent link">¶</a></h2>
@@ -3287,19 +3572,21 @@ between the host and other containers, as well as managing port
 forwarding.  This transparent background management is what makes
 container use seem to be so simple.</p>
 <p>All interface configuration is done in configure context.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config&gt; edit interface docker0
-admin@example:/config/interface/docker0/&gt; set container-network
-admin@example:/config/interface/docker0/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config&gt; <b>edit interface docker0</b>
+admin@example:/config/interface/docker0/&gt; <b>set container-network</b>
+admin@example:/config/interface/docker0/&gt; <b>leave</b>
+</code></pre>
+
 <p>There is more to this story.  When using the CLI, and sticking to common
 interface nomenclature, Infix helps you with some of the boring stuff.
 E.g., creating a new interface with a name like <code>brN</code> or <code>dockerN</code>
 automatically <em>infers</em> the interface types, which you would otherwise
 have to set manually:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/interface/docker0/&gt; set type bridge
-admin@example:/config/interface/docker0/&gt; set container-network type bridge
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/interface/docker0/&gt; <b>set type bridge</b>
+admin@example:/config/interface/docker0/&gt; <b>set container-network type bridge</b>
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
 <p>When configuring the system via an API such as NETCONF or RESTCONF, no
@@ -3322,17 +3609,18 @@ automatically created VETH pair connection to the bridge and a lot of
 other networking parameters (DNS, default route) are set up.</p>
 <p>Some of the defaults of a container <code>bridge</code> can be changed, e.g.,
 instead of <code>set container-network type bridge</code>, above, do:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/interface/docker0/&gt; edit container-network
-admin@example:/config/interface/docker0/container-network/&gt; set type bridge
-admin@example:/config/interface/docker0/container-network/&gt; edit subnet 192.168.0.0/16
-admin@example:/config/interface/docker0/container-network/subnet/192.168.0.0/16/&gt; set gateway 192.168.255.254
-admin@example:/config/interface/docker0/container-network/subnet/192.168.0.0/16/&gt; end
-admin@example:/config/interface/docker0/container-network/&gt; edit route 10.0.10.0/24
-admin@example:/config/interface/docker0/container-network/route/10.0.10.0/24/&gt; set gateway 192.168.10.254
-admin@example:/config/interface/docker0/container-network/route/10.0.10.0/24/&gt; end
-admin@example:/config/interface/docker0/container-network/&gt; end
-admin@example:/config/interface/docker0/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/interface/docker0/&gt; <b>edit container-network</b>
+admin@example:/config/…/container-network/&gt; <b>set type bridge</b>
+admin@example:/config/…/container-network/&gt; <b>edit subnet 192.168.0.0/16</b>
+admin@example:/config/…/subnet/192.168.0.0/16/&gt; <b>set gateway 192.168.255.254</b>
+admin@example:/config/…/subnet/192.168.0.0/16/&gt; <b>end</b>
+admin@example:/config/…/container-network/&gt; <b>edit route 10.0.10.0/24</b>
+admin@example:/config/…/route/10.0.10.0/24/&gt; <b>set gateway 192.168.10.254</b>
+admin@example:/config/…/route/10.0.10.0/24/&gt; <b>end</b>
+admin@example:/config/…/container-network/&gt; <b>end</b>
+admin@example:/config/interface/docker0/&gt; <b>leave</b>
+</code></pre>
+
 <p>Other network settings, like DNS and domain, use built-in defaults, but
 can be overridden from each container.  Other common settings per
 container is the IP address and name of the network interface inside the
@@ -3342,11 +3630,11 @@ given in the <code>network</code> list, and to give the container the next addre
 in a <code>bridge</code>.  Below an example of a system container calls <code>set
 network interface docker0</code>, here we show how to set options for that
 network:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/ntpd/&gt; edit network interface docker0
-admin@example:/config/container/ntpd/network/interface/docker0/&gt;
-admin@example:/config/container/ntpd/network/interface/docker0/&gt; set option
+<pre class="cli"><code>admin@example:/config/container/ntpd/&gt; <b>edit network interface docker0</b>
+admin@example:/config/…/network/interface/docker0/&gt;
+admin@example:/config/…/network/interface/docker0/&gt; <b>set option</b>
 &lt;string&gt;  Options for masquerading container bridges.
-admin@example:/config/container/ntpd/network/interface/docker0/&gt; help option
+admin@example:/config/…/network/interface/docker0/&gt; <b>help option</b>
 NAME
         option &lt;string&gt;
 
@@ -3357,10 +3645,11 @@ DESCRIPTION
                  mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
                  interface_name=foo0   -- set interface name inside container
 
-admin@example:/config/container/ntpd/network/interface/docker0/&gt; set option ip=172.17.0.2
-admin@example:/config/container/ntpd/network/interface/docker0/&gt; set option interface_name=wan
-admin@example:/config/container/ntpd/network/interface/docker0/&gt; leave
-</code></pre></div>
+admin@example:/config/…/network/interface/docker0/&gt; <b>set option ip=172.17.0.2</b>
+admin@example:/config/…/network/interface/docker0/&gt; <b>set option interface_name=wan</b>
+admin@example:/config/…/network/interface/docker0/&gt; <b>leave</b>
+</code></pre>
+
 <h3 id="container-host-interface">Container Host Interface<a class="headerlink" href="#container-host-interface" title="Permanent link">¶</a></h3>
 <p>Another common use-case is to move network interfaces into the network
 namespace of a container<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">1</a></sup>.  This of course works with plain Ethernet
@@ -3382,15 +3671,16 @@ the host and the <code>ntpd</code> container.</p>
 container-end of pair <code>ntpd</code>.  This is just a convenience for us when
 reading the configuration later.  The <em>real action</em> happens on the last
 line where we declare the <code>ntpd</code> end as a container network interface:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit interface veth0
-admin@example:/config/interface/veth0/&gt; set veth peer ntpd
-admin@example:/config/interface/veth0/&gt; set ipv4 address 192.168.0.1 prefix-length 24
-admin@example:/config/interface/veth0/&gt; end
-admin@example:/config/&gt; edit interface ntpd
-admin@example:/config/interface/ntpd/&gt; set ipv4 address 192.168.0.2 prefix-length 24
-admin@example:/config/interface/ntpd/&gt; set custom-phys-address static 00:c0:ff:ee:00:01
-admin@example:/config/interface/ntpd/&gt; set container-network
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface veth0</b>
+admin@example:/config/interface/veth0/&gt; <b>set veth peer ntpd</b>
+admin@example:/config/interface/veth0/&gt; <b>set ipv4 address 192.168.0.1 prefix-length 24</b>
+admin@example:/config/interface/veth0/&gt; <b>end</b>
+admin@example:/config/&gt; <b>edit interface ntpd</b>
+admin@example:/config/interface/ntpd/&gt; <b>set ipv4 address 192.168.0.2 prefix-length 24</b>
+admin@example:/config/interface/ntpd/&gt; <b>set custom-phys-address static 00:c0:ff:ee:00:01</b>
+admin@example:/config/interface/ntpd/&gt; <b>set container-network</b>
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>Notice how you can also set a custom MAC address at the same time.</p>
@@ -3398,9 +3688,10 @@ admin@example:/config/interface/ntpd/&gt; set container-network
 <p>Adding the interface to the container is the same as before, but since
 everything for host interfaces is set up in the interfaces context, we
 can take a bit of a shortcut.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/ntpd/&gt; set network interface ntpd
-admin@example:/config/container/ntpd/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/container/ntpd/&gt; <b>set network interface ntpd</b>
+admin@example:/config/container/ntpd/&gt; <b>leave</b>
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>Use the <code>set network interface ntpd option interface_name=foo0</code> to set
@@ -3415,10 +3706,11 @@ with other physical ports.  In this section we show how to add a new
 pair to give our container two interfaces:</p>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/cni-ntpd-bridged.svg" data-desc-position="bottom"><img alt="Bridged setup with ntpd container." src="../img/cni-ntpd-bridged.svg"></a></p>
 <p>We start by adding the second VETH pair:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit interface veth1a
-admin@example:/config/interface/veth1a/&gt; set veth peer veth1
-admin@example:/config/interface/veth1a/&gt; set ipv4 address 192.168.1.2 prefix-length 24
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface veth1a</b>
+admin@example:/config/interface/veth1a/&gt; <b>set veth peer veth1</b>
+admin@example:/config/interface/veth1a/&gt; <b>set ipv4 address 192.168.1.2 prefix-length 24</b>
+</code></pre>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The LAN bridge (br1) in this example has IP address 192.168.1.1.</p>
@@ -3426,8 +3718,8 @@ admin@example:/config/interface/veth1a/&gt; set ipv4 address 192.168.1.2 prefix-
 <p>When a container has multiple host interfaces it can often be useful to
 have a default route installed.  This can be added from the host with a
 <code>0.0.0.0/0</code> route on one of the interfaces:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/interface/veth1a/&gt; set container-network route 0.0.0.0/0 gateway 192.168.1.1
-admin@example:/config/interface/veth1a/&gt; show
+<pre class="cli"><code>admin@example:/config/interface/veth1a/&gt; <b>set container-network route 0.0.0.0/0 gateway 192.168.1.1</b>
+admin@example:/config/interface/veth1a/&gt; <b>show</b>
 type veth;
 container-network {
   type host;
@@ -3438,9 +3730,10 @@ container-network {
 veth {
   peer veth1;
 }
-admin@example:/config/interface/veth1a/&gt; end
-admin@example:/config/&gt; set interface veth1 bridge-port bridge br1
-</code></pre></div>
+admin@example:/config/interface/veth1a/&gt; <b>end</b>
+admin@example:/config/&gt; <b>set interface veth1 bridge-port bridge br1</b>
+</code></pre>
+
 <p>Please note, container network routes require the base interface also
 have a static IP address set.  Setting only the route, but no address,
 means the route is skipped.</p>
@@ -3455,12 +3748,13 @@ the host operating system.</p>
 <p>It is possible to mount files, directories, and even files matching a
 glob, into a container.  This gives precise control over the container's
 file system:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; edit mount leds
-admin@example:/config/container/system/mount/leds&gt; set source /sys/class/leds
-admin@example:/config/container/system/mount/leds&gt; set target /sys/class/leds
-admin@example:/config/container/system/mount/leds&gt; end
+<pre class="cli"><code>admin@example:/config/container/system/&gt; <b>edit mount leds</b>
+admin@example:/config/container/system/mount/leds&gt; <b>set source /sys/class/leds</b>
+admin@example:/config/container/system/mount/leds&gt; <b>set target /sys/class/leds</b>
+admin@example:/config/container/system/mount/leds&gt; <b>end</b>
 admin@example:/config/container/system/&gt;
-</code></pre></div>
+</code></pre>
+
 <p>Any type of file can be <em>bind mounted</em> into the container, just watch
 out for permissions though.  In the example above, <code>/sys/class/leds</code> is
 not writable from a container unless it runs in <em>privileged</em> mode.  For
@@ -3472,8 +3766,9 @@ use.  An intriguing option is <em>Content Mounts</em>, which when changed also
 trigger a container restart.</p>
 <p>Other times <em>volumes</em> are a better fit.  A volume is an automatically
 created read-writable entity that follows the life of your container.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/ntpd/&gt; set volume varlib target /var/lib
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/container/ntpd/&gt; <b>set volume varlib target /var/lib</b>
+</code></pre>
+
 <p>Volumes are persistent across both reboots and upgrades of the base
 image.  They are created by Podman when the container first starts up,
 unlike a regular bind mount it synchronizes with the contents of the
@@ -3499,7 +3794,7 @@ where:</p>
 </ul>
 <p>To clean up unused volumes and reclaim disk space, use the admin-exec
 command:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; container prune
+<pre class="cli"><code>admin@example:/&gt; <b>container prune</b>
 Deleted Images
 ...
 Deleted Volumes
@@ -3507,7 +3802,8 @@ ntpd-varlib
 system-data
 
 Total reclaimed space: 45.2MB
-</code></pre></div>
+</code></pre>
+
 <p>The <code>container prune</code> command safely removes:</p>
 <ul>
 <li>Unused container images</li>
@@ -3517,13 +3813,13 @@ Total reclaimed space: 45.2MB
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>You can monitor container resource usage with the command:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; show container usage
-</code></pre></div>
+<p></p><pre class="cli"><code>admin@example:/&gt; <b>show container usage</b>
+</code></pre><p></p>
 <p>This displays disk space used by images, containers, and volumes,
 helping you decide when to run the prune command.</p>
 <p>To see which volumes exist and which containers use them:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; show container volumes
-</code></pre></div>
+<p></p><pre class="cli"><code>admin@example:/&gt; <b>show container volumes</b>
+</code></pre><p></p>
 </div>
 <h3 id="content-mounts">Content Mounts<a class="headerlink" href="#content-mounts" title="Permanent link">¶</a></h3>
 <p>Content mounts are a special type of file mount where the file contents
@@ -3531,13 +3827,14 @@ is stored with the container configuration.  This can be very useful
 when deploying similar systems at multiple sites.  When the host loads
 its <code>startup-config</code> (or even <code>factory-config</code>) a temporary file is
 created using the decoded base64 data from the <code>content</code> node.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/ntpd/&gt; edit mount ntpd.conf
-admin@example:/config/container/ntpd/mount/ntpd.conf&gt; text-editor content
+<pre class="cli"><code>admin@example:/config/container/ntpd/&gt; <b>edit mount ntpd.conf</b>
+admin@example:/config/container/ntpd/mount/ntpd.conf&gt; <b>text-editor content</b>
 ... interactive editor starts up ...
-admin@example:/config/container/ntpd/mount/ntpd.conf&gt; set target /etc/ntpd.conf
-admin@example:/config/container/ntpd/mount/ntpd.conf&gt; end
+admin@example:/config/container/ntpd/mount/ntpd.conf&gt; <b>set target /etc/ntpd.conf</b>
+admin@example:/config/container/ntpd/mount/ntpd.conf&gt; <b>end</b>
 admin@example:/config/container/ntpd/&gt;
-</code></pre></div>
+</code></pre>
+
 <p>The editor is a small <a href="https://github.com/troglobit/mg">Emacs clone called Mg</a>, see the built-in help
 text, or press Ctrl-x Ctrl-c to exit and save.  When the editor exits
 the contents are base64 encoded and stored in the candidate datastore.</p>
@@ -3554,13 +3851,14 @@ see <a href="../cli/text-editor/">CLI Text Editor</a>.</p>
 <p>Let's try out what we've learned by setting up a system container, a
 container providing multiple services, using the <code>docker0</code> interface
 we created previously:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config&gt; edit container system
-admin@example:/config/container/system/&gt; set image ghcr.io/kernelkit/curios:edge
-admin@example:/config/container/system/&gt; set network interface docker0
-admin@example:/config/container/system/&gt; set publish 222:22
-admin@example:/config/container/system/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config&gt; <b>edit container system</b>
+admin@example:/config/container/system/&gt; <b>set image ghcr.io/kernelkit/curios:edge</b>
+admin@example:/config/container/system/&gt; <b>set network interface docker0</b>
+admin@example:/config/container/system/&gt; <b>set publish 222:22</b>
+admin@example:/config/container/system/&gt; <b>leave</b>
+</code></pre>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Ensure you have a network connection to the registry.  If the image
@@ -3573,25 +3871,28 @@ now runs behind the docker0 interface, forwarding container port 22 to
 port 222 on all of the host's interfaces.  (See <code>help publish</code> in the
 container configuration context for the full syntax.)</p>
 <p>Available containers can be accessed from admin-exec:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; show container
-CONTAINER ID  IMAGE                          COMMAND     CREATED       STATUS       PORTS                 NAMES
-439af2917b44  ghcr.io/kernelkit/curios:edge              41 hours ago  Up 16 hours  0.0.0.0:222-&gt;222/tcp  system
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show container</b>
+<span class="header">NAME     STATUS        NETWORK  MEMORY (KiB)  CPU%</span>
+system   Up 16 hours   docker0       136/512  0.02
+</code></pre>
+
 <p>This is a system container, so you can "attach" to it by starting a
 shell (or logging in with SSH):</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; container shell system
+<pre class="cli"><code>admin@example:/&gt; <b>container shell system</b>
 root@439af2917b44:/#
-</code></pre></div>
+</code></pre>
+
 <p>Notice how the hostname inside the container changes.  By default the
 container ID (hash) is used, but this can be easily changed:</p>
-<div class="highlight"><pre><span></span><code>root@439af2917b44:/# exit
-admin@example:/&gt; configure
-admin@example:/config/&gt; edit container system
-admin@example:/config/container/system/&gt; set hostname sys101
-admin@example:/config/container/system/&gt; leave
-admin@example:/&gt; container shell system
+<pre class="cli"><code>root@439af2917b44:/# <b>exit</b>
+admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit container system</b>
+admin@example:/config/container/system/&gt; <b>set hostname sys101</b>
+admin@example:/config/container/system/&gt; <b>leave</b>
+admin@example:/&gt; <b>container shell system</b>
 root@sys101:/#
-</code></pre></div>
+</code></pre>
+
 <p>In fact, the container <code>hostname</code> setting supports the same format
 specifiers as the host's <code>hostname</code> setting:</p>
 <ul>
@@ -3606,17 +3907,18 @@ this example give the container hostname <code>container-name-c0-ff-ee</code>.</
 <p>Infix currently does not have a native firewall configuration, and even
 when it does it will never expose the full capabilities of <code>nftables</code>.
 For advanced setups, the following is an interesting alternative.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config&gt; edit container nftables
-admin@example:/config/container/nftables/&gt; set image ghcr.io/kernelkit/curios-nftables:edge
-admin@example:/config/container/nftables/&gt; set network host
-admin@example:/config/container/nftables/&gt; set privileged
-admin@example:/config/container/nftables/&gt; edit mount nftables.conf
-admin@example:/config/container/nftables/mount/nftables.conf/&gt; set target /etc/nftables.conf
-admin@example:/config/container/nftables/mount/nftables.conf/&gt; text-editor content
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config&gt; <b>edit container nftables</b>
+admin@example:/config/container/nftables/&gt; <b>set image ghcr.io/kernelkit/curios-nftables:edge</b>
+admin@example:/config/container/nftables/&gt; <b>set network host</b>
+admin@example:/config/container/nftables/&gt; <b>set privileged</b>
+admin@example:/config/container/nftables/&gt; <b>edit mount nftables.conf</b>
+admin@example:/config/…/mount/nftables.conf/&gt; <b>set target /etc/nftables.conf</b>
+admin@example:/config/…/mount/nftables.conf/&gt; <b>text-editor content</b>
 ... interactive editor starts up where you can paste your rules ...
-admin@example:/config/container/nftables/mount/nftables.conf/&gt; leave
-</code></pre></div>
+admin@example:/config/…/mount/nftables.conf/&gt; <b>leave</b>
+</code></pre>
+
 <p>Notice how we <code>set network host</code>, so the container can see and act on
 all the host's interfaces, and that we also have to run the container
 in <em>privileged</em> mode.</p>
@@ -3629,20 +3931,21 @@ set up a read-only config file that is bind-mounted into the container's
 file system and store in the host's <code>startup-config</code>.  However, <code>ntpd</code>
 also saves clock drift information in <code>/var/lib/ntpd</code>, so we will also
 use volumes in this example.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config&gt; edit container ntpd
-admin@example:/config/container/ntpd/&gt; set image ghcr.io/kernelkit/curios-ntpd:edge
-admin@example:/config/container/ntpd/&gt; set network interface ntpd    # From veth0 above
-admin@example:/config/container/ntpd/&gt; edit mount ntp.conf
-admin@example:/config/container/ntpd/mount/ntp.conf/&gt; set target /etc/ntp.conf
-admin@example:/config/container/ntpd/mount/ntp.conf/&gt; text-editor content
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config&gt; <b>edit container ntpd</b>
+admin@example:/config/container/ntpd/&gt; <b>set image ghcr.io/kernelkit/curios-ntpd:edge</b>
+admin@example:/config/container/ntpd/&gt; <b>set network interface ntpd</b>    # From veth0 above
+admin@example:/config/container/ntpd/&gt; <b>edit mount ntp.conf</b>
+admin@example:/config/container/ntpd/mount/ntp.conf/&gt; <b>set target /etc/ntp.conf</b>
+admin@example:/config/container/ntpd/mount/ntp.conf/&gt; <b>text-editor content</b>
 ... interactive editor starts up where you can paste your rules ...
-admin@example:/config/container/ntpd/mount/ntp.conf/&gt; end
-admin@example:/config/container/ntpd/&gt; edit volume varlib
-admin@example:/config/container/ntpd/volume/varlib/&gt; set target /var/lib
-admin@example:/config/container/ntpd/volume/varlib/&gt; leave
-admin@example:/&gt; copy running-config startup-config
-</code></pre></div>
+admin@example:/config/container/ntpd/mount/ntp.conf/&gt; <b>end</b>
+admin@example:/config/container/ntpd/&gt; <b>edit volume varlib</b>
+admin@example:/config/container/ntpd/volume/varlib/&gt; <b>set target /var/lib</b>
+admin@example:/config/container/ntpd/volume/varlib/&gt; <b>leave</b>
+admin@example:/&gt; <b>copy running-config startup-config</b>
+</code></pre>
+
 <p>The <code>ntp.conf</code> file is stored in the host's <code>startup-config</code> and any
 state data in the container's <code>/var/lib</code> is retained between reboots
 and across image upgrades.</p>
@@ -3668,24 +3971,27 @@ limiting the time frame in which this is active!</p>
 <p>First, enable <em>Privileged</em> mode, this unlocks the door and allows the
 container to manage resources on the host system.  An example is the
 <code>nftables</code> container mentioned previously.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; set privileged
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/container/system/&gt; <b>set privileged</b>
+</code></pre>
+
 <p>Second, mount the host's <code>/proc/1</code> directory to somewhere inside your
 container.  Here we pick <code>/1</code>:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; edit mount host
-admin@example:/config/container/system/mount/host/&gt; set source /proc/1
-admin@example:/config/container/system/mount/host/&gt; set target /1
-admin@example:/config/container/system/mount/host/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/container/system/&gt; <b>edit mount host</b>
+admin@example:/config/container/system/mount/host/&gt; <b>set source /proc/1</b>
+admin@example:/config/container/system/mount/host/&gt; <b>set target /1</b>
+admin@example:/config/container/system/mount/host/&gt; <b>leave</b>
+</code></pre>
+
 <p>Third, from inside the container, use the host's PID 1 namespaces with
 the <code>nsenter</code><sup id="fnref:2"><a class="footnote-ref" href="#fn:2">3</a></sup> command to slide through the container's walls.  Here
 we show two example calls to <code>hostname</code>, first the container's own name
 and then asking what the hostname is on the host:</p>
-<div class="highlight"><pre><span></span><code>root@sys101:/# hostname
+<pre class="cli"><code>root@sys101:/# <b>hostname</b>
 sys101
-root@sys101:/# nsenter -m/1/ns/mnt -u/1/ns/uts -i/1/ns/ipc -n/1/ns/net hostname
+root@sys101:/# <b>nsenter -m/1/ns/mnt -u/1/ns/uts -i/1/ns/ipc -n/1/ns/net hostname</b>
 example
-</code></pre></div>
+</code></pre>
+
 <p>One use-case for this method is when extending Infix with a management
 container that connects to other systems.  For some tips on how to
 control an Infix system this way, see <a href="../scripting/">Scripting Infix</a>.</p>

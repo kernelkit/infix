@@ -643,6 +643,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -697,7 +709,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -829,9 +1009,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -845,7 +1042,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2272,19 +2541,20 @@ listing of existing log files.</p>
 E.g., a USB stick with a log partition (named/labeled: "log").  Below is
 an example.</p>
 <p>For a list of available log facilities, see the table in a later section.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit syslog actions log-file file:/media/log/mylog
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; set facility-list
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>     news      ntp   syslog     user     uucp
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; set facility-list all severity
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>     alert       all  critical     debug emergency     error      info      none    notice   warning
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; set facility-list all severity critical
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; set facility-list mail severity warning
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; leave
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit syslog actions log-file file:/media/log/mylog</b>
+admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>set facility-list</b>
+      all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
+   local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
+     news      ntp   syslog     user     uucp
+admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>set facility-list all severity</b>
+     alert       all  critical     debug emergency     error      info      none    notice   warning
+admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>set facility-list all severity critical</b>
+admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>set facility-list mail severity warning</b>
+admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
 <p>The <code>log-file</code> syntax requires the leading prefix <code>file:</code>.  If the
@@ -2298,10 +2568,11 @@ they are "rotated".  The whole reason for this is to not fill up the
 disk with outdated logs.  A rotated file is saved in stages and older
 ones are also compressed (using <code>gzip</code>).  Use the <code>show log</code> command in
 admin-exec context to start the log file viewer:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/config/syslog/&gt; do show log
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>log  log.0  log.1.gz  log.2.gz  log.3.gz  log.4.gz  log.5.gz
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/config/syslog/&gt; do show log log.1.gz
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/syslog/&gt; <b>do show log</b>
+log  log.0  log.1.gz  log.2.gz  log.3.gz  log.4.gz  log.5.gz
+admin@example:/config/syslog/&gt; <b>do show log log.1.gz</b>
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>Use the Tab key on your keyboard list available log files.  The <code>do</code>
@@ -2313,66 +2584,70 @@ from admin-exec context.</p>
 <p>Log file rotation can be configured both globally and per log file.
 Here we show the global settings, the set up is the same for per log
 file, which if unset inherit the global settings:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/&gt; edit syslog file-rotation
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/syslog/file-rotation/&gt; show
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/syslog/file-rotation/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit syslog file-rotation</b>
+admin@example:/config/syslog/file-rotation/&gt; <b>show</b>
+admin@example:/config/syslog/file-rotation/&gt;
+</code></pre>
+
 <p>The defaults are not shown.  We can inspect them by asking the YANG
 model for the help texts:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/config/syslog/file-rotation/&gt; help
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>   max-file-size    number-of-files
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/syslog/file-rotation/&gt; help max-file-size 
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>NAME
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        max-file-size kilobytes
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>DESCRIPTION
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        Maximum log file size (kiB), before rotation.
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>DEFAULT
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        1024
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>admin@example:/config/syslog/file-rotation/&gt; help number-of-files 
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>NAME
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>        number-of-files [0..4294967295]
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>DESCRIPTION
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>        Maximum number of log files retained.
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>DEFAULT
-<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>        10
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/syslog/file-rotation/&gt; <b>help</b>
+   max-file-size    number-of-files
+admin@example:/config/syslog/file-rotation/&gt; <b>help max-file-size</b>
+<b>NAME</b>
+        max-file-size kilobytes
+
+<b>DESCRIPTION</b>
+        Maximum log file size (kiB), before rotation.
+
+<b>DEFAULT</b>
+        1024
+admin@example:/config/syslog/file-rotation/&gt; <b>help number-of-files</b>
+<b>NAME</b>
+        number-of-files [0..4294967295]
+
+<b>DESCRIPTION</b>
+        Maximum number of log files retained.
+
+<b>DEFAULT</b>
+        10
+</code></pre>
+
 <p>To change the defaults to something smaller, 512 kiB and 20 (remember
 everything after .0 is compressed, and text compresses well):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/config/syslog/file-rotation/&gt; set max-file-size 512
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/syslog/file-rotation/&gt; set number-of-files 20
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:/config/syslog/file-rotation/&gt; show
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>number-of-files 20;
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>max-file-size 512;
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>admin@example:/config/syslog/file-rotation/&gt; leave
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/syslog/file-rotation/&gt; <b>set max-file-size 512</b>
+admin@example:/config/syslog/file-rotation/&gt; <b>set number-of-files 20</b>
+admin@example:/config/syslog/file-rotation/&gt; <b>show</b>
+number-of-files 20;
+max-file-size 512;
+admin@example:/config/syslog/file-rotation/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <h2 id="log-format">Log Format<a class="headerlink" href="#log-format" title="Permanent link">¶</a></h2>
 <p>There are three major syslog log formats, the default is <a href="https://datatracker.ietf.org/doc/html/rfc3164">RFC3164</a> for
 log files and BSD for remote logging.  Depending on time synchronization
 and remote log server capabilities, or policies, the <a href="https://datatracker.ietf.org/doc/html/rfc5424">RFC5424</a> format
 is often preferred since it not only has better time resolution but also
 supports structured logging:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>BSD     : myproc[8710]: Kilroy was here.
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>BSD     : myproc[8710]: Kilroy was here.
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
 </code></pre></div>
 <p>The BSD format is only applicable to remote logging.  It remains the
 default for compatibility reasons, and is recommended since the device
 may not have proper time, making it better for the remote log server to
 perform time stamping at the time of arrival.</p>
 <p>Configuring the log format is the same for log files and remotes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/config/&gt; edit syslog actions log-file file:foobar
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/syslog/…/file:foobar/&gt; set log-format
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>                  bsd               rfc3164              rfc5424
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/syslog/…/file:foobar/&gt; set log-format rfc5424
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>admin@example:/config/syslog/…/file:foobar/&gt; leave
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:foobar</b>
+admin@example:/config/syslog/…/file:foobar/&gt; <b>set log-format</b>
+                  bsd               rfc3164              rfc5424
+admin@example:/config/syslog/…/file:foobar/&gt; <b>set log-format rfc5424</b>
+admin@example:/config/syslog/…/file:foobar/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <h2 id="log-to-remote-server">Log to Remote Server<a class="headerlink" href="#log-to-remote-server" title="Permanent link">¶</a></h2>
 <p>Logging to a remote syslog server is the recommended way of supervising
 the system.  This way all login attempts (console, SSH, or web) and any
@@ -2384,18 +2659,19 @@ because your device may not have DNS set up or even available, and some
 remote syslog servers do not support receiving time stamped log messages
 -- this is of course entirely dependent on how the remote server is set
 up, as well as local policy.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/config/&gt; edit syslog
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>       actions file-rotation        server
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/&gt; edit syslog actions destination moon
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/syslog/…/moon/&gt; set
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a> facility-list    log-format           udp
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>admin@example:/config/syslog/…/moon/&gt; set udp
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a> address    port
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>admin@example:/config/syslog/…/moon/&gt; set udp address 192.168.0.12
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>admin@example:/config/syslog/…/moon/&gt; set facility-list container severity all
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>admin@example:/config/syslog/…/moon/&gt; leave
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog</b>
+       actions file-rotation        server
+admin@example:/config/&gt; <b>edit syslog actions destination moon</b>
+admin@example:/config/syslog/…/moon/&gt; <b>set</b>
+ facility-list    log-format           udp
+admin@example:/config/syslog/…/moon/&gt; <b>set udp</b>
+ address    port
+admin@example:/config/syslog/…/moon/&gt; <b>set udp address 192.168.0.12</b>
+admin@example:/config/syslog/…/moon/&gt; <b>set facility-list container severity all</b>
+admin@example:/config/syslog/…/moon/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The alternatives shown below each prompt in the example above can be
@@ -2404,13 +2680,14 @@ found by tapping the Tab key.</p>
 <h2 id="acting-as-a-log-server">Acting as a Log Server<a class="headerlink" href="#acting-as-a-log-server" title="Permanent link">¶</a></h2>
 <p>The syslog server can act as a log sink for other devices on a LAN.  For
 this to work you need a static IP address, here we use 10.0.0.1/24.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@example:/config/&gt; edit syslog server
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@example:/config/syslog/server/&gt; set enabled true
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>admin@example:/config/syslog/server/&gt; set listen udp 514 address 10.0.0.1
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@example:/config/syslog/server/&gt; leave
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit syslog server</b>
+admin@example:/config/syslog/server/&gt; <b>set enabled true</b>
+admin@example:/config/syslog/server/&gt; <b>set listen udp 514 address 10.0.0.1</b>
+admin@example:/config/syslog/server/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>See the above <a href="#log-to-file">Log to File</a> section on how to set up
 filtering of received logs to local files.  Advanced filtering based
 on hostname and message properties is also available, see the next
@@ -2424,50 +2701,55 @@ logging rules.</p>
 <p>Messages can be filtered using regular expressions (POSIX extended regex)
 on the message content.  This is useful when you want to log only messages
 containing specific keywords or patterns:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@example:/config/&gt; edit syslog actions log-file file:errors
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@example:/config/syslog/…/file:errors/&gt; set pattern-match "ERROR|CRITICAL|FATAL"
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>admin@example:/config/syslog/…/file:errors/&gt; set facility-list all severity info
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>admin@example:/config/syslog/…/file:errors/&gt; leave
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:errors</b>
+admin@example:/config/syslog/…/file:errors/&gt; <b>set pattern-match "ERROR|CRITICAL|FATAL"</b>
+admin@example:/config/syslog/…/file:errors/&gt; <b>set facility-list all severity info</b>
+admin@example:/config/syslog/…/file:errors/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>This will log all messages containing ERROR, CRITICAL, or FATAL.</p>
 <h3 id="advanced-severity-comparison">Advanced Severity Comparison<a class="headerlink" href="#advanced-severity-comparison" title="Permanent link">¶</a></h3>
 <p>By default, severity filtering uses "equals-or-higher" comparison,
 meaning a severity of <code>error</code> will match error, critical, alert, and
 emergency messages.  You can change this behavior:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@example:/config/&gt; edit syslog actions log-file file:daemon-errors
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>admin@example:/config/syslog/…/file:daemon-errors/&gt; set facility-list daemon
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>admin@example:/config/syslog/…/daemon/&gt; set severity error
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>admin@example:/config/syslog/…/daemon/&gt; set advanced-compare compare equals
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>admin@example:/config/syslog/…/daemon/&gt; leave
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:daemon-errors</b>
+admin@example:/config/syslog/…/file:daemon-errors/&gt; <b>set facility-list daemon</b>
+admin@example:/config/syslog/…/daemon/&gt; <b>set severity error</b>
+admin@example:/config/syslog/…/daemon/&gt; <b>set advanced-compare compare equals</b>
+admin@example:/config/syslog/…/daemon/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>This will log only <code>error</code> severity messages, not higher severities.</p>
 <p>You can also block specific severities:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@example:/config/syslog/…/daemon/&gt; set advanced-compare action block
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/syslog/…/daemon/&gt; <b>set advanced-compare action block</b>
+</code></pre>
+
 <p>This will exclude <code>error</code> messages from the log.</p>
 <h3 id="hostname-filtering">Hostname Filtering<a class="headerlink" href="#hostname-filtering" title="Permanent link">¶</a></h3>
 <p>When acting as a log server, you can filter messages by hostname.  This
 is useful for directing logs from different devices to separate files:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@example:/config/&gt; edit syslog actions log-file file:router1
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>admin@example:/config/syslog/…/file:router1/&gt; set hostname-filter router1
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>admin@example:/config/syslog/…/file:router1/&gt; set facility-list all severity info
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>admin@example:/config/syslog/…/file:router1/&gt; leave
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:router1</b>
+admin@example:/config/syslog/…/file:router1/&gt; <b>set hostname-filter router1</b>
+admin@example:/config/syslog/…/file:router1/&gt; <b>set facility-list all severity info</b>
+admin@example:/config/syslog/…/file:router1/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>Multiple hostnames can be added to the filter list.</p>
 <h3 id="property-based-filtering">Property-Based Filtering<a class="headerlink" href="#property-based-filtering" title="Permanent link">¶</a></h3>
 <p>For more advanced filtering, you can match on specific message properties
 using various comparison operators:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@example:/config/&gt; edit syslog actions log-file file:myapp
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>admin@example:/config/syslog/…/file:myapp/&gt; edit property-filter
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>admin@example:/config/syslog/…/property-filter/&gt; set property programname
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>admin@example:/config/syslog/…/property-filter/&gt; set operator isequal
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>admin@example:/config/syslog/…/property-filter/&gt; set value myapp
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>admin@example:/config/syslog/…/property-filter/&gt; leave
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:myapp</b>
+admin@example:/config/syslog/…/file:myapp/&gt; <b>edit property-filter</b>
+admin@example:/config/syslog/…/property-filter/&gt; <b>set property programname</b>
+admin@example:/config/syslog/…/property-filter/&gt; <b>set operator isequal</b>
+admin@example:/config/syslog/…/property-filter/&gt; <b>set value myapp</b>
+admin@example:/config/syslog/…/property-filter/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>Available properties:
 - <code>msg</code>: Message body
 - <code>msgid</code>: RFC5424 message identifier
@@ -2482,11 +2764,13 @@ using various comparison operators:</p>
 - <code>regex</code>: Basic regular expression
 - <code>ereregex</code>: Extended regular expression (POSIX ERE)</p>
 <p>The comparison can be made case-insensitive:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>admin@example:/config/syslog/…/property-filter/&gt; set case-insensitive true
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/syslog/…/property-filter/&gt; <b>set case-insensitive true</b>
+</code></pre>
+
 <p>Or negated to exclude matching messages:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>admin@example:/config/syslog/…/property-filter/&gt; set negate true
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/syslog/…/property-filter/&gt; <b>set negate true</b>
+</code></pre>
+
 <h3 id="facilities">Facilities<a class="headerlink" href="#facilities" title="Permanent link">¶</a></h3>
 <table>
 <thead>

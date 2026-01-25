@@ -643,6 +643,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -697,7 +709,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -829,9 +1009,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -845,7 +1042,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2207,34 +2476,36 @@ as NETCONF, RESTCONF, and CLI via SSH or Console.</p>
 <h2 id="ssh-management">SSH Management<a class="headerlink" href="#ssh-management" title="Permanent link">¶</a></h2>
 <p>An SSH server (SSHv2) is provided for remote management. It can be
 enabled/disabled as shown below.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit ssh
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/ssh/&gt; set enabled
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>admin@example:/config/ssh/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit ssh</b>
+admin@example:/config/ssh/&gt; <b>set enabled</b>
+admin@example:/config/ssh/&gt;
+</code></pre>
+
 <p>By default the SSH server accepts connections to port 22 on all its IP
 addresses, but this can be adjusted using the <code>listen</code> command. To
 make the server (only) listen for incoming connections to IP address
 <em>192.168.1.1</em> and port <em>12345</em> the following commands can be used.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>admin@example:/config/&gt; edit ssh
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/config/ssh/&gt; show
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>enabled true;
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>hostkey genkey;
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>listen ipv4 {
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  address 0.0.0.0;
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  port 22;
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>}
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>listen ipv6 {
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  address ::;
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  port 22;
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>}
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>admin@example:/config/ssh/&gt; no listen ipv6
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>admin@example:/config/ssh/&gt; edit listen ipv4
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>admin@example:/config/ssh/listen/ipv4/&gt; set address 192.168.1.1
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>admin@example:/config/ssh/listen/ipv4/&gt; set port 12345
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>admin@example:/config/ssh/listen/ipv4/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit ssh</b>
+admin@example:/config/ssh/&gt; <b>show</b>
+enabled true;
+hostkey genkey;
+listen ipv4 {
+  address 0.0.0.0;
+  port 22;
+}
+listen ipv6 {
+  address ::;
+  port 22;
+}
+admin@example:/config/ssh/&gt; <b>no listen ipv6</b>
+admin@example:/config/ssh/&gt; <b>edit listen ipv4</b>
+admin@example:/config/ssh/listen/ipv4/&gt; <b>set address 192.168.1.1</b>
+admin@example:/config/ssh/listen/ipv4/&gt; <b>set port 12345</b>
+admin@example:/config/ssh/listen/ipv4/&gt;
+</code></pre>
+
 <p>The default SSH hostkey is generated on first boot and is used in both
 SSH and NETCONF (SSH transport). Custom keys can be added to the
 configuration in <code>ietf-keystore</code>. The only supported hostkey type is
@@ -2243,17 +2514,18 @@ RSA for now, thus the private key must be
 <code>ietf-crypto-types:ssh-public-key-format</code></p>
 <h3 id="use-your-own-ssh-hostkeys">Use your own SSH hostkeys<a class="headerlink" href="#use-your-own-ssh-hostkeys" title="Permanent link">¶</a></h3>
 <p>Hostkeys can be generated with OpenSSL:
-</p><div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>openssl<span class="w"> </span>genpkey<span class="w"> </span>-quiet<span class="w"> </span>-algorithm<span class="w"> </span>RSA<span class="w"> </span>-pkeyopt<span class="w"> </span>rsa_keygen_bits:2048<span class="w"> </span>-outform<span class="w"> </span>PEM<span class="w"> </span>&gt;<span class="w"> </span>mykey
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>openssl<span class="w"> </span>rsa<span class="w"> </span>-RSAPublicKey_out<span class="w"> </span>&lt;<span class="w"> </span>mykey<span class="w"> </span>&gt;<span class="w"> </span>mykey.pub
+</p><div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>openssl<span class="w"> </span>genpkey<span class="w"> </span>-quiet<span class="w"> </span>-algorithm<span class="w"> </span>RSA<span class="w"> </span>-pkeyopt<span class="w"> </span>rsa_keygen_bits:2048<span class="w"> </span>-outform<span class="w"> </span>PEM<span class="w"> </span>&gt;<span class="w"> </span>mykey
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>openssl<span class="w"> </span>rsa<span class="w"> </span>-RSAPublicKey_out<span class="w"> </span>&lt;<span class="w"> </span>mykey<span class="w"> </span>&gt;<span class="w"> </span>mykey.pub
 </code></pre></div>
 Store the keys in <code>ietf-keystore</code> <em>without</em> the header and footer information
 created by OpenSSL.<p></p>
 <p>After the key has been stored in the keystore and given the name
 <em>mykey</em> it can be added to SSH configuration:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config/&gt; edit ssh
-admin@example:/config/ssh/&gt; set hostkey mykey
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit ssh</b>
+admin@example:/config/ssh/&gt; <b>set hostkey mykey</b>
+</code></pre>
+
 <h2 id="console-port">Console Port<a class="headerlink" href="#console-port" title="Permanent link">¶</a></h2>
 <p>For units with a console port, it is possible for users to login to
 shell/CLI with functionality similar to what is provided via SSH.</p>
@@ -2262,39 +2534,42 @@ instance, it can be a USB-C port connected to the CPU serial port
 using a USB-to-serial converter. To connect you would need a USB-C cable
 connected to the console port of the device. The serial port is
 typically setup to run at 115200 baud, 8N1.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Infix OS — Immutable.Friendly.Secure v24.11.1 (ttyS0)
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>example login: admin
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Password:
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>.-------.
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>|  . .  | Infix OS — Immutable.Friendly.Secure
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>|-. v .-| https://kernelkit.org
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>'-'---'-'
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>Run the command 'cli' for interactive OAM
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>admin@example:~$
-</code></pre></div>
+<pre class="cli"><code>Infix OS — Immutable.Friendly.Secure v24.11.1 (ttyS0)
+example login: <b>admin</b>
+Password:
+.-------.
+|  . .  | Infix OS — Immutable.Friendly.Secure
+|-. v .-| https://kernelkit.org
+'-'---'-'
+
+Run the command 'cli' for interactive OAM
+
+admin@example:~$
+</code></pre>
+
 <p>The <code>resize</code> command can be used to update terminal settings to the
 size of your terminal window.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:~$ resize
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>COLUMNS=115;LINES=59;export COLUMNS LINES;
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:~$
-</code></pre></div>
+<pre class="cli"><code>admin@example:~$ <b>resize</b>
+COLUMNS=115;LINES=59;export COLUMNS LINES;
+admin@example:~$
+</code></pre>
+
 <p>CLI can be entered from shell in the same way as for SSH.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:~$ cli
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>See the 'help' command for an introduction to the system
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>admin@example:/&gt; show interfaces
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>INTERFACE       PROTOCOL   STATE       DATA
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>lo              ethernet   UP          00:00:00:00:00:00
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>                ipv4                   127.0.0.1/8 (static)
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>                ipv6                   ::1/128 (static)
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>e1              ethernet   LOWER-DOWN  00:53:00:06:03:01
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>e2              ethernet   LOWER-DOWN  00:53:00:06:03:02
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>...
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:~$ <b>cli</b>
+
+See the 'help' command for an introduction to the system
+
+admin@example:/&gt; <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+e1              ethernet   LOWER-DOWN  00:53:00:06:03:01
+e2              ethernet   LOWER-DOWN  00:53:00:06:03:02
+...
+admin@example:/&gt;
+</code></pre>
+
 <h2 id="web-web-console-and-restconf">Web, Web-console and RESTCONF<a class="headerlink" href="#web-web-console-and-restconf" title="Permanent link">¶</a></h2>
 <p>The system provides a set of Web services:</p>
 <ul>
@@ -2306,22 +2581,24 @@ size of your terminal window.</p>
 <p>There is also a <em>Netbrowse</em> Web service presenting information about
 the unit's neighbors, collected via mDNS (see
 <a href="../discovery/">Discovery</a> for more details).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/&gt; edit web
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@example:/config/web/&gt; help
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  enabled                           Enable or disable on all web services.
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  console                           Web console interface.
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  netbrowse                         mDNS Network Browser.
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  restconf                          IETF RESTCONF Server.
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>admin@example:/config/web/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit web</b>
+admin@example:/config/web/&gt; <b>help</b>
+  enabled                           Enable or disable on all web services.
+  console                           Web console interface.
+  netbrowse                         mDNS Network Browser.
+  restconf                          IETF RESTCONF Server.
+admin@example:/config/web/&gt;
+</code></pre>
+
 <h3 id="enabledisable-web-service-and-server">Enable/disable Web Service and Server<a class="headerlink" href="#enabledisable-web-service-and-server" title="Permanent link">¶</a></h3>
 <p>The Web service can be enabled as shown below.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>admin@example:/config/&gt; edit web
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/web/&gt; set enabled
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/web/&gt; 
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit web</b>
+admin@example:/config/web/&gt; <b>set enabled</b>
+admin@example:/config/web/&gt;
+</code></pre>
+
 <p>Enabling the Web service implies that a Web server is
 enabled. Currently this Web server provides generic Infix information,
 as well as a link to a Web console. The Web server uses HTTPS; any
@@ -2335,10 +2612,11 @@ or SSH. The Web console is secured via HTTPS on port 7861.</p>
 <p>The Web console has its own enable/disable setting, but will only be
 activated if the Web service is enabled. The example below shows how
 to disable the Web console.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/config/web/&gt; edit console
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@example:/config/web/console/&gt; no enabled
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@example:/config/web/console/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/web/&gt; <b>edit console</b>
+admin@example:/config/web/console/&gt; <b>no enabled</b>
+admin@example:/config/web/console/&gt;
+</code></pre>
+
 <h3 id="enabledisable-restconf-service">Enable/disable RESTCONF Service<a class="headerlink" href="#enabledisable-restconf-service" title="Permanent link">¶</a></h3>
 <p>Alternatively, the system can be managed remotely using
 RESTCONF. Meaning you can <code>curl</code> it instead of using a dedicated
@@ -2346,10 +2624,11 @@ NETCONF client.</p>
 <p>The RESTCONF service has its own enable/disable setting, but will
 only be activated if the Web service is enabled. The example below
 shows how to disable the RESTCONF service.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@example:/config/web/&gt; edit restconf
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@example:/config/web/restconf/&gt; no enabled
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>admin@example:/config/web/restconf/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/web/&gt; <b>edit restconf</b>
+admin@example:/config/web/restconf/&gt; <b>no enabled</b>
+admin@example:/config/web/restconf/&gt;
+</code></pre>
+
 <h2 id="system-upgrade">System Upgrade<a class="headerlink" href="#system-upgrade" title="Permanent link">¶</a></h2>
 <p>See <a href="../upgrade/">Upgrade &amp; Boot Order</a> for information on upgrading.</p>
 

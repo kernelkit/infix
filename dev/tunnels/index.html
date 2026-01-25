@@ -645,6 +645,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -699,7 +711,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -1017,9 +1197,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -1033,7 +1230,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2305,27 +2574,29 @@ number, the CLI infers the interface type automatically.</p>
 </div>
 <h3 id="basic-gre-configuration">Basic GRE Configuration<a class="headerlink" href="#basic-gre-configuration" title="Permanent link">¶</a></h3>
 <p>A basic GRE tunnel for routing between two sites:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit interface gre0
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/interface/gre0/&gt; set gre local 192.168.3.1 remote 192.168.3.2
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>admin@example:/config/interface/gre0/&gt; set ipv4 address 10.255.0.1 prefix-length 30
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>admin@example:/config/interface/gre0/&gt; leave
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface gre0</b>
+admin@example:/config/interface/gre0/&gt; <b>set gre local 192.168.3.1 remote 192.168.3.2</b>
+admin@example:/config/interface/gre0/&gt; <b>set ipv4 address 10.255.0.1 prefix-length 30</b>
+admin@example:/config/interface/gre0/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>This creates a Layer 3 tunnel between 192.168.3.1 and 192.168.3.2 using
 the outer IP addresses, with the tunnel itself using 10.255.0.0/30 for
 the inner IP addressing.</p>
 <h3 id="gretap-configuration">GRETAP Configuration<a class="headerlink" href="#gretap-configuration" title="Permanent link">¶</a></h3>
 <p>GRETAP tunnels operate at Layer 2, allowing bridging across the tunnel:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>admin@example:/config/&gt; edit interface gretap0
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/config/interface/gretap0/&gt; set type gretap
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>admin@example:/config/interface/gretap0/&gt; set gre local 192.168.3.1 remote 192.168.3.2
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>admin@example:/config/interface/gretap0/&gt; leave
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface gretap0</b>
+admin@example:/config/interface/gretap0/&gt; <b>set type gretap</b>
+admin@example:/config/interface/gretap0/&gt; <b>set gre local 192.168.3.1 remote 192.168.3.2</b>
+admin@example:/config/interface/gretap0/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>GRETAP interfaces can be added to a bridge, bridging local and remote Ethernet
-segments.  See the <a href="../networking/#bridging">Bridge Configuration</a>
+segments.  See the <a href="../bridging/">Bridge Configuration</a>
 for more on bridges.</p>
 <h3 id="ospf-over-gre">OSPF over GRE<a class="headerlink" href="#ospf-over-gre" title="Permanent link">¶</a></h3>
 <p>GRE tunnels are commonly used to carry dynamic routing protocols like
@@ -2334,32 +2605,34 @@ create a virtual topology different from the physical network.</p>
 <p>Example topology: Two sites connected via a GRE tunnel, running OSPF to
 exchange routes.</p>
 <p><strong>Site A configuration:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@siteA:/&gt; configure
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@siteA:/config/&gt; edit interface gre0
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@siteA:/config/interface/gre0/&gt; set gre local 203.0.113.1 remote 203.0.113.2
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@siteA:/config/interface/gre0/&gt; set ipv4 address 10.255.0.1 prefix-length 30
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>admin@siteA:/config/interface/gre0/&gt; set ipv4 forwarding
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>admin@siteA:/config/interface/gre0/&gt; end
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>admin@siteA:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>admin@siteA:/config/routing/…/ospf/&gt; set area 0.0.0.0 interface gre0
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>admin@siteA:/config/routing/…/ospf/&gt; leave
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>admin@siteA:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@siteA:/&gt; <b>configure</b>
+admin@siteA:/config/&gt; <b>edit interface gre0</b>
+admin@siteA:/config/interface/gre0/&gt; <b>set gre local 203.0.113.1 remote 203.0.113.2</b>
+admin@siteA:/config/interface/gre0/&gt; <b>set ipv4 address 10.255.0.1 prefix-length 30</b>
+admin@siteA:/config/interface/gre0/&gt; <b>set ipv4 forwarding</b>
+admin@siteA:/config/interface/gre0/&gt; <b>end</b>
+admin@siteA:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@siteA:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface gre0</b>
+admin@siteA:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@siteA:/&gt;
+</code></pre>
+
 <p><strong>Site B configuration:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@siteB:/&gt; configure
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@siteB:/config/&gt; edit interface gre0
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@siteB:/config/interface/gre0/&gt; set gre local 203.0.113.2 remote 203.0.113.1
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>admin@siteB:/config/interface/gre0/&gt; set ipv4 address 10.255.0.2 prefix-length 30
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>admin@siteB:/config/interface/gre0/&gt; set ipv4 forwarding
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>admin@siteB:/config/interface/gre0/&gt; end
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>admin@siteB:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>admin@siteB:/config/routing/…/ospf/&gt; set area 0.0.0.0 interface gre0
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>admin@siteB:/config/routing/…/ospf/&gt; leave
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>admin@siteB:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@siteB:/&gt; <b>configure</b>
+admin@siteB:/config/&gt; <b>edit interface gre0</b>
+admin@siteB:/config/interface/gre0/&gt; <b>set gre local 203.0.113.2 remote 203.0.113.1</b>
+admin@siteB:/config/interface/gre0/&gt; <b>set ipv4 address 10.255.0.2 prefix-length 30</b>
+admin@siteB:/config/interface/gre0/&gt; <b>set ipv4 forwarding</b>
+admin@siteB:/config/interface/gre0/&gt; <b>end</b>
+admin@siteB:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@siteB:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface gre0</b>
+admin@siteB:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@siteB:/&gt;
+</code></pre>
+
 <p>Once configured, OSPF will establish a neighbor relationship through the
 tunnel and exchange routes between the sites.  For more info on OSPF
-configuration, see <a href="../networking/#ospfv2-routing">OSPFv2 Routing</a>.</p>
+configuration, see <a href="../routing/#ospfv2-routing">OSPFv2 Routing</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Consider adjusting MTU on the tunnel interface to account for GRE
@@ -2373,10 +2646,11 @@ and performance.</p>
 <p>The TTL setting controls the Time To Live value for the outer tunnel packets.
 By default, tunnels use a fixed TTL of 64, which allows packets to traverse
 multiple hops between tunnel endpoints.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/config/&gt; edit interface gre0
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/interface/gre0/&gt; set gre ttl 255
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:/config/interface/gre0/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface gre0</b>
+admin@example:/config/interface/gre0/&gt; <b>set gre ttl 255</b>
+admin@example:/config/interface/gre0/&gt; <b>leave</b>
+</code></pre>
+
 <p>Valid values are 1-255, or the special value <code>inherit</code> which copies the TTL
 from the encapsulated packet.</p>
 <div class="admonition tip">
@@ -2387,20 +2661,22 @@ always use a fixed TTL value (typically 64 or 255).</p>
 </div>
 <h4 id="type-of-service-tos">Type of Service (ToS)<a class="headerlink" href="#type-of-service-tos" title="Permanent link">¶</a></h4>
 <p>The ToS setting controls QoS marking for tunnel traffic:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/config/&gt; edit interface gre0
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@example:/config/interface/gre0/&gt; set gre tos 0x10
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>admin@example:/config/interface/gre0/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface gre0</b>
+admin@example:/config/interface/gre0/&gt; <b>set gre tos 0x10</b>
+admin@example:/config/interface/gre0/&gt; <b>leave</b>
+</code></pre>
+
 <p>Valid values are 0-255 for fixed ToS/DSCP marking, or <code>inherit</code> (default)
 to copy the ToS value from the encapsulated packet.</p>
 <h4 id="path-mtu-discovery-gre-only">Path MTU Discovery (GRE only)<a class="headerlink" href="#path-mtu-discovery-gre-only" title="Permanent link">¶</a></h4>
 <p>The <code>pmtu-discovery</code> setting can be used to control the Path MTU Discovery on
 GRE tunnels.  When enabled (default), the tunnel respects the Don't Fragment
 (DF) bit and performs PMTU discovery:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/config/&gt; edit interface gre0
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/interface/gre0/&gt; set gre pmtudisc false
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@example:/config/interface/gre0/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface gre0</b>
+admin@example:/config/interface/gre0/&gt; <b>set gre pmtudisc false</b>
+admin@example:/config/interface/gre0/&gt; <b>leave</b>
+</code></pre>
+
 <p>Disabling PMTU discovery may be necessary in networks with broken ICMP
 filtering but can lead to suboptimal performance and fragmentation.</p>
 <h2 id="virtual-extensible-local-area-network-vxlan">Virtual eXtensible Local Area Network (VXLAN)<a class="headerlink" href="#virtual-extensible-local-area-network-vxlan" title="Permanent link">¶</a></h2>
@@ -2415,28 +2691,30 @@ isolated networks.</p>
 <p>If you name your VXLAN interface <code>vxlanN</code>, where <code>N</code> is a number, the
 CLI infers the interface type automatically.</p>
 </div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>admin@example:/config/&gt; edit interface vxlan100
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/interface/vxlan100/&gt; set vxlan local 192.168.3.1
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/interface/vxlan100/&gt; set vxlan remote 192.168.3.2
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>admin@example:/config/interface/vxlan100/&gt; set vxlan vni 100
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>admin@example:/config/interface/vxlan100/&gt; leave
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface vxlan100</b>
+admin@example:/config/interface/vxlan100/&gt; <b>set vxlan local 192.168.3.1</b>
+admin@example:/config/interface/vxlan100/&gt; <b>set vxlan remote 192.168.3.2</b>
+admin@example:/config/interface/vxlan100/&gt; <b>set vxlan vni 100</b>
+admin@example:/config/interface/vxlan100/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>The VNI uniquely identifies the VXLAN segment and must match on both
 tunnel endpoints.</p>
 <h3 id="vxlan-with-custom-udp-port">VXLAN with Custom UDP Port<a class="headerlink" href="#vxlan-with-custom-udp-port" title="Permanent link">¶</a></h3>
 <p>The default VXLAN UDP destination port is 4789 (IANA assigned).  In some
 cases you may need to use a different port:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@example:/config/&gt; edit interface vxlan100
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@example:/config/interface/vxlan100/&gt; set vxlan local 192.168.3.1
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>admin@example:/config/interface/vxlan100/&gt; set vxlan remote 192.168.3.2
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@example:/config/interface/vxlan100/&gt; set vxlan vni 100
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>admin@example:/config/interface/vxlan100/&gt; set vxlan remote-port 8472
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>admin@example:/config/interface/vxlan100/&gt; leave
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>admin@example:/&gt;
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface vxlan100</b>
+admin@example:/config/interface/vxlan100/&gt; <b>set vxlan local 192.168.3.1</b>
+admin@example:/config/interface/vxlan100/&gt; <b>set vxlan remote 192.168.3.2</b>
+admin@example:/config/interface/vxlan100/&gt; <b>set vxlan vni 100</b>
+admin@example:/config/interface/vxlan100/&gt; <b>set vxlan remote-port 8472</b>
+admin@example:/config/interface/vxlan100/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
 <p>The remote-port setting allows interoperability with systems using
 non-standard VXLAN ports.</p>
 <div class="admonition note">

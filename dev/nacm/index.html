@@ -643,6 +643,18 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -697,7 +709,175 @@
   <span class="md-ellipsis">
     
   
-    Network Configuration
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
   
 
     
@@ -829,9 +1009,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../vpn/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -845,7 +1042,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -3073,84 +3342,88 @@ allowed:</p>
 <h2 id="debugging-nacm">Debugging NACM<a class="headerlink" href="#debugging-nacm" title="Permanent link">¶</a></h2>
 <h3 id="viewing-effective-permissions">Viewing Effective Permissions<a class="headerlink" href="#viewing-effective-permissions" title="Permanent link">¶</a></h3>
 <p>Check what NACM groups a user belongs to:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@example:/&gt; show nacm
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>enabled              : yes
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>default read access  : permit
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>default write access : permit
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>default exec access  : permit
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>denied operations    : 0
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>denied data writes   : 0
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>denied notifications : 0
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>          ┌──────────┬─────────┬─────────┬─────────┐
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>          │ GROUP    │  READ   │  WRITE  │  EXEC   │
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>          ├──────────┼─────────┼─────────┼─────────┤
-<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>          │ admin    │    ✓    │    ✓    │    ✓    │
-<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>          │ operator │    ⚠    │    ⚠    │    ⚠    │
-<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>          │ guest    │    ⚠    │    ✗    │    ✗    │
-<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>          └──────────┴─────────┴─────────┴─────────┘
-<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>              ✓ Full    ⚠ Restricted    ✗ Denied
-<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>
-<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>USER                   SHELL   LOGIN
-<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a>admin                  bash    password+key
-<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a>jacky                  bash    password
-<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a>monitor                false   key
-<a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a>
-<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a>GROUP                  USERS
-<a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a>admin                  admin
-<a id="__codelineno-13-26" name="__codelineno-13-26" href="#__codelineno-13-26"></a>operator               jacky
-<a id="__codelineno-13-27" name="__codelineno-13-27" href="#__codelineno-13-27"></a>guest                  monitor
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show nacm</b>
+enabled              : yes
+default read access  : permit
+default write access : permit
+default exec access  : permit
+denied operations    : 0
+denied data writes   : 0
+denied notifications : 0
+
+          ┌──────────┬─────────┬─────────┬─────────┐
+          │ GROUP    │  READ   │  WRITE  │  EXEC   │
+          ├──────────┼─────────┼─────────┼─────────┤
+          │ admin    │    ✓    │    ✓    │    ✓    │
+          │ operator │    ⚠    │    ⚠    │    ⚠    │
+          │ guest    │    ⚠    │    ✗    │    ✗    │
+          └──────────┴─────────┴─────────┴─────────┘
+              ✓ Full    ⚠ Restricted    ✗ Denied
+
+<span class="header">USER                   SHELL   LOGIN                            </span>
+admin                  bash    password+key
+jacky                  bash    password
+monitor                false   key
+
+<span class="header">GROUP                  USERS                                    </span>
+admin                  admin
+operator               jacky
+guest                  monitor
+</code></pre>
+
 <p>For details about a group's restrictions, use <code>show nacm group &lt;name&gt;</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>admin@example:/&gt; show nacm group operator
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>members          : jacky
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>read permission  : restricted
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>write permission : restricted
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>exec permission  : restricted
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>applicable rules : 4
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>──────────────────────────────────────────────────────────────────────
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>permit-system-rpcs
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>  action     : permit
-<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>  operations : exec
-<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>  target     : ietf-system (rpc: *)
-<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>
-<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>──────────────────────────────────────────────────────────────────────
-<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>deny-password-access (via '*')
-<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>  action     : deny
-<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>  operations : *
-<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>  target     : /ietf-system:system/authentication/user/password
-<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>
-<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>──────────────────────────────────────────────────────────────────────
-<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>deny-keystore-access (via '*')
-<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a>  action     : deny
-<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a>  operations : *
-<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>  target     : ietf-keystore
-<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a>
-<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a>──────────────────────────────────────────────────────────────────────
-<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a>deny-truststore-access (via '*')
-<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a>  action     : deny
-<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a>  operations : *
-<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a>  target     : ietf-truststore
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show nacm group operator</b>
+members          : jacky
+read permission  : restricted
+write permission : restricted
+exec permission  : restricted
+applicable rules : 4
+──────────────────────────────────────────────────────────────────────
+<span class="title">permit-system-rpcs</span>
+  action     : permit
+  operations : exec
+  target     : ietf-system (rpc: *)
+
+──────────────────────────────────────────────────────────────────────
+<span class="title">deny-password-access (via '*')</span>
+  action     : deny
+  operations : *
+  target     : /ietf-system:system/authentication/user/password
+
+──────────────────────────────────────────────────────────────────────
+<span class="title">deny-keystore-access (via '*')</span>
+  action     : deny
+  operations : *
+  target     : ietf-keystore
+
+──────────────────────────────────────────────────────────────────────
+<span class="title">deny-truststore-access (via '*')</span>
+  action     : deny
+  operations : *
+  target     : ietf-truststore
+</code></pre>
+
 <h3 id="testing-access">Testing Access<a class="headerlink" href="#testing-access" title="Permanent link">¶</a></h3>
 <p>The easiest way to test NACM permissions is to log in as the user and try
 the operation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>$<span class="w"> </span>ssh<span class="w"> </span>jacky@host
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>jacky@example:/&gt;<span class="w"> </span>configure
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>jacky@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>system<span class="w"> </span>authentication<span class="w"> </span>user<span class="w"> </span>admin
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>jacky@example:/config/system/authentication/user/admin/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>authorized-key<span class="w"> </span>foo
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>Error:<span class="w"> </span>Access<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>data<span class="w"> </span>model<span class="w"> </span><span class="s2">"ietf-system"</span><span class="w"> </span>is<span class="w"> </span>denied<span class="w"> </span>because<span class="w"> </span><span class="s2">"jacky"</span><span class="w"> </span>NACM<span class="w"> </span>authorization<span class="w"> </span>failed.
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>Error:<span class="w"> </span>Failed<span class="w"> </span>applying<span class="w"> </span>changes<span class="w"> </span><span class="o">(</span><span class="m">2</span><span class="o">)</span>.
-</code></pre></div>
+<pre class="cli"><code>$ ssh jacky@host
+jacky@example:/&gt; <b>configure</b>
+jacky@example:/config/&gt; <b>edit system authentication user admin</b>
+jacky@example:/config/system/authentication/user/admin/&gt; <b>set authorized-key foo</b>
+Error: Access to the data model "ietf-system" is denied because "jacky" NACM authorization failed.
+Error: Failed applying changes (2).
+</code></pre>
+
 <h3 id="nacm-statistics">NACM Statistics<a class="headerlink" href="#nacm-statistics" title="Permanent link">¶</a></h3>
 <p>NACM tracks denied operations.  If you suspect permission issues, check
 the statistics:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>admin@example:/&gt; show nacm
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>...
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>  denied operations      : 5
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>  denied data writes     : 12
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>...
-</code></pre></div>
+<pre class="cli"><code>admin@example:/&gt; <b>show nacm</b>
+...
+  denied operations      : 5
+  denied data writes     : 12
+...
+</code></pre>
+
 <p>Increasing counters indicate permission denials are occurring.</p>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">¶</a></h2>
 <ol>
