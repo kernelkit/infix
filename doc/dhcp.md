@@ -19,20 +19,18 @@ servers[^1].
 The following example configures a DHCP server for subnet 192.168.2.0/24
 with an address pool:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit dhcp-server subnet 192.168.2.0/24
-admin@example:/config/dhcp-server/…/192.168.2.0/24/> set pool start-address 192.168.2.100 end-address 192.168.2.200
-admin@example:/config/dhcp-server/…/192.168.2.0/24/> leave
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit dhcp-server subnet 192.168.2.0/24</b>
+admin@example:/config/dhcp-server/…/192.168.2.0/24/> <b>set pool start-address 192.168.2.100 end-address 192.168.2.200</b>
+admin@example:/config/dhcp-server/…/192.168.2.0/24/> <b>leave</b>
+</code></pre>
 
 When setting up the server from the CLI, the system automatically adds a
 few default DHCP options that will be sent to clients: both DNS server
 and default gateway will use the system address on the matching
 interface.
 
-```
-admin@example:/> show running-config
+<pre class="cli"><code>admin@example:/> <b>show running-config</b>
   "infix-dhcp-server:dhcp-server": {
     "subnet": [
       {
@@ -54,7 +52,7 @@ admin@example:/> show running-config
       }
     ]
   }
-```
+</code></pre>
 
 > [!IMPORTANT]
 > Remember to set up an interface in this subnet, avoid using addresses
@@ -68,23 +66,21 @@ admin@example:/> show running-config
 To reserve specific IP addresses for clients based on their MAC address,
 hostname, or client ID:
 
-```
-admin@example:/config/dhcp-server/…/192.168.2.0/24/> edit host 192.168.2.10
-admin@example:/config/dhcp-server/…/192.168.2.10/> set match mac-address 00:11:22:33:44:55
-admin@example:/config/dhcp-server/…/192.168.2.10/> set hostname printer
-admin@example:/config/dhcp-server/…/192.168.2.10/> leave
-```
+<pre class="cli"><code>admin@example:/config/dhcp-server/…/192.168.2.0/24/> <b>edit host 192.168.2.10</b>
+admin@example:/config/dhcp-server/…/192.168.2.10/> <b>set match mac-address 00:11:22:33:44:55</b>
+admin@example:/config/dhcp-server/…/192.168.2.10/> <b>set hostname printer</b>
+admin@example:/config/dhcp-server/…/192.168.2.10/> <b>leave</b>
+</code></pre>
 
 Match hosts using a client identifier instead of MAC address:
 
-```
-admin@example:/config/dhcp-server/…/192.168.1.0/24/> edit host 192.168.1.50
-admin@example:/config/dhcp-server/…/192.168.1.50/> edit match
-admin@example:/config/dhcp-server/…/match/> set client-id hex c0:ff:ee
-admin@example:/config/dhcp-server/…/match/> leave
-admin@example:/config/dhcp-server/…/192.168.1.50/> set lease-time infinite
-admin@example:/config/dhcp-server/…/192.168.1.50/> leave
-```
+<pre class="cli"><code>admin@example:/config/dhcp-server/…/192.168.1.0/24/> <b>edit host 192.168.1.50</b>
+admin@example:/config/dhcp-server/…/192.168.1.50/> <b>edit match</b>
+admin@example:/config/dhcp-server/…/match/> <b>set client-id hex c0:ff:ee</b>
+admin@example:/config/dhcp-server/…/match/> <b>leave</b>
+admin@example:/config/dhcp-server/…/192.168.1.50/> <b>set lease-time infinite</b>
+admin@example:/config/dhcp-server/…/192.168.1.50/> <b>leave</b>
+</code></pre>
 
 The `hex` prefix here ensures matching of client ID is done using the
 hexadecimal octets `c0:ff:ee`, three bytes.  Without the prefix the
@@ -100,32 +96,30 @@ ASCII string "c0:ff:ee", eight bytes, is used.
 
 Configure additional DHCP options globally, per subnet, or per host:
 
-```
-admin@example:/config/dhcp-server/> edit subnet 192.168.2.0/24
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> edit option dns-server
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/dns-server/> set address 8.8.8.8
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/dns-server/> leave
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> edit option ntp-server
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/ntp-server/> set address 192.168.2.1
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/ntp-server/> leave
-```
+<pre class="cli"><code>admin@example:/config/dhcp-server/> <b>edit subnet 192.168.2.0/24</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> <b>edit option dns-server</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/dns-server/> <b>set address 8.8.8.8</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/dns-server/> <b>leave</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> <b>edit option ntp-server</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/ntp-server/> <b>set address 192.168.2.1</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/ntp-server/> <b>leave</b>
+</code></pre>
 
 When configuring, e.g., `dns-server`, or `router` options with the value
 `auto`, the system uses the IP address from the interface matching the
 subnet.  For example:
 
-```
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
 eth0            ethernet   UP          02:00:00:00:00:00
                 ipv4                   192.168.1.1/24 (static)
 eth1            ethernet   UP          02:00:00:00:00:01
                 ipv4                   192.168.2.1/24 (static)
 
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> edit option dns-server
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/> set address auto
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/> leave
-```
+admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> <b>edit option dns-server</b>
+admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/> <b>set address auto</b>
+admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/> <b>leave</b>
+</code></pre>
 
 In this case, clients in subnet 192.168.1.0/24 will receive 192.168.1.1
 as their DNS server address.
@@ -135,29 +129,27 @@ as their DNS server address.
 
 Configure DHCP for multiple networks:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit dhcp-server
-admin@example:/config/dhcp-server/> edit subnet 192.168.1.0/24
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> set pool start-address 192.168.1.100 end-address 192.168.1.200
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> leave
-admin@example:/config/dhcp-server/> edit subnet 192.168.2.0/24
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> set pool start-address 192.168.2.100 end-address 192.168.2.200
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> leave
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit dhcp-server</b>
+admin@example:/config/dhcp-server/> <b>edit subnet 192.168.1.0/24</b>
+admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> <b>set pool start-address 192.168.1.100 end-address 192.168.1.200</b>
+admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> <b>leave</b>
+admin@example:/config/dhcp-server/> <b>edit subnet 192.168.2.0/24</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> <b>set pool start-address 192.168.2.100 end-address 192.168.2.200</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> <b>leave</b>
+</code></pre>
 
 
 ## Monitoring
 
 View active leases and server statistics:
 
-```
-admin@example:/> show dhcp-server
-IP ADDRESS       MAC                HOSTNAME            CLIENT ID             EXPIRES
+<pre class="cli"><code>admin@example:/> <b>show dhcp-server</b>
+<span class="header">IP ADDRESS       MAC                HOSTNAME            CLIENT ID             EXPIRES</span>
 192.168.2.22     00:a0:85:00:02:05                      00:c0:ff:ee           3591s
 192.168.1.11     00:a0:85:00:04:06  foo                 01:00:a0:85:00:04:06  3591s
 
-admin@example:/> show dhcp-server statistics
+admin@example:/> <b>show dhcp-server statistics</b>
 DHCP offers sent                : 6
 DHCP ACK messages sent          : 5
 DHCP NAK messages sent          : 0
@@ -166,7 +158,7 @@ DHCP discover messages received : 6
 DHCP request messages received  : 5
 DHCP release messages received  : 6
 DHCP inform messages received   : 6
-```
+</code></pre>
 
 
 [^1]: This requires the system DNS resolver to be configured.

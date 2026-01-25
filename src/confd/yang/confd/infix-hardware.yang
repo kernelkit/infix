@@ -21,6 +21,10 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-01-19 {
+    description "Add probe-timeout for slow USB WiFi dongles.";
+    reference "internal";
+  }
   revision 2025-12-04 {
     description "Add WiFi radio survey container for channel utilization data.";
     reference "internal";
@@ -260,6 +264,21 @@ module infix-hardware {
 
            Recommendation: Use 5GHz for better performance and less
            congestion in most environments.";
+      }
+
+      leaf probe-timeout {
+        type uint8;
+        description
+          "Seconds to wait for PHY detection at boot.
+
+           USB WiFi dongles may be slow to initialize due to firmware
+           loading. Set this to a non-zero value (e.g., 30) to wait
+           for the radio PHY to appear before creating WiFi interfaces.
+
+           If the PHY is not detected within the timeout, interface
+           creation is skipped gracefully instead of failing.
+
+           Value 0 (default) disables waiting.";
       }
 
       /*

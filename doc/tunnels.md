@@ -28,14 +28,13 @@ IPv6 tunnels in two modes:
 
 A basic GRE tunnel for routing between two sites:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface gre0
-admin@example:/config/interface/gre0/> set gre local 192.168.3.1 remote 192.168.3.2
-admin@example:/config/interface/gre0/> set ipv4 address 10.255.0.1 prefix-length 30
-admin@example:/config/interface/gre0/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface gre0</b>
+admin@example:/config/interface/gre0/> <b>set gre local 192.168.3.1 remote 192.168.3.2</b>
+admin@example:/config/interface/gre0/> <b>set ipv4 address 10.255.0.1 prefix-length 30</b>
+admin@example:/config/interface/gre0/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 This creates a Layer 3 tunnel between 192.168.3.1 and 192.168.3.2 using
 the outer IP addresses, with the tunnel itself using 10.255.0.0/30 for
@@ -45,17 +44,16 @@ the inner IP addressing.
 
 GRETAP tunnels operate at Layer 2, allowing bridging across the tunnel:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface gretap0
-admin@example:/config/interface/gretap0/> set type gretap
-admin@example:/config/interface/gretap0/> set gre local 192.168.3.1 remote 192.168.3.2
-admin@example:/config/interface/gretap0/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface gretap0</b>
+admin@example:/config/interface/gretap0/> <b>set type gretap</b>
+admin@example:/config/interface/gretap0/> <b>set gre local 192.168.3.1 remote 192.168.3.2</b>
+admin@example:/config/interface/gretap0/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 GRETAP interfaces can be added to a bridge, bridging local and remote Ethernet
-segments.  See the [Bridge Configuration](networking.md#bridging)
+segments.  See the [Bridge Configuration](bridging.md)
 for more on bridges.
 
 ### OSPF over GRE
@@ -69,37 +67,35 @@ exchange routes.
 
 **Site A configuration:**
 
-```
-admin@siteA:/> configure
-admin@siteA:/config/> edit interface gre0
-admin@siteA:/config/interface/gre0/> set gre local 203.0.113.1 remote 203.0.113.2
-admin@siteA:/config/interface/gre0/> set ipv4 address 10.255.0.1 prefix-length 30
-admin@siteA:/config/interface/gre0/> set ipv4 forwarding
-admin@siteA:/config/interface/gre0/> end
-admin@siteA:/config/> edit routing control-plane-protocol ospfv2 name default ospf
-admin@siteA:/config/routing/…/ospf/> set area 0.0.0.0 interface gre0
-admin@siteA:/config/routing/…/ospf/> leave
+<pre class="cli"><code>admin@siteA:/> <b>configure</b>
+admin@siteA:/config/> <b>edit interface gre0</b>
+admin@siteA:/config/interface/gre0/> <b>set gre local 203.0.113.1 remote 203.0.113.2</b>
+admin@siteA:/config/interface/gre0/> <b>set ipv4 address 10.255.0.1 prefix-length 30</b>
+admin@siteA:/config/interface/gre0/> <b>set ipv4 forwarding</b>
+admin@siteA:/config/interface/gre0/> <b>end</b>
+admin@siteA:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@siteA:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface gre0</b>
+admin@siteA:/config/routing/…/ospf/> <b>leave</b>
 admin@siteA:/>
-```
+</code></pre>
 
 **Site B configuration:**
 
-```
-admin@siteB:/> configure
-admin@siteB:/config/> edit interface gre0
-admin@siteB:/config/interface/gre0/> set gre local 203.0.113.2 remote 203.0.113.1
-admin@siteB:/config/interface/gre0/> set ipv4 address 10.255.0.2 prefix-length 30
-admin@siteB:/config/interface/gre0/> set ipv4 forwarding
-admin@siteB:/config/interface/gre0/> end
-admin@siteB:/config/> edit routing control-plane-protocol ospfv2 name default ospf
-admin@siteB:/config/routing/…/ospf/> set area 0.0.0.0 interface gre0
-admin@siteB:/config/routing/…/ospf/> leave
+<pre class="cli"><code>admin@siteB:/> <b>configure</b>
+admin@siteB:/config/> <b>edit interface gre0</b>
+admin@siteB:/config/interface/gre0/> <b>set gre local 203.0.113.2 remote 203.0.113.1</b>
+admin@siteB:/config/interface/gre0/> <b>set ipv4 address 10.255.0.2 prefix-length 30</b>
+admin@siteB:/config/interface/gre0/> <b>set ipv4 forwarding</b>
+admin@siteB:/config/interface/gre0/> <b>end</b>
+admin@siteB:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@siteB:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface gre0</b>
+admin@siteB:/config/routing/…/ospf/> <b>leave</b>
 admin@siteB:/>
-```
+</code></pre>
 
 Once configured, OSPF will establish a neighbor relationship through the
 tunnel and exchange routes between the sites.  For more info on OSPF
-configuration, see [OSPFv2 Routing](networking.md#ospfv2-routing).
+configuration, see [OSPFv2 Routing](routing.md#ospfv2-routing).
 
 > [!NOTE]
 > Consider adjusting MTU on the tunnel interface to account for GRE
@@ -118,11 +114,10 @@ The TTL setting controls the Time To Live value for the outer tunnel packets.
 By default, tunnels use a fixed TTL of 64, which allows packets to traverse
 multiple hops between tunnel endpoints.
 
-```
-admin@example:/config/> edit interface gre0
-admin@example:/config/interface/gre0/> set gre ttl 255
-admin@example:/config/interface/gre0/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit interface gre0</b>
+admin@example:/config/interface/gre0/> <b>set gre ttl 255</b>
+admin@example:/config/interface/gre0/> <b>leave</b>
+</code></pre>
 
 Valid values are 1-255, or the special value `inherit` which copies the TTL
 from the encapsulated packet.
@@ -136,11 +131,10 @@ from the encapsulated packet.
 
 The ToS setting controls QoS marking for tunnel traffic:
 
-```
-admin@example:/config/> edit interface gre0
-admin@example:/config/interface/gre0/> set gre tos 0x10
-admin@example:/config/interface/gre0/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit interface gre0</b>
+admin@example:/config/interface/gre0/> <b>set gre tos 0x10</b>
+admin@example:/config/interface/gre0/> <b>leave</b>
+</code></pre>
 
 Valid values are 0-255 for fixed ToS/DSCP marking, or `inherit` (default)
 to copy the ToS value from the encapsulated packet.
@@ -151,11 +145,10 @@ The `pmtu-discovery` setting can be used to control the Path MTU Discovery on
 GRE tunnels.  When enabled (default), the tunnel respects the Don't Fragment
 (DF) bit and performs PMTU discovery:
 
-```
-admin@example:/config/> edit interface gre0
-admin@example:/config/interface/gre0/> set gre pmtudisc false
-admin@example:/config/interface/gre0/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit interface gre0</b>
+admin@example:/config/interface/gre0/> <b>set gre pmtudisc false</b>
+admin@example:/config/interface/gre0/> <b>leave</b>
+</code></pre>
 
 Disabling PMTU discovery may be necessary in networks with broken ICMP
 filtering but can lead to suboptimal performance and fragmentation.
@@ -175,15 +168,14 @@ Infix supports both IPv4 and IPv6 for VXLAN tunnel endpoints.
 > If you name your VXLAN interface `vxlanN`, where `N` is a number, the
 > CLI infers the interface type automatically.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface vxlan100
-admin@example:/config/interface/vxlan100/> set vxlan local 192.168.3.1
-admin@example:/config/interface/vxlan100/> set vxlan remote 192.168.3.2
-admin@example:/config/interface/vxlan100/> set vxlan vni 100
-admin@example:/config/interface/vxlan100/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface vxlan100</b>
+admin@example:/config/interface/vxlan100/> <b>set vxlan local 192.168.3.1</b>
+admin@example:/config/interface/vxlan100/> <b>set vxlan remote 192.168.3.2</b>
+admin@example:/config/interface/vxlan100/> <b>set vxlan vni 100</b>
+admin@example:/config/interface/vxlan100/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 The VNI uniquely identifies the VXLAN segment and must match on both
 tunnel endpoints.
@@ -193,16 +185,15 @@ tunnel endpoints.
 The default VXLAN UDP destination port is 4789 (IANA assigned).  In some
 cases you may need to use a different port:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface vxlan100
-admin@example:/config/interface/vxlan100/> set vxlan local 192.168.3.1
-admin@example:/config/interface/vxlan100/> set vxlan remote 192.168.3.2
-admin@example:/config/interface/vxlan100/> set vxlan vni 100
-admin@example:/config/interface/vxlan100/> set vxlan remote-port 8472
-admin@example:/config/interface/vxlan100/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface vxlan100</b>
+admin@example:/config/interface/vxlan100/> <b>set vxlan local 192.168.3.1</b>
+admin@example:/config/interface/vxlan100/> <b>set vxlan remote 192.168.3.2</b>
+admin@example:/config/interface/vxlan100/> <b>set vxlan vni 100</b>
+admin@example:/config/interface/vxlan100/> <b>set vxlan remote-port 8472</b>
+admin@example:/config/interface/vxlan100/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 The remote-port setting allows interoperability with systems using
 non-standard VXLAN ports.

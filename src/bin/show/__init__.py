@@ -531,8 +531,9 @@ def system(args: List[str]) -> None:
             name = component.get("name", "")
             value_type = sensor_data.get("value-type")
 
-            # Only capture CPU temperature (ignore phy, sfp, etc.)
-            if value_type == "celsius" and name == "cpu" and cpu_temp is None:
+            # Only capture CPU/SoC temperature (ignore phy, sfp, etc.)
+            # Different platforms use different names: cpu, soc, core, etc.
+            if value_type == "celsius" and name in ("cpu", "soc", "core") and cpu_temp is None:
                 temp_millidegrees = sensor_data.get("value", 0)
                 cpu_temp = temp_millidegrees / 1000.0
 

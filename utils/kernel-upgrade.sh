@@ -255,26 +255,16 @@ update_changelog() {
     fi
 
     # Extract just the UNRELEASED section (from start until next version header)
-    # Need to find the second [v occurrence (first is UNRELEASED itself, second is previous release)
     UNRELEASED_SECTION=$(awk '/^\[v[0-9]/ { count++; if (count == 2) exit } { print }' doc/ChangeLog.md)
 
     # Check if there's already a kernel upgrade entry in the UNRELEASED section
-    if echo "$UNRELEASED_SECTION" | grep -q "^- Upgrade Linux kernel to"; then
-        # Update existing kernel upgrade line in UNRELEASED section only
-        # Find a real release marker (not UNRELEASED), then replace before that
-        awk -v new_version="$NEW_VERSION" '
-            /^\[v[0-9]/ && !/UNRELEASED/ { found_version=1 }
-            /^- Upgrade Linux kernel to/ && !found_version && !replaced {
-                print "- Upgrade Linux kernel to " new_version " (LTS)"
-                replaced=1
-                next
-            }
-            {print}
-        ' doc/ChangeLog.md > doc/ChangeLog.md.tmp && mv doc/ChangeLog.md.tmp doc/ChangeLog.md
+    # Match both plain and bold formats: "- Upgrade Linux" or "- Upgrade **Linux"
+    if echo "$UNRELEASED_SECTION" | grep -qE "^- Upgrade (\*\*)?Linux kernel to"; then
+        # Update existing kernel upgrade line using sed (first match only)
+        sed -i '0,/^- Upgrade \(\*\*\)\?Linux kernel to .*/s//- Upgrade Linux kernel to '"$NEW_VERSION"' (LTS)/' doc/ChangeLog.md
         log_info "Updated existing kernel version entry to $NEW_VERSION"
     else
         # Add new kernel upgrade entry after first "### Changes"
-        # Use awk to insert at the right place
         awk -v new_line="- Upgrade Linux kernel to $NEW_VERSION (LTS)" '
             /^### Changes/ && !done {
                 print

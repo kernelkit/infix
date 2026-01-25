@@ -93,7 +93,7 @@ about this in the [example below](#end-device-protection).
 > [!IMPORTANT] Remember IP forwarding on interfaces!
 > Firewall policies only control whether traffic is allowed on input, to be
 > forwarded, or blocked (default).  For the actual routing between interfaces
-> to work, you must also enable [IP forwarding](networking.md#ipv4-forwarding)
+> to work, you must also enable [IP forwarding](ip.md#ipv4-forwarding)
 > on the relevant interfaces.
 
 ### Intra-Zone Traffic
@@ -151,7 +151,8 @@ allowed access to.
 
 See the [examples below](#enterprise-gateway) for how to set up a policy.  The
 built-in help system can also be useful:
-<code><pre>admin@example:/config/firewall/policy/lan-to-dmz/> <b>help masquerade</b>
+
+<pre class="cli"><code>admin@example:/config/firewall/policy/lan-to-dmz/> <b>help masquerade</b>
 <b>NAME</b>
         masquerade <true/false><br/>
 <b>DESCRIPTION</b>
@@ -159,7 +160,7 @@ built-in help system can also be useful:
         Matching traffic will have their source IP address changed on egress,
         using the IP address of the interface the traffic egresses.<br/>
 admin@example:/config/firewall/policy/lan-to-dmz/>
-</pre></code>
+</code></pre>
 
 ### Symbolic Names
 
@@ -229,7 +230,8 @@ The firewall includes over 100 pre-defined services, such as:
 This is the default firewall setup, useful for end devices on untrusted
 networks.  It provides maximum protection while allowing essential
 connectivity.
-<code><pre>admin@example:/> <b>configure</b>
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit firewall</b>
 admin@example:/config/firewall/> <b>show</b>
 default public;
@@ -240,21 +242,21 @@ zone public {
   service ssh;
 }
 admin@example:/config/firewall/> <b>leave</b>
-</pre></code>
+</code></pre>
 
 The `reject` action differs from `drop` in that it responds to ICMP messages,
 although maybe not how you may think.  Pinging the device we may[^1] see this:
-<code><pre>
-<b>$</b> ping 192.168.122.161
+
+<pre class="cli"><code><b>$</b> ping 192.168.122.161
 From 192.168.122.161 icmp_seq=1 <u>Packet filtered</u>
-</pre></code>
+</code></pre>
 
 If we run `tcpdump` it shows us why:
-<code><pre>
-<b>$</b> tcpdump -lni eth0
+
+<pre class="cli"><code><b>$</b> tcpdump -lni eth0
 20:10:40.245707 IP 192.168.122.1 > 192.168.122.161: ICMP echo request, id 56838, seq 1, length 64
 20:10:40.245961 IP 192.168.122.161 > 192.168.122.1: ICMP <u>host 192.168.122.161 unreachable - admin prohibited filter</u>, length 92
-</pre></code>
+</code></pre>
 
 The key here is that, yes the device responds, but not with `ICMP reply` but
 `ICMP unreachable`, and a little helpful message.
@@ -285,7 +287,8 @@ Zone matrix and firewall overview from <kbd>show firewall</kbd>.
 For typical routers that need to protect internal devices while providing
 internet access.  The LAN zone trusts internal devices, while the WAN zone
 blocks external threats.
-<code><pre>admin@example:/> <b>configure</b>
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit firewall</b>
 admin@example:/config/firewall/> <b>set default wan</b>
 admin@example:/config/firewall/> <b>edit zone lan</b>
@@ -308,14 +311,15 @@ admin@example:/config/firewall/…/loc-to-wan/> <b>set egress wan</b>
 admin@example:/config/firewall/…/loc-to-wan/> <b>set action accept</b>
 admin@example:/config/firewall/…/loc-to-wan/> <b>set masquerade</b>
 admin@example:/config/firewall/…/loc-to-wan/> <b>leave</b>
-</pre></code>
+</code></pre>
 
 ### Enterprise Gateway
 
 For businesses that need to host public services while protecting internal
 resources.  We can build upon the Home/Office Router example above and add
 a DMZ zone with additional policies for controlled access.
-<code><pre>admin@example:/> <b>configure</b>
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit firewall zone dmz</b>
 admin@example:/config/firewall/…/dmz/> <b>set description "Semi-trusted public services"</b>
 admin@example:/config/firewall/…/dmz/> <b>set action drop</b>
@@ -339,7 +343,7 @@ admin@example:/config/firewall/> <b>edit zone wan port-forward 8080 tcp</b>
 admin@example:/config/firewall/…/tcp/> <b>set to addr 192.168.2.10</b>
 admin@example:/config/firewall/…/tcp/> <b>set to port 80</b>
 admin@example:/config/firewall/…/tcp/> <b>leave</b>
-</pre></code>
+</code></pre>
 
 This adds a DMZ zone for public services, updates the internet access policy
 to include DMZ traffic, allows LAN management of DMZ services, and forwards
@@ -349,12 +353,12 @@ external web traffic to the DMZ server.
 
 Different log levels are available to monitor and debug firewall behavior.
 Configure logging using the CLI:
-<code><pre>
-admin@example:/> <b>configure</b>
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit firewall</b>
 admin@example:/config/firewall/> <b>set logging all</b>
 admin@example:/config/firewall/> <b>leave</b>
-</pre></code>
+</code></pre>
 
 Firewall logs help you understand traffic patterns and security events.  The
 CLI admin-exec command <kbd>show firewall</kbd> shows the last 10 log messages in the
@@ -457,4 +461,4 @@ You can check the current lockdown state:
 }
 ```
 
-[1]: networking.md#bridging
+[1]: bridging.md

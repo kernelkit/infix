@@ -9,22 +9,20 @@ as NETCONF, RESTCONF, and CLI via SSH or Console.
 An SSH server (SSHv2) is provided for remote management. It can be
 enabled/disabled as shown below.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit ssh
-admin@example:/config/ssh/> set enabled
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit ssh</b>
+admin@example:/config/ssh/> <b>set enabled</b>
 admin@example:/config/ssh/>
-```
+</code></pre>
 
 By default the SSH server accepts connections to port 22 on all its IP
 addresses, but this can be adjusted using the `listen` command. To
 make the server (only) listen for incoming connections to IP address
 _192.168.1.1_ and port _12345_ the following commands can be used.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit ssh
-admin@example:/config/ssh/> show
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit ssh</b>
+admin@example:/config/ssh/> <b>show</b>
 enabled true;
 hostkey genkey;
 listen ipv4 {
@@ -35,12 +33,12 @@ listen ipv6 {
   address ::;
   port 22;
 }
-admin@example:/config/ssh/> no listen ipv6
-admin@example:/config/ssh/> edit listen ipv4
-admin@example:/config/ssh/listen/ipv4/> set address 192.168.1.1
-admin@example:/config/ssh/listen/ipv4/> set port 12345
+admin@example:/config/ssh/> <b>no listen ipv6</b>
+admin@example:/config/ssh/> <b>edit listen ipv4</b>
+admin@example:/config/ssh/listen/ipv4/> <b>set address 192.168.1.1</b>
+admin@example:/config/ssh/listen/ipv4/> <b>set port 12345</b>
 admin@example:/config/ssh/listen/ipv4/>
-```
+</code></pre>
 
 The default SSH hostkey is generated on first boot and is used in both
 SSH and NETCONF (SSH transport). Custom keys can be added to the
@@ -62,9 +60,10 @@ created by OpenSSL.
 After the key has been stored in the keystore and given the name
 _mykey_ it can be added to SSH configuration:
 
-	admin@example:/> configure
-	admin@example:/config/> edit ssh
-	admin@example:/config/ssh/> set hostkey mykey
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit ssh</b>
+admin@example:/config/ssh/> <b>set hostkey mykey</b>
+</code></pre>
 
 ## Console Port
 
@@ -78,9 +77,8 @@ connected to the console port of the device. The serial port is
 typically setup to run at 115200 baud, 8N1.
 
 
-```
-Infix OS — Immutable.Friendly.Secure v24.11.1 (ttyS0)
-example login: admin
+<pre class="cli"><code>Infix OS — Immutable.Friendly.Secure v24.11.1 (ttyS0)
+example login: <b>admin</b>
 Password:
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
@@ -90,26 +88,24 @@ Password:
 Run the command 'cli' for interactive OAM
 
 admin@example:~$
-```
+</code></pre>
 
 The `resize` command can be used to update terminal settings to the
 size of your terminal window.
 
-```
-admin@example:~$ resize
+<pre class="cli"><code>admin@example:~$ <b>resize</b>
 COLUMNS=115;LINES=59;export COLUMNS LINES;
 admin@example:~$
-```
+</code></pre>
 
 CLI can be entered from shell in the same way as for SSH.
 
-```
-admin@example:~$ cli
+<pre class="cli"><code>admin@example:~$ <b>cli</b>
 
 See the 'help' command for an introduction to the system
 
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+admin@example:/> <b>show interfaces</b>
+<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
 lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
@@ -117,7 +113,7 @@ e1              ethernet   LOWER-DOWN  00:53:00:06:03:01
 e2              ethernet   LOWER-DOWN  00:53:00:06:03:02
 ...
 admin@example:/>
-```
+</code></pre>
 
 ## Web, Web-console and RESTCONF
 
@@ -132,27 +128,25 @@ There is also a *Netbrowse* Web service presenting information about
 the unit's neighbors, collected via mDNS (see
 [Discovery](discovery.md) for more details).
 
-```
-admin@example:/> configure
-admin@example:/config/> edit web
-admin@example:/config/web/> help
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit web</b>
+admin@example:/config/web/> <b>help</b>
   enabled                           Enable or disable on all web services.
   console                           Web console interface.
   netbrowse                         mDNS Network Browser.
   restconf                          IETF RESTCONF Server.
 admin@example:/config/web/>
-```
+</code></pre>
 
 ### Enable/disable Web Service and Server
 
 The Web service can be enabled as shown below.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit web
-admin@example:/config/web/> set enabled
-admin@example:/config/web/> 
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit web</b>
+admin@example:/config/web/> <b>set enabled</b>
+admin@example:/config/web/>
+</code></pre>
 
 Enabling the Web service implies that a Web server is
 enabled. Currently this Web server provides generic Infix information,
@@ -172,11 +166,10 @@ The Web console has its own enable/disable setting, but will only be
 activated if the Web service is enabled. The example below shows how
 to disable the Web console.
 
-```
-admin@example:/config/web/> edit console
-admin@example:/config/web/console/> no enabled
+<pre class="cli"><code>admin@example:/config/web/> <b>edit console</b>
+admin@example:/config/web/console/> <b>no enabled</b>
 admin@example:/config/web/console/>
-```
+</code></pre>
 
 ### Enable/disable RESTCONF Service
 
@@ -188,11 +181,10 @@ The RESTCONF service has its own enable/disable setting, but will
 only be activated if the Web service is enabled. The example below
 shows how to disable the RESTCONF service.
 
-```
-admin@example:/config/web/> edit restconf
-admin@example:/config/web/restconf/> no enabled
+<pre class="cli"><code>admin@example:/config/web/> <b>edit restconf</b>
+admin@example:/config/web/restconf/> <b>no enabled</b>
 admin@example:/config/web/restconf/>
-```
+</code></pre>
 
 ## System Upgrade
 

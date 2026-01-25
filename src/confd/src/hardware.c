@@ -1,13 +1,13 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
+#include <fnmatch.h>
+#include <ftw.h>
 #include <jansson.h>
+#include <libgen.h>
+#include <limits.h>
 
 #include <srx/common.h>
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
-#include <jansson.h>
-#include <ftw.h>
-#include <libgen.h>
-#include <limits.h>
 
 #include "core.h"
 #include "interfaces.h"
@@ -17,10 +17,10 @@
 #define HOSTAPD_CONF             "/etc/hostapd-%s.conf"
 #define HOSTAPD_CONF_NEXT        HOSTAPD_CONF"+"
 
-static int dir_cb(const char *fpath, const struct stat *sb,
-		  int typeflag, struct FTW *ftwbuf)
+static int dir_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
-	char *filename;
+	const char *filename;
+
 	if (typeflag == FTW_DP)
 		return 0;
 
@@ -31,59 +31,55 @@ static int dir_cb(const char *fpath, const struct stat *sb,
 			return FTW_STOP;
 		}
 	}
+
 	return 0;
 }
 
 static bool usb_authorize(struct json_t *root, const char *name, int enabled)
 {
-	json_t *usb_port, *usb_ports;
+	json_t *port, *ports;
 	int index;
 
-	usb_ports = json_object_get(root, "usb-ports");
-	if (!usb_ports) /* No Infix controlled USB ports is ok */
+	ports = json_object_get(root, "usb-ports");
+	if (!ports)
 		return 0;
 
-	json_array_foreach(usb_ports, index, usb_port) {
-		struct json_t *jname;
+	json_array_foreach(ports, index, port) {
+		struct json_t *obj;
 
-		jname = json_object_get(usb_port, "name");
-		if (!jname || !json_is_string(jname)) {
+		obj = json_object_get(port, "name");
+		if (!obj || !json_is_string(obj)) {
 			ERROR("Did not find USB hardware port (name) for %s", name);
 			continue;
 		}
-		if (!strcmp(name, json_string_value(jname))) {
-			struct json_t *jpath = json_object_get(usb_port, "path");
-			char authorized_default_path[PATH_MAX];
+
+		if (!strcmp(name, json_string_value(obj))) {
+			char apath[PATH_MAX];
 			const char *path;
 
-			if (!jpath || !json_is_string(jpath)) {
+			obj = json_object_get(port, "path");
+			if (!obj || !json_is_string(obj)) {
 				ERROR("Did not find USB hardware port (path) for %s", name);
 				continue;
 			}
 
-			/* Path now points to USB device directory, not the attribute file */
-			path = json_string_value(jpath);
-			snprintf(authorized_default_path, sizeof(authorized_default_path),
-				 "%s/authorized_default", path);
+			path = json_string_value(obj);
+			snprintf(apath, sizeof(apath), "%s/authorized_default", path);
 
 			if (!enabled) {
-				if (fexist(authorized_default_path)) {
-					if (writedf(0, "w", "%s", authorized_default_path)) {
-						ERROR("Failed to unauthorize %s", authorized_default_path);
+				if (fexist(apath)) {
+					if (writedf(0, "w", "%s", apath)) {
+						ERROR("Failed to unauthorize %s", apath);
 						return 1;
 					}
 				}
 			} else {
-				char *rpath;
-
-				rpath = realpath(path, NULL);
-				if (rpath) {
-					nftw(rpath, dir_cb, 0, FTW_DEPTH | FTW_PHYS);
-					free(rpath);
-				}
+				if (realpath(path, apath))
+					nftw(apath, dir_cb, 20, FTW_DEPTH | FTW_PHYS);
 			}
 		}
 	}
+
 	return 0;
 }
 
@@ -145,8 +141,13 @@ static int hardware_cand_infer_class(json_t *root, sr_session_ctx_t *session, co
 			inferred.data.string_val = "infix-hardware:usb";
 			err = srx_set_item(session, &inferred, 0,
 					   "%s/class", xpath);
-			break;
+			goto out_free_name;
 		}
+	}
+
+	if (!fnmatch("radio+([0-9])", name, FNM_EXTMATCH)) {
+		inferred.data.string_val = "infix-hardware:wifi";
+		err = srx_set_item(session, &inferred, 0, "%s/class", xpath);
 	}
 out_free_name:
 	free(name);
@@ -457,12 +458,14 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	char hostapd_conf[256];
 	char **ap_list = NULL;
 	FILE *hostapd = NULL;
-	int ap_count = 0;
 	int rc = SR_ERR_OK;
+	int ap_count = 0;
+	mode_t oldmask;
 	int i;
 
-	wifi_find_radio_aps(cifs, radio_name, &ap_list, &ap_count);
+	oldmask = umask(0077);
 
+	wifi_find_radio_aps(cifs, radio_name, &ap_list, &ap_count);
 	if (ap_count == 0) {
 		DEBUG("No APs found on radio %s", radio_name);
 		goto cleanup;
@@ -537,6 +540,8 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fclose(hostapd);
 
 cleanup:
+	umask(oldmask);
+
 	for (i = 0; i < ap_count; i++)
 		free(ap_list[i]);
 	free(ap_list);
@@ -579,7 +584,8 @@ static int hardware_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return err;
 }
 
-int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+		    sr_event_t event, struct confd *confd)
 {
 	struct lyd_node  *difs = NULL, *dif = NULL;
 	int rc = SR_ERR_OK;
@@ -618,7 +624,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 				}
 				continue;
 			}
-			state = lydx_get_child(dif, "state");
+			state = lydx_get_child(cif, "state");
 			admin_state = lydx_get_cattr(state, "admin-state");
 			if (usb_authorize(confd->root, name, !strcmp(admin_state, "unlocked"))) {
 				rc = SR_ERR_INTERNAL;

@@ -16,16 +16,21 @@ CLI has several keybindings, most significant first:
 | Meta-b  | Ctrl-Left      | Move cursor back one word                        |
 | Ctrl-e  | End            | Move cursor to end of line                       |
 | Ctrl-a  | Home           | Move cursor to beginning of line                 |
+| Ctrl-@  | Ctrl-Space     | Mark current position for region operations      |
+| Meta w  |                | Copy region to kill buffer without deleting      |
 | Ctrl-k  |                | Kill (cut) text from cursor to end of line       |
 | Ctrl-u  |                | Delete (cut) entire line                         |
 | Ctrl-y  |                | Yank (paste) from kill buffer to cursor          |
 | Meta-.  |                | Yank (paste) last argument from previous line    |
-| Ctrl-w  | Meta-Backspace | Delete (cut) word to the left                    |
+| Ctrl-w  |                | Kill region if mark set, else kill word backward |
+|         | Meta-Backspace | Delete (cut) word to the left                    |
 |         | Meta-Delete    | Delete (cut) word to the right                   |
 | Ctrl-l  |                | Clear screen and refresh current line            |
 | Ctrl-p  | Up arrow       | History, previous command                        |
 | Ctrl-n  | Down arrow     | History, next command                            |
+| Ctrl-q  | Ctrl-v         | Insert next character literally                  |
 | Ctrl-r  |                | History, reversed interactive search (i-search)  |
+| Ctrl-t  |                | Transpose/Swap characters before and at cursor   |
 
 ## What is Meta?
 

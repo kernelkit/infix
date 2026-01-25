@@ -77,17 +77,22 @@ module infix-if-type {
     reference   "RFC 3635";
   }
 
+
   identity gre {
     base infix-interface-type;
+    description "GRE tunnel interface.";
   }
   identity gretap {
     base infix-interface-type;
+    description "GRETAP (Ethernet over GRE) tunnel interface.";
   }
   identity vxlan {
     base infix-interface-type;
+    description "Virtual eXtensible LAN tunnel interface.";
   }
   identity wireguard {
     base infix-interface-type;
+    description "WireGuard VPN tunnel interface.";
   }
   identity lag {
     base infix-interface-type;

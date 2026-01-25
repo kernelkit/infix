@@ -28,12 +28,20 @@ nav:
       - Upgrading: cli/upgrade.md
   - Docker Containers: container.md
   - Networking:
-      - Network Configuration: networking.md
+      - Overview: networking.md
+      - Common Settings: iface.md
+      - Bridging: bridging.md
+      - Link Aggregation: lag.md
+      - Ethernet Interfaces: ethernet.md
+      - IP Addressing: ip.md
+      - Routing: routing.md
       - Firewall Configuration: firewall.md
       - Quality of Service: qos.md
       - RMON Counters: eth-counters.md
       - Tunneling (L2/L3): tunnels.md
-      - VPN Tunnels: vpn.md
+      - VPN Tunnels:
+          - Overview: vpn.md
+          - WireGuard: vpn-wireguard.md
       - Wireless LAN (WiFi): wifi.md
   - Services:
       - Device Discovery: discovery.md

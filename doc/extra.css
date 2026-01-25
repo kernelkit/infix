@@ -24,3 +24,14 @@
     /* Reset alignment for table cells */
     text-align: initial;
 }
+
+/* CLI terminal output styling */
+.md-typeset pre.cli .title {
+    font-weight: bold;
+}
+
+.md-typeset pre.cli .header {
+    background-color: #e0e0e0;
+    color: #1a1a1a;
+    font-weight: bold;
+}

@@ -218,6 +218,36 @@ submodule infix-if-wifi {
                  - Below -80 dBm: Very weak";
             }
 
+            leaf rx-speed {
+              config false;
+              type uint32;
+              units "100 kbps";
+              description
+                "Last received data rate from the access point in 100 kbps.
+
+                 Only available when connected.
+
+                 Examples:
+                 - 10 = 1 Mbps
+                 - 65 = 6.5 Mbps
+                 - 866 = 86.6 Mbps";
+            }
+
+            leaf tx-speed {
+              config false;
+              type uint32;
+              units "100 kbps";
+              description
+                "Last transmitted data rate to the access point in 100 kbps.
+
+                 Only available when connected.
+
+                 Examples:
+                 - 10 = 1 Mbps
+                 - 65 = 6.5 Mbps
+                 - 866 = 86.6 Mbps";
+            }
+
             list scan-results {
               config false;
               key ssid;
@@ -421,26 +451,26 @@ submodule infix-if-wifi {
 
                 leaf rx-speed {
                   type uint32;
-                  units "100 kbit/s";
+                  units "100 kbps";
                   description
-                    "Last received data rate from this client in 100 kbit/s.
+                    "Last received data rate from this client in 100 kbps.
 
                      Examples:
-                     - 10 = 1 Mbit/s
-                     - 65 = 6.5 Mbit/s
-                     - 866 = 86.6 Mbit/s";
+                     - 10 = 1 Mbps
+                     - 65 = 6.5 Mbps
+                     - 866 = 86.6 Mbps";
                 }
 
                 leaf tx-speed {
                   type uint32;
-                  units "100 kbit/s";
+                  units "100 kbps";
                   description
-                    "Last transmitted data rate to this client in 100 kbit/s.
+                    "Last transmitted data rate to this client in 100 kbps.
 
                      Examples:
-                     - 10 = 1 Mbit/s
-                     - 65 = 6.5 Mbit/s
-                     - 866 = 86.6 Mbit/s";
+                     - 10 = 1 Mbps
+                     - 65 = 6.5 Mbps
+                     - 866 = 86.6 Mbps";
                 }
               }
             }

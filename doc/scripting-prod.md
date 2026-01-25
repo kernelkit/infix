@@ -350,5 +350,5 @@ the created configuration.
 
 [1]: scripting-sysrepocfg.md#backup-configuration
 [2]: scripting-sysrepocfg.md#restore-configuration
-[8]: networking.md#bridging
-[9]: networking.md#vlan-filtering-bridge
+[8]: bridging.md
+[9]: bridging.md#vlan-filtering-bridge
