@@ -8,16 +8,14 @@ The _boot order_ defines which image is tried first, and is listed with
 the CLI `show software` command. It also shows Infix version installed
 per partition, and which image was used when booting (`STATE booted`).
 
-```
-admin@example:/> show software
-BOOT ORDER
-primary secondary net
+<pre class="cli"><code>admin@example:/> <b>show software</b>
+Boot order : primary secondary net
 
-NAME      STATE     VERSION                DATE
-primary   booted    v25.01.0               2025-04-25T10:15:00+00:00
-secondary inactive  v25.01.0               2025-04-25T10:07:20+00:00
+<span class="header">NAME       STATE     VERSION                DATE                     </span>
+primary    booted    v25.01.0               2025-04-25T10:15:00+00:00
+secondary  inactive  v25.01.0               2025-04-25T10:07:20+00:00
 admin@example:/>
-```
+</code></pre>
 
 YANG support for upgrading Infix, inspecting and _modifying_ the
 boot-order, is defined in [infix-system-software][2].
@@ -41,52 +39,47 @@ valid values.
 
 Example: View current boot order and change it:
 
-```
-admin@example:/> show boot-order
+<pre class="cli"><code>admin@example:/> <b>show boot-order</b>
 primary secondary net
-admin@example:/> set boot-order secondary primary net
-admin@example:/> show boot-order
+admin@example:/> <b>set boot-order secondary primary net</b>
+admin@example:/> <b>show boot-order</b>
 secondary primary net
 admin@example:/>
-```
+</code></pre>
 
 Example: Set boot order to only try primary partition:
 
-```
-admin@example:/> show boot-order
+<pre class="cli"><code>admin@example:/> <b>show boot-order</b>
 secondary primary net
-admin@example:/> set boot-order primary
-admin@example:/> show boot-order
+admin@example:/> <b>set boot-order primary</b>
+admin@example:/> <b>show boot-order</b>
 primary
 admin@example:/>
-```
+</code></pre>
 
 Example: Using tab-completion (press TAB to see available options):
 
-```
-admin@example:/> set boot-order <TAB>
+<pre class="cli"><code>admin@example:/> <b>set boot-order </b><kbd>TAB</kbd>
 net        primary    secondary
-admin@example:/> set boot-order secondary <TAB>
+admin@example:/> <b>set boot-order secondary </b><kbd>TAB</kbd>
 net        primary    secondary
-admin@example:/> set boot-order secondary primary
-admin@example:/> show boot-order
+admin@example:/> <b>set boot-order secondary primary</b>
+admin@example:/> <b>show boot-order</b>
 secondary primary
 admin@example:/>
-```
+</code></pre>
 
 The new boot order takes effect on the next reboot and can be verified
 with `show boot-order` or `show software`:
 
-```
-admin@example:/> show software
-BOOT ORDER
-secondary primary
+<pre class="cli"><code>admin@example:/> <b>show software</b>
+Boot order : secondary primary
 
-NAME      STATE     VERSION                DATE
-primary   booted    v25.01.0               2025-04-25T10:15:00+00:00
-secondary inactive  v25.01.0               2025-04-25T10:07:20+00:00
+<span class="header">NAME       STATE     VERSION                DATE                     </span>
+primary    booted    v25.01.0               2025-04-25T10:15:00+00:00
+secondary  inactive  v25.01.0               2025-04-25T10:07:20+00:00
 admin@example:/>
-```
+</code></pre>
 
 > [!NOTE]
 > The boot order is automatically updated when performing an upgrade.
@@ -127,27 +120,28 @@ configuration before performing an upgrade. The backup is useful if the
 upgrade fails, and makes a later [downgrade](#downgrading) a smoother
 process.
 
-```
-admin@example:/> dir /cfg
+<pre class="cli"><code>admin@example:/> <b>dir /cfg</b>
 /cfg directory
 backup/             ssl/                startup-config.cfg
 
-admin@example:/> copy /cfg/startup-config.cfg /cfg/v25.01.0-startup-config.cfg
-admin@example:/> dir /cfg
+admin@example:/> <b>copy /cfg/startup-config.cfg /cfg/v25.01.0-startup-config.cfg</b>
+admin@example:/> <b>dir /cfg</b>
 /cfg directory
 backup/             ssl/                startup-config.cfg           v25.01.0-startup-config.cfg
 
-admin@example:/> 
-```
+admin@example:/>
+</code></pre>
 
 *Upgrade:* Here the image *pkg bundle* was made available via TFTP.
 
-```
-admin@example:/> upgrade tftp://198.18.117.1/infix-aarch64-25.03.1.pkg
+<pre class="cli"><code>admin@example:/> <b>upgrade tftp://198.18.117.1/infix-aarch64-25.03.1.pkg</b>
 installing
   0% Installing
   0% Determining slot states
  10% Determining slot states done.
+...
+ 40% Checking slot rootfs.1 (secondary)
+ 46% Checking slot rootfs.1 (secondary) done.
 ...
  98% Copying image to rootfs.1
  99% Copying image to rootfs.1
@@ -156,14 +150,13 @@ installing
 100% Installing done.
 Installing `tftp://198.18.117.1/infix-aarch64-25.03.1.pkg` succeeded
 admin@example:/>
-```
+</code></pre>
 
 *Reboot:* The unit will boot on the other partition, with the newly
 installed image. The `Loading startup-config` step conducts migration
 of startup configuration if applicable.
 
-```
-admin@example:/> reboot
+<pre class="cli"><code>admin@example:/> <b>reboot</b>
 [ OK ] Stopping Static routing daemon
 [ OK ] Stopping Zebra routing daemon
 ...
@@ -173,7 +166,7 @@ admin@example:/> reboot
 [ OK ] Starting Status daemon
 
 Infix OS — Immutable.Friendly.Secure v25.03.1 (ttyS0)
-example login: admin
+example login: <b>admin</b>
 Password:
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
@@ -182,19 +175,18 @@ Password:
 
 Run the command 'cli' for interactive OAM
 
-admin@example:~$ cli
+admin@example:~$ <b>cli</b>
 
 See the 'help' command for an introduction to the system
 
-admin@example:/> show software
-BOOT ORDER
-secondary primary net
+admin@example:/> <b>show software</b>
+Boot order : secondary primary net
 
-NAME      STATE     VERSION                DATE
-primary   inactive  v25.01.0               2025-04-25T10:15:00+00:00
-secondary booted    v25.03.1               2025-04-25T10:24:31+00:00
+<span class="header">NAME       STATE     VERSION                DATE                     </span>
+primary    inactive  v25.01.0               2025-04-25T10:15:00+00:00
+secondary  booted    v25.03.1               2025-04-25T10:24:31+00:00
 admin@example:/>
-```
+</code></pre>
 
 As shown, the *boot order* has been updated, so that *secondary* is
 now the preferred boot source.
@@ -217,20 +209,18 @@ numbering).  The startup configuration is migrated to `1.5`
 definitions and stored, while a backup previous startup configuration
 is stored in directory `/cfg/backup/`.
 
-```
-admin@example:/> dir /cfg/backup/
+<pre class="cli"><code>admin@example:/> <b>dir /cfg/backup/</b>
 /cfg/backup/ directory
 startup-config-1.4.cfg
 
 admin@example:/>
-```
+</code></pre>
 
 The modifications made to the startup configuration can be viewed by
 comparing the files from the *shell*. An example is shown below.
 
-```
-admin@example:/> exit
-admin@example:~$ diff /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg
+<pre class="cli"><code>admin@example:/> <b>exit</b>
+admin@example:~$ <b>diff /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg</b>
 --- /cfg/backup/startup-config-1.4.cfg
 +++ /cfg/startup-config.cfg
 ...
@@ -244,7 +234,7 @@ admin@example:~$ diff /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg
 +    "version": "1.5"
 ...
 admin@example:~$
-```
+</code></pre>
 
 ## Downgrading
 
@@ -259,16 +249,14 @@ startup configuration before rebooting.
 In both cases we start out with a unit running Infix v25.03.1, and
 wish to downgrade to v25.01.0.
 
-```
-admin@example:/> show software
-BOOT ORDER
-primary secondary net
+<pre class="cli"><code>admin@example:/> <b>show software</b>
+Boot order : primary secondary net
 
-NAME      STATE     VERSION                DATE
-primary   booted    v25.03.1               2025-04-25T11:36:26+00:00
-secondary inactive  v25.03.1               2025-04-25T10:24:31+00:00
+<span class="header">NAME       STATE     VERSION                DATE                     </span>
+primary    booted    v25.03.1               2025-04-25T11:36:26+00:00
+secondary  inactive  v25.03.1               2025-04-25T10:24:31+00:00
 admin@example:/>
-```
+</code></pre>
 
 ### With Backup `startup-config`
 
@@ -292,24 +280,22 @@ running Infix v25.01.0 on the unit.  See section [Upgrading](#upgrading)
 above for more information.  In the following example, there is a backup
 file available named `v25.01.0-startup-config.cfg`:
 
-```
-admin@example:/> dir /cfg
+<pre class="cli"><code>admin@example:/> <b>dir /cfg</b>
 /cfg directory
 backup/       ssl/       startup-config.cfg    v25.01.0-startup-config.cfg
 
-admin@example:/> 
-```
+admin@example:/>
+</code></pre>
 
 The alternative is to use a startup config implicitly backed up by the
 system as part of [Configuration Migration](#configuration-migration).
 
-```
-admin@example:/> dir /cfg/backup/
+<pre class="cli"><code>admin@example:/> <b>dir /cfg/backup/</b>
 /cfg/backup/ directory
 startup-config-1.4.cfg
 
 admin@example:/>
-```
+</code></pre>
 
 > [!CAUTION]
 > Using a backup configuration file stored when the unit was running the
@@ -330,8 +316,7 @@ config*.
 
 *Use `upgrade` command to downgrade:*
 
-```
-admin@example:/> upgrade tftp://198.18.117.1/infix-aarch64-25.01.0.pkg
+<pre class="cli"><code>admin@example:/> <b>upgrade tftp://198.18.117.1/infix-aarch64-25.01.0.pkg</b>
 installing
   0% Installing
   0% Determining slot states
@@ -342,35 +327,32 @@ installing
 100% Installing done.
 Installing `tftp://198.18.117.1/infix-aarch64-25.01.0.pkg` succeeded
 admin@example:/>
-```
+</code></pre>
 
 *Apply the backup configuration file:*
 
 It is recommended to use a backup configuration file for the Infix version to
 downgrade to, if there is one available.
 
-```
-admin@example:/> copy /cfg/v25.01.0-startup-config.cfg /cfg/startup-config.cfg
-Overwrite existing file /cfg/startup-config.cfg (y/N)? y
+<pre class="cli"><code>admin@example:/> <b>copy /cfg/v25.01.0-startup-config.cfg /cfg/startup-config.cfg</b>
+Overwrite existing file /cfg/startup-config.cfg (y/N)? <b>y</b>
 admin@example:/>
-```
+</code></pre>
 
 An alternative is to use a backup file stored when the system
 conducted a [configuration migration](#configuration-migration). See
 the *caution* note above.
 
-```
-admin@example:/> copy /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg
-Overwrite existing file /cfg/startup-config.cfg (y/N)? y
+<pre class="cli"><code>admin@example:/> <b>copy /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg</b>
+Overwrite existing file /cfg/startup-config.cfg (y/N)? <b>y</b>
 admin@example:/>
-```
+</code></pre>
 
 *Reboot:*
 
 The unit will come up with the applied backup configuration.
 
-```
-admin@example:/> reboot
+<pre class="cli"><code>admin@example:/> <b>reboot</b>
 [ OK ] Saving system clock to file
 [ OK ] Stopping Software update service
 [ OK ] Stopping Status daemon
@@ -384,7 +366,7 @@ admin@example:/> reboot
 
 Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
 example login:
-```
+</code></pre>
 
 > [!NOTE]
 > If the unit despite these measures ends up in *failure config*, see
@@ -403,8 +385,7 @@ its default login credentials[^1].
 
 *Use `upgrade` command to downgrade:*
 
-```
-admin@example:/> upgrade tftp://198.18.117.1/infix-aarch64-25.01.0.pkg
+<pre class="cli"><code>admin@example:/> <b>upgrade tftp://198.18.117.1/infix-aarch64-25.01.0.pkg</b>
 installing
   0% Installing
   0% Determining slot states
@@ -415,7 +396,7 @@ installing
 100% Installing done.
 Installing `tftp://198.18.117.1/infix-aarch64-25.01.0.pkg` succeeded
 admin@example:/>
-```
+</code></pre>
 
 *Reboot:*
 
@@ -426,8 +407,7 @@ config][3]. This is what is seen on the console when this situation
 occurs. Note that the login prompt displays `failed` as part of the
 *hostname*.
 
-```
-admin@example:/> reboot
+<pre class="cli"><code>admin@example:/> <b>reboot</b>
 [ OK ] Saving system clock to file
 [ OK ] Stopping Software update service
 [ OK ] Stopping Status daemon
@@ -444,32 +424,30 @@ Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
 
 ERROR: Corrupt startup-config, system has reverted to default login credentials
 failed-00-00-00 login:
-```
+</code></pre>
 
 To remedy a situation like this, you can login with the unit's *default
 login credentials*, preferrably via a [console port][4].
 The unit's default credentials are typically printed on a sticker on
 the unit.
 
-```
-failed-00-00-00 login: admin
+<pre class="cli"><code>failed-00-00-00 login: <b>admin</b>
 Password:
 
 Run the command 'cli' for interactive OAM
 
 admin@failed-00-00-00:~$
-```
+</code></pre>
 
 When it is *safe* from a network operations perspective, you can
 conduct a factory reset and reboot. It is recommended to remove the
 unit from any production network before doing this, as a factory reset
 may enable undesired connectivity between the unit's ports.
 
-```
-admin@failed-00-00-00:~$ factory
-Factory reset device (y/N)? y
+<pre class="cli"><code>admin@failed-00-00-00:~$ <b>factory</b>
+Factory reset device (y/N)? <b>y</b>
 factory: scheduled factory reset on next boot.
-Reboot now to perform reset, (y/N)? y
+Reboot now to perform reset, (y/N)? <b>y</b>
 [ OK ] Saving system time (UTC) to RTC
 [ OK ] Stopping mDNS alias advertiser
 ...
@@ -485,7 +463,7 @@ Please press Enter to activate this console.
 
 Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
 example login:
-```
+</code></pre>
 
 Continued configuration is done as with any unit after factory reset.
 

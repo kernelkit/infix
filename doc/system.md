@@ -22,13 +22,12 @@ hostname is included below.
 User management, including passwords, SSH keys, remote authentication is
 available in the system authentication configuration context.
 
-```
-admin@example:/config/> edit system authentication user admin
-admin@example:/config/system/authentication/user/admin/> change password
+<pre class="cli"><code>admin@example:/config/> <b>edit system authentication user admin</b>
+admin@example:/config/system/…/user/admin/> <b>change password</b>
 New password:
 Retype password:
-admin@example:/config/system/authentication/user/admin/> leave
-```
+admin@example:/config/system/…/user/admin/> <b>leave</b>
+</code></pre>
 
 The `change password` command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
@@ -56,16 +55,15 @@ are supported.
 With SSH keys in place it is possible to disable password login, just
 remember to verify SSH login and network connectivity before doing so.
 
-```
-admin@example:/config/> edit system authentication user admin
-admin@example:/config/system/authentication/user/admin/> edit authorized-key admin@example
-admin@example:/config/system/authentication/user/admin/authorized-key/example@host/> set algorithm ssh-rsa
-admin@example:/config/system/authentication/user/admin/authorized-key/example@host/> set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
-admin@example:/config/system/authentication/user/admin/authorized-key/example@host/> show
+<pre class="cli"><code>admin@example:/config/> <b>edit system authentication user admin</b>
+admin@example:/config/system/…/user/admin/> <b>edit authorized-key admin@example</b>
+admin@example:/config/system/…/example@host/> <b>set algorithm ssh-rsa</b>
+admin@example:/config/system/…/example@host/> <b>set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=</b>
+admin@example:/config/system/…/example@host/> <b>show</b>
 algorithm ssh-rsa;
 key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
-admin@example:/config/system/authentication/user/admin/authorized-key/example@host/> leave
-```
+admin@example:/config/system/…/example@host/> <b>leave</b>
+</code></pre>
 
 > [!NOTE]
 > The `ssh-keygen` program already base64 encodes the public key data,
@@ -112,8 +110,7 @@ way to regain full access is to perform a *factory reset*.
 For an overview of users and groups on the system, there is an admin-exec
 command:
 
-```
-admin@example:/> show nacm
+<pre class="cli"><code>admin@example:/> <b>show nacm</b>
 enabled              : yes
 default read access  : permit
 default write access : permit
@@ -131,16 +128,16 @@ denied notifications : 0
           └──────────┴─────────┴─────────┴─────────┘
               ✓ Full    ⚠ Restricted    ✗ Denied
 
-USER                   SHELL   LOGIN
+<span class="header">USER                   SHELL   LOGIN                            </span>
 admin                  bash    password+key
 jacky                  clish   password
 monitor                false   key
 
-GROUP                  USERS
+<span class="header">GROUP                  USERS                                    </span>
 admin                  admin
 operator               jacky
 guest                  monitor
-```
+</code></pre>
 
 The permissions matrix shows effective access for each NACM group:
 
@@ -151,46 +148,44 @@ The permissions matrix shows effective access for each NACM group:
 
 For detailed information about a specific group's rules:
 
-```
-admin@example:/> show nacm group operator
+<pre class="cli"><code>admin@example:/> <b>show nacm group operator</b>
 members          : jacky
 read permission  : restricted
 write permission : restricted
 exec permission  : restricted
 applicable rules : 4
 ──────────────────────────────────────────────────────────────────────
-permit-system-rpcs
+<span class="title">permit-system-rpcs</span>
   action     : permit
   operations : exec
   target     : ietf-system (rpc: *)
   comment    : Operators can reboot, shutdown, and set system time.
 
 ──────────────────────────────────────────────────────────────────────
-deny-password-access (via '*')
+<span class="title">deny-password-access (via '*')</span>
   action     : deny
   operations : *
   target     : /ietf-system:system/authentication/user/password
   comment    : No user except admins can access password hashes.
 
 ──────────────────────────────────────────────────────────────────────
-deny-keystore-access (via '*')
+<span class="title">deny-keystore-access (via '*')</span>
   action     : deny
   operations : *
   target     : ietf-keystore
   comment    : No user except admins can access cryptographic keys.
 
 ──────────────────────────────────────────────────────────────────────
-deny-truststore-access (via '*')
+<span class="title">deny-truststore-access (via '*')</span>
   action     : deny
   operations : *
   target     : ietf-truststore
   comment    : No user except admins can access trust store.
-```
+</code></pre>
 
 For user details:
 
-```
-admin@example:/> show nacm user jacky
+<pre class="cli"><code>admin@example:/> <b>show nacm user jacky</b>
 shell            : clish
 login            : password
 nacm group       : operator
@@ -198,20 +193,26 @@ read permission  : restricted
 write permission : restricted
 exec permission  : restricted
 
-For detailed rules, use: show nacm group <name>
-```
+For detailed rules, use: show nacm group &lt;name&gt;
+</code></pre>
 
 ### Adding a User
 
 Creating a new user starts with defining the user account in the system:
 
-```
-admin@example:/config/> edit system authentication user jacky
-admin@example:/config/system/authentication/user/jacky/> change password
+<pre class="cli"><code>admin@example:/config/> <b>edit system authentication user jacky</b>
+admin@example:/config/system/…/user/jacky/> <b>change password</b>
 New password:
 Retype password:
-admin@example:/config/system/authentication/user/jacky/> leave
-```
+admin@example:/config/system/…/user/jacky/> <b>leave</b>
+</code></pre>
+
+> [!TIP]
+> It is also possible to use <kbd>set password ...</kbd> if you have the
+> fully crypted and salted string ready.  This can be created offline
+> with the [`mkpasswd(1)`][5] tool, or the built-in CLI version <kbd>do
+> password encrypt [OPTS]</kbd>.  The `do` prefix is handy for reaching
+> all top-level commands when in configure context.
 
 An authorized SSH key can be added the same way as described in the
 previous sections.
@@ -219,11 +220,10 @@ previous sections.
 By default, shell access is disabled (`shell false`).  To allow CLI/SSH
 access, set the shell:
 
-```
-admin@example:/config/> edit system authentication user jacky
-admin@example:/config/system/authentication/user/jacky/> set shell clish
-admin@example:/config/system/authentication/user/jacky/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit system authentication user jacky</b>
+admin@example:/config/system/…/user/jacky/> <b>set shell clish</b>
+admin@example:/config/system/…/user/jacky/> <b>leave</b>
+</code></pre>
 
 Available shells:
 
@@ -250,27 +250,24 @@ corresponding NACM group:
 
 **Operator user:**
 
-```
-admin@example:/config/> edit nacm group operator
-admin@example:/config/nacm/group/operator/> set user-name jacky
-admin@example:/config/nacm/group/operator/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit nacm group operator</b>
+admin@example:/config/nacm/group/operator/> <b>set user-name jacky</b>
+admin@example:/config/nacm/group/operator/> <b>leave</b>
+</code></pre>
 
 **Adding another admin:**
 
-```
-admin@example:/config/> edit nacm group admin
-admin@example:/config/nacm/group/admin/> set user-name alice
-admin@example:/config/nacm/group/admin/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit nacm group admin</b>
+admin@example:/config/nacm/group/admin/> <b>set user-name alice</b>
+admin@example:/config/nacm/group/admin/> <b>leave</b>
+</code></pre>
 
 **Guest user:**
 
-```
-admin@example:/config/> edit nacm group guest
-admin@example:/config/nacm/group/guest/> set user-name monitor
-admin@example:/config/nacm/group/guest/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit nacm group guest</b>
+admin@example:/config/nacm/group/guest/> <b>set user-name monitor</b>
+admin@example:/config/nacm/group/guest/> <b>leave</b>
+</code></pre>
 
 > [!TIP]
 > For technical details about NACM rule evaluation, module-name vs path
@@ -363,12 +360,11 @@ cryptographic key material through global NACM rules.
 Notice how the hostname in the prompt does not change until the change
 is committed by issuing the `leave` command.
 
-```
-admin@example:/config/> edit system
-admin@example:/config/system/> set hostname myrouter
-admin@example:/config/system/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit system</b>
+admin@example:/config/system/> <b>set hostname myrouter</b>
+admin@example:/config/system/> <b>leave</b>
 admin@myrouter:/>
-```
+</code></pre>
 
 The hostname is advertised over mDNS-SD in the `.local` domain.  If
 another device already has claimed the `myrouter.local` CNAME, in our
@@ -379,12 +375,11 @@ available devices on your LAN.
 In some cases you may want to set the device's *domain name* as well.
 This is handled the same way:
 
-```
-admin@example:/config/> edit system
-admin@example:/config/system/> set hostname foo.example.com
-admin@example:/config/system/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit system</b>
+admin@example:/config/system/> <b>set hostname foo.example.com</b>
+admin@example:/config/system/> <b>leave</b>
 admin@foo:/>
-```
+</code></pre>
 
 Both host and domain name are stored in the system files `/etc/hosts`
 and `/etc/hostname`.  The latter is exclusively for the host name.  The
@@ -406,12 +401,11 @@ built-in [`text-editor` command](cli/text-editor.md).
 > See the next section for how to change the editor used to something
 > you may be more familiar with.
 
-```
-admin@example:/config/> edit system
-admin@example:/config/system/> text-editor motd-banner
-admin@example:/config/system/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit system</b>
+admin@example:/config/system/> <b>text-editor motd-banner</b>
+admin@example:/config/system/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 Log out and log back in again to inspect the changes.
 
@@ -427,13 +421,12 @@ as the `text-editor` command:
 
 To change the editor to GNU Nano:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit system
-admin@example:/config/system/> set text-editor nano
-admin@example:/config/system/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit system</b>
+admin@example:/config/system/> <b>set text-editor nano</b>
+admin@example:/config/system/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 > [!IMPORTANT]
 > Configuration changes only take effect after issuing the `leave`
@@ -447,18 +440,17 @@ The system supports both static and dynamic (DHCP) DNS setup.  The
 locally configured (static) server is preferred over any acquired
 from a DHCP client.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit system dns-resolver
-admin@example:/config/system/dns-resolver/> set server google udp-and-tcp address 8.8.8.8
-admin@example:/config/system/dns-resolver/> show
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit system dns-resolver</b>
+admin@example:/config/system/dns-resolver/> <b>set server google udp-and-tcp address 8.8.8.8</b>
+admin@example:/config/system/dns-resolver/> <b>show</b>
 server google {
   udp-and-tcp {
     address 8.8.8.8;
   }
 }
-admin@example:/config/system/dns-resolver/> leave
-```
+admin@example:/config/system/dns-resolver/> <b>leave</b>
+</code></pre>
 
 It is also possible to configure resolver options like timeout and
 retry attempts.  See the YANG model for details, or use the built-in
@@ -475,16 +467,15 @@ help system in the CLI.
 Below is an example configuration for enabling NTP with a specific
 server and the `iburst` option for faster initial synchronization.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit system ntp
-admin@example:/config/system/ntp/> set enabled
-admin@example:/config/system/ntp/> set server ntp-pool
-admin@example:/config/system/ntp/> set server ntp-pool udp address pool.ntp.org
-admin@example:/config/system/ntp/> set server ntp-pool iburst
-admin@example:/config/system/ntp/> set server ntp-pool prefer
-admin@example:/config/system/ntp/> leave
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit system ntp</b>
+admin@example:/config/system/ntp/> <b>set enabled</b>
+admin@example:/config/system/ntp/> <b>set server ntp-pool</b>
+admin@example:/config/system/ntp/> <b>set server ntp-pool udp address pool.ntp.org</b>
+admin@example:/config/system/ntp/> <b>set server ntp-pool iburst</b>
+admin@example:/config/system/ntp/> <b>set server ntp-pool prefer</b>
+admin@example:/config/system/ntp/> <b>leave</b>
+</code></pre>
 
 This configuration enables the NTP client and sets the NTP server to
 `pool.ntp.org` with the `iburst` and `prefer` options. The `iburst`
@@ -504,36 +495,38 @@ The status for NTP sources is availble in YANG and accessable with
 CLI/NETCONF/RESTCONF.
 
 To view the sources being used by the NTP client, run:
-```
-admin@target:/> show ntp
-ADDRESS         MODE         STATE            STRATUM POLL-INTERVAL
-192.168.1.1     server       candidate              1             6
-192.168.2.1     server       candidate              1             6
-192.168.3.1     server       selected               1             6
-```
+
+<pre class="cli"><code>admin@example:/> <b>show ntp</b>
+Mode                : Client
+Stratum             : 3
+Ref time (UTC)      : Sat Jan 24 23:41:42 2026
+
+<span class="header">ADDRESS         MODE    STATE     STRATUM  POLL</span>
+147.78.228.41   server  outlier         2   64s
+192.168.0.1     server  unusable        0  128s
+176.126.86.247  server  selected        2   64s
+</code></pre>
 
 ### Show NTP Status
 
 To check the status of NTP synchronization (only availble in CLI), use
 the following command:
 
-```
-admin@example:/> show ntp tracking
-Reference ID    : C0248F86 (192.36.143.134)
-Stratum         : 2
-Ref time (UTC)  : Mon Oct 21 10:06:45 2024
-System time     : 0.000000001 seconds slow of NTP time
-Last offset     : -3845.151367188 seconds
-RMS offset      : 3845.151367188 seconds
-Frequency       : 4.599 ppm slow
-Residual freq   : +1293.526 ppm
-Skew            : 12.403 ppm
-Root delay      : 1.024467230 seconds
-Root dispersion : 0.273462683 seconds
-Update interval : 0.0 seconds
-Leap status     : Normal
-admin@example:/>
-```
+<pre class="cli"><code>admin@example:/> <b>show ntp tracking</b>
+Reference ID        : 176.126.86.247
+Stratum             : 3
+Ref time (UTC)      : Sat Jan 24 23:41:42 2026
+System time         : 0.000000 seconds slow of NTP time
+Last offset         : -454779.375000000 seconds
+RMS offset          : 454779.375000000 seconds
+Frequency           : 0.000 ppm slow
+Residual freq       : -26.383 ppm
+Skew                : 1000000.000 ppm
+Root delay          : 0.007395 seconds
+Root dispersion     : 39.181149 seconds
+Update interval     : 0.0 seconds
+Leap status         : Normal
+</code></pre>
 
 This output provides detailed information about the NTP status, including
 reference ID, stratum, time offsets, frequency, and root delay.
@@ -546,3 +539,4 @@ reference ID, stratum, time offsets, frequency, and root delay.
 [2]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-system%402024-02-29.yang
 [3]: https://www.rfc-editor.org/rfc/rfc8341
 [4]: https://chrony-project.org/doc/4.6.1/chronyc.html
+[5]: https://linux.die.net/man/1/mkpasswd

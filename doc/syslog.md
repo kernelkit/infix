@@ -21,20 +21,19 @@ an example.
 
 For a list of available log facilities, see the table in a later section.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit syslog actions log-file file:/media/log/mylog
-admin@example:/config/syslog/…/file:/media/log/mylog/> set facility-list
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit syslog actions log-file file:/media/log/mylog</b>
+admin@example:/config/syslog/…/file:/media/log/mylog/> <b>set facility-list</b>
       all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
    local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
      news      ntp   syslog     user     uucp
-admin@example:/config/syslog/…/file:/media/log/mylog/> set facility-list all severity
+admin@example:/config/syslog/…/file:/media/log/mylog/> <b>set facility-list all severity</b>
      alert       all  critical     debug emergency     error      info      none    notice   warning
-admin@example:/config/syslog/…/file:/media/log/mylog/> set facility-list all severity critical
-admin@example:/config/syslog/…/file:/media/log/mylog/> set facility-list mail severity warning
-admin@example:/config/syslog/…/file:/media/log/mylog/> leave
+admin@example:/config/syslog/…/file:/media/log/mylog/> <b>set facility-list all severity critical</b>
+admin@example:/config/syslog/…/file:/media/log/mylog/> <b>set facility-list mail severity warning</b>
+admin@example:/config/syslog/…/file:/media/log/mylog/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 > [!IMPORTANT]
 > The `log-file` syntax requires the leading prefix `file:`.  If the
@@ -50,11 +49,10 @@ disk with outdated logs.  A rotated file is saved in stages and older
 ones are also compressed (using `gzip`).  Use the `show log` command in
 admin-exec context to start the log file viewer:
 
-```
-admin@example:/config/syslog/> do show log
+<pre class="cli"><code>admin@example:/config/syslog/> <b>do show log</b>
 log  log.0  log.1.gz  log.2.gz  log.3.gz  log.4.gz  log.5.gz
-admin@example:/config/syslog/> do show log log.1.gz
-```
+admin@example:/config/syslog/> <b>do show log log.1.gz</b>
+</code></pre>
 
 > [!TIP]
 > Use the Tab key on your keyboard list available log files.  The `do`
@@ -68,51 +66,48 @@ Log file rotation can be configured both globally and per log file.
 Here we show the global settings, the set up is the same for per log
 file, which if unset inherit the global settings:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit syslog file-rotation
-admin@example:/config/syslog/file-rotation/> show
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit syslog file-rotation</b>
+admin@example:/config/syslog/file-rotation/> <b>show</b>
 admin@example:/config/syslog/file-rotation/>
-```
+</code></pre>
 
 The defaults are not shown.  We can inspect them by asking the YANG
 model for the help texts:
 
-```
-admin@example:/config/syslog/file-rotation/> help
+<pre class="cli"><code>admin@example:/config/syslog/file-rotation/> <b>help</b>
    max-file-size    number-of-files
-admin@example:/config/syslog/file-rotation/> help max-file-size 
-NAME
+admin@example:/config/syslog/file-rotation/> <b>help max-file-size</b>
+<b>NAME</b>
         max-file-size kilobytes
 
-DESCRIPTION
+<b>DESCRIPTION</b>
         Maximum log file size (kiB), before rotation.
 
-DEFAULT
+<b>DEFAULT</b>
         1024
-admin@example:/config/syslog/file-rotation/> help number-of-files 
-NAME
+admin@example:/config/syslog/file-rotation/> <b>help number-of-files</b>
+<b>NAME</b>
         number-of-files [0..4294967295]
 
-DESCRIPTION
+<b>DESCRIPTION</b>
         Maximum number of log files retained.
 
-DEFAULT
+<b>DEFAULT</b>
         10
-```
+</code></pre>
 
 To change the defaults to something smaller, 512 kiB and 20 (remember
 everything after .0 is compressed, and text compresses well):
 
-```
-admin@example:/config/syslog/file-rotation/> set max-file-size 512
-admin@example:/config/syslog/file-rotation/> set number-of-files 20
-admin@example:/config/syslog/file-rotation/> show
+<pre class="cli"><code>admin@example:/config/syslog/file-rotation/> <b>set max-file-size 512</b>
+admin@example:/config/syslog/file-rotation/> <b>set number-of-files 20</b>
+admin@example:/config/syslog/file-rotation/> <b>show</b>
 number-of-files 20;
 max-file-size 512;
-admin@example:/config/syslog/file-rotation/> leave
+admin@example:/config/syslog/file-rotation/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 ## Log Format
 
@@ -135,14 +130,13 @@ perform time stamping at the time of arrival.
 
 Configuring the log format is the same for log files and remotes:
 
-```
-admin@example:/config/> edit syslog actions log-file file:foobar
-admin@example:/config/syslog/…/file:foobar/> set log-format
+<pre class="cli"><code>admin@example:/config/> <b>edit syslog actions log-file file:foobar</b>
+admin@example:/config/syslog/…/file:foobar/> <b>set log-format</b>
                   bsd               rfc3164              rfc5424
-admin@example:/config/syslog/…/file:foobar/> set log-format rfc5424
-admin@example:/config/syslog/…/file:foobar/> leave
+admin@example:/config/syslog/…/file:foobar/> <b>set log-format rfc5424</b>
+admin@example:/config/syslog/…/file:foobar/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 ## Log to Remote Server
 
@@ -158,19 +152,18 @@ remote syslog servers do not support receiving time stamped log messages
 -- this is of course entirely dependent on how the remote server is set
 up, as well as local policy.
 
-```
-admin@example:/config/> edit syslog
+<pre class="cli"><code>admin@example:/config/> <b>edit syslog</b>
        actions file-rotation        server
-admin@example:/config/> edit syslog actions destination moon
-admin@example:/config/syslog/…/moon/> set
+admin@example:/config/> <b>edit syslog actions destination moon</b>
+admin@example:/config/syslog/…/moon/> <b>set</b>
  facility-list    log-format           udp
-admin@example:/config/syslog/…/moon/> set udp
+admin@example:/config/syslog/…/moon/> <b>set udp</b>
  address    port
-admin@example:/config/syslog/…/moon/> set udp address 192.168.0.12
-admin@example:/config/syslog/…/moon/> set facility-list container severity all
-admin@example:/config/syslog/…/moon/> leave
+admin@example:/config/syslog/…/moon/> <b>set udp address 192.168.0.12</b>
+admin@example:/config/syslog/…/moon/> <b>set facility-list container severity all</b>
+admin@example:/config/syslog/…/moon/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 > [!TIP]
 > The alternatives shown below each prompt in the example above can be
@@ -181,14 +174,13 @@ admin@example:/>
 The syslog server can act as a log sink for other devices on a LAN.  For
 this to work you need a static IP address, here we use 10.0.0.1/24.
 
-```
-admin@example:/> configure
-admin@example:/config/> edit syslog server
-admin@example:/config/syslog/server/> set enabled true
-admin@example:/config/syslog/server/> set listen udp 514 address 10.0.0.1
-admin@example:/config/syslog/server/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit syslog server</b>
+admin@example:/config/syslog/server/> <b>set enabled true</b>
+admin@example:/config/syslog/server/> <b>set listen udp 514 address 10.0.0.1</b>
+admin@example:/config/syslog/server/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 See the above [Log to File](#log-to-file) section on how to set up
 filtering of received logs to local files.  Advanced filtering based
@@ -208,13 +200,12 @@ Messages can be filtered using regular expressions (POSIX extended regex)
 on the message content.  This is useful when you want to log only messages
 containing specific keywords or patterns:
 
-```
-admin@example:/config/> edit syslog actions log-file file:errors
-admin@example:/config/syslog/…/file:errors/> set pattern-match "ERROR|CRITICAL|FATAL"
-admin@example:/config/syslog/…/file:errors/> set facility-list all severity info
-admin@example:/config/syslog/…/file:errors/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit syslog actions log-file file:errors</b>
+admin@example:/config/syslog/…/file:errors/> <b>set pattern-match "ERROR|CRITICAL|FATAL"</b>
+admin@example:/config/syslog/…/file:errors/> <b>set facility-list all severity info</b>
+admin@example:/config/syslog/…/file:errors/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 This will log all messages containing ERROR, CRITICAL, or FATAL.
 
@@ -224,22 +215,20 @@ By default, severity filtering uses "equals-or-higher" comparison,
 meaning a severity of `error` will match error, critical, alert, and
 emergency messages.  You can change this behavior:
 
-```
-admin@example:/config/> edit syslog actions log-file file:daemon-errors
-admin@example:/config/syslog/…/file:daemon-errors/> set facility-list daemon
-admin@example:/config/syslog/…/daemon/> set severity error
-admin@example:/config/syslog/…/daemon/> set advanced-compare compare equals
-admin@example:/config/syslog/…/daemon/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit syslog actions log-file file:daemon-errors</b>
+admin@example:/config/syslog/…/file:daemon-errors/> <b>set facility-list daemon</b>
+admin@example:/config/syslog/…/daemon/> <b>set severity error</b>
+admin@example:/config/syslog/…/daemon/> <b>set advanced-compare compare equals</b>
+admin@example:/config/syslog/…/daemon/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 This will log only `error` severity messages, not higher severities.
 
 You can also block specific severities:
 
-```
-admin@example:/config/syslog/…/daemon/> set advanced-compare action block
-```
+<pre class="cli"><code>admin@example:/config/syslog/…/daemon/> <b>set advanced-compare action block</b>
+</code></pre>
 
 This will exclude `error` messages from the log.
 
@@ -248,13 +237,12 @@ This will exclude `error` messages from the log.
 When acting as a log server, you can filter messages by hostname.  This
 is useful for directing logs from different devices to separate files:
 
-```
-admin@example:/config/> edit syslog actions log-file file:router1
-admin@example:/config/syslog/…/file:router1/> set hostname-filter router1
-admin@example:/config/syslog/…/file:router1/> set facility-list all severity info
-admin@example:/config/syslog/…/file:router1/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit syslog actions log-file file:router1</b>
+admin@example:/config/syslog/…/file:router1/> <b>set hostname-filter router1</b>
+admin@example:/config/syslog/…/file:router1/> <b>set facility-list all severity info</b>
+admin@example:/config/syslog/…/file:router1/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 Multiple hostnames can be added to the filter list.
 
@@ -263,15 +251,14 @@ Multiple hostnames can be added to the filter list.
 For more advanced filtering, you can match on specific message properties
 using various comparison operators:
 
-```
-admin@example:/config/> edit syslog actions log-file file:myapp
-admin@example:/config/syslog/…/file:myapp/> edit property-filter
-admin@example:/config/syslog/…/property-filter/> set property programname
-admin@example:/config/syslog/…/property-filter/> set operator isequal
-admin@example:/config/syslog/…/property-filter/> set value myapp
-admin@example:/config/syslog/…/property-filter/> leave
+<pre class="cli"><code>admin@example:/config/> <b>edit syslog actions log-file file:myapp</b>
+admin@example:/config/syslog/…/file:myapp/> <b>edit property-filter</b>
+admin@example:/config/syslog/…/property-filter/> <b>set property programname</b>
+admin@example:/config/syslog/…/property-filter/> <b>set operator isequal</b>
+admin@example:/config/syslog/…/property-filter/> <b>set value myapp</b>
+admin@example:/config/syslog/…/property-filter/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 Available properties:
 - `msg`: Message body
@@ -290,15 +277,13 @@ Available operators:
 
 The comparison can be made case-insensitive:
 
-```
-admin@example:/config/syslog/…/property-filter/> set case-insensitive true
-```
+<pre class="cli"><code>admin@example:/config/syslog/…/property-filter/> <b>set case-insensitive true</b>
+</code></pre>
 
 Or negated to exclude matching messages:
 
-```
-admin@example:/config/syslog/…/property-filter/> set negate true
-```
+<pre class="cli"><code>admin@example:/config/syslog/…/property-filter/> <b>set negate true</b>
+</code></pre>
 
 ### Facilities
 

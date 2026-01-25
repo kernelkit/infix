@@ -41,27 +41,25 @@ and saves it to `publickey`.
 
 **Import the private key into the keystore:**
 
-```
-admin@example:/> configure
-admin@example:/config/> edit keystore asymmetric-key wg-site-a
-admin@example:/config/keystore/asymmetric-key/wg-site-a/> set public-key-format x25519-public-key-format
-admin@example:/config/keystore/asymmetric-key/wg-site-a/> set private-key-format x25519-private-key-format
-admin@example:/config/keystore/asymmetric-key/wg-site-a/> set public-key bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=
-admin@example:/config/keystore/asymmetric-key/wg-site-a/> set private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=
-admin@example:/config/keystore/asymmetric-key/wg-site-a/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit keystore asymmetric-key wg-site-a</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set public-key-format x25519-public-key-format</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set private-key-format x25519-private-key-format</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set public-key bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 **Import peer public keys into the truststore:**
 
-```
-admin@example:/> configure
-admin@example:/config/> edit truststore public-key-bag wg-peers public-key peer-b
-admin@example:/config/truststore/…/peer-b/> set public-key-format x25519-public-key-format
-admin@example:/config/truststore/…/peer-b/> set public-key PEER_PUBLIC_KEY_HERE
-admin@example:/config/truststore/…/peer-b/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit truststore public-key-bag wg-peers public-key peer-b</b>
+admin@example:/config/truststore/…/peer-b/> <b>set public-key-format x25519-public-key-format</b>
+admin@example:/config/truststore/…/peer-b/> <b>set public-key PEER_PUBLIC_KEY_HERE</b>
+admin@example:/config/truststore/…/peer-b/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 > [!IMPORTANT]
 > Keep private keys secure!  Never share your private key.  Only exchange
@@ -78,37 +76,35 @@ A basic WireGuard tunnel between two sites:
 
 **Site A configuration:**
 
-```
-admin@siteA:/> configure
-admin@siteA:/config/> edit interface wg0
-admin@siteA:/config/interface/wg0/> set wireguard listen-port 51820
-admin@siteA:/config/interface/wg0/> set wireguard private-key wg-site-a
-admin@siteA:/config/interface/wg0/> set ipv4 address 10.0.0.1 prefix-length 24
-admin@siteA:/config/interface/wg0/> edit wireguard peer wg-peers peer-b
-admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> set endpoint 203.0.113.2
-admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> set endpoint-port 51820
-admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> set allowed-ips 10.0.0.2/32
-admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> set persistent-keepalive 25
-admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> leave
+<pre class="cli"><code>admin@siteA:/> <b>configure</b>
+admin@siteA:/config/> <b>edit interface wg0</b>
+admin@siteA:/config/interface/wg0/> <b>set wireguard listen-port 51820</b>
+admin@siteA:/config/interface/wg0/> <b>set wireguard private-key wg-site-a</b>
+admin@siteA:/config/interface/wg0/> <b>set ipv4 address 10.0.0.1 prefix-length 24</b>
+admin@siteA:/config/interface/wg0/> <b>edit wireguard peer wg-peers peer-b</b>
+admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> <b>set endpoint 203.0.113.2</b>
+admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> <b>set endpoint-port 51820</b>
+admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> <b>set allowed-ips 10.0.0.2/32</b>
+admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> <b>set persistent-keepalive 25</b>
+admin@siteA:/config/interface/…/wg-peers/peer/peer-b/> <b>leave</b>
 admin@siteA:/>
-```
+</code></pre>
 
 **Site B configuration:**
 
-```
-admin@siteB:/> configure
-admin@siteB:/config/> edit interface wg0
-admin@siteB:/config/interface/wg0/> set wireguard listen-port 51820
-admin@siteB:/config/interface/wg0/> set wireguard private-key wg-site-b
-admin@siteB:/config/interface/wg0/> set ipv4 address 10.0.0.2 prefix-length 24
-admin@siteB:/config/interface/wg0/> edit wireguard peer wg-peers peer-a
-admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> set endpoint 203.0.113.1
-admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> set endpoint-port 51820
-admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> set allowed-ips 10.0.0.1/32
-admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> set persistent-keepalive 25
-admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> leave
+<pre class="cli"><code>admin@siteB:/> <b>configure</b>
+admin@siteB:/config/> <b>edit interface wg0</b>
+admin@siteB:/config/interface/wg0/> <b>set wireguard listen-port 51820</b>
+admin@siteB:/config/interface/wg0/> <b>set wireguard private-key wg-site-b</b>
+admin@siteB:/config/interface/wg0/> <b>set ipv4 address 10.0.0.2 prefix-length 24</b>
+admin@siteB:/config/interface/wg0/> <b>edit wireguard peer wg-peers peer-a</b>
+admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> <b>set endpoint 203.0.113.1</b>
+admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> <b>set endpoint-port 51820</b>
+admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> <b>set allowed-ips 10.0.0.1/32</b>
+admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> <b>set persistent-keepalive 25</b>
+admin@siteB:/config/interface/…/wg-peers/peer/peer-a/> <b>leave</b>
 admin@siteB:/>
-```
+</code></pre>
 
 This creates an encrypted tunnel with Site A at 10.0.0.1 and Site B at 10.0.0.2.
 
@@ -130,10 +126,9 @@ For a simple point-to-point tunnel, you typically allow only the peer's
 tunnel IP address (e.g., `10.0.0.2/32`).  For site-to-site VPNs connecting
 entire networks, include the remote network prefixes:
 
-```
-admin@example:/config/interface/…/wg-peers/peer/peer-a/> set allowed-ips 10.0.0.2/32
-admin@example:/config/interface/…/wg-peers/peer/peer-a/> set allowed-ips 192.168.2.0/24
-```
+<pre class="cli"><code>admin@example:/config/interface/…/wg-peers/peer/peer-a/> <b>set allowed-ips 10.0.0.2/32</b>
+admin@example:/config/interface/…/wg-peers/peer/peer-a/> <b>set allowed-ips 192.168.2.0/24</b>
+</code></pre>
 
 This allows traffic to/from the peer at 10.0.0.2 and routes traffic destined
 for 192.168.2.0/24 through this peer.
@@ -174,35 +169,34 @@ Settings that support bag-level defaults and per-peer overrides:
 
 **Example with bag-level defaults:**
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface wg0
-admin@example:/config/interface/wg0/> set wireguard listen-port 51820
-admin@example:/config/interface/wg0/> set wireguard private-key wg-key
-admin@example:/config/interface/wg0/> set ipv4 address 10.0.0.1 prefix-length 24
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface wg0</b>
+admin@example:/config/interface/wg0/> <b>set wireguard listen-port 51820</b>
+admin@example:/config/interface/wg0/> <b>set wireguard private-key wg-key</b>
+admin@example:/config/interface/wg0/> <b>set ipv4 address 10.0.0.1 prefix-length 24</b>
 
 # Configure defaults for all peers in the 'branch-offices' bag
-admin@example:/config/interface/wg0/> edit wireguard peers branch-offices
-admin@example:/config/interface/…/wireguard/peers/branch-offices/> set endpoint-port 51820
-admin@example:/config/interface/…/wireguard/peers/branch-offices/> set persistent-keepalive 25
-admin@example:/config/interface/…/wireguard/peers/branch-offices/> end
+admin@example:/config/interface/wg0/> <b>edit wireguard peers branch-offices</b>
+admin@example:/config/interface/…/wireguard/peers/branch-offices/> <b>set endpoint-port 51820</b>
+admin@example:/config/interface/…/wireguard/peers/branch-offices/> <b>set persistent-keepalive 25</b>
+admin@example:/config/interface/…/wireguard/peers/branch-offices/> <b>end</b>
 
 # Configure peer-specific settings (inherits endpoint-port and keepalive from bag)
-admin@example:/config/interface/…/wireguard/peers/branch-offices/> edit peer office-east
-admin@example:/config/interface/…/branch-offices/peer/office-east/> set endpoint 203.0.113.10
-admin@example:/config/interface/…/branch-offices/peer/office-east/> set allowed-ips 10.0.0.10/32
-admin@example:/config/interface/…/branch-offices/peer/office-east/> set allowed-ips 192.168.10.0/24
-admin@example:/config/interface/…/branch-offices/peer/office-east/> end
+admin@example:/config/interface/…/wireguard/peers/branch-offices/> <b>edit peer office-east</b>
+admin@example:/config/interface/…/branch-offices/peer/office-east/> <b>set endpoint 203.0.113.10</b>
+admin@example:/config/interface/…/branch-offices/peer/office-east/> <b>set allowed-ips 10.0.0.10/32</b>
+admin@example:/config/interface/…/branch-offices/peer/office-east/> <b>set allowed-ips 192.168.10.0/24</b>
+admin@example:/config/interface/…/branch-offices/peer/office-east/> <b>end</b>
 
 # Another peer with an override for persistent-keepalive
-admin@example:/config/interface/…/wireguard/peers/branch-offices/> edit peer office-west
-admin@example:/config/interface/…/branch-offices/peer/office-west/> set endpoint 203.0.113.20
-admin@example:/config/interface/…/branch-offices/peer/office-west/> set allowed-ips 10.0.0.20/32
-admin@example:/config/interface/…/branch-offices/peer/office-west/> set allowed-ips 192.168.20.0/24
-admin@example:/config/interface/…/branch-offices/peer/office-west/> set persistent-keepalive 10
-admin@example:/config/interface/…/branch-offices/peer/office-west/> leave
+admin@example:/config/interface/…/wireguard/peers/branch-offices/> <b>edit peer office-west</b>
+admin@example:/config/interface/…/branch-offices/peer/office-west/> <b>set endpoint 203.0.113.20</b>
+admin@example:/config/interface/…/branch-offices/peer/office-west/> <b>set allowed-ips 10.0.0.20/32</b>
+admin@example:/config/interface/…/branch-offices/peer/office-west/> <b>set allowed-ips 192.168.20.0/24</b>
+admin@example:/config/interface/…/branch-offices/peer/office-west/> <b>set persistent-keepalive 10</b>
+admin@example:/config/interface/…/branch-offices/peer/office-west/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 In this example:
 - Both peers inherit `endpoint-port 51820` and `persistent-keepalive 25` from the bag
@@ -235,13 +229,12 @@ then add the remote network to `allowed-ips` and configure static routes.
 For mobile clients or peers without fixed IPs, omit the `endpoint` setting.
 WireGuard learns the peer's endpoint from authenticated incoming packets:
 
-```
-admin@hub:/> configure
-admin@hub:/config/> edit interface wg0 wireguard peers wg-peers peer mobile-client
-admin@hub:/config/interface/…/wg-peers/peer/mobile-client/> set allowed-ips 10.0.0.10/32
-admin@hub:/config/interface/…/wg-peers/peer/mobile-client/> leave
+<pre class="cli"><code>admin@hub:/> <b>configure</b>
+admin@hub:/config/> <b>edit interface wg0 wireguard peers wg-peers peer mobile-client</b>
+admin@hub:/config/interface/…/wg-peers/peer/mobile-client/> <b>set allowed-ips 10.0.0.10/32</b>
+admin@hub:/config/interface/…/wg-peers/peer/mobile-client/> <b>leave</b>
 admin@hub:/>
-```
+</code></pre>
 
 The mobile client configures the hub's endpoint normally.  The hub learns
 and tracks the mobile client's changing IP address automatically.
@@ -256,59 +249,57 @@ sites connect to a central hub.
 
 **Hub configuration:**
 
-```
-admin@hub:/> configure
-admin@hub:/config/> edit interface wg0
-admin@hub:/config/interface/wg0/> set ipv4 address 10.0.0.1 prefix-length 24
-admin@hub:/config/interface/wg0/> set wireguard listen-port 51820
-admin@hub:/config/interface/wg0/> set wireguard private-key wg-hub
-admin@hub:/config/interface/wg0/> edit wireguard peers wg-peers
+<pre class="cli"><code>admin@hub:/> <b>configure</b>
+admin@hub:/config/> <b>edit interface wg0</b>
+admin@hub:/config/interface/wg0/> <b>set ipv4 address 10.0.0.1 prefix-length 24</b>
+admin@hub:/config/interface/wg0/> <b>set wireguard listen-port 51820</b>
+admin@hub:/config/interface/wg0/> <b>set wireguard private-key wg-hub</b>
+admin@hub:/config/interface/wg0/> <b>edit wireguard peers wg-peers</b>
 
 # Spoke 1
-admin@hub:/config/interface/…/wireguard/peers/wg-peers/> edit peer spoke1
-admin@hub:/config/interface/…/wg-peers/peer/spoke1/> set allowed-ips 10.0.0.2/32
-admin@hub:/config/interface/…/wg-peers/peer/spoke1/> set allowed-ips 192.168.1.0/24
-admin@hub:/config/interface/…/wg-peers/peer/spoke1/> end
+admin@hub:/config/interface/…/wireguard/peers/wg-peers/> <b>edit peer spoke1</b>
+admin@hub:/config/interface/…/wg-peers/peer/spoke1/> <b>set allowed-ips 10.0.0.2/32</b>
+admin@hub:/config/interface/…/wg-peers/peer/spoke1/> <b>set allowed-ips 192.168.1.0/24</b>
+admin@hub:/config/interface/…/wg-peers/peer/spoke1/> <b>end</b>
 
 # Spoke 2
-admin@hub:/config/interface/…/wireguard/peers/wg-peers/> edit peer spoke2
-admin@hub:/config/interface/…/wg-peers/peer/spoke2/> set allowed-ips 10.0.0.3/32
-admin@hub:/config/interface/…/wg-peers/peer/spoke2/> set allowed-ips 192.168.2.0/24
-admin@hub:/config/interface/…/wg-peers/peer/spoke2/> leave
+admin@hub:/config/interface/…/wireguard/peers/wg-peers/> <b>edit peer spoke2</b>
+admin@hub:/config/interface/…/wg-peers/peer/spoke2/> <b>set allowed-ips 10.0.0.3/32</b>
+admin@hub:/config/interface/…/wg-peers/peer/spoke2/> <b>set allowed-ips 192.168.2.0/24</b>
+admin@hub:/config/interface/…/wg-peers/peer/spoke2/> <b>leave</b>
 
 # Add routes for spoke networks
-admin@hub:/> configure
-admin@hub:/config/> edit routing control-plane-protocol static name default
-admin@hub:/config/routing/…/static/name/default/> set ipv4 route 192.168.1.0/24 wg0
-admin@hub:/config/routing/…/static/name/default/> set ipv4 route 192.168.2.0/24 wg0
-admin@hub:/config/routing/…/static/name/default/> leave
+admin@hub:/> <b>configure</b>
+admin@hub:/config/> <b>edit routing control-plane-protocol static name default</b>
+admin@hub:/config/routing/…/static/name/default/> <b>set ipv4 route 192.168.1.0/24 wg0</b>
+admin@hub:/config/routing/…/static/name/default/> <b>set ipv4 route 192.168.2.0/24 wg0</b>
+admin@hub:/config/routing/…/static/name/default/> <b>leave</b>
 admin@hub:/>
-```
+</code></pre>
 
 **Spoke 1 configuration:**
 
-```
-admin@spoke1:/> configure
-admin@spoke1:/config/> edit interface wg0
-admin@spoke1:/config/interface/wg0/> set wireguard listen-port 51820
-admin@spoke1:/config/interface/wg0/> set wireguard private-key wg-spoke1
-admin@spoke1:/config/interface/wg0/> set ipv4 address 10.0.0.2 prefix-length 24
-admin@spoke1:/config/interface/wg0/> edit wireguard peers wg-peers peer hub
-admin@spoke1:/config/interface/…/wg-peers/peer/hub/> set endpoint 203.0.113.1
-admin@spoke1:/config/interface/…/wg-peers/peer/hub/> set endpoint-port 51820
-admin@spoke1:/config/interface/…/wg-peers/peer/hub/> set allowed-ips 10.0.0.1/32
-admin@spoke1:/config/interface/…/wg-peers/peer/hub/> set allowed-ips 10.0.0.3/32
-admin@spoke1:/config/interface/…/wg-peers/peer/hub/> set allowed-ips 192.168.0.0/24
-admin@spoke1:/config/interface/…/wg-peers/peer/hub/> set allowed-ips 192.168.2.0/24
-admin@spoke1:/config/interface/…/wg-peers/peer/hub/> set persistent-keepalive 25
-admin@spoke1:/config/interface/…/wg-peers/peer/hub/> leave
-admin@spoke1:/> configure
-admin@spoke1:/config/> edit routing control-plane-protocol static name default
-admin@spoke1:/config/routing/…/static/name/default/> set ipv4 route 192.168.0.0/24 wg0
-admin@spoke1:/config/routing/…/static/name/default/> set ipv4 route 192.168.2.0/24 wg0
-admin@spoke1:/config/routing/…/static/name/default/> leave
+<pre class="cli"><code>admin@spoke1:/> <b>configure</b>
+admin@spoke1:/config/> <b>edit interface wg0</b>
+admin@spoke1:/config/interface/wg0/> <b>set wireguard listen-port 51820</b>
+admin@spoke1:/config/interface/wg0/> <b>set wireguard private-key wg-spoke1</b>
+admin@spoke1:/config/interface/wg0/> <b>set ipv4 address 10.0.0.2 prefix-length 24</b>
+admin@spoke1:/config/interface/wg0/> <b>edit wireguard peers wg-peers peer hub</b>
+admin@spoke1:/config/interface/…/wg-peers/peer/hub/> <b>set endpoint 203.0.113.1</b>
+admin@spoke1:/config/interface/…/wg-peers/peer/hub/> <b>set endpoint-port 51820</b>
+admin@spoke1:/config/interface/…/wg-peers/peer/hub/> <b>set allowed-ips 10.0.0.1/32</b>
+admin@spoke1:/config/interface/…/wg-peers/peer/hub/> <b>set allowed-ips 10.0.0.3/32</b>
+admin@spoke1:/config/interface/…/wg-peers/peer/hub/> <b>set allowed-ips 192.168.0.0/24</b>
+admin@spoke1:/config/interface/…/wg-peers/peer/hub/> <b>set allowed-ips 192.168.2.0/24</b>
+admin@spoke1:/config/interface/…/wg-peers/peer/hub/> <b>set persistent-keepalive 25</b>
+admin@spoke1:/config/interface/…/wg-peers/peer/hub/> <b>leave</b>
+admin@spoke1:/> <b>configure</b>
+admin@spoke1:/config/> <b>edit routing control-plane-protocol static name default</b>
+admin@spoke1:/config/routing/…/static/name/default/> <b>set ipv4 route 192.168.0.0/24 wg0</b>
+admin@spoke1:/config/routing/…/static/name/default/> <b>set ipv4 route 192.168.2.0/24 wg0</b>
+admin@spoke1:/config/routing/…/static/name/default/> <b>leave</b>
 admin@spoke1:/>
-```
+</code></pre>
 
 This configuration allows Spoke 1 to reach both the hub network (192.168.0.0/24)
 and Spoke 2's network (192.168.2.0/24) via the hub, enabling spoke-to-spoke
@@ -319,9 +310,8 @@ communication through the central hub.
 The `persistent-keepalive` setting sends periodic packets to keep the tunnel
 active through NAT devices and firewalls:
 
-```
-admin@example:/config/interface/…/wg-peers/peer/hub/> set persistent-keepalive 25
-```
+<pre class="cli"><code>admin@example:/config/interface/…/wg-peers/peer/hub/> <b>set persistent-keepalive 25</b>
+</code></pre>
 
 This is particularly important when:
 
@@ -340,21 +330,20 @@ for peers with public static IPs that initiate connections.
 
 WireGuard fully supports IPv6 for tunnel endpoints:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit interface wg0
-admin@example:/config/interface/wg0/> set wireguard listen-port 51820
-admin@example:/config/interface/wg0/> set wireguard private-key wg-key
-admin@example:/config/interface/wg0/> set ipv4 address 10.0.0.1 prefix-length 24
-admin@example:/config/interface/wg0/> set ipv6 address fd00::1 prefix-length 64
-admin@example:/config/interface/wg0/> edit wireguard peers wg-peers peer remote
-admin@example:/config/interface/…/wg-peers/peer/remote/> set endpoint 2001:db8::2
-admin@example:/config/interface/…/wg-peers/peer/remote/> set endpoint-port 51820
-admin@example:/config/interface/…/wg-peers/peer/remote/> set allowed-ips 10.0.0.2/32
-admin@example:/config/interface/…/wg-peers/peer/remote/> set allowed-ips fd00::2/128
-admin@example:/config/interface/…/wg-peers/peer/remote/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface wg0</b>
+admin@example:/config/interface/wg0/> <b>set wireguard listen-port 51820</b>
+admin@example:/config/interface/wg0/> <b>set wireguard private-key wg-key</b>
+admin@example:/config/interface/wg0/> <b>set ipv4 address 10.0.0.1 prefix-length 24</b>
+admin@example:/config/interface/wg0/> <b>set ipv6 address fd00::1 prefix-length 64</b>
+admin@example:/config/interface/wg0/> <b>edit wireguard peers wg-peers peer remote</b>
+admin@example:/config/interface/…/wg-peers/peer/remote/> <b>set endpoint 2001:db8::2</b>
+admin@example:/config/interface/…/wg-peers/peer/remote/> <b>set endpoint-port 51820</b>
+admin@example:/config/interface/…/wg-peers/peer/remote/> <b>set allowed-ips 10.0.0.2/32</b>
+admin@example:/config/interface/…/wg-peers/peer/remote/> <b>set allowed-ips fd00::2/128</b>
+admin@example:/config/interface/…/wg-peers/peer/remote/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 WireGuard can carry both IPv4 and IPv6 traffic regardless of whether the
 tunnel endpoints use IPv4 or IPv6.
@@ -363,13 +352,12 @@ tunnel endpoints use IPv4 or IPv6.
 
 Check WireGuard interface status and peer connections:
 
-```
-admin@example:/> show interfaces
+<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
 wg0             wireguard  UP          2 peers (1 up)
                 ipv4                   10.0.0.1/24 (static)
                 ipv6                   fd00::1/64 (static)
 
-admin@example:/> show interfaces wg0
+admin@example:/> <b>show interfaces wg0</b>
 name                : wg0
 type                : wireguard
 index               : 12
@@ -389,7 +377,7 @@ peers               : 2
     latest handshake  : 2025-12-09T09:15:22+0000
     transfer tx       : 45120 bytes
     transfer rx       : 32768 bytes
-```
+</code></pre>
 
 The connection status shows `UP` if a handshake occurred within the last 3
 minutes, indicating an active tunnel.  The `latest handshake` timestamp shows
@@ -416,17 +404,16 @@ cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
 
 **Import the preshared key into the keystore:**
 
-```
-admin@example:/> configure
-admin@example:/config/> edit keystore symmetric-key wg-psk
-admin@example:/config/keystore/symmetric-key/wg-psk/> set key-format wireguard-symmetric-key-format
-admin@example:/config/keystore/symmetric-key/wg-psk/> set key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
-admin@example:/config/keystore/symmetric-key/wg-psk/> end
-admin@example:/config/interface/wg0/> edit wireguard peers wg-peers peer remote
-admin@example:/config/interface/…/wg-peers/peer/remote/> set preshared-key wg-psk
-admin@example:/config/interface/…/wg-peers/peer/remote/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit keystore symmetric-key wg-psk</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key-format wireguard-symmetric-key-format</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/> <b>end</b>
+admin@example:/config/interface/wg0/> <b>edit wireguard peers wg-peers peer remote</b>
+admin@example:/config/interface/…/wg-peers/peer/remote/> <b>set preshared-key wg-psk</b>
+admin@example:/config/interface/…/wg-peers/peer/remote/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 The preshared key must be securely shared between both peers and configured
 on both sides.

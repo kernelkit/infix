@@ -399,11 +399,11 @@ operators can immediately configure them without updating NACM rules.
 
 **Effective permissions by group:**
 
-| Group | Read | Write | Exec | Exceptions |
-|-------|------|-------|------|------------|
-| admin | All | All | All | None |
-| operator | All | All | All | Cannot access passwords, keystore, truststore |
-| guest | All | None | None | Read-only access |
+| Group    | Read | Write | Exec | Exceptions                                    |
+|----------|------|-------|------|-----------------------------------------------|
+| admin    | All  | All   | All  | None                                          |
+| operator | All  | All   | All  | Cannot access passwords, keystore, truststore |
+| guest    | All  | None  | None | Read-only access                              |
 
 ## Common Patterns
 
@@ -505,8 +505,7 @@ Deny access to sensitive data for all users (except admins with permit-all):
 
 Check what NACM groups a user belongs to:
 
-```
-admin@example:/> show nacm
+<pre class="cli"><code>admin@example:/> <b>show nacm</b>
 enabled              : yes
 default read access  : permit
 default write access : permit
@@ -524,77 +523,74 @@ denied notifications : 0
           └──────────┴─────────┴─────────┴─────────┘
               ✓ Full    ⚠ Restricted    ✗ Denied
 
-USER                   SHELL   LOGIN
+<span class="header">USER                   SHELL   LOGIN                            </span>
 admin                  bash    password+key
 jacky                  bash    password
 monitor                false   key
 
-GROUP                  USERS
+<span class="header">GROUP                  USERS                                    </span>
 admin                  admin
 operator               jacky
 guest                  monitor
-```
+</code></pre>
 
 For details about a group's restrictions, use `show nacm group <name>`:
 
-```
-admin@example:/> show nacm group operator
+<pre class="cli"><code>admin@example:/> <b>show nacm group operator</b>
 members          : jacky
 read permission  : restricted
 write permission : restricted
 exec permission  : restricted
 applicable rules : 4
 ──────────────────────────────────────────────────────────────────────
-permit-system-rpcs
+<span class="title">permit-system-rpcs</span>
   action     : permit
   operations : exec
   target     : ietf-system (rpc: *)
 
 ──────────────────────────────────────────────────────────────────────
-deny-password-access (via '*')
+<span class="title">deny-password-access (via '*')</span>
   action     : deny
   operations : *
   target     : /ietf-system:system/authentication/user/password
 
 ──────────────────────────────────────────────────────────────────────
-deny-keystore-access (via '*')
+<span class="title">deny-keystore-access (via '*')</span>
   action     : deny
   operations : *
   target     : ietf-keystore
 
 ──────────────────────────────────────────────────────────────────────
-deny-truststore-access (via '*')
+<span class="title">deny-truststore-access (via '*')</span>
   action     : deny
   operations : *
   target     : ietf-truststore
-```
+</code></pre>
 
 ### Testing Access
 
 The easiest way to test NACM permissions is to log in as the user and try
 the operation:
 
-```bash
-$ ssh jacky@host
-jacky@example:/> configure
-jacky@example:/config/> edit system authentication user admin
-jacky@example:/config/system/authentication/user/admin/> set authorized-key foo
+<pre class="cli"><code>$ ssh jacky@host
+jacky@example:/> <b>configure</b>
+jacky@example:/config/> <b>edit system authentication user admin</b>
+jacky@example:/config/system/authentication/user/admin/> <b>set authorized-key foo</b>
 Error: Access to the data model "ietf-system" is denied because "jacky" NACM authorization failed.
 Error: Failed applying changes (2).
-```
+</code></pre>
 
 ### NACM Statistics
 
 NACM tracks denied operations.  If you suspect permission issues, check
 the statistics:
 
-```
-admin@example:/> show nacm
+<pre class="cli"><code>admin@example:/> <b>show nacm</b>
 ...
   denied operations      : 5
   denied data writes     : 12
 ...
-```
+</code></pre>
 
 Increasing counters indicate permission denials are occurring.
 

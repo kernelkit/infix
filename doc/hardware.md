@@ -8,7 +8,7 @@ hardware][1], with deviations and augmentations in _infix-hardware_.
 For Infix to be able to control USB port(s), a device tree modification
 is needed (see _alder.dtsi_ for full example).
 
-```
+```json
  chosen {
    infix {
      usb-ports = <&cp0_usb3_1>;
@@ -24,26 +24,38 @@ All USB ports in the system will be disabled during boot due to the file
 Infix to control USB port(s), remove the file or manually enable the USB
 bus, here is an example:
 
-```
+```bash
 # Enable the bus
 echo 1 > /sys/bus/usb/devices/usb1/authorized
 ```
 
 And then enable sub-devices (e.g. USB memory)
 
-```
+```bash
 # Enable a device plugged into usb1
 echo 1 >  /sys/bus/usb/devices/usb1/1-1/authorized
 ```
 
 ### Current status
 
-```
-admin@example:/> show hardware
- USB PORTS
- NAME                STATE
- USB                 unlocked
-```
+<pre class="cli"><code>admin@example:/> <b>show hardware</b>
+<span class="header">HARDWARE COMPONENTS                                           </span>
+──────────────────────────────────────────────────────────────
+<span class="title">Board Information                                            </span>
+Model               : FriendlyElec NanoPi R2S
+Manufacturer        : FriendlyElec
+Serial Number       : 9d1fbfdab6d171ce
+Base MAC Address    : 4a:dc:d8:20:0d:85
+──────────────────────────────────────────────────────────────
+<span class="title">USB Ports                                                    </span>
+<span class="header">NAME                                         STATE     OPER   </span>
+USB                                          unlocked  enabled
+──────────────────────────────────────────────────────────────
+<span class="title">Sensors                                                      </span>
+<span class="header">NAME                          VALUE                 STATUS    </span>
+soc                           44.1 °C               ok        
+soc                           44.5 °C               ok        
+</code></pre>
 
 An USB port can be in two states _unlocked_ and _locked_. When a port is
 locked, all connected devices will get power, but never authorized by
@@ -56,12 +68,11 @@ Linux to use.
 > command `show hardware` in admin-exec context.  (Use `do` prefix in
 > configure context.)
 
-```
-admin@example:/> configure
-admin@example:/config/> set hardware component USB state admin-state unlocked
-admin@example:/config/> leave
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set hardware component USB state admin-state unlocked</b>
+admin@example:/config/> <b>leave</b>
 admin@example:/>
-```
+</code></pre>
 
 ### Using a USB Stick
 
@@ -81,8 +92,7 @@ The only way currently to safely "eject" a USB memory stick is to use
 `umount` command from a UNIX shell, which explicitly synchronizes any
 cached data to disk before returning the prompt:
 
-```
-admin@example:~$ sudo umount /media/log
-```
+<pre class="cli"><code>admin@example:~$ <b>sudo umount /media/log</b>
+</code></pre>
 
 [1]:  https://www.rfc-editor.org/rfc/rfc8348.html

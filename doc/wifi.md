@@ -90,7 +90,7 @@ Reboot when the radio becomes available.
 Before configuring WiFi interfaces, you must first configure the WiFi radio.
 Radios are automatically discovered and named `radio0`, `radio1`, etc.
 
-### Country Code and Regulatory Compliance
+### Country Code ⚠
 
 The radio defaults to "00" for World domain, but some systems may ship with a
 factory default country code (typically "DE" for the BPi-R3).
@@ -160,7 +160,7 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 > TX power and channel width are automatically determined by the driver
 > based on regulatory constraints, PHY mode, and hardware capabilities.
 
-### WiFi 6 (802.11ax) Support
+### WiFi 6 Support
 
 WiFi 6 (802.11ax) is always enabled in AP mode on all bands, providing improved
 performance through features like OFDMA, BSS Coloring, and beamforming.
@@ -247,7 +247,7 @@ Station mode connects to an existing Wi-Fi network. Before configuring station
 mode, follow the "Discovering Available Networks (Scanning)" section above to
 scan for available networks and identify the SSID you want to connect to.
 
-### Step 1: Configure WiFi Password
+### Step 1: Configure Password
 
 Create a keystore entry for your WiFi password (8-63 characters):
 
@@ -344,7 +344,7 @@ admin@example:/config/interface/wifi0/> <b>leave</b>
 - `wpa3-personal`: WPA3-SAE (more secure, requires WPA3-capable clients)
 - `wpa2-wpa3-personal`: Mixed mode (maximum compatibility)
 
-### Hidden Network (SSID Hiding)
+### SSID Hiding
 
 To create a hidden network that doesn't broadcast its SSID:
 

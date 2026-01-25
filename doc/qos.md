@@ -91,15 +91,14 @@ These `ingress-qos` and `egress-qos` settings are done per VLAN, both
 defaulting to '0'. The example below shows how to keep the PCP priority 
 for packets being routed between two VLAN interfaces.
 
-```
-admin@example:/config/> edit interface e1.10
-admin@example:/config/interface/e1.10/> set vlan ingress-qos priority from-pcp 
-admin@example:/config/interface/e1.10/> up
-admin@example:/config/> edit interface e1.20
-admin@example:/config/interface/e1.20/> set vlan egress-qos pcp from-priority 
-admin@example:/config/interface/e1.20/> leave
-admin@example:/> 
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1.10</b>
+admin@example:/config/interface/e1.10/> <b>set vlan ingress-qos priority from-pcp</b>
+admin@example:/config/interface/e1.10/> <b>up</b>
+admin@example:/config/> <b>edit interface e1.20</b>
+admin@example:/config/interface/e1.20/> <b>set vlan egress-qos pcp from-priority</b>
+admin@example:/config/interface/e1.20/> <b>leave</b>
+admin@example:/>
+</code></pre>
 
 ## A complex example
 

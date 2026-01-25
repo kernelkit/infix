@@ -13,37 +13,34 @@ while serving time to downstream clients.
 
 Configure a standalone NTP server using only a local reference clock:
 
-```
-admin@example:/> configure
-admin@example:/config/> edit ntp
-admin@example:/config/ntp/> leave
-```
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit ntp</b>
+admin@example:/config/ntp/> <b>leave</b>
+</code></pre>
 
 When setting up NTP via the CLI the system automatically configures a local
 reference clock. The default [stratum](#ntp-stratum-levels) is 16 (unsynchronized),
 which is suitable for isolated networks. For production use, configure a specific
 stratum level:
 
-```
-admin@example:/config/> edit ntp
-admin@example:/config/ntp/> set refclock-master master-stratum 10
-admin@example:/config/ntp/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit ntp</b>
+admin@example:/config/ntp/> <b>set refclock-master master-stratum 10</b>
+admin@example:/config/ntp/> <b>leave</b>
+</code></pre>
 
 ## Server Mode
 
 Synchronize from upstream NTP servers while serving time to clients:
 
-```
-admin@example:/config/> edit ntp
-admin@example:/config/ntp/> edit unicast-configuration 0.pool.ntp.org type uc-server
-admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> set iburst true
-admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> end
-admin@example:/config/ntp/> edit unicast-configuration 1.pool.ntp.org type uc-server
-admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/> set iburst true
-admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/> end
-admin@example:/config/ntp/> leave
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit ntp</b>
+admin@example:/config/ntp/> <b>edit unicast-configuration 0.pool.ntp.org type uc-server</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> <b>set iburst true</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> <b>end</b>
+admin@example:/config/ntp/> <b>edit unicast-configuration 1.pool.ntp.org type uc-server</b>
+admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/> <b>set iburst true</b>
+admin@example:/config/ntp/…/1.pool.ntp.org/type/uc-server/> <b>end</b>
+admin@example:/config/ntp/> <b>leave</b>
+</code></pre>
 
 The `unicast-configuration` uses a composite key with both address and type.
 Both hostnames and IP addresses are supported.  The `iburst` option enables
@@ -56,23 +53,21 @@ Each server acts as both client and server to the other:
 
 **First peer:**
 
-```
-admin@peer1:/config/> edit ntp
-admin@peer1:/config/ntp/> edit unicast-configuration 192.168.1.2 type uc-peer
-admin@peer1:/config/ntp/…/192.168.1.2/type/uc-peer/> end
-admin@peer1:/config/ntp/> set refclock-master master-stratum 8
-admin@peer1:/config/ntp/> leave
-```
+<pre class="cli"><code>admin@peer1:/config/> <b>edit ntp</b>
+admin@peer1:/config/ntp/> <b>edit unicast-configuration 192.168.1.2 type uc-peer</b>
+admin@peer1:/config/ntp/…/192.168.1.2/type/uc-peer/> <b>end</b>
+admin@peer1:/config/ntp/> <b>set refclock-master master-stratum 8</b>
+admin@peer1:/config/ntp/> <b>leave</b>
+</code></pre>
 
 **Second peer:**
 
-```
-admin@peer2:/config/> edit ntp
-admin@peer2:/config/ntp/> edit unicast-configuration 192.168.1.1 type uc-peer
-admin@peer2:/config/ntp/…/192.168.1.1/type/uc-peer/> end
-admin@peer2:/config/ntp/> set refclock-master master-stratum 8
-admin@peer2:/config/ntp/> leave
-```
+<pre class="cli"><code>admin@peer2:/config/> <b>edit ntp</b>
+admin@peer2:/config/ntp/> <b>edit unicast-configuration 192.168.1.1 type uc-peer</b>
+admin@peer2:/config/ntp/…/192.168.1.1/type/uc-peer/> <b>end</b>
+admin@peer2:/config/ntp/> <b>set refclock-master master-stratum 8</b>
+admin@peer2:/config/ntp/> <b>leave</b>
+</code></pre>
 
 This configuration provides mutual synchronization between peers. If one peer
 fails, the other continues to serve time to clients.
@@ -103,12 +98,11 @@ the other peer.
 
 Control how often the NTP server polls upstream sources:
 
-```
-admin@example:/config/ntp/> edit unicast-configuration 0.pool.ntp.org type uc-server
-admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> set minpoll 4
-admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> set maxpoll 10
-admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> end
-```
+<pre class="cli"><code>admin@example:/config/ntp/> <b>edit unicast-configuration 0.pool.ntp.org type uc-server</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> <b>set minpoll 4</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> <b>set maxpoll 10</b>
+admin@example:/config/ntp/…/0.pool.ntp.org/type/uc-server/> <b>end</b>
+</code></pre>
 
 Poll intervals are specified as powers of 2:
 - `minpoll 4` = poll every 2^4 = 16 seconds (minimum polling rate)
@@ -126,12 +120,11 @@ critical for embedded systems without RTC that boot with epoch time.
 
 To customize the values:
 
-```
-admin@example:/config/ntp/> edit makestep
-admin@example:/config/ntp/makestep/> set threshold 2.0
-admin@example:/config/ntp/makestep/> set limit 1
-admin@example:/config/ntp/makestep/> end
-```
+<pre class="cli"><code>admin@example:/config/ntp/> <b>edit makestep</b>
+admin@example:/config/ntp/makestep/> <b>set threshold 2.0</b>
+admin@example:/config/ntp/makestep/> <b>set limit 1</b>
+admin@example:/config/ntp/makestep/> <b>end</b>
+</code></pre>
 
 - **threshold** - If clock offset exceeds this (in seconds), step immediately
   instead of slewing slowly
@@ -143,19 +136,44 @@ correct time within seconds instead of hours.
 
 ## Monitoring
 
-Check NTP server statistics:
+For a quick overview:
 
-```
-admin@example:/> show ntp server
-NTP SERVER CONFIGURATION
-Local Stratum       : 10
+To view the sources being used by the NTP client, run:
 
-SERVER STATISTICS
-Packets Received    : 142
-Packets Sent        : 142
-Packets Dropped     : 0
-Send Failures       : 0
-```
+<pre class="cli"><code>admin@example:/> <b>show ntp</b>
+Mode                : Client
+Stratum             : 3
+Ref time (UTC)      : Sat Jan 24 23:41:42 2026
+
+<span class="header">ADDRESS         MODE    STATE     STRATUM  POLL</span>
+147.78.228.41   server  outlier         2   64s
+192.168.0.1     server  unusable        0  128s
+176.126.86.247  server  selected        2   64s
+</code></pre>
+
+Check NTP source status:
+
+<pre class="cli"><code>admin@example:/> <b>show ntp source</b>
+<span class="header">MS  Name/IP address  Stratum  Poll  Reach  LastRx          Last sample</span>
+^+  147.78.228.41          2     6    007      15  -431us +/- 33.573ms
+^*  176.126.86.247         2     6    007      14   -389us +/- 4.307ms
+</code></pre>
+
+For detailed information about a specific source:
+
+<pre class="cli"><code>admin@example:/> <b>show ntp source 176.126.86.247</b>
+Address             : 176.126.86.247
+Mode                : Server (client mode) [^]
+State               : Selected sync source [*]
+Configured          : Yes
+Stratum             : 2
+Poll interval       : 7 (2^7 seconds = 128s)
+Reachability        : 377 (octal) = 11111111b
+Last RX             : 75s ago
+Offset              : +2.0us (+0.002000ms)
+Delay               : 4.270ms (0.004270s)
+Dispersion          : 205.0us (0.205000ms)
+</code></pre>
 
 ## NTP Stratum Levels
 
