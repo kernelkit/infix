@@ -144,7 +144,7 @@ class PadRoute:
 
 
 class PadSoftware:
-    name = 10
+    name = 11
     date = 25
     hash = 64
     state = 10
@@ -168,14 +168,6 @@ class PadSensor:
     def table_width(cls):
         """Total width of sensor table (matches show system width)"""
         return cls.name + cls.value + cls.status
-
-
-class PadNtpSource:
-    address = 16
-    mode = 13
-    state = 13
-    stratum = 11
-    poll = 14
 
 
 class PadLldp:
@@ -2056,11 +2048,10 @@ def show_software(json, name):
         if slot:
             slot.detail()
     else:
-        print(Decore.invert("BOOT ORDER"))
-        order=""
+        order = ""
         for boot in boot_order:
-            order+=f"{boot.strip()} "
-        print(order)
+            order += f"{boot.strip()} "
+        print(f"Boot order : {order}")
         print("")
 
         hdr = (f"{'NAME':<{PadSoftware.name}}"
@@ -2575,12 +2566,14 @@ def show_ntp(json, address=None):
         show_ntp_source_detail_single(sources[0], is_server)
         return
     print()
-    hdr = (f"{'ADDRESS':<{PadNtpSource.address}}"
-           f"{'MODE':<{PadNtpSource.mode}}"
-           f"{'STATE':<{PadNtpSource.state}}"
-           f"{'STRATUM':>{PadNtpSource.stratum}}"
-           f"{'POLL':>{PadNtpSource.poll}}")
-    print(Decore.invert(hdr))
+    table = SimpleTable([
+        Column('ADDRESS'),
+        Column('MODE'),
+        Column('STATE'),
+        Column('STRATUM', 'right'),
+        Column('POLL', 'right')
+    ])
+
     for source in sources:
         # Extract fields - handle both association and ietf-system format
         address = source.get('address', 'N/A')
@@ -2604,12 +2597,9 @@ def show_ntp(json, address=None):
         poll = source.get('poll', 0)
         poll_str = f"{2**poll}s" if poll else "-"
 
-        row = f"{address:<{PadNtpSource.address}}"
-        row += f"{mode_str:<{PadNtpSource.mode}}"
-        row += f"{state_str:<{PadNtpSource.state}}"
-        row += f"{stratum:>{PadNtpSource.stratum}}"
-        row += f"{poll_str:>{PadNtpSource.poll}}"
-        print(row)
+        table.row(address, mode_str, state_str, stratum, poll_str)
+
+    table.print()
 
 
 def show_ntp_tracking(json):
@@ -2827,21 +2817,18 @@ def show_ntp_source(json, address=None):
         show_ntp_association_detail(associations[0])
         return
 
-    # First pass: determine maximum address width needed
-    max_addr_len = len("Name/IP address")  # Minimum width to match chronyc header
-    for assoc in associations:
-        addr_len = len(assoc.get("address", ""))
-        if addr_len > max_addr_len:
-            max_addr_len = addr_len
+    # Table with chronyc-style columns
+    table = SimpleTable([
+        Column('MS'),
+        Column('Name/IP address', flexible=True),
+        Column('Stratum', 'right'),
+        Column('Poll', 'right'),
+        Column('Reach', 'right'),
+        Column('LastRx', 'right'),
+        Column('Last sample', 'right')
+    ])
 
-    # Cap at reasonable maximum (IPv6 can be up to 39 chars uncompressed)
-    max_addr_len = min(max_addr_len, 39)
-
-    # Table header - similar to chronyc sources
-    hdr = f"{'MS':<3}{f'Name/IP address':<{max_addr_len}} {'Stratum':>7} {'Poll':>4} {'Reach':>5} {'LastRx':>6} {'Last sample':>24}"
-    print(Decore.invert(hdr))
-
-    # Display each association
+    # Build rows
     for assoc in associations:
         # State indicator: * = prefer (sync source), + = candidate
         prefer = assoc.get("prefer", False)
@@ -2858,6 +2845,7 @@ def show_ntp_source(json, address=None):
         elif local_mode == "broadcast-client":
             mode_indicator = "#"
 
+        ms_col = f"{mode_indicator}{state}"
         address = assoc.get("address", "N/A")
         stratum = assoc.get("stratum", 0)
 
@@ -2902,14 +2890,13 @@ def show_ntp_source(json, address=None):
 
         # Last sample column combines offset and delay like chronyc
         if offset_str != "-":
-            last_sample = f"{offset_str:>12} {delay_str}"
+            last_sample = f"{offset_str} {delay_str}"
         else:
             last_sample = "-"
 
-        # Format row
-        ms_col = f"{mode_indicator}{state}"
-        row = f"{ms_col:<3}{address:<{max_addr_len}} {stratum:>7} {poll_str:>4} {reach_str:>5} {now_str:>6} {last_sample:>24}"
-        print(row)
+        table.row(ms_col, address, stratum, poll_str, reach_str, now_str, last_sample)
+
+    table.print()
 
 
 def _analyze_group_permissions(nacm):
