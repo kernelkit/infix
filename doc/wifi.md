@@ -238,8 +238,8 @@ CoffeeShop           00:1a:2b:3c:4d:5e  Open           bad           1
 </code></pre>
 
 In the CLI, signal strength is reported as: excellent, good, fair or bad.
-For precise RSSI values in dBm, use NETCONF or RESTCONF to access the
-operational datastore directly.
+For precise signal strength values in dBm, use NETCONF or RESTCONF to access
+the `signal-strength` leaf in the operational datastore.
 
 ## Station Mode (Client)
 

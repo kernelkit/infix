@@ -204,12 +204,12 @@ submodule infix-if-wifi {
 
             /* Operational state */
 
-            leaf rssi {
+            leaf signal-strength {
               config false;
               type int16;
               units "dBm";
               description
-                "Current received signal strength indication (RSSI) in dBm.
+                "Current signal strength in dBm.
 
                  More negative values indicate weaker signal.
 
@@ -269,7 +269,7 @@ submodule infix-if-wifi {
                 description "BSSID (MAC address) of the AP.";
               }
 
-              leaf rssi {
+              leaf signal-strength {
                 type int16;
                 units "dBm";
                 description "Signal strength of the network.";
@@ -418,7 +418,7 @@ submodule infix-if-wifi {
                   description "Client MAC address.";
                 }
 
-                leaf rssi {
+                leaf signal-strength {
                   type int16;
                   units "dBm";
                   description "Client signal strength in dBm.";

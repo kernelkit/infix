@@ -565,12 +565,12 @@ class Decore():
             print(txt)
 
 
-def rssi_to_status(rssi):
-    if rssi <= -75:
+def signal_to_status(signal):
+    if signal >= -50:
         status = Decore.bright_green("excellent")
-    elif rssi <= -65:
+    elif signal <= -65:
         status = Decore.green("good")
-    elif rssi <= -50:
+    elif signal <= -50:
         status = Decore.yellow("poor")
     else:
         status = Decore.red("bad")
@@ -1249,7 +1249,7 @@ class Iface:
             ssid = result.get('ssid', 'Hidden')
             bssid = result.get("bssid", "unknown")
             encstr = ", ".join(result.get("encryption", ["Unknown"]))
-            status = rssi_to_status(result.get("rssi", -100))
+            status = signal_to_status(result.get("signal-strength", -100))
             channel = result.get("channel", "?")
 
             ssid_table.row(ssid, bssid, encstr, status, channel)
@@ -1283,8 +1283,8 @@ class Iface:
 
         for station in stations:
             mac = station.get("mac-address", "unknown")
-            rssi = station.get("rssi")
-            signal_str = rssi_to_status(rssi) if rssi is not None else "------"
+            signal = station.get("signal-strength")
+            signal_str = signal_to_status(signal) if signal is not None else "------"
 
             conn_time = station.get("connected-time", 0)
             time_str = f"{conn_time}s"
@@ -1310,11 +1310,11 @@ class Iface:
         row = self._pr_proto_common("ethernet", True, pipe);
         print(row)
         ssid = None
-        rssi = None
+        signal = None
         mode = None
 
         if self.wifi:
-            # Detect mode: AP has "stations", Station has "rssi" or "scan-results"
+            # Detect mode: AP has "stations", Station has "signal-strength" or "scan-results"
             ap=self.wifi.get("access-point", {})
             if ap:
                 ssid = ap.get("ssid", "------")
@@ -1326,11 +1326,11 @@ class Iface:
             else:
                 station=self.wifi.get("station", {})
                 ssid = station.get("ssid", "------")
-                rssi = station.get("rssi")
+                signal = station.get("signal-strength")
                 mode = "Station"
-                if rssi is not None:
-                    signal = rssi_to_status(rssi)
-                    data_str = f"{mode}, ssid: {ssid}, signal: {signal}"
+                if signal is not None:
+                    signal_str = signal_to_status(signal)
+                    data_str = f"{mode}, ssid: {ssid}, signal: {signal_str}"
                 else:
                     data_str = f"{mode}, ssid: {ssid}"
         else:
@@ -1618,7 +1618,7 @@ class Iface:
             print(f"{'out-octets':<{20}}: {self.out_octets}")
 
         if self.wifi:
-            # Detect mode: AP has "stations", Station has "rssi" or "scan-results"
+            # Detect mode: AP has "stations", Station has "signal-strength" or "scan-results"
             ap = self.wifi.get('access-point')
             if ap:
                 mode = "access-point"
@@ -1632,13 +1632,13 @@ class Iface:
             else:
                 mode = "station"
                 station = self.wifi.get('station', {})
-                rssi = station.get('rssi')
+                signal = station.get('signal-strength')
                 ssid = station.get('ssid', "----")
                 print(f"{'mode':<{20}}: {mode}")
                 print(f"{'ssid':<{20}}: {ssid}")
-                if rssi is not None:
-                    signal_status = rssi_to_status(rssi)
-                    print(f"{'signal':<{20}}: {rssi} dBm ({signal_status})")
+                if signal is not None:
+                    signal_status = signal_to_status(signal)
+                    print(f"{'signal':<{20}}: {signal} dBm ({signal_status})")
                 rx_speed = station.get('rx-speed')
                 tx_speed = station.get('tx-speed')
                 if rx_speed is not None:

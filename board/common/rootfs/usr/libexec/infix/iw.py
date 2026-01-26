@@ -322,7 +322,7 @@ def parse_stations(ifname):
         try:
             if key == 'signal':
                 # Format: "-42 dBm" or "-42 [-44, -45] dBm"
-                current['rssi'] = int(value.split()[0])
+                current['signal-strength'] = int(value.split()[0])
             elif key == 'connected time':
                 # Format: "123 seconds"
                 current['connected-time'] = int(value.split()[0])
@@ -500,7 +500,7 @@ def parse_link(ifname):
         # signal: -42 dBm
         elif stripped.startswith('signal: '):
             try:
-                result['rssi'] = int(stripped.split()[1])
+                result['signal-strength'] = int(stripped.split()[1])
             except (ValueError, IndexError):
                 pass
 
