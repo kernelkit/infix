@@ -103,6 +103,10 @@ static int wifi_gen_station(struct lyd_node *cif)
 		goto out;
 	}
 
+	/*
+	 * Background scanning every 10 seconds while not associated, when we
+	 * have an SSID (below), bgscan assumes this task.
+	 */
 	fprintf(wpa_supplicant,
 		"ctrl_interface=/run/wpa_supplicant\n"
 		"autoscan=periodic:10\n"
@@ -121,14 +125,27 @@ static int wifi_gen_station(struct lyd_node *cif)
 		}
 		fprintf(wpa_supplicant,
 			"network={\n"
-			"bgscan=\"simple: 30:-45:300\"\n"
-			"ssid=\"%s\"\n"
-			"%s\n"
+			"  bgscan=\"simple: 30:-45:300\"\n"
+			"  ssid=\"%s\"\n"
+			"  %s\n"
 			"}\n", ssid, security_str);
 		free(security_str);
 	} else {
 		/* Scan-only mode - no station container configured */
-		fprintf(wpa_supplicant, "# Scan-only mode - no network configured\n");
+		fprintf(wpa_supplicant, "# Scan-only - need dummy network for state machine\n");
+		/*
+		 * This prevents the daemon from actually trying to associate and fail,
+		 * 'bssid' with a reserved/impossible MAC address prevents it from ever
+		 * actually \"finding\" and joining a random open AP
+		 */
+		fprintf(wpa_supplicant,
+			"network={\n"
+			"  ssid=\"\"\n"
+			"  key_mgmt=NONE\n"
+			"  disabled=0\n"
+			"  bssid=00:00:00:00:00:01\n"
+			"  scan_ssid=1\n"
+			"}\n");
 	}
 
 out:
