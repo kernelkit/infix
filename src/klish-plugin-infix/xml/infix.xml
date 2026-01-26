@@ -744,7 +744,7 @@
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       file=${KLISH_PARAM_fn:-syslog}
       echo -e "\e[1mPress Ctrl-C to abort ────────────────────────────────────────────\e[0m"
-      tail -F /log/$file
+      tail -F -n +1 /log/$file
     </ACTION>
   </COMMAND>
 
