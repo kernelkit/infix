@@ -1,11 +1,4 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-#include <srx/lyx.h>
-#include <srx/srx_val.h>
-
-#include "interfaces.h"
-
-#define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
-
 /*
  * WiFi Interface Management
  *
@@ -13,6 +6,13 @@
  * station mode configuration (wpa_supplicant). Access point mode
  * configuration (hostapd) is handled by hardware.c.
  */
+
+#include <srx/lyx.h>
+#include <srx/srx_val.h>
+
+#include "interfaces.h"
+
+#define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
 
 /*
  * Determine WiFi mode from YANG configuration
@@ -25,28 +25,35 @@ typedef enum wifi_mode_t {
 
 static wifi_mode_t wifi_get_mode(struct lyd_node *wifi)
 {
-	struct lyd_node *ap = lydx_get_child(wifi, "access-point");
+	struct lyd_node *ap;
 
-	if (ap && (lydx_get_op(ap) != LYDX_OP_DELETE))
-		return wifi_ap;
-	else
-		return wifi_station; /* Need to return station even if "station" also is false, since that is the default scanning mode */
+	ap = lydx_get_child(wifi, "access-point");
+	if (ap) {
+		if (lydx_get_op(ap) != LYDX_OP_DELETE)
+			return wifi_ap;
+	}
+
+	/*
+	 * Need to return station even if "station" also is false,
+	 * because station is the default scanning mode.
+	 */
+	return wifi_station;
 }
 
 int wifi_mode_changed(struct lyd_node *wifi)
 {
+	enum lydx_op ap_op = LYDX_OP_DELETE;
 	struct lyd_node *ap;
-	enum lydx_op ap_op;
 
 	if (!wifi)
 		return 0;
 
 	ap = lydx_get_child(wifi, "access-point");
-
 	if (ap)
 		ap_op = lydx_get_op(ap);
 
-	ERROR("MODE CHANGED: %d", ap && (ap_op == LYDX_OP_CREATE || ap_op == LYDX_OP_DELETE));
+	DEBUG("MODE CHANGED: %d", ap && (ap_op == LYDX_OP_CREATE || ap_op == LYDX_OP_DELETE));
+
 	return (ap && (ap_op == LYDX_OP_CREATE || ap_op == LYDX_OP_DELETE));
 }
 
@@ -70,21 +77,20 @@ static int wifi_gen_station(struct lyd_node *cif)
 
 	radio = lydx_get_cattr(wifi, "radio");
 	station = lydx_get_child(wifi, "station");
-	/* If station is NULL, we're in scan-only mode (no station container) */
 	if (station) {
 		ssid = lydx_get_cattr(station, "ssid");
 		security = lydx_get_child(station, "security");
 		security_mode = lydx_get_cattr(security, "mode");
 		secret_name = lydx_get_cattr(security, "secret");
 	} else {
+		/* If station is NULL, we're in scan-only mode (no station container) */
 		ssid = NULL;
 		security = NULL;
 		security_mode = "disabled";
 		secret_name = NULL;
 	}
 
-	radio_node = lydx_get_xpathf(cif,
-		"../../hardware/component[name='%s']/wifi-radio", radio);
+	radio_node = lydx_get_xpathf(cif, "../../hardware/component[name='%s']/wifi-radio", radio);
 	country = lydx_get_cattr(radio_node, "country-code");
 
 	if (secret_name && strcmp(security_mode, "disabled") != 0) {
@@ -103,6 +109,10 @@ static int wifi_gen_station(struct lyd_node *cif)
 		goto out;
 	}
 
+	/*
+	 * Background scanning every 10 seconds while not associated, when we
+	 * have an SSID (below), bgscan assumes this task.
+	 */
 	fprintf(wpa_supplicant,
 		"ctrl_interface=/run/wpa_supplicant\n"
 		"autoscan=periodic:10\n"
@@ -121,14 +131,27 @@ static int wifi_gen_station(struct lyd_node *cif)
 		}
 		fprintf(wpa_supplicant,
 			"network={\n"
-			"bgscan=\"simple: 30:-45:300\"\n"
-			"ssid=\"%s\"\n"
-			"%s\n"
+			"  bgscan=\"simple: 30:-45:300\"\n"
+			"  ssid=\"%s\"\n"
+			"  %s\n"
 			"}\n", ssid, security_str);
 		free(security_str);
 	} else {
 		/* Scan-only mode - no station container configured */
-		fprintf(wpa_supplicant, "# Scan-only mode - no network configured\n");
+		fprintf(wpa_supplicant, "# Scan-only - need dummy network for state machine\n");
+		/*
+		 * This prevents the daemon from actually trying to associate and fail,
+		 * 'bssid' with a reserved/impossible MAC address prevents it from ever
+		 * actually \"finding\" and joining a random open AP
+		 */
+		fprintf(wpa_supplicant,
+			"network={\n"
+			"  ssid=\"\"\n"
+			"  key_mgmt=NONE\n"
+			"  disabled=0\n"
+			"  bssid=00:00:00:00:00:01\n"
+			"  scan_ssid=1\n"
+			"}\n");
 	}
 
 out:

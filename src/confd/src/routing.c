@@ -26,7 +26,7 @@ hostname Router\n\
 password zebra \n\
 enable password zebra\n\
 no log unique-id\n\
-log syslog informational\n\
+log syslog warnings\n\
 log facility local2\n"
 
 int parse_rip_redistribute(sr_session_ctx_t *session, struct lyd_node *redistributes, FILE *fp)

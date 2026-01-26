@@ -14,12 +14,25 @@ config BR2_PACKAGE_FEATURE_WIFI
 	help
 	  Enables WiFi in Infix. Enables all requried applications.
 
-config BR2_PACKAGE_FEATURE_WIFI_DONGLE_REALTEK
-       bool "Realtek USB WiFi Dongles"
+config BR2_PACKAGE_FEATURE_WIFI_MEDIATEK
+       bool "Mediatek WiFi Devices"
+       depends on BR2_PACKAGE_FEATURE_WIFI
+       select BR2_PACKAGE_LINUX_FIRMWARE
+       select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7601U
+       select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7610E
+       select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT76X2E
+       select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7921
+       select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7922
+       select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7925
+       help
+         Enables support for various Mediatek WiFi devices.
+
+config BR2_PACKAGE_FEATURE_WIFI_REALTEK
+       bool "Realtek WiFi Devices"
        depends on BR2_PACKAGE_FEATURE_WIFI
        select BR2_PACKAGE_LINUX_FIRMWARE
        select BR2_PACKAGE_LINUX_FIRMWARE_RTL_81XX
        select BR2_PACKAGE_LINUX_FIRMWARE_RTL_RTW88
        select BR2_PACKAGE_LINUX_FIRMWARE_RTL_RTW89
        help
-         Enables Support for RTW88 and RTW89 USB dongles.
+         Enables support for RTL81xx, RTW88, and RTW89 WiFi devices.

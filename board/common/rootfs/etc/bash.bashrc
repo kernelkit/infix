@@ -40,11 +40,12 @@ log()
     less +G -r "$fn"
 }
 
-follow()
+follow ()
 {
     local fn="/var/log/syslog"
     [ -n "$1" ] && fn="/var/log/$1"
-    less +F -r "$fn"
+
+    tail -F -n +1 "$fn"
 }
 
 _logfile_completions()

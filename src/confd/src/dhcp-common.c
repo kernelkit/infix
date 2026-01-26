@@ -194,7 +194,6 @@ static void infer_options_v4(sr_session_ctx_t *session, const char *xpath)
 		"broadcast",
 		"router",
 		"domain",
-		"hostname", /* server may use this to register our current name */
 		"dns-server",
 		"ntp-server" /* will not be activated unless ietf-system also is */
 	};
@@ -202,6 +201,10 @@ static void infer_options_v4(sr_session_ctx_t *session, const char *xpath)
 
 	for (i = 0; i < NELEMS(opt); i++)
 		srx_set_item(session, NULL, 0, "%s/option[id='%s']", xpath, opt[i]);
+
+	/* server may use this to register our current name */
+	val.data.string_val = "auto";
+	srx_set_item(session, &val, 0, "%s/option[id='hostname']/value", xpath);
 
 	product_name = json_object_get(confd.root, "product-name");
 	if (product_name) {

@@ -18,77 +18,116 @@ To simplify RESTCONF operations, create a `curl.sh` wrapper script:
 #!/bin/sh
 # RESTCONF CLI wrapper for curl
 
-# Show usage and exit
-usage()
-{
-	cat <<-EOF >&2
-	Usage: $0 [-h HOST] [-d DATASTORE] [-u USER:PASS] METHOD PATH [CURL_ARGS...]
-
-	Options:
-	  -h HOST    Target host (default: infix.local)
-	  -d DS      Datastore: running, operational, startup (default: running)
-	  -u CREDS   Credentials as user:pass (default: admin:admin)
-
-	Methods: GET, POST, PUT, PATCH, DELETE
-	EOF
-	exit "$1"
-}
-
-# Default values
 HOST=${HOST:-infix.local}
 DATASTORE=running
 AUTH=admin:admin
 
-# Parse options
-while getopts "h:d:u:" opt; do
-	case $opt in
-		h) HOST="$OPTARG" ;;
-		d) DATASTORE="$OPTARG" ;;
-		u) AUTH="$OPTARG" ;;
-		*) usage 1 ;;
-	esac
+usage()
+{
+    cat <<EOF >&2
+Usage: $0 [-v] [-h HOST] [-d DATASTORE] [-u USER:PASS] METHOD XPATH [CURL_ARGS...]
+
+Options:
+  -h HOST    Target host (default: infix.local)
+  -d DS      Datastore: running, operational, startup (default: running)
+  -u CREDS   Credentials as user:pass (default: admin:admin)
+  -v         Verbose mode, use it to display variables and curl command
+
+Methods: GET, POST, PUT, PATCH, DELETE
+EOF
+    exit "$1"
+}
+
+check()
+{
+    hint="Note: URL may be missing a module prefix (e.g., ietf-system:system)"
+    resp="$1"
+    url="$2"
+
+    if ! command -v jq >/dev/null 2>&1; then
+        printf "%s\n" "$resp"
+        return
+    fi
+
+    case "$resp" in
+        *"Syntax error"*)
+            path_only="${url#*//}"
+
+            # Check for common URL error(s), e.g., missing module prefix
+            case "$path_only" in
+                *":"*)
+                    printf "%s\n" "$resp" | jq .
+                    ;;
+                *)
+                    printf "%s\n" "$resp" | jq --arg hint "$hint" \
+                           '.["ietf-restconf:errors"].error[] |= . + {comment: $hint}'
+                    ;;
+            esac
+            ;;
+        *)
+            printf "%s\n" "$resp" | jq .
+            ;;
+    esac
+}
+
+while getopts "h:d:u:v" opt; do
+    case $opt in
+        h) HOST="$OPTARG"      ;;
+        d) DATASTORE="$OPTARG" ;;
+        u) AUTH="$OPTARG"      ;;
+        v) VERBOSE=1           ;;
+        *) usage 1 ;;
+    esac
 done
 shift $((OPTIND - 1))
 
-# Validate required arguments
 if [ $# -lt 2 ]; then
-	echo "Error: METHOD and PATH are required" >&2
-	usage 1
+    echo "Error: METHOD and XPATH are required" >&2
+    usage 1
 fi
 
 METHOD=$1
-PATH=$2
+XPATH=$2
 shift 2
 
-# Ensure PATH starts with /
-case "$PATH" in
-	/*) ;;
-	*) PATH="/$PATH" ;;
+# Ensure XPATH starts with /
+case "$XPATH" in
+    /*) ;;
+    *) XPATH="/$XPATH" ;;
 esac
 
-# Build URL based on datastore
 case "$DATASTORE" in
-	running|startup)
-		URL="https://${HOST}/restconf/data${PATH}"
-		;;
-	operational)
-		URL="https://${HOST}/restconf/data${PATH}"
-		;;
-	*)
-		echo "Error: Invalid datastore '$DATASTORE'. Use: running, operational, or startup" >&2
-		exit 1
-		;;
+    running|startup)
+        URL="https://${HOST}/restconf/data${XPATH}"
+        ;;
+    operational)
+        URL="https://${HOST}/restconf/data${XPATH}"
+        ;;
+    *)
+        echo "Error: Invalid datastore '$DATASTORE'. Use: running, operational, or startup" >&2
+        exit 1
+        ;;
 esac
 
-# Execute curl with all remaining arguments passed through
-exec /usr/bin/curl \
-	--insecure \
-	--user "${AUTH}" \
-	--request "${METHOD}" \
-	--header "Content-Type: application/yang-data+json" \
-	--header "Accept: application/yang-data+json" \
-	"$@" \
-	"${URL}"
+if [ "$VERBOSE" ]; then
+    echo "DS     : $DATASTORE"
+    echo "OP     : $METHOD"
+    echo "XPATH  : $XPATH"
+    echo "AUTH   : $AUTH"
+    echo "=> URL : $URL"
+    set -x
+fi
+
+RESP=$(/usr/bin/curl --silent                           \
+    --insecure                                          \
+    --user "${AUTH}"                                    \
+    --request "${METHOD}"                               \
+    --header "Content-Type: application/yang-data+json" \
+    --header "Accept: application/yang-data+json"       \
+    "$@"                                                \
+    "${URL}")
+
+check "$RESP" "$URL"
 ```
 
 Make it executable:
