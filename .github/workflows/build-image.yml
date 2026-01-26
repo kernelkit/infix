@@ -56,7 +56,7 @@ jobs:
               ;;
             bananapi-bpi-r3)
               echo "BOOTLOADER_SD=bpi-r3-sd-boot" >> $GITHUB_ENV
-              echo "BOOTLOADER_EMMC=bpi-r3-emmc_boot" >> $GITHUB_ENV
+              echo "BOOTLOADER_EMMC=bpi-r3-emmc-boot" >> $GITHUB_ENV
               echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=true" >> $GITHUB_ENV
               ;;
