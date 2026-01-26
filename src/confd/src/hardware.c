@@ -272,20 +272,8 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	/* Allow UTF-8 characters in SSID for international network names */
 	fprintf(hostapd, "utf8_ssid=1\n");
 
-	/* Use short preamble for better throughput on modern clients */
-	fprintf(hostapd, "preamble=1\n");
-
-	/* Disconnect clients with poor link quality to free up airtime */
-	fprintf(hostapd, "disassoc_low_ack=1\n");
-
 	/* Poll inactive clients before disconnecting to detect sleepy devices */
 	fprintf(hostapd, "skip_inactivity_poll=0\n");
-
-	/* Disable opportunistic key caching, reduces roaming attack surface */
-	fprintf(hostapd, "okc=0\n");
-
-	/* Disable PMKSA caching, forces fresh authentication for better security */
-	fprintf(hostapd, "disable_pmksa_caching=1\n");
 
 	security = lydx_get_child(ap, "security");
 	security_mode = lydx_get_cattr(security, "mode");
@@ -369,6 +357,9 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 
 	fprintf(hostapd, "beacon_int=100\n");
 
+	/* Use short preamble for better throughput on modern clients */
+	fprintf(hostapd, "preamble=1\n");
+
 	if (band) {
 		if (!strcmp(band, "2.4GHz")) {
 			/* hw_mode=g: 2.4GHz with 802.11g (OFDM) as baseline */
@@ -440,8 +431,7 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 		}
 		/* 802.11ax (WiFi 6) always enabled for better performance */
 		fprintf(hostapd, "ieee80211ax=1\n");
-		/* BSS coloring reduces interference in dense deployments */
-		fprintf(hostapd, "he_bss_color=1\n");
+
 		/* Beamforming improves signal quality and range */
 		fprintf(hostapd, "he_su_beamformer=1\n");
 		fprintf(hostapd, "he_su_beamformee=1\n");
