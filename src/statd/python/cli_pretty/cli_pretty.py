@@ -568,9 +568,9 @@ class Decore():
 def signal_to_status(signal):
     if signal >= -50:
         status = Decore.bright_green("excellent")
-    elif signal <= -65:
+    elif signal >= -60:
         status = Decore.green("good")
-    elif signal <= -50:
+    elif signal >= -70:
         status = Decore.yellow("poor")
     else:
         status = Decore.red("bad")
