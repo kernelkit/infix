@@ -100,6 +100,9 @@ submodule infix-if-wifi {
         must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)]) <= 1" {
           error-message "Only one station or scan interface is allowed per radio";
         }
+        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(infix-if:custom-phys-address/*)]) <= 1" {
+          error-message "Only one interface per radio can use the default MAC address. Configure custom-phys-address on additional interfaces.";
+        }
 
         description
           "Reference to parent WiFi radio (PHY).
