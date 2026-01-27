@@ -452,9 +452,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_WIFI:
-		/* WiFi daemon config (hostapd/wpa_supplicant) is handled by
-		 * hardware.c when the radio (phy) is configured. Interface
-		 * creation/deletion is handled in netdag_gen_afspec_add(). */
+		if (wifi_get_mode(cif) == wifi_station)
+			return wifi_gen_station(cif);
 		return 0;
 	case IFT_DUMMY:
 	case IFT_GRE:

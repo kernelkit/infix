@@ -97,7 +97,7 @@ def main():
         common.LOG.warning("Unsupported model %s", args.model)
         sys.exit(1)
 
-    print(json.dumps(yang_data, indent=2))
+    print(json.dumps(yang_data, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

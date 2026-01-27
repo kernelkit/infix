@@ -100,6 +100,9 @@ submodule infix-if-wifi {
         must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)]) <= 1" {
           error-message "Only one station or scan interface is allowed per radio";
         }
+        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(infix-if:custom-phys-address/*)]) <= 1" {
+          error-message "Only one interface per radio can use the default MAC address. Configure custom-phys-address on additional interfaces.";
+        }
 
         description
           "Reference to parent WiFi radio (PHY).
@@ -148,6 +151,9 @@ submodule infix-if-wifi {
             leaf ssid {
               type string {
                 length "1..32";
+                pattern '[^\x00-\x1f\x22\x5c\x7f]*' {
+                  error-message "SSID must not contain control characters, double quotes, or backslashes.";
+                }
               }
               mandatory true;
               description
@@ -201,12 +207,12 @@ submodule infix-if-wifi {
 
             /* Operational state */
 
-            leaf rssi {
+            leaf signal-strength {
               config false;
               type int16;
               units "dBm";
               description
-                "Current received signal strength indication (RSSI) in dBm.
+                "Current signal strength in dBm.
 
                  More negative values indicate weaker signal.
 
@@ -266,7 +272,7 @@ submodule infix-if-wifi {
                 description "BSSID (MAC address) of the AP.";
               }
 
-              leaf rssi {
+              leaf signal-strength {
                 type int16;
                 units "dBm";
                 description "Signal strength of the network.";
@@ -319,6 +325,9 @@ submodule infix-if-wifi {
             leaf ssid {
               type string {
                 length "1..32";
+                pattern '[^\x00-\x1f\x22\x5c\x7f]*' {
+                  error-message "SSID must not contain control characters, double quotes, or backslashes.";
+                }
               }
               mandatory true;
               description
@@ -415,7 +424,7 @@ submodule infix-if-wifi {
                   description "Client MAC address.";
                 }
 
-                leaf rssi {
+                leaf signal-strength {
                   type int16;
                   units "dBm";
                   description "Client signal strength in dBm.";

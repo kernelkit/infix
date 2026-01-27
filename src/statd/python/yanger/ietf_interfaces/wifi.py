@@ -62,14 +62,14 @@ def wifi_station(ifname):
     """Get operational data for Station mode using iw + wpa_cli for scanning"""
     station_data = {}
 
-    # Get link info (includes SSID and RSSI when connected)
+    # Get link info (includes SSID and signal strength when connected)
     link = get_iw_link(ifname)
 
     if link.get('connected'):
         if link.get('ssid'):
             station_data['ssid'] = link['ssid']
-        if link.get('rssi') is not None:
-            station_data['rssi'] = link['rssi']
+        if link.get('signal-strength') is not None:
+            station_data['signal-strength'] = link['signal-strength']
         if link.get('rx-speed') is not None:
             station_data['rx-speed'] = link['rx-speed']
         if link.get('tx-speed') is not None:
@@ -122,29 +122,35 @@ def parse_wpa_scan_result(scan_output):
 
                 flags = parts[3].strip()
                 ssid = parts[4].strip() if len(parts) > 4 else ""
+                try:
+                    ssid = ssid.encode().decode('unicode_escape').encode('latin-1').decode('utf-8')
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    pass
+                # Strip control chars (terminal injection risk from rogue APs)
+                ssid = ''.join(c for c in ssid if c.isprintable())
 
                 # Skip hidden SSIDs (empty or null-filled)
-                if not ssid or ssid.isspace() or '\\x00' in ssid:
+                if not ssid or ssid.isspace():
                     continue
 
                 encryption = extract_encryption(flags)
                 channel = frequency_to_channel(frequency)
 
-                # Keep best RSSI per SSID
-                if ssid not in networks or rssi > networks[ssid]['rssi']:
+                # Keep best signal per SSID
+                if ssid not in networks or rssi > networks[ssid]['signal-strength']:
                     networks[ssid] = {
                         'bssid': bssid,
                         'ssid': ssid,
-                        'rssi': rssi,
+                        'signal-strength': rssi,
                         'encryption': encryption,
                         'channel': channel
                     }
         except Exception:
             continue
 
-    # Sort by RSSI (best first)
+    # Sort by signal strength (best first)
     result = list(networks.values())
-    result.sort(key=lambda x: x['rssi'], reverse=True)
+    result.sort(key=lambda x: x['signal-strength'], reverse=True)
 
     return result
 
