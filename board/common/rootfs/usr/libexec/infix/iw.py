@@ -13,6 +13,13 @@ import sys
 import json
 import subprocess
 import re
+def decode_iw_ssid(ssid):
+    """Decode iw escaped SSID (\\xHH) to UTF-8, stripping non-printable chars."""
+    try:
+        ssid = ssid.encode().decode('unicode_escape').encode('latin-1').decode('utf-8')
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return ssid
+    return ''.join(c for c in ssid if c.isprintable())
 
 
 def run_iw(*args):
@@ -260,7 +267,7 @@ def parse_interface_info(ifname):
 
         # SSID
         elif stripped.startswith('ssid '):
-            result['ssid'] = ' '.join(stripped.split()[1:])
+            result['ssid'] = decode_iw_ssid(' '.join(stripped.split()[1:]))
 
         # Channel/frequency
         elif stripped.startswith('channel '):
@@ -488,7 +495,7 @@ def parse_link(ifname):
 
         # SSID: NetworkName
         elif stripped.startswith('SSID: '):
-            result['ssid'] = stripped[6:]
+            result['ssid'] = decode_iw_ssid(stripped[6:])
 
         # freq: 5180
         elif stripped.startswith('freq: '):
@@ -582,7 +589,7 @@ def main():
         else:
             data = {'error': f'Unknown command: {command}'}
 
-        print(json.dumps(data, indent=2))
+        print(json.dumps(data, indent=2, ensure_ascii=False))
 
     except Exception as e:
         print(json.dumps({'error': str(e)}))

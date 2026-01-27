@@ -151,6 +151,9 @@ submodule infix-if-wifi {
             leaf ssid {
               type string {
                 length "1..32";
+                pattern '[^\x00-\x1f\x22\x5c\x7f]*' {
+                  error-message "SSID must not contain control characters, double quotes, or backslashes.";
+                }
               }
               mandatory true;
               description
@@ -322,6 +325,9 @@ submodule infix-if-wifi {
             leaf ssid {
               type string {
                 length "1..32";
+                pattern '[^\x00-\x1f\x22\x5c\x7f]*' {
+                  error-message "SSID must not contain control characters, double quotes, or backslashes.";
+                }
               }
               mandatory true;
               description

@@ -122,9 +122,15 @@ def parse_wpa_scan_result(scan_output):
 
                 flags = parts[3].strip()
                 ssid = parts[4].strip() if len(parts) > 4 else ""
+                try:
+                    ssid = ssid.encode().decode('unicode_escape').encode('latin-1').decode('utf-8')
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    pass
+                # Strip control chars (terminal injection risk from rogue APs)
+                ssid = ''.join(c for c in ssid if c.isprintable())
 
                 # Skip hidden SSIDs (empty or null-filled)
-                if not ssid or ssid.isspace() or '\\x00' in ssid:
+                if not ssid or ssid.isspace():
                     continue
 
                 encryption = extract_encryption(flags)
