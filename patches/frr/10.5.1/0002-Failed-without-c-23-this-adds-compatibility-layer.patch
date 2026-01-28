@@ -1,0 +1,127 @@
+From 859bc23f318cfa019b104e83591f185f5bcc3bd4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Fri, 30 Jan 2026 13:00:12 +0100
+Subject: [PATCH 2/2] Failed without c++ 23, this adds compatibility layer
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ lib/assert/assert.h | 29 +++++++++++++++++++++++++++++
+ lib/zlog.c          | 45 +++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 74 insertions(+)
+
+diff --git a/lib/assert/assert.h b/lib/assert/assert.h
+index 97c7460079..8fe8b10c05 100644
+--- a/lib/assert/assert.h
++++ b/lib/assert/assert.h
+@@ -41,12 +41,25 @@ extern void _zlog_assert_failed(const struct xref_assert *xref,
+ 				const char *extra, ...) PRINTFRR(2, 3)
+ 	__attribute__((noreturn));
+ 
++#ifdef __cplusplus
++/* C++ helper functions for assert without xref (to work in constexpr) */
++extern void _zlog_assert_failed_cpp(const char *file, int line,
++				     const char *func, const char *expr)
++	__attribute__((noreturn));
++extern void _zlog_assert_failed_cpp_fmt(const char *file, int line,
++					 const char *func, const char *expr,
++					 const char *extra, ...)
++	PRINTFRR(5, 6) __attribute__((noreturn));
++#endif
++
+ /* the "do { } while (expr_)" is there to get a warning for assignments inside
+  * the assert expression aka "assert(x = 1)".  The (necessary) braces around
+  * expr_ in the if () statement would suppress these warnings.  Since
+  * _zlog_assert_failed() is noreturn, the while condition will never be
+  * checked.
+  */
++#ifndef __cplusplus
++/* C version with full xref tracking */
+ #define assert(expr_)                                                          \
+ 	({                                                                     \
+ 		static const struct xref_assert _xref __attribute__(           \
+@@ -77,6 +90,22 @@ extern void _zlog_assert_failed(const struct xref_assert *xref,
+ 						    ##__VA_ARGS__);            \
+ 			} while (expr_);                                       \
+ 	})
++#else
++/* C++ version without xref tracking to allow use in constexpr contexts.
++ * Static variables in constexpr functions are only allowed in C++23, but
++ * we need to support earlier standards for compatibility with libraries
++ * like Abseil that use assert() in constexpr functions.
++ */
++#define assert(expr_)                                                          \
++	((expr_) ? (void)0                                                     \
++		 : _zlog_assert_failed_cpp(__FILE__, __LINE__, __func__,       \
++					   #expr_))
++
++#define assertf(expr_, extra_, ...)                                            \
++	((expr_) ? (void)0                                                     \
++		 : _zlog_assert_failed_cpp_fmt(__FILE__, __LINE__, __func__,   \
++					       #expr_, extra_, ##__VA_ARGS__))
++#endif
+ 
+ #define zassert assert
+ 
+diff --git a/lib/zlog.c b/lib/zlog.c
+index 157f3323cb..7e7b6f0c25 100644
+--- a/lib/zlog.c
++++ b/lib/zlog.c
+@@ -789,6 +789,51 @@ void _zlog_assert_failed(const struct xref_assert *xref, const char *extra, ...)
+ 	abort();
+ }
+ 
++/* C++ versions without xref struct - used to avoid static variables in
++ * constexpr contexts (C++23 requirement)
++ */
++void _zlog_assert_failed_cpp(const char *file, int line, const char *func,
++			      const char *expr)
++{
++	static bool assert_in_assert; /* "global-ish" variable, init to 0 */
++
++	if (assert_in_assert)
++		abort();
++	assert_in_assert = true;
++
++	zlog(LOG_CRIT, "%s:%d: %s(): assertion (%s) failed", file, line, func,
++	     expr);
++
++	/* abort() prints backtrace & memstats in SIGABRT handler */
++	abort();
++}
++
++void _zlog_assert_failed_cpp_fmt(const char *file, int line, const char *func,
++				  const char *expr, const char *extra, ...)
++{
++	va_list ap;
++	static bool assert_in_assert; /* "global-ish" variable, init to 0 */
++
++	if (assert_in_assert)
++		abort();
++	assert_in_assert = true;
++
++	struct va_format vaf;
++
++	va_start(ap, extra);
++	vaf.fmt = extra;
++	vaf.va = &ap;
++
++	zlog(LOG_CRIT,
++	     "%s:%d: %s(): assertion (%s) failed, extra info: %pVA", file,
++	     line, func, expr, &vaf);
++
++	va_end(ap);
++
++	/* abort() prints backtrace & memstats in SIGABRT handler */
++	abort();
++}
++
+ int zlog_msg_prio(struct zlog_msg *msg)
+ {
+ 	return msg->prio;
+-- 
+2.43.0
+

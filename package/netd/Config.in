@@ -1,0 +1,31 @@
+config BR2_PACKAGE_NETD
+	bool "netd"
+	select BR2_PACKAGE_LIBITE
+	select BR2_PACKAGE_LIBCONFUSE
+	help
+	  Network route daemon. Manages static routes and RIP routing.
+	  Reads configuration from /etc/netd/conf.d/*.conf.
+
+	  With FRR: Full routing via gRPC (static routes, RIP, OSPF).
+	  Without FRR: Standalone Linux backend via rtnetlink.
+
+	  https://github.com/kernelkit/infix
+
+if BR2_PACKAGE_NETD
+
+config BR2_PACKAGE_NETD_FRR
+	bool "FRR integration"
+	default y if BR2_PACKAGE_FRR
+	depends on BR2_PACKAGE_FRR
+	select BR2_PACKAGE_PROTOBUF
+	select BR2_PACKAGE_GRPC
+	select BR2_PACKAGE_HOST_PROTOBUF
+	select BR2_PACKAGE_HOST_GRPC
+	help
+	  Enable FRR integration via gRPC northbound API.
+	  Provides full routing support (static routes, RIP, OSPF).
+
+	  If disabled, netd uses Linux kernel backend (rtnetlink)
+	  with static routes only.
+
+endif
