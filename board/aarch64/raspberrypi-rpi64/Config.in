@@ -5,7 +5,7 @@ config BR2_PACKAGE_RASPBERRYPI_RPI64
 	select BR2_PACKAGE_FEATURE_WIFI
 	select BR2_PACKAGE_BRCMFMAC_SDIO_FIRMWARE_RPI
 	select BR2_PACKAGE_BRCMFMAC_SDIO_FIRMWARE_RPI_WIFI
-
+	select BR2_PACKAGE_LINUX_FIRMWARE_RTL_8169
 	help
 	  Raspberry Pi 64-bit adds support for the Raspberry Pi family of
 	  of single-board computers (SBC), RPi 3B and later, including the

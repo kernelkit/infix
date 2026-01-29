@@ -21,9 +21,8 @@ The board features:
 How to Build
 ------------
 
-Since there are no pre-built images for ARM32, you need to build both Infix
-and the bootloader from source.
-
+Since there are no pre-built images for ARM 32-bit, you need to build both
+Infix and the bootloader from source.
 
 1. Clone the repository
 
@@ -37,12 +36,12 @@ and the bootloader from source.
 
 3. Build Infix (in another tree)
 
-        make O=x-arm32 aarch32_defconfig
-        make O=x-arm32
+        make O=x-arm arm_defconfig
+        make O=x-arm
 
 4. Create the SD card image
 
-        ./utils/mkimage.sh -b x-boot -r x-arm32 raspberrypi-rpi2
+        ./utils/mkimage.sh -b x-boot -r x-arm raspberrypi-rpi2
 
 The resulting image can be found in `x-boot/images/infix-arm-sdcard.img`
 

@@ -21,7 +21,7 @@ CFLAGS="$(INFIX_CFLAGS)"
 endef
 
 define BIN_PERMISSIONS
-	/usr/bin/copy  d 04750 root klish - - - - -
+	/usr/bin/copy  f 04750 root klish - - - - -
 endef
 
 define BIN_BUILD_PYTHON

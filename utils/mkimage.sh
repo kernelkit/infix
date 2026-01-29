@@ -130,7 +130,7 @@ validate_board()
     fi
 
     board_underscore=$(echo "$BOARD" | tr '-' '_')
-    for arch in aarch32 aarch64 x86_64 riscv64; do
+    for arch in arm aarch64 x86_64 riscv64; do
         for variant in "$BOARD" "$board_underscore"; do
             candidate="$BR2_EXTERNAL_INFIX_PATH/board/$arch/$variant"
             if [ -d "$candidate" ]; then

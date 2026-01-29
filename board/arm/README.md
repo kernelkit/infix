@@ -1,5 +1,5 @@
-aarch32
-=======
+Arm 32-bit
+==========
 
 Board Specific Documentation
 ----------------------------
