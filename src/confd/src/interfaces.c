@@ -335,6 +335,10 @@ static int netdag_gen_sysctl(struct dagger *net,
 	err = err ? : netdag_gen_sysctl_setting(net, ifname, &sysctl, 1, "0", node,
 						"net.ipv4.conf.%s.forwarding", ifname);
 
+	/*
+	 * Use force_forwarding for IPv6 (available since Linux 6.17) which provides
+	 * true per-interface control, unlike the legacy forwarding sysctl.
+	 */
 	node = lydx_get_descendant(lyd_child(dif), "ipv6", "forwarding", NULL);
 	err = err ? : netdag_gen_sysctl_setting(net, ifname, &sysctl, 1, "0", node,
 						"net.ipv6.conf.%s.force_forwarding", ifname);
