@@ -14,7 +14,7 @@ submodule infix-if-veth {
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux virtual Ethernet pair extension for ietf-interfaces.
-                
+
                 Note: When using VETH pairs with containers, at least one side
                 of the pair must remain in the host namespace. Both ends of a
                 VETH pair cannot be assigned to different containers.";
