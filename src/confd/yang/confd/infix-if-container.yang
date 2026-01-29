@@ -59,7 +59,11 @@ submodule infix-if-container {
 
   identity host {
     base container-network;
-    description "Host device, e.g., one end of a VETH pair or other host interface.";
+    description "Host device, e.g., one end of a VETH pair or other host interface.
+                 
+                 Note: When using VETH pairs, at least one side must remain in the
+                 host namespace. Both ends of a VETH pair cannot be assigned to
+                 different containers.";
   }
 
   /*
