@@ -29,6 +29,15 @@ module infix-ntp {
   contact      "kernelkit@googlegroups.com";
   description  "Infix deviations and augments to ietf-ntp.";
 
+  revision 2026-03-09 {
+    description "Add stratumweight to NTP server configuration.
+
+                 Allows tuning the weight of stratum in NTP source selection
+                 relative to measured distance. Setting to 0.0 ensures lower
+                 stratum sources are always preferred regardless of distance.";
+    reference "internal";
+  }
+
   revision 2026-02-08 {
     description
       "Add GPS/GNSS reference clock support.
@@ -56,6 +65,25 @@ module infix-ntp {
    */
 
   augment "/ntp:ntp" {
+    leaf stratum-weight {
+      type decimal64 {
+        fraction-digits 3;
+        range "0.0..max";
+      }
+      default "0.001";
+      units "seconds";
+      description
+        "Weight of stratum in NTP source selection relative to measured distance.
+
+         A one-stratum difference counts as this many seconds of additional
+         distance when comparing candidates.
+
+         The default (0.001 = 1ms) means stratum only wins when distance
+         differences are less than 1ms. Setting it to 0.0 ensures that a
+         lower-stratum source is always preferred over a higher-stratum source,
+         regardless of their measured distances.";
+    }
+
     container makestep {
       presence "Enable clock stepping for large offsets";
       description
