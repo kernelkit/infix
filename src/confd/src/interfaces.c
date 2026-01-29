@@ -337,7 +337,7 @@ static int netdag_gen_sysctl(struct dagger *net,
 
 	node = lydx_get_descendant(lyd_child(dif), "ipv6", "forwarding", NULL);
 	err = err ? : netdag_gen_sysctl_setting(net, ifname, &sysctl, 1, "0", node,
-						"net.ipv6.conf.%s.forwarding", ifname);
+						"net.ipv6.conf.%s.force_forwarding", ifname);
 
 	if (!strcmp(ifname, "lo")) /* skip for now */
 		goto skip_mtu;
@@ -351,39 +351,6 @@ skip_mtu:
 		fclose(sysctl);
 
 	return err;
-}
-
-/*
- * The global IPv6 forwarding lever is off by default, enabled when any
- * interface has IPv6 forwarding enabled.
- */
-static int netdag_ipv6_forwarding(struct lyd_node *cifs, struct dagger *net)
-{
-	struct lyd_node *cif;
-	FILE *sysctl = NULL;
-	int ena = 0;
-
-	LYX_LIST_FOR_EACH(cifs, cif, "interface")
-		ena |= lydx_is_enabled(lydx_get_child(cif, "ipv6"), "forwarding");
-
-	if (ena)
-		sysctl = dagger_fopen_next(net, "init", "@post", NETDAG_INIT_POST, "ipv6.sysctl");
-	else
-		sysctl = dagger_fopen_current(net, "exit", "@pre", NETDAG_EXIT_PRE, "ipv6.sysctl");
-	if (!sysctl) {
-		/*
-		 * Cannot create exit code in gen: -1.  Safe to ignore
-		 * since ipv6 forwarding is disabled by default.
-		 */
-		if (dagger_is_bootstrap(net) && !ena)
-			return 0;
-		return -EIO;
-	}
-
-	fprintf(sysctl, "net.ipv6.conf.all.forwarding = %d\n", ena);
-	fclose(sysctl);
-
-	return 0;
 }
 
 static int dummy_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
@@ -781,9 +748,6 @@ static sr_error_t ifchange_post(sr_session_ctx_t *session, struct dagger *net,
 				struct lyd_node *cifs, struct lyd_node *difs)
 {
 	int err = 0;
-
-	/* Figure out value of global IPv6 forwarding flag. Issue #785 */
-	err |= netdag_ipv6_forwarding(cifs, net);
 
 	/* For each configured bridge, the corresponding multicast
 	 * querier settings depend on both the bridge config and on
