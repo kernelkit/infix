@@ -66,12 +66,17 @@ Noteworthy changes and additions in this release are marked below in bold text.
 
 ### Fixes
 
+- Fix #515: add per-interface IPv6 forwarding control using the Linux 6.17+
+  `force_forwarding` sysctl.  This provides true per-interface IPv6 forwarding
+  similar to IPv4, correctly mapping to the ietf-ip.yang model semantics
 - Fix #1082: Wi-Fi interfaces always scanned, introduce a `scan-mode` to the
   Wi-Fi concept in Infix
 - Fix #1314: Raspberry Pi 4B with 1 or 8 GiB RAM does not boot.  This was due
   newer EEPROM firmware in newer boards require a newer rpi-firmware package
 - Fix #1345: firewall not updating when interfaces become bridge/lag ports
 - Fix #1346: firewall complains in syslog, missing `/etc/firewalld/firewalld.conf`
+- Fix Raspberry Pi 2B build, among other things, the `aarch32_defconfig` did
+  not include a dtb.  Please note, the platform has now been renamed to `arm`
 - Fix default password hash in `do password encrypt` command.  New hash is the
   same as the more commonly used `change password` command, *yescrypt*
 - Prevent MOTD from showing on non-shell user login attempts
