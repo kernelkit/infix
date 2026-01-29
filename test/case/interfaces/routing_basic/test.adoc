@@ -4,8 +4,11 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/routing_basic]
 
 ==== Description
 
-Verify routing between interfaces is possible. That enable/disable routing
-in configuration has the expected result.
+Verify that the ietf-ip forwarding setting controls whether IPv4
+and IPv6 traffic is routed between interfaces.  When forwarding is
+enabled, hosts on separate subnets can reach each other through
+the device.  When forwarding is disabled, that connectivity is
+expected to be lost.
 
 ==== Topology
 
@@ -14,11 +17,11 @@ image::topology.svg[Routing basic topology, align=center, scaledwidth=75%]
 ==== Sequence
 
 . Set up topology and attach to target DUTs
-. Setup host
+. Set up host addresses and default routes
 . Enable forwarding on target:data1 and target:data2
-. Verify ping from host:data1 to 10.0.0.10
-. Verify ping from host:data2 to 192.168.0.10
+. Verify cross-subnet IPv4 connectivity
+. Verify cross-subnet IPv6 connectivity
 . Disable forwarding on target:data1 and target:data2
-. Verify ping does not work host:data1 to 10.0.0.10 and host:data2 to 192.168.0.10
+. Verify cross-subnet connectivity is lost
 
 

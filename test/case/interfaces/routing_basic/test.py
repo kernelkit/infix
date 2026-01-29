@@ -1,58 +1,53 @@
 #!/usr/bin/env python3
-# ,------------------------------------------------,
-# |                 [TARGET]                       |
-# |                                                |
-# |                                                |
-# | target:mgmt   target:data0     targetgt:data1  |
-# |              [192.168.0.1]     [10.0.0.1]      |
-# '------------------------------------------------'
-#         |                  |     |
-#         |                  |     |
-# ,----------------------------------------------,
-# |   host:mgmt    host:data0       host:data1   |
-# |             [192.168.0.10]     [10.0.0.10]   |
-# |                  (ns0)            (ns1)      |
-# |                                              |
-# |                  [ HOST ]                    |
-# '----------------------------------------------'
-
 """
 Routing basic
 
-Verify routing between interfaces is possible. That enable/disable routing
-in configuration has the expected result.
+Verify that the ietf-ip forwarding setting controls whether IPv4
+and IPv6 traffic is routed between interfaces.  When forwarding is
+enabled, hosts on separate subnets can reach each other through
+the device.  When forwarding is disabled, that connectivity is
+expected to be lost.
 """
 import infamy
 
+SUBNETS = [
+    {"ipv4": {"gw": "192.168.0.1",   "host": "192.168.0.10",   "prefix": 24},
+     "ipv6": {"gw": "2001:db8:0::1", "host": "2001:db8:0::10", "prefix": 64}},
+    {"ipv4": {"gw": "10.0.0.1",      "host": "10.0.0.10",      "prefix": 24},
+     "ipv6": {"gw": "2001:db8:1::1", "host": "2001:db8:1::10", "prefix": 64}},
+]
+
+def iface_cfg(port, subnet, enable_fwd):
+    """Build interface config with both IPv4 and IPv6."""
+    cfg = {"name": port, "enabled": True}
+    for family in ("ipv4", "ipv6"):
+        af = subnet[family]
+        cfg[family] = {
+            "forwarding": enable_fwd,
+            "address": [{"ip": af["gw"], "prefix-length": af["prefix"]}],
+        }
+    return cfg
+
 def config_target(target, tport0, tport1, enable_fwd):
+    """Configure forwarding and addresses for both address families."""
     target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": tport0,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": enable_fwd,
-                            "address": [{
-                            "ip": "192.168.0.1",
-                            "prefix-length": 24
-                            }]
-                        }
-                    },
-                    {
-                        "name": tport1,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": enable_fwd,
-                            "address": [{
-                            "ip": "10.0.0.1",
-                            "prefix-length": 24
-                            }]
-                        }
-                    }
-                ]
-            }
-        })
+        "interfaces": {
+            "interface": [
+                iface_cfg(tport0, SUBNETS[0], enable_fwd),
+                iface_cfg(tport1, SUBNETS[1], enable_fwd),
+            ]
+        }
+    })
+
+def setup_host(ns, subnet):
+    """Add IPv4 and IPv6 addresses and default routes."""
+    v4 = subnet["ipv4"]
+    ns.addip(v4["host"])
+    ns.addroute("default", v4["gw"])
+
+    v6 = subnet["ipv6"]
+    ns.addip(v6["host"], prefix_length=v6["prefix"], proto="ipv6")
+    ns.addroute("default", v6["gw"], proto="ipv6")
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
@@ -65,29 +60,31 @@ with infamy.Test() as test:
         _, hport1 = env.ltop.xlate("host", "data2")
 
     with infamy.IsolatedMacVlan(hport0) as ns0, \
-         infamy.IsolatedMacVlan(hport1) as ns1 :
+         infamy.IsolatedMacVlan(hport1) as ns1:
 
-        with test.step("Setup host"):
-            ns0.addip("192.168.0.10")
-            ns0.addroute("default", "192.168.0.1")
-
-            ns1.addip("10.0.0.10")
-            ns1.addroute("default", "10.0.0.1")
+        with test.step("Set up host addresses and default routes"):
+            setup_host(ns0, SUBNETS[0])
+            setup_host(ns1, SUBNETS[1])
 
         with test.step("Enable forwarding on target:data1 and target:data2"):
             config_target(target, tport0, tport1, True)
 
-        with test.step("Verify ping from host:data1 to 10.0.0.10"):
-            ns0.must_reach("10.0.0.10")
+        with test.step("Verify cross-subnet IPv4 connectivity"):
+            ns0.must_reach(SUBNETS[1]["ipv4"]["host"])
+            ns1.must_reach(SUBNETS[0]["ipv4"]["host"])
 
-        with test.step("Verify ping from host:data2 to 192.168.0.10"):
-            ns1.must_reach("192.168.0.10")
+        with test.step("Verify cross-subnet IPv6 connectivity"):
+            ns0.must_reach(SUBNETS[1]["ipv6"]["host"])
+            ns1.must_reach(SUBNETS[0]["ipv6"]["host"])
 
         with test.step("Disable forwarding on target:data1 and target:data2"):
             config_target(target, tport0, tport1, False)
 
-        with test.step("Verify ping does not work host:data1 to 10.0.0.10 and host:data2 to 192.168.0.10"):
-            infamy.parallel(lambda: ns0.must_not_reach("10.0.0.10"),
-                            lambda: ns1.must_not_reach("192.168.0.10"))
+        with test.step("Verify cross-subnet connectivity is lost"):
+            infamy.parallel(
+                lambda: ns0.must_not_reach(SUBNETS[1]["ipv4"]["host"]),
+                lambda: ns1.must_not_reach(SUBNETS[0]["ipv4"]["host"]),
+                lambda: ns0.must_not_reach(SUBNETS[1]["ipv6"]["host"]),
+                lambda: ns1.must_not_reach(SUBNETS[0]["ipv6"]["host"]))
 
     test.succeed()
