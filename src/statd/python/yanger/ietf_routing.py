@@ -125,7 +125,7 @@ def add_protocol(routes, proto):
 
 
 def get_routing_interfaces():
-    """Get list of interfaces with IPv4 forwarding enabled"""
+    """Get list of interfaces with IPv4 or IPv6 forwarding enabled"""
     import json
 
     # Get all interfaces
@@ -139,11 +139,12 @@ def get_routing_interfaces():
             continue
 
         # Check if IPv4 forwarding is enabled
-        # Note: We only check IPv4 forwarding. IPv6 forwarding behaves differently
-        # and will be handled separately when Linux 6.17+ force_forwarding is available.
         ipv4_fwd = HOST.run(tuple(['sysctl', '-n', f'net.ipv4.conf.{ifname}.forwarding']), default="0").strip()
 
-        if ipv4_fwd == "1":
+        # Check if IPv6 force_forwarding is enabled (available since Linux 6.17)
+        ipv6_fwd = HOST.run(tuple(['sysctl', '-n', f'net.ipv6.conf.{ifname}.force_forwarding']), default="0").strip()
+
+        if ipv4_fwd == "1" or ipv6_fwd == "1":
             routing_ifaces.append(ifname)
 
     return routing_ifaces
