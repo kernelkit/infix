@@ -83,7 +83,7 @@ loader_args()
 
 append_args()
 {
-    # ARM32 doesn't support virtio console properly, always use serial
+    # ARM 32-bit doesn't support virtio console properly, always use serial
     if [ "$CONFIG_QEMU_arm" ]; then
 	echo -n "console=ttyAMA0 "
     elif [ "$CONFIG_QEMU_CONSOLE_VIRTIO" ]; then
@@ -122,7 +122,7 @@ rootfs_args()
 	echo -n "-device sd-card,drive=mmc "
 	echo -n "-drive id=mmc,file=$CONFIG_QEMU_ROOTFS,if=none,format=raw "
     elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
-	# ARM32 virt machine uses MMIO virtio devices, not PCI
+	# ARM 32-bit virt machine uses MMIO virtio devices, not PCI
 	if [ "$CONFIG_QEMU_arm" ]; then
 	    echo -n "-drive file=qemu.qcow2,if=none,format=qcow2,id=rootfs "
 	    echo -n "-device virtio-blk-device,drive=rootfs "
@@ -189,7 +189,7 @@ rw_args()
 	mkfs.ext4 -L cfg "$CONFIG_QEMU_RW" >/dev/null 2>&1
     fi
 
-    # ARM32 virt machine uses MMIO virtio devices, not PCI
+    # ARM 32-bit virt machine uses MMIO virtio devices, not PCI
     if [ "$CONFIG_QEMU_arm" ]; then
 	echo -n "-drive file=aux.ext4,if=none,format=raw,id=aux "
 	echo -n "-device virtio-blk-device,drive=aux "

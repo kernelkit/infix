@@ -1,5 +1,0 @@
-if BR2_arm
-
-source "$BR2_EXTERNAL_INFIX_PATH/board/aarch32/raspberrypi-rpi2/Config.in"
-
-endif
