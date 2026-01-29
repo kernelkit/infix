@@ -47,6 +47,11 @@ RSA for now, thus the private key must be
 `ietf-crypto-types:rsa-private-key-format` and the public key
 `ietf-crypto-types:ssh-public-key-format`
 
+> [!TIP]
+> For comprehensive information about the keystore, including key management,
+> security considerations, and examples for different key types, see the
+> [Keystore documentation](keystore.md).
+
 ### Use your own SSH hostkeys
 
 Hostkeys can be generated with OpenSSL:
