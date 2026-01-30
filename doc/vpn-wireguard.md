@@ -46,7 +46,7 @@ admin@example:/config/> <b>edit keystore asymmetric-key wg-site-a</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set public-key-format x25519-public-key-format</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set private-key-format x25519-private-key-format</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set public-key bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=</b>
-admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set cleartext-private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>leave</b>
 admin@example:/>
 </code></pre>
@@ -407,7 +407,7 @@ cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key wg-psk</b>
 admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key-format wireguard-symmetric-key-format</b>
-admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set symmetric-key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
 admin@example:/config/keystore/symmetric-key/wg-psk/> <b>end</b>
 admin@example:/config/interface/wg0/> <b>edit wireguard peers wg-peers peer remote</b>
 admin@example:/config/interface/…/wg-peers/peer/remote/> <b>set preshared-key wg-psk</b>
