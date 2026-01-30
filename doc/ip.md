@@ -415,13 +415,12 @@ admin@example:/>
 
 ## IPv6 forwarding
 
-Due to how the Linux kernel manages IPv6 forwarding, we can not fully
-control it per interface via this setting like how IPv4 works.  Instead,
-IPv6 forwarding is globally enabled when at least one interface enable
-forwarding, otherwise it is disabled.
+Forwarding must be enabled on an interface for it to route IPv6
+traffic (static or dynamic).  The setting is per-interface and works
+the same way as IPv4 forwarding.
 
-The following table shows the system IPv6 features that the `forwarding`
-setting control when it is *Enabled* or *Disabled:
+The following table shows the IPv6 features that the `forwarding`
+setting controls when it is *Enabled* or *Disabled*:
 
 | **IPv6 Feature**                         | **Enabled** | **Disabled** |
 |:-----------------------------------------|:------------|:-------------|
