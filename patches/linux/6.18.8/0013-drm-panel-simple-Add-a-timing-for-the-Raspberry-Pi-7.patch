@@ -1,0 +1,103 @@
+From 3e90bfcf47de8d09d8fe975315186beaf18b3c8f Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Wed, 20 Aug 2025 21:38:24 +0200
+Subject: [PATCH 13/32] drm/panel-simple: Add a timing for the Raspberry Pi 7"
+ panel
+
+The Raspberry Pi 7" 800x480 panel uses a Toshiba TC358762 DSI
+to DPI bridge chip, so there is a requirement for the timings
+to be specified for the end panel. Add such a definition.
+
+Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
+
+drm/panel: simple: Alter the timing for the Pi 7" DSI display
+
+vc4 has always fixed up the timing, so the values defined have
+never actually appeared on the wire.
+The display appears to want a slightly longer HFP, so extend
+the timings and recompute the clock to give the same frame rate.
+
+Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
+
+drm/panel-simple: Fix 7inch panel mode for misalignment
+
+The 7inch panel is one line off the screen both horizontally
+and vertically.
+
+Alter the panel mode to correct this.
+
+Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
+
+drm/panel-simple: Increase pixel clock on Pi 7inch panel
+
+The Toshiba bridge is very fussy and doesn't like the CM3
+output when being told to produce a 27.777MHz pixel clock, which
+is an almost perfect match to the DSI link integer divider.
+
+Increasing to 30MHz will switch the DSI link from 333MHz to 400MHz
+and makes the bridge happy with the same video timing as works
+on Pi4.
+(Pi4 will be using a link frequency of 375MHz due to a 3GHz
+parent PLL).
+
+Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
+---
+ drivers/gpu/drm/panel/panel-simple.c | 31 +++++++++++++++++++++++++++-
+ 1 file changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/panel/panel-simple.c b/drivers/gpu/drm/panel/panel-simple.c
+index 271f93399193..75dbc3cb8135 100644
+--- a/drivers/gpu/drm/panel/panel-simple.c
++++ b/drivers/gpu/drm/panel/panel-simple.c
+@@ -400,7 +400,8 @@ static int panel_simple_get_modes(struct drm_panel *panel,
+ 	 * TODO: Remove once all drm drivers call
+ 	 * drm_connector_set_orientation_from_panel()
+ 	 */
+-	drm_connector_set_panel_orientation(connector, p->orientation);
++	/* RPI Hack */
++	//drm_connector_set_panel_orientation(connector, p->orientation);
+ 
+ 	return num;
+ }
+@@ -4074,6 +4075,31 @@ static const struct panel_desc qishenglong_gopher2b_lcd = {
+ 	.connector_type = DRM_MODE_CONNECTOR_DPI,
+ };
+ 
++static const struct drm_display_mode raspberrypi_7inch_mode = {
++       .clock = 30000,
++       .hdisplay = 800,
++       .hsync_start = 800 + 131,
++       .hsync_end = 800 + 131 + 2,
++       .htotal = 800 + 131 + 2 + 45,
++       .vdisplay = 480,
++       .vsync_start = 480 + 7,
++       .vsync_end = 480 + 7 + 2,
++       .vtotal = 480 + 7 + 2 + 22,
++       .flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
++};
++
++static const struct panel_desc raspberrypi_7inch = {
++       .modes = &raspberrypi_7inch_mode,
++       .num_modes = 1,
++       .bpc = 8,
++       .size = {
++               .width = 154,
++               .height = 86,
++       },
++       .bus_format = MEDIA_BUS_FMT_RGB888_1X24,
++       .connector_type = DRM_MODE_CONNECTOR_DSI,
++};
++
+ static const struct display_timing rocktech_rk043fn48h_timing = {
+ 	.pixelclock = { 6000000, 9000000, 12000000 },
+ 	.hactive = { 480, 480, 480 },
+@@ -5344,6 +5370,9 @@ static const struct of_device_id platform_of_match[] = {
+ 		.compatible = "qishenglong,gopher2b-lcd",
+ 		.data = &qishenglong_gopher2b_lcd,
+ 	}, {
++               .compatible = "raspberrypi,7inch-dsi",
++               .data = &raspberrypi_7inch,
++        }, {
+ 		.compatible = "rocktech,rk043fn48h",
+ 		.data = &rocktech_rk043fn48h,
+ 	}, {

@@ -1,0 +1,64 @@
+From 2e9805533f12711a22fbca9551f1da5360ff4537 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Tue, 20 Jan 2026 20:18:45 +0100
+Subject: [PATCH 32/32] wifi: brcmfmac: reduce log noise during AP to station
+ transition
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When transitioning from AP mode to station mode (e.g., hostapd stopping
+and wpa_supplicant starting), several non-fatal errors can occur:
+
+1. SET SSID error (-512) in stop_ap: This happens when hostapd is killed
+   before the firmware operation completes. -512 is ERESTARTSYS which is
+   expected in this scenario.
+
+2. MPC (Minimum Power Consumption) setting failures: These can occur
+   during mode transitions when the firmware is in an intermediate state.
+   MPC is a power optimization and failures are not critical.
+
+Suppress the ERESTARTSYS error in stop_ap and downgrade the MPC error
+to debug level to reduce log spam during normal operation.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .../wireless/broadcom/brcm80211/brcmfmac/cfg80211.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+index 046e07875d00..0b04f98f6e4e 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+@@ -1130,13 +1130,15 @@ static void brcmf_scan_config_mpc(struct brcmf_if *ifp, int mpc)
+ 
+ void brcmf_set_mpc(struct brcmf_if *ifp, int mpc)
+ {
+-	struct brcmf_pub *drvr = ifp->drvr;
+ 	s32 err = 0;
+ 
+ 	if (check_vif_up(ifp->vif)) {
+ 		err = brcmf_fil_iovar_int_set(ifp, "mpc", mpc);
+ 		if (err) {
+-			bphy_err(drvr, "fail to set mpc\n");
++			/* MPC setting can fail during mode transitions,
++			 * this is not critical.
++			 */
++			brcmf_dbg(INFO, "fail to set mpc to %d: %d\n", mpc, err);
+ 			return;
+ 		}
+ 		brcmf_dbg(INFO, "MPC : %d\n", mpc);
+@@ -5558,8 +5560,11 @@ static int brcmf_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *ndev,
+ 		memset(&join_params, 0, sizeof(join_params));
+ 		err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID,
+ 					     &join_params, sizeof(join_params));
+-		if (err < 0)
+-			bphy_err(drvr, "SET SSID error (%d)\n", err);
++		if (err < 0) {
++			/* -ERESTARTSYS is expected if hostapd was killed */
++			if (err != -ERESTARTSYS)
++				bphy_err(drvr, "SET SSID error (%d)\n", err);
++		}
+ 		err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
+ 		if (err < 0)
+ 			bphy_err(drvr, "BRCMF_C_DOWN error %d\n", err);
