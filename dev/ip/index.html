@@ -3093,12 +3093,11 @@ admin@example:/&gt;
 </code></pre>
 
 <h2 id="ipv6-forwarding">IPv6 forwarding<a class="headerlink" href="#ipv6-forwarding" title="Permanent link">¶</a></h2>
-<p>Due to how the Linux kernel manages IPv6 forwarding, we can not fully
-control it per interface via this setting like how IPv4 works.  Instead,
-IPv6 forwarding is globally enabled when at least one interface enable
-forwarding, otherwise it is disabled.</p>
-<p>The following table shows the system IPv6 features that the <code>forwarding</code>
-setting control when it is <em>Enabled</em> or *Disabled:</p>
+<p>Forwarding must be enabled on an interface for it to route IPv6
+traffic (static or dynamic).  The setting is per-interface and works
+the same way as IPv4 forwarding.</p>
+<p>The following table shows the IPv6 features that the <code>forwarding</code>
+setting controls when it is <em>Enabled</em> or <em>Disabled</em>:</p>
 <table>
 <thead>
 <tr>
