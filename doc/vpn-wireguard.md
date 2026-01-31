@@ -406,8 +406,8 @@ cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key wg-psk</b>
-admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key-format wireguard-symmetric-key-format</b>
-admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set symmetric-key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key-format octet-string-key-format</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set cleartext-symmetric-key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
 admin@example:/config/keystore/symmetric-key/wg-psk/> <b>end</b>
 admin@example:/config/interface/wg0/> <b>edit wireguard peers wg-peers peer remote</b>
 admin@example:/config/interface/…/wg-peers/peer/remote/> <b>set preshared-key wg-psk</b>
