@@ -15,32 +15,46 @@ module infix-crypto-types {
   revision 2025-02-04 {
     description "Initial";
   }
+
   identity private-key-format {
+    base ct:private-key-format;
     description
-      "Base key-format identity for private keys.";
+      "Base for Infix private key format extensions.";
   }
+
   identity public-key-format {
+    base ct:public-key-format;
     description
-      "Base key-format identity for public keys.";
+      "Base for Infix public key format extensions.";
   }
+
   identity rsa-private-key-format {
     base private-key-format;
     base ct:rsa-private-key-format;
+    description
+      "RSA private key in PKCS#1 format (RFC 8017).
+       Used for SSH host keys.";
   }
+
   identity ssh-public-key-format {
     base public-key-format;
     base ct:ssh-public-key-format;
+    description
+      "SSH public key format (RFC 4253, Section 6.6).
+       Used for SSH host keys.";
   }
 
   identity symmetric-key-format {
+    base ct:symmetric-key-format;
     description
-      "Base for symmetric key format";
+      "Base for Infix symmetric key format extensions.";
   }
-  identity wifi-preshared-key-format {
+
+  identity passphrase-key-format {
     base ct:symmetric-key-format;
     base symmetric-key-format;
     description
-      "WiFi secret key";
+      "Human-readable passphrase, e.g., WiFi WPA2/WPA3 passwords.";
   }
 
   identity x25519-public-key-format {
@@ -48,7 +62,7 @@ module infix-crypto-types {
     base ct:public-key-format;
     description
       "X25519 (Curve25519) public key format for Diffie-Hellman key exchange.
-       This is the format used by WireGuard.";
+       This format is used by network protocols such as WireGuard VPN.";
   }
 
   identity x25519-private-key-format {
@@ -56,15 +70,6 @@ module infix-crypto-types {
     base ct:private-key-format;
     description
       "X25519 (Curve25519) private key format for Diffie-Hellman key exchange.
-       This is the format used by WireGuard.";
-  }
-
-  identity wireguard-symmetric-key-format {
-    base ct:symmetric-key-format;
-    base symmetric-key-format;
-    description
-      "WireGuard pre-shared key format.
-       32-byte base64-encoded key used as an optional additional layer
-       of symmetric encryption for post-quantum resistance.";
+       This format is used by network protocols such as WireGuard VPN.";
   }
 }

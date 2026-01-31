@@ -75,12 +75,12 @@ def configure_server(dut):
                 "symmetric-keys": {
                     "symmetric-key": [{
                         "name": "psk-client1",
-                        "infix-keystore:symmetric-key": psk_client1,
-                        "infix-keystore:key-format": "infix-crypto-types:wireguard-symmetric-key-format"
+                        "cleartext-symmetric-key": psk_client1,
+                        "key-format": "ietf-crypto-types:octet-string-key-format"
                     }, {
                         "name": "psk-client2",
-                        "infix-keystore:symmetric-key": psk_client2,
-                        "infix-keystore:key-format": "infix-crypto-types:wireguard-symmetric-key-format"
+                        "cleartext-symmetric-key": psk_client2,
+                        "key-format": "ietf-crypto-types:octet-string-key-format"
                     }]
                 }
             }
@@ -226,8 +226,8 @@ def configure_client1(dut):
                 "symmetric-keys": {
                     "symmetric-key": [{
                         "name": "psk-server",
-                        "infix-keystore:symmetric-key": psk_client1,
-                        "infix-keystore:key-format": "infix-crypto-types:wireguard-symmetric-key-format"
+                        "cleartext-symmetric-key": psk_client1,
+                        "key-format": "ietf-crypto-types:octet-string-key-format"
                     }]
                 }
             }
@@ -360,8 +360,8 @@ def configure_client2(dut):
                 "symmetric-keys": {
                     "symmetric-key": [{
                         "name": "psk-server",
-                        "infix-keystore:symmetric-key": psk_client2,
-                        "infix-keystore:key-format": "infix-crypto-types:wireguard-symmetric-key-format"
+                        "cleartext-symmetric-key": psk_client2,
+                        "key-format": "ietf-crypto-types:octet-string-key-format"
                     }]
                 }
             }
