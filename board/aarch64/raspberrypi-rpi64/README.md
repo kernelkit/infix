@@ -107,8 +107,8 @@ To configure WiFi as a client, first store your WiFi password in the keystore:
 ```
 admin@infix:/> configure
 admin@infix:/config/> edit keystore symmetric-key mywifi
-admin@infix:/config/keystore/…/mywifi/> set key-format wifi-preshared-key-format
-admin@infix:/config/keystore/…/mywifi/> set symmetric-key YourWiFiPassword
+admin@infix:/config/keystore/…/mywifi/> set key-format passphrase-key-format
+admin@infix:/config/keystore/…/mywifi/> set cleartext-symmetric-key WW91cldpRmlQYXNzd29yZA==
 admin@infix:/config/keystore/…/mywifi/> leave
 ```
 
