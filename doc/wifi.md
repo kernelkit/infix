@@ -254,9 +254,14 @@ Create a keystore entry for your WiFi password (8-63 characters):
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key my-wifi-key</b>
 admin@example:/config/keystore/…/my-wifi-key/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/my-wifi-key/> <b>set cleartext-symmetric-key TXlQYXNzd29yZDEyMw==</b>
+admin@example:/config/keystore/…/my-wifi-key/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/keystore/…/my-wifi-key/> <b>leave</b>
 </code></pre>
+
+> The `change` command prompts for the passphrase interactively and
+> handles the base64 encoding required by the keystore automatically.
 
 ### Step 2: Connect to Network
 
@@ -311,7 +316,9 @@ create a keystore entry for your WiFi password and configure the AP interface:
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key my-wifi-secret</b>
 admin@example:/config/keystore/…/my-wifi-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/my-wifi-secret/> <b>set cleartext-symmetric-key TXlTZWN1cmVQYXNzd29yZDEyMw==</b>
+admin@example:/config/keystore/…/my-wifi-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/keystore/…/my-wifi-secret/> <b>end</b>
 </code></pre>
 
@@ -372,13 +379,19 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key main-secret</b>
 admin@example:/config/keystore/…/main-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/main-secret/> <b>set cleartext-symmetric-key TXlNYWluUGFzc3dvcmQ=</b>
+admin@example:/config/keystore/…/main-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/> <b>edit keystore symmetric-key guest-secret</b>
 admin@example:/config/keystore/…/guest-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/guest-secret/> <b>set cleartext-symmetric-key R3Vlc3RQYXNzd29yZDEyMw==</b>
+admin@example:/config/keystore/…/guest-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/> <b>edit keystore symmetric-key iot-secret</b>
 admin@example:/config/keystore/…/iot-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/iot-secret/> <b>set cleartext-symmetric-key SW9URGV2aWNlczIwMjU=</b>
+admin@example:/config/keystore/…/iot-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/keystore/…/iot-secret/> <b>leave</b>
 </code></pre>
 
