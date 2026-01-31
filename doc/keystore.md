@@ -22,15 +22,15 @@ managed via CLI, NETCONF, or RESTCONF.
 
 ### Supported Formats
 
-| Asymmetric Key Format                                    | Use Case      | Key Type   |
-|----------------------------------------------------------|---------------|------------|
-| `rsa-private-key-format` / `ssh-public-key-format`       | SSH host keys | RSA        |
-| `x25519-private-key-format` / `x25519-public-key-format` | WireGuard VPN | Curve25519 |
+| **Asymmetric Key Format**                                | **Use Case**  | **Key Type** |
+|----------------------------------------------------------|---------------|--------------|
+| `rsa-private-key-format` / `ssh-public-key-format`       | SSH host keys | RSA          |
+| `x25519-private-key-format` / `x25519-public-key-format` | WireGuard VPN | Curve25519   |
 
-| Symmetric Key format             | Use Case       | Key Length             |
-|----------------------------------|----------------|------------------------|
-| `wifi-preshared-key-format`      | WiFi WPA2/WPA3 | 8-63 characters        |
-| `wireguard-symmetric-key-format` | WireGuard PSK  | 44 characters (base64) |
+| **Symmetric Key Format**        | **Use Case**                          |
+|-----------------------------|-----------------------------------|
+| `passphrase-key-format`     | Human-readable passphrases (WiFi) |
+| `octet-string-key-format`   | Raw symmetric keys (WireGuard)    |
 
 ## Asymmetric Keys
 
@@ -63,15 +63,16 @@ all systems that need to communicate.
 ### WiFi Pre-Shared Keys
 
 WiFi networks secured with WPA2 or WPA3 use pre-shared keys stored as
-symmetric keys in the keystore.  The key must be 8-63 printable ASCII
-characters.
+symmetric keys in the keystore with `passphrase-key-format`.  The
+passphrase must be 8-63 printable ASCII characters.
 
 See [WiFi](wifi.md) for complete configuration examples.
 
 ### WireGuard Pre-Shared Keys
 
 WireGuard supports optional pre-shared keys (PSK) that add a layer of
-symmetric encryption alongside Curve25519.  This provides defense-in-depth
+symmetric encryption alongside Curve25519.  PSKs use the standard IETF
+`octet-string-key-format` (32 random bytes).  This provides defense-in-depth
 against future quantum computers that might break elliptic curve cryptography.
 Note, however, that WireGuard’s authentication and initial key agreement
 remain Curve25519-based, so PSKs only protect the session encryption,
@@ -126,12 +127,11 @@ as sensitive and protected accordingly.
 
 ### Key Validation
 
-The keystore validates symmetric keys based on their declared format:
+Symmetric key values are stored as binary (base64-encoded).  The system
+validates them based on their declared format:
 
-- **WiFi PSK**: Must be 8-63 characters
-- **WireGuard PSK**: Must be exactly 44 characters (base64-encoded)
-
-Invalid keys are rejected at configuration time.
+- `passphrase-key-format`:  Used by WiFi, must decode to 8-63 ASCII characters
+- `octet-string-key-format`: Used by Wireguard, must decode to exactly 32 bytes (256 bits)
 
 ## References
 
