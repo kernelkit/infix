@@ -190,7 +190,7 @@ def interface(args: List[str]) -> None:
     elif len(args) == 1:
         iface = args[0]
         if is_valid_interface_name(iface):
-            cli_pretty(data, f"show-interfaces", "-n", iface)
+            cli_pretty(data, "show-interfaces", "-n", iface)
         else:
             print(f"Invalid interface name: {iface}")
     else:

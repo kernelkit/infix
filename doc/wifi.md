@@ -241,6 +241,23 @@ In the CLI, signal strength is reported as: excellent, good, fair or bad.
 For precise signal strength values in dBm, use NETCONF or RESTCONF to access
 the `signal-strength` leaf in the operational datastore.
 
+## Passphrase Requirements
+
+To ensure your connection is secure and compatible with all network
+hardware, your passphrase must meet the following criteria:
+
+- Length: Between 8 and 63 characters
+- Characters: Use only standard English keyboard characters
+    - Allowed: Letters (A-Z, a-z), numbers (0-9), and common symbols (e.g., ! @ # $ % ^ & * ( ) _ + - = [ ] { } | ; : ' " , . < > / ? ~)
+    - Spaces: Spaces are allowed, but not at the very beginning or very end of the passphrase
+    - Prohibited: Emojis, accented characters (like á or ñ), and special "control" characters
+
+> [!TIP] Why the limit?
+> Standard WiFi security (WPA2/WPA3) requires a minimum of 8 characters to
+> prevent "brute-force" hacking.  The character limit ensures your password
+> works on older routers and various operating systems.  
+> Tips for password strength, see [XKCD #936](https://xkcd.com/936/).
+
 ## Station Mode (Client)
 
 Station mode connects to an existing Wi-Fi network. Before configuring station
@@ -254,9 +271,14 @@ Create a keystore entry for your WiFi password (8-63 characters):
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key my-wifi-key</b>
 admin@example:/config/keystore/…/my-wifi-key/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/my-wifi-key/> <b>set cleartext-symmetric-key TXlQYXNzd29yZDEyMw==</b>
+admin@example:/config/keystore/…/my-wifi-key/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/keystore/…/my-wifi-key/> <b>leave</b>
 </code></pre>
+
+The `change` command prompts for the passphrase interactively and
+handles the base64 encoding required by the keystore automatically.
 
 ### Step 2: Connect to Network
 
@@ -276,8 +298,9 @@ name                : wifi0
 type                : wifi
 operational status  : up
 physical address    : f0:09:0d:36:5f:86
-SSID                : MyHomeNetwork
-Signal              : excellent
+mode                : station
+ssid                : MyHomeNetwork
+signal              : -52 dBm (good)
 </code></pre>
 
 **Station configuration parameters:**
@@ -311,7 +334,9 @@ create a keystore entry for your WiFi password and configure the AP interface:
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key my-wifi-secret</b>
 admin@example:/config/keystore/…/my-wifi-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/my-wifi-secret/> <b>set cleartext-symmetric-key TXlTZWN1cmVQYXNzd29yZDEyMw==</b>
+admin@example:/config/keystore/…/my-wifi-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/keystore/…/my-wifi-secret/> <b>end</b>
 </code></pre>
 
@@ -372,13 +397,19 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key main-secret</b>
 admin@example:/config/keystore/…/main-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/main-secret/> <b>set cleartext-symmetric-key TXlNYWluUGFzc3dvcmQ=</b>
+admin@example:/config/keystore/…/main-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/> <b>edit keystore symmetric-key guest-secret</b>
 admin@example:/config/keystore/…/guest-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/guest-secret/> <b>set cleartext-symmetric-key R3Vlc3RQYXNzd29yZDEyMw==</b>
+admin@example:/config/keystore/…/guest-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/> <b>edit keystore symmetric-key iot-secret</b>
 admin@example:/config/keystore/…/iot-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/iot-secret/> <b>set cleartext-symmetric-key SW9URGV2aWNlczIwMjU=</b>
+admin@example:/config/keystore/…/iot-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
 admin@example:/config/keystore/…/iot-secret/> <b>leave</b>
 </code></pre>
 
@@ -466,8 +497,8 @@ If issues arise, try the following troubleshooting steps:
 
 1. **Verify signal strength**: Check that the target network shows
    "good" or "excellent" signal in scan results
-2. **Check credentials**: Verify the preshared key in the keystore
-   matches the network password
+2. **Check credentials**: Use `show keystore symmetric <name>` to verify
+   the passphrase matches the network password
 3. **Review logs**: Check system logs with `show log` for Wi-Fi related
    errors
 4. **Regulatory compliance**: Ensure the country-code on the radio

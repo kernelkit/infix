@@ -50,7 +50,12 @@ custom SSH host keys.
 
 WireGuard uses X25519 elliptic curve cryptography for key exchange.  Each
 WireGuard interface requires a public/private key pair stored as an asymmetric
-key in the keystore.
+key in the keystore.  Key pairs can be generated directly from the CLI:
+
+<pre class="cli"><code>admin@example:/> <b>wireguard genkey</b>
+Private: aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=
+Public:  bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=
+</code></pre>
 
 See [WireGuard VPN](vpn-wireguard.md) for key generation and configuration
 examples.
@@ -66,6 +71,14 @@ WiFi networks secured with WPA2 or WPA3 use pre-shared keys stored as
 symmetric keys in the keystore with `passphrase-key-format`.  The
 passphrase must be 8-63 printable ASCII characters.
 
+Since symmetric keys are stored as binary (base64-encoded), the CLI
+provides the `change` command to enter passphrases interactively:
+
+<pre class="cli"><code>admin@example:/config/keystore/…/my-wifi-key/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
+</code></pre>
+
 See [WiFi](wifi.md) for complete configuration examples.
 
 ### WireGuard Pre-Shared Keys
@@ -77,6 +90,12 @@ against future quantum computers that might break elliptic curve cryptography.
 Note, however, that WireGuard’s authentication and initial key agreement
 remain Curve25519-based, so PSKs only protect the session encryption,
 not the handshake itself.
+
+PSKs can be generated directly from the CLI:
+
+<pre class="cli"><code>admin@example:/> <b>wireguard genpsk</b>
+cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
+</code></pre>
 
 See [WireGuard VPN](vpn-wireguard.md) for PSK generation and usage examples.
 
