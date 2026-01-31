@@ -1,0 +1,128 @@
+From 597cf064f6076e3859f72b0da4dc0ab98ca2e1d2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Tue, 27 Jan 2026 22:54:59 +0100
+Subject: [PATCH 1/2] Libyang4 compat
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+libyang4 had breaking changes needs to be adapded for it.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ lib/northbound.c |  7 ++++++-
+ lib/yang.c       | 24 +++++++++++++++++++++---
+ lib/yang.h       |  6 ++++++
+ 3 files changed, 33 insertions(+), 4 deletions(-)
+
+diff --git a/lib/northbound.c b/lib/northbound.c
+index c21436804f..4de63f9b2d 100644
+--- a/lib/northbound.c
++++ b/lib/northbound.c
+@@ -2299,7 +2299,12 @@ bool nb_cb_operation_is_valid(enum nb_cb_operation operation,
+ 			if (sleaf->when)
+ 				return true;
+ 			if (CHECK_FLAG(sleaf->flags, LYS_MAND_TRUE)
+-			    || sleaf->dflt)
++#if (LY_VERSION_MAJOR < 4)
++			    || sleaf->dflt
++#else
++			    || sleaf->dflt.str
++#endif
++			    )
+ 				return false;
+ 			break;
+ 		case LYS_CONTAINER:
+diff --git a/lib/yang.c b/lib/yang.c
+index a8f66dce6e..aef0468a68 100644
+--- a/lib/yang.c
++++ b/lib/yang.c
+@@ -401,9 +401,13 @@ const char *yang_snode_get_default(const struct lysc_node *snode)
+ 	switch (snode->nodetype) {
+ 	case LYS_LEAF:
+ 		sleaf = (const struct lysc_node_leaf *)snode;
+-		return sleaf->dflt ? lyd_value_get_canonical(sleaf->module->ctx,
+-							     sleaf->dflt)
++#if (LY_VERSION_MAJOR < 4)
++		return sleaf->dflt ? lyd_value_get_canonical(sleaf->module->ctx, sleaf->dflt)
+ 				   : NULL;
++#else
++		/* NOTE: this is value in the schema, not necessarily the canonical form */
++		return sleaf->dflt.str;
++#endif
+ 	case LYS_LEAFLIST:
+ 		/* TODO: check leaf-list default values */
+ 		return NULL;
+@@ -954,6 +958,9 @@ LY_ERR yang_parse_notification(const char *xpath, LYD_FORMAT format,
+ 	}
+ 
+ 	err = lyd_parse_op(ly_native_ctx, NULL, in, format, LYD_TYPE_NOTIF_YANG,
++#if (LY_VERSION_MAJOR >= 4)
++			   LYD_PARSE_LYB_SKIP_CTX_CHECK /* parse_options */,
++#endif
+ 			   &tree, NULL);
+ 	ly_in_free(in, 0);
+ 	if (err) {
+@@ -1025,6 +1032,9 @@ LY_ERR yang_parse_rpc(const char *xpath, LYD_FORMAT format, const char *data,
+ 
+ 	err = lyd_parse_op(ly_native_ctx, parent, in, format,
+ 			   reply ? LYD_TYPE_REPLY_YANG : LYD_TYPE_RPC_YANG,
++#if (LY_VERSION_MAJOR >= 4)
++			   LYD_PARSE_LYB_SKIP_CTX_CHECK /* parse_options */,
++#endif
+ 			   NULL, rpc);
+ 	ly_in_free(in, 0);
+ 	if (err) {
+@@ -1072,6 +1082,7 @@ char *yang_convert_lyd_format(const char *data, size_t data_len,
+ 			      bool shrink)
+ {
+ 	struct lyd_node *tree = NULL;
++	uint32_t parse_options = LYD_PARSE_ONLY;
+ 	uint32_t options = LYD_PRINT_WD_EXPLICIT | LYD_PRINT_WITHSIBLINGS;
+ 	uint8_t *result = NULL;
+ 	LY_ERR err;
+@@ -1086,8 +1097,12 @@ char *yang_convert_lyd_format(const char *data, size_t data_len,
+ 	if (in_format == out_format)
+ 		return darr_strdup((const char *)data);
+ 
++#ifdef LYD_PARSE_LYB_SKIP_CTX_CHECK
++	if (in_format == LYD_LYB)
++		parse_options |= LYD_PARSE_LYB_SKIP_CTX_CHECK;
++#endif
+ 	err = lyd_parse_data_mem(ly_native_ctx, (const char *)data, in_format,
+-				 LYD_PARSE_ONLY, 0, &tree);
++				 parse_options, 0, &tree);
+ 
+ 	if (err) {
+ 		flog_err_sys(EC_LIB_LIBYANG,
+@@ -1171,6 +1186,9 @@ struct ly_ctx *yang_ctx_new_setup(bool embedded_modules, bool explicit_compile,
+ 	}
+ 
+ 	options = LY_CTX_DISABLE_SEARCHDIR_CWD;
++#if (LY_VERSION_MAJOR >= 4)
++	options |= LY_CTX_LYB_HASHES;
++#endif
+ 	if (!load_library)
+ 		options |= LY_CTX_NO_YANGLIBRARY;
+ 	if (explicit_compile)
+diff --git a/lib/yang.h b/lib/yang.h
+index 3877a421c5..7942573158 100644
+--- a/lib/yang.h
++++ b/lib/yang.h
+@@ -16,6 +16,12 @@
+ 
+ #include "yang_wrappers.h"
+ 
++/* libyang4 renamed LYD_PRINT_WITHSIBLINGS to LYD_PRINT_SIBLINGS */
++#include <libyang/version.h>
++#if (LY_VERSION_MAJOR >= 4)
++#define LYD_PRINT_WITHSIBLINGS LYD_PRINT_SIBLINGS
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+-- 
+2.43.0
+
