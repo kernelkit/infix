@@ -26,30 +26,24 @@ Key features of WireGuard:
 WireGuard uses public-key cryptography similar to SSH.  Each WireGuard interface
 requires a private key, and each peer is identified by its public key.
 
-**Generate a WireGuard key pair using the `wg` command:**
-
-```bash
-admin@example:~$ wg genkey | tee privatekey | wg pubkey > publickey
-admin@example:~$ cat privatekey
-aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=
-admin@example:~$ cat publickey
-bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=
-```
-
-This generates a private key, saves it to `privatekey`, derives the public key,
-and saves it to `publickey`.
-
-**Import the private key into the keystore:**
+**Import the key pair into the keystore:**
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore asymmetric-key wg-site-a</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>do wireguard genkey</b>
+Private: aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=
+Public:  bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=
 admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set public-key-format x25519-public-key-format</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set private-key-format x25519-private-key-format</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set public-key bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=</b>
-admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>set cleartext-private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/> <b>leave</b>
 admin@example:/>
 </code></pre>
+
+> [!TIP]
+> The `do` prefix allows running admin-exec commands from configure context.
+> Use the base for `wireguard genkey` when in admin-exec context.
 
 **Import peer public keys into the truststore:**
 
@@ -63,8 +57,7 @@ admin@example:/>
 
 > [!IMPORTANT]
 > Keep private keys secure!  Never share your private key.  Only exchange
-> public keys with peers.  Delete the `privatekey` file after importing it
-> into the keystore.
+> public keys with peers.
 
 ## Point-to-Point Configuration
 
@@ -394,20 +387,17 @@ recording traffic today would still need the PSK even if they break Curve25519
 later.  However, peer authentication still relies on Curve25519, so PSKs don't
 provide complete post-quantum security.
 
-**Generate a preshared key using `wg genpsk`:**
+**Generate a preshared key:**
 
-```bash
-admin@example:~$ wg genpsk > preshared.key
-admin@example:~$ cat preshared.key
+<pre class="cli"><code>admin@example:/config/> <b>do wireguard genpsk</b>
 cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
-```
+</code></pre>
 
 **Import the preshared key into the keystore:**
 
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit keystore symmetric-key wg-psk</b>
-admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key-format wireguard-symmetric-key-format</b>
-admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
+<pre class="cli"><code>admin@example:/config/> <b>edit keystore symmetric-key wg-psk</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set key-format octet-string-key-format</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/> <b>set cleartext-symmetric-key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
 admin@example:/config/keystore/symmetric-key/wg-psk/> <b>end</b>
 admin@example:/config/interface/wg0/> <b>edit wireguard peers wg-peers peer remote</b>
 admin@example:/config/interface/…/wg-peers/peer/remote/> <b>set preshared-key wg-psk</b>
@@ -420,5 +410,4 @@ on both sides.
 
 > [!IMPORTANT]
 > Preshared keys must be kept secret and exchanged through a secure channel,
-> just like passwords.  Delete the `preshared.key` file after importing it
-> into both peer keystores.
+> just like passwords.

@@ -12,6 +12,7 @@
 #include "core.h"
 #include "interfaces.h"
 #include "dagger.h"
+#include "base64.h"
 
 #define XPATH_BASE_              "/ietf-hardware:hardware"
 #define HOSTAPD_CONF             "/etc/hostapd-%s.conf"
@@ -235,8 +236,9 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 /* Helper: Write SSID and security configuration (shared between primary and BSS) */
 static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss)
 {
-	const char *ssid, *hidden, *security_mode, *secret_name, *secret;
+	const char *ssid, *hidden, *security_mode, *secret_name;
 	struct lyd_node *wifi, *ap, *security, *secret_node;
+	unsigned char *secret = NULL;
 	const char *ifname;
 	char bssid[18];
 
@@ -282,15 +284,19 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		security_mode = "open";
 
 	/* Get secret from keystore if needed */
-	secret = NULL;
 	if (strcmp(security_mode, "open") != 0) {
 		secret_name = lydx_get_cattr(security, "secret");
 		if (secret_name) {
+			const char *b64;
+
 			secret_node = lydx_get_xpathf(config,
-				"/keystore/symmetric-keys/symmetric-key[name='%s']/symmetric-key",
+				"/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key",
 				secret_name);
-			if (secret_node)
-				secret = lyd_get_value(secret_node);
+			if (secret_node) {
+				b64 = lyd_get_value(secret_node);
+				if (b64)
+					secret = base64_decode((const unsigned char *)b64, strlen(b64), NULL);
+			}
 		}
 	}
 
@@ -329,6 +335,8 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		/* ieee80211w=1: MFP capable but optional, for WPA2 client compatibility */
 		fprintf(hostapd, "ieee80211w=1\n");
 	}
+
+	free(secret);
 }
 
 /* Helper: Write radio-specific configuration */

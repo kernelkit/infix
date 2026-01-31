@@ -259,6 +259,21 @@
   </COMMAND>
 </COMMAND>
 
+<COMMAND name="wireguard" help="WireGuard VPN key tools" mode="switch">
+  <COMMAND name="genkey" help="Generate a WireGuard private/public key pair">
+    <ACTION sym="script">
+priv=$(wg genkey)
+pub=$(printf '%s' "$priv" | wg pubkey)
+echo "Private: $priv"
+echo "Public:  $pub"
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="genpsk" help="Generate a WireGuard pre-shared key">
+    <ACTION sym="script">wg genpsk</ACTION>
+  </COMMAND>
+</COMMAND>
+
 <COMMAND name="set" help="Set operations, e.g., current date/time" mode="switch">
   <COMMAND name="datetime" help="Set current date and time, ISO-8601 format">
     <PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
