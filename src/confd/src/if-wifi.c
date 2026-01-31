@@ -11,6 +11,7 @@
 #include <srx/srx_val.h>
 
 #include "interfaces.h"
+#include "base64.h"
 
 #define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
 
@@ -59,8 +60,9 @@ int wifi_mode_changed(struct lyd_node *wifi)
  */
 int wifi_gen_station(struct lyd_node *cif)
 {
-	const char *ifname, *ssid, *secret_name, *secret, *security_mode, *radio;
+	const char *ifname, *ssid, *secret_name, *security_mode, *radio;
 	struct lyd_node *security, *secret_node, *radio_node, *station, *wifi;
+	unsigned char *secret = NULL;
 	FILE *wpa_supplicant = NULL;
 	char *security_str = NULL;
 	const char *country;
@@ -91,12 +93,14 @@ int wifi_gen_station(struct lyd_node *cif)
 	country = lydx_get_cattr(radio_node, "country-code");
 
 	if (secret_name && strcmp(security_mode, "disabled") != 0) {
+		const char *b64;
+
 		secret_node = lydx_get_xpathf(cif,
 			"../../keystore/symmetric-keys/symmetric-key[name='%s']",
 			secret_name);
-		secret = lydx_get_cattr(secret_node, "symmetric-key");
-	} else {
-		secret = NULL;
+		b64 = lydx_get_cattr(secret_node, "cleartext-symmetric-key");
+		if (b64)
+			secret = base64_decode((const unsigned char *)b64, strlen(b64), NULL);
 	}
 
 	oldmask = umask(0077);
@@ -152,6 +156,7 @@ int wifi_gen_station(struct lyd_node *cif)
 	}
 
 out:
+	free(secret);
 	if (wpa_supplicant)
 		fclose(wpa_supplicant);
 	umask(oldmask);
