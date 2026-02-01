@@ -28,6 +28,7 @@ jobs:
     outputs:
       x86_64_target: ${{ steps.set-targets.outputs.x86_64_target }}
       aarch64_target: ${{ steps.set-targets.outputs.aarch64_target }}
+      arm_target: ${{ steps.set-targets.outputs.arm_target }}
     steps:
       - run: |
           echo "Triggering build, logging meta data ..."
@@ -43,9 +44,11 @@ jobs:
              | grep -q "ci:main"; then
             echo "x86_64_target=x86_64_minimal" >> $GITHUB_OUTPUT
             echo "aarch64_target=aarch64_minimal" >> $GITHUB_OUTPUT
+            echo "arm_target=arm_minimal" >> $GITHUB_OUTPUT
           else
             echo "x86_64_target=x86_64" >> $GITHUB_OUTPUT
             echo "aarch64_target=aarch64" >> $GITHUB_OUTPUT
+            echo "arm_target=arm" >> $GITHUB_OUTPUT
           fi
 
   build-x86_64:
@@ -61,6 +64,13 @@ jobs:
     with:
       name: "infix"
       target: ${{ needs.check-trigger.outputs.aarch64_target }}
+
+  build-arm:
+    needs: check-trigger
+    uses: ./.github/workflows/build.yml
+    with:
+      name: "infix"
+      target: ${{ needs.check-trigger.outputs.arm_target }}
 
   test-run-x86_64:
     needs: [check-trigger, build-x86_64]
