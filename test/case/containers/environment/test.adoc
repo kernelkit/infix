@@ -5,11 +5,13 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/environment]
 ==== Description
 
 Verify that environment variables can be set in container configuration
-and are available inside the running container.
+and are available inside the running container.  Also verify that
+changing an environment variable triggers a container restart.
 
 1  Set up a container config with multiple environment variables
 2. Serve variables back to host using a CGI script in container
 3. Verify served content against environment variables
+4. Change an environment variable and verify the container restarts
 
 ==== Topology
 
@@ -23,5 +25,7 @@ image::topology.svg[Container environment variables topology, align=center, scal
 . Verify container has started
 . Verify basic connectivity to data interface
 . Verify environment variables in CGI response
+. Change environment variable and verify container restarts
+. Verify container has restarted with updated env
 
 

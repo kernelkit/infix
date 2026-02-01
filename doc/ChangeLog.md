@@ -71,6 +71,7 @@ Noteworthy changes and additions in this release are marked below in bold text.
   similar to IPv4, correctly mapping to the ietf-ip.yang model semantics
 - Fix #1082: Wi-Fi interfaces always scanned, introduce a `scan-mode` to the
   Wi-Fi concept in Infix
+- Fix #1313: Container is not restarted if environment variable is changed
 - Fix #1314: Raspberry Pi 4B with 1 or 8 GiB RAM does not boot.  This was due
   newer EEPROM firmware in newer boards require a newer rpi-firmware package
 - Fix #1345: firewall not updating when interfaces become bridge/lag ports
