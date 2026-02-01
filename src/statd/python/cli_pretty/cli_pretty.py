@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import base64
 import json
 import argparse
 import sys
@@ -1030,6 +1031,7 @@ class DhcpServer:
 class Iface:
     # Class variable to hold routing-enabled interfaces for the current display session
     _routing_ifaces = set()
+    _keystore = {}
 
     def __init__(self, data):
         self.data = data
@@ -3381,6 +3383,131 @@ def show_nacm_user(json):
     print("For detailed rules, use: show nacm group <name>")
 
 
+def _keystore_format_name(key_format):
+    """Simplify key-format to a short display name."""
+    fmt = key_format.split(':')[-1] if ':' in key_format else key_format
+    return fmt.replace('-key-format', '')
+
+
+def _keystore_decode_symmetric(key):
+    """Decode a symmetric key value for display."""
+    key_format = key.get('key-format', '')
+    fmt = _keystore_format_name(key_format)
+    b64val = key.get('cleartext-symmetric-key', '')
+
+    if fmt == 'passphrase' and b64val:
+        try:
+            return base64.b64decode(b64val).decode('utf-8')
+        except Exception:
+            return b64val
+    return b64val if b64val else '-'
+
+
+def _keystore_find_key(keystore, kind, name):
+    """Find a key by type and name in the keystore."""
+    if kind == 'symmetric':
+        keys = keystore.get('symmetric-keys', {}).get('symmetric-key', [])
+    else:
+        keys = keystore.get('asymmetric-keys', {}).get('asymmetric-key', [])
+    for key in keys:
+        if key.get('name') == name:
+            return key
+    return None
+
+
+def _keystore_asym_type(key):
+    """Derive asymmetric key algorithm from key format fields."""
+    for field in ('private-key-format', 'public-key-format'):
+        fmt = key.get(field, '')
+        name = fmt.split(':')[-1] if ':' in fmt else fmt
+        name = name.replace('-private-key-format', '').replace('-public-key-format', '')
+        if name:
+            return name
+    return ''
+
+
+def show_keystore_detail(keystore, kind, name):
+    """Display detailed information about a specific key."""
+    key = _keystore_find_key(keystore, kind, name)
+    if not key:
+        print(f'{kind.capitalize()} key "{name}" not found.')
+        return
+
+    print(f"{'name':<{20}}: {name}")
+    if kind == 'symmetric':
+        fmt = _keystore_format_name(key.get('key-format', ''))
+        value = _keystore_decode_symmetric(key)
+        print(f"{'format':<{20}}: {fmt}")
+        print(f"{'value':<{20}}: {value}")
+    else:
+        ktype = _keystore_asym_type(key)
+        if ktype:
+            print(f"{'algorithm':<{20}}: {ktype}")
+        pub_fmt = _keystore_format_name(key.get('public-key-format', ''))
+        if pub_fmt:
+            print(f"{'public key format':<{20}}: {pub_fmt}")
+        pub_key = key.get('public-key', '')
+        if pub_key:
+            print(f"{'public key':<{20}}: {pub_key}")
+
+
+def show_keystore(json, kind=None, name=None):
+    """Display keystore keys overview or detail for a specific key."""
+    keystore = json.get("ietf-keystore:keystore", {})
+    if not keystore:
+        print("Keystore is empty.")
+        return
+
+    if kind and name:
+        show_keystore_detail(keystore, kind, name)
+        return
+
+    TABLE_WIDTH = 72
+
+    # Symmetric keys
+    sym_keys_data = keystore.get('symmetric-keys', {}).get('symmetric-key', [])
+    if sym_keys_data:
+        Decore.title("Symmetric Keys", TABLE_WIDTH)
+        table = SimpleTable([
+            Column('NAME', flexible=True),
+            Column('FORMAT'),
+            Column('VALUE', flexible=True)
+        ], min_width=TABLE_WIDTH)
+
+        for key in sym_keys_data:
+            name = key.get('name', '')
+            fmt = _keystore_format_name(key.get('key-format', ''))
+            value = _keystore_decode_symmetric(key)
+            table.row(name, fmt, value)
+
+        table.print()
+
+    # Asymmetric keys
+    asym_keys_data = keystore.get('asymmetric-keys', {}).get('asymmetric-key', [])
+    if asym_keys_data:
+        Decore.title("Asymmetric Keys", TABLE_WIDTH)
+        table = SimpleTable([
+            Column('NAME', flexible=True),
+            Column('TYPE'),
+            Column('PUBLIC KEY', flexible=True)
+        ], min_width=TABLE_WIDTH)
+
+        for key in asym_keys_data:
+            name = key.get('name', '')
+            ktype = _keystore_asym_type(key)
+
+            pub_key = key.get('public-key', '')
+            if len(pub_key) > 40:
+                pub_key = pub_key[:37] + '...'
+
+            table.row(name, ktype, pub_key)
+
+        table.print()
+
+    if not sym_keys_data and not asym_keys_data:
+        print("Keystore is empty.")
+
+
 def show_system(json):
     """System information overivew"""
     if not json.get("ietf-system:system-state"):
@@ -5369,6 +5496,10 @@ def main():
     subparsers.add_parser('show-nacm-group', help='Show NACM group details')
     subparsers.add_parser('show-nacm-user', help='Show NACM user details')
 
+    ks_parser = subparsers.add_parser('show-keystore', help='Show keystore keys')
+    ks_parser.add_argument('-t', '--type', help='Key type (symmetric or asymmetric)')
+    ks_parser.add_argument('-n', '--name', help='Key name')
+
     subparsers.add_parser('show-ntp', help='Show NTP status') \
               .add_argument('-a', '--address', help='Show details for specific address')
     subparsers.add_parser('show-ntp-tracking', help='Show NTP tracking status')
@@ -5438,6 +5569,8 @@ def main():
         show_nacm_group(json_data)
     elif args.command == "show-nacm-user":
         show_nacm_user(json_data)
+    elif args.command == "show-keystore":
+        show_keystore(json_data, getattr(args, 'type', None), args.name)
     elif args.command == "show-ntp":
         show_ntp(json_data, args.address)
     elif args.command == "show-ntp-tracking":

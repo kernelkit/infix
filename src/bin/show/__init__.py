@@ -659,6 +659,25 @@ def nacm(args: List[str]) -> None:
         print(f"Unknown NACM subcommand: {subcommand}")
 
 
+def keystore(args: List[str]) -> None:
+    data = get_json("/ietf-keystore:keystore", "running", quiet=True)
+    if not data:
+        user = os.environ.get('USER', 'unknown')
+        print(f'No keystore data available (check NACM permissions for "{user}").')
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    if len(args) == 0 or not args[0]:
+        cli_pretty(data, "show-keystore")
+    elif len(args) >= 2 and args[0] in ("symmetric", "asymmetric"):
+        cli_pretty(data, "show-keystore", "-t", args[0], "-n", args[1])
+    else:
+        print("Usage: show keystore [symmetric <name> | asymmetric <name>]")
+
+
 def execute_command(command: str, args: List[str]):
     command_mapping = {
         'bfd': bfd,
@@ -667,6 +686,7 @@ def execute_command(command: str, args: List[str]):
         'dhcp': dhcp,
         'hardware': hardware,
         'interface': interface,
+        'keystore': keystore,
         'lldp': lldp,
         'nacm': nacm,
         'ntp': ntp,

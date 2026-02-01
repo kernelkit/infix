@@ -101,27 +101,55 @@ See [WireGuard VPN](vpn-wireguard.md) for PSK generation and usage examples.
 
 ## Viewing Keys
 
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>show keystore</b>
-asymmetric-keys {
-  asymmetric-key genkey {
-    public-key-format ssh-public-key-format;
-    public-key MIIBCgKCAQEAm6uCENSafz7mIfIJ8O.... AQAB;
-    private-key-format rsa-private-key-format;
-    cleartext-private-key MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYw...b7dyPr4mpHg==;
-  }
-}
+The `show keystore` command in admin-exec mode gives an overview of all
+keys in the keystore.  Passphrases (WiFi passwords) are decoded and shown
+in cleartext, while binary keys (WireGuard PSKs) are shown as base64:
+
+<pre class="cli"><code>admin@example:/> <b>show keystore</b>
+────────────────────────────────────────────────────────────────────────
+<span class="title">Symmetric Keys</span>
+<span class="header">NAME                         FORMAT        VALUE                        </span>
+my-wifi-key                  passphrase    MySecretPassword
+wg-psk                       octet-string  zYr83O4Ykj9i1gN+/aaosJxQx...
+
+────────────────────────────────────────────────────────────────────────
+<span class="title">Asymmetric Keys</span>
+<span class="header">NAME                         TYPE    PUBLIC KEY                         </span>
+genkey                       rsa     MIIBCgKCAQEAnj0YinjhYDgYbEGuh7...
+wg-tunnel                    x25519  bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1...
+</code></pre>
+
+To see the full (untruncated) details of a specific key, use the
+`symmetric` or `asymmetric` qualifier with the key name:
+
+<pre class="cli"><code>admin@example:/> <b>show keystore symmetric my-wifi-key</b>
+name                : my-wifi-key
+format              : passphrase
+value               : MySecretPassword
+
+admin@example:/> <b>show keystore asymmetric genkey</b>
+name                : genkey
+algorithm           : rsa
+public key format   : ssh-public-key
+public key          : MIIBCgKCAQEAnj0YinjhY...full key...IDAQAB
+</code></pre>
+
+> [!NOTE]
+> The `show keystore` command is protected by NACM.  Only users in the
+> `admin` group can view keystore data.  Operator-level users will see a
+> message indicating that no keystore data is available.
+
+The full configuration-mode view (including private keys) is still
+available via `configure` and then `show keystore`:
+
+<pre class="cli"><code>admin@example:/config/> <b>show keystore</b>
 </code></pre>
 
 > [!WARNING]
-> The `show keystore` command displays private keys in cleartext.  Be careful
-> when viewing keys on shared screens or in logged sessions.
-
-To list only asymmetric or symmetric keys:
-
-<pre class="cli"><code>admin@example:/config/> <b>show keystore asymmetric-keys</b>
-admin@example:/config/> <b>show keystore symmetric-keys</b>
-</code></pre>
+> The configuration-mode `show keystore` displays private keys in
+> cleartext.  Be careful when viewing keys on shared screens or in
+> logged sessions.  The admin-exec `show keystore` command never
+> displays private keys.
 
 ## Deleting Keys
 
