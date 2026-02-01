@@ -31,6 +31,7 @@ CLI has several keybindings, most significant first:
 | Ctrl-q  | Ctrl-v         | Insert next character literally                  |
 | Ctrl-r  |                | History, reversed interactive search (i-search)  |
 | Ctrl-t  |                | Transpose/Swap characters before and at cursor   |
+| Meta-#  | Alt-Shift-3    | Prepend # to current line and submit to history  |
 
 ## What is Meta?
 
