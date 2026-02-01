@@ -7,6 +7,8 @@
  * configuration (hostapd) is handled by hardware.c.
  */
 
+#include <ctype.h>
+
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
@@ -15,6 +17,65 @@
 
 #define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
 
+
+int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif)
+{
+	struct lyd_node *wifi, *station, *security, *secret_node;
+	const char *ifname, *secret_name, *security_mode, *b64;
+	unsigned char *decoded;
+	size_t len;
+
+	ifname = lydx_get_cattr(cif, "name");
+	wifi = lydx_get_child(cif, "wifi");
+	if (!wifi)
+		return SR_ERR_OK;
+
+	station = lydx_get_child(wifi, "station");
+	if (!station)
+		return SR_ERR_OK;
+
+	security = lydx_get_child(station, "security");
+	security_mode = lydx_get_cattr(security, "mode");
+	secret_name = lydx_get_cattr(security, "secret");
+
+	if (!secret_name || !strcmp(security_mode, "disabled"))
+		return SR_ERR_OK;
+
+	secret_node = lydx_get_xpathf(cif,
+		"../../keystore/symmetric-keys/symmetric-key[name='%s']",
+		secret_name);
+	b64 = lydx_get_cattr(secret_node, "cleartext-symmetric-key");
+	if (!b64 || !*b64)
+		return SR_ERR_OK;
+
+	decoded = base64_decode((const unsigned char *)b64, strlen(b64), &len);
+	if (!decoded)
+		return SR_ERR_OK;
+
+	if (len < 8 || len > 63) {
+		if (session)
+			sr_session_set_error_message(session,
+				"%s: WiFi passphrase must be 8-63 characters, got %zu",
+				ifname, len);
+		free(decoded);
+		return SR_ERR_VALIDATION_FAILED;
+	}
+
+	for (size_t i = 0; i < len; i++) {
+		if (!isprint((unsigned char)decoded[i])) {
+			if (session)
+				sr_session_set_error_message(session,
+					"%s: WiFi passphrase contains non-printable "
+					"character at position %zu",
+					ifname, i + 1);
+			free(decoded);
+			return SR_ERR_VALIDATION_FAILED;
+		}
+	}
+
+	free(decoded);
+	return SR_ERR_OK;
+}
 
 wifi_mode_t wifi_get_mode(struct lyd_node *iface)
 {

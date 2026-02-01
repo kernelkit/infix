@@ -105,6 +105,7 @@ const char *get_chassis_addr(void);
 int interface_get_phys_addr(struct lyd_node *cif, char *mac);
 int link_gen_address(struct lyd_node *cif, FILE *ip);
 int interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces);
+int interfaces_validate_keys(sr_session_ctx_t *session, struct lyd_node *config);
 
 /* ip.c */
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
@@ -130,6 +131,7 @@ typedef enum wifi_mode_t {
 	wifi_unknown
 } wifi_mode_t;
 
+int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif);
 int wifi_add_iface(struct lyd_node *cif, struct dagger *net);
 int wifi_del_iface(struct lyd_node *dif, struct dagger *net);
 int wifi_mode_changed(struct lyd_node *wifi);
@@ -162,6 +164,7 @@ int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 /* infix-if-wireguard */
+int wireguard_validate_peers(sr_session_ctx_t *session, struct lyd_node *cif);
 int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip,  struct dagger *net);
 
 #endif /* CONFD_INTERFACES_H_ */

@@ -2,8 +2,80 @@
 #include <srx/lyx.h>
 
 #include "interfaces.h"
+#include "base64.h"
 
 #define WIREGUARD_CONFIG "/run/wireguard-%s.conf"
+
+static int wireguard_validate_psk(sr_session_ctx_t *session, struct lyd_node *cif,
+				  const char *ifname, const char *psk_ref)
+{
+	struct lyd_node *psk_node;
+	const char *psk_data;
+	unsigned char *decoded;
+	size_t len;
+
+	psk_node = lydx_get_xpathf(cif,
+		"../../keystore/symmetric-keys/symmetric-key[name='%s']",
+		psk_ref);
+	if (!psk_node)
+		return SR_ERR_OK;
+
+	psk_data = lydx_get_cattr(psk_node, "cleartext-symmetric-key");
+	if (!psk_data || !*psk_data)
+		return SR_ERR_OK;
+
+	decoded = base64_decode((const unsigned char *)psk_data, strlen(psk_data), &len);
+	if (!decoded)
+		return SR_ERR_OK;
+
+	if (len != 32) {
+		if (session)
+			sr_session_set_error_message(session,
+				"%s: WireGuard preshared key '%s' must be "
+				"exactly 32 bytes, got %zu",
+				ifname, psk_ref, len);
+		free(decoded);
+		return SR_ERR_VALIDATION_FAILED;
+	}
+
+	free(decoded);
+	return SR_ERR_OK;
+}
+
+int wireguard_validate_peers(sr_session_ctx_t *session, struct lyd_node *cif)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	struct lyd_node *wg, *bag_peer, *peer;
+
+	wg = lydx_get_child(cif, "wireguard");
+	if (!wg)
+		return SR_ERR_OK;
+
+	LYX_LIST_FOR_EACH(lyd_child(wg), bag_peer, "peers") {
+		const char *psk_ref;
+		int rc;
+
+		/* Validate bag-level PSK */
+		psk_ref = lydx_get_cattr(bag_peer, "preshared-key");
+		if (psk_ref) {
+			rc = wireguard_validate_psk(session, cif, ifname, psk_ref);
+			if (rc)
+				return rc;
+		}
+
+		/* Validate per-peer PSK overrides */
+		LYX_LIST_FOR_EACH(lyd_child(bag_peer), peer, "peer") {
+			psk_ref = lydx_get_cattr(peer, "preshared-key");
+			if (psk_ref) {
+				rc = wireguard_validate_psk(session, cif, ifname, psk_ref);
+				if (rc)
+					return rc;
+			}
+		}
+	}
+
+	return SR_ERR_OK;
+}
 
 /* Helper to get a peer setting with override logic:
  * 1. Check peer-specific override
