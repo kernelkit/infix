@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-KLISH_VERSION = 1c31f50ab775d467fa18f2e0a798006949536a2a
+KLISH_VERSION = 3ae496c43d90354ffa94d364d7775c089f0e119a
 KLISH_SITE = https://github.com/kernelkit/klish.git
 #KLISH_VERSION = tags/3.0.0
 #KLISH_SITE = https://src.libcode.org/pkun/klish.git

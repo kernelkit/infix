@@ -63,6 +63,21 @@ calc_sha()
     sha256sum "$1" 2>/dev/null | awk '{print $1}'
 }
 
+# Calculate a combined SHA256 over the container script and its
+# optional env file.  Environment variables are stored separately
+# from the script, so both must be included in the checksum to
+# detect configuration changes such as added/changed env vars.
+calc_config_sha()
+{
+    _envfile="/run/containers/args/${name}.env"
+
+    if [ -f "$_envfile" ]; then
+	cat "$1" "$_envfile" | sha256sum | awk '{print $1}'
+    else
+	calc_sha "$1"
+    fi
+}
+
 # Check image transport, return 0 if remote, 1 if local
 is_remote()
 {
@@ -124,7 +139,7 @@ is_uptodate()
 		    # If SHA matches, check container instance
 		    if [ "$stored_sha" = "$current_sha" ]; then
 			if podman container exists "$name"; then
-			    config_sha=$(calc_sha "$script")
+			    config_sha=$(calc_config_sha "$script")
 			    container_sha=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
 			    container_img_sha=$(podman inspect "$name" --format '{{index .Config.Labels "meta-image-sha256"}}' 2>/dev/null)
 
@@ -143,7 +158,7 @@ is_uptodate()
     else
 	# Remote image optimization: check config-sha256 only
 	if podman container exists "$name"; then
-	    config_sha=$(calc_sha "$script")
+	    config_sha=$(calc_config_sha "$script")
 	    container_sha=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
 
 	    if [ "$container_sha" = "$config_sha" ]; then
@@ -459,7 +474,7 @@ create()
 	fi
 
 	# Add config checksum label
-	args="$args --label config-sha256=$(calc_sha "$script")"
+	args="$args --label config-sha256=$(calc_config_sha "$script")"
     fi
 
     # shellcheck disable=SC2048
