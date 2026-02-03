@@ -4,11 +4,11 @@
 #
 ################################################################################
 
-MDNS_ALIAS_VERSION = 1.0
+MDNS_ALIAS_VERSION = 1.1
 MDNS_ALIAS_SITE = https://github.com/troglobit/mdns-alias/releases/download/v$(MDNS_ALIAS_VERSION)
 MDNS_ALIAS_LICENSE = ISC
 MDNS_ALIAS_LICENSE_FILES = LICENSE
-MDNS_ALIAS_DEPENDENCIES = host-pkgconf avahi
+MDNS_ALIAS_DEPENDENCIES = host-pkgconf avahi libuev
 #MDNS_ALIAS_AUTORECONF = YES
 #MDNS_ALIAS_DEPENDENCIES += host-automake host-autoconf
 
