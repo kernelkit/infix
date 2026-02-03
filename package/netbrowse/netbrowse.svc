@@ -1,2 +1,2 @@
-service <!> name:netbrowse @www-data:www-data log:prio:daemon.debug,tag:mdns \
-	[2345] gunicorn -w 1 -b 127.0.0.1:8000 netbrowse:app -- Network browser
+service <!> name:netbrowse log:prio:daemon.debug,tag:netbrowse \
+	[2345] netbrowse -l 127.0.0.1:8000 -- Network browser

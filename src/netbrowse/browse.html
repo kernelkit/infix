@@ -12,30 +12,21 @@
       .container h1 {
 	  text-align: center;
 	  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-	  /* margin-top: 50px; */
-	  /* margin-bottom: 20px; */
 	  font-size: 32px;
 	  color: #333;
-	  padding: 20px; /* Add some padding around the text */
+	  padding: 20px;
       }
-      /* Container for the checkbox for better alignment */
       .checkbox-container {
-	  margin-bottom: 20px; /* Spacing between the checkbox and the table */
+	  margin-bottom: 20px;
 	  display: flex;
-	  align-items: center; /* Vertically center the checkbox and label */
+	  align-items: center;
       }
-      /* Styles for the label text for better readability */
       .checkbox-container label {
 	  margin-left: 5px;
 	  font-size: 16px;
       }
-      /* Custom checkbox styles if needed */
-      input[type="checkbox"] {
-	  /* Custom styles here */
-      }
       .container table {
 	  background-color: rgba(255, 255, 255, 0.75);
-	  /* background-color: white; */
       }
       .network-image {
           display: block;
@@ -48,7 +39,6 @@
       .other { display: none; }
       .toggle-button {
 	  cursor: pointer;
-	  /* font-size: 20px; */
 	  color: #333;
 	  line-height: 1;
 	  user-select: none;
@@ -57,10 +47,10 @@
       html, body {
 	  height: 100%;
 	  font-family: Arial, sans-serif;
-	  margin: 0; /* 20px */
+	  margin: 0;
 	  padding: 0;
 	  /* By kjpargeter https://www.freepik.com/free-vector/network-connections-background_2533758.htm */
-	  background-image: url('{{ url_for("static", filename="images/2533758_8245.svg") }}');
+	  background-image: url('/static/images/2533758_8245.svg');
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
@@ -69,13 +59,13 @@
 	  border-collapse: collapse;
 	  width: 100%;
 	  margin: 20px auto;
-	  border: 2px solid rgba(0, 0, 0, 0.1); /* Slight, semi-transparent border */
+	  border: 2px solid rgba(0, 0, 0, 0.1);
 	  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
       table tr th:first-child, table tr td:first-child {
-	  width: 1%; /* Minimize the width */
-	  white-space: nowrap; /* Prevents content from wrapping */
-	  padding: 10px; /* Adjust padding as needed */
+	  width: 1%;
+	  white-space: nowrap;
+	  padding: 10px;
       }
       th, td {
 	  text-align: left;
@@ -92,10 +82,7 @@
   </head>
 <body>
   <div class="container">
-    <!-- <input type="text" id="search" onkeyup="filter()" placeholder="Filter column ..."> -->
     <div class="network-image">
-        <!-- Icon created by Ranah Pixel Studio -- https://www.flaticon.com/free-icons/computer -->
-	<!-- <img src="{{ url_for('static', filename='images/switch.png') }}" width="160px"> -->
     </div>
     <h1>mDNS Hosts and Services</h1>
     <div class="checkbox-container">
@@ -109,25 +96,25 @@
 	<tr><th></th><th>Link</th><th>Name</th><th>Type</th></tr>
       </thead>
       <tbody>
-	{% for link, details in hosts_services.items() %}
-	{% for service in details.services %}
-	{% if loop.first %}
-	<tr class="device-row {{ 'other' if service.other else '' }}">
-	  <td><span class="toggle-button" onclick="toggleFoldout('{{ link }}', event)">&#x25B6;</span></td>
-	{% else %}
-	<tr class="device-row detail-row" data-name="{{ link }}">
+	{{range $link, $services := .Hosts}}
+	{{range $i, $svc := $services}}
+	{{if eq $i 0}}
+	<tr class="device-row {{if $svc.Other}}other{{end}}">
+	  <td><span class="toggle-button" onclick="toggleFoldout('{{$link}}', event)">&#x25B6;</span></td>
+	{{else}}
+	<tr class="device-row detail-row" data-name="{{$link}}">
 	  <td></td>
-        {% endif %}
-	  {% if service.url %}
-          <td><a href="{{ service.url }}" target="_blank" rel="noopener noreferrer">{{ link }}</a></td>
-	  {% else %}
-          <td>{{ link }}</td>
-	  {% endif %}
-	  <td>{{ service.name }}</td>
-          <td>{{ service.type }}</td>
+        {{end}}
+	  {{if $svc.URL}}
+          <td><a href="{{$svc.URL}}" target="_blank" rel="noopener noreferrer">{{$link}}</a></td>
+	  {{else}}
+          <td>{{$link}}</td>
+	  {{end}}
+	  <td>{{$svc.Name}}</td>
+          <td>{{$svc.Type}}</td>
 	</tr>
-	{% endfor %}
-	{% endfor %}
+	{{end}}
+	{{end}}
       </tbody>
     </table>
   </div>
@@ -184,7 +171,6 @@
 
     function toggleAll(checkbox) {
 	const allRows = document.querySelectorAll('.device-row');
-	const otherRows = document.querySelectorAll('.other');
 
 	allRows.forEach(row => {
 	    if (row.classList.contains('other'))
