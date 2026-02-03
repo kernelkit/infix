@@ -202,7 +202,7 @@ llscan_mdns()
 	flags="-tarpk"
     fi
 
-    avahi-browse $flags | awk -F';' -v show_all="$all" '
+    avahi-browse $flags 2>/dev/null | awk -F';' -v show_all="$all" '
     $1 == "=" {
 	host = $7
 	proto = $3
