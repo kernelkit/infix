@@ -1,0 +1,3290 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infix Documentation">
+      
+      
+      
+        <link rel="canonical" href="https://kernelkit.github.io/infix/26.01/system/">
+      
+      
+        <link rel="prev" href="../boot/">
+      
+      
+        <link rel="next" href="../nacm/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Configuration - User's Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: black; }
+            .glightbox-clean .gslide-media { -webkit-box-shadow: none; box-shadow: none; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#system-configuration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            User's Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"></path></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    User's Guide
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/configure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/keybindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keybindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/netcalc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Calculator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/tcpdump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/quick/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/text-editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Text Editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker Containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Networking
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Networking
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Link Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ethernet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IP Addressing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Firewall Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quality of Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eth-counters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RMON Counters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tunnels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tunneling (L2/L3)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        
+          
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VPN Tunnels
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    VPN Tunnels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpn-wireguard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WireGuard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wifi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wireless LAN (WiFi)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Services
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Services
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DHCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ntp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NTP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    System
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boot Procedure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#changing-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing Password
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Changing Password">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ssh-authorized-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSH Authorized Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Users
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multiple Users">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-user" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a User
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-user-to-a-group" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a User to a Group
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-control-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access Control Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-aspects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Aspects
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-hostname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing Hostname
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-login-banner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing Login Banner
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-the-editor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing the Editor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dns-resolver-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DNS Resolver Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ntp-client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NTP Client Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="NTP Client Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#show-ntp-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show NTP Sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-ntp-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show NTP Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nacm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access Control (NACM)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware Info &amp; Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keystore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keystore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../syslog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syslog Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Scripting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-sysrepocfg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-netconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NETCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-restconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RESTCONF Scripting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8">
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer's Corner
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer's Corner
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../branding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Branding &amp; Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developers-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer's Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../override-package/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developing with Buildroot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netboot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Netboot HowTo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-arch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test System Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../virtual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Virtual Environments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vital Product Data (VPD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Origin &amp; Licensing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#changing-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing Password
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Changing Password">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ssh-authorized-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSH Authorized Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Users
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multiple Users">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-user" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a User
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-user-to-a-group" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a User to a Group
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-control-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access Control Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-aspects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Aspects
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-hostname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing Hostname
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-login-banner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing Login Banner
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-the-editor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing the Editor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dns-resolver-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DNS Resolver Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ntp-client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NTP Client Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="NTP Client Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#show-ntp-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show NTP Sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-ntp-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show NTP Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation">
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href=".." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../boot/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    System
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="system-configuration">System Configuration<a class="headerlink" href="#system-configuration" title="Permanent link">¶</a></h1>
+<p>System settings in Infix are provided by the <a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a> YANG
+model, augmented with Linux specific extensions in <a href="https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-system%402024-02-29.yang">infix-system</a>,
+like Message of the Day (login message) and user login shell.  More
+on this later on in this document.</p>
+<p>For the sake of brevity, the hostname in the following examples has been
+shortened to <code>example</code>.  The default hostname is composed from a product
+specific string followed by the last three octets of the system base MAC
+address, e.g., <code>switch-12-34-56</code>.  An example of how to change the
+hostname is included below.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When issuing <code>leave</code> to activate your changes, remember to also save
+your settings, <code>copy running-config startup-config</code>.  See the <a href="../cli/introduction/">CLI
+Introduction</a> for a background.</p>
+</div>
+<h2 id="changing-password">Changing Password<a class="headerlink" href="#changing-password" title="Permanent link">¶</a></h2>
+<p>User management, including passwords, SSH keys, remote authentication is
+available in the system authentication configuration context.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user admin</b>
+admin@example:/config/system/…/user/admin/&gt; <b>change password</b>
+New password:
+Retype password:
+admin@example:/config/system/…/user/admin/&gt; <b>leave</b>
+</code></pre>
+
+<p>The <code>change password</code> command starts an interactive dialogue that asks
+for the new password, with a confirmation, and then salts and encrypts
+the password with sha512crypt.</p>
+<p>It is also possible to use the <code>set password ...</code> command.  This allows
+setting an already hashed password.  To manually hash a password, use
+the <code>do password encrypt</code> command.  This launches the admin-exec command
+to hash, and optionally salt, your password.  This encrypted string can
+then be used with <code>set password ...</code>.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you are having trouble thinking of a password, there is a nifty
+<code>password generate</code> command in admin-exec context which generates
+random passwords using the UNIX command <code>pwgen</code>.  Use the <code>do</code> prefix
+when inside any configuration context to access admin-exec commands.</p>
+</div>
+<h3 id="ssh-authorized-key">SSH Authorized Key<a class="headerlink" href="#ssh-authorized-key" title="Permanent link">¶</a></h3>
+<p>Logging in remotely with SSH is possible by adding a <em>public key</em> to a
+user.  Here we add the authorized key to the admin user, multiple keys
+are supported.</p>
+<p>With SSH keys in place it is possible to disable password login, just
+remember to verify SSH login and network connectivity before doing so.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user admin</b>
+admin@example:/config/system/…/user/admin/&gt; <b>edit authorized-key admin@example</b>
+admin@example:/config/system/…/example@host/&gt; <b>set algorithm ssh-rsa</b>
+admin@example:/config/system/…/example@host/&gt; <b>set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=</b>
+admin@example:/config/system/…/example@host/&gt; <b>show</b>
+algorithm ssh-rsa;
+key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
+admin@example:/config/system/…/example@host/&gt; <b>leave</b>
+</code></pre>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code>ssh-keygen</code> program already base64 encodes the public key data,
+so there is no need to use the <code>text-editor</code> command, <code>set</code> does the
+job.</p>
+</div>
+<h2 id="multiple-users">Multiple Users<a class="headerlink" href="#multiple-users" title="Permanent link">¶</a></h2>
+<p>The factory configuration provides three hierarchical user group levels by
+default: <strong>guest ⊂ operator ⊂ admin</strong>.  These levels work out-of-the-box
+with sensible permissions - operators can configure the system immediately,
+while sensitive items (passwords, cryptographic keys) remain protected.</p>
+<p>The default levels provide different access to system resources and
+configuration:</p>
+<ul>
+<li>
+<p><strong>Admin</strong>: Full system access - can manage users, upgrade software,
+  restart the system, and modify all configuration including network
+  settings, routing, and firewall rules.</p>
+</li>
+<li>
+<p><strong>Operator</strong>: Configuration access - can modify most system settings
+  including network interfaces, routing, firewall, hostname, and more.
+  <em>Cannot access</em> password hashes, cryptographic keys, or perform
+  sensitive operations (factory reset, software upgrade).</p>
+</li>
+<li>
+<p><strong>Guest</strong>: Read-only access - can view operational state and
+  configuration but cannot modify anything or execute operations.</p>
+</li>
+</ul>
+<p>System access control is handled by the <a href="https://www.rfc-editor.org/rfc/rfc8341">ietf-netconf-acm</a> YANG model,
+usually referred to as <a href="../nacm/">NACM</a>, which provides granular access to
+configuration, data, and RPC commands.  The hierarchical levels in the system
+are determined by:</p>
+<ol>
+<li><strong>NACM permissions</strong> - what the user can access</li>
+<li><strong>Shell setting</strong> - which command-line interface the user can use</li>
+</ol>
+<p>By default the system ships with a single user, <code>admin</code>, in the <code>admin</code>
+group.  There are no restrictions on the number of users with admin
+privileges, nor is the <code>admin</code> user reserved or protected -- it can be
+removed from the configuration.  However, it is strongly recommended to
+keep at least one user with administrator privileges, otherwise the only
+way to regain full access is to perform a <em>factory reset</em>.</p>
+<p>For an overview of users and groups on the system, there is an admin-exec
+command:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show nacm</b>
+enabled              : yes
+default read access  : permit
+default write access : permit
+default exec access  : permit
+denied operations    : 0
+denied data writes   : 0
+denied notifications : 0
+
+          ┌──────────┬─────────┬─────────┬─────────┐
+          │ GROUP    │  READ   │  WRITE  │  EXEC   │
+          ├──────────┼─────────┼─────────┼─────────┤
+          │ admin    │    ✓    │    ✓    │    ✓    │
+          │ operator │    ⚠    │    ⚠    │    ⚠    │
+          │ guest    │    ⚠    │    ✗    │    ✗    │
+          └──────────┴─────────┴─────────┴─────────┘
+              ✓ Full    ⚠ Restricted    ✗ Denied
+
+<span class="header">USER                   SHELL   LOGIN                            </span>
+admin                  bash    password+key
+jacky                  clish   password
+monitor                false   key
+
+<span class="header">GROUP                  USERS                                    </span>
+admin                  admin
+operator               jacky
+guest                  monitor
+</code></pre>
+
+<p>The permissions matrix shows effective access for each NACM group:</p>
+<ul>
+<li><strong>✓ Full</strong> (green) - unrestricted access</li>
+<li><strong>⚠ Restricted</strong> (yellow) - access with exceptions, use <code>show nacm group</code>
+  for details</li>
+<li><strong>✗ Denied</strong> (red) - no access</li>
+</ul>
+<p>For detailed information about a specific group's rules:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show nacm group operator</b>
+members          : jacky
+read permission  : restricted
+write permission : restricted
+exec permission  : restricted
+applicable rules : 4
+──────────────────────────────────────────────────────────────────────
+<span class="title">permit-system-rpcs</span>
+  action     : permit
+  operations : exec
+  target     : ietf-system (rpc: *)
+  comment    : Operators can reboot, shutdown, and set system time.
+
+──────────────────────────────────────────────────────────────────────
+<span class="title">deny-password-access (via '*')</span>
+  action     : deny
+  operations : *
+  target     : /ietf-system:system/authentication/user/password
+  comment    : No user except admins can access password hashes.
+
+──────────────────────────────────────────────────────────────────────
+<span class="title">deny-keystore-access (via '*')</span>
+  action     : deny
+  operations : *
+  target     : ietf-keystore
+  comment    : No user except admins can access cryptographic keys.
+
+──────────────────────────────────────────────────────────────────────
+<span class="title">deny-truststore-access (via '*')</span>
+  action     : deny
+  operations : *
+  target     : ietf-truststore
+  comment    : No user except admins can access trust store.
+</code></pre>
+
+<p>For user details:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show nacm user jacky</b>
+shell            : clish
+login            : password
+nacm group       : operator
+read permission  : restricted
+write permission : restricted
+exec permission  : restricted
+
+For detailed rules, use: show nacm group &lt;name&gt;
+</code></pre>
+
+<h3 id="adding-a-user">Adding a User<a class="headerlink" href="#adding-a-user" title="Permanent link">¶</a></h3>
+<p>Creating a new user starts with defining the user account in the system:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user jacky</b>
+admin@example:/config/system/…/user/jacky/&gt; <b>change password</b>
+New password:
+Retype password:
+admin@example:/config/system/…/user/jacky/&gt; <b>leave</b>
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>It is also possible to use <kbd>set password ...</kbd> if you have the
+fully crypted and salted string ready.  This can be created offline
+with the <a href="https://linux.die.net/man/1/mkpasswd"><code>mkpasswd(1)</code></a> tool, or the built-in CLI version <kbd>do
+password encrypt [OPTS]</kbd>.  The <code>do</code> prefix is handy for reaching
+all top-level commands when in configure context.</p>
+</div>
+<p>An authorized SSH key can be added the same way as described in the
+previous sections.</p>
+<p>By default, shell access is disabled (<code>shell false</code>).  To allow CLI/SSH
+access, set the shell:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user jacky</b>
+admin@example:/config/system/…/user/jacky/&gt; <b>set shell clish</b>
+admin@example:/config/system/…/user/jacky/&gt; <b>leave</b>
+</code></pre>
+
+<p>Available shells:</p>
+<ul>
+<li><code>bash</code> - Full Bourne-again shell (recommended for admins only)</li>
+<li><code>sh</code> - POSIX shell (recommended for admins only)</li>
+<li><code>clish</code> - Limited CLI-only shell (recommended for operators and guests)</li>
+<li><code>false</code> - No shell access (default)</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Security Notice</p>
+<p>For security reasons, it is strongly recommended to limit non-admin users
+to the <code>clish</code> shell, which provides CLI access without exposing the
+underlying UNIX system.  Reserve <code>bash</code> and <code>sh</code> for administrators who
+need full system access for debugging and maintenance.</p>
+<p>Note that shell and CLI access is not always necessary - the system
+supports NETCONF and RESTCONF for remote management and automation.
+Setting <code>shell false</code> for users who only need programmatic access
+minimizes the attack surface and improves overall system security.</p>
+</div>
+<h3 id="adding-a-user-to-a-group">Adding a User to a Group<a class="headerlink" href="#adding-a-user-to-a-group" title="Permanent link">¶</a></h3>
+<p>To assign a user to a specific privilege level, add them to the
+corresponding NACM group:</p>
+<p><strong>Operator user:</strong></p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit nacm group operator</b>
+admin@example:/config/nacm/group/operator/&gt; <b>set user-name jacky</b>
+admin@example:/config/nacm/group/operator/&gt; <b>leave</b>
+</code></pre>
+
+<p><strong>Adding another admin:</strong></p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit nacm group admin</b>
+admin@example:/config/nacm/group/admin/&gt; <b>set user-name alice</b>
+admin@example:/config/nacm/group/admin/&gt; <b>leave</b>
+</code></pre>
+
+<p><strong>Guest user:</strong></p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit nacm group guest</b>
+admin@example:/config/nacm/group/guest/&gt; <b>set user-name monitor</b>
+admin@example:/config/nacm/group/guest/&gt; <b>leave</b>
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>For technical details about NACM rule evaluation, module-name vs path
+matching, and creating custom access control policies, see the
+<a href="../nacm/">NACM Technical Guide</a>.</p>
+</div>
+<h3 id="access-control-matrix">Access Control Matrix<a class="headerlink" href="#access-control-matrix" title="Permanent link">¶</a></h3>
+<p>The following table shows what each user level can do based on the NACM rules
+and shell access configured for each user:</p>
+<ul>
+<li><strong>Admin</strong>: <code>bash</code> — full system access</li>
+<li><strong>Operator</strong>: <code>clish</code> — CLI-only access without UNIX system exposure</li>
+<li><strong>Guest</strong>: <code>false</code> — no shell access</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Admin</th>
+<th>Operator</th>
+<th>Guest</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Network interfaces</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Routing (FRR)</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Firewall rules</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>VLANs/bridges</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Containers</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Hostname/system config</td>
+<td>✓</td>
+<td>✓</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>CLI/SSH access</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>System restart</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Set date/time</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>System reboot</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>System shutdown</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>User management</td>
+<td>✓</td>
+<td>✗</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td>Keystore (certs/keys)</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Truststore</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Read passwords/secrets</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>NACM rules</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Factory reset</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Software upgrade</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+</tbody>
+</table>
+<h3 id="security-aspects">Security Aspects<a class="headerlink" href="#security-aspects" title="Permanent link">¶</a></h3>
+<p>The three default user levels are implemented through a combination of NACM
+rules and UNIX group membership.  Access control is permission-based, not
+name-based - the system detects user levels by examining their NACM
+permissions and shell settings.</p>
+<p><strong>Admin users</strong> have unrestricted NACM access with the following rule:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="w">   </span><span class="nt">"module-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">   </span><span class="nt">"access-operations"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">   </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span>
+</code></pre></div>
+<p>Admin users are automatically added to the UNIX <code>wheel</code> and <code>frrvty</code>
+groups, granting them <code>sudo</code> privileges and access to FRR routing
+protocols. This makes it possible to use all the underlying UNIX
+tooling, which can be very useful for debugging, but please use with
+care -- the system is designed to be managed through the CLI and
+NETCONF, not directly via shell commands.</p>
+<p><strong>Operator users</strong> use the permit-by-default NACM model (<code>write-default:
+"permit"</code>), which means they can configure most system settings without
+explicit permit rules. This design is "future proof" - when new features
+are added, operators can immediately use them.</p>
+<p>The following are explicitly denied to operators through global NACM rules:</p>
+<ul>
+<li>Password hashes (<code>/ietf-system:system/authentication/user/password</code>)</li>
+<li>Cryptographic keys (<code>ietf-keystore</code> module)</li>
+<li>Trust store certificates (<code>ietf-truststore</code> module)</li>
+</ul>
+<p>Additionally, sensitive operations like factory reset, software upgrades,
+and system shutdown are protected by YANG-level <code>nacm:default-deny-all</code>
+annotations and remain restricted to administrators.</p>
+<p>Operators are automatically added to the UNIX <code>operator</code> and <code>frrvty</code>
+groups, granting them <code>sudo</code> privileges for network operations and FRR
+access.</p>
+<p><strong>Guest users</strong> have read-only NACM access through an explicit deny rule
+that blocks all write and exec operations (<code>create update delete exec</code>),
+while <code>read-default: "permit"</code> allows viewing configuration and state.
+Guests receive no special UNIX group memberships. The shell setting
+determines whether guests can access the CLI (<code>clish</code>) or are restricted
+from shell access entirely (<code>false</code>).</p>
+<p>All users, regardless of level, are denied access to password hashes and
+cryptographic key material through global NACM rules.</p>
+<h2 id="changing-hostname">Changing Hostname<a class="headerlink" href="#changing-hostname" title="Permanent link">¶</a></h2>
+<p>Notice how the hostname in the prompt does not change until the change
+is committed by issuing the <code>leave</code> command.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system</b>
+admin@example:/config/system/&gt; <b>set hostname myrouter</b>
+admin@example:/config/system/&gt; <b>leave</b>
+admin@myrouter:/&gt;
+</code></pre>
+
+<p>The hostname is advertised over mDNS-SD in the <code>.local</code> domain.  If
+another device already has claimed the <code>myrouter.local</code> CNAME, in our
+case, mDNS will advertise a "uniqified" variant, usually suffixing with
+an index, e.g., <code>myrouter-1.local</code>.  Use an mDNS browser to scan for
+available devices on your LAN.</p>
+<p>In some cases you may want to set the device's <em>domain name</em> as well.
+This is handled the same way:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system</b>
+admin@example:/config/system/&gt; <b>set hostname foo.example.com</b>
+admin@example:/config/system/&gt; <b>leave</b>
+admin@foo:/&gt;
+</code></pre>
+
+<p>Both host and domain name are stored in the system files <code>/etc/hosts</code>
+and <code>/etc/hostname</code>.  The latter is exclusively for the host name.  The
+domain <em>may</em> be used by the system DHCP server when handing out leases
+to clients, it is up to the clients to request the domain name <em>option</em>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Critical services like syslog, mDNS, LLDP, and similar that advertise
+the hostname, are restarted when the hostname is changed.</p>
+</div>
+<h2 id="changing-login-banner">Changing Login Banner<a class="headerlink" href="#changing-login-banner" title="Permanent link">¶</a></h2>
+<p>The <code>motd-banner</code> setting is an Infix augment and an example of a
+<code>binary</code> type setting that can be changed interactively with the
+built-in <a href="../cli/text-editor/"><code>text-editor</code> command</a>.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>See the next section for how to change the editor used to something
+you may be more familiar with.</p>
+</div>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit system</b>
+admin@example:/config/system/&gt; <b>text-editor motd-banner</b>
+admin@example:/config/system/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>Log out and log back in again to inspect the changes.</p>
+<h2 id="changing-the-editor">Changing the Editor<a class="headerlink" href="#changing-the-editor" title="Permanent link">¶</a></h2>
+<p>The system has three different built-in editors that can be used
+as the <code>text-editor</code> command:</p>
+<ul>
+<li><code>emacs</code> (Micro Emacs)</li>
+<li><code>nano</code> (GNU Nano)</li>
+<li><code>vi</code> (Visual Editor)</li>
+</ul>
+<p>To change the editor to GNU Nano:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit system</b>
+admin@example:/config/system/&gt; <b>set text-editor nano</b>
+admin@example:/config/system/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Configuration changes only take effect after issuing the <code>leave</code>
+command.  I.e., you must change the editor first, and then re-enter
+configure context to use your editor of choice.</p>
+</div>
+<h2 id="dns-resolver-configuration">DNS Resolver Configuration<a class="headerlink" href="#dns-resolver-configuration" title="Permanent link">¶</a></h2>
+<p>The system supports both static and dynamic (DHCP) DNS setup.  The
+locally configured (static) server is preferred over any acquired
+from a DHCP client.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit system dns-resolver</b>
+admin@example:/config/system/dns-resolver/&gt; <b>set server google udp-and-tcp address 8.8.8.8</b>
+admin@example:/config/system/dns-resolver/&gt; <b>show</b>
+server google {
+  udp-and-tcp {
+    address 8.8.8.8;
+  }
+}
+admin@example:/config/system/dns-resolver/&gt; <b>leave</b>
+</code></pre>
+
+<p>It is also possible to configure resolver options like timeout and
+retry attempts.  See the YANG model for details, or use the built-in
+help system in the CLI.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When acting as a DHCP server and DNS proxy for other devices, any
+local DNS server configured here is automatically used as upstream DNS
+server.</p>
+</div>
+<h2 id="ntp-client-configuration">NTP Client Configuration<a class="headerlink" href="#ntp-client-configuration" title="Permanent link">¶</a></h2>
+<p>Below is an example configuration for enabling NTP with a specific
+server and the <code>iburst</code> option for faster initial synchronization.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit system ntp</b>
+admin@example:/config/system/ntp/&gt; <b>set enabled</b>
+admin@example:/config/system/ntp/&gt; <b>set server ntp-pool</b>
+admin@example:/config/system/ntp/&gt; <b>set server ntp-pool udp address pool.ntp.org</b>
+admin@example:/config/system/ntp/&gt; <b>set server ntp-pool iburst</b>
+admin@example:/config/system/ntp/&gt; <b>set server ntp-pool prefer</b>
+admin@example:/config/system/ntp/&gt; <b>leave</b>
+</code></pre>
+
+<p>This configuration enables the NTP client and sets the NTP server to
+<code>pool.ntp.org</code> with the <code>iburst</code> and <code>prefer</code> options. The <code>iburst</code>
+option ensures faster initial synchronization, and the <code>prefer</code> option
+designates this server as preferred.</p>
+<ul>
+<li><code>prefer false</code>: The NTP client will choose the best available source
+based on several factors, such as network delay, stratum, and other
+metrics (default config).</li>
+<li><code>prefer true</code>: The NTP client will try to use the preferred server
+as the primary source unless it becomes unreachable or unusable.</li>
+</ul>
+<h3 id="show-ntp-sources">Show NTP Sources<a class="headerlink" href="#show-ntp-sources" title="Permanent link">¶</a></h3>
+<p>The status for NTP sources is availble in YANG and accessable with
+CLI/NETCONF/RESTCONF.</p>
+<p>To view the sources being used by the NTP client, run:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ntp</b>
+Mode                : Client
+Stratum             : 3
+Ref time (UTC)      : Sat Jan 24 23:41:42 2026
+
+<span class="header">ADDRESS         MODE    STATE     STRATUM  POLL</span>
+147.78.228.41   server  outlier         2   64s
+192.168.0.1     server  unusable        0  128s
+176.126.86.247  server  selected        2   64s
+</code></pre>
+
+<h3 id="show-ntp-status">Show NTP Status<a class="headerlink" href="#show-ntp-status" title="Permanent link">¶</a></h3>
+<p>To check the status of NTP synchronization (only availble in CLI), use
+the following command:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ntp tracking</b>
+Reference ID        : 176.126.86.247
+Stratum             : 3
+Ref time (UTC)      : Sat Jan 24 23:41:42 2026
+System time         : 0.000000 seconds slow of NTP time
+Last offset         : -454779.375000000 seconds
+RMS offset          : 454779.375000000 seconds
+Frequency           : 0.000 ppm slow
+Residual freq       : -26.383 ppm
+Skew                : 1000000.000 ppm
+Root delay          : 0.007395 seconds
+Root dispersion     : 39.181149 seconds
+Update interval     : 0.0 seconds
+Leap status         : Normal
+</code></pre>
+
+<p>This output provides detailed information about the NTP status, including
+reference ID, stratum, time offsets, frequency, and root delay.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The system uses <code>chronyd</code> Network Time Protocol (NTP) daemon.  The
+output shown here is best explained in the <a href="https://chrony-project.org/doc/4.6.1/chronyc.html">Chrony documentation</a>.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2022-2025 The KernelKit Team
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
