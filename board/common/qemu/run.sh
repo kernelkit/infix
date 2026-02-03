@@ -358,13 +358,12 @@ extract_squashfs()
 run_qemu()
 {
     # Auto-extract rootfs.squashfs from rootfs.itb if needed for initrd mode
-    if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
-	if [ "$CONFIG_QEMU_ROOTFS" = "rootfs.squashfs" ] && [ ! -f "rootfs.squashfs" ]; then
-	    if [ -f "rootfs.itb" ]; then
-		extract_squashfs "rootfs.itb" "rootfs.squashfs"
-	    else
-		die "Missing rootfs.squashfs and cannot find rootfs.itb to extract it from"
-	    fi
+    if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ] && [ ! -f "$CONFIG_QEMU_ROOTFS" ]; then
+	itb="${CONFIG_QEMU_ROOTFS%.squashfs}.itb"
+	if [ -f "$itb" ]; then
+	    extract_squashfs "$itb" "$CONFIG_QEMU_ROOTFS"
+	else
+	    die "Missing $CONFIG_QEMU_ROOTFS and cannot find $itb to extract it from"
 	fi
     fi
 
