@@ -1,23 +1,49 @@
 #!/bin/sh
+# Prompt for a secret with confirmation, then encode and output it.
+#
+# Default mode: hash with mkpasswd (for system passwords)
+#    askpass [OUTPUT]
+#
+# Base64 mode (-b): base64-encode (for keystore passphrases)
+#    askpass -b [OUTPUT]
+#
+# If OUTPUT is given, result is written to the file.
+# If omitted, result is written to stdout.
 # shellcheck disable=SC3045
 
+LABEL="New password"
+MODE=hash
+if [ "$1" = "-b" ]; then
+    LABEL="Passphrase"
+    MODE=base64
+    shift
+fi
 OUTPUT=$1
 
-read -r -s -p "New password: " password
+read -r -s -p "$LABEL: " secret
 >&2 echo
-read -r -s -p "Retype password: " password_again
+read -r -s -p "Retype $LABEL: " secret_again
 >&2 echo
 
-if [ "$password" != "$password_again" ]; then
-    echo "Passwords do not match, try again."
+if [ "$secret" != "$secret_again" ]; then
+    echo "${LABEL}s do not match, try again."
     exit 1
 fi
 
-if [ -z "$OUTPUT" ]; then
-    echo "$password"
-    exit 0
+if [ -z "$secret" ]; then
+    echo "Empty $LABEL, try again."
+    exit 1
+fi
+
+if [ "$MODE" = "base64" ]; then
+    encoded=$(printf '%s' "$secret" | base64 -w 0)
+else
+    encoded=$(printf '%s\n' "$secret" | mkpasswd -s)
 fi
 
 umask 0177
-echo "$password" | mkpasswd -s > "$OUTPUT"
-exit 0
+if [ -z "$OUTPUT" ]; then
+    echo "$encoded"
+else
+    printf '%s' "$encoded" > "$OUTPUT"
+fi

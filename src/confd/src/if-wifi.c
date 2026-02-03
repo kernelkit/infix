@@ -7,13 +7,75 @@
  * configuration (hostapd) is handled by hardware.c.
  */
 
+#include <ctype.h>
+
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
 #include "interfaces.h"
+#include "base64.h"
 
 #define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
 
+
+int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif)
+{
+	struct lyd_node *wifi, *station, *security, *secret_node;
+	const char *ifname, *secret_name, *security_mode, *b64;
+	unsigned char *decoded;
+	size_t len;
+
+	ifname = lydx_get_cattr(cif, "name");
+	wifi = lydx_get_child(cif, "wifi");
+	if (!wifi)
+		return SR_ERR_OK;
+
+	station = lydx_get_child(wifi, "station");
+	if (!station)
+		return SR_ERR_OK;
+
+	security = lydx_get_child(station, "security");
+	security_mode = lydx_get_cattr(security, "mode");
+	secret_name = lydx_get_cattr(security, "secret");
+
+	if (!secret_name || !strcmp(security_mode, "disabled"))
+		return SR_ERR_OK;
+
+	secret_node = lydx_get_xpathf(cif,
+		"../../keystore/symmetric-keys/symmetric-key[name='%s']",
+		secret_name);
+	b64 = lydx_get_cattr(secret_node, "cleartext-symmetric-key");
+	if (!b64 || !*b64)
+		return SR_ERR_OK;
+
+	decoded = base64_decode((const unsigned char *)b64, strlen(b64), &len);
+	if (!decoded)
+		return SR_ERR_OK;
+
+	if (len < 8 || len > 63) {
+		if (session)
+			sr_session_set_error_message(session,
+				"%s: WiFi passphrase must be 8-63 characters, got %zu",
+				ifname, len);
+		free(decoded);
+		return SR_ERR_VALIDATION_FAILED;
+	}
+
+	for (size_t i = 0; i < len; i++) {
+		if (!isprint((unsigned char)decoded[i])) {
+			if (session)
+				sr_session_set_error_message(session,
+					"%s: WiFi passphrase contains non-printable "
+					"character at position %zu",
+					ifname, i + 1);
+			free(decoded);
+			return SR_ERR_VALIDATION_FAILED;
+		}
+	}
+
+	free(decoded);
+	return SR_ERR_OK;
+}
 
 wifi_mode_t wifi_get_mode(struct lyd_node *iface)
 {
@@ -59,8 +121,9 @@ int wifi_mode_changed(struct lyd_node *wifi)
  */
 int wifi_gen_station(struct lyd_node *cif)
 {
-	const char *ifname, *ssid, *secret_name, *secret, *security_mode, *radio;
+	const char *ifname, *ssid, *secret_name, *security_mode, *radio;
 	struct lyd_node *security, *secret_node, *radio_node, *station, *wifi;
+	unsigned char *secret = NULL;
 	FILE *wpa_supplicant = NULL;
 	char *security_str = NULL;
 	const char *country;
@@ -91,12 +154,14 @@ int wifi_gen_station(struct lyd_node *cif)
 	country = lydx_get_cattr(radio_node, "country-code");
 
 	if (secret_name && strcmp(security_mode, "disabled") != 0) {
+		const char *b64;
+
 		secret_node = lydx_get_xpathf(cif,
 			"../../keystore/symmetric-keys/symmetric-key[name='%s']",
 			secret_name);
-		secret = lydx_get_cattr(secret_node, "symmetric-key");
-	} else {
-		secret = NULL;
+		b64 = lydx_get_cattr(secret_node, "cleartext-symmetric-key");
+		if (b64)
+			secret = base64_decode((const unsigned char *)b64, strlen(b64), NULL);
 	}
 
 	oldmask = umask(0077);
@@ -121,11 +186,13 @@ int wifi_gen_station(struct lyd_node *cif)
 	/* If SSID is present, create network block. Otherwise, scan-only mode */
 	if (ssid) {
 		/* Station mode with network configured */
-		if (!strcmp(security_mode, "disabled")) {
+		if (!strcmp(security_mode, "disabled"))
 			asprintf(&security_str, "key_mgmt=NONE");
-		} else if (secret) {
-			asprintf(&security_str, "key_mgmt=SAE WPA-PSK\npsk=\"%s\"", secret);
-		}
+		else if (secret)
+			asprintf(&security_str,
+				 "key_mgmt=SAE WPA-PSK\n"
+				 "  psk=\"%s\"", secret);
+
 		fprintf(wpa_supplicant,
 			"network={\n"
 			"  bgscan=\"simple: 30:-45:300\"\n"
@@ -152,6 +219,7 @@ int wifi_gen_station(struct lyd_node *cif)
 	}
 
 out:
+	free(secret);
 	if (wpa_supplicant)
 		fclose(wpa_supplicant);
 	umask(oldmask);

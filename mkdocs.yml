@@ -53,6 +53,7 @@ nav:
       - Access Control (NACM): nacm.md
       - Hardware Info & Status: hardware.md
       - Management: management.md
+      - Keystore: keystore.md
       - Syslog Support: syslog.md
       - Support Data: support.md
       - Upgrade: upgrade.md

@@ -22,6 +22,12 @@ may be supplied in places where a hostname is otherwise expected.
 
   Commands:
 
+    scan [-a] [<iface>]
+      Discover Infix devices on the LAN using mDNS-SD (avahi-browse).
+      Use -a to show all mDNS devices, not just Infix.  Falls back to
+      IPv6 link-local multicast ping if avahi-browse is not installed
+      and <iface> is specified.
+
     peer <iface>
       Return the address of the first IPv6 neighbor to respond on
       <iface>'s local LAN.
@@ -74,6 +80,9 @@ shift
 case "$cmd" in
     help)
 	usage && exit 0
+	;;
+    scan)
+	llscan "$@"
 	;;
     peer)
 	llpeer "$@"

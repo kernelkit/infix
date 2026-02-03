@@ -391,9 +391,11 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
 	case IFT_WIFI:
-		return wifi_add_iface(cif, net);
+		return wifi_validate_secret(session, cif)
+			? : wifi_add_iface(cif, net);
 	case IFT_WIREGUARD:
-		return wireguard_gen(NULL, cif, ip, net);
+		return wireguard_validate_peers(session, cif)
+			? : wireguard_gen(NULL, cif, ip, net);
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_LO:
@@ -424,7 +426,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_WIFI:
 		if (wifi_get_mode(cif) == wifi_station)
-			return wifi_gen_station(cif);
+			return wifi_validate_secret(session, cif)
+				? : wifi_gen_station(cif);
 		return 0;
 	case IFT_DUMMY:
 	case IFT_GRE:
@@ -817,6 +820,39 @@ int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 		dagger_abandon(&confd->netdag);
 err_out:
 	return err;
+}
+
+int interfaces_validate_keys(sr_session_ctx_t *session, struct lyd_node *config)
+{
+	struct lyd_node *ifaces, *iface;
+	int rc;
+
+	ifaces = lydx_get_descendant(config, "interfaces", "interface", NULL);
+	LYX_LIST_FOR_EACH(ifaces, iface, "interface") {
+		const char *ifname = lydx_get_cattr(iface, "name");
+
+		switch (iftype_from_iface(iface)) {
+		case IFT_WIFI:
+			rc = wifi_validate_secret(session, iface);
+			break;
+		case IFT_WIREGUARD:
+			rc = wireguard_validate_peers(session, iface);
+			break;
+		default:
+			rc = SR_ERR_OK;
+			break;
+		}
+
+		if (!rc)
+			continue;
+
+		if (session)
+			return rc;
+
+		ERROR("%s: key fails validation, check keystore", ifname);
+	}
+
+	return SR_ERR_OK;
 }
 
 int interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces)

@@ -155,6 +155,20 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="SYM_KEYS">
+  <COMPL>
+    <ACTION sym="sym_keys@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="ASYM_KEYS">
+  <COMPL>
+    <ACTION sym="asym_keys@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
   <HOTKEY key="^D" cmd="exit"/>
 
@@ -259,6 +273,21 @@
   </COMMAND>
 </COMMAND>
 
+<COMMAND name="wireguard" help="WireGuard VPN key tools" mode="switch">
+  <COMMAND name="genkey" help="Generate a WireGuard private/public key pair">
+    <ACTION sym="script">
+priv=$(wg genkey)
+pub=$(printf '%s' "$priv" | wg pubkey)
+echo "Private: $priv"
+echo "Public:  $pub"
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="genpsk" help="Generate a WireGuard pre-shared key">
+    <ACTION sym="script">wg genpsk</ACTION>
+  </COMMAND>
+</COMMAND>
+
 <COMMAND name="set" help="Set operations, e.g., current date/time" mode="switch">
   <COMMAND name="datetime" help="Set current date and time, ISO-8601 format">
     <PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
@@ -336,6 +365,20 @@
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       cat /etc/resolv.conf.head 2>/dev/null; resolvconf -l | sed 's/#.*//; /^\s*$/d' |pager
     </ACTION>
+  </COMMAND>
+
+  <COMMAND name="keystore" help="Show keystore keys">
+    <SWITCH name="subcommands" min="0">
+      <COMMAND name="symmetric" help="Show details for a symmetric key">
+	<PARAM name="name" ptype="/SYM_KEYS" help="Key name"/>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show keystore symmetric $KLISH_PARAM_name</ACTION>
+      </COMMAND>
+      <COMMAND name="asymmetric" help="Show details for an asymmetric key">
+	<PARAM name="name" ptype="/ASYM_KEYS" help="Key name"/>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show keystore asymmetric $KLISH_PARAM_name</ACTION>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">show keystore</ACTION>
   </COMMAND>
 
   <COMMAND name="nacm" help="Show users and NACM status and groups">

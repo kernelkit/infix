@@ -413,6 +413,20 @@ int infix_groups(kcontext_t *ctx)
 		      "| jq -r '.\"ietf-netconf-acm:nacm\".groups.group[].name'");
 }
 
+int infix_sym_keys(kcontext_t *ctx)
+{
+	(void)ctx;
+	return shellf("copy running -x /ietf-keystore:keystore/symmetric-keys "
+		      "| jq -r '.\"ietf-keystore:keystore\".\"symmetric-keys\".\"symmetric-key\"[].name'");
+}
+
+int infix_asym_keys(kcontext_t *ctx)
+{
+	(void)ctx;
+	return shellf("copy running -x /ietf-keystore:keystore/asymmetric-keys "
+		      "| jq -r '.\"ietf-keystore:keystore\".\"asymmetric-keys\".\"asymmetric-key\"[].name'");
+}
+
 int kplugin_infix_fini(kcontext_t *ctx)
 {
 	(void)ctx;
@@ -432,6 +446,8 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
 	kplugin_add_syms(plugin, ksym_new("users", infix_users));
 	kplugin_add_syms(plugin, ksym_new("groups", infix_groups));
+	kplugin_add_syms(plugin, ksym_new("sym_keys", infix_sym_keys));
+	kplugin_add_syms(plugin, ksym_new("asym_keys", infix_asym_keys));
 	kplugin_add_syms(plugin, ksym_new("firewall_zones", infix_firewall_zones));
 	kplugin_add_syms(plugin, ksym_new("firewall_policies", infix_firewall_policies));
 	kplugin_add_syms(plugin, ksym_new("firewall_services", infix_firewall_services));

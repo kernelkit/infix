@@ -8,8 +8,10 @@
 
 #include "base64.h"
 #include "core.h"
+#include "interfaces.h"
 
-#define XPATH_KEYSTORE_  "/ietf-keystore:keystore/asymmetric-keys"
+#define XPATH_KEYSTORE_ASYM "/ietf-keystore:keystore/asymmetric-keys"
+#define XPATH_KEYSTORE_SYM  "/ietf-keystore:keystore/symmetric-keys"
 #define SSH_PRIVATE_KEY  "/tmp/ssh.key"
 #define SSH_PUBLIC_KEY   "/tmp/ssh.pub"
 
@@ -166,7 +168,8 @@ int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	struct lyd_node *changes, *change;
 	int rc = SR_ERR_OK;
 
-	if (diff && !lydx_find_xpathf(diff, XPATH_KEYSTORE_))
+	if (diff && !lydx_find_xpathf(diff, XPATH_KEYSTORE_ASYM)
+	         && !lydx_find_xpathf(diff, XPATH_KEYSTORE_SYM))
 		return SR_ERR_OK;
 
 	switch (event) {
@@ -174,6 +177,9 @@ int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		rc = keystore_update(session, config, diff);
 		break;
 	case SR_EV_CHANGE:
+		if (diff && lydx_find_xpathf(diff, XPATH_KEYSTORE_SYM))
+			rc = interfaces_validate_keys(session, config);
+		break;
 	case SR_EV_ENABLED:
 		break;
 	case SR_EV_ABORT:
@@ -186,6 +192,8 @@ int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			if (rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS))
 				ERRNO("Failed switching to new %s", SSH_HOSTKEYS);
 		}
+		if (diff && lydx_find_xpathf(diff, XPATH_KEYSTORE_SYM))
+			interfaces_validate_keys(NULL, config);
 		return SR_ERR_OK;
 	default:
 		return SR_ERR_OK;

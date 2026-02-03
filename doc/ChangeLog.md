@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.01.0][UNRELEASED]
+[v26.01.0][] - 2026-02-03
 -------------------------
 
 > [!IMPORTANT]
@@ -23,7 +23,7 @@ All notable changes to the project are documented in this file.
 
 Noteworthy changes and additions in this release are marked below in bold text.
 
-- Upgrade Linux kernel to 6.18.8 (LTS)
+- **Upgrade Linux kernel from 6.12.65 to 6.18.8 (LTS)**
 - Upgrade Buildroot to 2025.02.10 (LTS)
 - Upgrade libyang to 4.2.2
 - Upgrade sysrepo to 4.2.10
@@ -53,6 +53,9 @@ Noteworthy changes and additions in this release are marked below in bold text.
   removed during upgrade (for the rest of the configuration to apply) and you
   need to reconfigure them again.  See the [WiFi][] documentation for details
 - Add support for **WireGuard VPN tunnels**.
+- Updated CLI change command to support `cleartext-symmetric-key` (type binary).
+  Used by both WireGuard and WiFi, with application-specific `key-format` for
+  keys and passphrases
 - New default NACM privilege levels (user levels) in `factory-config`:
   `operator` (network & container manager) and `guest` (read-only).  For
   details, see the updated system configuration documentation, as well as a
