@@ -1498,6 +1498,8 @@
       
         
       
+        
+      
     
     
     
@@ -1665,6 +1667,34 @@
     
   
     Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keystore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keystore
   
 
     
@@ -2557,26 +2587,25 @@ Introduction</a> for a background.</p>
 <h2 id="key-management">Key Management<a class="headerlink" href="#key-management" title="Permanent link">¶</a></h2>
 <p>WireGuard uses public-key cryptography similar to SSH.  Each WireGuard interface
 requires a private key, and each peer is identified by its public key.</p>
-<p><strong>Generate a WireGuard key pair using the <code>wg</code> command:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:~$<span class="w"> </span>wg<span class="w"> </span>genkey<span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>privatekey<span class="w"> </span><span class="p">|</span><span class="w"> </span>wg<span class="w"> </span>pubkey<span class="w"> </span>&gt;<span class="w"> </span>publickey
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:~$<span class="w"> </span>cat<span class="w"> </span>privatekey
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP</span><span class="o">=</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>admin@example:~$<span class="w"> </span>cat<span class="w"> </span>publickey
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP</span><span class="o">=</span>
-</code></pre></div>
-<p>This generates a private key, saves it to <code>privatekey</code>, derives the public key,
-and saves it to <code>publickey</code>.</p>
-<p><strong>Import the private key into the keystore:</strong></p>
+<p><strong>Import the key pair into the keystore:</strong></p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit keystore asymmetric-key wg-site-a</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/&gt; <b>do wireguard genkey</b>
+Private: aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=
+Public:  bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=
 admin@example:/config/keystore/asymmetric-key/wg-site-a/&gt; <b>set public-key-format x25519-public-key-format</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/&gt; <b>set private-key-format x25519-private-key-format</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/&gt; <b>set public-key bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=</b>
-admin@example:/config/keystore/asymmetric-key/wg-site-a/&gt; <b>set private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=</b>
+admin@example:/config/keystore/asymmetric-key/wg-site-a/&gt; <b>set cleartext-private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=</b>
 admin@example:/config/keystore/asymmetric-key/wg-site-a/&gt; <b>leave</b>
 admin@example:/&gt;
 </code></pre>
 
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The <code>do</code> prefix allows running admin-exec commands from configure context.
+Use the base for <code>wireguard genkey</code> when in admin-exec context.</p>
+</div>
 <p><strong>Import peer public keys into the truststore:</strong></p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit truststore public-key-bag wg-peers public-key peer-b</b>
@@ -2589,8 +2618,7 @@ admin@example:/&gt;
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
 <p>Keep private keys secure!  Never share your private key.  Only exchange
-public keys with peers.  Delete the <code>privatekey</code> file after importing it
-into the keystore.</p>
+public keys with peers.</p>
 </div>
 <h2 id="point-to-point-configuration">Point-to-Point Configuration<a class="headerlink" href="#point-to-point-configuration" title="Permanent link">¶</a></h2>
 <div class="admonition tip">
@@ -2887,16 +2915,15 @@ against future quantum computers that might break elliptic curve cryptography.</
 recording traffic today would still need the PSK even if they break Curve25519
 later.  However, peer authentication still relies on Curve25519, so PSKs don't
 provide complete post-quantum security.</p>
-<p><strong>Generate a preshared key using <code>wg genpsk</code>:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:~$<span class="w"> </span>wg<span class="w"> </span>genpsk<span class="w"> </span>&gt;<span class="w"> </span>preshared.key
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>admin@example:~$<span class="w"> </span>cat<span class="w"> </span>preshared.key
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m</span><span class="o">=</span>
-</code></pre></div>
+<p><strong>Generate a preshared key:</strong></p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>do wireguard genpsk</b>
+cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
+</code></pre>
+
 <p><strong>Import the preshared key into the keystore:</strong></p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit keystore symmetric-key wg-psk</b>
-admin@example:/config/keystore/symmetric-key/wg-psk/&gt; <b>set key-format wireguard-symmetric-key-format</b>
-admin@example:/config/keystore/symmetric-key/wg-psk/&gt; <b>set key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit keystore symmetric-key wg-psk</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/&gt; <b>set key-format octet-string-key-format</b>
+admin@example:/config/keystore/symmetric-key/wg-psk/&gt; <b>set cleartext-symmetric-key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=</b>
 admin@example:/config/keystore/symmetric-key/wg-psk/&gt; <b>end</b>
 admin@example:/config/interface/wg0/&gt; <b>edit wireguard peers wg-peers peer remote</b>
 admin@example:/config/interface/…/wg-peers/peer/remote/&gt; <b>set preshared-key wg-psk</b>
@@ -2909,8 +2936,7 @@ on both sides.</p>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
 <p>Preshared keys must be kept secret and exchanged through a secure channel,
-just like passwords.  Delete the <code>preshared.key</code> file after importing it
-into both peer keystores.</p>
+just like passwords.</p>
 </div>
 
 
