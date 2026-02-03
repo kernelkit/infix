@@ -34,6 +34,10 @@ Infix comes preconfigured with:
 
 The easiest way to get started is using an SD card:
 
+> [!NOTE]
+> SD card boot works but we have observed stability issues. For production
+> use or long-term reliability, we recommend installing to eMMC (see below).
+
 1. **Download the SD card image:** [infix-bpi-r3-sdcard.img][2]
 2. **Flash the image to an SD card:** see [this guide][0]
 3. **Set boot switches:**
@@ -53,8 +57,8 @@ The BPI-R3 has a 4-position DIP switch that controls boot media:
 
 | Position | Mode        | Description                           |
 |----------|-------------|---------------------------------------|
-| 0000     | SD card     | Boot from microSD card (recommended)  |
-| 0110     | eMMC        | Boot from internal eMMC storage       |
+| 0000     | SD card     | Boot from microSD card                |
+| 0110     | eMMC        | Boot from internal eMMC (recommended) |
 | 1010     | SPI NAND    | Boot from SPI NAND (advanced users)   |
 
 > [!NOTE]
@@ -67,10 +71,16 @@ For production deployments or better performance, you can install Infix
 to the internal eMMC storage. This is more complex but provides faster
 boot times and eliminates the external SD card.
 
+> [!IMPORTANT]
+> While Infix boots on both SD card and eMMC, we have observed stability
+> issues with SD cards on this platform. **eMMC is recommended** for
+> reliable operation.
+
 ### Why Use eMMC?
 
 **Advantages:**
 
+- More reliable than SD card (stability issues observed with SD cards)
 - Faster boot and better performance
 - No external SD card to manage
 - More robust for industrial/embedded deployments
