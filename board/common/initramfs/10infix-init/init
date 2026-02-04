@@ -1,0 +1,187 @@
+#!/bin/sh
+
+echo -ne "\e[31m●\e[0m \e[33m●\e[0m \e[32m●\e[0m  Infix Initramfs — " >/dev/console
+source /etc/os-release >/dev/console
+echo "$VERSION"
+
+set -e
+
+getkopt()
+{
+    sed -n "s/.*\<$1=\([^ ]*\).*/\1/p" /proc/cmdline
+}
+
+debug_shell()
+{
+    [ "$(getkopt rd.shell)" = "$1" ] || return 0
+
+    exec </dev/console &>/dev/console
+    echo "Starting debug shell at $1"
+    exec sh -i
+}
+
+die()
+{
+    echo -e "[\e[31mFAIL\e[0m] $*" >/dev/console
+    echo "<0>ix-initramfs: ERROR: $*" >/dev/kmsg
+    debug_shell error
+    exit 1
+}
+
+ok()
+{
+    echo "<5>ix-initramfs: $*" >/dev/kmsg
+    echo -e "[ \e[32mOK\e[0m ] $*" >/dev/console
+}
+
+debug()
+{
+    echo "<7>ix-initramfs: $*" >/dev/kmsg
+}
+
+mountcore()
+{
+    mount -t proc     proc /proc
+    mount -t sysfs    sys  /sys
+    mount -t devtmpfs dev  /dev
+}
+
+mountroot()
+{
+    mkdir /newroot
+    mount "$1" /newroot || \
+	die "Unable to mount rootfs on $1"
+
+    ok "Mounting root filesystem on $(basename $1)"
+}
+
+switchroot()
+{
+    local innerinit=$(getkopt init)
+
+    ok "Switching to root filesystem"
+    exec switch_root /newroot ${innerinit:-/sbin/init}
+}
+
+addparts()
+{
+    local _disk="$1"
+    local _partscan="/sys/class/block/"$(basename "$_disk")/partscan
+
+    [ -f "$_partscan" ] && [ $(cat "$_partscan") -eq 1 ] && return
+
+    kpartx -a "$_disk" 2>/dev/null || die "addparts: Unable to add partitions from $_disk"
+}
+
+gptuuid_probe()
+{
+    local _uuid=$(echo "$1" | sed -e 's/^GPTUUID=//' | tr ABCDEF abcdef)
+    local _cand _disk _initrd
+
+    [ -f /initrd.image ] && _initrd=/initrd.image
+
+    for _disk in $_initrd $(find /dev/ -type b); do
+	_cand=$(ddi "$_disk" inspect uuid | tr ABCDEF abcdef)
+	[ $? -eq 0 ] || continue
+
+	if [ "$_cand" = "$_uuid" ]; then
+	    ok "Located $_uuid in $_disk"
+	    echo "$_disk"
+	    return
+	fi
+    done
+
+    die "gptuuid_probe: Unable to find disk $_uuid"
+}
+
+ddi_probe()
+{
+    local _disk="$1"
+    local _dm="$(basename $_disk).root"
+    local _hash=$(getkopt rd.ddi.roothash)
+    local _v _trust
+
+    if [ -n "$_hash" ]; then
+	ok "Trusting pre-authenticated root hash"
+	_v="-V $_hash"
+    else
+	_v="-v"
+    fi
+
+    _trust=$(ddi "$_disk" part root open $_v "$_dm" 2>&1 \
+		 || die "ddi_probe: veritysetup of $_disk failed")
+
+    ok "$_trust"
+    ok "Opened verity protected root from $(basename $_disk)"
+    echo /dev/mapper/"$_dm"
+}
+
+lvm_probe()
+{
+    local _vg=$(dirname "$1") _lv=$(basename "$1")
+
+    lvm vgchange -ay "$_vg" &>/dev/null || \
+	die "lvm_probe: Failed to activate the $_vg VG"
+
+    [ -b /dev/"$1" ] || die "lvm_probe: Unable to locate the $_lv LV in $_vg"
+
+    echo /dev/"$1"
+}
+
+lo_probe()
+{
+    local _lo=$(losetup -f || die "probe_lo: found no free loop device for $1")
+    losetup -P "$_lo" "$1" || die "probe_lo: losetup of $1 to $_lo failed"
+
+    debug "lo_probe: setup $_lo backed by $1"
+    echo "$_lo"
+}
+
+probe()
+{
+    local _real _kind
+
+    case "$1" in
+	/*)
+	    _real=$(realpath "$1")
+	    _kind=$(stat -c %F "$_real" 2>/dev/null || true)
+	    case "$_kind" in
+		"block special file")
+		    addparts "$_real"
+		    echo "$_real"
+		    ;;
+		"regular file")
+		    lo_probe "$_real"
+		    ;;
+		"")
+		    die "Unknown root \"$1\""
+		    ;;
+		*)
+		    die "Unsupported root \"$1\": $_kind"
+		    ;;
+	    esac
+	    ;;
+	lvm)
+	    shift
+	    probe $(lvm_probe "$@")
+	    ;;
+	ddi)
+	    shift
+	    ddi_probe $(probe "$@")
+	    ;;
+	GPTUUID=*)
+	    gptuuid_probe "$@"
+	    ;;
+    esac
+}
+
+mountcore
+
+debug_shell probe
+rootdev=$(probe $(getkopt root | sed -e 's/:/ /g'))
+
+debug_shell mount
+mountroot "$rootdev"
+
+debug_shell switchroot
+switchroot
