@@ -115,7 +115,8 @@ with infamy.Test() as test:
                         "address": [{
                             "ip": "2001:db8:3c4d:30::1",
                             "prefix-length": 64
-                        }]
+                        }],
+                        "forwarding": True
                     },
                     CONTAINER_TYPE: container_left6
                 }]
