@@ -30,10 +30,11 @@ endif
 
 test:
 	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) \
-		sh -c '$(ninepm) -v $(TESTS); \
-		       $(ninepm_report) github $(test-dir)/.log/last/result.json; \
+		sh -c '$(ninepm) -v $(TESTS); rc=$?; \
+		       $(ninepm_report) github   $(test-dir)/.log/last/result.json; \
 		       $(ninepm_report) asciidoc $(test-dir)/.log/last/result.json; \
-		       chmod -R 777 $(test-dir)/.log'
+		       chmod -R 777 $(test-dir)/.log; \
+		       exit $$rc'
 
 test-sh:
 	$(test-dir)/env $(base) $(mode) $(binaries) $(pkg-$(ARCH)) -i /bin/sh
