@@ -1,0 +1,273 @@
+#!/bin/sh
+
+echo -ne "\e[31m●\e[0m \e[33m●\e[0m \e[32m●\e[0m  Infix Initramfs — "
+. /etc/os-release
+echo "$VERSION"
+
+set -e
+
+getkopt()
+{
+    grep -q -E "(^| )$1( |$)" /proc/cmdline
+}
+
+getkparam()
+{
+    sed -n "s/.*\<$1=\([^ ]*\).*/\1/p" /proc/cmdline
+}
+
+debug_shell()
+{
+    [ "$(getkparam rd.shell)" = "$1" ] || return 0
+
+    echo "Starting debug shell at $1"
+    exec sh -i
+}
+
+die()
+{
+    step="${*:-$step}"
+
+    echo -e "\r\e[0K[\e[31mFAIL\e[0m] $step"
+    echo "<0>ix-initramfs: ERROR: $step" >/dev/kmsg
+    debug_shell error
+    exit 1
+}
+
+warn()
+{
+    step="${*:-$step}"
+
+    echo -e "\r\e[0K[\e[33mWARN\e[0m] $step"
+    echo "<5>ix-initramfs: WARNING: $step" >/dev/kmsg
+    debug_shell warning
+}
+
+ok()
+{
+    step="${*:-$step}"
+
+    echo -e "\r\e[0K[\e[32m OK \e[0m] $step"
+    echo "<5>ix-initramfs: $step" >/dev/kmsg
+}
+
+begin()
+{
+    step="$*"
+    echo -ne "[\e[33m ⋯  \e[0m] $step"
+}
+
+debug()
+{
+    echo "<7>ix-initramfs: $*" >/dev/kmsg
+}
+
+getdisk()
+{
+    local _disk _uuid _kind
+
+    case "$1" in
+	PARTUUID=*)
+	    _uuid=$(echo "$1" | sed -e 's/PARTUUID=//' | tr 'A-F' 'a-f')
+	    _disk=/dev/disk/by-partuuid/"$_uuid"
+	    ;;
+	*)
+	    _disk="$1"
+	    ;;
+    esac
+
+    _disk=$(realpath "$_disk")
+    _kind=$(stat -c %F "$_disk" 2>/dev/null || true)
+    [ "$_kind" = "block special file" ] && echo "$_disk" || true
+}
+
+mountcore()
+{
+    mount -t proc     proc /proc
+    mount -t sysfs    sys  /sys
+    mount -t devtmpfs dev  /dev
+}
+
+mountroot()
+{
+    local _disk=$(getdisk $(getkparam root))
+
+    [ -z "$_disk" ] \
+	&& die "Unknown root device \"$(getkparam root)\""
+
+    mkdir /newroot
+    mount "$_disk" /newroot || \
+	die "Unable to mount rootfs on $_disk"
+
+    ok "Mounted root filesystem"
+}
+
+switchroot()
+{
+    local innerinit=$(getkparam init)
+
+    ok "Switching to root filesystem"
+    exec switch_root /newroot ${innerinit:-/sbin/init}
+}
+
+internal_get_part()
+{
+    local _i _pv
+
+    for _i in $(seq 50); do
+	_pv=$(lvm pvs --reportformat json \
+		  | jq -r '.report[].pv[] | select(.vg_name == "internal") | .pv_name')
+	if [ "$_pv" ]; then
+	    [ $_i -gt 5 ] && ok
+	    echo "$_pv"
+	    return 0
+	fi
+
+	[ $_i -eq 5 ] && begin "Waiting for the internal volume to come online"
+	sleep .2
+    done
+
+    warn "Proceeding without the internal volume"
+    return 0
+}
+
+internal_inflate()
+{
+    local _dev _growfs _index _part
+
+    getkopt rd.nointernal && return 0
+
+    GPT_PART_GROWFS_BIT=59
+
+    _part=$(internal_get_part)
+    [ "$_part" ] || return 0
+
+    _index=$(cat /sys/class/block/$(basename "$_part")/partition)
+    [ "$_index" ] || return 1
+
+    _dev=/dev/$(basename $(realpath /sys/class/block/$(basename "$_part")/../))
+    [ -b "$_dev" ] || return 1
+
+    sgdisk "$_dev" -A "$_index":get:$GPT_PART_GROWFS_BIT \
+	| grep -q "$_index:$GPT_PART_GROWFS_BIT:1" \
+	|| return 0
+
+    begin "Inflating internal VG in $_part"
+
+    # First, expand the GPT to cover the entire disk and expand the
+    # LVM partition as much as possible.
+    if ! sgdisk "$_dev" \
+	      --disk-guid=random \
+	      --set-alignment=1 \
+	      --move-second-header \
+	      --delete="$_index" \
+	      --largest-new="$_index" --typecode="$_index":8e00 \
+	      >/tmp/internal-inflate.log 2>&1; then
+	warn "Failed to inflate GPT on $_dev"
+	return 0
+    fi
+
+    if ! lvm pvresize "$_part" >>/tmp/internal-inflate.log 2>&1; then
+	warn "Failed to resize PV $_part"
+	return 0
+    fi
+
+    ok "Inflated internal VG in $_part"
+}
+
+initrd_probe()
+{
+    getkopt rd.noinitrd && return 0
+    [ -f /initrd.image ] || return 0
+
+    begin "Creating initrd loop device"
+
+    if ! losetup -P -f /initrd.image; then
+	warn "initrd_probe: losetup failed"
+	return 0
+    fi
+
+    ok "Created initrd loop device"
+}
+
+partuuids_probe()
+{
+    mkdir -p /dev/disk/by-partuuid
+
+    grep -H PARTUUID= /sys/class/block/*/uevent | \
+	sed -E 's|^/sys/class/block/([^/]+)/uevent:PARTUUID=(.*)$|\1 \2|' | \
+	while read name uuid; do
+	    ln -s /dev/"$name" /dev/disk/by-partuuid/"$uuid" || continue
+	done
+}
+
+lvm_probe()
+{
+    getkopt rd.nolvm && return 0
+
+    begin "Activating logical volumes"
+
+    if ! lvm vgchange -ay &>/dev/null; then
+	warn "lvm_probe: Failed to activate the $_vg VG"
+	return 0
+    fi
+
+    for _lv in $(dmsetup info -c --noheadings -o name); do
+	sfdisk -J /dev/mapper/"$_lv" >/tmp/lv 2>/dev/null || continue
+	jq -e '.partitiontable.label == "gpt"' /tmp/lv >/dev/null 2>&1 || continue
+
+	jq -r '.partitiontable | select(.label == "gpt") |
+		.partitions[] | "\(.uuid | ascii_downcase) \(.node)"' /tmp/lv | \
+		    while read uuid node; do
+			ln -s "$node" /dev/disk/by-partuuid/"$uuid" || continue
+		    done
+
+	kpartx -a -p-part /dev/mapper/"$_lv" || \
+	    warn "lvm_probe:: Unable to add partitions from $_lv"
+    done
+
+    ok "Activated logical volumes"
+}
+
+uuidfmt()
+{
+    echo $1 | \
+	sed -E 's/^([0-9a-fA-F]{8})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{12})$/\1-\2-\3-\4-\5/'
+}
+
+dm_verity_root_probe()
+{
+    local _root _hash
+
+    [ -z "$roothash" ] && return 0
+
+    begin "Creating verity protected root"
+
+    _root=$(getdisk PARTUUID=$(uuidfmt $(echo "$roothash" | cut -c  1-32)))
+    [ "$_root" ] || die "dm_verity_probe: Unknown verity root data device"
+
+    _hash=$(getdisk PARTUUID=$(uuidfmt $(echo "$roothash" | cut -c 33-64)))
+    [ "$_hash" ] || die "dm_verity_probe: Unknown verity root hash device"
+
+    veritysetup open "$_root" root "$_hash" "$roothash" \
+	|| die "dm_verity_probe: veritysetup failed"
+
+    ok "Created verity protected root"
+}
+
+mountcore
+
+debug_shell internal
+internal_inflate
+
+debug_shell probe
+initrd_probe
+partuuids_probe
+lvm_probe
+dm_verity_root_probe
+
+debug_shell mount
+mountroot
+
+debug_shell switchroot
+switchroot

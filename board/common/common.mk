@@ -1,4 +1,5 @@
 include $(BR2_EXTERNAL_INFIX_PATH)/board/common/image/image.mk
+include $(BR2_EXTERNAL_INFIX_PATH)/board/common/initramfs/initramfs.mk
 include $(BR2_EXTERNAL_INFIX_PATH)/board/common/qemu/qemu.mk
 
 ifeq ($(IX_KERNEL_SIGN),y)

@@ -3,6 +3,7 @@ menuconfig IX_IMAGE_DDI
 	select BR2_TARGET_ROOTFS_SQUASHFS
 	select BR2_PACKAGE_BTRFS_PROGS
 	select BR2_PACKAGE_HOST_GENIMAGE
+	select BR2_PACKAGE_HOST_DRACUT
 	help
 	  Create a Discoverable Disk Image containing:
 	  - SquashFS of the root filesystem
