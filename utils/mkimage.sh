@@ -12,13 +12,14 @@ fi
 usage()
 {
     cat <<EOF
-Create SD card image from build artifacts for any supported board.
+Create SD card/eMMC image from build artifacts for any supported board.
 
 Usage:
   $0 [OPTIONS] <board-name>
 
 Options:
   -b boot-dir     Path to bootloader build directory (default: O= or output/)
+  -B              Boot-only image (no rootfs, for bootloader testing)
   -d              Download bootloader files from latest-boot release
   -f              Force re-download of bootloader even if cached
   -h              This help text
@@ -55,6 +56,9 @@ Examples:
 
   # Create eMMC image instead of SD card:
   $0 -t emmc bananapi-bpi-r3
+
+  # Create boot-only image for bootloader testing:
+  $0 -B -b build-boot microchip-sama7g54-ek
 
 EOF
 }
@@ -293,10 +297,39 @@ discover_rpi_boot_files()
     echo "$files"
 }
 
-while getopts "hldfob:r:t:" opt; do
+# Filter genimage.cfg.in for boot-only image
+# Removes rootfs-related blocks: image cfg.ext4, image var.ext4,
+# and partitions: aux, primary, secondary, cfg, var
+filter_bootonly_genimage()
+{
+    awk '
+    BEGIN { skip=0; depth=0 }
+    /^image cfg\.ext4/ || /^image var\.ext4/ {
+        skip=1; depth=1; next
+    }
+    /^[[:space:]]*partition (aux|primary|secondary|cfg|var)[[:space:]]*\{/ {
+        skip=1; depth=1; next
+    }
+    skip==1 {
+        # Count braces on this line to track nesting depth
+        n = gsub(/{/, "{")
+        m = gsub(/}/, "}")
+        depth = depth + n - m
+        if (depth <= 0) { skip=0; depth=0 }
+        next
+    }
+    { print }
+    '
+}
+
+while getopts "hldfoBb:r:t:" opt; do
     case $opt in
         b)
 	    BOOT_DIR="$OPTARG"
+	    STANDALONE=1
+	    ;;
+	B)
+	    BOOT_ONLY=1
 	    STANDALONE=1
 	    ;;
 	d)
@@ -360,6 +393,11 @@ if [ -n "$STANDALONE" ]; then
         default_dir=$(find_build_dir) || die "Could not find build directory. Set O= or use -b/-r option"
         : "${BOOT_DIR:=$default_dir}"
         : "${ROOT_DIR:=$default_dir}"
+    elif [ -n "$BOOT_ONLY" ]; then
+        # Boot-only mode: only need bootloader directory
+        if [ -z "$BOOT_DIR" ]; then
+            BOOT_DIR=$(find_build_dir) || die "Could not find boot directory. Use -b option"
+        fi
     else
         if [ -z "$BOOT_DIR" ]; then
             BOOT_DIR=$(find_build_dir) || die "Could not find boot directory. Use -b option"
@@ -379,51 +417,54 @@ if [ -n "$STANDALONE" ]; then
 
     # Add host tools to PATH (for genimage, bmaptool, etc.)
     for dir in "$BOOT_DIR" "$ROOT_DIR"; do
+        [ -n "$dir" ] || continue
         if [ -d "$dir/host/bin" ]; then
             export PATH="$dir/host/bin:$PATH"
             break
         fi
     done
 
-    # Copy rootfs and partition images to BINARIES_DIR (skip if same directory)
+    # Copy rootfs and partition images to BINARIES_DIR (skip in boot-only mode)
     mkdir -p "$BINARIES_DIR"
 
-    # Normalize paths for comparison
-    boot_images=$(cd "$BOOT_DIR" && pwd)/images
-    root_images=""
+    if [ -z "$BOOT_ONLY" ]; then
+        # Normalize paths for comparison
+        boot_images=$(cd "$BOOT_DIR" && pwd)/images
+        root_images=""
 
-    if [ -f "$ROOT_DIR" ]; then
-        # Direct path to rootfs.squashfs file
-        log "Copying rootfs from $ROOT_DIR to $BINARIES_DIR/rootfs.squashfs"
-        cp "$ROOT_DIR" "$BINARIES_DIR/rootfs.squashfs"
-    elif [ -f "$ROOT_DIR/images/rootfs.squashfs" ]; then
-        root_images=$(cd "$ROOT_DIR" && pwd)/images
-        # Only copy if different directories
-        if [ "$boot_images" != "$root_images" ]; then
-            # Build directory with images/ - copy rootfs and partition images
-            log "Copying artifacts from $ROOT_DIR/images/ to $BINARIES_DIR/"
-            cp "$ROOT_DIR/images/rootfs.squashfs" "$BINARIES_DIR/"
+        if [ -f "$ROOT_DIR" ]; then
+            # Direct path to rootfs.squashfs file
+            log "Copying rootfs from $ROOT_DIR to $BINARIES_DIR/rootfs.squashfs"
+            cp "$ROOT_DIR" "$BINARIES_DIR/rootfs.squashfs"
+        elif [ -f "$ROOT_DIR/images/rootfs.squashfs" ]; then
+            root_images=$(cd "$ROOT_DIR" && pwd)/images
+            # Only copy if different directories
+            if [ "$boot_images" != "$root_images" ]; then
+                # Build directory with images/ - copy rootfs and partition images
+                log "Copying artifacts from $ROOT_DIR/images/ to $BINARIES_DIR/"
+                cp "$ROOT_DIR/images/rootfs.squashfs" "$BINARIES_DIR/"
+                # Copy partition images if they exist
+                for img in aux.ext4 cfg.ext4 var.ext4; do
+                    if [ -f "$ROOT_DIR/images/$img" ]; then
+                        cp "$ROOT_DIR/images/$img" "$BINARIES_DIR/"
+                    fi
+                done
+            else
+                log "Rootfs already in place at $BINARIES_DIR/"
+            fi
+        elif [ -f "$ROOT_DIR/rootfs.squashfs" ]; then
+            # Directory directly containing rootfs.squashfs
+            log "Copying rootfs from $ROOT_DIR/rootfs.squashfs"
+            cp "$ROOT_DIR/rootfs.squashfs" "$BINARIES_DIR/"
             # Copy partition images if they exist
             for img in aux.ext4 cfg.ext4 var.ext4; do
-                if [ -f "$ROOT_DIR/images/$img" ]; then
-                    cp "$ROOT_DIR/images/$img" "$BINARIES_DIR/"
+                if [ -f "$ROOT_DIR/$img" ]; then
+                    cp "$ROOT_DIR/$img" "$BINARIES_DIR/"
                 fi
             done
         else
-            log "Rootfs already in place at $BINARIES_DIR/"
+            die "Could not find rootfs.squashfs in $ROOT_DIR"
         fi
-    elif [ -f "$ROOT_DIR/rootfs.squashfs" ]; then
-        # Directory directly containing rootfs.squashfs
-        log "Copying rootfs from $ROOT_DIR/rootfs.squashfs"
-        cp "$ROOT_DIR/rootfs.squashfs" "$BINARIES_DIR/"
-        # Copy partition images if they exist
-        for img in aux.ext4 cfg.ext4 var.ext4; do
-            if [ -f "$ROOT_DIR/$img" ]; then
-                cp "$ROOT_DIR/$img" "$BINARIES_DIR/"
-            fi
-        done
-    else
-        die "Could not find rootfs.squashfs in $ROOT_DIR"
     fi
 else
     # Export for Buildroot genimage.sh wrapper
@@ -450,29 +491,31 @@ if [ -n "$DOWNLOAD_BOOT" ]; then
     # Now use the temporary directory for composition
     BINARIES_DIR="$SDCARD_TEMP_DIR"
 
-    log "Linking rootfs files to $BINARIES_DIR..."
-    # Link rootfs and partition images to temp directory
-    if [ -f "$ROOT_DIR" ]; then
-        # Direct path to rootfs.squashfs file
-        ln -sf "$(realpath "$ROOT_DIR")" "$BINARIES_DIR/rootfs.squashfs"
-    elif [ -f "$ROOT_DIR/images/rootfs.squashfs" ]; then
-        ln -sf "$(realpath "$ROOT_DIR/images/rootfs.squashfs")" "$BINARIES_DIR/rootfs.squashfs"
-        # Link partition images if they exist
-        for img in aux.ext4 cfg.ext4 var.ext4; do
-            if [ -f "$ROOT_DIR/images/$img" ]; then
-                ln -sf "$(realpath "$ROOT_DIR/images/$img")" "$BINARIES_DIR/$img"
-            fi
-        done
-    elif [ -f "$ROOT_DIR/rootfs.squashfs" ]; then
-        ln -sf "$(realpath "$ROOT_DIR/rootfs.squashfs")" "$BINARIES_DIR/rootfs.squashfs"
-        # Link partition images if they exist
-        for img in aux.ext4 cfg.ext4 var.ext4; do
-            if [ -f "$ROOT_DIR/$img" ]; then
-                ln -sf "$(realpath "$ROOT_DIR/$img")" "$BINARIES_DIR/$img"
-            fi
-        done
-    else
-        die "Could not find rootfs.squashfs in $ROOT_DIR"
+    # Link rootfs and partition images to temp directory (skip in boot-only mode)
+    if [ -z "$BOOT_ONLY" ]; then
+        log "Linking rootfs files to $BINARIES_DIR..."
+        if [ -f "$ROOT_DIR" ]; then
+            # Direct path to rootfs.squashfs file
+            ln -sf "$(realpath "$ROOT_DIR")" "$BINARIES_DIR/rootfs.squashfs"
+        elif [ -f "$ROOT_DIR/images/rootfs.squashfs" ]; then
+            ln -sf "$(realpath "$ROOT_DIR/images/rootfs.squashfs")" "$BINARIES_DIR/rootfs.squashfs"
+            # Link partition images if they exist
+            for img in aux.ext4 cfg.ext4 var.ext4; do
+                if [ -f "$ROOT_DIR/images/$img" ]; then
+                    ln -sf "$(realpath "$ROOT_DIR/images/$img")" "$BINARIES_DIR/$img"
+                fi
+            done
+        elif [ -f "$ROOT_DIR/rootfs.squashfs" ]; then
+            ln -sf "$(realpath "$ROOT_DIR/rootfs.squashfs")" "$BINARIES_DIR/rootfs.squashfs"
+            # Link partition images if they exist
+            for img in aux.ext4 cfg.ext4 var.ext4; do
+                if [ -f "$ROOT_DIR/$img" ]; then
+                    ln -sf "$(realpath "$ROOT_DIR/$img")" "$BINARIES_DIR/$img"
+                fi
+            done
+        else
+            die "Could not find rootfs.squashfs in $ROOT_DIR"
+        fi
     fi
 fi
 
@@ -496,13 +539,28 @@ if { [ "$BOARD" = "raspberrypi-rpi2" ] || [ "$BOARD" = "raspberrypi-rpi64" ]; } 
     GENIMAGE_TEMPLATE="${GENIMAGE_CFG}.tmp"
 fi
 
-# Epxand template variables
-sed "s|#VERSION#|${RELEASE}|" "$GENIMAGE_TEMPLATE" | \
-sed "s|#INFIX_ID#|${INFIX_ID}|" | \
-sed "s|#TARGET#|${TARGET}|" > "$GENIMAGE_CFG"
+# Filter for boot-only mode if requested
+if [ -n "$BOOT_ONLY" ]; then
+    log "Filtering genimage config for boot-only image..."
+    filter_bootonly_genimage < "$GENIMAGE_TEMPLATE" > "${GENIMAGE_CFG}.filtered"
+    GENIMAGE_TEMPLATE="${GENIMAGE_CFG}.filtered"
+fi
 
-# Clean up temp file if created
-rm -f "${GENIMAGE_CFG}.tmp"
+# Expand template variables
+# For boot-only mode, append "-boot" to the target name in the image filename
+if [ -n "$BOOT_ONLY" ]; then
+    sed "s|#VERSION#|${RELEASE}|" "$GENIMAGE_TEMPLATE" | \
+    sed "s|#INFIX_ID#|${INFIX_ID}|" | \
+    sed "s|#TARGET#|${TARGET}|" | \
+    sed "s|-${TARGET}\.img|-${TARGET}-boot.img|" > "$GENIMAGE_CFG"
+else
+    sed "s|#VERSION#|${RELEASE}|" "$GENIMAGE_TEMPLATE" | \
+    sed "s|#INFIX_ID#|${INFIX_ID}|" | \
+    sed "s|#TARGET#|${TARGET}|" > "$GENIMAGE_CFG"
+fi
+
+# Clean up temp files if created
+#rm -f "${GENIMAGE_CFG}.tmp" "${GENIMAGE_CFG}.filtered"
 
 # Find and set up for calling genimage/genimage.sh
 if [ -z "$BR2_CONFIG" ]; then
@@ -546,8 +604,12 @@ if [ -n "$DOWNLOAD_BOOT" ]; then
     BINARIES_DIR="$ORIGINAL_BINARIES_DIR"
 fi
 
-log "$TARGET image created successfully:"
-for img in "${BINARIES_DIR}"/*-sdcard.img* "${BINARIES_DIR}"/*-emmc.img*; do
+if [ -n "$BOOT_ONLY" ]; then
+    log "$TARGET boot-only image created successfully:"
+else
+    log "$TARGET image created successfully:"
+fi
+for img in "${BINARIES_DIR}"/*-sdcard*.img* "${BINARIES_DIR}"/*-emmc*.img*; do
     if [ -f "$img" ]; then
         if [ -n "$STANDALONE" ]; then
             # Show relative path in standalone mode
