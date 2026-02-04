@@ -117,6 +117,7 @@ BR2_PACKAGE_HOST_MTOOLS=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_FIT_SUPPORT=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_FIT_SIGNATURE_SUPPORT=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_FDT_ADD_PUBKEY=y
+BR2_PACKAGE_MICROCHIP_SAMA7G54_EK=y
 BR2_PACKAGE_RASPBERRYPI_RPI2=y
 INFIX_VENDOR_HOME="https://kernelkit.org"
 INFIX_DESC="Infix is an immutable, friendly, and secure operating system that turns any ARM or x86 device into a powerful, manageable network appliance. Deploy on anything from $35 Raspberry Pi boards to enterprise switches as routers, IoT gateways, or edge devices. Infix models Linux networking features using YANG so you can manage your devices using NETCONF/RESTCONF APIs and focus on your business logic running in isolated containers."

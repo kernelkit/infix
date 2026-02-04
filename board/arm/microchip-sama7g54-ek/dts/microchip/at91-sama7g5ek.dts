@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Infix OS device tree for Microchip SAMA7G5 Evaluation Kit
+ */
+
+#include <arm/microchip/at91-sama7g5ek.dts>
+#include "infix.dtsi"
+
+/ {
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+};
+
+/* Thermal sensor disabled until OTP is calibrated */
+&thermal_sensor {
+	status = "disabled";
+};

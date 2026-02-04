@@ -1,0 +1,19 @@
+/ {
+	config {
+		environment {
+			vendor = "Microchip";
+			bootcmd = "run ixboot";
+			boot_targets = "mmc0";
+			fdtfile = "microchip/at91-sama7g5ek.dtb";
+			fdt_addr_r = "0x62000000";
+			kernel_addr_r = "0x63000000";
+			scriptaddr = "0x68000000";
+			ramdisk_addr_r = "0x69000000";
+			ixbootdelay = "0.5";
+			bootdelay = "-2";
+			bootmenu_delay = "10";
+			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+			ixbtn-factory = "echo \"No button, use bootmenu\"";
+		};
+	};
+};

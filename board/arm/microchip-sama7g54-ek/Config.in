@@ -1,0 +1,7 @@
+config BR2_PACKAGE_MICROCHIP_SAMA7G54_EK
+	bool "Microchip SAMA7G54-EK Evaluation Kit"
+	depends on BR2_arm
+	select SDCARD_AUX
+	help
+	  Support for the Microchip SAMA7G54 Evaluation Kit featuring
+	  a Cortex-A7 processor with MACB Gigabit Ethernet and MMC storage.

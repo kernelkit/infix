@@ -1,5 +1,6 @@
 if BR2_arm
 
+source "$BR2_EXTERNAL_INFIX_PATH/board/arm/microchip-sama7g54-ek/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/board/arm/raspberrypi-rpi2/Config.in"
 
 endif
