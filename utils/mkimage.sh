@@ -111,7 +111,7 @@ run_genimage()
         --config     "$genimage_cfg"
 
     if command -v bmaptool >/dev/null 2>&1; then
-        for img in "${BINARIES_DIR}"/*-sdcard.img "${BINARIES_DIR}"/*-emmc.img; do
+        for img in "${BINARIES_DIR}"/*-sdcard*.img "${BINARIES_DIR}"/*-emmc*.img; do
             [ -f "$img" ] || continue
             log "Generating block map for $(basename "$img")..."
             bmaptool create -o "${img}.bmap" "$img"
@@ -184,6 +184,13 @@ get_bootloader_name()
             ;;
         friendlyarm-nanopi-r2s)
             echo "nanopi_r2s_boot"
+            ;;
+        microchip-sama7g54-ek)
+            if [ "$target" = "emmc" ]; then
+                echo "sama7g54_ek_emmc_boot"
+            else
+                echo "sama7g54_ek_sd_boot"
+            fi
             ;;
         *)
             err "Unknown bootloader for board: $board"
@@ -525,7 +532,7 @@ if [ -n "$DOWNLOAD_BOOT" ]; then
     log "Moving $TARGET images to $ORIGINAL_BINARIES_DIR..."
     mkdir -p "$ORIGINAL_BINARIES_DIR"
 
-    for img in "${BINARIES_DIR}"/*-sdcard.img* "${BINARIES_DIR}"/*-emmc.img*; do
+    for img in "${BINARIES_DIR}"/*-sdcard*.img* "${BINARIES_DIR}"/*-emmc*.img*; do
         if [ -f "$img" ]; then
             mv "$img" "$ORIGINAL_BINARIES_DIR/"
             log "  $(basename "$img")"
