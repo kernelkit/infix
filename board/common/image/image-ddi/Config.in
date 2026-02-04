@@ -9,6 +9,7 @@ menuconfig IX_IMAGE_DDI
 	select BR2_PACKAGE_MULTIPATH_TOOLS
 	select BR2_PACKAGE_UTIL_LINUX_BINARIES
 	select BR2_PACKAGE_HOST_GENIMAGE
+	select BR2_PACKAGE_HOST_DRACUT
 	help
 	  Create a Discoverable Disk Image containing:
 	  - SquashFS of the root filesystem
