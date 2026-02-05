@@ -1,0 +1,41 @@
+name: 'Restore Build Caches'
+description: 'Restore dl/ and .ccache/ caches for Buildroot builds'
+inputs:
+  target:
+    description: 'Build target for cache key differentiation'
+    required: true
+  dl-prefix:
+    description: 'Prefix for dl/ cache key (e.g., "dl", "dl-boot")'
+    required: false
+    default: 'dl'
+  ccache-prefix:
+    description: 'Prefix for .ccache/ cache key (e.g., "ccache", "ccache-boot")'
+    required: false
+    default: 'ccache'
+  enabled:
+    description: 'Set to false to skip cache restoration'
+    required: false
+    default: 'true'
+runs:
+  using: 'composite'
+  steps:
+    - name: Restore Cache of dl/
+      if: ${{ inputs.enabled == 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: dl/
+        key: ${{ inputs.dl-prefix }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+        restore-keys: |
+          ${{ inputs.dl-prefix }}-
+          dl-
+
+    - name: Restore Cache of .ccache/
+      if: ${{ inputs.enabled == 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: .ccache/
+        key: ${{ inputs.ccache-prefix }}-${{ inputs.target }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+        restore-keys: |
+          ${{ inputs.ccache-prefix }}-${{ inputs.target }}-
+          ${{ inputs.ccache-prefix }}-
+          ccache-

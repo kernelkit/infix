@@ -23,20 +23,12 @@ jobs:
         target: [aarch64, arm, x86_64]
       fail-fast: false
     steps:
-      - name: Cleanup podman state
-        run: |
-          set -x
-          podman ps -a              || true
-          podman stop -a            || true
-          podman rm -a -f           || true
-          podman volume prune -f    || true
-          podman system prune -a -f || true
-          podman system migrate     || true
-
       - uses: actions/checkout@v4
         with:
           clean: true
           submodules: recursive
+
+      - uses: ./.github/actions/podman-cleanup
 
       - name: Set Release Variables
         id: vars
@@ -48,24 +40,10 @@ jobs:
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
 
-      - name: Restore Cache of dl/
-        if: ${{ inputs.use_cache }}
-        uses: actions/cache@v4
+      - uses: ./.github/actions/cache-restore
         with:
-          path: dl/
-          key: dl-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
-          restore-keys: |
-            dl-
-
-      - name: Restore Cache of .ccache/
-        if: ${{ inputs.use_cache }}
-        uses: actions/cache@v4
-        with:
-          path: .ccache/
-          key: ccache-${{ matrix.target }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
-          restore-keys: |
-            ccache-${{ matrix.target }}-
-            ccache-
+          target: ${{ matrix.target }}
+          enabled: ${{ inputs.use_cache }}
 
       - name: Configure & Build
         env:

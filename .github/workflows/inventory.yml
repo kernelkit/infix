@@ -45,22 +45,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore Cache of dl/
-        uses: actions/cache@v4
+      - uses: ./.github/actions/cache-restore
         with:
-          path: dl/
-          key: dl-netconf-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
-          restore-keys: |
-            dl-netconf-
-            dl-
-      - name: Restore Cache of .ccache/
-        uses: actions/cache@v4
-        with:
-          path: .ccache/
-          key: ccache-x86_64-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
-          restore-keys: |
-            ccache-x86_64-
-            ccache-
+          target: x86_64
+          dl-prefix: dl-netconf
       - name: Disk inventory (2/2) ...
         run: |
           echo "df -h ========================================================================="
