@@ -22,6 +22,7 @@ jobs:
           - cn9130_crb_boot
           - fireant_boot
           - nanopi_r2s_boot
+          - rpi2_boot
           - rpi64_boot
     env:
       MAKEFLAGS: -j5
@@ -63,24 +64,11 @@ jobs:
 
           echo "Building ${defconfig}_defconfig, version ${version}-${rev}, artifact ${archive} ..."
 
-      - name: Restore Cache of dl/
-        uses: actions/cache@v4
+      - uses: ./.github/actions/cache-restore
         with:
-          path: dl/
-          key: dl-boot-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
-          restore-keys: |
-            dl-boot-
-            dl-
-
-      - name: Restore Cache of .ccache/
-        uses: actions/cache@v4
-        with:
-          path: .ccache/
-          key: ccache-boot-${{ matrix.defconfig }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
-          restore-keys: |
-            ccache-boot-${{ matrix.defconfig }}-
-            ccache-boot-
-            ccache-
+          target: ${{ matrix.defconfig }}
+          dl-prefix: dl-boot
+          ccache-prefix: ccache-boot
 
       - name: Configure ${{ matrix.defconfig }}_defconfig
         run: |

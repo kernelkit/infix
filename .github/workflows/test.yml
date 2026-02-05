@@ -60,16 +60,6 @@ jobs:
     name: Regression Test ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }} ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}
     runs-on: [self-hosted, regression]
     steps:
-      - name: Cleanup podman state
-        run: |
-          set -x
-          podman ps -a              || true
-          podman stop -a            || true
-          podman rm -a -f           || true
-          podman volume prune -f    || true
-          podman system prune -a -f || true
-          podman system migrate     || true
-
       - name: Checkout infix repo
         uses: actions/checkout@v4
         with:
@@ -79,6 +69,8 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
+
+      - uses: ./.github/actions/podman-cleanup
 
       - name: Run pre-test script
         if: ${{ inputs.pre_test_script != '' }}

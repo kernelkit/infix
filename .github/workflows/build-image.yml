@@ -8,6 +8,7 @@ on:
         type: choice
         required: true
         options:
+          - raspberrypi-rpi2
           - raspberrypi-rpi64
           - bananapi-bpi-r3
           - friendlyarm-nanopi-r2s
@@ -49,6 +50,11 @@ jobs:
       - name: Set bootloader and target based on board
         run: |
           case "${{ inputs.board }}" in
+            raspberrypi-rpi2)
+              echo "BOOTLOADER=rpi2-boot" >> $GITHUB_ENV
+              echo "ARCH=arm" >> $GITHUB_ENV
+              echo "BUILD_EMMC=false" >> $GITHUB_ENV
+              ;;
             raspberrypi-rpi64)
               echo "BOOTLOADER=rpi64-boot" >> $GITHUB_ENV
               echo "ARCH=aarch64" >> $GITHUB_ENV

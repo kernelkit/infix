@@ -78,15 +78,6 @@ jobs:
           rm -rf ./* || true
           rm -rf ./.??* || true
           ls -la ./
-      - name: Cleanup podman state
-        run: |
-          set -x
-          podman ps -a              || true
-          podman stop -a            || true
-          podman rm -a -f           || true
-          podman volume prune -f    || true
-          podman system prune -a -f || true
-          podman system migrate     || true
 
       - name: Checkout infix repo
         uses: actions/checkout@v4
@@ -97,6 +88,8 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
+
+      - uses: ./.github/actions/podman-cleanup
 
       - name: Run pre-build script
         if: ${{ inputs.pre_build_script != '' }}
@@ -127,22 +120,9 @@ jobs:
           echo "tgz=${name}-${target}.tar.gz" >> $GITHUB_OUTPUT
           echo "Building target ${target}_defconfig"
 
-      - name: Restore Cache of dl/
-        uses: actions/cache@v4
+      - uses: ./.github/actions/cache-restore
         with:
-          path: dl/
-          key: dl-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
-          restore-keys: |
-            dl-
-
-      - name: Restore Cache of .ccache/
-        uses: actions/cache@v4
-        with:
-          path: .ccache/
-          key: ccache-${{ env.TARGET }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
-          restore-keys: |
-            ccache-${{ env.TARGET }}-
-            ccache-
+          target: ${{ env.TARGET }}
 
       - name: Configure ${{ env.TARGET }}
         run: |
