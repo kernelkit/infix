@@ -114,6 +114,7 @@ containers for any custom functionality you need.
 - **x86_64** - Run in VMs or on mini PCs for development and testing
 - **Marvell CN9130 CRB, EspressoBIN** - High-performance ARM64 platforms
 - **Microchip SparX-5i** - Enterprise switching capabilities
+- **Microchip SAMA7G54-EK** - ARM Cortex-A7
 - **NXP i.MX8MP EVK** - Highly capable ARM64 SoC
 - **StarFive VisionFive2** - RISC-V architecture support
 
