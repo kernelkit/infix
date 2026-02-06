@@ -3693,6 +3693,13 @@ set:</p>
 <li>MAC address, to use the <code>custom-phys-address</code> in the interface settings</li>
 </ul>
 <p>For an example of both, see the next section.</p>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p><strong>VETH Pair Limitation:</strong> When using VETH pairs with containers, at least
+one side of the pair must remain in the host namespace. It is currently
+not possible to create VETH pairs where both ends are assigned to different
+containers. One end must always be accessible from the host.</p>
+</div>
 <h4 id="routed-setup">Routed Setup<a class="headerlink" href="#routed-setup" title="Permanent link">¶</a></h4>
 <p>In this routed setup we reserve 192.168.0.0/24 for the network between
 the host and the <code>ntpd</code> container.</p>
