@@ -12,6 +12,7 @@ on:
           - raspberrypi-rpi64
           - bananapi-bpi-r3
           - friendlyarm-nanopi-r2s
+          - microchip-sama7g54-ek
         default: 'raspberrypi-rpi64'
 
 jobs:
@@ -70,6 +71,12 @@ jobs:
               echo "BOOTLOADER=nanopi-r2s-boot" >> $GITHUB_ENV
               echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=false" >> $GITHUB_ENV
+              ;;
+            microchip-sama7g54-ek)
+              echo "BOOTLOADER_SD=sama7g54-ek-sd-boot" >> $GITHUB_ENV
+              echo "BOOTLOADER_EMMC=sama7g54-ek-emmc-boot" >> $GITHUB_ENV
+              echo "ARCH=arm" >> $GITHUB_ENV
+              echo "BUILD_EMMC=true" >> $GITHUB_ENV
               ;;
             *)
               echo "Error: Unknown board ${{ inputs.board }}"

@@ -3,6 +3,17 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.01.0][UNRELEASED]
+-------------------------
+
+### Changes
+
+- Add support for Microchip SAMA7G54-EK Evaluation Kit, Arm Cortex-A7
+
+### Fixes
+
+N/A
+
 [v26.01.0][] - 2026-02-03
 -------------------------
 
@@ -1907,7 +1918,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.11.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.01.0...HEAD
 [v26.01.0]:   https://github.com/kernelkit/infix/compare/v25.11.0...v26.01.0
 [v25.11.0]:   https://github.com/kernelkit/infix/compare/v25.10.0...v25.11.0
 [v25.10.0]:   https://github.com/kernelkit/infix/compare/v25.09.0...v26.10.0

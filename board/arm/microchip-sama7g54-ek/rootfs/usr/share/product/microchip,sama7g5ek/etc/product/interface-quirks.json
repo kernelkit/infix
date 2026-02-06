@@ -1,0 +1,5 @@
+{
+    "@ethtool:driver=macb": {
+        "broken-flow-control": true
+    }
+}
