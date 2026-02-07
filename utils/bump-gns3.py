@@ -82,7 +82,7 @@ def main():
             return
 
     # Build qcow2 URL
-    filename = f"infix-x86_64-disk-{version}.qcow2"
+    filename = f"infix-x86_64-v{version}.qcow2"
     url = f"{REPO}/releases/download/v{version}/{filename}"
 
     print(f"Downloading {url} to compute MD5 and size...")
