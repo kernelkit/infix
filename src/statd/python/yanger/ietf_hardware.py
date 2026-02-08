@@ -667,6 +667,85 @@ def wifi_radio_components():
     return components
 
 
+def gps_receiver_components():
+    """Discover GPS/GNSS receivers and populate operational state.
+
+    GPS devices are discovered via /dev/gps* symlinks (created by udev rules).
+    Status is read from /run/gps-status.json, a cache maintained by statd's
+    background GPS monitor (gpsd.c) which streams data from gpsd without
+    blocking the operational datastore.
+    """
+    components = []
+
+    # Discover GPS devices via /dev/gps* symlinks (created by udev rules)
+    gps_devices = {}
+    for i in range(4):
+        dev_path = f"/dev/gps{i}"
+        if not HOST.exists(dev_path):
+            continue
+        # Resolve symlink to actual device (for matching gpsd cache keys)
+        actual = HOST.run(("readlink", "-f", dev_path), default="").strip()
+        gps_devices[actual] = {
+            "name": f"gps{i}",
+            "symlink": dev_path,
+        }
+
+    if not gps_devices:
+        return components
+
+    # Read cached GPS status from statd background monitor
+    cache = HOST.read_json("/run/gps-status.json", {})
+
+    # Build hardware components for each discovered GPS device
+    for actual_path, dev in gps_devices.items():
+        name = dev["name"]
+        component = {
+            "name": name,
+            "class": "infix-hardware:gps",
+            "description": "GPS/GNSS Receiver"
+        }
+
+        gps_data = {}
+        gps_data["device"] = dev["symlink"]
+
+        # Look up cached status by actual device path
+        info = cache.get(actual_path, {})
+
+        if info.get("driver"):
+            gps_data["driver"] = info["driver"]
+        gps_data["activated"] = bool(info.get("activated"))
+
+        mode = info.get("mode", 0)
+        if mode == 2:
+            gps_data["fix-mode"] = "2d"
+        elif mode == 3:
+            gps_data["fix-mode"] = "3d"
+        else:
+            gps_data["fix-mode"] = "none"
+
+        if "lat" in info:
+            gps_data["latitude"] = f"{float(info['lat']):.6f}"
+        if "lon" in info:
+            gps_data["longitude"] = f"{float(info['lon']):.6f}"
+        if "altHAE" in info:
+            gps_data["altitude"] = f"{float(info['altHAE']):.1f}"
+
+        if "satellites_visible" in info:
+            gps_data["satellites-visible"] = int(info["satellites_visible"])
+            gps_data["satellites-used"] = int(info.get("satellites_used", 0))
+
+        # Check for PPS device availability
+        pps_path = f"/dev/pps{name.replace('gps', '')}"
+        gps_data["pps-available"] = HOST.exists(pps_path)
+
+        if gps_data:
+            component["infix-hardware:gps-receiver"] = gps_data
+
+        components.append(component)
+
+    return components
+
+
 def operational():
     systemjson = HOST.read_json("/run/system.json", {})
 
@@ -679,6 +758,7 @@ def operational():
             hwmon_sensor_components() +
             thermal_sensor_components() +
             wifi_radio_components() +
+            gps_receiver_components() +
             [],
         },
     }

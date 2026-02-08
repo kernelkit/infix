@@ -1,0 +1,65 @@
+# Override udev rules for gpsd
+#
+# This file is Copyright 2010 by the GPSD project
+# SPDX-License-Identifier: BSD-2-clause
+
+SUBSYSTEM!="tty", GOTO="gpsd_rules_end"
+
+# Prolific Technology, Inc. PL2303 Serial Port [linux module: pl2303]
+# !!! rule disabled in Debian as it matches too many other devices
+# ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+# ATEN International Co., Ltd UC-232A Serial Port [linux module: pl2303]
+ATTRS{idVendor}=="0557", ATTRS{idProduct}=="2008", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# PS-360 OEM (GPS sold with MS Street and Trips 2005) [linux module: pl2303]
+ATTRS{idVendor}=="067b", ATTRS{idProduct}=="aaa0", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# FTDI 8U232AM / FT232 [linux module: ftdi_sio]
+# !!! rule disabled in Debian as it matches too many other devices
+# ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# Cypress M8/CY7C64013 (Delorme uses these) [linux module: cypress_m8]
+ATTRS{idVendor}=="1163", ATTRS{idProduct}=="0100", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# Cypress M8/CY7C64013 (DeLorme LT-40)
+ATTRS{idVendor}=="1163", ATTRS{idProduct}=="0200", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# Garmin International GPSmap, various models (tested with Garmin GPS 18 USB)  [linux module: garmin_gps]
+ATTRS{idVendor}=="091e", ATTRS{idProduct}=="0003", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# Cygnal Integrated Products, Inc. CP210x Composite Device (Used by Holux m241 and Wintec grays2 wbt-201) [linux module: cp210x]
+# !!! rule disabled in Debian as it matches too many other devices
+#ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# Cygnal Integrated Products, Inc. [linux module: cp210x]
+# !!! rule disabled in Debian as it matches too many other devices
+#ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea71", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# u-blox AG, u-blox 5 (tested with Navilock NL-402U) [linux module: cdc_acm]
+ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a5", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# u-blox AG, u-blox 6 (tested with GNSS Evaluation Kit TCXO) [linux module: cdc_acm]
+ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a6", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# u-blox AG, u-blox 7 [linux module: cdc_acm]
+ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a7", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# u-blox AG, u-blox 8 (tested with GNSS Evaluation Kit EKV-M8N) [linux module: cdc_acm]
+ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# u-blox AG, u-blox 9 (tested with GNSS Evaluation Kit C099-F9P) [linux module: cdc_acm]
+ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a9", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# MediaTek (tested with HOLUX M-1200E) [linux module: cdc_acm]
+ATTRS{idVendor}=="0e8d", ATTRS{idProduct}=="3329", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# Telit wireless solutions (tested with HE910G) [linux module: cdc_acm]
+ATTRS{interface}=="Telit Wireless Module Port", ATTRS{bInterfaceNumber}=="06", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+# u-blox AG, u-blox 8 (tested with u-blox8 GNSS Mouse Receiver / GR-801) [linux module: cdc_acm] 
+# !!! rule disabled in Debian as it matches too many other devices
+#ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", SYMLINK+="gps%n", RUN+="/usr/lib/udev/gpsd.hotplug" 
+
+ACTION=="remove", RUN+="/usr/lib/udev/gpsd.hotplug"
+
+LABEL="gpsd_rules_end"

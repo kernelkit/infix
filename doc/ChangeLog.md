@@ -10,6 +10,7 @@ All notable changes to the project are documented in this file.
 
 - Upgrade Linux kernel to 6.18.9 (LTS)
 - Add support for Microchip SAMA7G54-EK Evaluation Kit, Arm Cortex-A7
+- Add GPS/GNSS receiver support with NTP reference clock integration
 
 ### Fixes
 
