@@ -134,12 +134,85 @@ static int change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 	}
 	fprintf(fp, "\n");
 
-	/* Reference clock (local stratum) - fallback time source */
+	/* Reference clock configuration */
 	refclock = lydx_get_child(ntp, "refclock-master");
 	if (refclock) {
+		struct lyd_node *source;
 		int stratum = atoi(lydx_get_cattr(refclock, "master-stratum"));
+		bool has_gps_sources = false;
 
-		/* Only configure local clock if stratum is valid (1-15) */
+		/*
+		 * GPS/GNSS reference clock sources via gpsd SHM
+		 *
+		 * Each GPS hardware component (gps0, gps1, ...) maps to:
+		 * - SHM unit 2*N for GPS time (coarse, ~100ms)
+		 * - SHM unit 2*N+1 for PPS time (precise, ~1us) if enabled
+		 *
+		 * The mapping is based on gpsd's convention.
+		 */
+		LYX_LIST_FOR_EACH(lyd_child(refclock), source, "source") {
+			const char *receiver, *refid, *poll_str, *precision_str;
+			const char *offset_str, *delay_str;
+			bool prefer, pps;
+			int unit;
+
+			receiver = lydx_get_cattr(source, "receiver");
+			if (!receiver)
+				continue;
+
+			/* Extract unit number from receiver name (gps0 -> 0, gps1 -> 1, ...) */
+			if (sscanf(receiver, "gps%d", &unit) != 1) {
+				ERROR("Invalid GPS receiver name: %s (expected gpsN)", receiver);
+				continue;
+			}
+
+			refid         = lydx_get_cattr(source, "refid");
+			poll_str      = lydx_get_cattr(source, "poll");
+			precision_str = lydx_get_cattr(source, "precision");
+			offset_str    = lydx_get_cattr(source, "offset");
+			delay_str     = lydx_get_cattr(source, "delay");
+			prefer        = lydx_get_bool(source, "prefer");
+			pps           = lydx_get_bool(source, "pps");
+
+			if (!has_gps_sources) {
+				fprintf(fp, "# GPS/GNSS reference clock sources (via gpsd SHM)\n");
+				has_gps_sources = true;
+			}
+
+			/* GPS time source: SHM unit 2*N */
+			fprintf(fp, "refclock SHM %d", unit * 2);
+			if (poll_str)
+				fprintf(fp, " poll %s", poll_str);
+			if (refid)
+				fprintf(fp, " refid %s", refid);
+			if (precision_str)
+				fprintf(fp, " precision %s", precision_str);
+			if (offset_str && atof(offset_str) != 0.0)
+				fprintf(fp, " offset %s", offset_str);
+			if (delay_str && atof(delay_str) != 0.0)
+				fprintf(fp, " delay %s", delay_str);
+			if (prefer)
+				fprintf(fp, " prefer");
+			fprintf(fp, "\n");
+
+			/* PPS time source: SHM unit 2*N+1 (if enabled) */
+			if (pps) {
+				fprintf(fp, "refclock SHM %d", unit * 2 + 1);
+				fprintf(fp, " poll %s", poll_str ? poll_str : "-6");
+				fprintf(fp, " refid PPS");
+				fprintf(fp, " precision 0.000001");
+				if (prefer)
+					fprintf(fp, " prefer");
+				/* PPS needs a time source for initial lock */
+				fprintf(fp, " lock %s", refid ? refid : "GPS");
+				fprintf(fp, "\n");
+			}
+		}
+
+		if (has_gps_sources)
+			fprintf(fp, "\n");
+
+		/* Local clock fallback - only if stratum is valid (1-15) */
 		if (stratum >= 1 && stratum <= 15) {
 			fprintf(fp, "# Local reference clock - fallback stratum %d source\n", stratum);
 			fprintf(fp, "local stratum %d orphan\n\n", stratum);

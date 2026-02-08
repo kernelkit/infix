@@ -21,6 +21,10 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-02-08 {
+    description "Add GPS/GNSS receiver hardware class and container for time sync.";
+    reference "internal";
+  }
   revision 2026-01-19 {
     description "Add probe-timeout for slow USB WiFi dongles.";
     reference "internal";
@@ -63,6 +67,15 @@ module infix-hardware {
        WiFi radios are hardware components with class 'ih:wifi'.";
   }
 
+  typedef gps-receiver-ref {
+    type leafref {
+      path "/iehw:hardware/iehw:component/iehw:name";
+    }
+    description
+      "Reference to a GPS/GNSS receiver hardware component.
+       GPS receivers are hardware components with class 'ih:gps'.";
+  }
+
   typedef wifi-band {
     type enumeration {
       enum "2.4GHz" {
@@ -93,6 +106,11 @@ module infix-hardware {
   identity wifi {
     base iahw:hardware-class;
     description "This identity is used to describe a WiFi radio/PHY";
+  }
+
+  identity gps {
+    base iahw:hardware-class;
+    description "GPS/GNSS receiver for time synchronization";
   }
 
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:admin-state" {
@@ -508,6 +526,127 @@ module infix-hardware {
                Subset of busy-time spent on frame transmission.";
           }
         }
+      }
+    }
+
+    /*
+     * GPS/GNSS Receiver configuration (when class = 'ih:gps')
+     */
+
+    container gps-receiver {
+      when "derived-from-or-self(../iehw:class, 'ih:gps')";
+      presence "GPS receiver configuration";
+      description
+        "GPS/GNSS receiver configuration and operational data.
+
+         This container is present when the hardware component represents
+         a GPS/GNSS receiver (class 'ih:gps'). GPS receivers provide
+         precision time via gpsd, which chronyd can use as a reference
+         clock through shared memory (SHM).
+
+         The hardware component name (e.g., 'gps0') determines:
+         - Device path: /dev/gps0 (symlink managed by udev)
+         - SHM unit: 0 for GPS time, 1 for PPS (derived from gpsN index)
+
+         Supported GNSS constellations depend on the hardware:
+         - GPS (US)
+         - GLONASS (Russia)
+         - Galileo (EU)
+         - BeiDou (China)";
+
+      /*
+       * Operational state from gpsd
+       */
+
+      leaf device {
+        config false;
+        type string;
+        description
+          "Actual device path being used (e.g., /dev/ttyUSB0, /dev/ttyACM0).
+           This is the physical device that /dev/gpsN symlinks to.";
+      }
+
+      leaf driver {
+        config false;
+        type string;
+        description
+          "GPS driver/protocol in use (e.g., 'u-blox', 'NMEA', 'SiRF').";
+      }
+
+      leaf activated {
+        config false;
+        type boolean;
+        description
+          "Whether gpsd has successfully activated this GPS device.";
+      }
+
+      leaf satellites-visible {
+        config false;
+        type uint8;
+        description
+          "Number of satellites currently visible to the receiver.";
+      }
+
+      leaf satellites-used {
+        config false;
+        type uint8;
+        description
+          "Number of satellites being used for the fix.";
+      }
+
+      leaf fix-mode {
+        config false;
+        type enumeration {
+          enum "none" {
+            description "No fix available";
+          }
+          enum "2d" {
+            description "2D fix (latitude/longitude only)";
+          }
+          enum "3d" {
+            description "3D fix (latitude/longitude/altitude)";
+          }
+        }
+        description
+          "Current GPS fix mode. A 3D fix is required for accurate time.";
+      }
+
+      leaf latitude {
+        config false;
+        type decimal64 {
+          fraction-digits 6;
+        }
+        units "degrees";
+        description
+          "Current latitude in decimal degrees. Negative values are south.";
+      }
+
+      leaf longitude {
+        config false;
+        type decimal64 {
+          fraction-digits 6;
+        }
+        units "degrees";
+        description
+          "Current longitude in decimal degrees. Negative values are west.";
+      }
+
+      leaf altitude {
+        config false;
+        type decimal64 {
+          fraction-digits 1;
+        }
+        units "meters";
+        description
+          "Current altitude above mean sea level in meters.";
+      }
+
+      leaf pps-available {
+        config false;
+        type boolean;
+        description
+          "Whether this GPS device provides a PPS (Pulse Per Second) signal.
+           PPS provides microsecond-level timing accuracy.";
       }
     }
   }

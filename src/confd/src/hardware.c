@@ -150,6 +150,12 @@ static int hardware_cand_infer_class(json_t *root, sr_session_ctx_t *session, co
 		inferred.data.string_val = "infix-hardware:wifi";
 		err = srx_set_item(session, &inferred, 0, "%s/class", xpath);
 	}
+
+	if (!fnmatch("gps+([0-9])", name, FNM_EXTMATCH)) {
+		inferred.data.string_val = "infix-hardware:gps";
+		err = srx_set_item(session, &inferred, 0, "%s/class", xpath);
+	}
+
 out_free_name:
 	free(name);
 out_free_xpath:
