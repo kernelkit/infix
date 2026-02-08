@@ -106,6 +106,7 @@ def ntp(args: List[str]) -> None:
     # Fetch both client and server operational data
     client_data = get_json("/system-state/ntp")
     server_data = get_json("/ietf-ntp:ntp")
+    hw_data = get_json("/ietf-hardware:hardware")
 
     # Merge into single data structure
     data = {}
@@ -113,6 +114,8 @@ def ntp(args: List[str]) -> None:
         data.update(client_data)
     if server_data:
         data.update(server_data)
+    if hw_data:
+        data.update(hw_data)
 
     if RAW_OUTPUT:
         if not data:
@@ -146,6 +149,11 @@ def ntp_source(args: List[str]) -> None:
     if not data:
         print("No ntp server data retrieved.")
         return
+
+    # Also fetch hardware data for GPS receiver info
+    hw_data = get_json("/ietf-hardware:hardware")
+    if hw_data:
+        data.update(hw_data)
 
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))

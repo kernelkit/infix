@@ -36,6 +36,29 @@ def get_boot_order():
     return order
 
 def add_ntp(out):
+    """Add NTP source information from chronyc sources.
+
+    The chronyc -c sources output is CSV with the following fields:
+      [0] Mode indicator:
+          ^  server (we're a client to this source)
+          =  peer (symmetric mode)
+          #  local reference clock (GPS, PPS, etc.) - skipped, no IP address
+      [1] State indicator:
+          *  selected (current sync source)
+          +  candidate
+          -  outlier
+          ?  unusable
+          x  falseticker
+          ~  unstable
+      [2] Address (IP address or refclock name like "GPS")
+      [3] Stratum
+      [4] Poll interval (log2 seconds)
+      [5] Reach (octal reachability register)
+      [6] LastRx (seconds since last response)
+      [7] Last offset (seconds)
+      [8] Offset at last update (seconds)
+      [9] Error estimate (seconds)
+    """
     data = HOST.run_multiline(["chronyc", "-c", "sources"], [])
     source = []
     state_mode_map = {
@@ -54,6 +77,9 @@ def add_ntp(out):
     for line in data:
         src = {}
         line = line.split(',')
+        # Skip reference clocks (mode "#") as they have names like "GPS" instead of IP addresses
+        if line[0] == "#":
+            continue
         src["address"] = line[2]
         src["mode"] = state_mode_map[line[0]]
         src["state"] = source_state_map[line[1]]
