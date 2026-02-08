@@ -2132,6 +2132,7 @@ def show_hardware(json):
     usb_ports = [c for c in components if c.get("class") == "infix-hardware:usb"]
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
     wifi_radios = [c for c in components if c.get("class") == "infix-hardware:wifi"]
+    gps_receivers = [c for c in components if c.get("class") == "infix-hardware:gps"]
 
     width = max(PadSensor.table_width(), 62)
 
@@ -2202,6 +2203,44 @@ def show_hardware(json):
 
             radios_table.row(phy, manufacturer, bands_str, standard_str, max_ap)
         radios_table.print()
+
+    if gps_receivers:
+        Decore.title("GPS/GNSS Receivers", width)
+
+        for component in gps_receivers:
+            gps = component.get("infix-hardware:gps-receiver", {})
+            name = component.get("name", "unknown")
+            device = gps.get("device", "N/A")
+            driver = gps.get("driver", "Unknown")
+            fix = gps.get("fix-mode", "none")
+            activated = gps.get("activated", False)
+
+            print(f"{'Name':<20}: {name}")
+            print(f"{'Device':<20}: {device}")
+            print(f"{'Driver':<20}: {driver}")
+            print(f"{'Status':<20}: {'Active' if activated else 'Inactive'}")
+            print(f"{'Fix':<20}: {fix.upper()}")
+
+            sat_vis = gps.get("satellites-visible")
+            sat_used = gps.get("satellites-used")
+            if sat_vis is not None:
+                print(f"{'Satellites':<20}: {sat_used}/{sat_vis} (used/visible)")
+
+            lat = gps.get("latitude")
+            lon = gps.get("longitude")
+            alt = gps.get("altitude")
+            if lat is not None and lon is not None:
+                lat_f = float(lat)
+                lon_f = float(lon)
+                lat_dir = "N" if lat_f >= 0 else "S"
+                lon_dir = "E" if lon_f >= 0 else "W"
+                pos = f"{abs(lat_f):.6f}{lat_dir} {abs(lon_f):.6f}{lon_dir}"
+                if alt is not None:
+                    pos += f" {alt}m"
+                print(f"{'Position':<20}: {pos}")
+
+            pps = gps.get("pps-available", False)
+            print(f"{'PPS':<20}: {'Available' if pps else 'Not available'}")
 
     if usb_ports:
         Decore.title("USB Ports", width)
@@ -2509,9 +2548,16 @@ def show_ntp(json, address=None):
             show_ntp_source_detail_single(matching[0], False)
         return
 
+    # Check for GPS/GNSS hardware reference clocks
+    hw_components = json.get("ietf-hardware:hardware", {}).get("component", [])
+    gps_sources = [c for c in hw_components if c.get("class") == "infix-hardware:gps"]
+
     if is_server:
         if sources:
             print(f"{'Mode':<20}: Relay (no local reference clock)")
+        elif gps_sources:
+            gps_names = ", ".join(c.get("name", "?") for c in gps_sources)
+            print(f"{'Mode':<20}: Server (GPS reference clock: {gps_names})")
         else:
             print(f"{'Mode':<20}: Server (local reference clock)")
         print(f"{'Port':<20}: {port}")
@@ -2808,8 +2854,41 @@ def show_ntp_source(json, address=None):
         return
 
     associations = ntp_data.get("associations", {}).get("association", [])
-    if not associations:
+
+    # Check for GPS/GNSS reference clock sources from hardware data
+    hw_components = json.get("ietf-hardware:hardware", {}).get("component", [])
+    gps_sources = [c for c in hw_components if c.get("class") == "infix-hardware:gps"]
+
+    # Show GPS reference clocks
+    if gps_sources:
+        clock_state = ntp_data.get("clock-state", {}).get("system-status", {})
+        clock_refid = clock_state.get("clock-refid", "").strip()
+
+        for gps in gps_sources:
+            gps_data = gps.get("infix-hardware:gps-receiver", {})
+            name = gps.get("name", "unknown")
+            driver = gps_data.get("driver", "Unknown")
+            fix = gps_data.get("fix-mode", "none")
+            activated = gps_data.get("activated", False)
+            sat_used = gps_data.get("satellites-used", 0)
+            sat_vis = gps_data.get("satellites-visible", 0)
+
+            # Determine if this GPS is the current sync source
+            is_synced = clock_refid in ("GPS", "PPS", "GLO", "GAL", "BDS", "GNSS")
+
+            state = "selected" if is_synced else ("active" if activated else "inactive")
+            print(f"{'Reference Clock':<20}: {name} ({driver})")
+            print(f"{'Status':<20}: {state}")
+            print(f"{'Fix Mode':<20}: {fix.upper()}")
+            if sat_vis:
+                print(f"{'Satellites':<20}: {sat_used}/{sat_vis} (used/visible)")
+            print()
+
+    if not associations and not gps_sources:
         print("No NTP associations found.")
+        return
+
+    if not associations:
         return
 
     # If address specified, show detailed view for that association
