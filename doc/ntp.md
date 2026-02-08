@@ -28,6 +28,70 @@ admin@example:/config/ntp/> <b>set refclock-master master-stratum 10</b>
 admin@example:/config/ntp/> <b>leave</b>
 </code></pre>
 
+## GPS Reference Clock
+
+A GPS/GNSS receiver can be used as an NTP reference clock source,
+providing stratum 1 time derived from the GPS satellite constellation.
+This requires a GPS hardware component to be configured first, see
+[Hardware — GPS/GNSS Receivers](hardware.md#gpsgnss-receivers).
+
+### Basic setup
+
+Add a GPS receiver as a reference clock source:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit ntp</b>
+admin@example:/config/ntp/> <b>edit refclock-master source gps0</b>
+admin@example:/config/ntp/refclock-master/source/gps0/> <b>set poll 2</b>
+admin@example:/config/ntp/refclock-master/source/gps0/> <b>set precision 0.1</b>
+admin@example:/config/ntp/refclock-master/source/gps0/> <b>end</b>
+admin@example:/config/ntp/> <b>leave</b>
+</code></pre>
+
+Tunable parameters:
+
+| Parameter   | Default | Description                                        |
+|-------------|--------:|----------------------------------------------------|
+| `poll`      |     `2` | Polling interval in log2 seconds (2 = 4s)          |
+| `precision` |   `0.1` | Assumed precision in seconds (0.1 = 100ms)         |
+| `refid`     |  `"GPS"`| Reference identifier (e.g., `GPS`, `GNSS`, `GLO`) |
+| `prefer`    | `false` | Prefer this source over other reference clocks     |
+| `pps`       | `false` | Enable PPS for microsecond-level accuracy          |
+| `offset`    |   `0.0` | Constant offset correction in seconds              |
+| `delay`     |   `0.0` | Assumed maximum delay from the receiver             |
+
+### PPS (Pulse Per Second)
+
+When the GPS receiver provides a PPS signal, enable the `pps` option for
+microsecond-level accuracy.  With PPS, the GPS time provides the initial
+lock and the PPS edges discipline the clock:
+
+<pre class="cli"><code>admin@example:/config/ntp/> <b>edit refclock-master source gps0</b>
+admin@example:/config/ntp/refclock-master/source/gps0/> <b>set pps true</b>
+admin@example:/config/ntp/refclock-master/source/gps0/> <b>set precision 0.000001</b>
+admin@example:/config/ntp/refclock-master/source/gps0/> <b>end</b>
+admin@example:/config/ntp/> <b>leave</b>
+</code></pre>
+
+### Monitoring
+
+The `show ntp` command shows the GPS receiver as the reference clock source:
+
+<pre class="cli"><code>admin@example:/> <b>show ntp</b>
+Mode                : Server (GPS reference clock: gps0)
+Port                : 123
+Stratum             : 1
+Ref time (UTC)      : Sun Feb 08 19:44:36 2026
+</code></pre>
+
+Use `show ntp source` to see GPS reference clock details:
+
+<pre class="cli"><code>admin@example:/> <b>show ntp source</b>
+Reference Clock     : gps0 (u-blox)
+Status              : selected
+Fix Mode            : 3D
+Satellites          : 9/17 (used/visible)
+</code></pre>
+
 ## Server Mode
 
 Synchronize from upstream NTP servers while serving time to clients:

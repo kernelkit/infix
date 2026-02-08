@@ -3,6 +3,56 @@
 The hardware infomation and status is handled by the YANG model [IETF
 hardware][1], with deviations and augmentations in _infix-hardware_.
 
+## GPS/GNSS Receivers
+
+Infix supports GPS/GNSS receivers for hardware status monitoring and NTP
+time synchronization.  USB GPS receivers using the USB ACM interface are
+supported (e.g., u-blox).  When connected, devices are automatically
+discovered and named `gps0`, `gps1`, etc.
+
+### Current status
+
+<pre class="cli"><code>admin@example:/> <b>show hardware</b>
+<span class="header">HARDWARE COMPONENTS                                           </span>
+──────────────────────────────────────────────────────────────
+<span class="title">GPS/GNSS Receivers                                           </span>
+Name                : gps0
+Device              : /dev/gps0
+Driver              : u-blox
+Status              : Active
+Fix                 : 3D
+Satellites          : 10/15 (used/visible)
+Position            : 59.334567N 18.063456E 42.3m
+PPS                 : Available
+</code></pre>
+
+Available information per receiver:
+
+| Field      | Description                                       |
+|------------|---------------------------------------------------|
+| Name       | Component name (`gps0`, `gps1`, ...)              |
+| Device     | Device path (`/dev/gps0`)                         |
+| Driver     | Protocol driver (e.g., `u-blox`, `NMEA`, `SiRF`)  |
+| Status     | `Active` or `Inactive`                            |
+| Fix        | `NONE`, `2D`, or `3D`                             |
+| Satellites | Used/visible count                                |
+| Position   | Latitude, longitude, altitude (when fix acquired) |
+| PPS        | Pulse Per Second signal availability              |
+
+### Configure GPS receiver
+
+GPS receivers are hardware components with class `gps`.  The class is
+auto-inferred from the component name, similar to WiFi radios (`radioN`):
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set hardware component gps0</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
+To use a GPS receiver as an NTP reference clock source, see
+[NTP — GPS Reference Clock](ntp.md#gps-reference-clock).
+
+
 ## USB Ports
 
 For Infix to be able to control USB port(s), a device tree modification
