@@ -18,7 +18,6 @@ A subnet can be entered in two ways:
 An optional `split LEN` can be given as argument, the new length value
 must be bigger than the current prefix length.  See example below.
 
-
 ## Examples
 
 Its most commonly used features are to understand how many addresses an

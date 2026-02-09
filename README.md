@@ -85,12 +85,12 @@ interfaces {
 admin@infix-12-34-56:/config/interface/eth0/> <b>leave</b>
 admin@infix-12-34-56:/> <b>show interfaces</b>
 <u>INTERFACE       PROTOCOL   STATE       DATA                                  </u>
-eth0            ethernet   UP          52:54:00:12:34:56
-                ipv4                   192.168.2.200/24 (static)
-                ipv6                   fe80::5054:ff:fe12:3456/64 (link-layer)
 lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
+eth0            ethernet   UP          52:54:00:12:34:56
+                ipv4                   192.168.2.200/24 (static)
+                ipv6                   fe80::5054:ff:fe12:3456/64 (link-layer)
 admin@infix-12-34-56:/> <b>copy running startup</b>
 </code></pre>
 

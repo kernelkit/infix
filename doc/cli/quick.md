@@ -23,10 +23,8 @@ keybindings are really useful to learn!
 | `help text-editor`  | Help with the built-in text-editor command         |
 | `help keybindings`  | Lists available keybindings & other helpful tricks |
 
-----
-
-> In `configure` context the `help setting` command shows the YANG
+> **Tip:** Online Help
+>
+> In `configure` context the `help <setting>` command shows the YANG
 > description text for each node and container.  To reach the admin
 > exec help from configure context, e.g., `do help text-editor`
-
-----
