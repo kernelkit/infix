@@ -33,7 +33,7 @@ CLI has several keybindings, most significant first:
 | Ctrl-t  |                | Transpose/Swap characters before and at cursor   |
 | Meta-#  | Alt-Shift-3    | Prepend # to current line and submit to history  |
 
-## What is Meta?
+## What is Meta
 
 The Meta key is called Alt on most modern keyboards.  If you have
 neither, first tap the Esc key instead of holding down Alt/Meta.
@@ -53,4 +53,3 @@ See possible arguments, with brief help text, to a command:
     ...
 
 Type the command, then tap the `?` key.
-
