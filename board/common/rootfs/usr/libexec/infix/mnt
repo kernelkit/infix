@@ -59,17 +59,9 @@ is_mmc()
 {
     [ -n "$mmc" ] && return $mmc
 
-    # Check if primary or secondary partition (our rootfs) is on MMC
-    for label in primary secondary; do
-        devname=$(find_partition_by_label "$label" 2>/dev/null)
-        if [ -n "$devname" ]; then
-            case "$devname" in
-                mmcblk*)
-		    mmc=0
-                    return 0
-                    ;;
-            esac
-        fi
+    # Fast sysfs check — avoids triggering the slow partition scan
+    for d in /sys/class/block/mmcblk[0-9]; do
+	[ -d "$d" ] && mmc=0 && return 0
     done
 
     mmc=1
@@ -78,77 +70,67 @@ is_mmc()
 
 wait_mmc()
 {
-    # Try up to 50 times with 0.2s sleep = 10 second timeout
-    for _ in $(seq 50); do
-        if ls /dev/mmcblk* >/dev/null 2>&1; then
-            logger $opt -p user.notice -t "$nm" "MMC device available after delay"
-            return 0
-        fi
-        sleep .2
+    tries=50
+    while [ $tries -gt 0 ]; do
+	for d in /dev/mmcblk[0-9]; do
+	    if [ -b "$d" ]; then
+		logger $opt -p user.notice -t "$nm" "MMC device available after delay"
+		return 0
+	    fi
+	done
+	sleep .2
+	tries=$((tries - 1))
     done
 
     logger $opt -p user.warn -t "$nm" "Timeout waiting for MMC device"
     return 1
 }
 
-# This early on we don't have the luxury of /dev/disk/by-label/$1
+# Read filesystem label from an ext2/3/4 formatted whole disk.
+# Superblock is at byte 1024, magic 0xEF53 at offset 56, label at 120.
+# Handles both LE and BE byte order (bi-endian MIPS, etc.)
+read_ext_label()
+{
+    magic=$(dd if="$1" bs=1 skip=1080 count=2 2>/dev/null \
+		| od -t x2 -An | tr -d ' \n')
+    case "$magic" in
+	ef53|53ef) ;;
+	*) return 1 ;;
+    esac
+
+    dd if="$1" bs=1 skip=1144 count=16 2>/dev/null | tr -d '\000'
+}
+
+# Look up a block device by its GPT partition name using the kernel's
+# sysfs uevent data (zero forks).  Falls back to reading the ext2/3/4
+# superblock for whole disks without GPT (e.g., virtual or USB setups).
 find_partition_by_label()
 {
-    label="$1"
-
-    for diskpath in /sys/class/block/*; do
-	devname=$(basename "$diskpath")
-
-	# Skip partitions, only check whole disks
-	[ -f "$diskpath/partition" ] && continue
-
-	# Skip ram, loop, and other virtual devices
-	case "$devname" in
-	    ram*|loop*|nullb*|dm-*) continue ;;
-	esac
-
-	disk="/dev/$devname"
-
-	#
-	# 1. Try GPT/MBR partition label using sgdisk
-	#
-	result=$(sgdisk -p "$disk" 2>/dev/null | awk -v label="$label" -v devname="$devname" '
-	    /^ *[0-9]/ {
-		if ($7 == label) {
-		    if (devname ~ /^(mmcblk|nvme|loop)/)
-			print devname "p" $1;
-		    else
-			print devname $1;
-		    exit 0;
-		}
-	    }
-	')
-
-	if [ -n "$result" ]; then
-	    echo "$result"
-	    return 0
-	fi
-
-	#
-	# 2. Fallback: Check if the whole disk is an ext4/ext2/ext3 filesystem
-	#
-
-	# Check for ext4/ext2/ext3 magic number (0xEF53) at offset 1080 (1024+56).
-	magic_number=$(dd if="$disk" bs=1 skip=1080 count=2 2>/dev/null | od -t x2 -A n | tr -d ' \n')
-
-	# Check for both Little-Endian ('53ef') and Big-Endian ('ef53') interpretations of 0xEF53.
-	# This supports bi-endian architectures like MIPS that may run in BE mode,
-	# as well as the LE mode which is standard for RISC-V and ext filesystems.
-	if [ "$magic_number" = "ef53" ] || [ "$magic_number" = "53ef" ]; then
-
-	    # Read the volume label from offset 1144 (1024+120)
-	    fslabel=$(dd if="$disk" bs=1 skip=1144 count=16 2>/dev/null | tr -d '\000')
-	    logger $opt -p user.notice -t "$nm" "Found label $fslabel on disk $disk ..."
-
-	    if [ "$fslabel" = "$label" ]; then
-		echo "$devname"
-		return 0
+    # The kernel exposes GPT partition names as PARTNAME in uevent
+    for uevent in /sys/class/block/*/uevent; do
+	while IFS='=' read -r key val; do
+	    if [ "$key" = "PARTNAME" ]; then
+		if [ "$val" = "$1" ]; then
+		    devname="${uevent%/uevent}"
+		    echo "${devname##*/}"
+		    return 0
+		fi
+		break
 	    fi
+	done < "$uevent"
+    done
+
+    # Fallback: ext filesystem label on whole disk
+    for diskpath in /sys/class/block/*; do
+	[ -f "$diskpath/partition" ] && continue
+	devname="${diskpath##*/}"
+	case "$devname" in
+	    ram*|loop*|nullb*|dm-*|*boot[0-9]*|*rpmb) continue ;;
+	esac
+	fslabel=$(read_ext_label "/dev/$devname")
+	if [ "$fslabel" = "$1" ]; then
+	    echo "$devname"
+	    return 0
 	fi
     done
 
@@ -319,12 +301,6 @@ mount_rw()
 	fi
     fi
 
-    # TODO: Also look for UBI partitions
-
-    # Disable periodic fsck, yet keeping safety checks on ext4
-    if grep "LABEL=$label" /etc/fstab |grep -q ext4; then
-	tune2fs -c 0 -i 0 LABEL="$1" 2>/dev/null
-    fi
     mount LABEL="$1" 2>/dev/null && return 0
 
     return 1
