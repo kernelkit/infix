@@ -1521,6 +1521,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#gpsgnss-receivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPS/GNSS Receivers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GPS/GNSS Receivers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-gps-receiver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure GPS receiver
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#usb-ports" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1533,7 +1572,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#current-status" class="md-nav__link">
+  <a href="#current-status_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Current status
@@ -2282,6 +2321,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#gpsgnss-receivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPS/GNSS Receivers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GPS/GNSS Receivers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-gps-receiver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure GPS receiver
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#usb-ports" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2294,7 +2372,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#current-status" class="md-nav__link">
+  <a href="#current-status_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Current status
@@ -2402,6 +2480,79 @@
 <h1 id="hardware-information-and-status">Hardware Information and Status<a class="headerlink" href="#hardware-information-and-status" title="Permanent link">¶</a></h1>
 <p>The hardware infomation and status is handled by the YANG model <a href="https://www.rfc-editor.org/rfc/rfc8348.html">IETF
 hardware</a>, with deviations and augmentations in <em>infix-hardware</em>.</p>
+<h2 id="gpsgnss-receivers">GPS/GNSS Receivers<a class="headerlink" href="#gpsgnss-receivers" title="Permanent link">¶</a></h2>
+<p>Infix supports GPS/GNSS receivers for hardware status monitoring and NTP
+time synchronization.  USB GPS receivers using the USB ACM interface are
+supported (e.g., u-blox).  When connected, devices are automatically
+discovered and named <code>gps0</code>, <code>gps1</code>, etc.</p>
+<h3 id="current-status">Current status<a class="headerlink" href="#current-status" title="Permanent link">¶</a></h3>
+<pre class="cli"><code>admin@example:/&gt; <b>show hardware</b>
+<span class="header">HARDWARE COMPONENTS                                           </span>
+──────────────────────────────────────────────────────────────
+<span class="title">GPS/GNSS Receivers                                           </span>
+Name                : gps0
+Device              : /dev/gps0
+Driver              : u-blox
+Status              : Active
+Fix                 : 3D
+Satellites          : 10/15 (used/visible)
+Position            : 59.334567N 18.063456E 42.3m
+PPS                 : Available
+</code></pre>
+
+<p>Available information per receiver:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>Component name (<code>gps0</code>, <code>gps1</code>, ...)</td>
+</tr>
+<tr>
+<td>Device</td>
+<td>Device path (<code>/dev/gps0</code>)</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td>Protocol driver (e.g., <code>u-blox</code>, <code>NMEA</code>, <code>SiRF</code>)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><code>Active</code> or <code>Inactive</code></td>
+</tr>
+<tr>
+<td>Fix</td>
+<td><code>NONE</code>, <code>2D</code>, or <code>3D</code></td>
+</tr>
+<tr>
+<td>Satellites</td>
+<td>Used/visible count</td>
+</tr>
+<tr>
+<td>Position</td>
+<td>Latitude, longitude, altitude (when fix acquired)</td>
+</tr>
+<tr>
+<td>PPS</td>
+<td>Pulse Per Second signal availability</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configure-gps-receiver">Configure GPS receiver<a class="headerlink" href="#configure-gps-receiver" title="Permanent link">¶</a></h3>
+<p>GPS receivers are hardware components with class <code>gps</code>.  The class is
+auto-inferred from the component name, similar to WiFi radios (<code>radioN</code>):</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>set hardware component gps0</b>
+admin@example:/config/&gt; <b>leave</b>
+</code></pre>
+
+<p>To use a GPS receiver as an NTP reference clock source, see
+<a href="../ntp/#gps-reference-clock">NTP — GPS Reference Clock</a>.</p>
 <h2 id="usb-ports">USB Ports<a class="headerlink" href="#usb-ports" title="Permanent link">¶</a></h2>
 <p>For Infix to be able to control USB port(s), a device tree modification
 is needed (see <em>alder.dtsi</em> for full example).</p>
@@ -2424,7 +2575,7 @@ bus, here is an example:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Enable a device plugged into usb1</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w">  </span>/sys/bus/usb/devices/usb1/1-1/authorized
 </code></pre></div>
-<h3 id="current-status">Current status<a class="headerlink" href="#current-status" title="Permanent link">¶</a></h3>
+<h3 id="current-status_1">Current status<a class="headerlink" href="#current-status_1" title="Permanent link">¶</a></h3>
 <pre class="cli"><code>admin@example:/&gt; <b>show hardware</b>
 <span class="header">HARDWARE COMPONENTS                                           </span>
 ──────────────────────────────────────────────────────────────

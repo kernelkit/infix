@@ -1346,6 +1346,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#gps-reference-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPS Reference Clock
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GPS Reference Clock">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pps-pulse-per-second" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PPS (Pulse Per Second)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#server-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1424,7 +1474,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#monitoring" class="md-nav__link">
+  <a href="#monitoring_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Monitoring
@@ -2354,6 +2404,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#gps-reference-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPS Reference Clock
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GPS Reference Clock">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pps-pulse-per-second" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PPS (Pulse Per Second)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#server-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2432,7 +2532,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#monitoring" class="md-nav__link">
+  <a href="#monitoring_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Monitoring
@@ -2547,6 +2647,96 @@ admin@example:/config/ntp/&gt; <b>set refclock-master master-stratum 10</b>
 admin@example:/config/ntp/&gt; <b>leave</b>
 </code></pre>
 
+<h2 id="gps-reference-clock">GPS Reference Clock<a class="headerlink" href="#gps-reference-clock" title="Permanent link">¶</a></h2>
+<p>A GPS/GNSS receiver can be used as an NTP reference clock source,
+providing stratum 1 time derived from the GPS satellite constellation.
+This requires a GPS hardware component to be configured first, see
+<a href="../hardware/#gpsgnss-receivers">Hardware — GPS/GNSS Receivers</a>.</p>
+<h3 id="basic-setup">Basic setup<a class="headerlink" href="#basic-setup" title="Permanent link">¶</a></h3>
+<p>Add a GPS receiver as a reference clock source:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ntp</b>
+admin@example:/config/ntp/&gt; <b>edit refclock-master source gps0</b>
+admin@example:/config/ntp/refclock-master/source/gps0/&gt; <b>set poll 2</b>
+admin@example:/config/ntp/refclock-master/source/gps0/&gt; <b>set precision 0.1</b>
+admin@example:/config/ntp/refclock-master/source/gps0/&gt; <b>end</b>
+admin@example:/config/ntp/&gt; <b>leave</b>
+</code></pre>
+
+<p>Tunable parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th style="text-align: right;">Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>poll</code></td>
+<td style="text-align: right;"><code>2</code></td>
+<td>Polling interval in log2 seconds (2 = 4s)</td>
+</tr>
+<tr>
+<td><code>precision</code></td>
+<td style="text-align: right;"><code>0.1</code></td>
+<td>Assumed precision in seconds (0.1 = 100ms)</td>
+</tr>
+<tr>
+<td><code>refid</code></td>
+<td style="text-align: right;"><code>"GPS"</code></td>
+<td>Reference identifier (e.g., <code>GPS</code>, <code>GNSS</code>, <code>GLO</code>)</td>
+</tr>
+<tr>
+<td><code>prefer</code></td>
+<td style="text-align: right;"><code>false</code></td>
+<td>Prefer this source over other reference clocks</td>
+</tr>
+<tr>
+<td><code>pps</code></td>
+<td style="text-align: right;"><code>false</code></td>
+<td>Enable PPS for microsecond-level accuracy</td>
+</tr>
+<tr>
+<td><code>offset</code></td>
+<td style="text-align: right;"><code>0.0</code></td>
+<td>Constant offset correction in seconds</td>
+</tr>
+<tr>
+<td><code>delay</code></td>
+<td style="text-align: right;"><code>0.0</code></td>
+<td>Assumed maximum delay from the receiver</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pps-pulse-per-second">PPS (Pulse Per Second)<a class="headerlink" href="#pps-pulse-per-second" title="Permanent link">¶</a></h3>
+<p>When the GPS receiver provides a PPS signal, enable the <code>pps</code> option for
+microsecond-level accuracy.  With PPS, the GPS time provides the initial
+lock and the PPS edges discipline the clock:</p>
+<pre class="cli"><code>admin@example:/config/ntp/&gt; <b>edit refclock-master source gps0</b>
+admin@example:/config/ntp/refclock-master/source/gps0/&gt; <b>set pps true</b>
+admin@example:/config/ntp/refclock-master/source/gps0/&gt; <b>set precision 0.000001</b>
+admin@example:/config/ntp/refclock-master/source/gps0/&gt; <b>end</b>
+admin@example:/config/ntp/&gt; <b>leave</b>
+</code></pre>
+
+<h3 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">¶</a></h3>
+<p>The <code>show ntp</code> command shows the GPS receiver as the reference clock source:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ntp</b>
+Mode                : Server (GPS reference clock: gps0)
+Port                : 123
+Stratum             : 1
+Ref time (UTC)      : Sun Feb 08 19:44:36 2026
+</code></pre>
+
+<p>Use <code>show ntp source</code> to see GPS reference clock details:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ntp source</b>
+Reference Clock     : gps0 (u-blox)
+Status              : selected
+Fix Mode            : 3D
+Satellites          : 9/17 (used/visible)
+</code></pre>
+
 <h2 id="server-mode">Server Mode<a class="headerlink" href="#server-mode" title="Permanent link">¶</a></h2>
 <p>Synchronize from upstream NTP servers while serving time to clients:</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit ntp</b>
@@ -2635,7 +2825,7 @@ admin@example:/config/ntp/makestep/&gt; <b>end</b>
 </ul>
 <p>With these defaults, a device booting at epoch time (1970-01-01) will sync to
 correct time within seconds instead of hours.</p>
-<h2 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">¶</a></h2>
+<h2 id="monitoring_1">Monitoring<a class="headerlink" href="#monitoring_1" title="Permanent link">¶</a></h2>
 <p>For a quick overview:</p>
 <p>To view the sources being used by the NTP client, run:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show ntp</b>
