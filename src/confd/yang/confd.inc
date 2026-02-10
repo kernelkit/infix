@@ -27,7 +27,7 @@ MODULES=(
 	"infix-syslog@2025-11-17.yang"
 	"iana-hardware@2018-03-13.yang"
 	"ietf-hardware@2018-03-13.yang -e hardware-state -e hardware-sensor"
-	"infix-hardware@2026-01-19.yang"
+	"infix-hardware@2026-02-08.yang"
 	"ieee802-dot1q-types@2022-10-29.yang"
 	"infix-ip@2025-11-02.yang"
 	"infix-if-type@2026-01-07.yang"
@@ -51,6 +51,6 @@ MODULES=(
 	"ietf-crypto-types -e cleartext-symmetric-keys"
 	"infix-crypto-types@2025-11-09.yang"
 	"ietf-keystore -e symmetric-keys"
-	"infix-ntp@2025-12-03.yang"
+	"infix-ntp@2026-02-08.yang"
 	"infix-keystore@2025-12-17.yang"
 )

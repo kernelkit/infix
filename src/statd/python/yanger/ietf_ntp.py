@@ -5,7 +5,39 @@ from .host import HOST
 
 
 def add_ntp_associations(out):
-    """Add NTP association information from chronyc sources and sourcestats"""
+    """Add NTP association information from chronyc sources and sourcestats.
+
+    The chronyc -c sources output is CSV with the following fields:
+      [0] Mode indicator:
+          ^  server (we're a client to this source)
+          =  peer (symmetric mode)
+          #  local reference clock (GPS, PPS, etc.) - skipped, no IP address
+      [1] State indicator:
+          *  selected (current sync source)
+          +  candidate
+          -  outlier
+          ?  unusable
+          x  falseticker
+          ~  unstable
+      [2] Address (IP address or refclock name like "GPS")
+      [3] Stratum
+      [4] Poll interval (log2 seconds)
+      [5] Reach (octal reachability register)
+      [6] LastRx (seconds since last response)
+      [7] Last offset (seconds)
+      [8] Offset at last update (seconds)
+      [9] Error estimate (seconds)
+
+    The chronyc -c sourcestats output is CSV with:
+      [0] Address
+      [1] NP (number of sample points)
+      [2] NR (number of runs)
+      [3] Span (seconds)
+      [4] Frequency (ppm)
+      [5] Freq Skew (ppm)
+      [6] Offset (seconds)
+      [7] Std Dev (seconds)
+    """
     try:
         # Get basic source information
         sources_data = HOST.run_multiline(["chronyc", "-c", "sources"], [])
@@ -44,6 +76,10 @@ def add_ntp_associations(out):
                 continue
 
             mode_indicator = parts[0]
+            # Skip reference clocks (mode "#") as they have names like "GPS" instead of IP addresses
+            if mode_indicator == "#":
+                continue
+
             state_indicator = parts[1]
             address = parts[2]
             stratum = int(parts[3])
@@ -156,7 +192,9 @@ def add_ntp_clock_state(out):
         refid_name = parts[1]
 
         if refid_name:
-            system_status["clock-refid"] = refid_name
+            # NTP refids are always 4 bytes; chronyc strips trailing padding.
+            # YANG typedef 'refid' requires exactly length 4 for strings.
+            system_status["clock-refid"] = refid_name.ljust(4)[:4]
         elif refid_ip and len(refid_ip) == 8:
             try:
                 a = int(refid_ip[0:2], 16)

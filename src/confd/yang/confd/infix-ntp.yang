@@ -15,9 +15,29 @@ module infix-ntp {
       "RFC 6991: Common YANG Data Types";
   }
 
+  import ietf-hardware {
+    prefix iehw;
+    reference
+      "RFC 8348: A YANG Data Model for Hardware Management";
+  }
+
+  import infix-hardware {
+    prefix ih;
+  }
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix deviations and augments to ietf-ntp.";
+
+  revision 2026-02-08 {
+    description
+      "Add GPS/GNSS reference clock support.
+
+       Augments refclock-master with a list of hardware GPS sources that
+       chronyd can use via gpsd's shared memory (SHM) interface. Supports
+       multiple GNSS receivers for redundancy (GPS, GLONASS, Galileo, BeiDou).";
+    reference "internal";
+  }
 
   revision 2025-12-03 {
     description
@@ -66,6 +86,150 @@ module infix-ntp {
            -1 = always allow stepping (not recommended)
             0 = never step (defeats purpose of this directive)
            1-N = allow stepping for first N updates (recommended: 3)";
+      }
+    }
+  }
+
+  /*
+   * GPS/GNSS reference clock sources
+   *
+   * Augments refclock-master with hardware GPS sources that chronyd
+   * can use via gpsd's shared memory (SHM) interface.
+   */
+  augment "/ntp:ntp/ntp:refclock-master" {
+    list source {
+      key "receiver";
+      max-elements 2;
+      description
+        "GPS/GNSS hardware reference clock sources.
+
+         Each source references a GPS receiver hardware component and
+         configures how chronyd should use it. The hardware component
+         name (e.g., 'gps0') determines the SHM unit number:
+         - gps0 -> SHM 0 (GPS time), SHM 1 (PPS if available)
+         - gps1 -> SHM 2 (GPS time), SHM 3 (PPS if available)
+
+         Two sources can be configured for redundancy against jamming
+         or hardware failure. The NTP server will evaluate all sources
+         and select the best one.";
+
+      leaf receiver {
+        type leafref {
+          path "/iehw:hardware/iehw:component/iehw:name";
+        }
+        must "derived-from-or-self(/iehw:hardware/iehw:component[iehw:name=current()]/iehw:class, 'ih:gps')" {
+          error-message "Referenced hardware component must be a GPS receiver (class 'ih:gps')";
+        }
+        description
+          "Reference to a GPS receiver hardware component.
+
+           The component name determines the device path (/dev/gpsN)
+           and the SHM unit number for chronyd.";
+      }
+
+      leaf poll {
+        type int8 {
+          range "-6..10";
+        }
+        default "2";
+        description
+          "Polling interval in log2 seconds.
+
+           Common values:
+           - -6 = 1/64 second (for hardware with PPS)
+           - 0  = 1 second
+           - 2  = 4 seconds (default, good for GPS without PPS)
+           - 4  = 16 seconds
+
+           Lower values provide faster response but higher CPU usage.";
+      }
+
+      leaf precision {
+        type decimal64 {
+          fraction-digits 9;
+          range "0.000000001..1.0";
+        }
+        default "0.1";
+        units "seconds";
+        description
+          "Assumed precision of the reference clock in seconds.
+
+           Typical values:
+           - 0.1     (100ms) - GPS without PPS, default
+           - 0.001   (1ms)   - GPS with software PPS processing
+           - 0.000001 (1us)  - GPS with hardware PPS";
+      }
+
+      leaf offset {
+        type decimal64 {
+          fraction-digits 9;
+        }
+        default "0.0";
+        units "seconds";
+        description
+          "Constant offset correction in seconds.
+
+           Used to compensate for known systematic delays in the
+           GPS receiver or signal path. Positive values mean the
+           GPS time is ahead of true time.";
+      }
+
+      leaf delay {
+        type decimal64 {
+          fraction-digits 9;
+          range "0.0..1.0";
+        }
+        default "0.0";
+        units "seconds";
+        description
+          "Assumed maximum delay from the GPS receiver in seconds.
+
+           This accounts for processing delays in gpsd and the
+           GPS receiver. Default is 0 (let chronyd estimate).";
+      }
+
+      leaf refid {
+        type string {
+          length "1..4";
+          pattern "[A-Z0-9]+";
+        }
+        default "GPS";
+        description
+          "Reference identifier (refid) shown in chronyc tracking.
+
+           Common values:
+           - GPS  - Generic GPS
+           - GLO  - GLONASS
+           - GAL  - Galileo
+           - BDS  - BeiDou
+           - PPS  - Pulse Per Second (for PPS-only sources)
+           - GNSS - Multi-constellation receiver";
+      }
+
+      leaf prefer {
+        type boolean;
+        default false;
+        description
+          "Prefer this source over others when multiple are available.
+
+           When multiple reference clocks have similar quality, the
+           preferred source will be selected. Useful for designating
+           a primary GPS receiver.";
+      }
+
+      leaf pps {
+        type boolean;
+        default false;
+        description
+          "Use PPS (Pulse Per Second) signal from this source.
+
+           When enabled, chronyd will also configure the PPS SHM
+           unit (2*N+1) for microsecond-level accuracy. The GPS
+           receiver must provide PPS and gpsd must be configured
+           to expose it.
+
+           Note: PPS requires the GPS source for initial time lock,
+           then provides precise time edges.";
       }
     }
   }
