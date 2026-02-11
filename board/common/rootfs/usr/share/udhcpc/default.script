@@ -119,7 +119,6 @@ set_dhcp_routes()
     cmp -s "$NAME" "$NEXT" && return
     mv "$NEXT" "$NAME"
 
-    rm /run/netd.pid
     initctl reload netd
 }
 
@@ -129,7 +128,6 @@ clr_dhcp_routes()
     [ -f "$NAME" ] || return
     rm "$NAME"
 
-    rm /run/netd.pid
     initctl reload netd
 }
 
