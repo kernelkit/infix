@@ -30,7 +30,6 @@
 
 #include "shared.h"
 #include "journal.h"
-#include "gpsd.h"
 
 /* New kernel feature, not in sys/mman.h yet */
 #ifndef MFD_NOEXEC_SEAL
@@ -70,7 +69,6 @@ struct statd {
 	sr_conn_ctx_t *sr_conn;          /* Connection (owns YANG context) */
 	struct ev_loop *ev_loop;
 	struct journal_ctx journal;      /* Journal thread context */
-	struct gpsd_ctx gpsd;            /* GPS monitor context */
 };
 
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
@@ -352,13 +350,6 @@ static void sigusr1_cb(struct ev_loop *, struct ev_signal *, int)
 	debug ^= 1;
 }
 
-static void sighup_cb(struct ev_loop *, struct ev_signal *w, int)
-{
-	struct statd *statd = (struct statd *)w->data;
-
-	INFO("SIGHUP received, reloading GPS config");
-	gpsd_reload(&statd->gpsd);
-}
 
 static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
 {
@@ -523,8 +514,6 @@ int main(int argc, char *argv[])
 	sigusr1_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sigusr1_watcher);
 
-	ev_signal_init(&sighup_watcher, sighup_cb, SIGHUP);
-	sighup_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sighup_watcher);
 
 	err = journal_start(&statd.journal, statd.sr_query_ses);
@@ -535,10 +524,6 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (gpsd_init(&statd.gpsd, statd.ev_loop, statd.sr_conn))
-		INFO("GPS monitoring not available");
-	gpsd_reload(&statd.gpsd);
-
 	/* Signal readiness to Finit */
 	pidfile(NULL);
 
@@ -548,7 +533,6 @@ int main(int argc, char *argv[])
 	/* We should never get here during normal operation */
 	INFO("Status daemon shutting down");
 
-	gpsd_exit(&statd.gpsd);
 	journal_stop(&statd.journal);
 
 	unsub_to_all(&statd);

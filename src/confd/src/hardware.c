@@ -593,6 +593,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 {
 	struct lyd_node  *difs = NULL, *dif = NULL;
 	int rc = SR_ERR_OK;
+	int num_gps = 0;
 
 	if (!lydx_find_xpathf(diff, XPATH_BASE_))
 		return SR_ERR_OK;
@@ -710,11 +711,13 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		} else if (!strcmp(class, "infix-hardware:gps")) {
 			if (event != SR_EV_DONE)
 				continue;
-
-			systemf("initctl -nbq touch statd");
+			num_gps++;
+			systemf("initctl -nbq enable gpsd");
 		}
 	}
 
+	if (!num_gps && event == SR_EV_DONE)
+		systemf("initctl -nbq disable gpsd");
 err:
 
 	return rc;
