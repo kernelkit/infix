@@ -86,11 +86,12 @@ endif
 
 ifeq ($(BR2_PACKAGE_FRR),y)
 define SKELETON_INIT_FINIT_SET_FRR
-	for svc in babeld bfdd bgpd eigrpd isisd ldpd ospfd ospf6d pathd ripd ripng staticd vrrpd zebra; do	\
+	for svc in babeld bfdd bgpd mgmtd eigrpd isisd ldpd ospfd ospf6d pathd ripd ripng staticd vrrpd zebra; do	\
 		cp $(SKELETON_INIT_FINIT_AVAILABLE)/frr/$$svc.conf $(FINIT_D)/available/$$svc.conf;		\
 	done
-	ln -sf ../available/staticd.conf $(FINIT_D)/enabled/staticd.conf
 	ln -sf ../available/zebra.conf $(FINIT_D)/enabled/zebra.conf
+	ln -sf ../available/staticd.conf $(FINIT_D)/enabled/staticd.conf
+	ln -sf ../available/mgmtd.conf $(FINIT_D)/enabled/mgmtd.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_FRR
 endif # BR2_PACKAGE_FRR

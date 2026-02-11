@@ -3,18 +3,20 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.01.0][UNRELEASED]
+[v26.02.0][UNRELEASED] -
 -------------------------
 
 ### Changes
 
 - Upgrade Linux kernel to 6.18.9 (LTS)
+- Upgrade FRR to 10.5.1
 - Add support for Microchip SAMA7G54-EK Evaluation Kit, Arm Cortex-A7
 - Add GPS/GNSS receiver support with NTP reference clock integration
 
 ### Fixes
 
 N/A
+
 
 [v26.01.0][] - 2026-02-03
 -------------------------

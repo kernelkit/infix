@@ -1,0 +1,31 @@
+From 7090321ff3c812644507d43e1ddea25de8cff93a Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 10 Feb 2026 15:58:46 +0100
+Subject: [PATCH 4/5] Don't hide cursor when shutting down
+Organization: Wires
+
+Users starting Finit based systems using U-Boot or Barebox may otherwise
+not get a visible cursor at their prompt.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/sm.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/src/sm.c b/src/sm.c
+index a1e982b..f23fa65 100644
+--- a/src/sm.c
++++ b/src/sm.c
+@@ -361,9 +361,6 @@ restart:
+ 
+ 		/* Restore terse mode and run hooks before shutdown */
+ 		if (runlevel == 0 || runlevel == 6) {
+-			/* Hide cursor, we're going down ... */
+-			dprint(STDOUT_FILENO, "\033[?25l", 6);
+-
+ 			api_exit();
+ 			log_exit();
+ 			plugin_run_hooks(HOOK_SHUTDOWN);
+-- 
+2.43.0
+

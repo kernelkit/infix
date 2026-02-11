@@ -93,10 +93,17 @@ def wifi(ifname):
     info = get_iw_info(ifname)
     mode = info.get('iftype', '').lower()
 
+    result = {}
+
+    if info.get('phy'):
+        result['radio'] = info['phy']
+
     if mode == 'ap':
-        return wifi_ap(ifname)
+        result.update(wifi_ap(ifname))
     else:
-        return wifi_station(ifname)
+        result.update(wifi_station(ifname))
+
+    return result
 
 
 def parse_wpa_scan_result(scan_output):

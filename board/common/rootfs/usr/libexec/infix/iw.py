@@ -290,6 +290,14 @@ def parse_interface_info(ifname):
             if power_match:
                 result['txpower'] = float(power_match.group(1))
 
+        # wiphy index -> phy/radio name
+        elif stripped.startswith('wiphy '):
+            try:
+                wiphy_idx = int(stripped.split()[1])
+                result['phy'] = normalize_phy_name(f'phy{wiphy_idx}')
+            except (ValueError, IndexError):
+                pass
+
     return result
 
 

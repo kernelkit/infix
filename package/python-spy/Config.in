@@ -1,0 +1,8 @@
+config BR2_PACKAGE_PYTHON_SPY
+	bool "python-spy"
+	depends on BR2_aarch64 || BR2_x86_64
+	select BR2_PACKAGE_PYTHON3
+	help
+	  Sampling profiler for Python programs.
+
+	  https://github.com/benfred/py-spy
