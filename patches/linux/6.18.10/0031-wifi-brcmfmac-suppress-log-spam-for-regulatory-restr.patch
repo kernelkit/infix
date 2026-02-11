@@ -1,0 +1,39 @@
+From d6613261611f8014d277f7f51e41b46ff1c4432b Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Tue, 20 Jan 2026 20:12:10 +0100
+Subject: [PATCH 31/32] wifi: brcmfmac: suppress log spam for
+ regulatory-restricted channels
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When scanning, the driver attempts to set each channel and logs an
+error if the firmware rejects it. For regulatory-restricted channels,
+the firmware returns -52 (EBADE), which is expected behavior.
+
+Suppress the error message for -52 errors to avoid spamming the kernel
+log during normal scan operations.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .../net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c    | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+index f06658d4299b..046e07875d00 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+@@ -8283,7 +8283,12 @@ brcmf_set_channel(struct brcmf_cfg80211_info *cfg, struct brcmf_if *ifp,
+ 	if (chspec != INVCHANSPEC) {
+ 		err = brcmf_fil_iovar_int_set(ifp, "chanspec", chspec);
+ 		if (err) {
+-			brcmf_err("set chanspec 0x%04x fail, reason %d\n", chspec, err);
++			/* -52 (EBADE) is expected for regulatory-restricted
++			 * channels, don't spam the log for these.
++			 */
++			if (err != -EBADE)
++				brcmf_err("set chanspec 0x%04x fail, reason %d\n",
++					  chspec, err);
+ 			err = -EINVAL;
+ 		}
+ 	} else {
