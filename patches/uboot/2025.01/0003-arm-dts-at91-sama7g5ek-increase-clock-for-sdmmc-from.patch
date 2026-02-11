@@ -16,7 +16,7 @@ improve the boot time when reading the kernel binary.  Tested on
 sama7g5ek rev 5 using mmcinfo command.
 
 Signed-off-by: Mihai Sain <mihai.sain@microchip.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  arch/arm/dts/at91-sama7g5ek.dts | 4 ----
  1 file changed, 4 deletions(-)
