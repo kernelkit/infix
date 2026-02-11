@@ -1,0 +1,25 @@
+=== GPS receiver basic test
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/hardware/gps_simple]
+
+==== Description
+
+Verify that a simulated GPS receiver is detected and reports a valid
+fix via the ietf-hardware operational datastore.
+
+The test injects NMEA sentences through a QEMU pipe chardev FIFO,
+which appears as a virtio serial port inside the guest.
+
+==== Topology
+
+image::topology.svg[GPS receiver basic test topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure GPS hardware component
+. Verify GPS is activated
+. Verify GPS has a fix
+. Verify the position is near the coordinates you test with
+
+

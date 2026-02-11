@@ -15,6 +15,10 @@ truncate -s 0 $imgdir/{{name}}.mactab
 echo "{{qn_name}}	{{qn_mac}}" >>$imgdir/{{name}}.mactab
 {{/links}}
 
+{{#qn_gps}}
+mkfifo /tmp/{{name}}-gps.in /tmp/{{name}}-gps.out 2>/dev/null
+{{/qn_gps}}
+
 exec qemu-system-x86_64 -M pc,accel=kvm:tcg -cpu max \
   -m {{#qn_mem}}{{qn_mem}}{{/qn_mem}}{{^qn_mem}}256M{{/qn_mem}} \
 {{> ../qeneth/templates/inc/qemu-links}}
@@ -24,3 +28,7 @@ exec qemu-system-x86_64 -M pc,accel=kvm:tcg -cpu max \
     $usb_cmd \
 {{> ../qeneth/templates/inc/infix-common}}
 {{> ../qeneth/templates/inc/qemu-console}}
+{{#qn_gps}}
+    -chardev pipe,id=gps0,path=/tmp/{{name}}-gps \
+    -device virtserialport,chardev=gps0,name=gps0 \
+{{/qn_gps}}
