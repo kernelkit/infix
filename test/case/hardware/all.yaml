@@ -7,3 +7,6 @@
 
 - name: Watchdog reset on system lockup
   case: watchdog/test.py
+
+- name: GPS receiver basic test
+  case: gps_simple/test.py

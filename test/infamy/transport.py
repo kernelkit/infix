@@ -79,6 +79,13 @@ class Transport(ABC):
         """Check if the device has the given YANG model loaded."""
         return model_name in self.modules
 
+    def has_feature(self, model_name, feature_name):
+        """Check if a specific feature is enabled on the device for a given YANG model."""
+        if model_name not in self.modules:
+            return False
+        features = self.modules[model_name].get("feature", [])
+        return feature_name in features
+
     def reachable(self):
         """Check if the device reachable on ll6"""
         neigh = ll6ping(self.location.interface, flags=["-w1", "-c1", "-L", "-n"])
