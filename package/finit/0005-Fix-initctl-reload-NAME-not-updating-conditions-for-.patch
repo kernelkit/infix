@@ -1,0 +1,61 @@
+From f0914f6d32b9cd055a888cf0a1c7e45dec871824 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 10 Feb 2026 15:59:49 +0100
+Subject: [PATCH 5/5] Fix 'initctl reload NAME' not updating conditions for
+ dependents
+Organization: Wires
+
+When reloading a specific service with 'initctl reload foo', the
+pid/foo and service/foo/ready conditions were never cleared, so
+dependent services were not notified of the reload.
+
+Clear the service's pid condition and, for pid/none notify types,
+the ready condition before reloading.  The conditions are then
+reasserted by the pidfile inotify handler when the service touches
+its PID file after processing SIGHUP.
+
+For s6/systemd services the ready condition is left intact since
+their readiness notification may not re-trigger on SIGHUP.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/api.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/src/api.c b/src/api.c
+index 381c219..8537335 100644
+--- a/src/api.c
++++ b/src/api.c
+@@ -112,6 +112,8 @@ static int restart(svc_t *svc, void *user_data)
+ 
+ static int reload(svc_t *svc, void *user_data)
+ {
++	char cond[MAX_COND_LEN];
++
+ 	(void)user_data;
+ 
+ 	if (!svc)
+@@ -122,6 +124,20 @@ static int reload(svc_t *svc, void *user_data)
+ 	else
+ 		service_timeout_cancel(svc);
+ 
++	/*
++	 * Clear conditions before reload to ensure dependent services
++	 * are properly updated.  The conditions are reasserted when
++	 * the service touches its PID file after processing SIGHUP.
++	 *
++	 * Note: only clear 'ready' for services where the pidfile
++	 * inotify handler reasserts it (pid/none).  For s6/systemd
++	 * services readiness relies on their respective notification
++	 * mechanism which may not re-trigger on SIGHUP.
++	 */
++	cond_clear(mkcond(svc, cond, sizeof(cond)));
++	if (svc->notify == SVC_NOTIFY_PID || svc->notify == SVC_NOTIFY_NONE)
++		service_ready(svc, 0);
++
+ 	svc_mark_dirty(svc);
+ 	service_step(svc);
+ 
+-- 
+2.43.0
+
