@@ -2207,24 +2207,27 @@ def show_hardware(json):
     if gps_receivers:
         Decore.title("GPS/GNSS Receivers", width)
 
+        gps_table = SimpleTable([
+            Column('NAME'),
+            Column('DEVICE'),
+            Column('STATUS'),
+            Column('FIX'),
+            Column('SATELLITES'),
+            Column('POSITION', flexible=True),
+            Column('PPS')
+        ], min_width=width)
+
         for component in gps_receivers:
             gps = component.get("infix-hardware:gps-receiver", {})
             name = component.get("name", "unknown")
             device = gps.get("device", "N/A")
-            driver = gps.get("driver", "Unknown")
-            fix = gps.get("fix-mode", "none")
             activated = gps.get("activated", False)
-
-            print(f"{'Name':<20}: {name}")
-            print(f"{'Device':<20}: {device}")
-            print(f"{'Driver':<20}: {driver}")
-            print(f"{'Status':<20}: {'Active' if activated else 'Inactive'}")
-            print(f"{'Fix':<20}: {fix.upper()}")
+            status = "Active" if activated else "Inactive"
+            fix = gps.get("fix-mode", "none").upper()
 
             sat_vis = gps.get("satellites-visible")
             sat_used = gps.get("satellites-used")
-            if sat_vis is not None:
-                print(f"{'Satellites':<20}: {sat_used}/{sat_vis} (used/visible)")
+            satellites = f"{sat_used}/{sat_vis}" if sat_vis is not None else "N/A"
 
             lat = gps.get("latitude")
             lon = gps.get("longitude")
@@ -2237,11 +2240,14 @@ def show_hardware(json):
                 pos = f"{abs(lat_f):.6f}{lat_dir} {abs(lon_f):.6f}{lon_dir}"
                 if alt is not None:
                     pos += f" {alt}m"
-                print(f"{'Position':<20}: {pos}")
+            else:
+                pos = "N/A"
 
-            pps = gps.get("pps-available", False)
-            print(f"{'PPS':<20}: {'Available' if pps else 'Not available'}")
+            pps = "Yes" if gps.get("pps-available", False) else "No"
 
+            gps_table.row(name, device, status, fix, satellites, pos, pps)
+
+        gps_table.print()
     if usb_ports:
         Decore.title("USB Ports", width)
 

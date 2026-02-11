@@ -1,0 +1,41 @@
+From 9ba3bc688c45a0c9e761c6c8bd0be83d6570c9dc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Fri, 27 Feb 2026 16:58:12 +0100
+Subject: [PATCH] Always log to syslog
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ gpsd/libgpsd_core.c | 13 ++-----------
+ 1 file changed, 2 insertions(+), 11 deletions(-)
+
+diff --git a/gpsd/libgpsd_core.c b/gpsd/libgpsd_core.c
+index 982f822b8..c53c64838 100644
+--- a/gpsd/libgpsd_core.c
++++ b/gpsd/libgpsd_core.c
+@@ -180,17 +180,8 @@ static void gpsd_vlog(const int errlevel,
+     // this was crazy expensive, just fix the bad log calls
+     // gps_visibilize(outbuf, outlen, buf, strlen(buf));
+ 
+-    if (getpid() == getsid(getpid())) {
+-        // I think this calls syslog() only when daemonized
+-        syslog(level, "%s",  outbuf);
+-    } else if (NULL != errout->report) {
+-        // we are a thread, use report()?
+-        // FIXME: is POSIX syslog() thread safe?
+-        errout->report(outbuf);
+-    } else {
+-        // foreground, use stderr?
+-        (void)fputs(outbuf, stderr);
+-    }
++    // always log to syslog, even with -N
++    syslog(level, "%s",  outbuf);
+     gpsd_release_reporting_lock();
+ #endif  // !SQUELCH_ENABLE
+ }
+-- 
+2.43.0
+
