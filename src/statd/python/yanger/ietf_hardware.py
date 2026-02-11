@@ -667,13 +667,50 @@ def wifi_radio_components():
     return components
 
 
+def _gpsd_poll():
+    """Query gpsd for current state via ?POLL command.
+
+    Returns a dict keyed by device path with tpv/sky data merged,
+    or empty dict on failure.
+    """
+    import json
+    import socket
+
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        sock.connect(("127.0.0.1", 2947))
+
+        # Read VERSION banner
+        sock.recv(4096)
+
+        # Send POLL request
+        sock.sendall(b'?WATCH={"enable":true,"json":true};\n?POLL;\n')
+
+        # Read until we get the POLL response
+        buf = b""
+        for _ in range(10):
+            buf += sock.recv(4096)
+            for line in buf.decode(errors="replace").splitlines():
+                try:
+                    msg = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if msg.get("class") == "POLL":
+                    sock.close()
+                    return msg
+        sock.close()
+    except (OSError, socket.error):
+        pass
+
+    return {}
+
+
 def gps_receiver_components():
     """Discover GPS/GNSS receivers and populate operational state.
 
-    GPS devices are discovered via /dev/gps* symlinks (created by udev rules).
-    Status is read from /run/gps-status.json, a cache maintained by statd's
-    background GPS monitor (gpsd.c) which streams data from gpsd without
-    blocking the operational datastore.
+    GPS devices are discovered via /dev/gps* symlinks (created by udev
+    rules).  Status is queried live from gpsd via the ?POLL command.
     """
     components = []
 
@@ -683,7 +720,6 @@ def gps_receiver_components():
         dev_path = f"/dev/gps{i}"
         if not HOST.exists(dev_path):
             continue
-        # Resolve symlink to actual device (for matching gpsd cache keys)
         actual = HOST.run(("readlink", "-f", dev_path), default="").strip()
         gps_devices[actual] = {
             "name": f"gps{i}",
@@ -693,12 +729,24 @@ def gps_receiver_components():
     if not gps_devices:
         return components
 
-    # Read cached GPS status from statd background monitor
-    cache = HOST.read_json("/run/gps-status.json", {})
+    # Query gpsd directly for current state
+    poll = _gpsd_poll()
+    active = poll.get("active", 0)
 
-    # Build hardware components for each discovered GPS device
+    # Index TPV and SKY responses by device path
+    tpv_by_dev = {}
+    for tpv in poll.get("tpv", []):
+        dev = tpv.get("device", "")
+        tpv_by_dev[dev] = tpv
+
+    sky_by_dev = {}
+    for sky in poll.get("sky", []):
+        dev = sky.get("device", "")
+        sky_by_dev[dev] = sky
+
     for actual_path, dev in gps_devices.items():
         name = dev["name"]
+        symlink = dev["symlink"]
         component = {
             "name": name,
             "class": "infix-hardware:gps",
@@ -706,16 +754,22 @@ def gps_receiver_components():
         }
 
         gps_data = {}
-        gps_data["device"] = dev["symlink"]
+        gps_data["device"] = symlink
 
-        # Look up cached status by actual device path
-        info = cache.get(actual_path, {})
+        # Match by resolved path or symlink (fallback to single report)
+        tpv = tpv_by_dev.get(actual_path, tpv_by_dev.get(symlink, {}))
+        sky = sky_by_dev.get(actual_path, sky_by_dev.get(symlink, {}))
+        if not tpv and len(tpv_by_dev) == 1:
+            tpv = next(iter(tpv_by_dev.values()))
+        if not sky and len(sky_by_dev) == 1:
+            sky = next(iter(sky_by_dev.values()))
 
-        if info.get("driver"):
-            gps_data["driver"] = info["driver"]
-        gps_data["activated"] = bool(info.get("activated"))
+        gps_data["activated"] = active > 0 and bool(tpv)
 
-        mode = info.get("mode", 0)
+        if tpv.get("driver"):
+            gps_data["driver"] = tpv["driver"]
+
+        mode = tpv.get("mode", 0)
         if mode == 2:
             gps_data["fix-mode"] = "2d"
         elif mode == 3:
@@ -723,16 +777,39 @@ def gps_receiver_components():
         else:
             gps_data["fix-mode"] = "none"
 
-        if "lat" in info:
-            gps_data["latitude"] = f"{float(info['lat']):.6f}"
-        if "lon" in info:
-            gps_data["longitude"] = f"{float(info['lon']):.6f}"
-        if "altHAE" in info:
-            gps_data["altitude"] = f"{float(info['altHAE']):.1f}"
+        if "lat" in tpv:
+            gps_data["latitude"] = f"{float(tpv['lat']):.6f}"
+        if "lon" in tpv:
+            gps_data["longitude"] = f"{float(tpv['lon']):.6f}"
+        if "altHAE" in tpv:
+            gps_data["altitude"] = f"{float(tpv['altHAE']):.1f}"
 
-        if "satellites_visible" in info:
-            gps_data["satellites-visible"] = int(info["satellites_visible"])
-            gps_data["satellites-used"] = int(info.get("satellites_used", 0))
+        sat_vis = 0
+        sat_used = 0
+
+        sats = sky.get("satellites", [])
+        if isinstance(sats, list):
+            sat_vis = len(sats)
+            sat_used = sum(1 for s in sats if s.get("used"))
+
+        # Fallback for gpsd variants that report aggregated counters only
+        # (common in POLL output for some setups).
+        if not sat_vis:
+            sat_vis = int(sky.get("nSat", sky.get("satellites_visible", 0)) or 0)
+        if not sat_used:
+            sat_used = int(sky.get("uSat", sky.get("satellites_used", 0)) or 0)
+
+        # Last fallback to TPV keys when SKY is absent.
+        if not sat_vis:
+            sat_vis = int(tpv.get("nSat", tpv.get("satellites_visible", 0)) or 0)
+        if not sat_used:
+            sat_used = int(tpv.get("uSat", tpv.get("satellites_used", 0)) or 0)
+
+        if sat_used > sat_vis:
+            sat_vis = sat_used
+
+        gps_data["satellites-visible"] = sat_vis
+        gps_data["satellites-used"] = sat_used
 
         # Check for PPS device availability
         pps_path = f"/dev/pps{name.replace('gps', '')}"
