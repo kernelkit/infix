@@ -48,6 +48,15 @@ submodule infix-if-wifi {
      - Security: WPA2/WPA3 with keystore integration
      - Operational state: Connection status, RSSI, client lists";
 
+  revision 2026-02-12 {
+    description
+      "Roaming model refactoring:
+       - Replaced boolean 802.11k/r/v leaves with presence containers
+       - Added optional 802.11r nas-identifier override
+       - Added validation: 802.11r cannot be used with open security";
+    reference "internal";
+  }
+
   revision 2025-12-17 {
     description
       "Major refactoring for AP mode support (BREAKING CHANGE):
@@ -439,8 +448,8 @@ submodule infix-if-wifi {
                  802.11r: Fast BSS Transition (fast handoff)
                  802.11v: BSS Transition Management (network-assisted roaming)";
 
-              leaf enable-80211k {
-                type boolean;
+              container dot11k {
+                presence "Enable 802.11k Radio Resource Management";
                 description
                   "Enable 802.11k Radio Resource Management.
 
@@ -450,38 +459,62 @@ submodule infix-if-wifi {
                    - Beacon reports";
               }
 
-              leaf enable-80211r {
-                type boolean;
+              container dot11r {
+                presence "Enable 802.11r Fast BSS Transition";
+                must "../../security/mode != 'open'" {
+                  error-message "802.11r requires WPA2/WPA3 security and cannot be used with open networks.";
+                }
                 description
                   "Enable 802.11r Fast BSS Transition.
 
                    Reduces handoff latency from ~1s to <50ms through
                    pre-authentication. Required for seamless roaming.";
+
+                leaf mobility-domain {
+                  type mobility-domain;
+                  default "4f57";
+                  description
+                    "802.11r Mobility Domain identifier.
+
+                     All APs that clients should roam between MUST use the
+                     same mobility domain ID.
+
+                     Can be either:
+                     - A 4-character hex string (e.g., '4f57')
+                     - 'hash' to auto-derive from SSID (OpenWrt-compatible)";
+                }
+
+                leaf nas-identifier {
+                  type union {
+                    type enumeration {
+                      enum auto {
+                        description
+                          "Automatically derive NAS-Identifier as:
+                           <interface-name>-<hostname>.<mobility-domain>.";
+                      }
+                    }
+                    type string {
+                      length "1..253";
+                    }
+                  }
+                  default auto;
+                  description
+                    "Override hostapd NAS-Identifier used for 802.11r.
+
+                     Set to 'auto' to derive:
+                     <interface-name>-<hostname>.<mobility-domain>.
+
+                     This value should be unique per AP BSS and stable.";
+                }
               }
 
-              leaf enable-80211v {
-                type boolean;
+              container dot11v {
+                presence "Enable 802.11v BSS Transition Management";
                 description
                   "Enable 802.11v BSS Transition Management.
 
                    Allows APs to suggest better APs to clients, improving
                    network-assisted roaming decisions.";
-              }
-
-              leaf mobility-domain {
-                when "../enable-80211r = 'true'";
-                type mobility-domain;
-                description
-                  "802.11r Mobility Domain identifier.
-
-                   All APs that clients should roam between MUST use the
-                   same mobility domain ID.
-
-                   Can be either:
-                   - A 4-character hex string (e.g., '4f57')
-                   - 'hash' to auto-derive from SSID (OpenWrt-compatible)
-
-                   Only applicable when 802.11r is enabled.";
               }
             }
 
