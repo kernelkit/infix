@@ -82,7 +82,7 @@ def main():
         from . import ietf_ntp
         yang_data = ietf_ntp.operational()
     elif args.model == 'ieee802-dot1ab-lldp':
-        from . import infix_lldp           
+        from . import infix_lldp
         yang_data = infix_lldp.operational()
     elif args.model == 'infix-firewall':
         from . import infix_firewall
@@ -90,9 +90,6 @@ def main():
     elif args.model == 'ietf-bfd-ip-sh':
         from . import ietf_bfd_ip_sh
         yang_data = ietf_bfd_ip_sh.operational()
-    elif args.model == 'infix-wifi-radio':
-        from . import infix_wifi_radio
-        yang_data = infix_wifi_radio.operational()
     else:
         common.LOG.warning("Unsupported model %s", args.model)
         sys.exit(1)
