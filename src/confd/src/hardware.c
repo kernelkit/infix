@@ -4,6 +4,7 @@
 #include <jansson.h>
 #include <libgen.h>
 #include <limits.h>
+#include <unistd.h>
 #include <openssl/evp.h>
 
 #include <srx/common.h>
@@ -283,10 +284,15 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss)
 {
 	struct lyd_node *wifi, *ap, *security, *secret_node, *roaming;
+	struct lyd_node *dot11k, *dot11r, *dot11v;
 	const char *ssid, *hidden, *security_mode, *secret_name;
+	const char *mobility_domain, *mobility_domain_raw;
+	const char *nas_identifier_cfg;
 	bool enable_80211k, enable_80211r, enable_80211v;
 	unsigned char *secret = NULL;
 	const char *ifname;
+	char nas_identifier_default[300];
+	char hostname[64] = "localhost";
 	char bssid[18];
 
 	ifname = lydx_get_cattr(cif, "name");
@@ -300,12 +306,13 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 
 	/* Check 802.11k/r/v configuration */
 	roaming = lydx_get_child(ap, "roaming");
-	enable_80211k = roaming && lydx_get_bool(roaming, "enable-80211k");
-	enable_80211r = roaming && lydx_get_bool(roaming, "enable-80211r");
-	enable_80211v = roaming && lydx_get_bool(roaming, "enable-80211v");
+	dot11k = roaming ? lydx_get_child(roaming, "dot11k") : NULL;
+	dot11r = roaming ? lydx_get_child(roaming, "dot11r") : NULL;
+	dot11v = roaming ? lydx_get_child(roaming, "dot11v") : NULL;
+	enable_80211k = dot11k != NULL;
+	enable_80211r = dot11r != NULL;
+	enable_80211v = dot11v != NULL;
 
-       if (enable_80211r)
-               mobility_domain = lydx_get_cattr(roaming, "mobility-domain");
 
 	/* Set BSSID if custom MAC is configured */
 	if (!interface_get_phys_addr(cif, bssid))
@@ -315,6 +322,19 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	ssid = lydx_get_cattr(ap, "ssid");
 	hidden = lydx_get_cattr(ap, "hidden");
 
+	if (enable_80211r) {
+		mobility_domain_raw = lydx_get_cattr(dot11r, "mobility-domain");
+		mobility_domain = resolve_mobility_domain(mobility_domain_raw, ssid);
+		nas_identifier_cfg = lydx_get_cattr(dot11r, "nas-identifier");
+		if (!nas_identifier_cfg || !strcmp(nas_identifier_cfg, "auto")) {
+			if (gethostname(hostname, sizeof(hostname)) != 0)
+				snprintf(hostname, sizeof(hostname), "localhost");
+			hostname[sizeof(hostname) - 1] = '\0';
+			snprintf(nas_identifier_default, sizeof(nas_identifier_default),
+				 "%s-%s.%s", ifname, hostname, mobility_domain);
+			nas_identifier_cfg = nas_identifier_default;
+		}
+	}
 	if (ssid)
 		fprintf(hostapd, "ssid=%s\n", ssid);
 	if (hidden && !strcmp(hidden, "true"))
@@ -372,7 +392,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		/* wpa=2: Uses RSN (WPA2) frame format for WPA3 */
 		fprintf(hostapd, "wpa=2\n");
 		/* SAE: Simultaneous Authentication of Equals, resistant to offline dictionary attacks */
-		fprintf(hostapd, "wpa_key_mgmt=%sSAE\n", enable_80211r ? "FT-PSK " : "");
+		fprintf(hostapd, "wpa_key_mgmt=%sSAE\n", enable_80211r ? "FT-SAE " : "");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "sae_password=%s\n", secret);
@@ -382,7 +402,8 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		/* Transition mode: supports both WPA2 and WPA3 clients */
 		fprintf(hostapd, "wpa=2\n");
 		/* Allow both PSK (WPA2) and SAE (WPA3) authentication */
-		fprintf(hostapd, "wpa_key_mgmt=%sWPA-PSK SAE\n", enable_80211r ? "FT-PSK " : "");
+		fprintf(hostapd, "wpa_key_mgmt=%sWPA-PSK SAE\n",
+			enable_80211r ? "FT-PSK FT-SAE " : "");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret) {
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
@@ -398,7 +419,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		fprintf(hostapd, "mobility_domain=%s\n", mobility_domain);
 		fprintf(hostapd, "ft_over_ds=1\n");
 		fprintf(hostapd, "ft_psk_generate_local=1\n");
-		fprintf(hostapd, "nas_identifier=%s.%s\n", ifname, mobility_domain);
+		fprintf(hostapd, "nas_identifier=%s\n", nas_identifier_cfg);
 	}
 
 	/* 802.11k: Radio Resource Management */

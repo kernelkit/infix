@@ -487,8 +487,8 @@ your requirements.
 Enable 802.11r for fast handoff (<50ms) between APs with the same SSID:
 
 ```
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
-admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain 4f57
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r mobility-domain 4f57
 ```
 
 **Requirements:**
@@ -504,7 +504,23 @@ Using `hash` allows multiple APs with the same SSID to automatically share
 the same mobility domain without manual configuration:
 
 ```
-admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain hash
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r mobility-domain hash
+```
+
+You can optionally set NAS identifier mode:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r nas-identifier auto
+```
+
+`auto` derives:
+
+`<interface-name>-<hostname>.<mobility-domain>`
+
+Or set an explicit string:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r nas-identifier ap01.wifi0.4f57
 ```
 
 ### 802.11k - Radio Resource Management
@@ -512,7 +528,7 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-d
 Enable 802.11k for client neighbor discovery and better roaming decisions:
 
 ```
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211k true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11k
 ```
 
 Enables neighbor reports and beacon reports, allowing clients to discover
@@ -523,7 +539,7 @@ nearby APs before roaming.
 Enable 802.11v for network-assisted roaming:
 
 ```
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v
 ```
 
 Allows APs to suggest better APs to clients, improving roaming decisions.
@@ -533,19 +549,19 @@ Allows APs to suggest better APs to clients, improving roaming decisions.
 For optimal roaming experience, enable all three features:
 
 ```
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211k true
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
-admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain 4f57
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11k
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r mobility-domain 4f57
 ```
 
 Or use `hash` for automatic mobility domain derivation from SSID:
 
 ```
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211k true
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211r true
-admin@example:/config/interface/wifi0/> set wifi access-point roaming enable-80211v true
-admin@example:/config/interface/wifi0/> set wifi access-point roaming mobility-domain hash
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11k
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r mobility-domain hash
 ```
 
 Repeat for all APs that should participate in the roaming group.
