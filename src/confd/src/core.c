@@ -431,11 +431,8 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 
 	if (event == SR_EV_DONE) {
 		/* skip reload in bootstrap, implicit reload in runlevel change */
-		if (systemf("runlevel >/dev/null 2>&1")) {
-			/* trigger any tasks waiting for confd to have applied *-config */
-			system("initctl -nbq cond set bootstrap");
+		if (systemf("runlevel >/dev/null 2>&1"))
 			return SR_ERR_OK;
-		}
 
 		if (systemf("initctl -b reload")) {
 			EMERG("initctl reload: failed applying new configuration!");
