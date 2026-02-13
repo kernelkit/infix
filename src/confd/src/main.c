@@ -17,6 +17,7 @@
 #include <getopt.h>
 #include <glob.h>
 #include <pthread.h>
+#include <stdint.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -71,6 +72,22 @@ static void error_print(int sr_error, const char *format, ...)
 
 	va_start(ap, format);
 	vfprintf(stderr, msg, ap);
+	va_end(ap);
+}
+
+/* Finit style progress output on console */
+static void conout(int rc, const char *fmt, ...)
+{
+	const char *sta = "%s\e[1m[\e[1;%dm%s\e[0m\e[1m]\e[0m %s";
+	const char *msg[] = { " OK ", "FAIL", "WARN", " ⋯  " };
+	const int col[] = { 32, 31, 33, 33 };
+	const char *cr = rc == 3 ? "" : "\r";
+	char buf[80];
+	va_list ap;
+
+	snprintf(buf, sizeof(buf), sta, cr, col[rc], msg[rc], fmt);
+	va_start(ap, fmt);
+	vfprintf(stderr, buf, ap);
 	va_end(ap);
 }
 
@@ -158,10 +175,26 @@ static void handle_signals(void)
 	sigaction(SIGTTOU, &action, NULL);
 }
 
+static void quiet_now(void)
+{
+	int fd = -1;
+
+	fd = open("/dev/null", O_RDWR, 0);
+	if (fd != -1) {
+		dup2(fd, STDIN_FILENO);
+		dup2(fd, STDOUT_FILENO);
+		dup2(fd, STDERR_FILENO);
+		close(fd);
+	}
+
+	nice(0);
+}
+
 static void daemon_init(int debug, sr_log_level_t log_level)
 {
 	pid_t pid = 0, sid = 0;
-	int fd = -1;
+
+	nice(-20);
 
 	if (debug) {
 		handle_signals();
@@ -192,14 +225,7 @@ static void daemon_init(int debug, sr_log_level_t log_level)
 		exit(EXIT_FAILURE);
 	}
 
-	fd = open("/dev/null", O_RDWR, 0);
-	if (fd != -1) {
-		dup2(fd, STDIN_FILENO);
-		dup2(fd, STDOUT_FILENO);
-		dup2(fd, STDERR_FILENO);
-		close(fd);
-	}
-
+	quiet_now();
 done:
 	sr_log_syslog("confd", log_level);
 }
@@ -514,6 +540,7 @@ static int export_running(sr_session_ctx_t *sess, const char *path, uint32_t tim
 		return -1;
 	}
 
+	umask(0006);
 	fp = fopen(path, "w");
 	if (!fp) {
 		SRPLG_LOG_ERR("confd", "Failed to open %s for writing: %s", path, strerror(errno));
@@ -525,11 +552,7 @@ static int export_running(sr_session_ctx_t *sess, const char *path, uint32_t tim
 	fclose(fp);
 	sr_release_data(data);
 
-	chown(path, 0, 0);    /* root:root initially */
-	chmod(path, 0660);
-
-	/* Set group to 'wheel' for admin access */
-	systemf("chgrp wheel '%s' 2>/dev/null", path);
+	chown(path, 0, 10);    /* root:wheel for admin group access */
 
 	return 0;
 }
@@ -572,8 +595,13 @@ static void handle_startup_failure(sr_session_ctx_t *sess, const char *failure_p
  */
 static void maybe_enable_test_mode(void)
 {
-	if (file_exists("/mnt/aux/test-mode"))
-		systemf("sysrepoctl -c infix-test -e test-mode-enable");
+	if (file_exists("/mnt/aux/test-mode")) {
+		int rc;
+
+		conout(3, "Enbling test mode");
+		rc = systemf("sysrepoctl -c infix-test -e test-mode-enable");
+		conout(rc ? 1 : 0, "\n");
+	}
 }
 
 /*
@@ -640,6 +668,12 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 	return 0;
 }
 
+static void *gen_config_thread(void *arg)
+{
+	(void)arg;
+	return (void *)(intptr_t)systemf("/usr/libexec/confd/gen-config");
+}
+
 int main(int argc, char **argv)
 {
 	struct plugin *plugins = NULL;
@@ -648,6 +682,8 @@ int main(int argc, char **argv)
 	sr_log_level_t log_level = SR_LL_ERR;
 	int plugin_count = 0, i, r, rc = EXIT_FAILURE, opt, debug = 0;
 	int pidfd = -1, fatal_fail = 0;
+	pthread_t tid;
+	void *tret;
 	const char *pidfile = NULL;
 	const char *factory_path = "/etc/factory-config.cfg";
 	const char *startup_path = "/cfg/startup-config.cfg";
@@ -748,6 +784,14 @@ int main(int argc, char **argv)
 	/* Daemonize -- after this point, confd no longer logs to stderr */
 	daemon_init(debug, log_level);
 
+	/* Start gen-config in parallel -- thread is joined before we need the result */
+	conout(3, "Generating factory-config and failure-config");
+	if (pthread_create(&tid, NULL, gen_config_thread, NULL)) {
+		SRPLG_LOG_ERR("confd", "Failed to create gen-config thread: %s", strerror(errno));
+		conout(1, "\n");
+		goto cleanup;
+	}
+
 	/* Phase 1: Wipe stale SHM for a clean slate */
 	wipe_sysrepo_shm();
 
@@ -758,22 +802,34 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	/* Phase 3: Install factory defaults into all datastores */
+	/* Phase 3: Wait for gen-config thread to finish */
+	pthread_join(tid, &tret);
+	if ((intptr_t)tret != 0) {
+		SRPLG_LOG_ERR("confd", "gen-config failed (rc=%d)", (int)(intptr_t)tret);
+		conout(1, "\n");
+		goto cleanup;
+	}
+	conout(0, "\n");
+
+	/* Phase 4: Install factory defaults into all datastores */
 	SRPLG_LOG_INF("confd", "Loading factory-default datastore from %s ...", factory_path);
+	conout(3, "Loading factory-default datastore");
 	r = sr_install_factory_config(conn, factory_path);
 	if (r != SR_ERR_OK) {
 		SRPLG_LOG_ERR("confd", "sr_install_factory_config failed: %s", sr_strerror(r));
+		conout(1, "\n");
 		goto cleanup;
 	}
+	conout(0, "\n");
 
-	/* Phase 4: Start running-datastore session */
+	/* Phase 5: Start running-datastore session */
 	r = sr_session_start(conn, SR_DS_RUNNING, &sess);
 	if (r != SR_ERR_OK) {
 		error_print(r, "Failed to start new session");
 		goto cleanup;
 	}
 
-	/* Phase 4b: Clear running datastore so plugin init sees an empty
+	/* Phase 6: Clear running datastore so plugin init sees an empty
 	 * tree.  This matches the original bootstrap flow where running
 	 * was cleared with '{}' before sysrepo-plugind started.  When we
 	 * later load startup-config, the diff will be all-create which is
@@ -787,25 +843,41 @@ int main(int argc, char **argv)
 	/* Enable test-mode YANG feature if needed */
 	maybe_enable_test_mode();
 
-	/* Phase 5: Initialize plugins (subscribe to YANG module changes) */
+	/* Phase 7: Initialize plugins (subscribe to YANG module changes) */
+	conout(3, "Loading confd plugins");
 	for (i = 0; i < plugin_count; i++) {
 		r = plugins[i].init_cb(sess, &plugins[i].private_data);
 		if (r) {
 			SRPLG_LOG_ERR("confd", "Plugin \"%s\" initialization failed (%s).",
 				      plugins[i].name, sr_strerror(r));
-			if (fatal_fail)
+			if (fatal_fail) {
+				conout(1, "\n");
 				goto cleanup;
+			}
 		} else {
 			SRPLG_LOG_INF("confd", "Plugin \"%s\" initialized.", plugins[i].name);
 			plugins[i].initialized = 1;
 		}
 	}
+	conout(0, "\n");
 
-	/* Phase 6: Load startup config -- plugins are now subscribed, so
-	 * sr_replace_config() will trigger their change callbacks. */
+	/*
+	 * Phase 8: Load startup config -- plugins are now subscribed, so
+	 * sr_replace_config() will trigger their change callbacks.
+	 */
+	conout(3, "Loading startup-config");
 	if (bootstrap_config(conn, sess, factory_path, startup_path,
-			     failure_path, test_path, timeout_ms))
+			     failure_path, test_path, timeout_ms)) {
+		conout(1, "\n");
 		goto cleanup;
+	}
+	conout(0, "\n");
+
+	/* No more progress to show, go to quiet daemon mode */
+	quiet_now();
+
+	/* Signal that bootstrap is complete (dbus, resolvconf depend on this) */
+	symlink("/run/finit/cond/reconf", "/run/finit/cond/usr/bootstrap");
 
 	/* Write PID file after everything is ready */
 	if (pidfile && write_pidfile(pidfd) < 0)
