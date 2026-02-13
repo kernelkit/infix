@@ -44,6 +44,10 @@ if [ -n "${ID_LIKE}" ]; then
     ID="${ID} ${ID_LIKE}"
 fi
 
+# Initialize default hostname for hostname.d pattern
+mkdir -p "$TARGET_DIR/etc/hostname.d"
+cp "$TARGET_DIR/etc/hostname" "$TARGET_DIR/etc/hostname.d/10-default"
+
 # This is a symlink to /usr/lib/os-release, so we remove this to keep
 # original Buildroot information.
 ixmsg "Creating /etc/os-release"
