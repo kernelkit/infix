@@ -59,6 +59,8 @@ them:
   XPath: `/ietf-system:system/authentication/user/password`
 - **Default SSH and NETCONF hostkey:** `genkey` (regenerated at factory reset)
   XPath: `/ietf-keystore:keystore/asymmetric-keys/asymmetric-key[name='genkey']`
+- **Default HTTPS certificate:** `gencert` (self-signed, regenerated at factory reset)
+  XPath: `/ietf-keystore:keystore/asymmetric-keys/asymmetric-key[name='gencert']`
 - **Hostname format specifiers:**  
   XPath: `/ietf-system:system/hostname`
    - `%i`: OS ID, from `/etc/os-release`, from Menuconfig branding
@@ -219,8 +221,12 @@ Notice how both the public and private keys are left empty here, this
 cause them to be always automatically regenerated after each factory reset.
 Keeping the `factory-config` snippet like this means we can use the same
 file on multiple devices, without risking them sharing the same host
-keys.  Sometimes you may want the same host keys, but that is the easy
-use-case and not documented here.
+keys or TLS certificates.  Sometimes you may want the same keys, but
+that is the easy use-case and not documented here.
+
+The `genkey` entry is the default SSH host key, and `gencert` is the
+default self-signed HTTPS certificate used by the web server (nginx).
+Both are regenerated on factory reset when their keys are empty.
 
 ```json
   "ietf-keystore:keystore": {
@@ -233,6 +239,18 @@ use-case and not documented here.
           "private-key-format": "ietf-crypto-types:rsa-private-key-format",
           "cleartext-private-key": "",
           "certificates": {}
+        },
+        {
+          "name": "gencert",
+          "public-key-format": "infix-crypto-types:x509-public-key-format",
+          "public-key": "",
+          "private-key-format": "infix-crypto-types:rsa-private-key-format",
+          "cleartext-private-key": "",
+          "certificates": {
+            "certificate": [
+              { "name": "self-signed", "cert-data": "" }
+            ]
+          }
         }
       ]
     }
@@ -292,8 +310,21 @@ use-case and not documented here.
         "port": 22
       }
     ]
+  },
+  "infix-services:web": {
+    "certificate": "gencert",
+    "enabled": true,
+    "console": { "enabled": true },
+    "netbrowse": { "enabled": true },
+    "restconf": { "enabled": true }
   }
 ```
+
+The `certificate` leaf references an asymmetric key in the keystore
+that has an associated certificate.  The default `gencert` entry uses
+a self-signed certificate.  To use a custom (e.g., CA-signed)
+certificate, create a new keystore entry with
+`x509-public-key-format` and point the web `certificate` leaf to it.
 
 ## Integration
 
