@@ -31,6 +31,11 @@
 
 #include "dagger.h"
 
+#define SSH_HOSTKEYS      "/etc/ssh/hostkeys"
+#define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
+#define SSL_CERT_DIR      "/etc/ssl/certs"
+#define SSL_KEY_DIR       "/etc/ssl/private"
+
 #define CB_PRIO_PRIMARY   65535
 #define CB_PRIO_PASSIVE   65000
 
@@ -238,8 +243,6 @@ int hardware_candidate_init(struct confd *confd);
 int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* keystore.c */
-#define SSH_HOSTKEYS "/etc/ssh/hostkeys"
-#define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
 int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* firewall.c */

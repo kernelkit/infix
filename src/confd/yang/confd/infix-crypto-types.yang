@@ -6,6 +6,9 @@ module infix-crypto-types {
     prefix ct;
   }
 
+  revision 2026-02-14 {
+    description "Add X.509 public key format for TLS certificates.";
+  }
   revision 2025-11-09 {
     description "Add Wireguard public/private key and sha";
   }
@@ -42,6 +45,13 @@ module infix-crypto-types {
     description
       "SSH public key format (RFC 4253, Section 6.6).
        Used for SSH host keys.";
+  }
+
+  identity x509-public-key-format {
+    base public-key-format;
+    base ct:subject-public-key-info-format;
+    description
+      "X.509 SubjectPublicKeyInfo format. Used for TLS certificates.";
   }
 
   identity symmetric-key-format {

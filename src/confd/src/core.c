@@ -99,6 +99,7 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 	dkeys = lydx_get_descendant(*diff, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
 	LYX_LIST_FOR_EACH(dkeys, dkey, "asymmetric-key") {
 		struct ly_set *hostkeys;
+		struct lyd_node *webcert;
 		uint32_t i;
 
 		key_name = lydx_get_cattr(dkey, "name");
@@ -115,6 +116,15 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 				}
 			}
 			ly_set_free(hostkeys, NULL);
+		}
+
+		webcert = lydx_get_xpathf(config, "/infix-services:web/certificate[.='%s']", key_name);
+		if (webcert) {
+			result = add_dependencies(diff, "/infix-services:web/certificate", key_name);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add web certificate to diff for key %s", key_name);
+				return result;
+			}
 		}
 	}
 
