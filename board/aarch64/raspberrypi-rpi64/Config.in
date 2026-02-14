@@ -2,9 +2,6 @@ config BR2_PACKAGE_RASPBERRYPI_RPI64
 	bool "Raspberry Pi 64-bit (RPi3 and later)"
 	depends on BR2_aarch64
 	select SDCARD_AUX
-	select BR2_PACKAGE_FEATURE_WIFI
-	select BR2_PACKAGE_BRCMFMAC_SDIO_FIRMWARE_RPI
-	select BR2_PACKAGE_BRCMFMAC_SDIO_FIRMWARE_RPI_WIFI
 	select BR2_PACKAGE_LINUX_FIRMWARE_RTL_8169
 	help
 	  Raspberry Pi 64-bit adds support for the Raspberry Pi family of
