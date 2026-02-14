@@ -11,6 +11,7 @@ The keystore supports two types of cryptographic keys:
 
 1. **Asymmetric Keys** — public/private key pairs used for:
     - SSH host authentication (RSA keys)
+    - HTTPS/TLS certificates (X.509 keys)
     - WireGuard VPN tunnels (X25519 keys)
 
 2. **Symmetric Keys** — shared secrets used for:
@@ -22,10 +23,11 @@ managed via CLI, NETCONF, or RESTCONF.
 
 ### Supported Formats
 
-| **Asymmetric Key Format**                                | **Use Case**  | **Key Type** |
-|----------------------------------------------------------|---------------|--------------|
-| `rsa-private-key-format` / `ssh-public-key-format`       | SSH host keys | RSA          |
-| `x25519-private-key-format` / `x25519-public-key-format` | WireGuard VPN | Curve25519   |
+| **Asymmetric Key Format**                                | **Use Case**       | **Key Type** |
+|----------------------------------------------------------|--------------------|--------------|
+| `rsa-private-key-format` / `ssh-public-key-format`       | SSH host keys      | RSA          |
+| `rsa-private-key-format` / `x509-public-key-format`      | TLS certificates   | RSA + X.509  |
+| `x25519-private-key-format` / `x25519-public-key-format` | WireGuard VPN      | Curve25519   |
 
 | **Symmetric Key Format**        | **Use Case**                          |
 |-----------------------------|-----------------------------------|
@@ -45,6 +47,53 @@ keystore with the name `genkey`.
 
 See [SSH Management](management.md) for details on generating and importing
 custom SSH host keys.
+
+### TLS Certificates
+
+TLS certificates are used by the web server (nginx) for HTTPS connections.
+The default certificate is a self-signed certificate automatically generated
+on first boot and stored in the keystore with the name `gencert`.  Like SSH
+host keys, the certificate is regenerated on factory reset when its keys are
+empty.
+
+The web server's `certificate` leaf references which keystore entry to use:
+
+```json
+"infix-services:web": {
+    "certificate": "gencert",
+    "enabled": true
+}
+```
+
+To use a custom (e.g., CA-signed) certificate, create a new asymmetric key
+entry with `x509-public-key-format`, populate it with your certificate and
+private key, then point the web `certificate` leaf to it:
+
+```json
+"ietf-keystore:keystore": {
+    "asymmetric-keys": {
+        "asymmetric-key": [
+            {
+                "name": "my-cert",
+                "public-key-format": "infix-crypto-types:x509-public-key-format",
+                "public-key": "<base64-encoded-cert>",
+                "private-key-format": "infix-crypto-types:rsa-private-key-format",
+                "cleartext-private-key": "<base64-encoded-key>",
+                "certificates": {
+                    "certificate": [
+                        { "name": "ca-signed", "cert-data": "<base64-encoded-cert>" }
+                    ]
+                }
+            }
+        ]
+    }
+}
+```
+
+> [!NOTE]
+> The `public-key` and `cert-data` fields contain base64-encoded PEM data
+> with the `-----BEGIN/END-----` markers stripped.  The system reconstructs
+> the PEM files when writing them to disk for nginx.
 
 ### WireGuard Keys
 
@@ -116,6 +165,7 @@ wg-psk                       octet-string  zYr83O4Ykj9i1gN+/aaosJxQx...
 <span class="title">Asymmetric Keys</span>
 <span class="header">NAME                         TYPE    PUBLIC KEY                         </span>
 genkey                       rsa     MIIBCgKCAQEAnj0YinjhYDgYbEGuh7...
+gencert                      x509    MIIDXTCCAkWgAwIBAgIJAJC1HiIAZA...
 wg-tunnel                    x25519  bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1...
 </code></pre>
 
