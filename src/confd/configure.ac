@@ -82,6 +82,15 @@ PKG_CHECK_MODULES([sysrepo], [sysrepo >= 4.2.10])
 PKG_CHECK_MODULES([libyang], [libyang >= 4.2.2])
 PKG_CHECK_MODULES([libsrx],  [libsrx >= 1.0.0])
 
+AC_CHECK_HEADER([ev.h],
+    [saved_LIBS="$LIBS"
+     AC_CHECK_LIB([ev], [ev_loop_new],
+        [EV_LIBS="-lev"],
+        [AC_MSG_ERROR("libev not found")])
+     LIBS="$saved_LIBS"],
+    [AC_MSG_ERROR("ev.h not found")])
+AC_SUBST([EV_LIBS])
+
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
 

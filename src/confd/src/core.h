@@ -145,7 +145,7 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
 	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
-				CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
+				CB_PRIO_PRIMARY, flags | SR_SUBSCR_NO_THREAD, sub);
 	if (rc) {
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
 		return rc;
@@ -159,7 +159,7 @@ static inline int register_monitor(sr_session_ctx_t *session, const char *module
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
 	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
-					    0, flags | SR_SUBSCR_PASSIVE, sub);
+					    0, flags | SR_SUBSCR_PASSIVE | SR_SUBSCR_NO_THREAD, sub);
 	if (rc) {
 		ERROR("failed subscribing to monitor %s: %s", xpath, sr_strerror(rc));
 		return rc;
@@ -172,7 +172,7 @@ static inline int register_oper(sr_session_ctx_t *session, const char *module, c
 	sr_oper_get_items_cb cb, void *arg, int flags, sr_subscription_ctx_t **sub)
 {
 	int rc = sr_oper_get_subscribe(session, module, xpath, cb, arg,
-				flags | SR_SUBSCR_DEFAULT, sub);
+				flags | SR_SUBSCR_NO_THREAD, sub);
 	if (rc)
 		ERROR("failed subscribing to %s oper: %s", xpath, sr_strerror(rc));
 	return rc;
@@ -181,7 +181,7 @@ static inline int register_oper(sr_session_ctx_t *session, const char *module, c
 static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 	sr_rpc_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	int rc = sr_rpc_subscribe(session, xpath, cb, arg, 0, SR_SUBSCR_DEFAULT, sub);
+	int rc = sr_rpc_subscribe(session, xpath, cb, arg, 0, SR_SUBSCR_NO_THREAD, sub);
 	if (rc)
 		ERROR("failed subscribing to %s rpc: %s", xpath, sr_strerror(rc));
 	return rc;

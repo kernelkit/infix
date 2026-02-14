@@ -13,9 +13,11 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
+#include <ev.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <glob.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <signal.h>
@@ -51,14 +53,15 @@ struct plugin {
 	char *name;
 	int (*init_cb)(sr_session_ctx_t *session, void **private_data);
 	void (*cleanup_cb)(sr_session_ctx_t *session, void *private_data);
+	void (*get_subs)(void *priv, sr_subscription_ctx_t **sub, sr_subscription_ctx_t **fsub);
 	void *private_data;
+	sr_subscription_ctx_t *sub;
+	sr_subscription_ctx_t *fsub;
 	int initialized;
 };
 
-/* Protected flag for terminating */
-static int loop_finish;
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+/* Maximum number of sysrepo event pipe file descriptors across all plugins */
+#define MAX_EVENT_FDS 64
 
 static void error_print(int sr_error, const char *format, ...)
 {
@@ -129,50 +132,78 @@ static void help_print(void)
 		"\n");
 }
 
-static void signal_handler(int sig)
-{
-	switch (sig) {
-	case SIGINT:
-	case SIGQUIT:
-	case SIGABRT:
-	case SIGTERM:
-	case SIGHUP:
-		pthread_mutex_lock(&lock);
-		if (!loop_finish) {
-			loop_finish = 1;
-			pthread_cond_signal(&cond);
-		} else {
-			error_print(0, "Exiting without a proper cleanup");
-			exit(EXIT_FAILURE);
-		}
-		pthread_mutex_unlock(&lock);
-		break;
-	default:
-		error_print(0, "Exiting on receiving an unhandled signal");
-		exit(EXIT_FAILURE);
-	}
-}
-
-static void handle_signals(void)
+static void ignore_signals(void)
 {
 	struct sigaction action;
-	sigset_t block_mask;
 
-	sigfillset(&block_mask);
-	action.sa_handler = signal_handler;
-	action.sa_mask = block_mask;
-	action.sa_flags = 0;
-	sigaction(SIGINT, &action, NULL);
-	sigaction(SIGQUIT, &action, NULL);
-	sigaction(SIGABRT, &action, NULL);
-	sigaction(SIGTERM, &action, NULL);
-	sigaction(SIGHUP, &action, NULL);
-
+	memset(&action, 0, sizeof(action));
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
 	sigaction(SIGTSTP, &action, NULL);
 	sigaction(SIGTTIN, &action, NULL);
 	sigaction(SIGTTOU, &action, NULL);
+}
+
+/* libev callbacks for steady-state operation */
+static void signal_cb(struct ev_loop *loop, struct ev_signal *w, int revents)
+{
+	(void)revents;
+	(void)w;
+	ev_break(loop, EVBREAK_ALL);
+}
+
+static void sr_event_cb(struct ev_loop *loop, struct ev_io *w, int revents)
+{
+	(void)loop;
+	(void)revents;
+	sr_subscription_process_events(w->data, NULL, NULL);
+}
+
+/*
+ * Temporary event pump thread for bootstrap.
+ *
+ * With SR_SUBSCR_NO_THREAD, sysrepo writes events to a pipe and waits
+ * for the application to call sr_subscription_process_events().  During
+ * bootstrap, sr_replace_config() blocks waiting for callbacks — this
+ * thread ensures those callbacks get dispatched.
+ */
+struct event_pump {
+	struct plugin *plugins;
+	int            plugin_count;
+	int            running;
+};
+
+static void *event_pump_thread(void *arg)
+{
+	struct event_pump *pump = arg;
+	struct pollfd fds[MAX_EVENT_FDS];
+	sr_subscription_ctx_t *subs[MAX_EVENT_FDS];
+	int nfds = 0;
+
+	for (int i = 0; i < pump->plugin_count; i++) {
+		struct plugin *p = &pump->plugins[i];
+
+		if (p->sub && sr_get_event_pipe(p->sub, &fds[nfds].fd) == SR_ERR_OK) {
+			fds[nfds].events = POLLIN;
+			subs[nfds] = p->sub;
+			nfds++;
+		}
+		if (p->fsub && sr_get_event_pipe(p->fsub, &fds[nfds].fd) == SR_ERR_OK) {
+			fds[nfds].events = POLLIN;
+			subs[nfds] = p->fsub;
+			nfds++;
+		}
+	}
+
+	while (pump->running) {
+		if (poll(fds, nfds, 100) > 0) {
+			for (int i = 0; i < nfds; i++)
+				if (fds[i].revents & POLLIN)
+					sr_subscription_process_events(subs[i], NULL, NULL);
+		}
+	}
+
+	return NULL;
 }
 
 static void quiet_now(void)
@@ -196,8 +227,9 @@ static void daemon_init(int debug, sr_log_level_t log_level)
 
 	nice(-20);
 
+	ignore_signals();
+
 	if (debug) {
-		handle_signals();
 		if (debug < 0)
 			goto done;
 		sr_log_stderr(log_level);
@@ -211,8 +243,6 @@ static void daemon_init(int debug, sr_log_level_t log_level)
 	}
 	if (pid > 0)
 		exit(EXIT_SUCCESS);
-
-	handle_signals();
 
 	sid = setsid();
 	if (sid < 0) {
@@ -356,6 +386,9 @@ static int load_plugins(struct plugin **plugins, int *plugin_count)
 			rc = -1;
 			break;
 		}
+
+		/* Optional: allows main to collect subscription contexts */
+		*(void **)&plugin->get_subs = dlsym(handle, "confd_get_subscriptions");
 
 		plugin->handle = handle;
 
@@ -861,17 +894,46 @@ int main(int argc, char **argv)
 	}
 	conout(0, "\n");
 
+	/* Phase 8: Collect subscription contexts from plugins */
+	for (i = 0; i < plugin_count; i++) {
+		if (plugins[i].initialized && plugins[i].get_subs)
+			plugins[i].get_subs(plugins[i].private_data,
+					    &plugins[i].sub, &plugins[i].fsub);
+	}
+
+	/* Phase 9: Start event pump thread for bootstrap.
+	 * With SR_SUBSCR_NO_THREAD, sr_replace_config() blocks waiting
+	 * for callbacks.  The pump thread processes those events. */
+	struct event_pump pump = {
+		.plugins      = plugins,
+		.plugin_count = plugin_count,
+		.running      = 1,
+	};
+	pthread_t pump_tid;
+
+	if (pthread_create(&pump_tid, NULL, event_pump_thread, &pump)) {
+		SRPLG_LOG_ERR("confd", "Failed to create event pump thread: %s", strerror(errno));
+		goto cleanup;
+	}
+
 	/*
-	 * Phase 8: Load startup config -- plugins are now subscribed, so
+	 * Phase 10: Load startup config -- plugins are now subscribed, so
 	 * sr_replace_config() will trigger their change callbacks.
+	 * The event pump thread processes those callbacks.
 	 */
 	conout(3, "Loading startup-config");
 	if (bootstrap_config(conn, sess, factory_path, startup_path,
 			     failure_path, test_path, timeout_ms)) {
+		pump.running = 0;
+		pthread_join(pump_tid, NULL);
 		conout(1, "\n");
 		goto cleanup;
 	}
 	conout(0, "\n");
+
+	/* Phase 11: Stop event pump — bootstrap is done */
+	pump.running = 0;
+	pthread_join(pump_tid, NULL);
 
 	/* No more progress to show, go to quiet daemon mode */
 	quiet_now();
@@ -883,11 +945,42 @@ int main(int argc, char **argv)
 	if (pidfile && write_pidfile(pidfd) < 0)
 		goto cleanup;
 
-	/* Wait for a terminating signal */
-	pthread_mutex_lock(&lock);
-	while (!loop_finish)
-		pthread_cond_wait(&cond, &lock);
-	pthread_mutex_unlock(&lock);
+	/* Phase 12: Steady-state — libev event loop replaces pthread_cond_wait */
+	{
+		struct ev_loop *loop = EV_DEFAULT;
+		struct ev_signal sigterm_w, sigint_w, sighup_w, sigquit_w;
+		struct ev_io io_watchers[MAX_EVENT_FDS];
+		int nio = 0;
+
+		ev_signal_init(&sigterm_w, signal_cb, SIGTERM);
+		ev_signal_init(&sigint_w,  signal_cb, SIGINT);
+		ev_signal_init(&sighup_w,  signal_cb, SIGHUP);
+		ev_signal_init(&sigquit_w, signal_cb, SIGQUIT);
+		ev_signal_start(loop, &sigterm_w);
+		ev_signal_start(loop, &sigint_w);
+		ev_signal_start(loop, &sighup_w);
+		ev_signal_start(loop, &sigquit_w);
+
+		for (i = 0; i < plugin_count; i++) {
+			int fd;
+
+			if (plugins[i].sub && sr_get_event_pipe(plugins[i].sub, &fd) == SR_ERR_OK) {
+				ev_io_init(&io_watchers[nio], sr_event_cb, fd, EV_READ);
+				io_watchers[nio].data = plugins[i].sub;
+				ev_io_start(loop, &io_watchers[nio]);
+				nio++;
+			}
+			if (plugins[i].fsub && sr_get_event_pipe(plugins[i].fsub, &fd) == SR_ERR_OK) {
+				ev_io_init(&io_watchers[nio], sr_event_cb, fd, EV_READ);
+				io_watchers[nio].data = plugins[i].fsub;
+				ev_io_start(loop, &io_watchers[nio]);
+				nio++;
+			}
+		}
+
+		ev_run(loop, 0);
+		ev_loop_destroy(loop);
+	}
 
 	rc = EXIT_SUCCESS;
 
