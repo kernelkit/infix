@@ -461,10 +461,10 @@ static inline int subscribe_model(char *model, struct confd *confd, int flags)
 {
 	return  sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd,
 					   CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES |
-					   SR_SUBSCR_DEFAULT | flags, &confd->sub) ||
+					   SR_SUBSCR_NO_THREAD | flags, &confd->sub) ||
 		sr_module_change_subscribe(confd->startup, model, "//.", startup_save, NULL,
 					   CB_PRIO_PASSIVE, SR_SUBSCR_CHANGE_ALL_MODULES |
-					   SR_SUBSCR_PASSIVE, &confd->sub);
+					   SR_SUBSCR_PASSIVE | SR_SUBSCR_NO_THREAD, &confd->sub);
 }
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
@@ -643,6 +643,15 @@ err:
 	sr_unsubscribe(confd.fsub);
 
 	return rc;
+}
+
+void confd_get_subscriptions(void *priv, sr_subscription_ctx_t **out_sub,
+			     sr_subscription_ctx_t **out_fsub)
+{
+	struct confd *c = (struct confd *)priv;
+
+	*out_sub  = c->sub;
+	*out_fsub = c->fsub;
 }
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)
