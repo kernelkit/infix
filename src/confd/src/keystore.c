@@ -14,6 +14,9 @@
 #define XPATH_KEYSTORE_SYM  "/ietf-keystore:keystore/symmetric-keys"
 #define SSH_PRIVATE_KEY  "/tmp/ssh.key"
 #define SSH_PUBLIC_KEY   "/tmp/ssh.pub"
+#define TLS_TMPDIR       "/tmp/ssl"
+#define TLS_PRIVATE_KEY  TLS_TMPDIR "/self-signed.key"
+#define TLS_CERTIFICATE  TLS_TMPDIR "/self-signed.crt"
 
 /* return file size */
 static size_t filesz(const char *fn)
@@ -70,11 +73,69 @@ static int gen_hostkey(const char *name, struct lyd_node *change)
 		rc = SR_ERR_INTERNAL;
 	}
 
+	AUDIT("Installing SSH host key \"%s\".", name);
 	if (systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name,
 		    SSH_HOSTKEYS_NEXT, public_key, private_key))
 		rc = SR_ERR_INTERNAL;
 
 	return rc;
+}
+
+static int gen_webcert(const char *name, struct lyd_node *change)
+{
+	const char *private_key, *cert_data, *certname;
+	struct lyd_node *certs, *cert;
+	FILE *fp;
+
+	erase("/run/finit/cond/usr/mkcert");
+
+	private_key = lydx_get_cattr(change, "cleartext-private-key");
+	if (!private_key || !*private_key) {
+		ERROR("Cannot find private key for \"%s\"", name);
+		return SR_ERR_OK;
+	}
+
+	certs = lydx_get_descendant(lyd_child(change), "certificates", "certificate", NULL);
+	if (!certs) {
+		ERROR("Cannot find any certificates for \"%s\"", name);
+		return SR_ERR_OK;
+	}
+
+	cert = certs;		/* Use first certificate */
+
+	certname = lydx_get_cattr(cert, "name");
+	if (!certname || !*certname) {
+		ERROR("Cannot find certificate name for \"%s\"", name);
+		return SR_ERR_OK;
+	}
+
+	cert_data = lydx_get_cattr(cert, "cert-data");
+	if (!cert_data || !*cert_data) {
+		ERROR("Cannot find certificate data \"%s\"", name);
+		return SR_ERR_OK;
+	}
+
+	AUDIT("Installing HTTPS %s certificate \"%s\"", name, certname);
+	fp = fopenf("w", "%s/%s.key", SSL_KEY_DIR, certname);
+	if (!fp) {
+		ERRNO("Failed creating key file for \"%s\"", certname);
+		return SR_ERR_INTERNAL;
+	}
+	fprintf(fp, "-----BEGIN RSA PRIVATE KEY-----\n%s\n-----END RSA PRIVATE KEY-----\n", private_key);
+	fclose(fp);
+	systemf("chmod 600 %s/%s.key", SSL_KEY_DIR, certname);
+
+	fp = fopenf("w", "%s/%s.crt", SSL_CERT_DIR, certname);
+	if (!fp) {
+		ERRNO("Failed creating crt file for \"%s\"", certname);
+		return SR_ERR_INTERNAL;
+	}
+	fprintf(fp, "-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n", cert_data);
+	fclose(fp);
+
+	symlink("/run/finit/cond/reconf", "/run/finit/cond/usr/mkcert");
+
+	return SR_ERR_OK;
 }
 
 static int keystore_update(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff)
@@ -159,6 +220,84 @@ static int keystore_update(sr_session_ctx_t *session, struct lyd_node *config, s
 	if (list)
 		sr_free_values(list, count);
 
+	/* Second pass: generate X.509 certificates for TLS */
+	list = NULL;
+	count = 0;
+	rc = sr_get_items(session, xpath, 0, 0, &list, &count);
+	if (rc != SR_ERR_OK)
+		return 0;
+
+	for (size_t i = 0; i < count; i++) {
+		char *name = srx_get_str(session, "%s/name", list[i].xpath);
+		char *public_key_format = NULL, *private_key_format = NULL;
+		char *pub_key = NULL, *priv_key = NULL, *cert = NULL;
+		sr_val_t *entry = &list[i];
+
+		if (srx_isset(session, "%s/cleartext-private-key", entry->xpath) ||
+		    srx_isset(session, "%s/public-key", entry->xpath))
+			goto next_x509;
+
+		public_key_format = srx_get_str(session, "%s/public-key-format", entry->xpath);
+		if (!public_key_format)
+			goto next_x509;
+
+		private_key_format = srx_get_str(session, "%s/private-key-format", entry->xpath);
+		if (!private_key_format)
+			goto next_x509;
+
+		if (strcmp(private_key_format, "infix-crypto-types:rsa-private-key-format") ||
+		    strcmp(public_key_format, "infix-crypto-types:x509-public-key-format"))
+			goto next_x509;
+
+		NOTE("X.509 certificate (%s) does not exist, generating...", name);
+		if (systemf("/usr/libexec/infix/mkcert")) {
+			ERROR("Failed generating X.509 certificate for %s", name);
+			goto next_x509;
+		}
+
+		priv_key = filerd(TLS_PRIVATE_KEY, filesz(TLS_PRIVATE_KEY));
+		if (!priv_key)
+			goto next_x509;
+
+		pub_key = filerd(TLS_CERTIFICATE, filesz(TLS_CERTIFICATE));
+		if (!pub_key)
+			goto next_x509;
+
+		/* Use cert data also for public-key (X.509 SubjectPublicKeyInfo) */
+		rc = srx_set_str(session, priv_key, 0, "%s/cleartext-private-key", entry->xpath);
+		if (rc) {
+			ERROR("Failed setting private key for %s... rc: %d", name, rc);
+			goto next_x509;
+		}
+
+		rc = srx_set_str(session, pub_key, 0, "%s/public-key", entry->xpath);
+		if (rc != SR_ERR_OK) {
+			ERROR("Failed setting public key for %s... rc: %d", name, rc);
+			goto next_x509;
+		}
+
+		cert = filerd(TLS_CERTIFICATE, filesz(TLS_CERTIFICATE));
+		if (cert) {
+			rc = srx_set_str(session, cert, 0,
+					 "%s/certificates/certificate[name='self-signed']/cert-data",
+					 entry->xpath);
+			if (rc)
+				ERROR("Failed setting cert-data for %s... rc: %d", name, rc);
+		}
+
+	next_x509:
+		rmrf(TLS_TMPDIR);
+		free(public_key_format);
+		free(private_key_format);
+		free(priv_key);
+		free(pub_key);
+		free(cert);
+		free(name);
+	}
+
+	if (list)
+		sr_free_values(list, count);
+
 	return 0;
 }
 
@@ -202,21 +341,13 @@ int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	changes = lydx_get_descendant(config, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
 	LYX_LIST_FOR_EACH(changes, change, "asymmetric-key") {
 		const char *name = lydx_get_cattr(change, "name");
-		const char *type;
+		const char *pubfmt;
 
-		type = lydx_get_cattr(change, "private-key-format");
-		if (strcmp(type, "infix-crypto-types:rsa-private-key-format")) {
-			INFO("Private key %s is not of SSH type (%s)", name, type);
-			continue;
-		}
-
-		type = lydx_get_cattr(change, "public-key-format");
-		if (strcmp(type, "infix-crypto-types:ssh-public-key-format")) {
-			INFO("Public key %s is not of SSH type (%s)", name, type);
-			continue;
-		}
-
-		gen_hostkey(name, change);
+		pubfmt = lydx_get_cattr(change, "public-key-format");
+		if (!strcmp(pubfmt, "infix-crypto-types:ssh-public-key-format"))
+			gen_hostkey(name, change);
+		else if (!strcmp(pubfmt, "infix-crypto-types:x509-public-key-format"))
+			gen_webcert(name, change);
 	}
 
 	return rc;

@@ -25,6 +25,10 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2026-02-14 {
+    description "Add certificate leaf to web container for TLS keystore reference.";
+    reference "internal";
+  }
   revision 2025-12-10 {
     description "Adapt to changes in final version of ietf-keystore";
     reference "internal";
@@ -187,6 +191,12 @@ module infix-services {
 
   container web {
     description "Web services";
+
+    leaf certificate {
+      description "Reference to asymmetric key in central keystore with an
+                   associated certificate. By default 'gencert' is used.";
+      type ks:central-asymmetric-key-ref;
+    }
 
     leaf enabled {
       description "Enable or disable on all web services.

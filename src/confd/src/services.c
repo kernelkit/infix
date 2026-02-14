@@ -19,6 +19,7 @@
 #define GENERATE_ENUM(ENUM)      ENUM,
 #define GENERATE_STRING(STRING) #STRING,
 
+#define NGINX_SSL_CONF "/etc/nginx/ssl.conf"
 #define AVAHI_SVC_PATH "/etc/avahi/services"
 
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
@@ -547,6 +548,48 @@ out:
 }
 
 
+static void web_ssl_conf(struct lyd_node *srv, struct lyd_node *config)
+{
+	const char *keyref, *certname = "self-signed";
+	struct lyd_node *key, *certs;
+	FILE *fp;
+
+	keyref = lydx_get_cattr(srv, "certificate");
+	if (!keyref)
+		keyref = "gencert";
+
+	key = lydx_get_xpathf(config, "/ietf-keystore:keystore/asymmetric-keys"
+			       "/asymmetric-key[name='%s']", keyref);
+	if (key) {
+		certs = lydx_get_descendant(lyd_child(key), "certificates", "certificate", NULL);
+		if (certs) {
+			const char *name = lydx_get_cattr(certs, "name");
+
+			if (name && *name)
+				certname = name;
+		}
+	}
+
+	fp = fopen(NGINX_SSL_CONF, "w");
+	if (!fp) {
+		ERRNO("failed creating %s", NGINX_SSL_CONF);
+		return;
+	}
+
+	fprintf(fp,
+		"ssl_certificate      %s/%s.crt;\n"
+		"ssl_certificate_key  %s/%s.key;\n"
+		"\n"
+		"ssl_protocols        TLSv1.3 TLSv1.2;\n"
+		"ssl_ciphers          HIGH:!aNULL:!MD5;\n"
+		"ssl_prefer_server_ciphers  on;\n"
+		"\n"
+		"ssl_session_cache    shared:SSL:1m;\n"
+		"ssl_session_timeout  5m;\n",
+		SSL_CERT_DIR, certname, SSL_KEY_DIR, certname);
+	fclose(fp);
+}
+
 static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
@@ -559,6 +602,8 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 	cfg = get(session, event, WEB_XPATH, &srv, "web", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
+
+	web_ssl_conf(srv, config);
 
 	ena = lydx_is_enabled(srv, "enabled");
 	if (ena) {
