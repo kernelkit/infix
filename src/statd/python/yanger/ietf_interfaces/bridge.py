@@ -204,10 +204,13 @@ def mctlq2yang_mode(mctlq):
     return "off"
 
 
-def mctl(ifname, vid):
-    mctl = HOST.run_json(["mctl", "-p", "show", "igmp", "json"], default={})
+def mctl_queriers():
+    """Fetch all IGMP multicast querier data in one call"""
+    return HOST.run_json(["mctl", "-p", "show", "igmp", "json"], default={})
 
-    for q in mctl.get("multicast-queriers", []):
+
+def mctl(ifname, vid, mctldata):
+    for q in mctldata.get("multicast-queriers", []):
         # TODO: Also need to match against VLAN uppers (e.g. br0.1337)
         if q.get("interface") == ifname and q.get("vid") == vid:
             return q
@@ -239,8 +242,8 @@ def multicast_filters(iplink, vid):
     return { "multicast-filter": list(mdb.values()) }
 
 
-def multicast(iplink, info):
-    mctlq = mctl(iplink["ifname"], info.get("vlan"))
+def multicast(iplink, info, mctldata):
+    mctlq = mctl(iplink["ifname"], info.get("vlan"), mctldata)
 
     mcast = {
         "snooping": bool(info.get("mcast_snooping")),
@@ -276,13 +279,15 @@ def vlans(iplink):
     if not (brgvlans := HOST.run_json(f"bridge -j vlan global show dev {iplink['ifname']}".split())):
         return []
 
+    mctldata = mctl_queriers()
+
     vlans = {
         v["vlan"]: {
             "vid": v["vlan"],
             "untagged": [],
             "tagged": [],
 
-            "multicast": multicast(iplink, v),
+            "multicast": multicast(iplink, v, mctldata),
             "multicast-filters": multicast_filters(iplink, v["vlan"]),
         }
         for v in brgvlans[0]["vlans"]
@@ -307,7 +312,7 @@ def dbridge(iplink):
     info = iplink["linkinfo"]["info_data"]
 
     return {
-        "multicast": multicast(iplink, info),
+        "multicast": multicast(iplink, info, mctl_queriers()),
         "multicast-filters": multicast_filters(iplink, None),
     }
 

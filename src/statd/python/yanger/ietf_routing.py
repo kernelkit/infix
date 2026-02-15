@@ -132,19 +132,34 @@ def get_routing_interfaces():
     links_json = HOST.run(tuple(['ip', '-j', 'link', 'show']), default="[]")
     links = json.loads(links_json)
 
+    # Fetch all forwarding sysctls in two calls instead of 2 per interface
+    ipv4_sysctls = HOST.run(tuple(['sysctl', 'net.ipv4.conf']), default="")
+    ipv6_sysctls = HOST.run(tuple(['sysctl', 'net.ipv6.conf']), default="")
+
+    # Parse "net.ipv4.conf.<iface>.forwarding = 1" lines into a set
+    ipv4_fwd = set()
+    ipv6_fwd = set()
+    for line in ipv4_sysctls.splitlines():
+        if '.forwarding = 1' in line:
+            # net.ipv4.conf.IFNAME.forwarding = 1
+            parts = line.split('.')
+            if len(parts) >= 5:
+                ipv4_fwd.add(parts[3])
+
+    for line in ipv6_sysctls.splitlines():
+        if '.force_forwarding = 1' in line:
+            # net.ipv6.conf.IFNAME.force_forwarding = 1
+            parts = line.split('.')
+            if len(parts) >= 5:
+                ipv6_fwd.add(parts[3])
+
     routing_ifaces = []
     for link in links:
         ifname = link.get('ifname')
         if not ifname:
             continue
 
-        # Check if IPv4 forwarding is enabled
-        ipv4_fwd = HOST.run(tuple(['sysctl', '-n', f'net.ipv4.conf.{ifname}.forwarding']), default="0").strip()
-
-        # Check if IPv6 force_forwarding is enabled (available since Linux 6.17)
-        ipv6_fwd = HOST.run(tuple(['sysctl', '-n', f'net.ipv6.conf.{ifname}.force_forwarding']), default="0").strip()
-
-        if ipv4_fwd == "1" or ipv6_fwd == "1":
+        if ifname in ipv4_fwd or ifname in ipv6_fwd:
             routing_ifaces.append(ifname)
 
     return routing_ifaces
