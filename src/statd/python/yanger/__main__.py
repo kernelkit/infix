@@ -1,97 +1,130 @@
-import logging
-import logging.handlers
 import json
-import sys  # (built-in module)
 import os
-import argparse
+import sys
 
 from . import common
 from . import host
 
+USAGE = """\
+usage: yanger [-p PARAM] [-x PREFIX] [-r DIR | -c DIR] model
+
+YANG data creator
+
+positional arguments:
+  model                 YANG Model
+
+options:
+  -p, --param PARAM     Model dependent parameter, e.g. interface name
+  -x, --cmd-prefix PREFIX
+                        Use this prefix for all system commands, e.g.
+                        'ssh user@remotehost sudo'
+  -r, --replay DIR      Generate output based on recorded system commands
+                        from DIR, rather than querying the local system
+  -c, --capture DIR     Capture system command output in DIR, such that the
+                        current system state can be recreated offline (with
+                        --replay) for testing purposes
+"""
+
+def _parse_args(argv):
+    model = None
+    param = None
+    cmd_prefix = None
+    replay = None
+    capture = None
+
+    i = 1
+    while i < len(argv):
+        arg = argv[i]
+        if arg in ('-h', '--help'):
+            sys.stdout.write(USAGE)
+            sys.exit(0)
+        elif arg in ('-p', '--param'):
+            i += 1
+            if i >= len(argv):
+                sys.exit(f"error: {arg} requires an argument")
+            param = argv[i]
+        elif arg in ('-x', '--cmd-prefix'):
+            i += 1
+            if i >= len(argv):
+                sys.exit(f"error: {arg} requires an argument")
+            cmd_prefix = argv[i]
+        elif arg in ('-r', '--replay'):
+            i += 1
+            if i >= len(argv):
+                sys.exit(f"error: {arg} requires an argument")
+            replay = argv[i]
+            if not os.path.isdir(replay):
+                sys.exit(f"error: '{replay}' is not a valid directory")
+        elif arg in ('-c', '--capture'):
+            i += 1
+            if i >= len(argv):
+                sys.exit(f"error: {arg} requires an argument")
+            capture = argv[i]
+        elif arg.startswith('-'):
+            sys.exit(f"error: unknown option: {arg}")
+        elif model is None:
+            model = arg
+        else:
+            sys.exit(f"error: unexpected argument: {arg}")
+        i += 1
+
+    if model is None:
+        sys.exit("error: missing required argument: model")
+    if replay and cmd_prefix:
+        sys.exit("error: --cmd-prefix cannot be used with --replay")
+    if replay and capture:
+        sys.exit("error: --replay cannot be used with --capture")
+
+    return model, param, cmd_prefix, replay, capture
+
 def main():
-    def dirpath(path):
-        if not os.path.isdir(path):
-            raise argparse.ArgumentTypeError(f"'{path}' is not a valid directory")
-        return path
+    model, param, cmd_prefix, replay, capture = _parse_args(sys.argv)
 
-    parser = argparse.ArgumentParser(description="YANG data creator")
-    parser.add_argument("model", help="YANG Model")
-    parser.add_argument("-p", "--param",
-                        help="Model dependent parameter, e.g. interface name")
-    parser.add_argument("-x", "--cmd-prefix", metavar="PREFIX",
-                        help="Use this prefix for all system commands, e.g. " +
-                        "'ssh user@remotehost sudo'")
-
-    rrparser = parser.add_mutually_exclusive_group()
-    rrparser.add_argument("-r", "--replay", type=dirpath, metavar="DIR",
-                          help="Generate output based on recorded system commands from DIR, " +
-                          "rather than querying the local system")
-    rrparser.add_argument("-c", "--capture", metavar="DIR",
-                          help="Capture system command output in DIR, such that the current system " +
-                          "state can be recreated offline (with --replay) for testing purposes")
-
-    args = parser.parse_args()
-    if args.replay and args.cmd_prefix:
-        parser.error("--cmd-prefix cannot be used with --replay")
-
-    # Set up syslog output for critical errors to aid debugging
-    common.LOG = logging.getLogger('yanger')
-    if os.path.exists('/dev/log'):
-        log = logging.handlers.SysLogHandler(address='/dev/log')
-    else:
-        # Use /dev/null as a fallback for unit tests
-        log = logging.FileHandler('/dev/null')
-
-    fmt = logging.Formatter('%(name)s[%(process)d]: %(message)s')
-    log.setFormatter(fmt)
-    common.LOG.setLevel(logging.INFO)
-    common.LOG.addHandler(log)
-
-    if args.cmd_prefix or args.capture:
-        host.HOST = host.Remotehost(args.cmd_prefix, args.capture)
-    elif args.replay:
-        host.HOST = host.Replayhost(args.replay)
+    if cmd_prefix or capture:
+        host.HOST = host.Remotehost(cmd_prefix, capture)
+    elif replay:
+        host.HOST = host.Replayhost(replay)
     else:
         host.HOST = host.Localhost()
 
-    if args.model == 'ietf-interfaces':
+    if model == 'ietf-interfaces':
         from . import ietf_interfaces
-        yang_data = ietf_interfaces.operational(args.param)
-    elif args.model == 'ietf-routing':
+        yang_data = ietf_interfaces.operational(param)
+    elif model == 'ietf-routing':
         from . import ietf_routing
         yang_data = ietf_routing.operational()
-    elif args.model == 'ietf-ospf':
+    elif model == 'ietf-ospf':
         from . import ietf_ospf
         yang_data = ietf_ospf.operational()
-    elif args.model == 'ietf-rip':
+    elif model == 'ietf-rip':
         from . import ietf_rip
         yang_data = ietf_rip.operational()
-    elif args.model == 'ietf-hardware':
+    elif model == 'ietf-hardware':
         from . import ietf_hardware
         yang_data = ietf_hardware.operational()
-    elif args.model == 'infix-containers':
+    elif model == 'infix-containers':
         from . import infix_containers
         yang_data = infix_containers.operational()
-    elif args.model == 'infix-dhcp-server':
+    elif model == 'infix-dhcp-server':
         from . import infix_dhcp_server
         yang_data = infix_dhcp_server.operational()
-    elif args.model == 'ietf-system':
+    elif model == 'ietf-system':
         from . import ietf_system
         yang_data = ietf_system.operational()
-    elif args.model == 'ietf-ntp':
+    elif model == 'ietf-ntp':
         from . import ietf_ntp
         yang_data = ietf_ntp.operational()
-    elif args.model == 'ieee802-dot1ab-lldp':
+    elif model == 'ieee802-dot1ab-lldp':
         from . import infix_lldp
         yang_data = infix_lldp.operational()
-    elif args.model == 'infix-firewall':
+    elif model == 'infix-firewall':
         from . import infix_firewall
         yang_data = infix_firewall.operational()
-    elif args.model == 'ietf-bfd-ip-sh':
+    elif model == 'ietf-bfd-ip-sh':
         from . import ietf_bfd_ip_sh
         yang_data = ietf_bfd_ip_sh.operational()
     else:
-        common.LOG.warning("Unsupported model %s", args.model)
+        common.LOG.warning("Unsupported model %s", model)
         sys.exit(1)
 
     print(json.dumps(yang_data, indent=2, ensure_ascii=False))
