@@ -313,8 +313,7 @@ int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 
 	switch (event) {
 	case SR_EV_UPDATE:
-		rc = keystore_update(session, config, diff);
-		break;
+		return keystore_update(session, config, diff);
 	case SR_EV_CHANGE:
 		if (diff && lydx_find_xpathf(diff, XPATH_KEYSTORE_SYM))
 			rc = interfaces_validate_keys(session, config);
