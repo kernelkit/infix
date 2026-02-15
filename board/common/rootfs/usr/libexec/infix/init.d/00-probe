@@ -519,6 +519,48 @@ def probe_dtsystem(out):
     return 0
 
 
+def probe_wifi_radios(out):
+    """Probe wifi radios via sysfs/iw and store in output dict."""
+    ieee80211 = "/sys/class/ieee80211"
+    if not os.path.exists(ieee80211):
+        return
+
+    radios = sorted(os.listdir(ieee80211))
+    if not radios:
+        return
+
+    out["wifi-radios"] = []
+    for phy in radios:
+        info = {"name": phy, "bands": []}
+        try:
+            result = subprocess.run(
+                ["iw", "phy", phy, "info"],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode != 0:
+                continue
+        except Exception:
+            continue
+
+        freqs = []
+        for line in result.stdout.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("* ") and "MHz" in stripped:
+                try:
+                    freqs.append(int(float(stripped.split()[1])))
+                except (ValueError, IndexError):
+                    pass
+
+        if any(2400 <= f <= 2500 for f in freqs):
+            info["bands"].append({"name": "2.4GHz"})
+        if any(5150 <= f <= 5900 for f in freqs):
+            info["bands"].append({"name": "5GHz"})
+        if any(5955 <= f <= 7115 for f in freqs):
+            info["bands"].append({"name": "6GHz"})
+
+        out["wifi-radios"].append(info)
+
+
 def main():
     out = {
         "vendor": None,
@@ -543,6 +585,8 @@ def main():
 
     if err:
         return err
+
+    probe_wifi_radios(out)
 
     if not out["factory-password-hash"]:
         sys.stdout.write("\n\n\033[31mCRITICAL BOOTSTRAP ERROR\n" +
