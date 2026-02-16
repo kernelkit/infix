@@ -18,10 +18,9 @@
 #include <getopt.h>
 #include <glob.h>
 #include <poll.h>
-#include <pthread.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <signal.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,8 +32,12 @@
 #include <jansson.h>
 #include <libyang/libyang.h>
 #include <libite/lite.h>
+#include <srx/common.h>
 #include <sysrepo.h>
 #include <sysrepo/version.h>
+
+/* Maximum number of sysrepo event pipe file descriptors across all plugins */
+#define MAX_EVENT_FDS 64
 
 /* Callback type names from sysrepo plugin API */
 #define SRP_INIT_CB    "sr_plugin_init_cb"
@@ -60,31 +63,17 @@ struct plugin {
 	int initialized;
 };
 
-/* Maximum number of sysrepo event pipe file descriptors across all plugins */
-#define MAX_EVENT_FDS 64
+static sig_atomic_t pump_running = 1;
+int debug = 0;
 
-static void error_print(int sr_error, const char *format, ...)
-{
-	va_list ap;
-	char msg[2048];
-
-	if (!sr_error)
-		snprintf(msg, sizeof(msg), "confd error: %s\n", format);
-	else
-		snprintf(msg, sizeof(msg), "confd error: %s (%s)\n", format, sr_strerror(sr_error));
-
-	va_start(ap, format);
-	vfprintf(stderr, msg, ap);
-	va_end(ap);
-}
 
 /* Finit style progress output on console */
 static void conout(int rc, const char *fmt, ...)
 {
 	const char *sta = "%s\e[1m[\e[1;%dm%s\e[0m\e[1m]\e[0m %s";
 	const char *msg[] = { " OK ", "FAIL", "WARN", " ⋯  " };
-	const int col[] = { 32, 31, 33, 33 };
 	const char *cr = rc == 3 ? "" : "\r";
+	const int col[] = { 32, 31, 33, 33 };
 	char buf[80];
 	va_list ap;
 
@@ -102,46 +91,28 @@ static void version_print(void)
 
 static void help_print(void)
 {
-	printf(
-		"Usage:\n"
-		"  confd [-h] [-V] [-v <level>] [-d] [-n] [-f] [-p pidfile]\n"
-		"        [-F factory-config] [-S startup-config] [-E failure-config]\n"
-		"        [-t timeout]\n"
-		"\n"
-		"Options:\n"
-		"  -h, --help           Prints usage help.\n"
-		"  -V, --version        Prints version information.\n"
-		"  -v, --verbosity <level>\n"
-		"                       Change verbosity to a level (none, error, warning, info, debug) or\n"
-		"                       number (0, 1, 2, 3, 4).\n"
-		"  -d, --debug          Debug mode - not daemonized and logs to stderr.\n"
-		"  -n, --foreground     Run in foreground and log to syslog.\n"
-		"  -f, --fatal-plugin-fail\n"
-		"                       Terminate if any plugin initialization fails.\n"
-		"  -p, --pid-file <path>\n"
-		"                       Create a PID file at the specified path.\n"
-		"  -F, --factory-config <path>\n"
-		"                       Factory default config file (default: /etc/factory-config.cfg).\n"
-		"  -S, --startup-config <path>\n"
-		"                       Startup config file (default: /cfg/startup-config.cfg).\n"
-		"  -E, --failure-config <path>\n"
-		"                       Failure fallback config file (default: /etc/failure-config.cfg).\n"
-		"  -t, --timeout <ms>   Sysrepo operation timeout in seconds (default: 60).\n"
-		"\n"
-		"Environment variable $SRPD_PLUGINS_PATH overwrites the default plugins directory.\n"
-		"\n");
-}
-
-static void ignore_signals(void)
-{
-	struct sigaction action;
-
-	memset(&action, 0, sizeof(action));
-	action.sa_handler = SIG_IGN;
-	sigaction(SIGPIPE, &action, NULL);
-	sigaction(SIGTSTP, &action, NULL);
-	sigaction(SIGTTIN, &action, NULL);
-	sigaction(SIGTTOU, &action, NULL);
+	printf("Usage:\n"
+	       "  confd [-h] [-V] [-v <level>] [-f]\n"
+	       "        [-F factory-config] [-S startup-config] [-E failure-config]\n"
+	       "        [-t timeout]\n"
+	       "\n"
+	       "Options:\n"
+	       "  -h, --help           Prints usage help.\n"
+	       "  -V, --version        Prints version information.\n"
+	       "  -v, --verbosity <level>\n"
+	       "                       Change verbosity to a level (none, error, warning, info, debug).\n"
+	       "  -f, --fatal-plugin-fail\n"
+	       "                       Terminate if any plugin initialization fails.\n"
+	       "  -F, --factory-config <path>\n"
+	       "                       Factory default config file (default: /etc/factory-config.cfg).\n"
+	       "  -S, --startup-config <path>\n"
+	       "                       Startup config file (default: /cfg/startup-config.cfg).\n"
+	       "  -E, --failure-config <path>\n"
+	       "                       Failure fallback config file (default: /etc/failure-config.cfg).\n"
+	       "  -t, --timeout <ms>   Sysrepo operation timeout in seconds (default: 60).\n"
+	       "\n"
+	       "Environment variable $SRPD_PLUGINS_PATH overwrites the default plugins directory.\n"
+	       "\n");
 }
 
 /* libev callbacks for steady-state operation */
@@ -160,28 +131,27 @@ static void sr_event_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 }
 
 /*
- * Temporary event pump thread for bootstrap.
+ * Temporary event pump process for bootstrap.
  *
  * With SR_SUBSCR_NO_THREAD, sysrepo writes events to a pipe and waits
  * for the application to call sr_subscription_process_events().  During
  * bootstrap, sr_replace_config() blocks waiting for callbacks — this
- * thread ensures those callbacks get dispatched.
+ * child process ensures those callbacks get dispatched.
  */
-struct event_pump {
-	struct plugin *plugins;
-	int            plugin_count;
-	int            running;
-};
-
-static void *event_pump_thread(void *arg)
+static void pump_sigterm(int sig)
 {
-	struct event_pump *pump = arg;
-	struct pollfd fds[MAX_EVENT_FDS];
+	(void)sig;
+	pump_running = 0;
+}
+
+static void event_pump(struct plugin *plugins, int plugin_count)
+{
 	sr_subscription_ctx_t *subs[MAX_EVENT_FDS];
+	struct pollfd fds[MAX_EVENT_FDS];
 	int nfds = 0;
 
-	for (int i = 0; i < pump->plugin_count; i++) {
-		struct plugin *p = &pump->plugins[i];
+	for (int i = 0; i < plugin_count; i++) {
+		struct plugin *p = &plugins[i];
 
 		if (p->sub && sr_get_event_pipe(p->sub, &fds[nfds].fd) == SR_ERR_OK) {
 			fds[nfds].events = POLLIN;
@@ -195,7 +165,9 @@ static void *event_pump_thread(void *arg)
 		}
 	}
 
-	while (pump->running) {
+	signal(SIGTERM, pump_sigterm);
+
+	while (pump_running) {
 		if (poll(fds, nfds, 100) > 0) {
 			for (int i = 0; i < nfds; i++)
 				if (fds[i].revents & POLLIN)
@@ -203,12 +175,12 @@ static void *event_pump_thread(void *arg)
 		}
 	}
 
-	return NULL;
+	_exit(0);
 }
 
 static void quiet_now(void)
 {
-	int fd = -1;
+	int fd;
 
 	fd = open("/dev/null", O_RDWR, 0);
 	if (fd != -1) {
@@ -217,89 +189,6 @@ static void quiet_now(void)
 		dup2(fd, STDERR_FILENO);
 		close(fd);
 	}
-
-	nice(0);
-}
-
-static void daemon_init(int debug, sr_log_level_t log_level)
-{
-	pid_t pid = 0, sid = 0;
-
-	nice(-20);
-
-	ignore_signals();
-
-	if (debug) {
-		if (debug < 0)
-			goto done;
-		sr_log_stderr(log_level);
-		return;
-	}
-
-	pid = fork();
-	if (pid < 0) {
-		error_print(0, "fork() failed (%s).", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	if (pid > 0)
-		exit(EXIT_SUCCESS);
-
-	sid = setsid();
-	if (sid < 0) {
-		error_print(0, "setsid() failed (%s).", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	if (chdir("/") < 0) {
-		error_print(0, "chdir() failed (%s).", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	quiet_now();
-done:
-	sr_log_syslog("confd", log_level);
-}
-
-static int open_pidfile(const char *pidfile)
-{
-	int pidfd;
-
-	pidfd = open(pidfile, O_RDWR | O_CREAT, 0640);
-	if (pidfd < 0) {
-		error_print(0, "Unable to open the PID file \"%s\" (%s).", pidfile, strerror(errno));
-		return -1;
-	}
-
-	if (lockf(pidfd, F_TLOCK, 0) < 0) {
-		if (errno == EACCES || errno == EAGAIN)
-			error_print(0, "Another instance of confd is running.");
-		else
-			error_print(0, "Unable to lock the PID file \"%s\" (%s).", pidfile, strerror(errno));
-		close(pidfd);
-		return -1;
-	}
-
-	return pidfd;
-}
-
-static int write_pidfile(int pidfd)
-{
-	char pid[30] = {0};
-	int pid_len;
-
-	if (ftruncate(pidfd, 0)) {
-		error_print(0, "Failed to truncate pid file (%s).", strerror(errno));
-		return -1;
-	}
-
-	snprintf(pid, sizeof(pid) - 1, "%ld\n", (long)getpid());
-	pid_len = strlen(pid);
-	if (write(pidfd, pid, pid_len) < pid_len) {
-		error_print(0, "Failed to write PID into pid file (%s).", strerror(errno));
-		return -1;
-	}
-
-	return 0;
 }
 
 /*
@@ -318,14 +207,14 @@ static size_t path_len_no_ext(const char *path)
 
 static int load_plugins(struct plugin **plugins, int *plugin_count)
 {
-	void *mem, *handle;
-	struct plugin *plugin;
-	DIR *dir;
-	struct dirent *ent;
 	const char *plugins_dir;
-	char *path;
+	struct dirent *ent;
+	struct plugin *plugin;
+	void *mem, *handle;
 	size_t name_len;
 	int rc = 0;
+	char *path;
+	DIR *dir;
 
 	*plugins = NULL;
 	*plugin_count = 0;
@@ -336,7 +225,7 @@ static int load_plugins(struct plugin **plugins, int *plugin_count)
 
 	dir = opendir(plugins_dir);
 	if (!dir) {
-		error_print(0, "Opening \"%s\" directory failed (%s).", plugins_dir, strerror(errno));
+		ERRNO("Opening \"%s\" directory failed", plugins_dir);
 		return -1;
 	}
 
@@ -345,13 +234,13 @@ static int load_plugins(struct plugin **plugins, int *plugin_count)
 			continue;
 
 		if (asprintf(&path, "%s/%s", plugins_dir, ent->d_name) == -1) {
-			error_print(0, "asprintf() failed (%s).", strerror(errno));
+			ERRNO("asprintf() failed");
 			rc = -1;
 			break;
 		}
 		handle = dlopen(path, RTLD_LAZY);
 		if (!handle) {
-			error_print(0, "Opening plugin \"%s\" failed (%s).", path, dlerror());
+			ERROR("Opening plugin \"%s\" failed: %s", path, dlerror());
 			free(path);
 			rc = -1;
 			break;
@@ -360,7 +249,7 @@ static int load_plugins(struct plugin **plugins, int *plugin_count)
 
 		mem = realloc(*plugins, (*plugin_count + 1) * sizeof(**plugins));
 		if (!mem) {
-			error_print(0, "realloc() failed (%s).", strerror(errno));
+			ERRNO("realloc() failed");
 			dlclose(handle);
 			rc = -1;
 			break;
@@ -371,8 +260,7 @@ static int load_plugins(struct plugin **plugins, int *plugin_count)
 
 		*(void **)&plugin->init_cb = dlsym(handle, SRP_INIT_CB);
 		if (!plugin->init_cb) {
-			error_print(0, "Failed to find function \"%s\" in plugin \"%s\".",
-				    SRP_INIT_CB, ent->d_name);
+			ERROR("Failed to find \"%s\" in plugin \"%s\".", SRP_INIT_CB, ent->d_name);
 			dlclose(handle);
 			rc = -1;
 			break;
@@ -380,8 +268,7 @@ static int load_plugins(struct plugin **plugins, int *plugin_count)
 
 		*(void **)&plugin->cleanup_cb = dlsym(handle, SRP_CLEANUP_CB);
 		if (!plugin->cleanup_cb) {
-			error_print(0, "Failed to find function \"%s\" in plugin \"%s\".",
-				    SRP_CLEANUP_CB, ent->d_name);
+			ERROR("Failed to find \"%s\" in plugin \"%s\".", SRP_CLEANUP_CB, ent->d_name);
 			dlclose(handle);
 			rc = -1;
 			break;
@@ -394,7 +281,7 @@ static int load_plugins(struct plugin **plugins, int *plugin_count)
 
 		name_len = path_len_no_ext(ent->d_name);
 		if (name_len == 0) {
-			error_print(0, "Wrong filename \"%s\".", ent->d_name);
+			ERROR("Wrong filename \"%s\".", ent->d_name);
 			dlclose(handle);
 			rc = -1;
 			break;
@@ -402,7 +289,7 @@ static int load_plugins(struct plugin **plugins, int *plugin_count)
 
 		plugin->name = strndup(ent->d_name, name_len);
 		if (!plugin->name) {
-			error_print(0, "strndup() failed.");
+			ERRNO("strndup() failed");
 			dlclose(handle);
 			rc = -1;
 			break;
@@ -490,8 +377,7 @@ static int maybe_migrate(const char *path)
 	}
 	json_decref(root);
 
-	SRPLG_LOG_INF("confd", "%s config version %s vs confd %s, migrating ...",
-		      path, file_ver, CONFD_VERSION);
+	NOTE("%s config version %s vs confd %s, migrating ...", path, file_ver, CONFD_VERSION);
 
 	mkpath(backup_dir, 0770);
 	chown(backup_dir, 0, 10); /* root:wheel */
@@ -499,14 +385,9 @@ static int maybe_migrate(const char *path)
 	snprintf(backup, sizeof(backup), "%s/%s", backup_dir, basenm(path));
 	rc = systemf("migrate -i -b \"%s\" \"%s\"", backup, path);
 	if (rc)
-		SRPLG_LOG_ERR("confd", "Migration of %s failed (rc=%d)", path, rc);
+		ERROR("Migration of %s failed (rc=%d)", path, rc);
 
 	return rc;
-}
-
-static int file_exists(const char *path)
-{
-	return access(path, F_OK) == 0;
 }
 
 /*
@@ -531,18 +412,17 @@ static int load_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 
 		ly_in_new_memory(empty, &in);
 	} else if (lyrc) {
-		error_print(0, "Failed to open \"%s\" for reading", path);
+		ERROR("Failed to open \"%s\" for reading", path);
 		sr_release_context(conn);
 		return -1;
 	}
 
 	lyrc = lyd_parse_data(ly_ctx, NULL, in, LYD_JSON,
-			      LYD_PARSE_NO_STATE | LYD_PARSE_ONLY | LYD_PARSE_STRICT,
-			      0, &data);
+			      LYD_PARSE_NO_STATE | LYD_PARSE_ONLY | LYD_PARSE_STRICT, 0, &data);
 	ly_in_free(in, 1);
 
 	if (lyrc) {
-		SRPLG_LOG_ERR("confd", "Parsing %s failed", path);
+		ERROR("Parsing %s failed", path);
 		sr_release_context(conn);
 		return -1;
 	}
@@ -551,7 +431,7 @@ static int load_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 
 	r = sr_replace_config(sess, NULL, data, timeout_ms);
 	if (r != SR_ERR_OK) {
-		SRPLG_LOG_ERR("confd", "sr_replace_config failed: %s", sr_strerror(r));
+		ERROR("sr_replace_config failed: %s", sr_strerror(r));
 		return -1;
 	}
 
@@ -569,14 +449,14 @@ static int export_running(sr_session_ctx_t *sess, const char *path, uint32_t tim
 
 	r = sr_get_data(sess, "/*", 0, timeout_ms, 0, &data);
 	if (r != SR_ERR_OK) {
-		SRPLG_LOG_ERR("confd", "sr_get_data failed: %s", sr_strerror(r));
+		ERROR("sr_get_data failed: %s", sr_strerror(r));
 		return -1;
 	}
 
 	umask(0006);
 	fp = fopen(path, "w");
 	if (!fp) {
-		SRPLG_LOG_ERR("confd", "Failed to open %s for writing: %s", path, strerror(errno));
+		ERRNO("Failed to open %s for writing", path);
 		sr_release_data(data);
 		return -1;
 	}
@@ -599,21 +479,21 @@ static void handle_startup_failure(sr_session_ctx_t *sess, const char *failure_p
 {
 	int r;
 
-	SRPLG_LOG_ERR("confd", "Failed loading startup-config, reverting to Fail Secure mode!");
+	ERROR("Failed loading startup-config, reverting to Fail Secure mode!");
 
 	/* Reset to factory-default */
 	r = sr_copy_config(sess, NULL, SR_DS_FACTORY_DEFAULT, timeout_ms);
 	if (r != SR_ERR_OK) {
-		SRPLG_LOG_ERR("confd", "sr_copy_config(factory-default) failed: %s", sr_strerror(r));
+		ERROR("sr_copy_config(factory-default) failed: %s", sr_strerror(r));
 		/* Nuclear option: wipe everything */
 		systemf("rm -f /etc/sysrepo/data/*startup* /etc/sysrepo/data/*running* /dev/shm/sr_*");
 		return;
 	}
 
 	/* Load failure-config on top */
-	if (file_exists(failure_path)) {
+	if (fexist(failure_path)) {
 		if (load_config(conn, sess, failure_path, timeout_ms)) {
-			SRPLG_LOG_ERR("confd", "Failed loading failure-config, aborting!");
+			ERROR("Failed loading failure-config, aborting!");
 			banner_append("CRITICAL ERROR: Logins are disabled, no credentials available");
 			systemf("initctl -nbq runlevel 9");
 			return;
@@ -628,10 +508,10 @@ static void handle_startup_failure(sr_session_ctx_t *sess, const char *failure_p
  */
 static void maybe_enable_test_mode(void)
 {
-	if (file_exists("/mnt/aux/test-mode")) {
+	if (fexist("/mnt/aux/test-mode")) {
 		int rc;
 
-		conout(3, "Enbling test mode");
+		conout(3, "Enabling test mode");
 		rc = systemf("sysrepoctl -c infix-test -e test-mode-enable");
 		conout(rc ? 1 : 0, "\n");
 	}
@@ -652,86 +532,78 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 	int r;
 
 	/* Test mode support */
-	if (file_exists("/mnt/aux/test-mode")) {
-		if (file_exists("/mnt/aux/test-override-startup")) {
+	if (fexist("/mnt/aux/test-mode")) {
+		if (fexist("/mnt/aux/test-override-startup")) {
 			unlink("/mnt/aux/test-override-startup");
 			config_path = startup_path;
 		} else {
-			SRPLG_LOG_INF("confd", "Test mode detected, switching to test-config");
+			NOTE("Test mode detected, switching to test-config");
 			config_path = test_path;
 		}
 	} else {
 		config_path = startup_path;
 	}
 
-	if (file_exists(config_path)) {
+	if (fexist(config_path)) {
 		/* Run migration if needed */
 		maybe_migrate(config_path);
 
 		/* Load startup (or test) config */
-		SRPLG_LOG_INF("confd", "Loading %s ...", config_path);
+		NOTE("Loading %s ...", config_path);
 		if (load_config(conn, sess, config_path, timeout_ms)) {
 			handle_startup_failure(sess, failure_path, conn, timeout_ms);
 			return 0; /* continue running even in fail-secure */
 		}
 
-		SRPLG_LOG_INF("confd", "Loaded %s successfully, syncing startup datastore.", config_path);
+		NOTE("Loaded %s successfully, syncing startup datastore.", config_path);
 		sr_session_switch_ds(sess, SR_DS_STARTUP);
 		r = sr_copy_config(sess, NULL, SR_DS_RUNNING, timeout_ms);
 		sr_session_switch_ds(sess, SR_DS_RUNNING);
 		if (r != SR_ERR_OK)
-			SRPLG_LOG_WRN("confd", "Failed to sync startup datastore: %s", sr_strerror(r));
+			WARN("Failed to sync startup datastore: %s", sr_strerror(r));
 
 		return 0;
 	}
 
 	/* First boot: no startup-config, initialize from factory */
-	SRPLG_LOG_INF("confd", "startup-config missing, initializing from factory-config");
+	NOTE("startup-config missing, initializing from factory-config");
 
 	r = sr_copy_config(sess, NULL, SR_DS_FACTORY_DEFAULT, timeout_ms);
 	if (r != SR_ERR_OK) {
-		SRPLG_LOG_ERR("confd", "sr_copy_config(factory-default) failed: %s", sr_strerror(r));
+		ERROR("sr_copy_config(factory-default) failed: %s", sr_strerror(r));
 		return -1;
 	}
 
 	/* Export running → startup file */
 	if (export_running(sess, startup_path, timeout_ms))
-		SRPLG_LOG_WRN("confd", "Failed to export running to %s", startup_path);
+		WARN("Failed to export running to %s", startup_path);
 
 	return 0;
 }
 
-static void *gen_config_thread(void *arg)
-{
-	(void)arg;
-	return (void *)(intptr_t)systemf("/usr/libexec/confd/gen-config");
-}
-
 int main(int argc, char **argv)
 {
+	const char *failure_path = "/etc/failure-config.cfg";
+	const char *startup_path = "/cfg/startup-config.cfg";
+	const char *factory_path = "/etc/factory-config.cfg";
+	const char *test_path = "/etc/test-config.cfg";
+	int log_opts = LOG_PID | LOG_NDELAY;
+	int rc = EXIT_FAILURE, opt, i, r;
+	sr_session_ctx_t *sess = NULL;
 	struct plugin *plugins = NULL;
 	sr_conn_ctx_t *conn = NULL;
-	sr_session_ctx_t *sess = NULL;
-	sr_log_level_t log_level = SR_LL_ERR;
-	int plugin_count = 0, i, r, rc = EXIT_FAILURE, opt, debug = 0;
-	int pidfd = -1, fatal_fail = 0;
-	pthread_t tid;
-	void *tret;
-	const char *pidfile = NULL;
-	const char *factory_path = "/etc/factory-config.cfg";
-	const char *startup_path = "/cfg/startup-config.cfg";
-	const char *failure_path = "/etc/failure-config.cfg";
-	const char *test_path = "/etc/test-config.cfg";
+	int log_level = LOG_ERR;
+	pid_t gen_pid, pump_pid;
 	uint32_t timeout_s = 60;
+	int plugin_count = 0;
+	int fatal_fail = 0;
 	uint32_t timeout_ms;
+	int status;
 
 	struct option options[] = {
 		{"help",              no_argument,       NULL, 'h'},
 		{"version",           no_argument,       NULL, 'V'},
 		{"verbosity",         required_argument, NULL, 'v'},
-		{"debug",             no_argument,       NULL, 'd'},
-		{"foreground",        no_argument,       NULL, 'n'},
-		{"pid-file",          required_argument, NULL, 'p'},
 		{"fatal-plugin-fail", no_argument,       NULL, 'f'},
 		{"factory-config",    required_argument, NULL, 'F'},
 		{"startup-config",    required_argument, NULL, 'S'},
@@ -741,43 +613,30 @@ int main(int argc, char **argv)
 	};
 
 	opterr = 0;
-	while ((opt = getopt_long(argc, argv, "hVv:dnp:fF:S:E:t:", options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "hVv:fF:S:E:t:", options, NULL)) != -1) {
 		switch (opt) {
 		case 'h':
 			version_print();
 			help_print();
-			rc = EXIT_SUCCESS;
-			goto cleanup;
+			return EXIT_SUCCESS;
 		case 'V':
 			version_print();
-			rc = EXIT_SUCCESS;
-			goto cleanup;
+			return EXIT_SUCCESS;
 		case 'v':
 			if (!strcmp(optarg, "none"))
-				log_level = SR_LL_NONE;
+				log_level = LOG_EMERG;
 			else if (!strcmp(optarg, "error"))
-				log_level = SR_LL_ERR;
+				log_level = LOG_ERR;
 			else if (!strcmp(optarg, "warning"))
-				log_level = SR_LL_WRN;
+				log_level = LOG_WARNING;
 			else if (!strcmp(optarg, "info"))
-				log_level = SR_LL_INF;
+				log_level = LOG_NOTICE;
 			else if (!strcmp(optarg, "debug"))
-				log_level = SR_LL_DBG;
-			else if (strlen(optarg) == 1 && optarg[0] >= '0' && optarg[0] <= '4')
-				log_level = atoi(optarg);
+				log_level = LOG_DEBUG;
 			else {
-				error_print(0, "Invalid verbosity \"%s\"", optarg);
-				goto cleanup;
+				fprintf(stderr, "confd error: Invalid verbosity \"%s\"\n", optarg);
+				return EXIT_FAILURE;
 			}
-			break;
-		case 'd':
-			debug = 1;
-			break;
-		case 'n':
-			debug = -1;
-			break;
-		case 'p':
-			pidfile = optarg;
 			break;
 		case 'f':
 			fatal_fail = 1;
@@ -795,35 +654,44 @@ int main(int argc, char **argv)
 			timeout_s = (uint32_t)atoi(optarg);
 			break;
 		default:
-			error_print(0, "Invalid option or missing argument: -%c", optopt);
-			goto cleanup;
+			fprintf(stderr, "confd error: Invalid option or missing argument: -%c\n", optopt);
+			return EXIT_FAILURE;
 		}
 	}
 
 	if (optind < argc) {
-		error_print(0, "Redundant parameters");
-		goto cleanup;
+		fprintf(stderr, "confd error: Redundant parameters\n");
+		return EXIT_FAILURE;
 	}
 
 	timeout_ms = timeout_s * 1000;
 
-	if (pidfile && (pidfd = open_pidfile(pidfile)) < 0)
-		goto cleanup;
+	nice(-20);
+	signal(SIGPIPE, SIG_IGN);
 
-	/* Load plugins from disk (dlopen) before daemonizing */
+	if (getenv("DEBUG")) {
+		log_opts |= LOG_PERROR;
+		debug = 1;
+	}
+	openlog("confd", log_opts, LOG_DAEMON);
+	setlogmask(LOG_UPTO(log_level));
+
+	pidfile(NULL);
+
+	/* Load plugins from disk (dlopen) */
 	if (load_plugins(&plugins, &plugin_count))
-		error_print(0, "load_plugins failed (continuing)");
+		ERROR("load_plugins failed (continuing)");
 
-	/* Daemonize -- after this point, confd no longer logs to stderr */
-	daemon_init(debug, log_level);
-
-	/* Start gen-config in parallel -- thread is joined before we need the result */
+	/* Start gen-config in parallel — child is reaped before we need the result */
 	conout(3, "Generating factory-config and failure-config");
-	if (pthread_create(&tid, NULL, gen_config_thread, NULL)) {
-		SRPLG_LOG_ERR("confd", "Failed to create gen-config thread: %s", strerror(errno));
+	gen_pid = fork();
+	if (gen_pid < 0) {
+		ERRNO("Failed to fork gen-config");
 		conout(1, "\n");
 		goto cleanup;
 	}
+	if (gen_pid == 0)
+		_exit(systemf("/usr/libexec/confd/gen-config"));
 
 	/* Phase 1: Wipe stale SHM for a clean slate */
 	wipe_sysrepo_shm();
@@ -831,25 +699,25 @@ int main(int argc, char **argv)
 	/* Phase 2: Connect to sysrepo (rebuilds SHM from installed YANG modules) */
 	r = sr_connect(0, &conn);
 	if (r != SR_ERR_OK) {
-		error_print(r, "Failed to connect");
+		ERROR("Failed to connect: %s", sr_strerror(r));
 		goto cleanup;
 	}
 
-	/* Phase 3: Wait for gen-config thread to finish */
-	pthread_join(tid, &tret);
-	if ((intptr_t)tret != 0) {
-		SRPLG_LOG_ERR("confd", "gen-config failed (rc=%d)", (int)(intptr_t)tret);
+	/* Phase 3: Wait for gen-config to finish */
+	waitpid(gen_pid, &status, 0);
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+		ERROR("gen-config failed (status=%d)", status);
 		conout(1, "\n");
 		goto cleanup;
 	}
 	conout(0, "\n");
 
 	/* Phase 4: Install factory defaults into all datastores */
-	SRPLG_LOG_INF("confd", "Loading factory-default datastore from %s ...", factory_path);
+	NOTE("Loading factory-default datastore from %s ...", factory_path);
 	conout(3, "Loading factory-default datastore");
 	r = sr_install_factory_config(conn, factory_path);
 	if (r != SR_ERR_OK) {
-		SRPLG_LOG_ERR("confd", "sr_install_factory_config failed: %s", sr_strerror(r));
+		ERROR("sr_install_factory_config failed: %s", sr_strerror(r));
 		conout(1, "\n");
 		goto cleanup;
 	}
@@ -858,7 +726,7 @@ int main(int argc, char **argv)
 	/* Phase 5: Start running-datastore session */
 	r = sr_session_start(conn, SR_DS_RUNNING, &sess);
 	if (r != SR_ERR_OK) {
-		error_print(r, "Failed to start new session");
+		ERROR("Failed to start new session: %s", sr_strerror(r));
 		goto cleanup;
 	}
 
@@ -869,7 +737,7 @@ int main(int argc, char **argv)
 	 * what the plugin callbacks expect. */
 	r = sr_replace_config(sess, NULL, NULL, timeout_ms);
 	if (r != SR_ERR_OK) {
-		SRPLG_LOG_ERR("confd", "Failed to clear running datastore: %s", sr_strerror(r));
+		ERROR("Failed to clear running datastore: %s", sr_strerror(r));
 		goto cleanup;
 	}
 
@@ -881,14 +749,13 @@ int main(int argc, char **argv)
 	for (i = 0; i < plugin_count; i++) {
 		r = plugins[i].init_cb(sess, &plugins[i].private_data);
 		if (r) {
-			SRPLG_LOG_ERR("confd", "Plugin \"%s\" initialization failed (%s).",
-				      plugins[i].name, sr_strerror(r));
+			ERROR("Plugin \"%s\" initialization failed (%s).", plugins[i].name, sr_strerror(r));
 			if (fatal_fail) {
 				conout(1, "\n");
 				goto cleanup;
 			}
 		} else {
-			SRPLG_LOG_INF("confd", "Plugin \"%s\" initialized.", plugins[i].name);
+			NOTE("Plugin \"%s\" initialized.", plugins[i].name);
 			plugins[i].initialized = 1;
 		}
 	}
@@ -897,43 +764,36 @@ int main(int argc, char **argv)
 	/* Phase 8: Collect subscription contexts from plugins */
 	for (i = 0; i < plugin_count; i++) {
 		if (plugins[i].initialized && plugins[i].get_subs)
-			plugins[i].get_subs(plugins[i].private_data,
-					    &plugins[i].sub, &plugins[i].fsub);
+			plugins[i].get_subs(plugins[i].private_data, &plugins[i].sub, &plugins[i].fsub);
 	}
 
-	/* Phase 9: Start event pump thread for bootstrap.
+	/* Phase 9: Fork event pump process for bootstrap.
 	 * With SR_SUBSCR_NO_THREAD, sr_replace_config() blocks waiting
-	 * for callbacks.  The pump thread processes those events. */
-	struct event_pump pump = {
-		.plugins      = plugins,
-		.plugin_count = plugin_count,
-		.running      = 1,
-	};
-	pthread_t pump_tid;
-
-	if (pthread_create(&pump_tid, NULL, event_pump_thread, &pump)) {
-		SRPLG_LOG_ERR("confd", "Failed to create event pump thread: %s", strerror(errno));
+	 * for callbacks.  The pump process processes those events. */
+	pump_pid = fork();
+	if (pump_pid < 0) {
+		ERRNO("Failed to fork event pump");
 		goto cleanup;
 	}
+	if (pump_pid == 0)
+		event_pump(plugins, plugin_count);
 
-	/*
-	 * Phase 10: Load startup config -- plugins are now subscribed, so
+	/* Phase 10: Load startup config -- plugins are now subscribed, so
 	 * sr_replace_config() will trigger their change callbacks.
-	 * The event pump thread processes those callbacks.
-	 */
+	 * The event pump process processes those callbacks. */
 	conout(3, "Loading startup-config");
 	if (bootstrap_config(conn, sess, factory_path, startup_path,
 			     failure_path, test_path, timeout_ms)) {
-		pump.running = 0;
-		pthread_join(pump_tid, NULL);
+		kill(pump_pid, SIGTERM);
+		waitpid(pump_pid, NULL, 0);
 		conout(1, "\n");
 		goto cleanup;
 	}
 	conout(0, "\n");
 
 	/* Phase 11: Stop event pump — bootstrap is done */
-	pump.running = 0;
-	pthread_join(pump_tid, NULL);
+	kill(pump_pid, SIGTERM);
+	waitpid(pump_pid, NULL, 0);
 
 	/* No more progress to show, go to quiet daemon mode */
 	quiet_now();
@@ -941,15 +801,11 @@ int main(int argc, char **argv)
 	/* Signal that bootstrap is complete (dbus, resolvconf depend on this) */
 	symlink("/run/finit/cond/reconf", "/run/finit/cond/usr/bootstrap");
 
-	/* Write PID file after everything is ready */
-	if (pidfile && write_pidfile(pidfd) < 0)
-		goto cleanup;
-
-	/* Phase 12: Steady-state — libev event loop replaces pthread_cond_wait */
+	/* Phase 12: Steady-state — libev event loop */
 	{
-		struct ev_loop *loop = EV_DEFAULT;
 		struct ev_signal sigterm_w, sigint_w, sighup_w, sigquit_w;
 		struct ev_io io_watchers[MAX_EVENT_FDS];
+		struct ev_loop *loop = EV_DEFAULT;
 		int nio = 0;
 
 		ev_signal_init(&sigterm_w, signal_cb, SIGTERM);
@@ -994,11 +850,6 @@ cleanup:
 		--plugin_count;
 	}
 	free(plugins);
-
-	if (pidfd >= 0) {
-		close(pidfd);
-		unlink(pidfile);
-	}
 
 	sr_disconnect(conn);
 	return rc;
