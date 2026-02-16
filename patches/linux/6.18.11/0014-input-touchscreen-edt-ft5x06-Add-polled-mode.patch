@@ -1,0 +1,159 @@
+From f808a8fc77b359c577f7f9c048b0015ab1348eb0 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Thu, 21 Aug 2025 11:20:23 +0200
+Subject: [PATCH 14/32] input:touchscreen:edt-ft5x06: Add polled mode
+
+Not all hardware has interrupts therefore we need
+to poll the touchscreen.
+---
+ drivers/input/touchscreen/edt-ft5x06.c | 74 ++++++++++++++++++++------
+ 1 file changed, 58 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/input/touchscreen/edt-ft5x06.c b/drivers/input/touchscreen/edt-ft5x06.c
+index bf498bd4dea9..30308d840935 100644
+--- a/drivers/input/touchscreen/edt-ft5x06.c
++++ b/drivers/input/touchscreen/edt-ft5x06.c
+@@ -77,6 +77,9 @@
+ #define EDT_DEFAULT_NUM_X		1024
+ #define EDT_DEFAULT_NUM_Y		1024
+ 
++#define FIRST_POLL_DELAY_MS		300	/* in addition to the above */
++#define POLL_INTERVAL_MS		17	/* 17ms = 60fps */
++
+ #define M06_REG_CMD(factory) ((factory) ? 0xf3 : 0xfc)
+ #define M06_REG_ADDR(factory, addr) ((factory) ? (addr) & 0x7f : (addr) & 0x3f)
+ 
+@@ -138,6 +141,7 @@ struct edt_ft5x06_ts_data {
+ 	u8 tdata_cmd;
+ 	int tdata_len;
+ 	int tdata_offset;
++	int init_td_status;
+ 
+ 	char name[EDT_NAME_LEN];
+ 	char fw_version[EDT_NAME_LEN];
+@@ -146,6 +150,9 @@ struct edt_ft5x06_ts_data {
+ 	enum edt_ver version;
+ 	unsigned int crc_errors;
+ 	unsigned int header_errors;
++
++	struct timer_list timer;
++	struct work_struct work_i2c_poll;
+ };
+ 
+ struct edt_i2c_chip_data {
+@@ -581,6 +588,22 @@ static struct attribute *edt_ft5x06_attrs[] = {
+ };
+ ATTRIBUTE_GROUPS(edt_ft5x06);
+ 
++static void edt_ft5x06_ts_irq_poll_timer(struct timer_list *t)
++{
++	struct edt_ft5x06_ts_data *tsdata = timer_container_of(tsdata, t, timer);
++
++	schedule_work(&tsdata->work_i2c_poll);
++	mod_timer(&tsdata->timer, jiffies + msecs_to_jiffies(POLL_INTERVAL_MS));
++}
++
++static void edt_ft5x06_ts_work_i2c_poll(struct work_struct *work)
++{
++	struct edt_ft5x06_ts_data *tsdata = container_of(work,
++			struct edt_ft5x06_ts_data, work_i2c_poll);
++
++	edt_ft5x06_ts_isr(0, tsdata);
++}
++
+ static void edt_ft5x06_restore_reg_parameters(struct edt_ft5x06_ts_data *tsdata)
+ {
+ 	struct edt_reg_addr *reg_addr = &tsdata->reg_addr;
+@@ -613,7 +636,9 @@ static int edt_ft5x06_factory_mode(struct edt_ft5x06_ts_data *tsdata)
+ 		return -EINVAL;
+ 	}
+ 
+-	disable_irq(client->irq);
++	if (client->irq) {
++		disable_irq(client->irq);
++	}
+ 
+ 	if (!tsdata->raw_buffer) {
+ 		tsdata->raw_bufsize = tsdata->num_x * tsdata->num_y *
+@@ -656,7 +681,8 @@ static int edt_ft5x06_factory_mode(struct edt_ft5x06_ts_data *tsdata)
+ 	kfree(tsdata->raw_buffer);
+ 	tsdata->raw_buffer = NULL;
+ 	tsdata->factory_mode = false;
+-	enable_irq(client->irq);
++	if (client->irq)
++		enable_irq(client->irq);
+ 
+ 	return error;
+ }
+@@ -697,7 +723,8 @@ static int edt_ft5x06_work_mode(struct edt_ft5x06_ts_data *tsdata)
+ 	tsdata->raw_buffer = NULL;
+ 
+ 	edt_ft5x06_restore_reg_parameters(tsdata);
+-	enable_irq(client->irq);
++	if (client->irq)
++		enable_irq(client->irq);
+ 
+ 	return 0;
+ }
+@@ -1327,18 +1354,27 @@ static int edt_ft5x06_ts_probe(struct i2c_client *client)
+ 		dev_err(&client->dev, "Unable to init MT slots.\n");
+ 		return error;
+ 	}
+-
+-	irq_flags = irq_get_trigger_type(client->irq);
+-	if (irq_flags == IRQF_TRIGGER_NONE)
+-		irq_flags = IRQF_TRIGGER_FALLING;
+-	irq_flags |= IRQF_ONESHOT;
+-
+-	error = devm_request_threaded_irq(&client->dev, client->irq,
+-					  NULL, edt_ft5x06_ts_isr, irq_flags,
+-					  client->name, tsdata);
+-	if (error) {
+-		dev_err(&client->dev, "Unable to request touchscreen IRQ.\n");
+-		return error;
++	if (client->irq) {
++		irq_flags = irq_get_trigger_type(client->irq);
++		if (irq_flags == IRQF_TRIGGER_NONE)
++			irq_flags = IRQF_TRIGGER_FALLING;
++		irq_flags |= IRQF_ONESHOT;
++
++		error = devm_request_threaded_irq(&client->dev, client->irq,
++						  NULL, edt_ft5x06_ts_isr, irq_flags,
++						  client->name, tsdata);
++		if (error) {
++			dev_err(&client->dev, "Unable to request touchscreen IRQ.\n");
++			return error;
++		}
++	} else {
++		tsdata->init_td_status = -1; /* filter bogus initial data */
++		INIT_WORK(&tsdata->work_i2c_poll,
++			  edt_ft5x06_ts_work_i2c_poll);
++		timer_setup(&tsdata->timer, edt_ft5x06_ts_irq_poll_timer, 0);
++		tsdata->timer.expires =
++			jiffies + msecs_to_jiffies(FIRST_POLL_DELAY_MS);
++		add_timer(&tsdata->timer);
+ 	}
+ 
+ 	error = input_register_device(input);
+@@ -1360,6 +1396,11 @@ static void edt_ft5x06_ts_remove(struct i2c_client *client)
+ {
+ 	struct edt_ft5x06_ts_data *tsdata = i2c_get_clientdata(client);
+ 
++	if (!client->irq) {
++		timer_delete(&tsdata->timer);
++		cancel_work_sync(&tsdata->work_i2c_poll);
++	}
++
+ 	edt_ft5x06_ts_teardown_debugfs(tsdata);
+ }
+ 
+@@ -1391,7 +1432,8 @@ static int edt_ft5x06_ts_suspend(struct device *dev)
+ 	 * settings. Disable the irq to avoid adjusting each host till the
+ 	 * device is back in a full functional state.
+ 	 */
+-	disable_irq(tsdata->client->irq);
++	if (tsdata->client->irq)
++		disable_irq(tsdata->client->irq);
+ 
+ 	gpiod_set_value_cansleep(reset_gpio, 1);
+ 	usleep_range(1000, 2000);
