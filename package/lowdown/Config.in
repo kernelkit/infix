@@ -1,7 +1,0 @@
-config BR2_PACKAGE_LOWDOWN
-	bool "lowdown"
-	help
-	  Simple markdown translator, useful for terminals.
-
-	  https://kristaps.bsd.lv/lowdown/
-
