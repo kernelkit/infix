@@ -1,8 +1,31 @@
+From 20b63b112df3092b51b8f1d2f9ef26c238fbc3dc Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 23 Nov 2023 18:49:36 +0100
+Subject: [PATCH] src/main: add optional syslog support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Instead of having to redirect (colored) logs to stdout/stderr, this
+patch adds support for logging directly to syslog with approximate
+GLogLevel to syslog level mapping.
+
+By default all LOG_NOTICE, g_message(), and higher log messages are
+logged to LOG_LOCAL0 facility.  This should of course be configurable
+but is not at this stage.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/main.c | 45 ++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 44 insertions(+), 1 deletion(-)
+
 diff --git a/src/main.c b/src/main.c
-index 8e851b4..62d0bec 100644
+index b3192a38..0ca5af21 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -9,6 +9,7 @@
+@@ -10,6 +10,7 @@
  #include <locale.h>
  #include <stdio.h>
  #include <string.h>
@@ -10,7 +33,7 @@ index 8e851b4..62d0bec 100644
  #include <sys/ioctl.h>
  #include <unistd.h>
  
-@@ -2183,6 +2184,38 @@ static gboolean unknown_start(int argc, char **argv)
+@@ -2540,6 +2541,38 @@ static gboolean unknown_start(int argc, char **argv)
  	return TRUE;
  }
  
@@ -49,16 +72,16 @@ index 8e851b4..62d0bec 100644
  typedef enum  {
  	UNKNOWN = 0,
  	INSTALL,
-@@ -2370,7 +2403,7 @@ static void create_option_groups(void)
+@@ -2774,7 +2807,7 @@ static gboolean collect_config_values(const gchar *option_name, const gchar *val
  
  static void cmdline_handler(int argc, char **argv)
  {
 -	gboolean help = FALSE, debug = FALSE, version = FALSE;
-+	gboolean help = FALSE, debug = FALSE, use_syslog = FALSE, version = FALSE;
- 	g_autofree gchar *confpath = NULL, *keyring = NULL, *mount = NULL;
++	gboolean help = FALSE, debug = FALSE, version = FALSE, use_syslog = FALSE;
+ 	g_autofree gchar *confpath = NULL, *mount = NULL;
  	char *cmdarg = NULL;
  	g_autoptr(GOptionContext) context = NULL;
-@@ -2383,6 +2416,7 @@ static void cmdline_handler(int argc, char **argv)
+@@ -2789,6 +2822,7 @@ static void cmdline_handler(int argc, char **argv)
  		{"intermediate", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_FILENAME_ARRAY, &intermediate, "intermediate CA file or PKCS#11 URL", "PEMFILE|PKCS11-URL"},
  		{"mount", '\0', 0, G_OPTION_ARG_FILENAME, &mount, "mount prefix", "PATH"},
  		{"debug", 'd', 0, G_OPTION_ARG_NONE, &debug, "enable debug output", NULL},
@@ -66,8 +89,8 @@ index 8e851b4..62d0bec 100644
  		{"version", '\0', 0, G_OPTION_ARG_NONE, &version, "display version", NULL},
  		{"help", 'h', 0, G_OPTION_ARG_NONE, &help, "display help and exit", NULL},
  		{0}
-@@ -2500,6 +2534,15 @@ static void cmdline_handler(int argc, char **argv)
- 		g_message("Debug log domains: '%s'", domains);
+@@ -2916,6 +2950,15 @@ static void cmdline_handler(int argc, char **argv)
+ 				);
  	}
  
 +	if (use_syslog) {
@@ -82,3 +105,6 @@ index 8e851b4..62d0bec 100644
  	/* get first parameter without dashes */
  	for (gint i = 1; i <= argc; i++) {
  		if (argv[i] && !g_str_has_prefix(argv[i], "-")) {
+-- 
+2.43.0
+

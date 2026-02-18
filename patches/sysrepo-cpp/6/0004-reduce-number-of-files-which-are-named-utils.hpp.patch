@@ -1,0 +1,82 @@
+From 753a3e6eb346f2a9f6263b2d9fcd1c6dbb508247 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 24 Oct 2025 17:06:56 +0200
+Subject: [PATCH 4/9] reduce number of files which are named "utils.hpp"
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+We used to have three (one in publicheaders, one in src/utils/, one
+below tests/). Let's cut that by one to increase our collective sanity.
+
+Change-Id: I9e3d93c65dffb29ba18b3ae325ddd7712a8be7a4
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/Connection.cpp                | 2 +-
+ src/Session.cpp                   | 2 +-
+ src/Subscription.cpp              | 2 +-
+ src/utils/{utils.hpp => misc.hpp} | 0
+ src/utils/utils.cpp               | 2 +-
+ 5 files changed, 4 insertions(+), 4 deletions(-)
+ rename src/utils/{utils.hpp => misc.hpp} (100%)
+
+diff --git a/src/Connection.cpp b/src/Connection.cpp
+index 0297ebe..1717b9a 100644
+--- a/src/Connection.cpp
++++ b/src/Connection.cpp
+@@ -13,7 +13,7 @@ extern "C" {
+ #include <sysrepo-cpp/utils/exception.hpp>
+ #include "utils/enum.hpp"
+ #include "utils/exception.hpp"
+-#include "utils/utils.hpp"
++#include "utils/misc.hpp"
+ 
+ namespace sysrepo {
+ 
+diff --git a/src/Session.cpp b/src/Session.cpp
+index dfe1044..994ce87 100644
+--- a/src/Session.cpp
++++ b/src/Session.cpp
+@@ -21,7 +21,7 @@ extern "C" {
+ #include <utility>
+ #include "utils/enum.hpp"
+ #include "utils/exception.hpp"
+-#include "utils/utils.hpp"
++#include "utils/misc.hpp"
+ 
+ using namespace std::string_literals;
+ namespace sysrepo {
+diff --git a/src/Subscription.cpp b/src/Subscription.cpp
+index 303b54c..5bb724e 100644
+--- a/src/Subscription.cpp
++++ b/src/Subscription.cpp
+@@ -16,7 +16,7 @@ extern "C" {
+ }
+ #include "utils/enum.hpp"
+ #include "utils/exception.hpp"
+-#include "utils/utils.hpp"
++#include "utils/misc.hpp"
+ 
+ namespace sysrepo {
+ /**
+diff --git a/src/utils/utils.hpp b/src/utils/misc.hpp
+similarity index 100%
+rename from src/utils/utils.hpp
+rename to src/utils/misc.hpp
+diff --git a/src/utils/utils.cpp b/src/utils/utils.cpp
+index c13b394..2e8d8b4 100644
+--- a/src/utils/utils.cpp
++++ b/src/utils/utils.cpp
+@@ -12,7 +12,7 @@ extern "C" {
+ #include <sysrepo.h>
+ }
+ #include "enum.hpp"
+-#include "utils.hpp"
++#include "misc.hpp"
+ 
+ namespace sysrepo {
+ /**
+-- 
+2.43.0
+

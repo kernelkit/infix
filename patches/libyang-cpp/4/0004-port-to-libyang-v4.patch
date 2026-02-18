@@ -1,0 +1,435 @@
+From 4c00c24dee6bbc694d62e7174b7ac14f8aa95f14 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 30 Oct 2025 21:16:13 +0100
+Subject: [PATCH 4/7] port to libyang v4
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Apart from the usual API/ABI changes, the default values of a `leaf` or
+a `leaf-list` are no longer canonicalized.
+
+This used to be missing from libyang v4, but it was added recently.
+Sill, chances are that the form which was used in the YANG model's
+source code is actually *the* intended presentation, so let's skip
+canonicalization altogether.
+
+Upstream has removed some flags and defines, so let's sync their list
+with whatever is currently available in the `devel` branch.
+
+Change-Id: I52dcec88eeee003b45dd6cf400f4d6875abbcc05
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .zuul.yaml                       |  4 ++--
+ CMakeLists.txt                   |  4 ++--
+ README.md                        |  2 +-
+ include/libyang-cpp/Context.hpp  |  6 +++++-
+ include/libyang-cpp/DataNode.hpp |  5 ++++-
+ include/libyang-cpp/Enum.hpp     | 15 +++++++++++++--
+ src/Context.cpp                  | 12 ++++++++++--
+ src/DataNode.cpp                 | 11 +++++++++--
+ src/SchemaNode.cpp               |  6 +++---
+ src/Type.cpp                     |  2 +-
+ src/utils/enum.hpp               | 21 +++++++++++++++++++--
+ tests/context.cpp                | 32 +++++++++++++++++---------------
+ tests/data_node.cpp              |  2 +-
+ tests/schema_node.cpp            |  4 ++--
+ 14 files changed, 89 insertions(+), 37 deletions(-)
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index fd89549..7b92766 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -4,13 +4,13 @@
+         - f38-gcc-cover:
+             required-projects:
+               - name: github/CESNET/libyang
+-                override-checkout: cesnet/2025-08-07
++                override-checkout: devel
+               - name: github/doctest/doctest
+                 override-checkout: v2.3.6
+         - f38-clang-asan-ubsan:
+             required-projects: &projects
+               - name: github/CESNET/libyang
+-                override-checkout: cesnet/2025-08-07
++                override-checkout: devel
+               - name: github/doctest/doctest
+                 override-checkout: v2.4.11
+         - f38-clang-tsan:
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c6db320..90f9aaa 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,7 +20,7 @@ add_custom_target(libyang-cpp-version-cmake
+         cmake/ProjectGitVersionRunner.cmake
+         )
+ include(cmake/ProjectGitVersion.cmake)
+-set(LIBYANG_CPP_PKG_VERSION "4")
++set(LIBYANG_CPP_PKG_VERSION "5")
+ prepare_git_version(LIBYANG_CPP_VERSION ${LIBYANG_CPP_PKG_VERSION})
+ 
+ find_package(Doxygen)
+@@ -28,7 +28,7 @@ option(WITH_DOCS "Create and install internal documentation (needs Doxygen)" ${D
+ option(BUILD_SHARED_LIBS "By default, shared libs are enabled. Turn off for a static build." ON)
+ 
+ find_package(PkgConfig REQUIRED)
+-pkg_check_modules(LIBYANG REQUIRED libyang>=3.10.1 IMPORTED_TARGET)
++pkg_check_modules(LIBYANG REQUIRED libyang>=4.1.0 IMPORTED_TARGET)
+ 
+ # FIXME from gcc 14.1 on we should be able to use the calendar/time from libstdc++ and thus remove the date dependency
+ find_package(date)
+diff --git a/README.md b/README.md
+index 8291e00..0cef2ff 100644
+--- a/README.md
++++ b/README.md
+@@ -8,7 +8,7 @@
+ Object lifetimes are managed automatically via RAII.
+ 
+ ## Dependencies
+-- [libyang v3](https://github.com/CESNET/libyang) - the `devel` branch (even for the `master` branch of *libyang-cpp*)
++- [libyang v4](https://github.com/CESNET/libyang) - the `devel` branch (even for the `master` branch of *libyang-cpp*)
+ - C++20 compiler (e.g., GCC 10.x+, clang 10+)
+ - CMake 3.19+
+ - optionally for built-in tests, [Doctest](https://github.com/doctest/doctest/) as a C++ unit test framework
+diff --git a/include/libyang-cpp/Context.hpp b/include/libyang-cpp/Context.hpp
+index ca89063..e695914 100644
+--- a/include/libyang-cpp/Context.hpp
++++ b/include/libyang-cpp/Context.hpp
+@@ -108,7 +108,11 @@ public:
+     std::optional<SubmoduleParsed> getSubmodule(const std::string& name, const std::optional<std::string>& revision) const;
+     void registerModuleCallback(std::function<ModuleCallback> callback);
+ 
+-    ParsedOp parseOp(const std::string& input, const DataFormat format, const OperationType opType) const;
++    ParsedOp parseOp(
++            const std::string& input,
++            const DataFormat format,
++            const OperationType opType,
++            const std::optional<ParseOptions> parseOpts = std::nullopt) const;
+ 
+     DataNode newPath(const std::string& path, const std::optional<std::string>& value = std::nullopt, const std::optional<CreationOptions> options = std::nullopt) const;
+     CreatedNodes newPath2(const std::string& path, const std::optional<std::string>& value = std::nullopt, const std::optional<CreationOptions> options = std::nullopt) const;
+diff --git a/include/libyang-cpp/DataNode.hpp b/include/libyang-cpp/DataNode.hpp
+index e202a96..35e5936 100644
+--- a/include/libyang-cpp/DataNode.hpp
++++ b/include/libyang-cpp/DataNode.hpp
+@@ -123,7 +123,10 @@ public:
+     Collection<DataNode, IterationType::Sibling> siblings() const;
+     Collection<DataNode, IterationType::Sibling> immediateChildren() const;
+ 
+-    ParsedOp parseOp(const std::string& input, const DataFormat format, const OperationType opType) const;
++    ParsedOp parseOp(const std::string& input,
++                     const DataFormat format,
++                     const OperationType opType,
++                     const std::optional<ParseOptions> parseOpts = std::nullopt) const;
+ 
+     void parseSubtree(
+             const std::string& data,
+diff --git a/include/libyang-cpp/Enum.hpp b/include/libyang-cpp/Enum.hpp
+index 85dcc83..32142f9 100644
+--- a/include/libyang-cpp/Enum.hpp
++++ b/include/libyang-cpp/Enum.hpp
+@@ -136,6 +136,7 @@ enum class DuplicationOptions : uint32_t {
+     WithFlags   = 0x08,
+     NoExt       = 0x10,
+     WithPriv    = 0x20,
++    NoLyds      = 0x40,
+ };
+ 
+ enum class NodeType : uint16_t {
+@@ -167,6 +168,13 @@ enum class ContextOptions : uint16_t {
+     PreferSearchDirs  = 0x20,
+     SetPrivParsed     = 0x40,
+     ExplicitCompile   = 0x80,
++    EnableImpFeatures = 0x100,
++    CompileObsolete   = 0x200,
++    LybHashes         = 0x400,
++    LeafrefExtended   = 0x800,
++    LeafrefLinking    = 0x1000,
++    BuiltinPluginsOnly = 0x2000,
++    StaticPluginsOnly = 0x4000,
+ };
+ 
+ /**
+@@ -203,7 +211,6 @@ enum class AnydataValueType : uint32_t {
+     String,
+     XML,
+     JSON,
+-    LYB
+ };
+ 
+ /**
+@@ -252,6 +259,7 @@ enum class ValidationOptions {
+     MultiError = 0x0004,
+     Operational = 0x0008,
+     NoDefaults = 0x0010,
++    NotFinal = 0x0020,
+ };
+ 
+ /**
+@@ -262,11 +270,14 @@ enum class ParseOptions {
+     Strict       = 0x020000,
+     Opaque       = 0x040000,
+     NoState      = 0x080000,
+-    LybModUpdate = 0x100000,
++    LybSkipCtxCheck = 0x100000,
+     Ordered      = 0x200000,
+     Subtree      = 0x400000, /**< Do not use this one for parsing of data subtrees */
+     WhenTrue     = 0x800000,
+     NoNew        = 0x1000000,
++    StoreOnly    = 0x2010000,
++    JsonNull     = 0x4000000,
++    JsonStringDataTypes = 0x8000000,
+ };
+ 
+ /**
+diff --git a/src/Context.cpp b/src/Context.cpp
+index fec2f27..f5bdc71 100644
+--- a/src/Context.cpp
++++ b/src/Context.cpp
+@@ -239,7 +239,7 @@ std::optional<DataNode> Context::parseExtData(
+  * Note: to parse a NETCONF RPC reply, you MUST parse the original NETCONF RPC request (that is, you have to use
+  * this method with OperationType::RpcNetconf).
+  */
+-ParsedOp Context::parseOp(const std::string& input, const DataFormat format, const OperationType opType) const
++ParsedOp Context::parseOp(const std::string& input, const DataFormat format, const OperationType opType, const std::optional<ParseOptions> parseOpts) const
+ {
+     auto in = wrap_ly_in_new_memory(input);
+ 
+@@ -251,7 +251,15 @@ ParsedOp Context::parseOp(const std::string& input, const DataFormat format, con
+     case OperationType::NotificationYang: {
+         lyd_node* op = nullptr;
+         lyd_node* tree = nullptr;
+-        auto err = lyd_parse_op(m_ctx.get(), nullptr, in.get(), utils::toLydFormat(format), utils::toOpType(opType), &tree, &op);
++        auto err = lyd_parse_op(
++            m_ctx.get(),
++            nullptr,
++            in.get(),
++            utils::toLydFormat(format),
++            utils::toOpType(opType),
++            parseOpts ? utils::toParseOptions(*parseOpts) : 0,
++            &tree,
++            &op);
+ 
+         ParsedOp res;
+         res.tree = tree ? std::optional{libyang::wrapRawNode(tree)} : std::nullopt;
+diff --git a/src/DataNode.cpp b/src/DataNode.cpp
+index e28ef30..edabf9b 100644
+--- a/src/DataNode.cpp
++++ b/src/DataNode.cpp
+@@ -391,7 +391,7 @@ DataNodeAny DataNode::asAny() const
+  *
+  * Wraps `lyd_parse_op`.
+  */
+-ParsedOp DataNode::parseOp(const std::string& input, const DataFormat format, const OperationType opType) const
++ParsedOp DataNode::parseOp(const std::string& input, const DataFormat format, const OperationType opType, const std::optional<ParseOptions> parseOpts) const
+ {
+     auto in = wrap_ly_in_new_memory(input);
+ 
+@@ -401,7 +401,14 @@ ParsedOp DataNode::parseOp(const std::string& input, const DataFormat format, co
+     case OperationType::ReplyRestconf: {
+         lyd_node* op = nullptr;
+         lyd_node* tree = nullptr;
+-        auto err = lyd_parse_op(m_node->schema->module->ctx, m_node, in.get(), utils::toLydFormat(format), utils::toOpType(opType), &tree, nullptr);
++        auto err = lyd_parse_op(m_node->schema->module->ctx,
++                                m_node,
++                                in.get(),
++                                utils::toLydFormat(format),
++                                utils::toOpType(opType),
++                                parseOpts ? utils::toParseOptions(*parseOpts) : 0,
++                                &tree,
++                                nullptr);
+         ParsedOp res{
+             .tree = tree ? std::optional{libyang::wrapRawNode(tree)} : std::nullopt,
+             .op = op ? std::optional{libyang::wrapRawNode(op)} : std::nullopt
+diff --git a/src/SchemaNode.cpp b/src/SchemaNode.cpp
+index ce24203..2e0351a 100644
+--- a/src/SchemaNode.cpp
++++ b/src/SchemaNode.cpp
+@@ -564,7 +564,7 @@ std::vector<std::string> LeafList::defaultValuesStr() const
+     auto dflts = reinterpret_cast<const lysc_node_leaflist*>(m_node)->dflts;
+     std::vector<std::string> res;
+     for (const auto& it : std::span(dflts, LY_ARRAY_COUNT(dflts))) {
+-        res.emplace_back(lyd_value_get_canonical(m_ctx.get(), it));
++        res.emplace_back(it.str);
+     }
+     return res;
+ }
+@@ -660,8 +660,8 @@ bool LeafList::isUserOrdered() const
+ std::optional<std::string> Leaf::defaultValueStr() const
+ {
+     auto dflt = reinterpret_cast<const lysc_node_leaf*>(m_node)->dflt;
+-    if (dflt) {
+-        return lyd_value_get_canonical(m_ctx.get(), dflt);
++    if (dflt.str) {
++        return std::string{dflt.str};
+     } else {
+         return std::nullopt;
+     }
+diff --git a/src/Type.cpp b/src/Type.cpp
+index 01b2c4f..4d2db46 100644
+--- a/src/Type.cpp
++++ b/src/Type.cpp
+@@ -240,7 +240,7 @@ std::optional<std::string> Type::description() const
+  */
+ std::string Type::internalPluginId() const
+ {
+-    return m_type->plugin->id;
++    return lysc_get_type_plugin(m_type->plugin_ref)->id;
+ }
+ 
+ /**
+diff --git a/src/utils/enum.hpp b/src/utils/enum.hpp
+index 5e02d24..0b2e2d7 100644
+--- a/src/utils/enum.hpp
++++ b/src/utils/enum.hpp
+@@ -91,6 +91,7 @@ static_assert(LYD_DUP_WITH_FLAGS == toDuplicationOptions(DuplicationOptions::Wit
+ static_assert(LYD_DUP_WITH_PARENTS == toDuplicationOptions(DuplicationOptions::WithParents));
+ static_assert(LYD_DUP_NO_EXT == toDuplicationOptions(DuplicationOptions::NoExt));
+ static_assert(LYD_DUP_WITH_PRIV == toDuplicationOptions(DuplicationOptions::WithPriv));
++static_assert(LYD_DUP_NO_LYDS == toDuplicationOptions(DuplicationOptions::NoLyds));
+ 
+ static_assert((LYD_DUP_NO_META | LYD_DUP_NO_EXT) ==
+         toDuplicationOptions(DuplicationOptions::NoMeta | DuplicationOptions::NoExt));
+@@ -131,6 +132,13 @@ static_assert(toContextOptions(ContextOptions::DisableSearchCwd) == LY_CTX_DISAB
+ static_assert(toContextOptions(ContextOptions::PreferSearchDirs) == LY_CTX_PREFER_SEARCHDIRS);
+ static_assert(toContextOptions(ContextOptions::SetPrivParsed) == LY_CTX_SET_PRIV_PARSED);
+ static_assert(toContextOptions(ContextOptions::ExplicitCompile) == LY_CTX_EXPLICIT_COMPILE);
++static_assert(toContextOptions(ContextOptions::EnableImpFeatures) == LY_CTX_ENABLE_IMP_FEATURES);
++static_assert(toContextOptions(ContextOptions::CompileObsolete) == LY_CTX_COMPILE_OBSOLETE);
++static_assert(toContextOptions(ContextOptions::LybHashes) == LY_CTX_LYB_HASHES);
++static_assert(toContextOptions(ContextOptions::LeafrefExtended) == LY_CTX_LEAFREF_EXTENDED);
++static_assert(toContextOptions(ContextOptions::LeafrefLinking) == LY_CTX_LEAFREF_LINKING);
++static_assert(toContextOptions(ContextOptions::BuiltinPluginsOnly) == LY_CTX_BUILTIN_PLUGINS_ONLY);
++static_assert(toContextOptions(ContextOptions::StaticPluginsOnly) == LY_CTX_STATIC_PLUGINS_ONLY);
+ 
+ constexpr uint16_t toLogOptions(const LogOptions options)
+ {
+@@ -198,6 +206,10 @@ constexpr uint32_t toValidationOptions(const ValidationOptions opts)
+ 
+ static_assert(toValidationOptions(ValidationOptions::NoState) == LYD_VALIDATE_NO_STATE);
+ static_assert(toValidationOptions(ValidationOptions::Present) == LYD_VALIDATE_PRESENT);
++static_assert(toValidationOptions(ValidationOptions::MultiError) == LYD_VALIDATE_MULTI_ERROR);
++static_assert(toValidationOptions(ValidationOptions::Operational) == LYD_VALIDATE_OPERATIONAL);
++static_assert(toValidationOptions(ValidationOptions::NoDefaults) == LYD_VALIDATE_NO_DEFAULTS);
++static_assert(toValidationOptions(ValidationOptions::NotFinal) == LYD_VALIDATE_NOT_FINAL);
+ 
+ constexpr uint32_t toParseOptions(const ParseOptions opts)
+ {
+@@ -208,8 +220,14 @@ static_assert(toParseOptions(ParseOptions::ParseOnly) == LYD_PARSE_ONLY);
+ static_assert(toParseOptions(ParseOptions::Strict) == LYD_PARSE_STRICT);
+ static_assert(toParseOptions(ParseOptions::Opaque) == LYD_PARSE_OPAQ);
+ static_assert(toParseOptions(ParseOptions::NoState) == LYD_PARSE_NO_STATE);
+-static_assert(toParseOptions(ParseOptions::LybModUpdate) == LYD_PARSE_LYB_MOD_UPDATE);
++static_assert(toParseOptions(ParseOptions::LybSkipCtxCheck) == LYD_PARSE_LYB_SKIP_CTX_CHECK);
+ static_assert(toParseOptions(ParseOptions::Ordered) == LYD_PARSE_ORDERED);
++static_assert(toParseOptions(ParseOptions::Subtree) == LYD_PARSE_SUBTREE);
++static_assert(toParseOptions(ParseOptions::WhenTrue) == LYD_PARSE_WHEN_TRUE);
++static_assert(toParseOptions(ParseOptions::NoNew) == LYD_PARSE_NO_NEW);
++static_assert(toParseOptions(ParseOptions::StoreOnly) == LYD_PARSE_STORE_ONLY);
++static_assert(toParseOptions(ParseOptions::JsonNull) == LYD_PARSE_JSON_NULL);
++static_assert(toParseOptions(ParseOptions::JsonStringDataTypes) == LYD_PARSE_JSON_STRING_DATATYPES);
+ 
+ constexpr lyd_type toOpType(const OperationType type)
+ {
+@@ -242,7 +260,6 @@ static_assert(toAnydataValueType(AnydataValueType::DataTree) == LYD_ANYDATA_DATA
+ static_assert(toAnydataValueType(AnydataValueType::String) == LYD_ANYDATA_STRING);
+ static_assert(toAnydataValueType(AnydataValueType::XML) == LYD_ANYDATA_XML);
+ static_assert(toAnydataValueType(AnydataValueType::JSON) == LYD_ANYDATA_JSON);
+-static_assert(toAnydataValueType(AnydataValueType::LYB) == LYD_ANYDATA_LYB);
+ 
+ constexpr LYS_OUTFORMAT toLysOutFormat(const SchemaOutputFormat format)
+ {
+diff --git a/tests/context.cpp b/tests/context.cpp
+index c0b7e09..eaedebf 100644
+--- a/tests/context.cpp
++++ b/tests/context.cpp
+@@ -359,25 +359,27 @@ TEST_CASE("context")
+         ctx->loadModule("mod1", std::nullopt, {});
+         ctx->parseModule(valid_yang_model, libyang::SchemaFormat::YANG);
+         auto modules = ctx->modules();
+-        REQUIRE(modules.size() == 8);
++        REQUIRE(modules.size() == 9);
+         REQUIRE(modules.at(0).name() == "ietf-yang-metadata");
+         REQUIRE(modules.at(0).ns() == "urn:ietf:params:xml:ns:yang:ietf-yang-metadata");
+         REQUIRE(modules.at(1).name() == "yang");
+         REQUIRE(modules.at(1).ns() == "urn:ietf:params:xml:ns:yang:1");
+-        REQUIRE(modules.at(2).name() == "ietf-inet-types");
+-        REQUIRE(modules.at(2).ns() == "urn:ietf:params:xml:ns:yang:ietf-inet-types");
+-        REQUIRE(modules.at(3).name() == "ietf-yang-types");
+-        REQUIRE(modules.at(3).ns() == "urn:ietf:params:xml:ns:yang:ietf-yang-types");
+-        REQUIRE(modules.at(4).name() == "ietf-yang-schema-mount");
+-        REQUIRE(modules.at(4).ns() == "urn:ietf:params:xml:ns:yang:ietf-yang-schema-mount");
+-        REQUIRE(modules.at(5).name() == "ietf-yang-structure-ext");
+-        REQUIRE(modules.at(5).ns() == "urn:ietf:params:xml:ns:yang:ietf-yang-structure-ext");
+-        REQUIRE(modules.at(6).name() == "mod1");
+-        REQUIRE(modules.at(6).ns() == "http://example.com");
+-        REQUIRE(*modules.at(6).revision() == "2021-11-15");
+-        REQUIRE(modules.at(7).name() == "test");
++        REQUIRE(modules.at(2).name() == "default");
++        REQUIRE(modules.at(2).ns() == "urn:ietf:params:xml:ns:netconf:default:1.0");
++        REQUIRE(modules.at(3).name() == "ietf-inet-types");
++        REQUIRE(modules.at(3).ns() == "urn:ietf:params:xml:ns:yang:ietf-inet-types");
++        REQUIRE(modules.at(4).name() == "ietf-yang-types");
++        REQUIRE(modules.at(4).ns() == "urn:ietf:params:xml:ns:yang:ietf-yang-types");
++        REQUIRE(modules.at(5).name() == "ietf-yang-schema-mount");
++        REQUIRE(modules.at(5).ns() == "urn:ietf:params:xml:ns:yang:ietf-yang-schema-mount");
++        REQUIRE(modules.at(6).name() == "ietf-yang-structure-ext");
++        REQUIRE(modules.at(6).ns() == "urn:ietf:params:xml:ns:yang:ietf-yang-structure-ext");
++        REQUIRE(modules.at(7).name() == "mod1");
+         REQUIRE(modules.at(7).ns() == "http://example.com");
+-        REQUIRE(modules.at(7).revision() == std::nullopt);
++        REQUIRE(*modules.at(7).revision() == "2021-11-15");
++        REQUIRE(modules.at(8).name() == "test");
++        REQUIRE(modules.at(8).ns() == "http://example.com");
++        REQUIRE(modules.at(8).revision() == std::nullopt);
+     }
+ 
+     DOCTEST_SUBCASE("Module comparison")
+@@ -704,7 +706,7 @@ TEST_CASE("context")
+ 
+     DOCTEST_SUBCASE("schema printing")
+     {
+-        std::optional<libyang::Context> ctx_pp{std::in_place, std::nullopt, libyang::ContextOptions::NoYangLibrary | libyang::ContextOptions::DisableSearchCwd | libyang::ContextOptions::SetPrivParsed};
++        std::optional<libyang::Context> ctx_pp{std::in_place, std::nullopt, libyang::ContextOptions::NoYangLibrary | libyang::ContextOptions::DisableSearchCwd | libyang::ContextOptions::SetPrivParsed | libyang::ContextOptions::CompileObsolete};
+         auto mod = ctx_pp->parseModule(type_module, libyang::SchemaFormat::YANG);
+ 
+         REQUIRE(mod.printStr(libyang::SchemaOutputFormat::Tree) == R"(module: type_module
+diff --git a/tests/data_node.cpp b/tests/data_node.cpp
+index 9215b12..88ca5b9 100644
+--- a/tests/data_node.cpp
++++ b/tests/data_node.cpp
+@@ -2426,7 +2426,7 @@ TEST_CASE("Data Node manipulation")
+                         "WTF": "foo bar baz"
+                       }
+                     }
+-                    )", libyang::DataFormat::JSON, libyang::OperationType::RpcRestconf),
++                    )", libyang::DataFormat::JSON, libyang::OperationType::RpcRestconf, libyang::ParseOptions::Strict),
+                         "Can't parse into operation data tree: LY_EVALID", libyang::Error);
+             }
+         }
+diff --git a/tests/schema_node.cpp b/tests/schema_node.cpp
+index 65ef462..58152a4 100644
+--- a/tests/schema_node.cpp
++++ b/tests/schema_node.cpp
+@@ -19,7 +19,7 @@ using namespace std::string_literals;
+ TEST_CASE("SchemaNode")
+ {
+     std::optional<libyang::Context> ctx{std::in_place, std::nullopt,
+-        libyang::ContextOptions::NoYangLibrary | libyang::ContextOptions::DisableSearchCwd};
++        libyang::ContextOptions::NoYangLibrary | libyang::ContextOptions::DisableSearchCwd | libyang::ContextOptions::CompileObsolete};
+     std::optional<libyang::Context> ctxWithParsed{std::in_place, std::nullopt,
+         libyang::ContextOptions::SetPrivParsed | libyang::ContextOptions::NoYangLibrary | libyang::ContextOptions::DisableSearchCwd};
+     ctx->parseModule(example_schema, libyang::SchemaFormat::YANG);
+@@ -841,7 +841,7 @@ TEST_CASE("SchemaNode")
+ 
+     DOCTEST_SUBCASE("LeafList::defaultValuesStr")
+     {
+-        REQUIRE(ctx->findPath("/type_module:leafListWithDefault").asLeafList().defaultValuesStr() == std::vector<std::string>{"-1", "512", "1024", "2048"});
++        REQUIRE(ctx->findPath("/type_module:leafListWithDefault").asLeafList().defaultValuesStr() == std::vector<std::string>{"-1", "+512", "0x400", "04000"});
+         REQUIRE(ctx->findPath("/type_module:leafListBasic").asLeafList().defaultValuesStr().size() == 0);
+     }
+ 
+-- 
+2.43.0
+

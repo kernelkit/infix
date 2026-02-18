@@ -1,0 +1,121 @@
+From 60d729e4791e5447cf0d969be6da9f8f1878af64 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 20 Nov 2025 15:38:04 +0100
+Subject: [PATCH 9/9] Update to libyang v4.2
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Depends-on: https://gerrit.cesnet.cz/c/CzechLight/libyang-cpp/+/9009
+Change-Id: Ia4c53dba0befa8dade38e728489edc6473aa5f4f
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                  |  4 ++--
+ tests/session.cpp               | 14 +++++++-------
+ tests/subscriptions-dynamic.cpp |  4 ++--
+ 3 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 49338dd..8234464 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -27,8 +27,8 @@ option(WITH_DOCS "Create and install internal documentation (needs Doxygen)" ${D
+ option(WITH_EXAMPLES "Build examples" ON)
+ 
+ find_package(PkgConfig)
+-pkg_check_modules(LIBYANG_CPP REQUIRED libyang-cpp>=5 IMPORTED_TARGET)
+-pkg_check_modules(SYSREPO REQUIRED sysrepo>=4.2.4 IMPORTED_TARGET)
++pkg_check_modules(LIBYANG_CPP REQUIRED libyang-cpp>=6 IMPORTED_TARGET)
++pkg_check_modules(SYSREPO REQUIRED sysrepo>=4.2.8 IMPORTED_TARGET)
+ 
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+ 
+diff --git a/tests/session.cpp b/tests/session.cpp
+index a709a09..0e92e65 100644
+--- a/tests/session.cpp
++++ b/tests/session.cpp
+@@ -105,7 +105,7 @@ TEST_CASE("session")
+ 
+             auto data = sess.getData("/test_module:popelnice", 0);
+             REQUIRE(data);
+-            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::KeepEmptyCont) == R"({
++            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::EmptyContainers) == R"({
+   "test_module:popelnice": {
+     "content": {
+       "trash": [
+@@ -126,14 +126,14 @@ TEST_CASE("session")
+ 
+             data = sess.getData("/test_module:popelnice", 1);
+             REQUIRE(data);
+-            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::KeepEmptyCont) == R"({
++            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::EmptyContainers) == R"({
+   "test_module:popelnice": {}
+ }
+ )");
+ 
+             data = sess.getData("/test_module:popelnice", 2);
+             REQUIRE(data);
+-            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::KeepEmptyCont) == R"({
++            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::EmptyContainers) == R"({
+   "test_module:popelnice": {
+     "content": {}
+   }
+@@ -143,7 +143,7 @@ TEST_CASE("session")
+             // If a list should be returned, its keys are always returned as well.
+             data = sess.getData("/test_module:popelnice", 3);
+             REQUIRE(data);
+-            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::KeepEmptyCont) == R"({
++            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::EmptyContainers) == R"({
+   "test_module:popelnice": {
+     "content": {
+       "trash": [
+@@ -161,7 +161,7 @@ TEST_CASE("session")
+ 
+             data = sess.getData("/test_module:popelnice", 4);
+             REQUIRE(data);
+-            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::KeepEmptyCont) == R"({
++            REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::EmptyContainers) == R"({
+   "test_module:popelnice": {
+     "content": {
+       "trash": [
+@@ -497,7 +497,7 @@ TEST_CASE("session")
+     {
+         sess.switchDatastore(sysrepo::Datastore::FactoryDefault);
+         auto data = sess.getData("/*");
+-        REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings) == "{\n\n}\n");
++        REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings) == "{\n\n}\n");
+         REQUIRE_THROWS_AS(sess.setItem(leaf, "123"), sysrepo::ErrorWithCode);
+     }
+ 
+@@ -622,7 +622,7 @@ TEST_CASE("session")
+         }
+ 
+         // the original tree is not corrupted
+-        REQUIRE(*conf->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings) != "");
++        REQUIRE(*conf->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings) != "");
+     }
+ 
+     DOCTEST_SUBCASE("libyang context flags")
+diff --git a/tests/subscriptions-dynamic.cpp b/tests/subscriptions-dynamic.cpp
+index 561df0c..0d4ce7c 100644
+--- a/tests/subscriptions-dynamic.cpp
++++ b/tests/subscriptions-dynamic.cpp
+@@ -140,12 +140,12 @@ TEST_CASE("Dynamic subscriptions")
+         const auto subId = std::get<uint32_t>(idNode->asTerm().value());
+         idNode->unlink();
+ 
+-        rec.recordYangPushUpdate(subId, tree->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings));
++        rec.recordYangPushUpdate(subId, tree->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings));
+     };
+ 
+     auto cbNotif = [&](const std::optional<libyang::DataNode>& tree, auto) {
+         REQUIRE(tree);
+-        rec.recordNotification(tree->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings));
++        rec.recordNotification(tree->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Siblings));
+     };
+ 
+     // write some initial data
+-- 
+2.43.0
+

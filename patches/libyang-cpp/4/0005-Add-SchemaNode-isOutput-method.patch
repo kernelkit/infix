@@ -1,0 +1,77 @@
+From 51d7457bd281e34bac92ff8231978766c7784657 Mon Sep 17 00:00:00 2001
+From: Martin Bohal <mb@mbohal.cz>
+Date: Tue, 4 Nov 2025 14:26:05 +0100
+Subject: [PATCH 5/7] Add SchemaNode::isOutput() method
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+This commit introduces the `isOutput()` method to the `SchemaNode`
+class, which checks whether the schema node is part of an output
+statement subtree.
+
+It complements an already existing `isInput()` method.
+
+Change-Id: I8fe75f2e607c0159d8295d685a59d301155ca92e
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/libyang-cpp/SchemaNode.hpp |  1 +
+ src/SchemaNode.cpp                 | 10 ++++++++++
+ tests/schema_node.cpp              |  7 +++++++
+ 3 files changed, 18 insertions(+)
+
+diff --git a/include/libyang-cpp/SchemaNode.hpp b/include/libyang-cpp/SchemaNode.hpp
+index 9f49fd7..db5a63e 100644
+--- a/include/libyang-cpp/SchemaNode.hpp
++++ b/include/libyang-cpp/SchemaNode.hpp
+@@ -58,6 +58,7 @@ public:
+     Status status() const;
+     Config config() const;
+     bool isInput() const;
++    bool isOutput() const;
+     NodeType nodeType() const;
+     // It is possible to cast SchemaNode to another type via the following methods. The types are children classes of
+     // SchemaNode. No problems with slicing can occur, because these types are value-based and aren't constructible
+diff --git a/src/SchemaNode.cpp b/src/SchemaNode.cpp
+index 2e0351a..9241b23 100644
+--- a/src/SchemaNode.cpp
++++ b/src/SchemaNode.cpp
+@@ -193,6 +193,16 @@ bool SchemaNode::isInput() const
+     return m_node->flags & LYS_INPUT;
+ }
+ 
++/**
++ * @brief Checks whether this node is inside a subtree of an output statement.
++ *
++ * Wraps `LYS_OUTPUT`.
++ */
++bool SchemaNode::isOutput() const
++{
++    return m_node->flags & LYS_OUTPUT;
++}
++
+ /**
+  * Returns the node type of this node (e.g. leaf, container...).
+  *
+diff --git a/tests/schema_node.cpp b/tests/schema_node.cpp
+index 58152a4..01c2f19 100644
+--- a/tests/schema_node.cpp
++++ b/tests/schema_node.cpp
+@@ -135,6 +135,13 @@ TEST_CASE("SchemaNode")
+         REQUIRE(!ctx->findPath("/type_module:leafString").isInput());
+     }
+ 
++    DOCTEST_SUBCASE("SchemaNode::isOutput")
++    {
++        REQUIRE(ctx->findPath("/example-schema:myRpc/outputLeaf", libyang::InputOutputNodes::Output).isOutput());
++        REQUIRE(!ctx->findPath("/example-schema:myRpc/inputLeaf").isOutput());
++        REQUIRE(!ctx->findPath("/type_module:leafString").isOutput());
++    }
++
+     DOCTEST_SUBCASE("SchemaNode::module")
+     {
+         REQUIRE(ctx->findPath("/type_module:leafString").module().name() == "type_module");
+-- 
+2.43.0
+
