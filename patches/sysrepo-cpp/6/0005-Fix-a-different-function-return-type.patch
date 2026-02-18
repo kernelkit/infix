@@ -1,0 +1,60 @@
+From dc118efa44b13508e1af47d924ad02ce58c58cea Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 24 Oct 2025 17:18:49 +0200
+Subject: [PATCH 5/9] Fix a different function return type
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The prototype that was specified in the header file did not match what
+was used in the corresponding .cpp implementation. This has not been a
+problem because that implementation .cpp file was not including the
+actual header, so this was not detected. Then, at runtime, this was not
+a problem due to the way how derived types are laid out in memory.
+
+Fixes: 6ed5442 Utilities for working with existing sysrepo:discard-items nodes
+Change-Id: Ie4cf8c0e39e9c8486a6289c0328510ad6f7360fb
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/utils/utils.cpp | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/utils/utils.cpp b/src/utils/utils.cpp
+index 2e8d8b4..61d0c7f 100644
+--- a/src/utils/utils.cpp
++++ b/src/utils/utils.cpp
+@@ -8,6 +8,7 @@
+ 
+ #include <sysrepo-cpp/Connection.hpp>
+ #include <sysrepo-cpp/utils/exception.hpp>
++#include <sysrepo-cpp/utils/utils.hpp>
+ extern "C" {
+ #include <sysrepo.h>
+ }
+@@ -78,7 +79,7 @@ void checkNoThreadFlag(const SubscribeOptions opts, const std::optional<FDHandli
+  * @see Session::operationalChanges()
+  * @see Session::dropForeignOperationalContent()
+  */
+-std::optional<libyang::DataNode> findMatchingDiscard(libyang::DataNode root, const std::string& xpath)
++std::optional<libyang::DataNodeOpaque> findMatchingDiscard(libyang::DataNode root, const std::string& xpath)
+ {
+     auto discard = root.firstOpaqueSibling();
+     while (discard) {
+@@ -97,11 +98,11 @@ std::optional<libyang::DataNode> findMatchingDiscard(libyang::DataNode root, con
+ /**
+  * @short Find all sysrepo:discard-items nodes which match the given XPath or the descendants of this XPath
+  */
+-std::vector<libyang::DataNode> findMatchingDiscardPrefixes(libyang::DataNode root, const std::string& xpathPrefix)
++std::vector<libyang::DataNodeOpaque> findMatchingDiscardPrefixes(libyang::DataNode root, const std::string& xpathPrefix)
+ {
+     auto withSlash = (xpathPrefix.empty() || xpathPrefix[xpathPrefix.size() - 1] == '/') ? xpathPrefix : xpathPrefix + '/';
+     auto withBracket = (xpathPrefix.empty() || xpathPrefix[xpathPrefix.size() - 1] == '[') ? xpathPrefix : xpathPrefix + '[';
+-    std::vector<libyang::DataNode> res;
++    std::vector<libyang::DataNodeOpaque> res;
+     auto discard = root.firstOpaqueSibling();
+     while (discard) {
+         if (discard->name().matches("sysrepo", "discard-items")) {
+-- 
+2.43.0
+

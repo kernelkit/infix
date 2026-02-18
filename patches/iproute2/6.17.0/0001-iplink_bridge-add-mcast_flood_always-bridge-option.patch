@@ -1,8 +1,11 @@
-From 392735fcb41b303b6dbe3517fab9ba734ff2e288 Mon Sep 17 00:00:00 2001
+From f9008d2d58b215886961ae2ce90caba473207309 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 09:41:46 +0100
 Subject: [PATCH 1/2] iplink_bridge: add mcast_flood_always bridge option
-Organization: Addiva Elektronik
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
 
  - Break out boolopt handling to simplify parsing and setting
  - Add set/get support for mcast_flood_always
@@ -10,6 +13,7 @@ Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  include/uapi/linux/if_bridge.h |  1 +
  ip/iplink_bridge.c             | 19 +++++++++++++++++++
@@ -17,22 +21,22 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  3 files changed, 32 insertions(+)
 
 diff --git a/include/uapi/linux/if_bridge.h b/include/uapi/linux/if_bridge.h
-index c206cf6..84ef423 100644
+index bed5e0c1..637ad93c 100644
 --- a/include/uapi/linux/if_bridge.h
 +++ b/include/uapi/linux/if_bridge.h
-@@ -830,6 +830,7 @@ enum br_boolopt_id {
- 	BR_BOOLOPT_NO_LL_LEARN,
+@@ -832,6 +832,7 @@ enum br_boolopt_id {
  	BR_BOOLOPT_MCAST_VLAN_SNOOPING,
  	BR_BOOLOPT_MST_ENABLE,
+ 	BR_BOOLOPT_MDB_OFFLOAD_FAIL_NOTIFICATION,
 +	BR_BOOLOPT_MCAST_FLOOD_ALWAYS,
  	BR_BOOLOPT_MAX
  };
  
 diff --git a/ip/iplink_bridge.c b/ip/iplink_bridge.c
-index 1fe8955..d4f2c80 100644
+index 76e69086..827a0716 100644
 --- a/ip/iplink_bridge.c
 +++ b/ip/iplink_bridge.c
-@@ -41,6 +41,7 @@ static void print_explain(FILE *f)
+@@ -42,6 +42,7 @@ static void print_explain(FILE *f)
  		"		  [ vlan_default_pvid VLAN_DEFAULT_PVID ]\n"
  		"		  [ vlan_stats_enabled VLAN_STATS_ENABLED ]\n"
  		"		  [ vlan_stats_per_port VLAN_STATS_PER_PORT ]\n"
@@ -40,7 +44,7 @@ index 1fe8955..d4f2c80 100644
  		"		  [ mcast_snooping MULTICAST_SNOOPING ]\n"
  		"		  [ mcast_vlan_snooping MULTICAST_VLAN_SNOOPING ]\n"
  		"		  [ mcast_router MULTICAST_ROUTER ]\n"
-@@ -245,6 +246,18 @@ static int bridge_parse_opt(struct link_util *lu, int argc, char **argv,
+@@ -247,6 +248,18 @@ static int bridge_parse_opt(struct link_util *lu, int argc, char **argv,
  				bm.optval |= mcvl_bit;
  			else
  				bm.optval &= ~mcvl_bit;
@@ -59,7 +63,7 @@ index 1fe8955..d4f2c80 100644
  		} else if (matches(*argv, "mcast_query_use_ifaddr") == 0) {
  			__u8 mcast_qui;
  
-@@ -623,6 +636,7 @@ static void bridge_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
+@@ -638,6 +651,7 @@ static void bridge_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
  		__u32 mcvl_bit = 1 << BR_BOOLOPT_MCAST_VLAN_SNOOPING;
  		__u32 no_ll_learn_bit = 1 << BR_BOOLOPT_NO_LL_LEARN;
  		__u32 mst_bit = 1 << BR_BOOLOPT_MST_ENABLE;
@@ -67,10 +71,10 @@ index 1fe8955..d4f2c80 100644
  		struct br_boolopt_multi *bm;
  
  		bm = RTA_DATA(tb[IFLA_BR_MULTI_BOOLOPT]);
-@@ -641,6 +655,11 @@ static void bridge_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
- 				   "mst_enabled",
- 				   "mst_enabled %u ",
- 				   !!(bm->optval & mst_bit));
+@@ -661,6 +675,11 @@ static void bridge_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
+ 				   "mdb_offload_fail_notification",
+ 				   "mdb_offload_fail_notification %u ",
+ 				   !!(bm->optval & mofn_bit));
 +		if (bm->optmask & mcfl_bit)
 +			print_uint(PRINT_ANY,
 +				   "mcast_flood_always",
@@ -80,10 +84,10 @@ index 1fe8955..d4f2c80 100644
  
  	if (tb[IFLA_BR_MCAST_ROUTER])
 diff --git a/man/man8/ip-link.8.in b/man/man8/ip-link.8.in
-index efb6248..2308835 100644
+index e3297c57..f2852adf 100644
 --- a/man/man8/ip-link.8.in
 +++ b/man/man8/ip-link.8.in
-@@ -1712,6 +1712,8 @@ the following additional arguments are supported:
+@@ -1737,6 +1737,8 @@ the following additional arguments are supported:
  ] [
  .BI vlan_stats_per_port " VLAN_STATS_PER_PORT "
  ] [
@@ -92,7 +96,7 @@ index efb6248..2308835 100644
  .BI mcast_snooping " MULTICAST_SNOOPING "
  ] [
  .BI mcast_vlan_snooping " MULTICAST_VLAN_SNOOPING "
-@@ -1860,6 +1862,16 @@ or disable
+@@ -1887,6 +1889,16 @@ or disable
  .RI ( VLAN_STATS_PER_PORT " == 0) "
  per-VLAN per-port stats accounting. Can be changed only when there are no port VLANs configured.
  

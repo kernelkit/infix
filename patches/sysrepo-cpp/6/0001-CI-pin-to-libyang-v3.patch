@@ -1,0 +1,47 @@
+From ee0ce2ea31f3ecba4a4753a761df08f0698c2726 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Mon, 20 Oct 2025 11:47:26 +0200
+Subject: [PATCH 1/9] CI: pin to libyang v3
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Depends-on: https://gerrit.cesnet.cz/c/CzechLight/libyang-cpp/+/8978
+Change-Id: I2521ad3a62d6197e757e636b88478deeb3bb5592
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .zuul.yaml | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index 7ada6f7..cef174f 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -4,9 +4,9 @@
+         - f38-gcc-cover:
+             required-projects:
+               - name: github/CESNET/libyang
+-                override-checkout: devel
++                override-checkout: cesnet/2025-07-08
+               - name: github/sysrepo/sysrepo
+-                override-checkout: devel
++                override-checkout: cesnet/2025-06-02
+               - name: github/doctest/doctest
+                 override-checkout: v2.4.8
+               - name: github/rollbear/trompeloeil
+@@ -15,9 +15,9 @@
+         - f38-clang-asan-ubsan:
+             required-projects: &projects
+               - name: github/CESNET/libyang
+-                override-checkout: devel
++                override-checkout: cesnet/2025-07-08
+               - name: github/sysrepo/sysrepo
+-                override-checkout: devel
++                override-checkout: cesnet/2025-06-02
+               - name: github/doctest/doctest
+                 override-checkout: v2.4.11
+               - name: github/rollbear/trompeloeil
+-- 
+2.43.0
+
