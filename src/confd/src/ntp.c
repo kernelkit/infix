@@ -215,7 +215,7 @@ static int change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 		/* Local clock fallback - only if stratum is valid (1-15) */
 		if (stratum >= 1 && stratum <= 15) {
 			fprintf(fp, "# Local reference clock - fallback stratum %d source\n", stratum);
-			fprintf(fp, "local stratum %d orphan\n\n", stratum);
+			fprintf(fp, "local stratum %d orphan waitunsynced 0\n\n", stratum);
 		}
 	}
 
