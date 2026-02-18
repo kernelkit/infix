@@ -1,0 +1,562 @@
+From 57b3cd8612a8da852f0796d97e6a7526cc4742cc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Wed, 18 Feb 2026 17:02:23 +0100
+Subject: [PATCH 7/7] bpi-r3/r4: Add probe for specific model
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Probe for bpi-r3 and bpi-r3-mini and select correct device tree,
+prepare for bpi-r4 (not supported yet, but soon), for bpi-r3,
+look if there are phys connected, if so it is a mini, else it is
+regular bpi-r3.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ arch/arm/mach-mediatek/Kconfig       |   3 +
+ board/mediatek/mt7986/Kconfig        |  10 ++
+ board/mediatek/mt7986/Makefile       |   1 +
+ board/mediatek/mt7986/bpir3.c        | 229 +++++++++++++++++++++++++++
+ board/mediatek/mt7988/Kconfig        |   9 ++
+ board/mediatek/mt7988/Makefile       |   1 +
+ board/mediatek/mt7988/bpir4.c        |  33 ++++
+ configs/mt7986a_bpir3_emmc_defconfig |   2 +
+ configs/mt7986a_bpir3_mini_defconfig |  66 ++++++++
+ configs/mt7986a_bpir3_sd_defconfig   |   2 +
+ configs/mt7988a_bpir4_defconfig      |  85 ++++++++++
+ 11 files changed, 441 insertions(+)
+ create mode 100644 board/mediatek/mt7986/Kconfig
+ create mode 100644 board/mediatek/mt7986/bpir3.c
+ create mode 100644 board/mediatek/mt7988/Kconfig
+ create mode 100644 board/mediatek/mt7988/bpir4.c
+ create mode 100644 configs/mt7986a_bpir3_mini_defconfig
+ create mode 100644 configs/mt7988a_bpir4_defconfig
+
+diff --git a/arch/arm/mach-mediatek/Kconfig b/arch/arm/mach-mediatek/Kconfig
+index ff1fdee5c8d..def8a564d90 100644
+--- a/arch/arm/mach-mediatek/Kconfig
++++ b/arch/arm/mach-mediatek/Kconfig
+@@ -153,4 +153,7 @@ config MTK_BROM_HEADER_INFO
+ 	default "media=snand;nandinfo=2k+64" if TARGET_MT7981 || TARGET_MT7986 || TARGET_MT7988
+ 	default "lk=1" if TARGET_MT7623
+ 
++source "board/mediatek/mt7986/Kconfig"
++source "board/mediatek/mt7988/Kconfig"
++
+ endif
+diff --git a/board/mediatek/mt7986/Kconfig b/board/mediatek/mt7986/Kconfig
+new file mode 100644
+index 00000000000..cea150b52d8
+--- /dev/null
++++ b/board/mediatek/mt7986/Kconfig
+@@ -0,0 +1,10 @@
++if TARGET_MT7986
++
++config BOARD_BPI_R3
++	bool "BananaPi BPI-R3 / BPI-R3-mini board support"
++	select BOARD_LATE_INIT
++	help
++	  Enable runtime variant detection for BananaPi BPI-R3 and BPI-R3-mini,
++	  selecting the correct device tree from a FIT image.
++
++endif
+diff --git a/board/mediatek/mt7986/Makefile b/board/mediatek/mt7986/Makefile
+index 7bb84fa2f4e..b006ee150bd 100644
+--- a/board/mediatek/mt7986/Makefile
++++ b/board/mediatek/mt7986/Makefile
+@@ -1,3 +1,4 @@
+ # SPDX-License-Identifier:	GPL-2.0
+ 
+ obj-y	+= mt7986_rfb.o
++obj-$(CONFIG_BOARD_BPI_R3) += bpir3.o
+diff --git a/board/mediatek/mt7986/bpir3.c b/board/mediatek/mt7986/bpir3.c
+new file mode 100644
+index 00000000000..01eef55bb74
+--- /dev/null
++++ b/board/mediatek/mt7986/bpir3.c
+@@ -0,0 +1,229 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * BPI-R3 / BPI-R3-mini board variant detection
++ */
++
++#include <env.h>
++#include <fdt_support.h>
++#include <image.h>
++#include <asm/global_data.h>
++#include <asm/io.h>
++#include <linux/delay.h>
++#include <linux/string.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++enum bpir3_variant {
++	BPIR3,
++	BPIR3_MINI,
++};
++
++/*
++ * Detect BPI-R3 vs BPI-R3-mini by probing for the Airoha EN8811H PHY.
++ *
++ * BPI-R3-mini: EN8811H is directly on the MDIO bus at addr 14.
++ *              GPIO49 (active-low) is its reset; PHYSID1 = 0x03a2.
++ * BPI-R3:      MT7531AE switch via SGMII; nothing at MDIO addr 14 → 0xffff.
++ *
++ * NOTE: I2C 0x50 is NOT usable — BPI-R3 SFP cage EEPROMs occupy 0x50–0x5b.
++ */
++
++/*
++ * MT7986 GPIO — gpio_base = 0x1001f000
++ *
++ * DIR  register: base + 0x000 + (pin/32)*0x10,  1 bit/pin  (1=output)
++ * DOUT register: base + 0x100 + (pin/32)*0x10,  1 bit/pin
++ * MODE register: base + 0x300 + (pin*4/32)*0x10, 4 bits/pin (0=GPIO, 1=eth…)
++ */
++#define MT7986_GPIO_BASE	0x1001f000UL
++#define GPIO_DIR_REG(p)		(MT7986_GPIO_BASE + 0x000 + ((p) / 32) * 0x10)
++#define GPIO_DOUT_REG(p)	(MT7986_GPIO_BASE + 0x100 + ((p) / 32) * 0x10)
++#define GPIO_MODE_REG(p)	(MT7986_GPIO_BASE + 0x300 + (((p) * 4) / 32) * 0x10)
++#define GPIO_MODE_SHIFT(p)	(((p) * 4) % 32)
++
++/* EN8811H PHY reset: GPIO49, active-low */
++#define EN8811H_RST_GPIO	49
++/* EN8811H power control lines: active-low enables on some BPI-R3-mini dts */
++#define EN8811H_PWR_A_GPIO	11
++#define EN8811H_PWR_B_GPIO	12
++/* Alternative EN8811H power control lines used by other mini trees */
++#define EN8811H_PWR2_A_GPIO	16
++#define EN8811H_PWR2_B_GPIO	17
++
++/* MDC/MDIO pins: GPIO67 = MDC, GPIO68 = MDIO, both on function 1 ("eth") */
++#define MDC_GPIO		67
++#define MDIO_GPIO		68
++
++/*
++ * MT7986 Frame Engine: ethernet@15100000, GMAC at +0x10000
++ *
++ * PPSC (+0x0000): MDC clock config — bits[29:24] = divider, bit[4] = turbo
++ * PIAC (+0x0004): PHY indirect access — write then poll PHY_ACS_ST clear
++ */
++#define GMAC_BASE		0x15110000UL
++#define GMAC_PPSC		(GMAC_BASE + 0x0000)
++#define GMAC_PIAC		(GMAC_BASE + 0x0004)
++
++#define PPSC_MDC_CFG_MASK	GENMASK(29, 24)
++#define PPSC_MDC_CFG(d)		(((d) & 0x3f) << 24)
++#define PPSC_MDC_TURBO		BIT(4)
++/* divider = 10 → MDC ≈ 2.5 MHz from 25 MHz reference */
++#define MDC_DIVIDER		10
++
++#define PIAC_ACS_ST		BIT(31)
++#define PIAC_REG_S		25
++#define PIAC_PHY_S		20
++#define PIAC_CMD_S		18
++#define PIAC_ST_S		16
++#define PIAC_DATA_MASK		0xffffU
++#define PIAC_CMD_READ		2
++#define PIAC_ST_C22		1
++
++/* EN8811H PHY ID register values */
++#define EN8811H_PHYSID1		0x03a2
++#define EN8811H_PHYSID2_MASK	0xfff0
++#define EN8811H_PHYSID2		0xa410
++#define MII_PHYSID1		0x02	/* IEEE MII register 2 */
++#define MII_PHYSID2		0x03	/* IEEE MII register 3 */
++
++/* Set a GPIO pin's mode field (0 = GPIO, 1 = eth function, …) */
++static void gpio_set_mode(unsigned int pin, unsigned int func)
++{
++	clrsetbits_le32(GPIO_MODE_REG(pin),
++			0xf << GPIO_MODE_SHIFT(pin),
++			(func & 0xf) << GPIO_MODE_SHIFT(pin));
++}
++
++/* Configure a GPIO pin as output and drive it high or low */
++static void gpio_out(unsigned int pin, int val)
++{
++	setbits_le32(GPIO_DIR_REG(pin), BIT(pin % 32));
++	if (val)
++		setbits_le32(GPIO_DOUT_REG(pin), BIT(pin % 32));
++	else
++		clrbits_le32(GPIO_DOUT_REG(pin), BIT(pin % 32));
++}
++
++/*
++ * Clause-22 MDIO read via the MT7986 GMAC PHY indirect access register.
++ * Returns the 16-bit register value, or -1 on timeout.
++ */
++static int mdio_read_c22(unsigned int phy, unsigned int reg)
++{
++	u32 val;
++	int i;
++
++	val = (PIAC_ST_C22   << PIAC_ST_S)  |
++	      (PIAC_CMD_READ << PIAC_CMD_S) |
++	      (phy           << PIAC_PHY_S) |
++	      (reg           << PIAC_REG_S);
++	writel(val | PIAC_ACS_ST, GMAC_PIAC);
++
++	for (i = 0; i < 5000; i++) {
++		val = readl(GMAC_PIAC);
++		if (!(val & PIAC_ACS_ST))
++			return (int)(val & PIAC_DATA_MASK);
++		udelay(1);
++	}
++
++	return -1; /* timeout */
++}
++
++static void enable_mini_power_lines(unsigned int gpio_a, unsigned int gpio_b)
++{
++	gpio_set_mode(gpio_a, 0);	/* mode 0 = GPIO */
++	gpio_set_mode(gpio_b, 0);	/* mode 0 = GPIO */
++	gpio_out(gpio_a, 0);		/* active-low enable */
++	gpio_out(gpio_b, 0);		/* active-low enable */
++}
++
++static void pulse_mini_phy_reset(void)
++{
++	gpio_set_mode(EN8811H_RST_GPIO, 0);	/* mode 0 = GPIO */
++	gpio_out(EN8811H_RST_GPIO, 0);		/* assert reset */
++	mdelay(10);
++	gpio_out(EN8811H_RST_GPIO, 1);		/* deassert reset */
++	mdelay(20);
++}
++
++static bool is_en8811_id(int id1, int id2)
++{
++	return id1 == EN8811H_PHYSID1 &&
++	       (id2 & EN8811H_PHYSID2_MASK) == EN8811H_PHYSID2;
++}
++
++static int probe_en8811_addr(unsigned int phy_addr)
++{
++	int id1, id2;
++
++	id1 = mdio_read_c22(phy_addr, MII_PHYSID1);
++	id2 = mdio_read_c22(phy_addr, MII_PHYSID2);
++
++	if (id1 < 0 || id2 < 0)
++		return 0;
++
++	return is_en8811_id(id1, id2);
++}
++
++static enum bpir3_variant detect_bpir3_variant(void)
++{
++	unsigned int pwr_a[] = { EN8811H_PWR_A_GPIO, EN8811H_PWR2_A_GPIO };
++	unsigned int pwr_b[] = { EN8811H_PWR_B_GPIO, EN8811H_PWR2_B_GPIO };
++	unsigned int i;
++
++	/* Switch GPIO67 (MDC) and GPIO68 (MDIO) to eth function */
++	gpio_set_mode(MDC_GPIO,  1);
++	gpio_set_mode(MDIO_GPIO, 1);
++
++	/* Configure MDC clock: enable turbo + set safe divider (~2.5 MHz) */
++	setbits_le32(GMAC_PPSC, PPSC_MDC_TURBO);
++	clrsetbits_le32(GMAC_PPSC, PPSC_MDC_CFG_MASK, PPSC_MDC_CFG(MDC_DIVIDER));
++
++	/*
++	 * Enable EN8811H power rails and probe; some mini boards use
++	 * GPIO11/12, others GPIO16/17.
++	 */
++	for (i = 0; i < ARRAY_SIZE(pwr_a); i++) {
++		enable_mini_power_lines(pwr_a[i], pwr_b[i]);
++		pulse_mini_phy_reset();
++
++		if (probe_en8811_addr(14) || probe_en8811_addr(15)) {
++			/* Assert reset; DM eth-phy will deassert with proper delays */
++			gpio_out(EN8811H_RST_GPIO, 0);
++			return BPIR3_MINI;
++		}
++	}
++
++	return BPIR3;
++}
++
++int board_fit_config_name_match(const char *name)
++{
++	static int variant = -1;
++
++	if (variant < 0)
++		variant = detect_bpir3_variant();
++
++	switch (variant) {
++	case BPIR3_MINI:
++		return strcmp(name, "mt7986a-bpi-r3-mini") ? -1 : 0;
++	case BPIR3:
++	default:
++		/*
++		 * Accept both sd and emmc variants of BPI-R3;
++		 * storage type is determined by spl_boot_device(), not here.
++		 */
++		return (strcmp(name, "mt7986a-bpi-r3-sd") == 0 ||
++			strcmp(name, "mt7986a-bpi-r3-emmc") == 0) ? 0 : -1;
++	}
++}
++
++int board_late_init(void)
++{
++	const char *model = fdt_getprop(gd->fdt_blob, 0, "model", NULL);
++
++	if (model && strstr(model, "Mini"))
++		env_set("fdtfile", "mediatek/mt7986a-bananapi-bpi-r3-mini.dtb");
++
++	return 0;
++}
+diff --git a/board/mediatek/mt7988/Kconfig b/board/mediatek/mt7988/Kconfig
+new file mode 100644
+index 00000000000..24c70417ec5
+--- /dev/null
++++ b/board/mediatek/mt7988/Kconfig
+@@ -0,0 +1,9 @@
++if TARGET_MT7988
++
++config BOARD_BPI_R4
++	bool "BananaPi BPI-R4 / BPI-R4-2g5 board support"
++	help
++	  Enable runtime variant detection for BananaPi BPI-R4 and BPI-R4-2g5,
++	  selecting the correct device tree from a FIT image.
++
++endif
+diff --git a/board/mediatek/mt7988/Makefile b/board/mediatek/mt7988/Makefile
+index f1249ab3715..157ee371eae 100644
+--- a/board/mediatek/mt7988/Makefile
++++ b/board/mediatek/mt7988/Makefile
+@@ -1,3 +1,4 @@
+ # SPDX-License-Identifier:	GPL-2.0
+ 
+ obj-y	+= mt7988_rfb.o
++obj-$(CONFIG_BOARD_BPI_R4) += bpir4.o
+diff --git a/board/mediatek/mt7988/bpir4.c b/board/mediatek/mt7988/bpir4.c
+new file mode 100644
+index 00000000000..46e22d38135
+--- /dev/null
++++ b/board/mediatek/mt7988/bpir4.c
+@@ -0,0 +1,33 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * BPI-R4 / BPI-R4-2g5 board variant detection
++ */
++
++#include <image.h>
++#include <linux/string.h>
++
++enum bpir4_variant {
++	BPIR4,
++	BPIR4_2G5,
++};
++
++/*
++ * Detect which BPI-R4 variant this board is.
++ * TODO: implement real hardware detection
++ */
++static enum bpir4_variant detect_bpir4_variant(void)
++{
++	/* Stub: always report BPI-R4 */
++	return BPIR4;
++}
++
++int board_fit_config_name_match(const char *name)
++{
++	switch (detect_bpir4_variant()) {
++	case BPIR4_2G5:
++		return strcmp(name, "mt7988a-bananapi-bpi-r4-2g5") ? -1 : 0;
++	case BPIR4:
++	default:
++		return strcmp(name, "mt7988a-bananapi-bpi-r4") ? -1 : 0;
++	}
++}
+diff --git a/configs/mt7986a_bpir3_emmc_defconfig b/configs/mt7986a_bpir3_emmc_defconfig
+index ef6a4822c18..193acb4a9b4 100644
+--- a/configs/mt7986a_bpir3_emmc_defconfig
++++ b/configs/mt7986a_bpir3_emmc_defconfig
+@@ -9,6 +9,8 @@ CONFIG_ENV_SIZE=0x80000
+ CONFIG_ENV_OFFSET=0x300000
+ CONFIG_DEFAULT_DEVICE_TREE="mt7986a-bpi-r3-emmc"
+ CONFIG_TARGET_MT7986=y
++CONFIG_BOARD_BPI_R3=y
++CONFIG_SPL_LOAD_FIT=y
+ CONFIG_SYS_LOAD_ADDR=0x46000000
+ CONFIG_DEBUG_UART_BASE=0x11002000
+ CONFIG_DEBUG_UART_CLOCK=40000000
+diff --git a/configs/mt7986a_bpir3_mini_defconfig b/configs/mt7986a_bpir3_mini_defconfig
+new file mode 100644
+index 00000000000..39e44555c55
+--- /dev/null
++++ b/configs/mt7986a_bpir3_mini_defconfig
+@@ -0,0 +1,66 @@
++CONFIG_ARM=y
++CONFIG_SYS_HAS_NONCACHED_MEMORY=y
++CONFIG_POSITION_INDEPENDENT=y
++CONFIG_ARCH_MEDIATEK=y
++CONFIG_TEXT_BASE=0x41e00000
++CONFIG_SYS_MALLOC_F_LEN=0x4000
++CONFIG_NR_DRAM_BANKS=1
++CONFIG_ENV_SIZE=0x80000
++CONFIG_ENV_OFFSET=0x300000
++CONFIG_DEFAULT_DEVICE_TREE="mt7986a-bpi-r3-mini"
++CONFIG_TARGET_MT7986=y
++CONFIG_BOARD_BPI_R3=y
++CONFIG_SPL_LOAD_FIT=y
++CONFIG_SYS_LOAD_ADDR=0x46000000
++CONFIG_DEBUG_UART_BASE=0x11002000
++CONFIG_DEBUG_UART_CLOCK=40000000
++CONFIG_DEBUG_UART=y
++# CONFIG_EFI_LOADER is not set
++# CONFIG_AUTOBOOT is not set
++CONFIG_DEFAULT_FDT_FILE="mt7986a-bpi-r3-mini"
++CONFIG_SYS_CBSIZE=512
++CONFIG_SYS_PBSIZE=1049
++CONFIG_LOGLEVEL=7
++CONFIG_LOG=y
++CONFIG_SYS_PROMPT="BPI-R3> "
++# CONFIG_BOOTM_NETBSD is not set
++# CONFIG_BOOTM_PLAN9 is not set
++# CONFIG_BOOTM_RTEMS is not set
++# CONFIG_BOOTM_VXWORKS is not set
++# CONFIG_CMD_ELF is not set
++# CONFIG_CMD_UNLZ4 is not set
++# CONFIG_CMD_UNZIP is not set
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_GPT=y
++CONFIG_CMD_GPT_RENAME=y
++CONFIG_CMD_LSBLK=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
++CONFIG_CMD_READ=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_SMC=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_ENV_OVERWRITE=y
++CONFIG_ENV_IS_IN_MMC=y
++CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
++CONFIG_NET_RANDOM_ETHADDR=y
++CONFIG_REGMAP=y
++CONFIG_SYSCON=y
++CONFIG_CLK=y
++CONFIG_MMC_HS200_SUPPORT=y
++CONFIG_MMC_MTK=y
++CONFIG_PHY_FIXED=y
++CONFIG_MEDIATEK_ETH=y
++CONFIG_PINCTRL=y
++CONFIG_PINCONF=y
++CONFIG_PINCTRL_MT7986=y
++CONFIG_POWER_DOMAIN=y
++CONFIG_MTK_POWER_DOMAIN=y
++CONFIG_DM_REGULATOR=y
++CONFIG_DM_REGULATOR_FIXED=y
++CONFIG_DM_SERIAL=y
++CONFIG_MTK_SERIAL=y
++CONFIG_FAT_WRITE=y
++CONFIG_HEXDUMP=y
+diff --git a/configs/mt7986a_bpir3_sd_defconfig b/configs/mt7986a_bpir3_sd_defconfig
+index 3d971f5c313..e498b58a4a5 100644
+--- a/configs/mt7986a_bpir3_sd_defconfig
++++ b/configs/mt7986a_bpir3_sd_defconfig
+@@ -9,6 +9,8 @@ CONFIG_ENV_SIZE=0x80000
+ CONFIG_ENV_OFFSET=0x300000
+ CONFIG_DEFAULT_DEVICE_TREE="mt7986a-bpi-r3-sd"
+ CONFIG_TARGET_MT7986=y
++CONFIG_BOARD_BPI_R3=y
++CONFIG_SPL_LOAD_FIT=y
+ CONFIG_SYS_LOAD_ADDR=0x46000000
+ CONFIG_DEBUG_UART_BASE=0x11002000
+ CONFIG_DEBUG_UART_CLOCK=40000000
+diff --git a/configs/mt7988a_bpir4_defconfig b/configs/mt7988a_bpir4_defconfig
+new file mode 100644
+index 00000000000..e2e128ec29d
+--- /dev/null
++++ b/configs/mt7988a_bpir4_defconfig
+@@ -0,0 +1,85 @@
++CONFIG_ARM=y
++CONFIG_SYS_HAS_NONCACHED_MEMORY=y
++CONFIG_POSITION_INDEPENDENT=y
++CONFIG_ARCH_MEDIATEK=y
++CONFIG_TEXT_BASE=0x41e00000
++CONFIG_SYS_MALLOC_F_LEN=0x4000
++CONFIG_NR_DRAM_BANKS=1
++CONFIG_DEFAULT_DEVICE_TREE="mt7988a-bananapi-bpi-r4"
++CONFIG_TARGET_MT7988=y
++CONFIG_BOARD_BPI_R4=y
++CONFIG_SPL_LOAD_FIT=y
++CONFIG_SYS_LOAD_ADDR=0x46000000
++CONFIG_DEBUG_UART_BASE=0x11000000
++CONFIG_DEBUG_UART_CLOCK=40000000
++CONFIG_DEBUG_UART=y
++# CONFIG_EFI_LOADER is not set
++# CONFIG_AUTOBOOT is not set
++CONFIG_DEFAULT_FDT_FILE="mt7988a-bananapi-bpi-r4"
++CONFIG_SYS_CBSIZE=512
++CONFIG_SYS_PBSIZE=1049
++CONFIG_LOGLEVEL=7
++CONFIG_LOG=y
++CONFIG_SYS_PROMPT="BPI-R4> "
++# CONFIG_BOOTM_NETBSD is not set
++# CONFIG_BOOTM_PLAN9 is not set
++# CONFIG_BOOTM_RTEMS is not set
++# CONFIG_BOOTM_VXWORKS is not set
++# CONFIG_CMD_ELF is not set
++CONFIG_CMD_CLK=y
++CONFIG_CMD_DM=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_PWM=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_MTD=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_SMC=y
++CONFIG_DOS_PARTITION=y
++CONFIG_EFI_PARTITION=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
++CONFIG_USE_IPADDR=y
++CONFIG_IPADDR="192.168.1.1"
++CONFIG_USE_NETMASK=y
++CONFIG_NETMASK="255.255.255.0"
++CONFIG_USE_SERVERIP=y
++CONFIG_SERVERIP="192.168.1.2"
++CONFIG_PROT_TCP=y
++CONFIG_NET_RANDOM_ETHADDR=y
++CONFIG_REGMAP=y
++CONFIG_SYSCON=y
++CONFIG_CLK=y
++CONFIG_MMC_HS200_SUPPORT=y
++CONFIG_MMC_MTK=y
++CONFIG_MTD=y
++CONFIG_DM_MTD=y
++CONFIG_MTD_SPI_NAND=y
++CONFIG_DM_SPI_FLASH=y
++CONFIG_SPI_FLASH_SFDP_SUPPORT=y
++CONFIG_SPI_FLASH_EON=y
++CONFIG_SPI_FLASH_GIGADEVICE=y
++CONFIG_SPI_FLASH_ISSI=y
++CONFIG_SPI_FLASH_MACRONIX=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_STMICRO=y
++CONFIG_SPI_FLASH_WINBOND=y
++CONFIG_SPI_FLASH_XMC=y
++CONFIG_SPI_FLASH_XTX=y
++CONFIG_SPI_FLASH_MTD=y
++CONFIG_PHY_FIXED=y
++CONFIG_MEDIATEK_ETH=y
++CONFIG_PINCTRL=y
++CONFIG_PINCONF=y
++CONFIG_PINCTRL_MT7988=y
++CONFIG_POWER_DOMAIN=y
++CONFIG_MTK_POWER_DOMAIN=y
++CONFIG_DM_PWM=y
++CONFIG_PWM_MTK=y
++CONFIG_RAM=y
++CONFIG_DM_SERIAL=y
++CONFIG_MTK_SERIAL=y
++CONFIG_SPI=y
++CONFIG_DM_SPI=y
++CONFIG_MTK_SPIM=y
++CONFIG_LZO=y
++CONFIG_HEXDUMP=y
+-- 
+2.43.0
+

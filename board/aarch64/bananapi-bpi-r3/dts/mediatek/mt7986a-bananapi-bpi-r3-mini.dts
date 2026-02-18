@@ -1,0 +1,12 @@
+#include <arm64/mediatek/mt7986a-bananapi-bpi-r3-mini.dts>
+
+#include "mt7986a-bananapi-bpi-r3.dtsi"
+#include "mt7986a-bananapi-bpi-r3-emmc.dtsi"
+
+&phy0 {
+	compatible = "ethernet-phy-id03a2.a411";
+};
+&phy1 {
+	compatible = "ethernet-phy-id03a2.a411";
+};
+

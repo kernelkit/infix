@@ -1,5 +1,3 @@
-#include <arm64/mediatek/mt7986a-bananapi-bpi-r3.dts>
-
 / {
 	chosen {
 		infix {

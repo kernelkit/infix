@@ -15,6 +15,10 @@
                        scriptaddr = "0x48000000";
                        ramdisk_addr_r = "0x4A000000";
 
+		en8811h_fw_part = "0#en8811h_fw";
+		en8811h_fw_dm_dir = "EthMD32.dm.bin";
+		en8811h_fw_dsp_dir = "EthMD32.DSP.bin";
+
                        /* This is a development platform, keep
                         * developer mode statically enabled.
                         */

@@ -1,8 +1,11 @@
-From 989ef8436df2ee48d308981098c44b1b8257c23b Mon Sep 17 00:00:00 2001
+From 9a9885324c70d607c9c79814441dbc829e212e41 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 10 Jun 2024 13:25:31 +0200
-Subject: [PATCH 8/8] hush: Remove Ctrl-C detection in loops
-Organization: Addiva Elektronik
+Subject: [PATCH 1/7] hush: Remove Ctrl-C detection in loops
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 Assume that the original intent was to emulate SIGINT to a shell. This
 only works as expected if the loop in question is the ouermost, and
@@ -14,15 +17,16 @@ Disable this behavior and delegate the problem of loop termination to
 the writer of the script instead.
 
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  common/cli_hush.c | 7 -------
  1 file changed, 7 deletions(-)
 
 diff --git a/common/cli_hush.c b/common/cli_hush.c
-index 171069f5f4..d6d487893f 100644
+index a6a8edce1f4..0711e05a779 100644
 --- a/common/cli_hush.c
 +++ b/common/cli_hush.c
-@@ -1796,13 +1796,6 @@ static int run_list_real(struct pipe *pi)
+@@ -1792,13 +1792,6 @@ static int run_list_real(struct pipe *pi)
  	for (; pi; pi = (flag_restore != 0) ? rpipe : pi->next) {
  		if (pi->r_mode == RES_WHILE || pi->r_mode == RES_UNTIL ||
  			pi->r_mode == RES_FOR) {
@@ -37,5 +41,5 @@ index 171069f5f4..d6d487893f 100644
  				if (!rpipe) {
  					flag_rep = 0;
 -- 
-2.34.1
+2.43.0
 

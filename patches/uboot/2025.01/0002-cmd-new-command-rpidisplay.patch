@@ -1,3 +1,20 @@
+From 7efc3aa61fbc84b2c0c959e737257d2de2e8020c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Sat, 6 Sep 2025 22:18:27 +0200
+Subject: [PATCH 2/7] cmd: new command rpidisplay
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ cmd/Kconfig       | 14 ++++++++
+ cmd/Makefile      |  2 +-
+ cmd/rpi_display.c | 81 +++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 96 insertions(+), 1 deletion(-)
+ create mode 100644 cmd/rpi_display.c
+
 diff --git a/cmd/Kconfig b/cmd/Kconfig
 index 1d7ddb4ed36..8572dc4353e 100644
 --- a/cmd/Kconfig
@@ -130,3 +147,6 @@ index 00000000000..07abdc08552
 +	"Returns: 0=connected, 1=not detected, 2=no video\n"
 +	"Usage: if testrpidisplay; then echo DSI found; fi"
 +);
+-- 
+2.43.0
+

@@ -1,2 +1,4 @@
+#include <arm64/mediatek/mt7986a-bananapi-bpi-r3.dts>
+
 #include "mt7986a-bananapi-bpi-r3.dtsi"
 #include "mt7986a-bananapi-bpi-r3-sd.dtsi"
