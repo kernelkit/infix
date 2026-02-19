@@ -23,7 +23,7 @@ with infamy.Test() as test:
         tgtssh = env.attach("target", "mgmt", "ssh")
 
     with test.step("Verify the presence of a watchdog device"):
-        wctl = tgtssh.run(["watchdogctl"], stdout=subprocess.PIPE)
+        wctl = tgtssh.run(["watchdogctl", "-j"], stdout=subprocess.PIPE)
         conf = json.loads(wctl.stdout)
 
         dogs = [ dog for dog in conf.get("device", []) if dog.get("name", "") == "/dev/watchdog" ]
