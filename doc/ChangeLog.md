@@ -12,10 +12,15 @@ All notable changes to the project are documented in this file.
 - Upgrade Buildroot to 2025.02.11 (LTS)
 - Add support for Microchip SAMA7G54-EK Evaluation Kit, Arm Cortex-A7
 - Add GPS/GNSS receiver support with NTP reference clock integration
+- Add support for [Banana Pi R3 Mini][BPI-R3-MINI], a 2 port router with 2 WiFi chip,
+  uses the same bootloader as BPI-R3 (eMMC-version)
 
 ### Fixes
 
 N/A
+
+[BPI-R3-MINI]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3_Mini
+
 
 [v26.01.0][] - 2026-02-03
 -------------------------
