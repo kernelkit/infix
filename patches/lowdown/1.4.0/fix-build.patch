@@ -1,0 +1,17 @@
+diff --git a/configure b/configure
+index dda8f27..8088b1c 100755
+--- a/configure
++++ b/configure
+@@ -106,9 +106,9 @@ done
+ # will ultimately be used in the event that none were passed in.
+ 
+ PASSED_IN_CFLAGS=$CFLAGS
+-AR=`printf "all:\\n\\t@echo \\\$(AR)\\n" | make ${MAKE_FLAGS} -sf -`
+-CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
+-CFLAGS=`printf "all:\\n\\t@echo \\\$(CFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
++CFLAGS="${CFLAGS} -g -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
++CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
++LDLIBS=
+ 
+ # If there are no passed-in CFLAGS, so the CFLAGS are coming from `make,
+ # add some additional useful defaults.
