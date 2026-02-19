@@ -1,0 +1,38 @@
+From de38f3ecfe42e9a3ebb43cb85239a82ba65560b7 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Tue, 17 Feb 2026 21:59:59 +0100
+Subject: [PATCH 33/33] net: phy: air_en8811h: add OF device table for
+ auto-loading
+
+mdio_uevent() only emits an OF-style MODALIAS via
+of_device_uevent_modalias(), never the mdio: binary format that
+MODULE_DEVICE_TABLE(mdio, ...) generates. Without an OF device table,
+modules.alias has no matching entry for the uevent, so udev cannot
+trigger modprobe automatically.
+
+Add an of_device_id table for the EN8811H compatible string defined in
+the DT binding and export it via MODULE_DEVICE_TABLE(of, ...) so that
+depmod generates the necessary alias. The table is intentionally not
+wired into the phy_driver struct, as phy_driver_register() explicitly
+rejects drivers that provide an of_match_table.
+---
+ drivers/net/phy/air_en8811h.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/net/phy/air_en8811h.c b/drivers/net/phy/air_en8811h.c
+index badd65f0ccee..b609465247a2 100644
+--- a/drivers/net/phy/air_en8811h.c
++++ b/drivers/net/phy/air_en8811h.c
+@@ -1184,6 +1184,12 @@ static int en8811h_suspend(struct phy_device *phydev)
+ 	return genphy_suspend(phydev);
+ }
+ 
++static const struct of_device_id en8811h_of_match[] = {
++	{ .compatible = "ethernet-phy-id03a2.a411" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, en8811h_of_match);
++
+ static struct phy_driver en8811h_driver[] = {
+ {
+ 	PHY_ID_MATCH_MODEL(EN8811H_PHY_ID),
