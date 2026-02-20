@@ -1,39 +1,21 @@
 #!/bin/sh
-# Find, install, and run product specific files and script in /etc
-# before resuming bootstrap.
+# Run product specific init scripts and set bootstrap conditions.
+#
+# Product-specific files (udev rules, factory config, etc.) are already
+# copied to / by the pre-udev run task before udevd starts.  This
+# script handles the remaining product init: running custom scripts
+# from /etc/product/init.d/ and setting finit conditions.
 #
 # Use /etc/product/init.d/S01-myscript for scripts, may be a symlink, it
 # will be called with `start` as its only argument.
-#
-# The compatible array is listed in the same order as the device tree,
-# most significant to least.  Hence the reverse.[], to ensure overrides
-# are applied in order of significance.
 ident=$(basename "$0")
 
 PRODUCT_INIT=/etc/product/init.d
-PREFIXD=/usr/share/product
-COMPATIBLES=$(jq -r '.compatible | reverse.[] | ascii_downcase' /run/system.json)
 
 note()
 {
     logger -I $$ -k -p user.notice -t "$ident" "$1"
 }
-
-found=false
-for PRODUCT in $COMPATIBLES; do
-    DIR="$PREFIXD/$PRODUCT"
-    if [ -d "$DIR" ]; then
-        note "Using vendor/product-specific defaults for $PRODUCT."
-        for dir in "$DIR"/*; do
-            [ -d "$dir" ] && cp -a "$dir" /
-        done
-        found=true
-    fi
-done
-
-if [ "$found" = false ]; then
-    note "No vendor/product-specific directory found, using built-in defaults."
-fi
 
 # Conditions for bootstrap services, this enables product specific
 # init scripts to prevent select services from starting.

@@ -1,0 +1,48 @@
+#!/bin/sh
+# Copy product-specific files to / based on DT compatible strings.
+# Designed to run before udevd, so that udev rules are in place when
+# the kernel starts enumerating devices.  No Python, no jq, no syslogd.
+#
+# Mirrors the platform detection from 00-probe and the copy logic from
+# 05-product, but reads the DT directly instead of /run/system.json.
+
+PREFIXD=/usr/share/product
+COMPAT=/sys/firmware/devicetree/base/compatible
+IDENT=$(basename "$0")
+
+note()
+{
+    logger -I $$ -k -p user.notice -t "$IDENT" "$*"
+}
+
+# Only DT-based systems have product-specific data keyed by compatible.
+# QEMU and x86/DMI systems have no product dirs to copy.
+[ -f "$COMPAT" ] || exit 0
+
+# The DT compatible property is a null-separated list of strings,
+# ordered most-specific first (e.g. "bananapi,bpi-r3\0mediatek,mt7986a").
+# Reverse the list so least-specific is applied first and more-specific
+# overrides it, matching the behaviour of 05-product.
+reversed=""
+while IFS= read -r c; do
+    [ -n "$c" ] || continue
+    reversed="$c${reversed:+ $reversed}"
+done <<EOF
+$(tr '\0' '\n' < "$COMPAT" | tr '[:upper:]' '[:lower:]')
+EOF
+
+found=false
+for compat in $reversed; do
+    dir="$PREFIXD/$compat"
+    [ -d "$dir" ] || continue
+
+    note "Using product-specific defaults for $compat."
+    for subdir in "$dir"/*; do
+        [ -d "$subdir" ] && cp -a "$subdir" /
+    done
+    found=true
+done
+
+$found || note "No product-specific directory found, using built-in defaults."
+
+exit 0
