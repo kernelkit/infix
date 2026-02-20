@@ -9,6 +9,7 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.13 (LTS)
+- Upgrade Buildroot to 2025.02.11 (LTS)
 - Add support for Microchip SAMA7G54-EK Evaluation Kit, Arm Cortex-A7
 - Add GPS/GNSS receiver support with NTP reference clock integration
 
