@@ -259,6 +259,50 @@ download_bootloader()
     log "Bootloader ready in temporary directory"
 }
 
+# Build EN8811H firmware partition image as an ext4 filesystem containing
+# EthMD32.dm.bin and EthMD32.DSP.bin. Returns 0 when created, 1 when source
+# files are missing.
+prepare_en8811h_fw_image()
+{
+    src_dir="$1"
+    out_img="$2"
+    dm_fw="${src_dir}/EthMD32.dm.bin"
+    dsp_fw="${src_dir}/EthMD32.DSP.bin"
+    fw_staging=""
+
+    [ -f "$dm_fw" ] && [ -f "$dsp_fw" ] || return 1
+
+    fw_staging=$(mktemp -d)
+    cp "$dm_fw" "$fw_staging/EthMD32.dm.bin"
+    cp "$dsp_fw" "$fw_staging/EthMD32.DSP.bin"
+
+    rm -f "$out_img"
+    truncate -s 2M "$out_img"
+
+    if command -v mke2fs >/dev/null 2>&1; then
+        mke2fs -q -t ext4 -L en8811h_fw -d "$fw_staging" "$out_img"
+    elif command -v mkfs.ext4 >/dev/null 2>&1; then
+        mkfs.ext4 -q -L en8811h_fw -d "$fw_staging" "$out_img"
+    else
+        rm -rf "$fw_staging"
+        die "mke2fs/mkfs.ext4 not found, cannot create en8811h-fw.bin"
+    fi
+
+    rm -rf "$fw_staging"
+    return 0
+}
+
+maybe_prepare_en8811h_fw_image()
+{
+    out_img="${BINARIES_DIR}/en8811h-fw.bin"
+
+    [ -f "$out_img" ] && return 0
+
+    prepare_en8811h_fw_image "${ROOT_DIR}/images/airoha" "$out_img" || \
+    prepare_en8811h_fw_image "${ROOT_DIR}/airoha" "$out_img" || \
+    prepare_en8811h_fw_image "${BINARIES_DIR}/airoha" "$out_img" || return 0
+}
+
 # Discover boot files for Raspberry Pi boot partition
 # Scans rpi-firmware directory and builds file list for genimage
 discover_rpi_boot_files()
@@ -517,6 +561,11 @@ if [ -n "$DOWNLOAD_BOOT" ]; then
             die "Could not find rootfs.squashfs in $ROOT_DIR"
         fi
     fi
+fi
+
+if [ "$BOARD" = "bananapi-bpi-r3" ]; then
+    maybe_prepare_en8811h_fw_image
+    [ -f "${BINARIES_DIR}/en8811h-fw.bin" ] || die "Missing EN8811H firmware image: ${BINARIES_DIR}/en8811h-fw.bin"
 fi
 
 # Template expansion

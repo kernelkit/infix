@@ -51,6 +51,11 @@ image #INFIX_ID##VERSION#-bpi-r3-#TARGET#.img {
                 size = 4096s
         }
 
+	partition en8811h_fw {
+		size = 10M
+		image = "en8811h-fw.bin"
+	}
+
         partition aux {
                 partition-uuid = D4EF35A0-0652-45A1-B3DE-D63339C82035
                 image = "aux.ext4"

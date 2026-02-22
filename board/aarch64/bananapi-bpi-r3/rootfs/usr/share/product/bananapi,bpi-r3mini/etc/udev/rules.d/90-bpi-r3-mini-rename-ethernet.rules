@@ -1,0 +1,2 @@
+ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/soc/15100000.ethernet/net/eth0", NAME="lan"
+ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/soc/15100000.ethernet/net/eth1", NAME="wan"

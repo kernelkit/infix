@@ -1,0 +1,48 @@
+From c646eef3ee304ae49ad7e3f998ed08bfa0efb7b9 Mon Sep 17 00:00:00 2001
+From: Mihai Sain <mihai.sain@microchip.com>
+Date: Fri, 5 May 2023 13:28:31 +0300
+Subject: [PATCH 3/7] arm: dts: at91: sama7g5ek: increase clock for sdmmc from
+ 25 MHz to 50 MHz
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Current clock for sdmmc0 and sdmmc1 is 25 MHz because of the caps forced
+by the mainline kernel.
+
+Remove the caps in order to increase the clock to 50 MHz.  This will
+improve the boot time when reading the kernel binary.  Tested on
+sama7g5ek rev 5 using mmcinfo command.
+
+Signed-off-by: Mihai Sain <mihai.sain@microchip.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ arch/arm/dts/at91-sama7g5ek.dts | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/arch/arm/dts/at91-sama7g5ek.dts b/arch/arm/dts/at91-sama7g5ek.dts
+index 9b247fcaf66..5bbbdd8ed76 100644
+--- a/arch/arm/dts/at91-sama7g5ek.dts
++++ b/arch/arm/dts/at91-sama7g5ek.dts
+@@ -776,8 +776,6 @@
+ &sdmmc0 {
+ 	bus-width = <8>;
+ 	non-removable;
+-	no-1-8-v;
+-	sdhci-caps-mask = <0x0 0x00200000>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_sdmmc0_default>;
+ 	status = "okay";
+@@ -785,8 +783,6 @@
+ 
+ &sdmmc1 {
+ 	bus-width = <4>;
+-	no-1-8-v;
+-	sdhci-caps-mask = <0x0 0x00200000>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_sdmmc1_default>;
+ 	status = "okay";
+-- 
+2.43.0
+
