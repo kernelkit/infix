@@ -16,7 +16,6 @@ import infamy
 import copy
 import infamy.usb as usb
 import time
-import infamy.netconf as netconf
 from infamy.util import until, wait_boot
 
 with infamy.Test() as test:
