@@ -1,0 +1,31 @@
+graph "dhcp_ntp_dns_combination" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <client> client | <server> server }",
+	    pos="0,120!",
+	    requires="controller",
+	];
+
+        client [
+	    label="{ <mgmt> mgmt | <server> server} | client",
+	    pos="20,130!",
+	    requires="infix",
+	];
+
+	server [
+	    label="{ <client> client | <mgmt> mgmt } | server",
+	    pos="20,120!",
+	    requires="infix",
+	];
+
+        host:server  -- server:mgmt  [requires="mgmt", color=lightgrey]
+	host:client -- client:mgmt [requires="mgmt", color=lightgrey]
+
+	server:client -- client:server [color=blue, fontcolor=black]
+}

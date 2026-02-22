@@ -1,0 +1,21 @@
+=== DHCP NTP DNS combination
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/use_case/dhcp_ntp_dns_combination]
+
+==== Description
+
+Verify statically configured DNS and NTP servers are not lost when receiving
+servers from a DHCP server.
+
+==== Topology
+
+image::topology.svg[DHCP NTP DNS combination topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and configure static IP on client
+. Configure static DNS and NTP on client and verify
+. Set up DHCP server with NTP and DNS options
+. Configure client to use DHCP and verify combined servers
+
+
