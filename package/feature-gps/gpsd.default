@@ -1,1 +1,1 @@
-GPSD_OPTIONS="-n /dev/gps0"
+GPSD_OPTIONS="-n"

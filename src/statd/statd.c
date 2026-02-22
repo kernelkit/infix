@@ -453,7 +453,7 @@ static int subscribe_to_all(struct statd *statd)
 
 int main(int argc, char *argv[])
 {
-	struct ev_signal sigint_watcher, sigusr1_watcher, sighup_watcher;
+	struct ev_signal sigint_watcher, sigusr1_watcher;
 	int log_opts = LOG_PID | LOG_NDELAY;
 	struct statd statd = {};
 	const char *env;
@@ -513,8 +513,6 @@ int main(int argc, char *argv[])
 	ev_signal_init(&sigusr1_watcher, sigusr1_cb, SIGUSR1);
 	sigusr1_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sigusr1_watcher);
-
-	ev_signal_start(statd.ev_loop, &sighup_watcher);
 
 	err = journal_start(&statd.journal, statd.sr_query_ses);
 	if (err) {
