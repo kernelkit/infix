@@ -1,2 +1,3 @@
-service <!service/mdns/running> env:-/etc/default/mdns-alias log:prio:daemon.debug,tag:mdns \
-	[2345] mdns-alias $MDNS_ALIAS_ARGS -- mDNS alias advertiser 
+service log:null env:-/etc/default/mdns-alias                      \
+	[2345] <!service/mdns/running> mdns-alias $MDNS_ALIAS_ARGS \
+	-- mDNS alias advertiser

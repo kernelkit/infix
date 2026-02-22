@@ -31,6 +31,11 @@
 
 #include "dagger.h"
 
+#define SSH_HOSTKEYS      "/etc/ssh/hostkeys"
+#define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
+#define SSL_CERT_DIR      "/etc/ssl/certs"
+#define SSL_KEY_DIR       "/etc/ssl/private"
+
 #define CB_PRIO_PRIMARY   65535
 #define CB_PRIO_PASSIVE   65000
 
@@ -140,7 +145,7 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
 	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
-				CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
+				CB_PRIO_PRIMARY, flags | SR_SUBSCR_NO_THREAD, sub);
 	if (rc) {
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
 		return rc;
@@ -154,7 +159,7 @@ static inline int register_monitor(sr_session_ctx_t *session, const char *module
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
 	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
-					    0, flags | SR_SUBSCR_PASSIVE, sub);
+					    0, flags | SR_SUBSCR_PASSIVE | SR_SUBSCR_NO_THREAD, sub);
 	if (rc) {
 		ERROR("failed subscribing to monitor %s: %s", xpath, sr_strerror(rc));
 		return rc;
@@ -167,7 +172,7 @@ static inline int register_oper(sr_session_ctx_t *session, const char *module, c
 	sr_oper_get_items_cb cb, void *arg, int flags, sr_subscription_ctx_t **sub)
 {
 	int rc = sr_oper_get_subscribe(session, module, xpath, cb, arg,
-				flags | SR_SUBSCR_DEFAULT, sub);
+				flags | SR_SUBSCR_NO_THREAD, sub);
 	if (rc)
 		ERROR("failed subscribing to %s oper: %s", xpath, sr_strerror(rc));
 	return rc;
@@ -176,7 +181,7 @@ static inline int register_oper(sr_session_ctx_t *session, const char *module, c
 static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 	sr_rpc_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	int rc = sr_rpc_subscribe(session, xpath, cb, arg, 0, SR_SUBSCR_DEFAULT, sub);
+	int rc = sr_rpc_subscribe(session, xpath, cb, arg, 0, SR_SUBSCR_NO_THREAD, sub);
 	if (rc)
 		ERROR("failed subscribing to %s rpc: %s", xpath, sr_strerror(rc));
 	return rc;
@@ -238,8 +243,6 @@ int hardware_candidate_init(struct confd *confd);
 int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* keystore.c */
-#define SSH_HOSTKEYS "/etc/ssh/hostkeys"
-#define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
 int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* firewall.c */

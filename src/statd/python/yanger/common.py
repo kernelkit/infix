@@ -1,8 +1,50 @@
+import syslog
 from datetime import timedelta
 
 from . import host
 
-LOG = None
+
+class SysLog:
+    """Lightweight syslog wrapper replacing the logging module.
+
+    Provides the same .error()/.warning()/.info()/.debug() interface
+    used throughout yanger, but uses the C syslog facility directly,
+    avoiding the ~374ms import overhead of logging + logging.handlers.
+    """
+
+    DEBUG = syslog.LOG_DEBUG
+    INFO = syslog.LOG_INFO
+    WARNING = syslog.LOG_WARNING
+    ERROR = syslog.LOG_ERR
+
+    def __init__(self, name):
+        syslog.openlog(name, syslog.LOG_PID)
+        self._level = self.INFO
+
+    def setLevel(self, level):
+        self._level = level
+
+    def _log(self, level, msg, *args):
+        if level > self._level:
+            return
+        if args:
+            msg = msg % args
+        syslog.syslog(level, msg)
+
+    def debug(self, msg, *args):
+        self._log(self.DEBUG, msg, *args)
+
+    def info(self, msg, *args):
+        self._log(self.INFO, msg, *args)
+
+    def warning(self, msg, *args):
+        self._log(self.WARNING, msg, *args)
+
+    def error(self, msg, *args):
+        self._log(self.ERROR, msg, *args)
+
+
+LOG = SysLog("yanger")
 
 class YangDate:
     def __init__(self, dt=None):

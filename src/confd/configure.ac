@@ -1,6 +1,6 @@
 AC_PREREQ(2.61)
 # confd version is same as system YANG model version, step on breaking changes
-AC_INIT([confd], [1.7], [https://github.com/kernelkit/infix/issues])
+AC_INIT([confd], [1.8], [https://github.com/kernelkit/infix/issues])
 AM_INIT_AUTOMAKE(1.11 foreign subdir-objects)
 AM_SILENT_RULES(yes)
 
@@ -21,6 +21,7 @@ AC_CONFIG_FILES([
 	share/migrate/1.5/Makefile
 	share/migrate/1.6/Makefile
 	share/migrate/1.7/Makefile
+	share/migrate/1.8/Makefile
 	yang/Makefile
 	yang/confd/Makefile
 	yang/test-mode/Makefile
@@ -77,8 +78,18 @@ PKG_CHECK_MODULES([crypt],   [libxcrypt >= 4.4.27])
 PKG_CHECK_MODULES([glib],    [glib-2.0 >= 2.50 gio-2.0 gio-unix-2.0])
 PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
 PKG_CHECK_MODULES([libite],  [libite >= 2.6.1])
-PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
+PKG_CHECK_MODULES([sysrepo], [sysrepo >= 4.2.10])
+PKG_CHECK_MODULES([libyang], [libyang >= 4.2.2])
 PKG_CHECK_MODULES([libsrx],  [libsrx >= 1.0.0])
+
+AC_CHECK_HEADER([ev.h],
+    [saved_LIBS="$LIBS"
+     AC_CHECK_LIB([ev], [ev_loop_new],
+        [EV_LIBS="-lev"],
+        [AC_MSG_ERROR("libev not found")])
+     LIBS="$saved_LIBS"],
+    [AC_MSG_ERROR("ev.h not found")])
+AC_SUBST([EV_LIBS])
 
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])

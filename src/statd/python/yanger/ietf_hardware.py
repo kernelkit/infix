@@ -265,8 +265,11 @@ def hwmon_sensor_components():
                         component["description"] = desc
                     return component
 
+                # List hwmon directory once, reuse for all sensor types
+                all_entries = HOST.run(("ls", hwmon_path), default="").split()
+
                 # Temperature sensors
-                temp_entries = HOST.run(("ls", hwmon_path), default="").split()
+                temp_entries = all_entries
                 temp_files = [os.path.join(hwmon_path, e) for e in temp_entries if e.startswith("temp") and e.endswith("_input")]
                 for temp_file in temp_files:
                     try:
@@ -285,7 +288,7 @@ def hwmon_sensor_components():
                         continue
 
                 # Fan sensors (RPM from tachometer)
-                fan_entries = HOST.run(("ls", hwmon_path), default="").split()
+                fan_entries = all_entries
                 fan_files = [os.path.join(hwmon_path, e) for e in fan_entries if e.startswith("fan") and e.endswith("_input")]
                 for fan_file in fan_files:
                     try:
@@ -307,7 +310,7 @@ def hwmon_sensor_components():
                 # Only add if no fan*_input exists for this device (avoid duplicates)
                 has_rpm_sensor = bool(fan_files)
                 if not has_rpm_sensor:
-                    pwm_entries = HOST.run(("ls", hwmon_path), default="").split()
+                    pwm_entries = all_entries
                     pwm_files = [os.path.join(hwmon_path, e) for e in pwm_entries if e.startswith("pwm") and e[3:].replace('_', '').isdigit() if len(e) > 3]
                     for pwm_file in pwm_files:
                         # Skip pwm*_enable, pwm*_mode, etc. - only process pwm1, pwm2, etc.
@@ -336,7 +339,7 @@ def hwmon_sensor_components():
                             continue
 
                 # Voltage sensors
-                voltage_entries = HOST.run(("ls", hwmon_path), default="").split()
+                voltage_entries = all_entries
                 voltage_files = [os.path.join(hwmon_path, e) for e in voltage_entries if e.startswith("in") and e.endswith("_input")]
                 for voltage_file in voltage_files:
                     try:
@@ -356,7 +359,7 @@ def hwmon_sensor_components():
                         continue
 
                 # Current sensors
-                current_entries = HOST.run(("ls", hwmon_path), default="").split()
+                current_entries = all_entries
                 current_files = [os.path.join(hwmon_path, e) for e in current_entries if e.startswith("curr") and e.endswith("_input")]
                 for current_file in current_files:
                     try:
@@ -376,7 +379,7 @@ def hwmon_sensor_components():
                         continue
 
                 # Power sensors
-                power_entries = HOST.run(("ls", hwmon_path), default="").split()
+                power_entries = all_entries
                 power_files = [os.path.join(hwmon_path, e) for e in power_entries if e.startswith("power") and e.endswith("_input")]
                 for power_file in power_files:
                     try:

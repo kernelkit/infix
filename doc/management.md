@@ -136,6 +136,7 @@ the unit's neighbors, collected via mDNS (see
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit web</b>
 admin@example:/config/web/> <b>help</b>
+  certificate                       Reference to asymmetric key in central keystore.
   enabled                           Enable or disable on all web services.
   console                           Web console interface.
   netbrowse                         mDNS Network Browser.
@@ -190,6 +191,23 @@ shows how to disable the RESTCONF service.
 admin@example:/config/web/restconf/> <b>no enabled</b>
 admin@example:/config/web/restconf/>
 </code></pre>
+
+### HTTPS Certificate
+
+The Web server uses a TLS certificate from the central
+[keystore](keystore.md).  By default it uses `gencert`, a self-signed
+certificate that is automatically generated on first boot.
+
+To use a different certificate, e.g., one signed by a CA, first add
+it to the keystore as an asymmetric key with `x509-public-key-format`,
+then point the web `certificate` leaf to it:
+
+<pre class="cli"><code>admin@example:/config/web/> <b>set certificate my-cert</b>
+admin@example:/config/web/>
+</code></pre>
+
+See [Keystore](keystore.md#tls-certificates) for details on managing
+TLS certificates.
 
 ## System Upgrade
 

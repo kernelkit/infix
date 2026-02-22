@@ -1,0 +1,22 @@
+config BR2_PACKAGE_INITVIZ
+	bool "initviz"
+	depends on BR2_USE_MMU # fork()
+	help
+	  InitViz is a performance analysis and visualization tool for the
+	  boot process and system services.  It consists of the bootchartd
+	  data collection daemon (bootchartd) that runs during boot to
+	  capture system activity, and InitViz the host visualization tool.
+
+	  InitViz is a reimplementation and successor to the bootchart2
+	  project, offering a more feature-rich solution compared to the
+	  bootchartd subset available as a BusyBox applet.
+
+	  To profile the boot process, append the following to the kernel
+	  command line:
+
+	      init=/sbin/bootchartd initcall_debug printk.time=y quiet
+
+	  The collected data can be visualized using the host-initviz
+	  tool, initviz.py, which is currently not built here.
+
+	  https://github.com/finit-project/InitViz

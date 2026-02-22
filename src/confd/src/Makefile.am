@@ -1,7 +1,14 @@
 AM_CPPFLAGS             = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DYANG_PATH_=\"$(YANGDIR)\"
+AM_CPPFLAGS            +=  -DCONFD_VERSION=\"$(PACKAGE_VERSION)\"
 CLEANFILES              = $(rauc_installer_sources)
 plugindir               = $(srpdplugindir)
 plugin_LTLIBRARIES      = confd-plugin.la
+
+sbin_PROGRAMS           = confd
+
+confd_CFLAGS            = $(sysrepo_CFLAGS) $(libyang_CFLAGS) $(jansson_CFLAGS) $(libite_CFLAGS) $(libsrx_CFLAGS)
+confd_LDADD             = $(sysrepo_LIBS)   $(libyang_LIBS)   $(jansson_LIBS)   $(libite_LIBS)   $(libsrx_LIBS) $(EV_LIBS) -ldl
+confd_SOURCES           = main.c
 
 confd_plugin_la_LDFLAGS = -module -avoid-version -shared
 

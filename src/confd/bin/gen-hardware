@@ -6,7 +6,11 @@ if jq -e '.["usb-ports"]' /run/system.json > /dev/null; then
 else
     usb_ports=""
 fi
-wifi_radios=$(/usr/libexec/infix/iw.py list 2>/dev/null | jq -r '.[]' || echo "")
+if jq -e '.["wifi-radios"]' /run/system.json > /dev/null 2>&1; then
+    wifi_radios=$(jq -r '.["wifi-radios"][].name' /run/system.json)
+else
+    wifi_radios=""
+fi
 
 
 gen_port()
@@ -27,11 +31,9 @@ gen_radio()
 {
     radio="$1"
 
-    # Detect supported bands from iw.py info JSON output
-    phy_info=$(/usr/libexec/infix/iw.py info "$radio" 2>/dev/null || echo '{"bands":[]}')
-    # Check if 2.4GHz band exists (band name "2.4GHz")
+    # Read band info from system.json (probed at boot by 00-probe)
+    phy_info=$(jq -r --arg r "$radio" '.["wifi-radios"][] | select(.name == $r)' /run/system.json 2>/dev/null || echo '{"bands":[]}')
     has_2ghz=$(echo "$phy_info" | jq '[.bands[] | select(.name == "2.4GHz")] | length')
-    # Check if 5GHz band exists (band name "5GHz")
     has_5ghz=$(echo "$phy_info" | jq '[.bands[] | select(.name == "5GHz")] | length')
 
     # Determine band setting
