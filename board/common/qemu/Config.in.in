@@ -149,7 +149,7 @@ config QEMU_HOST
 
 config QEMU_APPEND
 	string "Extra kernel options"
-	depends on !QEMU_ROOTFS_MMC
+	depends on QEMU_LOADER_KERNEL
 
 config QEMU_EXTRA
 	string "Extra QEMU options"
