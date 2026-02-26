@@ -1,0 +1,8 @@
+config IMAGE_LVM_STUB
+	bool "LVM2 stub image"
+	default y if IMAGE_DDI
+	help
+	  An empty LVM2 physical volume attached to the internal
+	  volume group. This is useful as a base image for persistent
+	  storage in QEMU emulation scenarios where the OS is supplied
+	  in a separate image.
