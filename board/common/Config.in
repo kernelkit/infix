@@ -15,6 +15,7 @@ source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-dl-release/Config.
 
 comment "General"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-barebox-esp/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-lvm-stub/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-readme/Config.in"
 
 endmenu
