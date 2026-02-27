@@ -4,9 +4,14 @@
 #
 ################################################################################
 
-QEMU_SCRIPTS_DIR := $(pkgdir)
+qemu-scripts-dir := $(pkgdir)/$(if $(IMAGE_DDI),ddi,itb)
+qemu-image := ../$(INFIX_ARTIFACT).$(if $(IMAGE_DDI),raw,qcow2)
+qemu-disk := $(if $(IMAGE_DDI_DISK),../$(INFIX_ARTIFACT).disk)
+
+qemu-kconfig-prefix := $(if $(IMAGE_DDI),,CONFIG_)
+
 qemu-kconfig = \
-	CONFIG_="CONFIG_" \
+	CONFIG_="$(qemu-kconfig-prefix)" \
 	BR2_CONFIG="$(BINARIES_DIR)/qemu/.config" \
 	$(BUILD_DIR)/buildroot-config/$(1) $(2) "$(BINARIES_DIR)/qemu/Config.in"
 
@@ -25,17 +30,18 @@ qemu-scripts: \
 		$(BINARIES_DIR)/qemu/Config.in \
 		$(BINARIES_DIR)/qemu/.config
 
-$(BINARIES_DIR)/qemu/run.sh: $(QEMU_SCRIPTS_DIR)/run.sh
+$(BINARIES_DIR)/qemu/run.sh: $(qemu-scripts-dir)/run.sh
 	@$(call IXMSG,"Installing QEMU scripts")
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(BINARIES_DIR)/qemu/Config.in: $(QEMU_SCRIPTS_DIR)/Config.in.in
+$(BINARIES_DIR)/qemu/Config.in: $(qemu-scripts-dir)/Config.in.in
 	@mkdir -p $(dir $@)
 	@sed \
-		-e "s:@ARCH@:QEMU_$(BR2_ARCH):" \
-		-e "s:@DISK_IMG@:../$(INFIX_ARTIFACT).qcow2:" \
-	< $< >$@
+		-e "s:@ARCH@:$(BR2_ARCH):g" \
+		-e "s:@IMAGE@:$(qemu-image):g" \
+		-e "s:@DISK@:$(qemu-disk):g" \
+	<$< >$@
 
 $(BINARIES_DIR)/qemu/.config: $(BINARIES_DIR)/qemu/Config.in
 	@$(call qemu-kconfig,conf,--olddefconfig)
