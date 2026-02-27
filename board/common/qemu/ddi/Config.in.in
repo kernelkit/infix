@@ -1,0 +1,279 @@
+mainmenu "QEMU @ARCH@ Virtualization"
+
+config QEMU_@ARCH@
+	bool
+	default y
+
+config QEMU_ARCH
+	string
+	default "@ARCH@"
+
+config QEMU_VIRTIO_BUS
+	string
+	default "device"  if QEMU_arm
+	default "pci"
+
+config QEMU_BIN_DDI
+	string
+	default "@IMAGE@"
+
+config QEMU_BIN_DISK
+	string
+	default "@DISK@"
+
+config QEMU_BIN_ESP
+	string
+	default "@ESP@"
+
+config QEMU_BIN_KERNEL
+	string
+	depends on QEMU_LOADER_QEMU
+	default "../zImage"  if QEMU_arm
+	default "../Image"   if QEMU_aarch64
+	default "../bzImage" if QEMU_x86_64
+
+config QEMU_BIN_LVM_STUB
+	string
+	default "../lvm-stub.disk"
+
+
+choice
+	prompt "Loader"
+	default QEMU_LOADER_QEMU
+
+config QEMU_LOADER_QEMU
+	bool "QEMU"
+
+config QEMU_LOADER_OVMF
+	bool "OVMF (UEFI)"
+
+endchoice
+
+config QEMU_BIN_BIOS
+	string
+	depends on !QEMU_LOADER_KERNEL
+	default "OVMF.fd" if QEMU_LOADER_OVMF
+
+menu "Machine"
+
+config QEMU_MACHINE
+	string "Machine"
+	default "pc" if QEMU_x86_64
+	default "virt"
+
+config QEMU_CPU
+	string "CPU"
+	default "host" if QEMU_x86_64
+	default "cortex-a53" if QEMU_aarch64
+	default "max"
+
+config QEMU_RAM
+	string "RAM size (k/M/G)"
+	default "384M"
+
+choice
+     prompt "Console"
+     default QEMU_CONSOLE_VIRTIO
+
+config QEMU_CONSOLE_VIRTIO
+     bool "Virtio (hvc0)"
+
+config QEMU_CONSOLE_SERIAL
+     bool "Serial (ttyS0/ttyAMA0)"
+
+endchoice
+
+config QEMU_CONSOLE
+     string
+     default "hvc0" if QEMU_CONSOLE_VIRTIO
+     default "ttyAMA0" if QEMU_arm
+     default "ttyAMA0" if QEMU_aarch64
+     default "ttyS0"
+
+endmenu
+
+menu "Disks & Filesystems"
+
+config QEMU_DISK_INITRD
+     bool "Use the DDI as initrd"
+     depends on QEMU_LOADER_QEMU
+     help
+       Pass, and boot from, the DDI as the initial RAM disk.
+
+       This is useful to test netbooting scenarios, e.g., in
+       combination with an empty system disk to simulate an initial
+       deployment.
+
+comment "System disk"
+
+choice
+     prompt "Interface"
+     default QEMU_DISK_SYS_IF_VIRTIO
+
+config QEMU_DISK_SYS_IF_VIRTIO
+     bool "virtio"
+     help
+       Attach system disks using virtio block devices.
+
+endchoice
+
+choice
+     prompt "Contents"
+     default QEMU_DISK_SYS_SPLIT
+
+config QEMU_DISK_SYS_EMPTY
+     bool "Empty disk"
+     help
+       Attach an empty disk.
+
+       This is useful for testing things like installing Infix from a
+       USB mass storage device (see "USB Mass Storage" below).
+
+config QEMU_DISK_SYS_FULL
+     bool "Full system disk"
+     help
+       Use the full system disk containing:
+       - EFI partition (and backup) with Barebox
+       - LVM PV with Infix installed
+
+       This is useful when testing system upgrades, fallback
+       mechanisms related to corrupt disks etc.
+
+       WARNING: Usage of this option is fraught with peril as
+       incremental builds of Infix are likely to cause corruption in
+       the QCoW2 layer. If you do not understand the meaning of this
+       you most likely to NOT want to make use of this feature.
+
+config QEMU_DISK_SYS_NONE
+     bool "None"
+     help
+       Do not attach any system disk.
+
+       This is useful for testing how Infix behaves when no persistent
+       storage is available - a common scenario during bringup of a
+       new board.
+
+config QEMU_DISK_SYS_SPLIT
+     bool "Split ESP/DDI/LVM"
+     help
+       Attach the EFI System partition, containing Barebox; the raw
+       DDI image; and an (initially empty) LVM stub for persistent
+       storage - each as a separate disk.
+
+       This is the simplest way of testing out incremental builds of
+       Infix. Since the DDI is attached as a raw read-only disk, there
+       is no risk of CoW corruption like with a full system disk.
+
+       NOTE: In this setup, the size below refers to the size of the
+       LVM stub.
+
+endchoice
+
+config QEMU_DISK_SYS_SIZE
+	string "Size (k/M/G)"
+	default "8G"
+
+comment "USB mass storage"
+
+choice
+     prompt "Contents"
+     default QEMU_DISK_USB_NONE
+
+config QEMU_DISK_USB_DISK
+     bool "Full system disk"
+     help
+       Attach the full system disk containing:
+       - EFI partition (and backup) with Barebox
+       - LVM PV with Infix installed
+
+config QEMU_DISK_USB_NONE
+     bool "None"
+     help
+       Do not attach any disk over USB.
+
+endchoice
+
+config QEMU_DISK_USB_SIZE
+	string "Size (k/M/G)"
+	depends on !QEMU_DISK_USB_NONE
+	default "4G"
+
+comment "Host filesystem passthrough (9P)"
+
+config QEMU_DISK_HOST
+	string "Path"
+	default "/tmp"
+
+endmenu
+
+menu "Networking"
+
+choice
+     prompt "Mode"
+     default QEMU_NET_USER
+
+config QEMU_NET_BRIDGE
+     bool "Bridged"
+
+config QEMU_NET_NONE
+     bool "None"
+
+config QEMU_NET_ROCKER
+     bool "Rocker"
+
+config QEMU_NET_TAP
+     bool "TAP"
+
+config QEMU_NET_USER
+     bool "User"
+
+endchoice
+
+config QEMU_NET_MODE
+	string
+	default "bridge" if QEMU_NET_BRIDGE
+	default "none"   if QEMU_NET_NONE
+	default "rocker" if QEMU_NET_ROCKER
+	default "tap"    if QEMU_NET_TAP
+	default "user"   if QEMU_NET_USER
+
+config QEMU_NET_MODEL
+	string "Interface model"
+	default "virtio-net-device" if QEMU_arm
+	default "virtio-net-pci"
+	help
+	  The default virtio NIC works for most use-cases, but if you
+	  want to play with low-level stuff like ethtool, you might
+	  want to test the Intel 82545EM driver, e1000.
+
+	  Note: ARM 32-bit uses virtio-net-device (MMIO) by default.
+
+config QEMU_NET_BRIDGE_DEV
+	string "Bridge device"
+	depends on QEMU_NET_BRIDGE
+	default "virbr0"
+
+config QEMU_NET_USER_OPTS
+	string "User mode options"
+	depends on QEMU_NET_USER
+	help
+	  Extra -nic user,<OPTIONS>
+
+config QEMU_NET_TAP_N
+	int "Number of TAPs"
+	depends on QEMU_NET_TAP
+	default 1
+
+config QEMU_NET_PORTS
+	int "Number of Rocker switch ports"
+	depends on QEMU_NET_ROCKER
+	default 10
+
+endmenu
+
+config QEMU_EXTRA
+	string "Extra QEMU options"
+
+config QEMU_APPEND
+	string "Extra kernel options"
+	depends on QEMU_LOADER_QEMU
