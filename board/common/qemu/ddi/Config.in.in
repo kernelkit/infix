@@ -1,0 +1,339 @@
+mainmenu "QEMU Virtualization"
+
+choice
+	prompt "Target Architecture"
+	default @ARCH@
+
+config IX_QEMU_aarch64
+	bool "AArch64 (little endian)"
+
+config IX_QEMU_arm
+	bool "AArch32 (little endian)"
+
+config IX_QEMU_riscv64
+	bool "riscv64"
+
+config IX_QEMU_x86_64
+	bool "x86_64"
+
+endchoice
+
+config IX_QEMU_ARCH
+	string
+	default "aarch64" if IX_QEMU_aarch64
+	default "arm" if IX_QEMU_arm
+	default "riscv64" if IX_QEMU_riscv64
+	default "x86_64" if IX_QEMU_x86_64
+
+config IX_QEMU_VIRTIO_BUS
+	string
+	default "device"  if IX_QEMU_arm
+	default "pci"
+
+config IX_QEMU_BIN_DDI
+	string
+	default "@IMAGE@"
+
+config IX_QEMU_BIN_DISK
+	string
+	default "@DISK@"
+
+config IX_QEMU_BIN_KERNEL
+	string
+	depends on IX_QEMU_LOADER_QEMU
+	default "../zImage"  if IX_QEMU_arm
+	default "../Image"   if IX_QEMU_aarch64
+	default "../bzImage" if IX_QEMU_x86_64
+
+config IX_QEMU_BIN_LVM_STUB
+	string
+	default "../lvm-stub.disk"
+
+
+choice
+	prompt "Loader"
+	default IX_QEMU_LOADER_QEMU
+
+config IX_QEMU_LOADER_QEMU
+	bool "QEMU"
+
+config IX_QEMU_LOADER_OVMF
+	bool "OVMF (UEFI)"
+
+endchoice
+
+menu "OVMF"
+	depends on IX_QEMU_LOADER_OVMF
+
+config IX_QEMU_BIN_OVMF_CODE
+	string "CODE binary"
+	default "/usr/share/OVMF/OVMF_CODE_4M.secboot.fd" if IX_QEMU_OVMF_SB
+	default "/usr/share/OVMF/OVMF_CODE_4M.fd"
+	help
+	  Path to the OVMF executable binary, passed as parallel FLASH
+	  0 (read-only).
+
+config IX_QEMU_BIN_OVMF_VARS
+	string "VARS binary"
+	default "/usr/share/OVMF/OVMF_VARS_4M.fd"
+	help
+	  Path to the binary containing the OVMF non-volatile variable
+	  store, passed as parallel FLASH 1.
+
+config IX_QEMU_OVMF_SB
+	bool "Secure boot"
+	default y
+
+config IX_QEMU_OVMF_SB_PK
+	string "Platform key (PK)"
+	depends on IX_QEMU_OVMF_SB
+	default "./infix-development.crt"
+
+config IX_QEMU_OVMF_SB_KEK
+	string "Key exchange key (KEK)"
+	depends on IX_QEMU_OVMF_SB
+	default "./infix-development.crt"
+
+config IX_QEMU_OVMF_SB_DB
+	string "Signature database keys (db)"
+	depends on IX_QEMU_OVMF_SB
+	default "./infix-development.crt"
+
+endmenu
+
+menu "Machine"
+
+config IX_QEMU_MACHINE
+	string "Machine"
+	default "q35,smm=on" if IX_QEMU_x86_64
+	default "virt"
+
+config IX_QEMU_CPU
+	string "CPU"
+	default "host" if IX_QEMU_x86_64
+	default "cortex-a53" if IX_QEMU_aarch64
+	default "max"
+
+config IX_QEMU_RAM
+	string "RAM size (k/M/G)"
+	default "384M"
+
+choice
+     prompt "Console"
+     default IX_QEMU_CONSOLE_VIRTIO
+
+config IX_QEMU_CONSOLE_VIRTIO
+     bool "Virtio (hvc0)"
+
+config IX_QEMU_CONSOLE_SERIAL
+     bool "Serial (ttyS0/ttyAMA0)"
+
+endchoice
+
+config IX_QEMU_CONSOLE
+     string
+     default "hvc0" if IX_QEMU_CONSOLE_VIRTIO
+     default "ttyAMA0" if IX_QEMU_arm
+     default "ttyAMA0" if IX_QEMU_aarch64
+     default "ttyS0"
+
+endmenu
+
+menu "Disks & Filesystems"
+
+config IX_QEMU_DISK_INITRD
+     bool "Use the DDI as initrd"
+     depends on IX_QEMU_LOADER_QEMU
+     help
+       Pass, and boot from, the DDI as the initial RAM disk.
+
+       This is useful to test netbooting scenarios, e.g., in
+       combination with an empty system disk to simulate an initial
+       deployment.
+
+comment "System disk"
+
+choice
+     prompt "Interface"
+     default IX_QEMU_DISK_SYS_IF_VIRTIO
+
+config IX_QEMU_DISK_SYS_IF_VIRTIO
+     bool "virtio"
+     help
+       Attach system disks using virtio block devices.
+
+endchoice
+
+choice
+     prompt "Contents"
+     default IX_QEMU_DISK_SYS_SPLIT
+
+config IX_QEMU_DISK_SYS_EMPTY
+     bool "Empty disk"
+     help
+       Attach an empty disk.
+
+       This is useful for testing things like installing Infix from a
+       USB mass storage device (see "USB Mass Storage" below).
+
+config IX_QEMU_DISK_SYS_FULL
+     bool "Full system disk"
+     help
+       Use the full system disk containing:
+       - EFI partition (and backup) with Barebox
+       - LVM PV with Infix installed
+
+       This is useful when testing system upgrades, fallback
+       mechanisms related to corrupt disks etc.
+
+       WARNING: Usage of this option is fraught with peril as
+       incremental builds of Infix are likely to cause corruption in
+       the QCoW2 layer. If you do not understand the meaning of this
+       you most likely to NOT want to make use of this feature.
+
+config IX_QEMU_DISK_SYS_NONE
+     bool "None"
+     help
+       Do not attach any system disk.
+
+       This is useful for testing how Infix behaves when no persistent
+       storage is available - a common scenario during bringup of a
+       new board.
+
+config IX_QEMU_DISK_SYS_SPLIT
+     bool "Split DDI/LVM"
+     help
+       Attach one disk containing the EFI System partition and an
+       (initially empty) LVM stub for persistent storage; and the raw
+       DDI image in another disk.
+
+       This is the simplest way of testing out incremental builds of
+       Infix. Since the DDI is attached as a raw read-only disk, there
+       is no risk of CoW corruption like with a full system disk.
+
+       NOTE: In this setup, the size below refers to the size of the
+       LVM stub.
+
+endchoice
+
+config IX_QEMU_DISK_SYS_SIZE
+	string "Size (k/M/G)"
+	default "8G"
+
+comment "USB mass storage"
+
+choice
+     prompt "Contents"
+     default IX_QEMU_DISK_USB_NONE
+
+config IX_QEMU_DISK_USB_DISK
+     bool "Full system disk"
+     help
+       Attach the full system disk containing:
+       - EFI partition (and backup) with Barebox
+       - LVM PV with Infix installed
+
+config IX_QEMU_DISK_USB_NONE
+     bool "None"
+     help
+       Do not attach any disk over USB.
+
+endchoice
+
+config IX_QEMU_DISK_USB_SIZE
+	string "Size (k/M/G)"
+	depends on !IX_QEMU_DISK_USB_NONE
+	default "4G"
+
+comment "Host filesystem passthrough (9P)"
+
+config IX_QEMU_DISK_HOST
+	string "Path"
+	default "/tmp"
+
+endmenu
+
+menu "Networking"
+
+comment "Host attachment"
+
+choice
+     prompt "Mode"
+     default IX_QEMU_NET_USER
+
+config IX_QEMU_NET_BRIDGE
+     bool "Bridged"
+
+config IX_QEMU_NET_NONE
+     bool "None"
+
+config IX_QEMU_NET_ROCKER
+     bool "Rocker"
+
+config IX_QEMU_NET_TAP
+     bool "TAP"
+
+config IX_QEMU_NET_USER
+     bool "User"
+
+endchoice
+
+config IX_QEMU_NET_MODE
+	string
+	default "bridge" if IX_QEMU_NET_BRIDGE
+	default "none"   if IX_QEMU_NET_NONE
+	default "rocker" if IX_QEMU_NET_ROCKER
+	default "tap"    if IX_QEMU_NET_TAP
+	default "user"   if IX_QEMU_NET_USER
+
+
+config IX_QEMU_NET_BRIDGE_DEV
+	string "Bridge device"
+	depends on IX_QEMU_NET_BRIDGE
+	default "virbr0"
+
+config IX_QEMU_NET_USER_NETBOOT
+	bool "Enable netbooting"
+	depends on IX_QEMU_NET_USER
+	help
+	  Supply the DDI as the DHCP bootfile and serve the images
+	  directory over TFTP.
+
+config IX_QEMU_NET_USER_OPTS
+	string "User mode options"
+	depends on IX_QEMU_NET_USER
+	help
+	  Extra -nic user,<OPTIONS>
+
+config IX_QEMU_NET_TAP_N
+	int "Number of TAPs"
+	depends on IX_QEMU_NET_TAP
+	default 1
+
+config IX_QEMU_NET_PORTS
+	int "Number of Rocker switch ports"
+	depends on IX_QEMU_NET_ROCKER
+	default 10
+
+
+comment "VM attachment"
+
+config IX_QEMU_NET_MODEL
+	string "Interface model"
+	default "virtio-net-device" if IX_QEMU_arm
+	default "virtio-net-pci"
+	help
+	  The default virtio NIC works for most use-cases, but if you
+	  want to play with low-level stuff like ethtool, you might
+	  want to test the Intel 82545EM driver, e1000.
+
+	  Note: ARM 32-bit uses virtio-net-device (MMIO) by default.
+
+endmenu
+
+config IX_QEMU_EXTRA
+	string "Extra QEMU options"
+
+config IX_QEMU_APPEND
+	string "Extra kernel options"
+	depends on IX_QEMU_LOADER_QEMU
