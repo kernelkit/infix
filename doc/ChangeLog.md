@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.14 (LTS)
+- Upgrade Linux kernel to 6.18.15 (LTS)
 - Upgrade Buildroot to 2025.02.11 (LTS)
 - Upgrade FRR to 10.5.1
 - Add support for Microchip SAMA7G54-EK Evaluation Kit, Arm Cortex-A7
