@@ -88,7 +88,7 @@ Warning: Permanently added 'fe80::ff:fe00:0%eth0' (ED25519) to the list of known
 admin@fe80::ff:fe00:0%eth0's password: *****
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
-|-. v .-| https://kernelkit.org
+|-. v .-| https://www.kernelkit.org
 '-'---'-'
 
 Run the command 'cli' for interactive OAM

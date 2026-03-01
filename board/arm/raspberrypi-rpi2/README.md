@@ -91,5 +91,5 @@ Serial settings: 115200 8N1
 > [!WARNING]
 > Use only 3.3V serial adapters. 5V adapters will damage your Raspberry Pi!
 
-[0]: https://kernelkit.org/posts/flashing-sdcard/
+[0]: https://www.kernelkit.org/posts/flashing-sdcard/
 [1]: https://www.raspberrypi.com/products/raspberry-pi-2-model-b/

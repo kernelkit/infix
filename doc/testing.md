@@ -152,7 +152,7 @@ infix-00-00-00 login: admin
 Password:
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
-|-. v .-| https://kernelkit.org
+|-. v .-| https://www.kernelkit.org
 '-'---'-'
 
 Run the command 'cli' for interactive OAM

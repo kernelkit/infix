@@ -112,5 +112,5 @@ Connect a USB-to-serial adapter to the board's debug UART header.
 > [!WARNING]
 > Use only 3.3V serial adapters.
 
-[0]: https://kernelkit.org/posts/flashing-sdcard/
+[0]: https://www.kernelkit.org/posts/flashing-sdcard/
 [1]: https://www.microchip.com/en-us/development-tool/EV21H18A

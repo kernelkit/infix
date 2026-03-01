@@ -167,8 +167,8 @@ APIs.
 [0]: https://www.kernel.org
 [1]: https://buildroot.org/ "Buildroot Homepage"
 [2]: https://www.sysrepo.org/ "Sysrepo Homepage"
-[3]: https://kernelkit.org/infix/latest/cli/introduction/
-[4]: https://kernelkit.org/infix/
+[3]: https://www.kernelkit.org/infix/latest/cli/introduction/
+[4]: https://www.kernelkit.org/infix/
 [5]: https://github.com/kernelkit/infix/releases
 [Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest "Latest build"
 [License]:         https://en.wikipedia.org/wiki/GPL_license

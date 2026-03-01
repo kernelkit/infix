@@ -106,7 +106,7 @@ Noteworthy changes and additions in this release are marked below in bold text.
 - Prevent MOTD from showing on non-shell user login attempts
 - Fix mDNS reflector.
 
-[wifi]: https://kernelkit.org/infix/latest/wifi/
+[wifi]: https://www.kernelkit.org/infix/latest/wifi/
 [sd card image]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi64-sdcard.img
 
 
@@ -724,7 +724,7 @@ renamed to ease maintenance, more info below.
   not supported (yet) in Infix, issue #709
 - The default builds now include the curiOS nftables container image,
   which can be used for advanced firewall setups.  For an introduction
-  see <https://kernelkit.org/posts/firewall-container/>
+  see <https://www.kernelkit.org/posts/firewall-container/>
 
 ### Fixes
 

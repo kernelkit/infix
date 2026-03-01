@@ -312,13 +312,13 @@ While capable of basic routing tasks, be aware of limitations:
 For applications requiring multiple ports or high performance, consider
 dedicated networking hardware like the [Banana Pi R3][12].
 
-[0]: https://kernelkit.org/posts/flashing-sdcard/
-[1]: https://kernelkit.org/infix/latest/
+[0]: https://www.kernelkit.org/posts/flashing-sdcard/
+[1]: https://www.kernelkit.org/infix/latest/
 [2]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi64-sdcard.img
-[3]: https://kernelkit.org/infix/latest/container/#content-mounts
-[4]: https://kernelkit.org/infix/latest/scripting-restconf/
+[3]: https://www.kernelkit.org/infix/latest/container/#content-mounts
+[4]: https://www.kernelkit.org/infix/latest/scripting-restconf/
 [8]: https://github.com/kernelkit/infix/releases/tag/latest-boot
-[9]: https://kernelkit.org/infix/latest/networking/#wifi
+[9]: https://www.kernelkit.org/infix/latest/networking/#wifi
 [10]: https://www.raspberrypi.com/products/raspberry-pi-touch-display/
 [11]: https://www.raspberrypi.com/documentation/
-[12]: https://kernelkit.org/infix/latest/hardware/#banana-pi-bpi-r3
+[12]: https://www.kernelkit.org/infix/latest/hardware/#banana-pi-bpi-r3

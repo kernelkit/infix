@@ -262,8 +262,8 @@ make aarch64
 ./utils/mkimage.sh -odt emmc bananapi-bpi-r3
 ```
 
-[0]: https://kernelkit.org/posts/flashing-sdcard/
-[1]: https://kernelkit.org/infix/latest/
+[0]: https://www.kernelkit.org/posts/flashing-sdcard/
+[1]: https://www.kernelkit.org/infix/latest/
 [2]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-bpi-r3-sdcard.img
 [3]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-bpi-r3-emmc.img
 [4]: https://github.com/kernelkit/infix/releases/download/latest-boot/bpi-r3-emmc-boot-2025.01-latest.tar.gz
