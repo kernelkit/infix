@@ -1,0 +1,37 @@
+.md-header__title {
+    font-size: 1.1rem;
+    line-height: 2.6rem;
+}
+
+.md-typeset code {
+  font-size: .75em;
+}
+
+[data-md-color-primary="orange"] {
+    --md-primary-fg-color: #ff7f2a;
+    --md-primary-bg-color: #5c5f5c;
+}
+[data-md-color-primary="black"] {
+    --md-primary-bg-color: #5c5f5c;
+}
+
+/* Center Markdown Tables (requires md_in_html extension) */
+.center-table {
+    text-align: center;
+}
+
+.md-typeset .center-table :is(td,th):not([align]) {
+    /* Reset alignment for table cells */
+    text-align: initial;
+}
+
+/* CLI terminal output styling */
+.md-typeset pre.cli .title {
+    font-weight: bold;
+}
+
+.md-typeset pre.cli .header {
+    background-color: #e0e0e0;
+    color: #1a1a1a;
+    font-weight: bold;
+}
