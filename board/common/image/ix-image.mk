@@ -22,6 +22,7 @@ $(1): $$($(2)_DEPENDENCIES)
 
 ifeq ($$($(3)),y)
 TARGETS_ROOTFS += $(1)
+BR2_ROOTFS_OVERLAY := "$$(realpath $$(pkgdir)/rootfs) $$(call qstrip,$$(BR2_ROOTFS_OVERLAY))"
 endif
 
 endef
