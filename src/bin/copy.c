@@ -466,7 +466,7 @@ static int curl(char *op, const char *path, const char *uri)
 {
 	char *argv[10] = { "curl", "-L", NULL };
 	int err = 1, i = 2;
-	int path_i, uri_i, user_i = 0;
+	int path_i, uri_i = 0, user_i = 0;
 
 	argv[i++] = op;
 
@@ -492,7 +492,8 @@ static int curl(char *op, const char *path, const char *uri)
 
 out:
 	free(argv[path_i]);
-	free(argv[uri_i]);
+	if (uri_i)
+		free(argv[uri_i]);
 	if (user_i)
 		free(argv[user_i]);
 	return err;
@@ -752,7 +753,7 @@ static int copy(const char *src, const char *dst)
 	 * meaningful name instead: the datastore's on-disk filename, or the
 	 * source file's own basename.
 	 */
-	if (is_ssh_uri(dst) && dst[strlen(dst) - 1] == '/') {
+	if (dst && is_ssh_uri(dst) && dst[strlen(dst) - 1] == '/') {
 		const char *bn, *slash;
 
 		if (srcds && srcds->path) {
