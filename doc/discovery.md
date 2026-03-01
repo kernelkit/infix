@@ -43,6 +43,100 @@ admin@fe80::ff:fec0:ffed%tap0's password: admin
 admin@infix-c0-ff-ee:~$ 
 ```
 
+### Windows Compatibility
+
+> [!NOTE]
+> **Testing Note (2023-2024):** The information below is based on user testing
+> performed on Windows 10 and early Windows 11 builds. This has **not** been
+> independently verified with recent Windows versions or through external research.
+> 
+> **We strongly encourage you to:**
+> 1. Test IPv6 multicast ping on your current Windows version first
+> 2. Report your findings (working/not working, Windows version, build number)
+> 3. Share any workarounds you discover
+>
+> Newer Windows updates may have resolved these issues entirely.
+
+On some Windows systems (based on 2023-2024 reports), IPv6 multicast ping
+(e.g., `ping ff02::1%interface`) has had issues where the Infix device
+responds correctly but Windows does not display the response at the command
+line.
+
+While the ping packets are transmitted and the Infix device responds as
+expected, Windows firewall or network stack settings may prevent the response
+from being visible in the command prompt. The responses can be verified using
+network packet capture tools like Wireshark.
+
+#### Tested Workarounds (Historical)
+
+The following approaches were tested by users on Windows 10 (2023-2024) but
+**reportedly did not** resolve the issue:
+
+- Enabling network discovery on Public and Domain profiles
+- Disabling all network interfaces except the connection to the Infix device
+- Changing the network profile from Public to Private
+- Enabling network discovery and file sharing for the Public profile
+
+These limitations appeared to be related to Windows IPv6 implementation and
+firewall behavior when handling link-local multicast responses.
+
+> [!TIP]
+> **Try IPv6 ping first!** If you're on a recent Windows 11 update or
+> newer Windows 10 build, IPv6 multicast ping may work correctly on your
+> system. Test with `ping ff02::1%interface` before assuming it won't work.
+
+#### Recommended Alternative: Use mDNS
+
+**If IPv6 multicast ping doesn't work on your Windows system, use mDNS as a
+reliable alternative** (described in detail in the [mDNS-SD](#mdns-sd)
+section below). Windows 10 (build 1709+) and Windows 11 have native mDNS-SD
+support, making this a reliable discovery method:
+
+```cmd
+C:\> ping infix-c0-ff-ee.local
+C:\> ping infix.local
+C:\> ssh admin@infix-c0-ff-ee.local
+```
+
+For networks with a single Infix device, the convenient `infix.local` alias
+works seamlessly. On networks with multiple devices, use the full hostname
+like `infix-c0-ff-ee.local` or the MAC-based name like `switch-c0-ff-ee.local`.
+
+#### Diagnostic Verification
+
+> [!TIP]
+> If IPv6 multicast ping doesn't show responses at the command line but
+> you want to verify that the Infix device is responding, use Wireshark
+> or another packet capture tool while running the ping command. This
+> shows whether the issue is with Windows display or actual connectivity.
+> As shown in the image below, you can see MDNS, LLMNR, and ICMPv6 echo
+> (ping) traffic being exchanged even when Windows doesn't display it.
+
+![Wireshark showing IPv6 ping responses](https://github.com/addiva-elektronik/alder/assets/122900029/c45d7726-448f-4c30-878e-bcf976dff531)
+
+#### Community Feedback Needed
+
+> [!WARNING]
+> **This information needs verification!** The details above are based on
+> user reports from 2023-2024 and have **not** been independently researched
+> or verified with recent Windows versions.
+>
+> **Please help us improve this documentation:**
+> - If you're using Windows 10 (specify build) or Windows 11 (specify version)
+> - Test `ping -6 ff02::1%<your-interface>` and report if it works or not
+> - Share your Windows version: run `winver` or `systeminfo | findstr /B /C:"OS"`
+> - Create an issue or PR to update this section with your findings
+>
+> Your feedback helps keep this documentation accurate and useful!
+
+For historical context on Windows IPv6 behavior, see these resources:
+
+- [Windows doesn't respond to IPv6 multicast ping](https://superuser.com/questions/490092/windows-doesnt-respond-to-ipv6-multicast-ping)
+- [Find device IPv6 link-local](https://serverless.industries/2019/05/30/find-device-ipv6-link-local.en.html)
+- [IPv6 Ping Scan from Windows](https://samsclass.info/ipv6/proj/proj-PingScan-Win.html)
+- [Hacking IPv6 from Windows](https://medium.com/@netscylla/hacking-ipv6-from-windows-ca23a9602ce7)
+- [Link-Local Multicast Name Resolution (LLMNR)](https://rakhesh.com/windows/resolving-names-using-link-local-multicast-name-resolution-llmnr/)
+
 
 ## LLDP
 
