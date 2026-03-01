@@ -3,25 +3,29 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.02.0][UNRELEASED] -
+[v26.02.0][] - 2026-03-01
 -------------------------
+
+> [!NOTE]
+> The blog and User Guide have a new address: <https://www.kernelkit.org>
 
 ### Changes
 
 - Upgrade Linux kernel to 6.18.15 (LTS)
 - Upgrade Buildroot to 2025.02.11 (LTS)
 - Upgrade FRR to 10.5.1
-- Add support for Microchip SAMA7G54-EK Evaluation Kit, Arm Cortex-A7
-- Add GPS/GNSS receiver support with NTP reference clock integration
+- Add support for [Microchip SAMA7G54][SAMA7G54-EK] Evaluation Kit, Arm Cortex-A7
 - Add support for [Banana Pi R3 Mini][BPI-R3-MINI], a 2 port router with 2 WiFi chip,
   uses the same bootloader as BPI-R3 (eMMC-version)
+- Add GPS/GNSS receiver support with NTP reference clock integration
+- Add `reset-volumes` option to `container upgrade foo` command
 
 ### Fixes
 
-N/A
+- Fix CLI `copy` command problem to copy to scp/sftp destinations
 
 [BPI-R3-MINI]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3_Mini
-
+[SAMA7G54-EK]: https://www.microchip.com/en-us/development-tool/ev21h18a
 
 [v26.01.0][] - 2026-02-03
 -------------------------
@@ -1927,7 +1931,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.01.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.02.0...HEAD
+[v26.02.0]:   https://github.com/kernelkit/infix/compare/v26.01.0...v26.02.0
 [v26.01.0]:   https://github.com/kernelkit/infix/compare/v25.11.0...v26.01.0
 [v25.11.0]:   https://github.com/kernelkit/infix/compare/v25.10.0...v25.11.0
 [v25.10.0]:   https://github.com/kernelkit/infix/compare/v25.09.0...v26.10.0
