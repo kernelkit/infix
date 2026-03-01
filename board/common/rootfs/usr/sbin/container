@@ -24,6 +24,7 @@ all=""
 env=""
 port=""
 force=${force:-}
+reset_volumes=
 
 # Variable shared across subshells
 export meta_sha=""
@@ -897,6 +898,9 @@ while [ "$1" != "" ]; do
 	    shift
 	    restart=$1
 	    ;;
+	-R | --reset-volumes)
+	    reset_volumes=true
+	    ;;
 	-s | --simple)
 	    simple=true
 	    ;;
@@ -1250,6 +1254,20 @@ case $cmd in
 	printf ">> Stopping container ... "
 	container stop "$name"
 	echo "done"
+
+	# If --reset-volumes requested, delete named volumes so they re-initialize from new image
+	if [ -n "$reset_volumes" ]; then
+	    printf ">> Resetting named volumes (all configuration will be lost): "
+	    grep -oE -- '-v [^ ]+' "$script" | awk '{print $2}' | cut -d: -f1 | \
+	    while read -r vol_name; do
+		if podman volume exists "$vol_name" 2>/dev/null; then
+		    printf "%s " "$vol_name"
+		    log "Removing volume $vol_name"
+		    podman volume rm -f "$vol_name" >/dev/null || true
+		fi
+	    done
+	    echo "done"
+	fi
 
 	# Set force flag to ensure fresh pull/fetch of image
 	export force="-f"
