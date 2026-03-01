@@ -50,10 +50,7 @@ submodule infix-if-wifi {
 
   revision 2026-02-12 {
     description
-      "Roaming model refactoring:
-       - Replaced boolean 802.11k/r/v leaves with presence containers
-       - Added optional 802.11r nas-identifier override
-       - Added validation: 802.11r cannot be used with open security";
+      "Add support for roaming, by adding support for 802.11v/k/r"
     reference "internal";
   }
 
@@ -515,6 +512,21 @@ submodule infix-if-wifi {
 
                    Allows APs to suggest better APs to clients, improving
                    network-assisted roaming decisions.";
+              }
+
+              leaf okc {
+                type boolean;
+                default true;
+                description
+                  "Opportunistic Key Caching (OKC).
+
+                   Reduces re-authentication time for roaming clients
+                   that don't support 802.11r. The AP caches PMK from
+                   previous associations and shares them with other APs
+                   in the same mobility group.
+
+                   Safe to leave enabled (default) - only activates when
+                   both AP and client support it.";
               }
             }
 

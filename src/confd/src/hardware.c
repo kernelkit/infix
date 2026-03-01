@@ -449,6 +449,14 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		fprintf(hostapd, "bss_transition=1\n");
 	}
 
+	/* OKC: Opportunistic Key Caching */
+	if (roaming) {
+		const char *okc = lydx_get_cattr(roaming, "okc");
+
+		if (!okc || !strcmp(okc, "true"))
+			fprintf(hostapd, "okc=1\n");
+	}
+
 	free(secret);
 }
 
