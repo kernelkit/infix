@@ -458,7 +458,8 @@ static void frr_daemons_write(int ospfd, int ripd, int bfdd)
 		fp);
 
 	fclose(fp);
-	rename(next, FRR_DAEMONS);
+	if (rename(next, FRR_DAEMONS))
+		ERROR("Failed to rename %s to %s: %m", next, FRR_DAEMONS);
 }
 
 int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
@@ -519,7 +520,6 @@ int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 			num = parse_rip(session, lydx_get_child(cplane, "rip"), fp);
 			if (num > 0) {
 				touch(RIPD_SIGNAL_NEXT);
-				ripd_enabled = 1;
 				netd_enabled = 1;
 			}
 		}
