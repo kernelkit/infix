@@ -170,6 +170,6 @@ plugins:
 
 extra:
   generator: false
-  homepage: https://kernelkit.org/
+  homepage: https://www.kernelkit.org/
   version:
     provider: mike

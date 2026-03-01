@@ -23,7 +23,8 @@ dir=""
 all=""
 env=""
 port=""
-force=
+force=${force:-}
+reset_volumes=
 
 # Variable shared across subshells
 export meta_sha=""
@@ -227,7 +228,7 @@ fetch()
 
     if out=$(eval "$cmd" 2>&1); then
 	log "$file downloaded successfully."
-	if check "$file"; then
+	if [ -n "$force" ] || check "$file"; then
 	    echo "$dst"
 	    return 0
 	fi
@@ -897,6 +898,9 @@ while [ "$1" != "" ]; do
 	    shift
 	    restart=$1
 	    ;;
+	-R | --reset-volumes)
+	    reset_volumes=true
+	    ;;
 	-s | --simple)
 	    simple=true
 	    ;;
@@ -1108,7 +1112,8 @@ case $cmd in
 	# Remove the old image if it's not used by any other containers
 	if [ -n "$old_image_id" ]; then
 	    # Check if the old image is still in use by any containers
-	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}$"; then
+	    old_image_id=${old_image_id:0:12}
+	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}"; then
 		log "Removing old image $old_image_id"
 		podman rmi "$old_image_id" 2>/dev/null || true
 	    else
@@ -1250,8 +1255,22 @@ case $cmd in
 	container stop "$name"
 	echo "done"
 
+	# If --reset-volumes requested, delete named volumes so they re-initialize from new image
+	if [ -n "$reset_volumes" ]; then
+	    printf ">> Resetting named volumes (all configuration will be lost): "
+	    grep -oE -- '-v [^ ]+' "$script" | awk '{print $2}' | cut -d: -f1 | \
+	    while read -r vol_name; do
+		if podman volume exists "$vol_name" 2>/dev/null; then
+		    printf "%s " "$vol_name"
+		    log "Removing volume $vol_name"
+		    podman volume rm -f "$vol_name" >/dev/null || true
+		fi
+	    done
+	    echo "done"
+	fi
+
 	# Set force flag to ensure fresh pull/fetch of image
-	force="-f"
+	export force="-f"
 
 	# For remote images, force re-pull
 	case "$img" in
@@ -1273,14 +1292,17 @@ case $cmd in
 	# Recreate container by running the script
 	echo ">> Recreating container ..."
 	if ! "$script"; then
+	    force=
 	    echo ">> Failed recreating container $name"
 	    exit 1
 	fi
+	force=
 
 	# Remove the old image if it's not used by any other containers
 	if [ -n "$old_image_id" ]; then
 	    # Check if the old image is still in use by any containers
-	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}$"; then
+	    old_image_id=${old_image_id:0:12}
+	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}"; then
 		log "Removing old image $old_image_id"
 		podman rmi "$old_image_id" 2>/dev/null || true
 	    else

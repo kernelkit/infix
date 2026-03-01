@@ -295,7 +295,7 @@ linux-pc:# ssh admin@infix-c0-ff-ee.local
 (admin@infix-c0-ff-ee.local) Password: 
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
-|-. v .-| https://kernelkit.org
+|-. v .-| https://www.kernelkit.org
 '-'---'-
 
 Run the command 'cli' for interactive OAM
@@ -335,7 +335,7 @@ linux-pc:# ssh admin@infix.local
 (admin@infix.local) Password: 
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
-|-. v .-| https://kernelkit.org
+|-. v .-| https://www.kernelkit.org
 '-'---'-
 
 Run the command 'cli' for interactive OAM

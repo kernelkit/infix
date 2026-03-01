@@ -336,7 +336,7 @@ It should now be possible to access the switch from the PC via SSH (or NETCONF).
 admin@fe80::0053:00ff:fe06:1101%eth1's password:
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
-|-. v .-| https://kernelkit.org
+|-. v .-| https://www.kernelkit.org
 '-'---'-'
 
 Run the command 'cli' for interactive OAM

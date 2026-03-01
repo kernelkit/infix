@@ -695,18 +695,17 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			wifi_find_interfaces_on_radio(interfaces_config, name,
 						       &wifi_iface_list, &wifi_iface_count);
 
-
-			if (!wifi_iface_count)
-				continue;
-
-			/* Generate AP config (hostapd) for all APs on this radio */
-			rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config);
-			if (rc != SR_ERR_OK)
-				ERROR("Failed to generate AP config for radio %s", name);
-			/* Free the interface list */
-			free(wifi_iface_list);
-			wifi_iface_list = NULL;
-			wifi_iface_count = 0;
+			if (wifi_iface_list) {
+				if (wifi_iface_count) {
+					/* Generate AP config (hostapd) for all APs on this radio */
+					rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config);
+					if (rc != SR_ERR_OK)
+						ERROR("Failed to generate AP config for radio %s", name);
+				}
+				free(wifi_iface_list);
+				wifi_iface_list = NULL;
+				wifi_iface_count = 0;
+			}
 		} else if (!strcmp(class, "infix-hardware:gps")) {
 			if (event != SR_EV_DONE)
 				continue;

@@ -178,9 +178,15 @@
   </COMMAND>
 
   <COMMAND name="upgrade" help="Upgrade image of a container (writable layer is lost!)">
-    <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
+    <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
+    <SWITCH name="optional" min="0" max="1">
+      <COMMAND name="reset-volumes" help="Delete named volumes, re-initialize from new image (all config lost!)" />
+    </SWITCH>
     <ACTION sym="script" out="tty" interrupt="true">
-      doas container upgrade $KLISH_PARAM_name
+      if env | grep -q 'reset-volumes' >/dev/null; then
+          opt="-R"
+      fi
+      doas container $opt upgrade $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 </COMMAND>

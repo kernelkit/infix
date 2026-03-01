@@ -12,7 +12,7 @@ cat <<EOF >"${gns3a}"
     "category": "router",
     "description": "${ARTIFACT} development appliance",
     "vendor_name": "Kernelkit",
-    "vendor_url": "https://kernelkit.org",
+    "vendor_url": "https://www.kernelkit.org",
     "product_name": "${ARTIFACT} devel",
     "registry_version": 6,
     "status": "experimental",
