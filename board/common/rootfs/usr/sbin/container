@@ -23,7 +23,7 @@ dir=""
 all=""
 env=""
 port=""
-force=
+force=${force:-}
 
 # Variable shared across subshells
 export meta_sha=""
@@ -227,7 +227,7 @@ fetch()
 
     if out=$(eval "$cmd" 2>&1); then
 	log "$file downloaded successfully."
-	if check "$file"; then
+	if [ -n "$force" ] || check "$file"; then
 	    echo "$dst"
 	    return 0
 	fi
@@ -1108,7 +1108,8 @@ case $cmd in
 	# Remove the old image if it's not used by any other containers
 	if [ -n "$old_image_id" ]; then
 	    # Check if the old image is still in use by any containers
-	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}$"; then
+	    old_image_id=${old_image_id:0:12}
+	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}"; then
 		log "Removing old image $old_image_id"
 		podman rmi "$old_image_id" 2>/dev/null || true
 	    else
@@ -1251,7 +1252,7 @@ case $cmd in
 	echo "done"
 
 	# Set force flag to ensure fresh pull/fetch of image
-	force="-f"
+	export force="-f"
 
 	# For remote images, force re-pull
 	case "$img" in
@@ -1273,14 +1274,17 @@ case $cmd in
 	# Recreate container by running the script
 	echo ">> Recreating container ..."
 	if ! "$script"; then
+	    force=
 	    echo ">> Failed recreating container $name"
 	    exit 1
 	fi
+	force=
 
 	# Remove the old image if it's not used by any other containers
 	if [ -n "$old_image_id" ]; then
 	    # Check if the old image is still in use by any containers
-	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}$"; then
+	    old_image_id=${old_image_id:0:12}
+	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}"; then
 		log "Removing old image $old_image_id"
 		podman rmi "$old_image_id" 2>/dev/null || true
 	    else
