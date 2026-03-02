@@ -1,5 +1,4 @@
-# Default FRR daemons file for Infix - confd overwrites on routing changes.
-# watchfrr, zebra, mgmtd, and staticd are always started by frrinit.sh.
+# Default FRR daemons file used with watchfrr, started by frrinit.sh.
 ospfd=no
 ripd=no
 bfdd=no
@@ -25,4 +24,3 @@ staticd_options="-A 127.0.0.1"
 bfdd_options="   -A 127.0.0.1"
 
 frr_profile="traditional"
-
