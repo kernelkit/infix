@@ -3,6 +3,16 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.03.0][UNRELEASED] -
+-------------------------
+
+### Changes
+- Upgrade Buildroot to 2026.02 (LTS)
+
+### Fixes
+
+
+
 [v26.02.0][] - 2026-03-01
 -------------------------
 
