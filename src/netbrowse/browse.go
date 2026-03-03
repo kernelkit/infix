@@ -8,12 +8,20 @@ import (
 	"strings"
 )
 
-// Service represents an mDNS service discovered on the network.
+// Service represents a single mDNS service advertised by a host.
 type Service struct {
-	Type  string `json:"type"`
-	Name  string `json:"name"`
-	URL   string `json:"url"`
-	Other bool   `json:"other"`
+	Type string `json:"type"`
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+// Host groups all services for one mDNS host with its metadata.
+type Host struct {
+	Addr    string    `json:"addr"`
+	Product string    `json:"product,omitempty"`
+	Version string    `json:"version,omitempty"`
+	Other   bool      `json:"other"`
+	Svcs    []Service `json:"svcs"`
 }
 
 type serviceInfo struct {
@@ -44,8 +52,8 @@ func hasK() bool {
 }
 
 // scan runs avahi-browse, parses the output, and returns discovered
-// services grouped by link (hostname), sorted per host.
-func scan() map[string][]Service {
+// hosts with their services and metadata.
+func scan() map[string]Host {
 	args := "-tarp"
 	if hasK() {
 		args += "k"
@@ -57,10 +65,13 @@ func scan() map[string][]Service {
 		return nil
 	}
 
-	hosts := make(map[string][]Service)
-	vvHosts   := make(map[string]bool) // has vv=1 TXT record
-	legHosts  := make(map[string]bool) // has on=Infix TXT record (legacy)
-	mgmtHosts := make(map[string]bool) // has at least one management service type
+	svcsMap    := make(map[string][]Service)
+	addrMap    := make(map[string]string) // preferred IP per host (IPv4 wins)
+	productMap := make(map[string]string)
+	versionMap := make(map[string]string)
+	vvHosts    := make(map[string]bool) // has vv=1 TXT record
+	legHosts   := make(map[string]bool) // has on=Infix TXT record (legacy)
+	mgmtHosts  := make(map[string]bool) // has at least one management service type
 
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		if line == "" {
@@ -84,7 +95,6 @@ func scan() map[string][]Service {
 		}
 
 		info, known := knownServices[serviceType]
-		other := !known
 		displayName := info.displayName
 		urlTemplate := info.urlTemplate
 		if !known {
@@ -100,20 +110,43 @@ func scan() map[string][]Service {
 			mgmtHosts[link] = true
 		}
 
-		// Parse TXT records
-		var path, adminurl string
-		for _, record := range strings.Split(txt, " ") {
+		// Prefer IPv4; accept non-link-local IPv6 as fallback.
+		if family == "IPv4" {
+			addrMap[link] = address
+		} else if addrMap[link] == "" && !strings.HasPrefix(address, "fe80:") {
+			addrMap[link] = address
+		}
+
+		// Parse TXT records.
+		// avahi-browse -p quotes records containing spaces, e.g.
+		//   "ty=Brother DCP-L3550CDW series" "adminurl=http://..."
+		// Split on the between-record boundary `" "` (close-quote space
+		// open-quote) to keep each record intact, then trim outer quotes.
+		var path, adminurl, product, version string
+		for _, record := range strings.Split(txt, "\" \"") {
 			stripped := strings.Trim(record, "\"")
 			switch {
 			case stripped == "vv=1":
 				vvHosts[link] = true
 			case stripped == "on=Infix":
 				legHosts[link] = true
-			case path == "" && strings.Contains(stripped, "path="):
-				path = stripped[strings.LastIndex(stripped, "path=")+5:]
-			case adminurl == "" && strings.Contains(stripped, "adminurl="):
-				adminurl = stripped[strings.LastIndex(stripped, "adminurl=")+9:]
+			case path == "" && strings.HasPrefix(stripped, "path="):
+				path = stripped[5:]
+			case adminurl == "" && strings.HasPrefix(stripped, "adminurl="):
+				adminurl = stripped[9:]
+			case product == "" && strings.HasPrefix(stripped, "product="):
+				product = stripped[8:]
+			case version == "" && strings.HasPrefix(stripped, "ov="):
+				version = stripped[3:]
 			}
+		}
+		// IPP/Bonjour printers encode product as "(Name)" — strip the parens.
+		product = strings.TrimPrefix(strings.TrimSuffix(product, ")"), "(")
+		if product != "" && productMap[link] == "" {
+			productMap[link] = product
+		}
+		if version != "" && versionMap[link] == "" {
+			versionMap[link] = version
 		}
 
 		var url string
@@ -128,30 +161,29 @@ func scan() map[string][]Service {
 		}
 
 		svc := Service{
-			Type:  displayName,
-			Name:  decode(serviceName),
-			URL:   url,
-			Other: other,
+			Type: displayName,
+			Name: decode(serviceName),
+			URL:  url,
 		}
 
 		// Deduplicate
 		dup := false
-		for _, existing := range hosts[link] {
+		for _, existing := range svcsMap[link] {
 			if existing.Type == svc.Type && existing.Name == svc.Name && existing.URL == svc.URL {
 				dup = true
 				break
 			}
 		}
 		if !dup {
-			hosts[link] = append(hosts[link], svc)
+			svcsMap[link] = append(svcsMap[link], svc)
 		}
 	}
 
 	// Sort services per host
-	for link := range hosts {
-		sort.SliceStable(hosts[link], func(i, j int) bool {
-			oi := typeOrder[hosts[link][i].Type]
-			oj := typeOrder[hosts[link][j].Type]
+	for link := range svcsMap {
+		sort.SliceStable(svcsMap[link], func(i, j int) bool {
+			oi := typeOrder[svcsMap[link][i].Type]
+			oj := typeOrder[svcsMap[link][j].Type]
 			if oi == 0 {
 				oi = 999
 			}
@@ -162,13 +194,18 @@ func scan() map[string][]Service {
 		})
 	}
 
-	// Default view shows only Infix devices. A host qualifies if it has
-	// vv=1 on a management service (to exclude Apple AirPlay collisions),
-	// or on=Infix for older firmware that predates vv=1.
-	for link := range hosts {
-		if len(hosts[link]) > 0 {
-			isInfix := (vvHosts[link] && mgmtHosts[link]) || legHosts[link]
-			hosts[link][0].Other = !isInfix
+	// Build final host map. Default view shows only Infix devices: a host
+	// qualifies if it has vv=1 on a management service (to exclude Apple
+	// AirPlay collisions), or on=Infix for older firmware predating vv=1.
+	hosts := make(map[string]Host)
+	for link, svcs := range svcsMap {
+		isInfix := (vvHosts[link] && mgmtHosts[link]) || legHosts[link]
+		hosts[link] = Host{
+			Addr:    addrMap[link],
+			Product: productMap[link],
+			Version: versionMap[link],
+			Other:   !isInfix,
+			Svcs:    svcs,
 		}
 	}
 

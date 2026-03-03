@@ -211,6 +211,16 @@
       border-bottom: 1px solid var(--border);
       word-break: break-all;
     }
+    .card-addr {
+      font-weight: 400;
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+    .card-meta {
+      padding: 5px 14px 6px;
+      font-size: 11px; color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
     .card-svcs { padding: 6px 0; }
 
     .svc {
@@ -297,7 +307,7 @@
       <button class="btn icon" id="btn-refresh" title="Refresh now">↻</button>
       <button class="btn" id="btn-all" aria-pressed="false" title="Show all mDNS devices, not just Infix">All</button>
       <button class="btn" id="btn-auto" aria-pressed="false" title="Toggle auto-refresh every 30 s">Auto<span id="cdspan"></span></button>
-      <button class="btn icon" id="btn-theme" title="Cycle theme: system → dark → light">◐</button>
+      <button class="btn icon" id="btn-theme" title="Cycle theme: system → dark → light">☀</button>
     </div>
   </div>
 </header>
@@ -331,7 +341,7 @@
   var btnRefresh = document.getElementById('btn-refresh');
 
   // ── Theme ──────────────────────────────────────────────────────────────────
-  var THEME_ICONS  = { system: '◐', dark: '●', light: '○' };
+  var THEME_ICONS  = { system: '◐', dark: '☽', light: '☀' };
   var THEME_ORDER  = ['system', 'dark', 'light'];
 
   function applyTheme() {
@@ -380,14 +390,15 @@
 
     // Devices to show based on the All toggle
     var inScope = entries.filter(function (e) {
-      return showAll || !(e[1].length > 0 && e[1][0].other);
+      return showAll || !e[1].other;
     });
 
     // Further filtered by the search query
     var visible = inScope.filter(function (e) {
       if (!q) return true;
-      var text = e[0];
-      e[1].forEach(function (s) { text += ' ' + s.type + ' ' + s.name; });
+      var h = e[1];
+      var text = e[0] + ' ' + (h.addr || '') + ' ' + (h.product || '') + ' ' + (h.version || '');
+      h.svcs.forEach(function (s) { text += ' ' + s.type + ' ' + s.name; });
       return text.toLowerCase().indexOf(q) !== -1;
     });
 
@@ -409,8 +420,8 @@
     setFooter(visible.length, inScope.length, entries.length);
   }
 
-  function makeCard(host, svcs) {
-    var rows = svcs.map(function (s) {
+  function makeCard(host, h) {
+    var rows = h.svcs.map(function (s) {
       var cls   = BADGE_CLASS[s.type] || 'b-other';
       var badge = '<span class="badge ' + cls + '">' + esc(s.type) + '</span>';
       var name  = '<span class="svc-name">' + esc(s.name) + '</span>';
@@ -421,7 +432,19 @@
       return '<div class="svc">' + badge + name + '</div>';
     }).join('');
 
-    return '<div class="card"><div class="card-host">' + esc(host) + '</div>'
+    var hdrText = esc(host);
+    if (h.addr) hdrText += ' <span class="card-addr">(' + esc(h.addr) + ')</span>';
+
+    var meta = '';
+    if (h.product || h.version) {
+      var parts = [];
+      if (h.product) parts.push(esc(h.product));
+      if (h.version) parts.push(esc(h.version));
+      meta = '<div class="card-meta">' + parts.join(' ') + '</div>';
+    }
+
+    return '<div class="card"><div class="card-host">' + hdrText + '</div>'
+         + meta
          + '<div class="card-svcs">' + rows + '</div></div>';
   }
 
