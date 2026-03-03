@@ -16,6 +16,9 @@ module infix-services {
     reference
       "RFC 9640: YANG Data Types and Groupings for Cryptography";
   }
+  import infix-system {
+    prefix infix-sys;
+  }
 
   import ietf-keystore {
     prefix ks;
@@ -25,6 +28,10 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2026-03-03 {
+    description "Add hostname leaf to mdns container for avahi host-name override.";
+    reference "internal";
+  }
   revision 2025-12-10 {
     description "Adapt to changes in final version of ietf-keystore";
     reference "internal";
@@ -78,6 +85,18 @@ module infix-services {
                    usually this setting can be left as-is.";
       default "local";
       type inet:domain-name;
+    }
+
+    leaf hostname {
+      description "Hostname for mDNS A/AAAA records (avahi host-name setting).
+
+                   When not set the default is the build-time branding hostname.
+                   Supports the same format specifiers as /system/hostname:
+                     %h  Default hostname (DEFAULT_HOSTNAME from os-release)
+                     %i  OS ID from os-release
+                     %m  Last three octets of base MAC (e.g. c0-ff-ee)";
+      type infix-sys:hostname;
+      default "%h";
     }
 
     container interfaces {

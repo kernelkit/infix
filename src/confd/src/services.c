@@ -339,11 +339,19 @@ static void fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const ch
 
 #define AVAHI_CONF "/etc/avahi/avahi-daemon.conf"
 
-static void mdns_conf(struct lyd_node *cfg)
+static void mdns_conf(struct confd *confd, struct lyd_node *cfg)
 {
-	const char *hostname = fgetkey("/etc/os-release", "DEFAULT_HOSTNAME");
+	char hname[HOST_NAME_MAX + 1];
+	const char *hostname;
+	const char *fmt;
 	struct lyd_node *ctx;
 	FILE *fp;
+
+	fmt = lydx_get_cattr(cfg, "hostname");   /* "%h" when unset (YANG default) */
+	if (!hostnamefmt(confd, fmt, hname, sizeof(hname), NULL, 0))
+		hostname = hname;
+	else
+		hostname = fgetkey("/etc/os-release", "DEFAULT_HOSTNAME");
 
 	fp = fopen(AVAHI_CONF, "w");
 	if (!fp) {
@@ -423,7 +431,7 @@ static int mdns_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 	ena = lydx_is_enabled(srv, "enabled");
 	if (ena) {
 		/* Generate/update avahi-daemon.conf */
-		mdns_conf(srv);
+		mdns_conf(confd, srv);
 
 		/* Generate/update basic mDNS service records */
 		mdns_records(MDNS_UPDATE, all);
