@@ -10,10 +10,10 @@ import (
 
 // Service represents an mDNS service discovered on the network.
 type Service struct {
-	Type  string
-	Name  string
-	URL   string
-	Other bool
+	Type  string `json:"type"`
+	Name  string `json:"name"`
+	URL   string `json:"url"`
+	Other bool   `json:"other"`
 }
 
 type serviceInfo struct {
