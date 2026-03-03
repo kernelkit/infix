@@ -58,6 +58,9 @@ func scan() map[string][]Service {
 	}
 
 	hosts := make(map[string][]Service)
+	vvHosts   := make(map[string]bool) // has vv=1 TXT record
+	legHosts  := make(map[string]bool) // has on=Infix TXT record (legacy)
+	mgmtHosts := make(map[string]bool) // has at least one management service type
 
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		if line == "" {
@@ -88,17 +91,28 @@ func scan() map[string][]Service {
 			displayName = serviceType
 		}
 
-		// Parse TXT records for path= and adminurl=
+		// vv=1 is the platform marker set by confd/services.c, survives OS
+		// rebranding. We require it together with a management service type
+		// (ssh, web, netconf, restconf) to avoid false positives from Apple
+		// devices, which also use vv=1 in their AirPlay/RAOP TXT records.
+		// on=Infix is kept as a fallback for older firmware predating vv=1.
+		if known {
+			mgmtHosts[link] = true
+		}
+
+		// Parse TXT records
 		var path, adminurl string
 		for _, record := range strings.Split(txt, " ") {
 			stripped := strings.Trim(record, "\"")
-			if strings.Contains(stripped, "path=") {
+			switch {
+			case stripped == "vv=1":
+				vvHosts[link] = true
+			case stripped == "on=Infix":
+				legHosts[link] = true
+			case path == "" && strings.Contains(stripped, "path="):
 				path = stripped[strings.LastIndex(stripped, "path=")+5:]
-				break
-			}
-			if strings.Contains(stripped, "adminurl=") {
+			case adminurl == "" && strings.Contains(stripped, "adminurl="):
 				adminurl = stripped[strings.LastIndex(stripped, "adminurl=")+9:]
-				break
 			}
 		}
 
@@ -146,6 +160,16 @@ func scan() map[string][]Service {
 			}
 			return oi < oj
 		})
+	}
+
+	// Default view shows only Infix devices. A host qualifies if it has
+	// vv=1 on a management service (to exclude Apple AirPlay collisions),
+	// or on=Infix for older firmware that predates vv=1.
+	for link := range hosts {
+		if len(hosts[link]) > 0 {
+			isInfix := (vvHosts[link] && mgmtHosts[link]) || legHosts[link]
+			hosts[link][0].Other = !isInfix
+		}
 	}
 
 	return hosts

@@ -204,12 +204,13 @@ llscan_mdns()
 
     avahi-browse $flags 2>/dev/null | awk -F';' -v show_all="$all" '
     $1 == "=" {
-	host = $7
+	host  = $7
 	proto = $3
-	addr = $8
-	txt  = $10
+	addr  = $8
+	stype = $5
+	txt   = $10
 
-	on = ""; ov = ""; product = ""; devid = ""
+	on = ""; ov = ""; product = ""; devid = ""; vv = ""
 	n = split(txt, parts, "\" \"")
 	for (i = 1; i <= n; i++) {
 	    gsub(/"/, "", parts[i])
@@ -217,9 +218,17 @@ llscan_mdns()
 	    else if (parts[i] ~ /^ov=/)       { split(parts[i], kv, "="); ov      = kv[2] }
 	    else if (parts[i] ~ /^product=/)  { split(parts[i], kv, "="); product = kv[2] }
 	    else if (parts[i] ~ /^deviceid=/) { split(parts[i], kv, "="); devid   = kv[2] }
+	    else if (parts[i] ~ /^vv=/)       { split(parts[i], kv, "="); vv      = kv[2] }
 	}
 
-	if (!show_all && on != "Infix") next
+	# vv=1 is the platform marker set by confd/services.c, survives OS rebranding.
+	# We require it together with a management service type to avoid false
+	# positives from Apple devices, which also use vv=1 in AirPlay/RAOP records.
+	# on=Infix is kept as a fallback for older firmware that predates vv=1.
+	mgmt = (stype == "_ssh._tcp" || stype == "_sftp-ssh._tcp"  || \
+		stype == "_https._tcp" || stype == "_http._tcp"     || \
+		stype == "_netconf-ssh._tcp" || stype == "_restconf-tls._tcp")
+	if (!show_all && !(vv == "1" && mgmt) && on != "Infix") next
 
 	# Use deviceid (MAC) as unique key; fall back to hostname
 	key = devid ? devid : host
