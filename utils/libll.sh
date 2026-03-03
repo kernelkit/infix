@@ -209,14 +209,13 @@ llscan_mdns()
 	addr = $8
 	txt  = $10
 
-	on = ""; ov = ""; product = ""; serial = ""; devid = ""
+	on = ""; ov = ""; product = ""; devid = ""
 	n = split(txt, parts, "\" \"")
 	for (i = 1; i <= n; i++) {
 	    gsub(/"/, "", parts[i])
 	    if      (parts[i] ~ /^on=/)       { split(parts[i], kv, "="); on      = kv[2] }
 	    else if (parts[i] ~ /^ov=/)       { split(parts[i], kv, "="); ov      = kv[2] }
 	    else if (parts[i] ~ /^product=/)  { split(parts[i], kv, "="); product = kv[2] }
-	    else if (parts[i] ~ /^serial=/)   { split(parts[i], kv, "="); serial  = kv[2] }
 	    else if (parts[i] ~ /^deviceid=/) { split(parts[i], kv, "="); devid   = kv[2] }
 	}
 
@@ -227,7 +226,6 @@ llscan_mdns()
 
 	if (!product) product = on ? on : "-"
 	if (!ov)      ov      = "-"
-	if (!serial || serial == "null") serial = "-"
 
 	# Prefer IPv4 for display address
 	if (proto == "IPv4") {
@@ -241,7 +239,6 @@ llscan_mdns()
 	    hosts[key]     = host
 	    products[key]  = product
 	    versions[key]  = ov
-	    serials[key]   = serial
 	} else if (length(host) > length(hosts[key])) {
 	    # Prefer the unique hostname (e.g., infix-c0-ff-ee.local)
 	    # over the generic one (e.g., infix.local)
@@ -258,8 +255,8 @@ llscan_mdns()
 	    exit 1
 	}
 
-	fmt = "%-26s %-18s %-24s %-22s %s\n"
-	hdr = sprintf(fmt, "HOSTNAME", "ADDRESS", "PRODUCT", "VERSION", "SERIAL")
+	fmt = "%-26s %-18s %-24s %-30s\n"
+	hdr = sprintf(fmt, "HOSTNAME", "ADDRESS", "PRODUCT", "VERSION")
 	sub(/\n$/, "", hdr)
 	printf "\033[7m%s\033[0m\n", hdr
 
@@ -268,7 +265,7 @@ llscan_mdns()
 	    a = (ipv4[k] ? ipv4[k] : (ipv6[k] ? ipv6[k] : "-"))
 	    p = products[k]; if (length(p) > 23) p = substr(p, 1, 22) "~"
 	    v = versions[k]; if (length(v) > 21) v = substr(v, 1, 20) "~"
-	    printf fmt, hosts[k], a, p, v, serials[k]
+	    printf fmt, hosts[k], a, p, v
 	}
 
 	printf "\n%d device(s) found.\n", ndevs
