@@ -63,20 +63,45 @@ struct mdns_svc {
 	char *desc;
 	char *text;
 } services[] = {
-	{ web,      "https",    "_https._tcp",        443, "Web Management Interface", "adminurl=https://%s.local" },
-	{ ttyd,     "ttyd",     "_https._tcp",        443, "Web Console Interface",    "adminurl=https://%s.local:7681" },
-	{ web,      "http",     "_http._tcp",          80, "Web Management Interface", "adminurl=http://%s.local" },
-	{ netconf,  "netconf",  "_netconf-ssh._tcp",  830, "NETCONF (XML/SSH)", NULL },
-	{ restconf, "restconf", "_restconf-tls._tcp", 443, "RESTCONF (JSON/HTTP)",  NULL },
-	{ ssh,      "sftp-ssh", "_sftp-ssh._tcp",      22, "Secure file transfer (FTP/SSH)", NULL },
-	{ ssh,      "ssh",      "_ssh._tcp",           22, "Secure shell command line interface (CLI)", NULL },
+	{ web,      "https",    "_https._tcp",        443, "%h Web",     "adminurl=https://%s.local" },
+	{ ttyd,     "ttyd",     "_https._tcp",        443, "%h Console", "adminurl=https://%s.local:7681" },
+	{ web,      "http",     "_http._tcp",          80, "%h Web",     "adminurl=http://%s.local" },
+	{ netconf,  "netconf",  "_netconf-ssh._tcp",  830, "%h",         NULL },
+	{ restconf, "restconf", "_restconf-tls._tcp", 443, "%h",         NULL },
+	{ ssh,      "sftp-ssh", "_sftp-ssh._tcp",      22, "%h",         NULL },
+	{ ssh,      "ssh",      "_ssh._tcp",           22, "%h",         NULL },
 };
 
 static const char *jgets(json_t *obj, const char *key)
 {
 	json_t *val = json_object_get(obj, key);
 
-	return val ? json_string_value(val) : NULL;
+	return (val && !json_is_null(val)) ? json_string_value(val) : NULL;
+}
+
+/* Write str to fp with XML special characters escaped. */
+static void xml_escape(FILE *fp, const char *str)
+{
+	for (; *str; str++) {
+		switch (*str) {
+		case '&':  fputs("&amp;",  fp); break;
+		case '<':  fputs("&lt;",   fp); break;
+		case '>':  fputs("&gt;",   fp); break;
+		case '"':  fputs("&quot;", fp); break;
+		default:   fputc(*str,     fp); break;
+		}
+	}
+}
+
+static void write_txt(FILE *fp, const char *key, const char *val)
+{
+	if (!val)
+		return;
+	fputs("    <txt-record>", fp);
+	xml_escape(fp, key);
+	fputc('=', fp);
+	xml_escape(fp, val);
+	fputs("</txt-record>\n", fp);
 }
 
 /*
@@ -137,28 +162,77 @@ static int mdns_records(int cmd, svc type)
 			"  <service>\n"
 			"    <type>%s</type>\n"
 			"    <port>%d</port>\n"
-			"    <txt-record>vv=1</txt-record>\n"
-			"    <txt-record>vendor=%s</txt-record>\n"
-			"    <txt-record>product=%s</txt-record>\n"
-			"    <txt-record>serial=%s</txt-record>\n"
-			"    <txt-record>deviceid=%s</txt-record>\n"
-			"    <txt-record>vn=%s</txt-record>\n"
-			"    <txt-record>on=%s</txt-record>\n"
-			"    <txt-record>ov=%s</txt-record>\n",
-			srv->desc, srv->type, srv->port,
-			vendor  ?: "", product ?: "", serial ?: "", mac ?: "",
-			vn ?: "", on ?: "", ov ?: "");
+			"    <txt-record>vv=1</txt-record>\n",
+			srv->desc, srv->type, srv->port);
+		write_txt(fp, "vendor",   vendor);
+		write_txt(fp, "product",  product);
+		write_txt(fp, "serial",   serial);
+		write_txt(fp, "deviceid", mac);
+		write_txt(fp, "vn",       vn);
+		write_txt(fp, "on",       on);
+		write_txt(fp, "ov",       ov);
 
 		if (srv->text) {
-			fprintf(fp, "    <txt-record>");
-			fprintf(fp, srv->text, hostname);
-			fprintf(fp, "</txt-record>\n");
+			char txt[256];
+
+			snprintf(txt, sizeof(txt), srv->text, hostname);
+			fputs("    <txt-record>", fp);
+			xml_escape(fp, txt);
+			fputs("</txt-record>\n", fp);
 		}
 
 		fprintf(fp,
 			"  </service>\n"
 			"</service-group>\n");
 		fclose(fp);
+	}
+
+	/* Always-on records tied to mDNS being active, not a specific service */
+	if (type == all) {
+		if (cmd == MDNS_DELETE) {
+			erasef(AVAHI_SVC_PATH "/workstation.service");
+			erasef(AVAHI_SVC_PATH "/device-info.service");
+		} else {
+			FILE *fp;
+
+			fp = fopenf("w", AVAHI_SVC_PATH "/workstation.service");
+			if (fp) {
+				fprintf(fp,
+					"<?xml version=\"1.0\" standalone='no'?>\n"
+					"<!DOCTYPE service-group SYSTEM \"avahi-service.dtd\">\n"
+					"<service-group>\n"
+					"  <name replace-wildcards=\"yes\">%%h [%s]</name>\n"
+					"  <service>\n"
+					"    <type>_workstation._tcp</type>\n"
+					"    <port>9</port>\n"
+					"  </service>\n"
+					"</service-group>\n",
+					mac ?: "");
+				fclose(fp);
+			} else {
+				ERRNO("failed creating workstation.service");
+			}
+
+			/* TODO: Use device-info YANG model for Apple-compatible model string */
+			fp = fopenf("w", AVAHI_SVC_PATH "/device-info.service");
+			if (fp) {
+				fprintf(fp,
+					"<?xml version=\"1.0\" standalone='no'?>\n"
+					"<!DOCTYPE service-group SYSTEM \"avahi-service.dtd\">\n"
+					"<service-group>\n"
+					"  <name replace-wildcards=\"yes\">%%h</name>\n"
+					"  <service>\n"
+					"    <type>_device-info._tcp</type>\n"
+					"    <port>0</port>\n");
+				write_txt(fp, "model", product);
+				fprintf(fp,
+					"  </service>\n"
+					"</service-group>\n");
+				fclose(fp);
+			} else {
+				ERRNO("failed creating device-info.service");
+			}
+		}
 	}
 
 	return SR_ERR_OK;
