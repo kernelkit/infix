@@ -1,0 +1,6 @@
+config IMAGE_BAREBOX_ESP
+	bool "Barebox EFI System Partition"
+	depends on BR2_TARGET_BAREBOX
+	default y if IMAGE_DDI
+	help
+	  An EFI System Partition (ESP) with Barebox installed.
