@@ -110,11 +110,17 @@ func scan() map[string]Host {
 			mgmtHosts[link] = true
 		}
 
-		// Prefer IPv4; accept non-link-local IPv6 as fallback.
-		if family == "IPv4" {
-			addrMap[link] = address
-		} else if addrMap[link] == "" && !strings.HasPrefix(address, "fe80:") {
-			addrMap[link] = address
+		// Prefer real IPv4; skip loopback and link-local.
+		// Loopback (127.x / ::1) appears when avahi resolves local-machine
+		// services from the same host — the address is useless for display.
+		isLoopback  := address == "127.0.0.1" || address == "::1" || strings.HasPrefix(address, "127.")
+		isLinkLocal := strings.HasPrefix(address, "fe80:")
+		if !isLoopback && !isLinkLocal {
+			if family == "IPv4" {
+				addrMap[link] = address // IPv4 always wins
+			} else if addrMap[link] == "" {
+				addrMap[link] = address // IPv6 fallback
+			}
 		}
 
 		// Parse TXT records.
