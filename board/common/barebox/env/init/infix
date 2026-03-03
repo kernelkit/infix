@@ -1,0 +1,20 @@
+#!/bin/sh
+
+global allow_color=1
+global model=efi
+export PS1="\e[1;32mbarebox@\h\e[0m:\e[1;36m\w\e[0m# "
+
+global autoboot_timeout=1
+global boot.default="bootchooser storage"
+global bootchooser.reset_attempts="all-zero"
+global bootchooser.retry=1
+global bootchooser.state_prefix="state.bootstate"
+global bootchooser.targets="internal-primary internal-secondary net"
+
+global blspec.require_trust=${efi.secure_mode}
+global ddi.require_trust=${efi.secure_mode}
+
+keys -l os @efi
+
+lvm activate
+

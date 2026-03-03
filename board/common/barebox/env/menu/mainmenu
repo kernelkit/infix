@@ -1,0 +1,4 @@
+#!/bin/sh
+
+boot -m
+reset

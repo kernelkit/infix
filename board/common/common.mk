@@ -1,3 +1,4 @@
+include $(BR2_EXTERNAL_INFIX_PATH)/board/common/barebox/barebox.mk
 include $(BR2_EXTERNAL_INFIX_PATH)/board/common/image/image.mk
 include $(BR2_EXTERNAL_INFIX_PATH)/board/common/qemu/qemu.mk
 

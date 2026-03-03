@@ -73,7 +73,7 @@ $ sudo apt install bc binutils build-essential bzip2 cpio \
                    libncurses-dev libssl-dev perl patch   \
                    python3 rsync sed tar unzip wget       \
                    autopoint bison flex autoconf automake \
-                   mtools
+                   mtools sbsigntool
 ```
 
 To build an Infix image; select the target and then make:
