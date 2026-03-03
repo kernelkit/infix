@@ -4,8 +4,8 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"flag"
-	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
@@ -15,22 +15,22 @@ import (
 )
 
 //go:embed browse.html
-var browseHTML string
+var browseHTML []byte
 
 //go:embed static
 var staticFS embed.FS
 
-var tmpl = template.Must(template.New("browse").Parse(browseHTML))
-
-type pageData struct {
-	Hosts map[string][]Service
+func browseHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(browseHTML)
 }
 
-func browseHandler(w http.ResponseWriter, r *http.Request) {
+func dataHandler(w http.ResponseWriter, r *http.Request) {
 	hosts := scan()
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.Execute(w, pageData{Hosts: hosts}); err != nil {
-		log.Printf("template: %v", err)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	if err := json.NewEncoder(w).Encode(hosts); err != nil {
+		log.Printf("json: %v", err)
 	}
 }
 
@@ -41,6 +41,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", browseHandler)
 	mux.HandleFunc("/netbrowse", browseHandler)
+	mux.HandleFunc("/data", dataHandler)
+	mux.HandleFunc("/netbrowse/data", dataHandler)
 
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err != nil {

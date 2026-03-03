@@ -1,182 +1,518 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>mDNS Hosts - Services</title>
-    <style>
-      .container {
-          max-width: 1024px;
-          margin: auto;
-          padding: 0 0px;
-	  overflow: auto;
+<html data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>mDNS Browser</title>
+  <style>
+    /* IBM Plex Mono — latin subset, weights 400/500/600
+     * Copyright © 2017 IBM Corp. (Reserved Font Name "Plex")
+     * Licensed under the SIL Open Font License 1.1
+     * Source: https://github.com/IBM/plex  v20 via fonts.gstatic.com */
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      font-style: normal; font-weight: 400; font-display: swap;
+      src: url('/static/fonts/IBMPlexMono-Regular.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                     U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                     U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      font-style: normal; font-weight: 500; font-display: swap;
+      src: url('/static/fonts/IBMPlexMono-Medium.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                     U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                     U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      font-style: normal; font-weight: 600; font-display: swap;
+      src: url('/static/fonts/IBMPlexMono-SemiBold.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                     U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                     U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+  </style>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Light theme (default) */
+      --bg:        #f2f0ec;
+      --surface:   #ffffff;
+      --border:    #e2ddd6;
+      --text:      #1c1917;
+      --text-dim:  #78716c;
+      --accent:    #1d4ed8;
+      --accent-bg: #eff6ff;
+      --hdr:       rgba(242,240,236,.92);
+      --shadow:    0 1px 2px rgba(0,0,0,.06), 0 3px 8px rgba(0,0,0,.04);
+      --shadow-h:  0 2px 6px rgba(0,0,0,.10), 0 8px 20px rgba(0,0,0,.06);
+      /* Badges: light */
+      --c-https:    #15803d; --bg-https:    #dcfce7;
+      --c-http:     #0e7490; --bg-http:     #cffafe;
+      --c-ssh:      #1e40af; --bg-ssh:      #dbeafe;
+      --c-sftp:     #6d28d9; --bg-sftp:     #ede9fe;
+      --c-netconf:  #b45309; --bg-netconf:  #fef3c7;
+      --c-restconf: #c2410c; --bg-restconf: #ffedd5;
+      --c-other:    #57534e; --bg-other:    #f5f5f4;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #09111f;
+        --surface:   #0f1a2e;
+        --border:    #1a2840;
+        --text:      #c2cede;
+        --text-dim:  #4e6070;
+        --accent:    #60a5fa;
+        --accent-bg: #0c1f3a;
+        --hdr:       rgba(9,17,31,.92);
+        --shadow:    0 1px 3px rgba(0,0,0,.40), 0 4px 12px rgba(0,0,0,.25);
+        --shadow-h:  0 2px 8px rgba(0,0,0,.50), 0 8px 24px rgba(0,0,0,.35);
+        /* Badges: dark */
+        --c-https:    #4ade80; --bg-https:    rgba(74,222,128,.10);
+        --c-http:     #22d3ee; --bg-http:     rgba(34,211,238,.10);
+        --c-ssh:      #93c5fd; --bg-ssh:      rgba(147,197,253,.10);
+        --c-sftp:     #c4b5fd; --bg-sftp:     rgba(196,181,253,.10);
+        --c-netconf:  #fcd34d; --bg-netconf:  rgba(252,211,77,.10);
+        --c-restconf: #fb923c; --bg-restconf: rgba(251,146,60,.10);
+        --c-other:    #a8a29e; --bg-other:    rgba(168,162,158,.08);
       }
-      .container h1 {
-	  text-align: center;
-	  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-	  font-size: 32px;
-	  color: #333;
-	  padding: 20px;
-      }
-      .checkbox-container {
-	  margin-bottom: 20px;
-	  display: flex;
-	  align-items: center;
-      }
-      .checkbox-container label {
-	  margin-left: 5px;
-	  font-size: 16px;
-      }
-      .container table {
-	  background-color: rgba(255, 255, 255, 0.75);
-      }
-      .network-image {
-          display: block;
-          margin-left: auto;
-          margin-right: auto;
-	  text-align: center;
-          width: 50%;
-      }
-      .detail-row { display: none; }
-      .other { display: none; }
-      .toggle-button {
-	  cursor: pointer;
-	  color: #333;
-	  line-height: 1;
-	  user-select: none;
-	  transition: transform 0.3s ease;
-      }
-      html, body {
-	  height: 100%;
-	  font-family: Arial, sans-serif;
-	  margin: 0;
-	  padding: 0;
-	  /* By kjpargeter https://www.freepik.com/free-vector/network-connections-background_2533758.htm */
-	  background-image: url('/static/images/2533758_8245.svg');
-          background-size: cover;
-          background-position: center;
-          background-repeat: no-repeat;
-      }
-      table {
-	  border-collapse: collapse;
-	  width: 100%;
-	  margin: 20px auto;
-	  border: 2px solid rgba(0, 0, 0, 0.1);
-	  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-      table tr th:first-child, table tr td:first-child {
-	  width: 1%;
-	  white-space: nowrap;
-	  padding: 10px;
-      }
-      th, td {
-	  text-align: left;
-	  padding: 8px;
-	  border-bottom: 1px solid #ddd;
-      }
-      th {
-	  background-color: #e2e2e2;
-      }
-      tr:hover {
-	  background-color: #d8d8d8;
-      }
-    </style>
-  </head>
+    }
+
+    html[data-theme="dark"] {
+      --bg: #09111f; --surface: #0f1a2e; --border: #1a2840;
+      --text: #c2cede; --text-dim: #4e6070; --accent: #60a5fa;
+      --accent-bg: #0c1f3a; --hdr: rgba(9,17,31,.92);
+      --shadow: 0 1px 3px rgba(0,0,0,.40), 0 4px 12px rgba(0,0,0,.25);
+      --shadow-h: 0 2px 8px rgba(0,0,0,.50), 0 8px 24px rgba(0,0,0,.35);
+      --c-https: #4ade80;  --bg-https:    rgba(74,222,128,.10);
+      --c-http: #22d3ee;   --bg-http:     rgba(34,211,238,.10);
+      --c-ssh: #93c5fd;    --bg-ssh:      rgba(147,197,253,.10);
+      --c-sftp: #c4b5fd;   --bg-sftp:     rgba(196,181,253,.10);
+      --c-netconf: #fcd34d; --bg-netconf: rgba(252,211,77,.10);
+      --c-restconf: #fb923c; --bg-restconf: rgba(251,146,60,.10);
+      --c-other: #a8a29e;  --bg-other:    rgba(168,162,158,.08);
+    }
+
+    html[data-theme="light"] {
+      --bg: #f2f0ec; --surface: #ffffff; --border: #e2ddd6;
+      --text: #1c1917; --text-dim: #78716c; --accent: #1d4ed8;
+      --accent-bg: #eff6ff; --hdr: rgba(242,240,236,.92);
+      --shadow: 0 1px 2px rgba(0,0,0,.06), 0 3px 8px rgba(0,0,0,.04);
+      --shadow-h: 0 2px 6px rgba(0,0,0,.10), 0 8px 20px rgba(0,0,0,.06);
+      --c-https: #15803d;  --bg-https:    #dcfce7;
+      --c-http: #0e7490;   --bg-http:     #cffafe;
+      --c-ssh: #1e40af;    --bg-ssh:      #dbeafe;
+      --c-sftp: #6d28d9;   --bg-sftp:     #ede9fe;
+      --c-netconf: #b45309; --bg-netconf: #fef3c7;
+      --c-restconf: #c2410c; --bg-restconf: #ffedd5;
+      --c-other: #57534e;  --bg-other:    #f5f5f4;
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'IBM Plex Mono', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      background: var(--bg);
+      color: var(--text);
+      transition: background .2s, color .2s;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--hdr);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .hdr-inner {
+      max-width: 1400px; margin: 0 auto;
+      padding: 10px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .brand {
+      font-size: 14px; font-weight: 600; letter-spacing: .03em;
+      color: var(--text); white-space: nowrap; flex-shrink: 0;
+      user-select: none;
+    }
+    .brand em { color: var(--accent); font-style: normal; }
+
+    .search-wrap { flex: 1; min-width: 120px; }
+    #search {
+      width: 100%; padding: 6px 10px;
+      font-family: inherit; font-size: 12px;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: 5px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      appearance: none; -webkit-appearance: none;
+    }
+    #search::placeholder { color: var(--text-dim); }
+    #search:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+    #search::-webkit-search-cancel-button,
+    #search::-webkit-search-decoration { display: none; }
+
+    .controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px;
+      font-family: inherit; font-size: 11px; font-weight: 500;
+      background: var(--surface); color: var(--text-dim);
+      border: 1px solid var(--border); border-radius: 5px;
+      cursor: pointer; white-space: nowrap;
+      transition: color .15s, background .15s, border-color .15s;
+      user-select: none; line-height: 1.4;
+    }
+    .btn:hover { color: var(--text); border-color: var(--text-dim); }
+    .btn[aria-pressed="true"] {
+      background: var(--accent-bg); color: var(--accent);
+      border-color: var(--accent);
+    }
+    .btn.icon { padding: 5px 8px; }
+
+    #cdspan { font-size: 10px; opacity: .75; min-width: 2.4em; }
+
+    /* ── Grid ───────────────────────────────────── */
+    main {
+      max-width: 1400px; margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 14px; align-items: start;
+    }
+
+    /* ── Card ───────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-h);
+    }
+    .card-host {
+      padding: 12px 14px 10px;
+      font-size: 12px; font-weight: 600;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      word-break: break-all;
+    }
+    .card-svcs { padding: 6px 0; }
+
+    .svc {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 14px;
+    }
+    .svc a {
+      display: flex; align-items: center; gap: 8px;
+      text-decoration: none; color: inherit; width: 100%;
+    }
+    .svc a:hover .svc-name { color: var(--accent); }
+    .svc a:hover .arrow { opacity: 1; }
+
+    .badge {
+      flex-shrink: 0;
+      display: inline-block;
+      padding: 2px 6px; border-radius: 3px;
+      font-size: 9px; font-weight: 600; letter-spacing: .05em;
+      text-transform: uppercase;
+      min-width: 64px; text-align: center;
+    }
+    .b-https    { color: var(--c-https);    background: var(--bg-https); }
+    .b-http     { color: var(--c-http);     background: var(--bg-http); }
+    .b-ssh      { color: var(--c-ssh);      background: var(--bg-ssh); }
+    .b-sftp     { color: var(--c-sftp);     background: var(--bg-sftp); }
+    .b-netconf  { color: var(--c-netconf);  background: var(--bg-netconf); }
+    .b-restconf { color: var(--c-restconf); background: var(--bg-restconf); }
+    .b-other    { color: var(--c-other);    background: var(--bg-other); }
+
+    .svc-name {
+      flex: 1; min-width: 0;
+      font-size: 11px; color: var(--text-dim);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      transition: color .12s;
+    }
+    .arrow {
+      flex-shrink: 0; font-size: 10px; color: var(--accent);
+      opacity: 0; transition: opacity .12s;
+    }
+
+    /* ── Empty / error states ───────────────────── */
+    .state {
+      grid-column: 1 / -1;
+      padding: 60px 20px; text-align: center;
+      color: var(--text-dim); line-height: 1.8;
+    }
+    .state.err { color: #ef4444; }
+    .state p + p { margin-top: 4px; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 22px; height: 22px; margin: 0 auto 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+    }
+
+    /* ── Footer ─────────────────────────────────── */
+    footer {
+      max-width: 1400px; margin: 0 auto;
+      padding: 12px 20px 28px;
+      font-size: 11px; color: var(--text-dim); text-align: center;
+    }
+
+    @media (max-width: 560px) {
+      .hdr-inner { flex-wrap: wrap; gap: 8px; }
+      .brand     { order: 0; }
+      .search-wrap { order: 2; flex-basis: 100%; }
+      .controls  { order: 1; margin-left: auto; }
+      main { padding: 12px; gap: 10px; grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
 <body>
-  <div class="container">
-    <div class="network-image">
+
+<header>
+  <div class="hdr-inner">
+    <div class="brand">mDNS<em>·</em>browser</div>
+    <div class="search-wrap">
+      <input type="search" id="search" placeholder="Search… (press /)" autocomplete="off" spellcheck="false">
     </div>
-    <h1>mDNS Hosts and Services</h1>
-    <div class="checkbox-container">
-      <label for="showAll">
-	<input type="checkbox" id="showAll" name="showAll" onchange="toggleAll(this)">
-	Show all
-      </label>
+    <div class="controls">
+      <button class="btn icon" id="btn-refresh" title="Refresh now">↻</button>
+      <button class="btn" id="btn-all" aria-pressed="false" title="Show all mDNS devices, not just Infix">All</button>
+      <button class="btn" id="btn-auto" aria-pressed="false" title="Toggle auto-refresh every 30 s">Auto<span id="cdspan"></span></button>
+      <button class="btn icon" id="btn-theme" title="Cycle theme: system → dark → light">◐</button>
     </div>
-    <table id="main">
-      <thead>
-	<tr><th></th><th>Link</th><th>Name</th><th>Type</th></tr>
-      </thead>
-      <tbody>
-	{{range $link, $services := .Hosts}}
-	{{range $i, $svc := $services}}
-	{{if eq $i 0}}
-	<tr class="device-row {{if $svc.Other}}other{{end}}">
-	  <td><span class="toggle-button" onclick="toggleFoldout('{{$link}}', event)">&#x25B6;</span></td>
-	{{else}}
-	<tr class="device-row detail-row" data-name="{{$link}}">
-	  <td></td>
-        {{end}}
-	  {{if $svc.URL}}
-          <td><a href="{{$svc.URL}}" target="_blank" rel="noopener noreferrer">{{$link}}</a></td>
-	  {{else}}
-          <td>{{$link}}</td>
-	  {{end}}
-	  <td>{{$svc.Name}}</td>
-          <td>{{$svc.Type}}</td>
-	</tr>
-	{{end}}
-	{{end}}
-      </tbody>
-    </table>
   </div>
-  <script>
-    document.addEventListener('DOMContentLoaded', (event) => {
-	document.getElementById('showAll').checked = false;
+</header>
+
+<main id="grid">
+  <div class="state"><div class="spinner"></div><p>Scanning…</p></div>
+</main>
+
+<footer id="foot"></footer>
+
+<script>(function () {
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  var showAll   = false;
+  var autoOn    = false;
+  var cdCount   = 30;
+  var cdTimer   = null;
+  var query     = '';
+  var themeMode = localStorage.getItem('theme') || 'system';
+  var lastData  = null;
+  var lastTs    = null;
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  var grid       = document.getElementById('grid');
+  var foot       = document.getElementById('foot');
+  var searchEl   = document.getElementById('search');
+  var btnAll     = document.getElementById('btn-all');
+  var btnAuto    = document.getElementById('btn-auto');
+  var cdspan     = document.getElementById('cdspan');
+  var btnTheme   = document.getElementById('btn-theme');
+  var btnRefresh = document.getElementById('btn-refresh');
+
+  // ── Theme ──────────────────────────────────────────────────────────────────
+  var THEME_ICONS  = { system: '◐', dark: '●', light: '○' };
+  var THEME_ORDER  = ['system', 'dark', 'light'];
+
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', themeMode);
+    btnTheme.textContent = THEME_ICONS[themeMode];
+    localStorage.setItem('theme', themeMode);
+  }
+
+  btnTheme.addEventListener('click', function () {
+    var i = THEME_ORDER.indexOf(themeMode);
+    themeMode = THEME_ORDER[(i + 1) % THEME_ORDER.length];
+    applyTheme();
+  });
+
+  // ── Data ───────────────────────────────────────────────────────────────────
+  function fetchData() {
+    fetch('/data')
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        lastData = data || {};
+        lastTs   = new Date();
+        render();
+      })
+      .catch(function (e) {
+        grid.innerHTML = '<div class="state err"><p>Error: ' + esc(e.message) + '</p></div>';
+        foot.textContent = '';
+      });
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  var BADGE_CLASS = {
+    'HTTPS':    'b-https',
+    'HTTP':     'b-http',
+    'SSH':      'b-ssh',
+    'SFTP':     'b-sftp',
+    'NETCONF':  'b-netconf',
+    'RESTCONF': 'b-restconf',
+  };
+
+  function render() {
+    var q       = query.toLowerCase();
+    var entries = Object.entries(lastData);
+
+    // Devices to show based on the All toggle
+    var inScope = entries.filter(function (e) {
+      return showAll || !(e[1].length > 0 && e[1][0].other);
     });
 
-    function filter() {
-        var input, filter, table, tr, tdaddr, tdserv, i, addr, serv;
+    // Further filtered by the search query
+    var visible = inScope.filter(function (e) {
+      if (!q) return true;
+      var text = e[0];
+      e[1].forEach(function (s) { text += ' ' + s.type + ' ' + s.name; });
+      return text.toLowerCase().indexOf(q) !== -1;
+    });
 
-        input = document.getElementById("search");
-        filter = input.value.toUpperCase();
-        table = document.getElementById("main");
-        tr = table.getElementsByTagName("tr");
-
-        for (i = 1; i < tr.length; i++) {
-            tdaddr = tr[i].getElementsByTagName("td")[0];
-            tdserv = tr[i].getElementsByTagName("td")[1];
-            tdlink = tr[i].getElementsByTagName("td")[2];
-            tdtype = tr[i].getElementsByTagName("td")[3];
-            addr = tdaddr ? tdaddr.textContent || tdaddr.innerText : "";
-            serv = tdserv ? tdserv.textContent || tdserv.innerText : "";
-            link = tdlink ? tdlink.textContent || tdlink.innerText : "";
-            type = tdtype ? tdtype.textContent || tdtype.innerText : "";
-
-            if (addr.toUpperCase().indexOf(filter) > -1 ||
-                serv.toUpperCase().indexOf(filter) > -1 ||
-                link.toUpperCase().indexOf(filter) > -1 ||
-                type.toUpperCase().indexOf(filter) > -1) {
-                tr[i].style.display = "";
-            } else {
-                tr[i].style.display = "none";
-            }
-        }
+    if (visible.length === 0) {
+      var msg = (inScope.length === 0)
+        ? '<p>No devices found.</p><p>Make sure avahi-browse is installed and running.</p>'
+        : '<p>No results for <strong>' + esc(query) + '</strong>.</p>';
+      grid.innerHTML = '<div class="state">' + msg + '</div>';
+      setFooter(0, inScope.length, entries.length);
+      return;
     }
 
-    function toggleFoldout(name, event) {
-        var isHidden = true;
-        var detailRows;
+    visible.sort(function (a, b) { return a[0].localeCompare(b[0]); });
 
-	detailRows = document.querySelectorAll(`tr[data-name='${name}']`);
-        detailRows.forEach(row => {
-	    if (row.style.display === 'none' || row.style.display === '') {
-		row.style.display = 'table-row';
-		isHidden = false;
-	    } else {
-		row.style.display = 'none';
-		isHidden = true;
-	    }
-        });
-        event.target.innerHTML = isHidden ? '&#x25B6;' : '&#x25BC;';
+    grid.innerHTML = visible.map(function (e) {
+      return makeCard(e[0], e[1]);
+    }).join('');
+
+    setFooter(visible.length, inScope.length, entries.length);
+  }
+
+  function makeCard(host, svcs) {
+    var rows = svcs.map(function (s) {
+      var cls   = BADGE_CLASS[s.type] || 'b-other';
+      var badge = '<span class="badge ' + cls + '">' + esc(s.type) + '</span>';
+      var name  = '<span class="svc-name">' + esc(s.name) + '</span>';
+      if (s.url) {
+        return '<div class="svc"><a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">'
+             + badge + name + '<span class="arrow">↗</span></a></div>';
+      }
+      return '<div class="svc">' + badge + name + '</div>';
+    }).join('');
+
+    return '<div class="card"><div class="card-host">' + esc(host) + '</div>'
+         + '<div class="card-svcs">' + rows + '</div></div>';
+  }
+
+  function setFooter(visible, inScope, total) {
+    var label = inScope + ' device' + (inScope !== 1 ? 's' : '');
+    if (visible < inScope) {
+      label = visible + ' of ' + label;
     }
-
-    function toggleAll(checkbox) {
-	const allRows = document.querySelectorAll('.device-row');
-
-	allRows.forEach(row => {
-	    if (row.classList.contains('other'))
-		row.style.display = checkbox.checked ? 'table-row' : 'none';
-        });
+    if (!showAll && total > inScope) {
+      label += ' (+' + (total - inScope) + ' hidden)';
     }
-  </script>
+    var parts = [label];
+    if (lastTs) {
+      parts.push('updated ' + lastTs.toLocaleTimeString());
+    }
+    foot.textContent = parts.join('  ·  ');
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+  searchEl.addEventListener('input', function () {
+    query = searchEl.value;
+    if (lastData) render();
+  });
+
+  // ── Show all ───────────────────────────────────────────────────────────────
+  btnAll.addEventListener('click', function () {
+    showAll = !showAll;
+    btnAll.setAttribute('aria-pressed', showAll);
+    if (lastData) render();
+  });
+
+  // ── Auto-refresh ───────────────────────────────────────────────────────────
+  function startCd() {
+    cdCount = 30;
+    cdspan.textContent = ' ' + cdCount + 's';
+    cdTimer = setInterval(function () {
+      cdCount--;
+      if (cdCount <= 0) {
+        cdCount = 30;
+        fetchData();
+      }
+      cdspan.textContent = ' ' + cdCount + 's';
+    }, 1000);
+  }
+
+  function stopCd() {
+    clearInterval(cdTimer);
+    cdspan.textContent = '';
+  }
+
+  btnAuto.addEventListener('click', function () {
+    autoOn = !autoOn;
+    btnAuto.setAttribute('aria-pressed', autoOn);
+    autoOn ? startCd() : stopCd();
+  });
+
+  // ── Manual refresh ─────────────────────────────────────────────────────────
+  btnRefresh.addEventListener('click', function () {
+    if (autoOn) {
+      cdCount = 30;
+      cdspan.textContent = ' ' + cdCount + 's';
+    }
+    fetchData();
+  });
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  document.addEventListener('keydown', function (e) {
+    if (e.target === searchEl) {
+      if (e.key === 'Escape') searchEl.blur();
+      return;
+    }
+    if (e.key === '/') {
+      e.preventDefault();
+      searchEl.focus();
+      searchEl.select();
+    }
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  applyTheme();
+  fetchData();
+
+}());</script>
+
 </body>
 </html>
