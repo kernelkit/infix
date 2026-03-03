@@ -2,7 +2,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os/exec"
 	"sort"
@@ -152,25 +151,30 @@ func scan() map[string][]Service {
 	return hosts
 }
 
-// decode handles avahi escape sequences in service names.
+// decode handles avahi's DNS-SD escape sequences in service names:
+//   - \DDD  decimal value 0-255, e.g. \058 → ':'
+//   - \X    literal character X, e.g. \. → '.'
 func decode(name string) string {
-	name = strings.ReplaceAll(name, `\032`, " ")
-	name = strings.ReplaceAll(name, `\040`, "(")
-	name = strings.ReplaceAll(name, `\041`, ")")
-
-	// Handle remaining \NNN octal escapes
 	var b strings.Builder
 	for i := 0; i < len(name); i++ {
-		if i+3 < len(name) && name[i] == '\\' &&
-			name[i+1] >= '0' && name[i+1] <= '3' &&
-			name[i+2] >= '0' && name[i+2] <= '7' &&
-			name[i+3] >= '0' && name[i+3] <= '7' {
-			val := (int(name[i+1]-'0') << 6) | (int(name[i+2]-'0') << 3) | int(name[i+3]-'0')
-			b.WriteByte(byte(val))
-			i += 3
-		} else {
+		if name[i] != '\\' || i+1 >= len(name) {
 			b.WriteByte(name[i])
+			continue
 		}
+		if i+3 < len(name) &&
+			name[i+1] >= '0' && name[i+1] <= '9' &&
+			name[i+2] >= '0' && name[i+2] <= '9' &&
+			name[i+3] >= '0' && name[i+3] <= '9' {
+			val := int(name[i+1]-'0')*100 + int(name[i+2]-'0')*10 + int(name[i+3]-'0')
+			if val <= 255 {
+				b.WriteByte(byte(val))
+				i += 3
+				continue
+			}
+		}
+		// \X where X is not a 3-digit decimal: output X literally
+		b.WriteByte(name[i+1])
+		i++
 	}
-	return fmt.Sprintf("%s", b.String())
+	return b.String()
 }
