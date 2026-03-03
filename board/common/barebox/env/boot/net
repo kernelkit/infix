@@ -1,0 +1,24 @@
+#!/bin/sh
+
+if dhcp $1; then
+    if [ -z "${global.dhcp.bootfile}" ]; then
+	echo "net: ERROR: DHCP did not supply a bootfile"
+	exit 1
+    fi
+else
+    echo "net: ERROR: DHCP Failed"
+    exit 1
+fi
+
+echo "net: Downloading ${global.dhcp.bootfile}..."
+if tftp ${global.dhcp.bootfile} /initrd; then
+else
+    echo "net: ERROR: Download failed"
+    exit 1
+fi
+
+global bootm.initrd=/initrd
+dmsetup loop initrd /initrd && boot /dev/initrd
+
+echo "net: ERROR: Unable to boot from ${global.dhcp.bootfile}"
+exit 1
