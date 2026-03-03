@@ -3,6 +3,7 @@
 set -e
 
 . $(dirname $(readlink -f "$0"))/libll.sh
+. $(dirname $(readlink -f "$0"))/libfleet.sh
 
 usage()
 {
@@ -13,6 +14,7 @@ usage: $me [-A] <command> [<args>]
 
 Wrap various existing network facilities such that an interface name
 may be supplied in places where a hostname is otherwise expected.
+Also provides fleet management and upgrade of enrolled Infix devices.
 
   Options:
 
@@ -20,7 +22,7 @@ may be supplied in places where a hostname is otherwise expected.
       For commands requiring authentication, use password
       authentication with username "admin" and password "admin".
 
-  Commands:
+  Link-local commands:
 
     scan [-a] [<iface>]
       Discover Infix devices on the LAN using mDNS-SD (avahi-browse).
@@ -44,16 +46,50 @@ may be supplied in places where a hostname is otherwise expected.
       <src> or <dst> is assumed to be an interface name, which is
       expanded to a neighboring host on that interface.
 
-    ${0} help
+  Fleet commands (RESTCONF, config in ~/.config/infix/config.json):
+
+    fleet enroll [-p <profile>] [-u <user>] [-w <password>] <name> <address>
+      Enroll a device.  Profile groups devices for bulk operations.
+      Password may be omitted if -A is always used.
+
+    fleet enroll -d <name>
+      Remove an enrolled device.
+
+    fleet list
+      List all enrolled devices.
+
+    fleet upgrade <name|profile> <url>
+      Install a software bundle from <url> on one device or all devices
+      in a profile, in parallel, with a live per-device progress display.
+
+    fleet backup [-o <dir>] <name|profile>
+      Save the startup-config from one device or all devices in a profile.
+      Single device: saved to the current directory.
+      Profile: saved to ~/.config/infix/<profile>/<name>/.
+
+    fleet reboot <name|profile>
+      Reboot one device or all devices in a profile.
+
+    help
       Display this message.
 
   Examples:
 
-    Start interactive ssh(1) session to the neighbor to eth0
+    Start interactive ssh(1) session to the neighbor on eth0
       $me ssh eth0
 
-    Copy /etc/hostname from the neighbor to eth0, using admin/admin
+    Copy /etc/hostname from the neighbor on eth0, using admin/admin
       $me -A scp eth0:/etc/hostname /tmp/hostname
+
+    Enroll two devices into the "aarch64" fleet
+      $me fleet enroll -p aarch64 -w secret gw-1 192.168.1.10
+      $me fleet enroll -p aarch64 -w secret gw-2 192.168.1.11
+
+    Upgrade the entire aarch64 fleet
+      $me fleet upgrade aarch64 ftp://build-server/infix-aarch64-26.02.pkg
+
+    Backup a single device's startup-config to the current directory
+      $me -A fleet backup gw-1
 
 EOF
 }
@@ -96,8 +132,11 @@ case "$cmd" in
     ssh)
 	llssh "$@"
 	;;
+    fleet)
+	fleet_main "$@"
+	;;
     *)
-	echo "Unknown command \"$cmd\"" >2
+	echo "Unknown command \"$cmd\"" >&2
 	exit 1
 	;;
 esac
