@@ -33,7 +33,6 @@ cat <<EOF >"$file"
   <service>
     <type>$type</type>
     <port>$port</port>
-    <host-name>$host.local</host-name>
     <txt-record>vv=1</txt-record>
     <txt-record>vendor=$(jq -r .vendor /run/system.json)</txt-record>
     <txt-record>product=$(jq -r '."product-name"' /run/system.json)</txt-record>

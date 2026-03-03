@@ -1,2 +1,5 @@
-service <!service/mdns/running> env:-/etc/default/mdns-alias log:prio:daemon.debug,tag:mdns \
-	[2345] mdns-alias $MDNS_ALIAS_ARGS -- mDNS alias advertiser 
+# Avahi advertises the system default hostname, this service advertises
+# /etc/hostname (-H) and, optionally, network.local as CNAMEs.  Changes
+# to /etc/default/mdns-alias will cause Finit to restart not reload.
+service <service/mdns/running> env:-/etc/default/mdns-alias \
+	[2345] mdns-alias -H $MDNS_ALIAS_ARGS --
