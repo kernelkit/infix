@@ -50,7 +50,7 @@ submodule infix-if-wifi {
 
   revision 2026-02-12 {
     description
-      "Add support for roaming, by adding support for 802.11v/k/r"
+      "Add support for roaming, by adding support for 802.11v/k/r";
     reference "internal";
   }
 
