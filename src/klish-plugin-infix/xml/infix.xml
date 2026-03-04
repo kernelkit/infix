@@ -169,6 +169,24 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="SSH_KNOWN_HOSTS">
+  <COMPL>
+    <ACTION sym="ssh_known_hosts@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="SSH_KEY_TYPE">
+  <COMPL>
+    <ACTION sym="printl">ecdsa-sha2-nistp256</ACTION>
+    <ACTION sym="printl">ecdsa-sha2-nistp384</ACTION>
+    <ACTION sym="printl">ecdsa-sha2-nistp521</ACTION>
+    <ACTION sym="printl">ssh-ed25519</ACTION>
+    <ACTION sym="printl">ssh-rsa</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
   <HOTKEY key="^D" cmd="exit"/>
 
@@ -299,6 +317,15 @@ echo "Public:  $pub"
     <PARAM name="second" ptype="/BOOT_TARGET" help="Second boot target" min="0"/>
     <PARAM name="third" ptype="/BOOT_TARGET" help="Third boot target" min="0"/>
     <ACTION sym="set_boot_order@infix"/>
+  </COMMAND>
+
+  <COMMAND name="ssh" help="SSH client settings" mode="switch">
+    <COMMAND name="known-hosts" help="Pre-enroll a host public key received out-of-band">
+      <PARAM name="host"    ptype="/STRING"       help="Hostname or IP address"/>
+      <PARAM name="keytype" ptype="/SSH_KEY_TYPE" help="Public key algorithm"/>
+      <PARAM name="pubkey"  ptype="/STRING"       help="Base64-encoded public key"/>
+      <ACTION sym="ssh_add_known_host@infix"/>
+    </COMMAND>
   </COMMAND>
 </COMMAND>
 
@@ -873,6 +900,28 @@ echo "Public:  $pub"
       verbose=${KLISH_PARAM_verbose:+-vvv}
       doas tcpdump -ln $count $size $verbose -i $KLISH_PARAM_iface $KLISH_PARAM_expr
     </ACTION>
+  </COMMAND>
+
+  <COMMAND name="ssh" help="Connect to a remote device over SSH">
+    <SWITCH name="optional" min="0" max="2">
+      <COMMAND name="user" help="Login with a different username">
+        <PARAM name="user" ptype="/STRING" help="Remote username"/>
+      </COMMAND>
+      <COMMAND name="port" help="Connect to a non-standard port">
+        <PARAM name="port" ptype="/UINT" help="TCP port number"/>
+      </COMMAND>
+    </SWITCH>
+    <PARAM name="host" ptype="/STRING" help="Hostname or IP address"/>
+    <ACTION sym="ssh_connect@infix" in="tty" out="tty" interrupt="true"/>
+  </COMMAND>
+
+  <COMMAND name="no" help="Remove a setting or entry" mode="switch">
+    <COMMAND name="ssh" help="SSH client settings" mode="switch">
+      <COMMAND name="known-hosts" help="Remove a host from the SSH known_hosts file">
+        <PARAM name="host" ptype="/SSH_KNOWN_HOSTS" help="Hostname or IP to remove"/>
+        <ACTION sym="ssh_remove_known_host@infix"/>
+      </COMMAND>
+    </COMMAND>
   </COMMAND>
 
   <COMMAND name="upgrade" help="Install a software update bundle from remote or local file">
