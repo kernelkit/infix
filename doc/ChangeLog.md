@@ -3,6 +3,36 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.03.0][UNRELEASED] -
+-------------------------
+
+### Changes
+
+- **Revamped <http://network.local> device browser**.  Device cards now
+  show the IP address, product name, and firmware version from mDNS TXT
+  records.  the mDNS browser is now also available over plain HTTP
+- mDNS service records now embed the per-device hostname (using avahi's `%h`
+  wildcard), so devices avoid the `#2`, `#3` suffix collisions on service names
+  when multiple Infix devices share the same LAN
+- Add configurable mDNS hostname: set `services mdns hostname` to override the
+  mDNS name advertised in A/AAAA records.  Supports `%h` (default hostname),
+  `%i` (hardware ID), and `%m` (MAC address) format specifiers
+- cli: new `show mdns` command to list  mDNS-discovered devices on the LAN,
+  with addresses and product model
+- Add SSH client commands to the CLI:
+  - `ssh [user <name>] [port <num>] <host>` — connect to a remote device
+  - `set ssh known-hosts <host> <keytype> <pubkey>` — pre-enroll a host key
+    received out-of-band, e.g. after a factory reset changes the device host key
+  - `no ssh known-hosts <host>` — remove a stale or changed host key entry
+
+### Fixes
+
+- Fix #1387: `infix.local` now resolves to exactly one device per LAN.  Previously
+  all Infix devices claimed both `hostname.local` and `infix.local`, causing avahi
+  to append `#2`, `#3` suffixes to the shared alias on busy networks.  Assignment
+  is now first-come-first-served using standard mDNS conflict resolution
+- Fix #1416: `show firewall` command show an error when the firewall is disabled
+
 [v26.02.0][] - 2026-03-01
 -------------------------
 
@@ -1932,6 +1962,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.02.0...HEAD
+[v26.03.0]:   https://github.com/kernelkit/infix/compare/v26.02.0...v26.03.0
 [v26.02.0]:   https://github.com/kernelkit/infix/compare/v26.01.0...v26.02.0
 [v26.01.0]:   https://github.com/kernelkit/infix/compare/v25.11.0...v26.01.0
 [v25.11.0]:   https://github.com/kernelkit/infix/compare/v25.10.0...v25.11.0
