@@ -21,6 +21,11 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-03-01 {
+    description "Add channel-width leaf for WiFi radio container.";
+    reference "internal";
+  }
+
   revision 2026-02-08 {
     description "Add GPS/GNSS receiver hardware class and container for time sync.";
     reference "internal";
@@ -96,6 +101,36 @@ module infix-hardware {
       }
     }
     description "WiFi frequency band selection.";
+  }
+
+  typedef wifi-channel-width {
+    type enumeration {
+      enum "auto" {
+        description "Automatic selection based on hardware and regulatory capabilities.";
+      }
+      enum "20MHz" {
+        description "20 MHz channel width.";
+      }
+      enum "40MHz" {
+        description "40 MHz channel width (HT40).";
+      }
+      enum "80MHz" {
+        description "80 MHz channel width (VHT/HE, 5/6 GHz only).";
+      }
+      enum "160MHz" {
+        description "160 MHz channel width (VHT/HE, 5/6 GHz only).";
+      }
+    }
+    description
+      "WiFi channel bandwidth selection.
+
+       Wider channels provide higher throughput but increase
+       interference and reduce the number of non-overlapping channels.
+
+       Constraints:
+       - 40 MHz: Requires HT capable hardware
+       - 80 MHz: Requires VHT capable hardware (5/6 GHz only)
+       - 160 MHz: Requires VHT capable hardware (5/6 GHz only)";
   }
 
   /*
@@ -292,6 +327,22 @@ module infix-hardware {
 
            Recommendation: Use 5GHz for better performance and less
            congestion in most environments.";
+      }
+
+      leaf channel-width {
+        type wifi-channel-width;
+        default "auto";
+        must "../band != '2.4GHz' or . = 'auto' or . = '20MHz' or . = '40MHz'" {
+          error-message "80/160 MHz channel width requires 5 GHz or 6 GHz band.";
+        }
+        description
+          "Channel bandwidth.
+
+           Wider channels increase throughput but are more susceptible
+           to interference. Default 'auto' lets the driver select the
+           widest width supported by hardware and regulatory domain.
+
+           Only applicable in Access Point mode.";
       }
 
       leaf probe-timeout {
