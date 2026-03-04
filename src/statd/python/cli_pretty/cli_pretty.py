@@ -5527,7 +5527,8 @@ def main():
     global UNIT_TEST
 
     try:
-        json_data = json.load(sys.stdin)
+        raw = sys.stdin.read()
+        json_data = json.loads(raw) if raw.strip() else {}
     except json.JSONDecodeError:
         print("Error, invalid JSON input")
         sys.exit(1)
