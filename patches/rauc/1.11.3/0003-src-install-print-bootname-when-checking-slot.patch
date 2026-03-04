@@ -1,0 +1,29 @@
+This makes the output more user friendly on systems where the bootname
+is the common way to refer to a slot.
+
+Example output:
+...
+40% Checking slot rootfs.1 (secondary)
+46% Checking slot rootfs.1 (secondary) done.
+...
+
+diff --git a/src/install.c b/src/install.c
+index ea7c95b3..fb38bcab 100644
+--- a/src/install.c
++++ b/src/install.c
+@@ -965,7 +965,11 @@ static gboolean handle_slot_install_plan(const RaucManifest *manifest, const RIm
+ 
+ 	install_args_update(args, "Checking slot %s", plan->target_slot->name);
+ 
+-	r_context_begin_step_weighted_formatted("check_slot", 0, 1, "Checking slot %s", plan->target_slot->name);
++	r_context_begin_step_weighted_formatted("check_slot", 0, 1, "Checking slot %s%s%s%s",
++						plan->target_slot->name,
++						plan->target_slot->bootname ? " (" : "",
++						plan->target_slot->bootname ? plan->target_slot->bootname : "",
++						plan->target_slot->bootname ? ")" : "");
+ 
+ 	r_slot_status_load(plan->target_slot);
+ 	slot_state = plan->target_slot->status;
+-- 
+2.34.1
+

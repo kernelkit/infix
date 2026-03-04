@@ -1,0 +1,6 @@
+config BR2_PACKAGE_LIBYANG_CPP
+	bool "libyang-cpp"
+	depends on BR2_USE_MMU
+	select BR2_PACKAGE_LIBYANG
+	help
+	   Libyang CPP bindings

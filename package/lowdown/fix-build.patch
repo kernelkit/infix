@@ -1,8 +1,7 @@
-diff --git a/configure b/configure
-index 8ae6a78..c8ab908 100755
---- a/configure
-+++ b/configure
-@@ -61,12 +61,7 @@ echo "config.log: writing..."
+diff -urN lowdown-VERSION_1_0_2.orig/configure lowdown-VERSION_1_0_2/configure
+--- lowdown-VERSION_1_0_2.orig/configure	2025-03-21 12:58:06.151106271 +0000
++++ lowdown-VERSION_1_0_2/configure	2025-03-21 13:20:20.649825864 +0000
+@@ -61,12 +61,7 @@
  
  MAKE_FLAGS=""
  
@@ -16,7 +15,7 @@ index 8ae6a78..c8ab908 100755
  
  if [ -n "$MAKE_FLAGS" ]; then 
  	echo "GNU submake detected: using --no-print-directory" 1>&2
-@@ -79,9 +74,6 @@ fi
+@@ -79,9 +74,6 @@
  # in.
  #----------------------------------------------------------------------
  
