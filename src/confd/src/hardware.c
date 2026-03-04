@@ -460,14 +460,55 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	free(secret);
 }
 
+/*
+ * Center channel for 80MHz VHT/HE operation.
+ * 5GHz 80MHz groups: 36-48(42), 52-64(58), 100-112(106),
+ *                    116-128(122), 132-144(138), 149-161(155)
+ */
+static int wifi_center_chan_80(int ch)
+{
+	static const int grp[][2] = {
+		{36, 42}, {52, 58}, {100, 106}, {116, 122}, {132, 138}, {149, 155}
+	};
+	int i;
+
+	for (i = 0; i < 6; i++)
+		if (ch >= grp[i][0] && ch < grp[i][0] + 16)
+			return grp[i][1];
+	return 0;
+}
+
+/*
+ * Center channel for 160MHz VHT/HE operation.
+ * 5GHz 160MHz groups: 36-64(50), 100-128(114)
+ */
+static int wifi_center_chan_160(int ch)
+{
+	if (ch >= 36 && ch <= 64)
+		return 50;
+	if (ch >= 100 && ch <= 128)
+		return 114;
+	return 0;
+}
+
+/* HT40 secondary channel direction: lower channel in pair uses +, upper uses - */
+static const char *wifi_ht40_dir(int ch)
+{
+	return ((ch / 4) % 2) ? "[HT40+]" : "[HT40-]";
+}
+
 /* Helper: Write radio-specific configuration */
 static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 {
-	const char *country, *channel, *band;
+	const char *country, *channel, *band, *width;
+	int ch = 0;
 
 	country = lydx_get_cattr(radio_node, "country-code");
 	band = lydx_get_cattr(radio_node, "band");
 	channel = lydx_get_cattr(radio_node, "channel");
+	width = lydx_get_cattr(radio_node, "channel-width");
+	if (channel && strcmp(channel, "auto"))
+		ch = atoi(channel);
 
 	if (country)
 		fprintf(hostapd, "country_code=%s\n", country);
@@ -560,6 +601,49 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 		}
 		/* 802.11ax (WiFi 6) always enabled for better performance */
 		fprintf(hostapd, "ieee80211ax=1\n");
+
+		/*
+		 * Channel width configuration.
+		 * - HT (802.11n): ht_capab [HT40+] or [HT40-]
+		 * - VHT (802.11ac): vht_oper_chwidth 0=20/40, 1=80, 2=160
+		 * - HE (802.11ax): he_oper_chwidth follows VHT values
+		 * Without explicit width, hostapd uses driver defaults.
+		 */
+		if (width && strcmp(width, "auto")) {
+			if (!strcmp(width, "20MHz")) {
+				fprintf(hostapd, "ht_capab=\n");
+				if (strcmp(band, "2.4GHz")) {
+					fprintf(hostapd, "vht_oper_chwidth=0\n");
+					fprintf(hostapd, "he_oper_chwidth=0\n");
+				}
+			} else if (!strcmp(width, "40MHz")) {
+				fprintf(hostapd, "ht_capab=%s\n", ch ? wifi_ht40_dir(ch) : "[HT40+]");
+				if (strcmp(band, "2.4GHz")) {
+					fprintf(hostapd, "vht_oper_chwidth=0\n");
+					fprintf(hostapd, "he_oper_chwidth=0\n");
+				}
+			} else if (!strcmp(width, "80MHz") && ch) {
+				int center = wifi_center_chan_80(ch);
+
+				fprintf(hostapd, "ht_capab=%s\n", wifi_ht40_dir(ch));
+				fprintf(hostapd, "vht_oper_chwidth=1\n");
+				fprintf(hostapd, "he_oper_chwidth=1\n");
+				if (center) {
+					fprintf(hostapd, "vht_oper_centr_freq_seg0_idx=%d\n", center);
+					fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
+				}
+			} else if (!strcmp(width, "160MHz") && ch) {
+				int center = wifi_center_chan_160(ch);
+
+				fprintf(hostapd, "ht_capab=%s\n", wifi_ht40_dir(ch));
+				fprintf(hostapd, "vht_oper_chwidth=2\n");
+				fprintf(hostapd, "he_oper_chwidth=2\n");
+				if (center) {
+					fprintf(hostapd, "vht_oper_centr_freq_seg0_idx=%d\n", center);
+					fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
+				}
+			}
+		}
 
 		/* Beamforming improves signal quality and range */
 		fprintf(hostapd, "he_su_beamformer=1\n");
