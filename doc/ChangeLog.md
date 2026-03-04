@@ -7,7 +7,7 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
-- Upgrade Buildroot to 2026.02 (LTS)
+- Upgrade Linux kernel to 6.18.16 (LTS)
 
 ### Fixes
 
