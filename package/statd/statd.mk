@@ -10,7 +10,7 @@ STATD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/statd
 STATD_LICENSE = BSD-3-Clause
 STATD_LICENSE_FILES = LICENSE
 STATD_REDISTRIBUTE = NO
-STATD_DEPENDENCIES = sysrepo libev libsrx jansson libyang libite \
+STATD_DEPENDENCIES = sysrepo libev libsrx jansson libyang libite avahi \
 	host-python3 python3 host-python-pypa-build host-python-installer \
 	host-python-poetry-core dbus-python
 STATD_AUTORECONF = YES

@@ -529,6 +529,10 @@ echo "Public:  $pub"
     </ACTION>
   </COMMAND>
 
+  <COMMAND name="mdns" help="Show mDNS configuration and neighbors">
+    <ACTION sym="script">show mdns</ACTION>
+  </COMMAND>
+
   <COMMAND name="hardware" help="Show hardware information">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       show hardware |pager
