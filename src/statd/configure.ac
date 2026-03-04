@@ -36,11 +36,12 @@ AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
-PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
-PKG_CHECK_MODULES([libite],  [libite  >= 2.6.1])
-PKG_CHECK_MODULES([libyang], [libyang >= 2.1.80])
-PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
-PKG_CHECK_MODULES([libsrx],  [libsrx  >= 1.0.0])
+PKG_CHECK_MODULES([jansson],      [jansson      >= 2.0.0])
+PKG_CHECK_MODULES([libite],       [libite       >= 2.6.1])
+PKG_CHECK_MODULES([libyang],      [libyang      >= 2.1.80])
+PKG_CHECK_MODULES([sysrepo],      [sysrepo      >= 2.2.36])
+PKG_CHECK_MODULES([libsrx],       [libsrx       >= 1.0.0])
+PKG_CHECK_MODULES([avahi_client], [avahi-client >= 0.7])
 
 AC_CHECK_HEADER([ev.h],
     [saved_LIBS="$LIBS"

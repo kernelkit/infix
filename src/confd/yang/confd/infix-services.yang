@@ -16,6 +16,9 @@ module infix-services {
     reference
       "RFC 9640: YANG Data Types and Groupings for Cryptography";
   }
+  import ietf-yang-types {
+    prefix yang;
+  }
   import infix-system {
     prefix infix-sys;
   }
@@ -28,9 +31,9 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
-  revision 2026-03-03 {
-    description "Add hostname leaf to mdns container for avahi host-name override.";
-    reference "internal";
+  revision 2026-03-04 {
+   description "Add hostname leaf to mdns container for avahi host-name override.
+                Add neighbors container to mdns for mDNS-SD neighbor table.";
   }
   revision 2025-12-10 {
     description "Adapt to changes in final version of ietf-keystore";
@@ -144,6 +147,62 @@ module infix-services {
 
                      By default all services are reflected.";
         type string;
+      }
+    }
+
+    container neighbors {
+      config false;
+      description "mDNS neighbor table populated by statd on avahi D-Bus events.
+                   All DNS-SD hosts are included; tools that need to identify Infix
+                   devices check for 'vv=1' in the txt leaf-list themselves.
+                   Addresses and TXT records are stored in raw form from avahi.";
+
+      list neighbor {
+        key "hostname";
+        description "A DNS-SD host discovered via avahi service browsing.";
+
+        leaf hostname {
+          type string;
+          description "mDNS hostname as reported by avahi, e.g. 'infix-2.local'.";
+        }
+
+        leaf-list address {
+          type inet:ip-address;
+          description "All addresses reported by avahi for this host.
+                       Loopback (127.x/::1) addresses are excluded.";
+        }
+
+        leaf last-seen {
+          type yang:date-and-time;
+          description "Timestamp of the most recent avahi resolver event for this host.";
+        }
+
+        list service {
+          key "name";
+          description "DNS-SD services advertised by this neighbor.";
+
+          leaf name {
+            type string;
+            description "Service instance name as announced, e.g. 'infix-2 Web'.";
+          }
+
+          leaf type {
+            type string;
+            description "Raw mDNS service type, e.g. '_https._tcp', '_ssh._tcp'.";
+          }
+
+          leaf port {
+            type inet:port-number;
+            description "TCP or UDP port number for this service.";
+          }
+
+          leaf-list txt {
+            type string;
+            description "Raw DNS-SD TXT record strings for this service instance,
+                         e.g. 'vv=1', 'product=Infix', 'ov=25.01.0'.
+                         Stored verbatim; callers split on '=' to extract key-value pairs.";
+          }
+        }
       }
     }
   }

@@ -30,6 +30,7 @@
 
 #include "shared.h"
 #include "journal.h"
+#include "avahi.h"
 
 /* New kernel feature, not in sys/mman.h yet */
 #ifndef MFD_NOEXEC_SEAL
@@ -69,6 +70,7 @@ struct statd {
 	sr_conn_ctx_t *sr_conn;          /* Connection (owns YANG context) */
 	struct ev_loop *ev_loop;
 	struct journal_ctx journal;      /* Journal thread context */
+	struct avahi_ctx avahi;          /* mDNS neighbor monitor */
 };
 
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
@@ -522,6 +524,9 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if (avahi_ctx_init(&statd.avahi, statd.ev_loop, statd.sr_conn))
+		INFO("mDNS neighbor monitoring not available");
+
 	/* Signal readiness to Finit */
 	pidfile(NULL);
 
@@ -531,6 +536,7 @@ int main(int argc, char *argv[])
 	/* We should never get here during normal operation */
 	INFO("Status daemon shutting down");
 
+	avahi_ctx_exit(&statd.avahi);
 	journal_stop(&statd.journal);
 
 	unsub_to_all(&statd);

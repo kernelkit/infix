@@ -3771,6 +3771,91 @@ def show_lldp(json):
             entry.print()
 
 
+def _mdns_sort_addrs(addresses):
+    """Sort addresses: IPv4 first, then non-link-local IPv6, then link-local IPv6."""
+    def key(a):
+        if ":" not in a:
+            return 0
+        if a.lower().startswith("fe80:"):
+            return 2
+        return 1
+    return sorted(addresses, key=key)
+
+
+def _mdns_last_seen(ts):
+    """Extract HH:MM:SS from RFC 3339 timestamp."""
+    if not ts:
+        return "-"
+    try:
+        return ts.split("T")[1][:8]
+    except (IndexError, AttributeError):
+        return "-"
+
+
+def _mdns_svc_name(stype):
+    """'_https._tcp' → 'https', '_netconf-ssh._tcp' → 'netconf-ssh'."""
+    return stype.lstrip("_").split("._")[0]
+
+
+def show_mdns(json):
+    mdns = json.get("infix-services:mdns", {})
+    if not mdns:
+        print("mDNS not configured.")
+        return
+
+    # Configuration
+    enabled  = mdns.get("enabled")
+    domain   = mdns.get("domain", "local")
+    hostname = mdns.get("hostname")
+    reflector_on = mdns.get("reflector", {}).get("enabled")
+
+    if enabled is not None:
+        print(f"{'Enabled':<16}: {'yes' if enabled else 'no'}")
+    print(f"{'Domain':<16}: {domain}")
+    if hostname:
+        print(f"{'Hostname':<16}: {hostname}")
+
+    ifaces = mdns.get("interfaces", {})
+    if ifaces.get("allow"):
+        print(f"{'Allow':<16}: {', '.join(ifaces['allow'])}")
+    if ifaces.get("deny"):
+        print(f"{'Deny':<16}: {', '.join(ifaces['deny'])}")
+
+    reflector = mdns.get("reflector", {})
+    if reflector_on is not None:
+        print(f"{'Reflector':<16}: {'yes' if reflector_on else 'no'}")
+    if reflector.get("service-filter"):
+        print(f"{'Svc filter':<16}: {', '.join(reflector['service-filter'])}")
+
+    # Neighbors
+    neighbors = mdns.get("neighbors", {}).get("neighbor", [])
+    if not neighbors:
+        print("\nNo mDNS neighbors.")
+        return
+
+    print()
+    table = SimpleTable([
+        Column("HOSTNAME", flexible=True),
+        Column("ADDRESS"),
+        Column("LAST SEEN"),
+        Column("SERVICES"),
+    ])
+
+    for nbr in sorted(neighbors, key=lambda n: n.get("hostname", "")):
+        addrs   = _mdns_sort_addrs(nbr.get("address", []))
+        ts      = _mdns_last_seen(nbr.get("last-seen", ""))
+        svcs    = nbr.get("service", [])
+        svc_str = " ".join(
+            f"{_mdns_svc_name(s.get('type', '?'))}({s.get('port', 0)})"
+            for s in svcs
+        ) if svcs else "-"
+        table.row(nbr.get("hostname", "?"), addrs[0] if addrs else "-", ts, svc_str)
+        for addr in addrs[1:]:
+            table.row("", addr, "", "")
+
+    table.print()
+
+
 def parse_firewall_log_line(line):
     """Parse a single firewall log line into structured data"""
 
@@ -5566,6 +5651,8 @@ def main():
 
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
 
+    subparsers.add_parser('show-mdns', help='Show mDNS configuration and neighbors')
+
     subparsers.add_parser('show-firewall', help='Show firewall overview')
     subparsers.add_parser('show-firewall-matrix', help='Show firewall matrix')
     subparsers.add_parser('show-firewall-zone', help='Show firewall zones') \
@@ -5636,6 +5723,8 @@ def main():
         show_interfaces(json_data, args.name)
     elif args.command == "show-lldp":
         show_lldp(json_data)
+    elif args.command == "show-mdns":
+        show_mdns(json_data)
     elif args.command == "show-firewall":
         show_firewall(json_data)
     elif args.command == "show-firewall-matrix":
