@@ -5,5 +5,7 @@ Integration tests verifying multiple software components working
 together:
 
  - OSPF routing with containerized applications and network segmentation
+ - Combined static and DHCP-provided DNS and NTP servers
 
+include::dhcp_ntp_dns_combination/Readme.adoc[]
 include::ospf_container/Readme.adoc[]
