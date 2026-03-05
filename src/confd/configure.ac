@@ -46,6 +46,10 @@ AC_ARG_ENABLE(wifi,
         AS_HELP_STRING([--enable-wifi], [Enable support for Wi-Fi]),,[
 	enable_wifi=no])
 
+AC_ARG_ENABLE(gps,
+        AS_HELP_STRING([--enable-gps], [Enable support for GPS receivers]),,[
+	enable_gps=no])
+
 AC_ARG_WITH(login-shell,
         AS_HELP_STRING([--with-login-shell=shell], [Login shell for new users, default: /bin/false]),
 	[login_shell=$withval], [login_shell=yes])
@@ -59,6 +63,9 @@ AS_IF([test "x$enable_containers" = "xyes"], [
 
 AS_IF([test "x$enable_wifi" = "xyes"], [
         AC_DEFINE(HAVE_WIFI, 1, [Built with Wi-Fi support])])
+
+AS_IF([test "x$enable_gps" = "xyes"], [
+        AC_DEFINE(HAVE_GPS, 1, [Built with GPS receiver support])])
 
 AS_IF([test "x$with_login_shell" != "xno"], [
 	AS_IF([test "x$login_shell" = "xyes"], [login_shell=/bin/false])
@@ -131,6 +138,7 @@ cat <<EOF
 Optional features:
   Container support ....: $enable_containers
   Wi-Fi support ........: $enable_wifi
+  GPS support ..........: $enable_gps
   Login shell ..........: $login_shell
   Default crypt algo ...: $crypt
 
