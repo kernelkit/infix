@@ -1,42 +1,32 @@
 #!/bin/sh
-# Bootstrap system factory-config, failure-config, test-config and sysrepo db.
+# Generate factory-config, failure-config, and test-config files.
 #
-########################################################################
-# The system factory-config, failure-config and test-config are derived
-# from default settings snippets, from /usr/share/confd/factory.d, and
-# some generated snippets, e.g., hostname (based on base MAC address)
-# and number of interfaces.
+# These configs are derived from default settings snippets in
+# /usr/share/confd/factory.d, and generated snippets (e.g., hostname
+# based on base MAC address, number of interfaces).
 #
-# The resulting factory-config is used to create the syrepo db (below)
-# {factory} datastore.  Hence, the factory-config file must match the
-# the YANG models of the active image.
+# The sysrepo datastore operations (loading factory defaults, startup
+# config, migration) are handled by the confd daemon.
 ########################################################################
 # NOTE: with the Infix defaults, a br2-external can provide a build-time
 #       /etc/factory-config.cfg to override the behavior of this script.
 #
 #       This applies also for /etc/failure-config.cfg, but we recommend
 #       strongly that you instead provide gen-err-custom, see below.
-#
-# TODO: Look for statically defined factory-config, based on system's
-#       product ID, or just custom site-specific factory on /cfg.
 ########################################################################
-STATUS=""
 
 # Log functions
-critical()
-{
-    logger -i -p user.crit -t bootstrap "$1" 2>/dev/null || echo "$1"
-}
-
 err()
 {
-    logger -i -p user.err -t bootstrap "$1" 2>/dev/null || echo "$1"
+    logger -i -p user.err -t gen-config "$1" 2>/dev/null || echo "$1"
 }
 
-# When logging errors, generating /etc/issue* or /etc/banner (SSH)
-. /etc/os-release
+log()
+{
+    logger -i -p user.notice -t gen-config "$1" 2>/dev/null || echo "$1"
+}
 
-# /etc/confdrc controls the behavior or most of the gen-scripts,
+# /etc/confdrc controls the behavior of most of the gen-scripts,
 # customize in an overlay when using Infix as an br2-external.
 RC=/etc/confdrc
 if [ "$1" = "-f" ] && [ -f "$2" ]; then
@@ -77,25 +67,6 @@ collate()
     if [ ! -f "$cfg" ]; then
 	cp "$gen" "$cfg"
     fi
-}
-
-# Report error on console, syslog, and set login banners for getty + ssh
-console_error()
-{
-    critical "$1"
-
-    # shellcheck disable=SC3037
-    /bin/echo -e "\n\n\e[31mCRITICAL BOOTSTRAP ERROR\n$1\e[0m\n" > /dev/console
-
-    [ -z "$STATUS" ] || return
-    STATUS="CRITICAL ERROR: $1"
-
-    printf "\n$STATUS\n" | tee -a \
-			       /etc/banner \
-			       /etc/issue \
-			       /etc/issue.net \
-			       >/dev/null
-    return 0
 }
 
 gen_factory_cfg()
@@ -145,49 +116,18 @@ gen_test_cfg()
     collate "$TEST_GEN" "$TEST_CFG" "$TEST_D"
 }
 
-# Both factory-config and failure-config are generated every boot
-# regardless if there is a static /etc/factory-config.cfg or not.
+log "Starting up, calling gen_factory_cfg()"
 gen_factory_cfg
+log "Starting up, calling gen_failure_cfg()"
 gen_failure_cfg
 
 if [ -f "/mnt/aux/test-mode" ]; then
     gen_test_cfg
-    sysrepoctl -c infix-test -e test-mode-enable
 fi
 
-if [ -n "$TESTING" ]; then
-	echo "Done."
-	exit 0
-fi
-mkdir -p /etc/sysrepo/
-if [ -f "$FACTORY_CFG" ]; then
-    cp "$FACTORY_CFG" "$INIT_DATA"
-else
-    cp "$FAILURE_CFG" "$INIT_DATA"
-fi
-rc=$?
+# Ensure 'admin' group users always have access to /cfg
+mkdir -p "$CFG_PATH_"
+chgrp wheel "$CFG_PATH_" 2>/dev/null
+chmod g+w   "$CFG_PATH_" 2>/dev/null
 
-# Ensure 'admin' group users always have access
-chgrp wheel "$CFG_PATH_"
-chmod g+w   "$CFG_PATH_"
-
-# Ensure factory-config has correct syntax
-if ! migrate -cq "$INIT_DATA"; then
-    if migrate -iq -b "${INIT_DATA%.*}.bak" "$INIT_DATA"; then
-	err "${INIT_DATA}: found and fixed old syntax!"
-    fi
-fi
-
-if ! sysrepoctl -z "$INIT_DATA"; then
-    rc=$?
-    err "Failed loading factory-default datastore"
-else
-    # Clear running-config so we can load/create startup in the next step
-    temp=$(mktemp)
-    echo "{}" > "$temp"
-    sysrepocfg -f json -I"$temp" -d running
-    rc=$?
-    rm "$temp"
-fi
-
-exit $rc
+log "All done."

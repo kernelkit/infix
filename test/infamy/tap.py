@@ -56,6 +56,8 @@ class Test:
             elif len(e.args) and type(e.args[0]) is subprocess.CompletedProcess:
                 print("Failing subprocess stdout:\n", e.args[0].stdout)
 
+        self.out.write(f"1..{self.steps}\n")
+        self.out.flush()
         raise SystemExit(1)
 
     @contextlib.contextmanager

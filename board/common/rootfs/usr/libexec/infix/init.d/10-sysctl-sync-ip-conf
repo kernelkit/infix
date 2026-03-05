@@ -5,24 +5,21 @@
 # interfaces at boot, such that physical interfaces will start from
 # the same point as virtual ones.
 tmp=$(mktemp)
-fil=$(mktemp)
+out=$(mktemp)
 
 # Ignore unreadable entries, like net.ipv6.conf.default.stable_secret
 sysctl net.ipv4.conf.default  >"$tmp" 2>/dev/null
 sysctl net.ipv6.conf.default >>"$tmp" 2>/dev/null
 
-# Filter out read-only entries like net.ipv4.conf.default.mc_forwarding
-# to prevent misleading error messages in syslog
-while IFS= read -r line; do
-    entry=$(echo "$line" | awk '{print $1}')
-    path="/proc/sys/$(echo "$entry" | tr . /)"
-    if [ -w "$path" ]; then
-        echo "$line" >> "$fil"
-    fi
-done < "$tmp"
-
-for iface in $(ip -j link show | jq -r .[].ifname); do
-    sed -e "s/.default./.${iface}./g" "$fil" | sysctl -q -p -
+# Build a single sysctl input with settings for all interfaces
+for dir in /sys/class/net/*/; do
+    iface=${dir%/}
+    iface=${iface##*/}
+    sed "s/.default./.${iface}./g" "$tmp" >> "$out"
 done
 
-rm "$tmp" "$fil"
+# Apply all at once, suppress errors from read-only entries
+# (e.g., net.ipv4.conf.*.mc_forwarding)
+sysctl -q -p - < "$out" 2>/dev/null
+
+rm "$tmp" "$out"

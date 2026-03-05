@@ -99,6 +99,7 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 	dkeys = lydx_get_descendant(*diff, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
 	LYX_LIST_FOR_EACH(dkeys, dkey, "asymmetric-key") {
 		struct ly_set *hostkeys;
+		struct lyd_node *webcert;
 		uint32_t i;
 
 		key_name = lydx_get_cattr(dkey, "name");
@@ -115,6 +116,15 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 				}
 			}
 			ly_set_free(hostkeys, NULL);
+		}
+
+		webcert = lydx_get_xpathf(config, "/infix-services:web/certificate[.='%s']", key_name);
+		if (webcert) {
+			result = add_dependencies(diff, "/infix-services:web/certificate", key_name);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add web certificate to diff for key %s", key_name);
+				return result;
+			}
 		}
 	}
 
@@ -431,11 +441,8 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 
 	if (event == SR_EV_DONE) {
 		/* skip reload in bootstrap, implicit reload in runlevel change */
-		if (systemf("runlevel >/dev/null 2>&1")) {
-			/* trigger any tasks waiting for confd to have applied *-config */
-			system("initctl -nbq cond set bootstrap");
+		if (systemf("runlevel >/dev/null 2>&1"))
 			return SR_ERR_OK;
-		}
 
 		if (systemf("initctl -b reload")) {
 			EMERG("initctl reload: failed applying new configuration!");
@@ -454,10 +461,10 @@ static inline int subscribe_model(char *model, struct confd *confd, int flags)
 {
 	return  sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd,
 					   CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES |
-					   SR_SUBSCR_DEFAULT | flags, &confd->sub) ||
+					   SR_SUBSCR_NO_THREAD | flags, &confd->sub) ||
 		sr_module_change_subscribe(confd->startup, model, "//.", startup_save, NULL,
 					   CB_PRIO_PASSIVE, SR_SUBSCR_CHANGE_ALL_MODULES |
-					   SR_SUBSCR_PASSIVE, &confd->sub);
+					   SR_SUBSCR_PASSIVE | SR_SUBSCR_NO_THREAD, &confd->sub);
 }
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
@@ -636,6 +643,15 @@ err:
 	sr_unsubscribe(confd.fsub);
 
 	return rc;
+}
+
+void confd_get_subscriptions(void *priv, sr_subscription_ctx_t **out_sub,
+			     sr_subscription_ctx_t **out_fsub)
+{
+	struct confd *c = (struct confd *)priv;
+
+	*out_sub  = c->sub;
+	*out_fsub = c->fsub;
 }
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)

@@ -85,12 +85,12 @@ interfaces {
 admin@infix-12-34-56:/config/interface/eth0/> <b>leave</b>
 admin@infix-12-34-56:/> <b>show interfaces</b>
 <u>INTERFACE       PROTOCOL   STATE       DATA                                  </u>
-eth0            ethernet   UP          52:54:00:12:34:56
-                ipv4                   192.168.2.200/24 (static)
-                ipv6                   fe80::5054:ff:fe12:3456/64 (link-layer)
 lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
+eth0            ethernet   UP          52:54:00:12:34:56
+                ipv4                   192.168.2.200/24 (static)
+                ipv6                   fe80::5054:ff:fe12:3456/64 (link-layer)
 admin@infix-12-34-56:/> <b>copy running startup</b>
 </code></pre>
 
@@ -114,6 +114,7 @@ containers for any custom functionality you need.
 - **x86_64** - Run in VMs or on mini PCs for development and testing
 - **Marvell CN9130 CRB, EspressoBIN** - High-performance ARM64 platforms
 - **Microchip SparX-5i** - Enterprise switching capabilities
+- **Microchip SAMA7G54-EK** - ARM Cortex-A7
 - **NXP i.MX8MP EVK** - Highly capable ARM64 SoC
 - **StarFive VisionFive2** - RISC-V architecture support
 

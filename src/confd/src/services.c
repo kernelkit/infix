@@ -19,8 +19,13 @@
 #define GENERATE_ENUM(ENUM)      ENUM,
 #define GENERATE_STRING(STRING) #STRING,
 
+#define NGINX_SSL_CONF "/etc/nginx/ssl.conf"
+#define AVAHI_SVC_PATH "/etc/avahi/services"
+
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
 #define LLDP_CONFIG_NEXT LLDP_CONFIG"+"
+
+enum mdns_cmd { MDNS_ADD, MDNS_DELETE, MDNS_UPDATE };
 
 #define FOREACH_SVC(SVC)			\
         SVC(none)				\
@@ -68,6 +73,13 @@ struct mdns_svc {
 	{ ssh,      "ssh",      "_ssh._tcp",           22, "Secure shell command line interface (CLI)", NULL },
 };
 
+static const char *jgets(json_t *obj, const char *key)
+{
+	json_t *val = json_object_get(obj, key);
+
+	return val ? json_string_value(val) : NULL;
+}
+
 /*
  * On hostname changes we need to update the mDNS records, in particular
  * the ones advertising an adminurl (standarized by Apple), because they
@@ -77,27 +89,78 @@ struct mdns_svc {
  *      adminurl to include 'admin@%s.local' to pre-populate the default
  *      username in the login dialog.
  */
-static int mdns_records(const char *cmd, svc type)
+static int mdns_records(int cmd, svc type)
 {
 	char hostname[MAXHOSTNAMELEN + 1];
+	const char *vendor, *product, *serial, *mac;
+	const char *vn, *on, *ov;
 
 	if (gethostname(hostname, sizeof(hostname))) {
 		ERRNO("failed getting system hostname");
 		return SR_ERR_SYS;
 	}
 
+	vendor  = jgets(confd.root, "vendor");
+	product = jgets(confd.root, "product-name");
+	serial  = jgets(confd.root, "serial-number");
+	mac     = jgets(confd.root, "mac-address");
+
+	vn = fgetkey("/etc/os-release", "VENDOR_NAME");
+	on = fgetkey("/etc/os-release", "NAME");
+	ov = fgetkey("/etc/os-release", "VERSION_ID");
+
 	for (size_t i = 0; i < NELEMS(services); i++) {
 		struct mdns_svc *srv = &services[i];
-		char buf[256] = "";
+		FILE *fp;
 
 		if (type != all && srv->svc != type)
 			continue;
 
-		if (srv->text)
-			snprintf(buf, sizeof(buf), srv->text, hostname);
+		if (cmd == MDNS_DELETE) {
+			erasef(AVAHI_SVC_PATH "/%s.service", srv->name);
+			continue;
+		}
 
-		systemf("/usr/libexec/confd/gen-service %s %s %s %s %d \"%s\" %s", cmd,
-			hostname, srv->name, srv->type, srv->port, srv->desc, buf);
+		if (cmd == MDNS_UPDATE && !fexistf(AVAHI_SVC_PATH "/%s.service", srv->name))
+			continue;
+
+		fp = fopenf("w", AVAHI_SVC_PATH "/%s.service", srv->name);
+		if (!fp) {
+			ERRNO("failed creating %s.service", srv->name);
+			continue;
+		}
+
+		fprintf(fp,
+			"<?xml version=\"1.0\" standalone='no'?>\n"
+			"<!DOCTYPE service-group SYSTEM \"avahi-service.dtd\">\n"
+			"<service-group>\n"
+			"  <name replace-wildcards=\"yes\">%s</name>\n"
+			"  <service>\n"
+			"    <type>%s</type>\n"
+			"    <port>%d</port>\n"
+			"    <host-name>%s.local</host-name>\n"
+			"    <txt-record>vv=1</txt-record>\n"
+			"    <txt-record>vendor=%s</txt-record>\n"
+			"    <txt-record>product=%s</txt-record>\n"
+			"    <txt-record>serial=%s</txt-record>\n"
+			"    <txt-record>deviceid=%s</txt-record>\n"
+			"    <txt-record>vn=%s</txt-record>\n"
+			"    <txt-record>on=%s</txt-record>\n"
+			"    <txt-record>ov=%s</txt-record>\n",
+			srv->desc, srv->type, srv->port, hostname,
+			vendor  ?: "", product ?: "", serial ?: "", mac ?: "",
+			vn ?: "", on ?: "", ov ?: "");
+
+		if (srv->text) {
+			fprintf(fp, "    <txt-record>");
+			fprintf(fp, srv->text, hostname);
+			fprintf(fp, "</txt-record>\n");
+		}
+
+		fprintf(fp,
+			"  </service>\n"
+			"</service-group>\n");
+		fclose(fp);
 	}
 
 	return SR_ERR_OK;
@@ -182,7 +245,7 @@ static void svc_enadis(int ena, svc type, const char *svc)
 	}
 
 	if (type != none)
-		mdns_records(ena ? "add" : "delete", type);
+		mdns_records(ena ? MDNS_ADD : MDNS_DELETE, type);
 
 	systemf("initctl -nbq touch avahi");
 	systemf("initctl -nbq touch nginx");
@@ -295,7 +358,7 @@ static int mdns_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 		mdns_conf(srv);
 
 		/* Generate/update basic mDNS service records */
-		mdns_records("update", all);
+		mdns_records(MDNS_UPDATE, all);
 	}
 
 	svc_enadis(ena, none, "avahi");
@@ -485,6 +548,48 @@ out:
 }
 
 
+static void web_ssl_conf(struct lyd_node *srv, struct lyd_node *config)
+{
+	const char *keyref, *certname = "self-signed";
+	struct lyd_node *key, *certs;
+	FILE *fp;
+
+	keyref = lydx_get_cattr(srv, "certificate");
+	if (!keyref)
+		keyref = "gencert";
+
+	key = lydx_get_xpathf(config, "/ietf-keystore:keystore/asymmetric-keys"
+			       "/asymmetric-key[name='%s']", keyref);
+	if (key) {
+		certs = lydx_get_descendant(lyd_child(key), "certificates", "certificate", NULL);
+		if (certs) {
+			const char *name = lydx_get_cattr(certs, "name");
+
+			if (name && *name)
+				certname = name;
+		}
+	}
+
+	fp = fopen(NGINX_SSL_CONF, "w");
+	if (!fp) {
+		ERRNO("failed creating %s", NGINX_SSL_CONF);
+		return;
+	}
+
+	fprintf(fp,
+		"ssl_certificate      %s/%s.crt;\n"
+		"ssl_certificate_key  %s/%s.key;\n"
+		"\n"
+		"ssl_protocols        TLSv1.3 TLSv1.2;\n"
+		"ssl_ciphers          HIGH:!aNULL:!MD5;\n"
+		"ssl_prefer_server_ciphers  on;\n"
+		"\n"
+		"ssl_session_cache    shared:SSL:1m;\n"
+		"ssl_session_timeout  5m;\n",
+		SSL_CERT_DIR, certname, SSL_KEY_DIR, certname);
+	fclose(fp);
+}
+
 static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
@@ -497,6 +602,8 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 	cfg = get(session, event, WEB_XPATH, &srv, "web", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
+
+	web_ssl_conf(srv, config);
 
 	ena = lydx_is_enabled(srv, "enabled");
 	if (ena) {

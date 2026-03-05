@@ -10,49 +10,43 @@
 
 HOSTNAME_D="/etc/hostname.d"
 
-# Ensure directory exists
-mkdir -p "$HOSTNAME_D"
-
-# Find the highest priority file (reverse sort, take first)
-hostname_file=$(ls -1 "$HOSTNAME_D" 2>/dev/null | sort -r | head -1)
-
-if [ -z "$hostname_file" ]; then
+# Find highest priority file (reverse lexicographic)
+set -- "$HOSTNAME_D"/*
+if [ ! -e "$1" ]; then
     logger -it confd "No hostname sources found in $HOSTNAME_D"
     exit 1
 fi
 
-# Read hostname from the file (first line only, strip whitespace)
-new_hostname=$(cat "$HOSTNAME_D/$hostname_file" | head -1 | tr -d '\n\r\t ')
-if [ -z "$new_hostname" ]; then
-    logger -it confd "Empty hostname in $hostname_file"
+file=$(printf '%s\n' "$@" | sort -r | head -n1)
+IFS= read -r new < "$file"
+new=$(printf '%s' "$new" | tr -d '\r\n\t ')
+if [ -z "$new" ]; then
+    logger -it confd "Empty hostname in $file"
     exit 1
 fi
 
-if [ ${#new_hostname} -gt 64 ]; then
-    logger -it confd "Hostname too long (${#new_hostname} > 64) in $hostname_file"
+if [ ${#new} -gt 64 ]; then
+    logger -it confd "Hostname too long (${#new} > 64) in $file"
     exit 1
 fi
 
 # Check if hostname has actually changed
-current_hostname=$(hostname)
-if [ "$new_hostname" = "$current_hostname" ]; then
+if [ "$new" = "$(hostname)" ]; then
     # No change needed, exit silently
     exit 0
 fi
 
 # Set the hostname
-logger -it confd "Setting hostname to '$new_hostname' from $hostname_file"
-hostname "$new_hostname"
-
-# Update /etc/hostname (for persistence across reboots)
-echo "$new_hostname" > /etc/hostname
+if hostname "$new"; then
+    echo "$new" > /etc/hostname
+fi
 
 # Update /etc/hosts (127.0.1.1 entry for proper name resolution)
 if grep -q "^127\.0\.1\.1" /etc/hosts; then
-    sed -i -E "s/^(127\.0\.1\.1\s+).*/\1$new_hostname/" /etc/hosts
+    sed -i -E "s/^(127\.0\.1\.1\s+).*/\1$new/" /etc/hosts
 else
     # Add entry if it doesn't exist
-    echo "127.0.1.1	$new_hostname" >> /etc/hosts
+    echo "127.0.1.1	$new" >> /etc/hosts
 fi
 
 # Notify services of hostname change, skip while in bootstrap
@@ -61,8 +55,8 @@ if ! runlevel >/dev/null 2>&1; then
     exit 0
 fi
 
-initctl -bq status lldpd && lldpcli configure system hostname "$new_hostname" 2>/dev/null
-initctl -bq status mdns  && avahi-set-host-name "$new_hostname" 2>/dev/null
+initctl -bq status lldpd && lldpcli configure system hostname "$new" 2>/dev/null
+initctl -bq status mdns  && avahi-set-host-name "$new" 2>/dev/null
 initctl -bq touch netbrowse 2>/dev/null
 
 # If called from dhcp script we need to reload to activate new name in syslogd
