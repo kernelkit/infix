@@ -1,5 +1,6 @@
 config BR2_PACKAGE_ALDER_ALDER
 	bool "Alder"
 	depends on BR2_aarch64
+	select BR2_PACKAGE_LINUX_FIRMWARE_INSIDE_SECURE_MINIFW
 	help
 	  Alder
