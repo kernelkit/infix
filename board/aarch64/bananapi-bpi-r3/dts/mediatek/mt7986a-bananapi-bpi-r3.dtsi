@@ -8,22 +8,7 @@
 		};
 	};
 };
-/*
-From 236317dd4e55512933dcdaec3d0b4a0824f5e5bd Mon Sep 17 00:00:00 2001
-From: Shiji Yang <yangshiji66@outlook.com>
-Date: Sun, 10 Aug 2025 18:11:01 +0800
-Subject: [PATCH] arm64: dts: mediatek: mt7986: increase ATF reserved memory to
- 256 kiB
 
-The latest Mediatek open-source Trusted Firmware-A project has
-reserved 256 KiB for BL2 and BL31. It is better to increase the
-reserved memory region in the Linux kernel to protect the data.
-
-https://github.com/openwrt/openwrt/blob/main/target/linux/mediatek/patches-6.12/199-arm64-dts-mediatek-mt7986-increase-ATF-reserved-memo.patch
-*/
-&secmon_reserved {
-	reg = <0 0x43000000 0 0x40000>;
-};
 &cpu_thermal {
 	/delete-node/ trips;
 	/delete-node/ cooling-maps;

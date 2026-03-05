@@ -1,0 +1,12 @@
+diff --git a/src/bundle.c b/src/bundle.c
+index 05ec358..d5888d4 100644
+--- a/src/bundle.c
++++ b/src/bundle.c
+@@ -1313,6 +1313,7 @@ static gboolean is_remote_scheme(const gchar *scheme)
+ {
+ 	return (g_strcmp0(scheme, "http") == 0) ||
+ 	       (g_strcmp0(scheme, "https") == 0) ||
++	       (g_strcmp0(scheme, "tftp") == 0) ||
+ 	       (g_strcmp0(scheme, "sftp") == 0) ||
+ 	       (g_strcmp0(scheme, "ftp") == 0) ||
+ 	       (g_strcmp0(scheme, "ftps") == 0);
