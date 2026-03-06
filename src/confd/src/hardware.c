@@ -219,6 +219,51 @@ static const char *resolve_mobility_domain(const char *mobility_domain, const ch
 	return hash_result;
 }
 
+/*
+ * Find an AP interface on a higher-band radio (5/6 GHz) advertising the
+ * same SSID as the caller's 2.4 GHz BSS. Used to emit
+ * no_probe_resp_if_seen_on=, which suppresses 2.4 GHz probe responses to
+ * clients that have recently probed the 5/6 GHz twin, forcing dual-band
+ * clients to discover the higher band. 2.4-only clients are unaffected:
+ * hostapd only suppresses if it has actually seen the MAC on the listed
+ * interface, so a 2.4-only client always gets a probe response.
+ *
+ * Returns a pointer into the config tree (do not free) or NULL.
+ */
+static const char *wifi_find_higher_band_twin(struct lyd_node *config,
+					      const char *current_band,
+					      const char *current_ssid)
+{
+	struct lyd_node *cifs, *cif;
+
+	if (strcmp(current_band, "2.4GHz"))
+		return NULL;
+
+	cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		struct lyd_node *wifi, *ap, *radio_node;
+		const char *radio, *ssid, *band;
+
+		wifi = lydx_get_child(cif, "wifi");
+		if (!wifi)
+			continue;
+		ap = lydx_get_child(wifi, "access-point");
+		if (!ap)
+			continue;
+		ssid = lydx_get_cattr(ap, "ssid");
+		if (strcmp(ssid, current_ssid))
+			continue;
+		radio = lydx_get_cattr(wifi, "radio");
+		radio_node = lydx_get_xpathf(config,
+			"/hardware/component[name='%s']/wifi-radio", radio);
+		band = lydx_get_cattr(radio_node, "band");
+		if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz"))
+			return lydx_get_cattr(cif, "name");
+	}
+
+	return NULL;
+}
+
 static int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio_name,
 					  struct lyd_node ***iface_list, int *count)
 {
@@ -302,7 +347,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	const char *ssid, *hidden, *security_mode, *secret_name;
 	const char *mobility_domain, *mobility_domain_raw;
 	const char *nas_identifier_cfg;
-	bool enable_80211k, enable_80211r, enable_80211v;
+	bool enable_80211k, enable_80211r, enable_80211v, enable_mbo;
 	unsigned char *secret = NULL;
 	const char *ifname;
 	char nas_identifier_default[300];
@@ -326,6 +371,14 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	enable_80211k = dot11k != NULL;
 	enable_80211r = dot11r != NULL;
 	enable_80211v = dot11v != NULL;
+	if (dot11v) {
+		const char *band_steering = lydx_get_cattr(dot11v, "band-steering");
+
+		enable_mbo = !band_steering || !strcmp(band_steering, "true");
+	} else {
+		enable_mbo = false;
+	}
+
 
 
 	/* Set BSSID if custom MAC is configured */
@@ -455,6 +508,27 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 
 		if (!okc || !strcmp(okc, "true"))
 			fprintf(hostapd, "okc=1\n");
+	}
+
+	/* MBO: Multi-Band Operation (band steering, needs 802.11v above) */
+	if (enable_mbo) {
+		const char *twin;
+
+		fprintf(hostapd, "mbo=1\n");
+
+		/* Required for no_probe_resp_if_seen_on below: without it
+		 * hostapd keeps no sta_track list, so the twin radio never
+		 * knows which clients it has seen.  Radio-level, emit once
+		 * in the main section, never per BSS. */
+		if (!is_bss)
+			fprintf(hostapd, "track_sta_max_num=100\n");
+
+		/* Active band steering: on a 2.4 GHz BSS, suppress probe
+		 * responses to clients recently seen on the same-SSID 5/6
+		 * GHz BSS, nudging dual-band clients to the higher band. */
+		twin = wifi_find_higher_band_twin(config, band, ssid);
+		if (twin)
+			fprintf(hostapd, "no_probe_resp_if_seen_on=%s\n", twin);
 	}
 
 	free(secret);
