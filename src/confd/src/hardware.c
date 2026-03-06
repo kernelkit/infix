@@ -457,6 +457,14 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 			fprintf(hostapd, "okc=1\n");
 	}
 
+	/* MBO: Multi-Band Operation (band steering) */
+	if (roaming) {
+		const char *band_steering = lydx_get_cattr(roaming, "band-steering");
+
+		if (band_steering && !strcmp(band_steering, "true"))
+			fprintf(hostapd, "mbo=1\n");
+	}
+
 	free(secret);
 }
 
