@@ -8,7 +8,7 @@ Firewall configuration suitable for end devices on untrusted networks.
 
 image::basic.svg[align=center, scaledwidth=50%]
 
-- Single zone configuration, "public", with action=drop
+- Single zone configuration, "public-untrusted-net", with `action=drop`
 - Allowed services: SSH (port 22), DHCPv6-client, mySSH (custom, port 222)
 - All other ports (HTTP, HTTPS, Telnet, etc.) blocked
 - Check that unused interfaces are automatically assigned to default zone
