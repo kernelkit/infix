@@ -48,6 +48,12 @@ submodule infix-if-wifi {
      - Security: WPA2/WPA3 with keystore integration
      - Operational state: Connection status, RSSI, client lists";
 
+  revision 2026-03-04 {
+    description
+      "Add band-steering (MBO) support and OKC configuration.";
+    reference "internal";
+  }
+
   revision 2026-02-12 {
     description
       "Add support for roaming, by adding support for 802.11v/k/r";
@@ -527,6 +533,20 @@ submodule infix-if-wifi {
 
                    Safe to leave enabled (default) - only activates when
                    both AP and client support it.";
+              }
+
+              leaf band-steering {
+                type boolean;
+                default false;
+                description
+                  "Multi-Band Operation (MBO) band steering.
+
+                   Signals band preferences to capable clients,
+                   encouraging dual-band devices to prefer 5GHz
+                   over 2.4GHz when signal quality permits.
+
+                   Safe to leave enabled (default) - only activates
+                   when both AP and client support MBO.";
               }
             }
 
