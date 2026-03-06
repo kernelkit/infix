@@ -202,32 +202,39 @@ llscan_mdns()
 	flags="-tarpk"
     fi
 
-    avahi-browse $flags | awk -F';' -v show_all="$all" '
+    avahi-browse $flags 2>/dev/null | awk -F';' -v show_all="$all" '
     $1 == "=" {
-	host = $7
+	host  = $7
 	proto = $3
-	addr = $8
-	txt  = $10
+	addr  = $8
+	stype = $5
+	txt   = $10
 
-	on = ""; ov = ""; product = ""; serial = ""; devid = ""
+	on = ""; ov = ""; product = ""; devid = ""; vv = ""
 	n = split(txt, parts, "\" \"")
 	for (i = 1; i <= n; i++) {
 	    gsub(/"/, "", parts[i])
 	    if      (parts[i] ~ /^on=/)       { split(parts[i], kv, "="); on      = kv[2] }
 	    else if (parts[i] ~ /^ov=/)       { split(parts[i], kv, "="); ov      = kv[2] }
 	    else if (parts[i] ~ /^product=/)  { split(parts[i], kv, "="); product = kv[2] }
-	    else if (parts[i] ~ /^serial=/)   { split(parts[i], kv, "="); serial  = kv[2] }
 	    else if (parts[i] ~ /^deviceid=/) { split(parts[i], kv, "="); devid   = kv[2] }
+	    else if (parts[i] ~ /^vv=/)       { split(parts[i], kv, "="); vv      = kv[2] }
 	}
 
-	if (!show_all && on != "Infix") next
+	# vv=1 is the platform marker set by confd/services.c, survives OS rebranding.
+	# We require it together with a management service type to avoid false
+	# positives from Apple devices, which also use vv=1 in AirPlay/RAOP records.
+	# on=Infix is kept as a fallback for older firmware that predates vv=1.
+	mgmt = (stype == "_ssh._tcp" || stype == "_sftp-ssh._tcp"  || \
+		stype == "_https._tcp" || stype == "_http._tcp"     || \
+		stype == "_netconf-ssh._tcp" || stype == "_restconf-tls._tcp")
+	if (!show_all && !(vv == "1" && mgmt) && on != "Infix") next
 
 	# Use deviceid (MAC) as unique key; fall back to hostname
 	key = devid ? devid : host
 
 	if (!product) product = on ? on : "-"
 	if (!ov)      ov      = "-"
-	if (!serial || serial == "null") serial = "-"
 
 	# Prefer IPv4 for display address
 	if (proto == "IPv4") {
@@ -241,7 +248,6 @@ llscan_mdns()
 	    hosts[key]     = host
 	    products[key]  = product
 	    versions[key]  = ov
-	    serials[key]   = serial
 	} else if (length(host) > length(hosts[key])) {
 	    # Prefer the unique hostname (e.g., infix-c0-ff-ee.local)
 	    # over the generic one (e.g., infix.local)
@@ -258,8 +264,8 @@ llscan_mdns()
 	    exit 1
 	}
 
-	fmt = "%-26s %-18s %-24s %-22s %s\n"
-	hdr = sprintf(fmt, "HOSTNAME", "ADDRESS", "PRODUCT", "VERSION", "SERIAL")
+	fmt = "%-26s %-18s %-24s %-30s\n"
+	hdr = sprintf(fmt, "HOSTNAME", "ADDRESS", "PRODUCT", "VERSION")
 	sub(/\n$/, "", hdr)
 	printf "\033[7m%s\033[0m\n", hdr
 
@@ -268,7 +274,7 @@ llscan_mdns()
 	    a = (ipv4[k] ? ipv4[k] : (ipv6[k] ? ipv6[k] : "-"))
 	    p = products[k]; if (length(p) > 23) p = substr(p, 1, 22) "~"
 	    v = versions[k]; if (length(v) > 21) v = substr(v, 1, 20) "~"
-	    printf fmt, hosts[k], a, p, v, serials[k]
+	    printf fmt, hosts[k], a, p, v
 	}
 
 	printf "\n%d device(s) found.\n", ndevs

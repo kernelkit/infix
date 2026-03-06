@@ -513,6 +513,31 @@ def lldp(args: List[str]):
     cli_pretty(data, "show-lldp")
 
 
+def mdns(args: List[str]) -> None:
+    # Fetch config from running DS (enabled, domain, hostname, reflector)
+    cfg = get_json("/infix-services:mdns", "running")
+    # Fetch live state from operational DS (neighbors pushed by avahi)
+    oper = get_json("/infix-services:mdns")
+
+    data: dict = {}
+    if cfg:
+        data.update(cfg)
+    if oper:
+        oper_mdns = oper.get("infix-services:mdns", {})
+        data_mdns = data.setdefault("infix-services:mdns", {})
+        data_mdns.update(oper_mdns)
+
+    if not data:
+        print("No mDNS data available.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    cli_pretty(data, "show-mdns")
+
+
 def system(args: List[str]) -> None:
     # Get system state from sysrepo
     data = get_json("/ietf-system:system-state")
@@ -696,6 +721,7 @@ def execute_command(command: str, args: List[str]):
         'interface': interface,
         'keystore': keystore,
         'lldp': lldp,
+        'mdns': mdns,
         'nacm': nacm,
         'ntp': ntp,
         'ospf': ospf,

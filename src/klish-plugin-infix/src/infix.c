@@ -1,9 +1,12 @@
 #include <errno.h>
+#include <grp.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -72,6 +75,53 @@ static int run(char *const argv[])
 		return WEXITSTATUS(status);
 
 	if (WIFSIGNALED(status)) {
+		errno = EINTR;
+		return -1;
+	}
+
+	return -1;
+}
+
+/*
+ * Like run(), but drops privileges to the given user before exec.
+ * Use for commands that must run as the CLI user, not root (klishd).
+ */
+static int run_as_user(const char *user, char *const argv[])
+{
+	struct passwd *pw;
+	pid_t pid;
+	int rc;
+
+	pw = getpwnam(user);
+	if (!pw) {
+		fprintf(stderr, ERRMSG "unknown user: %s\n", user);
+		return -1;
+	}
+
+	pid = fork();
+	if (pid == -1)
+		return -1;
+
+	if (!pid) {
+		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+			fprintf(stderr, "Aborting, failed dropping privileges to "
+				"(UID:%d GID:%d): %s\n",
+				pw->pw_uid, pw->pw_gid, strerror(errno));
+			_exit(1);
+		}
+		execvp(argv[0], argv);
+		_exit(127);
+	}
+
+	while (waitpid(pid, &rc, 0) < 0) {
+		if (errno != EINTR)
+			return -1;
+	}
+
+	if (WIFEXITED(rc))
+		return WEXITSTATUS(rc);
+
+	if (WIFSIGNALED(rc)) {
 		errno = EINTR;
 		return -1;
 	}
@@ -304,7 +354,7 @@ int infix_shell(kcontext_t *ctx)
 		};
 
 		pw = getpwnam(user);
-		if (setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
 			fprintf(stderr, "Aborting, failed dropping privileges to (UID:%d GID:%d): %s\n",
 				pw->pw_uid, pw->pw_gid, strerror(errno));
 			_exit(1);
@@ -313,8 +363,10 @@ int infix_shell(kcontext_t *ctx)
 		_exit(execvp(args[0], args));
 	}
 
-	while (waitpid(pid, &rc, 0) != pid)
-		;
+	while (waitpid(pid, &rc, 0) < 0) {
+		if (errno != EINTR)
+			return -1;
+	}
 
 	if (WIFEXITED(rc))
 		rc = WEXITSTATUS(rc);
@@ -427,6 +479,192 @@ int infix_asym_keys(kcontext_t *ctx)
 		      "| jq -r '.\"ietf-keystore:keystore\".\"asymmetric-keys\".\"asymmetric-key\"[].name'");
 }
 
+/*
+ * Create ~/.ssh/known_hosts with correct ownership if it doesn't exist.
+ * Must be called as root before dropping privileges, since ~/.ssh/ is
+ * owned by root on Infix (the system manages authorized_keys via YANG).
+ * Once the file exists with the user's ownership, ssh(1) can update it.
+ */
+static void ensure_known_hosts(const struct passwd *pw)
+{
+	char path[512];
+	int fd;
+
+	snprintf(path, sizeof(path), "%s/.ssh/known_hosts", pw->pw_dir);
+	fd = open(path, O_CREAT | O_EXCL | O_WRONLY, 0600);
+	if (fd < 0)
+		return; /* Already exists, or unrecoverable error */
+
+	fchown(fd, pw->pw_uid, pw->pw_gid);
+	close(fd);
+}
+
+int infix_ssh_connect(kcontext_t *ctx)
+{
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *host, *ruser, *port, *user;
+	struct passwd *pw;
+	kparg_t *parg;
+	char *argv[8];
+	int i = 0;
+
+	host  = kparg_value(kpargv_find(pargv, "host"));
+
+	parg  = kpargv_find(pargv, "user");
+	ruser = parg ? kparg_value(parg) : NULL;
+
+	parg  = kpargv_find(pargv, "port");
+	port  = parg ? kparg_value(parg) : NULL;
+
+	if (!host) {
+		fprintf(stderr, ERRMSG "missing host argument.\n");
+		return -1;
+	}
+
+	user = cd_home(ctx);
+	pw   = getpwnam(user);
+	if (pw)
+		ensure_known_hosts(pw);
+
+	argv[i++] = "ssh";
+	if (ruser) { argv[i++] = "-l"; argv[i++] = (char *)ruser; }
+	if (port)  { argv[i++] = "-p"; argv[i++] = (char *)port;  }
+	argv[i++] = (char *)host;
+	argv[i]   = NULL;
+
+	return run_as_user(user, argv);
+}
+
+/*
+ * Completion: list hostnames from the current user's ~/.ssh/known_hosts.
+ */
+int infix_ssh_known_hosts(kcontext_t *ctx)
+{
+	char path[512], line[4096];
+	const char *user;
+	struct passwd *pw;
+	FILE *f;
+
+	user = cd_home(ctx);
+	pw   = getpwnam(user);
+	if (!pw)
+		return 0;
+
+	snprintf(path, sizeof(path), "%s/.ssh/known_hosts", pw->pw_dir);
+	f = fopen(path, "r");
+	if (!f)
+		return 0;
+
+	while (fgets(line, sizeof(line), f)) {
+		char *sp;
+
+		/* Skip comments, blank lines, and hashed entries */
+		if (line[0] == '#' || line[0] == '\n' || line[0] == '|')
+			continue;
+		sp = strchr(line, ' ');
+		if (!sp)
+			continue;
+		*sp = '\0';
+		/* Entries may be comma-separated: "host,ip algo key" */
+		for (char *tok = strtok(line, ","); tok; tok = strtok(NULL, ","))
+			puts(tok);
+	}
+
+	fclose(f);
+	return 0;
+}
+
+/*
+ * Pre-enroll a host public key received out-of-band into ~/.ssh/known_hosts.
+ * Runs as the CLI user to ensure correct file ownership.
+ */
+int infix_ssh_add_known_host(kcontext_t *ctx)
+{
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *host, *keytype, *pubkey, *user;
+	char path[512];
+	struct passwd *pw;
+	pid_t pid;
+	int rc;
+
+	host    = kparg_value(kpargv_find(pargv, "host"));
+	keytype = kparg_value(kpargv_find(pargv, "keytype"));
+	pubkey  = kparg_value(kpargv_find(pargv, "pubkey"));
+	if (!host || !keytype || !pubkey) {
+		fprintf(stderr, ERRMSG "missing arguments.\n");
+		return -1;
+	}
+
+	user = cd_home(ctx);
+	pw   = getpwnam(user);
+	if (!pw) {
+		fprintf(stderr, ERRMSG "unknown user: %s\n", user);
+		return -1;
+	}
+
+	snprintf(path, sizeof(path), "%s/.ssh/known_hosts", pw->pw_dir);
+
+	ensure_known_hosts(pw);
+
+	pid = fork();
+	if (pid == -1)
+		return -1;
+
+	if (!pid) {
+		FILE *f;
+
+		if (setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+			fprintf(stderr, "Aborting, failed dropping privileges: %s\n",
+				strerror(errno));
+			_exit(1);
+		}
+
+		f = fopen(path, "a");
+		if (!f) {
+			fprintf(stderr, ERRMSG "cannot open %s: %s\n", path, strerror(errno));
+			_exit(1);
+		}
+
+		fprintf(f, "%s %s %s\n", host, keytype, pubkey);
+		fclose(f);
+		printf("Host %s added to %s\n", host, path);
+		_exit(0);
+	}
+
+	while (waitpid(pid, &rc, 0) != pid)
+		;
+
+	if (WIFEXITED(rc))
+		return WEXITSTATUS(rc);
+
+	if (WIFSIGNALED(rc)) {
+		errno = EINTR;
+		return -1;
+	}
+
+	return -1;
+}
+
+int infix_ssh_remove_known_host(kcontext_t *ctx)
+{
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *host;
+	char *argv[4];
+
+	host = kparg_value(kpargv_find(pargv, "host"));
+	if (!host) {
+		fprintf(stderr, ERRMSG "missing host argument.\n");
+		return -1;
+	}
+
+	argv[0] = "ssh-keygen";
+	argv[1] = "-R";
+	argv[2] = (char *)host;
+	argv[3] = NULL;
+
+	return run_as_user(cd_home(ctx), argv);
+}
+
 int kplugin_infix_fini(kcontext_t *ctx)
 {
 	(void)ctx;
@@ -453,6 +691,10 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("firewall_services", infix_firewall_services));
 	kplugin_add_syms(plugin, ksym_new("set_boot_order", infix_set_boot_order));
 	kplugin_add_syms(plugin, ksym_new("shell", infix_shell));
+	kplugin_add_syms(plugin, ksym_new("ssh_connect",           infix_ssh_connect));
+	kplugin_add_syms(plugin, ksym_new("ssh_known_hosts",       infix_ssh_known_hosts));
+	kplugin_add_syms(plugin, ksym_new("ssh_add_known_host",    infix_ssh_add_known_host));
+	kplugin_add_syms(plugin, ksym_new("ssh_remove_known_host", infix_ssh_remove_known_host));
 
 	return 0;
 }

@@ -1,5 +1,6 @@
 config BR2_PACKAGE_MDNS_ALIAS
 	bool mdns-alias
 	select BR2_PACKAGE_AVAHI
+	select BR2_PACKAGE_LIBUEV
 	help
 	  Advertises the initial $(HOSTNAME).local and network.local with Avahi.

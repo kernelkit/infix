@@ -27,6 +27,16 @@ The standard IETF model for static routes reside under the `static`
 control plane protocol.  For our examples we use the instance name
 `default`, you can use any name.
 
+The most common case when using a static IP setup is adding a default
+route (i.e., the default gateway):
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit routing control-plane-protocol static name default ipv4</b>
+admin@example:/config/routing/…/ipv4/> <b>set route 0.0.0.0/0 next-hop next-hop-address 192.168.1.1</b>
+admin@example:/config/routing/…/ipv4/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
 For a route with destination 192.168.200.0/24 via 192.168.1.1:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
@@ -52,6 +62,17 @@ admin@example:/>
 
 
 ## IPv6 Static routes
+
+Default route via an IPv6 gateway:
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit routing control-plane-protocol static name default ipv6</b>
+admin@example:/config/routing/…/ipv6/> <b>set route ::/0 next-hop next-hop-address 2001:db8:3c4d:1::1</b>
+admin@example:/config/routing/…/ipv6/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+For a route with destination 2001:db8:3c4d:200::/64 via 2001:db8:3c4d:1::1:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit routing control-plane-protocol static name default ipv6</b>
