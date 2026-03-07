@@ -4838,7 +4838,7 @@ def show_ospf_interfaces(json_data):
         state = target_iface.get('state', 'down')
         cost = target_iface.get('cost', 0)
         priority = target_iface.get('priority', 1)
-        iface_type = target_iface.get('interface-type', 'unknown')
+        iface_type = target_iface.get('interface-type', '')
         hello_interval = target_iface.get('hello-interval', 10)
         dead_interval = target_iface.get('dead-interval', 40)
         retransmit_interval = target_iface.get('retransmit-interval', 5)
@@ -4914,9 +4914,11 @@ def show_ospf_interfaces(json_data):
         network_type_map = {
             'point-to-point': 'POINTOPOINT',
             'broadcast': 'BROADCAST',
-            'non-broadcast': 'NBMA'
+            'non-broadcast': 'NBMA',
+            'point-to-multipoint': 'POINTOMULTIPOINT',
+            'hybrid': 'POINTOMULTIPOINT'
         }
-        network_type = network_type_map.get(iface_type, iface_type.upper())
+        network_type = network_type_map.get(iface_type, iface_type.upper() if iface_type else 'LOOPBACK')
 
         print(f"{name} is up")
         if ip_address:
@@ -4956,30 +4958,50 @@ def show_ospf_interfaces(json_data):
         return
 
     # Display table view (no specific interface)
-    hdr = f"{'INTERFACE':<12} {'AREA':<12} {'STATE':<10} {'COST':<6} {'PRI':<4} {'DR':<15} {'BDR':<15} {'NBRS':<5}"
-    print(Decore.invert(hdr))
+    type_display_map = {
+        'point-to-point': 'P2P',
+        'broadcast': 'Broadcast',
+        'non-broadcast': 'NBMA',
+        'point-to-multipoint': 'P2MP',
+        'hybrid': 'Hybrid'
+    }
+
+    def fmt_state(state):
+        if state in ('dr', 'bdr'):
+            return state.upper()
+        if state == 'dr-other':
+            return 'DROther'
+        return state.capitalize()
+
+    table = SimpleTable([
+        Column('INTERFACE'),
+        Column('AREA'),
+        Column('TYPE'),
+        Column('STATE'),
+        Column('COST', 'right'),
+        Column('PRI', 'right'),
+        Column('DR'),
+        Column('BDR'),
+        Column('NBRS', 'right')
+    ])
 
     for iface in all_interfaces:
         name = iface.get('name', 'unknown')
         area_id = iface.get('_area_id', '0.0.0.0')
         state = iface.get('state', 'down')
+        iface_type = iface.get('interface-type', '')
         cost = iface.get('cost', 0)
         priority = iface.get('priority', 1)
         dr_id = iface.get('dr-router-id', '-')
         bdr_id = iface.get('bdr-router-id', '-')
         neighbors = iface.get('neighbors', {}).get('neighbor', [])
-        nbr_count = len(neighbors)
 
-        # Capitalize state nicely
-        state_display = state.upper() if state in ['dr', 'bdr'] else state.capitalize()
-        if state == 'dr-other':
-            state_display = 'DROther'
+        table.row(name, area_id,
+                  type_display_map.get(iface_type, iface_type.capitalize() if iface_type else '-'),
+                  fmt_state(state),
+                  cost, priority, dr_id, bdr_id, len(neighbors))
 
-        # Shorten router IDs for display
-        dr_display = dr_id if dr_id != '-' else '-'
-        bdr_display = bdr_id if bdr_id != '-' else '-'
-
-        print(f"{name:<12} {area_id:<12} {state_display:<10} {cost:<6} {priority:<4} {dr_display:<15} {bdr_display:<15} {nbr_count:<5}")
+    table.print()
 
 
 def show_ospf_neighbor(json_data):

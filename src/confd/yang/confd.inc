@@ -14,7 +14,7 @@ MODULES=(
 	"ietf-routing@2018-03-13.yang"
 	"ietf-ipv6-unicast-routing@2018-03-13.yang"
 	"ietf-ipv4-unicast-routing@2018-03-13.yang"
-	"ietf-ospf@2022-10-19.yang -e bfd -e explicit-router-id"
+	"ietf-ospf@2022-10-19.yang -e bfd -e explicit-router-id -e hybrid-interface"
 	"ietf-rip@2020-02-20.yang"
 	"iana-bfd-types@2021-10-21.yang"
 	"ietf-bfd-types@2022-09-22.yang"
