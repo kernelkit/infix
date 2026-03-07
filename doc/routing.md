@@ -152,6 +152,66 @@ an Ethernet interface can be done as follows.
 admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/>
 </code></pre>
 
+
+### Point-to-Multipoint
+
+Point-to-Multipoint (P2MP) is used when multiple OSPF routers share a
+common network segment but should form individual adjacencies rather
+than electing a Designated Router (DR).  This is common in NBMA-like
+environments, DMVPN, or hub-and-spoke topologies.
+
+Infix supports two P2MP variants via the `interface-type` setting:
+
+| **Interface Type**    | **Behavior**                                   |
+|:----------------------|:-----------------------------------------------|
+| `hybrid`              | P2MP with multicast Hellos (broadcast-capable) |
+| `point-to-multipoint` | P2MP with unicast Hellos (non-broadcast)       |
+
+#### Hybrid (broadcast-capable P2MP)
+
+Use `hybrid` when all neighbors on the segment can receive multicast.
+Hello packets are sent to the standard OSPF multicast address (224.0.0.5)
+and neighbors are discovered automatically — no manual neighbor
+configuration is needed.
+
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 interface-type hybrid</b>
+admin@example:/config/routing/…/ospf/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+#### Non-broadcast P2MP
+
+Use `point-to-multipoint` when the network does not support multicast.
+Hello packets are sent as unicast directly to each configured neighbor.
+Since neighbors cannot be discovered automatically, they must be
+configured explicitly using static neighbors (see below).
+
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 interface-type point-to-multipoint</b>
+admin@example:/config/routing/…/ospf/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+
+### Static Neighbors
+
+When using non-broadcast interface types (such as `point-to-multipoint`),
+OSPF cannot discover neighbors via multicast.  Static neighbors must be
+configured so the router knows where to send unicast Hello packets.
+
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 static-neighbors neighbor 10.0.123.2</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 static-neighbors neighbor 10.0.123.3</b>
+admin@example:/config/routing/…/ospf/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+> [!NOTE]
+> Static neighbors are only needed for non-broadcast interface types.
+> With `hybrid` (or `broadcast`), neighbors are discovered automatically
+> via multicast.
+
 ### OSPF global settings
 
 In addition to *area* and *interface* specific settings, OSPF provides

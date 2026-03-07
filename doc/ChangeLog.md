@@ -25,6 +25,8 @@ All notable changes to the project are documented in this file.
   - `set ssh known-hosts <host> <keytype> <pubkey>` — pre-enroll a host key
     received out-of-band, e.g. after a factory reset changes the device host key
   - `no ssh known-hosts <host>` — remove a stale or changed host key entry
+- Add OSPF point-to-multipoint (P2MP) and hybrid interface type support
+
 
 ### Fixes
 
