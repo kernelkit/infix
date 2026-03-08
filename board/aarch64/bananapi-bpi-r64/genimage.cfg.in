@@ -1,0 +1,89 @@
+image cfg.ext4 {
+        empty = true
+        temporary = true
+        size = 128M
+        ext4 {
+                label = "cfg"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
+        }
+}
+
+# The /var partition will be expanded automatically at first boot
+# to use the full size of the SD-card or eMMC media.
+image var.ext4 {
+        empty = true
+        temporary = true
+        size = 128M
+        ext4 {
+                label = "var"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
+        }
+}
+
+image #INFIX_ID##VERSION#-bpi-r64-#TARGET#.img {
+        hdimage {
+                partition-table-type = "hybrid"
+                # MT7622 TF-A partition driver detects GPT by checking MBR[0]
+                # for the 0xEE protective entry.  Place it first so that BL2
+                # (with partition-type = 0x83) lands at MBR slot 1.
+                gpt-protective-first = true
+        }
+
+        # BL2 bootloader at sector 1024 (0x80000). The MT7622 Boot ROM scans
+        # the hybrid MBR for a bootable entry and loads BL2 from its offset.
+        # partition-type makes it visible in the MBR at slot 1 (slot 0 holds
+        # the 0xEE protective entry required by the TF-A partition driver).
+        partition bl2 {
+                partition-type = 0x83
+                image = "bl2.img"
+                offset = 1024s
+                size = 1024s
+                bootable = true
+        }
+
+        # Factory/calibration data at fixed offset
+        partition factory {
+                offset = 4608K
+                size = 2M
+        }
+
+        # FIP partition - BL31 + U-Boot
+        partition fip {
+                image = "fip.bin"
+                offset = 13312s
+                size = 4096s
+        }
+
+        partition aux {
+                partition-uuid = D4EF35A0-0652-45A1-B3DE-D63339C82035
+                image = "aux.ext4"
+        }
+
+        partition primary {
+                partition-type-uuid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4
+                bootable = true
+                size = 250M
+                image = "rootfs.squashfs"
+        }
+
+        partition secondary {
+                partition-type-uuid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4
+                bootable = true
+                size = 250M
+                image = "rootfs.squashfs"
+        }
+
+        partition cfg {
+                partition-uuid = 7aa497f0-73b5-47e5-b2ab-8752d8a48105
+                image = "cfg.ext4"
+        }
+
+        partition var {
+                partition-uuid = 8046A06A-E45A-4A14-A6AD-6684704A393F
+                image = "var.ext4"
+        }
+}

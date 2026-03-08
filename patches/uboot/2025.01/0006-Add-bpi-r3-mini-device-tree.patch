@@ -1,13 +1,10 @@
 From a987f92a768291669eec1a8c5d413190bd9241ec Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 18 Feb 2026 17:00:42 +0100
-Subject: [PATCH 6/7] Add bpi-r3-mini device tree
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 6/9] Add bpi-r3-mini device tree
 Organization: Wires
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  arch/arm/dts/Makefile                |   1 +
  arch/arm/dts/mt7986a-bpi-r3-mini.dts | 238 +++++++++++++++++++++++++++

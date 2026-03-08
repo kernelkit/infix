@@ -1,0 +1,14 @@
+# Rename MT7531 external switch ports by DT node path.
+
+# The DTS already contains this but it has been observed in the wild
+# that we may end up with names like lan118 rather than by DTS label,
+# so this set of rules, that run after most other rules, match on the
+# OF_FULLNAME which is a stable reference.
+#
+# MT7622 / BPI-R64 switch topology (switch@1f, ports):
+#   port@0 = wan, port@1..4 = lan0..lan3, port@5,6 = cpu
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@0", NAME="wan"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@1", NAME="lan0"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@2", NAME="lan1"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@3", NAME="lan2"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@1f/ports/port@4", NAME="lan3"

@@ -1,10 +1,7 @@
 From 57b3cd8612a8da852f0796d97e6a7526cc4742cc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 18 Feb 2026 17:02:23 +0100
-Subject: [PATCH 7/7] bpi-r3/r4: Add probe for specific model
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 7/9] bpi-r3/r4: Add probe for specific model
 Organization: Wires
 
 Probe for bpi-r3 and bpi-r3-mini and select correct device tree,
@@ -12,7 +9,7 @@ prepare for bpi-r4 (not supported yet, but soon), for bpi-r3,
 look if there are phys connected, if so it is a mini, else it is
 regular bpi-r3.
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  arch/arm/mach-mediatek/Kconfig       |   3 +
  board/mediatek/mt7986/Kconfig        |  10 ++

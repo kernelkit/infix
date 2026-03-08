@@ -1,0 +1,6 @@
+#include <mt7622-env.dtsi>
+
+&env {
+	boot_targets = "mmc1";   /* SD = mmc1 on MT7622 */
+	fdtfile = "mediatek/mt7622-bananapi-bpi-r64.dtb";
+};

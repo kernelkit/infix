@@ -1,11 +1,8 @@
 From 5a530e4eebf64887fd6b449dd45df04eccd07cad Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 12 Feb 2026 10:00:02 +0100
-Subject: [PATCH 4/7] arm: dts: at91: sama7g5ek supports high-speed on mmc0
+Subject: [PATCH 4/9] arm: dts: at91: sama7g5ek supports high-speed on mmc0
  (eMMC)
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 - eMMC high-speed timing is supported
@@ -14,7 +11,6 @@ Organization: Wires
 Tested on sama7g5ek rev 5.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  arch/arm/dts/at91-sama7g5ek.dts | 2 ++
  1 file changed, 2 insertions(+)

@@ -1,0 +1,10 @@
+/ {
+	chosen {
+		infix {
+			/* Default admin user password: 'admin' */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			usb-ports = <&ssusb>;
+			usb-port-names = "USB";
+		};
+	};
+};

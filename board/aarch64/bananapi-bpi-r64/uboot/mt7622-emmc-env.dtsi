@@ -1,0 +1,5 @@
+#include <mt7622-env.dtsi>
+
+&env {
+	fdtfile = "mediatek/mt7622-bananapi-bpi-r64.dtb";
+};

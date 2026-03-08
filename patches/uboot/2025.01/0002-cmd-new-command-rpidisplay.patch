@@ -1,13 +1,14 @@
 From 7efc3aa61fbc84b2c0c959e737257d2de2e8020c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Sat, 6 Sep 2025 22:18:27 +0200
-Subject: [PATCH 2/7] cmd: new command rpidisplay
+Subject: [PATCH 2/9] cmd: new command rpidisplay
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  cmd/Kconfig       | 14 ++++++++
  cmd/Makefile      |  2 +-
