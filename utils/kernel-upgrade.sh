@@ -249,9 +249,8 @@ update_changelog() {
     # Check if the latest release is UNRELEASED (first release header in file)
     FIRST_RELEASE=$(grep -m1 "^\[v" doc/ChangeLog.md)
     if ! echo "$FIRST_RELEASE" | grep -q "\[UNRELEASED\]"; then
-        log_error "First release section in ChangeLog.md is not UNRELEASED"
-        log_error "Please create an UNRELEASED section first before running this script"
-        exit 1
+        log_warn "No UNRELEASED section found in ChangeLog.md, skipping changelog update"
+        return 0
     fi
 
     # Extract just the UNRELEASED section (from start until next version header)
@@ -264,13 +263,22 @@ update_changelog() {
         sed -i '0,/^- Upgrade \(\*\*\)\?Linux kernel to .*/s//- Upgrade Linux kernel to '"$NEW_VERSION"' (LTS)/' doc/ChangeLog.md
         log_info "Updated existing kernel version entry to $NEW_VERSION"
     else
-        # Add new kernel upgrade entry after first "### Changes"
+        # Add new kernel upgrade entry after the first "### Changes" in the UNRELEASED section.
+        # Use getline to peek at the line following "### Changes" so we can preserve it:
+        # - blank line: print it, then insert kernel entry (normal case)
+        # - non-blank line: insert kernel entry first, then print the consumed line
+        #   (guards against silently dropping existing entries, e.g. a Buildroot upgrade)
         awk -v new_line="- Upgrade Linux kernel to $NEW_VERSION (LTS)" '
             /^### Changes/ && !done {
                 print
                 getline
-                if (NF == 0) print
-                print new_line
+                if (NF == 0) {
+                    print
+                    print new_line
+                } else {
+                    print new_line
+                    print
+                }
                 done=1
                 next
             }

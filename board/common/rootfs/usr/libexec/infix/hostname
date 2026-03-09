@@ -62,8 +62,8 @@ if ! runlevel >/dev/null 2>&1; then
 fi
 
 initctl -bq status lldpd && lldpcli configure system hostname "$new_hostname" 2>/dev/null
-initctl -bq status mdns  && avahi-set-host-name "$new_hostname" 2>/dev/null
-initctl -bq touch netbrowse 2>/dev/null
+initctl -bq touch mdns-alias 2>/dev/null
+initctl -bq touch netbrowse  2>/dev/null
 
 # If called from dhcp script we need to reload to activate new name in syslogd
 # Otherwise we're called from confd, which does the reload when all is done.

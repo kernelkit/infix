@@ -19,8 +19,12 @@
 #define GENERATE_ENUM(ENUM)      ENUM,
 #define GENERATE_STRING(STRING) #STRING,
 
+#define AVAHI_SVC_PATH "/etc/avahi/services"
+
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
 #define LLDP_CONFIG_NEXT LLDP_CONFIG"+"
+
+enum mdns_cmd { MDNS_ADD, MDNS_DELETE, MDNS_UPDATE };
 
 #define FOREACH_SVC(SVC)			\
         SVC(none)				\
@@ -59,14 +63,47 @@ struct mdns_svc {
 	char *desc;
 	char *text;
 } services[] = {
-	{ web,      "https",    "_https._tcp",        443, "Web Management Interface", "adminurl=https://%s.local" },
-	{ ttyd,     "ttyd",     "_https._tcp",        443, "Web Console Interface",    "adminurl=https://%s.local:7681" },
-	{ web,      "http",     "_http._tcp",          80, "Web Management Interface", "adminurl=http://%s.local" },
-	{ netconf,  "netconf",  "_netconf-ssh._tcp",  830, "NETCONF (XML/SSH)", NULL },
-	{ restconf, "restconf", "_restconf-tls._tcp", 443, "RESTCONF (JSON/HTTP)",  NULL },
-	{ ssh,      "sftp-ssh", "_sftp-ssh._tcp",      22, "Secure file transfer (FTP/SSH)", NULL },
-	{ ssh,      "ssh",      "_ssh._tcp",           22, "Secure shell command line interface (CLI)", NULL },
+	{ web,      "https",    "_https._tcp",        443, "%h Web",     "adminurl=https://%s.local" },
+	{ ttyd,     "ttyd",     "_https._tcp",        443, "%h Console", "adminurl=https://%s.local:7681" },
+	{ web,      "http",     "_http._tcp",          80, "%h Web",     "adminurl=http://%s.local" },
+	{ netconf,  "netconf",  "_netconf-ssh._tcp",  830, "%h",         NULL },
+	{ restconf, "restconf", "_restconf-tls._tcp", 443, "%h",         NULL },
+	{ ssh,      "sftp-ssh", "_sftp-ssh._tcp",      22, "%h",         NULL },
+	{ ssh,      "ssh",      "_ssh._tcp",           22, "%h",         NULL },
 };
+
+static const char *jgets(json_t *obj, const char *key)
+{
+	json_t *val = json_object_get(obj, key);
+
+	return (val && !json_is_null(val)) ? json_string_value(val) : NULL;
+}
+
+/* Write str to fp with XML special characters escaped. */
+static void xml_escape(FILE *fp, const char *str)
+{
+	for (; *str; str++) {
+		switch (*str) {
+		case '&':  fputs("&amp;",  fp); break;
+		case '<':  fputs("&lt;",   fp); break;
+		case '>':  fputs("&gt;",   fp); break;
+		case '"':  fputs("&quot;", fp); break;
+		case ';':                       break; /* avahi txt-record separator */
+		default:   fputc(*str,     fp); break;
+		}
+	}
+}
+
+static void write_txt(FILE *fp, const char *key, const char *val)
+{
+	if (!val)
+		return;
+	fputs("    <txt-record>", fp);
+	xml_escape(fp, key);
+	fputc('=', fp);
+	xml_escape(fp, val);
+	fputs("</txt-record>\n", fp);
+}
 
 /*
  * On hostname changes we need to update the mDNS records, in particular
@@ -77,27 +114,126 @@ struct mdns_svc {
  *      adminurl to include 'admin@%s.local' to pre-populate the default
  *      username in the login dialog.
  */
-static int mdns_records(const char *cmd, svc type)
+static int mdns_records(int cmd, svc type)
 {
 	char hostname[MAXHOSTNAMELEN + 1];
+	const char *vendor, *product, *serial, *mac;
+	const char *vn, *on, *ov;
 
 	if (gethostname(hostname, sizeof(hostname))) {
 		ERRNO("failed getting system hostname");
 		return SR_ERR_SYS;
 	}
 
+	vendor  = jgets(confd.root, "vendor");
+	product = jgets(confd.root, "product-name");
+	serial  = jgets(confd.root, "serial-number");
+	mac     = jgets(confd.root, "mac-address");
+
+	vn = fgetkey("/etc/os-release", "VENDOR_NAME");
+	on = fgetkey("/etc/os-release", "NAME");
+	ov = fgetkey("/etc/os-release", "VERSION_ID");
+
 	for (size_t i = 0; i < NELEMS(services); i++) {
 		struct mdns_svc *srv = &services[i];
-		char buf[256] = "";
+		FILE *fp;
 
 		if (type != all && srv->svc != type)
 			continue;
 
-		if (srv->text)
-			snprintf(buf, sizeof(buf), srv->text, hostname);
+		if (cmd == MDNS_DELETE) {
+			erasef(AVAHI_SVC_PATH "/%s.service", srv->name);
+			continue;
+		}
 
-		systemf("/usr/libexec/confd/gen-service %s %s %s %s %d \"%s\" %s", cmd,
-			hostname, srv->name, srv->type, srv->port, srv->desc, buf);
+		if (cmd == MDNS_UPDATE && !fexistf(AVAHI_SVC_PATH "/%s.service", srv->name))
+			continue;
+
+		fp = fopenf("w", AVAHI_SVC_PATH "/%s.service", srv->name);
+		if (!fp) {
+			ERRNO("failed creating %s.service", srv->name);
+			continue;
+		}
+
+		fprintf(fp,
+			"<?xml version=\"1.0\" standalone='no'?>\n"
+			"<!DOCTYPE service-group SYSTEM \"avahi-service.dtd\">\n"
+			"<service-group>\n"
+			"  <name replace-wildcards=\"yes\">%s</name>\n"
+			"  <service>\n"
+			"    <type>%s</type>\n"
+			"    <port>%d</port>\n"
+			"    <txt-record>vv=1</txt-record>\n",
+			srv->desc, srv->type, srv->port);
+		write_txt(fp, "vendor",   vendor);
+		write_txt(fp, "product",  product);
+		write_txt(fp, "serial",   serial);
+		write_txt(fp, "deviceid", mac);
+		write_txt(fp, "vn",       vn);
+		write_txt(fp, "on",       on);
+		write_txt(fp, "ov",       ov);
+
+		if (srv->text) {
+			char txt[256];
+
+			snprintf(txt, sizeof(txt), srv->text, hostname);
+			fputs("    <txt-record>", fp);
+			xml_escape(fp, txt);
+			fputs("</txt-record>\n", fp);
+		}
+
+		fprintf(fp,
+			"  </service>\n"
+			"</service-group>\n");
+		fclose(fp);
+	}
+
+	/* Always-on records tied to mDNS being active, not a specific service */
+	if (type == all) {
+		if (cmd == MDNS_DELETE) {
+			erasef(AVAHI_SVC_PATH "/workstation.service");
+			erasef(AVAHI_SVC_PATH "/device-info.service");
+		} else {
+			FILE *fp;
+
+			fp = fopenf("w", AVAHI_SVC_PATH "/workstation.service");
+			if (fp) {
+				fprintf(fp,
+					"<?xml version=\"1.0\" standalone='no'?>\n"
+					"<!DOCTYPE service-group SYSTEM \"avahi-service.dtd\">\n"
+					"<service-group>\n"
+					"  <name replace-wildcards=\"yes\">%%h [%s]</name>\n"
+					"  <service>\n"
+					"    <type>_workstation._tcp</type>\n"
+					"    <port>9</port>\n"
+					"  </service>\n"
+					"</service-group>\n",
+					mac ?: "");
+				fclose(fp);
+			} else {
+				ERRNO("failed creating workstation.service");
+			}
+
+			/* TODO: Use device-info YANG model for Apple-compatible model string */
+			fp = fopenf("w", AVAHI_SVC_PATH "/device-info.service");
+			if (fp) {
+				fprintf(fp,
+					"<?xml version=\"1.0\" standalone='no'?>\n"
+					"<!DOCTYPE service-group SYSTEM \"avahi-service.dtd\">\n"
+					"<service-group>\n"
+					"  <name replace-wildcards=\"yes\">%%h</name>\n"
+					"  <service>\n"
+					"    <type>_device-info._tcp</type>\n"
+					"    <port>0</port>\n");
+				write_txt(fp, "model", product);
+				fprintf(fp,
+					"  </service>\n"
+					"</service-group>\n");
+				fclose(fp);
+			} else {
+				ERRNO("failed creating device-info.service");
+			}
+		}
 	}
 
 	return SR_ERR_OK;
@@ -182,7 +318,7 @@ static void svc_enadis(int ena, svc type, const char *svc)
 	}
 
 	if (type != none)
-		mdns_records(ena ? "add" : "delete", type);
+		mdns_records(ena ? MDNS_ADD : MDNS_DELETE, type);
 
 	systemf("initctl -nbq touch avahi");
 	systemf("initctl -nbq touch nginx");
@@ -204,10 +340,19 @@ static void fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const ch
 
 #define AVAHI_CONF "/etc/avahi/avahi-daemon.conf"
 
-static void mdns_conf(struct lyd_node *cfg)
+static void mdns_conf(struct confd *confd, struct lyd_node *cfg)
 {
+	char hname[HOST_NAME_MAX + 1];
+	const char *hostname;
+	const char *fmt;
 	struct lyd_node *ctx;
 	FILE *fp;
+
+	fmt = lydx_get_cattr(cfg, "hostname");   /* "%h" when unset (YANG default) */
+	if (!hostnamefmt(confd, fmt, hname, sizeof(hname), NULL, 0))
+		hostname = hname;
+	else
+		hostname = fgetkey("/etc/os-release", "DEFAULT_HOSTNAME");
 
 	fp = fopen(AVAHI_CONF, "w");
 	if (!fp) {
@@ -217,9 +362,10 @@ static void mdns_conf(struct lyd_node *cfg)
 
 	fprintf(fp, "# Generated by Infix confd\n"
 		"[server]\n"
+		"host-name=%s\n"
 		"domain-name=%s\n"
 		"use-ipv4=yes\n"
-		"use-ipv6=yes\n", lydx_get_cattr(cfg, "domain"));
+		"use-ipv6=yes\n", hostname, lydx_get_cattr(cfg, "domain"));
 
 	ctx = lydx_get_descendant(lyd_child(cfg), "interfaces", NULL);
 	if (ctx) {
@@ -254,23 +400,17 @@ static void mdns_cname(sr_session_ctx_t *session)
 
 	if (ena) {
 		int www = srx_enabled(session, "/infix-services:web/netbrowse/enabled");
-		const char *hostname = fgetkey("/etc/os-release", "DEFAULT_HOSTNAME");
+		FILE *fp;
 
-		if (hostname || www) {
-			FILE *fp;
-
-			fp = fopen("/etc/default/mdns-alias", "w");
-			if (fp) {
-				fprintf(fp, "MDNS_ALIAS_ARGS=\"%s%s %s\"\n",
-					hostname ?: "", hostname ? ".local" : "",
-					www ? "network.local" : "");
-				fclose(fp);
-			} else {
-				ERRNO("failed updating mDNS aliases");
-				ena = 0;
-			}
-		} else
-			ena = 0; /* nothing to advertise */
+		fp = fopen("/etc/default/mdns-alias", "w");
+		if (fp) {
+			fprintf(fp, "MDNS_ALIAS_ARGS=\"%s\"\n",
+				www ? "network.local" : "");
+			fclose(fp);
+		} else {
+			ERRNO("failed updating mDNS aliases");
+			ena = 0;
+		}
 	}
 
 	svc_enadis(ena, none, "mdns-alias");
@@ -292,10 +432,10 @@ static int mdns_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 	ena = lydx_is_enabled(srv, "enabled");
 	if (ena) {
 		/* Generate/update avahi-daemon.conf */
-		mdns_conf(srv);
+		mdns_conf(confd, srv);
 
 		/* Generate/update basic mDNS service records */
-		mdns_records("update", all);
+		mdns_records(MDNS_UPDATE, all);
 	}
 
 	svc_enadis(ena, none, "avahi");

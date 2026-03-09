@@ -1,7 +1,7 @@
 From 03f273fc540082d1eaa23bd9b5847e695afd8283 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 25 Sep 2025 15:00:54 +0200
-Subject: [PATCH] Silence warnings about old backends
+Subject: [PATCH 1/2] Silence warnings about old backends
 Organization: Wires
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>

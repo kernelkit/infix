@@ -2,13 +2,15 @@ DISTCLEANFILES      = *~ *.d
 ACLOCAL_AMFLAGS     = -I m4
 
 sbin_PROGRAMS       = statd
-statd_SOURCES       = statd.c shared.c shared.h journal.c journal_retention.c journal.h
+statd_SOURCES       = statd.c shared.c shared.h journal.c journal_retention.c journal.h avahi.c avahi.h
 statd_CPPFLAGS      = -D_DEFAULT_SOURCE -D_GNU_SOURCE
 statd_CFLAGS        = -W -Wall -Wextra
 statd_CFLAGS       += $(jansson_CFLAGS) $(libyang_CFLAGS) $(sysrepo_CFLAGS)
 statd_CFLAGS       += $(libsrx_CFLAGS) $(libite_CFLAGS)
+statd_CFLAGS       += $(avahi_client_CFLAGS)
 statd_LDADD         = $(jansson_LIBS) $(libyang_LIBS) $(sysrepo_LIBS)
 statd_LDADD        += $(libsrx_LIBS) $(libite_LIBS) $(EV_LIBS) -lz
+statd_LDADD        += $(avahi_client_LIBS)
 
 # Test stub for journal retention policy (no dependencies, standalone)
 noinst_PROGRAMS     = journal_retention_stub

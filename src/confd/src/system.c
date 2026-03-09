@@ -1540,27 +1540,33 @@ static char *get_mac(struct confd *confd, char *mac, size_t len)
 int hostnamefmt(struct confd *confd, const char *fmt, char *hostnm, size_t hostlen,
 		char *domain, size_t domlen)
 {
+	char buf[HOST_NAME_MAX + 1];
 	char mac[10];
-	char *ptr;
+	char *f, *ptr;
 	size_t i;
 
 	if (!fmt || !*fmt)
 		return -1;
 
+	strlcpy(buf, fmt, sizeof(buf));
+	f = buf;
+
 	memset(hostnm, 0, hostlen);
 	if (domain)
 		memset(domain, 0, domlen);
 
-	ptr = strchr(fmt, '.');
+	ptr = strchr(f, '.');
 	if (ptr) {
 		*ptr++ = 0;
 		if (domain)
 			strlcpy(domain, ptr, domlen);
 	}
 
-	for (i = 0; i < strlen(fmt); i++) {
-		if (fmt[i] == '%') {
-			switch (fmt[++i]) {
+	for (i = 0; i < strlen(f); i++) {
+		if (f[i] == '%') {
+			if (f[++i] == '\0')
+				break;
+			switch (f[i]) {
 			case 'i':
 				strlcat(hostnm, id, hostlen);
 				break;
@@ -1577,7 +1583,7 @@ int hostnamefmt(struct confd *confd, const char *fmt, char *hostnm, size_t hostl
 				break; /* Unknown, skip */
 			}
 		} else {
-			char ch[2] = { fmt[i], 0 };
+			char ch[2] = { f[i], 0 };
 			strlcat(hostnm, ch, hostlen);
 		}
 	}
