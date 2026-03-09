@@ -107,6 +107,7 @@ with infamy.Test() as test:
                         "system": {
                             "ntp": {
                                 "enabled": True,
+                                "infix-system:stratum-weight": 0.0,
                                 "server": [{
                                     "name": "srv1",
                                     "udp": {

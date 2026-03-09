@@ -42,7 +42,7 @@ MODULES=(
 	"infix-firewall-services@2025-04-26.yang"
 	"infix-firewall-icmp-types@2025-04-26.yang"
 	"infix-meta@2025-12-10.yang"
-	"infix-system@2025-12-02.yang"
+	"infix-system@2026-03-09.yang"
 	"infix-services@2025-12-10.yang"
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"
@@ -51,6 +51,6 @@ MODULES=(
 	"ietf-crypto-types -e cleartext-symmetric-keys"
 	"infix-crypto-types@2025-11-09.yang"
 	"ietf-keystore -e symmetric-keys"
-	"infix-ntp@2026-02-08.yang"
+	"infix-ntp@2026-03-09.yang"
 	"infix-keystore@2025-12-17.yang"
 )

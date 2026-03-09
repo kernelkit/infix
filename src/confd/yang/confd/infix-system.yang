@@ -28,6 +28,15 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2026-03-09 {
+    description "Add stratumweight to NTP client configuration.
+
+                 Allows tuning the weight of stratum in NTP source selection
+                 relative to measured distance. Setting to 0.0 ensures lower
+                 stratum sources are always preferred regardless of distance.";
+    reference "internal";
+  }
+
   revision 2025-12-02 {
     description "Extend services with runtime statistics:
                    - Add statistics container with memory-usage, uptime, restart-count";
@@ -304,6 +313,27 @@ module infix-system {
         base editor-type;
       }
       default emacs;
+    }
+  }
+
+  augment "/sys:system/sys:ntp" {
+    leaf stratum-weight {
+      type decimal64 {
+        fraction-digits 3;
+        range "0.0..max";
+      }
+      default "0.001";
+      units "seconds";
+      description
+        "Weight of stratum in NTP source selection relative to measured distance.
+
+         A one-stratum difference counts as this many seconds of additional
+         distance when comparing candidates.
+
+         The default (0.001 = 1ms) means stratum only wins when distance
+         differences are less than 1ms. Setting it to 0.0 ensures that a
+         lower-stratum source is always preferred over a higher-stratum source,
+         regardless of their measured distances.";
     }
   }
 
