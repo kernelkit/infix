@@ -999,6 +999,56 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#point-to-multipoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Point-to-Multipoint
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Point-to-Multipoint">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hybrid-broadcast-capable-p2mp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hybrid (broadcast-capable P2MP)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-broadcast-p2mp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-broadcast P2MP
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-neighbors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static Neighbors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ospf-global-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2504,6 +2554,56 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#point-to-multipoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Point-to-Multipoint
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Point-to-Multipoint">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hybrid-broadcast-capable-p2mp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hybrid (broadcast-capable P2MP)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-broadcast-p2mp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-broadcast P2MP
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-neighbors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static Neighbors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ospf-global-settings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2865,6 +2965,69 @@ an Ethernet interface can be done as follows.</p>
 admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt;
 </code></pre>
 
+<h3 id="point-to-multipoint">Point-to-Multipoint<a class="headerlink" href="#point-to-multipoint" title="Permanent link">¶</a></h3>
+<p>Point-to-Multipoint (P2MP) is used when multiple OSPF routers share a
+common network segment but should form individual adjacencies rather
+than electing a Designated Router (DR).  This is common in NBMA-like
+environments, DMVPN, or hub-and-spoke topologies.</p>
+<p>Infix supports two P2MP variants via the <code>interface-type</code> setting:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Interface Type</strong></th>
+<th style="text-align: left;"><strong>Behavior</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>hybrid</code></td>
+<td style="text-align: left;">P2MP with multicast Hellos (broadcast-capable)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>point-to-multipoint</code></td>
+<td style="text-align: left;">P2MP with unicast Hellos (non-broadcast)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="hybrid-broadcast-capable-p2mp">Hybrid (broadcast-capable P2MP)<a class="headerlink" href="#hybrid-broadcast-capable-p2mp" title="Permanent link">¶</a></h4>
+<p>Use <code>hybrid</code> when all neighbors on the segment can receive multicast.
+Hello packets are sent to the standard OSPF multicast address (224.0.0.5)
+and neighbors are discovered automatically — no manual neighbor
+configuration is needed.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface e0 interface-type hybrid</b>
+admin@example:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h4 id="non-broadcast-p2mp">Non-broadcast P2MP<a class="headerlink" href="#non-broadcast-p2mp" title="Permanent link">¶</a></h4>
+<p>Use <code>point-to-multipoint</code> when the network does not support multicast.
+Hello packets are sent as unicast directly to each configured neighbor.
+Since neighbors cannot be discovered automatically, they must be
+configured explicitly using static neighbors (see below).</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface e0 interface-type point-to-multipoint</b>
+admin@example:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="static-neighbors">Static Neighbors<a class="headerlink" href="#static-neighbors" title="Permanent link">¶</a></h3>
+<p>When using non-broadcast interface types (such as <code>point-to-multipoint</code>),
+OSPF cannot discover neighbors via multicast.  Static neighbors must be
+configured so the router knows where to send unicast Hello packets.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface e0 static-neighbors neighbor 10.0.123.2</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface e0 static-neighbors neighbor 10.0.123.3</b>
+admin@example:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Static neighbors are only needed for non-broadcast interface types.
+With <code>hybrid</code> (or <code>broadcast</code>), neighbors are discovered automatically
+via multicast.</p>
+</div>
 <h3 id="ospf-global-settings">OSPF global settings<a class="headerlink" href="#ospf-global-settings" title="Permanent link">¶</a></h3>
 <p>In addition to <em>area</em> and <em>interface</em> specific settings, OSPF provides
 global settings for route redistribution and OSPF router identifier.</p>
