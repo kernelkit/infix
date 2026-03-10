@@ -1,0 +1,19 @@
+# Authorize USB devices on buses that Infix has unlocked (authorized_default=1).
+#
+# With usbcore.authorized_default=2 only DT-marked hard-wired ports are
+# auto-authorized by the kernel.  When confd unlocks a bus it sets
+# authorized_default=1 on the root hub and uses nftw to authorize already-
+# present devices.  However, devices behind an intermediate hub may appear
+# asynchronously — after nftw has already finished — because hub port probing
+# is slow.  This rule catches those out-of-band additions: if a device arrives
+# unauthorized (authorized=0) on a bus where confd has set authorized_default=1
+# on any ancestor root hub, authorize it immediately.
+#
+# Note: ATTRS{} matches the attribute on the device itself or any parent,
+# so authorized_default=1 on the root hub (usbN) is found even for devices
+# connected through one or more intermediate hubs.  Locked buses keep
+# authorized_default=0, so this rule correctly leaves them alone.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", \
+	ATTR{authorized}=="0", \
+	ATTRS{authorized_default}=="1", \
+	RUN+="/bin/sh -c 'echo 1 > /sys%p/authorized'"
