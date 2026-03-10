@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Upgrade Linux kernel to 6.18.16 (LTS)
 - **Revamped <http://network.local> device browser**.  Device cards now
   show the IP address, product name, and firmware version from mDNS TXT
   records.  the mDNS browser is now also available over plain HTTP
