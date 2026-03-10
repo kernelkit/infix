@@ -3,16 +3,23 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.02.1][] - 2026-03-xx
+[v26.02.1][] - 2026-03-11
 -------------------------
 
 ### Changes
 
 - Upgrade Linux kernel to 6.18.16 (LTS)
+- Add support for disabling WiFi and GPS features in builds
+- Add OSPF point-to-multipoint (P2MP) and hybrid interface type support.  This
+  also includes support for setting static neighbors, issue #1426
 
 ### Fixes
 
-- N/A
+- Fix #1389: legacy name limit in firewalld triggered problems with policy names
+- Fix #1416: `show firewall` command show an error when the firewall is disabled
+- Fix instabilities in Zebra route manager after Frr upgrade in v26.02.0
+- Fix regression in MVEBU SafeXcel Crypto Engine for Marvell Armada SOCs (37xx,
+  7k, 8k, and CN913x series).  Firmware package lost in v26.01.0
 
 [v26.02.0][] - 2026-03-01
 -------------------------
