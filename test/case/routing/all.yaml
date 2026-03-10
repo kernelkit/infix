@@ -29,6 +29,12 @@
 - name: OSPF Debug Logging
   case: ospf_debug/test.py
 
+- name: OSPF Point-to-Multipoint Hybrid
+  case: ospf_point_to_multipoint_hybrid/test.py
+
+- name: OSPF Point-to-Multipoint
+  case: ospf_point_to_multipoint/test.py
+
 - name: RIP Basic
   case: rip_basic/test.py
 

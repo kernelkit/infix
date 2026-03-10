@@ -154,6 +154,17 @@ int parse_rip(sr_session_ctx_t *session, struct lyd_node *rip, FILE *fp)
 	return num_interfaces;
 }
 
+static const char *ospf_network_type(const char *yang_type)
+{
+	if (!strcmp(yang_type, "hybrid"))
+		return "point-to-multipoint";
+	if (!strcmp(yang_type, "point-to-multipoint"))
+		return "point-to-multipoint non-broadcast";
+
+	/* broadcast, non-broadcast, point-to-point pass through unchanged */
+	return yang_type;
+}
+
 int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp)
 {
 	struct lyd_node *interface, *interfaces, *area;
@@ -203,7 +214,7 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 				if (passive)
 					fputs("  ip ospf passive\n", fp);
 				if (interface_type)
-					fprintf(fp, "  ip ospf network %s\n", interface_type);
+					fprintf(fp, "  ip ospf network %s\n", ospf_network_type(interface_type));
 				if (cost)
 					fprintf(fp, "  ip ospf cost %s\n", cost);
 			}
@@ -224,6 +235,28 @@ int parse_ospf_redistribute(sr_session_ctx_t *session, struct lyd_node *redistri
 	}
 
 	return 0;
+}
+
+static void parse_ospf_static_neighbors(struct lyd_node *areas, FILE *fp)
+{
+	struct lyd_node *area, *interface, *interfaces, *neighbors, *neighbor;
+
+	LY_LIST_FOR(lyd_child(areas), area) {
+		interfaces = lydx_get_child(area, "interfaces");
+
+		LY_LIST_FOR(lyd_child(interfaces), interface) {
+			neighbors = lydx_get_child(interface, "static-neighbors");
+			if (!neighbors)
+				continue;
+
+			LY_LIST_FOR(lyd_child(neighbors), neighbor) {
+				const char *id = lydx_get_cattr(neighbor, "identifier");
+
+				if (id)
+					fprintf(fp, "  neighbor %s\n", id);
+			}
+		}
+	}
 }
 
 int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp)
@@ -315,6 +348,7 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	fputs("router ospf\n", fp);
 	num_areas = parse_ospf_areas(session, areas, fp);
 	parse_ospf_redistribute(session, lydx_get_child(ospf, "redistribute"), fp);
+	parse_ospf_static_neighbors(areas, fp);
 	default_route = lydx_get_child(ospf, "default-route-advertise");
 	if (default_route) {
 		/* enable is obsolete in favor for enabled. */
