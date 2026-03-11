@@ -26,7 +26,7 @@ module infix-routing {
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing, ietf-ospf, and ietf-rip.";
 
-  revision 2026-03-04 {
+  revision 2026-03-11 {
     description "Remove interface-type deviation to expose standard ietf-ospf
                  interface types including point-to-multipoint and hybrid.
                  Un-deviate static-neighbors for non-broadcast P2MP support.";
@@ -452,6 +452,13 @@ module infix-routing {
   }
 
   /* OSPF Area Interface */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:static-neighbors/ospf:neighbor" {
+    deviate add {
+      must "../../ospf:interface-type = 'point-to-multipoint' or ../../ospf:interface-type = 'non-broadcast'" {
+        error-message "Static neighbors are only applicable to point-to-multipoint or non-broadcast interface types.";
+      }
+    }
+  }
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:multi-areas"    {
     deviate not-supported;
   }
