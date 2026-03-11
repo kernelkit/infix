@@ -35,7 +35,4 @@ fixup_file=fixup4.dat
 dtoverlay=vc4-kms-v3d-pi4
 lcd_rotate=2
 
-# Prevent console on DSI
-console=map:0
-
 gpu_mem=256

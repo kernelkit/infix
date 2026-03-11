@@ -186,6 +186,13 @@ get_bootloader_name()
                 echo "bpi_r3_sd_boot"
             fi
             ;;
+        bananapi-bpi-r64)
+            if [ "$target" = "emmc" ]; then
+                echo "bpi_r64_emmc_boot"
+            else
+                echo "bpi_r64_sd_boot"
+            fi
+            ;;
         friendlyarm-nanopi-r2s)
             echo "nanopi_r2s_boot"
             ;;

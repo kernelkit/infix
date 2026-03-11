@@ -9,6 +9,8 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.16 (LTS)
+- Add support for [Banana Pi R64 Mini][BPI-R64], 5 port router with WiFi 5
+- Add support for [Raspberry Pi 400][RPI-400], an RPi 4B built into a keyboard
 - **Revamped <http://network.local> device browser**.  Device cards now
   show the IP address, product name, and firmware version from mDNS TXT
   records.  the mDNS browser is now also available over plain HTTP
@@ -37,6 +39,9 @@ All notable changes to the project are documented in this file.
 - Fix #1416: `show firewall` command show an error when the firewall is disabled
 - Fix regression in MVEBU SafeXcel Crypto Engine for Marvell Armada SOCs (37xx,
   7k, 8k, and CN913x series).  Firmware package lost in v26.01.0
+
+[BPI-R64]: https://docs.banana-pi.org/en/BPI-R64/BananaPi_BPI-R64
+[RPI-400]: https://www.raspberrypi.com/products/raspberry-pi-400/
 
 [v26.02.0][] - 2026-03-01
 -------------------------

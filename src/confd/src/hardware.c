@@ -78,6 +78,17 @@ static bool usb_authorize(struct json_t *root, const char *name, int enabled)
 					}
 				}
 			} else {
+				/*
+				 * Set authorized_default=1 on the bus BEFORE nftw
+				 * authorizes individual devices.  With FTW_DEPTH,
+				 * nftw visits children before the root-hub entry, so
+				 * without this a hub would be authorized first while
+				 * authorized_default is still 2.  Setting it here
+				 * ensures devices appearing behind an intermediate
+				 * hub are auto-authorized by the kernel as they probe.
+				 */
+				if (fexist(apath))
+					writedf(1, "w", "%s", apath);
 				if (realpath(path, apath))
 					nftw(apath, dir_cb, 20, FTW_DEPTH | FTW_PHYS);
 			}

@@ -43,8 +43,8 @@ image #INFIX_ID##VERSION#-rpi64-sdcard.img {
 
 	partition boot {
 		partition-type = 0xc
-		bootable = "true"
 		image = "boot.vfat"
+		bootable = "true"
 	}
 
 	partition aux {
@@ -54,16 +54,14 @@ image #INFIX_ID##VERSION#-rpi64-sdcard.img {
 
 	partition primary {
 		partition-type-uuid = linux
-		bootable = "true"
-		size = 250M
 		image = "rootfs.squashfs"
+		size = 250M
 	}
 
 	partition secondary {
 		partition-type-uuid = linux
-		bootable = "true"
-		size = 250M
 		image = "rootfs.squashfs"
+		size = 250M
 	}
 
 	partition cfg {

@@ -1,0 +1,3 @@
+#include <arm64/mediatek/mt7622-bananapi-bpi-r64.dts>
+
+#include "mt7622-bananapi-bpi-r64.dtsi"

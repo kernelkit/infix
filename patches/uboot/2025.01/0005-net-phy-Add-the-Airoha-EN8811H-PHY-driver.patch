@@ -1,10 +1,7 @@
 From be250151366460ee318ca47bb15ec23e5e322a84 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 18 Feb 2026 17:00:09 +0100
-Subject: [PATCH 5/7] net: phy: Add the Airoha EN8811H PHY driver
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 5/9] net: phy: Add the Airoha EN8811H PHY driver
 Organization: Wires
 
 Add the driver for the Airoha EN8811H 2.5 Gigabit PHY. The PHY supports
@@ -26,7 +23,7 @@ I have modified the relevant process to align with the U-Boot boot sequence.
 and have validated this on Banana Pi BPI-R3 Mini.
 
 Signed-off-by: Lucien.Jheng <lucienzx159@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/phy/Kconfig       |  25 +
  drivers/net/phy/Makefile      |   1 +

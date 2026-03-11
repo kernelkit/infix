@@ -433,7 +433,13 @@ def probe_qemusystem(out):
 
 
 def generic_usb_ports(out):
-    """Generic USB port discovery - works for all systems"""
+    """Generic USB port discovery - works for all systems.
+
+    Each root hub gets its own uniquely-named entry so it can be independently
+    enabled or disabled.  Boards that need explicit per-port control (e.g. to
+    exclude internal buses) should annotate their DT with usb-ports /
+    usb-port-names in the chosen/infix node instead.
+    """
     ports = []
     usb_base = "/sys/bus/usb/devices"
 
@@ -441,26 +447,22 @@ def generic_usb_ports(out):
         return
 
     for entry in sorted(os.listdir(usb_base)):
-        # Only look at root hubs (usbN)
         if not entry.startswith("usb"):
             continue
-
         device_path = os.path.join(usb_base, entry)
-        # Check if this is a root hub (has authorized files)
-        if os.path.exists(os.path.join(device_path, "authorized")):
-            # Extract number from usbN
-            num = entry.replace("usb", "")
-            ports.append({
-                "num": num,
-                "path": device_path
-            })
+        if not os.path.exists(os.path.join(device_path, "authorized")):
+            continue
+        num = entry.replace("usb", "")
+        ports.append({"num": num, "path": device_path})
 
-    # Name ports: "USB" for single port, "USB1", "USB2", etc. for multiple
-    if ports:
-        if len(ports) == 1:
-            out["usb-ports"] = [{"name": "USB", "path": ports[0]["path"]}]
-        else:
-            out["usb-ports"] = [{"name": f"USB{p['num']}", "path": p["path"]} for p in ports]
+    if not ports:
+        return
+
+    # Single bus → "USB"; multiple → "USB1", "USB2", ... (by bus number)
+    if len(ports) == 1:
+        out["usb-ports"] = [{"name": "USB", "path": ports[0]["path"]}]
+    else:
+        out["usb-ports"] = [{"name": f"USB{p['num']}", "path": p["path"]} for p in ports]
 
 
 def probe_dmisystem(out):

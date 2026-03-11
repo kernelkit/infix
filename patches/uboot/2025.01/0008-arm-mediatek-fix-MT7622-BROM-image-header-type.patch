@@ -1,0 +1,37 @@
+From c07b984f00e48294cb6e14825919405d53532271 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 26 Feb 2026 11:22:28 +0100
+Subject: [PATCH 8/9] arm: mediatek: fix MT7622 BROM image header type
+Organization: Wires
+
+The LK image header for MT7622 was inadvertently changed to "media=nor"
+when board Kconfigs were merged into mach-mediatek/Kconfig. MT7622 uses
+the same ATF/LK-based boot flow as MT7623 and requires "lk=1" so that
+mkimage generates the correct header for the BROM to accept.
+
+Reported-by: Shiji Yang <yangshiji66@outlook.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ arch/arm/mach-mediatek/Kconfig | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-mediatek/Kconfig b/arch/arm/mach-mediatek/Kconfig
+index def8a564d90..53d5b5e58bd 100644
+--- a/arch/arm/mach-mediatek/Kconfig
++++ b/arch/arm/mach-mediatek/Kconfig
+@@ -148,10 +148,10 @@ config SYS_CONFIG_NAME
+ 
+ config MTK_BROM_HEADER_INFO
+ 	string
+-	default "media=nor" if TARGET_MT8518 || TARGET_MT8512 || TARGET_MT7629 || TARGET_MT7622
++	default "media=nor" if TARGET_MT8518 || TARGET_MT8512 || TARGET_MT7629
+ 	default "media=emmc" if TARGET_MT8516 || TARGET_MT8365 || TARGET_MT8183
+ 	default "media=snand;nandinfo=2k+64" if TARGET_MT7981 || TARGET_MT7986 || TARGET_MT7988
+-	default "lk=1" if TARGET_MT7623
++	default "lk=1" if TARGET_MT7622 || TARGET_MT7623
+ 
+ source "board/mediatek/mt7986/Kconfig"
+ source "board/mediatek/mt7988/Kconfig"
+-- 
+2.43.0
+

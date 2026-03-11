@@ -4,7 +4,8 @@ aarch64
 Board Specific Documentation
 ----------------------------
 
-- [Banana Pi R3](banana-pi-r3/)
+- [Banana Pi BPi-R3](banana-pi-r3/)
+- [Banana Pi BPi-R64](banana-pi-r64/)
 - [Marvell CN9130-CRB](cn9130-crb/)
 - [Microchip SparX-5i PCB135 (eMMC)](sparx5-pcb135/)
 - [NanoPi R2S](r2s/)
