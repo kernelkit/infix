@@ -1,0 +1,26 @@
+# Default FRR daemons file used with watchfrr, started by frrinit.sh.
+ospfd=no
+ripd=no
+bfdd=no
+bgpd=no
+ospf6d=no
+ripngd=no
+isisd=no
+pimd=no
+pim6d=no
+ldpd=no
+eigrpd=no
+babeld=no
+vrrpd=no
+pathd=no
+
+vtysh_enable=yes
+watchfrr_options="-l 4"
+zebra_options="  -A 127.0.0.1 -s 90000000"
+mgmtd_options="  -A 127.0.0.1"
+ospfd_options="  -A 127.0.0.1"
+ripd_options="   -A 127.0.0.1"
+staticd_options="-A 127.0.0.1"
+bfdd_options="   -A 127.0.0.1"
+
+frr_profile="traditional"

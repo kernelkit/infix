@@ -45,6 +45,13 @@ module infix-hardware {
     description "Initial";
     reference "internal";
   }
+  feature wifi {
+    description "WiFi support is an optional build-time feature in Infix.";
+  }
+
+  feature gps {
+    description "GPS support is an optional build-time feature in Infix.";
+  }
 
   typedef country-code {
     type string {
@@ -104,11 +111,13 @@ module infix-hardware {
     description "This identity is used to a VPD memory on the device.";
   }
   identity wifi {
+    if-feature wifi;
     base iahw:hardware-class;
     description "This identity is used to describe a WiFi radio/PHY";
   }
 
   identity gps {
+    if-feature gps;
     base iahw:hardware-class;
     description "GPS/GNSS receiver for time synchronization";
   }
@@ -211,6 +220,7 @@ module infix-hardware {
      */
 
     container wifi-radio {
+      if-feature wifi;
       when "derived-from-or-self(../iehw:class, 'ih:wifi')";
       presence "WiFi radio configuration";
       description
@@ -534,6 +544,7 @@ module infix-hardware {
      */
 
     container gps-receiver {
+      if-feature gps;
       when "derived-from-or-self(../iehw:class, 'ih:gps')";
       presence "GPS receiver configuration";
       description

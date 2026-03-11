@@ -124,8 +124,15 @@ def add_areas(control_protocols):
             interface["enabled"] = iface["ospfEnabled"]
             if iface["networkType"] == "POINTOPOINT":
                 interface["interface-type"] = "point-to-point"
-            if iface["networkType"] == "BROADCAST":
+            elif iface["networkType"] == "BROADCAST":
                 interface["interface-type"] = "broadcast"
+            elif iface["networkType"] == "POINTOMULTIPOINT":
+                if iface.get("p2mpNonBroadcast", False):
+                    interface["interface-type"] = "point-to-multipoint"
+                else:
+                    interface["interface-type"] = "hybrid"
+            elif iface["networkType"] == "NBMA":
+                interface["interface-type"] = "non-broadcast"
 
             if iface.get("state"):
                 # Wev've never seen "DependUpon", and has no entry in

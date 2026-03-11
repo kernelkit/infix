@@ -5,7 +5,7 @@ Firewall configuration suitable for end devices on untrusted networks.
 
 image::basic.svg[align=center, scaledwidth=50%]
 
-- Single zone configuration, "public", with action=drop
+- Single zone configuration, "public-untrusted-net", with `action=drop`
 - Allowed services: SSH (port 22), DHCPv6-client, mySSH (custom, port 222)
 - All other ports (HTTP, HTTPS, Telnet, etc.) blocked
 - Check that unused interfaces are automatically assigned to default zone
@@ -47,7 +47,7 @@ with infamy.Test() as test:
 
         target.put_config_dict("infix-firewall", {
             "firewall": {
-                "default": "public",
+                "default": "public-untrusted-net",
                 "logging": "all",
                 "service": [{
                     "name": "mySSH",
@@ -69,7 +69,9 @@ with infamy.Test() as test:
                     "interface": [mgmt_if],
                     "service": ["ssh", "netconf", "restconf"]
                 }, {
-                    "name": "public",
+                    # 20-char name, exceeds old iptables-derived 17-char limit
+                    # Verifies we allow long names with nftables, issue #1389
+                    "name": "public-untrusted-net",
                     "description": "Public untrusted network",
                     "action": "drop",
                     "interface": [data_if],
@@ -80,7 +82,7 @@ with infamy.Test() as test:
 
         # Wait for configuration to be activated
         infamy.Firewall.wait_for_operational(target, {
-            "public": {"action": "drop"},
+            "public-untrusted-net": {"action": "drop"},
             "mgmt": {"action": "accept"}
         })
 
@@ -88,7 +90,7 @@ with infamy.Test() as test:
         data = target.get_data("/infix-firewall:firewall")
         fw = data["firewall"]
 
-        assert fw["default"] == "public"
+        assert fw["default"] == "public-untrusted-net"
 
         services = {svc["name"]: svc for svc in fw.get("service", [])}
         assert "mySSH" in services, "Custom service mySSH not found"
@@ -106,8 +108,8 @@ with infamy.Test() as test:
         assert int(port_entry["lower"]) == 8080
 
         zones = {zone["name"]: zone for zone in fw["zone"]}
-        assert "public" in zones, "Public zone not found in configuration"
-        public_zone = zones["public"]
+        assert "public-untrusted-net" in zones, "public-untrusted-net zone not found in configuration"
+        public_zone = zones["public-untrusted-net"]
         assert public_zone["action"] == "drop"
         assert data_if in public_zone["interface"]
         assert "ssh" in public_zone["service"]
@@ -119,13 +121,13 @@ with infamy.Test() as test:
         data = target.get_data("/infix-firewall:firewall")
         fw = data["firewall"]
 
-        assert fw["default"] == "public", "Default zone should be 'public'"
+        assert fw["default"] == "public-untrusted-net", "Default zone should be 'public-untrusted-net'"
 
         zones = {zone["name"]: zone for zone in fw["zone"]}
-        public_zone = zones["public"]
+        public_zone = zones["public-untrusted-net"]
 
         assert unused_if in public_zone["interface"], \
-            f"Unused interface {unused_if} should be in default zone 'public', got interfaces: {public_zone['interface']}"
+            f"Unused interface {unused_if} should be in default zone 'public-untrusted-net', got interfaces: {public_zone['interface']}"
 
     with infamy.IsolatedMacVlan(host_data) as ns:
         ns.addip(HOST_IP)

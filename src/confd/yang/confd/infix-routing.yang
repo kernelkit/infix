@@ -26,6 +26,12 @@ module infix-routing {
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing, ietf-ospf, and ietf-rip.";
 
+  revision 2026-03-11 {
+    description "Remove interface-type deviation to expose standard ietf-ospf
+                 interface types including point-to-multipoint and hybrid.
+                 Un-deviate static-neighbors for non-broadcast P2MP support.";
+  }
+
   revision 2025-12-02 {
     description "Add configurable OSPF debug logging container.
                  Add RIP (Routing Information Protocol) support.";
@@ -247,18 +253,6 @@ module infix-routing {
   }
 
   /* OSPF */
-  typedef infix-ospf-interface-type {
-    type enumeration {
-      enum broadcast {
-        description
-          "Specifies an OSPF broadcast multi-access network.";
-      }
-      enum point-to-point {
-        description
-          "Specifies an OSPF point-to-point network.";
-      }
-    }
-  }
 
 
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol" {
@@ -367,11 +361,6 @@ module infix-routing {
     }
   }
 
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:interface-type" {
-    deviate replace {
-      type infix-ospf-interface-type;
-    }
-  }
 
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:auto-cost" {
     deviate not-supported;
@@ -463,9 +452,12 @@ module infix-routing {
   }
 
   /* OSPF Area Interface */
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:static-neighbors"
-  {
-    deviate not-supported;
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:static-neighbors/ospf:neighbor" {
+    deviate add {
+      must "../../ospf:interface-type = 'point-to-multipoint' or ../../ospf:interface-type = 'non-broadcast'" {
+        error-message "Static neighbors are only applicable to point-to-multipoint or non-broadcast interface types.";
+      }
+    }
   }
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:multi-areas"    {
     deviate not-supported;
