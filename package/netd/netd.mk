@@ -4,13 +4,13 @@
 #
 ################################################################################
 
-NETD_VERSION = 1.0
+NETD_VERSION = 1.1.0
 NETD_SITE_METHOD = local
 NETD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/netd
 NETD_LICENSE = BSD-3-Clause
 NETD_LICENSE_FILES = LICENSE
 NETD_REDISTRIBUTE = NO
-NETD_DEPENDENCIES = libite libconfuse jansson
+NETD_DEPENDENCIES = libite libconfuse jansson libev
 NETD_AUTORECONF = YES
 
 NETD_CONF_ENV = CFLAGS="$(INFIX_CFLAGS)"

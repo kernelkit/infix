@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([netd], [1.0.0], [https://github.com/kernelkit/infix/issues])
+AC_INIT([netd], [1.1.0], [https://github.com/kernelkit/infix/issues])
 AM_INIT_AUTOMAKE(1.11 foreign subdir-objects)
 AM_SILENT_RULES(yes)
 
@@ -80,6 +80,16 @@ PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES([libite], [libite >= 2.6.1])
 PKG_CHECK_MODULES([libconfuse], [libconfuse >= 3.0])
 PKG_CHECK_MODULES([jansson], [jansson >= 2.0])
+
+AC_CHECK_HEADER([ev.h],
+    [saved_LIBS="$LIBS"
+     AC_CHECK_LIB([ev], [ev_loop_new],
+        [EV_LIBS="-lev"],
+        [AC_MSG_ERROR("libev not found")])
+     LIBS="$saved_LIBS"],
+    [AC_MSG_ERROR("ev.h not found")]
+)
+AC_SUBST([EV_LIBS])
 
 test "x$prefix" = xNONE && prefix=$ac_default_prefix
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'

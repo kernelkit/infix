@@ -60,7 +60,7 @@ make install
 
 netd uses [libconfuse](https://github.com/martinh/libconfuse) for configuration parsing, providing a clean and structured format.
 
-Configuration files are placed in `/etc/netd/conf.d/` with the `.conf` extension. Files are processed in alphabetical order.
+Configuration files are placed in `/etc/net.d/` with the `.conf` extension. Files are processed in alphabetical order.
 
 ### Configuration Format
 
@@ -219,10 +219,10 @@ rip {
 
 ### Configuration Files
 
-Configuration files must be placed in `/etc/netd/conf.d/` with the `.conf` extension:
+Configuration files must be placed in `/etc/net.d/` with the `.conf` extension:
 
 ```bash
-/etc/netd/conf.d/
+/etc/net.d/
 ├── 10-static.conf      # Static routes
 ├── 20-rip.conf         # RIP configuration
 └── 99-local.conf       # Local overrides
@@ -256,7 +256,7 @@ netd validates configuration on reload. Check syslog for errors.
 
 ```
 ┌─────────┐
-│  confd  │ Writes /etc/netd/conf.d/confd.conf
+│  confd  │ Writes /etc/net.d/confd.conf
 └────┬────┘
      │ SIGHUP
      ▼
