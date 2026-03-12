@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.16 (LTS)
+- Upgrade Linux kernel to 6.18.17 (LTS)
 - Add support for disabling WiFi and GPS features in builds
 - Add OSPF point-to-multipoint (P2MP) and hybrid interface type support.  This
   also includes support for setting static neighbors, issue #1426
