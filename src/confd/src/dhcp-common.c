@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <ctype.h>
+#include <limits.h>
 #include <pwd.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
@@ -70,21 +71,20 @@ int dhcp_option_lookup(const struct lyd_node *id)
 
 char *dhcp_hostname(struct lyd_node *cfg, char *str, size_t len)
 {
+	char hostname[HOST_NAME_MAX + 1] = { 0 };
 	struct lyd_node *node;
-	const char *hostname;
-	char *ptr;
+	const char *fmt;
 
 	node = lydx_get_xpathf(cfg, "/ietf-system:system/hostname");
 	if (!node)
 		return NULL;
 
-	hostname = lyd_get_value(node);
-	if (!hostname || hostname[0] == 0)
+	fmt = lyd_get_value(node);
+	if (!fmt || !fmt[0])
 		return NULL;
 
-	ptr = strchr(hostname, '.');
-	if (ptr)
-		*ptr = 0;
+	if (hostnamefmt(&confd, fmt, hostname, sizeof(hostname), NULL, 0) || !hostname[0])
+		return NULL;
 
 	snprintf(str, len, "-x hostname:%s ", hostname);
 
@@ -262,10 +262,12 @@ int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *xpath)
 
 	/* Check if options already exist */
 	err = srx_nitems(session, &cnt, "%s/option", path);
-	if (err || cnt) {
-		ERROR("%s(): no %s/options err %d cnt %zu", __func__, path, err, cnt);
+	if (err) {
+		ERROR("%s(): failed querying %s/option: %d", __func__, path, err);
 		goto out;
 	}
+	if (cnt)
+		goto out;
 
 	/* Infer options based on IPv4 or IPv6 */
 	if (strstr(path, ":ipv4/"))

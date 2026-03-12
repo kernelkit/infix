@@ -2,15 +2,14 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <sys/inotify.h>
+#include <ev.h>
 #include <libite/lite.h>
 
 #include "netd.h"
 #include "config.h"
 
 int debug;
-
-static sig_atomic_t do_reload;
-static sig_atomic_t do_shutdown;
 
 static struct route_head active_routes = TAILQ_HEAD_INITIALIZER(active_routes);
 static struct rip_config active_rip;
@@ -46,19 +45,7 @@ static int backend_apply(struct route_head *routes, struct rip_config *rip) {
 }
 #endif
 
-static void sighup_handler(int sig)
-{
-	(void)sig;
-
-	INFO("Got SIGHUP, reloading ...");
-	do_reload = 1;
-}
-
-static void sigterm_handler(int sig)
-{
-	(void)sig;
-	do_shutdown = 1;
-}
+static ev_timer retry_w;
 
 static void route_list_free(struct route_head *head)
 {
@@ -118,7 +105,7 @@ static void rip_config_free(struct rip_config *cfg)
 	}
 }
 
-static void reload(void)
+static void reload(struct ev_loop *loop)
 {
 	struct route_head new_routes = TAILQ_HEAD_INITIALIZER(new_routes);
 	struct rip_redistribute *redist;
@@ -129,7 +116,7 @@ static void reload(void)
 	struct route *r;
 	int count = 0;
 
-	INFO("Reloading configuration");
+	DEBUG("Reloading configuration");
 
 	rip_config_init(&new_rip);
 
@@ -148,11 +135,16 @@ static void reload(void)
 
 	/* Apply config via backend */
 	if (backend_apply(&new_routes, &new_rip)) {
-		ERROR("Failed applying config via backend");
+		ERROR("Failed applying config via backend, retry in 5s");
 		route_list_free(&new_routes);
 		rip_config_free(&new_rip);
+		ev_timer_stop(loop, &retry_w);
+		ev_timer_set(&retry_w, 5., 0.);
+		ev_timer_start(loop, &retry_w);
+		pidfile(NULL);
 		return;
 	}
+	ev_timer_stop(loop, &retry_w);
 
 	route_list_free(&active_routes);
 	TAILQ_INIT(&active_routes);
@@ -214,26 +206,59 @@ static void reload(void)
 		}
 	}
 
-	INFO("Configuration reloaded");
 	pidfile(NULL);
+}
+
+static void inotify_cb(struct ev_loop *loop, ev_io *w, int revents)
+{
+	char buf[sizeof(struct inotify_event) + NAME_MAX + 1];
+
+	(void)revents;
+	while (read(w->fd, buf, sizeof(buf)) > 0)
+		;
+	DEBUG("conf.d changed, triggering reload");
+	reload(loop);
+}
+
+static void sighup_cb(struct ev_loop *loop, ev_signal *w, int revents)
+{
+	(void)w; (void)revents;
+	INFO("Got SIGHUP, reloading ...");
+	reload(loop);
+}
+
+static void sigterm_cb(struct ev_loop *loop, ev_signal *w, int revents)
+{
+	(void)w; (void)revents;
+	ev_break(loop, EVBREAK_ALL);
+}
+
+static void retry_cb(struct ev_loop *loop, ev_timer *w, int revents)
+{
+	(void)w; (void)revents;
+	reload(loop);
 }
 
 static int usage(int rc)
 {
 	fprintf(stderr,
-		"Usage: netd [-dh]\n"
+		"Usage: netd [-dhv]\n"
 		"  -d  Enable debug (log to stderr)\n"
-		"  -h  Show this help text\n");
+		"  -h  Show this help text\n"
+		"  -v  Show version and exit\n");
 	return rc;
 }
 
 int main(int argc, char *argv[])
 {
+	struct ev_loop *loop = EV_DEFAULT;
+	ev_signal sighup_w, sigterm_w, sigint_w;
+	ev_io inotify_w;
 	int log_opts = LOG_PID | LOG_NDELAY;
-	struct sigaction sa = { 0 };
+	int ifd = -1;
 	int c;
 
-	while ((c = getopt(argc, argv, "dhp:")) != -1) {
+	while ((c = getopt(argc, argv, "dhv")) != -1) {
 		switch (c) {
 		case 'd':
 			log_opts |= LOG_PERROR;
@@ -241,6 +266,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'h':
 			return usage(0);
+		case 'v':
+			puts("v" PACKAGE_VERSION);
+			return 0;
 		default:
 			return usage(1);
 		}
@@ -248,15 +276,7 @@ int main(int argc, char *argv[])
 
 	openlog("netd", log_opts, LOG_DAEMON);
 	setlogmask(LOG_UPTO(LOG_INFO));
-	INFO("starting");
-
-	/* Set up signal handlers */
-	sa.sa_handler = sighup_handler;
-	sigaction(SIGHUP, &sa, NULL);
-
-	sa.sa_handler = sigterm_handler;
-	sigaction(SIGTERM, &sa, NULL);
-	sigaction(SIGINT, &sa, NULL);
+	INFO("v%s starting", PACKAGE_VERSION);
 
 	if (backend_init()) {
 		ERROR("Failed to initialize backend");
@@ -267,19 +287,44 @@ int main(int argc, char *argv[])
 	TAILQ_INIT(&active_routes);
 	rip_config_init(&active_rip);
 
-	/* Initial load */
-	do_reload = 1;
+	/* Signal watchers */
+	ev_signal_init(&sighup_w, sighup_cb, SIGHUP);
+	ev_signal_start(loop, &sighup_w);
 
-	while (!do_shutdown) {
-		if (do_reload) {
-			do_reload = 0;
-			reload();
-		}
-		pause();
+	ev_signal_init(&sigterm_w, sigterm_cb, SIGTERM);
+	ev_signal_start(loop, &sigterm_w);
+
+	ev_signal_init(&sigint_w, sigterm_cb, SIGINT);
+	ev_signal_start(loop, &sigint_w);
+
+	/* Retry timer — one-shot, started only on backend failure */
+	ev_timer_init(&retry_w, retry_cb, 0., 0.);
+
+	/* Watch conf.d for changes so we don't rely solely on signals */
+	mkdir(CONF_DIR, 0755);
+	ifd = inotify_init1(IN_CLOEXEC | IN_NONBLOCK);
+	if (ifd < 0) {
+		ERROR("inotify_init1: %s, falling back to signals only", strerror(errno));
+	} else if (inotify_add_watch(ifd, CONF_DIR,
+				     IN_CLOSE_WRITE | IN_DELETE |
+				     IN_MOVED_TO | IN_MOVED_FROM) < 0) {
+		ERROR("inotify_add_watch %s: %s", CONF_DIR, strerror(errno));
+		close(ifd);
+		ifd = -1;
+	} else {
+		ev_io_init(&inotify_w, inotify_cb, ifd, EV_READ);
+		ev_io_start(loop, &inotify_w);
 	}
+
+	/* Initial load */
+	reload(loop);
+
+	ev_run(loop, 0);
 
 	INFO("shutting down");
 
+	if (ifd >= 0)
+		close(ifd);
 	route_list_free(&active_routes);
 	rip_config_free(&active_rip);
 	backend_cleanup();

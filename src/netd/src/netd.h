@@ -21,7 +21,7 @@ extern int debug;
 #define INFO(fmt, args...)       LOG(LOG_INFO, fmt, ##args)
 #define DEBUG(fmt, args...)      do { if (debug) LOG(LOG_DEBUG, fmt, ##args); } while (0)
 
-#define CONF_DIR    "/etc/netd/conf.d"
+#define CONF_DIR    "/etc/net.d"
 
 /* Nexthop types */
 enum nh_type {

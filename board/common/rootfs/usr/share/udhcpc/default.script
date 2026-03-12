@@ -7,7 +7,7 @@ ACTION="$1"
 IP_CACHE="/var/lib/misc/${interface}.cache"
 RESOLV_CONF="/run/resolvconf/interfaces/${interface}.conf"
 NTPFILE="/run/chrony/dhcp-sources.d/${interface}.sources"
-NAME="/etc/netd/conf.d/${interface}-dhcp.conf"
+NAME="/etc/net.d/${interface}-dhcp.conf"
 NEXT="${NAME}+"
 
 [ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
@@ -118,8 +118,6 @@ set_dhcp_routes()
     # Reduce changes needed by comparing with previous route(s)
     cmp -s "$NAME" "$NEXT" && return
     mv "$NEXT" "$NAME"
-
-    initctl reload netd
 }
 
 clr_dhcp_routes()
@@ -127,8 +125,6 @@ clr_dhcp_routes()
     log "deleting DHCP routes"
     [ -f "$NAME" ] || return
     rm "$NAME"
-
-    initctl reload netd
 }
 
 clr_dhcp_addresses()
