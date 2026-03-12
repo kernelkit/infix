@@ -510,7 +510,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 
 	hostapd = fopen(hostapd_conf, "w");
 	if (!hostapd) {
-		ERROR("Failed to create hostapd config: %s", hostapd_conf);
+		ERRNO("Failed to create hostapd config: %s", hostapd_conf);
 		rc = SR_ERR_INTERNAL;
 		goto cleanup;
 	}
@@ -759,7 +759,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 
 				fp = fopen(GPSD_CONF_NEXT, "w");
 				if (!fp) {
-					ERROR("Could not open " GPSD_CONF_NEXT);
+					ERRNO("Could not open " GPSD_CONF_NEXT);
 					return SR_ERR_INTERNAL;
 				}
 				int i;

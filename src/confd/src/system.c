@@ -476,7 +476,7 @@ static int change_dns(sr_session_ctx_t *session, struct lyd_node *config, struct
 
 	fp = fopen(fn, "w");
 	if (!fp) {
-		ERROR("failed updating %s: %s", fn, strerror(errno));
+		ERRNO("failed updating %s", fn);
 		return SR_ERR_SYS;
 	}
 
@@ -1189,7 +1189,7 @@ static sr_error_t generate_auth_keys(sr_session_ctx_t *session, const char *xpat
 
 		fp = fopenf("w", "/var/run/sshd/%s.keys", username);
 		if (!fp) {
-			ERROR("failed opening user \"%s\" authorized_keys file: %s", username, strerror(errno));
+			ERRNO("failed opening user \"%s\" authorized_keys file", username);
 			continue;
 		}
 

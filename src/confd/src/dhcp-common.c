@@ -170,7 +170,7 @@ char *dhcp_compose_options(struct lyd_node *cfg, const char *ifname, char **opti
 
 		opts = realloc(*options, strlen(*options) + strlen(opt) + 1);
 		if (!opts) {
-			ERROR("failed reallocating options: %s", strerror(errno));
+			ERRNO("failed reallocating options");
 			free(*options);
 			return NULL;
 		}

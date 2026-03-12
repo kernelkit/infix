@@ -274,7 +274,7 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 
 	iw = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PRE, "wifi-iface.sh");
 	if (!iw) {
-		ERROR("Failed to open dagger file for WiFi interface creation");
+		ERRNO("Failed to open dagger file for WiFi interface creation");
 		return SR_ERR_INTERNAL;
 	}
 
@@ -340,7 +340,7 @@ int wifi_del_iface(struct lyd_node *dif, struct dagger *net)
 
 	iw = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT_POST, "wifi-iface.sh");
 	if (!iw) {
-		ERROR("Failed to open dagger file for WiFi interface deletion");
+		ERRNO("Failed to open dagger file for WiFi interface deletion");
 		return SR_ERR_INTERNAL;
 	}
 

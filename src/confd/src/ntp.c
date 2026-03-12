@@ -61,7 +61,7 @@ static int change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 
 	fp = fopen(NTP_NEXT, "w");
 	if (!fp) {
-		ERROR("Failed creating %s: %s", NTP_NEXT, strerror(errno));
+		ERRNO("Failed creating %s", NTP_NEXT);
 		return SR_ERR_SYS;
 	}
 

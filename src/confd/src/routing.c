@@ -302,7 +302,7 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 
 	fp = fopen(OSPFD_CONF_NEXT, "w");
 	if (!fp) {
-		ERROR("Failed to open %s", OSPFD_CONF_NEXT);
+		ERRNO("Failed to open %s", OSPFD_CONF_NEXT);
 		return SR_ERR_INTERNAL;
 	}
 
@@ -450,7 +450,7 @@ static void frr_daemons_write(int ospfd, int ripd, int bfdd)
 
 	fp = fopen(next, "w");
 	if (!fp) {
-		ERROR("Failed to open %s", next);
+		ERRNO("Failed to open %s", next);
 		return;
 	}
 
@@ -493,7 +493,7 @@ static void frr_daemons_write(int ospfd, int ripd, int bfdd)
 
 	fclose(fp);
 	if (rename(next, FRR_DAEMONS))
-		ERROR("Failed to rename %s to %s: %m", next, FRR_DAEMONS);
+		ERRNO("Failed to rename %s to %s", next, FRR_DAEMONS);
 }
 
 int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
