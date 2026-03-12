@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.16 (LTS)
+- Upgrade Linux kernel to 6.18.17 (LTS)
 - Add support for [Banana Pi R64 Mini][BPI-R64], 5 port router with WiFi 5
 - Add support for [Raspberry Pi 400][RPI-400], an RPi 4B built into a keyboard
 - **Revamped <http://network.local> device browser**.  Device cards now
