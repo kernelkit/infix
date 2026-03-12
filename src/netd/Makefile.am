@@ -6,7 +6,7 @@ netd_SOURCES        = src/netd.c src/netd.h src/config.c src/config.h
 netd_CPPFLAGS       = -D_DEFAULT_SOURCE -D_GNU_SOURCE -I$(srcdir)/src
 netd_CFLAGS         = -W -Wall -Wextra
 netd_CFLAGS        += $(libite_CFLAGS) $(libconfuse_CFLAGS) $(jansson_CFLAGS)
-netd_LDADD          = $(libite_LIBS) $(libconfuse_LIBS) $(jansson_LIBS)
+netd_LDADD          = $(libite_LIBS) $(libconfuse_LIBS) $(jansson_LIBS) $(EV_LIBS)
 
 # Backend selection: FRR gRPC, FRR frr.conf, or Linux kernel
 if HAVE_FRR_GRPC
