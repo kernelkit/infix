@@ -34,6 +34,10 @@ else
 NETD_CONF_OPTS += --without-frr
 endif
 
+define NETD_INSTALL_EXTRA
+	cp $(NETD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/netd.conf
+endef
+
 NETD_TARGET_FINALIZE_HOOKS += NETD_INSTALL_EXTRA
 
 $(eval $(autotools-package))
