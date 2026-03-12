@@ -2,9 +2,10 @@ config BR2_PACKAGE_NETD
 	bool "netd"
 	select BR2_PACKAGE_LIBITE
 	select BR2_PACKAGE_LIBCONFUSE
+	select BR2_PACKAGE_LIBEV
 	help
 	  Network route daemon. Manages static routes and RIP routing.
-	  Reads configuration from /etc/netd/conf.d/*.conf.
+	  Reads configuration from /etc/net.d/*.conf.
 
 	  With FRR: Full routing via gRPC, vtysh, or frr.conf.
 	  Without FRR: Standalone Linux backend via rtnetlink.

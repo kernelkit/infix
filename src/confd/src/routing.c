@@ -8,7 +8,7 @@
 
 #define XPATH_BASE_ "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"
 #define XPATH_OSPF_ XPATH_BASE_ "/ietf-ospf:ospf"
-#define NETD_CONF "/etc/netd/conf.d/confd.conf"
+#define NETD_CONF "/etc/net.d/confd.conf"
 #define NETD_CONF_NEXT NETD_CONF "+"
 #define NETD_CONF_PREV NETD_CONF "-"
 #define OSPFD_CONF "/etc/frr/ospfd.conf"

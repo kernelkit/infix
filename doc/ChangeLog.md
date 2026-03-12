@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.02.1][] - 2026-03-11
+[v26.02.1][] - 2026-03-12
 -------------------------
 
 ### Changes
@@ -17,6 +17,7 @@ All notable changes to the project are documented in this file.
 
 - Fix #1389: legacy name limit in firewalld triggered problems with policy names
 - Fix #1416: `show firewall` command show an error when the firewall is disabled
+- Fix #1438: default route from DHCP client not set at boot, regression in v26.02.0
 - Fix instabilities in Zebra route manager after Frr upgrade in v26.02.0
 - Fix regression in MVEBU SafeXcel Crypto Engine for Marvell Armada SOCs (37xx,
   7k, 8k, and CN913x series).  Firmware package lost in v26.01.0
