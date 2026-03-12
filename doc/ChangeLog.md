@@ -32,6 +32,18 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Fix #1438: default route from DHCP client not set at boot, regression
+  introduced in v26.02.0
+- Fix DHCP client not sending hostname to server (e.g. for `dnsmasq` lease
+  registration).  All board factory configs had the hostname option without
+  `value: auto`, so `udhcpc` only requested the option instead of sending it.
+  Setting up a DHCP client manually was not affected.  Also, the hostname
+  format string (e.g. `rpi-%m`) was not expanded to the actual system hostname
+  before being passed to `udhcpc`
+- Fix dnsmasq logging spurious "Ignoring duplicate dhcp-option" warnings for
+  options 3 (router) and 6 (dns-server) on every DHCP transaction.  Add
+  `dhcp-authoritative` so clients with unexpired leases are not NAKed after
+  a router crash or factory reset that clears the lease database
 - Fix #1387: `infix.local` now resolves to exactly one device per LAN.  Previously
   all Infix devices claimed both `hostname.local` and `infix.local`, causing avahi
   to append `#2`, `#3` suffixes to the shared alias on busy networks.  Assignment
