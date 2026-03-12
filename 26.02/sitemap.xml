@@ -2,202 +2,202 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/boot/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/branding/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/bridging/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/container/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/developers-guide/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/dhcp/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/discovery/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/eth-counters/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/ethernet/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/firewall/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/hardware/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/iface/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/ip/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/keystore/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/lag/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/license/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/management/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/nacm/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/netboot/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/networking/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/ntp/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/override-package/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/qos/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/routing/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/scripting-netconf/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/scripting-prod/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/scripting-restconf/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/scripting-sysrepocfg/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/scripting/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/support/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/syslog/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/system/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/test-arch/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/testing/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/tunnels/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/upgrade/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/virtual/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/vpd/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/vpn-wireguard/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/vpn/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/wifi/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/cli/configure/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/cli/introduction/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/cli/keybindings/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/cli/netcalc/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/cli/quick/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/cli/tcpdump/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/cli/text-editor/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://kernelkit.github.io/infix/26.02/cli/upgrade/</loc>
-         <lastmod>2026-03-11</lastmod>
+         <lastmod>2026-03-12</lastmod>
     </url>
 </urlset>
