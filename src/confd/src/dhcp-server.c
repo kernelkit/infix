@@ -195,7 +195,7 @@ static void add(const char *subnet, struct lyd_node *cfg)
 
 	fp = fopenf("w", DNSMASQ_SUBNET_FMT, tag);
 	if (!fp) {
-		ERROR("Failed creating dnsmasq conf for %s: %s", subnet, strerror(errno));
+		ERRNO("Failed creating dnsmasq conf for %s", subnet);
 		return;
 	}
 

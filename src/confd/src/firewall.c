@@ -552,7 +552,7 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	    fmkpath(0755, FIREWALLD_ZONES_DIR) ||
 	    fmkpath(0755, FIREWALLD_SERVICES_DIR) ||
 	    fmkpath(0755, FIREWALLD_POLICIES_DIR)) {
-		ERROR("Failed creating " FIREWALLD_DIR_NEXT " directory structure");
+		ERRNO("Failed creating " FIREWALLD_DIR_NEXT " directory structure");
 		err = SR_ERR_SYS;
 		goto done;
 	}
