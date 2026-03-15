@@ -1,0 +1,784 @@
+From 8b3d206ff8c398de5290a1c4237c841389655505 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 15 Mar 2026 12:51:39 +0100
+Subject: [PATCH] arm: mediatek: add BananaPi BPI-R4 (MT7988A) board support
+Organization: Wires
+
+Add complete U-Boot support for the BananaPi BPI-R4 router board,
+based on MediaTek MT7988A (Filogic 880, quad-core Cortex-A73).
+
+Device tree (mt7988a-bananapi-bpi-r4.dts):
+- UART0 (console)
+- eMMC (8-bit, non-removable, 52 MHz, high-speed)
+- SPI NAND via SPI0
+- Gigabit/10G Ethernet via MT7988 internal switch (usxgmii)
+- PCIe x4 (pcie0-3)
+- USB 3.0 (xhci1)
+- PWM (fan control)
+- I2C0: RT5190A PMIC
+- I2C2: PCA9545 mux with PCF8563 RTC and 24C02 EEPROM on channel 0
+- gpio-keys: factory-reset / WPS button on GPIO14 (active-low);
+  U-Boot uses it for factory reset detection via the 'button' command,
+  Linux uses the same GPIO as KEY_WPS_BUTTON at runtime
+
+SD card variant (mt7988a-bananapi-bpi-r4-sd.dts + mt7988a_bpir4_sd_defconfig):
+- MT7988A eMMC (pins 38-49) and SD card (pins 32-37) use separate
+  physical pads so both are electrically independent; only one can be
+  active per boot session via the single MMC controller (mmc@11230000)
+- SD variant enables cap-sd-highspeed (50 MHz) vs legacy 25 MHz;
+  GPIO12 used as card-detect
+- pinctrl-mt7988.c: add 'sdcard' pin group (pins 32-37, function 5)
+  to match the Linux kernel driver
+
+Board support (mt7988_rfb.c, Kconfig, defconfig):
+- detect_boot_media(): reads BOOT_DEVICE register (0x1001f6f0 bits
+  10-11) to set $bootmedia env var (nor/spim-nand/emmc/snand)
+- detect_ram_size(): sets $ram_gb (4 or 8) based on detected DRAM
+- board_late_init(): calls both detectors at late init
+- ft_system_setup(): patches /chosen/rootdisk phandle in kernel DT
+  to point at the detected boot device node
+- BOARD_BPI_R4 now selects BOARD_LATE_INIT and OF_SYSTEM_SETUP
+
+Defconfig gaps vs upstream filled in (FIT, eMMC, USB, PCIe/NVMe, I2C).
+CONFIG_CMD_BUTTON=y added to both defconfigs for factory-reset button.
+
+The bpir4.c board file (from commit 57b3cd86) provides
+board_fit_config_name_match() for BPI-R4 / BPI-R4-2g5 variant
+selection via FIT image.
+
+Based on Frank Wunderlich's porting work:
+  https://github.com/frank-w/u-boot/tree/2026-01-bpi
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ arch/arm/dts/Makefile                        |   3 +
+ arch/arm/dts/mt7988a-bananapi-bpi-r4-2g5.dts |  16 ++
+ arch/arm/dts/mt7988a-bananapi-bpi-r4-sd.dts  |  33 +++
+ arch/arm/dts/mt7988a-bananapi-bpi-r4.dts     | 227 +++++++++++++++++++
+ board/mediatek/mt7988/Kconfig                |   2 +
+ board/mediatek/mt7988/bpir4.c                |  23 +-
+ board/mediatek/mt7988/mt7988_rfb.c           |  96 ++++++++
+ configs/mt7988a_bpir4_defconfig              |  33 ++-
+ configs/mt7988a_bpir4_sd_defconfig           | 114 ++++++++++
+ drivers/pinctrl/mediatek/pinctrl-mt7988.c    |   6 +-
+ 10 files changed, 547 insertions(+), 6 deletions(-)
+ create mode 100644 arch/arm/dts/mt7988a-bananapi-bpi-r4-2g5.dts
+ create mode 100644 arch/arm/dts/mt7988a-bananapi-bpi-r4-sd.dts
+ create mode 100644 arch/arm/dts/mt7988a-bananapi-bpi-r4.dts
+ create mode 100644 configs/mt7988a_bpir4_sd_defconfig
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index d4255f95702..697d3383b01 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -1134,6 +1134,9 @@ dtb-$(CONFIG_ARCH_MEDIATEK) += \
+ 	mt7986b-emmc-rfb.dtb \
+ 	mt7988-rfb.dtb \
+ 	mt7988-sd-rfb.dtb \
++	mt7988a-bananapi-bpi-r4.dtb \
++	mt7988a-bananapi-bpi-r4-2g5.dtb \
++	mt7988a-bananapi-bpi-r4-sd.dtb \
+ 	mt8183-pumpkin.dtb \
+ 	mt8512-bm1-emmc.dtb \
+ 	mt8516-pumpkin.dtb \
+diff --git a/arch/arm/dts/mt7988a-bananapi-bpi-r4-2g5.dts b/arch/arm/dts/mt7988a-bananapi-bpi-r4-2g5.dts
+new file mode 100644
+index 00000000000..0dd82cdc9fd
+--- /dev/null
++++ b/arch/arm/dts/mt7988a-bananapi-bpi-r4-2g5.dts
+@@ -0,0 +1,16 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (c) 2024 BananaPi
++ * Copyright (c) 2026 KernelKit
++ *
++ * U-Boot device tree for BananaPi BPI-R4-2g5 (MediaTek MT7988A)
++ * Variant with internal 2.5G PHY on GMAC1 instead of SFP+/USXGMII
++ */
++
++#include "mt7988a-bananapi-bpi-r4.dts"
++
++/ {
++	model = "BananaPi BPI-R4-2g5";
++	compatible = "bananapi,bpi-r4-2g5", "bananapi,bpi-r4",
++		     "mediatek,mt7988a", "mediatek,mt7988";
++};
+diff --git a/arch/arm/dts/mt7988a-bananapi-bpi-r4-sd.dts b/arch/arm/dts/mt7988a-bananapi-bpi-r4-sd.dts
+new file mode 100644
+index 00000000000..4fb411bad4d
+--- /dev/null
++++ b/arch/arm/dts/mt7988a-bananapi-bpi-r4-sd.dts
+@@ -0,0 +1,33 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * SD card boot variant of the BananaPi BPI-R4 U-Boot device tree.
++ * eMMC and SD use separate physical pins on MT7988, so both are
++ * accessible simultaneously — boot from SD, flash eMMC.
++ */
++
++/dts-v1/;
++#include "mt7988a-bananapi-bpi-r4.dts"
++
++/* Override mmc0 for SD card: swap pinctrl, enable high-speed, add CD */
++&mmc0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&mmc0_pins_sdcard>;
++	bus-width = <4>;
++	max-frequency = <52000000>;
++	cap-sd-highspeed;
++	cd-gpios = <&pio 12 GPIO_ACTIVE_LOW>;
++	vmmc-supply = <&reg_3p3v>;
++	vqmmc-supply = <&reg_3p3v>;
++	/delete-property/ cap-mmc-highspeed;
++	/delete-property/ cap-mmc-hw-reset;
++	/delete-property/ non-removable;
++};
++
++&pio {
++	mmc0_pins_sdcard: mmc0-sdcard-pins {
++		mux {
++			function = "flash";
++			groups = "sdcard";
++		};
++	};
++};
+diff --git a/arch/arm/dts/mt7988a-bananapi-bpi-r4.dts b/arch/arm/dts/mt7988a-bananapi-bpi-r4.dts
+new file mode 100644
+index 00000000000..d959d778716
+--- /dev/null
++++ b/arch/arm/dts/mt7988a-bananapi-bpi-r4.dts
+@@ -0,0 +1,227 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (c) 2024 BananaPi
++ * Copyright (c) 2026 KernelKit
++ *
++ * U-Boot device tree for BananaPi BPI-R4 (MediaTek MT7988A)
++ * Based on Frank Wunderlich's work: https://github.com/frank-w/u-boot
++ */
++
++/dts-v1/;
++#include "mt7988.dtsi"
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/linux-event-codes.h>
++
++/ {
++	model = "BananaPi BPI-R4";
++	compatible = "bananapi,bpi-r4", "mediatek,mt7988a", "mediatek,mt7988";
++
++	chosen {
++		stdout-path = &uart0;
++	};
++
++	memory@40000000 {
++		device_type = "memory";
++		reg = <0 0x40000000 1 0x00000000>; /* 4 GiB */
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		factory-reset {
++			label = "factory-reset";
++			gpios = <&pio 14 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_RESTART>;
++		};
++	};
++
++	reg_1p8v: regulator-1p8v {
++		compatible = "regulator-fixed";
++		regulator-name = "fixed-1.8V";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		regulator-boot-on;
++		regulator-always-on;
++	};
++
++	reg_3p3v: regulator-3p3v {
++		compatible = "regulator-fixed";
++		regulator-name = "fixed-3.3V";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-boot-on;
++		regulator-always-on;
++	};
++};
++
++&uart0 {
++	status = "okay";
++};
++
++/* RT5190A PMIC */
++&i2c0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&i2c0_pins>;
++	status = "okay";
++
++	rt5190a: pmic@64 {
++		compatible = "richtek,rt5190a";
++		reg = <0x64>;
++	};
++};
++
++/* I2C mux: PCA9545 at 0x70, with RTC and board EEPROM on channel 0 */
++&i2c2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&i2c2_1_pins>;
++	status = "okay";
++
++	i2c_mux: i2c-mux@70 {
++		compatible = "nxp,pca9545";
++		reg = <0x70>;
++		reset-gpios = <&pio 5 GPIO_ACTIVE_LOW>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		i2c_ch0: i2c@0 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <0>;
++
++			rtc@51 {
++				compatible = "nxp,pcf8563";
++				reg = <0x51>;
++			};
++
++			eeprom@57 {
++				compatible = "atmel,24c02";
++				reg = <0x57>;
++			};
++		};
++	};
++};
++
++&eth0 {
++	status = "okay";
++	phy-mode = "usxgmii";
++	mediatek,switch = "mt7988";
++
++	fixed-link {
++		speed = <10000>;
++		full-duplex;
++		pause;
++	};
++};
++
++&pcie0 {
++	status = "okay";
++};
++
++&pcie1 {
++	status = "okay";
++};
++
++&pcie2 {
++	status = "okay";
++};
++
++&pcie3 {
++	status = "okay";
++};
++
++&pio {
++	i2c0_pins: i2c0-g0-pins {
++		mux {
++			function = "i2c";
++			groups = "i2c0_1";
++		};
++	};
++
++	i2c2_1_pins: i2c2-g1-pins {
++		mux {
++			function = "i2c";
++			groups = "i2c2_1";
++		};
++	};
++
++	mmc0_pins_emmc: mmc0-emmc-pins {
++		mux {
++			function = "flash";
++			groups = "emmc_51";
++		};
++
++		conf-cmd-dat {
++			pins = "EMMC_DATA_0", "EMMC_DATA_1", "EMMC_DATA_2",
++			       "EMMC_DATA_3", "EMMC_DATA_4", "EMMC_DATA_5",
++			       "EMMC_DATA_6", "EMMC_DATA_7", "EMMC_CMD";
++			input-enable;
++			drive-strength = <MTK_DRIVE_4mA>;
++			mediatek,pull-up-adv = <1>;
++		};
++
++		conf-clk {
++			pins = "EMMC_CK";
++			drive-strength = <MTK_DRIVE_6mA>;
++			mediatek,pull-down-adv = <2>;
++		};
++
++		conf-dsl {
++			pins = "EMMC_DSL";
++			mediatek,pull-down-adv = <2>;
++		};
++
++		conf-rst {
++			pins = "EMMC_RSTB";
++			drive-strength = <MTK_DRIVE_4mA>;
++			mediatek,pull-up-adv = <1>;
++		};
++	};
++
++	spi0_flash_pins: spi0-flash-pins {
++		mux {
++			function = "spi";
++			groups = "spi0", "spi0_wp_hold";
++		};
++	};
++};
++
++&pwm {
++	status = "okay";
++};
++
++/* SPI NAND */
++&spi0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&spi0_flash_pins>;
++	#address-cells = <1>;
++	#size-cells = <0>;
++	status = "okay";
++	enhance_timing;
++	dma_ext;
++	ipm_design;
++	support_quad;
++	tick_dly = <2>;
++	sample_sel = <0>;
++
++	spi_nand: flash@0 {
++		compatible = "spi-nand";
++		reg = <0>;
++		spi-max-frequency = <52000000>;
++		spi-tx-bus-width = <4>;
++		spi-rx-bus-width = <4>;
++	};
++};
++
++/* eMMC */
++&mmc0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&mmc0_pins_emmc>;
++	max-frequency = <52000000>;
++	bus-width = <8>;
++	cap-mmc-highspeed;
++	cap-mmc-hw-reset;
++	vmmc-supply = <&reg_3p3v>;
++	vqmmc-supply = <&reg_1p8v>;
++	non-removable;
++	status = "okay";
++};
+diff --git a/board/mediatek/mt7988/Kconfig b/board/mediatek/mt7988/Kconfig
+index 24c70417ec5..9bcad9ecefd 100644
+--- a/board/mediatek/mt7988/Kconfig
++++ b/board/mediatek/mt7988/Kconfig
+@@ -2,6 +2,8 @@ if TARGET_MT7988
+ 
+ config BOARD_BPI_R4
+ 	bool "BananaPi BPI-R4 / BPI-R4-2g5 board support"
++	select BOARD_LATE_INIT
++	select OF_SYSTEM_SETUP
+ 	help
+ 	  Enable runtime variant detection for BananaPi BPI-R4 and BPI-R4-2g5,
+ 	  selecting the correct device tree from a FIT image.
+diff --git a/board/mediatek/mt7988/bpir4.c b/board/mediatek/mt7988/bpir4.c
+index 46e22d38135..cfc05c607fc 100644
+--- a/board/mediatek/mt7988/bpir4.c
++++ b/board/mediatek/mt7988/bpir4.c
+@@ -13,21 +13,36 @@ enum bpir4_variant {
+ 
+ /*
+  * Detect which BPI-R4 variant this board is.
+- * TODO: implement real hardware detection
++ *
++ * Unlike BPI-R3 vs R3-Mini, the R4-2g5 uses the MT7988A's internal 2.5G
++ * PHY (always present in SoC silicon at MDIO addr 15) rather than an
++ * external EN8811H, so MDIO probing cannot distinguish the variants.
++ *
++ * TODO: read variant ID from the 24C02 EEPROM on I2C2/PCA9545 ch0 (addr
++ * 0x57) once BananaPi's board-ID byte offset/format is known.
+  */
+ static enum bpir4_variant detect_bpir4_variant(void)
+ {
+-	/* Stub: always report BPI-R4 */
++	/* Stub: always report standard BPI-R4 */
+ 	return BPIR4;
+ }
+ 
+ int board_fit_config_name_match(const char *name)
+ {
+-	switch (detect_bpir4_variant()) {
++	static int variant = -1;
++
++	if (variant < 0)
++		variant = detect_bpir4_variant();
++
++	switch (variant) {
+ 	case BPIR4_2G5:
+ 		return strcmp(name, "mt7988a-bananapi-bpi-r4-2g5") ? -1 : 0;
+ 	case BPIR4:
+ 	default:
+-		return strcmp(name, "mt7988a-bananapi-bpi-r4") ? -1 : 0;
++		if (!strcmp(name, "mt7988a-bananapi-bpi-r4") ||
++		    !strcmp(name, "mt7988a-bananapi-bpi-r4-sd"))
++			return 0;
++		return -1;
+ 	}
+ }
++
+diff --git a/board/mediatek/mt7988/mt7988_rfb.c b/board/mediatek/mt7988/mt7988_rfb.c
+index 0ca87a88aed..ed184574b50 100644
+--- a/board/mediatek/mt7988/mt7988_rfb.c
++++ b/board/mediatek/mt7988/mt7988_rfb.c
+@@ -4,3 +4,99 @@
+  * Author: Sam Shih <sam.shih@mediatek.com>
+  */
+ 
++#include <env.h>
++#include <asm/io.h>
++#include <linux/libfdt.h>
++#include <linux/string.h>
++#include <fdt_support.h>
++#include <asm/global_data.h>
++
++#define MT7988_BOOT_NOR		0
++#define MT7988_BOOT_SPIM_NAND	1
++#define MT7988_BOOT_EMMC	2
++#define MT7988_BOOT_SNFI_NAND	3
++
++DECLARE_GLOBAL_DATA_PTR;
++
++int board_init(void)
++{
++	return 0;
++}
++
++static void detect_boot_media(void)
++{
++	const char *media;
++
++	switch ((readl(0x1001f6f0) & 0xc00) >> 10) {
++	case MT7988_BOOT_NOR:
++		media = "nor";
++		break;
++	case MT7988_BOOT_SPIM_NAND:
++		media = "spim-nand";
++		break;
++	case MT7988_BOOT_EMMC:
++		media = "emmc";
++		break;
++	case MT7988_BOOT_SNFI_NAND:
++		media = "snand";
++		break;
++	default:
++		media = "unknown";
++		break;
++	}
++
++	env_set("bootmedia", media);
++}
++
++static void detect_ram_size(void)
++{
++	env_set("ram_gb", gd->ram_size > (6ULL << 30) ? "8" : "4");
++}
++
++int board_late_init(void)
++{
++	const char *model;
++
++	detect_boot_media();
++	detect_ram_size();
++
++	model = fdt_getprop(gd->fdt_blob, 0, "model", NULL);
++	if (model && strstr(model, "2g5"))
++		env_set("fdtfile", "mediatek/mt7988a-bananapi-bpi-r4-2g5.dtb");
++
++	return 0;
++}
++
++int ft_system_setup(void *blob, struct bd_info *bd)
++{
++	const u32 *media_handle_p;
++	int chosen, len, ret;
++	char media[32];
++	const char *bootdev;
++	u32 media_handle;
++
++	if (!env_get("bootmedia"))
++		detect_boot_media();
++
++	bootdev = env_get("bootmedia");
++	snprintf(media, sizeof(media), "rootdisk-%s", bootdev);
++
++	chosen = fdt_path_offset(blob, "/chosen");
++	if (chosen <= 0)
++		return 0;
++
++	media_handle_p = fdt_getprop(blob, chosen, media, &len);
++	if (!media_handle_p || len != 4)
++		return 0;
++
++	media_handle = *media_handle_p;
++	ret = fdt_setprop(blob, chosen, "rootdisk", &media_handle, sizeof(media_handle));
++	if (ret) {
++		printf("cannot set media phandle %s as rootdisk in /chosen\n", media);
++		return ret;
++	}
++
++	printf("set /chosen/rootdisk to boot media: %s (phandle 0x%08x)\n",
++	       media, fdt32_to_cpu(media_handle));
++	return 0;
++}
+diff --git a/configs/mt7988a_bpir4_defconfig b/configs/mt7988a_bpir4_defconfig
+index e2e128ec29d..9d4a2f6e75e 100644
+--- a/configs/mt7988a_bpir4_defconfig
++++ b/configs/mt7988a_bpir4_defconfig
+@@ -9,6 +9,7 @@ CONFIG_DEFAULT_DEVICE_TREE="mt7988a-bananapi-bpi-r4"
+ CONFIG_TARGET_MT7988=y
+ CONFIG_BOARD_BPI_R4=y
+ CONFIG_SPL_LOAD_FIT=y
++CONFIG_FIT=y
+ CONFIG_SYS_LOAD_ADDR=0x46000000
+ CONFIG_DEBUG_UART_BASE=0x11000000
+ CONFIG_DEBUG_UART_CLOCK=40000000
+@@ -16,6 +17,8 @@ CONFIG_DEBUG_UART=y
+ # CONFIG_EFI_LOADER is not set
+ # CONFIG_AUTOBOOT is not set
+ CONFIG_DEFAULT_FDT_FILE="mt7988a-bananapi-bpi-r4"
++CONFIG_MULTI_DTB_FIT=y
++CONFIG_OF_LIST="mt7988a-bananapi-bpi-r4 mt7988a-bananapi-bpi-r4-2g5"
+ CONFIG_SYS_CBSIZE=512
+ CONFIG_SYS_PBSIZE=1049
+ CONFIG_LOGLEVEL=7
+@@ -26,14 +29,19 @@ CONFIG_SYS_PROMPT="BPI-R4> "
+ # CONFIG_BOOTM_RTEMS is not set
+ # CONFIG_BOOTM_VXWORKS is not set
+ # CONFIG_CMD_ELF is not set
++CONFIG_CMD_BUTTON=y
+ CONFIG_CMD_CLK=y
+ CONFIG_CMD_DM=y
+ CONFIG_CMD_GPIO=y
+-CONFIG_CMD_PWM=y
++CONFIG_CMD_I2C=y
+ CONFIG_CMD_MMC=y
+ CONFIG_CMD_MTD=y
++CONFIG_CMD_MDIO=y
++CONFIG_CMD_PCI=y
+ CONFIG_CMD_PING=y
++CONFIG_CMD_PWM=y
+ CONFIG_CMD_SMC=y
++CONFIG_CMD_USB=y
+ CONFIG_DOS_PARTITION=y
+ CONFIG_EFI_PARTITION=y
+ CONFIG_PARTITION_TYPE_GUID=y
+@@ -49,8 +57,15 @@ CONFIG_NET_RANDOM_ETHADDR=y
+ CONFIG_REGMAP=y
+ CONFIG_SYSCON=y
+ CONFIG_CLK=y
++CONFIG_I2C=y
++CONFIG_DM_I2C=y
++CONFIG_SYS_I2C_MTK=y
++CONFIG_I2C_MUX=y
++CONFIG_I2C_MUX_PCA954x=y
+ CONFIG_MMC_HS200_SUPPORT=y
++CONFIG_MMC_WRITE=y
+ CONFIG_MMC_MTK=y
++CONFIG_SUPPORT_EMMC_BOOT=y
+ CONFIG_MTD=y
+ CONFIG_DM_MTD=y
+ CONFIG_MTD_SPI_NAND=y
+@@ -67,7 +82,14 @@ CONFIG_SPI_FLASH_XMC=y
+ CONFIG_SPI_FLASH_XTX=y
+ CONFIG_SPI_FLASH_MTD=y
+ CONFIG_PHY_FIXED=y
++CONFIG_DM_MDIO=y
++CONFIG_DM_ETH_PHY=y
++CONFIG_PHY_ETHERNET_ID=y
+ CONFIG_MEDIATEK_ETH=y
++CONFIG_PCI=y
++CONFIG_PCIE_MEDIATEK_GEN3=y
++CONFIG_NVME_PCI=y
++CONFIG_NVME=y
+ CONFIG_PINCTRL=y
+ CONFIG_PINCONF=y
+ CONFIG_PINCTRL_MT7988=y
+@@ -78,8 +100,17 @@ CONFIG_PWM_MTK=y
+ CONFIG_RAM=y
+ CONFIG_DM_SERIAL=y
+ CONFIG_MTK_SERIAL=y
++CONFIG_PHY=y
++CONFIG_PHY_MTK_TPHY=y
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_XHCI_MTK=y
++CONFIG_USB_STORAGE=y
+ CONFIG_SPI=y
+ CONFIG_DM_SPI=y
+ CONFIG_MTK_SPIM=y
++CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_OF_SYSTEM_SETUP=y
++CONFIG_BOARD_LATE_INIT=y
+ CONFIG_LZO=y
+ CONFIG_HEXDUMP=y
+diff --git a/configs/mt7988a_bpir4_sd_defconfig b/configs/mt7988a_bpir4_sd_defconfig
+new file mode 100644
+index 00000000000..7e78dc17e54
+--- /dev/null
++++ b/configs/mt7988a_bpir4_sd_defconfig
+@@ -0,0 +1,114 @@
++CONFIG_ARM=y
++CONFIG_SYS_HAS_NONCACHED_MEMORY=y
++CONFIG_POSITION_INDEPENDENT=y
++CONFIG_ARCH_MEDIATEK=y
++CONFIG_TEXT_BASE=0x41e00000
++CONFIG_SYS_MALLOC_F_LEN=0x4000
++CONFIG_NR_DRAM_BANKS=1
++CONFIG_DEFAULT_DEVICE_TREE="mt7988a-bananapi-bpi-r4-sd"
++CONFIG_TARGET_MT7988=y
++CONFIG_BOARD_BPI_R4=y
++CONFIG_SPL_LOAD_FIT=y
++CONFIG_FIT=y
++CONFIG_SYS_LOAD_ADDR=0x46000000
++CONFIG_DEBUG_UART_BASE=0x11000000
++CONFIG_DEBUG_UART_CLOCK=40000000
++CONFIG_DEBUG_UART=y
++# CONFIG_EFI_LOADER is not set
++# CONFIG_AUTOBOOT is not set
++CONFIG_DEFAULT_FDT_FILE="mt7988a-bananapi-bpi-r4-sd"
++CONFIG_MULTI_DTB_FIT=y
++CONFIG_OF_LIST="mt7988a-bananapi-bpi-r4-sd"
++CONFIG_SYS_CBSIZE=512
++CONFIG_SYS_PBSIZE=1049
++CONFIG_LOGLEVEL=7
++CONFIG_LOG=y
++CONFIG_SYS_PROMPT="BPI-R4> "
++# CONFIG_BOOTM_NETBSD is not set
++# CONFIG_BOOTM_PLAN9 is not set
++# CONFIG_BOOTM_RTEMS is not set
++# CONFIG_BOOTM_VXWORKS is not set
++# CONFIG_CMD_ELF is not set
++CONFIG_CMD_BUTTON=y
++CONFIG_CMD_CLK=y
++CONFIG_CMD_DM=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_MTD=y
++CONFIG_CMD_MDIO=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_PWM=y
++CONFIG_CMD_SMC=y
++CONFIG_CMD_USB=y
++CONFIG_DOS_PARTITION=y
++CONFIG_EFI_PARTITION=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
++CONFIG_USE_IPADDR=y
++CONFIG_IPADDR="192.168.1.1"
++CONFIG_USE_NETMASK=y
++CONFIG_NETMASK="255.255.255.0"
++CONFIG_USE_SERVERIP=y
++CONFIG_SERVERIP="192.168.1.2"
++CONFIG_PROT_TCP=y
++CONFIG_NET_RANDOM_ETHADDR=y
++CONFIG_REGMAP=y
++CONFIG_SYSCON=y
++CONFIG_CLK=y
++CONFIG_I2C=y
++CONFIG_DM_I2C=y
++CONFIG_SYS_I2C_MTK=y
++CONFIG_I2C_MUX=y
++CONFIG_I2C_MUX_PCA954x=y
++CONFIG_MMC_WRITE=y
++CONFIG_MMC_MTK=y
++CONFIG_MTD=y
++CONFIG_DM_MTD=y
++CONFIG_MTD_SPI_NAND=y
++CONFIG_DM_SPI_FLASH=y
++CONFIG_SPI_FLASH_SFDP_SUPPORT=y
++CONFIG_SPI_FLASH_EON=y
++CONFIG_SPI_FLASH_GIGADEVICE=y
++CONFIG_SPI_FLASH_ISSI=y
++CONFIG_SPI_FLASH_MACRONIX=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_STMICRO=y
++CONFIG_SPI_FLASH_WINBOND=y
++CONFIG_SPI_FLASH_XMC=y
++CONFIG_SPI_FLASH_XTX=y
++CONFIG_SPI_FLASH_MTD=y
++CONFIG_PHY_FIXED=y
++CONFIG_DM_MDIO=y
++CONFIG_DM_ETH_PHY=y
++CONFIG_PHY_ETHERNET_ID=y
++CONFIG_MEDIATEK_ETH=y
++CONFIG_PCI=y
++CONFIG_PCIE_MEDIATEK_GEN3=y
++CONFIG_NVME_PCI=y
++CONFIG_NVME=y
++CONFIG_PINCTRL=y
++CONFIG_PINCONF=y
++CONFIG_PINCTRL_MT7988=y
++CONFIG_POWER_DOMAIN=y
++CONFIG_MTK_POWER_DOMAIN=y
++CONFIG_DM_PWM=y
++CONFIG_PWM_MTK=y
++CONFIG_RAM=y
++CONFIG_DM_SERIAL=y
++CONFIG_MTK_SERIAL=y
++CONFIG_PHY=y
++CONFIG_PHY_MTK_TPHY=y
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_XHCI_MTK=y
++CONFIG_USB_STORAGE=y
++CONFIG_SPI=y
++CONFIG_DM_SPI=y
++CONFIG_MTK_SPIM=y
++CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_OF_SYSTEM_SETUP=y
++CONFIG_BOARD_LATE_INIT=y
++CONFIG_LZO=y
++CONFIG_HEXDUMP=y
+diff --git a/drivers/pinctrl/mediatek/pinctrl-mt7988.c b/drivers/pinctrl/mediatek/pinctrl-mt7988.c
+index 639e2415c63..317a325d8c6 100644
+--- a/drivers/pinctrl/mediatek/pinctrl-mt7988.c
++++ b/drivers/pinctrl/mediatek/pinctrl-mt7988.c
+@@ -942,6 +942,9 @@ static const int mt7988_emmc_45_pins[] = {
+ 	21, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37 };
+ static const int mt7988_emmc_45_funcs[] = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
+ 
++static const int mt7988_sdcard_pins[] = { 32, 33, 34, 35, 36, 37 };
++static const int mt7988_sdcard_funcs[] = { 5, 5, 5, 5, 5, 5 };
++
+ static const int mt7988_emmc_51_pins[] = {
+ 	38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49 };
+ static const int mt7988_emmc_51_funcs[] = {
+@@ -1101,6 +1104,7 @@ static const struct mtk_group_desc mt7988_groups[] = {
+ 	PINCTRL_PIN_GROUP("udi", mt7988_udi),
+ 	PINCTRL_PIN_GROUP("emmc_45", mt7988_emmc_45),
+ 	PINCTRL_PIN_GROUP("emmc_51", mt7988_emmc_51),
++	PINCTRL_PIN_GROUP("sdcard", mt7988_sdcard),
+ 	PINCTRL_PIN_GROUP("2p5g_ext_mdio", mt7988_2p5g_ext_mdio),
+ 	PINCTRL_PIN_GROUP("gbe_ext_mdio", mt7988_gbe_ext_mdio),
+ 	PINCTRL_PIN_GROUP("pcm", mt7988_pcm),
+@@ -1197,7 +1201,7 @@ static const char *const mt7988_pmic_groups[] = { "pmic", };
+ static const char *const mt7988_wdt_groups[] = { "watchdog", };
+ static const char *const mt7988_spi_groups[] = { "spi0", "spi0_wp_hold",
+ 	"spi1", "spi2", "spi2_wp_hold", };
+-static const char *const mt7988_flash_groups[] = { "emmc_45", "snfi",
++static const char *const mt7988_flash_groups[] = { "emmc_45", "sdcard", "snfi",
+ 	"emmc_51" };
+ static const char *const mt7988_uart_groups[] = { "uart2", "tops_uart0_0",
+ 	"uart2_0", "uart1_0", "uart2_1",
+-- 
+2.43.0
+

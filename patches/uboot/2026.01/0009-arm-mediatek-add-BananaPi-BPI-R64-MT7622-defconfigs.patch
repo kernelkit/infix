@@ -1,0 +1,710 @@
+From 92ed8c8fbbacab3c2e98c65008b3c314f609fd00 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 26 Feb 2026 11:23:28 +0100
+Subject: [PATCH 09/10] arm: mediatek: add BananaPi BPI-R64 (MT7622) defconfigs
+Organization: Wires
+
+Add U-Boot support for the BananaPi BPI-R64 router board, based on the
+MediaTek MT7622 SoC (dual-core ARM Cortex-A53, 64-bit). Three defconfigs
+are provided, following the BPI-R3 pattern:
+
+  mt7622_bpir64_emmc_defconfig  - eMMC (mmc0), env at 4 MiB
+  mt7622_bpir64_sd_defconfig    - SD card (mmc1), env at 4 MiB
+  mt7622_bpir64_snand_defconfig - SPI NAND via SNFI, env in UBI
+
+All variants include PCIe, USB3 (xHCI + T-PHY), Ethernet (MT7531 switch
+via SGMII/2500base-x), GPIO-LEDs, and push-button support.
+
+The SNAND variant uses the upstream CONFIG_MTK_SNFI_SPI + MTD_SPI_NAND
+path with a spi-nand child under &snfi, adapting OpenWRT patch 403 to
+the upstream driver model (which has no separate &snand node or
+CONFIG_MTK_SPI_NAND). NAND layout: bl2 at 0x0 (512 KiB), ubi for the
+remainder of the flash.
+
+Also, add hardware description missing from the original device tree:
+  - ethernet0 alias for the MT7531 switch
+  - gpio-keys nodes for the reset (GPIO0) and WPS (GPIO102) buttons
+  - gpio-leds nodes for the green (GPIO89) and blue (GPIO85) LEDs
+  - Fix cap-sd-highspeed -> cap-mmc-highspeed on mmc0 (eMMC requires
+    the MMC-specific capability flag, not the SD one)
+  - Reduce mmc1 (SD card) max-frequency to 25 MHz for stability
+
+Sources:
+  OpenWRT patches 402-404/408 for package/boot/uboot-mediatek
+  https://git.infobricfleet.com/gtu/openwrt/-/tree/master/package/boot/uboot-mediatek/patches
+  Frank Wunderlich's initial MT7622/BPI-R64 U-Boot port (2019)
+  https://github.com/frank-w/u-boot/commit/c451ad3950e63d54b074f71e930459281dd3f594
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ arch/arm/dts/mt7622-bananapi-bpi-r64-nand.dts | 290 ++++++++++++++++++
+ arch/arm/dts/mt7622-bananapi-bpi-r64.dts      |  38 ++-
+ board/mediatek/mt7622/MAINTAINERS             |   5 +
+ configs/mt7622_bpir64_emmc_defconfig          |  82 +++++
+ configs/mt7622_bpir64_sd_defconfig            |  82 +++++
+ configs/mt7622_bpir64_snand_defconfig         |  88 ++++++
+ 6 files changed, 583 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm/dts/mt7622-bananapi-bpi-r64-nand.dts
+ create mode 100644 configs/mt7622_bpir64_emmc_defconfig
+ create mode 100644 configs/mt7622_bpir64_sd_defconfig
+ create mode 100644 configs/mt7622_bpir64_snand_defconfig
+
+diff --git a/arch/arm/dts/mt7622-bananapi-bpi-r64-nand.dts b/arch/arm/dts/mt7622-bananapi-bpi-r64-nand.dts
+new file mode 100644
+index 00000000000..afdcb646f69
+--- /dev/null
++++ b/arch/arm/dts/mt7622-bananapi-bpi-r64-nand.dts
+@@ -0,0 +1,290 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (c) 2019 MediaTek Inc.
++ * Author: Sam Shih <sam.shih@mediatek.com>
++ *
++ * BananaPi BPI-R64 - SPI NAND flash variant
++ */
++
++/dts-v1/;
++#include <dt-bindings/input/linux-event-codes.h>
++#include "mt7622.dtsi"
++#include "mt7622-u-boot.dtsi"
++
++/ {
++	#address-cells = <1>;
++	#size-cells = <1>;
++	model = "mt7622-bpi-r64";
++	compatible = "mediatek,mt7622", "mediatek,mt7622-rfb";
++	chosen {
++		stdout-path = &uart0;
++		tick-timer = &timer0;
++	};
++
++	aliases {
++		spi0 = &snfi;
++		ethernet0 = &eth;
++	};
++
++	memory@40000000 {
++		device_type = "memory";
++		reg = <0x40000000 0x40000000>;
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		factory-reset {
++			label = "factory-reset";
++			gpios = <&gpio 0 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_RESTART>;
++		};
++
++		wps {
++			label = "wps";
++			gpios = <&gpio 102 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_WPS_BUTTON>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++
++		green {
++			label = "bpi-r64:pio:green";
++			gpios = <&gpio 89 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		blue {
++			label = "bpi-r64:pio:blue";
++			gpios = <&gpio 85 GPIO_ACTIVE_LOW>;
++			default-state = "off";
++		};
++	};
++
++	reg_1p8v: regulator-1p8v {
++		compatible = "regulator-fixed";
++		regulator-name = "fixed-1.8V";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		regulator-boot-on;
++		regulator-always-on;
++	};
++
++	reg_3p3v: regulator-3p3v {
++		compatible = "regulator-fixed";
++		regulator-name = "fixed-3.3V";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-boot-on;
++		regulator-always-on;
++	};
++};
++
++&pcie {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pcie0_pins>, <&pcie1_pins>;
++	status = "okay";
++
++	pcie@0,0 {
++		status = "okay";
++	};
++
++	pcie@1,0 {
++		status = "okay";
++	};
++};
++
++&pinctrl {
++	pcie0_pins: pcie0-pins {
++		mux {
++			function = "pcie";
++			groups = "pcie0_pad_perst",
++				 "pcie0_1_waken",
++				 "pcie0_1_clkreq";
++		};
++	};
++
++	pcie1_pins: pcie1-pins {
++		mux {
++			function = "pcie";
++			groups = "pcie1_pad_perst",
++				 "pcie1_0_waken",
++				 "pcie1_0_clkreq";
++		};
++	};
++
++	snfi_pins: snfi-pins {
++		mux {
++			function = "flash";
++			groups = "snfi";
++		};
++	};
++
++	uart0_pins: uart0 {
++		mux {
++			function = "uart";
++			groups = "uart0_0_tx_rx" ;
++		};
++	};
++
++	pwm_pins: pwm1 {
++		mux {
++			function = "pwm";
++			groups = "pwm_ch1_0" ;
++		};
++	};
++
++	watchdog_pins: watchdog-default {
++		mux {
++			function = "watchdog";
++			groups = "watchdog";
++		};
++	};
++
++	mmc0_pins_default: mmc0default {
++		mux {
++			function = "emmc";
++			groups =  "emmc";
++		};
++
++		conf-cmd-dat {
++			pins = "NDL0", "NDL1", "NDL2",
++			       "NDL3", "NDL4", "NDL5",
++			       "NDL6", "NDL7", "NRB";
++			input-enable;
++			bias-pull-up;
++		};
++
++		conf-clk {
++			pins = "NCLE";
++			bias-pull-down;
++		};
++	};
++
++	mmc1_pins_default: mmc1default {
++		mux {
++			function = "sd";
++			groups =  "sd_0";
++		};
++
++		conf-cmd-data {
++			pins = "I2S2_OUT", "I2S4_IN", "I2S3_IN",
++			       "I2S2_IN","I2S4_OUT";
++			input-enable;
++			drive-strength = <8>;
++			bias-pull-up;
++		};
++
++		conf-clk {
++			pins = "I2S3_OUT";
++			drive-strength = <12>;
++			bias-pull-down;
++		};
++
++		conf-cd {
++			pins = "TXD3";
++			bias-pull-up;
++		};
++	};
++};
++
++&snfi {
++	pinctrl-names = "default";
++	pinctrl-0 = <&snfi_pins>;
++	status = "okay";
++
++	spi-nand@0 {
++		compatible = "spi-nand";
++		reg = <0>;
++		spi-tx-bus-width = <4>;
++		spi-rx-bus-width = <4>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "bl2";
++				reg = <0x0 0x80000>;
++			};
++
++			partition@80000 {
++				label = "ubi";
++				reg = <0x80000 0x7f80000>;
++			};
++		};
++	};
++};
++
++&uart0 {
++	status = "okay";
++};
++
++&pwm {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pwm_pins>;
++	status = "okay";
++};
++
++&mmc0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&mmc0_pins_default>;
++	status = "okay";
++	bus-width = <8>;
++	max-frequency = <50000000>;
++	cap-mmc-highspeed;
++	vmmc-supply = <&reg_3p3v>;
++	vqmmc-supply = <&reg_3p3v>;
++	non-removable;
++};
++
++&mmc1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&mmc1_pins_default>;
++	status = "okay";
++	bus-width = <4>;
++	max-frequency = <25000000>;
++	cap-sd-highspeed;
++	r_smpl = <1>;
++	vmmc-supply = <&reg_3p3v>;
++	vqmmc-supply = <&reg_3p3v>;
++};
++
++&watchdog {
++	pinctrl-names = "default";
++	pinctrl-0 = <&watchdog_pins>;
++	status = "okay";
++};
++
++&eth {
++	status = "okay";
++	mediatek,gmac-id = <0>;
++	phy-mode = "2500base-x";
++	mediatek,switch = "mt7531";
++	reset-gpios = <&gpio 54 GPIO_ACTIVE_HIGH>;
++
++	fixed-link {
++		speed = <2500>;
++		full-duplex;
++	};
++};
++
++&gpio {
++	/*gpio 90 for setting mode to sata*/
++	asm_sel {
++		gpio-hog;
++		gpios = <90 GPIO_ACTIVE_HIGH>;
++		output-low;
++	};
++};
++
++&ssusb {
++	status = "okay";
++};
++
++&u3phy {
++	status = "okay";
++};
+diff --git a/arch/arm/dts/mt7622-bananapi-bpi-r64.dts b/arch/arm/dts/mt7622-bananapi-bpi-r64.dts
+index 717baf26d3f..f25257be63d 100644
+--- a/arch/arm/dts/mt7622-bananapi-bpi-r64.dts
++++ b/arch/arm/dts/mt7622-bananapi-bpi-r64.dts
+@@ -5,6 +5,7 @@
+  */
+ 
+ /dts-v1/;
++#include <dt-bindings/input/linux-event-codes.h>
+ #include "mt7622.dtsi"
+ #include "mt7622-u-boot.dtsi"
+ 
+@@ -20,6 +21,7 @@
+ 
+ 	aliases {
+ 		spi0 = &snfi;
++		ethernet0 = &eth;
+ 	};
+ 
+ 	memory@40000000 {
+@@ -27,6 +29,38 @@
+ 		reg = <0x40000000 0x40000000>;
+ 	};
+ 
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		factory-reset {
++			label = "factory-reset";
++			gpios = <&gpio 0 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_RESTART>;
++		};
++
++		wps {
++			label = "wps";
++			gpios = <&gpio 102 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_WPS_BUTTON>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++
++		green {
++			label = "bpi-r64:pio:green";
++			gpios = <&gpio 89 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		blue {
++			label = "bpi-r64:pio:blue";
++			gpios = <&gpio 85 GPIO_ACTIVE_LOW>;
++			default-state = "off";
++		};
++	};
++
+ 	reg_1p8v: regulator-1p8v {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "fixed-1.8V";
+@@ -197,7 +231,7 @@
+ 	status = "okay";
+ 	bus-width = <8>;
+ 	max-frequency = <50000000>;
+-	cap-sd-highspeed;
++	cap-mmc-highspeed;
+ 	vmmc-supply = <&reg_3p3v>;
+ 	vqmmc-supply = <&reg_3p3v>;
+ 	non-removable;
+@@ -208,7 +242,7 @@
+ 	pinctrl-0 = <&mmc1_pins_default>;
+ 	status = "okay";
+ 	bus-width = <4>;
+-	max-frequency = <50000000>;
++	max-frequency = <25000000>;
+ 	cap-sd-highspeed;
+ 	r_smpl = <1>;
+ 	vmmc-supply = <&reg_3p3v>;
+diff --git a/board/mediatek/mt7622/MAINTAINERS b/board/mediatek/mt7622/MAINTAINERS
+index a3e0e75ca07..a7da7948a65 100644
+--- a/board/mediatek/mt7622/MAINTAINERS
++++ b/board/mediatek/mt7622/MAINTAINERS
+@@ -4,3 +4,8 @@ S:	Maintained
+ F:	board/mediatek/mt7622
+ F:	include/configs/mt7622.h
+ F:	configs/mt7622_rfb_defconfig
++F:	configs/mt7622_bpir64_emmc_defconfig
++F:	configs/mt7622_bpir64_sd_defconfig
++F:	configs/mt7622_bpir64_snand_defconfig
++F:	arch/arm/dts/mt7622-bananapi-bpi-r64.dts
++F:	arch/arm/dts/mt7622-bananapi-bpi-r64-nand.dts
+diff --git a/configs/mt7622_bpir64_emmc_defconfig b/configs/mt7622_bpir64_emmc_defconfig
+new file mode 100644
+index 00000000000..9af7b280c93
+--- /dev/null
++++ b/configs/mt7622_bpir64_emmc_defconfig
+@@ -0,0 +1,82 @@
++CONFIG_ARM=y
++CONFIG_SYS_HAS_NONCACHED_MEMORY=y
++CONFIG_POSITION_INDEPENDENT=y
++CONFIG_ARCH_MEDIATEK=y
++CONFIG_TARGET_MT7622=y
++CONFIG_TEXT_BASE=0x41e00000
++CONFIG_SYS_MALLOC_F_LEN=0x4000
++CONFIG_NR_DRAM_BANKS=1
++CONFIG_ENV_SIZE=0x80000
++CONFIG_ENV_OFFSET=0x400000
++CONFIG_DEFAULT_DEVICE_TREE="mt7622-bananapi-bpi-r64"
++CONFIG_SYS_LOAD_ADDR=0x40080000
++CONFIG_DEBUG_UART_BASE=0x11002000
++CONFIG_DEBUG_UART_CLOCK=25000000
++CONFIG_PCI=y
++CONFIG_DEBUG_UART=y
++CONFIG_FIT=y
++# CONFIG_EFI_LOADER is not set
++# CONFIG_AUTOBOOT is not set
++CONFIG_DEFAULT_FDT_FILE="mt7622-bananapi-bpi-r64"
++CONFIG_SYS_CBSIZE=512
++CONFIG_SYS_PBSIZE=1049
++CONFIG_LOGLEVEL=7
++CONFIG_LOG=y
++CONFIG_SYS_PROMPT="BPI-R64> "
++# CONFIG_BOOTM_NETBSD is not set
++# CONFIG_BOOTM_PLAN9 is not set
++# CONFIG_BOOTM_RTEMS is not set
++# CONFIG_BOOTM_VXWORKS is not set
++# CONFIG_CMD_ELF is not set
++# CONFIG_CMD_UNLZ4 is not set
++# CONFIG_CMD_UNZIP is not set
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_GPT=y
++CONFIG_CMD_GPT_RENAME=y
++CONFIG_CMD_LSBLK=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
++CONFIG_CMD_READ=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_SMC=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_ENV_OVERWRITE=y
++CONFIG_ENV_IS_IN_MMC=y
++CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
++CONFIG_NET_RANDOM_ETHADDR=y
++CONFIG_REGMAP=y
++CONFIG_SYSCON=y
++CONFIG_BUTTON=y
++CONFIG_BUTTON_GPIO=y
++CONFIG_CLK=y
++CONFIG_GPIO_HOG=y
++CONFIG_LED=y
++CONFIG_LED_GPIO=y
++CONFIG_SUPPORT_EMMC_BOOT=y
++CONFIG_MMC_HS200_SUPPORT=y
++CONFIG_MMC_MTK=y
++CONFIG_PHY_FIXED=y
++CONFIG_MEDIATEK_ETH=y
++CONFIG_PCIE_MEDIATEK=y
++CONFIG_PHY=y
++CONFIG_PHY_MTK_TPHY=y
++CONFIG_PINCTRL=y
++CONFIG_PINCONF=y
++CONFIG_PINCTRL_MT7622=y
++CONFIG_POWER_DOMAIN=y
++CONFIG_MTK_POWER_DOMAIN=y
++CONFIG_DM_REGULATOR=y
++CONFIG_DM_REGULATOR_FIXED=y
++CONFIG_RAM=y
++CONFIG_DM_SERIAL=y
++CONFIG_MTK_SERIAL=y
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_XHCI_MTK=y
++CONFIG_USB_STORAGE=y
++CONFIG_FAT_WRITE=y
++CONFIG_HEXDUMP=y
+diff --git a/configs/mt7622_bpir64_sd_defconfig b/configs/mt7622_bpir64_sd_defconfig
+new file mode 100644
+index 00000000000..5e9340a09a6
+--- /dev/null
++++ b/configs/mt7622_bpir64_sd_defconfig
+@@ -0,0 +1,82 @@
++CONFIG_ARM=y
++CONFIG_SYS_HAS_NONCACHED_MEMORY=y
++CONFIG_POSITION_INDEPENDENT=y
++CONFIG_ARCH_MEDIATEK=y
++CONFIG_TARGET_MT7622=y
++CONFIG_TEXT_BASE=0x41e00000
++CONFIG_SYS_MALLOC_F_LEN=0x4000
++CONFIG_NR_DRAM_BANKS=1
++CONFIG_ENV_SIZE=0x80000
++CONFIG_ENV_OFFSET=0x400000
++CONFIG_DEFAULT_DEVICE_TREE="mt7622-bananapi-bpi-r64"
++CONFIG_SYS_LOAD_ADDR=0x40080000
++CONFIG_DEBUG_UART_BASE=0x11002000
++CONFIG_DEBUG_UART_CLOCK=25000000
++CONFIG_PCI=y
++CONFIG_DEBUG_UART=y
++CONFIG_FIT=y
++# CONFIG_EFI_LOADER is not set
++# CONFIG_AUTOBOOT is not set
++CONFIG_DEFAULT_FDT_FILE="mt7622-bananapi-bpi-r64"
++CONFIG_SYS_CBSIZE=512
++CONFIG_SYS_PBSIZE=1049
++CONFIG_LOGLEVEL=7
++CONFIG_LOG=y
++CONFIG_SYS_PROMPT="BPI-R64> "
++# CONFIG_BOOTM_NETBSD is not set
++# CONFIG_BOOTM_PLAN9 is not set
++# CONFIG_BOOTM_RTEMS is not set
++# CONFIG_BOOTM_VXWORKS is not set
++# CONFIG_CMD_ELF is not set
++# CONFIG_CMD_UNLZ4 is not set
++# CONFIG_CMD_UNZIP is not set
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_GPT=y
++CONFIG_CMD_GPT_RENAME=y
++CONFIG_CMD_LSBLK=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
++CONFIG_CMD_READ=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_SMC=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_ENV_OVERWRITE=y
++CONFIG_ENV_IS_IN_MMC=y
++CONFIG_SYS_MMC_ENV_DEV=1
++CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
++CONFIG_NET_RANDOM_ETHADDR=y
++CONFIG_REGMAP=y
++CONFIG_SYSCON=y
++CONFIG_BUTTON=y
++CONFIG_BUTTON_GPIO=y
++CONFIG_CLK=y
++CONFIG_GPIO_HOG=y
++CONFIG_LED=y
++CONFIG_LED_GPIO=y
++CONFIG_MMC_HS200_SUPPORT=y
++CONFIG_MMC_MTK=y
++CONFIG_PHY_FIXED=y
++CONFIG_MEDIATEK_ETH=y
++CONFIG_PCIE_MEDIATEK=y
++CONFIG_PHY=y
++CONFIG_PHY_MTK_TPHY=y
++CONFIG_PINCTRL=y
++CONFIG_PINCONF=y
++CONFIG_PINCTRL_MT7622=y
++CONFIG_POWER_DOMAIN=y
++CONFIG_MTK_POWER_DOMAIN=y
++CONFIG_DM_REGULATOR=y
++CONFIG_DM_REGULATOR_FIXED=y
++CONFIG_RAM=y
++CONFIG_DM_SERIAL=y
++CONFIG_MTK_SERIAL=y
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_XHCI_MTK=y
++CONFIG_USB_STORAGE=y
++CONFIG_FAT_WRITE=y
++CONFIG_HEXDUMP=y
+diff --git a/configs/mt7622_bpir64_snand_defconfig b/configs/mt7622_bpir64_snand_defconfig
+new file mode 100644
+index 00000000000..9be13d26fd9
+--- /dev/null
++++ b/configs/mt7622_bpir64_snand_defconfig
+@@ -0,0 +1,88 @@
++CONFIG_ARM=y
++CONFIG_SYS_HAS_NONCACHED_MEMORY=y
++CONFIG_POSITION_INDEPENDENT=y
++CONFIG_ARCH_MEDIATEK=y
++CONFIG_TARGET_MT7622=y
++CONFIG_TEXT_BASE=0x41e00000
++CONFIG_SYS_MALLOC_F_LEN=0x4000
++CONFIG_NR_DRAM_BANKS=1
++CONFIG_DEFAULT_DEVICE_TREE="mt7622-bananapi-bpi-r64-nand"
++CONFIG_SYS_LOAD_ADDR=0x40080000
++CONFIG_DEBUG_UART_BASE=0x11002000
++CONFIG_DEBUG_UART_CLOCK=25000000
++CONFIG_PCI=y
++CONFIG_DEBUG_UART=y
++CONFIG_FIT=y
++# CONFIG_EFI_LOADER is not set
++# CONFIG_AUTOBOOT is not set
++CONFIG_DEFAULT_FDT_FILE="mt7622-bananapi-bpi-r64-nand"
++CONFIG_SYS_CBSIZE=512
++CONFIG_SYS_PBSIZE=1049
++CONFIG_LOGLEVEL=7
++CONFIG_LOG=y
++CONFIG_SYS_PROMPT="BPI-R64> "
++# CONFIG_BOOTM_NETBSD is not set
++# CONFIG_BOOTM_PLAN9 is not set
++# CONFIG_BOOTM_RTEMS is not set
++# CONFIG_BOOTM_VXWORKS is not set
++# CONFIG_CMD_ELF is not set
++# CONFIG_CMD_UNLZ4 is not set
++# CONFIG_CMD_UNZIP is not set
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_MTD=y
++CONFIG_CMD_PART=y
++CONFIG_CMD_READ=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_SMC=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_CMD_UBI=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_ENV_OVERWRITE=y
++CONFIG_ENV_IS_IN_UBI=y
++CONFIG_ENV_REDUNDANT=y
++CONFIG_ENV_UBI_PART="ubi"
++CONFIG_ENV_UBI_VOLUME="ubootenv"
++CONFIG_ENV_UBI_VOLUME_REDUND="ubootenv2"
++CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
++CONFIG_NET_RANDOM_ETHADDR=y
++CONFIG_REGMAP=y
++CONFIG_SYSCON=y
++CONFIG_BUTTON=y
++CONFIG_BUTTON_GPIO=y
++CONFIG_CLK=y
++CONFIG_GPIO_HOG=y
++CONFIG_LED=y
++CONFIG_LED_GPIO=y
++CONFIG_MMC_HS200_SUPPORT=y
++CONFIG_MMC_MTK=y
++CONFIG_MTD=y
++CONFIG_DM_MTD=y
++CONFIG_MTD_SPI_NAND=y
++CONFIG_PHY_FIXED=y
++CONFIG_MEDIATEK_ETH=y
++CONFIG_PCIE_MEDIATEK=y
++CONFIG_PHY=y
++CONFIG_PHY_MTK_TPHY=y
++CONFIG_PINCTRL=y
++CONFIG_PINCONF=y
++CONFIG_PINCTRL_MT7622=y
++CONFIG_POWER_DOMAIN=y
++CONFIG_MTK_POWER_DOMAIN=y
++CONFIG_DM_REGULATOR=y
++CONFIG_DM_REGULATOR_FIXED=y
++CONFIG_RAM=y
++CONFIG_DM_SERIAL=y
++CONFIG_MTK_SERIAL=y
++CONFIG_SPI=y
++CONFIG_DM_SPI=y
++CONFIG_MTK_SNFI_SPI=y
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_XHCI_MTK=y
++CONFIG_USB_STORAGE=y
++CONFIG_FAT_WRITE=y
++CONFIG_HEXDUMP=y
+-- 
+2.43.0
+

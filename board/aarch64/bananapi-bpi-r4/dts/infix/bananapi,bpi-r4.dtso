@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "bananapi,bpi-r4", "mediatek,mt7988a";
+};
+
+/*
+ * The upstream mt7988a-bananapi-bpi-r4.dtsi sets stdout-path = "serial0:..."
+ * but the aliases node there only has ethernet entries.  Linux resolves
+ * stdout-path by looking in /aliases, so we must add serial0 here.
+ * Path references in overlay aliases cannot use &label, so use the full path.
+ */
+&{/} {
+	aliases {
+		serial0 = "/soc/serial@11000000";
+	};
+
+	chosen {
+		infix {
+			/* Default admin user password: 'admin' */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			usb-ports = <&ssusb1>;
+			usb-port-names = "USB";
+		};
+	};
+};

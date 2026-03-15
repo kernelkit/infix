@@ -1,0 +1,5 @@
+# The mtk-2p5ge PHY driver uses MDIO PHY ID matching, not OF compatible
+# matching.  udev auto-loading is based on MODALIAS, which for DT-described
+# devices is "of:N...C<compatible>" — a format that never matches the driver's
+# "mdio:..." module alias.  Match on OF_COMPATIBLE_0 explicitly instead.
+ACTION=="add", SUBSYSTEM=="mdio_bus", ENV{OF_COMPATIBLE_0}=="ethernet-phy-id0033.9c11", RUN+="/sbin/modprobe -b mtk-2p5ge"

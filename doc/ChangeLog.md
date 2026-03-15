@@ -9,9 +9,15 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.21 (LTS)
+- Add support for [Banana Pi BPI-R4][BPI-R4], quad-core Cortex-A73 router with
+  4x 2.5 GbE switching, dual 10 GbE SFP+.  Variants BPI-R4-2g5 and BPI-R4P have
+  one SFP+ replaced by a 2.5 GbE RJ45, with optional PoE on the R4P
 
 ### Fixes
 
+- N/A
+
+[BPI-R4]: https://docs.banana-pi.org/en/BPI-R4/BananaPi_BPI-R4
 
 [v26.03.0][] - 2026-03-31
 -------------------------

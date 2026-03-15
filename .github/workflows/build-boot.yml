@@ -19,6 +19,8 @@ jobs:
           - aarch64_qemu_boot
           - bpi_r3_sd_boot
           - bpi_r3_emmc_boot
+          - bpi_r4_sd_boot
+          - bpi_r4_emmc_boot
           - bpi_r64_sd_boot
           - bpi_r64_emmc_boot
           - cn9130_crb_boot
