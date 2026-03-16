@@ -28,7 +28,7 @@ jobs:
           clean: true
           submodules: recursive
 
-      - uses: ./.github/actions/podman-cleanup
+      - uses: kernelkit/actions/podman-cleanup@v1
 
       - name: Set Release Variables
         id: vars
@@ -40,7 +40,7 @@ jobs:
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
 
-      - uses: ./.github/actions/cache-restore
+      - uses: kernelkit/actions/cache-restore@v1
         with:
           target: ${{ matrix.target }}
           enabled: ${{ inputs.use_cache }}
