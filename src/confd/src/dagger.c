@@ -124,8 +124,12 @@ int dagger_abandon(struct dagger *d)
 {
 	int exitcode;
 
+	if (!d->next_fp)
+		return 0;
+
 	fprintf(d->next_fp, "%d\n", d->next);
 	fclose(d->next_fp);
+	d->next_fp = NULL;
 
 	exitcode = systemf("dagger -C %s abandon", d->path);
 	DEBUG("dagger(%d->%d): abandon: exitcode=%d\n",
@@ -134,12 +138,13 @@ int dagger_abandon(struct dagger *d)
 	return exitcode;
 }
 
-int dagger_evolve(struct dagger *d)
+static int dagger_evolve(struct dagger *d)
 {
 	int exitcode;
 
 	fprintf(d->next_fp, "%d\n", d->next);
 	fclose(d->next_fp);
+	d->next_fp = NULL;
 
 	exitcode = systemf("dagger -C %s evolve", d->path);
 	DEBUG("dagger(%d->%d): evolve: exitcode=%d\n",
@@ -162,6 +167,9 @@ static int dagger_prune(struct dagger *d)
 int dagger_evolve_or_abandon(struct dagger *d)
 {
 	int exitcode, err;
+
+	if (!d->next_fp)
+		return 0;
 
 	exitcode = dagger_evolve(d);
 	dagger_prune(d);
