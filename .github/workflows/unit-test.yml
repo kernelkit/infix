@@ -87,7 +87,7 @@ jobs:
           submodules: recursive
           token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
 
-      - uses: ./.github/actions/podman-cleanup
+      - uses: kernelkit/actions/podman-cleanup@v1
 
       - name: Run pre-build script
         if: ${{ inputs.pre_build_script != '' }}
@@ -98,7 +98,7 @@ jobs:
           chmod +x ./pre-build.sh
           bash ./pre-build.sh
 
-      - uses: ./.github/actions/cache-restore
+      - uses: kernelkit/actions/cache-restore@v1
         with:
           target: ${{ env.TARGET }}
 
