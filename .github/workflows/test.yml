@@ -70,7 +70,7 @@ jobs:
           submodules: recursive
           token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
 
-      - uses: ./.github/actions/podman-cleanup
+      - uses: kernelkit/actions/podman-cleanup@v1
 
       - name: Run pre-test script
         if: ${{ inputs.pre_test_script != '' }}

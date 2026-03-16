@@ -89,7 +89,7 @@ jobs:
           submodules: recursive
           token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
 
-      - uses: ./.github/actions/podman-cleanup
+      - uses: kernelkit/actions/podman-cleanup@v1
 
       - name: Run pre-build script
         if: ${{ inputs.pre_build_script != '' }}
@@ -120,7 +120,7 @@ jobs:
           echo "tgz=${name}-${target}.tar.gz" >> $GITHUB_OUTPUT
           echo "Building target ${target}_defconfig"
 
-      - uses: ./.github/actions/cache-restore
+      - uses: kernelkit/actions/cache-restore@v1
         with:
           target: ${{ env.TARGET }}
 

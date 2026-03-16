@@ -68,7 +68,7 @@ jobs:
 
           echo "Building ${defconfig}_defconfig, version ${version}-${rev}, artifact ${archive} ..."
 
-      - uses: ./.github/actions/cache-restore
+      - uses: kernelkit/actions/cache-restore@v1
         with:
           target: ${{ matrix.defconfig }}
           dl-prefix: dl-boot

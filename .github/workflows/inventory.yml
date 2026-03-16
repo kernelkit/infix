@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/cache-restore
+      - uses: kernelkit/actions/cache-restore@v1
         with:
           target: x86_64
           dl-prefix: dl-netconf
