@@ -166,6 +166,7 @@ class Env(object):
                                  yangdir=self.args.yangdir)
             if test_reset:
                 dev.test_reset()
+                util.until(lambda: self.is_reachable(node, cport), 30)
             return dev
 
         if protocol == "ssh":
@@ -181,6 +182,7 @@ class Env(object):
                                   yangdir=self.args.yangdir)
             if test_reset:
                 dev.test_reset()
+                util.until(lambda: self.is_reachable(node, cport), 30)
             return dev
 
         raise Exception(f"Unsupported management procotol \"{protocol}\"")
