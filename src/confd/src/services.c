@@ -11,7 +11,6 @@
 #include <srx/common.h>
 #include <srx/helpers.h>
 #include <srx/lyx.h>
-#include <srx/srx_val.h>
 
 #include "core.h"
 #include <sysrepo_types.h>
@@ -274,55 +273,34 @@ static int put(sr_data_t *cfg)
 	return SR_ERR_OK;
 }
 
-static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *xpath,
-		      const char *name, const char *svc)
+/*
+ * Enable or disable a named service: manage nginx symlinks and mDNS
+ * records, then start or stop via initctl.  Does NOT touch (restart)
+ * the service -- call 'initctl touch <name>' separately when only
+ * config changes and the service is already running.
+ */
+static void svc_enable(int ena, svc type, const char *svcname)
 {
-	struct lyd_node *srv = NULL;
-	sr_data_t *cfg;
-	int ena;
+	if (!svcname)
+		svcname = name[type];
 
-	cfg = get(session, event, xpath, &srv, name, NULL);
-	if (!cfg)
-		return SR_ERR_OK;
-
-	ena = lydx_is_enabled(srv, "enabled");
-	if (systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svc))
-		ERROR("Failed %s %s", ena ? "enabling" : "disabling", name);
-	if (ena)
-		systemf("initctl -nbq touch %s", svc); /* in case already enabled */
-
-	return put(cfg);
-}
-
-static void svc_enadis(int ena, svc type, const char *svc)
-{
-	int isweb, isapp;
-
-	if (!svc)
-		svc = name[type];
-	isweb = fexistf("/etc/nginx/available/%s.conf", svc);
-	isapp = fexistf("/etc/nginx/%s.app", svc);
-
-	if (ena) {
-		if (isweb)
-			systemf("ln -sf ../available/%s.conf /etc/nginx/enabled/", svc);
-		if (isapp)
-			systemf("ln -sf ../%s.app /etc/nginx/app/%s.conf", svc, svc);
-		systemf("initctl -nbq enable %s", svc);
-		systemf("initctl -nbq touch %s", svc); /* in case already enabled */
-	} else {
-		if (isweb)
-			systemf("rm -f /etc/nginx/enabled/%s.conf", svc);
-		if (isapp)
-			systemf("rm -f /etc/nginx/app/%s.conf", svc);
-		systemf("initctl -nbq disable %s", svc);
+	if (fexistf("/etc/nginx/available/%s.conf", svcname)) {
+		if (ena)
+			systemf("ln -sf ../available/%s.conf /etc/nginx/enabled/", svcname);
+		else
+			systemf("rm -f /etc/nginx/enabled/%s.conf", svcname);
 	}
+	if (fexistf("/etc/nginx/%s.app", svcname)) {
+		if (ena)
+			systemf("ln -sf ../%s.app /etc/nginx/app/%s.conf", svcname, svcname);
+		else
+			systemf("rm -f /etc/nginx/app/%s.conf", svcname);
+	}
+
+	systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svcname);
 
 	if (type != none)
 		mdns_records(ena ? MDNS_ADD : MDNS_DELETE, type);
-
-	systemf("initctl -nbq touch avahi");
-	systemf("initctl -nbq touch nginx");
 }
 
 static void fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const char *heading)
@@ -395,28 +373,6 @@ static void mdns_conf(struct confd *confd, struct lyd_node *cfg)
 	fclose(fp);
 }
 
-static void mdns_cname(sr_session_ctx_t *session)
-{
-	int ena = srx_enabled(session, "/infix-services:mdns/enabled");
-
-	if (ena) {
-		int www = srx_enabled(session, "/infix-services:web/netbrowse/enabled");
-		FILE *fp;
-
-		fp = fopen("/etc/default/mdns-alias", "w");
-		if (fp) {
-			fprintf(fp, "MDNS_ALIAS_ARGS=\"%s\"\n",
-				www ? "network.local" : "");
-			fclose(fp);
-		} else {
-			ERRNO("failed updating mDNS aliases");
-			ena = 0;
-		}
-	}
-
-	svc_enadis(ena, none, "mdns-alias");
-}
-
 static int mdns_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
@@ -432,15 +388,16 @@ static int mdns_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 
 	ena = lydx_is_enabled(srv, "enabled");
 	if (ena) {
-		/* Generate/update avahi-daemon.conf */
 		mdns_conf(confd, srv);
-
-		/* Generate/update basic mDNS service records */
 		mdns_records(MDNS_UPDATE, all);
 	}
 
-	svc_enadis(ena, none, "avahi");
-	mdns_cname(session);
+	if (lydx_get_xpathf(diff, MDNS_XPATH "/enabled")) {
+		svc_enable(ena, none, "avahi");
+		svc_enable(ena, none, "mdns-alias");
+	}
+	if (ena)
+		systemf("initctl -nbq touch avahi");
 
 	return put(cfg);
 }
@@ -494,7 +451,15 @@ static int lldp_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 			if (erase(LLDP_CONFIG))
 				ERRNO("Failed to remove old %s", LLDP_CONFIG);
 
-		svc_change(session, event, LLDP_XPATH, "lldp", "lldpd");
+		{
+			struct lyd_node *lldp = lydx_get_xpathf(config, LLDP_XPATH);
+			int lldp_ena = lydx_is_enabled(lldp, "enabled");
+
+			if (lydx_get_xpathf(diff, LLDP_XPATH "/enabled"))
+				systemf("initctl -nbq %s lldpd", lldp_ena ? "enable" : "disable");
+			else if (lldp_ena)
+				systemf("initctl -nbq touch lldpd");
+		}
 		break;
 
 	case SR_EV_ABORT:
@@ -512,33 +477,54 @@ static int ttyd_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
+	int ena;
 
-	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_CONSOLE_XPATH))
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_CONSOLE_XPATH "/enabled"))
 		return SR_ERR_OK;
 
 	cfg = get(session, event, WEB_XPATH, &srv, "web", "console", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
 
-	svc_enadis(lydx_is_enabled(srv, "enabled"), ttyd, NULL);
+	ena = lydx_is_enabled(srv, "enabled") &&
+	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
+	svc_enable(ena, ttyd, NULL);
+	systemf("initctl -nbq touch nginx");
 
 	return put(cfg);
 }
 
-static int netbrowse_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+static void mdns_alias_conf(int ena)
+{
+	FILE *fp = fopen("/etc/default/mdns-alias", "w");
+
+	if (fp) {
+		fprintf(fp, "MDNS_ALIAS_ARGS=\"%s\"\n", ena ? "network.local" : "");
+		fclose(fp);
+	} else {
+		ERRNO("failed updating mDNS aliases");
+	}
+}
+
+static int netbrowse_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+			    sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
+	int ena;
 
-	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_NETBROWSE_XPATH))
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_NETBROWSE_XPATH "/enabled"))
 		return SR_ERR_OK;
 
 	cfg = get(session, event, WEB_XPATH, &srv, "web", "netbrowse", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
 
-	svc_enadis(lydx_is_enabled(srv, "enabled"), netbrowse, NULL);
-	mdns_cname(session);
+	ena = lydx_is_enabled(srv, "enabled") &&
+	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
+	svc_enable(ena, netbrowse, NULL);
+	mdns_alias_conf(ena);
+	systemf("initctl -nbq touch nginx mdns-alias");
 
 	return put(cfg);
 }
@@ -547,15 +533,19 @@ static int restconf_change(sr_session_ctx_t *session, struct lyd_node *config, s
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
+	int ena;
 
-	if (event != SR_EV_DONE  || !lydx_get_xpathf(diff, WEB_RESTCONF_XPATH))
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_RESTCONF_XPATH "/enabled"))
 		return SR_ERR_OK;
 
 	cfg = get(session, event, WEB_XPATH, &srv, "web", "restconf", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
 
-	svc_enadis(lydx_is_enabled(srv, "enabled"), restconf, NULL);
+	ena = lydx_is_enabled(srv, "enabled") &&
+	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
+	svc_enable(ena, restconf, "restconf");
+	systemf("initctl -nbq touch nginx");
 
 	return put(cfg);
 }
@@ -571,7 +561,16 @@ static int ssh_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 
 	switch (event) {
 	case SR_EV_DONE:
-		return svc_change(session, event, SSH_XPATH, "ssh", "sshd");
+		{
+			struct lyd_node *ssh = lydx_get_xpathf(config, SSH_XPATH);
+			int ssh_ena = lydx_is_enabled(ssh, "enabled");
+
+			if (lydx_get_xpathf(diff, SSH_XPATH "/enabled"))
+				systemf("initctl -nbq %s sshd", ssh_ena ? "enable" : "disable");
+			else if (ssh_ena)
+				systemf("initctl -nbq touch sshd");
+		}
+		return SR_ERR_OK;
 	case SR_EV_ENABLED:
 	case SR_EV_CHANGE:
 		break;
@@ -681,21 +680,27 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 	if (!cfg)
 		return SR_ERR_OK;
 
-	web_ssl_conf(srv, config);
-
 	ena = lydx_is_enabled(srv, "enabled");
-	if (ena) {
-		svc_enadis(srx_enabled(session, "%s/enabled", WEB_CONSOLE_XPATH), ttyd, "ttyd");
-		svc_enadis(srx_enabled(session, "%s/enabled", WEB_NETBROWSE_XPATH), netbrowse, "netbrowse");
-		svc_enadis(srx_enabled(session, "%s/enabled", WEB_RESTCONF_XPATH), restconf, "restconf");
-	} else {
-		svc_enadis(0, ttyd, NULL);
-		svc_enadis(0, netbrowse, NULL);
-		svc_enadis(0, restconf, NULL);
+
+	/* Certificate changed: regenerate ssl.conf and reload nginx */
+	if (lydx_get_xpathf(diff, WEB_XPATH "/certificate")) {
+		web_ssl_conf(srv, config);
+		systemf("initctl -nbq touch nginx");
 	}
 
-	svc_enadis(ena, web, "nginx");
-	mdns_cname(session);
+	/* Web master on/off: propagate to nginx and all sub-services */
+	if (lydx_get_xpathf(diff, WEB_XPATH "/enabled")) {
+		int nb_ena = ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_NETBROWSE_XPATH), "enabled");
+
+		svc_enable(ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_CONSOLE_XPATH), "enabled"),
+			   ttyd, "ttyd");
+		svc_enable(nb_ena, netbrowse, "netbrowse");
+		svc_enable(ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_RESTCONF_XPATH), "enabled"),
+			   restconf, "restconf");
+		svc_enable(ena, web, "nginx");
+		mdns_alias_conf(nb_ena);
+		systemf("initctl -nbq touch mdns-alias");
+	}
 
 	return put(cfg);
 }
