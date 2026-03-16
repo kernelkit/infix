@@ -42,7 +42,7 @@ define CONFD_INSTALL_EXTRA
 	done
 	cp $(CONFD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/confd.conf
 	mkdir -p $(TARGET_DIR)/etc/avahi/services
-	cp $(CONFD_PKGDIR)/avahi.service $(TARGET_DIR)/etc/avahi/services/netconf.service
+	cp $(CONFD_PKGDIR)/netconf.service $(TARGET_DIR)/etc/avahi/services/
 endef
 
 NETOPEER2_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/netopeer2/
