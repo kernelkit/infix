@@ -52,7 +52,7 @@ jobs:
         with:
           submodules: 'true'
 
-      - uses: ./.github/actions/podman-cleanup
+      - uses: kernelkit/actions/podman-cleanup@v1
 
       - name: Set Release Variables
         id: rel
