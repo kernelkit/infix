@@ -685,14 +685,14 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 							ap_interfaces++;
 
 							if (running)
-								systemf("initctl -bfq touch hostapd@%s", name);
+								finit_reloadf("hostapd@%s", name);
 							else
-								systemf("initctl -bfq enable hostapd@%s", name);
+								finit_enablef("hostapd@%s", name);
 						}
 					}
 				}
 				if (!ap_interfaces) {
-					systemf("initctl -bfq disable hostapd@%s", name);
+					finit_disablef("hostapd@%s", name);
 					erasef(HOSTAPD_CONF, name);
 					erasef(HOSTAPD_CONF_NEXT, name);
 				}
@@ -784,10 +784,10 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			if (fexist(GPSD_CONF_NEXT)) {
 				unlink(GPSD_CONF);
 				rename(GPSD_CONF_NEXT, GPSD_CONF);
-				systemf("initctl -nbq enable gpsd");
+				finit_enable("gpsd");
 			} else {
 				unlink(GPSD_CONF);
-				systemf("initctl -nbq disable gpsd");
+				finit_disable("gpsd");
 			}
 			break;
 		}

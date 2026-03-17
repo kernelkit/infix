@@ -276,8 +276,8 @@ static int put(sr_data_t *cfg)
 /*
  * Enable or disable a named service: manage nginx symlinks and mDNS
  * records, then start or stop via initctl.  Does NOT touch (restart)
- * the service -- call 'initctl touch <name>' separately when only
- * config changes and the service is already running.
+ * the service -- call finit_reload() separately when only config
+ * changes and the service is already running.
  */
 static void svc_enable(int ena, svc type, const char *svcname)
 {
@@ -297,7 +297,7 @@ static void svc_enable(int ena, svc type, const char *svcname)
 			systemf("rm -f /etc/nginx/app/%s.conf", svcname);
 	}
 
-	systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svcname);
+	ena ? finit_enable(svcname) : finit_disable(svcname);
 
 	if (type != none)
 		mdns_records(ena ? MDNS_ADD : MDNS_DELETE, type);
@@ -397,7 +397,7 @@ static int mdns_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 		svc_enable(ena, none, "mdns-alias");
 	}
 	if (ena)
-		systemf("initctl -nbq touch avahi");
+		finit_reload("avahi");
 
 	return put(cfg);
 }
@@ -456,9 +456,9 @@ static int lldp_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 			int lldp_ena = lydx_is_enabled(lldp, "enabled");
 
 			if (lydx_get_xpathf(diff, LLDP_XPATH "/enabled"))
-				systemf("initctl -nbq %s lldpd", lldp_ena ? "enable" : "disable");
+				lldp_ena ? finit_enable("lldpd") : finit_disable("lldpd");
 			else if (lldp_ena)
-				systemf("initctl -nbq touch lldpd");
+				finit_reload("lldpd");
 		}
 		break;
 
@@ -489,7 +489,7 @@ static int ttyd_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 	ena = lydx_is_enabled(srv, "enabled") &&
 	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
 	svc_enable(ena, ttyd, NULL);
-	systemf("initctl -nbq touch nginx");
+	finit_reload("nginx");
 
 	return put(cfg);
 }
@@ -524,7 +524,8 @@ static int netbrowse_change(sr_session_ctx_t *session, struct lyd_node *config, 
 	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
 	svc_enable(ena, netbrowse, NULL);
 	mdns_alias_conf(ena);
-	systemf("initctl -nbq touch nginx mdns-alias");
+	finit_reload("nginx");
+	finit_reload("mdns-alias");
 
 	return put(cfg);
 }
@@ -545,7 +546,7 @@ static int restconf_change(sr_session_ctx_t *session, struct lyd_node *config, s
 	ena = lydx_is_enabled(srv, "enabled") &&
 	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
 	svc_enable(ena, restconf, "restconf");
-	systemf("initctl -nbq touch nginx");
+	finit_reload("nginx");
 
 	return put(cfg);
 }
@@ -566,9 +567,9 @@ static int ssh_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 			int ssh_ena = lydx_is_enabled(ssh, "enabled");
 
 			if (lydx_get_xpathf(diff, SSH_XPATH "/enabled"))
-				systemf("initctl -nbq %s sshd", ssh_ena ? "enable" : "disable");
+				ssh_ena ? finit_enable("sshd") : finit_disable("sshd");
 			else if (ssh_ena)
-				systemf("initctl -nbq touch sshd");
+				finit_reload("sshd");
 		}
 		return SR_ERR_OK;
 	case SR_EV_ENABLED:
@@ -685,7 +686,7 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 	/* Certificate changed: regenerate ssl.conf and reload nginx */
 	if (lydx_get_xpathf(diff, WEB_XPATH "/certificate")) {
 		web_ssl_conf(srv, config);
-		systemf("initctl -nbq touch nginx");
+		finit_reload("nginx");
 	}
 
 	/* Web master on/off: propagate to nginx and all sub-services */
@@ -699,7 +700,7 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 			   restconf, "restconf");
 		svc_enable(ena, web, "nginx");
 		mdns_alias_conf(nb_ena);
-		systemf("initctl -nbq touch mdns-alias");
+		finit_reload("mdns-alias");
 	}
 
 	return put(cfg);

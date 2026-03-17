@@ -322,9 +322,12 @@ static int add(const char *name, struct lyd_node *cif)
 	fchmod(fileno(fp), 0700);
 	fclose(fp);
 
-	systemf("initctl -bnq touch container@%s.conf", name);
-	systemf("initctl -bnq %s container@%s.conf", lydx_is_enabled(cif, "enabled")
-		? "enable" : "disable", name);
+	if (lydx_is_enabled(cif, "enabled")) {
+		finit_enablef("container@%s", name);
+		finit_reloadf("container@%s", name);
+	} else {
+		finit_disablef("container@%s", name);
+	}
 
 	return 0;
 }
@@ -341,7 +344,7 @@ static int del(const char *name)
 	FILE *pp;
 
 	erasef("%s/%s.sh", _PATH_CONT, name);
-	systemf("initctl -bnq disable container@%s.conf", name);
+	finit_disablef("container@%s", name);
 
 	/* Schedule a cleanup job for this container as soon as it has stopped */
 	snprintf(prune_dir, sizeof(prune_dir), "%s/%s", _PATH_CLEAN, name);

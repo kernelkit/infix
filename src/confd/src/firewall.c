@@ -510,7 +510,7 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	case SR_EV_DONE:
 		if (!fisdir(FIREWALLD_DIR_NEXT)) {
 			/* Firewall is disabled */
-			systemf("initctl -nbq disable firewalld");
+			finit_disable("firewalld");
 			return SR_ERR_OK;
 		}
 
@@ -521,8 +521,8 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			return SR_ERR_SYS;
 		}
 
-		systemf("initctl -nbq touch firewalld");
-		systemf("initctl -nbq enable firewalld");
+		finit_reload("firewalld");
+		finit_enable("firewalld");
 		return SR_ERR_OK;
 
 	default:

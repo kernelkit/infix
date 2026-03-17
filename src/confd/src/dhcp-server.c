@@ -377,7 +377,7 @@ int dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 
 err_done:
 	if (added || deleted)
-		system("initctl -nbq touch dnsmasq");
+		finit_reload("dnsmasq");
 
 	return err;
 }

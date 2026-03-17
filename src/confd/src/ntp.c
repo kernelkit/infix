@@ -48,7 +48,7 @@ static int change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 		if (systemf("chronyc reload sources >/dev/null 2>&1"))
 			ERRNO("Failed reloading chronyd sources");
 
-		systemf("initctl -nbq touch chronyd");
+		finit_reload("chronyd");
 		return SR_ERR_OK;
 
 	default:

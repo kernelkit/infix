@@ -4,11 +4,14 @@
 #define CONFD_CORE_H_
 
 #include <errno.h>
+#include <fcntl.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/param.h>
 #include <unistd.h>
@@ -30,6 +33,8 @@
 #include <srx/systemv.h>
 
 #include "dagger.h"
+
+#define FINIT_RCSD        "/etc/finit.d"
 
 #define SSH_HOSTKEYS      "/etc/ssh/hostkeys"
 #define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
@@ -187,6 +192,16 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 	return rc;
 }
 
+
+/* core.c */
+int finit_enable(const char *svc);
+int finit_disable(const char *svc);
+int finit_delete(const char *svc);
+int finit_reload(const char *svc);
+int finit_enablef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+int finit_disablef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+int finit_deletef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+int finit_reloadf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 /* interfaces.c */
 int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);

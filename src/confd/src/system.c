@@ -308,7 +308,7 @@ static int change_ntp_client(sr_session_ctx_t *session, struct lyd_node *config,
 			(void)remove(NTP_CLIENT_CONF);
 			systemf("rm -f /etc/chrony/sources.d/*");
 			/* Note: chronyd enable/disable is managed centrally in core.c */
-			systemf("initctl -nbq touch chronyd");
+			finit_reload("chronyd");
 			return SR_ERR_OK;
 		}
 
@@ -318,7 +318,7 @@ static int change_ntp_client(sr_session_ctx_t *session, struct lyd_node *config,
 		}
 
 		/* Note: chronyd enable/disable is managed centrally in core.c */
-		systemf("initctl -nbq touch chronyd");
+		finit_reload("chronyd");
 		return SR_ERR_OK;
 
 	default:
@@ -466,7 +466,7 @@ static int change_dns(sr_session_ctx_t *session, struct lyd_node *config, struct
 			(void)rename(RESOLV_NEXT, RESOLV_CONF);
 		}
 
-		systemf("initctl -bq touch resolvconf");
+		finit_reload("resolvconf");
 
 		return SR_ERR_OK;
 

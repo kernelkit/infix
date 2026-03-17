@@ -9,6 +9,129 @@
 
 struct confd confd;
 
+/*
+ * Touch a Finit service .conf file to schedule a synchronized reload.
+ * Equivalent to 'initctl touch <svc>' but without the fork+exec overhead.
+ * The service name should be given without the .conf suffix.
+ */
+int finit_reload(const char *svc)
+{
+	char path[256];
+
+	/* Prefer the enabled/ symlink -- that's what Finit watches */
+	snprintf(path, sizeof(path), FINIT_RCSD "/enabled/%s.conf", svc);
+	if (!utimensat(AT_FDCWD, path, NULL, AT_SYMLINK_NOFOLLOW))
+		return 0;
+
+	snprintf(path, sizeof(path), FINIT_RCSD "/available/%s.conf", svc);
+	if (!utimensat(AT_FDCWD, path, NULL, AT_SYMLINK_NOFOLLOW))
+		return 0;
+
+	ERRNO("failed marking %s for reload", svc);
+	return -1;
+}
+
+int finit_reloadf(const char *fmt, ...)
+{
+	char svc[64];
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(svc, sizeof(svc), fmt, ap);
+	va_end(ap);
+
+	return finit_reload(svc);
+}
+
+int finit_enable(const char *svc)
+{
+	char src[256], dst[256];
+	const char *at;
+
+	snprintf(src, sizeof(src), FINIT_RCSD "/available/%s.conf", svc);
+	if (!fexist(src)) {
+		/* Template instance (e.g. container@foo): point to base template */
+		at = strchr(svc, '@');
+		if (at)
+			snprintf(src, sizeof(src), FINIT_RCSD "/available/%.*s@.conf",
+				 (int)(at - svc), svc);
+	}
+
+	snprintf(dst, sizeof(dst), FINIT_RCSD "/enabled/%s.conf", svc);
+	if (symlink(src, dst) && errno != EEXIST) {
+		ERRNO("failed enabling %s", svc);
+		return -1;
+	}
+	return 0;
+}
+
+int finit_disable(const char *svc)
+{
+	char path[256];
+
+	snprintf(path, sizeof(path), FINIT_RCSD "/enabled/%s.conf", svc);
+	if (remove(path) && errno != ENOENT) {
+		ERRNO("failed disabling %s", svc);
+		return -1;
+	}
+	return 0;
+}
+
+int finit_delete(const char *svc)
+{
+	char path[256];
+
+	snprintf(path, sizeof(path), FINIT_RCSD "/enabled/%s.conf", svc);
+	if (remove(path) && errno != ENOENT) {
+		ERRNO("failed removing enabled symlink for %s", svc);
+		return -1;
+	}
+
+	snprintf(path, sizeof(path), FINIT_RCSD "/available/%s.conf", svc);
+	if (remove(path) && errno != ENOENT) {
+		ERRNO("failed removing available conf for %s", svc);
+		return -1;
+	}
+
+	return 0;
+}
+
+int finit_deletef(const char *fmt, ...)
+{
+	char svc[64];
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(svc, sizeof(svc), fmt, ap);
+	va_end(ap);
+
+	return finit_delete(svc);
+}
+
+int finit_enablef(const char *fmt, ...)
+{
+	char svc[64];
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(svc, sizeof(svc), fmt, ap);
+	va_end(ap);
+
+	return finit_enable(svc);
+}
+
+int finit_disablef(const char *fmt, ...)
+{
+	char svc[64];
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(svc, sizeof(svc), fmt, ap);
+	va_end(ap);
+
+	return finit_disable(svc);
+}
+
 
 static int startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *model,
 			const char *xpath, sr_event_t event, unsigned request_id, void *priv)
@@ -433,7 +556,7 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		client = srx_enabled(session, "/ietf-system:system/ntp/enabled");
 		server = lydx_get_xpathf(config, "/ietf-ntp:ntp") != NULL;
 
-		systemf("initctl -nbq %s chronyd", client || server ? "enable" : "disable");
+		(client || server) ? finit_enable("chronyd") : finit_disable("chronyd");
 	}
 
 	if (cfg)
