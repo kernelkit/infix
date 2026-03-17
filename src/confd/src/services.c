@@ -285,16 +285,28 @@ static void svc_enable(int ena, svc type, const char *svcname)
 		svcname = name[type];
 
 	if (fexistf("/etc/nginx/available/%s.conf", svcname)) {
-		if (ena)
-			systemf("ln -sf ../available/%s.conf /etc/nginx/enabled/", svcname);
-		else
-			systemf("rm -f /etc/nginx/enabled/%s.conf", svcname);
+		char src[256], dst[256];
+
+		snprintf(dst, sizeof(dst), "/etc/nginx/enabled/%s.conf", svcname);
+		if (ena) {
+			snprintf(src, sizeof(src), "../available/%s.conf", svcname);
+			erase(dst);
+			symlink(src, dst);
+		} else {
+			erase(dst);
+		}
 	}
 	if (fexistf("/etc/nginx/%s.app", svcname)) {
-		if (ena)
-			systemf("ln -sf ../%s.app /etc/nginx/app/%s.conf", svcname, svcname);
-		else
-			systemf("rm -f /etc/nginx/app/%s.conf", svcname);
+		char src[256], dst[256];
+
+		snprintf(dst, sizeof(dst), "/etc/nginx/app/%s.conf", svcname);
+		if (ena) {
+			snprintf(src, sizeof(src), "../%s.app", svcname);
+			erase(dst);
+			symlink(src, dst);
+		} else {
+			erase(dst);
+		}
 	}
 
 	ena ? finit_enable(svcname) : finit_disable(svcname);

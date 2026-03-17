@@ -348,7 +348,7 @@ static int del(const char *name)
 
 	/* Schedule a cleanup job for this container as soon as it has stopped */
 	snprintf(prune_dir, sizeof(prune_dir), "%s/%s", _PATH_CLEAN, name);
-	systemf("mkdir -p %s", prune_dir);
+	mkpath(prune_dir, 0755);
 
 	/* Finit cleanup:script runs when container is deleted, it will remove any image by-ID */
 	pp = popenf("r", "podman inspect %s 2>/dev/null | jq -r '.[].Id' 2>/dev/null", name);
