@@ -208,3 +208,13 @@ def has_fix(target, name="gps0"):
     if not state:
         return False
     return state.get("fix-mode") in ("2d", "3d")
+
+
+def has_position(target, name="gps0"):
+    """Check if GPS has a fix and all position fields are populated."""
+    state = get_gps_state(target, name)
+    if not state:
+        return False
+    if state.get("fix-mode") not in ("2d", "3d"):
+        return False
+    return all(k in state for k in ("latitude", "longitude", "altitude", "satellites-used"))

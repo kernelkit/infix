@@ -84,7 +84,11 @@ with infamy.Test() as test:
             until(lambda: gps.is_activated(target, "gps0"), attempts=500)
             until(lambda: gps.is_activated(target, "gps1"), attempts=500)
 
-        with test.step("Verify both GPS receivers have a fix"):
+        with test.step("Verify both GPS receivers report full position data"):
+            until(lambda: gps.has_position(target, "gps0"), attempts=60)
+            until(lambda: gps.has_position(target, "gps1"), attempts=60)
+
+        with test.step("Verify both GPS receivers have a satellite fix"):
             until(lambda: gps.has_fix(target, "gps0"), attempts=60)
             until(lambda: gps.has_fix(target, "gps1"), attempts=60)
 
@@ -106,7 +110,11 @@ with infamy.Test() as test:
             until(lambda: gps.is_activated(target, "gps0"), attempts=500)
             until(lambda: gps.is_activated(target, "gps1"), attempts=500)
 
-        with test.step("Verify both GPS receivers have a fix"):
+        with test.step("Verify both GPS receivers report full position data"):
+            until(lambda: gps.has_position(target, "gps0"), attempts=60)
+            until(lambda: gps.has_position(target, "gps1"), attempts=60)
+
+        with test.step("Verify both GPS receivers have a satellite fix"):
             until(lambda: gps.has_fix(target, "gps0"), attempts=60)
             until(lambda: gps.has_fix(target, "gps1"), attempts=60)
 
