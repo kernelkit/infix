@@ -489,10 +489,20 @@ class Device(Transport):
 
         return data
 
-    def copy(self, source, target):
+    def copy(self, source, target, retries=3):
         factory = self.get_datastore(source)
         data = factory.print_mem("json", with_siblings=True, pretty=False)
-        self.put_datastore(target, json.loads(data))
+        last_error = None
+        for attempt in range(0, retries):
+            try:
+                self.put_datastore(target, json.loads(data))
+                return
+            except requests.exceptions.ConnectionError as e:
+                last_error = e
+                if attempt < retries - 1:
+                    print(f"Failed copy {source}->{target}: {e}  Retrying ...")
+                    time.sleep(1)
+        raise last_error
 
     def reboot(self):
         self.call_rpc("ietf-system:system-restart")
