@@ -1,4 +1,4 @@
-From daf4378dbf9d48372e2d10e825d67ba652abda87 Mon Sep 17 00:00:00 2001
+From 868d13c0982a0633e4144d03776358837d92cd8b Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 22 Feb 2026 10:22:06 +0100
 Subject: [PATCH 3/3] zebra: don't resolve nexthop via inactive connected route
@@ -41,15 +41,16 @@ continue_up_tree so that the lookup can try parent prefixes rather than
 using a stale interface index.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  zebra/zebra_nhg.c | 9 +++++++++
  1 file changed, 9 insertions(+)
 
 diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
-index f5f78050f1..39b61c02f8 100644
+index ccb354cf86..7e5cc0212a 100644
 --- a/zebra/zebra_nhg.c
 +++ b/zebra/zebra_nhg.c
-@@ -2466,6 +2466,15 @@ static int nexthop_active(struct nexthop *nexthop, struct nhg_hash_entry *nhe,
+@@ -2467,6 +2467,15 @@ static int nexthop_active(struct nexthop *nexthop, struct nhg_hash_entry *nhe,
  							    nexthop->ifindex);
  
  			newhop = match->nhe->nhg.nexthop;
