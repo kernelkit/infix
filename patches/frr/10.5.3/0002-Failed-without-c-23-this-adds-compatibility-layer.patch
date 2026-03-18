@@ -1,7 +1,10 @@
-From 859bc23f318cfa019b104e83591f185f5bcc3bd4 Mon Sep 17 00:00:00 2001
+From 6f7ff746c4016ea6e6d81c7abad088f5a86f8fbf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Fri, 30 Jan 2026 13:00:12 +0100
 Subject: [PATCH 2/3] Failed without c++ 23, this adds compatibility layer
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
