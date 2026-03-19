@@ -1,7 +1,7 @@
-From 6bca750f866b5b14c4d9c3da68e5c8f1e4eee36c Mon Sep 17 00:00:00 2001
+From 91e8e41b5f22629820799b48977a90f57f01f424 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 19 May 2025 12:11:09 +0200
-Subject: [PATCH 14/38] http: add optional callbacks to EventStream
+Subject: [PATCH 14/42] http: add optional callbacks to EventStream
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -15,6 +15,7 @@ disconnects.
 
 Change-Id: Icfc2959e38b812b7c18f45976415209b29151c7b
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/http/EventStream.cpp | 18 +++++++++++++++---
  src/http/EventStream.h   | 10 ++++++++--

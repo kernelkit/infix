@@ -1,7 +1,7 @@
-From ffc52b2e454ae4ac4fa1948cb76a9469026d453e Mon Sep 17 00:00:00 2001
+From f71d4467409885078395c8d59c4390ddc1782d33 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Mon, 6 Oct 2025 22:35:27 +0200
-Subject: [PATCH 19/38] ping: use a monotonic timer
+Subject: [PATCH 19/42] ping: use a monotonic timer
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -16,6 +16,7 @@ deprecated, use the other function.
 
 Change-Id: I40383721ecb0f12bfcb3f638124a32150a29bf48
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/http/EventStream.cpp | 2 +-
  src/http/EventStream.h   | 4 ++--

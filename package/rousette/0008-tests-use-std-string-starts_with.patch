@@ -1,7 +1,7 @@
-From 9961430bacdd8dbac64a01b2a2ffb6a4b7e806b6 Mon Sep 17 00:00:00 2001
+From edc6f47fe49d9873f9c7257d66fbf8b362a6c7ac Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 13 May 2025 13:48:35 +0200
-Subject: [PATCH 08/38] tests: use std::string::starts_with
+Subject: [PATCH 08/42] tests: use std::string::starts_with
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -11,6 +11,7 @@ We are C++20, so we can use line, which is more readable.
 
 Change-Id: I40d4038b421f6bc1fcf320f609b50d5ce7018a45
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  tests/restconf_utils.cpp | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

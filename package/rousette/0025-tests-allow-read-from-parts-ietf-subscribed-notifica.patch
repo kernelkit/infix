@@ -1,7 +1,7 @@
-From c2413237501eea3125fe31a9701919d14402737f Mon Sep 17 00:00:00 2001
+From 163ebff977aff8fea8e342f35314697f89e5bb82 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 11 Nov 2025 17:30:33 +0100
-Subject: [PATCH 25/38] tests: allow read from parts
+Subject: [PATCH 25/42] tests: allow read from parts
  ietf-subscribed-notifications for anonymous user
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -16,6 +16,7 @@ access for users.
 
 Change-Id: I50e49c8c60b7e6be47c51f3d8cd546fbb6f49294
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  tests/restconf-reading.cpp | 5 ++++-
  tests/restconf_utils.cpp   | 4 ++++

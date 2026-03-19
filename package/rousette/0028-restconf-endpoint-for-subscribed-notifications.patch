@@ -1,7 +1,7 @@
-From b3a55ae0a1ef9e092b0c8f0d7c3dbd7baa708cc8 Mon Sep 17 00:00:00 2001
+From 5f4c781728d888d3e1c8db9c1c78c545caae824c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 29 Jul 2025 11:39:21 +0200
-Subject: [PATCH 28/38] restconf: endpoint for subscribed notifications
+Subject: [PATCH 28/42] restconf: endpoint for subscribed notifications
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -27,6 +27,7 @@ of boost::asio is not enough.
 
 Change-Id: I07dcdd3fb9ef4f05f93ae6dda0e0d71094a0bbfc
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt                              |   1 +
  src/restconf/DynamicSubscriptions.cpp       | 127 ++++++++++++-

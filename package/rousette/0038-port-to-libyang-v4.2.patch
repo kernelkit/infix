@@ -1,7 +1,7 @@
-From 5a1d0dac28c1a78e90d3906693228584adcf3ab1 Mon Sep 17 00:00:00 2001
+From 6adfafa9324ee0bfd50d0dab7c7657138a4a55a0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Thu, 20 Nov 2025 16:13:43 +0100
-Subject: [PATCH 38/38] port to libyang v4.2
+Subject: [PATCH 38/42] port to libyang v4.2
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -10,6 +10,7 @@ Organization: Wires
 Depends-on: https://gerrit.cesnet.cz/c/CzechLight/dependencies/+/9012
 Change-Id: I1ac6b25a3c1034f06917594732f066fd77d4b26b
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt                              |  2 +-
  src/restconf/Server.cpp                     | 10 +++++-----

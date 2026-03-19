@@ -1,7 +1,7 @@
-From c5558b12ee67280b6281b639c3d8652cec3c7fa6 Mon Sep 17 00:00:00 2001
+From da35875a545a4709da0662bb6ea104dcdba85582 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Wed, 19 Mar 2025 14:39:05 +0100
-Subject: [PATCH 32/38] restconf: add subscribed notifications filtering
+Subject: [PATCH 32/42] restconf: add subscribed notifications filtering
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -12,6 +12,7 @@ filters.
 
 Change-Id: Iee973a6a2d03b4a0d90f952afe5436ce701787ae
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt                              |  2 +-
  src/restconf/DynamicSubscriptions.cpp       | 13 ++++-

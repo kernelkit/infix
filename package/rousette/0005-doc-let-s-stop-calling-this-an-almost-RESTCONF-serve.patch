@@ -1,7 +1,7 @@
-From 37ca95c387d76c3f296a4e44b211772a1ca155ab Mon Sep 17 00:00:00 2001
+From 130a5f43c3cb06e0a97e8eb580f97a526c8c9d8a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Wed, 18 Jun 2025 12:01:04 +0200
-Subject: [PATCH 05/38] doc: let's stop calling this "an almost-RESTCONF
+Subject: [PATCH 05/42] doc: let's stop calling this "an almost-RESTCONF
  server"
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -10,6 +10,7 @@ Organization: Wires
 
 Change-Id: If55ace481c78d838a811ded76a564f8fb59f9233
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  README.md | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

@@ -1,7 +1,7 @@
-From 4eae6200aa812950ebbac1660a1899f4edf41e11 Mon Sep 17 00:00:00 2001
+From 7b8c1d90594dbc65eeb0ea767e3a50b92db8aea3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Wed, 7 Aug 2024 19:07:35 +0200
-Subject: [PATCH 06/38] close long-lived connections on SIGTERM
+Subject: [PATCH 06/42] close long-lived connections on SIGTERM
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -24,6 +24,7 @@ hope it is).
 Change-Id: If442134783ba1d699de47c51a9068378f53e8339
 Co-authored-by: Tomas Pecka <tomas.pecka@cesnet.cz>
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt                      |  1 +
  src/clock.cpp                       |  7 +--

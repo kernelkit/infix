@@ -1,7 +1,7 @@
-From e2c8036130a2265476579ffa9f4354741b54bbd5 Mon Sep 17 00:00:00 2001
+From b2be7b3b43cb95b5bfc1e0b774de7dbac4376809 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 13 Oct 2025 16:10:51 +0200
-Subject: [PATCH 27/38] refactor: restconf stream request types
+Subject: [PATCH 27/42] refactor: restconf stream request types
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -21,6 +21,7 @@ will not have it.
 See-also: 97ceef119c900c37bbaa27860c3b43cfa6d69f95 ("restconf: refactor uri parser for stream URIs")
 Change-Id: Idc1e05f7ff05cea84b5806f60e217605f75e7a9f
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/Server.cpp |  2 +-
  src/restconf/uri.cpp    | 15 ++++++++-------

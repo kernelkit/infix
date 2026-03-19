@@ -1,7 +1,7 @@
-From 5becffe8a1dd47c8836ce1800a1b72acdf86021f Mon Sep 17 00:00:00 2001
+From fc240be374f70b0f006bb83152364678ffdbfa86 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 12 May 2025 14:56:54 +0200
-Subject: [PATCH 10/38] http: send keep-alive pings from EventStream
+Subject: [PATCH 10/42] http: send keep-alive pings from EventStream
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -32,6 +32,7 @@ to the server when the server sends these "keep-alive comments".
 
 Change-Id: I57e510d0b61ac7ed032c582779780c64768b7d53
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/clock.cpp                       |  4 +-
  src/http/EventStream.cpp            | 44 +++++++++++++--

@@ -1,7 +1,7 @@
-From ff4ff1c193083feca76d9f0f4485e4b175c373c2 Mon Sep 17 00:00:00 2001
+From 1375ecb15ef534ca2856f46f957686ccc23ab7fc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Wed, 23 Jul 2025 14:27:26 +0200
-Subject: [PATCH 11/38] refactor: event streams use named constructors
+Subject: [PATCH 11/42] refactor: event streams use named constructors
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -18,6 +18,7 @@ This way, the code is more readable and the intention should be clearer.
 
 Change-Id: Iac96c49c20670dfe924d7c8db33328ed9c2fc9dd
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/clock.cpp                       |  3 +--
  src/http/EventStream.cpp            | 20 ++++++++++++++++++++

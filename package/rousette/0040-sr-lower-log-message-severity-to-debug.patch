@@ -1,0 +1,46 @@
+From 3d4262c6c2e334fa6577a69e0483a19f638e43fd Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 19 Mar 2026 17:21:20 +0100
+Subject: [PATCH 40/42] sr: lower log message severity to debug
+Organization: Wires
+
+On non-CzechLight hardware this message fires on every startup.  It is
+not a warning condition, and at debug level it won't clutter the log at
+the default info level.  Also lower the NACM startup diagnostic from
+info to debug for the same reason.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/auth/Nacm.cpp        | 2 +-
+ src/sr/OpticalEvents.cpp | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/auth/Nacm.cpp b/src/auth/Nacm.cpp
+index 284fa85..a4cc8cc 100644
+--- a/src/auth/Nacm.cpp
++++ b/src/auth/Nacm.cpp
+@@ -98,7 +98,7 @@ Nacm::Nacm(sysrepo::Connection conn)
+     m_srSub.onModuleChange(
+         "ietf-netconf-acm", [&](auto session, auto, auto, auto, auto, auto) {
+             m_anonymousEnabled = validAnonymousNacmRules(session, ANONYMOUS_USER_GROUP);
+-            spdlog::info("NACM config validation: Anonymous user access {}", m_anonymousEnabled ? "enabled" : "disabled");
++            spdlog::debug("NACM config validation: Anonymous user access {}", m_anonymousEnabled ? "enabled" : "disabled");
+             return sysrepo::ErrorCode::Ok;
+         },
+         std::nullopt,
+diff --git a/src/sr/OpticalEvents.cpp b/src/sr/OpticalEvents.cpp
+index 3f78ddc..a2cefe7 100644
+--- a/src/sr/OpticalEvents.cpp
++++ b/src/sr/OpticalEvents.cpp
+@@ -47,7 +47,7 @@ OpticalEvents::OpticalEvents(sysrepo::Session session)
+         }
+     }
+ 
+-    spdlog::warn("Telemetry disabled. No CzechLight YANG modules found.");
++    spdlog::debug("Telemetry disabled. No CzechLight YANG modules found.");
+ }
+ 
+ sysrepo::ErrorCode OpticalEvents::onChange(sysrepo::Session session, const std::string& module)
+-- 
+2.43.0
+
