@@ -16,6 +16,8 @@
  * (same thread — no locking required).
  */
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -683,6 +685,62 @@ static void type_browser_cb(AvahiServiceTypeBrowser *b,
 	}
 }
 
+/*
+ * Check if mDNS is enabled in the running datastore.
+ * Opens a temporary session to avoid disturbing the operational-DS session.
+ * Returns true if enabled or if the check cannot be performed (fail-safe).
+ */
+static bool mdns_is_enabled(struct avahi_ctx *ctx)
+{
+	sr_session_ctx_t *sess = NULL;
+	sr_data_t *data = NULL;
+	const char *s;
+	bool enabled = true; /* fail-safe: assume enabled */
+
+	if (!ctx->sr_conn)
+		return true;
+
+	if (sr_session_start(ctx->sr_conn, SR_DS_RUNNING, &sess))
+		return true;
+
+	if (!sr_get_node(sess, "/infix-services:mdns/enabled", 0, &data) && data) {
+		s = lyd_get_value(data->tree);
+		if (s && !strcmp(s, "false"))
+			enabled = false;
+		sr_release_data(data);
+	}
+
+	sr_session_stop(sess);
+	return enabled;
+}
+
+/*
+ * Retry timer callback: fires 2 s after AVAHI_CLIENT_FAILURE (and repeats up
+ * to 3 times).  Only logs ERROR once all retries are exhausted AND mDNS is
+ * enabled in the running config — this avoids noisy errors when the operator
+ * has simply disabled the mDNS service.
+ *
+ * Example log (mDNS enabled, daemon stays down):
+ *   avahi: mDNS daemon not responding (attempt 3/3) — check that the mdns
+ *   service is running
+ */
+static void avahi_retry_cb(struct ev_loop *loop, ev_timer *w, int revents)
+{
+	struct avahi_ctx *ctx = (struct avahi_ctx *)
+		((char *)w - offsetof(struct avahi_ctx, retry_timer));
+
+	ctx->fail_count++;
+	if (ctx->fail_count < 3) {
+		ev_timer_set(w, 2.0, 0.0);
+		ev_timer_start(loop, w);
+		return;
+	}
+
+	if (mdns_is_enabled(ctx))
+		ERROR("avahi: mDNS daemon not responding (attempt %d/3) — "
+		      "check that the mdns service is running", ctx->fail_count);
+}
+
 static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 {
 	struct avahi_ctx *ctx = userdata;
@@ -691,6 +749,11 @@ static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 
 	switch (state) {
 	case AVAHI_CLIENT_S_RUNNING:
+		if (ctx->fail_count > 0) {
+			ev_timer_stop(ctx->loop, &ctx->retry_timer);
+			NOTE("avahi: mDNS daemon reconnected");
+			ctx->fail_count = 0;
+		}
 		INFO("avahi: client running");
 		if (ctx->type_browser)
 			break;  /* Already browsing */
@@ -707,13 +770,20 @@ static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 		break;
 
 	case AVAHI_CLIENT_FAILURE:
-		ERROR("avahi: client failure: %s",
-		      avahi_strerror(avahi_client_errno(c)));
-
 		/*
-		 * Browsers are internally invalidated when the daemon dies.
-		 * Free them explicitly here so they're recreated on reconnect.
+		 * The daemon went away.  AVAHI_CLIENT_NO_FAIL means the client
+		 * will reconnect automatically — we just need to clean up the
+		 * now-invalid browsers so they're recreated on reconnect.
+		 *
+		 * Suppress the immediate ERROR; start a 2-second timer that
+		 * will log only if the daemon stays down for 3 attempts (~6 s)
+		 * and mDNS is enabled in the running config.
 		 */
+		if (!ev_is_active(&ctx->retry_timer)) {
+			ev_timer_init(&ctx->retry_timer, avahi_retry_cb, 2.0, 0.0);
+			ev_timer_start(ctx->loop, &ctx->retry_timer);
+		}
+
 		{
 			struct avahi_type_entry *te;
 
@@ -749,7 +819,8 @@ int avahi_ctx_init(struct avahi_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *s
 	int avahi_err;
 
 	memset(ctx, 0, sizeof(*ctx));
-	ctx->loop = loop;
+	ctx->loop    = loop;
+	ctx->sr_conn = sr_conn;
 	LIST_INIT(&ctx->neighbors);
 	LIST_INIT(&ctx->services);
 	LIST_INIT(&ctx->type_entries);
@@ -789,6 +860,9 @@ int avahi_ctx_init(struct avahi_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *s
 void avahi_ctx_exit(struct avahi_ctx *ctx)
 {
 	struct avahi_type_entry *te;
+
+	if (ev_is_active(&ctx->retry_timer))
+		ev_timer_stop(ctx->loop, &ctx->retry_timer);
 
 	/* Free browsers explicitly before freeing the client */
 	while (!LIST_EMPTY(&ctx->type_entries)) {
