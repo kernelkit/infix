@@ -39,6 +39,16 @@
 /* Maximum number of sysrepo event pipe file descriptors across all plugins */
 #define MAX_EVENT_FDS 64
 
+/*
+ * Restart sentinel: written to tmpfs after a successful bootstrap.
+ * Survives crash and clean exit within the same boot session (cleared by
+ * reboot since /run is tmpfs).  On restart confd detects it and skips the
+ * destructive bootstrap phases (gen-config, SHM wipe, sr_install_factory_config,
+ * clearing the running datastore, loading startup-config), letting the already-
+ * consistent sysrepo state drive a lightweight re-attach.
+ */
+#define SENTINEL_PATH "/run/confd.boot"
+
 /* Callback type names from sysrepo plugin API */
 #define SRP_INIT_CB    "sr_plugin_init_cb"
 #define SRP_CLEANUP_CB "sr_plugin_cleanup_cb"
@@ -64,6 +74,7 @@ struct plugin {
 };
 
 static sig_atomic_t pump_running = 1;
+static int restart;   /* set when sentinel found; suppresses conout() */
 int debug = 0;
 
 
@@ -76,6 +87,9 @@ static void conout(int rc, const char *fmt, ...)
 	const int col[] = { 32, 31, 33, 33 };
 	char buf[80];
 	va_list ap;
+
+	if (restart)
+		return;
 
 	snprintf(buf, sizeof(buf), sta, cr, col[rc], msg[rc], fmt);
 	va_start(ap, fmt);
@@ -593,7 +607,7 @@ int main(int argc, char **argv)
 	struct plugin *plugins = NULL;
 	sr_conn_ctx_t *conn = NULL;
 	int log_level = LOG_ERR;
-	pid_t gen_pid, pump_pid;
+	pid_t gen_pid = -1, pump_pid = -1;
 	uint32_t timeout_s = 60;
 	int plugin_count = 0;
 	int fatal_fail = 0;
@@ -682,19 +696,30 @@ int main(int argc, char **argv)
 	if (load_plugins(&plugins, &plugin_count))
 		ERROR("load_plugins failed (continuing)");
 
-	/* Start gen-config in parallel — child is reaped before we need the result */
-	conout(3, "Generating factory-config and failure-config");
-	gen_pid = fork();
-	if (gen_pid < 0) {
-		ERRNO("Failed to fork gen-config");
-		conout(1, "\n");
-		goto cleanup;
-	}
-	if (gen_pid == 0)
-		_exit(systemf("/usr/libexec/confd/gen-config"));
+	/*
+	 * Check for restart sentinel.  If present, sysrepo and the system are
+	 * already in a consistent state from a prior completed bootstrap — skip
+	 * all destructive phases and re-attach to the live datastore instead.
+	 */
+	restart = fexist(SENTINEL_PATH);
+	if (restart)
+		NOTE("Restart sentinel found, skipping bootstrap and re-attaching to sysrepo");
 
-	/* Phase 1: Wipe stale SHM for a clean slate */
-	wipe_sysrepo_shm();
+	if (!restart) {
+		/* Start gen-config in parallel — child is reaped before we need the result */
+		conout(3, "Generating factory-config and failure-config");
+		gen_pid = fork();
+		if (gen_pid < 0) {
+			ERRNO("Failed to fork gen-config");
+			conout(1, "\n");
+			goto cleanup;
+		}
+		if (gen_pid == 0)
+			_exit(systemf("/usr/libexec/confd/gen-config"));
+
+		/* Phase 1: Wipe stale SHM for a clean slate */
+		wipe_sysrepo_shm();
+	}
 
 	/* Phase 2: Connect to sysrepo (rebuilds SHM from installed YANG modules) */
 	r = sr_connect(0, &conn);
@@ -703,25 +728,27 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	/* Phase 3: Wait for gen-config to finish */
-	waitpid(gen_pid, &status, 0);
-	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-		ERROR("gen-config failed (status=%d)", status);
-		conout(1, "\n");
-		goto cleanup;
-	}
-	conout(0, "\n");
+	if (!restart) {
+		/* Phase 3: Wait for gen-config to finish */
+		waitpid(gen_pid, &status, 0);
+		if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+			ERROR("gen-config failed (status=%d)", status);
+			conout(1, "\n");
+			goto cleanup;
+		}
+		conout(0, "\n");
 
-	/* Phase 4: Install factory defaults into all datastores */
-	NOTE("Loading factory-default datastore from %s ...", factory_path);
-	conout(3, "Loading factory-default datastore");
-	r = sr_install_factory_config(conn, factory_path);
-	if (r != SR_ERR_OK) {
-		ERROR("sr_install_factory_config failed: %s", sr_strerror(r));
-		conout(1, "\n");
-		goto cleanup;
+		/* Phase 4: Install factory defaults into all datastores */
+		NOTE("Loading factory-default datastore from %s ...", factory_path);
+		conout(3, "Loading factory-default datastore");
+		r = sr_install_factory_config(conn, factory_path);
+		if (r != SR_ERR_OK) {
+			ERROR("sr_install_factory_config failed: %s", sr_strerror(r));
+			conout(1, "\n");
+			goto cleanup;
+		}
+		conout(0, "\n");
 	}
-	conout(0, "\n");
 
 	/* Phase 5: Start running-datastore session */
 	r = sr_session_start(conn, SR_DS_RUNNING, &sess);
@@ -730,19 +757,21 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	/* Phase 6: Clear running datastore so plugin init sees an empty
-	 * tree.  This matches the original bootstrap flow where running
-	 * was cleared with '{}' before sysrepo-plugind started.  When we
-	 * later load startup-config, the diff will be all-create which is
-	 * what the plugin callbacks expect. */
-	r = sr_replace_config(sess, NULL, NULL, timeout_ms);
-	if (r != SR_ERR_OK) {
-		ERROR("Failed to clear running datastore: %s", sr_strerror(r));
-		goto cleanup;
-	}
+	if (!restart) {
+		/* Phase 6: Clear running datastore so plugin init sees an empty
+		 * tree.  This matches the original bootstrap flow where running
+		 * was cleared with '{}' before sysrepo-plugind started.  When we
+		 * later load startup-config, the diff will be all-create which is
+		 * what the plugin callbacks expect. */
+		r = sr_replace_config(sess, NULL, NULL, timeout_ms);
+		if (r != SR_ERR_OK) {
+			ERROR("Failed to clear running datastore: %s", sr_strerror(r));
+			goto cleanup;
+		}
 
-	/* Enable test-mode YANG feature if needed */
-	maybe_enable_test_mode();
+		/* Enable test-mode YANG feature if needed */
+		maybe_enable_test_mode();
+	}
 
 	/* Phase 7: Initialize plugins (subscribe to YANG module changes) */
 	conout(3, "Loading confd plugins");
@@ -767,39 +796,56 @@ int main(int argc, char **argv)
 			plugins[i].get_subs(plugins[i].private_data, &plugins[i].sub, &plugins[i].fsub);
 	}
 
-	/* Phase 9: Fork event pump process for bootstrap.
-	 * With SR_SUBSCR_NO_THREAD, sr_replace_config() blocks waiting
-	 * for callbacks.  The pump process processes those events. */
-	pump_pid = fork();
-	if (pump_pid < 0) {
-		ERRNO("Failed to fork event pump");
-		goto cleanup;
-	}
-	if (pump_pid == 0)
-		event_pump(plugins, plugin_count);
+	if (!restart) {
+		/* Phase 9: Fork event pump process for bootstrap.
+		 * With SR_SUBSCR_NO_THREAD, sr_replace_config() blocks waiting
+		 * for callbacks.  The pump process processes those events. */
+		pump_pid = fork();
+		if (pump_pid < 0) {
+			ERRNO("Failed to fork event pump");
+			goto cleanup;
+		}
+		if (pump_pid == 0)
+			event_pump(plugins, plugin_count);
 
-	/* Phase 10: Load startup config -- plugins are now subscribed, so
-	 * sr_replace_config() will trigger their change callbacks.
-	 * The event pump process processes those callbacks. */
-	conout(3, "Loading startup-config");
-	if (bootstrap_config(conn, sess, factory_path, startup_path,
-			     failure_path, test_path, timeout_ms)) {
+		/* Phase 10: Load startup config -- plugins are now subscribed, so
+		 * sr_replace_config() will trigger their change callbacks.
+		 * The event pump process processes those callbacks. */
+		conout(3, "Loading startup-config");
+		if (bootstrap_config(conn, sess, factory_path, startup_path,
+				     failure_path, test_path, timeout_ms)) {
+			kill(pump_pid, SIGTERM);
+			waitpid(pump_pid, NULL, 0);
+			conout(1, "\n");
+			goto cleanup;
+		}
+		conout(0, "\n");
+
+		/* Phase 11: Stop event pump — bootstrap is done */
 		kill(pump_pid, SIGTERM);
 		waitpid(pump_pid, NULL, 0);
-		conout(1, "\n");
-		goto cleanup;
 	}
-	conout(0, "\n");
-
-	/* Phase 11: Stop event pump — bootstrap is done */
-	kill(pump_pid, SIGTERM);
-	waitpid(pump_pid, NULL, 0);
 
 	/* No more progress to show, go to quiet daemon mode */
 	quiet_now();
 
 	/* Signal that bootstrap is complete (dbus, resolvconf depend on this) */
 	symlink("/run/finit/cond/reconf", "/run/finit/cond/usr/bootstrap");
+
+	/*
+	 * Write restart sentinel.  From this point on, sysrepo and the system
+	 * are in a consistent state.  If confd exits for any reason (crash or
+	 * clean shutdown) and Finit restarts it, the sentinel tells it to skip
+	 * the destructive bootstrap phases and re-attach to the live datastore.
+	 * The sentinel lives in /run (tmpfs) so a real reboot always starts clean.
+	 */
+	{
+		int sfd = open(SENTINEL_PATH, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+		if (sfd >= 0)
+			close(sfd);
+		else
+			WARN("Failed to write restart sentinel %s: %m", SENTINEL_PATH);
+	}
 
 	/* Phase 12: Steady-state — libev event loop */
 	{
