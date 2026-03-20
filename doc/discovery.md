@@ -43,6 +43,29 @@ admin@fe80::ff:fec0:ffed%tap0's password: admin
 admin@infix-c0-ff-ee:~$ 
 ```
 
+### Windows
+
+Infix advertises a `_workstation._tcp` DNS-SD record alongside its other
+mDNS services.  Windows 10 (build 1709+) and Windows 11 recognise this
+record and show the device in **File Explorer → Network** automatically —
+no extra software required.
+
+From the command line, use the `.local` hostname directly:
+
+```cmd
+C:\> ping infix-c0-ff-ee.local
+C:\> ssh admin@infix-c0-ff-ee.local
+```
+
+> [!NOTE]
+> IPv6 multicast ping (`ping ff02::1%if1`) may not display responses on
+> Windows even though the Infix device replies correctly.  If you need to
+> confirm connectivity, Wireshark will show the ICMPv6 echo replies
+> arriving.  Use mDNS (see [mDNS-SD](#mdns-sd) below) as the reliable
+> alternative.
+
+![Wireshark showing IPv6 ping responses](https://github.com/addiva-elektronik/alder/assets/122900029/c45d7726-448f-4c30-878e-bcf976dff531)
+
 
 ## LLDP
 
