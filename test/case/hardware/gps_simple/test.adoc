@@ -19,12 +19,14 @@ image::topology.svg[GPS receiver basic test topology, align=center, scaledwidth=
 . Set up topology and attach to target DUT
 . Configure GPS hardware components
 . Verify both GPS receivers are activated
-. Verify both GPS receivers have a fix
+. Verify both GPS receivers report full position data
+. Verify both GPS receivers have a satellite fix
 . Verify gps0 position is near the coordinates
 . Verify gps1 position is near the coordinates
 . Save the configuration to startup configuration and reboot
 . Verify both GPS receivers are activated
-. Verify both GPS receivers have a fix
+. Verify both GPS receivers report full position data
+. Verify both GPS receivers have a satellite fix
 . Verify gps0 position is near the coordinates
 . Verify gps1 position is near the coordinates
 

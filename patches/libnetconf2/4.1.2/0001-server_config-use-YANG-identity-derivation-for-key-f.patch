@@ -1,0 +1,217 @@
+From dfa37a99b335b99e89df1be87b240123178cf1f0 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 19 Mar 2026 15:15:52 +0100
+Subject: [PATCH 1/2] server_config: use YANG identity derivation for key
+ formats
+Organization: Wires
+
+Replace plain string comparison of public/private key format identities
+with proper derived-from-or-self() semantics.  This allows vendor-extended
+identities (e.g. an identity with base ct:subject-public-key-info-format)
+to be silently mapped to the correct internal type without any warning.
+
+Also silence the spurious warning for symmetric-keys: the feature is
+intentionally disabled for NETCONF, but a shared keystore may legitimately
+contain symmetric keys used by other applications, e.g, Wi-Fi passphrases,
+WireGuard PSKs, etc.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/server_config.c | 131 ++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 107 insertions(+), 24 deletions(-)
+
+diff --git a/src/server_config.c b/src/server_config.c
+index 9f85655..54c470c 100644
+--- a/src/server_config.c
++++ b/src/server_config.c
+@@ -110,6 +110,64 @@ nc_lyd_find_child(const struct lyd_node *node, const char *child, int fail_if_no
+     return 0;
+ }
+ 
++/**
++ * @brief Recursively check if @p ident is in the derived tree of @p base.
++ *
++ * @param[in] base Base identity to search from.
++ * @param[in] ident Identity to find.
++ * @return 1 if @p ident is @p base or derived from it, 0 otherwise.
++ */
++static int
++nc_ident_derived_or_self(const struct lysc_ident *base, const struct lysc_ident *ident)
++{
++    LY_ARRAY_COUNT_TYPE i;
++
++    if (base == ident)
++        return 1;
++
++    LY_ARRAY_FOR(base->derived, i) {
++        if (nc_ident_derived_or_self(base->derived[i], ident))
++            return 1;
++    }
++
++    return 0;
++}
++
++/**
++ * @brief Check if a YANG identity derives from (or is) a named identity in a given module.
++ *
++ * Implements YANG derived-from-or-self() semantics so that vendor-extended
++ * format identities (e.g. an identity with base ct:subject-public-key-info-format)
++ * are treated the same as their standard base.
++ *
++ * @param[in] ctx libyang context used to look up the base module.
++ * @param[in] ident Identity value from the data node.
++ * @param[in] base_mod Name of the module that defines the base identity.
++ * @param[in] base_name Name of the base identity.
++ * @return 1 if @p ident is or derives from the named base, 0 otherwise.
++ */
++static int
++nc_ident_is_derived_from(const struct ly_ctx *ctx, const struct lysc_ident *ident,
++			 const char *base_mod, const char *base_name)
++{
++    const struct lysc_ident *base;
++    const struct lys_module *mod;
++    LY_ARRAY_COUNT_TYPE i;
++
++    mod = ly_ctx_get_module_implemented(ctx, base_mod);
++    if (!mod)
++        return 0;
++
++    LY_ARRAY_FOR(mod->identities, i) {
++        if (!strcmp(mod->identities[i].name, base_name)) {
++            base = &mod->identities[i];
++            return nc_ident_derived_or_self(base, ident);
++        }
++    }
++
++    return 0;
++}
++
+ #ifdef NC_ENABLED_SSH_TLS
+ 
+ /**
+@@ -746,23 +804,32 @@ static int
+ config_pubkey_format(const struct lyd_node *node, enum nc_operation parent_op, struct nc_public_key *pubkey)
+ {
+     enum nc_operation op;
+-    const char *format;
++    const struct lysc_ident *ident;
+ 
+     NC_NODE_GET_OP(node, parent_op, &op);
+ 
+     if (op == NC_OP_DELETE) {
+         pubkey->type = NC_PUBKEY_FORMAT_UNKNOWN;
+     } else if ((op == NC_OP_CREATE) || (op == NC_OP_REPLACE)) {
+-        format = ((struct lyd_node_term *)node)->value.ident->name;
+-        assert(format);
+-        if (!strcmp(format, "ssh-public-key-format")) {
++        ident = ((struct lyd_node_term *)node)->value.ident;
++        assert(ident);
++
++        /*
++	 * Use derived-from-or-self semantics so that vendor-extended identities
++         * (e.g. an identity with base ct:ssh-public-key-format) are correctly
++         * mapped without requiring explicit registration in libnetconf2.
++	 */
++        if (nc_ident_is_derived_from(LYD_CTX(node), ident, "ietf-crypto-types", "ssh-public-key-format")) {
+             pubkey->type = NC_PUBKEY_FORMAT_SSH;
+-        } else if (!strcmp(format, "subject-public-key-info-format")) {
++        } else if (nc_ident_is_derived_from(LYD_CTX(node), ident, "ietf-crypto-types", "subject-public-key-info-format")) {
+             pubkey->type = NC_PUBKEY_FORMAT_X509;
+         } else {
+-            /* do not fail, the key may still be usable, or it may have come from a keystore/truststore
+-             * and have a different purpose other than NETCONF */
+-            WRN(NULL, "Public key format \"%s\" not supported. The key may not be usable.", format);
++            /*
++	     * The key format is not one used by NETCONF - it may be present in the
++             * keystore for other purposes (e.g. TLS, WireGuard, Wi-Fi).  Do not
++             * fail; just mark it unusable for NETCONF and continue.
++	     */
++            VRB(NULL, "Public key format \"%s\" not used by NETCONF, ignoring.", ident->name);
+             pubkey->type = NC_PUBKEY_FORMAT_UNKNOWN;
+         }
+     }
+@@ -792,29 +859,35 @@ config_pubkey_data(const struct lyd_node *node, enum nc_operation parent_op, str
+ static int
+ config_privkey_format(const struct lyd_node *node, enum nc_operation parent_op, struct nc_private_key *privkey)
+ {
++    const struct lysc_ident *ident;
+     enum nc_operation op;
+-    const char *format;
+ 
+     NC_NODE_GET_OP(node, parent_op, &op);
+ 
+     if (op == NC_OP_DELETE) {
+         privkey->type = NC_PRIVKEY_FORMAT_UNKNOWN;
+     } else if ((op == NC_OP_CREATE) || (op == NC_OP_REPLACE)) {
+-        format = ((struct lyd_node_term *)node)->value.ident->name;
+-        assert(format);
+-
+-        if (!strcmp(format, "rsa-private-key-format")) {
++        ident = ((struct lyd_node_term *)node)->value.ident;
++        assert(ident);
++        /*
++	 * Use derived-from-or-self semantics so that vendor-extended identities
++         * are correctly mapped without requiring explicit registration here.
++	 */
++        if (nc_ident_is_derived_from(LYD_CTX(node), ident, "ietf-crypto-types", "rsa-private-key-format")) {
+             privkey->type = NC_PRIVKEY_FORMAT_RSA;
+-        } else if (!strcmp(format, "ec-private-key-format")) {
++        } else if (nc_ident_is_derived_from(LYD_CTX(node), ident, "ietf-crypto-types", "ec-private-key-format")) {
+             privkey->type = NC_PRIVKEY_FORMAT_EC;
+-        } else if (!strcmp(format, "private-key-info-format")) {
++        } else if (nc_ident_is_derived_from(LYD_CTX(node), ident, "ietf-crypto-types", "private-key-info-format")) {
+             privkey->type = NC_PRIVKEY_FORMAT_X509;
+-        } else if (!strcmp(format, "openssh-private-key-format")) {
++        } else if (nc_ident_is_derived_from(LYD_CTX(node), ident, "ietf-crypto-types", "openssh-private-key-format")) {
+             privkey->type = NC_PRIVKEY_FORMAT_OPENSSH;
+         } else {
+-            /* do not fail, the key may still be usable, or it may have come from a keystore/truststore
+-             * and have a different purpose other than NETCONF */
+-            WRN(NULL, "Private key format \"%s\" not supported. The key may not be usable.", format);
++            /*
++	     * The key format is not one used by NETCONF - it may be present in the
++             * keystore for other purposes.  Do not fail; just mark it unusable for
++             * NETCONF and continue.
++	     */
++            VRB(NULL, "Private key format \"%s\" not used by NETCONF, ignoring.", ident->name);
+             privkey->type = NC_PRIVKEY_FORMAT_UNKNOWN;
+         }
+     }
+@@ -4223,9 +4296,14 @@ config_asymmetric_key(const struct lyd_node *node, enum nc_operation parent_op,
+         NC_CHECK_RET(config_encrypted_privkey_data(encrypted, op));
+     }
+ 
+-    /* config asymmetric key certificates */
+-    NC_CHECK_RET(nc_lyd_find_child(node, "certificates", 1, &n));
+-    NC_CHECK_RET(config_asymmetric_key_certs(n, op, entry));
++    /*
++     * config asymmetric key certificates (optional: keys shared with other
++     * applications may legitimately have no certificates node)
++     */
++    NC_CHECK_RET(nc_lyd_find_child(node, "certificates", 0, &n));
++    if (n) {
++        NC_CHECK_RET(config_asymmetric_key_certs(n, op, entry));
++    }
+ 
+     /* config generate csr */
+     NC_CHECK_RET(nc_lyd_find_child(node, "generate-csr", 0, &n));
+@@ -4261,9 +4339,14 @@ config_asymmetric_keys(const struct lyd_node *node, enum nc_operation parent_op,
+ }
+ 
+ static int
+-config_symmetric_keys(const struct lyd_node *node, enum nc_operation UNUSED(parent_op))
++config_symmetric_keys(const struct lyd_node *UNUSED(node), enum nc_operation UNUSED(parent_op))
+ {
+-    CONFIG_LOG_UNSUPPORTED(node);
++    /*
++     * Symmetric keys are not supported for NETCONF.  They may legitimately
++     * be present in a shared keystore used by other applications, e.g.,
++     * Wi-Fi passphrases, WireGuard PSKs.  Silently ignore them rather than
++     * emitting a warning that would confuse operators.
++     */
+     return 0;
+ }
+ 
+-- 
+2.43.0
+

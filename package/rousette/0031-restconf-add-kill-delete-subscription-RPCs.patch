@@ -1,7 +1,7 @@
-From 22cfcbf52be604afe0caafc892f4b7befe03b9db Mon Sep 17 00:00:00 2001
+From f8d6053c6777476384d9c32564e5faf355edbafa Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 8 Apr 2025 17:00:59 +0200
-Subject: [PATCH 31/38] restconf: add {kill,delete}-subscription RPCs
+Subject: [PATCH 31/42] restconf: add {kill,delete}-subscription RPCs
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -21,6 +21,7 @@ disconnects.
 
 Change-Id: I443d6fd88f2797045b5ae0a7d7e1a761fe74e7cb
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/DynamicSubscriptions.cpp       |  44 +++++
  src/restconf/DynamicSubscriptions.h         |   2 +

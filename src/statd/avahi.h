@@ -51,18 +51,21 @@ struct avahi_type_entry {
 	LIST_ENTRY(avahi_type_entry) link;
 };
 
-struct avahi_ctx {
+struct mdns_ctx {
 	struct ev_loop          *loop;
+	sr_conn_ctx_t           *sr_conn;      /* Connection for running-DS config queries */
 	sr_session_ctx_t        *sr_ses;       /* Dedicated operational DS write session */
 	AvahiClient             *client;
 	AvahiServiceTypeBrowser *type_browser;
 	AvahiPoll                poll_api;     /* libev-backed vtable */
+	unsigned int             fail_count;   /* Consecutive avahi-daemon connection failures */
+	ev_timer                 retry_timer;  /* Deferred error-log timer */
 	LIST_HEAD(, avahi_neighbor)   neighbors;
 	LIST_HEAD(, avahi_service)    services;    /* Flat list; keyed by 5-tuple */
 	LIST_HEAD(, avahi_type_entry) type_entries;
 };
 
-int  avahi_ctx_init(struct avahi_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *sr_conn);
-void avahi_ctx_exit(struct avahi_ctx *ctx);
+int  mdns_ctx_init(struct mdns_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *sr_conn);
+void mdns_ctx_exit(struct mdns_ctx *ctx);
 
 #endif

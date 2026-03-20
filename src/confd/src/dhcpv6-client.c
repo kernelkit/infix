@@ -80,7 +80,7 @@ static void add_v6(const char *ifname, struct lyd_node *cfg)
 	const char *metric = lydx_get_cattr(cfg, "route-preference");
 	const char *duid = lydx_get_cattr(cfg, "duid");
 	char *client_duid = NULL, *options = NULL;
-	const char *action = "disable";
+	int ena = 0;
 	const char *addr_mode = "-N try";  /* Default: stateful mode */
 	char prefix_del[16] = { 0 };
 	bool request_pd = false;
@@ -127,9 +127,10 @@ static void add_v6(const char *ifname, struct lyd_node *cfg)
 		options ?: "", client_duid ?: "",
 		ifname, ifname);
 	fclose(fp);
-	action = "enable";
+	ena = 1;
 err:
-	systemf("initctl -bfqn %s dhcpv6-client-%s", action, ifname);
+	ena ? finit_enablef("dhcpv6-client-%s", ifname)
+	    : finit_disablef("dhcpv6-client-%s", ifname);
 	if (options)
 		free(options);
 	if (client_duid)
@@ -138,7 +139,7 @@ err:
 
 static void del_v6(const char *ifname)
 {
-	systemf("initctl -bfq delete dhcpv6-client-%s", ifname);
+	finit_deletef("dhcpv6-client-%s", ifname);
 }
 
 int dhcpv6_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,

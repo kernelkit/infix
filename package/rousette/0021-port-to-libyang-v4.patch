@@ -1,7 +1,7 @@
-From 8077a63ac97529d56782d2315f23c44f6036b85f Mon Sep 17 00:00:00 2001
+From 462dca24ef3cb3ae8bb5c6f7a349b94308281f9c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Thu, 23 Oct 2025 18:17:37 +0200
-Subject: [PATCH 21/38] port to libyang v4
+Subject: [PATCH 21/42] port to libyang v4
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -41,6 +41,7 @@ Depends-on: https://gerrit.cesnet.cz/c/CzechLight/dependencies/+/8990
 Bug: https://github.com/CESNET/libyang/pull/2448
 Depends-on: https://github.com/sysrepo/sysrepo/commit/6dc5641762962b93d54a54443e2fd43aa319a7a6
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt                   |  6 +++---
  src/restconf/Server.cpp          |  2 +-

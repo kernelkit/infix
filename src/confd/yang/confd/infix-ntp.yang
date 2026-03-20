@@ -33,8 +33,10 @@ module infix-ntp {
     description "Add stratumweight to NTP server configuration.
 
                  Allows tuning the weight of stratum in NTP source selection
-                 relative to measured distance. Setting to 0.0 ensures lower
-                 stratum sources are always preferred regardless of distance.";
+                 relative to measured distance.  Higher values give more preference
+                 to lower-stratum sources; use 1.0 to guarantee stratum-based
+                 selection on local networks.  Setting to 0.0 disables stratum
+                 weighting (pure distance-based selection).";
     reference "internal";
   }
 
@@ -75,13 +77,19 @@ module infix-ntp {
       description
         "Weight of stratum in NTP source selection relative to measured distance.
 
-         A one-stratum difference counts as this many seconds of additional
-         distance when comparing candidates.
+         Each stratum level adds this many seconds of effective distance when
+         comparing candidates.  Higher values give more preference to lower-stratum
+         sources.
 
-         The default (0.001 = 1ms) means stratum only wins when distance
-         differences are less than 1ms. Setting it to 0.0 ensures that a
-         lower-stratum source is always preferred over a higher-stratum source,
-         regardless of their measured distances.";
+         The default (0.001 = 1ms per stratum level) is suitable for most networks.
+         On a LAN where all servers have similar round-trip times, a lower-stratum
+         source wins unless its synchronization distance degrades (e.g., due to
+         missed polls) by more than this amount.
+
+         Use 1.0 or larger to guarantee stratum-based selection on local networks
+         regardless of transient distance fluctuations.  Setting it to 0.0 disables
+         stratum weighting; selection is then based purely on measured
+         synchronization distance.";
     }
 
     container makestep {

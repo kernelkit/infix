@@ -16,3 +16,28 @@
 &thermal_sensor {
 	status = "disabled";
 };
+
+/*
+ * Enable SDMMC high speed mode, please note that neither 'mmc-ddr-1_8v'
+ * or 'mmc-hs200-1_8v' work, even though [1] states they are supported,
+ * the errata [2] tells a different story: "Using mode SDR104, HS200 or
+ * HS400 may lead to tuning issues, data read errors or clock switching
+ * failures." — empirical testing has proved this on a rev 5 board.
+ *
+ * [1]: https://github.com/linux4sam/linux-at91/commit/5b35500
+ * [2]: https://ww1.microchip.com/downloads/en/DeviceDoc/SAMA7G5-Series-Silicon-Errata-and-Data-Sheet-Clarification-DS80001016A.pdf
+ */
+&sdmmc0 {
+	/delete-property/ sdhci-caps-mask;
+	cap-mmc-highspeed;
+	cap-mmc-hw-reset;
+};
+
+&sdmmc1 {
+	/delete-property/ no-1-8-v;
+	/delete-property/ sdhci-caps-mask;
+};
+
+&sdmmc2 {
+	/delete-property/ sdhci-caps-mask;
+};

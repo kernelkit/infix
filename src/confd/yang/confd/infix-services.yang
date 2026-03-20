@@ -31,9 +31,11 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
-  revision 2026-03-04 {
-   description "Add hostname leaf to mdns container for avahi host-name override.
-                Add neighbors container to mdns for mDNS-SD neighbor table.";
+  revision 2026-03-20 {
+    description "Add hostname leaf to mdns container for avahi host-name override.
+                 Add neighbors container to mdns for mDNS-SD neighbor table.
+                 Add certificate leaf to web container for TLS keystore reference.";
+    reference "internal";
   }
   revision 2025-12-10 {
     description "Adapt to changes in final version of ietf-keystore";
@@ -265,6 +267,12 @@ module infix-services {
 
   container web {
     description "Web services";
+
+    leaf certificate {
+      description "Reference to asymmetric key in central keystore with an
+                   associated certificate. By default 'gencert' is used.";
+      type ks:central-asymmetric-key-ref;
+    }
 
     leaf enabled {
       description "Enable or disable on all web services.

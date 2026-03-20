@@ -1,0 +1,134 @@
+From 2877c5a6a139b15e42f99c5aba4127b427154707 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 19 Mar 2026 17:21:25 +0100
+Subject: [PATCH 41/42] restconf: add audit trail for datastore write
+ operations
+Organization: Wires
+
+Log an info message before and after committing changes to sysrepo,
+matching the style of netopeer2's audit trail.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/restconf/Server.cpp        | 14 ++++++++++++++
+ src/restconf/utils/sysrepo.cpp | 17 +++++++++++++++++
+ src/restconf/utils/sysrepo.h   |  1 +
+ 3 files changed, 32 insertions(+)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 3c7c3c7..15eec92 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -17,10 +17,12 @@
+ #include "restconf/Exceptions.h"
+ #include "restconf/NotificationStream.h"
+ #include "auth/Http.h"
++#include "NacmIdentities.h"
+ #include "restconf/Server.h"
+ #include "restconf/YangSchemaLocations.h"
+ #include "restconf/uri.h"
+ #include "restconf/utils/dataformat.h"
++#include "restconf/utils/sysrepo.h"
+ #include "restconf/utils/yang.h"
+ #include "sr/OpticalEvents.h"
+ 
+@@ -594,8 +596,10 @@ void processPost(std::shared_ptr<RequestContext> requestCtx, const std::chrono::
+     createdNodes.begin()->newMeta(*modNetconf, "operation", "create");
+     yangInsert(*requestCtx, *createdNodes.begin());
+ 
++    spdlog::info("user \"{}\" committing changes to {} ...", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+     requestCtx->sess.editBatch(*edit, sysrepo::DefaultOperation::Merge);
+     requestCtx->sess.applyChanges(timeout);
++    spdlog::info("user \"{}\" committed changes to {}.", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+ 
+     requestCtx->res.write_head(201,
+                                {
+@@ -682,8 +686,10 @@ void processYangPatchImpl(const std::shared_ptr<RequestContext>& requestCtx, con
+     }
+ 
+     if (mergedEdits) {
++        spdlog::info("user \"{}\" committing changes to {} ...", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+         requestCtx->sess.editBatch(*mergedEdits, sysrepo::DefaultOperation::Merge);
+         requestCtx->sess.applyChanges(timeout);
++        spdlog::info("user \"{}\" committed changes to {}.", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+     }
+ }
+ 
+@@ -726,12 +732,16 @@ void processPutOrPlainPatch(std::shared_ptr<RequestContext> requestCtx, const st
+         validateInputMetaAttributes(ctx, *edit);
+ 
+         if (requestCtx->req.method() == "PUT") {
++            spdlog::info("user \"{}\" committing changes to {} ...", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+             requestCtx->sess.replaceConfig(edit, std::nullopt, timeout);
++            spdlog::info("user \"{}\" committed changes to {}.", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+ 
+             requestCtx->res.write_head(edit ? 201 : 204, {CORS});
+         } else {
++            spdlog::info("user \"{}\" committing changes to {} ...", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+             requestCtx->sess.editBatch(*edit, sysrepo::DefaultOperation::Merge);
+             requestCtx->sess.applyChanges(timeout);
++            spdlog::info("user \"{}\" committed changes to {}.", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+             requestCtx->res.write_head(204, {CORS});
+         }
+         requestCtx->res.end();
+@@ -763,8 +773,10 @@ void processPutOrPlainPatch(std::shared_ptr<RequestContext> requestCtx, const st
+         yangInsert(*requestCtx, *replacementNode);
+     }
+ 
++    spdlog::info("user \"{}\" committing changes to {} ...", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+     requestCtx->sess.editBatch(*edit, sysrepo::DefaultOperation::Merge);
+     requestCtx->sess.applyChanges(timeout);
++    spdlog::info("user \"{}\" committed changes to {}.", requestCtx->sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(requestCtx->sess.activeDatastore()));
+ 
+     if (requestCtx->req.method() == "PUT") {
+         requestCtx->res.write_head(nodeExisted ? 204 : 201, {CORS});
+@@ -1219,8 +1231,10 @@ Server::Server(
+                             deletedNode->newMeta(*netconf, "operation", "delete");
+                         }
+ 
++                        spdlog::info("user \"{}\" committing changes to {} ...", sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(sess.activeDatastore()));
+                         sess.editBatch(*edit, sysrepo::DefaultOperation::Merge);
+                         sess.applyChanges(timeout);
++                        spdlog::info("user \"{}\" committed changes to {}.", sess.getNacmUser().value_or(ANONYMOUS_USER), datastoreToString(sess.activeDatastore()));
+                     } catch (const sysrepo::ErrorWithCode& e) {
+                         if (e.code() == sysrepo::ErrorCode::Unauthorized) {
+                             throw ErrorResponse(403, "application", "access-denied", "Access denied.", restconfRequest.path);
+diff --git a/src/restconf/utils/sysrepo.cpp b/src/restconf/utils/sysrepo.cpp
+index 9f14cc7..d3bcc39 100644
+--- a/src/restconf/utils/sysrepo.cpp
++++ b/src/restconf/utils/sysrepo.cpp
+@@ -38,4 +38,21 @@ sysrepo::Datastore datastoreFromString(const std::string& datastore)
+ 
+     throw std::runtime_error("Unknown datastore '" + datastore + "'");
+ }
++
++std::string datastoreToString(sysrepo::Datastore datastore)
++{
++    switch (datastore) {
++    case sysrepo::Datastore::Running:
++        return "running";
++    case sysrepo::Datastore::Operational:
++        return "operational";
++    case sysrepo::Datastore::Candidate:
++        return "candidate";
++    case sysrepo::Datastore::Startup:
++        return "startup";
++    case sysrepo::Datastore::FactoryDefault:
++        return "factory-default";
++    }
++    throw std::runtime_error("Unknown datastore");
++}
+ }
+diff --git a/src/restconf/utils/sysrepo.h b/src/restconf/utils/sysrepo.h
+index 0eced9e..b8dd399 100644
+--- a/src/restconf/utils/sysrepo.h
++++ b/src/restconf/utils/sysrepo.h
+@@ -27,4 +27,5 @@ public:
+ };
+ 
+ sysrepo::Datastore datastoreFromString(const std::string& datastore);
++std::string datastoreToString(sysrepo::Datastore datastore);
+ }
+-- 
+2.43.0
+

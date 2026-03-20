@@ -1,7 +1,7 @@
-From 5592ae49cd7607fdcb2c9e554a521b53545e761b Mon Sep 17 00:00:00 2001
+From 228aa9ea848d437565b5f90972a0c4b23b279337 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 21 Oct 2025 17:23:44 +0200
-Subject: [PATCH 24/38] restconf: validate input for internal rpcs
+Subject: [PATCH 24/42] restconf: validate input for internal rpcs
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -23,6 +23,7 @@ the RPC.
 
 Change-Id: I55296895e6993b4ca27d21ce2a64ec2d159a35fc
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/Server.cpp | 36 +++++++++++++++++++++++++++++-------
  1 file changed, 29 insertions(+), 7 deletions(-)

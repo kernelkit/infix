@@ -243,20 +243,59 @@ spanning tree matches the expected one.
 
 Integration to Infix
 --------------------
-When the test environment is started with Qeneth, it doesn't use the 
-base image directly. Instead, it creates a copy and inserts a `test-mode`
-flag into it. During the bootstrap phase, the system checks for the 
-presence of the test-mode flag (file).
 
-If the flag exists, a 'test-config.cfg' file is generated. In the 
-following step, the system loads the 'test-config' instead of the
-standard `startup-config` (or `factory-config`). This configuration
-is simple and safe, equivalent to the one used in 'Secure Mode' 
-(also known as 'failure-config').
+### Test Mode
 
-Additionally, the configuration enables extra RPCs related to system 
-restart and configuration overrides, allowing tests to be run even on 
-systems where the factory configuration may potentially create L2 loops. 
+Infix supports a *test mode* that makes devices safe and predictable to
+test against.  When active, each boot starts from a known-good
+`test-config` (equivalent to the failure/secure config) instead of the
+stored startup or factory configuration.  This prevents any persistent
+configuration from interfering with tests and avoids L2 loops that a
+factory config might create.  It also enables two extra RPCs used by
+Infamy:
+
+- `infix-test:test/reset` — reload the `test-config` into the running
+  datastore (called by `env.attach()` at the start of each test)
+- `infix-test:test/override-startup` — boot from the startup datastore
+  once, instead of the `test-config` (used by tests that verify
+  save-and-reboot behaviour)
+
+Test mode is activated by the presence of an empty file named
+`test-mode` on the device's `aux` partition (`/mnt/aux/test-mode`).
+
+### Test Mode on Virtual Devices
+
+When the test environment is started with Qeneth, the `inject-test-mode`
+script (`test/inject-test-mode`) is run automatically.  It copies the
+base disk image and writes the `test-mode` marker into the `aux`
+partition of that copy, which is then used as the Qeneth backing image.
+
+### Test Mode on Physical Devices
+
+For a physical device, log in as `root` (or `admin`) and create the
+marker file on the `aux` partition, then reboot:
+
+```
+# touch /mnt/aux/test-mode
+# reboot
+```
+
+Alternatively, if you want to prepare the disk image before flashing,
+use the `inject-test-mode` script:
+
+```
+$ test/inject-test-mode -b infix-<board>.img -o infix-<board>-test.img
+```
+
+Flash `infix-<board>-test.img` to the device instead of the plain
+image.  The device will boot into test mode on first power-on.
+
+> [!NOTE]
+> Test mode persists across reboots until the marker file is removed
+> (`rm /mnt/aux/test-mode`).  A device in test mode always starts from
+> the `test-config`, so any configuration changes are lost on reboot
+> unless `startup_override()` is called first (or the marker is removed
+> and a normal startup config is saved).
 
 [9PM]:    https://github.com/rical/9pm
 [Qeneth]: https://github.com/wkz/qeneth

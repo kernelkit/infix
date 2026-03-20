@@ -1,7 +1,7 @@
-From ed62a496744de0e0dc31171167d5d6f69f54af93 Mon Sep 17 00:00:00 2001
+From 538dbbff9604c00fd3875c88d0ed19074dfa0bfb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Fri, 21 Nov 2025 12:54:44 +0100
-Subject: [PATCH 37/38] remove obsolete targets
+Subject: [PATCH 37/42] remove obsolete targets
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -9,6 +9,7 @@ Organization: Wires
 
 Change-Id: Idde217a4ae1bc6f03657d9609e0ec1b0a47a9747
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt |  9 --------
  src/clock.cpp  | 62 --------------------------------------------------

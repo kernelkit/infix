@@ -16,6 +16,8 @@
  * (same thread — no locking required).
  */
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,14 +43,14 @@ struct AvahiWatch {
 	AvahiWatchEvent    last_event;
 	AvahiWatchCallback callback;
 	void              *userdata;
-	struct avahi_ctx  *ctx;
+	struct mdns_ctx  *ctx;
 };
 
 struct AvahiTimeout {
 	ev_timer             timer;    /* MUST be first */
 	AvahiTimeoutCallback callback;
 	void                *userdata;
-	struct avahi_ctx    *ctx;
+	struct mdns_ctx    *ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -71,7 +73,7 @@ static void watch_io_cb(struct ev_loop *loop, ev_io *w, int events)
 static AvahiWatch *watch_new(const AvahiPoll *api, int fd, AvahiWatchEvent event,
 			     AvahiWatchCallback callback, void *userdata)
 {
-	struct avahi_ctx *ctx = api->userdata;
+	struct mdns_ctx *ctx = api->userdata;
 	struct AvahiWatch *w;
 	int ev_events = 0;
 
@@ -128,7 +130,7 @@ static void timeout_cb(struct ev_loop *loop, ev_timer *t, int events)
 static AvahiTimeout *timeout_new(const AvahiPoll *api, const struct timeval *tv,
 				 AvahiTimeoutCallback callback, void *userdata)
 {
-	struct avahi_ctx *ctx = api->userdata;
+	struct mdns_ctx *ctx = api->userdata;
 	struct AvahiTimeout *t;
 
 	t = calloc(1, sizeof(*t));
@@ -186,7 +188,7 @@ static void timeout_free(AvahiTimeout *t)
  * In-memory state helpers
  * -------------------------------------------------------------------------- */
 
-static struct avahi_neighbor *find_neighbor(struct avahi_ctx *ctx, const char *hostname)
+static struct avahi_neighbor *find_neighbor(struct mdns_ctx *ctx, const char *hostname)
 {
 	struct avahi_neighbor *n;
 
@@ -197,7 +199,7 @@ static struct avahi_neighbor *find_neighbor(struct avahi_ctx *ctx, const char *h
 	return NULL;
 }
 
-static struct avahi_neighbor *get_neighbor(struct avahi_ctx *ctx, const char *hostname)
+static struct avahi_neighbor *get_neighbor(struct mdns_ctx *ctx, const char *hostname)
 {
 	struct avahi_neighbor *n = find_neighbor(ctx, hostname);
 
@@ -239,7 +241,7 @@ static void add_addr(struct avahi_neighbor *n, const char *addr)
 /*
  * Find service in flat list by 5-tuple (ifindex, proto, name, type, domain).
  */
-static struct avahi_service *find_service(struct avahi_ctx *ctx,
+static struct avahi_service *find_service(struct mdns_ctx *ctx,
 					  int ifindex, AvahiProtocol proto,
 					  const char *name, const char *type,
 					  const char *domain)
@@ -260,7 +262,7 @@ static struct avahi_service *find_service(struct avahi_ctx *ctx,
  * used after removing one 5-tuple entry to decide if the DS entry should
  * be removed too (another interface may still have the same service).
  */
-static int svc_ds_entry_exists(struct avahi_ctx *ctx, const char *hostname, const char *name)
+static int svc_ds_entry_exists(struct mdns_ctx *ctx, const char *hostname, const char *name)
 {
 	struct avahi_service *s;
 
@@ -271,7 +273,7 @@ static int svc_ds_entry_exists(struct avahi_ctx *ctx, const char *hostname, cons
 	return 0;
 }
 
-static int neighbor_has_services(struct avahi_ctx *ctx, const char *hostname)
+static int neighbor_has_services(struct mdns_ctx *ctx, const char *hostname)
 {
 	struct avahi_service *s;
 
@@ -313,7 +315,7 @@ static void free_neighbor(struct avahi_neighbor *n)
 	free(n);
 }
 
-static void free_all(struct avahi_ctx *ctx)
+static void free_all(struct mdns_ctx *ctx)
 {
 	struct avahi_service *s;
 	struct avahi_neighbor *n;
@@ -348,7 +350,7 @@ static int sr_setstr(sr_session_ctx_t *ses, const char *xpath, const char *val)
 	int err = sr_set_item_str(ses, xpath, val, NULL, 0);
 
 	if (err)
-		ERROR("avahi: sr_set_item_str(%s): %s", xpath, sr_strerror(err));
+		ERROR("mdns: sr_set_item_str(%s): %s", xpath, sr_strerror(err));
 	return err;
 }
 
@@ -370,7 +372,7 @@ static const char *xpath_str(char *buf, size_t sz, const char *val)
  * Push a resolver result to the operational DS.
  * new_addr is non-NULL only when a new address was just added in memory.
  */
-static void ds_push_resolver(struct avahi_ctx *ctx, struct avahi_service *svc,
+static void ds_push_resolver(struct mdns_ctx *ctx, struct avahi_service *svc,
 			     const char *new_addr)
 {
 	char qname[258]; /* quoted svc->name for safe XPath predicates */
@@ -441,10 +443,10 @@ static void ds_push_resolver(struct avahi_ctx *ctx, struct avahi_service *svc,
 
 	err = sr_apply_changes(ctx->sr_ses, 0);
 	if (err)
-		ERROR("avahi: sr_apply_changes: %s", sr_strerror(err));
+		ERROR("mdns: sr_apply_changes: %s", sr_strerror(err));
 }
 
-static void ds_delete_service(struct avahi_ctx *ctx, const char *hostname, const char *name)
+static void ds_delete_service(struct mdns_ctx *ctx, const char *hostname, const char *name)
 {
 	char qname[258];
 	char xpath[512];
@@ -456,7 +458,7 @@ static void ds_delete_service(struct avahi_ctx *ctx, const char *hostname, const
 	sr_delete_item(ctx->sr_ses, xpath, 0);
 }
 
-static void ds_delete_neighbor(struct avahi_ctx *ctx, const char *hostname)
+static void ds_delete_neighbor(struct mdns_ctx *ctx, const char *hostname)
 {
 	char xpath[512];
 
@@ -465,7 +467,7 @@ static void ds_delete_neighbor(struct avahi_ctx *ctx, const char *hostname)
 	sr_delete_item(ctx->sr_ses, xpath, 0);
 }
 
-static void ds_clear_all(struct avahi_ctx *ctx)
+static void ds_clear_all(struct mdns_ctx *ctx)
 {
 	sr_delete_item(ctx->sr_ses, XPATH_BASE, 0);
 	sr_apply_changes(ctx->sr_ses, 0);
@@ -484,7 +486,7 @@ static void resolver_cb(AvahiServiceResolver *r,
 			AvahiLookupResultFlags flags,
 			void *userdata)
 {
-	struct avahi_ctx *ctx = userdata;
+	struct mdns_ctx *ctx = userdata;
 	char addrstr[AVAHI_ADDRESS_STR_MAX] = "";
 	struct avahi_neighbor *n;
 	struct avahi_service *svc;
@@ -508,7 +510,7 @@ static void resolver_cb(AvahiServiceResolver *r,
 	/* Find or create neighbor (tracks addresses) */
 	n = get_neighbor(ctx, hostname);
 	if (!n) {
-		ERROR("avahi: out of memory for neighbor '%s'", hostname);
+		ERROR("mdns: out of memory for neighbor '%s'", hostname);
 		goto done;
 	}
 
@@ -523,7 +525,7 @@ static void resolver_cb(AvahiServiceResolver *r,
 	if (!svc) {
 		svc = calloc(1, sizeof(*svc));
 		if (!svc) {
-			ERROR("avahi: out of memory for service '%s'", name);
+			ERROR("mdns: out of memory for service '%s'", name);
 			goto done;
 		}
 		svc->ifindex = iface;
@@ -565,7 +567,7 @@ static void service_browser_cb(AvahiServiceBrowser *b,
 				AvahiLookupResultFlags flags,
 				void *userdata)
 {
-	struct avahi_ctx *ctx = userdata;
+	struct mdns_ctx *ctx = userdata;
 
 	(void)b;
 	(void)flags;
@@ -576,7 +578,7 @@ static void service_browser_cb(AvahiServiceBrowser *b,
 						name, type, domain,
 						AVAHI_PROTO_UNSPEC, 0,
 						resolver_cb, ctx))
-			DEBUG("avahi: resolver_new(%s) failed: %s", name,
+			DEBUG("mdns: resolver_new(%s) failed: %s", name,
 			      avahi_strerror(avahi_client_errno(ctx->client)));
 		break;
 
@@ -624,7 +626,7 @@ static void type_browser_cb(AvahiServiceTypeBrowser *b,
 			    AvahiLookupResultFlags flags,
 			    void *userdata)
 {
-	struct avahi_ctx *ctx = userdata;
+	struct mdns_ctx *ctx = userdata;
 
 	(void)b;
 	(void)flags;
@@ -651,14 +653,14 @@ static void type_browser_cb(AvahiServiceTypeBrowser *b,
 							0,
 							service_browser_cb, ctx);
 		if (!te->browser) {
-			DEBUG("avahi: service_browser_new(%s) failed: %s", type,
+			DEBUG("mdns: service_browser_new(%s) failed: %s", type,
 			      avahi_strerror(avahi_client_errno(ctx->client)));
 			free(te);
 			return;
 		}
 
 		LIST_INSERT_HEAD(&ctx->type_entries, te, link);
-		DEBUG("avahi: browsing service type %s", type);
+		DEBUG("mdns: browsing service type %s", type);
 		break;
 	}
 
@@ -683,15 +685,76 @@ static void type_browser_cb(AvahiServiceTypeBrowser *b,
 	}
 }
 
+/*
+ * Check if mDNS is enabled in the running datastore.
+ * Opens a temporary session to avoid disturbing the operational-DS session.
+ * Returns true if enabled or if the check cannot be performed (fail-safe).
+ */
+static bool mdns_is_enabled(struct mdns_ctx *ctx)
+{
+	sr_session_ctx_t *sess = NULL;
+	sr_data_t *data = NULL;
+	const char *s;
+	bool enabled = true; /* fail-safe: assume enabled */
+
+	if (!ctx->sr_conn)
+		return true;
+
+	if (sr_session_start(ctx->sr_conn, SR_DS_RUNNING, &sess))
+		return true;
+
+	if (!sr_get_node(sess, "/infix-services:mdns/enabled", 0, &data) && data) {
+		s = lyd_get_value(data->tree);
+		if (s && !strcmp(s, "false"))
+			enabled = false;
+		sr_release_data(data);
+	}
+
+	sr_session_stop(sess);
+	return enabled;
+}
+
+/*
+ * Retry timer callback: fires 2 s after AVAHI_CLIENT_FAILURE (and repeats up
+ * to 3 times).  Only logs ERROR once all retries are exhausted AND mDNS is
+ * enabled in the running config — this avoids noisy errors when the operator
+ * has simply disabled the mDNS service.
+ *
+ * Example log (mDNS enabled, daemon stays down):
+ *   avahi: mDNS daemon not responding (attempt 3/3) — check that the mdns
+ *   service is running
+ */
+static void mdns_retry_cb(struct ev_loop *loop, ev_timer *w, int revents)
+{
+	struct mdns_ctx *ctx = (struct mdns_ctx *)
+		((char *)w - offsetof(struct mdns_ctx, retry_timer));
+
+	ctx->fail_count++;
+	if (ctx->fail_count < 3) {
+		ev_timer_set(w, 2.0, 0.0);
+		ev_timer_start(loop, w);
+		return;
+	}
+
+	if (mdns_is_enabled(ctx))
+		ERROR("mdns: mDNS daemon not responding (attempt %d/3) — "
+		      "check that the mdns service is running", ctx->fail_count);
+}
+
 static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 {
-	struct avahi_ctx *ctx = userdata;
+	struct mdns_ctx *ctx = userdata;
 
 	ctx->client = c;
 
 	switch (state) {
 	case AVAHI_CLIENT_S_RUNNING:
-		INFO("avahi: client running");
+		if (ctx->fail_count > 0) {
+			ev_timer_stop(ctx->loop, &ctx->retry_timer);
+			NOTE("mdns: mDNS daemon reconnected");
+			ctx->fail_count = 0;
+		}
+		INFO("mdns: client running");
 		if (ctx->type_browser)
 			break;  /* Already browsing */
 
@@ -702,18 +765,25 @@ static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 			0,
 			type_browser_cb, ctx);
 		if (!ctx->type_browser)
-			ERROR("avahi: service_type_browser_new failed: %s",
+			ERROR("mdns: service_type_browser_new failed: %s",
 			      avahi_strerror(avahi_client_errno(ctx->client)));
 		break;
 
 	case AVAHI_CLIENT_FAILURE:
-		ERROR("avahi: client failure: %s",
-		      avahi_strerror(avahi_client_errno(c)));
-
 		/*
-		 * Browsers are internally invalidated when the daemon dies.
-		 * Free them explicitly here so they're recreated on reconnect.
+		 * The daemon went away.  AVAHI_CLIENT_NO_FAIL means the client
+		 * will reconnect automatically — we just need to clean up the
+		 * now-invalid browsers so they're recreated on reconnect.
+		 *
+		 * Suppress the immediate ERROR; start a 2-second timer that
+		 * will log only if the daemon stays down for 3 attempts (~6 s)
+		 * and mDNS is enabled in the running config.
 		 */
+		if (!ev_is_active(&ctx->retry_timer)) {
+			ev_timer_init(&ctx->retry_timer, mdns_retry_cb, 2.0, 0.0);
+			ev_timer_start(ctx->loop, &ctx->retry_timer);
+		}
+
 		{
 			struct avahi_type_entry *te;
 
@@ -744,12 +814,13 @@ static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
  * Public interface
  * -------------------------------------------------------------------------- */
 
-int avahi_ctx_init(struct avahi_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *sr_conn)
+int mdns_ctx_init(struct mdns_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *sr_conn)
 {
 	int avahi_err;
 
 	memset(ctx, 0, sizeof(*ctx));
-	ctx->loop = loop;
+	ctx->loop    = loop;
+	ctx->sr_conn = sr_conn;
 	LIST_INIT(&ctx->neighbors);
 	LIST_INIT(&ctx->services);
 	LIST_INIT(&ctx->type_entries);
@@ -757,7 +828,7 @@ int avahi_ctx_init(struct avahi_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *s
 	/* Dedicated operational session for push writes (avoids sharing
 	 * sr_query_ses which the journal thread also uses). */
 	if (sr_session_start(sr_conn, SR_DS_OPERATIONAL, &ctx->sr_ses)) {
-		ERROR("avahi: failed to start sysrepo session");
+		ERROR("mdns: failed to start sysrepo session");
 		return -1;
 	}
 
@@ -776,19 +847,22 @@ int avahi_ctx_init(struct avahi_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *s
 				       client_cb, ctx,
 				       &avahi_err);
 	if (!ctx->client) {
-		ERROR("avahi: client_new failed: %s", avahi_strerror(avahi_err));
+		ERROR("mdns: client_new failed: %s", avahi_strerror(avahi_err));
 		sr_session_stop(ctx->sr_ses);
 		ctx->sr_ses = NULL;
 		return -1;
 	}
 
-	INFO("avahi: mDNS neighbor monitor initialized");
+	INFO("mdns: mDNS neighbor monitor initialized");
 	return 0;
 }
 
-void avahi_ctx_exit(struct avahi_ctx *ctx)
+void mdns_ctx_exit(struct mdns_ctx *ctx)
 {
 	struct avahi_type_entry *te;
+
+	if (ev_is_active(&ctx->retry_timer))
+		ev_timer_stop(ctx->loop, &ctx->retry_timer);
 
 	/* Free browsers explicitly before freeing the client */
 	while (!LIST_EMPTY(&ctx->type_entries)) {
@@ -813,5 +887,5 @@ void avahi_ctx_exit(struct avahi_ctx *ctx)
 	}
 
 	free_all(ctx);
-	INFO("avahi: mDNS neighbor monitor stopped");
+	INFO("mdns: mDNS neighbor monitor stopped");
 }

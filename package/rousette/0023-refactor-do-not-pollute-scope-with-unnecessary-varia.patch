@@ -1,7 +1,7 @@
-From 27cbe6750bdfc9f346421e55ebe555b8c036d77c Mon Sep 17 00:00:00 2001
+From 24a35b1f1424826202ecaebf7aa04dccdf6ad2f4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 11 Nov 2025 15:01:21 +0100
-Subject: [PATCH 23/38] refactor: do not pollute scope with unnecessary
+Subject: [PATCH 23/42] refactor: do not pollute scope with unnecessary
  variables
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -13,6 +13,7 @@ nothing.
 
 Change-Id: I5b9b1a077d44d088084c3b2b93359ab7464ec8aa
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/Server.cpp | 6 +++---
  1 file changed, 3 insertions(+), 3 deletions(-)

@@ -1,7 +1,7 @@
-From fe91af1eb38888d7eacb36cb5a299bd3163f7c60 Mon Sep 17 00:00:00 2001
+From 36b8ec2f65a456bf97b97ed4b3d74bb323cf85b8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 14 Oct 2025 17:22:00 +0200
-Subject: [PATCH 33/38] cmake: wrap long line
+Subject: [PATCH 33/42] cmake: wrap long line
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -9,6 +9,7 @@ Organization: Wires
 
 Change-Id: Id94e18d581dbfbe2e6d386be6a232544f9344eec
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt | 7 ++++++-
  1 file changed, 6 insertions(+), 1 deletion(-)

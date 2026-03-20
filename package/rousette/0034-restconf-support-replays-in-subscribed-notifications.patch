@@ -1,7 +1,7 @@
-From 817debab72d10f2f30e83f1630bebdcdf3ec9455 Mon Sep 17 00:00:00 2001
+From f633e7ffd39955051d886b7977e8a8ecfffda2b4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 10 Mar 2025 15:33:08 +0100
-Subject: [PATCH 34/38] restconf: support replays in subscribed notifications
+Subject: [PATCH 34/42] restconf: support replays in subscribed notifications
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -9,6 +9,7 @@ Organization: Wires
 
 Change-Id: Idfc3ceb99c8111c5575c1c8b94d539f234fa43be
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt                              |   1 +
  src/restconf/DynamicSubscriptions.cpp       |  24 ++++-

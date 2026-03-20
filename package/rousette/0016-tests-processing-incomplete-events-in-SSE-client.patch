@@ -1,7 +1,7 @@
-From b7966613b43b01402c9f0af286a0b3237161779d Mon Sep 17 00:00:00 2001
+From fe57a9ac8024e4115c45d9c256d5048e17fe9fdb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 2 Sep 2025 15:33:43 +0200
-Subject: [PATCH 16/38] tests: processing incomplete events in SSE client
+Subject: [PATCH 16/42] tests: processing incomplete events in SSE client
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -14,6 +14,7 @@ a complete event, once available.
 
 Change-Id: Ied07e69e8b518f20fcc82134a4c041e7ec3a06d6
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  tests/restconf_utils.cpp | 53 +++++++++++++++++++++++-----------------
  tests/restconf_utils.h   |  3 ++-

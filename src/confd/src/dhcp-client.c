@@ -99,7 +99,7 @@ static void add(const char *ifname, struct lyd_node *cfg)
 	const char *metric = lydx_get_cattr(cfg, "route-preference");
 	const char *client_id = lydx_get_cattr(cfg, "client-id");
 	char *cid = NULL, *options = NULL;
-	const char *action = "disable";
+	int ena = 0;
 	const char *vendor_class;
 	char vendor[128] = { 0 };
 	char do_arp[20] = { 0 };
@@ -153,9 +153,10 @@ static void add(const char *ifname, struct lyd_node *cfg)
 		options ? "-o " : "", options,
 		ifname, cid ?: "", vendor, ifname);
 	fclose(fp);
-	action = "enable";
+	ena = 1;
 err:
-	systemf("initctl -bfqn %s dhcp-client-%s", action, ifname);
+	ena ? finit_enablef("dhcp-client-%s", ifname)
+	    : finit_disablef("dhcp-client-%s", ifname);
 	if (options)
 		free(options);
 	if (cid)
@@ -164,7 +165,7 @@ err:
 
 static void del(const char *ifname)
 {
-	systemf("initctl -bfq delete dhcp-client-%s", ifname);
+	finit_deletef("dhcp-client-%s", ifname);
 }
 
 int dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,

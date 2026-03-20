@@ -1,7 +1,7 @@
-From 41c9d9cab47a88ee6c70ab8009b789226c0982fe Mon Sep 17 00:00:00 2001
+From f548df0c693ffd1625fbcb843c6f914972315179 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Tue, 17 Jun 2025 12:46:27 +0200
-Subject: [PATCH 03/38] CI: switch to the new cloud's Swift URL
+Subject: [PATCH 03/42] CI: switch to the new cloud's Swift URL
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -9,6 +9,7 @@ Organization: Wires
 
 Change-Id: I69f8351394262a2a9b691422592741bfb40a8e38
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  ci/build.sh | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

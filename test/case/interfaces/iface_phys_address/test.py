@@ -35,15 +35,15 @@ def reset_mac(tgt, port):
 
 
 with infamy.Test() as test:
-    CMD = "jq -r '.[\"mac-address\"]' /run/system.json"
-
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
         _, tport = env.ltop.xlate("target", "data")
         pmac = iface.get_phys_address(target, tport)
-        cmac = tgtssh.runsh(CMD).stdout.strip()
+        data = target.get_data("/ietf-hardware:hardware/component[name='mainboard']")
+        components = data.get("hardware", {}).get("component", {})
+        cmac = components["mainboard"].get("phys-address", "") \
+               if "mainboard" in components else ""
         STATIC = "02:01:00:c0:ff:ee"
         OFFSET = "00:00:00:00:ff:aa"
 
@@ -88,9 +88,7 @@ with infamy.Test() as test:
         target.put_config_dict("ietf-interfaces", config)
 
     with test.step("Verify target:data has chassis MAC"):
-        mac = iface.get_phys_address(target, tport)
-        print(f"Current MAC: {mac}, should be: {cmac}")
-        assert mac == cmac
+        until(lambda: iface.get_phys_address(target, tport) == cmac)
 
     with test.step("Set target:data to chassis MAC + offset"):
         print(f"Setting chassis MAC {cmac} + offset {OFFSET}")
@@ -109,10 +107,8 @@ with infamy.Test() as test:
         target.put_config_dict("ietf-interfaces", config)
 
     with test.step("Verify target:data has chassis MAC + offset"):
-        mac = iface.get_phys_address(target, tport)
         BMAC = calc_mac(cmac, OFFSET)
-        print(f"Current MAC: {mac}, should be: {BMAC} (calculated)")
-        assert mac == BMAC
+        until(lambda: iface.get_phys_address(target, tport) == BMAC)
 
     with test.step("Reset target:data MAC address to default"):
         reset_mac(target, tport)

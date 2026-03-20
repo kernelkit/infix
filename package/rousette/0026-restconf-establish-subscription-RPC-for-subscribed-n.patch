@@ -1,7 +1,7 @@
-From aa04b0a99fb51aed998aa9f1ab0a527cc09e647f Mon Sep 17 00:00:00 2001
+From 0f13a7262ddf58f400a53cfedb038344abb929f0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 19 May 2025 12:11:09 +0200
-Subject: [PATCH 26/38] restconf: establish-subscription RPC for subscribed
+Subject: [PATCH 26/42] restconf: establish-subscription RPC for subscribed
  notifications
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -21,6 +21,7 @@ the follow-up patch.
 
 Change-Id: I0217e5abc56cfd73859dbcc610fb1f342dc33a10
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt                              |   8 +-
  src/restconf/DynamicSubscriptions.cpp       | 177 ++++++++++++++

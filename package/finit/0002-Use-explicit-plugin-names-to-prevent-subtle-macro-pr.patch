@@ -1,0 +1,318 @@
+From 662293e194811213b9b387163dfe8499e3300ccf Mon Sep 17 00:00:00 2001
+From: bazub <github@zubko.cc>
+Date: Fri, 6 Mar 2026 20:36:23 +0000
+Subject: [PATCH 2/3] Use explicit plugin names to prevent subtle macro
+ processing bugs
+Organization: Wires
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ plugins/alsa-utils.c   | 6 +++---
+ plugins/bootmisc.c     | 2 +-
+ plugins/dbus.c         | 4 ++--
+ plugins/hook-scripts.c | 2 +-
+ plugins/modprobe.c     | 2 +-
+ plugins/modules-load.c | 2 +-
+ plugins/netlink.c      | 2 +-
+ plugins/pidfile.c      | 2 +-
+ plugins/procps.c       | 4 ++--
+ plugins/resolvconf.c   | 2 +-
+ plugins/rtc.c          | 6 +++---
+ plugins/sys.c          | 2 +-
+ plugins/tty.c          | 1 +
+ plugins/urandom.c      | 6 +++---
+ plugins/usr.c          | 2 +-
+ plugins/x11-common.c   | 4 ++--
+ 16 files changed, 25 insertions(+), 24 deletions(-)
+
+diff --git a/plugins/alsa-utils.c b/plugins/alsa-utils.c
+index 6b2c3603..a8a967b0 100644
+--- a/plugins/alsa-utils.c
++++ b/plugins/alsa-utils.c
+@@ -38,7 +38,7 @@
+ static void save(void *arg)
+ {
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "alsa-utils");
+ 		return;
+ 	}
+ 
+@@ -51,7 +51,7 @@ static void save(void *arg)
+ static void restore(void *arg)
+ {
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "alsa-utils");
+ 		return;
+ 	}
+ 
+@@ -62,7 +62,7 @@ static void restore(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "alsa-utils",
+ 	.hook[HOOK_BASEFS_UP] = { .cb  = restore },
+ 	.hook[HOOK_SHUTDOWN]  = { .cb  = save    }
+ };
+diff --git a/plugins/bootmisc.c b/plugins/bootmisc.c
+index 701f73f0..a8ba3808 100644
+--- a/plugins/bootmisc.c
++++ b/plugins/bootmisc.c
+@@ -172,7 +172,7 @@ static void setup(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "bootmisc",
+ 	.hook[HOOK_MOUNT_POST] = { .cb = clean },
+ 	.hook[HOOK_BASEFS_UP]  = { .cb = setup },
+ 	.depends = { "pidfile" },
+diff --git a/plugins/dbus.c b/plugins/dbus.c
+index bbf55bc2..a8a155a1 100644
+--- a/plugins/dbus.c
++++ b/plugins/dbus.c
+@@ -106,7 +106,7 @@ static void setup(void *arg)
+ 	char *cmd;
+ 
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "dbus");
+ 		return;
+ 	}
+ 
+@@ -164,7 +164,7 @@ static void setup(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name                  = __FILE__,
++	.name = "dbus",
+ 	.hook[HOOK_SVC_PLUGIN] = { .cb  = setup },
+ };
+ 
+diff --git a/plugins/hook-scripts.c b/plugins/hook-scripts.c
+index 9aa78173..e75808c5 100644
+--- a/plugins/hook-scripts.c
++++ b/plugins/hook-scripts.c
+@@ -79,7 +79,7 @@ static void hscript_shutdown(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "hook-scripts",
+ 	.hook[HOOK_BANNER]      = { .cb  = hscript_banner      },
+ 	.hook[HOOK_ROOTFS_UP]   = { .cb  = hscript_rootfs_up   },
+ 	.hook[HOOK_MOUNT_ERROR] = { .cb  = hscript_mount_error },
+diff --git a/plugins/modprobe.c b/plugins/modprobe.c
+index b6b7e7bb..e52bf228 100644
+--- a/plugins/modprobe.c
++++ b/plugins/modprobe.c
+@@ -228,7 +228,7 @@ static void coldplug(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "modprobe",
+ 	.hook[HOOK_BASEFS_UP] = { .cb  = coldplug },
+ 	.depends = { "bootmisc", }
+ };
+diff --git a/plugins/modules-load.c b/plugins/modules-load.c
+index 53aef82f..e2e45c72 100644
+--- a/plugins/modules-load.c
++++ b/plugins/modules-load.c
+@@ -213,7 +213,7 @@ static void load(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name                  = __FILE__,
++	.name = "modules-load",
+ 	.hook[HOOK_SVC_PLUGIN] = { .cb  = load },
+ };
+ 
+diff --git a/plugins/netlink.c b/plugins/netlink.c
+index a70b01e8..625cbd1b 100644
+--- a/plugins/netlink.c
++++ b/plugins/netlink.c
+@@ -426,7 +426,7 @@ static void nl_enumerate(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "netlink",
+ 	.hook[HOOK_SVC_RECONF]  = { .cb = nl_reconf },
+ 	.hook[HOOK_SVC_PLUGIN]  = { .cb = nl_enumerate },
+ 	.io = {
+diff --git a/plugins/pidfile.c b/plugins/pidfile.c
+index ae0fdeea..f1232ab6 100644
+--- a/plugins/pidfile.c
++++ b/plugins/pidfile.c
+@@ -335,7 +335,7 @@ static void pidfile_init(void *arg)
+  * SIGSTP:ed (in state PAUSED) waiting for <net/iface/lo>.
+  */
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "pidfile",
+ 	.hook[HOOK_BASEFS_UP]  = { .cb = pidfile_init   },
+ 	.hook[HOOK_SVC_RECONF] = { .cb = pidfile_reconf },
+ 	.depends = { "netlink" }, /* bootmisc depends on us */
+diff --git a/plugins/procps.c b/plugins/procps.c
+index 826e38ad..5a178d75 100644
+--- a/plugins/procps.c
++++ b/plugins/procps.c
+@@ -43,7 +43,7 @@ static void setup(void *arg)
+ 	glob_t gl;
+ 
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "procps");
+ 		return;
+ 	}
+ 
+@@ -69,7 +69,7 @@ static void setup(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "procps",
+ 	.hook[HOOK_BASEFS_UP] = {
+ 		.cb  = setup
+ 	},
+diff --git a/plugins/resolvconf.c b/plugins/resolvconf.c
+index 1ac29dae..b98e9214 100644
+--- a/plugins/resolvconf.c
++++ b/plugins/resolvconf.c
+@@ -51,7 +51,7 @@ static void setup(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "resolvconf",
+ 	.hook[HOOK_BASEFS_UP] = {
+ 		.cb  = setup
+ 	},
+diff --git a/plugins/rtc.c b/plugins/rtc.c
+index faf69415..cf734763 100644
+--- a/plugins/rtc.c
++++ b/plugins/rtc.c
+@@ -236,7 +236,7 @@ static void rtc_save(void *arg)
+ 	int fd, rc = 0;
+ 
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "rtc");
+ 		return;
+ 	}
+ 
+@@ -266,7 +266,7 @@ static void rtc_restore(void *arg)
+ 	int fd, rc = 0;
+ 
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "rtc");
+ 		return;
+ 	}
+ 
+@@ -321,7 +321,7 @@ static void update(uev_t *w, void *arg, int events)
+ 
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "rtc",
+ 	.hook[HOOK_BASEFS_UP] = {
+ 		.cb  = rtc_restore
+ 	},
+diff --git a/plugins/sys.c b/plugins/sys.c
+index 438fdfd5..484adc05 100644
+--- a/plugins/sys.c
++++ b/plugins/sys.c
+@@ -180,7 +180,7 @@ static void sys_init(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "sys",
+ 	.hook[HOOK_BASEFS_UP]  = { .cb = sys_init },
+ 	.depends = { "bootmisc", },
+ };
+diff --git a/plugins/tty.c b/plugins/tty.c
+index b3255f9f..c6a750b0 100644
+--- a/plugins/tty.c
++++ b/plugins/tty.c
+@@ -43,6 +43,7 @@
+ static void tty_watcher(void *arg, int fd, int events);
+ 
+ static plugin_t plugin = {
++	.name = "tty",
+ 	.io = {
+ 		.cb    = tty_watcher,
+ 		.flags = PLUGIN_IO_READ,
+diff --git a/plugins/urandom.c b/plugins/urandom.c
+index 410d0660..9bb6252b 100644
+--- a/plugins/urandom.c
++++ b/plugins/urandom.c
+@@ -87,7 +87,7 @@ static void setup(void *arg)
+ 	int fd, err;
+ 
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "urandom");
+ 		return;
+ 	}
+ 
+@@ -188,7 +188,7 @@ static void save(void *arg)
+ 	mode_t prev;
+ 
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "urandom");
+ 		return;
+ 	}
+ 
+@@ -202,7 +202,7 @@ static void save(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "urandom",
+ 	.hook[HOOK_BASEFS_UP] = { .cb  = setup },
+ 	.hook[HOOK_SHUTDOWN]  = { .cb  = save  },
+ 	.depends = { "bootmisc", }
+diff --git a/plugins/usr.c b/plugins/usr.c
+index d30d9440..496facc2 100644
+--- a/plugins/usr.c
++++ b/plugins/usr.c
+@@ -104,7 +104,7 @@ static void usr_init(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "usr",
+ 	.hook[HOOK_BASEFS_UP]  = { .cb = usr_init },
+ 	.depends = { "bootmisc", },
+ };
+diff --git a/plugins/x11-common.c b/plugins/x11-common.c
+index f65331a0..75825a36 100644
+--- a/plugins/x11-common.c
++++ b/plugins/x11-common.c
+@@ -39,7 +39,7 @@
+ static void setup(void *arg)
+ {
+ 	if (rescue) {
+-		dbg("Skipping %s plugin in rescue mode.", __FILE__);
++		dbg("Skipping %s plugin in rescue mode.", "x11-common");
+ 		return;
+ 	}
+ 
+@@ -48,7 +48,7 @@ static void setup(void *arg)
+ }
+ 
+ static plugin_t plugin = {
+-	.name = __FILE__,
++	.name = "x11-common",
+ 	.hook[HOOK_SVC_PLUGIN] = { .cb  = setup },
+ };
+ 
+-- 
+2.43.0
+

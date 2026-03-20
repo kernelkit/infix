@@ -1,7 +1,7 @@
-From 746c0cdfef6808f393be7946630b8acbb0636706 Mon Sep 17 00:00:00 2001
+From 8f6ce5d8efd7e5ce4adb6e188dbec14ad86fa0e8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 22 Jul 2025 17:47:50 +0200
-Subject: [PATCH 09/38] tests: add SSE event watcher for comments
+Subject: [PATCH 09/42] tests: add SSE event watcher for comments
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -12,6 +12,7 @@ which should be ignored, i.e., lines starting with colon.
 
 Change-Id: If54f0af05b4884aab01325f12fd0a6859791b41b
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  tests/event_watchers.cpp |  7 ++++++-
  tests/event_watchers.h   |  4 +++-

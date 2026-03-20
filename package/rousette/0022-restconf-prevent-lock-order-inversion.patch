@@ -1,7 +1,7 @@
-From b4bf655502d949a5f351e6acd313f47eecefb062 Mon Sep 17 00:00:00 2001
+From 4b08c23436972e80760abe397806867a1d4d486c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 13 Oct 2025 12:26:46 +0200
-Subject: [PATCH 22/38] restconf: prevent lock order inversion
+Subject: [PATCH 22/42] restconf: prevent lock order inversion
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -29,6 +29,7 @@ callbacks to EventStream"), I am not sure.
 See-also: 6bca750f866b5b14c4d9c3da68e5c8f1e4eee36c ("http: add optional callbacks to EventStream")
 Change-Id: Ib6626c127ff2eb5feb1d17dece28e70265749df4
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/http/EventStream.cpp | 14 +++++++++-----
  1 file changed, 9 insertions(+), 5 deletions(-)

@@ -1,7 +1,7 @@
-From ec8673126929b6459fcd99c84a79993a725b40e1 Mon Sep 17 00:00:00 2001
+From 8c441795f1050412fc953518917f3d494edd6be1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Fri, 13 Jun 2025 10:47:55 +0200
-Subject: [PATCH 04/38] restconf: crash instead of a deadlock when the handler
+Subject: [PATCH 04/42] restconf: crash instead of a deadlock when the handler
  throws
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -38,6 +38,7 @@ Signed-off-by: Jan Kundrát <jan.kundrat@cesnet.cz>
 Bug: https://github.com/CESNET/rousette/issues/19
 Change-Id: I2c090b9a76b062101ba422a7d50e8e699779e203
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/Server.cpp | 28 ++++++++++++++++++++++++++++
  src/restconf/Server.h   |  4 ++++

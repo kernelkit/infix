@@ -1,7 +1,7 @@
-From fff342945eb3c8deb6f7aa67aca54f9c9f87f3ec Mon Sep 17 00:00:00 2001
+From 07131a39ca9c5a27fe7b1a5c628f3519c2efc0e5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Thu, 11 Sep 2025 18:56:31 +0200
-Subject: [PATCH 18/38] Use a working version of nghttp2-asio
+Subject: [PATCH 18/42] Use a working version of nghttp2-asio
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -15,6 +15,7 @@ Link: https://github.com/nghttp2/nghttp2-asio/pull/9
 Link: https://github.com/nghttp2/nghttp2-asio/pull/25
 Change-Id: Iec9619ce45e7e76f0781d39966d0b6c7cc6fa778
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  .zuul.yaml | 2 +-
  README.md  | 3 ++-

@@ -605,17 +605,17 @@ activate:
 
 	/* Enable/disable FRR daemons as standalone finit services.
 	 * Harmless no-op when using watchfrr (services not installed). */
-	systemf("initctl -nbq %s ospfd", ospfd_enabled ? "enable" : "disable");
+	ospfd_enabled ? finit_enable("ospfd") : finit_disable("ospfd");
 	if (ospfd_enabled)
-		systemf("initctl -nbq touch ospfd");
-	systemf("initctl -nbq %s ripd",  ripd_enabled  ? "enable" : "disable");
-	systemf("initctl -nbq %s bfdd",  bfdd_enabled  ? "enable" : "disable");
+		finit_reload("ospfd");
+	ripd_enabled  ? finit_enable("ripd")  : finit_disable("ripd");
+	bfdd_enabled  ? finit_enable("bfdd")  : finit_disable("bfdd");
 
 	/*
 	 * Signal netd to reload - it assembles /etc/frr/frr.conf and
 	 * Finit propagates the restart to the frr sysv service
 	 */
-	if (systemf("initctl -bfq touch netd"))
+	if (finit_reload("netd"))
 		ERROR("Failed to signal netd for reload");
 
 	return rc;

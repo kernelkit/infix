@@ -37,7 +37,7 @@ $ make TEST_MODE=host test
 ...
 ```
 
-This typically used when testing on physical hardware. By default the
+This is typically used when testing on physical hardware. By default the
 topology will be sourced from `/etc/infamy.dot`, but this can be
 overwritten by setting the `TOPOLOGY` variable:
 
@@ -45,6 +45,12 @@ overwritten by setting the `TOPOLOGY` variable:
 $ make TEST_MODE=host TOPOLOGY=~/my-topology.dot test
 ...
 ```
+
+> [!IMPORTANT]
+> Physical devices must be put into *test mode* before running tests.
+> See [Test Mode](test-arch.md#test-mode) in the architecture document
+> for details.  The short version: log in to the device and run
+> `touch /mnt/aux/test-mode && reboot`.
 
 ### `make run` Devices
 

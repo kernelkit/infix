@@ -344,7 +344,7 @@ static int file_change(sr_session_ctx_t *session, struct lyd_node *config,struct
 	}
 
 	srx_free_changes(tree);
-	systemf("initctl -nbq touch sysklogd");
+	finit_reload("sysklogd");
 
 	return SR_ERR_OK;
 }
@@ -377,7 +377,7 @@ static int remote_change(sr_session_ctx_t *session, struct lyd_node *config, str
 		}
 	}
 
-	systemf("initctl -nbq touch sysklogd");
+	finit_reload("sysklogd");
 
 	return SR_ERR_OK;
 }
@@ -410,7 +410,7 @@ static int rotate_change(sr_session_ctx_t *session, struct lyd_node *config, str
 	}
 
 	fclose(fp);
-	systemf("initctl -nbq touch sysklogd");
+	finit_reload("sysklogd");
 
 	return SR_ERR_OK;
 }
@@ -458,7 +458,7 @@ static int server_change(sr_session_ctx_t *session, struct lyd_node *config, str
 		sr_free_values(list, count);
 	fclose(fp);
 done:
-	systemf("initctl -nbq touch sysklogd");
+	finit_reload("sysklogd");
 
 	return SR_ERR_OK;
 }

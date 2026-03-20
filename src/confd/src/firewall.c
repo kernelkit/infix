@@ -504,25 +504,25 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		break;
 
 	case SR_EV_ABORT:
-		systemf("rm -rf " FIREWALLD_DIR_NEXT);
+		rmrf(FIREWALLD_DIR_NEXT);
 		return SR_ERR_OK;
 
 	case SR_EV_DONE:
 		if (!fisdir(FIREWALLD_DIR_NEXT)) {
 			/* Firewall is disabled */
-			systemf("initctl -nbq disable firewalld");
+			finit_disable("firewalld");
 			return SR_ERR_OK;
 		}
 
 		/* Firewall is enabled, roll in new configuration */
-		systemf("rm -rf " FIREWALLD_DIR);
+		rmrf(FIREWALLD_DIR);
 		if (rename(FIREWALLD_DIR_NEXT, FIREWALLD_DIR)) {
 			ERRNO("Failed rolling in firewalld configuration");
 			return SR_ERR_SYS;
 		}
 
-		systemf("initctl -nbq touch firewalld");
-		systemf("initctl -nbq enable firewalld");
+		finit_reload("firewalld");
+		finit_enable("firewalld");
 		return SR_ERR_OK;
 
 	default:
@@ -533,7 +533,7 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	global = lydx_get_descendant(tree, "firewall", NULL);
 
 	/* Clean up any stale /etc/firewalld+ first */
-	systemf("rm -rf " FIREWALLD_DIR_NEXT);
+	rmrf(FIREWALLD_DIR_NEXT);
 
 	/* If firewall is disabled or not enabled, don't generate config */
 	if (!global || !lydx_is_enabled(global, "enabled")) {

@@ -1,7 +1,7 @@
-From c1d5d143020ddc51c3886b82e87d463cf3211fca Mon Sep 17 00:00:00 2001
+From 8a541a83176eb44fbe501a91b7a4ef0576f60ba3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Fri, 21 Nov 2025 10:44:47 +0100
-Subject: [PATCH 36/38] build: remove duplicate line
+Subject: [PATCH 36/42] build: remove duplicate line
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -10,6 +10,7 @@ Organization: Wires
 Fixes: 817debab restconf: support replays in subscribed notifications
 Change-Id: I4d2ea8429a4cb7b77f8739aff7a26a03cf535756
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt | 1 -
  1 file changed, 1 deletion(-)

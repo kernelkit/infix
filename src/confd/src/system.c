@@ -268,8 +268,11 @@ static int change_clock(sr_session_ctx_t *session, struct lyd_node *config, stru
 		}
 	}
 
+	char zonelink[256];
+
+	snprintf(zonelink, sizeof(zonelink), "/usr/share/zoneinfo/%s", timezone);
 	(void)remove("/etc/localtime+");
-	if (systemf("ln -sf /usr/share/zoneinfo/%s /etc/localtime+", timezone)) {
+	if (symlink(zonelink, "/etc/localtime+")) {
 		ERROR("No such timezone %s", timezone);
 		rc = SR_ERR_VALIDATION_FAILED;
 	}
@@ -306,9 +309,10 @@ static int change_ntp_client(sr_session_ctx_t *session, struct lyd_node *config,
 	case SR_EV_DONE:
 		if (!srx_enabled(session, XPATH_NTP_"/enabled")) {
 			(void)remove(NTP_CLIENT_CONF);
-			systemf("rm -f /etc/chrony/sources.d/*");
+			rmrf("/etc/chrony/sources.d");
+			mkpath("/etc/chrony/sources.d", 0755);
 			/* Note: chronyd enable/disable is managed centrally in core.c */
-			systemf("initctl -nbq touch chronyd");
+			finit_reload("chronyd");
 			return SR_ERR_OK;
 		}
 
@@ -318,7 +322,7 @@ static int change_ntp_client(sr_session_ctx_t *session, struct lyd_node *config,
 		}
 
 		/* Note: chronyd enable/disable is managed centrally in core.c */
-		systemf("initctl -nbq touch chronyd");
+		finit_reload("chronyd");
 		return SR_ERR_OK;
 
 	default:
@@ -466,7 +470,7 @@ static int change_dns(sr_session_ctx_t *session, struct lyd_node *config, struct
 			(void)rename(RESOLV_NEXT, RESOLV_CONF);
 		}
 
-		systemf("initctl -bq touch resolvconf");
+		finit_reload("resolvconf");
 
 		return SR_ERR_OK;
 
@@ -701,7 +705,9 @@ static int sys_del_user(char *user, bool silent)
 			ERROR("Error deleting user \"%s\"", user);
 
 		/* Ensure $HOME is removed at least. */
-		systemf("rm -rf /home/%s", user);
+		char home[256];
+		snprintf(home, sizeof(home), "/home/%s", user);
+		rmrf(home);
 
 		return SR_ERR_SYS;
 	}
@@ -825,9 +831,14 @@ static int sys_add_user(sr_session_ctx_t *sess, char *name)
 	 * /home/%s/.ssh/authorized_keys file.  This creates a both the
 	 * directory and the symlink owned by root to prevent tampering.
 	 */
+	char src[256], dst[256];
+
 	DEBUG("Adding secure /home/%s/.ssh directory.", name);
 	fmkpath(0750, "/home/%s/.ssh", name);
-	systemf("ln -sf /var/run/sshd/%s.keys /home/%s/.ssh/authorized_keys", name, name);
+	snprintf(src, sizeof(src), "/var/run/sshd/%s.keys", name);
+	snprintf(dst, sizeof(dst), "/home/%s/.ssh/authorized_keys", name);
+	erasef("/home/%s/.ssh/authorized_keys", name);
+	symlink(src, dst);
 
 	return SR_ERR_OK;
 }
@@ -1491,7 +1502,7 @@ static int change_editor(sr_session_ctx_t *session, struct lyd_node *config, str
 			continue;
 
 		erase(alt);
-		rc = systemf("ln -s %s %s", map[i].path, alt);
+		rc = symlink(map[i].path, alt);
 		if (rc)
 			ERROR("Failed setting system editor '%s'", map[i].editor);
 	}
@@ -1611,7 +1622,7 @@ static int change_hostname(sr_session_ctx_t *session, struct lyd_node *config, s
 	}
 
 	/* Use hostname.d for deterministic hostname management */
-	systemf("mkdir -p /etc/hostname.d");
+	mkpath("/etc/hostname.d", 0755);
 
 	fp = fopen("/etc/hostname.d/50-configured", "w");
 	if (!fp)

@@ -21,7 +21,7 @@ static FILE *dagger_fopen(struct dagger *d, int gen, const char *action,
 		return NULL;
 	}
 
-	if (systemf("mkdir -p " PATH_ACTION_, d->path, gen, action, node))
+	if (fmkpath(0755, PATH_ACTION_, d->path, gen, action, node))
 		return NULL;
 
 	if (asprintf(&path, PATH_ACTION_"/%02u-%s", d->path, gen, action, node, prio, script) == -1)
@@ -117,15 +117,19 @@ int dagger_add_dep(const struct dagger *d, const char *depender, const char *dep
 
 int dagger_add_node(struct dagger *d, const char *node)
 {
-	return systemf("mkdir -p %s/%d/dag/%s", d->path, d->next, node);
+	return fmkpath(0755, "%s/%d/dag/%s", d->path, d->next, node);
 }
 
 int dagger_abandon(struct dagger *d)
 {
 	int exitcode;
 
+	if (!d->next_fp)
+		return 0;
+
 	fprintf(d->next_fp, "%d\n", d->next);
 	fclose(d->next_fp);
+	d->next_fp = NULL;
 
 	exitcode = systemf("dagger -C %s abandon", d->path);
 	DEBUG("dagger(%d->%d): abandon: exitcode=%d\n",
@@ -134,12 +138,13 @@ int dagger_abandon(struct dagger *d)
 	return exitcode;
 }
 
-int dagger_evolve(struct dagger *d)
+static int dagger_evolve(struct dagger *d)
 {
 	int exitcode;
 
 	fprintf(d->next_fp, "%d\n", d->next);
 	fclose(d->next_fp);
+	d->next_fp = NULL;
 
 	exitcode = systemf("dagger -C %s evolve", d->path);
 	DEBUG("dagger(%d->%d): evolve: exitcode=%d\n",
@@ -163,6 +168,9 @@ int dagger_evolve_or_abandon(struct dagger *d)
 {
 	int exitcode, err;
 
+	if (!d->next_fp)
+		return 0;
+
 	exitcode = dagger_evolve(d);
 	dagger_prune(d);
 	if (!exitcode)
@@ -184,13 +192,12 @@ int dagger_is_bootstrap(struct dagger *d)
 
 int dagger_claim(struct dagger *d, const char *path)
 {
-	int err;
+	char lnk[strlen(path) + 32];
 
 	memset(d, 0, sizeof(*d));
 
-	err = systemf("mkdir -p %s", path);
-	if (err)
-		return err;
+	if (mkpath(path, 0755))
+		return -1;
 
 	d->next_fp = fopenf("wx", "%s/next", path);
 	if (!d->next_fp) {
@@ -201,23 +208,22 @@ int dagger_claim(struct dagger *d, const char *path)
 	if (readdf(&d->current, "%s/current", path)) {
 		d->current = -1;
 	} else {
-		err = systemf("mkdir -p %s/%d/action/exit"
-			      " && "
-			      "ln -sf ../../top-down-order %s/%d/action/exit/order",
-			      path, d->current, path, d->current);
-		if (err)
-			return err;
+		if (fmkpath(0755, "%s/%d/action/exit", path, d->current))
+			return -1;
+		snprintf(lnk, sizeof(lnk), "%s/%d/action/exit/order", path, d->current);
+		erase(lnk);
+		if (symlink("../../top-down-order", lnk))
+			return -1;
 	}
 
 	d->next = d->current + 1;
-	err = systemf("mkdir -p %s/%d/action/init"
-		      " && "
-		      "mkdir -p %s/%d/skip"
-		      " && "
-		      "ln -s ../../bottom-up-order %s/%d/action/init/order",
-		      path, d->next, path, d->next, path, d->next);
-	if (err)
-		return err;
+	if (fmkpath(0755, "%s/%d/action/init", path, d->next))
+		return -1;
+	if (fmkpath(0755, "%s/%d/skip", path, d->next))
+		return -1;
+	snprintf(lnk, sizeof(lnk), "%s/%d/action/init/order", path, d->next);
+	if (symlink("../../bottom-up-order", lnk) && errno != EEXIST)
+		return -1;
 
 	strlcpy(d->path, path, sizeof(d->path));
 	return 0;

@@ -6,6 +6,7 @@
 	"enabled": true
     },
     "infix-services:web": {
+	"certificate": "gencert",
 	"enabled": true,
 	"restconf": {
 	    "enabled": true

@@ -1,7 +1,7 @@
-From 7d6b1a463fdacefaf7a7057564f6f4d4a8cb4632 Mon Sep 17 00:00:00 2001
+From f58dc52c4e7445a06484bce0bbfeac831004ce02 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 25 Mar 2025 11:06:26 +0100
-Subject: [PATCH 35/38] restconf: refactor getting datastore from string
+Subject: [PATCH 35/42] restconf: refactor getting datastore from string
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -11,6 +11,7 @@ This will be useful when processing YANG push requests.
 
 Change-Id: I1e76335c8d674e81890d6cd1e973adaf521eb205
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/uri.cpp           | 19 +++++--------------
  src/restconf/utils/sysrepo.cpp | 16 ++++++++++++++++

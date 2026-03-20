@@ -774,7 +774,8 @@ static sr_error_t ifchange_post(sr_session_ctx_t *session, struct dagger *net,
 	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
 
-int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+		      sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *cifs, *difs, *cif, *dif;
 	sr_error_t err;
@@ -794,12 +795,18 @@ int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 		return SR_ERR_OK;
 	}
 
+	difs = lydx_get_descendant(diff, "interfaces", "interface", NULL);
+	if (!difs) {
+		/* No interface changes, skip to prevent another dagger generation */
+		return SR_ERR_OK;
+	}
+
 	err = dagger_claim(&confd->netdag, "/run/net");
 	if (err)
 		return err;
 
 	cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
-	difs = lydx_get_descendant(diff, "interfaces", "interface", NULL);
+
 	err = netdag_init(session, &confd->netdag, cifs, difs);
 	if (err)
 		goto err_out;

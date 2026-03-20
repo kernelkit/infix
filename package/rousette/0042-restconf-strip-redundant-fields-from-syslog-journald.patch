@@ -1,0 +1,37 @@
+From 87f1984ea8d07d7e55c0ad08e24ba9adeefd6aca Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 19 Mar 2026 17:54:11 +0100
+Subject: [PATCH 42/42] restconf: strip redundant fields from syslog/journald
+ log messages
+Organization: Wires
+
+When logging to syslog or journald, the timestamp, program name, and log
+level are all provided by the logging infrastructure itself. Use a bare
+message-only pattern to avoid the duplication.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/restconf/main.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/restconf/main.cpp b/src/restconf/main.cpp
+index 66c782d..63f8760 100644
+--- a/src/restconf/main.cpp
++++ b/src/restconf/main.cpp
+@@ -110,11 +110,13 @@ int main(int argc, char* argv [])
+         auto syslog_sink = std::make_shared<spdlog::sinks::syslog_sink_mt>("rousette", LOG_PID, LOG_USER, true);
+         auto logger = std::make_shared<spdlog::logger>("rousette", syslog_sink);
+         spdlog::set_default_logger(logger);
++        spdlog::set_pattern("%v");
+ #ifdef HAVE_SYSTEMD
+     } else if (is_journald_active()) {
+         auto sink = std::make_shared<journald_sink<std::mutex>>();
+         auto logger = std::make_shared<spdlog::logger>("rousette", sink);
+         spdlog::set_default_logger(logger);
++        spdlog::set_pattern("%v");
+ #endif
+     } else {
+         auto stdout_sink = std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>();
+-- 
+2.43.0
+

@@ -24,7 +24,6 @@ FILE *dagger_fopen_current(struct dagger *d, const char *action, const char *nod
 int dagger_add_dep(const struct dagger *d, const char *depender, const char *dependee);
 int dagger_add_node(struct dagger *d, const char *node);
 int dagger_abandon(struct dagger *d);
-int dagger_evolve(struct dagger *d);
 int dagger_evolve_or_abandon(struct dagger *d);
 
 int dagger_is_bootstrap(struct dagger *d);

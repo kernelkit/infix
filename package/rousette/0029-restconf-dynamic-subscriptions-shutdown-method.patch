@@ -1,7 +1,7 @@
-From 9c39cdd8a8a6bb8fb94d4f943313ec8c4a1823d7 Mon Sep 17 00:00:00 2001
+From dc462f432a2360f4ed9c7b5e2a17051074674f01 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 10 Nov 2025 19:58:36 +0100
-Subject: [PATCH 29/38] restconf: dynamic subscriptions shutdown method
+Subject: [PATCH 29/42] restconf: dynamic subscriptions shutdown method
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -13,6 +13,7 @@ cannot call its terminate() method.
 
 Change-Id: I4532bbafff7c7386a18ed0636f1102842d2749fa
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/DynamicSubscriptions.cpp | 10 ++++++++++
  src/restconf/DynamicSubscriptions.h   |  1 +

@@ -1,7 +1,7 @@
-From f6ee629de8abef42a24c42b185052b0c8e78bd6b Mon Sep 17 00:00:00 2001
+From 39f43493339984e3a3c256bc818f11aee71375f9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 19 May 2025 12:23:16 +0200
-Subject: [PATCH 15/38] restconf: add internal RPC handler dispatcher
+Subject: [PATCH 15/42] restconf: add internal RPC handler dispatcher
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -15,6 +15,7 @@ ietf-subscribed-notifications:establish-subscription RPC is coming soon.
 
 Change-Id: I99121a511011229e4098f95e91601b39d333444a
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/Server.cpp | 24 ++++++++++++++++++++----
  tests/restconf-rpc.cpp  | 18 ++++++++++++++++++
