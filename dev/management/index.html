@@ -1632,6 +1632,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#https-certificate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTPS Certificate
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2415,6 +2426,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#https-certificate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTPS Certificate
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2620,6 +2642,7 @@ the unit's neighbors, collected via mDNS (see
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit web</b>
 admin@example:/config/web/&gt; <b>help</b>
+  certificate                       Reference to asymmetric key in central keystore.
   enabled                           Enable or disable on all web services.
   console                           Web console interface.
   netbrowse                         mDNS Network Browser.
@@ -2665,6 +2688,19 @@ admin@example:/config/web/restconf/&gt; <b>no enabled</b>
 admin@example:/config/web/restconf/&gt;
 </code></pre>
 
+<h3 id="https-certificate">HTTPS Certificate<a class="headerlink" href="#https-certificate" title="Permanent link">¶</a></h3>
+<p>The Web server uses a TLS certificate from the central
+<a href="../keystore/">keystore</a>.  By default it uses <code>gencert</code>, a self-signed
+certificate that is automatically generated on first boot.</p>
+<p>To use a different certificate, e.g., one signed by a CA, first add
+it to the keystore as an asymmetric key with <code>x509-public-key-format</code>,
+then point the web <code>certificate</code> leaf to it:</p>
+<pre class="cli"><code>admin@example:/config/web/&gt; <b>set certificate my-cert</b>
+admin@example:/config/web/&gt;
+</code></pre>
+
+<p>See <a href="../keystore/#tls-certificates">Keystore</a> for details on managing
+TLS certificates.</p>
 <h2 id="system-upgrade">System Upgrade<a class="headerlink" href="#system-upgrade" title="Permanent link">¶</a></h2>
 <p>See <a href="../upgrade/">Upgrade &amp; Boot Order</a> for information on upgrading.</p>
 

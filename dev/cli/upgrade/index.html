@@ -2262,7 +2262,7 @@ even both.</p>
 <p>To install a new software image to the currently <em>inactive</em> partition<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>, we
 use the <code>upgrade</code> command and a URI to a ftp/tftp/sftp or http/https server
 that hosts the file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@host:/&gt; upgrade tftp://192.168.122.1/firmware-x86_64-v23.11.pkg
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; upgrade tftp://192.168.122.1/firmware-x86_64-v23.11.pkg
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>installing
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  0% Installing
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  0% Determining slot states
@@ -2283,7 +2283,7 @@ that hosts the file:</p>
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a> 99% Updating slots done.
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>100% Installing done.
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>Installing `tftp://192.168.122.1/firmware-x86_64-v23.11.pkg` succeeded
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>admin@host:/&gt;
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>admin@example:/&gt;
 </code></pre></div>
 <p>The secondary partition (<code>rootfs.1</code>) has now been upgraded and will be used as
 the <em>active</em> partition on the next boot.  Leaving the primary partition, with

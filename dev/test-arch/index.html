@@ -2198,6 +2198,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Integration to Infix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#test-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-mode-on-virtual-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Mode on Virtual Devices
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-mode-on-physical-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Mode on Physical Devices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2416,6 +2455,45 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Integration to Infix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#test-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-mode-on-virtual-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Mode on Virtual Devices
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-mode-on-physical-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Mode on Physical Devices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2704,18 +2782,48 @@ could accept an arbitrary physical topology, run the STP algorithm on
 it offline, enable STP on all DUTs, and then verify that the resulting
 spanning tree matches the expected one.</p>
 <h2 id="integration-to-infix">Integration to Infix<a class="headerlink" href="#integration-to-infix" title="Permanent link">¶</a></h2>
-<p>When the test environment is started with Qeneth, it doesn't use the 
-base image directly. Instead, it creates a copy and inserts a <code>test-mode</code>
-flag into it. During the bootstrap phase, the system checks for the 
-presence of the test-mode flag (file).</p>
-<p>If the flag exists, a 'test-config.cfg' file is generated. In the 
-following step, the system loads the 'test-config' instead of the
-standard <code>startup-config</code> (or <code>factory-config</code>). This configuration
-is simple and safe, equivalent to the one used in 'Secure Mode' 
-(also known as 'failure-config').</p>
-<p>Additionally, the configuration enables extra RPCs related to system 
-restart and configuration overrides, allowing tests to be run even on 
-systems where the factory configuration may potentially create L2 loops. </p>
+<h3 id="test-mode">Test Mode<a class="headerlink" href="#test-mode" title="Permanent link">¶</a></h3>
+<p>Infix supports a <em>test mode</em> that makes devices safe and predictable to
+test against.  When active, each boot starts from a known-good
+<code>test-config</code> (equivalent to the failure/secure config) instead of the
+stored startup or factory configuration.  This prevents any persistent
+configuration from interfering with tests and avoids L2 loops that a
+factory config might create.  It also enables two extra RPCs used by
+Infamy:</p>
+<ul>
+<li><code>infix-test:test/reset</code> — reload the <code>test-config</code> into the running
+  datastore (called by <code>env.attach()</code> at the start of each test)</li>
+<li><code>infix-test:test/override-startup</code> — boot from the startup datastore
+  once, instead of the <code>test-config</code> (used by tests that verify
+  save-and-reboot behaviour)</li>
+</ul>
+<p>Test mode is activated by the presence of an empty file named
+<code>test-mode</code> on the device's <code>aux</code> partition (<code>/mnt/aux/test-mode</code>).</p>
+<h3 id="test-mode-on-virtual-devices">Test Mode on Virtual Devices<a class="headerlink" href="#test-mode-on-virtual-devices" title="Permanent link">¶</a></h3>
+<p>When the test environment is started with Qeneth, the <code>inject-test-mode</code>
+script (<code>test/inject-test-mode</code>) is run automatically.  It copies the
+base disk image and writes the <code>test-mode</code> marker into the <code>aux</code>
+partition of that copy, which is then used as the Qeneth backing image.</p>
+<h3 id="test-mode-on-physical-devices">Test Mode on Physical Devices<a class="headerlink" href="#test-mode-on-physical-devices" title="Permanent link">¶</a></h3>
+<p>For a physical device, log in as <code>root</code> (or <code>admin</code>) and create the
+marker file on the <code>aux</code> partition, then reboot:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a># touch /mnt/aux/test-mode
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a># reboot
+</code></pre></div>
+<p>Alternatively, if you want to prepare the disk image before flashing,
+use the <code>inject-test-mode</code> script:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$ test/inject-test-mode -b infix-&lt;board&gt;.img -o infix-&lt;board&gt;-test.img
+</code></pre></div>
+<p>Flash <code>infix-&lt;board&gt;-test.img</code> to the device instead of the plain
+image.  The device will boot into test mode on first power-on.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Test mode persists across reboots until the marker file is removed
+(<code>rm /mnt/aux/test-mode</code>).  A device in test mode always starts from
+the <code>test-config</code>, so any configuration changes are lost on reboot
+unless <code>startup_override()</code> is called first (or the marker is removed
+and a normal startup config is saved).</p>
+</div>
 
 
 

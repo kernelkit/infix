@@ -2485,15 +2485,14 @@ followed by Enter.  Available commands, press <code>?</code> at the prompt:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@host:/config/interface/eth0/&gt; up
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@host:/config/&gt;
 </code></pre></div>
-<hr>
 <blockquote>
-<p><strong>Note:</strong> commands in configure context are automatically generated
-from the system's YANG models, hence different products likely have a
-different set of commands.  However, both the <code>ietf-interfaces.yang</code>
-and <code>ietf-ip.yang</code> models, for instance, that provide the networking
+<p><strong>Note</strong></p>
+<p>Commands in configure context are automatically generated from the
+system's YANG models, hence different products likely have a different
+set of commands.  However, both the <code>ietf-interfaces.yang</code> and
+<code>ietf-ip.yang</code> models, for instance, that provide the networking
 support are common to all systems.</p>
 </blockquote>
-<hr>
 <h2 id="set-ip-address-on-an-interface">Set IP Address on an Interface<a class="headerlink" href="#set-ip-address-on-an-interface" title="Permanent link">¶</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@host:/config/&gt; edit interface eth0
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@host:/config/interface/eth0/&gt;
@@ -2535,12 +2534,11 @@ reboots:</p>
 </code></pre></div>
 <p>The <code>startup-config</code> can also be inspected with the <code>show</code> command to
 verify the changes are saved.</p>
-<hr>
 <blockquote>
-<p><strong>Note:</strong> all commands need to be spelled out, no short forms are
-allowed in the CLI.  Use the <code>TAB</code> key to make your life easier.</p>
+<p><strong>Important</strong></p>
+<p>All commands need to be spelled out, no short forms are allowed in the
+CLI.  Use the <code>TAB</code> key to make your life easier.</p>
 </blockquote>
-<hr>
 <h2 id="changing-hostname">Changing Hostname<a class="headerlink" href="#changing-hostname" title="Permanent link">¶</a></h2>
 <p>Settings like hostname are located in the <code>ietf-system.yang</code> model.
 Here is how it can be set.</p>
@@ -2551,35 +2549,33 @@ Here is how it can be set.</p>
 </code></pre></div>
 <p>Notice how the hostname in the prompt does not change until the change
 is committed.</p>
-<hr>
 <blockquote>
-<p><strong>Note:</strong> critical services like syslog, mDNS, LLDP, and similar that
-advertise the hostname, are restarted when the hostname is changed.</p>
+<p><strong>Note</strong></p>
+<p>Critical services like syslog, mDNS, LLDP, and similar that advertise
+the hostname, are restarted when the hostname is changed.</p>
 </blockquote>
-<hr>
 <h2 id="changing-password">Changing Password<a class="headerlink" href="#changing-password" title="Permanent link">¶</a></h2>
 <p>User management, including passwords, is also a part of <code>ietf-system</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@host:/config/&gt; edit system authentication user admin
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@host:/config/system/authentication/user/admin/&gt; change password
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>New password: 
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Retype password: 
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>New password:
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Retype password:
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@host:/config/system/authentication/user/admin/&gt; leave
 </code></pre></div>
 <p>The <code>change password</code> command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
-the password with sha512crypt. </p>
+the password with sha512crypt.</p>
 <p>It is also possible to use the <code>set password ...</code> command.  This allows
 setting an already hashed password.  To manually hash a password, use
 the <code>do password encrypt</code> command.  This launches the admin-exec command
 to hash, and optionally salt, your password.  This encrypted string can
 then be used with <code>set password ...</code>.</p>
-<hr>
 <blockquote>
-<p><strong>Tip:</strong> if you are having trouble thinking of a password, there is
-also <code>do password generate</code>, which generates random but readable
-strings using the UNIX command <code>pwgen</code>.</p>
+<p><strong>Tip</strong></p>
+<p>If you are having trouble thinking of a password, there is also <code>do
+password generate</code>, which generates random but readable strings using
+the UNIX command <code>pwgen</code>.</p>
 </blockquote>
-<hr>
 <h2 id="ssh-authorized-key">SSH Authorized Key<a class="headerlink" href="#ssh-authorized-key" title="Permanent link">¶</a></h2>
 <p>Logging in remotely with SSH is possible by adding a <em>public key</em> to a
 user.  Here we add the authorized key to the admin user, multiple keys
@@ -2595,11 +2591,11 @@ remember to verify SSH login and network connectivity before doing so.</p>
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
 <a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>admin@host:/config/system/authentication/user/admin/authorized-key/example@host/&gt; leave
 </code></pre></div>
-<hr>
 <blockquote>
-<p><strong>Note:</strong> the <code>ssh-keygen</code> program already base64 encodes the public
-key data, so there is no need to use the <code>text-editor</code> command, <code>set</code>
-does the job.</p>
+<p><strong>Note</strong></p>
+<p>The <code>ssh-keygen</code> program already base64 encodes the public key data,
+so there is no need to use the <code>text-editor</code> command, <code>set</code> does the
+job.</p>
 </blockquote>
 <hr>
 <h2 id="creating-a-veth-pair">Creating a VETH Pair<a class="headerlink" href="#creating-a-veth-pair" title="Permanent link">¶</a></h2>
@@ -2633,13 +2629,13 @@ world.  Here we also add an IPv4 address to one end of the pair.</p>
 <a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>admin@host:/config/&gt; leave
 </code></pre></div>
 <p>See the bridging example below for more.</p>
-<hr>
 <blockquote>
-<p><strong>Note:</strong> in the CLI you do not have to create the <code>veth0b</code> interface.
-The system <em>infers</em> this for you.  When setting up a VETH pair using
-NETCONF, however, you must include the <code>veth0b</code> interface.</p>
+<p><strong>Tip</strong></p>
+<p>In the CLI you do not have to create the <code>veth0b</code> interface.  The
+system <em>infers</em> this for you.  This does not apply when setting up a
+VETH pair using NETCONF or RESTCONF, then you must submit a complete
+configuration.</p>
 </blockquote>
-<hr>
 <h2 id="creating-a-bridge">Creating a Bridge<a class="headerlink" href="#creating-a-bridge" title="Permanent link">¶</a></h2>
 <p>Building on the previous example, we now create a non-VLAN filtering
 bridge (<code>br0</code>) that forwards any, normally link-local, LLDP traffic
@@ -2689,13 +2685,12 @@ between both its bridge ports: <code>eth0</code> and <code>vet0b</code>.</p>
 the VETH pair from the previous example) are now bridged.  Any traffic
 ingressing one port will egress the other.  Only reserved IEEE multicast
 is filtered, except LLDP frames as shown above.</p>
-<hr>
 <blockquote>
-<p><strong>Note:</strong> the bridge can be named anything, provided the interface
-name is not already taken.  However, for any name outside the pattern
-<code>br[0-9]+</code>, you have to set the interface type manually to <code>bridge</code>.</p>
+<p><strong>Important</strong></p>
+<p>The bridge can be named anything, provided the interface name is not
+already taken.  However, for any name outside the pattern <code>br[0-9]+</code>,
+you have to set the interface type manually to <code>bridge</code>.</p>
 </blockquote>
-<hr>
 
 
 

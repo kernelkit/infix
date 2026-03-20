@@ -2658,12 +2658,19 @@ namespace, specify the <code>host</code> <code>TEST_MODE</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$ make TEST_MODE=host test
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>...
 </code></pre></div>
-<p>This typically used when testing on physical hardware. By default the
+<p>This is typically used when testing on physical hardware. By default the
 topology will be sourced from <code>/etc/infamy.dot</code>, but this can be
 overwritten by setting the <code>TOPOLOGY</code> variable:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>$ make TEST_MODE=host TOPOLOGY=~/my-topology.dot test
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>...
 </code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Physical devices must be put into <em>test mode</em> before running tests.
+See <a href="../test-arch/#test-mode">Test Mode</a> in the architecture document
+for details.  The short version: log in to the device and run
+<code>touch /mnt/aux/test-mode &amp;&amp; reboot</code>.</p>
+</div>
 <h3 id="make-run-devices"><code>make run</code> Devices<a class="headerlink" href="#make-run-devices" title="Permanent link">¶</a></h3>
 <p>Some tests only require a single DUT.  These can therefore be run
 against an Infix image started from <code>make run</code>. This requires that the

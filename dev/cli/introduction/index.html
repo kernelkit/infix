@@ -2369,12 +2369,11 @@ available in any context are:</p>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@host-12-34-56:/&gt; show                   # Try: Tab or ?
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>admin@host-12-34-56:/&gt;                        # Try: Tab or ?
 </code></pre></div>
-<hr>
 <blockquote>
-<p><strong>Note:</strong> even on an empty command line, you can tap the <code>Tab</code> or <code>?</code> keys.<br>
+<p><strong>Tip</strong></p>
+<p>Even on an empty command line, you can tap the <code>Tab</code> or <code>?</code> keys.<br>
 See <a href="../keybindings/"><code>help keybindings</code></a> for more tips!</p>
 </blockquote>
-<hr>
 <h2 id="key-concepts">Key Concepts<a class="headerlink" href="#key-concepts" title="Permanent link">¶</a></h2>
 <p>The two modes in the CLI are the admin-exec and the configure context.</p>
 <p>The top-level context after logging in and starting the CLI is the
@@ -2407,14 +2406,14 @@ and <em>running</em> that can be managed and inspected using the <code>copy</cod
 for these are listed below:</p>
 <ul>
 <li><code>factory-config</code> the default configuration from factory for the
-   device, i.e., what the system returns to after a <code>factory-reset</code></li>
+  device, i.e., what the system returns to after a <code>factory-reset</code></li>
 <li><code>startup-config</code> created from <code>factory-config</code> at first boot after
-   factory reset.  Loaded as the system configuration on each boot</li>
+  factory reset.  Loaded as the system configuration on each boot</li>
 <li><code>running-config</code> what is actively running on the system.  If no
-   changes have been made since boot, it is the same as <code>startup-config</code></li>
+  changes have been made since boot, it is the same as <code>startup-config</code></li>
 <li><code>candidate-config</code> is created from <code>running-config</code> when entering the
-   configure context.  Any changes made here can be discarded (<code>abort</code>,
-   <code>rollback</code>) or committed (<code>commit</code>, <code>leave</code>) to <code>running-config</code></li>
+  configure context.  Any changes made here can be discarded (<code>abort</code>,
+  <code>rollback</code>) or committed (<code>commit</code>, <code>leave</code>) to <code>running-config</code></li>
 </ul>
 <p>Edit the <em>running</em> configuration using the <code>configure</code> command.  This
 copies <em>running</em> to <em>candidate</em>, a temporary datastore, where changes
@@ -2495,12 +2494,11 @@ store, so the system will use them for consecutive reboots, use the
 </tbody>
 </table>
 <h2 id="example-session">Example Session<a class="headerlink" href="#example-session" title="Permanent link">¶</a></h2>
-<hr>
 <blockquote>
+<p><strong>Tip</strong></p>
 <p>Remember to use the <code>TAB</code> and <code>?</code> keys to speed up your navigation.<br>
 See <a href="../keybindings/"><code>help keybindings</code></a> for more tips!</p>
 </blockquote>
-<hr>
 <p>In this example we enter configure context to add an IPv4 address to
 interface <code>eth0</code>, then we apply the changes using the <code>leave</code> command.</p>
 <p>We inspect the system status to ensure the change took effect.  Then we
@@ -2508,8 +2506,8 @@ save the changes for the next reboot.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@host-12-34-56:/&gt; configure
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>admin@host-12-34-56:/config/&gt; edit interface eth0
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>admin@host-12-34-56:/config/interface/eth0/&gt; set ipv4 &lt;TAB&gt;
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>      address     autoconf bind-ni-name      enabled
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>      forwarding  mtu      neighbor
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>      address     autoconf      bind-ni-name     dhcp 
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>      enabled     forwarding    mtu              neighbor
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>admin@host-12-34-56:/config/interface/eth0/&gt; set ipv4 address 192.168.2.200 prefix-length 24
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>admin@host-12-34-56:/config/interface/eth0/&gt; show
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>type ethernetCsmacd;
@@ -2546,11 +2544,12 @@ change that, e.g., breaks networking, it is trivial to revert back by:</p>
 </code></pre></div>
 <p>Or restart the device, for example if the change to the configuration
 caused you to lose contact with the system (it happens to the best of
-us).  The system will start up from the last "save gave".</p>
+us).  The system will start up from the last "save game".</p>
 <blockquote>
-<p><strong>Tip:</strong> when restoring a backup of a configuration, or having manually
-edited a config file, you can validate it using system's YANG models,
-it is <em>not</em> applied if validation is successful:</p>
+<p><strong>Tip:</strong> Restoring Backups</p>
+<p>When restoring a backup of a configuration, or having manually edited
+a config file, you can validate it using the system's YANG models, it
+is <em>not</em> applied if validation is successful:</p>
 <p><code>copy /media/backup/old.cfg running-config validate</code></p>
 </blockquote>
 
