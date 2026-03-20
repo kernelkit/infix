@@ -31,11 +31,24 @@ All notable changes to the project are documented in this file.
   - `no ssh known-hosts <host>` — remove a stale or changed host key entry
 - Add OSPF point-to-multipoint (P2MP) and hybrid interface type support.  This
   also includes support for setting static neighbors, issue #1426
+- Add support for user-configurable HTTPS certificate: select any certificate
+  stored in the keystore via `services web certificate <name>`.  The default
+  auto-generated self-signed certificate is now stored in the keystore rather
+  than in `/cfg/ssl` and existing certificates are auto-migrated on upgrade
 
 ### Fixes
 
+- Fix #892: suppress rousette RESTCONF server warnings from syslog
+- Fix #1387: `infix.local` now resolves to exactly one device per LAN.  Previously
+  all Infix devices claimed both `hostname.local` and `infix.local`, causing avahi
+  to append `#2`, `#3` suffixes to the shared alias on busy networks.  Assignment
+  is now first-come-first-served using standard mDNS conflict resolution
+- Fix #1416: `show firewall` command show an error when the firewall is disabled
+- Fix regression in MVEBU SafeXcel Crypto Engine for Marvell Armada SOCs (37xx,
+  7k, 8k, and CN913x series).  Firmware package lost in v26.01.0
 - Fix #1438: default route from DHCP client not set at boot, regression
   introduced in v26.02.0
+- Fix #1446: suppress netopeer2-server NETCONF server warnings from syslog
 - Fix DHCP client not sending hostname to server (e.g. for `dnsmasq` lease
   registration).  All board factory configs had the hostname option without
   `value: auto`, so `udhcpc` only requested the option instead of sending it.
@@ -46,13 +59,6 @@ All notable changes to the project are documented in this file.
   options 3 (router) and 6 (dns-server) on every DHCP transaction.  Add
   `dhcp-authoritative` so clients with unexpired leases are not NAKed after
   a router crash or factory reset that clears the lease database
-- Fix #1387: `infix.local` now resolves to exactly one device per LAN.  Previously
-  all Infix devices claimed both `hostname.local` and `infix.local`, causing avahi
-  to append `#2`, `#3` suffixes to the shared alias on busy networks.  Assignment
-  is now first-come-first-served using standard mDNS conflict resolution
-- Fix #1416: `show firewall` command show an error when the firewall is disabled
-- Fix regression in MVEBU SafeXcel Crypto Engine for Marvell Armada SOCs (37xx,
-  7k, 8k, and CN913x series).  Firmware package lost in v26.01.0
 
 [BPI-R64]: https://docs.banana-pi.org/en/BPI-R64/BananaPi_BPI-R64
 [RPI-400]: https://www.raspberrypi.com/products/raspberry-pi-400/
