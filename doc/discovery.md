@@ -18,8 +18,7 @@ link-local IPv6 address is then seen in the response.  In the following
 example, the PC here uses *tap0* as *if1*, Infix responds with address
 *fe80::ff:fec0:ffed*.
 
-```
-linux-pc:# ping -6 -L -c 3 ff02::1%tap0
+<pre class="cli"><code>linux-pc:# <b>ping -6 -L -c 3 ff02::1%tap0</b>
 PING ff02::1%tap0(ff02::1%tap0) 56 data bytes
 64 bytes from fe80::ff:fec0:ffed%tap0: icmp_seq=1 ttl=64 time=0.558 ms
 64 bytes from fe80::ff:fec0:ffed%tap0: icmp_seq=2 ttl=64 time=0.419 ms
@@ -28,8 +27,8 @@ PING ff02::1%tap0(ff02::1%tap0) 56 data bytes
 --- ff02::1%tap0 ping statistics ---
 3 packets transmitted, 3 received, 0% packet loss, time 2043ms
 rtt min/avg/max/mdev = 0.389/0.455/0.558/0.073 ms
-linux-pc:# 
-```
+linux-pc:#
+</code></pre>
 
 > [!TIP]
 > The `-L` option ignores local responses from the PC.
@@ -37,11 +36,10 @@ linux-pc:#
 This address can then be used to connect to the device, e.g., using SSH.
 Notice the syntax `username@address%interface`:
 
-```
-linux-pc:# ssh admin@fe80::ff:fec0:ffed%tap0
+<pre class="cli"><code>linux-pc:# <b>ssh admin@fe80::ff:fec0:ffed%tap0</b>
 admin@fe80::ff:fec0:ffed%tap0's password: admin
-admin@infix-c0-ff-ee:~$ 
-```
+admin@infix-c0-ff-ee:~$
+</code></pre>
 
 ### Windows
 
@@ -52,10 +50,9 @@ no extra software required.
 
 From the command line, use the `.local` hostname directly:
 
-```cmd
-C:\> ping infix-c0-ff-ee.local
-C:\> ssh admin@infix-c0-ff-ee.local
-```
+<pre class="cli"><code>C:\> <b>ping infix-c0-ff-ee.local</b>
+C:\> <b>ssh admin@infix-c0-ff-ee.local</b>
+</code></pre>
 
 > [!NOTE]
 > IPv6 multicast ping (`ping ff02::1%if1`) may not display responses on
@@ -63,9 +60,8 @@ C:\> ssh admin@infix-c0-ff-ee.local
 > confirm connectivity, Wireshark will show the ICMPv6 echo replies
 > arriving.  Use mDNS (see [mDNS-SD](#mdns-sd) below) as the reliable
 > alternative.
-
-![Wireshark showing IPv6 ping responses](https://github.com/addiva-elektronik/alder/assets/122900029/c45d7726-448f-4c30-878e-bcf976dff531)
-
+>
+> ![Wireshark showing IPv6 ping responses](img/windows-ipv6-ping-reply.png)
 
 ## LLDP
 
@@ -73,8 +69,7 @@ Infix supports LLDP (IEEE 802.1AB). For a device with factory default
 settings, the link-local IPv6 address can be read from the Management
 Address TLV using *tcpdump* or other sniffing tools[^1]:
 
-```
-linux-pc:# tcpdump -i tap0 -Qin -v ether proto 0x88cc
+<pre class="cli"><code>linux-pc:# <b>tcpdump -i tap0 -Qin -v ether proto 0x88cc</b>
 tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
 15:51:52.061071 LLDP, length 193
     Chassis ID TLV (1), length 7
@@ -103,8 +98,8 @@ tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 
     End TLV (0), length 0
 ^C
 1 packet captured
-linux-pc:# 
-```
+linux-pc:#
+</code></pre>
 
 If the device has an IPv4 address assigned, it is shown in an additional
 Management Address TLV.
@@ -116,8 +111,7 @@ Management Address TLV.
 In the example below, the IPv4 address (10.0.1.1) happens to be
 assigned to *eth0*, while the IPv6 address (2001:db8::1) is not.
 
-```
-linux-pc:# sudo tcpdump -i tap0 -Qin -v ether proto 0x88cc
+<pre class="cli"><code>linux-pc:# <b>sudo tcpdump -i tap0 -Qin -v ether proto 0x88cc</b>
 tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
 15:46:07.908665 LLDP, length 207
     Chassis ID TLV (1), length 7
@@ -152,7 +146,7 @@ tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 
 2 packets received by filter
 0 packets dropped by kernel
 linux-pc:#
-```
+</code></pre>
 
 The following capabilities are available via NETCONF/RESTCONF or the Infix CLI.
 
@@ -160,19 +154,17 @@ The following capabilities are available via NETCONF/RESTCONF or the Infix CLI.
 
 The LLDP service can be disabled using the following commands.
 
-```
-admin@infix-c0-ff-ee:/> configure
-admin@infix-c0-ff-ee:/config/> no lldp 
-admin@infix-c0-ff-ee:/config/> leave
-admin@infix-c0-ff-ee:/> 
-```
+<pre class="cli"><code>admin@infix-c0-ff-ee:/> <b>configure</b>
+admin@infix-c0-ff-ee:/config/> <b>no lldp</b>
+admin@infix-c0-ff-ee:/config/> <b>leave</b>
+admin@infix-c0-ff-ee:/>
+</code></pre>
 
 To reenable it from the CLI config mode:
 
-```
-admin@test-00-01-00:/config/> set lldp enabled 
-admin@test-00-01-00:/config/> leave
-```
+<pre class="cli"><code>admin@test-00-01-00:/config/> <b>set lldp enabled</b>
+admin@test-00-01-00:/config/> <b>leave</b>
+</code></pre>
 
 ### LLDP Message Transmission Interval
 
@@ -180,15 +172,14 @@ By default, LLDP uses a `message-tx-interval` of 30 seconds, as defined
 by the IEEE standard. Infix allows this value to be customized.
 To change it using the CLI:
 
-```
-admin@test-00-01-00:/config/> set lldp message-tx-interval 1
-admin@test-00-01-00:/config/> leave
-```
+<pre class="cli"><code>admin@test-00-01-00:/config/> <b>set lldp message-tx-interval 1</b>
+admin@test-00-01-00:/config/> <b>leave</b>
+</code></pre>
 
 ### LLDP Administrative Status per Interface
 
 Infix supports configuring the LLDP administrative status on a per-port
-basis. The default mode is `tx-and-rx`, but the following options are 
+basis. The default mode is `tx-and-rx`, but the following options are
 also supported:
 
 - `rx-only` – Receive LLDP packets only
@@ -197,15 +188,14 @@ also supported:
 
 Example configuration:
 
-```
-admin@test-00-01-00:/config/> set lldp port e8 dest-mac-address 01:80:C2:00:00:0E admin-status disabled
-admin@test-00-01-00:/config/> set lldp port e5 dest-mac-address 01:80:C2:00:00:0E admin-status rx-only 
-admin@test-00-01-00:/config/> set lldp port e6 dest-mac-address 01:80:C2:00:00:0E admin-status tx-only
-admin@test-00-01-00:/config/> leave
-```
+<pre class="cli"><code>admin@test-00-01-00:/config/> <b>set lldp port e8 dest-mac-address 01:80:C2:00:00:0E admin-status disabled</b>
+admin@test-00-01-00:/config/> <b>set lldp port e5 dest-mac-address 01:80:C2:00:00:0E admin-status rx-only</b>
+admin@test-00-01-00:/config/> <b>set lldp port e6 dest-mac-address 01:80:C2:00:00:0E admin-status tx-only</b>
+admin@test-00-01-00:/config/> <b>leave</b>
+</code></pre>
 
 > [!NOTE]
-> The destination MAC address must be the standard LLDP multicast 
+> The destination MAC address must be the standard LLDP multicast
 > address: `01:80:C2:00:00:0E`.
 
 ###  Displaying LLDP Neighbor Information
@@ -213,13 +203,12 @@ admin@test-00-01-00:/config/> leave
 In CLI mode, Infix also provides a convenient `show lldp` command to
 list LLDP neighbors detected on each interface:
 
-```
-admin@test-00-01-00:/> show lldp 
-INTERFACE       REM-IDX   TIME        CHASSIS-ID          PORT-ID             
-e5              1         902         00:a0:85:00:04:01   00:a0:85:00:04:07   
-e6              3         897         00:a0:85:00:03:01   00:a0:85:00:03:07   
+<pre class="cli"><code>admin@test-00-01-00:/> <b>show lldp</b>
+<span class="header">INTERFACE       REM-IDX   TIME        CHASSIS-ID          PORT-ID                           </span>
+e5              1         902         00:a0:85:00:04:01   00:a0:85:00:04:07
+e6              3         897         00:a0:85:00:03:01   00:a0:85:00:03:07
 e8              2         901         00:a0:85:00:02:01   00:a0:85:00:02:05
-```
+</code></pre>
 
 ## mDNS-SD
 
@@ -227,34 +216,44 @@ DNS-SD/mDNS-SD can be used to discover Infix devices and services.  By
 default, Infix use the `.local` domain for advertising services.  Some
 networks use `.lan` instead, so this configurable:
 
-```
-admin@infix-c0-ff-ee:/> configure
-admin@infix-c0-ff-ee:/config/> edit mdns
-admin@infix-c0-ff-ee:/config/mdns/> set domain lan
-```
+<pre class="cli"><code>admin@infix-c0-ff-ee:/> <b>configure</b>
+admin@infix-c0-ff-ee:/config/> <b>edit mdns</b>
+admin@infix-c0-ff-ee:/config/mdns/> <b>set domain lan</b>
+</code></pre>
 
 Other available settings include limiting the interfaces mDNS responder
-acts on:
+acts on, `allow`:
 
-```
-admin@infix-c0-ff-ee:/config/> set interfaces allow e1
-```
+<pre class="cli"><code>admin@infix-c0-ff-ee:/config/> <b>set interfaces allow e1</b>
+</code></pre>
 
-or
+or `deny`.  The `allow` and `deny` settings are complementary, `deny` always wins.
 
-```
-admin@infix-c0-ff-ee:/config/> set interfaces deny wan
-```
+<pre class="cli"><code>admin@infix-c0-ff-ee:/config/> <b>set interfaces deny wan</b>
+</code></pre>
 
-The `allow` and `deny` settings are complementary, `deny` always wins.
+Use `leave` to activate the new settings, then inspect the operational
+state and any detected neighbors with `show mdns` from admin-exec
+context:
+
+<pre class="cli"><code>admin@gateway:/> <b>show mdns</b>
+Enabled         : yes
+Domain          : local
+Deny            : wan
+
+<span class="header">HOSTNAME           ADDRESS        LAST SEEN  SERVICES                                       </span>
+Living-Room.local  192.168.0.139  17:28:43   trel(59813) sleep-proxy(61936) raop(7000) srpl-tls(853)
+firefly-4.local    192.168.0.122  17:28:37   workstation(9)
+gimli.local        192.168.0.180  17:28:37   smb(445)
+infix.local        192.168.0.1    17:28:38   https(443) workstation(9) ssh(22) https(443)
+</code></pre>
 
 ----
 
 In Linux, tools such as *avahi-browse* or *mdns-scan*[^2] can be used to
 search for devices advertising their services via mDNS.
 
-```
-linux-pc:# avahi-browse -ar
+<pre class="cli"><code>linux-pc:# <b>avahi-browse -ar</b>
 +   tap0 IPv6 infix-c0-ff-ee                                SFTP File Transfer   local
 +   tap0 IPv4 infix-c0-ff-ee                                SFTP File Transfer   local
 +   tap0 IPv6 infix-c0-ff-ee                                SSH Remote Terminal  local
@@ -281,7 +280,7 @@ linux-pc:# avahi-browse -ar
    txt = []
 ^C
 linux-pc:#
-```
+</code></pre>
 
 > [!TIP]
 > The `-t` option is also very useful, it stops browsing automatically
@@ -294,17 +293,15 @@ name mappings for IP addresses.  By default, it translates from IPv4
 addresses.  This function allows users to confirm that addresses are
 mapped correctly.
 
-```
-linux-pc:# avahi-resolve-host-name infix-c0-ff-ee.local
+<pre class="cli"><code>linux-pc:# <b>avahi-resolve-host-name infix-c0-ff-ee.local</b>
 infix-c0-ff-ee.local	10.0.1.1
 linux-pc:#
-```
+</code></pre>
 
 Thanks to mDNS we can use the advertised name instead of the IP
 address for operations like `ping` and `ssh` as shown below:
 
-```
-linux-pc:# ping infix-c0-ff-ee.local -c 3
+<pre class="cli"><code>linux-pc:# <b>ping infix-c0-ff-ee.local -c 3</b>
 PING infix-c0-ff-ee.local (10.0.1.1) 56(84) bytes of data.
 64 bytes from 10.0.1.1: icmp_seq=1 ttl=64 time=0.852 ms
 64 bytes from 10.0.1.1: icmp_seq=2 ttl=64 time=1.12 ms
@@ -314,8 +311,8 @@ PING infix-c0-ff-ee.local (10.0.1.1) 56(84) bytes of data.
 3 packets transmitted, 3 received, 0% packet loss, time 2003ms
 rtt min/avg/max/mdev = 0.852/1.105/1.348/0.202 ms
 
-linux-pc:# ssh admin@infix-c0-ff-ee.local
-(admin@infix-c0-ff-ee.local) Password: 
+linux-pc:# <b>ssh admin@infix-c0-ff-ee.local</b>
+(admin@infix-c0-ff-ee.local) Password:
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://www.kernelkit.org
@@ -324,27 +321,25 @@ linux-pc:# ssh admin@infix-c0-ff-ee.local
 Run the command 'cli' for interactive OAM
 
 linux-pc:#
-```
+</code></pre>
 
 To disable mDNS/mDNS-SD, type the commands:
 
-```
-admin@infix-c0-ff-ee:/> configure 
-admin@infix-c0-ff-ee:/config/> no mdns
-admin@infix-c0-ff-ee:/config/> leave
-```
+<pre class="cli"><code>admin@infix-c0-ff-ee:/> <b>configure</b>
+admin@infix-c0-ff-ee:/config/> <b>no mdns</b>
+admin@infix-c0-ff-ee:/config/> <b>leave</b>
+</code></pre>
 
 ### Human-Friendly Hostname Alias
 
-Each Infix deviuce advertise itself as *infix.local*, in addition to its
+Each Infix device advertises itself as *infix.local*, in addition to its
 full hostname (e.g., *infix-c0-ff-ee.local* or *foo.local*).  This alias
 works seamlessly on a network with a single Infix device, and makes it
 easy to connect when the exact hostname is not known in advance.  The
 examples below show how the alias can be used for actions such as
 pinging or establishing an SSH connection:
 
-```
-linux-pc:# ping infix.local -c 3
+<pre class="cli"><code>linux-pc:# <b>ping infix.local -c 3</b>
 PING infix.local (10.0.1.1) 56(84) bytes of data.
 64 bytes from 10.0.1.1: icmp_seq=1 ttl=64 time=0.751 ms
 64 bytes from 10.0.1.1: icmp_seq=2 ttl=64 time=2.28 ms
@@ -354,8 +349,8 @@ PING infix.local (10.0.1.1) 56(84) bytes of data.
 3 packets transmitted, 3 received, 0% packet loss, time 2003ms
 rtt min/avg/max/mdev = 0.751/1.482/2.281/0.626 ms
 
-linux-pc:# ssh admin@infix.local
-(admin@infix.local) Password: 
+linux-pc:# <b>ssh admin@infix.local</b>
+(admin@infix.local) Password:
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://www.kernelkit.org
@@ -364,7 +359,7 @@ linux-pc:# ssh admin@infix.local
 Run the command 'cli' for interactive OAM
 
 admin@infix-c0-ff-ee:~$
-```
+</code></pre>
 
 When multiple Infix devices are present on the LAN the alias will not
 uniquely identify a device; *infix.local* will refer to any of the
@@ -390,12 +385,11 @@ portal to access all others, if it goes down another takes its place.
 To disable the netbrowse service, and the *network.local* alias, the
 following commands can be used:
 
-```
-admin@infix-c0-ff-ee:/> configure 
-admin@infix-c0-ff-ee:/config/> edit web
-admin@infix-c0-ff-ee:/config/web/> no netbrowse
-admin@infix-c0-ff-ee:/config/web/> leave
-```
+<pre class="cli"><code>admin@infix-c0-ff-ee:/> <b>configure</b>
+admin@infix-c0-ff-ee:/config/> <b>edit web</b>
+admin@infix-c0-ff-ee:/config/web/> <b>no netbrowse</b>
+admin@infix-c0-ff-ee:/config/web/> <b>leave</b>
+</code></pre>
 
 
 [^1]: E.g., [lldpd](https://github.com/lldp/lldpd) which includes the
