@@ -458,7 +458,7 @@
     }
     var parts = [label];
     if (lastTs) {
-      parts.push('updated ' + lastTs.toLocaleTimeString());
+      parts.push('updated ' + lastTs.toLocaleTimeString(undefined, { hour12: false }));
     }
     foot.textContent = parts.join('  ·  ');
   }

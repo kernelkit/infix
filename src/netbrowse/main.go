@@ -25,24 +25,37 @@ func browseHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(browseHTML)
 }
 
-func dataHandler(w http.ResponseWriter, r *http.Request) {
-	hosts := scan()
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	if err := json.NewEncoder(w).Encode(hosts); err != nil {
-		log.Printf("json: %v", err)
+func dataHandler(scanFn func() map[string]Host) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		hosts := scanFn()
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		if err := json.NewEncoder(w).Encode(hosts); err != nil {
+			log.Printf("json: %v", err)
+		}
 	}
 }
 
 func main() {
-	listen := flag.String("l", "127.0.0.1:8000", "listen address:port")
+	listen  := flag.String("l", "127.0.0.1:8000", "listen address:port")
+	backend := flag.String("backend", "auto", "discovery backend: auto, avahi, or operational")
 	flag.Parse()
+
+	var scanFn func() map[string]Host
+	switch *backend {
+	case "operational":
+		scanFn = scanOperational
+	case "avahi":
+		scanFn = scan
+	default:
+		scanFn = scanAuto
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", browseHandler)
 	mux.HandleFunc("/netbrowse", browseHandler)
-	mux.HandleFunc("/data", dataHandler)
-	mux.HandleFunc("/netbrowse/data", dataHandler)
+	mux.HandleFunc("/data", dataHandler(scanFn))
+	mux.HandleFunc("/netbrowse/data", dataHandler(scanFn))
 
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err != nil {
