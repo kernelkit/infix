@@ -380,7 +380,7 @@ static void ds_push_resolver(struct mdns_ctx *ctx, struct avahi_service *svc,
 	char val[64];
 	struct avahi_txt *t;
 	char ts[32];
-	int err = 0;
+	int err;
 
 	xpath_str(qname, sizeof(qname), svc->name);
 
@@ -388,7 +388,7 @@ static void ds_push_resolver(struct mdns_ctx *ctx, struct avahi_service *svc,
 	 * rejects editing list-key leaves directly — set the list entry instead) */
 	snprintf(xpath, sizeof(xpath),
 		 XPATH_BASE "/neighbor[hostname='%s']", svc->hostname);
-	err = err ?: sr_setstr(ctx->sr_ses, xpath, NULL);
+	err = sr_setstr(ctx->sr_ses, xpath, NULL);
 
 	/* address (only if a new one was added) */
 	if (new_addr) {
@@ -542,16 +542,49 @@ static void resolver_cb(AvahiServiceResolver *r,
 
 	svc->port = port;
 
-	/* Copy TXT records verbatim */
+	/* Copy TXT records, skipping any that are not valid UTF-8 or contain
+	 * bytes that are illegal in XML/YANG strings.  Apple devices sometimes
+	 * embed raw binary tokens (device keys, protocol blobs) in TXT records;
+	 * passing them to sr_set_item_str() would return EINVAL. */
 	for (s = txtlist; s; s = avahi_string_list_get_next(s)) {
 		uint8_t *data = avahi_string_list_get_text(s);
 		size_t   len  = avahi_string_list_get_size(s);
+		size_t   i;
+
+		/* Validate: must be well-formed UTF-8 with no XML-illegal bytes */
+		for (i = 0; i < len; ) {
+			uint8_t b = data[i];
+			int extra;
+
+			if (b < 0x80) {
+				/* ASCII: reject control chars invalid in XML */
+				if ((b < 0x09) || (b > 0x0D && b < 0x20) || b == 0x7F)
+					goto skip;
+				i++;
+				continue;
+			}
+
+			/* Multi-byte UTF-8 lead byte */
+			if      ((b & 0xE0) == 0xC0) extra = 1;
+			else if ((b & 0xF0) == 0xE0) extra = 2;
+			else if ((b & 0xF8) == 0xF0) extra = 3;
+			else goto skip; /* invalid lead byte */
+
+			i++;
+			for (; extra-- > 0; i++) {
+				if (i >= len || (data[i] & 0xC0) != 0x80)
+					goto skip; /* truncated sequence */
+			}
+		}
 
 		t = calloc(1, sizeof(*t));
 		if (!t)
 			break;
 		snprintf(t->val, sizeof(t->val), "%.*s", (int)len, (char *)data);
 		LIST_INSERT_HEAD(&svc->txts, t, link);
+		continue;
+skip:
+		DEBUG("mdns: skipping binary TXT record for '%s' (len=%zu)", name, len);
 	}
 
 	ds_push_resolver(ctx, svc, new_addr);
@@ -714,31 +747,59 @@ static bool mdns_is_enabled(struct mdns_ctx *ctx)
 	return enabled;
 }
 
+static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata);
+
 /*
- * Retry timer callback: fires 2 s after AVAHI_CLIENT_FAILURE (and repeats up
- * to 3 times).  Only logs ERROR once all retries are exhausted AND mDNS is
- * enabled in the running config — this avoids noisy errors when the operator
- * has simply disabled the mDNS service.
- *
- * Example log (mDNS enabled, daemon stays down):
- *   avahi: mDNS daemon not responding (attempt 3/3) — check that the mdns
- *   service is running
+ * Reconnect timer: fires MDNS_RECONN_DELAY seconds after AVAHI_CLIENT_FAILURE.
+ * Frees the broken client and creates a fresh one.  libavahi's own AVAHI_CLIENT_NO_FAIL
+ * reconnection can miss D-Bus NameOwnerChanged events; explicit free+recreate is
+ * more reliable (same pattern used by mdns-alias).
  */
+#define MDNS_RECONN_DELAY 3.0
+
+static void reconn_cb(struct ev_loop *loop, ev_timer *w, int revents)
+{
+	struct mdns_ctx *ctx = (struct mdns_ctx *)
+		((char *)w - offsetof(struct mdns_ctx, reconn_timer));
+	int avahi_err;
+
+	(void)loop;
+	(void)revents;
+
+	if (ctx->client) {
+		avahi_client_free(ctx->client);
+		ctx->client = NULL;
+	}
+
+	ctx->client = avahi_client_new(&ctx->poll_api, AVAHI_CLIENT_NO_FAIL,
+				       client_cb, ctx, &avahi_err);
+	if (!ctx->client)
+		ERROR("mdns: failed to recreate avahi client: %s", avahi_strerror(avahi_err));
+}
+
+/*
+ * Log-delay timer: fires MDNS_WARN_DELAY seconds after AVAHI_CLIENT_FAILURE.
+ * Logs a single warning if mDNS is still enabled in the running config —
+ * suppresses noise when the operator has simply disabled the mDNS service or
+ * avahi is just restarting briefly.  Reconnection itself is handled by the
+ * libavahi client (AVAHI_CLIENT_NO_FAIL) — we never give up.
+ *
+ * The delay must exceed libavahi's internal reconnect-poll interval (~5 s so
+ * that a normal daemon restart cancels this timer before it fires.
+ */
+#define MDNS_WARN_DELAY 10.0
+
 static void mdns_retry_cb(struct ev_loop *loop, ev_timer *w, int revents)
 {
 	struct mdns_ctx *ctx = (struct mdns_ctx *)
 		((char *)w - offsetof(struct mdns_ctx, retry_timer));
 
+	(void)loop;
+	(void)revents;
 	ctx->fail_count++;
-	if (ctx->fail_count < 3) {
-		ev_timer_set(w, 2.0, 0.0);
-		ev_timer_start(loop, w);
-		return;
-	}
 
 	if (mdns_is_enabled(ctx))
-		ERROR("mdns: mDNS daemon not responding (attempt %d/3) — "
-		      "check that the mdns service is running", ctx->fail_count);
+		WARN("mdns: mDNS daemon not responding, will reconnect automatically");
 }
 
 static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
@@ -750,6 +811,7 @@ static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 	switch (state) {
 	case AVAHI_CLIENT_S_RUNNING:
 		if (ctx->fail_count > 0) {
+			ev_timer_stop(ctx->loop, &ctx->reconn_timer);
 			ev_timer_stop(ctx->loop, &ctx->retry_timer);
 			NOTE("mdns: mDNS daemon reconnected");
 			ctx->fail_count = 0;
@@ -779,8 +841,12 @@ static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 		 * will log only if the daemon stays down for 3 attempts (~6 s)
 		 * and mDNS is enabled in the running config.
 		 */
+		if (!ev_is_active(&ctx->reconn_timer)) {
+			ev_timer_init(&ctx->reconn_timer, reconn_cb, MDNS_RECONN_DELAY, 0.0);
+			ev_timer_start(ctx->loop, &ctx->reconn_timer);
+		}
 		if (!ev_is_active(&ctx->retry_timer)) {
-			ev_timer_init(&ctx->retry_timer, mdns_retry_cb, 2.0, 0.0);
+			ev_timer_init(&ctx->retry_timer, mdns_retry_cb, MDNS_WARN_DELAY, 0.0);
 			ev_timer_start(ctx->loop, &ctx->retry_timer);
 		}
 
@@ -857,10 +923,54 @@ int mdns_ctx_init(struct mdns_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *sr_
 	return 0;
 }
 
+void mdns_ctx_reconnect(struct mdns_ctx *ctx)
+{
+	struct avahi_type_entry *te;
+	int avahi_err;
+
+	if (!mdns_is_enabled(ctx)) {
+		NOTE("mdns: mDNS is disabled, ignoring reconnect request");
+		return;
+	}
+
+	NOTE("mdns: reconnecting on request");
+
+	ev_timer_stop(ctx->loop, &ctx->reconn_timer);
+	ev_timer_stop(ctx->loop, &ctx->retry_timer);
+	ctx->fail_count = 0;
+
+	/* Clean up browsers before freeing the client */
+	while (!LIST_EMPTY(&ctx->type_entries)) {
+		te = LIST_FIRST(&ctx->type_entries);
+		avahi_service_browser_free(te->browser);
+		LIST_REMOVE(te, link);
+		free(te);
+	}
+	if (ctx->type_browser) {
+		avahi_service_type_browser_free(ctx->type_browser);
+		ctx->type_browser = NULL;
+	}
+
+	free_all(ctx);
+	ds_clear_all(ctx);
+
+	if (ctx->client) {
+		avahi_client_free(ctx->client);
+		ctx->client = NULL;
+	}
+
+	ctx->client = avahi_client_new(&ctx->poll_api, AVAHI_CLIENT_NO_FAIL,
+				       client_cb, ctx, &avahi_err);
+	if (!ctx->client)
+		ERROR("mdns: failed to recreate avahi client: %s", avahi_strerror(avahi_err));
+}
+
 void mdns_ctx_exit(struct mdns_ctx *ctx)
 {
 	struct avahi_type_entry *te;
 
+	if (ev_is_active(&ctx->reconn_timer))
+		ev_timer_stop(ctx->loop, &ctx->reconn_timer);
 	if (ev_is_active(&ctx->retry_timer))
 		ev_timer_stop(ctx->loop, &ctx->retry_timer);
 

@@ -58,14 +58,16 @@ struct mdns_ctx {
 	AvahiClient             *client;
 	AvahiServiceTypeBrowser *type_browser;
 	AvahiPoll                poll_api;     /* libev-backed vtable */
-	unsigned int             fail_count;   /* Consecutive avahi-daemon connection failures */
-	ev_timer                 retry_timer;  /* Deferred error-log timer */
+	unsigned int             fail_count;   /* Non-zero while avahi-daemon is absent */
+	ev_timer                 reconn_timer; /* Free+recreate client after brief delay */
+	ev_timer                 retry_timer;  /* Deferred warn-log timer */
 	LIST_HEAD(, avahi_neighbor)   neighbors;
 	LIST_HEAD(, avahi_service)    services;    /* Flat list; keyed by 5-tuple */
 	LIST_HEAD(, avahi_type_entry) type_entries;
 };
 
 int  mdns_ctx_init(struct mdns_ctx *ctx, struct ev_loop *loop, sr_conn_ctx_t *sr_conn);
+void mdns_ctx_reconnect(struct mdns_ctx *ctx);
 void mdns_ctx_exit(struct mdns_ctx *ctx);
 
 #endif

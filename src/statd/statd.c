@@ -352,6 +352,13 @@ static void sigusr1_cb(struct ev_loop *, struct ev_signal *, int)
 	debug ^= 1;
 }
 
+static void sighup_cb(struct ev_loop *, struct ev_signal *w, int)
+{
+	struct statd *statd = w->data;
+
+	mdns_ctx_reconnect(&statd->mdns);
+}
+
 
 static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
 {
@@ -455,7 +462,7 @@ static int subscribe_to_all(struct statd *statd)
 
 int main(int argc, char *argv[])
 {
-	struct ev_signal sigint_watcher, sigusr1_watcher;
+	struct ev_signal sigint_watcher, sigusr1_watcher, sighup_watcher;
 	int log_opts = LOG_PID | LOG_NDELAY;
 	struct statd statd = {};
 	const char *env;
@@ -515,6 +522,10 @@ int main(int argc, char *argv[])
 	ev_signal_init(&sigusr1_watcher, sigusr1_cb, SIGUSR1);
 	sigusr1_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sigusr1_watcher);
+
+	ev_signal_init(&sighup_watcher, sighup_cb, SIGHUP);
+	sighup_watcher.data = &statd;
+	ev_signal_start(statd.ev_loop, &sighup_watcher);
 
 	err = journal_start(&statd.journal, statd.sr_query_ses);
 	if (err) {
