@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.19 (LTS)
+- Upgrade Linux kernel to 6.18.20 (LTS)
 - Upgrade Buildroot to 2025.02.12 (LTS)
 - Upgrade FRR to 10.5.3
 - Add support for [Banana Pi R64 Mini][BPI-R64], 5 port router with WiFi 5
