@@ -2535,36 +2535,39 @@ device:</p>
 link-local IPv6 address is then seen in the response.  In the following
 example, the PC here uses <em>tap0</em> as <em>if1</em>, Infix responds with address
 <em>fe80::ff:fec0:ffed</em>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>linux-pc:# ping -6 -L -c 3 ff02::1%tap0
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>PING ff02::1%tap0(ff02::1%tap0) 56 data bytes
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>64 bytes from fe80::ff:fec0:ffed%tap0: icmp_seq=1 ttl=64 time=0.558 ms
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>64 bytes from fe80::ff:fec0:ffed%tap0: icmp_seq=2 ttl=64 time=0.419 ms
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>64 bytes from fe80::ff:fec0:ffed%tap0: icmp_seq=3 ttl=64 time=0.389 ms
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>--- ff02::1%tap0 ping statistics ---
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>3 packets transmitted, 3 received, 0% packet loss, time 2043ms
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>rtt min/avg/max/mdev = 0.389/0.455/0.558/0.073 ms
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>linux-pc:# 
-</code></pre></div>
+<pre class="cli"><code>linux-pc:# <b>ping -6 -L -c 3 ff02::1%tap0</b>
+PING ff02::1%tap0(ff02::1%tap0) 56 data bytes
+64 bytes from fe80::ff:fec0:ffed%tap0: icmp_seq=1 ttl=64 time=0.558 ms
+64 bytes from fe80::ff:fec0:ffed%tap0: icmp_seq=2 ttl=64 time=0.419 ms
+64 bytes from fe80::ff:fec0:ffed%tap0: icmp_seq=3 ttl=64 time=0.389 ms
+
+--- ff02::1%tap0 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2043ms
+rtt min/avg/max/mdev = 0.389/0.455/0.558/0.073 ms
+linux-pc:#
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The <code>-L</code> option ignores local responses from the PC.</p>
 </div>
 <p>This address can then be used to connect to the device, e.g., using SSH.
 Notice the syntax <code>username@address%interface</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>linux-pc:# ssh admin@fe80::ff:fec0:ffed%tap0
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@fe80::ff:fec0:ffed%tap0's password: admin
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@infix-c0-ff-ee:~$ 
-</code></pre></div>
+<pre class="cli"><code>linux-pc:# <b>ssh admin@fe80::ff:fec0:ffed%tap0</b>
+admin@fe80::ff:fec0:ffed%tap0's password: admin
+admin@infix-c0-ff-ee:~$
+</code></pre>
+
 <h3 id="windows">Windows<a class="headerlink" href="#windows" title="Permanent link">¶</a></h3>
 <p>Infix advertises a <code>_workstation._tcp</code> DNS-SD record alongside its other
 mDNS services.  Windows 10 (build 1709+) and Windows 11 recognise this
 record and show the device in <strong>File Explorer → Network</strong> automatically —
 no extra software required.</p>
 <p>From the command line, use the <code>.local</code> hostname directly:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>C:\&gt; ping infix-c0-ff-ee.local
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>C:\&gt; ssh admin@infix-c0-ff-ee.local
-</code></pre></div>
+<pre class="cli"><code>C:\&gt; <b>ping infix-c0-ff-ee.local</b>
+C:\&gt; <b>ssh admin@infix-c0-ff-ee.local</b>
+</code></pre>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>IPv6 multicast ping (<code>ping ff02::1%if1</code>) may not display responses on
@@ -2572,43 +2575,44 @@ Windows even though the Infix device replies correctly.  If you need to
 confirm connectivity, Wireshark will show the ICMPv6 echo replies
 arriving.  Use mDNS (see <a href="#mdns-sd">mDNS-SD</a> below) as the reliable
 alternative.</p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="img/windows-ipv6-ping-reply.png" data-desc-position="bottom"><img alt="Wireshark showing IPv6 ping responses" src="img/windows-ipv6-ping-reply.png"></a></p>
 </div>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="https://github.com/addiva-elektronik/alder/assets/122900029/c45d7726-448f-4c30-878e-bcf976dff531" data-desc-position="bottom"><img alt="Wireshark showing IPv6 ping responses" src="https://github.com/addiva-elektronik/alder/assets/122900029/c45d7726-448f-4c30-878e-bcf976dff531"></a></p>
 <h2 id="lldp">LLDP<a class="headerlink" href="#lldp" title="Permanent link">¶</a></h2>
 <p>Infix supports LLDP (IEEE 802.1AB). For a device with factory default
 settings, the link-local IPv6 address can be read from the Management
 Address TLV using <em>tcpdump</em> or other sniffing tools<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>linux-pc:# tcpdump -i tap0 -Qin -v ether proto 0x88cc
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>15:51:52.061071 LLDP, length 193
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    Chassis ID TLV (1), length 7
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>      Subtype MAC address (4): 02:00:00:c0:ff:ee (oui Unknown)
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    Port ID TLV (2), length 7
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>      Subtype MAC address (3): 02:00:00:c0:ff:ee (oui Unknown)
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    Time to Live TLV (3), length 2: TTL 120s
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    System Name TLV (5), length 14: infix-c0-ff-ee
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    System Description TLV (6), length 91
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>      Infix by KernelKit Linux 5.19.17 #1 SMP PREEMPT_DYNAMIC Wed Jun 7 08:47:23 CEST 2023 x86_64
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    System Capabilities TLV (7), length 4
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>      System  Capabilities [Bridge, WLAN AP, Router, Station Only] (0x009c)
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>      Enabled Capabilities [Station Only] (0x0080)
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    Management Address TLV (8), length 24
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>      Management Address length 17, AFI IPv6 (2): fe80::ff:fec0:ffed
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>      Interface Index Interface Numbering (2): 2
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    Port Description TLV (4), length 4: eth0
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    Organization specific TLV (127), length 9: OUI IEEE 802.3 Private (0x00120f)
-<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>      Link aggregation Subtype (3)
-<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        aggregation status [supported], aggregation port ID 0
-<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>    Organization specific TLV (127), length 9: OUI IEEE 802.3 Private (0x00120f)
-<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>      MAC/PHY configuration/status Subtype (1)
-<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>        autonegotiation [none] (0x00)
-<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>        PMD autoneg capability [unknown] (0x8000)
-<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>        MAU type Unknown (0x0000)
-<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>    End TLV (0), length 0
-<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>^C
-<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>1 packet captured
-<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>linux-pc:# 
-</code></pre></div>
+<pre class="cli"><code>linux-pc:# <b>tcpdump -i tap0 -Qin -v ether proto 0x88cc</b>
+tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+15:51:52.061071 LLDP, length 193
+    Chassis ID TLV (1), length 7
+      Subtype MAC address (4): 02:00:00:c0:ff:ee (oui Unknown)
+    Port ID TLV (2), length 7
+      Subtype MAC address (3): 02:00:00:c0:ff:ee (oui Unknown)
+    Time to Live TLV (3), length 2: TTL 120s
+    System Name TLV (5), length 14: infix-c0-ff-ee
+    System Description TLV (6), length 91
+      Infix by KernelKit Linux 5.19.17 #1 SMP PREEMPT_DYNAMIC Wed Jun 7 08:47:23 CEST 2023 x86_64
+    System Capabilities TLV (7), length 4
+      System  Capabilities [Bridge, WLAN AP, Router, Station Only] (0x009c)
+      Enabled Capabilities [Station Only] (0x0080)
+    Management Address TLV (8), length 24
+      Management Address length 17, AFI IPv6 (2): fe80::ff:fec0:ffed
+      Interface Index Interface Numbering (2): 2
+    Port Description TLV (4), length 4: eth0
+    Organization specific TLV (127), length 9: OUI IEEE 802.3 Private (0x00120f)
+      Link aggregation Subtype (3)
+        aggregation status [supported], aggregation port ID 0
+    Organization specific TLV (127), length 9: OUI IEEE 802.3 Private (0x00120f)
+      MAC/PHY configuration/status Subtype (1)
+        autonegotiation [none] (0x00)
+        PMD autoneg capability [unknown] (0x8000)
+        MAU type Unknown (0x0000)
+    End TLV (0), length 0
+^C
+1 packet captured
+linux-pc:#
+</code></pre>
+
 <p>If the device has an IPv4 address assigned, it is shown in an additional
 Management Address TLV.</p>
 <div class="admonition note">
@@ -2618,64 +2622,68 @@ with the port transmitting the LLDP message.</p>
 </div>
 <p>In the example below, the IPv4 address (10.0.1.1) happens to be
 assigned to <em>eth0</em>, while the IPv6 address (2001:db8::1) is not.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>linux-pc:# sudo tcpdump -i tap0 -Qin -v ether proto 0x88cc
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>15:46:07.908665 LLDP, length 207
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    Chassis ID TLV (1), length 7
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>      Subtype MAC address (4): 02:00:00:c0:ff:ee (oui Unknown)
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    Port ID TLV (2), length 7
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>      Subtype MAC address (3): 02:00:00:c0:ff:ee (oui Unknown)
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    Time to Live TLV (3), length 2: TTL 120s
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    System Name TLV (5), length 14: infix-c0-ff-ee
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    System Description TLV (6), length 91
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>      Infix by KernelKit Linux 5.19.17 #1 SMP PREEMPT_DYNAMIC Wed Jun 7 08:47:23 CEST 2023 x86_64
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    System Capabilities TLV (7), length 4
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>      System  Capabilities [Bridge, WLAN AP, Router, Station Only] (0x009c)
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>      Enabled Capabilities [Station Only] (0x0080)
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    Management Address TLV (8), length 12
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>      Management Address length 5, AFI IPv4 (1): 10.0.1.1
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>      Interface Index Interface Numbering (2): 2
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>    Management Address TLV (8), length 24
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>      Management Address length 17, AFI IPv6 (2): 2001:db8::1
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>      Interface Index Interface Numbering (2): 3
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    Port Description TLV (4), length 4: eth0
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>    Organization specific TLV (127), length 9: OUI IEEE 802.3 Private (0x00120f)
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>      Link aggregation Subtype (3)
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>        aggregation status [supported], aggregation port ID 0
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>    Organization specific TLV (127), length 9: OUI IEEE 802.3 Private (0x00120f)
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>      MAC/PHY configuration/status Subtype (1)
-<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>        autonegotiation [none] (0x00)
-<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>        PMD autoneg capability [unknown] (0x8000)
-<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a>        MAU type Unknown (0x0000)
-<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a>    End TLV (0), length 0
-<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a>^C
-<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a>1 packet captured
-<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a>2 packets received by filter
-<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a>0 packets dropped by kernel
-<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a>linux-pc:#
-</code></pre></div>
+<pre class="cli"><code>linux-pc:# <b>sudo tcpdump -i tap0 -Qin -v ether proto 0x88cc</b>
+tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+15:46:07.908665 LLDP, length 207
+    Chassis ID TLV (1), length 7
+      Subtype MAC address (4): 02:00:00:c0:ff:ee (oui Unknown)
+    Port ID TLV (2), length 7
+      Subtype MAC address (3): 02:00:00:c0:ff:ee (oui Unknown)
+    Time to Live TLV (3), length 2: TTL 120s
+    System Name TLV (5), length 14: infix-c0-ff-ee
+    System Description TLV (6), length 91
+      Infix by KernelKit Linux 5.19.17 #1 SMP PREEMPT_DYNAMIC Wed Jun 7 08:47:23 CEST 2023 x86_64
+    System Capabilities TLV (7), length 4
+      System  Capabilities [Bridge, WLAN AP, Router, Station Only] (0x009c)
+      Enabled Capabilities [Station Only] (0x0080)
+    Management Address TLV (8), length 12
+      Management Address length 5, AFI IPv4 (1): 10.0.1.1
+      Interface Index Interface Numbering (2): 2
+    Management Address TLV (8), length 24
+      Management Address length 17, AFI IPv6 (2): 2001:db8::1
+      Interface Index Interface Numbering (2): 3
+    Port Description TLV (4), length 4: eth0
+    Organization specific TLV (127), length 9: OUI IEEE 802.3 Private (0x00120f)
+      Link aggregation Subtype (3)
+        aggregation status [supported], aggregation port ID 0
+    Organization specific TLV (127), length 9: OUI IEEE 802.3 Private (0x00120f)
+      MAC/PHY configuration/status Subtype (1)
+        autonegotiation [none] (0x00)
+        PMD autoneg capability [unknown] (0x8000)
+        MAU type Unknown (0x0000)
+    End TLV (0), length 0
+^C
+1 packet captured
+2 packets received by filter
+0 packets dropped by kernel
+linux-pc:#
+</code></pre>
+
 <p>The following capabilities are available via NETCONF/RESTCONF or the Infix CLI.</p>
 <h3 id="lldp-enabledisable">LLDP Enable/Disable<a class="headerlink" href="#lldp-enabledisable" title="Permanent link">¶</a></h3>
 <p>The LLDP service can be disabled using the following commands.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@infix-c0-ff-ee:/&gt; configure
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@infix-c0-ff-ee:/config/&gt; no lldp 
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@infix-c0-ff-ee:/config/&gt; leave
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@infix-c0-ff-ee:/&gt; 
-</code></pre></div>
+<pre class="cli"><code>admin@infix-c0-ff-ee:/&gt; <b>configure</b>
+admin@infix-c0-ff-ee:/config/&gt; <b>no lldp</b>
+admin@infix-c0-ff-ee:/config/&gt; <b>leave</b>
+admin@infix-c0-ff-ee:/&gt;
+</code></pre>
+
 <p>To reenable it from the CLI config mode:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@test-00-01-00:/config/&gt; set lldp enabled 
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>admin@test-00-01-00:/config/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@test-00-01-00:/config/&gt; <b>set lldp enabled</b>
+admin@test-00-01-00:/config/&gt; <b>leave</b>
+</code></pre>
+
 <h3 id="lldp-message-transmission-interval">LLDP Message Transmission Interval<a class="headerlink" href="#lldp-message-transmission-interval" title="Permanent link">¶</a></h3>
 <p>By default, LLDP uses a <code>message-tx-interval</code> of 30 seconds, as defined
 by the IEEE standard. Infix allows this value to be customized.
 To change it using the CLI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@test-00-01-00:/config/&gt; set lldp message-tx-interval 1
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@test-00-01-00:/config/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@test-00-01-00:/config/&gt; <b>set lldp message-tx-interval 1</b>
+admin@test-00-01-00:/config/&gt; <b>leave</b>
+</code></pre>
+
 <h3 id="lldp-administrative-status-per-interface">LLDP Administrative Status per Interface<a class="headerlink" href="#lldp-administrative-status-per-interface" title="Permanent link">¶</a></h3>
 <p>Infix supports configuring the LLDP administrative status on a per-port
-basis. The default mode is <code>tx-and-rx</code>, but the following options are 
+basis. The default mode is <code>tx-and-rx</code>, but the following options are
 also supported:</p>
 <ul>
 <li><code>rx-only</code> – Receive LLDP packets only</li>
@@ -2683,72 +2691,92 @@ also supported:</p>
 <li><code>disabled</code> – Disable LLDP on the interface</li>
 </ul>
 <p>Example configuration:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@test-00-01-00:/config/&gt; set lldp port e8 dest-mac-address 01:80:C2:00:00:0E admin-status disabled
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>admin@test-00-01-00:/config/&gt; set lldp port e5 dest-mac-address 01:80:C2:00:00:0E admin-status rx-only 
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>admin@test-00-01-00:/config/&gt; set lldp port e6 dest-mac-address 01:80:C2:00:00:0E admin-status tx-only
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>admin@test-00-01-00:/config/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@test-00-01-00:/config/&gt; <b>set lldp port e8 dest-mac-address 01:80:C2:00:00:0E admin-status disabled</b>
+admin@test-00-01-00:/config/&gt; <b>set lldp port e5 dest-mac-address 01:80:C2:00:00:0E admin-status rx-only</b>
+admin@test-00-01-00:/config/&gt; <b>set lldp port e6 dest-mac-address 01:80:C2:00:00:0E admin-status tx-only</b>
+admin@test-00-01-00:/config/&gt; <b>leave</b>
+</code></pre>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The destination MAC address must be the standard LLDP multicast 
+<p>The destination MAC address must be the standard LLDP multicast
 address: <code>01:80:C2:00:00:0E</code>.</p>
 </div>
 <h3 id="displaying-lldp-neighbor-information">Displaying LLDP Neighbor Information<a class="headerlink" href="#displaying-lldp-neighbor-information" title="Permanent link">¶</a></h3>
 <p>In CLI mode, Infix also provides a convenient <code>show lldp</code> command to
 list LLDP neighbors detected on each interface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@test-00-01-00:/&gt; show lldp 
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>INTERFACE       REM-IDX   TIME        CHASSIS-ID          PORT-ID             
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>e5              1         902         00:a0:85:00:04:01   00:a0:85:00:04:07   
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>e6              3         897         00:a0:85:00:03:01   00:a0:85:00:03:07   
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>e8              2         901         00:a0:85:00:02:01   00:a0:85:00:02:05
-</code></pre></div>
+<pre class="cli"><code>admin@test-00-01-00:/&gt; <b>show lldp</b>
+<span class="header">INTERFACE       REM-IDX   TIME        CHASSIS-ID          PORT-ID                           </span>
+e5              1         902         00:a0:85:00:04:01   00:a0:85:00:04:07
+e6              3         897         00:a0:85:00:03:01   00:a0:85:00:03:07
+e8              2         901         00:a0:85:00:02:01   00:a0:85:00:02:05
+</code></pre>
+
 <h2 id="mdns-sd">mDNS-SD<a class="headerlink" href="#mdns-sd" title="Permanent link">¶</a></h2>
 <p>DNS-SD/mDNS-SD can be used to discover Infix devices and services.  By
 default, Infix use the <code>.local</code> domain for advertising services.  Some
 networks use <code>.lan</code> instead, so this configurable:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@infix-c0-ff-ee:/&gt; configure
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>admin@infix-c0-ff-ee:/config/&gt; edit mdns
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>admin@infix-c0-ff-ee:/config/mdns/&gt; set domain lan
-</code></pre></div>
+<pre class="cli"><code>admin@infix-c0-ff-ee:/&gt; <b>configure</b>
+admin@infix-c0-ff-ee:/config/&gt; <b>edit mdns</b>
+admin@infix-c0-ff-ee:/config/mdns/&gt; <b>set domain lan</b>
+</code></pre>
+
 <p>Other available settings include limiting the interfaces mDNS responder
-acts on:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@infix-c0-ff-ee:/config/&gt; set interfaces allow e1
-</code></pre></div>
-<p>or</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@infix-c0-ff-ee:/config/&gt; set interfaces deny wan
-</code></pre></div>
-<p>The <code>allow</code> and <code>deny</code> settings are complementary, <code>deny</code> always wins.</p>
+acts on, <code>allow</code>:</p>
+<pre class="cli"><code>admin@infix-c0-ff-ee:/config/&gt; <b>set interfaces allow e1</b>
+</code></pre>
+
+<p>or <code>deny</code>.  The <code>allow</code> and <code>deny</code> settings are complementary, <code>deny</code> always wins.</p>
+<pre class="cli"><code>admin@infix-c0-ff-ee:/config/&gt; <b>set interfaces deny wan</b>
+</code></pre>
+
+<p>Use <code>leave</code> to activate the new settings, then inspect the operational
+state and any detected neighbors with <code>show mdns</code> from admin-exec
+context:</p>
+<pre class="cli"><code>admin@gateway:/&gt; <b>show mdns</b>
+Enabled         : yes
+Domain          : local
+Deny            : wan
+
+<span class="header">HOSTNAME           ADDRESS        LAST SEEN  SERVICES                                       </span>
+Living-Room.local  192.168.0.139  17:28:43   trel(59813) sleep-proxy(61936) raop(7000) srpl-tls(853)
+firefly-4.local    192.168.0.122  17:28:37   workstation(9)
+gimli.local        192.168.0.180  17:28:37   smb(445)
+infix.local        192.168.0.1    17:28:38   https(443) workstation(9) ssh(22) https(443)
+</code></pre>
+
 <hr>
 <p>In Linux, tools such as <em>avahi-browse</em> or <em>mdns-scan</em><sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup> can be used to
 search for devices advertising their services via mDNS.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>linux-pc:# avahi-browse -ar
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>+   tap0 IPv6 infix-c0-ff-ee                                SFTP File Transfer   local
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>+   tap0 IPv4 infix-c0-ff-ee                                SFTP File Transfer   local
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>+   tap0 IPv6 infix-c0-ff-ee                                SSH Remote Terminal  local
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>+   tap0 IPv4 infix-c0-ff-ee                                SSH Remote Terminal  local
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>=   tap0 IPv4 infix-c0-ff-ee                                SFTP File Transfer   local
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>   hostname = [infix-c0-ff-ee.local]
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>   address = [10.0.1.1]
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>   port = [22]
-<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>   txt = []
-<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>=   tap0 IPv4 infix-c0-ff-ee                                SSH Remote Terminal  local
-<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>   hostname = [infix-c0-ff-ee.local]
-<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>   address = [10.0.1.1]
-<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>   port = [22]
-<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>   txt = []
-<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>=   tap0 IPv6 infix-c0-ff-ee                                SFTP File Transfer   local
-<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>   hostname = [infix-c0-ff-ee.local]
-<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>   address = [fe80::ff:fec0:ffed]
-<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>   port = [22]
-<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>   txt = []
-<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a>=   tap0 IPv6 infix-c0-ff-ee                                SSH Remote Terminal  local
-<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a>   hostname = [infix-c0-ff-ee.local]
-<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>   address = [fe80::ff:fec0:ffed]
-<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a>   port = [22]
-<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a>   txt = []
-<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a>^C
-<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a>linux-pc:#
-</code></pre></div>
+<pre class="cli"><code>linux-pc:# <b>avahi-browse -ar</b>
++   tap0 IPv6 infix-c0-ff-ee                                SFTP File Transfer   local
++   tap0 IPv4 infix-c0-ff-ee                                SFTP File Transfer   local
++   tap0 IPv6 infix-c0-ff-ee                                SSH Remote Terminal  local
++   tap0 IPv4 infix-c0-ff-ee                                SSH Remote Terminal  local
+=   tap0 IPv4 infix-c0-ff-ee                                SFTP File Transfer   local
+   hostname = [infix-c0-ff-ee.local]
+   address = [10.0.1.1]
+   port = [22]
+   txt = []
+=   tap0 IPv4 infix-c0-ff-ee                                SSH Remote Terminal  local
+   hostname = [infix-c0-ff-ee.local]
+   address = [10.0.1.1]
+   port = [22]
+   txt = []
+=   tap0 IPv6 infix-c0-ff-ee                                SFTP File Transfer   local
+   hostname = [infix-c0-ff-ee.local]
+   address = [fe80::ff:fec0:ffed]
+   port = [22]
+   txt = []
+=   tap0 IPv6 infix-c0-ff-ee                                SSH Remote Terminal  local
+   hostname = [infix-c0-ff-ee.local]
+   address = [fe80::ff:fec0:ffed]
+   port = [22]
+   txt = []
+^C
+linux-pc:#
+</code></pre>
+
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The <code>-t</code> option is also very useful, it stops browsing automatically
@@ -2760,66 +2788,70 @@ you cannot find the device you are looking for.</p>
 name mappings for IP addresses.  By default, it translates from IPv4
 addresses.  This function allows users to confirm that addresses are
 mapped correctly.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>linux-pc:# avahi-resolve-host-name infix-c0-ff-ee.local
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>infix-c0-ff-ee.local    10.0.1.1
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>linux-pc:#
-</code></pre></div>
+<pre class="cli"><code>linux-pc:# <b>avahi-resolve-host-name infix-c0-ff-ee.local</b>
+infix-c0-ff-ee.local    10.0.1.1
+linux-pc:#
+</code></pre>
+
 <p>Thanks to mDNS we can use the advertised name instead of the IP
 address for operations like <code>ping</code> and <code>ssh</code> as shown below:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>linux-pc:# ping infix-c0-ff-ee.local -c 3
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>PING infix-c0-ff-ee.local (10.0.1.1) 56(84) bytes of data.
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>64 bytes from 10.0.1.1: icmp_seq=1 ttl=64 time=0.852 ms
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>64 bytes from 10.0.1.1: icmp_seq=2 ttl=64 time=1.12 ms
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>64 bytes from 10.0.1.1: icmp_seq=3 ttl=64 time=1.35 ms
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
-<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>--- infix-c0-ff-ee.local ping statistics ---
-<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>3 packets transmitted, 3 received, 0% packet loss, time 2003ms
-<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>rtt min/avg/max/mdev = 0.852/1.105/1.348/0.202 ms
-<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>
-<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>linux-pc:# ssh admin@infix-c0-ff-ee.local
-<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>(admin@infix-c0-ff-ee.local) Password: 
-<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>.-------.
-<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>|  . .  | Infix OS — Immutable.Friendly.Secure
-<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>|-. v .-| https://www.kernelkit.org
-<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a>'-'---'-
-<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a>
-<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a>Run the command 'cli' for interactive OAM
-<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a>
-<a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a>linux-pc:#
-</code></pre></div>
+<pre class="cli"><code>linux-pc:# <b>ping infix-c0-ff-ee.local -c 3</b>
+PING infix-c0-ff-ee.local (10.0.1.1) 56(84) bytes of data.
+64 bytes from 10.0.1.1: icmp_seq=1 ttl=64 time=0.852 ms
+64 bytes from 10.0.1.1: icmp_seq=2 ttl=64 time=1.12 ms
+64 bytes from 10.0.1.1: icmp_seq=3 ttl=64 time=1.35 ms
+
+--- infix-c0-ff-ee.local ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 0.852/1.105/1.348/0.202 ms
+
+linux-pc:# <b>ssh admin@infix-c0-ff-ee.local</b>
+(admin@infix-c0-ff-ee.local) Password:
+.-------.
+|  . .  | Infix OS — Immutable.Friendly.Secure
+|-. v .-| https://www.kernelkit.org
+'-'---'-
+
+Run the command 'cli' for interactive OAM
+
+linux-pc:#
+</code></pre>
+
 <p>To disable mDNS/mDNS-SD, type the commands:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>admin@infix-c0-ff-ee:/&gt; configure 
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>admin@infix-c0-ff-ee:/config/&gt; no mdns
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>admin@infix-c0-ff-ee:/config/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@infix-c0-ff-ee:/&gt; <b>configure</b>
+admin@infix-c0-ff-ee:/config/&gt; <b>no mdns</b>
+admin@infix-c0-ff-ee:/config/&gt; <b>leave</b>
+</code></pre>
+
 <h3 id="human-friendly-hostname-alias">Human-Friendly Hostname Alias<a class="headerlink" href="#human-friendly-hostname-alias" title="Permanent link">¶</a></h3>
-<p>Each Infix deviuce advertise itself as <em>infix.local</em>, in addition to its
+<p>Each Infix device advertises itself as <em>infix.local</em>, in addition to its
 full hostname (e.g., <em>infix-c0-ff-ee.local</em> or <em>foo.local</em>).  This alias
 works seamlessly on a network with a single Infix device, and makes it
 easy to connect when the exact hostname is not known in advance.  The
 examples below show how the alias can be used for actions such as
 pinging or establishing an SSH connection:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>linux-pc:# ping infix.local -c 3
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>PING infix.local (10.0.1.1) 56(84) bytes of data.
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>64 bytes from 10.0.1.1: icmp_seq=1 ttl=64 time=0.751 ms
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>64 bytes from 10.0.1.1: icmp_seq=2 ttl=64 time=2.28 ms
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>64 bytes from 10.0.1.1: icmp_seq=3 ttl=64 time=1.42 ms
-<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
-<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>--- infix.local ping statistics ---
-<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>3 packets transmitted, 3 received, 0% packet loss, time 2003ms
-<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>rtt min/avg/max/mdev = 0.751/1.482/2.281/0.626 ms
-<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>
-<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>linux-pc:# ssh admin@infix.local
-<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>(admin@infix.local) Password: 
-<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>.-------.
-<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>|  . .  | Infix OS — Immutable.Friendly.Secure
-<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>|-. v .-| https://www.kernelkit.org
-<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>'-'---'-
-<a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>
-<a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>Run the command 'cli' for interactive OAM
-<a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a>
-<a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a>admin@infix-c0-ff-ee:~$
-</code></pre></div>
+<pre class="cli"><code>linux-pc:# <b>ping infix.local -c 3</b>
+PING infix.local (10.0.1.1) 56(84) bytes of data.
+64 bytes from 10.0.1.1: icmp_seq=1 ttl=64 time=0.751 ms
+64 bytes from 10.0.1.1: icmp_seq=2 ttl=64 time=2.28 ms
+64 bytes from 10.0.1.1: icmp_seq=3 ttl=64 time=1.42 ms
+
+--- infix.local ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 0.751/1.482/2.281/0.626 ms
+
+linux-pc:# <b>ssh admin@infix.local</b>
+(admin@infix.local) Password:
+.-------.
+|  . .  | Infix OS — Immutable.Friendly.Secure
+|-. v .-| https://www.kernelkit.org
+'-'---'-
+
+Run the command 'cli' for interactive OAM
+
+admin@infix-c0-ff-ee:~$
+</code></pre>
+
 <p>When multiple Infix devices are present on the LAN the alias will not
 uniquely identify a device; <em>infix.local</em> will refer to any of the
 Infix devices, likely the one that first appeared.</p>
@@ -2838,11 +2870,12 @@ table of other Infix devices and their services.</p>
 portal to access all others, if it goes down another takes its place.</p>
 <p>To disable the netbrowse service, and the <em>network.local</em> alias, the
 following commands can be used:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>admin@infix-c0-ff-ee:/&gt; configure 
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>admin@infix-c0-ff-ee:/config/&gt; edit web
-<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>admin@infix-c0-ff-ee:/config/web/&gt; no netbrowse
-<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>admin@infix-c0-ff-ee:/config/web/&gt; leave
-</code></pre></div>
+<pre class="cli"><code>admin@infix-c0-ff-ee:/&gt; <b>configure</b>
+admin@infix-c0-ff-ee:/config/&gt; <b>edit web</b>
+admin@infix-c0-ff-ee:/config/web/&gt; <b>no netbrowse</b>
+admin@infix-c0-ff-ee:/config/web/&gt; <b>leave</b>
+</code></pre>
+
 <div class="footnote">
 <hr>
 <ol>
