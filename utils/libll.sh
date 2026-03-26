@@ -197,12 +197,31 @@ llscan_mdns()
 {
     local all="$1"
     local flags="-tarp"
+    local tmpfile i c pid
 
     if avahi-browse --help 2>&1 | grep -q -- '-k'; then
 	flags="-tarpk"
     fi
 
-    avahi-browse $flags 2>/dev/null | awk -F';' -v show_all="$all" '
+    tmpfile=$(mktemp)
+    avahi-browse $flags 2>/dev/null >"$tmpfile" &
+    pid=$!
+
+    if [ -t 2 ]; then
+	i=0
+	while kill -0 "$pid" 2>/dev/null; do
+	    case $((i % 4)) in
+		0) c='-';; 1) c="\\";; 2) c='|';; 3) c='/';;
+	    esac
+	    printf "\r[%s] Scanning, please wait ..." "$c" >&2
+	    i=$((i + 1))
+	    sleep 0.2
+	done
+	printf "\r\033[2K" >&2
+    fi
+
+    wait "$pid"
+    awk -F';' -v show_all="$all" '
     $1 == "=" {
 	host  = $7
 	proto = $3
@@ -279,7 +298,8 @@ llscan_mdns()
 
 	printf "\n%d device(s) found.\n", ndevs
     }
-    '
+    ' "$tmpfile"
+    rm -f "$tmpfile"
 }
 
 llscan_ll()

@@ -1,5 +1,4 @@
 # Avahi advertises the system default hostname, this service advertises
 # /etc/hostname (-H) and, optionally, network.local as CNAMEs.  Changes
 # to /etc/default/mdns-alias will cause Finit to restart not reload.
-service <pid/mdns> env:-/etc/default/mdns-alias \
-	[2345] mdns-alias -H $MDNS_ALIAS_ARGS --
+service [2345] env:-/etc/default/mdns-alias mdns-alias -H $MDNS_ALIAS_ARGS --
