@@ -403,9 +403,21 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  align-items: stretch;
+}
+
+/* Cards inside a grid don't need their own bottom margin — the grid gap handles spacing */
+.info-grid > .info-card { margin-bottom: 0; }
+
+/* Full-width card spanning all grid columns */
+.info-grid-full { grid-column: 1 / -1; }
+
+/* Two-column card for wide tables — only kicks in once the grid has ≥2 columns */
+@media (min-width: 680px) {
+  .info-grid-span-2 { grid-column: span 2; }
 }
 
 .info-card {
@@ -447,6 +459,45 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
   padding: 1.25rem;
 }
 
+/* Collapsible card: content is height-capped; JS adds "Show more" when it overflows */
+.card-collapsible-body {
+  position: relative;
+  max-height: 300px;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+.card-collapsible.is-expanded .card-collapsible-body {
+  max-height: 2000px;
+}
+/* Fade hint at the bottom when collapsed */
+.card-collapsible:not(.is-expanded) .card-collapsible-body::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5rem;
+  background: linear-gradient(transparent, var(--surface));
+  pointer-events: none;
+}
+/* The "Show more / Show less" button injected by JS */
+.card-expand-btn {
+  display: none;
+  width: 100%;
+  padding: 0.45rem;
+  text-align: center;
+  background: var(--bg);
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s;
+  letter-spacing: 0.02em;
+}
+.card-expand-btn:hover { color: var(--primary); }
+
 /* ==========================================================================
    Tables
    ========================================================================== */
@@ -462,6 +513,60 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
 .counters-table th, .counters-table td {
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border);
+}
+
+.info-table th {
+  width: 1%;
+  white-space: nowrap;
+  color: var(--fg-muted);
+  font-weight: 500;
+  text-align: left;
+}
+
+/* Disk usage widget (one entry per mount point) */
+.disk-item {
+  padding: 0.7rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.disk-item:last-child { border-bottom: none; }
+.disk-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.4rem;
+}
+.disk-mount {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--fg);
+}
+.disk-pct { font-size: 0.8rem; color: var(--fg-muted); }
+.disk-stats {
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  margin-top: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sensor-group-hdr th {
+  padding: 0.35rem 1.25rem 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border-bottom: none;
+}
+.sensor-child th {
+  padding-left: 2rem;
+}
+
+.data-table th.num,
+.data-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .info-table tr:last-child th, .info-table tr:last-child td,
@@ -502,6 +607,22 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  /* Scroll-shadow: a right-edge shadow appears automatically when the table
+     overflows, fading away once scrolled to the end. Pure CSS, no JS needed.
+     The `local` gradients act as white masks pinned to the scroll content;
+     the `scroll` gradients are the actual shadows fixed to the viewport edge. */
+  background:
+    linear-gradient(to right, var(--surface), var(--surface))            left  / 24px 100% no-repeat local,
+    linear-gradient(to left,  var(--surface), var(--surface))            right / 24px 100% no-repeat local,
+    linear-gradient(to right, rgba(0,0,0,0.07), transparent)             left  /  8px 100% no-repeat scroll,
+    linear-gradient(to left,  rgba(0,0,0,0.07), transparent)             right /  8px 100% no-repeat scroll;
+  background-color: var(--surface);
+}
+
+/* Remove the nested border when a table lives inside a card — the card already provides the frame */
+.info-card .data-table-wrap {
+  border: none;
+  border-radius: 0;
 }
 
 .data-table {
@@ -529,9 +650,11 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
   background-color: var(--zebra-stripe, rgba(0,0,0,0.025));
 }
 
-.data-table tbody tr:hover {
-  background-color: rgba(0,0,0,0.05);
+.data-table tbody tr:hover { background-color: var(--slate-100); }
+@media (prefers-color-scheme: dark) {
+  .data-table tbody tr:hover { background-color: rgba(255,255,255,0.06); }
 }
+.dark .data-table tbody tr:hover { background-color: rgba(255,255,255,0.06); }
 
 /* ==========================================================================
    Forms & Inputs

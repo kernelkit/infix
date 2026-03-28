@@ -371,6 +371,31 @@
   });
 })();
 
+// Card collapsible — "Show more / Show less" toggle injected when content overflows
+(function() {
+  function initCollapsibles() {
+    document.querySelectorAll('.card-collapsible:not([data-ci])').forEach(function(card) {
+      card.setAttribute('data-ci', '1');
+      var body = card.querySelector('.card-collapsible-body');
+      if (!body || body.scrollHeight <= body.clientHeight + 4) return;
+
+      var btn = document.createElement('button');
+      btn.className = 'card-expand-btn';
+      btn.type = 'button';
+      btn.textContent = 'Show more \u25be';
+      btn.style.display = 'block';
+      card.appendChild(btn);
+
+      btn.addEventListener('click', function() {
+        var expanded = card.classList.toggle('is-expanded');
+        btn.textContent = expanded ? 'Show less \u25b4' : 'Show more \u25be';
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', initCollapsibles);
+  document.addEventListener('htmx:afterSettle', initCollapsibles);
+})();
+
 // Sidebar toggle (mobile)
 (function() {
   var MOBILE_BP = 1024;

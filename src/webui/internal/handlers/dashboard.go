@@ -161,7 +161,7 @@ type hwComponentJSON struct {
 	SerialNum   string         `json:"serial-num"`
 	HardwareRev string         `json:"hardware-rev"`
 	PhysAddress string         `json:"infix-hardware:phys-address"`
-	WiFiRadio   *wifiRadioJSON `json:"infix-hardware:wifi-radio"`
+	WiFiRadio   *wifiRadioHWJSON `json:"infix-hardware:wifi-radio"`
 	SensorData  *struct {
 		ValueType  string    `json:"value-type"`
 		Value      yangInt64 `json:"value"`
@@ -178,10 +178,13 @@ type hwComponentJSON struct {
 
 type dashboardData struct {
 	PageData
-	Hostname string
+	Hostname     string
+	Contact      string
+	Location     string
 	OSName       string
 	OSVersion    string
 	Machine      string
+	CurrentTime  string
 	Firmware     string
 	Uptime       string
 	MemTotal     int64
@@ -194,7 +197,8 @@ type dashboardData struct {
 	CPUClass     string
 	Disks        []diskEntry
 	Board        boardInfo
-	Sensors      []sensorEntry
+	WiFiRadios   []wifiEntry
+	SensorGroups []sensorGroup
 	Error        string
 }
 
@@ -212,12 +216,25 @@ type sensorEntry struct {
 	Type  string // "temperature", "fan", "voltage", etc.
 }
 
+type sensorGroup struct {
+	Parent  string
+	Sensors []sensorEntry
+}
+
+type wifiEntry struct {
+	Name         string
+	Manufacturer string
+	Bands        string // all supported bands, e.g. "2.4 GHz, 5 GHz"
+	Standards    string
+	MaxAP        int
+}
+
 type diskEntry struct {
 	Mount     string
 	Size      string
-	Used      string
 	Available string
 	Percent   int
+	Class     string // "" / "is-warn" / "is-crit"
 }
 
 // DashboardHandler serves the main dashboard page.
@@ -242,6 +259,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		sysConf struct {
 			System struct {
 				Hostname string `json:"hostname"`
+				Contact  string `json:"contact"`
+				Location string `json:"location"`
 			} `json:"ietf-system:system"`
 		}
 		stateErr, hwErr, confErr error
@@ -276,6 +295,7 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		}
 		data.Firmware = firmwareVersion(ss.Software)
 		data.Uptime = computeUptime(ss.Clock.BootDatetime, ss.Clock.CurrentDatetime)
+		data.CurrentTime = formatCurrentTime(ss.Clock.CurrentDatetime)
 
 		total := int64(ss.Resource.Memory.Total)
 		avail := int64(ss.Resource.Memory.Available)
@@ -312,12 +332,19 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 			if size > 0 {
 				pct = int(float64(used) / float64(size) * 100)
 			}
+			diskClass := ""
+			switch {
+			case pct >= 90:
+				diskClass = "is-crit"
+			case pct >= 70:
+				diskClass = "is-warn"
+			}
 			data.Disks = append(data.Disks, diskEntry{
 				Mount:     fs.MountPoint,
 				Size:      humanKiB(size),
-				Used:      humanKiB(used),
 				Available: humanKiB(int64(fs.Available)),
 				Percent:   pct,
+				Class:     diskClass,
 			})
 		}
 	}
@@ -325,6 +352,9 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	if hwErr != nil {
 		log.Printf("restconf hardware: %v", hwErr)
 	} else {
+		sensorMap := make(map[string][]sensorEntry)
+		var sensorParents []string
+
 		for _, c := range hw.Hardware.Component {
 			class := shortClass(c.Class)
 			if class == "chassis" {
@@ -337,12 +367,69 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if c.SensorData != nil && c.SensorData.OperStatus == "ok" {
-				data.Sensors = append(data.Sensors, sensorEntry{
+				entry := sensorEntry{
 					Name:  c.Name,
 					Value: formatSensor(c.SensorData.ValueType, int64(c.SensorData.Value), c.SensorData.ValueScale),
 					Type:  c.SensorData.ValueType,
+				}
+				p := c.Parent
+				if _, ok := sensorMap[p]; !ok {
+					sensorParents = append(sensorParents, p)
+				}
+				sensorMap[p] = append(sensorMap[p], entry)
+			}
+			if c.WiFiRadio != nil {
+				var stds []string
+				var ht, vht, he bool
+				var bandNames []string
+				for _, b := range c.WiFiRadio.Bands {
+					if b.HTCapable {
+						ht = true
+					}
+					if b.VHTCapable {
+						vht = true
+					}
+					if b.HECapable {
+						he = true
+					}
+					name := b.Name
+					if name == "" {
+						name = b.Band
+					}
+					if name != "" {
+						bandNames = append(bandNames, name)
+					}
+				}
+				if len(bandNames) == 0 && c.WiFiRadio.Band != "" {
+					bandNames = append(bandNames, c.WiFiRadio.Band)
+				}
+				if ht {
+					stds = append(stds, "11n")
+				}
+				if vht {
+					stds = append(stds, "11ac")
+				}
+				if he {
+					stds = append(stds, "11ax")
+				}
+				maxAP := 0
+				if c.WiFiRadio.MaxInterfaces != nil {
+					maxAP = c.WiFiRadio.MaxInterfaces.AP
+				}
+				data.WiFiRadios = append(data.WiFiRadios, wifiEntry{
+					Name:         c.Name,
+					Manufacturer: c.MfgName,
+					Bands:        strings.Join(bandNames, ", "),
+					Standards:    strings.Join(stds, "/"),
+					MaxAP:        maxAP,
 				})
 			}
+		}
+		for _, p := range sensorParents {
+			data.SensorGroups = append(data.SensorGroups, sensorGroup{
+				Parent:  p,
+				Sensors: sensorMap[p],
+			})
 		}
 	}
 
@@ -350,6 +437,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		log.Printf("restconf system config: %v", confErr)
 	} else {
 		data.Hostname = sysConf.System.Hostname
+		data.Contact = sysConf.System.Contact
+		data.Location = sysConf.System.Location
 	}
 
 	tmplName := "dashboard.html"
@@ -396,6 +485,15 @@ func computeUptime(boot, now string) string {
 	default:
 		return fmt.Sprintf("%dm", mins)
 	}
+}
+
+// formatCurrentTime formats an RFC3339 timestamp as "2006-01-02 15:04:05 +00:00".
+func formatCurrentTime(s string) string {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return ""
+	}
+	return t.UTC().Format("2006-01-02 15:04:05 +00:00")
 }
 
 // shortClass strips the YANG module prefix from a hardware class identity.
@@ -447,17 +545,17 @@ func humanBytes(b int64) string {
 	return fmt.Sprintf("%.1f PiB", v)
 }
 
-// humanKiB converts KiB to a human-readable string (K, M, G, T).
+// humanKiB converts KiB to a human-readable string using binary (IEC) units.
 func humanKiB(kib int64) string {
 	v := float64(kib)
-	for _, unit := range []string{"K", "M", "G", "T"} {
-		if v < 1024 || unit == "T" {
+	for _, unit := range []string{"KiB", "MiB", "GiB", "TiB"} {
+		if v < 1024 || unit == "TiB" {
 			if v == math.Trunc(v) {
-				return fmt.Sprintf("%.0f%s", v, unit)
+				return fmt.Sprintf("%.0f %s", v, unit)
 			}
-			return fmt.Sprintf("%.1f%s", v, unit)
+			return fmt.Sprintf("%.1f %s", v, unit)
 		}
 		v /= 1024
 	}
-	return fmt.Sprintf("%.1fP", v)
+	return fmt.Sprintf("%.1f PiB", v)
 }
