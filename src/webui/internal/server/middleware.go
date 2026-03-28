@@ -15,10 +15,10 @@ import (
 
 const cookieName = "session"
 
-// authMiddleware checks the session cookie on every request, looks up
-// the session, and attaches decrypted credentials to the context.
-// Unauthenticated requests are redirected to /login (or get a 401 if
-// the request comes from HTMX).
+// authMiddleware checks the session cookie on every request, looks
+// the token up in the in-memory store, and attaches the session's
+// credentials to the context.  Unauthenticated requests are
+// redirected to /login (or get a 401 if the request comes from HTMX).
 func authMiddleware(store *auth.SessionStore, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isPublicPath(r.URL.Path) {
@@ -38,20 +38,12 @@ func authMiddleware(store *auth.SessionStore, next http.Handler) http.Handler {
 			return
 		}
 
-		// Sliding window: re-issue the cookie with a fresh timestamp.
-		// Skip for background polling endpoints so they don't keep
-		// the session alive indefinitely.
+		// Sliding window: extend the session on user-driven requests.
+		// Background polling endpoints are excluded so an idle user
+		// (just leaving the dashboard open in a tab) still hits the
+		// timeout.
 		if !isPollingPath(r.URL.Path) {
-			if fresh, err := store.CreateWithCSRF(username, password, csrf, features); err == nil {
-				http.SetCookie(w, &http.Cookie{
-					Name:     cookieName,
-					Value:    fresh,
-					Path:     "/",
-					HttpOnly: true,
-					Secure:   security.IsSecureRequest(r),
-					SameSite: http.SameSiteLaxMode,
-				})
-			}
+			store.Refresh(cookie.Value)
 		}
 
 		ctx := restconf.ContextWithCredentials(r.Context(), restconf.Credentials{

@@ -50,7 +50,6 @@ GOOS=linux GOARCH=arm64 make build
 |-------------------|-----------------------------------|-------------------------------------------|
 | `--listen`        | `:10000`                          | Address to listen on                      |
 | `--restconf`      | `http://localhost:8080/restconf`  | RESTCONF base URL of the device           |
-| `--session-key`   | `/var/lib/misc/webui-session.key` | Path to persistent session encryption key |
 | `--insecure-tls`  | `false`                           | Disable TLS certificate verification      |
 
 The RESTCONF URL can also be set via the `RESTCONF_URL` environment

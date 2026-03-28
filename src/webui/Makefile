@@ -7,7 +7,7 @@ build:
 	go build -ldflags="-s -w" -o $(BINARY) .
 
 dev: build
-	go run . --listen :10000 --session-key /tmp/webui-session.key --insecure-tls $(ARGS)
+	go run . --listen :10000 --insecure-tls $(ARGS)
 
 clean:
 	rm -f $(BINARY)

@@ -3,154 +3,128 @@
 package auth
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
+	"sync"
 	"time"
+
+	"github.com/kernelkit/webui/internal/security"
 )
 
 const sessionTimeout = 1 * time.Hour
 
-type tokenPayload struct {
-	Username  string          `json:"u"`
-	Password  string          `json:"p"`
-	CsrfToken string          `json:"c"`
-	CreatedAt int64           `json:"t"`
-	Features  map[string]bool `json:"f,omitempty"`
+// sessionEntry is the in-memory state of a single authenticated
+// session.  The user's password is kept alongside the token so the
+// webui can re-authenticate to RESTCONF on the user's behalf on each
+// request; it is never written to disk or surfaced over the wire.
+type sessionEntry struct {
+	username   string
+	password   string
+	csrfToken  string
+	features   map[string]bool
+	lastSeenAt time.Time
 }
 
-// SessionStore issues and validates stateless encrypted tokens.
-// The cookie value is a base64url-encoded AES-256-GCM sealed blob
-// containing the user's credentials and a creation timestamp.
-// No server-side session map is needed — only the AES key must
-// persist across restarts.
+// SessionStore issues opaque random session tokens backed by an
+// in-memory map.  Nothing is persisted: a webui restart drops every
+// active session and the UI's 401 handler surfaces a fresh login
+// page.
 type SessionStore struct {
-	aead cipher.AEAD
+	mu       sync.RWMutex
+	sessions map[string]*sessionEntry
 }
 
-// NewSessionStore creates a store.  If keyFile is non-empty, the AES
-// key is read from that path (or generated and written there on first
-// run).  If keyFile is empty, a random ephemeral key is used.
-func NewSessionStore(keyFile string) (*SessionStore, error) {
-	key, err := loadOrCreateKey(keyFile)
-	if err != nil {
-		return nil, err
+// NewSessionStore returns a fresh store and starts a janitor
+// goroutine that sweeps expired entries once a minute.
+func NewSessionStore() *SessionStore {
+	s := &SessionStore{
+		sessions: make(map[string]*sessionEntry),
 	}
-
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		return nil, err
-	}
-	aead, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SessionStore{aead: aead}, nil
+	go s.janitor()
+	return s
 }
 
-// Create returns an encrypted token carrying the user's credentials and capabilities.
+// Create issues a session for the given credentials, returning the
+// session token (cookie value) and a freshly minted CSRF token.
 func (s *SessionStore) Create(username, password string, features map[string]bool) (string, string, error) {
-	csrf := randomToken()
-	token, err := s.CreateWithCSRF(username, password, csrf, features)
-	return token, csrf, err
-}
-
-// CreateWithCSRF returns an encrypted token carrying the user's credentials,
-// capabilities, and a bound CSRF token.
-func (s *SessionStore) CreateWithCSRF(username, password, csrf string, features map[string]bool) (string, error) {
-	payload, err := json.Marshal(tokenPayload{
-		Username:  username,
-		Password:  password,
-		CsrfToken: csrf,
-		CreatedAt: time.Now().Unix(),
-		Features:  features,
-	})
+	token, err := security.RandomToken()
 	if err != nil {
-		return "", err
+		return "", "", fmt.Errorf("session token: %w", err)
+	}
+	csrf, err := security.RandomToken()
+	if err != nil {
+		return "", "", fmt.Errorf("csrf token: %w", err)
 	}
 
-	nonce := make([]byte, s.aead.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", err
+	s.mu.Lock()
+	s.sessions[token] = &sessionEntry{
+		username:   username,
+		password:   password,
+		csrfToken:  csrf,
+		features:   features,
+		lastSeenAt: time.Now(),
 	}
-
-	sealed := s.aead.Seal(nonce, nonce, payload, nil)
-	return base64.RawURLEncoding.EncodeToString(sealed), nil
+	s.mu.Unlock()
+	return token, csrf, nil
 }
 
-// Lookup decrypts a token and returns the credentials and capabilities if valid.
+// Lookup returns the credentials associated with a session token, or
+// ok=false if the token is unknown or expired.  An expired entry is
+// reaped as a side effect.
 func (s *SessionStore) Lookup(token string) (username, password, csrf string, features map[string]bool, ok bool) {
-	raw, err := base64.RawURLEncoding.DecodeString(token)
-	if err != nil {
-		return "", "", "", nil, false
+	s.mu.RLock()
+	e, present := s.sessions[token]
+	if present && time.Since(e.lastSeenAt) <= sessionTimeout {
+		username, password, csrf, features = e.username, e.password, e.csrfToken, e.features
+		s.mu.RUnlock()
+		return username, password, csrf, features, true
 	}
+	s.mu.RUnlock()
 
-	ns := s.aead.NonceSize()
-	if len(raw) < ns {
-		return "", "", "", nil, false
+	// Slow path: the entry was either missing or expired at read
+	// time.  Re-check under the write lock — Refresh may have
+	// updated lastSeenAt in the gap — and only delete if still
+	// expired.
+	if present {
+		s.mu.Lock()
+		if e, ok := s.sessions[token]; ok && time.Since(e.lastSeenAt) > sessionTimeout {
+			delete(s.sessions, token)
+		}
+		s.mu.Unlock()
 	}
-
-	plaintext, err := s.aead.Open(nil, raw[:ns], raw[ns:], nil)
-	if err != nil {
-		return "", "", "", nil, false
-	}
-
-	var p tokenPayload
-	if err := json.Unmarshal(plaintext, &p); err != nil {
-		return "", "", "", nil, false
-	}
-
-	if time.Since(time.Unix(p.CreatedAt, 0)) > sessionTimeout {
-		return "", "", "", nil, false
-	}
-
-	return p.Username, p.Password, p.CsrfToken, p.Features, true
+	return "", "", "", nil, false
 }
 
-// Delete is a no-op for stateless tokens (the cookie is cleared by
-// the caller), but kept to satisfy the existing logout flow.
-func (s *SessionStore) Delete(token string) {}
-
-// loadOrCreateKey returns a 32-byte AES key.  When path is non-empty
-// the key is persisted so sessions survive restarts.
-func loadOrCreateKey(path string) ([32]byte, error) {
-	var key [32]byte
-
-	if path != "" {
-		data, err := os.ReadFile(path)
-		if err == nil && len(data) == 32 {
-			copy(key[:], data)
-			return key, nil
-		}
+// Refresh extends a session's lifetime by resetting its last-seen
+// timestamp.  Called by the auth middleware on each user-driven
+// request so an active session doesn't expire mid-use.  No-op if the
+// token is unknown.
+func (s *SessionStore) Refresh(token string) {
+	s.mu.Lock()
+	if e, ok := s.sessions[token]; ok {
+		e.lastSeenAt = time.Now()
 	}
-
-	if _, err := io.ReadFull(rand.Reader, key[:]); err != nil {
-		return key, fmt.Errorf("generate session key: %w", err)
-	}
-
-	if path != "" {
-		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-			return key, fmt.Errorf("create key directory: %w", err)
-		}
-		if err := os.WriteFile(path, key[:], 0600); err != nil {
-			return key, fmt.Errorf("write session key: %w", err)
-		}
-	}
-
-	return key, nil
+	s.mu.Unlock()
 }
 
-func randomToken() string {
-	var b [32]byte
-	if _, err := io.ReadFull(rand.Reader, b[:]); err != nil {
-		return ""
+// Delete revokes a session.  Called by logout and by Lookup on
+// expiration.
+func (s *SessionStore) Delete(token string) {
+	s.mu.Lock()
+	delete(s.sessions, token)
+	s.mu.Unlock()
+}
+
+func (s *SessionStore) janitor() {
+	t := time.NewTicker(1 * time.Minute)
+	defer t.Stop()
+	for range t.C {
+		cutoff := time.Now().Add(-sessionTimeout)
+		s.mu.Lock()
+		for token, e := range s.sessions {
+			if e.lastSeenAt.Before(cutoff) {
+				delete(s.sessions, token)
+			}
+		}
+		s.mu.Unlock()
 	}
-	return base64.RawURLEncoding.EncodeToString(b[:])
 }

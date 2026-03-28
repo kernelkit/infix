@@ -30,12 +30,9 @@ type LLDPNeighbor struct {
 // ─── Page data ───────────────────────────────────────────────────────────────
 
 type lldpPageData struct {
-	CsrfToken    string
-	PageTitle    string
-	ActivePage   string
-	Capabilities *Capabilities
-	Neighbors    []LLDPNeighbor
-	Error        string
+	PageData
+	Neighbors []LLDPNeighbor
+	Error     string
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -49,10 +46,7 @@ type LLDPHandler struct {
 // Overview renders the LLDP page (GET /lldp).
 func (h *LLDPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := lldpPageData{
-		CsrfToken:    csrfToken(r.Context()),
-		PageTitle:    "LLDP Neighbors",
-		ActivePage:   "lldp",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "lldp", "LLDP Neighbors"),
 	}
 
 	ctx := context.WithoutCancel(r.Context())

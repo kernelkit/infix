@@ -6,6 +6,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -35,7 +37,10 @@ func EnsureToken(w http.ResponseWriter, r *http.Request, preferred string) strin
 		}
 	}
 
-	token := randomToken()
+	token, err := RandomToken()
+	if err != nil {
+		return ""
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     csrfCookieName,
 		Value:    token,
@@ -60,12 +65,14 @@ func TokenFromContext(ctx context.Context) string {
 	return ""
 }
 
-func randomToken() string {
+// RandomToken returns 32 bytes of crypto/rand, base64-url-encoded.
+// Used for both CSRF tokens and session-store entries.
+func RandomToken() (string, error) {
 	var b [32]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return ""
+	if _, err := io.ReadFull(rand.Reader, b[:]); err != nil {
+		return "", fmt.Errorf("read random: %w", err)
 	}
-	return base64.RawURLEncoding.EncodeToString(b[:])
+	return base64.RawURLEncoding.EncodeToString(b[:]), nil
 }
 
 func validToken(token string) bool {

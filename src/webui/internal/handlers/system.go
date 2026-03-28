@@ -106,12 +106,8 @@ type fwSlotBundle struct {
 // Template data for the firmware page.
 
 type firmwareData struct {
-	CsrfToken    string
-	Username     string
-	ActivePage   string
-	PageTitle    string
-	Capabilities *Capabilities
-	Slots        []slotEntry
+	PageData
+	Slots []slotEntry
 	Installer    *installerEntry
 	Error        string
 	Message      string
@@ -135,14 +131,9 @@ type installerEntry struct {
 
 // Firmware renders the firmware overview page (GET /firmware).
 func (h *SystemHandler) Firmware(w http.ResponseWriter, r *http.Request) {
-	creds := restconf.CredentialsFromContext(r.Context())
 	data := firmwareData{
-		Username:     creds.Username,
-		CsrfToken:    csrfToken(r.Context()),
-		ActivePage:   "firmware",
-		PageTitle:    "Firmware",
-		Capabilities: CapabilitiesFromContext(r.Context()),
-		Message:      r.URL.Query().Get("msg"),
+		PageData: newPageData(r, "firmware", "Firmware"),
+		Message:  r.URL.Query().Get("msg"),
 	}
 
 	var sw fwSoftwareWrapper

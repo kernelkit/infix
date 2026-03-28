@@ -137,12 +137,9 @@ type WiFiScan struct {
 
 // wifiData is the top-level template data for the WiFi page.
 type wifiData struct {
-	CsrfToken    string
-	PageTitle    string
-	ActivePage   string
-	Capabilities *Capabilities
-	Radios       []WiFiRadio
-	Error        string
+	PageData
+	Radios []WiFiRadio
+	Error  string
 }
 
 // WiFiHandler serves the WiFi status page.
@@ -154,10 +151,7 @@ type WiFiHandler struct {
 // Overview renders the WiFi page (GET /wifi).
 func (h *WiFiHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := wifiData{
-		CsrfToken:    csrfToken(r.Context()),
-		PageTitle:    "WiFi",
-		ActivePage:   "wifi",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "wifi", "WiFi"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive

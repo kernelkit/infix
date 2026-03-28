@@ -44,12 +44,9 @@ type DHCPData struct {
 // ─── Page data ───────────────────────────────────────────────────────────────
 
 type dhcpPageData struct {
-	CsrfToken    string
-	PageTitle    string
-	ActivePage   string
-	Capabilities *Capabilities
-	DHCP         *DHCPData
-	Error        string
+	PageData
+	DHCP  *DHCPData
+	Error string
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -63,10 +60,7 @@ type DHCPHandler struct {
 // Overview renders the DHCP page (GET /dhcp).
 func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := dhcpPageData{
-		CsrfToken:    csrfToken(r.Context()),
-		PageTitle:    "DHCP Server",
-		ActivePage:   "dhcp",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "dhcp", "DHCP Server"),
 	}
 
 	ctx := context.WithoutCancel(r.Context())

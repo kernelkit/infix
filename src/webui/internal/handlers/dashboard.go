@@ -177,12 +177,8 @@ type hwComponentJSON struct {
 // Template data structures.
 
 type dashboardData struct {
-	CsrfToken    string
-	Username     string
-	ActivePage   string
-	PageTitle    string
-	Capabilities *Capabilities
-	Hostname     string
+	PageData
+	Hostname string
 	OSName       string
 	OSVersion    string
 	Machine      string
@@ -232,13 +228,8 @@ type DashboardHandler struct {
 
 // Index renders the dashboard (GET /).
 func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
-	creds := restconf.CredentialsFromContext(r.Context())
 	data := dashboardData{
-		Username:     creds.Username,
-		CsrfToken:    csrfToken(r.Context()),
-		ActivePage:   "dashboard",
-		PageTitle:    "Dashboard",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "dashboard", "Dashboard"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive

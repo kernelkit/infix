@@ -31,14 +31,10 @@ func main() {
 
 	listen := flag.String("listen", ":10000", "address to listen on")
 	restconfURL := flag.String("restconf", defaultRC, "RESTCONF base URL")
-	sessionKey := flag.String("session-key", "/var/lib/misc/webui-session.key", "path to persistent session key file")
 	insecureTLS := flag.Bool("insecure-tls", envBool("INSECURE_TLS"), "disable TLS certificate verification")
 	flag.Parse()
 
-	store, err := auth.NewSessionStore(*sessionKey)
-	if err != nil {
-		log.Fatalf("session store: %v", err)
-	}
+	store := auth.NewSessionStore()
 
 	rc := restconf.NewClient(*restconfURL, *insecureTLS)
 

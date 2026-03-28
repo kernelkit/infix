@@ -41,10 +41,7 @@ type OSPFIface struct {
 }
 
 type routingData struct {
-	CsrfToken     string
-	PageTitle     string
-	ActivePage    string
-	Capabilities  *Capabilities
+	PageData
 	Routes        []RouteEntry
 	OSPFNeighbors []OSPFNeighbor
 	OSPFIfaces    []OSPFIface
@@ -180,10 +177,7 @@ type ospfNeighborJSON struct {
 
 func (h *RoutingHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := routingData{
-		CsrfToken:    csrfToken(r.Context()),
-		PageTitle:    "Routing",
-		ActivePage:   "routing",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "routing", "Routing"),
 	}
 
 	ctx := context.WithoutCancel(r.Context())
