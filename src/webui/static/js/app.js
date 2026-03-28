@@ -396,6 +396,19 @@
   document.addEventListener('htmx:afterSettle', initCollapsibles);
 })();
 
+// Keystore key detail row toggle
+(function() {
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.key-row-toggle');
+    if (!btn) return;
+    var target = btn.getAttribute('data-target');
+    var row = document.getElementById('key-detail-' + target);
+    if (!row) return;
+    var open = row.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+})();
+
 // Sidebar toggle (mobile)
 (function() {
   var MOBILE_BP = 1024;

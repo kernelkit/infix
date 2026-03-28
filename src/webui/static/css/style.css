@@ -61,6 +61,8 @@
   --font-sans:     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono:     "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
 
+  --surface-alt:   var(--slate-100);
+
   /* Legacy variable mapping */
   --card-bg:       var(--surface);
 }
@@ -74,6 +76,7 @@
     --fg-muted:      var(--slate-400);
     --border:        var(--slate-700);
     --border-subtle: var(--slate-800);
+    --surface-alt:   var(--slate-900);
     --sidebar-bg:       var(--slate-800);
     --sidebar-fg:       var(--slate-200);
     --sidebar-hover:    rgba(255, 255, 255, 0.1);
@@ -91,6 +94,7 @@
   --fg-muted:      var(--slate-400);
   --border:        var(--slate-700);
   --border-subtle: var(--slate-800);
+  --surface-alt:   var(--slate-900);
   --zebra-stripe:  rgba(255,255,255,0.03);
   --sidebar-bg:       var(--slate-800);
   --sidebar-fg:       var(--slate-200);
@@ -108,6 +112,7 @@
   --fg-muted:      var(--slate-500);
   --border:        var(--slate-200);
   --border-subtle: var(--slate-100);
+  --surface-alt:   var(--slate-100);
   --sidebar-bg:       var(--slate-100);
   --sidebar-fg:       var(--slate-700);
   --sidebar-hover:    rgba(0, 0, 0, 0.07);
@@ -130,7 +135,6 @@
 .light .badge-reject { background: #fef2f2; color: #991b1b; }
 .light .badge-drop { background: var(--slate-100); color: var(--slate-600); }
 .light .badge-continue { background: #dbeafe; color: #1e40af; }
-.light .key-full { background: var(--slate-100); }
 
 /* ==========================================================================
    Reset & Base
@@ -1274,9 +1278,51 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
 
 /* Keystore */
 .empty-message { color: var(--fg-muted); font-style: italic; padding: 1rem; text-align: center; }
-.key-full { font-family: var(--font-mono); font-size: 0.8rem; word-break: break-all; color: var(--fg); background: var(--slate-100); padding: 0.25rem; border-radius: 4px; }
-@media (prefers-color-scheme: dark) { .key-full { background: var(--slate-800); } }
-.dark .key-full { background: var(--slate-800); }
+
+.key-row-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--fg);
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: left;
+}
+.key-row-arrow {
+  font-size: 0.6rem;
+  color: var(--fg-muted);
+  display: inline-block;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.key-row-toggle[aria-expanded="true"] .key-row-arrow { transform: rotate(90deg); }
+
+.key-detail-row { display: none; }
+.key-detail-row.is-open { display: table-row; }
+.key-detail-cell {
+  background: var(--surface-alt);
+  padding: 0.75rem 1rem 0.75rem 1.5rem !important;
+  border-top: none !important;
+}
+.key-detail-body { display: flex; flex-direction: column; gap: 0.6rem; }
+.key-field { display: flex; flex-direction: column; gap: 0.2rem; }
+.key-field-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted); }
+.key-field-value {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  word-break: break-all;
+  white-space: pre-wrap;
+  color: var(--fg);
+  background: var(--surface);
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  max-width: 72ch;
+  display: block;
+}
 
 /* Survey */
 .survey-chart { max-width: 100%; height: auto; display: block; }
