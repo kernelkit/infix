@@ -67,6 +67,9 @@ func (h *SystemHandler) DownloadConfig(w http.ResponseWriter, r *http.Request) {
 
 type fwSoftwareWrapper struct {
 	SystemState struct {
+		Platform struct {
+			Machine string `json:"machine"`
+		} `json:"platform"`
 		Software fwSoftwareState `json:"infix-system:software"`
 	} `json:"ietf-system:system-state"`
 }
@@ -75,6 +78,7 @@ type fwSoftwareState struct {
 	Compatible string           `json:"compatible"`
 	Variant    string           `json:"variant"`
 	Booted     string           `json:"booted"`
+	BootOrder  []string         `json:"boot-order"`
 	Installer  fwInstallerState `json:"installer"`
 	Slots      []fwSlot         `json:"slot"`
 }
@@ -91,11 +95,14 @@ type fwInstallerProgress struct {
 }
 
 type fwSlot struct {
-	Name     string       `json:"name"`
-	BootName string       `json:"bootname"`
-	Class    string       `json:"class"`
-	State    string       `json:"state"`
-	Bundle   fwSlotBundle `json:"bundle"`
+	Name      string       `json:"name"`
+	BootName  string       `json:"bootname"`
+	Class     string       `json:"class"`
+	State     string       `json:"state"`
+	Bundle    fwSlotBundle `json:"bundle"`
+	Installed struct {
+		Datetime string `json:"datetime"`
+	} `json:"installed"`
 }
 
 type fwSlotBundle struct {
@@ -107,18 +114,20 @@ type fwSlotBundle struct {
 
 type firmwareData struct {
 	PageData
-	Slots []slotEntry
+	Machine      string
+	BootOrder    []string
+	Slots        []slotEntry
 	Installer    *installerEntry
 	Error        string
 	Message      string
 }
 
 type slotEntry struct {
-	Name     string
-	BootName string
-	State    string
-	Version  string
-	Booted   bool
+	Name        string // bootname: primary, secondary, etc.
+	State       string
+	Version     string
+	InstallDate string
+	Booted      bool
 }
 
 type installerEntry struct {
@@ -142,13 +151,29 @@ func (h *SystemHandler) Firmware(w http.ResponseWriter, r *http.Request) {
 		log.Printf("restconf firmware: %v", err)
 		data.Error = "Could not fetch firmware status"
 	} else {
+		data.Machine = sw.SystemState.Platform.Machine
+		if data.Machine == "arm64" {
+			data.Machine = "aarch64"
+		}
+		data.BootOrder = sw.SystemState.Software.BootOrder
 		for _, s := range sw.SystemState.Software.Slots {
+			if s.Class != "rootfs" {
+				continue
+			}
+			name := s.BootName
+			if name == "" {
+				name = s.Name
+			}
+			date := s.Installed.Datetime
+			if len(date) > 19 {
+				date = date[:19]
+			}
 			data.Slots = append(data.Slots, slotEntry{
-				Name:     s.Name,
-				BootName: s.BootName,
-				State:    s.State,
-				Version:  s.Bundle.Version,
-				Booted:   s.Name == sw.SystemState.Software.Booted,
+				Name:        name,
+				State:       s.State,
+				Version:     s.Bundle.Version,
+				InstallDate: date,
+				Booted:      s.BootName == sw.SystemState.Software.Booted,
 			})
 		}
 

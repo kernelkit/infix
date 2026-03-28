@@ -271,6 +271,9 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		data.OSName = ss.Platform.OSName
 		data.OSVersion = ss.Platform.OSVersion
 		data.Machine = ss.Platform.Machine
+		if data.Machine == "arm64" {
+			data.Machine = "aarch64"
+		}
 		data.Firmware = firmwareVersion(ss.Software)
 		data.Uptime = computeUptime(ss.Clock.BootDatetime, ss.Clock.CurrentDatetime)
 

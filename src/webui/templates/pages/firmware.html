@@ -25,45 +25,85 @@
 <div class="alert alert-error">Last error: {{.Installer.LastError}}</div>
 {{end}}{{end}}
 
-<section class="info-card">
-  <div class="card-header">Firmware Slots</div>
-  {{if .Slots}}
-  <div class="data-table-wrap">
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Slot</th>
-        <th>State</th>
-        <th>Version</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{range .Slots}}
-      <tr>
-        <td>{{.Name}}{{if .BootName}} ({{.BootName}}){{end}}{{if .Booted}} <span class="badge badge-accept">booted</span>{{end}}</td>
-        <td>{{.State}}</td>
-        <td>{{if .Version}}{{.Version}}{{else}}-{{end}}</td>
-      </tr>
-      {{end}}
-    </tbody>
-  </table>
-  </div>
-  {{else}}
-  <p class="empty-message">No firmware slot information available.</p>
-  {{end}}
-</section>
+<div class="fw-install-grid">
 
-<section class="info-card">
-  <div class="card-header">Install Firmware</div>
-  <form hx-post="/firmware/install" hx-swap="none" class="firmware-form">
-    <input type="hidden" name="csrf" value="{{.CsrfToken}}">
-    <div class="form-group">
-      <label for="fw-url">Bundle URL</label>
-      <input type="url" id="fw-url" name="url" placeholder="https://example.com/firmware.raucb" required>
+  <section class="info-card">
+    <div class="card-header">Software</div>
+    {{if .BootOrder}}
+    <div class="fw-boot-order-row">
+      <span class="fw-boot-order-label">Boot order</span>
+      {{range .BootOrder}}<span class="badge badge-neutral">{{.}}</span>{{end}}
     </div>
-    <button type="submit" class="btn btn-primary"
-            hx-confirm="Install firmware from this URL?"
-            {{if .Installer}}{{if .Installer.Active}}disabled{{end}}{{end}}>Install</button>
-  </form>
-</section>
+    {{end}}
+    {{if .Slots}}
+    <div class="fw-slot-list">
+      {{range .Slots}}
+      <div class="fw-slot-item">
+        <div class="fw-slot-primary">
+          <span class="fw-slot-name">{{.Name}}</span>
+          {{if .Booted}}<span class="badge badge-accept">booted</span>
+          {{else}}<span class="badge badge-neutral">{{.State}}</span>{{end}}
+        </div>
+        <div class="fw-slot-version">{{if .Version}}{{.Version}}{{else}}&mdash;{{end}}</div>
+        {{if .InstallDate}}<div class="fw-slot-date">{{.InstallDate}}</div>{{end}}
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-message">No software information available.</p>
+    {{end}}
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Install from URL</div>
+    <div class="card-body">
+      <p class="fw-help-text">
+        Get the latest firmware from
+        <a href="https://github.com/kernelkit/infix/releases/latest" target="_blank" rel="noopener">GitHub Releases</a>.
+        Download the <code>.tar.gz</code> tarball, extract the <code>.pkg</code> file, and serve it over HTTP.
+      </p>
+      <details class="fw-hint">
+        <summary>How to host the firmware from your PC</summary>
+        <div class="fw-hint-body">
+          <p>Extract and serve the package with Python (Linux/macOS/Windows):</p>
+          <code class="fw-hint-code">tar xf infix-{{if .Machine}}{{.Machine}}{{else}}aarch64{{end}}-vVERSION.tar.gz
+python3 -m http.server 8080</code>
+          <p>Then enter the URL below pointing at the <code>.pkg</code> file on your machine.</p>
+        </div>
+      </details>
+      <form hx-post="/firmware/install" hx-swap="none" class="firmware-form">
+        <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+        <div class="form-group">
+          <label for="fw-url">Firmware Package URL (.pkg)</label>
+          <input type="url" id="fw-url" name="url"
+                 placeholder="http://192.168.1.10:8080/infix-{{if .Machine}}{{.Machine}}{{else}}aarch64{{end}}-vVERSION.pkg"
+                 required>
+        </div>
+        <button type="submit" class="btn btn-primary"
+                hx-confirm="Install firmware from this URL?"
+                {{if .Installer}}{{if .Installer.Active}}disabled{{end}}{{end}}>Install</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="info-card fw-card-muted">
+    <div class="card-header">Upload &amp; Install <span class="badge badge-neutral">Coming Soon</span></div>
+    <div class="card-body">
+      <p class="fw-help-text">
+        Direct file upload is not yet available. As a workaround, serve the
+        <code>.pkg</code> file from your computer using a local HTTP server (see the URL installer).
+      </p>
+      <div class="fw-upload-placeholder">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Drop .pkg file here or click to browse</span>
+      </div>
+      <button class="btn btn-secondary" disabled>Upload &amp; Install</button>
+    </div>
+  </section>
+
+</div>
 {{end}}

@@ -978,8 +978,139 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
 }
 
 /* Firmware & Reboot */
+.fw-install-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+.fw-install-grid > .info-card { margin: 0; }
+
+.fw-card-muted { opacity: 0.6; pointer-events: none; }
+
+.fw-help-text {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+.fw-help-text a { color: var(--primary); }
+.fw-help-text code, .fw-hint-body code { font-family: var(--font-mono); font-size: 0.8em; }
+
+.fw-hint {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+}
+.fw-hint summary {
+  cursor: pointer;
+  padding: 0.55rem 0.8rem;
+  color: var(--fg-muted);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.fw-hint summary::-webkit-details-marker { display: none; }
+.fw-hint summary::before { content: '›'; display: inline-block; transition: transform 0.15s; }
+details.fw-hint[open] summary::before { transform: rotate(90deg); }
+.fw-hint-body {
+  padding: 0.75rem 0.8rem;
+  border-top: 1px solid var(--border);
+}
+.fw-hint-body p { margin: 0 0 0.5rem; color: var(--fg-muted); font-size: 0.85rem; }
+.fw-hint-body p:last-child { margin-bottom: 0; }
+.fw-hint-code {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--fg);
+  margin-bottom: 0.5rem;
+}
+
+.fw-boot-order-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+.fw-boot-order-label {
+  color: var(--fg-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-right: 0.2rem;
+}
+
+.fw-slot-list { display: flex; flex-direction: column; }
+.fw-slot-item {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.fw-slot-item:last-child { border-bottom: none; }
+.fw-slot-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+.fw-slot-name { font-weight: 600; font-size: 0.9rem; }
+.fw-slot-version {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+.fw-slot-date {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  opacity: 0.75;
+  margin-top: 0.1rem;
+}
+
+.fw-upload-placeholder {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--fg-muted);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.875rem;
+}
+
 .firmware-form { display: flex; gap: 1rem; align-items: flex-end; }
 .firmware-form .form-group { flex: 1; margin-bottom: 0; }
+
+.badge-neutral {
+  background: var(--slate-200);
+  color: var(--slate-600);
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.15em 0.5em;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+@media (prefers-color-scheme: dark) {
+  .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
+}
+.dark .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
 
 .progress-bar-wrap {
   background: var(--slate-200);
