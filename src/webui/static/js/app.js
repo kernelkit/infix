@@ -185,6 +185,26 @@
   });
 })();
 
+// Accordion nav group persistence
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('details.nav-group').forEach(function(d) {
+      var label = d.querySelector('summary');
+      if (!label) return;
+      var key = 'nav-group:' + label.textContent.trim();
+      var saved = localStorage.getItem(key);
+      if (saved === 'closed') {
+        d.removeAttribute('open');
+      } else if (saved === 'open') {
+        d.setAttribute('open', '');
+      }
+      d.addEventListener('toggle', function() {
+        localStorage.setItem(key, d.open ? 'open' : 'closed');
+      });
+    });
+  });
+})();
+
 // Sidebar toggle (mobile)
 (function() {
   document.addEventListener('DOMContentLoaded', function() {
