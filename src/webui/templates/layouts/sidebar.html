@@ -5,8 +5,10 @@
   </div>
   <div class="sidebar-nav">
 
-    <details class="nav-group" open>
-      <summary class="nav-group-summary">Network</summary>
+    <details class="nav-group-top" open>
+      <summary class="nav-group-summary-top">Status</summary>
+
+      <div class="nav-section-label">System</div>
       <ul class="nav-group-items">
         <li>
           <a href="/"
@@ -18,6 +20,32 @@
             Dashboard
           </a>
         </li>
+        {{if and .Capabilities (.Capabilities.Has "containers")}}
+        <li>
+          <a href="/containers"
+             hx-get="/containers"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "containers"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/containers.svg')"></span>
+            Containers
+          </a>
+        </li>
+        {{end}}
+        <li>
+          <a href="/keystore"
+             hx-get="/keystore"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "keystore"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/keystore.svg')"></span>
+            Keystore
+          </a>
+        </li>
+      </ul>
+
+      <div class="nav-section-label">Network</div>
+      <ul class="nav-group-items">
         <li>
           <a href="/interfaces"
              hx-get="/interfaces"
@@ -48,13 +76,7 @@
             Firewall
           </a>
         </li>
-      </ul>
-    </details>
-
-    {{if and .Capabilities (.Capabilities.Has "wifi")}}
-    <details class="nav-group" open>
-      <summary class="nav-group-summary">Wireless</summary>
-      <ul class="nav-group-items">
+        {{if and .Capabilities (.Capabilities.Has "wifi")}}
         <li>
           <a href="/wifi"
              hx-get="/wifi"
@@ -65,13 +87,7 @@
             WiFi
           </a>
         </li>
-      </ul>
-    </details>
-    {{end}}
-
-    <details class="nav-group" open>
-      <summary class="nav-group-summary">VPN</summary>
-      <ul class="nav-group-items">
+        {{end}}
         <li>
           <a href="/vpn"
              hx-get="/vpn"
@@ -82,11 +98,19 @@
             WireGuard
           </a>
         </li>
+        <li>
+          <a href="/lldp"
+             hx-get="/lldp"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "lldp"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/lldp.svg')"></span>
+            LLDP
+          </a>
+        </li>
       </ul>
-    </details>
 
-    <details class="nav-group" open>
-      <summary class="nav-group-summary">Services</summary>
+      <div class="nav-section-label">Services</div>
       <ul class="nav-group-items">
         <li>
           <a href="/dhcp"
@@ -108,34 +132,17 @@
             NTP
           </a>
         </li>
-        <li>
-          <a href="/lldp"
-             hx-get="/lldp"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "lldp"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/lldp.svg')"></span>
-            LLDP
-          </a>
-        </li>
       </ul>
+
     </details>
 
-    <details class="nav-group" open>
-      <summary class="nav-group-summary">System</summary>
+    <details class="nav-group-top">
+      <summary class="nav-group-summary-top">Configure</summary>
+    </details>
+
+    <details class="nav-group-top">
+      <summary class="nav-group-summary-top">Maintenance</summary>
       <ul class="nav-group-items">
-        {{if and .Capabilities (.Capabilities.Has "containers")}}
-        <li>
-          <a href="/containers"
-             hx-get="/containers"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "containers"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/containers.svg')"></span>
-            Containers
-          </a>
-        </li>
-        {{end}}
         <li>
           <a href="/firmware"
              hx-get="/firmware"
@@ -147,14 +154,20 @@
           </a>
         </li>
         <li>
-          <a href="/keystore"
-             hx-get="/keystore"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "keystore"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/keystore.svg')"></span>
-            Keystore
+          <a href="/config" class="nav-link" hx-boost="false" download>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Download Config
           </a>
+        </li>
+        <li>
+          <button class="nav-link nav-link-btn nav-link-danger"
+                  hx-post="/reboot"
+                  hx-confirm="Reboot the device?"
+                  hx-target="#content"
+                  hx-swap="innerHTML">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            Reboot
+          </button>
         </li>
       </ul>
     </details>

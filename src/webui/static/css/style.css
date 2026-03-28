@@ -42,11 +42,12 @@
   --warning:       var(--amber-500);
   --danger:        var(--red-500);
 
-  /* Sidebar (Always Dark) */
-  --sidebar-bg:    var(--slate-800);
-  --sidebar-fg:    var(--slate-200);
-  --sidebar-hover: rgba(255, 255, 255, 0.1);
-  --sidebar-border: rgba(255, 255, 255, 0.1);
+  /* Sidebar — Light mode */
+  --sidebar-bg:       var(--slate-100);
+  --sidebar-fg:       var(--slate-700);
+  --sidebar-hover:    rgba(0, 0, 0, 0.07);
+  --sidebar-hover-fg: var(--primary);
+  --sidebar-border:   rgba(0, 0, 0, 0.08);
   --sidebar-width: 240px;
 
   /* Layout */
@@ -70,6 +71,11 @@
     --fg-muted:      var(--slate-400);
     --border:        var(--slate-700);
     --border-subtle: var(--slate-800);
+    --sidebar-bg:       var(--slate-800);
+    --sidebar-fg:       var(--slate-200);
+    --sidebar-hover:    rgba(255, 255, 255, 0.1);
+    --sidebar-hover-fg: #fff;
+    --sidebar-border:   rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -82,6 +88,11 @@
   --border:        var(--slate-700);
   --border-subtle: var(--slate-800);
   --zebra-stripe:  rgba(255,255,255,0.03);
+  --sidebar-bg:       var(--slate-800);
+  --sidebar-fg:       var(--slate-200);
+  --sidebar-hover:    rgba(255, 255, 255, 0.1);
+  --sidebar-hover-fg: #fff;
+  --sidebar-border:   rgba(255, 255, 255, 0.1);
 }
 
 /* Force Light Mode (override system dark preference) */
@@ -92,6 +103,11 @@
   --fg-muted:      var(--slate-500);
   --border:        var(--slate-200);
   --border-subtle: var(--slate-100);
+  --sidebar-bg:       var(--slate-100);
+  --sidebar-fg:       var(--slate-700);
+  --sidebar-hover:    rgba(0, 0, 0, 0.07);
+  --sidebar-hover-fg: var(--primary);
+  --sidebar-border:   rgba(0, 0, 0, 0.08);
 }
 .light .alert-error { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 .light .alert-info { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
@@ -180,7 +196,6 @@ a:hover {
 
 .sidebar-header {
   padding: 1.5rem 1.25rem;
-  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .sidebar-logo {
@@ -195,45 +210,58 @@ a:hover {
   overflow-y: auto;
 }
 
-/* Accordion Nav Groups */
-details.nav-group {
-  border-top: 1px solid var(--sidebar-border);
-}
-details.nav-group:first-child {
-  border-top: none;
+/* Standalone nav link (Dashboard) */
+.nav-standalone {
+  margin: 0.25rem 0.5rem 0.5rem;
 }
 
-details.nav-group > summary.nav-group-summary {
+/* Top-level accordion groups (Status / Configure / Maintenance) */
+details.nav-group-top {
+}
+
+details.nav-group-top > summary.nav-group-summary-top {
   list-style: none;
   cursor: pointer;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--sidebar-fg);
-  opacity: 0.5;
-  padding: 0.875rem 1rem 0.375rem;
+  opacity: 0.7;
+  padding: 0.75rem 1rem 0.375rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   user-select: none;
   transition: opacity 0.15s;
 }
-details.nav-group > summary.nav-group-summary:hover { opacity: 0.8; }
-details.nav-group > summary.nav-group-summary::-webkit-details-marker { display: none; }
-details.nav-group > summary.nav-group-summary::marker { display: none; }
+details.nav-group-top > summary.nav-group-summary-top:hover { opacity: 1; }
+details.nav-group-top > summary.nav-group-summary-top::-webkit-details-marker { display: none; }
+details.nav-group-top > summary.nav-group-summary-top::marker { display: none; }
 
-details.nav-group > summary.nav-group-summary::after {
+details.nav-group-top > summary.nav-group-summary-top::after {
   content: '▸';
   font-size: 0.7rem;
 }
-details[open].nav-group > summary.nav-group-summary::after {
+details[open].nav-group-top > summary.nav-group-summary-top::after {
   content: '▾';
+}
+
+/* Static sub-section labels within top-level accordion */
+.nav-section-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sidebar-fg);
+  opacity: 0.45;
+  padding: 0.75rem 1rem 0.2rem;
+  user-select: none;
 }
 
 .nav-group-items {
   list-style: none;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
 }
 
 .nav-icon {
@@ -262,13 +290,13 @@ details[open].nav-group > summary.nav-group-summary::after {
   font-size: 0.875rem;
   border-radius: 0.375rem;
   margin: 0 0.5rem;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s, color 0.15s;
   font-weight: 500;
 }
 
 .nav-link:hover {
   background-color: var(--sidebar-hover);
-  color: #fff;
+  color: var(--sidebar-hover-fg);
   text-decoration: none;
 }
 
@@ -276,6 +304,22 @@ details[open].nav-group > summary.nav-group-summary::after {
   background-color: var(--primary);
   color: #fff;
   text-decoration: none;
+}
+
+/* Button styled as a nav-link (for actions like Reboot) */
+.nav-link-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.nav-link-danger:hover {
+  color: var(--danger);
+  background-color: var(--sidebar-hover);
 }
 
 .sidebar-footer {
@@ -550,6 +594,19 @@ details[open].nav-group > summary.nav-group-summary::after {
 /* ==========================================================================
    Alerts & Banners
    ========================================================================== */
+
+/* Top progress bar — shown during htmx page navigations */
+.page-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+}
 
 .conn-banner {
   background: var(--danger);
@@ -1023,8 +1080,8 @@ details[open].nav-group > summary.nav-group-summary::after {
   justify-content: flex-end;
   padding: 0 1rem;
   height: 48px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--sidebar-bg);
+  border-bottom: 1px solid var(--sidebar-border);
   flex-shrink: 0;
   z-index: 100;
 }
@@ -1139,7 +1196,7 @@ details[open].nav-group > summary.nav-group-summary::after {
 }
 .dropdown-item:hover,
 .dropdown-item:focus {
-  background: var(--border-subtle);
+  background: var(--border);
   color: var(--fg);
   text-decoration: none;
 }
@@ -1186,8 +1243,8 @@ details[open].nav-group > summary.nav-group-summary::after {
    Responsive Layout
    ========================================================================== */
 
-/* Mobile (≤768px): Sidebar hidden, hamburger visible */
-@media (max-width: 768px) {
+/* Narrow (≤1024px): Sidebar hidden behind hamburger overlay */
+@media (max-width: 1024px) {
   #sidebar {
     position: fixed;
     top: 0;
@@ -1221,43 +1278,8 @@ details[open].nav-group > summary.nav-group-summary::after {
   }
 }
 
-/* Tablet (769px–1024px): Icon-only sidebar */
-@media (min-width: 769px) and (max-width: 1024px) {
-  :root {
-    --sidebar-width: 64px;
-  }
-
-  .nav-link span:not(.nav-icon) {
-    display: none;
-  }
-
-  /* Accordion in icon-only mode: always show items, hide section headers */
-  details.nav-group > summary.nav-group-summary {
-    display: none;
-  }
-  details.nav-group:not([open]) > .nav-group-items {
-    display: block !important;
-  }
-
-  .nav-link {
-    justify-content: center;
-    padding: 0.6rem;
-  }
-
-  .sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-  }
-
-  .sidebar-logo {
-    max-width: 32px;
-  }
-}
-
-/* Desktop: hamburger hidden */
-@media (min-width: 769px) {
+/* Desktop (>1024px): hamburger hidden, sidebar always visible */
+@media (min-width: 1025px) {
   .hamburger-btn {
     display: none;
   }
