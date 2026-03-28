@@ -47,12 +47,9 @@ type WGTunnel struct {
 
 // vpnData is the template data struct for the VPN page.
 type vpnData struct {
-	CsrfToken    string
-	PageTitle    string
-	ActivePage   string
-	Capabilities *Capabilities
-	Tunnels      []WGTunnel
-	Error        string
+	PageData
+	Tunnels []WGTunnel
+	Error   string
 }
 
 // VPNHandler serves the VPN/WireGuard status page.
@@ -64,10 +61,7 @@ type VPNHandler struct {
 // Overview renders the VPN page (GET /vpn).
 func (h *VPNHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := vpnData{
-		CsrfToken:    csrfToken(r.Context()),
-		PageTitle:    "VPN",
-		ActivePage:   "vpn",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "vpn", "VPN"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive

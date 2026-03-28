@@ -40,12 +40,9 @@ type NTPData struct {
 // ─── Page data ───────────────────────────────────────────────────────────────
 
 type ntpPageData struct {
-	CsrfToken    string
-	PageTitle    string
-	ActivePage   string
-	Capabilities *Capabilities
-	NTP          *NTPData
-	Error        string
+	PageData
+	NTP   *NTPData
+	Error string
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -59,10 +56,7 @@ type NTPHandler struct {
 // Overview renders the NTP page (GET /ntp).
 func (h *NTPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := ntpPageData{
-		CsrfToken:    csrfToken(r.Context()),
-		PageTitle:    "NTP",
-		ActivePage:   "ntp",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "ntp", "NTP"),
 	}
 
 	ctx := context.WithoutCancel(r.Context())

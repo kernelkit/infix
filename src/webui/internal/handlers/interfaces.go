@@ -184,13 +184,9 @@ type ethFrameStats struct {
 // Template data structures.
 
 type interfacesData struct {
-	CsrfToken    string
-	Username     string
-	ActivePage   string
-	Capabilities *Capabilities
-	PageTitle    string
-	Interfaces   []ifaceEntry
-	Error        string
+	PageData
+	Interfaces []ifaceEntry
+	Error      string
 }
 
 type ifaceEntry struct {
@@ -221,13 +217,8 @@ type InterfacesHandler struct {
 
 // Overview renders the interfaces page (GET /interfaces).
 func (h *InterfacesHandler) Overview(w http.ResponseWriter, r *http.Request) {
-	creds := restconf.CredentialsFromContext(r.Context())
 	data := interfacesData{
-		Username:     creds.Username,
-		CsrfToken:    csrfToken(r.Context()),
-		ActivePage:   "interfaces",
-		PageTitle:    "Interfaces",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "interfaces", "Interfaces"),
 	}
 
 	var ifaces interfacesWrapper
@@ -389,12 +380,8 @@ func makeIfaceEntry(iface ifaceJSON, indent string) ifaceEntry {
 
 // Template data for the interface detail page.
 type ifaceDetailData struct {
-	CsrfToken        string
-	Username         string
-	ActivePage       string
-	Capabilities     *Capabilities
-	PageTitle        string
-	Name             string
+	PageData
+	Name string
 	Type             string
 	Status           string
 	StatusUp         bool
@@ -486,11 +473,9 @@ func (h *InterfacesHandler) fetchInterface(r *http.Request, name string) (*iface
 }
 
 // buildDetailData converts raw RESTCONF interface data to template data.
-func buildDetailData(username, csrf string, iface *ifaceJSON) ifaceDetailData {
+func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 	d := ifaceDetailData{
-		Username:  username,
-		CsrfToken: csrf,
-		Name:      iface.Name,
+		Name: iface.Name,
 		Type:      prettyIfType(iface.Type),
 		Status:    iface.OperStatus,
 		StatusUp:  iface.OperStatus == "up",
@@ -727,7 +712,6 @@ func formatCount(n int64) string {
 // Detail renders the interface detail page (GET /interfaces/{name}).
 func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	creds := restconf.CredentialsFromContext(r.Context())
 
 	iface, err := h.fetchInterface(r, name)
 	if err != nil {
@@ -736,10 +720,8 @@ func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := buildDetailData(creds.Username, csrfToken(r.Context()), iface)
-	data.ActivePage = "interfaces"
-	data.PageTitle = "Interface " + name
-	data.Capabilities = CapabilitiesFromContext(r.Context())
+	data := buildDetailData(r, iface)
+	data.PageData = newPageData(r, "interfaces", "Interface "+name)
 
 	tmplName := "iface-detail.html"
 	if r.Header.Get("HX-Request") == "true" {
@@ -754,7 +736,6 @@ func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 // Counters renders the counters fragment for htmx polling (GET /interfaces/{name}/counters).
 func (h *InterfacesHandler) Counters(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	creds := restconf.CredentialsFromContext(r.Context())
 
 	iface, err := h.fetchInterface(r, name)
 	if err != nil {
@@ -763,7 +744,7 @@ func (h *InterfacesHandler) Counters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := buildDetailData(creds.Username, csrfToken(r.Context()), iface)
+	data := buildDetailData(r, iface)
 
 	if err := h.CountersTemplate.ExecuteTemplate(w, "iface-counters", data); err != nil {
 		log.Printf("template error: %v", err)

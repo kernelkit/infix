@@ -135,35 +135,38 @@
   }
 })();
 
-// Dark mode toggle (auto / light / dark)
+// Theme (auto / light / dark) — shared by main app and login page
 (function() {
   function getTheme() {
     var m = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.indexOf('theme=')===0;});
     return m ? m.split('=')[1] : null;
   }
+
   function applyTheme(mode) {
-    var el = document.documentElement;
-    el.classList.remove('dark', 'light');
-    if (mode === 'dark') {
-      el.classList.add('dark');
-    } else if (mode === 'light') {
-      el.classList.add('light');
-    }
-    updateIcon(mode || 'auto');
+    document.documentElement.classList.remove('dark', 'light');
+    if (mode === 'dark') document.documentElement.classList.add('dark');
+    else if (mode === 'light') document.documentElement.classList.add('light');
+    updateDropdownCheck(mode || 'auto');
+    updateLoginToggleIcon(mode || 'auto');
   }
-  function updateIcon(mode) {
-    var btn = document.getElementById('theme-toggle');
+
+  function updateDropdownCheck(mode) {
+    document.querySelectorAll('.theme-opt').forEach(function(btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-theme') === mode);
+    });
+  }
+
+  function updateLoginToggleIcon(mode) {
+    // Login page floating toggle — cycle auto→light→dark
+    var btn = document.getElementById('login-theme-toggle');
     if (!btn) return;
-    var icons = btn.querySelectorAll('svg');
-    for (var i = 0; i < icons.length; i++) icons[i].style.display = 'none';
-    var id = mode === 'dark' ? 'icon-dark' : mode === 'light' ? 'icon-light' : 'icon-auto';
-    var active = btn.querySelector('#' + id);
-    if (active) active.style.display = '';
-    btn.setAttribute('aria-label',
-      mode === 'dark' ? 'Theme: dark (click for auto)' :
-      mode === 'light' ? 'Theme: light (click for dark)' :
-      'Theme: auto (click for light)');
+    var ids = {auto: 'lti-auto', light: 'lti-light', dark: 'lti-dark'};
+    Object.keys(ids).forEach(function(k) {
+      var el = btn.querySelector('#' + ids[k]);
+      if (el) el.style.display = (k === mode) ? '' : 'none';
+    });
   }
+
   function setTheme(mode) {
     if (mode) {
       document.cookie = 'theme=' + mode + '; path=/; max-age=31536000; samesite=lax';
@@ -172,16 +175,32 @@
     }
     applyTheme(mode);
   }
-  var saved = getTheme();
-  applyTheme(saved);
+
+  // Apply saved theme immediately (before DOMContentLoaded to avoid flash)
+  applyTheme(getTheme());
+
   document.addEventListener('DOMContentLoaded', function() {
-    var btn = document.getElementById('theme-toggle');
-    if (btn) btn.addEventListener('click', function() {
-      var cur = getTheme();
-      if (!cur) setTheme('light');
-      else if (cur === 'light') setTheme('dark');
-      else setTheme(null);
+    // Apply checkmarks now that DOM is ready
+    updateDropdownCheck(getTheme() || 'auto');
+
+    // Dropdown theme options (main app)
+    document.querySelectorAll('.theme-opt').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var t = btn.getAttribute('data-theme');
+        setTheme(t === 'auto' ? null : t);
+      });
     });
+
+    // Login page floating toggle — cycles auto → light → dark → auto
+    var loginBtn = document.getElementById('login-theme-toggle');
+    if (loginBtn) {
+      loginBtn.addEventListener('click', function() {
+        var cur = getTheme();
+        if (!cur || cur === 'auto') setTheme('light');
+        else if (cur === 'light') setTheme('dark');
+        else setTheme(null);
+      });
+    }
   });
 })();
 
@@ -201,6 +220,25 @@
       d.addEventListener('toggle', function() {
         localStorage.setItem(key, d.open ? 'open' : 'closed');
       });
+    });
+  });
+})();
+
+// User menu — hover handled by CSS; JS manages aria-expanded and keyboard
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var menu = document.getElementById('user-menu');
+    var btn = document.getElementById('user-menu-btn');
+    if (!menu || !btn) return;
+
+    menu.addEventListener('mouseenter', function() {
+      btn.setAttribute('aria-expanded', 'true');
+    });
+    menu.addEventListener('mouseleave', function() {
+      btn.setAttribute('aria-expanded', 'false');
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') btn.setAttribute('aria-expanded', 'false');
     });
   });
 })();

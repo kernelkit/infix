@@ -160,38 +160,5 @@
     </details>
 
   </div>
-  <div class="sidebar-footer">
-    <button id="theme-toggle" class="btn btn-sidebar-action theme-toggle" aria-label="Toggle theme">
-      <svg id="icon-auto" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9"></circle>
-        <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path>
-      </svg>
-      <svg id="icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
-        <circle cx="12" cy="12" r="5"></circle>
-        <line x1="12" y1="1" x2="12" y2="3"></line>
-        <line x1="12" y1="21" x2="12" y2="23"></line>
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-        <line x1="1" y1="12" x2="3" y2="12"></line>
-        <line x1="21" y1="12" x2="23" y2="12"></line>
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-      </svg>
-      <svg id="icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-      </svg>
-      <span>Theme</span>
-    </button>
-    <a href="/config" class="btn btn-sidebar-action" hx-boost="false" download>Download Config</a>
-    <button class="btn btn-sidebar-action btn-danger-hover"
-            hx-post="/reboot"
-            hx-confirm="Reboot the device?"
-            hx-target="#content"
-            hx-swap="innerHTML">Reboot</button>
-    <form method="POST" action="/logout">
-      <input type="hidden" name="csrf" value="{{.CsrfToken}}">
-      <button type="submit" class="btn btn-logout">Logout</button>
-    </form>
-  </div>
 </nav>
 {{end}}

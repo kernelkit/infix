@@ -67,12 +67,9 @@ type ContainerEntry struct {
 
 // containersData is the template data for the containers page.
 type containersData struct {
-	CsrfToken    string
-	PageTitle    string
-	ActivePage   string
-	Capabilities *Capabilities
-	Containers   []ContainerEntry
-	Error        string
+	PageData
+	Containers []ContainerEntry
+	Error      string
 }
 
 // ContainersHandler serves the containers status page.
@@ -84,10 +81,7 @@ type ContainersHandler struct {
 // Overview renders the containers list page.
 func (h *ContainersHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := containersData{
-		CsrfToken:    csrfToken(r.Context()),
-		PageTitle:    "Containers",
-		ActivePage:   "containers",
-		Capabilities: CapabilitiesFromContext(r.Context()),
+		PageData: newPageData(r, "containers", "Containers"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive
