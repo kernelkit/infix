@@ -939,8 +939,8 @@ submodule infix-if-bridge {
         must "not(../ip:ipv4/ip:address or ../ip:ipv6/ip:address)" {
           error-message "Bridge ports cannot have IP addresses configured.";
         }
-        must "not(derived-from-or-self(../if:type, 'infix-ift:wifi')) or ../infix-if:wifi/infix-if:access-point" {
-          error-message "WiFi interfaces can only be bridge ports when configured as Access Points.";
+        must "not(derived-from-or-self(../if:type, 'infix-ift:wifi')) or ../infix-if:wifi/infix-if:access-point or ../infix-if:wifi/infix-if:mesh-point" {
+          error-message "WiFi interfaces can only be bridge ports when configured as Access Points or Mesh Points.";
         }
         description "Bridge association and port specific settings.";
         uses bridge-port-common;

@@ -58,6 +58,21 @@ def wifi_ap(ifname):
     return {'access-point': ap_data} if ap_data else {}
 
 
+def wifi_mesh(ifname, info=None):
+    """Get operational data for mesh point mode using iw"""
+    mesh_data = {}
+
+    if info is None:
+        info = get_iw_info(ifname)
+    if info.get('ssid'):
+        mesh_data['mesh-id'] = info['ssid']
+
+    peers = get_iw_stations(ifname)
+    if peers:
+        mesh_data['peers'] = {'peer': peers}
+
+    return {'mesh-point': mesh_data}
+
 def wifi_station(ifname):
     """Get operational data for Station mode using iw + wpa_cli for scanning"""
     station_data = {}
@@ -100,6 +115,8 @@ def wifi(ifname):
 
     if mode == 'ap':
         result.update(wifi_ap(ifname))
+    elif mode == 'mesh point':
+        result.update(wifi_mesh(ifname, info))
     else:
         result.update(wifi_station(ifname))
 

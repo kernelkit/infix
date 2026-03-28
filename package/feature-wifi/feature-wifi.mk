@@ -69,7 +69,7 @@ define FEATURE_WIFI_LINUX_CONFIG_FIXUPS
 endef
 
 define FEATURE_WIFI_INSTALL_IN_ROMFS
-        mkdir -p $(TARGET_DIR)/etc/modprobe.d $(TARGET_DIR)/etc/udev/rules.d
+        mkdir -p $(TARGET_DIR)/etc/modprobe.d $(TARGET_DIR)/etc/udev/rules.d $(TARGET_DIR)/usr/libexec
         cp $(FEATURE_WIFI_PKGDIR)/mt7915e.conf $(TARGET_DIR)/etc/modprobe.d/mt7915e.conf
         cp $(FEATURE_WIFI_PKGDIR)/60-rename-wifi-phy.rules $(TARGET_DIR)/etc/udev/rules.d/60-rename-wifi-phy.rules
         cp $(FEATURE_WIFI_PKGDIR)/70-remove-virtual-wifi-interfaces.rules $(TARGET_DIR)/etc/udev/rules.d/70-remove-virtual-wifi-interfaces.rules

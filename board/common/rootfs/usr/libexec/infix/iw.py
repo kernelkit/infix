@@ -257,15 +257,15 @@ def parse_interface_info(ifname):
     for line in output.splitlines():
         stripped = line.strip()
 
-        # Interface type
+        # Interface type (can be multi-word, e.g. "mesh point")
         if stripped.startswith('type '):
-            result['iftype'] = stripped.split()[1]
+            result['iftype'] = ' '.join(stripped.split()[1:])
 
         # MAC address
         elif stripped.startswith('addr '):
             result['mac'] = stripped.split()[1]
 
-        # SSID
+        # SSID (AP mode) or mesh-id (mesh point mode) — kernel uses same attr
         elif stripped.startswith('ssid '):
             result['ssid'] = decode_iw_ssid(' '.join(stripped.split()[1:]))
 
@@ -538,6 +538,43 @@ def parse_link(ifname):
     return result
 
 
+def parse_phy_caps(phy_name):
+    """
+    Parse 'iw phy <name> info' for HT and VHT capability bitmasks.
+    Returns: {ht_cap: int, vht_cap: int}
+
+    iw phy info output format:
+        Capabilities: 0x1ef
+            ...
+        VHT Capabilities (0x339071b2):
+            ...
+    """
+    actual_phy = normalize_phy_name(phy_name)
+    output = run_iw('phy', actual_phy, 'info')
+    if not output:
+        output = run_iw(actual_phy, 'info')
+    if not output:
+        return {'ht_cap': 0, 'vht_cap': 0}
+
+    ht_cap = 0
+    vht_cap = 0
+
+    for line in output.splitlines():
+        stripped = line.strip()
+
+        # HT Capabilities: "Capabilities: 0x1ef"
+        ht_match = re.match(r'Capabilities:\s+(0x[0-9a-fA-F]+)', stripped)
+        if ht_match:
+            ht_cap = int(ht_match.group(1), 16)
+
+        # VHT Capabilities: "VHT Capabilities (0x339071b2):"
+        vht_match = re.match(r'VHT Capabilities\s+\((0x[0-9a-fA-F]+)\)', stripped)
+        if vht_match:
+            vht_cap = int(vht_match.group(1), 16)
+
+    return {'ht_cap': ht_cap, 'vht_cap': vht_cap}
+
+
 def main():
     if len(sys.argv) < 2:
         print(json.dumps({
@@ -548,7 +585,8 @@ def main():
                 'info': 'Get PHY or interface information (requires device)',
                 'survey': 'Get channel survey data (requires interface)',
                 'station': 'Get connected stations in AP mode (requires interface)',
-                'link': 'Get link info in station mode (requires interface)'
+                'link': 'Get link info in station mode (requires interface)',
+                'caps': 'Get HT/VHT capability bitmasks (requires PHY/radio)'
             },
             'examples': [
                 'iw.py list',
@@ -557,7 +595,8 @@ def main():
                 'iw.py info wlan0',
                 'iw.py station wifi0',
                 'iw.py link wlan0',
-                'iw.py survey wlan0'
+                'iw.py survey wlan0',
+                'iw.py caps radio0'
             ]
         }, indent=2))
         sys.exit(1)
@@ -594,6 +633,11 @@ def main():
                 data = {'error': 'survey command requires interface argument'}
             else:
                 data = parse_survey(sys.argv[2])
+        elif command == 'caps':
+            if len(sys.argv) < 3:
+                data = {'error': 'caps command requires PHY/radio argument'}
+            else:
+                data = parse_phy_caps(sys.argv[2])
         else:
             data = {'error': f'Unknown command: {command}'}
 
