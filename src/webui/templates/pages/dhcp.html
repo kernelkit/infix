@@ -9,24 +9,26 @@
 
 {{if .DHCP}}
 <section class="info-card">
-  <h2>DHCP Server</h2>
+  <div class="card-header">DHCP Server</div>
+  {{if .DHCP.Enabled}}
   <table class="info-table">
     <tr>
       <th>Status</th>
       <td>
-        <span class="status-dot {{if .DHCP.Enabled}}status-up{{else}}status-down{{end}}"></span>
-        {{if .DHCP.Enabled}}Enabled{{else}}Disabled{{end}}
+        <span class="status-dot status-up"></span>
+        Enabled
       </td>
     </tr>
   </table>
+  {{end}}
 
   <div class="stats-row">
-    <span class="zone-badge"><span class="zone-badge-label">Discovers</span><span class="zone-badge-value">{{.DHCP.Stats.InDiscoveries}}</span></span>
-    <span class="zone-badge"><span class="zone-badge-label">Requests</span><span class="zone-badge-value">{{.DHCP.Stats.InRequests}}</span></span>
-    <span class="zone-badge"><span class="zone-badge-label">Releases</span><span class="zone-badge-value">{{.DHCP.Stats.InReleases}}</span></span>
-    <span class="zone-badge"><span class="zone-badge-label">Offers</span><span class="zone-badge-value">{{.DHCP.Stats.OutOffers}}</span></span>
-    <span class="zone-badge"><span class="zone-badge-label">Acks</span><span class="zone-badge-value">{{.DHCP.Stats.OutAcks}}</span></span>
-    <span class="zone-badge"><span class="zone-badge-label">Naks</span><span class="zone-badge-value">{{.DHCP.Stats.OutNaks}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Discovers</span><span class="stat-chip-value">{{.DHCP.Stats.InDiscoveries}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Requests</span><span class="stat-chip-value">{{.DHCP.Stats.InRequests}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Releases</span><span class="stat-chip-value">{{.DHCP.Stats.InReleases}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Offers</span><span class="stat-chip-value">{{.DHCP.Stats.OutOffers}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Acks</span><span class="stat-chip-value">{{.DHCP.Stats.OutAcks}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Naks</span><span class="stat-chip-value">{{.DHCP.Stats.OutNaks}}</span></span>
   </div>
 
   {{if .DHCP.Leases}}
@@ -45,8 +47,8 @@
       <tbody>
         {{range .DHCP.Leases}}
         <tr>
-          <td class="num">{{.Address}}</td>
-          <td class="num">{{.MAC}}</td>
+          <td>{{.Address}}</td>
+          <td>{{.MAC}}</td>
           <td>{{if .Hostname}}{{.Hostname}}{{else}}<span class="text-muted">—</span>{{end}}</td>
           <td>{{.Expires}}</td>
           <td>{{if .ClientID}}{{.ClientID}}{{else}}<span class="text-muted">—</span>{{end}}</td>
@@ -56,12 +58,13 @@
     </table>
   </div>
   {{else}}
-  <p class="text-muted">No active leases.</p>
+  <p class="empty-message">No active leases.</p>
   {{end}}
 </section>
 {{else if not .Error}}
 <section class="info-card">
-  <p class="text-muted">DHCP server data not available.</p>
+  <div class="card-header">DHCP Server</div>
+  <p class="empty-message">DHCP server data not available.</p>
 </section>
 {{end}}
 {{end}}

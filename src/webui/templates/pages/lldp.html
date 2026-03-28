@@ -9,7 +9,7 @@
 
 {{if .Neighbors}}
 <section class="info-card">
-  <h2>LLDP Neighbors</h2>
+  <div class="card-header">LLDP Neighbors</div>
   <div class="data-table-wrap">
     <table class="data-table">
       <thead>
@@ -26,11 +26,11 @@
         {{range .Neighbors}}
         <tr>
           <td>{{.LocalPort}}</td>
-          <td class="num">{{.ChassisID}}</td>
+          <td>{{.ChassisID}}</td>
           <td>{{if .SystemName}}{{.SystemName}}{{else}}<span class="text-muted">—</span>{{end}}</td>
-          <td class="num">{{if .PortID}}{{.PortID}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .PortID}}{{.PortID}}{{else}}<span class="text-muted">—</span>{{end}}</td>
           <td>{{if .PortDesc}}{{.PortDesc}}{{else}}<span class="text-muted">—</span>{{end}}</td>
-          <td class="num">{{if .MgmtAddress}}{{.MgmtAddress}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .MgmtAddress}}{{.MgmtAddress}}{{else}}<span class="text-muted">—</span>{{end}}</td>
         </tr>
         {{end}}
       </tbody>
@@ -39,7 +39,8 @@
 </section>
 {{else if not .Error}}
 <section class="info-card">
-  <p class="text-muted">No LLDP neighbors discovered.</p>
+  <div class="card-header">LLDP Neighbors</div>
+  <p class="empty-message">No LLDP neighbors discovered.</p>
 </section>
 {{end}}
 {{end}}
