@@ -58,63 +58,28 @@
     }
     overlay.dataset.init = 'true';
 
-    var timeout = parseInt(overlay.getAttribute('data-timeout'), 10);
-    if (isNaN(timeout) || timeout <= 0) {
-      timeout = 120000;
-    }
-    var interval = parseInt(overlay.getAttribute('data-interval'), 10);
-    if (isNaN(interval) || interval <= 0) {
-      interval = 2000;
-    }
-    var start = Date.now();
     var status = overlay.querySelector('#reboot-status');
-    var returnTo = window.location.pathname + window.location.search;
 
-    function waitDown() {
-      if (Date.now() - start > timeout) {
-        if (status) {
-          status.textContent = 'Timeout - device did not shut down within 2 minutes.';
-          status.classList.add('is-error');
-        }
-        return;
-      }
-      fetch('/device-status').then(function (r) {
-        if (r.ok) {
-          setTimeout(waitDown, interval);
-        } else {
-          if (status) {
-            status.textContent = 'Device is down, waiting for it to come back...';
+    // Hard cap: redirect home after 60 s regardless of poll outcome.
+    setTimeout(function () { window.location.replace('/'); }, 60000);
+
+    // Wait 4 s for the device to shut down, then start polling for it to come back.
+    // This avoids the race where a fast reboot never shows as "down" on the 1 s poll.
+    setTimeout(function () {
+      if (status) status.textContent = 'Waiting for device to come back\u2026';
+      function poll() {
+        fetch('/device-status').then(function (r) {
+          if (r.ok) {
+            window.location.replace('/');
+          } else {
+            setTimeout(poll, 2000);
           }
-          setTimeout(waitUp, interval);
-        }
-      }).catch(function () {
-        if (status) {
-          status.textContent = 'Device is down, waiting for it to come back...';
-        }
-        setTimeout(waitUp, interval);
-      });
-    }
-
-    function waitUp() {
-      if (Date.now() - start > timeout) {
-        if (status) {
-          status.textContent = 'Timeout - device did not respond within 2 minutes.';
-          status.classList.add('is-error');
-        }
-        return;
+        }).catch(function () {
+          setTimeout(poll, 2000);
+        });
       }
-      fetch('/device-status').then(function (r) {
-        if (r.ok) {
-          window.location = returnTo || '/';
-        } else {
-          setTimeout(waitUp, interval);
-        }
-      }).catch(function () {
-        setTimeout(waitUp, interval);
-      });
-    }
-
-    setTimeout(waitDown, interval);
+      poll();
+    }, 8000);
   }
 
   function initDynamicUI(root) {
@@ -122,15 +87,73 @@
     startRebootOverlay(root);
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  // SSE-driven firmware progress card.
+  // The Go server polls RESTCONF and streams rendered HTML fragments; we just
+  // swap them into the card and let the server close the stream when done.
+  var fwEventSource = null;
+
+  function initFirmwareProgress(root) {
+    var scope = root || document;
+    var card = scope.querySelector('#fw-progress-card[data-sse-src]');
+    if (!card || card.dataset.sseInit) return;
+    card.dataset.sseInit = 'true';
+
+    var src = card.getAttribute('data-sse-src');
+    if (fwEventSource) { fwEventSource.close(); }
+    fwEventSource = new EventSource(src);
+
+    function swap(html) {
+      card.innerHTML = html;
+      initProgressBars(card);
+      if (window.htmx) htmx.process(card);
+    }
+
+    fwEventSource.addEventListener('progress', function(e) { swap(e.data); });
+
+    fwEventSource.addEventListener('done', function(e) {
+      swap(e.data);
+      fwEventSource.close();
+      fwEventSource = null;
+    });
+
+    fwEventSource.addEventListener('reboot', function(e) {
+      swap(e.data);
+      fwEventSource.close();
+      fwEventSource = null;
+      // Auto-reboot: POST /reboot and show the reboot overlay.
+      fetch('/reboot', { method: 'POST', headers: { 'X-CSRF-Token': getCSRFToken() } })
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+          var content = document.getElementById('content');
+          if (content) {
+            content.innerHTML = html;
+            initDynamicUI(content);
+          }
+        });
+    });
+
+    fwEventSource.onerror = function() {
+      fwEventSource.close();
+      fwEventSource = null;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
     initCSRF();
     initDeviceStatusBanner();
     initDynamicUI(document);
+    initFirmwareProgress(document);
   });
 
   if (window.htmx && document.body) {
     document.body.addEventListener('htmx:afterSwap', function (evt) {
+      // Close any open SSE stream if the firmware progress card is no longer present.
+      if (fwEventSource && !document.getElementById('fw-progress-card')) {
+        fwEventSource.close();
+        fwEventSource = null;
+      }
       initDynamicUI(evt.target);
+      initFirmwareProgress(evt.target);
     });
   }
 })();
@@ -156,9 +179,11 @@
     if (activeTopGroup) {
       document.querySelectorAll('details.nav-group-top').forEach(function(d) {
         if (d === activeTopGroup) {
-          d.setAttribute('open', '');
+          // Don't auto-open Configure: its toggle handler fires enterConfigure(),
+          // which must only happen on explicit user interaction, not on URL sync.
+          if (d.id !== 'nav-configure' && !d.open) d.open = true;
         } else {
-          d.removeAttribute('open');
+          if (d.open) d.open = false;
         }
       });
     }
@@ -292,21 +317,45 @@
 })();
 
 // Accordion nav group persistence
-// Top-level sections (Status / Configure / Maintenance) are mutually exclusive.
-// State is persisted in localStorage under 'nav-top:Name' keys.
+// Status and Maintenance persist open/closed state in localStorage.
+// Configure is excluded from persistence: its state is controlled by the
+// server template.  Configure's Enter POST (running→candidate) is fired
+// from JS the first time the accordion opens per page lifecycle.
 (function() {
   document.addEventListener('DOMContentLoaded', function() {
     var groups = document.querySelectorAll('details.nav-group-top');
+    var configureEntered = false;
 
-    // Restore saved state (HTML default: Status open, others closed)
+    // Fire Configure Enter POST once per page lifecycle (initialises the
+    // candidate datastore).  Called when the accordion is opened or when the
+    // page loads with the accordion already open (e.g. on a /configure/ page).
+    function enterConfigure() {
+      if (configureEntered) return;
+      configureEntered = true;
+      htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body});
+    }
+
+    // If the Configure accordion is already open on page load, fire Enter now.
+    var configureDetails = document.getElementById('nav-configure');
+    if (configureDetails && configureDetails.open) {
+      enterConfigure();
+    }
+
+    // Restore saved state — skip Configure so it never auto-reopens on page load.
+    // When closing an accordion, don't close it if the active page is inside it
+    // (updateActiveNav has already run at this point and set .nav-link.active).
+    // Mark elements being programmatically restored so the toggle handler below
+    // skips auto-navigation for these synthetic toggles (toggle fires async).
     groups.forEach(function(d) {
+      if (d.id === 'nav-configure') return;
       var label = d.querySelector(':scope > summary');
       if (!label) return;
       var key = 'nav-top:' + label.textContent.trim();
       var saved = localStorage.getItem(key);
       if (saved === 'open') {
+        d.dataset.navRestoring = 'true';
         d.setAttribute('open', '');
-      } else if (saved === 'closed') {
+      } else if (saved === 'closed' && !d.querySelector('.nav-link.active')) {
         d.removeAttribute('open');
       }
     });
@@ -317,14 +366,26 @@
       if (!label) return;
       var key = 'nav-top:' + label.textContent.trim();
       d.addEventListener('toggle', function() {
-        localStorage.setItem(key, d.open ? 'open' : 'closed');
+        // Skip synthetic toggles fired during page-load state restoration.
+        if (d.dataset.navRestoring) {
+          delete d.dataset.navRestoring;
+          return;
+        }
+        if (d.id !== 'nav-configure') {
+          localStorage.setItem(key, d.open ? 'open' : 'closed');
+        }
         if (d.open) {
+          if (d.id === 'nav-configure') {
+            enterConfigure();
+          }
           groups.forEach(function(other) {
             if (other !== d && other.open) {
               other.removeAttribute('open');
-              var otherLabel = other.querySelector(':scope > summary');
-              if (otherLabel) {
-                localStorage.setItem('nav-top:' + otherLabel.textContent.trim(), 'closed');
+              if (other.id !== 'nav-configure') {
+                var otherLabel = other.querySelector(':scope > summary');
+                if (otherLabel) {
+                  localStorage.setItem('nav-top:' + otherLabel.textContent.trim(), 'closed');
+                }
               }
             }
           });
@@ -369,6 +430,31 @@
       if (e.key === 'Escape') setExpanded(false);
     });
   });
+})();
+
+// Card collapsible — "Show more / Show less" toggle injected when content overflows
+(function() {
+  function initCollapsibles() {
+    document.querySelectorAll('.card-collapsible:not([data-ci])').forEach(function(card) {
+      card.setAttribute('data-ci', '1');
+      var body = card.querySelector('.card-collapsible-body');
+      if (!body || body.scrollHeight <= body.clientHeight + 4) return;
+
+      var btn = document.createElement('button');
+      btn.className = 'card-expand-btn';
+      btn.type = 'button';
+      btn.textContent = 'Show more \u25be';
+      btn.style.display = 'block';
+      card.appendChild(btn);
+
+      btn.addEventListener('click', function() {
+        var expanded = card.classList.toggle('is-expanded');
+        btn.textContent = expanded ? 'Show less \u25b4' : 'Show more \u25be';
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', initCollapsibles);
+  document.addEventListener('htmx:afterSettle', initCollapsibles);
 })();
 
 // Sidebar toggle (mobile)
@@ -463,5 +549,185 @@
       var btn = form.querySelector('button[type="submit"]');
       if (btn) { btn.disabled = true; btn.textContent = 'Logging in\u2026'; }
     });
+  });
+})();
+
+// ─── Confirm dialog ────────────────────────────────────────────────────────
+// openModal(message, onConfirm) shows the shared <dialog> and calls onConfirm
+// if the user clicks Confirm, or does nothing on Cancel.
+function openModal(message, onConfirm) {
+  var dlg = document.getElementById('confirm-dialog');
+  var msg = document.getElementById('dialog-message');
+  var ok  = document.getElementById('dialog-confirm');
+  var no  = document.getElementById('dialog-cancel');
+  if (!dlg) { onConfirm(); return; } // fallback if dialog missing
+  msg.textContent = message;
+
+  function cleanup() {
+    ok.removeEventListener('click', handleOK);
+    no.removeEventListener('click', handleNo);
+    dlg.close();
+  }
+  function handleOK()  { cleanup(); onConfirm(); }
+  function handleNo()  { cleanup(); }
+
+  ok.addEventListener('click', handleOK);
+  no.addEventListener('click', handleNo);
+  dlg.showModal();
+}
+
+// ─── data-show / data-hide: toggle element visibility ──────────────────────
+(function() {
+  document.addEventListener('click', function(e) {
+    var show = e.target.closest('[data-show]');
+    if (show) {
+      var el = document.getElementById(show.getAttribute('data-show'));
+      if (el) { el.hidden = false; el.querySelector('input,select,textarea') && el.querySelector('input,select,textarea').focus(); }
+    }
+    var hide = e.target.closest('[data-hide]');
+    if (hide) {
+      var el = document.getElementById(hide.getAttribute('data-hide'));
+      if (el) el.hidden = true;
+    }
+  });
+})();
+
+// ─── Configure: dynamic list row add/delete ────────────────────────────────
+// Handles .btn-add-row (data-table, data-template) and .cfg-delete-row buttons.
+// Templates are keyed by data-template attribute value.
+(function () {
+  var rowTemplates = {
+    'ntp': function(i) {
+      return '<tr>' +
+        '<td><input class="cfg-input" type="text" name="ntp_name_' + i + '" required></td>' +
+        '<td><input class="cfg-input" type="text" name="ntp_addr_' + i + '"></td>' +
+        '<td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"' +
+             ' name="ntp_port_' + i + '" placeholder="123"></td>' +
+        '<td style="text-align:center"><input type="checkbox" name="ntp_prefer_' + i + '"></td>' +
+        '<td>' + deleteBtn() + '</td>' +
+        '</tr>';
+    },
+    'dns-search': function(i) {
+      return '<tr>' +
+        '<td><input class="cfg-input" type="text" name="dns_search_' + i + '"></td>' +
+        '<td>' + deleteBtn() + '</td>' +
+        '</tr>';
+    },
+    'dns-server': function(i) {
+      return '<tr>' +
+        '<td><input class="cfg-input" type="text" name="dns_name_' + i + '" required></td>' +
+        '<td><input class="cfg-input" type="text" name="dns_addr_' + i + '"></td>' +
+        '<td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"' +
+             ' name="dns_port_' + i + '" placeholder="53"></td>' +
+        '<td>' + deleteBtn() + '</td>' +
+        '</tr>';
+    }
+  };
+
+  function deleteBtn() {
+    return '<button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+      ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' +
+      '</svg></button>';
+  }
+
+  // Re-index all inputs in a tbody so names stay sequential after add/delete.
+  function renumber(tbody) {
+    tbody.querySelectorAll('tr').forEach(function(row, i) {
+      row.querySelectorAll('input').forEach(function(inp) {
+        inp.name = inp.name.replace(/_\d+$/, '_' + i);
+      });
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    var addBtn = e.target.closest('.btn-add-row');
+    if (addBtn) {
+      var tbodyId  = addBtn.getAttribute('data-table');
+      var tmplKey  = addBtn.getAttribute('data-template');
+      var tbody    = document.getElementById(tbodyId);
+      if (!tbody || !rowTemplates[tmplKey]) { return; }
+      var idx = tbody.querySelectorAll('tr').length;
+      tbody.insertAdjacentHTML('beforeend', rowTemplates[tmplKey](idx));
+      var newInput = tbody.querySelector('tr:last-child input');
+      if (newInput) { newInput.focus(); }
+      return;
+    }
+
+    var delBtn = e.target.closest('.cfg-delete-row');
+    if (delBtn) {
+      var row   = delBtn.closest('tr');
+      var tbody = row && row.closest('tbody');
+      if (row) { row.remove(); }
+      if (tbody) { renumber(tbody); }
+    }
+  });
+})();
+
+// ─── Configure toolbar ─────────────────────────────────────────────────────
+// Intercept HTMX's confirm event for Apply/Abort buttons and show the custom
+// modal instead of the browser native confirm.  The server responds with
+// HX-Redirect: / so HTMX performs a full-page navigation (window.location.href),
+// which re-renders the sidebar and clears the Configure accordion.
+(function () {
+  document.addEventListener('htmx:confirm', function(e) {
+    var btn = e.detail.elt;
+    if (!btn || (!btn.classList.contains('cfg-apply-btn') && !btn.classList.contains('cfg-abort-btn'))) return;
+    e.preventDefault();
+    openModal(e.detail.question, function() {
+      e.detail.issueRequest(true);
+    });
+  });
+
+  // Show "Saved ✓" feedback when a card Save succeeds.
+  (function() {
+    var LS_KEY = 'fw-url-history';
+    var MAX_HIST = 10;
+
+    function loadHistory() {
+      try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+      catch (e) { return []; }
+    }
+
+    function saveURL(url) {
+      var hist = loadHistory().filter(function(u) { return u !== url; });
+      hist.unshift(url);
+      if (hist.length > MAX_HIST) hist = hist.slice(0, MAX_HIST);
+      localStorage.setItem(LS_KEY, JSON.stringify(hist));
+    }
+
+    function populateDatalist() {
+      var dl = document.getElementById('fw-url-history');
+      if (!dl) return;
+      dl.innerHTML = loadHistory().map(function(u) {
+        return '<option value="' + u.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">';
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', populateDatalist);
+    document.addEventListener('htmx:afterSettle', populateDatalist);
+
+    document.addEventListener('submit', function(e) {
+      var form = e.target.closest('.firmware-form');
+      if (!form) return;
+      var input = form.querySelector('input[name="url"]');
+      if (input && input.value) saveURL(input.value);
+    });
+  })();
+
+  document.addEventListener('cfgSaved', function(e) {
+    var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';
+    // Find the status span closest to the form that triggered the event.
+    var form = e.target && e.target.closest('form');
+    var span = form ? form.querySelector('.cfg-save-status') : null;
+    if (span) {
+      span.textContent = '✓ ' + msg;
+      span.classList.add('saved');
+      setTimeout(function() {
+        span.textContent = '';
+        span.classList.remove('saved');
+      }, 3000);
+    }
   });
 })();

@@ -17,6 +17,8 @@ define WEBUI_INSTALL_EXTRA
 		$(FINIT_D)/available/webui.conf
 	$(INSTALL) -D -m 0644 $(WEBUI_PKGDIR)/webui.conf \
 		$(TARGET_DIR)/etc/nginx/app/webui.conf
+	$(INSTALL) -D -m 0644 $(WEBUI_PKGDIR)/webui-proxy.conf \
+		$(TARGET_DIR)/etc/nginx/webui-proxy.conf
 	$(INSTALL) -D -m 0644 $(WEBUI_PKGDIR)/default.conf \
 		$(TARGET_DIR)/etc/nginx/available/default.conf
 	$(INSTALL) -D -m 0644 $(WEBUI_PKGDIR)/50x.html \
