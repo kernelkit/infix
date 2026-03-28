@@ -505,10 +505,276 @@ static const char *wifi_ht40_dir(int ch)
 	return ((ch / 4) % 2) ? "[HT40+]" : "[HT40-]";
 }
 
+/*
+ * Read HT/VHT capability bitmasks from hardware via iw.py.
+ * Returns 0 on success, -1 on failure.
+ */
+static int wifi_read_phy_caps(const char *radio_name, unsigned int *ht_cap, unsigned int *vht_cap)
+{
+	json_error_t jerr;
+	json_t *root, *jht, *jvht;
+	char buf[256];
+	size_t len;
+	FILE *pp;
+
+	*ht_cap = 0;
+	*vht_cap = 0;
+
+	pp = popenf("r", "/usr/libexec/infix/iw.py caps %s", radio_name);
+	if (!pp)
+		return -1;
+
+	len = fread(buf, 1, sizeof(buf) - 1, pp);
+	pclose(pp);
+	buf[len] = '\0';
+
+	/*
+	 * Parse JSON output: {"ht_cap": NNN, "vht_cap": NNN}
+	 * Use jansson since hardware.c already includes it.
+	 */
+	root = json_loads(buf, 0, &jerr);
+	if (!root)
+		return -1;
+
+	jht = json_object_get(root, "ht_cap");
+	jvht = json_object_get(root, "vht_cap");
+
+	if (json_is_integer(jht))
+		*ht_cap = (unsigned int)json_integer_value(jht);
+	if (json_is_integer(jvht))
+		*vht_cap = (unsigned int)json_integer_value(jvht);
+
+	json_decref(root);
+	return 0;
+}
+
+/*
+ * Build hostapd ht_capab string from HT capability bitmask.
+ * IEEE 802.11-2016 Table 9-153 — HT Capabilities Info field
+ *
+ * The ht40_dir string ("[HT40+]" or "[HT40-]") is prepended when
+ * the configured channel width is 40MHz or wider.
+ */
+static void wifi_build_ht_capab(char *out, size_t sz, unsigned int ht_cap,
+				const char *ht40_dir, int want_ht40)
+{
+	char *p = out;
+	size_t rem = sz;
+	int n;
+
+	*p = '\0';
+
+	if (want_ht40 && ht40_dir) {
+		n = snprintf(p, rem, "%s", ht40_dir);
+		p += n;
+		rem -= n;
+	}
+
+	if (ht_cap & 0x0001) {
+		n = snprintf(p, rem, "[LDPC]");
+		p += n;
+		rem -= n;
+	}
+	if (ht_cap & 0x0020) {
+		n = snprintf(p, rem, "[SHORT-GI-20]");
+		p += n;
+		rem -= n;
+	}
+	if (ht_cap & 0x0040) {
+		n = snprintf(p, rem, "[SHORT-GI-40]");
+		p += n;
+		rem -= n;
+	}
+	if (ht_cap & 0x0080) {
+		n = snprintf(p, rem, "[TX-STBC]");
+		p += n;
+		rem -= n;
+	}
+
+	/* RX-STBC: bits 8-9 */
+	switch ((ht_cap >> 8) & 0x3) {
+	case 1:
+		n = snprintf(p, rem, "[RX-STBC1]");
+		p += n;
+		rem -= n;
+		break;
+	case 2:
+		n = snprintf(p, rem, "[RX-STBC12]");
+		p += n;
+		rem -= n;
+		break;
+	case 3:
+		n = snprintf(p, rem, "[RX-STBC123]");
+		p += n;
+		rem -= n;
+		break;
+	}
+
+	/* Max A-MSDU Length: bit 11 */
+	if (ht_cap & 0x0800) {
+		n = snprintf(p, rem, "[MAX-AMSDU-7935]");
+		p += n;
+		rem -= n;
+	}
+}
+
+/*
+ * Build hostapd vht_capab string from VHT capability bitmask.
+ * IEEE 802.11-2016 Table 9-250 — VHT Capabilities Info field
+ *
+ * When the configured width is less than 160MHz, the VHT160 and
+ * SHORT-GI-160 flags are masked out to prevent hostapd from
+ * advertising capabilities the configuration does not use.
+ */
+static void wifi_build_vht_capab(char *out, size_t sz, unsigned int vht_cap, int chwidth)
+{
+	char *p = out;
+	size_t rem = sz;
+	int n;
+
+	*p = '\0';
+
+	/* Max MPDU Length: bits 0-1 */
+	switch (vht_cap & 0x3) {
+	case 1:
+		n = snprintf(p, rem, "[MAX-MPDU-7991]");
+		p += n;
+		rem -= n;
+		break;
+	case 2:
+		n = snprintf(p, rem, "[MAX-MPDU-11454]");
+		p += n;
+		rem -= n;
+		break;
+	}
+
+	/* Supported Channel Width: bits 2-3 */
+	if (chwidth >= 2) {
+		switch ((vht_cap >> 2) & 0x3) {
+		case 1:
+			n = snprintf(p, rem, "[VHT160]");
+			p += n;
+			rem -= n;
+			break;
+		case 2:
+			n = snprintf(p, rem, "[VHT160-80PLUS80]");
+			p += n;
+			rem -= n;
+			break;
+		}
+	}
+
+	/* RXLDPC: bit 4 */
+	if (vht_cap & 0x10) {
+		n = snprintf(p, rem, "[RXLDPC]");
+		p += n;
+		rem -= n;
+	}
+
+	/* Short GI for 80MHz: bit 5 */
+	if (vht_cap & 0x20) {
+		n = snprintf(p, rem, "[SHORT-GI-80]");
+		p += n;
+		rem -= n;
+	}
+
+	/* Short GI for 160MHz: bit 6 — only when configured for 160MHz */
+	if (chwidth >= 2 && (vht_cap & 0x40)) {
+		n = snprintf(p, rem, "[SHORT-GI-160]");
+		p += n;
+		rem -= n;
+	}
+
+	/* TX STBC: bit 7 */
+	if (vht_cap & 0x80) {
+		n = snprintf(p, rem, "[TX-STBC-2BY1]");
+		p += n;
+		rem -= n;
+	}
+
+	/* RX STBC: bits 8-10 */
+	switch ((vht_cap >> 8) & 0x7) {
+	case 1:
+		n = snprintf(p, rem, "[RX-STBC-1]");
+		p += n;
+		rem -= n;
+		break;
+	case 2:
+		n = snprintf(p, rem, "[RX-STBC-12]");
+		p += n;
+		rem -= n;
+		break;
+	case 3:
+		n = snprintf(p, rem, "[RX-STBC-123]");
+		p += n;
+		rem -= n;
+		break;
+	case 4:
+		n = snprintf(p, rem, "[RX-STBC-1234]");
+		p += n;
+		rem -= n;
+		break;
+	}
+
+	/* SU Beamformer: bit 11 */
+	if (vht_cap & 0x800) {
+		n = snprintf(p, rem, "[SU-BEAMFORMER]");
+		p += n;
+		rem -= n;
+	}
+
+	/* SU Beamformee: bit 12 */
+	if (vht_cap & 0x1000) {
+		n = snprintf(p, rem, "[SU-BEAMFORMEE]");
+		p += n;
+		rem -= n;
+	}
+
+	/* MU Beamformer: bit 19 */
+	if (vht_cap & 0x80000) {
+		n = snprintf(p, rem, "[MU-BEAMFORMER]");
+		p += n;
+		rem -= n;
+	}
+
+	/* MU Beamformee: bit 20 */
+	if (vht_cap & 0x100000) {
+		n = snprintf(p, rem, "[MU-BEAMFORMEE]");
+		p += n;
+		rem -= n;
+	}
+
+	/* VHT TXOP PS: bit 21 */
+	if (vht_cap & 0x200000) {
+		n = snprintf(p, rem, "[VHT-TXOP-PS]");
+		p += n;
+		rem -= n;
+	}
+
+	/* HTC-VHT: bit 22 */
+	if (vht_cap & 0x400000) {
+		n = snprintf(p, rem, "[HTC-VHT]");
+		p += n;
+		rem -= n;
+	}
+
+	/* Max A-MPDU Length Exponent: bits 23-25 */
+	n = (vht_cap >> 23) & 0x7;
+	if (n) {
+		int wrote = snprintf(p, rem, "[MAX-A-MPDU-LEN-EXP%d]", n);
+		p += wrote;
+		rem -= wrote;
+	}
+}
+
 /* Helper: Write radio-specific configuration */
-static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
+static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
+				  struct lyd_node *radio_node)
 {
 	const char *country, *channel, *band, *width;
+	unsigned int ht_cap = 0, vht_cap = 0;
+	char ht_capab[512], vht_capab[512];
+	int chwidth = 0; /* 0=20/40, 1=80, 2=160 */
 	int ch = 0;
 
 	country = lydx_get_cattr(radio_node, "country-code");
@@ -517,6 +783,9 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 	width = lydx_get_cattr(radio_node, "channel-width");
 	if (channel && strcmp(channel, "auto"))
 		ch = atoi(channel);
+
+	/* Read HT/VHT hardware capabilities from PHY */
+	wifi_read_phy_caps(radio_name, &ht_cap, &vht_cap);
 
 	if (country)
 		fprintf(hostapd, "country_code=%s\n", country);
@@ -611,21 +880,28 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 		fprintf(hostapd, "ieee80211ax=1\n");
 
 		/*
-		 * Channel width configuration.
-		 * - HT (802.11n): ht_capab [HT40+] or [HT40-]
-		 * - VHT (802.11ac): vht_oper_chwidth 0=20/40, 1=80, 2=160
-		 * - HE (802.11ax): he_oper_chwidth follows VHT values
-		 * Without explicit width, hostapd uses driver defaults.
+		 * Channel width + HT/VHT capability configuration.
+		 *
+		 * hostapd requires explicit ht_capab and vht_capab strings
+		 * that match hardware capabilities.  Without vht_capab, 160MHz
+		 * support is not advertised in beacons, causing clients to
+		 * connect at 80MHz.  Read capabilities from hardware via iw.py
+		 * and build the capability strings from the bitmasks.
 		 */
 		if (width && strcmp(width, "auto")) {
 			if (!strcmp(width, "20MHz")) {
-				fprintf(hostapd, "ht_capab=\n");
+				chwidth = 0;
+				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, NULL, 0);
+				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
 				if (strcmp(band, "2.4GHz")) {
 					fprintf(hostapd, "vht_oper_chwidth=0\n");
 					fprintf(hostapd, "he_oper_chwidth=0\n");
 				}
 			} else if (!strcmp(width, "40MHz")) {
-				fprintf(hostapd, "ht_capab=%s\n", ch ? wifi_ht40_dir(ch) : "[HT40+]");
+				chwidth = 0;
+				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap,
+						    ch ? wifi_ht40_dir(ch) : "[HT40+]", 1);
+				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
 				if (strcmp(band, "2.4GHz")) {
 					fprintf(hostapd, "vht_oper_chwidth=0\n");
 					fprintf(hostapd, "he_oper_chwidth=0\n");
@@ -633,7 +909,11 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			} else if (!strcmp(width, "80MHz") && ch) {
 				int center = wifi_center_chan_80(ch);
 
-				fprintf(hostapd, "ht_capab=%s\n", wifi_ht40_dir(ch));
+				chwidth = 1;
+				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, wifi_ht40_dir(ch), 1);
+				wifi_build_vht_capab(vht_capab, sizeof(vht_capab), vht_cap, chwidth);
+				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
+				fprintf(hostapd, "vht_capab=%s\n", vht_capab);
 				fprintf(hostapd, "vht_oper_chwidth=1\n");
 				fprintf(hostapd, "he_oper_chwidth=1\n");
 				if (center) {
@@ -643,7 +923,11 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			} else if (!strcmp(width, "160MHz") && ch) {
 				int center = wifi_center_chan_160(ch);
 
-				fprintf(hostapd, "ht_capab=%s\n", wifi_ht40_dir(ch));
+				chwidth = 2;
+				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, wifi_ht40_dir(ch), 1);
+				wifi_build_vht_capab(vht_capab, sizeof(vht_capab), vht_cap, chwidth);
+				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
+				fprintf(hostapd, "vht_capab=%s\n", vht_capab);
 				fprintf(hostapd, "vht_oper_chwidth=2\n");
 				fprintf(hostapd, "he_oper_chwidth=2\n");
 				if (center) {
@@ -724,7 +1008,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "\n");
 
 	/* Radio-specific configuration */
-	wifi_gen_radio_config(hostapd, radio_node);
+	wifi_gen_radio_config(hostapd, radio_name, radio_node);
 
 	/* Add BSS sections for secondary APs (multi-SSID) */
 	for (i = 1; i < ap_count; i++) {
