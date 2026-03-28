@@ -415,3 +415,26 @@
     }
   });
 })();
+
+// ─── Login page: progress bar on submit ────────────────────────────────────
+// The login form is a native POST (not HTMX), so htmx:beforeSend never fires.
+// Start the bar and disable the button to show the user something is happening.
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form[action="/login"]');
+    if (!form) return;
+    form.addEventListener('submit', function() {
+      var bar = document.getElementById('page-progress');
+      if (bar) {
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        bar.style.opacity = '1';
+        bar.offsetWidth;
+        bar.style.transition = 'width 8s cubic-bezier(0.05, 0.8, 0.4, 1)';
+        bar.style.width = '85%';
+      }
+      var btn = form.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = true; btn.textContent = 'Logging in\u2026'; }
+    });
+  });
+})();
