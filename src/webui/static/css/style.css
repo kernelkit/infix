@@ -198,6 +198,8 @@ a:hover {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* ==========================================================================
@@ -921,6 +923,20 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
   font-family: var(--font-mono);
 }
 
+.text-muted { color: var(--fg-muted); }
+
+/* Page title — used at the top of each content page */
+.page-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -0.025em;
+  margin-bottom: 1.5rem;
+}
+
+/* Removes the redundant wrapping div some pages use */
+.page-content { display: contents; }
+
 /* ==========================================================================
    Domain Specific: Firewall, Keystore, Firmware
    ========================================================================== */
@@ -1057,6 +1073,42 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
 .light .badge-warning { background: #fef9c3; color: #854d0e; }
 .light .badge-info    { background: #dbeafe; color: #1e40af; }
 .light .badge-neutral { background: var(--slate-100); color: var(--slate-600); }
+
+/* Sub-heading within a card body (e.g. "Active Leases" in DHCP) */
+.section-subtitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  padding: 1rem 1.25rem 0.5rem;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Row of stat chips (e.g. DHCP counters) */
+.stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Stat chip: label + value pair */
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.stat-chip-label { color: var(--fg-muted); font-weight: 500; }
+.stat-chip-value { color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Interfaces */
 .iface-name { white-space: nowrap; font-weight: 500; }
