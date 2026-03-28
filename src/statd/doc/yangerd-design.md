@@ -43,6 +43,8 @@
   - [4.1sexies Ethtool Netlink Monitor Subsystem](#41sexies-ethtool-netlink-monitor-subsystem)
   - [4.1octies ZAPI Watcher Subsystem (Zebra Route Redistribution)](#41octies-zapi-watcher-subsystem-zebra-route-redistribution)
   - [4.1novies D-Bus Monitor Subsystem](#41novies-d-bus-monitor-subsystem)
+  - [4.1decies LLDP Monitor Subsystem](#41decies-lldp-monitor-subsystem)
+  - [4.1undecies mDNS Monitor Subsystem](#41undecies-mdns-monitor-subsystem)
   - [4.1septies Event-Triggered Batch Re-read Pattern (All Netlink Events)](#41septies-event-triggered-batch-re-read-pattern-all-netlink-events)
   - [4.2 In-Memory Data Tree](#42-in-memory-data-tree)
   - [4.3 IPC Protocol Specification](#43-ipc-protocol-specification)
@@ -68,6 +70,7 @@
   - [5.7 infix-containers](#57-infix-containers)
   - [5.8 infix-dhcp-server](#58-infix-dhcp-server)
   - [5.9 infix-firewall](#59-infix-firewall)
+  - [5.9bis infix-services](#59bis-infix-services)
   - [5.10 Summary Table](#510-summary-table)
   - [5.11 Module-by-Module Mapping](#511-module-by-module-mapping)
 - [6. Project Structure](#6-project-structure)
@@ -135,6 +138,7 @@
 | 2026-03-04 | 0.22 | Second review pass: fixed 6 copy-paste regressions (duplicated modelEntry/Set/GetMulti/health schema, misplaced consistency note, missing package header), 8 consistency issues (timeout policy, failure philosophy exceptions, BridgeBatch ErrBatchDead, D-Bus code timeouts, yangerctl health output, dead/alive mapping, socket group, NTP env var), and 9 architectural additions (startup readiness protocol, graceful shutdown, memory bounds, security model with Finit snippet, IPC method mapping, config reload policy, signal handling, iw parser robustness, Phase-2 container namespace design). | Assistant |
 | 2026-03-04 | 0.23 | Firewall data source corrected: replaced all `nft list ruleset -j` references with firewalld D-Bus method calls, matching the Python `infix_firewall.py` implementation. `refreshFirewall()` now takes `conn *dbus.Conn` and queries firewalld directly (`getDefaultZone()`, `getActiveZones()`, `getZoneSettings2()`, `getPolicies()`, `getPolicySettings()`, `listServices()`, `getServiceSettings2()`, `getLogDenied()`, `queryPanicMode()`). Updated data source matrix (nftables YANG paths replaced with firewalld zone/policy/service paths), signal subscription table, differences table, collector #11 spec, design rationale, external command timeouts, migration section (reversed: D-Bus is kept, not replaced), summary migration table, project tree (`transformNftRuleset()` renamed to `buildFirewallTree()`), dbusmonitor package description, appendix model table, and glossary D-Bus Monitor entry throughout. | Assistant |
 | 2026-03-05 | 0.24 | Added testability architecture: Section 8.5 defines Go interface contracts for all 9 external dependencies (netlink, ip batch, bridge batch, D-Bus, ZAPI, ethtool, chrony, command execution, file I/O), with interface definitions, production/mock implementation table, and import restriction rule. Section 8.6 defines the verification loop (definition of done): 4-step build/vet/test/golden-file workflow executable on a developer workstation with no target hardware, golden-file capture process from running Python yanger, YANG schema validation via yanglint in CI, and 8-point per-module completion checklist. | Assistant |
+| 2026-03-27 | 0.25 | Review-driven corrections: LLDP converted from polling to reactive (`lldpcli -f json0 watch`); added `infix-services:mdns` module (migrated from statd/avahi.c via avahi D-Bus); added LLDPMonitor and mDNS Monitor subsystem sections; reconciled health endpoint schema (4.3.5 vs 4.8); fixed module counts; added container lifecycle reactive recommendation; added polling justification notes; fixed `routing-state` deprecation, typos, and formatting throughout. | Assistant |
 
 ---
 
@@ -144,7 +148,7 @@
 This document specifies the design for `yangerd`, a high-performance Go daemon that manages operational data for the Infix network OS. It serves as the authoritative technical reference for implementation, deployment, and testing.
 
 ### 1.2 Problem Statement
-`statd` is the operational data daemon for Infix. On every NETCONF or RESTCONF poll that touches an operational subtree, `statd` invokes `ly_add_yanger_data()`, which calls `fsystemv()` to fork and exec the `yanger` Python script. Each invocation starts a fresh CPython interpreter, imports the relevant module (one of 13 supported models), runs the collection logic, prints JSON to stdout, and exits. 
+`statd` is the operational data daemon for Infix. On every NETCONF or RESTCONF poll that touches an operational subtree, `statd` invokes `ly_add_yanger_data()`, which calls `fsystemv()` to fork and exec the `yanger` Python script. Each invocation starts a fresh CPython interpreter, imports the relevant module (one of 14 total YANG modules in the target design; 13 current migration modules in legacy Python/C paths), runs the collection logic, prints JSON to stdout, and exits. 
 
 The interpreter start-up cost alone is approximately 200 milliseconds per invocation. With 13 `sr_oper_get_subscribe()` callbacks registered in `subscribe_to_all()`, a worst-case full-tree poll triggers 13 sequential forks, for a cumulative delay of roughly 2.6 seconds before sysrepo can return data to the requestor.
 
@@ -167,7 +171,7 @@ Beyond latency, the architecture has two structural weaknesses:
 
 ### 2.1 Functional Requirements
 - **Real-time Monitoring:** Must subscribe to netlink events for link, address, and neighbor changes. Route data is sourced from a streaming ZAPI connection to FRR zebra.
-- **Comprehensive Collection:** Must implement collectors for all 13 supported YANG modules (Phase 1 & 2).
+- **Comprehensive Collection:** Must implement collectors/monitors for all 14 supported YANG modules (13 migrated modules + 1 new module: `infix-services:mdns` migrated from `statd/avahi.c`).
 - **In-Memory Cache:** Maintain a synchronized, pre-serialized JSON tree of all operational state.
 - **IPC Server:** Provide a Unix socket server for concurrent client queries.
 - **Health Reporting:** Expose internal monitor and collector status.
@@ -176,7 +180,7 @@ Beyond latency, the architecture has two structural weaknesses:
 ### 2.2 Non-Functional Requirements
 - **Sub-millisecond query latency:** `statd` callbacks receive a JSON response from an in-memory read — no process spawning, no disk I/O on the hot path.
 - **Reactive link state:** netlink events update the in-memory tree within microseconds of the kernel event, eliminating staleness.
-- **Elimination of Python startup overhead:** the 200 milliseconds per-invocation interpreter cost is removed entirely; 13 subscriptions no longer imply 13 sequential forks.
+- **Elimination of Python startup overhead:** the 200 milliseconds per-invocation interpreter cost is removed entirely; current per-subtree fork chains are replaced by in-memory IPC reads.
 - **Single consolidated daemon:** `yangerd` replaces 25+ Python collector scripts with typed Go collector functions, simplifying deployment, logging, and error handling.
 - **Pure Go cross-compilation:** No CGo dependency for easy cross-builds across ARM, AArch64, RISC-V, and x86_64.
 
@@ -258,10 +262,11 @@ Each yanger module returns a JSON object with one or more YANG-module-prefixed t
 | `infix-containers` | `infix_containers` | `"infix-containers:containers"` |
 | `infix-dhcp-server` | `infix_dhcp_server` | `"infix-dhcp-server:dhcp-server"` |
 | `infix-firewall` | `infix_firewall` | `"infix-firewall:firewall"` |
+| `infix-services` | `(new — migrated from statd/avahi.c)` | `"infix-services:mdns"` |
 | `ietf-ospf` | `ietf_ospf` | `"ietf-routing:routing"` (with nested `control-plane-protocols`) |
 | `ietf-rip` | `ietf_rip` | `"ietf-routing:routing"` (with nested `control-plane-protocols`) |
 | `ietf-bfd-ip-sh` | `ietf_bfd_ip_sh` | `"ietf-routing:routing"` (with nested `control-plane-protocols`) |
-| `infix-wifi-radio` | `infix_wifi_radio` | (module not yet implemented in Python) |
+
 
 #### 2.5.2 Concrete JSON Output Examples
 
@@ -304,7 +309,7 @@ The following examples show the exact JSON structures that yangerd must produce 
           ]
         },
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": true
           },
           "speed": "1.0",
@@ -330,6 +335,7 @@ The following examples show the exact JSON structures that yangerd must produce 
     ]
   }
 }
+```
 
 **ietf-interfaces with bridge augmentation** (`bridge.py`):
 ```json
@@ -1539,7 +1545,9 @@ Note: Unlike the ip/bridge/iw subsystems, the ethtool netlink monitor is NOT a s
 | **Ethtool Netlink Monitor Subsystem** | Native Go genetlink subscription to the `"ethtool"` family's `"monitor"` multicast group (`ETHNL_MCGRP_MONITOR`); receives `ETHTOOL_MSG_LINKMODES_NTF` and `ETHTOOL_MSG_LINKINFO_NTF` notifications for speed, duplex, and auto-negotiation changes; re-queries via `ethtool.Client.LinkInfo()` + `ethtool.Client.LinkMode()`. Also exposes `RefreshInterface()` for cross-subsystem use by the link event handler (RTM_NEWLINK), since `ETHNL_MCGRP_MONITOR` does NOT fire on link up/down. Not a subprocess — runs as a goroutine with a genetlink socket. |
 | **ZAPI Watcher Subsystem** | Persistent streaming connection to FRRouting's zebra daemon via the zserv Unix socket (`/var/run/frr/zserv.api`), using ZAPI protocol v6. Subscribes to route redistribution for kernel, connected, static, OSPF, and RIP route types. Receives incremental `REDISTRIBUTE_ROUTE_ADD` and `REDISTRIBUTE_ROUTE_DEL` messages and updates the in-memory tree. Handles zebra restarts with automatic reconnection and exponential backoff. **Sole source** for route table data -- replaces `vtysh` for route collection. See Section 4.1octies. |
 | **D-Bus Monitor Subsystem** | Subscribes to D-Bus signals from dnsmasq and firewalld via `godbus/dbus/v5`. dnsmasq signals (`DHCPLeaseAdded`, `DHCPLeaseDeleted`, `DHCPLeaseUpdated`) trigger re-read of the lease file (`/var/lib/misc/dnsmasq.leases`) and a `GetMetrics()` D-Bus method call for DHCP packet counters. firewalld signals (`Reloaded`, plus `NameOwnerChanged` for restart detection) trigger re-read of firewall state via firewalld D-Bus method calls (`getDefaultZone()`, `getActiveZones()`, `getZoneSettings2()`, `getPolicies()`, `getPolicySettings()`, `listServices()`, `getServiceSettings2()`, `getLogDenied()`, `queryPanicMode()`). Follows the event-as-trigger pattern: D-Bus signals provide the notification, actual data is re-read from the canonical source (firewalld D-Bus API). See Section 4.1novies. |
-| **Collectors** | Poll external sources (vtysh for OSPF/RIP/BFD protocol data, sysfs) at configured intervals. Route table collection is **not** performed by collectors -- it is handled by the ZAPI watcher. DHCP and firewall data are handled reactively by the D-Bus Monitor Subsystem, not by polling collectors. |
+| **LLDP Monitor Subsystem** | Persistent `lldpcli -f json0 watch` subprocess for reactive LLDP neighbor discovery. Receives pretty-printed JSON objects (blank-line delimited) with root keys `lldp-added`, `lldp-updated`, `lldp-deleted` — each carrying the full neighbor payload. Parses the stream using brace-depth counting, extracts neighbor data, and replaces the `ieee802-dot1ab-lldp:lldp` subtree in the in-memory tree. Uses lldpd's own CLI rather than reimplementing LLDP — lldpd is the system's LLDP authority. See Section 4.1decies. |
+| **mDNS Monitor Subsystem** | Subscribes to Avahi's D-Bus API (`org.freedesktop.Avahi`) for reactive mDNS/DNS-SD neighbor discovery. Uses the existing `godbus/dbus/v5` dependency to interact with Avahi's `ServiceTypeBrowser`, `ServiceBrowser`, and `ServiceResolver` objects. Updates `/infix-services:mdns/neighbors` on add/update/remove signals. Uses Avahi rather than a standalone mDNS library — Avahi is already running on the system and is the canonical mDNS authority. See Section 4.1undecies. |
+| **Collectors** | Poll external sources (vtysh for OSPF/RIP/BFD protocol data, chrony cmdmon for NTP, `podman` CLI for container state, sysfs for hardware sensors) at configured intervals. Container collection invokes `podman ps`, `podman inspect`, and `podman stats` for runtime data; lifecycle events (start/stop/create/remove) are candidates for reactive monitoring via `podman events --format json` in Phase 2. Route table collection is **not** performed by collectors -- it is handled by the ZAPI watcher. DHCP and firewall data are handled reactively by the D-Bus Monitor Subsystem, not by polling collectors. |
 | **In-Memory Tree** | Thread-safe storage of pre-serialized YANG JSON subtrees. |
 | **IPC Server** | Handle Unix socket requests from `statd` and `yangerctl`. |
 | **statd (C)** | Bridge sysrepo to `yangerd`. |
@@ -1601,7 +1609,7 @@ When a netlink event arrives on any subscription channel (e.g., `LinkUpdate` for
 - For bridge data: a separate `bridge -json -batch -` subprocess (see [4.1quater](#41quater-bridge-monitor-subsystem))
 
 #### 4.1.4 Initial State Dump
-- On startup, before subscribing to netlink events, `yangerd` populates the tree from two sources:
+- On startup, before subscribing to netlink events, `yangerd` populates the tree from three sources:
   - **ip batch** (link, address, neighbor data):
     - `link show` (all links)
     - `-s link show` (all links with stats)
@@ -1611,6 +1619,10 @@ When a netlink event arrives on any subscription channel (e.g., `LinkUpdate` for
     - Streaming connection to `/var/run/frr/zserv.api` via ZAPI v6
     - `ZEBRA_REDISTRIBUTE_ADD` per route type triggers full RIB dump from zebra
     - Receives `REDISTRIBUTE_ROUTE_ADD` / `REDISTRIBUTE_ROUTE_DEL` messages incrementally
+  - **fswatcher** (procfs forwarding flags):
+    - After glob expansion and inotify watch setup, calls `InitialRead()` to read the current value of every watched file (see Section 4.1ter)
+    - `/proc/sys/net/ipv4/conf/*/forwarding` for all existing interfaces
+    - Completes sub-millisecond (procfs reads are kernel-generated)
 - This populates the tree before any events arrive
 
 #### 4.1.5 Subprocess and Socket Lifecycle
@@ -1988,9 +2000,9 @@ func (fw *FSWatcher) Run(ctx context.Context) error {
 
 | Watched Path Pattern | Handler | Tree Key | Debounce | Notes |
 |-----|------|------|------|------|
+| `/proc/sys/net/ipv4/conf/*/forwarding` | readForwardingState | `ietf-routing:routing` | 200ms | May not support inotify on some procfs paths; falls back to polling |
 
 **Note**: sysfs pseudo-files under `/sys/class/hwmon/` and `/sys/class/thermal/` do **not** emit inotify events. The kernel does not call `fsnotify_modify()` when hardware sensor values change — these files generate their values on `read()`, not on write. Additionally, sensor values (temperature, fan speed, voltage) fluctuate continuously, which would produce event storms even if inotify worked. Hardware sensor data is therefore collected by the polling-based hardware collector (`collector/hardware.go`) at a 10-second interval, not by the fswatcher. See Section 5, collector #6.
-| `/proc/sys/net/ipv4/conf/*/forwarding` | readForwardingState | `ietf-routing:routing` | 200ms | May not support inotify on some procfs paths; falls back to polling |
 
 #### Debouncing Strategy
 
@@ -2003,6 +2015,31 @@ While inotify is highly efficient, it has certain kernel-level limitations that 
 #### Glob Expansion at Startup
 
 Some watched paths contain wildcards that must be resolved at startup. For example, procfs forwarding flags (`/proc/sys/net/ipv4/conf/*/forwarding`) use shell-style globs. These patterns are expanded using `filepath.Glob` during daemon initialization. For each matching path discovered, an individual inotify watch is added to the `FSWatcher` instance. If new interfaces appear at runtime, `yangerd` must be notified to re-scan and add new watches.
+
+#### Initial Read at Startup
+
+After all watches are established (including glob-expanded paths), the fswatcher performs a synchronous initial read of every watched file before entering the `Run()` event loop. For each path registered in `fw.handlers`, it calls the handler's `ReadFunc` to read the current value and populates the tree immediately. This ensures that forwarding flags are present in the tree from daemon start, rather than remaining empty until the first inotify event fires — which may never happen if the forwarding state does not change after boot.
+
+```go
+// InitialRead reads the current value of every watched file and populates
+// the tree.  Called once after all Watch() calls and glob expansion, before
+// Run().  Errors on individual files are logged but do not prevent startup.
+func (fw *FSWatcher) InitialRead() {
+    fw.mu.Lock()
+    defer fw.mu.Unlock()
+    for path, handler := range fw.handlers {
+        data, err := handler.ReadFunc(path)
+        if err != nil {
+            fw.log.Warn("initial read failed", "path", path, "err", err)
+            continue
+        }
+        fw.tree.Set(handler.TreeKey, data)
+        fw.log.Debug("initial read", "path", path, "key", handler.TreeKey)
+    }
+}
+```
+
+The initial read is fast (sub-millisecond per file — procfs reads are kernel-generated values) and completes synchronously before the daemon signals readiness.
 
 #### Concurrency Model
 
@@ -2415,7 +2452,7 @@ import (
 
     "github.com/mdlayher/ethtool"
     "github.com/mdlayher/genetlink"
-    "github.com/kernelkit/infix/src/statd/yangerd/internal/tree"
+    "github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 // EthMonitor subscribes to the ethtool genetlink monitor multicast
@@ -2694,7 +2731,7 @@ import (
     "time"
 
     "github.com/osrg/gobgp/v4/pkg/zebra"
-    "github.com/kernelkit/infix/src/statd/yangerd/internal/tree"
+    "github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 const (
@@ -2965,7 +3002,7 @@ import (
     "time"
 
     "github.com/godbus/dbus/v5"
-    "github.com/kernelkit/infix/src/statd/yangerd/internal/tree"
+    "github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 const (
@@ -3298,6 +3335,64 @@ This is analogous to the ZAPI watcher's `clearAllRoutes()` on zebra disconnect (
 The D-Bus monitor runs as a single goroutine executing the `Run()` event loop. All incoming D-Bus signals are processed sequentially within this loop. The `refreshDHCP()` and `refreshFirewall()` functions are called synchronously from the signal handler. Tree writes are serialized by the per-model `sync.RWMutex` for `infix-dhcp-server:dhcp-server` and `infix-firewall:firewall` respectively. No additional synchronization is needed.
 
 Signal processing is fast (file read + parse, or D-Bus method calls to firewalld), so sequential processing does not introduce meaningful latency. If multiple lease events arrive in rapid succession, each triggers a full re-read; this is acceptable because lease file parsing is inexpensive and the tree converges to the correct state after the final event.
+
+### 4.1decies LLDP Monitor Subsystem
+
+The LLDP monitor provides **reactive** LLDP neighbor updates by running a persistent `lldpcli -f json0 watch` subprocess. This replaces periodic `lldpctl -f json` polling. The monitor follows the same lifecycle pattern as `IWMonitor`: long-lived subprocess, stdout parsing loop, exponential backoff restart, and event-triggered tree replacement.
+
+#### Command and Output Contract
+
+- Command: `lldpcli -f json0 watch` (**`-f json0` before `watch`**)
+- Output framing: pretty-printed JSON objects separated by a blank line (`\n\n`)
+- Event roots: `lldp-added`, `lldp-updated`, `lldp-deleted`
+- Payload: each event object contains full neighbor data (not a delta patch)
+- `json0` guarantees stable structure (arrays stay arrays)
+
+Unlike NDJSON, each event is multi-line JSON. Framing must therefore use blank-line delimiters or brace-depth counting; single-line splitting is incorrect.
+
+#### Framing Strategy
+
+`internal/lldpmonitor/monitor.go` reads stdout as a stream and accumulates bytes until an object boundary is detected:
+
+1. Preferred: split on `\n\n` (lldpcli watch object separator)
+2. Defensive fallback: brace-depth counter for malformed/partial separators
+3. Parse each complete object via `json.Unmarshal`
+4. Dispatch by root key (`lldp-added` / `lldp-updated` / `lldp-deleted`)
+
+Each event triggers full in-memory LLDP subtree regeneration for `ieee802-dot1ab-lldp:lldp` from the watch payload, preserving list shape and RFC7951 key structure.
+
+#### Failure and Restart Behavior
+
+If `lldpd` is restarted or the subprocess exits, LLDPMonitor logs WARN, restarts `lldpcli -f json0 watch` with exponential backoff (100ms → 30s, factor 2x), and rebuilds state from subsequent watch events. During restart windows, the previous LLDP subtree remains served as last-known-good data.
+
+### 4.1undecies mDNS Monitor Subsystem
+
+The mDNS monitor provides **reactive** updates for `/infix-services:mdns/neighbors` using Avahi's D-Bus API (`org.freedesktop.Avahi`). This is a migration of `src/statd/avahi.c` behavior into pure Go.
+
+#### Why D-Bus (not libavahi-client)
+
+`yangerd` is pure Go (no CGo), so linking `libavahi-client` is not allowed. Avahi already exposes complete browsing/resolution via D-Bus signals and objects:
+
+- `ServiceTypeBrowser`
+- `ServiceBrowser`
+- `ServiceResolver`
+
+`internal/mdnsmonitor/` uses `godbus/dbus/v5` (already present for DBusMonitor) to subscribe to Avahi events and resolve service instances.
+
+#### Data Model Mapping
+
+The monitor writes:
+
+- Path: `/infix-services:mdns/neighbors`
+- Keys: `neighbor/hostname`, nested `service/name`
+- Leaves: `hostname`, `address` (leaf-list), `last-seen`, `service/name`, `service/type`, `service/port`, `service/txt` (leaf-list)
+
+On add/update/remove signals, the affected neighbor/service entries are rebuilt and the `infix-services:mdns` subtree is atomically replaced.
+
+#### Alternative Considered
+
+Pure Go mDNS libraries (`hashicorp/mdns`, `brutella/dnssd`) are possible, but Avahi D-Bus is preferred because Avahi is already running on target systems and is the canonical system mDNS authority.
+
 ### 4.1septies Event-Triggered Batch Re-read Pattern (All Netlink Events)
 
 This section documents the unified pattern used by all netlink event handlers for **link, address, and neighbor** events: **every event (both add and remove) triggers a full re-read of the affected state via ip batch**. Events are received as typed Go structs on `vishvananda/netlink` channels (`LinkUpdate`, `AddrUpdate`, `NeighUpdate`). The event itself is used only as a trigger -- its content is not parsed for data. Route data is sourced exclusively from the ZAPI watcher's streaming connection to zebra (Section 4.1octies) and is not part of this pattern -- yangerd does not subscribe to netlink route groups. This design is driven by two observations:
@@ -3485,7 +3580,7 @@ The in-memory tree has no hard size cap by default — in typical deployments, t
 ### 4.3 IPC Protocol Specification
 
 #### 4.3.1 Transport
-`AF_UNIX SOCK_STREAM` at `/run/yangerd.sock`. Permissions `0660`, owned by `root:statd`.
+`AF_UNIX SOCK_STREAM` at `/run/yangerd.sock`. Permissions `0660`, owned by `root:yangerd`.
 
 #### 4.3.2 Framing
 1-byte protocol version + 4-byte big-endian length header + JSON body. The version field enables future protocol changes without ambiguity. Version `1` is the initial release.
@@ -3643,7 +3738,7 @@ Bridge data collection is **fully reactive** — there is no polling collector f
 **Trigger**: Streaming -- no trigger needed. The ZAPI watcher receives incremental route updates as they occur in zebra's RIB. Upon initial connection, zebra sends a full dump of all routes matching the subscribed redistribution types. This replaces the previous `vtysh`-based approach where netlink route events (RTM_NEWROUTE/RTM_DELROUTE) were used as triggers for `vtysh` re-reads. See Section 4.1octies for the full ZAPI watcher design.
 **Initial startup**: The ZAPI watcher connects to zebra and subscribes to redistribution. Zebra responds with a full dump of all matching routes, populating the tree before the NLMonitor's select loop begins processing events.
 **Failure behavior**: If zebra is not running (socket absent), the watcher retries with exponential backoff (100ms initial, 30s max). Routes are cleared from the tree immediately upon ZAPI disconnection to prevent serving stale routing data. On reconnect, the full RIB dump repopulates the subtree.
-**Writes to**: `ietf-routing:routing`.
+**Writes to**: `ietf-routing:routing/ribs` (shared tree — routes only; ARP/NDP neighbors under `ietf-routing:routing` are written by the NLMonitor's neighbor handler, and forwarding flags are written by the fswatcher).
 
 ##### 5b. FRR Protocol Collectors (`internal/collector/ospf.go`, `rip.go`, `bfd.go`)
 **Collects**: OSPF neighbor state/adjacency, RIP full route table with metrics, BFD session state/peer address.
@@ -3653,7 +3748,7 @@ Bridge data collection is **fully reactive** — there is no polling collector f
 - `exec vtysh -c 'show bfd peers json'`
 **Interval**: 10 seconds for all three. Protocol state machines can transition quickly (OSPF adjacency flap, BFD session down); 10 seconds balances responsiveness with `vtysh` execution overhead.
 **Failure behavior**: If FRRouting is not running, write empty structures for the relevant subtrees. Log at ERROR on first failure; suppress to DEBUG for subsequent identical failures. (Note: Unlike the ZAPI watcher, protocol-specific state is cleared immediately when `vtysh` returns an error).
-**Writes to**: `ietf-routing:routing-state`.
+**Writes to**: `ietf-routing:routing/control-plane-protocols/control-plane-protocol` (OSPF under `.../ietf-ospf:ospf`, RIP under `.../ietf-rip:rip`, BFD under `.../ietf-bfd:bfd/ietf-bfd-ip-sh:...`).
 
 ##### 6. Hardware Collector (`internal/collector/hardware.go`)
 **Collects**: Temperature readings, fan speeds, voltage rail readings from kernel hwmon drivers; chassis inventory (manufacturer, model, serial number) from DMI.
@@ -3685,11 +3780,12 @@ Uses `github.com/facebook/time/ntp/chrony` to speak the cmdmon protocol natively
 **Failure behavior**: If chrony is not running (Unix socket absent or connection refused), write `synchronized: false` with an empty source list and log at WARN.
 **Writes to**: `ietf-ntp:ntp`.
 
-##### 9. LLDP Collector (`internal/collector/lldp.go`)
+##### 9. LLDP Monitor (`internal/lldpmonitor/`) — Reactive Subprocess
 **Collects**: Per-port LLDP neighbor information: chassis ID, port ID, TTL, system name, system capabilities, and management addresses.
-**Sources**: `exec lldpctl -f json` — single command that returns all LLDP neighbor data in JSON format from the running `lldpd` process.
-**Interval**: 30 seconds. LLDP advertisement interval is typically 30 seconds.
-**Failure behavior**: If `lldpd` is not running, `lldpctl` returns a non-zero exit code. Write an empty neighbor table and log at WARN.
+**Sources**: Persistent `exec lldpcli -f json0 watch` subprocess. Output consists of pretty-printed JSON objects separated by blank lines, rooted at `lldp-added`, `lldp-updated`, or `lldp-deleted`.
+**Trigger**: Event-driven by `lldpd` watch output (no fixed polling interval).
+**Framing**: Blank-line split (`\n\n`) with brace-depth fallback; **not** NDJSON line parsing.
+**Failure behavior**: If `lldpd`/`lldpcli` is unavailable, monitor restarts with exponential backoff and serves last-known-good LLDP subtree until events resume.
 **Writes to**: `ieee802-dot1ab-lldp:lldp`.
 
 ##### 10. DHCP Collector (`internal/collector/dhcp.go`) — Removed (D-Bus Reactive)
@@ -3711,6 +3807,8 @@ Uses `github.com/facebook/time/ntp/chrony` to speak the cmdmon protocol natively
 **Failure behavior**: Log at WARN. Container-internal interface statistics require more complex namespace traversal, deferred to Phase 2.
 **Writes to**: `infix-containers:containers`.
 **Feature gate**: `YANGERD_ENABLE_CONTAINERS=true`. When container support is not included in the Infix build, the Buildroot recipe sets this to `false` and the container collector is not started. When enabled, `podman` is guaranteed present on the target.
+
+**Phase-2 reactive recommendation**: container lifecycle state (`create`, `start`, `stop`, `die`, `remove`) can be made reactive via a persistent `podman events --format json` subscription. This would eliminate lifecycle polling lag and keep polling only for runtime metrics (CPU/memory), which still require periodic sampling.
 
 **Phase-2 container namespace design**: Collecting per-container network interface statistics requires entering each container's network namespace to read `/sys/class/net/*/statistics/` or query netlink. The planned approach uses `netns.Set()` from `vishvananda/netns` to switch the calling goroutine's network namespace, perform the queries, and switch back. Because Go goroutines can migrate between OS threads, the goroutine must be locked to its OS thread via `runtime.LockOSThread()` before the namespace switch. Each container's statistics are collected in a dedicated goroutine to prevent namespace leaks from affecting other collectors. Container namespace enumeration uses `podman inspect --format '{{.State.Pid}}'` to obtain the container's PID, from which `/proc/<pid>/ns/net` provides the network namespace file descriptor.
 ### 4.5 statd Integration
@@ -3977,7 +4075,7 @@ and before `sr_disconnect()`) to close the socket cleanly.
 
 ### Connection
 
-`yangerctl` connects to `/run/yangerd.sock` by default. The socket path can be overridden with `--socket <path>` for local testing against a non-system yangerd instance. There is no authentication — access control is enforced entirely by Unix socket file permissions (`srw-rw---- root:statd`).
+`yangerctl` connects to `/run/yangerd.sock` by default. The socket path can be overridden with `--socket <path>` for local testing against a non-system yangerd instance. There is no authentication — access control is enforced entirely by Unix socket file permissions (`srw-rw---- root:yangerd`).
 
 ### Subcommands
 
@@ -4016,9 +4114,9 @@ $ yangerctl get /ietf-interfaces:interfaces --filter name=eth0
 }
 
 # Query routing state
-$ yangerctl get /ietf-routing:routing-state
+$ yangerctl get /ietf-routing:routing
 {
-  "ietf-routing:routing-state": {
+  "ietf-routing:routing": {
     "ribs": {
       "rib": [
         { "name": "ipv4-master", "routes": { "route": [ ... ] } }
@@ -4074,7 +4172,7 @@ $ yangerctl dump | jq '."ietf-interfaces:interfaces".interface[].name'
 "lo"
 
 # Verify OSPF has at least one neighbor in state Full
-$ yangerctl dump | jq '."ietf-routing:routing-state" | .. | objects | select(."ospf-neighbor-state"? == "Full") | ."neighbor-id"'
+$ yangerctl dump | jq '."ietf-routing:routing" | .. | objects | select(."ospf-neighbor-state"? == "Full") | ."neighbor-id"'
 "192.168.1.2"
 
 # Save a diagnostic snapshot
@@ -4087,7 +4185,7 @@ Polls the specified YANG path every second and prints a diff whenever the return
 
 ```bash
 # Watch for changes to the routing table
-$ yangerctl watch /ietf-routing:routing-state
+$ yangerctl watch /ietf-routing:routing
 [1s] no change
 [2s] no change
 [3s] changed:
@@ -4265,32 +4363,34 @@ Monitoring the internal state of yangerd is critical for ensuring that data coll
 
 #### Health Endpoint
 
-The `yangerctl health` command (and the underlying `{"command":"health"}` IPC request) returns a JSON object describing the current state of every data source:
+The `yangerctl health` command (and the underlying `{"method":"health"}` IPC request) returns the same schema defined in Section 4.3.5 (`subsystems` + `models`):
 
 ```json
 {
-  "status": "healthy",
-  "uptime_seconds": 86412,
-  "tree": {
-    "modules": 5,
-    "total_json_bytes": 48216
+  "status": "ok",
+  "subsystems": {
+    "nlmonitor":   { "state": "running", "restarts": 0 },
+    "ipbatch":     { "state": "running", "pid": 1321, "restarts": 0 },
+    "bridgebatch": { "state": "running", "pid": 1322, "restarts": 0 },
+    "zapiwatcher": { "state": "running", "restarts": 1 },
+    "iwmonitor":   { "state": "disabled" },
+    "ethmonitor":  { "state": "running" },
+    "lldpmonitor": { "state": "running", "pid": 1323, "restarts": 0 },
+    "mdnsmonitor": { "state": "running", "restarts": 0 },
+    "dbusmonitor": { "state": "running" },
+    "fswatcher":   { "state": "running", "watches": 12 }
   },
-  "monitors": {
-    "link": { "status": "running", "last_event": "2025-03-15T10:22:01Z", "events_processed": 1847, "drops": 0 },
-    "addr": { "status": "running", "last_event": "2025-03-15T10:22:01Z", "events_processed": 312, "drops": 0 },
-    "route": { "status": "running", "last_event": "2025-03-15T10:21:58Z", "events_processed": 94, "drops": 0 },
-    "neigh": { "status": "running", "last_event": "2025-03-15T10:20:45Z", "events_processed": 2103, "drops": 0 }
-  },
-  "collectors": {
-    "ospf": { "status": "ok", "last_run": "2025-03-15T10:22:00Z", "duration_ms": 42, "errors": 0 },
-    "lldp": { "status": "ok", "last_run": "2025-03-15T10:21:55Z", "duration_ms": 18, "errors": 0 }
+  "models": {
+    "ietf-routing:routing": { "last_updated": "2026-03-27T10:22:01Z", "size_bytes": 15012 },
+    "ieee802-dot1ab-lldp:lldp": { "last_updated": "2026-03-27T10:22:00Z", "size_bytes": 4312 },
+    "infix-services:mdns": { "last_updated": "2026-03-27T10:21:58Z", "size_bytes": 2088 }
   }
 }
 ```
 
 #### Metrics Tracked
 
-For each netlink monitor: event count, drop count (ENOBUFS), last event timestamp, and re-list recovery count. For each supplementary collector: last run timestamp, execution duration, consecutive error count, and last error message. For the tree overall: number of modules loaded, total JSON byte size, and read/write lock contention count.
+For each subsystem: state (`running`/`restarting`/`failed`/`disabled`), restart counters, and PID for managed subprocesses. The route health entry is attributed to **`zapiwatcher`** (not NLMonitor), because routes are sourced from zebra via ZAPI. For each model: `last_updated` and `size_bytes`.
 
 #### Log Levels
 
@@ -4302,7 +4402,7 @@ Security is a primary concern given that yangerd handles sensitive network state
 
 #### Socket Permissions
 
-The Unix domain socket at `/run/yangerd.sock` is created with mode `0660` and owned by `root:statd`. Only processes running as root or in the `statd` group can connect. In practice, the only consumer is statd. The socket path is not configurable via the IPC protocol itself — it is set at daemon startup via the `YANGERD_SOCK` environment variable or the compile-time default.
+The Unix domain socket at `/run/yangerd.sock` is created with mode `0660` and owned by `root:yangerd`. Only processes running as root or in the `yangerd` group can connect. In practice, the only consumer is statd. The socket path is not configurable via the IPC protocol itself — it is set at daemon startup via the `YANGERD_SOCK` environment variable or the compile-time default.
 
 #### Linux Capabilities
 
@@ -4318,7 +4418,7 @@ No other capabilities are retained. yangerd does not need `CAP_SYS_ADMIN`, `CAP_
 yangerd runs as `root` but drops all capabilities except those listed above via `cap_set_proc()` at startup. Running as root is required because:
 - Netlink multicast group subscriptions require `CAP_NET_ADMIN`, which must be in the process's effective set.
 - The ZAPI watcher connects to `/var/run/frr/zserv.api`, which is owned by `root:frr` with mode `0660`. yangerd must be in the `frr` group.
-- The IPC socket at `/run/yangerd.sock` is created with `root:statd` ownership.
+- The IPC socket at `/run/yangerd.sock` is created with `root:yangerd` ownership.
 
 The Finit service file grants the minimum required capabilities:
 
@@ -4385,12 +4485,12 @@ Every operational YANG leaf collected by yangerd is listed below with its data s
 
 | YANG Path | Source | Go Method | Reactive/Polling | Notes |
 |-----------|--------|-----------|-----------------|-------|
-| `.../routing-state/ribs/rib[name='ipv4-master']/routes/route` | ZAPI `REDISTRIBUTE_ROUTE_ADD` (streaming) | `zapiwatcher.ZAPIWatcher` (gobgp/v4/pkg/zebra) | REACTIVE (ZAPI watcher) | Route data sourced from zebra's zserv socket via ZAPI v6 redistribution subscription. The ZAPI watcher receives incremental route add/delete messages covering ALL route types (kernel, connected, static, OSPF, RIP) with FRR-enriched metadata (protocol, distance, metric, next-hops, active/installed flags) -- including routes in zebra's RIB not installed in the kernel FIB. Replaces previous `vtysh`-based collection. See Section 4.1octies. |
-| `.../routing-state/ribs/rib[name='ipv6-master']/routes/route` | ZAPI `REDISTRIBUTE_ROUTE_ADD` (streaming) | `zapiwatcher.ZAPIWatcher` (gobgp/v4/pkg/zebra) | REACTIVE (ZAPI watcher) | Same as IPv4 but for IPv6 routes. ZAPI subscription covers both address families. See Section 4.1octies. |
+| `.../routing/ribs/rib[name='ipv4-master']/routes/route` | ZAPI `REDISTRIBUTE_ROUTE_ADD` (streaming) | `zapiwatcher.ZAPIWatcher` (gobgp/v4/pkg/zebra) | REACTIVE (ZAPI watcher) | Route data sourced from zebra's zserv socket via ZAPI v6 redistribution subscription. The ZAPI watcher receives incremental route add/delete messages covering ALL route types (kernel, connected, static, OSPF, RIP) with FRR-enriched metadata (protocol, distance, metric, next-hops, active/installed flags) -- including routes in zebra's RIB not installed in the kernel FIB. Replaces previous `vtysh`-based collection. See Section 4.1octies. |
+| `.../routing/ribs/rib[name='ipv6-master']/routes/route` | ZAPI `REDISTRIBUTE_ROUTE_ADD` (streaming) | `zapiwatcher.ZAPIWatcher` (gobgp/v4/pkg/zebra) | REACTIVE (ZAPI watcher) | Same as IPv4 but for IPv6 routes. ZAPI subscription covers both address families. See Section 4.1octies. |
 | `.../control-plane-protocols/ospf/neighbors` | exec `vtysh -c 'show ip ospf neighbor json'` | exec.Command | POLLING 10 seconds | FRRouting must be running |
-| `.../control-plane-protocols/ospf/areas/interfaces` | exec `vtysh -c 'show ip ospf interface json'` | exec.Command | POLLING 10 seconds | |
-| `.../control-plane-protocols/rip/routes` | exec `vtysh -c 'show ip rip json'` | exec.Command | POLLING 10 seconds | |
-| `.../control-plane-protocols/bfd/sessions` | exec `vtysh -c 'show bfd peers json'` | exec.Command | POLLING 10 seconds | |
+| `.../control-plane-protocols/ospf/areas/interfaces` | exec `vtysh -c 'show ip ospf interface json'` | exec.Command | POLLING 10 seconds | FRR exposes this state via request/response CLI only; no streaming API |
+| `.../control-plane-protocols/rip/routes` | exec `vtysh -c 'show ip rip json'` | exec.Command | POLLING 10 seconds | FRR exposes this state via request/response CLI only; no streaming API |
+| `.../control-plane-protocols/bfd/sessions` | exec `vtysh -c 'show bfd peers json'` | exec.Command | POLLING 10 seconds | FRR exposes this state via request/response CLI only; no streaming API |
 
 ### ietf-hardware — Hardware Components
 
@@ -4426,11 +4526,11 @@ Every operational YANG leaf collected by yangerd is listed below with its data s
 
 | YANG Path | Source | Go Method | Reactive/Polling | Notes |
 |-----------|--------|-----------|-----------------|-------|
-| `.../lldp/ports/port/neighbors/neighbor/chassis-id` | exec `lldpctl -f json` | exec.Command | POLLING 30 seconds | lldpd must be running |
-| `.../lldp/ports/port/neighbors/neighbor/port-id` | exec `lldpctl -f json` | exec.Command | POLLING 30 seconds | |
-| `.../lldp/ports/port/neighbors/neighbor/ttl` | exec `lldpctl -f json` | exec.Command | POLLING 30 seconds | |
-| `.../lldp/ports/port/neighbors/neighbor/system-name` | exec `lldpctl -f json` | exec.Command | POLLING 30 seconds | |
-| `.../lldp/ports/port/neighbors/neighbor/system-capabilities` | exec `lldpctl -f json` | exec.Command | POLLING 30 seconds | |
+| `.../lldp/ports/port/neighbors/neighbor/chassis-id` | `lldpcli -f json0 watch` (`lldp-added`/`lldp-updated`/`lldp-deleted`) | persistent subprocess monitor (`internal/lldpmonitor/`) | REACTIVE | Blank-line-delimited pretty JSON objects; parsed by framing-aware stream parser |
+| `.../lldp/ports/port/neighbors/neighbor/port-id` | `lldpcli -f json0 watch` | persistent subprocess monitor (`internal/lldpmonitor/`) | REACTIVE | `json0` structural stability (arrays always arrays) |
+| `.../lldp/ports/port/neighbors/neighbor/ttl` | `lldpcli -f json0 watch` | persistent subprocess monitor (`internal/lldpmonitor/`) | REACTIVE | Full neighbor payload in each event |
+| `.../lldp/ports/port/neighbors/neighbor/system-name` | `lldpcli -f json0 watch` | persistent subprocess monitor (`internal/lldpmonitor/`) | REACTIVE | |
+| `.../lldp/ports/port/neighbors/neighbor/system-capabilities` | `lldpcli -f json0 watch` | persistent subprocess monitor (`internal/lldpmonitor/`) | REACTIVE | |
 
 ### infix-containers — Container State (Feature-Gated)
 
@@ -4462,16 +4562,38 @@ Every operational YANG leaf collected by yangerd is listed below with its data s
 | `.../firewall/policies/policy` | firewalld D-Bus `getPolicies()` + `getPolicySettings()` | D-Bus Monitor `refreshFirewall()` | REACTIVE (D-Bus) | Per-policy: ingress/egress zones, action, priority, rich rules |
 | `.../firewall/services/service` | firewalld D-Bus `listServices()` + `getServiceSettings2()` | D-Bus Monitor `refreshFirewall()` | REACTIVE (D-Bus) | Per-service: port/protocol definitions |
 
+### 5.9bis infix-services — mDNS Neighbors
+
+| YANG Path | Source | Go Method | Reactive/Polling | Notes |
+|-----------|--------|-----------|-----------------|-------|
+| `/infix-services:mdns/neighbors/neighbor/hostname` | Avahi D-Bus `ServiceBrowser`/`ServiceResolver` signals | `internal/mdnsmonitor/` via `godbus/dbus/v5` | REACTIVE (D-Bus) | Keyed by hostname |
+| `/infix-services:mdns/neighbors/neighbor/address` | Avahi D-Bus resolver results | `internal/mdnsmonitor/` | REACTIVE (D-Bus) | Leaf-list of resolved addresses |
+| `/infix-services:mdns/neighbors/neighbor/last-seen` | Event timestamp at signal handling | `time.Now()` in mDNS monitor | REACTIVE (D-Bus) | Updated on add/update events |
+| `/infix-services:mdns/neighbors/neighbor/service/name` | Avahi service instance metadata | `internal/mdnsmonitor/` | REACTIVE (D-Bus) | Service list key |
+| `/infix-services:mdns/neighbors/neighbor/service/type` | Avahi service type | `internal/mdnsmonitor/` | REACTIVE (D-Bus) | e.g. `_ssh._tcp` |
+| `/infix-services:mdns/neighbors/neighbor/service/port` | Avahi resolver payload | `internal/mdnsmonitor/` | REACTIVE (D-Bus) | |
+| `/infix-services:mdns/neighbors/neighbor/service/txt` | Avahi TXT records | `internal/mdnsmonitor/` | REACTIVE (D-Bus) | Leaf-list |
+
 ### Summary
 
 | Category | Leaf Count | Strategy |
 |----------|-----------|----------|
-| REACTIVE (Monitor/Watcher) | 44 | `vishvananda/netlink` subscriptions (link, addr, neigh channels + bridge FDB/VLAN/MDB/STP events as triggers for `bridge -json -batch -` re-reads), ZAPI watcher (streaming route redistribution from zebra via zserv socket), D-Bus Monitor (dnsmasq DHCP lease signals + firewalld reload signals, triggering re-reads from canonical sources), `iw event -t`, ethtool genetlink monitor (`ETHNL_MCGRP_MONITOR`), and `fswatcher` (inotify for procfs forwarding flags) events; initial full state populates tree on startup via `ip` and `bridge` batch queries, ZAPI watcher connection (which triggers a full route dump from zebra), D-Bus Monitor initial refresh (lease file + `GetMetrics()` for DHCP, firewalld D-Bus method calls for firewall), `iw dev` info queries, and `ethtool.Client.LinkInfo()`/`LinkMode()` queries. Every LinkUpdate triggers a full interface re-read (3 `ip -json -batch` queries: `link show dev`, `-s link show dev`, `addr show dev`) plus `ethmonitor.RefreshInterface()` to re-query speed/duplex/autoneg. Bridge events (FDB, VLAN, MDB, STP) trigger full state re-reads via `bridge -json -batch -`. Route data is sourced exclusively from the ZAPI watcher (Section 4.1octies), not from netlink events or vtysh. DHCP and firewall data are sourced exclusively from the D-Bus Monitor (Section 4.1novies), not from polling collectors. Includes `last-change` timestamps recorded at LinkUpdate receipt, and WiFi signal strength via `iw dev <iface> link`. |
+| REACTIVE (Monitor/Watcher) | 56 | `vishvananda/netlink` subscriptions (link, addr, neigh channels + bridge FDB/VLAN/MDB/STP events as triggers for `bridge -json -batch -` re-reads), ZAPI watcher (streaming route redistribution from zebra via zserv socket), D-Bus Monitor (dnsmasq DHCP lease signals + firewalld reload signals), LLDP monitor (`lldpcli -f json0 watch`), mDNS monitor (Avahi D-Bus), `iw event -t`, ethtool genetlink monitor (`ETHNL_MCGRP_MONITOR`), and `fswatcher` (inotify for procfs forwarding flags). |
 | POLLING 10 seconds | 6 | FRRouting (OSPF/RIP/BFD) via `vtysh` JSON queries |
 | POLLING 10 seconds | 6 | Hardware sensors (hwmon temperature, fan, voltage, fault — sysfs files do not support inotify), container state (Phase 2, feature-gated: `YANGERD_ENABLE_CONTAINERS`), WiFi scan results via `wpa_cli` (feature-gated: `YANGERD_ENABLE_WIFI`) |
-| POLLING 30 seconds | 4 | Ethtool statistics (counters only -- speed/duplex/autoneg now reactive), WireGuard peer data, LLDP neighbors |
+| POLLING 30 seconds | 3 | Ethtool statistics (counters only -- speed/duplex/autoneg now reactive), WireGuard peer data |
 | POLLING 60 seconds | 8 | NTP state (chrony cmdmon protocol), system clock/uptime, users |
 | POLLING 300 seconds | 5 | Hardware inventory (DMI chassis data), OS platform info |
+
+### 5.10bis Polling Justification Notes
+
+The remaining polling sources are intentionally polling because no reliable subscription/event interface exists for the required data:
+
+- **WireGuard**: no kernel event stream for peer stats (`last-handshake`, `rx/tx bytes`); these values are available via `WG_CMD_GET_DEVICE` snapshots only.
+- **FRR OSPF/RIP/BFD protocol state**: protocol internals are exposed through `vtysh show ...` request/response commands; FRR does not provide a stable streaming API for these views.
+- **NTP (chrony)**: cmdmon protocol is strictly request/response (confirmed in revision 0.20); no subscribe mechanism.
+- **Hardware sensors**: sysfs pseudo-files do not emit inotify modify events (confirmed in revision 0.14).
+- **Ethtool statistics counters**: `ETHNL_MCGRP_MONITOR` emits setting-change notifications, not counter-change notifications.
 
 **Startup note**: All netlink-reactive data paths perform an initial full dump on daemon startup, using the subscribe-first-then-list pattern (subscriptions established BEFORE dump, following Antrea's approach). Link, address, and neighbor data is populated by writing bulk query commands (`ip -s -d -j link show`, `ip -j addr show`, `ip -j neigh show`) to the persistent `ip -json -force -batch -` subprocess. Route data is populated by the ZAPI watcher, which connects to zebra's zserv socket and receives a full dump of all routes matching the subscribed redistribution types (kernel, connected, static, OSPF, RIP) upon initial connection -- see Section 4.1octies. This replaces the previous `vtysh`-based initial route dump. OSPF, RIP, and BFD protocol-specific data is still collected via `vtysh` polling (unchanged). This populates the tree before the NLMonitor's select loop begins processing incremental netlink events. Without this, the tree appears empty until the first kernel event fires for each interface.
 ## Module-by-Module Mapping
@@ -4798,7 +4920,7 @@ For each existing Python yanger script, this section documents the external comm
 
 ---
 
-### infix_lldp.py → `internal/collector/lldp.go`
+### infix_lldp.py → `internal/lldpmonitor/`
 
 **Python approach**: Queries lldpd for its LLDP neighbor database in JSON format via `lldpcli`. Parses per-interface chassis-id and port-id (with subtype mapping), constructs `remote-systems-data` entries grouped by local port name.
 
@@ -4806,12 +4928,13 @@ For each existing Python yanger script, this section documents the external comm
 
 | Command | Purpose |
 |---------|---------|
-| `lldpcli show neighbors -f json` | LLDP neighbor table: per-interface chassis-id, port-id, age (for time-mark), rid |
+| `lldpcli show neighbors -f json` | LLDP neighbor table snapshot: per-interface chassis-id, port-id, age (for time-mark), rid |
 
 **Go replacement**:
-- `lldpcli show neighbors -f json` (Python) → `exec.Command("lldpctl", "-f", "json")` (Go) + JSON unmarshal
-- Alternatively: parse lldpd's Unix socket protocol directly (lldpd exposes a management socket at `/run/lldpd.socket`) — avoids subprocess overhead
-- Poll interval: 30 seconds
+- Snapshot polling is replaced with a persistent subprocess monitor: `lldpcli -f json0 watch`
+- Stream parser handles pretty JSON objects delimited by blank lines (`\n\n`) and dispatches `lldp-added`, `lldp-updated`, `lldp-deleted` events
+- `json0` output is required for structural stability (arrays always arrays)
+- Strategy: **REACTIVE** via `internal/lldpmonitor/` (persistent subprocess + framing-aware parser)
 
 ---
 
@@ -4898,16 +5021,17 @@ For each existing Python yanger script, this section documents the external comm
 | `ietf_hardware.py` | `internal/collector/hardware.go` | `os.ReadFile` sysfs (sensors, polling 10s) + `exec.Command` dmidecode (inventory) | 2 |
 | `ietf_system.py` | `internal/collector/system.go` | `os.ReadFile` /proc/* + `/etc/*` + `exec.Command` rauc/initctl | 2 |
 | `ietf_ntp.py` | `internal/collector/ntp.go` | `github.com/facebook/time/ntp/chrony` cmdmon protocol over Unix socket | 2 |
-| `infix_lldp.py` | `internal/collector/lldp.go` | `exec.Command` lldpctl | 2 |
+| `infix_lldp.py` | `internal/lldpmonitor/` | Persistent `lldpcli -f json0 watch` subprocess + stream parser (`lldp-added`/`updated`/`deleted`) | 2 |
+| `(new — from statd/avahi.c)` | `internal/mdnsmonitor/` | Avahi D-Bus `ServiceTypeBrowser`/`ServiceBrowser`/`ServiceResolver` signals | 1 |
 | `infix_containers.py` | `internal/collector/containers.go` | `exec.Command` podman + `os.ReadFile` cgroup | 2 (feature-gated: `YANGERD_ENABLE_CONTAINERS`) |
 | `infix_dhcp_server.py` | `internal/dbusmonitor/dbusmonitor.go` | D-Bus Monitor: dnsmasq signals (`DHCPLeaseAdded`/`Deleted`/`Updated`) → `refreshDHCP()` (lease file re-read + `GetMetrics()`) | 1 |
 | `infix_firewall.py` | `internal/dbusmonitor/dbusmonitor.go` | D-Bus Monitor: firewalld signals (`Reloaded` + `NameOwnerChanged`) → `refreshFirewall()` (firewalld D-Bus method calls: zones, policies, services, global state) | 1 |
 ## 6. Project Structure
 
-The yangerd Go module lives at `src/statd/yangerd/` inside the Infix repository, following the existing Infix pattern where each daemon is a self-contained subdirectory under `src/`.
+The yangerd Go module lives at `src/yangerd/` inside the Infix repository, following the existing Infix pattern where each daemon is a self-contained subdirectory under `src/`.
 
 ```
-src/statd/yangerd/
+src/yangerd/
 ├── cmd/
 │   ├── yangerd/
 │   │   └── main.go          # daemon entry point: flag parsing, signal handling, errgroup
@@ -4932,7 +5056,7 @@ src/statd/yangerd/
 │   │   ├── hardware.go      # Hardware sensors + inventory: /sys/class/hwmon + dmidecode
 │   │   ├── system.go        # System state: /proc, /etc/os-release, uname
 │   │   ├── ntp.go           # NTP sync status: chrony cmdmon protocol via facebook/time
-│   │   ├── lldp.go          # LLDP neighbors: exec lldpctl -f json
+│   │   ├── lldp.go          # LLDP transform helpers (fed by LLDP monitor events)
 │   │   ├── containers.go    # Container state: exec podman ps (Phase 2, feature-gated: YANGERD_ENABLE_CONTAINERS)
 │   │   ├── dhcp.go          # DHCP lease parsing: parseDnsmasqLeases() + buildDHCPTree() (called by D-Bus Monitor)
 │   │   └── firewall.go      # Firewall state: buildFirewallTree() from firewalld D-Bus data (called by D-Bus Monitor)
@@ -4949,17 +5073,21 @@ src/statd/yangerd/
 │   ├── iwmonitor/
 │   │   ├── monitor.go       # iw event -t subprocess manager + event parser
 │   │   └── query.go         # Short-lived iw re-query helpers (info, station dump)
+│   ├── lldpmonitor/
+│   │   └── monitor.go       # lldpcli -f json0 watch subprocess manager + framed JSON parser
 │   ├── ethmonitor/
 │   │   └── ethmonitor.go    # Ethtool genetlink monitor: ETHNL_MCGRP_MONITOR subscription
 │   ├── zapiwatcher/
 │   │   └── zapiwatcher.go  # ZAPI watcher: connects to zebra zserv socket, subscribes to route redistribution, maintains route tree with reconnection
 │   ├── dbusmonitor/
 │   │   └── dbusmonitor.go   # D-Bus Monitor: dnsmasq lease signals + firewalld reload signals → reactive data refresh
+│   ├── mdnsmonitor/
+│   │   └── mdnsmonitor.go   # Avahi D-Bus monitor: reactive mDNS service browse/resolve updates
 │   ├── scheduler/
 │   │   └── scheduler.go     # Runs collectors via time.NewTicker at configured intervals
 │   └── config/
 │       └── config.go        # Config struct: socket path, polling intervals, log level
-├── go.mod                   # module github.com/kernelkit/infix/src/statd/yangerd
+├── go.mod                   # module github.com/kernelkit/infix/src/yangerd
 ├── go.sum
 └── Makefile                 # cross-compilation targets for Buildroot integration
 ```
@@ -5008,7 +5136,7 @@ On disconnection, the watcher immediately clears the route subtree from the in-m
 The IPC server always serves whatever data is currently in the in-memory tree, regardless of whether underlying subprocesses (ip batch, bridge batch) are temporarily unavailable due to restarts. During a subprocess restart window, the tree contains the last successfully collected state. This means IPC responses may reflect slightly stale data during the restart gap (typically under 30 seconds), but the server never blocks or returns errors due to subprocess unavailability — only due to protocol-level issues (malformed request, unknown path).
 
 
-**`internal/config/`** — The `Config` struct read from a TOML or environment-variable source. Fields include socket path (default `/run/yangerd.sock`), per-collector polling intervals, log level, startup timeout before the IPC server begins accepting connections, and three boolean feature flags (`EnableWiFi`, `EnableContainers`, `EnableGPS`) parsed from the `YANGERD_ENABLE_WIFI`, `YANGERD_ENABLE_CONTAINERS`, and `YANGERD_ENABLE_GPS` environment variables. The feature flags default to `true` so that a missing `/etc/default/yangerd` file enables all features (matching the behavior of a full Infix build).
+**`internal/config/`** — The `Config` struct read from a TOML or environment-variable source. Fields include socket path (default `/run/yangerd.sock`), per-collector polling intervals, log level, startup timeout before the IPC server begins accepting connections, and three boolean feature flags (`EnableWiFi`, `EnableContainers`, `EnableGPS`) parsed from the `YANGERD_ENABLE_WIFI`, `YANGERD_ENABLE_CONTAINERS`, and `YANGERD_ENABLE_GPS` environment variables. Parsing defaults each flag to `true` when the env var is unset. In production, Buildroot writes `/etc/default/yangerd` explicitly and sets unsupported features to `false`; therefore disabled packages are still disabled. The phrase “missing file enables all features” refers specifically to `/etc/default/yangerd` being absent (all vars unset → parser defaults apply).
 
 ### Key Dependencies
 
@@ -5031,7 +5159,7 @@ All Go dependencies are pure Go with no CGo requirement. The module graph avoids
 ## 7. Deployment & Operations
 
 
-The `go.mod` module path `github.com/kernelkit/infix/src/statd/yangerd` matches the Infix directory structure, making the module self-describing with respect to its source location.
+The `go.mod` module path `github.com/kernelkit/infix/src/yangerd` matches the Infix directory structure, making the module self-describing with respect to its source location.
 
 Cross-compilation for embedded targets requires only standard Go toolchain invocation — no CGo means no cross-C-compiler complexity:
 
@@ -5040,7 +5168,7 @@ GOARCH=arm64 GOOS=linux go build ./cmd/yangerd
 GOARCH=arm   GOOS=linux GOARM=7 go build ./cmd/yangerd
 ```
 
-The canonical target build is via a Buildroot package at `package/yangerd/yangerd.mk`, using the standard `golang-package` infrastructure with `BR2_PACKAGE_YANGERD`. The `Makefile` in `src/statd/yangerd/` is for local host development and static analysis only, mirroring the pattern used by other native daemons under `src/`.
+The canonical target build is via a Buildroot package at `package/yangerd/yangerd.mk`, using the standard `golang-package` infrastructure with `BR2_PACKAGE_YANGERD`. The `Makefile` in `src/yangerd/` is for local host development and static analysis only, mirroring the pattern used by other native daemons under `src/`.
 
 ## Deployment
 ### Finit Service File
@@ -5110,6 +5238,7 @@ The following steps occur in order during yangerd startup:
    - `addr.AddrList(nil, netlink.FAMILY_ALL)` — enumerates all addresses on all links
    - `neigh.NeighList(0, netlink.FAMILY_ALL)` — enumerates all ARP/NDP entries
    - ZAPI watcher: sends `ZEBRA_HELLO` + `ZEBRA_ROUTER_ID_ADD` + `ZEBRA_REDISTRIBUTE_ADD` per route type; zebra responds with a full RIB dump
+   - fswatcher: calls `InitialRead()` after glob expansion and watch setup — reads every watched procfs file (forwarding flags) and populates the tree (sub-millisecond, synchronous)
    Note: only `LinkSubscribeWithOptions{ListExisting: true}` auto-delivers existing entries via the event channel; the address and neighbour monitors must call their respective list APIs explicitly. Route data is bootstrapped by the ZAPI watcher's redistribution subscription, which triggers a full dump from zebra.
 5. **Launch initial dump goroutine**: a separate goroutine waits for the three netlink monitor goroutines and the ZAPI watcher to signal completion of their initial data load (via a `sync.WaitGroup`). Once all four complete, it sets the daemon-wide `ready` flag to `true`.
 6. **Start IPC accept loop**: the main goroutine begins accepting connections from `/run/yangerd.sock`.
@@ -5122,6 +5251,7 @@ The `ready` flag transitions from `false` to `true` only when ALL of the followi
 1. **NLMonitor**: `LinkList()`, `AddrList()`, and `NeighList()` have each returned and populated the tree.
 2. **ZAPI watcher**: The initial RIB dump from zebra is complete (all `REDISTRIBUTE_ROUTE_ADD` messages for the initial dump have been received and processed).
 3. **BridgeBatch**: Initial `vlan show`, `fdb show`, and `mdb show` queries have completed.
+4. **FSWatcher**: `InitialRead()` has completed — all watched procfs files (forwarding flags) have been read and their values stored in the tree. This completes sub-millisecond but is included in the WaitGroup for correctness, ensuring forwarding state is never absent from the tree when the daemon begins serving queries.
 
 Each component signals completion via a shared `sync.WaitGroup`. The `main()` goroutine calls `wg.Wait()` with a timeout of `YANGERD_STARTUP_TIMEOUT` (default `5s`). If the timeout expires before all components signal, the daemon logs a warning identifying which components have not yet completed and sets `ready = true` anyway — serving partial data is preferable to blocking statd indefinitely.
 
@@ -5154,7 +5284,7 @@ All other signals use their default kernel behavior. Notably:
 ### Local Development Build
 
 ```bash
-cd src/statd/yangerd
+cd src/yangerd
 go build ./cmd/yangerd      # build the daemon binary
 go build ./cmd/yangerctl    # build the CLI diagnostic tool
 go vet ./...                # static analysis
@@ -5183,7 +5313,7 @@ The canonical target build is via `package/yangerd/yangerd.mk` using the standar
 ################################################################################
 
 YANGERD_VERSION = 1.0.0
-YANGERD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/statd/yangerd
+YANGERD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/yangerd
 YANGERD_SITE_METHOD = local
 YANGERD_LICENSE = BSD-2-Clause
 YANGERD_LICENSE_FILES = LICENSE
@@ -5297,7 +5427,7 @@ All unit tests and integration tests run with `-race` enabled in CI:
 # In .github/workflows/build.yml
 - name: yangerd unit tests
   run: |
-    cd src/statd/yangerd
+    cd src/yangerd
     go test -race ./...
 ```
 
@@ -5369,7 +5499,7 @@ type ChronyClient interface {
     Sources(ctx context.Context) ([]chrony.ReplySourceData, error)
 }
 
-// internal/collector/runner.go (shared by vtysh, iw, lldpctl, podman, dmidecode)
+// internal/collector/runner.go (shared by vtysh, iw, podman, dmidecode)
 type CommandRunner interface {
     Run(ctx context.Context, name string, args ...string) ([]byte, error)
 }
@@ -5410,7 +5540,7 @@ Step 3 implicitly validates golden-file parity: every collector's test function 
    yangerctl get /ietf-interfaces:interfaces > golden/interfaces.json
    yangerctl get /ietf-routing:routing      > golden/routing.json
    yangerctl get /ietf-hardware:hardware    > golden/hardware.json
-   # ... for all 13 modules
+   # ... for all 14 modules
    ```
 2. Capture the corresponding raw inputs that produced that output:
    ```bash
@@ -5446,18 +5576,18 @@ This runs in CI but not on every developer `go test` invocation, since `yanglint
 7. `go test -race` passes for the package
 8. No direct imports of external libraries outside interface implementation files
 
-When all 13 modules pass this checklist, yangerd is feature-complete and ready for integration testing on target hardware.
+When all migration modules and new modules pass this checklist (13 migrated modules + 1 new module = 14 total YANG modules), yangerd is feature-complete and ready for integration testing on target hardware.
 
 ## 9. Migration Plan
 
 
-yangerd ships as a single, complete delivery covering all 13 YANG modules. There is no phased rollout -- yangerd completely replaces the Python yanger scripts in one step. The Python scripts are removed from the Buildroot package when yangerd is integrated.
+yangerd ships as a single, complete delivery covering all 14 YANG modules. There is no phased rollout -- yangerd completely replaces the Python yanger scripts in one step. Migration scope is 13 modules (12 existing Python modules plus new `infix-services:mdns` migrated from `statd/avahi.c`).
 
 ### Module Inventory
 **Text parser test fixtures**: The `iw event` and `vtysh` output parsers process human-readable text that varies across tool versions. Test fixtures capture known-good outputs from specific versions (iw 6.9, vtysh from FRR 10.5.1) including edge cases: truncated output, empty responses, multi-line entries, and malformed lines. Each fixture is stored as a `.txt` file in `testdata/` alongside the expected parsed Go struct as a `.golden` JSON file.
 
 
-All 13 modules are implemented and delivered together:
+All 14 modules are implemented and delivered together (with additional supporting bridge and WireGuard collectors listed for completeness):
 
 | Module | YANG Path | Data Source | Go File |
 |--------|-----------|-------------|---------|
@@ -5465,17 +5595,17 @@ All 13 modules are implemented and delivered together:
 | ietf-routing (RIBs) | `/ietf-routing:routing/ribs` | ZAPI watcher (streaming from zebra zserv socket) | `internal/zapiwatcher/zapiwatcher.go` |
 | ietf-routing (ARP/NDP) | `/ietf-routing:routing` (neighbor tables) | Netlink RTNLGRP_NEIGH | `internal/monitor/neigh.go` |
 | Interface statistics | `/ietf-interfaces:interfaces/interface/statistics` | mdlayher/ethtool genetlink | `internal/collector/ethtool.go` |
-| ietf-routing (OSPF) | `.../ospf` | `vtysh -c 'show ip ospf json'` | `internal/collector/ospf.go` |
-| ietf-routing (RIP) | `.../rip` | `vtysh -c 'show ip rip json'` | `internal/collector/rip.go` |
-| ietf-routing (BFD) | `.../bfd` | `vtysh -c 'show bfd peers json'` | `internal/collector/bfd.go` |
+| ietf-routing (OSPF) | `.../control-plane-protocol/ietf-ospf:ospf` | `vtysh -c 'show ip ospf json'` | `internal/collector/ospf.go` |
+| ietf-routing (RIP) | `.../control-plane-protocol/ietf-rip:rip` | `vtysh -c 'show ip rip json'` | `internal/collector/rip.go` |
+| ietf-routing (BFD) | `.../control-plane-protocol/ietf-bfd:bfd` | `vtysh -c 'show bfd peers json'` | `internal/collector/bfd.go` |
 | ietf-hardware | `/ietf-hardware:hardware` | `/sys/class/hwmon`, `dmidecode` | `internal/collector/hardware.go` |
 | ietf-system | `/ietf-system:system-state` | `/proc/uptime`, `/etc/os-release`, `/proc/loadavg` | `internal/collector/system.go` |
 | ietf-ntp | `/ietf-ntp:ntp/state` | chrony cmdmon protocol (tracking + sources) | `internal/collector/ntp.go` |
-| ieee802-dot1ab-lldp | `/ieee802-dot1ab-lldp:lldp` | `lldpctl -f json` | `internal/collector/lldp.go` |
+| ieee802-dot1ab-lldp | `/ieee802-dot1ab-lldp:lldp` | `lldpcli -f json0 watch` | `internal/lldpmonitor/monitor.go` |
 | infix-containers | `/infix-containers:containers` | `podman ps --format json` | `internal/collector/containers.go` (feature-gated) |
 | infix-dhcp-server | `/infix-dhcp-server:dhcp-server` | `/var/lib/misc/dnsmasq.leases` | `internal/collector/dhcp.go` |
 | infix-firewall | `/infix-firewall:firewall` | firewalld D-Bus method calls (zones, policies, services, global state) | `internal/collector/firewall.go` |
-| infix-wifi-radio | `/infix-wifi-radio:wlan` | `iw dev <iface> station dump` | `internal/collector/wifi.go` |
+| infix-services (mDNS) | `/infix-services:mdns/neighbors` | Avahi D-Bus (`org.freedesktop.Avahi`) ServiceBrowser/ServiceResolver signals | `internal/mdnsmonitor/mdnsmonitor.go` |
 | bridge STP/VLAN/FDB/MDB | bridge state | Netlink event triggers + `bridge -json -batch -` re-reads | `internal/collector/bridge.go` |
 | WireGuard | WireGuard tunnels | `wgctrl.Client.Devices()` | `internal/collector/wireguard.go` |
 
@@ -5501,7 +5631,9 @@ All collectors use `context.WithTimeout()` with per-command timeouts to bound ea
 
 - `internal/monitor/{link,addr,neigh}.go`
 - `internal/zapiwatcher/zapiwatcher.go`
-- `internal/collector/{ethtool,ospf,rip,bfd,hardware,system,ntp,lldp,containers,dhcp,firewall,wifi,bridge,wireguard}.go`
+- `internal/collector/{ethtool,ospf,rip,bfd,hardware,system,ntp,containers,dhcp,firewall,wifi,bridge,wireguard}.go`
+- `internal/lldpmonitor/monitor.go`
+- `internal/mdnsmonitor/mdnsmonitor.go`
 - `internal/tree/tree.go`
 - `internal/ipc/{server,client,protocol}.go`
 - `cmd/yangerd/main.go`
@@ -5514,7 +5646,7 @@ All collectors use `context.WithTimeout()` with per-command timeouts to bound ea
 
 ### Milestone Criteria
 
-All 13 modules pass regression tests across x86_64, aarch64, and armv7 in CI. The Python yanger scripts are removed from the Buildroot package. statd's `get_oper_data()` function calls only `ly_add_yangerd_data()` -- there is no Python fallback path.
+All 14 modules pass regression tests across x86_64, aarch64, and armv7 in CI. The Python yanger scripts are removed from the Buildroot package. statd's `get_oper_data()` function calls only `ly_add_yangerd_data()` -- there is no Python fallback path.
 ## 10. Risk Assessment
 
 ### 10.1 Detailed Risks
@@ -5531,9 +5663,9 @@ On large Layer 2 segments or during periods of network instability such as Addre
 We mitigate this risk by debouncing tree writes for each module key using a one hundred millisecond coalescing window, ensuring that only the final value in a burst of events is committed to the shared tree. Additionally, the netlink subscription channels are buffered to hold up to two hundred and fifty-six events; any events beyond this limit are dropped, and a counter is incremented to provide visibility into the loss. A per-monitor event rate gauge is also exposed via the health endpoint to make storm conditions visible to operators and automated monitoring systems, allowing for proactive troubleshooting of network anomalies and preventing cascading failures in the management plane.
 
 **Risk 3 — dbus/external process query timeouts**
-Phase 2 collectors that invoke external processes such as vtysh or lldpctl, or query native protocols such as chrony cmdmon, may block if those processes are slow to start, waiting for a file lock, or unresponsive due to extreme system resource contention. A blocked collector goroutine could cause the corresponding tree key to remain in a stale state indefinitely if the collection logic does not account for execution delays. This would result in incorrect or outdated operational data being served to management clients, which could lead to incorrect diagnostic conclusions or automated system failures.
+Phase 2 collectors that invoke external processes such as vtysh or podman, or query native protocols such as chrony cmdmon and D-Bus APIs, may block if those processes are slow to start, waiting for a file lock, or unresponsive due to extreme system resource contention. A blocked collector goroutine could cause the corresponding tree key to remain in a stale state indefinitely if the collection logic does not account for execution delays. This would result in incorrect or outdated operational data being served to management clients, which could lead to incorrect diagnostic conclusions or automated system failures.
 
-Every collection operation is wrapped with a context that enforces a per-command timeout (vtysh: 5s, nft: 5s, iw: 2s, dmidecode: 5s). If a collector exceeds this deadline, the operation is aborted, a warning is logged to the system journal, and the last known good value is retained in the in-memory tree to prevent serving empty data. The collector then waits for the next scheduled interval before attempting the operation again. This ensures that a single slow or hung process cannot block other collectors or degrade the responsiveness of the IPC server, maintaining the overall stability of the daemon under various failure modes and ensuring that the system remains manageable even under duress.
+Every collection operation is wrapped with a context that enforces a per-command timeout (2-5 seconds depending on source: e.g., iw 2s; vtysh/dmidecode/podman 5s; D-Bus calls 2-5s). If a collector exceeds this deadline, the operation is aborted, a warning is logged to the system journal, and the last known good value is retained in the in-memory tree to prevent serving empty data. The collector then waits for the next scheduled interval before attempting the operation again. This ensures that a single slow or hung process cannot block other collectors or degrade the responsiveness of the IPC server, maintaining the overall stability of the daemon under various failure modes and ensuring that the system remains manageable even under duress.
 
 **Risk 4 — Incomplete tree state at first statd query (startup race)**
 Both statd and yangerd start concurrently during the system initialization process managed by finit. It is highly probable that statd's first operational data request will fire before yangerd has completed its initial state snapshot from the kernel using the bootstrap listing APIs. If yangerd responded with an empty or partial tree in this state, sysrepo might cache incorrect operational data, leading to a misleading view of the system state for the first few seconds after boot and potentially causing monitoring alerts to trigger unnecessarily.
@@ -5585,7 +5717,7 @@ The `internal/zapiwatcher/` package mitigates this with exponential backoff reco
 |---|------|-----------|--------|--------|
 | 1 | ip batch subprocess crash or netlink subscription failure | Low–Medium | High | Mitigated — health-monitored subprocess with auto-restart, exponential backoff, canary query; netlink re-subscription with full resync |
 | 2 | Netlink event storm (memory/CPU) | Low–Medium | Medium | Mitigated — 100 milliseconds debounce per key; 256-event buffer; health metrics |
-| 3 | dbus/process query timeout | Low | Medium | Mitigated — 2 seconds `context.WithTimeout`; stale value retained; retry on next tick |
+| 3 | dbus/process query timeout | Low | Medium | Mitigated — 2-5 seconds `context.WithTimeout` (command-specific); stale value retained; retry on next tick |
 | 4 | Startup race (incomplete tree at first query) | High | Low | Mitigated -- `code 503` response; statd retries on next callback; brief empty window during init |
 | 5 | FRR group membership (vtysh + zserv socket) | High | Medium | Deployment requirement — finit `group frr`; Buildroot adds user to group |
 
@@ -5617,25 +5749,25 @@ Notes:
 
 ### A.2 YANG Module Registry
 
-All 13 YANG modules that yangerd handles, with their canonical YANG path prefix and the corresponding Python yanger script that yangerd replaces:
+All 14 YANG modules that yangerd handles, with their canonical YANG path prefix and the corresponding Python predecessor (if any):
 
 | YANG Module | Path Prefix | Replaces |
 |-------------|------------|----------|
 | `ietf-interfaces` | `/ietf-interfaces:interfaces` | `interface.py` |
 | `ietf-routing` (RIBs/routes) | `/ietf-routing:routing/ribs` | `routing.py` |
 | `ietf-routing` (ARP/NDP neighbors) | `/ietf-routing:routing` (neighbor tables) | `routing.py` |
-| `ietf-routing` (OSPF) | `/ietf-routing:routing/control-plane-protocols/.../ospf` | `ospf.py` |
-| `ietf-routing` (RIP) | `/ietf-routing:routing/control-plane-protocols/.../rip` | `rip.py` |
-| `ietf-routing` (BFD) | `/ietf-routing:routing/control-plane-protocols/.../bfd` | `bfd.py` |
+| `ietf-routing` (OSPF) | `/ietf-routing:routing/control-plane-protocols/control-plane-protocol/ietf-ospf:ospf` | `ospf.py` |
+| `ietf-routing` (RIP) | `/ietf-routing:routing/control-plane-protocols/control-plane-protocol/ietf-rip:rip` | `rip.py` |
+| `ietf-routing` (BFD) | `/ietf-routing:routing/control-plane-protocols/control-plane-protocol/ietf-bfd:bfd` | `bfd.py` |
 | `ietf-hardware` | `/ietf-hardware:hardware` | `hardware.py` |
 | `ietf-system` | `/ietf-system:system-state` | `system.py` |
 | `ietf-ntp` | `/ietf-ntp:ntp/state` | `ntp.py` |
-| `ieee802-dot1ab-lldp` | `/ieee802-dot1ab-lldp:lldp` | `lldp.py` |
+| `ieee802-dot1ab-lldp` | `/ieee802-dot1ab-lldp:lldp` | `lldp.py` (served reactively via `lldpcli -f json0 watch`) |
 | `infix-containers` | `/infix-containers:containers` | `containers.py` (feature-gated: `YANGERD_ENABLE_CONTAINERS`) |
 | `infix-dhcp-server` | `/infix-dhcp-server:dhcp-server` | `dhcp-server.py` |
 | `infix-firewall` | `/infix-firewall:firewall` | `firewall.py` |
-| `infix-wifi-radio` | `/infix-wifi-radio:wlan` | `wifi.py` (feature-gated: `YANGERD_ENABLE_WIFI`) |
-Note: the registry lists 14 rows because `ietf-routing` covers three distinct sub-trees (RIBs, neighbors, and routing protocol instances) that correspond to three distinct `sr_oper_get_subscribe()` calls in `statd.c:subscribe_to_all()`, but are served from a single yangerd collector.
+| `infix-services` (mDNS) | `/infix-services:mdns` | `(new — migrated from statd/avahi.c via Avahi D-Bus)` |
+Note: the registry lists 14 rows because `ietf-routing` covers three distinct sub-trees (RIBs, neighbors, and routing protocol instances) that correspond to distinct `sr_oper_get_subscribe()` paths, while `infix-services:mdns` is an additional module entry beyond legacy Python parity.
 
 ### A.3 Glossary
 **inotify**
@@ -5705,12 +5837,12 @@ The wire unit of the yangerd IPC protocol: a 1-byte protocol version (currently 
 The sysrepo datastore holding current runtime state, as opposed to the `running`, `candidate`, and `startup` configuration datastores. The operational datastore is read-only from the management protocol perspective (NETCONF `<get>`, RESTCONF GET) and is populated by `sr_oper_get_subscribe()` callbacks registered by statd. yangerd's data ultimately reaches operators via this datastore after statd parses it with libyang and pushes it into sysrepo.
 
 **sr_oper_get_subscribe**
-The sysrepo C API function that registers a callback for operational data subtree queries. Signature: `sr_error_t sr_oper_get_subscribe(sr_session_ctx_t *session, const char *module_name, const char *path, sr_oper_get_items_cb callback, void *private_data, uint32_t opts, sr_subscription_ctx_t **subscription)`. statd calls this 13 times in `subscribe_to_all()`, once per YANG module. Each registered callback calls `ly_add_yangerd_data()` to populate the operational tree from yangerd's IPC response.
+The sysrepo C API function that registers a callback for operational data subtree queries. Signature: `sr_error_t sr_oper_get_subscribe(sr_session_ctx_t *session, const char *module_name, const char *path, sr_oper_get_items_cb callback, void *private_data, uint32_t opts, sr_subscription_ctx_t **subscription)`. Current legacy statd code calls this 13 times in `subscribe_to_all()`. The target yangerd design covers 14 YANG modules total (13 migration modules + `infix-services:mdns`). Each registered callback calls `ly_add_yangerd_data()` to populate the operational tree from yangerd's IPC response.
 
 ## Troubleshooting Guide
 
 ### IPC Connection Issues
-If statd is unable to connect to yangerd, first verify that the daemon is running using the initctl status yangerd command. If the daemon is active, check the permissions on /run/yangerd.sock; it should be owned by root:statd with 0660 permissions. If the socket file is missing, check the system logs for any startup errors that might have caused the daemon to exit prematurely. You can also attempt to connect manually using the yangerctl health command to verify that the IPC server is responding to requests. Network namespace isolation can also interfere with socket communication if not correctly configured.
+If statd is unable to connect to yangerd, first verify that the daemon is running using the initctl status yangerd command. If the daemon is active, check the permissions on /run/yangerd.sock; it should be owned by root:yangerd with 0660 permissions. If the socket file is missing, check the system logs for any startup errors that might have caused the daemon to exit prematurely. You can also attempt to connect manually using the yangerctl health command to verify that the IPC server is responding to requests. Network namespace isolation can also interfere with socket communication if not correctly configured.
 
 ### Stale Data in the Tree
 When a collector fails to update its designated module in the in-memory tree, yangerd retains the last known good value to prevent serving empty data. If you suspect that the data for a particular module like OSPF or LLDP is stale, use yangerctl health to check the timestamp of the last successful collection for that specific collector. A failure in a collector is usually accompanied by a warning message in the system log. Common causes for stale data include incorrect group memberships, unresponsive background services that the collectors depend on (e.g., FRRouting not yet running for OSPF/RIP/BFD), or feature-gated subsystems that are disabled in the build. Verification of kernel module status for protocols like WireGuard is also recommended.
@@ -5730,6 +5862,6 @@ The server responds with a success message containing the list of all interfaces
 ### Example 2: Routing Table Query
 To retrieve only the IPv4 routing table, the path should be specified as follows in the request body.
 ```json
-{"method": "get", "path": "/ietf-routing:routing-state/ribs/rib[name='ipv4-master']"}
+{"method": "get", "path": "/ietf-routing:routing/ribs/rib[name='ipv4-master']"}
 ```
 The response will contain a structured representation of all IPv4 routes currently installed in the kernel's routing table, including destination prefixes, next-hop addresses, and outgoing interface names.
