@@ -145,6 +145,18 @@ type filesystemFS struct {
 
 // RESTCONF JSON structures for ietf-hardware:hardware.
 
+// Short forms of hardware-class identities — see shortClass(). Kept here so
+// the dashboard and Status > Hardware handlers route the same way.
+const (
+	classChassis = "chassis" // ietf-hardware:chassis
+	classUSB     = "usb"     // infix-hardware:usb
+	classWiFi    = "wifi"    // infix-hardware:wifi
+	classGPS     = "gps"     // infix-hardware:gps
+)
+
+// sensorStatusOK matches the ietf-hardware sensor-status "ok" enum value.
+const sensorStatusOK = "ok"
+
 type hardwareWrapper struct {
 	Hardware struct {
 		Component []hwComponentJSON `json:"component"`
@@ -161,7 +173,7 @@ type hwComponentJSON struct {
 	SerialNum   string         `json:"serial-num"`
 	HardwareRev string         `json:"hardware-rev"`
 	PhysAddress string         `json:"infix-hardware:phys-address"`
-	WiFiRadio   *wifiRadioJSON `json:"infix-hardware:wifi-radio"`
+	WiFiRadio   *wifiRadioHWJSON `json:"infix-hardware:wifi-radio"`
 	SensorData  *struct {
 		ValueType  string    `json:"value-type"`
 		Value      yangInt64 `json:"value"`
@@ -178,10 +190,13 @@ type hwComponentJSON struct {
 
 type dashboardData struct {
 	PageData
-	Hostname string
+	Hostname     string
+	Contact      string
+	Location     string
 	OSName       string
 	OSVersion    string
 	Machine      string
+	CurrentTime  string
 	Firmware     string
 	Uptime       string
 	MemTotal     int64
@@ -194,7 +209,7 @@ type dashboardData struct {
 	CPUClass     string
 	Disks        []diskEntry
 	Board        boardInfo
-	Sensors      []sensorEntry
+	KeyVitals    []sensorEntry // Overview's at-a-glance subset: CPU/SoC + wifi-radio temperatures and fan RPMs. Status > Hardware has the full inventory.
 	Error        string
 }
 
@@ -212,12 +227,20 @@ type sensorEntry struct {
 	Type  string // "temperature", "fan", "voltage", etc.
 }
 
+type wifiEntry struct {
+	Name         string
+	Manufacturer string
+	Bands        string // all supported bands, e.g. "2.4 GHz, 5 GHz"
+	Standards    string
+	MaxAP        int
+}
+
 type diskEntry struct {
 	Mount     string
 	Size      string
-	Used      string
 	Available string
 	Percent   int
+	Class     string // "" / "is-warn" / "is-crit"
 }
 
 // DashboardHandler serves the main dashboard page.
@@ -229,7 +252,7 @@ type DashboardHandler struct {
 // Index renders the dashboard (GET /).
 func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	data := dashboardData{
-		PageData: newPageData(r, "dashboard", "Dashboard"),
+		PageData: newPageData(r, "dashboard", "Overview"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive
@@ -242,6 +265,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		sysConf struct {
 			System struct {
 				Hostname string `json:"hostname"`
+				Contact  string `json:"contact"`
+				Location string `json:"location"`
 			} `json:"ietf-system:system"`
 		}
 		stateErr, hwErr, confErr error
@@ -276,6 +301,7 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		}
 		data.Firmware = firmwareVersion(ss.Software)
 		data.Uptime = computeUptime(ss.Clock.BootDatetime, ss.Clock.CurrentDatetime)
+		data.CurrentTime = formatCurrentTime(ss.Clock.CurrentDatetime)
 
 		total := int64(ss.Resource.Memory.Total)
 		avail := int64(ss.Resource.Memory.Available)
@@ -312,12 +338,19 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 			if size > 0 {
 				pct = int(float64(used) / float64(size) * 100)
 			}
+			diskClass := ""
+			switch {
+			case pct >= 90:
+				diskClass = "is-crit"
+			case pct >= 70:
+				diskClass = "is-warn"
+			}
 			data.Disks = append(data.Disks, diskEntry{
 				Mount:     fs.MountPoint,
 				Size:      humanKiB(size),
-				Used:      humanKiB(used),
 				Available: humanKiB(int64(fs.Available)),
 				Percent:   pct,
+				Class:     diskClass,
 			})
 		}
 	}
@@ -325,9 +358,15 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	if hwErr != nil {
 		log.Printf("restconf hardware: %v", hwErr)
 	} else {
+		// Two passes: first build a name → class map so keyVital can tell
+		// whether a celsius sensor lives on a wifi component (and thus
+		// belongs in Key Vitals).
+		classByName := make(map[string]string, len(hw.Hardware.Component))
 		for _, c := range hw.Hardware.Component {
-			class := shortClass(c.Class)
-			if class == "chassis" {
+			classByName[c.Name] = shortClass(c.Class)
+		}
+		for _, c := range hw.Hardware.Component {
+			if shortClass(c.Class) == classChassis {
 				data.Board = boardInfo{
 					Model:        c.ModelName,
 					Manufacturer: c.MfgName,
@@ -336,12 +375,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 					BaseMAC:      c.PhysAddress,
 				}
 			}
-			if c.SensorData != nil && c.SensorData.OperStatus == "ok" {
-				data.Sensors = append(data.Sensors, sensorEntry{
-					Name:  c.Name,
-					Value: formatSensor(c.SensorData.ValueType, int64(c.SensorData.Value), c.SensorData.ValueScale),
-					Type:  c.SensorData.ValueType,
-				})
+			if v, ok := keyVital(c, classByName); ok {
+				data.KeyVitals = append(data.KeyVitals, v)
 			}
 		}
 	}
@@ -350,6 +385,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		log.Printf("restconf system config: %v", confErr)
 	} else {
 		data.Hostname = sysConf.System.Hostname
+		data.Contact = sysConf.System.Contact
+		data.Location = sysConf.System.Location
 	}
 
 	tmplName := "dashboard.html"
@@ -396,6 +433,102 @@ func computeUptime(boot, now string) string {
 	default:
 		return fmt.Sprintf("%dm", mins)
 	}
+}
+
+// formatCurrentTime formats an RFC3339 timestamp as "2006-01-02 15:04:05 +00:00".
+func formatCurrentTime(s string) string {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return ""
+	}
+	return t.UTC().Format("2006-01-02 15:04:05 +00:00")
+}
+
+// keyVital picks the dashboard's "Key Vitals" rows out of the hardware
+// component stream — the small at-a-glance subset for the Overview page:
+// CPU/SoC/core temperatures, wifi-radio temperatures, SFP temperatures,
+// and any fan RPM. Everything else (board temps, voltages, per-port
+// sensors, …) lives on Status > Hardware. classByName maps every
+// component's Name → short class so we can identify a celsius sensor's
+// parent without a second scan per call.
+func keyVital(c hwComponentJSON, classByName map[string]string) (sensorEntry, bool) {
+	if c.SensorData == nil || c.SensorData.OperStatus != sensorStatusOK {
+		return sensorEntry{}, false
+	}
+	switch c.SensorData.ValueType {
+	case "celsius":
+		switch {
+		case c.Name == "cpu", c.Name == "soc", c.Name == "core":
+			// CPU / SoC / core temperatures.
+		case classByName[c.Parent] == classWiFi:
+			// WiFi radio temperatures whose sensor-data lives under
+			// the radio component as a child.
+		case strings.HasPrefix(c.Name, "radio"),
+			strings.HasPrefix(c.Name, "phy"):
+			// WiFi radio temperatures whose sensor-data is a
+			// standalone iana-hardware:sensor (yanger labels these
+			// radio0, phy0, … per its normaliser). The parent-class
+			// branch above won't catch them.
+		case strings.HasPrefix(c.Name, "sfp"):
+			// SFP module temperatures (per ietf_hardware.py
+			// normalisation, names canonicalise to sfp0, sfp1, ...).
+		default:
+			return sensorEntry{}, false
+		}
+	case "rpm":
+		// every fan qualifies
+	default:
+		return sensorEntry{}, false
+	}
+	return sensorEntry{
+		Name:  c.Name,
+		Value: formatSensor(c.SensorData.ValueType, int64(c.SensorData.Value), c.SensorData.ValueScale),
+		Type:  c.SensorData.ValueType,
+	}, true
+}
+
+// summarizeWiFiRadio collapses an ietf-hardware component's wifi-radio
+// container into the row-shaped wifiEntry used by both the dashboard and
+// the Status > Hardware page. Detail beyond this summary (per-channel,
+// per-band capabilities) lives on the dedicated /wifi page.
+func summarizeWiFiRadio(c hwComponentJSON) wifiEntry {
+	e := wifiEntry{Name: c.Name, Manufacturer: c.MfgName}
+	if c.WiFiRadio == nil {
+		return e
+	}
+	var bandNames []string
+	var ht, vht, he bool
+	for _, b := range c.WiFiRadio.Bands {
+		ht = ht || b.HTCapable
+		vht = vht || b.VHTCapable
+		he = he || b.HECapable
+		name := b.Name
+		if name == "" {
+			name = b.Band
+		}
+		if name != "" {
+			bandNames = append(bandNames, name)
+		}
+	}
+	if len(bandNames) == 0 && c.WiFiRadio.Band != "" {
+		bandNames = append(bandNames, c.WiFiRadio.Band)
+	}
+	e.Bands = strings.Join(bandNames, ", ")
+	var stds []string
+	if ht {
+		stds = append(stds, "11n")
+	}
+	if vht {
+		stds = append(stds, "11ac")
+	}
+	if he {
+		stds = append(stds, "11ax")
+	}
+	e.Standards = strings.Join(stds, "/")
+	if c.WiFiRadio.MaxInterfaces != nil {
+		e.MaxAP = c.WiFiRadio.MaxInterfaces.AP
+	}
+	return e
 }
 
 // shortClass strips the YANG module prefix from a hardware class identity.
@@ -447,17 +580,17 @@ func humanBytes(b int64) string {
 	return fmt.Sprintf("%.1f PiB", v)
 }
 
-// humanKiB converts KiB to a human-readable string (K, M, G, T).
+// humanKiB converts KiB to a human-readable string using binary (IEC) units.
 func humanKiB(kib int64) string {
 	v := float64(kib)
-	for _, unit := range []string{"K", "M", "G", "T"} {
-		if v < 1024 || unit == "T" {
+	for _, unit := range []string{"KiB", "MiB", "GiB", "TiB"} {
+		if v < 1024 || unit == "TiB" {
 			if v == math.Trunc(v) {
-				return fmt.Sprintf("%.0f%s", v, unit)
+				return fmt.Sprintf("%.0f %s", v, unit)
 			}
-			return fmt.Sprintf("%.1f%s", v, unit)
+			return fmt.Sprintf("%.1f %s", v, unit)
 		}
 		v /= 1024
 	}
-	return fmt.Sprintf("%.1fP", v)
+	return fmt.Sprintf("%.1f PiB", v)
 }
