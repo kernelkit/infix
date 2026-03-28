@@ -19,6 +19,8 @@
 #define GENERATE_STRING(STRING) #STRING,
 
 #define NGINX_SSL_CONF "/etc/nginx/ssl.conf"
+#define NGINX_RESTCONF_ACCESS       "/etc/nginx/restconf-access.conf"
+#define NGINX_RESTCONF_ACCESS_LOCAL "restconf-access-local.conf"
 #define AVAHI_SVC_PATH "/etc/avahi/services"
 
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
@@ -557,7 +559,30 @@ static int restconf_change(sr_session_ctx_t *session, struct lyd_node *config, s
 
 	ena = lydx_is_enabled(srv, "enabled") &&
 	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
-	svc_enable(ena, restconf, "restconf");
+
+	/*
+	 * restconf.app is permanently installed in nginx/app/ so rousette is
+	 * always reachable from loopback (required by the WebUI).  External
+	 * access is gated by an `include` of restconf-access.conf — empty
+	 * means no allow/deny rules apply and nginx's default of `allow all`
+	 * takes effect; populated means loopback-only.
+	 *
+	 * The shipped state is a symlink to restconf-access-local.conf (which
+	 * holds the loopback rules), so the rules are defined in exactly one
+	 * place.  erase() before re-creating because fopen("w") on a symlink
+	 * follows the link and would clobber the template; the empty-file
+	 * path needs a real file, and the loopback path needs a fresh
+	 * symlink that may have been replaced on a previous transition.
+	 */
+	erase(NGINX_RESTCONF_ACCESS);
+	if (ena) {
+		FILE *fp = fopen(NGINX_RESTCONF_ACCESS, "w");
+		if (fp)
+			fclose(fp);
+	} else if (symlink(NGINX_RESTCONF_ACCESS_LOCAL, NGINX_RESTCONF_ACCESS)) {
+		ERRNO("failed restoring %s", NGINX_RESTCONF_ACCESS);
+	}
+	mdns_records(ena ? MDNS_ADD : MDNS_DELETE, restconf);
 	finit_reload("nginx");
 
 	return put(cfg);
@@ -703,13 +728,16 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 
 	/* Web master on/off: propagate to nginx and all sub-services */
 	if (lydx_get_xpathf(diff, WEB_XPATH "/enabled")) {
+		int rc_ena = ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_RESTCONF_XPATH), "enabled");
 		int nb_ena = ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_NETBROWSE_XPATH), "enabled");
 
 		svc_enable(ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_CONSOLE_XPATH), "enabled"),
 			   ttyd, "ttyd");
 		svc_enable(nb_ena, netbrowse, "netbrowse");
-		svc_enable(ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_RESTCONF_XPATH), "enabled"),
-			   restconf, "restconf");
+		/* Rousette follows web/enabled; external access is gated separately via restconf/enabled */
+		ena ? finit_enable("restconf") : finit_disable("restconf");
+		ena ? finit_enable("webui") : finit_disable("webui");
+		mdns_records(rc_ena ? MDNS_ADD : MDNS_DELETE, restconf);
 		svc_enable(ena, web, "nginx");
 		mdns_alias_conf(nb_ena);
 		finit_reload("mdns-alias");

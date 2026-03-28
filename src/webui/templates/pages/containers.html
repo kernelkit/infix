@@ -1,0 +1,52 @@
+{{define "containers.html"}}{{template "base" .}}{{end}}
+
+{{define "content"}}
+{{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+{{if .Containers}}
+<section class="info-card">
+  <div class="card-header">Containers</div>
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead><tr>
+        <th>Name</th><th>Image</th><th>Status</th><th>CPU</th><th>Memory</th><th>Uptime</th>
+      </tr></thead>
+      <tbody>
+        {{range .Containers}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td class="text-muted">{{.Image}}</td>
+          <td>
+            <span class="iface-status {{if .Running}}iface-up{{else}}iface-down{{end}}"></span>
+            {{.Status}}
+          </td>
+          <td>
+            {{if gt .CPUPct 0}}
+            <div class="health-bar-track" style="width:80px">
+              <div class="health-bar-fill {{if gt .CPUPct 80}}is-crit{{else if gt .CPUPct 60}}is-warn{{end}}" style="width:{{.CPUPct}}%"></div>
+            </div>
+            {{.CPUPct}}%
+            {{else}}<span class="text-muted">—</span>{{end}}
+          </td>
+          <td>
+            {{if .MemUsed}}
+            <div class="health-bar-track" style="width:80px">
+              <div class="health-bar-fill {{if gt .MemPct 80}}is-crit{{else if gt .MemPct 60}}is-warn{{end}}" style="width:{{.MemPct}}%"></div>
+            </div>
+            {{.MemUsed}} / {{.MemLimit}}
+            {{else}}<span class="text-muted">—</span>{{end}}
+          </td>
+          <td class="text-muted">{{if .Uptime}}{{.Uptime}}{{else}}—{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{else if not .Error}}
+<section class="info-card">
+  <div class="card-header">Containers</div>
+  <p class="empty-message">No containers configured.</p>
+</section>
+{{end}}
+{{end}}

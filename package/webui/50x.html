@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Loading…</title>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="3">
+<style>
+  html { color-scheme: light dark; font-family: Tahoma, Verdana, Arial, sans-serif; }
+  body { max-width: 32em; margin: 4em auto; text-align: center; }
+  h1 { font-weight: 500; margin-bottom: 0.5em; }
+  p { color: #888; margin: 0.5em 0; }
+  .spinner {
+    display: inline-block;
+    width: 1.5em;
+    height: 1.5em;
+    margin-top: 1em;
+    border: 3px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: rot 1s linear infinite;
+  }
+  @keyframes rot { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<h1>Loading…</h1>
+<p>The device is finishing its startup. This page refreshes automatically.</p>
+<p><span class="spinner" aria-hidden="true"></span></p>
+</body>
+</html>

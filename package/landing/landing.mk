@@ -14,6 +14,8 @@ define LANDING_INSTALL_TARGET_CMDS
         mkdir -p $(TARGET_DIR)/usr/html/
 	cp $(@D)/*.html $(TARGET_DIR)/usr/html/
 	cp $(@D)/*.png  $(TARGET_DIR)/usr/html/
+	$(INSTALL) -D -m 0644 $(LANDING_PKGDIR)/default.conf \
+		$(TARGET_DIR)/etc/nginx/available/default.conf
 endef
 
 $(eval $(generic-package))

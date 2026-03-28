@@ -1,0 +1,46 @@
+{{define "interfaces.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Interfaces}}
+<section class="info-card">
+  <div class="card-header">Interfaces</div>
+  <div class="data-table-wrap">
+    <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>MAC</th>
+        <th>Address</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Interfaces}}
+      <tr>
+        <td class="iface-name">{{if .Indent}}<span class="tree-pipe">{{.Indent}}</span>{{end}}<a href="/interfaces/{{.Name}}" hx-get="/interfaces/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
+        <td>{{.Type}}</td>
+        <td><span class="iface-status {{if .StatusUp}}iface-up{{else}}iface-down{{end}}"></span>{{.Status}}</td>
+        <td>{{.PhysAddr}}</td>
+        <td>{{range $i, $a := .Addresses}}{{if $i}}<br>{{end}}{{$a.Address}}{{if $a.Origin}} <span class="addr-origin">({{$a.Origin}})</span>{{end}}{{end}}</td>
+        <td>{{.Detail}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{else if not .Error}}
+<section class="info-card">
+  <div class="card-header">Interfaces</div>
+  <p class="empty-message">No interfaces found.</p>
+</section>
+{{end}}
+{{end}}
