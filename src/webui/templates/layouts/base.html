@@ -1,0 +1,36 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{.CsrfToken}}">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  <title>{{if .PageTitle}}{{.PageTitle}} — {{end}}Infix</title>
+  <link rel="icon" type="image/png" href="/assets/img/jack.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/htmx.min.js"></script>
+  <script src="/assets/js/app.js"></script>
+</head>
+<body hx-boost="true">
+  <div id="conn-banner" class="conn-banner" hidden>Device unreachable</div>
+  <div class="topbar">
+    <div class="logo-area topbar-left"></div>
+    <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+  <div class="layout">
+    {{template "sidebar" .}}
+    <main id="content">
+      {{block "content" .}}{{end}}
+    </main>
+  </div>
+</body>
+</html>
+{{end}}

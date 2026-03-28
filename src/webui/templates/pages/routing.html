@@ -1,0 +1,113 @@
+{{define "routing.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="page-content">
+  <h1 class="page-title">Routing</h1>
+  {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+  <div class="info-card">
+    <h2>Routing Table</h2>
+    {{if .Routes}}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Destination</th>
+          <th>Next Hop</th>
+          <th>Protocol</th>
+          <th>Preference</th>
+          <th>Active</th>
+        </tr></thead>
+        <tbody>
+          {{range .Routes}}
+          <tr>
+            <td class="num">{{.DestPrefix}}</td>
+            <td>{{if .NextHopAddr}}{{.NextHopAddr}}{{else}}{{.NextHopIface}}{{end}}</td>
+            <td>
+              {{if eq .Protocol "ospfv2"}}<span class="zone-badge" style="background:var(--blue-500);color:#fff">ospfv2</span>
+              {{else if eq .Protocol "static"}}<span class="zone-badge" style="background:var(--slate-500);color:#fff">static</span>
+              {{else if eq .Protocol "kernel"}}<span class="zone-badge" style="background:var(--slate-400);color:#fff">kernel</span>
+              {{else if eq .Protocol "direct"}}<span class="zone-badge" style="background:var(--green-500);color:#fff">direct</span>
+              {{else}}<span class="zone-badge">{{.Protocol}}</span>{{end}}
+            </td>
+            <td class="num">{{.Preference}}</td>
+            <td>{{if .Active}}<span class="iface-status iface-up"></span>{{else}}<span class="iface-status iface-down"></span>{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="text-muted">No routes found.</p>
+    {{end}}
+  </div>
+
+  {{if .HasOSPF}}
+  <div class="info-card">
+    <h2>OSPF Neighbors</h2>
+    {{if .OSPFNeighbors}}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Router ID</th>
+          <th>State</th>
+          <th>Role</th>
+          <th>Interface</th>
+          <th>Uptime</th>
+        </tr></thead>
+        <tbody>
+          {{range .OSPFNeighbors}}
+          <tr>
+            <td class="num">{{.RouterID}}</td>
+            <td>{{.State}}</td>
+            <td>{{.Role}}</td>
+            <td>{{.Interface}}</td>
+            <td>{{.Uptime}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="text-muted">No OSPF neighbors.</p>
+    {{end}}
+  </div>
+
+  <div class="info-card">
+    <h2>OSPF Interfaces</h2>
+    {{if .OSPFIfaces}}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Name</th>
+          <th>State</th>
+          <th>Cost</th>
+          <th>DR</th>
+          <th>BDR</th>
+        </tr></thead>
+        <tbody>
+          {{range .OSPFIfaces}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{.State}}</td>
+            <td class="num">{{.Cost}}</td>
+            <td class="num">{{.DR}}</td>
+            <td class="num">{{.BDR}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="text-muted">No OSPF interfaces.</p>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="info-card">
+    <h2>OSPF</h2>
+    <p class="text-muted">OSPF is not configured on this device.</p>
+  </div>
+  {{end}}
+</div>
+{{end}}

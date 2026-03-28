@@ -1,0 +1,74 @@
+{{define "ntp.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .NTP}}
+<section class="info-card">
+  <h2>NTP</h2>
+  <table class="info-table">
+    <tr>
+      <th>Sync Status</th>
+      <td>
+        <span class="status-dot {{if .NTP.Synchronized}}status-up{{else}}status-down{{end}}"></span>
+        {{if .NTP.Synchronized}}Synchronized{{else}}Not Synchronized{{end}}
+      </td>
+    </tr>
+    {{if .NTP.Stratum}}
+    <tr><th>Stratum</th><td class="num">{{.NTP.Stratum}}</td></tr>
+    {{end}}
+    {{if .NTP.RefID}}
+    <tr><th>Reference ID</th><td class="num">{{.NTP.RefID}}</td></tr>
+    {{end}}
+    {{if .NTP.Offset}}
+    <tr><th>Offset</th><td class="num">{{.NTP.Offset}}</td></tr>
+    {{end}}
+    {{if .NTP.RootDelay}}
+    <tr><th>Root Delay</th><td class="num">{{.NTP.RootDelay}}</td></tr>
+    {{end}}
+  </table>
+
+  {{if .NTP.Associations}}
+  <h3 class="section-subtitle">Associations</h3>
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Server</th>
+          <th class="num">Stratum</th>
+          <th>Ref ID</th>
+          <th class="num">Reach</th>
+          <th class="num">Poll (s)</th>
+          <th class="num">Offset</th>
+          <th class="num">Delay</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .NTP.Associations}}
+        <tr>
+          <td>{{.Address}}</td>
+          <td class="num">{{.Stratum}}</td>
+          <td class="num">{{.RefID}}</td>
+          <td class="num">{{.Reach}}</td>
+          <td class="num">{{.Poll}}</td>
+          <td class="num">{{.Offset}}</td>
+          <td class="num">{{.Delay}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="text-muted">No associations.</p>
+  {{end}}
+</section>
+{{else if not .Error}}
+<section class="info-card">
+  <p class="text-muted">NTP data not available.</p>
+</section>
+{{end}}
+{{end}}

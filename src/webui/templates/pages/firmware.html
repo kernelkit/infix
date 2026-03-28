@@ -1,0 +1,69 @@
+{{define "firmware.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Message}}
+<div class="alert alert-info">{{.Message}}</div>
+{{end}}
+
+{{if .Installer}}{{if .Installer.Active}}
+<section class="info-card" hx-get="/firmware" hx-trigger="every 3s" hx-target="#content">
+  <div class="card-header">Install in Progress</div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" data-progress="{{.Installer.Percentage}}"></div>
+  </div>
+  <p class="progress-text">{{.Installer.Percentage}}% — {{.Installer.Message}}</p>
+</section>
+{{end}}{{end}}
+
+{{if .Installer}}{{if .Installer.LastError}}
+<div class="alert alert-error">Last error: {{.Installer.LastError}}</div>
+{{end}}{{end}}
+
+<section class="info-card">
+  <div class="card-header">Firmware Slots</div>
+  {{if .Slots}}
+  <div class="data-table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Slot</th>
+        <th>State</th>
+        <th>Version</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Slots}}
+      <tr>
+        <td>{{.Name}}{{if .BootName}} ({{.BootName}}){{end}}{{if .Booted}} <span class="badge badge-accept">booted</span>{{end}}</td>
+        <td>{{.State}}</td>
+        <td>{{if .Version}}{{.Version}}{{else}}-{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <p class="empty-message">No firmware slot information available.</p>
+  {{end}}
+</section>
+
+<section class="info-card">
+  <div class="card-header">Install Firmware</div>
+  <form hx-post="/firmware/install" hx-swap="none" class="firmware-form">
+    <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+    <div class="form-group">
+      <label for="fw-url">Bundle URL</label>
+      <input type="url" id="fw-url" name="url" placeholder="https://example.com/firmware.raucb" required>
+    </div>
+    <button type="submit" class="btn btn-primary"
+            hx-confirm="Install firmware from this URL?"
+            {{if .Installer}}{{if .Installer.Active}}disabled{{end}}{{end}}>Install</button>
+  </form>
+</section>
+{{end}}

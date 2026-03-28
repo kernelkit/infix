@@ -1,0 +1,155 @@
+{{define "iface-detail.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="iface-detail-header">
+  <a href="/interfaces" hx-get="/interfaces" hx-target="#content" hx-push-url="true" class="back-link">&larr; Interfaces</a>
+  <h2>{{.Name}}</h2>
+</div>
+
+<div class="info-grid">
+  <section class="info-card">
+    <div class="card-header">Interface Info</div>
+    <table class="info-table">
+      <tr><th>Name</th><td>{{.Name}}</td></tr>
+      <tr><th>Type</th><td>{{.Type}}</td></tr>
+      <tr><th>Index</th><td>{{.IfIndex}}</td></tr>
+      <tr>
+        <th>Status</th>
+        <td><span class="status-dot {{if .StatusUp}}status-up{{else}}status-down{{end}}"></span>{{.Status}}</td>
+      </tr>
+      {{if .PhysAddr}}<tr><th>MAC Address</th><td>{{.PhysAddr}}</td></tr>{{end}}
+      {{if .MTU}}<tr><th>MTU</th><td>{{.MTU}}</td></tr>{{end}}
+      {{if .Speed}}<tr><th>Speed</th><td>{{.Speed}}</td></tr>{{end}}
+      {{if .Duplex}}<tr><th>Duplex</th><td>{{.Duplex}}</td></tr>{{end}}
+      {{if .AutoNeg}}<tr><th>Auto-negotiation</th><td>{{.AutoNeg}}</td></tr>{{end}}
+      {{if .WiFiMode}}<tr><th>Mode</th><td>{{.WiFiMode}}</td></tr>{{end}}
+      {{if .WiFiSSID}}<tr><th>SSID</th><td>{{.WiFiSSID}}</td></tr>{{end}}
+      {{if .WiFiSignal}}<tr><th>Signal</th><td>{{.WiFiSignal}}</td></tr>{{end}}
+      {{if .WiFiRxSpeed}}<tr><th>RX Speed</th><td>{{.WiFiRxSpeed}}</td></tr>{{end}}
+      {{if .WiFiTxSpeed}}<tr><th>TX Speed</th><td>{{.WiFiTxSpeed}}</td></tr>{{end}}
+      {{if .WiFiStationCount}}<tr><th>Connected Stations</th><td>{{.WiFiStationCount}}</td></tr>{{end}}
+      {{if .WGPeerSummary}}<tr><th>Peers</th><td>{{.WGPeerSummary}}</td></tr>{{end}}
+    </table>
+    {{if .Addresses}}
+    <h3>Addresses</h3>
+    <table class="info-table">
+      {{range .Addresses}}
+      <tr>
+        <td>{{.Address}}{{if .Origin}} <span class="addr-origin">({{.Origin}})</span>{{end}}</td>
+      </tr>
+      {{end}}
+    </table>
+    {{end}}
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Counters</div>
+    {{template "iface-counters" .}}
+  </section>
+</div>
+
+{{if .WiFiStations}}
+<section class="info-card">
+  <div class="card-header">Connected Stations</div>
+  <div class="data-table-wrap">
+    <table class="data-table">
+    <thead>
+      <tr>
+        <th>MAC</th>
+        <th>Signal</th>
+        <th>Time</th>
+        <th>RX Pkts</th>
+        <th>TX Pkts</th>
+        <th>RX Bytes</th>
+        <th>TX Bytes</th>
+        <th>RX Speed</th>
+        <th>TX Speed</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .WiFiStations}}
+      <tr>
+        <td>{{.MAC}}</td>
+        <td>{{if .Signal}}<span class="signal-{{.SignalCSS}}">{{.Signal}}</span>{{end}}</td>
+        <td>{{.Time}}</td>
+        <td class="num">{{.RxPkts}}</td>
+        <td class="num">{{.TxPkts}}</td>
+        <td class="num">{{.RxBytes}}</td>
+        <td class="num">{{.TxBytes}}</td>
+        <td class="num">{{.RxSpeed}}</td>
+        <td class="num">{{.TxSpeed}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{end}}
+
+{{if .ScanResults}}
+<section class="info-card">
+  <div class="card-header">Scan Results</div>
+  <div class="data-table-wrap">
+    <table class="data-table">
+    <thead>
+      <tr>
+        <th>SSID</th>
+        <th>BSSID</th>
+        <th>Signal</th>
+        <th>Channel</th>
+        <th>Security</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .ScanResults}}
+      <tr>
+        <td>{{if .SSID}}{{.SSID}}{{else}}<em>Hidden</em>{{end}}</td>
+        <td>{{.BSSID}}</td>
+        <td>{{if .Signal}}<span class="signal-{{.SignalCSS}}">{{.Signal}}</span>{{end}}</td>
+        <td>{{.Channel}}</td>
+        <td>{{.Encryption}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{end}}
+
+{{if .WGPeers}}
+<section class="info-card">
+  <div class="card-header">WireGuard Peers</div>
+  {{range .WGPeers}}
+  <div class="wg-peer">
+    <table class="info-table">
+      <tr><th>Public Key</th><td class="key-full">{{.PublicKey}}</td></tr>
+      <tr>
+        <th>Status</th>
+        <td><span class="iface-status {{if .StatusUp}}iface-up{{else}}iface-down{{end}}"></span>{{.Status}}</td>
+      </tr>
+      {{if .Endpoint}}<tr><th>Endpoint</th><td>{{.Endpoint}}</td></tr>{{end}}
+      {{if .Handshake}}<tr><th>Latest Handshake</th><td>{{.Handshake}}</td></tr>{{end}}
+      {{if .TxBytes}}<tr><th>Transfer TX</th><td class="num">{{.TxBytes}}</td></tr>{{end}}
+      {{if .RxBytes}}<tr><th>Transfer RX</th><td class="num">{{.RxBytes}}</td></tr>{{end}}
+    </table>
+  </div>
+  {{end}}
+</section>
+{{end}}
+
+{{if .EthFrameStats}}
+<section class="info-card">
+  <div class="card-header">Ethernet Frame Statistics</div>
+  <dl class="eth-stats">
+    {{range .EthFrameStats}}
+    <div class="eth-stats-row">
+      <dt>{{.Key}}</dt>
+      <dd class="num">{{.Value}}</dd>
+    </div>
+    {{end}}
+  </dl>
+</section>
+{{end}}
+{{end}}

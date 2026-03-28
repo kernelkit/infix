@@ -1,0 +1,45 @@
+{{define "iface-counters"}}
+<div id="iface-counters" hx-get="/interfaces/{{.Name}}/counters" hx-trigger="every 5s" hx-swap="outerHTML">
+  <table class="counters-table">
+    <thead>
+      <tr>
+        <th>Counter</th>
+        <th>RX</th>
+        <th>TX</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Bytes</td>
+        <td class="num">{{.Counters.RxBytes}}</td>
+        <td class="num">{{.Counters.TxBytes}}</td>
+      </tr>
+      <tr>
+        <td>Unicast</td>
+        <td class="num">{{.Counters.RxUnicast}}</td>
+        <td class="num">{{.Counters.TxUnicast}}</td>
+      </tr>
+      <tr>
+        <td>Broadcast</td>
+        <td class="num">{{.Counters.RxBroadcast}}</td>
+        <td class="num">{{.Counters.TxBroadcast}}</td>
+      </tr>
+      <tr>
+        <td>Multicast</td>
+        <td class="num">{{.Counters.RxMulticast}}</td>
+        <td class="num">{{.Counters.TxMulticast}}</td>
+      </tr>
+      <tr>
+        <td>Discards</td>
+        <td class="num">{{.Counters.RxDiscards}}</td>
+        <td class="num">{{.Counters.TxDiscards}}</td>
+      </tr>
+      <tr>
+        <td>Errors</td>
+        <td class="num">{{.Counters.RxErrors}}</td>
+        <td class="num">{{.Counters.TxErrors}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{{end}}

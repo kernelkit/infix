@@ -1,0 +1,175 @@
+{{define "sidebar"}}
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <img src="/assets/img/logo.png" alt="Infix" class="sidebar-logo">
+  </div>
+  <ul class="sidebar-nav">
+    <li class="nav-section-header">Network</li>
+    <li>
+      <a href="/"
+         hx-get="/"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "dashboard"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/dashboard.svg')"></span>
+        Dashboard
+      </a>
+    </li>
+    <li>
+      <a href="/interfaces"
+         hx-get="/interfaces"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "interfaces"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/interfaces.svg')"></span>
+        Interfaces
+      </a>
+    </li>
+    <li>
+      <a href="/routing"
+         hx-get="/routing"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "routing"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/routing.svg')"></span>
+        Routing
+      </a>
+    </li>
+    <li>
+      <a href="/firewall"
+         hx-get="/firewall"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "firewall"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
+        Firewall
+      </a>
+    </li>
+
+    {{if and .Capabilities (.Capabilities.Has "wifi")}}
+    <li class="nav-section-header">Wireless</li>
+    <li>
+      <a href="/wifi"
+         hx-get="/wifi"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "wifi"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/wifi.svg')"></span>
+        WiFi
+      </a>
+    </li>
+    {{end}}
+
+    <li class="nav-section-header">VPN</li>
+    <li>
+      <a href="/vpn"
+         hx-get="/vpn"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "vpn"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/wireguard.svg')"></span>
+        WireGuard
+      </a>
+    </li>
+
+    <li class="nav-section-header">Services</li>
+    <li>
+      <a href="/dhcp"
+         hx-get="/dhcp"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "dhcp"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/dhcp.svg')"></span>
+        DHCP
+      </a>
+    </li>
+    <li>
+      <a href="/ntp"
+         hx-get="/ntp"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "ntp"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/ntp.svg')"></span>
+        NTP
+      </a>
+    </li>
+    <li>
+      <a href="/lldp"
+         hx-get="/lldp"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "lldp"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/lldp.svg')"></span>
+        LLDP
+      </a>
+    </li>
+
+    <li class="nav-section-header">System</li>
+    {{if and .Capabilities (.Capabilities.Has "containers")}}
+    <li>
+      <a href="/containers"
+         hx-get="/containers"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "containers"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/containers.svg')"></span>
+        Containers
+      </a>
+    </li>
+    {{end}}
+    <li>
+      <a href="/firmware"
+         hx-get="/firmware"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "firmware"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/firmware.svg')"></span>
+        Firmware
+      </a>
+    </li>
+    <li>
+      <a href="/keystore"
+         hx-get="/keystore"
+         hx-target="#content"
+         hx-push-url="true"
+         class="nav-link {{if eq .ActivePage "keystore"}}active{{end}}">
+        <span class="nav-icon" style="--icon: url('/assets/img/icons/keystore.svg')"></span>
+        Keystore
+      </a>
+    </li>
+  </ul>
+  <div class="sidebar-footer">
+    <button id="theme-toggle" class="btn btn-sidebar-action theme-toggle" aria-label="Toggle theme">
+      <svg id="icon-auto" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path>
+      </svg>
+      <svg id="icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+      <svg id="icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+      <span>Theme</span>
+    </button>
+    <a href="/config" class="btn btn-sidebar-action" hx-boost="false" download>Download Config</a>
+    <button class="btn btn-sidebar-action btn-danger-hover"
+            hx-post="/reboot"
+            hx-confirm="Reboot the device?"
+            hx-target="#content"
+            hx-swap="innerHTML">Reboot</button>
+    <form method="POST" action="/logout">
+      <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+      <button type="submit" class="btn btn-logout">Logout</button>
+    </form>
+  </div>
+</nav>
+{{end}}
