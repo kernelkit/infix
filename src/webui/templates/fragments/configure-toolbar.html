@@ -1,0 +1,18 @@
+{{define "configure-toolbar"}}
+<div class="configure-toolbar">
+  <div class="configure-toolbar-inner">
+    <button type="button" class="btn btn-primary cfg-apply-btn"
+            hx-post="/configure/apply"
+            hx-swap="none"
+            hx-confirm="Apply all staged changes to the running configuration?">
+      Apply
+    </button>
+    <button type="button" class="btn btn-danger-outline cfg-abort-btn"
+            hx-post="/configure/abort"
+            hx-swap="none"
+            hx-confirm="Discard all staged changes and return to Status?">
+      Abort
+    </button>
+  </div>
+</div>
+{{end}}

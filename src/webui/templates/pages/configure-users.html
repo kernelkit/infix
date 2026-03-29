@@ -1,0 +1,178 @@
+{{define "configure-users.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  {{/* ── Users ───────────────────────────────────────────────────────── */}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Users</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Shell</th>
+            <th style="text-align:center">SSH Keys</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $u := .Users}}
+          <tr>
+            <td>
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="user-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Name}}
+              </button>
+            </td>
+            <td>
+              <form hx-post="/configure/users/{{.Name}}/shell" hx-swap="none"
+                    class="user-shell-form">
+                <select class="cfg-input" name="shell">
+                  <option value="infix-system:clish" {{if eq .Shell "infix-system:clish"}}selected{{end}}>CLI Shell</option>
+                  <option value="infix-system:bash"  {{if eq .Shell "infix-system:bash" }}selected{{end}}>Bash</option>
+                  <option value="infix-system:sh"    {{if eq .Shell "infix-system:sh"   }}selected{{end}}>Sh</option>
+                  <option value="infix-system:false" {{if eq .Shell "infix-system:false"}}selected{{end}}>Disabled</option>
+                </select>
+                <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                <span class="cfg-save-status"></span>
+              </form>
+            </td>
+            <td style="text-align:center">{{.KeyCount}}</td>
+            <td style="text-align:right">
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/users/{{.Name}}"
+                      hx-confirm="Delete user {{.Name}}?"
+                      hx-swap="none"
+                      title="Delete user">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-user-{{$i}}">
+            <td colspan="4" class="key-detail-cell">
+              <div class="key-detail-body">
+
+                {{/* Change password */}}
+                <form hx-post="/configure/users/{{.Name}}/password" hx-swap="none">
+                  <div class="section-subtitle">Change Password</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>New password</th>
+                      <td><input class="cfg-input" type="password" name="password"
+                                 autocomplete="new-password"
+                                 placeholder="Leave blank to keep current"></td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Change Password</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+
+                {{/* Authorized SSH keys */}}
+                <div>
+                  <div class="section-subtitle">Authorized SSH Keys ({{.KeyCount}})</div>
+                  {{if .AuthorizedKeys}}
+                  <div class="data-table-wrap">
+                    <table class="data-table cfg-table">
+                      <thead>
+                        <tr><th>Name</th><th>Algorithm</th><th></th></tr>
+                      </thead>
+                      <tbody>
+                        {{range .AuthorizedKeys}}
+                        <tr>
+                          <td>{{.Name}}</td>
+                          <td>{{.Algorithm}}</td>
+                          <td style="text-align:right">
+                            <button type="button" class="btn-icon btn-icon-danger"
+                                    hx-delete="/configure/users/{{$u.Name}}/keys/{{.Name}}"
+                                    hx-confirm="Remove key {{.Name}}?"
+                                    hx-swap="none"
+                                    title="Remove key">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                   stroke="currentColor" stroke-width="2"
+                                   stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
+                  </div>
+                  {{end}}
+                  <form hx-post="/configure/users/{{.Name}}/keys" hx-swap="none"
+                        style="margin-top:0.5rem">
+                    <table class="info-table">
+                      <tr>
+                        <th>Key name</th>
+                        <td><input class="cfg-input" type="text" name="key_name"
+                                   placeholder="e.g. laptop"></td>
+                      </tr>
+                      <tr>
+                        <th>Public key</th>
+                        <td><textarea class="cfg-input cfg-input-mono" name="key_data" rows="3"
+                                      placeholder="ssh-rsa AAAA… or ssh-ed25519 AAAA…"></textarea></td>
+                      </tr>
+                    </table>
+                    <div class="cfg-card-footer" style="padding-left:0">
+                      <button class="btn btn-primary btn-sm" type="submit">Add Key</button>
+                      <span class="cfg-save-status"></span>
+                    </div>
+                  </form>
+                </div>
+
+              </div>
+            </td>
+          </tr>
+          {{end}}
+
+          {{/* Hidden add-user row — revealed by the + Add user button */}}
+          <tr id="add-user-row" hidden>
+            <td colspan="4" class="key-detail-cell">
+              <form hx-post="/configure/users" hx-swap="none" class="user-add-inline">
+                <input class="cfg-input" type="text" name="username" required
+                       pattern="[a-zA-Z0-9_][a-zA-Z0-9_.-]*" placeholder="Username">
+                <input class="cfg-input" type="password" name="password" required
+                       autocomplete="new-password" placeholder="Password">
+                <select class="cfg-input" name="shell">
+                  <option value="infix-system:clish">CLI Shell</option>
+                  <option value="infix-system:bash">Bash</option>
+                  <option value="infix-system:sh">Sh</option>
+                  <option value="infix-system:false">Disabled</option>
+                </select>
+                <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                <button type="button" class="btn btn-sm" data-hide="add-user-row">Cancel</button>
+                <span class="cfg-save-status"></span>
+              </form>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-show="add-user-row">+ Add user</button>
+    </div>
+  </section>
+
+</section>
+
+{{template "configure-toolbar" .}}
+</div>
+{{end}}

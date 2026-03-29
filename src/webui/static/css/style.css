@@ -1920,3 +1920,150 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
 @media (max-width: 480px) {
   .col-priority-3 { display: none; }
 }
+
+/* ─── Confirm dialog ──────────────────────────────────────────────────────── */
+#confirm-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--fg);
+  padding: 1.5rem 2rem 1.25rem;
+  min-width: 20rem;
+  max-width: 90vw;
+  box-shadow: var(--shadow);
+  /* Centre in the viewport regardless of scroll position */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}
+#confirm-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+.dialog-message {
+  font-size: 0.95rem;
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+.dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+.btn-outline {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover { background: var(--border); }
+.btn-danger-outline {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+.btn-danger-outline:hover { background: rgba(220, 38, 38, 0.08); }
+
+/* ─── Configure toolbar ───────────────────────────────────────────────────── */
+.configure-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-width, 220px);
+  right: 0;
+  z-index: 200;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+}
+.configure-toolbar-inner {
+  display: flex;
+  gap: 0.75rem;
+  max-width: 960px;
+}
+/* Push page content above the toolbar */
+.configure-page { padding-bottom: 4rem; }
+
+/* ─── Editable form inputs inside cards ───────────────────────────────────── */
+.cfg-input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.cfg-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.cfg-input-sm { max-width: 8rem; }
+.cfg-input-mono { font-family: var(--font-mono); font-size: 0.85rem; }
+
+/* Editable table rows */
+.cfg-table td { padding: 0.45rem 0.75rem; vertical-align: middle; }
+.cfg-table td:last-child { width: 3rem; text-align: center; }
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  padding: 0;
+}
+.btn-icon:hover { background: var(--border); color: var(--fg); }
+.btn-icon-danger:hover { color: var(--danger); background: rgba(220,38,38,0.08); }
+.btn-add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+}
+.btn-add-row:hover { text-decoration: underline; }
+
+/* Inline forms inside users table */
+.user-shell-form, .user-add-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.user-shell-form .cfg-input { flex: 1; min-width: 0; }
+.user-add-inline .cfg-input { width: auto; flex: 1; min-width: 8rem; }
+
+/* Card-level save feedback */
+.cfg-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--border);
+}
+.cfg-save-status {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+  min-height: 1.2em;
+}
+.cfg-save-status.saved { color: #16a34a; }
+.cfg-save-error { font-size: 0.8rem; color: var(--danger); }
+@media (prefers-color-scheme: dark) {
+  .cfg-save-status.saved { color: #86efac; }
+}
+.dark .cfg-save-status.saved { color: #86efac; }
+.light .cfg-save-status.saved { color: #16a34a; }

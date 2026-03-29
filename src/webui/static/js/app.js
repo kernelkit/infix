@@ -156,9 +156,11 @@
     if (activeTopGroup) {
       document.querySelectorAll('details.nav-group-top').forEach(function(d) {
         if (d === activeTopGroup) {
-          d.setAttribute('open', '');
+          // Don't auto-open Configure: its toggle handler fires enterConfigure(),
+          // which must only happen on explicit user interaction, not on URL sync.
+          if (d.id !== 'nav-configure' && !d.open) d.open = true;
         } else {
-          d.removeAttribute('open');
+          if (d.open) d.open = false;
         }
       });
     }
@@ -292,21 +294,45 @@
 })();
 
 // Accordion nav group persistence
-// Top-level sections (Status / Configure / Maintenance) are mutually exclusive.
-// State is persisted in localStorage under 'nav-top:Name' keys.
+// Status and Maintenance persist open/closed state in localStorage.
+// Configure is excluded from persistence: its state is controlled by the
+// server template.  Configure's Enter POST (running→candidate) is fired
+// from JS the first time the accordion opens per page lifecycle.
 (function() {
   document.addEventListener('DOMContentLoaded', function() {
     var groups = document.querySelectorAll('details.nav-group-top');
+    var configureEntered = false;
 
-    // Restore saved state (HTML default: Status open, others closed)
+    // Fire Configure Enter POST once per page lifecycle (initialises the
+    // candidate datastore).  Called when the accordion is opened or when the
+    // page loads with the accordion already open (e.g. on a /configure/ page).
+    function enterConfigure() {
+      if (configureEntered) return;
+      configureEntered = true;
+      htmx.ajax('POST', '/configure/enter', {swap: 'none', target: document.body});
+    }
+
+    // If the Configure accordion is already open on page load, fire Enter now.
+    var configureDetails = document.getElementById('nav-configure');
+    if (configureDetails && configureDetails.open) {
+      enterConfigure();
+    }
+
+    // Restore saved state — skip Configure so it never auto-reopens on page load.
+    // When closing an accordion, don't close it if the active page is inside it
+    // (updateActiveNav has already run at this point and set .nav-link.active).
+    // Mark elements being programmatically restored so the toggle handler below
+    // skips auto-navigation for these synthetic toggles (toggle fires async).
     groups.forEach(function(d) {
+      if (d.id === 'nav-configure') return;
       var label = d.querySelector(':scope > summary');
       if (!label) return;
       var key = 'nav-top:' + label.textContent.trim();
       var saved = localStorage.getItem(key);
       if (saved === 'open') {
+        d.dataset.navRestoring = 'true';
         d.setAttribute('open', '');
-      } else if (saved === 'closed') {
+      } else if (saved === 'closed' && !d.querySelector('.nav-link.active')) {
         d.removeAttribute('open');
       }
     });
@@ -317,14 +343,26 @@
       if (!label) return;
       var key = 'nav-top:' + label.textContent.trim();
       d.addEventListener('toggle', function() {
-        localStorage.setItem(key, d.open ? 'open' : 'closed');
+        // Skip synthetic toggles fired during page-load state restoration.
+        if (d.dataset.navRestoring) {
+          delete d.dataset.navRestoring;
+          return;
+        }
+        if (d.id !== 'nav-configure') {
+          localStorage.setItem(key, d.open ? 'open' : 'closed');
+        }
         if (d.open) {
+          if (d.id === 'nav-configure') {
+            enterConfigure();
+          }
           groups.forEach(function(other) {
             if (other !== d && other.open) {
               other.removeAttribute('open');
-              var otherLabel = other.querySelector(':scope > summary');
-              if (otherLabel) {
-                localStorage.setItem('nav-top:' + otherLabel.textContent.trim(), 'closed');
+              if (other.id !== 'nav-configure') {
+                var otherLabel = other.querySelector(':scope > summary');
+                if (otherLabel) {
+                  localStorage.setItem('nav-top:' + otherLabel.textContent.trim(), 'closed');
+                }
               }
             }
           });
@@ -525,5 +563,150 @@
       var btn = form.querySelector('button[type="submit"]');
       if (btn) { btn.disabled = true; btn.textContent = 'Logging in\u2026'; }
     });
+  });
+})();
+
+// ─── Confirm dialog ────────────────────────────────────────────────────────
+// openModal(message, onConfirm) shows the shared <dialog> and calls onConfirm
+// if the user clicks Confirm, or does nothing on Cancel.
+function openModal(message, onConfirm) {
+  var dlg = document.getElementById('confirm-dialog');
+  var msg = document.getElementById('dialog-message');
+  var ok  = document.getElementById('dialog-confirm');
+  var no  = document.getElementById('dialog-cancel');
+  if (!dlg) { onConfirm(); return; } // fallback if dialog missing
+  msg.textContent = message;
+
+  function cleanup() {
+    ok.removeEventListener('click', handleOK);
+    no.removeEventListener('click', handleNo);
+    dlg.close();
+  }
+  function handleOK()  { cleanup(); onConfirm(); }
+  function handleNo()  { cleanup(); }
+
+  ok.addEventListener('click', handleOK);
+  no.addEventListener('click', handleNo);
+  dlg.showModal();
+}
+
+// ─── data-show / data-hide: toggle element visibility ──────────────────────
+(function() {
+  document.addEventListener('click', function(e) {
+    var show = e.target.closest('[data-show]');
+    if (show) {
+      var el = document.getElementById(show.getAttribute('data-show'));
+      if (el) { el.hidden = false; el.querySelector('input,select,textarea') && el.querySelector('input,select,textarea').focus(); }
+    }
+    var hide = e.target.closest('[data-hide]');
+    if (hide) {
+      var el = document.getElementById(hide.getAttribute('data-hide'));
+      if (el) el.hidden = true;
+    }
+  });
+})();
+
+// ─── Configure: dynamic list row add/delete ────────────────────────────────
+// Handles .btn-add-row (data-table, data-template) and .cfg-delete-row buttons.
+// Templates are keyed by data-template attribute value.
+(function () {
+  var rowTemplates = {
+    'ntp': function(i) {
+      return '<tr>' +
+        '<td><input class="cfg-input" type="text" name="ntp_name_' + i + '" required></td>' +
+        '<td><input class="cfg-input" type="text" name="ntp_addr_' + i + '"></td>' +
+        '<td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"' +
+             ' name="ntp_port_' + i + '" placeholder="123"></td>' +
+        '<td style="text-align:center"><input type="checkbox" name="ntp_prefer_' + i + '"></td>' +
+        '<td>' + deleteBtn() + '</td>' +
+        '</tr>';
+    },
+    'dns-search': function(i) {
+      return '<tr>' +
+        '<td><input class="cfg-input" type="text" name="dns_search_' + i + '"></td>' +
+        '<td>' + deleteBtn() + '</td>' +
+        '</tr>';
+    },
+    'dns-server': function(i) {
+      return '<tr>' +
+        '<td><input class="cfg-input" type="text" name="dns_name_' + i + '" required></td>' +
+        '<td><input class="cfg-input" type="text" name="dns_addr_' + i + '"></td>' +
+        '<td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"' +
+             ' name="dns_port_' + i + '" placeholder="53"></td>' +
+        '<td>' + deleteBtn() + '</td>' +
+        '</tr>';
+    }
+  };
+
+  function deleteBtn() {
+    return '<button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+      ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' +
+      '</svg></button>';
+  }
+
+  // Re-index all inputs in a tbody so names stay sequential after add/delete.
+  function renumber(tbody) {
+    tbody.querySelectorAll('tr').forEach(function(row, i) {
+      row.querySelectorAll('input').forEach(function(inp) {
+        inp.name = inp.name.replace(/_\d+$/, '_' + i);
+      });
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    var addBtn = e.target.closest('.btn-add-row');
+    if (addBtn) {
+      var tbodyId  = addBtn.getAttribute('data-table');
+      var tmplKey  = addBtn.getAttribute('data-template');
+      var tbody    = document.getElementById(tbodyId);
+      if (!tbody || !rowTemplates[tmplKey]) { return; }
+      var idx = tbody.querySelectorAll('tr').length;
+      tbody.insertAdjacentHTML('beforeend', rowTemplates[tmplKey](idx));
+      var newInput = tbody.querySelector('tr:last-child input');
+      if (newInput) { newInput.focus(); }
+      return;
+    }
+
+    var delBtn = e.target.closest('.cfg-delete-row');
+    if (delBtn) {
+      var row   = delBtn.closest('tr');
+      var tbody = row && row.closest('tbody');
+      if (row) { row.remove(); }
+      if (tbody) { renumber(tbody); }
+    }
+  });
+})();
+
+// ─── Configure toolbar ─────────────────────────────────────────────────────
+// Intercept HTMX's confirm event for Apply/Abort buttons and show the custom
+// modal instead of the browser native confirm.  The server responds with
+// HX-Redirect: / so HTMX performs a full-page navigation (window.location.href),
+// which re-renders the sidebar and clears the Configure accordion.
+(function () {
+  document.addEventListener('htmx:confirm', function(e) {
+    var btn = e.detail.elt;
+    if (!btn || (!btn.classList.contains('cfg-apply-btn') && !btn.classList.contains('cfg-abort-btn'))) return;
+    e.preventDefault();
+    openModal(e.detail.question, function() {
+      e.detail.issueRequest(true);
+    });
+  });
+
+  // Show "Saved ✓" feedback when a card Save succeeds.
+  document.addEventListener('cfgSaved', function(e) {
+    var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';
+    // Find the status span closest to the form that triggered the event.
+    var form = e.target && e.target.closest('form');
+    var span = form ? form.querySelector('.cfg-save-status') : null;
+    if (span) {
+      span.textContent = '✓ ' + msg;
+      span.classList.add('saved');
+      setTimeout(function() {
+        span.textContent = '';
+        span.classList.remove('saved');
+      }, 3000);
+    }
   });
 })();
