@@ -26,8 +26,8 @@
     <div class="card-header">Runtime</div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
-        {{if .Uptime}}<tr><th>Uptime</th><td>{{.Uptime}}</td></tr>{{end}}
-        {{if .CurrentTime}}<tr><th>Current Time</th><td>{{.CurrentTime}}</td></tr>{{end}}
+        {{if .Uptime}}<tr><th>Uptime</th><td><span class="num">{{.Uptime}}</span></td></tr>{{end}}
+        {{if .CurrentTime}}<tr><th>Current Time</th><td><span class="num">{{.CurrentTime}}</span></td></tr>{{end}}
         {{if .MemTotal}}
         <tr>
           <th>Memory</th>

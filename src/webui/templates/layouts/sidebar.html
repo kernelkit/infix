@@ -17,7 +17,7 @@
              hx-push-url="true"
              class="nav-link {{if eq .ActivePage "dashboard"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/dashboard.svg')"></span>
-            Dashboard
+            Overview
           </a>
         </li>
         {{if and .Capabilities (.Capabilities.Has "containers")}}
@@ -66,16 +66,6 @@
             Routing
           </a>
         </li>
-        <li>
-          <a href="/firewall"
-             hx-get="/firewall"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "firewall"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
-            Firewall
-          </a>
-        </li>
         {{if and .Capabilities (.Capabilities.Has "wifi")}}
         <li>
           <a href="/wifi"
@@ -88,6 +78,20 @@
           </a>
         </li>
         {{end}}
+      </ul>
+
+      <div class="nav-section-label">Security</div>
+      <ul class="nav-group-items">
+        <li>
+          <a href="/firewall"
+             hx-get="/firewall"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "firewall"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
+            Firewall
+          </a>
+        </li>
         <li>
           <a href="/vpn"
              hx-get="/vpn"
@@ -99,23 +103,13 @@
           </a>
         </li>
         <li>
-          <a href="/lldp"
-             hx-get="/lldp"
+          <a href="/nacm"
+             hx-get="/nacm"
              hx-target="#content"
              hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "lldp"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/lldp.svg')"></span>
-            LLDP
-          </a>
-        </li>
-        <li>
-          <a href="/mdns"
-             hx-get="/mdns"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "mdns"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/mdns.svg')"></span>
-            mDNS
+             class="nav-link {{if eq .ActivePage "nacm"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/nacm.svg')"></span>
+            NACM
           </a>
         </li>
       </ul>
@@ -150,6 +144,26 @@
              class="nav-link {{if eq .ActivePage "ntp"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/ntp.svg')"></span>
             NTP
+          </a>
+        </li>
+        <li>
+          <a href="/lldp"
+             hx-get="/lldp"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "lldp"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/lldp.svg')"></span>
+            LLDP
+          </a>
+        </li>
+        <li>
+          <a href="/mdns"
+             hx-get="/mdns"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "mdns"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/mdns.svg')"></span>
+            mDNS
           </a>
         </li>
       </ul>

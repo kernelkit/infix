@@ -246,7 +246,7 @@ type DashboardHandler struct {
 // Index renders the dashboard (GET /).
 func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	data := dashboardData{
-		PageData: newPageData(r, "dashboard", "Dashboard"),
+		PageData: newPageData(r, "dashboard", "Overview"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive
