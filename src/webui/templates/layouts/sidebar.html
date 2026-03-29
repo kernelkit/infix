@@ -123,6 +123,16 @@
       <div class="nav-section-label">Services</div>
       <ul class="nav-group-items">
         <li>
+          <a href="/services"
+             hx-get="/services"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "services"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/services.svg')"></span>
+            Services
+          </a>
+        </li>
+        <li>
           <a href="/dhcp"
              hx-get="/dhcp"
              hx-target="#content"
