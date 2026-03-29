@@ -1119,6 +1119,59 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
 .light .badge-info    { background: #dbeafe; color: #1e40af; }
 .light .badge-neutral { background: var(--slate-100); color: var(--slate-600); }
 
+/* mDNS service chips — self-contained, no .badge inheritance */
+.mdns-svc {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  background: var(--slate-100);
+  color: var(--slate-600);
+}
+.mdns-svc-link {
+  background: #2563eb;
+  color: #ffffff;
+  text-decoration: none;
+}
+.mdns-svc-link:hover { background: #1d4ed8; color: #ffffff; }
+@media (prefers-color-scheme: dark) {
+  .mdns-svc      { background: var(--slate-800); color: var(--slate-400); }
+  .mdns-svc-link { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+  .mdns-svc-link:hover { background: rgba(59, 130, 246, 0.35); color: #93c5fd; }
+}
+.dark .mdns-svc      { background: var(--slate-800); color: var(--slate-400); }
+.dark .mdns-svc-link { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+.dark .mdns-svc-link:hover { background: rgba(59, 130, 246, 0.35); color: #93c5fd; }
+.light .mdns-svc      { background: var(--slate-100); color: var(--slate-600); }
+.light .mdns-svc-link { background: #2563eb; color: #ffffff; }
+.light .mdns-svc-link:hover { background: #1d4ed8; color: #ffffff; }
+
+/* mDNS extra-address rows — hidden until toggle */
+.mdns-extra-row { display: none; }
+.mdns-extra-addr { color: var(--fg-muted); padding-top: 0.1rem; padding-bottom: 0.1rem; }
+
+/* mDNS toggle column and chevron button */
+.mdns-toggle-col { width: 1.5rem; min-width: 1.5rem; padding: 0 0.25rem !important; text-align: center; }
+.data-table td.mdns-toggle-col,
+.data-table th.mdns-toggle-col { vertical-align: middle; }
+.mdns-addr-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+.mdns-addr-toggle[aria-expanded="true"] .mdns-addr-arrow {
+  display: inline-block;
+  transform: rotate(90deg);
+}
+
+.mdns-lastseen { white-space: nowrap; }
+
 /* Sub-heading within a card body (e.g. "Active Leases" in DHCP) */
 .section-subtitle {
   font-size: 0.75rem;

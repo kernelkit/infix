@@ -77,6 +77,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	mdnsTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/mdns.html")
+	if err != nil {
+		return nil, err
+	}
 	containersTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/containers.html")
 	if err != nil {
 		return nil, err
@@ -121,6 +125,7 @@ func New(
 	dhcp := &handlers.DHCPHandler{Template: dhcpTmpl, RC: rc}
 	ntp := &handlers.NTPHandler{Template: ntpTmpl, RC: rc}
 	lldp := &handlers.LLDPHandler{Template: lldpTmpl, RC: rc}
+	mdns := &handlers.MDNSHandler{Template: mdnsTmpl, RC: rc}
 	containers := &handlers.ContainersHandler{Template: containersTmpl, RC: rc}
 
 	mux := http.NewServeMux()
@@ -152,6 +157,7 @@ func New(
 	mux.HandleFunc("GET /dhcp", dhcp.Overview)
 	mux.HandleFunc("GET /ntp", ntp.Overview)
 	mux.HandleFunc("GET /lldp", lldp.Overview)
+	mux.HandleFunc("GET /mdns", mdns.Overview)
 	mux.HandleFunc("GET /containers", containers.Overview)
 
 	handler := authMiddleware(store, mux)

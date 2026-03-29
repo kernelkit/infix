@@ -108,6 +108,16 @@
             LLDP
           </a>
         </li>
+        <li>
+          <a href="/mdns"
+             hx-get="/mdns"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "mdns"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/mdns.svg')"></span>
+            mDNS
+          </a>
+        </li>
       </ul>
 
       <div class="nav-section-label">Services</div>

@@ -1,0 +1,77 @@
+{{define "mdns.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  <div class="info-card">
+    <div class="card-header">mDNS Status</div>
+    <table class="info-table">
+      <tr>
+        <th>mDNS</th>
+        <td>
+          <span class="iface-status {{if .Enabled}}iface-up{{else}}iface-down{{end}}"></span>
+          {{.EnabledText}}
+        </td>
+      </tr>
+      <tr><th>Domain</th><td>{{.Domain}}</td></tr>
+      {{if .Allow}}<tr><th>Allow</th><td>{{.Allow}}</td></tr>{{end}}
+      {{if .Deny}}<tr><th>Deny</th><td>{{.Deny}}</td></tr>{{end}}
+      {{if .Reflector}}
+      <tr>
+        <th>Reflector</th>
+        <td><span class="iface-status iface-up"></span> Active{{if .SvcFilter}} — filter: {{.SvcFilter}}{{end}}</td>
+      </tr>
+      {{end}}
+    </table>
+  </div>
+
+  {{if .Neighbors}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Neighbors</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Hostname</th>
+            <th>Address</th>
+            <th>Last Seen</th>
+            <th>Services</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Neighbors}}
+          {{$host := .Hostname}}
+          <tr>
+            <td class="mdns-hostname">{{if .ExtraAddrs}}<button class="mdns-addr-toggle" data-group="{{$host}}" aria-expanded="false" title="Show more addresses"><span class="mdns-addr-arrow">▶</span></button>&nbsp;{{end}}{{.Hostname}}</td>
+            <td class="num">{{.PrimaryAddr}}</td>
+            <td class="mdns-lastseen">{{.LastSeen}}</td>
+            <td>{{range $i, $svc := .Services}}{{if $i}} {{end}}{{if $svc.URL}}<a href="{{$svc.URL}}" target="_blank" rel="noopener" class="mdns-svc mdns-svc-link">{{$svc.Label}}</a>{{else}}<span class="mdns-svc">{{$svc.Label}}({{$svc.Port}})</span>{{end}}{{end}}</td>
+          </tr>
+          {{range .ExtraAddrs}}
+          <tr class="mdns-extra-row" data-mdns-extra="{{$host}}">
+            <td></td>
+            <td class="num mdns-extra-addr">{{.}}</td>
+            <td></td>
+            <td></td>
+          </tr>
+          {{end}}
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{else if not .Error}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Neighbors</div>
+    <p class="empty-message">No mDNS neighbors discovered.</p>
+  </div>
+  {{end}}
+
+</section>
+{{end}}

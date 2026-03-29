@@ -431,6 +431,20 @@
   });
 })();
 
+// mDNS extra-address row toggle
+(function() {
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.mdns-addr-toggle');
+    if (!btn) return;
+    var group = btn.getAttribute('data-group');
+    var expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    document.querySelectorAll('[data-mdns-extra="' + group + '"]').forEach(function(row) {
+      row.style.display = expanded ? '' : 'table-row';
+    });
+  });
+})();
+
 // Bridge/LAG member row collapse toggle
 (function() {
   document.addEventListener('click', function(e) {
