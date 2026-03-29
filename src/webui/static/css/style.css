@@ -1992,6 +1992,13 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
 }
 .btn-danger-outline:hover { background: rgba(220, 38, 38, 0.08); }
 
+.btn-accept {
+  background: var(--success);
+  color: #fff;
+  border: 1px solid transparent;
+}
+.btn-accept:hover { background: var(--green-600); }
+
 /* ─── Configure toolbar ───────────────────────────────────────────────────── */
 .configure-toolbar {
   position: fixed;

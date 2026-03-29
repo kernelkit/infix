@@ -48,3 +48,20 @@ func (h *ConfigureHandler) Abort(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// ApplyAndSave copies candidate → running then running → startup in one step.
+// POST /configure/apply-and-save
+func (h *ConfigureHandler) ApplyAndSave(w http.ResponseWriter, r *http.Request) {
+	if err := h.RC.CopyDatastore(r.Context(), "candidate", "running"); err != nil {
+		log.Printf("configure apply-and-save: %v", err)
+		http.Error(w, "Could not apply configuration: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	if err := h.RC.CopyDatastore(r.Context(), "running", "startup"); err != nil {
+		log.Printf("configure apply-and-save (save): %v", err)
+		http.Error(w, "Could not save configuration: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusNoContent)
+}

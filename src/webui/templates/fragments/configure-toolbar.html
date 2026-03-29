@@ -4,8 +4,14 @@
     <button type="button" class="btn btn-primary cfg-apply-btn"
             hx-post="/configure/apply"
             hx-swap="none"
-            hx-confirm="Apply all staged changes to the running configuration?">
+            hx-confirm="Apply staged changes to running configuration? Changes will be lost on reboot unless saved.">
       Apply
+    </button>
+    <button type="button" class="btn btn-accept cfg-apply-save-btn"
+            hx-post="/configure/apply-and-save"
+            hx-swap="none"
+            hx-confirm="Apply staged changes and save to startup configuration?">
+      Apply &amp; Save
     </button>
     <button type="button" class="btn btn-danger-outline cfg-abort-btn"
             hx-post="/configure/abort"

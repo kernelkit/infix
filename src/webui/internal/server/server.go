@@ -187,6 +187,7 @@ func New(
 	// Configure routes.
 	mux.HandleFunc("POST /configure/enter",           cfg.Enter)
 	mux.HandleFunc("POST /configure/apply",           cfg.Apply)
+	mux.HandleFunc("POST /configure/apply-and-save",  cfg.ApplyAndSave)
 	mux.HandleFunc("POST /configure/abort",           cfg.Abort)
 	mux.HandleFunc("GET /configure/system",           cfgSys.Overview)
 	mux.HandleFunc("POST /configure/system/identity",     cfgSys.SaveIdentity)
