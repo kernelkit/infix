@@ -54,6 +54,7 @@
   --dot-color: rgba(0, 0, 0, 0.055);
 
   /* Layout */
+  --topbar-height: 48px;
   --radius:        8px;
   --radius-sm:     4px;
   --shadow-sm:     0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -174,7 +175,8 @@ a:hover {
 
 .layout {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - var(--topbar-height));
+  margin-top: var(--topbar-height);
   overflow: hidden;
 }
 
@@ -210,13 +212,9 @@ a:hover {
    Sidebar Components
    ========================================================================== */
 
-.sidebar-header {
-  padding: 1.5rem 1.25rem;
-}
-
-.sidebar-logo {
-  max-width: 100%;
-  height: auto;
+.topbar-logo {
+  height: calc(var(--topbar-height) - 14px);
+  width: auto;
   display: block;
 }
 
@@ -246,8 +244,8 @@ details.nav-group-top > summary.nav-group-summary-top {
   opacity: 0.7;
   padding: 0.75rem 1rem 0.375rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.35rem;
   user-select: none;
   transition: opacity 0.15s;
 }
@@ -255,11 +253,11 @@ details.nav-group-top > summary.nav-group-summary-top:hover { opacity: 1; }
 details.nav-group-top > summary.nav-group-summary-top::-webkit-details-marker { display: none; }
 details.nav-group-top > summary.nav-group-summary-top::marker { display: none; }
 
-details.nav-group-top > summary.nav-group-summary-top::after {
+details.nav-group-top > summary.nav-group-summary-top::before {
   content: '▸';
   font-size: 0.7rem;
 }
-details[open].nav-group-top > summary.nav-group-summary-top::after {
+details[open].nav-group-top > summary.nav-group-summary-top::before {
   content: '▾';
 }
 
@@ -1646,15 +1644,18 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
    ========================================================================== */
 
 .topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  gap: 0.75rem;
   padding: 0 1rem;
-  height: 48px;
+  height: var(--topbar-height);
   background: var(--sidebar-bg);
   border-bottom: 1px solid var(--sidebar-border);
-  flex-shrink: 0;
-  z-index: 100;
+  z-index: 200;
 }
 
 .topbar-right {
@@ -1826,10 +1827,10 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
 @media (max-width: 1024px) {
   #sidebar {
     position: fixed;
-    top: 0;
+    top: var(--topbar-height);
     left: 0;
-    height: 100%;
-    z-index: 300;
+    height: calc(100vh - var(--topbar-height));
+    z-index: 150;
     transform: translateX(-100%);
     transition: transform 0.25s ease;
     width: var(--sidebar-width);
@@ -1842,9 +1843,12 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   body.sidebar-open::after {
     content: '';
     position: fixed;
-    inset: 0;
+    top: var(--topbar-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: rgba(0,0,0,0.4);
-    z-index: 200;
+    z-index: 140;
   }
 
   #content {
