@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -30,6 +31,7 @@ type firewallJSON struct {
 type zoneJSON struct {
 	Name        string            `json:"name"`
 	Action      string            `json:"action"`
+	Description string            `json:"description"`
 	Interface   []string          `json:"interface"`
 	Network     []string          `json:"network"`
 	Service     []string          `json:"service"`
@@ -45,30 +47,31 @@ type portForwardJSON struct {
 }
 
 type policyJSON struct {
-	Name       string    `json:"name"`
-	Action     string    `json:"action"`
-	Priority   yangInt64 `json:"priority"`
-	Ingress    []string  `json:"ingress"`
-	Egress     []string  `json:"egress"`
-	Service    []string  `json:"service"`
-	Masquerade bool      `json:"masquerade"`
-	Immutable  bool      `json:"immutable"`
+	Name        string    `json:"name"`
+	Action      string    `json:"action"`
+	Description string    `json:"description"`
+	Priority    yangInt64 `json:"priority"`
+	Ingress     []string  `json:"ingress"`
+	Egress      []string  `json:"egress"`
+	Service     []string  `json:"service"`
+	Masquerade  bool      `json:"masquerade"`
+	Immutable   bool      `json:"immutable"`
 }
 
 // Template data structures.
 
 type firewallData struct {
 	PageData
-	Enabled bool
-	EnabledText  string
-	DefaultZone  string
-	Lockdown     bool
-	Logging      string
-	ZoneNames    []string
-	Matrix       []matrixRow
-	Zones        []zoneEntry
-	Policies     []policyEntry
-	Error        string
+	Enabled     bool
+	EnabledText string
+	DefaultZone string
+	Lockdown    bool
+	Logging     string
+	ZoneNames   []string
+	Matrix      []matrixRow
+	Zones       []zoneEntry
+	Policies    []policyEntry
+	Error       string
 }
 
 type matrixRow struct {
@@ -77,8 +80,12 @@ type matrixRow struct {
 }
 
 type matrixCell struct {
-	Class  string
-	Symbol string
+	Class   string
+	Symbol  string
+	Verdict string // "allow", "deny", "conditional", "self"
+	From    string
+	To      string
+	Detail  string // human-readable reason for the drill-down panel
 }
 
 type zoneEntry struct {
@@ -86,17 +93,19 @@ type zoneEntry struct {
 	Action     string
 	Interfaces string
 	Networks   string
-	Services   string
+	Services   string // services allowed to HOST from this zone
 }
 
 type policyEntry struct {
-	Name       string
-	Action     string
-	Priority   int64
-	Ingress    string
-	Egress     string
-	Services   string
-	Masquerade bool
+	Name        string
+	Action      string
+	Priority    int64
+	Ingress     string
+	Egress      string
+	Services    string
+	Masquerade  bool
+	Immutable   bool
+	Description string
 }
 
 // FirewallHandler serves the firewall overview page.
@@ -112,10 +121,18 @@ func (h *FirewallHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var fw firewallWrapper
-	if err := h.RC.Get(r.Context(), "/data/infix-firewall:firewall", &fw); err != nil {
-		log.Printf("restconf firewall: %v", err)
-		data.Error = "Could not fetch firewall configuration"
-	} else {
+	err := h.RC.Get(r.Context(), "/data/infix-firewall:firewall", &fw)
+	if err != nil {
+		var rcErr *restconf.Error
+		if errors.As(err, &rcErr) && rcErr.StatusCode == http.StatusNotFound {
+			// Firewall module not active — show disabled state, not an error.
+			data.EnabledText = "Inactive"
+		} else {
+			log.Printf("restconf firewall: %v", err)
+			data.Error = "Could not fetch firewall configuration"
+		}
+	}
+	if err == nil {
 		f := fw.Firewall
 		data.Enabled = f.Enabled == nil || bool(*f.Enabled)
 		if data.Enabled {
@@ -142,13 +159,15 @@ func (h *FirewallHandler) Overview(w http.ResponseWriter, r *http.Request) {
 
 		for _, p := range f.Policy {
 			data.Policies = append(data.Policies, policyEntry{
-				Name:       p.Name,
-				Action:     p.Action,
-				Priority:   int64(p.Priority),
-				Ingress:    strings.Join(p.Ingress, ", "),
-				Egress:     strings.Join(p.Egress, ", "),
-				Services:   strings.Join(p.Service, ", "),
-				Masquerade: p.Masquerade,
+				Name:        p.Name,
+				Action:      p.Action,
+				Priority:    int64(p.Priority),
+				Ingress:     strings.Join(p.Ingress, ", "),
+				Egress:      strings.Join(p.Egress, ", "),
+				Services:    strings.Join(p.Service, ", "),
+				Masquerade:  p.Masquerade,
+				Immutable:   p.Immutable,
+				Description: p.Description,
 			})
 		}
 
@@ -179,10 +198,10 @@ func buildMatrix(zones []zoneJSON, policies []policyJSON) ([]string, []matrixRow
 	}
 
 	names := []string{"HOST"}
-	zoneAction := map[string]string{}
+	zoneByName := map[string]zoneJSON{}
 	for _, z := range zones {
 		names = append(names, z.Name)
-		zoneAction[z.Name] = z.Action
+		zoneByName[z.Name] = z
 	}
 
 	// Sort policies by priority for evaluation.
@@ -196,21 +215,24 @@ func buildMatrix(zones []zoneJSON, policies []policyJSON) ([]string, []matrixRow
 	for i, src := range names {
 		rows[i] = matrixRow{Zone: src, Cells: make([]matrixCell, len(names))}
 		for j, dst := range names {
+			var cell matrixCell
 			switch {
-			case src == "HOST" && dst == "HOST":
-				rows[i].Cells[j] = matrixCell{Class: "matrix-self", Symbol: "\u2014"}
-			case src == "HOST":
-				// Traffic originating from the device is always allowed.
-				rows[i].Cells[j] = matrixCell{Class: "matrix-allow", Symbol: "\u2713"}
 			case src == dst:
-				rows[i].Cells[j] = matrixCell{Class: "matrix-self", Symbol: "\u2014"}
+				cell = matrixCell{Class: "matrix-self", Symbol: "—", Verdict: "self"}
+			case src == "HOST":
+				// Traffic from the device to any zone is always allowed.
+				cell = matrixCell{Class: "matrix-allow", Symbol: "✓", Verdict: "allow",
+					Detail: "HOST can reach all zones"}
 			case dst == "HOST":
-				// Input to device: governed by zone action + policies.
-				rows[i].Cells[j] = zoneToHost(src, zoneAction, sorted)
+				// Input to device: governed by zone action + zone services.
+				cell = zoneToHost(zoneByName[src])
 			default:
 				// Forwarding between zones: governed by policies.
-				rows[i].Cells[j] = evalForward(src, dst, sorted)
+				cell = evalForward(src, dst, sorted)
 			}
+			cell.From = src
+			cell.To = dst
+			rows[i].Cells[j] = cell
 		}
 	}
 
@@ -218,30 +240,38 @@ func buildMatrix(zones []zoneJSON, policies []policyJSON) ([]string, []matrixRow
 }
 
 // zoneToHost determines traffic flow from a zone to the device (HOST).
-// Policies are checked first; if none gives a verdict, the zone's
-// default action is used.
-func zoneToHost(zone string, zoneAction map[string]string, policies []policyJSON) matrixCell {
-	if v := evalPolicies(zone, "HOST", policies); v != "" {
-		return makeCell(v)
+// This mirrors the CLI: it is based solely on the zone's action and services,
+// not on policies (per cli_pretty.py traffic_flow logic).
+func zoneToHost(zone zoneJSON) matrixCell {
+	if zone.Action == "accept" {
+		return matrixCell{Class: "matrix-allow", Symbol: "✓", Verdict: "allow",
+			Detail: "Zone default action: accept"}
 	}
-	if zoneAction[zone] == "accept" {
-		return matrixCell{Class: "matrix-allow", Symbol: "\u2713"}
+	if len(zone.Service) > 0 || len(zone.PortForward) > 0 {
+		if len(zone.Service) > 0 {
+			return matrixCell{Class: "matrix-cond", Symbol: "⚠", Verdict: "conditional",
+				Detail: "Services: " + strings.Join(zone.Service, ", ")}
+		}
+		return matrixCell{Class: "matrix-cond", Symbol: "⚠", Verdict: "conditional",
+			Detail: "Port-forwarding rules apply"}
 	}
-	return matrixCell{Class: "matrix-deny", Symbol: "\u2717"}
+	return matrixCell{Class: "matrix-deny", Symbol: "✗", Verdict: "deny",
+		Detail: "Zone default action: " + zone.Action}
 }
 
-// evalForward determines traffic flow between two different zones.
+// evalForward determines traffic flow between two different zones via policies.
 func evalForward(src, dst string, policies []policyJSON) matrixCell {
-	if v := evalPolicies(src, dst, policies); v != "" {
-		return makeCell(v)
+	if v, name := evalPolicies(src, dst, policies); v != "" {
+		return makeCell(v, name)
 	}
-	return matrixCell{Class: "matrix-deny", Symbol: "\u2717"}
+	return matrixCell{Class: "matrix-deny", Symbol: "✗", Verdict: "deny",
+		Detail: "No policy — default deny"}
 }
 
 // evalPolicies walks the sorted policy list and returns the first terminal
-// verdict (accept/reject/drop) for traffic from src to dst.
+// verdict (accept/reject/drop) for traffic from src to dst, plus the policy name.
 // "continue" policies are skipped (they don't produce a final verdict).
-func evalPolicies(src, dst string, policies []policyJSON) string {
+func evalPolicies(src, dst string, policies []policyJSON) (verdict, name string) {
 	for _, p := range policies {
 		if !matchesZone(src, p.Ingress) || !matchesZone(dst, p.Egress) {
 			continue
@@ -249,9 +279,9 @@ func evalPolicies(src, dst string, policies []policyJSON) string {
 		if p.Action == "continue" {
 			continue
 		}
-		return p.Action
+		return p.Action, p.Name
 	}
-	return ""
+	return "", ""
 }
 
 // matchesZone checks whether zone appears in list, treating "ANY" as a wildcard.
@@ -264,9 +294,11 @@ func matchesZone(zone string, list []string) bool {
 	return false
 }
 
-func makeCell(verdict string) matrixCell {
+func makeCell(verdict, policyName string) matrixCell {
 	if verdict == "accept" {
-		return matrixCell{Class: "matrix-allow", Symbol: "\u2713"}
+		return matrixCell{Class: "matrix-allow", Symbol: "✓", Verdict: "allow",
+			Detail: "Policy: " + policyName + " (accept)"}
 	}
-	return matrixCell{Class: "matrix-deny", Symbol: "\u2717"}
+	return matrixCell{Class: "matrix-deny", Symbol: "✗", Verdict: "deny",
+		Detail: "Policy: " + policyName + " (" + verdict + ")"}
 }
