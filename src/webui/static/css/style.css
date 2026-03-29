@@ -88,6 +88,7 @@
 
 /* Manual Dark Mode Toggle */
 .dark {
+  color-scheme: dark;
   --bg:            var(--slate-900);
   --surface:       var(--slate-800);
   --fg:            var(--slate-100);
@@ -106,6 +107,7 @@
 
 /* Force Light Mode (override system dark preference) */
 .light {
+  color-scheme: light;
   --bg:            var(--slate-50);
   --surface:       #ffffff;
   --fg:            var(--slate-900);
@@ -1525,12 +1527,36 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   font-size: 0.875rem;
 }
 
-.firmware-form { display: flex; gap: 1rem; align-items: flex-end; }
-.firmware-form .form-group { flex: 1; margin-bottom: 0; }
+.firmware-form .form-group { margin-bottom: 0.75rem; }
+.firmware-form .fw-checkbox-row { margin-bottom: 0.75rem; }
 
-.badge-neutral {
+.fw-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.fw-checkbox-row input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
+
+.fw-result {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.fw-result svg { flex-shrink: 0; }
+.fw-result-ok { color: var(--success); }
+.fw-result-err { color: var(--danger); }
+.fw-result-body { display: flex; flex-direction: column; }
+.fw-result-actions { margin-top: 1rem; }
+
+/* Compact pill badges used in the firmware slot list and boot-order row. */
+.fw-install-grid .badge-neutral {
   background: var(--slate-200);
-  color: var(--slate-600);
   font-size: 0.65rem;
   font-weight: 600;
   padding: 0.15em 0.5em;
@@ -1540,9 +1566,11 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   vertical-align: middle;
 }
 @media (prefers-color-scheme: dark) {
-  .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
+  .fw-install-grid .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
 }
-.dark .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
+.dark .fw-install-grid .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
+
+.progress-bar-wrap--flush { margin-top: 0; }
 
 .progress-bar-wrap {
   background: var(--slate-200);

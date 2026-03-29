@@ -168,6 +168,7 @@ func New(
 	mux.HandleFunc("GET /firewall", fw.Overview)
 	mux.HandleFunc("GET /keystore", ks.Overview)
 	mux.HandleFunc("GET /firmware", sys.Firmware)
+	mux.HandleFunc("GET /firmware/progress", sys.FirmwareProgress)
 	mux.HandleFunc("POST /firmware/install", sys.FirmwareInstall)
 	mux.HandleFunc("POST /reboot", sys.Reboot)
 	mux.HandleFunc("GET /device-status", sys.DeviceStatus)

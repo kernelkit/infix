@@ -58,63 +58,28 @@
     }
     overlay.dataset.init = 'true';
 
-    var timeout = parseInt(overlay.getAttribute('data-timeout'), 10);
-    if (isNaN(timeout) || timeout <= 0) {
-      timeout = 120000;
-    }
-    var interval = parseInt(overlay.getAttribute('data-interval'), 10);
-    if (isNaN(interval) || interval <= 0) {
-      interval = 2000;
-    }
-    var start = Date.now();
     var status = overlay.querySelector('#reboot-status');
-    var returnTo = window.location.pathname + window.location.search;
 
-    function waitDown() {
-      if (Date.now() - start > timeout) {
-        if (status) {
-          status.textContent = 'Timeout - device did not shut down within 2 minutes.';
-          status.classList.add('is-error');
-        }
-        return;
-      }
-      fetch('/device-status').then(function (r) {
-        if (r.ok) {
-          setTimeout(waitDown, interval);
-        } else {
-          if (status) {
-            status.textContent = 'Device is down, waiting for it to come back...';
+    // Hard cap: redirect home after 60 s regardless of poll outcome.
+    setTimeout(function () { window.location.replace('/'); }, 60000);
+
+    // Wait 4 s for the device to shut down, then start polling for it to come back.
+    // This avoids the race where a fast reboot never shows as "down" on the 1 s poll.
+    setTimeout(function () {
+      if (status) status.textContent = 'Waiting for device to come back\u2026';
+      function poll() {
+        fetch('/device-status').then(function (r) {
+          if (r.ok) {
+            window.location.replace('/');
+          } else {
+            setTimeout(poll, 2000);
           }
-          setTimeout(waitUp, interval);
-        }
-      }).catch(function () {
-        if (status) {
-          status.textContent = 'Device is down, waiting for it to come back...';
-        }
-        setTimeout(waitUp, interval);
-      });
-    }
-
-    function waitUp() {
-      if (Date.now() - start > timeout) {
-        if (status) {
-          status.textContent = 'Timeout - device did not respond within 2 minutes.';
-          status.classList.add('is-error');
-        }
-        return;
+        }).catch(function () {
+          setTimeout(poll, 2000);
+        });
       }
-      fetch('/device-status').then(function (r) {
-        if (r.ok) {
-          window.location = returnTo || '/';
-        } else {
-          setTimeout(waitUp, interval);
-        }
-      }).catch(function () {
-        setTimeout(waitUp, interval);
-      });
-    }
-
-    setTimeout(waitDown, interval);
+      poll();
+    }, 8000);
   }
 
   function initDynamicUI(root) {
@@ -122,15 +87,73 @@
     startRebootOverlay(root);
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  // SSE-driven firmware progress card.
+  // The Go server polls RESTCONF and streams rendered HTML fragments; we just
+  // swap them into the card and let the server close the stream when done.
+  var fwEventSource = null;
+
+  function initFirmwareProgress(root) {
+    var scope = root || document;
+    var card = scope.querySelector('#fw-progress-card[data-sse-src]');
+    if (!card || card.dataset.sseInit) return;
+    card.dataset.sseInit = 'true';
+
+    var src = card.getAttribute('data-sse-src');
+    if (fwEventSource) { fwEventSource.close(); }
+    fwEventSource = new EventSource(src);
+
+    function swap(html) {
+      card.innerHTML = html;
+      initProgressBars(card);
+      if (window.htmx) htmx.process(card);
+    }
+
+    fwEventSource.addEventListener('progress', function(e) { swap(e.data); });
+
+    fwEventSource.addEventListener('done', function(e) {
+      swap(e.data);
+      fwEventSource.close();
+      fwEventSource = null;
+    });
+
+    fwEventSource.addEventListener('reboot', function(e) {
+      swap(e.data);
+      fwEventSource.close();
+      fwEventSource = null;
+      // Auto-reboot: POST /reboot and show the reboot overlay.
+      fetch('/reboot', { method: 'POST', headers: { 'X-CSRF-Token': getCSRFToken() } })
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+          var content = document.getElementById('content');
+          if (content) {
+            content.innerHTML = html;
+            initDynamicUI(content);
+          }
+        });
+    });
+
+    fwEventSource.onerror = function() {
+      fwEventSource.close();
+      fwEventSource = null;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
     initCSRF();
     initDeviceStatusBanner();
     initDynamicUI(document);
+    initFirmwareProgress(document);
   });
 
   if (window.htmx && document.body) {
     document.body.addEventListener('htmx:afterSwap', function (evt) {
+      // Close any open SSE stream if the firmware progress card is no longer present.
+      if (fwEventSource && !document.getElementById('fw-progress-card')) {
+        fwEventSource.close();
+        fwEventSource = null;
+      }
       initDynamicUI(evt.target);
+      initFirmwareProgress(evt.target);
     });
   }
 })();
@@ -695,6 +718,41 @@ function openModal(message, onConfirm) {
   });
 
   // Show "Saved ✓" feedback when a card Save succeeds.
+  (function() {
+    var LS_KEY = 'fw-url-history';
+    var MAX_HIST = 10;
+
+    function loadHistory() {
+      try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+      catch (e) { return []; }
+    }
+
+    function saveURL(url) {
+      var hist = loadHistory().filter(function(u) { return u !== url; });
+      hist.unshift(url);
+      if (hist.length > MAX_HIST) hist = hist.slice(0, MAX_HIST);
+      localStorage.setItem(LS_KEY, JSON.stringify(hist));
+    }
+
+    function populateDatalist() {
+      var dl = document.getElementById('fw-url-history');
+      if (!dl) return;
+      dl.innerHTML = loadHistory().map(function(u) {
+        return '<option value="' + u.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">';
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', populateDatalist);
+    document.addEventListener('htmx:afterSettle', populateDatalist);
+
+    document.addEventListener('submit', function(e) {
+      var form = e.target.closest('.firmware-form');
+      if (!form) return;
+      var input = form.querySelector('input[name="url"]');
+      if (input && input.value) saveURL(input.value);
+    });
+  })();
+
   document.addEventListener('cfgSaved', function(e) {
     var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';
     // Find the status span closest to the form that triggered the event.
