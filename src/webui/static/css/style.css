@@ -1172,6 +1172,31 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
 
 .mdns-lastseen { white-space: nowrap; }
 
+/* Services table */
+.svc-name  { font-family: var(--font-mono); font-size: 0.85rem; white-space: nowrap; }
+.svc-num   { white-space: nowrap; color: var(--fg-muted); font-size: 0.85rem; }
+.svc-desc  { color: var(--fg-muted); font-size: 0.875rem; }
+.svc-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+.svc-running { color: #16a34a; }
+.svc-stopped { color: #ca8a04; }
+.svc-error   { color: #dc2626; }
+@media (prefers-color-scheme: dark) {
+  .svc-running { color: #86efac; }
+  .svc-stopped { color: #fde047; }
+  .svc-error   { color: #fca5a5; }
+}
+.dark .svc-running { color: #86efac; }
+.dark .svc-stopped { color: #fde047; }
+.dark .svc-error   { color: #fca5a5; }
+.light .svc-running { color: #16a34a; }
+.light .svc-stopped { color: #ca8a04; }
+.light .svc-error   { color: #dc2626; }
+
 /* Sub-heading within a card body (e.g. "Active Leases" in DHCP) */
 .section-subtitle {
   font-size: 0.75rem;
