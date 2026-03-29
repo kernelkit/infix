@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/kernelkit/webui/internal/restconf"
 )
@@ -33,8 +34,14 @@ type ifaceJSON struct {
 	Statistics  *ifaceStats     `json:"statistics"`
 	Ethernet    *ethernetJSON   `json:"ieee802-ethernet-interface:ethernet"`
 	BridgePort  *bridgePortJSON `json:"infix-interfaces:bridge-port"`
+	Vlan        *vlanJSON       `json:"infix-interfaces:vlan"`
 	WiFi        *wifiJSON       `json:"infix-interfaces:wifi"`
 	WireGuard   *wireGuardJSON  `json:"infix-interfaces:wireguard"`
+}
+
+type vlanJSON struct {
+	ID           int    `json:"id"`
+	LowerLayerIf string `json:"lower-layer-if"`
 }
 
 type bridgePortJSON struct {
@@ -190,16 +197,20 @@ type interfacesData struct {
 }
 
 type ifaceEntry struct {
-	Indent    string // tree prefix for bridge/LAG members
-	Name      string
-	Type      string
-	Status    string
-	StatusUp  bool
-	PhysAddr  string
-	Addresses []addrEntry
-	Detail    string // extra info: wifi AP, wireguard peers, etc.
-	RxBytes   string
-	TxBytes   string
+	HasMembers   bool // is a bridge/LAG master with child ports
+	IsMember     bool // is a bridge port or LAG member
+	IsLastMember bool // is the last child in its group
+	Forwarding   bool // IP forwarding enabled (⇅ flag)
+	GroupID      string // bridge/LAG name — set on parent and all its members
+	Name         string
+	Type         string
+	Status       string
+	StatusUp     bool
+	PhysAddr     string
+	Addresses    []addrEntry
+	Detail       string // extra info: wifi AP, wireguard peers, etc.
+	RxBytes      string
+	TxBytes      string
 }
 
 type addrEntry struct {
@@ -221,12 +232,41 @@ func (h *InterfacesHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		PageData: newPageData(r, "interfaces", "Interfaces"),
 	}
 
-	var ifaces interfacesWrapper
-	if err := h.RC.Get(r.Context(), "/data/ietf-interfaces:interfaces", &ifaces); err != nil {
-		log.Printf("restconf interfaces: %v", err)
+	var (
+		ifaces interfacesWrapper
+		ri     struct {
+			Routing struct {
+				Interfaces struct {
+					Interface []string `json:"interface"`
+				} `json:"interfaces"`
+			} `json:"ietf-routing:routing"`
+		}
+		ifaceErr error
+		wg       sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		ifaceErr = h.RC.Get(r.Context(), "/data/ietf-interfaces:interfaces", &ifaces)
+	}()
+	go func() {
+		defer wg.Done()
+		// Best-effort: ignore errors (routing may not be configured).
+		// Fetch the full routing object — the /interfaces sub-path returns empty
+		// on Infix even when the data is present in the parent resource.
+		h.RC.Get(r.Context(), "/data/ietf-routing:routing", &ri) //nolint:errcheck
+	}()
+	wg.Wait()
+
+	if ifaceErr != nil {
+		log.Printf("restconf interfaces: %v", ifaceErr)
 		data.Error = "Could not fetch interface information"
 	} else {
-		data.Interfaces = buildIfaceList(ifaces.Interfaces.Interface)
+		fwdSet := make(map[string]bool, len(ri.Routing.Interfaces.Interface))
+		for _, name := range ri.Routing.Interfaces.Interface {
+			fwdSet[name] = true
+		}
+		data.Interfaces = buildIfaceList(ifaces.Interfaces.Interface, fwdSet)
 	}
 
 	tmplName := "interfaces.html"
@@ -274,9 +314,10 @@ func prettyIfType(full string) string {
 }
 
 // buildIfaceList converts raw RESTCONF interface data into a flat,
-// hierarchically ordered display list matching the cli_pretty style.
-// Bridge members are grouped under their parent with tree indicators.
-func buildIfaceList(raw []ifaceJSON) []ifaceEntry {
+// hierarchically ordered display list. Bridge/LAG members are grouped
+// under their parent. fwdSet contains the names of interfaces with IP
+// forwarding enabled (the ⇅ flag).
+func buildIfaceList(raw []ifaceJSON, fwdSet map[string]bool) []ifaceEntry {
 	byName := map[string]*ifaceJSON{}
 	children := map[string][]string{}
 	childSet := map[string]bool{}
@@ -291,46 +332,68 @@ func buildIfaceList(raw []ifaceJSON) []ifaceEntry {
 		}
 	}
 
+	// Collect top-level interfaces (not bridge/LAG members) and sort them:
+	// loopback first, then alphabetically.
+	var topLevel []ifaceJSON
+	for _, iface := range raw {
+		if !childSet[iface.Name] {
+			topLevel = append(topLevel, iface)
+		}
+	}
+	sort.Slice(topLevel, func(i, j int) bool {
+		li := prettyIfType(topLevel[i].Type) == "loopback"
+		lj := prettyIfType(topLevel[j].Type) == "loopback"
+		if li != lj {
+			return li
+		}
+		return topLevel[i].Name < topLevel[j].Name
+	})
+
+	// Sort children of each bridge/LAG alphabetically.
+	for parent := range children {
+		sort.Strings(children[parent])
+	}
+
 	var result []ifaceEntry
 
-	for _, iface := range raw {
-		if childSet[iface.Name] {
-			continue
-		}
-
-		result = append(result, makeIfaceEntry(iface, ""))
-
+	for _, iface := range topLevel {
+		e := makeIfaceEntry(iface, fwdSet)
 		members := children[iface.Name]
+		e.HasMembers = len(members) > 0
+		if e.HasMembers {
+			e.GroupID = iface.Name
+		}
+		result = append(result, e)
+
 		for i, childName := range members {
 			child, ok := byName[childName]
 			if !ok {
 				continue
 			}
-			prefix := "\u251c\u00a0" // ├
-			if i == len(members)-1 {
-				prefix = "\u2514\u00a0" // └
-			}
-			e := makeIfaceEntry(*child, prefix)
+			me := makeIfaceEntry(*child, fwdSet)
+			me.IsMember = true
+			me.IsLastMember = i == len(members)-1
+			me.GroupID = iface.Name
 			if child.BridgePort != nil && child.BridgePort.STP != nil &&
 				child.BridgePort.STP.CIST != nil && child.BridgePort.STP.CIST.State != "" {
-				e.Status = child.BridgePort.STP.CIST.State
-				e.StatusUp = e.Status == "forwarding"
+				me.Status = child.BridgePort.STP.CIST.State
+				me.StatusUp = me.Status == "forwarding"
 			}
-			result = append(result, e)
+			result = append(result, me)
 		}
 	}
 
 	return result
 }
 
-func makeIfaceEntry(iface ifaceJSON, indent string) ifaceEntry {
+func makeIfaceEntry(iface ifaceJSON, fwdSet map[string]bool) ifaceEntry {
 	e := ifaceEntry{
-		Indent:   indent,
-		Name:     iface.Name,
-		Type:     prettyIfType(iface.Type),
-		Status:   iface.OperStatus,
-		StatusUp: iface.OperStatus == "up",
-		PhysAddr: iface.PhysAddress,
+		Forwarding: fwdSet[iface.Name],
+		Name:       iface.Name,
+		Type:       prettyIfType(iface.Type),
+		Status:     iface.OperStatus,
+		StatusUp:   iface.OperStatus == "up",
+		PhysAddr:   iface.PhysAddress,
 	}
 
 	if iface.Statistics != nil {
@@ -352,6 +415,14 @@ func makeIfaceEntry(iface ifaceJSON, indent string) ifaceEntry {
 				Address: fmt.Sprintf("%s/%d", a.IP, int(a.PrefixLength)),
 				Origin:  a.Origin,
 			})
+		}
+	}
+
+	if v := iface.Vlan; v != nil {
+		if v.LowerLayerIf != "" {
+			e.Detail = fmt.Sprintf("vid %d (%s)", v.ID, v.LowerLayerIf)
+		} else {
+			e.Detail = fmt.Sprintf("vid %d", v.ID)
 		}
 	}
 
