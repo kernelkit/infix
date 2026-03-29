@@ -409,6 +409,21 @@
   });
 })();
 
+// Bridge/LAG member row collapse toggle
+(function() {
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.bridge-toggle');
+    if (!btn) return;
+    var group = btn.getAttribute('data-group');
+    var parentRow = btn.closest('tr');
+    var collapsed = parentRow.classList.toggle('bridge-collapsed');
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    document.querySelectorAll('[data-bridge-member="' + group + '"]').forEach(function(row) {
+      row.style.display = collapsed ? 'none' : '';
+    });
+  });
+})();
+
 // Sidebar toggle (mobile)
 (function() {
   var MOBILE_BP = 1024;

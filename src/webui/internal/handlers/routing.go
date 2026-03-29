@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/kernelkit/webui/internal/restconf"
 )
@@ -20,24 +21,31 @@ type RouteEntry struct {
 	NextHopIface string
 	NextHopAddr  string
 	Protocol     string
-	Preference   int
+	Preference   string // formatted as "distance/metric"
+	Uptime       string
 	Active       bool
 }
 
 type OSPFNeighbor struct {
 	RouterID  string
-	State     string
-	Role      string
-	Interface string
+	Priority  int
+	State     string // includes role suffix, e.g. "Full/DR"
 	Uptime    string
+	Address   string
+	Interface string
+	Area      string
 }
 
 type OSPFIface struct {
-	Name  string
-	State string
-	Cost  int
-	DR    string
-	BDR   string
+	Name     string
+	Area     string
+	Type     string
+	State    string
+	Cost     int
+	Priority int
+	DR       string
+	BDR      string
+	NbrCount int
 }
 
 type routingData struct {
@@ -82,6 +90,8 @@ type ribRouteJSON struct {
 	SourceProtocol  string           `json:"source-protocol"`
 	Active          *json.RawMessage `json:"active"`
 	RoutePreference int              `json:"route-preference"`
+	OspfMetric      int              `json:"ietf-ospf:metric"`
+	LastUpdated     string           `json:"last-updated"`
 }
 
 func (r ribRouteJSON) destinationPrefix() string {
@@ -157,18 +167,22 @@ type ospfAreaJSON struct {
 }
 
 type ospfIfaceJSON struct {
-	Name        string `json:"name"`
-	State       string `json:"state"`
-	Cost        int    `json:"cost"`
-	DRRouterID  string `json:"dr-router-id"`
-	BDRRouterID string `json:"bdr-router-id"`
-	Neighbors   struct {
+	Name          string `json:"name"`
+	State         string `json:"state"`
+	Cost          int    `json:"cost"`
+	Priority      int    `json:"priority"`
+	InterfaceType string `json:"interface-type"`
+	DRRouterID    string `json:"dr-router-id"`
+	BDRRouterID   string `json:"bdr-router-id"`
+	Neighbors     struct {
 		Neighbor []ospfNeighborJSON `json:"neighbor"`
 	} `json:"neighbors"`
 }
 
 type ospfNeighborJSON struct {
 	NeighborRouterID string `json:"neighbor-router-id"`
+	Address          string `json:"address"`
+	Priority         int    `json:"priority"`
 	State            string `json:"state"`
 	Role             string `json:"infix-routing:role"`
 	InterfaceName    string `json:"infix-routing:interface-name"`
@@ -211,7 +225,8 @@ func (h *RoutingHandler) Overview(w http.ResponseWriter, r *http.Request) {
 					NextHopIface: iface,
 					NextHopAddr:  addr,
 					Protocol:     shortProto(route.SourceProtocol),
-					Preference:   route.RoutePreference,
+					Preference:   fmt.Sprintf("%d/%d", route.RoutePreference, route.OspfMetric),
+					Uptime:       uptimeFromTimestamp(route.LastUpdated),
 					Active:       route.Active != nil,
 				})
 			}
@@ -235,19 +250,33 @@ func (h *RoutingHandler) Overview(w http.ResponseWriter, r *http.Request) {
 			for _, area := range proto.OSPF.Areas.Area {
 				for _, iface := range area.Interfaces.Interface {
 					data.OSPFIfaces = append(data.OSPFIfaces, OSPFIface{
-						Name:  iface.Name,
-						State: iface.State,
-						Cost:  iface.Cost,
-						DR:    iface.DRRouterID,
-						BDR:   iface.BDRRouterID,
+						Name:     iface.Name,
+						Area:     area.AreaID,
+						Type:     ospfIfaceType(iface.InterfaceType),
+						State:    ospfIfaceState(iface.State),
+						Cost:     iface.Cost,
+						Priority: iface.Priority,
+						DR:       iface.DRRouterID,
+						BDR:      iface.BDRRouterID,
+						NbrCount: len(iface.Neighbors.Neighbor),
 					})
 					for _, nbr := range iface.Neighbors.Neighbor {
+						stateStr := capitalize(nbr.State)
+						if nbr.Role != "" && nbr.State == "full" {
+							stateStr = "Full/" + nbr.Role
+						}
+						ifaceName := nbr.InterfaceName
+						if ifaceName == "" {
+							ifaceName = iface.Name
+						}
 						data.OSPFNeighbors = append(data.OSPFNeighbors, OSPFNeighbor{
 							RouterID:  nbr.NeighborRouterID,
-							State:     nbr.State,
-							Role:      nbr.Role,
-							Interface: iface.Name,
+							Priority:  nbr.Priority,
+							State:     stateStr,
 							Uptime:    formatUptime(nbr.Uptime),
+							Address:   nbr.Address,
+							Interface: ifaceName,
+							Area:      area.AreaID,
 						})
 					}
 				}
@@ -265,6 +294,57 @@ func (h *RoutingHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		log.Printf("template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+func uptimeFromTimestamp(s string) string {
+	if s == "" {
+		return ""
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return ""
+	}
+	return formatUptime(uint32(time.Since(t).Seconds()))
+}
+
+func ospfIfaceType(t string) string {
+	switch t {
+	case "broadcast":
+		return "Broadcast"
+	case "point-to-point":
+		return "P2P"
+	case "point-to-multipoint":
+		return "P2MP"
+	case "non-broadcast":
+		return "NBMA"
+	case "virtual-link":
+		return "VLink"
+	default:
+		if t != "" {
+			return capitalize(t)
+		}
+		return ""
+	}
+}
+
+func ospfIfaceState(s string) string {
+	switch s {
+	case "dr":
+		return "DR"
+	case "bdr":
+		return "BDR"
+	case "dr-other":
+		return "DROther"
+	default:
+		return capitalize(s)
+	}
+}
+
+func capitalize(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 func shortProto(proto string) string {

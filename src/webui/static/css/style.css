@@ -642,6 +642,7 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
+  vertical-align: top;
 }
 
 .data-table th {
@@ -1115,7 +1116,98 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
 .iface-name a { color: var(--primary); text-decoration: none; }
 .iface-name a:hover { text-decoration: underline; }
 
-.tree-pipe { color: var(--slate-300); font-family: var(--font-mono); margin-right: 0.5rem; }
+/* Forwarding flag column */
+.iface-fwd-col { width: 1.5rem; min-width: 1.5rem; padding: 0 0.25rem !important; text-align: center; }
+.iface-fwd-flag { font-size: 0.8rem; color: var(--primary); user-select: none; }
+
+/* Tree connector column — pseudo-elements draw the continuous vertical/horizontal lines.
+   Wide enough to be a comfortable click target for the collapse button on parent rows. */
+.iface-tree-col {
+  width: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0 !important;
+  position: relative;
+  overflow: visible;
+  text-align: center;
+}
+/* These two narrow icon columns must stay middle-aligned even though the rest of the
+   table uses vertical-align: top. Use td.class for higher specificity (0-1-1 beats 0-1-0). */
+.data-table td.iface-tree-col,
+.data-table td.iface-fwd-col,
+.data-table th.iface-fwd-col { vertical-align: middle; }
+
+/* Parent row: draw a vertical line from row center down to the bottom edge */
+.iface-tree-col.tree-parent::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%; bottom: 0;
+  width: 2px; margin-left: -1px;
+  background: var(--border);
+}
+
+/* Middle member: full-height vertical line + horizontal arm right */
+.iface-tree-col.tree-mid::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 2px; margin-left: -1px;
+  background: var(--border);
+}
+.iface-tree-col.tree-mid::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%; right: 0;
+  height: 2px; margin-top: -1px;
+  background: var(--border);
+}
+
+/* Last member: vertical line top-to-center + horizontal arm right */
+.iface-tree-col.tree-last::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 0; bottom: 50%;
+  width: 2px; margin-left: -1px;
+  background: var(--border);
+}
+.iface-tree-col.tree-last::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%; right: 0;
+  height: 2px; margin-top: -1px;
+  background: var(--border);
+}
+
+/* Member rows: subtle background tint; name indented to clear the tree arm */
+.iface-member { background: var(--surface-alt); }
+/* Tighter left padding on the name cell so connector arms read as attached to the text */
+.iface-name { padding-left: 0.4rem !important; }
+.iface-member-name { padding-left: 1rem !important; }
+
+/* Bridge/LAG collapse toggle — sits inside .iface-tree-col, centred over the connector line.
+   z-index: 1 ensures it is clickable above the ::after pseudo-element. */
+.bridge-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--fg-muted);
+  font-size: 0.65rem;
+  line-height: 1;
+  display: block;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+.bridge-toggle-arrow {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+/* When the parent row is collapsed: rotate arrow and hide the connector line below */
+.bridge-collapsed .bridge-toggle-arrow { transform: rotate(-90deg); }
+.bridge-collapsed .iface-tree-col.tree-parent::after { display: none; }
+
+.data-detail { color: var(--fg-muted); font-size: 0.85em; }
+
 .addr-origin { color: var(--fg-muted); font-size: 0.75rem; margin-left: 0.5rem; }
 
 .wg-peer {
