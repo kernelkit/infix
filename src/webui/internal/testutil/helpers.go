@@ -93,3 +93,17 @@ func (m *MockFetcher) PostJSON(_ context.Context, path string, _ any) error {
 	}
 	return nil
 }
+
+func (m *MockFetcher) Put(_ context.Context, _ string, _ any) error        { return nil }
+func (m *MockFetcher) Patch(_ context.Context, _ string, _ any) error      { return nil }
+func (m *MockFetcher) Delete(_ context.Context, _ string) error            { return nil }
+
+func (m *MockFetcher) GetDatastore(_ context.Context, _ string) (json.RawMessage, error) {
+	return json.RawMessage("{}"), nil
+}
+
+func (m *MockFetcher) PutDatastore(_ context.Context, _ string, _ json.RawMessage) error {
+	return nil
+}
+
+func (m *MockFetcher) CopyDatastore(_ context.Context, _, _ string) error { return nil }

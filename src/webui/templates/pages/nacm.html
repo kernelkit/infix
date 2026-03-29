@@ -1,0 +1,117 @@
+{{define "nacm.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  {{if not .Error}}
+  <div class="info-card">
+    <div class="card-header">NACM Settings</div>
+    <table class="info-table">
+      <tr><th>Enabled</th><td>{{.Enabled}}</td></tr>
+      <tr><th>Default read</th><td>{{.ReadDefault}}</td></tr>
+      <tr><th>Default write</th><td>{{.WriteDefault}}</td></tr>
+      <tr><th>Default exec</th><td>{{.ExecDefault}}</td></tr>
+      <tr><th>Denied operations</th><td>{{.DeniedOperations}}</td></tr>
+      <tr><th>Denied writes</th><td>{{.DeniedDataWrites}}</td></tr>
+      <tr><th>Denied notifications</th><td>{{.DeniedNotifications}}</td></tr>
+    </table>
+  </div>
+  {{end}}
+
+  {{if .Matrix}}
+  <div class="info-card">
+    <div class="card-header">Group Permissions</div>
+    <div class="data-table-wrap">
+      <table class="data-table nacm-matrix">
+        <thead>
+          <tr>
+            <th>Group</th>
+            <th class="nacm-col">Read</th>
+            <th class="nacm-col">Write</th>
+            <th class="nacm-col">Exec</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Matrix}}
+          <tr>
+            <td class="nacm-group">{{.Name}}</td>
+            <td class="nacm-col"><span class="nacm-cell {{.Read.Class}}">{{.Read.Symbol}}</span></td>
+            <td class="nacm-col"><span class="nacm-cell {{.Write.Class}}">{{.Write.Symbol}}</span></td>
+            <td class="nacm-col"><span class="nacm-cell {{.Exec.Class}}">{{.Exec.Symbol}}</span></td>
+          </tr>
+          {{if .Restrictions}}
+          <tr class="nacm-restrictions-row">
+            <td></td>
+            <td colspan="3" class="nacm-restrictions">Restricted: {{range $i, $r := .Restrictions}}{{if $i}}, {{end}}{{$r}}{{end}}</td>
+          </tr>
+          {{end}}
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="nacm-legend">
+      <span class="nacm-cell nacm-full">✓</span> Full &nbsp;
+      <span class="nacm-cell nacm-restricted">⚠</span> Restricted &nbsp;
+      <span class="nacm-cell nacm-denied">✗</span> Denied
+    </div>
+  </div>
+  {{end}}
+
+  {{if .Users}}
+  <div class="info-card">
+    <div class="card-header">Users</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Shell</th>
+            <th>Login</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Users}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Shell}}</td>
+            <td>{{.Login}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .Groups}}
+  <div class="info-card">
+    <div class="card-header">Groups</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Group</th>
+            <th>Members</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Groups}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Members}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+</section>
+{{end}}

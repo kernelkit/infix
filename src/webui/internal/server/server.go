@@ -81,11 +81,23 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	nacmTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/nacm.html")
+	if err != nil {
+		return nil, err
+	}
 	servicesTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/services.html")
 	if err != nil {
 		return nil, err
 	}
 	containersTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/containers.html")
+	if err != nil {
+		return nil, err
+	}
+	cfgSysTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-system.html")
+	if err != nil {
+		return nil, err
+	}
+	cfgUsersTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-users.html")
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +142,12 @@ func New(
 	ntp := &handlers.NTPHandler{Template: ntpTmpl, RC: rc}
 	lldp := &handlers.LLDPHandler{Template: lldpTmpl, RC: rc}
 	mdns := &handlers.MDNSHandler{Template: mdnsTmpl, RC: rc}
+	nacm := &handlers.NACMHandler{Template: nacmTmpl, RC: rc}
 	services := &handlers.ServicesHandler{Template: servicesTmpl, RC: rc}
 	containers := &handlers.ContainersHandler{Template: containersTmpl, RC: rc}
+	cfg := &handlers.ConfigureHandler{RC: rc}
+	cfgSys := &handlers.ConfigureSystemHandler{Template: cfgSysTmpl, RC: rc}
+	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc}
 
 	mux := http.NewServeMux()
 
@@ -164,8 +180,30 @@ func New(
 	mux.HandleFunc("GET /ntp", ntp.Overview)
 	mux.HandleFunc("GET /lldp", lldp.Overview)
 	mux.HandleFunc("GET /mdns", mdns.Overview)
+	mux.HandleFunc("GET /nacm", nacm.Overview)
 	mux.HandleFunc("GET /services", services.Overview)
 	mux.HandleFunc("GET /containers", containers.Overview)
+
+	// Configure routes.
+	mux.HandleFunc("POST /configure/enter",           cfg.Enter)
+	mux.HandleFunc("POST /configure/apply",           cfg.Apply)
+	mux.HandleFunc("POST /configure/apply-and-save",  cfg.ApplyAndSave)
+	mux.HandleFunc("POST /configure/abort",           cfg.Abort)
+	mux.HandleFunc("GET /configure/system",           cfgSys.Overview)
+	mux.HandleFunc("POST /configure/system/identity",     cfgSys.SaveIdentity)
+	mux.HandleFunc("POST /configure/system/clock",        cfgSys.SaveClock)
+	mux.HandleFunc("PUT /configure/system/ntp",           cfgSys.SaveNTP)
+	mux.HandleFunc("PUT /configure/system/dns",           cfgSys.SaveDNS)
+	mux.HandleFunc("POST /configure/system/preferences",  cfgSys.SavePreferences)
+	mux.HandleFunc("GET /configure/users",                cfgUsers.Overview)
+	mux.HandleFunc("POST /configure/users",               cfgUsers.AddUser)
+	mux.HandleFunc("DELETE /configure/users/{name}",      cfgUsers.DeleteUser)
+	mux.HandleFunc("POST /configure/users/{name}/shell",    cfgUsers.UpdateShell)
+	mux.HandleFunc("POST /configure/users/{name}/password", cfgUsers.ChangePassword)
+	mux.HandleFunc("POST /configure/users/{name}/keys",     cfgUsers.AddKey)
+	mux.HandleFunc("DELETE /configure/users/{name}/keys/{keyname}", cfgUsers.DeleteKey)
+	mux.HandleFunc("POST /configure/users/groups/{name}/members",          cfgUsers.AddGroupMembers)
+	mux.HandleFunc("DELETE /configure/users/groups/{name}/members/{user}", cfgUsers.RemoveGroupMember)
 
 	handler := authMiddleware(store, mux)
 	handler = csrfMiddleware(handler)
