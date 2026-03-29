@@ -81,6 +81,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	nacmTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/nacm.html")
+	if err != nil {
+		return nil, err
+	}
 	servicesTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/services.html")
 	if err != nil {
 		return nil, err
@@ -130,6 +134,7 @@ func New(
 	ntp := &handlers.NTPHandler{Template: ntpTmpl, RC: rc}
 	lldp := &handlers.LLDPHandler{Template: lldpTmpl, RC: rc}
 	mdns := &handlers.MDNSHandler{Template: mdnsTmpl, RC: rc}
+	nacm := &handlers.NACMHandler{Template: nacmTmpl, RC: rc}
 	services := &handlers.ServicesHandler{Template: servicesTmpl, RC: rc}
 	containers := &handlers.ContainersHandler{Template: containersTmpl, RC: rc}
 
@@ -163,6 +168,7 @@ func New(
 	mux.HandleFunc("GET /ntp", ntp.Overview)
 	mux.HandleFunc("GET /lldp", lldp.Overview)
 	mux.HandleFunc("GET /mdns", mdns.Overview)
+	mux.HandleFunc("GET /nacm", nacm.Overview)
 	mux.HandleFunc("GET /services", services.Overview)
 	mux.HandleFunc("GET /containers", containers.Overview)
 
