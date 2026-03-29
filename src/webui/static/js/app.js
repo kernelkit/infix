@@ -396,6 +396,28 @@
   document.addEventListener('htmx:afterSettle', initCollapsibles);
 })();
 
+// Firewall zone matrix cell drill-down
+(function() {
+  var verdictLabel = { allow: '✓ Allow', deny: '✗ Deny', conditional: '⚠ Conditional' };
+
+  document.addEventListener('click', function(e) {
+    var td = e.target.closest('.matrix-cell[data-verdict]');
+    var panel = document.getElementById('fw-flow-detail');
+    if (!panel) return;
+
+    if (!td) {
+      panel.hidden = true;
+      return;
+    }
+    panel.querySelector('.fw-detail-flow').textContent =
+      td.getAttribute('data-from') + ' → ' + td.getAttribute('data-to');
+    panel.querySelector('.fw-detail-verdict').textContent =
+      verdictLabel[td.getAttribute('data-verdict')] || td.getAttribute('data-verdict');
+    panel.querySelector('.fw-detail-text').textContent = td.getAttribute('data-detail') || '';
+    panel.hidden = false;
+  });
+})();
+
 // Keystore key detail row toggle
 (function() {
   document.addEventListener('click', function(e) {

@@ -196,10 +196,12 @@ a:hover {
 
 #content {
   flex: 1;
+  width: 100%;
   padding: 2rem;
   overflow-y: auto;
   max-width: 1200px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -989,26 +991,63 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
   color: #991b1b;
   font-weight: 700;
 }
+.matrix-cond {
+  background: #fef9c3;
+  color: #854d0e;
+  font-weight: 700;
+}
 .matrix-self {
   background: var(--slate-100);
   color: var(--slate-400);
 }
+/* Clickable cells */
+.matrix-cell[data-verdict] {
+  cursor: pointer;
+}
+.matrix-cell[data-verdict]:hover {
+  filter: brightness(0.93);
+}
 
 @media (prefers-color-scheme: dark) {
   .matrix-allow { background: rgba(22, 163, 74, 0.2); color: #86efac; }
-  .matrix-deny { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
-  .matrix-self { background: var(--slate-800); color: var(--slate-600); }
+  .matrix-deny  { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+  .matrix-cond  { background: rgba(234, 179, 8, 0.2); color: #fde047; }
+  .matrix-self  { background: var(--slate-800); color: var(--slate-600); }
 }
 .dark .matrix-allow { background: rgba(22, 163, 74, 0.2); color: #86efac; }
-.dark .matrix-deny { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
-.dark .matrix-self { background: var(--slate-800); color: var(--slate-600); }
+.dark .matrix-deny  { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+.dark .matrix-cond  { background: rgba(234, 179, 8, 0.2); color: #fde047; }
+.dark .matrix-self  { background: var(--slate-800); color: var(--slate-600); }
+.light .matrix-cond { background: #fef9c3; color: #854d0e; }
+
+/* Flow detail panel — shown below matrix when a cell is clicked.
+   display:flex overrides HTML [hidden], so we restore that here. */
+.fw-flow-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface-alt);
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+.fw-flow-detail[hidden] { display: none !important; }
+.fw-detail-flow   { font-weight: 600; }
+.fw-detail-sep    { color: var(--fg-muted); }
+.fw-detail-text   { color: var(--fg-muted); }
+
+/* Policy immutable lock icon */
+.policy-lock-col  { width: 1.5rem; min-width: 1.5rem; padding: 0 0.25rem !important; text-align: center; }
+.policy-lock      { color: var(--fg-muted); font-size: 0.85rem; user-select: none; }
+.data-table td.policy-lock-col,
+.data-table th.policy-lock-col { vertical-align: middle; }
 
 .matrix-legend {
   display: flex;
   gap: 1.5rem;
   font-size: 0.85rem;
   color: var(--fg-muted);
-  margin-top: 1rem;
+  padding: 0.75rem 1rem;
 }
 
 .legend-item {
@@ -1018,10 +1057,15 @@ details[open].nav-group-top > summary.nav-group-summary-top::after {
 }
 
 .legend-swatch {
-  width: 16px;
-  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.25rem;
   border-radius: 4px;
   border: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 0.75rem;
 }
 
 /* Badges */
