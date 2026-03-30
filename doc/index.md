@@ -18,6 +18,14 @@ This document provides an introduction of key concepts, details how
 the system boots, including failure modes, and provides links to
 other documents for further study.
 
+## Project Links
+
+| **Topic**                                   | **URL**                                              |
+|---------------------------------------------|------------------------------------------------------|
+| :fontawesome-solid-house: Home page & blog  | <https://www.kernelkit.org>                          |
+| :fontawesome-brands-github: GitHub          | <https://github.com/kernelkit/infix>                 |
+| :fontawesome-solid-box-open: Latest release | <https://github.com/kernelkit/infix/releases/latest> |
+
 ## Command Line Interface
 
 The command line interface (CLI, see-ell-i) is the traditional way of
