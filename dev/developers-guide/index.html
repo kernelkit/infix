@@ -2085,6 +2085,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#configuration-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#confd" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2567,6 +2578,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#configuration-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#confd" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2916,6 +2938,24 @@ it's best to follow the structure of an existing one.  However, before
 making any changes, <strong>always discuss them with the Infix core team</strong>.
 This helps avoid issues later in development and makes pull request
 reviews smoother.</p>
+<h3 id="configuration-migration">Configuration Migration<a class="headerlink" href="#configuration-migration" title="Permanent link">¶</a></h3>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Whenever a YANG model change makes existing <code>startup-config</code> files
+incompatible — removing a node, renaming a key, restructuring a
+container — you <strong>must</strong> include a migration script so that devices
+upgrading in the field are not left unbootable.</p>
+</div>
+<p>Migration scripts live in <code>src/confd/share/migrate/&lt;version&gt;/</code> where
+<code>&lt;version&gt;</code> is the confd version (defined in <code>src/confd/configure.ac</code>)
+that introduces the breaking change.  Each script receives the path to
+the startup configuration file as its first argument and must edit it
+in-place.  Scripts are run in lexicographic order, so prefix them with
+a number (e.g. <code>40-my-change.sh</code>).</p>
+<p>See <code>src/confd/share/migrate/1.6/40-bridge-port-remove-ip.sh</code> for a
+worked example, and the <a href="../upgrade/#configuration-migration">Configuration Migration</a>
+section of the Upgrade documentation for the user-facing side of this
+mechanism.</p>
 <h3 id="confd"><code>confd</code><a class="headerlink" href="#confd" title="Permanent link">¶</a></h3>
 <p>The Infix <code>src/confd/</code> is the engine of the system.  Currently it is a
 plugin for <code>systemd-plugind</code> and contains XPath subscriptions to all the
