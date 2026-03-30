@@ -175,6 +175,28 @@ making any changes, **always discuss them with the Infix core team**.
 This helps avoid issues later in development and makes pull request
 reviews smoother.
 
+### Configuration Migration
+
+> [!IMPORTANT]
+> Whenever a YANG model change makes existing `startup-config` files
+> incompatible — removing a node, renaming a key, restructuring a
+> container — you **must** include a migration script so that devices
+> upgrading in the field are not left unbootable.
+
+Migration scripts live in `src/confd/share/migrate/<version>/` where
+`<version>` is the confd version (defined in `src/confd/configure.ac`)
+that introduces the breaking change.  Each script receives the path to
+the startup configuration file as its first argument and must edit it
+in-place.  Scripts are run in lexicographic order, so prefix them with
+a number (e.g. `40-my-change.sh`).
+
+See `src/confd/share/migrate/1.6/40-bridge-port-remove-ip.sh` for a
+worked example, and the [Configuration Migration][upgrade-migration]
+section of the Upgrade documentation for the user-facing side of this
+mechanism.
+
+[upgrade-migration]: upgrade.md#configuration-migration
+
 ### `confd`
 
 The Infix `src/confd/` is the engine of the system.  Currently it is a

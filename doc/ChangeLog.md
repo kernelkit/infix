@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.03.0][UNRELEASED]
+[v26.03.0][] - 2026-03-30
 -------------------------
 
 ### Changes
@@ -13,6 +13,11 @@ All notable changes to the project are documented in this file.
 - Upgrade FRR to 10.5.3
 - Add support for [Banana Pi R64 Mini][BPI-R64], 5 port router with WiFi 5
 - Add support for [Raspberry Pi 400][RPI-400], an RPi 4B built into a keyboard
+- Significant boot time improvements, issue #1284.  The [InitViz][] boot
+  profiling tool is now included for users who want to visualize and measure
+  the boot process on their own hardware
+- Add OSPF point-to-multipoint (P2MP) and hybrid interface type support.  This
+  also includes support for setting static neighbors, issue #1426
 - **Revamped <http://network.local> device browser**.  Device cards now
   show the IP address, product name, and firmware version from mDNS TXT
   records.  the mDNS browser is now also available over plain HTTP
@@ -25,30 +30,42 @@ All notable changes to the project are documented in this file.
 - cli: new `show mdns` command to list  mDNS-discovered devices on the LAN,
   with addresses and product model
 - Add SSH client commands to the CLI:
-  - `ssh [user <name>] [port <num>] <host>` — connect to a remote device
-  - `set ssh known-hosts <host> <keytype> <pubkey>` — pre-enroll a host key
-    received out-of-band, e.g. after a factory reset changes the device host key
-  - `no ssh known-hosts <host>` — remove a stale or changed host key entry
-- Add OSPF point-to-multipoint (P2MP) and hybrid interface type support.  This
-  also includes support for setting static neighbors, issue #1426
+   - `ssh [user <name>] [port <num>] <host>` — connect to a remote device
+   - `set ssh known-hosts <host> <keytype> <pubkey>` — pre-enroll a host key
+     received out-of-band, e.g. after a factory reset
+   - `no ssh known-hosts <host>` — remove a stale or changed host key entry
 - Add support for user-configurable HTTPS certificate: select any certificate
   stored in the keystore via `services web certificate <name>`.  The default
   auto-generated self-signed certificate is now stored in the keystore rather
   than in `/cfg/ssl` and existing certificates are auto-migrated on upgrade
+- Add NTP `stratum-weight` setting to fine-tune server selection when multiple
+  NTP sources are available with different stratum levels
+- Enable HDMI console output on Raspberry Pi 4 and Pi 400.  Previously the
+  display was suppressed; a login prompt now appears on the HDMI monitor
 
 ### Fixes
 
 - Fix #892: suppress rousette RESTCONF server warnings from syslog
+- Fix #1122: add missing migration script for the YANG validation introduced
+  in v25.10.0 that disallows IP addresses on bridge member ports.  Without
+  this script, upgrading with such a `startup-config` would prevent the device
+  from booting.  The migration removes all IP addresses from bridge member
+  ports; any addresses that should be kept must be re-added to the bridge
+  interface itself after upgrade
 - Fix #1387: `infix.local` now resolves to exactly one device per LAN.  Previously
   all Infix devices claimed both `hostname.local` and `infix.local`, causing avahi
   to append `#2`, `#3` suffixes to the shared alias on busy networks.  Assignment
   is now first-come-first-served using standard mDNS conflict resolution
+- Fix #1389: firewall policies with names longer than 17 characters were
+  silently rejected
 - Fix #1416: `show firewall` command show an error when the firewall is disabled
+- Fix #1438: default route from DHCP client not set at boot, regression in v26.02.0
+- Fix #1446: suppress netopeer2-server NETCONF server warnings from syslog
+- Fix #1456: update project links in SUPPORT.md and README.md to point to
+  the home page and blog at <https://www.kernelkit.org>, and update the
+  release link to always resolve to the latest stable release
 - Fix regression in MVEBU SafeXcel Crypto Engine for Marvell Armada SOCs (37xx,
   7k, 8k, and CN913x series).  Firmware package lost in v26.01.0
-- Fix #1438: default route from DHCP client not set at boot, regression
-  introduced in v26.02.0
-- Fix #1446: suppress netopeer2-server NETCONF server warnings from syslog
 - Fix DHCP client not sending hostname to server (e.g. for `dnsmasq` lease
   registration).  All board factory configs had the hostname option without
   `value: auto`, so `udhcpc` only requested the option instead of sending it.
@@ -60,8 +77,9 @@ All notable changes to the project are documented in this file.
   `dhcp-authoritative` so clients with unexpired leases are not NAKed after
   a router crash or factory reset that clears the lease database
 
-[BPI-R64]: https://docs.banana-pi.org/en/BPI-R64/BananaPi_BPI-R64
-[RPI-400]: https://www.raspberrypi.com/products/raspberry-pi-400/
+[BPI-R64]:  https://docs.banana-pi.org/en/BPI-R64/BananaPi_BPI-R64
+[RPI-400]:  https://www.raspberrypi.com/products/raspberry-pi-400/
+[InitViz]:  https://github.com/finit-project/InitViz
 
 [v26.02.0][] - 2026-03-01
 -------------------------

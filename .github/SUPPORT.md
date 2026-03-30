@@ -1,8 +1,10 @@
 Limited free support is only available using the online resources of the
-project on GitHub, and Discord, see <https://github.com/kernelkit>:
+project on GitHub, and Discord, see <https://github.com/kernelkit/infix>:
 
+&nbsp;&nbsp; :house: <https://www.kernelkit.org> — home page, blog, news, howto's and tutorials  
+&nbsp;&nbsp; :package: <https://github.com/kernelkit/infix/releases/latest> — latest release  
 &nbsp;&nbsp; :speech_balloon: <https://github.com/orgs/kernelkit/discussions>  
-&nbsp;&nbsp; :bug: <https://github.com/kernelkit/infix/issues>
+&nbsp;&nbsp; :bug: <https://github.com/kernelkit/infix/issues>  
 
 Support contracts, development of new features, fast-tracking of reviews
 and contributions, customer branding of Infix, and even customer specific

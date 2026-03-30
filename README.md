@@ -170,11 +170,11 @@ APIs.
 [2]: https://www.sysrepo.org/ "Sysrepo Homepage"
 [3]: https://www.kernelkit.org/infix/latest/cli/introduction/
 [4]: https://www.kernelkit.org/infix/
-[5]: https://github.com/kernelkit/infix/releases
+[5]: https://github.com/kernelkit/infix/releases/latest
 [Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest "Latest build"
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
-[Release]:         https://github.com/kernelkit/infix/releases
+[Release]:         https://github.com/kernelkit/infix/releases/latest
 [Release Badge]:   https://img.shields.io/github/v/release/kernelkit/infix 
 [GitHub]:          https://github.com/kernelkit/infix/actions/workflows/build.yml/
 [GitHub Status]:   https://github.com/kernelkit/infix/actions/workflows/build.yml/badge.svg
