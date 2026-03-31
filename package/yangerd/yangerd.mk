@@ -28,6 +28,7 @@ define YANGERD_INSTALL_EXTRA
 		>> $(TARGET_DIR)/etc/default/yangerd
 	echo 'YANGERD_ENABLE_GPS=$(if $(BR2_PACKAGE_GPSD),true,false)' \
 		>> $(TARGET_DIR)/etc/default/yangerd
+	echo 'YANGERD_LOG_LEVEL=deug' >> $(TARGET_DIR)/etc/default/yangerd
 endef
 YANGERD_POST_INSTALL_TARGET_HOOKS += YANGERD_INSTALL_EXTRA
 

@@ -80,9 +80,13 @@ static int ly_add_yangerd_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		return SR_ERR_SYS;
 	}
 
+	NOTE("yangerd: got %zu bytes JSON for %s", len, path);
+
 	err = lyd_parse_data_mem(ctx, json, LYD_JSON, LYD_PARSE_ONLY, 0, parent);
-	if (err)
-		ERROR("yangerd: failed parsing JSON for %s (%d)", path, err);
+	if (err) {
+		ERROR("yangerd: failed parsing JSON for %s (%d): %s",
+		      path, err, ly_errmsg(ctx));
+	}
 
 	free(json);
 	return err;
@@ -138,11 +142,11 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	err = ly_add_yangerd_data(ctx, parent, "ietf-interfaces:interfaces");
 	if (err)
-		ERROR("Error adding interface data");
+		ERROR("Error adding interface data (err %d)", err);
 
 	sr_release_context(con);
 
-	return SR_ERR_OK;
+	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
 
 static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *,
