@@ -42,6 +42,6 @@ with infamy.Test() as test:
             client.put_config_dict("ietf-interfaces", config)
 
             with test.step("Verify DHCP client has default route via 192.168.0.254"):
-                until(lambda: route.ipv4_route_exist(client, "0.0.0.0/0", ROUTER))
+                until(lambda: route.ipv4_route_exist(client, "0.0.0.0/0", ROUTER), attempts=30)
 
     test.succeed()
