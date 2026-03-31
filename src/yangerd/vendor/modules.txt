@@ -1,0 +1,53 @@
+# github.com/fsnotify/fsnotify v1.9.0
+## explicit; go 1.17
+github.com/fsnotify/fsnotify
+github.com/fsnotify/fsnotify/internal
+# github.com/godbus/dbus/v5 v5.2.2
+## explicit; go 1.20
+github.com/godbus/dbus/v5
+# github.com/google/go-cmp v0.7.0
+## explicit; go 1.21
+github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/internal/diff
+github.com/google/go-cmp/cmp/internal/flags
+github.com/google/go-cmp/cmp/internal/function
+github.com/google/go-cmp/cmp/internal/value
+# github.com/mdlayher/ethtool v0.4.1
+## explicit; go 1.23.0
+github.com/mdlayher/ethtool
+# github.com/mdlayher/genetlink v1.3.2
+## explicit; go 1.18
+github.com/mdlayher/genetlink
+# github.com/mdlayher/netlink v1.8.0
+## explicit; go 1.23.0
+github.com/mdlayher/netlink
+github.com/mdlayher/netlink/nlenc
+# github.com/mdlayher/socket v0.5.1
+## explicit; go 1.20
+github.com/mdlayher/socket
+# github.com/osrg/gobgp/v3 v3.37.0
+## explicit; go 1.23.0
+github.com/osrg/gobgp/v3/pkg/log
+github.com/osrg/gobgp/v3/pkg/packet/bgp
+github.com/osrg/gobgp/v3/pkg/zebra
+# github.com/sirupsen/logrus v1.9.3
+## explicit; go 1.13
+github.com/sirupsen/logrus
+# github.com/vishvananda/netlink v1.3.1
+## explicit; go 1.12
+github.com/vishvananda/netlink
+github.com/vishvananda/netlink/nl
+# github.com/vishvananda/netns v0.0.5
+## explicit; go 1.17
+github.com/vishvananda/netns
+# golang.org/x/net v0.43.0
+## explicit; go 1.23.0
+golang.org/x/net/bpf
+# golang.org/x/sync v0.3.0
+## explicit; go 1.17
+golang.org/x/sync/errgroup
+# golang.org/x/sys v0.35.0
+## explicit; go 1.23.0
+golang.org/x/sys/cpu
+golang.org/x/sys/unix
+golang.org/x/sys/windows
