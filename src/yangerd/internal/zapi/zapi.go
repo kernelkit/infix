@@ -62,13 +62,14 @@ const (
 	RouteSystem  RouteType = 0
 	RouteKernel  RouteType = 1
 	RouteConnect RouteType = 2
-	RouteStatic  RouteType = 3
-	RouteRIP     RouteType = 4
-	RouteRIPNG   RouteType = 5
-	RouteOSPF    RouteType = 6
-	RouteOSPF6   RouteType = 7
-	RouteISIS    RouteType = 8
-	RouteBGP     RouteType = 9
+	RouteLocal   RouteType = 3
+	RouteStatic  RouteType = 4
+	RouteRIP     RouteType = 5
+	RouteRIPNG   RouteType = 6
+	RouteOSPF    RouteType = 7
+	RouteOSPF6   RouteType = 8
+	RouteISIS    RouteType = 9
+	RouteBGP     RouteType = 10
 )
 
 // AFI values.
