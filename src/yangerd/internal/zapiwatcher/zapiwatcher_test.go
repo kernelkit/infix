@@ -18,7 +18,7 @@ func TestRouteProtocol(t *testing.T) {
 		{"connect", zapi.RouteConnect, "ietf-routing:direct"},
 		{"static", zapi.RouteStatic, "ietf-routing:static"},
 		{"ospf", zapi.RouteOSPF, "ietf-ospf:ospfv2"},
-		{"rip", zapi.RouteRIP, "ietf-rip:ripv2"},
+		{"rip", zapi.RouteRIP, "ietf-rip:rip"},
 		{"unknown defaults to kernel", zapi.RouteType(99), "infix-routing:kernel"},
 		{"zero defaults to kernel", zapi.RouteType(0), "infix-routing:kernel"},
 	}
@@ -68,8 +68,9 @@ func TestRibName(t *testing.T) {
 
 func TestTransformRoute(t *testing.T) {
 	route := &zapi.Route{
-		Type:   zapi.RouteStatic,
-		Metric: 100,
+		Type:     zapi.RouteStatic,
+		Distance: 1,
+		Metric:   100,
 		Prefix: net.IPNet{
 			IP:   net.ParseIP("10.0.0.0").To4(),
 			Mask: net.CIDRMask(24, 32),
@@ -91,8 +92,8 @@ func TestTransformRoute(t *testing.T) {
 		t.Errorf("source-protocol = %v, want %q", got, "ietf-routing:static")
 	}
 
-	if got, ok := parsed["route-preference"].(float64); !ok || int(got) != 100 {
-		t.Errorf("route-preference = %v, want 100", parsed["route-preference"])
+	if got, ok := parsed["route-preference"].(float64); !ok || int(got) != 1 {
+		t.Errorf("route-preference = %v, want 1 (admin distance)", parsed["route-preference"])
 	}
 
 	nhContainer, ok := parsed["next-hop"].(map[string]any)
@@ -114,8 +115,9 @@ func TestTransformRoute(t *testing.T) {
 
 func TestTransformRouteIPv6(t *testing.T) {
 	route := &zapi.Route{
-		Type:   zapi.RouteOSPF,
-		Metric: 10,
+		Type:     zapi.RouteOSPF,
+		Distance: 110,
+		Metric:   10,
 		Prefix: net.IPNet{
 			IP:   net.ParseIP("2001:db8::").To16(),
 			Mask: net.CIDRMask(48, 128),
