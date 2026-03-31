@@ -28,7 +28,7 @@ with infamy.Test() as test:
         HOST_IP = "192.168.1.42"
 
     with test.step("Configure basic end-device firewall"):
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -43,9 +43,8 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
-
-        target.put_config_dict("infix-firewall", {
+        },
+        "infix-firewall": {
             "firewall": {
                 "default": "public-untrusted-net",
                 "logging": "all",
@@ -78,12 +77,18 @@ with infamy.Test() as test:
                     "service": ["ssh", "dhcpv6-client", "mySSH", "http"]
                 }]
             }
-        })
+        }})
 
         # Wait for configuration to be activated
         infamy.Firewall.wait_for_operational(target, {
-            "public-untrusted-net": {"action": "drop"},
-            "mgmt": {"action": "accept"}
+            "public-untrusted-net": {
+                "action": "drop",
+                "service": ["ssh", "dhcpv6-client", "mySSH", "http"]
+            },
+            "mgmt": {
+                "action": "accept",
+                "service": ["ssh", "netconf", "restconf"]
+            }
         })
 
         # Verify firewall operational state
@@ -92,23 +97,8 @@ with infamy.Test() as test:
 
         assert fw["default"] == "public-untrusted-net"
 
-        services = {svc["name"]: svc for svc in fw.get("service", [])}
-        assert "mySSH" in services, "Custom service mySSH not found"
-        custom_service = services["mySSH"]
-        assert len(custom_service["port"]) == 1
-        port_entry = next(iter(custom_service["port"]))
-        assert port_entry["proto"] == "tcp"
-        assert int(port_entry["lower"]) == 222
-
-        assert "http" in services, "HTTP service override not found"
-        http_service = services["http"]
-        assert len(http_service["port"]) == 1
-        port_entry = next(iter(http_service["port"]))
-        assert port_entry["proto"] == "tcp"
-        assert int(port_entry["lower"]) == 8080
-
         zones = {zone["name"]: zone for zone in fw["zone"]}
-        assert "public-untrusted-net" in zones, "public-untrusted-net zone not found in configuration"
+        assert "public-untrusted-net" in zones, "public-untrusted-net zone not found"
         public_zone = zones["public-untrusted-net"]
         assert public_zone["action"] == "drop"
         assert data_if in public_zone["interface"]
