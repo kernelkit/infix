@@ -147,37 +147,31 @@ with infamy.Test() as test:
         fw = data["firewall"]
         zones = {z["name"]: z for z in fw["zone"]}
 
-        # Verify WAN zone with port forwarding
         wan_zone = zones["wan"]
         assert wan_zone["action"] == "drop"
         assert wan_if in wan_zone["interface"]
         assert len(wan_zone["port-forward"]) == 1
         pf = next(iter(wan_zone["port-forward"]))
-        assert pf["lower"] == 8080
+        assert int(pf["lower"]) == 8080
         assert pf["to"]["addr"] == DMZ_SERVER_IP
-        assert pf["to"]["port"] == 80
+        assert int(pf["to"]["port"]) == 80
 
-        # Verify DMZ zone
         dmz_zone = zones["dmz"]
         assert dmz_zone["action"] == "reject"
         assert DMZ_NET in dmz_zone["network"]
         assert "http" in dmz_zone["service"]
 
-        # Verify LAN zone
         lan_zone = zones["lan"]
         assert lan_zone["action"] == "accept"
         assert lan_if in lan_zone["interface"]
 
-        # Check policies
         policies = {p["name"]: p for p in fw["policy"]}
 
-        # Verify loc-to-wan policy
         loc_wan_policy = policies["loc-to-wan"]
         assert set(loc_wan_policy["ingress"]) == {"lan", "dmz"}
         assert loc_wan_policy["egress"] == ["wan"]
         assert loc_wan_policy["masquerade"] is True
 
-        # Verify lan-to-dmz policy
         lan_dmz_policy = policies["lan-to-dmz"]
         assert lan_dmz_policy["ingress"] == ["lan"]
         assert lan_dmz_policy["egress"] == ["dmz"]

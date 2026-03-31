@@ -97,6 +97,21 @@ with infamy.Test() as test:
 
         assert fw["default"] == "public-untrusted-net"
 
+        services = {svc["name"]: svc for svc in fw.get("service", [])}
+        assert "mySSH" in services, "Custom service mySSH not found"
+        custom_service = services["mySSH"]
+        assert len(custom_service["port"]) == 1
+        port_entry = next(iter(custom_service["port"]))
+        assert port_entry["proto"] == "tcp"
+        assert int(port_entry["lower"]) == 222
+
+        assert "http" in services, "HTTP service override not found"
+        http_service = services["http"]
+        assert len(http_service["port"]) == 1
+        port_entry = next(iter(http_service["port"]))
+        assert port_entry["proto"] == "tcp"
+        assert int(port_entry["lower"]) == 8080
+
         zones = {zone["name"]: zone for zone in fw["zone"]}
         assert "public-untrusted-net" in zones, "public-untrusted-net zone not found"
         public_zone = zones["public-untrusted-net"]
