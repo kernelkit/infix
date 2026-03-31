@@ -29,18 +29,22 @@ const treeKey = "ietf-interfaces:interfaces"
 // with ethernet/wifi/bridge data before being stored as a single
 // complete YANG document.
 type NLMonitor struct {
-	batch      *ipbatch.IPBatch
+	linkBatch  *ipbatch.IPBatch
+	addrBatch  *ipbatch.IPBatch
 	brBatch    *bridgebatch.BridgeBatch
 	tree       *tree.Tree
 	ethRefresh func(string)
 	log        *slog.Logger
 	fc         iface.FileChecker
 
+	// initDone is closed after the first initialDump completes.
+	initDone chan struct{}
+
 	// staging holds raw ip-json data used as input to iface.Transform().
 	// Protected by mu.
 	mu       sync.Mutex
 	links    json.RawMessage // ip -json -s -d link show (includes stats+details)
-	addrs    json.RawMessage // ip -json addr show
+	addrs    json.RawMessage // ip -json -d addr show (details only, no stats)
 	fdb      map[string]json.RawMessage
 	mdb      map[string]json.RawMessage
 	ethernet map[string]json.RawMessage // ifname → ethtool JSON
@@ -50,13 +54,17 @@ type NLMonitor struct {
 }
 
 // New creates a netlink monitor backed by ip/bridge batch query workers.
-func New(batch *ipbatch.IPBatch, brBatch *bridgebatch.BridgeBatch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
+// linkBatch should include -s -d flags; addrBatch should include -d only
+// (no -s, which causes multi-line output for link commands).
+func New(linkBatch, addrBatch *ipbatch.IPBatch, brBatch *bridgebatch.BridgeBatch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
 	return &NLMonitor{
-		batch:          batch,
+		linkBatch:      linkBatch,
+		addrBatch:      addrBatch,
 		brBatch:        brBatch,
 		tree:           t,
 		fc:             fc,
 		log:            log,
+		initDone:       make(chan struct{}),
 		fdb:            make(map[string]json.RawMessage),
 		mdb:            make(map[string]json.RawMessage),
 		ethernet:       make(map[string]json.RawMessage),
@@ -69,6 +77,11 @@ func New(batch *ipbatch.IPBatch, brBatch *bridgebatch.BridgeBatch, t *tree.Tree,
 // when interface link events are received.
 func (m *NLMonitor) SetEthRefresh(fn func(string)) {
 	m.ethRefresh = fn
+}
+
+// WaitReady returns a channel that is closed after initialDump completes.
+func (m *NLMonitor) WaitReady() <-chan struct{} {
+	return m.initDone
 }
 
 // SetEthernetData updates the staged ethernet data for an interface
@@ -133,6 +146,7 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 	if err := m.initialDump(); err != nil {
 		m.log.Error("initial dump failed", "err", err)
 	}
+	close(m.initDone)
 
 	for {
 		select {
@@ -166,14 +180,17 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 }
 
 func (m *NLMonitor) initialDump() error {
-	linkRaw, err := m.queryIP("link show")
+	linkRaw, err := m.queryLink("link show")
 	if err != nil {
 		return err
 	}
-	addrRaw, err := m.queryIP("addr show")
+	addrRaw, err := m.queryAddr("addr show")
 	if err != nil {
 		return err
 	}
+
+	m.log.Debug("initialDump", "linkBytes", len(linkRaw), "addrBytes", len(addrRaw))
+	m.validateAddrData("initialDump", addrRaw)
 
 	m.mu.Lock()
 	m.links = linkRaw
@@ -209,8 +226,15 @@ func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) {
 		return
 	}
 
-	raw, err := m.queryIP("addr show dev " + ifname)
+	m.log.Debug("handleAddrUpdate", "ifname", ifname)
+	raw, err := m.queryAddr("addr show dev " + ifname)
 	if err != nil {
+		m.log.Error("handleAddrUpdate queryAddr failed", "ifname", ifname, "err", err)
+		return
+	}
+
+	if !m.validateAddrData("handleAddrUpdate/"+ifname, raw) {
+		m.log.Error("handleAddrUpdate: REFUSING to store invalid addr data", "ifname", ifname)
 		return
 	}
 
@@ -260,13 +284,17 @@ func (m *NLMonitor) handleMDBUpdate() {
 }
 
 func (m *NLMonitor) refreshInterface(name string) {
-	linkRaw, err := m.queryIP("link show dev " + name)
+	linkRaw, err := m.queryLink("link show dev " + name)
 	if err != nil {
 		return
 	}
 
-	addrRaw, err := m.queryIP("addr show dev " + name)
+	addrRaw, err := m.queryAddr("addr show dev " + name)
 	if err != nil {
+		addrRaw = nil
+	}
+	if addrRaw != nil && !m.validateAddrData("refreshInterface/"+name, addrRaw) {
+		m.log.Error("refreshInterface: REFUSING to store invalid addr data", "ifname", name)
 		addrRaw = nil
 	}
 
@@ -406,14 +434,27 @@ func (m *NLMonitor) updateOperStatus(ifname string, raw json.RawMessage) {
 	}
 }
 
-func (m *NLMonitor) queryIP(command string) (json.RawMessage, error) {
-	raw, err := m.batch.Query(command)
+func (m *NLMonitor) queryLink(command string) (json.RawMessage, error) {
+	raw, err := m.linkBatch.Query(command)
 	if err != nil {
 		if errors.Is(err, ipbatch.ErrBatchDead) {
-			m.log.Warn("ip batch dead", "command", command, "err", err)
+			m.log.Warn("link batch dead", "command", command, "err", err)
 			return nil, err
 		}
-		m.log.Error("ip batch query failed", "command", command, "err", err)
+		m.log.Error("link batch query failed", "command", command, "err", err)
+		return nil, err
+	}
+	return raw, nil
+}
+
+func (m *NLMonitor) queryAddr(command string) (json.RawMessage, error) {
+	raw, err := m.addrBatch.Query(command)
+	if err != nil {
+		if errors.Is(err, ipbatch.ErrBatchDead) {
+			m.log.Warn("addr batch dead", "command", command, "err", err)
+			return nil, err
+		}
+		m.log.Error("addr batch query failed", "command", command, "err", err)
 		return nil, err
 	}
 	return raw, nil
@@ -525,6 +566,54 @@ func bridgeNameFromNeigh(update netlink.NeighUpdate) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// validateAddrData checks whether a JSON response from "addr show" contains
+// addr_info entries.  "ip -json addr show" always includes an "addr_info"
+// array for every interface object; its absence means we got link-format
+// data instead.  Returns true if the data looks valid (has addr_info).
+func (m *NLMonitor) validateAddrData(caller string, raw json.RawMessage) bool {
+	if len(raw) == 0 {
+		m.log.Error("addr data is EMPTY", "caller", caller)
+		return false
+	}
+
+	var rows []map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		m.log.Error("addr data unmarshal failed", "caller", caller, "err", err, "raw", string(raw))
+		return false
+	}
+
+	if len(rows) == 0 {
+		// Empty array is valid — interface exists but has no addresses.
+		return true
+	}
+
+	for _, row := range rows {
+		ifnRaw, _ := row["ifname"]
+		var ifn string
+		json.Unmarshal(ifnRaw, &ifn)
+
+		if _, ok := row["addr_info"]; !ok {
+			m.log.Error("addr data MISSING addr_info — got link-format data",
+				"caller", caller,
+				"ifname", ifn,
+				"keys", mapKeys(row),
+				"raw", string(raw),
+			)
+			return false
+		}
+	}
+	return true
+}
+
+// mapKeys returns the JSON object keys from a map for diagnostic logging.
+func mapKeys(m map[string]json.RawMessage) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func extractOperStatus(raw json.RawMessage) (string, bool) {
