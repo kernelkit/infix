@@ -5,22 +5,22 @@ import (
 	"net"
 	"testing"
 
-	"github.com/osrg/gobgp/v3/pkg/zebra"
+	"github.com/kernelkit/infix/src/yangerd/internal/zapi"
 )
 
 func TestRouteProtocol(t *testing.T) {
 	tests := []struct {
 		name     string
-		rt       zebra.RouteType
+		rt       zapi.RouteType
 		expected string
 	}{
-		{"kernel", RouteKernel, "infix-routing:kernel"},
-		{"connect", RouteConnect, "ietf-routing:direct"},
-		{"static", RouteStatic, "ietf-routing:static"},
-		{"ospf", RouteOSPF, "ietf-ospf:ospfv2"},
-		{"rip", RouteRIP, "ietf-rip:ripv2"},
-		{"unknown defaults to kernel", zebra.RouteType(99), "infix-routing:kernel"},
-		{"zero defaults to kernel", zebra.RouteType(0), "infix-routing:kernel"},
+		{"kernel", zapi.RouteKernel, "infix-routing:kernel"},
+		{"connect", zapi.RouteConnect, "ietf-routing:direct"},
+		{"static", zapi.RouteStatic, "ietf-routing:static"},
+		{"ospf", zapi.RouteOSPF, "ietf-ospf:ospfv2"},
+		{"rip", zapi.RouteRIP, "ietf-rip:ripv2"},
+		{"unknown defaults to kernel", zapi.RouteType(99), "infix-routing:kernel"},
+		{"zero defaults to kernel", zapi.RouteType(0), "infix-routing:kernel"},
 	}
 
 	for _, tc := range tests {
@@ -42,17 +42,17 @@ func TestRibName(t *testing.T) {
 		{
 			"ipv4",
 			net.IPNet{IP: net.ParseIP("10.0.0.0").To4(), Mask: net.CIDRMask(24, 32)},
-			"ipv4-master",
+			"ipv4",
 		},
 		{
 			"ipv6",
 			net.IPNet{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)},
-			"ipv6-master",
+			"ipv6",
 		},
 		{
 			"loopback v4",
 			net.IPNet{IP: net.ParseIP("127.0.0.0").To4(), Mask: net.CIDRMask(8, 32)},
-			"ipv4-master",
+			"ipv4",
 		},
 	}
 
@@ -67,12 +67,14 @@ func TestRibName(t *testing.T) {
 }
 
 func TestTransformRoute(t *testing.T) {
-	route := &zebra.IPRouteBody{
-		Type:   RouteStatic,
+	route := &zapi.Route{
+		Type:   zapi.RouteStatic,
 		Metric: 100,
+		Prefix: net.IPNet{
+			IP:   net.ParseIP("10.0.0.0").To4(),
+			Mask: net.CIDRMask(24, 32),
+		},
 	}
-	route.Prefix.Prefix = net.ParseIP("10.0.0.0")
-	route.Prefix.PrefixLen = 24
 
 	result := transformRoute(route)
 
@@ -81,7 +83,7 @@ func TestTransformRoute(t *testing.T) {
 		t.Fatalf("unmarshal transformRoute result: %v", err)
 	}
 
-	if got := parsed["destination-prefix"]; got != "10.0.0.0/24" {
+	if got := parsed["ietf-ipv4-unicast-routing:destination-prefix"]; got != "10.0.0.0/24" {
 		t.Errorf("destination-prefix = %v, want %q", got, "10.0.0.0/24")
 	}
 
@@ -89,13 +91,17 @@ func TestTransformRoute(t *testing.T) {
 		t.Errorf("source-protocol = %v, want %q", got, "ietf-routing:static")
 	}
 
-	if got, ok := parsed["metric"].(float64); !ok || int(got) != 100 {
-		t.Errorf("metric = %v, want 100", parsed["metric"])
+	if got, ok := parsed["route-preference"].(float64); !ok || int(got) != 100 {
+		t.Errorf("route-preference = %v, want 100", parsed["route-preference"])
 	}
 
-	nhList, ok := parsed["next-hop-list"].(map[string]any)
+	nhContainer, ok := parsed["next-hop"].(map[string]any)
 	if !ok {
-		t.Fatalf("next-hop-list not a map: %T", parsed["next-hop-list"])
+		t.Fatalf("next-hop not a map: %T", parsed["next-hop"])
+	}
+	nhList, ok := nhContainer["next-hop-list"].(map[string]any)
+	if !ok {
+		t.Fatalf("next-hop-list not a map: %T", nhContainer["next-hop-list"])
 	}
 	hops, ok := nhList["next-hop"].([]any)
 	if !ok {
@@ -107,12 +113,14 @@ func TestTransformRoute(t *testing.T) {
 }
 
 func TestTransformRouteIPv6(t *testing.T) {
-	route := &zebra.IPRouteBody{
-		Type:   RouteOSPF,
+	route := &zapi.Route{
+		Type:   zapi.RouteOSPF,
 		Metric: 10,
+		Prefix: net.IPNet{
+			IP:   net.ParseIP("2001:db8::").To16(),
+			Mask: net.CIDRMask(48, 128),
+		},
 	}
-	route.Prefix.Prefix = net.ParseIP("2001:db8::")
-	route.Prefix.PrefixLen = 48
 
 	result := transformRoute(route)
 
@@ -121,65 +129,10 @@ func TestTransformRouteIPv6(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	if got := parsed["destination-prefix"]; got != "2001:db8::/48" {
+	if got := parsed["ietf-ipv6-unicast-routing:destination-prefix"]; got != "2001:db8::/48" {
 		t.Errorf("destination-prefix = %v, want %q", got, "2001:db8::/48")
 	}
 	if got := parsed["source-protocol"]; got != "ietf-ospf:ospfv2" {
 		t.Errorf("source-protocol = %v, want %q", got, "ietf-ospf:ospfv2")
-	}
-}
-
-func TestIpNetFromPrefix(t *testing.T) {
-	tests := []struct {
-		name     string
-		prefix   zebra.Prefix
-		wantCIDR string
-		wantOK   bool
-	}{
-		{
-			"valid ipv4",
-			zebra.Prefix{Prefix: net.ParseIP("192.168.1.0"), PrefixLen: 24},
-			"192.168.1.0/24",
-			true,
-		},
-		{
-			"valid ipv6",
-			zebra.Prefix{Prefix: net.ParseIP("2001:db8::"), PrefixLen: 64},
-			"2001:db8::/64",
-			true,
-		},
-		{
-			"host route ipv4",
-			zebra.Prefix{Prefix: net.ParseIP("10.0.0.1"), PrefixLen: 32},
-			"10.0.0.1/32",
-			true,
-		},
-		{
-			"zero prefix length",
-			zebra.Prefix{Prefix: net.ParseIP("0.0.0.0"), PrefixLen: 0},
-			"0.0.0.0/0",
-			true,
-		},
-		{
-			"prefix masking applied",
-			zebra.Prefix{Prefix: net.ParseIP("10.0.0.5"), PrefixLen: 24},
-			"10.0.0.0/24",
-			true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got, ok := ipNetFromPrefix(tc.prefix)
-			if ok != tc.wantOK {
-				t.Fatalf("ipNetFromPrefix ok = %v, want %v", ok, tc.wantOK)
-			}
-			if !ok {
-				return
-			}
-			if got.String() != tc.wantCIDR {
-				t.Errorf("ipNetFromPrefix = %q, want %q", got.String(), tc.wantCIDR)
-			}
-		})
 	}
 }
