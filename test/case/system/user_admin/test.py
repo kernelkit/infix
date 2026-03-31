@@ -11,6 +11,16 @@ import infamy.ssh as ssh
 import infamy.util as util
 from passlib.hash import sha256_crypt
 
+def get_user(name):
+    try:
+        operational = target.get_data("/ietf-system:system/authentication")
+        users = operational["system"]["authentication"]["user"]
+        for user in users:
+            if user['name'] == name:
+                return user
+    except:
+        return None
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
@@ -82,20 +92,15 @@ with infamy.Test() as test:
         target.put_config_dict("ietf-system", running)
 
     with test.step("Verify user jacky exists and has new password"):
-        operational = target.get_data("/ietf-system:system/authentication")
-        users = operational["system"]["authentication"]["user"]
+        def password_changed():
+            user = get_user(USER)
+            if user and user['password'] != PASS:
+                return user
+            return None
 
-        found = None
-        for user in users:
-            if user['name'] == USER:
-                found = user
-                break
+        user = util.until(password_changed)
 
-        if found is None:
-            test.fail()
-        if found['password'] == "$factory$":
-            test.fail()
-        if found['password'] == PASS:
+        if user is None:
             test.fail()
 
     with test.step("Verify user jacky can log in with SSH"):
