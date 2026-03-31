@@ -1,0 +1,13 @@
+---
+linters:
+  enable:
+    - misspell
+    - revive
+
+linters-settings:
+  revive:
+    rules:
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#var-naming
+      # Disable due to use of ALL_CAPS consts.
+      - name: var-naming
+        disabled: true
