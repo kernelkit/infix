@@ -139,6 +139,10 @@
 | 2026-03-04 | 0.23 | Firewall data source corrected: replaced all `nft list ruleset -j` references with firewalld D-Bus method calls, matching the Python `infix_firewall.py` implementation. `refreshFirewall()` now takes `conn *dbus.Conn` and queries firewalld directly (`getDefaultZone()`, `getActiveZones()`, `getZoneSettings2()`, `getPolicies()`, `getPolicySettings()`, `listServices()`, `getServiceSettings2()`, `getLogDenied()`, `queryPanicMode()`). Updated data source matrix (nftables YANG paths replaced with firewalld zone/policy/service paths), signal subscription table, differences table, collector #11 spec, design rationale, external command timeouts, migration section (reversed: D-Bus is kept, not replaced), summary migration table, project tree (`transformNftRuleset()` renamed to `buildFirewallTree()`), dbusmonitor package description, appendix model table, and glossary D-Bus Monitor entry throughout. | Assistant |
 | 2026-03-05 | 0.24 | Added testability architecture: Section 8.5 defines Go interface contracts for all 9 external dependencies (netlink, ip batch, bridge batch, D-Bus, ZAPI, ethtool, chrony, command execution, file I/O), with interface definitions, production/mock implementation table, and import restriction rule. Section 8.6 defines the verification loop (definition of done): 4-step build/vet/test/golden-file workflow executable on a developer workstation with no target hardware, golden-file capture process from running Python yanger, YANG schema validation via yanglint in CI, and 8-point per-module completion checklist. | Assistant |
 | 2026-03-27 | 0.25 | Review-driven corrections: LLDP converted from polling to reactive (`lldpcli -f json0 watch`); added `infix-services:mdns` module (migrated from statd/avahi.c via avahi D-Bus); added LLDPMonitor and mDNS Monitor subsystem sections; reconciled health endpoint schema (4.3.5 vs 4.8); fixed module counts; added container lifecycle reactive recommendation; added polling justification notes; fixed `routing-state` deprecation, typos, and formatting throughout. | Assistant |
+| 2026-03-30 | 0.26 | Hostname and timezone collection moved from polling to reactive inotify via fswatcher. Hostname: moved from SystemCollector `os.Hostname()` at 300s to inotify on `/etc/hostname` via `Watch()`. Timezone: moved from SystemCollector `os.Readlink("/etc/localtime")` at 300s to inotify on `/etc/localtime` via new `WatchSymlink()` method. `WatchSymlink()` watches the parent directory instead of the file itself because Go's `fsnotify` follows symlinks — `watcher.Add("/etc/localtime")` would watch the target file, not the symlink entry, so symlink replacements via `ln -sf` would go undetected. The handler is registered under the full file path so that directory-level `Create`/`Rename` events on `/etc/localtime` match the handler lookup. `readTimezone()` handles both named timezones (strip zoneinfo prefix) and Etc/GMT±N offsets (with POSIX sign inversion). SystemCollector now uses `tree.Merge()` for `ietf-system:system` (was `tree.Set()`) so fswatcher hostname/timezone updates are not clobbered by subsequent poll cycles. Added `WatchSymlink` subsection to fswatcher documentation, `/etc/localtime` to watched paths table. Updated fswatcher intro, system collector specification, data source matrix, module-by-module mapping, and summary table throughout. | Assistant |
+| 2026-03-30 | 0.27 | On-demand providers for live system state. Uptime, current-datetime, boot-datetime, memory usage, load average, and filesystem usage moved from polling (SystemCollector at 60s/300s) to on-demand computation at IPC request time. Added `OnDemandFunc` type and `RegisterProvider()` to `Tree` — when a provider is registered for a tree key, `Get()`/`GetMulti()` calls the provider function and shallow-merges the result with cached data, returning fresh values without mutating the cache. `internal/collector/live.go` implements `LiveSystemState()` which reads `/proc/uptime`, `/proc/meminfo`, `/proc/loadavg`, and calls `syscall.Statfs()` on `/`, `/var`, `/cfg` at the moment of each IPC request. SystemCollector no longer collects clock, memory, load average, or filesystem data — it retains only users, platform, software (RAUC/initctl), DNS, and services. Updated Tree type documentation (providers map, RegisterProvider, modified Get/GetMulti), SystemCollector specification (#7), data source matrix (clock/resource-usage rows now ON-DEMAND), summary table (moved leaf counts from POLLING to ON-DEMAND), module-by-module mapping (ietf_system.py strategy), project structure (added live.go), package descriptions (updated collector, tree), and summary migration table throughout. |
+| 2026-03-30 | 0.28 | SystemCollector decomposition complete. Users moved from polling (SystemCollector at 300s) to reactive fswatcher: `Watch("/etc/shadow")` for password/account changes, `WatchDir("/var/run/sshd/")` for SSH authorized key changes. `WatchDir()` is a new fswatcher method that watches a directory and fires the handler for any file create/write/remove event within it. Platform data (os-release, uname) moved from polling to boot-once: `BootPlatform()` in `internal/collector/boot.go` runs once at startup, result merged into tree and never re-read. Software data (RAUC slot status, installation status) moved from polling to boot-once: `BootSoftware()` in `internal/collector/boot.go` runs once at startup. Boot order moved from polling to reactive fswatcher: `Watch("/mnt/aux/grub/grubenv")` and `Watch("/mnt/aux/uboot.env")` trigger `ReadBootOrder()` which re-runs `fw_printenv`/`grub-editenv` and patches the software subtree. SystemCollector stripped to DNS resolver and Finit services only — all other data now handled by fswatcher reactive handlers, boot-once initialization, or on-demand providers. Updated collector specification #7, data source matrix (users/platform/software/boot-order rows), module-by-module mapping (ietf_system.py strategy), and summary migration table throughout. | Assistant |
+| 2026-03-30 | 0.29 | NTP collector now populates the `infix-system:ntp` augmentation under `ietf-system:system-state` in addition to `ietf-ntp:ntp`. The Infix YANG model (`infix-system.yang`) augments `/sys:system-state` with `container ntp` → `list source` (keyed by address) containing `state` (enum: selected, candidate, outlier, unusable, falseticker, unstable), `mode` (enum: server, peer, local-clock), `stratum`, and `poll`. `addSources()` parses the same `chronyc -c sources` output as `addAssociations()` (shared to avoid double subprocess invocation), maps chronyc indicators (`*→selected`, `+→candidate`, `-→outlier`, `?→unusable`, `x→falseticker`, `~→unstable`) and mode indicators (`^→server`, `=→peer`), skips reference clocks (mode `#`) and invalid stratum, and merges the result into `ietf-system:system-state` via `tree.Merge()`. This satisfies the integration test `test/case/system/ntp_client/test.py` which reads from `/ietf-system:system-state/infix-system:ntp/sources/source` and checks for `state == "selected"`. | Assistant |
 
 ---
 
@@ -1474,7 +1478,7 @@ Kernel          fsnotify         fswatcher        os.ReadFile      Tree
   |                   |                |               |              |
 ```
 
-Note: The fswatcher monitors procfs forwarding flags (`/proc/sys/net/ipv4/conf/*/forwarding`) via inotify. DHCP lease file watching has been moved to the D-Bus Monitor Subsystem (Section 3.2.8), which reacts to dnsmasq D-Bus signals instead of inotify file events.
+Note: The fswatcher monitors procfs forwarding flags (`/proc/sys/net/ipv4/conf/*/forwarding`), `/etc/hostname`, and `/etc/localtime` (via `WatchSymlink`) using inotify. DHCP lease file watching has been moved to the D-Bus Monitor Subsystem (Section 3.2.8), which reacts to dnsmasq D-Bus signals instead of inotify file events.
 
 #### 3.2.5 Bridge Monitor Reactive Path (Bridge Event to Tree)
 ```
@@ -1619,7 +1623,7 @@ When a netlink event arrives on any subscription channel (e.g., `LinkUpdate` for
     - Streaming connection to `/var/run/frr/zserv.api` via ZAPI v6
     - `ZEBRA_REDISTRIBUTE_ADD` per route type triggers full RIB dump from zebra
     - Receives `REDISTRIBUTE_ROUTE_ADD` / `REDISTRIBUTE_ROUTE_DEL` messages incrementally
-  - **fswatcher** (procfs forwarding flags):
+  - **fswatcher** (procfs forwarding flags, hostname, timezone):
     - After glob expansion and inotify watch setup, calls `InitialRead()` to read the current value of every watched file (see Section 4.1ter)
     - `/proc/sys/net/ipv4/conf/*/forwarding` for all existing interfaces
     - Completes sub-millisecond (procfs reads are kernel-generated)
@@ -1927,7 +1931,7 @@ func extractOperStatus(data json.RawMessage) string {
 
 ### 4.1ter File Watcher Subsystem
 
-The File Watcher Subsystem provides reactive monitoring of filesystem-based data sources, replacing traditional polling for files in `procfs` that support inotify. By leveraging the Linux `inotify` mechanism, `yangerd` can detect and process updates to IP forwarding flags immediately upon their modification, significantly reducing latency and CPU wake-ups for data that changes infrequently. Note: sysfs pseudo-files (hwmon sensors, thermal zones) do not support inotify and are handled by the polling-based hardware collector instead -- see the note after the Watched Paths table below. STP bridge port state is not watched via inotify either; it is handled reactively via netlink events (see Section 4.1quater). DHCP lease updates and firewall configuration changes are handled reactively via D-Bus signals (see Section 4.1novies).
+The File Watcher Subsystem provides reactive monitoring of filesystem-based data sources, replacing traditional polling for files that support inotify. By leveraging the Linux `inotify` mechanism, `yangerd` can detect and process updates to IP forwarding flags, the system hostname, and the timezone symlink immediately upon their modification, significantly reducing latency and CPU wake-ups for data that changes infrequently. For regular files (forwarding flags, hostname), the standard `Watch()` method adds an inotify watch directly on the file. For symlinks (`/etc/localtime`), the `WatchSymlink()` method watches the parent directory instead, because Go's `fsnotify` follows symlinks — a direct watch on `/etc/localtime` would monitor the target file (e.g., `/usr/share/zoneinfo/Europe/Amsterdam`), not the symlink entry itself, so symlink replacements via `ln -sf` would go undetected. Note: sysfs pseudo-files (hwmon sensors, thermal zones) do not support inotify and are handled by the polling-based hardware collector instead -- see the note after the Watched Paths table below. STP bridge port state is not watched via inotify either; it is handled reactively via netlink events (see Section 4.1quater). DHCP lease updates and firewall configuration changes are handled reactively via D-Bus signals (see Section 4.1novies).
 
 #### FSWatcher Implementation
 
@@ -1970,6 +1974,14 @@ func (fw *FSWatcher) Watch(path string, handler WatchHandler) error {
     return fw.watcher.Add(path)
 }
 
+func (fw *FSWatcher) WatchSymlink(path string, handler WatchHandler) error {
+    dir := filepath.Dir(path)
+    fw.mu.Lock()
+    fw.handlers[path] = handler
+    fw.mu.Unlock()
+    return fw.watcher.Add(dir)
+}
+
 func (fw *FSWatcher) Run(ctx context.Context) error {
     for {
         select {
@@ -2001,8 +2013,18 @@ func (fw *FSWatcher) Run(ctx context.Context) error {
 | Watched Path Pattern | Handler | Tree Key | Debounce | Notes |
 |-----|------|------|------|------|
 | `/proc/sys/net/ipv4/conf/*/forwarding` | readForwardingState | `ietf-routing:routing` | 200ms | May not support inotify on some procfs paths; falls back to polling |
+| `/etc/hostname` | readHostname | `ietf-system:system` | 200ms | Real file, reliable inotify; `UseMerge: true` to coexist with SystemCollector |
+| `/etc/localtime` | readTimezone | `ietf-system:system` | 200ms | Symlink to zoneinfo; uses `WatchSymlink()` (watches parent dir `/etc/`) because `fsnotify` follows symlinks — direct `Watch()` would track the target file, missing symlink replacements. `UseMerge: true`. Handles named zones and Etc/GMT±N with POSIX sign inversion. |
 
 **Note**: sysfs pseudo-files under `/sys/class/hwmon/` and `/sys/class/thermal/` do **not** emit inotify events. The kernel does not call `fsnotify_modify()` when hardware sensor values change — these files generate their values on `read()`, not on write. Additionally, sensor values (temperature, fan speed, voltage) fluctuate continuously, which would produce event storms even if inotify worked. Hardware sensor data is therefore collected by the polling-based hardware collector (`collector/hardware.go`) at a 10-second interval, not by the fswatcher. See Section 5, collector #6.
+
+#### WatchSymlink — Symlink-Aware File Watching
+
+Go's `fsnotify` library follows symlinks transparently: calling `watcher.Add("/etc/localtime")` places an inotify watch on the **target** file (e.g., `/usr/share/zoneinfo/Europe/Amsterdam`), not on the symlink entry in `/etc/`. When the system timezone changes, the symlink is replaced atomically via `ln -sf /usr/share/zoneinfo/NewZone /etc/localtime` (which translates to `unlink` + `symlink` at the syscall level). Since the inotify watch is on the old target, no event fires — the watch silently becomes stale.
+
+`WatchSymlink()` solves this by watching the **parent directory** (`/etc/`) instead of the symlink itself. Directory-level inotify receives `Create` and `Rename` events whenever any entry in the directory changes, including symlink replacements. The handler is registered in `fw.handlers` under the full file path (`/etc/localtime`), so when a directory event fires with `event.Name == "/etc/localtime"`, the existing `handleEvent()` lookup finds the correct handler.
+
+**Side effect**: Watching `/etc/` means the fswatcher also receives events for unrelated files in that directory (e.g., writes to `/etc/resolv.conf`). These events are harmlessly discarded by the `handleEvent()` handler lookup — no handler is registered for those paths, so `fw.handlers[event.Name]` returns the zero value and no action is taken. The `/etc/hostname` watch, being a direct file watch via `Watch()`, also receives a duplicate event from the directory watch when hostname changes; debouncing coalesces these into a single tree update.
 
 #### Debouncing Strategy
 
@@ -2018,7 +2040,7 @@ Some watched paths contain wildcards that must be resolved at startup. For examp
 
 #### Initial Read at Startup
 
-After all watches are established (including glob-expanded paths), the fswatcher performs a synchronous initial read of every watched file before entering the `Run()` event loop. For each path registered in `fw.handlers`, it calls the handler's `ReadFunc` to read the current value and populates the tree immediately. This ensures that forwarding flags are present in the tree from daemon start, rather than remaining empty until the first inotify event fires — which may never happen if the forwarding state does not change after boot.
+After all watches are established (including glob-expanded paths), the fswatcher performs a synchronous initial read of every watched file before entering the `Run()` event loop. For each path registered in `fw.handlers`, it calls the handler's `ReadFunc` to read the current value and populates the tree immediately. This ensures that forwarding flags, hostname, and timezone are present in the tree from daemon start, rather than remaining empty until the first inotify event fires — which may never happen if the forwarding state, hostname, or timezone does not change after boot.
 
 ```go
 // InitialRead reads the current value of every watched file and populates
@@ -3481,17 +3503,36 @@ type modelEntry struct {
     updated time.Time
 }
 
+// OnDemandFunc is called on every Get()/GetMulti() for keys that have a
+// registered provider. The returned JSON is shallow-merged with the cached
+// data so that live fields (e.g. clock, resource-usage) override stale
+// cached values while preserving fields that are only set by collectors.
+type OnDemandFunc func() json.RawMessage
+
 // Tree holds the operational YANG data in per-module JSON blobs.
 // Each module key has its own sync.RWMutex, so writers for different
 // modules never block each other.
 // All methods are safe for concurrent use.
 type Tree struct {
-    mu     sync.RWMutex               // protects the models map itself
-    models map[string]*modelEntry
+    mu        sync.RWMutex
+    models    map[string]*modelEntry
+    providers map[string]OnDemandFunc
 }
 
 func New() *Tree {
-    return &Tree{models: make(map[string]*modelEntry)}
+    return &Tree{
+        models:    make(map[string]*modelEntry),
+        providers: make(map[string]OnDemandFunc),
+    }
+}
+
+// RegisterProvider installs an on-demand function for the given tree key.
+// On every Get()/GetMulti() call for this key, the provider is invoked
+// and its output is shallow-merged with the cached entry data.
+func (t *Tree) RegisterProvider(key string, fn OnDemandFunc) {
+    t.mu.Lock()
+    t.providers[key] = fn
+    t.mu.Unlock()
 }
 
 // Set replaces the entire subtree at the given YANG module key.
@@ -3521,42 +3562,72 @@ func (t *Tree) Set(key string, v json.RawMessage) {
 func (t *Tree) Get(key string) json.RawMessage {
     t.mu.RLock()
     entry, ok := t.models[key]
+    provider := t.providers[key]
     t.mu.RUnlock()
     if !ok {
         return nil
     }
     entry.mu.RLock()
-    defer entry.mu.RUnlock()
-    return entry.data
+    data := entry.data
+    entry.mu.RUnlock()
+    if provider == nil {
+        return data
+    }
+    return shallowMerge(data, provider())
 }
 
 // GetMulti returns the concatenated raw JSON for multiple module keys.
 // Each module's read lock is acquired and released individually.
-// Lock ordering safety: the top-level RLock is held for the iteration
-// (preventing map mutation), then each modelEntry.mu.RLock is acquired
-// and released inline. This is deadlock-free because Set() never holds
-// both the top-level WLock and a modelEntry.mu.Lock simultaneously
-// (it uses double-checked locking with release-then-reacquire).
 func (t *Tree) GetMulti(keys []string) []json.RawMessage {
     result := make([]json.RawMessage, 0, len(keys))
     t.mu.RLock()
     defer t.mu.RUnlock()
     for _, key := range keys {
-        if entry, ok := t.models[key]; ok {
-            entry.mu.RLock()
-            result = append(result, entry.data)
-            entry.mu.RUnlock()
+        entry, ok := t.models[key]
+        if !ok {
+            continue
         }
+        provider := t.providers[key]
+        entry.mu.RLock()
+        data := entry.data
+        entry.mu.RUnlock()
+        if provider != nil {
+            data = shallowMerge(data, provider())
+        }
+        result = append(result, data)
     }
     return result
 }
+
+#### 4.2.3 Shallow Merge
+The `shallowMerge` helper performs a single-level merge of two JSON objects. It is used to combine static cached data with live on-demand fields.
+
+```go
+func shallowMerge(base, override json.RawMessage) json.RawMessage {
+    if len(override) == 0 || string(override) == "null" {
+        return base
+    }
+    if len(base) == 0 || string(base) == "null" {
+        return override
+    }
+    var baseMap, overrideMap map[string]json.RawMessage
+    if err := json.Unmarshal(base, &baseMap); err != nil {
+        return base
+    }
+    if err := json.Unmarshal(override, &overrideMap); err != nil {
+        return base
+    }
+    for k, v := range overrideMap {
+        baseMap[k] = v
+    }
+    merged, _ := json.Marshal(baseMap)
+    return merged
+}
 ```
 
-**Consistency note**: `GetMulti()` acquires each model's read lock individually within a single pass. A response spanning multiple modules (e.g., `ietf-interfaces` and `ietf-routing`) may reflect different points in time — this is eventual consistency, not snapshot isolation. This is an explicit design choice: operational data is inherently a best-effort snapshot of continuously changing system state, and the cost of a global read lock across all models would introduce contention between unrelated data sources. For single-model queries (the common case via statd), the response is always self-consistent.
-
-
-#### 4.2.3 Update Strategy
+#### 4.2.4 Update Strategy
 Each monitor maintains its own in-memory Go struct and re-serializes the entire module subtree to JSON on each update to ensure consistency.
+
 
 ```go
 func (m *LinkMonitor) updateTree(link netlink.Link) {
@@ -3760,14 +3831,20 @@ Bridge data collection is **fully reactive** — there is no polling collector f
 **Writes to**: `ietf-hardware:hardware`.
 
 ##### 7. System Collector (`internal/collector/system.go`)
-**Collects**: Hostname, OS distribution name and version, kernel release string, system uptime, boot timestamp, and current active user sessions.
+**Collects**: DNS resolver configuration and Finit service list only.
 **Sources**:
-- `/proc/uptime`, `/etc/os-release`
-- `exec uname -r`, `exec who -H`
-- `time.Now()` combined with `/proc/uptime` to compute boot timestamp
-**Interval**: 60 seconds. Hostname and OS release are effectively static.
+- `/etc/resolv.conf.head`, `exec /sbin/resolvconf -l` (DNS nameservers and search domains)
+- `exec initctl -j` (Finit service list: PID, identity, status, description, memory, uptime, restart-count)
+**Interval**: 300 seconds. DNS and services are slow-changing.
+**Note**: All other ietf-system data is handled outside SystemCollector:
+- **Hostname, timezone**: reactive fswatcher (Section 4.1ter)
+- **Users**: reactive fswatcher on `/etc/shadow` + `WatchDir("/var/run/sshd/")` for SSH keys
+- **Platform** (os-release, uname): boot-once via `BootPlatform()` in `internal/collector/boot.go`
+- **Software** (RAUC slots, installation status): boot-once via `BootSoftware()` in `internal/collector/boot.go`
+- **Boot order**: reactive fswatcher on `/mnt/aux/grub/grubenv` and `/mnt/aux/uboot.env`, triggering `ReadBootOrder()` in `internal/collector/boot.go`
+- **Clock, memory, load average, filesystem**: on-demand via `LiveSystemState()` in `internal/collector/live.go`
 **Failure behavior**: Individual source failures are logged at WARN; the collector writes whatever fields could be collected successfully.
-**Writes to**: `ietf-system:system-state`.
+**Writes to**: `ietf-system:system-state` (via Merge — DNS and services only; all other system data provided by fswatcher handlers, boot-once initialization, or on-demand providers).
 
 ##### 8. NTP Collector (`internal/collector/ntp.go`)
 **Collects**: Synchronization status, reference server address, clock offset (seconds), stratum, and RMS jitter from chrony.
@@ -3778,7 +3855,9 @@ Bridge data collection is **fully reactive** — there is no polling collector f
 Uses `github.com/facebook/time/ntp/chrony` to speak the cmdmon protocol natively in Go, eliminating `exec chronyc` subprocess spawning. The protocol is strictly request-response (no subscription/push mode exists); polling is the only supported monitoring approach.
 **Interval**: 60 seconds (configurable via `YANGERD_POLL_INTERVAL_NTP`).
 **Failure behavior**: If chrony is not running (Unix socket absent or connection refused), write `synchronized: false` with an empty source list and log at WARN.
-**Writes to**: `ietf-ntp:ntp`.
+**Writes to**: `ietf-ntp:ntp` (RFC 9249 associations, clock state, server status, server statistics) and `ietf-system:system-state` (Infix `infix-system:ntp/sources/source` augmentation with per-source address, mode, state, stratum, poll via `tree.Merge()`).
+
+The `infix-system:ntp` augmentation (defined in `infix-system.yang`) extends `ietf-system:system-state` with a simplified NTP sources list. Each source carries `state` (enum: selected, candidate, outlier, unusable, falseticker, unstable) and `mode` (enum: server, peer, local-clock) mapped from chronyc indicators (`*→selected`, `+→candidate`, `-→outlier`, `?→unusable`, `x→falseticker`, `~→unstable`; `^→server`, `=→peer`). Reference clocks (mode `#`) and invalid stratum are skipped. `addSources()` shares the same `chronyc -c sources` output with `addAssociations()` to avoid duplicate subprocess invocations.
 
 ##### 9. LLDP Monitor (`internal/lldpmonitor/`) — Reactive Subprocess
 **Collects**: Per-port LLDP neighbor information: chassis ID, port ID, TTL, system name, system capabilities, and management addresses.
@@ -4506,12 +4585,27 @@ Every operational YANG leaf collected by yangerd is listed below with its data s
 
 | YANG Path | Source | Go Method | Reactive/Polling | Notes |
 |-----------|--------|-----------|-----------------|-------|
-| `.../system-state/platform/os-name` | exec `uname -s` | exec.Command | POLLING 300 seconds | |
-| `.../system-state/platform/os-release` | exec `uname -r` | exec.Command | POLLING 300 seconds | |
-| `.../system-state/platform/machine` | exec `uname -m` | exec.Command | POLLING 300 seconds | |
-| `.../system-state/clock/current-datetime` | time.Now() | time package | POLLING 60 seconds | |
-| `.../system-state/clock/boot-datetime` | /proc/uptime + time.Now() | os.ReadFile | POLLING 60 seconds | |
-| `.../system/users/user/name` | /etc/passwd parsing | os.ReadFile | POLLING 300 seconds | |
+| `.../system/hostname` | /etc/hostname | fswatcher inotify (`readHostname`) | REACTIVE (fswatcher) | `UseMerge: true` into `ietf-system:system`; real file, reliable inotify |
+| `.../system/clock/timezone-name` | /etc/localtime (symlink target) | fswatcher `WatchSymlink` (`readTimezone`) | REACTIVE (fswatcher) | `UseMerge: true`; `WatchSymlink()` watches `/etc/` dir; strips zoneinfo prefix from symlink target |
+| `.../system/clock/timezone-utc-offset` | /etc/localtime (symlink target) | fswatcher `WatchSymlink` (`readTimezone`) | REACTIVE (fswatcher) | Only populated for Etc/GMT±N zones; POSIX sign inversion applied |
+| `.../system-state/platform/os-name` | `/etc/os-release` | `BootPlatform()` in `internal/collector/boot.go` | BOOT-ONCE | Read once at startup; merged into tree and never re-read |
+| `.../system-state/platform/os-release` | `exec uname -r` | `BootPlatform()` in `internal/collector/boot.go` | BOOT-ONCE | |
+| `.../system-state/platform/machine` | `exec uname -m` | `BootPlatform()` in `internal/collector/boot.go` | BOOT-ONCE | |
+| `.../system-state/clock/current-datetime` | `time.Now()` | `LiveSystemState()` (on-demand provider) | ON-DEMAND | Computed at IPC request time; never cached/stale |
+| `.../system-state/clock/boot-datetime` | `/proc/uptime` + `time.Now()` | `LiveSystemState()` (on-demand provider) | ON-DEMAND | Computed at IPC request time |
+| `.../system-state/infix-system:resource-usage/memory/total` | `/proc/meminfo` MemTotal | `LiveSystemState()` (on-demand provider) | ON-DEMAND | Read from /proc/meminfo at IPC request time |
+| `.../system-state/infix-system:resource-usage/memory/free` | `/proc/meminfo` MemFree | `LiveSystemState()` (on-demand provider) | ON-DEMAND | |
+| `.../system-state/infix-system:resource-usage/memory/available` | `/proc/meminfo` MemAvailable | `LiveSystemState()` (on-demand provider) | ON-DEMAND | |
+| `.../system-state/infix-system:resource-usage/load-average/load-1min` | `/proc/loadavg` field 1 | `LiveSystemState()` (on-demand provider) | ON-DEMAND | |
+| `.../system-state/infix-system:resource-usage/load-average/load-5min` | `/proc/loadavg` field 2 | `LiveSystemState()` (on-demand provider) | ON-DEMAND | |
+| `.../system-state/infix-system:resource-usage/load-average/load-15min` | `/proc/loadavg` field 3 | `LiveSystemState()` (on-demand provider) | ON-DEMAND | |
+| `.../system-state/infix-system:resource-usage/filesystem[name='/']/...` | `syscall.Statfs("/")` | `LiveSystemState()` (on-demand provider) | ON-DEMAND | Size, used, available in kB |
+| `.../system-state/infix-system:resource-usage/filesystem[name='/var']/...` | `syscall.Statfs("/var")` | `LiveSystemState()` (on-demand provider) | ON-DEMAND | |
+| `.../system-state/infix-system:resource-usage/filesystem[name='/cfg']/...` | `syscall.Statfs("/cfg")` | `LiveSystemState()` (on-demand provider) | ON-DEMAND | |
+| `.../system/users/user/name` | `/etc/passwd`, `/etc/shadow` | fswatcher `Watch("/etc/shadow")` + `readUsers()` | REACTIVE (fswatcher) | Triggered on `/etc/shadow` changes; reads both passwd and shadow |
+| `.../system/users/user/ssh-key` | `/var/run/sshd/<user>.keys` | fswatcher `WatchDir("/var/run/sshd/")` + `readUsers()` | REACTIVE (fswatcher) | `WatchDir()` fires on any file create/write/remove in the directory |
+| `.../system-state/infix-system:software/...` | `exec rauc status --detailed --output-format=json`, `exec rauc-installation-status` | `BootSoftware()` in `internal/collector/boot.go` | BOOT-ONCE | RAUC slot status, installation progress; read once at startup |
+| `.../system-state/infix-system:software/boot-order` | `exec fw_printenv BOOT_ORDER` / `exec grub-editenv list` | fswatcher `Watch("/mnt/aux/grub/grubenv")` + `Watch("/mnt/aux/uboot.env")` → `ReadBootOrder()` | REACTIVE (fswatcher) | File change triggers re-run of boot order commands only (not full RAUC) |
 
 ### ietf-ntp — NTP State
 
@@ -4578,12 +4672,13 @@ Every operational YANG leaf collected by yangerd is listed below with its data s
 
 | Category | Leaf Count | Strategy |
 |----------|-----------|----------|
-| REACTIVE (Monitor/Watcher) | 56 | `vishvananda/netlink` subscriptions (link, addr, neigh channels + bridge FDB/VLAN/MDB/STP events as triggers for `bridge -json -batch -` re-reads), ZAPI watcher (streaming route redistribution from zebra via zserv socket), D-Bus Monitor (dnsmasq DHCP lease signals + firewalld reload signals), LLDP monitor (`lldpcli -f json0 watch`), mDNS monitor (Avahi D-Bus), `iw event -t`, ethtool genetlink monitor (`ETHNL_MCGRP_MONITOR`), and `fswatcher` (inotify for procfs forwarding flags). |
+| REACTIVE (Monitor/Watcher) | 59 | `vishvananda/netlink` subscriptions (link, addr, neigh channels + bridge FDB/VLAN/MDB/STP events as triggers for `bridge -json -batch -` re-reads), ZAPI watcher (streaming route redistribution from zebra via zserv socket), D-Bus Monitor (dnsmasq DHCP lease signals + firewalld reload signals), LLDP monitor (`lldpcli -f json0 watch`), mDNS monitor (Avahi D-Bus), `iw event -t`, ethtool genetlink monitor (`ETHNL_MCGRP_MONITOR`), and `fswatcher` (inotify for procfs forwarding flags, `/etc/hostname`, and `/etc/localtime` via `WatchSymlink`). |
+| ON-DEMAND (live provider) | 11 | `LiveSystemState()` provider on `ietf-system:system-state`: clock (current-datetime, boot-datetime), memory (total, free, available), load average (1/5/15 min), filesystem usage (/, /var, /cfg). Computed fresh at every IPC request — zero staleness. |
 | POLLING 10 seconds | 6 | FRRouting (OSPF/RIP/BFD) via `vtysh` JSON queries |
 | POLLING 10 seconds | 6 | Hardware sensors (hwmon temperature, fan, voltage, fault — sysfs files do not support inotify), container state (Phase 2, feature-gated: `YANGERD_ENABLE_CONTAINERS`), WiFi scan results via `wpa_cli` (feature-gated: `YANGERD_ENABLE_WIFI`) |
 | POLLING 30 seconds | 3 | Ethtool statistics (counters only -- speed/duplex/autoneg now reactive), WireGuard peer data |
-| POLLING 60 seconds | 8 | NTP state (chrony cmdmon protocol), system clock/uptime, users |
-| POLLING 300 seconds | 5 | Hardware inventory (DMI chassis data), OS platform info |
+| POLLING 60 seconds | 4 | NTP state (chrony cmdmon protocol) |
+| POLLING 300 seconds | 9 | Hardware inventory (DMI chassis data), OS platform info, users, software status (RAUC, initctl, boot order), DNS resolvers |
 
 ### 5.10bis Polling Justification Notes
 
@@ -4880,19 +4975,21 @@ For each existing Python yanger script, this section documents the external comm
 | `df -k <mount>` | Filesystem size/used/available for `/`, `/var`, `/cfg` |
 | `/proc/uptime` (file read) | System uptime in seconds (for boot-datetime calculation) |
 
-- `hostname` → `os.Hostname()`
-- `/etc/passwd`, `/etc/shadow` → `os.ReadFile()` + line parsing
-- `realpath /etc/localtime` → `os.Readlink("/etc/localtime")`
+- `hostname` → fswatcher inotify on `/etc/hostname` (reactive, not polled by SystemCollector)
+- `/etc/passwd`, `/etc/shadow` → fswatcher `Watch("/etc/shadow")` triggers `readUsers()` which reads both files via `os.ReadFile()` + line parsing (reactive, not polled by SystemCollector)
+- `/var/run/sshd/<user>.keys` → fswatcher `WatchDir("/var/run/sshd/")` triggers same `readUsers()` handler (reactive)
+- `realpath /etc/localtime` → fswatcher `WatchSymlink` on `/etc/localtime` (reactive, not polled by SystemCollector); `readTimezone()` resolves symlink, strips zoneinfo prefix, handles Etc/GMT±N offset inversion
 - NTP data → handled by `internal/collector/ntp.go` via `github.com/facebook/time/ntp/chrony` cmdmon protocol (not by system.go)
-- `/etc/resolv.conf.head` → `os.ReadFile()`
-- `resolvconf -l` → `exec.Command("/sbin/resolvconf", "-l")`
-- `rauc status` → `exec.Command("rauc", "status", "--detailed", "--output-format=json")`
-- `initctl -j` → `exec.Command("initctl", "-j")`
-- `fw_printenv` / `grub-editenv` → `exec.Command(...)` with fallback
-- `/proc/meminfo`, `/proc/loadavg`, `/proc/uptime`, `/etc/os-release` → `os.ReadFile()`
+- `/etc/resolv.conf.head` → `os.ReadFile()` (polled by SystemCollector at 300s)
+- `resolvconf -l` → `exec.Command("/sbin/resolvconf", "-l")` (polled by SystemCollector at 300s)
+- `/etc/os-release`, `uname -r`, `uname -m` → `BootPlatform()` in `internal/collector/boot.go` (boot-once, not polled)
+- `rauc status`, `rauc-installation-status` → `BootSoftware()` in `internal/collector/boot.go` (boot-once, not polled)
+- `initctl -j` → `exec.Command("initctl", "-j")` (polled by SystemCollector at 300s)
+- `fw_printenv` / `grub-editenv` → fswatcher on `/mnt/aux/grub/grubenv` and `/mnt/aux/uboot.env` triggers `ReadBootOrder()` in `internal/collector/boot.go` (reactive, not polled)
+- `/proc/meminfo`, `/proc/loadavg`, `/proc/uptime` → `LiveSystemState()` on-demand provider (computed at IPC request time, not polled)
 - `/proc/sys/net/ipv4/conf/*/forwarding` → `fswatcher` inotify (reactive updates)
-- `df -k` → `syscall.Statfs()` per mount point
-- Strategy: **REACTIVE** for IP forwarding; **POLLING** 60 seconds for clock/NTP; **POLLING** 300 seconds for static data
+- `df -k` → `syscall.Statfs()` per mount point in `LiveSystemState()` on-demand provider
+- Strategy: **REACTIVE** for IP forwarding, hostname, timezone, users, SSH keys, and boot order (fswatcher inotify); **ON-DEMAND** for clock (current-datetime, boot-datetime), memory, load average, and filesystem usage (LiveSystemState provider); **BOOT-ONCE** for platform (os-release, uname) and software (RAUC slots, installation status); **POLLING** 300 seconds for DNS and services only
 
 ---
 - All `chronyc -c` calls -> native Go cmdmon protocol via `github.com/facebook/time/ntp/chrony` over Unix socket `/var/run/chrony/chronyd.sock`. This eliminates all subprocess spawning for NTP data collection. The library speaks chrony's undocumented cmdmon protocol v6 natively, providing typed Go structs for tracking, sources, and sourcestats responses.
@@ -5019,7 +5116,7 @@ For each existing Python yanger script, this section documents the external comm
 | `ietf_rip.py` | `internal/collector/rip.go` | `exec.Command` vtysh | 2 |
 | `ietf_bfd_ip_sh.py` | `internal/collector/bfd.go` | `exec.Command` vtysh | 2 |
 | `ietf_hardware.py` | `internal/collector/hardware.go` | `os.ReadFile` sysfs (sensors, polling 10s) + `exec.Command` dmidecode (inventory) | 2 |
-| `ietf_system.py` | `internal/collector/system.go` | `os.ReadFile` /proc/* + `/etc/*` + `exec.Command` rauc/initctl | 2 |
+| `ietf_system.py` | `internal/collector/system.go` (DNS+services polling) + `internal/collector/live.go` (on-demand clock/memory/load/fs) + `internal/collector/boot.go` (boot-once platform/software, reactive boot-order) + fswatcher reactive handlers in `main.go` (hostname, timezone, users, SSH keys, boot order) | `os.ReadFile` /etc/* + `exec.Command` initctl/resolvconf + on-demand `LiveSystemState()` + boot-once `BootPlatform()`/`BootSoftware()` + fswatcher `Watch`/`WatchSymlink`/`WatchDir` | 2 |
 | `ietf_ntp.py` | `internal/collector/ntp.go` | `github.com/facebook/time/ntp/chrony` cmdmon protocol over Unix socket | 2 |
 | `infix_lldp.py` | `internal/lldpmonitor/` | Persistent `lldpcli -f json0 watch` subprocess + stream parser (`lldp-added`/`updated`/`deleted`) | 2 |
 | `(new — from statd/avahi.c)` | `internal/mdnsmonitor/` | Avahi D-Bus `ServiceTypeBrowser`/`ServiceBrowser`/`ServiceResolver` signals | 1 |
@@ -5039,7 +5136,7 @@ src/yangerd/
 │       └── main.go          # CLI tool: subcommands get/health/dump/watch
 ├── internal/
 │   ├── tree/
-│   │   └── tree.go          # Tree type: per-model sync.RWMutex + map[string]*modelEntry
+│   │   └── tree.go          # Tree type: per-model sync.RWMutex + map[string]*modelEntry + on-demand providers
 │   ├── monitor/
 │   │   ├── link.go          # RTNLGRP_LINK goroutine: full interface re-read (3 ip batch queries) + ethmonitor.RefreshInterface() + last-change
 │   │   ├── addr.go          # RTNLGRP_*IFADDR goroutine: full address re-read via ip batch on any addr event
@@ -5054,7 +5151,8 @@ src/yangerd/
 │   │   ├── rip.go           # RIP state: exec vtysh
 │   │   ├── bfd.go           # BFD sessions: exec vtysh
 │   │   ├── hardware.go      # Hardware sensors + inventory: /sys/class/hwmon + dmidecode
-│   │   ├── system.go        # System state: /proc, /etc/os-release, uname
+│   │   ├── system.go        # System state: /etc/os-release, uname, users, software status, DNS
+│   │   ├── live.go          # On-demand system state: LiveSystemState() reads /proc/uptime, /proc/meminfo, /proc/loadavg, syscall.Statfs at IPC request time
 │   │   ├── ntp.go           # NTP sync status: chrony cmdmon protocol via facebook/time
 │   │   ├── lldp.go          # LLDP transform helpers (fed by LLDP monitor events)
 │   │   ├── containers.go    # Container state: exec podman ps (Phase 2, feature-gated: YANGERD_ENABLE_CONTAINERS)
@@ -5067,7 +5165,7 @@ src/yangerd/
 │   ├── ipbatch/
 │   │   └── batch.go         # IPBatch subprocess manager: persistent ip -json -force -batch -
 │   ├── fswatcher/
-│   │   └── fswatcher.go     # inotify/fsnotify goroutine: watches procfs forwarding flags
+│   │   └── fswatcher.go     # inotify/fsnotify goroutine: watches procfs forwarding flags, /etc/hostname, /etc/localtime (WatchSymlink)
 │   ├── nlmonitor/
 │   │   └── nlmonitor.go     # NLMonitor: vishvananda/netlink subscriptions (link, addr, neigh, and bridge FDB/VLAN/MDB). Route data comes from ZAPI watcher -- no netlink route group subscription.
 │   ├── iwmonitor/
@@ -5098,13 +5196,13 @@ src/yangerd/
 
 **`cmd/yangerctl/`** — A developer and operator CLI tool. Subcommands include `get <path>` (query yangerd and print JSON), `health` (display monitor status and tree size), `dump` (print the full in-memory tree), and `watch <path>` (poll and print changes). Connects to `/run/yangerd.sock` using the same IPC protocol as statd.
 
-**`internal/tree/`** -- The `Tree` type: a `map[string]*modelEntry` where each `modelEntry` holds its own `sync.RWMutex`, its `updated` timestamp, and a `json.RawMessage`. A top-level `sync.RWMutex` protects the map structure. Provides `Set(key, raw)`, `Get(key) json.RawMessage`, `GetMulti(keys) []json.RawMessage`, and `LastUpdated(key)` accessor. This package has no external dependencies -- it only imports `sync` and `encoding/json` from the standard library.
+**`internal/tree/`** -- The `Tree` type: a `map[string]*modelEntry` where each `modelEntry` holds its own `sync.RWMutex`, its `updated` timestamp, and a `json.RawMessage`. A top-level `sync.RWMutex` protects the map structure and a `providers` map for on-demand data functions. Provides `Set(key, raw)`, `Get(key) json.RawMessage`, `GetMulti(keys) []json.RawMessage`, `RegisterProvider(key, fn)`, and `LastUpdated(key)` accessor. When a provider is registered for a key, Get()/GetMulti() invokes the provider and shallow-merges the result with cached data — live fields override stale cached values without mutating the cache. This package has no external dependencies -- it only imports `sync` and `encoding/json` from the standard library.
 
 **`internal/monitor/`** — Event dispatcher goroutines that consume native Go netlink channel events via `vishvananda/netlink` subscriptions (LinkUpdate, AddrUpdate, NeighUpdate) and trigger state re-queries. For link, address, and neighbor events, re-queries go through the `ip -json -force -batch -` subprocess. Route data is sourced exclusively from the ZAPI watcher (see `internal/zapiwatcher/`) -- yangerd does not subscribe to netlink route groups. Each monitor follows the `Run(ctx context.Context) error` signature and calls `tree.Set()` after parsing the JSON response.
 
 **`internal/ipbatch/`** — Manages the persistent `ip -json -force -batch -` subprocess for state queries. `batch.go` implements the `IPBatch` type that maintains a persistent `ip -json -force -batch -` process, writing query commands to stdin and reading JSON array responses from stdout. Includes health monitoring, automatic restart with exponential backoff, and canary-query validation after restarts. This package handles data acquisition only — event monitoring is handled by the `internal/nlmonitor/` package via native Go netlink subscriptions.
 
-**`internal/collector/`** — Polling-based supplementary collectors for data not exposed via netlink. Each file implements the `Collector` interface:
+**`internal/collector/`** — Polling-based supplementary collectors for data not exposed via netlink. Additionally, `live.go` provides `LiveSystemState()`, an exported function registered as an on-demand provider for `ietf-system:system-state`. It reads `/proc/uptime`, `/proc/meminfo`, `/proc/loadavg`, and calls `syscall.Statfs()` on each IPC request, producing fresh JSON that is shallow-merged with the cached system-state data by the Tree's provider mechanism. Each file implements the `Collector` interface:
 
 ```go
 type Collector interface {
@@ -5116,7 +5214,7 @@ type Collector interface {
 
 `collector.go` provides `RunAll(ctx, collectors, tree)`, which launches one goroutine per collector and ticks it on its configured interval. Failed `Collect()` calls are logged and retried on the next tick — a single collector failure does not affect other collectors or the IPC server.
 
-**`internal/fswatcher/`** — Implements reactive monitoring for filesystem-based data sources that support inotify. It runs a single event loop that subscribes to inotify events via the `fsnotify` library. Paths like `/proc/sys/net/ipv4/conf/*/forwarding` (IP forwarding flags) are added at startup (with glob expansion). Modification events trigger a debounced re-read of the affected file, updating the tree immediately. Handles the `IN_IGNORED` event by automatically re-adding watches after file deletion/recreation. Note: sysfs pseudo-files under `/sys/class/hwmon/` and `/sys/class/thermal/` are NOT watched here — they do not emit inotify events (the kernel generates values on `read()`) and are instead collected by `collector/hardware.go` via polling. Bridge STP state is NOT watched here — it is handled reactively via netlink events and `bridge -json -batch -` re-reads. DHCP leases and firewall state are NOT watched here — they are handled reactively via D-Bus signals in `internal/dbusmonitor/`.
+**`internal/fswatcher/`** — Implements reactive monitoring for filesystem-based data sources that support inotify. It runs a single event loop that subscribes to inotify events via the `fsnotify` library. Paths like `/proc/sys/net/ipv4/conf/*/forwarding` (IP forwarding flags) and `/etc/hostname` are added at startup via `Watch()` (with glob expansion for wildcards). Symlink paths like `/etc/localtime` use `WatchSymlink()`, which watches the parent directory instead of the file — necessary because `fsnotify` follows symlinks, so a direct watch would monitor the target file rather than the symlink entry, missing symlink replacements. Modification events trigger a debounced re-read of the affected file, updating the tree immediately. Handles the `IN_IGNORED` event by automatically re-adding watches after file deletion/recreation. Note: sysfs pseudo-files under `/sys/class/hwmon/` and `/sys/class/thermal/` are NOT watched here — they do not emit inotify events (the kernel generates values on `read()`) and are instead collected by `collector/hardware.go` via polling. Bridge STP state is NOT watched here — it is handled reactively via netlink events and `bridge -json -batch -` re-reads. DHCP leases and firewall state are NOT watched here — they are handled reactively via D-Bus signals in `internal/dbusmonitor/`.
 
 **`internal/nlmonitor/`** — Implements native Go netlink event subscriptions via `vishvananda/netlink`. The `NLMonitor` struct subscribes to LinkUpdate, AddrUpdate, and NeighUpdate channels, plus bridge-specific events (FDB entries via NeighUpdate with NDA_MASTER flag, VLAN changes via LinkUpdate, STP port state changes via LinkUpdate with IFLA_BRPORT_STATE in IFLA_PROTINFO, MDB entries via raw RTNLGRP_MDB subscription). All bridge events are used as triggers only — full state is re-read via the `bridge -json -batch -` subprocess. yangerd does NOT subscribe to netlink route groups (RTNLGRP_IPV4_ROUTE, RTNLGRP_IPV6_ROUTE) — route data is sourced exclusively from the ZAPI watcher. A single `select` loop dispatches events to the appropriate monitor goroutines. Uses context cancellation for clean shutdown and a shared error callback for automatic re-subscription on netlink errors.
 After any subscription error, the error callback performs a full-scope re-read of ALL entities for the affected event type — not just the entity that was being processed when the error occurred. For example, a link subscription error triggers `ip -json -force -batch -` queries for every known interface (link show, addr show, neigh show) to resynchronize the entire tree. Events that occurred during the error/resubscribe window are inherently lost (netlink provides no replay), so only a full re-read guarantees consistency.
