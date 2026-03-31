@@ -129,7 +129,7 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 	}
 	ospf["ietf-ospf:address-family"] = "ipv4"
 
-	var areas []interface{}
+	areas := make([]interface{}, 0)
 	areasRaw, _ := data["areas"].(map[string]interface{})
 	for areaID, valRaw := range areasRaw {
 		values, ok := valRaw.(map[string]interface{})
@@ -145,7 +145,7 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 			area["ietf-ospf:area-type"] = at
 		}
 
-		var interfaces []interface{}
+		interfaces := make([]interface{}, 0)
 		ifacesRaw, _ := values["interfaces"].([]interface{})
 		for _, ifaceRaw := range ifacesRaw {
 			iface, ok := ifaceRaw.(map[string]interface{})
@@ -218,7 +218,7 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 				}
 			}
 
-			var neighbors []interface{}
+			neighbors := make([]interface{}, 0)
 			neighsRaw, _ := iface["neighbors"].([]interface{})
 			for _, neighRaw := range neighsRaw {
 				neigh, ok := neighRaw.(map[string]interface{})
@@ -351,7 +351,7 @@ func (c *RoutingCollector) addOSPFRoutes(ctx context.Context, ospf map[string]in
 			route["route-tag"] = v
 		}
 
-		var nexthops []interface{}
+		nexthops := make([]interface{}, 0)
 		hopsRaw, _ := info["nexthops"].([]interface{})
 		for _, hopRaw := range hopsRaw {
 			hop, ok := hopRaw.(map[string]interface{})

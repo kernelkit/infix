@@ -27,6 +27,7 @@ const (
 var subscribeTypes = []zapi.RouteType{
 	zapi.RouteKernel,
 	zapi.RouteConnect,
+	zapi.RouteLocal,
 	zapi.RouteStatic,
 	zapi.RouteRIP,
 	zapi.RouteOSPF,
@@ -35,9 +36,10 @@ var subscribeTypes = []zapi.RouteType{
 var routeTypeToProtocol = map[zapi.RouteType]string{
 	zapi.RouteKernel:  "infix-routing:kernel",
 	zapi.RouteConnect: "ietf-routing:direct",
+	zapi.RouteLocal:   "ietf-routing:direct",
 	zapi.RouteStatic:  "ietf-routing:static",
 	zapi.RouteOSPF:    "ietf-ospf:ospfv2",
-	zapi.RouteRIP:     "ietf-rip:ripv2",
+	zapi.RouteRIP:     "ietf-rip:rip",
 }
 
 type ZAPIWatcher struct {
@@ -118,6 +120,7 @@ func (w *ZAPIWatcher) connect(ctx context.Context) (net.Conn, error) {
 				conn.Close()
 				return nil, fmt.Errorf("send redistribute-add: %w", err)
 			}
+			w.log.Debug("zapi watcher: subscribed", "afi", afi, "routeType", rt)
 		}
 	}
 
@@ -142,20 +145,34 @@ func (w *ZAPIWatcher) processMessages(ctx context.Context, conn net.Conn) error 
 }
 
 func (w *ZAPIWatcher) handleMessage(hdr zapi.Header, body []byte) {
+	w.log.Debug("zapi watcher: message", "cmd", hdr.Command, "vrf", hdr.VrfID, "len", hdr.Length)
+
 	switch hdr.Command {
 	case zapi.CmdRedistRouteAdd:
 		route, err := zapi.DecodeRoute(body)
 		if err != nil {
-			w.log.Warn("zapi watcher: decode route add", "err", err)
+			w.log.Warn("zapi watcher: decode route add", "err", err, "bodyLen", len(body))
 			return
 		}
+		w.log.Debug("zapi watcher: route add",
+			"type", route.Type,
+			"prefix", route.Prefix.String(),
+			"distance", route.Distance,
+			"metric", route.Metric,
+			"nexthops", len(route.Nexthops),
+			"msg", route.Message,
+		)
 		w.addRoute(route)
 	case zapi.CmdRedistRouteDel:
 		route, err := zapi.DecodeRoute(body)
 		if err != nil {
-			w.log.Warn("zapi watcher: decode route del", "err", err)
+			w.log.Warn("zapi watcher: decode route del", "err", err, "bodyLen", len(body))
 			return
 		}
+		w.log.Debug("zapi watcher: route del",
+			"type", route.Type,
+			"prefix", route.Prefix.String(),
+		)
 		w.deleteRoute(route)
 	}
 }
@@ -166,8 +183,10 @@ func (w *ZAPIWatcher) addRoute(route *zapi.Route) {
 
 	w.mu.Lock()
 	w.routes[key] = transformRoute(route)
+	routeCount := len(w.routes)
 	w.mu.Unlock()
 
+	w.log.Debug("zapi watcher: stored route", "key", key, "totalRoutes", routeCount)
 	w.writeRibs()
 }
 
@@ -275,7 +294,7 @@ func transformRoute(route *zapi.Route) json.RawMessage {
 	routeNode := map[string]any{
 		destKey:            route.Prefix.String(),
 		"source-protocol":  routeProtocol(route.Type),
-		"route-preference": route.Metric,
+		"route-preference": route.Distance,
 		"next-hop": map[string]any{
 			"next-hop-list": map[string]any{
 				"next-hop": nextHops,
