@@ -1,11 +1,8 @@
-// Package zapiwatcher subscribes to FRR zebra zserv route redistribution
-// events and mirrors routing data into the operational YANG tree.
 package zapiwatcher
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -16,45 +13,33 @@ import (
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
-	"github.com/osrg/gobgp/v3/pkg/log"
-	"github.com/osrg/gobgp/v3/pkg/zebra"
+	"github.com/kernelkit/infix/src/yangerd/internal/zapi"
 )
 
 const (
 	zapiSocketPath = "/var/run/frr/zserv.api"
-	zapiVersion    = 6
-	zapiSoftware   = "frr10.5"
 
 	reconnectInitial = 100 * time.Millisecond
 	reconnectMax     = 30 * time.Second
 	reconnectFactor  = 2.0
 )
 
-const (
-	RouteKernel  zebra.RouteType = 1
-	RouteConnect zebra.RouteType = 2
-	RouteStatic  zebra.RouteType = 3
-	RouteRIP     zebra.RouteType = 4
-	RouteOSPF    zebra.RouteType = 6
-)
-
-var subscribeTypes = []zebra.RouteType{
-	RouteKernel,
-	RouteConnect,
-	RouteStatic,
-	RouteRIP,
-	RouteOSPF,
+var subscribeTypes = []zapi.RouteType{
+	zapi.RouteKernel,
+	zapi.RouteConnect,
+	zapi.RouteStatic,
+	zapi.RouteRIP,
+	zapi.RouteOSPF,
 }
 
-var routeTypeToProtocol = map[zebra.RouteType]string{
-	RouteKernel:  "infix-routing:kernel",
-	RouteConnect: "ietf-routing:direct",
-	RouteStatic:  "ietf-routing:static",
-	RouteOSPF:    "ietf-ospf:ospfv2",
-	RouteRIP:     "ietf-rip:ripv2",
+var routeTypeToProtocol = map[zapi.RouteType]string{
+	zapi.RouteKernel:  "infix-routing:kernel",
+	zapi.RouteConnect: "ietf-routing:direct",
+	zapi.RouteStatic:  "ietf-routing:static",
+	zapi.RouteOSPF:    "ietf-ospf:ospfv2",
+	zapi.RouteRIP:     "ietf-rip:ripv2",
 }
 
-// ZAPIWatcher keeps the routing subtree in sync with zebra route updates.
 type ZAPIWatcher struct {
 	tree   *tree.Tree
 	log    *slog.Logger
@@ -64,29 +49,6 @@ type ZAPIWatcher struct {
 
 const routingTreeKey = "ietf-routing:routing"
 
-// slogAdapter wraps slog.Logger to implement gobgp v3 log.Logger interface.
-type slogAdapter struct {
-	l *slog.Logger
-}
-
-func (a *slogAdapter) Panic(msg string, fields log.Fields) { a.l.Error(msg, toAttrs(fields)...) }
-func (a *slogAdapter) Fatal(msg string, fields log.Fields) { a.l.Error(msg, toAttrs(fields)...) }
-func (a *slogAdapter) Error(msg string, fields log.Fields) { a.l.Error(msg, toAttrs(fields)...) }
-func (a *slogAdapter) Warn(msg string, fields log.Fields)  { a.l.Warn(msg, toAttrs(fields)...) }
-func (a *slogAdapter) Info(msg string, fields log.Fields)  { a.l.Info(msg, toAttrs(fields)...) }
-func (a *slogAdapter) Debug(msg string, fields log.Fields) { a.l.Debug(msg, toAttrs(fields)...) }
-func (a *slogAdapter) SetLevel(level log.LogLevel)         {}
-func (a *slogAdapter) GetLevel() log.LogLevel              { return log.LogLevel(0) }
-
-func toAttrs(fields log.Fields) []any {
-	attrs := make([]any, 0, len(fields)*2)
-	for k, v := range fields {
-		attrs = append(attrs, k, v)
-	}
-	return attrs
-}
-
-// New creates a ZAPIWatcher bound to the provided operational tree and logger.
 func New(t *tree.Tree, log *slog.Logger) *ZAPIWatcher {
 	if log == nil {
 		log = slog.Default()
@@ -94,15 +56,11 @@ func New(t *tree.Tree, log *slog.Logger) *ZAPIWatcher {
 	return &ZAPIWatcher{tree: t, log: log, routes: make(map[string]json.RawMessage)}
 }
 
-// Run starts the zebra watcher loop with exponential reconnect backoff.
-//
-// On successful connection it processes incoming route messages until
-// disconnect or context cancellation. On disconnect, cached routes are cleared.
 func (w *ZAPIWatcher) Run(ctx context.Context) error {
 	delay := reconnectInitial
 
 	for {
-		cli, err := w.connect(ctx)
+		conn, err := w.connect(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
@@ -119,9 +77,10 @@ func (w *ZAPIWatcher) Run(ctx context.Context) error {
 		}
 
 		delay = reconnectInitial
-		w.log.Info("zapi watcher: connected", "socket", zapiSocketPath, "version", zapiVersion, "software", zapiSoftware)
+		w.log.Info("zapi watcher: connected", "socket", zapiSocketPath)
 
-		err = w.processMessages(ctx, cli)
+		err = w.processMessages(ctx, conn)
+		_ = conn.Close()
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -131,71 +90,79 @@ func (w *ZAPIWatcher) Run(ctx context.Context) error {
 	}
 }
 
-func (w *ZAPIWatcher) connect(ctx context.Context) (*zebra.Client, error) {
+func (w *ZAPIWatcher) connect(ctx context.Context) (net.Conn, error) {
 	d := net.Dialer{}
 	conn, err := d.DialContext(ctx, "unix", zapiSocketPath)
 	if err != nil {
-		return nil, fmt.Errorf("dial zserv socket: %w", err)
-	}
-	_ = conn.Close()
-
-	software := zebra.NewSoftware(zapiVersion, zapiSoftware)
-	zebra.MaxSoftware = software
-
-	cli, err := zebra.NewClient(&slogAdapter{l: w.log}, "unix", zapiSocketPath, zebra.RouteType(0), zapiVersion, software, 0)
-	if err != nil {
-		return nil, fmt.Errorf("new zapi client: %w", err)
+		return nil, fmt.Errorf("dial zserv: %w", err)
 	}
 
-	cli.SendHello()
-	cli.SendRouterIDAdd()
-	for _, typ := range subscribeTypes {
-		cli.SendRedistribute(typ, zebra.DefaultVrf)
+	hello := zapi.BuildMessage(zapi.CmdHello, zapi.DefaultVrf, zapi.EncodeHello())
+	if _, err := conn.Write(hello); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("send hello: %w", err)
 	}
 
-	return cli, nil
+	for _, afi := range []uint8{zapi.AFIIPv4, zapi.AFIIPv6} {
+		msg := zapi.BuildMessage(zapi.CmdRouterIDAdd, zapi.DefaultVrf, zapi.EncodeRouterIDAdd(afi))
+		if _, err := conn.Write(msg); err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("send router-id-add: %w", err)
+		}
+	}
+
+	for _, rt := range subscribeTypes {
+		for _, afi := range []uint8{zapi.AFIIPv4, zapi.AFIIPv6} {
+			msg := zapi.BuildMessage(zapi.CmdRedistributeAdd, zapi.DefaultVrf, zapi.EncodeRedistributeAdd(afi, rt))
+			if _, err := conn.Write(msg); err != nil {
+				conn.Close()
+				return nil, fmt.Errorf("send redistribute-add: %w", err)
+			}
+		}
+	}
+
+	return conn, nil
 }
 
-func (w *ZAPIWatcher) processMessages(ctx context.Context, cli *zebra.Client) error {
+func (w *ZAPIWatcher) processMessages(ctx context.Context, conn net.Conn) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case msg, ok := <-cli.Receive():
-			if !ok {
-				return errors.New("zapi receive channel closed")
-			}
-			if msg == nil {
-				continue
-			}
-			w.handleMessage(msg)
+		default:
 		}
+
+		hdr, body, err := zapi.ReadMessage(conn)
+		if err != nil {
+			return fmt.Errorf("read message: %w", err)
+		}
+
+		w.handleMessage(hdr, body)
 	}
 }
 
-func (w *ZAPIWatcher) handleMessage(msg *zebra.Message) {
-	ipr, ok := msg.Body.(*zebra.IPRouteBody)
-	if !ok || ipr == nil {
-		return
-	}
-
-	cmd := msg.Header.Command.ToCommon(zapiVersion, zebra.NewSoftware(zapiVersion, zapiSoftware))
-	switch cmd {
-	case zebra.RedistributeRouteAdd:
-		w.addRoute(ipr)
-	case zebra.RedistributeRouteDel:
-		w.deleteRoute(ipr)
+func (w *ZAPIWatcher) handleMessage(hdr zapi.Header, body []byte) {
+	switch hdr.Command {
+	case zapi.CmdRedistRouteAdd:
+		route, err := zapi.DecodeRoute(body)
+		if err != nil {
+			w.log.Warn("zapi watcher: decode route add", "err", err)
+			return
+		}
+		w.addRoute(route)
+	case zapi.CmdRedistRouteDel:
+		route, err := zapi.DecodeRoute(body)
+		if err != nil {
+			w.log.Warn("zapi watcher: decode route del", "err", err)
+			return
+		}
+		w.deleteRoute(route)
 	}
 }
 
-func (w *ZAPIWatcher) addRoute(route *zebra.IPRouteBody) {
-	pfx, ok := ipNetFromPrefix(route.Prefix)
-	if !ok {
-		w.log.Debug("zapi watcher: ignore route add with invalid prefix")
-		return
-	}
-	rib := ribName(pfx)
-	key := rib + ":" + pfx.String() + ":" + routeProtocol(route.Type)
+func (w *ZAPIWatcher) addRoute(route *zapi.Route) {
+	rib := ribName(route.Prefix)
+	key := rib + ":" + route.Prefix.String() + ":" + routeProtocol(route.Type)
 
 	w.mu.Lock()
 	w.routes[key] = transformRoute(route)
@@ -204,13 +171,9 @@ func (w *ZAPIWatcher) addRoute(route *zebra.IPRouteBody) {
 	w.writeRibs()
 }
 
-func (w *ZAPIWatcher) deleteRoute(route *zebra.IPRouteBody) {
-	pfx, ok := ipNetFromPrefix(route.Prefix)
-	if !ok {
-		return
-	}
-	rib := ribName(pfx)
-	key := rib + ":" + pfx.String() + ":" + routeProtocol(route.Type)
+func (w *ZAPIWatcher) deleteRoute(route *zapi.Route) {
+	rib := ribName(route.Prefix)
+	key := rib + ":" + route.Prefix.String() + ":" + routeProtocol(route.Type)
 
 	w.mu.Lock()
 	delete(w.routes, key)
@@ -234,7 +197,7 @@ func (w *ZAPIWatcher) writeRibs() {
 	ipv6Routes := make([]json.RawMessage, 0)
 
 	for key, routeData := range w.routes {
-		if strings.HasPrefix(key, "ipv4-master:") {
+		if strings.HasPrefix(key, "ipv4:") {
 			ipv4Routes = append(ipv4Routes, routeData)
 		} else {
 			ipv6Routes = append(ipv6Routes, routeData)
@@ -245,14 +208,14 @@ func (w *ZAPIWatcher) writeRibs() {
 	ribs := map[string]any{
 		"rib": []map[string]any{
 			{
-				"name":           "ipv4-master",
+				"name":           "ipv4",
 				"address-family": "ietf-routing:ipv4",
 				"routes": map[string]any{
 					"route": ipv4Routes,
 				},
 			},
 			{
-				"name":           "ipv6-master",
+				"name":           "ipv6",
 				"address-family": "ietf-routing:ipv6",
 				"routes": map[string]any{
 					"route": ipv6Routes,
@@ -272,15 +235,19 @@ func (w *ZAPIWatcher) writeRibs() {
 
 func ribName(prefix net.IPNet) string {
 	if prefix.IP.To4() != nil {
-		return "ipv4-master"
+		return "ipv4"
 	}
-	return "ipv6-master"
+	return "ipv6"
 }
 
-func transformRoute(route *zebra.IPRouteBody) json.RawMessage {
-	pfx, ok := ipNetFromPrefix(route.Prefix)
-	if !ok {
-		return json.RawMessage(`{}`)
+func transformRoute(route *zapi.Route) json.RawMessage {
+	isIPv4 := route.Prefix.IP.To4() != nil
+
+	addrKey := "ietf-ipv6-unicast-routing:address"
+	destKey := "ietf-ipv6-unicast-routing:destination-prefix"
+	if isIPv4 {
+		addrKey = "ietf-ipv4-unicast-routing:address"
+		destKey = "ietf-ipv4-unicast-routing:destination-prefix"
 	}
 
 	nextHops := make([]map[string]any, 0, len(route.Nexthops))
@@ -288,7 +255,7 @@ func transformRoute(route *zebra.IPRouteBody) json.RawMessage {
 		hop := make(map[string]any)
 
 		if len(nh.Gate) > 0 && !nh.Gate.IsUnspecified() {
-			hop["next-hop-address"] = nh.Gate.String()
+			hop[addrKey] = nh.Gate.String()
 		}
 
 		if nh.Ifindex > 0 {
@@ -306,11 +273,13 @@ func transformRoute(route *zebra.IPRouteBody) json.RawMessage {
 	}
 
 	routeNode := map[string]any{
-		"destination-prefix": pfx.String(),
-		"source-protocol":    routeProtocol(route.Type),
-		"metric":             route.Metric,
-		"next-hop-list": map[string]any{
-			"next-hop": nextHops,
+		destKey:            route.Prefix.String(),
+		"source-protocol":  routeProtocol(route.Type),
+		"route-preference": route.Metric,
+		"next-hop": map[string]any{
+			"next-hop-list": map[string]any{
+				"next-hop": nextHops,
+			},
 		},
 	}
 
@@ -322,33 +291,9 @@ func transformRoute(route *zebra.IPRouteBody) json.RawMessage {
 	return json.RawMessage(encoded)
 }
 
-func routeProtocol(rt zebra.RouteType) string {
+func routeProtocol(rt zapi.RouteType) string {
 	if protocol, ok := routeTypeToProtocol[rt]; ok {
 		return protocol
 	}
 	return "infix-routing:kernel"
-}
-
-func ipNetFromPrefix(prefix zebra.Prefix) (net.IPNet, bool) {
-	ip := prefix.Prefix
-	if len(ip) == 0 {
-		return net.IPNet{}, false
-	}
-
-	bits := 128
-	if v4 := ip.To4(); v4 != nil {
-		ip = v4
-		bits = 32
-	}
-
-	prefixLen := int(prefix.PrefixLen)
-	if prefixLen < 0 {
-		prefixLen = 0
-	}
-	if prefixLen > bits {
-		prefixLen = bits
-	}
-
-	mask := net.CIDRMask(prefixLen, bits)
-	return net.IPNet{IP: ip.Mask(mask), Mask: mask}, true
 }
