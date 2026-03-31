@@ -168,6 +168,12 @@ Noteworthy changes and additions in this release are marked below in bold text.
   latter now also require the use of `sudo` for `admin` level users
 - Enhanced `copy` command with XPath filtering support
 - Kernel now announces details of new USB devices
+- New `show keystore` admin-exec command to inspect stored keys and
+  certificates without entering configure context
+- `show system` now displays CPU/SoC temperature on all supported platforms,
+  including those that report it under the `soc` or `core` sensor name
+- CN913x (Marvell Octeon) platforms now use the hardware SBSA watchdog,
+  ensuring the device recovers automatically from software lockups
 
 ### Fixes
 
@@ -176,6 +182,8 @@ Noteworthy changes and additions in this release are marked below in bold text.
   similar to IPv4, correctly mapping to the ietf-ip.yang model semantics
 - Fix #1082: Wi-Fi interfaces always scanned, introduce a `scan-mode` to the
   Wi-Fi concept in Infix
+- Fix #1292: watchdog not working on NanoPi R2S due to a broken DesignWare
+  WDT on the RK3328 SoC; the hardware watchdog is now disabled on this board
 - Fix #1313: Container is not restarted if environment variable is changed
 - Fix #1314: Raspberry Pi 4B with 1 or 8 GiB RAM does not boot.  This was due
   newer EEPROM firmware in newer boards require a newer rpi-firmware package
@@ -185,8 +193,16 @@ Noteworthy changes and additions in this release are marked below in bold text.
   not include a dtb.  Please note, the platform has now been renamed to `arm`
 - Fix default password hash in `do password encrypt` command.  New hash is the
   same as the more commonly used `change password` command, *yescrypt*
+- Fix BPI-R3 hardware watchdog, wrong kernel config option used — the device
+  would not recover automatically from a software lockup
+- Fix WiFi signal strength display showing inverted quality labels (`excellent`
+  shown for weak signals, `bad` for strong)
+- Fix `follow` command (both shell and CLI) not properly handling log rotation;
+  it now shows the full log and tails it correctly across rotations
 - Prevent MOTD from showing on non-shell user login attempts
-- Fix mDNS reflector.
+- Fix mDNS reflector never actually enabling — the avahi config was written
+  with `on`/`off` instead of the correct `yes`/`no` values, so enabling the
+  reflector in the configuration had no effect
 
 [wifi]: https://www.kernelkit.org/infix/latest/wifi/
 [sd card image]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi64-sdcard.img
