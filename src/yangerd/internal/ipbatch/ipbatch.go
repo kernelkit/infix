@@ -1,9 +1,16 @@
-// Package ipbatch manages a persistent `ip -json -s -d -force -batch -`
+// Package ipbatch manages a persistent `ip -json [-s] [-d] -force -batch -`
 // subprocess.  Commands sent via Query are serialized by a mutex and
 // paired with the single JSON-array line the subprocess writes to
-// stdout.  The -s and -d global flags ensure link queries include
-// statistics and details.  On subprocess death the manager enters a
-// dead state and attempts automatic restart with exponential backoff.
+// stdout.  The caller chooses global flags via functional options:
+// WithStats adds -s (statistics) and WithDetails adds -d (details).
+//
+// IMPORTANT: When -s is present, `link show` commands produce multiple
+// lines of output — breaking the one-command-one-line protocol used by
+// Query.  Address queries must therefore use a separate IPBatch instance
+// that omits -s (use WithDetails only).
+//
+// On subprocess death the manager enters a dead state and attempts
+// automatic restart with exponential backoff.
 package ipbatch
 
 import (
@@ -33,6 +40,15 @@ const (
 	reconnectFactor  = 2.0
 )
 
+// Option configures an IPBatch instance.
+type Option func(*IPBatch)
+
+// WithStats adds -s (statistics) to the ip command.
+func WithStats() Option { return func(b *IPBatch) { b.stats = true } }
+
+// WithDetails adds -d (details) to the ip command.
+func WithDetails() Option { return func(b *IPBatch) { b.details = true } }
+
 // IPBatch wraps a persistent `ip -json -force -batch -` subprocess.
 type IPBatch struct {
 	cmd    *exec.Cmd
@@ -44,16 +60,22 @@ type IPBatch struct {
 	log    *slog.Logger
 	ctx    context.Context
 	cancel context.CancelFunc
+
+	stats   bool
+	details bool
 }
 
 // New spawns the ip batch subprocess.  The returned IPBatch is ready
 // for Query calls.  A background goroutine drains stderr.
-func New(ctx context.Context, log *slog.Logger) (*IPBatch, error) {
+func New(ctx context.Context, log *slog.Logger, opts ...Option) (*IPBatch, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	b := &IPBatch{
 		log:    log,
 		ctx:    ctx,
 		cancel: cancel,
+	}
+	for _, o := range opts {
+		o(b)
 	}
 	if err := b.start(); err != nil {
 		cancel()
@@ -64,7 +86,16 @@ func New(ctx context.Context, log *slog.Logger) (*IPBatch, error) {
 }
 
 func (b *IPBatch) start() error {
-	cmd := exec.CommandContext(b.ctx, "ip", "-json", "-s", "-d", "-force", "-batch", "-")
+	args := []string{"-json"}
+	if b.stats {
+		args = append(args, "-s")
+	}
+	if b.details {
+		args = append(args, "-d")
+	}
+	args = append(args, "-force", "-batch", "-")
+
+	cmd := exec.CommandContext(b.ctx, "ip", args...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("stdin pipe: %w", err)
@@ -119,6 +150,9 @@ func (b *IPBatch) Query(command string) (json.RawMessage, error) {
 	}
 	raw := make([]byte, len(b.stdout.Bytes()))
 	copy(raw, b.stdout.Bytes())
+
+	b.log.Debug("ipbatch query", "cmd", command, "respLen", len(raw))
+
 	return json.RawMessage(raw), nil
 }
 
