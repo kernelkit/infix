@@ -3,6 +3,16 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.04.0][UNRELEASED] -
+-------------------------
+
+### Changes
+
+- Upgrade Linux kernel to 6.18.21 (LTS)
+
+### Fixes
+
+
 [v26.03.0][] - 2026-03-31
 -------------------------
 
@@ -2025,7 +2035,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.02.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.03.0...HEAD
 [v26.03.0]:   https://github.com/kernelkit/infix/compare/v26.02.0...v26.03.0
 [v26.02.0]:   https://github.com/kernelkit/infix/compare/v26.01.0...v26.02.0
 [v26.01.0]:   https://github.com/kernelkit/infix/compare/v25.11.0...v26.01.0
