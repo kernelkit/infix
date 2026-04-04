@@ -1,8 +1,9 @@
 From 810739b589e9a754a62f2070abf39bab7c96122d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 16 Jan 2025 12:35:12 +0100
-Subject: [PATCH 26/33] net: dsa: mv88e6xxx: collapse disabled state into
+Subject: [PATCH 26/41] net: dsa: mv88e6xxx: collapse disabled state into
  blocking
+Organization: Wires
 
 This patch changes the behavior of switchcore ports wrt. the port state.
 Instead of disabling the port, the driver now treats the disabled state
@@ -22,7 +23,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 2 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
-index e1fee09eae2f..e28fdd21de38 100644
+index e1fee09eae2fc..e28fdd21de38e 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.c
 +++ b/drivers/net/dsa/mv88e6xxx/port.c
 @@ -793,8 +793,6 @@ int mv88e6xxx_port_set_state(struct mv88e6xxx_chip *chip, int port, u8 state)

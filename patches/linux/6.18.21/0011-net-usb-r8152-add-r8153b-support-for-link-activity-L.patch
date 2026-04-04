@@ -1,8 +1,9 @@
 From 080f229c35d686e8c260092e18caa39cbe833392 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 11 Aug 2024 11:27:35 +0200
-Subject: [PATCH 11/33] net: usb: r8152: add r8153b support for link/activity
+Subject: [PATCH 11/41] net: usb: r8152: add r8153b support for link/activity
  LEDs
+Organization: Wires
 
 This patch adds support for the link/activity LEDs on the NanoPi R2S
 and OrangePi R1 Plus.
@@ -18,7 +19,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/drivers/net/usb/r8152.c b/drivers/net/usb/r8152.c
-index 357f5c733d0b..e7aa0cffadc5 100644
+index 357f5c733d0b5..e7aa0cffadc58 100644
 --- a/drivers/net/usb/r8152.c
 +++ b/drivers/net/usb/r8152.c
 @@ -41,6 +41,11 @@

@@ -1,8 +1,9 @@
 From db4b35cf2ce8f06e9ed65b394728e846f92af4b7 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 20 Aug 2025 21:38:24 +0200
-Subject: [PATCH 13/33] drm/panel-simple: Add a timing for the Raspberry Pi 7"
+Subject: [PATCH 13/41] drm/panel-simple: Add a timing for the Raspberry Pi 7"
  panel
+Organization: Wires
 
 The Raspberry Pi 7" 800x480 panel uses a Toshiba TC358762 DSI
 to DPI bridge chip, so there is a requirement for the timings
@@ -46,7 +47,7 @@ Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
  1 file changed, 30 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/panel/panel-simple.c b/drivers/gpu/drm/panel/panel-simple.c
-index 271f93399193..75dbc3cb8135 100644
+index 271f933991937..75dbc3cb81354 100644
 --- a/drivers/gpu/drm/panel/panel-simple.c
 +++ b/drivers/gpu/drm/panel/panel-simple.c
 @@ -400,7 +400,8 @@ static int panel_simple_get_modes(struct drm_panel *panel,

@@ -1,8 +1,9 @@
 From 707470adc86e9a099e3660c1c6c7a50ec38c2aa9 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 26 Nov 2024 19:45:59 +0100
-Subject: [PATCH 25/33] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
+Subject: [PATCH 25/41] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
  VLANs
+Organization: Wires
 
 Before this change, in a setup like the following, packets assigned to
 VLAN 10 were forwarded between the switch ports, even though the
@@ -30,7 +31,7 @@ cause all packets assigned to these VLANs to properly terminated.
  3 files changed, 27 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 969f772fcb27..161ce87a8871 100644
+index 969f772fcb273..161ce87a88716 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -2611,7 +2611,7 @@ static int mv88e6xxx_port_broadcast_sync(struct mv88e6xxx_chip *chip, int port,
@@ -117,7 +118,7 @@ index 969f772fcb27..161ce87a8871 100644
  		return err;
  
 diff --git a/include/net/switchdev.h b/include/net/switchdev.h
-index 8346b0d29542..764cd3dd4645 100644
+index 8346b0d29542c..764cd3dd46454 100644
 --- a/include/net/switchdev.h
 +++ b/include/net/switchdev.h
 @@ -104,6 +104,10 @@ struct switchdev_obj_port_vlan {
@@ -132,7 +133,7 @@ index 8346b0d29542..764cd3dd4645 100644
  
  #define SWITCHDEV_OBJ_PORT_VLAN(OBJ) \
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index 58174ad612d2..c0019d0c1172 100644
+index 58174ad612d21..c0019d0c1172d 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
 @@ -1796,6 +1796,8 @@ static int dsa_user_vlan_rx_add_vid(struct net_device *dev, __be16 proto,

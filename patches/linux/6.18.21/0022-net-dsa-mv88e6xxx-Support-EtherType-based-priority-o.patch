@@ -1,8 +1,9 @@
 From ab5c530c7dbf9f8dacf42231d4aa8331ae874c00 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 22 Mar 2024 16:15:43 +0100
-Subject: [PATCH 22/33] net: dsa: mv88e6xxx: Support EtherType based priority
+Subject: [PATCH 22/41] net: dsa: mv88e6xxx: Support EtherType based priority
  overrides
+Organization: Wires
 
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    | 64 +++++++++++++++++++++++++++++
@@ -14,7 +15,7 @@ Subject: [PATCH 22/33] net: dsa: mv88e6xxx: Support EtherType based priority
  6 files changed, 207 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index de230df48545..c99aef8afa5d 100644
+index de230df48545d..c99aef8afa5d0 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -1688,6 +1688,11 @@ static int mv88e6xxx_rmu_setup(struct mv88e6xxx_chip *chip)
@@ -117,7 +118,7 @@ index de230df48545..c99aef8afa5d 100644
  
  static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
-index e073446ee7d0..5d5e7ab63fca 100644
+index e073446ee7d02..5d5e7ab63fca3 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.h
 +++ b/drivers/net/dsa/mv88e6xxx/chip.h
 @@ -301,6 +301,11 @@ struct mv88e6xxx_port {
@@ -170,7 +171,7 @@ index e073446ee7d0..5d5e7ab63fca 100644
  
  struct mv88e6xxx_bus_ops {
 diff --git a/drivers/net/dsa/mv88e6xxx/global2.c b/drivers/net/dsa/mv88e6xxx/global2.c
-index 30a6ffa7817b..3f16a7ef3fa2 100644
+index 30a6ffa7817b0..3f16a7ef3fa28 100644
 --- a/drivers/net/dsa/mv88e6xxx/global2.c
 +++ b/drivers/net/dsa/mv88e6xxx/global2.c
 @@ -315,7 +315,7 @@ int mv88e6xxx_g2_atu_stats_get(struct mv88e6xxx_chip *chip, u16 *stats)
@@ -244,7 +245,7 @@ index 30a6ffa7817b..3f16a7ef3fa2 100644
   * Offset 0x15: EEPROM Data (for 16-bit data access)
   * Offset 0x15: EEPROM Addr (for 8-bit data access)
 diff --git a/drivers/net/dsa/mv88e6xxx/global2.h b/drivers/net/dsa/mv88e6xxx/global2.h
-index 3663645621c9..496269c26c50 100644
+index 3663645621c9d..496269c26c508 100644
 --- a/drivers/net/dsa/mv88e6xxx/global2.h
 +++ b/drivers/net/dsa/mv88e6xxx/global2.h
 @@ -138,6 +138,7 @@
@@ -266,7 +267,7 @@ index 3663645621c9..496269c26c50 100644
  int mv88e6xxx_g2_trunk_mask_write(struct mv88e6xxx_chip *chip, int num,
  				  bool hash, u16 mask);
 diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
-index df19dfa5cc3d..e1fee09eae2f 100644
+index df19dfa5cc3d8..e1fee09eae2fc 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.c
 +++ b/drivers/net/dsa/mv88e6xxx/port.c
 @@ -1560,6 +1560,52 @@ int mv88e6351_port_set_ether_type(struct mv88e6xxx_chip *chip, int port,
@@ -323,7 +324,7 @@ index df19dfa5cc3d..e1fee09eae2f 100644
   * Offset 0x19: Port IEEE Priority Remapping Registers [4-7]
   */
 diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
-index c1d2f99efb1c..d2ba9ed1f23e 100644
+index c1d2f99efb1c6..d2ba9ed1f23ea 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.h
 +++ b/drivers/net/dsa/mv88e6xxx/port.h
 @@ -286,7 +286,18 @@
