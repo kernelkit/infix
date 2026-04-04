@@ -2,29 +2,18 @@
 #include "infix.dtsi"
 
 / {
-	/* Dynamic GPU reservation */
-	gpu-reserved {
-		size = <0x0 0x10000000>; /* 256MB */
-		alignment = <0x0 0x1000000>; /* 16MB aligned */
-		alloc-ranges = <0x0 0x10000000 0x1 0x00000000>; /* Allow anywhere in RAM */
-		no-map;
-	};
-
-	/* CMA pool */
-	cma-reserved {
-		compatible = "shared-dma-pool";
-		size = <0x0 0x10000000>; /* 256MB */
-		alignment = <0x0 0x1000000>; /* 16MB aligned */
-		linux,cma-default;
-		reusable;
-	};
-
 	chosen {
 		/* 8250 auxiliary UART instead of pl011 */
 		stdout-path = "serial1:115200n8";
 	};
 };
 
+/* Override upstream 64MB CMA with 256MB for vc4 GPU */
+&rmem {
+	cma: linux,cma {
+		size = <0x10000000>; /* 256MB */
+	};
+};
 
 &vc4 {
 	status = "okay";
