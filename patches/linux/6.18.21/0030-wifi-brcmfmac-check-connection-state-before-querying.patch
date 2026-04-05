@@ -1,11 +1,12 @@
 From 1b42e2f4929b011f0e0d7c8ec552970164811a98 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Mon, 19 Jan 2026 13:06:53 +0100
-Subject: [PATCH 30/33] wifi: brcmfmac: check connection state before querying
+Subject: [PATCH 30/41] wifi: brcmfmac: check connection state before querying
  station info
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 In station mode, brcmf_cfg80211_get_station() queries the firmware for
 station info even when not connected to an AP. This results in error
@@ -23,7 +24,7 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index bcd8a4724625..f06658d4299b 100644
+index bcd8a4724625b..f06658d4299b3 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -3303,6 +3303,11 @@ brcmf_cfg80211_get_station(struct wiphy *wiphy, struct net_device *ndev,

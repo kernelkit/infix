@@ -1,8 +1,9 @@
 From 81cb8dc071332896b5d3c49f6edd8b8331b86f2f Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 17 Feb 2026 21:59:59 +0100
-Subject: [PATCH 33/33] net: phy: air_en8811h: add OF device table for
+Subject: [PATCH 33/41] net: phy: air_en8811h: add OF device table for
  auto-loading
+Organization: Wires
 
 mdio_uevent() only emits an OF-style MODALIAS via
 of_device_uevent_modalias(), never the mdio: binary format that
@@ -20,7 +21,7 @@ rejects drivers that provide an of_match_table.
  1 file changed, 6 insertions(+)
 
 diff --git a/drivers/net/phy/air_en8811h.c b/drivers/net/phy/air_en8811h.c
-index badd65f0ccee..b609465247a2 100644
+index badd65f0ccee2..b609465247a28 100644
 --- a/drivers/net/phy/air_en8811h.c
 +++ b/drivers/net/phy/air_en8811h.c
 @@ -1184,6 +1184,12 @@ static int en8811h_suspend(struct phy_device *phydev)

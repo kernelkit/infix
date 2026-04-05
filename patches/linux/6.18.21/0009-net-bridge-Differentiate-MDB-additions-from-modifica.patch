@@ -1,8 +1,9 @@
 From e3f31e30e7086bdd0b9698deb0b036d5e8ebb99e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
-Subject: [PATCH 09/33] net: bridge: Differentiate MDB additions from
+Subject: [PATCH 09/41] net: bridge: Differentiate MDB additions from
  modifications
+Organization: Wires
 
 Before this change, the reception of an IGMPv3 report (and analogously
 for MLDv2) that adds a new group, would trigger two MDB RTM_NEWMDB
@@ -27,7 +28,7 @@ introducing a RTM_SETMDB events to be used in the latter scenario.
  3 files changed, 8 insertions(+), 6 deletions(-)
 
 diff --git a/include/uapi/linux/rtnetlink.h b/include/uapi/linux/rtnetlink.h
-index dab9493c791b..40a3534f0f1d 100644
+index dab9493c791b8..40a3534f0f1d7 100644
 --- a/include/uapi/linux/rtnetlink.h
 +++ b/include/uapi/linux/rtnetlink.h
 @@ -142,6 +142,8 @@ enum {
@@ -40,7 +41,7 @@ index dab9493c791b..40a3534f0f1d 100644
  	RTM_NEWNSID = 88,
  #define RTM_NEWNSID RTM_NEWNSID
 diff --git a/net/bridge/br_mdb.c b/net/bridge/br_mdb.c
-index 400eb872b403..cd7a2cd0911a 100644
+index 400eb872b4032..cd7a2cd0911ad 100644
 --- a/net/bridge/br_mdb.c
 +++ b/net/bridge/br_mdb.c
 @@ -752,7 +752,7 @@ static int br_mdb_replace_group_sg(const struct br_mdb_config *cfg,
@@ -62,7 +63,7 @@ index 400eb872b403..cd7a2cd0911a 100644
  	if (br_multicast_should_handle_mode(brmctx, cfg->group.proto))
  		br_multicast_star_g_handle_mode(pg, cfg->filter_mode);
 diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
-index bacff6c2e968..a5f3e4935edc 100644
+index bacff6c2e9684..a5f3e4935edc6 100644
 --- a/net/bridge/br_multicast.c
 +++ b/net/bridge/br_multicast.c
 @@ -616,7 +616,7 @@ static void br_multicast_fwd_src_handle(struct net_bridge_group_src *src)

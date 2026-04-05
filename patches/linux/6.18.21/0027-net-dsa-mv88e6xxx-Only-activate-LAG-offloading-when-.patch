@@ -1,8 +1,9 @@
 From 33439041b14ff724f0d607df9bf46ae90415f493 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
-Subject: [PATCH 27/33] net: dsa: mv88e6xxx: Only activate LAG offloading when
+Subject: [PATCH 27/41] net: dsa: mv88e6xxx: Only activate LAG offloading when
  bridged
+Organization: Wires
 
 The current port isolation scheme for mv88e6xxx is detailed here:
 https://lore.kernel.org/netdev/20220203101657.990241-1-tobias@waldekranz.com/
@@ -50,7 +51,7 @@ CPU; egress traffic always relies on software hashing.
  1 file changed, 20 insertions(+), 22 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 161ce87a8871..d379799c0a16 100644
+index 161ce87a88716..d379799c0a168 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -3058,6 +3058,7 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,

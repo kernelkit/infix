@@ -1,8 +1,9 @@
 From 657a79b59e67bac4af66f63bcf740238af399aba Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
-Subject: [PATCH 01/33] net: phy: marvell10g: Support firmware loading on
+Subject: [PATCH 01/41] net: phy: marvell10g: Support firmware loading on
  88X3310
+Organization: Wires
 
 When probing, if a device is waiting for firmware to be loaded into
 its RAM, ask userspace for the binary and load it over XMDIO.
@@ -15,7 +16,7 @@ fall back.
  1 file changed, 161 insertions(+)
 
 diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
-index 8fd42131cdbf..44294519231e 100644
+index 8fd42131cdbf9..44294519231ed 100644
 --- a/drivers/net/phy/marvell10g.c
 +++ b/drivers/net/phy/marvell10g.c
 @@ -25,6 +25,7 @@

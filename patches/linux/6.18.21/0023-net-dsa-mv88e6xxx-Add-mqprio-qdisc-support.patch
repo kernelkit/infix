@@ -1,7 +1,8 @@
 From 1a2c045f9e4fd595803b014bd85e2914b9003e8d Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 11:04:22 +0200
-Subject: [PATCH 23/33] net: dsa: mv88e6xxx: Add mqprio qdisc support
+Subject: [PATCH 23/41] net: dsa: mv88e6xxx: Add mqprio qdisc support
+Organization: Wires
 
 Add support for attaching mqprio qdisc's to mv88e6xxx ports and use
 the packet's traffic class as the outgoing priority when no PCP bits
@@ -29,7 +30,7 @@ handle the mapping down to the "real" number.
  2 files changed, 73 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index c99aef8afa5d..2c533aeb7374 100644
+index c99aef8afa5d0..2c533aeb7374d 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -32,6 +32,7 @@
@@ -131,7 +132,7 @@ index c99aef8afa5d..2c533aeb7374 100644
  
  	return dsa_register_switch(ds);
 diff --git a/net/dsa/tag_dsa.c b/net/dsa/tag_dsa.c
-index a00ae6bf2971..55c296e0b5b0 100644
+index a00ae6bf29717..55c296e0b5b0e 100644
 --- a/net/dsa/tag_dsa.c
 +++ b/net/dsa/tag_dsa.c
 @@ -180,8 +180,10 @@ static struct sk_buff *dsa_xmit_ll(struct sk_buff *skb, struct net_device *dev,

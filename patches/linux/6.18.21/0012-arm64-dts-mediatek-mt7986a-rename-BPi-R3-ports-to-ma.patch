@@ -1,8 +1,9 @@
 From 2040cffd47b80aa352b624ddaa66f47f85d5c88a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 10 Aug 2025 18:52:54 +0200
-Subject: [PATCH 12/33] arm64: dts: mediatek: mt7986a: rename BPi R3 ports to
+Subject: [PATCH 12/41] arm64: dts: mediatek: mt7986a: rename BPi R3 ports to
  match case
+Organization: Wires
 
 For ref. see: https://wiki.banana-pi.org/File:Bpi-r3_Metal_case.jpg
 
@@ -15,7 +16,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts b/arch/arm64/boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts
-index e7654dc9a1c9..4cc6aff07225 100644
+index e7654dc9a1c9b..4cc6aff072256 100644
 --- a/arch/arm64/boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts
 +++ b/arch/arm64/boot/dts/mediatek/mt7986a-bananapi-bpi-r3.dts
 @@ -46,7 +46,7 @@ fan: pwm-fan {
