@@ -485,25 +485,25 @@ with infamy.Test() as test:
         nsclient1.addroute("default", "2001:db8:3c4d:01::2", proto="ipv6")
 
         with test.step("Verify IPv4 connectivity with ping 10.0.0.1, 10.0.0.2 and 10.0.0.3 from host:data1"):
-            util.parallel(nsclient1.must_reach("10.0.0.1"),
-                          nsclient1.must_reach("10.0.0.2"),
-                          nsclient1.must_reach("10.0.0.3"))
+            util.parallel(util.until(nsclient1.must_reach("10.0.0.1")),
+                          util.until(nsclient1.must_reach("10.0.0.2")),
+                          util.until(nsclient1.must_reach("10.0.0.3")))
 
         with test.step("Verify IPv4 connectivity with ping 10.0.0.1 and 10.0.0.2 from host:data2"):
-            util.parallel(nsserver.must_reach("10.0.0.1"),
-                          nsserver.must_reach("10.0.0.2"))
+            util.parallel(util.until(nsserver.must_reach("10.0.0.1")),
+                          util.until(nsserver.must_reach("10.0.0.2")))
 
         with test.step("Verify host:data2 can not ping 10.0.0.3"):
             nsserver.must_not_reach("10.0.0.3") # Not in allowed IPs
 
         with test.step("Verify IPv6 connectivity with ping fd00:0::1, fd00:0::2 and fd00:0::3 from host:data1"):
-            util.parallel(nsclient1.must_reach("fd00:0::1"),
-                          nsclient1.must_reach("fd00:0::2"),
-                          nsclient1.must_reach("fd00:0::3"))
+            util.parallel(util.until(nsclient1.must_reach("fd00:0::1")),
+                          util.until(nsclient1.must_reach("fd00:0::2")),
+                          util.until(nsclient1.must_reach("fd00:0::3")))
 
         with test.step("Verify IPv6 connectivity with ping fd00:0:1 and fd00:0:2 from host:data2"):
-            util.parallel(nsserver.must_reach("fd00:0::1"),
-                          nsserver.must_reach("fd00:0::2"))
+            util.parallel(util.until(nnsserver.must_reach("fd00:0::1")),
+                          util.until(nsserver.must_reach("fd00:0::2")))
 
         with test.step("Verify host:data2 can not ping fd00:0::3"):
             nsserver.must_not_reach("fd00:0::3") # Not in allowed IPs
