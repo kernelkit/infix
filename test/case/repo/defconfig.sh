@@ -1,4 +1,6 @@
 #!/bin/sh
+# Verify all config/*_defconfig files, skipping any subdirectories,
+# e.g., developer snippets not used in official builds.
 
 SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
 CONFIGS="$SCRIPT_PATH/../../../configs"
@@ -47,6 +49,7 @@ check()
     done
 }
 
-check "$CONFIGS"/* || exit 1
+# shellcheck disable=SC2046
+check $(find "$CONFIGS" -maxdepth 1 -type f | LC_ALL=C sort) || exit 1
 
 exit 0
