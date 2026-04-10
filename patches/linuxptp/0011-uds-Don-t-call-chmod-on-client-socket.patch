@@ -1,0 +1,56 @@
+From 6bfc1de21b64ac17145b119cb636d1c1b3d90a75 Mon Sep 17 00:00:00 2001
+From: "Miroslav Lichvar (via linuxptp-devel Mailing List)"
+ <linuxptp-devel@lists.nwtime.org>
+Date: Thu, 31 Jul 2025 11:35:47 +0200
+Subject: [PATCH 11/13] uds: Don't call chmod() on client socket.
+Organization: Wires
+
+The pmc clients should not need to modify the permissions of their
+socket (following the uds_file_mode setting), they can rely on their
+umask.
+
+Make the chmod() call on the bound socket only in the server.
+
+This removes a race condition between the bind() and chmod() calls that
+could potentially be exploited by ptp4l running under a non-root user.
+It could replace the socket with a symlink in order to make the client
+running under root to change the mode of a different file.
+
+Signed-off-by: Miroslav Lichvar <mlichvar@redhat.com>
+Reviewed-by: Jacob Keller <jacob.e.keller@intel.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ uds.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/uds.c b/uds.c
+index ce7e92d..d74b7a8 100644
+--- a/uds.c
++++ b/uds.c
+@@ -97,19 +97,20 @@ static int uds_open(struct transport *t, struct interface *iface, struct fdarray
+ 	uds->address.sun = sa;
+ 	uds->address.len = sizeof(sa);
+ 
+-	chmod(name, file_mode);
+-
+ 	/*
+ 	 * In the client, copy the ownership of the server's socket if it runs
+ 	 * under a non-root user to allow it to send a response to the client
+ 	 * running under root.  Avoid following a symlink if the socket is
+-	 * replaced (e.g. by compromised ptp4l process).
++	 * replaced (e.g. by compromised ptp4l process).  The server just sets
++	 * the permissions on its socket per configuration.
+ 	 */
+ 	if (uds_path[0] != '\0') {
+ 		if (!lstat(uds_path, &st) && (st.st_uid || st.st_gid) &&
+ 		    lchown(name, st.st_uid, st.st_gid)) {
+ 			pr_err("uds: failed to change socket ownership: %m");
+ 		}
++	} else {
++		chmod(name, file_mode);
+ 	}
+ 
+ 	fda->fd[FD_EVENT] = -1;
+-- 
+2.43.0
+

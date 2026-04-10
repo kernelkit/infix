@@ -1,0 +1,40 @@
+From 5a97466a0ed88bae244566c2a5dba85ce72e4f01 Mon Sep 17 00:00:00 2001
+From: Miroslav Lichvar <mlichvar@redhat.com>
+Date: Tue, 26 Nov 2024 15:10:33 +0100
+Subject: [PATCH 07/13] phc2sys: Don't disable pmc agent with -s -d -w options.
+Organization: Wires
+
+When phc2sys is started with -s and -d options to combine a PPS device
+and PHC device as a time source, but without an offset specified by
+the -O option, the pmc agent is disabled after waiting for ptp4l to have
+a port in a synchronized state. This prevents phc2sys from following
+changes in the currentUtcOffset value.
+
+Disable the pmc agent only if no PHC device is specified by the -s
+option, i.e. there are no PHC readings to which the UTC offset could be
+applied.
+
+Fixes: 5f1b419c4102 ("phc2sys: Replace magical test with a proper test.")
+Signed-off-by: Miroslav Lichvar <mlichvar@redhat.com>
+Reviewed-by: Jacob Keller <jacob.e.keller@intel.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ phc2sys.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/phc2sys.c b/phc2sys.c
+index 47e896e..5962f6c 100644
+--- a/phc2sys.c
++++ b/phc2sys.c
+@@ -1547,7 +1547,7 @@ int main(int argc, char *argv[])
+ 
+ 		if (domains[0].forced_sync_offset ||
+ 		    !phc2sys_using_systemclock(&domains[0]) ||
+-		    hardpps_configured(pps_fd)) {
++		    (hardpps_configured(pps_fd) && !src_name)) {
+ 			pmc_agent_disable(domains[0].agent);
+ 		}
+ 	}
+-- 
+2.43.0
+

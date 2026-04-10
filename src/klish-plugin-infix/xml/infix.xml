@@ -422,6 +422,13 @@ echo "Public:  $pub"
     <ACTION sym="script" in="tty" out="tty" interrupt="true">show nacm</ACTION>
   </COMMAND>
 
+  <COMMAND name="ptp" help="Show PTP (IEEE 1588/802.1AS) status">
+    <SWITCH name="optional" min="0" max="1">
+      <PARAM name="instance" ptype="/INT" help="Show specific PTP instance (instance-index)"/>
+    </SWITCH>
+    <ACTION sym="script">show ptp $KLISH_PARAM_instance</ACTION>
+  </COMMAND>
+
   <COMMAND name="ntp" help="Show NTP status">
     <SWITCH name="subcommands" min="0">
       <COMMAND name="source" help="Show NTP source(s)">

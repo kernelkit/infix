@@ -271,4 +271,7 @@ int ntp_cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	     const char *path, sr_event_t event, unsigned request_id, void *priv);
 int ntp_candidate_init(struct confd *confd);
 
+/* ptp.c */
+int ptp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+
 #endif	/* CONFD_CORE_H_ */

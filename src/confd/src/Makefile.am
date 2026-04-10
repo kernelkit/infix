@@ -49,6 +49,7 @@ confd_plugin_la_SOURCES =			\
 	keystore.c				\
 	system.c				\
 	ntp.c					\
+	ptp.c					\
 	syslog.c				\
 	factory-default.c			\
 	routing.c				\

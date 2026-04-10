@@ -1,0 +1,82 @@
+From 5a192e152f4d19ff5899960154f1e14bbd0c6bd7 Mon Sep 17 00:00:00 2001
+From: "Maxime Chevallier (via linuxptp-devel Mailing List)"
+ <linuxptp-devel@lists.nwtime.org>
+Date: Wed, 4 Feb 2026 10:16:11 +0100
+Subject: [PATCH 12/13] port: Allow mixing wildcard identities and exact
+ identities in messages
+Organization: Wires
+
+A Port Identity is made of a Clock Identity and a Port Number. Each of
+these fields allow wildcards values.
+
+The current implementation checks if either both these fields contain an
+exact value, or if both contains a wildcard.
+
+Make so that we check for wildcards on each field independently. To
+avoid hard to read comparisons, introduce helper functions to compare
+each field in PortIdentity.
+
+Signed-off-by: Maxime Chevallier <maxime.chevallier@bootlin.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ port_signaling.c |  6 ++++--
+ util.h           | 26 ++++++++++++++++++++++++++
+ 2 files changed, 30 insertions(+), 2 deletions(-)
+
+diff --git a/port_signaling.c b/port_signaling.c
+index cf28756..b34ebe9 100644
+--- a/port_signaling.c
++++ b/port_signaling.c
+@@ -151,8 +151,10 @@ int process_signaling(struct port *p, struct ptp_message *m)
+ 	}
+ 
+ 	/* Ignore signaling messages not addressed to this port. */
+-	if (!pid_eq(&m->signaling.targetPortIdentity, &p->portIdentity) &&
+-	    !pid_eq(&m->signaling.targetPortIdentity, &wildcard_pid)) {
++	if ((!pid_cid_eq(&m->signaling.targetPortIdentity, &p->portIdentity) &&
++	     !pid_cid_eq(&m->signaling.targetPortIdentity, &wildcard_pid)) ||
++	    (!pid_pn_eq(&m->signaling.targetPortIdentity, &p->portIdentity) &&
++	     !pid_pn_eq(&m->signaling.targetPortIdentity, &wildcard_pid))) {
+ 		return 0;
+ 	}
+ 
+diff --git a/util.h b/util.h
+index b228745..7552353 100644
+--- a/util.h
++++ b/util.h
+@@ -158,6 +158,32 @@ static inline int pid_eq(const struct PortIdentity *a,
+ 	return memcmp(a, b, sizeof(*a)) == 0;
+ }
+ 
++/**
++ * Compare two port identities for PortIdentity.clockIdentity equality.
++ *
++ * @param a  First port identity.
++ * @param b  Second port identity.
++ * @return   1 if identities are equal, 0 otherwise.
++ */
++static inline int pid_cid_eq(const struct PortIdentity *a,
++			     const struct PortIdentity *b)
++{
++	return cid_eq(&a->clockIdentity, &b->clockIdentity);
++}
++
++/**
++ * Compare two port identities for PortIdentity.portNumber equality.
++ *
++ * @param a  First port identity.
++ * @param b  Second port identity.
++ * @return   1 if identities are equal, 0 otherwise.
++ */
++static inline int pid_pn_eq(const struct PortIdentity *a,
++			    const struct PortIdentity *b)
++{
++	return a->portNumber == b->portNumber;
++}
++
+ /**
+  * Convert a string containing a network address into binary form.
+  * @param type  The network transport type of the address.
+-- 
+2.43.0
+

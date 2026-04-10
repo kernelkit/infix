@@ -5636,6 +5636,203 @@ def show_bfd(json_data):
     show_bfd_peers_brief(json_data)
 
 
+def _ptp_ns(yang_val):
+    """Convert YANG time-interval (ns × 2^16, stored as str) to integer nanoseconds."""
+    try:
+        return int(yang_val) // 65536
+    except (TypeError, ValueError):
+        return None
+
+
+def _ptp_strip(identity):
+    """Strip YANG module prefix from identityref value.
+
+    'ieee1588-ptp-tt:cc-default' → 'cc-default'
+    """
+    if identity and ':' in identity:
+        return identity.split(':', 1)[1]
+    return identity or ''
+
+
+_PTP_INSTANCE_TYPE_NAMES = {
+    "oc":     "Ordinary Clock",
+    "bc":     "Boundary Clock",
+    "p2p-tc": "P2P Transparent Clock",
+    "e2e-tc": "E2E Transparent Clock",
+}
+
+_PTP_PORT_STATE_COLOR = {
+    "time-transmitter":     Decore.green,
+    "time-receiver":        Decore.green,
+    "pre-time-transmitter": Decore.yellow,
+    "uncalibrated":         Decore.yellow,
+    "listening":            Decore.yellow,
+    "passive":              lambda x: x,
+    "faulty":               Decore.red,
+    "disabled":             Decore.red,
+    "initializing":         lambda x: x,
+}
+
+
+def show_ptp(json_data, instance_index=None):
+    """Show PTP instance status."""
+    ptp = json_data.get("ieee1588-ptp-tt:ptp", {})
+    instances = ptp.get("instances", {}).get("instance", [])
+
+    if not instances:
+        print("PTP: no instances configured.")
+        return
+
+    for inst in instances:
+        idx = inst.get("instance-index", "?")
+
+        if instance_index is not None and str(idx) != str(instance_index):
+            continue
+
+        dds  = inst.get("default-ds", {})
+        cds  = inst.get("current-ds", {})
+        pds  = inst.get("parent-ds", {})
+        tpds = inst.get("time-properties-ds", {})
+        ports = inst.get("ports", {}).get("port", [])
+
+        itype    = _PTP_INSTANCE_TYPE_NAMES.get(dds.get("instance-type", "oc"), "Unknown")
+        domain   = dds.get("domain-number", 0)
+        clock_id = dds.get("clock-identity", "?")
+
+        # ── Header ────────────────────────────────────────────────────────────
+        header   = f"PTP Instance {idx}"
+        subtitle = f"{itype} · domain {domain}"
+        pad_len  = max(1, 40 - len(header))
+        pad      = " " * pad_len
+        rule_w   = max(68, len(header) + pad_len + len(subtitle))
+        print(f"{Decore.bold(header)}{pad}{subtitle}")
+        print("─" * rule_w)
+
+        # ── Clock / GM identity ───────────────────────────────────────────────
+        W = 24
+        gm_id = pds.get("grandmaster-identity", "")
+        print(f"  {'Clock identity':<{W}}: {clock_id}")
+        if gm_id and gm_id != clock_id:
+            print(f"  {'Grandmaster':<{W}}: {gm_id}")
+        else:
+            print(f"  {'Grandmaster':<{W}}: (self)")
+
+        # ── Priorities ────────────────────────────────────────────────────────
+        p1, p2 = dds.get("priority1", "?"), dds.get("priority2", "?")
+        print(f"  {'Priority1/Priority2':<{W}}: {p1} / {p2}")
+
+        if gm_id and gm_id != clock_id:
+            gp1 = pds.get("grandmaster-priority1", "?")
+            gp2 = pds.get("grandmaster-priority2", "?")
+            print(f"  {'GM Priority1/Priority2':<{W}}: {gp1} / {gp2}")
+
+        # ── Clock quality ─────────────────────────────────────────────────────
+        cq = dds.get("clock-quality", {})
+        cc = _ptp_strip(cq.get("clock-class", ""))
+        if cc:
+            print(f"  {'Clock class':<{W}}: {cc}")
+
+        if gm_id and gm_id != clock_id:
+            gcq = pds.get("grandmaster-clock-quality", {})
+            gcc = _ptp_strip(gcq.get("clock-class", ""))
+            if gcc and gcc != cc:
+                print(f"  {'GM clock class':<{W}}: {gcc}")
+
+        # ── Time source ───────────────────────────────────────────────────────
+        ts = _ptp_strip(tpds.get("time-source", ""))
+        if ts:
+            print(f"  {'Time source':<{W}}: {ts}")
+
+        if dds.get("time-receiver-only"):
+            print(f"  {'Mode':<{W}}: time-receiver only")
+
+        # ── Time properties ───────────────────────────────────────────────────
+        ptp_ts  = "yes" if tpds.get("ptp-timescale")        else "no"
+        t_trace = "yes" if tpds.get("time-traceable")        else "no"
+        f_trace = "yes" if tpds.get("frequency-traceable")   else "no"
+        utc_off = tpds.get("current-utc-offset")
+        utc_str = f"{utc_off} s" if utc_off is not None else "N/A"
+        print(f"  {'PTP timescale':<{W}}: {ptp_ts}")
+        print(f"  {'UTC offset':<{W}}: {utc_str}")
+        print(f"  {'Time traceable':<{W}}: {t_trace}")
+        print(f"  {'Freq. traceable':<{W}}: {f_trace}")
+
+        # ── Sync status ───────────────────────────────────────────────────────
+        offset = _ptp_ns(cds.get("offset-from-time-transmitter"))
+        delay  = _ptp_ns(cds.get("mean-delay"))
+        steps  = cds.get("steps-removed")
+        if offset is not None:
+            print(f"  {'Offset from GM':<{W}}: {offset} ns")
+        if delay is not None:
+            print(f"  {'Mean path delay':<{W}}: {delay} ns")
+        if steps is not None:
+            print(f"  {'Steps removed':<{W}}: {steps}")
+
+        # ── Ports ─────────────────────────────────────────────────────────────
+        if ports:
+            print()
+            Decore.title("Ports", width=rule_w)
+
+            port_table = SimpleTable([
+                Column("PORT",           align='right'),
+                Column("INTERFACE",      flexible=True),
+                Column("STATE",          flexible=True),
+                Column("DELAY"),
+                Column("LINK DELAY (ns)", align='right'),
+            ])
+            stats_table = SimpleTable([
+                Column("PORT",      align='right'),
+                Column("INTERFACE", flexible=True),
+                Column("SYNC \u25bc",  align='right'),
+                Column("SYNC \u25b2",  align='right'),
+                Column("ANN \u25bc",   align='right'),
+                Column("ANN \u25b2",   align='right'),
+                Column("PD \u25bc",    align='right'),
+                Column("PD \u25b2",    align='right'),
+            ])
+            has_stats = False
+
+            for port in ports:
+                pidx  = port.get("port-index", "?")
+                pds_  = port.get("port-ds", {})
+                iface = port.get("underlying-interface",
+                                 pds_.get("port-identity", {}).get("clock-identity", "?"))
+
+                state_raw = pds_.get("port-state", "?")
+                color_fn  = _PTP_PORT_STATE_COLOR.get(state_raw, lambda x: x)
+                state_str = color_fn(state_raw)
+
+                dm      = (pds_.get("delay-mechanism") or "?").upper()
+                mld     = _ptp_ns(pds_.get("mean-link-delay"))
+                mld_str = str(mld) if mld is not None else ""
+
+                port_table.row(str(pidx), iface, state_str, dm, mld_str)
+
+                st = port.get("ieee802-dot1as-gptp:port-statistics-ds", {})
+                if st:
+                    has_stats = True
+                    stats_table.row(
+                        str(pidx), iface,
+                        str(st.get("rx-sync-count",     0)),
+                        str(st.get("tx-sync-count",     0)),
+                        str(st.get("rx-announce-count", 0)),
+                        str(st.get("tx-announce-count", 0)),
+                        str(st.get("rx-pdelay-req-count", 0)),
+                        str(st.get("tx-pdelay-req-count", 0)),
+                    )
+
+            port_table.adjust_padding(rule_w)
+            port_table.print()
+
+            if has_stats:
+                print()
+                Decore.title("Message Statistics  (\u25bc\u202frx  \u25b2\u202ftx)", width=rule_w)
+                stats_table.adjust_padding(rule_w)
+                stats_table.print()
+
+        print()
+
+
 def main():
     global UNIT_TEST
 
@@ -5694,6 +5891,9 @@ def main():
     ks_parser = subparsers.add_parser('show-keystore', help='Show keystore keys')
     ks_parser.add_argument('-t', '--type', help='Key type (symmetric or asymmetric)')
     ks_parser.add_argument('-n', '--name', help='Key name')
+
+    subparsers.add_parser('show-ptp', help='Show PTP instance status') \
+              .add_argument('instance', nargs='?', help='Instance index (optional)')
 
     subparsers.add_parser('show-ntp', help='Show NTP status') \
               .add_argument('-a', '--address', help='Show details for specific address')
@@ -5768,6 +5968,8 @@ def main():
         show_nacm_user(json_data)
     elif args.command == "show-keystore":
         show_keystore(json_data, getattr(args, 'type', None), args.name)
+    elif args.command == "show-ptp":
+        show_ptp(json_data, getattr(args, 'instance', None))
     elif args.command == "show-ntp":
         show_ntp(json_data, args.address)
     elif args.command == "show-ntp-tracking":

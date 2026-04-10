@@ -47,6 +47,7 @@ nav:
       - Device Discovery: discovery.md
       - DHCP Server: dhcp.md
       - NTP Server: ntp.md
+      - PTP (IEEE 1588/802.1AS): ptp.md
   - System:
       - Boot Procedure: boot.md
       - Configuration: system.md

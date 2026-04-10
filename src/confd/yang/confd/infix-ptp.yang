@@ -1,0 +1,291 @@
+module infix-ptp {
+  yang-version 1.1;
+  namespace "urn:infix:ptp:ns:yang:1.0";
+  prefix infix-ptp;
+
+  import ieee1588-ptp-tt {
+    prefix ptp-tt;
+  }
+  import ieee802-dot1as-gptp {
+    prefix dot1as-gptp;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Augments and deviations for IEEE 1588-2019 and
+                IEEE 802.1AS-2020 PTP support.
+
+                Profile selection via the profile leaf covers all
+                protocol-mandatory settings for each profile.  The
+                standard sdo-id leaf is deviated not-supported; the
+                profile leaf is the authoritative selector.
+
+                Transparent Clock support uses the modern instance-type
+                approach (p2p-tc / e2e-tc) from IEEE 1588-2019.  The
+                deprecated IEEE 1588-2008 transparent-clock-default-ds
+                and transparent-clock-ports containers are deviated
+                not-supported.";
+
+  revision 2026-04-07 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Augments
+   */
+
+  augment "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+        + "/ptp-tt:default-ds" {
+    description
+      "Profile selection for this PTP instance.
+
+       The profile leaf selects the PTP profile and applies all
+       protocol-mandatory settings for that profile.  The standard
+       sdo-id leaf is deviated not-supported; use profile instead.";
+
+    leaf profile {
+      type enumeration {
+        enum ieee1588 {
+          value 0;
+          description
+            "IEEE 1588-2019 default profile.  Uses UDP/IPv4 transport
+             and E2E delay measurement by default.  Network transport
+             and delay mechanism are user-configurable per port.";
+        }
+        enum ieee802-dot1as {
+          value 1;
+          description
+            "IEEE 802.1AS-2020 gPTP profile.  Applies all
+             protocol-mandatory settings: IEEE 802.3 (Layer 2)
+             transport, P2P delay measurement, and the 802.1AS
+             multicast group address.  Also enables path trace,
+             follow-up information, and neighbor propagation delay
+             thresholds as required by the standard.
+
+             User-configurable: priority1, priority2, domain-number,
+             time-receiver-only, and timer interval leaves.";
+        }
+      }
+      default ieee1588;
+      description
+        "PTP profile for this instance.  Selects the complete set of
+         protocol-mandatory settings for the chosen profile.
+
+         The combination of domain-number and profile must be unique
+         across all PTP instances on this node.";
+    }
+  }
+
+  augment "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance" {
+    description
+      "Clock servo parameters for this PTP instance.";
+
+    container servo {
+      description
+        "Clock servo tuning parameters.";
+
+      leaf step-threshold {
+        type decimal64 {
+          fraction-digits 9;
+        }
+        units "seconds";
+        default "0.0";
+        description
+          "Maximum offset from the time transmitter that the servo
+           corrects by slewing rather than stepping.  When the measured
+           offset exceeds this threshold the clock is stepped abruptly
+           to the correct time; below the threshold the servo disciplines
+           the clock by frequency adjustment only.
+
+           The value 0.0 (default) disables stepping: the servo always
+           slews, which guarantees a monotonic clock at the cost of
+           potentially very slow convergence when starting from a large
+           initial offset.
+
+           Setting a non-zero value (for example 0.1 for 100 ms) allows
+           the servo to step the clock on first lock, achieving fast
+           initial convergence while keeping the clock monotonic once
+           it has locked.";
+      }
+    }
+  }
+
+  /*
+   * Deviations from ieee1588-ptp-tt
+   */
+
+  /*
+   * /ptp/instances/instance/default-ds
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:default-ds/ptp-tt:sdo-id" {
+    deviate not-supported;
+    description
+      "Only the upper 4-bit majorSdoId field is configurable.
+       Use the profile leaf to select the correct majorSdoId value.";
+  }
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:default-ds/ptp-tt:current-time" {
+    deviate not-supported;
+    description
+      "Setting PTP instance time via YANG is not supported.
+       The current PTP time is only observable via pmc and is
+       presented in operational data.";
+  }
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:default-ds/ptp-tt:external-port-config-enable" {
+    deviate not-supported;
+    description
+      "The external-port-config feature is not supported.";
+  }
+
+  /*
+   * /ptp/instances/instance/description-ds
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:description-ds" {
+    deviate not-supported;
+    description
+      "The description data set is not exposed by pmc and is
+       not supported in this implementation.";
+  }
+
+  /*
+   * /ptp/instances/instance/fault-log-ds
+   * (feature-gated; not enabled)
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:fault-log-ds" {
+    deviate not-supported;
+    description
+      "Structured fault log is not supported.  ptp4l does not
+       expose a fault log via pmc.  Faults are observable in
+       syslog (tagged ptp4l).";
+  }
+
+  /*
+   * /ptp/instances/instance/path-trace-ds
+   * (feature-gated; not enabled)
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:path-trace-ds" {
+    deviate not-supported;
+    description
+      "Path trace mechanism is not supported in this implementation.";
+  }
+
+  /*
+   * /ptp/instances/instance/alternate-timescale-ds
+   * (feature-gated; not enabled)
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:alternate-timescale-ds" {
+    deviate not-supported;
+    description
+      "Alternate timescale mechanism is not supported.";
+  }
+
+  /*
+   * /ptp/instances/instance/ports/port/port-ds
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:ports/ptp-tt:port/ptp-tt:port-ds"
+          + "/ptp-tt:peer-mean-path-delay" {
+    deviate not-supported;
+    description
+      "Deprecated in IEEE 1588-2019; superseded by mean-link-delay.
+       Not supported.";
+  }
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:ports/ptp-tt:port/ptp-tt:port-ds"
+          + "/ptp-tt:version-number" {
+    deviate not-supported;
+    description
+      "PTP version is determined by ptp4l at runtime and is not
+       user-configurable.";
+  }
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:ports/ptp-tt:port/ptp-tt:port-ds"
+          + "/ptp-tt:minor-version-number" {
+    deviate not-supported;
+    description
+      "PTP minor version is determined by ptp4l at runtime and is
+       not user-configurable.";
+  }
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:ports/ptp-tt:port/ptp-tt:port-ds"
+          + "/ptp-tt:port-enable" {
+    deviate add {
+      default "true";
+    }
+    description
+      "Ports are enabled by default.";
+  }
+
+  /*
+   * /ptp/transparent-clock-default-ds  (deprecated IEEE 1588-2008)
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:transparent-clock-default-ds" {
+    deviate not-supported;
+    description
+      "Deprecated IEEE 1588-2008 container.  Use the modern
+       instance-type = p2p-tc or e2e-tc approach in
+       /ptp/instances/instance/default-ds/instance-type instead.";
+  }
+
+  /*
+   * /ptp/transparent-clock-ports  (deprecated IEEE 1588-2008)
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:transparent-clock-ports" {
+    deviate not-supported;
+    description
+      "Deprecated IEEE 1588-2008 container.  Transparent Clock
+       ports are managed via /ptp/instances/instance/ports instead.";
+  }
+
+  /*
+   * /ptp/common-services  (CMLDS — Phase 2)
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:common-services" {
+    deviate not-supported;
+    description
+      "CMLDS (Common Mean Link Delay Service) is not supported yet.";
+  }
+
+  /*
+   * Deviations from ieee802-dot1as-gptp
+   */
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:ports/ptp-tt:port/ptp-tt:port-ds"
+          + "/dot1as-gptp:nup" {
+    deviate not-supported;
+    description
+      "EPON upstream refraction index — not applicable to
+       Ethernet/TSN deployments.";
+  }
+
+  deviation "/ptp-tt:ptp/ptp-tt:instances/ptp-tt:instance"
+          + "/ptp-tt:ports/ptp-tt:port/ptp-tt:port-ds"
+          + "/dot1as-gptp:ndown" {
+    deviate not-supported;
+    description
+      "EPON downstream refraction index — not applicable to
+       Ethernet/TSN deployments.";
+  }
+}

@@ -1,0 +1,82 @@
+From e76bb37019605dea4acd9ccec620a3faec1ba402 Mon Sep 17 00:00:00 2001
+From: Miroslav Lichvar <mlichvar@redhat.com>
+Date: Thu, 17 Oct 2024 15:05:21 +0200
+Subject: [PATCH 03/13] pmc: Avoid race conditions in agent update.
+Organization: Wires
+
+The pmc_agent_update() function updates the subscription to
+notifications and also the current UTC offset. It uses a timeout of 0
+to avoid blocking. When the pmc client sends the first request, the
+response from ptp4l may not come quickly enough to be received in the
+same run_pmc() call. It then sends the other request and checks for the
+response. If it is the response to the first request, it will be ignored.
+The update works correctly only if both responses are quick enough to be
+received in the same call, or are both slow enough that they are
+received in the next call of the pmc_agent_update() function.
+
+The function needs to be called a random number of times in order to
+finish one update. If the mismatch between requests and responses
+happened consistently, the agent would never reach the up-to-date state
+and phc2sys would not enter the main synchronization loop.
+
+Split the update into two phases, where only one thing is updated at a
+time. The function now needs to be called at most 3 times to update both
+the subscription and UTC offset, assuming it is not interrupted by
+another request outside of the agent's update.
+
+Signed-off-by: Miroslav Lichvar <mlichvar@redhat.com>
+Reviewed-by: Jacob Keller <jacob.e.keller@intel.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ pmc_agent.c | 24 ++++++++++++++++++------
+ 1 file changed, 18 insertions(+), 6 deletions(-)
+
+diff --git a/pmc_agent.c b/pmc_agent.c
+index 86b6ee6..d1a3367 100644
+--- a/pmc_agent.c
++++ b/pmc_agent.c
+@@ -37,6 +37,7 @@ struct pmc_agent {
+ 	struct pmc *pmc;
+ 	uint64_t pmc_last_update;
+ 	uint64_t update_interval;
++	int update_phase;
+ 
+ 	struct defaultDS dds;
+ 	bool dds_valid;
+@@ -427,16 +428,27 @@ int pmc_agent_update(struct pmc_agent *node)
+ 	ts = tp.tv_sec * NS_PER_SEC + tp.tv_nsec;
+ 
+ 	if (ts - node->pmc_last_update >= node->update_interval) {
+-		if (node->stay_subscribed) {
+-			renew_subscription(node, 0);
+-		}
+-		if (!pmc_agent_query_utc_offset(node, 0)) {
++		switch (node->update_phase) {
++		case 0:
++			if (node->stay_subscribed &&
++			    renew_subscription(node, 0))
++				break;
++			node->update_phase++;
++			/* Fall through */
++		case 1:
++			if (pmc_agent_query_utc_offset(node, 0))
++				break;
++			node->update_phase++;
++			/* Fall through */
++		default:
+ 			node->pmc_last_update = ts;
++			node->update_phase = 0;
++			break;
+ 		}
++	} else {
++		run_pmc(node, 0, -1, &msg);
+ 	}
+ 
+-	run_pmc(node, 0, -1, &msg);
+-
+ 	return 0;
+ }
+ 
+-- 
+2.43.0
+

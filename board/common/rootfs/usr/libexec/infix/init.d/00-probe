@@ -567,6 +567,59 @@ def probe_wifi_radios(out):
         out["wifi-radios"].append(info)
 
 
+def probe_ptp_capabilities(out):
+    """Probe PTP timestamping capabilities per physical interface via ethtool --json -T.
+
+    Only physical interfaces (those with a 'device' sysfs symlink) are probed;
+    virtual interfaces such as bridges, VLANs, and tun/tap devices are skipped.
+    Results are stored under out["interfaces"][<ifname>]["ptp-capabilities"].
+    """
+    net_base = "/sys/class/net"
+    if not os.path.exists(net_base):
+        return
+
+    ifaces = {}
+    for ifname in sorted(os.listdir(net_base)):
+        if ifname == "lo":
+            continue
+        # Physical interfaces have a 'device' symlink; virtual ones do not.
+        if not os.path.exists(os.path.join(net_base, ifname, "device")):
+            continue
+
+        try:
+            result = subprocess.run(
+                ["ethtool", "--json", "-T", ifname],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode != 0:
+                continue
+            data = json.loads(result.stdout)[0]
+        except Exception:
+            continue
+
+        caps = {
+            "capabilities": data.get("capabilities", []),
+            "tx-types":     data.get("tx-types", []),
+            "rx-filters":   data.get("rx-filters", []),
+        }
+
+        # phc-index is -1 when no PHC is present; omit in that case.
+        phc = data.get("phc-index", -1)
+        if phc >= 0:
+            caps["phc-index"] = phc
+
+        # hwtstamp provider fields are present only on newer kernels/hardware.
+        if (idx := data.get("hwtstamp-provider-index")) is not None:
+            caps["hwtstamp-provider-index"] = idx
+        if (qual := data.get("hwtstamp-provider-qualifier")) is not None:
+            caps["hwtstamp-provider-qualifier"] = qual
+
+        ifaces[ifname] = {"ptp-capabilities": caps}
+
+    if ifaces:
+        out.setdefault("interfaces", {}).update(ifaces)
+
+
 def main():
     out = {
         "vendor": None,
@@ -593,6 +646,7 @@ def main():
         return err
 
     probe_wifi_radios(out)
+    probe_ptp_capabilities(out)
 
     if not out["factory-password-hash"]:
         sys.stdout.write("\n\n\033[31mCRITICAL BOOTSTRAP ERROR\n" +

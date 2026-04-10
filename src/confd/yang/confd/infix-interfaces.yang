@@ -35,10 +35,16 @@ module infix-interfaces {
   include infix-if-vxlan;
   include infix-if-wifi;
   include infix-if-wireguard;
+  include infix-if-ptp;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2026-04-09 {
+    description "Add ptp-capabilities submodule for per-interface PTP timestamping info.";
+    reference "internal";
+  }
 
   revision 2025-11-06 {
     description "Use new tunnel-common grouping for local, remote, ttl, and tos.";
