@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "bananapi,bpi-r4-2g5";
+};
+
+/*
+ * On the 2g5 variant, GMAC1 uses the internal 2.5G PHY (eth1 renamed to
+ * "wan" by udev).  The switch's port0, which is labeled "wan" in the base
+ * DTS, would cause a name collision when the switch driver registers it.
+ * Rename it to "lan0" here so the kernel names it correctly from the start.
+ */
+&gsw_port0 {
+	label = "lan0";
+};
+
+/*
+ * The upstream mt7988a.dtsi sets compatible = "ethernet-phy-ieee802.3-c45"
+ * on the internal 2.5G PHY node.  That gives genphy_c45 (built-in) OF-match
+ * priority over the PHY-ID-based mtk-2p5ge driver, leaving the PHY powered
+ * down and unclaimed.  Replace it with the standard ethernet-phy-idXXXX.XXXX
+ * form so of_get_phy_id() registers the PHY as C22 with explicit ID 0x00339c11.
+ * mtk-2p5ge then matches via PHY_ID_MATCH_VENDOR(0x00339c00) instead of
+ * genphy_c45 winning via OF-match.
+ * Note: /delete-property/ is not used because U-Boot fdt apply does not
+ * implement property deletion in overlays.
+ */
+&int_2p5g_phy {
+	compatible = "ethernet-phy-id0033.9c11";
+};

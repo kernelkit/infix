@@ -1,0 +1,35 @@
+From 1a861c65011f636e464ca557804dfb6853a3871c Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 12 Feb 2026 10:00:02 +0100
+Subject: [PATCH 03/10] arm: dts: at91: sama7g5ek supports high-speed on mmc0
+ (eMMC)
+Organization: Wires
+
+- eMMC high-speed timing is supported
+- eMMC hardware reset is supported
+
+Tested on sama7g5ek rev 5.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ arch/arm/dts/at91-sama7g5ek.dts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/at91-sama7g5ek.dts b/arch/arm/dts/at91-sama7g5ek.dts
+index 9b247fcaf66..45fe6a7f6cd 100644
+--- a/arch/arm/dts/at91-sama7g5ek.dts
++++ b/arch/arm/dts/at91-sama7g5ek.dts
+@@ -776,8 +776,8 @@
+ &sdmmc0 {
+ 	bus-width = <8>;
+ 	non-removable;
+-	no-1-8-v;
+-	sdhci-caps-mask = <0x0 0x00200000>;
++	cap-mmc-highspeed;
++	cap-mmc-hw-reset;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_sdmmc0_default>;
+ 	status = "okay";
+-- 
+2.43.0
+

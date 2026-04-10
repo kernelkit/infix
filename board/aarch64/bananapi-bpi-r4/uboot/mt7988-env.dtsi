@@ -1,0 +1,27 @@
+/ {
+       config {
+               env: environment {
+                       bootcmd = "run ixboot";
+                       boot_targets = "mmc0";
+                       ethprime = "eth0";
+                       fdt_addr_r = "0x43f00000";
+                       kernel_addr_r = "0x44000000";
+                       fdtoverlay_addr_r = "0x47f00000";
+                       scriptaddr = "0x48000000";
+                       ramdisk_addr_r = "0x4A000000";
+
+                       /*
+                        * Apply BOARD_VARIANT from aux uboot.env.
+                        * Infix writes BOARD_VARIANT=2g5 via fw_setenv on
+                        * BPI-R4-2g5 / BPI-R4P boards to select the correct
+                        * device tree.  Unset = standard R4 (2x SFP+).
+                        */
+                       ixvariant = "if test \"${BOARD_VARIANT}\" = \"2g5\"; then setenv fdtfile mediatek/mt7988a-bananapi-bpi-r4-2g5.dtb; fi";
+
+                       /* This is a development platform, keep
+                        * developer mode statically enabled.
+                        */
+                       ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+               };
+       };
+};

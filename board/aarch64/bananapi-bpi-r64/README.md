@@ -30,20 +30,15 @@ Infix comes preconfigured with:
 
 <img align="right" src="bpi-r64-sw1.png" alt="SW1 Boot Switch" width=90 padding=10>
 
-The BPI-R64 uses a 2-position DIP switch (SW1) to select the boot device
-order.  The MT7622 Boot ROM tries devices in the order listed and falls
-back to the next if no valid BL2 is found at the expected location.
+The BPI-R64 has a 2-position DIP switch (SW1) for selecting the boot device.
+The MT7622 Boot ROM always tries SD first if a card is present, so you can
+leave SW1 in the OFF (eMMC) position and simply insert or remove an SD card
+to control boot device selection.
 
-| SW1 | Boot device | Use case                   |
-|-----|-------------|----------------------------|
-| OFF | eMMC        | Production eMMC boot       |
-| ON  | SD card     | SD card boot / development |
-
-> [!NOTE]
-> SinoVoip has exposed only one bit of the MT7622's two-bit `BOOT_SEL[1:0]`
-> strapping field via SW1, with `BOOT_SEL[1]` hardwired high.  This limits the
-> board to eMMC (`10b`) and SD (`11b`) boot; the SPI-NOR and SPI-NAND modes
-> available on the MT7622 reference board (`00b`, `01b`) are not selectable.
+| SW1 | Boot device |
+|-----|-------------|
+| OFF | eMMC        |
+| ON  | SD card     |
 
 ## Getting Started
 
@@ -58,11 +53,10 @@ back to the next if no valid BL2 is found at the expected location.
    dd if=infix-*-bpi-r64-sdcard.img of=/dev/sdX bs=4M status=progress
    ```
 
-2. **Set boot switch:** SW1 ON (SD card boot)
-3. **Insert SD card and power on**
-4. **Connect console:** 115200 8N1 — use the dedicated Debug UART header
+2. **Insert SD card and power on**
+3. **Connect console:** 115200 8N1 — use the dedicated Debug UART header
    just below the 40-pin GPIO header; pins are labeled GND, RX, TX on the board
-5. **Default login:** `admin` / `admin`
+4. **Default login:** `admin` / `admin`
 
 ## Installing to eMMC
 
@@ -84,9 +78,8 @@ drive.
 
 #### Step 1: Boot from SD card
 
-1. Set SW1 to ON (SD boot)
-2. Insert SD card with Infix
-3. Power on and break into U-Boot (press Ctrl-C during boot)
+1. Insert SD card with Infix
+2. Power on and break into U-Boot (press Ctrl-C during boot)
 
 #### Step 2: Write the eMMC image from U-Boot
 
@@ -115,9 +108,8 @@ mmc partconf 0 1 1 0
 #### Step 4: Boot from eMMC
 
 1. Power off the board
-2. Set SW1 to OFF (eMMC boot)
-3. Remove SD card and USB drive
-4. Power on
+2. Remove SD card and USB drive
+3. Power on
 
 ## Platform Notes
 

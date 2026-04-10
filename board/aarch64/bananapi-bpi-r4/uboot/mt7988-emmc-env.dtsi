@@ -1,0 +1,7 @@
+#include <mt7988-env.dtsi>
+
+&env {
+      fdtfile = "mediatek/mt7988a-bananapi-bpi-r4.dtb";
+      board   = "bananapi,bpi-r4-emmc";
+      ixvariant = "if test \"${BOARD_VARIANT}\" = \"2g5\"; then setenv fdtfile mediatek/mt7988a-bananapi-bpi-r4-2g5.dtb; setenv board bananapi,bpi-r4-2g5-emmc; fi";
+};
