@@ -1,4 +1,4 @@
-=== Verify that all interface types can be created
+=== Verify that All Interface Types Can Be Created
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/verify_all_interface_types]
 
@@ -20,7 +20,7 @@ slightly longer than sending the entire configuration at once.
 
 ==== Topology
 
-image::topology.svg[Verify that all interface types can be created topology, align=center, scaledwidth=75%]
+image::topology.svg[Verify that All Interface Types Can Be Created topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

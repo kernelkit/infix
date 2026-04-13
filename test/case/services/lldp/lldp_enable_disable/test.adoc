@@ -1,4 +1,4 @@
-=== LLDP enable/disable
+=== LLDP Enable/Disable
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/lldp/lldp_enable_disable]
 
@@ -9,7 +9,7 @@ Operation and non-operation are confirmed using tcpdump.
 
 ==== Topology
 
-image::topology.svg[LLDP enable/disable topology, align=center, scaledwidth=75%]
+image::topology.svg[LLDP Enable/Disable topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

@@ -1,4 +1,4 @@
-=== Static multicast filters
+=== Static Multicast Filters
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/static_multicast_filters]
 
@@ -24,7 +24,7 @@ enabled when using static multicast filters)
 
 ==== Topology
 
-image::topology.svg[Static multicast filters topology, align=center, scaledwidth=75%]
+image::topology.svg[Static Multicast Filters topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

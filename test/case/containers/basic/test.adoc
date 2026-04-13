@@ -1,4 +1,4 @@
-=== Container basic
+=== Container Basic
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/basic]
 
@@ -12,7 +12,7 @@ The RPC actions: stop + start, and restart are also verified.
 
 ==== Topology
 
-image::topology.svg[Container basic topology, align=center, scaledwidth=75%]
+image::topology.svg[Container Basic topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

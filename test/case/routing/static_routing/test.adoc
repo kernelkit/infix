@@ -1,4 +1,4 @@
-=== Static routing
+=== Static Routing
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/static_routing]
 
@@ -9,7 +9,7 @@ that data forwarding works as expected via an intermediate device.
 
 ==== Topology
 
-image::topology.svg[Static routing topology, align=center, scaledwidth=75%]
+image::topology.svg[Static Routing topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

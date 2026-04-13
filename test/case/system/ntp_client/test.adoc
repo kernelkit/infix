@@ -1,4 +1,4 @@
-=== Basic NTP client test
+=== Basic NTP Client Test
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/ntp_client]
 
@@ -8,7 +8,7 @@ Verify NTP client with multiple servers, ensure one get selected.
 
 ==== Topology
 
-image::topology.svg[Basic NTP client test topology, align=center, scaledwidth=75%]
+image::topology.svg[Basic NTP Client Test topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

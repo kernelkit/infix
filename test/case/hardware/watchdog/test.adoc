@@ -1,4 +1,4 @@
-=== Watchdog reset on system lockup
+=== Watchdog Reset on System Lockup
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/hardware/watchdog]
 
@@ -14,7 +14,7 @@ timeout.
 
 ==== Topology
 
-image::topology.svg[Watchdog reset on system lockup topology, align=center, scaledwidth=75%]
+image::topology.svg[Watchdog Reset on System Lockup topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

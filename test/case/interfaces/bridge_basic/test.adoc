@@ -1,4 +1,4 @@
-=== Bridge basic
+=== Bridge Basic
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/bridge_basic]
 
@@ -16,7 +16,7 @@ Test basic connectivity to a bridge
 
 ==== Topology
 
-image::topology.svg[Bridge basic topology, align=center, scaledwidth=75%]
+image::topology.svg[Bridge Basic topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

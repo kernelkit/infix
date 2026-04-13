@@ -1,4 +1,4 @@
-=== OSPF with multiple areas
+=== OSPF with Multiple Areas
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/ospf_multiarea]
 
@@ -28,7 +28,7 @@ explicit router-id.
 
 ==== Topology
 
-image::topology.svg[OSPF with multiple areas topology, align=center, scaledwidth=75%]
+image::topology.svg[OSPF with Multiple Areas topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

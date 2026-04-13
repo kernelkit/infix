@@ -1,4 +1,4 @@
-=== Set hostname
+=== Set Hostname
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/hostname]
 
@@ -11,7 +11,7 @@ base MAC address.  E.g., ix-01-01-01.
 
 ==== Topology
 
-image::topology.svg[Set hostname topology, align=center, scaledwidth=75%]
+image::topology.svg[Set Hostname topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

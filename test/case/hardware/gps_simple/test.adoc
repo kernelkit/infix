@@ -1,4 +1,4 @@
-=== GPS receiver basic test
+=== GPS Receiver Basic Test
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/hardware/gps_simple]
 
@@ -12,7 +12,7 @@ which appear as virtio serial ports inside the guest.
 
 ==== Topology
 
-image::topology.svg[GPS receiver basic test topology, align=center, scaledwidth=75%]
+image::topology.svg[GPS Receiver Basic Test topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

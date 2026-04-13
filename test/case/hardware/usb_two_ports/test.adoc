@@ -1,4 +1,4 @@
-=== USB configuration with two USB ports
+=== USB Configuration with Two USB Ports
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/hardware/usb_two_ports]
 
@@ -9,7 +9,7 @@ when having two USB ports.
 
 ==== Topology
 
-image::topology.svg[USB configuration with two USB ports topology, align=center, scaledwidth=75%]
+image::topology.svg[USB Configuration with Two USB Ports topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

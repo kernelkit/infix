@@ -1,4 +1,4 @@
-=== Remote syslog
+=== Remote Syslog
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/syslog/remote]
 
@@ -8,7 +8,7 @@ Verify logging to remote, acting as a remote, and RFC5424 log format.
 
 ==== Topology
 
-image::topology.svg[Remote syslog topology, align=center, scaledwidth=75%]
+image::topology.svg[Remote Syslog topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

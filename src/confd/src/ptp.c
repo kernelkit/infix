@@ -39,7 +39,7 @@ static const char *instance_type_to_clock_type(const char *type)
  *   gmCapable, follow_up_info, assume_two_step, path_trace_enabled,
  *   and the tighter neighborPropDelayThresh.
  */
-static bool emit_profile_globals(FILE *fp, const char *profile)
+static bool emit_profile_globals(FILE *fp, const char *profile, bool hw_ts)
 {
 	bool dot1as = profile && !strcmp(profile, "ieee802-dot1as");
 
@@ -53,7 +53,16 @@ static bool emit_profile_globals(FILE *fp, const char *profile)
 		fprintf(fp, "follow_up_info          1\n");
 		fprintf(fp, "assume_two_step         1\n");
 		fprintf(fp, "path_trace_enabled      1\n");
-		fprintf(fp, "neighborPropDelayThresh 800\n");
+		/*
+		 * 802.1AS P2P gate: if meanLinkDelay exceeds this threshold the
+		 * port stays asCapable=false and never leaves LISTENING.  800 ns
+		 * is the 802.1AS default and is appropriate only for hardware
+		 * timestamping — software timestamps (QEMU, tap interfaces) can
+		 * easily produce peer delays in the microsecond range, which
+		 * would keep both ports stuck in LISTENING indefinitely.
+		 */
+		if (hw_ts)
+			fprintf(fp, "neighborPropDelayThresh 800\n");
 	} else {
 		fprintf(fp, "transportSpecific       0\n");
 	}
@@ -134,7 +143,7 @@ static const char *instance_time_stamping(struct lyd_node *inst, json_t *root)
  */
 static int write_instance_conf(struct lyd_node *inst, json_t *root)
 {
-	const char *instance_type, *clock_type, *profile;
+	const char *instance_type, *clock_type, *profile, *ts;
 	struct lyd_node *default_ds, *port, *port_ds, *servo;
 	bool tc, bc, dot1as;
 	char path[256];
@@ -159,7 +168,7 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 
 	default_ds    = lydx_get_child(inst, "default-ds");
 	instance_type = lydx_get_cattr(default_ds, "instance-type");
-	profile       = lydx_get_cattr(default_ds, "infix-ptp:profile");
+	profile       = lydx_get_cattr(default_ds, "profile");
 
 	clock_type = instance_type_to_clock_type(instance_type);
 	tc = (clock_type != NULL);
@@ -169,10 +178,11 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 	fprintf(fp, "uds_address        /var/run/ptp4l-%u\n", idx);
 
 	/* Timestamping mode: hardware if all ports support it, software otherwise */
-	fprintf(fp, "time_stamping      %s\n", instance_time_stamping(inst, root));
+	ts = instance_time_stamping(inst, root);
+	fprintf(fp, "time_stamping      %s\n", ts);
 
 	/* Profile — sets transportSpecific and all protocol-mandatory options */
-	dot1as = emit_profile_globals(fp, profile);
+	dot1as = emit_profile_globals(fp, profile, !strcmp(ts, "hardware"));
 
 	/* domainNumber */
 	v = lydx_get_cattr(default_ds, "domain-number");

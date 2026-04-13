@@ -1,4 +1,4 @@
-=== GRE point-to-point
+=== GRE Point-to-Point
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/tunnel_basic]
 
@@ -14,7 +14,7 @@ connectivity with the second DUT through the tunnel.
 
 ==== Topology
 
-image::topology.svg[GRE point-to-point topology, align=center, scaledwidth=75%]
+image::topology.svg[GRE Point-to-Point topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

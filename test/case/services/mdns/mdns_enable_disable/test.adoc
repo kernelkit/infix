@@ -1,4 +1,4 @@
-=== mDNS enable/disable
+=== mDNS Enable/Disable
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/mdns/mdns_enable_disable]
 
@@ -9,7 +9,7 @@ Operation and non-operation are confirmed using tcpdump.
 
 ==== Topology
 
-image::topology.svg[mDNS enable/disable topology, align=center, scaledwidth=75%]
+image::topology.svg[mDNS Enable/Disable topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

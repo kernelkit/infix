@@ -1,0 +1,29 @@
+=== PTP basic
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ptp/basic]
+
+==== Description
+
+Verify basic PTP operation end-to-end: clock configuration, port state
+transitions, and clock servo convergence.
+
+Two Ordinary Clocks are connected back-to-back.  The grandmaster is
+configured with `priority1=1` so it always wins the BTCA election; the
+time receiver is configured with `time-receiver-only` so it never
+attempts to become grandmaster.  Software timestamping is used, making
+the test suitable for virtual machines as well as real hardware.
+
+This is the smoke test: if it passes, the full PTP stack is working.
+
+==== Topology
+
+image::topology.svg[PTP basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to DUTs
+. Configure grandmaster (priority1=1) and time receiver (priority1=128, client-only)
+. Wait for grandmaster and time receiver ports to reach active states
+. Wait for time receiver offset to converge
+
+

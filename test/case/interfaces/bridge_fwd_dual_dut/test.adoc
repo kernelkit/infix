@@ -1,4 +1,4 @@
-=== Bridge forwarding dual DUTs
+=== Bridge Forwarding Dual DUTs
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/bridge_fwd_dual_dut]
 
@@ -28,7 +28,7 @@ Ping through two bridges on two different DUTs.
 
 ==== Topology
 
-image::topology.svg[Bridge forwarding dual DUTs topology, align=center, scaledwidth=75%]
+image::topology.svg[Bridge Forwarding Dual DUTs topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

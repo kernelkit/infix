@@ -1,4 +1,4 @@
-=== Generate ssh key pair
+=== Generate SSH Key Pair
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/ssh/ssh_key_authentication]
 
@@ -8,7 +8,7 @@ Verify that 'guest' user can fetch data using only the 'public' key
 
 ==== Topology
 
-image::topology.svg[Generate ssh key pair topology, align=center, scaledwidth=75%]
+image::topology.svg[Generate SSH Key Pair topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

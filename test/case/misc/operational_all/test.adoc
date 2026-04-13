@@ -1,4 +1,4 @@
-=== Get operational
+=== Get Operational
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/operational_all]
 
@@ -8,7 +8,7 @@ Basic test just to get operational from test-config without errors.
 
 ==== Topology
 
-image::topology.svg[Get operational topology, align=center, scaledwidth=75%]
+image::topology.svg[Get Operational topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

@@ -1,4 +1,4 @@
-=== Bridge forwarding single DUTs
+=== Bridge Forwarding Single DUTs
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/bridge_fwd_sgl_dut]
 
@@ -28,7 +28,7 @@ Tests forwarding through a DUT with two bridged interfaces on one DUT.
 
 ==== Topology
 
-image::topology.svg[Bridge forwarding single DUTs topology, align=center, scaledwidth=75%]
+image::topology.svg[Bridge Forwarding Single DUTs topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

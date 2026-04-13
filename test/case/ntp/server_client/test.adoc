@@ -1,4 +1,4 @@
-=== NTP server and client interoperability
+=== NTP Server and Client Interoperability
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ntp/server_client]
 
@@ -14,7 +14,7 @@ Verify NTP server and client work together:
 
 ==== Topology
 
-image::topology.svg[NTP server and client interoperability topology, align=center, scaledwidth=75%]
+image::topology.svg[NTP Server and Client Interoperability topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

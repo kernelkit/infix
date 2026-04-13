@@ -1,4 +1,4 @@
-=== Custom MAC address on interface
+=== Custom MAC Address on Interface
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/iface_phys_address]
 
@@ -10,7 +10,7 @@ an offset applied.
 
 ==== Topology
 
-image::topology.svg[Custom MAC address on interface topology, align=center, scaledwidth=75%]
+image::topology.svg[Custom MAC Address on Interface topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

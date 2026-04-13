@@ -1,4 +1,4 @@
-=== NTP server mode
+=== NTP Server Mode
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ntp/server_mode_server]
 
@@ -18,7 +18,7 @@ The test verifies both servers operate correctly and serve accurate time.
 
 ==== Topology
 
-image::topology.svg[NTP server mode topology, align=center, scaledwidth=75%]
+image::topology.svg[NTP Server Mode topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

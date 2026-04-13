@@ -56,6 +56,10 @@ include::../case/ntp/Readme.adoc[]
 
 <<<
 
+include::../case/ptp/Readme.adoc[]
+
+<<<
+
 include::../case/hardware/Readme.adoc[]
 
 <<<

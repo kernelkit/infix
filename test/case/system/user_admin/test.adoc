@@ -1,4 +1,4 @@
-=== Add admin user
+=== Add Admin User
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/user_admin]
 
@@ -9,7 +9,7 @@ check that it when added as admin it is also the case in Linux.
 
 ==== Topology
 
-image::topology.svg[Add admin user topology, align=center, scaledwidth=75%]
+image::topology.svg[Add Admin User topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

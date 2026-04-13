@@ -1,4 +1,4 @@
-=== Add/delete user
+=== Add/Delete User
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/add_delete_user]
 
@@ -9,7 +9,7 @@ with yescrypt.
 
 ==== Topology
 
-image::topology.svg[Add/delete user topology, align=center, scaledwidth=75%]
+image::topology.svg[Add/Delete User topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

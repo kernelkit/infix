@@ -1,4 +1,4 @@
-=== Set timezone using timezone name
+=== Set Timezone Using Timezone Name
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/timezone]
 
@@ -8,7 +8,7 @@ Verify that it is possible to set timezone using timezone names.
 
 ==== Topology
 
-image::topology.svg[Set timezone using timezone name topology, align=center, scaledwidth=75%]
+image::topology.svg[Set Timezone Using Timezone Name topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

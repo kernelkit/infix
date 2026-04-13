@@ -1,4 +1,4 @@
-=== Interface IPv6 autoconf for bridges
+=== Interface IPv6 Autoconf for Bridges
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/ipv6_address]
 
@@ -9,7 +9,7 @@ See issue #473 for details.
 
 ==== Topology
 
-image::topology.svg[Interface IPv6 autoconf for bridges topology, align=center, scaledwidth=75%]
+image::topology.svg[Interface IPv6 Autoconf for Bridges topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

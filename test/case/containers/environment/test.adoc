@@ -1,4 +1,4 @@
-=== Container environment variables
+=== Container Environment Variables
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/environment]
 
@@ -15,7 +15,7 @@ changing an environment variable triggers a container restart.
 
 ==== Topology
 
-image::topology.svg[Container environment variables topology, align=center, scaledwidth=75%]
+image::topology.svg[Container Environment Variables topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

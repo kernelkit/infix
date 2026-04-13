@@ -1,4 +1,4 @@
-=== Dual bridges on one device
+=== Dual Bridges on One Device
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/dual_bridge]
 
@@ -15,7 +15,7 @@ PC - target:data  veth0a - veth0b
 
 ==== Topology
 
-image::topology.svg[Dual bridges on one device topology, align=center, scaledwidth=75%]
+image::topology.svg[Dual Bridges on One Device topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

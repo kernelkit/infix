@@ -1,4 +1,4 @@
-=== Container with physical interface
+=== Container with Physical Interface
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/phys]
 
@@ -9,7 +9,7 @@ given a physical interface instead of an end of a VETH pair.
 
 ==== Topology
 
-image::topology.svg[Container with physical interface topology, align=center, scaledwidth=75%]
+image::topology.svg[Container with Physical Interface topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

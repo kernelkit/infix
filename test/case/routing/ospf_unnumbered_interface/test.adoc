@@ -1,4 +1,4 @@
-=== OSPF unnumbered interfaces
+=== OSPF Unnumbered Interfaces
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/ospf_unnumbered_interface]
 
@@ -13,7 +13,7 @@ configuration and passive to function
 
 ==== Topology
 
-image::topology.svg[OSPF unnumbered interfaces topology, align=center, scaledwidth=75%]
+image::topology.svg[OSPF Unnumbered Interfaces topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

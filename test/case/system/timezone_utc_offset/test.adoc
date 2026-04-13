@@ -1,4 +1,4 @@
-=== Set timezone with UTC offset
+=== Set Timezone with UTC Offset
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/timezone_utc_offset]
 
@@ -8,7 +8,7 @@ Verify that it is possible to set timezone using UTC offset
 
 ==== Topology
 
-image::topology.svg[Set timezone with UTC offset topology, align=center, scaledwidth=75%]
+image::topology.svg[Set Timezone with UTC Offset topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

@@ -1,4 +1,4 @@
-=== OSPF Default route advertise
+=== OSPF Default Route Advertise
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/ospf_default_route_advertise]
 
@@ -33,7 +33,7 @@ unless _always_ is set for _default-route-advertising_.
 
 ==== Topology
 
-image::topology.svg[OSPF Default route advertise topology, align=center, scaledwidth=75%]
+image::topology.svg[OSPF Default Route Advertise topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

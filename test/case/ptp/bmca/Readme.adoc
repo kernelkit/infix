@@ -1,0 +1,6 @@
+include::ieee1588.adoc[]
+
+<<<
+
+include::ieee802dot1as.adoc[]
+
