@@ -78,7 +78,7 @@ jobs:
           ls -la ./
 
       - name: Checkout infix repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ env.INFIX_REPO }}
           ref: ${{ env.INFIX_BRANCH != '' && env.INFIX_BRANCH || github.ref }}

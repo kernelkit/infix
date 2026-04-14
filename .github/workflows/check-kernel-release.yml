@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Check out infix repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
@@ -103,7 +103,7 @@ jobs:
 
       - name: Create pull request
         if: steps.check.outputs.new_release == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
           script: |

@@ -33,7 +33,7 @@ jobs:
             mtools
 
       - name: Checkout infix repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.ref }}
@@ -77,7 +77,7 @@ jobs:
           ln -s Infix-x86_64 images
           tar cfz Infix-x86_64.tar.gz Infix-x86_64
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           path: output/Infix-x86_64.tar.gz
           name: artifact-x86_64
