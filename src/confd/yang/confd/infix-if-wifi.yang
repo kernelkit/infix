@@ -50,19 +50,9 @@ submodule infix-if-wifi {
 
   revision 2026-03-06 {
     description
-      "Add 802.11s mesh point mode support.";
-    reference "internal";
-  }
-
-  revision 2026-03-04 {
-    description
-      "Add band-steering (MBO) support and OKC configuration.";
-    reference "internal";
-  }
-
-  revision 2026-02-12 {
-    description
-      "Add support for roaming, by adding support for 802.11v/k/r";
+      "- Add 802.11s mesh point mode support.
+      - Add band-steering (MBO) support and OKC configuration.
+      - Add support for roaming, by adding support for 802.11v/k/r";
     reference "internal";
   }
 
@@ -406,6 +396,13 @@ submodule infix-if-wifi {
                        WARNING: All client traffic is unencrypted!
                        Only use in controlled environments (captive portal, etc.).";
                   }
+                  enum auto {
+                    description
+                      "Automatic security based on radio band.
+
+                       Uses WPA2/WPA3 transitional mode on 2.4GHz and 5GHz,
+                       and WPA3-only (SAE) on 6GHz as required by specification.";
+                  }
                   enum wpa2-personal {
                     description
                       "WPA2-Personal (WPA2-PSK).
@@ -424,7 +421,11 @@ submodule infix-if-wifi {
                        Recommended for maximum compatibility + security.";
                   }
                 }
-                default wpa2-wpa3-personal;
+                default auto;
+                must ". = 'auto' or . = 'open' or . = 'wpa3-personal' or "
+                   + "/iehw:hardware/iehw:component[iehw:name = current()/../../../radio]/ih:wifi-radio/ih:band != '6GHz'" {
+                  error-message "6GHz band requires 'auto' or 'wpa3-personal' security mode.";
+                }
                 description
                   "WiFi security mode.
 
