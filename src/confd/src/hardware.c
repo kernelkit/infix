@@ -254,7 +254,7 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 }
 
 /* Helper: Write SSID and security configuration (shared between primary and BSS) */
-static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss)
+static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss, const char *band)
 {
 	const char *ssid, *hidden, *security_mode, *secret_name;
 	struct lyd_node *wifi, *ap, *security, *secret_node;
@@ -320,11 +320,14 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		}
 	}
 
+	/* Resolve "auto" to concrete mode based on band */
+	if (!strcmp(security_mode, "auto"))
+		security_mode = (band && !strcmp(band, "6GHz")) ? "wpa3-personal" : "wpa2-wpa3-personal";
+
 	if (!strcmp(security_mode, "open")) {
 		/* auth_algs=1: Open System authentication (unencrypted) */
 		fprintf(hostapd, "auth_algs=1\n");
 	} else if (!strcmp(security_mode, "wpa2-personal")) {
-		/* wpa=2: WPA2 only (RSN), no legacy WPA1 */
 		fprintf(hostapd, "wpa=2\n");
 		/* WPA-PSK: Pre-shared key authentication */
 		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
@@ -333,17 +336,14 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		if (secret)
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
 	} else if (!strcmp(security_mode, "wpa3-personal")) {
-		/* wpa=2: Uses RSN (WPA2) frame format for WPA3 */
 		fprintf(hostapd, "wpa=2\n");
 		/* SAE: Simultaneous Authentication of Equals, resistant to offline dictionary attacks */
 		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "sae_password=%s\n", secret);
-		/* ieee80211w=2: Management Frame Protection required for WPA3 */
 		fprintf(hostapd, "ieee80211w=2\n");
 	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
-		/* Transition mode: supports both WPA2 and WPA3 clients */
 		fprintf(hostapd, "wpa=2\n");
 		/* Allow both PSK (WPA2) and SAE (WPA3) authentication */
 		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
@@ -388,6 +388,30 @@ static int wifi_center_chan_160(int ch)
 	if (ch >= 100 && ch <= 128)
 		return 114;
 	return 0;
+}
+
+/*
+ * 6GHz center channel index for 80MHz HE operation.
+ * 6GHz channels are uniformly spaced at 5MHz intervals from 5950MHz.
+ * 80MHz groups each span 16 channel numbers: 1-13(7), 17-29(23), etc.
+ */
+static int wifi_6ghz_center_chan_80(int ch)
+{
+	/* Round down to group start, add 6 to reach center */
+	int group_start = ((ch - 1) / 16) * 16 + 1;
+
+	return group_start + 6;
+}
+
+/*
+ * 6GHz center channel index for 160MHz HE operation.
+ * 160MHz groups each span 32 channel numbers: 1-29(15), 33-61(47), etc.
+ */
+static int wifi_6ghz_center_chan_160(int ch)
+{
+	int group_start = ((ch - 1) / 32) * 32 + 1;
+
+	return group_start + 14;
 }
 
 /* HT40 secondary channel direction: lower channel in pair uses +, upper uses - */
@@ -453,31 +477,18 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 				 * Default channels when "auto" selected:
 				 * - Ch 6: Center of 2.4GHz, least overlap with 1 and 11
 				 * - Ch 36: First UNII-1 channel, indoor use, no DFS
-				 * - Ch 109: 6GHz PSC channel, preferred for discovery
+				 * - Ch 37: 6GHz PSC channel (6135 MHz), preferred for discovery
 				 * TODO: Replace with ACS (channel=acs_survey) when driver support is verified.
-				 */
-				/* set to channel=acs_survey, if succeed to find a survey:
-				   iw dev wlan0 survey dump
-				   good:
-				      Survey data from wlan0
- 				       frequency:                      2412 MHz
-				       noise:                          -95 dBm
-				       channel active time:            154 ms
-				       channel busy time:              0 ms
-				       channel receive time:           0 ms
-				       channel transmit time:          0 ms
-				   bad:
-				      Survey data from wlan0
-  				       frequency:                      2412 MHz
-				       [in use]
-
 				 */
 				if (!strcmp(band, "2.4GHz")) {
 					fprintf(hostapd, "channel=6\n");
+					ch = 6;
 				} else if (!strcmp(band, "5GHz")) {
 					fprintf(hostapd, "channel=36\n");
+					ch = 36;
 				} else if (!strcmp(band, "6GHz")) {
-					fprintf(hostapd, "channel=109\n");
+					fprintf(hostapd, "channel=37\n");
+					ch = 37;
 				} else {
 					fprintf(hostapd, "channel=0\n");
 				}
@@ -486,29 +497,52 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			}
 		}
 
-		/*
-		 * Enable high-throughput modes per band:
-		 * - 802.11n (HT): Required for speeds >54Mbps, all bands
-		 * - 802.11ac (VHT): 5GHz only, enables 80/160MHz and MU-MIMO
-		 * - 802.11ax (HE): Always enabled, improves dense deployments with OFDMA
-		 */
 		if (!strcmp(band, "2.4GHz")) {
 			fprintf(hostapd, "ieee80211n=1\n");
+			fprintf(hostapd, "ieee80211ax=1\n");
 		} else if (!strcmp(band, "5GHz")) {
 			fprintf(hostapd, "ieee80211n=1\n");
 			fprintf(hostapd, "ieee80211ac=1\n");
+			fprintf(hostapd, "ieee80211ax=1\n");
+		} else if (!strcmp(band, "6GHz")) {
+			/* 6GHz is HE-only, no HT/VHT */
+			fprintf(hostapd, "ieee80211ax=1\n");
+			fprintf(hostapd, "he_6ghz_reg_pwr_type=0\n"); /* Indoor AP */
 		}
-		/* 802.11ax (WiFi 6) always enabled for better performance */
-		fprintf(hostapd, "ieee80211ax=1\n");
 
 		/*
 		 * Channel width configuration.
-		 * - HT (802.11n): ht_capab [HT40+] or [HT40-]
-		 * - VHT (802.11ac): vht_oper_chwidth 0=20/40, 1=80, 2=160
-		 * - HE (802.11ax): he_oper_chwidth follows VHT values
-		 * Without explicit width, hostapd uses driver defaults.
+		 *
+		 * 6GHz: bandwidth is determined by op_class (131-134),
+		 * hostapd ignores he_oper_chwidth on 6GHz.  No VHT/HT.
+		 *
+		 * 5GHz: requires explicit ht_capab/vht_capab strings
+		 * matching hardware.  Without vht_capab, 160MHz is not
+		 * advertised in beacons.
 		 */
-		if (width && strcmp(width, "auto")) {
+		if (!strcmp(band, "6GHz")) {
+			int op_class = 133; /* default 80MHz for 6GHz */
+
+			if (width && strcmp(width, "auto")) {
+				if (!strcmp(width, "20MHz"))
+					op_class = 131;
+				else if (!strcmp(width, "40MHz"))
+					op_class = 132;
+				else if (!strcmp(width, "80MHz"))
+					op_class = 133;
+				else if (!strcmp(width, "160MHz"))
+					op_class = 134;
+			}
+			fprintf(hostapd, "op_class=%d\n", op_class);
+
+			if (ch && op_class >= 133) {
+				int center = (op_class == 134)
+					? wifi_6ghz_center_chan_160(ch)
+					: wifi_6ghz_center_chan_80(ch);
+
+				fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
+			}
+		} else if (width && strcmp(width, "auto")) {
 			if (!strcmp(width, "20MHz")) {
 				fprintf(hostapd, "ht_capab=\n");
 				if (strcmp(band, "2.4GHz")) {
@@ -544,7 +578,6 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			}
 		}
 
-		/* Beamforming improves signal quality and range */
 		fprintf(hostapd, "he_su_beamformer=1\n");
 		fprintf(hostapd, "he_su_beamformee=1\n");
 	}
@@ -611,7 +644,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "ctrl_interface=/run/hostapd\n\n");
 
 	/* Primary AP SSID and security configuration */
-	wifi_gen_ssid_config(hostapd, primary_cif, config, false);
+	wifi_gen_ssid_config(hostapd, primary_cif, config, false, lydx_get_cattr(radio_node, "band"));
 	fprintf(hostapd, "\n");
 
 	/* Radio-specific configuration */
@@ -636,7 +669,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 		}
 
 		DEBUG("Adding BSS section for secondary AP %s", ap_list[i]);
-		wifi_gen_ssid_config(hostapd, bss_cif, config, true);
+		wifi_gen_ssid_config(hostapd, bss_cif, config, true, lydx_get_cattr(radio_node, "band"));
 	}
 
 	fclose(hostapd);
