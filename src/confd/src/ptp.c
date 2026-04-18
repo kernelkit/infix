@@ -306,6 +306,80 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 }
 
 /*
+ * True when a PTP instance needs a phc2sys companion to keep all its
+ * PHC devices in sync.  Required for BC and TC instances on hardware
+ * with multiple switch chips, where each chip has its own /dev/ptpN.
+ * On single-chip hardware the function is a no-op: phc2sys -a finds
+ * no second PHC and exits immediately.  OC has one port → one PHC,
+ * so no sync is ever needed.
+ */
+static bool needs_phc2sys(struct lyd_node *inst, json_t *root)
+{
+	struct lyd_node *default_ds = lydx_get_child(inst, "default-ds");
+	const char *type = lydx_get_cattr(default_ds, "instance-type");
+
+	if (!type)
+		return false;
+	if (strcmp(type, "bc") && strcmp(type, "p2p-tc") && strcmp(type, "e2e-tc"))
+		return false;
+
+	return !strcmp(instance_time_stamping(inst, root), "hardware");
+}
+
+/*
+ * Enable the phc2sys@ companion service for a multi-port HW instance.
+ * phc2sys -a subscribes to ptp4l's UDS, discovers the active slave
+ * port via BMCA, and disciplines all other PHCs to match it.
+ * No config file is needed — the UDS path is passed on the command line.
+ */
+static void activate_phc2sys(uint16_t idx)
+{
+	finit_enablef("phc2sys@%u", idx);
+	finit_reloadf("phc2sys@%u", idx);
+}
+
+static void deactivate_phc2sys(uint16_t idx)
+{
+	finit_disablef("phc2sys@%u", idx);
+}
+
+/*
+ * Disable any phc2sys@ services whose index is no longer configured.
+ */
+static void cleanup_stale_phc2sys(struct lyd_node *config)
+{
+	const struct dirent *ent;
+	struct lyd_node *inst;
+	DIR *d;
+	int idx;
+
+	d = opendir(FINIT_RCSD "/enabled");
+	if (!d)
+		return;
+
+	while ((ent = readdir(d))) {
+		bool found = false;
+
+		if (sscanf(ent->d_name, "phc2sys@%d.conf", &idx) != 1)
+			continue;
+
+		LYX_LIST_FOR_EACH(lydx_get_descendant(config, "ptp", "instances", "instance", NULL),
+				  inst, "instance") {
+			const char *v = lydx_get_cattr(inst, "instance-index");
+			if (v && atoi(v) == idx) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+			deactivate_phc2sys((uint16_t)idx);
+	}
+
+	closedir(d);
+}
+
+/*
  * Remove staging config for one instance.
  */
 static void remove_staging(uint16_t idx)
@@ -423,12 +497,18 @@ static int change(sr_session_ctx_t *session, struct lyd_node *config,
 			const char *v = lydx_get_cattr(inst, "instance-index");
 			if (!v)
 				continue;
-			if ((rc = activate_instance((uint16_t)atoi(v))))
+			uint16_t idx = (uint16_t)atoi(v);
+			if ((rc = activate_instance(idx)))
 				return rc;
+			if (needs_phc2sys(inst, confd->root))
+				activate_phc2sys(idx);
+			else
+				deactivate_phc2sys(idx);
 		}
 
 		/* Disable stale services not in current config */
 		cleanup_stale_instances(config);
+		cleanup_stale_phc2sys(config);
 
 		if (!instances)
 			return SR_ERR_OK;
