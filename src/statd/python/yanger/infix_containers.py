@@ -223,15 +223,20 @@ def container(ps):
         "status":   ps["Status"]
     }
 
-    # Bonus information, may not be available
-    if ps["Command"]:
-        out["command"] = " ".join(ps["Command"])
-
     inspect = podman_inspect(out["name"])
     if inspect and isinstance(inspect, list) and len(inspect) > 0:
         inspect = inspect[0]
     else:
         inspect = {}
+
+    path = inspect.get("Path", "")
+    args = inspect.get("Args", [])
+    if path:
+        out["cmdline"] = " ".join([path] + args)
+
+    cmd = inspect.get("Config", {}).get("Cmd", [])
+    if cmd:
+        out["command"] = " ".join(cmd)
 
     net = network(ps, inspect)
     if net:

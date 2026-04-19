@@ -1187,6 +1187,7 @@
   "infix-containers:containers": {
     "container": [
       {
+        "cmdline": "/usr/bin/tini -- /usr/sbin/httpd -f -v",
         "command": "/usr/sbin/httpd -f -v",
         "id": "78d28082c2e5d494c82aa181c95118ce498e25930ad9e288ba010257ca336378",
         "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
@@ -1207,6 +1208,7 @@
         "status": "Up About a minute"
       },
       {
+        "cmdline": "/usr/bin/tini -- /usr/sbin/httpd -f -v -p 91",
         "command": "/usr/sbin/httpd -f -v -p 91",
         "id": "3451cfceca4eee1091c1dfedece2faee99bc8a729e781799d9c0b4368a31d86d",
         "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
@@ -1229,6 +1231,7 @@
         "status": "Up About a minute"
       },
       {
+        "cmdline": "/usr/bin/tini -- /usr/sbin/nft-helper /etc/nftables.conf",
         "command": "/usr/sbin/nft-helper /etc/nftables.conf",
         "id": "4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523",
         "image": "localhost/curios-nftables-oci-amd64-v24.11.0:latest",

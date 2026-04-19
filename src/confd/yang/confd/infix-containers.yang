@@ -22,6 +22,13 @@ module infix-containers {
     prefix infix-sys;
   }
 
+  revision 2026-04-20 {
+    description "Add cmdline operational leaf showing the full process command line
+                 (entrypoint + args) from 'podman inspect'.  Allow environment variable
+                 references (dollar sign, braces) in the command override.";
+    reference "internal";
+  }
+
   revision 2026-02-23 {
     description "Input validation improvements";
     reference "internal";
@@ -257,8 +264,17 @@ module infix-containers {
       leaf command {
 	description "Override ENTRYPOINT from image and run command + args.";
 	type string {
-	  pattern '[a-zA-Z0-9_./ :=@%^,+-]+';
+	  pattern '[a-zA-Z0-9_./ :=@%^,${}()+-]+';
 	}
+      }
+
+      leaf cmdline {
+        description "Full process command line currently executing in the container,
+                     combining the entrypoint and its arguments as reported by
+                     'podman inspect'.  May differ from the configured 'command'
+                     override when the image provides its own entrypoint wrapper.";
+        config false;
+        type string;
       }
 
       leaf hostname {
