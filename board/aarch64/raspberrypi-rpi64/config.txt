@@ -36,3 +36,5 @@ dtoverlay=vc4-kms-v3d-pi4
 lcd_rotate=2
 
 gpu_mem=256
+
+[pi5]

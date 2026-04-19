@@ -12,12 +12,16 @@ All notable changes to the project are documented in this file.
 - Add support for [Banana Pi BPI-R4][BPI-R4], quad-core Cortex-A73 router with
   4x 2.5 GbE switching, dual 10 GbE SFP+.  Variants BPI-R4-2g5 and BPI-R4P have
   one SFP+ replaced by a 2.5 GbE RJ45, with optional PoE on the R4P
+- Add support for [Raspberry Pi 5 Model B][RPI-5], Broadcom BCM2712 Cortex-A76
+  quad-core @ 2.4 GHz with Gigabit Ethernet, dual USB 3.0, dual HDMI, and WiFi
+  via the RP1 companion chip
 
 ### Fixes
 
 - N/A
 
 [BPI-R4]: https://docs.banana-pi.org/en/BPI-R4/BananaPi_BPI-R4
+[RPI-5]:  https://www.raspberrypi.com/products/raspberry-pi-5/
 
 [v26.03.0][] - 2026-03-31
 -------------------------

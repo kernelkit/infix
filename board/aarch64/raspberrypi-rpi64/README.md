@@ -1,4 +1,4 @@
-# Raspberry Pi 3B/4B/CM4
+# Raspberry Pi 3B/4B/400/CM4/5B
 
 ## Overview
 
@@ -31,6 +31,18 @@ learning, prototyping, and lightweight network applications.
 - GPIO header (40-pin)
 - PoE support (with add-on HAT)
 
+**Raspberry Pi 5B:**
+
+- Broadcom BCM2712 ARM Cortex-A76 quad-core processor @ 2.4 GHz
+- 4 GB or 8 GB LPDDR4X RAM
+- microSD card slot for storage (PCIe Gen 2 speed via RP1)
+- 2x USB 3.0 + 2x USB 2.0 ports (via RP1 companion chip)
+- Gigabit Ethernet (via RP1)
+- Dual-band WiFi (2.4 GHz + 5 GHz) and Bluetooth 5.0
+- 2x micro-HDMI ports (up to 4K@60fps output)
+- GPIO header (40-pin)
+- PCIe Gen 2 x1 connector (FPC)
+
 **Compute Module 4 (CM4):**
 
 - Same processor as Pi 4B
@@ -53,6 +65,12 @@ Full support for base board networking and core functionality. GPIO extension
 boards (HATs) are not currently supported. Other Raspberry Pi boards of the
 same generation may work but may require additional testing.
 
+> [!NOTE]
+> The Raspberry Pi 5B uses the RP1 companion chip, which provides USB, Ethernet,
+> and PCIe connectivity over an internal PCIe Gen 2 link.  The mainline Linux
+> `drm/vc4` driver handles HDMI display on the Pi 5 — no firmware overlay is
+> required, unlike on the Pi 4.
+
 ## Getting Started
 
 ### Quick Start with SD Card
@@ -71,10 +89,10 @@ The easiest way to get started is using a microSD card:
    - Default login: `admin` / `admin`
 
 > [!NOTE]
-> Raspberry Pi 3B and 4B boot with a factory configuration (`factory-config.cfg`)
-> that enables DHCP client on the Ethernet port. This means you can access
-> the device over the network without needing a serial console. Simply find
-> the assigned IP address and SSH in!
+> Raspberry Pi 3B/4B/5B boot with a dedicated `factory-config.cfg` that
+> enables DHCP client on the Ethernet port.  This means you can access the
+> device over the network without needing a serial console.  Simply find the
+> assigned IP address using an mDNS scan and SSH in!
 >
 > **Compute Module 4 (CM4)** and some other variants do not have this factory
 > configuration, so you'll need to use a serial console for initial setup or
@@ -176,6 +194,7 @@ admin@infix:/config/container/…/var/> leave
 
 Proper power supply is critical for stable operation:
 
+- **Raspberry Pi 5B:** 5V/5A USB-C power supply (official 27W recommended)
 - **Raspberry Pi 4B:** 5V/3A USB-C power supply (official recommended)
 - **Raspberry Pi 3B:** 5V/2.5A micro-USB power supply
 - **Compute Module 4:** Power requirements depend on carrier board
@@ -190,10 +209,15 @@ Inadequate power can cause:
 
 ### Serial Console Access (Optional)
 
-A serial console is useful for debugging but not required for Pi 3B/4B, since
+A serial console is useful for debugging but not required for Pi 3B/4B/5B, since
 the factory configuration enables network access via DHCP. For CM4 and other
 variants without factory configuration, serial console access is required for
 initial setup.
+
+> [!NOTE]
+> On the Raspberry Pi 5B the serial console is on `ttyAMA10` (GPIO pins 8/10),
+> not `ttyAMA0` as on earlier models. Use the same wiring but connect to the
+> correct UART in your terminal emulator.
 
 To connect via serial:
 
