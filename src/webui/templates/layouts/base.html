@@ -16,19 +16,17 @@
 <body hx-boost="true">
   <div id="page-progress" class="page-progress" aria-hidden="true"></div>
   <div id="conn-banner" class="conn-banner" hidden>Device unreachable</div>
-  <div class="layout">
-    {{template "sidebar" .}}
-    <div class="main-column">
-      <div class="topbar">
-        <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu" aria-expanded="false">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
-        <div class="topbar-right">
-          <div class="user-menu" id="user-menu">
+  <div class="topbar">
+    <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
+    <div class="topbar-right">
+      <div class="user-menu" id="user-menu">
             <button class="user-menu-btn" id="user-menu-btn" aria-haspopup="true" aria-expanded="false">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -65,9 +63,13 @@
                 </button>
               </form>
             </div>
-          </div>
         </div>
       </div>
+    </div>
+  </div>
+  <div class="layout">
+    {{template "sidebar" .}}
+    <div class="main-column">
       <main id="content">
         {{block "content" .}}{{end}}
       </main>
