@@ -1,20 +1,20 @@
 ---
-- name: VLAN ping connectivity
+- name: VLAN Ping Connectivity
   case: vlan_ping/test.py
 
-- name: Interface with IPv4
+- name: Interface With IPv4
   case: ipv4_address/test.py
 
-- name: Interface IPv6 autoconf for bridges
+- name: Interface IPv6 Autoconf For Bridges
   case: ipv6_address/test.py
 
 - name: Interface Description (ifAlias)
   case: ifalias/test.py
 
-- name: Custom MAC address on interface
+- name: Custom MAC Address On Interface
   case: iface_phys_address/test.py
 
-- name: Routing basic
+- name: Routing Basic
   case: routing_basic/test.py
 
 - name: VLAN Interface Ingress/Egress QoS
@@ -23,29 +23,29 @@
 - name: Interface Speed Duplex (Copper)
   case: speed_duplex_copper/test.py
 
-- name: Verify that all interface types can be created
+- name: Verify That All Interface Types Can Be Created
   case: verify_all_interface_types/test.py
 
-- name: Interface status
+- name: Interface Status
   case: iface_enable_disable/test.py
 
 - name: VLAN Interface Termination
   case: vlan_iface_termination/test.py
 
-- name: Verify that VETH pairs can be deleted
+- name: Verify That VETH Pairs Can Be Deleted
   case: veth_delete/test.py
 
 - name: IPv4 link-local
   case: ipv4_autoconf/test.py
 
-- name: Bridge interface tests
+- name: Bridge Interface Tests
   suite: bridge.yaml
 
-- name: Link aggregation tests
+- name: Link Aggregation Tests
   suite: lag.yaml
 
-- name: Layer-2 multicast filtering tests
+- name: Layer-2 Multicast Filtering Tests
   suite: igmp.yaml
 
-- name: Layer-2/3 tunnel tests
+- name: Layer-2/3 Tunnel Tests
   suite: tunnels.yaml

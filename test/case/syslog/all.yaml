@@ -2,7 +2,7 @@
 - name: Syslog Basic
   case: basic/test.py
 
-- name: Remote syslog
+- name: Remote Syslog
   case: remote/test.py
 
 - name: Syslog Pattern Matching

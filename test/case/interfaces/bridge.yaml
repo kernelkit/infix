@@ -1,24 +1,24 @@
 ---
 
-- name: Bridge forwarding single DUTs
+- name: Bridge Forwarding Single DUTs
   case: bridge_fwd_sgl_dut/test.py
 
-- name: Bridge forwarding dual DUTs
+- name: Bridge Forwarding Dual DUTs
   case: bridge_fwd_dual_dut/test.py
 
 - name: Bridge STP Basic
   case: bridge_stp_basic/test.py
 
-- name: Bridge VLAN separation
+- name: Bridge VLAN Separation
   case: bridge_vlan_separation/test.py
 
-- name: Bridge basic
+- name: Bridge Basic
   case: bridge_basic/test.py
 
-- name: Dual bridges on one device
+- name: Dual Bridges On One Device
   case: dual_bridge/test.py
 
-- name: Bridge with a physical port and a veth
+- name: Bridge With A Physical Port And A Veth
   case: bridge_veth/test.py
 
 - name: Bridge VLAN

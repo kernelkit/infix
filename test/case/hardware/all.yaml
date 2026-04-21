@@ -1,12 +1,12 @@
 ---
-- name: USB configuration
+- name: USB Configuration
   case: usb/test.py
 
-- name: USB configuration with two USB ports
+- name: USB Configuration With Two USB Ports
   case: usb_two_ports/test.py
 
-- name: Watchdog reset on system lockup
+- name: Watchdog Reset On System Lockup
   case: watchdog/test.py
 
-- name: GPS receiver basic test
+- name: GPS Receiver Basic Test
   case: gps_simple/test.py

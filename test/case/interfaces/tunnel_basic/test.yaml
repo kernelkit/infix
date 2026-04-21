@@ -2,14 +2,14 @@
 - settings:
     test-spec: <case>.adoc
 
-- name: GRE point-to-point
+- name: GRE Point-To-Point
   case: gre.py
   opts: ["--tunnel", "gre"]
 
-- name: GRETAP point-to-point
+- name: GRETAP Point-To-Point
   case: gretap.py
   opts: ["--tunnel", "gretap"]
 
-- name: VXLAN point-to-point
+- name: VXLAN Point-To-Point
   case: vxlan.py
   opts: ["--tunnel", "vxlan"]

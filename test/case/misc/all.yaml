@@ -1,8 +1,8 @@
 ---
-- name: Get operational
+- name: Get Operational
   case: operational_all/test.py
 
-- name: Support data collection
+- name: Support Data Collection
   case: support_collect/test.py
 
 #- name: start_from_startup
