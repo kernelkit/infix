@@ -1,0 +1,30 @@
+{{/* Renders a slice of *schema.Node as <li> elements (no wrapping <ul>). */}}
+{{define "yang-tree-nodes"}}
+  {{range .}}{{template "yang-tree-node" .}}{{end}}
+{{end}}
+
+{{/* Renders a single *schema.Node as a <li>. */}}
+{{define "yang-tree-node"}}
+  {{if or (eq .Kind "container") (eq .Kind "list") (eq .Kind "list-instance")}}
+  <li>
+    <details class="yt-node"
+             hx-get="/configure/tree/children?path={{.Path | urlquery}}"
+             hx-target="find .yt-children"
+             hx-trigger="toggle once"
+             hx-swap="innerHTML">
+      <summary class="yt-label"
+               data-yang-path="{{.Path}}"
+               hx-get="/configure/tree/node?path={{.Path | urlquery}}"
+               hx-target="#yang-detail"
+               hx-swap="innerHTML">
+        <svg class="yt-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+        <span class="yt-name">{{.Name}}</span>
+      </summary>
+      <ul class="yt-children"></ul>
+    </details>
+  </li>
+  {{end}}
+{{end}}

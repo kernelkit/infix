@@ -1,0 +1,15 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  go:
+    uses: openconfig/common-ci/.github/workflows/go.yml@125b6b58286d116b216e45c33cb859f547965d61
+
+  linter:
+    uses: openconfig/common-ci/.github/workflows/linter.yml@125b6b58286d116b216e45c33cb859f547965d61

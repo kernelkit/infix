@@ -1,0 +1,348 @@
+{{/* Renders a container or list-instance as a level page.
+     Direct leaves appear as an inline editable form.
+     Structural children appear as navigation items below.
+     Data: *leafGroupData */}}
+{{define "yang-leaf-group"}}
+<div class="info-card">
+  <div class="card-header">
+    {{if .ParentPath}}
+    <button type="button" class="btn btn-outline btn-sm yt-back-btn"
+            data-yang-path="{{.ParentPath}}"
+            hx-get="/configure/tree/node?path={{.ParentPath | urlquery}}"
+            hx-target="#yang-detail"
+            hx-swap="innerHTML">← Back</button>
+    {{end}}
+    {{.Name}}
+  </div>
+
+  {{if .Error}}
+  <div class="alert alert-error">{{.Error}}</div>
+  {{end}}
+  {{if .SavedOK}}
+  <div class="alert alert-success">Saved to candidate</div>
+  {{end}}
+
+  {{/* ── Direct leaves ────────────────────────────────────────────── */}}
+  {{if .Leaves}}
+  <form class="yt-group-form"
+        hx-put="/configure/tree/group?path={{.Path | urlquery}}{{if .ParentPath}}&parent={{.ParentPath | urlquery}}{{end}}"
+        hx-target="#yang-detail"
+        hx-swap="innerHTML">
+    <div class="yt-group-list">
+      {{range .Leaves}}
+      {{$cv := .CurrentValue}}
+      {{$default := .Default}}
+      {{$hasHelp := or .Description .Default .Type}}
+      <details class="yt-leaf-item">
+        <summary class="yt-leaf-summary">
+          <span class="yt-leaf-name{{if not $hasHelp}} yt-leaf-no-expand{{end}}">
+            {{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}
+          </span>
+          <span class="yt-leaf-input" onclick="event.stopPropagation()">
+            {{if not .Config}}
+              <span class="text-muted">{{$cv}}</span>
+            {{else if and .Type (eq .Type.Kind "boolean")}}
+              <div class="yt-bool-group">
+                <label><input type="radio" name="{{.Name}}" value="true"
+                       {{if eq $cv "true"}}checked{{end}}> true</label>
+                <label><input type="radio" name="{{.Name}}" value="false"
+                       {{if eq $cv "false"}}checked{{end}}> false</label>
+                {{if and (eq $cv "") (not .UsingDefault)}}<span class="yt-unset-hint">(not configured)</span>{{end}}
+              </div>
+            {{else if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
+              <select class="cfg-input" name="{{.Name}}">
+                {{range .Type.Enums}}<option {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+              </select>
+            {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
+              <select class="cfg-input" name="{{.Name}}">
+                {{range .Type.Identities}}<option {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+              </select>
+            {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
+                                  (eq .Type.Kind "int32") (eq .Type.Kind "int64")
+                                  (eq .Type.Kind "uint8") (eq .Type.Kind "uint16")
+                                  (eq .Type.Kind "uint32") (eq .Type.Kind "uint64"))}}
+              <input class="cfg-input" type="number" name="{{.Name}}" value="{{$cv}}"
+                     {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}>
+            {{else if .LeafrefValues}}
+              <select class="cfg-input" name="{{.Name}}">
+                <option value="">(none)</option>
+                {{range .LeafrefValues}}<option {{if eq . $cv}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+              </select>
+            {{else if and .Type (eq .Type.Kind "binary")}}
+              <textarea class="cfg-input cfg-input-mono" name="{{.Name}}"
+                        rows="6">{{if .RawBase64}}{{.RawBase64}}{{else}}{{$cv}}{{end}}</textarea>
+            {{else}}
+              <input class="cfg-input" type="text" name="{{.Name}}"
+                     value="{{if not .UsingDefault}}{{$cv}}{{end}}"
+                     {{if and .UsingDefault .Default}}placeholder="{{.Default}}"{{end}}>
+            {{end}}
+          </span>
+          {{if and .Config (not .Mandatory)}}
+          <button class="btn btn-secondary btn-sm" type="button"
+                  title="Reset to YANG default"
+                  onclick="event.stopPropagation()"
+                  hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
+                  hx-target="#yang-detail"
+                  hx-swap="innerHTML"
+                  hx-confirm="Reset {{.Name}} to its YANG default?">↺</button>
+          {{end}}
+        </summary>
+        {{if $hasHelp}}
+        <div class="yt-leaf-help">
+          {{if .Description}}<p class="yt-description">{{.Description}}</p>{{end}}
+          <table class="info-table yt-schema-table">
+            {{if .Default}}<tr><th>Default</th><td><code>{{.Default}}</code></td></tr>{{end}}
+            {{if .Mandatory}}<tr><th>Mandatory</th><td>yes</td></tr>{{end}}
+            {{if .Type}}<tr><th>Type</th><td><code>{{.Type.Kind}}</code></td></tr>{{end}}
+            {{if and .Type .Type.Range}}<tr><th>Range</th><td><code>{{.Type.Range}}</code></td></tr>{{end}}
+            {{if and .Type .Type.Pattern}}<tr><th>Pattern</th><td><code>{{.Type.Pattern}}</code></td></tr>{{end}}
+            {{if and .Type .Type.Leafref}}<tr><th>Leafref</th><td><code class="yt-path">{{.Type.Leafref}}</code></td></tr>{{end}}
+            <tr><th>Path</th><td><code class="yt-path">{{.Path}}</code></td></tr>
+          </table>
+        </div>
+        {{end}}
+      </details>
+      {{end}}
+    </div>
+    <div class="cfg-card-footer">
+      <button class="btn btn-primary" type="submit">Save all</button>
+    </div>
+  </form>
+  {{end}}
+
+  {{/* ── Inline simple sub-lists ────────────────────────────────── */}}
+  {{range $i, $list := .InlineLists}}
+  <div class="yt-inline-list">
+    <div class="yt-subsections-header">{{$list.Name}}</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            {{if $list.Complex}}<th class="yt-nav-col"></th>{{end}}
+            {{range $list.Columns}}<th>{{.DisplayName}}</th>{{end}}
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $list.Rows}}
+          {{$row := .}}
+          <tr class="yt-list-row{{if $list.Complex}} yt-list-row-nav{{end}}"
+              data-yang-path="{{$row.InstancePath}}"
+              hx-get="/configure/tree/node?path={{$row.InstancePath | urlquery}}{{if $list.ParentPath}}&parent={{$list.ParentPath | urlquery}}{{end}}"
+              hx-target="#yang-detail"
+              hx-swap="innerHTML">
+            {{if $list.Complex}}
+            <td class="yt-nav-col">
+              <svg class="yt-row-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </td>
+            {{end}}
+            {{range $list.Columns}}<td>{{index $row.Values .Name}}</td>{{end}}
+            <td class="cfg-action-col">
+              <button type="button" class="btn-icon btn-icon-danger"
+                      title="Delete {{$row.InstanceName}}"
+                      hx-delete="/configure/tree/list-row?path={{$row.InstancePath | urlquery}}&parent={{$list.ParentPath | urlquery}}"
+                      hx-target="#yang-detail" hx-swap="innerHTML"
+                      hx-confirm="Delete {{$row.InstanceName}}?"
+                      onclick="event.stopPropagation()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                  <path d="M10 11v6M14 11v6"></path>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          {{end}}
+          {{if not $list.Rows}}
+          <tr><td class="yt-table-empty" colspan="99">No entries</td></tr>
+          {{end}}
+          {{if not $list.Complex}}
+          {{/* Hidden inline add row — simple lists only */}}
+          <tr id="yt-add-row-{{$i}}" hidden>
+            <td colspan="99" class="key-detail-cell">
+              <form class="user-add-inline"
+                    hx-post="/configure/tree/list-row?path={{$list.Path | urlquery}}&parent={{$list.ParentPath | urlquery}}"
+                    hx-target="#yang-detail"
+                    hx-swap="innerHTML">
+                {{range $list.Columns}}
+                {{if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
+                  <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
+                    {{range .Type.Enums}}<option>{{.}}</option>{{end}}
+                  </select>
+                {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
+                  <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
+                    {{range .Type.Identities}}<option>{{.}}</option>{{end}}
+                  </select>
+                {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
+                                       (eq .Type.Kind "int32") (eq .Type.Kind "int64")
+                                       (eq .Type.Kind "uint8") (eq .Type.Kind "uint16")
+                                       (eq .Type.Kind "uint32") (eq .Type.Kind "uint64"))}}
+                  <input class="cfg-input" type="number" name="{{.Name}}"
+                         placeholder="{{.Name}}"
+                         {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}
+                         {{if .Mandatory}}required{{end}}>
+                {{else}}
+                  <input class="cfg-input" type="text" name="{{.Name}}"
+                         placeholder="{{.Name}}"
+                         {{if .Mandatory}}required{{end}}>
+                {{end}}
+                {{end}}
+                <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                <button type="button" class="btn btn-sm" data-hide="yt-add-row-{{$i}}">Cancel</button>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div style="padding: 0.35rem 0.75rem 0.5rem">
+      {{if $list.Complex}}
+      <button class="btn btn-secondary btn-sm"
+              hx-get="/configure/tree/list-add?path={{$list.Path | urlquery}}&parent={{$list.ParentPath | urlquery}}"
+              hx-target="#yang-detail"
+              hx-swap="innerHTML">+ Add</button>
+      {{else}}
+      <button class="btn btn-secondary btn-sm" data-show="yt-add-row-{{$i}}">+ Add</button>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+  {{/* ── Inline flat sub-containers ────────────────────────────── */}}
+  {{range .InlineContainers}}
+  {{$sub := .}}
+  <div class="yt-inline-container">
+    <div class="yt-subsections-header">{{$sub.Name}}</div>
+    {{if $sub.Leaves}}
+    <form class="yt-group-form"
+          hx-put="/configure/tree/group?path={{$sub.Path | urlquery}}&parent={{$sub.ParentPath | urlquery}}"
+          hx-target="#yang-detail"
+          hx-swap="innerHTML">
+      <div class="yt-group-list">
+        {{range $sub.Leaves}}
+        {{$cv := .CurrentValue}}
+        {{$default := .Default}}
+        {{$hasHelp := or .Description .Default .Type}}
+        <details class="yt-leaf-item">
+          <summary class="yt-leaf-summary">
+            <span class="yt-leaf-name{{if not $hasHelp}} yt-leaf-no-expand{{end}}">
+              {{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}
+            </span>
+            <span class="yt-leaf-input" onclick="event.stopPropagation()">
+              {{if not .Config}}
+                {{if and .IsBinary $cv}}
+                <div class="yt-binary-wrap">
+                  <div class="yt-binary-row">
+                    <span class="yt-binary-hint">{{if .BinaryHint}}{{.BinaryHint}}{{else}}binary data{{end}}</span>
+                    <button type="button" class="btn-icon yt-binary-eye" title="Show/hide"
+                            onclick="this.closest('.yt-binary-wrap').classList.toggle('yt-revealed')">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
+                  </div>
+                  <code class="yt-binary-content yt-binary-pem">{{$cv}}</code>
+                </div>
+                {{else}}
+                <span class="text-muted">{{if $cv}}{{$cv}}{{else}}—{{end}}</span>
+                {{end}}
+              {{else if and .Type (eq .Type.Kind "boolean")}}
+                <div class="yt-bool-group">
+                  <label><input type="radio" name="{{.Name}}" value="true"
+                         {{if eq $cv "true"}}checked{{end}}> true</label>
+                  <label><input type="radio" name="{{.Name}}" value="false"
+                         {{if eq $cv "false"}}checked{{end}}> false</label>
+                  {{if and (eq $cv "") (not .UsingDefault)}}<span class="yt-unset-hint">(not configured)</span>{{end}}
+                </div>
+              {{else if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
+                <select class="cfg-input" name="{{.Name}}">
+                  {{range .Type.Enums}}<option {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                </select>
+              {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
+                <select class="cfg-input" name="{{.Name}}">
+                  {{range .Type.Identities}}<option {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                </select>
+              {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
+                                    (eq .Type.Kind "int32") (eq .Type.Kind "int64")
+                                    (eq .Type.Kind "uint8") (eq .Type.Kind "uint16")
+                                    (eq .Type.Kind "uint32") (eq .Type.Kind "uint64"))}}
+                <input class="cfg-input" type="number" name="{{.Name}}" value="{{$cv}}"
+                       {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}>
+              {{else if .LeafrefValues}}
+                <select class="cfg-input" name="{{.Name}}">
+                  <option value="">(none)</option>
+                  {{range .LeafrefValues}}<option {{if eq . $cv}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                </select>
+              {{else if and .Type (eq .Type.Kind "binary")}}
+                <textarea class="cfg-input cfg-input-mono" name="{{.Name}}"
+                          rows="6">{{if .RawBase64}}{{.RawBase64}}{{else}}{{$cv}}{{end}}</textarea>
+              {{else}}
+                <input class="cfg-input" type="text" name="{{.Name}}"
+                       value="{{if not .UsingDefault}}{{$cv}}{{end}}"
+                       {{if and .UsingDefault .Default}}placeholder="{{.Default}}"{{end}}>
+              {{end}}
+            </span>
+            {{if and .Config (not .Mandatory)}}
+            <button class="btn btn-secondary btn-sm" type="button"
+                    title="Reset to YANG default"
+                    onclick="event.stopPropagation()"
+                    hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
+                    hx-target="#yang-detail"
+                    hx-swap="innerHTML"
+                    hx-confirm="Reset {{.Name}} to its YANG default?">↺</button>
+            {{end}}
+          </summary>
+          {{if $hasHelp}}
+          <div class="yt-leaf-help">
+            {{if .Description}}<p class="yt-description">{{.Description}}</p>{{end}}
+            <table class="info-table yt-schema-table">
+              {{if .Default}}<tr><th>Default</th><td><code>{{.Default}}</code></td></tr>{{end}}
+              {{if .Mandatory}}<tr><th>Mandatory</th><td>yes</td></tr>{{end}}
+              {{if .Type}}<tr><th>Type</th><td><code>{{.Type.Kind}}</code></td></tr>{{end}}
+              {{if and .Type .Type.Range}}<tr><th>Range</th><td><code>{{.Type.Range}}</code></td></tr>{{end}}
+              {{if and .Type .Type.Pattern}}<tr><th>Pattern</th><td><code>{{.Type.Pattern}}</code></td></tr>{{end}}
+              {{if and .Type .Type.Leafref}}<tr><th>Leafref</th><td><code class="yt-path">{{.Type.Leafref}}</code></td></tr>{{end}}
+              <tr><th>Path</th><td><code class="yt-path">{{.Path}}</code></td></tr>
+            </table>
+          </div>
+          {{end}}
+        </details>
+        {{end}}
+      </div>
+      <div class="cfg-card-footer">
+        <button class="btn btn-primary" type="submit">Save all</button>
+      </div>
+    </form>
+    {{end}}
+  </div>
+  {{end}}
+
+  {{/* ── Sub-sections ─────────────────────────────────────────────── */}}
+  {{if .SubNodes}}
+  <div class="yt-subsections">
+    {{if .Leaves}}<div class="yt-subsections-header">Sub-sections</div>{{end}}
+    {{range .SubNodes}}
+    <button class="yt-subsection-item"
+            data-yang-path="{{.Path}}"
+            hx-get="/configure/tree/node?path={{.Path | urlquery}}"
+            hx-target="#yang-detail"
+            hx-swap="innerHTML">
+      <span class="yt-subsection-name">{{.Name}}</span>
+      <svg class="yt-subsection-arrow" width="14" height="14" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}

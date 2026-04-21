@@ -2068,6 +2068,8 @@ select.cfg-input {
 /* Editable table rows */
 .cfg-table td { padding: 0.45rem 0.75rem; vertical-align: middle; }
 .cfg-table td:last-child { width: 3rem; text-align: center; }
+/* Leading nav-chevron column for complex (drill-down) list rows */
+.yt-nav-col { width: 1.5rem; padding: 0.25rem !important; text-align: center; color: var(--fg-muted); }
 .btn-icon {
   display: inline-flex;
   align-items: center;
@@ -2392,7 +2394,7 @@ details[open].yt-schema-details summary::before { transform: rotate(90deg); }
 .yt-leaf-summary {
   display: grid;
   grid-template-columns: minmax(6rem, auto) 1fr auto;
-  align-items: center;
+  align-items: start;
   gap: 0.5rem;
   padding: 0.45rem 0.75rem;
   cursor: pointer;
@@ -2498,8 +2500,16 @@ details[open].yt-leaf-item .yt-leaf-name::before { transform: rotate(90deg); }
 /* Auto-generated list table */
 .yt-list-row { cursor: pointer; }
 .yt-list-row:hover td { background: var(--border-subtle); }
+.yt-list-row-nav { cursor: pointer; }
+.yt-list-row-nav td { padding-right: 0.25rem; }
+.yt-row-arrow { color: var(--fg-muted); vertical-align: middle; }
 .yt-table-empty { text-align: center; color: var(--fg-muted); padding: 1.5rem; }
 .cfg-action-col { width: 2rem; text-align: center; }
+
+/* Back button in card header when navigated from a parent list */
+.card-header { display: flex; align-items: center; gap: 0.5rem; }
+.yt-back-btn { margin-right: 0.25rem; flex-shrink: 0; }
+
 
 /* Inline list / flat container sections inside a leaf-group card */
 .yt-inline-list,

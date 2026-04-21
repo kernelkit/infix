@@ -1,0 +1,147 @@
+{{/* Auto-generated table for a simple (all-leaf) YANG list node.
+     Data: *listTableData */}}
+{{define "yang-list-table"}}
+<div class="info-card">
+  <div class="card-header">{{.Name}}</div>
+  {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+  {{if .SavedOK}}<div class="alert alert-success">Saved to candidate</div>{{end}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          {{range .Columns}}<th>{{.DisplayName}}</th>{{end}}
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Rows}}
+        {{$row := .}}
+        <tr class="yt-list-row"
+            data-yang-path="{{.InstancePath}}"
+            hx-get="/configure/tree/node?path={{.InstancePath | urlquery}}"
+            hx-target="#yang-detail"
+            hx-swap="innerHTML">
+          {{range $.Columns}}<td>{{index $row.Values .Name}}</td>{{end}}
+          <td class="cfg-action-col">
+            <button type="button"
+                    class="btn-icon btn-icon-danger"
+                    title="Delete {{$row.InstanceName}}"
+                    hx-delete="/configure/tree/list-row?path={{$row.InstancePath | urlquery}}"
+                    hx-target="#yang-detail"
+                    hx-swap="innerHTML"
+                    hx-confirm="Delete {{$row.InstanceName}}?"
+                    onclick="event.stopPropagation()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                <path d="M10 11v6M14 11v6"></path>
+              </svg>
+            </button>
+          </td>
+        </tr>
+        {{end}}
+        {{if not .Rows}}
+        <tr><td class="yt-table-empty" colspan="99">No entries</td></tr>
+        {{end}}
+        {{/* Hidden inline add row */}}
+        <tr id="yt-list-add-row" hidden>
+          <td colspan="99" class="key-detail-cell">
+            <form class="user-add-inline"
+                  hx-post="/configure/tree/list-row?path={{.Path | urlquery}}"
+                  hx-target="#yang-detail"
+                  hx-swap="innerHTML">
+              {{range .Columns}}
+              {{if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
+                <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
+                  {{range .Type.Enums}}<option>{{.}}</option>{{end}}
+                </select>
+              {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
+                <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
+                  {{range .Type.Identities}}<option>{{.}}</option>{{end}}
+                </select>
+              {{else if and .Type (eq .Type.Kind "boolean")}}
+                <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
+                  <option value="false">false</option>
+                  <option value="true">true</option>
+                </select>
+              {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
+                                     (eq .Type.Kind "int32") (eq .Type.Kind "int64")
+                                     (eq .Type.Kind "uint8") (eq .Type.Kind "uint16")
+                                     (eq .Type.Kind "uint32") (eq .Type.Kind "uint64"))}}
+                <input class="cfg-input" type="number" name="{{.Name}}"
+                       placeholder="{{.Name}}"
+                       {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}
+                       {{if .Mandatory}}required{{end}}>
+              {{else}}
+                <input class="cfg-input" type="text" name="{{.Name}}"
+                       placeholder="{{.Name}}"
+                       {{if .Mandatory}}required{{end}}>
+              {{end}}
+              {{end}}
+              <button class="btn btn-primary btn-sm" type="submit">Add</button>
+              <button type="button" class="btn btn-sm" data-hide="yt-list-add-row">Cancel</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="cfg-card-footer">
+    <button class="btn btn-secondary" data-show="yt-list-add-row">+ Add</button>
+  </div>
+</div>
+{{end}}
+
+{{/* Blank add-row form for a simple list.
+     Data: *listAddData */}}
+{{define "yang-list-add"}}
+<div class="info-card">
+  <div class="card-header">Add {{.Name}}</div>
+  {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+  <form hx-post="/configure/tree/list-row?path={{.Path | urlquery}}{{if .ParentPath}}&parent={{.ParentPath | urlquery}}{{end}}"
+        hx-target="#yang-detail"
+        hx-swap="innerHTML">
+    <table class="info-table" style="margin:0">
+      {{range .Columns}}
+      <tr>
+        <th>{{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}</th>
+        <td>
+          {{if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
+            <select class="cfg-input" name="{{.Name}}">
+              {{range .Type.Enums}}<option>{{.}}</option>{{end}}
+            </select>
+          {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
+            <select class="cfg-input" name="{{.Name}}">
+              {{range .Type.Identities}}<option>{{.}}</option>{{end}}
+            </select>
+          {{else if and .Type (eq .Type.Kind "boolean")}}
+            <select class="cfg-input" name="{{.Name}}">
+              <option value="false">false</option>
+              <option value="true">true</option>
+            </select>
+          {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
+                                 (eq .Type.Kind "int32") (eq .Type.Kind "int64")
+                                 (eq .Type.Kind "uint8") (eq .Type.Kind "uint16")
+                                 (eq .Type.Kind "uint32") (eq .Type.Kind "uint64"))}}
+            <input class="cfg-input" type="number" name="{{.Name}}"
+                   {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}
+                   {{if .Mandatory}}required{{end}}>
+          {{else}}
+            <input class="cfg-input" type="text" name="{{.Name}}"
+                   {{if .Mandatory}}required{{end}}>
+          {{end}}
+        </td>
+      </tr>
+      {{end}}
+    </table>
+    <div class="cfg-card-footer">
+      <button class="btn btn-primary" type="submit">Add</button>
+      <button type="button" class="btn btn-outline"
+              hx-get="/configure/tree/node?path={{.Path | urlquery}}"
+              hx-target="#yang-detail"
+              hx-swap="innerHTML">Cancel</button>
+    </div>
+  </form>
+</div>
+{{end}}
