@@ -2163,9 +2163,47 @@ select.cfg-input {
 .yang-tree { padding: 0.25rem 0; }
 
 .yt-children {
-  padding-left: 1rem;
-  border-left: 1px solid var(--border-subtle);
+  padding-left: 0;
   margin-left: 1.1rem;
+}
+
+.yt-children > li {
+  position: relative;
+  padding-left: 1rem;
+}
+
+/* Horizontal arm */
+.yt-children > li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.85rem;
+  width: 0.75rem;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Vertical connector — runs full height for non-last, stops at arm for last */
+.yt-children > li::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  background: var(--border);
+}
+.yt-children > li:not(:last-child)::after {
+  bottom: 0;
+}
+.yt-children > li:last-child::after {
+  height: calc(0.85rem + 1px);
+}
+
+/* Style for the root "/" node */
+.yt-root {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--fg-muted);
 }
 
 /* Expandable node (container / list) */
@@ -2456,6 +2494,16 @@ details[open].yt-leaf-item .yt-leaf-name::before { transform: rotate(90deg); }
 .yt-subsection-item:hover { background: var(--hover-bg, rgba(0,0,0,0.04)); }
 .yt-subsection-name { flex: 1; }
 .yt-subsection-arrow { color: var(--text-muted); flex-shrink: 0; }
+
+/* Auto-generated list table */
+.yt-list-row { cursor: pointer; }
+.yt-list-row:hover td { background: var(--border-subtle); }
+.yt-table-empty { text-align: center; color: var(--fg-muted); padding: 1.5rem; }
+.cfg-action-col { width: 2rem; text-align: center; }
+
+/* Inline list / flat container sections inside a leaf-group card */
+.yt-inline-list,
+.yt-inline-container { border-top: 1px solid var(--border); }
 
 /* Success / error feedback banners inside detail pane */
 .alert-success {

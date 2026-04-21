@@ -6,6 +6,41 @@
 ~/src/infix/src/webui(web)$ make clean; sudo make dev ARGS="--restconf https://192.168.0.1/restconf --insecure-tls"  
 ```
 
+## New TODO
+
+Minor changes:
+
+ 1. Rename YANG Tree back to Advanced
+ 1. The tree view should never list leafs, only nodes that can be expanded.
+ 1. The tree should be a tree, not just foldouts in a list
+ 1. The top of the tree could be a single '/'
+
+### Graphics & Design
+
+Use smaller logo, without the three pillars, on top-bar and raise top-bar.
+Similar to the WebUI v1 design. The left side-bar should not cover the
+top-bar.
+
+Review all the icons.  DHCP, Keystore, Interfaces, and Routing look weird.
+Tobias says the macOS network/interface icon could be a good fit.
+
+### Refactor Apply/Apply & Save/Abort
+
+Refactor apply/abort to fit with CLI scheme.  A user building up new config
+should be able to see the diff before applying/aborting.
+
+After apply a "status bar", or similar, should show that the current settings
+have not yet been saved. This should also show if a CLI user makes an unsaved
+change.
+
+### Ideas for auto-generated pages
+
+Some pages, like IPv4 addresses could be shown similar to how the curated
+Users configuration page looks.  I.e., when a container has a list, the
+complexity of the list items decide if it deserves a separate new page or can
+be shown on the current page.  Q: how should this "complexity score" be
+calculated?
+
 ## Ideas for Improvement for Configure Advanced Tree View
 
 ### Filter out /test

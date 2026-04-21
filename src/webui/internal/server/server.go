@@ -115,7 +115,8 @@ func New(
 	yangFragTmpl, err := template.ParseFS(templateFS,
 		"fragments/yang-tree-node.html",
 		"fragments/yang-node-detail.html",
-		"fragments/yang-leaf-group.html")
+		"fragments/yang-leaf-group.html",
+		"fragments/yang-list-table.html")
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +246,10 @@ func New(
 	mux.HandleFunc("GET /configure/tree/node",      treeH.TreeNode)
 	mux.HandleFunc("PUT /configure/tree/node",      treeH.SaveLeaf)
 	mux.HandleFunc("DELETE /configure/tree/node",   treeH.DeleteLeaf)
-	mux.HandleFunc("PUT /configure/tree/group",     treeH.SaveGroup)
+	mux.HandleFunc("PUT /configure/tree/group",      treeH.SaveGroup)
+	mux.HandleFunc("GET /configure/tree/list-add",   treeH.AddListRowForm)
+	mux.HandleFunc("POST /configure/tree/list-row",  treeH.SaveListRow)
+	mux.HandleFunc("DELETE /configure/tree/list-row", treeH.DeleteListRow)
 
 	handler := authMiddleware(store, mux)
 	handler = csrfMiddleware(handler)

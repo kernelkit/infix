@@ -629,6 +629,65 @@ function openModal(message, onConfirm) {
   });
 })();
 
+// ─── YANG tree: browser back/forward navigation for detail pane ─────────────
+(function() {
+  var pendingPath = null;
+  var observedEl = null;
+  var observer = null;
+
+  // Track which node path the user intends to navigate to.
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-yang-path]');
+    if (el) pendingPath = el.getAttribute('data-yang-path');
+  });
+
+  // MutationObserver on #yang-detail: when its direct children change, a new
+  // node was loaded.  Push a history entry only when a navigation click caused it.
+  function onDetailMutated() {
+    if (!pendingPath) return;
+    var path = pendingPath;
+    pendingPath = null;
+    history.pushState({ yangDetailPath: path }, '',
+      window.location.pathname + '?node=' + encodeURIComponent(path));
+  }
+
+  function attachObserver() {
+    var detail = document.getElementById('yang-detail');
+    if (!detail || detail === observedEl) return;
+    if (observer) observer.disconnect();
+    observedEl = detail;
+    observer = new MutationObserver(onDetailMutated);
+    observer.observe(detail, { childList: true });
+  }
+
+  window.addEventListener('popstate', function(e) {
+    var detail = document.getElementById('yang-detail');
+    if (!detail) return;
+    if (e.state && e.state.yangDetailPath) {
+      if (window.htmx) {
+        htmx.ajax('GET', '/configure/tree/node?path=' + encodeURIComponent(e.state.yangDetailPath),
+          { target: '#yang-detail', swap: 'innerHTML' });
+      }
+    } else {
+      detail.innerHTML = '';
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    attachObserver();
+    var detail = document.getElementById('yang-detail');
+    if (!detail || !window.htmx) return;
+    var node = new URLSearchParams(window.location.search).get('node');
+    if (node) {
+      htmx.ajax('GET', '/configure/tree/node?path=' + encodeURIComponent(node),
+        { target: '#yang-detail', swap: 'innerHTML' });
+    }
+  });
+
+  // Re-attach after HTMX page navigation recreates #content (and #yang-detail).
+  document.addEventListener('htmx:afterSwap', attachObserver);
+})();
+
 // ─── Configure: dynamic list row add/delete ────────────────────────────────
 // Handles .btn-add-row (data-table, data-template) and .cfg-delete-row buttons.
 // Templates are keyed by data-template attribute value.
