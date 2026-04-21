@@ -14,6 +14,7 @@ import (
 
 	"github.com/kernelkit/webui/internal/auth"
 	"github.com/kernelkit/webui/internal/restconf"
+	"github.com/kernelkit/webui/internal/schema"
 	"github.com/kernelkit/webui/internal/server"
 )
 
@@ -33,6 +34,7 @@ func main() {
 	restconfURL := flag.String("restconf", defaultRC, "RESTCONF base URL")
 	sessionKey := flag.String("session-key", "/var/lib/misc/webui-session.key", "path to persistent session key file")
 	insecureTLS := flag.Bool("insecure-tls", envBool("INSECURE_TLS"), "disable TLS certificate verification")
+	yangCacheDir := flag.String("yang-cache-dir", "/var/cache/webui/yang", "directory for cached YANG schema files")
 	flag.Parse()
 
 	store, err := auth.NewSessionStore(*sessionKey)
@@ -41,6 +43,9 @@ func main() {
 	}
 
 	rc := restconf.NewClient(*restconfURL, *insecureTLS)
+
+	schemaCache := schema.NewCache(rc, *yangCacheDir)
+	schemaCache.LoadFromCacheBackground() // fast, no HTTP — uses whatever is already on disk
 
 	tmplFS, err := fs.Sub(templateFS, "templates")
 	if err != nil {
@@ -52,7 +57,7 @@ func main() {
 		log.Fatalf("static fs: %v", err)
 	}
 
-	handler, err := server.New(store, rc, tmplFS, stFS)
+	handler, err := server.New(store, rc, schemaCache, tmplFS, stFS)
 	if err != nil {
 		log.Fatalf("server setup: %v", err)
 	}

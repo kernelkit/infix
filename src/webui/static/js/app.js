@@ -702,6 +702,61 @@ function openModal(message, onConfirm) {
   });
 })();
 
+// ─── YANG tree accordion ───────────────────────────────────────────────────
+// When any node opens, collapse its siblings at the same level so only one
+// subtree is expanded at a time.  Works at every depth (top-level modules,
+// list instances, nested containers).  toggle doesn't bubble — use capture.
+(function() {
+  document.addEventListener('toggle', function(e) {
+    var node = e.target;
+    if (!node.classList || !node.classList.contains('yt-node') || !node.open) return;
+    var li = node.parentElement;
+    var ul = li && li.parentElement;
+    if (!ul) return;
+    ul.querySelectorAll(':scope > li > details.yt-node').forEach(function(d) {
+      if (d !== node && d.open) d.removeAttribute('open');
+    });
+  }, true);
+})();
+
+// ─── ⓘ field-info tooltip (position:fixed to escape overflow clipping) ───────
+(function() {
+  var tip = null;
+
+  function getTip() {
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'field-tip';
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+
+  document.addEventListener('mouseover', function(e) {
+    var el = e.target.closest('.field-info[data-tip]');
+    if (!el) return;
+    var t = getTip();
+    t.textContent = el.getAttribute('data-tip');
+    t.style.display = 'block';
+    var r = el.getBoundingClientRect();
+    // Position above the icon, centred; clamp to viewport edges.
+    var left = r.left + r.width / 2 - t.offsetWidth / 2;
+    var top  = r.top - t.offsetHeight - 6;
+    if (left < 8) left = 8;
+    if (left + t.offsetWidth > window.innerWidth - 8) left = window.innerWidth - t.offsetWidth - 8;
+    if (top < 8) top = r.bottom + 6; // flip below if no room above
+    t.style.left = left + 'px';
+    t.style.top  = top  + 'px';
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    var el = e.target.closest('.field-info[data-tip]');
+    if (!el) return;
+    var t = getTip();
+    t.style.display = 'none';
+  });
+})();
+
 // ─── Configure toolbar ─────────────────────────────────────────────────────
 // Intercept HTMX's confirm event for Apply/Abort buttons and show the custom
 // modal instead of the browser native confirm.  The server responds with

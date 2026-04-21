@@ -171,7 +171,7 @@
     </details>
 
     <details class="nav-group-top" id="nav-configure"
-             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-users")}}open{{end}}>
+             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-users") (eq .ActivePage "configure-tree")}}open{{end}}>
       <summary class="nav-group-summary-top">Configure</summary>
       <ul class="nav-group-items">
         <li>
@@ -192,6 +192,16 @@
              class="nav-link {{if eq .ActivePage "configure-users"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/nacm.svg')"></span>
             Users
+          </a>
+        </li>
+        <li>
+          <a href="/configure/tree"
+             hx-get="/configure/tree"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-tree"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/routing.svg')"></span>
+            YANG Tree
           </a>
         </li>
       </ul>

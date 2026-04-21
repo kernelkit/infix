@@ -3,6 +3,7 @@
 package server
 
 import (
+	"context"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -10,12 +11,14 @@ import (
 	"github.com/kernelkit/webui/internal/auth"
 	"github.com/kernelkit/webui/internal/handlers"
 	"github.com/kernelkit/webui/internal/restconf"
+	"github.com/kernelkit/webui/internal/schema"
 )
 
 // New creates a fully wired http.Handler with all routes and middleware.
 func New(
 	store *auth.SessionStore,
 	rc *restconf.Client,
+	schemaCache *schema.Cache,
 	templateFS fs.FS,
 	staticFS fs.FS,
 ) (http.Handler, error) {
@@ -101,11 +104,29 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	yangTreeTmpl, err := template.ParseFS(templateFS,
+		"layouts/*.html",
+		"fragments/configure-toolbar.html",
+		"fragments/yang-tree-node.html",
+		"pages/yang-tree.html")
+	if err != nil {
+		return nil, err
+	}
+	yangFragTmpl, err := template.ParseFS(templateFS,
+		"fragments/yang-tree-node.html",
+		"fragments/yang-node-detail.html",
+		"fragments/yang-leaf-group.html")
+	if err != nil {
+		return nil, err
+	}
 
 	login := &auth.LoginHandler{
 		Store:    store,
 		RC:       rc,
 		Template: loginTmpl,
+		OnLogin: func(ctx context.Context) {
+			schemaCache.RefreshBackground(ctx)
+		},
 	}
 
 	dash := &handlers.DashboardHandler{
@@ -146,8 +167,16 @@ func New(
 	services := &handlers.ServicesHandler{Template: servicesTmpl, RC: rc}
 	containers := &handlers.ContainersHandler{Template: containersTmpl, RC: rc}
 	cfg := &handlers.ConfigureHandler{RC: rc}
-	cfgSys := &handlers.ConfigureSystemHandler{Template: cfgSysTmpl, RC: rc}
-	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc}
+	cfgSys := &handlers.ConfigureSystemHandler{Template: cfgSysTmpl, RC: rc, Schema: schemaCache}
+	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc, Schema: schemaCache}
+	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
+	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
+	treeH := &handlers.TreeHandler{
+		Cache:    schemaCache,
+		RC:       rc,
+		PageTmpl: yangTreeTmpl,
+		FragTmpl: yangFragTmpl,
+	}
 
 	mux := http.NewServeMux()
 
@@ -202,6 +231,21 @@ func New(
 	mux.HandleFunc("POST /configure/users/{name}/password", cfgUsers.ChangePassword)
 	mux.HandleFunc("POST /configure/users/{name}/keys",     cfgUsers.AddKey)
 	mux.HandleFunc("DELETE /configure/users/{name}/keys/{keyname}", cfgUsers.DeleteKey)
+
+	// Schema API routes (authenticated).
+	mux.HandleFunc("GET /api/schema",          schemaH.Schema)
+	mux.HandleFunc("GET /api/schema/children", schemaH.Children)
+
+	// Data API route (authenticated) — raw RESTCONF JSON passthrough.
+	mux.HandleFunc("GET /api/data", dataH.Get)
+
+	// YANG tree UI routes (authenticated).
+	mux.HandleFunc("GET /configure/tree",           treeH.Overview)
+	mux.HandleFunc("GET /configure/tree/children",  treeH.TreeChildren)
+	mux.HandleFunc("GET /configure/tree/node",      treeH.TreeNode)
+	mux.HandleFunc("PUT /configure/tree/node",      treeH.SaveLeaf)
+	mux.HandleFunc("DELETE /configure/tree/node",   treeH.DeleteLeaf)
+	mux.HandleFunc("PUT /configure/tree/group",     treeH.SaveGroup)
 
 	handler := authMiddleware(store, mux)
 	handler = csrfMiddleware(handler)

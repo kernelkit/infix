@@ -4,6 +4,17 @@
 
 {{define "content"}}
 <div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/users"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
 {{if .Error}}
 <div class="alert alert-error">{{.Error}}</div>
 {{end}}
@@ -36,10 +47,15 @@
               <form hx-post="/configure/users/{{.Name}}/shell" hx-swap="none"
                     class="user-shell-form">
                 <select class="cfg-input" name="shell">
-                  <option value="infix-system:clish" {{if eq .Shell "infix-system:clish"}}selected{{end}}>CLI Shell</option>
-                  <option value="infix-system:bash"  {{if eq .Shell "infix-system:bash" }}selected{{end}}>Bash</option>
-                  <option value="infix-system:sh"    {{if eq .Shell "infix-system:sh"   }}selected{{end}}>Sh</option>
-                  <option value="infix-system:false" {{if eq .Shell "infix-system:false"}}selected{{end}}>Disabled</option>
+                  {{$shell := .Shell}}
+                  {{if $.ShellOptions}}
+                  {{range $.ShellOptions}}<option value="{{.Value}}" {{if or (eq .Value $shell) (and (eq $shell "") .IsDefault)}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>{{end}}
+                  {{else}}
+                  <option value="infix-system:clish" {{if eq $shell "infix-system:clish"}}selected{{end}}>clish</option>
+                  <option value="infix-system:bash"  {{if eq $shell "infix-system:bash" }}selected{{end}}>bash</option>
+                  <option value="infix-system:sh"    {{if eq $shell "infix-system:sh"   }}selected{{end}}>sh</option>
+                  <option value="infix-system:false" {{if eq $shell "infix-system:false"}}selected{{end}}>false</option>
+                  {{end}}
                 </select>
                 <button class="btn btn-primary btn-sm" type="submit">Save</button>
                 <span class="cfg-save-status"></span>
@@ -151,10 +167,14 @@
                 <input class="cfg-input" type="password" name="password" required
                        autocomplete="new-password" placeholder="Password">
                 <select class="cfg-input" name="shell">
-                  <option value="infix-system:clish">CLI Shell</option>
-                  <option value="infix-system:bash">Bash</option>
-                  <option value="infix-system:sh">Sh</option>
-                  <option value="infix-system:false">Disabled</option>
+                  {{if .ShellOptions}}
+                  {{range .ShellOptions}}<option value="{{.Value}}" {{if .IsDefault}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>{{end}}
+                  {{else}}
+                  <option value="infix-system:clish">clish</option>
+                  <option value="infix-system:bash">bash</option>
+                  <option value="infix-system:sh">sh</option>
+                  <option value="infix-system:false">false</option>
+                  {{end}}
                 </select>
                 <button class="btn btn-primary btn-sm" type="submit">Add</button>
                 <button type="button" class="btn btn-sm" data-hide="add-user-row">Cancel</button>
@@ -175,4 +195,6 @@
 
 {{template "configure-toolbar" .}}
 </div>
+{{end}}{{/* end {{else}} — schema ready */}}
+
 {{end}}

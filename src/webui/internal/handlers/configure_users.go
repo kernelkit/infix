@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/kernelkit/webui/internal/restconf"
+	"github.com/kernelkit/webui/internal/schema"
 )
 
 // ─── RESTCONF JSON types ──────────────────────────────────────────────────────
@@ -50,25 +51,14 @@ type cfgUserDisplay struct {
 	KeyCount   int
 }
 
-func shellLabel(s string) string {
-	switch s {
-	case "infix-system:clish":
-		return "CLI Shell"
-	case "infix-system:bash":
-		return "Bash"
-	case "infix-system:sh":
-		return "Sh"
-	default:
-		return "Disabled"
-	}
-}
-
 // ─── Template data ────────────────────────────────────────────────────────────
 
 type cfgUsersPageData struct {
 	PageData
-	Users []cfgUserDisplay
-	Error string
+	Loading      bool
+	Users        []cfgUserDisplay
+	Error        string
+	ShellOptions []schema.IdentityOption
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -77,6 +67,7 @@ type cfgUsersPageData struct {
 type ConfigureUsersHandler struct {
 	Template *template.Template
 	RC       restconf.Fetcher
+	Schema   *schema.Cache
 }
 
 const authPath = candidatePath + "/ietf-system:system/authentication"
@@ -108,10 +99,16 @@ func (h *ConfigureUsersHandler) Overview(w http.ResponseWriter, r *http.Request)
 			data.Error = "Could not read user configuration"
 		}
 	}
+	const shellPath = "/ietf-system:system/authentication/user/infix-system:shell"
+	mgr := h.Schema.Manager()
+	data.Loading = mgr == nil
+	if mgr != nil {
+		data.ShellOptions = schema.OptionsFor(mgr, shellPath)
+	}
 	for _, u := range raw.System.Auth.Users {
 		data.Users = append(data.Users, cfgUserDisplay{
 			cfgUserJSON: u,
-			ShellLabel:  shellLabel(u.Shell),
+			ShellLabel:  schema.StripModulePrefix(u.Shell),
 			KeyCount:    len(u.AuthorizedKeys),
 		})
 	}
