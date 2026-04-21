@@ -8,7 +8,7 @@
 - name: DHCP Router
   case: client_default_gw/test.py
 
-- name: DHCP option 121 vs option 3
+- name: DHCP Option 121 vs Option 3
   case: client_routes/test.py
 
 - name: DHCP Hostname Priority

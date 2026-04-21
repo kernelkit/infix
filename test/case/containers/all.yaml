@@ -1,21 +1,21 @@
 ---
 
-- name: Container basic
+- name: Container Basic
   case: basic/test.py
 
-- name: Container enabled/disabled
+- name: Container Enabled/Disabled
   case: enabled/test.py
 
-- name: Container environment variables
+- name: Container Environment Variables
   case: environment/test.py
 
-- name: Container with bridge network
+- name: Container with Bridge Network
   case: bridge/test.py
 
-- name: Container with physical interface
+- name: Container with Physical Interface
   case: phys/test.py
 
-- name: Container with VETH pair
+- name: Container with VETH Pair
   case: veth/test.py
 
 - name: Container Volume Persistence

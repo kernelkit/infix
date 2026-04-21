@@ -1,8 +1,8 @@
 ---
-- name: Basic tunnel connectivity test
+- name: Basic Tunnel Connectivity Test
   suite: tunnel_basic/test.yaml
 
-- name: Tunnel interface bridged with physical
+- name: Tunnel Interface Bridged with Physical
   suite: tunnel_bridged/test.yaml
 
 - name: Tunnel TTL verification
@@ -11,7 +11,7 @@
 - name: WireGuard Point-to-Point
   case: wireguard_p2p/test.py
 
-- name: WireGuard multipoint
+- name: WireGuard Multipoint
   case: wireguard_multipoint/test.py
 
 - name: WireGuard Roadwarrior

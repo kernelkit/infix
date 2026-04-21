@@ -1,6 +1,6 @@
 ---
-- name: SSH server configuration
+- name: SSH Server Configuration
   case: ssh_server_config/test.py
 
-- name: Generate ssh key pair
+- name: Generate SSH Key Pair
   case: ssh_key_authentication/test.py

@@ -1,9 +1,9 @@
 ---
-- name: mDNS enable/disable
+- name: mDNS Enable/Disable
   case: mdns_enable_disable/test.py
 
-- name: mDNS allow/deny interfaces
+- name: mDNS Allow/Deny Interfaces
   case: mdns_allow_deny/test.py
 
-- name: mDNS reflector
+- name: mDNS Reflector
   case: mdns_reflector/test.py
