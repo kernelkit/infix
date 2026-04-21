@@ -3,18 +3,21 @@
     test-spec: Readme.adoc
 
 - case: meta/reproducible.py
+  name: "Ensure Reproducible Env"
   infamy:
     specification: False
 
 - case: meta/bootorder.py
+  name: "Verify Bootorder"
   infamy:
     specification: False
 
 - case: meta/check-version.py
+  name: "Verify Software Version"
   infamy:
     specification: False
 
-- name: Misc tests
+- name: "Miscellaneous"
   suite: misc/all.yaml
 
 
@@ -23,6 +26,7 @@
 
 # Upgrade may leave wrong boot order
 - case: meta/bootorder.py
+  name: "Verify Bootorder After Upgrade"
   infamy:
     specification: False
 
