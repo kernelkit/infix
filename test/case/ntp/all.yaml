@@ -8,7 +8,7 @@
 - name: NTP Peer Mode
   case: server_mode_peer/test.py
 
-- name: NTP Server And Client Interoperability
+- name: NTP Server and Client Interoperability
   case: server_client/test.py
 
 - name: NTP Client Stratum Selection

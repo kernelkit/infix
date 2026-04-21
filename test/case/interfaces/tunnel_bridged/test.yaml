@@ -2,10 +2,10 @@
 - settings:
     test-spec: <case>.adoc
 
-- name: GRETAP Bridged With Physical Interface
+- name: GRETAP Bridged with Physical Interface
   case: gretap.py
   opts: ["--tunnel", "gretap"]
 
-- name: VXLAN Bridged With Physical Interface
+- name: VXLAN Bridged with Physical Interface
   case: vxlan.py
   opts: ["--tunnel", "vxlan"]

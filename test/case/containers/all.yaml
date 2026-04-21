@@ -9,13 +9,13 @@
 - name: Container Environment Variables
   case: environment/test.py
 
-- name: Container With Bridge Network
+- name: Container with Bridge Network
   case: bridge/test.py
 
-- name: Container With Physical Interface
+- name: Container with Physical Interface
   case: phys/test.py
 
-- name: Container With VETH Pair
+- name: Container with VETH Pair
   case: veth/test.py
 
 - name: Container Volume Persistence

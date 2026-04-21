@@ -2,7 +2,7 @@
 - name: Basic Tunnel Connectivity Test
   suite: tunnel_basic/test.yaml
 
-- name: Tunnel Interface Bridged With Physical
+- name: Tunnel Interface Bridged with Physical
   suite: tunnel_bridged/test.yaml
 
 - name: Tunnel TTL verification

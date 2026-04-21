@@ -15,10 +15,10 @@
 - name: Bridge Basic
   case: bridge_basic/test.py
 
-- name: Dual Bridges On One Device
+- name: Dual Bridges on One Device
   case: dual_bridge/test.py
 
-- name: Bridge With A Physical Port And A Veth
+- name: Bridge with a Physical Port and a Veth
   case: bridge_veth/test.py
 
 - name: Bridge VLAN

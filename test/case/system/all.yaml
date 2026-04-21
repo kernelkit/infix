@@ -14,7 +14,7 @@
 - name: Set Timezone Using Timezone Name
   case: timezone/test.py
 
-- name: Set Timezone With UTC Offset
+- name: Set Timezone with UTC Offset
   case: timezone_utc_offset/test.py
 
 - name: Basic NTP Client Test

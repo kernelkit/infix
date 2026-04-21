@@ -8,7 +8,7 @@
 - name: OSPF Unnumbered Interfaces
   case: ospf_unnumbered_interface/test.py
 
-- name: OSPF With Multiple Areas
+- name: OSPF with Multiple Areas
   case: ospf_multiarea/test.py
 
 - name: OSPF BFD

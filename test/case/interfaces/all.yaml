@@ -2,16 +2,16 @@
 - name: VLAN Ping Connectivity
   case: vlan_ping/test.py
 
-- name: Interface With IPv4
+- name: Interface with IPv4
   case: ipv4_address/test.py
 
-- name: Interface IPv6 Autoconf For Bridges
+- name: Interface IPv6 Autoconf for Bridges
   case: ipv6_address/test.py
 
 - name: Interface Description (ifAlias)
   case: ifalias/test.py
 
-- name: Custom MAC Address On Interface
+- name: Custom MAC Address on Interface
   case: iface_phys_address/test.py
 
 - name: Routing Basic
@@ -23,7 +23,7 @@
 - name: Interface Speed Duplex (Copper)
   case: speed_duplex_copper/test.py
 
-- name: Verify That All Interface Types Can Be Created
+- name: Verify that All Interface Types Can Be Created
   case: verify_all_interface_types/test.py
 
 - name: Interface Status
@@ -32,7 +32,7 @@
 - name: VLAN Interface Termination
   case: vlan_iface_termination/test.py
 
-- name: Verify That VETH Pairs Can Be Deleted
+- name: Verify that VETH Pairs Can Be Deleted
   case: veth_delete/test.py
 
 - name: IPv4 link-local
