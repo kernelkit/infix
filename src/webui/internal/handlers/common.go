@@ -17,6 +17,7 @@ type PageData struct {
 	PageTitle    string
 	ActivePage   string
 	Capabilities *Capabilities
+	CfgUnsaved   bool // running config differs from startup (Apply was used without ApplyAndSave)
 }
 
 func csrfToken(ctx context.Context) string {
@@ -24,11 +25,13 @@ func csrfToken(ctx context.Context) string {
 }
 
 func newPageData(r *http.Request, page, title string) PageData {
+	_, cookieErr := r.Cookie(cfgUnsavedCookie)
 	return PageData{
 		Username:     restconf.CredentialsFromContext(r.Context()).Username,
 		CsrfToken:    csrfToken(r.Context()),
 		PageTitle:    title,
 		ActivePage:   page,
 		Capabilities: CapabilitiesFromContext(r.Context()),
+		CfgUnsaved:   cookieErr == nil,
 	}
 }

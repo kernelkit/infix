@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/kernelkit/webui/internal/restconf"
+	"github.com/kernelkit/webui/internal/schema"
 )
 
 // ─── RESTCONF JSON types (candidate datastore) ────────────────────────────────
@@ -70,6 +71,7 @@ type cfgDNSAddrJSON struct {
 
 type cfgSystemPageData struct {
 	PageData
+	Loading    bool   // true while YANG schema is still downloading
 	Error      string
 	Hostname   string
 	Contact    string
@@ -79,6 +81,11 @@ type cfgSystemPageData struct {
 	DNS        cfgDNSJSON
 	MotdBanner string // decoded from YANG binary
 	TextEditor string // e.g. "infix-system:emacs"
+
+	// Schema-enriched fields — only populated when Loading is false.
+	TextEditorOptions []schema.IdentityOption
+	TimezoneOptions   []string          // bare timezone names for select
+	Desc              map[string]string // leaf name → YANG description
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -87,6 +94,7 @@ type cfgSystemPageData struct {
 type ConfigureSystemHandler struct {
 	Template *template.Template
 	RC       restconf.Fetcher
+	Schema   *schema.Cache
 }
 
 const candidatePath = "/ds/ietf-datastores:candidate"
@@ -125,6 +133,32 @@ func (h *ConfigureSystemHandler) Overview(w http.ResponseWriter, r *http.Request
 		data.DNS = s.DNS
 		data.MotdBanner = string(s.MotdBanner)
 		data.TextEditor = s.TextEditor
+	}
+
+	mgr := h.Schema.Manager()
+	data.Loading = mgr == nil
+	if mgr != nil {
+		const sys = "/ietf-system:system"
+		data.TextEditorOptions = schema.OptionsFor(mgr, sys+"/infix-system:text-editor")
+		if data.TextEditor == "" {
+			for _, opt := range data.TextEditorOptions {
+				if opt.IsDefault {
+					data.TextEditor = opt.Value
+					break
+				}
+			}
+		}
+		data.Desc = map[string]string{
+			"hostname":    schema.DescriptionOf(mgr, sys+"/hostname"),
+			"contact":     schema.DescriptionOf(mgr, sys+"/contact"),
+			"location":    schema.DescriptionOf(mgr, sys+"/location"),
+			"timezone":    schema.DescriptionOf(mgr, sys+"/clock/timezone-name"),
+			"text-editor": schema.DescriptionOf(mgr, sys+"/infix-system:text-editor"),
+			"motd-banner": schema.DescriptionOf(mgr, sys+"/infix-system:motd-banner"),
+		}
+		for _, opt := range schema.OptionsFor(mgr, sys+"/clock/timezone-name") {
+			data.TimezoneOptions = append(data.TimezoneOptions, schema.StripModulePrefix(opt.Value))
+		}
 	}
 
 	tmplName := "configure-system.html"

@@ -14,29 +14,32 @@
     });
   }
 
+  // The banner reflects htmx request outcomes — both user interactions and
+  // the `hx-trigger="every 30s"` watchdog div in base.html.
+  //
+  // The watchdog request gets a 5 s timeout (via configRequest), bounding
+  // disconnect detection at ~30 s + 5 s. Without it the XHR would sit on the
+  // OS TCP timeout (1–2 min) before any error fires.
   function initDeviceStatusBanner() {
     var banner = document.getElementById('conn-banner');
-    if (!banner) {
-      return;
-    }
-    var down = false;
-    function check() {
-      fetch('/device-status').then(function (r) {
-        if (!r.ok) {
-          throw r;
-        }
-        if (down) {
-          down = false;
-          banner.hidden = true;
-        }
-      }).catch(function () {
-        if (!down) {
-          down = true;
-          banner.hidden = false;
-        }
-      });
-    }
-    setInterval(check, 10000);
+    if (!banner) return;
+    var show = function () { banner.hidden = false; };
+    var hide = function () { banner.hidden = true; };
+
+    document.addEventListener('htmx:configRequest', function (evt) {
+      if (evt.detail && evt.detail.path === '/device-status') {
+        evt.detail.timeout = 5000;
+      }
+    });
+    document.addEventListener('htmx:sendError', show);
+    document.addEventListener('htmx:timeout',   show);
+    document.addEventListener('htmx:responseError', function (evt) {
+      var s = evt.detail && evt.detail.xhr && evt.detail.xhr.status;
+      if (s === 502 || s === 503 || s === 504) show();
+    });
+    document.addEventListener('htmx:afterRequest', function (evt) {
+      if (evt.detail && evt.detail.successful) hide();
+    });
   }
 
   function initProgressBars(root) {
@@ -85,7 +88,257 @@
   function initDynamicUI(root) {
     initProgressBars(root);
     startRebootOverlay(root);
+    initDatetimePicker(root);
+    fwBootInit(root);
+    fwUploadInit(root);
+    initRestoreCheckbox(root);
+    initYangTree(root);
   }
+
+  function initYangTree(scope) {
+    var root = scope || document;
+    // Stop <details> from toggling when clicking interactive elements inside <summary>.
+    // Also stops row-click navigation when action buttons inside rows are clicked.
+    root.querySelectorAll('.yt-sp').forEach(function (el) {
+      if (el.dataset.init) return;
+      el.dataset.init = 'true';
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+    });
+    // Binary content show/hide eye button.
+    root.querySelectorAll('.yt-binary-eye').forEach(function (btn) {
+      if (btn.dataset.init) return;
+      btn.dataset.init = 'true';
+      btn.addEventListener('click', function () {
+        var wrap = btn.closest('.yt-binary-wrap');
+        if (wrap) wrap.classList.toggle('yt-revealed');
+      });
+    });
+  }
+
+  function fwUploadInit(scope) {
+    var btn = (scope || document).querySelector('#fw-upload-btn');
+    if (!btn || btn.dataset.init) return;
+    btn.dataset.init = 'true';
+    btn.addEventListener('click', window.fwUpload);
+  }
+
+  function initRestoreCheckbox(scope) {
+    var cb = (scope || document).querySelector('#restore-startup-cb');
+    if (!cb || cb.dataset.init) return;
+    cb.dataset.init = 'true';
+    cb.addEventListener('change', function () { window.scRestoreCheckbox(cb); });
+  }
+
+  // ─── Firmware: boot order drag-and-drop ──────────────────────────────────
+  function fwBootInit(scope) {
+    var slots = (scope || document).querySelector('#fw-boot-slots');
+    if (!slots || slots.dataset.dndInit) return;
+    slots.dataset.dndInit = 'true';
+
+    var dragging = null;
+    var insertRef = undefined; // node to insertBefore; undefined = not set, null = append
+
+    function clearIndicators() {
+      slots.querySelectorAll('.fw-boot-drop-before').forEach(function (el) {
+        el.classList.remove('fw-boot-drop-before');
+      });
+    }
+
+    slots.addEventListener('dragstart', function (e) {
+      dragging = e.target.closest('.fw-boot-badge');
+      if (!dragging) return;
+      dragging.classList.add('fw-boot-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    slots.addEventListener('dragend', function () {
+      if (dragging) dragging.classList.remove('fw-boot-dragging');
+      dragging = null;
+      insertRef = undefined;
+      clearIndicators();
+    });
+
+    slots.addEventListener('dragenter', function (e) { e.preventDefault(); });
+
+    slots.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (!dragging) return;
+      var target = e.target.closest('.fw-boot-badge');
+      clearIndicators();
+      if (!target || target === dragging) return;
+      var rect = target.getBoundingClientRect();
+      if (e.clientX < rect.left + rect.width / 2) {
+        insertRef = target;
+        target.classList.add('fw-boot-drop-before');
+      } else {
+        insertRef = target.nextElementSibling || null;
+        if (insertRef && insertRef.classList.contains('fw-boot-badge')) {
+          insertRef.classList.add('fw-boot-drop-before');
+        }
+      }
+    });
+
+    slots.addEventListener('drop', function (e) {
+      e.preventDefault();
+      if (!dragging || insertRef === undefined) return;
+      slots.insertBefore(dragging, insertRef); // insertRef===null appends to end
+      clearIndicators();
+      insertRef = undefined;
+    });
+
+    var saveBtn = document.getElementById('fw-boot-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', function () { window.fwBootSave(saveBtn); });
+  }
+
+  window.fwBootSave = function (btn) {
+    var badges = document.querySelectorAll('#fw-boot-slots .fw-boot-badge');
+    var params = new URLSearchParams();
+    badges.forEach(function (b) { params.append('boot-order', b.dataset.slot); });
+
+    function btnSet(text, disabled) {
+      if (!btn) return;
+      btn.textContent = text;
+      btn.disabled = disabled;
+    }
+
+    btnSet('Setting\u2026', true);
+
+    fetch('/firmware/boot-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRF-Token': getCSRFToken(),
+      },
+      body: params.toString(),
+    }).then(function (r) {
+      if (r.ok) {
+        btnSet('\u2713 Set', true);
+        setTimeout(function () { btnSet('Set', false); }, 2000);
+        return;
+      }
+      return r.text().then(function (t) {
+        btnSet('\u2717 ' + (t.replace(/<[^>]*>/g, '').trim() || 'Failed'), false);
+        setTimeout(function () { btnSet('Set', false); }, 4000);
+      });
+    }).catch(function () {
+      btnSet('\u2717 Failed', false);
+      setTimeout(function () { btnSet('Set', false); }, 4000);
+    });
+  };
+
+  // ─── System Control: datetime picker ─────────────────────────────────────
+  // Pre-fills #sc-dt-input with the browser's current UTC time on page load
+  // and after HTMX swaps.  Also exposed as window.scSyncTime() for the
+  // "Browser time" button.
+  function utcDatetimeLocal() {
+    var d = new Date();
+    return d.getUTCFullYear() + '-' +
+      String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getUTCDate()).padStart(2, '0') + 'T' +
+      String(d.getUTCHours()).padStart(2, '0') + ':' +
+      String(d.getUTCMinutes()).padStart(2, '0');
+  }
+
+  function initDatetimePicker(root) {
+    var el = (root || document).querySelector('#sc-dt-input:not([data-init])');
+    if (!el) return;
+    el.dataset.init = 'true';
+    el.value = utcDatetimeLocal();
+    var btn = (root || document).querySelector('#sc-sync-time-btn');
+    if (btn) btn.addEventListener('click', function () { el.value = utcDatetimeLocal(); });
+  }
+
+  window.scRestoreCheckbox = function (cb) {
+    var form = document.getElementById('restore-form');
+    if (!form) return;
+    form.setAttribute('hx-confirm', cb.checked
+      ? 'Save configuration to startup? Reboot required to apply.'
+      : 'Apply this configuration to the running system?');
+  };
+
+  // Locate or inject the shared #fw-progress-card. Server-rendered when the
+  // page loads with ?installing=1; injected here when the upload flow starts
+  // from /firmware. The same DOM element later receives SSE-driven swaps.
+  function ensureProgressCard(headerText, message) {
+    var card = document.getElementById('fw-progress-card');
+    if (!card) {
+      card = document.createElement('section');
+      card.id = 'fw-progress-card';
+      card.className = 'info-card';
+      var grid = document.querySelector('.fw-install-grid');
+      var parent = grid && grid.parentNode;
+      if (parent) parent.insertBefore(card, grid);
+      else (document.getElementById('content') || document.body).appendChild(card);
+    }
+    card.innerHTML =
+      '<div class="card-header">' + headerText + '</div>' +
+      '<div class="card-body">' +
+      '  <div class="progress-bar-wrap progress-bar-wrap--flush">' +
+      '    <div class="progress-bar" style="width:0%"></div>' +
+      '  </div>' +
+      '  <p class="progress-text">' + message + '</p>' +
+      '</div>';
+    // Force re-init of the SSE stream if one was previously attached.
+    delete card.dataset.sseInit;
+    return card;
+  }
+
+  window.fwUpload = function () {
+    var fileInput = document.getElementById('fw-file');
+    if (!fileInput || !fileInput.files.length) return;
+    if (!confirm('Upload and install this firmware? The current installation may be overwritten.')) return;
+
+    var file       = fileInput.files[0];
+    var autoReboot = !!document.querySelector('#fw-upload-auto-reboot:checked');
+    var btn        = document.getElementById('fw-upload-btn');
+
+    var sseURL = new URL((btn && btn.getAttribute('data-sse-url')) || '/firmware/progress', window.location.origin);
+    if (autoReboot) sseURL.searchParams.set('auto-reboot', '1');
+
+    var formData = new FormData();
+    formData.append('pkg', file);
+    if (autoReboot) formData.append('auto-reboot', '1');
+
+    if (btn) btn.disabled = true;
+    var card = ensureProgressCard('Uploading Firmware', 'Uploading firmware image… 0%');
+    var bar  = card.querySelector('.progress-bar');
+    var text = card.querySelector('.progress-text');
+
+    var xhr = new XMLHttpRequest();
+
+    xhr.upload.onprogress = function (e) {
+      if (!e.lengthComputable) return;
+      var pct = Math.round(e.loaded / e.total * 100);
+      bar.style.width = pct + '%';
+      text.textContent = 'Uploading firmware image\u2026 ' + pct + '%';
+    };
+
+    xhr.onload = function () {
+      if (xhr.status !== 200) {
+        text.textContent = 'Upload failed: ' + (xhr.responseText.replace(/<[^>]*>/g, '').trim() || 'unknown error');
+        if (btn) btn.disabled = false;
+        return;
+      }
+      // pushState lets a mid-install reload resume the progress card.
+      var target = xhr.responseText.trim() || '/firmware?installing=1';
+      if (window.history && window.history.pushState) {
+        window.history.pushState({}, '', target);
+      }
+      text.textContent = 'Starting installation\u2026';
+      card.setAttribute('data-sse-src', sseURL.pathname + sseURL.search);
+      initFirmwareProgress(document);
+    };
+
+    xhr.onerror = function () {
+      text.textContent = 'Upload failed \u2014 network error.';
+      if (btn) btn.disabled = false;
+    };
+
+    xhr.open('POST', '/firmware/upload');
+    xhr.setRequestHeader('X-CSRF-Token', getCSRFToken());
+    xhr.send(formData);
+  };
 
   // SSE-driven firmware progress card.
   // The Go server polls RESTCONF and streams rendered HTML fragments; we just
@@ -108,18 +361,27 @@
       if (window.htmx) htmx.process(card);
     }
 
+    function endStream() {
+      fwEventSource.close();
+      fwEventSource = null;
+      // Drop the stream URL and re-arm the upload button so a follow-up
+      // install can run on the same page without a reload.
+      card.removeAttribute('data-sse-src');
+      delete card.dataset.sseInit;
+      var btn = document.getElementById('fw-upload-btn');
+      if (btn) btn.disabled = false;
+    }
+
     fwEventSource.addEventListener('progress', function(e) { swap(e.data); });
 
     fwEventSource.addEventListener('done', function(e) {
       swap(e.data);
-      fwEventSource.close();
-      fwEventSource = null;
+      endStream();
     });
 
     fwEventSource.addEventListener('reboot', function(e) {
       swap(e.data);
-      fwEventSource.close();
-      fwEventSource = null;
+      endStream();
       // Auto-reboot: POST /reboot and show the reboot overlay.
       fetch('/reboot', { method: 'POST', headers: { 'X-CSRF-Token': getCSRFToken() } })
         .then(function(r) { return r.text(); })
@@ -132,10 +394,7 @@
         });
     });
 
-    fwEventSource.onerror = function() {
-      fwEventSource.close();
-      fwEventSource = null;
-    };
+    fwEventSource.onerror = endStream;
   }
 
   document.addEventListener('DOMContentLoaded', function() {
@@ -143,19 +402,24 @@
     initDeviceStatusBanner();
     initDynamicUI(document);
     initFirmwareProgress(document);
-  });
 
-  if (window.htmx && document.body) {
-    document.body.addEventListener('htmx:afterSwap', function (evt) {
-      // Close any open SSE stream if the firmware progress card is no longer present.
-      if (fwEventSource && !document.getElementById('fw-progress-card')) {
-        fwEventSource.close();
-        fwEventSource = null;
-      }
-      initDynamicUI(evt.target);
-      initFirmwareProgress(evt.target);
-    });
-  }
+    // Attach the htmx swap listener here, not at IIFE parse time — at parse
+    // time the script runs inside <head> before <body> exists, so the
+    // document.body guard would silently skip the listener and subsequent
+    // navigations wouldn't re-init dynamic UI.
+    if (window.htmx) {
+      document.body.addEventListener('htmx:afterSwap', function (evt) {
+        // Close any open SSE stream if the firmware progress card is no longer present.
+        if (fwEventSource && !document.getElementById('fw-progress-card')) {
+          fwEventSource.close();
+          fwEventSource = null;
+        }
+        var scope = (evt.detail && evt.detail.target) || document;
+        initDynamicUI(scope);
+        initFirmwareProgress(scope);
+      });
+    }
+  });
 })();
 
 // Active nav link — keep in sync with the current URL after htmx navigation.
@@ -205,46 +469,67 @@
 
 // Top progress bar during htmx navigations
 (function() {
-  var bar, timer;
+  var bar, showTimer, hideTimer, inFlight = 0, visible = false;
 
   function getBar() {
     if (!bar) bar = document.getElementById('page-progress');
     return bar;
   }
 
-  function start() {
+  function show() {
+    visible = true;
     var b = getBar();
     if (!b) return;
-    if (timer) { clearTimeout(timer); timer = null; }
+    clearTimeout(hideTimer); hideTimer = null;
     b.style.transition = 'none';
     b.style.width = '0%';
     b.style.opacity = '1';
-    b.offsetWidth; // force reflow so the transition below fires from 0
-    b.style.transition = 'width 8s cubic-bezier(0.05, 0.8, 0.4, 1)';
+    b.offsetWidth; // force reflow
+    b.style.transition = 'width 6s cubic-bezier(0.05, 0.8, 0.4, 1)';
     b.style.width = '85%';
   }
 
-  function finish() {
+  function hide() {
+    visible = false;
     var b = getBar();
     if (!b) return;
-    if (timer) clearTimeout(timer);
-    b.style.transition = 'width 0.1s ease';
+    clearTimeout(hideTimer);
+    b.style.transition = 'width 0.15s ease';
     b.style.width = '100%';
-    timer = setTimeout(function() {
+    hideTimer = setTimeout(function() {
       b.style.transition = 'opacity 0.25s ease';
       b.style.opacity = '0';
-      timer = setTimeout(function() {
+      hideTimer = setTimeout(function() {
         b.style.transition = 'none';
         b.style.width = '0%';
-        timer = null;
-      }, 260);
+        hideTimer = null;
+      }, 270);
     }, 120);
   }
 
-  document.addEventListener('htmx:beforeSend',     start);
-  document.addEventListener('htmx:afterSettle',    finish);
-  document.addEventListener('htmx:responseError',  finish);
-  document.addEventListener('htmx:sendError',      finish);
+  function start() {
+    inFlight++;
+    if (inFlight === 1 && !showTimer) {
+      // Only show after 150 ms — fast requests (saves, etc.) won't trigger it.
+      showTimer = setTimeout(function() {
+        showTimer = null;
+        if (inFlight > 0) show();
+      }, 150);
+    }
+  }
+
+  function finish() {
+    inFlight = Math.max(0, inFlight - 1);
+    if (inFlight > 0) return; // other requests still in flight
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; return; }
+    if (visible) hide();
+  }
+
+  document.addEventListener('htmx:beforeSend',    start);
+  // afterRequest fires for all types including hx-swap="none"; afterSettle does not.
+  document.addEventListener('htmx:afterRequest',  finish);
+  document.addEventListener('htmx:responseError', finish);
+  document.addEventListener('htmx:sendError',     finish);
 })();
 
 // Theme (auto / light / dark) — shared by main app and login page
@@ -631,6 +916,65 @@ function openModal(message, onConfirm) {
   });
 })();
 
+// ─── YANG tree: browser back/forward navigation for detail pane ─────────────
+(function() {
+  var pendingPath = null;
+  var observedEl = null;
+  var observer = null;
+
+  // Track which node path the user intends to navigate to.
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-yang-path]');
+    if (el) pendingPath = el.getAttribute('data-yang-path');
+  });
+
+  // MutationObserver on #yang-detail: when its direct children change, a new
+  // node was loaded.  Push a history entry only when a navigation click caused it.
+  function onDetailMutated() {
+    if (!pendingPath) return;
+    var path = pendingPath;
+    pendingPath = null;
+    history.pushState({ yangDetailPath: path }, '',
+      window.location.pathname + '?node=' + encodeURIComponent(path));
+  }
+
+  function attachObserver() {
+    var detail = document.getElementById('yang-detail');
+    if (!detail || detail === observedEl) return;
+    if (observer) observer.disconnect();
+    observedEl = detail;
+    observer = new MutationObserver(onDetailMutated);
+    observer.observe(detail, { childList: true });
+  }
+
+  window.addEventListener('popstate', function(e) {
+    var detail = document.getElementById('yang-detail');
+    if (!detail) return;
+    if (e.state && e.state.yangDetailPath) {
+      if (window.htmx) {
+        htmx.ajax('GET', '/configure/tree/node?path=' + encodeURIComponent(e.state.yangDetailPath),
+          { target: '#yang-detail', swap: 'innerHTML' });
+      }
+    } else {
+      detail.innerHTML = '';
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    attachObserver();
+    var detail = document.getElementById('yang-detail');
+    if (!detail || !window.htmx) return;
+    var node = new URLSearchParams(window.location.search).get('node');
+    if (node) {
+      htmx.ajax('GET', '/configure/tree/node?path=' + encodeURIComponent(node),
+        { target: '#yang-detail', swap: 'innerHTML' });
+    }
+  });
+
+  // Re-attach after HTMX page navigation recreates #content (and #yang-detail).
+  document.addEventListener('htmx:afterSwap', attachObserver);
+})();
+
 // ─── Configure: dynamic list row add/delete ────────────────────────────────
 // Handles .btn-add-row (data-table, data-template) and .cfg-delete-row buttons.
 // Templates are keyed by data-template attribute value.
@@ -704,19 +1048,184 @@ function openModal(message, onConfirm) {
   });
 })();
 
+// ─── YANG tree accordion ───────────────────────────────────────────────────
+// When any node opens, collapse its siblings at the same level so only one
+// subtree is expanded at a time.  Works at every depth (top-level modules,
+// list instances, nested containers).  toggle doesn't bubble — use capture.
+(function() {
+  document.addEventListener('toggle', function(e) {
+    var node = e.target;
+    if (!node.classList || !node.classList.contains('yt-node') || !node.open) return;
+    var li = node.parentElement;
+    var ul = li && li.parentElement;
+    if (!ul) return;
+    ul.querySelectorAll(':scope > li > details.yt-node').forEach(function(d) {
+      if (d !== node && d.open) d.removeAttribute('open');
+    });
+  }, true);
+})();
+
+// ─── ⓘ field-info tooltip (position:fixed to escape overflow clipping) ───────
+(function() {
+  var tip = null;
+
+  function getTip() {
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'field-tip';
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+
+  document.addEventListener('mouseover', function(e) {
+    var el = e.target.closest('.field-info[data-tip]');
+    if (!el) return;
+    var t = getTip();
+    t.textContent = el.getAttribute('data-tip');
+    t.style.display = 'block';
+    var r = el.getBoundingClientRect();
+    // Position above the icon, centred; clamp to viewport edges.
+    var left = r.left + r.width / 2 - t.offsetWidth / 2;
+    var top  = r.top - t.offsetHeight - 6;
+    if (left < 8) left = 8;
+    if (left + t.offsetWidth > window.innerWidth - 8) left = window.innerWidth - t.offsetWidth - 8;
+    if (top < 8) top = r.bottom + 6; // flip below if no room above
+    t.style.left = left + 'px';
+    t.style.top  = top  + 'px';
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    var el = e.target.closest('.field-info[data-tip]');
+    if (!el) return;
+    var t = getTip();
+    t.style.display = 'none';
+  });
+})();
+
+// ─── Configure interaction log ─────────────────────────────────────────────
+// Persists save/error events in sessionStorage so they survive page reloads
+// (Apply/Abort both do HX-Refresh).  Cleared on logout.
+var cfgLogEntries = (function() {
+  try { return JSON.parse(sessionStorage.getItem('cfgLog') || '[]'); } catch(e) { return []; }
+})();
+
+function cfgIsoNow() {
+  var d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0') + ' ' +
+    String(d.getHours()).padStart(2, '0') + ':' +
+    String(d.getMinutes()).padStart(2, '0') + ':' +
+    String(d.getSeconds()).padStart(2, '0');
+}
+
+function cfgLog(level, msg) {
+  cfgLogEntries.push({ level: level, msg: msg, ts: cfgIsoNow() });
+  if (cfgLogEntries.length > 200) cfgLogEntries.shift();
+  try { sessionStorage.setItem('cfgLog', JSON.stringify(cfgLogEntries)); } catch(e) {}
+  var badge = document.getElementById('cfg-log-badge');
+  if (badge && level === 'error') {
+    badge.hidden = false;
+    badge.textContent = cfgLogEntries.filter(function(e) { return e.level === 'error'; }).length;
+  }
+}
+
+// Restore error badge count after a page reload (entries came from sessionStorage).
+document.addEventListener('DOMContentLoaded', function() {
+  var errCount = cfgLogEntries.filter(function(e) { return e.level === 'error'; }).length;
+  if (errCount > 0) {
+    var badge = document.getElementById('cfg-log-badge');
+    if (badge) { badge.hidden = false; badge.textContent = errCount; }
+  }
+  // Clear log on logout so the next session starts fresh.
+  document.addEventListener('submit', function(e) {
+    if (e.target.closest('form[action="/logout"]')) {
+      try { sessionStorage.removeItem('cfgLog'); } catch(e2) {}
+    }
+  });
+});
+
+function renderCfgLog() {
+  var panel = document.getElementById('cfg-log-panel');
+  if (!panel) return;
+  if (cfgLogEntries.length === 0) {
+    panel.querySelector('.cfg-log-list').innerHTML = '<li class="cfg-log-empty">No activity yet.</li>';
+    return;
+  }
+  var html = cfgLogEntries.slice().reverse().map(function(e) {
+    return '<li class="cfg-log-entry cfg-log-' + e.level + '">' +
+           '<span class="cfg-log-ts">' + e.ts + '</span> ' +
+           '<span class="cfg-log-msg">' + e.msg.replace(/</g, '&lt;') + '</span></li>';
+  }).join('');
+  panel.querySelector('.cfg-log-list').innerHTML = html;
+}
+
 // ─── Configure toolbar ─────────────────────────────────────────────────────
-// Intercept HTMX's confirm event for Apply/Abort buttons and show the custom
-// modal instead of the browser native confirm.  The server responds with
-// HX-Redirect: / so HTMX performs a full-page navigation (window.location.href),
-// which re-renders the sidebar and clears the Configure accordion.
+// Intercept HTMX's confirm event for toolbar buttons and show the custom modal.
+// Apply / Apply & Save / Abort / Save-to-startup all respond with HX-Refresh.
 (function () {
+  var toolbarLabels = {
+    'cfg-apply-btn':        'Applied staged changes to running config',
+    'cfg-apply-save-btn':   'Applied and saved to startup config',
+    'cfg-abort-btn':        'Aborted: candidate reset to running config',
+    'cfg-unsaved-save-btn': 'Saved running config to startup',
+  };
   document.addEventListener('htmx:confirm', function(e) {
     var btn = e.detail.elt;
-    if (!btn || (!btn.classList.contains('cfg-apply-btn') && !btn.classList.contains('cfg-abort-btn'))) return;
+    if (!btn) return;
+    var label = null;
+    for (var cls in toolbarLabels) {
+      if (btn.classList.contains(cls)) { label = toolbarLabels[cls]; break; }
+    }
+    if (!label) return;
     e.preventDefault();
     openModal(e.detail.question, function() {
+      cfgLog('ok', label);
       e.detail.issueRequest(true);
     });
+  });
+
+  // Log panel toggle / close.
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.cfg-log-close')) {
+      var panel = document.getElementById('cfg-log-panel');
+      if (panel) panel.hidden = true;
+      return;
+    }
+    var btn = e.target.closest('#cfg-log-btn');
+    if (!btn) return;
+    var panel = document.getElementById('cfg-log-panel');
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) {
+      renderCfgLog();
+      var badge = document.getElementById('cfg-log-badge');
+      if (badge) badge.hidden = true;
+    }
+  });
+
+  // cfgError: show error message in the .cfg-save-status span of the submitting form.
+  document.addEventListener('cfgError', function(e) {
+    var msg = e.detail && e.detail.value ? e.detail.value : 'Save failed';
+    var form = e.target && e.target.closest('form');
+    var span = form ? form.querySelector('.cfg-save-status') : null;
+    if (span) {
+      span.textContent = '✗ ' + msg;
+      span.classList.add('error');
+      cfgLog('error', msg);
+      // Keep error visible until dismissed (click) or 30 s timeout.
+      var tid = setTimeout(function() {
+        span.textContent = '';
+        span.classList.remove('error');
+      }, 30000);
+      span.addEventListener('click', function once() {
+        clearTimeout(tid);
+        span.textContent = '';
+        span.classList.remove('error');
+        span.removeEventListener('click', once);
+      });
+    }
   });
 
   // Show "Saved ✓" feedback when a card Save succeeds.
@@ -757,6 +1266,7 @@ function openModal(message, onConfirm) {
 
   document.addEventListener('cfgSaved', function(e) {
     var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';
+    cfgLog('ok', msg);
     // Find the status span closest to the form that triggered the event.
     var form = e.target && e.target.closest('form');
     var span = form ? form.querySelector('.cfg-save-status') : null;

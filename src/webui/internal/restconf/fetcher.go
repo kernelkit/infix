@@ -12,6 +12,9 @@ import (
 type Fetcher interface {
 	Get(ctx context.Context, path string, target any) error
 	GetRaw(ctx context.Context, path string) ([]byte, error)
+	// GetYANG downloads a YANG module file from /yang/{name}@{revision}.yang
+	// on the device host (outside the /restconf tree).
+	GetYANG(ctx context.Context, name, revision string) ([]byte, error)
 	Post(ctx context.Context, path string) error
 	PostJSON(ctx context.Context, path string, body any) error
 

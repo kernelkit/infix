@@ -187,6 +187,40 @@ func (c *Client) writeJSON(ctx context.Context, method, path string, body any) e
 	return nil
 }
 
+// GetYANG downloads a YANG module file. YANG files are served outside the
+// RESTCONF tree at /yang/{name}@{revision}.yang on the device host — mirroring
+// the approach used by the Infamy test framework (yang_url = base_url + "/yang").
+func (c *Client) GetYANG(ctx context.Context, name, revision string) ([]byte, error) {
+	// Strip the /restconf suffix to get the host-level base URL.
+	yangBase := c.baseURL
+	if i := strings.LastIndex(yangBase, "/restconf"); i >= 0 {
+		yangBase = yangBase[:i]
+	}
+
+	path := "/yang/" + name
+	if revision != "" {
+		path += "@" + revision
+	}
+	path += ".yang"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, yangBase+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	creds := CredentialsFromContext(ctx)
+	req.SetBasicAuth(creds.Username, creds.Password)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("restconf request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, parseError(resp)
+	}
+	return io.ReadAll(resp.Body)
+}
+
 // GetRaw fetches a RESTCONF resource and returns the raw JSON bytes.
 func (c *Client) GetRaw(ctx context.Context, path string) ([]byte, error) {
 	resp, err := c.doRequest(ctx, http.MethodGet, path)

@@ -3,6 +3,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"html/template"
 	"log"
@@ -20,6 +21,11 @@ type LoginHandler struct {
 	Store    *SessionStore
 	RC       *restconf.Client
 	Template *template.Template
+	// OnLogin is called after every successful login with a context that
+	// carries the authenticated user's credentials.  It is invoked in the
+	// foreground, so implementations should start their own goroutines for
+	// slow work.  May be nil.
+	OnLogin func(ctx context.Context)
 }
 
 type loginData struct {
@@ -60,12 +66,19 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Probe optional features once at login and bake into the session.
+	// Build an authenticated context for post-login work.
 	ctx := restconf.ContextWithCredentials(r.Context(), restconf.Credentials{
 		Username: username,
 		Password: password,
 	})
+
+	// Probe optional features once at login and bake into the session.
 	caps := handlers.DetectCapabilities(ctx, h.RC)
+
+	// Trigger any post-login hooks (e.g. schema sync) with full credentials.
+	if h.OnLogin != nil {
+		h.OnLogin(ctx)
+	}
 
 	token, csrfToken, err := h.Store.Create(username, password, caps.Features())
 	if err != nil {
