@@ -70,6 +70,24 @@
   <div class="layout">
     {{template "sidebar" .}}
     <div class="main-column">
+      {{if .CfgUnsaved}}
+      <div id="cfg-unsaved-banner" class="cfg-unsaved-banner">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        Running config has unsaved changes — will be lost on reboot.
+        <button type="button" class="btn btn-sm btn-primary cfg-unsaved-save-btn"
+                title="Copy running config to startup config so changes survive a reboot."
+                hx-post="/configure/save"
+                hx-swap="none"
+                hx-confirm="Save running configuration to startup?">
+          Save to startup
+        </button>
+      </div>
+      {{end}}
       <main id="content">
         {{block "content" .}}{{end}}
       </main>

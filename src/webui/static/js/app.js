@@ -205,46 +205,67 @@
 
 // Top progress bar during htmx navigations
 (function() {
-  var bar, timer;
+  var bar, showTimer, hideTimer, inFlight = 0, visible = false;
 
   function getBar() {
     if (!bar) bar = document.getElementById('page-progress');
     return bar;
   }
 
-  function start() {
+  function show() {
+    visible = true;
     var b = getBar();
     if (!b) return;
-    if (timer) { clearTimeout(timer); timer = null; }
+    clearTimeout(hideTimer); hideTimer = null;
     b.style.transition = 'none';
     b.style.width = '0%';
     b.style.opacity = '1';
-    b.offsetWidth; // force reflow so the transition below fires from 0
-    b.style.transition = 'width 8s cubic-bezier(0.05, 0.8, 0.4, 1)';
+    b.offsetWidth; // force reflow
+    b.style.transition = 'width 6s cubic-bezier(0.05, 0.8, 0.4, 1)';
     b.style.width = '85%';
   }
 
-  function finish() {
+  function hide() {
+    visible = false;
     var b = getBar();
     if (!b) return;
-    if (timer) clearTimeout(timer);
-    b.style.transition = 'width 0.1s ease';
+    clearTimeout(hideTimer);
+    b.style.transition = 'width 0.15s ease';
     b.style.width = '100%';
-    timer = setTimeout(function() {
+    hideTimer = setTimeout(function() {
       b.style.transition = 'opacity 0.25s ease';
       b.style.opacity = '0';
-      timer = setTimeout(function() {
+      hideTimer = setTimeout(function() {
         b.style.transition = 'none';
         b.style.width = '0%';
-        timer = null;
-      }, 260);
+        hideTimer = null;
+      }, 270);
     }, 120);
   }
 
-  document.addEventListener('htmx:beforeSend',     start);
-  document.addEventListener('htmx:afterSettle',    finish);
-  document.addEventListener('htmx:responseError',  finish);
-  document.addEventListener('htmx:sendError',      finish);
+  function start() {
+    inFlight++;
+    if (inFlight === 1 && !showTimer) {
+      // Only show after 150 ms — fast requests (saves, etc.) won't trigger it.
+      showTimer = setTimeout(function() {
+        showTimer = null;
+        if (inFlight > 0) show();
+      }, 150);
+    }
+  }
+
+  function finish() {
+    inFlight = Math.max(0, inFlight - 1);
+    if (inFlight > 0) return; // other requests still in flight
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; return; }
+    if (visible) hide();
+  }
+
+  document.addEventListener('htmx:beforeSend',    start);
+  // afterRequest fires for all types including hx-swap="none"; afterSettle does not.
+  document.addEventListener('htmx:afterRequest',  finish);
+  document.addEventListener('htmx:responseError', finish);
+  document.addEventListener('htmx:sendError',     finish);
 })();
 
 // Theme (auto / light / dark) — shared by main app and login page
@@ -816,19 +837,129 @@ function openModal(message, onConfirm) {
   });
 })();
 
+// ─── Configure interaction log ─────────────────────────────────────────────
+// Persists save/error events in sessionStorage so they survive page reloads
+// (Apply/Abort both do HX-Refresh).  Cleared on logout.
+var cfgLogEntries = (function() {
+  try { return JSON.parse(sessionStorage.getItem('cfgLog') || '[]'); } catch(e) { return []; }
+})();
+
+function cfgIsoNow() {
+  var d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0') + ' ' +
+    String(d.getHours()).padStart(2, '0') + ':' +
+    String(d.getMinutes()).padStart(2, '0') + ':' +
+    String(d.getSeconds()).padStart(2, '0');
+}
+
+function cfgLog(level, msg) {
+  cfgLogEntries.push({ level: level, msg: msg, ts: cfgIsoNow() });
+  if (cfgLogEntries.length > 200) cfgLogEntries.shift();
+  try { sessionStorage.setItem('cfgLog', JSON.stringify(cfgLogEntries)); } catch(e) {}
+  var badge = document.getElementById('cfg-log-badge');
+  if (badge && level === 'error') {
+    badge.hidden = false;
+    badge.textContent = cfgLogEntries.filter(function(e) { return e.level === 'error'; }).length;
+  }
+}
+
+// Restore error badge count after a page reload (entries came from sessionStorage).
+document.addEventListener('DOMContentLoaded', function() {
+  var errCount = cfgLogEntries.filter(function(e) { return e.level === 'error'; }).length;
+  if (errCount > 0) {
+    var badge = document.getElementById('cfg-log-badge');
+    if (badge) { badge.hidden = false; badge.textContent = errCount; }
+  }
+  // Clear log on logout so the next session starts fresh.
+  document.addEventListener('submit', function(e) {
+    if (e.target.closest('form[action="/logout"]')) {
+      try { sessionStorage.removeItem('cfgLog'); } catch(e2) {}
+    }
+  });
+});
+
+function renderCfgLog() {
+  var panel = document.getElementById('cfg-log-panel');
+  if (!panel) return;
+  if (cfgLogEntries.length === 0) {
+    panel.querySelector('.cfg-log-list').innerHTML = '<li class="cfg-log-empty">No activity yet.</li>';
+    return;
+  }
+  var html = cfgLogEntries.slice().reverse().map(function(e) {
+    return '<li class="cfg-log-entry cfg-log-' + e.level + '">' +
+           '<span class="cfg-log-ts">' + e.ts + '</span> ' +
+           '<span class="cfg-log-msg">' + e.msg.replace(/</g, '&lt;') + '</span></li>';
+  }).join('');
+  panel.querySelector('.cfg-log-list').innerHTML = html;
+}
+
 // ─── Configure toolbar ─────────────────────────────────────────────────────
-// Intercept HTMX's confirm event for Apply/Abort buttons and show the custom
-// modal instead of the browser native confirm.  The server responds with
-// HX-Redirect: / so HTMX performs a full-page navigation (window.location.href),
-// which re-renders the sidebar and clears the Configure accordion.
+// Intercept HTMX's confirm event for toolbar buttons and show the custom modal.
+// Apply / Apply & Save / Abort / Save-to-startup all respond with HX-Refresh.
 (function () {
+  var toolbarLabels = {
+    'cfg-apply-btn':        'Applied staged changes to running config',
+    'cfg-apply-save-btn':   'Applied and saved to startup config',
+    'cfg-abort-btn':        'Aborted: candidate reset to running config',
+    'cfg-unsaved-save-btn': 'Saved running config to startup',
+  };
   document.addEventListener('htmx:confirm', function(e) {
     var btn = e.detail.elt;
-    if (!btn || (!btn.classList.contains('cfg-apply-btn') && !btn.classList.contains('cfg-abort-btn'))) return;
+    if (!btn) return;
+    var label = null;
+    for (var cls in toolbarLabels) {
+      if (btn.classList.contains(cls)) { label = toolbarLabels[cls]; break; }
+    }
+    if (!label) return;
     e.preventDefault();
     openModal(e.detail.question, function() {
+      cfgLog('ok', label);
       e.detail.issueRequest(true);
     });
+  });
+
+  // Log panel toggle / close.
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.cfg-log-close')) {
+      var panel = document.getElementById('cfg-log-panel');
+      if (panel) panel.hidden = true;
+      return;
+    }
+    var btn = e.target.closest('#cfg-log-btn');
+    if (!btn) return;
+    var panel = document.getElementById('cfg-log-panel');
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) {
+      renderCfgLog();
+      var badge = document.getElementById('cfg-log-badge');
+      if (badge) badge.hidden = true;
+    }
+  });
+
+  // cfgError: show error message in the .cfg-save-status span of the submitting form.
+  document.addEventListener('cfgError', function(e) {
+    var msg = e.detail && e.detail.value ? e.detail.value : 'Save failed';
+    var form = e.target && e.target.closest('form');
+    var span = form ? form.querySelector('.cfg-save-status') : null;
+    if (span) {
+      span.textContent = '✗ ' + msg;
+      span.classList.add('error');
+      cfgLog('error', msg);
+      // Keep error visible until dismissed (click) or 30 s timeout.
+      var tid = setTimeout(function() {
+        span.textContent = '';
+        span.classList.remove('error');
+      }, 30000);
+      span.addEventListener('click', function once() {
+        clearTimeout(tid);
+        span.textContent = '';
+        span.classList.remove('error');
+        span.removeEventListener('click', once);
+      });
+    }
   });
 
   // Show "Saved ✓" feedback when a card Save succeeds.
@@ -869,6 +1000,7 @@ function openModal(message, onConfirm) {
 
   document.addEventListener('cfgSaved', function(e) {
     var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';
+    cfgLog('ok', msg);
     // Find the status span closest to the form that triggered the event.
     var form = e.target && e.target.closest('form');
     var span = form ? form.querySelector('.cfg-save-status') : null;

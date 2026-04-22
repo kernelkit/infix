@@ -24,14 +24,28 @@ top-bar.
 Review all the icons.  DHCP, Keystore, Interfaces, and Routing look weird.
 Tobias says the macOS network/interface icon could be a good fit.
 
-### Refactor Apply/Apply & Save/Abort
+### Refactor Save/Save all/Apply/Apply & Save/Abort
 
-Refactor apply/abort to fit with CLI scheme.  A user building up new config
-should be able to see the diff before applying/aborting.
+It's a bit of a mess currently on auto-generated pages that collapse any
+sub-containers or lists, they show multiple Save and Save all buttons.
 
-After apply a "status bar", or similar, should show that the current settings
-have not yet been saved. This should also show if a CLI user makes an unsaved
-change.
+That in combination with the Apply, Apply & Save, and Abort buttons at the
+bottom of the screen.  One user told me; "What do they do, what if I do
+something wrong?"
+
+So we had a discussion in the team and we all agreed we want to mimic the
+semantics of the CLI.  A user building up new candidate config should be able
+to see the diff between running and candidate before applying (CLI `leave`) or
+aborting (CLI `abort`).  When applied, regardless of context, the WebUI should
+display a permanent "status" of sorts, reminding the user they've got unsaved
+activated changes.  From that status the user should be able to, again, view
+the diff (this time running vs startup) and/or save to startup-config.  This
+status should also show if a CLI user makes a change in the background to the
+running-config.
+
+We have very different opinions on how this should be implemented, so we are
+very open to design ideas and discussions around this topic before we go ahead
+and make a change.
 
 ### Ideas for auto-generated pages
 

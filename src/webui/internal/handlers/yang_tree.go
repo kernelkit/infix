@@ -754,7 +754,9 @@ func (h *TreeHandler) fetchNodeValues(r *http.Request, path string) map[string]s
 }
 
 // SaveGroup serves PUT /configure/tree/group?path=...
-// Saves every leaf in the group form to the candidate datastore and re-renders.
+// Saves every leaf in the group form to the candidate datastore.
+// Returns HX-Trigger cfgSaved/cfgError so the form shows inline feedback
+// without a full re-render (forms use hx-swap="none").
 func (h *TreeHandler) SaveGroup(w http.ResponseWriter, r *http.Request) {
 	mgr := h.Cache.Manager()
 	if mgr == nil {
@@ -767,7 +769,6 @@ func (h *TreeHandler) SaveGroup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "path required", http.StatusBadRequest)
 		return
 	}
-	parent := r.URL.Query().Get("parent")
 
 	node, err := mgr.NodeAt(path)
 	if err != nil {
@@ -778,7 +779,6 @@ func (h *TreeHandler) SaveGroup(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	children, _ := mgr.Children(path)
-	gd := &leafGroupData{Path: path, Name: node.Name}
 	var firstErr string
 
 	for _, child := range children {
@@ -786,8 +786,6 @@ func (h *TreeHandler) SaveGroup(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		rawValue := r.FormValue(child.Name)
-		item := &leafGroupItem{Node: child, CurrentValue: rawValue}
-
 		qualName, qErr := mgr.ModuleQualifiedName(child.Path)
 		if qErr != nil {
 			qualName = child.Name
@@ -796,34 +794,15 @@ func (h *TreeHandler) SaveGroup(w http.ResponseWriter, r *http.Request) {
 		if putErr := h.RC.Put(r.Context(), candidateDS+child.Path, body); putErr != nil && firstErr == "" {
 			firstErr = child.Name + ": " + putErr.Error()
 		}
-		gd.Leaves = append(gd.Leaves, item)
 	}
 
 	if firstErr != "" {
-		gd.Error = firstErr
-	} else {
-		gd.SavedOK = true
+		w.Header().Set("HX-Trigger", `{"cfgError":"`+firstErr+`"}`)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
 	}
-
-	// If called from an inline sub-container, re-render the parent so the user
-	// stays on the parent page.
-	if parent != "" {
-		parentNode, pErr := mgr.NodeAt(parent)
-		if pErr == nil {
-			pgd := h.buildLeafGroup(r, mgr, parent, parentNode.Name, parentNode.Kind)
-			if pgd != nil {
-				if firstErr != "" {
-					pgd.Error = firstErr
-				} else {
-					pgd.SavedOK = true
-				}
-				h.FragTmpl.ExecuteTemplate(w, "yang-leaf-group", pgd)
-				return
-			}
-		}
-	}
-
-	h.FragTmpl.ExecuteTemplate(w, "yang-leaf-group", gd)
+	w.Header().Set("HX-Trigger", `{"cfgSaved":"Saved `+node.Name+` to candidate"}`)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // SaveLeaf serves PUT /configure/tree/node?path=...

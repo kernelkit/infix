@@ -18,16 +18,12 @@
   {{if .Error}}
   <div class="alert alert-error">{{.Error}}</div>
   {{end}}
-  {{if .SavedOK}}
-  <div class="alert alert-success">Saved to candidate</div>
-  {{end}}
 
   {{/* ── Direct leaves ────────────────────────────────────────────── */}}
   {{if .Leaves}}
   <form class="yt-group-form"
         hx-put="/configure/tree/group?path={{.Path | urlquery}}{{if .ParentPath}}&parent={{.ParentPath | urlquery}}{{end}}"
-        hx-target="#yang-detail"
-        hx-swap="innerHTML">
+        hx-swap="none">
     <div class="yt-group-list">
       {{range .Leaves}}
       {{$cv := .CurrentValue}}
@@ -51,11 +47,11 @@
               </div>
             {{else if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
               <select class="cfg-input" name="{{.Name}}">
-                {{range .Type.Enums}}<option {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                {{range .Type.Enums}}<option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
               </select>
             {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
               <select class="cfg-input" name="{{.Name}}">
-                {{range .Type.Identities}}<option {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                {{range .Type.Identities}}<option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
               </select>
             {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
                                   (eq .Type.Kind "int32") (eq .Type.Kind "int64")
@@ -66,7 +62,7 @@
             {{else if .LeafrefValues}}
               <select class="cfg-input" name="{{.Name}}">
                 <option value="">(none)</option>
-                {{range .LeafrefValues}}<option {{if eq . $cv}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                {{range .LeafrefValues}}<option value="{{.}}" {{if eq . $cv}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
               </select>
             {{else if and .Type (eq .Type.Kind "binary")}}
               <textarea class="cfg-input cfg-input-mono" name="{{.Name}}"
@@ -105,7 +101,8 @@
       {{end}}
     </div>
     <div class="cfg-card-footer">
-      <button class="btn btn-primary" type="submit">Save all</button>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
     </div>
   </form>
   {{end}}
@@ -221,8 +218,7 @@
     {{if $sub.Leaves}}
     <form class="yt-group-form"
           hx-put="/configure/tree/group?path={{$sub.Path | urlquery}}&parent={{$sub.ParentPath | urlquery}}"
-          hx-target="#yang-detail"
-          hx-swap="innerHTML">
+          hx-swap="none">
       <div class="yt-group-list">
         {{range $sub.Leaves}}
         {{$cv := .CurrentValue}}
@@ -263,11 +259,11 @@
                 </div>
               {{else if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
                 <select class="cfg-input" name="{{.Name}}">
-                  {{range .Type.Enums}}<option {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                  {{range .Type.Enums}}<option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
                 </select>
               {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
                 <select class="cfg-input" name="{{.Name}}">
-                  {{range .Type.Identities}}<option {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                  {{range .Type.Identities}}<option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
                 </select>
               {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
                                     (eq .Type.Kind "int32") (eq .Type.Kind "int64")
@@ -278,7 +274,7 @@
               {{else if .LeafrefValues}}
                 <select class="cfg-input" name="{{.Name}}">
                   <option value="">(none)</option>
-                  {{range .LeafrefValues}}<option {{if eq . $cv}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                  {{range .LeafrefValues}}<option value="{{.}}" {{if eq . $cv}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
                 </select>
               {{else if and .Type (eq .Type.Kind "binary")}}
                 <textarea class="cfg-input cfg-input-mono" name="{{.Name}}"
@@ -317,7 +313,8 @@
         {{end}}
       </div>
       <div class="cfg-card-footer">
-        <button class="btn btn-primary" type="submit">Save all</button>
+        <button class="btn btn-primary" type="submit">Save</button>
+        <span class="cfg-save-status"></span>
       </div>
     </form>
     {{end}}

@@ -40,14 +40,14 @@
           {{$cv := .CurrentValue}}{{$def := .Default}}
           <select class="cfg-input" name="value">
             {{range .Type.Enums}}
-            <option {{if or (eq . $cv) (and (eq $cv "") (eq . $def))}}selected{{end}}>{{.}}{{if and $def (eq . $def)}} (default){{end}}</option>
+            <option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $def))}}selected{{end}}>{{.}}{{if and $def (eq . $def)}} (default){{end}}</option>
             {{end}}
           </select>
         {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
           {{$cv := .CurrentValue}}{{$def := .Default}}
           <select class="cfg-input" name="value">
             {{range .Type.Identities}}
-            <option {{if or (eq . $cv) (and (eq $cv "") (eq . $def))}}selected{{end}}>{{.}}{{if and $def (eq . $def)}} (default){{end}}</option>
+            <option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $def))}}selected{{end}}>{{.}}{{if and $def (eq . $def)}} (default){{end}}</option>
             {{end}}
           </select>
         {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")

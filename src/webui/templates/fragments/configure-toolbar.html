@@ -2,23 +2,37 @@
 <div class="configure-toolbar">
   <div class="configure-toolbar-inner">
     <button type="button" class="btn btn-primary cfg-apply-btn"
+            title="Copy candidate to running config, activating staged changes. Unsaved changes will be lost on reboot."
             hx-post="/configure/apply"
             hx-swap="none"
             hx-confirm="Apply staged changes to running configuration? Changes will be lost on reboot unless saved.">
       Apply
     </button>
     <button type="button" class="btn btn-accept cfg-apply-save-btn"
+            title="Apply staged changes and immediately persist to startup config. Safe across reboots."
             hx-post="/configure/apply-and-save"
             hx-swap="none"
             hx-confirm="Apply staged changes and save to startup configuration?">
       Apply &amp; Save
     </button>
     <button type="button" class="btn btn-danger-outline cfg-abort-btn"
+            title="Discard all staged changes and reset candidate to match running config."
             hx-post="/configure/abort"
             hx-swap="none"
-            hx-confirm="Discard all staged changes and return to Status?">
+            hx-confirm="Discard all staged changes?">
       Abort
     </button>
+    <div class="cfg-log-wrap">
+      <button type="button" id="cfg-log-btn" class="btn btn-outline btn-sm cfg-log-btn"
+              title="Show activity log">
+        Log
+        <span id="cfg-log-badge" class="cfg-log-badge" hidden>0</span>
+      </button>
+      <div id="cfg-log-panel" class="cfg-log-panel" hidden>
+        <div class="cfg-log-header">Activity log <button type="button" class="cfg-log-close">✕</button></div>
+        <ul class="cfg-log-list"></ul>
+      </div>
+    </div>
   </div>
 </div>
 {{end}}

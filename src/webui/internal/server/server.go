@@ -215,10 +215,11 @@ func New(
 	mux.HandleFunc("GET /containers", containers.Overview)
 
 	// Configure routes.
-	mux.HandleFunc("POST /configure/enter",           cfg.Enter)
-	mux.HandleFunc("POST /configure/apply",           cfg.Apply)
-	mux.HandleFunc("POST /configure/apply-and-save",  cfg.ApplyAndSave)
-	mux.HandleFunc("POST /configure/abort",           cfg.Abort)
+	mux.HandleFunc("POST /configure/enter",          cfg.Enter)
+	mux.HandleFunc("POST /configure/apply",          cfg.Apply)
+	mux.HandleFunc("POST /configure/apply-and-save", cfg.ApplyAndSave)
+	mux.HandleFunc("POST /configure/abort",          cfg.Abort)
+	mux.HandleFunc("POST /configure/save",           cfg.Save)
 	mux.HandleFunc("GET /configure/system",           cfgSys.Overview)
 	mux.HandleFunc("POST /configure/system/identity",     cfgSys.SaveIdentity)
 	mux.HandleFunc("POST /configure/system/clock",        cfgSys.SaveClock)

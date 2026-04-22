@@ -149,7 +149,11 @@
   padding: 0;
 }
 
-html, body {
+html {
+  height: 100%;
+  overflow: hidden;
+}
+body {
   height: 100%;
   font-family: var(--font-sans);
   font-size: 15px;
@@ -181,6 +185,8 @@ a:hover {
 }
 
 #sidebar {
+  position: relative;
+  z-index: 150;
   width: var(--sidebar-width);
   background: var(--sidebar-bg);
   color: var(--sidebar-fg);
@@ -2019,21 +2025,99 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
 .configure-toolbar {
   position: fixed;
   bottom: 0;
-  left: var(--sidebar-width, 220px);
+  left: var(--sidebar-width);
   right: 0;
-  z-index: 200;
+  z-index: 130;
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 0.75rem 1.5rem;
   box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
 }
+@media (max-width: 1024px) {
+  .configure-toolbar { left: 0; }
+}
 .configure-toolbar-inner {
   display: flex;
   gap: 0.75rem;
-  max-width: 960px;
 }
 /* Push page content above the toolbar */
 .configure-page { padding-bottom: 4rem; }
+
+/* ─── Unsaved-changes banner ──────────────────────────────────────────────── */
+.cfg-unsaved-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1.25rem;
+  background: #fffbeb;
+  border-bottom: 1px solid #fcd34d;
+  color: #78350f;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+.dark .cfg-unsaved-banner {
+  background: #2d2007;
+  border-color: #92400e;
+  color: #fde68a;
+}
+@media (prefers-color-scheme: dark) {
+  .cfg-unsaved-banner {
+    background: #2d2007;
+    border-color: #92400e;
+    color: #fde68a;
+  }
+}
+
+/* cfgError inline feedback */
+.cfg-save-status.error { color: var(--danger); cursor: pointer; }
+
+/* ─── Configure activity log ─────────────────────────────────────────────── */
+.cfg-log-wrap { position: relative; margin-left: auto; }
+.cfg-log-btn  { position: relative; }
+.cfg-log-badge {
+  position: absolute;
+  top: -6px; right: -6px;
+  min-width: 16px; height: 16px;
+  padding: 0 3px;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  line-height: 16px;
+  text-align: center;
+}
+.cfg-log-panel {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 420px;
+  max-height: 300px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  flex-direction: column;
+  z-index: 300;
+  font-size: 0.8rem;
+}
+.cfg-log-panel:not([hidden]) { display: flex; }
+.cfg-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+.cfg-log-close { background: none; border: none; cursor: pointer; color: var(--fg-muted); font-size: 0.9rem; }
+.cfg-log-list  { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+.cfg-log-entry { padding: 0.3rem 0.75rem; border-bottom: 1px solid var(--border-subtle, var(--border)); }
+.cfg-log-empty { padding: 0.5rem 0.75rem; color: var(--fg-muted); }
+.cfg-log-ts    { color: var(--fg-muted); margin-right: 0.4rem; }
+.cfg-log-ok    { color: var(--fg); }
+.cfg-log-error { color: var(--danger); background: rgba(var(--danger-rgb, 220,38,38), 0.05); }
 
 /* ─── Editable form inputs inside cards ───────────────────────────────────── */
 .cfg-input {
