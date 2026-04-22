@@ -2074,6 +2074,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#configuration-snippets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Snippets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#yang-model" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2567,6 +2578,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#configuration-snippets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Snippets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#yang-model" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2817,12 +2839,11 @@ builds.  Meaning, the only way to access the system is with the <code>admin</cod
 account, which is created based on credentials found in the VPD area --
 for Qemu devices this is emulated using <code>qemu_fw_cfg</code>.</p>
 <p>For developers this can be quite frustrating to be blocked from logging
-in to debug the system.  So we recommend enabling the <code>root</code> account in
-the Buildroot <code>make menuconfig</code> system.</p>
-<div class="highlight"><pre><span></span><code>make menuconfig
-     -&gt; System configuration
-        -&gt; [*]Enable root login with password
+in to debug the system.  The quickest way to enable root login is to
+apply the <code>dev</code> configuration snippet:</p>
+<div class="highlight"><pre><span></span><code>make apply-dev
 </code></pre></div>
+<p>See <a href="#configuration-snippets">Configuration Snippets</a> for more details.</p>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
 <p>Please see the <a href="#contributing">Contributing</a> section, below, for
@@ -2931,6 +2952,28 @@ go, like this:</p>
 <p>This rebuilds (and installs) <code>foo</code> and <code>bar</code>, the <code>all</code> target calls
 on Buildroot to finalize the target filesystem and generate the images.
 The final <code>run</code> argument is explained below.</p>
+<h3 id="configuration-snippets">Configuration Snippets<a class="headerlink" href="#configuration-snippets" title="Permanent link">¶</a></h3>
+<p>Infix ships a set of Kconfig fragments in <code>configs/snippets/</code> that can
+be merged into your active <code>.config</code> on demand.  This avoids polluting
+defconfigs with settings that are only useful during development.</p>
+<p>To see what snippets are available:</p>
+<div class="highlight"><pre><span></span><code>make list-snippets
+</code></pre></div>
+<p>To apply a single snippet to the current output directory:</p>
+<div class="highlight"><pre><span></span><code>make apply-dev          # enable root login
+make apply-ext4         # build an ext4 rootfs (needed for boards
+                        # whose bootloader lacks squashfs support,
+                        # e.g. Marvell ESPRESSObin)
+</code></pre></div>
+<p>The <code>apply-*</code> targets require an existing <code>.config</code> (i.e. you must have
+already run a <code>make &lt;board&gt;_defconfig</code>).  The snippet is merged using
+Buildroot's <code>merge_config.sh</code>, so it behaves like <code>make menuconfig</code>:
+unrelated settings are preserved, conflicting ones are overridden.</p>
+<p>To apply <strong>all</strong> snippets at once and then build:</p>
+<div class="highlight"><pre><span></span><code>make dev
+</code></pre></div>
+<p>This is the recommended one-shot command for setting up a development
+build from a freshly selected defconfig.</p>
 <h3 id="yang-model">YANG Model<a class="headerlink" href="#yang-model" title="Permanent link">¶</a></h3>
 <p>When making changes to the <code>confd</code> and <code>statd</code> services, you will often
 need to update the YANG models.  If you are adding a new YANG module,
