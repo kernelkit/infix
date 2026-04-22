@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Validate release version format
       id: validate
@@ -170,7 +170,7 @@ jobs:
         fi
 
     - name: Upload signed artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: signed-infix-${{ steps.validate.outputs.file_version }}
         path: ${{ steps.download_signed.outputs.signed_filename }}

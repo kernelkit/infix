@@ -23,7 +23,7 @@ jobs:
         target: [aarch64, arm, x86_64]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           clean: true
           submodules: recursive
@@ -86,12 +86,12 @@ jobs:
           ln -s ${{ steps.vars.outputs.dir }} images
           tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: artifact-${{ matrix.target }}
           path: output/*.tar.gz
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: artifact-disk-image-${{ matrix.target }}
           path: output/images/*.qcow2

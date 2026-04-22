@@ -9,8 +9,10 @@ O    ?= output
 # otherwise treat it as relative to ./buildroot.
 override O := $(if $(filter /%,$O),$O,$(CURDIR)/$O)
 
-config := $(O)/.config
-bmake   = $(MAKE) -C buildroot O=$(O) $1
+config      := $(O)/.config
+bmake        = $(MAKE) -C buildroot O=$(O) $1
+SNIPPETS_DIR := $(CURDIR)/configs/snippets
+MERGE_CONFIG := $(CURDIR)/buildroot/support/kconfig/merge_config.sh
 
 
 all: $(config) buildroot/Makefile
@@ -25,6 +27,23 @@ $(config):
 	@echo "Please choose a configuration from the list above by running"
 	@echo "'make <board>_defconfig' before building an image."
 	@exit 1
+
+apply-%: $(SNIPPETS_DIR)/%.conf | $(config)
+	@KCONFIG_CONFIG=$(config) $(MERGE_CONFIG) -m $(config) $<
+	@+$(call bmake,olddefconfig)
+	@echo "Applied snippet: $<"
+
+list-snippets:
+	@echo "Available snippets (use 'make apply-<name>'):"
+	@ls $(SNIPPETS_DIR)/*.conf 2>/dev/null | sed 's|.*/||; s|\.conf$$||; s|^|  |'
+
+dev: | $(config)
+	@for s in $(SNIPPETS_DIR)/*.conf; do \
+		KCONFIG_CONFIG=$(config) $(MERGE_CONFIG) -m $(config) $$s; \
+		echo "Applied snippet: $$s"; \
+	done
+	@+$(call bmake,olddefconfig)
+	@+$(call bmake,all)
 
 %: | buildroot/Makefile
 	@+$(call bmake,$@)
@@ -44,4 +63,4 @@ test:
 buildroot/Makefile:
 	@git submodule update --init
 
-.PHONY: all check coverity dep test cyclonedx
+.PHONY: all check coverity dep test cyclonedx list-snippets dev

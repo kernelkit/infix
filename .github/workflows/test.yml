@@ -61,7 +61,7 @@ jobs:
     runs-on: [self-hosted, regression]
     steps:
       - name: Checkout infix repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ env.INFIX_REPO }}
           ref: ${{ env.INFIX_BRANCH != '' && env.INFIX_BRANCH || github.ref }}
@@ -93,7 +93,7 @@ jobs:
         run: |
           make ${{ env.TARGET }}_defconfig
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: "artifact-*"
           merge-multiple: true
@@ -131,7 +131,7 @@ jobs:
           make test-dir="$(pwd)/$TEST_PATH" test-report
 
       - name: Upload Test Report as Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-report
           path: output/images/test-report.pdf

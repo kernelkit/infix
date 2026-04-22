@@ -15,7 +15,10 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
-- N/A
+- Fix #1458: `show ntp tracking` displaying a truncated Reference ID, e.g.,
+  `92.2` instead of `92.246.137.39`
+- Fix #1466: `show container` showing no output for containers whose command
+  line includes environment variables
 
 [BPI-R4]: https://docs.banana-pi.org/en/BPI-R4/BananaPi_BPI-R4
 

@@ -191,9 +191,20 @@ def add_ntp_clock_state(out):
         refid_ip = parts[0]
         refid_name = parts[1]
 
-        if refid_name:
-            # NTP refids are always 4 bytes; chronyc strips trailing padding.
-            # YANG typedef 'refid' requires exactly length 4 for strings.
+        def _is_ipv4(s):
+            p = s.split('.')
+            if len(p) != 4:
+                return False
+            try:
+                return all(0 <= int(x) <= 255 for x in p)
+            except ValueError:
+                return False
+
+        if refid_name and _is_ipv4(refid_name):
+            # chronyc reports the IPv4 server address as the name field; use it directly
+            system_status["clock-refid"] = refid_name
+        elif refid_name and ':' not in refid_name:
+            # Short NTP code (GPS, NIST, INIT, …); YANG refid requires length 4
             system_status["clock-refid"] = refid_name.ljust(4)[:4]
         elif refid_ip and len(refid_ip) == 8:
             try:

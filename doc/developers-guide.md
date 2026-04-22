@@ -7,12 +7,12 @@ account, which is created based on credentials found in the VPD area --
 for Qemu devices this is emulated using `qemu_fw_cfg`.
 
 For developers this can be quite frustrating to be blocked from logging
-in to debug the system.  So we recommend enabling the `root` account in
-the Buildroot `make menuconfig` system.
+in to debug the system.  The quickest way to enable root login is to
+apply the `dev` configuration snippet:
 
-    make menuconfig
-         -> System configuration
-            -> [*]Enable root login with password
+    make apply-dev
+
+See [Configuration Snippets](#configuration-snippets) for more details.
 
 > [!IMPORTANT]
 > Please see the [Contributing](#contributing) section, below, for
@@ -164,6 +164,36 @@ go, like this:
 This rebuilds (and installs) `foo` and `bar`, the `all` target calls
 on Buildroot to finalize the target filesystem and generate the images.
 The final `run` argument is explained below.
+
+
+### Configuration Snippets
+
+Infix ships a set of Kconfig fragments in `configs/snippets/` that can
+be merged into your active `.config` on demand.  This avoids polluting
+defconfigs with settings that are only useful during development.
+
+To see what snippets are available:
+
+    make list-snippets
+
+To apply a single snippet to the current output directory:
+
+    make apply-dev          # enable root login
+    make apply-ext4         # build an ext4 rootfs (needed for boards
+                            # whose bootloader lacks squashfs support,
+                            # e.g. Marvell ESPRESSObin)
+
+The `apply-*` targets require an existing `.config` (i.e. you must have
+already run a `make <board>_defconfig`).  The snippet is merged using
+Buildroot's `merge_config.sh`, so it behaves like `make menuconfig`:
+unrelated settings are preserved, conflicting ones are overridden.
+
+To apply **all** snippets at once and then build:
+
+    make dev
+
+This is the recommended one-shot command for setting up a development
+build from a freshly selected defconfig.
 
 
 ### YANG Model

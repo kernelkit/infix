@@ -44,7 +44,7 @@ jobs:
   checkout:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: kernelkit/actions/cache-restore@v1
         with:
           target: x86_64
