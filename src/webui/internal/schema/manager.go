@@ -544,7 +544,15 @@ func yangTypeInfo(e *yang.Entry) *TypeInfo {
 	case yang.Yidentityref:
 		if t.IdentityBase != nil {
 			for _, v := range t.IdentityBase.Values {
-				info.Identities = append(info.Identities, v.Name)
+				name := v.Name
+				if root := yang.RootNode(v); root != nil {
+					modName := root.Name
+					if root.Kind() == "submodule" && root.BelongsTo != nil {
+						modName = root.BelongsTo.Name
+					}
+					name = modName + ":" + v.Name
+				}
+				info.Identities = append(info.Identities, name)
 			}
 			sort.Strings(info.Identities)
 		}

@@ -36,7 +36,7 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	ksTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/keystore.html")
+	ksTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-keystore.html")
 	if err != nil {
 		return nil, err
 	}
@@ -140,9 +140,10 @@ func New(
 		RC:       rc,
 	}
 
-	ks := &handlers.KeystoreHandler{
+	cfgKs := &handlers.ConfigureKeystoreHandler{
 		Template: ksTmpl,
 		RC:       rc,
+		Schema:   schemaCache,
 	}
 
 	iface := &handlers.InterfacesHandler{
@@ -196,7 +197,9 @@ func New(
 	mux.HandleFunc("GET /interfaces/{name}", iface.Detail)
 	mux.HandleFunc("GET /interfaces/{name}/counters", iface.Counters)
 	mux.HandleFunc("GET /firewall", fw.Overview)
-	mux.HandleFunc("GET /keystore", ks.Overview)
+	mux.HandleFunc("GET /keystore", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/configure/keystore", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("GET /firmware", sys.Firmware)
 	mux.HandleFunc("GET /firmware/progress", sys.FirmwareProgress)
 	mux.HandleFunc("POST /firmware/install", sys.FirmwareInstall)
@@ -233,6 +236,16 @@ func New(
 	mux.HandleFunc("POST /configure/users/{name}/password", cfgUsers.ChangePassword)
 	mux.HandleFunc("POST /configure/users/{name}/keys",     cfgUsers.AddKey)
 	mux.HandleFunc("DELETE /configure/users/{name}/keys/{keyname}", cfgUsers.DeleteKey)
+	mux.HandleFunc("GET /configure/keystore",                              cfgKs.Overview)
+	mux.HandleFunc("POST /configure/keystore/symmetric",                   cfgKs.AddSymKey)
+	mux.HandleFunc("POST /configure/keystore/symmetric/{name}",            cfgKs.UpdateSymKey)
+	mux.HandleFunc("DELETE /configure/keystore/symmetric/{name}",          cfgKs.DeleteSymKey)
+	mux.HandleFunc("POST /configure/keystore/asymmetric",                  cfgKs.AddAsymKey)
+	mux.HandleFunc("POST /configure/keystore/asymmetric/{name}",           cfgKs.UpdateAsymKey)
+	mux.HandleFunc("DELETE /configure/keystore/asymmetric/{name}",         cfgKs.DeleteAsymKey)
+	mux.HandleFunc("POST /configure/keystore/asymmetric/{name}/certs",              cfgKs.AddCert)
+	mux.HandleFunc("POST /configure/keystore/asymmetric/{name}/certs/{certname}",  cfgKs.UpdateCert)
+	mux.HandleFunc("DELETE /configure/keystore/asymmetric/{name}/certs/{certname}", cfgKs.DeleteCert)
 
 	// Schema API routes (authenticated).
 	mux.HandleFunc("GET /api/schema",          schemaH.Schema)

@@ -4,12 +4,7 @@ package handlers
 
 import (
 	"encoding/base64"
-	"html/template"
-	"log"
-	"net/http"
 	"strings"
-
-	"github.com/kernelkit/webui/internal/restconf"
 )
 
 // RESTCONF JSON structures for ietf-keystore:keystore.
@@ -55,85 +50,6 @@ type certificateJSON struct {
 	CertData string `json:"cert-data"`
 }
 
-// Template data structures.
-
-type keystoreData struct {
-	PageData
-	SymmetricKeys  []symKeyEntry
-	AsymmetricKeys []asymKeyEntry
-	Empty          bool
-	Error          string
-}
-
-type symKeyEntry struct {
-	Name   string
-	Format string
-	Value  string
-}
-
-type asymKeyEntry struct {
-	Name           string
-	Algorithm      string
-	PublicKey      string
-	PublicKeyFull  string
-	PrivateKey     string
-	PrivateKeyFull string
-	Certificates   []string
-}
-
-// KeystoreHandler serves the keystore overview page.
-type KeystoreHandler struct {
-	Template *template.Template
-	RC       *restconf.Client
-}
-
-// Overview renders the keystore overview (GET /keystore).
-func (h *KeystoreHandler) Overview(w http.ResponseWriter, r *http.Request) {
-	data := keystoreData{
-		PageData: newPageData(r, "keystore", "Keystore"),
-	}
-
-	var ks keystoreWrapper
-	if err := h.RC.Get(r.Context(), "/data/ietf-keystore:keystore", &ks); err != nil {
-		log.Printf("restconf keystore: %v", err)
-		data.Error = "Could not fetch keystore"
-	} else {
-		for _, k := range ks.Keystore.SymmetricKeys.SymmetricKey {
-			data.SymmetricKeys = append(data.SymmetricKeys, symKeyEntry{
-				Name:   k.Name,
-				Format: shortFormat(k.KeyFormat),
-				Value:  decodeSymmetricValue(k),
-			})
-		}
-
-		for _, k := range ks.Keystore.AsymmetricKeys.AsymmetricKey {
-			entry := asymKeyEntry{
-				Name:           k.Name,
-				Algorithm:      asymAlgorithm(k),
-				PublicKeyFull:  k.PublicKey,
-				PublicKey:      truncate(k.PublicKey, 40),
-				PrivateKeyFull: k.CleartextPrivateKey,
-				PrivateKey:     truncate(k.CleartextPrivateKey, 40),
-			}
-			for _, c := range k.Certificates.Certificate {
-				entry.Certificates = append(entry.Certificates, c.Name)
-			}
-			data.AsymmetricKeys = append(data.AsymmetricKeys, entry)
-		}
-
-		data.Empty = len(data.SymmetricKeys) == 0 && len(data.AsymmetricKeys) == 0
-	}
-
-	tmplName := "keystore.html"
-	if r.Header.Get("HX-Request") == "true" {
-		tmplName = "content"
-	}
-	if err := h.Template.ExecuteTemplate(w, tmplName, data); err != nil {
-		log.Printf("template error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-	}
-}
-
 // shortFormat strips the YANG module prefix and "-key-format" suffix.
 // e.g. "ietf-crypto-types:octet-string-key-format" → "octet-string"
 func shortFormat(full string) string {
@@ -170,12 +86,4 @@ func decodeSymmetricValue(k symmetricKeyJSON) string {
 		}
 	}
 	return val
-}
-
-// truncate shortens s to max characters, adding "..." if truncated.
-func truncate(s string, max int) string {
-	if len(s) <= max {
-		return s
-	}
-	return s[:max-3] + "..."
 }

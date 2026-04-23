@@ -29,16 +29,6 @@
           </a>
         </li>
         {{end}}
-        <li>
-          <a href="/keystore"
-             hx-get="/keystore"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "keystore"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/keystore.svg')"></span>
-            Keystore
-          </a>
-        </li>
       </ul>
 
       <div class="nav-section-label">Network</div>
@@ -168,7 +158,7 @@
     </details>
 
     <details class="nav-group-top" id="nav-configure"
-             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-users") (eq .ActivePage "configure-tree")}}open{{end}}>
+             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
       <summary class="nav-group-summary-top">Configure</summary>
       <ul class="nav-group-items">
         <li>
@@ -189,6 +179,16 @@
              class="nav-link {{if eq .ActivePage "configure-users"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/nacm.svg')"></span>
             Users
+          </a>
+        </li>
+        <li>
+          <a href="/configure/keystore"
+             hx-get="/configure/keystore"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-keystore"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/keystore.svg')"></span>
+            Keystore
           </a>
         </li>
         <li>

@@ -1655,6 +1655,7 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   background: var(--surface-alt);
   padding: 0.75rem 1rem 0.75rem 1.5rem !important;
   border-top: none !important;
+  text-align: left !important;
 }
 .key-detail-body { display: flex; flex-direction: column; gap: 0.6rem; }
 .key-field { display: flex; flex-direction: column; gap: 0.2rem; }

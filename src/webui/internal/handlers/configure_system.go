@@ -365,16 +365,16 @@ func renderSaved(w http.ResponseWriter, msg string) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// renderSaveError writes an inline error message for HTMX to swap.
+// renderSaveError writes an inline error for HTMX. HX-Trigger ensures forms with
+// hx-swap="none" still receive the cfgError event (body swap alone would be silenced).
 func renderSaveError(w http.ResponseWriter, err error) {
 	msg := "Save failed"
 	if re, ok := err.(*restconf.Error); ok && re.Message != "" {
 		msg = re.Message
 	}
 	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusUnprocessableEntity)
-	// Encode the message safely for HTML output.
 	b, _ := json.Marshal(msg)
-	_ = b // used below via template-escaped string
+	w.Header().Set("HX-Trigger", `{"cfgError":`+string(b)+`}`)
+	w.WriteHeader(http.StatusUnprocessableEntity)
 	w.Write([]byte(`<span class="cfg-save-error">` + template.HTMLEscapeString(msg) + `</span>`))
 }

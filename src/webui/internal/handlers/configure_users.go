@@ -147,11 +147,11 @@ func (h *ConfigureUsersHandler) AddUser(w http.ResponseWriter, r *http.Request) 
 	}
 
 	user := map[string]any{
-		"ietf-system:user": map[string]any{
-			"name":                 name,
-			"password":             hash,
-			"infix-system:shell":   shell,
-		},
+		"ietf-system:user": []map[string]any{{
+			"name":               name,
+			"password":           hash,
+			"infix-system:shell": shell,
+		}},
 	}
 	path := authPath + "/user=" + url.PathEscape(name)
 	if err := h.RC.Put(r.Context(), path, user); err != nil {
@@ -187,10 +187,10 @@ func (h *ConfigureUsersHandler) UpdateShell(w http.ResponseWriter, r *http.Reque
 	name := r.PathValue("name")
 	shell := r.FormValue("shell")
 	body := map[string]any{
-		"ietf-system:user": map[string]any{
+		"ietf-system:user": []map[string]any{{
 			"name":               name,
 			"infix-system:shell": shell,
-		},
+		}},
 	}
 	path := authPath + "/user=" + url.PathEscape(name)
 	if err := h.RC.Patch(r.Context(), path, body); err != nil {
@@ -223,10 +223,10 @@ func (h *ConfigureUsersHandler) ChangePassword(w http.ResponseWriter, r *http.Re
 	}
 
 	body := map[string]any{
-		"ietf-system:user": map[string]any{
+		"ietf-system:user": []map[string]any{{
 			"name":     name,
 			"password": hash,
-		},
+		}},
 	}
 	path := authPath + "/user=" + url.PathEscape(name)
 	if err := h.RC.Patch(r.Context(), path, body); err != nil {
@@ -267,11 +267,11 @@ func (h *ConfigureUsersHandler) AddKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body := map[string]any{
-		"ietf-system:authorized-key": map[string]any{
+		"ietf-system:authorized-key": []map[string]any{{
 			"name":      keyName,
 			"algorithm": algorithm,
-			"key-data":  keyBytes, // []byte → base64 in JSON
-		},
+			"key-data":  keyBytes,
+		}},
 	}
 	path := authPath + "/user=" + url.PathEscape(name) +
 		"/authorized-key=" + url.PathEscape(keyName)
