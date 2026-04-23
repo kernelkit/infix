@@ -1,23 +1,8 @@
-From 9ba3bc688c45a0c9e761c6c8bd0be83d6570c9dc Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
-Date: Fri, 27 Feb 2026 16:58:12 +0100
-Subject: [PATCH] Always log to syslog
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Organization: Wires
-
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
----
- gpsd/libgpsd_core.c | 13 ++-----------
- 1 file changed, 2 insertions(+), 11 deletions(-)
-
-diff --git a/gpsd/libgpsd_core.c b/gpsd/libgpsd_core.c
-index 982f822b8..c53c64838 100644
---- a/gpsd/libgpsd_core.c
-+++ b/gpsd/libgpsd_core.c
-@@ -180,17 +180,8 @@ static void gpsd_vlog(const int errlevel,
-     // this was crazy expensive, just fix the bad log calls
+diff -urN gpsd-3.25.orig/gpsd/libgpsd_core.c gpsd-3.25/gpsd/libgpsd_core.c
+--- gpsd-3.25.orig/gpsd/libgpsd_core.c	2023-01-10 23:38:26.000000000 +0100
++++ gpsd-3.25/gpsd/libgpsd_core.c	2026-04-22 14:06:09.498017456 +0200
+@@ -180,17 +180,8 @@
+     // this was carzy expensive, just fix the bad log calls
      // gps_visibilize(outbuf, outlen, buf, strlen(buf));
  
 -    if (getpid() == getsid(getpid())) {
@@ -36,6 +21,3 @@ index 982f822b8..c53c64838 100644
      gpsd_release_reporting_lock();
  #endif  // !SQUELCH_ENABLE
  }
--- 
-2.43.0
-
