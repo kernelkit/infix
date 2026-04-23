@@ -250,8 +250,8 @@ details.nav-group-top > summary.nav-group-summary-top {
   opacity: 0.7;
   padding: 0.75rem 1rem 0.375rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.35rem;
   user-select: none;
   transition: opacity 0.15s;
 }
@@ -259,11 +259,11 @@ details.nav-group-top > summary.nav-group-summary-top:hover { opacity: 1; }
 details.nav-group-top > summary.nav-group-summary-top::-webkit-details-marker { display: none; }
 details.nav-group-top > summary.nav-group-summary-top::marker { display: none; }
 
-details.nav-group-top > summary.nav-group-summary-top::after {
+details.nav-group-top > summary.nav-group-summary-top::before {
   content: '▸';
   font-size: 0.7rem;
 }
-details[open].nav-group-top > summary.nav-group-summary-top::after {
+details[open].nav-group-top > summary.nav-group-summary-top::before {
   content: '▾';
 }
 
