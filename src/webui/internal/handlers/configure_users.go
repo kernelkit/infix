@@ -339,7 +339,6 @@ func (h *ConfigureUsersHandler) DeleteKey(w http.ResponseWriter, r *http.Request
 		renderSaveError(w, err)
 		return
 	}
-
 	var userEntry map[string]any
 	for _, u := range raw.System.Auth.Users {
 		if u.Name != name {
@@ -391,7 +390,7 @@ func (h *ConfigureUsersHandler) DeleteKey(w http.ResponseWriter, r *http.Request
 		renderSaveError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	renderSavedRedirect(w, "SSH key deleted", "/configure/users")
 }
 
 // fetchAllGroups reads NACM groups from candidate, falling back to running on 404.
