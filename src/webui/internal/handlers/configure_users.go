@@ -159,8 +159,7 @@ func (h *ConfigureUsersHandler) AddUser(w http.ResponseWriter, r *http.Request) 
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/users","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "User added", "/configure/users")
 }
 
 // DeleteUser removes a user from the candidate datastore.
@@ -173,8 +172,7 @@ func (h *ConfigureUsersHandler) DeleteUser(w http.ResponseWriter, r *http.Reques
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/users","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "User deleted", "/configure/users")
 }
 
 // UpdateShell changes a user's login shell in the candidate datastore.
@@ -280,8 +278,7 @@ func (h *ConfigureUsersHandler) AddKey(w http.ResponseWriter, r *http.Request) {
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/users","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "SSH key added", "/configure/users")
 }
 
 // DeleteKey removes an SSH authorized key for a user in the candidate.
@@ -296,7 +293,6 @@ func (h *ConfigureUsersHandler) DeleteKey(w http.ResponseWriter, r *http.Request
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/users","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "SSH key deleted", "/configure/users")
 }
 

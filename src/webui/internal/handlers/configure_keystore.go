@@ -157,8 +157,7 @@ func (h *ConfigureKeystoreHandler) AddSymKey(w http.ResponseWriter, r *http.Requ
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/keystore","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "Symmetric key added", "/configure/keystore")
 }
 
 // DeleteSymKey removes a symmetric key from the candidate.
@@ -171,8 +170,7 @@ func (h *ConfigureKeystoreHandler) DeleteSymKey(w http.ResponseWriter, r *http.R
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/keystore","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "Symmetric key deleted", "/configure/keystore")
 }
 
 // AddAsymKey adds an asymmetric key from a PEM-encoded private key.
@@ -225,8 +223,7 @@ func (h *ConfigureKeystoreHandler) AddAsymKey(w http.ResponseWriter, r *http.Req
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/keystore","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "Asymmetric key added", "/configure/keystore")
 }
 
 // derivePublicKeyFromDER extracts the public key from DER-encoded private key bytes
@@ -289,8 +286,7 @@ func (h *ConfigureKeystoreHandler) DeleteAsymKey(w http.ResponseWriter, r *http.
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/keystore","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "Asymmetric key deleted", "/configure/keystore")
 }
 
 // AddCert adds a certificate to an asymmetric key entry.
@@ -327,8 +323,7 @@ func (h *ConfigureKeystoreHandler) AddCert(w http.ResponseWriter, r *http.Reques
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/keystore","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "Certificate added", "/configure/keystore")
 }
 
 // UpdateCert replaces the PEM data of an existing certificate.
@@ -380,8 +375,7 @@ func (h *ConfigureKeystoreHandler) DeleteCert(w http.ResponseWriter, r *http.Req
 		renderSaveError(w, err)
 		return
 	}
-	w.Header().Set("HX-Location", `{"path":"/configure/keystore","target":"#content"}`)
-	w.WriteHeader(http.StatusNoContent)
+	renderSavedRedirect(w, "Certificate deleted", "/configure/keystore")
 }
 
 // derBase64ToPEM converts a base64-encoded DER blob (as returned by RESTCONF

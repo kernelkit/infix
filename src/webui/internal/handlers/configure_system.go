@@ -365,6 +365,16 @@ func renderSaved(w http.ResponseWriter, msg string) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// renderSavedRedirect logs a cfgSaved activity entry and then navigates HTMX to
+// the given page path (targeting #content). Use this instead of a bare HX-Location
+// for Add/Delete operations that redirect back to the listing page after success.
+func renderSavedRedirect(w http.ResponseWriter, msg, path string) {
+	b, _ := json.Marshal(msg)
+	w.Header().Set("HX-Trigger", `{"cfgSaved":`+string(b)+`}`)
+	w.Header().Set("HX-Location", `{"path":"`+path+`","target":"#content"}`)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // renderSaveError writes an inline error for HTMX. HX-Trigger ensures forms with
 // hx-swap="none" still receive the cfgError event (body swap alone would be silenced).
 func renderSaveError(w http.ResponseWriter, err error) {
