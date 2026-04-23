@@ -14,6 +14,9 @@
 - name: DHCP Hostname Priority
   case: client_hostname/test.py
 
+- name: DHCP Hostname Resend
+  case: client_hostname_resend/test.py
+
 - name: DHCPv6 Basic
   case: client6_basic/test.py
 

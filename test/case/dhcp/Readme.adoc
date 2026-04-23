@@ -7,6 +7,7 @@ Tests verifying DHCPv4/DHCPv6 client and server functionality:
  - DHCPv4 client with default gateway assignment
  - DHCPv4 client with static route configuration
  - DHCPv4 client hostname management and priority
+ - DHCPv4 client hostname option is resent after system hostname changes
  - Basic DHCPv6 client operation with address assignment
  - DHCPv6 client with prefix delegation (IA_PD)
  - DHCPv6 SLAAC/RA (Stateless)
@@ -27,6 +28,10 @@ include::client_routes/Readme.adoc[]
 <<<
 
 include::client_hostname/Readme.adoc[]
+
+<<<
+
+include::client_hostname_resend/Readme.adoc[]
 
 <<<
 
