@@ -141,7 +141,8 @@
               <button type="button" class="btn-icon btn-icon-danger"
                       title="Delete {{$row.InstanceName}}"
                       hx-delete="/configure/tree/list-row?path={{$row.InstancePath | urlquery}}&parent={{$list.ParentPath | urlquery}}"
-                      hx-target="#yang-detail" hx-swap="innerHTML"
+                      hx-target="closest tr"
+                      hx-swap="delete"
                       hx-confirm="Delete {{$row.InstanceName}}?"
                       onclick="event.stopPropagation()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -165,14 +166,14 @@
                     hx-post="/configure/tree/list-row?path={{$list.Path | urlquery}}&parent={{$list.ParentPath | urlquery}}"
                     hx-target="#yang-detail"
                     hx-swap="innerHTML">
-                {{range $list.Columns}}
+                {{range $list.FormColumns}}
                 {{if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
                   <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
                     {{range .Type.Enums}}<option>{{.}}</option>{{end}}
                   </select>
                 {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
                   <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
-                    {{range .Type.Identities}}<option>{{.}}</option>{{end}}
+                    {{range .Type.Identities}}<option value="{{.}}">{{stripPrefix .}}</option>{{end}}
                   </select>
                 {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
                                        (eq .Type.Kind "int32") (eq .Type.Kind "int64")
@@ -182,6 +183,11 @@
                          placeholder="{{.Name}}"
                          {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}
                          {{if .Mandatory}}required{{end}}>
+                {{else if and .Type (eq .Type.Kind "binary")}}
+                  <textarea class="cfg-input cfg-input-mono" name="{{.Name}}"
+                            rows="1" placeholder="{{.Name}} (base64)"
+                            title="{{.Name}}"
+                            {{if .Mandatory}}required{{end}}></textarea>
                 {{else}}
                   <input class="cfg-input" type="text" name="{{.Name}}"
                          placeholder="{{.Name}}"

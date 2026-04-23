@@ -152,6 +152,15 @@ func (m *Manager) Default(path string) (string, bool) {
 	return e.SingleDefaultValue()
 }
 
+// ModuleName returns the module name for the schema node at path.
+func (m *Manager) ModuleName(path string) (string, error) {
+	e, err := m.entryAt(path)
+	if err != nil {
+		return "", err
+	}
+	return e.InstantiatingModule()
+}
+
 // ModuleQualifiedName returns "module:name" for the schema node at path.
 // This is the JSON object key used when PUT/PATCHing that node directly via
 // RESTCONF (RFC 7951 §4 — namespace-qualified name at module boundaries).

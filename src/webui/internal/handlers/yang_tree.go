@@ -5,6 +5,8 @@ package handlers
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -126,14 +128,15 @@ type listTableColumn struct {
 
 // listTableData is the template data for yang-list-table.
 type listTableData struct {
-	Path       string
-	ParentPath string // set when rendered inline inside a container leaf-group
-	Name       string
-	Keys       []string
-	Columns    []*listTableColumn
-	Rows       []listTableRow
-	Complex    bool   // has nested containers/lists; rows navigate to a full detail page
-	SavedOK    bool
+	Path        string
+	ParentPath  string // set when rendered inline inside a container leaf-group
+	Name        string
+	Keys        []string
+	Columns     []*listTableColumn // display columns (binary excluded to keep table readable)
+	FormColumns []*listTableColumn // all leaf columns including binary, used by the add-row form
+	Rows        []listTableRow
+	Complex     bool // has nested containers/lists; rows navigate to a full detail page
+	SavedOK     bool
 	Error      string
 }
 
@@ -243,13 +246,11 @@ func (h *TreeHandler) TreeChildren(w http.ResponseWriter, r *http.Request) {
 // node and returns one schema.Node per instance, using the key values to
 // build RESTCONF key predicates for the path.
 //
-// RESTCONF rejects a bare list path ("List requires N keys"), so we GET the
-// parent container instead and extract the list array from the response.
-// The response structure is {"module:parent": {"list-name": [...]}}.
+// rousette always wraps GET responses in the full module-root hierarchy, so
+// we can GET the parent path and then use navigateToNode with the full list
+// path to reach the list array directly.
 func (h *TreeHandler) fetchListInstances(r *http.Request, path string, listNode *schema.Node) []*schema.Node {
-	// Split into parent container path and bare list name.
 	segs := strings.Split(strings.TrimPrefix(path, "/"), "/")
-	_, listName := splitModPrefix(segs[len(segs)-1])
 	parentPath := "/" + strings.Join(segs[:len(segs)-1], "/")
 	if len(segs) < 2 {
 		parentPath = path
@@ -257,37 +258,18 @@ func (h *TreeHandler) fetchListInstances(r *http.Request, path string, listNode 
 
 	data, err := h.RC.GetRaw(r.Context(), candidateDS+parentPath)
 	if err != nil {
-		log.Printf("yang-tree: list parent GET candidate %s: %v — trying running", parentPath, err)
+		log.Printf("yang-tree: list GET candidate %s: %v — trying running", parentPath, err)
 		data, err = h.RC.GetRaw(r.Context(), "/data"+parentPath)
 		if err != nil {
-			log.Printf("yang-tree: list parent GET running %s: %v", parentPath, err)
+			log.Printf("yang-tree: list GET running %s: %v", parentPath, err)
 			return nil
 		}
 	}
 
-	// Navigate to the parent container node within the full-hierarchy response.
-	parentNode := navigateToNode(data, parentPath)
-	if parentNode == nil {
-		log.Printf("yang-tree: could not navigate to parent %s in response", parentPath)
-		return nil
-	}
-
-	// Find the list array by bare name inside the parent container.
-	var parentObj map[string]json.RawMessage
-	if err := json.Unmarshal(parentNode, &parentObj); err != nil {
-		log.Printf("yang-tree: parent unmarshal %s: %v", parentPath, err)
-		return nil
-	}
-	var rawItems json.RawMessage
-	for k, v := range parentObj {
-		_, local := splitModPrefix(k)
-		if local == listName {
-			rawItems = v
-			break
-		}
-	}
+	// Navigate directly to the list array using the full path.
+	rawItems := navigateToNode(data, path)
 	if rawItems == nil {
-		log.Printf("yang-tree: list %q not found in parent response for %s", listName, parentPath)
+		log.Printf("yang-tree: list %q not found in response for %s", listNode.Name, path)
 		return nil
 	}
 
@@ -441,7 +423,19 @@ func (h *TreeHandler) buildLeafGroup(r *http.Request, mgr *schema.Manager, path,
 	}
 	gd := &leafGroupData{Path: path, Name: name, Kind: kind}
 	values := h.fetchNodeValues(r, path)
+
+	// mgr.Children always returns schema paths (no key predicates).  When path
+	// is a list instance (e.g. /…/user=admin), we must rebuild each child's
+	// path using the instance path as prefix so that RESTCONF requests and form
+	// actions address the correct instance, not a bare list path.
+	schemaBase := stripKeyPredicate(path) // path with last key predicate removed
+
 	for _, c := range children {
+		childPath := c.Path
+		if schemaBase != path && strings.HasPrefix(c.Path, schemaBase+"/") {
+			childPath = path + c.Path[len(schemaBase):]
+		}
+
 		switch c.Kind {
 		case "leaf", "leaf-list":
 			item := &leafGroupItem{Node: c}
@@ -453,23 +447,35 @@ func (h *TreeHandler) buildLeafGroup(r *http.Request, mgr *schema.Manager, path,
 			item.LeafrefValues = h.fetchLeafrefValues(r, mgr, c)
 			gd.Leaves = append(gd.Leaves, item)
 		case "list":
-			if td := h.buildListTable(r, mgr, c.Path, c); td != nil {
+			if td := h.buildListTable(r, mgr, childPath, c); td != nil {
 				td.ParentPath = path
 				gd.InlineLists = append(gd.InlineLists, td)
 			}
 		case "container":
 			kids2, err2 := mgr.Children(c.Path)
 			if err2 == nil && isSimpleList(kids2) {
-				sub := h.buildLeafGroup(r, mgr, c.Path, c.Name, "container")
+				sub := h.buildLeafGroup(r, mgr, childPath, c.Name, "container")
 				if sub != nil {
 					sub.ParentPath = path
 					gd.InlineContainers = append(gd.InlineContainers, sub)
 					break
 				}
 			}
-			gd.SubNodes = append(gd.SubNodes, c)
+			subNode := c
+			if childPath != c.Path {
+				cn := *c
+				cn.Path = childPath
+				subNode = &cn
+			}
+			gd.SubNodes = append(gd.SubNodes, subNode)
 		default:
-			gd.SubNodes = append(gd.SubNodes, c)
+			subNode := c
+			if childPath != c.Path {
+				cn := *c
+				cn.Path = childPath
+				subNode = &cn
+			}
+			gd.SubNodes = append(gd.SubNodes, subNode)
 		}
 	}
 	return gd
@@ -506,11 +512,13 @@ func (h *TreeHandler) buildListTable(r *http.Request, mgr *schema.Manager, path 
 
 	// Keys first, then up to 4 non-key LEAF columns so the table stays readable.
 	// For complex lists we skip containers and sub-lists from the column set.
+	// FormColumns tracks all leaf columns (including binary) for use by the add-row
+	// form — binary is excluded from Columns only to keep the table display readable.
 	keySet := make(map[string]bool, len(listNode.Keys))
 	for _, k := range listNode.Keys {
 		keySet[k] = true
 	}
-	var keyNodes, otherNodes []*listTableColumn
+	var keyNodes, otherNodes, formNodes []*listTableColumn
 	for _, c := range children {
 		if c.Kind != "leaf" && c.Kind != "leaf-list" {
 			continue // skip containers/sub-lists from column display
@@ -521,6 +529,7 @@ func (h *TreeHandler) buildListTable(r *http.Request, mgr *schema.Manager, path 
 		if c.Type != nil && c.Type.Kind == "empty" && strings.HasPrefix(c.Name, "hidden-") {
 			col.DisplayName = strings.TrimPrefix(c.Name, "hidden-")
 		}
+		formNodes = append(formNodes, col)
 		if keySet[c.Name] {
 			keyNodes = append(keyNodes, col)
 		} else if c.Type == nil || (c.Type.Kind != "binary") {
@@ -539,11 +548,12 @@ func (h *TreeHandler) buildListTable(r *http.Request, mgr *schema.Manager, path 
 
 	instances := h.fetchListInstances(r, path, listNode)
 	td := &listTableData{
-		Path:    path,
-		Name:    listNode.Name,
-		Keys:    listNode.Keys,
-		Columns: columns,
-		Complex: !simple,
+		Path:        path,
+		Name:        listNode.Name,
+		Keys:        listNode.Keys,
+		Columns:     columns,
+		FormColumns: formNodes,
+		Complex:     !simple,
 	}
 	for _, inst := range instances {
 		rawVals := h.fetchNodeValues(r, inst.Path)
@@ -582,6 +592,78 @@ func (h *TreeHandler) buildListTable(r *http.Request, mgr *schema.Manager, path 
 
 // stripKeyPredicate removes the key predicate from the last segment of a path,
 // e.g. "/interfaces/interface=eth0" → "/interfaces/interface".
+// splitLastSegment splits "/a/b/c=d" into ("/a/b", "c=d").
+func splitLastSegment(path string) (parent, last string) {
+	i := strings.LastIndexByte(path, '/')
+	if i < 0 {
+		return "", path
+	}
+	return path[:i], path[i+1:]
+}
+
+// buildRootedPatch returns the top-level module container path and a body
+// suitable for PATCH /candidateDS+topPath that nests entry inside the full
+// schema path.  Patching at the module root (like configure-system.go does
+// for hostname/NTP) gives libyang the complete ancestor-key context it needs
+// to validate nested list entries — patching at a sub-path like user=admin
+// leaves libyang without parent-list key context.
+func buildRootedPatch(mgr *schema.Manager, listPath string, listNode *schema.Node, entry map[string]any) (topPath string, body map[string]any) {
+	segs := strings.Split(strings.TrimPrefix(listPath, "/"), "/")
+	if len(segs) == 0 {
+		qn, _ := mgr.ModuleQualifiedName(listPath)
+		return listPath, map[string]any{qn: []map[string]any{entry}}
+	}
+
+	topSeg := segs[0] // e.g. "ietf-system:system"
+	topModName, _ := splitModPrefix(topSeg)
+
+	// qualName returns the bare name if the node is in the same module as
+	// topMod, or "module:name" if it's in a different module.
+	qualName := func(nodePath, name string) string {
+		mod, err := mgr.ModuleName(nodePath)
+		if err == nil && mod != "" && mod != topModName {
+			return mod + ":" + name
+		}
+		return name
+	}
+
+	// Start with the innermost: the target list → [entry].
+	innerVal := map[string]any{qualName(listPath, listNode.Name): []map[string]any{entry}}
+
+	// Walk upward through intermediate segments, wrapping at each level.
+	for i := len(segs) - 2; i >= 1; i-- {
+		seg := segs[i]
+		segPath := "/" + strings.Join(segs[:i+1], "/")
+		eqIdx := strings.IndexByte(seg, '=')
+		if eqIdx >= 0 {
+			// List instance (e.g. "user=admin"): build a list entry that
+			// includes the key value(s) extracted from the path predicate.
+			listName := seg[:eqIdx]
+			predVals := strings.SplitN(seg[eqIdx+1:], ",", 16)
+			schemaPath := stripKeyPredicate(segPath)
+			schemaNode, err := mgr.NodeAt(schemaPath)
+			listEntry := make(map[string]any)
+			if err == nil {
+				for j, k := range schemaNode.Keys {
+					if j < len(predVals) {
+						v, _ := url.PathUnescape(predVals[j])
+						listEntry[k] = v
+					}
+				}
+			}
+			for k, v := range innerVal {
+				listEntry[k] = v
+			}
+			innerVal = map[string]any{qualName(schemaPath, listName): []map[string]any{listEntry}}
+		} else {
+			// Container segment: wrap innerVal in the container object.
+			innerVal = map[string]any{qualName(segPath, seg): innerVal}
+		}
+	}
+
+	return "/" + topSeg, map[string]any{topSeg: innerVal}
+}
+
 func stripKeyPredicate(path string) string {
 	segs := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(segs) == 0 {
@@ -611,12 +693,18 @@ func (h *TreeHandler) AddListRowForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	children, _ := mgr.Children(path)
+	var leafCols []*schema.Node
+	for _, c := range children {
+		if c.Kind == "leaf" || c.Kind == "leaf-list" {
+			leafCols = append(leafCols, c)
+		}
+	}
 	h.FragTmpl.ExecuteTemplate(w, "yang-list-add", &listAddData{
 		Path:       path,
 		ParentPath: parent,
 		Name:       node.Name,
 		Keys:       node.Keys,
-		Columns:    children,
+		Columns:    leafCols,
 	})
 }
 
@@ -639,15 +727,11 @@ func (h *TreeHandler) SaveListRow(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	children, _ := mgr.Children(path)
 
-	// Build key predicate from posted key values.
-	var keyVals []string
-	for _, key := range listNode.Keys {
-		keyVals = append(keyVals, url.PathEscape(r.FormValue(key)))
-	}
-	instancePath := path + "=" + strings.Join(keyVals, ",")
-
 	// Build RESTCONF body from all posted leaf values.
-	body := make(map[string]any)
+	// Use bare field names (no module prefix) inside the entry; cross-module
+	// augmented fields still need their module prefix.
+	listModName, _ := mgr.ModuleName(path)
+	entry := make(map[string]any)
 	for _, child := range children {
 		if child.Kind != "leaf" && child.Kind != "leaf-list" {
 			continue
@@ -656,14 +740,20 @@ func (h *TreeHandler) SaveListRow(w http.ResponseWriter, r *http.Request) {
 		if raw == "" {
 			continue
 		}
-		qualName, qErr := mgr.ModuleQualifiedName(child.Path)
-		if qErr != nil {
-			qualName = child.Name
+		fieldModName, _ := mgr.ModuleName(child.Path)
+		fieldKey := child.Name
+		if fieldModName != listModName {
+			fieldKey = fieldModName + ":" + child.Name
 		}
-		body[qualName] = coerceLeafValue(raw, child)
+		entry[fieldKey] = coerceLeafValue(raw, child)
 	}
 
-	putErr := h.RC.Put(r.Context(), candidateDS+instancePath, body)
+	// PATCH at the top-level module container (e.g. ietf-system:system) with
+	// the full nested structure so libyang has complete ancestor-key context.
+	// Patching at a sub-path leaves libyang without parent list-key context
+	// and produces "List requires N keys" errors.
+	topPath, rootBody := buildRootedPatch(mgr, path, listNode, entry)
+	putErr := h.RC.Patch(r.Context(), candidateDS+topPath, rootBody)
 
 	if parent != "" {
 		parentNode, pErr := mgr.NodeAt(parent)
@@ -712,20 +802,29 @@ func (h *TreeHandler) DeleteListRow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	errMsg := ""
-	if delErr := h.RC.Delete(r.Context(), candidateDS+path); delErr != nil {
-		errMsg = delErr.Error()
+	// Skip direct DELETE when the path contains '@': libyang treats it as a
+	// module@revision separator in path predicates and always returns 400.
+	useParentPut := strings.ContainsRune(path, '@')
+	if !useParentPut {
+		if delErr := h.RC.Delete(r.Context(), candidateDS+path); delErr != nil {
+			useParentPut = true
+		}
+	}
+	if useParentPut {
+		if fbErr := h.deleteViaParentPut(r, mgr, path, listPath, listNode); fbErr != nil {
+			errMsg = fbErr.Error()
+		}
 	}
 
+	// Inline list delete (parent set): the button uses hx-swap="delete" to remove
+	// the row from the DOM — no full re-render needed.  Return a minimal signal.
 	if parent != "" {
-		parentNode, pErr := mgr.NodeAt(parent)
-		if pErr == nil {
-			gd := h.buildLeafGroup(r, mgr, parent, parentNode.Name, parentNode.Kind)
-			if gd != nil {
-				gd.Error = errMsg
-				h.FragTmpl.ExecuteTemplate(w, "yang-leaf-group", gd)
-				return
-			}
+		if errMsg != "" {
+			renderSaveError(w, errors.New(errMsg))
+		} else {
+			renderSaved(w, "Deleted")
 		}
+		return
 	}
 
 	td := h.buildListTable(r, mgr, listPath, listNode)
@@ -736,14 +835,144 @@ func (h *TreeHandler) DeleteListRow(w http.ResponseWriter, r *http.Request) {
 	h.FragTmpl.ExecuteTemplate(w, "yang-list-table", td)
 }
 
+// deleteViaParentPut removes a list instance without using a DELETE to the
+// instance path. It GETs the parent, filters the list, and PUTs the parent
+// back — identical in spirit to the curated DeleteKey workaround.
+// Used when a direct DELETE fails (e.g. '@' in key value causes libyang to
+// treat it as a module@revision separator and return "Syntax error").
+func (h *TreeHandler) deleteViaParentPut(r *http.Request, mgr *schema.Manager, instancePath, listPath string, listNode *schema.Node) error {
+	// Parent of the list (e.g. user=admin for authorized-key).
+	listParentPath, _ := splitLastSegment(listPath)
+	if listParentPath == "" {
+		return fmt.Errorf("no parent for %s", listPath)
+	}
+
+	// GET parent — rousette returns full module-root hierarchy.
+	data, err := h.RC.GetRaw(r.Context(), candidateDS+listParentPath)
+	if err != nil {
+		data, err = h.RC.GetRaw(r.Context(), "/data"+listParentPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Navigate to the parent instance.
+	parentRaw := navigateToNode(data, listParentPath)
+	if parentRaw == nil {
+		return nil // already absent
+	}
+	var parentObj map[string]json.RawMessage
+	if err := json.Unmarshal(parentRaw, &parentObj); err != nil {
+		return err
+	}
+
+	// Find the list array by bare name inside the parent object.
+	_, listBareName := splitModPrefix(listPath[strings.LastIndexByte(listPath, '/')+1:])
+	var listKey string
+	var rawItems json.RawMessage
+	for k, v := range parentObj {
+		_, local := splitModPrefix(k)
+		if local == listBareName {
+			listKey, rawItems = k, v
+			break
+		}
+	}
+	if rawItems == nil {
+		return nil // list absent, nothing to do
+	}
+
+	var items []map[string]json.RawMessage
+	if err := json.Unmarshal(rawItems, &items); err != nil {
+		return err
+	}
+
+	// Key values from instance path predicate (after the '=', comma-separated).
+	_, instanceSeg := splitLastSegment(instancePath)
+	eqIdx := strings.IndexByte(instanceSeg, '=')
+	if eqIdx < 0 {
+		return fmt.Errorf("no predicate in %s", instancePath)
+	}
+	delVals := strings.Split(instanceSeg[eqIdx+1:], ",")
+
+	// Filter: keep all entries except the one matching the deletion key.
+	var kept []json.RawMessage
+	for _, item := range items {
+		pred := buildKeyPredicate(item, listNode.Keys)
+		itemVals := strings.Split(pred[1:], ",") // strip leading "="
+		match := len(delVals) == len(itemVals)
+		for i := range delVals {
+			if !match {
+				break
+			}
+			d1, _ := url.PathUnescape(delVals[i])
+			d2, _ := url.PathUnescape(itemVals[i])
+			if d1 != d2 {
+				match = false
+			}
+		}
+		if !match {
+			b, _ := json.Marshal(item)
+			kept = append(kept, b)
+		}
+	}
+
+	filteredJSON, _ := json.Marshal(kept)
+	parentObj[listKey] = json.RawMessage(filteredJSON)
+
+	// Convert parent object back to map[string]any for the PUT body.
+	parentAny := make(map[string]any, len(parentObj))
+	for k, v := range parentObj {
+		var val any
+		json.Unmarshal(v, &val) //nolint:errcheck
+		parentAny[k] = val
+	}
+
+	// Wrap in the module-qualified list-instance envelope expected by RESTCONF.
+	_, parentLastSeg := splitLastSegment(listParentPath)
+	_, parentBareName := splitModPrefix(stripModPredicate(parentLastSeg))
+	parentModName, _ := mgr.ModuleName(listParentPath)
+	body := map[string]any{
+		parentModName + ":" + parentBareName: []any{parentAny},
+	}
+	return h.RC.Put(r.Context(), candidateDS+listParentPath, body)
+}
+
 // fetchNodeValues fetches a container or list-instance and returns a flat map
 // of bare-leaf-name → string for its direct scalar children.
+//
+// When the path contains characters like '@' that rousette/libyang rejects in
+// URL path predicates, a direct GET fails.  We fall back to GETting the parent
+// path — rousette always returns the full module-root hierarchy, so
+// navigateToNode can still walk down to the target node.
 func (h *TreeHandler) fetchNodeValues(r *http.Request, path string) map[string]string {
-	data, err := h.RC.GetRaw(r.Context(), candidateDS+path)
-	if err != nil {
-		data, err = h.RC.GetRaw(r.Context(), "/data"+path)
+	// If the last segment contains percent-encoded characters (e.g. %40 for @),
+	// Go's HTTP client decodes them before sending and libyang then rejects the
+	// path with "Syntax error".  Skip directly to the parent-path fallback.
+	_, lastSeg := splitLastSegment(path)
+	skipDirect := strings.ContainsRune(lastSeg, '%')
+
+	var data []byte
+	var err error
+	if !skipDirect {
+		data, err = h.RC.GetRaw(r.Context(), candidateDS+path)
 		if err != nil {
+			data, err = h.RC.GetRaw(r.Context(), "/data"+path)
+			if err != nil {
+				skipDirect = true
+			}
+		}
+	}
+	if skipDirect {
+		parentPath, _ := splitLastSegment(path)
+		if parentPath == "" {
 			return nil
+		}
+		data, err = h.RC.GetRaw(r.Context(), candidateDS+parentPath)
+		if err != nil {
+			data, err = h.RC.GetRaw(r.Context(), "/data"+parentPath)
+			if err != nil {
+				return nil
+			}
 		}
 	}
 	raw := navigateToNode(data, path)
@@ -973,11 +1202,30 @@ func naturalLess(a, b string) bool {
 // module hierarchy; navigateToNode is used to reach the value in that case,
 // with a fallback to the simpler single-key envelope unwrap.
 func (h *TreeHandler) fetchLeafValue(r *http.Request, path string) string {
-	data, err := h.RC.GetRaw(r.Context(), candidateDS+path)
-	if err != nil {
-		data, err = h.RC.GetRaw(r.Context(), "/data"+path)
+	// If any segment in the path contains percent-encoded chars, skip direct GET.
+	skipDirect := strings.ContainsRune(path, '%')
+	var data []byte
+	var err error
+	if !skipDirect {
+		data, err = h.RC.GetRaw(r.Context(), candidateDS+path)
 		if err != nil {
+			data, err = h.RC.GetRaw(r.Context(), "/data"+path)
+			if err != nil {
+				skipDirect = true
+			}
+		}
+	}
+	if skipDirect {
+		parentPath, _ := splitLastSegment(path)
+		if parentPath == "" {
 			return ""
+		}
+		data, err = h.RC.GetRaw(r.Context(), candidateDS+parentPath)
+		if err != nil {
+			data, err = h.RC.GetRaw(r.Context(), "/data"+parentPath)
+			if err != nil {
+				return ""
+			}
 		}
 	}
 	if raw := navigateToNode(data, path); raw != nil {

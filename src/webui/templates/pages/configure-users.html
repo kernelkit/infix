@@ -116,7 +116,8 @@
                             <button type="button" class="btn-icon btn-icon-danger"
                                     hx-delete="/configure/users/{{$u.Name}}/keys/{{.Name}}"
                                     hx-confirm="Remove key {{.Name}}?"
-                                    hx-swap="none"
+                                    hx-target="closest tr"
+                                    hx-swap="delete"
                                     title="Remove key">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                                    stroke="currentColor" stroke-width="2"

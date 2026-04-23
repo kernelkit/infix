@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // AuthError is returned when RESTCONF rejects credentials (401/403).
@@ -35,7 +36,7 @@ func (e *Error) Error() string {
 
 // parseError reads a RESTCONF error response body and returns an *Error.
 func parseError(resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
 
 	re := &Error{StatusCode: resp.StatusCode}
 
@@ -45,16 +46,28 @@ func parseError(resp *http.Response) error {
 			Error []struct {
 				ErrorType    string `json:"error-type"`
 				ErrorTag     string `json:"error-tag"`
+				ErrorPath    string `json:"error-path"`
 				ErrorMessage string `json:"error-message"`
+				ErrorInfo    any    `json:"error-info"`
 			} `json:"error"`
 		} `json:"ietf-restconf:errors"`
 	}
 
 	if json.Unmarshal(body, &envelope) == nil && len(envelope.Errors.Error) > 0 {
-		first := envelope.Errors.Error[0]
-		re.Type = first.ErrorType
-		re.Tag = first.ErrorTag
-		re.Message = first.ErrorMessage
+		var parts []string
+		for _, e := range envelope.Errors.Error {
+			msg := e.ErrorMessage
+			if msg == "" {
+				msg = e.ErrorTag
+			}
+			if e.ErrorPath != "" {
+				msg += " (path: " + e.ErrorPath + ")"
+			}
+			parts = append(parts, msg)
+		}
+		re.Type = envelope.Errors.Error[0].ErrorType
+		re.Tag = envelope.Errors.Error[0].ErrorTag
+		re.Message = strings.Join(parts, "; ")
 	} else {
 		re.Message = http.StatusText(resp.StatusCode)
 	}

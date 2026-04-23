@@ -51,7 +51,7 @@
                   hx-post="/configure/tree/list-row?path={{.Path | urlquery}}"
                   hx-target="#yang-detail"
                   hx-swap="innerHTML">
-              {{range .Columns}}
+              {{range .FormColumns}}
               {{if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
                 <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
                   {{range .Type.Enums}}<option>{{.}}</option>{{end}}
@@ -73,6 +73,11 @@
                        placeholder="{{.Name}}"
                        {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}
                        {{if .Mandatory}}required{{end}}>
+              {{else if and .Type (eq .Type.Kind "binary")}}
+                <textarea class="cfg-input cfg-input-mono" name="{{.Name}}"
+                          rows="1" placeholder="{{.Name}} (base64)"
+                          title="{{.Name}}"
+                          {{if .Mandatory}}required{{end}}></textarea>
               {{else}}
                 <input class="cfg-input" type="text" name="{{.Name}}"
                        placeholder="{{.Name}}"
@@ -102,39 +107,58 @@
   <form hx-post="/configure/tree/list-row?path={{.Path | urlquery}}{{if .ParentPath}}&parent={{.ParentPath | urlquery}}{{end}}"
         hx-target="#yang-detail"
         hx-swap="innerHTML">
-    <table class="info-table" style="margin:0">
+    <div class="yt-group-list">
       {{range .Columns}}
-      <tr>
-        <th>{{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}</th>
-        <td>
-          {{if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
-            <select class="cfg-input" name="{{.Name}}">
-              {{range .Type.Enums}}<option>{{.}}</option>{{end}}
-            </select>
-          {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
-            <select class="cfg-input" name="{{.Name}}">
-              {{range .Type.Identities}}<option value="{{.}}">{{stripPrefix .}}</option>{{end}}
-            </select>
-          {{else if and .Type (eq .Type.Kind "boolean")}}
-            <select class="cfg-input" name="{{.Name}}">
-              <option value="false">false</option>
-              <option value="true">true</option>
-            </select>
-          {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
-                                 (eq .Type.Kind "int32") (eq .Type.Kind "int64")
-                                 (eq .Type.Kind "uint8") (eq .Type.Kind "uint16")
-                                 (eq .Type.Kind "uint32") (eq .Type.Kind "uint64"))}}
-            <input class="cfg-input" type="number" name="{{.Name}}"
-                   {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}
-                   {{if .Mandatory}}required{{end}}>
-          {{else}}
-            <input class="cfg-input" type="text" name="{{.Name}}"
-                   {{if .Mandatory}}required{{end}}>
-          {{end}}
-        </td>
-      </tr>
+      {{$hasHelp := or .Description .Default .Type}}
+      <details class="yt-leaf-item">
+        <summary class="yt-leaf-summary">
+          <span class="yt-leaf-name{{if not $hasHelp}} yt-leaf-no-expand{{end}}">
+            {{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}
+          </span>
+          <span class="yt-leaf-input" onclick="event.stopPropagation()">
+            {{if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
+              <select class="cfg-input" name="{{.Name}}">
+                {{range .Type.Enums}}<option>{{.}}</option>{{end}}
+              </select>
+            {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
+              <select class="cfg-input" name="{{.Name}}">
+                {{range .Type.Identities}}<option value="{{.}}">{{stripPrefix .}}</option>{{end}}
+              </select>
+            {{else if and .Type (eq .Type.Kind "boolean")}}
+              <select class="cfg-input" name="{{.Name}}">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
+                                   (eq .Type.Kind "int32") (eq .Type.Kind "int64")
+                                   (eq .Type.Kind "uint8") (eq .Type.Kind "uint16")
+                                   (eq .Type.Kind "uint32") (eq .Type.Kind "uint64"))}}
+              <input class="cfg-input" type="number" name="{{.Name}}"
+                     {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}
+                     {{if .Mandatory}}required{{end}}>
+            {{else}}
+              <input class="cfg-input" type="text" name="{{.Name}}"
+                     {{if .Default}}placeholder="{{.Default}}"{{end}}
+                     {{if .Mandatory}}required{{end}}>
+            {{end}}
+          </span>
+        </summary>
+        {{if $hasHelp}}
+        <div class="yt-leaf-help">
+          {{if .Description}}<p class="yt-description">{{.Description}}</p>{{end}}
+          <table class="info-table yt-schema-table">
+            {{if .Default}}<tr><th>Default</th><td><code>{{.Default}}</code></td></tr>{{end}}
+            {{if .Mandatory}}<tr><th>Mandatory</th><td>yes</td></tr>{{end}}
+            {{if .Type}}<tr><th>Type</th><td><code>{{.Type.Kind}}</code></td></tr>{{end}}
+            {{if and .Type .Type.Range}}<tr><th>Range</th><td><code>{{.Type.Range}}</code></td></tr>{{end}}
+            {{if and .Type .Type.Pattern}}<tr><th>Pattern</th><td><code>{{.Type.Pattern}}</code></td></tr>{{end}}
+            <tr><th>Path</th><td><code class="yt-path">{{.Path}}</code></td></tr>
+          </table>
+        </div>
+        {{end}}
+      </details>
       {{end}}
-    </table>
+    </div>
     <div class="cfg-card-footer">
       <button class="btn btn-primary" type="submit">Add</button>
       <button type="button" class="btn btn-outline"

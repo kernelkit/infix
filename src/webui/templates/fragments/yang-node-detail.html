@@ -47,7 +47,7 @@
           {{$cv := .CurrentValue}}{{$def := .Default}}
           <select class="cfg-input" name="value">
             {{range .Type.Identities}}
-            <option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $def))}}selected{{end}}>{{.}}{{if and $def (eq . $def)}} (default){{end}}</option>
+            <option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $def))}}selected{{end}}>{{stripPrefix .}}{{if and $def (eq . $def)}} (default){{end}}</option>
             {{end}}
           </select>
         {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
@@ -66,7 +66,7 @@
           </select>
         {{else if and .Type (eq .Type.Kind "binary")}}
           {{if .IsBinary}}
-          <textarea class="cfg-input cfg-input-mono" name="value" rows="4">{{.CurrentValue}}</textarea>
+          <textarea class="cfg-input cfg-input-mono" name="value" rows="1">{{.CurrentValue}}</textarea>
           {{else}}
           <span class="text-muted">Binary data (non-text, cannot edit here)</span>
           {{end}}

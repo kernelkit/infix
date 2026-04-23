@@ -206,10 +206,16 @@ func coerceLeafValue(raw string, node *schema.Node) any {
 			return n
 		}
 	case "binary":
-		// If the value is already valid base64 (e.g. copied from the existing DER
-		// value), send it as-is.  Otherwise encode plain text (PEM) to base64.
-		if _, err := base64.StdEncoding.DecodeString(raw); err == nil {
-			return raw
+		// Strip whitespace that textarea input may add (trailing newlines, spaces).
+		// If the cleaned value is valid base64, send it as-is; otherwise encode.
+		cleaned := strings.Map(func(r rune) rune {
+			if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
+				return -1
+			}
+			return r
+		}, raw)
+		if _, err := base64.StdEncoding.DecodeString(cleaned); err == nil {
+			return cleaned
 		}
 		return base64.StdEncoding.EncodeToString([]byte(raw))
 	}

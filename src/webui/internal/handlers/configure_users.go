@@ -264,16 +264,25 @@ func (h *ConfigureUsersHandler) AddKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// PATCH at the system root so libyang has full ancestor-key context.
+	// Patching at user=admin or authorized-key leaves libyang without the
+	// parent list-key context and produces "List requires N keys" errors.
 	body := map[string]any{
-		"ietf-system:authorized-key": []map[string]any{{
-			"name":      keyName,
-			"algorithm": algorithm,
-			"key-data":  keyBytes,
-		}},
+		"ietf-system:system": map[string]any{
+			"authentication": map[string]any{
+				"user": []map[string]any{{
+					"name": name,
+					"authorized-key": []map[string]any{{
+						"name":      keyName,
+						"algorithm": algorithm,
+						"key-data":  keyBytes,
+					}},
+				}},
+			},
+		},
 	}
-	path := authPath + "/user=" + url.PathEscape(name) +
-		"/authorized-key=" + url.PathEscape(keyName)
-	if err := h.RC.Put(r.Context(), path, body); err != nil {
+	path := candidatePath + "/ietf-system:system"
+	if err := h.RC.Patch(r.Context(), path, body); err != nil {
 		log.Printf("configure users key add %q/%q: %v", name, keyName, err)
 		renderSaveError(w, err)
 		return
@@ -283,16 +292,73 @@ func (h *ConfigureUsersHandler) AddKey(w http.ResponseWriter, r *http.Request) {
 
 // DeleteKey removes an SSH authorized key for a user in the candidate.
 // DELETE /configure/users/{name}/keys/{keyname}
+//
+// Direct DELETE to the authorized-key path fails when the key name contains
+// characters like '@' that libyang interprets as module@revision syntax in path
+// predicates. Work around by GET + filter + PUT at the user level instead.
 func (h *ConfigureUsersHandler) DeleteKey(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	keyName := r.PathValue("keyname")
-	path := authPath + "/user=" + url.PathEscape(name) +
-		"/authorized-key=" + url.PathEscape(keyName)
-	if err := h.RC.Delete(r.Context(), path); err != nil {
-		log.Printf("configure users key delete %q/%q: %v", name, keyName, err)
+
+	sysPath := candidatePath + "/ietf-system:system"
+	var raw cfgAuthWrapper
+	if err := h.RC.Get(r.Context(), sysPath, &raw); err != nil {
+		log.Printf("configure users key delete %q/%q: GET: %v", name, keyName, err)
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "SSH key deleted", "/configure/users")
+
+	var userEntry map[string]any
+	for _, u := range raw.System.Auth.Users {
+		if u.Name != name {
+			continue
+		}
+		filteredKeys := make([]map[string]any, 0, len(u.AuthorizedKeys))
+		found := false
+		for _, k := range u.AuthorizedKeys {
+			if k.Name == keyName {
+				found = true
+				continue
+			}
+			filteredKeys = append(filteredKeys, map[string]any{
+				"name":      k.Name,
+				"algorithm": k.Algorithm,
+				"key-data":  k.KeyData,
+			})
+		}
+		if !found {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		userEntry = map[string]any{
+			"name":               u.Name,
+			"authorized-key":     filteredKeys,
+		}
+		if u.Password != "" {
+			userEntry["password"] = u.Password
+		}
+		if u.Shell != "" {
+			userEntry["infix-system:shell"] = u.Shell
+		}
+		break
+	}
+	if userEntry == nil {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// PUT at the user level replaces only this user's entry (including its key
+	// list), which avoids the path-predicate Syntax error while not touching
+	// other users or system config.
+	putPath := authPath + "/user=" + url.PathEscape(name)
+	body := map[string]any{
+		"ietf-system:user": []map[string]any{userEntry},
+	}
+	if err := h.RC.Put(r.Context(), putPath, body); err != nil {
+		log.Printf("configure users key delete %q/%q: PUT: %v", name, keyName, err)
+		renderSaveError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
