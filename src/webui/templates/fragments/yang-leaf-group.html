@@ -51,7 +51,7 @@
               </select>
             {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
               <select class="cfg-input" name="{{.Name}}">
-                {{range .Type.Identities}}<option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                {{range .Type.Identities}}<option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{stripPrefix .}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
               </select>
             {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
                                   (eq .Type.Kind "int32") (eq .Type.Kind "int64")
@@ -263,7 +263,7 @@
                 </select>
               {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
                 <select class="cfg-input" name="{{.Name}}">
-                  {{range .Type.Identities}}<option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{.}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
+                  {{range .Type.Identities}}<option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $default))}}selected{{end}}>{{stripPrefix .}}{{if and $default (eq . $default)}} (default){{end}}</option>{{end}}
                 </select>
               {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
                                     (eq .Type.Kind "int32") (eq .Type.Kind "int64")

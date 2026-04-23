@@ -112,7 +112,8 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	yangFragTmpl, err := template.ParseFS(templateFS,
+	yangFuncs := template.FuncMap{"stripPrefix": schema.StripModulePrefix}
+	yangFragTmpl, err := template.New("frag").Funcs(yangFuncs).ParseFS(templateFS,
 		"fragments/yang-tree-node.html",
 		"fragments/yang-node-detail.html",
 		"fragments/yang-leaf-group.html",

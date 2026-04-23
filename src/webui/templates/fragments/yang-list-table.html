@@ -58,7 +58,7 @@
                 </select>
               {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
                 <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
-                  {{range .Type.Identities}}<option>{{.}}</option>{{end}}
+                  {{range .Type.Identities}}<option value="{{.}}">{{stripPrefix .}}</option>{{end}}
                 </select>
               {{else if and .Type (eq .Type.Kind "boolean")}}
                 <select class="cfg-input" name="{{.Name}}" title="{{.Name}}">
@@ -113,7 +113,7 @@
             </select>
           {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
             <select class="cfg-input" name="{{.Name}}">
-              {{range .Type.Identities}}<option>{{.}}</option>{{end}}
+              {{range .Type.Identities}}<option value="{{.}}">{{stripPrefix .}}</option>{{end}}
             </select>
           {{else if and .Type (eq .Type.Kind "boolean")}}
             <select class="cfg-input" name="{{.Name}}">
