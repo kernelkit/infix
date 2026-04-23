@@ -1,0 +1,32 @@
+From f2cd1a8ad5887fc43b316342b3a33200f1eabd8a Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Wed, 27 Mar 2024 10:10:19 +0100
+Subject: [PATCH 05/48] net: phy: Do not resume PHY when attaching
+
+The PHY should not start negotiating with its link-partner until
+explicitly instructed to do so.
+
+Therefore, skip resuming the PHY in the attach phase, deferring it to
+when phy_start() is called from the net_device's open() callback,
+possibly via phylink_start().
+
+Otherwise, drivers that attached to their PHYs during
+probing (e.g. DSA) would end up with a physical link being
+established, even though the corresponding interface was still
+administratively down.
+---
+ drivers/net/phy/phy_device.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/net/phy/phy_device.c b/drivers/net/phy/phy_device.c
+index 2353d6eced68..9b0983453393 100644
+--- a/drivers/net/phy/phy_device.c
++++ b/drivers/net/phy/phy_device.c
+@@ -1750,7 +1750,6 @@ int phy_attach_direct(struct net_device *dev, struct phy_device *phydev,
+ 	if (err)
+ 		goto error;
+ 
+-	phy_resume(phydev);
+ 
+ 	/**
+ 	 * If the external phy used by current mac interface is managed by
