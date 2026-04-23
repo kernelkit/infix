@@ -21,8 +21,9 @@ Use smaller logo, without the three pillars, on top-bar and raise top-bar.
 Similar to the WebUI v1 design. The left side-bar should not cover the
 top-bar.
 
-Review all the icons.  DHCP, Keystore, Interfaces, and Routing look weird.
-Tobias says the macOS network/interface icon could be a good fit.
+Review all the icons.  DHCP, Keystore, Interfaces, Routing, and Advanced look
+weird.  Advanced + Routing look like a swastika ... Tobias says the macOS
+network/interface icon could be a good fit.
 
 ### Refactor Save/Save all/Apply/Apply & Save/Abort
 
