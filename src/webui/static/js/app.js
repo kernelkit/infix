@@ -85,7 +85,202 @@
   function initDynamicUI(root) {
     initProgressBars(root);
     startRebootOverlay(root);
+    initDatetimePicker(root);
+    fwBootInit(root);
+    fwUploadInit(root);
+    initRestoreCheckbox(root);
   }
+
+  function fwUploadInit(scope) {
+    var btn = (scope || document).getElementById('fw-upload-btn');
+    if (!btn || btn.dataset.init) return;
+    btn.dataset.init = 'true';
+    btn.addEventListener('click', window.fwUpload);
+  }
+
+  function initRestoreCheckbox(scope) {
+    var cb = (scope || document).getElementById('restore-startup-cb');
+    if (!cb || cb.dataset.init) return;
+    cb.dataset.init = 'true';
+    cb.addEventListener('change', function () { window.scRestoreCheckbox(cb); });
+  }
+
+  // ─── Firmware: boot order drag-and-drop ──────────────────────────────────
+  function fwBootInit(scope) {
+    var slots = (scope || document).querySelector('#fw-boot-slots');
+    if (!slots || slots.dataset.dndInit) return;
+    slots.dataset.dndInit = 'true';
+
+    var dragging = null;
+    var insertRef = undefined; // node to insertBefore; undefined = not set, null = append
+
+    function clearIndicators() {
+      slots.querySelectorAll('.fw-boot-drop-before').forEach(function (el) {
+        el.classList.remove('fw-boot-drop-before');
+      });
+    }
+
+    slots.addEventListener('dragstart', function (e) {
+      dragging = e.target.closest('.fw-boot-badge');
+      if (!dragging) return;
+      dragging.classList.add('fw-boot-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    slots.addEventListener('dragend', function () {
+      if (dragging) dragging.classList.remove('fw-boot-dragging');
+      dragging = null;
+      insertRef = undefined;
+      clearIndicators();
+    });
+
+    slots.addEventListener('dragenter', function (e) { e.preventDefault(); });
+
+    slots.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (!dragging) return;
+      var target = e.target.closest('.fw-boot-badge');
+      clearIndicators();
+      if (!target || target === dragging) return;
+      var rect = target.getBoundingClientRect();
+      if (e.clientX < rect.left + rect.width / 2) {
+        insertRef = target;
+        target.classList.add('fw-boot-drop-before');
+      } else {
+        insertRef = target.nextElementSibling || null;
+        if (insertRef && insertRef.classList.contains('fw-boot-badge')) {
+          insertRef.classList.add('fw-boot-drop-before');
+        }
+      }
+    });
+
+    slots.addEventListener('drop', function (e) {
+      e.preventDefault();
+      if (!dragging || insertRef === undefined) return;
+      slots.insertBefore(dragging, insertRef); // insertRef===null appends to end
+      clearIndicators();
+      insertRef = undefined;
+    });
+
+    var saveBtn = document.getElementById('fw-boot-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', function () { window.fwBootSave(saveBtn); });
+  }
+
+  window.fwBootSave = function (btn) {
+    var badges = document.querySelectorAll('#fw-boot-slots .fw-boot-badge');
+    var params = new URLSearchParams();
+    badges.forEach(function (b) { params.append('boot-order', b.dataset.slot); });
+
+    function btnSet(text, disabled) {
+      if (!btn) return;
+      btn.textContent = text;
+      btn.disabled = disabled;
+    }
+
+    btnSet('Setting\u2026', true);
+
+    fetch('/firmware/boot-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRF-Token': getCSRFToken(),
+      },
+      body: params.toString(),
+    }).then(function (r) {
+      if (r.ok) {
+        btnSet('\u2713 Set', true);
+        setTimeout(function () { btnSet('Set', false); }, 2000);
+        return;
+      }
+      return r.text().then(function (t) {
+        btnSet('\u2717 ' + (t.replace(/<[^>]*>/g, '').trim() || 'Failed'), false);
+        setTimeout(function () { btnSet('Set', false); }, 4000);
+      });
+    }).catch(function () {
+      btnSet('\u2717 Failed', false);
+      setTimeout(function () { btnSet('Set', false); }, 4000);
+    });
+  };
+
+  // ─── System Control: datetime picker ─────────────────────────────────────
+  // Pre-fills #sc-dt-input with the browser's current UTC time on page load
+  // and after HTMX swaps.  Also exposed as window.scSyncTime() for the
+  // "Browser time" button.
+  function utcDatetimeLocal() {
+    var d = new Date();
+    return d.getUTCFullYear() + '-' +
+      String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getUTCDate()).padStart(2, '0') + 'T' +
+      String(d.getUTCHours()).padStart(2, '0') + ':' +
+      String(d.getUTCMinutes()).padStart(2, '0');
+  }
+
+  function initDatetimePicker(root) {
+    var el = (root || document).querySelector('#sc-dt-input:not([data-init])');
+    if (!el) return;
+    el.dataset.init = 'true';
+    el.value = utcDatetimeLocal();
+    var btn = (root || document).getElementById('sc-sync-time-btn');
+    if (btn) btn.addEventListener('click', function () { el.value = utcDatetimeLocal(); });
+  }
+
+  window.scRestoreCheckbox = function (cb) {
+    var form = document.getElementById('restore-form');
+    if (!form) return;
+    form.setAttribute('hx-confirm', cb.checked
+      ? 'Save configuration to startup? Reboot required to apply.'
+      : 'Apply this configuration to the running system?');
+  };
+
+  window.fwUpload = function () {
+    var fileInput = document.getElementById('fw-file');
+    if (!fileInput || !fileInput.files.length) return;
+    if (!confirm('Upload and install this firmware? The current installation may be overwritten.')) return;
+
+    var autoReboot = document.getElementById('fw-upload-auto-reboot');
+    var btn        = document.getElementById('fw-upload-btn');
+    var wrap       = document.getElementById('fw-upload-progress');
+    var bar        = document.getElementById('fw-upload-bar');
+    var text       = document.getElementById('fw-upload-text');
+
+    var formData = new FormData();
+    formData.append('pkg', fileInput.files[0]);
+    if (autoReboot && autoReboot.checked) formData.append('auto-reboot', '1');
+
+    var xhr = new XMLHttpRequest();
+
+    xhr.upload.onprogress = function (e) {
+      if (e.lengthComputable) {
+        var pct = Math.round(e.loaded / e.total * 100);
+        bar.style.width = pct + '%';
+        text.textContent = 'Uploading\u2026 ' + pct + '%';
+      }
+    };
+
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        window.location.href = xhr.responseText.trim();
+      } else {
+        text.textContent = 'Failed: ' + xhr.responseText;
+        btn.disabled = false;
+      }
+    };
+
+    xhr.onerror = function () {
+      text.textContent = 'Upload failed \u2014 network error.';
+      btn.disabled = false;
+    };
+
+    xhr.open('POST', '/firmware/upload');
+    xhr.setRequestHeader('X-CSRF-Token', getCSRFToken());
+
+    btn.disabled = true;
+    wrap.hidden = false;
+    bar.style.width = '0%';
+    text.textContent = 'Uploading\u2026';
+    xhr.send(formData);
+  };
 
   // SSE-driven firmware progress card.
   // The Go server polls RESTCONF and streams rendered HTML fragments; we just

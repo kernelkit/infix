@@ -25,7 +25,11 @@
     {{if .BootOrder}}
     <div class="fw-boot-order-row">
       <span class="fw-boot-order-label">Boot order</span>
-      {{range .BootOrder}}<span class="badge badge-neutral">{{.}}</span>{{end}}
+      <span id="fw-boot-slots" class="fw-boot-slots">
+        {{range .BootOrder}}<span class="badge badge-neutral fw-boot-badge" draggable="true" data-slot="{{.}}">{{.}}</span>{{end}}
+      </span>
+      <button type="button" class="btn btn-sm btn-outline"
+              id="fw-boot-save-btn">Set</button>
     </div>
     {{end}}
     {{if .Slots}}
@@ -84,24 +88,35 @@ python3 -m http.server 8080</code>
     </div>
   </section>
 
-  <section class="info-card fw-card-muted">
-    <div class="card-header">Upload &amp; Install <span class="badge badge-neutral">Coming Soon</span></div>
+  <section class="info-card">
+    <div class="card-header">Upload &amp; Install</div>
     <div class="card-body">
       <p class="fw-help-text">
-        Direct file upload is not yet available. As a workaround, serve the
-        <code>.pkg</code> file from your computer using a local HTTP server (see the URL installer).
+        Select a <code>.pkg</code> firmware file from your computer to upload and install directly.
       </p>
-      <div class="fw-upload-placeholder">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <span>Drop .pkg file here or click to browse</span>
+      <div class="form-group">
+        <label for="fw-file">Firmware Package (.pkg)</label>
+        <input type="file" id="fw-file" accept=".pkg" class="cfg-input" required>
       </div>
-      <button class="btn btn-secondary" disabled>Upload &amp; Install</button>
+      <label class="fw-checkbox-row">
+        <input type="checkbox" id="fw-upload-auto-reboot">
+        Reboot after successful firmware upgrade
+      </label>
+      <div id="fw-upload-progress" hidden>
+        <div class="progress-bar-wrap" style="margin-top:0.75rem">
+          <div class="progress-bar" id="fw-upload-bar"></div>
+        </div>
+        <p class="progress-text" id="fw-upload-text">Uploading&hellip;</p>
+      </div>
+      <div style="margin-top:0.75rem">
+        <button type="button" class="btn btn-primary" id="fw-upload-btn"
+                {{if and .Installer .Installer.Active}}disabled{{end}}>
+          Upload &amp; Install
+        </button>
+      </div>
     </div>
   </section>
+
 
 </div>
 {{end}}

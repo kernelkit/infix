@@ -42,6 +42,10 @@
   --warning:       var(--amber-500);
   --danger:        var(--red-500);
 
+  --warning-bg:     #fffbeb;
+  --warning-fg:     #78350f;
+  --warning-border: #fcd34d;
+
   /* Sidebar — Light mode */
   --sidebar-bg:       var(--slate-100);
   --sidebar-fg:       var(--slate-700);
@@ -84,6 +88,9 @@
     --sidebar-hover-fg: #fff;
     --sidebar-border:   rgba(255, 255, 255, 0.1);
     --dot-color: rgba(255, 255, 255, 0.045);
+    --warning-bg:     #2d2007;
+    --warning-fg:     #fde68a;
+    --warning-border: #92400e;
   }
 }
 
@@ -104,6 +111,9 @@
   --sidebar-hover-fg: #fff;
   --sidebar-border:   rgba(255, 255, 255, 0.1);
   --dot-color: rgba(255, 255, 255, 0.045);
+  --warning-bg:     #2d2007;
+  --warning-fg:     #fde68a;
+  --warning-border: #92400e;
 }
 
 /* Force Light Mode (override system dark preference) */
@@ -122,6 +132,9 @@
   --sidebar-hover-fg: var(--primary);
   --sidebar-border:   rgba(0, 0, 0, 0.08);
   --dot-color: rgba(0, 0, 0, 0.055);
+  --warning-bg:     #fffbeb;
+  --warning-fg:     #78350f;
+  --warning-border: #fcd34d;
 }
 .light .alert-error { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 .light .alert-info { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
@@ -1504,6 +1517,11 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   margin-right: 0.2rem;
 }
 
+.fw-boot-slots { display: flex; gap: 0.3rem; align-items: center; flex: 1; }
+.fw-boot-badge { cursor: grab; user-select: none; }
+.fw-boot-badge.fw-boot-dragging { opacity: 0.35; }
+.fw-boot-badge.fw-boot-drop-before { box-shadow: -3px 0 0 var(--primary); }
+
 .fw-slot-list { display: flex; flex-direction: column; }
 .fw-slot-item {
   padding: 0.75rem 1.25rem;
@@ -2050,23 +2068,11 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   align-items: center;
   gap: 0.6rem;
   padding: 0.5rem 1.25rem;
-  background: #fffbeb;
-  border-bottom: 1px solid #fcd34d;
-  color: #78350f;
+  background: var(--warning-bg);
+  border-bottom: 1px solid var(--warning-border);
+  color: var(--warning-fg);
   font-size: 0.875rem;
   flex-shrink: 0;
-}
-.dark .cfg-unsaved-banner {
-  background: #2d2007;
-  border-color: #92400e;
-  color: #fde68a;
-}
-@media (prefers-color-scheme: dark) {
-  .cfg-unsaved-banner {
-    background: #2d2007;
-    border-color: #92400e;
-    color: #fde68a;
-  }
 }
 
 /* cfgError inline feedback */
@@ -2214,6 +2220,66 @@ select.cfg-input {
 }
 .dark .cfg-save-status.saved { color: #86efac; }
 .light .cfg-save-status.saved { color: #16a34a; }
+
+/* ==========================================================================
+   System Control page
+   ========================================================================== */
+
+.sc-action-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  gap: 1rem;
+}
+
+.sc-desc {
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.sc-danger-card { border-color: var(--warning-border); }
+
+.sc-danger-body { display: flex; flex-direction: column; }
+
+.sc-danger-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.sc-danger-text { flex: 1; min-width: 0; }
+.sc-danger-text strong { display: block; margin-bottom: 0.35rem; }
+
+.sc-danger-sep { height: 1px; background: var(--border); margin: 0 1.25rem; }
+
+.sc-fd-ok  { color: var(--success); font-size: 0.875rem; }
+.sc-fd-err { color: var(--danger);  font-size: 0.875rem; }
+
+.sc-dt-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.sc-restore-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  cursor: pointer;
+}
+.sc-restore-warn-text {
+  color: var(--warning-fg);
+  font-size: 0.875rem;
+}
 
 /* ==========================================================================
    YANG Tree Navigation

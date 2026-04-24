@@ -56,6 +56,14 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	sysCtrlTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/system-control.html")
+	if err != nil {
+		return nil, err
+	}
+	backupTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/backup.html")
+	if err != nil {
+		return nil, err
+	}
 	routingTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/routing.html")
 	if err != nil {
 		return nil, err
@@ -155,8 +163,10 @@ func New(
 	}
 
 	sys := &handlers.SystemHandler{
-		RC:       rc,
-		Template: fwrTmpl,
+		RC:          rc,
+		Template:    fwrTmpl,
+		SysCtrlTmpl: sysCtrlTmpl,
+		BackupTmpl:  backupTmpl,
 	}
 
 	routing := &handlers.RoutingHandler{Template: routingTmpl, RC: rc}
@@ -203,10 +213,20 @@ func New(
 	})
 	mux.HandleFunc("GET /firmware", sys.Firmware)
 	mux.HandleFunc("GET /firmware/progress", sys.FirmwareProgress)
-	mux.HandleFunc("POST /firmware/install", sys.FirmwareInstall)
-	mux.HandleFunc("POST /reboot", sys.Reboot)
+	mux.HandleFunc("POST /firmware/install",     sys.FirmwareInstall)
+	mux.HandleFunc("POST /firmware/upload",      sys.FirmwareUpload)
+	mux.HandleFunc("POST /firmware/boot-order",  sys.SetBootOrder)
+	mux.HandleFunc("POST /reboot", sys.Reboot) // kept for firmware page "Reboot to activate"
 	mux.HandleFunc("GET /device-status", sys.DeviceStatus)
 	mux.HandleFunc("GET /config", sys.DownloadConfig)
+	mux.HandleFunc("GET /maintenance/backup",                  sys.Backup)
+	mux.HandleFunc("POST /maintenance/backup/restore",         sys.RestoreConfig)
+	mux.HandleFunc("GET /maintenance/system",                  sys.SystemControl)
+	mux.HandleFunc("POST /maintenance/system/reboot",          sys.Reboot)
+	mux.HandleFunc("POST /maintenance/system/shutdown",        sys.Shutdown)
+	mux.HandleFunc("POST /maintenance/system/factory-default", sys.FactoryDefault)
+	mux.HandleFunc("POST /maintenance/system/factory-reset",   sys.FactoryReset)
+	mux.HandleFunc("POST /maintenance/system/datetime",        sys.SetDatetime)
 	mux.HandleFunc("GET /routing", routing.Overview)
 	mux.HandleFunc("GET /wifi", wifi.Overview)
 	mux.HandleFunc("GET /vpn", vpn.Overview)
