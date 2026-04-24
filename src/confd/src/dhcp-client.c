@@ -180,6 +180,20 @@ int dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 	ifaces  = lydx_get_descendant(config, "interfaces", "interface", NULL);
 	difaces = lydx_get_descendant(diff, "interfaces", "interface", NULL);
 
+	if (diff && lydx_get_xpathf(diff, "/ietf-system:system/hostname")) {
+		LYX_LIST_FOR_EACH(ifaces, iface, "interface") {
+			const char *ifname = lydx_get_cattr(iface, "name");
+
+			ipv4 = lydx_get_descendant(lyd_child(iface), "ipv4", NULL);
+			if (!ipv4)
+				continue;
+
+			dhcp = lydx_get_descendant(lyd_child(ipv4), "dhcp", NULL);
+			if (dhcp)
+				add(ifname, dhcp);
+		}
+	}
+
 	/* find the modified interfaces */
 	LYX_LIST_FOR_EACH(difaces, diface, "interface") {
 		const char *ifname = lydx_get_cattr(diface, "name");

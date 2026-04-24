@@ -1,27 +1,19 @@
 #!/usr/bin/env python3
 """DHCP Hostname Resend
 
-Verify that updating the system hostname regenerates the DHCP client
-Finit service file so subsequent DHCP requests advertise the current
-hostname (option 12, RFC 2132).
+Verify that updating the system hostname restarts the DHCP client so
+subsequent DHCP requests advertise the current hostname (option 12,
+RFC 2132).
 
 Regression test for a bug where the DHCP client callback only reacts
 on diffs in infix-dhcp-client, so a standalone change of
-ietf-system:system/hostname leaves the previously written
-/etc/finit.d/available/dhcp-client-<iface>.conf untouched and the
-running udhcpc keeps announcing the old name.
+ietf-system:system/hostname leaves the running udhcpc untouched with
+the old '-x hostname:' argument from when it was first started.
 
 """
 
 import infamy
 from infamy.util import until
-
-
-def finit_conf(ssh, ifname):
-    """Return the contents of the generated DHCP client Finit service file."""
-    path = f"/etc/finit.d/available/dhcp-client-{ifname}.conf"
-    cmd = ssh.runsh(f"cat {path} 2>/dev/null")
-    return cmd.stdout
 
 
 def udhcpc_cmdline(ssh, ifname):
