@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net"
 	"testing"
+	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 	"github.com/kernelkit/infix/src/yangerd/internal/zapi"
 )
 
@@ -77,7 +79,8 @@ func TestTransformRoute(t *testing.T) {
 		},
 	}
 
-	result := transformRoute(route)
+	received := time.Date(2025, 6, 15, 10, 30, 0, 0, time.UTC)
+	result := transformRoute(route, false, received)
 
 	var parsed map[string]any
 	if err := json.Unmarshal(result, &parsed); err != nil {
@@ -111,6 +114,201 @@ func TestTransformRoute(t *testing.T) {
 	if len(hops) != 0 {
 		t.Errorf("expected 0 next-hops, got %d", len(hops))
 	}
+
+	if _, ok := parsed["active"]; ok {
+		t.Error("non-selected route should not have 'active' leaf")
+	}
+
+	lastUpdated, ok := parsed["last-updated"].(string)
+	if !ok {
+		t.Fatal("last-updated missing or not a string")
+	}
+	if lastUpdated != "2025-06-15T10:30:00Z" {
+		t.Errorf("last-updated = %q, want %q", lastUpdated, "2025-06-15T10:30:00Z")
+	}
+}
+
+func TestTransformRouteActiveParam(t *testing.T) {
+	route := &zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 5,
+		Prefix: net.IPNet{
+			IP:   net.ParseIP("0.0.0.0").To4(),
+			Mask: net.CIDRMask(0, 32),
+		},
+	}
+
+	result := transformRoute(route, true, time.Now())
+
+	var parsed map[string]any
+	if err := json.Unmarshal(result, &parsed); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	active, ok := parsed["active"].([]any)
+	if !ok {
+		t.Fatalf("active leaf missing or wrong type: %v", parsed["active"])
+	}
+	if len(active) != 1 || active[0] != nil {
+		t.Errorf("active = %v, want [null]", active)
+	}
+}
+
+func TestRouteKeyDifferentGateways(t *testing.T) {
+	dhcp := &zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 5,
+		Prefix: net.IPNet{
+			IP:   net.IPv4(0, 0, 0, 0),
+			Mask: net.CIDRMask(0, 32),
+		},
+		Nexthops: []zapi.Nexthop{{
+			Gate: net.ParseIP("192.168.10.3").To4(),
+		}},
+	}
+	static := &zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 120,
+		Prefix: net.IPNet{
+			IP:   net.IPv4(0, 0, 0, 0),
+			Mask: net.CIDRMask(0, 32),
+		},
+		Nexthops: []zapi.Nexthop{{
+			Gate: net.ParseIP("192.168.50.2").To4(),
+		}},
+	}
+
+	keyDHCP := routeKey(dhcp)
+	keyStatic := routeKey(static)
+
+	if keyDHCP == keyStatic {
+		t.Errorf("routes with different gateways must have different keys: %q == %q", keyDHCP, keyStatic)
+	}
+}
+
+func TestRouteKeySameGatewayDifferentDistance(t *testing.T) {
+	old := &zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 120,
+		Prefix: net.IPNet{
+			IP:   net.IPv4(0, 0, 0, 0),
+			Mask: net.CIDRMask(0, 32),
+		},
+		Nexthops: []zapi.Nexthop{{
+			Gate: net.ParseIP("192.168.50.2").To4(),
+		}},
+	}
+	updated := &zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 1,
+		Prefix: net.IPNet{
+			IP:   net.IPv4(0, 0, 0, 0),
+			Mask: net.CIDRMask(0, 32),
+		},
+		Nexthops: []zapi.Nexthop{{
+			Gate: net.ParseIP("192.168.50.2").To4(),
+		}},
+	}
+
+	if routeKey(old) != routeKey(updated) {
+		t.Errorf("same gateway routes must share a key regardless of distance: %q != %q", routeKey(old), routeKey(updated))
+	}
+}
+
+func TestAddRouteSamePrefixDifferentDistance(t *testing.T) {
+	tr := tree.New()
+	w := New(tr, nil)
+
+	dhcpRoute := &zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 5,
+		Prefix: net.IPNet{
+			IP:   net.IPv4(0, 0, 0, 0),
+			Mask: net.CIDRMask(0, 32),
+		},
+		Nexthops: []zapi.Nexthop{{
+			Type: zapi.NHIPv4IFIndex,
+			Gate: net.ParseIP("192.168.10.3").To4(),
+		}},
+	}
+	staticRoute := &zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 120,
+		Prefix: net.IPNet{
+			IP:   net.IPv4(0, 0, 0, 0),
+			Mask: net.CIDRMask(0, 32),
+		},
+		Nexthops: []zapi.Nexthop{{
+			Type: zapi.NHIPv4IFIndex,
+			Gate: net.ParseIP("192.168.50.2").To4(),
+		}},
+	}
+
+	w.addRoute(dhcpRoute)
+	w.addRoute(staticRoute)
+
+	w.mu.Lock()
+	count := len(w.routes)
+	w.mu.Unlock()
+
+	if count != 2 {
+		t.Errorf("expected 2 routes, got %d", count)
+	}
+
+	data := tr.Get(routingTreeKey)
+	if data == nil {
+		t.Fatal("routing tree key not set")
+	}
+
+	var routing map[string]any
+	if err := json.Unmarshal(data, &routing); err != nil {
+		t.Fatalf("unmarshal routing: %v", err)
+	}
+
+	ribs, ok := routing["ribs"].(map[string]any)
+	if !ok {
+		t.Fatal("ribs not found")
+	}
+	ribList, ok := ribs["rib"].([]any)
+	if !ok {
+		t.Fatal("rib list not found")
+	}
+
+	var ipv4Routes []any
+	for _, rib := range ribList {
+		ribMap := rib.(map[string]any)
+		if ribMap["name"] == "ipv4" {
+			routes := ribMap["routes"].(map[string]any)
+			ipv4Routes = routes["route"].([]any)
+			break
+		}
+	}
+
+	if len(ipv4Routes) != 2 {
+		t.Fatalf("expected 2 IPv4 routes, got %d", len(ipv4Routes))
+	}
+
+	var activeCount int
+	for _, r := range ipv4Routes {
+		rm := r.(map[string]any)
+		pref := int(rm["route-preference"].(float64))
+		_, hasActive := rm["active"]
+		if hasActive {
+			activeCount++
+			if pref != 5 {
+				t.Errorf("active route has preference %d, want 5", pref)
+			}
+		}
+		if pref == 120 && hasActive {
+			t.Error("route with preference 120 should not be active")
+		}
+		if _, ok := rm["last-updated"].(string); !ok {
+			t.Errorf("route with preference %d missing last-updated", pref)
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("expected exactly 1 active route, got %d", activeCount)
+	}
 }
 
 func TestTransformRouteIPv6(t *testing.T) {
@@ -124,7 +322,7 @@ func TestTransformRouteIPv6(t *testing.T) {
 		},
 	}
 
-	result := transformRoute(route)
+	result := transformRoute(route, false, time.Now())
 
 	var parsed map[string]any
 	if err := json.Unmarshal(result, &parsed); err != nil {
@@ -136,5 +334,102 @@ func TestTransformRouteIPv6(t *testing.T) {
 	}
 	if got := parsed["source-protocol"]; got != "ietf-ospf:ospfv2" {
 		t.Errorf("source-protocol = %v, want %q", got, "ietf-ospf:ospfv2")
+	}
+}
+
+func TestAddRouteDistanceChangeOverwrites(t *testing.T) {
+	tr := tree.New()
+	w := New(tr, nil)
+
+	gateway := net.ParseIP("192.168.50.2").To4()
+	prefix := net.IPNet{IP: net.IPv4(0, 0, 0, 0), Mask: net.CIDRMask(0, 32)}
+
+	w.addRoute(&zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 120,
+		Prefix:   prefix,
+		Nexthops: []zapi.Nexthop{{Type: zapi.NHIPv4IFIndex, Gate: gateway}},
+	})
+
+	w.addRoute(&zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 1,
+		Prefix:   prefix,
+		Nexthops: []zapi.Nexthop{{Type: zapi.NHIPv4IFIndex, Gate: gateway}},
+	})
+
+	w.mu.Lock()
+	count := len(w.routes)
+	w.mu.Unlock()
+
+	if count != 1 {
+		t.Errorf("same-gateway route should overwrite on distance change: got %d routes, want 1", count)
+	}
+
+	data := tr.Get(routingTreeKey)
+	if data == nil {
+		t.Fatal("routing tree key not set")
+	}
+
+	var routing map[string]any
+	if err := json.Unmarshal(data, &routing); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	ribs := routing["ribs"].(map[string]any)
+	ribList := ribs["rib"].([]any)
+	var ipv4Routes []any
+	for _, rib := range ribList {
+		ribMap := rib.(map[string]any)
+		if ribMap["name"] == "ipv4" {
+			ipv4Routes = ribMap["routes"].(map[string]any)["route"].([]any)
+			break
+		}
+	}
+
+	if len(ipv4Routes) != 1 {
+		t.Fatalf("expected 1 route, got %d", len(ipv4Routes))
+	}
+
+	rm := ipv4Routes[0].(map[string]any)
+	if pref := int(rm["route-preference"].(float64)); pref != 1 {
+		t.Errorf("route-preference = %d, want 1 (updated distance)", pref)
+	}
+	if _, hasActive := rm["active"]; !hasActive {
+		t.Error("sole route should be active")
+	}
+}
+
+func TestDeleteRouteWithoutNexthops(t *testing.T) {
+	tr := tree.New()
+	w := New(tr, nil)
+
+	gateway := net.ParseIP("192.168.10.3").To4()
+	prefix := net.IPNet{IP: net.IPv4(0, 0, 0, 0), Mask: net.CIDRMask(0, 32)}
+
+	w.addRoute(&zapi.Route{
+		Type:     zapi.RouteStatic,
+		Distance: 5,
+		Prefix:   prefix,
+		Nexthops: []zapi.Nexthop{{Type: zapi.NHIPv4IFIndex, Gate: gateway}},
+	})
+
+	w.mu.Lock()
+	count := len(w.routes)
+	w.mu.Unlock()
+	if count != 1 {
+		t.Fatalf("expected 1 route after add, got %d", count)
+	}
+
+	w.deleteRoute(&zapi.Route{
+		Type:   zapi.RouteStatic,
+		Prefix: prefix,
+	})
+
+	w.mu.Lock()
+	count = len(w.routes)
+	w.mu.Unlock()
+	if count != 0 {
+		t.Errorf("expected 0 routes after delete without nexthops, got %d", count)
 	}
 }
