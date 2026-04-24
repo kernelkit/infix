@@ -7,8 +7,10 @@ package zapi
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"syscall"
 )
@@ -78,6 +80,11 @@ const (
 	AFIIPv6 uint8 = 2
 )
 
+// Route flags from FRR (lib/zebra.h: ZEBRA_FLAG_*).
+const (
+	FlagSelected uint32 = 0x04
+)
+
 // Message flags (from struct zapi_route.message).
 type MsgFlag uint32
 
@@ -109,11 +116,13 @@ const (
 
 // Nexthop flags (from lib/zclient.h: ZAPI_NEXTHOP_FLAG_*).
 const (
+	nhFlagOnlink    uint8 = 0x01
 	nhFlagLabel     uint8 = 0x02
 	nhFlagWeight    uint8 = 0x04
 	nhFlagHasBackup uint8 = 0x08
 	nhFlagSeg6      uint8 = 0x10
 	nhFlagSeg6Local uint8 = 0x20
+	nhFlagEVPN      uint8 = 0x40
 )
 
 // Header is a ZAPI v6 message header.
@@ -157,7 +166,7 @@ func EncodeHeader(length uint16, vrfID uint32, cmd Command) []byte {
 	binary.BigEndian.PutUint16(buf[0:2], length)
 	buf[2] = HeaderMarker
 	buf[3] = HeaderVersion
-	binary.LittleEndian.PutUint32(buf[4:8], vrfID)
+	binary.BigEndian.PutUint32(buf[4:8], vrfID)
 	binary.BigEndian.PutUint16(buf[8:10], uint16(cmd))
 	return buf
 }
@@ -171,7 +180,7 @@ func DecodeHeader(data []byte) (Header, error) {
 		Length:  binary.BigEndian.Uint16(data[0:2]),
 		Marker:  data[2],
 		Version: data[3],
-		VrfID:   binary.LittleEndian.Uint32(data[4:8]),
+		VrfID:   binary.BigEndian.Uint32(data[4:8]),
 		Command: Command(binary.BigEndian.Uint16(data[8:10])),
 	}
 	if h.Marker != HeaderMarker {
@@ -184,11 +193,10 @@ func DecodeHeader(data []byte) (Header, error) {
 }
 
 // EncodeHello builds a Hello message body.
-// Fields: redistDefault(1), instance(2), sessionID(4), receiveNotify(1), synchronous(1), flags(4), ...
-// We send zeros for everything (redistDefault=0 means "no default route type").
+// Fields: redistDefault(1), instance(2), sessionID(4), synchronous(1) = 8 bytes.
+// We send zeros for everything (redistDefault=0 means ZEBRA_ROUTE_SYSTEM).
 func EncodeHello() []byte {
-	body := make([]byte, 12) // redistDefault + instance + sessionID + receiveNotify + synchronous + flags
-	return body
+	return make([]byte, 8)
 }
 
 // EncodeRouterIDAdd builds a RouterIDAdd message body.
@@ -248,32 +256,41 @@ func ReadMessage(r io.Reader) (Header, []byte, error) {
 //
 //	type(1) instance(2) flags(4) message(4) safi(1) family(1) prefixlen(1) prefix(var) ...
 func DecodeRoute(body []byte) (*Route, error) {
+	return DecodeRouteLog(body, nil)
+}
+
+// DecodeRouteLog is like DecodeRoute but logs decode positions if log is non-nil.
+func DecodeRouteLog(body []byte, log *slog.Logger) (*Route, error) {
 	if len(body) < 10 {
 		return nil, fmt.Errorf("route body too short: %d bytes", len(body))
+	}
+
+	if log != nil {
+		log.Debug("zapi decode: raw body", "len", len(body), "hex", hex.EncodeToString(body))
 	}
 
 	r := &Route{}
 	pos := 0
 
-	// type(1)
 	r.Type = RouteType(body[pos])
 	pos++
 
 	// instance(2)
 	pos += 2
 
-	// flags(4)
 	r.Flags = binary.BigEndian.Uint32(body[pos : pos+4])
 	pos += 4
 
-	// message(4) — FRR >= 7.5 uses 4-byte message field
 	r.Message = MsgFlag(binary.BigEndian.Uint32(body[pos : pos+4]))
 	pos += 4
+
+	if log != nil {
+		log.Debug("zapi decode: header", "type", r.Type, "flags", r.Flags, "message", fmt.Sprintf("0x%x", r.Message), "pos", pos)
+	}
 
 	// safi(1)
 	pos++
 
-	// family(1)
 	if pos >= len(body) {
 		return nil, fmt.Errorf("truncated at family")
 	}
@@ -285,14 +302,12 @@ func DecodeRoute(body []byte) (*Route, error) {
 		return nil, err
 	}
 
-	// prefixlen(1)
 	if pos >= len(body) {
 		return nil, fmt.Errorf("truncated at prefixlen")
 	}
 	prefixLen := body[pos]
 	pos++
 
-	// prefix (ceil(prefixLen/8) bytes)
 	byteLen := int((prefixLen + 7) / 8)
 	if pos+byteLen > len(body) {
 		return nil, fmt.Errorf("truncated at prefix data")
@@ -310,7 +325,10 @@ func DecodeRoute(body []byte) (*Route, error) {
 	mask := net.CIDRMask(int(prefixLen), addrLen*8)
 	r.Prefix = net.IPNet{IP: ip, Mask: mask}
 
-	// source prefix (if MsgSrcPfx set)
+	if log != nil {
+		log.Debug("zapi decode: prefix", "prefix", r.Prefix.String(), "pos", pos)
+	}
+
 	if r.Message&MsgSrcPfx != 0 {
 		if pos >= len(body) {
 			return nil, fmt.Errorf("truncated at src prefix")
@@ -324,34 +342,38 @@ func DecodeRoute(body []byte) (*Route, error) {
 		pos += srcByteLen
 	}
 
-	// NHG (if MsgNHG set, frr >= 8)
 	if r.Message&MsgNHG != 0 {
 		if pos+4 > len(body) {
 			return nil, fmt.Errorf("truncated at nhg")
 		}
-		pos += 4 // skip nhgid
+		pos += 4
 	}
 
-	// Nexthops
 	if r.Message&MsgNexthop != 0 {
 		if pos+2 > len(body) {
 			return nil, fmt.Errorf("truncated at nexthop count")
 		}
 		numNH := binary.BigEndian.Uint16(body[pos : pos+2])
 		pos += 2
-		r.Nexthops = make([]Nexthop, 0, numNH)
 
+		if log != nil {
+			log.Debug("zapi decode: nexthops", "count", numNH, "pos", pos)
+		}
+
+		r.Nexthops = make([]Nexthop, 0, numNH)
 		for i := uint16(0); i < numNH; i++ {
-			nh, n, err := decodeNexthop(body[pos:], family)
+			nh, n, err := decodeNexthop(body[pos:], r.Message)
 			if err != nil {
 				return nil, fmt.Errorf("nexthop %d: %w", i, err)
+			}
+			if log != nil {
+				log.Debug("zapi decode: nexthop", "i", i, "type", nh.Type, "gate", nh.Gate, "ifindex", nh.Ifindex, "consumed", n, "nextPos", pos+n)
 			}
 			r.Nexthops = append(r.Nexthops, nh)
 			pos += n
 		}
 	}
 
-	// Backup nexthops (skip)
 	if r.Message&MsgBackupNH != 0 {
 		if pos+2 > len(body) {
 			return nil, fmt.Errorf("truncated at backup nexthop count")
@@ -359,7 +381,7 @@ func DecodeRoute(body []byte) (*Route, error) {
 		numBackup := binary.BigEndian.Uint16(body[pos : pos+2])
 		pos += 2
 		for i := uint16(0); i < numBackup; i++ {
-			_, n, err := decodeNexthop(body[pos:], family)
+			_, n, err := decodeNexthop(body[pos:], r.Message)
 			if err != nil {
 				return nil, fmt.Errorf("backup nexthop %d: %w", i, err)
 			}
@@ -367,25 +389,28 @@ func DecodeRoute(body []byte) (*Route, error) {
 		}
 	}
 
-	// Distance
 	if r.Message&MsgDistance != 0 {
 		if pos >= len(body) {
 			return nil, fmt.Errorf("truncated at distance")
 		}
 		r.Distance = body[pos]
+		if log != nil {
+			log.Debug("zapi decode: distance", "distance", r.Distance, "pos", pos, "byte", fmt.Sprintf("0x%02x", body[pos]))
+		}
 		pos++
 	}
 
-	// Metric
 	if r.Message&MsgMetric != 0 {
 		if pos+4 > len(body) {
 			return nil, fmt.Errorf("truncated at metric")
 		}
 		r.Metric = binary.BigEndian.Uint32(body[pos : pos+4])
+		if log != nil {
+			log.Debug("zapi decode: metric", "metric", r.Metric, "pos", pos)
+		}
 		pos += 4
 	}
 
-	// Tag
 	if r.Message&MsgTag != 0 {
 		if pos+4 > len(body) {
 			return nil, fmt.Errorf("truncated at tag")
@@ -394,7 +419,6 @@ func DecodeRoute(body []byte) (*Route, error) {
 		pos += 4
 	}
 
-	// MTU
 	if r.Message&MsgMTU != 0 {
 		if pos+4 > len(body) {
 			return nil, fmt.Errorf("truncated at mtu")
@@ -403,127 +427,120 @@ func DecodeRoute(body []byte) (*Route, error) {
 		pos += 4
 	}
 
-	// Remaining fields (tableID, SRTE, opaque) are not needed.
 	return r, nil
 }
 
-// decodeNexthop decodes one nexthop from the body.
-// FRR >= 7.3 / ZAPI v6 format: vrfID(4) type(1) flags(1) [gate] [ifindex] ...
-func decodeNexthop(data []byte, family uint8) (Nexthop, int, error) {
+// decodeNexthop decodes one nexthop matching FRR 10.5 zapi_nexthop_decode.
+// Wire format: vrfID(4) type(1) flags(1) [gate/ifindex] [labels] [weight]
+// [rmac] [srte_color] [backup] [seg6local] [seg6]
+func decodeNexthop(data []byte, routeMsg MsgFlag) (Nexthop, int, error) {
 	nh := Nexthop{}
 	pos := 0
 
-	// vrfID(4)
-	if pos+4 > len(data) {
-		return nh, 0, fmt.Errorf("truncated at vrf_id")
+	if pos+6 > len(data) {
+		return nh, 0, fmt.Errorf("truncated at nh header")
 	}
-	pos += 4 // skip vrfID
-
-	// type(1)
-	if pos >= len(data) {
-		return nh, 0, fmt.Errorf("truncated at nh type")
-	}
+	pos += 4 // vrfID
 	nh.Type = NHType(data[pos])
 	pos++
-
-	// flags(1) — FRR >= 7.3
-	if pos >= len(data) {
-		return nh, 0, fmt.Errorf("truncated at nh flags")
-	}
 	flags := data[pos]
 	pos++
 
-	// For FRR >= 7.3, IPv4 and IPv6 are treated as IPv4IFIndex and IPv6IFIndex
-	// respectively (nexthopProcessIPToIPIFindex). We do the same mapping.
-	nhType := nh.Type
-	switch nhType {
-	case NHIPv4:
-		nhType = NHIPv4IFIndex
-	case NHIPv6:
-		nhType = NHIPv6IFIndex
-	}
-
-	// Decode gate address
-	switch nhType {
-	case NHIPv4IFIndex:
-		if pos+4 > len(data) {
-			return nh, 0, fmt.Errorf("truncated at ipv4 gate")
+	switch nh.Type {
+	case NHBlackhole:
+		if pos >= len(data) {
+			return nh, 0, fmt.Errorf("truncated at blackhole type")
+		}
+		pos++
+	case NHIPv4, NHIPv4IFIndex:
+		if pos+8 > len(data) {
+			return nh, 0, fmt.Errorf("truncated at ipv4 gate+ifindex")
 		}
 		nh.Gate = net.IP(data[pos : pos+4]).To4()
 		pos += 4
-	case NHIPv6IFIndex:
-		if pos+16 > len(data) {
-			return nh, 0, fmt.Errorf("truncated at ipv6 gate")
-		}
-		nh.Gate = net.IP(data[pos : pos+16]).To16()
-		pos += 16
-	}
-
-	// Decode ifindex
-	switch nhType {
-	case NHIFIndex, NHIPv4IFIndex, NHIPv6IFIndex:
+		nh.Ifindex = binary.BigEndian.Uint32(data[pos : pos+4])
+		pos += 4
+	case NHIFIndex:
 		if pos+4 > len(data) {
 			return nh, 0, fmt.Errorf("truncated at ifindex")
 		}
 		nh.Ifindex = binary.BigEndian.Uint32(data[pos : pos+4])
 		pos += 4
-	}
-
-	// Blackhole type
-	if nhType == NHBlackhole {
-		if pos >= len(data) {
-			return nh, 0, fmt.Errorf("truncated at blackhole type")
+	case NHIPv6, NHIPv6IFIndex:
+		if pos+20 > len(data) {
+			return nh, 0, fmt.Errorf("truncated at ipv6 gate+ifindex")
 		}
-		pos++ // skip blackhole type byte
+		nh.Gate = net.IP(data[pos : pos+16]).To16()
+		pos += 16
+		nh.Ifindex = binary.BigEndian.Uint32(data[pos : pos+4])
+		pos += 4
 	}
 
-	// Labels (if flag set)
 	if flags&nhFlagLabel != 0 {
-		if pos >= len(data) {
-			return nh, 0, fmt.Errorf("truncated at label count")
+		if pos+2 > len(data) {
+			return nh, 0, fmt.Errorf("truncated at labels")
 		}
 		labelNum := int(data[pos])
 		pos++
+		pos++ // label_type (1 byte)
 		if labelNum > 16 {
 			labelNum = 16
 		}
-		pos += labelNum * 4 // skip label data
+		pos += labelNum * 4
 	}
 
-	// Weight (if flag set)
 	if flags&nhFlagWeight != 0 {
-		if pos+4 > len(data) {
+		if pos+8 > len(data) {
 			return nh, 0, fmt.Errorf("truncated at weight")
+		}
+		pos += 8 // uint64
+	}
+
+	if flags&nhFlagEVPN != 0 {
+		if pos+6 > len(data) {
+			return nh, 0, fmt.Errorf("truncated at evpn rmac")
+		}
+		pos += 6 // struct ethaddr
+	}
+
+	if routeMsg&MsgSRTE != 0 {
+		if pos+4 > len(data) {
+			return nh, 0, fmt.Errorf("truncated at srte color")
 		}
 		pos += 4
 	}
 
-	// SRTE color — present when message has MsgSRTE flag.
-	// We can't check message flags here; instead rely on the frr >=7.5
-	// behavior: SRTE color is only present if the SRTE message flag was
-	// set on the route. The caller handles this by not passing SRTE routes
-	// to us (we only subscribe to simple route types). For safety, we skip
-	// nothing here — SRTE is handled at the route level if needed.
-
-	// Backup nexthop indices (if flag set)
 	if flags&nhFlagHasBackup != 0 {
 		if pos >= len(data) {
 			return nh, 0, fmt.Errorf("truncated at backup count")
 		}
 		backupNum := int(data[pos])
 		pos++
-		pos += backupNum // skip backup indices
+		pos += backupNum
 	}
 
-	// SEG6 (if flag set)
-	if flags&nhFlagSeg6 != 0 {
-		// seg6local_action(4) + seg6local_context(4+16+4 = 24)
+	// SEG6LOCAL comes before SEG6 in FRR's decode order
+	if flags&nhFlagSeg6Local != 0 {
+		// seg6local_action(4) + seg6local_context(sizeof(struct seg6local_context))
+		// struct seg6local_context is 24 bytes in FRR (nh_seg.h)
+		if pos+28 > len(data) {
+			return nh, 0, fmt.Errorf("truncated at seg6local")
+		}
 		pos += 28
 	}
 
-	// SEG6 local (if flag set)
-	if flags&nhFlagSeg6Local != 0 {
-		pos += 16 // struct in6_addr
+	if flags&nhFlagSeg6 != 0 {
+		if pos >= len(data) {
+			return nh, 0, fmt.Errorf("truncated at seg6 count")
+		}
+		segNum := int(data[pos])
+		pos++
+		// segs(segNum*16) + behavior(4)
+		skip := segNum*16 + 4
+		if pos+skip > len(data) {
+			return nh, 0, fmt.Errorf("truncated at seg6 data")
+		}
+		pos += skip
 	}
 
 	return nh, pos, nil
