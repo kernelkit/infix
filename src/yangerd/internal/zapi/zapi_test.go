@@ -256,6 +256,118 @@ type testNexthop struct {
 	ifindex uint32
 }
 
+// TestDecodeRouteFRRRedistribute tests the exact wire format that FRR's
+// zsend_redistribute_route produces: message flags 0x17 = nexthop|distance|metric|mtu.
+func TestDecodeRouteFRRRedistribute(t *testing.T) {
+	msgFlags := uint32(MsgNexthop | MsgDistance | MsgMetric | MsgMTU)
+
+	var body []byte
+	body = append(body, uint8(RouteRIP)) // type
+	body = append(body, 0, 0)            // instance
+	tmp := make([]byte, 4)
+	binary.BigEndian.PutUint32(tmp, 0) // flags
+	body = append(body, tmp...)
+	binary.BigEndian.PutUint32(tmp, msgFlags)
+	body = append(body, tmp...)
+	body = append(body, 1)               // safi=unicast
+	body = append(body, syscall.AF_INET) // family
+	body = append(body, 24)              // prefixlen
+	body = append(body, 192, 168, 10)    // prefix (3 bytes for /24)
+
+	// 1 nexthop: type=IFINDEX, flags=0, ifindex=5
+	binary.BigEndian.PutUint16(tmp[:2], 1) // nexthop count
+	body = append(body, tmp[:2]...)
+	body = append(body, 0, 0, 0, 0)       // vrfID
+	body = append(body, uint8(NHIFIndex)) // nh type
+	body = append(body, 0)                // nh flags
+	binary.BigEndian.PutUint32(tmp, 5)    // ifindex
+	body = append(body, tmp...)
+
+	body = append(body, 120)           // distance (RIP=120)
+	binary.BigEndian.PutUint32(tmp, 3) // metric
+	body = append(body, tmp...)
+	binary.BigEndian.PutUint32(tmp, 1500) // mtu
+	body = append(body, tmp...)
+
+	route, err := DecodeRoute(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if route.Type != RouteRIP {
+		t.Errorf("Type = %d, want %d", route.Type, RouteRIP)
+	}
+	if route.Prefix.String() != "192.168.10.0/24" {
+		t.Errorf("Prefix = %s, want 192.168.10.0/24", route.Prefix.String())
+	}
+	if route.Distance != 120 {
+		t.Errorf("Distance = %d, want 120", route.Distance)
+	}
+	if route.Metric != 3 {
+		t.Errorf("Metric = %d, want 3", route.Metric)
+	}
+	if route.MTU != 1500 {
+		t.Errorf("MTU = %d, want 1500", route.MTU)
+	}
+	if len(route.Nexthops) != 1 {
+		t.Fatalf("Nexthops = %d, want 1", len(route.Nexthops))
+	}
+	if route.Nexthops[0].Ifindex != 5 {
+		t.Errorf("Ifindex = %d, want 5", route.Nexthops[0].Ifindex)
+	}
+}
+
+// TestDecodeRouteWithTag tests message flags 0x1f = nexthop|distance|metric|tag|mtu.
+func TestDecodeRouteWithTag(t *testing.T) {
+	msgFlags := uint32(MsgNexthop | MsgDistance | MsgMetric | MsgTag | MsgMTU)
+
+	var body []byte
+	body = append(body, uint8(RouteOSPF)) // type
+	body = append(body, 0, 0)             // instance
+	tmp := make([]byte, 4)
+	binary.BigEndian.PutUint32(tmp, 0)
+	body = append(body, tmp...) // flags
+	binary.BigEndian.PutUint32(tmp, msgFlags)
+	body = append(body, tmp...)          // message
+	body = append(body, 1)               // safi
+	body = append(body, syscall.AF_INET) // family
+	body = append(body, 32)              // prefixlen
+	body = append(body, 10, 1, 1, 1)     // prefix
+
+	binary.BigEndian.PutUint16(tmp[:2], 1)
+	body = append(body, tmp[:2]...) // nexthop count
+	body = append(body, 0, 0, 0, 0) // vrfID
+	body = append(body, uint8(NHIPv4IFIndex))
+	body = append(body, 0)           // nh flags
+	body = append(body, 10, 0, 0, 1) // gate
+	binary.BigEndian.PutUint32(tmp, 3)
+	body = append(body, tmp...) // ifindex
+
+	body = append(body, 110) // distance (OSPF=110)
+	binary.BigEndian.PutUint32(tmp, 20)
+	body = append(body, tmp...) // metric
+	binary.BigEndian.PutUint32(tmp, 42)
+	body = append(body, tmp...) // tag
+	binary.BigEndian.PutUint32(tmp, 9000)
+	body = append(body, tmp...) // mtu
+
+	route, err := DecodeRoute(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if route.Distance != 110 {
+		t.Errorf("Distance = %d, want 110", route.Distance)
+	}
+	if route.Metric != 20 {
+		t.Errorf("Metric = %d, want 20", route.Metric)
+	}
+	if route.Tag != 42 {
+		t.Errorf("Tag = %d, want 42", route.Tag)
+	}
+	if route.MTU != 9000 {
+		t.Errorf("MTU = %d, want 9000", route.MTU)
+	}
+}
+
 func buildRouteBody(t *testing.T, family uint8, prefix net.IP, prefixLen uint8, msgFlags uint32, routeType RouteType, flags uint32, nexthops []testNexthop, distance uint8, metric uint32) []byte {
 	t.Helper()
 	var buf []byte
