@@ -16,6 +16,7 @@
 <body hx-boost="true">
   <div id="page-progress" class="page-progress" aria-hidden="true"></div>
   <div id="conn-banner" class="conn-banner" hidden>Device unreachable</div>
+  <div hidden hx-get="/device-status" hx-trigger="every 5s" hx-swap="none"></div>
   <div class="topbar">
     <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu" aria-expanded="false">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

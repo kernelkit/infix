@@ -135,6 +135,12 @@
     if (!slots || slots.dataset.dndInit) return;
     slots.dataset.dndInit = 'true';
 
+    // Stash the page-load order so Reset can restore it without a page refresh.
+    // Slot names are a fixed enum (primary | secondary | net), so comma-joining is safe.
+    var initialOrder = [];
+    slots.querySelectorAll('.fw-boot-badge').forEach(function (b) { initialOrder.push(b.dataset.slot); });
+    slots.dataset.originalOrder = initialOrder.join(',');
+
     var dragging = null;
     var insertRef = undefined; // node to insertBefore; undefined = not set, null = append
 
@@ -189,7 +195,27 @@
 
     var saveBtn = document.getElementById('fw-boot-save-btn');
     if (saveBtn) saveBtn.addEventListener('click', function () { window.fwBootSave(saveBtn); });
+
+    var resetBtn = document.getElementById('fw-boot-reset-btn');
+    if (resetBtn) resetBtn.addEventListener('click', window.fwBootReset);
   }
+
+  // Restore the boot-order row to the page-load order — i.e. what RAUC
+  // reported as the current device boot order before any drag/drop.
+  // Set will push the displayed order to the device; Reset just undoes
+  // local rearrangement without a server round-trip.
+  window.fwBootReset = function () {
+    var slots = document.getElementById('fw-boot-slots');
+    if (!slots) return;
+    var original = (slots.dataset.originalOrder || '').split(',');
+    var existing = {};
+    slots.querySelectorAll('.fw-boot-badge').forEach(function (b) {
+      existing[b.dataset.slot] = b;
+    });
+    original.forEach(function (slot) {
+      if (existing[slot]) slots.appendChild(existing[slot]);
+    });
+  };
 
   window.fwBootSave = function (btn) {
     var badges = document.querySelectorAll('#fw-boot-slots .fw-boot-badge');
@@ -213,6 +239,14 @@
       body: params.toString(),
     }).then(function (r) {
       if (r.ok) {
+        // Device now holds the displayed order; refresh the Reset baseline
+        // so a follow-up \u21ba doesn't revert to a state the device no longer has.
+        var slots = document.getElementById('fw-boot-slots');
+        if (slots) {
+          var saved = [];
+          badges.forEach(function (b) { saved.push(b.dataset.slot); });
+          slots.dataset.originalOrder = saved.join(',');
+        }
         btnSet('\u2713 Set', true);
         setTimeout(function () { btnSet('Set', false); }, 2000);
         return;

@@ -218,20 +218,24 @@
           </a>
         </li>
         <li>
-          <a href="/config" class="nav-link" hx-boost="false" download>
+          <a href="/maintenance/backup"
+             hx-get="/maintenance/backup"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "backup"}}active{{end}}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Download Config
+            Backup &amp; Restore
           </a>
         </li>
         <li>
-          <button class="nav-link nav-link-btn nav-link-danger"
-                  hx-post="/reboot"
-                  hx-confirm="Reboot the device?"
-                  hx-target="#content"
-                  hx-swap="innerHTML">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-            Reboot
-          </button>
+          <a href="/maintenance/system"
+             hx-get="/maintenance/system"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "system-control"}}active{{end}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            System Control
+          </a>
         </li>
       </ul>
     </details>

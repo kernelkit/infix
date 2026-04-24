@@ -1,0 +1,98 @@
+{{define "system-control.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="info-grid">
+
+  <section class="info-card">
+    <div class="card-header">Reboot</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">Restart the device. The running configuration is preserved.
+        Any unsaved changes (running config not yet copied to startup) will be lost on reboot.</p>
+      <div>
+        <button class="btn btn-primary"
+                hx-post="/maintenance/system/reboot"
+                hx-confirm="Reboot the device?"
+                hx-target="#content"
+                hx-swap="innerHTML">Reboot</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Shutdown</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">Power off the device. Physical access is required to bring it back online.</p>
+      <div>
+        <button class="btn btn-secondary"
+                hx-post="/maintenance/system/shutdown"
+                hx-confirm="Shut down the device?"
+                hx-target="#content"
+                hx-swap="innerHTML">Shut down</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Date &amp; Time</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">
+        {{if .CurrentDatetime}}Device clock: <strong>{{.CurrentDatetime}}</strong>.{{else}}Device clock unavailable.{{end}}
+      </p>
+      <form hx-post="/maintenance/system/datetime"
+            hx-target="#sc-dt-result"
+            hx-swap="innerHTML">
+        <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+        <div class="sc-dt-row">
+          <input type="datetime-local" id="sc-dt-input" name="datetime"
+                 class="cfg-input" required>
+          <button type="button" id="sc-sync-time-btn"
+                  class="btn btn-outline btn-sm">Browser time</button>
+        </div>
+        <div id="sc-dt-result"></div>
+        <div style="margin-top:0.75rem">
+          <button type="submit" class="btn btn-primary">Set time</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="info-card info-grid-full sc-danger-card">
+    <div class="card-header">Factory Reset</div>
+    <div class="sc-danger-body">
+
+      <div class="sc-danger-item">
+        <div class="sc-danger-text">
+          <strong>Reset running config</strong>
+          <p class="sc-desc">Replaces the running configuration with factory defaults.
+            No reboot — takes effect immediately. Use the persistent notification to save to startup.</p>
+          <div id="sc-fd-result"></div>
+        </div>
+        <button class="btn btn-danger-outline"
+                hx-post="/maintenance/system/factory-default"
+                hx-confirm="Reset running configuration to factory defaults? This cannot be undone."
+                hx-target="#sc-fd-result"
+                hx-swap="innerHTML">Reset running config</button>
+      </div>
+
+      <div class="sc-danger-sep"></div>
+
+      <div class="sc-danger-item">
+        <div class="sc-danger-text">
+          <strong>Factory reset &amp; reboot</strong>
+          <p class="sc-desc">Wipes all configuration and non-volatile storage, then reboots.
+            The device may become unreachable on the network. This cannot be undone.</p>
+        </div>
+        <button class="btn btn-danger-outline"
+                hx-post="/maintenance/system/factory-reset"
+                hx-confirm="Wipe all configuration and reboot? This cannot be undone."
+                hx-target="#content"
+                hx-swap="innerHTML">Factory reset</button>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+{{end}}
