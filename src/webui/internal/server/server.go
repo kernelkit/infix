@@ -285,6 +285,8 @@ func New(
 	mux.HandleFunc("GET /configure/tree/list-add",   treeH.AddListRowForm)
 	mux.HandleFunc("POST /configure/tree/list-row",  treeH.SaveListRow)
 	mux.HandleFunc("DELETE /configure/tree/list-row", treeH.DeleteListRow)
+	mux.HandleFunc("PUT /configure/tree/presence",    treeH.TogglePresence)
+	mux.HandleFunc("DELETE /configure/tree/presence", treeH.TogglePresence)
 
 	handler := authMiddleware(store, mux)
 	handler = csrfMiddleware(handler)

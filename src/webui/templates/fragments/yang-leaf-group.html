@@ -13,6 +13,23 @@
             hx-swap="innerHTML">← Back</button>
     {{end}}
     {{.Name}}
+    {{if .Presence}}
+    <div class="yt-presence-header">
+      {{if .Exists}}
+      <button class="btn btn-sm yt-presence-toggle yt-presence-on"
+              hx-delete="/configure/tree/presence?path={{.Path | urlquery}}"
+              hx-target="#yang-detail"
+              hx-swap="innerHTML"
+              title="{{.Presence}} — click to disable">&#9679; Enabled</button>
+      {{else}}
+      <button class="btn btn-sm yt-presence-toggle yt-presence-off"
+              hx-put="/configure/tree/presence?path={{.Path | urlquery}}"
+              hx-target="#yang-detail"
+              hx-swap="innerHTML"
+              title="{{.Presence}} — click to enable">&#9675; Disabled</button>
+      {{end}}
+    </div>
+    {{end}}
   </div>
 
   {{if .Error}}
@@ -34,7 +51,7 @@
           <span class="yt-leaf-name{{if not $hasHelp}} yt-leaf-no-expand{{end}}">
             {{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}
           </span>
-          <span class="yt-leaf-input" onclick="event.stopPropagation()">
+          <span class="yt-leaf-input yt-sp">
             {{if not .Config}}
               <span class="text-muted">{{$cv}}</span>
             {{else if and .Type (eq .Type.Kind "boolean")}}
@@ -74,9 +91,8 @@
             {{end}}
           </span>
           {{if and .Config (not .Mandatory)}}
-          <button class="btn btn-secondary btn-sm" type="button"
+          <button class="btn btn-secondary btn-sm yt-sp" type="button"
                   title="Reset to YANG default"
-                  onclick="event.stopPropagation()"
                   hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
                   hx-target="#yang-detail"
                   hx-swap="innerHTML"
@@ -138,13 +154,12 @@
             {{end}}
             {{range $list.Columns}}<td>{{index $row.Values .Name}}</td>{{end}}
             <td class="cfg-action-col">
-              <button type="button" class="btn-icon btn-icon-danger"
+              <button type="button" class="btn-icon btn-icon-danger yt-sp"
                       title="Delete {{$row.InstanceName}}"
                       hx-delete="/configure/tree/list-row?path={{$row.InstancePath | urlquery}}&parent={{$list.ParentPath | urlquery}}"
                       hx-target="closest tr"
                       hx-swap="delete"
-                      hx-confirm="Delete {{$row.InstanceName}}?"
-                      onclick="event.stopPropagation()">
+                      hx-confirm="Delete {{$row.InstanceName}}?">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
@@ -235,14 +250,13 @@
             <span class="yt-leaf-name{{if not $hasHelp}} yt-leaf-no-expand{{end}}">
               {{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}
             </span>
-            <span class="yt-leaf-input" onclick="event.stopPropagation()">
+            <span class="yt-leaf-input yt-sp">
               {{if not .Config}}
                 {{if and .IsBinary $cv}}
                 <div class="yt-binary-wrap">
                   <div class="yt-binary-row">
                     <span class="yt-binary-hint">{{if .BinaryHint}}{{.BinaryHint}}{{else}}binary data{{end}}</span>
-                    <button type="button" class="btn-icon yt-binary-eye" title="Show/hide"
-                            onclick="this.closest('.yt-binary-wrap').classList.toggle('yt-revealed')">
+                    <button type="button" class="btn-icon yt-binary-eye" title="Show/hide">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -292,9 +306,8 @@
               {{end}}
             </span>
             {{if and .Config (not .Mandatory)}}
-            <button class="btn btn-secondary btn-sm" type="button"
+            <button class="btn btn-secondary btn-sm yt-sp" type="button"
                     title="Reset to YANG default"
-                    onclick="event.stopPropagation()"
                     hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
                     hx-target="#yang-detail"
                     hx-swap="innerHTML"

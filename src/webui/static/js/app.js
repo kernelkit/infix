@@ -89,6 +89,27 @@
     fwBootInit(root);
     fwUploadInit(root);
     initRestoreCheckbox(root);
+    initYangTree(root);
+  }
+
+  function initYangTree(scope) {
+    var root = scope || document;
+    // Stop <details> from toggling when clicking interactive elements inside <summary>.
+    // Also stops row-click navigation when action buttons inside rows are clicked.
+    root.querySelectorAll('.yt-sp').forEach(function (el) {
+      if (el.dataset.init) return;
+      el.dataset.init = 'true';
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+    });
+    // Binary content show/hide eye button.
+    root.querySelectorAll('.yt-binary-eye').forEach(function (btn) {
+      if (btn.dataset.init) return;
+      btn.dataset.init = 'true';
+      btn.addEventListener('click', function () {
+        var wrap = btn.closest('.yt-binary-wrap');
+        if (wrap) wrap.classList.toggle('yt-revealed');
+      });
+    });
   }
 
   function fwUploadInit(scope) {

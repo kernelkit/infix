@@ -469,6 +469,28 @@ func isNonConfigNode(e *yang.Entry) bool {
 		isDeprecatedOrObsolete(e)
 }
 
+// entryPresence returns the YANG presence statement string for e, or "".
+// Presence is stored on the underlying Container Node via reflection because
+// yang.Entry does not expose it directly.
+func entryPresence(e *yang.Entry) string {
+	if e.Node == nil {
+		return ""
+	}
+	v := reflect.ValueOf(e.Node)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	f := v.FieldByName("Presence")
+	if !f.IsValid() || f.Kind() != reflect.Ptr || f.IsNil() {
+		return ""
+	}
+	name := f.Elem().FieldByName("Name")
+	if !name.IsValid() {
+		return ""
+	}
+	return name.String()
+}
+
 // isDeprecatedOrObsolete returns true when the YANG node carries
 // "status deprecated" or "status obsolete". goyang does not expose status
 // directly on Entry, so we reach through to the underlying Node via reflection.
@@ -503,6 +525,7 @@ func entryToNode(e *yang.Entry, path string) *Node {
 		Config:      e.Config != yang.TSFalse,
 		Mandatory:   e.Mandatory == yang.TSTrue,
 		When:        extractWhen(e),
+		Presence:    entryPresence(e),
 	}
 
 	if def, ok := e.SingleDefaultValue(); ok {

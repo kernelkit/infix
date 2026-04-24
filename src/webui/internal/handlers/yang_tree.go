@@ -84,9 +84,16 @@ type TreeHandler struct {
 	FragTmpl *template.Template
 }
 
+// treeNodeData wraps a schema.Node with live presence-state from the datastore.
+// Exists is only meaningful when Node.Presence != "".
+type treeNodeData struct {
+	*schema.Node
+	Exists bool
+}
+
 type yangTreePageData struct {
 	PageData
-	Nodes   []*schema.Node
+	Nodes   []*treeNodeData
 	Loading bool
 }
 
@@ -110,6 +117,8 @@ type leafGroupData struct {
 	ParentPath       string           // set when rendered as an inline sub-container
 	Name             string           // display name of the parent node
 	Kind             string           // "container" or "list-instance"
+	Presence         string           // non-empty for presence containers (YANG presence stmt)
+	Exists           bool             // only meaningful when Presence != ""; true = present in datastore
 	Leaves           []*leafGroupItem
 	InlineLists      []*listTableData  // simple sub-lists shown inline as tables
 	InlineContainers []*leafGroupData  // flat sub-containers (all-leaf) shown inline
@@ -180,7 +189,12 @@ func (h *TreeHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	} else {
 		nodes, err := mgr.Children("/")
 		if err == nil {
-			data.Nodes = nodes
+			// Root-level containers are structural (non-presence); Exists=true is correct.
+			treeNodes := make([]*treeNodeData, len(nodes))
+			for i, n := range nodes {
+				treeNodes[i] = &treeNodeData{Node: n, Exists: true}
+			}
+			data.Nodes = treeNodes
 		}
 	}
 
@@ -216,7 +230,11 @@ func (h *TreeHandler) TreeChildren(w http.ResponseWriter, r *http.Request) {
 	if !strings.ContainsAny(lastSeg, "[=") {
 		if node, err := mgr.NodeAt(path); err == nil && node.Kind == "list" {
 			instances := h.fetchListInstances(r, path, node)
-			h.FragTmpl.ExecuteTemplate(w, "yang-tree-nodes", instances)
+			treeNodes := make([]*treeNodeData, len(instances))
+			for i, n := range instances {
+				treeNodes[i] = &treeNodeData{Node: n, Exists: true}
+			}
+			h.FragTmpl.ExecuteTemplate(w, "yang-tree-nodes", treeNodes)
 			return
 		}
 	}
@@ -250,7 +268,28 @@ func (h *TreeHandler) TreeChildren(w http.ResponseWriter, r *http.Request) {
 		}
 		visible = append(visible, n)
 	}
-	h.FragTmpl.ExecuteTemplate(w, "yang-tree-nodes", visible)
+	h.FragTmpl.ExecuteTemplate(w, "yang-tree-nodes", h.resolvePresenceState(r, path, visible))
+}
+
+// resolvePresenceState wraps schema nodes in treeNodeData.
+// Existence is not checked here — presence toggle lives in the right-pane card header
+// and is only resolved lazily when a node is selected (see TreeNode/checkPresenceExists).
+func (h *TreeHandler) resolvePresenceState(r *http.Request, parentPath string, nodes []*schema.Node) []*treeNodeData {
+	result := make([]*treeNodeData, len(nodes))
+	for i, n := range nodes {
+		result[i] = &treeNodeData{Node: n}
+	}
+	return result
+}
+
+// checkPresenceExists reports whether the YANG presence container at path
+// currently exists in the candidate (or running) datastore.
+func (h *TreeHandler) checkPresenceExists(r *http.Request, path string) bool {
+	_, err := h.RC.GetRaw(r.Context(), candidateDS+path)
+	if err != nil {
+		_, err = h.RC.GetRaw(r.Context(), "/data"+path)
+	}
+	return err == nil
 }
 
 // fetchListInstances queries the candidate (fallback: running) for a list
@@ -400,9 +439,19 @@ func (h *TreeHandler) TreeNode(w http.ResponseWriter, r *http.Request) {
 		if isInstance {
 			dispKind = "list-instance"
 		}
-		if gd := h.buildLeafGroup(r, mgr, path, node.Name, dispKind); gd != nil {
+		gd := h.buildLeafGroup(r, mgr, path, node.Name, dispKind)
+		if gd == nil && node.Presence == "" {
+			// Non-presence empty container — fall through to node detail view.
+		} else {
+			if gd == nil {
+				gd = &leafGroupData{Path: path, Name: node.Name, Kind: dispKind}
+			}
 			if parentPath != "" {
 				gd.ParentPath = parentPath
+			}
+			if node.Presence != "" {
+				gd.Presence = node.Presence
+				gd.Exists = h.checkPresenceExists(r, path)
 			}
 			h.FragTmpl.ExecuteTemplate(w, "yang-leaf-group", gd)
 			return
@@ -1306,4 +1355,57 @@ func resolveLeafItem(item *leafGroupItem, val string) {
 	} else {
 		item.CurrentValue = val
 	}
+}
+
+// TogglePresence serves PUT and DELETE /configure/tree/presence?path=...
+// PUT creates the presence container with an empty body; DELETE removes it.
+// Returns the updated yang-tree-node HTML fragment for HTMX outerHTML swap.
+func (h *TreeHandler) TogglePresence(w http.ResponseWriter, r *http.Request) {
+	mgr := h.Cache.Manager()
+	if mgr == nil {
+		http.Error(w, "schema not yet loaded", http.StatusServiceUnavailable)
+		return
+	}
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		http.Error(w, "path required", http.StatusBadRequest)
+		return
+	}
+
+	node, err := mgr.NodeAt(path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	var exists bool
+	if r.Method == http.MethodDelete {
+		if delErr := h.RC.Delete(r.Context(), candidateDS+path); delErr != nil {
+			http.Error(w, delErr.Error(), http.StatusBadGateway)
+			return
+		}
+		exists = false
+	} else {
+		qualName, qErr := mgr.ModuleQualifiedName(path)
+		if qErr != nil {
+			http.Error(w, qErr.Error(), http.StatusBadRequest)
+			return
+		}
+		if putErr := h.RC.Put(r.Context(), candidateDS+path, map[string]any{qualName: map[string]any{}}); putErr != nil {
+			http.Error(w, putErr.Error(), http.StatusBadGateway)
+			return
+		}
+		exists = true
+	}
+
+	setCfgUnsaved(w)
+
+	// Re-render the right-pane leaf group with the updated presence state.
+	gd := h.buildLeafGroup(r, mgr, path, node.Name, "container")
+	if gd == nil {
+		gd = &leafGroupData{Path: path, Name: node.Name, Kind: "container"}
+	}
+	gd.Presence = node.Presence
+	gd.Exists = exists
+	h.FragTmpl.ExecuteTemplate(w, "yang-leaf-group", gd)
 }

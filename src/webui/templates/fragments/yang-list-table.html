@@ -24,13 +24,12 @@
           {{range $.Columns}}<td>{{index $row.Values .Name}}</td>{{end}}
           <td class="cfg-action-col">
             <button type="button"
-                    class="btn-icon btn-icon-danger"
+                    class="btn-icon btn-icon-danger yt-sp"
                     title="Delete {{$row.InstanceName}}"
                     hx-delete="/configure/tree/list-row?path={{$row.InstancePath | urlquery}}"
                     hx-target="#yang-detail"
                     hx-swap="innerHTML"
-                    hx-confirm="Delete {{$row.InstanceName}}?"
-                    onclick="event.stopPropagation()">
+                    hx-confirm="Delete {{$row.InstanceName}}?">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -115,7 +114,7 @@
           <span class="yt-leaf-name{{if not $hasHelp}} yt-leaf-no-expand{{end}}">
             {{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}
           </span>
-          <span class="yt-leaf-input" onclick="event.stopPropagation()">
+          <span class="yt-leaf-input yt-sp">
             {{if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
               <select class="cfg-input" name="{{.Name}}">
                 {{range .Type.Enums}}<option>{{.}}</option>{{end}}

@@ -16,6 +16,9 @@ type Node struct {
 	// When holds the pre-resolved YANG when expression (prefix aliases replaced
 	// by canonical module names). Empty when there is no constraint.
 	When string `json:"when,omitempty"`
+	// Presence is non-empty for presence containers; its value is the YANG
+	// presence statement string (describes what the container's existence means).
+	Presence string `json:"presence,omitempty"`
 }
 
 // TypeInfo describes the type of a leaf or leaf-list node.

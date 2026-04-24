@@ -1,9 +1,9 @@
-{{/* Renders a slice of *schema.Node as <li> elements (no wrapping <ul>). */}}
+{{/* Renders a slice of *treeNodeData as <li> elements (no wrapping <ul>). */}}
 {{define "yang-tree-nodes"}}
   {{range .}}{{template "yang-tree-node" .}}{{end}}
 {{end}}
 
-{{/* Renders a single *schema.Node as a <li>. */}}
+{{/* Renders a single *treeNodeData as a <li>. */}}
 {{define "yang-tree-node"}}
   {{if or (eq .Kind "container") (eq .Kind "list") (eq .Kind "list-instance")}}
   <li>

@@ -2410,6 +2410,26 @@ details[open] > summary .yt-chevron { transform: rotate(90deg); }
   min-width: 0;
 }
 
+/* Presence toggle — card header right side */
+.yt-presence-header { margin-left: auto; }
+.yt-presence-toggle {
+  font-size: 0.75rem;
+  padding: 0.15em 0.6em;
+  border-radius: 2em;
+}
+.yt-presence-on {
+  color: var(--accept-fg, #1a7f37);
+  border: 1px solid var(--accept-fg, #1a7f37);
+  background: transparent;
+}
+.yt-presence-on:hover { opacity: 0.75; }
+.yt-presence-off {
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  background: transparent;
+}
+.yt-presence-off:hover { opacity: 0.75; }
+
 /* Read-only badge */
 .yt-ro {
   font-size: 0.6rem;
