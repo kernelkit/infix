@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,11 +43,18 @@ var routeTypeToProtocol = map[zapi.RouteType]string{
 	zapi.RouteRIP:     "ietf-rip:rip",
 }
 
+// routeEntry pairs a ZAPI route with the wall-clock time it was first
+// received.  The timestamp is used for the YANG last-updated leaf.
+type routeEntry struct {
+	route      *zapi.Route
+	receivedAt time.Time
+}
+
 type ZAPIWatcher struct {
 	tree   *tree.Tree
 	log    *slog.Logger
 	mu     sync.Mutex
-	routes map[string]json.RawMessage
+	routes map[string]*routeEntry
 }
 
 const routingTreeKey = "ietf-routing:routing"
@@ -55,7 +63,7 @@ func New(t *tree.Tree, log *slog.Logger) *ZAPIWatcher {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ZAPIWatcher{tree: t, log: log, routes: make(map[string]json.RawMessage)}
+	return &ZAPIWatcher{tree: t, log: log, routes: make(map[string]*routeEntry)}
 }
 
 func (w *ZAPIWatcher) Run(ctx context.Context) error {
@@ -149,7 +157,7 @@ func (w *ZAPIWatcher) handleMessage(hdr zapi.Header, body []byte) {
 
 	switch hdr.Command {
 	case zapi.CmdRedistRouteAdd:
-		route, err := zapi.DecodeRoute(body)
+		route, err := zapi.DecodeRouteLog(body, w.log)
 		if err != nil {
 			w.log.Warn("zapi watcher: decode route add", "err", err, "bodyLen", len(body))
 			return
@@ -177,12 +185,34 @@ func (w *ZAPIWatcher) handleMessage(hdr zapi.Header, body []byte) {
 	}
 }
 
-func (w *ZAPIWatcher) addRoute(route *zapi.Route) {
+func routeKey(route *zapi.Route) string {
 	rib := ribName(route.Prefix)
-	key := rib + ":" + route.Prefix.String() + ":" + routeProtocol(route.Type)
+	proto := routeProtocol(route.Type)
+
+	gates := make([]string, 0, len(route.Nexthops))
+	for _, nh := range route.Nexthops {
+		if len(nh.Gate) > 0 && !nh.Gate.IsUnspecified() {
+			gates = append(gates, nh.Gate.String())
+		}
+	}
+	sort.Strings(gates)
+
+	return rib + ":" + route.Prefix.String() + ":" + proto + ":" + strings.Join(gates, ",")
+}
+
+func routeKeyPrefix(route *zapi.Route) string {
+	return ribName(route.Prefix) + ":" + route.Prefix.String() + ":" + routeProtocol(route.Type) + ":"
+}
+
+func (w *ZAPIWatcher) addRoute(route *zapi.Route) {
+	key := routeKey(route)
+	now := time.Now()
 
 	w.mu.Lock()
-	w.routes[key] = transformRoute(route)
+	if existing, ok := w.routes[key]; ok {
+		now = existing.receivedAt
+	}
+	w.routes[key] = &routeEntry{route: route, receivedAt: now}
 	routeCount := len(w.routes)
 	w.mu.Unlock()
 
@@ -191,11 +221,19 @@ func (w *ZAPIWatcher) addRoute(route *zapi.Route) {
 }
 
 func (w *ZAPIWatcher) deleteRoute(route *zapi.Route) {
-	rib := ribName(route.Prefix)
-	key := rib + ":" + route.Prefix.String() + ":" + routeProtocol(route.Type)
+	key := routeKey(route)
 
 	w.mu.Lock()
-	delete(w.routes, key)
+	if _, ok := w.routes[key]; ok {
+		delete(w.routes, key)
+	} else {
+		prefix := routeKeyPrefix(route)
+		for k := range w.routes {
+			if strings.HasPrefix(k, prefix) {
+				delete(w.routes, k)
+			}
+		}
+	}
 	w.mu.Unlock()
 
 	w.writeRibs()
@@ -203,20 +241,56 @@ func (w *ZAPIWatcher) deleteRoute(route *zapi.Route) {
 
 func (w *ZAPIWatcher) clearAllRoutes() {
 	w.mu.Lock()
-	w.routes = make(map[string]json.RawMessage)
+	w.routes = make(map[string]*routeEntry)
 	w.mu.Unlock()
 
 	w.writeRibs()
 }
 
+// destKey returns the grouping key for active route computation:
+// "rib:prefix" — all routes sharing the same destination compete.
+func destKey(route *zapi.Route) string {
+	return ribName(route.Prefix) + ":" + route.Prefix.String()
+}
+
 func (w *ZAPIWatcher) writeRibs() {
 	w.mu.Lock()
 
-	ipv4Routes := make([]json.RawMessage, 0)
-	ipv6Routes := make([]json.RawMessage, 0)
+	bestDist := make(map[string]uint8)
+	for _, entry := range w.routes {
+		dk := destKey(entry.route)
+		if d, ok := bestDist[dk]; !ok || entry.route.Distance < d {
+			bestDist[dk] = entry.route.Distance
+		}
+	}
 
-	for key, routeData := range w.routes {
-		if strings.HasPrefix(key, "ipv4:") {
+	// Collect entries into a slice for deterministic ordering.
+	allEntries := make([]*routeEntry, 0, len(w.routes))
+	for _, entry := range w.routes {
+		allEntries = append(allEntries, entry)
+	}
+
+	// Sort by destination prefix so routes for the same destination are
+	// grouped together.  Within the same prefix, lowest distance first
+	// (active route on top).
+	sort.Slice(allEntries, func(i, j int) bool {
+		a, b := allEntries[i].route, allEntries[j].route
+		ap, bp := a.Prefix.String(), b.Prefix.String()
+		if ap != bp {
+			return ap < bp
+		}
+		return a.Distance < b.Distance
+	})
+
+	ipv4Routes := make([]json.RawMessage, 0, len(allEntries))
+	ipv6Routes := make([]json.RawMessage, 0, len(allEntries))
+
+	for _, entry := range allEntries {
+		dk := destKey(entry.route)
+		active := entry.route.Distance == bestDist[dk]
+		routeData := transformRoute(entry.route, active, entry.receivedAt)
+
+		if entry.route.Prefix.IP.To4() != nil {
 			ipv4Routes = append(ipv4Routes, routeData)
 		} else {
 			ipv6Routes = append(ipv6Routes, routeData)
@@ -259,14 +333,14 @@ func ribName(prefix net.IPNet) string {
 	return "ipv6"
 }
 
-func transformRoute(route *zapi.Route) json.RawMessage {
+func transformRoute(route *zapi.Route, active bool, receivedAt time.Time) json.RawMessage {
 	isIPv4 := route.Prefix.IP.To4() != nil
 
 	addrKey := "ietf-ipv6-unicast-routing:address"
-	destKey := "ietf-ipv6-unicast-routing:destination-prefix"
+	dpKey := "ietf-ipv6-unicast-routing:destination-prefix"
 	if isIPv4 {
 		addrKey = "ietf-ipv4-unicast-routing:address"
-		destKey = "ietf-ipv4-unicast-routing:destination-prefix"
+		dpKey = "ietf-ipv4-unicast-routing:destination-prefix"
 	}
 
 	nextHops := make([]map[string]any, 0, len(route.Nexthops))
@@ -292,14 +366,19 @@ func transformRoute(route *zapi.Route) json.RawMessage {
 	}
 
 	routeNode := map[string]any{
-		destKey:            route.Prefix.String(),
+		dpKey:              route.Prefix.String(),
 		"source-protocol":  routeProtocol(route.Type),
 		"route-preference": route.Distance,
+		"last-updated":     receivedAt.Format(time.RFC3339),
 		"next-hop": map[string]any{
 			"next-hop-list": map[string]any{
 				"next-hop": nextHops,
 			},
 		},
+	}
+
+	if active {
+		routeNode["active"] = []any{nil}
 	}
 
 	encoded, err := json.Marshal(routeNode)
