@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -401,7 +402,18 @@ func dirToNodes(dir map[string]*yang.Entry, parentPath string) []*Node {
 	var nodes []*Node
 	for _, e := range sortedEntries(dir) {
 		if e.IsChoice() || e.IsCase() {
-			nodes = append(nodes, dirToNodes(e.Dir, parentPath)...)
+			// Extract when from the choice/case before inlining its children.
+			// Cases contributed by augments carry the augment's when (e.g.
+			// lag-port only for ethernetCsmacd, bridge-port only for bridge).
+			// Propagate that constraint to each promoted child that has no when of
+			// its own; if the child already has one, leave it alone.
+			caseWhen := extractWhen(e)
+			for _, child := range dirToNodes(e.Dir, parentPath) {
+				if caseWhen != "" && child.When == "" {
+					child.When = caseWhen
+				}
+				nodes = append(nodes, child)
+			}
 			continue
 		}
 		if isNonConfigNode(e) {
@@ -490,6 +502,7 @@ func entryToNode(e *yang.Entry, path string) *Node {
 		Description: e.Description,
 		Config:      e.Config != yang.TSFalse,
 		Mandatory:   e.Mandatory == yang.TSTrue,
+		When:        extractWhen(e),
 	}
 
 	if def, ok := e.SingleDefaultValue(); ok {
@@ -505,6 +518,55 @@ func entryToNode(e *yang.Entry, path string) *Node {
 	}
 
 	return n
+}
+
+// prefixInXPath matches a "prefix:X" token where X is a letter or underscore,
+// the first character of an identifier.  The matched letter is included so
+// ReplaceAllStringFunc can reattach it after resolving the prefix.
+var prefixInXPath = regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9_\-]*:[a-zA-Z_]`)
+
+// extractWhen returns the pre-resolved YANG when expression for e, or "".
+// It first checks e itself (when directly on the node), then checks parent
+// augments — the Infix convention is to put when on the augment, not on the
+// top-level container inside the augment.
+func extractWhen(e *yang.Entry) string {
+	if xpath, ok := e.GetWhenXPath(); ok && xpath != "" {
+		return resolveWhenPrefixes(e.Node, xpath)
+	}
+	// Check parent's augment list: the augment may carry the when expression
+	// even though the individual container inside it does not.
+	if e.Parent == nil {
+		return ""
+	}
+	for _, aug := range e.Parent.Augmented {
+		if _, found := aug.Dir[e.Name]; !found {
+			continue
+		}
+		if xpath, ok := aug.GetWhenXPath(); ok && xpath != "" {
+			return resolveWhenPrefixes(aug.Node, xpath)
+		}
+	}
+	return ""
+}
+
+// resolveWhenPrefixes replaces "prefix:x" tokens in an XPath expression with
+// the canonical "module:x" form using FindModuleByPrefix on the given node.
+// Unknown prefixes (not imported by the node's module) are left unchanged.
+func resolveWhenPrefixes(node yang.Node, xpath string) string {
+	return prefixInXPath.ReplaceAllStringFunc(xpath, func(m string) string {
+		colon := strings.IndexByte(m, ':')
+		prefix := m[:colon]
+		rest := m[colon+1:] // the single identifier-start character
+		mod := yang.FindModuleByPrefix(node, prefix)
+		if mod == nil {
+			return m
+		}
+		modName := mod.Name
+		if mod.BelongsTo != nil {
+			modName = mod.BelongsTo.Name
+		}
+		return modName + ":" + rest
+	})
 }
 
 // entryKind maps a goyang Entry to a kind string.

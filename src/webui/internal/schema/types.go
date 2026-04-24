@@ -13,6 +13,9 @@ type Node struct {
 	Mandatory   bool      `json:"mandatory"`
 	Default     string    `json:"default,omitempty"`
 	Type        *TypeInfo `json:"type,omitempty"`
+	// When holds the pre-resolved YANG when expression (prefix aliases replaced
+	// by canonical module names). Empty when there is no constraint.
+	When string `json:"when,omitempty"`
 }
 
 // TypeInfo describes the type of a leaf or leaf-list node.

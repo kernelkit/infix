@@ -227,10 +227,21 @@ func (h *TreeHandler) TreeChildren(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// For list instances, fetch live data so when conditions can be evaluated.
+	// For bare schema paths (no instance key) values stays nil → conservative.
+	var values map[string]string
+	if strings.ContainsAny(lastSeg, "[=") {
+		values = h.fetchNodeValues(r, path)
+	}
+
 	// Filter out nodes that are inlined in the detail pane (simple lists and
-	// flat containers) so they don't clutter the tree.
+	// flat containers) so they don't clutter the tree.  Also hide nodes whose
+	// when condition is not satisfied by the current instance data.
 	var visible []*schema.Node
 	for _, n := range nodes {
+		if n.When != "" && !schema.EvaluateWhen(mgr, n.When, values) {
+			continue
+		}
 		if n.Kind == "list" || n.Kind == "container" {
 			kids, _ := mgr.Children(n.Path)
 			if isSimpleList(kids) {
@@ -424,6 +435,25 @@ func (h *TreeHandler) buildLeafGroup(r *http.Request, mgr *schema.Manager, path,
 	gd := &leafGroupData{Path: path, Name: name, Kind: kind}
 	values := h.fetchNodeValues(r, path)
 
+	// For list instances: enrich the card heading ("interface wan") and build a
+	// key-name set so key leaves can be sorted first in the form.
+	var keySet map[string]bool
+	if kind == "list-instance" {
+		schemaPath := stripKeyPredicate(path)
+		if listNode, lerr := mgr.NodeAt(schemaPath); lerr == nil && len(listNode.Keys) > 0 {
+			keySet = make(map[string]bool, len(listNode.Keys))
+			for _, k := range listNode.Keys {
+				keySet[k] = true
+			}
+			_, lastSeg := splitLastSegment(path)
+			if i := strings.IndexByte(lastSeg, '='); i >= 0 {
+				if keyVal, uerr := url.PathUnescape(lastSeg[i+1:]); uerr == nil && keyVal != "" {
+					gd.Name = name + " " + keyVal
+				}
+			}
+		}
+	}
+
 	// mgr.Children always returns schema paths (no key predicates).  When path
 	// is a list instance (e.g. /…/user=admin), we must rebuild each child's
 	// path using the instance path as prefix so that RESTCONF requests and form
@@ -431,6 +461,11 @@ func (h *TreeHandler) buildLeafGroup(r *http.Request, mgr *schema.Manager, path,
 	schemaBase := stripKeyPredicate(path) // path with last key predicate removed
 
 	for _, c := range children {
+		// Skip nodes whose when condition is false for the current data values.
+		if c.When != "" && !schema.EvaluateWhen(mgr, c.When, values) {
+			continue
+		}
+
 		childPath := c.Path
 		if schemaBase != path && strings.HasPrefix(c.Path, schemaBase+"/") {
 			childPath = path + c.Path[len(schemaBase):]
@@ -478,6 +513,14 @@ func (h *TreeHandler) buildLeafGroup(r *http.Request, mgr *schema.Manager, path,
 			gd.SubNodes = append(gd.SubNodes, subNode)
 		}
 	}
+
+	// Sort key leaves to the top of the form (schema order preserved within groups).
+	if len(keySet) > 0 {
+		sort.SliceStable(gd.Leaves, func(i, j int) bool {
+			return keySet[gd.Leaves[i].Name] && !keySet[gd.Leaves[j].Name]
+		})
+	}
+
 	return gd
 }
 
@@ -1253,13 +1296,6 @@ func resolveLeafItem(item *leafGroupItem, val string) {
 			}
 		}
 		return
-	}
-	// RESTCONF returns identityref values module-qualified ("module:name");
-	// the schema Identities list contains only bare names — strip the prefix.
-	if val != "" && node.Type != nil && node.Type.Kind == "identityref" {
-		if i := strings.LastIndexByte(val, ':'); i >= 0 {
-			val = val[i+1:]
-		}
 	}
 	if val == "" && node.Default != "" {
 		item.CurrentValue = node.Default
