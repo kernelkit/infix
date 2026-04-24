@@ -25,6 +25,7 @@ static const char *instance_type_to_clock_type(const char *type)
 		return "P2P_TC";
 	if (!strcmp(type, "e2e-tc"))
 		return "E2E_TC";
+
 	return NULL;
 }
 
@@ -101,32 +102,34 @@ static bool iface_has_hw_timestamp(json_t *root, const char *ifname)
 	return false;
 }
 
+static uint16_t instance(struct lyd_node *inst)
+{
+	return (uint16_t)atoi(lydx_get_cattr(inst, "instance-index"));
+}
+
 /*
  * Scan all ports of inst and determine whether to use hardware or software
  * timestamping.  Emits a syslog WARNING when falling back to software due
  * to a mixed or software-only set of port interfaces.
  */
-static const char *instance_time_stamping(struct lyd_node *inst, json_t *root)
+static const char *instance_time_stamping(uint16_t idx, struct lyd_node *inst, json_t *root)
 {
+	const char *ifname = NULL;
 	struct lyd_node *port;
-	bool any_sw = false;
 
 	LYX_LIST_FOR_EACH(lyd_child(lydx_get_child(inst, "ports")), port, "port") {
 		const char *iface = lydx_get_cattr(port, "underlying-interface");
 
-		if (!iface)
-			continue;
 		if (iface_has_hw_timestamp(root, iface))
 			continue;
 
-		any_sw = true;
+		ifname = iface;
 		break;
 	}
 
-	if (any_sw) {
-		WARN("PTP instance has software-only timestamping port(s), "
-		     "falling back to time_stamping software");
-
+	if (ifname) {
+		WARN("PTP instance %u will use software based timestamping due to "
+		     "missing hardware support on %s", idx, ifname);
 		return "software";
 	}
 
@@ -151,10 +154,7 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 	uint16_t idx;
 	FILE *fp;
 
-	v = lydx_get_cattr(inst, "instance-index");
-	if (!v)
-		return SR_ERR_INVAL_ARG;
-	idx = (uint16_t)atoi(v);
+	idx = instance(inst);
 
 	snprintf(path, sizeof(path), PTP_CONF_DIR "/ptp4l-%u.conf+", idx);
 	fp = fopen(path, "w");
@@ -178,7 +178,7 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 	fprintf(fp, "uds_address        /var/run/ptp4l-%u\n", idx);
 
 	/* Timestamping mode: hardware if all ports support it, software otherwise */
-	ts = instance_time_stamping(inst, root);
+	ts = instance_time_stamping(idx, inst, root);
 	fprintf(fp, "time_stamping      %s\n", ts);
 
 	/* Profile — sets transportSpecific and all protocol-mandatory options */
@@ -200,10 +200,8 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 	 * boundary_clock_jbod silences ptp4l's startup PHC-mismatch check and
 	 * lets each port use its own PHC.  It is a no-op when all ports share
 	 * the same PHC (single-chip board or software timestamping).
-	 *
-	 * NOTE: for BC on multi-chip hardware, ptp4l only disciplines the PHC
-	 * of the active slave port; the other chips' PHCs will drift unless
-	 * phc2sys(8) -a is also run.  That is a separate service (TODO).
+	 * On multi-chip hardware, phc2sys -a disciplines the secondary PHCs;
+	 * see needs_phc2sys() / activate_phc2sys().
 	 */
 	if (tc || bc)
 		fprintf(fp, "boundary_clock_jbod 1\n");
@@ -333,7 +331,7 @@ static bool needs_phc2sys(struct lyd_node *inst, json_t *root)
 	if (strcmp(type, "bc") && strcmp(type, "p2p-tc") && strcmp(type, "e2e-tc"))
 		return false;
 
-	return !strcmp(instance_time_stamping(inst, root), "hardware");
+	return !strcmp(instance_time_stamping(instance(inst), inst, root), "hardware");
 }
 
 /*
@@ -359,24 +357,23 @@ static void deactivate_phc2sys(uint16_t idx)
 static void cleanup_stale_phc2sys(struct lyd_node *config)
 {
 	const struct dirent *ent;
-	struct lyd_node *inst;
 	DIR *d;
-	int idx;
 
 	d = opendir(FINIT_RCSD "/enabled");
 	if (!d)
 		return;
 
 	while ((ent = readdir(d))) {
+		struct lyd_node *inst, *instances;
 		bool found = false;
+		int idx;
 
 		if (sscanf(ent->d_name, "phc2sys@%d.conf", &idx) != 1)
 			continue;
 
-		LYX_LIST_FOR_EACH(lydx_get_descendant(config, "ptp", "instances", "instance", NULL),
-				  inst, "instance") {
-			const char *v = lydx_get_cattr(inst, "instance-index");
-			if (v && atoi(v) == idx) {
+		instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
+		LYX_LIST_FOR_EACH(instances, inst, "instance") {
+			if (instance(inst) == idx) {
 				found = true;
 				break;
 			}
@@ -445,8 +442,6 @@ static void deactivate_instance(uint16_t idx)
 static void cleanup_stale_instances(struct lyd_node *config)
 {
 	const struct dirent *ent;
-	struct lyd_node *inst;
-	int idx;
 	DIR *d;
 
 	d = opendir(FINIT_RCSD "/enabled");
@@ -454,16 +449,17 @@ static void cleanup_stale_instances(struct lyd_node *config)
 		return;
 
 	while ((ent = readdir(d))) {
+		struct lyd_node *inst, *instances;
 		bool found = false;
+		int idx;
 
 		if (sscanf(ent->d_name, "ptp4l@%d.conf", &idx) != 1)
 			continue;
 
 		/* Is this index still configured? */
-		LYX_LIST_FOR_EACH(lydx_get_descendant(config, "ptp", "instances", "instance", NULL),
-				  inst, "instance") {
-			const char *v = lydx_get_cattr(inst, "instance-index");
-			if (v && atoi(v) == idx) {
+		instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
+		LYX_LIST_FOR_EACH(instances, inst, "instance") {
+			if (instance(inst) == idx) {
 				found = true;
 				break;
 			}
@@ -493,23 +489,19 @@ static int change(sr_session_ctx_t *session, struct lyd_node *config,
 	case SR_EV_ABORT:
 		/* Remove any staging files */
 		instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
-		LYX_LIST_FOR_EACH(instances, inst, "instance") {
-			const char *v = lydx_get_cattr(inst, "instance-index");
-			if (v)
-				remove_staging((uint16_t)atoi(v));
-		}
+		LYX_LIST_FOR_EACH(instances, inst, "instance")
+			remove_staging(instance(inst));
 		return SR_ERR_OK;
 
 	case SR_EV_DONE:
 		/* Activate all configured instances */
 		instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
 		LYX_LIST_FOR_EACH(instances, inst, "instance") {
-			const char *v = lydx_get_cattr(inst, "instance-index");
-			if (!v)
-				continue;
-			uint16_t idx = (uint16_t)atoi(v);
+			uint16_t idx = instance(inst);
+
 			if ((rc = activate_instance(idx)))
 				return rc;
+
 			if (needs_phc2sys(inst, confd->root))
 				activate_phc2sys(idx);
 			else
@@ -519,10 +511,6 @@ static int change(sr_session_ctx_t *session, struct lyd_node *config,
 		/* Disable stale services not in current config */
 		cleanup_stale_instances(config);
 		cleanup_stale_phc2sys(config);
-
-		if (!instances)
-			return SR_ERR_OK;
-
 		return SR_ERR_OK;
 
 	default:
