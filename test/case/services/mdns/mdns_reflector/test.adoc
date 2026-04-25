@@ -1,4 +1,4 @@
-=== mDNS reflector
+=== mDNS Reflector
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/mdns/mdns_reflector]
 
@@ -17,7 +17,7 @@ We verify operation with two scenarios:
 
 ==== Topology
 
-image::topology.svg[mDNS reflector topology, align=center, scaledwidth=75%]
+image::topology.svg[mDNS Reflector topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

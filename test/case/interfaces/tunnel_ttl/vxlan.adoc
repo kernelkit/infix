@@ -1,4 +1,4 @@
-=== VXLAN Tunnel TTL verification
+=== VXLAN Tunnel TTL Verification
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/tunnel_ttl]
 
@@ -18,7 +18,7 @@ many hops and the TTL would reach zero before the last routing step.)
 
 ==== Topology
 
-image::topology.svg[VXLAN Tunnel TTL verification topology, align=center, scaledwidth=75%]
+image::topology.svg[VXLAN Tunnel TTL Verification topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

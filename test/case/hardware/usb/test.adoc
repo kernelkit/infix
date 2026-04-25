@@ -1,4 +1,4 @@
-=== USB configuration
+=== USB Configuration
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/hardware/usb]
 
@@ -16,7 +16,7 @@ port is handled correctly.
 
 ==== Topology
 
-image::topology.svg[USB configuration topology, align=center, scaledwidth=75%]
+image::topology.svg[USB Configuration topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

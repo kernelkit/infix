@@ -1,0 +1,92 @@
+From 4ea423b94264e4eeb0c2706fc3485b1fe283cc11 Mon Sep 17 00:00:00 2001
+From: Miroslav Lichvar <mlichvar@redhat.com>
+Date: Wed, 25 Sep 2024 14:37:20 +0200
+Subject: [PATCH 02/13] udp: Fix port-specific ptp/p2p_dst_ipv4 configuration.
+Organization: Wires
+
+If different ports are configured with a different ptp_dst_ipv4 or
+p2p_dst_ipv4 address, only the last port in the configuration works
+correctly. This is caused by a global variable holding the
+destination address for all ports using the udp transport.
+
+Move the address to the udp structure to avoid the conflict between
+different ports, same as when port-specific scope in udp6 was fixed
+in commit a48666bee3dd ("udp6: Make mc6_addr transport-local").
+
+Fixes: 8a26c94cc88e ("udp+udp6: Make IP addresses configurable.")
+Signed-off-by: Miroslav Lichvar <mlichvar@redhat.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ udp.c | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/udp.c b/udp.c
+index 38d0ec4..c9b5f39 100644
+--- a/udp.c
++++ b/udp.c
+@@ -44,6 +44,7 @@ struct udp {
+ 	struct transport t;
+ 	struct address ip;
+ 	struct address mac;
++	struct in_addr mcast_addr[2];
+ };
+ 
+ static int mcast_bind(int fd, int index)
+@@ -146,8 +147,6 @@ no_socket:
+ 
+ enum { MC_PRIMARY, MC_PDELAY };
+ 
+-static struct in_addr mcast_addr[2];
+-
+ static int udp_open(struct transport *t, struct interface *iface,
+ 		    struct fdarray *fda, enum timestamp_type ts_type)
+ {
+@@ -165,22 +164,22 @@ static int udp_open(struct transport *t, struct interface *iface,
+ 	sk_interface_addr(name, AF_INET, &udp->ip);
+ 
+ 	str = config_get_string(t->cfg, name, "ptp_dst_ipv4");
+-	if (!inet_aton(str, &mcast_addr[MC_PRIMARY])) {
++	if (!inet_aton(str, &udp->mcast_addr[MC_PRIMARY])) {
+ 		pr_err("invalid ptp_dst_ipv4 %s", str);
+ 		return -1;
+ 	}
+ 
+ 	str = config_get_string(t->cfg, name, "p2p_dst_ipv4");
+-	if (!inet_aton(str, &mcast_addr[MC_PDELAY])) {
++	if (!inet_aton(str, &udp->mcast_addr[MC_PDELAY])) {
+ 		pr_err("invalid p2p_dst_ipv4 %s", str);
+ 		return -1;
+ 	}
+ 
+-	efd = open_socket(name, mcast_addr, EVENT_PORT, ttl);
++	efd = open_socket(name, udp->mcast_addr, EVENT_PORT, ttl);
+ 	if (efd < 0)
+ 		goto no_event;
+ 
+-	gfd = open_socket(name, mcast_addr, GENERAL_PORT, ttl);
++	gfd = open_socket(name, udp->mcast_addr, GENERAL_PORT, ttl);
+ 	if (gfd < 0)
+ 		goto no_general;
+ 
+@@ -223,6 +222,7 @@ static int udp_send(struct transport *t, struct fdarray *fda,
+ 		    enum transport_event event, int peer, void *buf, int len,
+ 		    struct address *addr, struct hw_timestamp *hwts)
+ {
++	struct udp *udp = container_of(t, struct udp, t);
+ 	struct address addr_buf;
+ 	unsigned char junk[1600];
+ 	ssize_t cnt;
+@@ -243,8 +243,8 @@ static int udp_send(struct transport *t, struct fdarray *fda,
+ 	if (!addr) {
+ 		memset(&addr_buf, 0, sizeof(addr_buf));
+ 		addr_buf.sin.sin_family = AF_INET;
+-		addr_buf.sin.sin_addr = peer ? mcast_addr[MC_PDELAY] :
+-					       mcast_addr[MC_PRIMARY];
++		addr_buf.sin.sin_addr = peer ? udp->mcast_addr[MC_PDELAY] :
++					       udp->mcast_addr[MC_PRIMARY];
+ 		addr_buf.len = sizeof(addr_buf.sin);
+ 		addr = &addr_buf;
+ 	}
+-- 
+2.43.0
+

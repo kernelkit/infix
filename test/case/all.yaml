@@ -39,6 +39,9 @@
 - name: "NTP Server"
   suite: ntp/all.yaml
 
+- name: "PTP"
+  suite: ptp/all.yaml
+
 - name: "Routing"
   suite: routing/all.yaml
 

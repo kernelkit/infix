@@ -1,0 +1,82 @@
+From b8a3020e806dd6252e7edd434ae3940706a0b516 Mon Sep 17 00:00:00 2001
+From: Miroslav Lichvar <mlichvar@redhat.com>
+Date: Tue, 4 Mar 2025 15:53:37 +0100
+Subject: [PATCH 09/13] port: Refresh link status on faults.
+Organization: Wires
+
+ptp4l gets the ENOBUFS error on the netlink socket when the kernel has
+to drop messages due to full socket buffer. If ptp4l has a port in the
+faulty state waiting for the link to go up and that event corresponds
+to one of the dropped netlink messages, the port will be stuck in the
+faulty state until the link goes down and up again.
+
+To prevent the port from getting stuck, request the current link status
+when dispatching the EV_FAULT_DETECTED event. Also, reopen the socket to
+get rid of the buffered messages when handling the fault and again when
+reinitializing the port.
+
+Signed-off-by: Miroslav Lichvar <mlichvar@redhat.com>
+Reviewed-by: Jacob Keller <jacob.e.keller@intel.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ port.c | 30 +++++++++++++++++++++++-------
+ 1 file changed, 23 insertions(+), 7 deletions(-)
+
+diff --git a/port.c b/port.c
+index 282be66..5eea2f2 100644
+--- a/port.c
++++ b/port.c
+@@ -1975,6 +1975,20 @@ static int port_cmlds_initialize(struct port *p)
+ 	return port_cmlds_renew(p, now.tv_sec);
+ }
+ 
++static void port_rtnl_initialize(struct port *p)
++{
++	/* Reopen the socket to get rid of buffered messages */
++	if (p->fda.fd[FD_RTNL] >= 0) {
++		rtnl_close(p->fda.fd[FD_RTNL]);
++	}
++	p->fda.fd[FD_RTNL] = rtnl_open();
++	if (p->fda.fd[FD_RTNL] >= 0) {
++		rtnl_link_query(p->fda.fd[FD_RTNL], interface_name(p->iface));
++	}
++
++	clock_fda_changed(p->clock);
++}
++
+ void port_disable(struct port *p)
+ {
+ 	int i;
+@@ -2088,13 +2102,8 @@ int port_initialize(struct port *p)
+ 		if (p->bmca == BMCA_NOOP) {
+ 			port_set_delay_tmo(p);
+ 		}
+-		if (p->fda.fd[FD_RTNL] == -1) {
+-			p->fda.fd[FD_RTNL] = rtnl_open();
+-		}
+-		if (p->fda.fd[FD_RTNL] >= 0) {
+-			const char *ifname = interface_name(p->iface);
+-			rtnl_link_query(p->fda.fd[FD_RTNL], ifname);
+-		}
++
++		port_rtnl_initialize(p);
+ 	}
+ 
+ 	port_nrate_initialize(p);
+@@ -3769,6 +3778,13 @@ int port_state_update(struct port *p, enum fsm_event event, int mdiff)
+ 		if (port_link_status_get(p) && clear_fault_asap(&i)) {
+ 			pr_notice("%s: clearing fault immediately", p->log_name);
+ 			next = p->state_machine(next, EV_FAULT_CLEARED, 0);
++		} else if (event == EV_FAULT_DETECTED) {
++			/*
++			 * Reopen the netlink socket and refresh the link
++			 * status in case the fault was triggered by a missed
++			 * netlink message (ENOBUFS).
++			 */
++			port_rtnl_initialize(p);
+ 		}
+ 	}
+ 
+-- 
+2.43.0
+

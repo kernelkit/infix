@@ -52,6 +52,7 @@
 #define XPATH_LLDP_BASE "/ieee802-dot1ab-lldp:lldp"
 #define XPATH_FIREWALL_BASE "/infix-firewall:firewall"
 #define XPATH_NTP_BASE "/ietf-ntp:ntp"
+#define XPATH_PTP_BASE "/ieee1588-ptp-tt:ptp"
 
 TAILQ_HEAD(sub_head, sub);
 
@@ -111,7 +112,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 
 	err = lyd_parse_data_fd(ctx, fd, LYD_JSON, LYD_PARSE_ONLY, 0, parent);
 	if (err)
-		ERROR("Error, parsing yanger data (%d)", err);
+		ERROR("Error, parsing yanger data (%d): %s", err, ly_errmsg(ctx));
 
 	fclose(stream);
 	/* Note: fclose() already closes the underlying fd from fdopen() */
@@ -454,6 +455,8 @@ static int subscribe_to_all(struct statd *statd)
 	if (subscribe(statd, "infix-firewall", XPATH_FIREWALL_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-ntp", XPATH_NTP_BASE, sr_generic_cb))
+		return SR_ERR_INTERNAL;
+	if (subscribe(statd, "ieee1588-ptp-tt", XPATH_PTP_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 
 	INFO("Successfully subscribed to all models");

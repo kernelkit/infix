@@ -1,4 +1,4 @@
-=== Container with bridge network
+=== Container with Bridge Network
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/bridge]
 
@@ -13,7 +13,7 @@ port accessed from the host.
 
 ==== Topology
 
-image::topology.svg[Container with bridge network topology, align=center, scaledwidth=75%]
+image::topology.svg[Container with Bridge Network topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

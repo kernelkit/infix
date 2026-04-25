@@ -117,8 +117,37 @@ def interface_common(iplink, ipaddr):
     return interface
 
 
-def interface(iplink, ipaddr):
+def ptp_capabilities(ifname, systemjson):
+    """Return infix-interfaces:ptp-capabilities dict for ifname, or None."""
+    caps = systemjson.get("interfaces", {}).get(ifname, {}).get("ptp-capabilities")
+    if not caps:
+        return None
+
+    result = {}
+    if cl := caps.get("capabilities"):
+        result["capabilities"] = cl
+    if (phc := caps.get("phc-index")) is not None:
+        result["phc-index"] = phc
+    if tx := caps.get("tx-types"):
+        result["tx-types"] = tx
+    if rx := caps.get("rx-filters"):
+        result["rx-filters"] = rx
+    if (idx := caps.get("hwtstamp-provider-index")) is not None:
+        result["hwtstamp-provider-index"] = idx
+    if qual := caps.get("hwtstamp-provider-qualifier"):
+        result["hwtstamp-provider-qualifier"] = qual
+
+    return result or None
+
+
+def interface(iplink, ipaddr, systemjson=None):
     interface = interface_common(iplink, ipaddr)
+
+    if systemjson is None:
+        systemjson = {}
+
+    if ptpcap := ptp_capabilities(iplink["ifname"], systemjson):
+        interface["infix-interfaces:ptp-capabilities"] = ptpcap
 
     match interface["type"]:
         case "infix-if-type:bridge":
@@ -163,8 +192,11 @@ def interface(iplink, ipaddr):
 
 
 def interfaces(ifname=None):
+    from ..host import HOST
+
     links = common.iplinks(ifname)
     addrs = common.ipaddrs(ifname)
+    systemjson = HOST.read_json("/run/system.json", {})
 
     interfaces = []
     for ifname, iplink in links.items():
@@ -177,6 +209,6 @@ def interfaces(ifname=None):
 
         ipaddr = addrs.get(ifname, {})
 
-        interfaces.append(interface(iplink, ipaddr))
+        interfaces.append(interface(iplink, ipaddr, systemjson))
 
     return interfaces

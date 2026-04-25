@@ -1,0 +1,50 @@
+From 0bb9080c1bf631ae0265475d75860b6acd92ed2c Mon Sep 17 00:00:00 2001
+From: Miroslav Lichvar <mlichvar@redhat.com>
+Date: Tue, 26 Nov 2024 15:10:32 +0100
+Subject: [PATCH 06/13] pmc_agent: Use longer update interval when not
+ subscribed.
+Organization: Wires
+
+When phc2sys is started with the -w option, the pmc agent is not
+subscribed to events by the pmc_agent_subscribe() function, which also
+sets the update interval. The update interval in this case is zero,
+which means the pmc agent is trying to update the currentUtcOffset value
+on every call of pmc_agent_update(), i.e. on every clock update in
+phc2sys.
+
+Set a default update interval of 60 seconds to reduce the rate of
+pmc requests.
+
+Fixes: e3ca7ea90a9e ("pmc_agent: Make update interval configurable.")
+Signed-off-by: Miroslav Lichvar <mlichvar@redhat.com>
+Reviewed-by: Jacob Keller <jacob.e.keller@intel.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ pmc_agent.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/pmc_agent.c b/pmc_agent.c
+index d1a3367..663adc0 100644
+--- a/pmc_agent.c
++++ b/pmc_agent.c
+@@ -33,6 +33,9 @@
+ #define UPDATES_PER_SUBSCRIPTION 3
+ #define MIN_UPDATE_INTERVAL 10
+ 
++/* Update interval if the agent not subscribed, just polling the UTC offset */
++#define DEFAULT_UPDATE_INTERVAL 60
++
+ struct pmc_agent {
+ 	struct pmc *pmc;
+ 	uint64_t pmc_last_update;
+@@ -253,6 +256,7 @@ int init_pmc_node(struct config *cfg, struct pmc_agent *node, const char *uds,
+ 	}
+ 	node->recv_subscribed = recv_subscribed;
+ 	node->recv_context = context;
++	node->update_interval = DEFAULT_UPDATE_INTERVAL * NS_PER_SEC;
+ 
+ 	return 0;
+ }
+-- 
+2.43.0
+

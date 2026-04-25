@@ -1,4 +1,4 @@
-=== mDNS allow/deny interfaces
+=== mDNS Allow/Deny Interfaces
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/mdns/mdns_allow_deny]
 
@@ -14,7 +14,7 @@ with three scenarios:
 
 ==== Topology
 
-image::topology.svg[mDNS allow/deny interfaces topology, align=center, scaledwidth=75%]
+image::topology.svg[mDNS Allow/Deny Interfaces topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

@@ -1,4 +1,4 @@
-=== Basic NACM permissions
+=== Basic NACM Permissions
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/nacm-basic]
 
@@ -22,7 +22,7 @@ Verifies that:
 
 ==== Topology
 
-image::topology.svg[Basic NACM permissions topology, align=center, scaledwidth=75%]
+image::topology.svg[Basic NACM Permissions topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

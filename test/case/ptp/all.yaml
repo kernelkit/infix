@@ -1,0 +1,18 @@
+---
+- name: PTP basic
+  suite: basic/test.yaml
+
+- name: PTP BTCA grandmaster election
+  suite: bmca/test.yaml
+
+- name: PTP boundary clock
+  suite: boundary_clock/test.yaml
+
+- name: PTP transparent clock
+  suite: transparent_clock/test.yaml
+
+- name: PTP port fault recovery
+  case: port_recovery/test.py
+
+- name: PTP servo step-threshold
+  case: servo/test.py

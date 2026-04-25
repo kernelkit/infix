@@ -1,4 +1,4 @@
-=== Ling Aggregation Basic
+=== Link Aggregation Basic
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/lag_basic]
 
@@ -15,7 +15,7 @@ each test step using the `mon` interface.
 
 ==== Topology
 
-image::topology.svg[Ling Aggregation Basic topology, align=center, scaledwidth=75%]
+image::topology.svg[Link Aggregation Basic topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

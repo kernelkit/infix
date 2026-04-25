@@ -1,4 +1,4 @@
-=== NTP peer mode
+=== NTP Peer Mode
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ntp/server_mode_peer]
 
@@ -22,7 +22,7 @@ selected as sync source by the other peer.
 
 ==== Topology
 
-image::topology.svg[NTP peer mode topology, align=center, scaledwidth=75%]
+image::topology.svg[NTP Peer Mode topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

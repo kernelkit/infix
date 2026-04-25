@@ -1,4 +1,4 @@
-=== GRETAP bridged with physical interface
+=== GRETAP Bridged with Physical Interface
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/tunnel_bridged]
 
@@ -13,7 +13,7 @@ first DUT.  On host, verify connectivity with the second DUT through tunnel.
 
 ==== Topology
 
-image::topology.svg[GRETAP bridged with physical interface topology, align=center, scaledwidth=75%]
+image::topology.svg[GRETAP Bridged with Physical Interface topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

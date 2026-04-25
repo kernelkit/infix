@@ -18,7 +18,7 @@ Usage:
   $0 [OPTIONS] <board-name>
 
 Options:
-  -b boot-dir     Path to bootloader build directory (default: O= or output/)
+  -b boot-dir     Path to bootloader build directory (default: same as -r, or O= or output/)
   -B              Boot-only image (no rootfs, for bootloader testing)
   -d              Download bootloader files from latest-boot release
   -f              Force re-download of bootloader even if cached
@@ -47,6 +47,9 @@ Examples:
 
   # Standalone with separate boot/rootfs builds:
   $0 -b x-boot -r output raspberrypi-rpi64
+
+  # Rootfs-only (no separate bootloader build, e.g. EspressoBIN):
+  $0 -r x-aarch64 marvell-espressobin
 
   # With downloaded rootfs and bootloader:
   $0 -d -r ~/Downloads/rootfs.squashfs friendlyarm-nanopi-r2s
@@ -457,12 +460,19 @@ if [ -n "$STANDALONE" ]; then
             BOOT_DIR=$(find_build_dir) || die "Could not find boot directory. Use -b option"
         fi
     else
-        if [ -z "$BOOT_DIR" ]; then
-            BOOT_DIR=$(find_build_dir) || die "Could not find boot directory. Use -b option"
-        fi
-
         if [ -z "$ROOT_DIR" ]; then
             ROOT_DIR=$(find_build_dir) || die "Could not find rootfs directory. Set O= or use -r option"
+        fi
+
+        if [ -z "$BOOT_DIR" ]; then
+            # For boards without a separate bootloader build (e.g. EspressoBIN,
+            # where U-Boot lives in SPI NOR), -r alone is sufficient: default
+            # the boot directory to the rootfs directory.
+            if [ -n "$ROOT_DIR" ]; then
+                BOOT_DIR="$ROOT_DIR"
+            else
+                BOOT_DIR=$(find_build_dir) || die "Could not find boot directory. Use -b option"
+            fi
         fi
     fi
 
@@ -501,8 +511,8 @@ if [ -n "$STANDALONE" ]; then
                 # Build directory with images/ - copy rootfs and partition images
                 log "Copying artifacts from $ROOT_DIR/images/ to $BINARIES_DIR/"
                 cp "$ROOT_DIR/images/rootfs.squashfs" "$BINARIES_DIR/"
-                # Copy partition images if they exist
-                for img in aux.ext4 cfg.ext4 var.ext4; do
+                # Copy partition images and rootfs variants if they exist
+                for img in aux.ext4 cfg.ext4 var.ext4 rootfs.ext2; do
                     if [ -f "$ROOT_DIR/images/$img" ]; then
                         cp "$ROOT_DIR/images/$img" "$BINARIES_DIR/"
                     fi
@@ -514,8 +524,8 @@ if [ -n "$STANDALONE" ]; then
             # Directory directly containing rootfs.squashfs
             log "Copying rootfs from $ROOT_DIR/rootfs.squashfs"
             cp "$ROOT_DIR/rootfs.squashfs" "$BINARIES_DIR/"
-            # Copy partition images if they exist
-            for img in aux.ext4 cfg.ext4 var.ext4; do
+            # Copy partition images and rootfs variants if they exist
+            for img in aux.ext4 cfg.ext4 var.ext4 rootfs.ext2; do
                 if [ -f "$ROOT_DIR/$img" ]; then
                     cp "$ROOT_DIR/$img" "$BINARIES_DIR/"
                 fi
@@ -557,16 +567,16 @@ if [ -n "$DOWNLOAD_BOOT" ]; then
             ln -sf "$(realpath "$ROOT_DIR")" "$BINARIES_DIR/rootfs.squashfs"
         elif [ -f "$ROOT_DIR/images/rootfs.squashfs" ]; then
             ln -sf "$(realpath "$ROOT_DIR/images/rootfs.squashfs")" "$BINARIES_DIR/rootfs.squashfs"
-            # Link partition images if they exist
-            for img in aux.ext4 cfg.ext4 var.ext4; do
+            # Link partition images and rootfs variants if they exist
+            for img in aux.ext4 cfg.ext4 var.ext4 rootfs.ext2; do
                 if [ -f "$ROOT_DIR/images/$img" ]; then
                     ln -sf "$(realpath "$ROOT_DIR/images/$img")" "$BINARIES_DIR/$img"
                 fi
             done
         elif [ -f "$ROOT_DIR/rootfs.squashfs" ]; then
             ln -sf "$(realpath "$ROOT_DIR/rootfs.squashfs")" "$BINARIES_DIR/rootfs.squashfs"
-            # Link partition images if they exist
-            for img in aux.ext4 cfg.ext4 var.ext4; do
+            # Link partition images and rootfs variants if they exist
+            for img in aux.ext4 cfg.ext4 var.ext4 rootfs.ext2; do
                 if [ -f "$ROOT_DIR/$img" ]; then
                     ln -sf "$(realpath "$ROOT_DIR/$img")" "$BINARIES_DIR/$img"
                 fi

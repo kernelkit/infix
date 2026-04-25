@@ -1,4 +1,4 @@
-=== DHCP option 121 vs option 3
+=== DHCP Option 121 vs Option 3
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/dhcp/client_routes]
 
@@ -20,7 +20,7 @@ via 192.168.0.1 and a default route (option 121) via 192.168.0.254.
 
 ==== Topology
 
-image::topology.svg[DHCP option 121 vs option 3 topology, align=center, scaledwidth=75%]
+image::topology.svg[DHCP Option 121 vs Option 3 topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

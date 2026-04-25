@@ -1,4 +1,4 @@
-=== Verify that VETH pairs can be deleted
+=== Verify that VETH Pairs Can Be Deleted
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/veth_delete]
 
@@ -14,7 +14,7 @@ from any other step.  This to trigger a new configuration "generation".
 
 ==== Topology
 
-image::topology.svg[Verify that VETH pairs can be deleted topology, align=center, scaledwidth=75%]
+image::topology.svg[Verify that VETH Pairs Can Be Deleted topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

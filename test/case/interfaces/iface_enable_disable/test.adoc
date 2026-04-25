@@ -1,4 +1,4 @@
-=== Interface status
+=== Interface Status
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/iface_enable_disable]
 
@@ -11,7 +11,7 @@ Both admin-status and oper-status are verified.
 
 ==== Topology
 
-image::topology.svg[Interface status topology, align=center, scaledwidth=75%]
+image::topology.svg[Interface Status topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

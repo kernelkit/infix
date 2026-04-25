@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: ptp&#45;servo Pages: 1 -->
+<svg width="510pt" height="149pt"
+ viewBox="0.00 0.00 509.54 149.01" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 145.01)">
+<title>ptp&#45;servo</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-145.01 505.54,-145.01 505.54,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-4 0,-137 58,-137 58,-4 0,-4"/>
+<text text-anchor="middle" x="29" y="-121.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="0,-114 58,-114 "/>
+<text text-anchor="middle" x="29" y="-66.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="0,-27 58,-27 "/>
+<text text-anchor="middle" x="29" y="-11.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- gm -->
+<g id="node2" class="node">
+<title>gm</title>
+<polygon fill="none" stroke="black" points="348.04,-98.51 348.04,-140.51 494.04,-140.51 494.04,-98.51 348.04,-98.51"/>
+<text text-anchor="middle" x="371.54" y="-126.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="348.04,-119.51 395.04,-119.51 "/>
+<text text-anchor="middle" x="371.54" y="-105.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">data</text>
+<polyline fill="none" stroke="black" points="395.04,-98.51 395.04,-140.51 "/>
+<text text-anchor="middle" x="444.54" y="-122.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">gm</text>
+<text text-anchor="middle" x="444.54" y="-109.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">priority1=1</text>
+</g>
+<!-- host&#45;&#45;gm -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;gm:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M58,-125.5C58,-125.5 348.04,-130.51 348.04,-130.51"/>
+</g>
+<!-- receiver -->
+<g id="node3" class="node">
+<title>receiver</title>
+<polygon fill="none" stroke="black" points="340.54,-0.5 340.54,-42.5 501.54,-42.5 501.54,-0.5 340.54,-0.5"/>
+<text text-anchor="middle" x="364.04" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">data</text>
+<polyline fill="none" stroke="black" points="340.54,-21.5 387.54,-21.5 "/>
+<text text-anchor="middle" x="364.04" y="-7.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="387.54,-0.5 387.54,-42.5 "/>
+<text text-anchor="middle" x="444.54" y="-24.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">receiver</text>
+<text text-anchor="middle" x="444.54" y="-11.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">priority1=128</text>
+</g>
+<!-- host&#45;&#45;receiver -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;receiver:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M58,-15.5C58,-15.5 340.04,-10.5 340.04,-10.5"/>
+</g>
+<!-- gm&#45;&#45;receiver -->
+<g id="edge3" class="edge">
+<title>gm:data&#45;&#45;receiver:data</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M369.79,-88.5C368.51,-78.3 366.55,-62.59 365.28,-52.43"/>
+<polygon fill="cornflowerblue" stroke="cornflowerblue" stroke-width="2" points="366.33,-89.02 371.04,-98.51 373.27,-88.15 366.33,-89.02"/>
+<polygon fill="cornflowerblue" stroke="cornflowerblue" stroke-width="2" points="368.75,-51.99 364.04,-42.5 361.81,-52.86 368.75,-51.99"/>
+<text text-anchor="middle" x="299.53" y="-74.26" font-family="DejaVu Serif, Book" font-size="14.00">192.168.100.0/30 &#160;</text>
+</g>
+</g>
+</svg>

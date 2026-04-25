@@ -1,4 +1,4 @@
-=== System upgrade
+=== System Upgrade
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/upgrade]
 
@@ -8,7 +8,7 @@ Verify system upgrade functionality.
 
 ==== Topology
 
-image::topology.svg[System upgrade topology, align=center, scaledwidth=75%]
+image::topology.svg[System Upgrade topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

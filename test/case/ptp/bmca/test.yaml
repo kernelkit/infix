@@ -1,0 +1,11 @@
+---
+- settings:
+    test-spec: <case>.adoc
+
+- name: PTP BTCA grandmaster election (IEEE 1588)
+  case: ieee1588.py
+  opts: ["--profile", "ieee1588"]
+
+- name: PTP BTCA grandmaster election (IEEE 802.1AS)
+  case: ieee802dot1as.py
+  opts: ["--profile", "ieee802-dot1as"]

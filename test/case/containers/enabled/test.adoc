@@ -1,4 +1,4 @@
-=== Container enabled/disabled
+=== Container Enabled/Disabled
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/enabled]
 
@@ -15,7 +15,7 @@ Uses operational datastore to verify container running status.
 
 ==== Topology
 
-image::topology.svg[Container enabled/disabled topology, align=center, scaledwidth=75%]
+image::topology.svg[Container Enabled/Disabled topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

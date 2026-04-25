@@ -1,0 +1,42 @@
+graph "ptp-boundary-clock" {
+	layout="neato";
+	overlap="false";
+	esep="+22";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="{ <mgmt1> mgmt1 | <host> \n\nhost\n\n | <mgmt2> mgmt2 | <mgmt3> mgmt3 }",
+	    pos="0,15!",
+	    requires="controller",
+	];
+
+	gm [
+	    label="{ <mgmt> mgmt | <data> data } | { gm\npriority1=1 }",
+	    pos="2,15.5!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	bc [
+	    label="{ <uplink> uplink | <mgmt> mgmt | <dnlink> dnlink } | { bc\npriority1=64 }",
+	    pos="2,15!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	receiver [
+	    label="{ <data> data | <mgmt> mgmt } | { receiver\npriority1=128 }",
+	    pos="2,14.5!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	host:mgmt1 -- gm:mgmt       [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- bc:mgmt       [requires="mgmt", color="lightgray"]
+	host:mgmt3 -- receiver:mgmt [requires="mgmt", color="lightgray"]
+
+	gm:data     -- bc:uplink      [label="192.168.102.0/30 ", dir="both"]
+	bc:dnlink -- receiver:data  [label="192.168.103.0/30 ", dir="both"]
+}

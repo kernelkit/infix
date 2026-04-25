@@ -1,0 +1,386 @@
+From 4fdb58ce4e052862f0dc7432d84b19febd5256a5 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 10 Apr 2026 14:33:56 +0200
+Subject: [PATCH 13/13] Add pidfile support to ptp4l, phc2sys, and timemaster
+Organization: Wires
+
+Add pidfile.c derived from OpenBSD via libite.  The pidfile() function
+creates a PID file and registers an atexit() handler to clean it up on
+normal exit.
+
+For ptp4l and phc2sys the pidfile path is set via the 'pidfile' global
+config option (or -u <path> on the ptp4l command line).  For timemaster,
+which uses its own config format, the path is given with -u <path>.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ config.c     |   1 +
+ makefile     |  12 ++---
+ phc2sys.c    |   7 +++
+ pidfile.c    | 142 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ pidfile.h    |  10 ++++
+ ptp4l.c      |  14 ++++-
+ timemaster.c |  19 +++++--
+ 7 files changed, 194 insertions(+), 11 deletions(-)
+ create mode 100644 pidfile.c
+ create mode 100644 pidfile.h
+
+diff --git a/config.c b/config.c
+index d0bc32c..4b46542 100644
+--- a/config.c
++++ b/config.c
+@@ -341,6 +341,7 @@ struct config_item config_tab[] = {
+ 	PORT_ITEM_INT("power_profile.2011.networkTimeInaccuracy", 0xFFFFFFFF, -1, INT_MAX),
+ 	PORT_ITEM_INT("power_profile.2017.totalTimeInaccuracy", 0xFFFFFFFF, -1, INT_MAX),
+ 	PORT_ITEM_INT("power_profile.grandmasterID", 0, 0, 0xFFFF),
++	GLOB_ITEM_STR("pidfile", NULL),
+ 	GLOB_ITEM_INT("priority1", 128, 0, UINT8_MAX),
+ 	GLOB_ITEM_INT("priority2", 128, 0, UINT8_MAX),
+ 	GLOB_ITEM_STR("productDescription", ";;"),
+diff --git a/makefile b/makefile
+index 3c2406b..67622e1 100644
+--- a/makefile
++++ b/makefile
+@@ -31,9 +31,9 @@ TS2PHC	= ts2phc.o lstab.o nmea.o serial.o sock.o ts2phc_generic_pps_source.o \
+  ts2phc_nmea_pps_source.o ts2phc_phc_pps_source.o ts2phc_pps_sink.o ts2phc_pps_source.o
+ OBJ	= bmc.o clock.o clockadj.o clockcheck.o config.o designated_fsm.o \
+  e2e_tc.o fault.o $(FILTERS) fsm.o hash.o interface.o monitor.o msg.o phc.o \
+- pmc_common.o port.o port_signaling.o pqueue.o print.o ptp4l.o p2p_tc.o rtnl.o \
+- $(SECURITY) $(SERVOS) sk.o stats.o tc.o $(TRANSP) telecom.o tlv.o tsproc.o \
+- unicast_client.o unicast_fsm.o unicast_service.o util.o version.o
++ pidfile.o pmc_common.o port.o port_signaling.o pqueue.o print.o ptp4l.o \
++ p2p_tc.o rtnl.o $(SECURITY) $(SERVOS) sk.o stats.o tc.o $(TRANSP) telecom.o \
++ tlv.o tsproc.o unicast_client.o unicast_fsm.o unicast_service.o util.o version.o
+ 
+ OBJECTS	= $(OBJ) hwstamp_ctl.o nsm.o phc2sys.o phc_ctl.o pmc.o pmc_agent.o \
+  pmc_common.o sysoff.o timemaster.o $(TS2PHC) tz2alt.o
+@@ -78,14 +78,14 @@ pmc: config.o hash.o interface.o msg.o phc.o pmc.o pmc_common.o print.o \
+  $(SECURITY) sk.o tlv.o $(TRANSP) util.o version.o
+ 
+ phc2sys: clockadj.o clockcheck.o config.o hash.o interface.o msg.o \
+- phc.o phc2sys.o pmc_agent.o pmc_common.o print.o $(SECURITY) $(SERVOS) \
+- sk.o stats.o sysoff.o tlv.o $(TRANSP) util.o version.o
++ phc.o phc2sys.o pidfile.o pmc_agent.o pmc_common.o print.o $(SECURITY) \
++ $(SERVOS) sk.o stats.o sysoff.o tlv.o $(TRANSP) util.o version.o
+ 
+ hwstamp_ctl: hwstamp_ctl.o version.o
+ 
+ phc_ctl: phc_ctl.o phc.o sk.o util.o clockadj.o sysoff.o print.o version.o
+ 
+-timemaster: phc.o print.o rtnl.o sk.o timemaster.o util.o version.o
++timemaster: phc.o pidfile.o print.o rtnl.o sk.o timemaster.o util.o version.o
+ 
+ ts2phc: config.o clockadj.o hash.o interface.o msg.o phc.o pmc_agent.o \
+  pmc_common.o print.o $(SECURITY) $(SERVOS) sk.o $(TS2PHC) tlv.o transport.o \
+diff --git a/phc2sys.c b/phc2sys.c
+index 5962f6c..b272adf 100644
+--- a/phc2sys.c
++++ b/phc2sys.c
+@@ -56,6 +56,7 @@
+ #include "sysoff.h"
+ #include "tlv.h"
+ #include "uds.h"
++#include "pidfile.h"
+ #include "util.h"
+ #include "version.h"
+ 
+@@ -1432,6 +1433,12 @@ int main(int argc, char *argv[])
+ 	print_set_syslog(config_get_int(cfg, NULL, "use_syslog"));
+ 	print_set_level(config_get_int(cfg, NULL, "logging_level"));
+ 
++	if (config_get_string(cfg, NULL, "pidfile") &&
++	    pidfile(config_get_string(cfg, NULL, "pidfile"))) {
++		fprintf(stderr, "failed to create pidfile\n");
++		goto end;
++	}
++
+ 	settings.free_running = config_get_int(cfg, NULL, "free_running");
+ 	settings.servo_type = config_get_int(cfg, NULL, "clock_servo");
+ 	if (settings.free_running || settings.servo_type == CLOCK_SERVO_NTPSHM) {
+diff --git a/pidfile.c b/pidfile.c
+new file mode 100644
+index 0000000..42121b0
+--- /dev/null
++++ b/pidfile.c
+@@ -0,0 +1,142 @@
++/*	Updated by troglobit for libite/finit/uftpd projects 2016/07/04 */
++/*	$OpenBSD: pidfile.c,v 1.11 2015/06/03 02:24:36 millert Exp $	*/
++/*	$NetBSD: pidfile.c,v 1.4 2001/02/19 22:43:42 cgd Exp $	*/
++
++/*-
++ * Copyright (c) 1999 The NetBSD Foundation, Inc.
++ * All rights reserved.
++ *
++ * This code is derived from software contributed to The NetBSD Foundation
++ * by Jason R. Thorpe.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
++ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
++ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
++ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <sys/stat.h>
++#include <sys/time.h>
++#include <sys/types.h>
++#include <errno.h>
++#include <paths.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++#include "pidfile.h"
++
++static char *pidfile_path = NULL;
++static pid_t pidfile_pid  = 0;
++
++static void pidfile_cleanup(void);
++
++static const char *pidfile_rundir = _PATH_VARRUN;
++extern char *__progname;
++
++/**
++ * Create or update mtime of process PID file.
++ * @param basename  Program name, or NULL, may start with '/'
++ *
++ * If @p basename is NULL the implicit @a __progname variable from the
++ * C-library is used.  If @p basename starts with '/' it is used as the
++ * absolute path to the PID file.
++ *
++ * @returns POSIX OK(0) on success, non-zero with errno set on error.
++ */
++int pidfile(const char *basename)
++{
++	int save_errno;
++	int atexit_already;
++	pid_t pid;
++	FILE *f;
++
++	if (basename == NULL)
++		basename = __progname;
++
++	pid = getpid();
++	atexit_already = 0;
++
++	if (pidfile_path != NULL) {
++		if (!access(pidfile_path, R_OK) && pid == pidfile_pid) {
++			utimensat(0, pidfile_path, NULL, 0);
++			return 0;
++		}
++		free(pidfile_path);
++		pidfile_path = NULL;
++		atexit_already = 1;
++	}
++
++	if (basename[0] != '/') {
++		size_t len = strlen(pidfile_rundir);
++		int slash = pidfile_rundir[len > 0 ? len - 1 : 0] != '/';
++
++		if (asprintf(&pidfile_path, "%s%s%s.pid",
++			     pidfile_rundir, slash ? "/" : "", basename) == -1)
++			return -1;
++	} else {
++		if (asprintf(&pidfile_path, "%s", basename) == -1)
++			return -1;
++	}
++
++	if ((f = fopen(pidfile_path, "w")) == NULL) {
++		save_errno = errno;
++		free(pidfile_path);
++		pidfile_path = NULL;
++		errno = save_errno;
++		return -1;
++	}
++
++	if (fprintf(f, "%ld\n", (long)pid) <= 0 || fflush(f) != 0) {
++		save_errno = errno;
++		(void)fclose(f);
++		(void)unlink(pidfile_path);
++		free(pidfile_path);
++		pidfile_path = NULL;
++		errno = save_errno;
++		return -1;
++	}
++	(void)fclose(f);
++
++	if (atexit_already)
++		return 0;
++
++	pidfile_pid = pid;
++	if (atexit(pidfile_cleanup) < 0) {
++		save_errno = errno;
++		(void)unlink(pidfile_path);
++		free(pidfile_path);
++		pidfile_path = NULL;
++		pidfile_pid = 0;
++		errno = save_errno;
++		return -1;
++	}
++
++	return 0;
++}
++
++static void pidfile_cleanup(void)
++{
++	if (pidfile_path != NULL && pidfile_pid == getpid()) {
++		(void)unlink(pidfile_path);
++		free(pidfile_path);
++		pidfile_path = NULL;
++	}
++}
+diff --git a/pidfile.h b/pidfile.h
+new file mode 100644
+index 0000000..7b68c78
+--- /dev/null
++++ b/pidfile.h
+@@ -0,0 +1,10 @@
++/**
++ * @file pidfile.h
++ * @brief PID file support, derived from OpenBSD via libite.
++ */
++#ifndef HAVE_PIDFILE_H
++#define HAVE_PIDFILE_H
++
++int pidfile(const char *basename);
++
++#endif
+diff --git a/ptp4l.c b/ptp4l.c
+index ac2ef96..12f5e20 100644
+--- a/ptp4l.c
++++ b/ptp4l.c
+@@ -34,6 +34,7 @@
+ #include "transport.h"
+ #include "udp6.h"
+ #include "uds.h"
++#include "pidfile.h"
+ #include "util.h"
+ #include "version.h"
+ 
+@@ -63,6 +64,7 @@ static void usage(char *progname)
+ 		" -l [num]  set the logging level to 'num'\n"
+ 		" -m        print messages to stdout\n"
+ 		" -q        do not print messages to the syslog\n"
++		" -u [file] write process ID to 'file'\n"
+ 		" -v        prints the software version and exits\n"
+ 		" -h        prints this message and exits\n"
+ 		"\n",
+@@ -90,7 +92,7 @@ int main(int argc, char *argv[])
+ 	/* Process the command line arguments. */
+ 	progname = strrchr(argv[0], '/');
+ 	progname = progname ? 1+progname : argv[0];
+-	while (EOF != (c = getopt_long(argc, argv, "AEP246HSLf:i:p:sl:mqvh",
++	while (EOF != (c = getopt_long(argc, argv, "AEP246HSLf:i:p:sl:mqu:vh",
+ 				       opts, &index))) {
+ 		switch (c) {
+ 		case 0:
+@@ -163,6 +165,10 @@ int main(int argc, char *argv[])
+ 		case 'q':
+ 			config_set_int(cfg, "use_syslog", 0);
+ 			break;
++		case 'u':
++			if (config_set_string(cfg, "pidfile", optarg))
++				goto out;
++			break;
+ 		case 'v':
+ 			version_show(stdout);
+ 			return 0;
+@@ -188,6 +194,12 @@ int main(int argc, char *argv[])
+ 	print_set_syslog(config_get_int(cfg, NULL, "use_syslog"));
+ 	print_set_level(config_get_int(cfg, NULL, "logging_level"));
+ 
++	if (config_get_string(cfg, NULL, "pidfile") &&
++	    pidfile(config_get_string(cfg, NULL, "pidfile"))) {
++		fprintf(stderr, "failed to create pidfile\n");
++		goto out;
++	}
++
+ 	assume_two_step = config_get_int(cfg, NULL, "assume_two_step");
+ 	sk_check_fupsync = config_get_int(cfg, NULL, "check_fup_sync");
+ 	sk_tx_timeout = config_get_int(cfg, NULL, "tx_timestamp_timeout");
+diff --git a/timemaster.c b/timemaster.c
+index b367b2f..873083f 100644
+--- a/timemaster.c
++++ b/timemaster.c
+@@ -38,6 +38,7 @@
+ #include <sys/wait.h>
+ #include <unistd.h>
+ 
++#include "pidfile.h"
+ #include "print.h"
+ #include "rtnl.h"
+ #include "sk.h"
+@@ -1531,6 +1532,7 @@ static void usage(char *progname)
+ 		"\nusage: %s [options] -f file\n\n"
+ 		" -f file      specify path to configuration file\n"
+ 		" -n           only print generated files and commands\n"
++		" -u file      write process ID to 'file'\n"
+ 		" -l level     set logging level (6)\n"
+ 		" -m           print messages to stdout\n"
+ 		" -q           do not print messages to syslog\n"
+@@ -1543,7 +1545,7 @@ int main(int argc, char **argv)
+ {
+ 	struct timemaster_config *config;
+ 	struct script *script;
+-	char *progname, *config_path = NULL;
++	char *progname, *config_path = NULL, *pid_file = NULL;
+ 	int c, ret = 0, log_stdout = 0, log_syslog = 1, dry_run = 0;
+ 
+ 	progname = strrchr(argv[0], '/');
+@@ -1553,7 +1555,7 @@ int main(int argc, char **argv)
+ 	print_set_verbose(1);
+ 	print_set_syslog(0);
+ 
+-	while (EOF != (c = getopt(argc, argv, "f:nl:mqvh"))) {
++	while (EOF != (c = getopt(argc, argv, "f:nu:l:mqvh"))) {
+ 		switch (c) {
+ 		case 'f':
+ 			config_path = optarg;
+@@ -1561,6 +1563,9 @@ int main(int argc, char **argv)
+ 		case 'n':
+ 			dry_run = 1;
+ 			break;
++		case 'u':
++			pid_file = optarg;
++			break;
+ 		case 'l':
+ 			print_set_level(atoi(optarg));
+ 			break;
+@@ -1599,10 +1604,16 @@ int main(int argc, char **argv)
+ 	print_set_verbose(log_stdout);
+ 	print_set_syslog(log_syslog);
+ 
+-	if (dry_run)
++	if (dry_run) {
+ 		script_print(script);
+-	else
++	} else {
++		if (pid_file && pidfile(pid_file)) {
++			pr_err("failed to create pidfile %s: %m", pid_file);
++			script_destroy(script);
++			return 1;
++		}
+ 		ret = script_run(script);
++	}
+ 
+ 	script_destroy(script);
+ 
+-- 
+2.43.0
+

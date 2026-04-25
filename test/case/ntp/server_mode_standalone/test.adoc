@@ -1,4 +1,4 @@
-=== NTP server standalone mode
+=== NTP Server Standalone Mode
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ntp/server_mode_standalone]
 
@@ -12,7 +12,7 @@ syncing from any upstream sources.
 
 ==== Topology
 
-image::topology.svg[NTP server standalone mode topology, align=center, scaledwidth=75%]
+image::topology.svg[NTP Server Standalone Mode topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

@@ -1,4 +1,4 @@
-=== Bridge VLAN separation
+=== Bridge VLAN Separation
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/bridge_vlan_separation]
 
@@ -27,7 +27,7 @@ Test that two VLANs are correctly separated in the bridge
 
 ==== Topology
 
-image::topology.svg[Bridge VLAN separation topology, align=center, scaledwidth=75%]
+image::topology.svg[Bridge VLAN Separation topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

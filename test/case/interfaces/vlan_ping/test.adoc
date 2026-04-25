@@ -1,4 +1,4 @@
-=== VLAN ping connectivity
+=== VLAN Ping Connectivity
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/vlan_ping]
 
@@ -8,7 +8,7 @@ Very basic test if the VLAN interface configuration works.
 
 ==== Topology
 
-image::topology.svg[VLAN ping connectivity topology, align=center, scaledwidth=75%]
+image::topology.svg[VLAN Ping Connectivity topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

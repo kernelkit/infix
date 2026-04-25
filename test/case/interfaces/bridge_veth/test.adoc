@@ -1,4 +1,4 @@
-=== Bridge with a physical port and a veth
+=== Bridge with a Physical Port and a Veth
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/bridge_veth]
 
@@ -18,7 +18,7 @@ PING -->      br0
 
 ==== Topology
 
-image::topology.svg[Bridge with a physical port and a veth topology, align=center, scaledwidth=75%]
+image::topology.svg[Bridge with a Physical Port and a Veth topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

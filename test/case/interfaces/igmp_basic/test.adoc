@@ -1,4 +1,4 @@
-=== IGMP basic
+=== IGMP Basic
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/igmp_basic]
 
@@ -33,7 +33,7 @@ the group.
 
 ==== Topology
 
-image::topology.svg[IGMP basic topology, align=center, scaledwidth=75%]
+image::topology.svg[IGMP Basic topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

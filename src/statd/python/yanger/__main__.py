@@ -123,6 +123,9 @@ def main():
     elif model == 'ietf-bfd-ip-sh':
         from . import ietf_bfd_ip_sh
         yang_data = ietf_bfd_ip_sh.operational()
+    elif model == 'ieee1588-ptp-tt':
+        from . import ieee1588_ptp
+        yang_data = ieee1588_ptp.operational()
     else:
         common.LOG.warning("Unsupported model %s", model)
         sys.exit(1)

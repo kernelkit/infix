@@ -1,4 +1,4 @@
-=== VXLAN point-to-point
+=== VXLAN Point-to-Point
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/tunnel_basic]
 
@@ -14,7 +14,7 @@ connectivity with the second DUT through the tunnel.
 
 ==== Topology
 
-image::topology.svg[VXLAN point-to-point topology, align=center, scaledwidth=75%]
+image::topology.svg[VXLAN Point-to-Point topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

@@ -1,4 +1,4 @@
-=== Container with VETH pair
+=== Container with VETH Pair
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/veth]
 
@@ -19,7 +19,7 @@ regular bridge, a VETH pair connects the container to the bridge.
 
 ==== Topology
 
-image::topology.svg[Container with VETH pair topology, align=center, scaledwidth=75%]
+image::topology.svg[Container with VETH Pair topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

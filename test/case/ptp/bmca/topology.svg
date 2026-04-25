@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: ptp&#45;bmca Pages: 1 -->
+<svg width="480pt" height="149pt"
+ viewBox="0.00 0.00 479.54 149.01" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 145.01)">
+<title>ptp&#45;bmca</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-145.01 475.54,-145.01 475.54,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-4 0,-137 58,-137 58,-4 0,-4"/>
+<text text-anchor="middle" x="29" y="-121.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="0,-114 58,-114 "/>
+<text text-anchor="middle" x="29" y="-66.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="0,-27 58,-27 "/>
+<text text-anchor="middle" x="29" y="-11.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- alpha -->
+<g id="node2" class="node">
+<title>alpha</title>
+<polygon fill="none" stroke="black" points="370.54,-98.51 370.54,-140.51 471.54,-140.51 471.54,-98.51 370.54,-98.51"/>
+<text text-anchor="middle" x="394.04" y="-126.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="370.54,-119.51 417.54,-119.51 "/>
+<text text-anchor="middle" x="394.04" y="-105.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">data</text>
+<polyline fill="none" stroke="black" points="417.54,-98.51 417.54,-140.51 "/>
+<text text-anchor="middle" x="444.54" y="-116.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">alpha</text>
+</g>
+<!-- host&#45;&#45;alpha -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;alpha:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M58,-125.5C58,-125.5 370.04,-130.51 370.04,-130.51"/>
+</g>
+<!-- beta -->
+<g id="node3" class="node">
+<title>beta</title>
+<polygon fill="none" stroke="black" points="374.04,-0.5 374.04,-42.5 468.04,-42.5 468.04,-0.5 374.04,-0.5"/>
+<text text-anchor="middle" x="397.54" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">data</text>
+<polyline fill="none" stroke="black" points="374.04,-21.5 421.04,-21.5 "/>
+<text text-anchor="middle" x="397.54" y="-7.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="421.04,-0.5 421.04,-42.5 "/>
+<text text-anchor="middle" x="444.54" y="-18.4" font-family="DejaVu Sans Mono, Book" font-size="12.00">beta</text>
+</g>
+<!-- host&#45;&#45;beta -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;beta:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M58,-15.5C58,-15.5 374.04,-10.5 374.04,-10.5"/>
+</g>
+<!-- alpha&#45;&#45;beta -->
+<g id="edge3" class="edge">
+<title>alpha:data&#45;&#45;beta:data</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M394.58,-88.5C395.11,-78.43 395.94,-62.98 396.49,-52.81"/>
+<polygon fill="cornflowerblue" stroke="cornflowerblue" stroke-width="2" points="391.08,-88.34 394.04,-98.51 398.07,-88.71 391.08,-88.34"/>
+<polygon fill="cornflowerblue" stroke="cornflowerblue" stroke-width="2" points="400,-52.67 397.04,-42.5 393.01,-52.3 400,-52.67"/>
+<text text-anchor="middle" x="330.03" y="-74.45" font-family="DejaVu Serif, Book" font-size="14.00">192.168.101.0/30 </text>
+</g>
+</g>
+</svg>

@@ -1,0 +1,27 @@
+config IMAGE_EXT4_RAUC
+	bool "RAUC upgrade bundle (ext4)"
+	depends on BR2_TARGET_ROOTFS_EXT2
+	select BR2_PACKAGE_HOST_RAUC
+	help
+	  Create a RAUC upgrade bundle for targets using an ext4 rootfs
+	  image.  Intended for development boards whose bootloader does
+	  not support squashfs.
+
+config IMAGE_EXT4_RAUC_KEY
+	string "signing key"
+	depends on IMAGE_EXT4_RAUC
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.key"
+	help
+	  Path to the private key, in PKCS#8 format, used to sign
+	  the RAUC bundle; or a PKCS#11 URI.
+
+config IMAGE_EXT4_RAUC_CERT
+	string "signing certificate"
+	depends on IMAGE_EXT4_RAUC
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.crt"
+	help
+	  Path to the X509 certificate which will be associated with
+	  the bundle signature.
+
+	  NOTE: This cert MUST be included in the trust store of the
+	        system on which this bundle is to be installed.

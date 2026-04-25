@@ -1,4 +1,4 @@
-=== NTP client stratum selection
+=== NTP Client Stratum Selection
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ntp/client_stratum_selection]
 
@@ -20,7 +20,7 @@ should then select srv1 (lower stratum) as its sync source.
 
 ==== Topology
 
-image::topology.svg[NTP client stratum selection topology, align=center, scaledwidth=75%]
+image::topology.svg[NTP Client Stratum Selection topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

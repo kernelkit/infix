@@ -511,6 +511,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	if ((rc = ntp_change(session, config, diff, event, confd)))
 		goto free_diff;
 
+	/* ieee1588-ptp-tt */
+	if ((rc = ptp_change(session, config, diff, event, confd)))
+		goto free_diff;
+
 	/* infix-services */
 	if ((rc = services_change(session, config, diff, event, confd)))
 		goto free_diff;
@@ -704,6 +708,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = subscribe_model("infix-meta", &confd, SR_SUBSCR_UPDATE);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-meta");
+		goto err;
+	}
+	rc = subscribe_model("ieee1588-ptp-tt", &confd, 0);
+	if (rc) {
+		ERROR("Failed to subscribe to ieee1588-ptp-tt");
 		goto err;
 	}
 

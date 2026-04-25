@@ -70,11 +70,11 @@ The BPI-R3 has a 4-position DIP switch that controls boot media:
 
 <img align="right" src="bootstrap-switch.webp" alt="DIP switches" width=200 padding=10>
 
-| Position | Mode        | Description                           |
-|----------|-------------|---------------------------------------|
-| 0000     | SD card     | Boot from microSD card                |
-| 0110     | eMMC        | Boot from internal eMMC (recommended) |
-| 1010     | SPI NAND    | Boot from SPI NAND (advanced users)   |
+| ABCD | Mode     | Description                           |
+|------|----------|---------------------------------------|
+| 0000 | SD card  | Boot from microSD card                |
+| 0101 | SPI NAND | Boot from SPI NAND (advanced users)   |
+| 1001 | eMMC     | Boot from internal eMMC (recommended) |
 
 > [!NOTE]
 > Switch position is read from left to right: "0" = OFF, "1" = ON.
@@ -150,6 +150,7 @@ From the U-Boot prompt:
 usb start
 fatload usb 0:1 0x50000000 infix-bpi-r3-emmc.img
 setexpr blocks ${filesize} / 0x200
+mmc dev 0
 mmc write 0x50000000 0x0 ${blocks}
 ```
 

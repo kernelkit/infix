@@ -1,4 +1,4 @@
-=== Routing basic
+=== Routing Basic
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/routing_basic]
 
@@ -12,7 +12,7 @@ expected to be lost.
 
 ==== Topology
 
-image::topology.svg[Routing basic topology, align=center, scaledwidth=75%]
+image::topology.svg[Routing Basic topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

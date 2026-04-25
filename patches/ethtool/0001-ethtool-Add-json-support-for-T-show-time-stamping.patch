@@ -1,0 +1,309 @@
+From ccd5fe71878cc3eeea2a3137c7b8d5715e3f4253 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 9 Apr 2026 11:09:51 +0200
+Subject: [PATCH] ethtool: Add --json support for -T (show-time-stamping)
+Organization: Wires
+
+Wire up JSON output for `ethtool -T`:
+
+ - Mark the -T command with .json = true in the command table
+ - Wrap tsinfo_reply_cb output in open/close_json_object, use
+   print_string for the header, and handle the PHC index/none
+   case with proper JSON primitives
+ - Convert tsinfo_dump_list to open a JSON array (keyed by the
+   new json_key parameter) and close it on return; update callers
+   in tsinfo.c and tsconfig.c with appropriate keys
+ - Convert tsinfo_dump_cb to use print_string(PRINT_ANY) so
+   each set bit is emitted as a JSON array element in JSON mode
+   and as an indented text line in plain mode
+ - Wrap the netlink request in nl_tsinfo with new_json_obj /
+   delete_json_obj
+
+Example output on a Marvell 88e6341 (Topaz) switch (lan0):
+
+  $ ethtool --json -T lan0 | jq
+  [
+    {
+      "ifname": "lan0",
+      "capabilities": [
+        "hardware-transmit",
+        "hardware-receive",
+        "software-receive",
+        "software-system-clock",
+        "hardware-raw-clock"
+      ],
+      "hwtstamp-provider-index": 0,
+      "hwtstamp-provider-qualifier": "Precise (IEEE 1588 quality)",
+      "tx-types": [
+        "off",
+        "on"
+      ],
+      "rx-filters": [
+        "none",
+        "ptpv2-l4-event",
+        "ptpv2-l4-sync",
+        "ptpv2-l4-delay-req",
+        "ptpv2-l2-event",
+        "ptpv2-l2-sync",
+        "ptpv2-l2-delay-req",
+        "ptpv2-event",
+        "ptpv2-sync",
+        "ptpv2-delay-req"
+      ]
+    }
+  ]
+
+Example output on a Qemu VM with e1000 NIC (e1):
+
+  $ ethtool --json -T e1 | jq
+  [
+    {
+      "ifname": "e1",
+      "capabilities": [
+        "software-transmit",
+        "software-receive",
+        "software-system-clock"
+      ],
+      "phc-index": -1,
+      "tx-types": [],
+      "rx-filters": []
+    }
+  ]
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ ethtool.c          |   1 +
+ netlink/ts.h       |   2 +-
+ netlink/tsconfig.c |   6 +--
+ netlink/tsinfo.c   | 106 ++++++++++++++++++++++++++++++---------------
+ 4 files changed, 75 insertions(+), 40 deletions(-)
+
+diff --git a/ethtool.c b/ethtool.c
+index 9c8a542..f845dae 100644
+--- a/ethtool.c
++++ b/ethtool.c
+@@ -5985,6 +5985,7 @@ static const struct option args[] = {
+ 	},
+ 	{
+ 		.opts	= "-T|--show-time-stamping",
++		.json	= true,
+ 		.func	= do_tsinfo,
+ 		.nlfunc	= nl_tsinfo,
+ 		.help	= "Show time stamping capabilities",
+diff --git a/netlink/ts.h b/netlink/ts.h
+index 9442b44..07f140a 100644
+--- a/netlink/ts.h
++++ b/netlink/ts.h
+@@ -17,6 +17,6 @@ int tsinfo_qualifier_parser(struct nl_context *nlctx,
+ 			    void *dest);
+ int tsinfo_dump_list(struct nl_context *nlctx, const struct nlattr *attr,
+ 		     const char *label, const char *if_empty,
+-		     unsigned int stringset_id);
++		     unsigned int stringset_id, const char *json_key);
+ 
+ #endif /* ETHTOOL_NETLINK_TS_H__ */
+diff --git a/netlink/tsconfig.c b/netlink/tsconfig.c
+index d427c7b..aab9859 100644
+--- a/netlink/tsconfig.c
++++ b/netlink/tsconfig.c
+@@ -52,19 +52,19 @@ int tsconfig_reply_cb(const struct nlmsghdr *nlhdr, void *data)
+ 
+ 	ret = tsinfo_dump_list(nlctx, tb[ETHTOOL_A_TSCONFIG_TX_TYPES],
+ 			       "Hardware Transmit Timestamp Mode", " none",
+-			       ETH_SS_TS_TX_TYPES);
++			       ETH_SS_TS_TX_TYPES, "tx-types");
+ 	if (ret < 0)
+ 		return err_ret;
+ 
+ 	ret = tsinfo_dump_list(nlctx, tb[ETHTOOL_A_TSCONFIG_RX_FILTERS],
+ 			       "Hardware Receive Filter Mode", " none",
+-			       ETH_SS_TS_RX_FILTERS);
++			       ETH_SS_TS_RX_FILTERS, "rx-filters");
+ 	if (ret < 0)
+ 		return err_ret;
+ 
+ 	ret = tsinfo_dump_list(nlctx, tb[ETHTOOL_A_TSCONFIG_HWTSTAMP_FLAGS],
+ 			       "Hardware Flags", " none",
+-			       ETH_SS_TS_FLAGS);
++			       ETH_SS_TS_FLAGS, "hwtstamp-flags");
+ 	if (ret < 0)
+ 		return err_ret;
+ 
+diff --git a/netlink/tsinfo.c b/netlink/tsinfo.c
+index 187c3ad..da64b50 100644
+--- a/netlink/tsinfo.c
++++ b/netlink/tsinfo.c
+@@ -52,6 +52,7 @@ int tsinfo_show_hwprov(const struct nlattr *nest)
+ 	return 0;
+ }
+ 
++
+ static int tsinfo_show_stats(const struct nlattr *nest)
+ {
+ 	const struct nlattr *tb[ETHTOOL_A_TS_STAT_MAX + 1] = {};
+@@ -109,39 +110,57 @@ err_close_stats:
+ static void tsinfo_dump_cb(unsigned int idx, const char *name, bool val,
+ 			   void *data __maybe_unused)
+ {
++	char buf[16];
++
+ 	if (!val)
+ 		return;
+ 
+-	if (name)
+-		printf("\t%s\n", name);
+-	else
+-		printf("\tbit%u\n", idx);
++	if (!name) {
++		snprintf(buf, sizeof(buf), "bit%u", idx);
++		name = buf;
++	}
++	print_string(PRINT_ANY, NULL, "\t%s\n", name);
+ }
+ 
+ int tsinfo_dump_list(struct nl_context *nlctx, const struct nlattr *attr,
+ 		     const char *label, const char *if_empty,
+-		     unsigned int stringset_id)
++		     unsigned int stringset_id, const char *json_key)
+ {
+ 	const struct stringset *strings = NULL;
+-	int ret;
++	bool empty;
++	int ret = 0;
+ 
+-	printf("%s:", label);
+-	ret = 0;
+-	if (!attr || bitset_is_empty(attr, false, &ret)) {
+-		printf("%s\n", if_empty);
+-		return ret;
+-	}
+-	putchar('\n');
+-	if (ret < 0)
+-		return ret;
++	empty = !attr || bitset_is_empty(attr, false, &ret);
+ 
+-	if (bitset_is_compact(attr)) {
+-		ret = netlink_init_ethnl2_socket(nlctx);
++	if (!is_json_context()) {
++		printf("%s:", label);
++		if (empty) {
++			printf("%s\n", if_empty);
++			return ret;
++		}
++		putchar('\n');
++		if (ret < 0)
++			return ret;
++	} else {
+ 		if (ret < 0)
+ 			return ret;
+-		strings = global_stringset(stringset_id, nlctx->ethnl2_socket);
++		open_json_array(json_key, "");
++	}
++
++	if (!empty) {
++		if (bitset_is_compact(attr)) {
++			ret = netlink_init_ethnl2_socket(nlctx);
++			if (ret < 0)
++				goto out_close;
++			strings = global_stringset(stringset_id, nlctx->ethnl2_socket);
++		}
++		ret = walk_bitset(attr, strings, tsinfo_dump_cb, NULL);
+ 	}
+-	return walk_bitset(attr, strings, tsinfo_dump_cb, NULL);
++
++out_close:
++	if (is_json_context())
++		close_json_array("");
++	return ret;
+ }
+ 
+ int tsinfo_reply_cb(const struct nlmsghdr *nlhdr, void *data)
+@@ -163,47 +182,59 @@ int tsinfo_reply_cb(const struct nlmsghdr *nlhdr, void *data)
+ 		return err_ret;
+ 
+ 	if (silent)
+-		putchar('\n');
+-	printf("Time stamping parameters for %s:\n", nlctx->devname);
++		print_nl();
++
++	open_json_object(NULL);
++	print_string(PRINT_ANY, "ifname",
++		     "Time stamping parameters for %s:\n", nlctx->devname);
+ 
+ 	ret = tsinfo_dump_list(nlctx, tb[ETHTOOL_A_TSINFO_TIMESTAMPING],
+-			       "Capabilities", "", ETH_SS_SOF_TIMESTAMPING);
++			       "Capabilities", "", ETH_SS_SOF_TIMESTAMPING,
++			       "capabilities");
+ 	if (ret < 0)
+-		return err_ret;
++		goto err_close_dev;
+ 
+ 	if (tb[ETHTOOL_A_TSINFO_HWTSTAMP_PROVIDER]) {
+ 		ret = tsinfo_show_hwprov(tb[ETHTOOL_A_TSINFO_HWTSTAMP_PROVIDER]);
+ 		if (ret < 0)
+-			return err_ret;
+-
++			goto err_close_dev;
+ 	} else if (tb[ETHTOOL_A_TSINFO_PHC_INDEX]) {
+-		printf("PTP Hardware Clock: ");
+-		printf("%d\n",
+-		       mnl_attr_get_u32(tb[ETHTOOL_A_TSINFO_PHC_INDEX]));
++		print_uint(PRINT_ANY, "phc-index",
++			   "PTP Hardware Clock: %d\n",
++			   mnl_attr_get_u32(tb[ETHTOOL_A_TSINFO_PHC_INDEX]));
+ 	} else {
+-		printf("PTP Hardware Clock: ");
+-		printf("none\n");
++		if (is_json_context())
++			print_int(PRINT_JSON, "phc-index", NULL, -1);
++		else
++			printf("PTP Hardware Clock: none\n");
+ 	}
+ 
+ 	ret = tsinfo_dump_list(nlctx, tb[ETHTOOL_A_TSINFO_TX_TYPES],
+ 			       "Hardware Transmit Timestamp Modes", " none",
+-			       ETH_SS_TS_TX_TYPES);
++			       ETH_SS_TS_TX_TYPES, "tx-types");
+ 	if (ret < 0)
+-		return err_ret;
++		goto err_close_dev;
+ 
+ 	ret = tsinfo_dump_list(nlctx, tb[ETHTOOL_A_TSINFO_RX_FILTERS],
+ 			       "Hardware Receive Filter Modes", " none",
+-			       ETH_SS_TS_RX_FILTERS);
++			       ETH_SS_TS_RX_FILTERS, "rx-filters");
+ 	if (ret < 0)
+-		return err_ret;
++		goto err_close_dev;
+ 
+ 	if (tb[ETHTOOL_A_TSINFO_STATS]) {
+ 		ret = tsinfo_show_stats(tb[ETHTOOL_A_TSINFO_STATS]);
+ 		if (ret < 0)
+-			return err_ret;
++			goto err_close_dev;
+ 	}
+ 
++	if (!silent)
++		print_nl();
++	close_json_object();
+ 	return MNL_CB_OK;
++
++err_close_dev:
++	close_json_object();
++	return err_ret;
+ }
+ 
+ int tsinfo_qualifier_parser(struct nl_context *nlctx,
+@@ -271,5 +302,8 @@ int nl_tsinfo(struct cmd_context *ctx)
+ 	if (ret < 0)
+ 		return ret;
+ 
+-	return nlsock_send_get_request(nlsk, tsinfo_reply_cb);
++	new_json_obj(ctx->json);
++	ret = nlsock_send_get_request(nlsk, tsinfo_reply_cb);
++	delete_json_obj();
++	return ret;
+ }
+-- 
+2.43.0
+

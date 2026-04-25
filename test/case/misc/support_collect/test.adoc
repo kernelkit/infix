@@ -1,4 +1,4 @@
-=== Support data collection
+=== Support Data Collection
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/support_collect]
 
@@ -10,7 +10,7 @@ encryption (when available on target).
 
 ==== Topology
 
-image::topology.svg[Support data collection topology, align=center, scaledwidth=75%]
+image::topology.svg[Support Data Collection topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

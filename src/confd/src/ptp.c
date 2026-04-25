@@ -1,0 +1,543 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+
+#include <dirent.h>
+#include <stdbool.h>
+#include <jansson.h>
+
+#include <srx/common.h>
+#include <srx/lyx.h>
+#include <srx/srx_val.h>
+
+#include "core.h"
+
+#define XPATH_PTP_   "/ieee1588-ptp-tt:ptp"
+#define PTP_CONF_DIR "/etc/linuxptp"
+
+/*
+ * Map instance-type string to ptp4l clockType keyword.
+ * Returns NULL for oc/bc (no explicit clockType needed in [global]).
+ */
+static const char *instance_type_to_clock_type(const char *type)
+{
+	if (!type)
+		return NULL;
+	if (!strcmp(type, "p2p-tc"))
+		return "P2P_TC";
+	if (!strcmp(type, "e2e-tc"))
+		return "E2E_TC";
+
+	return NULL;
+}
+
+/*
+ * Emit all protocol-mandatory [global] settings for the chosen profile.
+ * Returns true when the profile is ieee802-dot1as (802.1AS/gPTP), which
+ * the caller uses to suppress per-port delay_mechanism output — identical
+ * to the guard already used for Transparent Clock instances.
+ *
+ * ieee802-dot1as sets the full gPTP option set as required by the standard:
+ *   transportSpecific, network_transport, delay_mechanism, multicast MACs,
+ *   gmCapable, follow_up_info, assume_two_step, path_trace_enabled,
+ *   and the tighter neighborPropDelayThresh.
+ */
+static bool emit_profile_globals(FILE *fp, const char *profile, bool hw_ts)
+{
+	bool dot1as = profile && !strcmp(profile, "ieee802-dot1as");
+
+	if (dot1as) {
+		fprintf(fp, "transportSpecific       1\n");
+		fprintf(fp, "network_transport       L2\n");
+		fprintf(fp, "delay_mechanism         P2P\n");
+		fprintf(fp, "ptp_dst_mac             01:80:C2:00:00:0E\n");
+		fprintf(fp, "p2p_dst_mac             01:80:C2:00:00:0E\n");
+		fprintf(fp, "gmCapable               1\n");
+		fprintf(fp, "follow_up_info          1\n");
+		fprintf(fp, "assume_two_step         1\n");
+		fprintf(fp, "path_trace_enabled      1\n");
+		/*
+		 * 802.1AS P2P gate: if meanLinkDelay exceeds this threshold the
+		 * port stays asCapable=false and never leaves LISTENING.  800 ns
+		 * is the 802.1AS default and is appropriate only for hardware
+		 * timestamping — software timestamps (QEMU, tap interfaces) can
+		 * easily produce peer delays in the microsecond range, which
+		 * would keep both ports stuck in LISTENING indefinitely.
+		 */
+		if (hw_ts)
+			fprintf(fp, "neighborPropDelayThresh 800\n");
+	} else {
+		fprintf(fp, "transportSpecific       0\n");
+	}
+	return dot1as;
+}
+
+/*
+ * Return true if ifname has hardware TX timestamping capability according
+ * to the probed data in system.json (confd->root).  If the interface is
+ * absent from system.json (virtual interface, QEMU tap, etc.) or the
+ * "hardware-transmit" capability string is missing, returns false.
+ */
+static bool iface_has_hw_timestamp(json_t *root, const char *ifname)
+{
+	json_t *caps, *list, *entry;
+	size_t i;
+
+	if (!root || !ifname)
+		return false;
+
+	caps = json_object_get(json_object_get(
+		json_object_get(root, "interfaces"),
+		ifname), "ptp-capabilities");
+	if (!caps)
+		return false;
+
+	list = json_object_get(caps, "capabilities");
+	if (!json_is_array(list))
+		return false;
+
+	json_array_foreach(list, i, entry) {
+		const char *s = json_string_value(entry);
+		if (s && !strcmp(s, "hardware-transmit"))
+			return true;
+	}
+	return false;
+}
+
+static uint16_t instance(struct lyd_node *inst)
+{
+	return (uint16_t)atoi(lydx_get_cattr(inst, "instance-index"));
+}
+
+/*
+ * Scan all ports of inst and determine whether to use hardware or software
+ * timestamping.  Emits a syslog WARNING when falling back to software due
+ * to a mixed or software-only set of port interfaces.
+ */
+static const char *instance_time_stamping(uint16_t idx, struct lyd_node *inst, json_t *root)
+{
+	const char *ifname = NULL;
+	struct lyd_node *port;
+
+	LYX_LIST_FOR_EACH(lyd_child(lydx_get_child(inst, "ports")), port, "port") {
+		const char *iface = lydx_get_cattr(port, "underlying-interface");
+
+		if (iface_has_hw_timestamp(root, iface))
+			continue;
+
+		ifname = iface;
+		break;
+	}
+
+	if (ifname) {
+		WARN("PTP instance %u will use software based timestamping due to "
+		     "missing hardware support on %s", idx, ifname);
+		return "software";
+	}
+
+	return "hardware";
+}
+
+/*
+ * Write ptp4l config for one PTP instance.
+ * Config file: /etc/linuxptp/ptp4l-<idx>.conf+  (staging)
+ *
+ * ptp4l key config layout:
+ *   [global]           — instance-wide settings
+ *   [eth0]             — per-port interface sections, sorted by port-index
+ */
+static int write_instance_conf(struct lyd_node *inst, json_t *root)
+{
+	const char *instance_type, *clock_type, *profile, *ts;
+	struct lyd_node *default_ds, *port, *port_ds, *servo;
+	bool tc, bc, dot1as;
+	char path[256];
+	const char *v;
+	uint16_t idx;
+	FILE *fp;
+
+	idx = instance(inst);
+
+	snprintf(path, sizeof(path), PTP_CONF_DIR "/ptp4l-%u.conf+", idx);
+	fp = fopen(path, "w");
+	if (!fp) {
+		ERRNO("Failed creating %s", path);
+		return SR_ERR_SYS;
+	}
+
+	fprintf(fp, "# Generated by confd — do not edit\n\n");
+	fprintf(fp, "[global]\n");
+
+	default_ds    = lydx_get_child(inst, "default-ds");
+	instance_type = lydx_get_cattr(default_ds, "instance-type");
+	profile       = lydx_get_cattr(default_ds, "profile");
+
+	clock_type = instance_type_to_clock_type(instance_type);
+	tc = (clock_type != NULL);
+	bc = instance_type && !strcmp(instance_type, "bc");
+
+	/* Unique UDS socket per instance — required for pmc with multiple instances */
+	fprintf(fp, "uds_address        /var/run/ptp4l-%u\n", idx);
+
+	/* Timestamping mode: hardware if all ports support it, software otherwise */
+	ts = instance_time_stamping(idx, inst, root);
+	fprintf(fp, "time_stamping      %s\n", ts);
+
+	/* Profile — sets transportSpecific and all protocol-mandatory options */
+	dot1as = emit_profile_globals(fp, profile, !strcmp(ts, "hardware"));
+
+	/* domainNumber */
+	v = lydx_get_cattr(default_ds, "domain-number");
+	if (v)
+		fprintf(fp, "domainNumber       %s\n", v);
+
+	/* Transparent Clock clock_type */
+	if (tc)
+		fprintf(fp, "clock_type         %s\n", clock_type);
+
+	/*
+	 * Multi-port instances (BC and TC) may span ports on different PHC
+	 * devices when the ports belong to different switch chips (e.g. a
+	 * three-chip board where each mv88e6xxx chip owns its own /dev/ptpN).
+	 * boundary_clock_jbod silences ptp4l's startup PHC-mismatch check and
+	 * lets each port use its own PHC.  It is a no-op when all ports share
+	 * the same PHC (single-chip board or software timestamping).
+	 * On multi-chip hardware, phc2sys -a disciplines the secondary PHCs;
+	 * see needs_phc2sys() / activate_phc2sys().
+	 */
+	if (tc || bc)
+		fprintf(fp, "boundary_clock_jbod 1\n");
+
+	/* priority1 / priority2 (not applicable for TC, but harmless) */
+	v = lydx_get_cattr(default_ds, "priority1");
+	if (v)
+		fprintf(fp, "priority1          %s\n", v);
+	v = lydx_get_cattr(default_ds, "priority2");
+	if (v)
+		fprintf(fp, "priority2          %s\n", v);
+
+	/* clientOnly (OC only) — inclusive replacement for slaveOnly in ptp4l 4.x */
+	v = lydx_get_cattr(default_ds, "time-receiver-only");
+	if (v && !strcmp(v, "true"))
+		fprintf(fp, "clientOnly         1\n");
+
+	/* maxStepsRemoved */
+	v = lydx_get_cattr(default_ds, "max-steps-removed");
+	if (v)
+		fprintf(fp, "maxStepsRemoved    %s\n", v);
+
+	/* servo: step_threshold (0.0 = slew-only, never step) */
+	servo = lydx_get_child(inst, "servo");
+	if (servo) {
+		v = lydx_get_cattr(servo, "step-threshold");
+		if (v)
+			fprintf(fp, "step_threshold     %s\n", v);
+	}
+
+	/*
+	 * Transparent Clocks set delay_mechanism globally; ptp4l ignores
+	 * per-port delay_mechanism for TCs.  802.1AS mandates P2P globally
+	 * (already emitted by emit_profile_globals).
+	 */
+	if (tc) {
+		if (!strcmp(clock_type, "P2P_TC"))
+			fprintf(fp, "delay_mechanism    P2P\n");
+		else
+			fprintf(fp, "delay_mechanism    E2E\n");
+	}
+
+	fprintf(fp, "\n");
+
+	/* Per-port [interface] sections, sorted by port-index */
+	LYX_LIST_FOR_EACH(lyd_child(lydx_get_child(inst, "ports")), port, "port") {
+		const char *iface;
+
+		iface = lydx_get_cattr(port, "underlying-interface");
+		if (!iface)
+			continue;
+
+		port_ds = lydx_get_child(port, "port-ds");
+		if (!port_ds)
+			continue;
+
+		if (!lydx_is_enabled(port_ds, "port-enable"))
+			continue;
+
+		fprintf(fp, "[%s]\n", iface);
+
+		v = lydx_get_cattr(port_ds, "log-announce-interval");
+		if (v)
+			fprintf(fp, "logAnnounceInterval    %s\n", v);
+
+		v = lydx_get_cattr(port_ds, "announce-receipt-timeout");
+		if (v)
+			fprintf(fp, "announceReceiptTimeout %s\n", v);
+
+		v = lydx_get_cattr(port_ds, "log-sync-interval");
+		if (v)
+			fprintf(fp, "logSyncInterval        %s\n", v);
+
+		v = lydx_get_cattr(port_ds, "log-min-delay-req-interval");
+		if (v)
+			fprintf(fp, "logMinDelayReqInterval %s\n", v);
+
+		v = lydx_get_cattr(port_ds, "log-min-pdelay-req-interval");
+		if (v)
+			fprintf(fp, "logMinPdelayReqInterval %s\n", v);
+
+		/*
+		 * delay_mechanism per port — only for OC/BC on ieee1588 profile.
+		 * TC and 802.1AS both set it globally; ptp4l ignores per-port
+		 * overrides in those cases.
+		 */
+		if (!tc && !dot1as) {
+			const char *dm = lydx_get_cattr(port_ds, "delay-mechanism");
+
+			if (dm) {
+				if (!strcmp(dm, "p2p"))
+					fprintf(fp, "delay_mechanism        P2P\n");
+				else if (!strcmp(dm, "e2e"))
+					fprintf(fp, "delay_mechanism        E2E\n");
+			}
+		}
+
+		v = lydx_get_cattr(port_ds, "delay-asymmetry");
+		if (v && strcmp(v, "0"))
+			fprintf(fp, "delayAsymmetry         %s\n", v);
+
+		if (lydx_is_enabled(port_ds, "time-transmitter-only"))
+			fprintf(fp, "masterOnly             1\n");
+
+		fprintf(fp, "\n");
+	}
+
+	fclose(fp);
+	return SR_ERR_OK;
+}
+
+/*
+ * True when a PTP instance needs a phc2sys companion to keep all its
+ * PHC devices in sync.  Required for BC and TC instances on hardware
+ * with multiple switch chips, where each chip has its own /dev/ptpN.
+ * On single-chip hardware the function is a no-op: phc2sys -a finds
+ * no second PHC and exits immediately.  OC has one port → one PHC,
+ * so no sync is ever needed.
+ */
+static bool needs_phc2sys(struct lyd_node *inst, json_t *root)
+{
+	struct lyd_node *default_ds = lydx_get_child(inst, "default-ds");
+	const char *type = lydx_get_cattr(default_ds, "instance-type");
+
+	if (!type)
+		return false;
+	if (strcmp(type, "bc") && strcmp(type, "p2p-tc") && strcmp(type, "e2e-tc"))
+		return false;
+
+	return !strcmp(instance_time_stamping(instance(inst), inst, root), "hardware");
+}
+
+/*
+ * Enable the phc2sys@ companion service for a multi-port HW instance.
+ * phc2sys -a subscribes to ptp4l's UDS, discovers the active slave
+ * port via BMCA, and disciplines all other PHCs to match it.
+ * No config file is needed — the UDS path is passed on the command line.
+ */
+static void activate_phc2sys(uint16_t idx)
+{
+	finit_enablef("phc2sys@%u", idx);
+	finit_reloadf("phc2sys@%u", idx);
+}
+
+static void deactivate_phc2sys(uint16_t idx)
+{
+	finit_disablef("phc2sys@%u", idx);
+}
+
+/*
+ * Disable any phc2sys@ services whose index is no longer configured.
+ */
+static void cleanup_stale_phc2sys(struct lyd_node *config)
+{
+	const struct dirent *ent;
+	DIR *d;
+
+	d = opendir(FINIT_RCSD "/enabled");
+	if (!d)
+		return;
+
+	while ((ent = readdir(d))) {
+		struct lyd_node *inst, *instances;
+		bool found = false;
+		int idx;
+
+		if (sscanf(ent->d_name, "phc2sys@%d.conf", &idx) != 1)
+			continue;
+
+		instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
+		LYX_LIST_FOR_EACH(instances, inst, "instance") {
+			if (instance(inst) == idx) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+			deactivate_phc2sys((uint16_t)idx);
+	}
+
+	closedir(d);
+}
+
+/*
+ * Remove staging config for one instance.
+ */
+static void remove_staging(uint16_t idx)
+{
+	char path[256];
+
+	snprintf(path, sizeof(path), PTP_CONF_DIR "/ptp4l-%u.conf+", idx);
+	(void)remove(path);
+}
+
+/*
+ * Activate one instance: rename staging → live, enable finit service.
+ */
+static int activate_instance(uint16_t idx)
+{
+	char staging[256], live[256];
+
+	snprintf(staging, sizeof(staging), PTP_CONF_DIR "/ptp4l-%u.conf+", idx);
+	snprintf(live,    sizeof(live),    PTP_CONF_DIR "/ptp4l-%u.conf",  idx);
+
+	if (!fexist(staging)) {
+		(void)remove(live);
+		return SR_ERR_OK;
+	}
+
+	if (rename(staging, live)) {
+		ERRNO("Failed renaming %s → %s", staging, live);
+		return SR_ERR_SYS;
+	}
+
+	finit_enablef("ptp4l@%u", idx);
+	return finit_reloadf("ptp4l@%u", idx);
+}
+
+/*
+ * Deactivate (disable) one instance and remove its live config.
+ */
+static void deactivate_instance(uint16_t idx)
+{
+	char live[256];
+
+	finit_disablef("ptp4l@%u", idx);
+
+	snprintf(live, sizeof(live), PTP_CONF_DIR "/ptp4l-%u.conf", idx);
+	(void)remove(live);
+}
+
+/*
+ * Disable any ptp4l@ services in finit enabled/ whose index is not in the
+ * currently configured set.  Called from SR_EV_DONE after enabling active
+ * instances, to clean up stale services from a previous config.
+ */
+static void cleanup_stale_instances(struct lyd_node *config)
+{
+	const struct dirent *ent;
+	DIR *d;
+
+	d = opendir(FINIT_RCSD "/enabled");
+	if (!d)
+		return;
+
+	while ((ent = readdir(d))) {
+		struct lyd_node *inst, *instances;
+		bool found = false;
+		int idx;
+
+		if (sscanf(ent->d_name, "ptp4l@%d.conf", &idx) != 1)
+			continue;
+
+		/* Is this index still configured? */
+		instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
+		LYX_LIST_FOR_EACH(instances, inst, "instance") {
+			if (instance(inst) == idx) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+			deactivate_instance((uint16_t)idx);
+	}
+
+	closedir(d);
+}
+
+static int change(sr_session_ctx_t *session, struct lyd_node *config,
+		  struct lyd_node *diff, sr_event_t event, struct confd *confd)
+{
+	struct lyd_node *instances, *inst;
+	int rc = SR_ERR_OK;
+
+	if (diff && !lydx_get_xpathf(diff, XPATH_PTP_))
+		return SR_ERR_OK;
+
+	switch (event) {
+	case SR_EV_ENABLED:
+	case SR_EV_CHANGE:
+		break;
+
+	case SR_EV_ABORT:
+		/* Remove any staging files */
+		instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
+		LYX_LIST_FOR_EACH(instances, inst, "instance")
+			remove_staging(instance(inst));
+		return SR_ERR_OK;
+
+	case SR_EV_DONE:
+		/* Activate all configured instances */
+		instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
+		LYX_LIST_FOR_EACH(instances, inst, "instance") {
+			uint16_t idx = instance(inst);
+
+			if ((rc = activate_instance(idx)))
+				return rc;
+
+			if (needs_phc2sys(inst, confd->root))
+				activate_phc2sys(idx);
+			else
+				deactivate_phc2sys(idx);
+		}
+
+		/* Disable stale services not in current config */
+		cleanup_stale_instances(config);
+		cleanup_stale_phc2sys(config);
+		return SR_ERR_OK;
+
+	default:
+		return SR_ERR_OK;
+	}
+
+	/* SR_EV_ENABLED / SR_EV_CHANGE — generate staging configs */
+	instances = lydx_get_descendant(config, "ptp", "instances", "instance", NULL);
+	if (!instances)
+		return SR_ERR_OK;
+
+	if (mkdir(PTP_CONF_DIR, 0755) && errno != EEXIST) {
+		ERRNO("Failed creating " PTP_CONF_DIR);
+		return SR_ERR_SYS;
+	}
+
+	LYX_LIST_FOR_EACH(instances, inst, "instance") {
+		rc = write_instance_conf(inst, confd->root);
+		if (rc)
+			return rc;
+	}
+
+	return SR_ERR_OK;
+}
+
+int ptp_change(sr_session_ctx_t *session, struct lyd_node *config,
+	       struct lyd_node *diff, sr_event_t event, struct confd *confd)
+{
+	return change(session, config, diff, event, confd);
+}

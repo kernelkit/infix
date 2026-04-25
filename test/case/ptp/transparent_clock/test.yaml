@@ -1,0 +1,15 @@
+---
+- settings:
+    test-spec: <case>.adoc
+
+- name: PTP transparent clock (E2E)
+  case: e2e.py
+  opts: ["--delay-mechanism", "e2e"]
+
+- name: PTP transparent clock (P2P)
+  case: p2p.py
+  opts: ["--delay-mechanism", "p2p"]
+
+- name: PTP transparent clock (IEEE 802.1AS)
+  case: ieee802dot1as.py
+  opts: ["--profile", "ieee802-dot1as"]

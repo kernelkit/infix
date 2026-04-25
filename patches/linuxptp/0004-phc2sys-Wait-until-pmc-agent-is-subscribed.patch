@@ -1,0 +1,45 @@
+From 1942fde263f40d318d56acf824626641263facd0 Mon Sep 17 00:00:00 2001
+From: Miroslav Lichvar <mlichvar@redhat.com>
+Date: Thu, 17 Oct 2024 15:05:22 +0200
+Subject: [PATCH 04/13] phc2sys: Wait until pmc agent is subscribed.
+Organization: Wires
+
+When phc2sys is configured with multiple domains, different domains may
+have their pmc agent subscribed after different number of calls of the
+pmc_agent_update() function depending on how quickly responses from
+ptp4l are received. If one domain triggers reconfiguration and the other
+domain does not have its agent subscribed yet, it will not have any of
+its clocks synchronized until a port changes state and triggers another
+reconfiguration of the domain.
+
+To avoid this problem, wait for each domain to have its agent subscribed
+before entering the main synchronization loop. Use a 10ms update
+interval to speed up the start of phc2sys.
+
+Signed-off-by: Miroslav Lichvar <mlichvar@redhat.com>
+Reviewed-by: Jacob Keller <jacob.e.keller@intel.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ phc2sys.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/phc2sys.c b/phc2sys.c
+index 6113539..47e896e 100644
+--- a/phc2sys.c
++++ b/phc2sys.c
+@@ -962,6 +962,12 @@ static int auto_init_ports(struct domain *domain)
+ 		return -1;
+ 	}
+ 
++	while (!pmc_agent_is_subscribed(domain->agent)) {
++		usleep(10000);
++		if (pmc_agent_update(domain->agent) < 0)
++			return -1;
++	}
++
+ 	for (i = 1; i <= number_ports; i++) {
+ 		err = pmc_agent_query_port_properties(domain->agent, 1000, i,
+ 						      &state, &timestamping,
+-- 
+2.43.0
+

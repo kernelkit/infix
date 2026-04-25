@@ -1,4 +1,4 @@
-=== WireGuard multipoint
+=== WireGuard Multipoint
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/wireguard_multipoint]
 
@@ -41,7 +41,7 @@ Security boundaries:
 
 ==== Topology
 
-image::topology.svg[WireGuard multipoint topology, align=center, scaledwidth=75%]
+image::topology.svg[WireGuard Multipoint topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

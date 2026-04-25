@@ -1,0 +1,102 @@
+submodule infix-if-ptp {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "PTP timestamping capabilities for ietf-interfaces.";
+
+  revision 2026-04-09 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  augment "/if:interfaces/if:interface" {
+    description
+      "PTP timestamping capabilities reported by the network driver.
+       Data is probed at boot via ethtool --json -T and is read-only.";
+
+    container ptp-capabilities {
+      config false;
+      description
+        "PTP hardware and software timestamping capabilities of this
+         interface, as reported by the driver via ethtool -T.  Absent
+         on virtual interfaces (bridges, VLANs, etc.) that have no
+         underlying physical device.";
+
+      leaf-list capabilities {
+        type enumeration {
+          enum software-transmit {
+            description "Software TX timestamping supported.";
+          }
+          enum software-receive {
+            description "Software RX timestamping supported.";
+          }
+          enum software-system-clock {
+            description "System clock can be used for SW timestamping.";
+          }
+          enum hardware-transmit {
+            description "Hardware TX timestamping supported.";
+          }
+          enum hardware-receive {
+            description "Hardware RX timestamping supported.";
+          }
+          enum hardware-raw-clock {
+            description "Raw hardware clock (PHC) exposed to userspace.";
+          }
+        }
+        description
+          "Set of timestamping capability flags reported by the driver.
+           The presence of hardware-transmit indicates that ptp4l can
+           use hardware timestamping on this interface.";
+      }
+
+      leaf phc-index {
+        type uint32;
+        description
+          "PTP Hardware Clock device index (e.g. 0 for /dev/ptp0).
+           Absent when the interface has no associated PHC.";
+      }
+
+      leaf-list tx-types {
+        type string;
+        description
+          "Hardware TX timestamp types supported (e.g. 'off', 'on',
+           'onestep-sync').  Empty when hardware-transmit is not in
+           the capabilities set.";
+      }
+
+      leaf-list rx-filters {
+        type string;
+        description
+          "Hardware RX timestamp filter modes supported (e.g.
+           'ptpv2-l2-event', 'ptpv2-l4-sync').  Empty when
+           hardware-receive is not in the capabilities set.";
+      }
+
+      leaf hwtstamp-provider-index {
+        type uint32;
+        description
+          "Hardware timestamp provider index.  Present only on kernels
+           and drivers that expose per-provider timestamping (Linux 6.x+).";
+      }
+
+      leaf hwtstamp-provider-qualifier {
+        type string;
+        description
+          "Human-readable quality descriptor for the hardware timestamp
+           provider, e.g. 'Precise (IEEE 1588 quality)'.";
+      }
+    }
+  }
+}

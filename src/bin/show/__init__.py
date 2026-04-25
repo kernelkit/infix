@@ -711,6 +711,23 @@ def keystore(args: List[str]) -> None:
         print("Usage: show keystore [symmetric <name> | asymmetric <name>]")
 
 
+def ptp(args: List[str]) -> None:
+    data = get_json("/ieee1588-ptp-tt:ptp")
+    if not data:
+        print("PTP: no instances running.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    # Optional: filter to a specific instance-index
+    if args and args[0].isdigit():
+        cli_pretty(data, "show-ptp", args[0])
+    else:
+        cli_pretty(data, "show-ptp")
+
+
 def execute_command(command: str, args: List[str]):
     command_mapping = {
         'bfd': bfd,
@@ -725,6 +742,7 @@ def execute_command(command: str, args: List[str]):
         'nacm': nacm,
         'ntp': ntp,
         'ospf': ospf,
+        'ptp': ptp,
         'rip': rip,
         'routes': routes,
         'services': services,

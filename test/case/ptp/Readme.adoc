@@ -1,0 +1,46 @@
+:testgroup:
+== PTP Tests
+
+Tests for PTP (IEEE 1588 Precision Time Protocol) functionality across
+different clock types and operational scenarios:
+
+ - Basic smoke test: full stack end-to-end
+ - BTCA: grandmaster election and runtime re-election via `priority1`
+ - Boundary Clock: two-port BC forwarding time with `steps-removed` accounting
+ - Transparent Clock: E2E and P2P TC on hardware-timestamping nodes
+ - Port fault recovery: link-down/link-up state machine and re-convergence
+
+The offset convergence threshold in the tests varies with the timestamping
+capability of the nodes under test:
+
+[cols="1,1,3",options="header"]
+|===
+| Timestamping | Default Threshold | Typical scenario
+| Software     | 100 000 ns        | Virtual machines, QEMU tap interfaces
+| Hardware     | 1 000 ns          | Nodes with PHC hardware timestamping
+|===
+
+Tests that accept a `--threshold-ns` option may use that value instead.
+When no option is given, the threshold is selected automatically based
+on the `ptp-hwts` capability of the relevant node in the physical test
+system's topology file.
+
+<<<
+
+include::basic/Readme.adoc[]
+
+<<<
+
+include::bmca/Readme.adoc[]
+
+<<<
+
+include::boundary_clock/Readme.adoc[]
+
+<<<
+
+include::transparent_clock/Readme.adoc[]
+
+<<<
+
+include::port_recovery/Readme.adoc[]

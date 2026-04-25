@@ -359,6 +359,53 @@ $ make test-spec
 ...
 ```
 
+### Node and Link Capabilities
+
+Logical topology files (`topology.dot`) declare what each node and link
+*requires*; physical topology files declare what each node and link
+*provides*.  When mapping a logical topology to physical hardware, infamy
+only assigns a physical node to a logical node when the physical node's
+`provides` set is a superset of the logical node's `requires` set.  Tests
+are skipped if no matching physical topology can be found.
+
+#### Declaring requirements (logical topology)
+
+```dot
+dut [
+    requires="infix",
+];
+
+host:data -- dut:data [requires="ptp-hwts"]
+```
+
+#### Declaring capabilities (physical topology)
+
+```dot
+switch1 [
+    provides="infix",
+];
+
+switch1:eth0 -- switch2:eth0 [provides="ptp-hwts"]
+```
+
+#### Node capabilities
+
+| Capability        | Meaning                                                                 |
+|-------------------|-------------------------------------------------------------------------|
+| `controller`      | Reserved for the host/controller node; never assigned to a DUT          |
+| `infix`           | Node runs Infix OS — required by virtually all DUT nodes                |
+| `gps`             | Node has a GPS receiver available as a time reference                   |
+| `watchdog`        | Node has a hardware watchdog device                                     |
+
+#### Link capabilities
+
+| Capability        | Meaning                                                                 |
+|-------------------|-------------------------------------------------------------------------|
+| `mgmt`            | Link is a management path (typically coloured grey in diagrams)         |
+| `ieee-mc`         | Link carries IEEE multicast traffic (required by LAG and some L2 tests) |
+| `link-ctrl copper`| Link supports copper speed/duplex control                               |
+| `ptp-hwts`        | Both ends of this link support PTP hardware timestamping (PHC); required for sub-microsecond accuracy |
+
 ### Test Development
 
 For adding a new test to the automated regression test suite, it's best
