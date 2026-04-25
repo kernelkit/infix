@@ -7,13 +7,13 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/system/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/ptp/">
       
       
-        <link rel="prev" href="../boot/">
+        <link rel="prev" href="../ntp/">
       
       
-        <link rel="next" href="../nacm/">
+        <link rel="next" href="../boot/">
       
       
         
@@ -24,7 +24,7 @@
     
     
       
-        <title>Configuration - User's Guide</title>
+        <title>PTP (IEEE 1588/802.1AS) - User's Guide</title>
       
     
     
@@ -88,7 +88,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#system-configuration" class="md-skip">
+        <a href="#ptp-precision-time-protocol" class="md-skip">
           Skip to content
         </a>
       
@@ -127,7 +127,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Configuration
+              PTP (IEEE 1588/802.1AS)
             
           </span>
         </div>
@@ -1159,8 +1159,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1176,11 +1178,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked="">
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -1201,7 +1203,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1300,10 +1302,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../ptp/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTP (IEEE 1588/802.1AS)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1319,6 +1348,258 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#clock-roles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clock roles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptp-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PTP profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delay-mechanisms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delay mechanisms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-sets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Sets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#domains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domains
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ordinary-clock-time-receiver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ordinary Clock (time-receiver)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ordinary-clock-time-transmitter-grandmaster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ordinary Clock (time-transmitter / grandmaster)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#boundary-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boundary Clock
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transparent-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transparent Clock
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gptp-ieee-8021as" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gPTP / IEEE 802.1AS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-instances" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Instances
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#port-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Port states
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Monitoring">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#show-all-ptp-instances" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show all PTP instances
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-a-specific-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show a specific instance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tuning-port-intervals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning port intervals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-exchange" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message exchange
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message format
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Message format">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decoding-with-wireshark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decoding with Wireshark
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#glossary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Glossary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1335,10 +1616,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1364,11 +1643,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked="">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -1389,7 +1668,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1432,37 +1711,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configuration
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../system/" class="md-nav__link">
         
   
   
@@ -1478,198 +1730,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
-      
-        <li class="md-nav__item">
-  <a href="#changing-password" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changing Password
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Changing Password">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ssh-authorized-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SSH Authorized Key
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multiple-users" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multiple Users
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multiple Users">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-user" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a User
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-user-to-a-group" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a User to a Group
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#access-control-matrix" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Access Control Matrix
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#security-aspects" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security Aspects
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#changing-hostname" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changing Hostname
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#changing-login-banner" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changing Login Banner
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#changing-the-editor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changing the Editor
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dns-resolver-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DNS Resolver Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ntp-client-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        NTP Client Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="NTP Client Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#show-ntp-sources" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Show NTP Sources
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#show-ntp-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Show NTP Status
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2434,22 +2494,165 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#changing-password" class="md-nav__link">
+  <a href="#clock-roles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Changing Password
+        Clock roles
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Changing Password">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptp-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PTP profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delay-mechanisms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delay mechanisms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-sets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Sets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#domains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domains
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ordinary-clock-time-receiver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ordinary Clock (time-receiver)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ordinary-clock-time-transmitter-grandmaster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ordinary Clock (time-transmitter / grandmaster)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#boundary-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boundary Clock
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transparent-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transparent Clock
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gptp-ieee-8021as" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gPTP / IEEE 802.1AS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-instances" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Instances
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#port-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Port states
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Monitoring">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ssh-authorized-key" class="md-nav__link">
+  <a href="#show-all-ptp-instances" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SSH Authorized Key
+        Show all PTP instances
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-a-specific-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show a specific instance
       
     </span>
   </a>
@@ -2462,55 +2665,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multiple-users" class="md-nav__link">
+  <a href="#tuning-port-intervals" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multiple Users
+        Tuning port intervals
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Multiple Users">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-exchange" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message exchange
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Message format
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Message format">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adding-a-user" class="md-nav__link">
+  <a href="#decoding-with-wireshark" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adding a User
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-user-to-a-group" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a User to a Group
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#access-control-matrix" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Access Control Matrix
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#security-aspects" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security Aspects
+        Decoding with Wireshark
       
     </span>
   </a>
@@ -2523,85 +2715,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#changing-hostname" class="md-nav__link">
+  <a href="#glossary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Changing Hostname
+        Glossary
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#changing-login-banner" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changing Login Banner
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#changing-the-editor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changing the Editor
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dns-resolver-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DNS Resolver Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ntp-client-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        NTP Client Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="NTP Client Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#show-ntp-sources" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Show NTP Sources
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#show-ntp-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Show NTP Status
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2648,10 +2768,10 @@
     
     
       <li class="md-path__item">
-        <a href="../boot/" class="md-path__link">
+        <a href="../discovery/" class="md-path__link">
           
   <span class="md-ellipsis">
-    System
+    Services
   </span>
 
         </a>
@@ -2673,591 +2793,650 @@
   
 
 
-<h1 id="system-configuration">System Configuration<a class="headerlink" href="#system-configuration" title="Permanent link">¶</a></h1>
-<p>System settings in Infix are provided by the <a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a> YANG
-model, augmented with Linux specific extensions in <a href="https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-system%402024-02-29.yang">infix-system</a>,
-like Message of the Day (login message) and user login shell.  More
-on this later on in this document.</p>
-<p>For the sake of brevity, the hostname in the following examples has been
-shortened to <code>example</code>.  The default hostname is composed from a product
-specific string followed by the last three octets of the system base MAC
-address, e.g., <code>switch-12-34-56</code>.  An example of how to change the
-hostname is included below.</p>
+<h1 id="ptp-precision-time-protocol">PTP — Precision Time Protocol<a class="headerlink" href="#ptp-precision-time-protocol" title="Permanent link">¶</a></h1>
+<p>The Precision Time Protocol (PTP), defined in IEEE 1588-2019, synchronises
+clocks across a network to sub-microsecond accuracy.  Where NTP (Network Time
+Protocol) aims at millisecond accuracy over wide-area networks, PTP is
+designed for local-area networks and relies on hardware timestamping in the
+network interface to eliminate software-induced jitter.</p>
+<p>PTP works by exchanging timestamped messages between devices.  A <em>grandmaster
+clock</em> — elected by the <strong>Best TimeTransmitter Clock Algorithm (BTCA)</strong> based
+on priority, clock class, and accuracy — distributes time to the rest of the
+network.  Each synchronising device measures the one-way message delay to its
+time-transmitter and continuously adjusts its local clock to compensate.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>When issuing <code>leave</code> to activate your changes, remember to also save
-your settings, <code>copy running-config startup-config</code>.  See the <a href="../cli/introduction/">CLI
-Introduction</a> for a background.</p>
+<p>The IEEE 1588g-2022 amendment to IEEE 1588-2019 introduced the terms
+<em>timeTransmitter</em> and <em>timeReceiver</em> as replacements for the former
+<em>master</em> and <em>slave</em> terminology, and <em>Best TimeTransmitter Clock
+Algorithm (BTCA)</em> in place of <em>BMCA</em>.  This document uses the updated
+terms throughout.  You may even see the short forms transmitter and
+receiver here and in online documentation.</p>
 </div>
-<h2 id="changing-password">Changing Password<a class="headerlink" href="#changing-password" title="Permanent link">¶</a></h2>
-<p>User management, including passwords, SSH keys, remote authentication is
-available in the system authentication configuration context.</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user admin</b>
-admin@example:/config/system/…/user/admin/&gt; <b>change password</b>
-New password:
-Retype password:
-admin@example:/config/system/…/user/admin/&gt; <b>leave</b>
-</code></pre>
-
-<p>The <code>change password</code> command starts an interactive dialogue that asks
-for the new password, with a confirmation, and then salts and encrypts
-the password with sha512crypt.</p>
-<p>It is also possible to use the <code>set password ...</code> command.  This allows
-setting an already hashed password.  To manually hash a password, use
-the <code>do password encrypt</code> command.  This launches the admin-exec command
-to hash, and optionally salt, your password.  This encrypted string can
-then be used with <code>set password ...</code>.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>If you are having trouble thinking of a password, there is a nifty
-<code>password generate</code> command in admin-exec context which generates
-random passwords using the UNIX command <code>pwgen</code>.  Use the <code>do</code> prefix
-when inside any configuration context to access admin-exec commands.</p>
-</div>
-<h3 id="ssh-authorized-key">SSH Authorized Key<a class="headerlink" href="#ssh-authorized-key" title="Permanent link">¶</a></h3>
-<p>Logging in remotely with SSH is possible by adding a <em>public key</em> to a
-user.  Here we add the authorized key to the admin user, multiple keys
-are supported.</p>
-<p>With SSH keys in place it is possible to disable password login, just
-remember to verify SSH login and network connectivity before doing so.</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user admin</b>
-admin@example:/config/system/…/user/admin/&gt; <b>edit authorized-key admin@example</b>
-admin@example:/config/system/…/example@host/&gt; <b>set algorithm ssh-rsa</b>
-admin@example:/config/system/…/example@host/&gt; <b>set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=</b>
-admin@example:/config/system/…/example@host/&gt; <b>show</b>
-algorithm ssh-rsa;
-key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
-admin@example:/config/system/…/example@host/&gt; <b>leave</b>
-</code></pre>
-
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The <code>ssh-keygen</code> program already base64 encodes the public key data,
-so there is no need to use the <code>text-editor</code> command, <code>set</code> does the
-job.</p>
-</div>
-<h2 id="multiple-users">Multiple Users<a class="headerlink" href="#multiple-users" title="Permanent link">¶</a></h2>
-<p>The factory configuration provides three hierarchical user group levels by
-default: <strong>guest ⊂ operator ⊂ admin</strong>.  These levels work out-of-the-box
-with sensible permissions - operators can configure the system immediately,
-while sensitive items (passwords, cryptographic keys) remain protected.</p>
-<p>The default levels provide different access to system resources and
-configuration:</p>
-<ul>
-<li>
-<p><strong>Admin</strong>: Full system access - can manage users, upgrade software,
-  restart the system, and modify all configuration including network
-  settings, routing, and firewall rules.</p>
-</li>
-<li>
-<p><strong>Operator</strong>: Configuration access - can modify most system settings
-  including network interfaces, routing, firewall, hostname, and more.
-  <em>Cannot access</em> password hashes, cryptographic keys, or perform
-  sensitive operations (factory reset, software upgrade).</p>
-</li>
-<li>
-<p><strong>Guest</strong>: Read-only access - can view operational state and
-  configuration but cannot modify anything or execute operations.</p>
-</li>
-</ul>
-<p>System access control is handled by the <a href="https://www.rfc-editor.org/rfc/rfc8341">ietf-netconf-acm</a> YANG model,
-usually referred to as <a href="../nacm/">NACM</a>, which provides granular access to
-configuration, data, and RPC commands.  The hierarchical levels in the system
-are determined by:</p>
-<ol>
-<li><strong>NACM permissions</strong> - what the user can access</li>
-<li><strong>Shell setting</strong> - which command-line interface the user can use</li>
-</ol>
-<p>By default the system ships with a single user, <code>admin</code>, in the <code>admin</code>
-group.  There are no restrictions on the number of users with admin
-privileges, nor is the <code>admin</code> user reserved or protected -- it can be
-removed from the configuration.  However, it is strongly recommended to
-keep at least one user with administrator privileges, otherwise the only
-way to regain full access is to perform a <em>factory reset</em>.</p>
-<p>For an overview of users and groups on the system, there is an admin-exec
-command:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show nacm</b>
-enabled              : yes
-default read access  : permit
-default write access : permit
-default exec access  : permit
-denied operations    : 0
-denied data writes   : 0
-denied notifications : 0
-
-          ┌──────────┬─────────┬─────────┬─────────┐
-          │ GROUP    │  READ   │  WRITE  │  EXEC   │
-          ├──────────┼─────────┼─────────┼─────────┤
-          │ admin    │    ✓    │    ✓    │    ✓    │
-          │ operator │    ⚠    │    ⚠    │    ⚠    │
-          │ guest    │    ⚠    │    ✗    │    ✗    │
-          └──────────┴─────────┴─────────┴─────────┘
-              ✓ Full    ⚠ Restricted    ✗ Denied
-
-<span class="header">USER                   SHELL   LOGIN                            </span>
-admin                  bash    password+key
-jacky                  clish   password
-monitor                false   key
-
-<span class="header">GROUP                  USERS                                    </span>
-admin                  admin
-operator               jacky
-guest                  monitor
-</code></pre>
-
-<p>The permissions matrix shows effective access for each NACM group:</p>
-<ul>
-<li><strong>✓ Full</strong> (green) - unrestricted access</li>
-<li><strong>⚠ Restricted</strong> (yellow) - access with exceptions, use <code>show nacm group</code>
-  for details</li>
-<li><strong>✗ Denied</strong> (red) - no access</li>
-</ul>
-<p>For detailed information about a specific group's rules:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show nacm group operator</b>
-members          : jacky
-read permission  : restricted
-write permission : restricted
-exec permission  : restricted
-applicable rules : 4
-──────────────────────────────────────────────────────────────────────
-<span class="title">permit-system-rpcs</span>
-  action     : permit
-  operations : exec
-  target     : ietf-system (rpc: *)
-  comment    : Operators can reboot, shutdown, and set system time.
-
-──────────────────────────────────────────────────────────────────────
-<span class="title">deny-password-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : /ietf-system:system/authentication/user/password
-  comment    : No user except admins can access password hashes.
-
-──────────────────────────────────────────────────────────────────────
-<span class="title">deny-keystore-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : ietf-keystore
-  comment    : No user except admins can access cryptographic keys.
-
-──────────────────────────────────────────────────────────────────────
-<span class="title">deny-truststore-access (via '*')</span>
-  action     : deny
-  operations : *
-  target     : ietf-truststore
-  comment    : No user except admins can access trust store.
-</code></pre>
-
-<p>For user details:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show nacm user jacky</b>
-shell            : clish
-login            : password
-nacm group       : operator
-read permission  : restricted
-write permission : restricted
-exec permission  : restricted
-
-For detailed rules, use: show nacm group &lt;name&gt;
-</code></pre>
-
-<h3 id="adding-a-user">Adding a User<a class="headerlink" href="#adding-a-user" title="Permanent link">¶</a></h3>
-<p>Creating a new user starts with defining the user account in the system:</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user jacky</b>
-admin@example:/config/system/…/user/jacky/&gt; <b>change password</b>
-New password:
-Retype password:
-admin@example:/config/system/…/user/jacky/&gt; <b>leave</b>
-</code></pre>
-
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>It is also possible to use <kbd>set password ...</kbd> if you have the
-fully crypted and salted string ready.  This can be created offline
-with the <a href="https://linux.die.net/man/1/mkpasswd"><code>mkpasswd(1)</code></a> tool, or the built-in CLI version <kbd>do
-password encrypt [OPTS]</kbd>.  The <code>do</code> prefix is handy for reaching
-all top-level commands when in configure context.</p>
-</div>
-<p>An authorized SSH key can be added the same way as described in the
-previous sections.</p>
-<p>By default, shell access is disabled (<code>shell false</code>).  To allow CLI/SSH
-access, set the shell:</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit system authentication user jacky</b>
-admin@example:/config/system/…/user/jacky/&gt; <b>set shell clish</b>
-admin@example:/config/system/…/user/jacky/&gt; <b>leave</b>
-</code></pre>
-
-<p>Available shells:</p>
-<ul>
-<li><code>bash</code> - Full Bourne-again shell (recommended for admins only)</li>
-<li><code>sh</code> - POSIX shell (recommended for admins only)</li>
-<li><code>clish</code> - Limited CLI-only shell (recommended for operators and guests)</li>
-<li><code>false</code> - No shell access (default)</li>
-</ul>
-<div class="admonition warning">
-<p class="admonition-title">Security Notice</p>
-<p>For security reasons, it is strongly recommended to limit non-admin users
-to the <code>clish</code> shell, which provides CLI access without exposing the
-underlying UNIX system.  Reserve <code>bash</code> and <code>sh</code> for administrators who
-need full system access for debugging and maintenance.</p>
-<p>Note that shell and CLI access is not always necessary - the system
-supports NETCONF and RESTCONF for remote management and automation.
-Setting <code>shell false</code> for users who only need programmatic access
-minimizes the attack surface and improves overall system security.</p>
-</div>
-<h3 id="adding-a-user-to-a-group">Adding a User to a Group<a class="headerlink" href="#adding-a-user-to-a-group" title="Permanent link">¶</a></h3>
-<p>To assign a user to a specific privilege level, add them to the
-corresponding NACM group:</p>
-<p><strong>Operator user:</strong></p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit nacm group operator</b>
-admin@example:/config/nacm/group/operator/&gt; <b>set user-name jacky</b>
-admin@example:/config/nacm/group/operator/&gt; <b>leave</b>
-</code></pre>
-
-<p><strong>Adding another admin:</strong></p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit nacm group admin</b>
-admin@example:/config/nacm/group/admin/&gt; <b>set user-name alice</b>
-admin@example:/config/nacm/group/admin/&gt; <b>leave</b>
-</code></pre>
-
-<p><strong>Guest user:</strong></p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit nacm group guest</b>
-admin@example:/config/nacm/group/guest/&gt; <b>set user-name monitor</b>
-admin@example:/config/nacm/group/guest/&gt; <b>leave</b>
-</code></pre>
-
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>For technical details about NACM rule evaluation, module-name vs path
-matching, and creating custom access control policies, see the
-<a href="../nacm/">NACM Technical Guide</a>.</p>
-</div>
-<h3 id="access-control-matrix">Access Control Matrix<a class="headerlink" href="#access-control-matrix" title="Permanent link">¶</a></h3>
-<p>The following table shows what each user level can do based on the NACM rules
-and shell access configured for each user:</p>
-<ul>
-<li><strong>Admin</strong>: <code>bash</code> — full system access</li>
-<li><strong>Operator</strong>: <code>clish</code> — CLI-only access without UNIX system exposure</li>
-<li><strong>Guest</strong>: <code>false</code> — no shell access</li>
-</ul>
+<h2 id="clock-roles">Clock roles<a class="headerlink" href="#clock-roles" title="Permanent link">¶</a></h2>
+<p>Every device in a PTP network takes one of the following roles:</p>
 <table>
 <thead>
 <tr>
-<th>Feature</th>
-<th>Admin</th>
-<th>Operator</th>
-<th>Guest</th>
+<th>Role</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Network interfaces</td>
-<td>✓</td>
-<td>✓</td>
-<td>Read only</td>
+<td><strong>Grandmaster (GM)</strong></td>
+<td>Network-wide time source; elected by BTCA</td>
 </tr>
 <tr>
-<td>Routing (FRR)</td>
-<td>✓</td>
-<td>✓</td>
-<td>Read only</td>
+<td><strong>Time-transmitter</strong></td>
+<td>Sends Sync messages downstream on a port</td>
 </tr>
 <tr>
-<td>Firewall rules</td>
-<td>✓</td>
-<td>✓</td>
-<td>Read only</td>
+<td><strong>Time-receiver</strong></td>
+<td>Synchronises to a time-transmitter on a port</td>
 </tr>
 <tr>
-<td>VLANs/bridges</td>
-<td>✓</td>
-<td>✓</td>
-<td>Read only</td>
+<td><strong>Boundary Clock (BC)</strong></td>
+<td>Terminates PTP on each port; acts as time-receiver upstream and time-transmitter downstream</td>
 </tr>
 <tr>
-<td>Containers</td>
-<td>✓</td>
-<td>✓</td>
-<td>Read only</td>
-</tr>
-<tr>
-<td>Hostname/system config</td>
-<td>✓</td>
-<td>✓</td>
-<td>Read only</td>
-</tr>
-<tr>
-<td>CLI/SSH access</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>System restart</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>Set date/time</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>System reboot</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>System shutdown</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>User management</td>
-<td>✓</td>
-<td>✗</td>
-<td>Read only</td>
-</tr>
-<tr>
-<td>Keystore (certs/keys)</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>Truststore</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>Read passwords/secrets</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>NACM rules</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>Factory reset</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
-</tr>
-<tr>
-<td>Software upgrade</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
+<td><strong>Transparent Clock (TC)</strong></td>
+<td>Passes PTP messages while correcting the residence-time delay accumulated in the device</td>
 </tr>
 </tbody>
 </table>
-<h3 id="security-aspects">Security Aspects<a class="headerlink" href="#security-aspects" title="Permanent link">¶</a></h3>
-<p>The three default user levels are implemented through a combination of NACM
-rules and UNIX group membership.  Access control is permission-based, not
-name-based - the system detects user levels by examining their NACM
-permissions and shell settings.</p>
-<p><strong>Admin users</strong> have unrestricted NACM access with the following rule:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="w">   </span><span class="nt">"module-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">   </span><span class="nt">"access-operations"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">   </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span>
+<p>An <strong>Ordinary Clock (OC)</strong> has a single PTP port and is either a
+time-transmitter (acting as a grandmaster candidate) or a time-receiver
+(a leaf node synchronising to the network).</p>
+<h2 id="ptp-profiles">PTP profiles<a class="headerlink" href="#ptp-profiles" title="Permanent link">¶</a></h2>
+<p>A <strong>PTP profile</strong> (as defined in IEEE 1588-2019 §3.1) is a document that
+specifies a consistent set of required, permitted, and prohibited PTP
+options for a particular application domain — much like a dialect of the
+protocol.  Examples from the standards world include profiles for power
+utilities (IEC/IEEE C37.238), telecom (ITU-T G.8265.1), and
+Time-Sensitive Networks.</p>
+<p>Each profile sets a unique value in the <code>majorSdoId</code> field of PTP message
+headers — a 4-bit identifier that lets devices distinguish traffic belonging
+to different profiles on the same link.  Profile also determines the network
+transport (UDP or Ethernet) and the delay measurement mechanism.</p>
+<p>Currently, two profiles are supported via the <code>profile</code> leaf in <code>default-ds</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>profile</code></th>
+<th>Standard</th>
+<th style="text-align: center;">majorSdoId</th>
+<th>Transport</th>
+<th>Delay</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ieee1588</code> (default)</td>
+<td>IEEE 1588-2019</td>
+<td style="text-align: center;"><code>0x0</code></td>
+<td>UDP/IPv4</td>
+<td><code>e2e</code> or <code>p2p</code></td>
+</tr>
+<tr>
+<td><code>ieee802-dot1as</code></td>
+<td>IEEE 802.1AS-2020</td>
+<td style="text-align: center;"><code>0x1</code></td>
+<td>L2</td>
+<td><code>p2p</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>gPTP</strong> (generalized Precision Time Protocol) profile from IEEE 802.1AS-2020
+is used in <strong>TSN</strong> (Time-Sensitive Networking) and <strong>AVB</strong> (Audio/Video Bridging)
+applications.  Setting <code>profile ieee802-dot1as</code> applies all protocol-mandatory
+settings automatically — Layer 2 transport, P2P delay measurement, 802.1AS
+multicast addressing, path trace, follow-up information, and neighbour propagation
+delay thresholds.  The user still configures <code>priority1</code>, <code>priority2</code>,
+<code>domain-number</code>, <code>time-receiver-only</code>, and timer interval leaves.</p>
+<p>The <code>ieee1588</code> profile leaves transport and delay mechanism user-configurable
+per port.</p>
+<h2 id="delay-mechanisms">Delay mechanisms<a class="headerlink" href="#delay-mechanisms" title="Permanent link">¶</a></h2>
+<p>PTP measures the link delay between neighbours using one of two mechanisms:</p>
+<ul>
+<li><strong>End-to-End (E2E)</strong>: Each time-receiver measures the delay to the
+  grandmaster by sending a <code>DELAY_REQ</code> message upstream.  Simple to
+  configure; works with any network topology.</li>
+<li><strong>Peer-to-Peer (P2P)</strong>: Each port measures its delay to its <em>immediate
+  neighbour</em> independently using <code>PDELAY_REQ</code> messages.  Enables faster
+  path-delay updates and is required by the gPTP profile.</li>
+</ul>
+<h2 id="data-sets">Data Sets<a class="headerlink" href="#data-sets" title="Permanent link">¶</a></h2>
+<p>IEEE 1588 organises protocol state into named <strong>Data Sets (DS)</strong> — each a
+collection of related attributes for one aspect of a PTP instance.  You
+will encounter these directly in the CLI and in the <code>show ptp</code> output:</p>
+<table>
+<thead>
+<tr>
+<th>Data Set</th>
+<th>CLI node</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Default DS</td>
+<td><code>default-ds</code></td>
+<td>Instance identity, clock class, priority, domain number</td>
+</tr>
+<tr>
+<td>Current DS</td>
+<td><code>current-ds</code></td>
+<td>Live offset-from-GM, mean path delay, steps-removed</td>
+</tr>
+<tr>
+<td>Parent DS</td>
+<td><code>parent-ds</code></td>
+<td>Grandmaster identity and quality attributes</td>
+</tr>
+<tr>
+<td>Time Properties DS</td>
+<td><code>time-properties-ds</code></td>
+<td>UTC offset, leap-second flags, time source</td>
+</tr>
+<tr>
+<td>Port DS</td>
+<td><code>port-ds</code></td>
+<td>Per-port state, delay mechanism, message intervals</td>
+</tr>
+</tbody>
+</table>
+<h2 id="domains">Domains<a class="headerlink" href="#domains" title="Permanent link">¶</a></h2>
+<p>A <strong>PTP domain</strong> (0–255) is a logical partition of the network.  Devices
+only synchronise with others in the same domain.  Running multiple
+instances on the same device — one per domain, or one per profile — is
+fully supported; each instance is independent.</p>
+<p>Each PTP instance is identified on the network by its
+<code>(domain-number, profile)</code> pair, which must be unique across all instances
+on a device.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code>show ptp</code> offset values reflect <strong>PHC</strong> (PTP Hardware Clock)
+synchronisation only.  A PHC is the hardware clock exposed by the network
+interface; it tracks the PTP grandmaster but is independent of the Linux
+system clock, which currently is <strong>not</strong> automatically adjusted.</p>
+</div>
+<h2 id="ordinary-clock-time-receiver">Ordinary Clock (time-receiver)<a class="headerlink" href="#ordinary-clock-time-receiver" title="Permanent link">¶</a></h2>
+<p>A typical time-receiver Ordinary Clock, synchronising on interface
+<code>eth0</code> using the default IEEE 1588 profile:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit ptp instance 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds domain-number 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds time-receiver-only true</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 1</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set underlying-interface eth0</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>leave</b>
+</code></pre>
+
+<h2 id="ordinary-clock-time-transmitter-grandmaster">Ordinary Clock (time-transmitter / grandmaster)<a class="headerlink" href="#ordinary-clock-time-transmitter-grandmaster" title="Permanent link">¶</a></h2>
+<p>A grandmaster clock with high priority, domain 0:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ptp instance 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds domain-number 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds priority1 1</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds priority2 1</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 1</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set underlying-interface eth0</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>leave</b>
+</code></pre>
+
+<p>Lower <code>priority1</code> values win in the BTCA.  A clock with <code>priority1 1</code> will
+be preferred over the default <code>128</code> in any compliant network.</p>
+<h2 id="boundary-clock">Boundary Clock<a class="headerlink" href="#boundary-clock" title="Permanent link">¶</a></h2>
+<p>A Boundary Clock terminates PTP on each port and re-originates it.  Add one
+port per interface:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ptp instance 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds instance-type bc</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds domain-number 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 1</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set underlying-interface eth0</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>end</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 2</b>
+admin@example:/config/ptp/…/0/port/2/&gt; <b>set underlying-interface eth1</b>
+admin@example:/config/ptp/…/0/port/2/&gt; <b>leave</b>
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>PTP port numbers are assigned sorted by <code>port-index</code>, so <code>port-index 1</code>
+becomes PTP port 1, <code>port-index 2</code> becomes PTP port 2, and so on.</p>
+</div>
+<h2 id="transparent-clock">Transparent Clock<a class="headerlink" href="#transparent-clock" title="Permanent link">¶</a></h2>
+<p>Transparent Clocks correct timestamps end-to-end without terminating PTP.
+Use <code>instance-type p2p-tc</code> for a P2P TC (preferred in TSN networks) or
+<code>instance-type e2e-tc</code> for an E2E TC:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ptp instance 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds instance-type p2p-tc</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds domain-number 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 1</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set underlying-interface eth0</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>end</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 2</b>
+admin@example:/config/ptp/…/0/port/2/&gt; <b>set underlying-interface eth1</b>
+admin@example:/config/ptp/…/0/port/2/&gt; <b>leave</b>
+</code></pre>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For Transparent Clocks the delay mechanism is determined globally by the
+<code>instance-type</code> (<code>p2p-tc</code> → P2P, <code>e2e-tc</code> → E2E).  Per-port
+<code>delay-mechanism</code> settings have no effect for TC instances.</p>
+</div>
+<h2 id="gptp-ieee-8021as">gPTP / IEEE 802.1AS<a class="headerlink" href="#gptp-ieee-8021as" title="Permanent link">¶</a></h2>
+<p>The gPTP profile is used in TSN and AVB applications.  Setting
+<code>profile ieee802-dot1as</code> applies all protocol-mandatory options from
+IEEE 802.1AS-2020 automatically — Layer 2 transport, P2P delay
+measurement, 802.1AS multicast addressing, and related protocol features.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ptp instance 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds profile ieee802-dot1as</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds domain-number 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds time-receiver-only true</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 1</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set underlying-interface eth0</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>leave</b>
+</code></pre>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code>ieee802-dot1as</code> profile enforces Layer 2 transport and P2P delay
+measurement globally, as required by IEEE 802.1AS-2020.  Per-port
+<code>delay-mechanism</code> settings have no effect for 802.1AS instances.</p>
+</div>
+<h2 id="multiple-instances">Multiple Instances<a class="headerlink" href="#multiple-instances" title="Permanent link">¶</a></h2>
+<p>Multiple PTP instances can run simultaneously, one per domain or profile
+combination.  Each instance must have a unique <code>(domain-number, profile)</code>
+pair and an independent set of ports:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit ptp instance 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds domain-number 0</b>
+admin@example:/config/ptp/instance/0/&gt; <b>set default-ds profile ieee1588</b>
+admin@example:/config/ptp/instance/0/&gt; <b>edit port 1</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set underlying-interface eth0</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>end</b>
+admin@example:/config/ptp/instance/0/&gt; <b>end</b>
+admin@example:/config/ptp/&gt; <b>edit instance 1</b>
+admin@example:/config/ptp/instance/1/&gt; <b>set default-ds domain-number 0</b>
+admin@example:/config/ptp/instance/1/&gt; <b>set default-ds profile ieee802-dot1as</b>
+admin@example:/config/ptp/instance/1/&gt; <b>edit port 1</b>
+admin@example:/config/ptp/…/1/port/1/&gt; <b>set underlying-interface eth1</b>
+admin@example:/config/ptp/…/1/port/1/&gt; <b>leave</b>
+</code></pre>
+
+<h2 id="port-states">Port states<a class="headerlink" href="#port-states" title="Permanent link">¶</a></h2>
+<p>Each PTP port progresses through a state machine.  The current state is
+shown in the <code>show ptp</code> port table:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>initializing</code></td>
+<td>Port is starting up, not yet ready to exchange messages</td>
+</tr>
+<tr>
+<td><code>faulty</code></td>
+<td>A fault condition has been detected on this port</td>
+</tr>
+<tr>
+<td><code>disabled</code></td>
+<td>Port is administratively disabled</td>
+</tr>
+<tr>
+<td><code>listening</code></td>
+<td>Awaiting <code>ANNOUNCE</code> messages; BTCA has not yet resolved</td>
+</tr>
+<tr>
+<td><code>pre-time-transmitter</code></td>
+<td>Transitioning towards time-transmitter state</td>
+</tr>
+<tr>
+<td><code>time-transmitter</code></td>
+<td>Port is acting as time-transmitter on this link</td>
+</tr>
+<tr>
+<td><code>passive</code></td>
+<td>Another port on this device is already time-transmitter</td>
+</tr>
+<tr>
+<td><code>uncalibrated</code></td>
+<td>Receiving sync; local clock not yet locked to time-transmitter</td>
+</tr>
+<tr>
+<td><code>time-receiver</code></td>
+<td>Port is locked and tracking its time-transmitter</td>
+</tr>
+</tbody>
+</table>
+<p>A port in <code>uncalibrated</code> will typically transition to <code>time-receiver</code>
+within a few seconds once the clock servo has converged.</p>
+<h2 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">¶</a></h2>
+<div class="admonition tip">
+<p class="admonition-title">Use the <span class="keys"><kbd class="key-question">?</kbd></span> key in the CLI</p>
+<p>The <code>show ptp</code> command has sub-commands — tap <span class="keys"><kbd class="key-question">?</kbd></span> after
+<code>show ptp</code> to see them, or use <span class="keys"><kbd class="key-tab">Tab</kbd></span> to complete.</p>
+</div>
+<h3 id="show-all-ptp-instances">Show all PTP instances<a class="headerlink" href="#show-all-ptp-instances" title="Permanent link">¶</a></h3>
+<pre class="cli"><code>admin@example:/&gt; <b>show ptp</b>
+<b>PTP Instance 0</b>                          Ordinary Clock · domain 0
+────────────────────────────────────────────────────────────────────
+  Clock identity          : AA-BB-CC-FF-FE-00-11-22
+  Grandmaster             : DD-EE-FF-FF-FE-33-44-55
+  Priority1/Priority2     : 128 / 128
+  GM Priority1/Priority2  : 1 / 1
+  Clock class             : cc-time-receiver-only
+  GM clock class          : cc-primary-sync
+  Time source             : gnss
+  PTP timescale           : yes
+  UTC offset              : 37 s
+  Time traceable          : yes
+  Freq. traceable         : yes
+  Offset from GM          : -42 ns
+  Mean path delay         : 1250 ns
+  Steps removed           : 1
+
+────────────────────────────────────────────────────────────────────
+Ports
+<span class="header">PORT  INTERFACE          STATE                DELAY  LINK DELAY (ns)</span>
+   1  eth0               <span class="ok">time-receiver</span>        E2E                  0
+
+────────────────────────────────────────────────────────────────────
+Message Statistics  (▼ rx  ▲ tx)
+<span class="header">PORT  INTERFACE             SYNC ▼  SYNC ▲  ANN ▼  ANN ▲  PD ▼  PD ▲</span>
+   1  eth0                      42       0     15      0     0     0
+
+</code></pre>
+
+<p>Port state is colour-coded: green for <code>time-transmitter</code> and <code>time-receiver</code>
+(actively synchronising), yellow for transient states (<code>listening</code>,
+<code>uncalibrated</code>, <code>pre-time-transmitter</code>), and red for fault states (<code>faulty</code>,
+<code>disabled</code>).  The <em>Message Statistics</em> section is omitted when no counts are
+available.</p>
+<h3 id="show-a-specific-instance">Show a specific instance<a class="headerlink" href="#show-a-specific-instance" title="Permanent link">¶</a></h3>
+<pre class="cli"><code>admin@example:/&gt; <b>show ptp 0</b>
+</code></pre>
+
+<h2 id="tuning-port-intervals">Tuning port intervals<a class="headerlink" href="#tuning-port-intervals" title="Permanent link">¶</a></h2>
+<p>Adjust announcement, sync, and delay-request intervals per port.  Values
+are expressed as log₂ of the interval in seconds (e.g. <code>-3</code> = 125 ms,
+<code>0</code> = 1 s, <code>1</code> = 2 s):</p>
+<pre class="cli"><code>admin@example:/config/ptp/…/0/port/1/&gt; <b>set port-ds log-announce-interval 0</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set port-ds log-sync-interval -3</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set port-ds log-min-delay-req-interval 0</b>
+admin@example:/config/ptp/…/0/port/1/&gt; <b>set announce-receipt-timeout 3</b>
+</code></pre>
+
+<p><code>announce-receipt-timeout</code> is a count of announce intervals, not a duration
+in seconds.  With <code>log-announce-interval 0</code> (1 s) and
+<code>announce-receipt-timeout 3</code>, a port waits 3 s without receiving an
+<code>ANNOUNCE</code> before declaring the time-transmitter lost and returning to
+<code>listening</code>.</p>
+<h2 id="message-exchange">Message exchange<a class="headerlink" href="#message-exchange" title="Permanent link">¶</a></h2>
+<p>PTP distributes time using a small set of messages, all of which carry
+hardware timestamps at the network interface:</p>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th style="text-align: center;">Timestamped</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ANNOUNCE</code></td>
+<td style="text-align: center;">No</td>
+<td>Advertises clock quality for BTCA election</td>
+</tr>
+<tr>
+<td><code>SYNC</code></td>
+<td style="text-align: center;">Yes</td>
+<td>Carries transmitter timestamp to receivers</td>
+</tr>
+<tr>
+<td><code>FOLLOW_UP</code></td>
+<td style="text-align: center;">No</td>
+<td>Carries precise <code>t1</code> in two-step mode</td>
+</tr>
+<tr>
+<td><code>DELAY_REQ</code></td>
+<td style="text-align: center;">Yes</td>
+<td>Receiver-initiated E2E delay measurement</td>
+</tr>
+<tr>
+<td><code>DELAY_RESP</code></td>
+<td style="text-align: center;">No</td>
+<td>Time-transmitter reply to <code>DELAY_REQ</code></td>
+</tr>
+<tr>
+<td><code>PDELAY_REQ</code></td>
+<td style="text-align: center;">Yes</td>
+<td>Initiates P2P neighbour-delay measurement</td>
+</tr>
+<tr>
+<td><code>PDELAY_RESP</code></td>
+<td style="text-align: center;">Yes</td>
+<td>Neighbour reply to <code>PDELAY_REQ</code></td>
+</tr>
+<tr>
+<td><code>PDELAY_RESP_FOLLOW_UP</code></td>
+<td style="text-align: center;">No</td>
+<td>Carries precise <code>PDELAY_RESP</code> <code>t3</code> in two-step mode</td>
+</tr>
+</tbody>
+</table>
+<p>In <strong>one-step</strong> mode the timestamp is embedded directly into each <code>SYNC</code>
+message as it leaves the wire, eliminating the need for <code>FOLLOW_UP</code>.
+In <strong>two-step</strong> mode the <code>SYNC</code> carries a placeholder and the precise
+transmit timestamp arrives in a subsequent <code>FOLLOW_UP</code>.  Hardware
+timestamping gives high accuracy in both modes; one-step reduces message
+overhead at the cost of more demanding hardware support.</p>
+<h2 id="message-format">Message format<a class="headerlink" href="#message-format" title="Permanent link">¶</a></h2>
+<p>Every PTP message begins with a common 34-octet header, regardless of type.
+The structure below follows the traditional IETF bit-field layout: each row
+is four octets wide, bit 7 (MSB) is on the left and bit 0 (LSB) on the
+right within each octet.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>         7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  0-3   |trSpec |msgType|  rsv  |  ver  |         messageLength         |
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  4-7   |  domainNumber |  minorSdoId   |             flags             |
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a> 8-15   |                                                               |
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        +                        correctionField                        +
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        |                                                               |
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>16-19   |                      messageTypeSpecific                      |
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>20-27   |                                                               |
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        +                         clockIdentity                         +
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        |                                                               |
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>28-31   |          portNumber           |           sequenceId          |
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>32-33   |  controlField | logMsgIntvl   |
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 </code></pre></div>
-<p>Admin users are automatically added to the UNIX <code>wheel</code> and <code>frrvty</code>
-groups, granting them <code>sudo</code> privileges and access to FRR routing
-protocols. This makes it possible to use all the underlying UNIX
-tooling, which can be very useful for debugging, but please use with
-care -- the system is designed to be managed through the CLI and
-NETCONF, not directly via shell commands.</p>
-<p><strong>Operator users</strong> use the permit-by-default NACM model (<code>write-default:
-"permit"</code>), which means they can configure most system settings without
-explicit permit rules. This design is "future proof" - when new features
-are added, operators can immediately use them.</p>
-<p>The following are explicitly denied to operators through global NACM rules:</p>
 <ul>
-<li>Password hashes (<code>/ietf-system:system/authentication/user/password</code>)</li>
-<li>Cryptographic keys (<code>ietf-keystore</code> module)</li>
-<li>Trust store certificates (<code>ietf-truststore</code> module)</li>
+<li><strong><code>trSpec</code></strong> (<code>transportSpecific</code>, bits 7–4 of octet 0): 4-bit profile
+  identifier.  <code>0x0</code> = IEEE 1588, <code>0x1</code> = gPTP (802.1AS).  Set implicitly
+  by the <code>profile</code> configuration leaf.</li>
+<li><strong><code>msgType</code></strong> (<code>messageType</code>, bits 3–0 of octet 0): <code>0x0</code> SYNC ·
+  <code>0x1</code> DELAY_REQ · <code>0x2</code> PDELAY_REQ · <code>0x3</code> PDELAY_RESP ·
+  <code>0x8</code> FOLLOW_UP · <code>0x9</code> DELAY_RESP · <code>0xA</code> PDELAY_RESP_FOLLOW_UP ·
+  <code>0xB</code> ANNOUNCE.</li>
+<li><strong><code>rsv</code></strong> (reserved, bits 7–4 of octet 1): Set to zero; ignored on
+  receipt.</li>
+<li><strong><code>ver</code></strong> (<code>versionPTP</code>, bits 3–0 of octet 1): PTP version; <code>2</code> for
+  IEEE 1588-2008 and IEEE 1588-2019.</li>
+<li><strong><code>messageLength</code></strong> (octets 2–3): Total message length in octets,
+  including the header.</li>
+<li><strong><code>domainNumber</code></strong> (octet 4): PTP domain; receivers silently discard
+  messages that do not match their configured domain.</li>
+<li><strong><code>minorSdoId</code></strong> (octet 5): Reserved in IEEE 1588-2008; carries a
+  profile sub-identifier in IEEE 1588-2019.</li>
+<li><strong><code>flags</code></strong> (octets 6–7): Per-message flags — includes the two-step
+  flag (set when a FOLLOW_UP will follow a SYNC), UTC offset valid, and
+  leap-second indicators.</li>
+<li><strong><code>correctionField</code></strong> (octets 8–15): Accumulated path correction in
+  nanoseconds × 2¹⁶.  Transparent Clocks add their measured residence
+  time and link delay here as they forward each message, so the final
+  time-receiver can subtract the total accumulated delay.</li>
+<li><strong><code>messageTypeSpecific</code></strong> (octets 16–19): Reserved in IEEE 1588-2008;
+  carries message-type-specific data in IEEE 1588-2019.</li>
+<li><strong><code>clockIdentity</code></strong> (octets 20–27): EUI-64 identity of the sending
+  clock — the value shown as "Clock identity" in <code>show ptp</code>.</li>
+<li><strong><code>portNumber</code></strong> (octets 28–29): Port number of the sender within its
+  clock; together with <code>clockIdentity</code> it forms the unique
+  <code>sourcePortIdentity</code>.</li>
+<li><strong><code>sequenceId</code></strong> (octets 30–31): Increments with each message; used to
+  match a DELAY_REQ to its DELAY_RESP.</li>
+<li><strong><code>controlField</code></strong> (octet 32): Deprecated in PTPv2; set to fixed
+  values per message type for backward compatibility with PTPv1.</li>
+<li><strong><code>logMsgIntvl</code></strong> (<code>logMessageInterval</code>, octet 33): Log₂ of the
+  expected interval between messages of this type; <code>0x7F</code> means not
+  applicable.</li>
 </ul>
-<p>Additionally, sensitive operations like factory reset, software upgrades,
-and system shutdown are protected by YANG-level <code>nacm:default-deny-all</code>
-annotations and remain restricted to administrators.</p>
-<p>Operators are automatically added to the UNIX <code>operator</code> and <code>frrvty</code>
-groups, granting them <code>sudo</code> privileges for network operations and FRR
-access.</p>
-<p><strong>Guest users</strong> have read-only NACM access through an explicit deny rule
-that blocks all write and exec operations (<code>create update delete exec</code>),
-while <code>read-default: "permit"</code> allows viewing configuration and state.
-Guests receive no special UNIX group memberships. The shell setting
-determines whether guests can access the CLI (<code>clish</code>) or are restricted
-from shell access entirely (<code>false</code>).</p>
-<p>All users, regardless of level, are denied access to password hashes and
-cryptographic key material through global NACM rules.</p>
-<h2 id="changing-hostname">Changing Hostname<a class="headerlink" href="#changing-hostname" title="Permanent link">¶</a></h2>
-<p>Notice how the hostname in the prompt does not change until the change
-is committed by issuing the <code>leave</code> command.</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit system</b>
-admin@example:/config/system/&gt; <b>set hostname myrouter</b>
-admin@example:/config/system/&gt; <b>leave</b>
-admin@myrouter:/&gt;
-</code></pre>
-
-<p>The hostname is advertised over mDNS-SD in the <code>.local</code> domain.  If
-another device already has claimed the <code>myrouter.local</code> CNAME, in our
-case, mDNS will advertise a "uniqified" variant, usually suffixing with
-an index, e.g., <code>myrouter-1.local</code>.  Use an mDNS browser to scan for
-available devices on your LAN.</p>
-<p>In some cases you may want to set the device's <em>domain name</em> as well.
-This is handled the same way:</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit system</b>
-admin@example:/config/system/&gt; <b>set hostname foo.example.com</b>
-admin@example:/config/system/&gt; <b>leave</b>
-admin@foo:/&gt;
-</code></pre>
-
-<p>Both host and domain name are stored in the system files <code>/etc/hosts</code>
-and <code>/etc/hostname</code>.  The latter is exclusively for the host name.  The
-domain <em>may</em> be used by the system DHCP server when handing out leases
-to clients, it is up to the clients to request the domain name <em>option</em>.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Critical services like syslog, mDNS, LLDP, and similar that advertise
-the hostname, are restarted when the hostname is changed.</p>
-</div>
-<h2 id="changing-login-banner">Changing Login Banner<a class="headerlink" href="#changing-login-banner" title="Permanent link">¶</a></h2>
-<p>The <code>motd-banner</code> setting is an Infix augment and an example of a
-<code>binary</code> type setting that can be changed interactively with the
-built-in <a href="../cli/text-editor/"><code>text-editor</code> command</a>.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>See the next section for how to change the editor used to something
-you may be more familiar with.</p>
-</div>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit system</b>
-admin@example:/config/system/&gt; <b>text-editor motd-banner</b>
-admin@example:/config/system/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<p>Log out and log back in again to inspect the changes.</p>
-<h2 id="changing-the-editor">Changing the Editor<a class="headerlink" href="#changing-the-editor" title="Permanent link">¶</a></h2>
-<p>The system has three different built-in editors that can be used
-as the <code>text-editor</code> command:</p>
-<ul>
-<li><code>emacs</code> (Micro Emacs)</li>
-<li><code>nano</code> (GNU Nano)</li>
-<li><code>vi</code> (Visual Editor)</li>
-</ul>
-<p>To change the editor to GNU Nano:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit system</b>
-admin@example:/config/system/&gt; <b>set text-editor nano</b>
-admin@example:/config/system/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<div class="admonition tip">
-<p class="admonition-title">Important</p>
-<p>Configuration changes only take effect after issuing the <code>leave</code>
-command.  I.e., you must change the editor first, and then re-enter
-configure context to use your editor of choice.</p>
-</div>
-<h2 id="dns-resolver-configuration">DNS Resolver Configuration<a class="headerlink" href="#dns-resolver-configuration" title="Permanent link">¶</a></h2>
-<p>The system supports both static and dynamic (DHCP) DNS setup.  The
-locally configured (static) server is preferred over any acquired
-from a DHCP client.</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit system dns-resolver</b>
-admin@example:/config/system/dns-resolver/&gt; <b>set server google udp-and-tcp address 8.8.8.8</b>
-admin@example:/config/system/dns-resolver/&gt; <b>show</b>
-server google {
-  udp-and-tcp {
-    address 8.8.8.8;
-  }
-}
-admin@example:/config/system/dns-resolver/&gt; <b>leave</b>
-</code></pre>
-
-<p>It is also possible to configure resolver options like timeout and
-retry attempts.  See the YANG model for details, or use the built-in
-help system in the CLI.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>When acting as a DHCP server and DNS proxy for other devices, any
-local DNS server configured here is automatically used as upstream DNS
-server.</p>
-</div>
-<h2 id="ntp-client-configuration">NTP Client Configuration<a class="headerlink" href="#ntp-client-configuration" title="Permanent link">¶</a></h2>
-<p>Below is an example configuration for enabling NTP with a specific
-server and the <code>iburst</code> option for faster initial synchronization.</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit system ntp</b>
-admin@example:/config/system/ntp/&gt; <b>set enabled</b>
-admin@example:/config/system/ntp/&gt; <b>set server ntp-pool</b>
-admin@example:/config/system/ntp/&gt; <b>set server ntp-pool udp address pool.ntp.org</b>
-admin@example:/config/system/ntp/&gt; <b>set server ntp-pool iburst</b>
-admin@example:/config/system/ntp/&gt; <b>set server ntp-pool prefer</b>
-admin@example:/config/system/ntp/&gt; <b>leave</b>
-</code></pre>
-
-<p>This configuration enables the NTP client and sets the NTP server to
-<code>pool.ntp.org</code> with the <code>iburst</code> and <code>prefer</code> options. The <code>iburst</code>
-option ensures faster initial synchronization, and the <code>prefer</code> option
-designates this server as preferred.</p>
-<ul>
-<li><code>prefer false</code>: The NTP client will choose the best available source
-based on several factors, such as network delay, stratum, and other
-metrics (default config).</li>
-<li><code>prefer true</code>: The NTP client will try to use the preferred server
-as the primary source unless it becomes unreachable or unusable.</li>
-</ul>
-<h3 id="show-ntp-sources">Show NTP Sources<a class="headerlink" href="#show-ntp-sources" title="Permanent link">¶</a></h3>
-<p>The status for NTP sources is availble in YANG and accessable with
-CLI/NETCONF/RESTCONF.</p>
-<p>To view the sources being used by the NTP client, run:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show ntp</b>
-Mode                : Client
-Stratum             : 3
-Ref time (UTC)      : Sat Jan 24 23:41:42 2026
-
-<span class="header">ADDRESS         MODE    STATE     STRATUM  POLL</span>
-147.78.228.41   server  outlier         2   64s
-192.168.0.1     server  unusable        0  128s
-176.126.86.247  server  selected        2   64s
-</code></pre>
-
-<h3 id="show-ntp-status">Show NTP Status<a class="headerlink" href="#show-ntp-status" title="Permanent link">¶</a></h3>
-<p>To check the status of NTP synchronization (only availble in CLI), use
-the following command:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show ntp tracking</b>
-Reference ID        : 176.126.86.247
-Stratum             : 3
-Ref time (UTC)      : Sat Jan 24 23:41:42 2026
-System time         : 0.000000 seconds slow of NTP time
-Last offset         : -454779.375000000 seconds
-RMS offset          : 454779.375000000 seconds
-Frequency           : 0.000 ppm slow
-Residual freq       : -26.383 ppm
-Skew                : 1000000.000 ppm
-Root delay          : 0.007395 seconds
-Root dispersion     : 39.181149 seconds
-Update interval     : 0.0 seconds
-Leap status         : Normal
-</code></pre>
-
-<p>This output provides detailed information about the NTP status, including
-reference ID, stratum, time offsets, frequency, and root delay.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>The system uses <code>chronyd</code> Network Time Protocol (NTP) daemon.  The
-output shown here is best explained in the <a href="https://chrony-project.org/doc/4.6.1/chronyc.html">Chrony documentation</a>.</p>
-</div>
+<p>The <code>transportSpecific</code> and <code>domainNumber</code> fields are the quickest way to
+verify on the wire that a device is using the profile and domain you
+configured.</p>
+<h3 id="decoding-with-wireshark">Decoding with Wireshark<a class="headerlink" href="#decoding-with-wireshark" title="Permanent link">¶</a></h3>
+<p>Wireshark decodes PTP messages automatically, expanding every header field
+and message-type-specific payload in the packet tree.  PTP travels over
+two UDP ports — 319 for event messages (SYNC, DELAY_REQ, PDELAY_REQ and
+their responses) and 320 for general messages (ANNOUNCE, FOLLOW_UP) — as
+well as directly over Ethernet (EtherType <code>0x88F7</code>) when layer-2 transport
+is in use.</p>
+<p>Use the display filter <code>ptp</code> to isolate PTP traffic:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ptp
+</code></pre></div>
+<p>To narrow down to a specific domain or profile (exact field names can be
+verified in Wireshark via <strong>View → Internals → Supported Protocols</strong>,
+filtering for <code>ptp</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ptp.v2.domainnumber == 0
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>ptp.v2.transportspecific == 1
+</code></pre></div>
+<p>This makes it straightforward to confirm which grandmaster a port is
+tracking, verify that <code>correctionField</code> is being updated by a Transparent
+Clock, or diagnose why the BTCA is not electing the expected grandmaster.</p>
+<h2 id="glossary">Glossary<a class="headerlink" href="#glossary" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Abbreviation</th>
+<th>Expansion</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AVB</td>
+<td>Audio/Video Bridging</td>
+<td>IEEE 802.1 precursor to TSN; real-time AV over Ethernet</td>
+</tr>
+<tr>
+<td>IETF</td>
+<td>Internet Engineering Task Force</td>
+<td>Standards body; defines RFC for layer-3 and up</td>
+</tr>
+<tr>
+<td>UDP</td>
+<td>User Datagram Protocol</td>
+<td>IP transport used by PTP; port 319 (event) and 320 (general)</td>
+</tr>
+<tr>
+<td>EUI-64</td>
+<td>Extended Unique Identifier (64-bit)</td>
+<td>IEEE identifier format used as <code>clockIdentity</code> in PTP</td>
+</tr>
+<tr>
+<td>EtherType</td>
+<td>Ethernet frame type field</td>
+<td><code>0x88F7</code> identifies PTP over layer-2 Ethernet</td>
+</tr>
+<tr>
+<td>BC</td>
+<td>Boundary Clock</td>
+<td>Terminates and re-originates PTP on each port</td>
+</tr>
+<tr>
+<td>BTCA</td>
+<td>Best TimeTransmitter Clock Algorithm</td>
+<td>Elects the GM; replaces BMCA from IEEE 1588-2008</td>
+</tr>
+<tr>
+<td>CMLDS</td>
+<td>Common Mean Link Delay Service</td>
+<td>IEEE 1588-2019 §16.6; shared delay service for multiple instances</td>
+</tr>
+<tr>
+<td>DS</td>
+<td>Data Set</td>
+<td>Named attribute collection in IEEE 1588 (default-ds, port-ds, …)</td>
+</tr>
+<tr>
+<td>E2E</td>
+<td>End-to-End</td>
+<td>Delay mechanism: measures path from GM to time-receiver</td>
+</tr>
+<tr>
+<td>GM</td>
+<td>Grandmaster</td>
+<td>PTP network-wide time source, elected by BTCA</td>
+</tr>
+<tr>
+<td>gPTP</td>
+<td>generalized Precision Time Protocol</td>
+<td>IEEE 802.1AS profile; used in TSN and AVB</td>
+</tr>
+<tr>
+<td>NTP</td>
+<td>Network Time Protocol</td>
+<td>Millisecond-accuracy time protocol for wide-area use</td>
+</tr>
+<tr>
+<td>OC</td>
+<td>Ordinary Clock</td>
+<td>Single-port PTP clock; time-transmitter or time-receiver</td>
+</tr>
+<tr>
+<td>P2P</td>
+<td>Peer-to-Peer</td>
+<td>Delay mechanism: measures delay to immediate neighbour</td>
+</tr>
+<tr>
+<td>PHC</td>
+<td>PTP Hardware Clock</td>
+<td>Hardware clock in the NIC used for PTP timestamping</td>
+</tr>
+<tr>
+<td>PTP</td>
+<td>Precision Time Protocol</td>
+<td>IEEE 1588 sub-microsecond clock synchronisation protocol</td>
+</tr>
+<tr>
+<td>SDO</td>
+<td>Standards Development Organization</td>
+<td>Body that defines a PTP profile; encoded in <code>sdo-id</code></td>
+</tr>
+<tr>
+<td>TC</td>
+<td>Transparent Clock</td>
+<td>Forwards PTP messages, correcting for residence-time delay</td>
+</tr>
+<tr>
+<td>TSN</td>
+<td>Time-Sensitive Networking</td>
+<td>IEEE 802.1 standard set for deterministic Ethernet</td>
+</tr>
+</tbody>
+</table>
 
 
 

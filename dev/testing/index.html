@@ -1170,6 +1170,8 @@
       
         
       
+        
+      
     
     
     
@@ -1281,6 +1283,34 @@
     
   
     NTP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ptp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTP (IEEE 1588/802.1AS)
   
 
     
@@ -2229,6 +2259,67 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#node-and-link-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node and Link Capabilities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Node and Link Capabilities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#declaring-requirements-logical-topology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Declaring requirements (logical topology)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#declaring-capabilities-physical-topology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Declaring capabilities (physical topology)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#test-development" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2544,6 +2635,67 @@
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-and-link-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node and Link Capabilities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Node and Link Capabilities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#declaring-requirements-logical-topology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Declaring requirements (logical topology)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#declaring-capabilities-physical-topology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Declaring capabilities (physical topology)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -2890,6 +3042,81 @@ and the description of the test. For example:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>$ make test-spec
 <a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>...
 </code></pre></div>
+<h3 id="node-and-link-capabilities">Node and Link Capabilities<a class="headerlink" href="#node-and-link-capabilities" title="Permanent link">¶</a></h3>
+<p>Logical topology files (<code>topology.dot</code>) declare what each node and link
+<em>requires</em>; physical topology files declare what each node and link
+<em>provides</em>.  When mapping a logical topology to physical hardware, infamy
+only assigns a physical node to a logical node when the physical node's
+<code>provides</code> set is a superset of the logical node's <code>requires</code> set.  Tests
+are skipped if no matching physical topology can be found.</p>
+<h4 id="declaring-requirements-logical-topology">Declaring requirements (logical topology)<a class="headerlink" href="#declaring-requirements-logical-topology" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="nt">dut</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">    </span><span class="na">requires</span><span class="p">=</span><span class="s2">"infix"</span><span class="p">,</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="p">];</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="nt">host</span><span class="p">:</span><span class="nt">data</span><span class="w"> </span><span class="o">--</span><span class="w"> </span><span class="nt">dut</span><span class="p">:</span><span class="nt">data</span><span class="w"> </span><span class="p">[</span><span class="na">requires</span><span class="p">=</span><span class="s2">"ptp-hwts"</span><span class="p">]</span>
+</code></pre></div>
+<h4 id="declaring-capabilities-physical-topology">Declaring capabilities (physical topology)<a class="headerlink" href="#declaring-capabilities-physical-topology" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="nt">switch1</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="w">    </span><span class="na">provides</span><span class="p">=</span><span class="s2">"infix"</span><span class="p">,</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="p">];</span>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="nt">switch1</span><span class="p">:</span><span class="nt">eth0</span><span class="w"> </span><span class="o">--</span><span class="w"> </span><span class="nt">switch2</span><span class="p">:</span><span class="nt">eth0</span><span class="w"> </span><span class="p">[</span><span class="na">provides</span><span class="p">=</span><span class="s2">"ptp-hwts"</span><span class="p">]</span>
+</code></pre></div>
+<h4 id="node-capabilities">Node capabilities<a class="headerlink" href="#node-capabilities" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>controller</code></td>
+<td>Reserved for the host/controller node; never assigned to a DUT</td>
+</tr>
+<tr>
+<td><code>infix</code></td>
+<td>Node runs Infix OS — required by virtually all DUT nodes</td>
+</tr>
+<tr>
+<td><code>gps</code></td>
+<td>Node has a GPS receiver available as a time reference</td>
+</tr>
+<tr>
+<td><code>watchdog</code></td>
+<td>Node has a hardware watchdog device</td>
+</tr>
+</tbody>
+</table>
+<h4 id="link-capabilities">Link capabilities<a class="headerlink" href="#link-capabilities" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mgmt</code></td>
+<td>Link is a management path (typically coloured grey in diagrams)</td>
+</tr>
+<tr>
+<td><code>ieee-mc</code></td>
+<td>Link carries IEEE multicast traffic (required by LAG and some L2 tests)</td>
+</tr>
+<tr>
+<td><code>link-ctrl copper</code></td>
+<td>Link supports copper speed/duplex control</td>
+</tr>
+<tr>
+<td><code>ptp-hwts</code></td>
+<td>Both ends of this link support PTP hardware timestamping (PHC); required for sub-microsecond accuracy</td>
+</tr>
+</tbody>
+</table>
 <h3 id="test-development">Test Development<a class="headerlink" href="#test-development" title="Permanent link">¶</a></h3>
 <p>For adding a new test to the automated regression test suite, it's best
 to start by reviewing an existing test case.</p>
@@ -2902,19 +3129,19 @@ logically relevant category.</p>
 <p>When creating a new test group, add it to <code>infix/test/case/all.yaml</code>, to
 enable it to run as a <a href="#running-subsets-of-tests">subset of the test
 suite</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>- name:  infix-services
-<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>  suite: services/services.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>- name:  infix-services
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>  suite: services/services.yaml
 </code></pre></div>
 <p>A new test (e.g., lldp_enable_disable) should be added to the
 corresponding test group .yaml file, such as
 <code>infix/test/cases/services.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>- name: lldp_enable_disable
-<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>  case: lldp_enable_disable/test.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>- name: lldp_enable_disable
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>  case: lldp_enable_disable/test.py
 </code></pre></div>
 <p>It is necessary to include the test in
 <code>infix/test/case/services/Readme.adoc</code> to ensure proper test
 specification generation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>include::lldp_enable_disable/Readme.adoc[]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>include::lldp_enable_disable/Readme.adoc[]
 </code></pre></div>
 <p>Each test case should have its own directory under,
 <code>infix/test/case/services</code>, containing:</p>
