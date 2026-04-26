@@ -56,4 +56,5 @@ MODULES=(
 	"ieee1588-ptp-tt@2023-08-14.yang -e timestamp-correction"
 	"ieee802-dot1as-gptp@2025-12-10.yang"
 	"infix-ptp@2026-04-07.yang"
+	"infix-modem@2024-03-15.yang"
 )

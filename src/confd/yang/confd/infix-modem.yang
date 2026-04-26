@@ -1,0 +1,1089 @@
+/*
+ * Infix Modem YANG module
+ */
+
+module infix-modem {
+  yang-version 1.1;
+  namespace "urn:infix:params:xml:ns:yang:infix-modem";
+  prefix "infix-modem";
+
+  import ietf-inet-types {
+    prefix "inet";
+  }
+  import ietf-interfaces {
+    prefix "if";
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+  import ietf-netconf-acm {
+    prefix nacm;
+  }
+
+  organization "KernelKit";
+  contact "kernelkit@googlegroups.com";
+  description "YANG data model for modems.";
+
+  revision 2024-03-15  {
+    description "Initial revision";
+    reference "internal";
+  }
+
+  container modems {
+    description "Configuration of modems.";
+
+    list modem {
+      key "index";
+      unique sim;
+      description "List of modems";
+
+      leaf index {
+        type uint8;
+        description "Index of the modem.";
+      }
+      leaf enabled {
+        type boolean;
+        description "Enable or disable modem.";
+        default false;
+      }
+      leaf path {
+        type string;
+        description "Path to modem.";
+        config false;
+      }
+      leaf sim {
+        type int8;
+        description "Index of SIM card.";
+      }
+      leaf pin {
+        type string;
+        description "PIN code to unlock SIM card.";
+        nacm:default-deny-all;
+      }
+      leaf puk {
+        type string;
+        description "PUK code to unlock SIM card.";
+        nacm:default-deny-all;
+      }
+
+      leaf preferred-mode {
+        type access-mode;
+        description "Preferred mode.";
+      }
+      list allowed-mode {
+        key "mode";
+        description "List of allowed modes.";
+
+        leaf mode {
+          type access-mode;
+          description "Allowed mode.";
+        }
+      }
+      leaf carrier {
+        type string;
+        description "Network carrier profile.";
+      }
+      list band {
+        key "band";
+        description "List of enabled bands.";
+
+        leaf band {
+          type band;
+          description "Enabled band.";
+        }
+      }
+      list bearer {
+          key "index";
+          description "List of bearers.";
+
+          leaf index {
+            type uint8;
+            description "Index of the bearer.";
+          }
+          leaf apn-type {
+            type bearer-apn-type;
+            description "APN type.";
+          }
+          leaf apn {
+            type string;
+            description "Access Point Name (APN).";
+          }
+          leaf username {
+            type string;
+            description "User name (if any) required by the network.";
+            default "";
+          }
+          leaf password {
+            type string;
+            description "Password (if any) required by the network.";
+            default "";
+            nacm:default-deny-all;
+          }
+          leaf allow-roaming {
+            type boolean;
+            description "Flag to tell whether connection is allowed during roaming.";
+            default false;
+          }
+          leaf ip-type {
+            type ip-family;
+            description "IP addressing type.";
+            default ipv4v6;
+          }
+          leaf default-route {
+            type boolean;
+            description "Set default route for connection";
+            default false;
+          }
+          leaf firewall-enabled {
+            type boolean;
+            description "Enable firewall for connection.";
+            default false;
+          }
+          leaf dns-enabled {
+            type boolean;
+            description "Enable DNS resolver for connection.";
+            default true;
+          }
+      }
+      container location {
+        leaf enabled {
+          type boolean;
+          description "Enable location gathering.";
+          default false;
+        }
+
+        list source {
+          key "source";
+          description "List of location sources.";
+
+          leaf source {
+            type location-source;
+            description "Source used for location gathering.";
+          }
+        }
+      }
+
+      container info {
+        description "Modem information.";
+        config false;
+
+        leaf manufacturer {
+          type string;
+          description "Manufacturer of the modem.";
+        }
+        leaf model {
+          type string;
+          description "Model name of the modem.";
+        }
+        leaf hardware-revision {
+          type string;
+          description "Hardware revision of the modem.";
+        }
+        leaf firmware-version {
+          type string;
+          description "Firmware version of the modem.";
+        }
+        leaf-list supported-carrier {
+          type string;
+          description "List of supported carriers.";
+        }
+        leaf serial-number {
+          type string;
+          description "Serial number of the modem (IMEI).";
+        }
+        leaf-list phone-number {
+          type string;
+          description "List of own phone numbers.";
+        }
+        leaf imsi {
+          type string;
+          description "International Mobile Subscriber Identity";
+        }
+        leaf iccid {
+          type string;
+          description "ICCID of the SIM card.";
+        }
+      }
+
+      container status {
+        description "Modem Status Information.";
+        config false;
+
+        leaf sim-active {
+          type int8;
+          description "Index of active SIM card.";
+        }
+        leaf sim-present {
+          type boolean;
+          description "True if SIM card is present";
+        }
+        leaf state {
+          type string;
+          description "Modem state.";
+        }
+        leaf state-failed-reason {
+          type string;
+          description "Reason of failed modem state.";
+        }
+        leaf selected-carrier {
+          type string;
+          description "Selected carrier.";
+        }
+        leaf signal-quality {
+          type uint8;
+          description "Signal strength in percent (0-100).";
+        }
+        leaf signal-rssi {
+          type string;
+          description "RSSI (Received Signal Strength Indication) in dBm.";
+        }
+        leaf signal-rsrp {
+          type string;
+          description "RSRP (Reference Signal Received Power) in dBm.";
+        }
+        leaf signal-rsrq {
+          type string;
+          description "RSRQ (Reference Signal Received Quality) in dB.";
+        }
+        leaf signal-rscp {
+          type string;
+          description "RSCP (Received Signal Code Power) in dBm.";
+        }
+        leaf signal-snr {
+          type string;
+          description "SNR (Signal Noise Ratio) in dB.";
+        }
+        leaf signal-sinr {
+          type string;
+          description "SINR (Signal Interference Noise Ratio) ) in dB.";
+        }
+
+        container cellular {
+          description "Cellular network information.";
+
+          leaf registration-state {
+            description "Modem registration state.";
+            type registration-state;
+          }
+          leaf operator-name {
+            type string;
+            description "Name of the cellular network operator.";
+          }
+          leaf operator-id {
+            type string;
+            description "Identifier of the cellular network operator (MCC/MNC).";
+          }
+          leaf network-type {
+            type string;
+            description "Type of cellular network (e.g. LTE)";
+          }
+          leaf packet-service-state {
+            description "Modem packet service state.";
+            type string;
+          }
+        }
+
+        list bearer {
+          description "Bearer information.";
+          key "path";
+
+          leaf path {
+            type string;
+            description "Path to bearer.";
+          }
+          leaf interface {
+            type if:interface-ref;
+            description "Network interface name for the bearer.";
+          }
+          leaf connected {
+            type boolean;
+            description "Indicates whether bearer is connected.";
+          }
+          leaf connection-failed-reason {
+            type string;
+            description "Reason of failed connection of bearer.";
+          }
+          leaf ipv4-address {
+            type inet:ipv4-address;
+            description "The IPv4 address of the bearer connection.";
+          }
+          leaf ipv4-prefix {
+            type uint16;
+            description "The IPv4 prefix of the bearer connection.";
+          }
+          leaf ipv6-address {
+            type inet:ipv6-address;
+            description "The IPv6 address of the bearer connection.";
+          }
+          leaf ipv6-prefix {
+            type uint16;
+            description "The IPv6 prefix of the bearer connection.";
+          }
+          leaf in-bytes {
+            type yang:counter64;
+            description "The number of received bytes of the bearer connection.";
+          }
+          leaf out-bytes {
+            type yang:counter64;
+            description "The number of sent bytes of the bearer connection.";
+          }
+          leaf total-in-bytes {
+            type yang:counter64;
+            description "Total number of received bytes of all connections.";
+          }
+          leaf total-out-bytes {
+            type yang:counter64;
+            description "Total number of sent bytes of all connections.";
+          }
+          leaf total-duration {
+            type string;
+            description "Total duration of all connections in seconds.";
+          }
+        }
+
+        container location {
+          description "Location information.";
+
+          leaf latitude {
+            type string;
+            description "Latitude in decimal degrees.";
+          }
+          leaf longitude {
+            type string;
+            description "Longitude in decimal degrees.";
+          }
+          leaf altitude {
+            type string;
+            description "Altitude above sea level in meters.";
+          }
+          leaf mcc {
+            type string;
+            description "Mobile Country Code of the operator.";
+          }
+          leaf mnc {
+            type string;
+            description "Mobile Network Code of the operator.";
+          }
+          leaf lac {
+            type string;
+            description "Location Area Code of the operator.";
+          }
+          leaf cid {
+            type string;
+            description "Cell Identifier of the operator.";
+          }
+          leaf tac {
+            type string;
+            description "Tracking Area Code of the operator.";
+          }
+        }
+      }
+
+      notification status-update {
+        description "Notification for modem status updates.";
+        leaf desc {
+          type string;
+          description "Description of the status update.";
+          mandatory true;
+        }
+      }
+    }
+  }
+
+  rpc restart {
+    description "Restart modem.";
+    input {
+      leaf index {
+        type string;
+        description "Modem index.";
+      }
+    }
+  }
+  rpc reset {
+    description "Reset the modem to factory defaults.";
+    input {
+      leaf index {
+        type string;
+        description "Modem index.";
+      }
+    }
+  }
+  rpc send-sms {
+    description "Send an SMS message.";
+    input {
+      leaf index {
+        type string;
+        description "Modem index.";
+      }
+      leaf phone-number {
+        type string;
+        description "Recipient's phone number.";
+      }
+      leaf message-text {
+        type string;
+        description "Text of the SMS message.";
+      }
+    }
+  }
+
+  typedef bearer-apn-type {
+    description "APN type for bearer.";
+
+    type enumeration {
+      enum initial {
+        description "APN used for the initial attach procedure.";
+      }
+      enum default {
+        description "Default connection APN providing access to the Internet.";
+      }
+      enum ims {
+        description "APN providing access to IMS services.";
+      }
+      enum mms {
+        description "APN providing access to MMS services.";
+      }
+      enum management {
+        description "APN providing access to over-the-air device management procedures.";
+      }
+      enum voice {
+        description "APN providing access to voice-over-IP services.";
+      }
+      enum emergency {
+        description "APN providing access to emergency services.";
+      }
+      enum private {
+        description "APN providing access to private networks.";
+      }
+      enum purchase {
+        description "APN providing access to over-the-air activation sites.";
+      }
+      enum video_share {
+        description "APN providing access to video sharing service.";
+      }
+      enum local {
+        description "APN providing access to a local connection with the device.";
+      }
+      enum app {
+        description "APN providing access to certain applications allowed by mobile operators.";
+      }
+      enum xcap {
+        description "APN providing access to XCAP provisioning on IMS services.";
+      }
+      enum tethering {
+        description "APN providing access to mobile hotspot tethering.";
+      }
+    }
+  }
+
+  typedef ip-family {
+    description "IP address family.";
+
+    type enumeration {
+      enum ipv4 {
+        description "IPv4 address family.";
+      }
+      enum ipv6 {
+        description "IPv6 address family.";
+      }
+      enum ipv4v6 {
+        description "IPv4 or IPv6 address family.";
+      }
+    }
+  }
+
+  typedef access-mode {
+    type enumeration {
+      enum cs {
+        description "Circuit-switched technologies (e.g. CSD, GSM).";
+      }
+      enum 2g {
+        description "2G technologies (e.g. GPRS, EDGE).";
+      }
+      enum 3g {
+        description "3G technologies (e.g. UMTS, HSxPA).";
+      }
+      enum 4g {
+        description "4G technologies (e.g. LTE).";
+      }
+      enum 5g {
+        description "5G technologies (e.g. 5GNR).";
+      }
+      enum any {
+        description "Any technologies.";
+      }
+    }
+  }
+
+  typedef registration-state {
+    type enumeration {
+      enum idle {
+          description "Not registered, not searching for new operator to register.";
+      }
+      enum home {
+          description "Registered on home network.";
+      }
+      enum searching {
+          description "Not registered, searching for new operator to register with.";
+      }
+      enum denied {
+          description "Registration denied.";
+      }
+      enum roaming {
+          description "Registered on a roaming network.";
+      }
+      enum unknown {
+          description "Unknown registration state.";
+      }
+    }
+  }
+
+  typedef band {
+    type enumeration {
+      enum any {
+        description "Any band.";
+      }
+      enum egsm {
+        description "GSM/GPRS/EDGE 900 MHz.";
+      }
+      enum dcs {
+        description "GSM/GPRS/EDGE 1800 MHz.";
+      }
+      enum pcs {
+        description "GSM/GPRS/EDGE 1900 MHz.";
+      }
+      enum g850 {
+        description "GSM/GPRS/EDGE 850 MHz.";
+      }
+      enum g450 {
+        description "GSM/GPRS/EDGE 450 MHz.";
+      }
+      enum g480 {
+        description "GSM/GPRS/EDGE 480 MHz.";
+      }
+      enum g750 {
+        description "GSM/GPRS/EDGE 750 MHz.";
+      }
+      enum g380 {
+        description "GSM/GPRS/EDGE 380 MHz.";
+      }
+      enum g410 {
+        description "GSM/GPRS/EDGE 410 MHz.";
+      }
+      enum g710 {
+        description "GSM/GPRS/EDGE 710 MHz.";
+      }
+      enum g810 {
+        description "GSM/GPRS/EDGE 810 MHz.";
+      }
+      enum utran-1 {
+        description "UMTS 2100 MHz (IMT, UTRAN band 1).";
+      }
+      enum utran-2 {
+        description "UMTS 1900 MHz (PCS A-F, UTRAN band 2).";
+      }
+      enum utran-3 {
+        description "UMTS 1800 MHz (DCS, UTRAN band 3).";
+      }
+      enum utran-4 {
+        description "UMTS 1700 MHz (AWS A-F, UTRAN band 4).";
+      }
+      enum utran-5 {
+        description "UMTS 850 MHz (CLR, UTRAN band 5).";
+      }
+      enum utran-6 {
+        description "UMTS 800 MHz (UTRAN band 6).";
+      }
+      enum utran-7 {
+        description "UMTS 2600 MHz (IMT-E, UTRAN band 7).";
+      }
+      enum utran-8 {
+        description "UMTS 900 MHz (E-GSM, UTRAN band 8).";
+      }
+      enum utran-9 {
+        description "UMTS 1700 MHz (UTRAN band 9).";
+      }
+      enum utran-10 {
+        description "UMTS 1700 MHz (EAWS A-G, UTRAN band 10).";
+      }
+      enum utran-11 {
+        description "UMTS 1500 MHz (LPDC, UTRAN band 11).";
+      }
+      enum utran-12 {
+        description "UMTS 700 MHz (LSMH A/B/C, UTRAN band 12).";
+      }
+      enum utran-13 {
+        description "UMTS 700 MHz (USMH C, UTRAN band 13).";
+      }
+      enum utran-14 {
+        description "UMTS 700 MHz (USMH D, UTRAN band 14).";
+      }
+      enum utran-19 {
+        description "UMTS 800 MHz (UTRAN band 19).";
+      }
+      enum utran-20 {
+        description "UMTS 800 MHz (EUDD, UTRAN band 20).";
+      }
+      enum utran-21 {
+        description "UMTS 1500 MHz (UPDC, UTRAN band 21).";
+      }
+      enum utran-22 {
+        description "UMTS 3500 MHz (UTRAN band 22).";
+      }
+      enum utran-25 {
+        description "UMTS 1900 MHz (EPCS A-G, UTRAN band 25).";
+      }
+      enum utran-26 {
+        description "UMTS 850 MHz (ECLR, UTRAN band 26).";
+      }
+      enum utran-32 {
+        description "UMTS 1500 MHz (L-band, UTRAN band 32).";
+      }
+      enum eutran-1 {
+        description "E-UTRAN band 1.";
+      }
+      enum eutran-2 {
+        description "E-UTRAN band 2.";
+      }
+      enum eutran-3 {
+        description "E-UTRAN band 3.";
+      }
+      enum eutran-4 {
+        description "E-UTRAN band 4.";
+      }
+      enum eutran-5 {
+        description "E-UTRAN band 5.";
+      }
+      enum eutran-6 {
+        description "E-UTRAN band 6.";
+      }
+      enum eutran-7 {
+        description "E-UTRAN band 7.";
+      }
+      enum eutran-8 {
+        description "E-UTRAN band 8.";
+      }
+      enum eutran-9 {
+        description "E-UTRAN band 9.";
+      }
+      enum eutran-10 {
+        description "E-UTRAN band 10.";
+      }
+      enum eutran-11 {
+        description "E-UTRAN band 11.";
+      }
+      enum eutran-12 {
+        description "E-UTRAN band 12.";
+      }
+      enum eutran-13 {
+        description "E-UTRAN band 13.";
+      }
+      enum eutran-14 {
+        description "E-UTRAN band 14.";
+      }
+      enum eutran-17 {
+        description "E-UTRAN band 17.";
+      }
+      enum eutran-18 {
+        description "E-UTRAN band 18.";
+      }
+      enum eutran-19 {
+        description "E-UTRAN band 19.";
+      }
+      enum eutran-20 {
+        description "E-UTRAN band 20.";
+      }
+      enum eutran-21 {
+        description "E-UTRAN band 21.";
+      }
+      enum eutran-22 {
+        description "E-UTRAN band 22.";
+      }
+      enum eutran-23 {
+        description "E-UTRAN band 23.";
+      }
+      enum eutran-24 {
+        description "E-UTRAN band 24.";
+      }
+      enum eutran-25 {
+        description "E-UTRAN band 25.";
+      }
+      enum eutran-26 {
+        description "E-UTRAN band 26.";
+      }
+      enum eutran-27 {
+        description "E-UTRAN band 27.";
+      }
+      enum eutran-28 {
+        description "E-UTRAN band 28.";
+      }
+      enum eutran-29 {
+        description "E-UTRAN band 29.";
+      }
+      enum eutran-30 {
+        description "E-UTRAN band 30.";
+      }
+      enum eutran-31 {
+        description "E-UTRAN band 31.";
+      }
+      enum eutran-32 {
+        description "E-UTRAN band 32.";
+      }
+      enum eutran-33 {
+        description "E-UTRAN band 33.";
+      }
+      enum eutran-34 {
+        description "E-UTRAN band 34.";
+      }
+      enum eutran-35 {
+        description "E-UTRAN band 35.";
+      }
+      enum eutran-36 {
+        description "E-UTRAN band 36.";
+      }
+      enum eutran-37 {
+        description "E-UTRAN band 37.";
+      }
+      enum eutran-38 {
+        description "E-UTRAN band 38.";
+      }
+      enum eutran-39 {
+        description "E-UTRAN band 39.";
+      }
+      enum eutran-40 {
+        description "E-UTRAN band 40.";
+      }
+      enum eutran-41 {
+        description "E-UTRAN band 41.";
+      }
+      enum eutran-42 {
+        description "E-UTRAN band 42.";
+      }
+      enum eutran-43 {
+        description "E-UTRAN band 43.";
+      }
+      enum eutran-44 {
+        description "E-UTRAN band 44.";
+      }
+      enum eutran-45 {
+        description "E-UTRAN band 45.";
+      }
+      enum eutran-46 {
+        description "E-UTRAN band 46.";
+      }
+      enum eutran-47 {
+        description "E-UTRAN band 47.";
+      }
+      enum eutran-48 {
+        description "E-UTRAN band 48.";
+      }
+      enum eutran-49 {
+        description "E-UTRAN band 49.";
+      }
+      enum eutran-50 {
+        description "E-UTRAN band 50.";
+      }
+      enum eutran-51 {
+        description "E-UTRAN band 51.";
+      }
+      enum eutran-52 {
+        description "E-UTRAN band 52.";
+      }
+      enum eutran-53 {
+        description "E-UTRAN band 53.";
+      }
+      enum eutran-54 {
+        description "E-UTRAN band 54.";
+      }
+      enum eutran-55 {
+        description "E-UTRAN band 55.";
+      }
+      enum eutran-56 {
+        description "E-UTRAN band 56.";
+      }
+      enum eutran-57 {
+        description "E-UTRAN band 57.";
+      }
+      enum eutran-58 {
+        description "E-UTRAN band 58.";
+      }
+      enum eutran-59 {
+        description "E-UTRAN band 59.";
+      }
+      enum eutran-60 {
+        description "E-UTRAN band 60.";
+      }
+      enum eutran-61 {
+        description "E-UTRAN band 61.";
+      }
+      enum eutran-62 {
+        description "E-UTRAN band 62.";
+      }
+      enum eutran-63 {
+        description "E-UTRAN band 63.";
+      }
+      enum eutran-64 {
+        description "E-UTRAN band 64.";
+      }
+      enum eutran-65 {
+        description "E-UTRAN band 65.";
+      }
+      enum eutran-66 {
+        description "E-UTRAN band 66.";
+      }
+      enum eutran-67 {
+        description "E-UTRAN band 67.";
+      }
+      enum eutran-68 {
+        description "E-UTRAN band 68.";
+      }
+      enum eutran-69 {
+        description "E-UTRAN band 69.";
+      }
+      enum eutran-70 {
+        description "E-UTRAN band 70.";
+      }
+      enum eutran-71 {
+        description "E-UTRAN band 71.";
+      }
+      enum eutran-85 {
+        description "E-UTRAN band 85.";
+      }
+      enum cdma-bc0 {
+        description "CDMA Band Class 0 (US Cellular 850MHz).";
+      }
+      enum cdma-bc1 {
+        description "CDMA Band Class 1 (US PCS 1900MHz).";
+      }
+      enum cdma-bc2 {
+        description "CDMA Band Class 2 (UK TACS 900MHz).";
+      }
+      enum cdma-bc3 {
+        description "CDMA Band Class 3 (Japanese TACS).";
+      }
+      enum cdma-bc4 {
+        description "CDMA Band Class 4 (Korean PCS).";
+      }
+      enum cdma-bc5 {
+        description "CDMA Band Class 5 (NMT 450MHz).";
+      }
+      enum cdma-bc6 {
+        description "CDMA Band Class 6 (IMT2000 2100MHz).";
+      }
+      enum cdma-bc7 {
+        description "CDMA Band Class 7 (Cellular 700MHz).";
+      }
+      enum cdma-bc8 {
+        description "CDMA Band Class 8 (1800MHz).";
+      }
+      enum cdma-bc9 {
+        description "CDMA Band Class 9 (900MHz).";
+      }
+      enum cdma-bc10 {
+        description "CDMA Band Class 10 (US Secondary 800).";
+      }
+      enum cdma-bc11 {
+        description "CDMA Band Class 11 (European PAMR 400MHz).";
+      }
+      enum cdma-bc12 {
+        description "CDMA Band Class 12 (PAMR 800MHz).";
+      }
+      enum cdma-bc13 {
+        description "CDMA Band Class 13 (IMT2000 2500MHz Expansion).";
+      }
+      enum cdma-bc14 {
+        description "CDMA Band Class 14 (More US PCS 1900MHz).";
+      }
+      enum cdma-bc15 {
+        description "CDMA Band Class 15 (AWS 1700MHz).";
+      }
+      enum cdma-bc16 {
+        description "CDMA Band Class 16 (US 2500MHz).";
+      }
+      enum cdma-bc17 {
+        description "CDMA Band Class 17 (US 2500MHz Forward Link Only).";
+      }
+      enum cdma-bc18 {
+        description "CDMA Band Class 18 (US 700MHz Public Safety).";
+      }
+      enum cdma-bc19 {
+        description "CDMA Band Class 19 (US Lower 700MHz).";
+      }
+      enum ngran-1 {
+        description "NGRAN band 1.";
+      }
+      enum ngran-2 {
+        description "NGRAN band 2.";
+      }
+      enum ngran-3 {
+        description "NGRAN band 3.";
+      }
+      enum ngran-5 {
+        description "NGRAN band 5.";
+      }
+      enum ngran-7 {
+        description "NGRAN band 7.";
+      }
+      enum ngran-8 {
+        description "NGRAN band 8.";
+      }
+      enum ngran-12 {
+        description "NGRAN band 12.";
+      }
+      enum ngran-13 {
+        description "NGRAN band 13.";
+      }
+      enum ngran-14 {
+        description "NGRAN band 14.";
+      }
+      enum ngran-18 {
+        description "NGRAN band 18.";
+      }
+      enum ngran-20 {
+        description "NGRAN band 20.";
+      }
+      enum ngran-25 {
+        description "NGRAN band 25.";
+      }
+      enum ngran-26 {
+        description "NGRAN band 26.";
+      }
+      enum ngran-28 {
+        description "NGRAN band 28.";
+      }
+      enum ngran-29 {
+        description "NGRAN band 29.";
+      }
+      enum ngran-30 {
+        description "NGRAN band 30.";
+      }
+      enum ngran-34 {
+        description "NGRAN band 34.";
+      }
+      enum ngran-38 {
+        description "NGRAN band 38.";
+      }
+      enum ngran-39 {
+        description "NGRAN band 39.";
+      }
+      enum ngran-40 {
+        description "NGRAN band 40.";
+      }
+      enum ngran-41 {
+        description "NGRAN band 41.";
+      }
+      enum ngran-48 {
+        description "NGRAN band 48.";
+      }
+      enum ngran-50 {
+        description "NGRAN band 50.";
+      }
+      enum ngran-51 {
+        description "NGRAN band 51.";
+      }
+      enum ngran-53 {
+        description "NGRAN band 53.";
+      }
+      enum ngran-65 {
+        description "NGRAN band 65.";
+      }
+      enum ngran-66 {
+        description "NGRAN band 66.";
+      }
+      enum ngran-70 {
+        description "NGRAN band 70.";
+      }
+      enum ngran-71 {
+        description "NGRAN band 71.";
+      }
+      enum ngran-74 {
+        description "NGRAN band 74.";
+      }
+      enum ngran-75 {
+        description "NGRAN band 75.";
+      }
+      enum ngran-76 {
+        description "NGRAN band 76.";
+      }
+      enum ngran-77 {
+        description "NGRAN band 77.";
+      }
+      enum ngran-78 {
+        description "NGRAN band 78.";
+      }
+      enum ngran-79 {
+        description "NGRAN band 79.";
+      }
+      enum ngran-80 {
+        description "NGRAN band 80.";
+      }
+      enum ngran-81 {
+        description "NGRAN band 81.";
+      }
+      enum ngran-82 {
+        description "NGRAN band 82.";
+      }
+      enum ngran-83 {
+        description "NGRAN band 83.";
+      }
+      enum ngran-84 {
+        description "NGRAN band 84.";
+      }
+      enum ngran-86 {
+        description "NGRAN band 86.";
+      }
+      enum ngran-89 {
+        description "NGRAN band 89.";
+      }
+      enum ngran-90 {
+        description "NGRAN band 90.";
+      }
+      enum ngran-91 {
+        description "NGRAN band 91.";
+      }
+      enum ngran-92 {
+        description "NGRAN band 92.";
+      }
+      enum ngran-93 {
+        description "NGRAN band 93.";
+      }
+      enum ngran-94 {
+        description "NGRAN band 94.";
+      }
+      enum ngran-95 {
+        description "NGRAN band 95.";
+      }
+      enum ngran-257 {
+        description "NGRAN band 257.";
+      }
+      enum ngran-258 {
+        description "NGRAN band 258.";
+      }
+      enum ngran-260 {
+        description "NGRAN band 260.";
+      }
+      enum ngran-261 {
+        description "NGRAN band 261.";
+      }
+    }
+  }
+
+  typedef location-source {
+    type enumeration {
+      enum gps {
+        description "GPS location source.";
+      }
+      enum agps-msa {
+        description "MSA A-GPS location source.";
+      }
+      enum agps-msb {
+        description "MSB A-GPS location source.";
+      }
+      enum 3gpp {
+        description "3GPP location source.";
+      }
+      enum cdma {
+        description "CDMA location source.";
+      }
+    }
+  }
+}
