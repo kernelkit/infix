@@ -1,0 +1,21 @@
+diff --git a/src/qmi-firmware-update/qfu-helpers-udev.c b/src/qmi-firmware-update/qfu-helpers-udev.c
+index bda9106..40d648f 100644
+--- a/src/qmi-firmware-update/qfu-helpers-udev.c
++++ b/src/qmi-firmware-update/qfu-helpers-udev.c
+@@ -364,8 +364,14 @@ device_matches (GUdevDevice          *device,
+     if (!device_sysfs_path)
+         goto out;
+ 
+-    if (g_strcmp0 (device_sysfs_path, sysfs_path) != 0)
+-        goto out;
++    /*
++     * don't compare sysfs path for download mode as it
++     * changes from USB4 to USB3 and thus may use a different host controller
++     */
++    if (mode != QFU_HELPERS_DEVICE_MODE_DOWNLOAD) {
++        if (g_strcmp0 (device_sysfs_path, sysfs_path) != 0)
++            goto out;
++    }
+ 
+     if (device_mode != mode)
+         return NULL;

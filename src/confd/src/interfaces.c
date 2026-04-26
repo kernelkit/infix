@@ -80,6 +80,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 
 	if (!fnmatch("wifi+([0-9])*", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:wifi";
+	else if (!fnmatch("wwan+([0-9-])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:modem";
 	else if (iface_is_phys(ifname))
 		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
@@ -390,6 +392,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vlan_gen(NULL, cif, ip);
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
+	case IFT_MODEM:
+		return modem_gen(NULL, cif, net);
 	case IFT_WIFI:
 		return wifi_validate_secret(session, cif)
 			? : wifi_add_iface(cif, net);
@@ -434,6 +438,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
+	case IFT_MODEM:
 	case IFT_VETH:
 	case IFT_VXLAN:
 	case IFT_WIREGUARD:
@@ -474,6 +479,8 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 		return lydx_get_descendant(lyd_child(dif), "veth", NULL);
 	case IFT_VXLAN:
 		return lydx_get_descendant(lyd_child(dif), "vxlan", NULL);
+	case IFT_MODEM:
+		return false;
 	case IFT_WIREGUARD:
 		return lydx_get_descendant(lyd_child(dif), "wireguard", NULL);
 	case IFT_UNKNOWN:
@@ -551,6 +558,9 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_VETH:
 		veth_gen_del(dif, ip);
 		break;
+	case IFT_MODEM:
+		modem_gen_del(dif, net);
+		break;
 	case IFT_WIFI:
 		wifi_del_iface(dif, net);
 		break;
@@ -573,7 +583,8 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 static sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname, const char *iftype)
 {
-	if (!strcmp(iftype, "infix-if-type:ethernet")) {
+	if (!strcmp(iftype, "infix-if-type:ethernet") ||
+	    !strcmp(iftype, "infix-if-type:modem")) {
 		FILE *wait;
 
 		wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");
@@ -693,8 +704,9 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	fprintf(ip, "link set alias \"%s\" dev %s\n", attr ?: "", ifname);
 
 	/* Bring interface back up, if enabled */
-	if (lydx_is_enabled(cif, "enabled"))
-		fprintf(ip, "link set dev %s up state up\n", ifname);
+	if (strcmp(iftype, "infix-if-type:modem") != 0)
+		if (lydx_is_enabled(cif, "enabled"))
+			fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, cif, dif);
 
@@ -724,6 +736,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 		return vlan_add_deps(cif);
 	case IFT_VETH:
 		return veth_add_deps(cif);
+	case IFT_MODEM:
 	case IFT_WIFI:
 	case IFT_DUMMY:
 	case IFT_ETH:

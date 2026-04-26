@@ -1,0 +1,8 @@
+ACTION!="add", GOTO="modemd_end"
+
+SUBSYSTEM=="net", ENV{INTERFACE}=="wwan[0-9]*", RUN+="/usr/libexec/modemd/modem-udev"
+SUBSYSTEM=="tty", ENV{ID_MM_PORT_TYPE_AT_PRIMARY}=="1", RUN+="/usr/libexec/modemd/modem-udev"
+SUBSYSTEM=="tty", ENV{ID_MM_PORT_TYPE_AT_SECONDARY}=="1", RUN+="/usr/libexec/modemd/modem-udev"
+SUBSYSTEM=="usbmisc", KERNEL=="cdc-wdm[0-9]*",, RUN+="/usr/libexec/modemd/modem-udev"
+
+LABEL="modemd_end"

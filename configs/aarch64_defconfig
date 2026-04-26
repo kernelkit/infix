@@ -149,6 +149,7 @@ INFIX_HOME="https://github.com/kernelkit/infix/"
 INFIX_DOC="https://www.kernelkit.org/infix/"
 INFIX_SUPPORT="mailto:kernelkit@googlegroups.com"
 BR2_PACKAGE_FEATURE_GPS=y
+BR2_PACKAGE_FEATURE_MODEM=y
 BR2_PACKAGE_FEATURE_WIFI=y
 BR2_PACKAGE_FEATURE_WIFI_MEDIATEK=y
 BR2_PACKAGE_FEATURE_WIFI_QUALCOMM=y

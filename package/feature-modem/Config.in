@@ -1,0 +1,19 @@
+config BR2_PACKAGE_FEATURE_MODEM
+	bool "Feature Modem"
+	select BR2_PACKAGE_MODEMD
+	select BR2_PACKAGE_MODEM_MANAGER
+	select BR2_PACKAGE_MODEM_MANAGER_LIBMBIM
+	select BR2_PACKAGE_MODEM_MANAGER_LIBQMI
+	select BR2_PACKAGE_MODEM_MANAGER_LIBQRTR
+	help
+	  Enables cellular modem support in Infix via ModemManager and
+	  the modemd management daemon.  Includes drivers for common
+	  USB option modems and QMI/MBIM-based devices.
+
+config BR2_PACKAGE_FEATURE_MODEM_QUALCOMM
+	bool "Qualcomm-based modems (QMI/QRTR/MHI)"
+	depends on BR2_PACKAGE_FEATURE_MODEM
+	help
+	  Adds kernel support for Qualcomm-based cellular modems that use
+	  the MHI bus and QRTR IPC router (e.g. Sierra Wireless EM7xxx,
+	  Quectel EM/RMxxx, Telit LN9xx).
