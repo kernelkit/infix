@@ -1,0 +1,2 @@
+# Placeholder — add module names here if any modem drivers need explicit
+# loading (e.g. when device IDs are not yet upstream in the driver table).

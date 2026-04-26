@@ -59,4 +59,5 @@ MODULES=(
 	"infix-ptp@2026-04-07.yang"
 	"ietf-schedule@2026-03-10.yang -e icalendar-recurrence"
 	"infix-schedule@2026-09-07.yang"
+	"infix-modem@2024-03-15.yang"
 )
