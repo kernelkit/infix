@@ -1,0 +1,39 @@
+From 50b47c45e3979745adf84d92000c955b8d0631c9 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sat, 26 Sep 2026 11:13:00 +0200
+Subject: [PATCH 1/2] bearer-qmi: name multiplexed links after the data port
+Organization: Wires
+
+Multiplexed QMI links are named qmapmux<N>.<id>, where N is the D-Bus
+id of the modem object.  A new id is assigned each time the modem is
+re-probed, e.g., after a reset or replug, so the link name changes and
+tells nothing about which interface it belongs to.
+
+Use the data port name as prefix instead, so links on wwan0 become
+wwan0.1, wwan0.2, ...
+
+Originally from the modem support donated by Avvero Pty Ltd.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/mm-bearer-qmi.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/mm-bearer-qmi.c b/src/mm-bearer-qmi.c
+index 54f2e934..2f27b074 100644
+--- a/src/mm-bearer-qmi.c
++++ b/src/mm-bearer-qmi.c
+@@ -2493,8 +2493,8 @@ load_settings_from_bearer (MMBearerQmi         *self,
+             return FALSE;
+         }
+ 
+-        /* The link prefix hint given must be modem-specific */
+-        ctx->link_prefix_hint = g_strdup_printf ("qmapmux%u.", mm_base_modem_get_dbus_id (MM_BASE_MODEM (modem)));
++        /* Name links after the data port, e.g. wwan0.1, not qmapmux0.1 */
++        ctx->link_prefix_hint = g_strdup_printf ("%s.", mm_port_get_device (ctx->data));
+     }
+ 
+     /* If profile id is given, we'll launch the connection specifying the profile id in use
+-- 
+2.43.0
+

@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import json
+import sys
+
+index = 0
+
+
+def runcmd(cmd):
+    ret = None
+    try:
+        res = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True)
+        if res.returncode == 0:
+            if res.stdout:
+                ret = res.stdout.strip()
+            else:
+                ret = True
+    except subprocess.CalledProcessError:
+        return None
+    finally:
+        return ret
+
+
+def runcmdj(cmd):
+    output = runcmd(cmd)
+    if not output:
+        return None
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        return None
+    finally:
+        return data
+
+
+def scan(mpath):
+    output = runcmdj(['mmcli', '-J', '-m', mpath,
+                     '--3gpp-scan', '--timeout', '60'])
+    if not output:
+        return False
+
+    networks = []
+    for entry in output["modem"]["3gpp"]["scan-networks"]:
+        net = {}
+        for attr in entry.split(", "):
+            (key, value) = attr.split(": ")
+            net[key] = value
+
+        if "operator-name" in net:
+            networks.append(net)
+
+    if len(networks) == 0:
+        print("No networks found")
+        return True
+
+    for net in networks:
+        print("Network '%s' %s (%s, %s)" % (
+              net.get("operator-name"),
+              net.get("operator-code"),
+              net.get("access-technologies"),
+              net.get("availability")))
+    return True
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog='modem-scan-networks')
+    parser.add_argument("-i", "--index", default=0, help="Modem index")
+    args = parser.parse_args()
+    if args.index:
+        index = int(args.index)
+
+    for m in runcmdj(['/usr/libexec/modemd/modem-info']):
+        if m["index"] == index:
+            print("Scanning networks on modem%d, please stand by ..." % index)
+            if not scan(m["path"]):
+                print("Operation failed.", file=sys.stderr)
