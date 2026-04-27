@@ -147,7 +147,7 @@
     </details>
 
     <details class="nav-group-top" id="nav-configure"
-             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
+             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
       <summary class="nav-group-summary-top">Configure</summary>
       <ul class="nav-group-items">
         <li>
@@ -158,6 +158,16 @@
              class="nav-link {{if eq .ActivePage "configure-system"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/system.svg')"></span>
             System
+          </a>
+        </li>
+        <li>
+          <a href="/configure/routes"
+             hx-get="/configure/routes"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-routes"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/routes.svg')"></span>
+            Routes
           </a>
         </li>
         <li>

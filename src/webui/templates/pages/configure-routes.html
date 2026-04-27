@@ -1,0 +1,235 @@
+{{define "configure-routes.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/routes"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">IPv4 Static Routes</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table" id="ipv4-routes-table">
+        <thead>
+          <tr>
+            <th>Destination{{template "field-info" (index $d "prefix")}}</th>
+            <th>Next Hop{{template "field-info" (index $d "nexthop")}}</th>
+            <th>Interface{{template "field-info" (index $d "interface")}}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $rt := .IPv4Routes}}
+          <tr>
+            <td class="num">
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="ipv4-route-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Prefix}}
+              </button>
+            </td>
+            <td>{{.NextHop}}</td>
+            <td>{{.Interface}}</td>
+            <td style="text-align:right">
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/routes?family=ipv4&prefix={{.Prefix | urlquery}}"
+                      hx-confirm="Delete route {{.Prefix}}?"
+                      hx-swap="none"
+                      title="Delete route">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                  <path d="M10 11v6M14 11v6"></path>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-ipv4-route-{{$i}}">
+            <td colspan="4" class="key-detail-cell">
+              <div class="key-detail-body">
+                <form hx-put="/configure/routes" hx-swap="none">
+                  <input type="hidden" name="family" value="ipv4">
+                  <input type="hidden" name="prefix" value="{{.Prefix}}">
+                  <table class="info-table">
+                    <tr>
+                      <th>Destination</th>
+                      <td><span class="text-muted">{{.Prefix}}</span></td>
+                    </tr>
+                    <tr>
+                      <th>Next hop{{template "field-info" (index $d "nexthop")}}</th>
+                      <td><input class="cfg-input" type="text" name="nexthop"
+                                 value="{{.NextHop}}" placeholder="e.g. 192.168.1.1"></td>
+                    </tr>
+                    <tr>
+                      <th>Interface{{template "field-info" (index $d "interface")}}</th>
+                      <td><input class="cfg-input" type="text" name="interface"
+                                 value="{{.Interface}}" placeholder="e.g. eth0"></td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {{end}}
+
+          {{if not .IPv4Routes}}
+          <tr><td colspan="4" class="yt-table-empty">No IPv4 static routes</td></tr>
+          {{end}}
+
+          {{/* Hidden add row */}}
+          <tr id="ipv4-add-row" hidden>
+            <td colspan="4" class="key-detail-cell">
+              <form hx-post="/configure/routes" hx-swap="none" class="user-add-inline">
+                <input type="hidden" name="family" value="ipv4">
+                <input class="cfg-input" type="text" name="prefix" required
+                       placeholder="0.0.0.0/0">
+                <input class="cfg-input" type="text" name="nexthop"
+                       placeholder="Next hop (e.g. 192.168.1.1)">
+                <input class="cfg-input" type="text" name="interface"
+                       placeholder="Interface (e.g. eth0)">
+                <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                <button type="button" class="btn btn-sm"
+                        data-hide="ipv4-add-row">Cancel</button>
+                <span class="cfg-save-status"></span>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button class="btn btn-secondary" data-show="ipv4-add-row">+ Add Route</button>
+    </div>
+  </section>
+
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">IPv6 Static Routes</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table" id="ipv6-routes-table">
+        <thead>
+          <tr>
+            <th>Destination{{template "field-info" (index $d "prefix")}}</th>
+            <th>Next Hop{{template "field-info" (index $d "nexthop")}}</th>
+            <th>Interface{{template "field-info" (index $d "interface")}}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $rt := .IPv6Routes}}
+          <tr>
+            <td class="num">
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="ipv6-route-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Prefix}}
+              </button>
+            </td>
+            <td>{{.NextHop}}</td>
+            <td>{{.Interface}}</td>
+            <td style="text-align:right">
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/routes?family=ipv6&prefix={{.Prefix | urlquery}}"
+                      hx-confirm="Delete route {{.Prefix}}?"
+                      hx-swap="none"
+                      title="Delete route">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                  <path d="M10 11v6M14 11v6"></path>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-ipv6-route-{{$i}}">
+            <td colspan="4" class="key-detail-cell">
+              <div class="key-detail-body">
+                <form hx-put="/configure/routes" hx-swap="none">
+                  <input type="hidden" name="family" value="ipv6">
+                  <input type="hidden" name="prefix" value="{{.Prefix}}">
+                  <table class="info-table">
+                    <tr>
+                      <th>Destination</th>
+                      <td><span class="text-muted">{{.Prefix}}</span></td>
+                    </tr>
+                    <tr>
+                      <th>Next hop{{template "field-info" (index $d "nexthop")}}</th>
+                      <td><input class="cfg-input" type="text" name="nexthop"
+                                 value="{{.NextHop}}" placeholder="e.g. 2001:db8::1"></td>
+                    </tr>
+                    <tr>
+                      <th>Interface{{template "field-info" (index $d "interface")}}</th>
+                      <td><input class="cfg-input" type="text" name="interface"
+                                 value="{{.Interface}}" placeholder="e.g. eth0"></td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {{end}}
+
+          {{if not .IPv6Routes}}
+          <tr><td colspan="4" class="yt-table-empty">No IPv6 static routes</td></tr>
+          {{end}}
+
+          {{/* Hidden add row */}}
+          <tr id="ipv6-add-row" hidden>
+            <td colspan="4" class="key-detail-cell">
+              <form hx-post="/configure/routes" hx-swap="none" class="user-add-inline">
+                <input type="hidden" name="family" value="ipv6">
+                <input class="cfg-input" type="text" name="prefix" required
+                       placeholder="::/0">
+                <input class="cfg-input" type="text" name="nexthop"
+                       placeholder="Next hop (e.g. 2001:db8::1)">
+                <input class="cfg-input" type="text" name="interface"
+                       placeholder="Interface (e.g. eth0)">
+                <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                <button type="button" class="btn btn-sm"
+                        data-hide="ipv6-add-row">Cancel</button>
+                <span class="cfg-save-status"></span>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button class="btn btn-secondary" data-show="ipv6-add-row">+ Add Route</button>
+    </div>
+  </section>
+
+</section>
+
+{{template "configure-toolbar" .}}
+</div>
+{{end}}{{/* end {{else}} — schema ready */}}
+
+{{end}}
+
+{{define "field-info"}}{{if .}} <span class="field-info" data-tip="{{.}}">ⓘ</span>{{end}}{{end}}

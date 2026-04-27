@@ -878,6 +878,16 @@ func ToEntry(n Node) (e *Entry) {
 			for _, a := range fv.Interface().([]*Uses) {
 				grouping := ToEntry(a)
 				e.merge(nil, nil, grouping)
+				// Apply inline augments from the uses statement. Their paths
+				// are relative to e (the node where the uses appears), so we
+				// resolve them directly rather than deferring to e.Augment().
+				for _, aug := range a.Augment {
+					target := e.Find(aug.Name)
+					if target != nil {
+						augEntry := ToEntry(aug)
+						target.merge(nil, augEntry.Namespace(), augEntry)
+					}
+				}
 				if ms.ParseOptions.StoreUses {
 					e.Uses = append(e.Uses, &UsesStmt{a, grouping.shallowDup()})
 				}

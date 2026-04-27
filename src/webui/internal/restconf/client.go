@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -286,4 +287,12 @@ func escapeZoneID(rawURL string) string {
 		return rawURL[:open+pct] + "%25" + rawURL[open+pct+1:]
 	}
 	return rawURL
+}
+
+// EscapeKey percent-encodes a RESTCONF list-key value for use in a URL path.
+// url.PathEscape leaves ':' unescaped, but rousette parses ':' in a path
+// segment as the module:node separator — so an IPv6 key like 2001:db8::1 must
+// have its colons encoded or the request fails with a URI "Syntax error".
+func EscapeKey(s string) string {
+	return strings.ReplaceAll(url.PathEscape(s), ":", "%3A")
 }
