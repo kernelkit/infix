@@ -2156,6 +2156,8 @@ select.cfg-input {
 .cfg-input-sm { max-width: 8rem; }
 .cfg-input-mono { font-family: var(--font-mono); font-size: 0.85rem; }
 .cfg-reset-col { width: 1%; white-space: nowrap; padding-left: 0.25rem; }
+.cfg-section-head { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.4rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
+.cfg-subsection-head { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin: 0.5rem 0 0.25rem; }
 .fw-check-scroll { max-height: 12rem; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 0.4rem 0.6rem; background: var(--input-bg, var(--surface)); }
 .fw-check-grid { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; }
 .fw-check-grid label { display: flex; align-items: center; gap: 0.35rem; font-weight: normal; cursor: pointer; }

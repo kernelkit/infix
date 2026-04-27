@@ -25,7 +25,9 @@ type interfacesWrapper struct {
 
 type ifaceJSON struct {
 	Name        string          `json:"name"`
+	Description string          `json:"description"`
 	Type        string          `json:"type"`
+	Enabled     *bool           `json:"enabled"`
 	OperStatus  string          `json:"oper-status"`
 	PhysAddress string          `json:"phys-address"`
 	IfIndex     int             `json:"if-index"`
@@ -33,14 +35,18 @@ type ifaceJSON struct {
 	IPv6        *ipCfg          `json:"ietf-ip:ipv6"`
 	Statistics  *ifaceStats     `json:"statistics"`
 	Ethernet    *ethernetJSON   `json:"ieee802-ethernet-interface:ethernet"`
+	Bridge      *bridgeCfgJSON  `json:"infix-interfaces:bridge"`
 	BridgePort  *bridgePortJSON `json:"infix-interfaces:bridge-port"`
-	Vlan        *vlanJSON       `json:"infix-interfaces:vlan"`
+	Lag         *lagCfgJSON     `json:"infix-interfaces:lag"`
+	LagPort     *lagPortCfgJSON `json:"infix-interfaces:lag-port"`
+	Vlan        *vlanCfgJSON    `json:"infix-interfaces:vlan"`
 	WiFi        *wifiJSON       `json:"infix-interfaces:wifi"`
 	WireGuard   *wireGuardJSON  `json:"infix-interfaces:wireguard"`
 }
 
-type vlanJSON struct {
+type vlanCfgJSON struct {
 	ID           int    `json:"id"`
+	TagType      string `json:"tag-type"`
 	LowerLayerIf string `json:"lower-layer-if"`
 }
 
@@ -133,8 +139,12 @@ type wgPeerJSON struct {
 }
 
 type ipCfg struct {
-	Address []ipAddr `json:"address"`
-	MTU     int      `json:"mtu"`
+	Address  []ipAddr  `json:"address"`
+	MTU      int       `json:"mtu"`
+	DHCP     *struct{} `json:"infix-dhcp-client:dhcp"`   // DHCPv4 presence
+	Autoconf *struct{} `json:"infix-ip:autoconf"`         // IPv4 link-local presence
+	SLAACv6  *struct{} `json:"autoconf"`                 // IPv6 SLAAC presence
+	DHCPv6   *struct{} `json:"infix-dhcpv6-client:dhcp"` // DHCPv6 presence
 }
 
 type ipAddr struct {

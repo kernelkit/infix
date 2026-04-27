@@ -120,6 +120,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	cfgIfTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-interfaces.html")
+	if err != nil {
+		return nil, err
+	}
 	yangTreeTmpl, err := template.ParseFS(templateFS,
 		"layouts/*.html",
 		"fragments/configure-toolbar.html",
@@ -191,6 +195,7 @@ func New(
 	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc, Schema: schemaCache}
 	cfgRoutes := &handlers.ConfigureRoutesHandler{Template: cfgRoutesTmpl, RC: rc, Schema: schemaCache}
 	cfgFw := &handlers.ConfigureFirewallHandler{Template: cfgFwTmpl, RC: rc, Schema: schemaCache}
+	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
 	treeH := &handlers.TreeHandler{
@@ -267,6 +272,28 @@ func New(
 	mux.HandleFunc("PUT /configure/system/ntp",           cfgSys.SaveNTP)
 	mux.HandleFunc("PUT /configure/system/dns",           cfgSys.SaveDNS)
 	mux.HandleFunc("POST /configure/system/preferences",  cfgSys.SavePreferences)
+	mux.HandleFunc("GET /configure/interfaces",                          cfgIf.Overview)
+	mux.HandleFunc("POST /configure/interfaces",                         cfgIf.CreateInterface)
+	mux.HandleFunc("POST /configure/interfaces/{name}",                  cfgIf.SaveGeneral)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4",              cfgIf.AddIPv4)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv4/{ip}",       cfgIf.DeleteIPv4)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/dhcp",         cfgIf.SaveIPv4DHCP)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/autoconf",     cfgIf.SaveIPv4Autoconf)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6",              cfgIf.AddIPv6)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv6/{ip}",       cfgIf.DeleteIPv6)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/autoconf",     cfgIf.SaveIPv6SLAAC)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp",         cfgIf.SaveIPv6DHCP)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge-port",      cfgIf.SaveBridgePort)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/bridge-port",    cfgIf.DeleteBridgePort)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge",           cfgIf.SaveBridge)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/members",   cfgIf.SaveBridgeMembers)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/vlans",     cfgIf.AddVLAN)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/vlans/{vid}", cfgIf.SaveVLAN)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/bridge/vlans/{vid}", cfgIf.DeleteVLAN)
+	mux.HandleFunc("POST /configure/interfaces/{name}/lag",              cfgIf.SaveLAG)
+	mux.HandleFunc("POST /configure/interfaces/{name}/lag/members",      cfgIf.SaveLAGMembers)
+	mux.HandleFunc("POST /configure/interfaces/{name}/lag-port",         cfgIf.SaveLagPort)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/lag-port",       cfgIf.DeleteLagPort)
 	mux.HandleFunc("GET /configure/firewall",                        cfgFw.Overview)
 	mux.HandleFunc("POST /configure/firewall/enable",               cfgFw.Enable)
 	mux.HandleFunc("POST /configure/firewall/settings",             cfgFw.SaveSettings)
