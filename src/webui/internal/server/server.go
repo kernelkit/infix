@@ -116,6 +116,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	cfgFwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-firewall.html")
+	if err != nil {
+		return nil, err
+	}
 	yangTreeTmpl, err := template.ParseFS(templateFS,
 		"layouts/*.html",
 		"fragments/configure-toolbar.html",
@@ -186,6 +190,7 @@ func New(
 	cfgSys := &handlers.ConfigureSystemHandler{Template: cfgSysTmpl, RC: rc, Schema: schemaCache}
 	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc, Schema: schemaCache}
 	cfgRoutes := &handlers.ConfigureRoutesHandler{Template: cfgRoutesTmpl, RC: rc, Schema: schemaCache}
+	cfgFw := &handlers.ConfigureFirewallHandler{Template: cfgFwTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
 	treeH := &handlers.TreeHandler{
@@ -193,6 +198,13 @@ func New(
 		RC:       rc,
 		PageTmpl: yangTreeTmpl,
 		FragTmpl: yangFragTmpl,
+	}
+	statusTreeH := &handlers.TreeHandler{
+		Cache:    schemaCache,
+		RC:       rc,
+		PageTmpl: yangTreeTmpl,
+		FragTmpl: yangFragTmpl,
+		ReadOnly: true,
 	}
 
 	mux := http.NewServeMux()
@@ -248,12 +260,22 @@ func New(
 	mux.HandleFunc("POST /configure/apply-and-save", cfg.ApplyAndSave)
 	mux.HandleFunc("POST /configure/abort",          cfg.Abort)
 	mux.HandleFunc("POST /configure/save",           cfg.Save)
+	mux.HandleFunc("DELETE /configure/leaf",         cfg.DeleteLeaf)
 	mux.HandleFunc("GET /configure/system",           cfgSys.Overview)
 	mux.HandleFunc("POST /configure/system/identity",     cfgSys.SaveIdentity)
 	mux.HandleFunc("POST /configure/system/clock",        cfgSys.SaveClock)
 	mux.HandleFunc("PUT /configure/system/ntp",           cfgSys.SaveNTP)
 	mux.HandleFunc("PUT /configure/system/dns",           cfgSys.SaveDNS)
 	mux.HandleFunc("POST /configure/system/preferences",  cfgSys.SavePreferences)
+	mux.HandleFunc("GET /configure/firewall",                        cfgFw.Overview)
+	mux.HandleFunc("POST /configure/firewall/enable",               cfgFw.Enable)
+	mux.HandleFunc("POST /configure/firewall/settings",             cfgFw.SaveSettings)
+	mux.HandleFunc("POST /configure/firewall/zones",                cfgFw.AddZone)
+	mux.HandleFunc("POST /configure/firewall/zones/{name}",         cfgFw.SaveZone)
+	mux.HandleFunc("DELETE /configure/firewall/zones/{name}",       cfgFw.DeleteZone)
+	mux.HandleFunc("POST /configure/firewall/policies",             cfgFw.AddPolicy)
+	mux.HandleFunc("POST /configure/firewall/policies/{name}",     cfgFw.SavePolicy)
+	mux.HandleFunc("DELETE /configure/firewall/policies/{name}",   cfgFw.DeletePolicy)
 	mux.HandleFunc("GET /configure/routes",               cfgRoutes.Overview)
 	mux.HandleFunc("POST /configure/routes",              cfgRoutes.AddRoute)
 	mux.HandleFunc("PUT /configure/routes",               cfgRoutes.UpdateRoute)
@@ -295,6 +317,11 @@ func New(
 	mux.HandleFunc("DELETE /configure/tree/list-row", treeH.DeleteListRow)
 	mux.HandleFunc("PUT /configure/tree/presence",    treeH.TogglePresence)
 	mux.HandleFunc("DELETE /configure/tree/presence", treeH.TogglePresence)
+
+	// Status tree (read-only operational view).
+	mux.HandleFunc("GET /status/tree",          statusTreeH.Overview)
+	mux.HandleFunc("GET /status/tree/children", statusTreeH.TreeChildren)
+	mux.HandleFunc("GET /status/tree/node",     statusTreeH.TreeNode)
 
 	handler := authMiddleware(store, mux)
 	handler = csrfMiddleware(handler)

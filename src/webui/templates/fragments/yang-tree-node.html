@@ -8,13 +8,13 @@
   {{if or (eq .Kind "container") (eq .Kind "list") (eq .Kind "list-instance")}}
   <li>
     <details class="yt-node"
-             hx-get="/configure/tree/children?path={{.Path | urlquery}}"
+             hx-get="{{.TreeBase}}/children?path={{.Path | urlquery}}"
              hx-target="find .yt-children"
              hx-trigger="toggle once"
              hx-swap="innerHTML">
       <summary class="yt-label"
                data-yang-path="{{.Path}}"
-               hx-get="/configure/tree/node?path={{.Path | urlquery}}"
+               hx-get="{{.TreeBase}}/node?path={{.Path | urlquery}}"
                hx-target="#yang-detail"
                hx-swap="innerHTML">
         <svg class="yt-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none"

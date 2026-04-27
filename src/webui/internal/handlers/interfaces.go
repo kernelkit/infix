@@ -279,6 +279,11 @@ func (h *InterfacesHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+const (
+	ifTypeEthernet = "ethernet"
+	ifTypeLoopback = "loopback"
+)
+
 // prettyIfType converts a YANG interface type identity to the display
 // name used by the Infix CLI (cli_pretty).
 func prettyIfType(full string) string {
@@ -341,8 +346,8 @@ func buildIfaceList(raw []ifaceJSON, fwdSet map[string]bool) []ifaceEntry {
 		}
 	}
 	sort.Slice(topLevel, func(i, j int) bool {
-		li := prettyIfType(topLevel[i].Type) == "loopback"
-		lj := prettyIfType(topLevel[j].Type) == "loopback"
+		li := prettyIfType(topLevel[i].Type) == ifTypeLoopback
+		lj := prettyIfType(topLevel[j].Type) == ifTypeLoopback
 		if li != lj {
 			return li
 		}
@@ -574,7 +579,7 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 		}
 	}
 
-	if iface.Ethernet != nil {
+	if iface.Ethernet != nil && prettyIfType(iface.Type) == ifTypeEthernet {
 		d.Speed = prettySpeed(iface.Ethernet.Speed)
 		d.Duplex = iface.Ethernet.Duplex
 		if iface.Ethernet.AutoNegotiation != nil {

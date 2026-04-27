@@ -69,6 +69,24 @@ func (m *Manager) Children(path string) ([]*Node, error) {
 	return dirToNodes(e.Dir, path), nil
 }
 
+// ChildrenAll is like Children but includes config:false nodes, making it
+// suitable for the operational/status tree where state data reuses read-write
+// schema nodes. Only RPCs, notifications, anydata/anyxml, and deprecated or
+// obsolete nodes are excluded.
+func (m *Manager) ChildrenAll(path string) ([]*Node, error) {
+	if path == "" || path == "/" {
+		return m.topLevelNodesAll(), nil
+	}
+	e, err := m.entryAt(path)
+	if err != nil {
+		return nil, err
+	}
+	if e.Dir == nil {
+		return nil, nil
+	}
+	return dirToNodesAll(e.Dir, path), nil
+}
+
 // NodeAt returns a Node for the YANG schema node at path (without children).
 func (m *Manager) NodeAt(path string) (*Node, error) {
 	if path == "" || path == "/" {
@@ -175,6 +193,20 @@ func (m *Manager) ModuleQualifiedName(path string) (string, error) {
 		return "", err
 	}
 	return modName + ":" + e.Name, nil
+}
+
+// internalOperationalTopNodes lists bare node names that must not appear at
+// the top level of the operational/status tree.  These are all transport- or
+// server-monitoring nodes of no interest to end users.  They are already
+// absent from the configure tree because they are config:false; this list
+// applies the same exclusion to topLevelNodesAll.
+var internalOperationalTopNodes = map[string]bool{
+	"netconf":              true, // NETCONF session/lock monitoring
+	"netconf-state":        true, // ietf-netconf-monitoring (RFC 6022)
+	"notification":         true, // nc-notifications stream container
+	"restconf-state":       true, // ietf-restconf-monitoring (RFC 8527)
+	"supported-algorithms": true, // SSH/TLS algorithm capability advertisement
+	"system-capabilities":  true, // ietf-system-capabilities (RFC 9196)
 }
 
 // internalModules is the deny-list of YANG modules that are infrastructure-only
@@ -387,6 +419,87 @@ func listChildOf(e *yang.Entry) *yang.Entry {
 	return nil
 }
 
+// listChildOfAll is like listChildOf but uses the data-node filter (includes
+// config:false lists), used by dirToNodesAll / the operational status tree.
+func listChildOfAll(e *yang.Entry) *yang.Entry {
+	for _, child := range e.Dir {
+		if child.IsList() && !isNonDataNode(child) {
+			return child
+		}
+	}
+	return nil
+}
+
+// topLevelNodesAll is like topLevelNodes but includes config:false top-level
+// nodes, for use by the operational status tree.
+func (m *Manager) topLevelNodesAll() []*Node {
+	var nodes []*Node
+	for key, mod := range m.ms.Modules {
+		if strings.Contains(key, "@") {
+			continue
+		}
+		if mod.BelongsTo != nil {
+			continue
+		}
+		if internalModules[key] {
+			continue
+		}
+		e := yang.ToEntry(mod)
+		if e == nil || e.Dir == nil {
+			continue
+		}
+		for _, child := range sortedEntries(e.Dir) {
+			if isNonDataNode(child) {
+				continue
+			}
+			if internalOperationalTopNodes[child.Name] {
+				continue
+			}
+			nodePath := "/" + key + ":" + child.Name
+			if isContainerList(child) {
+				if lc := listChildOfAll(child); lc != nil {
+					nodes = append(nodes, entryToNode(lc, nodePath+"/"+nodeSegment(lc, key)))
+				}
+				continue
+			}
+			nodes = append(nodes, entryToNode(child, nodePath))
+		}
+	}
+	sort.Slice(nodes, func(i, j int) bool { return nodes[i].Name < nodes[j].Name })
+	return nodes
+}
+
+// dirToNodesAll is like dirToNodes but uses isNonDataNode, including
+// config:false leaves and containers in the result.
+func dirToNodesAll(dir map[string]*yang.Entry, parentPath string) []*Node {
+	parentMod := extractModuleFromPath(parentPath)
+	var nodes []*Node
+	for _, e := range sortedEntries(dir) {
+		if e.IsChoice() || e.IsCase() {
+			caseWhen := extractWhen(e)
+			for _, child := range dirToNodesAll(e.Dir, parentPath) {
+				if caseWhen != "" && child.When == "" {
+					child.When = caseWhen
+				}
+				nodes = append(nodes, child)
+			}
+			continue
+		}
+		if isNonDataNode(e) {
+			continue
+		}
+		nodePath := parentPath + "/" + nodeSegment(e, parentMod)
+		if isContainerList(e) {
+			if lc := listChildOfAll(e); lc != nil {
+				nodes = append(nodes, entryToNode(lc, nodePath+"/"+nodeSegment(lc, parentMod)))
+			}
+			continue
+		}
+		nodes = append(nodes, entryToNode(e, nodePath))
+	}
+	return nodes
+}
+
 // dirToNodes converts a goyang Dir map to a sorted slice of Nodes.
 // choice/case children are inlined (their contents promoted to this level).
 // Collapsible container-list wrappers are transparent: the list child is surfaced
@@ -466,6 +579,17 @@ func isNonConfigNode(e *yang.Entry) bool {
 		e.Kind == yang.AnyDataEntry ||
 		e.Kind == yang.AnyXMLEntry ||
 		e.Config == yang.TSFalse ||
+		isDeprecatedOrObsolete(e)
+}
+
+// isNonDataNode is like isNonConfigNode but keeps config:false nodes.
+// Used by ChildrenAll / the operational status tree which shows all data —
+// operational state reuses read-write schema nodes alongside state-only leaves.
+func isNonDataNode(e *yang.Entry) bool {
+	return e.RPC != nil ||
+		e.Kind == yang.NotificationEntry ||
+		e.Kind == yang.AnyDataEntry ||
+		e.Kind == yang.AnyXMLEntry ||
 		isDeprecatedOrObsolete(e)
 }
 
@@ -652,6 +776,15 @@ func yangTypeInfo(e *yang.Entry) *TypeInfo {
 		}
 	case yang.Yleafref:
 		info.Leafref = t.Path
+	case yang.Yunion:
+		for _, sub := range t.Type {
+			if sub.Kind == yang.Yenum && sub.Enum != nil {
+				info.Enums = append(info.Enums, sub.Enum.Names()...)
+			}
+		}
+		if len(info.Enums) > 0 {
+			sort.Strings(info.Enums)
+		}
 	}
 
 	if len(t.Pattern) > 0 {

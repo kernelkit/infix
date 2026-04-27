@@ -1,19 +1,21 @@
 {{/* Renders a container or list-instance as a level page.
-     Direct leaves appear as an inline editable form.
+     Direct leaves appear as an inline editable form (or read-only in ReadOnly mode).
      Structural children appear as navigation items below.
      Data: *leafGroupData */}}
 {{define "yang-leaf-group"}}
+{{$ro := .ReadOnly}}
+{{$nodeBase := "/configure/tree"}}{{if $ro}}{{$nodeBase = "/status/tree"}}{{end}}
 <div class="info-card">
   <div class="card-header">
     {{if .ParentPath}}
     <button type="button" class="btn btn-outline btn-sm yt-back-btn"
             data-yang-path="{{.ParentPath}}"
-            hx-get="/configure/tree/node?path={{.ParentPath | urlquery}}"
+            hx-get="{{$nodeBase}}/node?path={{.ParentPath | urlquery}}"
             hx-target="#yang-detail"
             hx-swap="innerHTML">← Back</button>
     {{end}}
     {{.Name}}
-    {{if .Presence}}
+    {{if and .Presence (not $ro)}}
     <div class="yt-presence-header">
       {{if .Exists}}
       <button class="btn btn-sm yt-presence-toggle yt-presence-on"
@@ -29,6 +31,12 @@
               title="{{.Presence}} — click to enable">&#9675; Disabled</button>
       {{end}}
     </div>
+    {{else if and .Presence $ro}}
+    <div class="yt-presence-header">
+      <span class="yt-presence-toggle {{if .Exists}}yt-presence-on{{else}}yt-presence-off{{end}}">
+        {{if .Exists}}&#9679; Enabled{{else}}&#9675; Disabled{{end}}
+      </span>
+    </div>
     {{end}}
   </div>
 
@@ -38,9 +46,11 @@
 
   {{/* ── Direct leaves ────────────────────────────────────────────── */}}
   {{if .Leaves}}
+  {{if not $ro}}
   <form class="yt-group-form"
         hx-put="/configure/tree/group?path={{.Path | urlquery}}{{if .ParentPath}}&parent={{.ParentPath | urlquery}}{{end}}"
         hx-swap="none">
+  {{end}}
     <div class="yt-group-list">
       {{range .Leaves}}
       {{$cv := .CurrentValue}}
@@ -52,8 +62,24 @@
             {{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}
           </span>
           <span class="yt-leaf-input yt-sp">
-            {{if not .Config}}
-              <span class="text-muted">{{$cv}}</span>
+            {{if or $ro (not .Config)}}
+              {{if and .IsBinary .HasBinary}}
+              <div class="yt-binary-wrap">
+                <div class="yt-binary-row">
+                  <span class="yt-binary-hint">binary data</span>
+                  <button type="button" class="btn-icon yt-binary-eye" title="Show/hide">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </button>
+                </div>
+                <code class="yt-binary-content yt-binary-pem">{{if $cv}}{{$cv}}{{else}}{{.RawBase64}}{{end}}</code>
+              </div>
+              {{else}}
+              <span class="{{if not .Config}}text-muted{{end}}">{{if $cv}}{{$cv}}{{else}}—{{end}}</span>
+              {{end}}
             {{else if and .Type (eq .Type.Kind "boolean")}}
               <div class="yt-bool-group">
                 <label><input type="radio" name="{{.Name}}" value="true"
@@ -90,7 +116,7 @@
                      {{if and .UsingDefault .Default}}placeholder="{{.Default}}"{{end}}>
             {{end}}
           </span>
-          {{if and .Config (not .Mandatory)}}
+          {{if and (not $ro) .Config (not .Mandatory)}}
           <button class="btn btn-secondary btn-sm yt-sp" type="button"
                   title="Reset to YANG default"
                   hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
@@ -116,11 +142,13 @@
       </details>
       {{end}}
     </div>
+    {{if not $ro}}
     <div class="cfg-card-footer">
       <button class="btn btn-primary" type="submit">Save</button>
       <span class="cfg-save-status"></span>
     </div>
   </form>
+  {{end}}
   {{end}}
 
   {{/* ── Inline simple sub-lists ────────────────────────────────── */}}
@@ -133,7 +161,7 @@
           <tr>
             {{if $list.Complex}}<th class="yt-nav-col"></th>{{end}}
             {{range $list.Columns}}<th>{{.DisplayName}}</th>{{end}}
-            <th></th>
+            {{if not $list.ReadOnly}}<th></th>{{end}}
           </tr>
         </thead>
         <tbody>
@@ -141,7 +169,7 @@
           {{$row := .}}
           <tr class="yt-list-row{{if $list.Complex}} yt-list-row-nav{{end}}"
               data-yang-path="{{$row.InstancePath}}"
-              hx-get="/configure/tree/node?path={{$row.InstancePath | urlquery}}{{if $list.ParentPath}}&parent={{$list.ParentPath | urlquery}}{{end}}"
+              hx-get="{{$nodeBase}}/node?path={{$row.InstancePath | urlquery}}{{if $list.ParentPath}}&parent={{$list.ParentPath | urlquery}}{{end}}"
               hx-target="#yang-detail"
               hx-swap="innerHTML">
             {{if $list.Complex}}
@@ -153,6 +181,7 @@
             </td>
             {{end}}
             {{range $list.Columns}}<td>{{index $row.Values .Name}}</td>{{end}}
+            {{if not $list.ReadOnly}}
             <td class="cfg-action-col">
               <button type="button" class="btn-icon btn-icon-danger yt-sp"
                       title="Delete {{$row.InstanceName}}"
@@ -168,12 +197,13 @@
                 </svg>
               </button>
             </td>
+            {{end}}
           </tr>
           {{end}}
           {{if not $list.Rows}}
           <tr><td class="yt-table-empty" colspan="99">No entries</td></tr>
           {{end}}
-          {{if not $list.Complex}}
+          {{if and (not $list.Complex) (not $list.ReadOnly)}}
           {{/* Hidden inline add row — simple lists only */}}
           <tr id="yt-add-row-{{$i}}" hidden>
             <td colspan="99" class="key-detail-cell">
@@ -218,6 +248,7 @@
         </tbody>
       </table>
     </div>
+    {{if not $list.ReadOnly}}
     <div style="padding: 0.35rem 0.75rem 0.5rem">
       {{if $list.Complex}}
       <button class="btn btn-secondary btn-sm"
@@ -228,6 +259,7 @@
       <button class="btn btn-secondary btn-sm" data-show="yt-add-row-{{$i}}">+ Add</button>
       {{end}}
     </div>
+    {{end}}
   </div>
   {{end}}
 
@@ -237,9 +269,11 @@
   <div class="yt-inline-container">
     <div class="yt-subsections-header">{{$sub.Name}}</div>
     {{if $sub.Leaves}}
+    {{if not $sub.ReadOnly}}
     <form class="yt-group-form"
           hx-put="/configure/tree/group?path={{$sub.Path | urlquery}}&parent={{$sub.ParentPath | urlquery}}"
           hx-swap="none">
+    {{end}}
       <div class="yt-group-list">
         {{range $sub.Leaves}}
         {{$cv := .CurrentValue}}
@@ -251,11 +285,11 @@
               {{.Name}}{{if .Mandatory}}<span class="yt-mandatory" title="mandatory">*</span>{{end}}
             </span>
             <span class="yt-leaf-input yt-sp">
-              {{if not .Config}}
-                {{if and .IsBinary $cv}}
+              {{if or $sub.ReadOnly (not .Config)}}
+                {{if and .IsBinary .HasBinary}}
                 <div class="yt-binary-wrap">
                   <div class="yt-binary-row">
-                    <span class="yt-binary-hint">{{if .BinaryHint}}{{.BinaryHint}}{{else}}binary data{{end}}</span>
+                    <span class="yt-binary-hint">binary data</span>
                     <button type="button" class="btn-icon yt-binary-eye" title="Show/hide">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -264,10 +298,10 @@
                       </svg>
                     </button>
                   </div>
-                  <code class="yt-binary-content yt-binary-pem">{{$cv}}</code>
+                  <code class="yt-binary-content yt-binary-pem">{{if $cv}}{{$cv}}{{else}}{{.RawBase64}}{{end}}</code>
                 </div>
                 {{else}}
-                <span class="text-muted">{{if $cv}}{{$cv}}{{else}}—{{end}}</span>
+                <span class="{{if not .Config}}text-muted{{end}}">{{if $cv}}{{$cv}}{{else}}—{{end}}</span>
                 {{end}}
               {{else if and .Type (eq .Type.Kind "boolean")}}
                 <div class="yt-bool-group">
@@ -305,7 +339,7 @@
                        {{if and .UsingDefault .Default}}placeholder="{{.Default}}"{{end}}>
               {{end}}
             </span>
-            {{if and .Config (not .Mandatory)}}
+            {{if and (not $sub.ReadOnly) .Config (not .Mandatory)}}
             <button class="btn btn-secondary btn-sm yt-sp" type="button"
                     title="Reset to YANG default"
                     hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
@@ -331,11 +365,13 @@
         </details>
         {{end}}
       </div>
+      {{if not $sub.ReadOnly}}
       <div class="cfg-card-footer">
         <button class="btn btn-primary" type="submit">Save</button>
         <span class="cfg-save-status"></span>
       </div>
     </form>
+    {{end}}
     {{end}}
   </div>
   {{end}}
@@ -347,7 +383,7 @@
     {{range .SubNodes}}
     <button class="yt-subsection-item"
             data-yang-path="{{.Path}}"
-            hx-get="/configure/tree/node?path={{.Path | urlquery}}"
+            hx-get="{{$nodeBase}}/node?path={{.Path | urlquery}}"
             hx-target="#yang-detail"
             hx-swap="innerHTML">
       <span class="yt-subsection-name">{{.Name}}</span>

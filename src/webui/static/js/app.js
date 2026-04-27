@@ -850,6 +850,19 @@ function openModal(message, onConfirm) {
   dlg.showModal();
 }
 
+// ─── data-close-detail: collapse a key-detail-row from inside ───────────────
+(function() {
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-close-detail]');
+    if (!btn) return;
+    var target = btn.getAttribute('data-close-detail');
+    var row = document.getElementById('key-detail-' + target);
+    if (row) row.classList.remove('is-open');
+    var toggle = document.querySelector('[data-target="' + target + '"]');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  });
+})();
+
 // ─── data-show / data-hide: toggle element visibility ──────────────────────
 (function() {
   document.addEventListener('click', function(e) {

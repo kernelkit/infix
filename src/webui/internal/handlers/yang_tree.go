@@ -82,13 +82,16 @@ type TreeHandler struct {
 	RC       restconf.Fetcher
 	PageTmpl *template.Template
 	FragTmpl *template.Template
+	ReadOnly bool // true for the status/operational tree; suppresses all writes
 }
 
 // treeNodeData wraps a schema.Node with live presence-state from the datastore.
 // Exists is only meaningful when Node.Presence != "".
+// TreeBase is the URL prefix for tree HTMX requests ("/configure/tree" or "/status/tree").
 type treeNodeData struct {
 	*schema.Node
-	Exists bool
+	Exists   bool
+	TreeBase string
 }
 
 type yangTreePageData struct {
@@ -96,6 +99,8 @@ type yangTreePageData struct {
 	Nodes       []*treeNodeData
 	Loading     bool
 	InitialPath string // non-empty: auto-load this node in the right pane on page load
+	ReadOnly    bool   // true for the operational status tree
+	TreeBase    string // URL prefix: "/configure/tree" or "/status/tree"
 }
 
 // nodeDetailData is the template data for the yang-node-detail fragment.
@@ -107,6 +112,7 @@ type nodeDetailData struct {
 	LeafrefValues []string
 	SavedOK       bool
 	Error         string
+	ReadOnly      bool
 }
 
 // leafGroupData is the template data for yang-leaf-group: a container or
@@ -126,6 +132,7 @@ type leafGroupData struct {
 	SubNodes         []*schema.Node   // complex containers/lists → navigation buttons
 	SavedOK          bool
 	Error            string
+	ReadOnly         bool
 }
 
 // listTableColumn is a schema Node with an optional display-name override,
@@ -147,7 +154,8 @@ type listTableData struct {
 	Rows        []listTableRow
 	Complex     bool // has nested containers/lists; rows navigate to a full detail page
 	SavedOK     bool
-	Error      string
+	Error       string
+	ReadOnly    bool
 }
 
 // listTableRow holds one instance's display path and column values.
@@ -178,24 +186,32 @@ type leafGroupItem struct {
 	LeafrefValues []string
 }
 
-// Overview serves GET /configure/tree and GET /configure/tree?path=<restconf-path>.
+// Overview serves GET /configure/tree (or /status/tree for ReadOnly mode).
 // When path is set the right pane auto-loads the node on page load.
 func (h *TreeHandler) Overview(w http.ResponseWriter, r *http.Request) {
+	activePage := "configure-tree"
+	title := "Advanced Configuration"
+	if h.ReadOnly {
+		activePage = "status-tree"
+		title = "Advanced Status"
+	}
+	base := h.treeBase()
 	data := yangTreePageData{
-		PageData:    newPageData(r, "configure-tree", "Advanced Configuration"),
+		PageData:    newPageData(r, activePage, title),
 		InitialPath: r.URL.Query().Get("path"),
+		ReadOnly:    h.ReadOnly,
+		TreeBase:    base,
 	}
 
 	mgr := h.Cache.Manager()
 	if mgr == nil {
 		data.Loading = true
 	} else {
-		nodes, err := mgr.Children("/")
+		nodes, err := h.childrenFunc(mgr)("/")
 		if err == nil {
-			// Root-level containers are structural (non-presence); Exists=true is correct.
 			treeNodes := make([]*treeNodeData, len(nodes))
 			for i, n := range nodes {
-				treeNodes[i] = &treeNodeData{Node: n, Exists: true}
+				treeNodes[i] = &treeNodeData{Node: n, Exists: true, TreeBase: base}
 			}
 			data.Nodes = treeNodes
 		}
@@ -230,19 +246,21 @@ func (h *TreeHandler) TreeChildren(w http.ResponseWriter, r *http.Request) {
 	if i := strings.LastIndexByte(path, '/'); i >= 0 {
 		lastSeg = path[i+1:]
 	}
+	base := h.treeBase()
 	if !strings.ContainsAny(lastSeg, "[=") {
 		if node, err := mgr.NodeAt(path); err == nil && node.Kind == "list" {
 			instances := h.fetchListInstances(r, path, node)
 			treeNodes := make([]*treeNodeData, len(instances))
 			for i, n := range instances {
-				treeNodes[i] = &treeNodeData{Node: n, Exists: true}
+				treeNodes[i] = &treeNodeData{Node: n, Exists: true, TreeBase: base}
 			}
 			h.FragTmpl.ExecuteTemplate(w, "yang-tree-nodes", treeNodes)
 			return
 		}
 	}
 
-	nodes, err := mgr.Children(path)
+	childFn := h.childrenFunc(mgr)
+	nodes, err := childFn(path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -264,7 +282,7 @@ func (h *TreeHandler) TreeChildren(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if n.Kind == "list" || n.Kind == "container" {
-			kids, _ := mgr.Children(n.Path)
+			kids, _ := childFn(n.Path)
 			if isSimpleList(kids) {
 				continue
 			}
@@ -278,20 +296,46 @@ func (h *TreeHandler) TreeChildren(w http.ResponseWriter, r *http.Request) {
 // Existence is not checked here — presence toggle lives in the right-pane card header
 // and is only resolved lazily when a node is selected (see TreeNode/checkPresenceExists).
 func (h *TreeHandler) resolvePresenceState(r *http.Request, parentPath string, nodes []*schema.Node) []*treeNodeData {
+	base := h.treeBase()
 	result := make([]*treeNodeData, len(nodes))
 	for i, n := range nodes {
-		result[i] = &treeNodeData{Node: n}
+		result[i] = &treeNodeData{Node: n, TreeBase: base}
 	}
 	return result
+}
+
+// treeBase returns the URL prefix for this handler's tree routes.
+func (h *TreeHandler) treeBase() string {
+	if h.ReadOnly {
+		return "/status/tree"
+	}
+	return "/configure/tree"
+}
+
+func (h *TreeHandler) childrenFunc(mgr *schema.Manager) func(string) ([]*schema.Node, error) {
+	if h.ReadOnly {
+		return mgr.ChildrenAll
+	}
+	return mgr.Children
+}
+
+// fetchData fetches from the candidate datastore in config mode, or from /data
+// (operational) in ReadOnly mode. In config mode it falls back to /data on error.
+func (h *TreeHandler) fetchData(r *http.Request, path string) ([]byte, error) {
+	if h.ReadOnly {
+		return h.RC.GetRaw(r.Context(), "/data"+path)
+	}
+	data, err := h.RC.GetRaw(r.Context(), candidateDS+path)
+	if err != nil {
+		return h.RC.GetRaw(r.Context(), "/data"+path)
+	}
+	return data, nil
 }
 
 // checkPresenceExists reports whether the YANG presence container at path
 // currently exists in the candidate (or running) datastore.
 func (h *TreeHandler) checkPresenceExists(r *http.Request, path string) bool {
-	_, err := h.RC.GetRaw(r.Context(), candidateDS+path)
-	if err != nil {
-		_, err = h.RC.GetRaw(r.Context(), "/data"+path)
-	}
+	_, err := h.fetchData(r, path)
 	return err == nil
 }
 
@@ -309,14 +353,10 @@ func (h *TreeHandler) fetchListInstances(r *http.Request, path string, listNode 
 		parentPath = path
 	}
 
-	data, err := h.RC.GetRaw(r.Context(), candidateDS+parentPath)
+	data, err := h.fetchData(r, parentPath)
 	if err != nil {
-		log.Printf("yang-tree: list GET candidate %s: %v — trying running", parentPath, err)
-		data, err = h.RC.GetRaw(r.Context(), "/data"+parentPath)
-		if err != nil {
-			log.Printf("yang-tree: list GET running %s: %v", parentPath, err)
-			return nil
-		}
+		log.Printf("yang-tree: list GET %s: %v", parentPath, err)
+		return nil
 	}
 
 	// Navigate directly to the list array using the full path.
@@ -456,13 +496,14 @@ func (h *TreeHandler) TreeNode(w http.ResponseWriter, r *http.Request) {
 				gd.Presence = node.Presence
 				gd.Exists = h.checkPresenceExists(r, path)
 			}
+			gd.ReadOnly = h.ReadOnly
 			h.FragTmpl.ExecuteTemplate(w, "yang-leaf-group", gd)
 			return
 		}
 	}
 
-	data := &nodeDetailData{Node: node}
-	if node.Config && (node.Kind == "leaf" || node.Kind == "leaf-list") {
+	data := &nodeDetailData{Node: node, ReadOnly: h.ReadOnly}
+	if node.Kind == "leaf" || node.Kind == "leaf-list" {
 		item := &leafGroupItem{Node: node}
 		resolveLeafItem(item, h.fetchLeafValue(r, path))
 		data.CurrentValue = item.CurrentValue
@@ -480,11 +521,12 @@ func (h *TreeHandler) TreeNode(w http.ResponseWriter, r *http.Request) {
 // Structural children (sub-containers, lists) are listed as navigation items.
 // Returns nil only when the schema has no children (empty container).
 func (h *TreeHandler) buildLeafGroup(r *http.Request, mgr *schema.Manager, path, name, kind string) *leafGroupData {
-	children, err := mgr.Children(path)
+	childFn := h.childrenFunc(mgr)
+	children, err := childFn(path)
 	if err != nil || len(children) == 0 {
 		return nil
 	}
-	gd := &leafGroupData{Path: path, Name: name, Kind: kind}
+	gd := &leafGroupData{Path: path, Name: name, Kind: kind, ReadOnly: h.ReadOnly}
 	values := h.fetchNodeValues(r, path)
 
 	// For list instances: enrich the card heading ("interface wan") and build a
@@ -539,7 +581,7 @@ func (h *TreeHandler) buildLeafGroup(r *http.Request, mgr *schema.Manager, path,
 				gd.InlineLists = append(gd.InlineLists, td)
 			}
 		case "container":
-			kids2, err2 := mgr.Children(c.Path)
+			kids2, err2 := childFn(c.Path)
 			if err2 == nil && isSimpleList(kids2) {
 				sub := h.buildLeafGroup(r, mgr, childPath, c.Name, "container")
 				if sub != nil {
@@ -598,7 +640,7 @@ func isSimpleList(children []*schema.Node) bool {
 // instead of an inline add form.
 // Returns nil only if children cannot be resolved.
 func (h *TreeHandler) buildListTable(r *http.Request, mgr *schema.Manager, path string, listNode *schema.Node) *listTableData {
-	children, err := mgr.Children(path)
+	children, err := h.childrenFunc(mgr)(path)
 	if err != nil {
 		return nil
 	}
@@ -649,6 +691,7 @@ func (h *TreeHandler) buildListTable(r *http.Request, mgr *schema.Manager, path 
 		Columns:     columns,
 		FormColumns: formNodes,
 		Complex:     !simple,
+		ReadOnly:    h.ReadOnly,
 	}
 	for _, inst := range instances {
 		rawVals := h.fetchNodeValues(r, inst.Path)
@@ -943,12 +986,9 @@ func (h *TreeHandler) deleteViaParentPut(r *http.Request, mgr *schema.Manager, i
 	}
 
 	// GET parent — rousette returns full module-root hierarchy.
-	data, err := h.RC.GetRaw(r.Context(), candidateDS+listParentPath)
+	data, err := h.fetchData(r, listParentPath)
 	if err != nil {
-		data, err = h.RC.GetRaw(r.Context(), "/data"+listParentPath)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	// Navigate to the parent instance.
@@ -1044,30 +1084,20 @@ func (h *TreeHandler) fetchNodeValues(r *http.Request, path string) map[string]s
 	// Go's HTTP client decodes them before sending and libyang then rejects the
 	// path with "Syntax error".  Skip directly to the parent-path fallback.
 	_, lastSeg := splitLastSegment(path)
-	skipDirect := strings.ContainsRune(lastSeg, '%')
 
 	var data []byte
 	var err error
-	if !skipDirect {
-		data, err = h.RC.GetRaw(r.Context(), candidateDS+path)
-		if err != nil {
-			data, err = h.RC.GetRaw(r.Context(), "/data"+path)
-			if err != nil {
-				skipDirect = true
-			}
-		}
+	if !strings.ContainsRune(lastSeg, '%') {
+		data, err = h.fetchData(r, path)
 	}
-	if skipDirect {
+	if data == nil {
 		parentPath, _ := splitLastSegment(path)
 		if parentPath == "" {
 			return nil
 		}
-		data, err = h.RC.GetRaw(r.Context(), candidateDS+parentPath)
+		data, err = h.fetchData(r, parentPath)
 		if err != nil {
-			data, err = h.RC.GetRaw(r.Context(), "/data"+parentPath)
-			if err != nil {
-				return nil
-			}
+			return nil
 		}
 	}
 	raw := navigateToNode(data, path)
@@ -1207,12 +1237,9 @@ func (h *TreeHandler) fetchLeafrefValues(r *http.Request, mgr *schema.Manager, n
 	_, targetLeaf := splitModPrefix(segs[len(segs)-1])
 	parentPath := "/" + strings.Join(segs[:len(segs)-1], "/")
 
-	data, err := h.RC.GetRaw(r.Context(), candidateDS+parentPath)
+	data, err := h.fetchData(r, parentPath)
 	if err != nil {
-		data, err = h.RC.GetRaw(r.Context(), "/data"+parentPath)
-		if err != nil {
-			return nil
-		}
+		return nil
 	}
 	return extractFieldValues(data, targetLeaf)
 }
@@ -1297,30 +1324,20 @@ func naturalLess(a, b string) bool {
 // module hierarchy; navigateToNode is used to reach the value in that case,
 // with a fallback to the simpler single-key envelope unwrap.
 func (h *TreeHandler) fetchLeafValue(r *http.Request, path string) string {
-	// If any segment in the path contains percent-encoded chars, skip direct GET.
-	skipDirect := strings.ContainsRune(path, '%')
 	var data []byte
 	var err error
-	if !skipDirect {
-		data, err = h.RC.GetRaw(r.Context(), candidateDS+path)
-		if err != nil {
-			data, err = h.RC.GetRaw(r.Context(), "/data"+path)
-			if err != nil {
-				skipDirect = true
-			}
-		}
+	_, lastSeg := splitLastSegment(path)
+	if !strings.ContainsRune(lastSeg, '%') {
+		data, err = h.fetchData(r, path)
 	}
-	if skipDirect {
+	if data == nil {
 		parentPath, _ := splitLastSegment(path)
 		if parentPath == "" {
 			return ""
 		}
-		data, err = h.RC.GetRaw(r.Context(), candidateDS+parentPath)
+		data, err = h.fetchData(r, parentPath)
 		if err != nil {
-			data, err = h.RC.GetRaw(r.Context(), "/data"+parentPath)
-			if err != nil {
-				return ""
-			}
+			return ""
 		}
 	}
 	if raw := navigateToNode(data, path); raw != nil {
@@ -1364,6 +1381,10 @@ func resolveLeafItem(item *leafGroupItem, val string) {
 // PUT creates the presence container with an empty body; DELETE removes it.
 // Returns the updated yang-tree-node HTML fragment for HTMX outerHTML swap.
 func (h *TreeHandler) TogglePresence(w http.ResponseWriter, r *http.Request) {
+	if h.ReadOnly {
+		http.Error(w, "read-only tree", http.StatusMethodNotAllowed)
+		return
+	}
 	mgr := h.Cache.Manager()
 	if mgr == nil {
 		http.Error(w, "schema not yet loaded", http.StatusServiceUnavailable)
