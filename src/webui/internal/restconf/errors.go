@@ -4,11 +4,20 @@ package restconf
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 )
+
+// IsNotFound reports whether err is a RESTCONF error with HTTP status 404.
+// Used to distinguish "data resource absent" (expected for delete-or-create
+// flows) from real failures.
+func IsNotFound(err error) bool {
+	var e *Error
+	return errors.As(err, &e) && e.StatusCode == http.StatusNotFound
+}
 
 // AuthError is returned when RESTCONF rejects credentials (401/403).
 type AuthError struct {

@@ -2120,6 +2120,14 @@ select.cfg-input {
 .cfg-input-sm { max-width: 8rem; }
 .cfg-input-mono { font-family: var(--font-mono); font-size: 0.85rem; }
 .cfg-reset-col { width: 1%; white-space: nowrap; padding-left: 0.25rem; }
+.cfg-section-head { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.4rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
+.cfg-subsection-head { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin: 0.5rem 0 0.25rem; }
+.cfg-fold { margin: 0.5rem 0 0; }
+.cfg-fold > summary { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.4rem; user-select: none; }
+.cfg-fold > summary::-webkit-details-marker { display: none; }
+.cfg-fold > summary::before { content: '›'; display: inline-block; transition: transform 0.15s; font-size: 1rem; }
+details.cfg-fold[open] > summary::before { transform: rotate(90deg); }
+.cfg-fold-body { padding-top: 0.5rem; }
 .fw-check-scroll { max-height: 12rem; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 0.4rem 0.6rem; background: var(--input-bg, var(--surface)); }
 .fw-check-grid { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; }
 .fw-check-grid label { display: flex; align-items: center; gap: 0.35rem; font-weight: normal; cursor: pointer; }
@@ -2167,6 +2175,149 @@ select.cfg-input {
 }
 .user-shell-form .cfg-input { flex: 1; min-width: 0; }
 .user-add-inline .cfg-input { width: auto; flex: 1; min-width: 8rem; }
+
+/* Add Interface modal dialog */
+.iface-modal {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--fg);
+  padding: 0;
+  min-width: 42rem;
+  max-width: 90vw;
+  box-shadow: var(--shadow);
+  /* Native <dialog>.showModal() centers by default, but some browsers
+     drift on long content — pin the position to be safe. */
+  position: fixed;
+  inset: 0;
+  margin: auto;
+}
+.iface-modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+.iface-modal-form {
+  display: flex;
+  flex-direction: column;
+}
+.iface-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.iface-modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.iface-modal-header .btn-close {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--fg-muted);
+  padding: 0 0.25rem;
+}
+.iface-modal-header .btn-close:hover {
+  color: var(--fg);
+}
+.iface-modal-body {
+  padding: 0.75rem 1rem;
+}
+.iface-modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--border);
+}
+.iface-fields {
+  border: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+.iface-fields-unsupported {
+  padding: 0.5rem 0;
+}
+.cfg-hint {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+  margin-top: 0.25rem;
+}
+
+/* Inline keystore "+ New" create-key form, used by the Add Interface
+   modal's WiFi PSK and WireGuard private-key rows. */
+.ks-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ks-picker-row > select { flex: 1; min-width: 0; }
+.ks-create-form {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: var(--card-bg);
+}
+/* `display: flex` above overrides the `[hidden]` attribute's UA-stylesheet
+   `display: none`, so the fold-out form was always shown. Restore the
+   collapsed-by-default behaviour. */
+.ks-create-form[hidden] { display: none; }
+.ks-create-form > input,
+.ks-create-form > textarea { width: 100%; }
+.ks-create-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+/* WiFi PSK passphrase — masked text input, NOT type="password". A real
+   password input pulls in browser password managers; the WiFi key is a
+   device-config value, not a per-site credential, so we mask with CSS
+   instead and let the user toggle visibility via the eye button. The
+   webkit property covers Chrome/Edge/Safari (>90% of browsers); Firefox
+   shows the value in plain text. */
+.cfg-input-mask {
+  -webkit-text-security: disc;
+  font-family: text-security-disc, inherit;
+  letter-spacing: 0.08em;
+}
+.cfg-input-mask.cfg-secret-shown {
+  -webkit-text-security: none;
+  font-family: inherit;
+  letter-spacing: normal;
+}
+.cfg-secret-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.cfg-secret-wrap > input { flex: 1; min-width: 0; }
+.cfg-secret-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* Sub-table inside an inline create form. Same row layout as the rest
+   of the wizard (label on the left, value on the right) but indented a
+   touch so the user reads it as "fields belonging to the picker above". */
+.info-table-sub {
+  margin: 0;
+}
+.info-table-sub th {
+  padding-left: 0.75rem;
+  font-weight: normal;
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+}
 
 /* Card-level save feedback */
 .cfg-card-footer {
@@ -2585,7 +2736,7 @@ details[open].yt-leaf-item .yt-leaf-name::before { transform: rotate(90deg); }
   cursor: help;
   font-size: 0.72rem;
   font-weight: normal;
-  color: var(--text-muted);
+  color: var(--fg-muted);
   margin-left: 0.3rem;
   vertical-align: middle;
   line-height: 1;

@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -112,11 +113,51 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	cfgRoutesTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-routes.html")
+	cfgRoutesTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-routes.html")
 	if err != nil {
 		return nil, err
 	}
-	cfgFwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-firewall.html")
+	cfgFwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-firewall.html")
+	if err != nil {
+		return nil, err
+	}
+	ifFuncs := template.FuncMap{
+		"add": func(a, b int) int { return a + b },
+		"deref": func(v any) any {
+			switch p := v.(type) {
+			case *bool:
+				if p != nil {
+					return *p
+				}
+			case *uint32:
+				if p != nil {
+					return *p
+				}
+			case *int:
+				if p != nil {
+					return *p
+				}
+			}
+			return nil
+		},
+		// dict lets callers pass keyed args to nested templates, e.g.
+		// {{template "foo" (dict "Key" .X "Selected" "")}}.
+		"dict": func(values ...any) (map[string]any, error) {
+			if len(values)%2 != 0 {
+				return nil, fmt.Errorf("dict: odd argument count")
+			}
+			m := make(map[string]any, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				k, ok := values[i].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict: non-string key at position %d", i)
+				}
+				m[k] = values[i+1]
+			}
+			return m, nil
+		},
+	}
+	cfgIfTmpl, err := template.New("").Funcs(ifFuncs).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html", "fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +174,8 @@ func New(
 		"fragments/yang-tree-node.html",
 		"fragments/yang-node-detail.html",
 		"fragments/yang-leaf-group.html",
-		"fragments/yang-list-table.html")
+		"fragments/yang-list-table.html",
+		"fragments/icons.html")
 	if err != nil {
 		return nil, err
 	}
@@ -191,6 +233,7 @@ func New(
 	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc, Schema: schemaCache}
 	cfgRoutes := &handlers.ConfigureRoutesHandler{Template: cfgRoutesTmpl, RC: rc, Schema: schemaCache}
 	cfgFw := &handlers.ConfigureFirewallHandler{Template: cfgFwTmpl, RC: rc, Schema: schemaCache}
+	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
 	treeH := &handlers.TreeHandler{
@@ -266,6 +309,42 @@ func New(
 	mux.HandleFunc("PUT /configure/system/ntp",           cfgSys.SaveNTP)
 	mux.HandleFunc("PUT /configure/system/dns",           cfgSys.SaveDNS)
 	mux.HandleFunc("POST /configure/system/preferences",  cfgSys.SavePreferences)
+	mux.HandleFunc("GET /configure/interfaces",                          cfgIf.Overview)
+	mux.HandleFunc("POST /configure/interfaces",                         cfgIf.CreateInterface)
+	mux.HandleFunc("POST /configure/interfaces/wizard/sym-key",          cfgIf.WizardCreateSymKey)
+	mux.HandleFunc("POST /configure/interfaces/wizard/asym-key",         cfgIf.WizardCreateAsymKey)
+	mux.HandleFunc("POST /configure/interfaces/wizard/wg-genkey",        cfgIf.WizardGenerateWGKey)
+	mux.HandleFunc("POST /configure/interfaces/wizard/radio",            cfgIf.WizardCreateRadio)
+	mux.HandleFunc("POST /configure/interfaces/{name}",                  cfgIf.SaveGeneral)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}",                cfgIf.DeleteInterface)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4",              cfgIf.AddIPv4)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv4/{ip}",       cfgIf.DeleteIPv4)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/dhcp",                    cfgIf.SaveIPv4DHCP)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/dhcp/settings",           cfgIf.SaveIPv4DHCPSettings)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/dhcp/options",            cfgIf.AddIPv4DHCPOption)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv4/dhcp/options/{id}",     cfgIf.DeleteIPv4DHCPOption)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/autoconf",                cfgIf.SaveIPv4Autoconf)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6",                         cfgIf.AddIPv6)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv6/{ip}",                  cfgIf.DeleteIPv6)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/autoconf",                cfgIf.SaveIPv6SLAAC)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp",                    cfgIf.SaveIPv6DHCP)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp/settings",           cfgIf.SaveIPv6DHCPSettings)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp/options",            cfgIf.AddIPv6DHCPOption)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv6/dhcp/options/{id}",     cfgIf.DeleteIPv6DHCPOption)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge-port",      cfgIf.SaveBridgePort)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/bridge-port",    cfgIf.DeleteBridgePort)
+	mux.HandleFunc("POST /configure/interfaces/{name}/wifi",             cfgIf.SaveWifi)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge",           cfgIf.SaveBridge)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/stp",       cfgIf.SaveBridgeSTP)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/members",   cfgIf.SaveBridgeMembers)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/multicast", cfgIf.SaveBridgeMulticast)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/vlans",     cfgIf.AddVLAN)
+	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/vlans/{vid}", cfgIf.SaveVLAN)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/bridge/vlans/{vid}", cfgIf.DeleteVLAN)
+	mux.HandleFunc("POST /configure/interfaces/{name}/lag",              cfgIf.SaveLAG)
+	mux.HandleFunc("POST /configure/interfaces/{name}/lag/members",      cfgIf.SaveLAGMembers)
+	mux.HandleFunc("POST /configure/interfaces/{name}/lag-port",         cfgIf.SaveLagPort)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/lag-port",       cfgIf.DeleteLagPort)
 	mux.HandleFunc("GET /configure/firewall",                        cfgFw.Overview)
 	mux.HandleFunc("POST /configure/firewall/enable",               cfgFw.Enable)
 	mux.HandleFunc("POST /configure/firewall/settings",             cfgFw.SaveSettings)

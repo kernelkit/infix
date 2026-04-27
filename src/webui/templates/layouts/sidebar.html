@@ -161,9 +161,19 @@
     </details>
 
     <details class="nav-group-top" id="nav-configure"
-             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
+             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-interfaces") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
       <summary class="nav-group-summary-top">Configure</summary>
       <ul class="nav-group-items">
+        <li>
+          <a href="/configure/interfaces"
+             hx-get="/configure/interfaces"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-interfaces"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/interfaces.svg')"></span>
+            Interfaces
+          </a>
+        </li>
         <li>
           <a href="/configure/system"
              hx-get="/configure/system"

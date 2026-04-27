@@ -25,7 +25,9 @@ type interfacesWrapper struct {
 
 type ifaceJSON struct {
 	Name        string          `json:"name"`
+	Description string          `json:"description"`
 	Type        string          `json:"type"`
+	Enabled     *bool           `json:"enabled"`
 	OperStatus  string          `json:"oper-status"`
 	PhysAddress string          `json:"phys-address"`
 	IfIndex     int             `json:"if-index"`
@@ -33,24 +35,42 @@ type ifaceJSON struct {
 	IPv6        *ipCfg          `json:"ietf-ip:ipv6"`
 	Statistics  *ifaceStats     `json:"statistics"`
 	Ethernet    *ethernetJSON   `json:"ieee802-ethernet-interface:ethernet"`
+	Bridge      *bridgeCfgJSON  `json:"infix-interfaces:bridge"`
 	BridgePort  *bridgePortJSON `json:"infix-interfaces:bridge-port"`
-	Vlan        *vlanJSON       `json:"infix-interfaces:vlan"`
+	Lag         *lagCfgJSON     `json:"infix-interfaces:lag"`
+	LagPort     *lagPortCfgJSON `json:"infix-interfaces:lag-port"`
+	Vlan        *vlanCfgJSON    `json:"infix-interfaces:vlan"`
 	WiFi        *wifiJSON       `json:"infix-interfaces:wifi"`
 	WireGuard   *wireGuardJSON  `json:"infix-interfaces:wireguard"`
 }
 
-type vlanJSON struct {
+type vlanCfgJSON struct {
 	ID           int    `json:"id"`
+	TagType      string `json:"tag-type"`
 	LowerLayerIf string `json:"lower-layer-if"`
 }
 
 type bridgePortJSON struct {
-	Bridge string `json:"bridge"`
-	STP    *struct {
+	Bridge    string             `json:"bridge"`
+	PVID      *int               `json:"pvid"`
+	Flood     *bridgePortFlood   `json:"flood"`
+	Multicast *bridgePortMcast   `json:"multicast"`
+	STP       *struct {
 		CIST *struct {
 			State string `json:"state"`
 		} `json:"cist"`
 	} `json:"stp"`
+}
+
+type bridgePortFlood struct {
+	Broadcast *bool `json:"broadcast"`
+	Unicast   *bool `json:"unicast"`
+	Multicast *bool `json:"multicast"`
+}
+
+type bridgePortMcast struct {
+	FastLeave *bool  `json:"fast-leave"`
+	Router    string `json:"router"`
 }
 
 type wifiJSON struct {
@@ -60,10 +80,17 @@ type wifiJSON struct {
 }
 
 type wifiAPJSON struct {
-	SSID     string `json:"ssid"`
+	SSID     string         `json:"ssid"`
+	Hidden   *bool          `json:"hidden"`
+	Security *wifiSecJSON   `json:"security"`
 	Stations struct {
 		Station []wifiStaJSON `json:"station"`
 	} `json:"stations"`
+}
+
+type wifiSecJSON struct {
+	Mode   string `json:"mode"`
+	Secret string `json:"secret"`
 }
 
 type wifiStaJSON struct {
@@ -80,6 +107,7 @@ type wifiStaJSON struct {
 
 type wifiStationJSON struct {
 	SSID           string               `json:"ssid"`
+	Security       *wifiSecJSON         `json:"security"`
 	SignalStrength *int                 `json:"signal-strength"`
 	RxSpeed        yangInt64            `json:"rx-speed"`
 	TxSpeed        yangInt64            `json:"tx-speed"`
@@ -132,9 +160,33 @@ type wgPeerJSON struct {
 	} `json:"transfer"`
 }
 
+type dhcpOptionJSON struct {
+	ID    string `json:"id"`
+	Value string `json:"value,omitempty"`
+	Hex   string `json:"hex,omitempty"`
+}
+
+type dhcpv4CfgJSON struct {
+	ClientID        string           `json:"client-id,omitempty"`
+	Arping          *bool            `json:"arping,omitempty"`
+	RoutePreference *uint32          `json:"route-preference,omitempty"`
+	Options         []dhcpOptionJSON `json:"option,omitempty"`
+}
+
+type dhcpv6CfgJSON struct {
+	DUID            string           `json:"duid,omitempty"`
+	InformationOnly *bool            `json:"information-only,omitempty"`
+	RoutePreference *uint32          `json:"route-preference,omitempty"`
+	Options         []dhcpOptionJSON `json:"option,omitempty"`
+}
+
 type ipCfg struct {
-	Address []ipAddr `json:"address"`
-	MTU     int      `json:"mtu"`
+	Address  []ipAddr       `json:"address"`
+	MTU      int            `json:"mtu"`
+	DHCP     *dhcpv4CfgJSON `json:"infix-dhcp-client:dhcp"`
+	Autoconf *struct{}      `json:"infix-ip:autoconf"`
+	SLAACv6  *struct{}      `json:"autoconf"`
+	DHCPv6   *dhcpv6CfgJSON `json:"infix-dhcpv6-client:dhcp"`
 }
 
 type ipAddr struct {
@@ -282,6 +334,7 @@ func (h *InterfacesHandler) Overview(w http.ResponseWriter, r *http.Request) {
 const (
 	ifTypeEthernet = "ethernet"
 	ifTypeLoopback = "loopback"
+	ifTypePrefix   = "infix-if-type:" // YANG module prefix for short-slug identities
 )
 
 // prettyIfType converts a YANG interface type identity to the display

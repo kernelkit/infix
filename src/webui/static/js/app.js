@@ -566,6 +566,323 @@
   document.addEventListener('htmx:sendError',     finish);
 })();
 
+// Interface page glue (replaces inline hx-on / inline <script>, which CSP
+// blocks under the `script-src 'self'` policy in middleware.go).
+(function () {
+  // After an htmx checkbox marked [data-toggle-details] completes its request,
+  // show/hide the next-sibling <details> element based on its checked state.
+  // Used for DHCP/DHCPv6 settings fold-out on the Configure → Interface page.
+  // Only react to successful requests so a server rejection doesn't lie about
+  // the new state.
+  document.addEventListener('htmx:afterRequest', function (evt) {
+    if (!evt.detail || !evt.detail.successful) return;
+    var cb = evt.detail.elt;
+    if (!cb || !cb.matches || !cb.matches('input[type="checkbox"][data-toggle-details]')) return;
+    var wrapper = cb.closest('div');
+    var details = wrapper && wrapper.nextElementSibling;
+    if (details && details.tagName === 'DETAILS') details.hidden = !cb.checked;
+  });
+
+  // Add Interface modal — open via data-show-modal, close via
+  // data-close-modal. Mirrors the existing data-show/data-hide vocabulary
+  // for action-on-target attributes. Native <dialog>.showModal() gives us
+  // focus trap, ESC, and backdrop for free.
+  document.addEventListener('click', function (e) {
+    var open = e.target.closest && e.target.closest('[data-show-modal]');
+    if (open) {
+      var dlg = document.getElementById(open.getAttribute('data-show-modal'));
+      if (dlg && dlg.showModal) {
+        // Reset to server-rendered defaults so the dialog is consistent
+        // on every open (a previous pick + Cancel would otherwise leave
+        // the wrong fieldset enabled).
+        var form = dlg.querySelector('form');
+        if (form) form.reset();
+        var vlanName = dlg.querySelector('#add-iface-vlan-name');
+        if (vlanName) delete vlanName.dataset.userEdited;
+        var wifiName = dlg.querySelector('#add-iface-wifi-name');
+        if (wifiName) delete wifiName.dataset.userEdited;
+        dlg.showModal();
+        var sel = dlg.querySelector('#add-iface-type-select');
+        if (sel) sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    var close = e.target.closest && e.target.closest('[data-close-modal]');
+    if (close) {
+      var dlg2 = document.getElementById(close.getAttribute('data-close-modal'));
+      if (dlg2 && dlg2.close) dlg2.close();
+    }
+  });
+
+  // Add Interface modal, WiFi fieldset: mode (Station/AP) drives which
+  // security-mode optgroup is exposed, which AP-only rows are visible,
+  // whether the PSK row applies (open/disabled hide it), and an -ap
+  // suffix on the Name.
+  function refreshWifiSec() {
+    var modeAP = document.getElementById('add-iface-wifi-mode-ap');
+    var isAP = !!(modeAP && modeAP.checked);
+    var sec = document.getElementById('add-iface-wifi-sec');
+    if (sec) {
+      var groups = sec.querySelectorAll('optgroup[data-mode-group]');
+      groups.forEach(function (g) {
+        var match = g.getAttribute('data-mode-group') === (isAP ? 'access-point' : 'station');
+        g.hidden = !match;
+        g.disabled = !match;
+      });
+      // Reset to the first visible option of the active group if the
+      // current value belongs to the other mode.
+      var active = sec.options[sec.selectedIndex];
+      if (!active || active.parentElement.disabled) {
+        for (var i = 0; i < sec.options.length; i++) {
+          if (!sec.options[i].parentElement.disabled) { sec.selectedIndex = i; break; }
+        }
+      }
+    }
+    var hiddenRow = document.getElementById('add-iface-wifi-hidden-row');
+    if (hiddenRow) hiddenRow.hidden = !isAP;
+    refreshWifiPSK();
+    refreshWifiName();
+  }
+  // Auto-suffix the Name with "-ap" in AP mode and strip it in Station,
+  // unless the user has manually edited the Name. Matches the in-tree
+  // wifi naming convention (wifi0 / wifi0-ap).
+  function refreshWifiName() {
+    var name = document.getElementById('add-iface-wifi-name');
+    if (!name || name.dataset.userEdited === '1') return;
+    var modeAP = document.getElementById('add-iface-wifi-mode-ap');
+    var isAP = !!(modeAP && modeAP.checked);
+    var base = name.value.replace(/-ap$/, '');
+    name.value = isAP ? base + '-ap' : base;
+  }
+  function refreshWifiPSK() {
+    var sec = document.getElementById('add-iface-wifi-sec');
+    var pskRow = document.getElementById('add-iface-wifi-psk-row');
+    var psk = document.getElementById('add-iface-wifi-psk');
+    if (!sec || !pskRow || !psk) return;
+    var v = sec.value;
+    var needPSK = v !== 'disabled' && v !== 'open';
+    pskRow.hidden = !needPSK;
+    psk.required = needPSK;
+    psk.disabled = !needPSK;
+  }
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.id === 'add-iface-wifi-mode-sta' || t.id === 'add-iface-wifi-mode-ap') {
+      refreshWifiSec();
+    } else if (t.id === 'add-iface-wifi-sec') {
+      refreshWifiPSK();
+    }
+  });
+  // User-typed Name pins it (stops auto-suffix on mode change).
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'add-iface-wifi-name') {
+      e.target.dataset.userEdited = '1';
+    }
+  });
+
+  // CSP-safe successor to inline hx-on:htmx:after-request. Save buttons
+  // in the inline "+ New keystore key" forms carry
+  // data-ks-create-success="<form-id>"; on a successful HTMX swap, hide
+  // the named form and clear its inputs so the user sees the picker
+  // with their new key selected.
+  document.addEventListener('htmx:afterRequest', function (evt) {
+    if (!evt.detail || !evt.detail.successful) return;
+    var btn = evt.detail.elt;
+    if (!btn || !btn.hasAttribute || !btn.hasAttribute('data-ks-create-success')) return;
+    var form = document.getElementById(btn.getAttribute('data-ks-create-success'));
+    if (!form) return;
+    form.hidden = true;
+    form.querySelectorAll('input, textarea').forEach(function (i) { i.value = ''; });
+    resetMaskedInputs(form);
+  });
+
+  // Wizard "Edit" / "+ Add" buttons that share an inline create form.
+  //   - data-add-form="<form-id>" clears every input/textarea before
+  //     showing the form (handled here; data-show on the same button
+  //     then reveals it).
+  //   - data-edit-form="<form-id>" pre-fills the form from the picker's
+  //     selected option. data-edit-source points at the <select>;
+  //     data-edit-name-target (optional) names the input that should
+  //     receive the picker's value (for keystore forms whose name input
+  //     mirrors the picker). For the radio form, every <input>/<select>
+  //     whose name matches a data-<name> attribute on the picker option
+  //     is filled from that attribute (e.g. data-country fills
+  //     name="country-code", data-band fills name="band", …).
+  function clearKsForm(formId) {
+    var form = document.getElementById(formId);
+    if (!form) return;
+    form.querySelectorAll('input, textarea').forEach(function (i) { i.value = ''; });
+    form.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+    resetMaskedInputs(form);
+  }
+  // Strip the `.cfg-secret-shown` (eye-toggled "show") class from any
+  // masked inputs inside `root`. Called whenever a fold-out form
+  // transitions (open / clear / prefill / after-save) so a previous
+  // session's "shown" state never leaks across the next interaction.
+  function resetMaskedInputs(root) {
+    if (!root) return;
+    root.querySelectorAll('.cfg-input-mask.cfg-secret-shown').forEach(function (i) {
+      i.classList.remove('cfg-secret-shown');
+    });
+  }
+  function prefillKsForm(btn) {
+    var formId = btn.getAttribute('data-edit-form');
+    var srcId  = btn.getAttribute('data-edit-source');
+    var form = document.getElementById(formId);
+    var src  = document.getElementById(srcId);
+    if (!form || !src) return;
+    resetMaskedInputs(form);
+    var opt = src.options[src.selectedIndex];
+    if (!opt) return;
+    var ksNameTarget = btn.getAttribute('data-edit-name-target');
+    if (ksNameTarget) {
+      var nameInput = document.getElementById(ksNameTarget);
+      if (nameInput) nameInput.value = opt.value;
+    }
+    // Generic mapping: every form field whose [name=X] matches a
+    // data-X attribute on the option gets that attribute's value.
+    form.querySelectorAll('[name]').forEach(function (field) {
+      var attr = 'data-' + field.getAttribute('name');
+      if (opt.hasAttribute(attr)) field.value = opt.getAttribute(attr) || '';
+    });
+    // For the radio form, the picker's selected radio name needs to be
+    // present in the inner radio-name <select> so the Save POST carries
+    // it. The available-radios dropdown only lists unconfigured radios,
+    // so inject the selected name as an extra option if missing.
+    var radioNameSel = form.querySelector('select[name="radio-name"]');
+    if (radioNameSel && opt.value) {
+      var found = false;
+      for (var i = 0; i < radioNameSel.options.length; i++) {
+        if (radioNameSel.options[i].value === opt.value) {
+          radioNameSel.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        var injected = document.createElement('option');
+        injected.value = opt.value;
+        injected.textContent = opt.value + ' (currently configured)';
+        injected.dataset.injected = '1';
+        radioNameSel.insertBefore(injected, radioNameSel.firstChild);
+        radioNameSel.selectedIndex = 0;
+      }
+    }
+  }
+  document.addEventListener('click', function (e) {
+    var addBtn = e.target.closest && e.target.closest('[data-add-form]');
+    if (addBtn) {
+      clearKsForm(addBtn.getAttribute('data-add-form'));
+    }
+    var editBtn = e.target.closest && e.target.closest('[data-edit-form]');
+    if (editBtn) {
+      // Clear any injected "currently configured" options from prior
+      // edits before re-prefilling.
+      var form = document.getElementById(editBtn.getAttribute('data-edit-form'));
+      if (form) form.querySelectorAll('option[data-injected]').forEach(function (o) { o.remove(); });
+      prefillKsForm(editBtn);
+    }
+  });
+
+  // Show / hide the WiFi PSK passphrase. The input is type="text" with
+  // CSS masking (to dodge browser password-manager prompts); the eye
+  // button toggles a `.cfg-secret-shown` class that removes the mask.
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-toggle-mask]');
+    if (!btn) return;
+    var input = document.getElementById(btn.getAttribute('data-toggle-mask'));
+    if (!input) return;
+    input.classList.toggle('cfg-secret-shown');
+  });
+
+  // Hide the Edit button when its picker has no real selection
+  // (placeholder option, or empty). Re-evaluated on every change to the
+  // picker, including the HTMX swap that follows a successful Save.
+  function syncKsEditButtons(root) {
+    var scope = root || document;
+    scope.querySelectorAll('[data-edit-source]').forEach(function (btn) {
+      var src = document.getElementById(btn.getAttribute('data-edit-source'));
+      if (!src) { btn.hidden = true; return; }
+      var opt = src.options[src.selectedIndex];
+      btn.hidden = !opt || !opt.value || opt.disabled;
+    });
+  }
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.tagName === 'SELECT') syncKsEditButtons();
+  });
+  document.addEventListener('htmx:afterSwap', function () { syncKsEditButtons(); });
+  document.addEventListener('DOMContentLoaded', function () { syncKsEditButtons(); });
+  // Sync once when the dialog opens so initial state matches the default
+  // mode (Station). The fieldset toggle below already fires on dialog
+  // open, so piggyback there.
+
+  // Add Interface modal, VLAN fieldset: keep the Name input synced to
+  // <parent>.<vid> as the user changes either side. The user can still
+  // override by typing into Name; once they type a custom value, we stop
+  // auto-syncing for that session (tracked via .dataset.userEdited).
+  document.addEventListener('input', function (e) {
+    var nameInput = document.getElementById('add-iface-vlan-name');
+    if (!nameInput) return;
+    var t = e.target;
+    if (t === nameInput) {
+      nameInput.dataset.userEdited = '1';
+      return;
+    }
+    if (t.id !== 'add-iface-vlan-parent' && t.id !== 'add-iface-vlan-vid') return;
+    if (nameInput.dataset.userEdited === '1') return;
+    var parent = document.getElementById('add-iface-vlan-parent');
+    var vid = document.getElementById('add-iface-vlan-vid');
+    if (parent && vid) {
+      nameInput.value = (parent.value || '') + '.' + (vid.value || '');
+    }
+  });
+
+  // On type select change in the Add Interface modal, show/enable the
+  // matching <fieldset> and hide/disable the rest. Disabling siblings is
+  // what keeps their inputs out of the form submission so only one
+  // `name="name"` reaches the server. Falls back to the "unsupported"
+  // panel for types whose Create path isn't implemented yet.
+  document.addEventListener('change', function (e) {
+    var sel = e.target.closest && e.target.closest('#add-iface-type-select');
+    if (!sel) return;
+    var opt = sel.options[sel.selectedIndex];
+    var slug = (opt && opt.getAttribute('data-slug')) || '';
+    var fields = document.querySelectorAll('.iface-fields');
+    var matched = null;
+    fields.forEach(function (fs) {
+      var isMatch = fs.id === 'iface-fields-' + slug;
+      fs.hidden = !isMatch;
+      fs.disabled = !isMatch;
+      if (isMatch) matched = fs;
+    });
+    if (!matched) {
+      var unsupported = document.getElementById('iface-fields-unsupported');
+      if (unsupported) {
+        unsupported.hidden = false;
+        unsupported.disabled = false;
+      }
+    }
+    var createBtn = document.getElementById('add-iface-create-btn');
+    if (createBtn) createBtn.disabled = !matched;
+    if (matched && matched.id === 'iface-fields-wifi') refreshWifiSec();
+  });
+
+  // Configure > Hardware "+ Add hardware" picker: sync the hidden class
+  // input from the selected option's data-class and reveal class-specific
+  // fields (currently WiFi country-code).
+  document.addEventListener('change', function (e) {
+    var sel = e.target.closest && e.target.closest('#add-hw-picker');
+    if (!sel) return;
+    var opt = sel.options[sel.selectedIndex];
+    var cls = (opt && opt.getAttribute('data-class')) || '';
+    var classInput = document.getElementById('add-hw-class');
+    if (classInput) classInput.value = cls;
+    var wifi = document.getElementById('add-hw-wifi-fields');
+    if (wifi) wifi.hidden = (cls !== 'wifi');
+    var country = document.getElementById('add-hw-wifi-country');
+    if (country) country.required = (cls === 'wifi');
+  });
+})();
+
 // Theme (auto / light / dark) — shared by main app and login page
 (function() {
   function getTheme() {
@@ -1120,15 +1437,24 @@ function openModal(message, onConfirm) {
     if (!tip) {
       tip = document.createElement('div');
       tip.id = 'field-tip';
-      document.body.appendChild(tip);
     }
     return tip;
+  }
+
+  // A native <dialog>.showModal() renders in the browser's top layer,
+  // which is above z-index entirely; a tooltip appended to <body> ends
+  // up *below* the dialog regardless of z-index. Re-parent the tooltip
+  // into the active dialog so it shares the same top-layer context.
+  function parentFor(el) {
+    return el.closest('dialog[open]') || document.body;
   }
 
   document.addEventListener('mouseover', function(e) {
     var el = e.target.closest('.field-info[data-tip]');
     if (!el) return;
     var t = getTip();
+    var parent = parentFor(el);
+    if (t.parentElement !== parent) parent.appendChild(t);
     t.textContent = el.getAttribute('data-tip');
     t.style.display = 'block';
     var r = el.getBoundingClientRect();
