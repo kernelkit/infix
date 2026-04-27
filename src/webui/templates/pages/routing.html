@@ -6,7 +6,13 @@
 {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
 
 <div class="info-card">
-  <div class="card-header">Routing Table</div>
+  <div class="card-header">Routing Table
+    <a href="/configure/tree?path=/ietf-routing:routing"
+       hx-get="/configure/tree?path=/ietf-routing:routing"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
   {{if .Routes}}
   <div class="data-table-wrap">
     <table class="data-table">

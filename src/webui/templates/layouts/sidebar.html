@@ -53,18 +53,7 @@
             Routing
           </a>
         </li>
-        {{if and .Capabilities (.Capabilities.Has "wifi")}}
-        <li>
-          <a href="/wifi"
-             hx-get="/wifi"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "wifi"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/wifi.svg')"></span>
-            WiFi
-          </a>
-        </li>
-        {{end}}
+
       </ul>
 
       <div class="nav-section-label">Security</div>

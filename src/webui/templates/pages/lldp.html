@@ -9,7 +9,13 @@
 
 {{if .Neighbors}}
 <section class="info-card">
-  <div class="card-header">LLDP Neighbors</div>
+  <div class="card-header">LLDP Neighbors
+    <a href="/configure/tree?path=/ieee802-dot1ab-lldp:lldp"
+       hx-get="/configure/tree?path=/ieee802-dot1ab-lldp:lldp"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
   <div class="data-table-wrap">
     <table class="data-table">
       <thead>
@@ -39,7 +45,13 @@
 </section>
 {{else if not .Error}}
 <section class="info-card">
-  <div class="card-header">LLDP Neighbors</div>
+  <div class="card-header">LLDP Neighbors
+    <a href="/configure/tree?path=/ieee802-dot1ab-lldp:lldp"
+       hx-get="/configure/tree?path=/ieee802-dot1ab-lldp:lldp"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
   <p class="empty-message">No LLDP neighbors discovered.</p>
 </section>
 {{end}}

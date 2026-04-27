@@ -93,8 +93,9 @@ type treeNodeData struct {
 
 type yangTreePageData struct {
 	PageData
-	Nodes   []*treeNodeData
-	Loading bool
+	Nodes       []*treeNodeData
+	Loading     bool
+	InitialPath string // non-empty: auto-load this node in the right pane on page load
 }
 
 // nodeDetailData is the template data for the yang-node-detail fragment.
@@ -177,10 +178,12 @@ type leafGroupItem struct {
 	LeafrefValues []string
 }
 
-// Overview serves GET /configure/tree.
+// Overview serves GET /configure/tree and GET /configure/tree?path=<restconf-path>.
+// When path is set the right pane auto-loads the node on page load.
 func (h *TreeHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := yangTreePageData{
-		PageData: newPageData(r, "configure-tree", "Advanced Configuration"),
+		PageData:    newPageData(r, "configure-tree", "Advanced Configuration"),
+		InitialPath: r.URL.Query().Get("path"),
 	}
 
 	mgr := h.Cache.Manager()

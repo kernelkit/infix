@@ -2680,6 +2680,7 @@ details[open].yt-leaf-item .yt-leaf-name::before { transform: rotate(90deg); }
 /* Back button in card header when navigated from a parent list */
 .card-header { display: flex; align-items: center; gap: 0.5rem; }
 .yt-back-btn { margin-right: 0.25rem; flex-shrink: 0; }
+.card-header-action { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
 
 
 /* Inline list / flat container sections inside a leaf-group card */

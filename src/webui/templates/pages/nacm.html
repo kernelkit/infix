@@ -11,7 +11,13 @@
 
   {{if not .Error}}
   <div class="info-card">
-    <div class="card-header">NACM Settings</div>
+    <div class="card-header">NACM Settings
+      <a href="/configure/tree?path=/ietf-netconf-acm:nacm"
+         hx-get="/configure/tree?path=/ietf-netconf-acm:nacm"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+    </div>
     <table class="info-table">
       <tr><th>Enabled</th><td>{{.Enabled}}</td></tr>
       <tr><th>Default read</th><td>{{.ReadDefault}}</td></tr>
