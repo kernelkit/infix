@@ -38,7 +38,15 @@ type NLMonitor struct {
 	fc         iface.FileChecker
 
 	// initDone is closed after the first initialDump completes.
-	initDone chan struct{}
+	// initDoneOnce ensures it is only closed once across restarts.
+	initDone     chan struct{}
+	initDoneOnce sync.Once
+
+	// redumpCh is written by the errorCallback goroutine to ask the
+	// event loop goroutine to run initialDump.  Buffer of 1 so signals
+	// are coalesced — if a re-dump is already pending there is no point
+	// queuing another one.
+	redumpCh chan struct{}
 
 	// staging holds raw ip-json data used as input to iface.Transform().
 	// Protected by mu.
@@ -65,6 +73,7 @@ func New(linkBatch, addrBatch *ipbatch.IPBatch, brBatch *bridgebatch.BridgeBatch
 		fc:             fc,
 		log:            log,
 		initDone:       make(chan struct{}),
+		redumpCh:       make(chan struct{}, 1),
 		fdb:            make(map[string]json.RawMessage),
 		mdb:            make(map[string]json.RawMessage),
 		ethernet:       make(map[string]json.RawMessage),
@@ -115,6 +124,18 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 		if err == nil {
 			return
 		}
+		if errors.Is(err, syscall.ENOBUFS) {
+			// Kernel dropped events due to socket buffer overflow.
+			// Signal the event loop goroutine to do a full re-dump so
+			// that the snapshot is taken in the same goroutine as event
+			// processing — avoiding a race with concurrent refreshInterface
+			// calls that could otherwise be overwritten by the re-dump.
+			select {
+			case m.redumpCh <- struct{}{}:
+			default: // re-dump already pending
+			}
+			return
+		}
 		m.log.Error("netlink subscription error", "err", err)
 		cancel()
 	}
@@ -125,17 +146,23 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 	mdbCh := make(chan struct{}, 32)
 
 	if err := netlink.LinkSubscribeWithOptions(linkCh, done, netlink.LinkSubscribeOptions{
-		ErrorCallback: errorCallback,
+		ErrorCallback:          errorCallback,
+		ReceiveBufferSize:      32 * 1024 * 1024,
+		ReceiveBufferForceSize: true,
 	}); err != nil {
 		return fmt.Errorf("subscribe link updates: %w", err)
 	}
 	if err := netlink.AddrSubscribeWithOptions(addrCh, done, netlink.AddrSubscribeOptions{
-		ErrorCallback: errorCallback,
+		ErrorCallback:          errorCallback,
+		ReceiveBufferSize:      32 * 1024 * 1024,
+		ReceiveBufferForceSize: true,
 	}); err != nil {
 		return fmt.Errorf("subscribe addr updates: %w", err)
 	}
 	if err := netlink.NeighSubscribeWithOptions(neighCh, done, netlink.NeighSubscribeOptions{
-		ErrorCallback: errorCallback,
+		ErrorCallback:          errorCallback,
+		ReceiveBufferSize:      32 * 1024 * 1024,
+		ReceiveBufferForceSize: true,
 	}); err != nil {
 		return fmt.Errorf("subscribe neigh updates: %w", err)
 	}
@@ -146,7 +173,7 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 	if err := m.initialDump(); err != nil {
 		m.log.Error("initial dump failed", "err", err)
 	}
-	close(m.initDone)
+	m.initDoneOnce.Do(func() { close(m.initDone) })
 
 	for {
 		select {
@@ -175,6 +202,12 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 				return fmt.Errorf("bridge mdb update channel closed")
 			}
 			m.handleMDBUpdate()
+		case <-m.redumpCh:
+			m.log.Warn("re-dumping all interfaces")
+			if err := m.initialDump(); err != nil {
+				m.log.Error("re-dump failed, will retry", "err", err)
+				m.requestRedump()
+			}
 		}
 	}
 }
@@ -213,6 +246,11 @@ func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) {
 		return
 	}
 
+	if update.Header.Type == syscall.RTM_DELLINK {
+		m.removeInterface(name)
+		return
+	}
+
 	m.refreshInterface(name)
 	if m.ethRefresh != nil {
 		m.ethRefresh(name)
@@ -229,6 +267,9 @@ func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) {
 	m.log.Debug("handleAddrUpdate", "ifname", ifname)
 	raw, err := m.queryAddr("addr show dev " + ifname)
 	if err != nil {
+		if errors.Is(err, ipbatch.ErrBatchDead) {
+			m.requestRedump()
+		}
 		m.log.Error("handleAddrUpdate queryAddr failed", "ifname", ifname, "err", err)
 		return
 	}
@@ -255,6 +296,9 @@ func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) {
 
 		raw, err := m.queryBridge("fdb show br " + bridgeName)
 		if err != nil {
+			if errors.Is(err, bridgebatch.ErrBatchDead) {
+				m.requestRedump()
+			}
 			return
 		}
 
@@ -283,9 +327,37 @@ func (m *NLMonitor) handleMDBUpdate() {
 	m.rebuild()
 }
 
+// removeInterface purges all staged data for the named interface and
+// triggers a rebuild.  Used for RTM_DELLINK events where querying the
+// device via ip-batch would produce no output and hang the batch process.
+func (m *NLMonitor) removeInterface(name string) {
+	m.mu.Lock()
+	m.links = replaceByIfName(m.links, name, json.RawMessage(`[]`))
+	m.addrs = replaceByIfName(m.addrs, name, json.RawMessage(`[]`))
+	delete(m.fdb, name)
+	delete(m.mdb, name)
+	delete(m.ethernet, name)
+	delete(m.wifi, name)
+	delete(m.lastOperStatus, name)
+	m.mu.Unlock()
+
+	m.log.Debug("removeInterface", "ifname", name)
+	m.rebuild()
+}
+
+func (m *NLMonitor) requestRedump() {
+	select {
+	case m.redumpCh <- struct{}{}:
+	default:
+	}
+}
+
 func (m *NLMonitor) refreshInterface(name string) {
 	linkRaw, err := m.queryLink("link show dev " + name)
 	if err != nil {
+		if errors.Is(err, ipbatch.ErrBatchDead) {
+			m.requestRedump()
+		}
 		return
 	}
 
@@ -319,10 +391,9 @@ func (m *NLMonitor) rebuild() {
 	wfi := copyStringMap(m.wifi)
 	fdb := copyStringMap(m.fdb)
 	mdb := copyStringMap(m.mdb)
-	m.mu.Unlock()
-
 	doc = mergeAugments(doc, eth, wfi, fdb, mdb)
 	m.tree.Set(treeKey, doc)
+	m.mu.Unlock()
 }
 
 // mergeAugments adds ethernet, wifi, and bridge data into the
