@@ -9,6 +9,10 @@
 // Query.  Address queries must therefore use a separate IPBatch instance
 // that omits -s (use WithDetails only).
 //
+// IMPORTANT: `ip -force -batch -` produces NO stdout for commands that
+// fail (e.g. "link show dev <nonexistent>").  Query uses a read timeout
+// to detect this and kills the subprocess so restartLoop can recover.
+//
 // On subprocess death the manager enters a dead state and attempts
 // automatic restart with exponential backoff.
 package ipbatch
@@ -35,6 +39,7 @@ var ErrBatchDead = errors.New("ip batch process is dead")
 const (
 	canaryCommand = "link show lo"
 
+	queryTimeout     = 5 * time.Second
 	reconnectInitial = 100 * time.Millisecond
 	reconnectMax     = 30 * time.Second
 	reconnectFactor  = 2.0
@@ -53,7 +58,7 @@ func WithDetails() Option { return func(b *IPBatch) { b.details = true } }
 type IPBatch struct {
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
-	stdout *bufio.Scanner
+	lines  chan []byte
 	stderr io.ReadCloser
 	mu     sync.Mutex // serializes queries
 	alive  atomic.Bool
@@ -114,18 +119,31 @@ func (b *IPBatch) start() error {
 	b.mu.Lock()
 	b.cmd = cmd
 	b.stdin = stdin
-	b.stdout = bufio.NewScanner(stdout)
-	b.stdout.Buffer(make([]byte, 0, 4*1024*1024), 4*1024*1024) // 4 MiB max line
+	b.lines = make(chan []byte, 8)
 	b.stderr = stderr
 	b.alive.Store(true)
 	b.mu.Unlock()
+	go b.readLines(stdout)
 	go b.drainStderr()
 	return nil
 }
 
+func (b *IPBatch) readLines(r io.Reader) {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 4*1024*1024), 4*1024*1024)
+	for scanner.Scan() {
+		line := make([]byte, len(scanner.Bytes()))
+		copy(line, scanner.Bytes())
+		b.lines <- line
+	}
+	b.alive.Store(false)
+}
+
 // Query sends a command to the ip batch process and returns the JSON
 // response.  Commands are newline-terminated (e.g. "link show dev eth0").
-// Each command produces exactly one line of JSON array output.
+// Each command produces exactly one line of JSON array output.  If the
+// subprocess produces no output (e.g. querying a non-existent device),
+// Query times out and kills the subprocess for recovery.
 func (b *IPBatch) Query(command string) (json.RawMessage, error) {
 	if !b.alive.Load() {
 		return nil, ErrBatchDead
@@ -141,19 +159,23 @@ func (b *IPBatch) Query(command string) (json.RawMessage, error) {
 		b.alive.Store(false)
 		return nil, fmt.Errorf("write command: %w", err)
 	}
-	if !b.stdout.Scan() {
-		b.alive.Store(false)
-		if err := b.stdout.Err(); err != nil {
-			return nil, fmt.Errorf("read response: %w", err)
+
+	select {
+	case line, ok := <-b.lines:
+		if !ok {
+			b.alive.Store(false)
+			return nil, fmt.Errorf("ip batch process exited")
 		}
-		return nil, fmt.Errorf("ip batch process exited")
+		b.log.Debug("ipbatch query", "cmd", command, "respLen", len(line))
+		return json.RawMessage(line), nil
+	case <-time.After(queryTimeout):
+		b.log.Warn("ip batch query timeout, killing subprocess", "cmd", command)
+		b.alive.Store(false)
+		if b.cmd != nil && b.cmd.Process != nil {
+			b.cmd.Process.Kill()
+		}
+		return nil, fmt.Errorf("timeout waiting for response to: %s", command)
 	}
-	raw := make([]byte, len(b.stdout.Bytes()))
-	copy(raw, b.stdout.Bytes())
-
-	b.log.Debug("ipbatch query", "cmd", command, "respLen", len(raw))
-
-	return json.RawMessage(raw), nil
 }
 
 // Close terminates the subprocess and cancels the restart loop.
@@ -198,8 +220,6 @@ func (b *IPBatch) restartLoop() {
 		}
 
 		if b.alive.Load() {
-			// Wait for death or context cancellation.
-			// Poll periodically since there's no notification channel.
 			select {
 			case <-b.ctx.Done():
 				return
@@ -215,7 +235,6 @@ func (b *IPBatch) restartLoop() {
 		case <-time.After(delay):
 		}
 
-		// Kill old process if lingering.
 		b.mu.Lock()
 		if b.cmd != nil && b.cmd.Process != nil {
 			b.cmd.Process.Kill()
@@ -231,7 +250,6 @@ func (b *IPBatch) restartLoop() {
 			continue
 		}
 
-		// Canary query to validate the new process.
 		if _, err := b.Query(canaryCommand); err != nil {
 			b.log.Warn("ip batch: canary query failed", "err", err)
 			b.alive.Store(false)
