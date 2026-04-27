@@ -9,7 +9,13 @@
 
 {{if .DHCP}}
 <section class="info-card">
-  <div class="card-header">DHCP Server</div>
+  <div class="card-header">DHCP Server
+    <a href="/configure/tree?path=/infix-dhcp-server:dhcp-server"
+       hx-get="/configure/tree?path=/infix-dhcp-server:dhcp-server"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
   {{if .DHCP.Enabled}}
   <table class="info-table">
     <tr>

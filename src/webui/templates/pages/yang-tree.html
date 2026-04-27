@@ -37,7 +37,13 @@
     </div>
 
     {{/* ── Right pane: node detail ────────────────────────────  */}}
-    <div class="yang-detail-pane" id="yang-detail">
+    <div class="yang-detail-pane" id="yang-detail"
+         {{if .InitialPath}}
+         hx-get="/configure/tree/node?path={{.InitialPath | urlquery}}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         {{end}}>
+      {{if not .InitialPath}}
       <div class="yang-detail-empty">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
@@ -47,6 +53,7 @@
         </svg>
         <p>Select a node to inspect.</p>
       </div>
+      {{end}}
     </div>
 
   </div>
