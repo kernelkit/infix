@@ -2158,7 +2158,7 @@ select.cfg-input {
 
 /* Editable table rows */
 .cfg-table td { padding: 0.45rem 0.75rem; vertical-align: middle; }
-.cfg-table td:last-child { width: 3rem; text-align: center; }
+.cfg-table > tbody > tr > td:last-child { width: 3rem; text-align: center; }
 /* Leading nav-chevron column for complex (drill-down) list rows */
 .yt-nav-col { width: 1.5rem; padding: 0.25rem !important; text-align: center; color: var(--fg-muted); }
 .btn-icon {

@@ -112,6 +112,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	cfgRoutesTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-routes.html")
+	if err != nil {
+		return nil, err
+	}
 	yangTreeTmpl, err := template.ParseFS(templateFS,
 		"layouts/*.html",
 		"fragments/configure-toolbar.html",
@@ -129,7 +133,6 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-
 	login := &auth.LoginHandler{
 		Store:    store,
 		RC:       rc,
@@ -182,6 +185,7 @@ func New(
 	cfg := &handlers.ConfigureHandler{RC: rc}
 	cfgSys := &handlers.ConfigureSystemHandler{Template: cfgSysTmpl, RC: rc, Schema: schemaCache}
 	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc, Schema: schemaCache}
+	cfgRoutes := &handlers.ConfigureRoutesHandler{Template: cfgRoutesTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
 	treeH := &handlers.TreeHandler{
@@ -250,6 +254,10 @@ func New(
 	mux.HandleFunc("PUT /configure/system/ntp",           cfgSys.SaveNTP)
 	mux.HandleFunc("PUT /configure/system/dns",           cfgSys.SaveDNS)
 	mux.HandleFunc("POST /configure/system/preferences",  cfgSys.SavePreferences)
+	mux.HandleFunc("GET /configure/routes",               cfgRoutes.Overview)
+	mux.HandleFunc("POST /configure/routes",              cfgRoutes.AddRoute)
+	mux.HandleFunc("PUT /configure/routes",               cfgRoutes.UpdateRoute)
+	mux.HandleFunc("DELETE /configure/routes",            cfgRoutes.DeleteRoute)
 	mux.HandleFunc("GET /configure/users",                cfgUsers.Overview)
 	mux.HandleFunc("POST /configure/users",               cfgUsers.AddUser)
 	mux.HandleFunc("DELETE /configure/users/{name}",      cfgUsers.DeleteUser)
