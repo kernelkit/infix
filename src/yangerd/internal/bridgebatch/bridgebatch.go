@@ -2,6 +2,10 @@
 // subprocess for querying bridge FDB, VLAN, MDB, and STP state.
 // Identical design to ipbatch: mutex-serialized queries, dead/alive
 // state management, and exponential backoff restart.
+//
+// Like ipbatch, `bridge -batch -` produces NO stdout for commands
+// that fail.  Query uses a read timeout to detect this and kills
+// the subprocess so restartLoop can recover.
 package bridgebatch
 
 import (
@@ -25,6 +29,7 @@ var ErrBatchDead = errors.New("bridge batch process is dead")
 const (
 	canaryCommand = "vlan show"
 
+	queryTimeout     = 5 * time.Second
 	reconnectInitial = 100 * time.Millisecond
 	reconnectMax     = 30 * time.Second
 	reconnectFactor  = 2.0
@@ -34,7 +39,7 @@ const (
 type BridgeBatch struct {
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
-	stdout *bufio.Scanner
+	lines  chan []byte
 	stderr io.ReadCloser
 	mu     sync.Mutex
 	alive  atomic.Bool
@@ -79,13 +84,24 @@ func (b *BridgeBatch) start() error {
 	b.mu.Lock()
 	b.cmd = cmd
 	b.stdin = stdin
-	b.stdout = bufio.NewScanner(stdout)
-	b.stdout.Buffer(make([]byte, 0, 4*1024*1024), 4*1024*1024)
+	b.lines = make(chan []byte, 8)
 	b.stderr = stderr
 	b.alive.Store(true)
 	b.mu.Unlock()
+	go b.readLines(stdout)
 	go b.drainStderr()
 	return nil
+}
+
+func (b *BridgeBatch) readLines(r io.Reader) {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 4*1024*1024), 4*1024*1024)
+	for scanner.Scan() {
+		line := make([]byte, len(scanner.Bytes()))
+		copy(line, scanner.Bytes())
+		b.lines <- line
+	}
+	b.alive.Store(false)
 }
 
 // Query sends a command to the bridge batch process and returns the
@@ -105,16 +121,22 @@ func (b *BridgeBatch) Query(command string) (json.RawMessage, error) {
 		b.alive.Store(false)
 		return nil, fmt.Errorf("write command: %w", err)
 	}
-	if !b.stdout.Scan() {
-		b.alive.Store(false)
-		if err := b.stdout.Err(); err != nil {
-			return nil, fmt.Errorf("read response: %w", err)
+
+	select {
+	case line, ok := <-b.lines:
+		if !ok {
+			b.alive.Store(false)
+			return nil, fmt.Errorf("bridge batch process exited")
 		}
-		return nil, fmt.Errorf("bridge batch process exited")
+		return json.RawMessage(line), nil
+	case <-time.After(queryTimeout):
+		b.log.Warn("bridge batch query timeout, killing subprocess", "cmd", command)
+		b.alive.Store(false)
+		if b.cmd != nil && b.cmd.Process != nil {
+			b.cmd.Process.Kill()
+		}
+		return nil, fmt.Errorf("timeout waiting for response to: %s", command)
 	}
-	raw := make([]byte, len(b.stdout.Bytes()))
-	copy(raw, b.stdout.Bytes())
-	return json.RawMessage(raw), nil
 }
 
 // Close terminates the subprocess and cancels the restart loop.
