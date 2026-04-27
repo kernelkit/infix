@@ -1,0 +1,78 @@
+From 6337586eb2f26cf011d21dc3065c02f0d022ceae Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 6 Apr 2026 14:16:11 +0200
+Subject: [PATCH 46/48] arm64: dts: mediatek: bananapi-bpi-r4: enable SFP+
+ ports and WPS button
+
+Enable the SFP+ cages wired to gmac1 and gmac2.  The USXGMII PCS nodes
+and xfi_tphy SerDes are wired up in mt7988a.dtsi; only status = "okay"
+was missing.
+
+gmac2 (sfp1, WAN cage) is common to all R4 variants and is enabled in
+mt7988a-bananapi-bpi-r4.dtsi.  gmac1 (sfp2, LAN cage) is present only
+on the standard R4 (2x SFP+) and is enabled here in the variant .dts.
+The 2g5 variant uses gmac1 for the internal 2.5G PHY instead.
+
+Also add a gpio-keys node for the WPS/factory button on GPIO14 (active-low)
+reporting KEY_WPS_BUTTON.  This is the physical button labeled WPS/Factory
+on the board silkscreen; GPIO14 is connected to it in the final hardware
+revision of the BPI-R4.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dts   |  1 +
+ .../boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dtsi  | 13 ++++++++++++-
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dts b/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dts
+index 4b3796ba82e3..499f0c91c213 100644
+--- a/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dts
++++ b/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dts
+@@ -27,6 +27,7 @@ &gmac1 {
+ 	managed = "in-band-status";
+ 	phy-mode = "usxgmii";
+ 	sfp = <&sfp2>;
++	status = "okay";
+ };
+ 
+ &pca9545 {
+diff --git a/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dtsi b/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dtsi
+index 0ff69dae45d3..2a904a76f3fe 100644
+--- a/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dtsi
++++ b/arch/arm64/boot/dts/mediatek/mt7988a-bananapi-bpi-r4.dtsi
+@@ -3,9 +3,9 @@
+ /dts-v1/;
+ 
+ #include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
+ #include <dt-bindings/leds/common.h>
+ #include <dt-bindings/regulator/richtek,rt5190a-regulator.h>
+-#include <dt-bindings/leds/common.h>
+ 
+ #include "mt7988a.dtsi"
+ 
+@@ -29,6 +29,16 @@ fan: pwm-fan {
+ 		status = "okay";
+ 	};
+ 
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		wps {
++			label = "wps";
++			gpios = <&pio 14 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_WPS_BUTTON>;
++		};
++	};
++
+ 	gpio-leds {
+ 		compatible = "gpio-leds";
+ 
+@@ -152,6 +162,7 @@ &gmac2 {
+ 	managed = "in-band-status";
+ 	phy-mode = "usxgmii";
+ 	sfp = <&sfp1>;
++	status = "okay";
+ };
+ 
+ &gsw_phy0 {

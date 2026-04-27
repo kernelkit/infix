@@ -1,0 +1,59 @@
+From 3d24f34e92e4ed3da2b945b8ca7884a0a05f4cff Mon Sep 17 00:00:00 2001
+From: Dave Stevenson <dave.stevenson@raspberrypi.com>
+Date: Fri, 5 Apr 2024 17:51:55 +0100
+Subject: [PATCH 36/48] drm/vc4: Ensure DSI is enabled for FIFO resets
+
+The block must be enabled for the FIFO resets to be actioned,
+so ensure this is the case.
+
+Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
+---
+ drivers/gpu/drm/vc4/vc4_dsi.c | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/gpu/drm/vc4/vc4_dsi.c b/drivers/gpu/drm/vc4/vc4_dsi.c
+index 1eba498d276f..de963edefb76 100644
+--- a/drivers/gpu/drm/vc4/vc4_dsi.c
++++ b/drivers/gpu/drm/vc4/vc4_dsi.c
+@@ -400,7 +400,8 @@
+ # define DSI1_CTRL_DISABLE_DISP_ECCC	BIT(1)
+ # define DSI0_CTRL_CTRL0		BIT(0)
+ # define DSI1_CTRL_EN			BIT(0)
+-# define DSI0_CTRL_RESET_FIFOS		(DSI_CTRL_CLR_LDF | \
++# define DSI0_CTRL_RESET_FIFOS		(DSI0_CTRL_CTRL0 | \
++					 DSI_CTRL_CLR_LDF | \
+ 					 DSI0_CTRL_CLR_PBCF | \
+ 					 DSI0_CTRL_CLR_CPBCF |	\
+ 					 DSI0_CTRL_CLR_PDF | \
+@@ -941,12 +942,17 @@ static void vc4_dsi_bridge_pre_enable(struct drm_bridge *bridge,
+ 
+ 	hs_clock = clk_get_rate(dsi->pll_phy_clock);
+ 
+-	/* Reset the DSI and all its fifos. */
++	/*
++	 * Reset the DSI and all its fifos. The block must be enabled for the
++	 * FIFO resets to trigger.
++	 */
+ 	DSI_PORT_WRITE(CTRL,
+ 		       DSI_CTRL_SOFT_RESET_CFG |
+ 		       DSI_PORT_BIT(CTRL_RESET_FIFOS));
+ 
+ 	DSI_PORT_WRITE(CTRL,
++		       ((dsi->variant->port == 0) ?
++					DSI0_CTRL_CTRL0 : DSI1_CTRL_EN) |
+ 		       DSI_CTRL_HSDT_EOT_DISABLE |
+ 		       DSI_CTRL_RX_LPDT_EOT_DISABLE);
+ 
+@@ -1114,12 +1120,6 @@ static void vc4_dsi_bridge_pre_enable(struct drm_bridge *bridge,
+ 				     DSI_DISP1_PFORMAT) |
+ 		       DSI_DISP1_ENABLE);
+ 
+-	/* Ungate the block. */
+-	if (dsi->variant->port == 0)
+-		DSI_PORT_WRITE(CTRL, DSI_PORT_READ(CTRL) | DSI0_CTRL_CTRL0);
+-	else
+-		DSI_PORT_WRITE(CTRL, DSI_PORT_READ(CTRL) | DSI1_CTRL_EN);
+-
+ 	/* Bring AFE out of reset. */
+ 	DSI_PORT_WRITE(PHY_AFEC0,
+ 		       DSI_PORT_READ(PHY_AFEC0) &
