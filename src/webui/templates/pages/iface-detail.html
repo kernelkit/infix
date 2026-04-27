@@ -10,7 +10,14 @@
 
 <div class="info-grid">
   <section class="info-card">
-    <div class="card-header">Interface Info</div>
+    <div class="card-header">Interface Info
+      {{$cfgPath := printf "/ietf-interfaces:interfaces/interface=%s" .Name}}
+      <a href="/configure/tree?path={{$cfgPath | urlquery}}"
+         hx-get="/configure/tree?path={{$cfgPath | urlquery}}"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+    </div>
     <table class="info-table">
       <tr><th>Name</th><td>{{.Name}}</td></tr>
       <tr><th>Type</th><td>{{.Type}}</td></tr>

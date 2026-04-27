@@ -48,14 +48,7 @@
                     class="user-shell-form">
                 <select class="cfg-input" name="shell">
                   {{$shell := .Shell}}
-                  {{if $.ShellOptions}}
                   {{range $.ShellOptions}}<option value="{{.Value}}" {{if or (eq .Value $shell) (and (eq $shell "") .IsDefault)}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>{{end}}
-                  {{else}}
-                  <option value="infix-system:clish" {{if eq $shell "infix-system:clish"}}selected{{end}}>clish</option>
-                  <option value="infix-system:bash"  {{if eq $shell "infix-system:bash" }}selected{{end}}>bash</option>
-                  <option value="infix-system:sh"    {{if eq $shell "infix-system:sh"   }}selected{{end}}>sh</option>
-                  <option value="infix-system:false" {{if eq $shell "infix-system:false"}}selected{{end}}>false</option>
-                  {{end}}
                 </select>
                 <button class="btn btn-primary btn-sm" type="submit">Save</button>
                 <span class="cfg-save-status"></span>
@@ -168,14 +161,7 @@
                 <input class="cfg-input" type="password" name="password" required
                        autocomplete="new-password" placeholder="Password">
                 <select class="cfg-input" name="shell">
-                  {{if .ShellOptions}}
                   {{range .ShellOptions}}<option value="{{.Value}}" {{if .IsDefault}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>{{end}}
-                  {{else}}
-                  <option value="infix-system:clish">clish</option>
-                  <option value="infix-system:bash">bash</option>
-                  <option value="infix-system:sh">sh</option>
-                  <option value="infix-system:false">false</option>
-                  {{end}}
                 </select>
                 <button class="btn btn-primary btn-sm" type="submit">Add</button>
                 <button type="button" class="btn btn-sm" data-hide="add-user-row">Cancel</button>

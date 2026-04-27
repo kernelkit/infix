@@ -20,12 +20,29 @@ type firewallWrapper struct {
 }
 
 type firewallJSON struct {
-	Enabled  *yangBool    `json:"enabled"` // YANG default: true; nil means enabled
-	Default  string       `json:"default"`
-	Logging  string       `json:"logging"`
-	Lockdown yangBool     `json:"lockdown"`
-	Zone     []zoneJSON   `json:"zone"`
-	Policy   []policyJSON `json:"policy"`
+	Enabled  *yangBool     `json:"enabled"` // YANG default: true; nil means enabled
+	Default  string        `json:"default"`
+	Logging  string        `json:"logging"`
+	Lockdown yangBool      `json:"lockdown"`
+	Zone     []zoneJSON    `json:"zone"`
+	Policy   []policyJSON  `json:"policy"`
+	Service  []fwServiceJSON `json:"service"`
+}
+
+// fwServiceJSON models a user-defined firewall service (port + protocol bundle).
+// Custom services appear in the zone-service dropdown alongside the YANG-defined
+// well-known identities (ssh, http, …).
+type fwServiceJSON struct {
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	Destination string              `json:"destination"`
+	Port        []fwServicePortJSON `json:"port"`
+}
+
+type fwServicePortJSON struct {
+	Lower yangInt64 `json:"lower"`
+	Upper yangInt64 `json:"upper"`
+	Proto string    `json:"proto"`
 }
 
 type zoneJSON struct {
@@ -40,10 +57,15 @@ type zoneJSON struct {
 }
 
 type portForwardJSON struct {
-	Port     string `json:"port"`
-	Protocol string `json:"protocol"`
-	ToAddr   string `json:"to-addr"`
-	ToPort   string `json:"to-port"`
+	Lower yangInt64       `json:"lower"`
+	Upper yangInt64       `json:"upper"`
+	Proto string          `json:"proto"`
+	To    *portForwardTo  `json:"to"`
+}
+
+type portForwardTo struct {
+	Addr string    `json:"addr"`
+	Port yangInt64 `json:"port"`
 }
 
 type policyJSON struct {

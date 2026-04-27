@@ -144,10 +144,24 @@
         </li>
       </ul>
 
+      <div class="nav-section-label">Advanced</div>
+      <ul class="nav-group-items">
+        <li>
+          <a href="/status/tree"
+             hx-get="/status/tree"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "status-tree"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/status-tree.svg')"></span>
+            Advanced
+          </a>
+        </li>
+      </ul>
+
     </details>
 
     <details class="nav-group-top" id="nav-configure"
-             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
+             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
       <summary class="nav-group-summary-top">Configure</summary>
       <ul class="nav-group-items">
         <li>
@@ -158,6 +172,16 @@
              class="nav-link {{if eq .ActivePage "configure-system"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/system.svg')"></span>
             System
+          </a>
+        </li>
+        <li>
+          <a href="/configure/firewall"
+             hx-get="/configure/firewall"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-firewall"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
+            Firewall
           </a>
         </li>
         <li>

@@ -10,8 +10,17 @@
   <div class="alert alert-success">Saved to candidate</div>
   {{end}}
 
-  {{/* ── Edit form — only for writable leaves ──────────────────────── */}}
-  {{if and .Config (or (eq .Kind "leaf") (eq .Kind "leaf-list"))}}
+  {{/* ── Read-only value display for status tree ──────────────────── */}}
+  {{if and .ReadOnly (or (eq .Kind "leaf") (eq .Kind "leaf-list"))}}
+  <div class="cfg-card-footer">
+    <span class="yt-value-label">
+      {{if .CurrentValue}}{{.CurrentValue}}{{else}}<span class="text-muted">—</span>{{end}}
+    </span>
+  </div>
+  {{end}}
+
+  {{/* ── Edit form — only for writable leaves in non-ReadOnly mode ── */}}
+  {{if and (not .ReadOnly) .Config (or (eq .Kind "leaf") (eq .Kind "leaf-list"))}}
   <form class="yt-edit-form"
         hx-put="/configure/tree/node?path={{.Path | urlquery}}"
         hx-target="#yang-detail"

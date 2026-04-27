@@ -7,10 +7,12 @@
   {{if .SavedOK}}<div class="alert alert-success">Saved to candidate</div>{{end}}
   <div class="data-table-wrap">
     <table class="data-table">
+      {{$ro := .ReadOnly}}
+      {{$nodeBase := "/configure/tree"}}{{if $ro}}{{$nodeBase = "/status/tree"}}{{end}}
       <thead>
         <tr>
           {{range .Columns}}<th>{{.DisplayName}}</th>{{end}}
-          <th></th>
+          {{if not $ro}}<th></th>{{end}}
         </tr>
       </thead>
       <tbody>
@@ -18,10 +20,11 @@
         {{$row := .}}
         <tr class="yt-list-row"
             data-yang-path="{{.InstancePath}}"
-            hx-get="/configure/tree/node?path={{.InstancePath | urlquery}}"
+            hx-get="{{$nodeBase}}/node?path={{.InstancePath | urlquery}}"
             hx-target="#yang-detail"
             hx-swap="innerHTML">
           {{range $.Columns}}<td>{{index $row.Values .Name}}</td>{{end}}
+          {{if not $ro}}
           <td class="cfg-action-col">
             <button type="button"
                     class="btn-icon btn-icon-danger yt-sp"
@@ -38,12 +41,14 @@
               </svg>
             </button>
           </td>
+          {{end}}
         </tr>
         {{end}}
         {{if not .Rows}}
         <tr><td class="yt-table-empty" colspan="99">No entries</td></tr>
         {{end}}
-        {{/* Hidden inline add row */}}
+        {{/* Hidden inline add row — config mode only */}}
+        {{if not $ro}}
         <tr id="yt-list-add-row" hidden>
           <td colspan="99" class="key-detail-cell">
             <form class="user-add-inline"
@@ -88,12 +93,15 @@
             </form>
           </td>
         </tr>
+        {{end}}
       </tbody>
     </table>
   </div>
+  {{if not $ro}}
   <div class="cfg-card-footer">
     <button class="btn btn-secondary" data-show="yt-list-add-row">+ Add</button>
   </div>
+  {{end}}
 </div>
 {{end}}
 

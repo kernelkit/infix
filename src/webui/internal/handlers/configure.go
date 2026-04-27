@@ -80,6 +80,23 @@ func (h *ConfigureHandler) ApplyAndSave(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// DeleteLeaf removes a single leaf from the candidate datastore so the YANG
+// default takes effect. Used by curated-page ↺ reset buttons.
+// DELETE /configure/leaf?path=...&redirect=...
+func (h *ConfigureHandler) DeleteLeaf(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	redirect := r.URL.Query().Get("redirect")
+	if path == "" || redirect == "" {
+		http.Error(w, "path and redirect required", http.StatusBadRequest)
+		return
+	}
+	if err := h.RC.Delete(r.Context(), candidatePath+path); err != nil {
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "Reset to default", redirect)
+}
+
 // Save copies running → startup, persisting the active configuration.
 // Clears the cfg-unsaved cookie and does a full-page refresh so the banner disappears.
 // POST /configure/save

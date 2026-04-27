@@ -6,7 +6,7 @@
 <div class="configure-page">
   {{if .Loading}}
   <div class="alert alert-info"
-       hx-get="/configure/tree"
+       hx-get="{{.TreeBase}}"
        hx-trigger="every 3s"
        hx-target="#content"
        hx-swap="innerHTML">
@@ -17,7 +17,7 @@
 
     {{/* ── Left pane: navigation tree ───────────────────────── */}}
     <div class="yang-tree-pane info-card">
-      <div class="card-header">Advanced</div>
+      <div class="card-header">{{if .ReadOnly}}Status{{else}}Advanced{{end}}</div>
       <ul class="yang-tree">
         <li>
           <details class="yt-node" open>
@@ -39,7 +39,7 @@
     {{/* ── Right pane: node detail ────────────────────────────  */}}
     <div class="yang-detail-pane" id="yang-detail"
          {{if .InitialPath}}
-         hx-get="/configure/tree/node?path={{.InitialPath | urlquery}}"
+         hx-get="{{.TreeBase}}/node?path={{.InitialPath | urlquery}}"
          hx-trigger="load"
          hx-swap="innerHTML"
          {{end}}>
@@ -59,6 +59,6 @@
   </div>
   {{end}}
 
-  {{template "configure-toolbar" .}}
+  {{if not .ReadOnly}}{{template "configure-toolbar" .}}{{end}}
 </div>
 {{end}}
