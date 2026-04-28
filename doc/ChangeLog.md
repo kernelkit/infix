@@ -23,6 +23,7 @@ All notable changes to the project are documented in this file.
   `92.2` instead of `92.246.137.39`
 - Fix #1466: `show container` showing no output for containers whose command
   line includes environment variables
+- Fix #1439: changing hostname does not regenerate DHCP client conf until restart
 
 [BPI-R4]: https://docs.banana-pi.org/en/BPI-R4/BananaPi_BPI-R4
 
