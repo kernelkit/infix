@@ -154,7 +154,7 @@ setenv bootcmd_net \
 setenv bootcmd \
   'setenv bootpart 2; setenv bootslot primary; setenv auxpart 1; \
    if ext4load mmc 0:$auxpart $loadaddr /uboot.env; then \
-     env import -b $loadaddr $filesize BOOT_ORDER; \
+     env import -c $loadaddr $filesize BOOT_ORDER; \
    fi; \
    if test "$BOOT_ORDER" = "secondary primary" || \
       test "$BOOT_ORDER" = "secondary primary net"; then \
