@@ -161,6 +161,10 @@ func isPollingPath(path string) bool {
 
 func deny(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("HX-Request") == "true" {
+		// HX-Redirect is honored by HTMX even on a 401 response, so
+		// the page navigates to /login instead of leaving the user
+		// staring at a stale screen where every click silently fails.
+		w.Header().Set("HX-Redirect", "/login")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}

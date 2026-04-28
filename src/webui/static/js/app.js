@@ -1653,3 +1653,99 @@ function renderCfgLog() {
     }
   });
 })();
+
+// ─── Inactivity auto-logout ────────────────────────────────────────────────
+// Submits POST /logout after a configurable period of inactivity.
+// The chosen timeout is stored in localStorage; default is 15 min.
+// Reset by deliberate user input and by HTMX requests that aren't
+// background pollers.
+(function() {
+  var LS_KEY = 'auto-logout';
+  var DEFAULT = '900';
+  var timerId = null;
+
+  function getMs() {
+    var n = parseInt(localStorage.getItem(LS_KEY) || DEFAULT, 10);
+    return isNaN(n) ? parseInt(DEFAULT, 10) * 1000 : n * 1000;
+  }
+
+  function updateOpts() {
+    var current = localStorage.getItem(LS_KEY) || DEFAULT;
+    document.querySelectorAll('.timeout-opt').forEach(function(btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-timeout') === current);
+    });
+  }
+
+  function doLogout() {
+    // Tear down the server-side session in the background so it can't
+    // outlive the navigation. keepalive lets the request finish even
+    // if the user is mid-tab-close. getCSRFToken() from the early IIFE
+    // isn't in scope here — read the meta tag directly.
+    var fd = new FormData();
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) fd.append('csrf', meta.getAttribute('content') || '');
+    fetch('/logout', {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+      keepalive: true,
+    }).catch(function () {});
+    window.location.replace('/login');
+  }
+
+  function reset() {
+    clearTimeout(timerId);
+    var ms = getMs();
+    if (ms > 0) timerId = setTimeout(doLogout, ms);
+  }
+
+  // Background pollers (watchdog, *counters refresh) must NOT extend
+  // the idle window — otherwise the timer never reaches the threshold.
+  function isPollingPath(p) {
+    return p === '/device-status' || (p && p.indexOf('/counters') !== -1);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.querySelector('form[action="/login"]')) return;
+
+    updateOpts();
+    reset();
+
+    // mousemove deliberately omitted: trackpad jitter from a neighbouring
+    // window would keep the session alive indefinitely.
+    ['mousedown', 'keypress', 'touchstart', 'scroll', 'click'].forEach(function(ev) {
+      window.addEventListener(ev, reset, { passive: true });
+    });
+    document.addEventListener('htmx:afterRequest', function(evt) {
+      var cfg = evt && evt.detail && evt.detail.requestConfig;
+      if (cfg && isPollingPath(cfg.path)) return;
+      reset();
+    });
+
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('.timeout-opt');
+      if (!btn) return;
+      localStorage.setItem(LS_KEY, btn.getAttribute('data-timeout'));
+      updateOpts();
+      reset();
+    });
+
+    // Session expired server-side while we were idle: any HX request
+    // now returns 401. Send the user to /login so the page reflects
+    // reality instead of failing silently on every click.
+    document.addEventListener('htmx:responseError', function(evt) {
+      var s = evt && evt.detail && evt.detail.xhr && evt.detail.xhr.status;
+      if (s === 401) window.location.replace('/login');
+    });
+
+    // Route the manual Logout button through doLogout so the session is
+    // torn down server-side before navigation, not after.
+    var logoutForm = document.querySelector('form[action="/logout"]');
+    if (logoutForm) {
+      logoutForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        doLogout();
+      });
+    }
+  });
+})();

@@ -1860,7 +1860,8 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
 
 /* Theme checkmark — hidden by default, shown on active option */
 .theme-check { margin-left: auto; flex-shrink: 0; opacity: 0; transition: opacity 0.1s; }
-.theme-opt.is-active .theme-check { opacity: 1; }
+.theme-opt.is-active .theme-check,
+.timeout-opt.is-active .theme-check { opacity: 1; }
 
 /* Login page floating theme button */
 .login-theme-btn {
