@@ -3,29 +3,55 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.04.0][UNRELEASED] -
+[v26.04.0][] - 2026-04-30
 -------------------------
 
 ### Changes
 
 - Upgrade Linux kernel to 6.18.25 (LTS)
 - Upgrade Buildroot to 2025.02.13 (LTS)
+- Add support for per-bridge multicast router port in operational, issue #395
+- Add support for static ARP (IPv4) and neighbor cache (IPv6) entries per
+  interface, issue #819.  Static entries are installed as permanent kernel
+  neighbor table entries that are never evicted by normal ARP/NDP aging
 - Add support for PTP/gPTP (IEEE 1588-2019 / 802.1AS) clock synchronization.
   Supported clock types: Ordinary Clock, Boundary Clock, and Transparent Clock.
   See the User Guide for configuration details
 - Add support for [Banana Pi BPI-R4][BPI-R4], quad-core Cortex-A73 router with
   4x 2.5 GbE switching, dual 10 GbE SFP+.  Variants BPI-R4-2g5 and BPI-R4P have
   one SFP+ replaced by a 2.5 GbE RJ45, with optional PoE on the R4P
+- Update [Marvell ESPRESSObin][ESPRESSObin] board support.  Allow booting with
+  stock U-Boot, which only supports ext4 rootfs partitions; to use, apply the
+  `ext4` developer snippet before building (`make apply-ext4 all`)
+- Fix onboard WiFi support on the Banana Pi BPi-R64
 
 ### Fixes
 
+- Fix #520: warn in syslog if multicast flooding is disabled
+- Fix #769: document dummy interfaces in user guide
+- Fix #790: document static multicast filters in user guide
+- Fix #1439: changing hostname does not regenerate DHCP client conf until restart
 - Fix #1458: `show ntp tracking` displaying a truncated Reference ID, e.g.,
   `92.2` instead of `92.246.137.39`
 - Fix #1466: `show container` showing no output for containers whose command
   line includes environment variables
-- Fix #1439: changing hostname does not regenerate DHCP client conf until restart
+- Fix issue with IGMP queries sent with all-zeroes source MAC address
+- Fix missing IGMP query startup burst when assuming IGMP querier role, as
+  defined in RFC3376 §8.6/§8.7
+- Fix Raspberry Pi 4 and Pi 400 display instability after soft reboot.
+  Previously the touchscreen/DSI display required a full power cycle to
+  reinitialise correctly; it now works reliably after `reboot`.  Please note,
+  you need a fairly up-to-date EEPROM version as well
+- Fix [BPI-R4][] board README showing inverted DIP switch values for eMMC and
+  SPI NAND boot modes, which would prevent the board from booting correctly
+- Fix [SAMA7G54][] U-Boot build system selection that caused build failures
+- Fix [BPI-R3][] PCIe devices failing to initialize on boot due to a missing
+  clock definition in the device tree
 
+[BPI-R3]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3
 [BPI-R4]: https://docs.banana-pi.org/en/BPI-R4/BananaPi_BPI-R4
+[ESPRESSObin]: https://espressobin.net/
+[SAMA7G54]: https://www.microchip.com/en-us/development-tool/ev21h18a
 
 [v26.03.0][] - 2026-03-31
 -------------------------
