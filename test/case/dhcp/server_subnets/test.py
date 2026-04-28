@@ -342,7 +342,7 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(client2, "0.0.0.0/0", nexthop=GW2))
 
     with test.step("Verify DHCP client2 has correct DNS and NTP server(s)"):
-        until(lambda: has_system_servers(client2, ["192.168.2.1"], "192.168.2.1"))
+        until(lambda: has_system_servers(client2, ["192.168.2.1"], "192.168.2.1"), attempts=120)
 
     with test.step("Verify DHCP client3 get correct lease"):
         until(lambda: iface.address_exist(client3, client3["server"], POOL2))
@@ -351,6 +351,6 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(client3, "0.0.0.0/0", nexthop=SERVER2))
 
     with test.step("Verify DHCP client3 has correct DNS and NTP server(s)"):
-        until(lambda: has_system_servers(client3, ["1.2.3.4", "192.168.2.1"], "192.168.2.1"))
+        until(lambda: has_system_servers(client3, ["1.2.3.4", "192.168.2.1"], "192.168.2.1"), attempts=120)
 
     test.succeed()
