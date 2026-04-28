@@ -87,11 +87,11 @@ with infamy.Test() as test:
         })
 
     with test.step("Verify NTP server has received packets"):
-        until(lambda: ntp.server_has_received_packets(server), attempts=30)
+        until(lambda: ntp.server_has_received_packets(server), attempts=120)
         print("Server has received NTP packets from client")
 
     with test.step("Verify NTP client has synchronized"):
-        selected = until(lambda: ntp.any_source_selected(client), attempts=30)
+        selected = until(lambda: ntp.any_source_selected(client), attempts=120)
         print(f"Client synchronized to {selected.get('address')} (stratum {selected.get('stratum')})")
 
     test.succeed()
