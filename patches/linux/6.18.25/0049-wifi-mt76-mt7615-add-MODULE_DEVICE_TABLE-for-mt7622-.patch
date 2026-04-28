@@ -1,0 +1,31 @@
+From 925bc823c4f4ece91c090371a358134e238e7cc4 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 28 Apr 2026 15:30:01 +0200
+Subject: [PATCH] wifi: mt76: mt7615: add MODULE_DEVICE_TABLE for mt7622 wmac
+Organization: Wires
+
+Without MODULE_DEVICE_TABLE(of, ...) the OF compatible alias is never
+exported to modules.alias, so udev cannot autoload mt7615e when the
+mediatek,mt7622-wmac platform device is probed.  Add the export so the
+module loads automatically on BPI-R64 and similar MT7622-based boards.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/wireless/mediatek/mt76/mt7615/soc.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7615/soc.c b/drivers/net/wireless/mediatek/mt76/mt7615/soc.c
+index 06a0f2a141e8..538ea1dc333b 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7615/soc.c
++++ b/drivers/net/wireless/mediatek/mt76/mt7615/soc.c
+@@ -56,6 +56,7 @@ static const struct of_device_id mt7622_wmac_of_match[] = {
+ 	{ .compatible = "mediatek,mt7622-wmac" },
+ 	{},
+ };
++MODULE_DEVICE_TABLE(of, mt7622_wmac_of_match);
+ 
+ struct platform_driver mt7622_wmac_driver = {
+ 	.driver = {
+-- 
+2.43.0
+
