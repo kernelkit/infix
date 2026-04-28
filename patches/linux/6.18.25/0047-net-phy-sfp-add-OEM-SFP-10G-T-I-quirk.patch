@@ -1,0 +1,56 @@
+From 83a80e1f67550dc5f58c8711f1d1612cd9233911 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 7 Apr 2026 07:34:52 +0200
+Subject: [PATCH 47/48] net: phy: sfp: add OEM SFP-10G-T-I quirk
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The industrial-temperature variant of the OEM SFP-10G-T copper module
+reports vendor PN "SFP-10G-T-I".  Unlike the base "SFP-10G-T" which is a
+genuine RollBall module, the -I variant uses a plain XFI (10GBASER) host
+interface and does not implement the RollBall MDIO protocol.
+
+Both variants zero the extended_cc field in EEPROM, which causes
+sfp_module_parse_support() to hit SFF8024_ECC_UNSPEC and set no interface
+modes, making phylink reject the module with "no common interface modes".
+
+For the -I variant, add sfp_fixup_xfi_cc which only corrects the extended
+compliance code to SFF8024_ECC_10GBASE_T_SFI so the driver picks 10GBASER.
+Skipping the RollBall PHY probe avoids a ~7-minute boot-time delay
+(sfp_poll_timeout * retries ≈ 440 s) when no RollBall PHY is found.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/phy/sfp.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/net/phy/sfp.c b/drivers/net/phy/sfp.c
+index c62e3f364ea7..26b4314de996 100644
+--- a/drivers/net/phy/sfp.c
++++ b/drivers/net/phy/sfp.c
+@@ -451,6 +451,16 @@ static void sfp_fixup_rollball_cc(struct sfp *sfp)
+ 	sfp->id.base.extended_cc = SFF8024_ECC_10GBASE_T_SFI;
+ }
+ 
++static void sfp_fixup_xfi_cc(struct sfp *sfp)
++{
++	/* Module has zeroed extended compliance code but uses a plain XFI
++	 * (10GBASER) host interface and does not support the Rollball MDIO
++	 * protocol.  Only fix the compliance code so the driver picks 10GBASER;
++	 * skipping Rollball avoids a ~7 minute PHY probe retry delay on boot.
++	 */
++	sfp->id.base.extended_cc = SFF8024_ECC_10GBASE_T_SFI;
++}
++
+ static void sfp_quirk_2500basex(const struct sfp_eeprom_id *id,
+ 				struct sfp_module_caps *caps)
+ {
+@@ -580,6 +590,7 @@ static const struct sfp_quirk sfp_quirks[] = {
+ 	SFP_QUIRK_F("OEM", "SFP-GE-T", sfp_fixup_ignore_tx_fault),
+ 
+ 	SFP_QUIRK_F("OEM", "SFP-10G-T", sfp_fixup_rollball_cc),
++	SFP_QUIRK_F("OEM", "SFP-10G-T-I", sfp_fixup_xfi_cc),
+ 	SFP_QUIRK_S("OEM", "SFP-2.5G-T", sfp_quirk_oem_2_5g),
+ 	SFP_QUIRK_S("OEM", "SFP-2.5G-BX10-D", sfp_quirk_2500basex),
+ 	SFP_QUIRK_S("OEM", "SFP-2.5G-BX10-U", sfp_quirk_2500basex),

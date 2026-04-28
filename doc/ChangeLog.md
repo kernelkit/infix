@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.24 (LTS)
+- Upgrade Linux kernel to 6.18.25 (LTS)
 - Upgrade Buildroot to 2025.02.13 (LTS)
 - Add support for PTP/gPTP (IEEE 1588-2019 / 802.1AS) clock synchronization.
   Supported clock types: Ordinary Clock, Boundary Clock, and Transparent Clock.
