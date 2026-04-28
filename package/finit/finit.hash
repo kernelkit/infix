@@ -1,5 +1,5 @@
 # From https://github.com/troglobit/finit/releases/
-sha256  f0894cd8b79ce030fdc656600208ddb0b994364f86ebad066de2e005e5e18a35  finit-4.16.tar.gz
+sha256  ca8b489a0ed99c17c0288e9e65e325a8f14af3734dfecf58f516c0a6f884e903  finit-4.17.tar.gz
 
 # Locally calculated
 sha256  868cb6c5414933a48db11186042cfe65c87480d326734bc6cf0e4b19b4a2e52a  LICENSE

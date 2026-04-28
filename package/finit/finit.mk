@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-FINIT_VERSION = 4.16
+FINIT_VERSION = 4.17
 FINIT_SITE = https://github.com/troglobit/finit/releases/download/$(FINIT_VERSION)
 FINIT_LICENSE = MIT
 FINIT_LICENSE_FILES = LICENSE
