@@ -9,7 +9,6 @@ import (
 	"net"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -185,23 +184,12 @@ func (w *ZAPIWatcher) handleMessage(hdr zapi.Header, body []byte) {
 	}
 }
 
+// routeKey returns a unique map key for a redistributed route.
+// FRR's redistribution sends a single RouteAdd per prefix+protocol —
+// nexthop changes are updates (no preceding RouteDel), so the key
+// must NOT include nexthops or distance.
 func routeKey(route *zapi.Route) string {
-	rib := ribName(route.Prefix)
-	proto := routeProtocol(route.Type)
-
-	gates := make([]string, 0, len(route.Nexthops))
-	for _, nh := range route.Nexthops {
-		if len(nh.Gate) > 0 && !nh.Gate.IsUnspecified() {
-			gates = append(gates, nh.Gate.String())
-		}
-	}
-	sort.Strings(gates)
-
-	return rib + ":" + route.Prefix.String() + ":" + proto + ":" + strings.Join(gates, ",")
-}
-
-func routeKeyPrefix(route *zapi.Route) string {
-	return ribName(route.Prefix) + ":" + route.Prefix.String() + ":" + routeProtocol(route.Type) + ":"
+	return ribName(route.Prefix) + ":" + route.Prefix.String() + ":" + routeProtocol(route.Type)
 }
 
 func (w *ZAPIWatcher) addRoute(route *zapi.Route) {
@@ -224,16 +212,7 @@ func (w *ZAPIWatcher) deleteRoute(route *zapi.Route) {
 	key := routeKey(route)
 
 	w.mu.Lock()
-	if _, ok := w.routes[key]; ok {
-		delete(w.routes, key)
-	} else {
-		prefix := routeKeyPrefix(route)
-		for k := range w.routes {
-			if strings.HasPrefix(k, prefix) {
-				delete(w.routes, k)
-			}
-		}
-	}
+	delete(w.routes, key)
 	w.mu.Unlock()
 
 	w.writeRibs()
