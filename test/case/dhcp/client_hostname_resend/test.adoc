@@ -4,15 +4,14 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/dhcp/client_hostname_resend]
 
 ==== Description
 
-Verify that updating the system hostname regenerates the DHCP client
-Finit service file so subsequent DHCP requests advertise the current
-hostname (option 12, RFC 2132).
+Verify that updating the system hostname restarts the DHCP client so
+subsequent DHCP requests advertise the current hostname (option 12,
+RFC 2132).
 
 Regression test for a bug where the DHCP client callback only reacts
 on diffs in infix-dhcp-client, so a standalone change of
-ietf-system:system/hostname leaves the previously written
-/etc/finit.d/available/dhcp-client-<iface>.conf untouched and the
-running udhcpc keeps announcing the old name.
+ietf-system:system/hostname leaves the running udhcpc untouched with
+the old '-x hostname:' argument from when it was first started.
 
 ==== Topology
 
@@ -23,8 +22,8 @@ image::topology.svg[DHCP Hostname Resend topology, align=center, scaledwidth=75%
 . Set up topology and attach to target DUT
 . Configure initial hostname '{HOSTNM_A}'
 . Enable DHCP client sending hostname option
-. Verify Finit service carries hostname '{HOSTNM_A}'
+. Verify running udhcpc announces hostname '{HOSTNM_A}'
 . Update system hostname to '{HOSTNM_B}'
-. Verify Finit service is regenerated with '{HOSTNM_B}'
+. Verify running udhcpc announces hostname '{HOSTNM_B}'
 
 
