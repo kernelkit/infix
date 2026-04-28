@@ -122,7 +122,7 @@ name()
     nm=infamy
     id=0
 
-    if [ -n "$random" ]; then
+    if [ -n "$random" ] || [ -n "$CI" ]; then
 	# Let podman/docker allocate random hostname and container name
 	return
     fi
