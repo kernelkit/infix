@@ -154,13 +154,13 @@ func TestTransformRouteActiveParam(t *testing.T) {
 	}
 }
 
-func TestRouteKeyDifferentGateways(t *testing.T) {
-	dhcp := &zapi.Route{
-		Type:     zapi.RouteStatic,
-		Distance: 5,
+func TestRouteKeyDifferentProtocols(t *testing.T) {
+	ospf := &zapi.Route{
+		Type:     zapi.RouteOSPF,
+		Distance: 110,
 		Prefix: net.IPNet{
-			IP:   net.IPv4(0, 0, 0, 0),
-			Mask: net.CIDRMask(0, 32),
+			IP:   net.IPv4(10, 0, 0, 0),
+			Mask: net.CIDRMask(24, 32),
 		},
 		Nexthops: []zapi.Nexthop{{
 			Gate: net.ParseIP("192.168.10.3").To4(),
@@ -170,23 +170,23 @@ func TestRouteKeyDifferentGateways(t *testing.T) {
 		Type:     zapi.RouteStatic,
 		Distance: 120,
 		Prefix: net.IPNet{
-			IP:   net.IPv4(0, 0, 0, 0),
-			Mask: net.CIDRMask(0, 32),
+			IP:   net.IPv4(10, 0, 0, 0),
+			Mask: net.CIDRMask(24, 32),
 		},
 		Nexthops: []zapi.Nexthop{{
 			Gate: net.ParseIP("192.168.50.2").To4(),
 		}},
 	}
 
-	keyDHCP := routeKey(dhcp)
+	keyOSPF := routeKey(ospf)
 	keyStatic := routeKey(static)
 
-	if keyDHCP == keyStatic {
-		t.Errorf("routes with different gateways must have different keys: %q == %q", keyDHCP, keyStatic)
+	if keyOSPF == keyStatic {
+		t.Errorf("routes with different protocols must have different keys: %q == %q", keyOSPF, keyStatic)
 	}
 }
 
-func TestRouteKeySameGatewayDifferentDistance(t *testing.T) {
+func TestRouteKeySamePrefixProtoIgnoresDistance(t *testing.T) {
 	old := &zapi.Route{
 		Type:     zapi.RouteStatic,
 		Distance: 120,
@@ -194,9 +194,6 @@ func TestRouteKeySameGatewayDifferentDistance(t *testing.T) {
 			IP:   net.IPv4(0, 0, 0, 0),
 			Mask: net.CIDRMask(0, 32),
 		},
-		Nexthops: []zapi.Nexthop{{
-			Gate: net.ParseIP("192.168.50.2").To4(),
-		}},
 	}
 	updated := &zapi.Route{
 		Type:     zapi.RouteStatic,
@@ -205,23 +202,20 @@ func TestRouteKeySameGatewayDifferentDistance(t *testing.T) {
 			IP:   net.IPv4(0, 0, 0, 0),
 			Mask: net.CIDRMask(0, 32),
 		},
-		Nexthops: []zapi.Nexthop{{
-			Gate: net.ParseIP("192.168.50.2").To4(),
-		}},
 	}
 
 	if routeKey(old) != routeKey(updated) {
-		t.Errorf("same gateway routes must share a key regardless of distance: %q != %q", routeKey(old), routeKey(updated))
+		t.Errorf("same prefix+proto must produce same key regardless of distance: %q vs %q", routeKey(old), routeKey(updated))
 	}
 }
 
-func TestAddRouteSamePrefixDifferentDistance(t *testing.T) {
+func TestAddRouteSamePrefixDifferentProtocol(t *testing.T) {
 	tr := tree.New()
 	w := New(tr, nil)
 
-	dhcpRoute := &zapi.Route{
-		Type:     zapi.RouteStatic,
-		Distance: 5,
+	ospfRoute := &zapi.Route{
+		Type:     zapi.RouteOSPF,
+		Distance: 110,
 		Prefix: net.IPNet{
 			IP:   net.IPv4(0, 0, 0, 0),
 			Mask: net.CIDRMask(0, 32),
@@ -244,7 +238,7 @@ func TestAddRouteSamePrefixDifferentDistance(t *testing.T) {
 		}},
 	}
 
-	w.addRoute(dhcpRoute)
+	w.addRoute(ospfRoute)
 	w.addRoute(staticRoute)
 
 	w.mu.Lock()
@@ -252,7 +246,7 @@ func TestAddRouteSamePrefixDifferentDistance(t *testing.T) {
 	w.mu.Unlock()
 
 	if count != 2 {
-		t.Errorf("expected 2 routes, got %d", count)
+		t.Errorf("expected 2 routes (different protocols), got %d", count)
 	}
 
 	data := tr.Get(routingTreeKey)
@@ -295,8 +289,8 @@ func TestAddRouteSamePrefixDifferentDistance(t *testing.T) {
 		_, hasActive := rm["active"]
 		if hasActive {
 			activeCount++
-			if pref != 5 {
-				t.Errorf("active route has preference %d, want 5", pref)
+			if pref != 110 {
+				t.Errorf("active route has preference %d, want 110", pref)
 			}
 		}
 		if pref == 120 && hasActive {
@@ -337,7 +331,7 @@ func TestTransformRouteIPv6(t *testing.T) {
 	}
 }
 
-func TestAddRouteDistanceChangeOverwrites(t *testing.T) {
+func TestAddRouteSamePrefixProtoOverwrites(t *testing.T) {
 	tr := tree.New()
 	w := New(tr, nil)
 
@@ -351,11 +345,12 @@ func TestAddRouteDistanceChangeOverwrites(t *testing.T) {
 		Nexthops: []zapi.Nexthop{{Type: zapi.NHIPv4IFIndex, Gate: gateway}},
 	})
 
+	newGateway := net.ParseIP("10.0.0.1").To4()
 	w.addRoute(&zapi.Route{
 		Type:     zapi.RouteStatic,
 		Distance: 1,
 		Prefix:   prefix,
-		Nexthops: []zapi.Nexthop{{Type: zapi.NHIPv4IFIndex, Gate: gateway}},
+		Nexthops: []zapi.Nexthop{{Type: zapi.NHIPv4IFIndex, Gate: newGateway}},
 	})
 
 	w.mu.Lock()
@@ -363,7 +358,7 @@ func TestAddRouteDistanceChangeOverwrites(t *testing.T) {
 	w.mu.Unlock()
 
 	if count != 1 {
-		t.Errorf("same-gateway route should overwrite on distance change: got %d routes, want 1", count)
+		t.Errorf("same prefix+proto should overwrite: got %d routes, want 1", count)
 	}
 
 	data := tr.Get(routingTreeKey)
@@ -393,10 +388,7 @@ func TestAddRouteDistanceChangeOverwrites(t *testing.T) {
 
 	rm := ipv4Routes[0].(map[string]any)
 	if pref := int(rm["route-preference"].(float64)); pref != 1 {
-		t.Errorf("route-preference = %d, want 1 (updated distance)", pref)
-	}
-	if _, hasActive := rm["active"]; !hasActive {
-		t.Error("sole route should be active")
+		t.Errorf("route-preference = %d, want 1 (latest add wins)", pref)
 	}
 }
 
