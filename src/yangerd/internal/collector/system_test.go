@@ -12,17 +12,6 @@ import (
 )
 
 const (
-	testResolvHead = `nameserver 8.8.8.8
-nameserver 1.1.1.1
-search example.com local.lan
-options timeout:2 attempts:3
-`
-
-	testResolvconfOutput = `nameserver 10.0.0.1 # eth0
-nameserver 10.0.0.2 # eth1
-search dhcp.example.com # eth0
-`
-
 	testInitctlJSON = `[
   {
     "identity": "sshd",
@@ -48,16 +37,13 @@ search dhcp.example.com # eth0
 func newTestCollector() (*SystemCollector, *testutil.MockRunner, *testutil.MockFileReader) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{
-			"initctl -j":          []byte(testInitctlJSON),
-			"/sbin/resolvconf -l": []byte(testResolvconfOutput),
+			"initctl -j": []byte(testInitctlJSON),
 		},
 		Errors: map[string]error{},
 	}
 
 	fs := &testutil.MockFileReader{
-		Files: map[string][]byte{
-			"/etc/resolv.conf.head": []byte(testResolvHead),
-		},
+		Files: map[string][]byte{},
 		Globs: map[string][]string{},
 	}
 
@@ -95,59 +81,6 @@ func TestSystemCollectorInterval(t *testing.T) {
 	c, _, _ := newTestCollector()
 	if c.Interval() != 60*time.Second {
 		t.Fatalf("expected interval 60s, got %v", c.Interval())
-	}
-}
-
-func TestSystemCollectorDNS(t *testing.T) {
-	c, _, _ := newTestCollector()
-	state := collectToState(t, c)
-
-	dns, ok := state["infix-system:dns-resolver"].(map[string]interface{})
-	if !ok {
-		t.Fatal("missing infix-system:dns-resolver in system-state")
-	}
-
-	servers, ok := dns["server"].([]interface{})
-	if !ok {
-		t.Fatal("missing server list in dns-resolver")
-	}
-
-	// 2 static (resolv.conf.head) + 2 DHCP (resolvconf -l) = 4 total
-	if len(servers) != 4 {
-		t.Fatalf("expected 4 DNS servers, got %d: %v", len(servers), servers)
-	}
-
-	s0 := servers[0].(map[string]interface{})
-	if s0["address"] != "8.8.8.8" || s0["origin"] != "static" {
-		t.Fatalf("server[0]: expected 8.8.8.8/static, got %v", s0)
-	}
-	s1 := servers[1].(map[string]interface{})
-	if s1["address"] != "1.1.1.1" || s1["origin"] != "static" {
-		t.Fatalf("server[1]: expected 1.1.1.1/static, got %v", s1)
-	}
-
-	s2 := servers[2].(map[string]interface{})
-	if s2["address"] != "10.0.0.1" || s2["origin"] != "dhcp" {
-		t.Fatalf("server[2]: expected 10.0.0.1/dhcp, got %v", s2)
-	}
-	if s2["interface"] != "eth0" {
-		t.Fatalf("server[2] interface: expected eth0, got %v", s2["interface"])
-	}
-
-	search, ok := dns["search"].([]interface{})
-	if !ok || len(search) < 2 {
-		t.Fatalf("expected search domains, got %v", dns["search"])
-	}
-
-	options, ok := dns["options"].(map[string]interface{})
-	if !ok {
-		t.Fatal("missing options in dns-resolver")
-	}
-	if int(options["timeout"].(float64)) != 2 {
-		t.Fatalf("dns timeout: expected 2, got %v", options["timeout"])
-	}
-	if int(options["attempts"].(float64)) != 3 {
-		t.Fatalf("dns attempts: expected 3, got %v", options["attempts"])
 	}
 }
 
@@ -189,8 +122,7 @@ func TestSystemCollectorCommandFailureGraceful(t *testing.T) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{},
 		Errors: map[string]error{
-			"initctl -j":          fmt.Errorf("not available"),
-			"/sbin/resolvconf -l": fmt.Errorf("not available"),
+			"initctl -j": fmt.Errorf("not available"),
 		},
 	}
 
@@ -228,8 +160,7 @@ func TestSystemCollectorTreeKeys(t *testing.T) {
 func TestSystemCollectorServicesNilFields(t *testing.T) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{
-			"initctl -j":          []byte(`[{"identity":"minimal","pid":999,"status":"running","description":"Minimal service"}]`),
-			"/sbin/resolvconf -l": []byte(""),
+			"initctl -j": []byte(`[{"identity":"minimal","pid":999,"status":"running","description":"Minimal service"}]`),
 		},
 		Errors: map[string]error{},
 	}
@@ -259,35 +190,5 @@ func TestSystemCollectorServicesNilFields(t *testing.T) {
 	}
 	if int(stats["restart-count"].(float64)) != 0 {
 		t.Fatalf("nil restarts should become 0, got %v", stats["restart-count"])
-	}
-}
-
-func TestSystemCollectorNoDNSEmptyArray(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"initctl -j":          []byte(testInitctlJSON),
-			"/sbin/resolvconf -l": []byte(""),
-		},
-		Errors: map[string]error{},
-	}
-
-	fs := &testutil.MockFileReader{
-		Files: map[string][]byte{},
-		Globs: map[string][]string{},
-	}
-
-	c := NewSystemCollector(runner, fs, 60*time.Second)
-	state := collectToState(t, c)
-
-	dns, ok := state["infix-system:dns-resolver"].(map[string]interface{})
-	if !ok {
-		t.Fatal("missing infix-system:dns-resolver")
-	}
-	servers, ok := dns["server"].([]interface{})
-	if !ok {
-		t.Fatal("dns server should be an array, not null")
-	}
-	if len(servers) != 0 {
-		t.Fatalf("expected empty server array, got %d servers", len(servers))
 	}
 }
