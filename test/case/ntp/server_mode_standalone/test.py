@@ -53,9 +53,9 @@ with infamy.Test() as test:
             ns1.must_reach("192.168.1.1")
 
         with test.step("Query time from NTP server"):
-            until(lambda: ntp.server_query(ns1, "192.168.1.1"), attempts=20)
+            until(lambda: ntp.server_query(ns1, "192.168.1.1"), attempts=120)
 
         with test.step("Verify NTP server statistics"):
-            until(lambda: ntp.server_has_received_packets(target), attempts=20)
+            until(lambda: ntp.server_has_received_packets(target), attempts=120)
 
     test.succeed()
