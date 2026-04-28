@@ -159,9 +159,9 @@ func TestNTPSources(t *testing.T) {
 		t.Fatal("missing source list in sources")
 	}
 
-	// 5 sources minus GPS refclock (#) minus stratum-0 (10.0.0.4) = 3
-	if len(sources) != 3 {
-		t.Fatalf("expected 3 sources, got %d", len(sources))
+	// 5 sources minus GPS refclock (#) = 4 (stratum 0 is kept)
+	if len(sources) != 4 {
+		t.Fatalf("expected 4 sources, got %d", len(sources))
 	}
 
 	byAddr := make(map[string]map[string]interface{})
@@ -210,6 +210,18 @@ func TestNTPSources(t *testing.T) {
 	}
 	if s3["mode"] != "peer" {
 		t.Fatalf("10.0.0.3 mode: expected peer, got %v", s3["mode"])
+	}
+
+	// 10.0.0.4: unreachable server (stratum 0)
+	s4 := byAddr["10.0.0.4"]
+	if s4 == nil {
+		t.Fatal("missing source 10.0.0.4")
+	}
+	if s4["state"] != "unusable" {
+		t.Fatalf("10.0.0.4 state: expected unusable, got %v", s4["state"])
+	}
+	if toInt(s4["stratum"]) != 0 {
+		t.Fatalf("10.0.0.4 stratum: expected 0, got %v", s4["stratum"])
 	}
 }
 
