@@ -681,6 +681,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	err = err ? : netdag_gen_link_addr(ip, cif, dif);
 	err = err ? : netdag_gen_ip_addrs(net, ip, "ipv4", cif, dif);
 	err = err ? : netdag_gen_ip_addrs(net, ip, "ipv6", cif, dif);
+	err = err ? : netdag_gen_ip_neighs(net, ip, "ipv4", cif, dif);
+	err = err ? : netdag_gen_ip_neighs(net, ip, "ipv6", cif, dif);
 	if (err)
 		goto err_close_ip;
 

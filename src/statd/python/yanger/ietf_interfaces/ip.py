@@ -1,4 +1,55 @@
+import ipaddress
+
 from ..host import HOST
+from . import common
+
+
+def neigh_state(states):
+    xlate = {
+        "REACHABLE":  "reachable",
+        "STALE":      "stale",
+        "DELAY":      "delay",
+        "PROBE":      "probe",
+        "INCOMPLETE": "incomplete",
+    }
+    return next((xlate[s] for s in states if s in xlate), None)
+
+
+def neighbors(ifname, family):
+    result = []
+    for entry in common.ipneighs().get(ifname, []):
+        dst = entry.get("dst", "")
+        try:
+            version = ipaddress.ip_address(dst).version
+        except ValueError:
+            continue
+
+        if version != (4 if family == "inet" else 6):
+            continue
+
+        lladdr = entry.get("lladdr")
+        states = entry.get("state", [])
+
+        if not lladdr:
+            continue
+
+        origin = "static" if "PERMANENT" in states else "dynamic"
+        neigh = {
+            "ip":                 dst,
+            "link-layer-address": lladdr,
+            "origin":             origin,
+        }
+
+        if family == "inet6":
+            if state := neigh_state(states):
+                neigh["state"] = state
+            if entry.get("router"):
+                neigh["is-router"] = [None]
+
+        result.append(neigh)
+
+    return result
+
 
 def inet2yang_origin(inet):
     """Translate kernel IP address origin to YANG"""
@@ -34,23 +85,31 @@ def addresses(ipaddr, proto):
 
 def ipv4(ipaddr):
     ipv4 = {}
+    ifname = ipaddr.get("ifname")
 
     mtu = ipaddr.get("mtu")
-    if mtu and ipaddr.get("ifname") != "lo":
+    if mtu and ifname != "lo":
         ipv4["mtu"] = mtu
 
     if addrs := addresses(ipaddr, "inet"):
         ipv4["address"] = addrs
 
+    if neighs := neighbors(ifname, "inet"):
+        ipv4["neighbor"] = neighs
+
     return ipv4
 
 def ipv6(ipaddr):
     ipv6 = {}
+    ifname = ipaddr.get("ifname")
 
-    if mtu := HOST.read(f"/proc/sys/net/ipv6/conf/{ipaddr['ifname']}/mtu"):
+    if mtu := HOST.read(f"/proc/sys/net/ipv6/conf/{ifname}/mtu"):
         ipv6["mtu"] = int(mtu.strip())
 
     if addrs := addresses(ipaddr, "inet6"):
         ipv6["address"] = addrs
+
+    if neighs := neighbors(ifname, "inet6"):
+        ipv6["neighbor"] = neighs
 
     return ipv6

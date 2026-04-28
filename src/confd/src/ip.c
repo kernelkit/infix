@@ -242,6 +242,79 @@ static int netdag_set_conf_addrs(FILE *ip, const char *ifname,
 	return 0;
 }
 
+static int netdag_gen_diff_neigh(FILE *ip, const char *ifname,
+				 struct lyd_node *neigh)
+{
+	enum lydx_op op = lydx_get_op(neigh);
+	struct lyd_node *addr, *lladdr;
+	struct lydx_diff addrd, lladrd;
+
+	addr = lydx_get_child(neigh, "ip");
+	if (!addr)
+		return -EINVAL;
+
+	lydx_get_diff(addr, &addrd);
+
+	if (op == LYDX_OP_DELETE) {
+		fprintf(ip, "neigh del %s dev %s\n", addrd.old, ifname);
+		return 0;
+	}
+
+	lladdr = lydx_get_child(neigh, "link-layer-address");
+	if (!lladdr)
+		return -EINVAL;
+
+	lydx_get_diff(lladdr, &lladrd);
+	fprintf(ip, "neigh replace %s lladdr %s dev %s nud permanent\n",
+		addrd.new, lladrd.new, ifname);
+	return 0;
+}
+
+static int netdag_set_conf_neighs(FILE *ip, const char *ifname,
+				  struct lyd_node *ipvx)
+{
+	struct lyd_node *neigh;
+
+	LYX_LIST_FOR_EACH(lyd_child(ipvx), neigh, "neighbor") {
+		fprintf(ip, "neigh replace %s lladdr %s dev %s nud permanent\n",
+			lydx_get_cattr(neigh, "ip"),
+			lydx_get_cattr(neigh, "link-layer-address"),
+			ifname);
+	}
+
+	return 0;
+}
+
+int netdag_gen_ip_neighs(struct dagger *net, FILE *ip, const char *proto,
+			 struct lyd_node *cif, struct lyd_node *dif)
+{
+	struct lyd_node *ipconf = lydx_get_child(cif, proto);
+	struct lyd_node *ipdiff = lydx_get_child(dif, proto);
+	const char *ifname = lydx_get_cattr(dif, "name");
+	struct lyd_node *neigh;
+	int err = 0;
+
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled")) {
+		FILE *fp = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT_PRE, "flush-neigh.sh");
+		if (fp) {
+			fprintf(fp, "ip -%c neigh flush dev %s nud permanent\n", proto[3], ifname);
+			fclose(fp);
+		}
+		return 0;
+	}
+
+	if (lydx_get_op(lydx_get_child(ipdiff, "enabled")) == LYDX_OP_REPLACE)
+		return netdag_set_conf_neighs(ip, ifname, ipconf);
+
+	LYX_LIST_FOR_EACH(lyd_child(ipdiff), neigh, "neighbor") {
+		err = netdag_gen_diff_neigh(ip, ifname, neigh);
+		if (err)
+			break;
+	}
+
+	return err;
+}
+
 int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 			struct lyd_node *cif, struct lyd_node *dif)
 {

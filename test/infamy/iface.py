@@ -108,6 +108,28 @@ def is_oper_up(target, iface):
     return get_oper_status(target, iface) == "up"
 
 
+def _get_neighbors(target, iface, proto):
+    interface = target.get_iface(iface)
+    if interface is None:
+        return None
+    ip = interface.get(proto) or interface.get(f"ietf-ip:{proto}")
+    return ip.get("neighbor") if ip else None
+
+
+def neighbor_exist(target, iface, address, lladdr=None, origin=None):
+    """Check if neighbor 'address' exists on iface, optionally matching lladdr and origin"""
+    for proto in ("ipv4", "ipv6"):
+        for n in _get_neighbors(target, iface, proto) or []:
+            if n.get("ip") != address:
+                continue
+            if lladdr and n.get("link-layer-address") != lladdr:
+                continue
+            if origin and n.get("origin") != origin:
+                continue
+            return True
+    return False
+
+
 def exist_bridge_multicast_filter(target, group, iface, bridge):
     """Check if a bridge has a multicast filter for group with iface"""
     # The interface array is different in restconf/netconf, netconf has

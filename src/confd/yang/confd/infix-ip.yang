@@ -18,6 +18,10 @@ module infix-ip {
 
   description "This module augments ietf-ip with Infix extensions and deviations.";
 
+  revision 2026-04-28 {
+    description "Add support for ARP and neighbor cache (ietf-ip neighbor lists).";
+    reference "Internal, issue #819.";
+  }
   revision 2025-11-02 {
     description "Change autoconf to presence container, removing enabled leaf.";
     reference "Internal, issue #1109.";
@@ -65,15 +69,8 @@ module infix-ip {
     deviate not-supported;
   }
 
-  deviation "/if:interfaces/if:interface/ip:ipv4/ip:neighbor" {
-    deviate not-supported;
-  }
-
   deviation "/if:interfaces/if:interface/ip:ipv6/ip:address/ip:status" {
     deviate not-supported;
   }
 
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:neighbor" {
-    deviate not-supported;
-  }
 }

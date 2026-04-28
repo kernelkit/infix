@@ -29,7 +29,7 @@ MODULES=(
 	"ietf-hardware@2018-03-13.yang -e hardware-state -e hardware-sensor"
 	"infix-hardware@2026-02-08.yang"
 	"ieee802-dot1q-types@2022-10-29.yang"
-	"infix-ip@2025-11-02.yang"
+	"infix-ip@2026-04-28.yang"
 	"infix-if-type@2026-01-07.yang"
 	"infix-routing@2026-03-11.yang"
 	"ieee802-dot1ab-lldp@2022-03-15.yang"
