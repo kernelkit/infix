@@ -247,7 +247,7 @@ func (c *NTPCollector) addSources(sourcesOut []byte) map[string]interface{} {
 		}
 
 		stratum, err := strconv.Atoi(parts[3])
-		if err != nil || stratum < 1 || stratum > 16 {
+		if err != nil || stratum > 16 {
 			continue
 		}
 
