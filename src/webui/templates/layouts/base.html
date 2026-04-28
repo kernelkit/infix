@@ -1,0 +1,105 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{.CsrfToken}}">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  <title>{{if .PageTitle}}{{.PageTitle}} — {{end}}Management</title>
+  <link rel="icon" type="image/png" href="/assets/img/jack.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/htmx.min.js"></script>
+  <script src="/assets/js/app.js"></script>
+</head>
+<body hx-boost="true">
+  <div id="page-progress" class="page-progress" aria-hidden="true"></div>
+  <div id="conn-banner" class="conn-banner" hidden>Device unreachable</div>
+  <div class="topbar">
+    <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
+    <div class="topbar-right">
+      <div class="user-menu" id="user-menu">
+            <button class="user-menu-btn" id="user-menu-btn" aria-haspopup="true" aria-expanded="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>{{.Username}}</span>
+              <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="user-dropdown" id="user-dropdown">
+              <div class="dropdown-section-label">Theme</div>
+              <button class="dropdown-item theme-opt" data-theme="auto">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path></svg>
+                Auto
+                <svg class="theme-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </button>
+              <button class="dropdown-item theme-opt" data-theme="light">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                Light
+                <svg class="theme-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </button>
+              <button class="dropdown-item theme-opt" data-theme="dark">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                Dark
+                <svg class="theme-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </button>
+              <div class="dropdown-divider"></div>
+              <form method="POST" action="/logout">
+                <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+                <button type="submit" class="dropdown-item dropdown-item-danger">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                  Logout
+                </button>
+              </form>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="layout">
+    {{template "sidebar" .}}
+    <div class="main-column">
+      {{if .CfgUnsaved}}
+      <div id="cfg-unsaved-banner" class="cfg-unsaved-banner">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        Running config has unsaved changes — will be lost on reboot.
+        <button type="button" class="btn btn-sm btn-primary cfg-unsaved-save-btn"
+                title="Copy running config to startup config so changes survive a reboot."
+                hx-post="/configure/save"
+                hx-swap="none"
+                hx-confirm="Save running configuration to startup?">
+          Save to startup
+        </button>
+      </div>
+      {{end}}
+      <main id="content">
+        {{block "content" .}}{{end}}
+      </main>
+    </div>
+  </div>
+  <dialog id="confirm-dialog" aria-modal="true">
+    <p class="dialog-message" id="dialog-message"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-primary" id="dialog-confirm" autofocus>Confirm</button>
+      <button class="btn btn-outline" id="dialog-cancel">Cancel</button>
+    </div>
+  </dialog>
+</body>
+</html>
+{{end}}

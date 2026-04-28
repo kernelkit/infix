@@ -257,8 +257,15 @@ def add_software(out):
     insert(out, "infix-system:software", software)
 
 def add_hostname(out):
-    hostname =  HOST.run(tuple(["hostname"]))
+    hostname = HOST.run(tuple(["hostname"]))
     out["hostname"] = hostname.strip()
+
+def add_contact_location(out):
+    for name in ("contact", "location"):
+        data = HOST.run_json(("copy", "running", "-x", f"/system/{name}"), {})
+        val = data.get("ietf-system:system", {}).get(name)
+        if val:
+            out[name] = val
 
 def add_timezone(out):
     path = HOST.run(tuple("realpath /etc/localtime".split()), "")
@@ -448,6 +455,7 @@ def operational():
     out_state = out["ietf-system:system-state"]
     out_system = out["ietf-system:system"]
     add_hostname(out_system)
+    add_contact_location(out_system)
     add_users(out_system)
     add_timezone(out_system)
     add_software(out_state)

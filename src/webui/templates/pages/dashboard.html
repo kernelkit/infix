@@ -1,0 +1,131 @@
+{{define "dashboard.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+  <div class="info-card">
+    <div class="card-header">System Information</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{if .Hostname}}<tr><th>Hostname</th><td>{{.Hostname}}</td></tr>{{end}}
+        {{if .Contact}}<tr><th>Contact</th><td>{{.Contact}}</td></tr>{{end}}
+        {{if .Location}}<tr><th>Location</th><td>{{.Location}}</td></tr>{{end}}
+        {{if .OSName}}<tr><th>OS</th><td>{{.OSName}} {{.OSVersion}}</td></tr>{{end}}
+        {{if .Machine}}<tr><th>Architecture</th><td>{{.Machine}}</td></tr>{{end}}
+        {{if .Firmware}}<tr><th>Boot Partition</th><td>{{.Firmware}}</td></tr>{{end}}
+      </table>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="card-header">Runtime</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{if .Uptime}}<tr><th>Uptime</th><td><span class="num">{{.Uptime}}</span></td></tr>{{end}}
+        {{if .CurrentTime}}<tr><th>Current Time</th><td><span class="num">{{.CurrentTime}}</span></td></tr>{{end}}
+        {{if .MemTotal}}
+        <tr>
+          <th>Memory</th>
+          <td>
+            <div class="health-bar-track" style="margin-bottom:0.25rem">
+              <div class="health-bar-fill {{.MemClass}}" style="width:{{.MemPercent}}%"></div>
+            </div>
+            <span class="num">{{.MemUsed}} / {{.MemTotal}} MiB ({{.MemPercent}}%)</span>
+          </td>
+        </tr>
+        {{end}}
+        {{if .Load1}}
+        <tr>
+          <th>Load Average</th>
+          <td><span class="num">{{.Load1}} &middot; {{.Load5}} &middot; {{.Load15}}</span></td>
+        </tr>
+        {{end}}
+      </table>
+    </div>
+  </div>
+
+  {{if .Board.Model}}
+  <div class="info-card">
+    <div class="card-header">Board</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
+        {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
+        {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
+        {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
+        {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td>{{.Board.BaseMAC}}</td></tr>{{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .WiFiRadios}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">WiFi</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Mfg.</th>
+            <th>Bands</th>
+            <th>Standards</th>
+            <th class="num">Max AP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .WiFiRadios}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Manufacturer}}</td>
+            <td>{{.Bands}}</td>
+            <td>{{.Standards}}</td>
+            <td class="num">{{if .MaxAP}}{{.MaxAP}}{{else}}&mdash;{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .SensorGroups}}
+  <div class="info-card card-collapsible">
+    <div class="card-header">Sensors</div>
+    <div class="card-collapsible-body">
+      <table class="info-table">
+        {{range $g := .SensorGroups}}
+          {{if $g.Parent}}<tr class="sensor-group-hdr"><th colspan="2">{{$g.Parent}}</th></tr>{{end}}
+          {{range $g.Sensors}}
+          <tr{{if $g.Parent}} class="sensor-child"{{end}}><th>{{.Name}}</th><td>{{.Value}}</td></tr>
+          {{end}}
+        {{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .Disks}}
+  <div class="info-card">
+    <div class="card-header">Disk Usage</div>
+    {{range .Disks}}
+    <div class="disk-item">
+      <div class="disk-item-header">
+        <span class="disk-mount">{{.Mount}}</span>
+        <span class="num disk-pct">{{.Percent}}%</span>
+      </div>
+      <div class="health-bar-track">
+        <div class="health-bar-fill {{.Class}}" style="width:{{.Percent}}%"></div>
+      </div>
+      <div class="disk-stats">{{.Available}} free of {{.Size}}</div>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+</section>
+{{end}}

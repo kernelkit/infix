@@ -1,0 +1,48 @@
+{{define "services.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Services}}
+<section class="info-card">
+  <div class="card-header">Services</div>
+  <div class="data-table-wrap">
+    <table class="data-table svc-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th class="num">PID</th>
+          <th class="num">Mem</th>
+          <th class="num">Up</th>
+          <th class="num">Rst</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Services}}
+        <tr>
+          <td class="svc-name">{{.Name}}</td>
+          <td><span class="svc-status {{.StatusClass}}">{{.Status}}</span></td>
+          <td class="num svc-num">{{.PID}}</td>
+          <td class="num svc-num">{{.Memory}}</td>
+          <td class="num svc-num">{{.Uptime}}</td>
+          <td class="num svc-num">{{if .RestartCount}}{{.RestartCount}}{{end}}</td>
+          <td class="svc-desc">{{.Description}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{else if not .Error}}
+<section class="info-card">
+  <div class="card-header">Services</div>
+  <p class="empty-message">No services found.</p>
+</section>
+{{end}}
+{{end}}

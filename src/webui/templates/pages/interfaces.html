@@ -1,0 +1,48 @@
+{{define "interfaces.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Interfaces}}
+<section class="info-card">
+  <div class="card-header">Interfaces</div>
+  <div class="data-table-wrap">
+    <table class="data-table">
+    <thead>
+      <tr>
+        <th class="iface-fwd-col" title="IP forwarding">⚑</th>
+        <th class="iface-tree-col"></th>
+        <th class="iface-name">Name</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>MAC</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Interfaces}}
+      <tr{{if .IsMember}} class="iface-member" data-bridge-member="{{.GroupID}}"{{else if .HasMembers}} data-bridge-group="{{.GroupID}}"{{end}}>
+        <td class="iface-fwd-col">{{if .Forwarding}}<span class="iface-fwd-flag" title="IP forwarding">⇅</span>{{end}}</td>
+        <td class="iface-tree-col {{if .HasMembers}}tree-parent{{else if .IsLastMember}}tree-last{{else if .IsMember}}tree-mid{{end}}">{{if .HasMembers}}<button class="bridge-toggle" type="button" data-group="{{.GroupID}}" title="Collapse members" aria-expanded="true"><span class="bridge-toggle-arrow">▼</span></button>{{end}}</td>
+        <td class="iface-name{{if .IsMember}} iface-member-name{{end}}"><a href="/interfaces/{{.Name}}" hx-get="/interfaces/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
+        <td>{{.Type}}</td>
+        <td><span class="iface-status {{if .StatusUp}}iface-up{{else}}iface-down{{end}}"></span>{{.Status}}</td>
+        <td>{{.PhysAddr}}</td>
+        <td>{{range $i, $a := .Addresses}}{{if $i}}<br>{{end}}{{$a.Address}}{{if $a.Origin}} <span class="addr-origin">({{$a.Origin}})</span>{{end}}{{end}}{{if and .Addresses .Detail}}<br>{{end}}{{if .Detail}}<span class="data-detail">{{.Detail}}</span>{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{else if not .Error}}
+<section class="info-card">
+  <div class="card-header">Interfaces</div>
+  <p class="empty-message">No interfaces found.</p>
+</section>
+{{end}}
+{{end}}

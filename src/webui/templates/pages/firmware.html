@@ -1,0 +1,160 @@
+{{define "firmware.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Message}}
+<div class="alert alert-info">{{.Message}}</div>
+{{end}}
+
+{{if .Installing}}
+{{$sseURL := "/firmware/progress"}}{{if .AutoReboot}}{{$sseURL = "/firmware/progress?auto-reboot=1"}}{{end}}
+<section id="fw-progress-card" class="info-card" data-sse-src="{{$sseURL}}">
+  {{template "fw-progress-body" .}}
+</section>
+{{end}}
+
+<div class="fw-install-grid">
+
+  <section class="info-card">
+    <div class="card-header">Software</div>
+    {{if .BootOrder}}
+    <div class="fw-boot-order-row">
+      <span class="fw-boot-order-label">Boot order</span>
+      <span id="fw-boot-slots" class="fw-boot-slots">
+        {{range .BootOrder}}<span class="badge badge-neutral fw-boot-badge" draggable="true" data-slot="{{.}}">{{.}}</span>{{end}}
+      </span>
+      <button type="button" class="btn btn-sm btn-outline"
+              id="fw-boot-save-btn">Set</button>
+    </div>
+    {{end}}
+    {{if .Slots}}
+    <div class="fw-slot-list">
+      {{range .Slots}}
+      <div class="fw-slot-item">
+        <div class="fw-slot-primary">
+          <span class="fw-slot-name">{{.Name}}</span>
+          {{if .Booted}}<span class="badge badge-accept">booted</span>
+          {{else}}<span class="badge badge-neutral">{{.State}}</span>{{end}}
+        </div>
+        <div class="fw-slot-version">{{if .Version}}{{.Version}}{{else}}&mdash;{{end}}</div>
+        {{if .InstallDate}}<div class="fw-slot-date">{{.InstallDate}}</div>{{end}}
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-message">No software information available.</p>
+    {{end}}
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Install from URL</div>
+    <div class="card-body">
+      <p class="fw-help-text">
+        Get the latest firmware from
+        <a href="https://github.com/kernelkit/infix/releases/latest" target="_blank" rel="noopener">GitHub Releases</a>.
+        Download the <code>.tar.gz</code> tarball, extract the <code>.pkg</code> file, and serve it over FTP/HTTP.
+      </p>
+      <details class="fw-hint">
+        <summary>How to host the firmware from your PC</summary>
+        <div class="fw-hint-body">
+          <p>Extract and serve the package with Python (Linux/macOS/Windows):</p>
+          <code class="fw-hint-code">tar xf infix-{{if .Machine}}{{.Machine}}{{else}}aarch64{{end}}-vVERSION.tar.gz
+python3 -m http.server 8080</code>
+          <p>Then enter the URL below pointing at the <code>.pkg</code> file on your machine.</p>
+        </div>
+      </details>
+      <form hx-post="/firmware/install" hx-swap="none" class="firmware-form">
+        <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+        <div class="form-group">
+          <label for="fw-url">Firmware Package URL (.pkg)</label>
+          <input type="url" id="fw-url" name="url"
+                 placeholder="http://192.168.1.10:8080/infix-{{if .Machine}}{{.Machine}}{{else}}aarch64{{end}}-vVERSION.pkg"
+                 list="fw-url-history" autocomplete="off" required>
+          <datalist id="fw-url-history"></datalist>
+        </div>
+        <label class="fw-checkbox-row">
+          <input type="checkbox" name="auto-reboot" value="1" id="fw-auto-reboot">
+          Reboot after successful firmware upgrade
+        </label>
+        <button type="submit" class="btn btn-primary"
+                hx-confirm="Install firmware from this URL?"
+                {{if .Installer}}{{if .Installer.Active}}disabled{{end}}{{end}}>Install</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Upload &amp; Install</div>
+    <div class="card-body">
+      <p class="fw-help-text">
+        Select a <code>.pkg</code> firmware file from your computer to upload and install directly.
+      </p>
+      <div class="form-group">
+        <label for="fw-file">Firmware Package (.pkg)</label>
+        <input type="file" id="fw-file" accept=".pkg" class="cfg-input" required>
+      </div>
+      <label class="fw-checkbox-row">
+        <input type="checkbox" id="fw-upload-auto-reboot">
+        Reboot after successful firmware upgrade
+      </label>
+      <div id="fw-upload-progress" hidden>
+        <div class="progress-bar-wrap" style="margin-top:0.75rem">
+          <div class="progress-bar" id="fw-upload-bar"></div>
+        </div>
+        <p class="progress-text" id="fw-upload-text">Uploading&hellip;</p>
+      </div>
+      <div style="margin-top:0.75rem">
+        <button type="button" class="btn btn-primary" id="fw-upload-btn"
+                {{if and .Installer .Installer.Active}}disabled{{end}}>
+          Upload &amp; Install
+        </button>
+      </div>
+    </div>
+  </section>
+
+
+</div>
+{{end}}
+
+{{define "fw-progress-body"}}
+{{if and .Installer .Installer.Done}}
+  {{if .Installer.Success}}
+  <div class="card-header">Install Complete</div>
+  <div class="card-body fw-result-body">
+    <div class="fw-result fw-result-ok">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span>Firmware installed successfully.</span>
+    </div>
+    {{if not .AutoReboot}}
+    <div class="fw-result-actions">
+      <button class="btn btn-primary fw-reboot-btn"
+              hx-post="/reboot"
+              hx-target="#content"
+              hx-swap="innerHTML">Reboot to activate</button>
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="card-header">Install Failed</div>
+  <div class="card-body">
+    <div class="fw-result fw-result-err">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+      <span>{{.Installer.LastError}}</span>
+    </div>
+  </div>
+  {{end}}
+{{else}}
+  <div class="card-header">Install in Progress</div>
+  <div class="card-body">
+    <div class="progress-bar-wrap progress-bar-wrap--flush">
+      <div class="progress-bar" data-progress="{{if .Installer}}{{.Installer.Percentage}}{{end}}"></div>
+    </div>
+    <p class="progress-text">{{if .Installer}}{{.Installer.Percentage}}% &mdash; {{.Installer.Message}}{{else}}Installing&hellip;{{end}}</p>
+  </div>
+{{end}}
+{{end}}

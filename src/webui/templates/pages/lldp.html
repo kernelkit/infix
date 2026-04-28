@@ -1,0 +1,58 @@
+{{define "lldp.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Neighbors}}
+<section class="info-card">
+  <div class="card-header">LLDP Neighbors
+    <a href="/configure/tree?path=/ieee802-dot1ab-lldp:lldp"
+       hx-get="/configure/tree?path=/ieee802-dot1ab-lldp:lldp"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Local Port</th>
+          <th>Chassis ID</th>
+          <th>System Name</th>
+          <th>Port ID</th>
+          <th>Port Desc</th>
+          <th>Mgmt Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Neighbors}}
+        <tr>
+          <td>{{.LocalPort}}</td>
+          <td>{{.ChassisID}}</td>
+          <td>{{if .SystemName}}{{.SystemName}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .PortID}}{{.PortID}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .PortDesc}}{{.PortDesc}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .MgmtAddress}}{{.MgmtAddress}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{else if not .Error}}
+<section class="info-card">
+  <div class="card-header">LLDP Neighbors
+    <a href="/configure/tree?path=/ieee802-dot1ab-lldp:lldp"
+       hx-get="/configure/tree?path=/ieee802-dot1ab-lldp:lldp"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  <p class="empty-message">No LLDP neighbors discovered.</p>
+</section>
+{{end}}
+{{end}}

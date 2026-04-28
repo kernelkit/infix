@@ -1,0 +1,48 @@
+{{define "backup.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="info-grid">
+
+  <section class="info-card">
+    <div class="card-header">Backup</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">Download the current startup configuration as a JSON file.
+	The file format is <pre>startup-config-$hostname-$date-$time.cfg</pre>
+      </p>
+      <div>
+        <a href="/config" hx-boost="false" class="btn btn-primary">Download config</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Restore</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">Restore a previously backed-up configuration.  By default
+        the restore operation is made to running config, this is the safe default.</p>
+      <form id="restore-form"
+            hx-post="/maintenance/backup/restore"
+            hx-target="#restore-result"
+            hx-swap="innerHTML"
+            hx-encoding="multipart/form-data"
+            hx-confirm="Apply this configuration to the running system?"
+            hx-headers='{"X-CSRF-Token": "{{.CsrfToken}}"}'>
+        <div class="sc-dt-row">
+          <input type="file" name="config" accept=".json" required class="cfg-input">
+        </div>
+        <label class="sc-restore-label">
+          <input type="checkbox" name="save-to-startup" id="restore-startup-cb">
+          <span class="sc-restore-warn-text">Save to startup — may break system boot!</span>
+        </label>
+        <div id="restore-result"></div>
+        <div style="margin-top:0.75rem">
+          <button type="submit" class="btn btn-primary">Restore</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+</div>
+{{end}}

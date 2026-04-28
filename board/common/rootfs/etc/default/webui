@@ -1,0 +1,2 @@
+RESTCONF_URL=https://127.0.0.1/restconf
+INSECURE_TLS=1
