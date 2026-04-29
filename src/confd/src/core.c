@@ -572,6 +572,15 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			return SR_ERR_SYS;
 		}
 
+		/*
+		  Send sighup to yangerd to trigger a poll of polled values.
+		  This will make sure that there is no stale data.
+		*/
+		if (systemf("initctl -b reload yangerd")) {
+			EMERG("Failed reloading yangerd");
+			return SR_ERR_SYS;
+		}
+
 		AUDIT("The new configuration has been applied.");
 	}
 
