@@ -21,14 +21,14 @@ type Collector interface {
 // RunAll starts one goroutine per Collector, each ticking at the
 // collector's configured interval.  A failed Collect is logged and
 // retried on the next tick.  All goroutines exit when ctx is cancelled.
-func RunAll(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, collectors []Collector) {
+func RunAll(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, collectors []Collector, pokeCh <-chan struct{}) {
 	for _, c := range collectors {
 		wg.Add(1)
-		go runOne(ctx, wg, t, c)
+		go runOne(ctx, wg, t, c, pokeCh)
 	}
 }
 
-func runOne(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, c Collector) {
+func runOne(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, c Collector, pokeCh <-chan struct{}) {
 	defer wg.Done()
 
 	if err := c.Collect(ctx, t); err != nil {
@@ -45,6 +45,10 @@ func runOne(ctx context.Context, wg *sync.WaitGroup, t *tree.Tree, c Collector) 
 		case <-ticker.C:
 			if err := c.Collect(ctx, t); err != nil {
 				log.Printf("collector %s: %v", c.Name(), err)
+			}
+		case <-pokeCh:
+			if err := c.Collect(ctx, t); err != nil {
+				log.Printf("collector %s: poke: %v", c.Name(), err)
 			}
 		}
 	}
