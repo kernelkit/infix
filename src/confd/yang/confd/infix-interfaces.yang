@@ -41,6 +41,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2026-04-29 {
+    description "Add operational state for multicast router ports per bridge.";
+    reference "internal";
+  }
+
   revision 2026-04-09 {
     description "Add ptp-capabilities submodule for per-interface PTP timestamping info.";
     reference "internal";
