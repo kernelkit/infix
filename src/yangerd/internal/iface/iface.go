@@ -503,6 +503,19 @@ func lagAugment(iplink map[string]any) map[string]any {
 	return bond
 }
 
+func bridgePortSTP(info map[string]any) map[string]any {
+	state := getString(info, "state")
+	if state == "" {
+		return map[string]any{}
+	}
+
+	return map[string]any{
+		"cist": map[string]any{
+			"state": state,
+		},
+	}
+}
+
 func bridgePortLower(iplink map[string]any) map[string]any {
 	master := getString(iplink, "master")
 	if master == "" {
@@ -526,7 +539,7 @@ func bridgePortLower(iplink map[string]any) map[string]any {
 			"fast-leave": getBool(info, "fastleave"),
 			"router":     bridgeRouterMode(getIntOrZero(info, "multicast_router")),
 		},
-		"stp": map[string]any{},
+		"stp": bridgePortSTP(info),
 	}
 }
 

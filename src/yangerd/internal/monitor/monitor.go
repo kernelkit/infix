@@ -13,6 +13,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/bridgebatch"
 	"github.com/kernelkit/infix/src/yangerd/internal/iface"
 	"github.com/kernelkit/infix/src/yangerd/internal/ipbatch"
+	"github.com/kernelkit/infix/src/yangerd/internal/stpquery"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netlink/nl"
@@ -386,20 +387,26 @@ func (m *NLMonitor) refreshInterface(name string) {
 // Caller must NOT hold m.mu.
 func (m *NLMonitor) rebuild() {
 	m.mu.Lock()
+	linksCopy := append(json.RawMessage{}, m.links...)
 	doc := iface.Transform(m.links, m.addrs, m.links, m.fc)
 	eth := copyStringMap(m.ethernet)
 	wfi := copyStringMap(m.wifi)
 	fdb := copyStringMap(m.fdb)
 	mdb := copyStringMap(m.mdb)
-	doc = mergeAugments(doc, eth, wfi, fdb, mdb)
-	m.tree.Set(treeKey, doc)
 	m.mu.Unlock()
+
+	var brSTP, ptSTP map[string]json.RawMessage
+	resolver := stpquery.NewLinksIfIndexResolver(linksCopy)
+	brSTP, ptSTP = stpquery.Query(linksCopy, resolver)
+
+	doc = mergeAugments(doc, eth, wfi, fdb, mdb, brSTP, ptSTP)
+	m.tree.Set(treeKey, doc)
 }
 
 // mergeAugments adds ethernet, wifi, and bridge data into the
 // complete ietf-interfaces document produced by iface.Transform().
-func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb map[string]json.RawMessage) json.RawMessage {
-	if len(ethernet) == 0 && len(wifi) == 0 && len(fdb) == 0 && len(mdb) == 0 {
+func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, portSTP map[string]json.RawMessage) json.RawMessage {
+	if len(ethernet) == 0 && len(wifi) == 0 && len(fdb) == 0 && len(mdb) == 0 && len(bridgeSTP) == 0 && len(portSTP) == 0 {
 		return doc
 	}
 
@@ -457,6 +464,22 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb map[string]json
 			}
 		}
 
+		if stpData, ok := bridgeSTP[name]; ok {
+			bridgeObj := ensureBridgeAugment(ifaceObj)
+			var stpObj any
+			if err := json.Unmarshal(stpData, &stpObj); err == nil {
+				bridgeObj["stp"] = stpObj
+			}
+		}
+
+		if stpData, ok := portSTP[name]; ok {
+			bpObj := ensureBridgePortAugment(ifaceObj)
+			var stpObj any
+			if err := json.Unmarshal(stpData, &stpObj); err == nil {
+				deepMergeSTP(bpObj, stpObj)
+			}
+		}
+
 		ifaceArr[i] = ifaceObj
 	}
 
@@ -479,6 +502,52 @@ func ensureBridgeAugment(ifaceObj map[string]any) map[string]any {
 	bridgeObj := map[string]any{}
 	ifaceObj[key] = bridgeObj
 	return bridgeObj
+}
+
+func ensureBridgePortAugment(ifaceObj map[string]any) map[string]any {
+	key := "infix-interfaces:bridge-port"
+	if existing, ok := ifaceObj[key]; ok {
+		if m, ok := existing.(map[string]any); ok {
+			return m
+		}
+	}
+	obj := map[string]any{}
+	ifaceObj[key] = obj
+	return obj
+}
+
+// deepMergeSTP merges mstpd STP data into the bridge-port augment.
+// The kernel already provides stp.cist.state via iface.Transform;
+// mstpd adds role, port-id, designated, etc.  We deep-merge to
+// preserve the kernel state field while adding mstpd fields.
+func deepMergeSTP(bpObj map[string]any, stpData any) {
+	stpMap, ok := stpData.(map[string]any)
+	if !ok {
+		return
+	}
+
+	existing, _ := bpObj["stp"].(map[string]any)
+	if existing == nil {
+		bpObj["stp"] = stpMap
+		return
+	}
+
+	if newCist, ok := stpMap["cist"].(map[string]any); ok {
+		existingCist, _ := existing["cist"].(map[string]any)
+		if existingCist == nil {
+			existing["cist"] = newCist
+		} else {
+			for k, v := range newCist {
+				existingCist[k] = v
+			}
+		}
+	}
+
+	for k, v := range stpMap {
+		if k != "cist" {
+			existing[k] = v
+		}
+	}
 }
 
 func copyStringMap(m map[string]json.RawMessage) map[string]json.RawMessage {
