@@ -9,6 +9,10 @@ can change the hostname of the host.
 import infamy
 from infamy.util import until, to_binary
 
+def get_hostname(dut):
+    oper = target.get_data("/ietf-system:system")
+    return oper["system"]["hostname"]
+
 with infamy.Test() as test:
     cont_image = f"oci-archive:{infamy.Container.NFTABLES_IMAGE}"
     cont_name = "cont0"
@@ -30,12 +34,7 @@ with infamy.Test() as test:
             })
 
     with test.step("Verify initial hostname in operational"):
-        oper = target.get_data("/ietf-system:system")
-        name = oper["system"]["hostname"]
-
-        if name != hostname_init:
-            print(f"Expected hostname: {hostname_init}, actual hostname: {name}")
-            test.fail()
+        until(lambda: get_hostname(target) == hostname_init)
 
     with test.step("Include script in OCI image to modify host hostname"):
         commands = to_binary(f"""#!/bin/sh
@@ -75,5 +74,5 @@ nsenter -m/1/ns/mnt -u/1/ns/uts -i/1/ns/ipc -n/1/ns/net hostname {hostname_new}
         until(lambda: c.running(cont_name), attempts=60)
 
     with test.step("Verify the new hostname set by the container"):
-        until(lambda: c.running(cont_name) != target.get_data("/ietf-system:system")["system"]["hostname"], attempts=30)
+        until(lambda: c.running(cont_name) != get_hostname(target), attempts=30)
     test.succeed()
