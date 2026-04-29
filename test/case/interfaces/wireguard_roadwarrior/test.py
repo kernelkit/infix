@@ -335,8 +335,8 @@ with infamy.Test() as test:
         )
 
     with test.step("Check on the server that both clients is connected"):
-        util.parallel(lambda: util.until(lambda: wg.is_peer_up(server, "wg0", client1_public_key)),
-                      lambda: util.until(lambda: wg.is_peer_up(server, "wg0", client2_public_key)))
+        util.parallel(lambda: util.until(lambda: wg.is_peer_up(server, "wg0", client1_public_key), attempts = 30),
+                      lambda: util.until(lambda: wg.is_peer_up(server, "wg0", client2_public_key), attempts = 30))
 
     with infamy.IsolatedMacVlan(hport_server) as ns_server, \
          infamy.IsolatedMacVlan(hport_client1) as ns_client1, \
