@@ -51,13 +51,14 @@ type NLMonitor struct {
 
 	// staging holds raw ip-json data used as input to iface.Transform().
 	// Protected by mu.
-	mu       sync.Mutex
-	links    json.RawMessage // ip -json -s -d link show (includes stats+details)
-	addrs    json.RawMessage // ip -json -d addr show (details only, no stats)
-	fdb      map[string]json.RawMessage
-	mdb      map[string]json.RawMessage
-	ethernet map[string]json.RawMessage // ifname → ethtool JSON
-	wifi     map[string]json.RawMessage // ifname → wifi JSON
+	mu        sync.Mutex
+	links     json.RawMessage // ip -json -s -d link show (includes stats+details)
+	addrs     json.RawMessage // ip -json -d addr show (details only, no stats)
+	fdb       map[string]json.RawMessage
+	mdb       map[string]json.RawMessage
+	ethernet  map[string]json.RawMessage // ifname → ethtool JSON
+	wifi      map[string]json.RawMessage // ifname → wifi JSON
+	wireguard map[string]json.RawMessage // ifname → WireGuard peer-status JSON
 
 	lastOperStatus map[string]string
 }
@@ -79,6 +80,7 @@ func New(linkBatch, addrBatch *ipbatch.IPBatch, brBatch *bridgebatch.BridgeBatch
 		mdb:            make(map[string]json.RawMessage),
 		ethernet:       make(map[string]json.RawMessage),
 		wifi:           make(map[string]json.RawMessage),
+		wireguard:      make(map[string]json.RawMessage),
 		lastOperStatus: make(map[string]string),
 	}
 }
@@ -110,6 +112,23 @@ func (m *NLMonitor) SetWifiData(ifname string, data json.RawMessage) {
 	m.wifi[ifname] = data
 	m.mu.Unlock()
 	m.rebuild()
+}
+
+// SetWireguardData updates the staged WireGuard peer-status data for an
+// interface and triggers a full rebuild of the YANG document.
+func (m *NLMonitor) SetWireguardData(ifname string, data json.RawMessage) {
+	m.mu.Lock()
+	m.wireguard[ifname] = data
+	m.mu.Unlock()
+	m.rebuild()
+}
+
+// Links returns a copy of the current staged links data.
+func (m *NLMonitor) Links() json.RawMessage {
+	m.mu.Lock()
+	cp := append(json.RawMessage{}, m.links...)
+	m.mu.Unlock()
+	return cp
 }
 
 // Run starts the netlink monitor loop and returns on context cancellation,
@@ -339,6 +358,7 @@ func (m *NLMonitor) removeInterface(name string) {
 	delete(m.mdb, name)
 	delete(m.ethernet, name)
 	delete(m.wifi, name)
+	delete(m.wireguard, name)
 	delete(m.lastOperStatus, name)
 	m.mu.Unlock()
 
@@ -393,20 +413,21 @@ func (m *NLMonitor) rebuild() {
 	wfi := copyStringMap(m.wifi)
 	fdb := copyStringMap(m.fdb)
 	mdb := copyStringMap(m.mdb)
+	wg := copyStringMap(m.wireguard)
 	m.mu.Unlock()
 
 	var brSTP, ptSTP map[string]json.RawMessage
 	resolver := stpquery.NewLinksIfIndexResolver(linksCopy)
 	brSTP, ptSTP = stpquery.Query(linksCopy, resolver)
 
-	doc = mergeAugments(doc, eth, wfi, fdb, mdb, brSTP, ptSTP)
+	doc = mergeAugments(doc, eth, wfi, fdb, mdb, brSTP, ptSTP, wg)
 	m.tree.Set(treeKey, doc)
 }
 
 // mergeAugments adds ethernet, wifi, and bridge data into the
 // complete ietf-interfaces document produced by iface.Transform().
-func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, portSTP map[string]json.RawMessage) json.RawMessage {
-	if len(ethernet) == 0 && len(wifi) == 0 && len(fdb) == 0 && len(mdb) == 0 && len(bridgeSTP) == 0 && len(portSTP) == 0 {
+func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, portSTP, wireguard map[string]json.RawMessage) json.RawMessage {
+	if len(ethernet) == 0 && len(wifi) == 0 && len(fdb) == 0 && len(mdb) == 0 && len(bridgeSTP) == 0 && len(portSTP) == 0 && len(wireguard) == 0 {
 		return doc
 	}
 
@@ -477,6 +498,13 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, por
 			var stpObj any
 			if err := json.Unmarshal(stpData, &stpObj); err == nil {
 				deepMergeSTP(bpObj, stpObj)
+			}
+		}
+
+		if wgData, ok := wireguard[name]; ok {
+			var wgObj any
+			if err := json.Unmarshal(wgData, &wgObj); err == nil {
+				ifaceObj["infix-interfaces:wireguard"] = wgObj
 			}
 		}
 
