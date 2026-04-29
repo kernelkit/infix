@@ -37,6 +37,12 @@ func (c *ContainerCollector) Interval() time.Duration { return c.interval }
 // Collect implements Collector. It produces one tree key:
 // "infix-containers:containers".
 func (c *ContainerCollector) Collect(ctx context.Context, t *tree.Tree) error {
+	data := c.collectJSON(ctx)
+	t.Set("infix-containers:containers", data)
+	return nil
+}
+
+func (c *ContainerCollector) collectJSON(ctx context.Context) json.RawMessage {
 	containers := []interface{}{}
 
 	psList := c.podmanPS(ctx)
@@ -51,11 +57,18 @@ func (c *ContainerCollector) Collect(ctx context.Context, t *tree.Tree) error {
 		"container": containers,
 	}
 
-	if data, err := json.Marshal(out); err == nil {
-		t.Set("infix-containers:containers", data)
+	data, err := json.Marshal(out)
+	if err != nil {
+		return json.RawMessage(`{"container":[]}`)
 	}
+	return data
+}
 
-	return nil
+// CollectContainers runs a full container collection and returns the
+// result as JSON suitable for tree.Set("infix-containers:containers").
+func CollectContainers(cmd CommandRunner, fs FileReader) json.RawMessage {
+	c := &ContainerCollector{cmd: cmd, fs: fs}
+	return c.collectJSON(context.TODO())
 }
 
 func (c *ContainerCollector) podmanPS(ctx context.Context) []map[string]interface{} {
