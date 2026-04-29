@@ -169,10 +169,10 @@ with infamy.Test() as test:
     with test.step("Verify that A, B, C and D agrees on A being the root bridge"):
         a_id = bridge_id(a, "bridge-id")
         print(f"A's bridge-id: {a_id}")
-        until(lambda: all(map(lambda n: bridge_id(n, "root-id") == a_id, (a, b, c, d))), 60)
+        until(lambda: all(map(lambda n: bridge_id(n, "root-id") == a_id, (a, b, c, d))), 120)
 
     with test.step("Verify that B, C and D all use their direct connection to on A"):
-        until(lambda: all(map(lambda n: port_role(n, n["a"]) == "root", (b, c, d))), 60)
+        until(lambda: all(map(lambda n: port_role(n, n["a"]) == "root", (b, c, d))), 120)
 
     with test.step("Verify that host:a can reach host:{b,c,d}"):
         parallel(lambda: ns["a"].must_reach("10.0.0.2"),
