@@ -24,6 +24,18 @@ https://github.com/openwrt/openwrt/blob/main/target/linux/mediatek/patches-6.12/
 &secmon_reserved {
 	reg = <0 0x43000000 0 0x40000>;
 };
+/*
+ * The T-PHY's pcie-phy sub-node only claims clk40m ("ref") in the SoC
+ * dtsi.  CLK_TOP_PCIE_PHY_SEL ("da_ref") is left unclaimed, so the
+ * kernel's clk_disable_unused late_initcall gates it — killing the
+ * PCIe REFCLK output to the endpoint mid-probe.  Wire it here so the
+ * clock stays enabled while the PHY is active.
+ */
+&pcie_port {
+	clocks = <&clk40m>, <&topckgen CLK_TOP_PCIE_PHY_SEL>;
+	clock-names = "ref", "da_ref";
+};
+
 &cpu_thermal {
 	/delete-node/ trips;
 	/delete-node/ cooling-maps;
