@@ -344,7 +344,7 @@ func TestMergeAugments(t *testing.T) {
 		"br0": json.RawMessage(`[{"mac":"00:11:22:33:44:55"}]`),
 	}
 
-	got := mergeAugments(doc, eth, nil, fdb, nil)
+	got := mergeAugments(doc, eth, nil, fdb, nil, nil, nil)
 
 	var root map[string]any
 	if err := json.Unmarshal(got, &root); err != nil {
@@ -370,7 +370,7 @@ func TestMergeAugments(t *testing.T) {
 
 func TestMergeAugmentsNoOp(t *testing.T) {
 	doc := json.RawMessage(`{"interface":[{"name":"lo"}]}`)
-	got := mergeAugments(doc, nil, nil, nil, nil)
+	got := mergeAugments(doc, nil, nil, nil, nil, nil, nil)
 	if string(got) != string(doc) {
 		t.Fatalf("expected no-op, got %s", string(got))
 	}
@@ -379,7 +379,7 @@ func TestMergeAugmentsNoOp(t *testing.T) {
 func TestMergeAugmentsInvalidDoc(t *testing.T) {
 	doc := json.RawMessage(`{invalid`)
 	eth := map[string]json.RawMessage{"eth0": json.RawMessage(`{}`)}
-	got := mergeAugments(doc, eth, nil, nil, nil)
+	got := mergeAugments(doc, eth, nil, nil, nil, nil, nil)
 	if string(got) != string(doc) {
 		t.Fatalf("expected passthrough on invalid doc, got %s", string(got))
 	}
