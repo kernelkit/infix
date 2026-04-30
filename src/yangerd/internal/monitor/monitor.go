@@ -9,6 +9,7 @@ import (
 	"net"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/bridgebatch"
 	"github.com/kernelkit/infix/src/yangerd/internal/iface"
@@ -225,8 +226,8 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 		case <-m.redumpCh:
 			m.log.Warn("re-dumping all interfaces")
 			if err := m.initialDump(); err != nil {
-				m.log.Error("re-dump failed, will retry", "err", err)
-				m.requestRedump()
+				m.log.Error("re-dump failed, will retry in 5s", "err", err)
+				time.AfterFunc(5*time.Second, m.requestRedump)
 			}
 		}
 	}
