@@ -105,10 +105,11 @@ jobs:
 
           ls -l
           mkdir -p output
-          mv ${name}-${target}.tar.gz output/
+          tarfile=$(ls ${name}-${target}*.tar.gz | head -1)
+          mv "$tarfile" output/
           cd output/
-          tar xf ${name}-${target}.tar.gz
-          ln -s ${name}-${target} images
+          tar xf "$tarfile"
+          ln -s "${tarfile%.tar.gz}" images
 
       - name: Regression Test ${{ env.TARGET }}
         run: |
