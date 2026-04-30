@@ -885,6 +885,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#dummy-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dummy Interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dummy Interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-stable-ospf-router-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Stable OSPF Router-ID
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2449,6 +2477,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#dummy-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dummy Interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dummy Interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-stable-ospf-router-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Stable OSPF Router-ID
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2630,6 +2686,44 @@ administered bit.  Same chassis MAC as before.</p>
 admin@example:/config/interface/veth0a/&gt; <b>set custom-phys-address chassis offset 02:00:00:00:00:02</b>
 
 =&gt; 02:53:00:c0:ff:f0
+</code></pre>
+
+<h2 id="dummy-interface">Dummy Interface<a class="headerlink" href="#dummy-interface" title="Permanent link">¶</a></h2>
+<p>A dummy interface is a virtual interface that is always administratively
+and operationally UP, regardless of any physical link state.  It can
+hold IP addresses just like any other interface.</p>
+<p>The two most common uses are:</p>
+<ul>
+<li><strong>Stable OSPF router-ID</strong>: OSPF picks its router-ID from an interface
+  address.  If that interface goes down, adjacencies can flap.  Binding
+  the router-ID to a /32 address on a dummy avoids this.</li>
+<li><strong>Stable management address</strong>: A /32 on a dummy gives the device a
+  permanent identity on the network, reachable as long as at least one
+  uplink is up and the address is redistributed into the routing domain.</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>WiFi interfaces also use dummies as placeholders when the radio
+hardware is not detected at boot (e.g., a USB dongle that was
+unplugged).  See <a href="../wifi/">WiFi</a> for details.</p>
+</div>
+<h3 id="example-stable-ospf-router-id">Example: Stable OSPF Router-ID<a class="headerlink" href="#example-stable-ospf-router-id" title="Permanent link">¶</a></h3>
+<p>Create a dummy interface with a /32 address and use it as the OSPF
+router-ID so that the ID never changes when physical ports bounce:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface lo0</b>
+admin@example:/config/interface/lo0/&gt; <b>set type dummy</b>
+admin@example:/config/interface/lo0/&gt; <b>set ipv4 address 192.0.2.1 prefix-length 32</b>
+admin@example:/config/interface/lo0/&gt; <b>leave</b>
+admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set explicit-router-id 192.0.2.1</b>
+admin@example:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@example:/&gt; <b>copy running-config startup-config</b>
+</code></pre>
+
+<p>To also make the address reachable by other routers, redistribute
+connected routes (or add <code>lo0</code> as an OSPF interface):</p>
+<pre class="cli"><code>admin@example:/config/routing/…/ospf/&gt; <b>set redistribute connected</b>
 </code></pre>
 
 <div class="footnote">

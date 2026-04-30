@@ -1041,6 +1041,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#arp-and-neighbor-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ARP and Neighbor Cache
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ARP and Neighbor Cache">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-ipv4-arp-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static IPv4 ARP Entry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-ipv6-neighbor-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static IPv6 Neighbor Entry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2537,6 +2576,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#arp-and-neighbor-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ARP and Neighbor Cache
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ARP and Neighbor Cache">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-ipv4-arp-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static IPv4 ARP Entry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-ipv6-neighbor-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static IPv6 Neighbor Entry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3195,6 +3273,62 @@ admin@example:/config/interface/eth0/&gt; <b>leave</b>
 admin@example:/&gt;
 </code></pre>
 
+<h2 id="arp-and-neighbor-cache">ARP and Neighbor Cache<a class="headerlink" href="#arp-and-neighbor-cache" title="Permanent link">¶</a></h2>
+<p>Static ARP entries (IPv4) and neighbor cache entries (IPv6) can be
+configured per interface.  The most common reasons to do so are:</p>
+<ul>
+<li><strong>Security</strong> — prevent ARP/NDP spoofing by locking critical hosts
+  (e.g., a default gateway) to their known MAC addresses</li>
+<li><strong>Reliability</strong> — ensure reachability of a host even when ARP/NDP
+  traffic is suppressed or filtered (e.g., across a strict firewall)</li>
+</ul>
+<p>Dynamic entries are learned automatically by the kernel using ARP and
+Neighbor Discovery Protocol (NDP), and are visible as read-only
+operational state alongside the static ones.</p>
+<h3 id="static-ipv4-arp-entry">Static IPv4 ARP Entry<a class="headerlink" href="#static-ipv4-arp-entry" title="Permanent link">¶</a></h3>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv4</b>
+admin@example:/config/interface/eth0/ipv4/&gt; <b>set neighbor 192.168.1.100 link-layer-address 00:11:22:33:44:55</b>
+admin@example:/config/interface/eth0/ipv4/&gt; <b>diff</b>
++interfaces {
++  interface eth0 {
++    ipv4 {
++      neighbor 192.168.1.100 {
++        link-layer-address 00:11:22:33:44:55;
++      }
++    }
++  }
++}
+admin@example:/config/interface/eth0/ipv4/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<h3 id="static-ipv6-neighbor-entry">Static IPv6 Neighbor Entry<a class="headerlink" href="#static-ipv6-neighbor-entry" title="Permanent link">¶</a></h3>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>set neighbor 2001:db8::100 link-layer-address 00:11:22:33:44:55</b>
+admin@example:/config/interface/eth0/ipv6/&gt; <b>diff</b>
++interfaces {
++  interface eth0 {
++    ipv6 {
++      neighbor 2001:db8::100 {
++        link-layer-address 00:11:22:33:44:55;
++      }
++    }
++  }
++}
+admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>The full neighbor table — including dynamically learned entries (origin:
+<em>dynamic</em>) — is available as operational state via NETCONF or RESTCONF.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Static neighbor entries take effect immediately on <code>leave</code> (commit).
+They are installed as <em>permanent</em> entries in the kernel neighbor table,
+which means they are never evicted by the normal ARP/NDP aging process.</p>
+</div>
 <div class="footnote">
 <hr>
 <ol>
