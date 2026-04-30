@@ -183,6 +183,48 @@ In this setup we have a lot more going on.  Multiple multicast router
 ports have been detected, and behind the scenes someone has also added
 an IGMP/MLD fast-leave port.
 
+### Static Multicast Filters
+
+When IGMP/MLD snooping is in use, traffic for an unregistered group is
+flooded to all ports until a receiver joins.  For MAC multicast groups,
+or for groups where snooping cannot learn membership automatically, you
+can add static entries to the MDB that immediately restrict forwarding
+to a given set of ports.
+
+> [!NOTE]
+> Snooping must be enabled on the bridge (or per VLAN) before static
+> multicast filters can be configured.
+
+On a plain (non-VLAN) bridge, add a static IPv4 or MAC multicast filter
+like this:
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface br0</b>
+admin@example:/config/interface/br0/> <b>set bridge multicast-filters multicast-filter 224.1.1.1 ports e2</b>
+admin@example:/config/interface/br0/> <b>set bridge multicast-filters multicast-filter 224.1.1.1 ports e3</b>
+admin@example:/config/interface/br0/> <b>set bridge multicast-filters multicast-filter 01:00:5e:01:01:01 ports e2</b>
+admin@example:/config/interface/br0/> <b>leave</b>
+admin@example:/> <b>copy running-config startup-config</b>
+</code></pre>
+
+Each `ports` entry for the same group adds one port to the filter.
+Receivers on all other ports will not see traffic for that group.
+
+On a VLAN-filtering bridge the filter is scoped per VLAN:
+
+<pre class="cli"><code>admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 multicast-filters multicast-filter 224.2.2.2 ports e5</b>
+admin@example:/config/interface/br1/> <b>set bridge vlans vlan 10 multicast-filters multicast-filter 224.2.2.2 ports e6</b>
+</code></pre>
+
+To verify the MDB — both statically configured and dynamically learned
+entries — use:
+
+<pre class="cli"><code>admin@example:/> <b>show bridge mdb</b>
+<span class="header">BRIDGE   VID  GROUP                 PORTS                              </span>
+br0           224.1.1.1             e2, e3
+br0           01:00:5e:01:01:01     e2
+</code></pre>
+
 ### Terminology & Abbreviations
 
  - **IGMP**: Internet Group Membership Protocol, multicast subscription

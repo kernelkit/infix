@@ -114,6 +114,8 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 			     struct lyd_node *dif);
 int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 			struct lyd_node *cif, struct lyd_node *dif);
+int netdag_gen_ip_neighs(struct dagger *net, FILE *ip, const char *proto,
+			 struct lyd_node *cif, struct lyd_node *dif);
 
 /* if-bridge.c */
 int bridge_mstpd_gen(struct lyd_node *cifs);

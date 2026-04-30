@@ -28,3 +28,17 @@ def ipaddrs(ifname=None, netns=None):
         return HOST.run_json(pre + ["ip", "-j", "addr", "show"] + filt)
 
     return { addr["ifname"]: addr for addr in _ipaddrs(ifname, netns) }
+
+
+@cache
+def ipneighs(ifname=None, netns=None):
+    def _ipneighs(ifname, netns):
+        pre = ["ip", "netns", "exec", netns] if netns else []
+        filt = ["dev", ifname] if ifname else []
+        return HOST.run_json(pre + ["ip", "-j", "neigh", "show"] + filt, [])
+
+    result = {}
+    for e in _ipneighs(ifname, netns):
+        if dev := e.get("dev"):
+            result.setdefault(dev, []).append(e)
+    return result

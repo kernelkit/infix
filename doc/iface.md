@@ -138,6 +138,49 @@ admin@example:/config/interface/veth0a/> <b>set custom-phys-address chassis offs
 </code></pre>
 
 
+## Dummy Interface
+
+A dummy interface is a virtual interface that is always administratively
+and operationally UP, regardless of any physical link state.  It can
+hold IP addresses just like any other interface.
+
+The two most common uses are:
+
+- **Stable OSPF router-ID**: OSPF picks its router-ID from an interface
+  address.  If that interface goes down, adjacencies can flap.  Binding
+  the router-ID to a /32 address on a dummy avoids this.
+- **Stable management address**: A /32 on a dummy gives the device a
+  permanent identity on the network, reachable as long as at least one
+  uplink is up and the address is redistributed into the routing domain.
+
+> [!TIP]
+> WiFi interfaces also use dummies as placeholders when the radio
+> hardware is not detected at boot (e.g., a USB dongle that was
+> unplugged).  See [WiFi](wifi.md) for details.
+
+### Example: Stable OSPF Router-ID
+
+Create a dummy interface with a /32 address and use it as the OSPF
+router-ID so that the ID never changes when physical ports bounce:
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface lo0</b>
+admin@example:/config/interface/lo0/> <b>set type dummy</b>
+admin@example:/config/interface/lo0/> <b>set ipv4 address 192.0.2.1 prefix-length 32</b>
+admin@example:/config/interface/lo0/> <b>leave</b>
+admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set explicit-router-id 192.0.2.1</b>
+admin@example:/config/routing/…/ospf/> <b>leave</b>
+admin@example:/> <b>copy running-config startup-config</b>
+</code></pre>
+
+To also make the address reachable by other routers, redistribute
+connected routes (or add `lo0` as an OSPF interface):
+
+<pre class="cli"><code>admin@example:/config/routing/…/ospf/> <b>set redistribute connected</b>
+</code></pre>
+
+
 [^1]: A YANG deviation was previously used to make it possible to set
     `phys-address`, but this has been replaced with the more flexible
     `custom-phys-address`.

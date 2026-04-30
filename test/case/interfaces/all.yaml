@@ -5,6 +5,9 @@
 - name: Interface with IPv4
   case: ipv4_address/test.py
 
+- name: ARP and Neighbor Cache
+  case: neighbor_cache/test.py
+
 - name: Interface IPv6 Autoconf for Bridges
   case: ipv6_address/test.py
 

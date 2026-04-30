@@ -218,6 +218,13 @@ def mctl(ifname, vid, mctldata):
     return {}
 
 
+def mctl_router_ports(brname, mctldata):
+    for entry in mctldata.get("multicast-router-ports", []):
+        if entry.get("bridge") == brname:
+            return entry.get("ports", [])
+    return []
+
+
 def multicast_filters(iplink, vid):
     filt = ["dev", iplink["ifname"]] + (["vid", str(vid)] if vid else [])
     brmdb = HOST.run_json(["bridge", "-j", "mdb", "show"] + filt)[0]["mdb"]
@@ -252,6 +259,9 @@ def multicast(iplink, info, mctldata):
 
     if interval := mctlq.get("interval"):
         mcast["query-interval"] = interval
+
+    if ports := mctl_router_ports(iplink["ifname"], mctldata):
+        mcast["router-ports"] = ports
 
     return mcast
 

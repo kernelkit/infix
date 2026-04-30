@@ -435,6 +435,66 @@ admin@example:/config/interface/eth0/> <b>leave</b>
 admin@example:/>
 </code></pre>
 
+## ARP and Neighbor Cache
+
+Static ARP entries (IPv4) and neighbor cache entries (IPv6) can be
+configured per interface.  The most common reasons to do so are:
+
+- **Security** — prevent ARP/NDP spoofing by locking critical hosts
+  (e.g., a default gateway) to their known MAC addresses
+- **Reliability** — ensure reachability of a host even when ARP/NDP
+  traffic is suppressed or filtered (e.g., across a strict firewall)
+
+Dynamic entries are learned automatically by the kernel using ARP and
+Neighbor Discovery Protocol (NDP), and are visible as read-only
+operational state alongside the static ones.
+
+### Static IPv4 ARP Entry
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv4</b>
+admin@example:/config/interface/eth0/ipv4/> <b>set neighbor 192.168.1.100 link-layer-address 00:11:22:33:44:55</b>
+admin@example:/config/interface/eth0/ipv4/> <b>diff</b>
++interfaces {
++  interface eth0 {
++    ipv4 {
++      neighbor 192.168.1.100 {
++        link-layer-address 00:11:22:33:44:55;
++      }
++    }
++  }
++}
+admin@example:/config/interface/eth0/ipv4/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+### Static IPv6 Neighbor Entry
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit interface eth0 ipv6</b>
+admin@example:/config/interface/eth0/ipv6/> <b>set neighbor 2001:db8::100 link-layer-address 00:11:22:33:44:55</b>
+admin@example:/config/interface/eth0/ipv6/> <b>diff</b>
++interfaces {
++  interface eth0 {
++    ipv6 {
++      neighbor 2001:db8::100 {
++        link-layer-address 00:11:22:33:44:55;
++      }
++    }
++  }
++}
+admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+The full neighbor table — including dynamically learned entries (origin:
+*dynamic*) — is available as operational state via NETCONF or RESTCONF.
+
+> [!NOTE]
+> Static neighbor entries take effect immediately on `leave` (commit).
+> They are installed as *permanent* entries in the kernel neighbor table,
+> which means they are never evicted by the normal ARP/NDP aging process.
+
 [1]: https://www.rfc-editor.org/rfc/rfc3442
 [2]: https://www.rfc-editor.org/rfc/rfc8344
 [3]: https://www.rfc-editor.org/rfc/rfc8981

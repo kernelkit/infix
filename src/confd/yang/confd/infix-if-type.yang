@@ -68,7 +68,9 @@ module infix-if-type {
   identity dummy {
     base infix-interface-type;
     base ianaift:other;
-    description "Linux dummy interface.  Useful mostly for testing.";
+    description "Linux virtual interface that is always UP.  Useful for
+                 stable loopback-style addresses, e.g., as a permanent
+                 management address or OSPF router-ID source.";
   }
   identity ethernet {
     base infix-interface-type;

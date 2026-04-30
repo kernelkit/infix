@@ -12,6 +12,56 @@
 
 #include "interfaces.h"
 
+static void warn_mcast_flood_port(struct lyd_node *port_cif)
+{
+	struct lyd_node *bp, *flood;
+
+	bp = lydx_get_child(port_cif, "bridge-port");
+	if (!bp)
+		return;
+
+	flood = lydx_get_child(bp, "flood");
+	if (!lydx_is_enabled(flood, "multicast"))
+		WARN("%s: multicast flood disabled, topology changes will black-hole multicast until IGMP/MLD rejoin",
+		     lydx_get_cattr(port_cif, "name"));
+}
+
+static void warn_mcast_flood_bridge(struct lyd_node *cif, const char *brname)
+{
+	struct ly_set *ports;
+	uint32_t i;
+
+	ports = lydx_find_xpathf(cif, "../interface[bridge-port/bridge='%s']", brname);
+	if (!ports)
+		return;
+
+	for (i = 0; i < ports->count; i++)
+		warn_mcast_flood_port(ports->dnodes[i]);
+
+	ly_set_free(ports, NULL);
+}
+
+static void warn_mcast_flood_vlan(struct lyd_node *cif, struct lyd_node *vlan)
+{
+	static const char *modes[] = { "tagged", "untagged", NULL };
+	struct lyd_node *portentry;
+	struct ly_set *set;
+	const char **mode;
+
+	for (mode = modes; *mode; mode++) {
+		LYX_LIST_FOR_EACH(lyd_child(vlan), portentry, *mode) {
+			set = lydx_find_xpathf(cif, "../interface[name='%s']",
+					       lyd_get_value(portentry));
+			if (!set || !set->count) {
+				ly_set_free(set, NULL);
+				continue;
+			}
+			warn_mcast_flood_port(set->dnodes[0]);
+			ly_set_free(set, NULL);
+		}
+	}
+}
+
 static int gen_vlan(struct lyd_node *cif, struct lyd_node *vlan, FILE *conf)
 {
 	const char *iface, *querier, *upper;
@@ -25,6 +75,8 @@ static int gen_vlan(struct lyd_node *cif, struct lyd_node *vlan, FILE *conf)
 	querier = lydx_get_cattr(mcast, "querier");
 	if (!strcmp(querier, "off"))
 		return 0;
+
+	warn_mcast_flood_vlan(cif, vlan);
 
 	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
 
@@ -65,6 +117,8 @@ static int gen_bridge(struct lyd_node *cif, FILE *conf)
 			return 0;
 
 		interval = atoi(lydx_get_cattr(mcast, "query-interval"));
+
+		warn_mcast_flood_bridge(cif, iface);
 
 		fprintf(conf, "iface %s enable %s igmpv3 query-interval %d\n",
 			iface, !strcmp(querier, "proxy") ? "proxy-queries" : "",

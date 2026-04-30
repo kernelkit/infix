@@ -29,6 +29,11 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2026-04-29 {
+    description "Add operational state for multicast router ports per bridge.";
+    reference "internal";
+  }
+
   revision 2025-10-28 {
     description "Prevent IP addresses on bridge ports.";
     reference "internal";
@@ -388,6 +393,12 @@ submodule infix-if-bridge {
           range "1..1024";
         }
         default 125;
+      }
+
+      leaf-list router-ports {
+        config false;
+        description "Ports with detected multicast routers, learned by IGMP/MLD snooping.";
+        type if:interface-ref;
       }
     }
   }
