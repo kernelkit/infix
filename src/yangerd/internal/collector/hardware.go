@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/nl80211"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
@@ -349,22 +350,19 @@ func sensorName(baseName, sensorNum string) string {
 	return baseName + sensorNum
 }
 
-func (c *HardwareCollector) get_wifi_phy_info(ctx context.Context) map[string]map[string]interface{} {
+func (c *HardwareCollector) get_wifi_phy_info(ctx context.Context, client *nl80211.Client) map[string]map[string]interface{} {
 	phyInfo := make(map[string]map[string]interface{})
+	if err := ctx.Err(); err != nil {
+		return phyInfo
+	}
 
-	listOut, err := c.cmd.Run(ctx, "/usr/libexec/infix/iw.py", "list")
+	phys, err := client.ListPhys()
 	if err != nil {
 		return phyInfo
 	}
 
-	var phys []interface{}
-	if err := json.Unmarshal(listOut, &phys); err != nil {
-		return phyInfo
-	}
-
-	for _, phyRaw := range phys {
-		phy, ok := phyRaw.(string)
-		if !ok || phy == "" {
+	for _, phy := range phys {
+		if phy == "" {
 			continue
 		}
 		phyInfo[phy] = map[string]interface{}{
@@ -382,26 +380,18 @@ func (c *HardwareCollector) get_wifi_phy_info(ctx context.Context) map[string]ma
 		}
 	}
 
-	devOut, err := c.cmd.Run(ctx, "/usr/libexec/infix/iw.py", "dev")
+	devMap, err := client.PhyInterfaces()
 	if err == nil {
-		var devMap map[string]interface{}
-		if json.Unmarshal(devOut, &devMap) == nil {
-			for phyNum, ifacesRaw := range devMap {
-				phyName, ok := phyNumToName[phyNum]
-				if !ok {
-					continue
-				}
-				ifaces, ok := ifacesRaw.([]interface{})
-				if !ok || len(ifaces) == 0 {
-					continue
-				}
-				iface, ok := ifaces[0].(string)
-				if !ok {
-					continue
-				}
-				if entry, ok := phyInfo[phyName]; ok {
-					entry["iface"] = iface
-				}
+		for phyNum, ifaces := range devMap {
+			phyName, ok := phyNumToName[phyNum]
+			if !ok {
+				continue
+			}
+			if len(ifaces) == 0 {
+				continue
+			}
+			if entry, ok := phyInfo[phyName]; ok {
+				entry["iface"] = ifaces[0]
 			}
 		}
 	}
@@ -618,7 +608,11 @@ func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context) []inter
 		}
 	}
 
-	wifiInfo := c.get_wifi_phy_info(ctx)
+	wifiInfo := make(map[string]map[string]interface{})
+	if client, err := nl80211.Dial(); err == nil {
+		wifiInfo = c.get_wifi_phy_info(ctx, client)
+		_ = client.Close()
+	}
 	for _, componentRaw := range components {
 		component, ok := componentRaw.(map[string]interface{})
 		if !ok {
@@ -668,26 +662,25 @@ func (c *HardwareCollector) thermal_sensor_components(ctx context.Context) []int
 	return components
 }
 
-func (c *HardwareCollector) get_survey_data(ctx context.Context, ifname string) []interface{} {
+func (c *HardwareCollector) get_survey_data(ctx context.Context, client *nl80211.Client, ifname string) []interface{} {
+	if err := ctx.Err(); err != nil {
+		return nil
+	}
 	if ifname == "" {
 		return nil
 	}
-	out, err := c.cmd.Run(ctx, "/usr/libexec/infix/iw.py", "survey", ifname)
+	iface, err := net.InterfaceByName(ifname)
 	if err != nil {
 		return nil
 	}
 
-	var survey []interface{}
-	if err := json.Unmarshal(out, &survey); err != nil {
+	survey, err := client.Survey(iface.Index)
+	if err != nil {
 		return nil
 	}
 
 	channels := make([]interface{}, 0, len(survey))
-	for _, entryRaw := range survey {
-		entry, ok := entryRaw.(map[string]interface{})
-		if !ok {
-			continue
-		}
+	for _, entry := range survey {
 		channel := map[string]interface{}{
 			"frequency": entry["frequency"],
 			"in-use":    entry["in_use"],
@@ -703,16 +696,15 @@ func (c *HardwareCollector) get_survey_data(ctx context.Context, ifname string) 
 	return channels
 }
 
-func (c *HardwareCollector) get_phy_info(ctx context.Context, phyName string) map[string]interface{} {
-	out, err := c.cmd.Run(ctx, "/usr/libexec/infix/iw.py", "info", phyName)
+func (c *HardwareCollector) get_phy_info(ctx context.Context, client *nl80211.Client, phyName string) map[string]interface{} {
+	if err := ctx.Err(); err != nil {
+		return map[string]interface{}{}
+	}
+	phyInfo, err := client.PhyInfo(phyName)
 	if err != nil {
 		return map[string]interface{}{}
 	}
 
-	var phyInfo map[string]interface{}
-	if err := json.Unmarshal(out, &phyInfo); err != nil {
-		return map[string]interface{}{}
-	}
 	return phyInfo
 }
 
@@ -805,7 +797,13 @@ func channelFromFrequency(freq int) (int, bool) {
 
 func (c *HardwareCollector) wifi_radio_components(ctx context.Context) []interface{} {
 	components := make([]interface{}, 0)
-	wifiInfo := c.get_wifi_phy_info(ctx)
+	client, err := nl80211.Dial()
+	if err != nil {
+		return components
+	}
+	defer client.Close()
+
+	wifiInfo := c.get_wifi_phy_info(ctx, client)
 
 	for phyName, phyData := range wifiInfo {
 		component := map[string]interface{}{
@@ -815,7 +813,7 @@ func (c *HardwareCollector) wifi_radio_components(ctx context.Context) []interfa
 		}
 
 		wifiRadioData := make(map[string]interface{})
-		iwInfo := c.get_phy_info(ctx, phyName)
+		iwInfo := c.get_phy_info(ctx, client, phyName)
 		phyDetails := convert_iw_phy_info_for_yanger(iwInfo)
 
 		if manufacturer := strDefault(phyDetails["manufacturer"], "Unknown"); manufacturer != "Unknown" {
@@ -865,7 +863,7 @@ func (c *HardwareCollector) wifi_radio_components(ctx context.Context) []interfa
 		wifiRadioData["num-virtual-interfaces"] = toInt(iwInfo["num_virtual_interfaces"])
 
 		iface := strDefault(phyData["iface"], "")
-		if channels := c.get_survey_data(ctx, iface); len(channels) > 0 {
+		if channels := c.get_survey_data(ctx, client, iface); len(channels) > 0 {
 			wifiRadioData["survey"] = map[string]interface{}{
 				"channel": channels,
 			}
