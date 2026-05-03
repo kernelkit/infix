@@ -27,10 +27,10 @@ MODULES=(
 	"infix-syslog@2025-11-17.yang"
 	"iana-hardware@2018-03-13.yang"
 	"ietf-hardware@2018-03-13.yang -e hardware-state -e hardware-sensor"
-	"infix-hardware@2026-02-08.yang"
+	"infix-hardware@2026-04-27.yang"
 	"ieee802-dot1q-types@2022-10-29.yang"
 	"infix-ip@2026-04-28.yang"
-	"infix-if-type@2026-01-07.yang"
+	"infix-if-type@2026-04-27.yang"
 	"infix-routing@2026-03-11.yang"
 	"ieee802-dot1ab-lldp@2022-03-15.yang"
 	"infix-lldp@2025-05-05.yang"
@@ -56,5 +56,4 @@ MODULES=(
 	"ieee1588-ptp-tt@2023-08-14.yang -e timestamp-correction"
 	"ieee802-dot1as-gptp@2025-12-10.yang"
 	"infix-ptp@2026-04-07.yang"
-	"infix-modem@2024-03-15.yang"
 )
