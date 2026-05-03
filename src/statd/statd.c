@@ -112,7 +112,8 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 
 	err = lyd_parse_data_fd(ctx, fd, LYD_JSON, LYD_PARSE_ONLY, 0, parent);
 	if (err)
-		ERROR("Error, parsing yanger data (%d): %s", err, ly_errmsg(ctx));
+		ERROR("Error, parsing yanger data (%d) for model '%s': %s", err,
+		      yanger_args[1] ?: "?", ly_errmsg(ctx));
 
 	fclose(stream);
 	/* Note: fclose() already closes the underlying fd from fdopen() */
@@ -227,7 +228,7 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Error adding yanger data for xpath: %s", xpath);
 
 	sr_release_context(con);
 

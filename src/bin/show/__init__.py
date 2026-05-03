@@ -552,8 +552,9 @@ def system(args: List[str]) -> None:
     runtime = {}
 
     # Extract CPU temperature and fan speed from hardware components
-    cpu_temp = None
+    cpu_temps = []
     fan_rpm = None
+    _cpu_prefixes = ("cpu", "soc", "core")
     if hardware_data and "ietf-hardware:hardware" in hardware_data:
         components = hardware_data.get("ietf-hardware:hardware", {}).get("component", [])
         for component in components:
@@ -564,18 +565,16 @@ def system(args: List[str]) -> None:
             name = component.get("name", "")
             value_type = sensor_data.get("value-type")
 
-            # Only capture CPU/SoC temperature (ignore phy, sfp, etc.)
-            # Different platforms use different names: cpu, soc, core, etc.
-            if value_type == "celsius" and name in ("cpu", "soc", "core") and cpu_temp is None:
-                temp_millidegrees = sensor_data.get("value", 0)
-                cpu_temp = temp_millidegrees / 1000.0
+            # Capture all CPU/SoC temperatures (handles cpu, cpu1, soc, core0, etc.)
+            if value_type == "celsius" and any(name == p or name.startswith(p) for p in _cpu_prefixes):
+                cpu_temps.append(sensor_data.get("value", 0) / 1000.0)
 
             # Capture fan speed if available
             elif value_type == "rpm" and fan_rpm is None:
                 fan_rpm = sensor_data.get("value", 0)
 
-    if cpu_temp is not None:
-        runtime["cpu_temp"] = cpu_temp
+    if cpu_temps:
+        runtime["cpu_temp"] = max(cpu_temps)
     if fan_rpm is not None:
         runtime["fan_rpm"] = fan_rpm
 

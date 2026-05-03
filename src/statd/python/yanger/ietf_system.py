@@ -134,11 +134,10 @@ def add_dns(out):
 
             try:
                 ipaddress.ip_address(ip)
-                servers.append({
-                    "address": ip,
-                    "origin": "dhcp",
-                    "interface": iface
-                })
+                entry = {"address": ip, "origin": "dhcp"}
+                if iface:
+                    entry["interface"] = iface
+                servers.append(entry)
             except ValueError:
                 continue
 
@@ -146,9 +145,12 @@ def add_dns(out):
             parts = line.split('#', 1)
             search.extend(parts[0].split()[1:])
 
-    insert(out, "infix-system:dns-resolver", "options", options)
-    insert(out, "infix-system:dns-resolver", "server", servers)
-    insert(out, "infix-system:dns-resolver", "search", search)
+    if options:
+        insert(out, "infix-system:dns-resolver", "options", options)
+    if servers:
+        insert(out, "infix-system:dns-resolver", "server", servers)
+    if search:
+        insert(out, "infix-system:dns-resolver", "search", search)
 
 def add_software_slots(out, data):
     slots = []
@@ -357,7 +359,8 @@ def add_users(out):
 
         users.append(user)
 
-    insert(out, "authentication", "user", users)
+    if users:
+        insert(out, "authentication", "user", users)
 
 def add_clock(out):
     clock = {}
