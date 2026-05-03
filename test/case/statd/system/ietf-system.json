@@ -110,15 +110,13 @@
       }
     },
     "infix-system:dns-resolver": {
-      "options": {},
       "server": [
         {
           "address": "192.168.2.1",
           "origin": "dhcp",
           "interface": "e7"
         }
-      ],
-      "search": []
+      ]
     },
     "clock": {
       "boot-datetime": "2026-01-02T20:42:11+00:00",
