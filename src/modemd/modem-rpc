@@ -38,6 +38,13 @@ if __name__ == "__main__":
 
     print("Sending '%s' rpc to modem%d" % (args.rpc, index))
 
-    rpc = {"infix-modem:%s" % args.rpc: {"index": str(index)}}
+    rpc = {
+        "ietf-hardware:hardware": {
+            "component": [{
+                "name": "modem%d" % index,
+                "infix-hardware:modem": {args.rpc: {}}
+            }]
+        }
+    }
 
     sendrpc(index, rpc)

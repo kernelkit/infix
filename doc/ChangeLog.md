@@ -10,13 +10,17 @@ All notable changes to the project are documented in this file.
 
 - Add Wi-Fi roaming for fast, seamless handoff between access points that
   share an SSID: 802.11k, 802.11v and 802.11r (over-the-air FT).  See the
-  [Wi-Fi][wifi] guide for details
+  [Wi-Fi User's Guide][wifi] for details
 - Add Wi-Fi 802.11s mesh support, letting access points form a wireless
   backhaul between each other without cabling
 - Add band steering for dual-band access points, nudging dual-band
   clients onto the faster 5/6 GHz band
 - Add `legacy-rates` option to re-enable 802.11b rates on 2.4 GHz for
   old IoT devices (disabled by default)
+- Add cellular modem (WWAN) support for USB-attached MBIM/QMI modems,
+  including USB dongles, mPCIe cards, and M.2 Key-B modules.  Multiple
+  APNs per modem, SIM PIN configuration, and NMEA routing from modem
+  GPS to gpsd.  See the [Modem User's Guide][modem] for details
 
 ### Fixes
 
@@ -24,7 +28,8 @@ All notable changes to the project are documented in this file.
   sysctls.  You must now enable IP forwarding explicitly on the interfaces
   that should route traffic; enabling NAT alone is no longer enough
 
-[wifi]: wifi.md
+[wifi]:  https://www.kernelkit.org/infix/latest/wifi/
+[modem]: https://www.kernelkit.org/infix/latest/modem/
 
 [v26.05.0][] - 2026-05-29
 -------------------------
@@ -83,9 +88,9 @@ All notable changes to the project are documented in this file.
   show`, which were not expanded, so `show interface` and other operational
   reads failed.  Ranges are now expanded and listed correctly
 
-[ethernet]: ethernet.md#restricting-advertised-link-modes
+[ethernet]: https://www.kernelkit.org/infix/latest/ethernet/#restricting-advertised-link-modes
 [BPI-R3]:   https://docs.banana-pi.org/en/BPI-R3/BananaPi_BPI-R3
-[AcerConnectVero]: ../board/aarch64/acer-connect-vero-w6m/
+[AcerConnectVero]: https://github.com/kernelkit/infix/tree/main/board/aarch64/acer-connect-vero-w6m/
 
 [v26.04.0][] - 2026-04-30
 -------------------------

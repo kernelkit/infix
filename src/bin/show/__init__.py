@@ -81,6 +81,33 @@ def hardware(args: List[str]) -> None:
     cli_pretty(data, "show-hardware")
 
 
+def modem(args: List[str]) -> None:
+    ref = args[0] if args else None
+
+    if ref:
+        try:
+            result = subprocess.run(["/usr/libexec/modemd/modem-info"],
+                                    capture_output=True, text=True, check=True)
+            data = json.loads(result.stdout) if result.stdout.strip() else []
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            data = []
+
+        if RAW_OUTPUT:
+            print(json.dumps(data, indent=2))
+            return
+        cli_pretty({"modem-list": data}, "show-modem-detail", ref)
+    else:
+        data = get_json("/ietf-hardware:hardware")
+        if not data:
+            print("No modem data available.")
+            return
+
+        if RAW_OUTPUT:
+            print(json.dumps(data, indent=2))
+            return
+        cli_pretty(data, "show-modem")
+
+
 def ntp(args: List[str]) -> None:
     # Create argument parser for ntp subcommands
     parser = argparse.ArgumentParser(prog='show ntp', add_help=False)
@@ -744,6 +771,7 @@ def execute_command(command: str, args: List[str]):
         'keystore': keystore,
         'lldp': lldp,
         'mdns': mdns,
+        'modem': modem,
         'nacm': nacm,
         'ntp': ntp,
         'ospf': ospf,

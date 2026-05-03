@@ -48,6 +48,7 @@ confd_plugin_la_SOURCES =			\
 	  if-vxlan.c				\
 	  if-wifi.c				\
           if-wireguard.c			\
+	  if-modem.c				\
 	  modem.c				\
 	keystore.c				\
 	system.c				\

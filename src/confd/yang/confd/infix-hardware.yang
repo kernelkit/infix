@@ -12,7 +12,9 @@ module infix-hardware {
   import ietf-yang-types {
     prefix yang;
   }
-
+  import ietf-netconf-acm {
+    prefix nacm;
+  }
   import infix-wifi-country-codes {
     prefix iwcc;
   }
@@ -21,6 +23,25 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-05-08 {
+    description "Move modem actions (restart/reset/send-sms) from container modem to a
+                 direct augment on component with when/if-feature guard, fixing sysrepo
+                 NP-container parent validation for nested YANG actions.";
+    reference "internal";
+  }
+  revision 2026-05-03 {
+    description "Add cellular modem and SIM hardware config containers.
+                 Add modem typedefs (modem-access-mode, modem-band, modem-location-source).
+                 Add actions restart/reset/send-sms and status-update notification on modem.
+                 Add sim container with pin, puk, carrier.
+                 Add sim-state operational container with slot, lock state, operator-name.";
+    reference "internal";
+  }
+  revision 2026-04-27 {
+    description "Add cellular modem and SIM hardware class identities.
+                 Add modem-state operational augment for statd.";
+    reference "internal";
+  }
   revision 2026-03-01 {
     description "Add channel-width leaf for WiFi radio container.";
     reference "internal";
@@ -56,6 +77,10 @@ module infix-hardware {
 
   feature gps {
     description "GPS support is an optional build-time feature in Infix.";
+  }
+
+  feature modem {
+    description "Cellular modem support is an optional build-time feature in Infix.";
   }
 
   typedef country-code {
@@ -134,6 +159,303 @@ module infix-hardware {
   }
 
   /*
+   * Modem-specific typedefs
+   */
+
+  typedef modem-access-mode {
+    type enumeration {
+      enum cs  { description "Circuit-switched (CSD, GSM)."; }
+      enum 2g  { description "2G (GPRS, EDGE)."; }
+      enum 3g  { description "3G (UMTS, HSxPA)."; }
+      enum 4g  { description "4G (LTE)."; }
+      enum 5g  { description "5G (NR)."; }
+      enum any { description "Any technology."; }
+    }
+    description "Cellular radio access technology.";
+  }
+
+  typedef modem-band {
+    type enumeration {
+      // 2G GSM
+      enum egsm  { description "GSM 900 MHz, Extended (880-960 MHz)."; }
+      enum dcs   { description "GSM 1800 MHz, DCS (Digital Cellular System)."; }
+      enum pcs   { description "GSM 1900 MHz, PCS (Personal Communications Service)."; }
+      enum g850  { description "GSM 850 MHz (Americas, Pacific)."; }
+      // 3G UMTS/WCDMA
+      enum utran-1  { description "UMTS Band I, 2100 MHz FDD (Europe, Asia, global)."; }
+      enum utran-2  { description "UMTS Band II, 1900 MHz FDD (Americas, PCS band)."; }
+      enum utran-3  { description "UMTS Band III, 1800 MHz FDD."; }
+      enum utran-4  { description "UMTS Band IV, 1700/2100 MHz FDD, AWS (Americas)."; }
+      enum utran-5  { description "UMTS Band V, 850 MHz FDD (Americas, Pacific)."; }
+      enum utran-6  { description "UMTS Band VI, 800 MHz FDD (Japan)."; }
+      enum utran-7  { description "UMTS Band VII, 2600 MHz FDD (Europe)."; }
+      enum utran-8  { description "UMTS Band VIII, 900 MHz FDD (Europe, Asia)."; }
+      enum utran-9  { description "UMTS Band IX, 1700 MHz FDD (Japan)."; }
+      enum utran-10 { description "UMTS Band X, 1700/2100 MHz FDD, AWS-II (Americas)."; }
+      enum utran-11 { description "UMTS Band XI, 1500 MHz FDD (Japan)."; }
+      enum utran-12 { description "UMTS Band XII, 700 MHz FDD (Americas, lower block)."; }
+      enum utran-13 { description "UMTS Band XIII, 700 MHz FDD (Americas, upper C block)."; }
+      enum utran-14 { description "UMTS Band XIV, 700 MHz FDD (Americas, upper D block)."; }
+      enum utran-19 { description "UMTS Band XIX, 800 MHz FDD (Japan)."; }
+      enum utran-20 { description "UMTS Band XX, 800 MHz FDD (Europe, digital dividend)."; }
+      enum utran-21 { description "UMTS Band XXI, 1500 MHz FDD (Japan)."; }
+      enum utran-22 { description "UMTS Band XXII, 3500 MHz FDD."; }
+      enum utran-25 { description "UMTS Band XXV, 1900 MHz FDD (Americas, PCS extended)."; }
+      enum utran-26 { description "UMTS Band XXVI, 850 MHz FDD (Americas, extended)."; }
+      enum utran-32 { description "UMTS Band XXXII, 1500 MHz SDL (supplemental downlink)."; }
+      // 4G LTE
+      enum eutran-1  { description "LTE Band 1, 2100 MHz FDD (Europe, Asia, global)."; }
+      enum eutran-2  { description "LTE Band 2, 1900 MHz FDD, PCS (Americas)."; }
+      enum eutran-3  { description "LTE Band 3, 1800 MHz FDD (global)."; }
+      enum eutran-4  { description "LTE Band 4, 1700/2100 MHz FDD, AWS (Americas)."; }
+      enum eutran-5  { description "LTE Band 5, 850 MHz FDD, CLR (Americas, Pacific)."; }
+      enum eutran-6  { description "LTE Band 6, 800 MHz FDD (Japan)."; }
+      enum eutran-7  { description "LTE Band 7, 2600 MHz FDD (Europe, global)."; }
+      enum eutran-8  { description "LTE Band 8, 900 MHz FDD (Europe, Asia)."; }
+      enum eutran-9  { description "LTE Band 9, 1800 MHz FDD (Japan)."; }
+      enum eutran-10 { description "LTE Band 10, 1700/2100 MHz FDD, AWS (Americas)."; }
+      enum eutran-11 { description "LTE Band 11, 1500 MHz FDD (Japan)."; }
+      enum eutran-12 { description "LTE Band 12, 700 MHz FDD (Americas, lower A/B/C)."; }
+      enum eutran-13 { description "LTE Band 13, 700 MHz FDD (Americas, upper C)."; }
+      enum eutran-14 { description "LTE Band 14, 700 MHz FDD (Americas, upper D, public safety)."; }
+      enum eutran-17 { description "LTE Band 17, 700 MHz FDD (Americas, lower B/C)."; }
+      enum eutran-18 { description "LTE Band 18, 800 MHz FDD (Japan)."; }
+      enum eutran-19 { description "LTE Band 19, 800 MHz FDD (Japan)."; }
+      enum eutran-20 { description "LTE Band 20, 800 MHz FDD (Europe, digital dividend)."; }
+      enum eutran-21 { description "LTE Band 21, 1500 MHz FDD (Japan)."; }
+      enum eutran-22 { description "LTE Band 22, 3500 MHz FDD."; }
+      enum eutran-23 { description "LTE Band 23, 2000 MHz FDD."; }
+      enum eutran-24 { description "LTE Band 24, 1600 MHz FDD (Americas, L-band)."; }
+      enum eutran-25 { description "LTE Band 25, 1900 MHz FDD, PCS extended (Americas)."; }
+      enum eutran-26 { description "LTE Band 26, 850 MHz FDD, CLR extended (Americas)."; }
+      enum eutran-27 { description "LTE Band 27, 800 MHz FDD, SMR (Americas)."; }
+      enum eutran-28 { description "LTE Band 28, 700 MHz FDD, APT (Asia-Pacific)."; }
+      enum eutran-29 { description "LTE Band 29, 700 MHz FDD, SDL (Americas, downlink only)."; }
+      enum eutran-30 { description "LTE Band 30, 2300 MHz FDD, WCS (Americas)."; }
+      enum eutran-31 { description "LTE Band 31, 450 MHz FDD."; }
+      enum eutran-32 { description "LTE Band 32, 1500 MHz FDD, SDL (Europe, downlink only)."; }
+      enum eutran-33 { description "LTE Band 33, 1900 MHz TDD."; }
+      enum eutran-34 { description "LTE Band 34, 2000 MHz TDD."; }
+      enum eutran-35 { description "LTE Band 35, 1900 MHz TDD."; }
+      enum eutran-36 { description "LTE Band 36, 1900 MHz TDD."; }
+      enum eutran-37 { description "LTE Band 37, 1910 MHz TDD."; }
+      enum eutran-38 { description "LTE Band 38, 2600 MHz TDD (China, Europe)."; }
+      enum eutran-39 { description "LTE Band 39, 1900 MHz TDD (China)."; }
+      enum eutran-40 { description "LTE Band 40, 2300 MHz TDD (India, Asia)."; }
+      enum eutran-41 { description "LTE Band 41, 2500 MHz TDD (China, Americas)."; }
+      enum eutran-42 { description "LTE Band 42, 3500 MHz TDD."; }
+      enum eutran-43 { description "LTE Band 43, 3700 MHz TDD."; }
+      enum eutran-44 { description "LTE Band 44, 700 MHz TDD, APT."; }
+      enum eutran-45 { description "LTE Band 45, 1500 MHz TDD (China)."; }
+      enum eutran-46 { description "LTE Band 46, 5200 MHz TDD, ULAA (unlicensed)."; }
+      enum eutran-47 { description "LTE Band 47, 5900 MHz TDD, V2X (vehicle-to-everything)."; }
+      enum eutran-48 { description "LTE Band 48, 3500 MHz TDD, CBRS (Americas, shared)."; }
+      enum eutran-49 { description "LTE Band 49, 3500 MHz TDD."; }
+      enum eutran-50 { description "LTE Band 50, 1500 MHz TDD."; }
+      enum eutran-51 { description "LTE Band 51, 1500 MHz TDD."; }
+      enum eutran-52 { description "LTE Band 52, 3300 MHz TDD."; }
+      enum eutran-53 { description "LTE Band 53, 2500 MHz TDD."; }
+      enum eutran-54 { description "LTE Band 54, 1600 MHz TDD."; }
+      enum eutran-55 { description "LTE Band 55, 1800 MHz TDD."; }
+      enum eutran-56 { description "LTE Band 56, 700 MHz TDD."; }
+      enum eutran-57 { description "LTE Band 57, 700 MHz TDD."; }
+      enum eutran-58 { description "LTE Band 58, 700 MHz TDD."; }
+      enum eutran-59 { description "LTE Band 59, 700 MHz TDD."; }
+      enum eutran-60 { description "LTE Band 60, 1500 MHz FDD."; }
+      enum eutran-61 { description "LTE Band 61, 1500 MHz FDD."; }
+      enum eutran-62 { description "LTE Band 62, 1500 MHz FDD."; }
+      enum eutran-63 { description "LTE Band 63, 1900 MHz FDD."; }
+      enum eutran-64 { description "LTE Band 64, 1900 MHz FDD."; }
+      enum eutran-65 { description "LTE Band 65, 2100 MHz FDD, extended (Europe)."; }
+      enum eutran-66 { description "LTE Band 66, 1700/2100 MHz FDD, AWS-3 (Americas)."; }
+      enum eutran-67 { description "LTE Band 67, 700 MHz FDD, SDL (Europe)."; }
+      enum eutran-68 { description "LTE Band 68, 700 MHz FDD (Middle East, Africa)."; }
+      enum eutran-69 { description "LTE Band 69, 2500 MHz FDD, SDL."; }
+      enum eutran-70 { description "LTE Band 70, 1700/2100 MHz FDD, AWS-4 (Americas)."; }
+      enum eutran-71 { description "LTE Band 71, 600 MHz FDD (Americas)."; }
+      enum eutran-85 { description "LTE Band 85, 700 MHz FDD, APT extended."; }
+      // 5G NR
+      enum ngran-1   { description "NR Band n1, 2100 MHz FDD (Europe, Asia)."; }
+      enum ngran-2   { description "NR Band n2, 1900 MHz FDD, PCS (Americas)."; }
+      enum ngran-3   { description "NR Band n3, 1800 MHz FDD (global)."; }
+      enum ngran-5   { description "NR Band n5, 850 MHz FDD (Americas, Pacific)."; }
+      enum ngran-7   { description "NR Band n7, 2600 MHz FDD (Europe)."; }
+      enum ngran-8   { description "NR Band n8, 900 MHz FDD (Europe, Asia)."; }
+      enum ngran-12  { description "NR Band n12, 700 MHz FDD (Americas)."; }
+      enum ngran-13  { description "NR Band n13, 700 MHz FDD (Americas)."; }
+      enum ngran-14  { description "NR Band n14, 700 MHz FDD (Americas, public safety)."; }
+      enum ngran-18  { description "NR Band n18, 850 MHz FDD (Japan)."; }
+      enum ngran-20  { description "NR Band n20, 800 MHz FDD (Europe, digital dividend)."; }
+      enum ngran-25  { description "NR Band n25, 1900 MHz FDD, PCS extended (Americas)."; }
+      enum ngran-26  { description "NR Band n26, 850 MHz FDD, CLR extended."; }
+      enum ngran-28  { description "NR Band n28, 700 MHz FDD, APT (Asia-Pacific)."; }
+      enum ngran-29  { description "NR Band n29, 700 MHz FDD, SDL (Americas)."; }
+      enum ngran-30  { description "NR Band n30, 2300 MHz FDD, WCS (Americas)."; }
+      enum ngran-34  { description "NR Band n34, 2000 MHz TDD."; }
+      enum ngran-38  { description "NR Band n38, 2600 MHz TDD."; }
+      enum ngran-39  { description "NR Band n39, 1900 MHz TDD (China)."; }
+      enum ngran-40  { description "NR Band n40, 2300 MHz TDD (India, Asia)."; }
+      enum ngran-41  { description "NR Band n41, 2500 MHz TDD (China, Americas)."; }
+      enum ngran-48  { description "NR Band n48, 3500 MHz TDD, CBRS (Americas, shared)."; }
+      enum ngran-50  { description "NR Band n50, 1500 MHz TDD."; }
+      enum ngran-51  { description "NR Band n51, 1500 MHz TDD."; }
+      enum ngran-53  { description "NR Band n53, 2500 MHz TDD."; }
+      enum ngran-65  { description "NR Band n65, 2100 MHz FDD, extended."; }
+      enum ngran-66  { description "NR Band n66, 1700/2100 MHz FDD, AWS-3."; }
+      enum ngran-70  { description "NR Band n70, 1700/2100 MHz FDD, AWS-4."; }
+      enum ngran-71  { description "NR Band n71, 600 MHz FDD (Americas)."; }
+      enum ngran-74  { description "NR Band n74, 1500 MHz FDD."; }
+      enum ngran-75  { description "NR Band n75, 1500 MHz SDL."; }
+      enum ngran-76  { description "NR Band n76, 1500 MHz SDL."; }
+      enum ngran-77  { description "NR Band n77, 3700 MHz TDD (Europe, Americas)."; }
+      enum ngran-78  { description "NR Band n78, 3500 MHz TDD (Europe, Asia, global)."; }
+      enum ngran-79  { description "NR Band n79, 4700 MHz TDD (Japan, China)."; }
+      enum ngran-80  { description "NR Band n80, 1800 MHz SUL (supplemental uplink)."; }
+      enum ngran-81  { description "NR Band n81, 900 MHz SUL (supplemental uplink)."; }
+      enum ngran-82  { description "NR Band n82, 800 MHz SUL (supplemental uplink)."; }
+      enum ngran-83  { description "NR Band n83, 700 MHz SUL, APT (supplemental uplink)."; }
+      enum ngran-84  { description "NR Band n84, 2100 MHz SUL (supplemental uplink)."; }
+      enum ngran-86  { description "NR Band n86, 1700 MHz SUL (supplemental uplink)."; }
+      enum ngran-89  { description "NR Band n89, 850 MHz SUL (supplemental uplink)."; }
+      enum ngran-90  { description "NR Band n90, 2500 MHz TDD."; }
+      enum ngran-91  { description "NR Band n91, 800+1800 MHz SUL (supplemental uplink)."; }
+      enum ngran-92  { description "NR Band n92, 800+2300 MHz SUL (supplemental uplink)."; }
+      enum ngran-93  { description "NR Band n93, 900+1800 MHz SUL (supplemental uplink)."; }
+      enum ngran-94  { description "NR Band n94, 900+2300 MHz SUL (supplemental uplink)."; }
+      enum ngran-95  { description "NR Band n95, 2100 MHz SUL (supplemental uplink)."; }
+      enum ngran-257 { description "NR Band n257, 28 GHz mmWave (Americas)."; }
+      enum ngran-258 { description "NR Band n258, 26 GHz mmWave (Europe, Asia)."; }
+      enum ngran-260 { description "NR Band n260, 39 GHz mmWave (Americas)."; }
+      enum ngran-261 { description "NR Band n261, 28 GHz mmWave (Americas)."; }
+      // Wildcard
+      enum any { description "All bands supported by the hardware."; }
+    }
+    description
+      "Cellular frequency band identifier using ModemManager's MMModemBand
+       enum value names (as used with 'mmcli --set-current-bands').
+       An empty band list in the parent container is equivalent to 'any'.";
+  }
+
+  typedef modem-location-source {
+    type enumeration {
+      enum gps      { description "GPS location source."; }
+      enum agps-msa { description "MSA A-GPS location source."; }
+      enum agps-msb { description "MSB A-GPS location source."; }
+      enum 3gpp     { description "3GPP location source."; }
+      enum cdma     { description "CDMA location source."; }
+    }
+    description "Location source for the modem's location subsystem.";
+  }
+
+  typedef modem-state {
+    type enumeration {
+      enum failed        { description "Unrecoverable error; see state-failed-reason for the cause."; }
+      enum unknown       { description "State unknown; modem has not yet reported in."; }
+      enum initializing  { description "Modem is initialising hardware."; }
+      enum locked        { description "Modem is locked (SIM lock or otherwise) and cannot be used."; }
+      enum disabled      { description "Modem is administratively disabled (low power)."; }
+      enum disabling     { description "Modem is transitioning to the disabled state."; }
+      enum enabling      { description "Modem is transitioning to the enabled state."; }
+      enum enabled       { description "Modem is enabled but not yet registered."; }
+      enum searching     { description "Searching for a cellular network."; }
+      enum registered    { description "Registered on a cellular network."; }
+      enum disconnecting { description "Tearing down an active data connection."; }
+      enum connecting    { description "Bringing up a data connection."; }
+      enum connected     { description "Data connection established."; }
+    }
+    description
+      "Cellular modem state, mirroring ModemManager's MMModemState
+       enumeration.  Read-only operational data.";
+  }
+
+  typedef modem-state-failed-reason {
+    type enumeration {
+      enum none               { description "No failure recorded."; }
+      enum unknown            { description "Failure reason is unknown."; }
+      enum sim-missing        { description "No SIM card is inserted."; }
+      enum sim-error          { description "The SIM card reports an error."; }
+      enum sim-wrong          { description "The SIM card is not accepted by the modem (PLMN mismatch, etc.)."; }
+      enum sim-busy           { description "The SIM card is busy."; }
+      enum unlock-required    { description "PIN or PUK unlock is required."; }
+      enum modem-busy         { description "The modem is busy and could not complete the operation."; }
+      enum modem-disabled     { description "The modem is administratively disabled."; }
+      enum mode-not-supported { description "The configured radio access mode is not supported."; }
+      enum esim-without-profiles { description "An eSIM is present but has no profiles."; }
+    }
+    description
+      "Reason for a modem state of 'failed', mirroring
+       ModemManager's MMModemStateFailedReason enumeration.";
+  }
+
+  typedef modem-power-state {
+    type enumeration {
+      enum unknown { description "Power state cannot be reported."; }
+      enum off     { description "Modem is fully powered down."; }
+      enum low     { description "Modem is in a low-power state; radio idle."; }
+      enum on      { description "Modem is fully powered."; }
+    }
+    description
+      "Modem power state, mirroring ModemManager's MMModemPowerState
+       enumeration.";
+  }
+
+  typedef modem-access-tech {
+    type enumeration {
+      enum unknown    { description "Access technology unknown or unreported."; }
+      enum pots       { description "Plain old telephone service."; }
+      enum gsm        { description "2G GSM."; }
+      enum gsm-compact { description "2G GSM compact."; }
+      enum gprs       { description "2.5G GPRS."; }
+      enum edge       { description "2.75G EDGE."; }
+      enum umts       { description "3G UMTS."; }
+      enum hsdpa      { description "3.5G HSDPA."; }
+      enum hsupa      { description "3.5G HSUPA."; }
+      enum hspa       { description "3.5G HSPA."; }
+      enum hspa-plus  { description "3.75G HSPA+."; }
+      enum 1xrtt      { description "CDMA2000 1xRTT."; }
+      enum evdo0      { description "CDMA2000 EV-DO rev. 0."; }
+      enum evdoa      { description "CDMA2000 EV-DO rev. A."; }
+      enum evdob      { description "CDMA2000 EV-DO rev. B."; }
+      enum lte        { description "4G LTE."; }
+      enum 5gnr       { description "5G New Radio."; }
+    }
+    description
+      "Cellular radio access technology currently in use, mirroring
+       ModemManager's MMModemAccessTechnology bitmask (Infix exposes
+       it as a single best-match enum, not a leaf-list).";
+  }
+
+  typedef modem-3gpp-facility {
+    type enumeration {
+      enum sim                   { description "SIM PIN."; }
+      enum fixed-dialing         { description "Fixed dialling numbers (FDN)."; }
+      enum phone-sim             { description "Phone SIM lock."; }
+      enum phone-first-sim       { description "First-inserted-SIM lock."; }
+      enum phone-network         { description "Network personalisation."; }
+      enum phone-network-subset  { description "Network-subset personalisation."; }
+      enum phone-service-provider { description "Service-provider personalisation."; }
+      enum phone-corporate       { description "Corporate personalisation."; }
+      enum phone-first-sim-network { description "First-SIM network personalisation."; }
+    }
+    description
+      "3GPP facility that may be locked or active on the modem,
+       mirroring ModemManager's MMModem3gppFacility enumeration.";
+  }
+
+  typedef modem-packet-service-state {
+    type enumeration {
+      enum unknown  { description "Packet service state cannot be determined."; }
+      enum attached { description "Packet service is attached; data sessions can be brought up."; }
+      enum detached { description "Packet service is detached; data sessions are unavailable."; }
+    }
+    description
+      "3GPP packet-service attach state.  Independent of the
+       circuit-switched registration-state — a modem may be
+       registered but packet-detached, meaning voice/SMS work but
+       data does not.";
+  }
+
+  /*
    * Hardware class identities
    */
 
@@ -155,6 +477,26 @@ module infix-hardware {
     if-feature gps;
     base iahw:hardware-class;
     description "GPS/GNSS receiver for time synchronization";
+  }
+
+  identity modem {
+    if-feature modem;
+    base iahw:hardware-class;
+    description "Cellular modem hardware component.
+                 One modem0 component per physical modem module.
+                 Auto-discovered by 00-probe from /sys/class/usbmisc/cdc-wdm*
+                 and written to /run/system.json['modem']; gen-hardware emits
+                 the corresponding ietf-hardware component entries.";
+  }
+
+  identity sim {
+    if-feature modem;
+    base iahw:hardware-class;
+    description "SIM/UICC card hardware component.
+                 One sim0 component per SIM slot on hardware that exposes
+                 SIM multiplexing via /sys/class/sim/ (e.g. Minex modules).
+                 On hardware without a SIM multiplexer, a synthetic sim0 is
+                 inferred from the modem's active SIM.";
   }
 
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:admin-state" {
@@ -605,6 +947,354 @@ module infix-hardware {
     }
 
     /*
+     * Modem hardware configuration (when class = 'ih:modem')
+     */
+
+    container modem {
+      if-feature modem;
+      when "derived-from-or-self(../iehw:class, 'ih:modem')";
+      presence "Modem hardware configuration";
+      description
+        "Cellular modem hardware configuration.
+
+         Controls radio access technology, frequency bands, and location
+         services.  The modem is enabled or disabled via the hardware
+         component admin-state (unlocked = enabled, locked = disabled).
+
+         Actions restart and reset operate on the modem hardware directly.
+         send-sms uses the modem's SMS capability independent of any data
+         bearer or APN — SMS travels over the signalling plane, not the
+         data bearer.";
+
+      leaf preferred-mode {
+        type modem-access-mode;
+        description
+          "Preferred radio access technology.  The modem will attempt to
+           use this technology first; falls back to allowed modes if not
+           available.  Omit (or set to 'any') for automatic selection.";
+      }
+
+      leaf-list allowed-mode {
+        type modem-access-mode;
+        description "Restrict the modem to these radio access technologies.
+                     Empty list means all technologies are allowed.";
+      }
+
+      leaf-list band {
+        type modem-band;
+        description
+          "Restrict the modem to these frequency bands.  An empty list
+           (or a list containing only 'any') means all bands supported
+           by the hardware are allowed.";
+      }
+
+      container location {
+        description "Modem location/GPS subsystem configuration.";
+        leaf enabled {
+          type boolean;
+          default false;
+          description "Enable location gathering via the modem.";
+        }
+        leaf-list source {
+          type modem-location-source;
+          description "Location sources to enable.";
+        }
+      }
+
+      leaf probe-timeout {
+        type uint8;
+        default 30;
+        description
+          "Seconds to wait for the wwan interface to appear at boot.
+
+           USB modems may be slow to initialize due to firmware loading
+           and USB enumeration.  The default of 30 seconds covers most
+           USB modems; the interface typically appears within 2-5 seconds.
+
+           If the interface is not detected within the timeout, a dummy
+           placeholder is created so downstream configuration succeeds.
+           modemd will reconfigure the real interface when it attaches.
+
+           Set to 0 to disable waiting and create the dummy immediately.";
+      }
+
+      notification status-update {
+        description "Emitted by modemd when the modem state changes.";
+        leaf desc {
+          type string;
+          mandatory true;
+          description "Human-readable description of the state change.";
+        }
+      }
+    }
+
+    /*
+     * Modem operational state (when class = 'ih:modem')
+     * Populated by statd/infix_modem.py from /run/modemd/modemN/ runtime files.
+     */
+
+    container modem-state {
+      if-feature modem;
+      when "derived-from-or-self(../iehw:class, 'ih:modem')";
+      config false;
+      description
+        "Cellular modem operational state.
+
+         Written by statd/infix_modem.py which reads modemd runtime files
+         from /run/modemd/modem0/.  The split is intentional: modemd drives
+         ModemManager and writes runtime files; statd reads them on demand
+         and populates sysrepo operational nodes.  modemd never touches
+         sysrepo operational nodes directly.";
+
+      leaf manufacturer {
+        type string;
+        description "Modem manufacturer (e.g. 'Quectel', 'Sierra Wireless').";
+      }
+
+      leaf model {
+        type string;
+        description "Modem model (e.g. 'EM05', 'EM7455').";
+      }
+
+      leaf firmware-version {
+        type string;
+        description "Firmware revision reported by the modem.";
+      }
+
+      leaf serial-number {
+        type string;
+        description "IMEI serial number.";
+      }
+
+      leaf imsi {
+        type string;
+        description "IMSI from the active SIM card.";
+      }
+
+      leaf iccid {
+        type string;
+        description "ICCID from the active SIM card.";
+      }
+
+      leaf state {
+        type modem-state;
+        description "Cellular modem state (see modem-state typedef).";
+      }
+
+      leaf state-failed-reason {
+        type modem-state-failed-reason;
+        description
+          "Detailed reason for the failed state.  Only meaningful when
+           'state' is 'failed'; absent or 'none' otherwise.";
+      }
+
+      leaf power-state {
+        type modem-power-state;
+        description "Modem RF power state.";
+      }
+
+      leaf-list enabled-locks {
+        type modem-3gpp-facility;
+        description
+          "3GPP facility locks currently enabled on the modem (e.g.
+           'fixed-dialing' for FDN-restricted SIMs that whitelist
+           outbound calls / SMS).";
+      }
+
+      leaf hardware-revision {
+        type string;
+        description "Hardware revision string reported by the modem.";
+      }
+
+      leaf-list phone-number {
+        type string;
+        description
+          "MSISDN(s) associated with the active SIM, as reported by
+           the modem.  Typically empty unless provisioned in the SIM.";
+      }
+
+      leaf selected-carrier {
+        type string;
+        description
+          "Operator carrier profile currently selected by the modem
+           firmware (e.g. 'default', 'att', 'verizon').";
+      }
+
+      leaf-list supported-carrier {
+        type string;
+        description
+          "Carrier profiles supported by this modem firmware.  Used
+           to validate the SIM-component 'carrier' configuration.";
+      }
+
+      leaf signal-quality {
+        type uint8;
+        units "percent";
+        description "Signal quality as a percentage (0-100).";
+      }
+
+      leaf signal-quality-recent {
+        type boolean;
+        description
+          "TRUE if the most recent signal-quality measurement is fresh.
+           FALSE indicates a cached value that may no longer reflect
+           current conditions.";
+      }
+
+      leaf signal-rssi {
+        type int16;
+        units "dBm";
+        description "Received Signal Strength Indicator.";
+      }
+
+      leaf signal-rsrp {
+        type int16;
+        units "dBm";
+        description "LTE Reference Signal Received Power.";
+      }
+
+      leaf signal-rsrq {
+        type decimal64 { fraction-digits 1; }
+        units "dB";
+        description "LTE Reference Signal Received Quality.";
+      }
+
+      leaf signal-sinr {
+        type decimal64 { fraction-digits 1; }
+        units "dB";
+        description "Signal-to-Interference-plus-Noise Ratio.";
+      }
+
+      container cellular {
+        description "Cellular network information.";
+
+        leaf registration-state {
+          type enumeration {
+            enum idle       { description "Not registered, not searching."; }
+            enum home       { description "Registered on home network."; }
+            enum searching  { description "Searching for a network."; }
+            enum denied     { description "Registration denied."; }
+            enum roaming    { description "Registered on a roaming network."; }
+            enum unknown    { description "Registration state unknown."; }
+          }
+          description "3GPP registration state.";
+        }
+
+        leaf service-state {
+          type modem-packet-service-state;
+          description
+            "3GPP packet-service attach state.  A modem can be
+             registered but not packet-attached, in which case
+             data connections cannot be established.";
+        }
+
+        leaf operator-name {
+          type string;
+          description "Name of the registered cellular operator.";
+        }
+
+        leaf operator-id {
+          type string {
+            pattern '[0-9]{5,6}';
+          }
+          description
+            "Operator PLMN code: MCC (3 digits) concatenated with
+             MNC (2 or 3 digits).";
+        }
+
+        leaf network-type {
+          type modem-access-tech;
+          description "Active cellular radio access technology.";
+        }
+      }
+    }
+
+    /*
+     * SIM card configuration (when class = 'ih:sim')
+     */
+
+    container sim {
+      if-feature modem;
+      when "derived-from-or-self(../iehw:class, 'ih:sim')";
+      presence "SIM card configuration";
+      description
+        "SIM card / subscription configuration.
+
+         PIN and PUK are per-SIM credentials used to unlock the card.
+         carrier selects the operator profile that modemd applies to the
+         modem firmware when this SIM is active (band preferences, firmware
+         quirks).  On hardware with a SIM multiplexer (/dev/simctrl) each
+         SIM slot gets its own component (sim0, sim1, …); on hardware without
+         a multiplexer a synthetic sim0 represents the single SIM present.";
+
+      leaf pin {
+        type string;
+        nacm:default-deny-all;
+        description
+          "PIN code to unlock this SIM card.  Leave unset if the SIM has
+           PIN protection disabled.";
+      }
+
+      leaf puk {
+        type string;
+        nacm:default-deny-all;
+        description
+          "PUK (PIN Unblocking Key) to unblock a PIN-locked SIM.  Only
+           needed after too many incorrect PIN attempts.";
+      }
+
+      leaf carrier {
+        type string;
+        description
+          "Operator profile name applied to the modem firmware when this
+           SIM is active (e.g. 'default', 'att', 'verizon').  Profiles
+           are provided by the modem-carrier helper in modemd.  Omit to
+           use the modem's built-in defaults.";
+      }
+    }
+
+    /*
+     * SIM card operational state (when class = 'ih:sim')
+     * Populated by statd/infix_modem.py from modemd runtime data.
+     */
+
+    container sim-state {
+      if-feature modem;
+      when "derived-from-or-self(../iehw:class, 'ih:sim')";
+      config false;
+      description
+        "SIM card operational state.
+
+         Shows which physical slot the SIM occupies, its lock state, and
+         the home operator name stored on the card.  Useful for remote
+         diagnostics (e.g. confirming which SIM slot is active).";
+
+      leaf slot {
+        type uint8;
+        description
+          "Physical SIM slot number (1-based).
+           For single-SIM modems this is always 1.";
+      }
+
+      leaf state {
+        type enumeration {
+          enum unknown             { description "Modem reports a SIM but it cannot be read (busy, transient error)."; }
+          enum not-inserted        { description "No SIM card in this slot."; }
+          enum unlocked            { description "SIM is present and accessible."; }
+          enum pin-required        { description "SIM requires PIN to unlock."; }
+          enum puk-required        { description "SIM PIN blocked; PUK needed to unblock."; }
+          enum permanently-blocked { description "SIM permanently blocked; cannot be used."; }
+        }
+        description "SIM card lock and presence state.";
+      }
+
+      leaf operator-name {
+        type string;
+        description "Home operator name stored on the SIM card.";
+      }
+    }
+
+    /*
      * GPS/GNSS Receiver configuration (when class = 'ih:gps')
      */
 
@@ -723,6 +1413,51 @@ module infix-hardware {
         description
           "Whether this GPS device provides a PPS (Pulse Per Second) signal.
            PPS provides microsecond-level timing accuracy.";
+      }
+    }
+  }
+
+  /*
+   * Modem actions — augmented directly on component so sysrepo can
+   * resolve the parent node (list entry) without needing to instantiate
+   * the NP container modem, which requires the sibling 'class' leaf.
+   */
+  augment "/iehw:hardware/iehw:component" {
+    if-feature modem;
+    when "derived-from-or-self(iehw:class, 'ih:modem')" {
+      description "Applies only to modem hardware components.";
+    }
+
+    action restart {
+      description
+        "Restart the modem: disconnect all bearers and reconnect.
+         Use this to recover from a stuck connection without a full
+         hardware reset.";
+    }
+
+    action reset {
+      description
+        "Factory-reset the modem firmware to its default state.
+         This clears all modem-internal profiles and settings.
+         Modem will re-initialise and reconnect automatically.";
+    }
+
+    action send-sms {
+      description
+        "Send an SMS message via the modem.
+         SMS uses the signalling plane and does not require an active
+         data bearer; the modem only needs to be registered on a network.";
+      input {
+        leaf phone-number {
+          type string;
+          mandatory true;
+          description "Recipient phone number in international format (e.g. +46701234567).";
+        }
+        leaf message-text {
+          type string;
+          mandatory true;
+          description "SMS message body (max 160 characters for single-part SMS).";
+        }
       }
     }
   }
