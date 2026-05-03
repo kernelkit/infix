@@ -126,9 +126,6 @@ def main():
     elif model == 'ieee1588-ptp-tt':
         from . import ieee1588_ptp
         yang_data = ieee1588_ptp.operational()
-    elif model == 'infix-modem':
-        from . import infix_modem
-        yang_data = infix_modem.operational()
     else:
         common.LOG.warning("Unsupported model %s", model)
         sys.exit(1)

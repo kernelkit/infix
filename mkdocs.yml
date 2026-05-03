@@ -43,6 +43,7 @@ nav:
           - Overview: vpn.md
           - WireGuard: vpn-wireguard.md
       - Wireless LAN (WiFi): wifi.md
+      - Cellular Modem (wwan): modem.md
   - Services:
       - Device Discovery: discovery.md
       - DHCP Server: dhcp.md

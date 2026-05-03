@@ -113,6 +113,15 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="MODEMS">
+  <COMPL>
+    <ACTION sym="script">
+      jq -r '.modem[]? | "modem" + (.index|tostring)' /run/system.json 2>/dev/null
+    </ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <PTYPE name="FIREWALL_ZONES">
   <COMPL>
     <ACTION sym="firewall_zones@infix"/>
@@ -332,6 +341,30 @@ echo "Public:  $pub"
 <COMMAND name="dhcp-server" help="DHCP server tools" mode="switch">
   <COMMAND name="clear-statistics" help="Clear DHCP server statistics">
     <ACTION sym="srp_rpc@sysrepo">/infix-dhcp-server:dhcp-server/statistics/clear</ACTION>
+  </COMMAND>
+</COMMAND>
+
+<COMMAND name="modem" help="Cellular modem management" mode="switch">
+  <COMMAND name="restart" help="Restart modem connection (disconnect and reconnect bearers)">
+    <PARAM name="ref" ptype="/MODEMS" help="Modem name (e.g. modem0)"/>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      rpc "/ietf-hardware:hardware/component[name='$KLISH_PARAM_ref']/infix-hardware:restart"
+    </ACTION>
+  </COMMAND>
+  <COMMAND name="reset" help="Factory-reset modem firmware to default state">
+    <PARAM name="ref" ptype="/MODEMS" help="Modem name (e.g. modem0)"/>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      rpc "/ietf-hardware:hardware/component[name='$KLISH_PARAM_ref']/infix-hardware:reset"
+    </ACTION>
+  </COMMAND>
+  <COMMAND name="sms" help="Send an SMS message via the modem">
+    <PARAM name="ref"     ptype="/MODEMS"  help="Modem name (e.g. modem0)"/>
+    <PARAM name="number"  ptype="/STRING"  help="Recipient phone number (e.g. +46701234567)"/>
+    <PARAM name="message" ptype="/STRING"  help="SMS message text (max 160 characters)"/>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      rpc "/ietf-hardware:hardware/component[name='$KLISH_PARAM_ref']/infix-hardware:send-sms" \
+        phone-number "$KLISH_PARAM_number" message-text "$KLISH_PARAM_message"
+    </ACTION>
   </COMMAND>
 </COMMAND>
 
@@ -570,6 +603,15 @@ echo "Public:  $pub"
   <COMMAND name="hardware" help="Show hardware information">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       show hardware |pager
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="modem" help="Show cellular modem status">
+    <SWITCH name="optional" min="0" max="1">
+      <PARAM name="ref" ptype="/MODEMS" help="Modem name (e.g. modem0)" />
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      show modem "$KLISH_PARAM_ref" |pager
     </ACTION>
   </COMMAND>
 

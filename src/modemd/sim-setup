@@ -173,17 +173,42 @@ def swapslot(slot):
 def sim_setup(setup):
     changed = False
 
-    config = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "infix-modem"])
-    if not config or "infix-modem:modems" not in config:
+    hw = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-hardware"])
+    ifaces = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-interfaces"])
+    if not hw or not ifaces:
         err("Cannot read config")
         return False
 
-    for cfg in config["infix-modem:modems"]["modem"]:
-        if not cfg.get("enabled", False) or cfg.get("index", -1) < 0:
-            continue
+    modem_set = set()
+    for comp in hw.get("ietf-hardware:hardware", {}).get("component", []):
+        if comp.get("class", "") == "infix-hardware:modem" \
+                and comp.get("state", {}).get("admin-state", "unlocked") == "unlocked":
+            name = comp["name"]
+            try:
+                modem_set.add(int(name[5:]))
+            except (ValueError, IndexError):
+                pass
 
-        modem = find_modem(setup, cfg["index"])
-        sim = find_sim(setup, cfg.get("sim", -1))
+    sim_for_modem = {}
+    for iface in ifaces.get("ietf-interfaces:interfaces", {}).get("interface", []):
+        if iface.get("type", "") != "infix-if-type:modem":
+            continue
+        wwan = iface.get("infix-interfaces:wwan", {})
+        modem_ref = wwan.get("modem", "")
+        sim_ref = wwan.get("sim", "")
+        if not modem_ref.startswith("modem") or not sim_ref.startswith("sim"):
+            continue
+        try:
+            midx = int(modem_ref[5:])
+            sidx = int(sim_ref[3:])
+        except (ValueError, IndexError):
+            continue
+        if midx in modem_set:
+            sim_for_modem[midx] = sidx
+
+    for modem_idx, sim_idx in sim_for_modem.items():
+        modem = find_modem(setup, modem_idx)
+        sim = find_sim(setup, sim_idx)
         if modem and sim:
             sim["newslot"] = modem["slot"]
             if sim["newslot"] != sim["slot"]:
