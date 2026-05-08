@@ -1,0 +1,205 @@
+From 2e5f34ed626021e3307dcf5a005d9466eecdacd1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Sun, 10 May 2026 21:42:27 +0200
+Subject: [PATCH 10/10] mt7986: bpi-r3: Enable Acer Connect Vero W
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ arch/arm/dts/Makefile                        |  1 +
+ arch/arm/dts/mt7986a-acer-connect-vero-w.dts | 13 ++++
+ board/mediatek/mt7986/bpir3.c                | 78 +++++++++++++++++++-
+ configs/mt7986a_bpir3_emmc_defconfig         |  2 +
+ configs/mt7986a_bpir3_sd_defconfig           |  2 +
+ 5 files changed, 95 insertions(+), 1 deletion(-)
+ create mode 100644 arch/arm/dts/mt7986a-acer-connect-vero-w.dts
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 3561e4c3651..b21881b9a1c 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -1200,6 +1200,7 @@ dtb-$(CONFIG_ARCH_MEDIATEK) += \
+ 	mt7986a-bpi-r3-sd.dtb \
+ 	mt7986a-bpi-r3-emmc.dtb \
+ 	mt7986a-bpi-r3-mini.dtb \
++	mt7986a-acer-connect-vero-w.dtb \
+ 	mt7986a-rfb.dtb \
+ 	mt7986b-rfb.dtb \
+ 	mt7986a-sd-rfb.dtb \
+diff --git a/arch/arm/dts/mt7986a-acer-connect-vero-w.dts b/arch/arm/dts/mt7986a-acer-connect-vero-w.dts
+new file mode 100644
+index 00000000000..2e18c3eb717
+--- /dev/null
++++ b/arch/arm/dts/mt7986a-acer-connect-vero-w.dts
+@@ -0,0 +1,13 @@
++// SPDX-License-Identifier: GPL-2.0
++
++/dts-v1/;
++#include "mt7986a-bpi-r3-emmc.dts"
++
++/ {
++	model = "Acer Connect Vero W";
++	compatible = "acer,connect-vero-w", "mediatek,mt7986";
++};
++
++&{/memory@40000000} {
++	reg = <0x40000000 0x40000000>;
++};
+diff --git a/board/mediatek/mt7986/bpir3.c b/board/mediatek/mt7986/bpir3.c
+index 01eef55bb74..695db8725d9 100644
+--- a/board/mediatek/mt7986/bpir3.c
++++ b/board/mediatek/mt7986/bpir3.c
+@@ -1,14 +1,16 @@
+ // SPDX-License-Identifier: GPL-2.0
+ /*
+- * BPI-R3 / BPI-R3-mini board variant detection
++ * BPI-R3 / BPI-R3-mini / Acer Connect Vero W board variant detection
+  */
+ 
+ #include <env.h>
+ #include <fdt_support.h>
+ #include <image.h>
++#include <asm/cache.h>
+ #include <asm/global_data.h>
+ #include <asm/io.h>
+ #include <linux/delay.h>
++#include <linux/sizes.h>
+ #include <linux/string.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+@@ -16,8 +18,74 @@ DECLARE_GLOBAL_DATA_PTR;
+ enum bpir3_variant {
+ 	BPIR3,
+ 	BPIR3_MINI,
++	ASUS_VERO_W,
+ };
+ 
++/*
++ * Acer Connect Vero W ships with 1 GiB DDR; BPI-R3 and BPI-R3-mini
++ * both ship with 2 GiB. Probe the +1 GiB mark with patterns that are
++ * distinct from a parallel write at the DRAM base, so an aliased
++ * (wrap-around) address is detected as such instead of returning a
++ * false positive when the DDR controller mirrors the high address
++ * onto base RAM.
++ *
++ * MT7986 DRAM base is 0x40000000. NOTE: when this board file is
++ * chain-loaded via "go" from a previous U-Boot, the dcache is
++ * already enabled. We must flush after writes and invalidate before
++ * reads so the test actually exercises the AXI/DDR bus instead of
++ * giving a false positive from cache hits at +1 GiB.
++ */
++#define MT7986_DRAM_BASE	0x40000000UL
++#define PROBE_BASE_ADDR		MT7986_DRAM_BASE
++#define PROBE_HIGH_ADDR		(MT7986_DRAM_BASE + SZ_1G)
++#define PROBE_LINE_BYTES	64	/* worst-case ARMv8 cacheline */
++
++static void probe_flush(unsigned long addr)
++{
++	flush_dcache_range(addr, addr + PROBE_LINE_BYTES);
++}
++
++static void probe_invalidate(unsigned long addr)
++{
++	invalidate_dcache_range(addr, addr + PROBE_LINE_BYTES);
++}
++
++static u32 probe_read(unsigned long addr)
++{
++	probe_invalidate(addr);
++	return *(volatile u32 *)addr;
++}
++
++static void probe_write(unsigned long addr, u32 val)
++{
++	*(volatile u32 *)addr = val;
++	probe_flush(addr);
++}
++
++static bool ram_above_1g_present(void)
++{
++	u32 sb, sp, b1, p1, b2, p2;
++
++	sb = probe_read(PROBE_BASE_ADDR);
++	sp = probe_read(PROBE_HIGH_ADDR);
++
++	probe_write(PROBE_BASE_ADDR, 0x12345678);
++	probe_write(PROBE_HIGH_ADDR, 0xdeadbeef);
++	b1 = probe_read(PROBE_BASE_ADDR);
++	p1 = probe_read(PROBE_HIGH_ADDR);
++
++	probe_write(PROBE_BASE_ADDR, 0xa5a5a5a5);
++	probe_write(PROBE_HIGH_ADDR, 0x5a5a5a5a);
++	b2 = probe_read(PROBE_BASE_ADDR);
++	p2 = probe_read(PROBE_HIGH_ADDR);
++
++	probe_write(PROBE_BASE_ADDR, sb);
++	probe_write(PROBE_HIGH_ADDR, sp);
++
++	return b1 == 0x12345678 && p1 == 0xdeadbeef &&
++	       b2 == 0xa5a5a5a5 && p2 == 0x5a5a5a5a;
++}
++
+ /*
+  * Detect BPI-R3 vs BPI-R3-mini by probing for the Airoha EN8811H PHY.
+  *
+@@ -171,6 +239,10 @@ static enum bpir3_variant detect_bpir3_variant(void)
+ 	unsigned int pwr_b[] = { EN8811H_PWR_B_GPIO, EN8811H_PWR2_B_GPIO };
+ 	unsigned int i;
+ 
++	/* 1 GiB DDR → Acer Connect Vero W; skip MDIO probe entirely. */
++	if (!ram_above_1g_present())
++		return ASUS_VERO_W;
++
+ 	/* Switch GPIO67 (MDC) and GPIO68 (MDIO) to eth function */
+ 	gpio_set_mode(MDC_GPIO,  1);
+ 	gpio_set_mode(MDIO_GPIO, 1);
+@@ -207,6 +279,8 @@ int board_fit_config_name_match(const char *name)
+ 	switch (variant) {
+ 	case BPIR3_MINI:
+ 		return strcmp(name, "mt7986a-bpi-r3-mini") ? -1 : 0;
++	case ASUS_VERO_W:
++	return strcmp(name, "mt7986a-acer-connect-vero-w") ? -1 : 0;
+ 	case BPIR3:
+ 	default:
+ 		/*
+@@ -224,6 +298,8 @@ int board_late_init(void)
+ 
+ 	if (model && strstr(model, "Mini"))
+ 		env_set("fdtfile", "mediatek/mt7986a-bananapi-bpi-r3-mini.dtb");
++	else if (model && strstr(model, "Vero"))
++	env_set("fdtfile", "mediatek/mt7986a-acer-connect-vero-w.dtb");
+ 
+ 	return 0;
+ }
+diff --git a/configs/mt7986a_bpir3_emmc_defconfig b/configs/mt7986a_bpir3_emmc_defconfig
+index 193acb4a9b4..dff2f6f164e 100644
+--- a/configs/mt7986a_bpir3_emmc_defconfig
++++ b/configs/mt7986a_bpir3_emmc_defconfig
+@@ -8,6 +8,8 @@ CONFIG_NR_DRAM_BANKS=1
+ CONFIG_ENV_SIZE=0x80000
+ CONFIG_ENV_OFFSET=0x300000
+ CONFIG_DEFAULT_DEVICE_TREE="mt7986a-bpi-r3-emmc"
++CONFIG_OF_LIST="mt7986a-bpi-r3-sd mt7986a-bpi-r3-emmc mt7986a-bpi-r3-mini mt7986a-acer-connect-vero-w"
++CONFIG_MULTI_DTB_FIT=y
+ CONFIG_TARGET_MT7986=y
+ CONFIG_BOARD_BPI_R3=y
+ CONFIG_SPL_LOAD_FIT=y
+diff --git a/configs/mt7986a_bpir3_sd_defconfig b/configs/mt7986a_bpir3_sd_defconfig
+index e498b58a4a5..f281f570075 100644
+--- a/configs/mt7986a_bpir3_sd_defconfig
++++ b/configs/mt7986a_bpir3_sd_defconfig
+@@ -8,6 +8,8 @@ CONFIG_NR_DRAM_BANKS=1
+ CONFIG_ENV_SIZE=0x80000
+ CONFIG_ENV_OFFSET=0x300000
+ CONFIG_DEFAULT_DEVICE_TREE="mt7986a-bpi-r3-sd"
++CONFIG_OF_LIST="mt7986a-bpi-r3-sd mt7986a-bpi-r3-emmc mt7986a-bpi-r3-mini mt7986a-acer-connect-vero-w"
++CONFIG_MULTI_DTB_FIT=y
+ CONFIG_TARGET_MT7986=y
+ CONFIG_BOARD_BPI_R3=y
+ CONFIG_SPL_LOAD_FIT=y
+-- 
+2.43.0
+

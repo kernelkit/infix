@@ -26,7 +26,7 @@ Options:
   -l              List available boards
   -o              Override auto-detection of genimage.sh, use host installed version
   -r root-dir     Path to rootfs build directory or rootfs.squashfs file (default: O= or output/)
-  -t target       Image target type: sdcard or emmc (default: sdcard)
+  -t target       Image target type: sdcard, emmc, or vero (default: sdcard)
 
 Arguments:
   board-name      Board identifier (must come after options)
@@ -440,6 +440,9 @@ case "$TARGET" in
     emmc)
         TARGET="emmc"
         ;;
+    vero)
+        TARGET="vero"
+        ;;
     *)
         err "Invalid target: $TARGET. Must be 'sdcard' or 'emmc'"
         usage
@@ -587,7 +590,7 @@ if [ -n "$DOWNLOAD_BOOT" ]; then
     fi
 fi
 
-if [ "$BOARD" = "bananapi-bpi-r3" ]; then
+if [ "$BOARD" = "bananapi-bpi-r3" ] && [ "$TARGET" != "vero" ]; then
     maybe_prepare_en8811h_fw_image
     [ -f "${BINARIES_DIR}/en8811h-fw.bin" ] || die "Missing EN8811H firmware image: ${BINARIES_DIR}/en8811h-fw.bin"
 fi
@@ -596,8 +599,12 @@ fi
 log "Generating genimage configuration for $BOARD..."
 
 GENIMAGE_CFG="${BUILD_DIR}/genimage.cfg"
-GENIMAGE_TEMPLATE="$BOARD_DIR/genimage.cfg.in"
-[ -f "$GENIMAGE_TEMPLATE" ] || die "genimage.cfg.in not found in $BOARD_DIR"
+if [ "$TARGET" = "vero" ]; then
+    GENIMAGE_TEMPLATE="$BOARD_DIR/genimage-vero.cfg.in"
+else
+    GENIMAGE_TEMPLATE="$BOARD_DIR/genimage.cfg.in"
+fi
+[ -f "$GENIMAGE_TEMPLATE" ] || die "$(basename "$GENIMAGE_TEMPLATE") not found in $BOARD_DIR"
 
 # Check if board needs special boot file discovery (Raspberry Pi)
 if { [ "$BOARD" = "raspberrypi-rpi2" ] || [ "$BOARD" = "raspberrypi-rpi64" ]; } && grep -q '#BOOT_FILES#' "$GENIMAGE_TEMPLATE"; then

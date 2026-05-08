@@ -1,4 +1,4 @@
-# Banana Pi BPI-R3 / BPI-R3 Mini
+# Banana Pi BPI-R3 / BPI-R3 Mini / Acer Connect Vero w6
 
 <img src="bananapi-bpi-r3.webp" alt="The board" width=800 padding=10>
 
@@ -212,6 +212,95 @@ sync
 2. Set boot switches to eMMC mode (see image above)
 3. Power on
 
+
+## Acer Connect Vero W6m
+
+The Acer Connect Vero W6m is based on the same MT7986a SoC as the
+BPI-R3, with tri-band WiFi (2.4 GHz + 5 GHz + 6 GHz) using a PCIe
+MT7916 module and the SoC's built-in MT7976 DBDC radio.
+
+Secure boot is enabled on this device, so the factory bootloader
+(partitions 1-4: bl2, u-boot-env, factory, fip) must not be modified.
+Infix is installed by replacing partitions 5+ while keeping the
+factory bootloader intact.  The stock U-Boot chainloads the Infix
+U-Boot from the first partition after fip.
+
+### Prerequisites
+
+- Serial console access (115200 8N1) — required to interrupt U-Boot.
+  Disassembly is needed to reach the UART header.  See the [OpenWrt
+  Vero W6m page][vero-openwrt] for details.
+- TFTP server on the local network with the built image and U-Boot.
+- Ethernet cable connected to the Vero.
+- **Save the MAC addresses** from the stock U-Boot environment before
+  installing.  Interrupt autoboot and run `printenv` to note down:
+  `2gMAC`, `5gMAC`, `6gMAC`, `LANMAC`, and `WANMAC`.
+
+### Installing Infix
+
+1. **Build the Vero eMMC image:**
+
+   ```bash
+   ./utils/mkimage.sh -t vero bananapi-bpi-r3
+   ```
+
+   Place `u-boot.bin` and `infix-vero-w-vero.img` on your TFTP server.
+
+2. **RAM-load Infix U-Boot** from the stock U-Boot serial console
+   (hit any key to stop autoboot):
+
+   ```
+   setenv bootmenu_default 7
+   tftpboot 0x46000000 u-boot.bin
+   go 0x46000000
+   ```
+
+   `bootmenu_default 7` bypasses secure boot verification.  The Infix
+   U-Boot will automatically netboot the Infix system.
+
+3. **From running Infix**, transfer the image and write it to eMMC:
+
+   ```bash
+   cd /tmp
+   tftp -g -r infix-vero-w-vero.img <TFTP_SERVER_IP>
+   dd if=infix-vero-w-vero.img of=/dev/mmcblk0 bs=512 seek=17408 skip=17408
+   ```
+
+   This writes only the Infix partitions (starting after fip at sector
+   17408), leaving the factory bootloader and calibration data intact.
+
+4. **Update the GPT** to replace stock partitions 5+ with the Infix
+   layout:
+
+   ```bash
+   sudo sgdisk --zap-all /dev/mmcblk0
+   sudo sgdisk -a 1 \
+       -n2:8192:9215      -c2:u-boot-env  \
+       -n3:9216:13311     -c3:factory      \
+       -n4:13312:17407    -c4:fip          \
+       -n5:17408:+32M     -c5:infix-uboot \
+       -n6:0:+8M          -c6:aux         \
+       -n7:0:+250M        -c7:primary     \
+       -n8:0:+250M        -c8:secondary   \
+       -n9:0:+128M        -c9:cfg         \
+       -n10:0:+128M       -c10:var        \
+       -p /dev/mmcblk0
+   ```
+
+5. **Configure U-Boot to chainload Infix permanently** — reboot and
+   interrupt stock U-Boot again:
+
+   ```
+   setenv bootmenu_default 7
+   setenv bootcmd 'mmc read 0x46000000 0x4400 0x10000; go 0x46000000'
+   saveenv
+   reset
+   ```
+
+   The `bootcmd` reads the Infix U-Boot (at sector 0x4400/17408)
+   into RAM and jumps to it.  After `reset`, Infix boots from eMMC.
+
+
 ## Troubleshooting
 
 ### Board won't boot
@@ -272,3 +361,4 @@ make aarch64
 [6]: https://github.com/frank-w/u-boot/releases/download/CI-BUILD-2025-10-bpi-2025.10-2025-10-13_1032/bpi-r3_spim-nand_fip.bin
 [7]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3
 [8]: https://github.com/kernelkit/infix/releases/tag/latest-boot
+[vero-openwrt]: https://openwrt.org/toh/acer/predator_vero_w6m
