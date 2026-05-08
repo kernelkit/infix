@@ -212,6 +212,7 @@ sync
 2. Set boot switches to eMMC mode (see image above)
 3. Power on
 
+
 ## Troubleshooting
 
 ### Board won't boot

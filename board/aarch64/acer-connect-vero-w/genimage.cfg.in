@@ -1,0 +1,86 @@
+image cfg.ext4 {
+        empty = true
+        temporary = true
+        size = 128M
+        ext4 {
+                label = "cfg"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
+        }
+}
+
+image var.ext4 {
+        empty = true
+        temporary = true
+        size = 128M
+        ext4 {
+                label = "var"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
+        }
+}
+
+image #INFIX_ID##VERSION#-vero-w-#TARGET#.img {
+        hdimage {
+                partition-table-type = "gpt"
+                gpt-no-backup = true
+        }
+
+        /*
+         * Factory partitions (1-4) -- secure boot, do not overwrite.
+         * Offsets and sizes match the stock Acer GPT exactly.
+         * No image data is written, preserving factory content.
+         */
+        partition u-boot-env {
+                offset = 8192s
+                size = 1024s
+        }
+
+        partition factory {
+                offset = 9216s
+                size = 4096s
+        }
+
+        partition fip {
+                offset = 13312s
+                size = 4096s
+        }
+
+        /* Infix U-Boot, chainloaded by stock bootloader */
+        partition infix-uboot {
+                offset = 17408s
+                image = "u-boot.bin"
+                size = 32M
+        }
+
+        partition aux {
+                partition-uuid = D4EF35A0-0652-45A1-B3DE-D63339C82035
+                image = "aux.ext4"
+        }
+
+        partition primary {
+                partition-type-uuid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4
+                bootable = true
+                size = 250M
+                image = "rootfs.squashfs"
+        }
+
+        partition secondary {
+                partition-type-uuid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4
+                bootable = true
+                size = 250M
+                image = "rootfs.squashfs"
+        }
+
+        partition cfg {
+                partition-uuid = 7aa497f0-73b5-47e5-b2ab-8752d8a48105
+                image = "cfg.ext4"
+        }
+
+        partition var {
+                partition-uuid = 8046A06A-E45A-4A14-A6AD-6684704A393F
+                image = "var.ext4"
+        }
+}

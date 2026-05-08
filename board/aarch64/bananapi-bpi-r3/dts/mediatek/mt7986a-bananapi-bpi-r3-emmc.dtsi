@@ -19,4 +19,34 @@ possible to use dtbo in sysboot unless present in syslinux.conf
         no-sd;
         no-sdio;
         status = "okay";
+
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        card@0 {
+                compatible = "mmc-card";
+                reg = <0>;
+
+                partitions {
+                        compatible = "gpt-partitions";
+
+                        partition-factory {
+                                partname = "factory";
+
+                                nvmem-layout {
+                                        compatible = "fixed-layout";
+                                        #address-cells = <1>;
+                                        #size-cells = <1>;
+
+                                        eeprom_factory_wmac: eeprom@0 {
+                                                reg = <0x0 0x1000>;
+                                        };
+
+                                        eeprom_factory_pcie: eeprom@a0000 {
+                                                reg = <0xa0000 0x1000>;
+                                        };
+                                };
+                        };
+                };
+        };
 };

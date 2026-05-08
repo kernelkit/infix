@@ -15,6 +15,7 @@ on:
           - bananapi-bpi-r64
           - friendlyarm-nanopi-r2s
           - microchip-sama7g54-ek
+          - acer-connect-vero-w
         default: 'raspberrypi-rpi64'
 
 jobs:
@@ -57,40 +58,53 @@ jobs:
               echo "BOOTLOADER=rpi2-boot" >> $GITHUB_ENV
               echo "ARCH=arm" >> $GITHUB_ENV
               echo "BUILD_EMMC=false" >> $GITHUB_ENV
+              echo "BUILD_SD=true" >> $GITHUB_ENV
               ;;
             raspberrypi-rpi64)
               echo "BOOTLOADER=rpi64-boot" >> $GITHUB_ENV
               echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=false" >> $GITHUB_ENV
+              echo "BUILD_SD=true" >> $GITHUB_ENV
               ;;
             bananapi-bpi-r3)
               echo "BOOTLOADER_SD=bpi-r3-sd-boot" >> $GITHUB_ENV
               echo "BOOTLOADER_EMMC=bpi-r3-emmc-boot" >> $GITHUB_ENV
               echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=true" >> $GITHUB_ENV
+              echo "BUILD_SD=true" >> $GITHUB_ENV
               ;;
             bananapi-bpi-r4)
               echo "BOOTLOADER_SD=bpi-r4-sd-boot" >> $GITHUB_ENV
               echo "BOOTLOADER_EMMC=bpi-r4-emmc-boot" >> $GITHUB_ENV
               echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=true" >> $GITHUB_ENV
+              echo "BUILD_SD=true" >> $GITHUB_ENV
               ;;
             bananapi-bpi-r64)
               echo "BOOTLOADER_SD=bpi-r64-sd-boot" >> $GITHUB_ENV
               echo "BOOTLOADER_EMMC=bpi-r64-emmc-boot" >> $GITHUB_ENV
               echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=true" >> $GITHUB_ENV
+              echo "BUILD_SD=true" >> $GITHUB_ENV
+              ;;
+            acer-connect-vero-w)
+              echo "BOOTLOADER_EMMC=bpi-r3-emmc-boot" >> $GITHUB_ENV
+              echo "ARCH=aarch64" >> $GITHUB_ENV
+              echo "BUILD_EMMC=true" >> $GITHUB_ENV
+              echo "BUILD_SD=false" >> $GITHUB_ENV
               ;;
             friendlyarm-nanopi-r2s)
               echo "BOOTLOADER=nanopi-r2s-boot" >> $GITHUB_ENV
               echo "ARCH=aarch64" >> $GITHUB_ENV
               echo "BUILD_EMMC=false" >> $GITHUB_ENV
+              echo "BUILD_SD=true" >> $GITHUB_ENV
               ;;
             microchip-sama7g54-ek)
               echo "BOOTLOADER_SD=sama7g54-ek-sd-boot" >> $GITHUB_ENV
               echo "BOOTLOADER_EMMC=sama7g54-ek-emmc-boot" >> $GITHUB_ENV
               echo "ARCH=arm" >> $GITHUB_ENV
               echo "BUILD_EMMC=true" >> $GITHUB_ENV
+              echo "BUILD_SD=true" >> $GITHUB_ENV
               ;;
             *)
               echo "Error: Unknown board ${{ inputs.board }}"
@@ -111,15 +125,16 @@ jobs:
         run: |
           # Download bootloader from latest-boot release tag
           if [ "$BUILD_EMMC" = "true" ]; then
-            # Download both SD and eMMC bootloaders for boards that support both
-            echo "Downloading SD bootloader: ${BOOTLOADER_SD}"
-            gh release download latest-boot --pattern "*${BOOTLOADER_SD}*" --dir temp_bootloader_sd/
-            mkdir -p output_sd/images
-            cd temp_bootloader_sd/
-            tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
-            cd ../
-            rm -rf temp_bootloader_sd/
-
+            if [ "$BUILD_SD" = "true" ]; then
+              # Download both SD and eMMC bootloaders for boards that support both
+              echo "Downloading SD bootloader: ${BOOTLOADER_SD}"
+              gh release download latest-boot --pattern "*${BOOTLOADER_SD}*" --dir temp_bootloader_sd/
+              mkdir -p output_sd/images
+              cd temp_bootloader_sd/
+              tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
+              cd ../
+              rm -rf temp_bootloader_sd/
+            fi
             echo "Downloading eMMC bootloader: ${BOOTLOADER_EMMC}"
             gh release download latest-boot --pattern "*${BOOTLOADER_EMMC}*" --dir temp_bootloader_emmc/
             mkdir -p output_emmc/images
@@ -128,8 +143,10 @@ jobs:
             cd ../
             rm -rf temp_bootloader_emmc/
 
-            echo "SD bootloader files:"
-            ls -la output_sd/images/
+            if [ "$BUILD_SD" = "true" ]; then
+              echo "SD bootloader files:"
+              ls -la output_sd/images/
+            fi
             echo "eMMC bootloader files:"
             ls -la output_emmc/images/
           else
@@ -201,22 +218,18 @@ jobs:
           fi
 
       - name: Create SD card image
+        if: ${{ env.BUILD_SD == 'true' }}
         run: |
           if [ "$BUILD_EMMC" = "true" ]; then
             export BINARIES_DIR=$PWD/output_sd/images
-            export BUILD_DIR=$PWD/build
-            export BR2_EXTERNAL_INFIX_PATH=$PWD
-            export RELEASE=""
-            export INFIX_ID="infix"
-            ./utils/mkimage.sh -t sdcard ${{ inputs.board }}
           else
             export BINARIES_DIR=$PWD/output/images
-            export BUILD_DIR=$PWD/build
-            export BR2_EXTERNAL_INFIX_PATH=$PWD
-            export RELEASE=""
-            export INFIX_ID="infix"
-            ./utils/mkimage.sh -t sdcard ${{ inputs.board }}
           fi
+          export BUILD_DIR=$PWD/build
+          export BR2_EXTERNAL_INFIX_PATH=$PWD
+          export RELEASE=""
+          export INFIX_ID="infix"
+          ./utils/mkimage.sh -t sdcard ${{ inputs.board }}
 
       - name: Create eMMC image
         if: ${{ env.BUILD_EMMC == 'true' }}
