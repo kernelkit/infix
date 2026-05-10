@@ -762,6 +762,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		ERROR("Failed to subscribe to infix-services");
 		goto err;
 	}
+	rc = subscribe_model("ietf-syslog", &confd, 0);
+	if (rc) {
+		ERROR("Failed to subscribe to ietf-syslog");
+		goto err;
+	}
 	rc = subscribe_model("ietf-system", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-system");

@@ -16,6 +16,13 @@ module infix-syslog {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-syslog, draft 32.";
 
+  revision 2026-05-08 {
+    description "Add TCP transport (RFC 6587) support:
+                    - Remote forwarding and server listen
+                    - Configurable TCP forwarding suspension time";
+    reference "internal";
+  }
+
   revision 2025-11-17 {
     description "Add hostname-filter support.";
     reference "internal";
@@ -123,6 +130,18 @@ module infix-syslog {
       }
     }
 
+    leaf tcp-retry-timeout {
+      description "Suspension time after a failed TCP connection to a remote syslog
+                   server, before retrying.  During suspension, messages are queued
+                   and flushed in bulk when the connection is reestablished.
+
+                   The default of 180 seconds is conservative.  Set to a lower value
+                   for faster recovery or to test the queueing behaviour.";
+      type uint32;
+      units "seconds";
+      default 180;
+    }
+
     container server {
       description "Syslog server settings, acting as a remote server (sink)";
 
@@ -146,9 +165,24 @@ module infix-syslog {
                 description "Interface to listen on, default: any.";
                 type inet:ip-address;
               }
-
               leaf port {
-                description "The Internet port to listen on, default: 514.";
+                description "UDP port to listen on, default: 514.";
+                type inet:port-number;
+                default 514;
+              }
+            }
+          }
+          case tcp {
+            list tcp {
+              key "port";
+              description "Listen for incoming TCP syslog connections per RFC 6587.";
+              reference "RFC 6587: Transmission of Syslog Messages over TCP";
+              leaf address {
+                description "Interface to listen on, default: any.";
+                type inet:ip-address;
+              }
+              leaf port {
+                description "TCP port to listen on, default: 514.";
                 type inet:port-number;
                 default 514;
               }
@@ -250,6 +284,26 @@ module infix-syslog {
                        → matches messages containing 'ERROR'
                      - operator: contains, value: 'ERROR', negate: true
                        → matches messages NOT containing 'ERROR'";
+      }
+    }
+  }
+
+  augment "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination/syslog:transport" {
+    description "Add TCP transport for syslog forwarding per RFC 6587.";
+    case tcp {
+      container tcp {
+        description "TCP transport for syslog forwarding per RFC 6587.
+                     Messages are framed using octet counting.";
+        reference "RFC 6587: Transmission of Syslog Messages over TCP";
+        leaf address {
+          type inet:host;
+          description "Address of the remote syslog server.";
+        }
+        leaf port {
+          type inet:port-number;
+          default 514;
+          description "TCP port of the remote syslog server, default 514.";
+        }
       }
     }
   }

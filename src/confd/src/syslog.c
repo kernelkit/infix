@@ -13,16 +13,19 @@
 #define XPATH_REMOTE_DST  XPATH_BASE_"/actions/remote/destination"
 #define XPATH_ROTATE_     XPATH_BASE_"/infix-syslog:file-rotation"
 #define XPATH_SERVER_     XPATH_BASE_"/infix-syslog:server"
+#define XPATH_TCP_RETRY_  XPATH_BASE_"/infix-syslog:tcp-retry-timeout"
 
 #define SYSLOG_D_         "/etc/syslog.d"
 #define SYSLOG_FILE       SYSLOG_D_"/log-file-%s.conf"
 #define SYSLOG_REMOTE     SYSLOG_D_"/remote-%s.conf"
 #define SYSLOG_ROTATE     SYSLOG_D_"/rotate.conf"
 #define SYSLOG_SERVER     SYSLOG_D_"/server.conf"
+#define SYSLOG_TCP_RETRY  SYSLOG_D_"/tcp-retry.conf"
 
 struct addr {
 	char *address;
 	int   port;
+	bool  tcp;
 };
 
 struct action {
@@ -288,9 +291,12 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 
 	/*
 	 * The [] syntax is for IPv6, but the sysklogd parser handles
-	 * them separately from the address conversion, so this works.
+	 * them separately from the address conversion, so this works for
+	 * both IPv4 and IPv6 addresses in both the @ and tcp:// forms.
 	 */
-	if (addr)
+	if (addr && addr->tcp)
+		fprintf(act.fp, "\ttcp://[%s]:%d%s\n", addr->address, addr->port, opts);
+	else if (addr)
 		fprintf(act.fp, "\t@[%s]:%d%s\n", addr->address, addr->port, opts);
 	else if (name[0] == '/')
 		fprintf(act.fp, "\t-%s%s\n", name, opts);
@@ -368,12 +374,23 @@ static int remote_change(sr_session_ctx_t *session, struct lyd_node *config, str
 			if (remove(filename(name, true, path, sizeof(path))))
 				ERRNO("failed removing %s", path);
 		} else {
-			struct addr addr;
+			struct addr addr = {};
 
 			addr.address = srx_get_str(session, "%s/udp/address", path);
-			srx_get_int(session, &addr.port, SR_UINT16_T, "%s/udp/port", path);
+			if (addr.address) {
+				srx_get_int(session, &addr.port, SR_UINT16_T, "%s/udp/port", path);
+			} else {
+				addr.address = srx_get_str(session, "%s/infix-syslog:tcp/address", path);
+				if (addr.address) {
+					srx_get_int(session, &addr.port, SR_UINT16_T, "%s/infix-syslog:tcp/port", path);
+					addr.tcp = true;
+				}
+			}
 
-			action(session, name, path, &addr);
+			if (addr.address) {
+				action(session, name, path, &addr);
+				free(addr.address);
+			}
 		}
 	}
 
@@ -415,17 +432,28 @@ static int rotate_change(sr_session_ctx_t *session, struct lyd_node *config, str
 	return SR_ERR_OK;
 }
 
+static void write_listen_url(FILE *fp, struct lyd_node *entry, const char *scheme)
+{
+	const char *address = lydx_get_cattr(entry, "address");
+	const char *port    = lydx_get_cattr(entry, "port");
+
+	if (address)
+		fprintf(fp, "listen %s://[%s]:%s\n", scheme, address, port);
+	else
+		fprintf(fp, "listen %s://[::]:%s\n", scheme, port);
+}
+
 static int server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	char path[512] = XPATH_SERVER_;
-	sr_val_t *list = NULL;
-	size_t count;
+	struct lyd_node *listen, *entry;
 	FILE *fp;
 
-	if (SR_EV_DONE != event || !lydx_get_xpathf(diff, XPATH_SERVER_))
+	if (SR_EV_DONE != event)
+		return SR_ERR_OK;
+	if (!lydx_get_xpathf(diff, XPATH_SERVER_))
 		return SR_ERR_OK;
 
-	if (!srx_enabled(session, "%s/enabled", path)) {
+	if (!srx_enabled(session, XPATH_SERVER_ "/enabled")) {
 		if (erase(SYSLOG_SERVER))
 			ERRNO("failed disabling syslog server");
 		goto done;
@@ -437,29 +465,47 @@ static int server_change(sr_session_ctx_t *session, struct lyd_node *config, str
 		return SR_ERR_SYS;
 	}
 
-	/* Allow listening on port 514, or custom listen below */
 	fprintf(fp, "secure_mode 0\n");
 
-	if (!srx_get_items(session, &list, &count, "%s/listen/udp", path)) {
-		for (size_t i = 0; i < count; ++i) {
-			sr_val_t *entry = &list[i];
-			char *address, *port;
+	listen = lydx_get_descendant(config, "syslog", "server", "listen", NULL);
+	if (listen) {
+		LYX_LIST_FOR_EACH(lyd_child(listen), entry, "udp") {
+			const char *address = lydx_get_cattr(entry, "address");
+			const char *port    = lydx_get_cattr(entry, "port");
 
-			address = srx_get_str(session, "%s/address", entry->xpath);
-			port = srx_get_str(session, "%s/port", entry->xpath);
-
-			/* Accepted formats: address, :port, address:port */
 			fprintf(fp, "listen %s%s%s\n", address ?: "", port ? ":" : "", port ?: "");
-			free(address);
-			free(port);
+		}
+		LYX_LIST_FOR_EACH(lyd_child(listen), entry, "tcp") {
+			write_listen_url(fp, entry, "tcp");
 		}
 	}
-	if (list)
-		sr_free_values(list, count);
+
 	fclose(fp);
 done:
 	finit_reload("sysklogd");
 
+	return SR_ERR_OK;
+}
+
+static int tcp_retry_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+{
+	int timeout = 180;
+	FILE *fp;
+
+	if (SR_EV_DONE != event || !lydx_get_xpathf(diff, XPATH_TCP_RETRY_))
+		return SR_ERR_OK;
+
+	srx_get_int(session, &timeout, SR_UINT32_T, XPATH_TCP_RETRY_);
+
+	fp = fopen(SYSLOG_TCP_RETRY, "w");
+	if (!fp) {
+		ERRNO("Failed opening %s", SYSLOG_TCP_RETRY);
+		return SR_ERR_SYS;
+	}
+	fprintf(fp, "tcp_suspend_time %d\n", timeout);
+	fclose(fp);
+
+	finit_reload("sysklogd");
 	return SR_ERR_OK;
 }
 
@@ -474,6 +520,8 @@ int syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 	if ((rc = rotate_change(session, config, diff, event, confd)))
 		return rc;
 	if ((rc = server_change(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = tcp_retry_change(session, config, diff, event, confd)))
 		return rc;
 
 	return SR_ERR_OK;
