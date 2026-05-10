@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import subprocess
 import argparse
 import urllib.parse
@@ -347,7 +345,8 @@ def download(url, checksum):
     return True
 
 
-if __name__ == "__main__":
+def main():
+    global debug, index
     syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_DAEMON)
 
     parser = argparse.ArgumentParser(prog='modem-firmware-update')
@@ -387,3 +386,7 @@ if __name__ == "__main__":
         fatal("Firmware update failed")
 
     rmdir(tempdir)
+
+
+if __name__ == "__main__":
+    main()
