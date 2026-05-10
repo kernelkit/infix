@@ -47,6 +47,7 @@ define MODEMD_INSTALL_TARGET_CMDS
 	install -m 644 $(MODEMD_DIR)/modemd.rules $(TARGET_DIR)/lib/udev/rules.d/90-modemd.rules
 	install -m 644 $(MODEMD_DIR)/qmi-wwan-ids.rules $(TARGET_DIR)/lib/udev/rules.d/91-qmi-wwan-ids.rules
 	install -m 644 $(MODEMD_DIR)/77-mm-dell-port-types.rules $(TARGET_DIR)/etc/udev/rules.d/77-mm-dell-port-types.rules
+	install -m 644 $(MODEMD_DIR)/77-mm-modem-gps.rules $(TARGET_DIR)/etc/udev/rules.d/77-mm-modem-gps.rules
 	install -D -m 644 $(MODEMD_DIR)/modemd.modules-load $(TARGET_DIR)/etc/modules-load.d/modemd.conf
 	install -m 755 $(MODEMD_DIR)/modem-command $(TARGET_DIR)/sbin/modem-command
 	ln -sf /usr/libexec/modemd/modemd $(TARGET_DIR)/sbin/modemd

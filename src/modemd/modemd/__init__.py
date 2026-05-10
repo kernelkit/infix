@@ -22,6 +22,27 @@ debug   = False
 threads = []
 reload_event = threading.Event()
 
+# Vendor-specific AT commands to enable / disable raw NMEA output on the
+# modem's dedicated GPS port.  Used when the udev rules in
+# 77-mm-modem-gps.rules have set ID_MM_PORT_IGNORE on that port — gpsd
+# then reads NMEA directly from /dev/gpsN.  For unrecognised vendors,
+# prepare_location() falls back to ModemManager's high-level options
+# (which keeps MM in charge of the NMEA port).  Keys match the
+# manufacturer string ModemManager reports verbatim.
+GPS_AT_COMMANDS = {
+    "Quectel":         ("AT+QGPS=1", "AT+QGPS=0"),
+    "Sierra Wireless": ("AT+CGPS=1", "AT+CGPS=0"),
+}
+
+# ModemManager --location-{enable,disable}-* flag suffixes per source.
+# 'gps' is handled separately because known vendors take the raw AT path.
+LOCATION_MM_FLAGS = {
+    "agps-msa": ("agps-msa",),
+    "agps-msb": ("agps-msb",),
+    "3gpp":     ("3gpp",),
+    "cdma":     ("cdma-bs",),
+}
+
 syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_SYSLOG)
 
 class Trigger(enum.Enum):
@@ -515,6 +536,12 @@ class ModemThread(threading.Thread):
     def fatal(self, msg):
         fatal("%s%s" % (self.prefix, msg))
 
+    def _mmcli(self, *args, check=True):
+        return runcmd(["mmcli", "-m", self.path, *args], check=check)
+
+    def _mmclij(self, *args):
+        return runcmdj(["mmcli", "-J", "-m", self.path, *args])
+
     def init(self):
         self.timeout = 1
         self.path = None
@@ -623,12 +650,10 @@ class ModemThread(threading.Thread):
         self.pulldown()
 
         wait = 0
-        if runcmd(["mmcli", "-m", self.path,
-                   "--reset"]):
+        if self._mmcli("--reset"):
             self.info("Performed a normal reset")
             wait = 5
-        elif runcmd(["mmcli", "-m", self.path,
-                     "--factory-reset=000000"]):
+        elif self._mmcli("--factory-reset=000000"):
             self.info("Performed a factory reset")
             wait = 10
         else:
@@ -662,15 +687,14 @@ class ModemThread(threading.Thread):
         if not self.update():
             return bearers
         for path in self.status.get("bearers", []):
-            output = runcmdj(["mmcli", "-J", "-m", self.path, "-b", path])
+            output = self._mmclij("-b", path)
             if output and "bearer" in output:
                 bearers.append(output["bearer"])
         return bearers
 
     def get_profiles(self):
         profiles = []
-        output = runcmdj(["mmcli", "-J", "-m", self.path,
-                          "--3gpp-profile-manager-list"])
+        output = self._mmclij("--3gpp-profile-manager-list")
         if not output:
             return profiles
         for entry in output["modem"]["3gpp"]["profile-manager"]["list"]:
@@ -690,7 +714,7 @@ class ModemThread(threading.Thread):
     def update(self):
         if not self.path:
             return False
-        output = runcmdj(["mmcli", "-J", "-m", self.path])
+        output = self._mmclij()
         if output:
             output = output.get("modem", {})
             output = output.get("generic", None)
@@ -883,14 +907,14 @@ class ModemThread(threading.Thread):
     def poweron(self):
         if self.status.get("power-state", "") == "off":
             self.info("Powering on")
-            if not runcmd(["mmcli", "-m", self.path, "--set-power-state-on"]):
+            if not self._mmcli("--set-power-state-on"):
                 self.err("Unable to power on")
                 return False
         return True
 
     def disable(self):
         self.info("Disabling")
-        if not runcmd(["mmcli", "-m", self.path, "--disable"]):
+        if not self._mmcli("--disable"):
             self.err("Unable to disable")
             return False
         else:
@@ -903,14 +927,13 @@ class ModemThread(threading.Thread):
         if not self.path:
             return False
         if state == "unknown" or state == "disabled":
-            if not runcmd(["mmcli", "-m", self.path, "--enable"]):
+            if not self._mmcli("--enable"):
                 self.err("Unable to enable")
                 return False
         return True
 
     def unlock(self):
-        cmd = ["mmcli", "-m", self.path, "--sim=%s" %
-               self.status.get("sim", "0")]
+        args = ["--sim=%s" % self.status.get("sim", "0")]
 
         if self.status.get("unlock-required", "") == "sim-pin":
             self.info("Unlocking with PIN")
@@ -918,20 +941,20 @@ class ModemThread(threading.Thread):
             if not pin:
                 self.err("No PIN defined")
                 return False
-            cmd.append("--pin=%s" % pin)
+            args.append("--pin=%s" % pin)
         elif self.status.get("unlock-required", "") == "sim-puk":
             self.info("Unlocking with PUK")
             puk = self.cfg.get("puk")
             if not puk:
                 self.err("No PUK defined")
                 return False
-            cmd.append("--puk=%s" % puk)
+            args.append("--puk=%s" % puk)
         else:
             self.err("Unsupported lock")
             return False
 
         self.disable()
-        if not runcmd(cmd):
+        if not self._mmcli(*args):
             self.err("Unable to unlock")
             return False
         else:
@@ -1087,9 +1110,8 @@ class ModemThread(threading.Thread):
         for p in self.get_profiles():
             if p["profile-id"] != "1":
                 self.dbg("Deleting profile %s" % p["profile-id"])
-                if not runcmd(["mmcli", "-m", self.path,
-                               "--3gpp-profile-manager-delete=%s" %
-                               p["profile-id"]]):
+                if not self._mmcli("--3gpp-profile-manager-delete=%s" %
+                                   p["profile-id"]):
                     self.err("Unable to delete profile")
                     return False
 
@@ -1103,20 +1125,17 @@ class ModemThread(threading.Thread):
                 self.err("Max. number of bearers reached")
                 break
             if bearer["pid"] != "1":
-                if not runcmd(["mmcli", "-m", self.path,
-                               "--3gpp-profile-manager-set="]):
+                if not self._mmcli("--3gpp-profile-manager-set="):
                     self.err("Unable to create profile")
                     return False
 
             args = self.get_profile_args(bearer)
-            if not runcmd(["mmcli", "-m", self.path,
-                           "--3gpp-profile-manager-set=%s" % args]):
+            if not self._mmcli("--3gpp-profile-manager-set=%s" % args):
                 self.err("Unable to configure profile")
                 return False
 
             args = self.get_bearer_args(bearer)
-            if not runcmd(["mmcli", "-m", self.path,
-                           "--create-bearer=%s" % args]):
+            if not self._mmcli("--create-bearer=%s" % args):
                 self.err("Unable to create bearer")
                 return False
 
@@ -1130,8 +1149,7 @@ class ModemThread(threading.Thread):
 
         for bearer in bearers:
             args = self.get_bearer_args(bearer)
-            if not runcmd(["mmcli", "-m", self.path,
-                           "--create-bearer=multiplex=required,%s" % args]):
+            if not self._mmcli("--create-bearer=multiplex=required,%s" % args):
                 self.err("Unable to create bearer")
                 return False
             self.info("Created multiplex bearer for '%s'" % bearer["apn"])
@@ -1139,9 +1157,7 @@ class ModemThread(threading.Thread):
         return True
 
     def prepare_default_bearer(self, bearer):
-        if not runcmd(["mmcli", "-m", self.path,
-                       "--create-bearer=%s" %
-                       self.get_bearer_args(bearer)]):
+        if not self._mmcli("--create-bearer=%s" % self.get_bearer_args(bearer)):
             self.err("Unable to create bearer")
             return False
 
@@ -1155,8 +1171,7 @@ class ModemThread(threading.Thread):
         # wipe existing bearers
         for bearer in self.get_bearers():
             self.dbg("Deleting bearer %s" % bearer["dbus-path"])
-            if not runcmd(["mmcli", "-m", self.path,
-                           "--delete-bearer=%s" % bearer["dbus-path"]]):
+            if not self._mmcli("--delete-bearer=%s" % bearer["dbus-path"]):
                 self.err("Unable to delete bearer")
                 return False
 
@@ -1164,9 +1179,8 @@ class ModemThread(threading.Thread):
         initial = self.bearers.get("initial")
         if initial:
             self.info("Setting initial bearer '%s'" % initial["apn"])
-            if not runcmd(["mmcli", "-m", self.path,
-                           "--3gpp-set-initial-eps-bearer-settings=%s" %
-                           self.get_bearer_args(initial)]):
+            if not self._mmcli("--3gpp-set-initial-eps-bearer-settings=%s" %
+                               self.get_bearer_args(initial)):
                 self.err("Unable to set initial bearer")
 
         # configure dialup bearers
@@ -1189,8 +1203,7 @@ class ModemThread(threading.Thread):
         if len(bands) == 0 or "any" in bands:
             return True
 
-        if not runcmd(["mmcli", "-m", self.path,
-                      "--set-current-bands=%s" % "|".join(bands)]):
+        if not self._mmcli("--set-current-bands=%s" % "|".join(bands)):
             self.err("Unable to set band")
             return False
         return True
@@ -1207,7 +1220,7 @@ class ModemThread(threading.Thread):
             allow = []
 
         if pref == "none" and len(allow) == 0:
-            runcmd(["mmcli", "-m", self.path, "--set-allowed-modes=any"], check=False)
+            self._mmcli("--set-allowed-modes=any", check=False)
             return True
 
         mode = "allowed: %s; preferred: %s" % (", ".join(allow), pref)
@@ -1227,12 +1240,47 @@ class ModemThread(threading.Thread):
 
         self.info("Setting mode '%s'" % mode)
 
-        cmd = ["mmcli", "-m", self.path]
+        args = []
         if len(allow) > 0:
-            cmd.append("--set-allowed-modes=%s" % "|".join(allow))
+            args.append("--set-allowed-modes=%s" % "|".join(allow))
         if pref != "none":
-            cmd.append("--set-preferred-mode=%s" % pref)
-        return runcmd(cmd)
+            args.append("--set-preferred-mode=%s" % pref)
+        return self._mmcli(*args)
+
+    def _gps_at_command(self, enable):
+        """Vendor-specific AT command to toggle GPS NMEA, or None.
+
+        Match by substring so 'Quectel' picks up 'Quectel Incorporated' too —
+        ModemManager normalises differently across firmware revisions.
+        """
+        for vendor, cmds in GPS_AT_COMMANDS.items():
+            if vendor in self.manf:
+                return cmds[0] if enable else cmds[1]
+        return None
+
+    def _location_capabilities(self):
+        """YANG source names this modem actually supports.
+
+        Returns None if the capability query itself fails.  Otherwise a
+        set drawn from {gps, agps-msa, agps-msb, 3gpp, cdma}.  Asking
+        ModemManager to enable an unsupported source fails the whole
+        batched mmcli call, so prepare_location() filters against this.
+        """
+        output = self._mmclij("--location-status")
+        if not output:
+            return None
+        caps = output.get("modem", {}).get("location", {}).get("capabilities", "")
+        if isinstance(caps, str):
+            caps = [c.strip() for c in caps.split(",") if c.strip()]
+        mapping = {
+            "3gpp-lac-ci": "3gpp",
+            "gps-raw":     "gps",
+            "gps-nmea":    "gps",
+            "agps-msa":    "agps-msa",
+            "agps-msb":    "agps-msb",
+            "cdma-bs":     "cdma",
+        }
+        return {mapping[c] for c in caps if c in mapping}
 
     def prepare_location(self):
         self.info("Preparing location")
@@ -1241,34 +1289,53 @@ class ModemThread(threading.Thread):
         if not self.location["enabled"]:
             return True
 
-        for source in ["gps", "agps-msa", "agps-msb", "3gpp", "cdma"]:
-            if self.location["enabled"] and source in self.location["sources"]:
+        sources = self.location["sources"]
+
+        # GPS via vendor AT command (known vendor) or via MM (fallback).
+        # The AT path doesn't consult MM's --location-status, since
+        # marking the NMEA port ID_MM_PORT_IGNORE removes 'gps' from MM's
+        # capability list even though the hardware is still there.
+        at = self._gps_at_command("gps" in sources)
+        if at is not None:
+            if not self._mmcli("--command=%s" % at):
+                self.err("Unable to send AT command '%s'" % at)
+                self.location["state"] = "failed"
+                return False
+            gps_flags = ()
+        else:
+            gps_flags = ("gps-nmea", "gps-raw")
+
+        # Capability filter for the remaining (MM-managed) sources so
+        # CDMA on an LTE-only modem doesn't fail the whole batched call.
+        caps = self._location_capabilities()
+        if caps is None:
+            self.err("Unable to query modem location capabilities")
+            self.location["state"] = "failed"
+            return False
+
+        flag_map = {**LOCATION_MM_FLAGS, "gps": gps_flags}
+        args = []
+        for source, flags in flag_map.items():
+            if source == "gps" and at is not None:
+                continue   # AT command already handled GPS
+            if source not in caps:
+                if source in sources:
+                    self.err("Modem does not support location source"
+                             " '%s', skipping" % source)
+                continue
+            enabled = source in sources
+            if enabled:
                 self.info("Enabling location source '%s'" % source)
-                action = "enable"
             else:
                 self.dbg("Disabling location source '%s'" % source)
-                action = "disable"
+            action = "enable" if enabled else "disable"
+            for flag in flags:
+                args.append("--location-%s-%s" % (action, flag))
 
-            args = []
-            if source == "gps":
-                args = ["--location-%s-gps-nmea" % action,
-                        "--location-%s-gps-raw" % action]
-            elif source == "agps-msa":
-                args = ["--location-%s-agps-msa" % action]
-            elif source == "agps-msb":
-                args = ["--location-%s-agps-msb" % action]
-            elif source == "3gpp":
-                args = ["--location-%s-3gpp" % action]
-            elif source == "cdma":
-                args = ["--location-%s-cdma-bs" % action]
-            else:
-                continue
-
-            if not runcmd(["mmcli", "-m", self.path] + args):
-                self.err("Unable to %s location source" % action)
-                if self.location["enabled"]:
-                    self.location["state"] = "failed"
-                return False
+        if args and not self._mmcli(*args):
+            self.err("Unable to configure location sources")
+            self.location["state"] = "failed"
+            return False
         return True
 
     def prepare(self):
@@ -1296,10 +1363,7 @@ class ModemThread(threading.Thread):
     def connect(self):
         for bearer in self.status.get("bearers", []):
             self.info("Connecting %s" % bearer)
-            if not runcmd(["mmcli", "-m", self.path,
-                           "--connect",
-                           "--bearer=%s" % bearer
-                           ]):
+            if not self._mmcli("--connect", "--bearer=%s" % bearer):
                 self.connfail += 1
                 self.err("Unable to connect (%d failures)" % self.connfail)
                 self.err("Reason: %s" % self.get_conn_failure(bearer))
@@ -1346,8 +1410,8 @@ class ModemThread(threading.Thread):
 
             if bearer["status"]["connected"] == "yes":
                 self.info("Disconnecting %s" % bearer["dbus-path"])
-                runcmd(["mmcli", "-m", self.path,
-                        "--disconnect", "--bearer=%s" % bearer["dbus-path"]])
+                self._mmcli("--disconnect",
+                            "--bearer=%s" % bearer["dbus-path"])
         for iface in self.ifaces:
             self.linkdown(iface)
 
@@ -1439,8 +1503,7 @@ class ModemThread(threading.Thread):
         if not self.location["enabled"]:
             return
 
-        output = runcmdj(["mmcli", "-J", "-m", self.path,
-                          "--location-get"])
+        output = self._mmclij("--location-get")
         loc = (output or {}).get("modem", {}).get("location", {})
         gps = loc.get("gps", {})
         gpp = loc.get("3gpp", {})
@@ -1506,8 +1569,7 @@ class ModemThread(threading.Thread):
 
         storage = payload["properties"]["storage"].upper()
         if storage != "--":
-            if not runcmd(["mmcli", "-m", self.path,
-                          "--messaging-delete-sms=%s" % sms["path"]]):
+            if not self._mmcli("--messaging-delete-sms=%s" % sms["path"]):
                 self.err("Unable to delete SMS from %s storage" % storage)
             else:
                 self.info("Deleted SMS from %s storage" % storage)
@@ -1522,12 +1584,11 @@ class ModemThread(threading.Thread):
         for sms in list_sms(self.path):
             if sms["type"] == "notsent":
                 self.dbg("Sending sms %s" % sms)
-                runcmd(["mmcli", "-m", self.path, "-s", sms["path"], "--send"])
+                self._mmcli("-s", sms["path"], "--send")
 
             elif sms["type"] == "sent":
                 self.notif("SMS-SENT")
-                runcmd(["mmcli", "-m", self.path,
-                        "--messaging-delete-sms=%s" % sms["path"]])
+                self._mmcli("--messaging-delete-sms=%s" % sms["path"])
 
             elif sms["type"] == "received":
                 self.save_sms(sms)
