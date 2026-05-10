@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import threading
 import subprocess
 import argparse
@@ -1620,7 +1618,8 @@ def sighandler(signum, frame):
         fatal("Exiting on signal %d" % signum)
 
 
-if __name__ == "__main__":
+def main():
+    global debug
     syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_DAEMON)
 
     if os.geteuid() != 0:
@@ -1687,3 +1686,7 @@ if __name__ == "__main__":
     [th.join() for th in threads]
 
     fatal("Abnormal exit")
+
+
+if __name__ == "__main__":
+    main()

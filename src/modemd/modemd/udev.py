@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import shutil
 import errno
 import time
@@ -283,7 +281,8 @@ def apply():
     return True
 
 
-if __name__ == "__main__":
+def main():
+    global debug
     with open("/proc/cmdline", 'r') as fd:
         cmdline = fd.read()
         if "debug" in cmdline:
@@ -314,3 +313,7 @@ if __name__ == "__main__":
     dbg("ended")
 
     sys.exit(rc)
+
+
+if __name__ == "__main__":
+    main()

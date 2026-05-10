@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from datetime import datetime
 import argparse
 import locale
@@ -106,7 +104,7 @@ def listlocale():
     return ", ".join(locales)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(prog='modem-sms')
     parser.add_argument("-d", action="store_true", help="Delete SMS")
     parser.add_argument("-s", action="store_true", help="Send SMS")
@@ -140,3 +138,7 @@ if __name__ == "__main__":
         delete(index)
     else:
         show(index)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import subprocess
 import argparse
 import json
@@ -272,7 +270,7 @@ def runlist(index, manf, model):
     sys.exit(0)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(prog='modem-carrier')
     parser.add_argument("-i", "--index", default=0, help="Modem index")
     parser.add_argument("-m", "--manf", default=0, help="Modem manufacturer")
@@ -312,3 +310,7 @@ if __name__ == "__main__":
         runget(index, manf, model)
 
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

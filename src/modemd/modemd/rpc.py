@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import json
 import sys
@@ -21,7 +19,7 @@ def sendrpc(index, rpc):
     os.unlink(path)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(prog='modem-rpc')
     parser.add_argument("-i", "--index", default=0, help="Modem index")
     parser.add_argument("-r", "--rpc", default=0, help="RPC command")
@@ -48,3 +46,7 @@ if __name__ == "__main__":
     }
 
     sendrpc(index, rpc)
+
+
+if __name__ == "__main__":
+    main()

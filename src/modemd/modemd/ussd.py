@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import subprocess
 import sys
@@ -49,7 +47,8 @@ def ussd(index, code):
     return True
 
 
-if __name__ == "__main__":
+def main():
+    global verbose
     parser = argparse.ArgumentParser(prog='modem-ussd')
     parser.add_argument("-i", "--index", default=0, help="Modem index")
     parser.add_argument("-c", "--code", default=None, help="USSD codec")
@@ -70,3 +69,7 @@ if __name__ == "__main__":
             sys.exit(0)
 
     sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
