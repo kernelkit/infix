@@ -2,6 +2,7 @@ config BR2_PACKAGE_FEATURE_MODEM
 	bool "Feature Modem"
 	select BR2_PACKAGE_MODEMD
 	select BR2_PACKAGE_MODEM_MANAGER
+	select BR2_PACKAGE_MODEM_MANAGER_ATVIADBUS
 	select BR2_PACKAGE_MODEM_MANAGER_LIBMBIM
 	select BR2_PACKAGE_MODEM_MANAGER_LIBQMI
 	select BR2_PACKAGE_MODEM_MANAGER_LIBQRTR
@@ -9,6 +10,11 @@ config BR2_PACKAGE_FEATURE_MODEM
 	  Enables cellular modem support in Infix via ModemManager and
 	  the modemd management daemon.  Includes drivers for common
 	  USB option modems and QMI/MBIM-based devices.
+
+	  ATVIADBUS allows raw AT commands over D-Bus (used by modemd to
+	  enable GPS NMEA output via vendor-specific AT commands such as
+	  AT+QGPS=1) without needing to start ModemManager in --debug
+	  mode.
 
 config BR2_PACKAGE_FEATURE_MODEM_QUALCOMM
 	bool "Qualcomm-based modems (QMI/QRTR/MHI)"

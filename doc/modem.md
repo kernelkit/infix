@@ -353,6 +353,59 @@ admin@example:/config/interface/wwan0/wwan/bearer/> <b>leave</b>
 > Enabling roaming may incur significant charges depending on your
 > mobile subscription.  Check with your operator before enabling.
 
+## Location and GPS
+
+Cellular modems with a GNSS chip can report their location into the
+YANG operational tree, and feed the system GPS subsystem so the modem
+shows up alongside any USB GPS receivers in `show hardware` and is
+available as an NTP reference clock.  See the
+[Hardware User's Guide][hardware-gps] for the system-wide view of
+GPS/GNSS receivers, and the [NTP User's Guide][ntp-gps] for using a
+GPS source as a time reference.
+
+Location reporting is off by default.  Enable it under the modem
+hardware container:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit hardware component modem0 modem</b>
+admin@example:/config/hardware/component/modem0/modem/> <b>set location enabled</b>
+admin@example:/config/hardware/component/modem0/modem/> <b>set location source gps</b>
+admin@example:/config/hardware/component/modem0/modem/> <b>leave</b>
+</code></pre>
+
+The `source` leaf-list takes one or more of:
+
+- `gps`: on-modem GNSS receiver.  The modem joins the system GPS
+  subsystem and is reported alongside any USB GPS dongles in
+  `show hardware`
+- `3gpp`: cell-tower based location reported by the network as
+  MCC/MNC/LAC/TAC/cell-id.  No external antenna required, but
+  positional accuracy is coarse
+- `agps-msa`, `agps-msb`: assisted-GPS variants that use the cellular
+  network to download almanac and ephemeris data, speeding up the
+  first fix
+
+When `gps` is enabled and the modem has a fix, `show modem modem0`
+gains a Location section with current latitude, longitude, and
+altitude.
+
+> [!NOTE]
+> Not every modem has GNSS hardware.  Many LTE-only modules only
+> support `3gpp` location.  If `show modem modem0` does not gain a
+> Location section after several minutes outdoors with `gps`
+> enabled, the firmware does not expose GNSS regardless of the YANG
+> configuration.
+
+> [!IMPORTANT]
+> Most cellular modems' GNSS antenna input is passive RF only.  The
+> host board, or an inline bias-T, must supply DC power on the coax
+> to drive an active antenna's LNA.  Check the carrier-board README
+> for the GPS antenna wiring on your specific hardware.  Cold-start
+> time to first fix is typically several minutes with a clear view
+> of the sky.
+
+[hardware-gps]: https://www.kernelkit.org/infix/latest/hardware/#gpsgnss-receivers
+[ntp-gps]:      https://www.kernelkit.org/infix/latest/ntp/#gps-reference-clock
+
 ## Management Commands
 
 ### Restart Bearer
