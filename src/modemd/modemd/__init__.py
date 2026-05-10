@@ -1,6 +1,7 @@
 import threading
 import subprocess
 import argparse
+import datetime
 import hashlib
 import signal
 import syslog
@@ -122,6 +123,32 @@ def fwritej(path, cont):
     if fwrite(path, json.dumps(cont)):
         return True
     else:
+        return False
+
+
+def now_rfc3339():
+    """Return current UTC time as a yang:date-and-time string.
+
+    Format matches yanger.common.YangDate (+00:00 offset, not Z) so that
+    consumers see identical timestamp formatting regardless of producer.
+    """
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(
+        timespec="seconds")
+
+
+def fwritej_atomic(path, cont):
+    """Write JSON to path via tmp+rename so readers never see a partial file."""
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w", opener=opener) as fd:
+            fd.write(json.dumps(cont))
+        os.rename(tmp, path)
+        return True
+    except OSError:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
         return False
 
 
@@ -1212,7 +1239,6 @@ class ModemThread(threading.Thread):
 
         rmrf(self.locdir)
         if not self.location["enabled"]:
-            fwrite("%s/disabled" % self.locdir, "1")
             return True
 
         for source in ["gps", "agps-msa", "agps-msb", "3gpp", "cdma"]:
@@ -1241,7 +1267,6 @@ class ModemThread(threading.Thread):
             if not runcmd(["mmcli", "-m", self.path] + args):
                 self.err("Unable to %s location source" % action)
                 if self.location["enabled"]:
-                    fwrite("%s/failed" % self.locdir, "1")
                     self.location["state"] = "failed"
                 return False
         return True
@@ -1416,22 +1441,49 @@ class ModemThread(threading.Thread):
 
         output = runcmdj(["mmcli", "-J", "-m", self.path,
                           "--location-get"])
-        if output:
-            lat = output["modem"]["location"]["gps"]["latitude"]
-            lon = output["modem"]["location"]["gps"]["longitude"]
-        else:
-            lat = "--"
-            lon = "--"
+        loc = (output or {}).get("modem", {}).get("location", {})
+        gps = loc.get("gps", {})
+        gpp = loc.get("3gpp", {})
 
-        if lat != "--" and lon != "--":
+        def _pick(d, key):
+            v = d.get(key)
+            return v if v not in (None, "--", "") else None
+
+        data = {"last-change": now_rfc3339()}
+
+        lat = _pick(gps, "latitude")
+        lon = _pick(gps, "longitude")
+        alt = _pick(gps, "altitude")
+        if lat is not None and lon is not None:
+            data["source"]    = "gps"
+            data["latitude"]  = float(lat)
+            data["longitude"] = float(lon)
+            if alt is not None:
+                data["altitude"] = float(alt)
+
+        for src_key, dst_key in (("cid", "cell-id"), ("lac", "lac"),
+                                 ("tac", "tac"), ("mcc", "mcc"),
+                                 ("mnc", "mnc")):
+            v = _pick(gpp, src_key)
+            if v is None:
+                continue
+            if dst_key in ("cell-id", "lac", "tac"):
+                try:
+                    data[dst_key] = int(v, 0) if isinstance(v, str) else int(v)
+                except (TypeError, ValueError):
+                    continue
+            else:
+                data[dst_key] = str(v)
+            data.setdefault("source", "3gpp")
+
+        fwritej_atomic("%s/data.json" % self.locdir, data)
+
+        if "latitude" in data:
             if self.location["state"] != "up":
-                self.info("Retrieved GPS location [%s, %s]" % (lat, lon))
-            rmf("%s/down" % self.locdir)
-            fwrite("%s/up" % self.locdir, "1")
+                self.info("Retrieved GPS location [%s, %s]"
+                          % (data["latitude"], data["longitude"]))
             self.location["state"] = "up"
         else:
-            rmf("%s/up" % self.locdir)
-            fwrite("%s/down" % self.locdir, "1")
             self.location["state"] = "down"
 
     def save_sms(self, sms):
@@ -1480,6 +1532,11 @@ class ModemThread(threading.Thread):
             elif sms["type"] == "received":
                 self.save_sms(sms)
 
+    def touch_state(self):
+        """Refresh state.json with the current poll time."""
+        fwritej_atomic("%s/state.json" % self.rundir,
+                       {"last-change": now_rfc3339()})
+
     def check(self):
         timeout = 10 if self.state == State.UP else 3
         elapsed = time.time() - self.timer1
@@ -1488,6 +1545,7 @@ class ModemThread(threading.Thread):
             if self.update():
                 self.check_state()
                 self.timer1 = time.time()
+                self.touch_state()
 
         elapsed = time.time() - self.timer2
         if elapsed > 30:

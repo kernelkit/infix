@@ -2185,72 +2185,61 @@ def show_modem(json):
         sim_table.print()
 
 
-def _modem_signal_str(status):
+def _modem_signal_str(ms):
     parts = []
-    sq = status.get("signal-quality")
+    sq = ms.get("signal-quality")
     if sq is not None:
         parts.append(f"Quality: {sq}%")
     for key, label in (("signal-rssi", "RSSI"), ("signal-rsrp", "RSRP"),
                        ("signal-rsrq", "RSRQ"), ("signal-sinr", "SINR")):
-        if key in status:
-            parts.append(f"{label}: {status[key]}")
+        if key in ms:
+            parts.append(f"{label}: {ms[key]}")
     return "  ".join(parts)
 
 
 def show_modem_detail(json, ref):
-    modems = json.get("modem-list", [])
-    try:
-        idx = int(ref.removeprefix("modem"))
-    except ValueError:
-        idx = -1
-
-    modem = next((m for m in modems if m.get("index") == idx), None)
+    components = get_json_data([], json, "ietf-hardware:hardware", "component")
+    modem = next((c for c in components
+                  if c.get("class") == "infix-hardware:modem"
+                  and c.get("name") == ref), None)
     if modem is None:
         print(f"Modem '{ref}' not found.")
         return
 
-    info = modem.get("info", {})
-    status = modem.get("status", {})
-    cell = status.get("cellular", {})
-    sim_state = modem.get("sim-state", {})
-    bearers = status.get("bearer", [])
-    location = status.get("location", {})
+    ms = modem.get("infix-hardware:modem-state", {})
+    cell = ms.get("cellular", {})
+    location = ms.get("location-state", {})
+
+    sim_name = ref.replace("modem", "sim", 1)
+    sim = next((c for c in components
+                if c.get("class") == "infix-hardware:sim"
+                and c.get("name") == sim_name), None)
+    sim_state = sim.get("infix-hardware:sim-state", {}) if sim else {}
 
     width = 62
     print(Decore.invert(f"{'MODEM: ' + ref:<{width}}"))
 
     Decore.title("Hardware Information", width)
     for label, val in (
-        ("Manufacturer",       info.get("manufacturer", "")),
-        ("Model",              info.get("model", "")),
-        ("Hardware Revision",  info.get("hardware-revision", "")),
-        ("Firmware Version",   info.get("firmware-version", "")),
-        ("Serial Number",      info.get("serial-number", "")),
-        ("IMSI",               info.get("imsi", "")),
-        ("ICCID",              info.get("iccid", "")),
+        ("Manufacturer",       ms.get("manufacturer", "")),
+        ("Model",              ms.get("model", "")),
+        ("Firmware Version",   ms.get("firmware-version", "")),
+        ("Serial Number",      ms.get("serial-number", "")),
+        ("IMSI",               ms.get("imsi", "")),
+        ("ICCID",              ms.get("iccid", "")),
     ):
         if val:
             print(f"  {label:<20}: {val}")
-    phone = info.get("phone-number", [])
-    if phone:
-        print(f"  {'Phone Number':<20}: {', '.join(phone)}")
-    carriers = info.get("supported-carrier", [])
-    if carriers:
-        print(f"  {'Supported Carriers':<20}: {', '.join(carriers)}")
-    selected = status.get("selected-carrier", "")
-    if selected:
-        print(f"  {'Selected Carrier':<20}: {selected}")
 
     Decore.title("Status", width)
-    state = status.get("state", "unknown")
+    state = ms.get("state", "unknown")
     print(f"  {'State':<20}: {state}")
-    if state == "failed":
-        reason = status.get("state-failed-reason", "")
-        if reason:
-            print(f"  {'Failed Reason':<20}: {reason}")
-    sig_str = _modem_signal_str(status)
+    sig_str = _modem_signal_str(ms)
     if sig_str:
         print(f"  {'Signal':<20}: {sig_str}")
+    last_change = ms.get("last-change")
+    if last_change:
+        print(f"  {'Last Update':<20}: {last_change}")
 
     if cell:
         Decore.title("Cellular", width)
@@ -2259,76 +2248,53 @@ def show_modem_detail(json, ref):
             ("Operator",       "operator-name"),
             ("Operator ID",    "operator-id"),
             ("Network Type",   "network-type"),
-            ("Service State",  "service-state"),
         ):
             val = cell.get(key, "")
             if val:
                 print(f"  {label:<20}: {val}")
 
-    if sim_state:
+    if sim:
         Decore.title("SIM Card", width)
+        print(f"  {'Name':<20}: {sim.get('name', '')}")
         for label, key in (
-            ("Name",           "name"),
             ("Slot",           "slot"),
             ("Lock State",     "state"),
             ("Operator",       "operator-name"),
         ):
             val = sim_state.get(key)
-            if val:
+            if val is not None and val != "":
                 print(f"  {label:<20}: {val}")
 
-    if bearers:
-        Decore.title("Bearers", width)
-        for b in bearers:
-            iface = b.get("interface", "")
-            hdr = iface if iface else b.get("path", "")
-            connected = b.get("connected", False)
-            conn_str = "connected" if connected else "disconnected"
-            print(f"  {hdr} ({conn_str})")
-            if not connected:
-                reason = b.get("connection-failed-reason", "")
-                if reason:
-                    print(f"    {'Error':<18}: {reason}")
-            v4 = b.get("ipv4-address")
-            v4pfx = b.get("ipv4-prefix", 0)
-            if v4 and v4pfx:
-                print(f"    {'IPv4':<18}: {v4}/{v4pfx}")
-            v6 = b.get("ipv6-address")
-            v6pfx = b.get("ipv6-prefix", 0)
-            if v6 and v6pfx:
-                print(f"    {'IPv6':<18}: {v6}/{v6pfx}")
-            rx = b.get("in-bytes", 0)
-            tx = b.get("out-bytes", 0)
-            if rx or tx:
-                print(f"    {'Traffic':<18}: RX {rx} B  TX {tx} B")
-            total_rx = b.get("total-in-bytes", 0)
-            total_tx = b.get("total-out-bytes", 0)
-            duration = b.get("total-duration", 0)
-            if total_rx or total_tx:
-                print(f"    {'Total Traffic':<18}: RX {total_rx} B  TX {total_tx} B  ({duration} s)")
-
     if location:
-        lat = location.get("latitude", "")
-        lon = location.get("longitude", "")
-        alt = location.get("altitude", "")
-        cid = location.get("cid", "")
-        lac = location.get("lac", "")
-        mcc = location.get("mcc", "")
-        mnc = location.get("mnc", "")
-        if lat or cid:
-            Decore.title("Location", width)
-        if lat and lon:
+        Decore.title("Location", width)
+        src = location.get("source")
+        if src:
+            print(f"  {'Source':<20}: {src}")
+        lat = location.get("latitude")
+        lon = location.get("longitude")
+        alt = location.get("altitude")
+        if lat is not None and lon is not None:
             pos = f"{lat}, {lon}"
-            if alt:
+            if alt is not None:
                 pos += f"  Alt: {alt} m"
             print(f"  {'GPS':<20}: {pos}")
-        if cid:
+        cid = location.get("cell-id")
+        if cid is not None:
             cell_id = f"CID {cid}"
-            if lac:
+            lac = location.get("lac")
+            tac = location.get("tac")
+            if lac is not None:
                 cell_id += f"  LAC {lac}"
+            if tac is not None:
+                cell_id += f"  TAC {tac}"
+            mcc = location.get("mcc")
+            mnc = location.get("mnc")
             if mcc and mnc:
                 cell_id += f"  MCC {mcc}  MNC {mnc}"
             print(f"  {'Cell ID':<20}: {cell_id}")
+        loc_change = location.get("last-change")
+        if loc_change:
+            print(f"  {'Last Update':<20}: {loc_change}")
 
 
 def show_hardware(json):
