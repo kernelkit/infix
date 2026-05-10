@@ -2,6 +2,28 @@ from .common import LOG
 from .host import HOST
 
 
+RUNDIR = "/run/modemd"
+
+
+def _location_state(idx):
+    data = HOST.read_json("%s/modem%d/location/data.json" % (RUNDIR, idx),
+                          default={})
+    if not data:
+        return None
+
+    state = {}
+    for key in ("source", "latitude", "longitude", "altitude",
+                "cell-id", "lac", "tac", "mcc", "mnc", "last-change"):
+        if key in data and data[key] is not None:
+            state[key] = data[key]
+    return state or None
+
+
+def _state_last_change(idx):
+    data = HOST.read_json("%s/modem%d/state.json" % (RUNDIR, idx), default={})
+    return data.get("last-change") if data else None
+
+
 def _modem_to_hw_state(modem):
     info = modem.get("info", {})
     status = modem.get("status", {})
@@ -64,6 +86,15 @@ def operational():
         idx = modem.get("index", 0)
         name = "modem%d" % idx
         hw_state = _modem_to_hw_state(modem)
+
+        location_state = _location_state(idx)
+        if location_state:
+            hw_state["location-state"] = location_state
+
+        last_change = _state_last_change(idx)
+        if last_change:
+            hw_state["last-change"] = last_change
+
         if hw_state:
             hw_components.append({
                 "name": name,

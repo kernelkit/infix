@@ -23,6 +23,12 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-05-10 {
+    description "Add modem-state/last-change and modem-state/location-state operational
+                 nodes so cellular modem location and state freshness are accessible over
+                 NETCONF/RESTCONF, not only via the CLI.";
+    reference "internal";
+  }
   revision 2026-05-08 {
     description "Move modem actions (restart/reset/send-sms) from container modem to a
                  direct augment on component with when/if-feature guard, fixing sysrepo
@@ -962,6 +968,76 @@ module infix-hardware {
           type string;
           description "Access technology in use (e.g. LTE, 5G NR).";
         }
+      }
+
+      container location-state {
+        description
+          "Location data observed by the modem.  Coordinates come from the
+           modem's GPS subsystem (or A-GPS); cell-id/lac/tac/mcc/mnc come
+           from 3GPP signalling.  Source indicates which mechanism produced
+           the current fix.  Empty when no source is enabled or no fix is
+           available.";
+
+        leaf source {
+          type modem-location-source;
+          description "Source that produced the current fix.";
+        }
+
+        leaf latitude {
+          type decimal64 { fraction-digits 6; }
+          units "degrees";
+          description "Latitude in decimal degrees, negative = south.";
+        }
+
+        leaf longitude {
+          type decimal64 { fraction-digits 6; }
+          units "degrees";
+          description "Longitude in decimal degrees, negative = west.";
+        }
+
+        leaf altitude {
+          type decimal64 { fraction-digits 1; }
+          units "meters";
+          description "Altitude above mean sea level.";
+        }
+
+        leaf cell-id {
+          type uint32;
+          description "Serving 3GPP cell identifier.";
+        }
+
+        leaf lac {
+          type uint16;
+          description "Location Area Code (2G/3G).";
+        }
+
+        leaf tac {
+          type uint16;
+          description "Tracking Area Code (LTE/5G).";
+        }
+
+        leaf mcc {
+          type string { pattern '[0-9]{3}'; }
+          description "Mobile Country Code.";
+        }
+
+        leaf mnc {
+          type string { pattern '[0-9]{2,3}'; }
+          description "Mobile Network Code.";
+        }
+
+        leaf last-change {
+          type yang:date-and-time;
+          description "Timestamp when location-state was last refreshed.";
+        }
+      }
+
+      leaf last-change {
+        type yang:date-and-time;
+        description
+          "Timestamp of the most recent change to any leaf in modem-state.
+           Consumers can use this to gauge data freshness independent of
+           individual leaf timestamps.";
       }
     }
 
