@@ -14,10 +14,12 @@ import os
 import sys
 import ipaddress
 
-rundir = "/run/modemd"
-smsdir = "/var/sms"
-debug = False
+rundir  = "/run/modemd"
+smsdir  = "/var/sms"
+pidfile = "/run/modemd.pid"
+debug   = False
 threads = []
+reload_event = threading.Event()
 
 syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_SYSLOG)
 
@@ -1605,12 +1607,11 @@ def sighandler(signum, frame):
     for th in threads:
         th.stop()
 
-    # wait for modem threads
     timeout = 0
     while timeout < 3:
         exited = True
         for th in threads:
-            if th.name.startswith("modem") and not th.exited:
+            if isinstance(th, ModemThread) and not th.exited:
                 exited = False
         if exited:
             break
@@ -1621,6 +1622,22 @@ def sighandler(signum, frame):
         sys.exit(0)
     else:
         fatal("Exiting on signal %d" % signum)
+
+
+def start_modem_threads(cfgs):
+    started = []
+    for cfg in cfgs:
+        try:
+            th = ModemThread(cfg)
+            th.start()
+            started.append(th)
+        except Exception as e:
+            err("Failed to start modem%d thread: %s" % (cfg["index"], e))
+    return started
+
+
+def sighup_handler(signum, frame):
+    reload_event.set()
 
 
 def main():
@@ -1647,8 +1664,10 @@ def main():
 
     mkdir(rundir)
     mkdir(smsdir)
+    fwrite(pidfile, str(os.getpid()) + "\n")
     signal.signal(signal.SIGINT, sighandler)
     signal.signal(signal.SIGTERM, sighandler)
+    signal.signal(signal.SIGHUP, sighup_handler)
 
     try:
         th = RpcThread()
@@ -1673,24 +1692,32 @@ def main():
     if not runcmd(['/usr/libexec/modemd/sim-setup']):
         fatal("Unable to setup SIMs")
 
-    for cfg in modems:
-        th = None
-        try:
-            th = ModemThread(cfg)
-            th.start()
-        except Exception as e:
-            if debug:
-                print(e)
-            fatal("Modem %d thread caught an exception" % cfg["index"])
-        if th:
-            threads.append(th)
-
+    threads.extend(start_modem_threads(modems))
     if len(threads) == 0:
         fatal("No modem threads are running")
 
-    [th.join() for th in threads]
+    while True:
+        if not reload_event.wait(timeout=60):
+            continue
+        reload_event.clear()
 
-    fatal("Abnormal exit")
+        info("Reloading configuration")
+        modem_threads = [th for th in threads if isinstance(th, ModemThread)]
+        for th in modem_threads:
+            th.stop()
+        for th in modem_threads:
+            th.join(timeout=5)
+            if th.is_alive():
+                err("modem%d thread did not stop, orphaning" % th.index)
+        threads[:] = [th for th in threads if th not in modem_threads]
+
+        runcmd(['/usr/libexec/modemd/sim-setup'])
+
+        new_modems = load_config()
+        threads.extend(start_modem_threads(new_modems))
+
+        os.utime(pidfile, None)
+        info("Reload complete")
 
 
 if __name__ == "__main__":
