@@ -84,27 +84,24 @@ def hardware(args: List[str]) -> None:
 def modem(args: List[str]) -> None:
     ref = args[0] if args else None
 
+    data = get_json("/ietf-hardware:hardware")
+    if not data:
+        print("No modem data available.")
+        return
+
+    # Merge bearer-state from wwan interfaces (lives under ietf-interfaces).
+    # Quiet on miss — a system without wwan interfaces still shows modems.
+    iface_data = get_json("/ietf-interfaces:interfaces", quiet=True)
+    if iface_data:
+        data.update(iface_data)
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
     if ref:
-        try:
-            result = subprocess.run(["/usr/libexec/modemd/modem-info"],
-                                    capture_output=True, text=True, check=True)
-            data = json.loads(result.stdout) if result.stdout.strip() else []
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
-            data = []
-
-        if RAW_OUTPUT:
-            print(json.dumps(data, indent=2))
-            return
-        cli_pretty({"modem-list": data}, "show-modem-detail", ref)
+        cli_pretty(data, "show-modem-detail", ref)
     else:
-        data = get_json("/ietf-hardware:hardware")
-        if not data:
-            print("No modem data available.")
-            return
-
-        if RAW_OUTPUT:
-            print(json.dumps(data, indent=2))
-            return
         cli_pretty(data, "show-modem")
 
 
