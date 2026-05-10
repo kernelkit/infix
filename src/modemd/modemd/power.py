@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import subprocess
 import argparse
 import json
@@ -65,7 +63,7 @@ def reset(index, info):
     return True
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(prog='modem-power')
     parser.add_argument("-i", "--index", default=0, help="Modem index")
     args = parser.parse_args()
@@ -84,3 +82,7 @@ if __name__ == "__main__":
         fatal("Unable to power-cycle modem")
 
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

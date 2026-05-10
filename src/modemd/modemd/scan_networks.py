@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import subprocess
 import json
@@ -65,7 +63,8 @@ def scan(mpath):
     return True
 
 
-if __name__ == "__main__":
+def main():
+    global index
     parser = argparse.ArgumentParser(prog='modem-scan-networks')
     parser.add_argument("-i", "--index", default=0, help="Modem index")
     args = parser.parse_args()
@@ -77,3 +76,7 @@ if __name__ == "__main__":
             print("Scanning networks on modem%d, please stand by ..." % index)
             if not scan(m["path"]):
                 print("Operation failed.", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

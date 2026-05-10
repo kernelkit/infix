@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import subprocess
 import json
 import fcntl
@@ -254,7 +252,7 @@ def read_setup():
     return setup
 
 
-if __name__ == "__main__":
+def main():
     setup = read_setup()
     if setup is None:
         sys.exit(0)
@@ -263,3 +261,7 @@ if __name__ == "__main__":
         fatal("Unable set up SIMs")
 
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
