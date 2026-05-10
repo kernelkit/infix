@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "modemd"
+version = "1.0"
+description = "Infix modem daemon and utilities"
+license = "BSD-3-Clause"
+packages = [
+    { include = "modemd" }
+]
+authors = [
+  "KernelKit developers"
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+modemd = "modemd:main"
+modem-info = "modemd.info:main"
+modem-carrier = "modemd.carrier:main"
+modem-rpc = "modemd.rpc:main"
+modem-sms = "modemd.sms:main"
+modem-scan-networks = "modemd.scan_networks:main"
+modem-update-firmware = "modemd.update_firmware:main"
+modem-ussd = "modemd.ussd:main"
+modem-power = "modemd.power:main"
+modem-udev = "modemd.udev:main"
+sim-setup = "modemd.sim_setup:main"
