@@ -41,6 +41,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2026-05-13 {
+    description "Add limitations on custom mac addresses on interfaces, now needs to be a correct unicast mac-address";
+    reference "internal";
+  }
+
   revision 2026-04-29 {
     description "Add operational state for multicast router ports per bridge.";
     reference "internal";
@@ -235,8 +240,12 @@ module infix-interfaces {
 
         case static {
           leaf static {
-            description "Statically configured interface address on protocol sub-layer, e.g., MAC.";
-            type yang:phys-address;
+            description "Statically configured unicast MAC address.";
+            type yang:mac-address {
+              pattern '[0-9a-fA-F][02468aAcCeE]:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}' {
+                error-message "Must be a unicast MAC address (multicast bit must not be set).";
+              }
+            }
           }
         }
 
@@ -247,7 +256,7 @@ module infix-interfaces {
 
             leaf offset {
               description "Static offset added to the chassis MAC address.";
-              type yang:phys-address;
+              type yang:mac-address;
             }
           }
         }

@@ -18,6 +18,7 @@ All notable changes to the project are documented in this file.
 - Handle unclean daemon exits better, e.g., `dbus-daemon` crashing and
   leaving a stale pidfile behind, causing it to refuse to be restarted
 - Fix occasional blank or garbled `[ OK ]` lines at startup
+- Disallow multicast MAC addresses in custom MAC address configuration
 
 [v26.04.0][] - 2026-04-30
 -------------------------
