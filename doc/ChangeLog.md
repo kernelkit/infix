@@ -9,6 +9,7 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.31 (LTS)
+- Upgrade FRR to 10.5.4
 
 ### Fixes
 
