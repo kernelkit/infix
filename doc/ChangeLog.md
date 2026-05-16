@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.30 (LTS)
+- Upgrade Linux kernel to 6.18.31 (LTS)
 
 ### Fixes
 
