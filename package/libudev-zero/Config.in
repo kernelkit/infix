@@ -1,0 +1,19 @@
+config BR2_PACKAGE_LIBUDEV_ZERO
+	bool "libudev-zero"
+	select BR2_PACKAGE_HAS_UDEV
+	help
+	  Daemonless replacement for libudev.  Provides libudev.so.1 with
+	  the same ABI as upstream systemd-udev / eudev, but reads device
+	  properties directly from /sys and /run/udev/data/ without needing
+	  a daemon.  Pairs naturally with finit-keventd, which produces the
+	  /run/udev/data/ records and rebroadcasts kernel uevents on the
+	  netlink group libudev-zero monitors.
+
+	  https://github.com/illiliti/libudev-zero
+
+if BR2_PACKAGE_LIBUDEV_ZERO
+
+config BR2_PACKAGE_PROVIDES_UDEV
+	default "libudev-zero"
+
+endif
