@@ -106,14 +106,15 @@ interfaces {
   }
 }
 admin@infix-12-34-56:/config/interface/eth0/&gt; leave
-admin@infix-12-34-56:/&gt; show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
-eth0            ethernet   UP          52:54:00:12:34:56
-                ipv4                   192.168.2.200/24 (static)
-                ipv6                   fe80::5054:ff:fe12:3456/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
-                ipv4                   127.0.0.1/8 (static)
-                ipv6                   ::1/128 (static)
+admin@infix-12-34-56:/&gt; show interface
+INTERFACE       PROTOCOL      STATE       DATA
+eth0            1000baseT     UP          duplex: full
+                ethernet                  52:54:00:12:34:56
+                ipv4                      192.168.2.200/24 (static)
+                ipv6                      fe80::5054:ff:fe12:3456/64 (link-layer)
+lo              loopback      UP
+                ipv4                      127.0.0.1/8 (static)
+                ipv6                      ::1/128 (static)
 admin@infix-12-34-56:/&gt; copy running-config startup-config</code></pre>
 <a href="doc/cli/introduction.md">Click here</a> for more details.
 </details>

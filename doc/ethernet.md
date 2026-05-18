@@ -56,22 +56,41 @@ top of a bridge interface *br0* is named *vlan10*.
 Physical Ethernet interfaces provide low-level settings for speed/duplex as
 well as packet status and [statistics](#ethernet-statistics).
 
-By default, Ethernet interfaces defaults to auto-negotiating
-speed/duplex modes, advertising all speed and duplex modes available.
-In the example below, the switch would by default auto-negotiate speed
-1 Gbit/s on port eth1 and 100 Mbit/s on port eth4, as those are the
-highest speeds supported by H1 and H2 respectively.
+By default, Ethernet interfaces defaults to auto-negotiating speed/duplex
+modes, advertising all speed and duplex modes available.  In the example
+below, the switch would by default auto-negotiate speed 1 Gbps on port eth1
+and 100 Mbps on port eth4, as those are the highest speeds supported by H1 and
+H2 respectively.
 
 ![4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts](img/ethernet-autoneg.svg)
 
-The speed and duplex status for the links can be listed as shown
-below, assuming the link operational status is 'up'.
+A quick at-a-glance view of the physical link is available in the summary
+listing.  When a port is up, a physical-layer row appears above the ethernet
+row, naming the IEEE PMD type (e.g. `1000baseT`, `10GbaseLR`) in the PROTOCOL
+column and the negotiated duplex in DATA.  When the link is down the row is
+omitted and the interface name falls onto the ethernet row.
+
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA             </span>
+eth1            1000baseT     UP          duplex: full
+                ethernet                  00:53:00:06:11:01
+eth2            1000baseT     UP          duplex: full
+                ethernet                  00:53:00:06:11:02
+eth3            ethernet      DOWN        00:53:00:06:11:03
+eth4            100baseTX     UP          duplex: full
+                ethernet                  00:53:00:06:11:04
+...
+</code></pre>
+
+The detail view spells everything out, including auto-negotiation
+state and the speed in Mbit/s.
 
 <pre class="cli"><code>admin@example:/> <b>show interface eth1</b>
 name                : eth1
 index               : 2
 mtu                 : 1500
 operational status  : up
+link mode           : 1000baseT
 auto-negotiation    : on
 duplex              : full
 speed               : 1000
@@ -86,6 +105,7 @@ name                : eth4
 index               : 5
 mtu                 : 1500
 operational status  : up
+link mode           : 100baseTX
 auto-negotiation    : on
 duplex              : full
 speed               : 100
@@ -174,6 +194,7 @@ name                : eth1
 index               : 2
 mtu                 : 1500
 operational status  : up
+link mode           : 1000baseT
 auto-negotiation    : on
 duplex              : full
 speed               : 1000

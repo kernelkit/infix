@@ -87,34 +87,34 @@ Like other interfaces, link aggregates are also available in the general
 interfaces overview in the CLI admin-exec context.  Here is the above
 static mode aggregate:
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-lo              ethernet   UP          00:00:00:00:00:00
-                ipv4                   127.0.0.1/8 (static)
-                ipv6                   ::1/128 (static)
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+lo              ethernet      UP          00:00:00:00:00:00
+                ipv4                      127.0.0.1/8 (static)
+                ipv6                      ::1/128 (static)
 .
 .
 .
-lag0            lag        UP          static: balance-xor, hash: layer2
-│               ethernet   UP          00:a0:85:00:02:00
-├ eth7          lag        ACTIVE
-└ eth8          lag        ACTIVE
+lag0            lag           UP          static: balance-xor, hash: layer2
+│               ethernet      UP          00:a0:85:00:02:00
+├ eth7          lag           ACTIVE
+└ eth8          lag           ACTIVE
 </code></pre>
 
 Same aggregate, but in LACP mode:
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-lo              ethernet   UP          00:00:00:00:00:00
-                ipv4                   127.0.0.1/8 (static)
-                ipv6                   ::1/128 (static)
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+lo              ethernet      UP          00:00:00:00:00:00
+                ipv4                      127.0.0.1/8 (static)
+                ipv6                      ::1/128 (static)
 .
 .
 .
-lag0            lag        UP          lacp: active, rate: fast (1s), hash: layer2
-│               ethernet   UP          00:a0:85:00:02:00
-├ eth7          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
-└ eth8          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+lag0            lag           UP          lacp: active, rate: fast (1s), hash: layer2
+│               ethernet      UP          00:a0:85:00:02:00
+├ eth7          lag           ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+└ eth8          lag           ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
 </code></pre>
 
 

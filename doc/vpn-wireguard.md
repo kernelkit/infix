@@ -345,12 +345,12 @@ tunnel endpoints use IPv4 or IPv6.
 
 Check WireGuard interface status and peer connections:
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
 wg0             wireguard  UP          2 peers (1 up)
                 ipv4                   10.0.0.1/24 (static)
                 ipv6                   fd00::1/64 (static)
 
-admin@example:/> <b>show interfaces wg0</b>
+admin@example:/> <b>show interface wg0</b>
 name                : wg0
 type                : wireguard
 index               : 12

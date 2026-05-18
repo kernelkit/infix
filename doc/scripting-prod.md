@@ -39,20 +39,20 @@ Starting out, we assume a configuration where all ports are network
 interfaces (possibly with IPv6 enabled).
 
 ```
-admin@example:/> show interfaces
-lo              ethernet   UP          00:00:00:00:00:00
+admin@example:/> show interface
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-e1              ethernet   LOWER-DOWN  00:53:00:06:11:01
-e2              ethernet   LOWER-DOWN  00:53:00:06:11:02
-e3              ethernet   LOWER-DOWN  00:53:00:06:11:03
-e4              ethernet   LOWER-DOWN  00:53:00:06:11:04
-e5              ethernet   LOWER-DOWN  00:53:00:06:11:05
-e6              ethernet   LOWER-DOWN  00:53:00:06:11:06
-e7              ethernet   LOWER-DOWN  00:53:00:06:11:07
-e8              ethernet   LOWER-DOWN  00:53:00:06:11:08
-e9              ethernet   LOWER-DOWN  00:53:00:06:11:09
-e10             ethernet   UP          00:53:00:06:11:0a
+e1              ethernet      LOWER-DOWN  00:53:00:06:11:01
+e2              ethernet      LOWER-DOWN  00:53:00:06:11:02
+e3              ethernet      LOWER-DOWN  00:53:00:06:11:03
+e4              ethernet      LOWER-DOWN  00:53:00:06:11:04
+e5              ethernet      LOWER-DOWN  00:53:00:06:11:05
+e6              ethernet      LOWER-DOWN  00:53:00:06:11:06
+e7              ethernet      LOWER-DOWN  00:53:00:06:11:07
+e8              ethernet      LOWER-DOWN  00:53:00:06:11:08
+e9              ethernet      LOWER-DOWN  00:53:00:06:11:09
+e10             ethernet      UP          00:53:00:06:11:0a
                 ipv6                   fe80::0053:00ff:fe06:110a/64 (link-layer)
 admin@example:/>
 ```
@@ -80,7 +80,7 @@ admin@example:/config/> set interface e10 bridge-port bridge br0
 admin@example:/config/>
 ```
 
-The interface status can be viewed using `show interfaces` after leaving
+The interface status can be viewed using `show interface` after leaving
 configuration context.  When configuring via SSH, first assign an IP
 address to `br0` *before leaving* configuration context, e.g.
 
@@ -95,10 +95,10 @@ setup, including [setting IP address](#set-ip-address).
 ```
 admin@example:/config/> leave
 admin@example:/>
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+admin@example:/> show interface
+INTERFACE       PROTOCOL      STATE       DATA
 br0             bridge
-│               ethernet   UP          00:53:00:06:11:01
+│               ethernet      UP          00:53:00:06:11:01
 ├ e1            bridge     LOWER-DOWN
 ├ e2            bridge     LOWER-DOWN
 ├ e3            bridge     LOWER-DOWN
@@ -109,7 +109,7 @@ br0             bridge
 ├ e8            bridge     LOWER-DOWN
 ├ e9            bridge     LOWER-DOWN
 └ e10           bridge     FORWARDING
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -154,21 +154,21 @@ admin@example:/>
 Interface status would now should something like the following
 
 ```
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+admin@example:/> show interface
+INTERFACE       PROTOCOL      STATE       DATA
 br0             bridge
-│               ethernet   UP          00:53:00:06:11:01
-├ e1            bridge     LOWER-DOWN  vlan:10u pvid:10
-├ e2            bridge     LOWER-DOWN  vlan:10u pvid:10
-├ e3            bridge     LOWER-DOWN  vlan:20u pvid:20
-├ e4            bridge     LOWER-DOWN  vlan:20u pvid:20
-├ e5            bridge     LOWER-DOWN  vlan:30u pvid:30
-├ e6            bridge     LOWER-DOWN  vlan:30u pvid:30
-├ e7            bridge     LOWER-DOWN  vlan:40u pvid:40
-├ e8            bridge     LOWER-DOWN  vlan:40u pvid:40
-├ e9            bridge     LOWER-DOWN  vlan:50u pvid:50
-└ e10           bridge     FORWARDING  vlan:50u pvid:50
-lo              ethernet   UP          00:00:00:00:00:00
+│               ethernet      UP          00:53:00:06:11:01
+├ e1            bridge     LOWER-DOWN  vlan:10u pvid: 10
+├ e2            bridge     LOWER-DOWN  vlan:10u pvid: 10
+├ e3            bridge     LOWER-DOWN  vlan:20u pvid: 20
+├ e4            bridge     LOWER-DOWN  vlan:20u pvid: 20
+├ e5            bridge     LOWER-DOWN  vlan:30u pvid: 30
+├ e6            bridge     LOWER-DOWN  vlan:30u pvid: 30
+├ e7            bridge     LOWER-DOWN  vlan:40u pvid: 40
+├ e8            bridge     LOWER-DOWN  vlan:40u pvid: 40
+├ e9            bridge     LOWER-DOWN  vlan:50u pvid: 50
+└ e10           bridge     FORWARDING  vlan:50u pvid: 50
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -181,21 +181,21 @@ patched according to [above](#vlan-snake).  We should see link up and
 *FORWARDING* on all ports in the bridge.
 
 ```
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+admin@example:/> show interface
+INTERFACE       PROTOCOL      STATE       DATA
 br0             bridge
-│               ethernet   UP          00:53:00:06:11:01
-├ e1            bridge     FORWARDING  vlan:10u pvid:10
-├ e2            bridge     FORWARDING  vlan:10u pvid:10
-├ e3            bridge     FORWARDING  vlan:20u pvid:20
-├ e4            bridge     FORWARDING  vlan:20u pvid:20
-├ e5            bridge     FORWARDING  vlan:30u pvid:30
-├ e6            bridge     FORWARDING  vlan:30u pvid:30
-├ e7            bridge     FORWARDING  vlan:40u pvid:40
-├ e8            bridge     FORWARDING  vlan:40u pvid:40
-├ e9            bridge     FORWARDING  vlan:50u pvid:50
-└ e10           bridge     FORWARDING  vlan:50u pvid:50
-lo              ethernet   UP          00:00:00:00:00:00
+│               ethernet      UP          00:53:00:06:11:01
+├ e1            bridge     FORWARDING  vlan:10u pvid: 10
+├ e2            bridge     FORWARDING  vlan:10u pvid: 10
+├ e3            bridge     FORWARDING  vlan:20u pvid: 20
+├ e4            bridge     FORWARDING  vlan:20u pvid: 20
+├ e5            bridge     FORWARDING  vlan:30u pvid: 30
+├ e6            bridge     FORWARDING  vlan:30u pvid: 30
+├ e7            bridge     FORWARDING  vlan:40u pvid: 40
+├ e8            bridge     FORWARDING  vlan:40u pvid: 40
+├ e9            bridge     FORWARDING  vlan:50u pvid: 50
+└ e10           bridge     FORWARDING  vlan:50u pvid: 50
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -284,26 +284,26 @@ admin@example:/>
 Interface *vlan10* with an auto-configured IPv6 address should appear.
 
 ```
-admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA
+admin@example:/> show interface
+INTERFACE       PROTOCOL      STATE       DATA
 br0             bridge                 vlan:10t
-│               ethernet   UP          00:53:00:06:11:01
-├ e1            bridge     FORWARDING  vlan:10u pvid:10
-├ e2            bridge     FORWARDING  vlan:10u pvid:10
-├ e3            bridge     FORWARDING  vlan:20u pvid:20
-├ e4            bridge     FORWARDING  vlan:20u pvid:20
-├ e5            bridge     FORWARDING  vlan:30u pvid:30
-├ e6            bridge     FORWARDING  vlan:30u pvid:30
-├ e7            bridge     FORWARDING  vlan:40u pvid:40
-├ e8            bridge     FORWARDING  vlan:40u pvid:40
-├ e9            bridge     FORWARDING  vlan:50u pvid:50
-└ e10           bridge     FORWARDING  vlan:50u pvid:50
-lo              ethernet   UP          00:00:00:00:00:00
+│               ethernet      UP          00:53:00:06:11:01
+├ e1            bridge     FORWARDING  vlan:10u pvid: 10
+├ e2            bridge     FORWARDING  vlan:10u pvid: 10
+├ e3            bridge     FORWARDING  vlan:20u pvid: 20
+├ e4            bridge     FORWARDING  vlan:20u pvid: 20
+├ e5            bridge     FORWARDING  vlan:30u pvid: 30
+├ e6            bridge     FORWARDING  vlan:30u pvid: 30
+├ e7            bridge     FORWARDING  vlan:40u pvid: 40
+├ e8            bridge     FORWARDING  vlan:40u pvid: 40
+├ e9            bridge     FORWARDING  vlan:50u pvid: 50
+└ e10           bridge     FORWARDING  vlan:50u pvid: 50
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-vlan10          ethernet   UP          00:53:00:06:11:01
+vlan10          ethernet      UP          00:53:00:06:11:01
 │               ipv6                   fe80::0053:00ff:fe06:1101/64 (link-layer)
-└ br0           ethernet   UP          00:53:00:06:11:01
+└ br0           ethernet      UP          00:53:00:06:11:01
 admin@example:/>
 ```
 
