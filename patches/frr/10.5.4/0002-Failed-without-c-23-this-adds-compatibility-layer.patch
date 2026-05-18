@@ -1,4 +1,4 @@
-From 6f7ff746c4016ea6e6d81c7abad088f5a86f8fbf Mon Sep 17 00:00:00 2001
+From 80634c421c695b191c54d94feda6fb6c32c17eb4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Fri, 30 Jan 2026 13:00:12 +0100
 Subject: [PATCH 2/3] Failed without c++ 23, this adds compatibility layer
@@ -67,10 +67,10 @@ index 97c7460079..8fe8b10c05 100644
  #define zassert assert
  
 diff --git a/lib/zlog.c b/lib/zlog.c
-index 157f3323cb..7e7b6f0c25 100644
+index eb9b1c236b..b1d23a08d9 100644
 --- a/lib/zlog.c
 +++ b/lib/zlog.c
-@@ -789,6 +789,51 @@ void _zlog_assert_failed(const struct xref_assert *xref, const char *extra, ...)
+@@ -792,6 +792,51 @@ void _zlog_assert_failed(const struct xref_assert *xref, const char *extra, ...)
  	abort();
  }
  

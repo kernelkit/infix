@@ -1,4 +1,4 @@
-From 868d13c0982a0633e4144d03776358837d92cd8b Mon Sep 17 00:00:00 2001
+From 939a6bd1c38f8fe37236696a862c659b8fa96b07 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 22 Feb 2026 10:22:06 +0100
 Subject: [PATCH 3/3] zebra: don't resolve nexthop via inactive connected route
