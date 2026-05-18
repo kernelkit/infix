@@ -65,11 +65,17 @@ config BR2_PACKAGE_FINIT_SILENCE_KERNEL
 config BR2_PACKAGE_FINIT_KEVENTD
 	bool "finit-keventd"
 	default n
+	# When keventd is the system's device manager (no hotplug plugin)
+	# pull in libudev-zero so packages like util-linux, lvm2, ... that
+	# link -ludev have a libudev.so.1 to link against.
+	select BR2_PACKAGE_LIBUDEV_ZERO if !BR2_PACKAGE_FINIT_PLUGIN_HOTPLUG
 	help
-	  Build bundled finit-keventd, which monitors kernel events
-	  for AC power status and generates sys/pwr/fail condition.
-	  This is a new feature in Finit v4.1 and is still very much
-	  in an experimental state.
+	  Build bundled finit-keventd, the kernel event daemon.  When
+	  the hotplug plugin is disabled, keventd is the full system
+	  device manager (replacing udevd/mdev) and installs a curated
+	  set of udev rules under /lib/udev/rules.d/.  In coexistence
+	  with the hotplug plugin (which starts udevd or mdev) keventd
+	  only handles power_supply events.
 
 	  For lxc/docker application builds you do not need this.
 
