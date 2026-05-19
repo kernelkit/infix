@@ -38,6 +38,8 @@ All notable changes to the project are documented in this file.
   exposing the set of PMD types currently supported.  Useful for SFP/SFP+
   diagnosis: an LR-only optic narrows the list to a single entry, confirming
   the transceiver without `ethtool -m`
+- New CLI command `show operational`, and XPath filtering for this and any of
+  the other datastores, using `[path /path/to/subtree]`
 
 ### Fixes
 

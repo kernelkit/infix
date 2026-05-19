@@ -737,15 +737,39 @@ echo "Public:  $pub"
   </COMMAND>
 
   <COMMAND name="factory-config" help="Show factory-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy factory | jq -C . |pager</ACTION>
+    <SWITCH name="optional" min="0">
+      <COMMAND name="path" help="Filter by XPath, e.g. /ietf-interfaces:interfaces">
+        <PARAM name="xpath" ptype="/STRING" help="XPath into the datastore"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy factory ${KLISH_PARAM_xpath:+-x $KLISH_PARAM_xpath} | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="running-config" help="Show running-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy running | jq -C . |pager</ACTION>
+    <SWITCH name="optional" min="0">
+      <COMMAND name="path" help="Filter by XPath, e.g. /ietf-interfaces:interfaces">
+        <PARAM name="xpath" ptype="/STRING" help="XPath into the datastore"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy running ${KLISH_PARAM_xpath:+-x $KLISH_PARAM_xpath} | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="startup-config" help="Show startup-config">
-    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy startup | jq -C . |pager</ACTION>
+    <SWITCH name="optional" min="0">
+      <COMMAND name="path" help="Filter by XPath, e.g. /ietf-interfaces:interfaces">
+        <PARAM name="xpath" ptype="/STRING" help="XPath into the datastore"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy startup ${KLISH_PARAM_xpath:+-x $KLISH_PARAM_xpath} | jq -C . |pager</ACTION>
+  </COMMAND>
+
+  <COMMAND name="operational" help="Show operational data (running config + system state)">
+    <SWITCH name="optional" min="0">
+      <COMMAND name="path" help="Filter by XPath, e.g. /ietf-interfaces:interfaces">
+        <PARAM name="xpath" ptype="/STRING" help="XPath into the datastore"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">copy operational ${KLISH_PARAM_xpath:+-x $KLISH_PARAM_xpath} | jq -C . |pager</ACTION>
   </COMMAND>
 
   <COMMAND name="firewall" help="Show firewall status and configuration">

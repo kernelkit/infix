@@ -283,6 +283,7 @@ static void rmtmp(const char *path)
 static void sysrepo_print_error(sr_session_ctx_t *sess)
 {
 	const sr_error_info_t *erri = NULL;
+	const char *msg;
 	int err;
 
 	if (!sess)
@@ -292,7 +293,10 @@ static void sysrepo_print_error(sr_session_ctx_t *sess)
 	if (err || !erri || !erri->err_count)
 		return;
 
-	warnx("%s (%d)", erri->err->message, erri->err->err_code);
+	msg = erri->err->message;
+	if (!msg)
+		msg = sr_strerror(erri->err->err_code);
+	warnx("%s (%d)", msg, erri->err->err_code);
 }
 
 /* Connect to sysrepo and create NACM-aware session on running datastore */

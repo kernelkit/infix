@@ -17,17 +17,18 @@ def get_json(xpath: str, datastore: str = "operational", quiet: bool = False) ->
             print("Invalid XPATH. It must be a valid string starting with '/'.")
         return {}
 
-    try:
-        result = subprocess.run(["copy", datastore, "-x", shlex.quote(xpath)],
-                                capture_output=True, text=True, check=True)
-        if not result.stdout.strip():
-            return {}
-        json_data = json.loads(result.stdout)
-        return json_data
-    except subprocess.CalledProcessError as e:
-        if not quiet:
-            print(f"Error running copy: {e}")
+    result = subprocess.run(["copy", datastore, "-x", shlex.quote(xpath)],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        # copy already wrote a 'failed retrieving …' message (and a
+        # sysrepo error line) to stderr; relay it verbatim.
+        if not quiet and result.stderr:
+            print(result.stderr.rstrip())
         return {}
+    if not result.stdout.strip():
+        return {}
+    try:
+        return json.loads(result.stdout)
     except json.JSONDecodeError as e:
         if not quiet:
             print(f"Error parsing JSON output: {e}")
