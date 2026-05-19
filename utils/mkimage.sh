@@ -182,6 +182,9 @@ get_bootloader_name()
         raspberrypi-rpi64)
             echo "rpi64_boot"
             ;;
+	acer-connect-vero-w)
+            echo "bpi_r3_emmc_boot"
+            ;; 
         bananapi-bpi-r3)
             if [ "$target" = "emmc" ]; then
                 echo "bpi_r3_emmc_boot"
@@ -597,7 +600,7 @@ log "Generating genimage configuration for $BOARD..."
 
 GENIMAGE_CFG="${BUILD_DIR}/genimage.cfg"
 GENIMAGE_TEMPLATE="$BOARD_DIR/genimage.cfg.in"
-[ -f "$GENIMAGE_TEMPLATE" ] || die "genimage.cfg.in not found in $BOARD_DIR"
+[ -f "$GENIMAGE_TEMPLATE" ] || die "$(basename "$GENIMAGE_TEMPLATE") not found in $BOARD_DIR"
 
 # Check if board needs special boot file discovery (Raspberry Pi)
 if { [ "$BOARD" = "raspberrypi-rpi2" ] || [ "$BOARD" = "raspberrypi-rpi64" ]; } && grep -q '#BOOT_FILES#' "$GENIMAGE_TEMPLATE"; then

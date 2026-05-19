@@ -1,7 +1,10 @@
 From d89bb394f5d5f2cf8b15e5694d168f937b9ac426 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 26 Feb 2026 11:23:28 +0100
-Subject: [PATCH 9/9] arm: mediatek: add BananaPi BPI-R64 (MT7622) defconfigs
+Subject: [PATCH 09/10] arm: mediatek: add BananaPi BPI-R64 (MT7622) defconfigs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 Add U-Boot support for the BananaPi BPI-R64 router board, based on the
@@ -36,6 +39,7 @@ Sources:
   https://github.com/frank-w/u-boot/commit/c451ad3950e63d54b074f71e930459281dd3f594
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  arch/arm/dts/mt7622-bananapi-bpi-r64-nand.dts | 290 ++++++++++++++++++
  arch/arm/dts/mt7622-bananapi-bpi-r64.dts      |  38 ++-

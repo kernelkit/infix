@@ -137,6 +137,7 @@ admin@example:/config/> <b>edit hardware component radio0 wifi-radio</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set country-code DE</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set band 5GHz</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set channel 36</b>
+admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set channel-width 80MHz</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 </code></pre>
 
@@ -150,22 +151,26 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
       - 2.4GHz: 802.11n/ax
       - 5GHz: 802.11n/ac/ax
       - 6GHz: 802.11ax
-- `channel`: Channel number (1-196) or "auto".  When set to "auto", defaults to
-  channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 109 for 6GHz
+- `channel`: Channel number (1-233) or "auto".  When set to "auto", defaults to
+  channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 37 for 6GHz
+- `channel-width`: AP channel bandwidth.  Supported values are `auto`, `20MHz`,
+  `40MHz`, `80MHz`, and `160MHz`.  Wider channels require matching hardware,
+  regulatory approval, and are only available on 5GHz/6GHz where supported.
 - `probe-timeout`: Seconds to wait for PHY detection at boot (default: 0).  Set
   to a non-zero value (e.g., 30) for USB WiFi dongles that are slow to
   initialize due to firmware loading
 
 > [!NOTE]
-> TX power and channel width are automatically determined by the driver
-> based on regulatory constraints, PHY mode, and hardware capabilities.
+> TX power is still determined by the driver based on regulatory
+> constraints and hardware capabilities.  Channel width can now be set
+> explicitly for AP mode, or left at `auto` to let the driver choose.
 
 ### WiFi 6 Support
 
 WiFi 6 (802.11ax) is always enabled in AP mode on all bands, providing improved
 performance through features like OFDMA, BSS Coloring, and beamforming.
 
-**WiFi 6 Features (always enabled):**
+**WiFi 6 Features (always enabled in AP mode on supported radios):**
 
 - **OFDMA**: Better multi-user efficiency in dense environments
 - **BSS Coloring**: Reduced interference from neighboring networks
@@ -176,6 +181,11 @@ performance through features like OFDMA, BSS Coloring, and beamforming.
 - Hardware must support 802.11ax
 - Client devices must support WiFi 6 for full benefits
 - Older WiFi 5/4 clients can still connect but won't use WiFi 6 features
+
+> [!IMPORTANT]
+> 6 GHz AP operation requires WPA3-Personal (SAE) with mandatory
+> management frame protection.  Open networks and WPA2-only AP
+> configurations are not valid on 6 GHz.
 
 ## Discovering Available Networks
 
@@ -345,7 +355,6 @@ admin@example:/config/keystore/…/my-wifi-secret/> <b>end</b>
 <pre class="cli"><code>admin@example:/config/> <b>edit interface wifi0</b>
 admin@example:/config/interface/wifi0/> <b>set wifi radio radio0</b>
 admin@example:/config/interface/wifi0/> <b>set wifi access-point ssid MyNetwork</b>
-admin@example:/config/interface/wifi0/> <b>set wifi access-point security mode wpa2-personal</b>
 admin@example:/config/interface/wifi0/> <b>set wifi access-point security secret my-wifi-secret</b>
 admin@example:/config/interface/wifi0/> <b>leave</b>
 </code></pre>
@@ -365,6 +374,7 @@ admin@example:/config/interface/wifi0/> <b>leave</b>
 **Security modes:**
 
 - `open`: No encryption (not recommended)
+- `auto`: WPA2/WPA3 transitional mode on 2.4/5 GHz, WPA3-only on 6 GHz
 - `wpa2-personal`: WPA2-PSK (most compatible)
 - `wpa3-personal`: WPA3-SAE (more secure, requires WPA3-capable clients)
 - `wpa2-wpa3-personal`: Mixed mode (maximum compatibility)

@@ -10,6 +10,10 @@ All notable changes to the project are documented in this file.
 
 - Upgrade Linux kernel to 6.18.32 (LTS)
 - Upgrade FRR to 10.5.4
+- Add support for [Acer Connect Vero W6m][AcerConnectVero], a COTS home router,
+  based upon the same hardware as [Banana Pi BPI-R3][BPI-R3], but
+  with a Wi-Fi 6E (6 GHz band) chip.
+- Add configurable channel-width in Wi-Fi configuration.
 
 ### Fixes
 
@@ -19,6 +23,9 @@ All notable changes to the project are documented in this file.
   leaving a stale pidfile behind, causing it to refuse to be restarted
 - Fix occasional blank or garbled `[ OK ]` lines at startup
 - Disallow multicast MAC addresses in custom MAC address configuration
+- Fix broken Wi-Fi 6 GHz band configuration.
+
+[AcerConnectVero]: ../board/aarch64/acer-connect-vero-w/
 
 [v26.04.0][] - 2026-04-30
 -------------------------
