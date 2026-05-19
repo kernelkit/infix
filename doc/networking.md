@@ -47,7 +47,7 @@ other traffic would be bridged as usual.
 |----------|----------------------------|--------------------------------------------------------------|
 | [bridge](bridging.md)   | infix-if-bridge            | SW implementation of an IEEE 802.1Q bridge          |
 | [ip](ip.md)             | ietf-ip, infix-ip          | IP address to the subordinate interface             |
-| [vlan](ethernet.md#vlan-interfaces) | infix-if-vlan  | Capture all traffic belonging to a specific 802.1Q VID |
+| [vlan](vlan.md)         | infix-if-vlan              | Capture all traffic belonging to a specific 802.1Q VID |
 | [lag](lag.md)           | infix-if-lag               | Link aggregation, static and IEEE 802.3ad (LACP)    |
 | lo                      | ietf-interfaces            | Software loopback interface                         |
 | [eth](ethernet.md#physical-ethernet-interfaces) | ieee802-ethernet-interface | Physical Ethernet device/port |

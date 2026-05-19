@@ -10,21 +10,51 @@ All notable changes to the project are documented in this file.
 
 - Upgrade Linux kernel to 6.18.33 (LTS)
 - Upgrade FRR to 10.5.4
-- Add support for [Acer Connect Vero W6m][AcerConnectVero], a COTS home router,
-  based upon the same hardware as [Banana Pi BPI-R3][BPI-R3], but
+- Add support for [Acer Connect Vero W6m][AcerConnectVero], a low-cost COTS
+  home router, based on the same hardware as [Banana Pi BPI-R3][BPI-R3], but
   with a Wi-Fi 6E (6 GHz band) chip.
 - Add configurable channel-width in Wi-Fi configuration.
+- Upgrade `ieee802-ethernet-interface` YANG model to revision 2025-09-10 (IEEE
+  Std 802.3.2-2025), adding the standard `phy-type` and `pmd-type` operational
+  leaves.  Speed is now exposed via `ietf-interfaces:speed` (bps, RFC 8343);
+  the now obsolete `eth:speed` is no longer returned
+- Rework `show interface` summary output as layered protocol rows.  When a
+  port has link, a physical-medium row (e.g. `1000baseT`, `10GbaseLR`) appears
+  above the `ethernet` row.  VLAN, GRE, VXLAN and WiFi interfaces likewise get
+  one row per protocol layer, with type-specific data on each (`vid:`,
+  `remote:`, `vni:`, `station ssid:`, etc.), issue #530
+- New `auto-negotiation/advertised-pmd-types` leaf-list replaces the
+  retired `enable=false + speed + duplex` idiom for pinned link modes
+  (IEEE Std 802.3.2-2025 obsoleted `eth:speed`), issue #805.  Existing
+  startup configurations are migrated automatically on upgrade; see
+  [ethernet.md](ethernet.md#restricting-advertised-link-modes) for the
+  new model, the duplex × PMD mapping, and the `enable=false` escape
+  hatch for non-autoneg peers
+- New `ethernet/mdi-x` boolean leaf to force the copper MDI/MDI-X pinout
+  (true = MDI-X, false = MDI, absent = Auto-MDIX).  Needed on some PHYs
+  where Auto-MDIX stops working once auto-negotiation is disabled; see
+  [ethernet.md](ethernet.md#restricting-advertised-link-modes)
+- New operational `supported-pmd-types` leaf-list on each Ethernet interface,
+  exposing the set of PMD types currently supported.  Useful for SFP/SFP+
+  diagnosis: an LR-only optic narrows the list to a single entry, confirming
+  the transceiver without `ethtool -m`
 
 ### Fixes
 
 - Fix #1493: container with a physical interface not properly removed
   when switching to a configuration without containers
+- Fix #1506: add documentation on how to configure VLAN interfaces,
+  including stacked (Q-in-Q) VLAN interfaces, in a dedicated `vlan.md`
+- Fix long-standing typo `auto-negotation` in `yanger`, which caused
+  the operational `auto-negotiation/enable` leaf to always read as
+  `unknown` regardless of the actual port setting
 - Handle unclean daemon exits better, e.g., `dbus-daemon` crashing and
   leaving a stale pidfile behind, causing it to refuse to be restarted
 - Fix occasional blank or garbled `[ OK ]` lines at startup
 - Disallow multicast MAC addresses in custom MAC address configuration
 - Fix broken Wi-Fi 6 GHz band configuration.
 
+[BPI-R3]: https://docs.banana-pi.org/en/BPI-R3/BananaPi_BPI-R3
 [AcerConnectVero]: ../board/aarch64/acer-connect-vero-w6m/
 
 [v26.04.0][] - 2026-04-30
@@ -72,7 +102,6 @@ All notable changes to the project are documented in this file.
 - Fix [BPI-R3][] PCIe devices failing to initialize on boot due to a missing
   clock definition in the device tree
 
-[BPI-R3]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3
 [BPI-R4]: https://docs.banana-pi.org/en/BPI-R4/BananaPi_BPI-R4
 [ESPRESSObin]: https://espressobin.net/
 [SAMA7G54]: https://www.microchip.com/en-us/development-tool/ev21h18a
@@ -176,7 +205,7 @@ All notable changes to the project are documented in this file.
 
 - Fix CLI `copy` command problem to copy to scp/sftp destinations
 
-[BPI-R3-MINI]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3_Mini
+[BPI-R3-MINI]: https://docs.banana-pi.org/en/BPI-R3_Mini/BananaPi_BPI-R3_Mini
 [SAMA7G54-EK]: https://www.microchip.com/en-us/development-tool/ev21h18a
 
 [v26.01.0][] - 2026-02-03

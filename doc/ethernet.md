@@ -1,52 +1,8 @@
 # Ethernet Interfaces
 
-This document covers VLAN interfaces, physical Ethernet interfaces,
-and virtual Ethernet (VETH) pairs.
-
-
-## VLAN Interfaces
-
-Creating a VLAN can be done in many ways.  This section assumes VLAN
-interfaces created atop another Linux interface.  E.g., the VLAN
-interfaces created on top of the Ethernet interface or bridge in the
-picture below.
-
-![VLAN interface on top of Ethernet or Bridge interfaces](img/interface-vlan-variants.svg)
-
-A VLAN interface is basically a filtering abstraction. When you run
-`tcpdump` on a VLAN interface you will only see the frames matching the
-VLAN ID of the interface, compared to *all* the VLAN IDs if you run
-`tcpdump` on the lower-layer interface.
-
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit interface eth0.20</b>
-admin@example:/config/interface/eth0.20/> <b>show</b>
-type vlan;
-vlan {
-  tag-type c-vlan;
-  id 20;
-  lower-layer-if eth0;
-}
-admin@example:/config/interface/eth0.20/> <b>leave</b>
-</code></pre>
-
-The example below assumes bridge br0 is already created, see [VLAN
-Filtering Bridge](bridging.md#vlan-filtering-bridge).
-
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit interface vlan10</b>
-admin@example:/config/interface/vlan10/> <b>set vlan id 10</b>
-admin@example:/config/interface/vlan10/> <b>set vlan lower-layer-if br0</b>
-admin@example:/config/interface/vlan10/> <b>leave</b>
-</code></pre>
-
-As conventions, a VLAN interface for VID 20 on top of an Ethernet
-interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on
-top of a bridge interface *br0* is named *vlan10*.
-
-> [!NOTE]
-> If you name your VLAN interface `foo0.N` or `vlanN`, where `N` is a
-> number, the CLI infers the interface type automatically.
+This document covers physical Ethernet interfaces and virtual Ethernet
+(VETH) pairs.  For VLAN interfaces stacked on top of an Ethernet port
+or bridge, see [VLAN Interfaces](vlan.md).
 
 
 ## Physical Ethernet Interfaces
@@ -120,19 +76,23 @@ admin@example:/>
 
 ### Restricting advertised link modes
 
-Auto-negotiation of speed/duplex is the desired default for almost all
-use-cases, but sometimes a port must come up at a specific speed —
-typically when interoperating with legacy hardware that does not
-auto-negotiate, or that does so poorly.  IEEE Std 802.3.2-2025 retired
-the older *disable auto-negotiation, then set fixed speed/duplex*
-idiom; the standards-correct way to express the same intent is to
-**restrict the set of PMD types auto-negotiation may advertise**.
-When only one PMD is advertised, the link pins to that mode against
-any cooperating peer.
+Auto-negotiation is the right default for almost all links, but sometimes a
+port has to come up at a fixed speed, usually when talking to old hardware
+that won't auto-negotiate or does it badly.  IEEE Std 802.3.2-2025 dropped
+the old "turn off auto-negotiation, then set a fixed speed and duplex"
+approach.  Instead you restrict the set of PMD types the port may advertise:
+list a single PMD and the link pins to that mode against any peer that
+supports it.
 
-Each entry in `auto-negotiation/advertised-pmd-types` is an IEEE
-PMD-type identity (`ieee802-ethernet-phy-type:pmd-type-*`).  Half- vs
-full-duplex pinning is expressed by the orthogonal `duplex` leaf.
+> [!NOTE]
+> Earlier Infix releases needed `enable false` plus explicit `speed` and
+> `duplex` leaves.  IEEE Std 802.3.2-2025 retired the `eth:speed` leaf, so
+> the speed now comes from the `advertised-pmd-types` entry instead.
+> Existing `startup-config.cfg` files are migrated automatically on upgrade.
+
+Each entry in `auto-negotiation/advertised-pmd-types` is an IEEE PMD-type
+identity (`ieee802-ethernet-phy-type:pmd-type-*`).  The separate `duplex`
+leaf controls half vs full duplex.
 
 The example below pins port `eth3` to 100 Mbit/s half-duplex.
 
@@ -149,20 +109,70 @@ admin@example:/config/interface/eth3/ethernet/> <b>leave</b>
 admin@example:/>
 </code></pre>
 
-Listing multiple PMD identities advertises that set; the peer's
-auto-negotiation picks the highest mutually-supported mode.
+List several PMDs to advertise all of them; auto-negotiation then settles
+on the highest mode both ends support.
 
 > [!IMPORTANT]
-> When pinning to a specific link mode, ensure both sides of the link
-> agree on at least one common (PMD, duplex) combination.  If they
-> don't, the link will not come up.
+> When pinning a link mode, make sure both ends share at least one common
+> (PMD, duplex) combination, otherwise the link will not come up.
+
+#### Duplex and advertised modes
+
+A PMD type like `10BASE-T` or `100BASE-TX` says nothing about duplex on its
+own, but the kernel tracks half and full duplex as separate link modes.
+Infix advertises both variants of every PMD you list, then narrows to one
+duplex when the `duplex` leaf is set:
+
+| `advertised-pmd-types`     | `duplex` | Resulting advertised modes               |
+|----------------------------|----------|------------------------------------------|
+| `[10BASE-T]`               | _unset_  | `10baseT/Half` + `10baseT/Full`          |
+| `[10BASE-T]`               | `full`   | `10baseT/Full`                           |
+| `[10BASE-T]`               | `half`   | `10baseT/Half`                           |
+| `[10BASE-T, 100BASE-TX]`   | _unset_  | all four half/full combinations          |
+| `[10BASE-T, 100BASE-TX]`   | `full`   | `10baseT/Full` + `100baseT/Full`         |
+| _unset_                    | _unset_  | every mode the PHY supports (default)    |
+
+So `duplex` filters the PMDs you listed.  PMDs with no half-duplex variant
+(everything above 1 Gbps) only ever advertise full.
+
+#### Disabling auto-negotiation
+
+The method above keeps auto-negotiation on and only limits what it
+advertises, so the peer still negotiates as usual.  That doesn't help with
+gear that won't negotiate at all, like some old switches or a back-to-back
+copper link.  For those, set `auto-negotiation/enable false` together with a
+single `advertised-pmd-types` entry to force a fixed speed and duplex with
+negotiation off:
+
+<pre class="cli"><code>admin@example:/config/interface/eth3/ethernet/> <b>set auto-negotiation enable false</b>
+admin@example:/config/interface/eth3/ethernet/> <b>set auto-negotiation advertised-pmd-types pmd-type-100BASE-TX</b>
+admin@example:/config/interface/eth3/ethernet/> <b>set duplex full</b>
+</code></pre>
+
+With `enable false` you must list exactly one PMD: it sets the speed, and
+the `duplex` leaf sets half or full.  Leave `duplex` out and Infix uses
+whatever the PMD supports, normally full.
+
+Auto-MDIX usually rides along with auto-negotiation, so turning negotiation
+off can leave both ends picking the same MDI/MDI-X pinout.  The link then
+comes up electrically but carries no traffic.  When that happens, force
+opposite pinouts with the `mdi-x` leaf — set one end true (MDI-X) and the
+other false (MDI):
+
+<pre class="cli"><code>admin@example:/config/interface/eth3/ethernet/> <b>set mdi-x false</b>
+</code></pre>
+
+Leaving `mdi-x` unset keeps Auto-MDIX in charge, which is correct whenever
+auto-negotiation is on.
 
 > [!NOTE]
-> Earlier Infix releases used `auto-negotiation/enable=false` with
-> `speed` and `duplex` leaves to express the same thing.  That syntax
-> is retired together with the IEEE obsoletion of `eth:speed`; existing
-> `startup-config.cfg` snippets are automatically migrated to the new
-> shape on upgrade.
+> Whether `enable false` reaches the external PHY depends on the driver.
+> Direct-attach NICs handle it directly.  Switch user ports go through the
+> switch driver, and some accept the request at the MAC but leave the PHY
+> auto-negotiating: the kernel reports the configured speed while the wire
+> runs at whatever was negotiated, and traffic stalls.  If that happens,
+> read the PHY's BMCR register (e.g. with `mdio` from `mdiotools`) to see
+> what the PHY is actually doing.
 
 The detail view exposes a `supported` block (operational state,
 backed by the `supported-pmd-types` leaf-list) listing the PMD types
