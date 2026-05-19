@@ -29,6 +29,7 @@
 	_map(IFT_GRETAP, "infix-if-type:gretap")	\
 	_map(IFT_LAG,    "infix-if-type:lag")		\
 	_map(IFT_LO,     "infix-if-type:loopback")	\
+	_map(IFT_MODEM,  "infix-if-type:modem")		\
 	_map(IFT_VETH,   "infix-if-type:veth")		\
 	_map(IFT_VLAN,   "infix-if-type:vlan")		\
 	_map(IFT_VXLAN,  "infix-if-type:vxlan")		\
@@ -164,6 +165,10 @@ int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
 
 /* if-vxlan.c */
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+
+/* if-modem.c */
+int modem_add_iface(struct lyd_node *cif, struct dagger *net);
+int modem_del_iface(struct lyd_node *dif, struct dagger *net);
 
 /* infix-if-wireguard */
 int wireguard_validate_peers(sr_session_ctx_t *session, struct lyd_node *cif);

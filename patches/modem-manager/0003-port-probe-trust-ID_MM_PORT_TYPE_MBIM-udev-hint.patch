@@ -1,0 +1,29 @@
+When a udev rule explicitly sets ID_MM_PORT_TYPE_MBIM=1 for a port,
+treat it as definitive and skip the active MBIM open/probe.  This
+mirrors the way ID_MM_PORT_TYPE_GPS is handled (set via is_gps, a
+direct result field rather than a "maybe" hint).
+
+The active MBIM probe attempts to open the WDM device and send an
+MBIM OPEN message.  Some modems (e.g. Dell DW5811e / Sierra Wireless
+EM7455 in USB composition 8) persistently send QMI/QMUX-framed
+notifications on the MBIM control channel before ever responding to
+MBIM OPEN, causing the probe to time out (~50 s).  The probe failure
+causes mm_port_probe_list_has_mbim_port() to return FALSE, so the
+Dell plugin creates a non-MBIM modem object that cannot handle the
+usbmisc/MBIM port, resulting in "unhandled port type".
+
+Since the udev rule already encodes the vendor/product/interface
+specificity required to identify the port, the active probe adds no
+information in this case.
+
+diff --git a/src/mm-port-probe.c b/src/mm-port-probe.c
+--- a/src/mm-port-probe.c
++++ b/src/mm-port-probe.c
+@@ -1529,6 +1529,7 @@ mm_port_probe_run (MMPortProbe *self,
+     /* If this is a port flagged as being a MBIM port, don't do any other probing */
+     if (self->priv->maybe_mbim) {
+         mm_obj_dbg (self, "no AT/QCDM/QMI probing in possible MBIM port");
++        mm_port_probe_set_result_mbim (self, TRUE);
+         mm_port_probe_set_result_at   (self, FALSE);
+         mm_port_probe_set_result_qcdm (self, FALSE);
+         mm_port_probe_set_result_qmi  (self, FALSE);

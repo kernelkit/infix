@@ -11,6 +11,10 @@ module infix-if-type {
   contact      "kernelkit@googlegroups.com";
   description  "Infix extensions to IANA interfaces types";
 
+  revision 2026-04-27 {
+    description "Add interface type modem for cellular wwan interfaces.";
+    reference "internal";
+  }
   revision 2026-01-07 {
     description "Add interface type wifi and wireguard";
     reference "internal";
@@ -46,6 +50,10 @@ module infix-if-type {
   /*
    * Features
    */
+
+  feature modem {
+    description "Cellular modem support is an optional build-time feature in Infix.";
+  }
 
   feature wifi {
     description "WiFi support is an optional build-time feature in Infix.";
@@ -121,6 +129,15 @@ module infix-if-type {
     base ianaift:l2vlan;
     description "Layer 2 Virtual LAN using 802.1Q.";
   }
+  identity modem {
+    if-feature modem;
+    base infix-interface-type;
+    description "Cellular modem (wwan) network interface.
+                 Created by the kernel (cdc_mbim, qmi_wwan) when a USB modem
+                 attaches. Interface names follow the kernel wwan subsystem
+                 naming convention: wwan[0-9]+.";
+  }
+
   identity wifi {
     if-feature wifi;
     base infix-interface-type;

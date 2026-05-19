@@ -764,7 +764,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = ntp_candidate_init(&confd);
 	if (rc)
 		goto err;
-	/* YOUR_INIT GOES HERE */
+	rc = modem_init(&confd);
+	if (rc)
+		goto err;
 
 	return SR_ERR_OK;
 err:

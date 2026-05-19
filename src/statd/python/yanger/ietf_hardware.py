@@ -829,19 +829,39 @@ def gps_receiver_components():
     return components
 
 
+def modem_components():
+    from . import infix_modem
+    data = infix_modem.operational()
+    return data.get("ietf-hardware:hardware", {}).get("component", [])
+
+
 def operational():
     systemjson = HOST.read_json("/run/system.json", {})
 
+    all_components = (
+        motherboard_component(systemjson) +
+        vpd_components(systemjson) +
+        usb_port_components(systemjson) +
+        hwmon_sensor_components() +
+        thermal_sensor_components() +
+        wifi_radio_components() +
+        gps_receiver_components() +
+        modem_components()
+    )
+
+    name_count = {}
+    components = []
+    for c in all_components:
+        name = c.get("name")
+        count = name_count.get(name, 0)
+        name_count[name] = count + 1
+        if count > 0:
+            c = dict(c)
+            c["name"] = f"{name}{count}"
+        components.append(c)
+
     return {
         "ietf-hardware:hardware": {
-            "component":
-            motherboard_component(systemjson) +
-            vpd_components(systemjson) +
-            usb_port_components(systemjson) +
-            hwmon_sensor_components() +
-            thermal_sensor_components() +
-            wifi_radio_components() +
-            gps_receiver_components() +
-            [],
+            "component": components,
         },
     }

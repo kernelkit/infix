@@ -1,0 +1,41 @@
+# Cellular modem NMEA port routing
+#
+# For modems whose GPS NMEA stream is available on a dedicated USB
+# interface, expose that TTY as /dev/gpsN so the existing gpsd → chronyd
+# pipeline can consume it like any other NMEA USB GPS receiver.  Setting
+# ID_MM_PORT_IGNORE=1 keeps ModemManager from claiming the NMEA port for
+# itself; modemd issues the vendor-specific AT command to enable GPS
+# output (see prepare_location() in modemd).
+#
+# When adding a new modem entry, find the NMEA interface number with
+# 'mmcli -m N' or 'lsusb -v' and add a rule below.
+
+ACTION!="add|change|move|bind", GOTO="modem_gps_end"
+
+# Note: bInterfaceNumber lives on the USB interface device while
+# idVendor/idProduct live on the USB device — udev's ATTRS{} requires
+# all matches in one rule to share a parent, so we match the interface
+# number via ENV{ID_USB_INTERFACE_NUM}, which udev populates from
+# bInterfaceNumber and which has no same-parent constraint.
+
+# Quectel EM05 — NMEA on interface 1
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2c7c", ATTRS{idProduct}=="0125", \
+    ENV{ID_USB_INTERFACE_NUM}=="01", \
+    ENV{ID_MM_PORT_IGNORE}="1", SYMLINK+="gps%n"
+
+# Quectel EM06-E / EM06-A — NMEA on interface 1
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2c7c", ATTRS{idProduct}=="0306", \
+    ENV{ID_USB_INTERFACE_NUM}=="01", \
+    ENV{ID_MM_PORT_IGNORE}="1", SYMLINK+="gps%n"
+
+# Quectel EM12-G — NMEA on interface 1
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2c7c", ATTRS{idProduct}=="0512", \
+    ENV{ID_USB_INTERFACE_NUM}=="01", \
+    ENV{ID_MM_PORT_IGNORE}="1", SYMLINK+="gps%n"
+
+# Sierra Wireless EM7565 — NMEA on interface 2
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1199", ATTRS{idProduct}=="9091", \
+    ENV{ID_USB_INTERFACE_NUM}=="02", \
+    ENV{ID_MM_PORT_IGNORE}="1", SYMLINK+="gps%n"
+
+LABEL="modem_gps_end"
