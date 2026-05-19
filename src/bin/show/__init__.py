@@ -40,15 +40,20 @@ def cli_pretty(json_data: dict, command: str, *args: str):
         return
 
     safe_args = [shlex.quote(arg) for arg in args]
+    json_input = json.dumps(json_data)
+    result = subprocess.run([
+        "/usr/libexec/statd/cli-pretty", command, *safe_args
+    ], input=json_input, capture_output=True, text=True)
 
-    try:
-        json_input = json.dumps(json_data)  # Keep as string, not bytes
-        result = subprocess.run([
-            "/usr/libexec/statd/cli-pretty", command, *safe_args
-        ], input=json_input, capture_output=True, text=True, check=True)
+    # cli-pretty prints a user-facing message on stdout before any
+    # sys.exit(1) (e.g. 'Interface "w" not found').  Relay it regardless
+    # of the exit status, and only surface the generic exec error when
+    # nothing useful was produced.
+    if result.stdout:
         print(result.stdout, end="")
-    except subprocess.CalledProcessError as e:
-        print(f"Error running cli-pretty: {e}")
+    elif result.returncode != 0:
+        msg = result.stderr.strip() or f"exit status {result.returncode}"
+        print(f"Error running cli-pretty: {msg}")
 
 
 def dhcp(args: List[str]) -> None:
