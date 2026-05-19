@@ -1,10 +1,10 @@
-name                : veth0a.20
-type                : vlan
-index               : 14
-mtu                 : 1500
-operational status  : up
-ip forwarding       : disabled
-lower-layer-if      : veth0a
-physical address    : 6e:d0:98:c4:e7:ef
-ipv4 addresses      :
-ipv6 addresses      :
+name               : veth0a.20
+type               : vlan
+index              : 14
+mtu                : 1500
+operational status : up
+ip forwarding      : disabled
+lower-layer-if     : veth0a
+physical address   : 6e:d0:98:c4:e7:ef
+ipv4 addresses     :
+ipv6 addresses     :

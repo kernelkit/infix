@@ -1194,13 +1194,13 @@ class Iface:
         always been rendered when the interface has no IPs.
         """
         if not values:
-            print(f"{label:<{20}}:")
+            print(f"{label:<{19}}:")
             return
         first = True
         for value in values:
             key = label if first else ''
             colon = ':' if first else ' '
-            print(f"{key:<{20}}{colon} {value}")
+            print(f"{key:<{19}}{colon} {value}")
             first = False
 
     @staticmethod
@@ -1583,36 +1583,36 @@ class Iface:
 
     def pr_iface(self):
         if self.is_in_container():
-            print(Decore.gray_bg(f"{'owned by container':<{20}}: {', ' . join(self.containers)}"))
+            print(Decore.gray_bg(f"{'owned by container':<{19}}: {', ' . join(self.containers)}"))
 
-        print(f"{'name':<{20}}: {self.name}")
-        print(f"{'type':<{20}}: {self.type.split(':')[1]}")
-        print(f"{'index':<{20}}: {self.index}")
+        print(f"{'name':<{19}}: {self.name}")
+        print(f"{'type':<{19}}: {self.type.split(':')[1]}")
+        print(f"{'index':<{19}}: {self.index}")
 
         if self.mtu:
-            print(f"{'mtu':<{20}}: {self.mtu}")
+            print(f"{'mtu':<{19}}: {self.mtu}")
         if self.oper():
-            print(f"{'operational status':<{20}}: {self.oper(detail=True)}")
+            print(f"{'operational status':<{19}}: {self.oper(detail=True)}")
 
         forwarding = "enabled" if self.name in Iface._routing_ifaces else "disabled"
-        print(f"{'ip forwarding':<{20}}: {forwarding}")
+        print(f"{'ip forwarding':<{19}}: {forwarding}")
 
         if self.lower_if:
-            print(f"{'lower-layer-if':<{20}}: {self.lower_if}")
+            print(f"{'lower-layer-if':<{19}}: {self.lower_if}")
 
         if label := self._phy_label():
-            print(f"{'link mode':<{20}}: {label}")
+            print(f"{'link mode':<{19}}: {label}")
 
         if self.speed:
             mbps = int(self.speed) // 1_000_000
-            print(f"{'speed':<{20}}: {mbps}")
+            print(f"{'speed':<{19}}: {mbps}")
 
         if self.duplex:
-            print(f"{'duplex':<{20}}: {self.duplex}")
+            print(f"{'duplex':<{19}}: {self.duplex}")
 
         if self.autoneg != 'unknown':
             val = "on" if self.autoneg else "off"
-            print(f"{'auto-negotiation':<{20}}: {val}")
+            print(f"{'auto-negotiation':<{19}}: {val}")
 
         if self.advertised:
             self._pr_label_list('advertised',
@@ -1623,33 +1623,33 @@ class Iface:
                 [self._pmd_label(pmd) for pmd in self.supported])
 
         if self.phys_address:
-            print(f"{'physical address':<{20}}: {self.phys_address}")
+            print(f"{'physical address':<{19}}: {self.phys_address}")
 
         if self.lag_mode:
-            print(f"{'lag mode':<{20}}: {self.lag_mode}")
+            print(f"{'lag mode':<{19}}: {self.lag_mode}")
             if self.lag_mode == "lacp":
-                print(f"{'lag hash':<{20}}: {self.lag_hash}")
-                print(f"{'lacp mode':<{20}}: {self.lacp_mode}")
-                print(f"{'lacp rate':<{20}}: {self.lacp_rate}")
-                print(f"{'lacp aggregate id':<{20}}: {self.lacp_id}")
-                print(f"{'lacp system priority':<{20}}: {self.lacp_sys_prio}")
-                print(f"{'lacp actor key':<{20}}: {self.lacp_actor_key}")
-                print(f"{'lacp partner key':<{20}}: {self.lacp_partner_key}")
-                print(f"{'lacp partner mac':<{20}}: {self.lacp_partner_mac}")
+                print(f"{'lag hash':<{19}}: {self.lag_hash}")
+                print(f"{'lacp mode':<{19}}: {self.lacp_mode}")
+                print(f"{'lacp rate':<{19}}: {self.lacp_rate}")
+                print(f"{'lacp aggregate id':<{19}}: {self.lacp_id}")
+                print(f"{'lacp sys priority':<{19}}: {self.lacp_sys_prio}")
+                print(f"{'lacp actor key':<{19}}: {self.lacp_actor_key}")
+                print(f"{'lacp partner key':<{19}}: {self.lacp_partner_key}")
+                print(f"{'lacp partner mac':<{19}}: {self.lacp_partner_mac}")
             else:
-                print(f"{'lag type':<{20}}: {self.lag_type}")
-                print(f"{'lag hash':<{20}}: {self.lag_hash}")
-                print(f"{'link debounce up':<{20}}: {self.link_updelay} msec")
-                print(f"{'link debounce down':<{20}}: {self.link_downdelay} msec")
+                print(f"{'lag type':<{19}}: {self.lag_type}")
+                print(f"{'lag hash':<{19}}: {self.lag_hash}")
+                print(f"{'link debounce up':<{19}}: {self.link_updelay} msec")
+                print(f"{'link debounce down':<{19}}: {self.link_downdelay} msec")
 
         if self.lag:
-            print(f"{'lag member':<{20}}: {self.lag}")
-            print(f"{'lag member state':<{20}}: {self.lag_state}")
+            print(f"{'lag member':<{19}}: {self.lag}")
+            print(f"{'lag member state':<{19}}: {self.lag_state}")
             if self.lacp_state:
-                print(f"{'lacp aggregate id':<{20}}: {self.lacp_id}")
-                print(f"{'lacp actor state':<{20}}: {', '.join(self.lacp_state)}")
-                print(f"{'lacp partner state':<{20}}: {', '.join(self.lacp_pstate)}")
-            print(f"{'link failure count':<{20}}: {self.link_failures}")
+                print(f"{'lacp aggregate id':<{19}}: {self.lacp_id}")
+                print(f"{'lacp actor state':<{19}}: {', '.join(self.lacp_state)}")
+                print(f"{'lacp partner state':<{19}}: {', '.join(self.lacp_pstate)}")
+            print(f"{'link failure count':<{19}}: {self.link_failures}")
 
         def _addr_lines(addrs):
             for addr in addrs:
@@ -1660,8 +1660,8 @@ class Iface:
         self._pr_label_list('ipv6 addresses', list(_addr_lines(self.ipv6_addr)))
 
         if self.in_octets and self.out_octets:
-            print(f"{'in-octets':<{20}}: {self.in_octets}")
-            print(f"{'out-octets':<{20}}: {self.out_octets}")
+            print(f"{'in-octets':<{19}}: {self.in_octets}")
+            print(f"{'out-octets':<{19}}: {self.out_octets}")
 
         if self.wifi:
             # Detect mode: AP has "stations", Station has "signal-strength" or "scan-results"
@@ -1671,43 +1671,43 @@ class Iface:
                 ssid = ap.get('ssid', "----")
                 stations_data = ap.get("stations", {})
                 stations = stations_data.get("station", [])
-                print(f"{'mode':<{20}}: {mode}")
-                print(f"{'ssid':<{20}}: {ssid}")
-                print(f"{'connected stations':<{20}}: {len(stations)}")
+                print(f"{'mode':<{19}}: {mode}")
+                print(f"{'ssid':<{19}}: {ssid}")
+                print(f"{'connected stations':<{19}}: {len(stations)}")
                 self.pr_wifi_stations()
             else:
                 mode = "station"
                 station = self.wifi.get('station', {})
                 signal = station.get('signal-strength')
                 ssid = station.get('ssid', "----")
-                print(f"{'mode':<{20}}: {mode}")
-                print(f"{'ssid':<{20}}: {ssid}")
+                print(f"{'mode':<{19}}: {mode}")
+                print(f"{'ssid':<{19}}: {ssid}")
                 if signal is not None:
                     signal_status = signal_to_status(signal)
-                    print(f"{'signal':<{20}}: {signal} dBm ({signal_status})")
+                    print(f"{'signal':<{19}}: {signal} dBm ({signal_status})")
                 rx_speed = station.get('rx-speed')
                 tx_speed = station.get('tx-speed')
                 if rx_speed is not None:
-                    print(f"{'rx bitrate':<{20}}: {rx_speed / 10:.1f} Mbps")
+                    print(f"{'rx bitrate':<{19}}: {rx_speed / 10:.1f} Mbps")
                 if tx_speed is not None:
-                    print(f"{'tx bitrate':<{20}}: {tx_speed / 10:.1f} Mbps")
+                    print(f"{'tx bitrate':<{19}}: {tx_speed / 10:.1f} Mbps")
                 if "scan-results" in station:
                     self.pr_wifi_ssids()
 
         if self.gre:
-            print(f"{'local address':<{20}}: {self.gre['local']}")
-            print(f"{'remote address':<{20}}: {self.gre['remote']}")
+            print(f"{'local address':<{19}}: {self.gre['local']}")
+            print(f"{'remote address':<{19}}: {self.gre['remote']}")
 
         if self.vxlan:
-            print(f"{'local address':<{20}}: {self.vxlan['local']}")
-            print(f"{'remote address':<{20}}: {self.vxlan['remote']}")
-            print(f"{'VxLAN id':<{20}}: {self.vxlan['vni']}")
+            print(f"{'local address':<{19}}: {self.vxlan['local']}")
+            print(f"{'remote address':<{19}}: {self.vxlan['remote']}")
+            print(f"{'VxLAN id':<{19}}: {self.vxlan['vni']}")
 
         if self.wireguard:
             peer_status = self.wireguard.get('peer-status', {})
             peers = peer_status.get('peer', [])
             if peers:
-                print(f"{'peers':<{20}}: {len(peers)}")
+                print(f"{'peers':<{19}}: {len(peers)}")
                 for idx, peer in enumerate(peers, 1):
                     print(f"\n  Peer {idx}:")
 
@@ -1744,10 +1744,10 @@ class Iface:
         frame = get_json_data([], self.data,'ieee802-ethernet-interface:ethernet',
                               'statistics', 'frame')
         if frame:
-            print("")
+            Decore.title("Ethernet Statistics")
             for key, val in frame.items():
                 key = remove_yang_prefix(key)
-                print(f"eth-{key:<{25}}: {val}")
+                print(f"{key:<{25}}: {val}")
 
     def pr_mdb(self, bridge):
         for group in self.br_mdb.get("multicast-filter", {}):

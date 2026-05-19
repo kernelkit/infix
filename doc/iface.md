@@ -90,9 +90,9 @@ The description is visible in the operational datastore and in `show`
 commands:
 
 <pre class="cli"><code>admin@example:/> <b>show interface eth0</b>
-name                : eth0
-description         : Uplink to core switch
-index               : 2
+name               : eth0
+description        : Uplink to core switch
+index              : 2
 ...
 </code></pre>
 

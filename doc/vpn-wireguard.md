@@ -351,11 +351,11 @@ wg0             wireguard  UP          2 peers (1 up)
                 ipv6                   fd00::1/64 (static)
 
 admin@example:/> <b>show interface wg0</b>
-name                : wg0
-type                : wireguard
-index               : 12
-operational status  : up
-peers               : 2
+name               : wg0
+type               : wireguard
+index              : 12
+operational status : up
+peers              : 2
 
   Peer 1:
     status            : UP

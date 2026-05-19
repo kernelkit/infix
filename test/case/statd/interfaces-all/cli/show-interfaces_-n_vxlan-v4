@@ -1,12 +1,12 @@
-name                : vxlan-v4
-type                : vxlan
-index               : 23
-mtu                 : 1500
-operational status  : up
-ip forwarding       : disabled
-physical address    : 8a:ea:59:32:df:70
-ipv4 addresses      : 192.168.30.2/24 (static)
-ipv6 addresses      :
-local address       : 192.168.20.100
-remote address      : 192.168.20.200
-VxLAN id            : 4
+name               : vxlan-v4
+type               : vxlan
+index              : 23
+mtu                : 1500
+operational status : up
+ip forwarding      : disabled
+physical address   : 8a:ea:59:32:df:70
+ipv4 addresses     : 192.168.30.2/24 (static)
+ipv6 addresses     :
+local address      : 192.168.20.100
+remote address     : 192.168.20.200
+VxLAN id           : 4

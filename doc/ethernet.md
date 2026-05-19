@@ -42,34 +42,34 @@ The detail view spells everything out, including auto-negotiation
 state and the speed in Mbit/s.
 
 <pre class="cli"><code>admin@example:/> <b>show interface eth1</b>
-name                : eth1
-index               : 2
-mtu                 : 1500
-operational status  : up
-link mode           : 1000baseT
-auto-negotiation    : on
-duplex              : full
-speed               : 1000
-physical address    : 00:53:00:06:11:01
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 75581
-out-octets          : 43130
+name               : eth1
+index              : 2
+mtu                : 1500
+operational status : up
+link mode          : 1000baseT
+auto-negotiation   : on
+duplex             : full
+speed              : 1000
+physical address   : 00:53:00:06:11:01
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 75581
+out-octets         : 43130
 ...
 admin@example:/> <b>show interface eth4</b>
-name                : eth4
-index               : 5
-mtu                 : 1500
-operational status  : up
-link mode           : 100baseTX
-auto-negotiation    : on
-duplex              : full
-speed               : 100
-physical address    : 00:53:00:06:11:04
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 75439
-out-octets          : 550704
+name               : eth4
+index              : 5
+mtu                : 1500
+operational status : up
+link mode          : 100baseTX
+auto-negotiation   : on
+duplex             : full
+speed              : 100
+physical address   : 00:53:00:06:11:04
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 75439
+out-octets         : 550704
 ...
 admin@example:/>
 </code></pre>
@@ -200,30 +200,31 @@ speed              : 10000
 Ethernet packet statistics[^1] can be listed as shown below.
 
 <pre class="cli"><code>admin@example:/> <b>show interface eth1</b>
-name                : eth1
-index               : 2
-mtu                 : 1500
-operational status  : up
-link mode           : 1000baseT
-auto-negotiation    : on
-duplex              : full
-speed               : 1000
-physical address    : 00:53:00:06:11:0a
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 75581
-out-octets          : 43130
-
-eth-in-frames                : 434
-eth-in-multicast-frames      : 296
-eth-in-broadcast-frames      : 138
-eth-in-error-fcs-frames      : 0
-eth-in-error-oversize-frames : 0
-eth-out-frames               : 310
-eth-out-multicast-frames     : 310
-eth-out-broadcast-frames     : 0
-eth-out-good-octets          : 76821
-eth-in-good-octets           : 60598
+name               : eth1
+index              : 2
+mtu                : 1500
+operational status : up
+link mode          : 1000baseT
+auto-negotiation   : on
+duplex             : full
+speed              : 1000
+physical address   : 00:53:00:06:11:0a
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 75581
+out-octets         : 43130
+───────────────────
+<b>Ethernet Statistics</b>
+in-frames                : 434
+in-multicast-frames      : 296
+in-broadcast-frames      : 138
+in-error-fcs-frames      : 0
+in-error-oversize-frames : 0
+out-frames               : 310
+out-multicast-frames     : 310
+out-broadcast-frames     : 0
+out-good-octets          : 76821
+in-good-octets           : 60598
 admin@example:/>
 </code></pre>
 

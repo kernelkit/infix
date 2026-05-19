@@ -1,11 +1,11 @@
-name                : gretap-v6
-type                : gretap
-index               : 22
-mtu                 : 1434
-operational status  : up
-ip forwarding       : disabled
-physical address    : 7a:46:13:bd:fa:e6
-ipv4 addresses      :
-ipv6 addresses      :
-local address       : 2001:db8::1
-remote address      : 2001:db8::2
+name               : gretap-v6
+type               : gretap
+index              : 22
+mtu                : 1434
+operational status : up
+ip forwarding      : disabled
+physical address   : 7a:46:13:bd:fa:e6
+ipv4 addresses     :
+ipv6 addresses     :
+local address      : 2001:db8::1
+remote address     : 2001:db8::2
