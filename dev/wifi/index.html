@@ -3048,6 +3048,7 @@ admin@example:/config/&gt; <b>edit hardware component radio0 wifi-radio</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/&gt; <b>set country-code DE</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/&gt; <b>set band 5GHz</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/&gt; <b>set channel 36</b>
+admin@example:/config/hardware/component/radio0/wifi-radio/&gt; <b>set channel-width 80MHz</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/&gt; <b>leave</b>
 </code></pre>
 
@@ -3063,21 +3064,25 @@ admin@example:/config/hardware/component/radio0/wifi-radio/&gt; <b>leave</b>
 <li>6GHz: 802.11ax</li>
 </ul>
 </li>
-<li><code>channel</code>: Channel number (1-196) or "auto".  When set to "auto", defaults to
-  channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 109 for 6GHz</li>
+<li><code>channel</code>: Channel number (1-233) or "auto".  When set to "auto", defaults to
+  channel 6 for 2.4GHz, channel 36 for 5GHz, or channel 37 for 6GHz</li>
+<li><code>channel-width</code>: AP channel bandwidth.  Supported values are <code>auto</code>, <code>20MHz</code>,
+  <code>40MHz</code>, <code>80MHz</code>, and <code>160MHz</code>.  Wider channels require matching hardware,
+  regulatory approval, and are only available on 5GHz/6GHz where supported.</li>
 <li><code>probe-timeout</code>: Seconds to wait for PHY detection at boot (default: 0).  Set
   to a non-zero value (e.g., 30) for USB WiFi dongles that are slow to
   initialize due to firmware loading</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>TX power and channel width are automatically determined by the driver
-based on regulatory constraints, PHY mode, and hardware capabilities.</p>
+<p>TX power is still determined by the driver based on regulatory
+constraints and hardware capabilities.  Channel width can now be set
+explicitly for AP mode, or left at <code>auto</code> to let the driver choose.</p>
 </div>
 <h3 id="wifi-6-support">WiFi 6 Support<a class="headerlink" href="#wifi-6-support" title="Permanent link">¶</a></h3>
 <p>WiFi 6 (802.11ax) is always enabled in AP mode on all bands, providing improved
 performance through features like OFDMA, BSS Coloring, and beamforming.</p>
-<p><strong>WiFi 6 Features (always enabled):</strong></p>
+<p><strong>WiFi 6 Features (always enabled in AP mode on supported radios):</strong></p>
 <ul>
 <li><strong>OFDMA</strong>: Better multi-user efficiency in dense environments</li>
 <li><strong>BSS Coloring</strong>: Reduced interference from neighboring networks</li>
@@ -3089,6 +3094,12 @@ performance through features like OFDMA, BSS Coloring, and beamforming.</p>
 <li>Client devices must support WiFi 6 for full benefits</li>
 <li>Older WiFi 5/4 clients can still connect but won't use WiFi 6 features</li>
 </ul>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>6 GHz AP operation requires WPA3-Personal (SAE) with mandatory
+management frame protection.  Open networks and WPA2-only AP
+configurations are not valid on 6 GHz.</p>
+</div>
 <h2 id="discovering-available-networks">Discovering Available Networks<a class="headerlink" href="#discovering-available-networks" title="Permanent link">¶</a></h2>
 <p>Before connecting to a WiFi network, you need to discover which networks
 are available. Infix automatically scans for networks when a WiFi interface
@@ -3238,7 +3249,6 @@ admin@example:/config/keystore/…/my-wifi-secret/&gt; <b>end</b>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit interface wifi0</b>
 admin@example:/config/interface/wifi0/&gt; <b>set wifi radio radio0</b>
 admin@example:/config/interface/wifi0/&gt; <b>set wifi access-point ssid MyNetwork</b>
-admin@example:/config/interface/wifi0/&gt; <b>set wifi access-point security mode wpa2-personal</b>
 admin@example:/config/interface/wifi0/&gt; <b>set wifi access-point security secret my-wifi-secret</b>
 admin@example:/config/interface/wifi0/&gt; <b>leave</b>
 </code></pre>
@@ -3259,6 +3269,7 @@ Alternatively, you can use any name and explicitly set <code>type wifi</code>.</
 <p><strong>Security modes:</strong></p>
 <ul>
 <li><code>open</code>: No encryption (not recommended)</li>
+<li><code>auto</code>: WPA2/WPA3 transitional mode on 2.4/5 GHz, WPA3-only on 6 GHz</li>
 <li><code>wpa2-personal</code>: WPA2-PSK (most compatible)</li>
 <li><code>wpa3-personal</code>: WPA3-SAE (more secure, requires WPA3-capable clients)</li>
 <li><code>wpa2-wpa3-personal</code>: Mixed mode (maximum compatibility)</li>
