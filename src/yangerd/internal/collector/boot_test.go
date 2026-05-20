@@ -75,14 +75,6 @@ HOME_URL="https://kernelkit.github.io"
   ]
 }`
 
-	testRaucInstallStatus = `{
-  "operation": "idle",
-  "progress": {
-    "percentage": 100,
-    "message": "Installation complete"
-  }
-}`
-
 	testBootOrder = "BOOT_ORDER=A B\n"
 )
 
@@ -134,7 +126,6 @@ func TestBootSoftware(t *testing.T) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{
 			"rauc status --detailed --output-format=json": []byte(testRaucStatus),
-			"rauc-installation-status":                    []byte(testRaucInstallStatus),
 			"fw_printenv BOOT_ORDER":                      []byte(testBootOrder),
 		},
 		Errors: map[string]error{},
@@ -174,14 +165,6 @@ func TestBootSoftware(t *testing.T) {
 	if !ok || len(slots) != 2 {
 		t.Fatalf("expected 2 slots, got %v", sw["slot"])
 	}
-
-	installer, ok := sw["installer"].(map[string]interface{})
-	if !ok {
-		t.Fatal("missing installer")
-	}
-	if installer["operation"] != "idle" {
-		t.Fatalf("installer operation: expected 'idle', got %v", installer["operation"])
-	}
 }
 
 func TestBootSoftwareAllCommandsFail(t *testing.T) {
@@ -189,7 +172,6 @@ func TestBootSoftwareAllCommandsFail(t *testing.T) {
 		Results: map[string][]byte{},
 		Errors: map[string]error{
 			"rauc status --detailed --output-format=json": fmt.Errorf("not found"),
-			"rauc-installation-status":                    fmt.Errorf("not found"),
 			"fw_printenv BOOT_ORDER":                      fmt.Errorf("not found"),
 			"grub-editenv /mnt/aux/grub/grubenv list":     fmt.Errorf("not found"),
 		},
@@ -205,9 +187,6 @@ func TestBootSoftwareAllCommandsFail(t *testing.T) {
 	sw := result["infix-system:software"].(map[string]interface{})
 	if _, ok := sw["boot-order"]; ok {
 		t.Fatal("boot-order should not be present when commands fail")
-	}
-	if _, ok := sw["installer"]; !ok {
-		t.Fatal("installer key should always be present")
 	}
 }
 

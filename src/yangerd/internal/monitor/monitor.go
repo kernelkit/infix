@@ -409,7 +409,8 @@ func (m *NLMonitor) refreshInterface(name string) {
 func (m *NLMonitor) rebuild() {
 	m.mu.Lock()
 	linksCopy := append(json.RawMessage{}, m.links...)
-	doc := iface.Transform(m.links, m.addrs, m.links, m.fc)
+	addrsCopy := append(json.RawMessage{}, m.addrs...)
+	doc := iface.Transform(linksCopy, addrsCopy, linksCopy, m.fc)
 	eth := copyStringMap(m.ethernet)
 	wfi := copyStringMap(m.wifi)
 	fdb := copyStringMap(m.fdb)

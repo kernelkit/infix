@@ -11,6 +11,9 @@ import (
 // LiveSystemState computes the on-demand portion of ietf-system:system-state.
 // It reads uptime, current time, memory, load average from procfs and
 // filesystem usage via statfs — all computed fresh on each call.
+//
+// Installer status is handled separately via MergeInstaller to avoid
+// shallow-merge clobbering the boot-time software data.
 func LiveSystemState(fs FileReader) json.RawMessage {
 	state := make(map[string]interface{})
 
@@ -37,6 +40,75 @@ func LiveSystemState(fs FileReader) json.RawMessage {
 		return nil
 	}
 	return data
+}
+
+// MergeInstaller reads the cached software data from the tree and
+// overlays the live installer status into it, returning the merged
+// infix-system:software object as a top-level system-state fragment.
+func MergeInstaller(cached json.RawMessage, inst InstallerStatus) json.RawMessage {
+	if inst == nil {
+		return nil
+	}
+	installer := liveInstaller(inst)
+	if len(installer) == 0 {
+		return nil
+	}
+
+	var base map[string]json.RawMessage
+	if len(cached) > 0 {
+		json.Unmarshal(cached, &base)
+	}
+	if base == nil {
+		base = make(map[string]json.RawMessage)
+	}
+
+	sw := make(map[string]interface{})
+	if raw, ok := base["infix-system:software"]; ok {
+		json.Unmarshal(raw, &sw)
+	}
+	if sw == nil {
+		sw = make(map[string]interface{})
+	}
+	sw["installer"] = installer
+
+	swJSON, err := json.Marshal(sw)
+	if err != nil {
+		return nil
+	}
+
+	result := map[string]json.RawMessage{
+		"infix-system:software": swJSON,
+	}
+	out, err := json.Marshal(result)
+	if err != nil {
+		return nil
+	}
+	return out
+}
+
+func liveInstaller(inst InstallerStatus) map[string]interface{} {
+	op, lastErr, pct, msg, err := inst.GetInstallStatus()
+	if err != nil {
+		return nil
+	}
+	installer := make(map[string]interface{})
+	if op != "" {
+		installer["operation"] = op
+	}
+	if lastErr != "" {
+		installer["last-error"] = lastErr
+	}
+	if pct > 0 || msg != "" {
+		progress := make(map[string]interface{})
+		if pct > 0 {
+			progress["percentage"] = pct
+		}
+		if msg != "" {
+			progress["message"] = msg
+		}
+		installer["progress"] = progress
+	}
+	return installer
 }
 
 func liveClock(fs FileReader) map[string]interface{} {

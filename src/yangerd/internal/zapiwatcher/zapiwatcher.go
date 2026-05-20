@@ -5,24 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"net"
 	"sort"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 	"github.com/kernelkit/infix/src/yangerd/internal/zapi"
 )
 
-const (
-	zapiSocketPath = "/var/run/frr/zserv.api"
-
-	reconnectInitial = 100 * time.Millisecond
-	reconnectMax     = 30 * time.Second
-	reconnectFactor  = 2.0
-)
+const zapiSocketPath = "/var/run/frr/zserv.api"
 
 var subscribeTypes = []zapi.RouteType{
 	zapi.RouteKernel,
@@ -66,7 +60,8 @@ func New(t *tree.Tree, log *slog.Logger) *ZAPIWatcher {
 }
 
 func (w *ZAPIWatcher) Run(ctx context.Context) error {
-	delay := reconnectInitial
+	bo := backoff.Default()
+	delay := bo.Initial
 
 	for {
 		conn, err := w.connect(ctx)
@@ -76,16 +71,14 @@ func (w *ZAPIWatcher) Run(ctx context.Context) error {
 			}
 
 			w.log.Warn("zapi watcher: connect failed", "err", err, "delay", delay)
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(delay):
+			if err := backoff.Sleep(ctx, delay); err != nil {
+				return err
 			}
-			delay = time.Duration(math.Min(float64(delay)*reconnectFactor, float64(reconnectMax)))
+			delay = bo.Next(delay)
 			continue
 		}
 
-		delay = reconnectInitial
+		delay = bo.Initial
 		w.log.Info("zapi watcher: connected", "socket", zapiSocketPath)
 
 		err = w.processMessages(ctx, conn)

@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 )
 
 func TestParseDnsmasqLeases(t *testing.T) {
@@ -586,7 +588,7 @@ func TestSleepOrDone(t *testing.T) {
 				defer cancel()
 			}
 
-			err := sleepOrDone(ctx, tc.delay)
+			err := backoff.Sleep(ctx, tc.delay)
 			if tc.wantErr {
 				if !errors.Is(err, context.Canceled) {
 					t.Fatalf("expected context.Canceled, got %v", err)
@@ -668,22 +670,23 @@ func TestDecodeActiveZones(t *testing.T) {
 }
 
 func TestNextDelay(t *testing.T) {
+	b := backoff.Default()
 	tests := []struct {
 		name string
 		in   time.Duration
 		want time.Duration
 	}{
-		{name: "doubles normal delay", in: reconnectInitial, want: reconnectInitial * 2},
-		{name: "caps at reconnectMax", in: reconnectMax, want: reconnectMax},
-		{name: "near max also caps", in: reconnectMax - time.Second, want: reconnectMax},
-		{name: "zero becomes reconnectInitial", in: 0, want: reconnectInitial},
-		{name: "negative becomes reconnectInitial", in: -time.Second, want: reconnectInitial},
+		{name: "doubles normal delay", in: b.Initial, want: b.Initial * 2},
+		{name: "caps at max", in: b.Max, want: b.Max},
+		{name: "near max also caps", in: b.Max - time.Second, want: b.Max},
+		{name: "zero becomes initial", in: 0, want: b.Initial},
+		{name: "negative becomes initial", in: -time.Second, want: b.Initial},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := nextDelay(tc.in); got != tc.want {
-				t.Fatalf("nextDelay(%v) = %v, want %v", tc.in, got, tc.want)
+			if got := b.Next(tc.in); got != tc.want {
+				t.Fatalf("Next(%v) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
 	}
