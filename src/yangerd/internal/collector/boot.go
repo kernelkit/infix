@@ -55,28 +55,6 @@ func BootSoftware(ctx context.Context, cmd CommandRunner) json.RawMessage {
 		software["boot-order"] = bootOrder
 	}
 
-	installer := make(map[string]interface{})
-	instOut, err := cmd.Run(ctx, "rauc-installation-status")
-	if err == nil {
-		var instData map[string]interface{}
-		if json.Unmarshal(instOut, &instData) == nil {
-			if op, ok := instData["operation"]; ok && op != "" {
-				installer["operation"] = op
-			}
-			if prog, ok := instData["progress"].(map[string]interface{}); ok {
-				progress := make(map[string]interface{})
-				if pct, ok := prog["percentage"]; ok {
-					progress["percentage"] = toInt(pct)
-				}
-				if msg, ok := prog["message"]; ok {
-					progress["message"] = msg
-				}
-				installer["progress"] = progress
-			}
-		}
-	}
-	software["installer"] = installer
-
 	result, _ := json.Marshal(map[string]interface{}{"infix-system:software": software})
 	return result
 }
