@@ -87,9 +87,6 @@ static int ly_add_yangerd_data(const struct ly_ctx *ctx, struct lyd_node **paren
 	if (err)
 		ERROR("Error, parsing yanger data (%d): %s", err, ly_errmsg(ctx));
 
-	fclose(stream);
-	/* Note: fclose() already closes the underlying fd from fdopen() */
-
 	free(json);
 	return err;
 }
