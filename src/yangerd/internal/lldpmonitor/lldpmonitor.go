@@ -11,21 +11,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 const (
-	reconnectInitial = 100 * time.Millisecond
-	reconnectMax     = 30 * time.Second
-	reconnectFactor  = 2.0
-
 	lldpMulticastMAC = "01:80:C2:00:00:0E"
 	treeKey          = "ieee802-dot1ab-lldp:lldp"
 )
@@ -44,7 +39,8 @@ func New(t *tree.Tree, log *slog.Logger) *LLDPMonitor {
 
 // Run starts the LLDP monitor.  It blocks until ctx is cancelled.
 func (m *LLDPMonitor) Run(ctx context.Context) error {
-	delay := reconnectInitial
+	bo := backoff.Default()
+	delay := bo.Initial
 
 	for {
 		err := m.runOnce(ctx)
@@ -54,14 +50,10 @@ func (m *LLDPMonitor) Run(ctx context.Context) error {
 
 		m.log.Warn("lldp monitor: subprocess exited, restarting",
 			"err", err, "delay", delay)
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(delay):
+		if err := backoff.Sleep(ctx, delay); err != nil {
+			return err
 		}
-		delay = time.Duration(math.Min(
-			float64(delay)*reconnectFactor,
-			float64(reconnectMax)))
+		delay = bo.Next(delay)
 	}
 }
 
@@ -262,15 +254,7 @@ func transformLLDPEvent(data []byte) json.RawMessage {
 	return json.RawMessage(out)
 }
 
-var chassisSubtypeMap = map[string]string{
-	"ifalias": "interface-alias",
-	"mac":     "mac-address",
-	"ip":      "network-address",
-	"ifname":  "interface-name",
-	"local":   "local",
-}
-
-var portSubtypeMap = map[string]string{
+var idSubtypeMap = map[string]string{
 	"ifalias": "interface-alias",
 	"mac":     "mac-address",
 	"ip":      "network-address",
@@ -279,14 +263,14 @@ var portSubtypeMap = map[string]string{
 }
 
 func chassisIDSubtype(t string) string {
-	if v, ok := chassisSubtypeMap[t]; ok {
+	if v, ok := idSubtypeMap[t]; ok {
 		return v
 	}
 	return "unknown"
 }
 
 func portIDSubtype(t string) string {
-	if v, ok := portSubtypeMap[t]; ok {
+	if v, ok := idSubtypeMap[t]; ok {
 		return v
 	}
 	return "unknown"

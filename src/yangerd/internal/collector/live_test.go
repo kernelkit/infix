@@ -188,3 +188,77 @@ func TestLiveSystemStatePartialFailure(t *testing.T) {
 		t.Fatal("load-average should be present")
 	}
 }
+
+type mockInstaller struct {
+	op, lastErr, msg string
+	pct              int
+	err              error
+}
+
+func (m *mockInstaller) GetInstallStatus() (string, string, int, string, error) {
+	return m.op, m.lastErr, m.pct, m.msg, m.err
+}
+
+func TestMergeInstaller(t *testing.T) {
+	cached := json.RawMessage(`{"infix-system:software":{"compatible":"infix-x86_64","booted":{"slot":"rootfs.0"}}}`)
+	inst := &mockInstaller{op: "installing", pct: 45, msg: "Writing rootfs"}
+
+	raw := MergeInstaller(cached, inst)
+	if raw == nil {
+		t.Fatal("expected non-nil")
+	}
+
+	var result map[string]json.RawMessage
+	json.Unmarshal(raw, &result)
+
+	var sw map[string]interface{}
+	json.Unmarshal(result["infix-system:software"], &sw)
+	if sw == nil {
+		t.Fatal("missing infix-system:software")
+	}
+	if sw["compatible"] != "infix-x86_64" {
+		t.Fatalf("cached 'compatible' was lost: %v", sw["compatible"])
+	}
+	if sw["booted"] == nil {
+		t.Fatal("cached 'booted' was lost")
+	}
+	installer, ok := sw["installer"].(map[string]interface{})
+	if !ok {
+		t.Fatal("missing installer")
+	}
+	if installer["operation"] != "installing" {
+		t.Fatalf("operation = %v, want 'installing'", installer["operation"])
+	}
+	progress, ok := installer["progress"].(map[string]interface{})
+	if !ok {
+		t.Fatal("missing progress")
+	}
+	if toInt(progress["percentage"]) != 45 {
+		t.Fatalf("percentage = %v, want 45", progress["percentage"])
+	}
+	if progress["message"] != "Writing rootfs" {
+		t.Fatalf("message = %v", progress["message"])
+	}
+}
+
+func TestMergeInstallerNilCached(t *testing.T) {
+	inst := &mockInstaller{op: "idle"}
+	raw := MergeInstaller(nil, inst)
+	if raw == nil {
+		t.Fatal("expected non-nil even with nil cached")
+	}
+	var result map[string]json.RawMessage
+	json.Unmarshal(raw, &result)
+	var sw map[string]interface{}
+	json.Unmarshal(result["infix-system:software"], &sw)
+	if sw["installer"] == nil {
+		t.Fatal("missing installer")
+	}
+}
+
+func TestMergeInstallerNilInst(t *testing.T) {
+	cached := json.RawMessage(`{"infix-system:software":{"compatible":"infix-x86_64"}}`)
+	if raw := MergeInstaller(cached, nil); raw != nil {
+		t.Fatalf("expected nil with nil installer, got %s", raw)
+	}
+}
