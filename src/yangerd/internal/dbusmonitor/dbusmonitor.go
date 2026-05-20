@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
@@ -33,10 +33,6 @@ const (
 
 	dhcpTreeKey     = "infix-dhcp-server:dhcp-server"
 	firewallTreeKey = "infix-firewall:firewall"
-
-	reconnectInitial = 100 * time.Millisecond
-	reconnectMax     = 30 * time.Second
-	reconnectFactor  = 2.0
 )
 
 // DBusMonitor subscribes to dnsmasq and firewalld D-Bus signals and
@@ -55,7 +51,8 @@ func New(t *tree.Tree, log *slog.Logger) *DBusMonitor {
 // to relevant signals, loads initial DHCP/firewall data, and reconnects
 // with exponential backoff on failures until ctx is cancelled.
 func (m *DBusMonitor) Run(ctx context.Context) error {
-	delay := reconnectInitial
+	bo := backoff.Default()
+	delay := bo.Initial
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -65,24 +62,24 @@ func (m *DBusMonitor) Run(ctx context.Context) error {
 		conn, err := dbus.ConnectSystemBus()
 		if err != nil {
 			m.log.Warn("dbus monitor: connect system bus failed", "err", err, "delay", delay)
-			if err := sleepOrDone(ctx, delay); err != nil {
+			if err := backoff.Sleep(ctx, delay); err != nil {
 				return err
 			}
-			delay = nextDelay(delay)
+			delay = bo.Next(delay)
 			continue
 		}
 
 		if err := m.subscribe(conn); err != nil {
 			m.log.Warn("dbus monitor: subscribe failed", "err", err, "delay", delay)
 			_ = conn.Close()
-			if err := sleepOrDone(ctx, delay); err != nil {
+			if err := backoff.Sleep(ctx, delay); err != nil {
 				return err
 			}
-			delay = nextDelay(delay)
+			delay = bo.Next(delay)
 			continue
 		}
 
-		delay = reconnectInitial
+		delay = bo.Initial
 
 		if err := m.refreshDHCP(conn); err != nil {
 			m.log.Warn("dbus monitor: initial dhcp refresh failed", "err", err)
@@ -98,10 +95,10 @@ func (m *DBusMonitor) Run(ctx context.Context) error {
 		}
 
 		m.log.Warn("dbus monitor: signal loop ended, reconnecting", "err", err, "delay", delay)
-		if err := sleepOrDone(ctx, delay); err != nil {
+		if err := backoff.Sleep(ctx, delay); err != nil {
 			return err
 		}
-		delay = nextDelay(delay)
+		delay = bo.Next(delay)
 	}
 }
 
@@ -1048,21 +1045,4 @@ func toUint64(v any) uint64 {
 		}
 	}
 	return 0
-}
-
-func sleepOrDone(ctx context.Context, d time.Duration) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(d):
-		return nil
-	}
-}
-
-func nextDelay(delay time.Duration) time.Duration {
-	next := time.Duration(math.Min(float64(delay)*reconnectFactor, float64(reconnectMax)))
-	if next <= 0 {
-		return reconnectInitial
-	}
-	return next
 }

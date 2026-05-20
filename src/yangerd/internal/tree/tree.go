@@ -226,6 +226,21 @@ func shallowMerge(base, overlay json.RawMessage) json.RawMessage {
 	return merged
 }
 
+// GetCached returns the raw cached JSON for the given module key
+// WITHOUT invoking any registered provider.  This is safe to call
+// from inside a provider closure (no recursion risk).
+func (t *Tree) GetCached(key string) json.RawMessage {
+	t.mu.RLock()
+	entry, ok := t.models[key]
+	t.mu.RUnlock()
+	if !ok {
+		return nil
+	}
+	entry.mu.RLock()
+	defer entry.mu.RUnlock()
+	return entry.data
+}
+
 // Info returns metadata for the given module key.
 func (t *Tree) Info(key string) (ModelInfo, bool) {
 	t.mu.RLock()
