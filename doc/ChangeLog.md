@@ -25,7 +25,7 @@ All notable changes to the project are documented in this file.
 - Disallow multicast MAC addresses in custom MAC address configuration
 - Fix broken Wi-Fi 6 GHz band configuration.
 
-[AcerConnectVero]: ../board/aarch64/acer-connect-vero-w/
+[AcerConnectVero]: ../board/aarch64/acer-connect-vero-w6m/
 
 [v26.04.0][] - 2026-04-30
 -------------------------
