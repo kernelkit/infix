@@ -182,7 +182,7 @@ get_bootloader_name()
         raspberrypi-rpi64)
             echo "rpi64_boot"
             ;;
-	acer-connect-vero-w)
+	acer-connect-vero-w6m)
             echo "bpi_r3_emmc_boot"
             ;; 
         bananapi-bpi-r3)
