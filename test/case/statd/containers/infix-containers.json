@@ -9,7 +9,6 @@
         "running": true,
         "status": "Up About a minute",
         "cmdline": "/usr/bin/tini -- /usr/sbin/httpd -f -v",
-        "command": "/usr/sbin/httpd -f -v",
         "network": {
           "interface": [
             {
@@ -30,7 +29,6 @@
         "running": true,
         "status": "Up About a minute",
         "cmdline": "/usr/bin/tini -- /usr/sbin/httpd -f -v -p 91",
-        "command": "/usr/sbin/httpd -f -v -p 91",
         "network": {
           "interface": [
             {
@@ -53,7 +51,6 @@
         "running": true,
         "status": "Up About a minute",
         "cmdline": "/usr/bin/tini -- /usr/sbin/nft-helper /etc/nftables.conf",
-        "command": "/usr/sbin/nft-helper /etc/nftables.conf",
         "network": {
           "host": true
         }

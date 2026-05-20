@@ -234,10 +234,6 @@ def container(ps):
     if path:
         out["cmdline"] = " ".join([path] + args)
 
-    cmd = inspect.get("Config", {}).get("Cmd", [])
-    if cmd:
-        out["command"] = " ".join(cmd)
-
     net = network(ps, inspect)
     if net:
         out["network"] = net
