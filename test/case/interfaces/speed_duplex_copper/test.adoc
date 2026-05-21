@@ -4,11 +4,24 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/speed_duplex_copper
 
 ==== Description
 
-Verify that the interface operates at the expected speed/duplex in two scenarios:
+Verify that the interface operates at the expected speed/duplex by
+restricting the set of PMD types auto-negotiation may advertise:
 
-1. Fixed configuration – host and target are both manually set to a specific speed/duplex
-2. Auto-negotiation – host advertises selectable modes and the target negotiates
- to the highest common speed/duplex.
+1. Single-mode advertise — host and target both advertise exactly
+   one PMD/duplex combination; the link comes up at that mode.
+2. Multi-mode advertise — host advertises a set, target advertises
+   another set; the link comes up at the highest common.
+3. Auto-negotiation off — both peers forced to a fixed speed/duplex,
+   the escape hatch for link partners that don't speak auto-negotiation.
+   Disabling autoneg also disables Auto-MDIX, so the ends use opposite
+   MDI/MDI-X pinouts (host mdix on, DUT mdi).  The link bounces and can
+   take a few seconds to settle, so the forced steps poll for it.
+
+The legacy "auto-negotiation: off + fixed speed + fixed duplex"
+configuration was retired together with the obsoletion of eth:speed
+in IEEE Std 802.3.2-2025; the standards-correct way to pin a link to
+a specific mode is to advertise only that mode.  See the augment in
+infix-ethernet-interface.yang.
 
 ==== Topology
 
@@ -18,16 +31,18 @@ image::topology.svg[Interface Speed Duplex (Copper) topology, align=center, scal
 
 . Set up topology and attach to target DUT
 . Enable target interface
-. Verify fixed 10/full
-. Verify fixed 10/half
-. Verify fixed 100/full
-. Verify fixed 100/half
-. Switch to auto-negotiation mode for target and host
-. Verify auto-negotiation to 10/Full only
-. Verify auto-negotiation to 10/Half only
-. Verify auto-negotiation to 100/Full only
-. Verify auto-negotiation to 100/Half only
-. Verify auto-negotiation to 10/half + 10/full + 100/half
-. Verify auto-negotiation to 10/half + 10/full + 100/half + 100/full + 1000/full
+. Advertise 10/full only on both peers
+. Advertise 10/half only on both peers
+. Advertise 100/full only on both peers
+. Advertise 100/half only on both peers
+. Switch target back to advertising all supported modes
+. Host advertises 10/full only
+. Host advertises 10/half only
+. Host advertises 100/full only
+. Host advertises 100/half only
+. Host advertises 10/half + 10/full + 100/half
+. Host advertises every mode up to 1G
+. Both sides forced to 100/full, autoneg off
+. Both sides forced to 10/full, autoneg off
 
 

@@ -41,6 +41,15 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2026-05-18 {
+    description "Track ieee802-ethernet-interface@2025-09-10 upgrade
+                 (IEEE Std 802.3.2-2025): operational data now exposes
+                 phy-type/pmd-type leaves and the interface speed via
+                 ietf-interfaces:speed (bits/s) rather than the obsolete
+                 eth:speed.";
+    reference "internal";
+  }
+
   revision 2026-05-13 {
     description "Add limitations on custom mac addresses on interfaces, now needs to be a correct unicast mac-address";
     reference "internal";

@@ -101,7 +101,7 @@ def compress_interface_list(interfaces):
 class Pad:
     flags = 2
     iface = 16
-    proto = 11
+    proto = 14
     state = 12
     data = 41
 
@@ -1042,7 +1042,15 @@ class Iface:
         self.autoneg = get_json_data('unknown', self.data, 'ieee802-ethernet-interface:ethernet',
                                           'auto-negotiation', 'enable')
         self.duplex = get_json_data('', self.data,'ieee802-ethernet-interface:ethernet','duplex')
-        self.speed = get_json_data('', self.data, 'ieee802-ethernet-interface:ethernet', 'speed')
+        self.speed = get_json_data('', self.data, 'speed')
+        self.pmd_type = get_json_data('', self.data, 'ieee802-ethernet-interface:ethernet', 'pmd-type')
+        self.phy_type = get_json_data('', self.data, 'ieee802-ethernet-interface:ethernet', 'phy-type')
+        self.advertised = get_json_data([], self.data, 'ieee802-ethernet-interface:ethernet',
+                                       'auto-negotiation',
+                                       'infix-ethernet-interface:advertised-pmd-types')
+        self.supported = get_json_data([], self.data,
+                                       'ieee802-ethernet-interface:ethernet',
+                                       'infix-ethernet-interface:supported-pmd-types')
         self.phys_address = data.get('phys-address', '')
 
         self.br_mdb = get_json_data({}, self.data, 'infix-interfaces:bridge', 'multicast-filters')
@@ -1107,9 +1115,12 @@ class Iface:
         self.wireguard = self.data.get('infix-interfaces:wireguard')
 
         if self.data.get('infix-interfaces:vlan'):
-            self.lower_if = self.data.get('infix-interfaces:vlan', None).get('lower-layer-if',None)
+            vlan_data = self.data.get('infix-interfaces:vlan')
+            self.lower_if = vlan_data.get('lower-layer-if', None)
+            self.vid = vlan_data.get('id', None)
         else:
             self.lower_if = ''
+            self.vid = None
 
     def is_wifi(self):
         return self.type == "infix-if-type:wifi"
@@ -1173,66 +1184,130 @@ class Iface:
             row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']} {origin}"
             print(row)
 
-    def _pr_proto_common(self, name, phys_address, pipe=''):
+    @staticmethod
+    def _pr_label_list(label, values):
+        """Print label-prefixed values, one per row.
+
+        First row carries the label and a colon; later rows are blank-
+        prefixed continuations.  When 'values' is empty, prints just the
+        label and a trailing colon — matching how 'ipv4 addresses' has
+        always been rendered when the interface has no IPs.
+        """
+        if not values:
+            print(f"{label:<{20}}:")
+            return
+        first = True
+        for value in values:
+            key = label if first else ''
+            colon = ':' if first else ' '
+            print(f"{key:<{20}}{colon} {value}")
+            first = False
+
+    @staticmethod
+    def _pmd_label(identity):
+        """Render an IEEE pmd-type / phy-type identityref as a display string.
+
+        Strips the module/leaf prefix and rewrites the IEEE 'BASE-' literal
+        to the lowercase 'base' the rest of the codebase uses (matching
+        ethtool's link-mode string format).  Returns empty for empty input.
+        """
+        if not identity:
+            return ""
+        return identity.removeprefix(
+            "ieee802-ethernet-phy-type:pmd-type-"
+        ).removeprefix(
+            "ieee802-ethernet-phy-type:phy-type-"
+        ).replace("BASE-", "base")
+
+    def _phy_label(self):
+        """Display label for the active link.
+
+        Prefers pmd-type (specific medium, e.g. '10GbaseLR') over phy-type
+        (family-level, e.g. '10GbaseR') when both are populated.  Empty
+        when neither is reported — non-ethernet interfaces don't have these
+        leaves, and yanger skips them for ethernet ports with no link or
+        unmapped (port, speed, duplex) tuple.
+        """
+        return self._pmd_label(self.pmd_type or self.phy_type)
+
+    def _pr_proto_common(self, name, pipe='', data='', show_state=True):
+        # pipe="" means this row follows pr_name() on the same line, so col 1-2
+        # are already on screen.  A non-empty pipe (" ", "│", "└ ") prints col
+        # 1-2 with that marker.  show_state=False blanks the STATE column for
+        # sub-rows whose state was already reflected in the row above.
         row = ""
         if len(pipe) > 0:
             row =  f"{'':<{Pad.flags}}"
             row += f"{pipe:<{Pad.iface}}"
 
         row += f"{name:<{Pad.proto}}"
-        dec = Decore.green if self.oper() == "up" else Decore.red
-        row += dec(f"{self.oper().upper():<{Pad.state}}")
-        if phys_address:
-            row += f"{self.phys_address:<{Pad.data}}"
+        if show_state:
+            dec = Decore.green if self.oper() == "up" else Decore.red
+            row += dec(f"{self.oper().upper():<{Pad.state}}")
+        else:
+            row += f"{'':<{Pad.state}}"
+        if data:
+            row += f"{data:<{Pad.data}}"
         return row
 
+    def _pr_phy_row(self, pipe=''):
+        """Emit the physical-medium row when applicable. Return True if printed.
+
+        Skipped when pmd-type is unknown or the link is not up — keeping the
+        common 'boring port' cases quiet and falling back to the ethernet row.
+        """
+        label = self._phy_label()
+        if not label or self.oper() != "up":
+            return False
+        data = f"duplex: {self.duplex}" if self.duplex else ""
+        print(self._pr_proto_common(label, pipe, data))
+        return True
+
     def pr_proto_eth(self, pipe=''):
-        row = self._pr_proto_common("ethernet", True, pipe);
-        print(row)
+        print(self._pr_proto_common("ethernet", pipe, self.phys_address or ""))
+
+    def pr_proto_eth_subrow(self, pipe=' '):
+        """Ethernet row beneath another protocol row: bare MAC, no STATE column."""
+        print(self._pr_proto_common("ethernet", pipe, self.phys_address or "",
+                                    show_state=False))
 
     def pr_proto_veth(self, pipe=''):
-        row = self._pr_proto_common("veth", True, pipe);
-
+        parts = []
+        if self.phys_address:
+            parts.append(self.phys_address)
         if self.lower_if:
-            row = f"{'':<{Pad.iface}}"
-            row += f"{'veth':<{Pad.proto}}"
-            row += f"{'':<{Pad.state}}"
-            row += f"peer:{self.lower_if}"
-
-        print(row)
-
-    def pr_proto_gretap(self, pipe=''):
-        row = self._pr_proto_common("gretap", True, pipe);
-        print(row)
+            parts.append(f"peer: {self.lower_if}")
+        print(self._pr_proto_common("veth", pipe, " ".join(parts)))
 
     def pr_proto_gre(self, pipe=''):
-        row = self._pr_proto_common("gre", False, pipe);
-        print(row)
+        data = ""
+        if self.gre and (remote := self.gre.get('remote')):
+            data = f"remote: {remote}"
+        print(self._pr_proto_common("gre", pipe, data))
 
     def pr_proto_vxlan(self, pipe=''):
-        row = self._pr_proto_common("vxlan", True, pipe);
-        print(row)
+        parts = []
+        if self.vxlan:
+            if (vni := self.vxlan.get('vni')) is not None:
+                parts.append(f"vni: {vni}")
+            if remote := self.vxlan.get('remote'):
+                parts.append(f"remote: {remote}")
+        print(self._pr_proto_common("vxlan", pipe, " ".join(parts)))
 
     def pr_proto_wireguard(self, pipe=''):
-        row = self._pr_proto_common("wireguard", False, pipe)
-
+        data = ""
         if self.wireguard:
             peer_status = self.wireguard.get('peer-status', {})
             peers = peer_status.get('peer', [])
             total_peers = len(peers)
             up_peers = sum(1 for p in peers if p.get('connection-status') == 'up')
-
             if total_peers > 0:
-                row += f"{total_peers} peer"
-                if total_peers != 1:
-                    row += "s"
-                row += f" ({up_peers} up)"
-
-        print(row)
+                plural = "s" if total_peers != 1 else ""
+                data = f"{total_peers} peer{plural} ({up_peers} up)"
+        print(self._pr_proto_common("wireguard", pipe, data))
 
     def pr_proto_loopack(self, pipe=''):
-        row = self._pr_proto_common("loopback", False, pipe);
-        print(row)
+        print(self._pr_proto_common("loopback", pipe))
 
     def pr_wifi_ssids(self):
         width = 70
@@ -1309,42 +1384,19 @@ class Iface:
 
 
     def pr_proto_wifi(self, pipe=''):
-        row = self._pr_proto_common("ethernet", True, pipe);
-        print(row)
-        ssid = None
-        signal = None
-        mode = None
-
-        if self.wifi:
-            # Detect mode: AP has "stations", Station has "signal-strength" or "scan-results"
-            ap=self.wifi.get("access-point", {})
-            if ap:
-                ssid = ap.get("ssid", "------")
-                mode = "AP"
-                stations_data = ap.get("stations", {})
-                stations = stations_data.get("station", [])
-                station_count = len(stations)
-                data_str = f"{mode}, ssid: {ssid}, stations: {station_count}"
-            else:
-                station=self.wifi.get("station", {})
-                ssid = station.get("ssid", "------")
-                signal = station.get("signal-strength")
-                mode = "Station"
-                if signal is not None:
-                    signal_str = signal_to_status(signal)
-                    data_str = f"{mode}, ssid: {ssid}, signal: {signal_str}"
-                else:
-                    data_str = f"{mode}, ssid: {ssid}"
+        if self.wifi and (ap := self.wifi.get("access-point", {})):
+            ssid = ap.get("ssid", "------")
+            stations = ap.get("stations", {}).get("station", [])
+            data_str = f"access-point ssid: {ssid} stations: {len(stations)}"
+        elif self.wifi and (station := self.wifi.get("station", {})):
+            ssid = station.get("ssid", "------")
+            data_str = f"station ssid: {ssid}"
+            if (signal := station.get("signal-strength")) is not None:
+                data_str += f" signal: {signal_to_status(signal)}"
         else:
             data_str = "ssid: ------"
 
-        row =  f"{'':<{Pad.flags}}"
-        row += f"{pipe:<{Pad.iface}}"
-        row =  f"{'':<{Pad.flags}}"
-        row += f"{pipe:<{Pad.iface}}"
-        row += f"{'wifi':<{Pad.proto}}"
-        row += f"{'':<{Pad.state}}{data_str}"
-        print(row)
+        print(self._pr_proto_common("wifi", pipe, data_str))
 
     def pr_proto_br(self, br_vlans):
         data_str = ""
@@ -1357,23 +1409,18 @@ class Iface:
         else:
             row += Decore.red(f"{self.oper().upper():<{Pad.state}}")
 
+        vlans = []
         for vlan in br_vlans:
-            if 'tagged' in vlan:
-                for tagged in vlan['tagged']:
-                    if tagged == self.name:
-                        if data_str:
-                            data_str += f",{vlan['vid']}t"
-                        else:
-                            data_str += f"vlan:{vlan['vid']}t"
-            if 'untagged' in vlan:
-                for untagged in vlan['untagged']:
-                    if untagged == self.name:
-                        if data_str:
-                            data_str += f",{vlan['vid']}u"
-                        else:
-                            data_str += f"vlan:{vlan['vid']}u"
+            if 'tagged' in vlan and self.name in vlan['tagged']:
+                vlans.append(f"{vlan['vid']}t")
+            if 'untagged' in vlan and self.name in vlan['untagged']:
+                vlans.append(f"{vlan['vid']}u")
+        tokens = []
+        if vlans:
+            tokens.append(f"vlan: {','.join(vlans)}")
         if self.pvid:
-            data_str += f" pvid:{self.pvid}"
+            tokens.append(f"pvid: {self.pvid}")
+        data_str = " ".join(tokens)
 
         if data_str:
             row += f"{data_str:<{Pad.data}}"
@@ -1390,11 +1437,11 @@ class Iface:
                 lowers.append(_iface)
 
         if lowers:
-            self.pr_proto_eth(pipe='│')
+            self.pr_proto_eth_subrow(pipe='│')
             self.pr_proto_ipv4(pipe='│')
             self.pr_proto_ipv6(pipe='│')
         else:
-            self.pr_proto_eth(pipe=' ')
+            self.pr_proto_eth_subrow()
             self.pr_proto_ipv4()
             self.pr_proto_ipv6()
 
@@ -1449,11 +1496,11 @@ class Iface:
                 lowers.append(_iface)
 
         if lowers:
-            self.pr_proto_eth(pipe='│')
+            self.pr_proto_eth_subrow(pipe='│')
             self.pr_proto_ipv4(pipe='│')
             self.pr_proto_ipv6(pipe='│')
         else:
-            self.pr_proto_eth(pipe=' ')
+            self.pr_proto_eth_subrow()
             self.pr_proto_ipv4()
             self.pr_proto_ipv6()
 
@@ -1476,13 +1523,15 @@ class Iface:
 
     def pr_gretap(self):
         self.pr_name(pipe="")
-        self.pr_proto_gretap()
+        self.pr_proto_gre()
+        self.pr_proto_eth_subrow()
         self.pr_proto_ipv4()
         self.pr_proto_ipv6()
 
     def pr_vxlan(self):
         self.pr_name(pipe="")
         self.pr_proto_vxlan()
+        self.pr_proto_eth_subrow()
         self.pr_proto_ipv4()
         self.pr_proto_ipv6()
 
@@ -1495,12 +1544,14 @@ class Iface:
     def pr_wifi(self):
         self.pr_name(pipe="")
         self.pr_proto_wifi()
+        self.pr_proto_eth_subrow()
         self.pr_proto_ipv4()
         self.pr_proto_ipv6()
 
     def pr_vlan(self, _ifaces):
         self.pr_name(pipe="")
-        self.pr_proto_eth()
+        data = f"vid: {self.vid}" if self.vid is not None else ""
+        print(self._pr_proto_common("vlan", "", data))
 
         if self.lower_if:
             self.pr_proto_ipv4(pipe='│')
@@ -1515,7 +1566,7 @@ class Iface:
             print(f"Error, didn't find parent interface for vlan {self.name}")
             sys.exit(1)
         parent.pr_name(pipe='└ ')
-        parent.pr_proto_eth()
+        print()
 
     def pr_container(self):
         # Add ⇅ flag for interfaces with IP forwarding enabled
@@ -1549,16 +1600,27 @@ class Iface:
         if self.lower_if:
             print(f"{'lower-layer-if':<{20}}: {self.lower_if}")
 
-        if self.autoneg != 'unknown':
-            val = "on" if self.autoneg else "off"
-            print(f"{'auto-negotiation':<{20}}: {val}")
+        if label := self._phy_label():
+            print(f"{'link mode':<{20}}: {label}")
+
+        if self.speed:
+            mbps = int(self.speed) // 1_000_000
+            print(f"{'speed':<{20}}: {mbps}")
 
         if self.duplex:
             print(f"{'duplex':<{20}}: {self.duplex}")
 
-        if self.speed:
-            mbs = float(self.speed) * 1000
-            print(f"{'speed':<{20}}: {int(mbs)}")
+        if self.autoneg != 'unknown':
+            val = "on" if self.autoneg else "off"
+            print(f"{'auto-negotiation':<{20}}: {val}")
+
+        if self.advertised:
+            self._pr_label_list('advertised',
+                [self._pmd_label(pmd) for pmd in self.advertised])
+
+        if self.supported:
+            self._pr_label_list('supported',
+                [self._pmd_label(pmd) for pmd in self.supported])
 
         if self.phys_address:
             print(f"{'physical address':<{20}}: {self.phys_address}")
@@ -1589,31 +1651,13 @@ class Iface:
                 print(f"{'lacp partner state':<{20}}: {', '.join(self.lacp_pstate)}")
             print(f"{'link failure count':<{20}}: {self.link_failures}")
 
-        if self.ipv4_addr:
-            first = True
-            for addr in self.ipv4_addr:
+        def _addr_lines(addrs):
+            for addr in addrs:
                 origin = f"({addr['origin']})" if addr.get('origin') else ""
-                key = 'ipv4 addresses' if first else ''
-                colon = ':' if first else ' '
-                row = f"{key:<{20}}{colon} "
-                row += f"{addr['ip']}/{addr['prefix-length']} {origin}"
-                print(row)
-                first = False
-        else:
-                print(f"{'ipv4 addresses':<{20}}:")
+                yield f"{addr['ip']}/{addr['prefix-length']} {origin}"
 
-        if self.ipv6_addr:
-            first = True
-            for addr in self.ipv6_addr:
-                origin = f"({addr['origin']})" if addr.get('origin') else ""
-                key = 'ipv6 addresses' if first else ''
-                colon = ':' if first else ' '
-                row = f"{key:<{20}}{colon} "
-                row += f"{addr['ip']}/{addr['prefix-length']} {origin}"
-                print(row)
-                first = False
-        else:
-                print(f"{'ipv6 addresses':<{20}}:")
+        self._pr_label_list('ipv4 addresses', list(_addr_lines(self.ipv4_addr)))
+        self._pr_label_list('ipv6 addresses', list(_addr_lines(self.ipv6_addr)))
 
         if self.in_octets and self.out_octets:
             print(f"{'in-octets':<{20}}: {self.in_octets}")
@@ -1804,7 +1848,10 @@ def brport_sort(iface):
 
 def print_interface(iface):
     iface.pr_name()
-    iface.pr_proto_eth()
+    if iface._pr_phy_row():
+        iface.pr_proto_eth_subrow()
+    else:
+        iface.pr_proto_eth()
     iface.pr_proto_ipv4()
     iface.pr_proto_ipv6()
 

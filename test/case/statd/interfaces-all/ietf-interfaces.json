@@ -57,7 +57,7 @@
           ]
         },
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         }
@@ -87,7 +87,7 @@
           ]
         },
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         }
@@ -109,7 +109,7 @@
           "mtu": 1500
         },
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         },
@@ -156,7 +156,7 @@
           ]
         },
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         }
@@ -186,7 +186,7 @@
           ]
         },
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         }
@@ -216,7 +216,7 @@
           ]
         },
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         }
@@ -246,7 +246,7 @@
           ]
         },
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         }

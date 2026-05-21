@@ -98,40 +98,72 @@ out-octets          : 550704
 admin@example:/>
 </code></pre>
 
-### Configuring fixed speed and duplex
+### Restricting advertised link modes
 
-Auto-negotiation of speed/duplex mode is desired in almost all
-use-cases, but it is possible to disable auto-negotiation and specify
-a fixed speed and duplex mode.
+Auto-negotiation of speed/duplex is the desired default for almost all
+use-cases, but sometimes a port must come up at a specific speed —
+typically when interoperating with legacy hardware that does not
+auto-negotiate, or that does so poorly.  IEEE Std 802.3.2-2025 retired
+the older *disable auto-negotiation, then set fixed speed/duplex*
+idiom; the standards-correct way to express the same intent is to
+**restrict the set of PMD types auto-negotiation may advertise**.
+When only one PMD is advertised, the link pins to that mode against
+any cooperating peer.
 
-> [!IMPORTANT]
-> When setting a fixed speed and duplex mode, ensure both sides of the
-> link have matching configuration.  If speed does not match, the link
-> will not come up.  If duplex mode does not match, the result is
-> reported collisions and/or bad throughput.
+Each entry in `auto-negotiation/advertised-pmd-types` is an IEEE
+PMD-type identity (`ieee802-ethernet-phy-type:pmd-type-*`).  Half- vs
+full-duplex pinning is expressed by the orthogonal `duplex` leaf.
 
-The example below configures port eth3 to fixed speed 100 Mbit/s
-half-duplex mode.
+The example below pins port `eth3` to 100 Mbit/s half-duplex.
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit interface eth3 ethernet</b>
-admin@example:/config/interface/eth3/ethernet/> <b>set speed 0.1</b>
+admin@example:/config/interface/eth3/ethernet/> <b>set auto-negotiation advertised-pmd-types pmd-type-100BASE-TX</b>
 admin@example:/config/interface/eth3/ethernet/> <b>set duplex half</b>
-admin@example:/config/interface/eth3/ethernet/> <b>set auto-negotiation enable false</b>
 admin@example:/config/interface/eth3/ethernet/> <b>show</b>
 auto-negotiation {
-  enable false;
+  advertised-pmd-types [ ieee802-ethernet-phy-type:pmd-type-100BASE-TX ];
 }
 duplex half;
-speed 0.1;
 admin@example:/config/interface/eth3/ethernet/> <b>leave</b>
 admin@example:/>
 </code></pre>
 
-Speed metric is in Gbit/s.  Auto-negotiation needs to be disabled in
-order for fixed speed/duplex to apply. Only speeds `0.1`(100 Mbit/s)
-and `0.01` (10 Mbit/s) can be specified. 1 Gbit/s and higher speeds
-require auto-negotiation to be enabled.
+Listing multiple PMD identities advertises that set; the peer's
+auto-negotiation picks the highest mutually-supported mode.
+
+> [!IMPORTANT]
+> When pinning to a specific link mode, ensure both sides of the link
+> agree on at least one common (PMD, duplex) combination.  If they
+> don't, the link will not come up.
+
+> [!NOTE]
+> Earlier Infix releases used `auto-negotiation/enable=false` with
+> `speed` and `duplex` leaves to express the same thing.  That syntax
+> is retired together with the IEEE obsoletion of `eth:speed`; existing
+> `startup-config.cfg` snippets are automatically migrated to the new
+> shape on upgrade.
+
+The detail view exposes a `supported` block (operational state,
+backed by the `supported-pmd-types` leaf-list) listing the PMD types
+the kernel currently believes the interface can operate at.  For
+SFP/SFP+ cages this set reflects the inserted module: plug in a 10G
+LR optic and `supported` will narrow to `10GbaseLR` only.  Combined
+with the operational `link mode` row above it, this makes it trivial
+to confirm what an unknown transceiver actually is — no `ethtool -m`
+round-trip needed.
+
+<pre class="cli"><code>admin@example:/> <b>show interface eth13</b>
+name               : eth13
+type               : ethernet
+operational status : up
+link mode          : 10GbaseLR
+auto-negotiation   : off
+supported          : 10GbaseLR
+duplex             : full
+speed              : 10000
+...
+</code></pre>
 
 ### Ethernet statistics
 

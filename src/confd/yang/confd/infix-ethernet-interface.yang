@@ -5,9 +5,17 @@ module infix-ethernet-interface {
 
   import ieee802-ethernet-interface {
     prefix eth;
+    revision-date 2025-09-10;
+  }
+  import ieee802-ethernet-phy-type {
+    prefix ieee802-phy;
+    revision-date 2025-09-10;
   }
   import ietf-interfaces {
     prefix if;
+  }
+  import iana-if-type {
+    prefix ianaift;
   }
   import ietf-yang-types {
     prefix yang;
@@ -17,6 +25,34 @@ module infix-ethernet-interface {
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Extensions and deviations to ieee802-ethernet-interface.yang";
+
+  revision 2026-05-21 {
+    description "Augment auto-negotiation with an 'advertise' leaf-list
+                 of PMD-type identities, modelling the standards-correct
+                 way to express what older configurations called 'fixed
+                 speed': restrict the set of modes auto-negotiation may
+                 advertise.  IEEE Std 802.3.2-2025 obsoleted the eth:speed
+                 leaf without providing a config-true replacement; this
+                 augment fills that gap using existing IEEE PMD identities.
+                 Old configurations using auto-negotiation/enable=false
+                 plus speed+duplex are migrated by confd/share/migrate/1.9.
+
+                 Also add an 'mdi-x' boolean leaf under ethernet for forcing
+                 the copper MDI/MDI-X pinout, needed on some PHYs when
+                 auto-negotiation is disabled and Auto-MDIX stops working.
+                 Absent = Auto-MDIX, true = MDI-X, false = MDI; gated by a
+                 when-expression on auto-negotiation/enable = false.";
+    reference "internal";
+  }
+
+  revision 2026-05-18 {
+    description "Updated to ieee802-ethernet-interface@2025-09-10 base
+                 (IEEE Std 802.3.2-2025).  No path or semantic changes
+                 to Infix-exposed config; new operational leaves
+                 phy-type and pmd-type from the upstream model are
+                 used directly without deviation.";
+    reference "internal";
+  }
 
   revision 2024-02-27 {
     description "Add augment for in-good-octets and out-good-octets";
@@ -36,6 +72,62 @@ module infix-ethernet-interface {
   /*
    * Data Nodes
    */
+  augment "/if:interfaces/if:interface/eth:ethernet/eth:auto-negotiation" {
+    when "derived-from-or-self(../../if:type, 'ianaift:ethernetCsmacd')";
+    description "Configuration knobs that constrain auto-negotiation.";
+
+    leaf-list advertised-pmd-types {
+      type identityref {
+        base ieee802-phy:pmd-type;
+      }
+      description "Restrict auto-negotiation to advertise only these PMD types.
+                   When empty, the PHY advertises every mode it supports.";
+    }
+  }
+
+  /*
+   * mdi-x has deliberately NO default: the absent state is what carries
+   * the Auto-MDIX meaning, so adding a default would remove it.  The C
+   * apply path must therefore read it with lydx_get_cattr() (absent vs
+   * true vs false), not lydx_get_bool() which collapses absent and false.
+   *
+   * The when-expression confines it to auto-negotiation/enable = false:
+   * Auto-MDIX is negotiated together with the link when autoneg is on, so
+   * forcing a pinout only makes sense once negotiation is disabled.
+   */
+  augment "/if:interfaces/if:interface/eth:ethernet" {
+    when "derived-from-or-self(../if:type, 'ianaift:ethernetCsmacd')";
+    description "Copper PHY configuration knobs.";
+
+    leaf mdi-x {
+      when "../eth:auto-negotiation/eth:enable = 'false'";
+      type boolean;
+      description "Force the copper MDI/MDI-X crossover pinout.  Only
+                   available with auto-negotiation disabled, since Auto-MDIX
+                   otherwise rides along with negotiation:
+                     true   force MDI-X (crossover)
+                     false  force MDI (straight)
+                   The two ends of the link must use opposite values.
+
+                   Leave unset for Auto-MDIX, the right choice for any link
+                   that negotiates.";
+    }
+  }
+
+  augment "/if:interfaces/if:interface/eth:ethernet" {
+    when "derived-from-or-self(../if:type, 'ianaift:ethernetCsmacd')";
+    description "Operational facets for diagnosis.";
+
+    leaf-list supported-pmd-types {
+      type identityref {
+        base ieee802-phy:pmd-type;
+      }
+      config false;
+      description "PMD types this interface currently supports.
+                   On SFP/SFP+ cages the set reflects the inserted module.";
+    }
+  }
+
   augment "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame" {
     leaf out-good-octets {
       type yang:counter64;
