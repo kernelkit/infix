@@ -13,7 +13,7 @@ from any other step.  This to trigger a new configuration "generation".
 
 import infamy
 import infamy.iface as iface
-
+from infamy.util import until
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -51,10 +51,8 @@ with infamy.Test() as test:
         }})
 
     with test.step("Verify interfaces 'veth0a' and 'veth0b' exist"):
-        assert iface.exist(target, veth0a), \
-            f"Interface <{veth0a}> does not exist."
-        assert iface.exist(target, veth0b), \
-            f"Interface <{veth0b}> does not exist."
+        until(lambda: iface.exist(target, veth0a))
+        until(lambda: iface.exist(target, veth0b))
 
     with test.step("Set IP address on target:data1 (dummy op)"):
         target.put_config_dicts({"ietf-interfaces": {
@@ -97,15 +95,11 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Verify target:data1 and target:data2 still exist"):
-        assert iface.exist(target, data1), \
-            f"Interface {data1} missing!"
-        assert iface.exist(target, data2), \
-            f"Interface {data2} missing!"
+        until(lambda: iface.exist(target, data1))
+        until(lambda: iface.exist(target, data2))
 
     with test.step("Verify VETH pair have been removed"):
-        assert not iface.exist(target, veth0a), \
-            f"Interface <{veth0a}> still exists!"
-        assert not iface.exist(target, veth0b), \
-            f"Interface <{veth0b}> still exists!"
+        until(lambda: not iface.exist(target, veth0a))
+        until(lambda: not iface.exist(target, veth0b))
 
     test.succeed()
