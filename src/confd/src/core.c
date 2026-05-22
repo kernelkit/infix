@@ -323,6 +323,8 @@ static confd_dependency_t dep_hostname(struct lyd_node **diff, struct lyd_node *
 {
 	confd_dependency_t result = CONFD_DEP_DONE;
 	struct lyd_node *hostname, *mdns, *dhcp_server;
+	struct ly_set *ifaces;
+	uint32_t i;
 
 	hostname = lydx_get_xpathf(*diff, "/ietf-system:system/hostname");
 	if (!hostname)
@@ -345,6 +347,25 @@ static confd_dependency_t dep_hostname(struct lyd_node **diff, struct lyd_node *
 			return result;
 		}
 	}
+
+	ifaces = lydx_find_xpathf(config,
+		"/ietf-interfaces:interfaces/interface[ietf-ip:ipv4/infix-dhcp-client:dhcp]");
+	if (ifaces && ifaces->count > 0) {
+		for (i = 0; i < ifaces->count; i++) {
+			const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+			char xpath[256];
+
+			snprintf(xpath, sizeof(xpath),
+				 "/ietf-interfaces:interfaces/interface[name='%s']/ietf-ip:ipv4/infix-dhcp-client:dhcp", ifname);
+			result = add_dependencies(diff, xpath, ifname);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add dhcp-client to diff for interface %s", ifname);
+				ly_set_free(ifaces, NULL);
+				return result;
+			}
+		}
+	}
+	ly_set_free(ifaces, NULL);
 
 	return result;
 }
