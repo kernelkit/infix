@@ -26,7 +26,7 @@ PKGPATH = os.path.join(
     "package"
 )
 def get_boot_order(target):
-    oper = target.get_dict("/system-state/software")
+    oper = target.get_dict("/ietf-system:system-state/software")
     return " ".join(oper["system-state"]["software"]["boot-order"])
 
 def set_boot_order(target, order):
@@ -106,9 +106,25 @@ with infamy.Test() as test:
                 }
             })
 
+        with test.step("Wait for upgrade to start"):
+            for _ in range(600):
+                oper = target.get_dict("/ietf-system:system-state/software")
+                installer = oper["system-state"]["software"]["installer"]
+                if installer["operation"] != "idle":
+                    print(installer)
+                    if "last-error" in installer:
+                        print("Install failed:", installer["last-error"])
+                        test.fail()
+
+                    break
+                time.sleep(1)
+            else:
+                print("Timeout, last state:", oper)
+                test.fail()
+
         with test.step("Wait for upgrade to finish"):
             for _ in range(600):
-                oper = target.get_dict("/system-state/software")
+                oper = target.get_dict("/ietf-system:system-state/software")
                 installer = oper["system-state"]["software"]["installer"]
                 if installer["operation"] == "idle":
                     print(installer)
@@ -135,7 +151,7 @@ with infamy.Test() as test:
 
         with test.step("Verify that the partition is the booted"):
             should_boot=get_boot_order(target).split()[0]
-            oper = target.get_dict("/system-state/software")
+            oper = target.get_dict("/ietf-system:system-state/software")
             booted = oper["system-state"]["software"]["booted"]
             print(f"Should boot: {should_boot}, booted: {booted}")
             assert(booted == should_boot)
