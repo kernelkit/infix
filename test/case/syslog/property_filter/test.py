@@ -109,7 +109,7 @@ with infamy.Test() as test:
             test.fail(f"Expected 0 otherapp messages in /var/log/myapp, got {count}")
 
     with test.step("Verify not-error log excludes ERROR messages"):
-        rc = tgtssh.runsh("grep -c 'test' /var/log/not-error 2>/dev/null")
+        rc = tgtssh.runsh("grep -c 'target test' /var/log/not-error 2>/dev/null")
         count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
         if count != 3:
             test.fail(f"Expected 3 non-ERROR messages in /var/log/not-error, got {count}")
