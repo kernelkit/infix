@@ -33,6 +33,7 @@ const treeKey = "ietf-interfaces:interfaces"
 type NLMonitor struct {
 	linkBatch  *ipbatch.IPBatch
 	addrBatch  *ipbatch.IPBatch
+	neighBatch *ipbatch.IPBatch
 	brBatch    *bridgebatch.BridgeBatch
 	tree       *tree.Tree
 	ethRefresh func(string)
@@ -55,6 +56,7 @@ type NLMonitor struct {
 	mu        sync.Mutex
 	links     json.RawMessage // ip -json -s -d link show (includes stats+details)
 	addrs     json.RawMessage // ip -json -d addr show (details only, no stats)
+	neighs    json.RawMessage // ip -json neigh show
 	fdb       map[string]json.RawMessage
 	mdb       map[string]json.RawMessage
 	ethernet  map[string]json.RawMessage // ifname → ethtool JSON
@@ -67,10 +69,11 @@ type NLMonitor struct {
 // New creates a netlink monitor backed by ip/bridge batch query workers.
 // linkBatch should include -s -d flags; addrBatch should include -d only
 // (no -s, which causes multi-line output for link commands).
-func New(linkBatch, addrBatch *ipbatch.IPBatch, brBatch *bridgebatch.BridgeBatch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
+func New(linkBatch, addrBatch, neighBatch *ipbatch.IPBatch, brBatch *bridgebatch.BridgeBatch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
 	return &NLMonitor{
 		linkBatch:      linkBatch,
 		addrBatch:      addrBatch,
+		neighBatch:     neighBatch,
 		brBatch:        brBatch,
 		tree:           t,
 		fc:             fc,
@@ -242,13 +245,18 @@ func (m *NLMonitor) initialDump() error {
 	if err != nil {
 		return err
 	}
+	neighRaw, err := m.queryNeigh("neigh show")
+	if err != nil {
+		neighRaw = json.RawMessage(`[]`)
+	}
 
-	m.log.Debug("initialDump", "linkBytes", len(linkRaw), "addrBytes", len(addrRaw))
+	m.log.Debug("initialDump", "linkBytes", len(linkRaw), "addrBytes", len(addrRaw), "neighBytes", len(neighRaw))
 	m.validateAddrData("initialDump", addrRaw)
 
 	m.mu.Lock()
 	m.links = linkRaw
 	m.addrs = addrRaw
+	m.neighs = neighRaw
 	for _, name := range interfaceNames(linkRaw) {
 		if st, ok := extractOperStatus(filterByIfName(linkRaw, name)); ok {
 			m.lastOperStatus[name] = st
@@ -331,6 +339,19 @@ func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) {
 		return
 	}
 
+	raw, err := m.queryNeigh("neigh show")
+	if err != nil {
+		if errors.Is(err, ipbatch.ErrBatchDead) {
+			m.requestRedump()
+		}
+		return
+	}
+
+	m.mu.Lock()
+	m.neighs = raw
+	m.mu.Unlock()
+
+	m.rebuild()
 }
 
 func (m *NLMonitor) handleMDBUpdate() {
@@ -410,7 +431,8 @@ func (m *NLMonitor) rebuild() {
 	m.mu.Lock()
 	linksCopy := append(json.RawMessage{}, m.links...)
 	addrsCopy := append(json.RawMessage{}, m.addrs...)
-	doc := iface.Transform(linksCopy, addrsCopy, linksCopy, m.fc)
+	neighsCopy := append(json.RawMessage{}, m.neighs...)
+	doc := iface.Transform(linksCopy, addrsCopy, linksCopy, neighsCopy, m.fc)
 	eth := copyStringMap(m.ethernet)
 	wfi := copyStringMap(m.wifi)
 	fdb := copyStringMap(m.fdb)
@@ -625,6 +647,19 @@ func (m *NLMonitor) queryAddr(command string) (json.RawMessage, error) {
 			return nil, err
 		}
 		m.log.Error("addr batch query failed", "command", command, "err", err)
+		return nil, err
+	}
+	return raw, nil
+}
+
+func (m *NLMonitor) queryNeigh(command string) (json.RawMessage, error) {
+	raw, err := m.neighBatch.Query(command)
+	if err != nil {
+		if errors.Is(err, ipbatch.ErrBatchDead) {
+			m.log.Warn("neigh batch dead", "command", command, "err", err)
+			return nil, err
+		}
+		m.log.Error("neigh batch query failed", "command", command, "err", err)
 		return nil, err
 	}
 	return raw, nil
