@@ -216,6 +216,44 @@ static confd_dependency_t dep_symmetric_keys(struct lyd_node **diff, struct lyd_
 			}
 		}
 		ly_set_free(ifaces, NULL);
+
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[infix-interfaces:wireguard/peers/preshared-key='%s']", key_name);
+		if (ifaces && ifaces->count > 0) {
+			for (i = 0; i < ifaces->count; i++) {
+				const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+				char xpath[256];
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wireguard", ifname);
+				result = add_dependencies(diff, xpath, key_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add wireguard to diff for interface %s", ifname);
+					ly_set_free(ifaces, NULL);
+					return result;
+				}
+			}
+		}
+		ly_set_free(ifaces, NULL);
+
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[infix-interfaces:wireguard/peers/peer/preshared-key='%s']", key_name);
+		if (ifaces && ifaces->count > 0) {
+			for (i = 0; i < ifaces->count; i++) {
+				const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+				char xpath[256];
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wireguard", ifname);
+				result = add_dependencies(diff, xpath, key_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add wireguard to diff for interface %s", ifname);
+					ly_set_free(ifaces, NULL);
+					return result;
+				}
+			}
+		}
+		ly_set_free(ifaces, NULL);
 	}
 
 	return result;
@@ -229,7 +267,7 @@ static confd_dependency_t dep_asymmetric_keys(struct lyd_node **diff, struct lyd
 	dkeys = lydx_get_descendant(*diff, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
 	LYX_LIST_FOR_EACH(dkeys, dkey, "asymmetric-key") {
 		const char *key_name = lydx_get_cattr(dkey, "name");
-		struct ly_set *hostkeys;
+		struct ly_set *hostkeys, *ifaces;
 		struct lyd_node *webcert;
 		uint32_t i;
 
@@ -258,6 +296,24 @@ static confd_dependency_t dep_asymmetric_keys(struct lyd_node **diff, struct lyd
 			}
 		}
 
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[infix-interfaces:wireguard/private-key='%s']", key_name);
+		if (ifaces && ifaces->count > 0) {
+			for (i = 0; i < ifaces->count; i++) {
+				const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+				char xpath[256];
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wireguard", ifname);
+				result = add_dependencies(diff, xpath, key_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add wireguard to diff for interface %s", ifname);
+					ly_set_free(ifaces, NULL);
+					return result;
+				}
+			}
+		}
+		ly_set_free(ifaces, NULL);
 	}
 
 	return result;
