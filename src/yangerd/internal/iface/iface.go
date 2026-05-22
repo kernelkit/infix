@@ -19,10 +19,15 @@ type FileChecker interface {
 // `{"interface":[...]}`.  The caller (NLMonitor) stores this at tree key
 // "ietf-interfaces:interfaces"; the IPC server adds the module-qualified
 // wrapper when responding to clients.
-func Transform(linkData, addrData, statsData json.RawMessage, fc FileChecker) json.RawMessage {
+//
+// neighData is the output of `ip -json neigh show` — an array of objects
+// with keys: dst, dev, lladdr, state (array of strings like "REACHABLE",
+// "STALE", "PERMANENT", etc.).  May be nil if unavailable.
+func Transform(linkData, addrData, statsData, neighData json.RawMessage, fc FileChecker) json.RawMessage {
 	links := dedup(decodeObjects(linkData))
 	addrs := decodeObjects(addrData)
 	stats := decodeObjects(statsData)
+	neighs := decodeObjects(neighData)
 
 	addrByName := make(map[string]map[string]any, len(addrs))
 	for _, addr := range addrs {
@@ -40,6 +45,15 @@ func Transform(linkData, addrData, statsData json.RawMessage, fc FileChecker) js
 			continue
 		}
 		statsByName[ifname] = st
+	}
+
+	neighByName := make(map[string][]map[string]any)
+	for _, n := range neighs {
+		dev := getString(n, "dev")
+		if dev == "" {
+			continue
+		}
+		neighByName[dev] = append(neighByName[dev], n)
 	}
 
 	interfaces := make([]map[string]any, 0, len(links))
@@ -60,7 +74,7 @@ func Transform(linkData, addrData, statsData json.RawMessage, fc FileChecker) js
 			}
 		}
 
-		iface := interfaceCommon(iplink, ipaddr, fc)
+		iface := interfaceCommon(iplink, ipaddr, neighByName[ifname], fc)
 		yangType := getString(iface, "type")
 
 		switch yangType {
@@ -172,7 +186,7 @@ func dedup(links []map[string]any) []map[string]any {
 	return out
 }
 
-func interfaceCommon(iplink, ipaddr map[string]any, fc FileChecker) map[string]any {
+func interfaceCommon(iplink, ipaddr map[string]any, neighEntries []map[string]any, fc FileChecker) map[string]any {
 	flags := getStrings(iplink, "flags")
 
 	iface := map[string]any{
@@ -197,11 +211,11 @@ func interfaceCommon(iplink, ipaddr map[string]any, fc FileChecker) map[string]a
 		iface["statistics"] = stats
 	}
 
-	if ipv4 := ipv4Data(ipaddr); len(ipv4) > 0 {
+	if ipv4 := ipv4Data(ipaddr, neighEntries); len(ipv4) > 0 {
 		iface["ietf-ip:ipv4"] = ipv4
 	}
 
-	if ipv6 := ipv6Data(ipaddr, fc); len(ipv6) > 0 {
+	if ipv6 := ipv6Data(ipaddr, neighEntries, fc); len(ipv6) > 0 {
 		iface["ietf-ip:ipv6"] = ipv6
 	}
 
@@ -299,42 +313,54 @@ func statistics(iplink map[string]any) map[string]any {
 	return out
 }
 
-func ipv4Data(ipaddr map[string]any) map[string]any {
-	if len(ipaddr) == 0 {
+func ipv4Data(ipaddr map[string]any, neighEntries []map[string]any) map[string]any {
+	if len(ipaddr) == 0 && len(neighEntries) == 0 {
 		return nil
 	}
 
 	out := map[string]any{}
-	if mtu, ok := getInt(ipaddr, "mtu"); ok && mtu != 0 && getString(ipaddr, "ifname") != "lo" {
-		out["mtu"] = mtu
+	if len(ipaddr) > 0 {
+		if mtu, ok := getInt(ipaddr, "mtu"); ok && mtu != 0 && getString(ipaddr, "ifname") != "lo" {
+			out["mtu"] = mtu
+		}
+
+		if addr := addresses(ipaddr, "inet"); len(addr) > 0 {
+			out["address"] = addr
+		}
 	}
 
-	if addr := addresses(ipaddr, "inet"); len(addr) > 0 {
-		out["address"] = addr
+	if n := neighbors(neighEntries, 4); len(n) > 0 {
+		out["neighbor"] = n
 	}
 
 	return out
 }
 
-func ipv6Data(ipaddr map[string]any, fc FileChecker) map[string]any {
-	if len(ipaddr) == 0 {
+func ipv6Data(ipaddr map[string]any, neighEntries []map[string]any, fc FileChecker) map[string]any {
+	if len(ipaddr) == 0 && len(neighEntries) == 0 {
 		return nil
 	}
 
 	out := map[string]any{}
-	ifname := getString(ipaddr, "ifname")
-	if ifname != "" && fc != nil {
-		path := fmt.Sprintf("/proc/sys/net/ipv6/conf/%s/mtu", ifname)
-		if raw, err := fc.ReadFile(path); err == nil {
-			trimmed := strings.TrimSpace(raw)
-			if mtu, err := strconv.Atoi(trimmed); err == nil {
-				out["mtu"] = mtu
+	if len(ipaddr) > 0 {
+		ifname := getString(ipaddr, "ifname")
+		if ifname != "" && fc != nil {
+			path := fmt.Sprintf("/proc/sys/net/ipv6/conf/%s/mtu", ifname)
+			if raw, err := fc.ReadFile(path); err == nil {
+				trimmed := strings.TrimSpace(raw)
+				if mtu, err := strconv.Atoi(trimmed); err == nil {
+					out["mtu"] = mtu
+				}
 			}
+		}
+
+		if addr := addresses(ipaddr, "inet6"); len(addr) > 0 {
+			out["address"] = addr
 		}
 	}
 
-	if addr := addresses(ipaddr, "inet6"); len(addr) > 0 {
-		out["address"] = addr
+	if n := neighbors(neighEntries, 6); len(n) > 0 {
+		out["neighbor"] = n
 	}
 
 	return out
@@ -371,6 +397,81 @@ func addresses(ipaddr map[string]any, family string) []map[string]any {
 	}
 
 	return out
+}
+
+func neighbors(entries []map[string]any, ipVersion int) []map[string]any {
+	out := make([]map[string]any, 0, len(entries))
+	for _, entry := range entries {
+		dst := getString(entry, "dst")
+		if dst == "" {
+			continue
+		}
+
+		if !neighMatchesFamily(dst, ipVersion) {
+			continue
+		}
+
+		lladdr := getString(entry, "lladdr")
+		if lladdr == "" {
+			continue
+		}
+
+		states := getStrings(entry, "state")
+		origin := "dynamic"
+		if contains(states, "PERMANENT") {
+			origin = "static"
+		}
+
+		neigh := map[string]any{
+			"ip":                 dst,
+			"link-layer-address": lladdr,
+			"origin":             origin,
+		}
+
+		if ipVersion == 6 {
+			if state := neighState(states); state != "" {
+				neigh["state"] = state
+			}
+			if getBool(entry, "router") {
+				neigh["is-router"] = []any{nil}
+			}
+		}
+
+		out = append(out, neigh)
+	}
+
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func neighMatchesFamily(dst string, ipVersion int) bool {
+	for i := 0; i < len(dst); i++ {
+		if dst[i] == '.' {
+			return ipVersion == 4
+		}
+		if dst[i] == ':' {
+			return ipVersion == 6
+		}
+	}
+	return false
+}
+
+func neighState(states []string) string {
+	xlate := map[string]string{
+		"REACHABLE":  "reachable",
+		"STALE":      "stale",
+		"DELAY":      "delay",
+		"PROBE":      "probe",
+		"INCOMPLETE": "incomplete",
+	}
+	for _, s := range states {
+		if v, ok := xlate[s]; ok {
+			return v
+		}
+	}
+	return ""
 }
 
 func inet2yangOrigin(inet map[string]any) string {
