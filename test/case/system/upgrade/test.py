@@ -141,7 +141,7 @@ with infamy.Test() as test:
         with test.step("Verify boot order has changed and reboot"):
             print(get_boot_order(target))
             print(old_bootorder)
-            assert(old_bootorder != get_boot_order(target))
+            until(lambda: get_boot_order(target) != old_bootorder)
             target.reboot()
 
             if not wait_boot(target, env):
