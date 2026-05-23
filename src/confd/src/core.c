@@ -187,27 +187,26 @@ static confd_dependency_t add_dependencies(struct lyd_node **diff, const char *x
 	return CONFD_DEP_DONE;
 }
 
-static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config)
+static confd_dependency_t dep_symmetric_keys(struct lyd_node **diff, struct lyd_node *config)
 {
-	struct lyd_node *dkeys, *dkey, *hostname, *dcomponents, *dcomponent;
 	confd_dependency_t result = CONFD_DEP_DONE;
-	const char *key_name;
+	struct lyd_node *dkeys, *dkey;
 
 	dkeys = lydx_get_descendant(*diff, "keystore", "symmetric-keys", "symmetric-key", NULL);
-
 	LYX_LIST_FOR_EACH(dkeys, dkey, "symmetric-key") {
+		const char *key_name = lydx_get_cattr(dkey, "name");
 		struct ly_set *ifaces;
 		uint32_t i;
 
-		key_name = lydx_get_cattr(dkey, "name");
-		ifaces = lydx_find_xpathf(config, "/ietf-interfaces:interfaces/interface[infix-interfaces:wifi/secret='%s']", key_name);
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[infix-interfaces:wifi/secret='%s']", key_name);
 		if (ifaces && ifaces->count > 0) {
 			for (i = 0; i < ifaces->count; i++) {
-				struct lyd_node *iface = ifaces->dnodes[i];
-				const char *ifname;
+				const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
 				char xpath[256];
-				ifname = lydx_get_cattr(iface, "name");
-				snprintf(xpath, sizeof(xpath), "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/secret", ifname);
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/secret", ifname);
 				result = add_dependencies(diff, xpath, key_name);
 				if (result == CONFD_DEP_ERROR) {
 					ERROR("Failed to add wifi node to diff for interface %s", ifname);
@@ -215,21 +214,68 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 					return result;
 				}
 			}
-			ly_set_free(ifaces, NULL);
 		}
+		ly_set_free(ifaces, NULL);
+
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[infix-interfaces:wireguard/peers/preshared-key='%s']", key_name);
+		if (ifaces && ifaces->count > 0) {
+			for (i = 0; i < ifaces->count; i++) {
+				const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+				char xpath[256];
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wireguard", ifname);
+				result = add_dependencies(diff, xpath, key_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add wireguard to diff for interface %s", ifname);
+					ly_set_free(ifaces, NULL);
+					return result;
+				}
+			}
+		}
+		ly_set_free(ifaces, NULL);
+
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[infix-interfaces:wireguard/peers/peer/preshared-key='%s']", key_name);
+		if (ifaces && ifaces->count > 0) {
+			for (i = 0; i < ifaces->count; i++) {
+				const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+				char xpath[256];
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wireguard", ifname);
+				result = add_dependencies(diff, xpath, key_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add wireguard to diff for interface %s", ifname);
+					ly_set_free(ifaces, NULL);
+					return result;
+				}
+			}
+		}
+		ly_set_free(ifaces, NULL);
 	}
+
+	return result;
+}
+
+static confd_dependency_t dep_asymmetric_keys(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	struct lyd_node *dkeys, *dkey;
 
 	dkeys = lydx_get_descendant(*diff, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
 	LYX_LIST_FOR_EACH(dkeys, dkey, "asymmetric-key") {
-		struct ly_set *hostkeys;
+		const char *key_name = lydx_get_cattr(dkey, "name");
+		struct ly_set *hostkeys, *ifaces;
 		struct lyd_node *webcert;
 		uint32_t i;
 
-		key_name = lydx_get_cattr(dkey, "name");
 		hostkeys = lydx_find_xpathf(config, "/infix-services:ssh/hostkey[.='%s']", key_name);
 		if (hostkeys && hostkeys->count > 0) {
 			for (i = 0; i < hostkeys->count; i++) {
 				char xpath[256];
+
 				snprintf(xpath, sizeof(xpath), "/infix-services:ssh/hostkey[.='%s']", key_name);
 				result = add_dependencies(diff, xpath, key_name);
 				if (result == CONFD_DEP_ERROR) {
@@ -249,191 +295,239 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 				return result;
 			}
 		}
-	}
 
-	hostname = lydx_get_xpathf(*diff, "/ietf-system:system/hostname");
-	if (hostname) {
-		struct lyd_node *mdns, *dhcp_server;
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[infix-interfaces:wireguard/private-key='%s']", key_name);
+		if (ifaces && ifaces->count > 0) {
+			for (i = 0; i < ifaces->count; i++) {
+				const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+				char xpath[256];
 
-		dhcp_server = lydx_get_xpathf(config, "/infix-dhcp-server:dhcp-server/enabled");
-		if(dhcp_server && lydx_is_enabled(dhcp_server, "enabled")) {
-			result = add_dependencies(diff, "/infix-dhcp-server:dhcp-server/enabled", "true");
-			if (result == CONFD_DEP_ERROR) {
-				ERROR("Failed to add dhcp-server to diff on hostname change");
-				return result;
-			}
-		}
-		mdns = lydx_get_xpathf(config, "/infix-services:mdns");
-		if (mdns && lydx_is_enabled(mdns, "enabled")) {
-			result = add_dependencies(diff, "/infix-services:mdns/enabled", "true");
-			if (result == CONFD_DEP_ERROR) {
-				ERROR("Failed to add mdns to diff on hostname change");
-				return result;
-			}
-		}
-	}
-
-	struct lyd_node *difs = lydx_get_descendant(*diff, "interfaces", "interface", NULL);
-	if (difs) {
-		struct lyd_node *dif, *cif;
-
-		LYX_LIST_FOR_EACH(difs, dif, "interface") {
-			struct lyd_node *dwifi, *dcustom_phys, *radio_node, *cwifi, *ap;
-			const char *ifname, *radio_name;
-			bool is_wifi_change = false;
-			enum iftype type;
-			char xpath[256];
-
-
-			ifname = lydx_get_cattr(dif, "name");
-			if (!ifname)
-				continue;
-
-			cif = lydx_get_xpathf(config, "/ietf-interfaces:interfaces/interface[name='%s']", ifname);
-
-
-			type = iftype_from_iface(dif);
-			if (type == IFT_UNKNOWN)
-				type = iftype_from_iface(cif);
-
-			if (type ==  IFT_WIFI) {
-				/* Check if this interface has a wifi container in the diff */
-				dwifi = lydx_get_child(dif, "wifi");
-				if (dwifi)
-					is_wifi_change = true;
-
-				ap = lydx_get_child(dwifi, "access-point");
-				if (ap)
-					is_wifi_change = true;
-
-				/* Check if custom-phys-address changed on a WiFi interface */
-				if (!is_wifi_change) {
-					dcustom_phys = lydx_get_child(dif, "custom-phys-address");
-					if (dcustom_phys) {
-						/* Check if this interface is a WiFi interface in the config */
-						cwifi = lydx_get_xpathf(config,
-									"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
-									ifname);
-						if (cwifi)
-							is_wifi_change = true;
-					}
-				}
-
-				/* Get radio reference from config tree using xpath */
-				radio_node = lydx_get_xpathf(config,
-							     "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
-							     ifname);
-				if (!radio_node)
-					continue;
-
-				radio_name = lyd_get_value(radio_node);
-
-				if (!radio_name)
-					continue;
-
-				/* Add the radio to the diff */
-				snprintf(xpath, sizeof(xpath), "/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio_name);
-				result = add_dependencies(diff, xpath, radio_name);
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wireguard", ifname);
+				result = add_dependencies(diff, xpath, key_name);
 				if (result == CONFD_DEP_ERROR) {
-					ERROR("Failed to add radio %s to diff for WiFi interface %s", radio_name, ifname);
+					ERROR("Failed to add wireguard to diff for interface %s", ifname);
+					ly_set_free(ifaces, NULL);
 					return result;
 				}
+			}
+		}
+		ly_set_free(ifaces, NULL);
+	}
 
-				DEBUG("Added radio %s to diff for WiFi interface %s", radio_name, ifname);
+	return result;
+}
+
+static confd_dependency_t dep_hostname(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	struct lyd_node *hostname, *mdns, *dhcp_server;
+	struct ly_set *ifaces;
+	uint32_t i;
+
+	hostname = lydx_get_xpathf(*diff, "/ietf-system:system/hostname");
+	if (!hostname)
+		return CONFD_DEP_DONE;
+
+	dhcp_server = lydx_get_xpathf(config, "/infix-dhcp-server:dhcp-server/enabled");
+	if (dhcp_server && lydx_is_enabled(dhcp_server, "enabled")) {
+		result = add_dependencies(diff, "/infix-dhcp-server:dhcp-server/enabled", "true");
+		if (result == CONFD_DEP_ERROR) {
+			ERROR("Failed to add dhcp-server to diff on hostname change");
+			return result;
+		}
+	}
+
+	mdns = lydx_get_xpathf(config, "/infix-services:mdns");
+	if (mdns && lydx_is_enabled(mdns, "enabled")) {
+		result = add_dependencies(diff, "/infix-services:mdns/enabled", "true");
+		if (result == CONFD_DEP_ERROR) {
+			ERROR("Failed to add mdns to diff on hostname change");
+			return result;
+		}
+	}
+
+	ifaces = lydx_find_xpathf(config,
+		"/ietf-interfaces:interfaces/interface[ietf-ip:ipv4/infix-dhcp-client:dhcp]");
+	if (ifaces && ifaces->count > 0) {
+		for (i = 0; i < ifaces->count; i++) {
+			const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+			char xpath[256];
+
+			snprintf(xpath, sizeof(xpath),
+				 "/ietf-interfaces:interfaces/interface[name='%s']/ietf-ip:ipv4/infix-dhcp-client:dhcp", ifname);
+			result = add_dependencies(diff, xpath, ifname);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add dhcp-client to diff for interface %s", ifname);
+				ly_set_free(ifaces, NULL);
+				return result;
 			}
 		}
 	}
+	ly_set_free(ifaces, NULL);
+
+	return result;
+}
+
+static confd_dependency_t dep_wifi_interfaces(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	struct lyd_node *difs, *dif;
+
+	difs = lydx_get_descendant(*diff, "interfaces", "interface", NULL);
+	if (!difs)
+		return CONFD_DEP_DONE;
+
+	LYX_LIST_FOR_EACH(difs, dif, "interface") {
+		struct lyd_node *radio_node, *cif;
+		const char *ifname, *radio_name;
+		enum iftype type;
+		char xpath[256];
+
+		ifname = lydx_get_cattr(dif, "name");
+
+		cif = lydx_get_xpathf(config, "/ietf-interfaces:interfaces/interface[name='%s']", ifname);
+
+		type = iftype_from_iface(dif);
+		if (type == IFT_UNKNOWN)
+			type = iftype_from_iface(cif);
+
+		if (type != IFT_WIFI)
+			continue;
+
+		radio_node = lydx_get_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio", ifname);
+		if (!radio_node)
+			continue;
+
+		radio_name = lyd_get_value(radio_node);
+
+		/* Add the radio to the diff */
+		snprintf(xpath, sizeof(xpath),
+			 "/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio_name);
+		result = add_dependencies(diff, xpath, radio_name);
+		if (result == CONFD_DEP_ERROR) {
+			ERROR("Failed to add radio %s to diff for WiFi interface %s", radio_name, ifname);
+			return result;
+		}
+
+		DEBUG("Added radio %s to diff for WiFi interface %s", radio_name, ifname);
+	}
+
+	return result;
+}
+
+static confd_dependency_t dep_radio_components(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	struct lyd_node *dcomponents, *dcomponent;
+
 	dcomponents = lydx_get_descendant(*diff, "hardware", "component", NULL);
 	LYX_LIST_FOR_EACH(dcomponents, dcomponent, "component") {
-				const char *class, *name;
+		const char *class, *name;
+		struct ly_set *ifaces;
+		uint32_t j;
 
 		name = lydx_get_cattr(dcomponent, "name");
-		if (!name)
-			continue;
 
 		class = lydx_get_cattr(dcomponent, "class");
 		if (!class) {
-		struct lyd_node *class_node = lydx_get_xpathf(config, "/ietf-hardware:hardware/component[name='%s']/class", name);
+			struct lyd_node *class_node = lydx_get_xpathf(config,
+				"/ietf-hardware:hardware/component[name='%s']/class", name);
 			if (class_node)
 				class = lyd_get_value(class_node);
 		}
-		if (!strcmp(class, "infix-hardware:wifi"))
-		{
-			struct ly_set *ifaces;
-			uint32_t j;
+
+		if (strcmp(class, "infix-hardware:wifi"))
+			continue;
+
+		/* Find all interfaces that reference this radio */
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface/infix-interfaces:wifi/radio[.='%s']", name);
+		if (!ifaces || ifaces->count == 0) {
+			ly_set_free(ifaces, NULL);
+			continue;
+		}
+
+		DEBUG("Found %d interfaces using radio %s", ifaces->count, name);
+		for (j = 0; j < ifaces->count; j++) {
+			struct lyd_node *wifi_node = lyd_parent(ifaces->dnodes[j]);
+			struct lyd_node *iface_node = lyd_parent(wifi_node);
+			const char *ifname;
 			char xpath[256];
 
-			/* Find all interfaces that reference this radio */
-			ifaces = lydx_find_xpathf(config,
-				"/ietf-interfaces:interfaces/interface/infix-interfaces:wifi/radio[.='%s']",
-				name);
-			if (!ifaces || ifaces->count == 0) {
-				if (ifaces)
-					ly_set_free(ifaces, NULL);
-				continue;
+			ifname = lydx_get_cattr(iface_node, "name");
+
+			snprintf(xpath, sizeof(xpath),
+				 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi", ifname);
+			result = add_dependencies(diff, xpath, ifname);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add interface wifi for %s (radio %s)", ifname, name);
+				ly_set_free(ifaces, NULL);
+				return result;
 			}
-			DEBUG("Found %d interfaces using radio %s", ifaces->count, name);
 
-			for (j = 0; j < ifaces->count; j++) {
-				/* ifaces->dnodes[j] is the radio leaf, navigate up: radio -> wifi -> interface */
-				struct lyd_node *wifi_node = lyd_parent(ifaces->dnodes[j]);
-				struct lyd_node *iface_node = lyd_parent(wifi_node);
-				const char *ifname;
+			snprintf(xpath, sizeof(xpath),
+				 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio", ifname);
+			result = add_dependencies(diff, xpath, name);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add radio leaf for interface %s (radio %s)", ifname, name);
+				ly_set_free(ifaces, NULL);
+				return result;
+			}
 
-				ifname = lydx_get_cattr(iface_node, "name");
-				if (!ifname)
-					continue;
-
-				/* Add the wifi container */
+			if (lydx_get_child(wifi_node, "station")) {
 				snprintf(xpath, sizeof(xpath),
-					"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
-					ifname);
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/station", ifname);
 				result = add_dependencies(diff, xpath, ifname);
 				if (result == CONFD_DEP_ERROR) {
-					ERROR("Failed to add interface wifi for %s (radio %s)", ifname, name);
+					ERROR("Failed to add station for interface %s (radio %s)", ifname, name);
 					ly_set_free(ifaces, NULL);
 					return result;
 				}
-
-				/* Add the radio leaf */
+			} else if (lydx_get_child(wifi_node, "access-point")) {
 				snprintf(xpath, sizeof(xpath),
-					"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
-					ifname);
-				result = add_dependencies(diff, xpath, name);
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/access-point", ifname);
+				result = add_dependencies(diff, xpath, ifname);
 				if (result == CONFD_DEP_ERROR) {
-					ERROR("Failed to add radio leaf for interface %s (radio %s)", ifname, name);
+					ERROR("Failed to add access-point for interface %s (radio %s)", ifname, name);
 					ly_set_free(ifaces, NULL);
 					return result;
 				}
-
-				/* Add station or access-point container depending on mode */
-				if (lydx_get_child(wifi_node, "station")) {
-					snprintf(xpath, sizeof(xpath),
-						"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/station",
-						ifname);
-					result = add_dependencies(diff, xpath, ifname);
-					if (result == CONFD_DEP_ERROR) {
-						ERROR("Failed to add station for interface %s (radio %s)", ifname, name);
-						ly_set_free(ifaces, NULL);
-						return result;
-					}
-				} else if (lydx_get_child(wifi_node, "access-point")) {
-					snprintf(xpath, sizeof(xpath),
-						"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/access-point",
-						ifname);
-					result = add_dependencies(diff, xpath, ifname);
-					if (result == CONFD_DEP_ERROR) {
-						ERROR("Failed to add access-point for interface %s (radio %s)", ifname, name);
-						ly_set_free(ifaces, NULL);
-						return result;
-					}
-				}
-
-				DEBUG("Added interface %s to diff for radio %s", ifname, name);
 			}
-			ly_set_free(ifaces, NULL);
+
+			DEBUG("Added interface %s to diff for radio %s", ifname, name);
 		}
+		ly_set_free(ifaces, NULL);
 	}
+
+	return result;
+}
+
+static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result;
+
+	result = dep_symmetric_keys(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_asymmetric_keys(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_hostname(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_wifi_interfaces(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_radio_components(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
 
 	return result;
 }
