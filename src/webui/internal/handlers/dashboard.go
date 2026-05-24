@@ -157,6 +157,13 @@ const (
 // sensorStatusOK matches the ietf-hardware sensor-status "ok" enum value.
 const sensorStatusOK = "ok"
 
+// admin-state values for configurable ietf-hardware components. The infix
+// deviation in infix-hardware.yang restricts the base type to these two.
+const (
+	adminStateLocked   = "locked"
+	adminStateUnlocked = "unlocked"
+)
+
 type hardwareWrapper struct {
 	Hardware struct {
 		Component []hwComponentJSON `json:"component"`
@@ -174,6 +181,7 @@ type hwComponentJSON struct {
 	HardwareRev string         `json:"hardware-rev"`
 	PhysAddress string         `json:"infix-hardware:phys-address"`
 	WiFiRadio   *wifiRadioHWJSON `json:"infix-hardware:wifi-radio"`
+	GPSReceiver *struct{}        `json:"infix-hardware:gps-receiver"`
 	SensorData  *struct {
 		ValueType  string    `json:"value-type"`
 		Value      yangInt64 `json:"value"`

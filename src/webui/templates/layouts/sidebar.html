@@ -17,6 +17,16 @@
             Overview
           </a>
         </li>
+        <li>
+          <a href="/hardware"
+             hx-get="/hardware"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "hardware"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/hardware.svg')"></span>
+            Hardware
+          </a>
+        </li>
         {{if and .Capabilities (.Capabilities.Has "containers")}}
         <li>
           <a href="/containers"
@@ -182,6 +192,16 @@
              class="nav-link {{if eq .ActivePage "configure-system"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/system.svg')"></span>
             System
+          </a>
+        </li>
+        <li>
+          <a href="/configure/hardware"
+             hx-get="/configure/hardware"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-hardware"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/hardware.svg')"></span>
+            Hardware
           </a>
         </li>
         <li>

@@ -1,0 +1,206 @@
+{{define "hardware.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  {{/* ── Board ─────────────────────────────────────────────────────────── */}}
+  {{if .Board.Model}}
+  <div class="info-card">
+    <div class="card-header">Board</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
+        {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
+        {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
+        {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
+        {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td><span class="num">{{.Board.BaseMAC}}</span></td></tr>{{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{/* ── USB Ports ────────────────────────────────────────────────────── */}}
+  {{if .USBPorts}}
+  <div class="info-card">
+    <div class="card-header">USB Ports
+      <a href="/configure/hardware"
+         hx-get="/configure/hardware"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>State</th>
+            <th>Operational</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .USBPorts}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>
+              {{if eq .AdminState "unlocked"}}
+              <span class="status-dot status-up"></span>unlocked
+              {{else if eq .AdminState "locked"}}
+              <span class="status-dot status-down"></span>locked
+              {{else}}
+              <span class="text-muted">{{.AdminState}}</span>
+              {{end}}
+            </td>
+            <td>{{if .OperState}}{{.OperState}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .Description}}{{.Description}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{/* ── WiFi Radios ──────────────────────────────────────────────────── */}}
+  {{if .WiFiRadios}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">WiFi Radios
+      <a href="/configure/hardware"
+         hx-get="/configure/hardware"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Manufacturer</th>
+            <th>Bands</th>
+            <th>Standards</th>
+            <th class="num">Max AP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .WiFiRadios}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{if .Manufacturer}}{{.Manufacturer}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .Bands}}{{.Bands}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .Standards}}{{.Standards}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td class="num">{{if .MaxAP}}{{.MaxAP}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{/* ── GPS Receivers ────────────────────────────────────────────────── */}}
+  {{if .GPSReceivers}}
+  <div class="info-card">
+    <div class="card-header">GPS Receivers</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Manufacturer</th>
+            <th>Model</th>
+            <th>HW Rev</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .GPSReceivers}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{if .Manufacturer}}{{.Manufacturer}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .ModelName}}{{.ModelName}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .HardwareRev}}{{.HardwareRev}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{/* ── Sensors ──────────────────────────────────────────────────────── */}}
+  {{if .SensorGroups}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Sensors</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{range $g := .SensorGroups}}
+          {{if $g.Parent}}<tr class="sensor-group-hdr"><th colspan="3">{{$g.Parent}}</th></tr>{{end}}
+          {{range $g.Sensors}}
+          <tr{{if $g.Parent}} class="sensor-child"{{end}}>
+            <th>{{.Name}}</th>
+            <td><span class="num">{{.Value}}</span></td>
+            <td style="text-align:right">
+              {{if eq .OperStatus "ok"}}
+              <span class="status-dot status-up" title="ok"></span>
+              {{else if eq .OperStatus ""}}
+              <span class="text-muted">&mdash;</span>
+              {{else}}
+              <span class="status-dot status-down" title="{{.OperStatus}}"></span><span class="text-muted">{{.OperStatus}}</span>
+              {{end}}
+            </td>
+          </tr>
+          {{end}}
+        {{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{/* ── Other Components ─────────────────────────────────────────────── */}}
+  {{if .OtherComps}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Other Components</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Class</th>
+            <th>Parent</th>
+            <th>Manufacturer</th>
+            <th>Model</th>
+            <th>Serial</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .OtherComps}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Class}}</td>
+            <td>{{if .Parent}}{{.Parent}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .Manufacturer}}{{.Manufacturer}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .ModelName}}{{.ModelName}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>{{if .SerialNum}}{{.SerialNum}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{if and (not .Board.Model) (not .USBPorts) (not .WiFiRadios) (not .GPSReceivers) (not .SensorGroups) (not .OtherComps) (not .Error)}}
+  <div class="info-card info-grid-span-2">
+    <p class="empty-message">No hardware information available.</p>
+  </div>
+  {{end}}
+
+</section>
+{{end}}

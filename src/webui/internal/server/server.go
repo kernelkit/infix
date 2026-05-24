@@ -69,6 +69,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	hwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/hardware.html")
+	if err != nil {
+		return nil, err
+	}
 	wifiTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/wifi.html")
 	if err != nil {
 		return nil, err
@@ -118,6 +122,10 @@ func New(
 		return nil, err
 	}
 	cfgFwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-firewall.html")
+	if err != nil {
+		return nil, err
+	}
+	cfgHwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-hardware.html")
 	if err != nil {
 		return nil, err
 	}
@@ -220,6 +228,7 @@ func New(
 
 	routing := &handlers.RoutingHandler{Template: routingTmpl, RC: rc}
 	wifi := &handlers.WiFiHandler{Template: wifiTmpl, RC: rc}
+	hw := &handlers.HardwareHandler{Template: hwTmpl, RC: rc}
 	vpn := &handlers.VPNHandler{Template: vpnTmpl, RC: rc}
 	dhcp := &handlers.DHCPHandler{Template: dhcpTmpl, RC: rc}
 	ntp := &handlers.NTPHandler{Template: ntpTmpl, RC: rc}
@@ -233,6 +242,7 @@ func New(
 	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc, Schema: schemaCache}
 	cfgRoutes := &handlers.ConfigureRoutesHandler{Template: cfgRoutesTmpl, RC: rc, Schema: schemaCache}
 	cfgFw := &handlers.ConfigureFirewallHandler{Template: cfgFwTmpl, RC: rc, Schema: schemaCache}
+	cfgHw := &handlers.ConfigureHardwareHandler{Template: cfgHwTmpl, RC: rc, Schema: schemaCache}
 	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
@@ -287,6 +297,7 @@ func New(
 	mux.HandleFunc("POST /maintenance/system/datetime",        sys.SetDatetime)
 	mux.HandleFunc("GET /routing", routing.Overview)
 	mux.HandleFunc("GET /wifi", wifi.Overview)
+	mux.HandleFunc("GET /hardware", hw.Overview)
 	mux.HandleFunc("GET /vpn", vpn.Overview)
 	mux.HandleFunc("GET /dhcp", dhcp.Overview)
 	mux.HandleFunc("GET /ntp", ntp.Overview)
@@ -361,6 +372,12 @@ func New(
 	mux.HandleFunc("POST /configure/firewall/services",            cfgFw.AddService)
 	mux.HandleFunc("POST /configure/firewall/services/{name}",     cfgFw.SaveService)
 	mux.HandleFunc("DELETE /configure/firewall/services/{name}",   cfgFw.DeleteService)
+	mux.HandleFunc("GET /configure/hardware",                       cfgHw.Overview)
+	mux.HandleFunc("POST /configure/hardware",                      cfgHw.CreateHardware)
+	mux.HandleFunc("POST /configure/hardware/usb/{name}",           cfgHw.SaveUSBPort)
+	mux.HandleFunc("POST /configure/hardware/wifi/{name}",          cfgHw.SaveWiFiRadio)
+	mux.HandleFunc("POST /configure/hardware/gps/{name}",           cfgHw.SaveGPS)
+	mux.HandleFunc("DELETE /configure/hardware/{name}",             cfgHw.DeleteComponent)
 	mux.HandleFunc("GET /configure/routes",               cfgRoutes.Overview)
 	mux.HandleFunc("POST /configure/routes",              cfgRoutes.AddRoute)
 	mux.HandleFunc("PUT /configure/routes",               cfgRoutes.UpdateRoute)

@@ -25,10 +25,11 @@ type wifiMaxIfJSON struct {
 }
 
 type wifiRadioHWJSON struct {
-	Channel       interface{}     `json:"channel"` // uint16 or "auto"
-	Band          string          `json:"band"`
-	Frequency     int             `json:"frequency"` // MHz, operational
-	Noise         int             `json:"noise"`     // dBm, operational
+	CountryCode   string          `json:"country-code"` // ISO 3166-1, rw
+	Channel       interface{}     `json:"channel"`      // uint16 or "auto", rw
+	Band          string          `json:"band"`         // rw
+	Frequency     int             `json:"frequency"`    // MHz, operational
+	Noise         int             `json:"noise"`        // dBm, operational
 	Driver        string          `json:"driver"`
 	Bands         []wifiBandJSON  `json:"bands"`
 	MaxInterfaces *wifiMaxIfJSON  `json:"max-interfaces"`
