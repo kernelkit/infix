@@ -86,8 +86,12 @@ func (h *NTPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		} `json:"ietf-ntp:ntp"`
 	}
 	if err := h.RC.Get(ctx, "/data/ietf-ntp:ntp", &raw); err != nil {
-		log.Printf("restconf ntp: %v", err)
-		data.Error = "Failed to fetch NTP data"
+		// 404 = NTP container absent (not configured). Render the empty-state
+		// section instead of a red error banner.
+		if !restconf.IsNotFound(err) {
+			log.Printf("restconf ntp: %v", err)
+			data.Error = "Failed to fetch NTP data"
+		}
 	} else {
 		ss := raw.NTP.ClockState.SystemStatus
 		synced := strings.Contains(ss.ClockState, "synchronized") &&

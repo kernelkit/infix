@@ -32,8 +32,8 @@
     {{end}}
   </table>
 
-  {{if .NTP.Associations}}
   <h3 class="section-subtitle">Associations</h3>
+  {{if .NTP.Associations}}
   <div class="data-table-wrap">
     <table class="data-table">
       <thead>
@@ -63,12 +63,19 @@
     </table>
   </div>
   {{else}}
-  <p class="text-muted">No associations.</p>
+  <p class="empty-message">No upstream associations to display.</p>
   {{end}}
 </section>
 {{else if not .Error}}
 <section class="info-card">
-  <p class="text-muted">NTP data not available.</p>
+  <div class="card-header">NTP
+    <a href="/configure/tree?path=/ietf-system:system/ntp"
+       hx-get="/configure/tree?path=/ietf-system:system/ntp"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  <p class="empty-message">NTP is not configured.</p>
 </section>
 {{end}}
 {{end}}
