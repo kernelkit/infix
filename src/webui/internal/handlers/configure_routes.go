@@ -4,7 +4,6 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -298,17 +297,13 @@ func (h *ConfigureRoutesHandler) fetchStaticCPP(ctx context.Context) (staticCPPW
 	if err == nil {
 		return cpp, nil
 	}
-	var rcErr *restconf.Error
-	if errors.As(err, &rcErr) && rcErr.StatusCode == http.StatusNotFound {
-		runErr := h.RC.Get(ctx, "/data"+staticCPPSuffix, &cpp)
-		if runErr == nil {
-			return cpp, nil
-		}
-		var rcRun *restconf.Error
-		if errors.As(runErr, &rcRun) && rcRun.StatusCode == http.StatusNotFound {
-			return cpp, nil // no static routes configured — not an error
-		}
-		return cpp, runErr
+	if !restconf.IsNotFound(err) {
+		return cpp, err
 	}
-	return cpp, err
+	runErr := h.RC.Get(ctx, "/data"+staticCPPSuffix, &cpp)
+	if runErr == nil || restconf.IsNotFound(runErr) {
+		// 404 on fallback = no static routes configured, not an error
+		return cpp, nil
+	}
+	return cpp, runErr
 }

@@ -4,7 +4,6 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -716,17 +715,15 @@ func (h *ConfigureFirewallHandler) fetchFirewall(ctx context.Context) (*firewall
 	if err == nil {
 		return wrap.Firewall, wrap.Firewall != nil, nil
 	}
-	var rcErr *restconf.Error
-	if errors.As(err, &rcErr) && rcErr.StatusCode == http.StatusNotFound {
-		runErr := h.RC.Get(ctx, "/data/infix-firewall:firewall", &wrap)
-		if runErr == nil {
-			return wrap.Firewall, wrap.Firewall != nil, nil
-		}
-		var rcRun *restconf.Error
-		if errors.As(runErr, &rcRun) && rcRun.StatusCode == http.StatusNotFound {
-			return nil, false, nil
-		}
-		return nil, false, runErr
+	if !restconf.IsNotFound(err) {
+		return nil, false, err
 	}
-	return nil, false, err
+	runErr := h.RC.Get(ctx, "/data/infix-firewall:firewall", &wrap)
+	if runErr == nil {
+		return wrap.Firewall, wrap.Firewall != nil, nil
+	}
+	if restconf.IsNotFound(runErr) {
+		return nil, false, nil
+	}
+	return nil, false, runErr
 }

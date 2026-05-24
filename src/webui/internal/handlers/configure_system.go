@@ -4,7 +4,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -108,19 +107,13 @@ func (h *ConfigureSystemHandler) Overview(w http.ResponseWriter, r *http.Request
 
 	var raw cfgSystemWrapper
 	if err := h.RC.Get(r.Context(), candidatePath+"/ietf-system:system", &raw); err != nil {
-		var rcErr *restconf.Error
-		if errors.As(err, &rcErr) && rcErr.StatusCode == http.StatusNotFound {
-			// Candidate not initialised — read from running as fallback.
-			if fallErr := h.RC.Get(r.Context(), "/data/ietf-system:system", &raw); fallErr != nil {
-				var rcFall *restconf.Error
-				if !errors.As(fallErr, &rcFall) || rcFall.StatusCode != http.StatusNotFound {
-					log.Printf("configure system (running fallback): %v", fallErr)
-					data.Error = "Could not read system configuration"
-				}
-			}
-		} else {
+		if !restconf.IsNotFound(err) {
 			log.Printf("configure system: %v", err)
 			data.Error = "Could not read candidate configuration"
+		} else if fallErr := h.RC.Get(r.Context(), "/data/ietf-system:system", &raw); fallErr != nil && !restconf.IsNotFound(fallErr) {
+			// Candidate not initialised — fall back to running; only real errors surface.
+			log.Printf("configure system (running fallback): %v", fallErr)
+			data.Error = "Could not read system configuration"
 		}
 	}
 	if data.Error == "" {

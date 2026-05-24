@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -69,17 +68,11 @@ func (h *ConfigureKeystoreHandler) Overview(w http.ResponseWriter, r *http.Reque
 
 	var ks keystoreWrapper
 	if err := h.RC.Get(r.Context(), keystorePath, &ks); err != nil {
-		var rcErr *restconf.Error
-		if errors.As(err, &rcErr) && rcErr.StatusCode == http.StatusNotFound {
-			if fallErr := h.RC.Get(r.Context(), "/data/ietf-keystore:keystore", &ks); fallErr != nil {
-				var rcFall *restconf.Error
-				if !errors.As(fallErr, &rcFall) || rcFall.StatusCode != http.StatusNotFound {
-					log.Printf("configure keystore (running fallback): %v", fallErr)
-					data.Error = "Could not read keystore"
-				}
-			}
-		} else {
+		if !restconf.IsNotFound(err) {
 			log.Printf("configure keystore: %v", err)
+			data.Error = "Could not read keystore"
+		} else if fallErr := h.RC.Get(r.Context(), "/data/ietf-keystore:keystore", &ks); fallErr != nil && !restconf.IsNotFound(fallErr) {
+			log.Printf("configure keystore (running fallback): %v", fallErr)
 			data.Error = "Could not read keystore"
 		}
 	}

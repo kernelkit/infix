@@ -3,7 +3,6 @@
 package handlers
 
 import (
-	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -145,8 +144,7 @@ func (h *FirewallHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	var fw firewallWrapper
 	err := h.RC.Get(r.Context(), "/data/infix-firewall:firewall", &fw)
 	if err != nil {
-		var rcErr *restconf.Error
-		if errors.As(err, &rcErr) && rcErr.StatusCode == http.StatusNotFound {
+		if restconf.IsNotFound(err) {
 			// Firewall module not active — show disabled state, not an error.
 			data.EnabledText = "Inactive"
 		} else {
