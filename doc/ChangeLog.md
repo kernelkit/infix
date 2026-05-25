@@ -9,6 +9,7 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.33 (LTS)
+- Upgrade Buildroot to 2025.02.14 (LTS)
 - Upgrade FRR to 10.5.4
 - Add support for [Acer Connect Vero W6m][AcerConnectVero], a COTS home router,
   based upon the same hardware as [Banana Pi BPI-R3][BPI-R3], but
