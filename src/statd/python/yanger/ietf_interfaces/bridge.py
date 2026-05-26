@@ -275,8 +275,9 @@ def vlans_add_memberships(iplink, vlans):
             continue
 
         for brpvlan in brpvlans["vlans"]:
-            if not (vlan := vlans.get(brpvlan["vlan"])):
-                LOG.error(f"Unexpected vlan {brpvlans['vlan']} on {port}")
+            vid = brpvlan["vlan"]
+            if not (vlan := vlans.get(vid)):
+                LOG.error(f"Unexpected vlan {vid} on {port}")
                 continue
 
             if "Egress Untagged" in brpvlan.get("flags", []):
@@ -291,17 +292,18 @@ def vlans(iplink):
 
     mctldata = mctl_queriers()
 
-    vlans = {
-        v["vlan"]: {
-            "vid": v["vlan"],
-            "untagged": [],
-            "tagged": [],
-
-            "multicast": multicast(iplink, v, mctldata),
-            "multicast-filters": multicast_filters(iplink, v["vlan"]),
-        }
-        for v in brgvlans[0]["vlans"]
-    }
+    vlans = {}
+    for v in brgvlans[0]["vlans"]:
+        start = v["vlan"]
+        end = v.get("vlanEnd", start)
+        for vid in range(start, end + 1):
+            vlans[vid] = {
+                "vid": vid,
+                "untagged": [],
+                "tagged": [],
+                "multicast": multicast(iplink, v, mctldata),
+                "multicast-filters": multicast_filters(iplink, vid),
+            }
 
     vlans_add_memberships(iplink, vlans)
     return list(vlans.values())
