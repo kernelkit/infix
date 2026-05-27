@@ -655,6 +655,8 @@
       
         
       
+        
+      
     
     
     
@@ -822,6 +824,34 @@
     
   
     Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
   
 
     
@@ -1024,10 +1054,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13">
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -1045,8 +1075,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2537,11 +2567,11 @@ admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/ntp-server/&gt; <
 <p>When configuring, e.g., <code>dns-server</code>, or <code>router</code> options with the value
 <code>auto</code>, the system uses the IP address from the interface matching the
 subnet.  For example:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv4                   192.168.1.1/24 (static)
-eth1            ethernet   UP          02:00:00:00:00:01
+eth1            ethernet      UP          02:00:00:00:00:01
                 ipv4                   192.168.2.1/24 (static)
 
 admin@example:/config/dhcp-server/subnet/192.168.1.0/24/&gt; <b>edit option dns-server</b>

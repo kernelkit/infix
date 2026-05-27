@@ -657,6 +657,8 @@
       
         
       
+        
+      
     
     
     
@@ -824,6 +826,34 @@
     
   
     Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
   
 
     
@@ -1028,10 +1058,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" checked="">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" checked="">
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -1049,8 +1079,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2907,17 +2937,17 @@ admin@example:/&gt;
 tunnel endpoints use IPv4 or IPv6.</p>
 <h2 id="monitoring-wireguard-status">Monitoring WireGuard Status<a class="headerlink" href="#monitoring-wireguard-status" title="Permanent link">¶</a></h2>
 <p>Check WireGuard interface status and peer connections:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
+<pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
 wg0             wireguard  UP          2 peers (1 up)
                 ipv4                   10.0.0.1/24 (static)
                 ipv6                   fd00::1/64 (static)
 
-admin@example:/&gt; <b>show interfaces wg0</b>
-name                : wg0
-type                : wireguard
-index               : 12
-operational status  : up
-peers               : 2
+admin@example:/&gt; <b>show interface wg0</b>
+name               : wg0
+type               : wireguard
+index              : 12
+operational status : up
+peers              : 2
 
   Peer 1:
     status            : UP

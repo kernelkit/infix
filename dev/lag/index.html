@@ -657,6 +657,8 @@
       
         
       
+        
+      
     
     
     
@@ -957,6 +959,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../ip/" class="md-nav__link">
         
   
@@ -1139,10 +1169,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13">
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -1160,8 +1190,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2537,77 +2567,77 @@ admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; <b>set down 
 <p>Like other interfaces, link aggregates are also available in the general
 interfaces overview in the CLI admin-exec context.  Here is the above
 static mode aggregate:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-lo              ethernet   UP          00:00:00:00:00:00
-                ipv4                   127.0.0.1/8 (static)
-                ipv6                   ::1/128 (static)
+<pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+lo              ethernet      UP          00:00:00:00:00:00
+                ipv4                      127.0.0.1/8 (static)
+                ipv6                      ::1/128 (static)
 .
 .
 .
-lag0            lag        UP          static: balance-xor, hash: layer2
-│               ethernet   UP          00:a0:85:00:02:00
-├ eth7          lag        ACTIVE
-└ eth8          lag        ACTIVE
+lag0            lag           UP          static: balance-xor, hash: layer2
+│               ethernet      UP          00:a0:85:00:02:00
+├ eth7          lag           ACTIVE
+└ eth8          lag           ACTIVE
 </code></pre>
 
 <p>Same aggregate, but in LACP mode:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-lo              ethernet   UP          00:00:00:00:00:00
-                ipv4                   127.0.0.1/8 (static)
-                ipv6                   ::1/128 (static)
+<pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+lo              ethernet      UP          00:00:00:00:00:00
+                ipv4                      127.0.0.1/8 (static)
+                ipv6                      ::1/128 (static)
 .
 .
 .
-lag0            lag        UP          lacp: active, rate: fast (1s), hash: layer2
-│               ethernet   UP          00:a0:85:00:02:00
-├ eth7          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
-└ eth8          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+lag0            lag           UP          lacp: active, rate: fast (1s), hash: layer2
+│               ethernet      UP          00:a0:85:00:02:00
+├ eth7          lag           ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+└ eth8          lag           ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
 </code></pre>
 
 <h2 id="operational-status-detail">Operational Status, Detail<a class="headerlink" href="#operational-status-detail" title="Permanent link">¶</a></h2>
 <p>In addition to basic status shown in the interface overview, detailed
 LAG status can be inspected:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface lag0</b>
-name                : lag0
-index               : 25
-mtu                 : 1500
-operational status  : up
-physical address    : 00:a0:85:00:02:00
-lag mode            : static
-lag type            : balance-xor
-lag hash            : layer2
-link debounce up    : 0 msec
-link debounce down  : 0 msec
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 0
-out-octets          : 2142
+name               : lag0
+index              : 25
+mtu                : 1500
+operational status : up
+physical address   : 00:a0:85:00:02:00
+lag mode           : static
+lag type           : balance-xor
+lag hash           : layer2
+link debounce up   : 0 msec
+link debounce down : 0 msec
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 0
+out-octets         : 2142
 </code></pre>
 
 <p>Same aggregate, but in LACP mode:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface lag0</b>
-name                : lag0
-index               : 24
-mtu                 : 1500
-operational status  : up
-physical address    : 00:a0:85:00:02:00
-lag mode            : lacp
-lag hash            : layer2
-lacp mode           : active
-lacp rate           : fast (1s)
-lacp aggregate id   : 1
+name               : lag0
+index              : 24
+mtu                : 1500
+operational status : up
+physical address   : 00:a0:85:00:02:00
+lag mode           : lacp
+lag hash           : layer2
+lacp mode          : active
+lacp rate          : fast (1s)
+lacp aggregate id  : 1
 lacp system priority: 65535
-lacp actor key      : 9
-lacp partner key    : 9
-lacp partner mac    : 00:a0:85:00:03:00
-link debounce up    : 0 msec
-link debounce down  : 0 msec
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 100892
-out-octets          : 111776
+lacp actor key     : 9
+lacp partner key   : 9
+lacp partner mac   : 00:a0:85:00:03:00
+link debounce up   : 0 msec
+link debounce down : 0 msec
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 100892
+out-octets         : 111776
 </code></pre>
 
 <p>Member ports provide additional status information:</p>
@@ -2628,21 +2658,21 @@ out-octets          : 111776
 </ul>
 <p>Example member port status:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface eth7</b>
-name                : eth7
-index               : 8
-mtu                 : 1500
-operational status  : up
-physical address    : 00:a0:85:00:02:00
-lag member          : lag0
-lag member state    : active
-lacp aggregate id   : 1
-lacp actor state    : active, short_timeout, aggregating, in_sync, collecting, distributing
-lacp partner state  : active, short_timeout, aggregating, in_sync, collecting, distributing
-link failure count  : 0
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 473244
-out-octets          : 499037
+name               : eth7
+index              : 8
+mtu                : 1500
+operational status : up
+physical address   : 00:a0:85:00:02:00
+lag member         : lag0
+lag member state   : active
+lacp aggregate id  : 1
+lacp actor state   : active, short_timeout, aggregating, in_sync, collecting, distributing
+lacp partner state : active, short_timeout, aggregating, in_sync, collecting, distributing
+link failure count : 0
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 473244
+out-octets         : 499037
 </code></pre>
 
 <h2 id="example-switch-uplink-with-lacp">Example: Switch Uplink with LACP<a class="headerlink" href="#example-switch-uplink-with-lacp" title="Permanent link">¶</a></h2>

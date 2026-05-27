@@ -10,7 +10,7 @@
         <link rel="canonical" href="https://kernelkit.github.io/infix/dev/ip/">
       
       
-        <link rel="prev" href="../ethernet/">
+        <link rel="prev" href="../vlan/">
       
       
         <link rel="next" href="../routing/">
@@ -657,6 +657,8 @@
       
         
       
+        
+      
     
     
     
@@ -824,6 +826,34 @@
     
   
     Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
   
 
     
@@ -1250,10 +1280,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13">
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -1271,8 +1301,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2969,11 +2999,11 @@ will be ignored. For details on how to enable the NTP client, see the
 <a href="../system/#ntp-client-configuration">NTP Client Configuration</a> section.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h2>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-switch.svg" data-desc-position="bottom"><img alt="Switch example (eth0 and lo)" src="../img/ip-address-example-switch.svg"></a></p>
-<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3002,13 +3032,13 @@ admin@example:/config/interface/eth0/ipv4/&gt; <b>diff</b>
 +  }
 +}
 admin@example:/config/interface/eth0/ipv4/&gt; <b>leave</b>
-admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv4                   169.254.1.3/16 (random)
                 ipv4                   10.0.1.1/24 (static)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3032,12 +3062,12 @@ admin@example:/config/interface/eth0/ipv4/autoconf/&gt; <b>leave</b>
 admin@example:/config/&gt; <b>edit interface eth0 ipv4</b>
 admin@example:/config/interface/eth0/ipv4/&gt; <b>set dhcp</b>
 admin@example:/config/interface/eth0/ipv4/&gt; <b>leave</b>
-admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv4                   10.1.2.100/24 (dhcp)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3075,11 +3105,11 @@ admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>set dhcp</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
 admin@example:/&gt; <b>show interface</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8::42/128 (dhcp)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3125,10 +3155,10 @@ on the interface.</p>
 admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>set enabled false</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
-admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
-lo              ethernet   UP          00:00:00:00:00:00
+admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3140,12 +3170,12 @@ admin@example:/&gt;
 admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>set address 2001:db8::1 prefix-length 64</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
-admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8::1/64 (static)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3158,12 +3188,12 @@ default. The address is formed by concatenating the network prefix
 advertised by the router (here 2001:db8:0:1::0/64) and the interface
 identifier.  The resulting address is of type <em>link-layer</em>, as it is
 formed based on the interface identifier (<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip.yang</a>).</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3175,11 +3205,11 @@ below.</p>
 admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>set autoconf create-global-addresses false</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
-admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3189,12 +3219,12 @@ admin@example:/&gt;
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-auto-global.svg" data-desc-position="bottom"><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg"></a></p>
 <p>By default, the auto-configured link-local and global IPv6 addresses
 are formed from a link-identifier based on the MAC address.</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
@@ -3207,12 +3237,12 @@ possible to specify use of a random identifier (<a href="https://www.rfc-editor.
 admin@example:/config/&gt; <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>set autoconf create-temporary-addresses true</b>
 admin@example:/config/interface/eth0/ipv6/&gt; <b>leave</b>
-admin@example:/&gt; <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/&gt; <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8:0:1:b705:8374:638e:74a8/64 (random)
                 ipv6                   fe80::ad3d:b274:885a:9ffb/64 (random)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;

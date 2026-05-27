@@ -655,6 +655,8 @@
       
         
       
+        
+      
     
     
     
@@ -822,6 +824,34 @@
     
   
     Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
   
 
     
@@ -1024,10 +1054,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13">
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -1045,8 +1075,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2516,20 +2546,20 @@ VLAN configuration step.</p>
 <h2 id="configuration-at-start">Configuration at Start<a class="headerlink" href="#configuration-at-start" title="Permanent link">¶</a></h2>
 <p>Starting out, we assume a configuration where all ports are network
 interfaces (possibly with IPv6 enabled).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; show interfaces
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>lo              ethernet   UP          00:00:00:00:00:00
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; show interface
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>lo              ethernet      UP          00:00:00:00:00:00
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                ipv4                   127.0.0.1/8 (static)
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                ipv6                   ::1/128 (static)
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>e1              ethernet   LOWER-DOWN  00:53:00:06:11:01
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>e2              ethernet   LOWER-DOWN  00:53:00:06:11:02
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>e3              ethernet   LOWER-DOWN  00:53:00:06:11:03
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>e4              ethernet   LOWER-DOWN  00:53:00:06:11:04
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>e5              ethernet   LOWER-DOWN  00:53:00:06:11:05
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>e6              ethernet   LOWER-DOWN  00:53:00:06:11:06
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>e7              ethernet   LOWER-DOWN  00:53:00:06:11:07
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>e8              ethernet   LOWER-DOWN  00:53:00:06:11:08
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>e9              ethernet   LOWER-DOWN  00:53:00:06:11:09
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>e10             ethernet   UP          00:53:00:06:11:0a
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>e1              ethernet      LOWER-DOWN  00:53:00:06:11:01
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>e2              ethernet      LOWER-DOWN  00:53:00:06:11:02
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>e3              ethernet      LOWER-DOWN  00:53:00:06:11:03
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>e4              ethernet      LOWER-DOWN  00:53:00:06:11:04
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>e5              ethernet      LOWER-DOWN  00:53:00:06:11:05
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>e6              ethernet      LOWER-DOWN  00:53:00:06:11:06
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>e7              ethernet      LOWER-DOWN  00:53:00:06:11:07
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>e8              ethernet      LOWER-DOWN  00:53:00:06:11:08
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>e9              ethernet      LOWER-DOWN  00:53:00:06:11:09
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>e10             ethernet      UP          00:53:00:06:11:0a
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                ipv6                   fe80::0053:00ff:fe06:110a/64 (link-layer)
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>admin@example:/&gt;
 </code></pre></div>
@@ -2552,7 +2582,7 @@ all ports in the same VLAN.  The next section sets up VLAN isolation.</p>
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>admin@example:/config/&gt; set interface e10 bridge-port bridge br0
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>admin@example:/config/&gt;
 </code></pre></div>
-<p>The interface status can be viewed using <code>show interfaces</code> after leaving
+<p>The interface status can be viewed using <code>show interface</code> after leaving
 configuration context.  When configuring via SSH, first assign an IP
 address to <code>br0</code> <em>before leaving</em> configuration context, e.g.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/config/&gt; set interface br0 ipv6 enabled
@@ -2562,10 +2592,10 @@ stay in configuration context until you have completed all the device
 setup, including <a href="#set-ip-address">setting IP address</a>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/config/&gt; leave
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@example:/&gt;
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/&gt; show interfaces
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>INTERFACE       PROTOCOL   STATE       DATA
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/&gt; show interface
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>INTERFACE       PROTOCOL      STATE       DATA
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>br0             bridge
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│               ethernet   UP          00:53:00:06:11:01
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│               ethernet      UP          00:53:00:06:11:01
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>├ e1            bridge     LOWER-DOWN
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>├ e2            bridge     LOWER-DOWN
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>├ e3            bridge     LOWER-DOWN
@@ -2576,7 +2606,7 @@ setup, including <a href="#set-ip-address">setting IP address</a>.</p>
 <a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>├ e8            bridge     LOWER-DOWN
 <a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>├ e9            bridge     LOWER-DOWN
 <a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>└ e10           bridge     FORWARDING
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>lo              ethernet   UP          00:00:00:00:00:00
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>lo              ethernet      UP          00:00:00:00:00:00
 <a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>                ipv4                   127.0.0.1/8 (static)
 <a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>                ipv6                   ::1/128 (static)
 <a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>admin@example:/&gt;
@@ -2614,21 +2644,21 @@ more information.</p>
 <a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>admin@example:/&gt;
 </code></pre></div>
 <p>Interface status would now should something like the following</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; show interfaces
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>INTERFACE       PROTOCOL   STATE       DATA
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; show interface
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>INTERFACE       PROTOCOL      STATE       DATA
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>br0             bridge
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>│               ethernet   UP          00:53:00:06:11:01
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>├ e1            bridge     LOWER-DOWN  vlan:10u pvid:10
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>├ e2            bridge     LOWER-DOWN  vlan:10u pvid:10
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>├ e3            bridge     LOWER-DOWN  vlan:20u pvid:20
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>├ e4            bridge     LOWER-DOWN  vlan:20u pvid:20
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>├ e5            bridge     LOWER-DOWN  vlan:30u pvid:30
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>├ e6            bridge     LOWER-DOWN  vlan:30u pvid:30
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>├ e7            bridge     LOWER-DOWN  vlan:40u pvid:40
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>├ e8            bridge     LOWER-DOWN  vlan:40u pvid:40
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>├ e9            bridge     LOWER-DOWN  vlan:50u pvid:50
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>└ e10           bridge     FORWARDING  vlan:50u pvid:50
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>lo              ethernet   UP          00:00:00:00:00:00
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>│               ethernet      UP          00:53:00:06:11:01
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>├ e1            bridge     LOWER-DOWN  vlan:10u pvid: 10
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>├ e2            bridge     LOWER-DOWN  vlan:10u pvid: 10
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>├ e3            bridge     LOWER-DOWN  vlan:20u pvid: 20
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>├ e4            bridge     LOWER-DOWN  vlan:20u pvid: 20
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>├ e5            bridge     LOWER-DOWN  vlan:30u pvid: 30
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>├ e6            bridge     LOWER-DOWN  vlan:30u pvid: 30
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>├ e7            bridge     LOWER-DOWN  vlan:40u pvid: 40
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>├ e8            bridge     LOWER-DOWN  vlan:40u pvid: 40
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>├ e9            bridge     LOWER-DOWN  vlan:50u pvid: 50
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>└ e10           bridge     FORWARDING  vlan:50u pvid: 50
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>lo              ethernet      UP          00:00:00:00:00:00
 <a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>                ipv4                   127.0.0.1/8 (static)
 <a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>                ipv6                   ::1/128 (static)
 <a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>admin@example:/&gt;
@@ -2637,21 +2667,21 @@ more information.</p>
 <p>We can now connect the PC to e1 and e10, while the other ports are
 patched according to <a href="#vlan-snake">above</a>.  We should see link up and
 <em>FORWARDING</em> on all ports in the bridge.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt; show interfaces
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>INTERFACE       PROTOCOL   STATE       DATA
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt; show interface
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>INTERFACE       PROTOCOL      STATE       DATA
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>br0             bridge
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>│               ethernet   UP          00:53:00:06:11:01
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>├ e1            bridge     FORWARDING  vlan:10u pvid:10
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>├ e2            bridge     FORWARDING  vlan:10u pvid:10
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>├ e3            bridge     FORWARDING  vlan:20u pvid:20
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>├ e4            bridge     FORWARDING  vlan:20u pvid:20
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>├ e5            bridge     FORWARDING  vlan:30u pvid:30
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>├ e6            bridge     FORWARDING  vlan:30u pvid:30
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>├ e7            bridge     FORWARDING  vlan:40u pvid:40
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>├ e8            bridge     FORWARDING  vlan:40u pvid:40
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>├ e9            bridge     FORWARDING  vlan:50u pvid:50
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>└ e10           bridge     FORWARDING  vlan:50u pvid:50
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>lo              ethernet   UP          00:00:00:00:00:00
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>│               ethernet      UP          00:53:00:06:11:01
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>├ e1            bridge     FORWARDING  vlan:10u pvid: 10
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>├ e2            bridge     FORWARDING  vlan:10u pvid: 10
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>├ e3            bridge     FORWARDING  vlan:20u pvid: 20
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>├ e4            bridge     FORWARDING  vlan:20u pvid: 20
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>├ e5            bridge     FORWARDING  vlan:30u pvid: 30
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>├ e6            bridge     FORWARDING  vlan:30u pvid: 30
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>├ e7            bridge     FORWARDING  vlan:40u pvid: 40
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>├ e8            bridge     FORWARDING  vlan:40u pvid: 40
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>├ e9            bridge     FORWARDING  vlan:50u pvid: 50
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>└ e10           bridge     FORWARDING  vlan:50u pvid: 50
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>lo              ethernet      UP          00:00:00:00:00:00
 <a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>                ipv4                   127.0.0.1/8 (static)
 <a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>                ipv6                   ::1/128 (static)
 <a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>admin@example:/&gt;
@@ -2728,26 +2758,26 @@ ports e1 and e2) and enables IPv6.</p>
 <a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>admin@example:/&gt;
 </code></pre></div>
 <p>Interface <em>vlan10</em> with an auto-configured IPv6 address should appear.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@example:/&gt; show interfaces
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>INTERFACE       PROTOCOL   STATE       DATA
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@example:/&gt; show interface
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>INTERFACE       PROTOCOL      STATE       DATA
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>br0             bridge                 vlan:10t
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>│               ethernet   UP          00:53:00:06:11:01
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>├ e1            bridge     FORWARDING  vlan:10u pvid:10
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>├ e2            bridge     FORWARDING  vlan:10u pvid:10
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>├ e3            bridge     FORWARDING  vlan:20u pvid:20
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>├ e4            bridge     FORWARDING  vlan:20u pvid:20
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>├ e5            bridge     FORWARDING  vlan:30u pvid:30
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>├ e6            bridge     FORWARDING  vlan:30u pvid:30
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>├ e7            bridge     FORWARDING  vlan:40u pvid:40
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>├ e8            bridge     FORWARDING  vlan:40u pvid:40
-<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>├ e9            bridge     FORWARDING  vlan:50u pvid:50
-<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>└ e10           bridge     FORWARDING  vlan:50u pvid:50
-<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>lo              ethernet   UP          00:00:00:00:00:00
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>│               ethernet      UP          00:53:00:06:11:01
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>├ e1            bridge     FORWARDING  vlan:10u pvid: 10
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>├ e2            bridge     FORWARDING  vlan:10u pvid: 10
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>├ e3            bridge     FORWARDING  vlan:20u pvid: 20
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>├ e4            bridge     FORWARDING  vlan:20u pvid: 20
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>├ e5            bridge     FORWARDING  vlan:30u pvid: 30
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>├ e6            bridge     FORWARDING  vlan:30u pvid: 30
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>├ e7            bridge     FORWARDING  vlan:40u pvid: 40
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>├ e8            bridge     FORWARDING  vlan:40u pvid: 40
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>├ e9            bridge     FORWARDING  vlan:50u pvid: 50
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>└ e10           bridge     FORWARDING  vlan:50u pvid: 50
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>lo              ethernet      UP          00:00:00:00:00:00
 <a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>                ipv4                   127.0.0.1/8 (static)
 <a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>                ipv6                   ::1/128 (static)
-<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>vlan10          ethernet   UP          00:53:00:06:11:01
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>vlan10          ethernet      UP          00:53:00:06:11:01
 <a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>│               ipv6                   fe80::0053:00ff:fe06:1101/64 (link-layer)
-<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>└ br0           ethernet   UP          00:53:00:06:11:01
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>└ br0           ethernet      UP          00:53:00:06:11:01
 <a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>admin@example:/&gt;
 </code></pre></div>
 <p>When pinging "IPv6 all hosts" from the PC, there should be two

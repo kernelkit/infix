@@ -657,6 +657,8 @@
       
         
       
+        
+      
     
     
     
@@ -824,6 +826,34 @@
     
   
     Ethernet Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vlan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VLAN Interfaces
   
 
     
@@ -1026,10 +1056,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13">
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -1047,8 +1077,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3127,22 +3157,22 @@ access-point).</p>
 <h3 id="view-available-networks">View Available Networks<a class="headerlink" href="#view-available-networks" title="Permanent link">¶</a></h3>
 <p>Use <code>show interface</code> to see discovered networks and their signal strength:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface wifi0</b>
-name                : wifi0
-type                : wifi
-index               : 3
-mtu                 : 1500
-operational status  : up
-ip forwarding       : enabled
-physical address    : f0:09:0d:36:5f:86
-ipv4 addresses      : 192.168.1.100/24 (dhcp)
-ipv6 addresses      :
-in-octets           : 148388
-out-octets          : 24555
-mode                : station
-ssid                : MyNetwork
-signal              : -45 dBm (good)
-rx bitrate          : 72.2 Mbps
-tx bitrate          : 86.6 Mbps
+name               : wifi0
+type               : wifi
+index              : 3
+mtu                : 1500
+operational status : up
+ip forwarding      : enabled
+physical address   : f0:09:0d:36:5f:86
+ipv4 addresses     : 192.168.1.100/24 (dhcp)
+ipv6 addresses     :
+in-octets          : 148388
+out-octets         : 24555
+mode               : station
+ssid               : MyNetwork
+signal             : -45 dBm (good)
+rx bitrate         : 72.2 Mbps
+tx bitrate         : 86.6 Mbps
 ──────────────────────────────────────────────────────────────────────
 <span class="title">Available Networks</span>
 <span class="header">SSID                 BSSID              SECURITY       SIGNAL  CHANNEL</span>
@@ -3201,13 +3231,13 @@ admin@example:/config/interface/wifi0/&gt; <b>leave</b>
 
 <p>The connection attempt will start immediately. You can verify the connection status:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show interface wifi0</b>
-name                : wifi0
-type                : wifi
-operational status  : up
-physical address    : f0:09:0d:36:5f:86
-mode                : station
-ssid                : MyHomeNetwork
-signal              : -52 dBm (good)
+name               : wifi0
+type               : wifi
+operational status : up
+physical address   : f0:09:0d:36:5f:86
+mode               : station
+ssid               : MyHomeNetwork
+signal             : -52 dBm (good)
 </code></pre>
 
 <p><strong>Station configuration parameters:</strong></p>
