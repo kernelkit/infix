@@ -35,7 +35,7 @@
       {
         "admin-status": "up",
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         },
@@ -65,7 +65,7 @@
       {
         "admin-status": "up",
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         },
@@ -105,7 +105,7 @@
       {
         "admin-status": "up",
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         },
@@ -145,7 +145,7 @@
       {
         "admin-status": "up",
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         },
@@ -185,7 +185,7 @@
       {
         "admin-status": "up",
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         },
@@ -215,7 +215,7 @@
       {
         "admin-status": "up",
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         },
@@ -245,7 +245,7 @@
       {
         "admin-status": "up",
         "ieee802-ethernet-interface:ethernet": {
-          "auto-negotation": {
+          "auto-negotiation": {
             "enable": false
           }
         },

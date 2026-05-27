@@ -17,17 +17,18 @@ def get_json(xpath: str, datastore: str = "operational", quiet: bool = False) ->
             print("Invalid XPATH. It must be a valid string starting with '/'.")
         return {}
 
-    try:
-        result = subprocess.run(["copy", datastore, "-x", shlex.quote(xpath)],
-                                capture_output=True, text=True, check=True)
-        if not result.stdout.strip():
-            return {}
-        json_data = json.loads(result.stdout)
-        return json_data
-    except subprocess.CalledProcessError as e:
-        if not quiet:
-            print(f"Error running copy: {e}")
+    result = subprocess.run(["copy", datastore, "-x", shlex.quote(xpath)],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        # copy already wrote a 'failed retrieving …' message (and a
+        # sysrepo error line) to stderr; relay it verbatim.
+        if not quiet and result.stderr:
+            print(result.stderr.rstrip())
         return {}
+    if not result.stdout.strip():
+        return {}
+    try:
+        return json.loads(result.stdout)
     except json.JSONDecodeError as e:
         if not quiet:
             print(f"Error parsing JSON output: {e}")
@@ -40,15 +41,20 @@ def cli_pretty(json_data: dict, command: str, *args: str):
         return
 
     safe_args = [shlex.quote(arg) for arg in args]
+    json_input = json.dumps(json_data)
+    result = subprocess.run([
+        "/usr/libexec/statd/cli-pretty", command, *safe_args
+    ], input=json_input, capture_output=True, text=True)
 
-    try:
-        json_input = json.dumps(json_data)  # Keep as string, not bytes
-        result = subprocess.run([
-            "/usr/libexec/statd/cli-pretty", command, *safe_args
-        ], input=json_input, capture_output=True, text=True, check=True)
+    # cli-pretty prints a user-facing message on stdout before any
+    # sys.exit(1) (e.g. 'Interface "w" not found').  Relay it regardless
+    # of the exit status, and only surface the generic exec error when
+    # nothing useful was produced.
+    if result.stdout:
         print(result.stdout, end="")
-    except subprocess.CalledProcessError as e:
-        print(f"Error running cli-pretty: {e}")
+    elif result.returncode != 0:
+        msg = result.stderr.strip() or f"exit status {result.returncode}"
+        print(f"Error running cli-pretty: {msg}")
 
 
 def dhcp(args: List[str]) -> None:

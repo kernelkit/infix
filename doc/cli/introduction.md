@@ -164,7 +164,7 @@ interfaces {
   }
 }
 admin@host-12-34-56:/config/interface/eth0/> leave
-admin@host-12-34-56:/> show interfaces
+admin@host-12-34-56:/> show interface
 INTERFACE       PROTOCOL   STATE       DATA
 lo              loopback   UNKNOWN     00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)

@@ -73,8 +73,8 @@ admin@example:/config/interface/br0/> <b>set bridge vlans vlan 20 tagged br0</b>
 </code></pre>
 
 To route or to manage via a VLAN, a VLAN interface needs to be created
-on top of the bridge, see section [VLAN Interfaces](ethernet.md#vlan-interfaces)
-for more on this topic.
+on top of the bridge, see section [VLAN Interfaces](vlan.md) for more
+on this topic.
 
 > [!NOTE]
 > In some use-cases only a single management VLAN on the bridge is used.

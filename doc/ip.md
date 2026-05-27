@@ -117,11 +117,11 @@ will be ignored. For details on how to enable the NTP client, see the
 
 ![Switch example (eth0 and lo)](img/ip-address-example-switch.svg)
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -153,13 +153,13 @@ admin@example:/config/interface/eth0/ipv4/> <b>diff</b>
 +  }
 +}
 admin@example:/config/interface/eth0/ipv4/> <b>leave</b>
-admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv4                   169.254.1.3/16 (random)
                 ipv4                   10.0.1.1/24 (static)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -188,12 +188,12 @@ admin@example:/config/interface/eth0/ipv4/autoconf/> <b>leave</b>
 admin@example:/config/> <b>edit interface eth0 ipv4</b>
 admin@example:/config/interface/eth0/ipv4/> <b>set dhcp</b>
 admin@example:/config/interface/eth0/ipv4/> <b>leave</b>
-admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv4                   10.1.2.100/24 (dhcp)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -235,11 +235,11 @@ admin@example:/config/> <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/> <b>set dhcp</b>
 admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
 admin@example:/> <b>show interface</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8::42/128 (dhcp)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -291,10 +291,10 @@ on the interface.
 admin@example:/config/> <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/> <b>set enabled false</b>
 admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
-admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
-lo              ethernet   UP          00:00:00:00:00:00
+admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -308,12 +308,12 @@ admin@example:/>
 admin@example:/config/> <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/> <b>set address 2001:db8::1 prefix-length 64</b>
 admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
-admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8::1/64 (static)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -330,12 +330,12 @@ advertised by the router (here 2001:db8:0:1::0/64) and the interface
 identifier.  The resulting address is of type *link-layer*, as it is
 formed based on the interface identifier ([ietf-ip.yang][2]).
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -348,11 +348,11 @@ below.
 admin@example:/config/> <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/> <b>set autoconf create-global-addresses false</b>
 admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
-admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -366,12 +366,12 @@ admin@example:/>
 By default, the auto-configured link-local and global IPv6 addresses
 are formed from a link-identifier based on the MAC address.
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
                 ipv6                   fe80::ff:fe00:0/64 (link-layer)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -385,12 +385,12 @@ possible to specify use of a random identifier ([ietf-ip.yang][2] and
 admin@example:/config/> <b>edit interface eth0 ipv6</b>
 admin@example:/config/interface/eth0/ipv6/> <b>set autoconf create-temporary-addresses true</b>
 admin@example:/config/interface/eth0/ipv6/> <b>leave</b>
-admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv6                   2001:db8:0:1:b705:8374:638e:74a8/64 (random)
                 ipv6                   fe80::ad3d:b274:885a:9ffb/64 (random)
-lo              ethernet   UP          00:00:00:00:00:00
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>

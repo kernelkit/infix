@@ -61,12 +61,18 @@ admin@example:/config/interface/eth0/> <b>leave</b>
 The operational status can be inspected to see both administrative and
 actual link state:
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-INTERFACE       PROTOCOL   STATE       DATA
-eth0            ethernet   <b>DISABLED</b>    02:00:00:00:00:00
-eth1            ethernet   UP          02:00:00:00:00:01
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA             </span>
+eth0            ethernet      <b>DISABLED</b>    02:00:00:00:00:00
+eth1            1000baseT     UP          duplex: full
+                ethernet                  02:00:00:00:00:01
 ...
 </code></pre>
+
+The rows are layered bottom-up by protocol: a physical-medium row (only
+emitted when the link is up) on top, then the ethernet row carrying the
+bare MAC, then any ipv4/ipv6 sub-rows.  See [Ethernet](ethernet.md) for the
+full set of summary fields.
 
 
 ## Description
@@ -84,9 +90,9 @@ The description is visible in the operational datastore and in `show`
 commands:
 
 <pre class="cli"><code>admin@example:/> <b>show interface eth0</b>
-name                : eth0
-description         : Uplink to core switch
-index               : 2
+name               : eth0
+description        : Uplink to core switch
+index              : 2
 ...
 </code></pre>
 

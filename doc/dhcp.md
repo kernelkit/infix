@@ -109,11 +109,11 @@ When configuring, e.g., `dns-server`, or `router` options with the value
 `auto`, the system uses the IP address from the interface matching the
 subnet.  For example:
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-eth0            ethernet   UP          02:00:00:00:00:00
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+eth0            ethernet      UP          02:00:00:00:00:00
                 ipv4                   192.168.1.1/24 (static)
-eth1            ethernet   UP          02:00:00:00:00:01
+eth1            ethernet      UP          02:00:00:00:00:01
                 ipv4                   192.168.2.1/24 (static)
 
 admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> <b>edit option dns-server</b>

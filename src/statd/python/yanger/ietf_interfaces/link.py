@@ -159,8 +159,11 @@ def interface(iplink, ipaddr, systemjson=None):
             if lg := lag.lag(iplink):
                 interface["infix-interfaces:lag"] = lg
         case "infix-if-type:ethernet":
-            if eth := ethernet.ethernet(iplink):
+            eth, speed_bps = ethernet.ethernet(iplink)
+            if eth:
                 interface["ieee802-ethernet-interface:ethernet"] = eth
+            if speed_bps:
+                interface["speed"] = str(speed_bps)
         case "infix-if-type:vxlan":
             if vxlan := tun.vxlan(iplink):
                 interface["infix-interfaces:vxlan"] = vxlan

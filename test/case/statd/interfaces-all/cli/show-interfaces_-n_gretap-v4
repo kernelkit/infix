@@ -1,11 +1,11 @@
-name                : gretap-v4
-type                : gretap
-index               : 21
-mtu                 : 1462
-operational status  : up
-ip forwarding       : disabled
-physical address    : f6:d4:96:d8:9f:96
-ipv4 addresses      :
-ipv6 addresses      :
-local address       : 192.168.20.1
-remote address      : 192.168.20.2
+name               : gretap-v4
+type               : gretap
+index              : 21
+mtu                : 1462
+operational status : up
+ip forwarding      : disabled
+physical address   : f6:d4:96:d8:9f:96
+ipv4 addresses     :
+ipv6 addresses     :
+local address      : 192.168.20.1
+remote address     : 192.168.20.2

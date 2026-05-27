@@ -223,22 +223,22 @@ access-point).
 Use `show interface` to see discovered networks and their signal strength:
 
 <pre class="cli"><code>admin@example:/> <b>show interface wifi0</b>
-name                : wifi0
-type                : wifi
-index               : 3
-mtu                 : 1500
-operational status  : up
-ip forwarding       : enabled
-physical address    : f0:09:0d:36:5f:86
-ipv4 addresses      : 192.168.1.100/24 (dhcp)
-ipv6 addresses      :
-in-octets           : 148388
-out-octets          : 24555
-mode                : station
-ssid                : MyNetwork
-signal              : -45 dBm (good)
-rx bitrate          : 72.2 Mbps
-tx bitrate          : 86.6 Mbps
+name               : wifi0
+type               : wifi
+index              : 3
+mtu                : 1500
+operational status : up
+ip forwarding      : enabled
+physical address   : f0:09:0d:36:5f:86
+ipv4 addresses     : 192.168.1.100/24 (dhcp)
+ipv6 addresses     :
+in-octets          : 148388
+out-octets         : 24555
+mode               : station
+ssid               : MyNetwork
+signal             : -45 dBm (good)
+rx bitrate         : 72.2 Mbps
+tx bitrate         : 86.6 Mbps
 ──────────────────────────────────────────────────────────────────────
 <span class="title">Available Networks</span>
 <span class="header">SSID                 BSSID              SECURITY       SIGNAL  CHANNEL</span>
@@ -304,13 +304,13 @@ admin@example:/config/interface/wifi0/> <b>leave</b>
 The connection attempt will start immediately. You can verify the connection status:
 
 <pre class="cli"><code>admin@example:/> <b>show interface wifi0</b>
-name                : wifi0
-type                : wifi
-operational status  : up
-physical address    : f0:09:0d:36:5f:86
-mode                : station
-ssid                : MyHomeNetwork
-signal              : -52 dBm (good)
+name               : wifi0
+type               : wifi
+operational status : up
+physical address   : f0:09:0d:36:5f:86
+mode               : station
+ssid               : MyHomeNetwork
+signal             : -52 dBm (good)
 </code></pre>
 
 **Station configuration parameters:**

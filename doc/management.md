@@ -109,13 +109,13 @@ CLI can be entered from shell in the same way as for SSH.
 
 See the 'help' command for an introduction to the system
 
-admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-lo              ethernet   UP          00:00:00:00:00:00
+admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+lo              ethernet      UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-e1              ethernet   LOWER-DOWN  00:53:00:06:03:01
-e2              ethernet   LOWER-DOWN  00:53:00:06:03:02
+e1              ethernet      LOWER-DOWN  00:53:00:06:03:01
+e2              ethernet      LOWER-DOWN  00:53:00:06:03:02
 ...
 admin@example:/>
 </code></pre>

@@ -87,34 +87,34 @@ Like other interfaces, link aggregates are also available in the general
 interfaces overview in the CLI admin-exec context.  Here is the above
 static mode aggregate:
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-lo              ethernet   UP          00:00:00:00:00:00
-                ipv4                   127.0.0.1/8 (static)
-                ipv6                   ::1/128 (static)
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+lo              ethernet      UP          00:00:00:00:00:00
+                ipv4                      127.0.0.1/8 (static)
+                ipv6                      ::1/128 (static)
 .
 .
 .
-lag0            lag        UP          static: balance-xor, hash: layer2
-│               ethernet   UP          00:a0:85:00:02:00
-├ eth7          lag        ACTIVE
-└ eth8          lag        ACTIVE
+lag0            lag           UP          static: balance-xor, hash: layer2
+│               ethernet      UP          00:a0:85:00:02:00
+├ eth7          lag           ACTIVE
+└ eth8          lag           ACTIVE
 </code></pre>
 
 Same aggregate, but in LACP mode:
 
-<pre class="cli"><code>admin@example:/> <b>show interfaces</b>
-<span class="header">INTERFACE       PROTOCOL   STATE       DATA                                    </span>
-lo              ethernet   UP          00:00:00:00:00:00
-                ipv4                   127.0.0.1/8 (static)
-                ipv6                   ::1/128 (static)
+<pre class="cli"><code>admin@example:/> <b>show interface</b>
+<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
+lo              ethernet      UP          00:00:00:00:00:00
+                ipv4                      127.0.0.1/8 (static)
+                ipv6                      ::1/128 (static)
 .
 .
 .
-lag0            lag        UP          lacp: active, rate: fast (1s), hash: layer2
-│               ethernet   UP          00:a0:85:00:02:00
-├ eth7          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
-└ eth8          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+lag0            lag           UP          lacp: active, rate: fast (1s), hash: layer2
+│               ethernet      UP          00:a0:85:00:02:00
+├ eth7          lag           ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+└ eth8          lag           ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
 </code></pre>
 
 
@@ -124,45 +124,45 @@ In addition to basic status shown in the interface overview, detailed
 LAG status can be inspected:
 
 <pre class="cli"><code>admin@example:/> <b>show interface lag0</b>
-name                : lag0
-index               : 25
-mtu                 : 1500
-operational status  : up
-physical address    : 00:a0:85:00:02:00
-lag mode            : static
-lag type            : balance-xor
-lag hash            : layer2
-link debounce up    : 0 msec
-link debounce down  : 0 msec
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 0
-out-octets          : 2142
+name               : lag0
+index              : 25
+mtu                : 1500
+operational status : up
+physical address   : 00:a0:85:00:02:00
+lag mode           : static
+lag type           : balance-xor
+lag hash           : layer2
+link debounce up   : 0 msec
+link debounce down : 0 msec
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 0
+out-octets         : 2142
 </code></pre>
 
 Same aggregate, but in LACP mode:
 
 <pre class="cli"><code>admin@example:/> <b>show interface lag0</b>
-name                : lag0
-index               : 24
-mtu                 : 1500
-operational status  : up
-physical address    : 00:a0:85:00:02:00
-lag mode            : lacp
-lag hash            : layer2
-lacp mode           : active
-lacp rate           : fast (1s)
-lacp aggregate id   : 1
+name               : lag0
+index              : 24
+mtu                : 1500
+operational status : up
+physical address   : 00:a0:85:00:02:00
+lag mode           : lacp
+lag hash           : layer2
+lacp mode          : active
+lacp rate          : fast (1s)
+lacp aggregate id  : 1
 lacp system priority: 65535
-lacp actor key      : 9
-lacp partner key    : 9
-lacp partner mac    : 00:a0:85:00:03:00
-link debounce up    : 0 msec
-link debounce down  : 0 msec
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 100892
-out-octets          : 111776
+lacp actor key     : 9
+lacp partner key   : 9
+lacp partner mac   : 00:a0:85:00:03:00
+link debounce up   : 0 msec
+link debounce down : 0 msec
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 100892
+out-octets         : 111776
 </code></pre>
 
 Member ports provide additional status information:
@@ -184,21 +184,21 @@ Member ports provide additional status information:
 Example member port status:
 
 <pre class="cli"><code>admin@example:/> <b>show interface eth7</b>
-name                : eth7
-index               : 8
-mtu                 : 1500
-operational status  : up
-physical address    : 00:a0:85:00:02:00
-lag member          : lag0
-lag member state    : active
-lacp aggregate id   : 1
-lacp actor state    : active, short_timeout, aggregating, in_sync, collecting, distributing
-lacp partner state  : active, short_timeout, aggregating, in_sync, collecting, distributing
-link failure count  : 0
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 473244
-out-octets          : 499037
+name               : eth7
+index              : 8
+mtu                : 1500
+operational status : up
+physical address   : 00:a0:85:00:02:00
+lag member         : lag0
+lag member state   : active
+lacp aggregate id  : 1
+lacp actor state   : active, short_timeout, aggregating, in_sync, collecting, distributing
+lacp partner state : active, short_timeout, aggregating, in_sync, collecting, distributing
+link failure count : 0
+ipv4 addresses     :
+ipv6 addresses     :
+in-octets          : 473244
+out-octets         : 499037
 </code></pre>
 
 
