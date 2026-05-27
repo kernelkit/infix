@@ -517,13 +517,17 @@ the same mobility domain without manual configuration:
 admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r mobility-domain hash
 ```
 
-You can optionally set NAS identifier mode:
+The NAS-Identifier (Network Access Server Identifier) is a string that
+uniquely identifies each AP within the 802.11r mobility domain.  APs
+exchange this identifier during fast BSS transition so they can look up
+the correct PMK-R1 key for the roaming client.  It must be unique per AP
+BSS and stable across reboots.
 
 ```
 admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r nas-identifier auto
 ```
 
-`auto` derives:
+`auto` derives the identifier as:
 
 `<interface-name>-<hostname>.<mobility-domain>`
 
@@ -554,6 +558,46 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v
 
 Allows APs to suggest better APs to clients, improving roaming decisions.
 
+#### Band Steering (MBO)
+
+Enabling `dot11v` also turns on MBO (Multi-Band Operation), advertised in
+beacons and association responses.  MBO lets a dual-band client see that
+the same SSID exists on another band and decide for itself when to move,
+while 802.11v BSS Transition Management lets the AP suggest a better
+target.
+
+On top of the client-cooperative hints, the AP applies active steering:
+on a 2.4 GHz access-point it suppresses probe responses to clients that
+were recently seen on the same SSID on the 5/6 GHz band, nudging
+dual-band clients onto the higher band.  MBO is **enabled by default**
+whenever `dot11v` is enabled:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v
+```
+
+To turn it off while keeping BSS Transition Management:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v band-steering false
+```
+
+> [!NOTE]
+> Band steering only matters when the same SSID is offered on two or more
+> bands (one access-point per radio).  On a single-band network there is
+> no other band to move to, so it has no effect.
+
+### Opportunistic Key Caching (OKC)
+
+OKC reduces re-authentication time for roaming clients that do not
+support 802.11r.  The AP caches the PMK from previous associations and
+shares it with other APs in the same mobility group.  It is **enabled by
+default** and only activates when both AP and client support it:
+
+```
+admin@example:/config/interface/wifi0/> set wifi access-point roaming okc false
+```
+
 ### Recommended Configuration
 
 For optimal roaming experience, enable all three features:
@@ -581,19 +625,113 @@ Repeat for all APs that should participate in the roaming group.
 > support 802.11k/r/v, but older devices may only support basic roaming without
 > fast transition.
 
-### AP as Bridge Port
+## 802.11s Mesh Point Mode
 
-WiFi AP interfaces can be added to bridges to integrate wireless devices
-into your LAN:
+IEEE 802.11s is a wireless mesh networking standard operating at Layer 2.
+Mesh nodes form peer links directly with each other and route traffic
+using HWMP (Hybrid Wireless Mesh Protocol), which is built into the
+Linux mac80211 subsystem.  There is no central controller; nodes
+discover peers and find paths on their own.
+
+The standard defines two node roles:
+
+- **Mesh Point (MP)** - a basic mesh node that forwards traffic within
+  the mesh
+- **Mesh Portal (MPP)** - a mesh node that bridges traffic between the
+  mesh and an external network (e.g., a wired LAN)
+
+In practice, a node bridging the mesh interface to a LAN acts as a mesh
+portal.
+
+> [!NOTE]
+> Not all WiFi hardware supports 802.11s mesh.  The driver must implement
+> mesh point mode in mac80211.  Check your adapter's capabilities with
+> `iw phy <phy> info` and look for "mesh point" under "Supported interface
+> modes".
+
+### 802.11s vs EasyMesh
+
+|                             | **802.11s**              | **EasyMesh**                   |
+|-----------------------------|--------------------------|--------------------------------|
+| **Standard**                | IEEE (open, ratified)    | Wi-Fi Alliance (certification) |
+| **Topology**                | Peer-to-peer, any-to-any | Controller-based tree          |
+| **Single point of failure** | None                     | Controller                     |
+| **Multi-hop**               | True N-hop               | Limited (1-2 hops)             |
+| **Vendor lock-in**          | None                     | Common                         |
+| **Linux support**           | Kernel-native (mac80211) | Requires proprietary firmware  |
+
+Infix uses 802.11s because it runs entirely in the kernel with no
+proprietary components.
+
+### Mesh configuration
+
+A mesh point requires the radio to have `band`, `channel`, and a valid
+`country-code` configured. Mesh and AP modes cannot coexist on the same
+radio.
+
+**Step 1: Configure the radio**
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit interface br0</b>
-admin@example:/config/interface/br0/> <b>set type bridge</b>
-
-admin@example:/config/> <b>edit interface wifi0</b>
-admin@example:/config/interface/wifi0/> <b>set bridge-port bridge br0</b>
-admin@example:/config/interface/wifi0/> <b>leave</b>
+admin@example:/config/> <b>edit hardware component radio1 wifi-radio</b>
+admin@example:/config/hardware/component/radio1/wifi-radio/> <b>set country-code DE</b>
+admin@example:/config/hardware/component/radio1/wifi-radio/> <b>set band 5GHz</b>
+admin@example:/config/hardware/component/radio1/wifi-radio/> <b>set channel 36</b>
+admin@example:/config/hardware/component/radio1/wifi-radio/> <b>leave</b>
 </code></pre>
+
+**Step 2: Create keystore entry for mesh security**
+
+All mesh links use WPA3-SAE encryption. All nodes in the same mesh
+network must share the same passphrase:
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit keystore symmetric-key mesh-secret</b>
+admin@example:/config/keystore/…/mesh-secret/> <b>set key-format passphrase-key-format</b>
+admin@example:/config/keystore/…/mesh-secret/> <b>change cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
+admin@example:/config/keystore/…/mesh-secret/> <b>end</b>
+</code></pre>
+
+**Step 3: Configure the mesh interface**
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface wifi-mesh</b>
+admin@example:/config/interface/wifi-mesh/> <b>set type wifi</b>
+admin@example:/config/interface/wifi-mesh/> <b>set wifi radio radio1</b>
+admin@example:/config/interface/wifi-mesh/> <b>set wifi mesh-point mesh-id my-mesh</b>
+admin@example:/config/interface/wifi-mesh/> <b>set wifi mesh-point security secret mesh-secret</b>
+admin@example:/config/interface/wifi-mesh/> <b>leave</b>
+</code></pre>
+
+**Mesh parameters:**
+
+- `mesh-id`: Network identifier, 1-32 characters.  All nodes in the mesh
+  must use the same mesh ID
+- `forwarding`: L2 mesh forwarding (default: true).  When enabled, the
+  interface can be added to a bridge as a mesh portal
+- `security secret`: Keystore reference for the WPA3-SAE passphrase
+
+### Mesh portal (bridge integration)
+
+To connect the wireless mesh to a wired LAN, add the mesh interface to
+a bridge:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface wifi-mesh</b>
+admin@example:/config/interface/wifi-mesh/> <b>set bridge-port bridge br0</b>
+admin@example:/config/interface/wifi-mesh/> <b>leave</b>
+</code></pre>
+
+### Mesh with roaming APs
+
+You can combine 802.11s mesh backhaul with roaming-enabled access
+points.  Each node has a mesh interface for backhaul on one radio and
+AP interfaces for clients on another:
+
+![802.11s mesh backhaul with roaming-enabled access points](img/wifi-mesh-roaming.svg)
+
+With 802.11r/k/v roaming enabled on the APs (same SSID, same
+passphrase, same mobility domain), clients hand off between nodes while
+the mesh carries backhaul traffic.
 
 ## Troubleshooting
 
