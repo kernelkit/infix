@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.05.0][UNRELEASED]
+[v26.05.0][] - 2026-05-29
 -------------------------
 
 ### Changes
@@ -24,40 +24,44 @@ All notable changes to the project are documented in this file.
   above the `ethernet` row.  VLAN, GRE, VXLAN and WiFi interfaces likewise get
   one row per protocol layer, with type-specific data on each (`vid:`,
   `remote:`, `vni:`, `station ssid:`, etc.), issue #530
-- New `auto-negotiation/advertised-pmd-types` leaf-list replaces the
-  retired `enable=false + speed + duplex` idiom for pinned link modes
-  (IEEE Std 802.3.2-2025 obsoleted `eth:speed`), issue #805.  Existing
-  startup configurations are migrated automatically on upgrade; see
-  [ethernet.md](ethernet.md#restricting-advertised-link-modes) for the
-  new model, the duplex × PMD mapping, and the `enable=false` escape
-  hatch for non-autoneg peers
-- New `ethernet/mdi-x` boolean leaf to force the copper MDI/MDI-X pinout
-  (true = MDI-X, false = MDI, absent = Auto-MDIX).  Needed on some PHYs
-  where Auto-MDIX stops working once auto-negotiation is disabled; see
-  [ethernet.md](ethernet.md#restricting-advertised-link-modes)
+- Add support for configurable auto-negotiation for Ethernet ports.  A new
+  `advertised-pmd-types` leaf-list replaces the fixed speed idiom for pinned
+  link modes, issue #805.  See the [Ethernet Interfaces][ethernet] section in
+  the User Guide for details. Existing configurations using fixed speed are
+  migrated automatically on upgrade
+- Add support for configurable MDI/MDI-X pinout on Ethernet ports.  Needed on
+  some PHYs where Auto-MDIX stops working once auto-negotiation is disabled
 - New operational `supported-pmd-types` leaf-list on each Ethernet interface,
-  exposing the set of PMD types currently supported.  Useful for SFP/SFP+
-  diagnosis: an LR-only optic narrows the list to a single entry, confirming
-  the transceiver without `ethtool -m`
-- New CLI command `show operational`, and XPath filtering for this and any of
-  the other datastores, using `[path /path/to/subtree]`
+  exposing the set of PMD types currently supported
+- New CLI command `show operational`, and optional XPath filtering for this
+  and any of the other datastores, using `[path /path/to/subtree]`
+- CLI `show` commands now surface human-friendly error messages instead of a
+  raw Python exceptions, e.g., `Interface "w" not found`
 
 ### Fixes
 
-- Fix #1493: container with a physical interface not properly removed
-  when switching to a configuration without containers
-- Fix #1506: add documentation on how to configure VLAN interfaces,
-  including stacked (Q-in-Q) VLAN interfaces, in a dedicated `vlan.md`
-- Fix long-standing typo `auto-negotation` in `yanger`, which caused
-  the operational `auto-negotiation/enable` leaf to always read as
-  `unknown` regardless of the actual port setting
-- Handle unclean daemon exits better, e.g., `dbus-daemon` crashing and
-  leaving a stale pidfile behind, causing it to refuse to be restarted
+- Fix #1493: container with a physical interface not properly removed when
+  switching to a configuration without containers
+- Fix #1506: add documentation on how to configure VLAN interfaces, including
+  stacked (Q-in-Q) VLAN interfaces, in a dedicated `vlan.md`
+- Handle unclean daemon exits better, e.g., `dbus-daemon` crashing and leaving
+  a stale pidfile behind, causing it to refuse to be restarted
 - Fix occasional blank or garbled `[ OK ]` lines at startup
 - Disallow multicast MAC addresses in custom MAC address configuration
 - Fix broken Wi-Fi 6 GHz band configuration.
+- Fix operational read of `/containers` failing and thereby aborting all
+  operational get-data, including RESTCONF/NETCONF reads — for containers
+  whose command contains shell metacharacters, e.g. `sh -c "... && ..."`
+- WireGuard interfaces are now regenerated when a referenced keystore key
+  changes: the asymmetric `private-key`, and the symmetric `preshared-key` at
+  both peer-group and per-peer level
+- Fix crash in operational data when a bridge has VLAN ranges configured: the
+  kernel may report ranges (e.g. `vlan 1 vlanEnd 3`) from `bridge vlan global
+  show`, which were not expanded, so `show interface` and other operational
+  reads failed.  Ranges are now expanded and listed correctly
 
-[BPI-R3]: https://docs.banana-pi.org/en/BPI-R3/BananaPi_BPI-R3
+[ethernet]: ethernet.md#restricting-advertised-link-modes
+[BPI-R3]:   https://docs.banana-pi.org/en/BPI-R3/BananaPi_BPI-R3
 [AcerConnectVero]: ../board/aarch64/acer-connect-vero-w6m/
 
 [v26.04.0][] - 2026-04-30
@@ -2131,7 +2135,9 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.03.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.05.0...HEAD
+[v26.05.0]:   https://github.com/kernelkit/infix/compare/v26.04.0...v26.05.0
+[v26.04.0]:   https://github.com/kernelkit/infix/compare/v26.03.0...v26.04.0
 [v26.03.0]:   https://github.com/kernelkit/infix/compare/v26.02.0...v26.03.0
 [v26.02.0]:   https://github.com/kernelkit/infix/compare/v26.01.0...v26.02.0
 [v26.01.0]:   https://github.com/kernelkit/infix/compare/v25.11.0...v26.01.0

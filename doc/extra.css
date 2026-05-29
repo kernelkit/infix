@@ -1,3 +1,90 @@
+/* Chirpy-style typography (must precede all other rules).
+ * Source Sans Pro was renamed "Source Sans 3" on Google Fonts; it is the
+ * same typeface. Lato is used for headings, matching www.kernelkit.org. */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+/* ---- Fonts ---------------------------------------------------------------
+ * theme.font is disabled in mkdocs.yml, so we set Material's font vars here.
+ * Body: Source Sans 3, code: system monospace (same stack Chirpy uses). */
+:root {
+  --md-text-font: "Source Sans 3";
+  --md-code-font: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New";
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Lato for all headings and the masthead site title. */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6,
+.md-header__title,
+.md-nav__title {
+  font-family: "Lato", "Microsoft Yahei", sans-serif;
+}
+
+/* ---- Light mode (Chirpy "default" palette) ------------------------------- */
+[data-md-color-scheme="default"] {
+  --md-typeset-color: #34343c;
+  --md-typeset-a-color: #0056b2;     /* Chirpy blue links */
+  --md-accent-fg-color: #0056b2;     /* link hover / active TOC */
+  --md-code-bg-color: #f6f8fa;
+  --md-code-fg-color: #3a3a3a;
+}
+
+[data-md-color-scheme="default"] .md-typeset h1,
+[data-md-color-scheme="default"] .md-typeset h2,
+[data-md-color-scheme="default"] .md-typeset h3,
+[data-md-color-scheme="default"] .md-typeset h4,
+[data-md-color-scheme="default"] .md-typeset h5,
+[data-md-color-scheme="default"] .md-typeset h6 {
+  color: #2a2a2a;
+}
+
+/* Subtle tinted sidebars (left nav + right TOC), as on the blog. */
+[data-md-color-scheme="default"] .md-sidebar {
+  background-color: #f6f8fa;
+}
+
+/* ---- Dark mode (Chirpy "dark" palette over Material's slate) ------------- */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: rgb(27 27 30);          /* neutral near-black */
+  --md-default-fg-color: rgb(207 208 209);       /* UI text */
+  --md-default-fg-color--light: rgb(175 176 177);
+  --md-default-fg-color--lighter: rgb(175 176 177 / 45%);
+  --md-default-fg-color--lightest: rgb(175 176 177 / 18%);
+  --md-typeset-color: rgb(175 176 177);          /* body text */
+  --md-code-bg-color: #151515;
+  --md-code-fg-color: #b0b0b0;
+  --md-typeset-a-color: rgb(138 180 248);        /* Chirpy blue links */
+  --md-accent-fg-color: rgb(168 199 250);        /* brighter blue on hover */
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3,
+[data-md-color-scheme="slate"] .md-typeset h4,
+[data-md-color-scheme="slate"] .md-typeset h5,
+[data-md-color-scheme="slate"] .md-typeset h6 {
+  color: #cccccc;
+}
+
+/* Sidebars slightly lighter than the main background, as on the blog. */
+[data-md-color-scheme="slate"] .md-sidebar {
+  background-color: #1e1e1e;
+}
+
+/* Inline code reads as a faint highlight rather than a dark block. */
+[data-md-color-scheme="slate"] .md-typeset :not(pre) > code {
+  background-color: rgb(255 255 255 / 6%);
+}
+
+/* ---- Existing project styling -------------------------------------------- */
 .md-header__title {
     font-size: 1.1rem;
     line-height: 2.6rem;
