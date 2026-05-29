@@ -42,12 +42,6 @@
     
     
       
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
     
     
       <link rel="stylesheet" href="../extra.css">
@@ -2722,7 +2716,7 @@ Qeneth topology, <code>podman</code> may also be used by installing the
 DHCP server, and the other two as DHCP clients - with all three having
 a management connection to the host PC running the test.  In other
 words, the test requires a <em>logical</em> topology like the one below.</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="img/testing-log.dot.svg" data-desc-position="bottom"><img align="right" src="img/testing-log.dot.svg" alt="Example Logical Topology"></a></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/testing-log.svg" data-desc-position="bottom"><img align="right" alt="Example Logical Topology" src="../img/testing-log.svg" width="360"></a></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">graph</span><span class="w"> </span><span class="nt">"dhcp-client-server"</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nt">host</span><span class="w"> </span><span class="p">[</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="na">label</span><span class="p">=</span><span class="s2">"host | { &lt;c1&gt; c1 | &lt;srv&gt; srv | &lt;c2&gt; c2 }"</span><span class="p">,</span>
@@ -2763,7 +2757,7 @@ is <em>isomorphic</em> to the logical topology.</p>
 degrees), we can deploy well-known algorithms to find such subgraphs.
 Continuing our example, let's say we want to run our DHCP test on the
 <em>physical</em> topology below.</p>
-<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="img/testing-phy.dot.svg" data-desc-position="bottom"><img align="right" src="img/testing-phy.dot.svg" alt="Example Physical Topology"></a></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/testing-phy.svg" data-desc-position="bottom"><img align="right" alt="Example Physical Topology" src="../img/testing-phy.svg" width="360"></a></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">graph</span><span class="w"> </span><span class="nt">"quad-ring"</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nt">host</span><span class="w"> </span><span class="p">[</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="na">label</span><span class="p">=</span><span class="s2">"host | { &lt;d1a&gt; d1a | &lt;d1b&gt; d1b | &lt;d1c&gt; d1c | &lt;d2a&gt; d2a | &lt;d2b&gt; d2b | &lt;d2c&gt; d2c | &lt;d3a&gt; d3a | &lt;d3b&gt; d3b | &lt;d3c&gt; d3c | &lt;d4a&gt; d4a | &lt;d4b&gt; d4b | &lt;d4c&gt; d4c }"</span><span class="p">,</span>
@@ -2913,7 +2907,7 @@ and a normal startup config is saved).</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright © 2022-2025 The KernelKit Team
+      Copyright © 2022-2026 The KernelKit Team
     </div>
   
   
