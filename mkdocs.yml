@@ -3,7 +3,7 @@ site_description: Infix Documentation
 site_url: https://kernelkit.github.io/infix/
 repo_url: https://github.com/kernelkit/infix/
 repo_name: kernelkit/infix
-copyright: Copyright &copy; 2022-2025 The KernelKit Team
+copyright: Copyright &copy; 2022-2026 The KernelKit Team
 docs_dir: doc/
 edit_uri: edit/master/doc/
 extra_css:
@@ -79,6 +79,10 @@ nav:
 theme:
   logo: logo-plain.png
   name: material
+  # Fonts are loaded by doc/extra.css (Lato headings + Source Sans body +
+  # system monospace, matching the Chirpy blog) instead of Material's
+  # auto-loaded Roboto. Keep this false so Material does not also fetch Roboto.
+  font: false
   features:
     - toc.follow
 #    - toc.integrate
