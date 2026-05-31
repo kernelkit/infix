@@ -996,7 +996,14 @@
       }
     });
 
-    // Mutual exclusion, persistence, and auto-navigation to first page link
+    // Persistence + Configure enter-hook.
+    //
+    // Toggling a section header just expands or collapses that section —
+    // it does NOT close sibling sections, and it does NOT auto-navigate
+    // to the first page in the section. This lets the user browse the
+    // available pages under a header without paying for a navigation
+    // they didn't ask for. The actual mutual-exclusion (other sections
+    // collapse) happens in updateActiveNav after a real page-link click.
     groups.forEach(function(d) {
       var label = d.querySelector(':scope > summary');
       if (!label) return;
@@ -1010,26 +1017,8 @@
         if (d.id !== 'nav-configure') {
           localStorage.setItem(key, d.open ? 'open' : 'closed');
         }
-        if (d.open) {
-          if (d.id === 'nav-configure') {
-            enterConfigure();
-          }
-          groups.forEach(function(other) {
-            if (other !== d && other.open) {
-              other.removeAttribute('open');
-              if (other.id !== 'nav-configure') {
-                var otherLabel = other.querySelector(':scope > summary');
-                if (otherLabel) {
-                  localStorage.setItem('nav-top:' + otherLabel.textContent.trim(), 'closed');
-                }
-              }
-            }
-          });
-          // Navigate to the first page link if none in this section is active
-          if (!d.querySelector('.nav-link.active')) {
-            var first = d.querySelector('a.nav-link[hx-get]');
-            if (first) first.click();
-          }
+        if (d.open && d.id === 'nav-configure') {
+          enterConfigure();
         }
       });
     });
