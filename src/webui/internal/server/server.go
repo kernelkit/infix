@@ -37,7 +37,7 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	ksTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-keystore.html")
+	ksTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-keystore.html")
 	if err != nil {
 		return nil, err
 	}
@@ -109,11 +109,11 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	cfgSysTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-system.html")
+	cfgSysTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-system.html")
 	if err != nil {
 		return nil, err
 	}
-	cfgUsersTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-users.html")
+	cfgUsersTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-users.html")
 	if err != nil {
 		return nil, err
 	}
