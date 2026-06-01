@@ -1,0 +1,63 @@
+{{define "login.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{.CsrfToken}}">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  <title>Login</title>
+  <link rel="icon" type="image/png" href="/assets/img/jack.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/htmx.min.js"></script>
+  <script src="/assets/js/app.js"></script>
+</head>
+<body class="login-page">
+  <div id="page-progress" class="page-progress" aria-hidden="true"></div>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <h1>Login</h1>
+      </div>
+      {{if .Error}}
+      <div class="alert alert-error" role="alert">{{.Error}}</div>
+      {{end}}
+      <form method="POST" action="/login">
+        <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username"
+                 autocomplete="username" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password"
+                 autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Log in</button>
+      </form>
+    </div>
+    <button id="login-theme-toggle" class="login-theme-btn" aria-label="Toggle theme">
+      <svg id="lti-auto" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path>
+      </svg>
+      <svg id="lti-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+      <svg id="lti-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    </button>
+  </div>
+</body>
+</html>
+{{end}}

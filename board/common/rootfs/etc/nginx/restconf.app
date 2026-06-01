@@ -1,5 +1,6 @@
 # /telemetry/optics is for streaming (not used atm)
 location ~ ^/(restconf|yang|.well-known)/ {
+    include /etc/nginx/restconf-access.conf;
     grpc_pass grpc://[::1]:10080;
     grpc_set_header Host $host;
     grpc_set_header X-Real-IP $remote_addr;

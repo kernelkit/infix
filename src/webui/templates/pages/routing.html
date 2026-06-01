@@ -1,0 +1,131 @@
+{{define "routing.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+<div class="info-card">
+  <div class="card-header">Routing Table
+    <a href="/configure/routes"
+       hx-get="/configure/routes"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  {{if .Routes}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead><tr>
+        <th class="num">Destination</th>
+        <th>Next Hop</th>
+        <th>Protocol</th>
+        <th class="num">Preference</th>
+        <th class="num">Uptime</th>
+        <th>Active</th>
+      </tr></thead>
+      <tbody>
+        {{range .Routes}}
+        <tr>
+          <td class="num">{{.DestPrefix}}</td>
+          <td>{{if .NextHopAddr}}{{.NextHopAddr}}{{else}}{{.NextHopIface}}{{end}}</td>
+          <td>
+            {{if eq .Protocol "ospfv2"}}<span class="badge badge-info">ospfv2</span>
+            {{else if eq .Protocol "ospfv3"}}<span class="badge badge-info">ospfv3</span>
+            {{else if eq .Protocol "static"}}<span class="badge badge-neutral">static</span>
+            {{else if eq .Protocol "kernel"}}<span class="badge badge-neutral">kernel</span>
+            {{else if eq .Protocol "direct"}}<span class="badge badge-accept">direct</span>
+            {{else}}<span class="badge badge-neutral">{{.Protocol}}</span>{{end}}
+          </td>
+          <td class="num">{{.Preference}}</td>
+          <td class="num">{{.Uptime}}</td>
+          <td>{{if .Active}}<span class="status-dot status-up"></span>{{else}}<span class="status-dot status-down"></span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="empty-message">No routes found.</p>
+  {{end}}
+</div>
+
+{{if .HasOSPF}}
+<div class="info-card">
+  <div class="card-header">OSPF Neighbors</div>
+  {{if .OSPFNeighbors}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead><tr>
+        <th>Router ID</th>
+        <th class="num">Pri</th>
+        <th>State</th>
+        <th class="num">Uptime</th>
+        <th>Address</th>
+        <th>Interface</th>
+        <th>Area</th>
+      </tr></thead>
+      <tbody>
+        {{range .OSPFNeighbors}}
+        <tr>
+          <td>{{.RouterID}}</td>
+          <td class="num">{{.Priority}}</td>
+          <td>{{.State}}</td>
+          <td class="num">{{.Uptime}}</td>
+          <td>{{.Address}}</td>
+          <td>{{.Interface}}</td>
+          <td>{{.Area}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="empty-message">No OSPF neighbors.</p>
+  {{end}}
+</div>
+
+<div class="info-card">
+  <div class="card-header">OSPF Interfaces</div>
+  {{if .OSPFIfaces}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead><tr>
+        <th>Interface</th>
+        <th>Area</th>
+        <th>Type</th>
+        <th>State</th>
+        <th class="num">Cost</th>
+        <th class="num">Pri</th>
+        <th>DR</th>
+        <th>BDR</th>
+        <th class="num">Nbrs</th>
+      </tr></thead>
+      <tbody>
+        {{range .OSPFIfaces}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td>{{.Area}}</td>
+          <td>{{if .Type}}{{.Type}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{.State}}</td>
+          <td class="num">{{.Cost}}</td>
+          <td class="num">{{.Priority}}</td>
+          <td>{{if .DR}}{{.DR}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .BDR}}{{.BDR}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td class="num">{{.NbrCount}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="empty-message">No OSPF interfaces.</p>
+  {{end}}
+</div>
+{{else}}
+<div class="info-card">
+  <div class="card-header">OSPF</div>
+  <p class="empty-message">OSPF is not configured on this device.</p>
+</div>
+{{end}}
+{{end}}

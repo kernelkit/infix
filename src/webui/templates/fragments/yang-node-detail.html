@@ -1,0 +1,138 @@
+{{/* Renders a *nodeDetailData as the right-pane detail panel. */}}
+{{define "yang-node-detail"}}
+<div class="info-card">
+  <div class="card-header" title="{{.Path}}">{{.Name}}</div>
+
+  {{if .Error}}
+  <div class="alert alert-error">{{.Error}}</div>
+  {{end}}
+  {{if .SavedOK}}
+  <div class="alert alert-success">Saved to candidate</div>
+  {{end}}
+
+  {{/* ── Read-only value display for status tree ──────────────────── */}}
+  {{if and .ReadOnly (or (eq .Kind "leaf") (eq .Kind "leaf-list"))}}
+  <div class="cfg-card-footer">
+    <span class="yt-value-label">
+      {{if .CurrentValue}}{{.CurrentValue}}{{else}}<span class="text-muted">—</span>{{end}}
+    </span>
+  </div>
+  {{end}}
+
+  {{/* ── Edit form — only for writable leaves in non-ReadOnly mode ── */}}
+  {{if and (not .ReadOnly) .Config (or (eq .Kind "leaf") (eq .Kind "leaf-list"))}}
+  <form class="yt-edit-form"
+        hx-put="/configure/tree/node?path={{.Path | urlquery}}"
+        hx-target="#yang-detail"
+        hx-swap="innerHTML">
+    <div class="cfg-card-footer">
+      <label class="yt-value-label">
+        {{if .UsingDefault -}}
+          <span class="text-muted yt-default-hint"
+                title="No explicit value set — showing YANG schema default">
+            Value <em>(default)</em>
+          </span>
+        {{- else -}}
+          Value
+        {{- end}}
+        {{if and .Type (eq .Type.Kind "boolean")}}
+          <div class="yt-bool-group">
+            <label><input type="radio" name="value" value="true"
+                   {{if eq .CurrentValue "true"}}checked{{end}}> true</label>
+            <label><input type="radio" name="value" value="false"
+                   {{if eq .CurrentValue "false"}}checked{{end}}> false</label>
+            {{if and (eq .CurrentValue "") (not .UsingDefault) -}}
+            <span class="yt-unset-hint">(not configured)</span>
+            {{- end}}
+          </div>
+        {{else if and .Type (eq .Type.Kind "enumeration") .Type.Enums}}
+          {{$cv := .CurrentValue}}{{$def := .Default}}
+          <select class="cfg-input" name="value">
+            {{range .Type.Enums}}
+            <option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $def))}}selected{{end}}>{{.}}{{if and $def (eq . $def)}} (default){{end}}</option>
+            {{end}}
+          </select>
+        {{else if and .Type (eq .Type.Kind "identityref") .Type.Identities}}
+          {{$cv := .CurrentValue}}{{$def := .Default}}
+          <select class="cfg-input" name="value">
+            {{range .Type.Identities}}
+            <option value="{{.}}" {{if or (eq . $cv) (and (eq $cv "") (eq . $def))}}selected{{end}}>{{stripPrefix .}}{{if and $def (eq . $def)}} (default){{end}}</option>
+            {{end}}
+          </select>
+        {{else if and .Type (or (eq .Type.Kind "int8")  (eq .Type.Kind "int16")
+                              (eq .Type.Kind "int32") (eq .Type.Kind "int64")
+                              (eq .Type.Kind "uint8") (eq .Type.Kind "uint16")
+                              (eq .Type.Kind "uint32") (eq .Type.Kind "uint64"))}}
+          <input class="cfg-input" type="number" name="value" value="{{.CurrentValue}}"
+                 {{if and .Type .Type.Range}}title="Range: {{.Type.Range}}"{{end}}>
+        {{else if .LeafrefValues}}
+          {{$cv := .CurrentValue}}
+          <select class="cfg-input" name="value">
+            <option value="">(none)</option>
+            {{range .LeafrefValues}}
+            <option {{if eq . $cv}}selected{{end}}>{{.}}</option>
+            {{end}}
+          </select>
+        {{else if and .Type (eq .Type.Kind "binary")}}
+          {{if .IsBinary}}
+          <textarea class="cfg-input cfg-input-mono" name="value" rows="1">{{.CurrentValue}}</textarea>
+          {{else}}
+          <span class="text-muted">Binary data (non-text, cannot edit here)</span>
+          {{end}}
+        {{else}}
+          <input class="cfg-input" type="text" name="value"
+                 value="{{if not .UsingDefault}}{{.CurrentValue}}{{end}}"
+                 {{if and .UsingDefault .Default}}placeholder="{{.Default}}"{{end}}>
+        {{end}}
+      </label>
+      <button class="btn btn-primary" type="submit">Save</button>
+      {{if not .Mandatory}}
+      <button class="btn btn-secondary" type="button"
+              title="Reset to YANG default"
+              hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
+              hx-target="#yang-detail"
+              hx-swap="innerHTML"
+              hx-confirm="Reset {{.Name}} to its YANG default?">Reset</button>
+      {{end}}
+    </div>
+  </form>
+  {{end}}
+
+  {{/* ── Details foldout ────────────────────────────────────────────── */}}
+  <details class="yt-schema-details">
+    <summary>Details</summary>
+    <div class="yt-schema-body">
+      {{if .Description}}
+      <p class="yt-description">{{.Description}}</p>
+      {{end}}
+      <table class="info-table yt-schema-table">
+        <tr><th>Path</th><td><code class="yt-path">{{.Path}}</code></td></tr>
+        <tr>
+          <th>Access</th>
+          <td>{{if .Config}}read-write{{else}}<span class="text-muted">read-only</span>{{end}}</td>
+        </tr>
+        {{if .Mandatory}}<tr><th>Mandatory</th><td>yes</td></tr>{{end}}
+        {{if .Default}}<tr><th>Default</th><td><code>{{.Default}}</code></td></tr>{{end}}
+        {{if .Keys}}
+        <tr>
+          <th>Keys</th>
+          <td>{{range $i,$k := .Keys}}{{if $i}}, {{end}}<code>{{$k}}</code>{{end}}</td>
+        </tr>
+        {{end}}
+        {{if .Type}}
+        <tr><th>Type</th><td><code>{{.Type.Kind}}</code></td></tr>
+        {{if .Type.Enums}}
+        <tr><th>Values</th><td><div class="yt-value-list">{{range .Type.Enums}}<code class="yt-enum">{{.}}</code>{{end}}</div></td></tr>
+        {{end}}
+        {{if .Type.Identities}}
+        <tr><th>Identities</th><td><div class="yt-value-list">{{range .Type.Identities}}<code class="yt-enum">{{.}}</code>{{end}}</div></td></tr>
+        {{end}}
+        {{if .Type.Leafref}}<tr><th>Leafref</th><td><code class="yt-path">{{.Type.Leafref}}</code></td></tr>{{end}}
+        {{if .Type.Range}}<tr><th>Range</th><td><code>{{.Type.Range}}</code></td></tr>{{end}}
+        {{if .Type.Pattern}}<tr><th>Pattern</th><td><code>{{.Type.Pattern}}</code></td></tr>{{end}}
+        {{end}}
+      </table>
+    </div>
+  </details>
+</div>
+{{end}}

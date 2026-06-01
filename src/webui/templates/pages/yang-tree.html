@@ -1,0 +1,64 @@
+{{define "yang-tree.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+  {{if .Loading}}
+  <div class="alert alert-info"
+       hx-get="{{.TreeBase}}"
+       hx-trigger="every 3s"
+       hx-target="#content"
+       hx-swap="innerHTML">
+    Downloading YANG schema from device&hellip; this takes a moment on first login.
+  </div>
+  {{else}}
+  <div class="yang-layout">
+
+    {{/* ── Left pane: navigation tree ───────────────────────── */}}
+    <div class="yang-tree-pane info-card">
+      <div class="card-header">{{if .ReadOnly}}Status{{else}}Advanced{{end}}</div>
+      <ul class="yang-tree">
+        <li>
+          <details class="yt-node" open>
+            <summary class="yt-label">
+              <svg class="yt-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <span class="yt-name yt-root">/</span>
+            </summary>
+            <ul class="yt-children">
+              {{template "yang-tree-nodes" .Nodes}}
+            </ul>
+          </details>
+        </li>
+      </ul>
+    </div>
+
+    {{/* ── Right pane: node detail ────────────────────────────  */}}
+    <div class="yang-detail-pane" id="yang-detail"
+         {{if .InitialPath}}
+         hx-get="{{.TreeBase}}/node?path={{.InitialPath | urlquery}}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         {{end}}>
+      {{if not .InitialPath}}
+      <div class="yang-detail-empty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+             style="margin-bottom:.75rem;color:var(--fg-muted)">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <p>Select a node to inspect.</p>
+      </div>
+      {{end}}
+    </div>
+
+  </div>
+  {{end}}
+
+  {{if not .ReadOnly}}{{template "configure-toolbar" .}}{{end}}
+</div>
+{{end}}

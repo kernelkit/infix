@@ -1,0 +1,76 @@
+{{define "dhcp.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .DHCP}}
+<section class="info-card">
+  <div class="card-header">DHCP Server
+    <a href="/configure/tree?path=/infix-dhcp-server:dhcp-server"
+       hx-get="/configure/tree?path=/infix-dhcp-server:dhcp-server"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  {{if .DHCP.Enabled}}
+  <table class="info-table">
+    <tr>
+      <th>Status</th>
+      <td>
+        <span class="status-dot status-up"></span>
+        Enabled
+      </td>
+    </tr>
+  </table>
+  {{end}}
+
+  <div class="stats-row">
+    <span class="stat-chip"><span class="stat-chip-label">Discovers</span><span class="stat-chip-value">{{.DHCP.Stats.InDiscoveries}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Requests</span><span class="stat-chip-value">{{.DHCP.Stats.InRequests}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Releases</span><span class="stat-chip-value">{{.DHCP.Stats.InReleases}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Offers</span><span class="stat-chip-value">{{.DHCP.Stats.OutOffers}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Acks</span><span class="stat-chip-value">{{.DHCP.Stats.OutAcks}}</span></span>
+    <span class="stat-chip"><span class="stat-chip-label">Naks</span><span class="stat-chip-value">{{.DHCP.Stats.OutNaks}}</span></span>
+  </div>
+
+  {{if .DHCP.Leases}}
+  <h3 class="section-subtitle">Active Leases</h3>
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>IP Address</th>
+          <th>MAC Address</th>
+          <th>Hostname</th>
+          <th>Expires</th>
+          <th>Client ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .DHCP.Leases}}
+        <tr>
+          <td>{{.Address}}</td>
+          <td>{{.MAC}}</td>
+          <td>{{if .Hostname}}{{.Hostname}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{.Expires}}</td>
+          <td>{{if .ClientID}}{{.ClientID}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="empty-message">No active leases.</p>
+  {{end}}
+</section>
+{{else if not .Error}}
+<section class="info-card">
+  <div class="card-header">DHCP Server</div>
+  <p class="empty-message">DHCP server data not available.</p>
+</section>
+{{end}}
+{{end}}

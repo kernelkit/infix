@@ -1,0 +1,8 @@
+config BR2_PACKAGE_WEBUI
+	bool "webui"
+	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
+	depends on BR2_PACKAGE_ROUSETTE
+	help
+	  Web management interface for Infix, a Go+HTMX application
+	  that provides browser-based configuration and monitoring
+	  via RESTCONF.

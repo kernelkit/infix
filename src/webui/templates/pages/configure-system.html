@@ -1,0 +1,238 @@
+{{define "configure-system.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/system"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  {{/* ── Identity ─────────────────────────────────────────────────────── */}}
+  <form class="info-card"
+        hx-post="/configure/system/identity"
+        hx-swap="none">
+    <div class="card-header">Identity</div>
+    <table class="info-table">
+      <tr>
+        <th>Hostname{{template "field-info" (index $d "hostname")}}</th>
+        <td><input class="cfg-input" type="text" name="hostname" value="{{.Hostname}}" required></td>
+      </tr>
+      <tr>
+        <th>Contact{{template "field-info" (index $d "contact")}}</th>
+        <td><input class="cfg-input" type="text" name="contact" value="{{.Contact}}"></td>
+      </tr>
+      <tr>
+        <th>Location{{template "field-info" (index $d "location")}}</th>
+        <td><input class="cfg-input" type="text" name="location" value="{{.Location}}"></td>
+      </tr>
+    </table>
+    <div class="cfg-card-footer">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
+    </div>
+  </form>
+
+  {{/* ── Clock ───────────────────────────────────────────────────────── */}}
+  <form class="info-card"
+        hx-post="/configure/system/clock"
+        hx-swap="none">
+    <div class="card-header">Clock</div>
+    <table class="info-table">
+      <tr>
+        <th>Timezone{{template "field-info" (index $d "timezone")}}</th>
+        <td>
+          <select class="cfg-input" name="timezone">
+            {{$tz := .Timezone}}
+            {{range .TimezoneOptions}}<option {{if eq . $tz}}selected{{end}}>{{.}}</option>{{end}}
+          </select>
+        </td>
+      </tr>
+    </table>
+    <div class="cfg-card-footer">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
+    </div>
+  </form>
+
+  {{/* ── NTP servers ──────────────────────────────────────────────────── */}}
+  <form class="info-card info-grid-span-2"
+        hx-put="/configure/system/ntp"
+        hx-swap="none">
+    <div class="card-header">NTP Servers</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table" id="ntp-table">
+        <thead>
+          <tr>
+            <th>Name / Key</th>
+            <th>Address</th>
+            <th class="cfg-input-sm">Port</th>
+            <th>Prefer</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ntp-tbody">
+          {{range $i, $s := .NTP.Servers}}
+          <tr>
+            <td><input class="cfg-input" type="text"
+                       name="ntp_name_{{$i}}" value="{{$s.Name}}" required></td>
+            <td><input class="cfg-input" type="text"
+                       name="ntp_addr_{{$i}}" value="{{$s.UDP.Address}}"></td>
+            <td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"
+                       name="ntp_port_{{$i}}" value="{{if $s.UDP.Port}}{{$s.UDP.Port}}{{end}}"
+                       placeholder="123"></td>
+            <td style="text-align:center">
+              <input type="checkbox" name="ntp_prefer_{{$i}}" {{if $s.Prefer}}checked{{end}}>
+            </td>
+            <td>
+              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row"
+                      title="Remove">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-table="ntp-tbody"
+              data-template="ntp">+ Add server</button>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
+    </div>
+  </form>
+
+  {{/* ── DNS ─────────────────────────────────────────────────────────── */}}
+  <form class="info-card info-grid-span-2"
+        hx-put="/configure/system/dns"
+        hx-swap="none">
+    <div class="card-header">DNS</div>
+
+    <div class="section-subtitle">Search domains</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table" id="dns-search-table">
+        <thead>
+          <tr><th>Domain</th><th></th></tr>
+        </thead>
+        <tbody id="dns-search-tbody">
+          {{range $i, $d := .DNS.Search}}
+          <tr>
+            <td><input class="cfg-input" type="text"
+                       name="dns_search_{{$i}}" value="{{$d}}"></td>
+            <td>
+              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div style="padding: 0 0.75rem;">
+      <button type="button" class="btn-add-row" data-table="dns-search-tbody"
+              data-template="dns-search">+ Add domain</button>
+    </div>
+
+    <div class="section-subtitle" style="margin-top:0.75rem">Servers</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table" id="dns-server-table">
+        <thead>
+          <tr>
+            <th>Name / Key</th>
+            <th>Address</th>
+            <th class="cfg-input-sm">Port</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dns-server-tbody">
+          {{range $i, $s := .DNS.Servers}}
+          <tr>
+            <td><input class="cfg-input" type="text"
+                       name="dns_name_{{$i}}" value="{{$s.Name}}" required></td>
+            <td><input class="cfg-input" type="text"
+                       name="dns_addr_{{$i}}" value="{{$s.UDPAndTCP.Address}}"></td>
+            <td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"
+                       name="dns_port_{{$i}}" value="{{if $s.UDPAndTCP.Port}}{{$s.UDPAndTCP.Port}}{{end}}"
+                       placeholder="53"></td>
+            <td>
+              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-table="dns-server-tbody"
+              data-template="dns-server">+ Add server</button>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
+    </div>
+  </form>
+
+  {{/* ── Preferences ─────────────────────────────────────────────────── */}}
+  <form class="info-card info-grid-span-2"
+        hx-post="/configure/system/preferences"
+        hx-swap="none">
+    <div class="card-header">Preferences</div>
+    <table class="info-table">
+      <tr>
+        <th>Text editor{{template "field-info" (index $d "text-editor")}}</th>
+        <td>
+          <select class="cfg-input" name="text_editor">
+            {{range .TextEditorOptions}}
+            <option value="{{.Value}}" {{if eq .Value $.TextEditor}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>
+            {{end}}
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <th>Login banner{{template "field-info" (index $d "motd-banner")}}</th>
+        <td>
+          <textarea class="cfg-input cfg-input-mono" name="motd_banner" rows="4"
+                    placeholder="Displayed after SSH/console login…">{{.MotdBanner}}</textarea>
+        </td>
+      </tr>
+    </table>
+    <div class="cfg-card-footer">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
+    </div>
+  </form>
+
+</section>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}{{/* end {{else}} — schema ready */}}
+
+{{end}}
+
+{{/* ── ⓘ tooltip helper ─────────────────────────────────────────────────── */}}
+{{define "field-info"}}{{if .}} <span class="field-info" data-tip="{{.}}">ⓘ</span>{{end}}{{end}}

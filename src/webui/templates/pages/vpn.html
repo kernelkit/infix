@@ -1,0 +1,51 @@
+{{define "vpn.html"}}{{template "base" .}}{{end}}
+
+{{define "content"}}
+<div class="page-content">
+  <h1 class="page-title">VPN</h1>
+  {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+
+  {{if .Tunnels}}
+  {{range .Tunnels}}
+  <div class="info-card">
+    <h2>
+      <span class="iface-status {{if eq .OperStatus "up"}}iface-up{{else}}iface-down{{end}}"></span>
+      {{.Name}}
+      {{if .ListenPort}}<span class="text-muted">:{{.ListenPort}}</span>{{end}}
+    </h2>
+    <div style="margin-bottom:1rem;">
+      {{range .Addresses}}<span class="zone-badge" style="background:var(--slate-200);color:var(--fg);margin-right:4px">{{.}}</span>{{end}}
+    </div>
+
+    {{if .Peers}}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Public Key</th><th>Endpoint</th><th>Status</th><th>Last Handshake</th><th>RX</th><th>TX</th>
+        </tr></thead>
+        <tbody>
+          {{range .Peers}}
+          <tr>
+            <td class="num" title="{{.PublicKey}}">{{.PublicKeyShort}}</td>
+            <td>{{if .Endpoint}}{{.Endpoint}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+            <td><span class="iface-status {{if eq .Status "up"}}iface-up{{else}}iface-down{{end}}"></span> {{.Status}}</td>
+            <td class="text-muted">{{.LastHandshake}}</td>
+            <td class="num">{{.RxBytes}}</td>
+            <td class="num">{{.TxBytes}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="text-muted">No peers configured.</p>
+    {{end}}
+  </div>
+  {{end}}
+  {{else}}
+  <div class="info-card">
+    <p class="text-muted">No WireGuard tunnels configured.</p>
+  </div>
+  {{end}}
+</div>
+{{end}}

@@ -557,7 +557,20 @@ static int restconf_change(sr_session_ctx_t *session, struct lyd_node *config, s
 
 	ena = lydx_is_enabled(srv, "enabled") &&
 	      lydx_is_enabled(lydx_get_xpathf(config, WEB_XPATH), "enabled");
-	svc_enable(ena, restconf, "restconf");
+
+	/*
+	 * restconf.app is permanently installed in nginx/app/ so rousette is
+	 * always reachable from loopback (required by the WebUI).  When external
+	 * RESTCONF access is disabled we tighten the location to loopback-only
+	 * by writing the appropriate allow/deny rules into the include file.
+	 */
+	FILE *fp = fopen("/etc/nginx/restconf-access.conf", "w");
+	if (fp) {
+		if (!ena)
+			fputs("allow 127.0.0.1;\nallow ::1;\ndeny all;\n", fp);
+		fclose(fp);
+	}
+	mdns_records(ena ? MDNS_ADD : MDNS_DELETE, restconf);
 	finit_reload("nginx");
 
 	return put(cfg);
@@ -703,13 +716,16 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 
 	/* Web master on/off: propagate to nginx and all sub-services */
 	if (lydx_get_xpathf(diff, WEB_XPATH "/enabled")) {
+		int rc_ena = ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_RESTCONF_XPATH), "enabled");
 		int nb_ena = ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_NETBROWSE_XPATH), "enabled");
 
 		svc_enable(ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_CONSOLE_XPATH), "enabled"),
 			   ttyd, "ttyd");
 		svc_enable(nb_ena, netbrowse, "netbrowse");
-		svc_enable(ena && lydx_is_enabled(lydx_get_xpathf(config, WEB_RESTCONF_XPATH), "enabled"),
-			   restconf, "restconf");
+		/* Rousette follows web/enabled; external access is gated separately via restconf/enabled */
+		ena ? finit_enable("restconf") : finit_disable("restconf");
+		ena ? finit_enable("webui") : finit_disable("webui");
+		mdns_records(rc_ena ? MDNS_ADD : MDNS_DELETE, restconf);
 		svc_enable(ena, web, "nginx");
 		mdns_alias_conf(nb_ena);
 		finit_reload("mdns-alias");

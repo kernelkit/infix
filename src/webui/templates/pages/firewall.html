@@ -1,0 +1,139 @@
+{{define "firewall.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  <div class="info-card">
+    <div class="card-header">Firewall Status</div>
+    <table class="info-table">
+      <tr>
+        <th>Firewall</th>
+        <td>
+          <span class="iface-status {{if .Enabled}}iface-up{{else}}iface-down{{end}}"></span>
+          {{.EnabledText}}
+        </td>
+      </tr>
+      {{if .DefaultZone}}
+      <tr><th>Default Zone</th><td>{{.DefaultZone}}</td></tr>
+      {{end}}
+      <tr>
+        <th>Lockdown Mode</th>
+        <td>{{if .Lockdown}}<span class="badge badge-drop">Active</span>{{else}}Inactive{{end}}</td>
+      </tr>
+      <tr><th>Log Denied Traffic</th><td>{{.Logging}}</td></tr>
+    </table>
+  </div>
+
+  {{if .Matrix}}
+  <div class="info-card">
+    <div class="card-header">Zone Matrix</div>
+    <div class="matrix-wrap">
+      <table class="zone-matrix">
+        <thead>
+          <tr>
+            <th class="matrix-corner">&rarr;</th>
+            {{range .ZoneNames}}<th>{{.}}</th>{{end}}
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Matrix}}
+          <tr>
+            <th>{{.Zone}}</th>
+            {{range .Cells}}
+            <td class="matrix-cell {{.Class}}"
+                {{if ne .Verdict "self"}}
+                data-from="{{.From}}"
+                data-to="{{.To}}"
+                data-verdict="{{.Verdict}}"
+                data-detail="{{.Detail}}"
+                {{end}}>{{.Symbol}}</td>
+            {{end}}
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      <div id="fw-flow-detail" class="fw-flow-detail" hidden>
+        <span class="fw-detail-flow"></span>
+        <span class="fw-detail-verdict"></span>
+        <span class="fw-detail-sep">—</span>
+        <span class="fw-detail-text"></span>
+      </div>
+      <div class="matrix-legend">
+        <span class="legend-item"><span class="legend-swatch matrix-allow">✓</span> Allow</span>
+        <span class="legend-item"><span class="legend-swatch matrix-cond">⚠</span> Conditional</span>
+        <span class="legend-item"><span class="legend-swatch matrix-deny">✗</span> Deny</span>
+      </div>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .Zones}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Zones</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Action</th>
+          <th>Interfaces</th>
+          <th>Networks</th>
+          <th>Host Services</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Zones}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td><span class="badge badge-{{.Action}}">{{.Action}}</span></td>
+          <td>{{.Interfaces}}</td>
+          <td>{{if .Networks}}{{.Networks}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .Services}}{{.Services}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .Policies}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Policies</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+      <thead>
+        <tr>
+          <th class="policy-lock-col" title="Immutable">⚷</th>
+          <th>Name</th>
+          <th>Action</th>
+          <th>Ingress</th>
+          <th>Egress</th>
+          <th>Services</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Policies}}
+        <tr{{if .Description}} title="{{.Description}}"{{end}}>
+          <td class="policy-lock-col">{{if .Immutable}}<span class="policy-lock" title="Built-in policy">⚷</span>{{end}}</td>
+          <td>{{.Name}}</td>
+          <td><span class="badge badge-{{.Action}}">{{.Action}}</span></td>
+          <td>{{.Ingress}}</td>
+          <td>{{.Egress}}</td>
+          <td>{{if .Services}}{{.Services}} {{end}}{{if .Masquerade}}<span class="badge badge-neutral">masq</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {{end}}
+
+</section>
+{{end}}

@@ -1,0 +1,148 @@
+{{define "wifi.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Radios}}
+{{range .Radios}}
+<div class="info-grid">
+  <section class="info-card">
+    <div class="card-header">
+      <div class="wifi-radio-header">
+        <span>{{.Name}}</span>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{if .Manufacturer}}<tr><th>Manufacturer</th><td>{{.Manufacturer}}</td></tr>{{end}}
+        {{if .Driver}}<tr><th>Driver</th><td>{{.Driver}}</td></tr>{{end}}
+        {{if .Standards}}<tr><th>Standards</th><td>{{.Standards}}</td></tr>{{end}}
+        {{if .Band}}<tr><th>Active Band</th><td>{{.Band}}</td></tr>{{end}}
+        {{if .Channel}}<tr><th>Channel</th><td>{{.Channel}}</td></tr>{{end}}
+        {{if .Frequency}}<tr><th>Frequency</th><td>{{.Frequency}} MHz</td></tr>{{end}}
+        {{if .Noise}}<tr><th>Noise Floor</th><td>{{.Noise}} dBm</td></tr>{{end}}
+        {{if .MaxAP}}<tr><th>Max APs</th><td>{{.MaxAP}}</td></tr>{{end}}
+        {{if .Bands}}
+        <tr>
+          <th>Supported Bands</th>
+          <td>
+            <div class="wifi-band-list">
+              {{range .Bands}}
+              <div class="wifi-band-item">
+                <span>{{.Name}}</span>
+              </div>
+              {{end}}
+            </div>
+          </td>
+        </tr>
+        {{end}}
+      </table>
+    </div>
+  </section>
+
+  {{if .SurveySVG}}
+  <section class="info-card">
+    <div class="card-header">Channel Survey</div>
+    <div class="card-body wifi-survey-body">
+      {{.SurveySVG}}
+    </div>
+  </section>
+  {{end}}
+</div>
+
+{{range .Interfaces}}
+<section class="info-card">
+  <div class="card-header">
+    <div class="wifi-radio-header">
+      <span>
+        <span class="iface-status {{if .StatusUp}}iface-up{{else}}iface-down{{end}}"></span>
+        {{.Name}}
+        {{if .SSID}}<span class="wifi-ssid">{{.SSID}}</span>{{end}}
+      </span>
+      {{if .Mode}}<span class="zone-badge">{{.Mode}}</span>{{end}}
+    </div>
+  </div>
+
+  {{if eq .Mode "station"}}
+  <div class="card-body" style="padding:0">
+    <table class="info-table">
+      {{if .Signal}}<tr><th>Signal</th><td><span class="signal-{{.SignalCSS}}">{{.Signal}}</span></td></tr>{{end}}
+      {{if .RxSpeed}}<tr><th>RX Speed</th><td>{{.RxSpeed}}</td></tr>{{end}}
+      {{if .TxSpeed}}<tr><th>TX Speed</th><td>{{.TxSpeed}}</td></tr>{{end}}
+    </table>
+  </div>
+  {{end}}
+
+  {{if and (eq .Mode "ap") .APClients}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>MAC Address</th>
+          <th>Signal</th>
+          <th>Connected</th>
+          <th>RX Bytes</th>
+          <th>TX Bytes</th>
+          <th>RX Speed</th>
+          <th>TX Speed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .APClients}}
+        <tr>
+          <td>{{.MAC}}</td>
+          <td>{{if .Signal}}<span class="signal-{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
+          <td>{{.ConnTime}}</td>
+          <td class="num">{{.RxBytes}}</td>
+          <td class="num">{{.TxBytes}}</td>
+          <td class="num">{{.RxSpeed}}</td>
+          <td class="num">{{.TxSpeed}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else if eq .Mode "ap"}}
+  <p class="empty-message">No stations connected.</p>
+  {{end}}
+
+  {{if and (eq .Mode "station") .ScanResults}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>SSID</th>
+          <th>BSSID</th>
+          <th>Signal</th>
+          <th>Channel</th>
+          <th>Security</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .ScanResults}}
+        <tr>
+          <td>{{if .SSID}}{{.SSID}}{{else}}<em>Hidden</em>{{end}}</td>
+          <td>{{.BSSID}}</td>
+          <td>{{if .Signal}}<span class="signal-{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
+          <td>{{.Channel}}</td>
+          <td>{{.Encryption}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{end}}
+</section>
+{{end}}
+{{end}}
+{{else if not .Error}}
+<section class="info-card">
+  <div class="card-header">WiFi</div>
+  <p class="empty-message">No WiFi radios detected.</p>
+</section>
+{{end}}
+{{end}}
