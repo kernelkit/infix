@@ -1285,7 +1285,9 @@ func (h *TreeHandler) DeleteContainer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	setCfgUnsaved(w)
+	// No setCfgUnsaved here — this only modifies candidate. The cfg-
+	// unsaved banner is specifically about "running differs from
+	// startup," set after Apply / RestoreConfig-to-running.
 
 	parentSchema, err := mgr.NodeAt(stripKeyPredicate(parent))
 	if err != nil || parentSchema == nil {

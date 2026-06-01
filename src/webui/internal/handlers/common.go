@@ -18,6 +18,12 @@ type PageData struct {
 	ActivePage   string
 	Capabilities *Capabilities
 	CfgUnsaved   bool // running config differs from startup (Apply was used without ApplyAndSave)
+	// RetryAfter, when > 0, renders a <meta http-equiv="refresh">
+	// in the page head with that many seconds. Used by transient
+	// fetch failures (e.g. post-upgrade dashboard fetch racing
+	// yanger / sysrepo startup) to self-recover without the user
+	// having to remember to reload.
+	RetryAfter int
 }
 
 func csrfToken(ctx context.Context) string {
@@ -25,13 +31,12 @@ func csrfToken(ctx context.Context) string {
 }
 
 func newPageData(r *http.Request, page, title string) PageData {
-	_, cookieErr := r.Cookie(cfgUnsavedCookie)
 	return PageData{
 		Username:     restconf.CredentialsFromContext(r.Context()).Username,
 		CsrfToken:    csrfToken(r.Context()),
 		PageTitle:    title,
 		ActivePage:   page,
 		Capabilities: CapabilitiesFromContext(r.Context()),
-		CfgUnsaved:   cookieErr == nil,
+		CfgUnsaved:   cfgUnsavedFromRequest(r),
 	}
 }

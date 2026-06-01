@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{.CsrfToken}}">
   <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  {{if .RetryAfter}}<meta http-equiv="refresh" content="{{.RetryAfter}}">{{end}}
   <title>{{if .PageTitle}}{{.PageTitle}} — {{end}}Management</title>
   <link rel="icon" type="image/png" href="/assets/img/jack.png">
   <link rel="stylesheet" href="/assets/css/style.css">

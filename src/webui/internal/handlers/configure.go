@@ -5,11 +5,24 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/kernelkit/webui/internal/restconf"
 )
 
 const cfgUnsavedCookie = "cfg-unsaved"
+
+// webuiStartTime is captured when the process starts. The cfg-unsaved
+// cookie carries the timestamp it was set at; cookies whose timestamp
+// predates this value are from a previous boot (or a previous webui
+// restart) and the running/startup state they referred to no longer
+// applies — running was reloaded from startup at boot, so they're
+// equal and the banner must not show. Using process-start instead of
+// kernel boot keeps the check entirely in-process: a webui restart
+// from configd flush also resets the marker, which matches "fresh
+// running" semantics.
+var webuiStartTime = time.Now()
 
 // ConfigureHandler manages the candidate datastore lifecycle.
 type ConfigureHandler struct {
@@ -17,11 +30,36 @@ type ConfigureHandler struct {
 }
 
 func setCfgUnsaved(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{Name: cfgUnsavedCookie, Value: "1", Path: "/", MaxAge: 86400, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{
+		Name:     cfgUnsavedCookie,
+		Value:    strconv.FormatInt(time.Now().Unix(), 10),
+		Path:     "/",
+		MaxAge:   86400,
+		SameSite: http.SameSiteLaxMode,
+	})
 }
 
 func clearCfgUnsaved(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{Name: cfgUnsavedCookie, Value: "", Path: "/", MaxAge: -1, SameSite: http.SameSiteLaxMode})
+}
+
+// cfgUnsavedFromRequest returns true when the cfg-unsaved cookie is
+// present AND its timestamp is from this webui session. Stale cookies
+// (process restart / device reboot since the cookie was set) are
+// treated as absent — running has been reloaded from startup, so the
+// "unsaved" condition the cookie referred to no longer holds.
+func cfgUnsavedFromRequest(r *http.Request) bool {
+	cookie, err := r.Cookie(cfgUnsavedCookie)
+	if err != nil {
+		return false
+	}
+	ts, perr := strconv.ParseInt(cookie.Value, 10, 64)
+	if perr != nil {
+		// Legacy cookie format ("1") from before the timestamp change,
+		// or unparseable junk. Treat as stale.
+		return false
+	}
+	return time.Unix(ts, 0).After(webuiStartTime)
 }
 
 // Enter copies running → candidate, initialising a fresh edit session.

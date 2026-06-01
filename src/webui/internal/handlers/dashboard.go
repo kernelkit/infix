@@ -298,7 +298,12 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 
 	if stateErr != nil {
 		log.Printf("restconf system-state: %v", stateErr)
-		data.Error = "Could not fetch system information"
+		data.Error = "Could not fetch system information — retrying…"
+		// Post-upgrade / fresh-boot race: yanger or sysrepo not ready
+		// yet. Schedule a page-level meta-refresh so the dashboard
+		// self-recovers instead of stranding the user on a stale
+		// error banner.
+		data.RetryAfter = 5
 	} else {
 		ss := state.SystemState
 		data.OSName = ss.Platform.OSName

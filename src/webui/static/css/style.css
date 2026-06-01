@@ -757,9 +757,17 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   font-weight: 600;
   position: fixed;
   top: var(--topbar-height);
-  left: 0;
+  /* #sidebar sits at z-index 150 (above this banner's 100), so a
+     left:0 banner gets its left edge clipped behind the sidebar and
+     the text drifts visually off-centre. Inset the banner past the
+     sidebar on desktop; on ≤1024px the sidebar slides off-screen
+     and the banner reclaims full width. */
+  left: var(--sidebar-width);
   right: 0;
   z-index: 100;
+}
+@media (max-width: 1024px) {
+  .conn-banner { left: 0; }
 }
 
 .alert {
