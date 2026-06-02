@@ -1,0 +1,49 @@
+#!/bin/sh
+
+case $1 in
+    base|baseline) mode="baseline" ;;
+    incr|incremental) mode="incremental" ;;
+    ival|interval) mode="interval" ;;
+    single) mode="single" ;;
+    *) exit 1 ;;
+esac
+shift
+
+slug=$(echo $* | tr ' ' '_' | tr -cd '[a-zA-Z0-9]-_')
+baseline=/tmp/swatch-"$slug"
+now=/tmp/swatch-"$slug".now
+
+output()
+{
+    diff -u -U0 "$baseline" "$now" | awk '
+	/^\-[^-]/ {
+		sub(/^-/, "");
+		last[$1] = $2;
+	}
+	/^\+[^+]/ {
+		sub(/^\+/, "");
+		diff = $2 - last[$1];
+		if (diff)
+			printf("%-60s %10d\n", $1, diff);
+	}
+    '
+}
+
+if [ $mode = baseline ] || ! [ -f "$baseline" ]; then
+    $@ >"$baseline"
+    [ $mode = baseline ] && exit
+fi
+
+if [ $mode = single ]; then
+    $@ >"$now"
+    output
+    exit
+fi
+
+while sleep 1; do
+    $@ >"$now"
+
+    printf '\e[2J\e[H'
+    output
+    [ $mode = interval ] && mv "$now" "$baseline"
+done
