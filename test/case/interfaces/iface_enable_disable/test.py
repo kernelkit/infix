@@ -56,11 +56,11 @@ def configure_interface(target, iface_name, iface_type=None, enabled=True, ip_ad
             "bridge": bridge
         }
 
-    target.put_config_dict( "ietf-interfaces", {
+    target.put_config_dicts({"ietf-interfaces": {
         "interfaces": {
             "interface": [
                 interface_config
-            ]}})
+            ]}}})
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):

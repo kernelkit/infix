@@ -30,29 +30,33 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Set hostname to 'container-host'"):
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": "container-host"
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": "container-host"
+                    }
                 }
             })
 
     with test.step("Create container 'web' from bundled OCI image"):
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": f"{NAME}",
-                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
-                        "command": "/usr/sbin/httpd -f -v -p 91",
-                        "network": {
-                            "host": True
-                        },
-                        "resource-limit": {
-                            "memory": 512,  # 512 KiB
-                            "cpu": 500      # 50% of one CPU (0.5 cores)
+        target.put_config_dicts({
+            "infix-containers": {
+                "containers": {
+                    "container": [
+                        {
+                            "name": f"{NAME}",
+                            "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                            "command": "/usr/sbin/httpd -f -v -p 91",
+                            "network": {
+                                "host": True
+                            },
+                            "resource-limit": {
+                                "memory": 512,  # 512 KiB
+                                "cpu": 500      # 50% of one CPU (0.5 cores)
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             }
         })
 

@@ -28,55 +28,56 @@ with infamy.Test() as test:
         HOST_IP = "192.168.1.42"
 
     with test.step("Configure basic end-device firewall"):
-        target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": data_if,
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": TARGET_IP,
-                                "prefix-length": 24
-                            }]
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": data_if,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": TARGET_IP,
+                                    "prefix-length": 24
+                                }]
+                            }
                         }
-                    }
-                ]
-            }
-        })
-
-        target.put_config_dict("infix-firewall", {
-            "firewall": {
-                "default": "public-untrusted-net",
-                "logging": "all",
-                "service": [{
-                    "name": "mySSH",
-                    "port": [{
-                        "lower": 222,
-                        "proto": "tcp"
+                    ]
+                }
+            },
+            "infix-firewall": {
+                "firewall": {
+                    "default": "public-untrusted-net",
+                    "logging": "all",
+                    "service": [{
+                        "name": "mySSH",
+                        "port": [{
+                            "lower": 222,
+                            "proto": "tcp"
+                        }]
+                    }, {
+                        "name": "http",
+                        "port": [{
+                            "lower": 8080,
+                            "proto": "tcp"
+                        }]
+                    }],
+                    "zone": [{
+                        "name": "mgmt",
+                        "description": "Management network - for test automation",
+                        "action": "accept",
+                        "interface": [mgmt_if],
+                        "service": ["ssh", "netconf", "restconf"]
+                    }, {
+                        # 20-char name, exceeds old iptables-derived 17-char limit
+                        # Verifies we allow long names with nftables, issue #1389
+                        "name": "public-untrusted-net",
+                        "description": "Public untrusted network",
+                        "action": "drop",
+                        "interface": [data_if],
+                        "service": ["ssh", "dhcpv6-client", "mySSH", "http"]
                     }]
-                }, {
-                    "name": "http",
-                    "port": [{
-                        "lower": 8080,
-                        "proto": "tcp"
-                    }]
-                }],
-                "zone": [{
-                    "name": "mgmt",
-                    "description": "Management network - for test automation",
-                    "action": "accept",
-                    "interface": [mgmt_if],
-                    "service": ["ssh", "netconf", "restconf"]
-                }, {
-                    # 20-char name, exceeds old iptables-derived 17-char limit
-                    # Verifies we allow long names with nftables, issue #1389
-                    "name": "public-untrusted-net",
-                    "description": "Public untrusted network",
-                    "action": "drop",
-                    "interface": [data_if],
-                    "service": ["ssh", "dhcpv6-client", "mySSH", "http"]
-                }]
+                }
             }
         })
 

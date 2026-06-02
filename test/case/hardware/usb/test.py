@@ -39,9 +39,11 @@ with infamy.Test() as test:
             }
             components.append(component)
 
-        target.put_config_dict("ietf-hardware", {
-            "hardware": {
-                "component": components
+        target.put_config_dicts({
+            "ietf-hardware": {
+                "hardware": {
+                    "component": components
+                }
             }
         })
 
@@ -61,9 +63,11 @@ with infamy.Test() as test:
             }
             components.append(component)
 
-        target.put_config_dict("ietf-hardware", {
-            "hardware": {
-                "component": components
+        target.put_config_dicts({
+            "ietf-hardware": {
+                "hardware": {
+                    "component": components
+                }
             }
         })
 
@@ -91,9 +95,11 @@ with infamy.Test() as test:
             }
             components.append(component)
 
-        target.put_config_dict("ietf-hardware", {
-            "hardware": {
-                "component": components
+        target.put_config_dicts({
+            "ietf-hardware": {
+                "hardware": {
+                    "component": components
+                }
             }
         })
 

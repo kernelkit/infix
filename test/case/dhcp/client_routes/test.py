@@ -34,7 +34,7 @@ with infamy.Test() as test:
 
         # Install canary route to smoke out any regressions in
         # how the DHCP client installs routes in the kernel FIB
-        client.put_config_dict("ietf-routing", {
+        client.put_config_dicts({"ietf-routing": {
             "routing": {
                 "control-plane-protocols": {
                     "control-plane-protocol": [{
@@ -54,12 +54,12 @@ with infamy.Test() as test:
                     }]
                 }
             }
-        })
+        }})
 
     with test.step("Enabling DHCP client, allow option 3 and 121"):
         _, port = env.ltop.xlate("client", "data")
 
-        client.put_config_dict("ietf-interfaces", {
+        client.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": f"{port}",
@@ -73,7 +73,7 @@ with infamy.Test() as test:
                     }
                 }]
             }
-        })
+        }})
 
     with infamy.IsolatedMacVlan(host) as netns:
         netns.addip("192.168.0.1")

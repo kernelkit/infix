@@ -23,10 +23,6 @@ class Transport(ABC):
         pass
 
     @abstractmethod
-    def put_config_dict(self, modname, edit):
-        pass
-
-    @abstractmethod
     def patch_config(self, modname, edit):
         pass
 

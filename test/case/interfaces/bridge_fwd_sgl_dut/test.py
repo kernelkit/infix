@@ -36,7 +36,7 @@ with infamy.Test() as test:
         _, tport1 = env.ltop.xlate("target", "data1")
         _, tport2 = env.ltop.xlate("target", "data2")
 
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -60,7 +60,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
     with test.step("Verify ping from host:data1 to 10.0.0.2"):
         _, hport1 = env.ltop.xlate("host", "data1")

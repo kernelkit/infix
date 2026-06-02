@@ -41,7 +41,7 @@ with infamy.Test() as test:
         _, tport22 = env.ltop.xlate("dut2", "data2")
         _, tport2_link = env.ltop.xlate("dut2", "link")
 
-        dut1.put_config_dict("ietf-interfaces", {
+        dut1.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -77,9 +77,9 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
-        dut2.put_config_dict("ietf-interfaces", {
+        dut2.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -123,7 +123,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
     with test.step("Verify ping 10.0.0.3 and 10.0.0.4 from host:data11"):
 

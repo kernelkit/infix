@@ -23,16 +23,18 @@ with infamy.Test() as test:
         tgtssh = env.attach("target", "mgmt", "ssh")
 
     with test.step("Add new user 'newuser01' with password 'newuser01password'"):
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "authentication": {
-                    "user": [
-                        {
-                            "name": username,
-                            "password": hashed_password,
-                            "shell": "infix-system:bash"
-                        }
-                    ]
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "authentication": {
+                        "user": [
+                            {
+                                "name": username,
+                                "password": hashed_password,
+                                "shell": "infix-system:bash"
+                            }
+                        ]
+                    }
                 }
             }
         })

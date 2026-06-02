@@ -61,7 +61,7 @@ with infamy.Test() as test:
                 }]
             }
         }
-        target.put_config_dict("ietf-interfaces", config)
+        target.put_config_dicts({"ietf-interfaces": config})
 
     with test.step("Verify target:data has MAC address '02:01:00:c0:ff:ee'"):
         mac = iface.get_phys_address(target, tport)
@@ -85,7 +85,7 @@ with infamy.Test() as test:
                 }]
             }
         }
-        target.put_config_dict("ietf-interfaces", config)
+        target.put_config_dicts({"ietf-interfaces": config})
 
     with test.step("Verify target:data has chassis MAC"):
         until(lambda: iface.get_phys_address(target, tport) == cmac)
@@ -104,7 +104,7 @@ with infamy.Test() as test:
                 }]
             }
         }
-        target.put_config_dict("ietf-interfaces", config)
+        target.put_config_dicts({"ietf-interfaces": config})
 
     with test.step("Verify target:data has chassis MAC + offset"):
         BMAC = calc_mac(cmac, OFFSET)

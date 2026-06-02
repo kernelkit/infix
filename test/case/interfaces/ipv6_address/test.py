@@ -17,7 +17,7 @@ with infamy.Test() as test:
     with test.step("Setting up bridge with IPv6 SLAAC for global prefix on target:data"):
         _, tport = env.ltop.xlate("target", "data")
 
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -40,7 +40,7 @@ with infamy.Test() as test:
                     },
                 ]
             }
-        })
+        }})
 
     with test.step("Verify using sysctl that 'net.ipv6.conf.br0.autoconf' is 1 on target"):
         def check_autoconf():

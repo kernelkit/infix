@@ -52,57 +52,61 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Set hostname to 'container-host'"):
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": "container-host"
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": "container-host"
+                    }
                 }
             })
 
     with test.step("Create VETH pair for web server container"):
-        target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": f"{ext0}",
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": f"{EXTIP}",
-                                "prefix-length": 24
-                            }]
-                        }
-                    },
-                    {
-                        "name": "int0",
-                        "type": "infix-if-type:veth",
-                        "enabled": True,
-                        "infix-interfaces:veth": {
-                            "peer": f"{WEBNM}"
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": f"{ext0}",
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": f"{EXTIP}",
+                                    "prefix-length": 24
+                                }]
+                            }
                         },
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": f"{INTIP}",
-                                "prefix-length": 24,
-                            }]
-                        }
-                    },
-                    {
-                        "name": f"{WEBNM}",
-                        "type": "infix-if-type:veth",
-                        "enabled": True,
-                        "infix-interfaces:veth": {
-                            "peer": "int0"
+                        {
+                            "name": "int0",
+                            "type": "infix-if-type:veth",
+                            "enabled": True,
+                            "infix-interfaces:veth": {
+                                "peer": f"{WEBNM}"
+                            },
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": f"{INTIP}",
+                                    "prefix-length": 24,
+                                }]
+                            }
                         },
-                        "ipv4": {
-                            "address": [{
-                                "ip": f"{WEBIP}",
-                                "prefix-length": 24,
-                            }]
+                        {
+                            "name": f"{WEBNM}",
+                            "type": "infix-if-type:veth",
+                            "enabled": True,
+                            "infix-interfaces:veth": {
+                                "peer": "int0"
+                            },
+                            "ipv4": {
+                                "address": [{
+                                    "ip": f"{WEBIP}",
+                                    "prefix-length": 24,
+                                }]
+                            },
+                            "container-network": {}
                         },
-                        "container-network": {}
-                    },
-                ]
+                    ]
+                }
             }
         })
 
@@ -132,43 +136,47 @@ table ip nat {
 }
 """)
 
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": f"{NFTNM}",
-                        "image": f"{NFTABLES}",
-                        "network": {
-                            "host": True
-                        },
-                        "mount": [
-                          {
-                            "name": "nftables.conf",
-                            "content": config,
-                            "target": "/etc/nftables.conf"
-                          }
-                        ],
-                        "privileged": True
-                    }
-                ]
+        target.put_config_dicts({
+            "infix-containers": {
+                "containers": {
+                    "container": [
+                        {
+                            "name": f"{NFTNM}",
+                            "image": f"{NFTABLES}",
+                            "network": {
+                                "host": True
+                            },
+                            "mount": [
+                              {
+                                "name": "nftables.conf",
+                                "content": config,
+                                "target": "/etc/nftables.conf"
+                              }
+                            ],
+                            "privileged": True
+                        }
+                    ]
+                }
             }
         })
 
     with test.step("Create web server container from bundled OCI image"):
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": f"{WEBNM}",
-                        "image": f"{HTTPD}",
-                        "command": "/usr/sbin/httpd -f -v -p 91",
-                        "network": {
-                            "interface": [
-                                {"name": f"{WEBNM}"}
-                            ]
+        target.put_config_dicts({
+            "infix-containers": {
+                "containers": {
+                    "container": [
+                        {
+                            "name": f"{WEBNM}",
+                            "image": f"{HTTPD}",
+                            "command": "/usr/sbin/httpd -f -v -p 91",
+                            "network": {
+                                "interface": [
+                                    {"name": f"{WEBNM}"}
+                                ]
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             }
         })
 

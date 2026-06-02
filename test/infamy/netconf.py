@@ -330,8 +330,17 @@ class Device(Transport):
         # print(f"Send new XML config: {config}")
         return self.put_config(config, retries=retries)
 
-    def put_config_dict(self, modname, edit, retries=3):
-        """Convert Python dictionary to XMl and send as configuration"""
+    def patch_config(self, modname, edit, retries=3):
+        """Merge configuration for a single model to running-config
+
+        For NETCONF, edit-config already has proper NACM support, so a
+        single-model merge is sufficient.
+
+        Args:
+            modname: YANG module name
+            edit: Configuration dictionary
+            retries: Number of retry attempts on failure (default 3)
+        """
         try:
             mod = self.ly.get_module(modname)
         except libyang.util.LibyangError:
@@ -342,19 +351,6 @@ class Device(Transport):
         config = lyd.print_mem("xml", with_siblings=True, pretty=False)
         # print(f"Send new XML config: {config}")
         return self.put_config(config, retries=retries)
-
-    def patch_config(self, modname, edit, retries=3):
-        """Merge configuration for a single model to running-config
-
-        For NETCONF, this is identical to put_config_dict() since
-        edit-config already has proper NACM support.
-
-        Args:
-            modname: YANG module name
-            edit: Configuration dictionary
-            retries: Number of retry attempts on failure (default 3)
-        """
-        return self.put_config_dict(modname, edit, retries=retries)
 
     def call(self, call):
         """Call RPC, XML version"""

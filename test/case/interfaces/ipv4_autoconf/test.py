@@ -50,7 +50,7 @@ with infamy.Test() as test:
     with test.step("Configure interface target:data with IPv4 ZeroConf IP"):
         _, tport = env.ltop.xlate("target", "data")
 
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -62,7 +62,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
     with test.step("Verify link-local address exist on target:data"):
         until(lambda: has_linklocal(target, tport), attempts=30)
@@ -70,7 +70,7 @@ with infamy.Test() as test:
     with test.step("Configure target:data with a specific IPv4 ZeroConf IP"):
         _, tport = env.ltop.xlate("target", "data")
 
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -84,7 +84,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
     with test.step("Verify target:data has link-local address 169.254.42.42"):
         until(lambda: has_linklocal(target, tport, request="169.254.42.42"),

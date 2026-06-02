@@ -27,7 +27,7 @@ with infamy.Test() as test:
         veth0b = "veth0b"
 
     with test.step("Create VETH pair"):
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -48,7 +48,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
     with test.step("Verify interfaces 'veth0a' and 'veth0b' exist"):
         assert iface.exist(target, veth0a), \
@@ -57,7 +57,7 @@ with infamy.Test() as test:
             f"Interface <{veth0b}> does not exist."
 
     with test.step("Set IP address on target:data1 (dummy op)"):
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": f"{data1}",
@@ -69,10 +69,10 @@ with infamy.Test() as test:
                     }
                 }]
             }
-        })
+        }})
 
     with test.step("Set IP address on target:data2 (dummy op)"):
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": f"{data2}",
@@ -84,7 +84,7 @@ with infamy.Test() as test:
                     }
                 }]
             }
-        })
+        }})
 
     # TODO: need target.del_config_dict() or similar for VETH _pairs_,
     #       because both interfaces must be removed at the same time.

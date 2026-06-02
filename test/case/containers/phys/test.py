@@ -27,32 +27,34 @@ with infamy.Test() as test:
     with test.step("Create httpd container from bundled OCI image"):
         _, ifname = env.ltop.xlate("target", "data")
 
-        target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [{
-                    "name": f"{ifname}",
-                    "ipv4": {
-                        "address": [{
-                            "ip": f"{DUTIP}",
-                            "prefix-length": 24
-                        }]
-                    },
-                    "container-network": {}
-                }]
-            }
-        })
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [{
-                    "name": f"{NAME}",
-                    "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
-                    "command": "/usr/sbin/httpd -f -v -p 91",
-                    "network": {
-                        "interface": [
-                            {"name": f"{ifname}"}
-                        ]
-                    }
-                }]
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": f"{ifname}",
+                        "ipv4": {
+                            "address": [{
+                                "ip": f"{DUTIP}",
+                                "prefix-length": 24
+                            }]
+                        },
+                        "container-network": {}
+                    }]
+                }
+            },
+            "infix-containers": {
+                "containers": {
+                    "container": [{
+                        "name": f"{NAME}",
+                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                        "command": "/usr/sbin/httpd -f -v -p 91",
+                        "network": {
+                            "interface": [
+                                {"name": f"{ifname}"}
+                            ]
+                        }
+                    }]
+                }
             }
         })
 
@@ -74,16 +76,18 @@ with infamy.Test() as test:
             # Verify modifying a running container takes, issue #930
             data = to_binary(BODY)
 
-            target.put_config_dict("infix-containers", {
-                "containers": {
-                    "container": [{
-                        "name": f"{NAME}",
-                        "mount": [{
-                            "name": "index.html",
-                            "content": f"{data}",
-                            "target": "/var/www/index.html"
+            target.put_config_dicts({
+                "infix-containers": {
+                    "containers": {
+                        "container": [{
+                            "name": f"{NAME}",
+                            "mount": [{
+                                "name": "index.html",
+                                "content": f"{data}",
+                                "target": "/var/www/index.html"
+                            }]
                         }]
-                    }]
+                    }
                 }
             })
 

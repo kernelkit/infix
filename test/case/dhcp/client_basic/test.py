@@ -33,7 +33,7 @@ with infamy.Test() as test:
                     }]
                 }
             }
-            client.put_config_dict("ietf-interfaces", config)
+            client.put_config_dicts({"ietf-interfaces": config})
 
             with test.step("Verify client lease for 10.0.0.42"):
                 until(lambda: iface.address_exist(client, port, ADDRESS))

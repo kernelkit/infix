@@ -29,11 +29,11 @@ with infamy.Test() as test:
         _, port = env.ltop.xlate("client", "mgmt")
 
     with test.step("Configure static system hostname"):
-        client.put_config_dict("ietf-system", {
+        client.put_config_dicts({"ietf-system": {
             "system": {
                 "hostname": CONF_HOSTNAME
             }
-        })
+        }})
 
     with test.step("Verify configured hostname is set"):
         until(lambda: verify_hostname(client, CONF_HOSTNAME))
@@ -42,7 +42,13 @@ with infamy.Test() as test:
         netns.addip("10.0.0.1")
         with infamy.dhcp.Server(netns, ip="10.0.0.42", hostname=DHCP_HOSTNAME):
             with test.step("Enable DHCP client requesting hostname option"):
-                client.put_config_dict("ietf-interfaces", {
+                client.put_config_dicts({
+                    "ietf-system": {
+                        "system": {
+                            "hostname": CONF_HOSTNAME
+                        }
+                    },
+                    "ietf-interfaces": {
                     "interfaces": {
                         "interface": [{
                             "name": port,
@@ -58,7 +64,7 @@ with infamy.Test() as test:
                             }
                         }]
                     }
-                })
+                }})
 
             with test.step("Verify DHCP hostname takes precedence"):
                 until(lambda: verify_hostname(client, DHCP_HOSTNAME))

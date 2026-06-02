@@ -23,16 +23,18 @@ with infamy.Test() as test:
         USER = "jacky"
         PASS = "$1$3aR7Bq2u$G9kV.8AALtKkCnaAXFyu6/"
 
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "authentication": {
-                    "user": [
-                        {
-                            "name": USER,
-                            "password": PASS,
-                            "shell": "infix-system:bash"
-                        }
-                    ]
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "authentication": {
+                        "user": [
+                            {
+                                "name": USER,
+                                "password": PASS,
+                                "shell": "infix-system:bash"
+                            }
+                        ]
+                    }
                 }
             }
         })
@@ -60,7 +62,7 @@ with infamy.Test() as test:
             if group["name"] == "admin":
                 if USER not in group["user-name"]:
                     group["user-name"].append(USER)
-        target.put_config_dict("ietf-netconf-acm", nacm)
+        target.put_config_dicts({"ietf-netconf-acm": nacm})
 
     with test.step("Verify user jacky is now in wheel group (in Linux)"):
         if not tgtssh.runsh(f"grep wheel /etc/group | grep '{USER}'"):
@@ -79,7 +81,7 @@ with infamy.Test() as test:
             if user['name'] == USER:
                 user['password'] = "$factory$"
                 break
-        target.put_config_dict("ietf-system", running)
+        target.put_config_dicts({"ietf-system": running})
 
     with test.step("Verify user jacky exists and has new password"):
         operational = target.get_data("/ietf-system:system/authentication")

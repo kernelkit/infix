@@ -40,7 +40,7 @@ with infamy.Test() as test:
         _, tport21 = env.ltop.xlate("dut2", "data2")
         _, tport22 = env.ltop.xlate("dut2", "link")
 
-        dut1.put_config_dict("ietf-interfaces", {
+        dut1.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -89,9 +89,9 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
-        dut2.put_config_dict("ietf-interfaces", {
+        dut2.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -140,7 +140,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
 
     _, hport10 = env.ltop.xlate("host", "data10")

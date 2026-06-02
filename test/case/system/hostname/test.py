@@ -19,9 +19,11 @@ with infamy.Test() as test:
         NEW = "h0stn4m3"
 
     with test.step("Set hostname to 'h0stn4m3'"):
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": NEW,
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": NEW,
+                }
             }
         })
 
@@ -30,9 +32,11 @@ with infamy.Test() as test:
         assert running["system"]["hostname"] == NEW
 
     with test.step("Set hostname to '%h-%m'"):
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": FMT,
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": FMT,
+                }
             }
         })
 

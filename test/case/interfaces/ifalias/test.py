@@ -16,7 +16,7 @@ with infamy.Test() as test:
     with test.step("Set up interface target:data with description"):
         _, tport = env.ltop.xlate("target", "data")
 
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -26,7 +26,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
     with test.step("Verify description can be read back from operational"):
         text = iface.get_param(target, tport, "description")

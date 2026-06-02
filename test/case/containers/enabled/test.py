@@ -17,14 +17,16 @@ from infamy.util import until
 
 def set_container_enabled(target, name, enabled):
     """Helper function to set container enabled state and verify the change"""
-    target.put_config_dict("infix-containers", {
-        "containers": {
-            "container": [
-                {
-                    "name": name,
-                    "enabled": enabled
-                }
-            ]
+    target.put_config_dicts({
+        "infix-containers": {
+            "containers": {
+                "container": [
+                    {
+                        "name": name,
+                        "enabled": enabled
+                    }
+                ]
+            }
         }
     })
 
@@ -39,27 +41,22 @@ with infamy.Test() as test:
         if not target.has_model("infix-containers"):
             test.skip()
 
-    with test.step("Set hostname to 'container-host'"):
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": "container-host"
-                }
-            })
-
     with test.step("Create enabled container from bundled OCI image"):
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": f"{NAME}",
-                        "enabled": True,
-                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
-                        "command": "/usr/sbin/httpd -f -v -p 91",
-                        "network": {
-                            "host": True
+        target.put_config_dicts({
+            "infix-containers": {
+                "containers": {
+                    "container": [
+                        {
+                            "name": f"{NAME}",
+                            "enabled": True,
+                            "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                            "command": "/usr/sbin/httpd -f -v -p 91",
+                            "network": {
+                                "host": True
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             }
         })
 

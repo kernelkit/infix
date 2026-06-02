@@ -36,60 +36,62 @@ with infamy.Test() as test:
 
     with test.step("Create 'web-br0-veth' container from bundled OCI image"):
         _, ifname = env.ltop.xlate("target", "data")
-        target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": f"{ifname}",
-                        "infix-interfaces:bridge-port": {
-                            "bridge": "br0"
-                        }
-                    },
-                    {
-                        "name": "br0",
-                        "type": "infix-if-type:bridge"
-                    },
-                    {
-                        "name": f"{NAME}",
-                        "type": "infix-if-type:veth",
-                        "infix-interfaces:veth": {
-                            "peer": "veth0b"
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": f"{ifname}",
+                            "infix-interfaces:bridge-port": {
+                                "bridge": "br0"
+                            }
                         },
-                        "ipv4": {
-                            "address": [{
-                                "ip": f"{DUTIP}",
-                                "prefix-length": 24
-                            }]
+                        {
+                            "name": "br0",
+                            "type": "infix-if-type:bridge"
                         },
-                        "container-network": {}
-                    },
-                    {
-                        "name": "veth0b",
-                        "type": "infix-if-type:veth",
-                        "infix-interfaces:veth": {
-                            "peer": f"{NAME}"
+                        {
+                            "name": f"{NAME}",
+                            "type": "infix-if-type:veth",
+                            "infix-interfaces:veth": {
+                                "peer": "veth0b"
+                            },
+                            "ipv4": {
+                                "address": [{
+                                    "ip": f"{DUTIP}",
+                                    "prefix-length": 24
+                                }]
+                            },
+                            "container-network": {}
                         },
-                        "infix-interfaces:bridge-port": {
-                            "bridge": "br0"
+                        {
+                            "name": "veth0b",
+                            "type": "infix-if-type:veth",
+                            "infix-interfaces:veth": {
+                                "peer": f"{NAME}"
+                            },
+                            "infix-interfaces:bridge-port": {
+                                "bridge": "br0"
+                            }
+                        },
+                    ]
+                }
+            },
+            "infix-containers": {
+                "containers": {
+                    "container": [
+                        {
+                            "name": f"{NAME}",
+                            "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                            "command": "/usr/sbin/httpd -f -v -p 91",
+                            "network": {
+                                "interface": [
+                                    { "name": f"{NAME}" }
+                                ]
+                            }
                         }
-                    },
-                ]
-            }
-        })
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": f"{NAME}",
-                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
-                        "command": "/usr/sbin/httpd -f -v -p 91",
-                        "network": {
-                            "interface": [
-                                { "name": f"{NAME}" }
-                            ]
-                        }
-                    }
-                ]
+                    ]
+                }
             }
         })
 

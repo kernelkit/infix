@@ -25,22 +25,24 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Create container with volume from bundled OCI image"):
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": f"{NAME}",
-                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
-                        "command": f"/usr/sbin/httpd -f -v -p {PORT}",
-                        "network": {
-                            "host": True
-                        },
-                        "volume": [{
-                            "name": "www",
-                            "target": "/var/www"
-                        }]
-                    }
-                ]
+        target.put_config_dicts({
+            "infix-containers": {
+                "containers": {
+                    "container": [
+                        {
+                            "name": f"{NAME}",
+                            "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                            "command": f"/usr/sbin/httpd -f -v -p {PORT}",
+                            "network": {
+                                "host": True
+                            },
+                            "volume": [{
+                                "name": "www",
+                                "target": "/var/www"
+                            }]
+                        }
+                    ]
+                }
             }
         })
 

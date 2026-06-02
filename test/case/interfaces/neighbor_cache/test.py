@@ -24,7 +24,7 @@ with infamy.Test() as test:
         _, tport = env.ltop.xlate("target", "data")
 
     with test.step("Configure static IPv4 ARP and IPv6 neighbor entries on target:data"):
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": tport,
@@ -42,7 +42,7 @@ with infamy.Test() as test:
                     }
                 }]
             }
-        })
+        }})
 
     with test.step("Verify static IPv4 ARP entry is visible in operational state"):
         until(lambda: iface.neighbor_exist(target, tport, IPV4_NEIGH, IPV4_LLADR, "static"))

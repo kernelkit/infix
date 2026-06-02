@@ -63,12 +63,14 @@ def configure_oc(iface, ip, priority1, client_only, dm="e2e"):
 
 
 def set_iface_enabled(target, iface, enabled):
-    target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [{
-                "name": iface,
-                "enabled": enabled,
-            }]
+    target.put_config_dicts({
+        "ietf-interfaces": {
+            "interfaces": {
+                "interface": [{
+                    "name": iface,
+                    "enabled": enabled,
+                }]
+            }
         }
     })
 

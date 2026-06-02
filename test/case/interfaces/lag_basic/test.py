@@ -113,7 +113,7 @@ def dut_init(dut, mode, addr):
     net = net_init(dut["mon"], addr)
     lag = lag_init(mode)
 
-    dut.put_config_dict("ietf-interfaces", {
+    dut.put_config_dicts({"ietf-interfaces": {
         "interfaces": {
             "interface": [{
                 "name": "lag0",
@@ -130,7 +130,7 @@ def dut_init(dut, mode, addr):
                 "lag-port": {"lag": "lag0"}
             }] + net + lag
         }
-    })
+    }})
 
 
 with infamy.Test() as test:

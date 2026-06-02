@@ -45,16 +45,22 @@ with infamy.Test() as test:
         _, port = env.ltop.xlate("client", "mgmt")
 
     with test.step(f"Configure initial hostname '{HOSTNM_A}'"):
-        client.put_config_dict("ietf-system", {
+        client.put_config_dicts({"ietf-system": {
             "system": {
                 "hostname": HOSTNM_A
             }
-        })
+        }})
         until(lambda: client.get_data("/ietf-system:system")
               .get("system", {}).get("hostname") == HOSTNM_A)
 
     with test.step("Enable DHCP client sending hostname option"):
-        client.put_config_dict("ietf-interfaces", {
+        client.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": HOSTNM_A
+                }
+            },
+            "ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": port,
@@ -70,17 +76,17 @@ with infamy.Test() as test:
                     }
                 }]
             }
-        })
+        }})
 
     with test.step(f"Verify running udhcpc announces hostname '{HOSTNM_A}'"):
         until(lambda: running_hostname(clissh, port) == HOSTNM_A)
 
     with test.step(f"Update system hostname to '{HOSTNM_B}'"):
-        client.put_config_dict("ietf-system", {
+        client.put_config_dicts({"ietf-system": {
             "system": {
                 "hostname": HOSTNM_B
             }
-        })
+        }})
         until(lambda: client.get_data("/ietf-system:system")
               .get("system", {}).get("hostname") == HOSTNM_B)
 

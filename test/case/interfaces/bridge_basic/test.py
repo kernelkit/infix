@@ -23,7 +23,7 @@ with infamy.Test() as test:
     with test.step("Configure single bridge with a single physical port, bridge @ IP 10.0.0.2"):
         _, tport = env.ltop.xlate("target", "data")
 
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": "br0",
@@ -43,7 +43,7 @@ with infamy.Test() as test:
                     }
                 }]
             }
-        })
+        }})
 
     with test.step("Verify ping 10.0.0.2 is possible from host:data"):
         _, hport = env.ltop.xlate("host", "data")

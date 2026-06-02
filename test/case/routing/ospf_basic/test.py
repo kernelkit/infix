@@ -20,7 +20,8 @@ from infamy.util import until, parallel
 
 
 def config_target1(target, data, link):
-    target.put_config_dict("ietf-interfaces", {
+    target.put_config_dicts({
+        "ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -56,135 +57,128 @@ def config_target1(target, data, link):
                     }
                 ]
             }
-    })
-    target.put_config_dict("ietf-system", {
-        "system": {
-            "hostname": "R1"
-        }
-    })
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [{
-                    "type": "infix-routing:static",
-                    "name": "default",
-                    "static-routes": {
-                        "ipv4": {
-                            "route": [{
-                                "destination-prefix": "192.168.33.1/32",
-                                "next-hop": {
-                                    "special-next-hop": "blackhole"
-                                }
-                            }]
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [{
+                        "type": "infix-routing:static",
+                        "name": "default",
+                        "static-routes": {
+                            "ipv4": {
+                                "route": [{
+                                    "destination-prefix": "192.168.33.1/32",
+                                    "next-hop": {
+                                        "special-next-hop": "blackhole"
+                                    }
+                                }]
+                            }
                         }
-                    }
-                }, {
-                    "type": "infix-routing:ospfv2",
-                    "name": "default",
-                    "ospf": {
-                        "redistribute": {
-                            "redistribute": [{
-                                "protocol": "static"
-                            }, {
-                                "protocol": "connected"
-                            }]
-                        },
-                        "areas": {
-                            "area": [{
-                                "area-id": "0.0.0.0",
-                                "interfaces": {
-                                    "interface": [{
-                                        "enabled": True,
-                                        "name": link,
-                                        "hello-interval": 1,
-                                        "dead-interval": 3
-                                    }]
-                                },
-                            }]
+                    }, {
+                        "type": "infix-routing:ospfv2",
+                        "name": "default",
+                        "ospf": {
+                            "redistribute": {
+                                "redistribute": [{
+                                    "protocol": "static"
+                                }, {
+                                    "protocol": "connected"
+                                }]
+                            },
+                            "areas": {
+                                "area": [{
+                                    "area-id": "0.0.0.0",
+                                    "interfaces": {
+                                        "interface": [{
+                                            "enabled": True,
+                                            "name": link,
+                                            "hello-interval": 1,
+                                            "dead-interval": 3
+                                        }]
+                                    },
+                                }]
+                            }
                         }
-                    }
-                }]
+                    }]
+                }
             }
         }
     })
 
 
 def config_target2(target, link, data):
-    target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [{
-                "name": link,
-                "enabled": True,
-                "ipv4": {
+    target.put_config_dicts({
+        "ietf-interfaces": {
+            "interfaces": {
+                "interface": [{
+                    "name": link,
+                    "enabled": True,
+                    "ipv4": {
+                        "forwarding": True,
+                        "address": [{
+                            "ip": "192.168.50.2",
+                            "prefix-length": 24
+                        }]
+                    }
+                }, {
+                    "name": data,
+                    "enabled": True,
+                    "ipv4": {
+                        "forwarding": True,
+                        "address": [{
+                            "ip": "192.168.60.1",
+                            "prefix-length": 24
+                        }]
+                    }
+                }, {
+                    "name": "lo",
+                    "enabled": True,
                     "forwarding": True,
-                    "address": [{
-                        "ip": "192.168.50.2",
-                        "prefix-length": 24
-                    }]
-                }
-            }, {
-                "name": data,
-                "enabled": True,
-                "ipv4": {
-                    "forwarding": True,
-                    "address": [{
-                        "ip": "192.168.60.1",
-                        "prefix-length": 24
-                    }]
-                }
-            }, {
-                "name": "lo",
-                "enabled": True,
-                "forwarding": True,
-                "ipv4": {
-                    "address": [{
-                        "ip": "192.168.200.1",
-                        "prefix-length": 32
-                    }]
-                }
-            }]
-        }
-    })
-
-    target.put_config_dict("ietf-system", {
-        "system": {
-            "hostname": "R2"
-        }
-    })
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [{
-                    "type": "infix-routing:ospfv2",
-                    "name": "default",
-                    "ospf": {
-                        "redistribute": {
-                            "redistribute": [{
-                                "protocol": "connected"
-                            }]
-                        },
-                        "areas": {
-                            "area": [{
-                                "area-id": "0.0.0.0",
-                                "interfaces": {
-                                    "interface": [{
-                                        "enabled": True,
-                                        "name": link,
-                                        "hello-interval": 1,
-                                        "dead-interval": 3
-                                    }]
-                                }
-                            }]
-                        }
+                    "ipv4": {
+                        "address": [{
+                            "ip": "192.168.200.1",
+                            "prefix-length": 32
+                        }]
                     }
                 }]
+            }
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [{
+                        "type": "infix-routing:ospfv2",
+                        "name": "default",
+                        "ospf": {
+                            "redistribute": {
+                                "redistribute": [{
+                                    "protocol": "connected"
+                                }]
+                            },
+                            "areas": {
+                                "area": [{
+                                    "area-id": "0.0.0.0",
+                                    "interfaces": {
+                                        "interface": [{
+                                            "enabled": True,
+                                            "name": link,
+                                            "hello-interval": 1,
+                                            "dead-interval": 3
+                                        }]
+                                    }
+                                }]
+                            }
+                        }
+                    }]
+                }
             }
         }
     })
 
 
 def config_host(target, link):
-    target.put_config_dict("ietf-interfaces", {
+    target.put_config_dicts({
+        "ietf-interfaces": {
             "interfaces": {
                 "interface": [{
                     "name": link,
@@ -197,11 +191,6 @@ def config_host(target, link):
                     }
                 }]
             }
-        })
-
-    target.put_config_dict("ietf-system", {
-        "system": {
-            "hostname": "HOST"
         }
     })
 
