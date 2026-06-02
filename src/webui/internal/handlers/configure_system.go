@@ -381,9 +381,8 @@ func renderSaveError(w http.ResponseWriter, err error) {
 		msg = err.Error()
 	}
 	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusUnprocessableEntity)
-	// Encode the message safely for HTML output.
 	b, _ := json.Marshal(msg)
-	_ = b // used below via template-escaped string
+	w.Header().Set("HX-Trigger", `{"cfgError":`+string(b)+`}`)
+	w.WriteHeader(http.StatusUnprocessableEntity)
 	w.Write([]byte(`<span class="cfg-save-error">` + template.HTMLEscapeString(msg) + `</span>`))
 }
