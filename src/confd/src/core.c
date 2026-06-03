@@ -621,6 +621,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	if ((rc = system_change(session, config, diff, event, confd)))
 		goto free_diff;
 
+	/* infix-schedule */
+	if ((rc = schedule_change(session, config, diff, event, confd)))
+		goto free_diff;
+
 	/* infix-containers */
 #ifdef CONTAINERS
 	if ((rc = containers_change(session, config, diff, event, confd)))
@@ -792,6 +796,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = subscribe_model("ietf-hardware", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-hardware");
+		goto err;
+	}
+	rc = subscribe_model("infix-schedule", &confd, 0);
+	if (rc) {
+		ERROR("Failed to subscribe to infix-schedule");
 		goto err;
 	}
 	rc = subscribe_model("infix-firewall", &confd, 0);

@@ -23,6 +23,10 @@ All notable changes to the project are documented in this file.
   clients onto the faster 5/6 GHz band
 - Add `legacy-rates` option to re-enable 802.11b rates on 2.4 GHz for
   old IoT devices (disabled by default)
+- Add system scheduling based on ietf-schedule (RFC 9922), using the
+  iCalendar recurrence grouping pruned to cron-expressible rules.  Schedules
+  are reusable time-specs; features (`scheduled-reboot`,
+  `software/check-update`) trigger off them via a schedule reference
 
 ### Fixes
 

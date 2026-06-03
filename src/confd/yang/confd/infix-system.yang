@@ -22,12 +22,20 @@ module infix-system {
       "RFC 6991: Common YANG Data Types";
   }
 
+  import infix-schedule {
+    prefix infix-schedule;
+  }
+
   include infix-system-software;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2026-06-17 {
+    description "Add scheduled-reboot, triggered from a referenced schedule.";
+    reference "internal";
+  }
   revision 2026-03-09 {
     description "Add stratumweight to NTP client configuration.
 
@@ -315,6 +323,23 @@ module infix-system {
         base editor-type;
       }
       default emacs;
+    }
+  }
+
+  augment "/sys:system" {
+    description "Scheduled reboot of the system.";
+
+    container scheduled-reboot {
+      description
+        "Reboot the system on the occurrences of a referenced schedule.
+         Without a referenced schedule the system is never rebooted on a
+         schedule.";
+
+      leaf schedule {
+        type infix-schedule:schedule-ref;
+        description
+          "The schedule whose occurrences trigger a system reboot.";
+      }
     }
   }
 

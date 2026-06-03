@@ -215,6 +215,17 @@ int system_rpc_init (struct confd *confd);
 int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t hostlen, char *domain, size_t domlen);
 int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
+/* schedule.c */
+/* A feature registers cron consumer to run a command on a schedule. */
+struct cron_consumer {
+	const char *path;	  /* xpath of the container holding the schedule-ref leaf */
+	const char *sched_leaf;	  /* name of the schedule-ref leaf within 'path' */
+	const char *enabled_leaf; /* boolean leaf in 'path' that gates the job; NULL = active whenever a schedule is referenced */
+	const char *command;	  /* what crond runs on each occurrence */
+};
+int schedule_consumer_register(const struct cron_consumer *consumer);
+int schedule_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+
 /* containers.c */
 #ifdef CONTAINERS
 int containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);

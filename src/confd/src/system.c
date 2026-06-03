@@ -1678,6 +1678,14 @@ int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 	return SR_ERR_OK;
 }
 
+/* Scheduler consumer for scheduled-reboot. */
+static const struct cron_consumer reboot_consumer = {
+	.path	      = "/ietf-system:system/infix-system:scheduled-reboot",
+	.sched_leaf   = "schedule",
+	.enabled_leaf = NULL,
+	.command      = "/usr/sbin/reboot",
+};
+
 int system_rpc_init(struct confd *confd)
 {
 	int rc;
@@ -1687,6 +1695,8 @@ int system_rpc_init(struct confd *confd)
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:set-current-datetime", rpc_set_datetime, NULL, &confd->sub);
+
+	schedule_consumer_register(&reboot_consumer);
 
 	return SR_ERR_OK;
 fail:

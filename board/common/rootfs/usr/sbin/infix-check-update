@@ -1,0 +1,55 @@
+#!/bin/sh
+# Check for available firmware updates and notify on login if one exists.
+# Called by the scheduler when predefined-action infix-schedule:check-update fires.
+
+NOTIFY_FILE=/run/infix-update
+TAG=infix-update
+
+# Source os-release for VERSION and IMAGE_ID
+if [ ! -f /etc/os-release ]; then
+    logger -t "$TAG" "ERROR: /etc/os-release not found"
+    exit 1
+fi
+. /etc/os-release
+
+# Dev/dirty builds have no comparable semver — always show the latest release
+IS_RELEASE=true
+if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+    IS_RELEASE=false
+fi
+
+# Read configured update-url from running config, fall back to upstream
+UPDATE_URL=$(copy running-config \
+    -x '/ietf-system:system/infix-system:software/check-update/update-url' \
+    2>/dev/null \
+    | jq -r '.. | objects | ."update-url"? // empty')
+UPDATE_URL=${UPDATE_URL:-"https://github.com/kernelkit/infix"}
+
+# Derive API URL from the configured update URL.
+# Default (github.com): https://github.com/org/repo → https://api.github.com/repos/org/repo
+REPO=$(echo "$UPDATE_URL" | sed 's|https://github.com/||; s|/*$||')
+API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+
+LATEST_TAG=$(curl -sSL --max-time 10 "$API_URL" 2>/dev/null \
+    | jq -r '.tag_name // empty')
+if [ -z "$LATEST_TAG" ]; then
+    logger -p daemon.info -t "$TAG" "Update check skipped: could not reach ${API_URL}"
+    exit 0
+fi
+LATEST=${LATEST_TAG#v}
+
+# Compare: is $1 strictly newer than $2?
+newer() {
+    [ "$1" = "$2" ] && return 1
+    [ "$(printf '%s\n%s' "$1" "$2" | sort -V | tail -1)" = "$1" ]
+}
+
+if [ "$IS_RELEASE" = false ] || newer "$LATEST" "$VERSION"; then
+    RELEASE_URL="${UPDATE_URL}/releases/${LATEST_TAG}"
+    MSG="Firmware update available: ${LATEST_TAG}, running ${VERSION} (see ${RELEASE_URL})"
+    logger -t "$TAG" "$MSG"
+    printf '%s\n' "$MSG" > "$NOTIFY_FILE"
+else
+    logger -p daemon.debug -t "$TAG" "No update available (current: $VERSION, latest: $LATEST)"
+    printf '' > "$NOTIFY_FILE"
+fi

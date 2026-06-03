@@ -1,0 +1,187 @@
+module infix-schedule {
+  yang-version 1.1;
+  namespace "urn:project:yang:infix-schedule";
+  prefix infix-schedule;
+
+  import ietf-system {
+    prefix sys;
+  }
+  import ietf-schedule {
+    prefix schedule;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix deviations and augments to ietf-schedule";
+
+  revision 2026-06-17 {
+    description
+      "Initial revision - system scheduling.
+
+       Reusable named schedules built on the
+       ietf-schedule:icalendar-recurrence grouping (RFC 9922), pruned via
+       deviations to the subset expressible as five-field cron.";
+    reference "internal";
+  }
+
+  typedef schedule-ref {
+    type leafref {
+      path "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+         + "/infix-schedule:name";
+    }
+    description
+      "References a named schedule by name.  A feature owns its trigger by
+       pointing a leaf of this type at a schedule; the reference is validated,
+       so a schedule cannot be deleted while something still uses it, and
+       several features may share a single recurrence.";
+  }
+
+  /*
+   * Prune ietf-schedule:icalendar-recurrence down to the subset that maps
+   * cleanly onto a five-field cron expression.  Everything removed here has
+   * no cron equivalent; what survives (frequency, interval, byminute, byhour,
+   * byday/weekday, bymonthday, byyearmonth) is exactly the surface the
+   * scheduler backend implements.
+   */
+
+  /* No start anchor, no UTC/timezone duration -- cron has no notion of one. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:recurrence-first" {
+    deviate not-supported;
+  }
+
+  /* No way to bound a recurrence by end-time (until) or occurrence count in
+   * cron; drop the whole recurrence-end choice and both of its cases. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:recurrence-end" {
+    deviate not-supported;
+  }
+
+  /* Explicit period lists are not expressible as cron fields. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:period" {
+    deviate not-supported;
+  }
+
+  /* Cron has no seconds field. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:bysecond" {
+    deviate not-supported;
+  }
+
+  /* "nth weekday of the month" has no five-field cron equivalent. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:byday"
+          + "/infix-schedule:direction" {
+    deviate not-supported;
+  }
+
+  /* Day-of-year, week-of-year, and set-position have no cron field. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:byyearday" {
+    deviate not-supported;
+  }
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:byyearweek" {
+    deviate not-supported;
+  }
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:bysetpos" {
+    deviate not-supported;
+  }
+
+  /* Cron has no configurable week-start. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:workweek-start" {
+    deviate not-supported;
+  }
+
+  /* No exception-date support in cron. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:exception-dates" {
+    deviate not-supported;
+  }
+
+  /* Schedules run in the system's local time; no per-schedule timezone. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:time-zone-identifier" {
+    deviate not-supported;
+  }
+
+  /* Negative values (last N days) have no five-field cron equivalent. */
+  deviation "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
+          + "/infix-schedule:recurrence/infix-schedule:bymonthday" {
+    deviate replace {
+      type int32 {
+        range "1..31";
+      }
+    }
+  }
+
+  augment "/sys:system" {
+    description
+      "Scheduling configuration under ietf-system.";
+    container schedules {
+      description
+        "Container for all configured schedules.";
+      list schedule {
+        key "name";
+        description
+          "A named, reusable recurrence (time-spec).  Schedules carry no
+           action of their own; features trigger off a schedule by pointing
+           a schedule-ref leaf at its name.";
+        leaf name {
+          type string;
+          description
+            "Unique name identifying this schedule.";
+        }
+        leaf enabled {
+          type boolean;
+          default "true";
+          description
+            "Turn this schedule on or off.  When off, anything that uses
+             it stops running, but the schedule itself is kept.";
+        }
+        leaf description {
+          type string;
+          description
+            "Optional human-readable description of this schedule's purpose.";
+        }
+        must "recurrence" {
+          error-message "A recurrence rule is required for each schedule.";
+        }
+        container recurrence {
+          if-feature "schedule:icalendar-recurrence";
+          description
+            "Recurrence rule controlling when the schedule fires.
+
+             Uses the standard iCalendar recurrence grouping; nodes with no
+             five-field cron equivalent are removed via deviations in this
+             module.";
+          uses schedule:icalendar-recurrence {
+            refine frequency {
+              mandatory true;
+              /* secondly has no cron field; a missing frequency would
+               * otherwise compile to the every-minute expression. */
+              must "not(derived-from-or-self(., 'schedule:secondly'))" {
+                error-message
+                  "secondly frequency is not supported; the finest "
+                + "supported resolution is minutely.";
+              }
+            }
+            refine interval {
+              default 1;
+            }
+          }
+          /* cron takes the union of day-of-month and day-of-week, not the
+           * RFC 5545 intersection, so forbid combining them. */
+          must "not(bymonthday and byday)" {
+            error-message
+              "Combining bymonthday and byday is not supported: cron would "
+            + "fire on the union of the two, not their intersection.";
+          }
+        }
+      }
+    }
+  }
+}
