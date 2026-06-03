@@ -41,10 +41,12 @@ def mdns_reflect_test():
 
 def disable_reflector():
     """Disable mDNS reflector"""
-    dut.put_config_dict("infix-services", {
-        "mdns": {
-            "reflector": {
-                "enabled": False
+    dut.put_config_dicts({
+        "infix-services": {
+            "mdns": {
+                "reflector": {
+                    "enabled": False
+                }
             }
         }
     })

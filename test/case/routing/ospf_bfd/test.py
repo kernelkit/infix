@@ -43,7 +43,8 @@ def config(target, params):
                 }]}
         }
 
-    target.put_config_dict("ietf-interfaces", {
+    target.put_config_dicts({
+        "ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     ifconfig("lo", rid, 32),
@@ -53,15 +54,8 @@ def config(target, params):
                     ifconfig(sif, saddr, 30),
                 ]
             }
-    })
-
-    target.put_config_dict("ietf-system", {
-        "system": {
-            "hostname": name,
-        }
-    })
-
-    target.put_config_dict("ietf-routing", {
+        },
+        "ietf-routing": {
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [{
@@ -100,6 +94,7 @@ def config(target, params):
                     }
                 }]
             }
+        }
         }
     })
 

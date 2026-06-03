@@ -90,18 +90,20 @@ with infamy.Test() as test:
             print(f"Created symlink: {latest_link} -> {old_img}")
 
         with test.step("Create container 'web' from curios-httpd:latest (24.05.0)"):
-            target.put_config_dict("infix-containers", {
-                "containers": {
-                    "container": [
-                        {
-                            "name": f"{NAME}",
-                            "image": f"http://192.168.0.1:{SRVPORT}/curios-httpd-latest.tar.gz",
-                            "command": "/usr/sbin/httpd -f -v -p 91",
-                            "network": {
-                                "host": True
+            target.put_config_dicts({
+                "infix-containers": {
+                    "containers": {
+                        "container": [
+                            {
+                                "name": f"{NAME}",
+                                "image": f"http://192.168.0.1:{SRVPORT}/curios-httpd-latest.tar.gz",
+                                "command": "/usr/sbin/httpd -f -v -p 91",
+                                "network": {
+                                    "host": True
+                                }
                             }
-                        }
-                    ]
+                        ]
+                    }
                 }
             })
 

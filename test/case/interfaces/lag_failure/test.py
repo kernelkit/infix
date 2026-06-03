@@ -98,7 +98,7 @@ def dut_init(dut, addr, peer):
     """Configure each DUT specific according to LAG mode and peer"""
     net = net_init(dut["mon"], addr)
 
-    dut.put_config_dict("ietf-interfaces", {
+    dut.put_config_dicts({"ietf-interfaces": {
         "interfaces": {
             "interface": [{
                 "name": "lag0",
@@ -116,7 +116,7 @@ def dut_init(dut, addr, peer):
                 "lag-port": {"lag": "lag0"}
             }] + net
         }
-    })
+    }})
 
 
 with infamy.Test() as test:

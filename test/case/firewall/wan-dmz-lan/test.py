@@ -42,96 +42,97 @@ with infamy.Test() as test:
         LAN_CLIENT_IP = "192.168.1.100"   # Host LAN interface
 
     with test.step("Configure gateway with multi-zone firewall and NAT"):
-        gateway.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": wan_if,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": WAN_ROUTER_IP,
-                                "prefix-length": 24
-                            }]
-                        }
-                    },
-                    {
-                        "name": dmz_if,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": DMZ_ROUTER_IP,
-                                "prefix-length": 24
-                            }]
-                        }
-                    },
-                    {
-                        "name": lan_if,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": LAN_ROUTER_IP,
-                                "prefix-length": 24
-                            }]
-                        }
-                    }
-                ]
-            }
-        })
-
-        gateway.put_config_dict("infix-firewall", {
-            "firewall": {
-                "default": "wan",
-                "logging": "all",
-                "zone": [
-                    {
-                        "name": "wan",
-                        "description": "External WAN interface - untrusted",
-                        "action": "drop",
-                        "interface": [wan_if],
-                        "port-forward": [{
-                            "lower": 8080,
-                            "proto": "tcp",
-                            "to": {
-                                "addr": DMZ_SERVER_IP,
-                                "port": 80
+        gateway.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": wan_if,
+                            "enabled": True,
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": WAN_ROUTER_IP,
+                                    "prefix-length": 24
+                                }]
                             }
-                        }]
-                    },
-                    {
-                        "name": "dmz",
-                        "description": "DMZ network - limited trust",
-                        "action": "reject",
-                        "network": [DMZ_NET],
-                        "service": ["http"]
-                    },
-                    {
-                        "name": "lan",
-                        "description": "Internal LAN network - trusted",
-                        "action": "accept",
-                        "interface": [lan_if, mgmt_if]
-                    }
-                ],
-                "policy": [
-                    {
-                        "name": "loc-to-wan",
-                        "description": "Allow local networks to WAN with SNAT",
-                        "ingress": ["lan", "dmz"],
-                        "egress": ["wan"],
-                        "action": "accept",
-                        "masquerade": True
-                    }, {
-                        "name": "lan-to-dmz",
-                        "description": "Allow LAN access to DMZ services",
-                        "ingress": ["lan"],
-                        "egress": ["dmz"],
-                        "action": "accept",
-                        "service": ["ssh", "http"]
-                    }
-                ]
+                        },
+                        {
+                            "name": dmz_if,
+                            "enabled": True,
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": DMZ_ROUTER_IP,
+                                    "prefix-length": 24
+                                }]
+                            }
+                        },
+                        {
+                            "name": lan_if,
+                            "enabled": True,
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": LAN_ROUTER_IP,
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }
+                    ]
+                }
+            },
+            "infix-firewall": {
+                "firewall": {
+                    "default": "wan",
+                    "logging": "all",
+                    "zone": [
+                        {
+                            "name": "wan",
+                            "description": "External WAN interface - untrusted",
+                            "action": "drop",
+                            "interface": [wan_if],
+                            "port-forward": [{
+                                "lower": 8080,
+                                "proto": "tcp",
+                                "to": {
+                                    "addr": DMZ_SERVER_IP,
+                                    "port": 80
+                                }
+                            }]
+                        },
+                        {
+                            "name": "dmz",
+                            "description": "DMZ network - limited trust",
+                            "action": "reject",
+                            "network": [DMZ_NET],
+                            "service": ["http"]
+                        },
+                        {
+                            "name": "lan",
+                            "description": "Internal LAN network - trusted",
+                            "action": "accept",
+                            "interface": [lan_if, mgmt_if]
+                        }
+                    ],
+                    "policy": [
+                        {
+                            "name": "loc-to-wan",
+                            "description": "Allow local networks to WAN with SNAT",
+                            "ingress": ["lan", "dmz"],
+                            "egress": ["wan"],
+                            "action": "accept",
+                            "masquerade": True
+                        }, {
+                            "name": "lan-to-dmz",
+                            "description": "Allow LAN access to DMZ services",
+                            "ingress": ["lan"],
+                            "egress": ["dmz"],
+                            "action": "accept",
+                            "service": ["ssh", "http"]
+                        }
+                    ]
+                }
             }
         })
 

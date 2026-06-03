@@ -27,7 +27,7 @@ with infamy.Test() as test:
                   """)
 
       with test.step("Configure VLAN 10 interface on target:data with IP 10.0.0.2"):
-            target.put_config_dict("ietf-interfaces", {
+            target.put_config_dicts({"ietf-interfaces": {
                   "interfaces": {
                         "interface": [
                               {
@@ -52,7 +52,7 @@ with infamy.Test() as test:
                               },
                         ]
                   }
-            })
+            }})
 
       with test.step("Wait for links to come up"):
             until(lambda: iface.get_param(target, tport, "oper-status") == "up")

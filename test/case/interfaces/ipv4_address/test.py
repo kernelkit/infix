@@ -37,7 +37,7 @@ with infamy.Test() as test:
             }
         }
 
-        target.put_config_dict("ietf-interfaces", config)
+        target.put_config_dicts({"ietf-interfaces": config})
 
     with test.step("Verify '10.10.10.20/24' exists on target:mgmt"):
         until(lambda: iface.address_exist(target, interface_name, new_ip_address, proto='static'))

@@ -52,22 +52,24 @@ with infamy.Test() as test:
         # Upon attachment, target reverts to `test-config`, in which
         # the SSH service is enabled, hence we do not have to
         # explicitly enable it here.
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "authentication": {
-                    "user": [
-                        {
-                            "name": USER,
-                            "authorized-key": [
-                                {
-                                    "name":"guest-ssh-key",
-                                    "algorithm": "ssh-rsa",
-                                    "key-data": KEY["public"]
-                                }
-                            ],
-                            "infix-system:shell":"bash"
-                        }
-                    ]
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "authentication": {
+                        "user": [
+                            {
+                                "name": USER,
+                                "authorized-key": [
+                                    {
+                                        "name":"guest-ssh-key",
+                                        "algorithm": "ssh-rsa",
+                                        "key-data": KEY["public"]
+                                    }
+                                ],
+                                "infix-system:shell":"bash"
+                            }
+                        ]
+                    }
                 }
             }
         })

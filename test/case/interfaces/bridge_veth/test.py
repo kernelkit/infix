@@ -26,7 +26,7 @@ with infamy.Test() as test:
     with test.step("Configure bridged eth port and veth pair with IP 10.0.0.2"):
         _, tport = env.ltop.xlate("target", "data")
 
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -70,7 +70,7 @@ with infamy.Test() as test:
                     },
                 ]
             }
-        })
+        }})
 
     with test.step("Verify ping from host:data to 10.0.0.2"):
         _, hport = env.ltop.xlate("host", "data")

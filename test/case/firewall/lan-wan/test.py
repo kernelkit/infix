@@ -36,63 +36,64 @@ with infamy.Test() as test:
         WAN_SERVER_IP = "203.0.113.100"   # Server on WAN side
 
     with test.step("Configure gateway with firewall and SNAT"):
-        gateway.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": lan_if,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": LAN_ROUTER_IP,
-                                "prefix-length": 24
-                            }]
+        gateway.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": lan_if,
+                            "enabled": True,
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": LAN_ROUTER_IP,
+                                    "prefix-length": 24
+                                }]
+                            }
+                        },
+                        {
+                            "name": wan_if,
+                            "enabled": True,
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": WAN_ROUTER_IP,
+                                    "prefix-length": 24
+                                }]
+                            }
                         }
-                    },
-                    {
-                        "name": wan_if,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": WAN_ROUTER_IP,
-                                "prefix-length": 24
-                            }]
+                    ]
+                }
+            },
+            "infix-firewall": {
+                "firewall": {
+                    "default": "wan",
+                    "logging": "all",
+                    "zone": [
+                        {
+                            "name": "lan",
+                            "description": "Internal LAN network - trusted",
+                            "action": "accept",
+                            "interface": [lan_if, mgmt_if],
+                            "service": ["ssh", "dhcp", "dns"]
+                        }, {
+                            "name": "wan",
+                            "description": "External WAN interface - untrusted",
+                            "action": "drop",
+                            "interface": [wan_if]
                         }
-                    }
-                ]
-            }
-        })
-
-        gateway.put_config_dict("infix-firewall", {
-            "firewall": {
-                "default": "wan",
-                "logging": "all",
-                "zone": [
-                    {
-                        "name": "lan",
-                        "description": "Internal LAN network - trusted",
-                        "action": "accept",
-                        "interface": [lan_if, mgmt_if],
-                        "service": ["ssh", "dhcp", "dns"]
-                    }, {
-                        "name": "wan",
-                        "description": "External WAN interface - untrusted",
-                        "action": "drop",
-                        "interface": [wan_if]
-                    }
-                ],
-                "policy": [
-                    {
-                        "name": "lan-to-wan",
-                        "description": "Allow LAN to WAN traffic with SNAT",
-                        "ingress": ["lan"],
-                        "egress": ["wan"],
-                        "action": "accept",
-                        "masquerade": True
-                    }
-                ]
+                    ],
+                    "policy": [
+                        {
+                            "name": "lan-to-wan",
+                            "description": "Allow LAN to WAN traffic with SNAT",
+                            "ingress": ["lan"],
+                            "egress": ["wan"],
+                            "action": "accept",
+                            "masquerade": True
+                        }
+                    ]
+                }
             }
         })
 

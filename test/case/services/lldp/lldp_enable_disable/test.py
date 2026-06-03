@@ -25,10 +25,7 @@ with infamy.Test() as test:
                         }
                     ]
                 }
-            }
-        })
-
-        target.put_config_dicts({
+            },
             "ieee802-dot1ab-lldp": {
                 "lldp": {
                     "enabled": False

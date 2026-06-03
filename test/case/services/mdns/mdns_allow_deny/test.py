@@ -54,7 +54,7 @@ def check(expected, allow=None, deny=None):
     if deny:
         mdns_config["mdns"]["interfaces"]["deny"] = deny
 
-    dut.put_config_dict("infix-services", mdns_config)
+    dut.put_config_dicts({"infix-services": mdns_config})
 
     actual = mdns_scan()
     if actual != tuple(expected):

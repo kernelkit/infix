@@ -34,10 +34,7 @@ with infamy.Test() as test:
                         }
                     ]
                 }
-            }
-        })
-
-        target.put_config_dicts({
+            },
             "infix-services": {
                 "mdns": {
                     "enabled": False

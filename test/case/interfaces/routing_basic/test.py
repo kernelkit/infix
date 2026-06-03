@@ -30,14 +30,14 @@ def iface_cfg(port, subnet, enable_fwd):
 
 def config_target(target, tport0, tport1, enable_fwd):
     """Configure forwarding and addresses for both address families."""
-    target.put_config_dict("ietf-interfaces", {
+    target.put_config_dicts({"ietf-interfaces": {
         "interfaces": {
             "interface": [
                 iface_cfg(tport0, SUBNETS[0], enable_fwd),
                 iface_cfg(tport1, SUBNETS[1], enable_fwd),
             ]
         }
-    })
+    }})
 
 def setup_host(ns, subnet):
     """Add IPv4 and IPv6 addresses and default routes."""

@@ -37,17 +37,19 @@ with infamy.Test() as test:
 
     with test.step("Configure data interface with static IPv4"):
         _, ifname = env.ltop.xlate("target", "data")
-        target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [{
-                    "name": f"{ifname}",
-                    "ipv4": {
-                        "address": [{
-                            "ip": f"{DUTIP}",
-                            "prefix-length": 24
-                        }]
-                    }
-                }]
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": f"{ifname}",
+                        "ipv4": {
+                            "address": [{
+                                "ip": f"{DUTIP}",
+                                "prefix-length": 24
+                            }]
+                        }
+                    }]
+                }
             }
         })
 
@@ -62,31 +64,33 @@ with infamy.Test() as test:
         for var in ENV_VARS:
             cgi.append(f'echo "{var["key"]}=${var["key"]}"')
 
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": f"{NAME}",
-                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
-                        "command": "/usr/sbin/httpd -f -v -p 8080",
-                        "env": ENV_VARS,
-                        "network": {
-                            "host": True
-                        },
-                        "mount": [
-                            {
-                                "name": "env.cgi",
-                                "content": to_binary('\n'.join(cgi) + '\n'),
-                                "target": "/var/www/cgi-bin/env.cgi",
-                                "mode": "0755"
-                            }
-                        ],
-                        "volume": [{
-                            "name": "www",
-                            "target": "/var/www"
-                        }]
-                    }
-                ]
+        target.put_config_dicts({
+            "infix-containers": {
+                "containers": {
+                    "container": [
+                        {
+                            "name": f"{NAME}",
+                            "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                            "command": "/usr/sbin/httpd -f -v -p 8080",
+                            "env": ENV_VARS,
+                            "network": {
+                                "host": True
+                            },
+                            "mount": [
+                                {
+                                    "name": "env.cgi",
+                                    "content": to_binary('\n'.join(cgi) + '\n'),
+                                    "target": "/var/www/cgi-bin/env.cgi",
+                                    "mode": "0755"
+                                }
+                            ],
+                            "volume": [{
+                                "name": "www",
+                                "target": "/var/www"
+                            }]
+                        }
+                    ]
+                }
             }
         })
 
@@ -115,12 +119,14 @@ with infamy.Test() as test:
                 {"key": "PATH_WITH_SPACES", "value": "/path with spaces/test"}
             ]
 
-            target.put_config_dict("infix-containers", {
-                "containers": {
-                    "container": [{
-                        "name": f"{NAME}",
-                        "env": UPDATED_ENV_VARS,
-                    }]
+            target.put_config_dicts({
+                "infix-containers": {
+                    "containers": {
+                        "container": [{
+                            "name": f"{NAME}",
+                            "env": UPDATED_ENV_VARS,
+                        }]
+                    }
                 }
             })
 

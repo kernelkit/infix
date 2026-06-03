@@ -46,7 +46,7 @@ with infamy.Test() as test:
         _, nojoin = env.ltop.xlate("target", "data3")
 
     with test.step("Configure device"):
-        target.put_config_dict("ietf-interfaces",
+        target.put_config_dicts({"ietf-interfaces":
                         {
                             "interfaces": {
                                 "interface": [
@@ -95,7 +95,7 @@ with infamy.Test() as test:
                                 ]
 
                             }
-                        })
+                        }})
 
     _, hsend = env.ltop.xlate("host", "data1")
     _, hreceive = env.ltop.xlate("host", "data2")

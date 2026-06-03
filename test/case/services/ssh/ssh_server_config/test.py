@@ -131,9 +131,11 @@ with infamy.Test() as test:
             assert ns88.runsh(f"ssh-keyscan -p {SSH_PORT_1} {SSH_ADDRESS_2}").returncode == 1, "SSH is accessable on wrong interface"
 
     with test.step("Disable SSH server"):
-        target.put_config_dict("infix-services", {
-            "ssh": {
-                "enabled": False
+        target.put_config_dicts({
+            "infix-services": {
+                "ssh": {
+                    "enabled": False
+                }
             }
         })
         assert(ns77.run(

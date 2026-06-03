@@ -18,7 +18,7 @@ with infamy.Test() as test:
         dut2 = env.attach("dut2", "mgmt")
 
     with test.step("Configure DUTs"):
-        dut1.put_config_dict("ietf-interfaces", {
+        dut1.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -65,9 +65,9 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
-        dut2.put_config_dict("ietf-interfaces", {
+        dut2.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -96,7 +96,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
     with test.step("Verify ping from host:data to 10.0.0.2 and 10.0.0.3"):
         _, hport = env.ltop.xlate("host", "data")

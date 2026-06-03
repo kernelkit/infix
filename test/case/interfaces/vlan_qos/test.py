@@ -64,7 +64,7 @@ with infamy.Test() as test:
         _, hd1 = env.ltop.xlate("host", "data1")
 
     with test.step("Apply initial config without priority mapping"):
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -107,7 +107,7 @@ with infamy.Test() as test:
                     }
                 ]
             }
-        })
+        }})
 
     with infamy.IsolatedMacVlan(hd0) as ns0, \
          infamy.IsolatedMacVlan(hd1) as ns1 :
@@ -134,7 +134,7 @@ with infamy.Test() as test:
                 with test.step(desc):
                     ns0.runsh(f"ip link set vlan10 type vlan egress-qos-map 0:{p['pcp']}")
 
-                    target.put_config_dict("ietf-interfaces", {
+                    target.put_config_dicts({"ietf-interfaces": {
                         "interfaces": {
                             "interface": [
                                 {
@@ -155,7 +155,7 @@ with infamy.Test() as test:
                                 },
                             ]
                         }
-                    })
+                    }})
 
                     ns0.must_reach("192.168.11.2", id=p["id"])
 

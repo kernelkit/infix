@@ -23,9 +23,11 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Set initial hostname"):
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": hostname_init
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "hostname": hostname_init
+                    }
                 }
             })
 
@@ -42,31 +44,33 @@ with infamy.Test() as test:
 nsenter -m/1/ns/mnt -u/1/ns/uts -i/1/ns/ipc -n/1/ns/net hostname {hostname_new}
 """)
 
-        target.put_config_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": cont_name,
-                        "image": cont_image,
-                        "network": {
-                            "host": True
-                        },
-                        "mount": [
-                            {
-                              "name": "rc.local",
-                              "content": commands,
-                              "target": "/etc/rc.local",
-                              "mode": "0755"
+        target.put_config_dicts({
+            "infix-containers": {
+                "containers": {
+                    "container": [
+                        {
+                            "name": cont_name,
+                            "image": cont_image,
+                            "network": {
+                                "host": True
                             },
-                            {
-                              "name": "proc1ns",
-                              "source": "/proc/1/ns",
-                              "target": "/1/ns",
-                            }
-                        ],
-                        "privileged": True
-                    }
-                ]
+                            "mount": [
+                                {
+                                  "name": "rc.local",
+                                  "content": commands,
+                                  "target": "/etc/rc.local",
+                                  "mode": "0755"
+                                },
+                                {
+                                  "name": "proc1ns",
+                                  "source": "/proc/1/ns",
+                                  "target": "/1/ns",
+                                }
+                            ],
+                            "privileged": True
+                        }
+                    ]
+                }
             }
         })
 

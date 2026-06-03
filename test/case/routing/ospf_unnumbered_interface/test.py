@@ -18,135 +18,137 @@ from infamy.util import until, parallel
 # This test tests passive interfaces and unnumbered interfaces.
 
 def config_target1(target, data, link):
-    target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": data,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": "192.168.10.1",
-                                "prefix-length": 24
-                            }]}
-                    },
-                    {
-                        "name": link,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": "10.0.0.1",
-                                "prefix-length": 32
-                            }]
+    target.put_config_dicts({
+        "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": data,
+                            "enabled": True,
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": "192.168.10.1",
+                                    "prefix-length": 24
+                                }]}
+                        },
+                        {
+                            "name": link,
+                            "enabled": True,
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": "10.0.0.1",
+                                    "prefix-length": 32
+                                }]
+                            }
+                        },
+                        {
+                            "name": "lo",
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.100.1",
+                                    "prefix-length": 32
+                                }]
+                            }
                         }
-                    },
-                    {
-                        "name": "lo",
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.100.1",
-                                "prefix-length": 32
-                            }]
-                        }
-                    }
-                ]
-            }
-    })
-
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [{
-                    "type": "infix-routing:ospfv2",
-                    "name": "default",
-                    "ospf": {
-                        "areas": {
-                            "area": [{
-                                "area-id": "0.0.0.0",
-                                "interfaces":
-                                {
-                                    "interface": [{
-                                        "name": link,
-                                        "hello-interval": 1,
-                                        "dead-interval": 3,
-                                        "interface-type": "point-to-point"
-                                    }, {
-                                        "name": data,
-                                        "passive": True
-                                    }, {
-                                        "name": "lo",
-                                        "passive": True
-                                    }]
-                                },
-                            }]
-                        }
-                    }
-                }]
-            }
-        }
-    })
-
-
-def config_target2(target, link):
-    target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": link,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                                "ip": "10.0.0.2",
-                                "prefix-length": 32
-                            }]
-                        }
-                    },
-                    {
-                        "name": "lo",
-                        "enabled": True,
-                        "forwarding": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.200.1",
-                                "prefix-length": 32
-                            }]
-                        }
-                    }
-                ]
-            }
-        })
-
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [
-                    {
+                    ]
+                }
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [{
                         "type": "infix-routing:ospfv2",
                         "name": "default",
                         "ospf": {
                             "areas": {
                                 "area": [{
                                     "area-id": "0.0.0.0",
-                                    "interfaces": {
+                                    "interfaces":
+                                    {
                                         "interface": [{
                                             "name": link,
                                             "hello-interval": 1,
                                             "dead-interval": 3,
                                             "interface-type": "point-to-point"
                                         }, {
+                                            "name": data,
+                                            "passive": True
+                                        }, {
                                             "name": "lo",
                                             "passive": True
                                         }]
-                                    }
+                                    },
                                 }]
                             }
                         }
-                    }
-                ]
+                    }]
+                }
+            }
+        }
+    })
+
+
+def config_target2(target, link):
+    target.put_config_dicts({
+        "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": link,
+                            "enabled": True,
+                            "ipv4": {
+                                "forwarding": True,
+                                "address": [{
+                                    "ip": "10.0.0.2",
+                                    "prefix-length": 32
+                                }]
+                            }
+                        },
+                        {
+                            "name": "lo",
+                            "enabled": True,
+                            "forwarding": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.200.1",
+                                    "prefix-length": 32
+                                }]
+                            }
+                        }
+                    ]
+                }
+            },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [
+                        {
+                            "type": "infix-routing:ospfv2",
+                            "name": "default",
+                            "ospf": {
+                                "areas": {
+                                    "area": [{
+                                        "area-id": "0.0.0.0",
+                                        "interfaces": {
+                                            "interface": [{
+                                                "name": link,
+                                                "hello-interval": 1,
+                                                "dead-interval": 3,
+                                                "interface-type": "point-to-point"
+                                            }, {
+                                                "name": "lo",
+                                                "passive": True
+                                            }]
+                                        }
+                                    }]
+                                }
+                            }
+                        }
+                    ]
+                }
             }
         }
     })

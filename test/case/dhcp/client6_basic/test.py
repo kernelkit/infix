@@ -64,7 +64,7 @@ with infamy.Test() as test:
                         }]
                     }
                 }
-                client.put_config_dict("ietf-interfaces", config)
+                client.put_config_dicts({"ietf-interfaces": config})
 
             with test.step("Verify DHCPv6 client is running"):
                 until(checkrun, attempts=10)

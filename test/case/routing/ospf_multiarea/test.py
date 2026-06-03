@@ -557,13 +557,15 @@ def config_target4(target, ring1, cross, link):
 
 
 def disable_link(target, link):
-    target.put_config_dict("ietf-interfaces", {
+    target.put_config_dicts({
+        "ietf-interfaces": {
         "interfaces": {
             "interface": [
                 {
                     "name": link,
                     "enabled": False
                 }]
+        }
         }
     })
 

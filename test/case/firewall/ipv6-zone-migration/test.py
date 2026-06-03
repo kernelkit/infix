@@ -192,12 +192,14 @@ with infamy.Test() as test:
 
             with test.step("Perform dynamic zone migration"):
                 target.delete_xpath(f"/infix-firewall:firewall/zone[name='untrusted']/interface[.='{data1_if}']")
-                target.put_config_dict("infix-firewall", {
-                    "firewall": {
-                        "zone": [{
-                            "name": "trusted",
-                            "interface": [data1_if]
-                        }]
+                target.put_config_dicts({
+                    "infix-firewall": {
+                        "firewall": {
+                            "zone": [{
+                                "name": "trusted",
+                                "interface": [data1_if]
+                            }]
+                        }
                     }
                 })
 
