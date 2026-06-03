@@ -81,6 +81,6 @@ done
 TMPDIR=`mktemp -d`
 $MERGE_CONFIG -O "$TMPDIR" "$base" "$changes"
 
-O="$TMPDIR" make savedefconfig
+make O="$TMPDIR" savedefconfig
 mv "$TMPDIR"/defconfig "$output"
 rm -r "$TMPDIR"
