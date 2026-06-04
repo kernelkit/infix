@@ -98,7 +98,7 @@ jobs:
         run: |
           make ${{ env.TARGET }}_defconfig
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           pattern: "artifact-*"
           merge-multiple: true
