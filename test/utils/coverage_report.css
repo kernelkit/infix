@@ -1,0 +1,137 @@
+/*
+ * Stylesheet for the XPath coverage report PDF (pandoc --pdf-engine=weasyprint).
+ *
+ * The Markdown report uses emoji (🟢🟠🔴✅❌) for status.  WeasyPrint cannot
+ * embed the bitmap glyphs of "Noto Color Emoji" into a PDF, so those render as
+ * empty boxes.  The Makefile therefore rewrites the emoji into <span> marks
+ * (● ✓ ✗) which are plain text glyphs present in every font; the colours below
+ * restore the green/orange/red meaning.
+ */
+
+@page {
+    size: A4;
+    margin: 18mm 14mm;
+
+    /* Footer: a full-width rule with the page number on it.  The number sits
+     * in the outside corner (alternated below); the border-top draws the line
+     * above the footer, like the test specification/report. */
+    @bottom-center {
+        content: counter(page);
+        width: 100%;
+        border-top: 0.75pt solid #999999;
+        padding-top: 6pt;
+        font-family: "DejaVu Sans", "Noto Sans", sans-serif;
+        font-size: 8pt;
+        color: #777777;
+    }
+}
+
+/* Page number in the outside corner: left on left-hand (even) pages,
+ * right on right-hand (odd) pages. */
+@page :left  { @bottom-center { text-align: left;  } }
+@page :right { @bottom-center { text-align: right; } }
+
+/* The cover page carries no footer (no rule, no number). */
+@page cover {
+    @bottom-center { content: none; }
+}
+
+body {
+    font-family: "DejaVu Sans", "Noto Sans", sans-serif;
+    font-size: 9pt;
+    line-height: 1.4;
+    color: #1b1b1b;
+}
+
+h1 { font-size: 22pt; margin: 0 0 4pt; }
+
+/*
+ * Cover page — logo, title, software version and generation date, on a page of
+ * its own (page-break-after).  Mirrors the asciidoctor-pdf title page used by
+ * the test specification/report; the logo is doc/logo.png (set by the Makefile).
+ *
+ * NOTE: WeasyPrint does not support viewport units (vh/vw), so the vertical
+ * offset is a fixed length (~40% down an A4 page, like the test report logo).
+ */
+.cover {
+    page: cover;
+    page-break-after: always;
+    text-align: right;
+    margin-left: auto;
+    padding-top: 80mm;
+    /* Cover is page 0 (number suppressed below), so the first body page is 1. */
+    counter-reset: page 0;
+}
+.cover-logo {
+    width: 90mm;
+    margin-bottom: 18pt;
+}
+.cover-title {
+    color: gray;
+    font-size: 26pt;
+    font-weight: 400;
+    margin: 0 0 8pt;
+    border: none;
+}
+.cover-version {
+    font-size: 13pt;
+    font-weight: 400;
+    margin: 0 0 2pt;
+}
+.cover-date {
+    font-size: 11pt;
+    color: #777777;
+    margin: 0;
+}
+h2 {
+    font-size: 15pt;
+    margin: 18pt 0 6pt;
+    border-bottom: 1px solid #dddddd;
+    padding-bottom: 3pt;
+}
+h3 { font-size: 11pt; margin: 14pt 0 4pt; }
+
+code, pre {
+    font-family: "DejaVu Sans Mono", "Noto Sans Mono", monospace;
+    font-size: 8pt;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6pt 0 12pt;
+}
+
+th, td {
+    border: 1px solid #d0d0d0;
+    padding: 3pt 6pt;
+    vertical-align: top;
+    /* Long XPaths have no spaces; allow them to wrap anywhere. */
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+thead th {
+    background: #f2f2f2;
+    font-weight: 600;
+    border-bottom: 2px solid #bbbbbb;
+}
+
+tbody tr:nth-child(even) { background: #fafafa; }
+
+/* Status dots (module summary + section headings). */
+.dot {
+    display: inline-block;
+    width: 9pt;
+    height: 9pt;
+    border-radius: 50%;
+    vertical-align: middle;
+}
+.dot.ok   { background: #2e9e44; }   /* 🟢 >= 80%  */
+.dot.warn { background: #f0883e; }   /* 🟠  1-79%  */
+.dot.err  { background: #e5534b; }   /* 🔴   0%    */
+
+/* Per-row covered marks. */
+.mark { font-weight: 700; }
+.mark.ok  { color: #2e9e44; }        /* ✅ */
+.mark.err { color: #e5534b; }        /* ❌ */
