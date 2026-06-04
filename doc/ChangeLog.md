@@ -3,6 +3,21 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.06.0][UNRELEASED]
+--------------
+
+### Changes
+
+- Add Wi-Fi roaming for fast, seamless handoff between access points that
+  share an SSID: 802.11k, 802.11v and 802.11r (over-the-air FT).  See the
+  [Wi-Fi][wifi] guide for details
+- Add Wi-Fi 802.11s mesh support, letting access points form a wireless
+  backhaul between each other without cabling
+- Add band steering for dual-band access points, nudging dual-band
+  clients onto the faster 5/6 GHz band
+
+[wifi]: wifi.md
+
 [v26.05.0][] - 2026-05-29
 -------------------------
 
