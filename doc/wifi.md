@@ -156,6 +156,11 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 - `channel-width`: AP channel bandwidth.  Supported values are `auto`, `20MHz`,
   `40MHz`, `80MHz`, and `160MHz`.  Wider channels require matching hardware,
   regulatory approval, and are only available on 5GHz/6GHz where supported.
+- `legacy-rates`: Allow legacy 802.11b rates (1, 2, 5.5, 11 Mbps) on 2.4GHz
+  (default: disabled).  Slow 802.11b clients consume excessive airtime and
+  degrade throughput for all stations, so the rates are normally suppressed.
+  Enable only when old 2.4GHz-only IoT devices need them to associate.  No
+  effect on 5GHz/6GHz.
 - `probe-timeout`: Seconds to wait for PHY detection at boot (default: 0).  Set
   to a non-zero value (e.g., 30) for USB WiFi dongles that are slow to
   initialize due to firmware loading
@@ -164,6 +169,69 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 > TX power is still determined by the driver based on regulatory
 > constraints and hardware capabilities.  Channel width can now be set
 > explicitly for AP mode, or left at `auto` to let the driver choose.
+
+### Bands and Channels
+
+Each band strikes a different balance between range and capacity.  The
+`country-code` decides which channels are legal in your location; the
+lists below are the common allocations, and your regulatory domain may
+allow fewer.
+
+**2.4 GHz**
+
+Channels 1-13 are available in most of the world, 1-11 in the US and
+Canada, and 14 in Japan (802.11b only).  At 20 MHz only three channels
+avoid overlap: 1, 6, and 11.  A 40 MHz channel takes up most of the
+band, so it is seldom worth using here.
+
+Drawbacks:
+
+- This is the most crowded band.  It is shared with Bluetooth, Zigbee,
+  cordless phones, microwave ovens, and most of the neighboring Wi-Fi.
+- Narrow channels and constant contention hold real throughput well
+  below 5 and 6 GHz.
+- The upside is range: 2.4 GHz reaches further and passes through walls
+  better, which keeps it useful for distant clients and 2.4 GHz-only
+  IoT devices.
+
+**5 GHz**
+
+UNII-1 (channels 36-48) and UNII-3 (149-165) need no radar checks.
+UNII-2 (channels 52-64 and 100-144) shares spectrum with radar and
+requires DFS.  ETSI regions such as the EU do not include UNII-3, so the
+only non-DFS 5 GHz channels there are 36-48.  This band supports 20, 40,
+80, and 160 MHz, so it is the one to use for wide, fast channels.
+
+Drawbacks:
+
+- Shorter range than 2.4 GHz, and a weaker signal through walls and
+  floors.
+- A DFS channel must be monitored for radar for 60 seconds (up to 10
+  minutes near some weather radars) before the AP may transmit, which
+  delays start-up.  If radar appears later, the AP has to leave the
+  channel within 10 seconds and avoid it for 30 minutes, dropping
+  clients during the move.
+- The widest 80 and 160 MHz channels almost always sit on DFS spectrum,
+  so the same radar rules apply to them.
+
+**6 GHz**
+
+The FCC regions open 59 channels (1, 5, 9 ... 233) across 5925-7125 MHz.
+ETSI regions, including the EU, currently open only the lower part,
+5945-6425 MHz (channels 1-93), for indoor use.  Clients find networks on
+the 15 Preferred Scanning Channels (5, 21, 37 ... 229) spaced every
+80 MHz, and `auto` selects channel 37.  There is no DFS in 6 GHz, so
+there is no radar start-up delay.
+
+Drawbacks:
+
+- The shortest range and the weakest wall penetration of the three
+  bands.
+- Only Wi-Fi 6E and newer clients can use it; older phones and IoT
+  devices cannot see the band at all.
+- AP operation requires WPA3-Personal (SAE) with management frame
+  protection, so WPA2-only and open networks are rejected.
+- Indoor power limits cap coverage further.
 
 ### WiFi 6 Support
 

@@ -345,6 +345,20 @@ module infix-hardware {
            Only applicable in Access Point mode.";
       }
 
+      leaf legacy-rates {
+        type boolean;
+        default false;
+        description
+          "Allow legacy 802.11b rates (1, 2, 5.5, 11 Mbps) on 2.4 GHz.
+
+           Disabled by default: slow 802.11b clients consume excessive
+           airtime and degrade throughput for all associated stations.
+           Enable only when old 2.4 GHz-only IoT devices require these
+           rates to associate.
+
+           No effect on 5 GHz or 6 GHz radios.";
+      }
+
       leaf probe-timeout {
         type uint8;
         description

@@ -871,11 +871,13 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 	char ht_capab[512], vht_capab[512];
 	int chwidth = 0; /* 0=20/40, 1=80, 2=160 */
 	int ch = 0;
+	bool legacy_rates;
 
 	country = lydx_get_cattr(radio_node, "country-code");
 	band = lydx_get_cattr(radio_node, "band");
 	channel = lydx_get_cattr(radio_node, "channel");
 	width = lydx_get_cattr(radio_node, "channel-width");
+	legacy_rates = lydx_is_enabled(radio_node, "legacy-rates");
 	if (channel && strcmp(channel, "auto"))
 		ch = atoi(channel);
 
@@ -908,13 +910,18 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 			fprintf(hostapd, "hw_mode=g\n");
 
 			/*
-			 * Disable legacy 802.11b rates (1, 2, 5.5, 11 Mbps).
-			 * Slow clients using these rates consume excessive
-			 * airtime, degrading performance for all clients.
+			 * Disable legacy 802.11b rates (1, 2, 5.5, 11 Mbps)
+			 * unless explicitly enabled via 'legacy-rates'. Slow
+			 * 802.11b clients consume excessive airtime, degrading
+			 * performance for all clients. When enabled, hostapd
+			 * keeps its default rate set so old 2.4GHz-only IoT
+			 * devices can still associate.
 			 * Rates in 0.5 Mbps units: 60=6M, 90=9M, etc.
 			 */
-			fprintf(hostapd, "supported_rates=60 90 120 180 240 360 480 540\n");
-			fprintf(hostapd, "basic_rates=60 120 240\n");
+			if (!legacy_rates) {
+				fprintf(hostapd, "supported_rates=60 90 120 180 240 360 480 540\n");
+				fprintf(hostapd, "basic_rates=60 120 240\n");
+			}
 		} else if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz")) {
 			/* hw_mode=a: 5GHz/6GHz with 802.11a (OFDM) as baseline */
 			fprintf(hostapd, "hw_mode=a\n");
