@@ -1,0 +1,54 @@
+From 9899169d6dcb07aaecdde09c77ef59b56f66e3e5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Fri, 5 Jun 2026 09:10:15 +0200
+Subject: [PATCH 3/3] fix(functions): do not touch global ip_forward sysctl
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Infix manages IPv4/IPv6 forwarding per-interface via the sysctls
+net.ipv4.conf.<iface>.forwarding and net.ipv6.conf.<iface>.forwarding.
+firewalld's enable_ip_forwarding() instead writes the *global*
+net.ipv4.ip_forward and net.ipv6.conf.all.forwarding knobs.  The kernel
+propagates those global values to every interface, which clobbers the
+per-interface forwarding configuration Infix sets.
+
+Make enable_ip_forwarding() a no-op.  The backends still install the
+masquerade and forward-port nftables rules; the per-packet forwarding
+decision is governed by the inbound interface's forwarding flag, so
+routing keeps working on the interfaces where Infix enabled it while
+the global knob is left untouched.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/firewall/functions.py | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/src/firewall/functions.py b/src/firewall/functions.py
+index 1b8a32c..cd87f5d 100644
+--- a/src/firewall/functions.py
++++ b/src/firewall/functions.py
+@@ -495,11 +495,14 @@ def writefile(filename, line):
+ 
+ 
+ def enable_ip_forwarding(ipv):
+-    if ipv == "ipv4":
+-        return writefile("/proc/sys/net/ipv4/ip_forward", "1\n")
+-    elif ipv == "ipv6":
+-        return writefile("/proc/sys/net/ipv6/conf/all/forwarding", "1\n")
+-    return False
++    # Infix manages IP forwarding per-interface via the sysctls
++    # net.ipv4.conf.<iface>.forwarding and net.ipv6.conf.<iface>.forwarding.
++    # Writing the global net.ipv4.ip_forward / net.ipv6.conf.all.forwarding
++    # knobs would clobber those per-interface settings, since the kernel
++    # propagates the global value to every interface.  Make this a no-op:
++    # firewalld still installs the masquerade and forward-port nft rules, and
++    # forwarding works on the interfaces where Infix has enabled it.
++    return True
+ 
+ 
+ def get_nf_conntrack_short_name(module):
+-- 
+2.43.0
+
