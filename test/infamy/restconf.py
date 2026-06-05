@@ -452,12 +452,26 @@ class Device(Transport):
     def reboot(self):
         self.call_rpc("ietf-system:system-restart")
 
-    def call_action(self, xpath):
+    def call_action(self, xpath, input_data=None):
         path = xpath_to_uri(xpath)
         url = f"{self.restconf_url}/data{path}"
+
+        # RFC 8040 wraps action input as {"<action-module>:input": {...}}.
+        # The action's module is the prefix of the closest namespaced
+        # xpath segment; for "/a:foo/b:bar/baz" that's "b".
+        body = None
+        if input_data:
+            module = None
+            for seg in xpath.split("/"):
+                if ":" in seg:
+                    module = seg.split(":", 1)[0]
+            if not module:
+                raise ValueError(f"cannot determine action module from {xpath}")
+            body = {f"{module}:input": input_data}
+
         response = requests_workaround_post(
             url,
-            json=None,
+            json=body,
             headers=self.headers,
             auth=self.auth,
             verify=False

@@ -367,14 +367,19 @@ class Device(Transport):
         lyd = mod.parse_data_dict(call, rpc=True)
         return self.call(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
-    def call_action(self, xpath):
-        """Call NETCONF action (contextualized RPC), XML version"""
+    def call_action(self, xpath, input_data=None):
+        """Call NETCONF action (contextualized RPC), XML version.
+
+        If `input_data` is supplied, it's set at the action's xpath as
+        the action's input leaves.  Defaults to an empty input for
+        actions that take no parameters.
+        """
         action={}
         pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
         match = re.search(pattern, xpath)
         module = match.group('module')
         modpath = f"/{match.group('module')}:{match.group('path')}"
-        libyang.xpath_set(action, xpath, {})
+        libyang.xpath_set(action, xpath, input_data or {})
         mod = self.ly.get_module(module)
         lyd = mod.parse_data_dict(action, rpc=True)
         xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" + lyd.print_mem("xml", with_siblings=True, pretty=False) + "</action>"

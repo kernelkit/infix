@@ -47,7 +47,13 @@ class Transport(ABC):
         pass
 
     @abstractmethod
-    def call_action(self, xpath):
+    def call_action(self, xpath, input_data=None):
+        """Invoke a YANG action at `xpath`.
+
+        `input_data`, if supplied, is a dict of input leaves (e.g.
+        ``{"state": "on"}``).  Backends wrap it in the protocol-specific
+        envelope; actions that take no input may omit the argument.
+        """
         pass
 
     def __getitem__(self, key):
