@@ -428,6 +428,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		if (wifi_get_mode(cif) == wifi_station)
 			return wifi_validate_secret(session, cif)
 				? : wifi_gen_station(cif);
+		if (wifi_get_mode(cif) == wifi_mesh)
+			return wifi_gen_mesh(cif);
 		return 0;
 	case IFT_DUMMY:
 	case IFT_GRE:

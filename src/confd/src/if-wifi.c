@@ -79,17 +79,22 @@ int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif)
 
 wifi_mode_t wifi_get_mode(struct lyd_node *iface)
 {
-	struct lyd_node *ap, *wifi;
+	struct lyd_node *ap, *mesh, *wifi;
 
 	wifi = lydx_get_child(iface, "wifi");
 	if (!wifi)
 		return wifi_unknown;
 
-
 	ap = lydx_get_child(wifi, "access-point");
 	if (ap) {
 		if (lydx_get_op(ap) != LYDX_OP_DELETE)
 			return wifi_ap;
+	}
+
+	mesh = lydx_get_child(wifi, "mesh-point");
+	if (mesh) {
+		if (lydx_get_op(mesh) != LYDX_OP_DELETE)
+			return wifi_mesh;
 	}
 
 	/*
@@ -101,19 +106,25 @@ wifi_mode_t wifi_get_mode(struct lyd_node *iface)
 
 int wifi_mode_changed(struct lyd_node *wifi)
 {
-	enum lydx_op ap_op = LYDX_OP_DELETE;
-	struct lyd_node *ap;
+	enum lydx_op op = LYDX_OP_DELETE;
+	struct lyd_node *node;
 
 	if (!wifi)
 		return 0;
 
-	ap = lydx_get_child(wifi, "access-point");
-	if (ap)
-		ap_op = lydx_get_op(ap);
+	node = lydx_get_child(wifi, "access-point");
+	if (node)
+		op = lydx_get_op(node);
+	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
+		return 1;
 
-	DEBUG("MODE CHANGED: %d", ap && (ap_op == LYDX_OP_CREATE || ap_op == LYDX_OP_DELETE));
+	node = lydx_get_child(wifi, "mesh-point");
+	if (node)
+		op = lydx_get_op(node);
+	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
+		return 1;
 
-	return (ap && (ap_op == LYDX_OP_CREATE || ap_op == LYDX_OP_DELETE));
+	return 0;
 }
 
 /*
@@ -150,7 +161,8 @@ int wifi_gen_station(struct lyd_node *cif)
 		secret_name = NULL;
 	}
 
-	radio_node = lydx_get_xpathf(cif, "../../hardware/component[name='%s']/wifi-radio", radio);
+	radio_node = lydx_get_xpathf(cif,
+		"/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio);
 	country = lydx_get_cattr(radio_node, "country-code");
 
 	if (secret_name && strcmp(security_mode, "disabled") != 0) {
@@ -171,10 +183,8 @@ int wifi_gen_station(struct lyd_node *cif)
 		goto out;
 	}
 
-	/*
-	 * Background scanning every 10 seconds while not associated, when we
-	 * have an SSID (below), bgscan assumes this task.
-	 */
+	/* autoscan drives scanning every 10s while unassociated; once
+	 * associated no background scanning runs (bgscan disabled below). */
 	fprintf(wpa_supplicant,
 		"ctrl_interface=/run/wpa_supplicant\n"
 		"autoscan=periodic:10\n"
@@ -190,12 +200,15 @@ int wifi_gen_station(struct lyd_node *cif)
 			asprintf(&security_str, "key_mgmt=NONE");
 		else if (secret)
 			asprintf(&security_str,
-				 "key_mgmt=SAE WPA-PSK\n"
+				 "key_mgmt=FT-SAE FT-PSK SAE WPA-PSK\n"
 				 "  psk=\"%s\"", secret);
 
+		/* bgscan="" disables background scanning once associated: on a
+		 * fixed backhaul link the periodic off-channel sweep stalls
+		 * traffic and buys no roaming benefit. */
 		fprintf(wpa_supplicant,
 			"network={\n"
-			"  bgscan=\"simple: 30:-45:300\"\n"
+			"  bgscan=\"\"\n"
 			"  ssid=\"%s\"\n"
 			"  %s\n"
 			"}\n", ssid, security_str);
@@ -227,6 +240,195 @@ out:
 	return rc;
 }
 
+
+
+/*
+ * Center channel for 80MHz VHT/HE operation.
+ * 5GHz 80MHz channel groups and their center channels:
+ *   36-48(42), 52-64(58), 100-112(106),
+ *                    116-128(122), 132-144(138), 149-161(155)
+ */
+static int wifi_center_chan_80(int ch)
+{
+	static const int grp[][2] = {
+		{36, 42}, {52, 58}, {100, 106}, {116, 122}, {132, 138}, {149, 155}
+	};
+	int i;
+
+	for (i = 0; i < 6; i++)
+		if (ch >= grp[i][0] && ch < grp[i][0] + 16)
+			return grp[i][1];
+	return 0;
+}
+
+/*
+ * Center channel for 160MHz VHT/HE operation.
+ * 5GHz 160MHz groups: 36-64(50), 100-128(114)
+ */
+static int wifi_center_chan_160(int ch)
+{
+	if (ch >= 36 && ch <= 64)
+		return 50;
+	if (ch >= 100 && ch <= 128)
+		return 114;
+	return 0;
+}
+
+/*
+ * Convert WiFi channel number to frequency in MHz.
+ * Band is determined from channel range:
+ *   2.4GHz: channels 1-14
+ *   5GHz:   channels 32-177
+ *   6GHz:   channels 1-233 (identified by band string)
+ */
+static int wifi_chan_to_freq(int channel, const char *band)
+{
+	if (!strcmp(band, "6GHz"))
+		return 5950 + channel * 5;
+
+	if (channel >= 1 && channel <= 13)
+		return 2407 + channel * 5;
+	if (channel == 14)
+		return 2484;
+
+	/* 5GHz */
+	return 5000 + channel * 5;
+}
+
+/*
+ * Generate wpa_supplicant config for 802.11s mesh mode
+ */
+int wifi_gen_mesh(struct lyd_node *cif)
+{
+	const char *ifname, *mesh_id, *secret_name, *radio;
+	struct lyd_node *mesh, *security, *secret_node, *radio_node, *wifi;
+	const char *country, *band, *width;
+	FILE *wpa_supplicant = NULL;
+	unsigned char *secret = NULL;
+	int rc = SR_ERR_OK;
+	int channel, freq;
+	mode_t oldmask;
+	bool forwarding;
+
+	ifname = lydx_get_cattr(cif, "name");
+	wifi = lydx_get_child(cif, "wifi");
+	if (!wifi)
+		return SR_ERR_OK;
+
+	radio = lydx_get_cattr(wifi, "radio");
+	mesh = lydx_get_child(wifi, "mesh-point");
+	if (!mesh)
+		return SR_ERR_OK;
+
+	mesh_id = lydx_get_cattr(mesh, "mesh-id");
+	forwarding = lydx_is_enabled(mesh, "forwarding");
+
+	security = lydx_get_child(mesh, "security");
+	secret_name = lydx_get_cattr(security, "secret");
+
+	radio_node = lydx_get_xpathf(cif,
+		"/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio);
+	country = lydx_get_cattr(radio_node, "country-code");
+	band = lydx_get_cattr(radio_node, "band");
+	width = lydx_get_cattr(radio_node, "channel-width");
+	channel = atoi(lydx_get_cattr(radio_node, "channel") ? : "0");
+	if (!channel && band && width && !strcmp(width, "auto")) {
+		if (!strcmp(band, "2.4GHz"))
+			channel = 6;
+		else if (!strcmp(band, "5GHz"))
+			channel = 36;
+		else if (!strcmp(band, "6GHz"))
+			channel = 1;
+	}
+
+	freq = wifi_chan_to_freq(channel, band);
+
+	if (secret_name) {
+		const char *b64;
+
+		secret_node = lydx_get_xpathf(cif,
+			"../../keystore/symmetric-keys/symmetric-key[name='%s']",
+			secret_name);
+		b64 = lydx_get_cattr(secret_node, "cleartext-symmetric-key");
+		if (b64)
+			secret = base64_decode((const unsigned char *)b64, strlen(b64), NULL);
+	}
+
+	oldmask = umask(0077);
+	wpa_supplicant = fopenf("w", WPA_SUPPLICANT_CONF, ifname);
+	if (!wpa_supplicant) {
+		rc = SR_ERR_INTERNAL;
+		goto out;
+	}
+
+	fprintf(wpa_supplicant, "ctrl_interface=/run/wpa_supplicant\n");
+	if (country)
+		fprintf(wpa_supplicant, "country=%s\n", country);
+
+	/* Global scope only (maps to peer_link_timeout): raise the 300s
+	 * default so a fixed backhaul peer is not idled out and re-peered
+	 * (MESH_CLOSE, reason 55), which briefly breaks forwarding. */
+	fprintf(wpa_supplicant, "mesh_max_inactivity=3600\n");
+
+	fprintf(wpa_supplicant, "\nnetwork={\n");
+	fprintf(wpa_supplicant, "  mode=5\n");
+	fprintf(wpa_supplicant, "  ssid=\"%s\"\n", mesh_id);
+	fprintf(wpa_supplicant, "  frequency=%d\n", freq);
+
+	if (band && !strcmp(band, "6GHz") && (!width || !strcmp(width, "auto"))) {
+		int center = wifi_center_chan_80(channel);
+
+		fprintf(wpa_supplicant, "  ht40=1\n");
+		fprintf(wpa_supplicant, "  he=1\n");
+		fprintf(wpa_supplicant, "  max_oper_chwidth=1\n");
+		if (center)
+			fprintf(wpa_supplicant, "  vht_center_freq1=%d\n", wifi_chan_to_freq(center, band));
+	} else if (width && strcmp(width, "auto")) {
+		if (!strcmp(width, "20MHz")) {
+			fprintf(wpa_supplicant, "  disable_ht40=1\n");
+		} else if (!strcmp(width, "40MHz")) {
+			fprintf(wpa_supplicant, "  ht40=1\n");
+		} else if (!strcmp(width, "80MHz")) {
+			int center = wifi_center_chan_80(channel);
+
+			fprintf(wpa_supplicant, "  ht40=1\n");
+			if (!strcmp(band, "6GHz"))
+				fprintf(wpa_supplicant, "  he=1\n");
+			else
+				fprintf(wpa_supplicant, "  vht=1\n");
+			fprintf(wpa_supplicant, "  max_oper_chwidth=1\n");
+			if (center)
+				fprintf(wpa_supplicant, "  vht_center_freq1=%d\n", wifi_chan_to_freq(center, band));
+		} else if (!strcmp(width, "160MHz")) {
+			int center = wifi_center_chan_160(channel);
+
+			fprintf(wpa_supplicant, "  ht40=1\n");
+			if (!strcmp(band, "6GHz"))
+				fprintf(wpa_supplicant, "  he=1\n");
+			else
+				fprintf(wpa_supplicant, "  vht=1\n");
+			fprintf(wpa_supplicant, "  max_oper_chwidth=2\n");
+			if (center)
+				fprintf(wpa_supplicant, "  vht_center_freq1=%d\n", wifi_chan_to_freq(center, band));
+		}
+	}
+	fprintf(wpa_supplicant, "  mesh_fwding=%d\n", forwarding ? 1 : 0);
+
+	fprintf(wpa_supplicant, "  key_mgmt=SAE\n");
+	fprintf(wpa_supplicant, "  ieee80211w=2\n");
+	if (secret)
+		fprintf(wpa_supplicant, "  sae_password=\"%s\"\n", secret);
+
+	fprintf(wpa_supplicant, "}\n");
+
+out:
+	free(secret);
+	if (wpa_supplicant)
+		fclose(wpa_supplicant);
+	umask(oldmask);
+
+	return rc;
+}
 /*
  * Get probe-timeout for a radio from sysrepo config.
  * Returns 0 if not set.
@@ -283,7 +485,7 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 
 	fprintf(iw, "# Generated by Infix confd - WiFi Interface Creation\n");
 	fprintf(iw, "# Create %s interface %s on radio %s\n",
-		mode == wifi_station ? "station" : "access point", ifname, radio);
+		mode == wifi_station ? "station" : (mode == wifi_mesh ? "mesh" : "access point"), ifname, radio);
 
 	/* Wait for PHY if probe-timeout is set (slow USB dongles) */
 	if (probe_timeout > 0) {
@@ -316,6 +518,12 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		break;
 	case wifi_ap:
 		fprintf(iw, "iw phy %s interface add %s type __ap\n", radio, ifname);
+		break;
+	case wifi_mesh:
+		fprintf(iw, "iw phy %s interface add %s type mesh\n", radio, ifname);
+		wifi_gen_mesh(cif);
+		fprintf(iw, "initctl -bfq enable mesh@%s\n", ifname);
+		fprintf(iw, "initctl -bfq touch mesh@%s\n", ifname);
 		break;
 	default:
 		ERROR("WiFi mode %d unknown", mode);
@@ -350,9 +558,16 @@ int wifi_del_iface(struct lyd_node *dif, struct dagger *net)
 	fprintf(iw, "iw dev %s del 2>/dev/null || ip link del %s 2>/dev/null || true\n", ifname, ifname);
 
 	wifi = lydx_get_child(dif, "wifi");
-	if (wifi && wifi_get_mode(wifi) != wifi_ap) {
-		erasef(WPA_SUPPLICANT_CONF, ifname);
-		fprintf(iw, "initctl -bfq disable wifi@%s\n", ifname);
+	if (wifi) {
+		int mode = wifi_get_mode(wifi);
+
+		if (mode == wifi_mesh) {
+			erasef(WPA_SUPPLICANT_CONF, ifname);
+			fprintf(iw, "initctl -bfq disable mesh@%s\n", ifname);
+		} else if (mode != wifi_ap) {
+			erasef(WPA_SUPPLICANT_CONF, ifname);
+			fprintf(iw, "initctl -bfq disable wifi@%s\n", ifname);
+		}
 	}
 	fclose(iw);
 

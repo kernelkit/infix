@@ -3,6 +3,23 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.06.0][UNRELEASED]
+--------------
+
+### Changes
+
+- Add Wi-Fi roaming for fast, seamless handoff between access points that
+  share an SSID: 802.11k, 802.11v and 802.11r (over-the-air FT).  See the
+  [Wi-Fi][wifi] guide for details
+- Add Wi-Fi 802.11s mesh support, letting access points form a wireless
+  backhaul between each other without cabling
+- Add band steering for dual-band access points, nudging dual-band
+  clients onto the faster 5/6 GHz band
+- Add `legacy-rates` option to re-enable 802.11b rates on 2.4 GHz for
+  old IoT devices (disabled by default)
+
+[wifi]: wifi.md
+
 [v26.05.0][] - 2026-05-29
 -------------------------
 

@@ -48,6 +48,15 @@ submodule infix-if-wifi {
      - Security: WPA2/WPA3 with keystore integration
      - Operational state: Connection status, RSSI, client lists";
 
+  revision 2026-03-06 {
+    description
+      "Adding mesh support and roaming.
+	- Add 802.11s mesh point mode support.
+        - Add band-steering (MBO) support and OKC configuration.
+        - Add support for roaming, by adding support for 802.11v/k/r";
+    reference "internal";
+  }
+
   revision 2025-12-17 {
     description
       "Major refactoring for AP mode support (BREAKING CHANGE):
@@ -70,6 +79,27 @@ submodule infix-if-wifi {
 
   feature wifi {
     description "WiFi support is an optional build-time feature in Infix.";
+  }
+
+  typedef mobility-domain {
+    type union {
+      type string {
+        pattern '[0-9a-fA-F]{4}';
+      }
+      type enumeration {
+        enum hash {
+          description
+            "Derive mobility domain by hashing the SSID.
+
+             OpenWrt-compatible: md5(ssid), first 4 hex chars.";
+        }
+      }
+    }
+    default "4f57";
+    description
+      "802.11r Mobility Domain identifier (4 hex digits).
+
+       Use 'hash' to automatically derive it from the SSID.";
   }
 
   augment "/if:interfaces/if:interface" {
@@ -127,12 +157,14 @@ submodule infix-if-wifi {
            Once you've identified a network, configure either:
            - Station mode: Connect to an existing WiFi network
            - Access Point mode: Create a WiFi network for clients
+           - Mesh Point mode: Create an 802.11s mesh link
 
            Note: A radio can host either:
            - Multiple AP interfaces (multi-SSID), OR
-           - A single Station interface
+           - A single Station interface, OR
+           - A single Mesh Point interface
 
-           Mixing AP and Station on the same radio is not supported.";
+           Mixing AP and Mesh Point on the same radio is not supported.";
 
         case station {
           container station {
@@ -421,6 +453,121 @@ submodule infix-if-wifi {
               }
             }
 
+            container roaming {
+              description
+                "Fast roaming and seamless handoff configuration.
+
+                 802.11k: Radio Resource Management (neighbor discovery)
+                 802.11r: Fast BSS Transition (fast handoff)
+                 802.11v: BSS Transition Management (network-assisted roaming)";
+
+              container dot11k {
+                presence "Enable 802.11k Radio Resource Management";
+                description
+                  "Enable 802.11k Radio Resource Management.
+
+                   Allows clients to discover neighboring APs for better
+                   roaming decisions. Enables:
+                   - Neighbor reports
+                   - Beacon reports";
+              }
+
+              container dot11r {
+                presence "Enable 802.11r Fast BSS Transition";
+                must "../../security/mode != 'open'" {
+                  error-message "802.11r requires WPA2/WPA3 security and cannot be used with open networks.";
+                }
+                description
+                  "Enable 802.11r Fast BSS Transition.
+
+                   Reduces handoff latency from ~1s to <50ms through
+                   pre-authentication. Required for seamless roaming.";
+
+                leaf mobility-domain {
+                  type mobility-domain;
+                  default "4f57";
+                  description
+                    "802.11r Mobility Domain identifier.
+
+                     All APs that clients should roam between MUST use the
+                     same mobility domain ID.
+
+                     Can be either:
+                     - A 4-character hex string (e.g., '4f57')
+                     - 'hash' to auto-derive from SSID (OpenWrt-compatible)";
+                }
+
+                leaf nas-identifier {
+                  type union {
+                    type enumeration {
+                      enum auto {
+                        description
+                          "Automatically derive NAS-Identifier as:
+                           <interface-name>-<hostname>.<mobility-domain>.";
+                      }
+                    }
+                    type string {
+                      length "1..253";
+                    }
+                  }
+                  default auto;
+                  description
+                    "Override NAS-Identifier used for 802.11r.
+
+                     Set to 'auto' to derive:
+                     <interface-name>-<hostname>.<mobility-domain>.
+
+                     This value should be unique per AP BSS and stable.";
+                }
+              }
+
+              container dot11v {
+                presence "Enable 802.11v BSS Transition Management";
+                description
+                  "Enable 802.11v BSS Transition Management.
+
+                   Allows APs to suggest better APs to clients, improving
+                   network-assisted roaming decisions.";
+
+                leaf band-steering {
+                  type boolean;
+                  default true;
+                  description
+                    "Multi-Band Operation (MBO) band steering.
+
+                     Signals band preferences to capable clients,
+                     encouraging dual-band devices to prefer 5GHz
+                     over 2.4GHz when signal quality permits.
+
+                     MBO steers clients via 802.11v BSS Transition
+                     Management, hence its placement under dot11v;
+                     enabling dot11v enables band steering by default.
+
+                     Only meaningful when the same SSID is offered on
+                     two or more bands (an access-point per radio); a
+                     single-band BSS has no other band to steer toward.
+
+                     Safe to leave enabled (default) - only activates
+                     when both AP and client support MBO.";
+                }
+              }
+
+              leaf okc {
+                type boolean;
+                default true;
+                description
+                  "Opportunistic Key Caching (OKC).
+
+                   Reduces re-authentication time for roaming clients
+                   that don't support 802.11r. The AP caches PMK from
+                   previous associations and shares them with other APs
+                   in the same mobility group.
+
+                   Safe to leave enabled (default) - only activates when
+                   both AP and client support it.";
+              }
+            }
+
             /* Operational state */
 
             container stations {
@@ -491,6 +638,145 @@ submodule infix-if-wifi {
                      - 10 = 1 Mbps
                      - 65 = 6.5 Mbps
                      - 866 = 86.6 Mbps";
+                }
+              }
+            }
+          }
+        }
+
+        case mesh-point {
+          container mesh-point {
+            presence "Configure 802.11s mesh point mode";
+
+            must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:band" {
+              error-message "Parent radio must have 'band' configured for mesh mode";
+            }
+
+            must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:channel" {
+              error-message "Parent radio must have 'channel' configured for mesh mode";
+            }
+
+            must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:country-code != '00'" {
+              error-message "Country code '00' is not allowed for mesh mode.";
+            }
+
+            must "not(/if:interfaces/if:interface[wifi/access-point][wifi/radio = current()/../radio])" {
+              error-message "Mesh point and access point cannot coexist on the same radio";
+            }
+
+            description
+              "802.11s Mesh Point mode configuration.
+
+               In mesh mode, the interface creates a peer-to-peer mesh
+               link with other mesh points sharing the same mesh ID.
+
+               Only one mesh point interface is allowed per radio.
+               Mesh point and access point cannot share the same radio.
+
+               Example use case: Wireless backhaul between APs.";
+
+            leaf mesh-id {
+              type string {
+                length "1..32";
+              }
+              mandatory true;
+              description
+                "Mesh network identifier.
+
+                 All mesh points that should form a mesh network
+                 must use the same mesh ID.";
+            }
+
+            leaf forwarding {
+              type boolean;
+              default true;
+              description
+                "Enable layer-2 mesh forwarding (mesh_fwding).
+
+                 When true, the mesh interface can be added to a Linux
+                 bridge for transparent L2 connectivity (mesh portal).
+
+                 When false, only locally destined traffic is received.";
+            }
+
+            container security {
+              description
+                "Mesh security configuration.
+
+                 All mesh links use WPA3-SAE encryption.";
+
+              leaf secret {
+                type ks:central-symmetric-key-ref;
+                mandatory true;
+                description
+                  "Pre-shared key (PSK) reference for SAE mesh.
+
+                   References a symmetric key in the keystore.
+                   All mesh points in the same mesh must share
+                   the same key.";
+              }
+            }
+
+            /* Operational state */
+
+            container peers {
+              list peer {
+                config false;
+                key mac-address;
+                description
+                  "List of currently connected mesh peers.";
+
+                leaf mac-address {
+                  type yang:mac-address;
+                  description "Mesh peer MAC address.";
+                }
+
+                leaf signal-strength {
+                  type int16;
+                  units "dBm";
+                  description "Peer signal strength in dBm.";
+                }
+
+                leaf connected-time {
+                  type uint32;
+                  units "seconds";
+                  description "Time since peer connected, in seconds.";
+                }
+
+                leaf rx-packets {
+                  type yang:counter64;
+                  description "Packets received from this peer.";
+                }
+
+                leaf tx-packets {
+                  type yang:counter64;
+                  description "Packets transmitted to this peer.";
+                }
+
+                leaf rx-bytes {
+                  type yang:counter64;
+                  units "octets";
+                  description "Bytes received from this peer.";
+                }
+
+                leaf tx-bytes {
+                  type yang:counter64;
+                  units "octets";
+                  description "Bytes transmitted to this peer.";
+                }
+
+                leaf rx-speed {
+                  type uint32;
+                  units "100 kbps";
+                  description
+                    "Last received data rate from this peer in 100 kbps.";
+                }
+
+                leaf tx-speed {
+                  type uint32;
+                  units "100 kbps";
+                  description
+                    "Last transmitted data rate to this peer in 100 kbps.";
                 }
               }
             }

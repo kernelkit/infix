@@ -1,9 +1,12 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 #include <fnmatch.h>
 #include <ftw.h>
+#include <glob.h>
 #include <jansson.h>
 #include <libgen.h>
 #include <limits.h>
+#include <unistd.h>
+#include <openssl/evp.h>
 
 #include <srx/common.h>
 #include <srx/lyx.h>
@@ -17,6 +20,7 @@
 #define XPATH_BASE_              "/ietf-hardware:hardware"
 #define HOSTAPD_CONF             "/etc/hostapd-%s.conf"
 #define HOSTAPD_CONF_NEXT        HOSTAPD_CONF"+"
+#define HOSTAPD_SERVICE          "/etc/finit.d/available/hostapd.conf"
 #define GPSD_CONF                "/etc/finit.d/available/gpsd.conf"
 #define GPSD_CONF_NEXT           GPSD_CONF"+"
 #define GPSD_MAX_DEVICES         4
@@ -177,6 +181,89 @@ out_free_xpath:
 	return err;
 }
 
+/* Resolve mobility domain - if "hash", derive from SSID using MD5 (OpenWrt-compatible) */
+static const char *resolve_mobility_domain(const char *mobility_domain, const char *ssid)
+{
+	static char hash_result[5]; /* 4 hex chars + null */
+	unsigned char md5_digest[EVP_MAX_MD_SIZE];
+	unsigned int md5_len;
+	EVP_MD_CTX *ctx;
+
+	if (strcmp(mobility_domain, "hash"))
+		return mobility_domain;
+
+	if (!ssid) {
+		ERROR("Cannot derive mobility domain from NULL SSID");
+		return "4f57"; /* Fallback to default */
+	}
+
+	/* Compute MD5 hash using EVP API (OpenSSL 3.0+) */
+	ctx = EVP_MD_CTX_new();
+	if (!ctx) {
+		ERROR("Failed to create EVP context");
+		return "4f57";
+	}
+
+	if (EVP_DigestInit_ex(ctx, EVP_md5(), NULL) != 1 ||
+	    EVP_DigestUpdate(ctx, ssid, strlen(ssid)) != 1 ||
+	    EVP_DigestFinal_ex(ctx, md5_digest, &md5_len) != 1) {
+		ERROR("Failed to compute MD5 hash");
+		EVP_MD_CTX_free(ctx);
+		return "4f57";
+	}
+
+	EVP_MD_CTX_free(ctx);
+
+	/* Extract first 4 hex characters (first 2 bytes) */
+	snprintf(hash_result, sizeof(hash_result), "%02x%02x", md5_digest[0], md5_digest[1]);
+
+	DEBUG("Derived mobility domain '%s' from SSID '%s'", hash_result, ssid);
+	return hash_result;
+}
+
+/*
+ * Find an AP interface on a higher-band radio (5/6 GHz) advertising the
+ * same SSID as the caller's 2.4 GHz BSS, for no_probe_resp_if_seen_on=.
+ * hostapd suppresses a 2.4 GHz probe response only once it has actually
+ * seen that MAC on the listed interface, so 2.4-only clients always get a
+ * response while dual-band clients are nudged to the higher band. Note:
+ * sta_track spans bands only when both radios run in one hostapd process.
+ *
+ * Returns a pointer into the config tree (do not free) or NULL.
+ */
+static const char *wifi_find_higher_band_twin(struct lyd_node *config,
+					      const char *current_band,
+					      const char *current_ssid)
+{
+	struct lyd_node *cifs, *cif;
+
+	if (strcmp(current_band, "2.4GHz"))
+		return NULL;
+
+	cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		struct lyd_node *wifi, *ap, *radio_node;
+		const char *radio, *ssid, *band;
+
+		wifi = lydx_get_child(cif, "wifi");
+		if (!wifi)
+			continue;
+		ap = lydx_get_child(wifi, "access-point");
+		if (!ap)
+			continue;
+		ssid = lydx_get_cattr(ap, "ssid");
+		if (strcmp(ssid, current_ssid))
+			continue;
+		radio = lydx_get_cattr(wifi, "radio");
+		radio_node = lydx_get_xpathf(config,
+			"/hardware/component[name='%s']/wifi-radio", radio);
+		band = lydx_get_cattr(radio_node, "band");
+		if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz"))
+			return lydx_get_cattr(cif, "name");
+	}
+
+	return NULL;
+}
 
 static int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio_name,
 					  struct lyd_node ***iface_list, int *count)
@@ -200,7 +287,7 @@ static int wifi_find_interfaces_on_radio(struct lyd_node *ifs, const char *radio
 
 		if (lydx_get_op(iface) == LYDX_OP_DELETE)
 			continue;
-		list = realloc(list, sizeof(struct lyd_node *) * n + 1);
+		list = realloc(list, sizeof(struct lyd_node *) * (n + 1));
 		list[n++] = iface;
 	}
 
@@ -230,8 +317,7 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 		ap = lydx_get_child(wifi, "access-point");
 		if (!ap)
 			continue;
-		list = realloc(list, sizeof(char *) *n+1);
-
+		list = realloc(list, sizeof(char *) * (n + 1));
 
 		ifname = lydx_get_cattr(cif, "name");
 		list[n++] = strdup(ifname);
@@ -256,10 +342,16 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 /* Helper: Write SSID and security configuration (shared between primary and BSS) */
 static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss, const char *band)
 {
+	struct lyd_node *wifi, *ap, *security, *secret_node, *roaming;
+	struct lyd_node *dot11k, *dot11r, *dot11v;
 	const char *ssid, *hidden, *security_mode, *secret_name;
-	struct lyd_node *wifi, *ap, *security, *secret_node;
+	const char *mobility_domain, *mobility_domain_raw;
+	const char *nas_identifier_cfg;
+	bool enable_80211k, enable_80211r, enable_80211v, enable_mbo;
 	unsigned char *secret = NULL;
 	const char *ifname;
+	char nas_identifier_default[300];
+	char hostname[64] = "localhost";
 	char bssid[18];
 
 	ifname = lydx_get_cattr(cif, "name");
@@ -271,6 +363,24 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		fprintf(hostapd, "bss=%s\n", ifname);
 	}
 
+	/* Check 802.11k/r/v configuration */
+	roaming = lydx_get_child(ap, "roaming");
+	dot11k = roaming ? lydx_get_child(roaming, "dot11k") : NULL;
+	dot11r = roaming ? lydx_get_child(roaming, "dot11r") : NULL;
+	dot11v = roaming ? lydx_get_child(roaming, "dot11v") : NULL;
+	enable_80211k = dot11k != NULL;
+	enable_80211r = dot11r != NULL;
+	enable_80211v = dot11v != NULL;
+	if (dot11v) {
+		const char *band_steering = lydx_get_cattr(dot11v, "band-steering");
+
+		enable_mbo = !band_steering || !strcmp(band_steering, "true");
+	} else {
+		enable_mbo = false;
+	}
+
+
+
 	/* Set BSSID if custom MAC is configured */
 	if (!interface_get_phys_addr(cif, bssid))
 		fprintf(hostapd, "bssid=%s\n", bssid);
@@ -279,6 +389,19 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	ssid = lydx_get_cattr(ap, "ssid");
 	hidden = lydx_get_cattr(ap, "hidden");
 
+	if (enable_80211r) {
+		mobility_domain_raw = lydx_get_cattr(dot11r, "mobility-domain");
+		mobility_domain = resolve_mobility_domain(mobility_domain_raw, ssid);
+		nas_identifier_cfg = lydx_get_cattr(dot11r, "nas-identifier");
+		if (!nas_identifier_cfg || !strcmp(nas_identifier_cfg, "auto")) {
+			if (gethostname(hostname, sizeof(hostname)) != 0)
+				snprintf(hostname, sizeof(hostname), "localhost");
+			hostname[sizeof(hostname) - 1] = '\0';
+			snprintf(nas_identifier_default, sizeof(nas_identifier_default),
+				 "%s-%s.%s", ifname, hostname, mobility_domain);
+			nas_identifier_cfg = nas_identifier_default;
+		}
+	}
 	if (ssid)
 		fprintf(hostapd, "ssid=%s\n", ssid);
 	if (hidden && !strcmp(hidden, "true"))
@@ -330,7 +453,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	} else if (!strcmp(security_mode, "wpa2-personal")) {
 		fprintf(hostapd, "wpa=2\n");
 		/* WPA-PSK: Pre-shared key authentication */
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK\n");
+		fprintf(hostapd, "wpa_key_mgmt=%sWPA-PSK\n", enable_80211r ? "FT-PSK " : "");
 		/* CCMP: AES-based encryption, mandatory for WPA2 */
 		fprintf(hostapd, "wpa_pairwise=CCMP\n");
 		if (secret)
@@ -338,7 +461,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	} else if (!strcmp(security_mode, "wpa3-personal")) {
 		fprintf(hostapd, "wpa=2\n");
 		/* SAE: Simultaneous Authentication of Equals, resistant to offline dictionary attacks */
-		fprintf(hostapd, "wpa_key_mgmt=SAE\n");
+		fprintf(hostapd, "wpa_key_mgmt=%sSAE\n", enable_80211r ? "FT-SAE " : "");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret)
 			fprintf(hostapd, "sae_password=%s\n", secret);
@@ -346,7 +469,8 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	} else if (!strcmp(security_mode, "wpa2-wpa3-personal")) {
 		fprintf(hostapd, "wpa=2\n");
 		/* Allow both PSK (WPA2) and SAE (WPA3) authentication */
-		fprintf(hostapd, "wpa_key_mgmt=WPA-PSK SAE\n");
+		fprintf(hostapd, "wpa_key_mgmt=%sWPA-PSK SAE\n",
+			enable_80211r ? "FT-PSK FT-SAE " : "");
 		fprintf(hostapd, "rsn_pairwise=CCMP\n");
 		if (secret) {
 			fprintf(hostapd, "wpa_passphrase=%s\n", secret);
@@ -354,6 +478,62 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		}
 		/* ieee80211w=1: MFP capable but optional, for WPA2 client compatibility */
 		fprintf(hostapd, "ieee80211w=1\n");
+	}
+
+	/* 802.11r: Fast BSS Transition */
+	if (enable_80211r) {
+		fprintf(hostapd, "# Fast BSS Transition (802.11r)\n");
+		fprintf(hostapd, "mobility_domain=%s\n", mobility_domain);
+		/* Over-the-air FT: the client authenticates directly with the
+		 * target AP. Over-DS would relay the exchange through the wireless
+		 * mesh backhaul, adding latency and packet loss, so it is not used. */
+		fprintf(hostapd, "ft_over_ds=0\n");
+		fprintf(hostapd, "ft_psk_generate_local=1\n");
+		fprintf(hostapd, "nas_identifier=%s\n", nas_identifier_cfg);
+	}
+
+	/* 802.11k: Radio Resource Management */
+	if (enable_80211k) {
+		fprintf(hostapd, "# Radio Resource Management (802.11k)\n");
+		fprintf(hostapd, "rrm_neighbor_report=1\n");
+		fprintf(hostapd, "rrm_beacon_report=1\n");
+	}
+
+	/* 802.11v: BSS Transition Management */
+	if (enable_80211v) {
+		fprintf(hostapd, "# BSS Transition Management (802.11v)\n");
+		fprintf(hostapd, "bss_transition=1\n");
+	}
+
+	/* OKC: Opportunistic Key Caching */
+	if (roaming) {
+		const char *okc = lydx_get_cattr(roaming, "okc");
+
+		if (!okc || !strcmp(okc, "true"))
+			fprintf(hostapd, "okc=1\n");
+	}
+
+	/* MBO: Multi-Band Operation. Advertises multi-band capability so
+	 * MBO-aware clients make their own band-steering decisions; pairs
+	 * with 802.11v BSS Transition Management above. */
+	if (enable_mbo) {
+		const char *twin;
+
+		fprintf(hostapd, "mbo=1\n");
+
+		/* Required for no_probe_resp_if_seen_on below: without it
+		 * hostapd keeps no sta_track list, so the twin radio never
+		 * knows which clients it has seen.  Radio-level, emit once
+		 * in the main section, never per BSS. */
+		if (!is_bss)
+			fprintf(hostapd, "track_sta_max_num=100\n");
+
+		/* Active band steering: on a 2.4 GHz BSS, suppress probe
+		 * responses to clients recently seen on the same-SSID 5/6
+		 * GHz BSS, nudging dual-band clients to the higher band. */
+		twin = wifi_find_higher_band_twin(config, band, ssid);
+		if (twin)
+			fprintf(hostapd, "no_probe_resp_if_seen_on=%s\n", twin);
 	}
 
 	free(secret);
@@ -420,18 +600,289 @@ static const char *wifi_ht40_dir(int ch)
 	return ((ch / 4) % 2) ? "[HT40+]" : "[HT40-]";
 }
 
+/*
+ * Read HT/VHT capability bitmasks from hardware via iw.py.
+ * Returns 0 on success, -1 on failure.
+ */
+static int wifi_read_phy_caps(const char *radio_name, unsigned int *ht_cap, unsigned int *vht_cap)
+{
+	json_error_t jerr;
+	json_t *root, *jht, *jvht;
+	char buf[256];
+	size_t len;
+	FILE *pp;
+
+	*ht_cap = 0;
+	*vht_cap = 0;
+
+	pp = popenf("r", "/usr/libexec/infix/iw.py caps %s", radio_name);
+	if (!pp)
+		return -1;
+
+	len = fread(buf, 1, sizeof(buf) - 1, pp);
+	pclose(pp);
+	buf[len] = '\0';
+
+	/*
+	 * Parse JSON output: {"ht_cap": NNN, "vht_cap": NNN}
+	 * Use jansson since hardware.c already includes it.
+	 */
+	root = json_loads(buf, 0, &jerr);
+	if (!root)
+		return -1;
+
+	jht = json_object_get(root, "ht_cap");
+	jvht = json_object_get(root, "vht_cap");
+
+	if (json_is_integer(jht))
+		*ht_cap = (unsigned int)json_integer_value(jht);
+	if (json_is_integer(jvht))
+		*vht_cap = (unsigned int)json_integer_value(jvht);
+
+	json_decref(root);
+	return 0;
+}
+
+/*
+ * Build hostapd ht_capab string from HT capability bitmask.
+ * IEEE 802.11-2016 Table 9-153 — HT Capabilities Info field
+ *
+ * The ht40_dir string ("[HT40+]" or "[HT40-]") is prepended when
+ * the configured channel width is 40MHz or wider.
+ */
+static void wifi_build_ht_capab(char *out, size_t sz, unsigned int ht_cap,
+				const char *ht40_dir, int want_ht40)
+{
+	char *p = out;
+	size_t rem = sz;
+	int n;
+
+	*p = '\0';
+
+	if (want_ht40 && ht40_dir) {
+		n = snprintf(p, rem, "%s", ht40_dir);
+		p += n;
+		rem -= n;
+	}
+
+	if (ht_cap & 0x0001) {
+		n = snprintf(p, rem, "[LDPC]");
+		p += n;
+		rem -= n;
+	}
+	if (ht_cap & 0x0020) {
+		n = snprintf(p, rem, "[SHORT-GI-20]");
+		p += n;
+		rem -= n;
+	}
+	if (ht_cap & 0x0040) {
+		n = snprintf(p, rem, "[SHORT-GI-40]");
+		p += n;
+		rem -= n;
+	}
+	if (ht_cap & 0x0080) {
+		n = snprintf(p, rem, "[TX-STBC]");
+		p += n;
+		rem -= n;
+	}
+
+	/* RX-STBC: bits 8-9 */
+	switch ((ht_cap >> 8) & 0x3) {
+	case 1:
+		n = snprintf(p, rem, "[RX-STBC1]");
+		p += n;
+		rem -= n;
+		break;
+	case 2:
+		n = snprintf(p, rem, "[RX-STBC12]");
+		p += n;
+		rem -= n;
+		break;
+	case 3:
+		n = snprintf(p, rem, "[RX-STBC123]");
+		p += n;
+		rem -= n;
+		break;
+	}
+
+	/* Max A-MSDU Length: bit 11 */
+	if (ht_cap & 0x0800) {
+		n = snprintf(p, rem, "[MAX-AMSDU-7935]");
+		p += n;
+		rem -= n;
+	}
+}
+
+/*
+ * Build hostapd vht_capab string from VHT capability bitmask.
+ * IEEE 802.11-2016 Table 9-250 — VHT Capabilities Info field
+ *
+ * When the configured width is less than 160MHz, the VHT160 and
+ * SHORT-GI-160 flags are masked out to prevent hostapd from
+ * advertising capabilities the configuration does not use.
+ */
+static void wifi_build_vht_capab(char *out, size_t sz, unsigned int vht_cap, int chwidth)
+{
+	char *p = out;
+	size_t rem = sz;
+	int n;
+
+	*p = '\0';
+
+	/* Max MPDU Length: bits 0-1 */
+	switch (vht_cap & 0x3) {
+	case 1:
+		n = snprintf(p, rem, "[MAX-MPDU-7991]");
+		p += n;
+		rem -= n;
+		break;
+	case 2:
+		n = snprintf(p, rem, "[MAX-MPDU-11454]");
+		p += n;
+		rem -= n;
+		break;
+	}
+
+	/* Supported Channel Width: bits 2-3 */
+	if (chwidth >= 2) {
+		switch ((vht_cap >> 2) & 0x3) {
+		case 1:
+			n = snprintf(p, rem, "[VHT160]");
+			p += n;
+			rem -= n;
+			break;
+		case 2:
+			n = snprintf(p, rem, "[VHT160-80PLUS80]");
+			p += n;
+			rem -= n;
+			break;
+		}
+	}
+
+	/* RXLDPC: bit 4 */
+	if (vht_cap & 0x10) {
+		n = snprintf(p, rem, "[RXLDPC]");
+		p += n;
+		rem -= n;
+	}
+
+	/* Short GI for 80MHz: bit 5 */
+	if (vht_cap & 0x20) {
+		n = snprintf(p, rem, "[SHORT-GI-80]");
+		p += n;
+		rem -= n;
+	}
+
+	/* Short GI for 160MHz: bit 6 — only when configured for 160MHz */
+	if (chwidth >= 2 && (vht_cap & 0x40)) {
+		n = snprintf(p, rem, "[SHORT-GI-160]");
+		p += n;
+		rem -= n;
+	}
+
+	/* TX STBC: bit 7 */
+	if (vht_cap & 0x80) {
+		n = snprintf(p, rem, "[TX-STBC-2BY1]");
+		p += n;
+		rem -= n;
+	}
+
+	/* RX STBC: bits 8-10 */
+	switch ((vht_cap >> 8) & 0x7) {
+	case 1:
+		n = snprintf(p, rem, "[RX-STBC-1]");
+		p += n;
+		rem -= n;
+		break;
+	case 2:
+		n = snprintf(p, rem, "[RX-STBC-12]");
+		p += n;
+		rem -= n;
+		break;
+	case 3:
+		n = snprintf(p, rem, "[RX-STBC-123]");
+		p += n;
+		rem -= n;
+		break;
+	case 4:
+		n = snprintf(p, rem, "[RX-STBC-1234]");
+		p += n;
+		rem -= n;
+		break;
+	}
+
+	/* SU Beamformer: bit 11 */
+	if (vht_cap & 0x800) {
+		n = snprintf(p, rem, "[SU-BEAMFORMER]");
+		p += n;
+		rem -= n;
+	}
+
+	/* SU Beamformee: bit 12 */
+	if (vht_cap & 0x1000) {
+		n = snprintf(p, rem, "[SU-BEAMFORMEE]");
+		p += n;
+		rem -= n;
+	}
+
+	/* MU Beamformer: bit 19 */
+	if (vht_cap & 0x80000) {
+		n = snprintf(p, rem, "[MU-BEAMFORMER]");
+		p += n;
+		rem -= n;
+	}
+
+	/* MU Beamformee: bit 20 */
+	if (vht_cap & 0x100000) {
+		n = snprintf(p, rem, "[MU-BEAMFORMEE]");
+		p += n;
+		rem -= n;
+	}
+
+	/* VHT TXOP PS: bit 21 */
+	if (vht_cap & 0x200000) {
+		n = snprintf(p, rem, "[VHT-TXOP-PS]");
+		p += n;
+		rem -= n;
+	}
+
+	/* HTC-VHT: bit 22 */
+	if (vht_cap & 0x400000) {
+		n = snprintf(p, rem, "[HTC-VHT]");
+		p += n;
+		rem -= n;
+	}
+
+	/* Max A-MPDU Length Exponent: bits 23-25 */
+	n = (vht_cap >> 23) & 0x7;
+	if (n) {
+		int wrote = snprintf(p, rem, "[MAX-A-MPDU-LEN-EXP%d]", n);
+		p += wrote;
+		rem -= wrote;
+	}
+}
+
 /* Helper: Write radio-specific configuration */
-static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
+static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
+				  struct lyd_node *radio_node)
 {
 	const char *country, *channel, *band, *width;
+	unsigned int ht_cap = 0, vht_cap = 0;
+	char ht_capab[512], vht_capab[512];
+	int chwidth = 0; /* 0=20/40, 1=80, 2=160 */
 	int ch = 0;
+	bool legacy_rates;
 
 	country = lydx_get_cattr(radio_node, "country-code");
 	band = lydx_get_cattr(radio_node, "band");
 	channel = lydx_get_cattr(radio_node, "channel");
 	width = lydx_get_cattr(radio_node, "channel-width");
+	legacy_rates = lydx_is_enabled(radio_node, "legacy-rates");
 	if (channel && strcmp(channel, "auto"))
 		ch = atoi(channel);
+
+	/* Read HT/VHT hardware capabilities from PHY */
+	wifi_read_phy_caps(radio_name, &ht_cap, &vht_cap);
 
 	if (country)
 		fprintf(hostapd, "country_code=%s\n", country);
@@ -459,13 +910,18 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			fprintf(hostapd, "hw_mode=g\n");
 
 			/*
-			 * Disable legacy 802.11b rates (1, 2, 5.5, 11 Mbps).
-			 * Slow clients using these rates consume excessive
-			 * airtime, degrading performance for all clients.
+			 * Disable legacy 802.11b rates (1, 2, 5.5, 11 Mbps)
+			 * unless explicitly enabled via 'legacy-rates'. Slow
+			 * 802.11b clients consume excessive airtime, degrading
+			 * performance for all clients. When enabled, hostapd
+			 * keeps its default rate set so old 2.4GHz-only IoT
+			 * devices can still associate.
 			 * Rates in 0.5 Mbps units: 60=6M, 90=9M, etc.
 			 */
-			fprintf(hostapd, "supported_rates=60 90 120 180 240 360 480 540\n");
-			fprintf(hostapd, "basic_rates=60 120 240\n");
+			if (!legacy_rates) {
+				fprintf(hostapd, "supported_rates=60 90 120 180 240 360 480 540\n");
+				fprintf(hostapd, "basic_rates=60 120 240\n");
+			}
 		} else if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz")) {
 			/* hw_mode=a: 5GHz/6GHz with 802.11a (OFDM) as baseline */
 			fprintf(hostapd, "hw_mode=a\n");
@@ -511,14 +967,13 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 		}
 
 		/*
-		 * Channel width configuration.
+		 * Channel width + HT/VHT capability configuration.
 		 *
-		 * 6GHz: bandwidth is determined by op_class (131-134),
-		 * hostapd ignores he_oper_chwidth on 6GHz.  No VHT/HT.
-		 *
-		 * 5GHz: requires explicit ht_capab/vht_capab strings
-		 * matching hardware.  Without vht_capab, 160MHz is not
-		 * advertised in beacons.
+		 * hostapd requires explicit ht_capab and vht_capab strings
+		 * that match hardware capabilities.  Without vht_capab, 160MHz
+		 * support is not advertised in beacons, causing clients to
+		 * connect at 80MHz.  Read capabilities from hardware via iw.py
+		 * and build the capability strings from the bitmasks.
 		 */
 		if (!strcmp(band, "6GHz")) {
 			int op_class = 133; /* default 80MHz for 6GHz */
@@ -544,13 +999,18 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			}
 		} else if (width && strcmp(width, "auto")) {
 			if (!strcmp(width, "20MHz")) {
-				fprintf(hostapd, "ht_capab=\n");
+				chwidth = 0;
+				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, NULL, 0);
+				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
 				if (strcmp(band, "2.4GHz")) {
 					fprintf(hostapd, "vht_oper_chwidth=0\n");
 					fprintf(hostapd, "he_oper_chwidth=0\n");
 				}
 			} else if (!strcmp(width, "40MHz")) {
-				fprintf(hostapd, "ht_capab=%s\n", ch ? wifi_ht40_dir(ch) : "[HT40+]");
+				chwidth = 0;
+				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap,
+						    ch ? wifi_ht40_dir(ch) : "[HT40+]", 1);
+				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
 				if (strcmp(band, "2.4GHz")) {
 					fprintf(hostapd, "vht_oper_chwidth=0\n");
 					fprintf(hostapd, "he_oper_chwidth=0\n");
@@ -558,7 +1018,11 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			} else if (!strcmp(width, "80MHz") && ch) {
 				int center = wifi_center_chan_80(ch);
 
-				fprintf(hostapd, "ht_capab=%s\n", wifi_ht40_dir(ch));
+				chwidth = 1;
+				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, wifi_ht40_dir(ch), 1);
+				wifi_build_vht_capab(vht_capab, sizeof(vht_capab), vht_cap, chwidth);
+				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
+				fprintf(hostapd, "vht_capab=%s\n", vht_capab);
 				fprintf(hostapd, "vht_oper_chwidth=1\n");
 				fprintf(hostapd, "he_oper_chwidth=1\n");
 				if (center) {
@@ -568,7 +1032,11 @@ static void wifi_gen_radio_config(FILE *hostapd, struct lyd_node *radio_node)
 			} else if (!strcmp(width, "160MHz") && ch) {
 				int center = wifi_center_chan_160(ch);
 
-				fprintf(hostapd, "ht_capab=%s\n", wifi_ht40_dir(ch));
+				chwidth = 2;
+				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, wifi_ht40_dir(ch), 1);
+				wifi_build_vht_capab(vht_capab, sizeof(vht_capab), vht_cap, chwidth);
+				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
+				fprintf(hostapd, "vht_capab=%s\n", vht_capab);
 				fprintf(hostapd, "vht_oper_chwidth=2\n");
 				fprintf(hostapd, "he_oper_chwidth=2\n");
 				if (center) {
@@ -648,7 +1116,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "\n");
 
 	/* Radio-specific configuration */
-	wifi_gen_radio_config(hostapd, radio_node);
+	wifi_gen_radio_config(hostapd, radio_name, radio_node);
 
 	/* Add BSS sections for secondary APs (multi-SSID) */
 	for (i = 1; i < ap_count; i++) {
@@ -725,6 +1193,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	struct lyd_node  *difs = NULL, *dif = NULL;
 	int rc = SR_ERR_OK;
 	int gps_changed = 0;
+	int wifi_changed = 0;
 
 	if (!lydx_find_xpathf(diff, XPATH_BASE_))
 		return SR_ERR_OK;
@@ -786,34 +1255,25 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 				wifi_find_interfaces_on_radio(interfaces_diff, name,
 							      &wifi_iface_list, &wifi_iface_count);
 				if (wifi_iface_count > 0) {
-					bool running, enabled;
-
 					ap = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "access-point", NULL);
 					if (ap && lydx_get_op(ap) != LYDX_OP_DELETE) {
-						/* AP mode - activate hostapd for radio */
 						snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
 						snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
 
-						running = !systemf("initctl -bfq status hostapd:%s", name);
-						enabled = fexistf(HOSTAPD_CONF_NEXT, name);
-
-						if (enabled) {
+						if (fexistf(HOSTAPD_CONF_NEXT, name)) {
 							(void)rename(src, dst);
 							ap_interfaces++;
-
-							if (running)
-								finit_reloadf("hostapd@%s", name);
-							else
-								finit_enablef("hostapd@%s", name);
 						}
 					}
 				}
 				if (!ap_interfaces) {
-					finit_disablef("hostapd@%s", name);
 					erasef(HOSTAPD_CONF, name);
 					erasef(HOSTAPD_CONF_NEXT, name);
 				}
 				free(wifi_iface_list);
+				/* All radios share one hostapd process; the service is
+				 * (re)generated after the component loop below. */
+				wifi_changed = 1;
 				continue;
 			default:
 				continue;
@@ -908,6 +1368,45 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			}
 			break;
 		}
+	}
+
+	/*
+	 * All AP radios run in a single hostapd process so that
+	 * cross-radio directives (e.g. no_probe_resp_if_seen_on for band
+	 * steering) resolve: those only consult interfaces managed by the
+	 * same process.  Regenerate the combined service from every staged
+	 * /etc/hostapd-<radio>.conf and (re)start it.  A restart re-reads
+	 * all radio configs, so band edits and radio add/remove both apply.
+	 */
+	if (wifi_changed && event == SR_EV_DONE) {
+		glob_t gl = { 0 };
+
+		if (glob("/etc/hostapd-*.conf", 0, NULL, &gl) == 0 && gl.gl_pathc > 0) {
+			FILE *fp;
+
+			fp = fopen(HOSTAPD_SERVICE, "w");
+			if (!fp) {
+				ERRNO("Could not open " HOSTAPD_SERVICE);
+				rc = SR_ERR_INTERNAL;
+			} else {
+				size_t i;
+
+				fprintf(fp, "# Generated by confd, do not edit.\n");
+				fprintf(fp, "service <!> name:hostapd \\\n");
+				fprintf(fp, "\t[2345] hostapd -P /run/hostapd.pid");
+				for (i = 0; i < gl.gl_pathc; i++)
+					fprintf(fp, " %s", gl.gl_pathv[i]);
+				fprintf(fp, " \\\n\t-- Wi-Fi Access Points\n");
+				fclose(fp);
+
+				finit_enable("hostapd");
+				finit_reload("hostapd");
+			}
+		} else {
+			unlink(HOSTAPD_SERVICE);
+			finit_disable("hostapd");
+		}
+		globfree(&gl);
 	}
 err:
 

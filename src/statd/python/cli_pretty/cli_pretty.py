@@ -1382,17 +1382,85 @@ class Iface:
 
         stations_table.print()
 
+    def pr_wifi_peers(self):
+        if not self.wifi:
+            return
+
+        mesh = self.wifi.get("mesh-point", {})
+        peers_data = mesh.get("peers", {})
+        peers = peers_data.get("peer", [])
+
+        if not peers:
+            return
+
+        print("\nCONNECTED PEERS:")
+        peers_table = SimpleTable([
+            Column('MAC'),
+            Column('SIGNAL'),
+            Column('TIME'),
+            Column('RX PKT'),
+            Column('TX PKT'),
+            Column('RX BYTES'),
+            Column('TX BYTES'),
+            Column('RX SPEED'),
+            Column('TX SPEED')
+        ])
+
+        for peer in peers:
+            mac = peer.get("mac-address", "unknown")
+            signal = peer.get("signal-strength")
+            signal_str = signal_to_status(signal) if signal is not None else "------"
+
+            conn_time = peer.get("connected-time", 0)
+            time_str = f"{conn_time}s"
+
+            rx_pkt = peer.get("rx-packets", 0)
+            tx_pkt = peer.get("tx-packets", 0)
+            rx_bytes = peer.get("rx-bytes", 0)
+            tx_bytes = peer.get("tx-bytes", 0)
+
+            rx_speed = peer.get("rx-speed", 0)
+            tx_speed = peer.get("tx-speed", 0)
+            rx_speed_str = f"{rx_speed / 10:.1f}" if rx_speed else "-"
+            tx_speed_str = f"{tx_speed / 10:.1f}" if tx_speed else "-"
+
+            peers_table.row(mac, signal_str, time_str, rx_pkt, tx_pkt,
+                           rx_bytes, tx_bytes, rx_speed_str, tx_speed_str)
+
+        peers_table.print()
+
 
     def pr_proto_wifi(self, pipe=''):
-        if self.wifi and (ap := self.wifi.get("access-point", {})):
-            ssid = ap.get("ssid", "------")
-            stations = ap.get("stations", {}).get("station", [])
-            data_str = f"access-point ssid: {ssid} stations: {len(stations)}"
-        elif self.wifi and (station := self.wifi.get("station", {})):
-            ssid = station.get("ssid", "------")
-            data_str = f"station ssid: {ssid}"
-            if (signal := station.get("signal-strength")) is not None:
-                data_str += f" signal: {signal_to_status(signal)}"
+        ssid = None
+        signal = None
+        mode = None
+
+        if self.wifi:
+            if "access-point" in self.wifi:
+                ap = self.wifi["access-point"]
+                ssid = ap.get("ssid", "------")
+                mode = "AP"
+                stations_data = ap.get("stations", {})
+                stations = stations_data.get("station", [])
+                station_count = len(stations)
+                data_str = f"{mode}, ssid: {ssid}, stations: {station_count}"
+            elif "mesh-point" in self.wifi:
+                mesh = self.wifi["mesh-point"]
+                mesh_id = mesh.get("mesh-id", "------")
+                mode = "Mesh"
+                peers_data = mesh.get("peers", {})
+                peers = peers_data.get("peer", [])
+                data_str = f"{mode}, mesh-id: {mesh_id}, peers: {len(peers)}"
+            else:
+                station=self.wifi.get("station", {})
+                ssid = station.get("ssid", "------")
+                signal = station.get("signal-strength")
+                mode = "Station"
+                if signal is not None:
+                    signal_str = signal_to_status(signal)
+                    data_str = f"{mode}, ssid: {ssid}, signal: {signal_str}"
+                else:
+                    data_str = f"{mode}, ssid: {ssid}"
         else:
             data_str = "ssid: ------"
 
@@ -1664,9 +1732,8 @@ class Iface:
             print(f"{'out-octets':<{19}}: {self.out_octets}")
 
         if self.wifi:
-            # Detect mode: AP has "stations", Station has "signal-strength" or "scan-results"
-            ap = self.wifi.get('access-point')
-            if ap:
+            if "access-point" in self.wifi:
+                ap = self.wifi['access-point']
                 mode = "access-point"
                 ssid = ap.get('ssid', "----")
                 stations_data = ap.get("stations", {})
@@ -1675,6 +1742,16 @@ class Iface:
                 print(f"{'ssid':<{19}}: {ssid}")
                 print(f"{'connected stations':<{19}}: {len(stations)}")
                 self.pr_wifi_stations()
+            elif "mesh-point" in self.wifi:
+                mesh = self.wifi['mesh-point']
+                mode = "mesh-point"
+                mesh_id = mesh.get('mesh-id', "----")
+                peers_data = mesh.get("peers", {})
+                peers = peers_data.get("peer", [])
+                print(f"{'mode':<{20}}: {mode}")
+                print(f"{'mesh-id':<{20}}: {mesh_id}")
+                print(f"{'connected peers':<{20}}: {len(peers)}")
+                self.pr_wifi_peers()
             else:
                 mode = "station"
                 station = self.wifi.get('station', {})

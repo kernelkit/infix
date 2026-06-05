@@ -21,6 +21,7 @@ regression test system solely relies on NETCONF and RESTCONF.
    - [Introduction](introduction.md)
    - [System Configuration](system.md)
    - [Network Configuration](networking.md)
+   - [Wi-Fi](wifi.md)
    - [DHCP Server](dhcp.md)
    - [Syslog Support](syslog.md)
  - **Infix In-Depth**

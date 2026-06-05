@@ -17,6 +17,7 @@ confd_plugin_la_CFLAGS  =			\
 	$(glib_CFLAGS)				\
 	$(jansson_CFLAGS)			\
 	$(libite_CFLAGS)			\
+	$(libcrypto_CFLAGS)			\
 	$(sysrepo_CFLAGS)			\
 	$(libsrx_CFLAGS)			\
 	$(CFLAGS)
@@ -26,6 +27,7 @@ confd_plugin_la_LIBADD  =			\
 	$(glib_LIBS)				\
 	$(jansson_LIBS)				\
 	$(libite_LIBS)				\
+	$(libcrypto_LIBS)			\
 	$(sysrepo_LIBS)				\
 	$(libsrx_LIBS)
 
