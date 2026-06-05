@@ -103,7 +103,7 @@ jobs:
 
       - name: Create pull request
         if: steps.check.outputs.new_release == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
           script: |
