@@ -516,6 +516,13 @@ class ModemThread(threading.Thread):
         mkdir(self.statedir)
         mkdir(self.locdir)
 
+        # Some modems (e.g. Quectel EM05) reject both --reset and
+        # --factory-reset.  Cache the first such observation so we don't
+        # retry every 30 s for the rest of the thread's lifetime.  Recovery
+        # from a hardware-stuck state on these modems requires a physical
+        # power cycle anyway — see MODEM.md.
+        self._reset_unsupported = False
+
         self.init()
 
     def stop(self):
@@ -649,6 +656,12 @@ class ModemThread(threading.Thread):
         self.init()
 
     def reset(self):
+        if self._reset_unsupported:
+            # Cached from a previous attempt: skip silently.  The state
+            # machine will keep polling; once the user power-cycles the
+            # hardware modemd will re-detect via init().
+            return
+
         self.info("Resetting")
         self.notif("RESET")
 
@@ -662,7 +675,10 @@ class ModemThread(threading.Thread):
             self.info("Performed a factory reset")
             wait = 10
         else:
-            self.err("Unable to reset")
+            self.err("Modem rejects --reset and --factory-reset; "
+                     "recovery requires a physical power cycle. "
+                     "Suppressing further reset attempts.")
+            self._reset_unsupported = True
 
         if wait > 0:
             self.info("Waiting %ds" % wait)
@@ -1451,7 +1467,7 @@ class ModemThread(threading.Thread):
         # state failed
         if self.state == State.FAILED:
             elapsed = time.time() - self.failtime
-            if elapsed > 30:
+            if elapsed > 30 and not self._reset_unsupported:
                 self.err("Resetting after being 30s in state failed")
                 self.reset()
 
@@ -1470,7 +1486,7 @@ class ModemThread(threading.Thread):
                 if self.state != "connecting":
                     if self.connect():
                         self.set_state(State.CONNECTING)
-                    elif self.connfail > 5:
+                    elif self.connfail > 5 and not self._reset_unsupported:
                         self.err("Resetting after 5 connection attempts")
                         self.reset()
 
