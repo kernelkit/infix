@@ -18,6 +18,12 @@ All notable changes to the project are documented in this file.
 - Add `legacy-rates` option to re-enable 802.11b rates on 2.4 GHz for
   old IoT devices (disabled by default)
 
+### Fixes
+
+- Firewall masquerade no longer enables the global IPv4/IPv6 forwarding
+  sysctls.  You must now enable IP forwarding explicitly on the interfaces
+  that should route traffic; enabling NAT alone is no longer enough
+
 [wifi]: wifi.md
 
 [v26.05.0][] - 2026-05-29
