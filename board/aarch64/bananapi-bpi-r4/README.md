@@ -87,6 +87,45 @@ Infix ships with the following factory defaults.
 > are bridged into the LAN as access points.  WiFi is not included with the board
 > and is not part of the factory default configuration.
 
+## SIM Card Installation
+
+The BPI-R4 has three SIM holders, one per PCIe slot:
+
+| Slot     | PCIe socket | Typical use              |
+|----------|-------------|--------------------------|
+| **SIM1** | M.2 Key-B   | 4G/5G WWAN modem         |
+| **SIM2** | mPCIe #1    | Cellular or other modem  |
+| **SIM3** | mPCIe #2    | Cellular or other modem  |
+
+All three take **nano-SIM (4FF)** cards.
+
+> [!NOTE]
+> The official Banana Pi pages show an older board revision with a sliding
+> "sled" holder.  Newer boards ship with a fixed friction-fit holder instead:
+> there is no lid to lift and no spring eject.  The [closest matching photo on
+> bananapi.org][15] shows the current mechanism.
+
+### Inserting a SIM
+
+1. Orient the card with the gold contacts facing the PCB (printed
+   side up) and the cut corner pointing toward the M.2/mPCIe socket,
+   which on this board is also toward the outer edge.  The silkscreen
+   next to each holder shows the same outline.
+2. Push the SIM straight in until it is fully seated.  There is no
+   click and the holder is not spring-loaded, so press firmly until
+   the contacts engage and the rear edge of the card sits flush with
+   the holder.
+3. A SIM that still protrudes is not fully inserted; push again.
+
+### Removing a SIM
+
+The friction grip on these holders is tight.  Gently pry the card out
+with a fingernail or a thin plastic spudger.  Avoid metal tweezers
+near the contacts.  Removing the front panel of the metal case is
+absolutely necessary to access the SIM holder.
+
+For software configuration once the modem is recognised, see the
+[Cellular Modem User's Guide][16].
 
 ## Getting Started
 
@@ -358,3 +397,6 @@ make aarch64
 [12]: https://github.com/frank-w/u-boot/releases
 [13]: https://github.com/frank-w/u-boot/releases/download/CI-BUILD-2026-01-bpi-2026.01-2026-01-15_2013/bpi-r4_spim-nand_bl2.img
 [14]: https://github.com/frank-w/u-boot/releases/download/CI-BUILD-2026-01-bpi-2026.01-2026-01-15_2013/bpi-r4_spim-nand_fip.bin
+[15]: https://docs.banana-pi.org/bpi-r4/bpi-r4_4g5g_2.jpg
+[16]: https://www.kernelkit.org/infix/latest/modem/
+
