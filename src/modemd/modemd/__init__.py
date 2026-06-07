@@ -523,6 +523,12 @@ class ModemThread(threading.Thread):
         # power cycle anyway — see MODEM.md.
         self._reset_unsupported = False
 
+        # Signature of the last (allow, pref, supported-modes) tuple that
+        # prepare_modes rejected.  Repeats are silent until the user changes
+        # the config (SIGHUP recycles the thread, clearing this) or the
+        # modem reports a different supported-modes set.
+        self._modes_failed_sig = None
+
         self.init()
 
     def stop(self):
@@ -1218,20 +1224,17 @@ class ModemThread(threading.Thread):
             return self.prepare_profile_bearers(self.bearers["list"])
 
     def prepare_bands(self):
-        self.info("Preparing bands")
-
         bands = self.cfg.get("band", [])
         if len(bands) == 0 or "any" in bands:
             return True
 
+        self.info("Preparing bands")
         if not self._mmcli("--set-current-bands=%s" % "|".join(bands)):
             self.err("Unable to set band")
             return False
         return True
 
     def prepare_modes(self):
-        self.info("Preparing modes")
-
         pref = self.cfg.get("preferred-mode")
         if not pref or pref == "any":
             pref = "none"
@@ -1240,33 +1243,75 @@ class ModemThread(threading.Thread):
         if "any" in allow:
             allow = []
 
+        supported_modes = self.status.get("supported-modes", [])
+
+        # Same (config, modem-supports) inputs we already rejected — stay
+        # silent so the 3 s prepare-retry loop doesn't spam syslog with
+        # the same error.  Cleared on success below, on SIGHUP (thread
+        # rebuild), or whenever the modem reports a different supported
+        # set.  frozenset so leaf-list reorderings don't defeat the cache.
+        sig = (frozenset(allow), pref, frozenset(supported_modes))
+        if self._modes_failed_sig == sig:
+            return False
+
+        self.info("Preparing modes")
+
         if pref == "none" and len(allow) == 0:
+            # User didn't pin anything; let the modem choose.
             self._mmcli("--set-allowed-modes=any", check=False)
+            self._modes_failed_sig = None
             return True
 
+        # If only preferred-mode is set (no allowed-mode), derive allowed
+        # from supported combinations that have this preferred.  Skipping
+        # this would build an invalid 'allowed: ; preferred: X' string
+        # that never matches.  Pick the widest supported allow-set so the
+        # user gets maximum fallback (e.g. 2g/3g/4g over 4g-only when both
+        # have 'preferred: 4g').
+        if len(allow) == 0:
+            best = None
+            for m in supported_modes:
+                if ("preferred: %s" % pref) not in m:
+                    continue
+                head = m.split("allowed: ", 1)
+                if len(head) != 2:
+                    continue
+                allowed_part = head[1].split(";", 1)[0].strip()
+                candidate = [t.strip() for t in allowed_part.split(",")
+                             if t.strip()]
+                if best is None or len(candidate) > len(best):
+                    best = candidate
+            if not best:
+                supported = "; ".join(supported_modes) or "(none reported)"
+                self.err("Modem does not support preferred mode '%s'. "
+                         "Supported: %s" % (pref, supported))
+                self._modes_failed_sig = sig
+                return False
+            allow = best
+
         mode = "allowed: %s; preferred: %s" % (", ".join(allow), pref)
-        supported = False
-        for m in self.status.get("supported-modes", []):
-            if m == mode:
-                supported = True
-                break
-        if not supported:
-            self.err("Mode '%s' is not supported" % mode)
+        if mode not in supported_modes:
+            supported = "; ".join(supported_modes) or "(none reported)"
+            self.err("Mode '%s' is not supported. Supported: %s" %
+                     (mode, supported))
+            self._modes_failed_sig = sig
             return False
 
         current = self.status.get("current-modes", "")
         if current == mode:
             self.info("Mode '%s' already set" % mode)
+            self._modes_failed_sig = None
             return True
 
         self.info("Setting mode '%s'" % mode)
 
-        args = []
-        if len(allow) > 0:
-            args.append("--set-allowed-modes=%s" % "|".join(allow))
+        args = ["--set-allowed-modes=%s" % "|".join(allow)]
         if pref != "none":
             args.append("--set-preferred-mode=%s" % pref)
-        return self._mmcli(*args)
+        ok = self._mmcli(*args)
+        if ok:
+            self._modes_failed_sig = None
+        return ok
 
     def _gps_at_command(self, enable):
         """Vendor-specific AT command to toggle GPS NMEA, or None.
@@ -1368,8 +1413,9 @@ class ModemThread(threading.Thread):
         if not self.prepare_bands():
             self.err("Unable to prepare bands")
             return False
+        # prepare_modes logs a specific error on first failure and goes
+        # quiet on cached repeats; don't add a generic line on top.
         if not self.prepare_modes():
-            self.err("Unable to prepare mode")
             return False
         if not self.prepare_bearers():
             self.err("Unable to prepare bearers")
