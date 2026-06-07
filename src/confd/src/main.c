@@ -656,9 +656,10 @@ int main(int argc, char **argv)
 				log_level = LOG_WARNING;
 			else if (!strcmp(optarg, "info"))
 				log_level = LOG_NOTICE;
-			else if (!strcmp(optarg, "debug"))
+			else if (!strcmp(optarg, "debug")) {
 				log_level = LOG_DEBUG;
-			else {
+				debug = 1;
+			} else {
 				fprintf(stderr, "confd error: Invalid verbosity \"%s\"\n", optarg);
 				return EXIT_FAILURE;
 			}
@@ -696,6 +697,7 @@ int main(int argc, char **argv)
 
 	if (getenv("DEBUG")) {
 		log_opts |= LOG_PERROR;
+		log_level = LOG_DEBUG;
 		debug = 1;
 	}
 	openlog("confd", log_opts, LOG_DAEMON);
