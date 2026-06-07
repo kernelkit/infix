@@ -1,0 +1,17 @@
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index 72a0bf503..9bdc2b41d 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -916,12 +916,6 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
+ 	if (bits < j)
+ 		bits = j;
+ 
+-	if (bits > 40) {
+-		wpa_printf(MSG_ERROR, "Too many bits in the BSSID mask (%u)",
+-			   bits);
+-		return -1;
+-	}
+-
+ 	os_memset(mask, 0xff, ETH_ALEN);
+ 	j = bits / 8;
+ 	for (i = 5; i > 5 - j; i--)
