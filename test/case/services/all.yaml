@@ -7,3 +7,6 @@
 
 - name: SSH
   suite: ssh/all.yaml
+
+- name: Web UI
+  suite: webui/all.yaml

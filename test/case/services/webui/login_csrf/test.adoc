@@ -1,0 +1,45 @@
+=== Web UI Login and CSRF Protection
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/webui/login_csrf]
+
+==== Description
+
+Black-box test of the web management interface (nginx :443 -> Go webui on
+127.0.0.1:10000).  Drives the UI exactly like a browser would, using a
+cookie-preserving HTTP session, and verifies the security-critical parts of
+the login flow:
+
+1. A protected page is not served to an unauthenticated client; the request
+   is redirected to /login.
+2. Login with a bad password is rejected (no session is created).
+3. Login with the correct credentials establishes a session, and the session
+   cookie is flagged HttpOnly.
+4. An authenticated page load succeeds.
+5. A state-changing POST without the CSRF token is rejected with 403, even
+   with a valid session cookie.
+6. The same POST with the CSRF token (X-CSRF-Token header) succeeds.
+7. After logout the session cookie no longer grants access.
+
+The device is reached over its IPv6 link-local mgmt address, which carries a
+zone id (fe80::.../%ifname).  requests/urllib3 percent-encode the '%' to
+'%25' while preparing the request, so we substitute it back before sending —
+the same workaround infamy.restconf uses.
+
+==== Topology
+
+image::topology.svg[Web UI Login and CSRF Protection topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Wait for the web UI to come up
+. Unauthenticated access to a protected page redirects to /login
+. Login with a bad password is rejected
+. Login with correct credentials establishes a session
+. Session cookie is flagged HttpOnly
+. Authenticated page load succeeds
+. State-changing POST without CSRF token is rejected
+. State-changing POST with CSRF token succeeds (logout)
+. After logout the session no longer grants access
+
+
