@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // RESTCONF JSON structures for infix-firewall:firewall.

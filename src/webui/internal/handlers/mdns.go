@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // ─── RESTCONF JSON types ──────────────────────────────────────────────────────

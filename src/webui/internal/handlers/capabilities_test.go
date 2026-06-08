@@ -7,7 +7,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kernelkit/webui/internal/testutil"
+	"infix/webui/internal/testutil"
 )
 
 func yangLibraryResponse(modules ...map[string]interface{}) map[string]interface{} {

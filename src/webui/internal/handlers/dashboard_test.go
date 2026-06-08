@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kernelkit/webui/internal/restconf"
-	"github.com/kernelkit/webui/internal/security"
+	"infix/webui/internal/restconf"
+	"infix/webui/internal/security"
 )
 
 var minimalDashTmpl = template.Must(template.New("dashboard.html").Parse(

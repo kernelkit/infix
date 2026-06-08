@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // ModuleInfo identifies a YANG module by name and revision.

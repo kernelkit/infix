@@ -1,4 +1,4 @@
-module github.com/kernelkit/webui
+module infix/webui
 
 go 1.22.0
 

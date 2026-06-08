@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 const cfgUnsavedCookie = "cfg-unsaved"

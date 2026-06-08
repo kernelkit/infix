@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // RESTCONF JSON structures for ietf-interfaces:interfaces.

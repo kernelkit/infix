@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kernelkit/webui/internal/security"
+	"infix/webui/internal/security"
 )
 
 const sessionTimeout = 1 * time.Hour

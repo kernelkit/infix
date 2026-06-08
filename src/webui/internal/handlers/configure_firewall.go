@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kernelkit/webui/internal/restconf"
-	"github.com/kernelkit/webui/internal/schema"
+	"infix/webui/internal/restconf"
+	"infix/webui/internal/schema"
 )
 
 const fwConfigPath = candidatePath + "/infix-firewall:firewall"

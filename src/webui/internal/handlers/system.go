@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // raucInstallationStatus reads RAUC's Operation/Progress/LastError D-Bus

@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kernelkit/webui/internal/restconf"
-	"github.com/kernelkit/webui/internal/security"
+	"infix/webui/internal/restconf"
+	"infix/webui/internal/security"
 )
 
 var minimalContainersTmpl = template.Must(template.New("containers.html").Parse(

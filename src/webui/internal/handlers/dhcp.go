@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // ─── DHCP types ──────────────────────────────────────────────────────────────

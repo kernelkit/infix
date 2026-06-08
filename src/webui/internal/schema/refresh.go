@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // Cache holds a lazily-loaded schema Manager and refreshes it at startup.

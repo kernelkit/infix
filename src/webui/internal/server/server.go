@@ -9,10 +9,10 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/kernelkit/webui/internal/auth"
-	"github.com/kernelkit/webui/internal/handlers"
-	"github.com/kernelkit/webui/internal/restconf"
-	"github.com/kernelkit/webui/internal/schema"
+	"infix/webui/internal/auth"
+	"infix/webui/internal/handlers"
+	"infix/webui/internal/restconf"
+	"infix/webui/internal/schema"
 )
 
 // New creates a fully wired http.Handler with all routes and middleware.

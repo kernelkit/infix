@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // containerJSON matches the RESTCONF JSON for a single container entry.

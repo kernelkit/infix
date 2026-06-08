@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 type RouteEntry struct {

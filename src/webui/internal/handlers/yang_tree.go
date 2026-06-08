@@ -16,8 +16,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/kernelkit/webui/internal/restconf"
-	"github.com/kernelkit/webui/internal/schema"
+	"infix/webui/internal/restconf"
+	"infix/webui/internal/schema"
 )
 
 // SchemaHandler serves YANG schema queries as JSON (used by the tree UI and

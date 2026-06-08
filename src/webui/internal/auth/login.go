@@ -9,9 +9,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/kernelkit/webui/internal/handlers"
-	"github.com/kernelkit/webui/internal/restconf"
-	"github.com/kernelkit/webui/internal/security"
+	"infix/webui/internal/handlers"
+	"infix/webui/internal/restconf"
+	"infix/webui/internal/security"
 )
 
 const cookieName = "session"

@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kernelkit/webui/internal/auth"
-	"github.com/kernelkit/webui/internal/restconf"
-	"github.com/kernelkit/webui/internal/schema"
-	"github.com/kernelkit/webui/internal/server"
+	"infix/webui/internal/auth"
+	"infix/webui/internal/restconf"
+	"infix/webui/internal/schema"
+	"infix/webui/internal/server"
 )
 
 //go:embed templates/*

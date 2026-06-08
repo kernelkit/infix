@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // Hardware page data — populated from /ietf-hardware:hardware.

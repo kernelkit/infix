@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // ─── NTP types ───────────────────────────────────────────────────────────────

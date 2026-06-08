@@ -6,7 +6,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 type feature struct {

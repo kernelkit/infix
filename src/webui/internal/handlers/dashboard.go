@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // yangInt64 unmarshals a YANG numeric value that RESTCONF encodes as a

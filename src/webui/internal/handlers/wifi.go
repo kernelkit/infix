@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/kernelkit/webui/internal/restconf"
+	"infix/webui/internal/restconf"
 )
 
 // wifiRadioHWJSON extends the hardware component wifi-radio container with
