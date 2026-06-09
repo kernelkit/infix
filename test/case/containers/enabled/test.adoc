@@ -20,7 +20,6 @@ image::topology.svg[Container Enabled/Disabled topology, align=center, scaledwid
 ==== Sequence
 
 . Set up topology and attach to target DUT
-. Set hostname to 'container-host'
 . Create enabled container from bundled OCI image
 . Verify container has started
 . Disable container
