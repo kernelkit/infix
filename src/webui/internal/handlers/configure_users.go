@@ -84,7 +84,7 @@ const nacmGroupsPath = candidatePath + "/ietf-netconf-acm:nacm/groups"
 // GET /configure/users
 func (h *ConfigureUsersHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := cfgUsersPageData{
-		PageData: newPageData(r, "configure-users", "Configure: Users & Groups"),
+		PageData: newPageData(w, r, "configure-users", "Users & Groups"),
 	}
 
 	// Read via the full system path (same as configure-system) to avoid

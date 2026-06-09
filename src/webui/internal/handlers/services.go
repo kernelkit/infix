@@ -79,7 +79,7 @@ type ServicesHandler struct {
 // Overview renders the services page (GET /services).
 func (h *ServicesHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := servicesPageData{
-		PageData: newPageData(r, "services", "Services"),
+		PageData: newPageData(w, r, "services", "Services"),
 	}
 
 	var raw servicesWrapper

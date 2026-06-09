@@ -81,7 +81,7 @@ type ContainersHandler struct {
 // Overview renders the containers list page.
 func (h *ContainersHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := containersData{
-		PageData: newPageData(r, "containers", "Containers"),
+		PageData: newPageData(w, r, "containers", "Containers"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive

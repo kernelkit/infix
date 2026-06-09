@@ -17,7 +17,7 @@
         {{if .Location}}<tr><th>Location</th><td>{{.Location}}</td></tr>{{end}}
         {{if .OSName}}<tr><th>OS</th><td>{{.OSName}} {{.OSVersion}}</td></tr>{{end}}
         {{if .Machine}}<tr><th>Architecture</th><td>{{.Machine}}</td></tr>{{end}}
-        {{if .Firmware}}<tr><th>Boot Partition</th><td>{{.Firmware}}</td></tr>{{end}}
+        {{if .Software}}<tr><th>Boot Partition</th><td>{{.Software}}</td></tr>{{end}}
       </table>
     </div>
   </div>
@@ -90,7 +90,7 @@
     {{range .Disks}}
     <div class="disk-item">
       <div class="disk-item-header">
-        <span class="disk-mount">{{.Mount}}</span>
+        <span class="disk-mount">{{.Mount}}{{if .ReadOnly}} <span class="disk-tag">read-only</span>{{end}}</span>
         <span class="num disk-pct">{{.Percent}}%</span>
       </div>
       <div class="health-bar-track">

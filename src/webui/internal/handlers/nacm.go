@@ -125,7 +125,7 @@ type NACMHandler struct {
 // Overview renders the NACM page (GET /nacm).
 func (h *NACMHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := nacmPageData{
-		PageData: newPageData(r, "nacm", "NACM"),
+		PageData: newPageData(w, r, "nacm", "Users & Groups"),
 	}
 
 	var nacmRaw nacmWrapper

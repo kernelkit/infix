@@ -60,7 +60,7 @@ type DHCPHandler struct {
 // Overview renders the DHCP page (GET /dhcp).
 func (h *DHCPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := dhcpPageData{
-		PageData: newPageData(r, "dhcp", "DHCP Server"),
+		PageData: newPageData(w, r, "dhcp", "DHCP"),
 	}
 
 	ctx := context.WithoutCancel(r.Context())

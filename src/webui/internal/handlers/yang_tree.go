@@ -197,14 +197,14 @@ type leafGroupItem struct {
 // When path is set the right pane auto-loads the node on page load.
 func (h *TreeHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	activePage := "configure-tree"
-	title := "Advanced Configuration"
+	title := "Edit all"
 	if h.ReadOnly {
 		activePage = "status-tree"
-		title = "Advanced Status"
+		title = "View all"
 	}
 	base := h.treeBase()
 	data := yangTreePageData{
-		PageData:    newPageData(r, activePage, title),
+		PageData:    newPageData(w, r, activePage, title),
 		InitialPath: r.URL.Query().Get("path"),
 		ReadOnly:    h.ReadOnly,
 		TreeBase:    base,

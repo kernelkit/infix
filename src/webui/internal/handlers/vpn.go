@@ -45,23 +45,23 @@ type WGTunnel struct {
 	Peers      []WGPeer
 }
 
-// vpnData is the template data struct for the VPN page.
+// vpnData is the template data struct for the WireGuard status page.
 type vpnData struct {
 	PageData
 	Tunnels []WGTunnel
 	Error   string
 }
 
-// VPNHandler serves the VPN/WireGuard status page.
+// VPNHandler serves the WireGuard status page.
 type VPNHandler struct {
 	Template *template.Template
 	RC       *restconf.Client
 }
 
-// Overview renders the VPN page (GET /vpn).
+// Overview renders the WireGuard page (GET /vpn).
 func (h *VPNHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := vpnData{
-		PageData: newPageData(r, "vpn", "VPN"),
+		PageData: newPageData(w, r, "vpn", "WireGuard"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive

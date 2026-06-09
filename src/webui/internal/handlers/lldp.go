@@ -46,7 +46,7 @@ type LLDPHandler struct {
 // Overview renders the LLDP page (GET /lldp).
 func (h *LLDPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := lldpPageData{
-		PageData: newPageData(r, "lldp", "LLDP Neighbors"),
+		PageData: newPageData(w, r, "lldp", "LLDP"),
 	}
 
 	ctx := context.WithoutCancel(r.Context())

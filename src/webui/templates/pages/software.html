@@ -1,0 +1,147 @@
+{{define "software.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Message}}
+<div class="alert alert-info">{{.Message}}</div>
+{{end}}
+
+{{$sseURL := "/software/progress"}}{{if .AutoReboot}}{{$sseURL = "/software/progress?auto-reboot=1"}}{{end}}
+
+{{if .Installing}}
+<section id="sw-progress-card" class="info-card" data-sse-src="{{$sseURL}}">
+  {{template "sw-progress-body" .}}
+</section>
+{{end}}
+
+<div class="sw-install-grid">
+
+  <section class="info-card">
+    <div class="card-header">Software</div>
+    {{if .BootOrder}}
+    <div class="sw-boot-order-row">
+      <span class="sw-boot-order-label">Boot order</span>
+      <span id="sw-boot-slots" class="sw-boot-slots">
+        {{range .BootOrder}}<span class="badge badge-neutral sw-boot-badge" draggable="true" data-slot="{{.}}">{{.}}</span>{{end}}
+      </span>
+      <button type="button" class="btn btn-sm btn-outline"
+              id="sw-boot-save-btn">Set</button>
+      <button type="button" class="btn btn-secondary btn-sm"
+              id="sw-boot-reset-btn"
+              title="Restore current device boot order">{{template "icon-reset"}}</button>
+    </div>
+    {{end}}
+    {{if .Slots}}
+    <div class="sw-slot-list">
+      {{range .Slots}}
+      <div class="sw-slot-item">
+        <div class="sw-slot-primary">
+          <span class="sw-slot-name">{{.Name}}</span>
+          {{if .Booted}}<span class="badge badge-accept">booted</span>
+          {{else}}<span class="badge badge-neutral">{{.State}}</span>{{end}}
+        </div>
+        <div class="sw-slot-version">{{if .Version}}{{.Version}}{{else}}&mdash;{{end}}</div>
+        {{if .InstallDate}}<div class="sw-slot-date">{{.InstallDate}}</div>{{end}}
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="empty-message">No software information available.</p>
+    {{end}}
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Install from URL</div>
+    <div class="card-body">
+      <p class="sw-help-text">
+        Fetch a <code>.pkg</code> software bundle from a URL and install directly.
+      </p>
+      <form hx-post="/software/install" hx-swap="none" class="software-form">
+        <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+        <div class="form-group">
+          <label for="sw-url">Software Bundle URL (.pkg)</label>
+          <input type="url" id="sw-url" name="url"
+                 list="sw-url-history" autocomplete="off" required>
+          <datalist id="sw-url-history"></datalist>
+        </div>
+        <label class="sw-checkbox-row">
+          <input type="checkbox" name="auto-reboot" value="1" id="sw-auto-reboot">
+          Reboot after successful upgrade
+        </label>
+        <button type="submit" class="btn btn-primary"
+                hx-confirm="Install software bundle from this URL?"
+                {{if .Installer}}{{if .Installer.Active}}disabled{{end}}{{end}}>Install</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Upload &amp; Install</div>
+    <div class="card-body">
+      <p class="sw-help-text">
+        Select a <code>.pkg</code> software bundle from your computer to upload and install directly.
+      </p>
+      <div class="form-group">
+        <label for="sw-file">Software Bundle (.pkg)</label>
+        <input type="file" id="sw-file" accept=".pkg" class="cfg-input" required>
+      </div>
+      <label class="sw-checkbox-row">
+        <input type="checkbox" id="sw-upload-auto-reboot">
+        Reboot after successful upgrade
+      </label>
+      <div style="margin-top:0.75rem">
+        <button type="button" class="btn btn-primary" id="sw-upload-btn"
+                data-sse-url="{{$sseURL}}"
+                {{if and .Installer .Installer.Active}}disabled{{end}}>
+          Upload &amp; Install
+        </button>
+      </div>
+    </div>
+  </section>
+
+
+</div>
+{{end}}
+
+{{define "sw-progress-body"}}
+{{if and .Installer .Installer.Done}}
+  {{if .Installer.Success}}
+  <div class="card-header">Install Complete</div>
+  <div class="card-body sw-result-body">
+    <div class="sw-result sw-result-ok">
+      {{template "icon-check-lg"}}
+      <span>Software installed successfully.</span>
+    </div>
+    {{if not .AutoReboot}}
+    <div class="sw-result-actions">
+      <button class="btn btn-primary sw-reboot-btn"
+              hx-post="/reboot"
+              hx-target="#content"
+              hx-swap="innerHTML">Reboot to activate</button>
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="card-header">Install Failed</div>
+  <div class="card-body">
+    <div class="sw-result sw-result-err">
+      {{template "icon-circle-x"}}
+      <span>{{.Installer.LastError}}</span>
+    </div>
+  </div>
+  {{end}}
+{{else}}
+  <div class="card-header">Install in Progress</div>
+  <div class="card-body">
+    <div class="progress-bar-wrap progress-bar-wrap--flush">
+      <div class="progress-bar" data-progress="{{if .Installer}}{{.Installer.Percentage}}{{end}}"></div>
+    </div>
+    <p class="progress-text">{{if .Installer}}{{.Installer.Percentage}}% &mdash; {{.Installer.Message}}{{else}}Installing&hellip;{{end}}</p>
+  </div>
+{{end}}
+{{end}}

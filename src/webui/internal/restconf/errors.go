@@ -19,10 +19,11 @@ func IsNotFound(err error) bool {
 	return errors.As(err, &e) && e.StatusCode == http.StatusNotFound
 }
 
-// IsDataMissing reports whether err is a RESTCONF "data-missing" tag error
-// (RFC 8040 §7.6.2). Returned by DELETE on a leaf that is already absent.
-// Useful when the caller is explicitly trying to reach an "absent" state
-// and treats already-absent the same as just-deleted.
+// IsDataMissing reports whether err carries the RESTCONF "data-missing"
+// error-tag, returned when an operation targets a leaf or container that
+// isn't present in the datastore (e.g. a reset on a leaf that was never
+// set).  Callers use this to swallow no-op failures so the UI stays
+// consistent regardless of whether the leaf was already absent.
 func IsDataMissing(err error) bool {
 	var e *Error
 	return errors.As(err, &e) && e.Tag == "data-missing"

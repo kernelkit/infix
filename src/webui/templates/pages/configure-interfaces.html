@@ -87,7 +87,7 @@
                       <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                               hx-delete="/configure/leaf?path={{$ip}}/description&redirect=/configure/interfaces"
                               hx-swap="none"
-                              hx-confirm="Reset description to its YANG default?">↺</button>
+                              hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
                     </td>
                   </tr>
                   <tr>
@@ -102,7 +102,23 @@
                       <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                               hx-delete="/configure/leaf?path={{$ip}}/enabled&redirect=/configure/interfaces"
                               hx-swap="none"
-                              hx-confirm="Reset enabled to its YANG default?">↺</button>
+                              hx-confirm="Reset enabled to its YANG default?">{{template "icon-reset"}}</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>MAC address{{template "field-info" (index $d "mac")}}</th>
+                    <td>
+                      <input class="cfg-input cfg-input-mono" type="text" name="mac"
+                             value="{{if .CustomPhysAddress}}{{.CustomPhysAddress.Static}}{{end}}"
+                             placeholder="{{if .PhysAddress}}{{.PhysAddress}} (default){{else}}aa:bb:cc:dd:ee:ff{{end}}"
+                             pattern="[0-9a-fA-F][02468aAcCeE](:[0-9a-fA-F]{2}){5}"
+                             title="Unicast MAC, lower-case or upper-case hex, e.g. 02:11:22:33:44:55">
+                    </td>
+                    <td class="cfg-reset-col">
+                      <button type="button" class="btn btn-secondary btn-sm" title="Clear custom MAC"
+                              hx-delete="/configure/leaf?path={{$ip}}/infix-interfaces:custom-phys-address&redirect=/configure/interfaces"
+                              hx-swap="none"
+                              hx-confirm="Clear the custom MAC override?">{{template "icon-reset"}}</button>
                     </td>
                   </tr>
                 </table>
@@ -118,31 +134,38 @@
               <div style="margin-top:1rem">
                 <h4 class="cfg-section-head">IP Addresses</h4>
 
-                {{/* IPv4 */}}
+                {{/* IPv4.  Toggles, DHCP foldout, address list, and add-address
+                     row visually compose one IPv4 group; the Save button at the
+                     bottom is bound to the toggles form via the HTML5 `form`
+                     attribute, so users see the whole group before clicking Save. */}}
+                {{$ipv4Form := printf "ipv4-form-%s" $r.Name}}
+                {{$ipv4Fold := printf "ipv4-dhcp-%s" $r.Name}}
                 <h5 class="cfg-subsection-head">IPv4{{template "field-info" (index $d "ipv4-address")}}</h5>
-                <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
-                  <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                    <input type="checkbox"
-                           name="enabled" value="true"
-                           hx-trigger="change"
-                           hx-post="/configure/interfaces/{{.Name}}/ipv4/dhcp"
-                           hx-swap="none"
-                           data-toggle-details
-                           {{if and .IPv4 .IPv4.DHCP}}checked{{end}}>
-                    DHCP client{{template "field-info" (index $d "ipv4-dhcp")}}
-                  </label>
-                  <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                    <input type="checkbox"
-                           name="enabled" value="true"
-                           hx-trigger="change"
-                           hx-post="/configure/interfaces/{{.Name}}/ipv4/autoconf"
-                           hx-swap="none"
-                           {{if and .IPv4 .IPv4.Autoconf}}checked{{end}}>
-                    Link-Local (Zeroconf){{template "field-info" (index $d "ipv4-autoconf")}}
-                  </label>
-                </div>
-                {{if and .IPv4 .IPv4.DHCP}}
-                <details class="cfg-fold">
+                <form id="{{$ipv4Form}}" hx-post="/configure/interfaces/{{.Name}}/ipv4/settings" hx-swap="none">
+                  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="forwarding" value="true"
+                             {{if and .IPv4 .IPv4.Forwarding}}checked{{end}}>
+                      Forwarding{{template "field-info" (index $d "ipv4-forwarding")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="dhcp" value="true" data-fold-target="{{$ipv4Fold}}"
+                             {{if .DHCPv4Enabled}}checked{{end}}>
+                      DHCP client{{template "field-info" (index $d "ipv4-dhcp")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="autoconf" value="true"
+                             {{if and .IPv4 .IPv4.Autoconf}}checked{{end}}>
+                      Link-Local (Zeroconf){{template "field-info" (index $d "ipv4-autoconf")}}
+                    </label>
+                  </div>
+                </form>
+
+                {{/* DHCPv4 foldout — always in the DOM, hidden when DHCP is off.
+                     The data-fold-target hook on the DHCP checkbox toggles
+                     this without waiting for a server round-trip so the
+                     foldout is discoverable before clicking Save. */}}
+                <details id="{{$ipv4Fold}}" class="cfg-fold" {{if not .DHCPv4Enabled}}hidden{{end}}>
                   <summary>DHCP Settings &amp; Options</summary>
                   <div class="cfg-fold-body">
                     <form hx-post="/configure/interfaces/{{.Name}}/ipv4/dhcp/settings" hx-swap="none">
@@ -205,7 +228,6 @@
                     {{end}}
                   </div>
                 </details>
-                {{end}}
 
                 {{if and .IPv4 .IPv4.Address}}
                 <table class="info-table" style="margin-bottom:0.5rem">
@@ -239,31 +261,37 @@
                   <span class="cfg-save-status"></span>
                 </form>
 
-                {{/* IPv6 */}}
-                <h5 class="cfg-subsection-head" style="margin-top:0.75rem">IPv6{{template "field-info" (index $d "ipv6-address")}}</h5>
-                <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
-                  <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                    <input type="checkbox"
-                           name="enabled" value="true"
-                           hx-trigger="change"
-                           hx-post="/configure/interfaces/{{.Name}}/ipv6/dhcp"
-                           hx-swap="none"
-                           data-toggle-details
-                           {{if and .IPv6 .IPv6.DHCPv6}}checked{{end}}>
-                    DHCPv6 client{{template "field-info" (index $d "ipv6-dhcp")}}
-                  </label>
-                  <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                    <input type="checkbox"
-                           name="enabled" value="true"
-                           hx-trigger="change"
-                           hx-post="/configure/interfaces/{{.Name}}/ipv6/autoconf"
-                           hx-swap="none"
-                           {{if and .IPv6 .IPv6.SLAACv6}}checked{{end}}>
-                    SLAAC{{template "field-info" (index $d "ipv6-slaac")}}
-                  </label>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button form="{{$ipv4Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv4 Settings</button>
+                  <span class="cfg-save-status" data-cfg-status-for="{{$ipv4Form}}"></span>
                 </div>
-                {{if and .IPv6 .IPv6.DHCPv6}}
-                <details class="cfg-fold">
+
+                {{/* IPv6 — mirrors the IPv4 form structure above. */}}
+                {{/* IPv6 — mirrors the IPv4 layout above. */}}
+                {{$ipv6Form := printf "ipv6-form-%s" $r.Name}}
+                {{$ipv6Fold := printf "ipv6-dhcp-%s" $r.Name}}
+                <h5 class="cfg-subsection-head" style="margin-top:0.75rem">IPv6{{template "field-info" (index $d "ipv6-address")}}</h5>
+                <form id="{{$ipv6Form}}" hx-post="/configure/interfaces/{{.Name}}/ipv6/settings" hx-swap="none">
+                  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="forwarding" value="true"
+                             {{if and .IPv6 .IPv6.Forwarding}}checked{{end}}>
+                      Forwarding{{template "field-info" (index $d "ipv6-forwarding")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="dhcp" value="true" data-fold-target="{{$ipv6Fold}}"
+                             {{if .DHCPv6Enabled}}checked{{end}}>
+                      DHCPv6 client{{template "field-info" (index $d "ipv6-dhcp")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="slaac" value="true"
+                             {{if and .IPv6 .IPv6.SLAACv6}}checked{{end}}>
+                      SLAAC{{template "field-info" (index $d "ipv6-slaac")}}
+                    </label>
+                  </div>
+                </form>
+
+                <details id="{{$ipv6Fold}}" class="cfg-fold" {{if not .DHCPv6Enabled}}hidden{{end}}>
                   <summary>DHCPv6 Settings &amp; Options</summary>
                   <div class="cfg-fold-body">
                     <form hx-post="/configure/interfaces/{{.Name}}/ipv6/dhcp/settings" hx-swap="none">
@@ -326,7 +354,6 @@
                     {{end}}
                   </div>
                 </details>
-                {{end}}
 
                 {{if and .IPv6 .IPv6.Address}}
                 <table class="info-table" style="margin-bottom:0.5rem">
@@ -359,6 +386,11 @@
                   <button class="btn btn-primary btn-sm" type="submit">Add</button>
                   <span class="cfg-save-status"></span>
                 </form>
+
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button form="{{$ipv6Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv6 Settings</button>
+                  <span class="cfg-save-status" data-cfg-status-for="{{$ipv6Form}}"></span>
+                </div>
               </div>
               {{end}}{{/* HasIP */}}
 
@@ -370,14 +402,14 @@
                 <form hx-post="/configure/interfaces/{{.Name}}/bridge-port" hx-swap="none">
                   <table class="info-table">
                     <tr>
-                      <th>Bridge</th>
+                      <th>Bridge{{template "field-info" (index $d "bp-bridge")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="text" name="bridge"
                                  value="{{if .BridgePort}}{{.BridgePort.Bridge}}{{end}}" required></td>
                     </tr>
                     {{$bpPath := printf "/ietf-interfaces:interfaces/interface=%s/infix-interfaces:bridge-port" .Name}}
                     {{if .ParentBridgeIs8021Q}}
                     <tr>
-                      <th>PVID</th>
+                      <th>PVID{{template "field-info" (index $d "bp-pvid")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="number" name="pvid"
                                  {{if and .BridgePort .BridgePort.PVID}}value="{{deref .BridgePort.PVID}}"{{end}}
                                  min="1" max="4094" placeholder="—"></td>
@@ -385,12 +417,12 @@
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                 hx-delete="/configure/leaf?path={{$bpPath}}/pvid&redirect=/configure/interfaces"
                                 hx-swap="none"
-                                hx-confirm="Reset PVID to its YANG default?">↺</button>
+                                hx-confirm="Reset PVID to its YANG default?">{{template "icon-reset"}}</button>
                       </td>
                     </tr>
                     {{end}}
                     <tr>
-                      <th>Flood unknown</th>
+                      <th>Flood unknown{{template "field-info" (index $d "bp-flood")}}</th>
                       <td>
                         <div class="yt-bool-group">
                           <label><input type="checkbox" name="flood-broadcast"
@@ -405,11 +437,11 @@
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG defaults"
                                 hx-delete="/configure/leaf?path={{$bpPath}}/flood&redirect=/configure/interfaces"
                                 hx-swap="none"
-                                hx-confirm="Reset flood flags to YANG defaults?">↺</button>
+                                hx-confirm="Reset flood flags to YANG defaults?">{{template "icon-reset"}}</button>
                       </td>
                     </tr>
                     <tr>
-                      <th>Multicast router</th>
+                      <th>Multicast router{{template "field-info" (index $d "bp-mc-router")}}</th>
                       <td>
                         {{/* YANG default is auto. */}}
                         {{$mr := "auto"}}{{if and .BridgePort .BridgePort.Multicast .BridgePort.Multicast.Router}}{{$mr = .BridgePort.Multicast.Router}}{{end}}
@@ -423,11 +455,11 @@
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                 hx-delete="/configure/leaf?path={{$bpPath}}/multicast/router&redirect=/configure/interfaces"
                                 hx-swap="none"
-                                hx-confirm="Reset multicast router to YANG default?">↺</button>
+                                hx-confirm="Reset multicast router to YANG default?">{{template "icon-reset"}}</button>
                       </td>
                     </tr>
                     <tr>
-                      <th>Multicast fast-leave</th>
+                      <th>Multicast fast-leave{{template "field-info" (index $d "bp-mc-fast-leave")}}</th>
                       <td>
                         {{/* Hidden companion lets the handler distinguish
                              "form omitted the field" from "user unchecked". */}}
@@ -440,7 +472,7 @@
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                 hx-delete="/configure/leaf?path={{$bpPath}}/multicast/fast-leave&redirect=/configure/interfaces"
                                 hx-swap="none"
-                                hx-confirm="Reset fast-leave to YANG default?">↺</button>
+                                hx-confirm="Reset fast-leave to YANG default?">{{template "icon-reset"}}</button>
                       </td>
                     </tr>
                   </table>
@@ -467,7 +499,7 @@
                 <form hx-post="/configure/interfaces/{{.Name}}/lag-port" hx-swap="none">
                   <table class="info-table">
                     <tr>
-                      <th>LAG</th>
+                      <th>LAG{{template "field-info" (index $d "lp-lag")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="text" name="lag"
                                  value="{{if .LagPort}}{{.LagPort.LAG}}{{end}}" required></td>
                     </tr>
@@ -609,7 +641,7 @@
                   <input type="hidden" name="mode" value="{{.WifiMode}}">
                   <table class="info-table">
                     <tr>
-                      <th>Radio</th>
+                      <th>Radio{{template "field-info" (index $d "wifi-radio")}}</th>
                       <td>
                         <div class="ks-picker-row">
                           {{template "wizard-radio-picker.html" (dict "Radios" $.WizardWifiRadios "Selected" $curRadio "ID" $radioPickerID)}}
@@ -679,12 +711,12 @@
                     {{if and .WiFi .WiFi.AccessPoint}}
                     {{$ap := .WiFi.AccessPoint}}
                     <tr>
-                      <th>SSID</th>
+                      <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="text" name="ssid"
                                  value="{{$ap.SSID}}" maxlength="32" required></td>
                     </tr>
                     <tr>
-                      <th>Hidden SSID</th>
+                      <th>Hidden SSID{{template "field-info" (index $d "wifi-hidden")}}</th>
                       <td>
                         <label><input type="checkbox" name="hidden"
                                {{if and $ap.Hidden (deref $ap.Hidden)}}checked{{end}}>
@@ -692,7 +724,7 @@
                       </td>
                     </tr>
                     <tr>
-                      <th>Security mode</th>
+                      <th>Security mode{{template "field-info" (index $d "wifi-sec-mode")}}</th>
                       <td>
                         {{$sm := "wpa2-wpa3-personal"}}{{if and $ap.Security $ap.Security.Mode}}{{$sm = $ap.Security.Mode}}{{end}}
                         <select class="cfg-input cfg-input-sm" name="sec-mode">
@@ -705,12 +737,12 @@
                     {{else if and .WiFi .WiFi.Station}}
                     {{$sta := .WiFi.Station}}
                     <tr>
-                      <th>SSID</th>
+                      <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="text" name="ssid"
                                  value="{{$sta.SSID}}" maxlength="32" required></td>
                     </tr>
                     <tr>
-                      <th>Security mode</th>
+                      <th>Security mode{{template "field-info" (index $d "wifi-sec-mode")}}</th>
                       <td>
                         {{$sm := "auto"}}{{if and $sta.Security $sta.Security.Mode}}{{$sm = $sta.Security.Mode}}{{end}}
                         <select class="cfg-input cfg-input-sm" name="sec-mode">
@@ -722,7 +754,7 @@
                     </tr>
                     {{end}}
                     <tr>
-                      <th>PSK</th>
+                      <th>PSK{{template "field-info" (index $d "wifi-secret")}}</th>
                       <td>
                         <div class="ks-picker-row">
                           {{template "wizard-psk-picker.html" (dict "Keys" $.WizardSymKeys "Selected" $curSecret "ID" $pskPickerID)}}
@@ -809,10 +841,27 @@
                         </div>
                       </td>
                     </tr>
+                    <tr>
+                      <th style="vertical-align:top">Ports</th>
+                      <td colspan="2">
+                        {{if $r.PortCandidates}}
+                        <div class="fw-check-scroll">
+                          <div class="fw-check-grid">
+                            {{range $r.PortCandidates}}
+                            <label><input type="checkbox" name="members" value="{{.}}"
+                                   {{if index $r.BridgeMemberSet .}}checked{{end}}> {{.}}</label>
+                            {{end}}
+                          </div>
+                        </div>
+                        {{else}}
+                        <span class="text-muted" style="font-size:0.85em">No candidate port interfaces available.</span>
+                        {{end}}
+                      </td>
+                    </tr>
                   </table>
 
                   <div class="cfg-card-footer" style="padding-left:0">
-                    <button class="btn btn-primary btn-sm" type="submit">Save Bridge Settings</button>
+                    <button class="btn btn-primary btn-sm" type="submit">Save Bridge</button>
                     <span class="cfg-save-status"></span>
                   </div>
                 </form>
@@ -821,8 +870,9 @@
                 {{/* STP — own form, save inside the fold-out so the
                      section is self-contained. YANG defaults are
                      rendered inline (value="..." not a placeholder)
-                     so the user sees the actual default; the ↺ button
-                     drops the candidate value and lets YANG re-apply. */}}
+                     so the user sees the actual default; the reset
+                     button drops the candidate value and lets YANG
+                     re-apply. */}}
                 <form hx-post="/configure/interfaces/{{.Name}}/bridge/stp" hx-swap="none">
                   <details style="margin-top:0.75rem">
                     <summary style="cursor:pointer;font-size:0.9em;color:var(--text-muted);padding:0.25rem 0">
@@ -843,7 +893,7 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/stp/force-protocol&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset force-protocol to YANG default (rstp)?">↺</button>
+                                  hx-confirm="Reset force-protocol to YANG default (rstp)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                       <tr>
@@ -857,7 +907,7 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/stp/hello-time&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset hello time to YANG default (2)?">↺</button>
+                                  hx-confirm="Reset hello time to YANG default (2)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                       <tr>
@@ -871,7 +921,7 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/stp/forward-delay&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset forward delay to YANG default (15)?">↺</button>
+                                  hx-confirm="Reset forward delay to YANG default (15)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                       <tr>
@@ -885,7 +935,7 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/stp/max-age&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset max age to YANG default (20)?">↺</button>
+                                  hx-confirm="Reset max age to YANG default (20)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                       <tr>
@@ -899,7 +949,7 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/stp/transmit-hold-count&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset transmit hold count to YANG default (6)?">↺</button>
+                                  hx-confirm="Reset transmit hold count to YANG default (6)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                       <tr>
@@ -913,7 +963,7 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/stp/max-hops&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset max hops to YANG default (20)?">↺</button>
+                                  hx-confirm="Reset max hops to YANG default (20)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                     </table>
@@ -933,7 +983,7 @@
                     </summary>
                     <table class="info-table" style="margin-top:0.5rem">
                       <tr>
-                        <th>Snooping</th>
+                        <th>Snooping{{template "field-info" (index $d "mc-snoop")}}</th>
                         <td>
                           <label><input type="checkbox" name="snooping"
                                  {{if or (not .Bridge) (not .Bridge.Multicast) (not .Bridge.Multicast.Snooping) (deref .Bridge.Multicast.Snooping)}}checked{{end}}>
@@ -943,11 +993,11 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/multicast/snooping&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset snooping to YANG default (true)?">↺</button>
+                                  hx-confirm="Reset snooping to YANG default (true)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                       <tr>
-                        <th>Querier</th>
+                        <th>Querier{{template "field-info" (index $d "mc-querier")}}</th>
                         <td>
                           {{$q := "auto"}}{{if and .Bridge .Bridge.Multicast .Bridge.Multicast.Querier}}{{$q = .Bridge.Multicast.Querier}}{{end}}
                           <select class="cfg-input cfg-input-sm" name="querier">
@@ -960,11 +1010,11 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/multicast/querier&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset querier to YANG default (auto)?">↺</button>
+                                  hx-confirm="Reset querier to YANG default (auto)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                       <tr>
-                        <th>Query interval (s)</th>
+                        <th>Query interval (s){{template "field-info" (index $d "mc-query-int")}}</th>
                         <td>
                           <input class="cfg-input cfg-input-sm" type="number" name="query-interval"
                                  value="{{if and .Bridge .Bridge.Multicast .Bridge.Multicast.QueryInterval}}{{deref .Bridge.Multicast.QueryInterval}}{{else}}125{{end}}"
@@ -974,7 +1024,7 @@
                           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                   hx-delete="/configure/leaf?path={{$brPath}}/multicast/query-interval&redirect=/configure/interfaces"
                                   hx-swap="none"
-                                  hx-confirm="Reset query interval to YANG default (125)?">↺</button>
+                                  hx-confirm="Reset query interval to YANG default (125)?">{{template "icon-reset"}}</button>
                         </td>
                       </tr>
                     </table>
@@ -984,27 +1034,6 @@
                     </div>
                   </details>
                 </form>
-
-                {{/* Bridge Ports */}}
-                <h4 class="cfg-section-head" style="margin-top:1rem">Bridge Ports</h4>
-                {{if $r.PortCandidates}}
-                <form hx-post="/configure/interfaces/{{.Name}}/bridge/members" hx-swap="none">
-                  <div class="fw-check-scroll" style="margin-bottom:0.5rem">
-                    <div class="fw-check-grid">
-                      {{range $r.PortCandidates}}
-                      <label><input type="checkbox" name="members" value="{{.}}"
-                             {{if index $r.BridgeMemberSet .}}checked{{end}}> {{.}}</label>
-                      {{end}}
-                    </div>
-                  </div>
-                  <div class="cfg-card-footer" style="padding-left:0">
-                    <button class="btn btn-primary btn-sm" type="submit">Save Members</button>
-                    <span class="cfg-save-status"></span>
-                  </div>
-                </form>
-                {{else}}
-                <p class="text-muted" style="font-size:0.85em">No candidate port interfaces available.</p>
-                {{end}}
 
                 {{/* 802.1Q VLANs — matrix layout: rows = VLAN, columns
                      = bridge ports + self, cells = U/T/-. Click VID to
@@ -1810,4 +1839,3 @@
 
 {{end}}
 
-{{define "field-info"}}{{if .}} <span class="field-info" data-tip="{{.}}">ⓘ</span>{{end}}{{end}}

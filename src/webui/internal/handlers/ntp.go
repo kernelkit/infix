@@ -56,7 +56,7 @@ type NTPHandler struct {
 // Overview renders the NTP page (GET /ntp).
 func (h *NTPHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := ntpPageData{
-		PageData: newPageData(r, "ntp", "NTP"),
+		PageData: newPageData(w, r, "ntp", "NTP"),
 	}
 
 	ctx := context.WithoutCancel(r.Context())

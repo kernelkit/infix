@@ -97,7 +97,7 @@ type ConfigureFirewallHandler struct {
 // GET /configure/firewall
 func (h *ConfigureFirewallHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := cfgFirewallPageData{
-		PageData: newPageData(r, "configure-firewall", "Configure: Firewall"),
+		PageData: newPageData(w, r, "configure-firewall", "Firewall"),
 	}
 
 	mgr := h.Schema.Manager()

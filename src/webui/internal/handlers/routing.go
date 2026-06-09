@@ -191,7 +191,7 @@ type ospfNeighborJSON struct {
 
 func (h *RoutingHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := routingData{
-		PageData: newPageData(r, "routing", "Routing"),
+		PageData: newPageData(w, r, "routing", "Routes"),
 	}
 
 	ctx := context.WithoutCancel(r.Context())

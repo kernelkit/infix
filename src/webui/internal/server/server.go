@@ -25,7 +25,7 @@ func New(
 ) (http.Handler, error) {
 	// Parse templates per page so each can define its own "content" block
 	// without collisions.
-	loginTmpl, err := template.ParseFS(templateFS, "pages/login.html")
+	loginTmpl, err := template.ParseFS(templateFS, "layouts/icons.html", "pages/login.html")
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	ksTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-keystore.html")
+	ksTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-keystore.html")
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	fwrTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/firmware.html")
+	swTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/software.html")
 	if err != nil {
 		return nil, err
 	}
@@ -109,23 +109,31 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	cfgSysTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-system.html")
+	cfgSysTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-system.html")
 	if err != nil {
 		return nil, err
 	}
-	cfgUsersTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-users.html")
+	cfgNTPTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-ntp.html")
 	if err != nil {
 		return nil, err
 	}
-	cfgRoutesTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-routes.html")
+	cfgDNSTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-dns.html")
 	if err != nil {
 		return nil, err
 	}
-	cfgFwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-firewall.html")
+	cfgUsersTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-users.html")
 	if err != nil {
 		return nil, err
 	}
-	cfgHwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "pages/configure-hardware.html")
+	cfgRoutesTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-routes.html")
+	if err != nil {
+		return nil, err
+	}
+	cfgFwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-firewall.html")
+	if err != nil {
+		return nil, err
+	}
+	cfgHwTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-hardware.html")
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +174,7 @@ func New(
 			return m, nil
 		},
 	}
-	cfgIfTmpl, err := template.New("").Funcs(ifFuncs).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/icons.html", "fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html", "fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
+	cfgIfTmpl, err := template.New("").Funcs(ifFuncs).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html", "fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +192,7 @@ func New(
 		"fragments/yang-node-detail.html",
 		"fragments/yang-leaf-group.html",
 		"fragments/yang-list-table.html",
-		"fragments/icons.html")
+		"layouts/icons.html")
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +231,7 @@ func New(
 
 	sys := &handlers.SystemHandler{
 		RC:          rc,
-		Template:    fwrTmpl,
+		Template:    swTmpl,
 		SysCtrlTmpl: sysCtrlTmpl,
 		BackupTmpl:  backupTmpl,
 	}
@@ -240,7 +248,13 @@ func New(
 	services := &handlers.ServicesHandler{Template: servicesTmpl, RC: rc}
 	containers := &handlers.ContainersHandler{Template: containersTmpl, RC: rc}
 	cfg := &handlers.ConfigureHandler{RC: rc}
-	cfgSys := &handlers.ConfigureSystemHandler{Template: cfgSysTmpl, RC: rc, Schema: schemaCache}
+	cfgSys := &handlers.ConfigureSystemHandler{
+		Template:    cfgSysTmpl,
+		NTPTemplate: cfgNTPTmpl,
+		DNSTemplate: cfgDNSTmpl,
+		RC:          rc,
+		Schema:      schemaCache,
+	}
 	cfgUsers := &handlers.ConfigureUsersHandler{Template: cfgUsersTmpl, RC: rc, Schema: schemaCache}
 	cfgRoutes := &handlers.ConfigureRoutesHandler{Template: cfgRoutesTmpl, RC: rc, Schema: schemaCache}
 	cfgFw := &handlers.ConfigureFirewallHandler{Template: cfgFwTmpl, RC: rc, Schema: schemaCache}
@@ -282,12 +296,12 @@ func New(
 	mux.HandleFunc("GET /keystore", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/configure/keystore", http.StatusMovedPermanently)
 	})
-	mux.HandleFunc("GET /firmware", sys.Firmware)
-	mux.HandleFunc("GET /firmware/progress", sys.FirmwareProgress)
-	mux.HandleFunc("POST /firmware/install",     sys.FirmwareInstall)
-	mux.HandleFunc("POST /firmware/upload",      sys.FirmwareUpload)
-	mux.HandleFunc("POST /firmware/boot-order",  sys.SetBootOrder)
-	mux.HandleFunc("POST /reboot", sys.Reboot) // kept for firmware page "Reboot to activate"
+	mux.HandleFunc("GET /software", sys.Software)
+	mux.HandleFunc("GET /software/progress", sys.SoftwareProgress)
+	mux.HandleFunc("POST /software/install",     sys.SoftwareInstall)
+	mux.HandleFunc("POST /software/upload",      sys.SoftwareUpload)
+	mux.HandleFunc("POST /software/boot-order",  sys.SetBootOrder)
+	mux.HandleFunc("POST /reboot", sys.Reboot) // kept for software page "Reboot to activate"
 	mux.HandleFunc("GET /config", sys.DownloadConfig)
 	mux.HandleFunc("GET /maintenance/backup",                  sys.Backup)
 	mux.HandleFunc("POST /maintenance/backup/restore",         sys.RestoreConfig)
@@ -317,6 +331,8 @@ func New(
 	mux.HandleFunc("POST /configure/save",           cfg.Save)
 	mux.HandleFunc("DELETE /configure/leaf",         cfg.DeleteLeaf)
 	mux.HandleFunc("GET /configure/system",           cfgSys.Overview)
+	mux.HandleFunc("GET /configure/ntp",              cfgSys.OverviewNTP)
+	mux.HandleFunc("GET /configure/dns",              cfgSys.OverviewDNS)
 	mux.HandleFunc("POST /configure/system/identity",     cfgSys.SaveIdentity)
 	mux.HandleFunc("POST /configure/system/clock",        cfgSys.SaveClock)
 	mux.HandleFunc("PUT /configure/system/ntp",           cfgSys.SaveNTP)
@@ -332,15 +348,13 @@ func New(
 	mux.HandleFunc("DELETE /configure/interfaces/{name}",                cfgIf.DeleteInterface)
 	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4",              cfgIf.AddIPv4)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv4/{ip}",       cfgIf.DeleteIPv4)
-	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/dhcp",                    cfgIf.SaveIPv4DHCP)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/settings",                cfgIf.SaveIPv4Settings)
 	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/dhcp/settings",           cfgIf.SaveIPv4DHCPSettings)
 	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/dhcp/options",            cfgIf.AddIPv4DHCPOption)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv4/dhcp/options/{id}",     cfgIf.DeleteIPv4DHCPOption)
-	mux.HandleFunc("POST /configure/interfaces/{name}/ipv4/autoconf",                cfgIf.SaveIPv4Autoconf)
 	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6",                         cfgIf.AddIPv6)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv6/{ip}",                  cfgIf.DeleteIPv6)
-	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/autoconf",                cfgIf.SaveIPv6SLAAC)
-	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp",                    cfgIf.SaveIPv6DHCP)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/settings",                cfgIf.SaveIPv6Settings)
 	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp/settings",           cfgIf.SaveIPv6DHCPSettings)
 	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp/options",            cfgIf.AddIPv6DHCPOption)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv6/dhcp/options/{id}",     cfgIf.DeleteIPv6DHCPOption)
@@ -351,7 +365,6 @@ func New(
 	mux.HandleFunc("POST /configure/interfaces/{name}/wifi",             cfgIf.SaveWifi)
 	mux.HandleFunc("POST /configure/interfaces/{name}/bridge",           cfgIf.SaveBridge)
 	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/stp",       cfgIf.SaveBridgeSTP)
-	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/members",   cfgIf.SaveBridgeMembers)
 	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/multicast", cfgIf.SaveBridgeMulticast)
 	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/vlans",     cfgIf.AddVLAN)
 	mux.HandleFunc("POST /configure/interfaces/{name}/bridge/vlans/{vid}", cfgIf.SaveVLAN)

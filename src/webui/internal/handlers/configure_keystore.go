@@ -33,9 +33,15 @@ type cfgKeystorePageData struct {
 }
 
 type cfgSymKeyEntry struct {
-	Name   string
-	Format string
-	Value  string
+	Name     string
+	Format   string // short label shown in the read-only column ("passphrase")
+	FormatID string // raw identityref ("infix-crypto-types:passphrase-key-format")
+	// — Format is shortFormat-stripped for display, FormatID is what the
+	// edit-row <select> needs to match its <option value=...> against.
+	// Comparing the two in the template silently mismatches and the
+	// browser falls back to the first <option>, rewriting the key with
+	// the wrong format on Save.
+	Value string
 }
 
 type cfgCertEntry struct {
@@ -63,7 +69,7 @@ type ConfigureKeystoreHandler struct {
 // GET /configure/keystore
 func (h *ConfigureKeystoreHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := cfgKeystorePageData{
-		PageData: newPageData(r, "configure-keystore", "Configure: Keystore"),
+		PageData: newPageData(w, r, "configure-keystore", "Keystore"),
 	}
 
 	var ks keystoreWrapper
@@ -79,9 +85,10 @@ func (h *ConfigureKeystoreHandler) Overview(w http.ResponseWriter, r *http.Reque
 
 	for _, k := range ks.Keystore.SymmetricKeys.SymmetricKey {
 		data.SymmetricKeys = append(data.SymmetricKeys, cfgSymKeyEntry{
-			Name:   k.Name,
-			Format: shortFormat(k.KeyFormat),
-			Value:  decodeSymmetricValue(k),
+			Name:     k.Name,
+			Format:   shortFormat(k.KeyFormat),
+			FormatID: k.KeyFormat,
+			Value:    decodeSymmetricValue(k),
 		})
 	}
 	for _, k := range ks.Keystore.AsymmetricKeys.AsymmetricKey {

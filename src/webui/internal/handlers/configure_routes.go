@@ -79,18 +79,18 @@ type cfgRoutesPageData struct {
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
-// ConfigureRoutesHandler serves the Configure > Routes page.
+// ConfigureRoutesHandler serves the Configure > Routing page.
 type ConfigureRoutesHandler struct {
 	Template *template.Template
 	RC       restconf.Fetcher
 	Schema   *schema.Cache
 }
 
-// Overview renders the Configure > Routes page reading from the candidate.
+// Overview renders the Configure > Routing page reading from the candidate.
 // GET /configure/routes
 func (h *ConfigureRoutesHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := cfgRoutesPageData{
-		PageData: newPageData(r, "configure-routes", "Configure: Routes"),
+		PageData: newPageData(w, r, "configure-routes", "Routing"),
 	}
 
 	mgr := h.Schema.Manager()

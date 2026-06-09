@@ -152,7 +152,7 @@ type WiFiHandler struct {
 // Overview renders the WiFi page (GET /wifi).
 func (h *WiFiHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := wifiData{
-		PageData: newPageData(r, "wifi", "WiFi"),
+		PageData: newPageData(w, r, "wifi", "WiFi"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive

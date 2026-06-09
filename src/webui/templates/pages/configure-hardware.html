@@ -155,7 +155,7 @@
         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                 hx-delete="/configure/leaf?path={{$p}}/description&redirect=/configure/hardware"
                 hx-swap="none"
-                hx-confirm="Reset description to its YANG default?">↺</button>
+                hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
       </td>
     </tr>
     <tr>
@@ -170,7 +170,7 @@
         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                 hx-delete="/configure/leaf?path={{$p}}/state/admin-state&redirect=/configure/hardware"
                 hx-swap="none"
-                hx-confirm="Reset state to its YANG default?">↺</button>
+                hx-confirm="Reset state to its YANG default?">{{template "icon-reset"}}</button>
       </td>
     </tr>
   </table>
@@ -196,7 +196,7 @@
         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                 hx-delete="/configure/leaf?path={{$p}}/description&redirect=/configure/hardware"
                 hx-swap="none"
-                hx-confirm="Reset description to its YANG default?">↺</button>
+                hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
       </td>
     </tr>
     <tr>
@@ -222,7 +222,7 @@
         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                 hx-delete="/configure/leaf?path={{$rp}}/band&redirect=/configure/hardware"
                 hx-swap="none"
-                hx-confirm="Reset band to its YANG default?">↺</button>
+                hx-confirm="Reset band to its YANG default?">{{template "icon-reset"}}</button>
       </td>
     </tr>
     <tr>
@@ -236,7 +236,7 @@
         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                 hx-delete="/configure/leaf?path={{$rp}}/channel&redirect=/configure/hardware"
                 hx-swap="none"
-                hx-confirm="Reset channel to its YANG default?">↺</button>
+                hx-confirm="Reset channel to its YANG default?">{{template "icon-reset"}}</button>
       </td>
     </tr>
   </table>
@@ -261,7 +261,7 @@
         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                 hx-delete="/configure/leaf?path={{$p}}/description&redirect=/configure/hardware"
                 hx-swap="none"
-                hx-confirm="Reset description to its YANG default?">↺</button>
+                hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
       </td>
     </tr>
   </table>
@@ -272,4 +272,3 @@
 </form>
 {{end}}
 
-{{define "field-info"}}{{if .}} <span class="field-info" data-tip="{{.}}">ⓘ</span>{{end}}{{end}}

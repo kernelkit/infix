@@ -1,0 +1,59 @@
+{{define "configure-ntp.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<form class="info-card"
+      hx-put="/configure/system/ntp"
+      hx-swap="none">
+    <div class="card-header">NTP Servers</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table" id="ntp-table">
+        <thead>
+          <tr>
+            <th>Name / Key</th>
+            <th>Address</th>
+            <th class="cfg-input-sm">Port</th>
+            <th>Prefer</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ntp-tbody">
+          {{range $i, $s := .NTP.Servers}}
+          <tr>
+            <td><input class="cfg-input" type="text"
+                       name="ntp_name_{{$i}}" value="{{$s.Name}}" required></td>
+            <td><input class="cfg-input" type="text"
+                       name="ntp_addr_{{$i}}" value="{{$s.UDP.Address}}"></td>
+            <td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"
+                       name="ntp_port_{{$i}}" value="{{if $s.UDP.Port}}{{$s.UDP.Port}}{{end}}"
+                       placeholder="123"></td>
+            <td style="text-align:center">
+              <input type="checkbox" name="ntp_prefer_{{$i}}" {{if $s.Prefer}}checked{{end}}>
+            </td>
+            <td>
+              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row"
+                      title="Remove">
+                {{template "icon-trash"}}
+              </button>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-table="ntp-tbody"
+              data-template="ntp">+ Add server</button>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
+    </div>
+</form>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}

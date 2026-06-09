@@ -205,7 +205,7 @@ type dashboardData struct {
 	OSVersion    string
 	Machine      string
 	CurrentTime  string
-	Firmware     string
+	Software     string
 	Uptime       string
 	MemTotal     int64
 	MemUsed      int64
@@ -249,6 +249,7 @@ type diskEntry struct {
 	Available string
 	Percent   int
 	Class     string // "" / "is-warn" / "is-crit"
+	ReadOnly  bool
 }
 
 // DashboardHandler serves the main dashboard page.
@@ -260,7 +261,7 @@ type DashboardHandler struct {
 // Index renders the dashboard (GET /).
 func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	data := dashboardData{
-		PageData: newPageData(r, "dashboard", "Overview"),
+		PageData: newPageData(w, r, "dashboard", "Overview"),
 	}
 
 	// Detach from the request context so that RESTCONF calls survive
@@ -312,7 +313,7 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		if data.Machine == "arm64" {
 			data.Machine = "aarch64"
 		}
-		data.Firmware = firmwareVersion(ss.Software)
+		data.Software = softwareVersion(ss.Software)
 		data.Uptime = computeUptime(ss.Clock.BootDatetime, ss.Clock.CurrentDatetime)
 		data.CurrentTime = formatCurrentTime(ss.Clock.CurrentDatetime)
 
@@ -347,23 +348,33 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		for _, fs := range ss.Resource.Filesystem {
 			size := int64(fs.Size)
 			used := int64(fs.Used)
+			avail := int64(fs.Available)
 			pct := 0
 			if size > 0 {
 				pct = int(float64(used) / float64(size) * 100)
 			}
+			// Read-only signature: used == size, no slack at all.
+			// Squashfs/erofs rootfs reports this — pinning it at 100 %
+			// for the lifetime of the running image, with nothing the
+			// operator can do about it. Skip the crit/warn coloring so
+			// it doesn't read as an actionable alert.
+			readOnly := size > 0 && used == size && avail == 0
 			diskClass := ""
-			switch {
-			case pct >= 90:
-				diskClass = "is-crit"
-			case pct >= 70:
-				diskClass = "is-warn"
+			if !readOnly {
+				switch {
+				case pct >= 90:
+					diskClass = "is-crit"
+				case pct >= 70:
+					diskClass = "is-warn"
+				}
 			}
 			data.Disks = append(data.Disks, diskEntry{
 				Mount:     fs.MountPoint,
 				Size:      humanKiB(size),
-				Available: humanKiB(int64(fs.Available)),
+				Available: humanKiB(avail),
 				Percent:   pct,
 				Class:     diskClass,
+				ReadOnly:  readOnly,
 			})
 		}
 	}
@@ -412,8 +423,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// firmwareVersion returns the version string for the booted software slot.
-func firmwareVersion(sw software) string {
+// softwareVersion returns the version string for the booted software slot.
+func softwareVersion(sw software) string {
 	for _, slot := range sw.Slot {
 		if slot.Name == sw.Booted {
 			return slot.Version

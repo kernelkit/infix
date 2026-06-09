@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"infix/webui/internal/restconf"
 	"infix/webui/internal/schema"
@@ -70,16 +71,15 @@ type cfgDNSAddrJSON struct {
 
 type cfgSystemPageData struct {
 	PageData
-	Loading    bool   // true while YANG schema is still downloading
-	Error      string
-	Hostname   string
-	Contact    string
-	Location   string
-	Timezone   string
-	NTP        cfgNTPJSON
-	DNS        cfgDNSJSON
-	MotdBanner string // decoded from YANG binary
-	TextEditor string // e.g. "infix-system:emacs"
+	Loading         bool   // true while YANG schema is still downloading
+	Error           string
+	Hostname        string
+	Contact         string
+	Location        string
+	Timezone        string
+	CurrentDatetime string // device clock from system-state, empty when unavailable
+	MotdBanner      string // decoded from YANG binary
+	TextEditor      string // e.g. "infix-system:emacs"
 
 	// Schema-enriched fields — only populated when Loading is false.
 	TextEditorOptions []schema.IdentityOption
@@ -87,45 +87,114 @@ type cfgSystemPageData struct {
 	Desc              map[string]string // leaf name → YANG description
 }
 
+type cfgNTPPageData struct {
+	PageData
+	Error string
+	NTP   cfgNTPJSON
+}
+
+type cfgDNSPageData struct {
+	PageData
+	Error string
+	DNS   cfgDNSJSON
+}
+
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
-// ConfigureSystemHandler serves the Configure > System page.
+// ConfigureSystemHandler serves the Configure > General, NTP Client, and
+// DNS Client pages, all of which share the same candidate-datastore source.
 type ConfigureSystemHandler struct {
-	Template *template.Template
-	RC       restconf.Fetcher
-	Schema   *schema.Cache
+	Template    *template.Template
+	NTPTemplate *template.Template
+	DNSTemplate *template.Template
+	RC          restconf.Fetcher
+	Schema      *schema.Cache
 }
 
 const candidatePath = "/ds/ietf-datastores:candidate"
 
-// Overview renders the Configure > System page reading from the candidate datastore.
-// GET /configure/system
-func (h *ConfigureSystemHandler) Overview(w http.ResponseWriter, r *http.Request) {
-	data := cfgSystemPageData{
-		PageData: newPageData(r, "configure-system", "Configure: System"),
-	}
-
+// loadSystem reads /ietf-system:system from the candidate datastore, falling
+// back to running when candidate is uninitialised. The returned errMsg is
+// non-empty only for real errors that should surface to the user.
+func (h *ConfigureSystemHandler) loadSystem(r *http.Request) (cfgSystemJSON, string) {
 	var raw cfgSystemWrapper
 	if err := h.RC.Get(r.Context(), candidatePath+"/ietf-system:system", &raw); err != nil {
 		if !restconf.IsNotFound(err) {
 			log.Printf("configure system: %v", err)
-			data.Error = "Could not read candidate configuration"
-		} else if fallErr := h.RC.Get(r.Context(), "/data/ietf-system:system", &raw); fallErr != nil && !restconf.IsNotFound(fallErr) {
-			// Candidate not initialised — fall back to running; only real errors surface.
+			return cfgSystemJSON{}, "Could not read candidate configuration"
+		}
+		if fallErr := h.RC.Get(r.Context(), "/data/ietf-system:system", &raw); fallErr != nil && !restconf.IsNotFound(fallErr) {
 			log.Printf("configure system (running fallback): %v", fallErr)
-			data.Error = "Could not read system configuration"
+			return cfgSystemJSON{}, "Could not read system configuration"
 		}
 	}
-	if data.Error == "" {
-		s := raw.System
+	return raw.System, ""
+}
+
+// render swaps the root template for "content" on HTMX requests so a partial
+// reply skips the base shell.  pageName is the same key passed to newPageData
+// (e.g. "configure-ntp") — the corresponding template file is "<pageName>.html".
+func (h *ConfigureSystemHandler) render(w http.ResponseWriter, r *http.Request, tmpl *template.Template, pageName string, data any) {
+	tmplName := pageName + ".html"
+	if r.Header.Get("HX-Request") == "true" {
+		tmplName = "content"
+	}
+	if err := tmpl.ExecuteTemplate(w, tmplName, data); err != nil {
+		log.Printf("template error: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// Overview renders the Configure > General page (identity, clock, preferences).
+// GET /configure/system
+func (h *ConfigureSystemHandler) Overview(w http.ResponseWriter, r *http.Request) {
+	data := cfgSystemPageData{
+		PageData: newPageData(w, r, "configure-system", "General"),
+	}
+
+	// Fetch candidate config and operational clock in parallel — they hit
+	// different RESTCONF resources and the round-trips are independent.
+	var (
+		s         cfgSystemJSON
+		errMsg    string
+		clockResp struct {
+			SystemState struct {
+				Clock struct {
+					CurrentDatetime string `json:"current-datetime"`
+				} `json:"clock"`
+			} `json:"ietf-system:system-state"`
+		}
+		clockErr error
+		wg       sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() { defer wg.Done(); s, errMsg = h.loadSystem(r) }()
+	go func() {
+		defer wg.Done()
+		clockErr = h.RC.Get(r.Context(), "/data/ietf-system:system-state/clock", &clockResp)
+	}()
+	wg.Wait()
+
+	data.Error = errMsg
+	if errMsg == "" {
 		data.Hostname = s.Hostname
 		data.Contact = s.Contact
 		data.Location = s.Location
 		data.Timezone = s.Clock.TimezoneName
-		data.NTP = s.NTP
-		data.DNS = s.DNS
 		data.MotdBanner = string(s.MotdBanner)
 		data.TextEditor = s.TextEditor
+	}
+
+	// Operational clock for the Date & Time card.  Best-effort; the
+	// template renders "Device clock unavailable" when CurrentDatetime
+	// stays empty.  Truncate the RFC 3339 offset; the Timezone row
+	// below gives the user the zone context.
+	if clockErr == nil {
+		dt := clockResp.SystemState.Clock.CurrentDatetime
+		if len(dt) > 19 {
+			dt = dt[:19]
+		}
+		data.CurrentDatetime = dt
 	}
 
 	mgr := h.Schema.Manager()
@@ -154,14 +223,35 @@ func (h *ConfigureSystemHandler) Overview(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	tmplName := "configure-system.html"
-	if r.Header.Get("HX-Request") == "true" {
-		tmplName = "content"
+	h.render(w, r, h.Template, "configure-system", data)
+}
+
+// OverviewNTP renders the Configure > NTP Client page.
+// GET /configure/ntp
+func (h *ConfigureSystemHandler) OverviewNTP(w http.ResponseWriter, r *http.Request) {
+	data := cfgNTPPageData{
+		PageData: newPageData(w, r, "configure-ntp", "NTP Client"),
 	}
-	if err := h.Template.ExecuteTemplate(w, tmplName, data); err != nil {
-		log.Printf("template error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	s, errMsg := h.loadSystem(r)
+	data.Error = errMsg
+	if errMsg == "" {
+		data.NTP = s.NTP
 	}
+	h.render(w, r, h.NTPTemplate, "configure-ntp", data)
+}
+
+// OverviewDNS renders the Configure > DNS Client page.
+// GET /configure/dns
+func (h *ConfigureSystemHandler) OverviewDNS(w http.ResponseWriter, r *http.Request) {
+	data := cfgDNSPageData{
+		PageData: newPageData(w, r, "configure-dns", "DNS Client"),
+	}
+	s, errMsg := h.loadSystem(r)
+	data.Error = errMsg
+	if errMsg == "" {
+		data.DNS = s.DNS
+	}
+	h.render(w, r, h.DNSTemplate, "configure-dns", data)
 }
 
 // SaveIdentity patches hostname / contact / location to the candidate datastore.
@@ -195,6 +285,20 @@ func (h *ConfigureSystemHandler) SaveClock(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Empty value = the "UTC (default)" placeholder.  Treat it as a leaf
+	// delete so the candidate matches Infix's "unset means UTC" convention;
+	// swallow data-missing for idempotency (the leaf may already be absent).
+	if r.FormValue("timezone") == "" {
+		err := h.RC.Delete(r.Context(), candidatePath+"/ietf-system:system/clock/timezone-name")
+		if err != nil && !restconf.IsDataMissing(err) {
+			log.Printf("configure system clock: %v", err)
+			renderSaveError(w, err)
+			return
+		}
+		renderSaved(w, "Timezone saved")
+		return
+	}
+
 	body := map[string]any{
 		"ietf-system:system": map[string]any{
 			"clock": map[string]any{
@@ -207,7 +311,7 @@ func (h *ConfigureSystemHandler) SaveClock(w http.ResponseWriter, r *http.Reques
 		renderSaveError(w, err)
 		return
 	}
-	renderSaved(w, "Clock saved")
+	renderSaved(w, "Timezone saved")
 }
 
 // SaveNTP replaces the NTP server list in the candidate datastore.

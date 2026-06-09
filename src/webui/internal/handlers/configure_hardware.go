@@ -102,7 +102,7 @@ type ConfigureHardwareHandler struct {
 // GET /configure/hardware
 func (h *ConfigureHardwareHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := cfgHardwarePageData{
-		PageData: newPageData(r, "configure-hardware", "Configure: Hardware"),
+		PageData: newPageData(w, r, "configure-hardware", "Hardware"),
 	}
 
 	mgr := h.Schema.Manager()

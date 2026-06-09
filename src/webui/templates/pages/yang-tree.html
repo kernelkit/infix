@@ -17,15 +17,12 @@
 
     {{/* ── Left pane: navigation tree ───────────────────────── */}}
     <div class="yang-tree-pane info-card">
-      <div class="card-header">{{if .ReadOnly}}Status{{else}}Advanced{{end}}</div>
+      <div class="card-header">{{if .ReadOnly}}View all{{else}}Edit all{{end}}</div>
       <ul class="yang-tree">
         <li>
           <details class="yt-node" open>
             <summary class="yt-label">
-              <svg class="yt-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
+              {{template "icon-yt-chevron"}}
               <span class="yt-name yt-root">/</span>
             </summary>
             <ul class="yt-children">
@@ -45,12 +42,7 @@
          {{end}}>
       {{if not .InitialPath}}
       <div class="yang-detail-empty">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-             style="margin-bottom:.75rem;color:var(--fg-muted)">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
+        {{template "icon-search-empty"}}
         <p>Select a node to inspect.</p>
       </div>
       {{end}}

@@ -138,7 +138,7 @@ type FirewallHandler struct {
 // Overview renders the firewall overview (GET /firewall).
 func (h *FirewallHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := firewallData{
-		PageData: newPageData(r, "firewall", "Firewall"),
+		PageData: newPageData(w, r, "firewall", "Firewall"),
 	}
 
 	var fw firewallWrapper

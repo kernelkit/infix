@@ -82,11 +82,7 @@
                 <div class="yt-binary-row">
                   <span class="yt-binary-hint">binary data</span>
                   <button type="button" class="btn-icon yt-binary-eye" title="Show/hide">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
+                    {{template "icon-eye"}}
                   </button>
                 </div>
                 <code class="yt-binary-content yt-binary-pem">{{if $cv}}{{$cv}}{{else}}{{.RawBase64}}{{end}}</code>
@@ -139,7 +135,7 @@
                   hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
                   hx-target="#yang-detail"
                   hx-swap="innerHTML"
-                  hx-confirm="Reset {{.Name}} to its YANG default?">↺</button>
+                  hx-confirm="Reset {{.Name}} to its YANG default?">{{template "icon-reset"}}</button>
           {{end}}
         </summary>
         {{if $hasHelp}}
@@ -191,10 +187,7 @@
               hx-swap="innerHTML">
             {{if $list.Complex}}
             <td class="yt-nav-col">
-              <svg class="yt-row-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
+              {{template "icon-yt-row-arrow"}}
             </td>
             {{end}}
             {{range $list.Columns}}<td>{{index $row.Values .Name}}</td>{{end}}
@@ -303,11 +296,7 @@
                   <div class="yt-binary-row">
                     <span class="yt-binary-hint">binary data</span>
                     <button type="button" class="btn-icon yt-binary-eye" title="Show/hide">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
+                      {{template "icon-eye"}}
                     </button>
                   </div>
                   <code class="yt-binary-content yt-binary-pem">{{if $cv}}{{$cv}}{{else}}{{.RawBase64}}{{end}}</code>
@@ -357,7 +346,7 @@
                     hx-delete="/configure/tree/node?path={{.Path | urlquery}}"
                     hx-target="#yang-detail"
                     hx-swap="innerHTML"
-                    hx-confirm="Reset {{.Name}} to its YANG default?">↺</button>
+                    hx-confirm="Reset {{.Name}} to its YANG default?">{{template "icon-reset"}}</button>
             {{end}}
           </summary>
           {{if $hasHelp}}
@@ -399,11 +388,7 @@
             hx-target="#yang-detail"
             hx-swap="innerHTML">
       <span class="yt-subsection-name">{{.Name}}</span>
-      <svg class="yt-subsection-arrow" width="14" height="14" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2.5"
-           stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="9 18 15 12 9 6"></polyline>
-      </svg>
+      {{template "icon-yt-subsection-arrow"}}
     </button>
     {{end}}
   </div>

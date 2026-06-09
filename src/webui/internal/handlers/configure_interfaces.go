@@ -123,6 +123,11 @@ type cfgIfaceRow struct {
 	EthDuplex     string   // "" / "full" / "half"
 	EthAdvertised []string // identityref leaf-list, empty = advertise all
 	EthSupported  []string // identityref leaf-list from operational data
+	// DHCP enabled flags — captured BEFORE the placeholder DHCP/DHCPv6
+	// containers are seeded so the template can tell "configured" from
+	// "auto-injected placeholder" apart.
+	DHCPv4Enabled bool
+	DHCPv6Enabled bool
 }
 
 // ifaceRadioMirror is the subset of wifi-radio fields we expose on the
@@ -204,7 +209,7 @@ type ConfigureInterfacesHandler struct {
 // GET /configure/interfaces
 func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := cfgIfacePageData{
-		PageData: newPageData(r, "configure-interfaces", "Configure: Interfaces"),
+		PageData: newPageData(w, r, "configure-interfaces", "Interfaces"),
 	}
 
 	mgr := h.Schema.Manager()
@@ -224,6 +229,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"description":    schema.DescriptionOf(mgr, ifPath+"/description"),
 			"type":           schema.DescriptionOf(mgr, ifPath+"/type"),
 			"enabled":        schema.DescriptionOf(mgr, ifPath+"/enabled"),
+			"mac":            descOr(mgr, ifPath+"/infix-interfaces:custom-phys-address/static", "Override the interface's default physical (MAC) address with a static unicast value."),
 			"bridge-type":    descOr(mgr, ifPath+bPath+"/vlans", "Presence of bridge/vlans switches the bridge into IEEE 802.1Q VLAN-filtering mode. Pick this if downstream ports need PVID and tagged/untagged membership."),
 			"stp-force":      schema.DescriptionOf(mgr, ifPath+bPath+"/stp/force-protocol"),
 			"stp-hello":      schema.DescriptionOf(mgr, ifPath+bPath+"/stp/hello-time"),
@@ -242,10 +248,12 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"ipv4-prefix":    schema.DescriptionOf(mgr, ifPath+ip4+"/address/prefix-length"),
 			"ipv4-dhcp":      schema.DescriptionOf(mgr, ifPath+ip4+"/infix-dhcp-client:dhcp"),
 			"ipv4-autoconf":  schema.DescriptionOf(mgr, ifPath+ip4+"/infix-ip:autoconf"),
+			"ipv4-forwarding": schema.DescriptionOf(mgr, ifPath+ip4+"/forwarding"),
 			"ipv6-address":   schema.DescriptionOf(mgr, ifPath+ip6+"/address/ip"),
 			"ipv6-prefix":    schema.DescriptionOf(mgr, ifPath+ip6+"/address/prefix-length"),
 			"ipv6-slaac":     schema.DescriptionOf(mgr, ifPath+ip6+"/autoconf"),
 			"ipv6-dhcp":      schema.DescriptionOf(mgr, ifPath+ip6+"/infix-dhcpv6-client:dhcp"),
+			"ipv6-forwarding": schema.DescriptionOf(mgr, ifPath+ip6+"/forwarding"),
 
 			// Add Interface wizard — augment paths still don't resolve
 			// through goyang (same gap as LAG mode), so each entry is
@@ -273,6 +281,15 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"eth-advertised":  descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/infix-ethernet-interface:advertised-pmd-types", "Restrict auto-negotiation to advertise only these PMD types.  Leave empty to advertise every mode the PHY supports."),
 			"eth-duplex":      descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/duplex", "Force half- or full-duplex.  Leave on Auto to let auto-negotiation pick.  Modern PMDs are full-duplex only."),
 			"eth-mdix":        descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/infix-ethernet-interface:mdi-x", "Force the copper MDI/MDI-X crossover pinout.  Leave on Auto-MDIX (default) for any link that negotiates.  Force MDI/MDI-X only when negotiation is disabled and the two ends must use opposite values."),
+			"bp-bridge":       descOr(mgr, ifPath+"/infix-interfaces:bridge-port/bridge", "Bridge that this port joins as a member, carrying L2 traffic on its behalf."),
+			"bp-pvid":         descOr(mgr, ifPath+"/infix-interfaces:bridge-port/pvid", "Port VLAN ID — VLAN assigned to untagged frames arriving on this port. Only meaningful when the parent bridge is in IEEE 802.1Q VLAN-filtering mode."),
+			"bp-flood":        descOr(mgr, ifPath+"/infix-interfaces:bridge-port/flood", "Per-traffic-class control of how unknown destinations are flooded out this port. Unticking suppresses flooding of that traffic class."),
+			"bp-mc-router":    descOr(mgr, ifPath+"/infix-interfaces:bridge-port/multicast/router", "Multicast router behaviour on this port. Auto (default) lets IGMP/MLD snooping decide; permanent forces the port to always receive multicast; off blocks it."),
+			"bp-mc-fast-leave": descOr(mgr, ifPath+"/infix-interfaces:bridge-port/multicast/fast-leave", "Drop the port from a multicast group immediately on IGMP/MLD leave instead of waiting for the next query. Suitable when each port has at most one receiver."),
+			"lp-lag":          descOr(mgr, ifPath+"/infix-interfaces:lag-port/lag", "LAG that this port joins as a slave. The LAG itself is configured on its own row."),
+			"mc-snoop":        descOr(mgr, ifPath+bPath+"/multicast/snooping", "Enable IGMP/MLD snooping on the bridge so multicast is forwarded only to ports with active receivers."),
+			"mc-querier":      descOr(mgr, ifPath+bPath+"/multicast/querier", "Querier role: auto (only when no other querier is heard), on (always send queries), or off."),
+			"mc-query-int":    descOr(mgr, ifPath+bPath+"/multicast/query-interval", "Interval (seconds) between IGMP/MLD general queries when this bridge is acting as querier."),
 		}
 		if data.Desc["ipv6-slaac"] == "" {
 			data.Desc["ipv6-slaac"] = "SLAAC (Stateless Address Autoconfiguration, RFC 4862) " +
@@ -1101,7 +1118,9 @@ func (h *ConfigureInterfacesHandler) DeleteInterface(w http.ResponseWriter, r *h
 	renderSavedRedirect(w, name+" deleted", "/configure/interfaces")
 }
 
-// SaveGeneral saves description and enabled for any interface.
+// SaveGeneral saves description, enabled, and optional custom MAC for any
+// interface. Empty MAC clears the override (DELETE on custom-phys-address);
+// non-empty installs it as a static override.
 // POST /configure/interfaces/{name}
 func (h *ConfigureInterfacesHandler) SaveGeneral(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -1122,7 +1141,26 @@ func (h *ConfigureInterfacesHandler) SaveGeneral(w http.ResponseWriter, r *http.
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "Saved", "/configure/interfaces")
+
+	macPath := ifacePath(name) + "/infix-interfaces:custom-phys-address"
+	if mac := strings.TrimSpace(r.FormValue("mac")); mac != "" {
+		macBody := map[string]any{
+			"infix-interfaces:custom-phys-address": map[string]any{"static": mac},
+		}
+		if err := h.RC.Put(r.Context(), macPath, macBody); err != nil {
+			log.Printf("configure interfaces %s mac: %v", name, err)
+			renderSaveError(w, err)
+			return
+		}
+	} else {
+		if err := h.RC.Delete(r.Context(), macPath); err != nil && !restconf.IsNotFound(err) {
+			log.Printf("configure interfaces %s mac clear: %v", name, err)
+			renderSaveError(w, err)
+			return
+		}
+	}
+
+	renderSaved(w, "Saved")
 }
 
 // AddIPv4 adds an IPv4 address to an interface.
@@ -1233,7 +1271,7 @@ func (h *ConfigureInterfacesHandler) SaveEthernet(w http.ResponseWriter, r *http
 		return
 	}
 
-	renderSavedRedirect(w, "Ethernet saved", "/configure/interfaces")
+	renderSaved(w, "Ethernet saved")
 }
 
 // ResetEthernetAdvertised clears the advertised-pmd-types leaf-list while
@@ -1269,7 +1307,7 @@ func (h *ConfigureInterfacesHandler) ResetEthernetAdvertised(w http.ResponseWrit
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "Reset to default", "/configure/interfaces")
+	renderSaved(w, "Reset to default")
 }
 
 func (h *ConfigureInterfacesHandler) SaveBridgePort(w http.ResponseWriter, r *http.Request) {
@@ -1290,7 +1328,7 @@ func (h *ConfigureInterfacesHandler) SaveBridgePort(w http.ResponseWriter, r *ht
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "Bridge port saved", "/configure/interfaces")
+	renderSaved(w, "Bridge port saved")
 }
 
 // buildBridgePortBody assembles the bridge-port augment from form
@@ -1384,20 +1422,9 @@ func unwrapSingleInterface(doc map[string]any) (map[string]any, error) {
 	return iface, nil
 }
 
-// SaveBridgeMembers performs a diff-and-write to set the bridge's member ports.
-// POST /configure/interfaces/{name}/bridge/members
-func (h *ConfigureInterfacesHandler) SaveBridgeMembers(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-	h.saveMembersDiff(w, r, r.PathValue("name"), "bridge",
-		func(iface ifaceJSON, master string) bool {
-			return iface.BridgePort != nil && iface.BridgePort.Bridge == master
-		}, "Bridge members saved")
-}
-
-// SaveBridge saves bridge STP settings and bridge type.
+// SaveBridge saves bridge type and member ports in one round trip from the
+// unified "Bridge Settings" form.  STP/multicast keep their own foldout
+// forms; this handler covers what used to be two side-by-side forms.
 // POST /configure/interfaces/{name}/bridge
 func (h *ConfigureInterfacesHandler) SaveBridge(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -1452,7 +1479,15 @@ func (h *ConfigureInterfacesHandler) SaveBridge(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	renderSavedRedirect(w, "Bridge saved", "/configure/interfaces")
+	if err := h.applyMembersDiff(r, name, "bridge",
+		func(iface ifaceJSON, master string) bool {
+			return iface.BridgePort != nil && iface.BridgePort.Bridge == master
+		}); err != nil {
+		renderSaveError(w, err)
+		return
+	}
+
+	renderSaved(w, "Bridge saved")
 }
 
 // AddVLAN creates a new VLAN on an ieee8021q bridge.
@@ -1519,7 +1554,7 @@ func (h *ConfigureInterfacesHandler) SaveVLAN(w http.ResponseWriter, r *http.Req
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "VLAN saved", "/configure/interfaces")
+	renderSaved(w, "VLAN saved")
 }
 
 // DeleteVLAN removes a VLAN from an ieee8021q bridge.
@@ -1557,7 +1592,7 @@ func (h *ConfigureInterfacesHandler) SaveLagPort(w http.ResponseWriter, r *http.
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "LAG port saved", "/configure/interfaces")
+	renderSaved(w, "LAG port saved")
 }
 
 // SaveBridgeSTP PATCHes the bridge STP container. Split out from
@@ -1592,7 +1627,7 @@ func (h *ConfigureInterfacesHandler) SaveBridgeSTP(w http.ResponseWriter, r *htt
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "STP saved", "/configure/interfaces")
+	renderSaved(w, "STP saved")
 }
 
 // SaveBridgeMulticast PATCHes the bridge multicast snooping container.
@@ -1621,7 +1656,7 @@ func (h *ConfigureInterfacesHandler) SaveBridgeMulticast(w http.ResponseWriter, 
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "Multicast saved", "/configure/interfaces")
+	renderSaved(w, "Multicast saved")
 }
 
 // SaveWifi PATCHes the WiFi interface container plus, when the form
@@ -1692,7 +1727,7 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "WiFi saved", "/configure/interfaces")
+	renderSaved(w, "WiFi saved")
 }
 
 // DeleteLagPort detaches an interface from its LAG.
@@ -1737,7 +1772,7 @@ func (h *ConfigureInterfacesHandler) SaveLAG(w http.ResponseWriter, r *http.Requ
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "LAG saved", "/configure/interfaces")
+	renderSaved(w, "LAG saved")
 }
 
 // SaveLAGMembers performs a diff-and-write to set the LAG's member ports.
@@ -1788,11 +1823,22 @@ func indexWifiRadios(comps []hwComponentJSON) map[string]*ifaceRadioMirror {
 // kind is "bridge" or "lag"; it determines the YANG augment path and body key.
 func (h *ConfigureInterfacesHandler) saveMembersDiff(w http.ResponseWriter, r *http.Request,
 	masterName, kind string, isMember func(ifaceJSON, string) bool, successMsg string) {
+	if err := h.applyMembersDiff(r, masterName, kind, isMember); err != nil {
+		renderSaveError(w, err)
+		return
+	}
+	renderSaved(w, successMsg)
+}
+
+// applyMembersDiff is the no-response-writing core of saveMembersDiff so it
+// can be reused by callers that compose multiple save steps (e.g. SaveBridge
+// which writes type + members in one form submission).
+func (h *ConfigureInterfacesHandler) applyMembersDiff(r *http.Request,
+	masterName, kind string, isMember func(ifaceJSON, string) bool) error {
 
 	ifaces, err := h.fetchAllInterfaces(r.Context())
 	if err != nil {
-		renderSaveError(w, err)
-		return
+		return err
 	}
 
 	submitted := make(map[string]bool)
@@ -1813,18 +1859,16 @@ func (h *ConfigureInterfacesHandler) saveMembersDiff(w http.ResponseWriter, r *h
 			body := map[string]any{portKey: map[string]any{kind: masterName}}
 			if err := h.RC.Put(r.Context(), portPath, body); err != nil {
 				log.Printf("configure interfaces %s members add %s→%s: %v", kind, iface.Name, masterName, err)
-				renderSaveError(w, err)
-				return
+				return err
 			}
 		} else if !wantMember && currentlyMember {
 			if err := h.RC.Delete(r.Context(), portPath); err != nil {
 				log.Printf("configure interfaces %s members remove %s from %s: %v", kind, iface.Name, masterName, err)
-				renderSaveError(w, err)
-				return
+				return err
 			}
 		}
 	}
-	renderSavedRedirect(w, successMsg, "/configure/interfaces")
+	return nil
 }
 
 // unconfiguredPhysical returns physical Ethernet interfaces present in
@@ -1953,6 +1997,31 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJ
 			row.ParentBridgeIs8021Q = bridgeIs8021Q[iface.BridgePort.Bridge]
 		}
 		row.HasIP = !row.IsBridgePort && !row.IsLagPort
+		// The DHCP/DHCPv6 foldouts are always rendered so users can
+		// discover the settings form before enabling the client. The
+		// foldout body iterates .IPv4.DHCP / .IPv6.DHCPv6 — populate
+		// placeholders here so the template can use .IPv4.DHCP.X without
+		// a forest of nil guards. Whether DHCP is actually configured is
+		// captured separately on .DHCPv4Enabled / .DHCPv6Enabled so the
+		// checkbox state and foldout-hidden gate still reflect candidate.
+		if row.HasIP {
+			if row.IPv4 == nil {
+				row.IPv4 = &ipCfg{}
+			} else {
+				row.DHCPv4Enabled = row.IPv4.DHCP != nil
+			}
+			if row.IPv4.DHCP == nil {
+				row.IPv4.DHCP = &dhcpv4CfgJSON{}
+			}
+			if row.IPv6 == nil {
+				row.IPv6 = &ipCfg{}
+			} else {
+				row.DHCPv6Enabled = row.IPv6.DHCPv6 != nil
+			}
+			if row.IPv6.DHCPv6 == nil {
+				row.IPv6.DHCPv6 = &dhcpv6CfgJSON{}
+			}
+		}
 		row.AddrSummary = addrSummary(iface)
 
 		if row.IsBridge {
@@ -2076,40 +2145,67 @@ func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.R
 	renderSavedRedirect(w, "Address removed", "/configure/interfaces")
 }
 
-// SaveIPv4DHCP enables or disables the DHCPv4 client presence container.
-// POST /configure/interfaces/{name}/ipv4/dhcp
-func (h *ConfigureInterfacesHandler) SaveIPv4DHCP(w http.ResponseWriter, r *http.Request) {
-	h.togglePresence(w, r,
-		ifacePath(r.PathValue("name"))+"/ietf-ip:ipv4/infix-dhcp-client:dhcp",
-		"infix-dhcp-client:dhcp",
-		"DHCP client")
+// SaveIPv4Settings PATCHes the per-interface IPv4 group settings — forwarding
+// leaf plus the DHCP-client and link-local autoconf presence containers — in
+// a single round trip from the IPv4 settings form. Each presence container is
+// PUT (enable) or DELETE (disable) per checkbox state; forwarding is PATCHed.
+// POST /configure/interfaces/{name}/ipv4/settings
+func (h *ConfigureInterfacesHandler) SaveIPv4Settings(w http.ResponseWriter, r *http.Request) {
+	h.saveIPSettings(w, r, "ietf-ip:ipv4", "IPv4", map[string]string{
+		"dhcp":     "infix-dhcp-client:dhcp",
+		"autoconf": "infix-ip:autoconf",
+	})
 }
 
-// SaveIPv4Autoconf enables or disables IPv4 link-local autoconfiguration.
-// POST /configure/interfaces/{name}/ipv4/autoconf
-func (h *ConfigureInterfacesHandler) SaveIPv4Autoconf(w http.ResponseWriter, r *http.Request) {
-	h.togglePresence(w, r,
-		ifacePath(r.PathValue("name"))+"/ietf-ip:ipv4/infix-ip:autoconf",
-		"infix-ip:autoconf",
-		"IPv4 link-local")
+// SaveIPv6Settings is the IPv6 counterpart of SaveIPv4Settings. SLAAC lives at
+// the standard ietf-ip "autoconf" container; DHCPv6 is the Infix augment.
+// POST /configure/interfaces/{name}/ipv6/settings
+func (h *ConfigureInterfacesHandler) SaveIPv6Settings(w http.ResponseWriter, r *http.Request) {
+	h.saveIPSettings(w, r, "ietf-ip:ipv6", "IPv6", map[string]string{
+		"dhcp":  "infix-dhcpv6-client:dhcp",
+		"slaac": "autoconf",
+	})
 }
 
-// SaveIPv6SLAAC enables or disables IPv6 SLAAC (autoconf).
-// POST /configure/interfaces/{name}/ipv6/autoconf
-func (h *ConfigureInterfacesHandler) SaveIPv6SLAAC(w http.ResponseWriter, r *http.Request) {
-	h.togglePresence(w, r,
-		ifacePath(r.PathValue("name"))+"/ietf-ip:ipv6/autoconf",
-		"autoconf",
-		"IPv6 SLAAC")
-}
+// saveIPSettings is the shared body of SaveIPv4Settings / SaveIPv6Settings.
+// presenceMap maps form-field names (e.g. "dhcp") to their YANG presence
+// container key (e.g. "infix-dhcp-client:dhcp"); each one is PUT when checked
+// and DELETEd otherwise. Forwarding is always PATCHed.
+func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *http.Request, container, family string, presenceMap map[string]string) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	name := r.PathValue("name")
+	base := ifacePath(name) + "/" + container
 
-// SaveIPv6DHCP enables or disables the DHCPv6 client presence container.
-// POST /configure/interfaces/{name}/ipv6/dhcp
-func (h *ConfigureInterfacesHandler) SaveIPv6DHCP(w http.ResponseWriter, r *http.Request) {
-	h.togglePresence(w, r,
-		ifacePath(r.PathValue("name"))+"/ietf-ip:ipv6/infix-dhcpv6-client:dhcp",
-		"infix-dhcpv6-client:dhcp",
-		"DHCPv6 client")
+	forwarding := r.FormValue("forwarding") == "true"
+	body := map[string]any{container: map[string]any{"forwarding": forwarding}}
+	if err := h.RC.Patch(r.Context(), base, body); err != nil {
+		log.Printf("configure interfaces %s %s settings: forwarding: %v", name, family, err)
+		renderSaveError(w, err)
+		return
+	}
+
+	for field, child := range presenceMap {
+		path := base + "/" + child
+		if r.FormValue(field) == "true" {
+			b := map[string]any{child: map[string]any{}}
+			if err := h.RC.Put(r.Context(), path, b); err != nil {
+				log.Printf("configure interfaces %s %s settings: enable %s: %v", name, family, field, err)
+				renderSaveError(w, err)
+				return
+			}
+		} else {
+			if err := h.RC.Delete(r.Context(), path); err != nil && !restconf.IsNotFound(err) {
+				log.Printf("configure interfaces %s %s settings: disable %s: %v", name, family, field, err)
+				renderSaveError(w, err)
+				return
+			}
+		}
+	}
+
+	renderSaved(w, family+" settings saved")
 }
 
 func (h *ConfigureInterfacesHandler) SaveIPv4DHCPSettings(w http.ResponseWriter, r *http.Request) {
@@ -2218,29 +2314,6 @@ func (h *ConfigureInterfacesHandler) DeleteIPv6DHCPOption(w http.ResponseWriter,
 	h.deleteDHCPOption(w, r, "ietf-ip:ipv6/infix-dhcpv6-client:dhcp")
 }
 
-func (h *ConfigureInterfacesHandler) togglePresence(w http.ResponseWriter, r *http.Request, path, bodyKey, label string) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-	name := r.PathValue("name")
-	if r.FormValue("enabled") == "true" {
-		body := map[string]any{bodyKey: map[string]any{}}
-		if err := h.RC.Put(r.Context(), path, body); err != nil {
-			log.Printf("configure interfaces %s enable %s: %v", name, label, err)
-			renderSaveError(w, err)
-			return
-		}
-	} else {
-		if err := h.RC.Delete(r.Context(), path); err != nil && !restconf.IsNotFound(err) {
-			log.Printf("configure interfaces %s disable %s: %v", name, label, err)
-			renderSaveError(w, err)
-			return
-		}
-	}
-	renderSavedRedirect(w, label+" updated", "/configure/interfaces")
-}
-
 func typeSlug(yangType string) string {
 	s := schema.StripModulePrefix(yangType)
 	// Normalise iana-if-type identities to infix slugs where relevant.
@@ -2339,7 +2412,7 @@ type wifiRadioOption struct {
 // pulldown. Sorted by typeOrder then alphabetical. Includes types whose
 // Create path is not yet implemented (gre, gretap, vxlan, wireguard,
 // wifi, …) — the modal's "unsupported" panel handles those by pointing
-// the user at the Advanced YANG tree.
+// the user at the Edit-all YANG tree.
 // buildWifiRadioOptions filters detected hardware components down to
 // configured WiFi radios (class=wifi with a wifi-radio container present
 // in running config) and returns picker entries with a label that hints

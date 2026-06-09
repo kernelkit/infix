@@ -27,16 +27,17 @@ type interfacesWrapper struct {
 }
 
 type ifaceJSON struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Type        string          `json:"type"`
-	Enabled     *bool           `json:"enabled"`
-	OperStatus  string          `json:"oper-status"`
-	PhysAddress string          `json:"phys-address"`
-	IfIndex     int             `json:"if-index"`
+	Name              string             `json:"name"`
+	Description       string             `json:"description"`
+	Type              string             `json:"type"`
+	Enabled           *bool              `json:"enabled"`
+	OperStatus        string             `json:"oper-status"`
+	PhysAddress       string             `json:"phys-address"`
+	CustomPhysAddress *customPhysAddress `json:"infix-interfaces:custom-phys-address"`
+	IfIndex           int                `json:"if-index"`
 	// Operational link rate from ietf-interfaces (yang:gauge64 bits/s).
 	// The same-named leaf inside the ethernet container is obsolete.
-	Speed yangInt64 `json:"speed"`
+	Speed       yangInt64       `json:"speed"`
 	IPv4        *ipCfg          `json:"ietf-ip:ipv4"`
 	IPv6        *ipCfg          `json:"ietf-ip:ipv6"`
 	Statistics  *ifaceStats     `json:"statistics"`
@@ -48,6 +49,13 @@ type ifaceJSON struct {
 	Vlan        *vlanCfgJSON    `json:"infix-interfaces:vlan"`
 	WiFi        *wifiJSON       `json:"infix-interfaces:wifi"`
 	WireGuard   *wireGuardJSON  `json:"infix-interfaces:wireguard"`
+}
+
+// customPhysAddress mirrors infix-interfaces:custom-phys-address. Only the
+// static-MAC case is exposed in the WebUI; chassis-derived addresses are
+// uncommon and editable from the Advanced YANG tree.
+type customPhysAddress struct {
+	Static string `json:"static"`
 }
 
 type vlanCfgJSON struct {
@@ -187,12 +195,13 @@ type dhcpv6CfgJSON struct {
 }
 
 type ipCfg struct {
-	Address  []ipAddr       `json:"address"`
-	MTU      int            `json:"mtu"`
-	DHCP     *dhcpv4CfgJSON `json:"infix-dhcp-client:dhcp"`
-	Autoconf *struct{}      `json:"infix-ip:autoconf"`
-	SLAACv6  *struct{}      `json:"autoconf"`
-	DHCPv6   *dhcpv6CfgJSON `json:"infix-dhcpv6-client:dhcp"`
+	Address    []ipAddr       `json:"address"`
+	MTU        int            `json:"mtu"`
+	Forwarding bool           `json:"forwarding"`
+	DHCP       *dhcpv4CfgJSON `json:"infix-dhcp-client:dhcp"`
+	Autoconf   *struct{}      `json:"infix-ip:autoconf"`
+	SLAACv6    *struct{}      `json:"autoconf"`
+	DHCPv6     *dhcpv6CfgJSON `json:"infix-dhcpv6-client:dhcp"`
 }
 
 type ipAddr struct {
@@ -295,7 +304,7 @@ type InterfacesHandler struct {
 // Overview renders the interfaces page (GET /interfaces).
 func (h *InterfacesHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := interfacesData{
-		PageData: newPageData(r, "interfaces", "Interfaces"),
+		PageData: newPageData(w, r, "interfaces", "Interfaces"),
 	}
 
 	var (
@@ -948,7 +957,7 @@ func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := buildDetailData(r, iface)
-	data.PageData = newPageData(r, "interfaces", "Interface "+name)
+	data.PageData = newPageData(w, r, "interfaces", name)
 	data.Desc = h.fieldDescriptions()
 
 	tmplName := "iface-detail.html"

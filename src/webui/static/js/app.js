@@ -14,17 +14,69 @@
     });
   }
 
+  // HTMX page navigation swaps only #content, leaving the <title> in <head>
+  // stale.  Each rendered page emits a setPageTitle HX-Trigger event (set in
+  // handlers/common.go newPageData) carrying the full "Page · Context" title
+  // string ready to apply.
+  function initPageTitle() {
+    document.body.addEventListener('setPageTitle', function (evt) {
+      if (evt.detail && typeof evt.detail.value === 'string') {
+        document.title = evt.detail.value;
+      }
+    });
+  }
+
   // The banner reflects htmx request outcomes — both user interactions and
-  // the `hx-trigger="every 30s"` watchdog div in base.html.
+  // the `hx-trigger="every 5s"` watchdog div in base.html.
   //
   // The watchdog request gets a 5 s timeout (via configRequest), bounding
-  // disconnect detection at ~30 s + 5 s. Without it the XHR would sit on the
+  // disconnect detection at ~5 s + 5 s. Without it the XHR would sit on the
   // OS TCP timeout (1–2 min) before any error fires.
+  //
+  // Once we see a failure, a dead-man timer counts down to a forced
+  // navigation to /login.  The device may have been rebooted or upgraded
+  // out of band; in that case its in-memory session is gone and the next
+  // poll would 401 → HX-Redirect → /login automatically.  But if the
+  // device is truly unreachable (cable pulled, route flap), no response
+  // ever comes, so we time out client-side instead of letting the user
+  // stare at a stale page.
   function initDeviceStatusBanner() {
     var banner = document.getElementById('conn-banner');
     if (!banner) return;
-    var show = function () { banner.hidden = false; };
-    var hide = function () { banner.hidden = true; };
+
+    var REDIRECT_AFTER_MS = 90 * 1000;
+    var firstFailureMs = null;
+    var tickerId = null;
+
+    function tick() {
+      var remaining = Math.max(0, Math.ceil(
+        (firstFailureMs + REDIRECT_AFTER_MS - Date.now()) / 1000
+      ));
+      banner.textContent =
+        'Device unreachable — returning to login in ' + remaining + ' s';
+      if (remaining === 0) {
+        clearInterval(tickerId);
+        window.location.replace('/login');
+      }
+    }
+
+    function show() {
+      banner.hidden = false;
+      if (tickerId !== null) return;
+      firstFailureMs = Date.now();
+      tick();
+      tickerId = setInterval(tick, 1000);
+    }
+
+    function hide() {
+      banner.hidden = true;
+      banner.textContent = 'Device unreachable';
+      firstFailureMs = null;
+      if (tickerId !== null) {
+        clearInterval(tickerId);
+        tickerId = null;
+      }
+    }
 
     document.addEventListener('htmx:configRequest', function (evt) {
       if (evt.detail && evt.detail.path === '/device-status') {
@@ -38,7 +90,15 @@
       if (s === 502 || s === 503 || s === 504) show();
     });
     document.addEventListener('htmx:afterRequest', function (evt) {
-      if (evt.detail && evt.detail.successful) hide();
+      if (!evt.detail) return;
+      var xhr = evt.detail.xhr;
+      var status = xhr ? xhr.status : 0;
+      // Any HTTP response < 500 means the server is reachable — hide.
+      // (Pre-fix the banner stuck on after the next poll returned 404
+      // because the old check used `successful`, which is true only for
+      // 2xx.)  status === 0 = no response, leave the banner alone;
+      // sendError / timeout handles it.
+      if (status > 0 && status < 500) hide();
     });
   }
 
@@ -89,8 +149,8 @@
     initProgressBars(root);
     startRebootOverlay(root);
     initDatetimePicker(root);
-    fwBootInit(root);
-    fwUploadInit(root);
+    swBootInit(root);
+    swUploadInit(root);
     initRestoreCheckbox(root);
     initYangTree(root);
     initMultiDropdown(root);
@@ -165,11 +225,11 @@
     });
   }
 
-  function fwUploadInit(scope) {
-    var btn = (scope || document).querySelector('#fw-upload-btn');
+  function swUploadInit(scope) {
+    var btn = (scope || document).querySelector('#sw-upload-btn');
     if (!btn || btn.dataset.init) return;
     btn.dataset.init = 'true';
-    btn.addEventListener('click', window.fwUpload);
+    btn.addEventListener('click', window.swUpload);
   }
 
   function initRestoreCheckbox(scope) {
@@ -179,36 +239,36 @@
     cb.addEventListener('change', function () { window.scRestoreCheckbox(cb); });
   }
 
-  // ─── Firmware: boot order drag-and-drop ──────────────────────────────────
-  function fwBootInit(scope) {
-    var slots = (scope || document).querySelector('#fw-boot-slots');
+  // ─── Software: boot order drag-and-drop ──────────────────────────────────
+  function swBootInit(scope) {
+    var slots = (scope || document).querySelector('#sw-boot-slots');
     if (!slots || slots.dataset.dndInit) return;
     slots.dataset.dndInit = 'true';
 
     // Stash the page-load order so Reset can restore it without a page refresh.
     // Slot names are a fixed enum (primary | secondary | net), so comma-joining is safe.
     var initialOrder = [];
-    slots.querySelectorAll('.fw-boot-badge').forEach(function (b) { initialOrder.push(b.dataset.slot); });
+    slots.querySelectorAll('.sw-boot-badge').forEach(function (b) { initialOrder.push(b.dataset.slot); });
     slots.dataset.originalOrder = initialOrder.join(',');
 
     var dragging = null;
     var insertRef = undefined; // node to insertBefore; undefined = not set, null = append
 
     function clearIndicators() {
-      slots.querySelectorAll('.fw-boot-drop-before').forEach(function (el) {
-        el.classList.remove('fw-boot-drop-before');
+      slots.querySelectorAll('.sw-boot-drop-before').forEach(function (el) {
+        el.classList.remove('sw-boot-drop-before');
       });
     }
 
     slots.addEventListener('dragstart', function (e) {
-      dragging = e.target.closest('.fw-boot-badge');
+      dragging = e.target.closest('.sw-boot-badge');
       if (!dragging) return;
-      dragging.classList.add('fw-boot-dragging');
+      dragging.classList.add('sw-boot-dragging');
       e.dataTransfer.effectAllowed = 'move';
     });
 
     slots.addEventListener('dragend', function () {
-      if (dragging) dragging.classList.remove('fw-boot-dragging');
+      if (dragging) dragging.classList.remove('sw-boot-dragging');
       dragging = null;
       insertRef = undefined;
       clearIndicators();
@@ -220,17 +280,17 @@
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       if (!dragging) return;
-      var target = e.target.closest('.fw-boot-badge');
+      var target = e.target.closest('.sw-boot-badge');
       clearIndicators();
       if (!target || target === dragging) return;
       var rect = target.getBoundingClientRect();
       if (e.clientX < rect.left + rect.width / 2) {
         insertRef = target;
-        target.classList.add('fw-boot-drop-before');
+        target.classList.add('sw-boot-drop-before');
       } else {
         insertRef = target.nextElementSibling || null;
-        if (insertRef && insertRef.classList.contains('fw-boot-badge')) {
-          insertRef.classList.add('fw-boot-drop-before');
+        if (insertRef && insertRef.classList.contains('sw-boot-badge')) {
+          insertRef.classList.add('sw-boot-drop-before');
         }
       }
     });
@@ -243,23 +303,23 @@
       insertRef = undefined;
     });
 
-    var saveBtn = document.getElementById('fw-boot-save-btn');
-    if (saveBtn) saveBtn.addEventListener('click', function () { window.fwBootSave(saveBtn); });
+    var saveBtn = document.getElementById('sw-boot-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', function () { window.swBootSave(saveBtn); });
 
-    var resetBtn = document.getElementById('fw-boot-reset-btn');
-    if (resetBtn) resetBtn.addEventListener('click', window.fwBootReset);
+    var resetBtn = document.getElementById('sw-boot-reset-btn');
+    if (resetBtn) resetBtn.addEventListener('click', window.swBootReset);
   }
 
   // Restore the boot-order row to the page-load order — i.e. what RAUC
   // reported as the current device boot order before any drag/drop.
   // Set will push the displayed order to the device; Reset just undoes
   // local rearrangement without a server round-trip.
-  window.fwBootReset = function () {
-    var slots = document.getElementById('fw-boot-slots');
+  window.swBootReset = function () {
+    var slots = document.getElementById('sw-boot-slots');
     if (!slots) return;
     var original = (slots.dataset.originalOrder || '').split(',');
     var existing = {};
-    slots.querySelectorAll('.fw-boot-badge').forEach(function (b) {
+    slots.querySelectorAll('.sw-boot-badge').forEach(function (b) {
       existing[b.dataset.slot] = b;
     });
     original.forEach(function (slot) {
@@ -267,8 +327,8 @@
     });
   };
 
-  window.fwBootSave = function (btn) {
-    var badges = document.querySelectorAll('#fw-boot-slots .fw-boot-badge');
+  window.swBootSave = function (btn) {
+    var badges = document.querySelectorAll('#sw-boot-slots .sw-boot-badge');
     var params = new URLSearchParams();
     badges.forEach(function (b) { params.append('boot-order', b.dataset.slot); });
 
@@ -280,7 +340,7 @@
 
     btnSet('Setting\u2026', true);
 
-    fetch('/firmware/boot-order', {
+    fetch('/software/boot-order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -291,7 +351,7 @@
       if (r.ok) {
         // Device now holds the displayed order; refresh the Reset baseline
         // so a follow-up \u21ba doesn't revert to a state the device no longer has.
-        var slots = document.getElementById('fw-boot-slots');
+        var slots = document.getElementById('sw-boot-slots');
         if (slots) {
           var saved = [];
           badges.forEach(function (b) { saved.push(b.dataset.slot); });
@@ -311,27 +371,94 @@
     });
   };
 
-  // ─── System Control: datetime picker ─────────────────────────────────────
-  // Pre-fills #sc-dt-input with the browser's current UTC time on page load
-  // and after HTMX swaps.  Also exposed as window.scSyncTime() for the
-  // "Browser time" button.
-  function utcDatetimeLocal() {
+  // ─── Configure > Date & Time card ────────────────────────────────────────
+  // Two pieces working together:
+  //   1. #sc-dt-input is pre-filled with the browser's current local time so
+  //      "Set now" defaults to "synchronize device to my clock".
+  //   2. #sc-system-time is a JS-driven live clock seeded from the server's
+  //      data-server-time attribute (ISO string).  We compute the offset
+  //      between device clock and browser clock once, then tick locally and
+  //      render via toLocaleString() so each user sees their own locale.
+  //      After a successful POST /maintenance/system/datetime we recompute
+  //      the offset from the value the user submitted so the visible clock
+  //      jumps to the new time and continues ticking.
+  var systemTimeOffsetMs = null; // device - browser
+
+  function localDatetimeLocal() {
+    // Format Date as YYYY-MM-DDTHH:MM:SS in *local* time, matching what
+    // <input type="datetime-local"> stores in its .value field.
     var d = new Date();
-    return d.getUTCFullYear() + '-' +
-      String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getUTCDate()).padStart(2, '0') + 'T' +
-      String(d.getUTCHours()).padStart(2, '0') + ':' +
-      String(d.getUTCMinutes()).padStart(2, '0');
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0') + 'T' +
+      String(d.getHours()).padStart(2, '0') + ':' +
+      String(d.getMinutes()).padStart(2, '0') + ':' +
+      String(d.getSeconds()).padStart(2, '0');
+  }
+
+  function renderSystemTime(span) {
+    if (systemTimeOffsetMs === null) return;
+    var d = new Date(Date.now() + systemTimeOffsetMs);
+    span.textContent = d.toLocaleString();
   }
 
   function initDatetimePicker(root) {
-    var el = (root || document).querySelector('#sc-dt-input:not([data-init])');
-    if (!el) return;
-    el.dataset.init = 'true';
-    el.value = utcDatetimeLocal();
-    var btn = (root || document).querySelector('#sc-sync-time-btn');
-    if (btn) btn.addEventListener('click', function () { el.value = utcDatetimeLocal(); });
+    // Always pre-fill an empty picker; htmx swaps replace #content so each
+    // visit gets a fresh element, and overwriting an empty value is a no-op.
+    var input = (root || document).querySelector('#sc-dt-input');
+    if (input && !input.value) {
+      input.value = localDatetimeLocal();
+    }
+
+    var span = (root || document).querySelector('#sc-system-time');
+    if (span && span.dataset.serverTime) {
+      // Server omits the timezone offset; treat the value as the device's
+      // local wall clock, which is what the Timezone row tells the user.
+      var deviceMs = new Date(span.dataset.serverTime).getTime();
+      systemTimeOffsetMs = deviceMs - Date.now();
+      renderSystemTime(span);
+      // Cancel any prior tick from an earlier htmx navigation — htmx
+      // replaces #content but doesn't notify JS to clean up timers,
+      // so without this each visit would leak a 1 Hz interval pinning
+      // an orphaned span.
+      if (window.scSystemTimeTimer) clearInterval(window.scSystemTimeTimer);
+      window.scSystemTimeTimer = setInterval(function () { renderSystemTime(span); }, 1000);
+    }
   }
+
+  // The <input type="datetime-local"> reports its value in the user's local
+  // time without a zone suffix; the server appends "+00:00" unconditionally,
+  // so without this hook a CEST user typing 18:55 would set the device to
+  // 18:55 UTC instead of 16:55 UTC.  Convert the parameter to UTC just
+  // before it goes on the wire so the device clock matches the moment the
+  // user actually selected.  Attached to `document` (not document.body)
+  // because this code runs at IIFE parse time before <body> exists.
+  document.addEventListener('htmx:configRequest', function (evt) {
+    if (!evt.detail || evt.detail.path !== '/maintenance/system/datetime') return;
+    var local = evt.detail.parameters && evt.detail.parameters.datetime;
+    if (!local) return;
+    var d = new Date(local);
+    if (isNaN(d.getTime())) return;
+    // toISOString gives "YYYY-MM-DDTHH:MM:SS.sssZ"; strip millis so the
+    // server's "+00:00" append produces valid RFC 3339.
+    evt.detail.parameters.datetime = d.toISOString().slice(0, 19);
+  });
+
+  // After a successful Set POST, re-sync the live clock to the value the
+  // user just submitted so the display jumps instead of waiting for the next
+  // page load.
+  document.addEventListener('htmx:afterRequest', function (evt) {
+    if (!evt.detail || !evt.detail.successful) return;
+    var path = evt.detail.requestConfig && evt.detail.requestConfig.path;
+    if (path !== '/maintenance/system/datetime') return;
+    var input = document.getElementById('sc-dt-input');
+    var span = document.getElementById('sc-system-time');
+    if (!input || !span || !input.value) return;
+    var submittedMs = new Date(input.value).getTime();
+    if (isNaN(submittedMs)) return;
+    systemTimeOffsetMs = submittedMs - Date.now();
+    renderSystemTime(span);
+  });
 
   window.scRestoreCheckbox = function (cb) {
     var form = document.getElementById('restore-form');
@@ -341,16 +468,16 @@
       : 'Apply this configuration to the running system?');
   };
 
-  // Locate or inject the shared #fw-progress-card. Server-rendered when the
+  // Locate or inject the shared #sw-progress-card. Server-rendered when the
   // page loads with ?installing=1; injected here when the upload flow starts
-  // from /firmware. The same DOM element later receives SSE-driven swaps.
+  // from /software. The same DOM element later receives SSE-driven swaps.
   function ensureProgressCard(headerText, message) {
-    var card = document.getElementById('fw-progress-card');
+    var card = document.getElementById('sw-progress-card');
     if (!card) {
       card = document.createElement('section');
-      card.id = 'fw-progress-card';
+      card.id = 'sw-progress-card';
       card.className = 'info-card';
-      var grid = document.querySelector('.fw-install-grid');
+      var grid = document.querySelector('.sw-install-grid');
       var parent = grid && grid.parentNode;
       if (parent) parent.insertBefore(card, grid);
       else (document.getElementById('content') || document.body).appendChild(card);
@@ -368,16 +495,16 @@
     return card;
   }
 
-  window.fwUpload = function () {
-    var fileInput = document.getElementById('fw-file');
+  window.swUpload = function () {
+    var fileInput = document.getElementById('sw-file');
     if (!fileInput || !fileInput.files.length) return;
-    if (!confirm('Upload and install this firmware? The current installation may be overwritten.')) return;
+    if (!confirm('Upload and install this software bundle? The current installation may be overwritten.')) return;
 
     var file       = fileInput.files[0];
-    var autoReboot = !!document.querySelector('#fw-upload-auto-reboot:checked');
-    var btn        = document.getElementById('fw-upload-btn');
+    var autoReboot = !!document.querySelector('#sw-upload-auto-reboot:checked');
+    var btn        = document.getElementById('sw-upload-btn');
 
-    var sseURL = new URL((btn && btn.getAttribute('data-sse-url')) || '/firmware/progress', window.location.origin);
+    var sseURL = new URL((btn && btn.getAttribute('data-sse-url')) || '/software/progress', window.location.origin);
     if (autoReboot) sseURL.searchParams.set('auto-reboot', '1');
 
     var formData = new FormData();
@@ -385,7 +512,7 @@
     if (autoReboot) formData.append('auto-reboot', '1');
 
     if (btn) btn.disabled = true;
-    var card = ensureProgressCard('Uploading Firmware', 'Uploading firmware image… 0%');
+    var card = ensureProgressCard('Uploading Bundle', 'Uploading bundle… 0%');
     var bar  = card.querySelector('.progress-bar');
     var text = card.querySelector('.progress-text');
 
@@ -395,7 +522,7 @@
       if (!e.lengthComputable) return;
       var pct = Math.round(e.loaded / e.total * 100);
       bar.style.width = pct + '%';
-      text.textContent = 'Uploading firmware image\u2026 ' + pct + '%';
+      text.textContent = 'Uploading bundle\u2026 ' + pct + '%';
     };
 
     xhr.onload = function () {
@@ -405,13 +532,13 @@
         return;
       }
       // pushState lets a mid-install reload resume the progress card.
-      var target = xhr.responseText.trim() || '/firmware?installing=1';
+      var target = xhr.responseText.trim() || '/software?installing=1';
       if (window.history && window.history.pushState) {
         window.history.pushState({}, '', target);
       }
       text.textContent = 'Starting installation\u2026';
       card.setAttribute('data-sse-src', sseURL.pathname + sseURL.search);
-      initFirmwareProgress(document);
+      initSoftwareProgress(document);
     };
 
     xhr.onerror = function () {
@@ -419,25 +546,25 @@
       if (btn) btn.disabled = false;
     };
 
-    xhr.open('POST', '/firmware/upload');
+    xhr.open('POST', '/software/upload');
     xhr.setRequestHeader('X-CSRF-Token', getCSRFToken());
     xhr.send(formData);
   };
 
-  // SSE-driven firmware progress card.
+  // SSE-driven software install progress card.
   // The Go server polls RESTCONF and streams rendered HTML fragments; we just
   // swap them into the card and let the server close the stream when done.
-  var fwEventSource = null;
+  var swEventSource = null;
 
-  function initFirmwareProgress(root) {
+  function initSoftwareProgress(root) {
     var scope = root || document;
-    var card = scope.querySelector('#fw-progress-card[data-sse-src]');
+    var card = scope.querySelector('#sw-progress-card[data-sse-src]');
     if (!card || card.dataset.sseInit) return;
     card.dataset.sseInit = 'true';
 
     var src = card.getAttribute('data-sse-src');
-    if (fwEventSource) { fwEventSource.close(); }
-    fwEventSource = new EventSource(src);
+    if (swEventSource) { swEventSource.close(); }
+    swEventSource = new EventSource(src);
 
     function swap(html) {
       card.innerHTML = html;
@@ -446,24 +573,24 @@
     }
 
     function endStream() {
-      fwEventSource.close();
-      fwEventSource = null;
+      swEventSource.close();
+      swEventSource = null;
       // Drop the stream URL and re-arm the upload button so a follow-up
       // install can run on the same page without a reload.
       card.removeAttribute('data-sse-src');
       delete card.dataset.sseInit;
-      var btn = document.getElementById('fw-upload-btn');
+      var btn = document.getElementById('sw-upload-btn');
       if (btn) btn.disabled = false;
     }
 
-    fwEventSource.addEventListener('progress', function(e) { swap(e.data); });
+    swEventSource.addEventListener('progress', function(e) { swap(e.data); });
 
-    fwEventSource.addEventListener('done', function(e) {
+    swEventSource.addEventListener('done', function(e) {
       swap(e.data);
       endStream();
     });
 
-    fwEventSource.addEventListener('reboot', function(e) {
+    swEventSource.addEventListener('reboot', function(e) {
       swap(e.data);
       endStream();
       // Auto-reboot: POST /reboot and show the reboot overlay.
@@ -478,14 +605,23 @@
         });
     });
 
-    fwEventSource.onerror = endStream;
+    // Let EventSource auto-reconnect on transient errors. Only tear down
+    // when the browser gives up (readyState === CLOSED) — otherwise an
+    // nginx read-timeout or a brief network blip would silently kill the
+    // stream and leave the progress card stuck on stale data.
+    swEventSource.onerror = function () {
+      if (swEventSource && swEventSource.readyState === EventSource.CLOSED) {
+        endStream();
+      }
+    };
   }
 
   document.addEventListener('DOMContentLoaded', function() {
     initCSRF();
+    initPageTitle();
     initDeviceStatusBanner();
     initDynamicUI(document);
-    initFirmwareProgress(document);
+    initSoftwareProgress(document);
 
     // Attach the htmx swap listener here, not at IIFE parse time — at parse
     // time the script runs inside <head> before <body> exists, so the
@@ -493,14 +629,14 @@
     // navigations wouldn't re-init dynamic UI.
     if (window.htmx) {
       document.body.addEventListener('htmx:afterSwap', function (evt) {
-        // Close any open SSE stream if the firmware progress card is no longer present.
-        if (fwEventSource && !document.getElementById('fw-progress-card')) {
-          fwEventSource.close();
-          fwEventSource = null;
+        // Close any open SSE stream if the software install progress card is no longer present.
+        if (swEventSource && !document.getElementById('sw-progress-card')) {
+          swEventSource.close();
+          swEventSource = null;
         }
         var scope = (evt.detail && evt.detail.target) || document;
         initDynamicUI(scope);
-        initFirmwareProgress(scope);
+        initSoftwareProgress(scope);
       });
     }
   });
@@ -619,18 +755,17 @@
 // Interface page glue (replaces inline hx-on / inline <script>, which CSP
 // blocks under the `script-src 'self'` policy in middleware.go).
 (function () {
-  // After an htmx checkbox marked [data-toggle-details] completes its request,
-  // show/hide the next-sibling <details> element based on its checked state.
-  // Used for DHCP/DHCPv6 settings fold-out on the Configure → Interface page.
-  // Only react to successful requests so a server rejection doesn't lie about
-  // the new state.
-  document.addEventListener('htmx:afterRequest', function (evt) {
-    if (!evt.detail || !evt.detail.successful) return;
-    var cb = evt.detail.elt;
-    if (!cb || !cb.matches || !cb.matches('input[type="checkbox"][data-toggle-details]')) return;
-    var wrapper = cb.closest('div');
-    var details = wrapper && wrapper.nextElementSibling;
-    if (details && details.tagName === 'DETAILS') details.hidden = !cb.checked;
+  // A checkbox marked [data-fold-target="<id>"] toggles the matching <details>
+  // (or any element with that id) immediately on change. Used for the DHCP /
+  // DHCPv6 settings foldouts on Configure → Interface: the foldout is always
+  // in the DOM but starts hidden when the client isn't enabled. This lets the
+  // user see the settings form before clicking Save IPvX Settings and confirms
+  // the section exists even when DHCP is off.
+  document.addEventListener('change', function (evt) {
+    var cb = evt.target;
+    if (!cb || !cb.matches || !cb.matches('input[type="checkbox"][data-fold-target]')) return;
+    var target = document.getElementById(cb.getAttribute('data-fold-target'));
+    if (target) target.hidden = !cb.checked;
   });
 
   // Add Interface modal — open via data-show-modal, close via
@@ -1617,11 +1752,34 @@ function renderCfgLog() {
     }
   });
 
+  // findSaveStatusSpan locates the status span associated with the form that
+  // triggered an htmx event. Lookup order:
+  //   1. .cfg-save-status inside the form
+  //   2. [data-cfg-status-for="<form-id>"] anywhere on the page — used when the
+  //      Save button is bound to the form via the HTML5 `form` attribute and
+  //      lives outside the form element
+  //   3. .cfg-save-status inside the enclosing .info-card (shared feedback slot)
+  function findSaveStatusSpan(e) {
+    var form = e.target && e.target.closest('form');
+    if (form) {
+      var inside = form.querySelector('.cfg-save-status');
+      if (inside) return inside;
+      if (form.id) {
+        var bound = document.querySelector('.cfg-save-status[data-cfg-status-for="' + form.id + '"]');
+        if (bound) return bound;
+      }
+    }
+    var card = e.target && e.target.closest('.info-card');
+    return card ? card.querySelector('.cfg-save-status') : null;
+  }
+
   // cfgError: show error message in the .cfg-save-status span of the submitting form.
+  // Falls back to the enclosing .info-card when the form itself has no status
+  // span — useful when multiple forms in one card share a single feedback slot
+  // (e.g. Date & Time's Set-now and Save-timezone forms).
   document.addEventListener('cfgError', function(e) {
     var msg = e.detail && e.detail.value ? e.detail.value : 'Save failed';
-    var form = e.target && e.target.closest('form');
-    var span = form ? form.querySelector('.cfg-save-status') : null;
+    var span = findSaveStatusSpan(e);
     if (span) {
       span.textContent = '✗ ' + msg;
       span.classList.add('error');
@@ -1642,7 +1800,7 @@ function renderCfgLog() {
 
   // Show "Saved ✓" feedback when a card Save succeeds.
   (function() {
-    var LS_KEY = 'fw-url-history';
+    var LS_KEY = 'sw-url-history';
     var MAX_HIST = 10;
 
     function loadHistory() {
@@ -1658,7 +1816,7 @@ function renderCfgLog() {
     }
 
     function populateDatalist() {
-      var dl = document.getElementById('fw-url-history');
+      var dl = document.getElementById('sw-url-history');
       if (!dl) return;
       dl.innerHTML = loadHistory().map(function(u) {
         return '<option value="' + u.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">';
@@ -1669,7 +1827,7 @@ function renderCfgLog() {
     document.addEventListener('htmx:afterSettle', populateDatalist);
 
     document.addEventListener('submit', function(e) {
-      var form = e.target.closest('.firmware-form');
+      var form = e.target.closest('.software-form');
       if (!form) return;
       var input = form.querySelector('input[name="url"]');
       if (input && input.value) saveURL(input.value);
@@ -1679,9 +1837,7 @@ function renderCfgLog() {
   document.addEventListener('cfgSaved', function(e) {
     var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';
     cfgLog('ok', msg);
-    // Find the status span closest to the form that triggered the event.
-    var form = e.target && e.target.closest('form');
-    var span = form ? form.querySelector('.cfg-save-status') : null;
+    var span = findSaveStatusSpan(e);
     if (span) {
       span.textContent = '✓ ' + msg;
       span.classList.add('saved');

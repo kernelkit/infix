@@ -40,7 +40,7 @@
           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                   hx-delete="/configure/leaf?path=/ietf-system:system/contact&redirect=/configure/system"
                   hx-swap="none"
-                  hx-confirm="Reset contact to its YANG default?">↺</button>
+                  hx-confirm="Reset contact to its YANG default?">{{template "icon-reset"}}</button>
         </td>
       </tr>
       <tr>
@@ -50,7 +50,7 @@
           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                   hx-delete="/configure/leaf?path=/ietf-system:system/location&redirect=/configure/system"
                   hx-swap="none"
-                  hx-confirm="Reset location to its YANG default?">↺</button>
+                  hx-confirm="Reset location to its YANG default?">{{template "icon-reset"}}</button>
         </td>
       </tr>
     </table>
@@ -60,17 +60,59 @@
     </div>
   </form>
 
-  {{/* ── Clock ───────────────────────────────────────────────────────── */}}
-  <form class="info-card"
-        hx-post="/configure/system/clock"
-        hx-swap="none">
-    <div class="card-header">Clock</div>
-    <table class="info-table">
+  {{/* ── Date & Time ──────────────────────────────────────────────────
+       One table for all three rows so the value and action columns
+       line up.  The two write paths have different semantics (Set time
+       = immediate RPC, Timezone = candidate save), so they're declared
+       as sibling <form>s and bound to the table's inputs / buttons via
+       the HTML5 form="…" attribute.  The System time row's
+       data-server-time seeds the JS-driven live tick (initDatetimePicker
+       in app.js). */}}
+  <div class="info-card">
+    <div class="card-header">Date &amp; Time</div>
+
+    <form id="cfg-clock-now" hx-post="/maintenance/system/datetime"
+          hx-swap="none"></form>
+
+    <table class="info-table info-table-fixed">
+      <colgroup>
+        <col style="width:9rem">
+        <col>
+        <col style="width:5.5rem">
+      </colgroup>
+      <tr>
+        <th>System time</th>
+        <td colspan="2">
+          {{/* Span pads itself to match the Set time input's border+left
+               padding (1px + 0.6rem), so plain text and the input text
+               start at the same x-position. */}}
+          {{if .CurrentDatetime}}<span id="sc-system-time" data-server-time="{{.CurrentDatetime}}" style="display:inline-block;padding-left:calc(0.6rem + 1px);"></span>{{else}}<span class="text-muted">unavailable</span>{{end}}
+        </td>
+      </tr>
+      <tr>
+        <th>Set time{{template "field-info" "Manually set the device system clock.  The time you enter is interpreted in your browser's local timezone and converted to UTC on submit."}}</th>
+        <td>
+          <input type="datetime-local" id="sc-dt-input" name="datetime"
+                 form="cfg-clock-now"
+                 class="cfg-input" step="1" required>
+        </td>
+        <td class="cfg-reset-col">
+          <button type="submit" form="cfg-clock-now"
+                  class="btn btn-primary btn-sm"
+                  title="Set the system clock immediately.">Set</button>
+        </td>
+      </tr>
       <tr>
         <th>Timezone{{template "field-info" (index $d "timezone")}}</th>
         <td>
-          <select class="cfg-input" name="timezone">
-            {{$tz := .Timezone}}
+          {{$tz := .Timezone}}
+          <select class="cfg-input" name="timezone" form="cfg-clock-tz">
+            {{/* The IANA YANG enum has no UTC / Etc-UTC entry, so when
+                 timezone-name isn't configured we surface that explicitly
+                 instead of letting the browser default to the
+                 alphabetically-first option. Infix interprets an unset
+                 leaf as UTC. */}}
+            {{if eq $tz ""}}<option value="" selected>UTC (default)</option>{{end}}
             {{range .TimezoneOptions}}<option {{if eq . $tz}}selected{{end}}>{{.}}</option>{{end}}
           </select>
         </td>
@@ -78,134 +120,18 @@
           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                   hx-delete="/configure/leaf?path=/ietf-system:system/clock/timezone-name&redirect=/configure/system"
                   hx-swap="none"
-                  hx-confirm="Reset timezone to its YANG default?">↺</button>
+                  hx-confirm="Reset timezone to its YANG default?">{{template "icon-reset"}}</button>
         </td>
       </tr>
     </table>
-    <div class="cfg-card-footer">
-      <button class="btn btn-primary" type="submit">Save</button>
-      <span class="cfg-save-status"></span>
-    </div>
-  </form>
 
-  {{/* ── NTP servers ──────────────────────────────────────────────────── */}}
-  <form class="info-card info-grid-span-2"
-        hx-put="/configure/system/ntp"
-        hx-swap="none">
-    <div class="card-header">NTP Servers</div>
-    <div class="data-table-wrap">
-      <table class="data-table cfg-table" id="ntp-table">
-        <thead>
-          <tr>
-            <th>Name / Key</th>
-            <th>Address</th>
-            <th class="cfg-input-sm">Port</th>
-            <th>Prefer</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="ntp-tbody">
-          {{range $i, $s := .NTP.Servers}}
-          <tr>
-            <td><input class="cfg-input" type="text"
-                       name="ntp_name_{{$i}}" value="{{$s.Name}}" required></td>
-            <td><input class="cfg-input" type="text"
-                       name="ntp_addr_{{$i}}" value="{{$s.UDP.Address}}"></td>
-            <td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"
-                       name="ntp_port_{{$i}}" value="{{if $s.UDP.Port}}{{$s.UDP.Port}}{{end}}"
-                       placeholder="123"></td>
-            <td style="text-align:center">
-              <input type="checkbox" name="ntp_prefer_{{$i}}" {{if $s.Prefer}}checked{{end}}>
-            </td>
-            <td>
-              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row"
-                      title="Remove">
-                {{template "icon-trash"}}
-              </button>
-            </td>
-          </tr>
-          {{end}}
-        </tbody>
-      </table>
-    </div>
-    <div class="cfg-card-footer">
-      <button type="button" class="btn-add-row" data-table="ntp-tbody"
-              data-template="ntp">+ Add server</button>
-      <button class="btn btn-primary" type="submit">Save</button>
-      <span class="cfg-save-status"></span>
-    </div>
-  </form>
-
-  {{/* ── DNS ─────────────────────────────────────────────────────────── */}}
-  <form class="info-card info-grid-span-2"
-        hx-put="/configure/system/dns"
-        hx-swap="none">
-    <div class="card-header">DNS</div>
-
-    <div class="section-subtitle">Search domains</div>
-    <div class="data-table-wrap">
-      <table class="data-table cfg-table" id="dns-search-table">
-        <thead>
-          <tr><th>Domain</th><th></th></tr>
-        </thead>
-        <tbody id="dns-search-tbody">
-          {{range $i, $d := .DNS.Search}}
-          <tr>
-            <td><input class="cfg-input" type="text"
-                       name="dns_search_{{$i}}" value="{{$d}}"></td>
-            <td>
-              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">
-                {{template "icon-trash"}}
-              </button>
-            </td>
-          </tr>
-          {{end}}
-        </tbody>
-      </table>
-    </div>
-    <div style="padding: 0 0.75rem;">
-      <button type="button" class="btn-add-row" data-table="dns-search-tbody"
-              data-template="dns-search">+ Add domain</button>
-    </div>
-
-    <div class="section-subtitle" style="margin-top:0.75rem">Servers</div>
-    <div class="data-table-wrap">
-      <table class="data-table cfg-table" id="dns-server-table">
-        <thead>
-          <tr>
-            <th>Name / Key</th>
-            <th>Address</th>
-            <th class="cfg-input-sm">Port</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="dns-server-tbody">
-          {{range $i, $s := .DNS.Servers}}
-          <tr>
-            <td><input class="cfg-input" type="text"
-                       name="dns_name_{{$i}}" value="{{$s.Name}}" required></td>
-            <td><input class="cfg-input" type="text"
-                       name="dns_addr_{{$i}}" value="{{$s.UDPAndTCP.Address}}"></td>
-            <td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"
-                       name="dns_port_{{$i}}" value="{{if $s.UDPAndTCP.Port}}{{$s.UDPAndTCP.Port}}{{end}}"
-                       placeholder="53"></td>
-            <td>
-              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">
-                {{template "icon-trash"}}
-              </button>
-            </td>
-          </tr>
-          {{end}}
-        </tbody>
-      </table>
-    </div>
-    <div class="cfg-card-footer">
-      <button type="button" class="btn-add-row" data-table="dns-server-tbody"
-              data-template="dns-server">+ Add server</button>
-      <button class="btn btn-primary" type="submit">Save</button>
-      <span class="cfg-save-status"></span>
-    </div>
-  </form>
+    <form id="cfg-clock-tz" hx-post="/configure/system/clock" hx-swap="none">
+      <div class="cfg-card-footer">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <span class="cfg-save-status"></span>
+      </div>
+    </form>
+  </div>
 
   {{/* ── Preferences ─────────────────────────────────────────────────── */}}
   <form class="info-card info-grid-span-2"
@@ -226,7 +152,7 @@
           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                   hx-delete="/configure/leaf?path=/ietf-system:system/infix-system:text-editor&redirect=/configure/system"
                   hx-swap="none"
-                  hx-confirm="Reset text editor to its YANG default?">↺</button>
+                  hx-confirm="Reset text editor to its YANG default?">{{template "icon-reset"}}</button>
         </td>
       </tr>
       <tr>
@@ -239,7 +165,7 @@
           <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                   hx-delete="/configure/leaf?path=/ietf-system:system/infix-system:motd-banner&redirect=/configure/system"
                   hx-swap="none"
-                  hx-confirm="Reset login banner to its YANG default?">↺</button>
+                  hx-confirm="Reset login banner to its YANG default?">{{template "icon-reset"}}</button>
         </td>
       </tr>
     </table>
@@ -256,5 +182,3 @@
 
 {{end}}
 
-{{/* ── ⓘ tooltip helper ─────────────────────────────────────────────────── */}}
-{{define "field-info"}}{{if .}} <span class="field-info" data-tip="{{.}}">ⓘ</span>{{end}}{{end}}

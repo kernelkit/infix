@@ -39,6 +39,36 @@
           </a>
         </li>
         {{end}}
+        <li>
+          <a href="/services"
+             hx-get="/services"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "services"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/services.svg')"></span>
+            Services
+          </a>
+        </li>
+        <li>
+          <a href="/keystore"
+             hx-get="/keystore"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "keystore"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/keystore.svg')"></span>
+            Keystore
+          </a>
+        </li>
+        <li>
+          <a href="/nacm"
+             hx-get="/nacm"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "nacm"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/nacm.svg')"></span>
+            Users &amp; Groups
+          </a>
+        </li>
       </ul>
 
       <div class="nav-section-label">Network</div>
@@ -54,65 +84,6 @@
           </a>
         </li>
         <li>
-          <a href="/routing"
-             hx-get="/routing"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "routing"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/routing.svg')"></span>
-            Routing
-          </a>
-        </li>
-
-      </ul>
-
-      <div class="nav-section-label">Security</div>
-      <ul class="nav-group-items">
-        <li>
-          <a href="/firewall"
-             hx-get="/firewall"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "firewall"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
-            Firewall
-          </a>
-        </li>
-        <li>
-          <a href="/vpn"
-             hx-get="/vpn"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "vpn"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/wireguard.svg')"></span>
-            WireGuard
-          </a>
-        </li>
-        <li>
-          <a href="/nacm"
-             hx-get="/nacm"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "nacm"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/nacm.svg')"></span>
-            NACM
-          </a>
-        </li>
-      </ul>
-
-      <div class="nav-section-label">Services</div>
-      <ul class="nav-group-items">
-        <li>
-          <a href="/services"
-             hx-get="/services"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "services"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/services.svg')"></span>
-            Services
-          </a>
-        </li>
-        <li>
           <a href="/dhcp"
              hx-get="/dhcp"
              hx-target="#content"
@@ -120,16 +91,6 @@
              class="nav-link {{if eq .ActivePage "dhcp"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/dhcp.svg')"></span>
             DHCP
-          </a>
-        </li>
-        <li>
-          <a href="/ntp"
-             hx-get="/ntp"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "ntp"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/ntp.svg')"></span>
-            NTP
           </a>
         </li>
         <li>
@@ -152,6 +113,58 @@
             mDNS
           </a>
         </li>
+        <li>
+          <a href="/ntp"
+             hx-get="/ntp"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "ntp"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/ntp.svg')"></span>
+            NTP
+          </a>
+        </li>
+        <li>
+          <a href="/routing"
+             hx-get="/routing"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "routing"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/routing.svg')"></span>
+            Routes
+          </a>
+        </li>
+        <li>
+          <a href="/firewall"
+             hx-get="/firewall"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "firewall"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
+            Firewall
+          </a>
+        </li>
+        {{if and .Capabilities (.Capabilities.Has "wifi")}}
+        <li>
+          <a href="/wifi"
+             hx-get="/wifi"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "wifi"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/wifi.svg')"></span>
+            WiFi
+          </a>
+        </li>
+        {{end}}
+        <li>
+          <a href="/vpn"
+             hx-get="/vpn"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "vpn"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/wireguard.svg')"></span>
+            WireGuard
+          </a>
+        </li>
       </ul>
 
       <div class="nav-section-label">Advanced</div>
@@ -163,7 +176,7 @@
              hx-push-url="true"
              class="nav-link {{if eq .ActivePage "status-tree"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/status-tree.svg')"></span>
-            Advanced
+            View all
           </a>
         </li>
       </ul>
@@ -171,19 +184,11 @@
     </details>
 
     <details class="nav-group-top" id="nav-configure"
-             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-interfaces") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
+             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-ntp") (eq .ActivePage "configure-dns") (eq .ActivePage "configure-hardware") (eq .ActivePage "configure-interfaces") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
       <summary class="nav-group-summary-top">Configure</summary>
+
+      <div class="nav-section-label">System</div>
       <ul class="nav-group-items">
-        <li>
-          <a href="/configure/interfaces"
-             hx-get="/configure/interfaces"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "configure-interfaces"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/interfaces.svg')"></span>
-            Interfaces
-          </a>
-        </li>
         <li>
           <a href="/configure/system"
              hx-get="/configure/system"
@@ -191,7 +196,7 @@
              hx-push-url="true"
              class="nav-link {{if eq .ActivePage "configure-system"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/system.svg')"></span>
-            System
+            General
           </a>
         </li>
         <li>
@@ -205,36 +210,6 @@
           </a>
         </li>
         <li>
-          <a href="/configure/firewall"
-             hx-get="/configure/firewall"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "configure-firewall"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
-            Firewall
-          </a>
-        </li>
-        <li>
-          <a href="/configure/routes"
-             hx-get="/configure/routes"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "configure-routes"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/routes.svg')"></span>
-            Routes
-          </a>
-        </li>
-        <li>
-          <a href="/configure/users"
-             hx-get="/configure/users"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "configure-users"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/nacm.svg')"></span>
-            Users
-          </a>
-        </li>
-        <li>
           <a href="/configure/keystore"
              hx-get="/configure/keystore"
              hx-target="#content"
@@ -245,29 +220,98 @@
           </a>
         </li>
         <li>
+          <a href="/configure/users"
+             hx-get="/configure/users"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-users"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/nacm.svg')"></span>
+            Users &amp; Groups
+          </a>
+        </li>
+      </ul>
+
+      <div class="nav-section-label">Network</div>
+      <ul class="nav-group-items">
+        <li>
+          <a href="/configure/interfaces"
+             hx-get="/configure/interfaces"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-interfaces"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/interfaces.svg')"></span>
+            Interfaces
+          </a>
+        </li>
+        <li>
+          <a href="/configure/routes"
+             hx-get="/configure/routes"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-routes"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/routes.svg')"></span>
+            Routing
+          </a>
+        </li>
+        <li>
+          <a href="/configure/firewall"
+             hx-get="/configure/firewall"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-firewall"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
+            Firewall
+          </a>
+        </li>
+        <li>
+          <a href="/configure/dns"
+             hx-get="/configure/dns"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-dns"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/dns.svg')"></span>
+            DNS Client
+          </a>
+        </li>
+        <li>
+          <a href="/configure/ntp"
+             hx-get="/configure/ntp"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-ntp"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/ntp.svg')"></span>
+            NTP Client
+          </a>
+        </li>
+      </ul>
+
+      <div class="nav-section-label">Advanced</div>
+      <ul class="nav-group-items">
+        <li>
           <a href="/configure/tree"
              hx-get="/configure/tree"
              hx-target="#content"
              hx-push-url="true"
              class="nav-link {{if eq .ActivePage "configure-tree"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/advanced.svg')"></span>
-            Advanced
+            Edit all
           </a>
         </li>
       </ul>
     </details>
 
-    <details class="nav-group-top">
+    <details class="nav-group-top"
+             {{if or (eq .ActivePage "software") (eq .ActivePage "backup") (eq .ActivePage "system-control")}}open{{end}}>
       <summary class="nav-group-summary-top">Maintenance</summary>
       <ul class="nav-group-items">
         <li>
-          <a href="/firmware"
-             hx-get="/firmware"
+          <a href="/software"
+             hx-get="/software"
              hx-target="#content"
              hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "firmware"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/firmware.svg')"></span>
-            Firmware
+             class="nav-link {{if eq .ActivePage "software"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/software.svg')"></span>
+            Software
           </a>
         </li>
         <li>
@@ -276,7 +320,7 @@
              hx-target="#content"
              hx-push-url="true"
              class="nav-link {{if eq .ActivePage "backup"}}active{{end}}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/backup.svg')"></span>
             Backup &amp; Restore
           </a>
         </li>
@@ -286,7 +330,7 @@
              hx-target="#content"
              hx-push-url="true"
              class="nav-link {{if eq .ActivePage "system-control"}}active{{end}}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/system-control.svg')"></span>
             System Control
           </a>
         </li>

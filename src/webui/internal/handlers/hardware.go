@@ -74,7 +74,7 @@ type HardwareHandler struct {
 
 func (h *HardwareHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := hardwarePageData{
-		PageData: newPageData(r, "hardware", "Hardware"),
+		PageData: newPageData(w, r, "hardware", "Hardware"),
 	}
 
 	// Detach from r.Context() so the RESTCONF call (and yanger behind it)

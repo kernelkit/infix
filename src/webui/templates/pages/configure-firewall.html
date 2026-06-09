@@ -54,7 +54,7 @@
             <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                     hx-delete="/configure/leaf?path=/infix-firewall:firewall/enabled&redirect=/configure/firewall"
                     hx-swap="none"
-                    hx-confirm="Reset enabled to its YANG default?">↺</button>
+                    hx-confirm="Reset enabled to its YANG default?">{{template "icon-reset"}}</button>
           </td>
         </tr>
         <tr>
@@ -73,7 +73,7 @@
             <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                     hx-delete="/configure/leaf?path=/infix-firewall:firewall/default&redirect=/configure/firewall"
                     hx-swap="none"
-                    hx-confirm="Reset default zone to its YANG default?">↺</button>
+                    hx-confirm="Reset default zone to its YANG default?">{{template "icon-reset"}}</button>
           </td>
         </tr>
         <tr>
@@ -90,7 +90,7 @@
             <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                     hx-delete="/configure/leaf?path=/infix-firewall:firewall/logging&redirect=/configure/firewall"
                     hx-swap="none"
-                    hx-confirm="Reset logging to its YANG default?">↺</button>
+                    hx-confirm="Reset logging to its YANG default?">{{template "icon-reset"}}</button>
           </td>
         </tr>
       </table>
@@ -166,7 +166,7 @@
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                 hx-delete="/configure/leaf?path={{printf "/infix-firewall:firewall/zone=%s/action" .Name | urlquery}}&redirect=/configure/firewall"
                                 hx-swap="none"
-                                hx-confirm="Reset action to its YANG default?">↺</button>
+                                hx-confirm="Reset action to its YANG default?">{{template "icon-reset"}}</button>
                       </td>
                     </tr>
                     <tr>
@@ -177,7 +177,7 @@
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                 hx-delete="/configure/leaf?path={{printf "/infix-firewall:firewall/zone=%s/description" .Name | urlquery}}&redirect=/configure/firewall"
                                 hx-swap="none"
-                                hx-confirm="Reset description to its YANG default?">↺</button>
+                                hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
                       </td>
                     </tr>
                     {{if .Network}}
@@ -396,7 +396,7 @@
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                 hx-delete="/configure/leaf?path={{printf "/infix-firewall:firewall/policy=%s/action" .Name | urlquery}}&redirect=/configure/firewall"
                                 hx-swap="none"
-                                hx-confirm="Reset action to its YANG default?">↺</button>
+                                hx-confirm="Reset action to its YANG default?">{{template "icon-reset"}}</button>
                       </td>
                     </tr>
                     <tr>
@@ -443,7 +443,7 @@
                         <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
                                 hx-delete="/configure/leaf?path={{printf "/infix-firewall:firewall/policy=%s/masquerade" .Name | urlquery}}&redirect=/configure/firewall"
                                 hx-swap="none"
-                                hx-confirm="Reset masquerade to its YANG default?">↺</button>
+                                hx-confirm="Reset masquerade to its YANG default?">{{template "icon-reset"}}</button>
                       </td>
                     </tr>
                   </table>
@@ -732,4 +732,3 @@
 
 {{end}}
 
-{{define "field-info"}}{{if .}} <span class="field-info" data-tip="{{.}}">ⓘ</span>{{end}}{{end}}

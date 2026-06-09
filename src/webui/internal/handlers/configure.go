@@ -119,7 +119,7 @@ func (h *ConfigureHandler) ApplyAndSave(w http.ResponseWriter, r *http.Request) 
 }
 
 // DeleteLeaf removes a single leaf from the candidate datastore so the YANG
-// default takes effect. Used by curated-page ↺ reset buttons.
+// default takes effect. Used by curated-page reset buttons.
 // DELETE /configure/leaf?path=...&redirect=...
 func (h *ConfigureHandler) DeleteLeaf(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
@@ -128,7 +128,9 @@ func (h *ConfigureHandler) DeleteLeaf(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "path and redirect required", http.StatusBadRequest)
 		return
 	}
-	if err := h.RC.Delete(r.Context(), candidatePath+path); err != nil {
+	// Swallow data-missing: the leaf was already absent, so the reset
+	// semantically succeeded — there was nothing left to remove.
+	if err := h.RC.Delete(r.Context(), candidatePath+path); err != nil && !restconf.IsDataMissing(err) {
 		renderSaveError(w, err)
 		return
 	}

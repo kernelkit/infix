@@ -543,6 +543,19 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   color: var(--fg);
 }
 .disk-pct { font-size: 0.8rem; color: var(--fg-muted); }
+.disk-tag {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
 .disk-stats {
   font-size: 0.78rem;
   color: var(--fg-muted);
@@ -944,7 +957,7 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 .page-content { display: contents; }
 
 /* ==========================================================================
-   Domain Specific: Firewall, Keystore, Firmware
+   Domain Specific: Firewall, Keystore, Software
    ========================================================================== */
 
 /* Zone Matrix */
@@ -1439,34 +1452,34 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   border-left: 3px solid var(--primary);
 }
 
-/* Firmware & Reboot */
-.fw-install-grid {
+/* Software & Reboot */
+.sw-install-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 1.5rem;
   margin-top: 1.5rem;
 }
-.fw-install-grid > .info-card { margin: 0; }
+.sw-install-grid > .info-card { margin: 0; }
 
-.fw-card-muted { opacity: 0.6; pointer-events: none; }
+.sw-card-muted { opacity: 0.6; pointer-events: none; }
 
-.fw-help-text {
+.sw-help-text {
   font-size: 0.875rem;
   color: var(--fg-muted);
   margin-bottom: 1rem;
   line-height: 1.6;
 }
-.fw-help-text a { color: var(--primary); }
-.fw-help-text code, .fw-hint-body code { font-family: var(--font-mono); font-size: 0.8em; }
+.sw-help-text a { color: var(--primary); }
+.sw-help-text code, .sw-hint-body code { font-family: var(--font-mono); font-size: 0.8em; }
 
-.fw-hint {
+.sw-hint {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   margin-bottom: 1.25rem;
   font-size: 0.875rem;
 }
-.fw-hint summary {
+.sw-hint summary {
   cursor: pointer;
   padding: 0.55rem 0.8rem;
   color: var(--fg-muted);
@@ -1476,16 +1489,16 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   align-items: center;
   gap: 0.4rem;
 }
-.fw-hint summary::-webkit-details-marker { display: none; }
-.fw-hint summary::before { content: '›'; display: inline-block; transition: transform 0.15s; }
-details.fw-hint[open] summary::before { transform: rotate(90deg); }
-.fw-hint-body {
+.sw-hint summary::-webkit-details-marker { display: none; }
+.sw-hint summary::before { content: '›'; display: inline-block; transition: transform 0.15s; }
+details.sw-hint[open] summary::before { transform: rotate(90deg); }
+.sw-hint-body {
   padding: 0.75rem 0.8rem;
   border-top: 1px solid var(--border);
 }
-.fw-hint-body p { margin: 0 0 0.5rem; color: var(--fg-muted); font-size: 0.85rem; }
-.fw-hint-body p:last-child { margin-bottom: 0; }
-.fw-hint-code {
+.sw-hint-body p { margin: 0 0 0.5rem; color: var(--fg-muted); font-size: 0.85rem; }
+.sw-hint-body p:last-child { margin-bottom: 0; }
+.sw-hint-code {
   display: block;
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -1499,7 +1512,7 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   margin-bottom: 0.5rem;
 }
 
-.fw-boot-order-row {
+.sw-boot-order-row {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1507,7 +1520,7 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   border-bottom: 1px solid var(--border);
   font-size: 0.8rem;
 }
-.fw-boot-order-label {
+.sw-boot-order-label {
   color: var(--fg-muted);
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -1516,37 +1529,37 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   margin-right: 0.2rem;
 }
 
-.fw-boot-slots { display: flex; gap: 0.3rem; align-items: center; flex: 1; }
-.fw-boot-badge { cursor: grab; user-select: none; }
-.fw-boot-badge.fw-boot-dragging { opacity: 0.35; }
-.fw-boot-badge.fw-boot-drop-before { box-shadow: -3px 0 0 var(--primary); }
+.sw-boot-slots { display: flex; gap: 0.3rem; align-items: center; flex: 1; }
+.sw-boot-badge { cursor: grab; user-select: none; }
+.sw-boot-badge.sw-boot-dragging { opacity: 0.35; }
+.sw-boot-badge.sw-boot-drop-before { box-shadow: -3px 0 0 var(--primary); }
 
-.fw-slot-list { display: flex; flex-direction: column; }
-.fw-slot-item {
+.sw-slot-list { display: flex; flex-direction: column; }
+.sw-slot-item {
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border);
 }
-.fw-slot-item:last-child { border-bottom: none; }
-.fw-slot-primary {
+.sw-slot-item:last-child { border-bottom: none; }
+.sw-slot-primary {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.2rem;
 }
-.fw-slot-name { font-weight: 600; font-size: 0.9rem; }
-.fw-slot-version {
+.sw-slot-name { font-weight: 600; font-size: 0.9rem; }
+.sw-slot-version {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--fg-muted);
 }
-.fw-slot-date {
+.sw-slot-date {
   font-size: 0.75rem;
   color: var(--fg-muted);
   opacity: 0.75;
   margin-top: 0.1rem;
 }
 
-.fw-upload-placeholder {
+.sw-upload-placeholder {
   border: 2px dashed var(--border);
   border-radius: var(--radius);
   padding: 2rem 1rem;
@@ -1560,10 +1573,10 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   font-size: 0.875rem;
 }
 
-.firmware-form .form-group { margin-bottom: 0.75rem; }
-.firmware-form .fw-checkbox-row { margin-bottom: 0.75rem; }
+.software-form .form-group { margin-bottom: 0.75rem; }
+.software-form .sw-checkbox-row { margin-bottom: 0.75rem; }
 
-.fw-checkbox-row {
+.sw-checkbox-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1572,7 +1585,7 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   cursor: pointer;
   user-select: none;
 }
-.fw-checkbox-row input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
+.sw-checkbox-row input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
 
 /* Multi-select dropdown built on <details> + checkboxes so the summary
    row looks like a native <select> trigger and the body holds the
@@ -1637,21 +1650,21 @@ details[open] > .cfg-multi-summary {
 }
 .cfg-multi-item input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
 
-.fw-result {
+.sw-result {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-size: 0.9rem;
   font-weight: 500;
 }
-.fw-result svg { flex-shrink: 0; }
-.fw-result-ok { color: var(--success); }
-.fw-result-err { color: var(--danger); }
-.fw-result-body { display: flex; flex-direction: column; }
-.fw-result-actions { margin-top: 1rem; }
+.sw-result svg { flex-shrink: 0; }
+.sw-result-ok { color: var(--success); }
+.sw-result-err { color: var(--danger); }
+.sw-result-body { display: flex; flex-direction: column; }
+.sw-result-actions { margin-top: 1rem; }
 
-/* Compact pill badges used in the firmware slot list and boot-order row. */
-.fw-install-grid .badge-neutral {
+/* Compact pill badges used in the software slot list and boot-order row. */
+.sw-install-grid .badge-neutral {
   background: var(--slate-200);
   font-size: 0.65rem;
   font-weight: 600;
@@ -1662,9 +1675,9 @@ details[open] > .cfg-multi-summary {
   vertical-align: middle;
 }
 @media (prefers-color-scheme: dark) {
-  .fw-install-grid .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
+  .sw-install-grid .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
 }
-.dark .fw-install-grid .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
+.dark .sw-install-grid .badge-neutral { background: var(--slate-700); color: var(--slate-300); }
 
 .progress-bar-wrap--flush { margin-top: 0; }
 
@@ -2217,6 +2230,13 @@ select.cfg-input {
   cursor: pointer;
 }
 .cfg-input-sm { max-width: 8rem; }
+/* Inputs in info-table cells must shrink to the column; without this the
+   intrinsic min-width of a datetime-local (wide in Firefox) forces the table
+   past the card edge. min-width:0 isn't enough on its own for datetime-local,
+   so cards with one use .info-table-fixed (table-layout: fixed + <colgroup>)
+   to cap the columns and make the input shrink. */
+.info-table .cfg-input { min-width: 0; }
+.info-table-fixed { table-layout: fixed; }
 .cfg-input-mono { font-family: var(--font-mono); font-size: 0.85rem; }
 .cfg-reset-col { width: 1%; white-space: nowrap; padding-left: 0.25rem; }
 .cfg-section-head { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.4rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
@@ -2833,12 +2853,14 @@ details[open].yt-leaf-item .yt-leaf-name::before { transform: rotate(90deg); }
 .field-info {
   display: inline-block;
   cursor: help;
-  font-size: 0.72rem;
+  font-size: 0.85em;
   font-weight: normal;
   color: var(--fg-muted);
   margin-left: 0.3rem;
   vertical-align: middle;
   line-height: 1;
+  position: relative;
+  top: -2px;
 }
 #field-tip {
   position: fixed;

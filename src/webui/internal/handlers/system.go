@@ -23,10 +23,10 @@ import (
 
 // raucInstallationStatus reads RAUC's Operation/Progress/LastError D-Bus
 // properties directly via the rauc-installation-status helper. Used during
-// installs because the RESTCONF path goes through yanger, which runs
-// `rauc status` and blocks while RAUC is busy.
-func raucInstallationStatus(ctx context.Context) (fwInstallerState, error) {
-	var inst fwInstallerState
+// installs because the RESTCONF path goes through the operational-state
+// machinery, which runs `rauc status` and blocks while RAUC is busy.
+func raucInstallationStatus(ctx context.Context) (swInstallerState, error) {
+	var inst swInstallerState
 	out, err := exec.CommandContext(ctx, "/usr/bin/rauc-installation-status").Output()
 	if err != nil {
 		return inst, err
@@ -35,27 +35,26 @@ func raucInstallationStatus(ctx context.Context) (fwInstallerState, error) {
 	return inst, err
 }
 
-// SystemHandler provides reboot, config download, and firmware update actions.
+// SystemHandler provides reboot, config download, and software install actions.
 type SystemHandler struct {
 	RC          *restconf.Client
-	Template    *template.Template // firmware page template
+	Template    *template.Template // software page template
 	SysCtrlTmpl *template.Template // system control page template
 	BackupTmpl  *template.Template // backup & restore page template
 
-	// fwSlots caches the last successfully-fetched Software card payload
-	// so /firmware?installing=1 can keep rendering slot details — RESTCONF
-	// /data/ietf-system:system-state blocks on `rauc status` while RAUC
-	// is busy, and the user wants to read (and adjust) boot order even
-	// between install attempts.
-	fwSlots fwSlotSnapshot
+	// swSlots caches the last successfully-fetched Software card payload
+	// so /software?installing=1 can keep rendering slot details — the
+	// RESTCONF path blocks on `rauc status` while RAUC is busy, and the
+	// user wants to read (and adjust) boot order even between install
+	// attempts.
+	swSlots swSlotSnapshot
 }
 
-// fwSlotSnapshot is a tiny RWMutex-guarded copy of the Firmware page's
-// Software card body. Mirrors the schema.Cache shape (rw lock + payload)
-// from internal/schema/refresh.go.
-type fwSlotSnapshot struct {
+// swSlotSnapshot is a tiny RWMutex-guarded copy of the Software page's
+// card body. Mirrors the schema.Cache shape (rw lock + payload) from
+// internal/schema/refresh.go.
+type swSlotSnapshot struct {
 	mu        sync.RWMutex
-	machine   string
 	bootOrder []string
 	slots     []slotEntry
 }
@@ -93,28 +92,12 @@ const rebootSpinnerHTML = `<div class="reboot-overlay">
 
 type systemControlData struct {
 	PageData
-	CurrentDatetime string // device clock, empty when unavailable
 }
 
 // SystemControl renders the System Control maintenance page.
 func (h *SystemHandler) SystemControl(w http.ResponseWriter, r *http.Request) {
 	data := systemControlData{
-		PageData: newPageData(r, "system-control", "System Control"),
-	}
-
-	var clockResp struct {
-		SystemState struct {
-			Clock struct {
-				CurrentDatetime string `json:"current-datetime"`
-			} `json:"clock"`
-		} `json:"ietf-system:system-state"`
-	}
-	if err := h.RC.Get(r.Context(), "/data/ietf-system:system-state/clock", &clockResp); err == nil {
-		dt := clockResp.SystemState.Clock.CurrentDatetime
-		if len(dt) > 19 {
-			dt = dt[:19]
-		}
-		data.CurrentDatetime = strings.Replace(dt, "T", " ", 1) + " UTC"
+		PageData: newPageData(w, r, "system-control", "System Control"),
 	}
 
 	tmplName := "system-control.html"
@@ -133,28 +116,32 @@ func (h *SystemHandler) SetDatetime(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	raw := r.FormValue("datetime") // YYYY-MM-DDTHH:MM from datetime-local input
+	raw := r.FormValue("datetime") // YYYY-MM-DDTHH:MM or :SS, ISO 24h
 	if raw == "" {
 		http.Error(w, "datetime required", http.StatusBadRequest)
 		return
 	}
+	// Accept either YYYY-MM-DDTHH:MM (16 chars) or with :SS (19 chars).
+	if len(raw) == 16 {
+		raw += ":00"
+	}
 
 	body := map[string]map[string]string{
-		"ietf-system:input": {"current-datetime": raw + ":00+00:00"},
+		"ietf-system:input": {"current-datetime": raw + "+00:00"},
 	}
-	err := h.RC.PostJSON(r.Context(), "/operations/ietf-system:set-current-datetime", body)
-
-	w.Header().Set("Content-Type", "text/html")
-	if err != nil {
+	if err := h.RC.PostJSON(r.Context(), "/operations/ietf-system:set-current-datetime", body); err != nil {
 		msg := err.Error()
 		if strings.Contains(msg, "ntp-active") {
-			fmt.Fprint(w, `<span class="sc-fd-err">NTP is active &mdash; disable NTP first under Configure &gt; System.</span>`)
-		} else {
-			fmt.Fprintf(w, `<span class="sc-fd-err">Failed: %s</span>`, template.HTMLEscapeString(msg))
+			msg = "NTP is active — disable NTP first under Configure > System"
 		}
+		log.Printf("set datetime: %v", err)
+		b, _ := json.Marshal(msg)
+		w.Header().Set("HX-Trigger", `{"cfgError":`+string(b)+`}`)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	fmt.Fprint(w, `<span class="sc-fd-ok">&#10003; System time updated</span>`)
+	w.Header().Set("HX-Trigger", `{"cfgSaved":"System time updated"}`)
+	w.WriteHeader(http.StatusOK)
 }
 
 // Shutdown triggers a device power-off via the ietf-system:system-shutdown RPC.
@@ -211,7 +198,7 @@ const factoryResetSpinnerHTML = `<div class="reboot-overlay">
 
 // Backup renders the Backup & Restore maintenance page.
 func (h *SystemHandler) Backup(w http.ResponseWriter, r *http.Request) {
-	data := newPageData(r, "backup", "Backup & Restore")
+	data := newPageData(w, r, "backup", "Backup & Restore")
 	tmplName := "backup.html"
 	if r.Header.Get("HX-Request") == "true" {
 		tmplName = "content"
@@ -311,62 +298,58 @@ func (h *SystemHandler) DownloadConfig(w http.ResponseWriter, r *http.Request) {
 
 // RESTCONF JSON structures for infix-system:software state.
 
-type fwSoftwareWrapper struct {
+type swStateWrapper struct {
 	SystemState struct {
-		Platform struct {
-			Machine string `json:"machine"`
-		} `json:"platform"`
-		Software fwSoftwareState `json:"infix-system:software"`
+		Software swState `json:"infix-system:software"`
 	} `json:"ietf-system:system-state"`
 }
 
-type fwSoftwareState struct {
+type swState struct {
 	Compatible string           `json:"compatible"`
 	Variant    string           `json:"variant"`
 	Booted     string           `json:"booted"`
 	BootOrder  []string         `json:"boot-order"`
-	Installer  fwInstallerState `json:"installer"`
-	Slots      []fwSlot         `json:"slot"`
+	Installer  swInstallerState `json:"installer"`
+	Slots      []swSlot         `json:"slot"`
 }
 
-type fwInstallerState struct {
+type swInstallerState struct {
 	Operation string              `json:"operation"`
-	Progress  fwInstallerProgress `json:"progress"`
+	Progress  swInstallerProgress `json:"progress"`
 	LastError string              `json:"last-error"`
 }
 
 // IsIdle reports whether RAUC has no install in flight. The YANG model leaves
 // Operation empty when no install has run yet and "idle" once one has completed.
-func (s fwInstallerState) IsIdle() bool {
+func (s swInstallerState) IsIdle() bool {
 	return s.Operation == "" || s.Operation == "idle"
 }
 
-type fwInstallerProgress struct {
+type swInstallerProgress struct {
 	Percentage int    `json:"percentage"`
 	Message    string `json:"message"`
 }
 
-type fwSlot struct {
+type swSlot struct {
 	Name      string       `json:"name"`
 	BootName  string       `json:"bootname"`
 	Class     string       `json:"class"`
 	State     string       `json:"state"`
-	Bundle    fwSlotBundle `json:"bundle"`
+	Bundle    swSlotBundle `json:"bundle"`
 	Installed struct {
 		Datetime string `json:"datetime"`
 	} `json:"installed"`
 }
 
-type fwSlotBundle struct {
+type swSlotBundle struct {
 	Compatible string `json:"compatible"`
 	Version    string `json:"version"`
 }
 
-// Template data for the firmware page.
+// Template data for the software page.
 
-type firmwareData struct {
+type softwareData struct {
 	PageData
-	Machine      string
 	BootOrder    []string
 	Slots        []slotEntry
 	Installer    *installerEntry
@@ -394,42 +377,38 @@ type installerEntry struct {
 	Success    bool // Done with no error
 }
 
-// Firmware renders the firmware overview page (GET /firmware).
-func (h *SystemHandler) Firmware(w http.ResponseWriter, r *http.Request) {
-	data := firmwareData{
-		PageData:   newPageData(r, "firmware", "Firmware"),
+// Software renders the software overview page (GET /software).
+func (h *SystemHandler) Software(w http.ResponseWriter, r *http.Request) {
+	data := softwareData{
+		PageData:   newPageData(w, r, "software", "Software"),
 		Message:    r.URL.Query().Get("msg"),
 		Installing: r.URL.Query().Get("installing") == "1",
 		AutoReboot: r.URL.Query().Get("auto-reboot") == "1",
 	}
 
-	// When an install is in progress, RESTCONF/yanger blocks on `rauc status`
-	// until RAUC is done. Skip the slow path and just read the installer
-	// state directly so the progress card can render immediately; SSE then
-	// drives the visual update during the install. The Software card body
-	// falls back to the last cached slot snapshot so it doesn't go blank.
+	// When an install is in progress, the RESTCONF path blocks on
+	// `rauc status` until RAUC is done. Skip the slow path and read
+	// the installer state directly so the progress card can render
+	// immediately; SSE then drives the visual update during the
+	// install. The Software card body falls back to the last cached
+	// slot snapshot so it doesn't go blank.
 	if data.Installing {
 		if inst, err := raucInstallationStatus(r.Context()); err == nil {
 			data.Installer = newInstallerEntry(inst)
 		} else {
-			log.Printf("firmware page (installing): %v", err)
+			log.Printf("software page (installing): %v", err)
 		}
-		h.fwSlots.mu.RLock()
-		data.Machine = h.fwSlots.machine
-		data.BootOrder = slices.Clone(h.fwSlots.bootOrder)
-		data.Slots = slices.Clone(h.fwSlots.slots)
-		h.fwSlots.mu.RUnlock()
+		h.swSlots.mu.RLock()
+		data.BootOrder = slices.Clone(h.swSlots.bootOrder)
+		data.Slots = slices.Clone(h.swSlots.slots)
+		h.swSlots.mu.RUnlock()
 	} else {
-		var sw fwSoftwareWrapper
+		var sw swStateWrapper
 		err := h.RC.Get(r.Context(), "/data/ietf-system:system-state", &sw)
 		if err != nil {
-			log.Printf("restconf firmware: %v", err)
-			data.Error = "Could not fetch firmware status"
+			log.Printf("restconf software: %v", err)
+			data.Error = "Could not fetch software status"
 		} else {
-			data.Machine = sw.SystemState.Platform.Machine
-			if data.Machine == "arm64" {
-				data.Machine = "aarch64"
-			}
 			data.BootOrder = sw.SystemState.Software.BootOrder
 			for _, s := range sw.SystemState.Software.Slots {
 				if s.Class != "rootfs" {
@@ -454,15 +433,14 @@ func (h *SystemHandler) Firmware(w http.ResponseWriter, r *http.Request) {
 
 			data.Installer = newInstallerEntry(sw.SystemState.Software.Installer)
 
-			h.fwSlots.mu.Lock()
-			h.fwSlots.machine = data.Machine
-			h.fwSlots.bootOrder = slices.Clone(data.BootOrder)
-			h.fwSlots.slots = slices.Clone(data.Slots)
-			h.fwSlots.mu.Unlock()
+			h.swSlots.mu.Lock()
+			h.swSlots.bootOrder = slices.Clone(data.BootOrder)
+			h.swSlots.slots = slices.Clone(data.Slots)
+			h.swSlots.mu.Unlock()
 		}
 	}
 
-	tmplName := "firmware.html"
+	tmplName := "software.html"
 	if r.Header.Get("HX-Request") == "true" {
 		tmplName = "content"
 	}
@@ -502,13 +480,13 @@ func (h *SystemHandler) SetBootOrder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// FirmwareUpload accepts a .pkg file upload, saves it to a temp file, and
+// SoftwareUpload accepts a .pkg file upload, saves it to a temp file, and
 // kicks off the install-bundle RPC asynchronously so the response (a
 // plain-text redirect target) reaches the browser before RAUC starts
 // writing slots. Upload size is capped at the nginx layer.
-func (h *SystemHandler) FirmwareUpload(w http.ResponseWriter, r *http.Request) {
+func (h *SystemHandler) SoftwareUpload(w http.ResponseWriter, r *http.Request) {
 	if h.raucBusy(r.Context()) {
-		http.Error(w, "firmware install already in progress", http.StatusConflict)
+		http.Error(w, "software install already in progress", http.StatusConflict)
 		return
 	}
 
@@ -531,9 +509,9 @@ func (h *SystemHandler) FirmwareUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	tmp, err := os.CreateTemp("", "webui-fw-*.pkg")
+	tmp, err := os.CreateTemp("", "webui-bundle-*.pkg")
 	if err != nil {
-		log.Printf("firmware upload: create temp: %v", err)
+		log.Printf("software upload: create temp: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -542,8 +520,8 @@ func (h *SystemHandler) FirmwareUpload(w http.ResponseWriter, r *http.Request) {
 	if _, err := io.Copy(tmp, file); err != nil {
 		tmp.Close()
 		os.Remove(tmpPath)
-		log.Printf("firmware upload: write: %v", err)
-		http.Error(w, "failed to save firmware", http.StatusInternalServerError)
+		log.Printf("software upload: write: %v", err)
+		http.Error(w, "failed to save bundle", http.StatusInternalServerError)
 		return
 	}
 	tmp.Close()
@@ -554,7 +532,7 @@ func (h *SystemHandler) FirmwareUpload(w http.ResponseWriter, r *http.Request) {
 	creds := restconf.CredentialsFromContext(r.Context())
 	go h.runInstall(creds, body, tmpPath)
 
-	target := "/firmware?installing=1"
+	target := "/software?installing=1"
 	if r.FormValue("auto-reboot") == "1" {
 		target += "&auto-reboot=1"
 	}
@@ -574,7 +552,7 @@ func (h *SystemHandler) runInstall(creds restconf.Credentials, body any, tmpPath
 	defer os.Remove(tmpPath)
 
 	if err := h.RC.PostJSON(ctx, "/operations/infix-system:install-bundle", body); err != nil {
-		log.Printf("firmware upload: install-bundle: %v", err)
+		log.Printf("software upload: install-bundle: %v", err)
 		return
 	}
 
@@ -596,8 +574,8 @@ func (h *SystemHandler) runInstall(creds restconf.Credentials, body any, tmpPath
 	}
 }
 
-// FirmwareInstall triggers a firmware install via the install-bundle RPC (POST /firmware/install).
-func (h *SystemHandler) FirmwareInstall(w http.ResponseWriter, r *http.Request) {
+// SoftwareInstall triggers a bundle install via the install-bundle RPC (POST /software/install).
+func (h *SystemHandler) SoftwareInstall(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
@@ -617,13 +595,13 @@ func (h *SystemHandler) FirmwareInstall(w http.ResponseWriter, r *http.Request) 
 
 	err := h.RC.PostJSON(r.Context(), "/operations/infix-system:install-bundle", body)
 	if err != nil {
-		log.Printf("firmware install: %v", err)
-		w.Header().Set("HX-Redirect", "/firmware?msg=Install+failed:+"+err.Error())
+		log.Printf("software install: %v", err)
+		w.Header().Set("HX-Redirect", "/software?msg=Install+failed:+"+err.Error())
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-	target := "/firmware?installing=1"
+	target := "/software?installing=1"
 	if r.FormValue("auto-reboot") == "1" {
 		target += "&auto-reboot=1"
 	}
@@ -631,10 +609,10 @@ func (h *SystemHandler) FirmwareInstall(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// FirmwareProgress streams installer status as SSE so the Go server does the
+// SoftwareProgress streams installer status as SSE so the Go server does the
 // polling and the browser just receives rendered HTML fragments.
-// GET /firmware/progress
-func (h *SystemHandler) FirmwareProgress(w http.ResponseWriter, r *http.Request) {
+// GET /software/progress
+func (h *SystemHandler) SoftwareProgress(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming not supported", http.StatusInternalServerError)
@@ -653,6 +631,7 @@ func (h *SystemHandler) FirmwareProgress(w http.ResponseWriter, r *http.Request)
 	defer ticker.Stop()
 
 	var lastKey string // change-detection: suppress redundant SSE frames
+	lastFrame := time.Now()
 
 	for {
 		select {
@@ -667,13 +646,27 @@ func (h *SystemHandler) FirmwareProgress(w http.ResponseWriter, r *http.Request)
 				key = fmt.Sprintf("%s|%d|%s|%s", data.Installer.Operation, data.Installer.Percentage, data.Installer.Message, data.Installer.LastError)
 			}
 			if key == lastKey && key != "" {
+				// RAUC sometimes parks Progress at the same percentage
+				// for tens of seconds (e.g., "Checking bundle" while
+				// verifying signatures, or quiet during slot write).
+				// Emit a comment as a keep-alive every 15 s so nginx's
+				// proxy_read_timeout and the browser EventSource both
+				// keep the stream warm — otherwise the connection gets
+				// torn down mid-install and the UI freezes on the last
+				// rendered frame until a manual page reload.
+				if time.Since(lastFrame) > 15*time.Second {
+					fmt.Fprint(w, ": keep-alive\n\n")
+					flusher.Flush()
+					lastFrame = time.Now()
+				}
 				continue
 			}
 			lastKey = key
+			lastFrame = time.Now()
 
 			var buf bytes.Buffer
-			if err := h.Template.ExecuteTemplate(&buf, "fw-progress-body", data); err != nil {
-				log.Printf("firmware progress template: %v", err)
+			if err := h.Template.ExecuteTemplate(&buf, "sw-progress-body", data); err != nil {
+				log.Printf("software progress template: %v", err)
 				continue
 			}
 
@@ -701,10 +694,10 @@ func (h *SystemHandler) FirmwareProgress(w http.ResponseWriter, r *http.Request)
 
 // installerSnapshot reads RAUC's installer state via rauc-installation-status
 // (direct D-Bus property read) and builds the template data for the
-// fw-progress-body fragment. The RESTCONF path is avoided because yanger runs
+// sw-progress-body fragment. The RESTCONF path is avoided because it runs
 // `rauc status`, which blocks while an install is in progress.
-func (h *SystemHandler) installerSnapshot(r *http.Request, autoReboot bool) firmwareProgressData {
-	data := firmwareProgressData{
+func (h *SystemHandler) installerSnapshot(r *http.Request, autoReboot bool) softwareProgressData {
+	data := softwareProgressData{
 		AutoReboot: autoReboot,
 	}
 
@@ -712,7 +705,7 @@ func (h *SystemHandler) installerSnapshot(r *http.Request, autoReboot bool) firm
 	if err != nil {
 		// Leave Installer nil so the template renders an indeterminate
 		// "Installing…" state on transient failures.
-		log.Printf("firmware progress poll: %v", err)
+		log.Printf("software progress poll: %v", err)
 		return data
 	}
 	data.Installer = newInstallerEntry(inst)
@@ -720,7 +713,7 @@ func (h *SystemHandler) installerSnapshot(r *http.Request, autoReboot bool) firm
 }
 
 // newInstallerEntry converts a raw YANG installer state to the template-facing struct.
-func newInstallerEntry(inst fwInstallerState) *installerEntry {
+func newInstallerEntry(inst swInstallerState) *installerEntry {
 	idle := inst.IsIdle()
 	done := idle && (inst.Progress.Percentage > 0 || inst.LastError != "")
 	return &installerEntry{
@@ -734,8 +727,8 @@ func newInstallerEntry(inst fwInstallerState) *installerEntry {
 	}
 }
 
-// firmwareProgressData is the template data for the fw-progress-body fragment.
-type firmwareProgressData struct {
+// softwareProgressData is the template data for the sw-progress-body fragment.
+type softwareProgressData struct {
 	AutoReboot bool
 	Installer  *installerEntry
 }

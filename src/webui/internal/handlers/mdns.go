@@ -97,7 +97,7 @@ type MDNSHandler struct {
 // Overview renders the mDNS page (GET /mdns).
 func (h *MDNSHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	data := mdnsPageData{
-		PageData: newPageData(r, "mdns", "mDNS"),
+		PageData: newPageData(w, r, "mdns", "mDNS"),
 	}
 
 	var raw mdnsWrapper
