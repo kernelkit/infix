@@ -51,7 +51,7 @@ with infamy.Test() as test:
         }})
 
     with test.step("Verify interfaces 'veth0a' and 'veth0b' exist"):
-        until(lambda: iface.exist(target, veth0a))
+        until(lambda: iface.exist(target, veth0a), attempts=30)
         until(lambda: iface.exist(target, veth0b))
 
     with test.step("Set IP address on target:data1 (dummy op)"):
