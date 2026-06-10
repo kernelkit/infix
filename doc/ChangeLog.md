@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Upgrade Linux kernel to 6.18.35 (LTS)
 - Add Wi-Fi roaming for fast, seamless handoff between access points that
   share an SSID: 802.11k, 802.11v and 802.11r (over-the-air FT).  See the
   [Wi-Fi][wifi] guide for details
