@@ -338,7 +338,7 @@ func TestMergeAugments(t *testing.T) {
 	doc := json.RawMessage(`{"interface":[{"name":"eth0","type":"infix-if-type:ethernet"},{"name":"br0","type":"infix-if-type:bridge"}]}`)
 
 	eth := map[string]json.RawMessage{
-		"eth0": json.RawMessage(`{"speed":1000,"duplex":"full"}`),
+		"eth0": json.RawMessage(`{"ethernet":{"speed":"1.000","duplex":"full"},"speed":"1000000000"}`),
 	}
 	fdb := map[string]json.RawMessage{
 		"br0": json.RawMessage(`[{"mac":"00:11:22:33:44:55"}]`),
@@ -388,5 +388,71 @@ func TestMergeAugmentsInvalidDoc(t *testing.T) {
 func TestTreeKey(t *testing.T) {
 	if treeKey != "ietf-interfaces:interfaces" {
 		t.Fatalf("treeKey = %q, want %q", treeKey, "ietf-interfaces:interfaces")
+	}
+}
+
+func TestTransformMDB(t *testing.T) {
+	// transformMDB receives the output of filterByMDBBridge: a flat array of entries
+	raw := json.RawMessage(`[{"dev":"br0","port":"e3","grp":"224.1.1.1","state":"temp"},{"dev":"br0","port":"e4","grp":"224.1.1.1","state":"permanent"},{"dev":"br0","port":"e3","grp":"ff02::6a","state":"temp"}]`)
+
+	result := transformMDB(raw)
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+
+	filters, ok := result["multicast-filter"].([]map[string]any)
+	if !ok {
+		t.Fatalf("unexpected type: %T", result["multicast-filter"])
+	}
+	if len(filters) != 2 {
+		t.Fatalf("expected 2 filters, got %d", len(filters))
+	}
+
+	if filters[0]["group"] != "224.1.1.1" {
+		t.Fatalf("unexpected group: %v", filters[0]["group"])
+	}
+
+	out, _ := json.Marshal(result)
+	if !json.Valid(out) {
+		t.Fatalf("invalid JSON: %s", out)
+	}
+}
+
+func TestTransformMDBEmpty(t *testing.T) {
+	if transformMDB(json.RawMessage(`[]`)) != nil {
+		t.Fatal("expected nil for empty")
+	}
+	if transformMDB(json.RawMessage(`[{"dev":"br0","port":"br0","grp":"ff02::6a","state":"temp"}]`)) == nil {
+		t.Fatal("expected non-nil for router-only entry")
+	}
+}
+
+func TestMDBBridgeNames(t *testing.T) {
+	raw := json.RawMessage(`[{"mdb":[{"dev":"br0","port":"e3","grp":"224.1.1.1","state":"temp"}],"router":{}},{"mdb":[{"dev":"br1","port":"e5","grp":"ff02::1","state":"temp"}],"router":{}}]`)
+	names := mdbBridgeNames(raw)
+	if len(names) != 2 || names[0] != "br0" || names[1] != "br1" {
+		t.Fatalf("unexpected names: %v", names)
+	}
+}
+
+func TestSTPFingerprintDeterministic(t *testing.T) {
+	br1 := map[string]json.RawMessage{
+		"br0": json.RawMessage(`{"root-id":"1.000.00:a0:85:00:01:00"}`),
+		"br1": json.RawMessage(`{"root-id":"2.000.00:a0:85:00:02:00"}`),
+	}
+	br2 := map[string]json.RawMessage{
+		"br1": json.RawMessage(`{"root-id":"2.000.00:a0:85:00:02:00"}`),
+		"br0": json.RawMessage(`{"root-id":"1.000.00:a0:85:00:01:00"}`),
+	}
+	pt1 := map[string]json.RawMessage{"e1": json.RawMessage(`{"state":"forwarding"}`)}
+	pt2 := map[string]json.RawMessage{"e1": json.RawMessage(`{"state":"forwarding"}`)}
+
+	if stpFingerprint(br1, pt1) != stpFingerprint(br2, pt2) {
+		t.Fatal("fingerprint must be independent of map iteration order")
+	}
+
+	br2["br0"] = json.RawMessage(`{"root-id":"8.000.00:a0:85:00:01:00"}`)
+	if stpFingerprint(br1, pt1) == stpFingerprint(br2, pt2) {
+		t.Fatal("fingerprint must change when STP data changes")
 	}
 }

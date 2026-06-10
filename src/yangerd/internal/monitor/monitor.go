@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -64,6 +66,11 @@ type NLMonitor struct {
 	wireguard map[string]json.RawMessage // ifname → WireGuard peer-status JSON
 
 	lastOperStatus map[string]string
+
+	// stpMu guards lastSTP, a fingerprint of the most recent mstpd STP
+	// query, letting the periodic poll rebuild only on actual change.
+	stpMu   sync.Mutex
+	lastSTP string
 }
 
 // New creates a netlink monitor backed by ip/bridge batch query workers.
@@ -249,6 +256,10 @@ func (m *NLMonitor) initialDump() error {
 	if err != nil {
 		neighRaw = json.RawMessage(`[]`)
 	}
+	mdbRaw, err := m.queryBridge("mdb show")
+	if err != nil {
+		mdbRaw = json.RawMessage(`[]`)
+	}
 
 	m.log.Debug("initialDump", "linkBytes", len(linkRaw), "addrBytes", len(addrRaw), "neighBytes", len(neighRaw))
 	m.validateAddrData("initialDump", addrRaw)
@@ -257,6 +268,9 @@ func (m *NLMonitor) initialDump() error {
 	m.links = linkRaw
 	m.addrs = addrRaw
 	m.neighs = neighRaw
+	for _, bridgeName := range mdbBridgeNames(mdbRaw) {
+		m.mdb[bridgeName] = filterByMDBBridge(mdbRaw, bridgeName)
+	}
 	for _, name := range interfaceNames(linkRaw) {
 		if st, ok := extractOperStatus(filterByIfName(linkRaw, name)); ok {
 			m.lastOperStatus[name] = st
@@ -361,8 +375,8 @@ func (m *NLMonitor) handleMDBUpdate() {
 	}
 
 	m.mu.Lock()
-	for _, bridgeName := range bridgeNames(raw) {
-		m.mdb[bridgeName] = filterByBridge(raw, bridgeName)
+	for _, bridgeName := range mdbBridgeNames(raw) {
+		m.mdb[bridgeName] = filterByMDBBridge(raw, bridgeName)
 	}
 	m.mu.Unlock()
 
@@ -448,6 +462,53 @@ func (m *NLMonitor) rebuild() {
 	m.tree.Set(treeKey, doc)
 }
 
+// RefreshSTP re-queries mstpd and rebuilds only when STP data changed.
+// mstpd's control socket is request/response with no event channel, and
+// the bridge-level root-id settles via BPDU exchange without any netlink
+// event, so STP state must be polled to stay current.  No bridges or an
+// unchanged result costs one cheap mstpd query and no document re-marshal.
+func (m *NLMonitor) RefreshSTP() {
+	links := m.Links()
+	resolver := stpquery.NewLinksIfIndexResolver(links)
+	brSTP, ptSTP := stpquery.Query(links, resolver)
+	if len(brSTP) == 0 && len(ptSTP) == 0 {
+		return
+	}
+
+	fp := stpFingerprint(brSTP, ptSTP)
+	m.stpMu.Lock()
+	changed := fp != m.lastSTP
+	m.lastSTP = fp
+	m.stpMu.Unlock()
+
+	if changed {
+		m.rebuild()
+	}
+}
+
+func stpFingerprint(brSTP, ptSTP map[string]json.RawMessage) string {
+	var b strings.Builder
+	writeSortedRaw(&b, "b", brSTP)
+	writeSortedRaw(&b, "p", ptSTP)
+	return b.String()
+}
+
+func writeSortedRaw(b *strings.Builder, prefix string, m map[string]json.RawMessage) {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		b.WriteString(prefix)
+		b.WriteByte(':')
+		b.WriteString(k)
+		b.WriteByte('=')
+		b.Write(m[k])
+		b.WriteByte('\n')
+	}
+}
+
 // mergeAugments adds ethernet, wifi, and bridge data into the
 // complete ietf-interfaces document produced by iface.Transform().
 func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, portSTP, wireguard map[string]json.RawMessage) json.RawMessage {
@@ -480,9 +541,20 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, por
 		}
 
 		if ethData, ok := ethernet[name]; ok {
-			var ethObj any
-			if err := json.Unmarshal(ethData, &ethObj); err == nil {
-				ifaceObj["ieee802-ethernet-interface:ethernet"] = ethObj
+			var wrapper map[string]json.RawMessage
+			if err := json.Unmarshal(ethData, &wrapper); err == nil {
+				if ethRaw, ok := wrapper["ethernet"]; ok {
+					var ethObj any
+					if err := json.Unmarshal(ethRaw, &ethObj); err == nil {
+						ifaceObj["ieee802-ethernet-interface:ethernet"] = ethObj
+					}
+				}
+				if speedRaw, ok := wrapper["speed"]; ok {
+					var speed string
+					if err := json.Unmarshal(speedRaw, &speed); err == nil {
+						ifaceObj["speed"] = speed
+					}
+				}
 			}
 		}
 
@@ -503,9 +575,8 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, por
 
 		if mdbData, ok := mdb[name]; ok {
 			bridgeObj := ensureBridgeAugment(ifaceObj)
-			var mdbObj any
-			if err := json.Unmarshal(mdbData, &mdbObj); err == nil {
-				bridgeObj["mdb"] = mdbObj
+			if mf := transformMDB(mdbData); mf != nil {
+				bridgeObj["multicast-filters"] = mf
 			}
 		}
 
@@ -981,4 +1052,120 @@ func filterByBridge(raw json.RawMessage, bridgeName string) json.RawMessage {
 		return json.RawMessage(`[]`)
 	}
 	return json.RawMessage(out)
+}
+
+// parseMDBEntries extracts the flat list of MDB entries from the
+// bridge batch output format: [{"mdb":[{entries...}],"router":{}}]
+func parseMDBEntries(raw json.RawMessage) []map[string]any {
+	var wrappers []map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &wrappers); err != nil {
+		return nil
+	}
+
+	var all []map[string]any
+	for _, w := range wrappers {
+		mdbRaw, ok := w["mdb"]
+		if !ok {
+			continue
+		}
+		var entries []map[string]any
+		if err := json.Unmarshal(mdbRaw, &entries); err != nil {
+			continue
+		}
+		all = append(all, entries...)
+	}
+	return all
+}
+
+func mdbBridgeNames(raw json.RawMessage) []string {
+	entries := parseMDBEntries(raw)
+	seen := make(map[string]struct{}, len(entries))
+	var names []string
+	for _, e := range entries {
+		name, _ := e["dev"].(string)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+	return names
+}
+
+func filterByMDBBridge(raw json.RawMessage, bridgeName string) json.RawMessage {
+	entries := parseMDBEntries(raw)
+	var filtered []map[string]any
+	for _, e := range entries {
+		if dev, _ := e["dev"].(string); dev == bridgeName {
+			filtered = append(filtered, e)
+		}
+	}
+	if len(filtered) == 0 {
+		return json.RawMessage(`[]`)
+	}
+	out, err := json.Marshal(filtered)
+	if err != nil {
+		return json.RawMessage(`[]`)
+	}
+	return json.RawMessage(out)
+}
+
+func transformMDB(raw json.RawMessage) map[string]any {
+	var entries []map[string]any
+	if err := json.Unmarshal(raw, &entries); err != nil || len(entries) == 0 {
+		return nil
+	}
+
+	type portEntry struct {
+		Port  string `json:"port"`
+		State string `json:"state"`
+	}
+
+	groups := make(map[string][]portEntry)
+	var order []string
+
+	for _, e := range entries {
+		grp, _ := e["grp"].(string)
+		port, _ := e["port"].(string)
+		state, _ := e["state"].(string)
+		if grp == "" || port == "" {
+			continue
+		}
+
+		if _, seen := groups[grp]; !seen {
+			order = append(order, grp)
+		}
+		groups[grp] = append(groups[grp], portEntry{
+			Port:  port,
+			State: mdbStateToYANG(state),
+		})
+	}
+
+	if len(groups) == 0 {
+		return nil
+	}
+
+	filters := make([]map[string]any, 0, len(order))
+	for _, grp := range order {
+		filters = append(filters, map[string]any{
+			"group": grp,
+			"ports": groups[grp],
+		})
+	}
+
+	return map[string]any{"multicast-filter": filters}
+}
+
+func mdbStateToYANG(state string) string {
+	switch state {
+	case "temp":
+		return "temporary"
+	case "permanent":
+		return "permanent"
+	default:
+		return state
+	}
 }
