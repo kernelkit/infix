@@ -124,7 +124,12 @@ with infamy.Test() as test:
 
         with test.step("Wait for upgrade to finish"):
             for _ in range(600):
-                oper = target.get_dict("/ietf-system:system-state/software")
+                # yanger may not yet has fully populated the operational
+                try:
+                    oper = target.get_dict("/ietf-system:system-state/software")
+                except:
+                    continue
+
                 installer = oper["system-state"]["software"]["installer"]
                 if installer["operation"] == "idle":
                     print(installer)
