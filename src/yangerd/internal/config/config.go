@@ -15,6 +15,7 @@ type Config struct {
 	PollRouting      time.Duration
 	PollNTP          time.Duration
 	PollHardware     time.Duration
+	PollSTP          time.Duration
 	EnableWifi       bool
 	EnableLLDP       bool
 	EnableFirewall   bool
@@ -32,6 +33,7 @@ func Load() *Config {
 		PollRouting:      envDur("YANGERD_POLL_INTERVAL_ROUTING", 10*time.Second),
 		PollNTP:          envDur("YANGERD_POLL_INTERVAL_NTP", 60*time.Second),
 		PollHardware:     envDur("YANGERD_POLL_INTERVAL_HARDWARE", 10*time.Second),
+		PollSTP:          envDur("YANGERD_POLL_INTERVAL_STP", 5*time.Second),
 		EnableWifi:       envBool("YANGERD_ENABLE_WIFI", false),
 		EnableLLDP:       envBool("YANGERD_ENABLE_LLDP", true),
 		EnableFirewall:   envBool("YANGERD_ENABLE_FIREWALL", true),

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"sort"
+	"regexp"
 	"strconv"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
@@ -16,8 +16,23 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/zapi"
 )
 
-const zapiSocketPath = "/var/run/frr/zserv.api"
+const (
+	zapiSocketPath = "/var/run/frr/zserv.api"
+	routingTreeKey = "ietf-routing:routing"
 
+	// debounceDelay coalesces a burst of ZAPI route notifications into a
+	// single RIB read.  FRR emits many RouteAdd/Del messages while a
+	// protocol converges; without debouncing we would re-read the table
+	// dozens of times in a few milliseconds.
+	debounceDelay = 200 * time.Millisecond
+)
+
+// subscribeTypes are the route types we ask zebra to redistribute.  We do
+// not use the route payloads themselves -- redistribution only ever
+// delivers the selected route per destination and does not reliably send
+// a delete when a route is superseded.  The subscription exists purely so
+// zebra notifies us that *something* changed; the authoritative table is
+// then read from zebra's vty socket (see RouteQuerier).
 var subscribeTypes = []zapi.RouteType{
 	zapi.RouteKernel,
 	zapi.RouteConnect,
@@ -27,39 +42,45 @@ var subscribeTypes = []zapi.RouteType{
 	zapi.RouteOSPF,
 }
 
-var routeTypeToProtocol = map[zapi.RouteType]string{
-	zapi.RouteKernel:  "infix-routing:kernel",
-	zapi.RouteConnect: "ietf-routing:direct",
-	zapi.RouteLocal:   "ietf-routing:direct",
-	zapi.RouteStatic:  "ietf-routing:static",
-	zapi.RouteOSPF:    "ietf-ospf:ospfv2",
-	zapi.RouteRIP:     "ietf-rip:rip",
+// RouteQuerier runs a "show ... json" command against FRR and returns its
+// raw output.  Production code uses an frrvty.Client (zebra's vty socket);
+// tests inject a fake.
+type RouteQuerier interface {
+	Query(ctx context.Context, command string) ([]byte, error)
 }
 
-// routeEntry pairs a ZAPI route with the wall-clock time it was first
-// received.  The timestamp is used for the YANG last-updated leaf.
-type routeEntry struct {
-	route      *zapi.Route
-	receivedAt time.Time
-}
-
+// ZAPIWatcher keeps the operational RIB (ietf-routing:routing/ribs) in
+// sync with FRR.  It does NOT reconstruct routes from the ZAPI stream:
+// the ZAPI socket is used only as a change trigger, and the full routing
+// table -- every candidate per destination, with FRR's own
+// selected/installed flags, exactly as "show ip route" renders it -- is
+// read from zebra's vty socket on each change.  Because every refresh is
+// a complete snapshot, a route removed from zebra simply disappears; we
+// never depend on receiving a ZAPI delete.
 type ZAPIWatcher struct {
-	tree   *tree.Tree
-	log    *slog.Logger
-	mu     sync.Mutex
-	routes map[string]*routeEntry
+	tree    *tree.Tree
+	querier RouteQuerier
+	log     *slog.Logger
+	refresh chan struct{}
 }
 
-const routingTreeKey = "ietf-routing:routing"
-
-func New(t *tree.Tree, log *slog.Logger) *ZAPIWatcher {
+func New(t *tree.Tree, querier RouteQuerier, log *slog.Logger) *ZAPIWatcher {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ZAPIWatcher{tree: t, log: log, routes: make(map[string]*routeEntry)}
+	return &ZAPIWatcher{
+		tree:    t,
+		querier: querier,
+		log:     log,
+		refresh: make(chan struct{}, 1),
+	}
 }
 
 func (w *ZAPIWatcher) Run(ctx context.Context) error {
+	// The refresh worker owns all writes to the tree and runs for the
+	// lifetime of the watcher, independent of the ZAPI connection.
+	go w.refreshLoop(ctx)
+
 	bo := backoff.Default()
 	delay := bo.Initial
 
@@ -81,6 +102,10 @@ func (w *ZAPIWatcher) Run(ctx context.Context) error {
 		delay = bo.Initial
 		w.log.Info("zapi watcher: connected", "socket", zapiSocketPath)
 
+		// Read the current table now that we are subscribed, so we have
+		// data even if no further events arrive.
+		w.triggerRefresh()
+
 		err = w.processMessages(ctx, conn)
 		_ = conn.Close()
 		if ctx.Err() != nil {
@@ -88,7 +113,6 @@ func (w *ZAPIWatcher) Run(ctx context.Context) error {
 		}
 
 		w.log.Warn("zapi watcher: disconnected", "err", err)
-		w.clearAllRoutes()
 	}
 }
 
@@ -127,6 +151,9 @@ func (w *ZAPIWatcher) connect(ctx context.Context) (net.Conn, error) {
 	return conn, nil
 }
 
+// processMessages drains the ZAPI stream.  We only care *that* a route
+// changed, not what changed -- each route add/delete triggers a debounced
+// re-read of the full table.
 func (w *ZAPIWatcher) processMessages(ctx context.Context, conn net.Conn) error {
 	for {
 		select {
@@ -135,235 +162,310 @@ func (w *ZAPIWatcher) processMessages(ctx context.Context, conn net.Conn) error 
 		default:
 		}
 
-		hdr, body, err := zapi.ReadMessage(conn)
+		hdr, _, err := zapi.ReadMessage(conn)
 		if err != nil {
 			return fmt.Errorf("read message: %w", err)
 		}
 
-		w.handleMessage(hdr, body)
+		switch hdr.Command {
+		case zapi.CmdRedistRouteAdd, zapi.CmdRedistRouteDel:
+			w.log.Debug("zapi watcher: route change", "cmd", hdr.Command, "vrf", hdr.VrfID)
+			w.triggerRefresh()
+		}
 	}
 }
 
-func (w *ZAPIWatcher) handleMessage(hdr zapi.Header, body []byte) {
-	w.log.Debug("zapi watcher: message", "cmd", hdr.Command, "vrf", hdr.VrfID, "len", hdr.Length)
+// triggerRefresh requests a table re-read.  The buffered channel collapses
+// multiple pending requests into one.
+func (w *ZAPIWatcher) triggerRefresh() {
+	select {
+	case w.refresh <- struct{}{}:
+	default:
+	}
+}
 
-	switch hdr.Command {
-	case zapi.CmdRedistRouteAdd:
-		route, err := zapi.DecodeRouteLog(body, w.log)
-		if err != nil {
-			w.log.Warn("zapi watcher: decode route add", "err", err, "bodyLen", len(body))
+func (w *ZAPIWatcher) refreshLoop(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
 			return
+		case <-w.refresh:
 		}
-		w.log.Debug("zapi watcher: route add",
-			"type", route.Type,
-			"prefix", route.Prefix.String(),
-			"distance", route.Distance,
-			"metric", route.Metric,
-			"nexthops", len(route.Nexthops),
-			"msg", route.Message,
-		)
-		w.addRoute(route)
-	case zapi.CmdRedistRouteDel:
-		route, err := zapi.DecodeRoute(body)
-		if err != nil {
-			w.log.Warn("zapi watcher: decode route del", "err", err, "bodyLen", len(body))
+
+		// Let a burst of notifications settle before reading.
+		select {
+		case <-ctx.Done():
 			return
+		case <-time.After(debounceDelay):
 		}
-		w.log.Debug("zapi watcher: route del",
-			"type", route.Type,
-			"prefix", route.Prefix.String(),
-		)
-		w.deleteRoute(route)
-	}
-}
-
-// routeKey returns a unique map key for a redistributed route.
-// FRR's redistribution sends a single RouteAdd per prefix+protocol —
-// nexthop changes are updates (no preceding RouteDel), so the key
-// must NOT include nexthops or distance.
-func routeKey(route *zapi.Route) string {
-	return ribName(route.Prefix) + ":" + route.Prefix.String() + ":" + routeProtocol(route.Type)
-}
-
-func (w *ZAPIWatcher) addRoute(route *zapi.Route) {
-	key := routeKey(route)
-	now := time.Now()
-
-	w.mu.Lock()
-	if existing, ok := w.routes[key]; ok {
-		now = existing.receivedAt
-	}
-	w.routes[key] = &routeEntry{route: route, receivedAt: now}
-	routeCount := len(w.routes)
-	w.mu.Unlock()
-
-	w.log.Debug("zapi watcher: stored route", "key", key, "totalRoutes", routeCount)
-	w.writeRibs()
-}
-
-func (w *ZAPIWatcher) deleteRoute(route *zapi.Route) {
-	key := routeKey(route)
-
-	w.mu.Lock()
-	delete(w.routes, key)
-	w.mu.Unlock()
-
-	w.writeRibs()
-}
-
-func (w *ZAPIWatcher) clearAllRoutes() {
-	w.mu.Lock()
-	w.routes = make(map[string]*routeEntry)
-	w.mu.Unlock()
-
-	w.writeRibs()
-}
-
-// destKey returns the grouping key for active route computation:
-// "rib:prefix" — all routes sharing the same destination compete.
-func destKey(route *zapi.Route) string {
-	return ribName(route.Prefix) + ":" + route.Prefix.String()
-}
-
-func (w *ZAPIWatcher) writeRibs() {
-	w.mu.Lock()
-
-	bestDist := make(map[string]uint8)
-	for _, entry := range w.routes {
-		dk := destKey(entry.route)
-		if d, ok := bestDist[dk]; !ok || entry.route.Distance < d {
-			bestDist[dk] = entry.route.Distance
+		// Drain a request that arrived during the debounce window; the
+		// upcoming read already reflects it.
+		select {
+		case <-w.refresh:
+		default:
 		}
+
+		w.writeRibs(ctx)
 	}
+}
 
-	// Collect entries into a slice for deterministic ordering.
-	allEntries := make([]*routeEntry, 0, len(w.routes))
-	for _, entry := range w.routes {
-		allEntries = append(allEntries, entry)
+// writeRibs reads the full IPv4 and IPv6 routing tables from zebra and
+// replaces the ribs subtree.  On a query error it leaves the previous
+// data untouched rather than blanking the table.
+func (w *ZAPIWatcher) writeRibs(ctx context.Context) {
+	ipv4, err := w.collectRoutes(ctx, "ipv4")
+	if err != nil {
+		w.log.Warn("zapi watcher: read ipv4 routes", "err", err)
+		return
 	}
-
-	// Sort by destination prefix so routes for the same destination are
-	// grouped together.  Within the same prefix, lowest distance first
-	// (active route on top).
-	sort.Slice(allEntries, func(i, j int) bool {
-		a, b := allEntries[i].route, allEntries[j].route
-		ap, bp := a.Prefix.String(), b.Prefix.String()
-		if ap != bp {
-			return ap < bp
-		}
-		return a.Distance < b.Distance
-	})
-
-	ipv4Routes := make([]json.RawMessage, 0, len(allEntries))
-	ipv6Routes := make([]json.RawMessage, 0, len(allEntries))
-
-	for _, entry := range allEntries {
-		dk := destKey(entry.route)
-		active := entry.route.Distance == bestDist[dk]
-		routeData := transformRoute(entry.route, active, entry.receivedAt)
-
-		if entry.route.Prefix.IP.To4() != nil {
-			ipv4Routes = append(ipv4Routes, routeData)
-		} else {
-			ipv6Routes = append(ipv6Routes, routeData)
-		}
+	ipv6, err := w.collectRoutes(ctx, "ipv6")
+	if err != nil {
+		w.log.Warn("zapi watcher: read ipv6 routes", "err", err)
+		return
 	}
-	w.mu.Unlock()
 
 	ribs := map[string]any{
 		"rib": []map[string]any{
 			{
 				"name":           "ipv4",
 				"address-family": "ietf-routing:ipv4",
-				"routes": map[string]any{
-					"route": ipv4Routes,
-				},
+				"routes":         map[string]any{"route": ipv4},
 			},
 			{
 				"name":           "ipv6",
 				"address-family": "ietf-routing:ipv6",
-				"routes": map[string]any{
-					"route": ipv6Routes,
-				},
+				"routes":         map[string]any{"route": ipv6},
 			},
 		},
 	}
 
-	ribsJSON, err := json.Marshal(map[string]any{"ribs": ribs})
+	data, err := json.Marshal(map[string]any{"ribs": ribs})
 	if err != nil {
 		w.log.Error("zapi watcher: marshal ribs", "err", err)
 		return
 	}
 
-	w.tree.Merge(routingTreeKey, ribsJSON)
+	w.tree.Merge(routingTreeKey, data)
 }
 
-func ribName(prefix net.IPNet) string {
-	if prefix.IP.To4() != nil {
-		return "ipv4"
-	}
-	return "ipv6"
-}
-
-func transformRoute(route *zapi.Route, active bool, receivedAt time.Time) json.RawMessage {
-	isIPv4 := route.Prefix.IP.To4() != nil
-
-	addrKey := "ietf-ipv6-unicast-routing:address"
-	dpKey := "ietf-ipv6-unicast-routing:destination-prefix"
-	if isIPv4 {
-		addrKey = "ietf-ipv4-unicast-routing:address"
-		dpKey = "ietf-ipv4-unicast-routing:destination-prefix"
+// collectRoutes runs "show ip route json" / "show ipv6 route json" and
+// transforms every entry into an ietf-routing route node.
+func (w *ZAPIWatcher) collectRoutes(ctx context.Context, family string) ([]json.RawMessage, error) {
+	command := "show ip route json"
+	if family == "ipv6" {
+		command = "show ipv6 route json"
 	}
 
-	nextHops := make([]map[string]any, 0, len(route.Nexthops))
-	for _, nh := range route.Nexthops {
-		hop := make(map[string]any)
+	out, err := w.querier.Query(ctx, command)
+	if err != nil {
+		return nil, err
+	}
 
-		if len(nh.Gate) > 0 && !nh.Gate.IsUnspecified() {
-			hop[addrKey] = nh.Gate.String()
+	// FRR prints "{}" for an empty table; otherwise a map of
+	// prefix -> [route, ...] (multiple candidates per prefix).
+	var table map[string][]map[string]any
+	if err := json.Unmarshal(out, &table); err != nil {
+		return nil, fmt.Errorf("parse %q: %w", command, err)
+	}
+
+	now := time.Now()
+	routes := make([]json.RawMessage, 0, len(table))
+	for prefix, entries := range table {
+		if !strings.Contains(prefix, "/") {
+			continue
 		}
+		for _, entry := range entries {
+			routes = append(routes, transformRoute(family, prefix, entry, now))
+		}
+	}
+	return routes, nil
+}
 
-		if nh.Ifindex > 0 {
-			ifi, err := net.InterfaceByIndex(int(nh.Ifindex))
-			if err == nil && ifi != nil && ifi.Name != "" {
-				hop["outgoing-interface"] = ifi.Name
-			} else {
-				hop["outgoing-interface"] = strconv.FormatUint(uint64(nh.Ifindex), 10)
+// protocolMap maps FRR's protocol names to IETF routing-protocol
+// identities.  Unknown protocols fall back to kernel so they still
+// validate against the model.
+var protocolMap = map[string]string{
+	"kernel":    "infix-routing:kernel",
+	"connected": "ietf-routing:direct",
+	"local":     "ietf-routing:direct",
+	"static":    "ietf-routing:static",
+	"ospf":      "ietf-ospf:ospfv2",
+	"ospf6":     "ietf-ospf:ospfv3",
+	"rip":       "ietf-rip:rip",
+	"ripng":     "ietf-rip:rip",
+}
+
+func protocolName(frr string) string {
+	if p, ok := protocolMap[frr]; ok {
+		return p
+	}
+	return "infix-routing:kernel"
+}
+
+// transformRoute converts one FRR JSON route entry into an ietf-routing
+// route node.  It mirrors the legacy yanger ietf_routing.py:add_protocol.
+func transformRoute(family, prefixKey string, route map[string]any, now time.Time) json.RawMessage {
+	addrKey := "ietf-ipv4-unicast-routing:address"
+	dpKey := "ietf-ipv4-unicast-routing:destination-prefix"
+	nhAddrKey := "ietf-ipv4-unicast-routing:next-hop-address"
+	hostLen := "32"
+	if family == "ipv6" {
+		addrKey = "ietf-ipv6-unicast-routing:address"
+		dpKey = "ietf-ipv6-unicast-routing:destination-prefix"
+		nhAddrKey = "ietf-ipv6-unicast-routing:next-hop-address"
+		hostLen = "128"
+	}
+
+	dst := stringField(route, "prefix")
+	if dst == "" {
+		dst = prefixKey
+	}
+	if !strings.Contains(dst, "/") {
+		plen := hostLen
+		if v, ok := route["prefixLen"]; ok {
+			plen = strconv.Itoa(toInt(v))
+		}
+		dst = dst + "/" + plen
+	}
+
+	frr := stringField(route, "protocol")
+
+	node := map[string]any{
+		dpKey:              dst,
+		"source-protocol":  protocolName(frr),
+		"route-preference": toInt(route["distance"]),
+		"last-updated":     now.Add(-parseUptime(stringField(route, "uptime"))).Format(time.RFC3339),
+	}
+
+	// Metric is modelled only for OSPF and RIP routes.
+	switch {
+	case strings.Contains(frr, "ospf"):
+		node["ietf-ospf:metric"] = toInt(route["metric"])
+	case strings.Contains(frr, "rip"):
+		node["ietf-rip:metric"] = toInt(route["metric"])
+	}
+
+	// "selected" is FRR's own best-path decision -- the '>' in
+	// "show ip route".  active is a presence leaf, encoded as [null].
+	if boolField(route, "selected") {
+		node["active"] = []any{nil}
+	}
+
+	installed := boolField(route, "installed")
+
+	nextHops := make([]map[string]any, 0)
+	if hops, ok := route["nexthops"].([]any); ok {
+		for _, h := range hops {
+			hop, ok := h.(map[string]any)
+			if !ok {
+				continue
+			}
+			nh := map[string]any{}
+			if ip := stringField(hop, "ip"); ip != "" {
+				nh[addrKey] = ip
+			} else if ifn := stringField(hop, "interfaceName"); ifn != "" {
+				nh["outgoing-interface"] = ifn
+			}
+			// zebra marks the nexthop programmed into the FIB with
+			// "fib":true (see zebra/zebra_vty.c).
+			if installed && boolField(hop, "fib") {
+				nh["infix-routing:installed"] = []any{nil}
+			}
+			if len(nh) > 0 {
+				nextHops = append(nextHops, nh)
 			}
 		}
-
-		if len(hop) > 0 {
-			nextHops = append(nextHops, hop)
-		}
 	}
 
-	routeNode := map[string]any{
-		dpKey:              route.Prefix.String(),
-		"source-protocol":  routeProtocol(route.Type),
-		"route-preference": route.Distance,
-		"last-updated":     receivedAt.Format(time.RFC3339),
-		"next-hop": map[string]any{
+	if len(nextHops) > 0 {
+		node["next-hop"] = map[string]any{
 			"next-hop-list": map[string]any{
 				"next-hop": nextHops,
 			},
-		},
+		}
+	} else {
+		nh := map[string]any{}
+		switch frr {
+		case "blackhole":
+			nh["special-next-hop"] = "blackhole"
+		case "unreachable":
+			nh["special-next-hop"] = "unreachable"
+		default:
+			if ifn := stringField(route, "interfaceName"); ifn != "" {
+				nh["outgoing-interface"] = ifn
+			}
+			if gw := stringField(route, "nexthop"); gw != "" {
+				nh[nhAddrKey] = gw
+			}
+		}
+		node["next-hop"] = nh
 	}
 
-	if active {
-		routeNode["active"] = []any{nil}
-	}
-
-	encoded, err := json.Marshal(routeNode)
+	encoded, err := json.Marshal(node)
 	if err != nil {
 		return json.RawMessage(`{}`)
 	}
-
-	return json.RawMessage(encoded)
+	return encoded
 }
 
-func routeProtocol(rt zapi.RouteType) string {
-	if protocol, ok := routeTypeToProtocol[rt]; ok {
-		return protocol
+func stringField(m map[string]any, key string) string {
+	if s, ok := m[key].(string); ok {
+		return s
 	}
-	return "infix-routing:kernel"
+	return ""
+}
+
+func boolField(m map[string]any, key string) bool {
+	b, _ := m[key].(bool)
+	return b
+}
+
+func toInt(v any) int {
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	case int64:
+		return int(n)
+	case json.Number:
+		i, _ := n.Int64()
+		return int(i)
+	case string:
+		i, _ := strconv.Atoi(n)
+		return i
+	}
+	return 0
+}
+
+// FRR uptime string formats (frrtime), ported from yanger's
+// uptime2datetime: "HH:MM:SS", "XdXXhXXm", "XXwXdXXh".
+var (
+	uptimeHMS = regexp.MustCompile(`^(\d{2}):(\d{2}):(\d{2})$`)
+	uptimeDHM = regexp.MustCompile(`^(\d+)d(\d{2})h(\d{2})m$`)
+	uptimeWDH = regexp.MustCompile(`^(\d{2})w(\d)d(\d{2})h$`)
+)
+
+// parseUptime converts an FRR uptime string into a duration.  The
+// last-updated leaf is then computed as now-uptime.  Unrecognised input
+// yields zero (i.e. last-updated == now).
+func parseUptime(s string) time.Duration {
+	atoi := func(x string) int { n, _ := strconv.Atoi(x); return n }
+
+	if m := uptimeHMS.FindStringSubmatch(s); m != nil {
+		return time.Duration(atoi(m[1]))*time.Hour +
+			time.Duration(atoi(m[2]))*time.Minute +
+			time.Duration(atoi(m[3]))*time.Second
+	}
+	if m := uptimeDHM.FindStringSubmatch(s); m != nil {
+		return time.Duration(atoi(m[1]))*24*time.Hour +
+			time.Duration(atoi(m[2]))*time.Hour +
+			time.Duration(atoi(m[3]))*time.Minute
+	}
+	if m := uptimeWDH.FindStringSubmatch(s); m != nil {
+		return time.Duration(atoi(m[1]))*7*24*time.Hour +
+			time.Duration(atoi(m[2]))*24*time.Hour +
+			time.Duration(atoi(m[3]))*time.Hour
+	}
+	return 0
 }
