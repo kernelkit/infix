@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Route preference: OSPF vs Static 
+Route preference: OSPF vs Static
 
 This test configures a device with both an OSPF-acquired route on a
 dedicated interface and a static route to the same destination on
 another interface. The static route has a higher preference value than
 OSPF.
 
-Initially, the device should prefer the OSPF route; if the OSPF route 
+Initially, the device should prefer the OSPF route; if the OSPF route
 becomes unavailable, the static route should take over.
 """
 
@@ -173,10 +173,8 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(R1, "192.168.20.0/24", proto="ietf-routing:static"), attempts=200)
 
     with test.step("Verify connectivity from PC:data1 to PC:data2 via OSPF"):
+        until(lambda: route.ipv4_route_exist(R1, "192.168.20.0/24", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
         ns1.must_reach("192.168.20.22")
-
-        ospf_route_active = route.ipv4_route_exist(R1, "192.168.20.0/24", proto="ietf-ospf:ospfv2", active_check=True)
-        assert ospf_route_active, "OSPF route should be preferred when available."
 
         hops = [row[1] for row in ns1.traceroute("192.168.20.22")]
         assert "192.168.60.2" in hops, f"Path does not use expected OSPF route: {hops}"
