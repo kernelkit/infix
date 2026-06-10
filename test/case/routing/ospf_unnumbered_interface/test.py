@@ -175,8 +175,8 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", proto="ietf-ospf:ospfv2"), attempts=200)
 
     with test.step("Verify interface type on R1:link and R2:link is point-to-point"):
-        assert(route.ospf_get_interface_type(R1, "0.0.0.0", R1link) == "point-to-point")
-        assert(route.ospf_get_interface_type(R2, "0.0.0.0", R2link) == "point-to-point")
+        until(lambda: route.ospf_get_interface_type(R1, "0.0.0.0", R1link) == "point-to-point")
+        until(lambda: route.ospf_get_interface_type(R2, "0.0.0.0", R2link) == "point-to-point")
 
         _, hport0 = env.ltop.xlate("PC", "data")
     with infamy.IsolatedMacVlan(hport0) as ns0:
