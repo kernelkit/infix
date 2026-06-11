@@ -29,6 +29,17 @@ module infix-ntp {
   contact      "kernelkit@googlegroups.com";
   description  "Infix deviations and augments to ietf-ntp.";
 
+  revision 2026-06-11 {
+    description "Fix iburst/burst peer-mode must expressions.
+
+                 The must was attached to the iburst/burst leaf, so the
+                 context node was the leaf itself; 'ntp:iburst'/'ntp:burst'
+                 then resolved as a non-existent child of the leaf, which
+                 libyang flagged as an unresolved schema node.  Reference
+                 the leaf's own value with '.' instead.";
+    reference "internal";
+  }
+
   revision 2026-03-09 {
     description "Add stratumweight to NTP server configuration.
 
@@ -351,7 +362,7 @@ module infix-ntp {
 
   deviation "/ntp:ntp/ntp:unicast-configuration/ntp:iburst" {
     deviate add {
-      must "not(ntp:iburst and ../type = 'ntp:uc-peer')" {
+      must "not(. = 'true' and ../type = 'ntp:uc-peer')" {
         error-message "iburst option is not supported in peer mode";
       }
     }
@@ -359,7 +370,7 @@ module infix-ntp {
 
   deviation "/ntp:ntp/ntp:unicast-configuration/ntp:burst" {
     deviate add {
-      must "not(ntp:burst and ../type = 'ntp:uc-peer')" {
+      must "not(. = 'true' and ../type = 'ntp:uc-peer')" {
         error-message "burst option is not supported in peer mode";
       }
     }
