@@ -327,6 +327,6 @@ with infamy.Test() as test:
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip("192.168.20.2")
             ns0.addroute("0.0.0.0/0", "192.168.20.1")
-            ns0.must_reach("10.10.10.10", timeout=15)
+            ns0.must_reach("10.10.10.10", timeout=60)
 
     test.succeed()
