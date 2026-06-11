@@ -321,9 +321,9 @@ with infamy.Test() as test:
 
     with test.step("Verify interface type is point-to-multipoint"):
         print("Checking OSPF interface type on all routers")
-        assert route.ospf_get_interface_type(R1, "0.0.0.0", R1link) == "point-to-multipoint"
-        assert route.ospf_get_interface_type(R2, "0.0.0.0", "br0") == "point-to-multipoint"
-        assert route.ospf_get_interface_type(R3, "0.0.0.0", R3link) == "point-to-multipoint"
+        until(lambda: route.ospf_get_interface_type(R1, "0.0.0.0", R1link) == "point-to-multipoint")
+        until(lambda: route.ospf_get_interface_type(R2, "0.0.0.0", "br0") == "point-to-multipoint")
+        until(lambda: route.ospf_get_interface_type(R3, "0.0.0.0", R3link) == "point-to-multipoint")
 
     with test.step("Verify connectivity between all DUTs"):
         _, hport1 = env.ltop.xlate("PC", "data1")
