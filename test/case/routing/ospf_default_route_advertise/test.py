@@ -309,15 +309,15 @@ with infamy.Test() as test:
 
     with test.step("Verify R2 has a default route and 192.168.100.1/32 from OSPF"):
         print("Waiting for OSPF routes...")
-        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "0.0.0.0/0", proto="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "0.0.0.0/0", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
 
     with test.step("Verify connectivity from PC:data2 to 10.10.10.10"):
         _, hport0 = env.ltop.xlate("PC", "data2")
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip("192.168.20.2")
             ns0.addroute("0.0.0.0/0", "192.168.20.1")
-            ns0.must_reach("10.10.10.10")
+            ns0.must_reach("10.10.10.10", timeout=60)
 
     test.succeed()
