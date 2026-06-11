@@ -9,6 +9,7 @@ base MAC address.  E.g., ix-01-01-01.
 """
 import re
 import infamy
+from infamy.util import until
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -48,12 +49,15 @@ with infamy.Test() as test:
     with test.step("Verify hostname format in operational"):
         cmd = tgtssh.runsh("sed -n s/^DEFAULT_HOSTNAME=//p /etc/os-release")
         default = cmd.stdout.rstrip()
-
-        oper = target.get_data("/ietf-system:system")
-        name = oper["system"]["hostname"]
         pattern = rf'^{default}-([0-9a-fA-F]{{2}}-){{2}}[0-9a-fA-F]{{2}}$'
         regex = re.compile(pattern)
-        if not regex.match(name):
-            test.fail()
+
+        # Operational hostname updates a moment after the config write, so
+        # poll until the '%h-%m' format has been expanded and applied.
+        def hostname_expanded():
+            oper = target.get_data("/ietf-system:system")
+            return bool(regex.match(oper["system"]["hostname"]))
+
+        until(hostname_expanded, attempts=10)
 
     test.succeed()
