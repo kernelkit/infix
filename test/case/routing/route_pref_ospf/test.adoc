@@ -9,7 +9,7 @@ dedicated interface and a static route to the same destination on
 another interface. The static route has a higher preference value than
 OSPF.
 
-Initially, the device should prefer the OSPF route; if the OSPF route 
+Initially, the device should prefer the OSPF route; if the OSPF route
 becomes unavailable, the static route should take over.
 
 ==== Topology
