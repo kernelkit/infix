@@ -140,7 +140,9 @@ class TestCase:
         if title is None:
             title = visitor.name
 
-        self.gen_topology()
+        has_topology = os.path.exists(self.topo_dot)
+        if has_topology:
+            self.gen_topology()
 
         with open(self.spec_path, "w", encoding='utf-8') as spec:
             # This is the test name/title  for the test-specification.pdf,
@@ -156,8 +158,9 @@ class TestCase:
             spec.write("==== Description\n\n")
             spec.write(description + "\n\n")
 
-            spec.write("==== Topology\n\n")
-            spec.write(f"image::topology.svg[{title} topology, align=center, scaledwidth=75%]\n\n")
+            if has_topology:
+                spec.write("==== Topology\n\n")
+                spec.write(f"image::topology.svg[{title} topology, align=center, scaledwidth=75%]\n\n")
 
             spec.write("==== Sequence\n\n")
             spec.writelines([f". {step}\n" for step in test_steps])
