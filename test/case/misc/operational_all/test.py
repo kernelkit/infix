@@ -1,23 +1,86 @@
 #!/usr/bin/env python3
-
-# Test that it is possible to get all operational data
 """
 Get operational
 
-Basic test just to get operational from test-config without errors.
+For every Infix device, verify the operational datastore against the
+test-config -- the running config is the source of truth, so it works
+regardless of how interfaces differ between devices:
+
+  1. The operational interfaces are exactly the configured interfaces --
+     no missing interface, and nothing operational that was not
+     configured.
+  2. Features the test-config does not enable (NTP, containers, routing
+     protocols) emit no operational data.
+
+Both checks use specific-path GETs, which behave consistently across
+NETCONF and RESTCONF.  A full-datastore GET is not portable: RESTCONF does
+not serve the operational datastore root, and NETCONF's operational
+provider errors when asked for an empty subtree.
+
+This test has no logical topology -- it reads state from whatever Infix
+DUTs the physical topology provides.
 """
 import infamy
-import infamy.iface as iface
+from infamy.util import parallel, until
+
+# Feature subtrees that must be absent because the test-config does not
+# enable them.  /ietf-routing:routing itself is always present (its RIB
+# reflects the kernel's connected/local routes), so we target the
+# config-gated control-plane-protocols child rather than all of routing.
+ABSENT = [
+    "/ietf-ntp:ntp",
+    "/infix-containers:containers",
+    "/ietf-routing:routing/control-plane-protocols",
+]
+
+
+def configured_interfaces(dut):
+    cfg = dut.get_config_dict("/ietf-interfaces:interfaces")
+    return {i["name"] for i in cfg["interfaces"]["interface"]}
+
+
+def verify_interfaces(name, dut, want):
+    """Operational interfaces must be exactly the configured set."""
+    oper = dut.get_data("/ietf-interfaces:interfaces")["interfaces"]["interface"]
+    have = {i["name"] for i in oper}
+    assert have == want, \
+        f"{name}: operational interfaces {sorted(have)} != configured {sorted(want)}"
+    return True
+
+
+def absent(dut, xpath):
+    # RESTCONF returns nothing for an absent subtree; NETCONF's operational
+    # provider errors when asked for one -- both mean "not present".
+    try:
+        return not dut.get_data(xpath)
+    except Exception:
+        return True
+
+
+def verify_absent(name, dut):
+    for xpath in ABSENT:
+        assert absent(dut, xpath), \
+            f"{name}: unexpected operational data at {xpath}"
+    return True
+
 
 with infamy.Test() as test:
-    with test.step("Set up topology and attach to target DUT"):
-        env = infamy.Env()
-        target = env.attach("target", "mgmt")
+    with test.step("Attach to all Infix DUTs in the topology"):
+        env = infamy.Env(ltop=False)
+        infixen = env.ptop.get_infixen()
+        assert infixen, "no Infix devices found in topology"
+        duts = dict(zip(infixen, parallel(*(lambda n=name: env.attach(n, "mgmt")
+                                            for name in infixen))))
 
-    with test.step("Copy test-config to running configuration"):
-        pass
+    with test.step("Verify operational interfaces match the test-config"):
+        def check(name, dut):
+            want = configured_interfaces(dut)
+            until(lambda: verify_interfaces(name, dut, want))
 
-    with test.step("Get all Operational data from 'target', verify there are no errors"):
-        target.get_data(parse=False)
+        parallel(*(lambda n=name, d=dut: check(n, d) for name, dut in duts.items()))
+
+    with test.step("Verify unconfigured feature subtrees are absent"):
+        parallel(*(lambda n=name, d=dut: verify_absent(n, d)
+                   for name, dut in duts.items()))
 
     test.succeed()

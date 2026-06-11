@@ -17,9 +17,6 @@
   infamy:
     specification: False
 
-- name: "Miscellaneous"
-  suite: misc/all.yaml
-
 
 - name: "System"
   suite: system/all.yaml
@@ -62,3 +59,7 @@
 
 - name: "Use Case Tests"
   suite: use_case/all.yaml
+
+- name: "Miscellaneous"
+  suite: misc/all.yaml
+

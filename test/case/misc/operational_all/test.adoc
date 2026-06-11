@@ -4,16 +4,28 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/operational_all]
 
 ==== Description
 
-Basic test just to get operational from test-config without errors.
+For every Infix device, verify the operational datastore against the
+test-config -- the running config is the source of truth, so it works
+regardless of how interfaces differ between devices:
 
-==== Topology
+  1. The operational interfaces are exactly the configured interfaces --
+     no missing interface, and nothing operational that was not
+     configured.
+  2. Features the test-config does not enable (NTP, containers, routing
+     protocols) emit no operational data.
 
-image::topology.svg[Get Operational topology, align=center, scaledwidth=75%]
+Both checks use specific-path GETs, which behave consistently across
+NETCONF and RESTCONF.  A full-datastore GET is not portable: RESTCONF does
+not serve the operational datastore root, and NETCONF's operational
+provider errors when asked for an empty subtree.
+
+This test has no logical topology -- it reads state from whatever Infix
+DUTs the physical topology provides.
 
 ==== Sequence
 
-. Set up topology and attach to target DUT
-. Copy test-config to running configuration
-. Get all Operational data from 'target', verify there are no errors
+. Attach to all Infix DUTs in the topology
+. Verify operational interfaces match the test-config
+. Verify unconfigured feature subtrees are absent
 
 
