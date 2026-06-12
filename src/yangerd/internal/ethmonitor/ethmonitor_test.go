@@ -48,11 +48,11 @@ func TestBuildEthernetContainerCopper1G(t *testing.T) {
 
 func TestBuildEthernetContainerFibre10G(t *testing.T) {
 	data := ethtoolJSON{
-		Speed:              10000,
-		Duplex:             "Full",
-		Port:               "FIBRE",
-		AutoNegotiation:    false,
-		SupportedLinkModes: []string{"10000baseSR/Full"},
+		Speed:               10000,
+		Duplex:              "Full",
+		Port:                "FIBRE",
+		AutoNegotiation:     false,
+		SupportedLinkModes:  []string{"10000baseSR/Full"},
 		AdvertisedLinkModes: []string{"10000baseSR/Full"},
 	}
 

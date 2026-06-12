@@ -38,12 +38,12 @@ type CommandRunner interface {
 // EthMonitor listens for ethtool genetlink monitor events and updates
 // interface ethernet operational state via a callback.
 type EthMonitor struct {
-	conn    *genetlink.Conn
-	family  genetlink.Family
-	groupID uint32
-	cmd     CommandRunner
-	ctx     context.Context
-	log     *slog.Logger
+	conn     *genetlink.Conn
+	family   genetlink.Family
+	groupID  uint32
+	cmd      CommandRunner
+	ctx      context.Context
+	log      *slog.Logger
 	onUpdate func(ifname string, data json.RawMessage)
 }
 
@@ -137,11 +137,13 @@ func (m *EthMonitor) RefreshInterface(ifname string) {
 
 // ethtoolJSON represents the relevant fields from `ethtool --json <ifname>`.
 type ethtoolJSON struct {
-	Speed              int      `json:"speed"`
-	Duplex             string   `json:"duplex"`
-	Port               string   `json:"port"`
-	AutoNegotiation    bool     `json:"auto-negotiation"`
-	SupportedLinkModes []string `json:"supported-link-modes"`
+	// Speed must be a 64-bit type: ethtool reports unknown speed as
+	// 0xFFFFFFFF, which overflows int on 32-bit targets (arm).
+	Speed               int64    `json:"speed"`
+	Duplex              string   `json:"duplex"`
+	Port                string   `json:"port"`
+	AutoNegotiation     bool     `json:"auto-negotiation"`
+	SupportedLinkModes  []string `json:"supported-link-modes"`
 	AdvertisedLinkModes []string `json:"advertised-link-modes"`
 }
 
@@ -275,7 +277,7 @@ func extractIfname(data []byte) (string, error) {
 // linkModeKey is the lookup key for phy-type/pmd-type mapping.
 type linkModeKey struct {
 	Port      string
-	SpeedMbps int
+	SpeedMbps int64
 	Duplex    string
 }
 
@@ -288,27 +290,27 @@ type linkModeMapping struct {
 // linkModes maps (port, speed, duplex) → (phy-type, pmd-type) per
 // IEEE Std 802.3.2-2025 (ieee802-ethernet-phy-type).
 var linkModes = map[linkModeKey]linkModeMapping{
-	{"Twisted Pair", 10, "full"}:       {"10BASE-T", "10BASE-T"},
-	{"Twisted Pair", 10, "half"}:       {"10BASE-T", "10BASE-T"},
-	{"Twisted Pair", 100, "full"}:      {"100BASE-X", "100BASE-TX"},
-	{"Twisted Pair", 100, "half"}:      {"100BASE-X", "100BASE-TX"},
-	{"Twisted Pair", 1000, "full"}:     {"1000BASE-T", "1000BASE-T"},
-	{"Twisted Pair", 1000, "half"}:     {"1000BASE-T", "1000BASE-T"},
-	{"Twisted Pair", 2500, "full"}:     {"2.5GBASE-T", "2.5GBASE-T"},
-	{"Twisted Pair", 5000, "full"}:     {"5GBASE-T", "5GBASE-T"},
-	{"Twisted Pair", 10000, "full"}:    {"10GBASE-T", "10GBASE-T"},
-	{"Twisted Pair", 25000, "full"}:    {"25GBASE-T", "25GBASE-T"},
-	{"Twisted Pair", 40000, "full"}:    {"40GBASE-T", "40GBASE-T"},
-	{"MII", 10, "full"}:               {"10BASE-T", "10BASE-T"},
-	{"MII", 10, "half"}:               {"10BASE-T", "10BASE-T"},
-	{"MII", 100, "full"}:              {"100BASE-X", "100BASE-TX"},
-	{"MII", 100, "half"}:              {"100BASE-X", "100BASE-TX"},
-	{"FIBRE", 100, "full"}:            {"100BASE-X", ""},
-	{"FIBRE", 1000, "full"}:           {"1000BASE-X", ""},
-	{"FIBRE", 10000, "full"}:          {"10GBASE-R", ""},
-	{"FIBRE", 25000, "full"}:          {"25GBASE-R", ""},
-	{"FIBRE", 40000, "full"}:          {"40GBASE-R", ""},
-	{"FIBRE", 100000, "full"}:         {"100GBASE-R", ""},
+	{"Twisted Pair", 10, "full"}:             {"10BASE-T", "10BASE-T"},
+	{"Twisted Pair", 10, "half"}:             {"10BASE-T", "10BASE-T"},
+	{"Twisted Pair", 100, "full"}:            {"100BASE-X", "100BASE-TX"},
+	{"Twisted Pair", 100, "half"}:            {"100BASE-X", "100BASE-TX"},
+	{"Twisted Pair", 1000, "full"}:           {"1000BASE-T", "1000BASE-T"},
+	{"Twisted Pair", 1000, "half"}:           {"1000BASE-T", "1000BASE-T"},
+	{"Twisted Pair", 2500, "full"}:           {"2.5GBASE-T", "2.5GBASE-T"},
+	{"Twisted Pair", 5000, "full"}:           {"5GBASE-T", "5GBASE-T"},
+	{"Twisted Pair", 10000, "full"}:          {"10GBASE-T", "10GBASE-T"},
+	{"Twisted Pair", 25000, "full"}:          {"25GBASE-T", "25GBASE-T"},
+	{"Twisted Pair", 40000, "full"}:          {"40GBASE-T", "40GBASE-T"},
+	{"MII", 10, "full"}:                      {"10BASE-T", "10BASE-T"},
+	{"MII", 10, "half"}:                      {"10BASE-T", "10BASE-T"},
+	{"MII", 100, "full"}:                     {"100BASE-X", "100BASE-TX"},
+	{"MII", 100, "half"}:                     {"100BASE-X", "100BASE-TX"},
+	{"FIBRE", 100, "full"}:                   {"100BASE-X", ""},
+	{"FIBRE", 1000, "full"}:                  {"1000BASE-X", ""},
+	{"FIBRE", 10000, "full"}:                 {"10GBASE-R", ""},
+	{"FIBRE", 25000, "full"}:                 {"25GBASE-R", ""},
+	{"FIBRE", 40000, "full"}:                 {"40GBASE-R", ""},
+	{"FIBRE", 100000, "full"}:                {"100GBASE-R", ""},
 	{"Direct Attach Copper", 10000, "full"}:  {"10GBASE-R", ""},
 	{"Direct Attach Copper", 25000, "full"}:  {"25GBASE-R", "25GBASE-CR"},
 	{"Direct Attach Copper", 40000, "full"}:  {"40GBASE-R", "40GBASE-CR4"},
@@ -319,36 +321,36 @@ var linkModes = map[linkModeKey]linkModeMapping{
 // identity suffixes. The kernel reports modes like "1000baseT/Full";
 // we strip the "/Full" or "/Half" suffix before lookup.
 var ethtoolToPMD = map[string]string{
-	"10baseT":          "10BASE-T",
-	"10baseT1L":        "10BASE-T1L",
-	"100baseT":         "100BASE-TX",
-	"100baseT1":        "100BASE-T1",
-	"100baseFX":        "100BASE-FX",
-	"1000baseT":        "1000BASE-T",
-	"1000baseT1":       "1000BASE-T1",
-	"1000baseX":        "1000BASE-LX",
-	"1000baseKX":       "1000BASE-KX",
-	"2500baseT":        "2.5GBASE-T",
-	"2500baseX":        "2.5GBASE-X",
-	"5000baseT":        "5GBASE-T",
-	"10000baseT":       "10GBASE-T",
-	"10000baseSR":      "10GBASE-SR",
-	"10000baseLR":      "10GBASE-LR",
-	"10000baseLRM":     "10GBASE-LRM",
-	"10000baseER":      "10GBASE-ER",
-	"10000baseKR":      "10GBASE-KR",
-	"10000baseKX4":     "10GBASE-KX4",
-	"25000baseCR":      "25GBASE-CR",
-	"25000baseSR":      "25GBASE-SR",
-	"25000baseKR":      "25GBASE-KR",
-	"40000baseCR4":     "40GBASE-CR4",
-	"40000baseSR4":     "40GBASE-SR4",
-	"40000baseLR4":     "40GBASE-LR4",
-	"40000baseKR4":     "40GBASE-KR4",
-	"100000baseCR4":    "100GBASE-CR4",
-	"100000baseSR4":    "100GBASE-SR4",
+	"10baseT":           "10BASE-T",
+	"10baseT1L":         "10BASE-T1L",
+	"100baseT":          "100BASE-TX",
+	"100baseT1":         "100BASE-T1",
+	"100baseFX":         "100BASE-FX",
+	"1000baseT":         "1000BASE-T",
+	"1000baseT1":        "1000BASE-T1",
+	"1000baseX":         "1000BASE-LX",
+	"1000baseKX":        "1000BASE-KX",
+	"2500baseT":         "2.5GBASE-T",
+	"2500baseX":         "2.5GBASE-X",
+	"5000baseT":         "5GBASE-T",
+	"10000baseT":        "10GBASE-T",
+	"10000baseSR":       "10GBASE-SR",
+	"10000baseLR":       "10GBASE-LR",
+	"10000baseLRM":      "10GBASE-LRM",
+	"10000baseER":       "10GBASE-ER",
+	"10000baseKR":       "10GBASE-KR",
+	"10000baseKX4":      "10GBASE-KX4",
+	"25000baseCR":       "25GBASE-CR",
+	"25000baseSR":       "25GBASE-SR",
+	"25000baseKR":       "25GBASE-KR",
+	"40000baseCR4":      "40GBASE-CR4",
+	"40000baseSR4":      "40GBASE-SR4",
+	"40000baseLR4":      "40GBASE-LR4",
+	"40000baseKR4":      "40GBASE-KR4",
+	"100000baseCR4":     "100GBASE-CR4",
+	"100000baseSR4":     "100GBASE-SR4",
 	"100000baseLR4_ER4": "100GBASE-LR4",
-	"100000baseKR4":    "100GBASE-KR4",
+	"100000baseKR4":     "100GBASE-KR4",
 }
 
 // ethtoolModesToPMD translates a list of ethtool link-mode strings
