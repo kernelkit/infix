@@ -36,6 +36,19 @@ submodule infix-if-wireguard {
   contact      "kernelkit@googlegroups.com";
   description  "WireGuard VPN tunnel interface";
 
+  revision 2026-06-11 {
+    description "Fix private-key/public-key-bag key-format must expressions.
+
+                 deref() of a *-ref leafref resolves to the referenced key's
+                 'name' leaf, so 'deref(.)/ks:public-key-format' looked for the
+                 format leaf as a child of 'name' (which does not exist).  Step
+                 up to the key entry with 'deref(.)/../...', matching the
+                 working preshared-key must.  For the truststore public-key-bag,
+                 public-key-format lives under the 'public-key' list, so descend
+                 via 'deref(.)/../ts:public-key/ts:public-key-format'.";
+    reference "internal";
+  }
+
   revision 2025-11-09 {
     description "Initial revision";
     reference "internal";
@@ -149,9 +162,9 @@ submodule infix-if-wireguard {
         type ks:central-asymmetric-key-ref;
         mandatory true;
         description "Reference to WireGuard private key (X25519/Curve25519 format)";
-        must "not(deref(.)/ks:public-key-format) or "
-          + "(derived-from-or-self(deref(.)/ks:public-key-format,  'ixct:x25519-public-key-format') and "
-          + "derived-from-or-self(deref(.)/ks:private-key-format,  'ixct:x25519-private-key-format'))" {
+        must "not(deref(.)/../ks:public-key-format) or "
+          + "(derived-from-or-self(deref(.)/../ks:public-key-format,  'ixct:x25519-public-key-format') and "
+          + "derived-from-or-self(deref(.)/../ks:private-key-format,  'ixct:x25519-private-key-format'))" {
           error-message "Private key must be in WireGuard (X25519/Curve25519) format";
         }
       }
@@ -177,8 +190,8 @@ submodule infix-if-wireguard {
 
         leaf public-key-bag {
           type ts:central-public-key-bag-ref;
-          must "not(deref(.)/ts:public-key-format) or "
-            + "(derived-from-or-self(deref(.)/ts:public-key-format,  'ixct:x25519-public-key-format'))" {
+          must "not(deref(.)/../ts:public-key/ts:public-key-format) or "
+            + "(derived-from-or-self(deref(.)/../ts:public-key/ts:public-key-format,  'ixct:x25519-public-key-format'))" {
             error-message "Public key must be in WireGuard (X25519/Curve25519) format";
           }
           description "Reference to public key bag containing peer public keys";

@@ -41,6 +41,12 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2026-06-11 {
+    description "Fix WireGuard key-format must expressions, see
+                 infix-if-wireguard@2026-06-11.";
+    reference "internal";
+  }
+
   revision 2026-05-18 {
     description "Track ieee802-ethernet-interface@2025-09-10 upgrade
                  (IEEE Std 802.3.2-2025): operational data now exposes
