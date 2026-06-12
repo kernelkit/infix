@@ -4,11 +4,15 @@ Change Log
 All notable changes to the project are documented in this file.
 
 [v26.06.0][UNRELEASED]
---------------
+-------------------------
 
 ### Changes
 
 - Upgrade Linux kernel to 6.18.35 (LTS)
+- Add basic web interface: static status pages and a tree view of operational
+  status.  Curated configuration pages for some common tasks and a YANG tree
+  editor for the rest.  Also includes a maintenance section for firmware
+  upgrade, backup & restore, and more
 - Add Wi-Fi roaming for fast, seamless handoff between access points that
   share an SSID: 802.11k, 802.11v and 802.11r (over-the-air FT).  See the
   [Wi-Fi][wifi] guide for details
@@ -21,11 +25,15 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
-- Firewall masquerade no longer enables the global IPv4/IPv6 forwarding
-  sysctls.  You must now enable IP forwarding explicitly on the interfaces
-  that should route traffic; enabling NAT alone is no longer enough
+- Enabling IP masquerading in the firewall no longer enables IP forwarding on
+  all interfaces.  This has been an issue ever since the firewall support was
+  introduced in v25.10.0
+- Fix file permission regression in `/cfg/startup-config.cfg`, causing the
+  default `admin` user no permission to read or write the file from shell
+- Fix admin url shown for HTTP/HTTPS links in <https://network.local> browser,
+  used pre-conflict resolution hostname.local, instead of hostname-2.local
 
-[wifi]: wifi.md
+[wifi]: https://www.kernelkit.org/infix/latest/wifi/
 
 [v26.05.0][] - 2026-05-29
 -------------------------
@@ -84,9 +92,9 @@ All notable changes to the project are documented in this file.
   show`, which were not expanded, so `show interface` and other operational
   reads failed.  Ranges are now expanded and listed correctly
 
-[ethernet]: ethernet.md#restricting-advertised-link-modes
+[ethernet]: https://www.kernelkit.org/infix/latest/ethernet/#restricting-advertised-link-modes
 [BPI-R3]:   https://docs.banana-pi.org/en/BPI-R3/BananaPi_BPI-R3
-[AcerConnectVero]: ../board/aarch64/acer-connect-vero-w6m/
+[AcerConnectVero]: https://github.com/kernelkit/infix/tree/main/board/aarch64/acer-connect-vero-w6m
 
 [v26.04.0][] - 2026-04-30
 -------------------------
@@ -2160,6 +2168,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.05.0...HEAD
+[v26.06.0]:   https://github.com/kernelkit/infix/compare/v26.05.0...v26.06.0
 [v26.05.0]:   https://github.com/kernelkit/infix/compare/v26.04.0...v26.05.0
 [v26.04.0]:   https://github.com/kernelkit/infix/compare/v26.03.0...v26.04.0
 [v26.03.0]:   https://github.com/kernelkit/infix/compare/v26.02.0...v26.03.0
