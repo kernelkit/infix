@@ -27,10 +27,26 @@
         <td><span class="status-dot {{if .StatusUp}}status-up{{else}}status-down{{end}}"></span>{{.Status}}</td>
       </tr>
       {{if .PhysAddr}}<tr><th>MAC Address</th><td>{{.PhysAddr}}</td></tr>{{end}}
-      {{if .MTU}}<tr><th>MTU</th><td>{{.MTU}}</td></tr>{{end}}
-      {{if .Speed}}<tr><th>Speed</th><td>{{.Speed}}</td></tr>{{end}}
-      {{if .Duplex}}<tr><th>Duplex</th><td>{{.Duplex}}</td></tr>{{end}}
-      {{if .AutoNeg}}<tr><th>Auto-negotiation</th><td>{{.AutoNeg}}</td></tr>{{end}}
+      {{if .MTU}}<tr><th>MTU{{template "field-info" (index .Desc "mtu")}}</th><td>{{.MTU}}</td></tr>{{end}}
+      {{if .Speed}}<tr><th>Speed{{template "field-info" (index .Desc "speed")}}</th><td>{{.Speed}}</td></tr>{{end}}
+      {{if .Duplex}}<tr><th>Duplex{{template "field-info" (index .Desc "duplex")}}</th><td>{{.Duplex}}</td></tr>{{end}}
+      {{if .AutoNeg}}<tr><th>Auto-negotiation{{template "field-info" (index .Desc "autoneg")}}</th><td>{{.AutoNeg}}</td></tr>{{end}}
+      {{if .PhyType}}<tr><th>PHY type{{template "field-info" (index .Desc "phy-type")}}</th><td>{{.PhyType}}</td></tr>{{end}}
+      {{if .PMDType}}<tr><th>PMD type{{template "field-info" (index .Desc "pmd-type")}}</th><td>{{.PMDType}}</td></tr>{{end}}
+      {{if or .SupportedPMDs .AdvertisedPMDs}}
+      <tr><th>Link modes</th><td>
+        <div class="pmd-compare">
+          <div class="pmd-col">
+            <div class="pmd-col-head">Supported{{template "field-info" (index .Desc "supported")}}</div>
+            <ul class="pmd-list">{{range .SupportedPMDs}}<li>{{.}}</li>{{end}}</ul>
+          </div>
+          <div class="pmd-col">
+            <div class="pmd-col-head">Advertised{{template "field-info" (index .Desc "advertised")}}</div>
+            <ul class="pmd-list">{{range .AdvertisedPMDs}}<li>{{.}}</li>{{end}}</ul>
+          </div>
+        </div>
+      </td></tr>
+      {{end}}
       {{if .WiFiMode}}<tr><th>Mode</th><td>{{.WiFiMode}}</td></tr>{{end}}
       {{if .WiFiSSID}}<tr><th>SSID</th><td>{{.WiFiSSID}}</td></tr>{{end}}
       {{if .WiFiSignal}}<tr><th>Signal</th><td>{{.WiFiSignal}}</td></tr>{{end}}

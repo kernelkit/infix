@@ -1398,6 +1398,33 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 .eth-stats dt { color: var(--fg-muted); font-family: var(--font-mono); }
 .eth-stats dd { text-align: right; font-family: var(--font-mono); font-weight: 600; }
 
+/* Side-by-side comparison of supported vs advertised PMDs on iface-detail.
+   Equal-width columns keep the lists visually parallel even when one side
+   is empty (no auto-negotiation, or no module data yet). */
+.pmd-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.pmd-col-head {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  margin-bottom: 0.3rem;
+}
+.pmd-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+.pmd-list li {
+  padding: 0.1rem 0;
+}
+
 .iface-detail-header { margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
 .iface-detail-header h2 { font-size: 1.5rem; font-weight: 600; color: var(--fg); }
 .back-link { display: inline-flex; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem; }
@@ -1546,6 +1573,69 @@ details.fw-hint[open] summary::before { transform: rotate(90deg); }
   user-select: none;
 }
 .fw-checkbox-row input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
+
+/* Multi-select dropdown built on <details> + checkboxes so the summary
+   row looks like a native <select> trigger and the body holds the
+   checkbox list.  Native <select multiple size="1"> never renders as
+   a dropdown, hence the substitute. */
+.cfg-multi {
+  position: relative;
+  display: inline-block;
+  min-width: 14rem;
+}
+.cfg-multi-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.cfg-multi-summary::-webkit-details-marker { display: none; }
+.cfg-multi-summary::after {
+  content: '\25BE';
+  margin-left: 0.5rem;
+  color: var(--fg-muted);
+  transition: transform 0.15s;
+}
+details[open] > .cfg-multi-summary::after { transform: rotate(180deg); }
+details[open] > .cfg-multi-summary {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.cfg-multi-body {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  max-height: 20rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.cfg-multi-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cfg-multi-item input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
 
 .fw-result {
   display: flex;

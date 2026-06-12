@@ -116,6 +116,13 @@ type cfgIfaceRow struct {
 	// from the WiFi interface page without bouncing to Configure >
 	// Hardware. Nil when the wifi/radio reference is empty or unknown.
 	PortRadio *ifaceRadioMirror
+	// MDIXState renders the *bool ethernet/mdi-x as a template-friendly
+	// string: "" = absent (Auto-MDIX), "true" / "false" = explicit force.
+	MDIXState     string
+	EthAutoneg    bool     // current candidate value; defaults to YANG default (true)
+	EthDuplex     string   // "" / "full" / "half"
+	EthAdvertised []string // identityref leaf-list, empty = advertise all
+	EthSupported  []string // identityref leaf-list from operational data
 }
 
 // ifaceRadioMirror is the subset of wifi-radio fields we expose on the
@@ -262,6 +269,10 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"wifi-sec-mode":      descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/mode", "Security mode. Open is unencrypted (insecure). For AP: wpa2-wpa3-personal is recommended for compatibility + security."),
 			"wifi-secret":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/secret", "Pre-shared key reference — a symmetric key in the keystore. 8–63 characters per the WPA spec."),
 			"wifi-hidden":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/hidden", "Hide the SSID from broadcast beacons. Minimal security benefit and may cause compatibility issues with some clients."),
+			"eth-autoneg":     descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/enable", "Enable IEEE 802.3 auto-negotiation.  When off, the link must come up via parallel detection or the forced PMD picked below."),
+			"eth-advertised":  descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/auto-negotiation/infix-ethernet-interface:advertised-pmd-types", "Restrict auto-negotiation to advertise only these PMD types.  Leave empty to advertise every mode the PHY supports."),
+			"eth-duplex":      descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/duplex", "Force half- or full-duplex.  Leave on Auto to let auto-negotiation pick.  Modern PMDs are full-duplex only."),
+			"eth-mdix":        descOr(mgr, ifPath+"/ieee802-ethernet-interface:ethernet/infix-ethernet-interface:mdi-x", "Force the copper MDI/MDI-X crossover pinout.  Leave on Auto-MDIX (default) for any link that negotiates.  Force MDI/MDI-X only when negotiation is disabled and the two ends must use opposite values."),
 		}
 		if data.Desc["ipv6-slaac"] == "" {
 			data.Desc["ipv6-slaac"] = "SLAAC (Stateless Address Autoconfiguration, RFC 4862) " +
@@ -440,7 +451,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 	}
 	sort.Strings(data.WizardAvailableRadios)
 
-	data.Interfaces = h.buildRows(ifaces)
+	data.Interfaces = h.buildRows(ifaces, operWrap.Interfaces.Interface)
 	// Populate the mirrored radio editor for WiFi interface rows from
 	// the already-fetched candidate hardware tree (no extra fetch).
 	radios := indexWifiRadios(hwCand.Hardware.Component)
@@ -1143,6 +1154,124 @@ func (h *ConfigureInterfacesHandler) DeleteIPv6(w http.ResponseWriter, r *http.R
 // field it wants preserved. Changing the `bridge` field from one name
 // to another effectively moves the port — the PUT is atomic.
 // POST /configure/interfaces/{name}/bridge-port
+// SaveEthernet writes ethernet settings via a sequence of PATCH and DELETE
+// ops rather than a single PUT.  A PUT that includes every leaf in the
+// ethernet container silently drops the duplex leaf on rousette/confd
+// (verified with curl); the per-leaf approach matches what manual PATCH
+// curls land reliably.  Tri-state fields (duplex, mdi-x) DELETE on "Auto"
+// so the candidate ends with an absent leaf, which is how the YANG model
+// expresses the default.  data-missing on DELETE is swallowed for
+// idempotency.
+// POST /configure/interfaces/{name}/ethernet
+func (h *ConfigureInterfacesHandler) SaveEthernet(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	name := r.PathValue("name")
+	base := ifacePath(name) + "/ieee802-ethernet-interface:ethernet"
+
+	autoneg := r.FormValue("autoneg") == "on"
+	var adv []string
+	for _, v := range r.Form["advertised"] {
+		if v != "" {
+			adv = append(adv, v)
+		}
+	}
+
+	// auto-negotiation: PUT the whole container so an empty advertised list
+	// actually clears stale entries.  DELETE on an unqualified leaf-list
+	// path fails ("requires exactly one key") under RFC 8040, so omitting
+	// the leaf-list from a container PUT is the cleanest clear.  Safe here
+	// because the container only carries enable + advertised-pmd-types
+	// (negotiation-status is deviate-not-supported in Infix).
+	an := map[string]any{"enable": autoneg}
+	if len(adv) > 0 {
+		an["infix-ethernet-interface:advertised-pmd-types"] = adv
+	}
+	body := map[string]any{"ieee802-ethernet-interface:auto-negotiation": an}
+	if err := h.RC.Put(ctx, base+"/auto-negotiation", body); err != nil {
+		log.Printf("configure interfaces %s ethernet autoneg: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+
+	// duplex: PATCH if user picked full/half, DELETE on Auto
+	if d := r.FormValue("duplex"); d != "" {
+		body := map[string]any{
+			"ieee802-ethernet-interface:ethernet": map[string]any{"duplex": d},
+		}
+		if err := h.RC.Patch(ctx, base, body); err != nil {
+			log.Printf("configure interfaces %s ethernet duplex: %v", name, err)
+			renderSaveError(w, err)
+			return
+		}
+	} else if err := h.RC.Delete(ctx, base+"/duplex"); err != nil && !restconf.IsDataMissing(err) {
+		log.Printf("configure interfaces %s ethernet duplex delete: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+
+	// mdi-x: only valid when autoneg is off (YANG when).  On autoneg=true
+	// or user picks Auto-MDIX, DELETE so the leaf stays absent.
+	mdix := r.FormValue("mdix")
+	if !autoneg && (mdix == "true" || mdix == "false") {
+		body := map[string]any{
+			"ieee802-ethernet-interface:ethernet": map[string]any{
+				"infix-ethernet-interface:mdi-x": mdix == "true",
+			},
+		}
+		if err := h.RC.Patch(ctx, base, body); err != nil {
+			log.Printf("configure interfaces %s ethernet mdi-x: %v", name, err)
+			renderSaveError(w, err)
+			return
+		}
+	} else if err := h.RC.Delete(ctx, base+"/infix-ethernet-interface:mdi-x"); err != nil && !restconf.IsDataMissing(err) {
+		log.Printf("configure interfaces %s ethernet mdi-x delete: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+
+	renderSavedRedirect(w, "Ethernet saved", "/configure/interfaces")
+}
+
+// ResetEthernetAdvertised clears the advertised-pmd-types leaf-list while
+// preserving auto-negotiation/enable.  Routed off the per-row reset
+// button because the generic /configure/leaf path can't DELETE a leaf-list
+// without per-entry key predicates.
+// DELETE /configure/interfaces/{name}/ethernet/advertised
+func (h *ConfigureInterfacesHandler) ResetEthernetAdvertised(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	base := ifacePath(name) + "/ieee802-ethernet-interface:ethernet"
+
+	var resp struct {
+		AN struct {
+			Enable *bool `json:"enable"`
+		} `json:"ieee802-ethernet-interface:auto-negotiation"`
+	}
+	enable := true // YANG default
+	if err := h.RC.Get(r.Context(), base+"/auto-negotiation", &resp); err == nil {
+		if resp.AN.Enable != nil {
+			enable = *resp.AN.Enable
+		}
+	} else if !restconf.IsNotFound(err) {
+		log.Printf("configure interfaces %s reset advertised get: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+
+	body := map[string]any{
+		"ieee802-ethernet-interface:auto-negotiation": map[string]any{"enable": enable},
+	}
+	if err := h.RC.Put(r.Context(), base+"/auto-negotiation", body); err != nil {
+		log.Printf("configure interfaces %s reset advertised put: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "Reset to default", "/configure/interfaces")
+}
+
 func (h *ConfigureInterfacesHandler) SaveBridgePort(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -1739,7 +1868,13 @@ func (h *ConfigureInterfacesHandler) fetchAllInterfaces(ctx context.Context) ([]
 
 type membership struct{ kind, master string }
 
-func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON) []cfgIfaceRow {
+func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJSON) []cfgIfaceRow {
+	// Index operational so each row can pull supported-pmd-types — that
+	// leaf is config false, so the candidate read doesn't carry it.
+	operByName := make(map[string]*ifaceJSON, len(oper))
+	for i := range oper {
+		operByName[oper[i].Name] = &oper[i]
+	}
 	// Build a set of current bridge/lag members for fast lookup.
 	memberOf := make(map[string]membership, len(ifaces))
 	for _, iface := range ifaces {
@@ -1792,6 +1927,24 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON) []cfgIfaceRow
 			case iface.WiFi.Station != nil:
 				row.WifiMode = "station"
 			}
+		}
+		row.EthAutoneg = true // YANG default when no candidate value is set
+		if iface.Ethernet != nil {
+			row.EthDuplex = iface.Ethernet.Duplex
+			if iface.Ethernet.AutoNegotiation != nil {
+				row.EthAutoneg = iface.Ethernet.AutoNegotiation.Enable
+				row.EthAdvertised = iface.Ethernet.AutoNegotiation.AdvertisedPMDs
+			}
+			if iface.Ethernet.MDIX != nil {
+				if *iface.Ethernet.MDIX {
+					row.MDIXState = "true"
+				} else {
+					row.MDIXState = "false"
+				}
+			}
+		}
+		if op := operByName[iface.Name]; op != nil && op.Ethernet != nil {
+			row.EthSupported = op.Ethernet.SupportedPMDs
 		}
 		if m, ok := memberOf[iface.Name]; ok {
 			row.MemberOf = m.master

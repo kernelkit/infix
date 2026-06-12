@@ -130,7 +130,8 @@ func New(
 		return nil, err
 	}
 	ifFuncs := template.FuncMap{
-		"add": func(a, b int) int { return a + b },
+		"shortPMD": handlers.ShortenPMD,
+		"add":      func(a, b int) int { return a + b },
 		"deref": func(v any) any {
 			switch p := v.(type) {
 			case *bool:
@@ -217,6 +218,7 @@ func New(
 		DetailTemplate:   ifDetailTmpl,
 		CountersTemplate: ifCountersTmpl,
 		RC:               rc,
+		Schema:           schemaCache,
 	}
 
 	sys := &handlers.SystemHandler{
@@ -342,6 +344,8 @@ func New(
 	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp/settings",           cfgIf.SaveIPv6DHCPSettings)
 	mux.HandleFunc("POST /configure/interfaces/{name}/ipv6/dhcp/options",            cfgIf.AddIPv6DHCPOption)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/ipv6/dhcp/options/{id}",     cfgIf.DeleteIPv6DHCPOption)
+	mux.HandleFunc("POST /configure/interfaces/{name}/ethernet",                cfgIf.SaveEthernet)
+	mux.HandleFunc("DELETE /configure/interfaces/{name}/ethernet/advertised",   cfgIf.ResetEthernetAdvertised)
 	mux.HandleFunc("POST /configure/interfaces/{name}/bridge-port",      cfgIf.SaveBridgePort)
 	mux.HandleFunc("DELETE /configure/interfaces/{name}/bridge-port",    cfgIf.DeleteBridgePort)
 	mux.HandleFunc("POST /configure/interfaces/{name}/wifi",             cfgIf.SaveWifi)

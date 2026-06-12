@@ -93,7 +93,57 @@
     fwUploadInit(root);
     initRestoreCheckbox(root);
     initYangTree(root);
+    initMultiDropdown(root);
   }
+
+  // The <details>-based multi-select dropdown needs JS to behave like a
+  // real <select>: refresh the summary text when checkboxes change, and
+  // close when the user clicks outside the widget.
+  function initMultiDropdown(root) {
+    var scope = root || document;
+    scope.querySelectorAll('.cfg-multi:not([data-init])').forEach(function (det) {
+      det.dataset.init = 'true';
+      var summary = det.querySelector('.cfg-multi-summary');
+      var body = det.querySelector('.cfg-multi-body');
+      if (!summary || !body) return;
+
+      var allBox = body.querySelector('input[data-multi-all]');
+      var itemBoxes = body.querySelectorAll('input[type="checkbox"]:not([data-multi-all])');
+
+      function refreshSummary() {
+        var labels = [];
+        itemBoxes.forEach(function (cb) {
+          if (!cb.checked) return;
+          var lab = cb.closest('label');
+          labels.push(lab ? lab.textContent.trim() : cb.value);
+        });
+        summary.textContent = labels.length ? labels.join(', ') : '(All)';
+      }
+      body.addEventListener('change', function (evt) {
+        if (evt.target === allBox && allBox.checked) {
+          // (All) was just checked — clear specific selections.
+          itemBoxes.forEach(function (cb) { cb.checked = false; });
+        } else if (evt.target !== allBox && evt.target.checked && allBox) {
+          // A specific PMD was checked — uncheck (All).
+          allBox.checked = false;
+        } else if (evt.target !== allBox && allBox) {
+          // A specific PMD was unchecked — if none remain, re-check (All).
+          var anyChecked = false;
+          itemBoxes.forEach(function (cb) { if (cb.checked) anyChecked = true; });
+          if (!anyChecked) allBox.checked = true;
+        }
+        refreshSummary();
+      });
+    });
+  }
+
+  // Close any open .cfg-multi when the user clicks outside it.  Single
+  // top-level listener — cheaper than per-widget bindings.
+  document.addEventListener('click', function (evt) {
+    document.querySelectorAll('.cfg-multi[open]').forEach(function (det) {
+      if (!det.contains(evt.target)) det.removeAttribute('open');
+    });
+  });
 
   function initYangTree(scope) {
     var root = scope || document;

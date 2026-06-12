@@ -485,6 +485,102 @@
               {{end}}{{/* IsLagPort */}}
 
 
+              {{/* ── Ethernet ────────────────────────────────────────── */}}
+              {{if eq .TypeSlug "ethernet"}}
+              {{$ep := printf "%s/ieee802-ethernet-interface:ethernet" $ip}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">Ethernet</h4>
+                <form hx-post="/configure/interfaces/{{.Name}}/ethernet" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Auto-negotiation{{template "field-info" (index $d "eth-autoneg")}}</th>
+                      <td><label><input type="checkbox" name="autoneg" {{if .EthAutoneg}}checked{{end}}> Enabled</label></td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$ep}}/auto-negotiation/enable&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset auto-negotiation to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <th>Advertised speeds{{template "field-info" (index $d "eth-advertised")}}</th>
+                      <td>
+                        {{if .EthSupported}}
+                        {{$advertised := .EthAdvertised}}
+                        <details class="cfg-multi">
+                          <summary class="cfg-multi-summary">
+                            {{if $advertised}}
+                              {{range $i, $v := $advertised}}{{if $i}}, {{end}}{{shortPMD $v}}{{end}}
+                            {{else}}(All){{end}}
+                          </summary>
+                          <div class="cfg-multi-body">
+                            <label class="cfg-multi-item cfg-multi-all">
+                              <input type="checkbox" data-multi-all {{if not $advertised}}checked{{end}}>
+                              (All)
+                            </label>
+                            {{range .EthSupported}}
+                            {{$cur := .}}
+                            {{$selected := false}}
+                            {{range $advertised}}{{if eq . $cur}}{{$selected = true}}{{end}}{{end}}
+                            <label class="cfg-multi-item">
+                              <input type="checkbox" name="advertised" value="{{.}}" {{if $selected}}checked{{end}}>
+                              {{shortPMD .}}
+                            </label>
+                            {{end}}
+                          </div>
+                        </details>
+                        {{else}}
+                        <span class="text-muted">No supported-PMD data from device.</span>
+                        {{end}}
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/interfaces/{{.Name}}/ethernet/advertised"
+                                hx-swap="none"
+                                hx-confirm="Reset advertised speeds to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <th>Duplex{{template "field-info" (index $d "eth-duplex")}}</th>
+                      <td>
+                        <label><input type="radio" name="duplex" value="" {{if eq .EthDuplex ""}}checked{{end}}> Auto</label>
+                        <label style="margin-left:1em"><input type="radio" name="duplex" value="full" {{if eq .EthDuplex "full"}}checked{{end}}> Full</label>
+                        <label style="margin-left:1em"><input type="radio" name="duplex" value="half" {{if eq .EthDuplex "half"}}checked{{end}}> Half</label>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$ep}}/duplex&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset duplex to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <th>MDI-X{{template "field-info" (index $d "eth-mdix")}}</th>
+                      <td>
+                        <label><input type="radio" name="mdix" value="" {{if eq .MDIXState ""}}checked{{end}}> Auto-MDIX</label>
+                        <label style="margin-left:1em"><input type="radio" name="mdix" value="false" {{if eq .MDIXState "false"}}checked{{end}}> Force MDI</label>
+                        <label style="margin-left:1em"><input type="radio" name="mdix" value="true" {{if eq .MDIXState "true"}}checked{{end}}> Force MDI-X</label>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$ep}}/infix-ethernet-interface:mdi-x&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset MDI-X to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer">
+                    <button class="btn btn-primary" type="submit">Save</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+              {{end}}{{/* TypeSlug ethernet */}}
+
+
               {{/* ── WiFi interface editor ───────────────────────────── */}}
               {{/* Radio + PSK pickers mirror the Add-Interface wizard
                    pattern: each picker has Edit / + New buttons that

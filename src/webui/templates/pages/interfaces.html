@@ -19,6 +19,7 @@
         <th class="iface-name">Name</th>
         <th>Type</th>
         <th>Status</th>
+        <th>Speed</th>
         <th>MAC</th>
         <th>Data</th>
       </tr>
@@ -31,6 +32,7 @@
         <td class="iface-name{{if .IsMember}} iface-member-name{{end}}"><a href="/interfaces/{{.Name}}" hx-get="/interfaces/{{.Name}}" hx-target="#content" hx-push-url="true">{{.Name}}</a></td>
         <td>{{.Type}}</td>
         <td><span class="iface-status {{if .StatusUp}}iface-up{{else}}iface-down{{end}}"></span>{{.Status}}</td>
+        <td>{{.Link}}</td>
         <td>{{.PhysAddr}}</td>
         <td>{{range $i, $a := .Addresses}}{{if $i}}<br>{{end}}{{$a.Address}}{{if $a.Origin}} <span class="addr-origin">({{$a.Origin}})</span>{{end}}{{end}}{{if and .Addresses .Detail}}<br>{{end}}{{if .Detail}}<span class="data-detail">{{.Detail}}</span>{{end}}</td>
       </tr>

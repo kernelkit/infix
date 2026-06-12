@@ -8,11 +8,14 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
 	"infix/webui/internal/restconf"
+	"infix/webui/internal/schema"
 )
 
 // RESTCONF JSON structures for ietf-interfaces:interfaces.
@@ -31,6 +34,9 @@ type ifaceJSON struct {
 	OperStatus  string          `json:"oper-status"`
 	PhysAddress string          `json:"phys-address"`
 	IfIndex     int             `json:"if-index"`
+	// Operational link rate from ietf-interfaces (yang:gauge64 bits/s).
+	// The same-named leaf inside the ethernet container is obsolete.
+	Speed yangInt64 `json:"speed"`
 	IPv4        *ipCfg          `json:"ietf-ip:ipv4"`
 	IPv6        *ipCfg          `json:"ietf-ip:ipv6"`
 	Statistics  *ifaceStats     `json:"statistics"`
@@ -211,10 +217,16 @@ type ifaceStats struct {
 }
 
 type ethernetJSON struct {
-	Speed           string `json:"speed"`
 	Duplex          string `json:"duplex"`
+	PhyType         string `json:"phy-type"`
+	PMDType         string `json:"pmd-type"`
+	SupportedPMDs []string `json:"infix-ethernet-interface:supported-pmd-types"`
+	// *bool because the YANG model uses absent as the Auto-MDIX signal —
+	// collapsing nil and false here would lose the tri-state.
+	MDIX            *bool `json:"infix-ethernet-interface:mdi-x"`
 	AutoNegotiation *struct {
-		Enable bool `json:"enable"`
+		Enable         bool     `json:"enable"`
+		AdvertisedPMDs []string `json:"infix-ethernet-interface:advertised-pmd-types"`
 	} `json:"auto-negotiation"`
 	Statistics *struct {
 		Frame *ethFrameStats `json:"frame"`
@@ -261,6 +273,7 @@ type ifaceEntry struct {
 	PhysAddr     string
 	Addresses    []addrEntry
 	Detail       string // extra info: wifi AP, wireguard peers, etc.
+	Link         string // ethernet speed + duplex e.g. "1 Gbps full"; empty for non-ethernet
 	RxBytes      string
 	TxBytes      string
 }
@@ -276,6 +289,7 @@ type InterfacesHandler struct {
 	DetailTemplate   *template.Template
 	CountersTemplate *template.Template
 	RC               *restconf.Client
+	Schema           *schema.Cache
 }
 
 // Overview renders the interfaces page (GET /interfaces).
@@ -454,6 +468,14 @@ func makeIfaceEntry(iface ifaceJSON, fwdSet map[string]bool) ifaceEntry {
 		PhysAddr:   iface.PhysAddress,
 	}
 
+	if prettyIfType(iface.Type) == ifTypeEthernet {
+		duplex := ""
+		if iface.Ethernet != nil {
+			duplex = iface.Ethernet.Duplex
+		}
+		e.Link = formatEthernetLink(uint64(iface.Speed), duplex)
+	}
+
 	if iface.Statistics != nil {
 		e.RxBytes = humanBytes(int64(iface.Statistics.InOctets))
 		e.TxBytes = humanBytes(int64(iface.Statistics.OutOctets))
@@ -520,6 +542,10 @@ type ifaceDetailData struct {
 	Speed            string
 	Duplex           string
 	AutoNeg          string
+	PhyType          string // e.g. "1000BASE-T"
+	PMDType          string // e.g. "1000BASE-T"
+	SupportedPMDs    []string // short names (what the PHY can do)
+	AdvertisedPMDs   []string // short names (what autoneg announces)
 	Addresses        []addrEntry
 	WiFiMode         string // "Access Point" or "Station"
 	WiFiSSID         string
@@ -533,6 +559,7 @@ type ifaceDetailData struct {
 	WGPeers          []wgPeerEntry
 	WiFiStations     []wifiStaEntry
 	ScanResults      []wifiScanEntry
+	Desc             map[string]string
 }
 
 type ifaceCounters struct {
@@ -632,15 +659,21 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 		}
 	}
 
+	if prettyIfType(iface.Type) == ifTypeEthernet {
+		d.Speed = formatEthernetLink(uint64(iface.Speed), "")
+	}
 	if iface.Ethernet != nil && prettyIfType(iface.Type) == ifTypeEthernet {
-		d.Speed = prettySpeed(iface.Ethernet.Speed)
 		d.Duplex = iface.Ethernet.Duplex
+		d.PhyType = ShortenPMD(iface.Ethernet.PhyType)
+		d.PMDType = ShortenPMD(iface.Ethernet.PMDType)
+		d.SupportedPMDs = shortenPMDs(iface.Ethernet.SupportedPMDs)
 		if iface.Ethernet.AutoNegotiation != nil {
 			if iface.Ethernet.AutoNegotiation.Enable {
 				d.AutoNeg = "on"
 			} else {
 				d.AutoNeg = "off"
 			}
+			d.AdvertisedPMDs = shortenPMDs(iface.Ethernet.AutoNegotiation.AdvertisedPMDs)
 		}
 		if iface.Ethernet.Statistics != nil && iface.Ethernet.Statistics.Frame != nil {
 			d.EthFrameStats = buildEthFrameStats(iface.Ethernet.Statistics.Frame)
@@ -745,10 +778,75 @@ func buildEthFrameStats(f *ethFrameStats) []kvEntry {
 	}
 }
 
-// prettySpeed converts YANG ethernet speed identities to display strings.
-func prettySpeed(s string) string {
-	if i := strings.LastIndex(s, ":"); i >= 0 {
-		s = s[i+1:]
+// ShortenPMD turns a PHY/PMD identityref into its IEEE shorthand,
+// e.g. "ieee802-ethernet-phy-type:pmd-type-1000BASE-T" → "1000BASE-T".
+// Exported so the configure-interfaces template can call it via funcmap.
+func ShortenPMD(s string) string {
+	s = schema.StripModulePrefix(s)
+	for _, prefix := range []string{"pmd-type-", "phy-type-"} {
+		if strings.HasPrefix(s, prefix) {
+			return s[len(prefix):]
+		}
+	}
+	return s
+}
+
+func shortenPMDs(pmds []string) []string {
+	if len(pmds) == 0 {
+		return nil
+	}
+	out := make([]string, len(pmds))
+	for i, p := range pmds {
+		out[i] = ShortenPMD(p)
+	}
+	// Sort by line rate so Supported and Advertised line up
+	// row-by-row in the comparison view — ethtool --json doesn't
+	// guarantee a consistent order between the two lists.
+	slices.SortStableFunc(out, func(a, b string) int {
+		return pmdSpeedMbps(a) - pmdSpeedMbps(b)
+	})
+	return out
+}
+
+// pmdSpeedMbps extracts the line rate in megabits per second from a short
+// PMD name like "10BASE-T", "2.5GBASE-T", or "100GBASE-CR4". Unknown
+// strings sort as 0.
+func pmdSpeedMbps(name string) int {
+	i := 0
+	for i < len(name) && (name[i] >= '0' && name[i] <= '9' || name[i] == '.') {
+		i++
+	}
+	if i == 0 {
+		return 0
+	}
+	n, err := strconv.ParseFloat(name[:i], 64)
+	if err != nil {
+		return 0
+	}
+	if i < len(name) && name[i] == 'G' {
+		n *= 1000
+	}
+	return int(n)
+}
+
+// formatEthernetLink renders the ietf-interfaces:speed (yang:gauge64 bits/s)
+// plus duplex as "1 Gbps full" / "100 Mbps half"; empty when speed is 0.
+func formatEthernetLink(bps uint64, duplex string) string {
+	if bps == 0 {
+		return ""
+	}
+	var s string
+	switch {
+	case bps >= 1_000_000_000:
+		gbps := float64(bps) / 1_000_000_000
+		s = strconv.FormatFloat(gbps, 'f', -1, 64) + " Gbps"
+	case bps >= 1_000_000:
+		s = strconv.FormatUint(bps/1_000_000, 10) + " Mbps"
+	default:
+		s = strconv.FormatUint(bps/1_000, 10) + " kbps"
+	}
+	if duplex != "" {
+		s += " " + duplex
 	}
 	return s
 }
@@ -851,6 +949,7 @@ func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 
 	data := buildDetailData(r, iface)
 	data.PageData = newPageData(r, "interfaces", "Interface "+name)
+	data.Desc = h.fieldDescriptions()
 
 	tmplName := "iface-detail.html"
 	if r.Header.Get("HX-Request") == "true" {
@@ -859,6 +958,28 @@ func (h *InterfacesHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	if err := h.DetailTemplate.ExecuteTemplate(w, tmplName, data); err != nil {
 		log.Printf("template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// fieldDescriptions returns YANG-sourced hover descriptions for the rows
+// rendered on the interface-detail page. The keys correspond to the
+// field-info template invocations in iface-detail.html.
+func (h *InterfacesHandler) fieldDescriptions() map[string]string {
+	mgr := h.Schema.Manager()
+	if mgr == nil {
+		return nil
+	}
+	ifPath := "/ietf-interfaces:interfaces/interface"
+	ethPath := ifPath + "/ieee802-ethernet-interface:ethernet"
+	return map[string]string{
+		"mtu":        schema.DescriptionOf(mgr, ifPath+"/ietf-ip:ipv4/mtu"),
+		"speed":      schema.DescriptionOf(mgr, ifPath+"/speed"),
+		"duplex":     schema.DescriptionOf(mgr, ethPath+"/duplex"),
+		"autoneg":    schema.DescriptionOf(mgr, ethPath+"/auto-negotiation/enable"),
+		"phy-type":   schema.DescriptionOf(mgr, ethPath+"/phy-type"),
+		"pmd-type":   schema.DescriptionOf(mgr, ethPath+"/pmd-type"),
+		"supported":  schema.DescriptionOf(mgr, ethPath+"/infix-ethernet-interface:supported-pmd-types"),
+		"advertised": schema.DescriptionOf(mgr, ethPath+"/auto-negotiation/infix-ethernet-interface:advertised-pmd-types"),
 	}
 }
 

@@ -19,6 +19,15 @@ func IsNotFound(err error) bool {
 	return errors.As(err, &e) && e.StatusCode == http.StatusNotFound
 }
 
+// IsDataMissing reports whether err is a RESTCONF "data-missing" tag error
+// (RFC 8040 §7.6.2). Returned by DELETE on a leaf that is already absent.
+// Useful when the caller is explicitly trying to reach an "absent" state
+// and treats already-absent the same as just-deleted.
+func IsDataMissing(err error) bool {
+	var e *Error
+	return errors.As(err, &e) && e.Tag == "data-missing"
+}
+
 // AuthError is returned when RESTCONF rejects credentials (401/403).
 type AuthError struct {
 	Code int
