@@ -131,10 +131,15 @@ func (s *Server) handleGet(conn net.Conn, req *Request) {
 
 	data := s.tree.Get(key)
 	if data == nil {
+		// An absent subtree is a normal answer for operational data --
+		// the feature is simply not active (e.g. NTP unconfigured).
+		// Answer ok with an empty object rather than an error, so every
+		// client gets "no data" without special-casing.  Deliberately
+		// NOT {"<key>": {}}: that would make libyang instantiate the
+		// container, which for presence containers is real data.
 		WriteResponse(conn, &Response{
-			Status:  "error",
-			Code:    404,
-			Message: "path not found: " + path,
+			Status: "ok",
+			Data:   json.RawMessage(`{}`),
 		})
 		return
 	}
