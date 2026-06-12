@@ -225,6 +225,36 @@ func TestNTPSources(t *testing.T) {
 	}
 }
 
+// ntpSourceCount returns the number of infix-system:ntp sources in the
+// system-state tree key, failing the test if the subtree is missing.
+func ntpSourceCount(t *testing.T, tr *tree.Tree) int {
+	t.Helper()
+
+	raw := tr.Get("ietf-system:system-state")
+	if raw == nil {
+		t.Fatal("system-state not set")
+	}
+
+	var data map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatalf("unmarshal system-state: %v", err)
+	}
+	ntpRaw, ok := data["infix-system:ntp"]
+	if !ok {
+		t.Fatal("infix-system:ntp not present")
+	}
+
+	var ntp struct {
+		Sources struct {
+			Source []json.RawMessage `json:"source"`
+		} `json:"sources"`
+	}
+	if err := json.Unmarshal(ntpRaw, &ntp); err != nil {
+		t.Fatalf("unmarshal infix-system:ntp: %v", err)
+	}
+	return len(ntp.Sources.Source)
+}
+
 func TestNTPSourcesEmpty(t *testing.T) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{
@@ -237,9 +267,69 @@ func TestNTPSourcesEmpty(t *testing.T) {
 	tr := tree.New()
 	c.Collect(context.Background(), tr)
 
-	raw := tr.Get("ietf-system:system-state")
-	if raw != nil {
-		t.Fatal("should not set system-state when no sources available")
+	// With no chrony sources the collector must still write an empty
+	// source list, so a previously-reported source cannot linger as
+	// stale operational data.
+	if n := ntpSourceCount(t, tr); n != 0 {
+		t.Fatalf("expected empty NTP source list, got %d", n)
+	}
+}
+
+// When chronyd stops (NTP disabled via config reset), the whole
+// ietf-ntp:ntp key must disappear -- yangerd outlives config resets, so
+// a key that is only ever Set when non-empty would keep stale data from
+// a previous run forever.
+func TestNTPTreeKeyRemovedWhenChronydStops(t *testing.T) {
+	tr := tree.New()
+
+	running := &testutil.MockRunner{
+		Results: map[string][]byte{
+			"chronyc -c sources":  []byte(testChronycSources),
+			"chronyc -c tracking": []byte(testChronycTracking),
+		},
+		Errors: map[string]error{},
+	}
+	newNTPCollector(running).Collect(context.Background(), tr)
+	if tr.Get("ietf-ntp:ntp") == nil {
+		t.Fatal("expected ietf-ntp:ntp after first poll")
+	}
+
+	stopped := &testutil.MockRunner{
+		Results: map[string][]byte{},
+		Errors:  map[string]error{},
+	}
+	newNTPCollector(stopped).Collect(context.Background(), tr)
+	if data := tr.Get("ietf-ntp:ntp"); data != nil {
+		t.Fatalf("stale ietf-ntp:ntp survived chronyd stop: %s", data)
+	}
+}
+
+// A source that disappears from chrony (e.g. a DHCP NTP server that is no
+// longer offered) must be cleared from operational, not left stale.
+func TestNTPSourcesClearedWhenGone(t *testing.T) {
+	tr := tree.New()
+
+	withSources := &testutil.MockRunner{
+		Results: map[string][]byte{
+			"chronyc -c sources":  []byte(testChronycSources),
+			"chronyc -c tracking": []byte(testChronycTracking),
+		},
+		Errors: map[string]error{},
+	}
+	newNTPCollector(withSources).Collect(context.Background(), tr)
+	if ntpSourceCount(t, tr) == 0 {
+		t.Fatal("expected NTP sources after first poll")
+	}
+
+	noSources := &testutil.MockRunner{
+		Results: map[string][]byte{
+			"chronyc -c tracking": []byte(testChronycTracking),
+		},
+		Errors: map[string]error{},
+	}
+	newNTPCollector(noSources).Collect(context.Background(), tr)
+	if n := ntpSourceCount(t, tr); n != 0 {
+		t.Fatalf("stale NTP sources not cleared: got %d, want 0", n)
 	}
 }
 
