@@ -7,6 +7,7 @@ Verify that LLDP admin status is set properly by lldpd
 import time
 import infamy
 import infamy.lldp as lldp
+from infamy.util import until
 
 from scapy.all import Ether, sendp
 from scapy.contrib.lldp import (
@@ -29,16 +30,6 @@ def send_lldp_packet(iface, chassis_id, chassis_id_subtype, ttl=3):
     lldpdu /= LLDPDUTimeToLive(ttl=ttl) / LLDPDUEndOfLLDPDU()
     sendp(lldpdu, iface=iface, verbose=False)
 
-def verify_neigh_presence(test, target, port, expect_neighbor):
-    """Verify neighbor (host) presence on the target system"""
-    neighbors = lldp.get_remote_systems_data(target, port)
-    if expect_neighbor and not neighbors:
-        print("Expected LLDP neighbor but found none.")
-        test.fail()
-    if not expect_neighbor and neighbors:
-        print("Unexpected LLDP neighbor found.")
-        test.fail()    
-
 def verify_admin_status(test, target, port, admin_status, local_capture, remote_detect):
     target.put_config_dicts({
         "ieee802-dot1ab-lldp": {
@@ -59,8 +50,21 @@ def verify_admin_status(test, target, port, admin_status, local_capture, remote_
     if not local_capture and "LLDP" in rc.stdout:
         test.fail()
     
-    send_lldp_packet(port, "Chassis ID 007", 7)
-    verify_neigh_presence(test, target, target["data"], remote_detect)
+    if remote_detect:
+        # A single ttl=3 LLDP frame expires before the neighbor reaches
+        # operational (lldpd -> yangerd -> statd), so resend on every poll
+        # until the target registers it.
+        def detected():
+            send_lldp_packet(port, "Chassis ID 007", 7)
+            return bool(lldp.get_remote_systems_data(target, target["data"]))
+        until(detected, attempts=30)
+    else:
+        # rx disabled: a received frame must not register, and any neighbor
+        # from a previous step must age out (ttl).  Send one frame, then
+        # wait until no neighbor is present.
+        send_lldp_packet(port, "Chassis ID 007", 7)
+        until(lambda: not lldp.get_remote_systems_data(target, target["data"]),
+              attempts=30)
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
