@@ -267,35 +267,24 @@ with infamy.Test() as test:
 
     with test.step("Verify R2 has two RIP neighbors"):
         print("Checking R2 has two RIP neighbors...")
-        # R2 should have neighbors: 192.168.50.1 (R1) and 192.168.60.2 (R3)
-        # Query without predicates to avoid RESTCONF encoding issues
-        routing_data = R2.get_data("/ietf-routing:routing/control-plane-protocols")
 
-        # Navigate to RIP protocol
-        protocols = routing_data.get("routing", {}).get("control-plane-protocols", {}).get("control-plane-protocol", [])
-        if not protocols:
-            raise Exception("No protocols found")
+        # R2 should learn neighbors 192.168.50.1 (R1) and 192.168.60.2 (R3).
+        # They appear over time, so poll until both are present.
+        def has_both_neighbors():
+            data = R2.get_data("/ietf-routing:routing/control-plane-protocols")
+            protocols = data.get("routing", {}) \
+                            .get("control-plane-protocols", {}) \
+                            .get("control-plane-protocol", [])
+            for protocol in protocols:
+                if protocol.get("type") == "infix-routing:ripv2" \
+                   and protocol.get("name") == "default":
+                    neighbors = protocol.get("rip", {}).get("ipv4", {}) \
+                                        .get("neighbors", {}).get("neighbor", [])
+                    ips = {n.get("ipv4-address") for n in neighbors}
+                    return {"192.168.50.1", "192.168.60.2"} <= ips
+            return False
 
-        # Find RIP protocol
-        rip = None
-        for protocol in protocols:
-            if protocol.get("type") == "infix-routing:ripv2" and protocol.get("name") == "default":
-                rip = protocol.get("rip", {})
-                break
-
-        if not rip:
-            raise Exception("RIP protocol not found in control-plane-protocols")
-
-        ipv4_data = rip.get("ipv4", {})
-        neighbors_data = ipv4_data.get("neighbors", {})
-        neighbor_list = neighbors_data.get("neighbor", [])
-
-        assert len(neighbor_list) == 2, f"Expected 2 neighbors, found {len(neighbor_list)}"
-
-        neighbor_ips = [n.get("ipv4-address") for n in neighbor_list]
-        assert "192.168.50.1" in neighbor_ips, "R1 not in neighbor list"
-        assert "192.168.60.2" in neighbor_ips, "R3 not in neighbor list"
-        print(f"R2 has correct neighbors: {neighbor_ips}")
+        until(has_both_neighbors, attempts=40)
 
     with test.step("Test end-to-end connectivity PC:data1 to R3 loopback"):
         _, hport1 = env.ltop.xlate("PC", "data1")
