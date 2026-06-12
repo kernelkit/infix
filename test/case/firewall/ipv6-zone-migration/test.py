@@ -203,9 +203,17 @@ with infamy.Test() as test:
                     }
                 })
 
+                # Wait for the migration to actually land in operational.
+                # Both zones were already action 'accept' before the move,
+                # so waiting on action alone returns immediately; wait on
+                # the interface reassignment (and service) that changed.
                 infamy.Firewall.wait_for_operational(target, {
                     "untrusted": {"action": "accept"},
-                    "trusted": {"action": "accept"}
+                    "trusted": {
+                        "action": "accept",
+                        "interface": [data1_if, data2_if],
+                        "service": ["myapp"],
+                    },
                 })
 
             with test.step("Verify connectivity after zone migration"):
