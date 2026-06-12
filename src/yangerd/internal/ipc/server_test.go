@@ -33,8 +33,13 @@ func TestServerGetNotFound(t *testing.T) {
 	tr := tree.New()
 	resp := serverRoundTrip(t, tr, true, &Request{Method: "get", Path: "/nonexistent"})
 
-	if resp.Status != "error" || resp.Code != 404 {
-		t.Fatalf("expected 404 error, got %+v", resp)
+	// An absent subtree is "no data", not an error: ok + empty object,
+	// so clients (statd, yangerctl) need no special-casing.
+	if resp.Status != "ok" {
+		t.Fatalf("expected ok, got %+v", resp)
+	}
+	if string(resp.Data) != "{}" {
+		t.Fatalf("expected empty object data, got %s", resp.Data)
 	}
 }
 
