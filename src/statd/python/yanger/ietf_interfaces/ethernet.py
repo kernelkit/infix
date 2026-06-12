@@ -203,10 +203,11 @@ def link(ifname):
     if supported:
         eth["infix-ethernet-interface:supported-pmd-types"] = supported
 
-    # Suppress when advertised == supported — that's the default
-    # "advertise everything" state with no diagnostic value.
+    # Always emit when the PHY is advertising something — even when it equals
+    # the full supported set, displaying the list alongside supported is
+    # useful for "show interfaces detail" and the WebUI ethernet card.
     advertised = _ethtool_modes_to_pmd_identities(data.get("advertised-link-modes"))
-    if advertised and set(advertised) != set(supported):
+    if advertised:
         eth["auto-negotiation"]["infix-ethernet-interface:advertised-pmd-types"] = advertised
 
     speed_bps = None

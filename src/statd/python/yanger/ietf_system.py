@@ -422,9 +422,14 @@ def add_resource_usage(out):
     except (FileNotFoundError, ValueError):
         pass
 
-    # Filesystem usage
+    # Filesystem usage.  /run and /tmp are tmpfs (RAM-backed) and easily the
+    # scarcest writable storage on small embedded boards — surface them so
+    # operators can tell when the box is about to start dropping logs or
+    # failing to spool config diffs.  / is the read-only rootfs (squashfs);
+    # always 100 % used by design but kept in the list so a flag/limit
+    # consumer can recognise it.
     filesystems = []
-    for mount in ["/", "/var", "/cfg"]:
+    for mount in ["/", "/var", "/cfg", "/run", "/tmp"]:
         try:
             result = HOST.run_multiline(["df", "-k", mount], [])
             if len(result) > 1:
