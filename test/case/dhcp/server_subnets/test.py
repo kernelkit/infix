@@ -333,7 +333,10 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(client1, "0.0.0.0/0", nexthop=SERVER1))
 
     with test.step("Verify DHCP client1 has correct DNS server(s)"):
-        until(lambda: has_system_servers(client1, ["192.168.1.1"]))
+        # DNS arrives via DHCP and propagates event-driven (DHCP client ->
+        # resolvconf -> fswatcher -> yangerd), which can take well over the
+        # default ~10s window; match the client2/client3 checks below.
+        until(lambda: has_system_servers(client1, ["192.168.1.1"]), attempts=120)
 
     with test.step("Verify DHCP client2 get correct static lease"):
         until(lambda: iface.address_exist(client2, client2["server"], ADDR2))
