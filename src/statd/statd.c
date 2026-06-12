@@ -52,6 +52,7 @@ TAILQ_HEAD(sub_head, sub);
 struct sub {
 	struct ev_io watcher;
 	sr_subscription_ctx_t *sr_sub;
+	char key[XPATH_MAX];	/* yangerd key, derived from the subscription xpath */
 
 	TAILQ_ENTRY(sub)
 	entries;
@@ -150,14 +151,14 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *,
 			 const char *, const char *xpath, uint32_t,
-			 struct lyd_node **parent, __attribute__((unused)) void *priv)
+			 struct lyd_node **parent, void *priv)
 {
-	char yangerd_path[XPATH_MAX];
+	struct sub *sub = priv;
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
 	sr_error_t err;
 
-	DEBUG("Incoming generic query for xpath: %s", xpath);
+	DEBUG("Incoming generic query for xpath: %s -> key %s", xpath, sub->key);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
@@ -171,10 +172,9 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		return SR_ERR_INTERNAL;
 	}
 
-	xpath_to_yangerd_path(xpath, yangerd_path, sizeof(yangerd_path));
-	err = ly_add_yangerd_data(ctx, parent, yangerd_path);
+	err = ly_add_yangerd_data(ctx, parent, sub->key);
 	if (err)
-		ERROR("Error adding data for %s", yangerd_path);
+		ERROR("Error adding data for %s", sub->key);
 
 	sr_release_context(con);
 
@@ -311,7 +311,16 @@ static int subscribe(struct statd *statd, char *model, char *xpath,
 	sub = malloc(sizeof(struct sub));
 	memset(sub, 0, sizeof(struct sub));
 
-	DEBUG("Subscribe to events for \"%s\"", xpath);
+	/*
+	 * Derive the yangerd key from the (static) subscription xpath here,
+	 * once.  The generic callback must NOT derive it from the runtime
+	 * request xpath sysrepo hands it -- that is unreliable and yields a
+	 * bare "system-state" for /ietf-system:system-state, which yangerd
+	 * (keyed "ietf-system:system-state") cannot match.
+	 */
+	xpath_to_yangerd_path(xpath, sub->key, sizeof(sub->key));
+
+	DEBUG("Subscribe to events for \"%s\" (key \"%s\")", xpath, sub->key);
 	err = sr_oper_get_subscribe(statd->sr_ses, model, xpath, cb, sub,
 				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
 				    &sub->sr_sub);
