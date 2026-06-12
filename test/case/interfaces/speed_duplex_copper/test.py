@@ -180,37 +180,13 @@ def clear_target_advertise(target, interface):
     target.delete_xpath(iface.get_xpath(interface, "ieee802-ethernet-interface:ethernet"))
 
 
-def verify_speed_duplex(target, ns, interface, exp_mbps, exp_duplex):
-    until(lambda: _speed_duplex_present(target, interface))
-    speed_bps, duplex = get_target_speed_duplex(target, interface)
-    if speed_bps is None or duplex is None:
-        print(f"Could not fetch speed/duplex from target for interface {interface}")
-        test.fail()
+def _settle_speed_duplex(target, ns, interface, exp_mbps, exp_duplex):
+    """Poll until the link reaches exp speed/duplex AND carries traffic.
 
-    act_mbps = int(speed_bps) // 1_000_000
-    if act_mbps != exp_mbps:
-        print(f"act_mbps: {act_mbps}, exp_mbps: {exp_mbps}")
-        test.fail()
-
-    if duplex.lower() != exp_duplex.lower():
-        print(f"act_duplex: {duplex}, exp_duplex: {exp_duplex}")
-        test.fail()
-
-    ns.must_reach("10.0.0.2")
-    print(f"Verified: {interface} is operating at {act_mbps} Mbps, {duplex} duplex")
-
-
-def _speed_duplex_present(target, interface):
-    speed_bps, duplex = get_target_speed_duplex(target, interface)
-    return speed_bps is not None and duplex is not None
-
-
-def verify_forced_speed_duplex(target, ns, interface, exp_mbps, exp_duplex):
-    """Verify a forced (autoneg off) link reaches exp speed/duplex.
-
-    Turning auto-negotiation off bounces the link; it can take a few
-    seconds to settle, so poll the operational speed/duplex AND a ping
-    together until both hold instead of checking once.
+    Any advertisement change (either peer) bounces the link, and while it
+    renegotiates the operational data transiently shows the previous
+    values or none at all -- a one-shot read races both ways.  Poll the
+    expected speed/duplex and a ping together until all hold.
     """
     def settled():
         speed_bps, duplex = get_target_speed_duplex(target, interface)
@@ -227,6 +203,16 @@ def verify_forced_speed_duplex(target, ns, interface, exp_mbps, exp_duplex):
         return True
 
     until(settled, attempts=30)
+
+
+def verify_speed_duplex(target, ns, interface, exp_mbps, exp_duplex):
+    _settle_speed_duplex(target, ns, interface, exp_mbps, exp_duplex)
+    print(f"Verified: {interface} is operating at {exp_mbps} Mbps, {exp_duplex} duplex")
+
+
+def verify_forced_speed_duplex(target, ns, interface, exp_mbps, exp_duplex):
+    """Verify a forced (autoneg off) link reaches exp speed/duplex."""
+    _settle_speed_duplex(target, ns, interface, exp_mbps, exp_duplex)
     print(f"Verified: {interface} forced to {exp_mbps} Mbps, {exp_duplex} duplex")
 
 
