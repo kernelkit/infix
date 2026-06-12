@@ -48,21 +48,36 @@ func (c *NTPCollector) Collect(ctx context.Context, t *tree.Tree) error {
 	c.addServerStatus(ctx, ntp)
 	c.addServerStats(ctx, ntp)
 
-	if len(ntp) == 0 {
-		return nil
-	}
-
-	if data, err := json.Marshal(ntp); err == nil {
-		t.Set("ietf-ntp:ntp", data)
-	}
-
-	// Populate the Infix NTP sources augmentation under system-state.
-	if sources := c.addSources(sourcesOut); sources != nil {
-		if data, err := json.Marshal(map[string]interface{}{
-			"infix-system:ntp": sources,
-		}); err == nil {
-			t.Merge("ietf-system:system-state", data)
+	if len(ntp) > 0 {
+		if data, err := json.Marshal(ntp); err == nil {
+			t.Set("ietf-ntp:ntp", data)
 		}
+	} else {
+		// chronyd is not running (NTP unconfigured, or disabled by a
+		// config change).  Drop the key so data from a previous run does
+		// not linger -- yangerd outlives config resets, so stale state
+		// would otherwise survive until restart.
+		t.Delete("ietf-ntp:ntp")
+	}
+
+	// Always refresh the Infix NTP sources under system-state, even when
+	// empty.  Otherwise a source that disappears from chrony (e.g. a DHCP
+	// lease without option 42, or NTP turned off) lingers as stale
+	// operational data -- a phantom "selected" server chronyc no longer
+	// reports.  Merge only overwrites the keys it is given, so we must
+	// hand it an empty source list to clear a previously-populated one.
+	sources := c.addSources(sourcesOut)
+	if sources == nil {
+		sources = map[string]interface{}{
+			"sources": map[string]interface{}{
+				"source": []interface{}{},
+			},
+		}
+	}
+	if data, err := json.Marshal(map[string]interface{}{
+		"infix-system:ntp": sources,
+	}); err == nil {
+		t.Merge("ietf-system:system-state", data)
 	}
 
 	return nil
