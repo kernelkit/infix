@@ -80,6 +80,9 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 	console, netbrowse := handlers.DetectWebShortcuts(ctx, h.RC)
 	caps.Features()["console"] = console
 	caps.Features()["netbrowse"] = netbrowse
+	// The User's Guide is bundled at build time (a filesystem check, not
+	// config); gate the Help entry on its presence.
+	caps.Features()["docs"] = handlers.DetectDocs()
 
 	// Trigger any post-login hooks (e.g. schema sync) with full credentials.
 	if h.OnLogin != nil {

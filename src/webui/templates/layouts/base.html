@@ -24,6 +24,13 @@
     </button>
     <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
     <div class="topbar-right">
+      {{if .Capabilities.Has "docs"}}
+      {{/* On-device User's Guide (static mkdocs site at /guide/). */}}
+      <a class="topbar-link" href="/guide/" target="_blank" rel="noopener"
+         title="Open the User Guide in a new tab" aria-label="User Guide">
+        {{template "icon-book"}}
+      </a>
+      {{end}}
       {{if .Capabilities.Has "netbrowse"}}
       {{/* mDNS network browser — fixed network.local vhost, so a static
            href (no JS, no CSP concern). */}}
@@ -85,6 +92,13 @@
                 Off
                 {{template "icon-check"}}
               </button>
+              {{if .Capabilities.Has "docs"}}
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="/guide/" target="_blank" rel="noopener">
+                {{template "icon-book"}}
+                User Guide
+              </a>
+              {{end}}
               <div class="dropdown-divider"></div>
               <form method="POST" action="/logout">
                 <input type="hidden" name="csrf" value="{{.CsrfToken}}">

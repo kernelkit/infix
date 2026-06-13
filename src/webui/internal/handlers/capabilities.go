@@ -5,9 +5,21 @@ package handlers
 import (
 	"context"
 	"log"
+	"os"
 
 	"infix/webui/internal/restconf"
 )
+
+// docsIndexPath is the entry point of the on-device User's Guide bundled
+// by post-build.sh (mkdocs → /var/www/guide), served by nginx at /guide/.
+const docsIndexPath = "/var/www/guide/index.html"
+
+// DetectDocs reports whether the User's Guide was bundled into this image
+// (the build host had mkdocs), so the UI can show or hide the entry.
+func DetectDocs() bool {
+	_, err := os.Stat(docsIndexPath)
+	return err == nil
+}
 
 type feature struct {
 	Name    string // key used in Has() and session cookie
