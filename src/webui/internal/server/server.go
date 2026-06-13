@@ -293,9 +293,6 @@ func New(
 	mux.HandleFunc("GET /interfaces/{name}", iface.Detail)
 	mux.HandleFunc("GET /interfaces/{name}/counters", iface.Counters)
 	mux.HandleFunc("GET /firewall", fw.Overview)
-	mux.HandleFunc("GET /keystore", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/configure/keystore", http.StatusMovedPermanently)
-	})
 	mux.HandleFunc("GET /software", sys.Software)
 	mux.HandleFunc("GET /software/progress", sys.SoftwareProgress)
 	mux.HandleFunc("POST /software/install",     sys.SoftwareInstall)
