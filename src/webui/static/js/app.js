@@ -154,6 +154,203 @@
     initRestoreCheckbox(root);
     initYangTree(root);
     initMultiDropdown(root);
+    initLogsFilter(root);
+    initLogsTail(root);
+  }
+
+  // Active EventSource for the live-tail stream, if any.  Module-scoped
+  // so the htmx:afterSwap handler can tear it down on tab change — the
+  // old tail-checkbox is replaced by the new card, but the underlying
+  // stream would otherwise keep running until the server times out.
+  var logsTailES = null;
+
+  // Latched true between a Load earlier click and the swap completing.
+  // Stays true for a 500ms grace window after the click, then auto-clears
+  // — htmx can fire htmx:afterSwap more than once per request (OOB swaps,
+  // settle, etc.), and consuming the flag on the first fire would leave
+  // a subsequent fire to scroll-to-bottom and undo the preservation.
+  // The grace window comfortably covers a normal request RTT but expires
+  // quickly enough that a real tab swap right afterwards behaves correctly.
+  var loadEarlierInFlight = false;
+  var loadEarlierClearTimer = null;
+
+  function teardownLogsTail() {
+    if (logsTailES) {
+      logsTailES.close();
+      logsTailES = null;
+    }
+  }
+
+  // Helper: returns true when the user is at (or very near) the bottom
+  // of a scrollable element.  Used so live-tail only auto-scrolls when
+  // the user is already reading the tail; if they've scrolled up to
+  // inspect old context, new lines append silently in the background.
+  function nearBottom(el) {
+    return (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
+  }
+
+  function setTailStatus(label, text, cls) {
+    if (!label) return;
+    var status = label.querySelector('.logs-tail-status');
+    if (!status) return;
+    status.textContent = text;
+    status.className = 'logs-tail-status' + (cls ? ' ' + cls : '');
+  }
+
+  function initLogsTail(root) {
+    var scope = root || document;
+    scope.querySelectorAll('.logs-tail-cb:not([data-init])').forEach(function (cb) {
+      cb.dataset.init = 'true';
+      var label = cb.closest('label');
+
+      cb.addEventListener('change', function () {
+        teardownLogsTail();
+        if (!cb.checked) {
+          setTailStatus(label, '', '');
+          return;
+        }
+
+        var body = cb.closest('.logs-body');
+        var srcKey = body && body.getAttribute('data-source');
+        var content = body && body.querySelector('.logs-content');
+        if (!srcKey || !content) {
+          // Surface the failure rather than silently no-op — empty log
+          // files have no .logs-content element, and any future markup
+          // tweak that drops the data-source attribute would otherwise
+          // make tail appear broken without any clue why.
+          console.warn('[logs] live-tail aborted', { body: !!body, srcKey: srcKey, content: !!content });
+          setTailStatus(label, 'nothing to tail', 'err');
+          cb.checked = false;
+          return;
+        }
+
+        // Toggling tail on always jumps to the end — the user opted in
+        // to "show me new stuff," even if they were scrolled up.  Defer
+        // to the next frame so the jump lands after the layout settles
+        // (the status pill flips to "connecting…" on the same tick).
+        var stickToBottom = true;
+        requestAnimationFrame(function () {
+          content.scrollTop = content.scrollHeight;
+        });
+
+        setTailStatus(label, 'connecting…', 'pending');
+
+        logsTailES = new EventSource('/maintenance/logs/' + encodeURIComponent(srcKey) + '/tail');
+
+        // The native open event fires on successful HTTP handshake,
+        // which is enough to confirm the TCP/TLS path works even if no
+        // log lines are streaming yet.  Useful when nginx buffering
+        // would otherwise leave the user staring at a blank tail.
+        logsTailES.onopen = function () {
+          setTailStatus(label, 'live', 'live');
+        };
+        logsTailES.addEventListener('lines', function (evt) {
+          // Stick to the bottom for the first batch unconditionally (the
+          // user just opted in), then fall back to the "only follow if
+          // already at the bottom" rule so scrolling up to read pauses
+          // the auto-follow.
+          var follow = stickToBottom || nearBottom(content);
+          stickToBottom = false;
+          content.insertAdjacentHTML('beforeend', evt.data);
+          if (follow) {
+            content.scrollTop = content.scrollHeight;
+          }
+          setTailStatus(label, 'live', 'live');
+        });
+        logsTailES.onerror = function () {
+          // EventSource auto-reconnects on transient drops — fired
+          // commonly under nginx proxy in front of our handler.  Only
+          // touch the status when the browser has given up (CLOSED is
+          // terminal); leave "live" alone during the auto-reconnect
+          // cycle so the badge doesn't flicker between green and amber
+          // while new lines are still arriving correctly.
+          if (logsTailES && logsTailES.readyState === EventSource.CLOSED) {
+            teardownLogsTail();
+            cb.checked = false;
+            setTailStatus(label, 'disconnected', 'err');
+          }
+        };
+      });
+    });
+  }
+
+  // Pin the log buffer to the bottom on initial render and after every
+  // htmx swap (tab change).  The Load earlier button sits at the top of
+  // the same scroll container, so this naturally hides it until the user
+  // scrolls back up.  Always query against `document`: with our
+  // outerHTML tab swap, htmx hands us the OLD .logs-card as the scope,
+  // which is detached from the DOM by the time afterSwap fires.  Note
+  // for the SSE wiring step: when the user toggles Live tail on, call
+  // this here too.
+  function scrollLogsToBottom() {
+    document.querySelectorAll('.logs-content').forEach(function (el) {
+      el.scrollTop = el.scrollHeight;
+    });
+  }
+
+  // Move keyboard focus onto the log buffer so PageUp / PageDown /
+  // Home / End / arrow keys all work without the user having to click
+  // first.  Uses preventScroll because the buffer was just scrolled to
+  // the bottom and the default focus() would scroll it back to make
+  // the element-top visible.
+  function focusLogsContent() {
+    var content = document.querySelector('.logs-content');
+    if (!content) return;
+    try { content.focus({ preventScroll: true }); } catch (_) { content.focus(); }
+  }
+
+  // Steal Ctrl-F (and ⌘-F on macOS) when a log filter is on-screen so
+  // searching jumps into the filter input rather than opening the
+  // browser's native find — the filter actually understands the
+  // structured log buffer (regex, severity colors stay aligned).  When
+  // no filter is in the DOM the binding does nothing and the browser
+  // behaves normally.
+  document.addEventListener('keydown', function (evt) {
+    if (!evt.key || evt.key.toLowerCase() !== 'f') return;
+    if (!(evt.ctrlKey || evt.metaKey)) return;
+    if (evt.altKey || evt.shiftKey) return;
+    var filter = document.querySelector('.logs-filter');
+    if (!filter) return;
+    evt.preventDefault();
+    filter.focus();
+    filter.select();
+  });
+
+  // Filter the visible log buffer client-side.  Plain substring by default;
+  // /…/ delimiters switch to JS regex (case-insensitive).  Empty query
+  // shows everything.  Debounced so per-keystroke regex compile doesn't
+  // hitch the UI on a big buffer.
+  function initLogsFilter(root) {
+    var scope = root || document;
+    scope.querySelectorAll('.logs-filter:not([data-init])').forEach(function (input) {
+      input.dataset.init = 'true';
+      var content = input.closest('.logs-body') && input.closest('.logs-body').querySelector('.logs-content');
+      if (!content) return;
+
+      function apply() {
+        var q = input.value;
+        var re = null;
+        var trimmed = q.trim();
+        if (trimmed.length >= 2 && trimmed.charAt(0) === '/' && trimmed.charAt(trimmed.length - 1) === '/') {
+          try { re = new RegExp(trimmed.slice(1, -1), 'i'); } catch (_) { re = null; }
+        }
+        var sub = q.toLowerCase();
+        content.querySelectorAll('.logs-line').forEach(function (line) {
+          var t = line.textContent;
+          var show;
+          if (re)        show = re.test(t);
+          else if (q)    show = t.toLowerCase().indexOf(sub) !== -1;
+          else           show = true;
+          line.style.display = show ? '' : 'none';
+        });
+      }
+
+      var timer = null;
+      input.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(apply, 120);
+      });
+    });
   }
 
   // The <details>-based multi-select dropdown needs JS to behave like a
@@ -622,11 +819,38 @@
     initDeviceStatusBanner();
     initDynamicUI(document);
     initSoftwareProgress(document);
+    // On first paint we want the buffer pinned to the most recent entries
+    // and keyboard focus on the buffer so PageUp/PageDown work straight away.
+    scrollLogsToBottom();
+    focusLogsContent();
 
     // Attach the htmx swap listener here, not at IIFE parse time — at parse
     // time the script runs inside <head> before <body> exists, so the
     // document.body guard would silently skip the listener and subsequent
     // navigations wouldn't re-init dynamic UI.
+    // Set the Load earlier flag at click capture time — runs before htmx
+    // sees the click, before any other listener, and works regardless of
+    // whether htmx's beforeRequest event detail matches our expectations.
+    // While we're here, snapshot the scroll state on the .logs-content so
+    // afterSwap can preserve the user's visual position: the line they
+    // were looking at should stay put after new (older) content gets
+    // prepended, not jump to top or bottom.
+    document.body.addEventListener('click', function (evt) {
+      var btn = evt.target && evt.target.closest && evt.target.closest('.logs-load-earlier');
+      if (!btn) return;
+      loadEarlierInFlight = true;
+      if (loadEarlierClearTimer) clearTimeout(loadEarlierClearTimer);
+      loadEarlierClearTimer = setTimeout(function () {
+        loadEarlierInFlight = false;
+        loadEarlierClearTimer = null;
+      }, 500);
+      var content = btn.closest('.logs-content');
+      if (content) {
+        content._preLoadHeight = content.scrollHeight;
+        content._preLoadTop = content.scrollTop;
+      }
+    }, true);
+
     if (window.htmx) {
       document.body.addEventListener('htmx:afterSwap', function (evt) {
         // Close any open SSE stream if the software install progress card is no longer present.
@@ -634,8 +858,51 @@
           swEventSource.close();
           swEventSource = null;
         }
-        var scope = (evt.detail && evt.detail.target) || document;
+
+        // Read but DON'T reset — the timeout in the click handler clears
+        // it after the grace window, so successive htmx:afterSwap fires
+        // within one Load earlier round trip all take the same branch.
+        var isLoadEarlier = loadEarlierInFlight;
+
+        // Tab change replaces the whole logs card, which removes the
+        // tail checkbox without giving us a chance to react.  Kill any
+        // open stream so it doesn't run on after navigation.  Skip on
+        // Load earlier — that swap stays within the current tab and
+        // shouldn't touch the live-tail stream.
+        if (!isLoadEarlier) {
+          teardownLogsTail();
+        }
+
+        // Scope to document, not evt.detail.target: tab swaps use
+        // hx-swap="outerHTML", so afterSwap hands us the OLD (now detached)
+        // .logs-card as the target.  Initialising against it misses the new
+        // tab's Live-tail checkbox — which is why tailing only worked on the
+        // tab rendered at page load.  The init helpers all guard on
+        // :not([data-init]), so re-scanning the document is idempotent.
+        var scope = document;
         initDynamicUI(scope);
+
+        if (isLoadEarlier) {
+          // Content-anchored scroll preservation: keep the line the user
+          // was looking at in the same vertical position by shifting
+          // scrollTop by exactly the height of the newly-prepended
+          // content.  The pre-swap measurements were captured in the
+          // click-capture handler so they reflect the buffer's state
+          // before htmx mutated it.  Without this, the browser falls
+          // back to scrollTop=0 because the OLD anchor element (the
+          // clicked button) no longer exists in the DOM.  Idempotent
+          // across multiple afterSwap fires — recomputing from saved
+          // snapshots always yields the same scrollTop.
+          document.querySelectorAll('.logs-content').forEach(function (content) {
+            if (typeof content._preLoadHeight !== 'number') return;
+            var added = content.scrollHeight - content._preLoadHeight;
+            content.scrollTop = content._preLoadTop + added;
+          });
+        } else {
+          scrollLogsToBottom();
+          focusLogsContent();
+        }
+
         initSoftwareProgress(scope);
       });
     }

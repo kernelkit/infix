@@ -65,6 +65,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	logsTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/logs.html")
+	if err != nil {
+		return nil, err
+	}
 	routingTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/routing.html")
 	if err != nil {
 		return nil, err
@@ -235,6 +239,7 @@ func New(
 		SysCtrlTmpl: sysCtrlTmpl,
 		BackupTmpl:  backupTmpl,
 	}
+	logs := &handlers.LogsHandler{Template: logsTmpl}
 
 	routing := &handlers.RoutingHandler{Template: routingTmpl, RC: rc}
 	wifi := &handlers.WiFiHandler{Template: wifiTmpl, RC: rc}
@@ -300,6 +305,11 @@ func New(
 	mux.HandleFunc("POST /software/boot-order",  sys.SetBootOrder)
 	mux.HandleFunc("POST /reboot", sys.Reboot) // kept for software page "Reboot to activate"
 	mux.HandleFunc("GET /config", sys.DownloadConfig)
+	mux.HandleFunc("GET /maintenance/logs",                    logs.Overview)
+	mux.HandleFunc("GET /maintenance/logs/{name}",             logs.Fragment)
+	mux.HandleFunc("GET /maintenance/logs/{name}/earlier",     logs.Earlier)
+	mux.HandleFunc("GET /maintenance/logs/{name}/tail",        logs.Tail)
+	mux.HandleFunc("GET /maintenance/logs/{name}/download",    logs.Download)
 	mux.HandleFunc("GET /maintenance/backup",                  sys.Backup)
 	mux.HandleFunc("POST /maintenance/backup/restore",         sys.RestoreConfig)
 	mux.HandleFunc("GET /maintenance/system",                  sys.SystemControl)

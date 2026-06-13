@@ -291,7 +291,7 @@
     </details>
 
     <details class="nav-group-top"
-             {{if or (eq .ActivePage "software") (eq .ActivePage "backup") (eq .ActivePage "system-control")}}open{{end}}>
+             {{if or (eq .ActivePage "software") (eq .ActivePage "logs") (eq .ActivePage "backup") (eq .ActivePage "system-control")}}open{{end}}>
       <summary class="nav-group-summary-top">Maintenance</summary>
       <ul class="nav-group-items">
         <li>
@@ -302,6 +302,16 @@
              class="nav-link {{if eq .ActivePage "software"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/software.svg')"></span>
             Software
+          </a>
+        </li>
+        <li>
+          <a href="/maintenance/logs"
+             hx-get="/maintenance/logs"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "logs"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/logs.svg')"></span>
+            Logs
           </a>
         </li>
         <li>
