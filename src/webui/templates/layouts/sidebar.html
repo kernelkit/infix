@@ -103,6 +103,16 @@
             mDNS
           </a>
         </li>
+        {{if .Capabilities.Has "netbrowse"}}
+        {{/* External link to the mDNS network browser at network.local
+             (new tab); not an htmx nav. */}}
+        <li>
+          <a href="https://network.local/" target="_blank" rel="noopener" class="nav-link">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/netbrowse.svg')"></span>
+            Network Browser
+          </a>
+        </li>
+        {{end}}
         <li>
           <a href="/ntp"
              hx-get="/ntp"

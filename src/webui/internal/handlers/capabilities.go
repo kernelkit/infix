@@ -70,26 +70,31 @@ type yangLibrary struct {
 	} `json:"ietf-yang-library:yang-library"`
 }
 
-// webConsoleConfig mirrors the slice of infix-services we need for the
-// console gate.
-type webConsoleConfig struct {
+// webConfig mirrors the slice of infix-services we need to gate the
+// external web-app shortcuts (console, netbrowse).
+type webConfig struct {
 	Web struct {
 		Console struct {
 			Enabled bool `json:"enabled"`
 		} `json:"console"`
+		Netbrowse struct {
+			Enabled bool `json:"enabled"`
+		} `json:"netbrowse"`
 	} `json:"infix-services:web"`
 }
 
-// DetectConsole reports whether the web console (ttyd on :7681) is enabled
-// in config, so the UI can show or hide the terminal entry.  Fails closed:
-// a read error hides the entry rather than offering a dead link.
-func DetectConsole(ctx context.Context, rc restconf.Fetcher) bool {
-	var cfg webConsoleConfig
+// DetectWebShortcuts reports whether the web console (ttyd on :7681) and
+// the mDNS network browser (netbrowse at network.local) are enabled in
+// config, so the UI can show or hide their shortcuts.  One read covers
+// both.  Fails closed: a read error hides both rather than offering a
+// dead link.
+func DetectWebShortcuts(ctx context.Context, rc restconf.Fetcher) (console, netbrowse bool) {
+	var cfg webConfig
 	if err := rc.Get(ctx, "/data/infix-services:web", &cfg); err != nil {
-		log.Printf("web/console config: %v (console entry hidden)", err)
-		return false
+		log.Printf("web config: %v (console/netbrowse shortcuts hidden)", err)
+		return false, false
 	}
-	return cfg.Web.Console.Enabled
+	return cfg.Web.Console.Enabled, cfg.Web.Netbrowse.Enabled
 }
 
 func DetectCapabilities(ctx context.Context, rc restconf.Fetcher) *Capabilities {

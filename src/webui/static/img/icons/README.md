@@ -29,6 +29,7 @@ untouched.
 | logs.svg          | scroll-text           |
 | mdns.svg          | radio                 |
 | nacm.svg          | users                 |
+| netbrowse.svg     | radar                 |
 | ntp.svg           | clock                 |
 | routes.svg        | git-compare-arrows    |
 | routing.svg       | git-compare-arrows    |

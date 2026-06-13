@@ -2133,8 +2133,8 @@ details[open] > .cfg-multi-summary {
   border-color: var(--fg-muted);
 }
 
-/* Web console (terminal) shortcut in the topbar */
-.topbar-console {
+/* External web-app shortcuts (console, network browser) in the topbar */
+.topbar-link {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2144,7 +2144,7 @@ details[open] > .cfg-multi-summary {
   text-decoration: none;
   transition: color 0.15s, background 0.15s;
 }
-.topbar-console:hover {
+.topbar-link:hover {
   color: var(--fg);
   background: var(--border);
 }

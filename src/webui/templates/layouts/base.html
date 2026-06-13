@@ -24,10 +24,18 @@
     </button>
     <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
     <div class="topbar-right">
+      {{if .Capabilities.Has "netbrowse"}}
+      {{/* mDNS network browser — fixed network.local vhost, so a static
+           href (no JS, no CSP concern). */}}
+      <a class="topbar-link" href="https://network.local/" target="_blank" rel="noopener"
+         title="Browse mDNS neighbors (network.local) in a new tab" aria-label="Network browser">
+        {{template "icon-radar"}}
+      </a>
+      {{end}}
       {{if .Capabilities.Has "console"}}
       {{/* Web console (ttyd) on :7681. href is set by JS from the current
            hostname since the port differs and CSP forbids inline script. */}}
-      <a class="topbar-console" data-console-link href="#" target="_blank" rel="noopener"
+      <a class="topbar-link" data-console-link href="#" target="_blank" rel="noopener"
          title="Open web console (terminal) in a new tab" aria-label="Web console">
         {{template "icon-terminal"}}
       </a>
