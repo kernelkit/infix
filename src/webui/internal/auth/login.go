@@ -74,6 +74,9 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Probe optional features once at login and bake into the session.
 	caps := handlers.DetectCapabilities(ctx, h.RC)
+	// The web console (ttyd) is config-gated; fold it into the same feature
+	// map so templates gate on .Capabilities.Has "console".
+	caps.Features()["console"] = handlers.DetectConsole(ctx, h.RC)
 
 	// Trigger any post-login hooks (e.g. schema sync) with full credentials.
 	if h.OnLogin != nil {

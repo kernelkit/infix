@@ -70,6 +70,28 @@ type yangLibrary struct {
 	} `json:"ietf-yang-library:yang-library"`
 }
 
+// webConsoleConfig mirrors the slice of infix-services we need for the
+// console gate.
+type webConsoleConfig struct {
+	Web struct {
+		Console struct {
+			Enabled bool `json:"enabled"`
+		} `json:"console"`
+	} `json:"infix-services:web"`
+}
+
+// DetectConsole reports whether the web console (ttyd on :7681) is enabled
+// in config, so the UI can show or hide the terminal entry.  Fails closed:
+// a read error hides the entry rather than offering a dead link.
+func DetectConsole(ctx context.Context, rc restconf.Fetcher) bool {
+	var cfg webConsoleConfig
+	if err := rc.Get(ctx, "/data/infix-services:web", &cfg); err != nil {
+		log.Printf("web/console config: %v (console entry hidden)", err)
+		return false
+	}
+	return cfg.Web.Console.Enabled
+}
+
 func DetectCapabilities(ctx context.Context, rc restconf.Fetcher) *Capabilities {
 	var lib yangLibrary
 	if err := rc.Get(ctx, "/data/ietf-yang-library:yang-library", &lib); err != nil {

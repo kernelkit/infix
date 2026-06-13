@@ -2133,6 +2133,22 @@ details[open] > .cfg-multi-summary {
   border-color: var(--fg-muted);
 }
 
+/* Web console (terminal) shortcut in the topbar */
+.topbar-console {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+.topbar-console:hover {
+  color: var(--fg);
+  background: var(--border);
+}
+
 /* User menu button */
 .user-menu {
   position: relative;

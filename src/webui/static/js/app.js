@@ -2633,3 +2633,17 @@ function renderCfgLog() {
     }
   });
 })();
+
+// ─── Web console (ttyd) link ────────────────────────────────────────────────
+// The console runs on its own HTTPS port (7681), so the link target can't be
+// a relative path — build it from the current hostname at load time.  CSP
+// (script-src 'self') forbids an inline onclick, hence this lives here.  The
+// topbar/sidebar only render on full page loads, so DOMContentLoaded covers it.
+(function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    var links = document.querySelectorAll('[data-console-link]');
+    if (!links.length) return;
+    var url = 'https://' + window.location.hostname + ':7681/';
+    links.forEach(function (a) { a.href = url; });
+  });
+})();

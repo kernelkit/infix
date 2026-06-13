@@ -324,6 +324,16 @@
             Diagnostics
           </a>
         </li>
+        {{if .Capabilities.Has "console"}}
+        {{/* External link to ttyd on :7681 (new tab); not an htmx nav.
+             href is filled in by JS from the current hostname. */}}
+        <li>
+          <a data-console-link href="#" target="_blank" rel="noopener" class="nav-link">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/console.svg')"></span>
+            Console
+          </a>
+        </li>
+        {{end}}
         <li>
           <a href="/maintenance/backup"
              hx-get="/maintenance/backup"

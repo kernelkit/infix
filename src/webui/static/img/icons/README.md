@@ -14,6 +14,7 @@ untouched.
 |-------------------|-----------------------|
 | advanced.svg      | folder-git-2          |
 | backup.svg        | archive-restore       |
+| console.svg       | square-terminal       |
 | containers.svg    | container             |
 | dashboard.svg     | circle-gauge          |
 | dhcp.svg          | network               |

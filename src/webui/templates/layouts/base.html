@@ -24,6 +24,14 @@
     </button>
     <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
     <div class="topbar-right">
+      {{if .Capabilities.Has "console"}}
+      {{/* Web console (ttyd) on :7681. href is set by JS from the current
+           hostname since the port differs and CSP forbids inline script. */}}
+      <a class="topbar-console" data-console-link href="#" target="_blank" rel="noopener"
+         title="Open web console (terminal) in a new tab" aria-label="Web console">
+        {{template "icon-terminal"}}
+      </a>
+      {{end}}
       <div class="user-menu" id="user-menu">
             <button class="user-menu-btn" id="user-menu-btn" aria-haspopup="true" aria-expanded="false">
               {{template "icon-user"}}
