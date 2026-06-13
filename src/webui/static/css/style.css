@@ -1504,6 +1504,15 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 .diag-status.pending::before { color: var(--warning, #c97a00); animation: logs-tail-pulse 1s ease-in-out infinite; }
 .diag-status.err::before { color: var(--danger, #b03030); }
 
+/* Support bundle status pill — shares the diag-status visual language,
+   but sits on its own line below the button. */
+.support-status { display: block; font-size: 0.8rem; color: var(--fg-muted); margin: 0.5rem 0 0; }
+.support-status:empty { margin: 0; }
+.support-status:not(:empty)::before { content: "●"; margin-right: 0.25rem; font-size: 0.85em; }
+.support-status.pending::before { color: var(--warning, #c97a00); animation: logs-tail-pulse 1s ease-in-out infinite; }
+.support-status.err::before { color: var(--danger, #b03030); }
+.sc-hint { font-size: 0.8rem; opacity: 0.8; margin-top: 0.4rem; }
+
 .diag-output { padding: 0.25rem 1rem 1rem; }
 .diag-placeholder { color: var(--fg-muted); font-size: 0.85rem; padding: 1rem 0; }
 .diag-text {

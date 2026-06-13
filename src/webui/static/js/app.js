@@ -2563,3 +2563,73 @@ function renderCfgLog() {
     }
   });
 })();
+
+// ─── Maintenance > Backup & Support: support bundle download ────────────────
+// `support collect` takes up to a minute and returns the whole archive at
+// once, so a plain <a download> would just hang with no feedback.  Instead
+// fetch the bundle as a blob with a visible "generating…" state, then save
+// it client-side using the filename the server set in Content-Disposition.
+(function () {
+  function filenameFromDisposition(cd, fallback) {
+    var m = /filename="?([^";]+)"?/.exec(cd || '');
+    return m ? m[1] : fallback;
+  }
+
+  function initSupportBundle(scope) {
+    (scope || document).querySelectorAll('.support-generate:not([data-init])').forEach(function (btn) {
+      btn.dataset.init = 'true';
+      var card = btn.closest('.info-card');
+      var pass = card.querySelector('.support-pass');
+      var status = card.querySelector('.support-status');
+
+      function setStatus(text, cls) {
+        if (!status) return;
+        status.textContent = text || '';
+        status.className = 'support-status' + (cls ? ' ' + cls : '');
+      }
+
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        setStatus('Collecting… (up to a minute)', 'pending');
+
+        var body = new FormData();
+        if (pass && pass.value) body.append('password', pass.value);
+
+        fetch('/maintenance/support-bundle', {
+          method: 'POST',
+          headers: { 'X-CSRF-Token': btn.getAttribute('data-csrf') || '' },
+          body: body
+        }).then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          var name = filenameFromDisposition(r.headers.get('Content-Disposition'), 'support-bundle.tar.gz');
+          return r.blob().then(function (blob) { return { blob: blob, name: name }; });
+        }).then(function (res) {
+          var url = URL.createObjectURL(res.blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = res.name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+          setStatus('Downloaded ' + res.name, '');
+          if (pass) pass.value = '';
+        }).catch(function (e) {
+          setStatus('Failed to generate bundle', 'err');
+          if (window.console) console.warn('[support]', e);
+        }).finally(function () {
+          btn.disabled = false;
+        });
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    initSupportBundle(document);
+    if (window.htmx) {
+      document.body.addEventListener('htmx:afterSwap', function (evt) {
+        initSupportBundle((evt.detail && evt.detail.target) || document);
+      });
+    }
+  });
+})();

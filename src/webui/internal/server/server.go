@@ -320,6 +320,7 @@ func New(
 	mux.HandleFunc("GET /maintenance/diagnostics/resolve",     diag.Resolve)
 	mux.HandleFunc("GET /maintenance/backup",                  sys.Backup)
 	mux.HandleFunc("POST /maintenance/backup/restore",         sys.RestoreConfig)
+	mux.HandleFunc("POST /maintenance/support-bundle",         sys.SupportBundle)
 	mux.HandleFunc("GET /maintenance/system",                  sys.SystemControl)
 	mux.HandleFunc("POST /maintenance/system/reboot",          sys.Reboot)
 	mux.HandleFunc("POST /maintenance/system/shutdown",        sys.Shutdown)

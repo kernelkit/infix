@@ -44,5 +44,26 @@
     </div>
   </section>
 
+  <section class="info-card">
+    <div class="card-header">Support Bundle</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">Collect system state — configuration, logs, routing,
+        interfaces, hardware inventory, and container and service status — into a
+        single archive to attach to a support ticket.  Collection can take up to
+        a minute.</p>
+      <div class="sc-dt-row">
+        <input type="password" class="cfg-input support-pass"
+               placeholder="Encryption password (optional)" autocomplete="new-password">
+      </div>
+      <p class="sc-desc sc-hint">Leave blank for a plain <code>.tar.gz</code>, or set
+        a password to encrypt the bundle (GPG) before download.</p>
+      <div style="margin-top:0.75rem">
+        <button type="button" class="btn btn-primary support-generate"
+                data-csrf="{{.CsrfToken}}">Download support</button>
+      </div>
+      <p class="support-status" aria-live="polite"></p>
+    </div>
+  </section>
+
 </div>
 {{end}}

@@ -198,7 +198,7 @@ const factoryResetSpinnerHTML = `<div class="reboot-overlay">
 
 // Backup renders the Backup & Restore maintenance page.
 func (h *SystemHandler) Backup(w http.ResponseWriter, r *http.Request) {
-	data := newPageData(w, r, "backup", "Backup & Restore")
+	data := newPageData(w, r, "backup", "Backup & Support")
 	tmplName := "backup.html"
 	if r.Header.Get("HX-Request") == "true" {
 		tmplName = "content"
@@ -206,6 +206,67 @@ func (h *SystemHandler) Backup(w http.ResponseWriter, r *http.Request) {
 	if err := h.BackupTmpl.ExecuteTemplate(w, tmplName, data); err != nil {
 		log.Printf("backup template: %v", err)
 	}
+}
+
+// SupportBundle runs the on-device `support collect` tool and streams the
+// resulting archive back as a download.  The WebUI runs as root, so the
+// collection is complete (dmesg, ethtool, etc.).  An optional password
+// encrypts the archive via the tool's GPG support and is fed on stdin so
+// it never lands in the process list.
+//
+// Collection emits nothing on stdout until it finishes (~50 s), then the
+// whole archive at once.  We buffer it and only commit response headers
+// once the tool exits successfully, so a mid-collection failure becomes a
+// clean 500 rather than a truncated download.  --work-dir /tmp keeps the
+// transient files in tmpfs; the tool cleans up after itself.
+// POST /maintenance/support-bundle
+func (h *SystemHandler) SupportBundle(w http.ResponseWriter, r *http.Request) {
+	// Collection blocks ~50 s with no output, but the server's 15 s
+	// WriteTimeout would close the connection long before then (nginx
+	// then logs a 502 "upstream prematurely closed connection").  Push
+	// the write deadline out for this long-running download.
+	if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(4 * time.Minute)); err != nil {
+		log.Printf("support bundle: extend write deadline: %v", err)
+	}
+
+	password := r.FormValue("password")
+	encrypt := password != ""
+
+	args := []string{"--work-dir", "/tmp", "collect"}
+	ext, ctype := "tar.gz", "application/gzip"
+	if encrypt {
+		args = append(args, "-p")
+		ext, ctype = "tar.gz.gpg", "application/pgp-encrypted"
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "/usr/sbin/support", args...)
+	if encrypt {
+		cmd.Stdin = strings.NewReader(password + "\n")
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		stderr := ""
+		if ee, ok := err.(*exec.ExitError); ok {
+			stderr = strings.TrimSpace(string(ee.Stderr))
+		}
+		log.Printf("support bundle: %v: %s", err, stderr)
+		http.Error(w, "Failed to collect support bundle", http.StatusInternalServerError)
+		return
+	}
+
+	hostname, _ := os.Hostname()
+	if hostname == "" {
+		hostname = "device"
+	}
+	fname := fmt.Sprintf("support-%s-%s.%s", hostname, time.Now().UTC().Format("20060102-1504"), ext)
+
+	w.Header().Set("Content-Type", ctype)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", fname))
+	w.Header().Set("Content-Length", fmt.Sprint(len(out)))
+	w.Write(out) //nolint:errcheck
 }
 
 // RestoreConfig accepts a multipart-uploaded JSON config file and applies it.
