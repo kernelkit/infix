@@ -38,7 +38,7 @@ func csrfToken(ctx context.Context) string {
 // where it lives in the sidebar.
 func pageContext(page string) string {
 	switch page {
-	case "software", "logs", "backup", "system-control":
+	case "software", "logs", "diagnostics", "backup", "system-control":
 		return "Maintenance"
 	}
 	if strings.HasPrefix(page, "configure-") {

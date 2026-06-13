@@ -17,6 +17,7 @@ untouched.
 | containers.svg    | container             |
 | dashboard.svg     | circle-gauge          |
 | dhcp.svg          | network               |
+| diagnostics.svg   | activity              |
 | dns.svg           | globe                 |
 | download.svg      | download              |
 | firewall.svg      | shield-check          |

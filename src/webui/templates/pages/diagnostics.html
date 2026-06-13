@@ -1,0 +1,149 @@
+{{define "diagnostics.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{template "diag-card" .}}
+{{end}}
+
+{{/* Tabs are client-side here (unlike Logs): switching tool only swaps
+     which option fields show, there's no server data to fetch.  The Run
+     button opens an EventSource to /maintenance/diagnostics/run; Stop
+     closes it, which cancels the request context and kills the tool. */}}
+{{define "diag-card"}}
+<section class="info-card diag-card" data-active="{{.Active}}">
+  <div class="card-header">Diagnostics</div>
+
+  <div class="diag-tabs" role="tablist">
+    <button class="diag-tab active" type="button" role="tab" data-tool="ping">Ping</button>
+    <button class="diag-tab" type="button" role="tab" data-tool="traceroute">Traceroute</button>
+    <button class="diag-tab" type="button" role="tab" data-tool="mtr">MTR</button>
+    <button class="diag-tab" type="button" role="tab" data-tool="nmap">Nmap</button>
+    <button class="diag-tab" type="button" role="tab" data-tool="dns">DNS lookup</button>
+  </div>
+
+  <form class="diag-form" autocomplete="off" onsubmit="return false">
+    {{/* One wrapping row: the target grows to fill the left; the per-tool
+         option fields flow to its right, and Source interface + Address
+         family always come last on the line.  Per-tool fields show/hide
+         via the [hidden] attr driven by JS keyed on data-tool. */}}
+    <div class="diag-row">
+      <label class="diag-field diag-field-grow">
+        <span class="diag-label" data-target-label>Target host or address</span>
+        <input type="text" class="cfg-input diag-target" name="target"
+               placeholder="hostname or IP" list="diag-history">
+      </label>
+
+      <label class="diag-field diag-opt" data-tool="ping">
+        <span class="diag-label">Count</span>
+        <input type="number" class="cfg-input diag-count" name="count" value="3" min="1" max="100">
+      </label>
+      <label class="diag-field diag-opt" data-tool="ping">
+        <span class="diag-label">Size</span>
+        <input type="number" class="cfg-input diag-size" name="size" value="56" min="0" max="65500">
+      </label>
+
+      <label class="diag-field diag-opt" data-tool="traceroute">
+        <span class="diag-label">Max hops</span>
+        <input type="number" class="cfg-input diag-maxhops" name="maxhops" value="30" min="1" max="64">
+      </label>
+
+      {{/* mtr's cycle/size only appear when continuous mode is off; the
+           toggle itself lives on its own row below so the revealed
+           fields don't intermingle with the checkbox. */}}
+      <label class="diag-field diag-opt diag-mtr-param" data-tool="mtr">
+        <span class="diag-label">Cycles</span>
+        <input type="number" class="cfg-input diag-mtr-count" value="10" min="1" max="1000">
+      </label>
+      <label class="diag-field diag-opt diag-mtr-param" data-tool="mtr">
+        <span class="diag-label">Size</span>
+        <input type="number" class="cfg-input diag-mtr-size" value="56" min="0" max="65500">
+      </label>
+
+      <label class="diag-field diag-opt" data-tool="nmap">
+        <span class="diag-label">Scan type</span>
+        <select class="cfg-input diag-scan" name="scan">
+          <option value="quick">Quick (top 100 ports)</option>
+          <option value="standard">Standard (top 1000 ports)</option>
+          <option value="services">Service &amp; version (-sV)</option>
+          <option value="ping">Host discovery / ping sweep</option>
+        </select>
+      </label>
+
+      <label class="diag-field diag-only-net">
+        <span class="diag-label">Source interface</span>
+        <select class="cfg-input diag-iface" name="iface">
+          <option value="">Auto</option>
+          {{range .Interfaces}}<option value="{{.}}">{{.}}</option>{{end}}
+        </select>
+      </label>
+
+      <label class="diag-field">
+        <span class="diag-label">Address family</span>
+        <select class="cfg-input diag-family" name="family">
+          <option value="auto">Auto</option>
+          <option value="4">IPv4</option>
+          <option value="6">IPv6</option>
+        </select>
+      </label>
+    </div>
+
+    {{/* MTR run mode lives on its own row, below the options, so toggling
+         it off reveals Cycles/Size cleanly above without reflowing
+         around the checkbox. */}}
+    <div class="diag-row diag-opt diag-mode-row" data-tool="mtr">
+      <label class="diag-check"><input type="checkbox" class="diag-mtr-continuous" checked> Run continuously (uncheck to set cycles)</label>
+    </div>
+
+    <div class="diag-actions">
+      <button type="button" class="btn btn-primary diag-run">Run</button>
+      <button type="button" class="btn diag-stop" hidden>Stop</button>
+      <button type="button" class="btn btn-sm diag-clear">Clear</button>
+      <span class="diag-status" aria-live="polite"></span>
+    </div>
+  </form>
+
+  {{/* Shared host history for the target field, persisted in
+       localStorage and rebuilt by JS on each run. */}}
+  <datalist id="diag-history"></datalist>
+
+  {{/* Two output surfaces share the card: a text pane for ping /
+       traceroute / dns, and a live table for mtr.  JS toggles which is
+       visible per tool. */}}
+  <div class="diag-output">
+    <pre class="diag-text" tabindex="0" hidden></pre>
+
+    <table class="diag-mtr" hidden>
+      <thead>
+        <tr>
+          <th class="diag-mtr-hop">Hop</th>
+          <th class="diag-mtr-host">Host</th>
+          <th>Loss%</th>
+          <th>Snt</th>
+          <th>Last</th>
+          <th>Avg</th>
+          <th>Best</th>
+          <th>Worst</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="diag-dns" hidden></div>
+
+    <p class="diag-placeholder">Enter a target and press Run.</p>
+  </div>
+</section>
+{{end}}
+
+{{/* DNS lookup result fragment, swapped into .diag-dns. */}}
+{{define "diag-dns-result"}}
+{{if .Error}}
+<p class="diag-dns-err">Lookup failed for <code>{{.Name}}</code>: {{.Error}}</p>
+{{else}}
+<p class="diag-dns-head"><code>{{.Name}}</code> resolves to:</p>
+<ul class="diag-dns-list">
+  {{range .Addrs}}<li><code>{{.}}</code></li>{{end}}
+</ul>
+{{end}}
+{{end}}

@@ -2211,3 +2211,355 @@ function renderCfgLog() {
     }
   });
 })();
+
+// ─── Maintenance > Diagnostics ─────────────────────────────────────────────
+// Ping / traceroute / mtr / DNS lookup.  Tabs are client-side: switching
+// tool only changes which option fields and which output surface show.
+// Run opens an EventSource to /maintenance/diagnostics/run and renders
+// streamed `line` / `hop` / `done` events; Stop closes it, which cancels
+// the server request context and kills the spawned tool.  DNS lookup is a
+// one-shot fetch instead of a stream.
+(function () {
+  var diagES = null; // active stream, module-scoped so afterSwap can kill it
+
+  function diagTeardown() {
+    if (diagES) {
+      diagES.close();
+      diagES = null;
+    }
+  }
+
+  // Tools that take a network target + source interface (everything but
+  // DNS, which resolves a name and has no source-interface concept here).
+  function isNetTool(tool) {
+    return tool === 'ping' || tool === 'traceroute' || tool === 'mtr' || tool === 'nmap';
+  }
+
+  function setActiveTool(card, tool) {
+    card.dataset.active = tool;
+
+    card.querySelectorAll('.diag-tab').forEach(function (t) {
+      t.classList.toggle('active', t.getAttribute('data-tool') === tool);
+    });
+
+    // Show only the option fields belonging to this tool.
+    card.querySelectorAll('.diag-opt').forEach(function (o) {
+      o.hidden = o.getAttribute('data-tool') !== tool;
+    });
+
+    // Source interface only applies to the network tools.
+    card.querySelectorAll('.diag-only-net').forEach(function (el) {
+      el.hidden = !isNetTool(tool);
+    });
+
+    // mtr's cycle/size fields only make sense when not running forever.
+    if (tool === 'mtr') applyMtrContinuous(card);
+
+    // Retarget the input label/placeholder per tool.
+    var label = card.querySelector('[data-target-label]');
+    var input = card.querySelector('.diag-target');
+    if (tool === 'dns') {
+      if (label) label.textContent = 'Name to resolve';
+      if (input) input.placeholder = 'hostname';
+    } else if (tool === 'nmap') {
+      if (label) label.textContent = 'Target host, address, or CIDR';
+      if (input) input.placeholder = 'host, IP, or 192.168.0.0/24';
+    } else {
+      if (label) label.textContent = 'Target host or address';
+      if (input) input.placeholder = 'hostname or IP';
+    }
+
+    // Reset to the ready state: kill any stream, hide all output
+    // surfaces, show the placeholder hint.  The matching surface is
+    // revealed on Run.  Switching tool is a context change, so dropping
+    // the previous tool's output is the expected "fresh start".
+    diagTeardown();
+    card.querySelector('.diag-text').hidden = true;
+    card.querySelector('.diag-mtr').hidden = true;
+    card.querySelector('.diag-dns').hidden = true;
+    card.querySelector('.diag-placeholder').hidden = false;
+    diagSetStatus(card, '', '');
+    diagSetRunning(card, false);
+  }
+
+  function diagSetStatus(card, text, cls) {
+    var s = card.querySelector('.diag-status');
+    if (!s) return;
+    s.textContent = text || '';
+    s.className = 'diag-status' + (cls ? ' ' + cls : '');
+  }
+
+  function diagSetRunning(card, running) {
+    card.querySelector('.diag-run').hidden = running;
+    card.querySelector('.diag-stop').hidden = !running;
+  }
+
+  // Return focus to the target field when a run finishes so the user can
+  // type the next address immediately.  Guard on visibility so a run that
+  // completes while the tab is backgrounded doesn't yank the window
+  // forward (the run was started, then the user looked away).
+  function diagFocusTarget(card) {
+    var input = card.querySelector('.diag-target');
+    if (input && document.visibilityState !== 'hidden') {
+      input.focus({ preventScroll: true });
+    }
+  }
+
+  // Hide mtr's Cycles/Size fields while "Run continuously" is checked.
+  function applyMtrContinuous(card) {
+    var cb = card.querySelector('.diag-mtr-continuous');
+    var continuous = cb ? cb.checked : true;
+    card.querySelectorAll('.diag-mtr-param').forEach(function (el) {
+      el.hidden = continuous;
+    });
+  }
+
+  // ── Target history (shared across tools, persisted in localStorage) ──
+  var DIAG_HIST_KEY = 'infix.diag.history';
+
+  function diagLoadHistory() {
+    try { return JSON.parse(localStorage.getItem(DIAG_HIST_KEY)) || []; }
+    catch (_) { return []; }
+  }
+
+  function diagRenderHistory() {
+    var dl = document.getElementById('diag-history');
+    if (!dl) return;
+    dl.innerHTML = '';
+    diagLoadHistory().forEach(function (h) {
+      var o = document.createElement('option');
+      o.value = h;
+      dl.appendChild(o);
+    });
+  }
+
+  function diagPushHistory(target) {
+    if (!target) return;
+    var list = diagLoadHistory().filter(function (h) { return h !== target; });
+    list.unshift(target);
+    if (list.length > 25) list = list.slice(0, 25);
+    try { localStorage.setItem(DIAG_HIST_KEY, JSON.stringify(list)); } catch (_) {}
+    diagRenderHistory();
+  }
+
+  // Upsert one mtr hop row keyed by hop index.
+  function diagUpsertHop(tbody, hop) {
+    var row = tbody.querySelector('tr[data-idx="' + hop.idx + '"]');
+    if (!row) {
+      row = document.createElement('tr');
+      row.setAttribute('data-idx', hop.idx);
+      row.innerHTML =
+        '<td class="diag-mtr-hop"></td><td class="diag-mtr-host"></td>' +
+        '<td class="diag-mtr-loss"></td><td></td><td></td><td></td><td></td><td></td>';
+      // Keep rows ordered by hop index even if events arrive out of order.
+      var next = null;
+      tbody.querySelectorAll('tr').forEach(function (r) {
+        if (next === null && parseInt(r.getAttribute('data-idx'), 10) > hop.idx) next = r;
+      });
+      tbody.insertBefore(row, next);
+    }
+    var c = row.children;
+    c[0].textContent = hop.idx + 1;
+    c[1].textContent = hop.host;
+    c[2].textContent = hop.loss.toFixed(1);
+    c[2].classList.toggle('diag-loss-bad', hop.loss > 0);
+    c[3].textContent = hop.snt;
+    c[4].textContent = hop.last.toFixed(1);
+    c[5].textContent = hop.avg.toFixed(1);
+    c[6].textContent = hop.best.toFixed(1);
+    c[7].textContent = hop.worst.toFixed(1);
+  }
+
+  function diagBuildURL(card) {
+    var tool = card.dataset.active;
+    var q = new URLSearchParams();
+    q.set('tool', tool);
+    q.set('target', card.querySelector('.diag-target').value.trim());
+    q.set('family', card.querySelector('.diag-family').value);
+    if (isNetTool(tool)) {
+      q.set('iface', card.querySelector('.diag-iface').value);
+    }
+    if (tool === 'ping') {
+      var count = card.querySelector('.diag-count');
+      var size = card.querySelector('.diag-size');
+      if (count) q.set('count', count.value);
+      if (size) q.set('size', size.value);
+    } else if (tool === 'traceroute') {
+      var maxhops = card.querySelector('.diag-maxhops');
+      if (maxhops) q.set('maxhops', maxhops.value);
+    } else if (tool === 'mtr') {
+      // Omitting count tells the backend to run forever; only send the
+      // cycle/size knobs when the user has opted out of continuous mode.
+      var cont = card.querySelector('.diag-mtr-continuous');
+      if (cont && !cont.checked) {
+        var mc = card.querySelector('.diag-mtr-count');
+        var ms = card.querySelector('.diag-mtr-size');
+        if (mc) q.set('count', mc.value);
+        if (ms) q.set('size', ms.value);
+      }
+    } else if (tool === 'nmap') {
+      var scan = card.querySelector('.diag-scan');
+      if (scan) q.set('scan', scan.value);
+    }
+    return '/maintenance/diagnostics/run?' + q.toString();
+  }
+
+  function diagRunDNS(card) {
+    var name = card.querySelector('.diag-target').value.trim();
+    if (!name) {
+      diagSetStatus(card, 'enter a name', 'err');
+      return;
+    }
+    var dns = card.querySelector('.diag-dns');
+    var family = card.querySelector('.diag-family').value;
+    diagSetStatus(card, 'resolving…', 'pending');
+    card.querySelector('.diag-placeholder').hidden = true;
+    dns.hidden = false;
+    fetch('/maintenance/diagnostics/resolve?name=' + encodeURIComponent(name) +
+          '&family=' + encodeURIComponent(family), { headers: { 'HX-Request': 'true' } })
+      .then(function (r) { return r.text(); })
+      .then(function (html) { dns.innerHTML = html; diagSetStatus(card, '', ''); diagFocusTarget(card); })
+      .catch(function () { diagSetStatus(card, 'lookup failed', 'err'); });
+  }
+
+  function diagRunStream(card) {
+    var tool = card.dataset.active;
+    var target = card.querySelector('.diag-target').value.trim();
+    if (!target) {
+      diagSetStatus(card, 'enter a target', 'err');
+      return;
+    }
+
+    diagTeardown();
+    card.querySelector('.diag-placeholder').hidden = true;
+
+    var textPane = card.querySelector('.diag-text');
+    var mtrTable = card.querySelector('.diag-mtr');
+    var mtrBody = mtrTable.querySelector('tbody');
+    if (tool === 'mtr') {
+      mtrBody.innerHTML = '';
+      mtrTable.hidden = false;
+      textPane.hidden = true;
+    } else {
+      textPane.textContent = '';
+      textPane.hidden = false;
+      mtrTable.hidden = true;
+    }
+
+    diagSetStatus(card, 'running…', 'pending');
+    diagSetRunning(card, true);
+
+    diagES = new EventSource(diagBuildURL(card));
+    diagES.addEventListener('line', function (evt) {
+      textPane.textContent += evt.data + '\n';
+      textPane.scrollTop = textPane.scrollHeight;
+    });
+    diagES.addEventListener('hop', function (evt) {
+      try { diagUpsertHop(mtrBody, JSON.parse(evt.data)); } catch (_) {}
+    });
+    diagES.addEventListener('done', function () {
+      diagTeardown();
+      diagSetStatus(card, 'done', '');
+      diagSetRunning(card, false);
+      diagFocusTarget(card);
+    });
+    diagES.onerror = function () {
+      // Transient drops auto-reconnect; only react to a terminal close.
+      if (diagES && diagES.readyState === EventSource.CLOSED) {
+        diagTeardown();
+        diagSetStatus(card, 'disconnected', 'err');
+        diagSetRunning(card, false);
+      }
+    };
+  }
+
+  function diagRun(card) {
+    var input = card.querySelector('.diag-target');
+    var target = input.value.trim();
+    if (target) diagPushHistory(target);
+    // Blur the target so Firefox dismisses the datalist popup, which it
+    // otherwise leaves hovering over the results after a selection.
+    if (input) input.blur();
+    if (card.dataset.active === 'dns') {
+      diagRunDNS(card);
+    } else {
+      diagRunStream(card);
+    }
+  }
+
+  function diagStop(card) {
+    diagTeardown();
+    diagSetStatus(card, 'stopped', '');
+    diagSetRunning(card, false);
+    diagFocusTarget(card);
+  }
+
+  function diagClear(card) {
+    card.querySelector('.diag-text').textContent = '';
+    card.querySelector('.diag-mtr tbody').innerHTML = '';
+    card.querySelector('.diag-dns').innerHTML = '';
+    card.querySelector('.diag-text').hidden = true;
+    card.querySelector('.diag-mtr').hidden = true;
+    card.querySelector('.diag-dns').hidden = true;
+    card.querySelector('.diag-placeholder').hidden = false;
+    diagSetStatus(card, '', '');
+  }
+
+  function initDiagnostics(scope) {
+    var root = scope || document;
+    root.querySelectorAll('.diag-card:not([data-init])').forEach(function (card) {
+      card.dataset.init = 'true';
+
+      card.querySelectorAll('.diag-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          setActiveTool(card, tab.getAttribute('data-tool'));
+          // Focus the target field so the user can type straight away.
+          var input = card.querySelector('.diag-target');
+          if (input) input.focus();
+        });
+      });
+
+      card.querySelector('.diag-run').addEventListener('click', function () { diagRun(card); });
+      card.querySelector('.diag-stop').addEventListener('click', function () { diagStop(card); });
+      card.querySelector('.diag-clear').addEventListener('click', function () { diagClear(card); });
+
+      var cont = card.querySelector('.diag-mtr-continuous');
+      if (cont) cont.addEventListener('change', function () { applyMtrContinuous(card); });
+
+      // Enter in ANY form field (target, count, family, …) runs the
+      // active tool — Run is the natural default action.  Buttons are
+      // excluded so Enter on Run/Stop/Clear keeps their own behavior
+      // and doesn't fire twice.
+      card.querySelector('.diag-form').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+          e.preventDefault();
+          diagRun(card);
+        }
+      });
+
+      diagRenderHistory();
+      setActiveTool(card, card.dataset.active || 'ping');
+
+      // Focus the target on load too (tab clicks already do).  Guard on
+      // visibility so a background load doesn't yank the window forward
+      // under X11 WMs — same reasoning as the data-autofocus handler.
+      var target = card.querySelector('.diag-target');
+      if (target && document.visibilityState !== 'hidden') {
+        target.focus({ preventScroll: true });
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    initDiagnostics(document);
+    if (window.htmx) {
+      document.body.addEventListener('htmx:afterSwap', function (evt) {
+        // Navigating away from the diagnostics page removes the card;
+        // make sure any running stream is torn down server-side.
+        if (!document.querySelector('.diag-card')) diagTeardown();
+        var s = (evt.detail && evt.detail.target) || document;
+        initDiagnostics(s);
+      });
+    }
+  });
+})();

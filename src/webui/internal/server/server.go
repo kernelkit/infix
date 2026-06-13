@@ -69,6 +69,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	diagTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/diagnostics.html")
+	if err != nil {
+		return nil, err
+	}
 	routingTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/routing.html")
 	if err != nil {
 		return nil, err
@@ -240,6 +244,7 @@ func New(
 		BackupTmpl:  backupTmpl,
 	}
 	logs := &handlers.LogsHandler{Template: logsTmpl}
+	diag := &handlers.DiagnosticsHandler{RC: rc, Template: diagTmpl}
 
 	routing := &handlers.RoutingHandler{Template: routingTmpl, RC: rc}
 	wifi := &handlers.WiFiHandler{Template: wifiTmpl, RC: rc}
@@ -310,6 +315,9 @@ func New(
 	mux.HandleFunc("GET /maintenance/logs/{name}/earlier",     logs.Earlier)
 	mux.HandleFunc("GET /maintenance/logs/{name}/tail",        logs.Tail)
 	mux.HandleFunc("GET /maintenance/logs/{name}/download",    logs.Download)
+	mux.HandleFunc("GET /maintenance/diagnostics",             diag.Overview)
+	mux.HandleFunc("GET /maintenance/diagnostics/run",         diag.Run)
+	mux.HandleFunc("GET /maintenance/diagnostics/resolve",     diag.Resolve)
 	mux.HandleFunc("GET /maintenance/backup",                  sys.Backup)
 	mux.HandleFunc("POST /maintenance/backup/restore",         sys.RestoreConfig)
 	mux.HandleFunc("GET /maintenance/system",                  sys.SystemControl)

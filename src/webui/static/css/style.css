@@ -1456,6 +1456,92 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
    monospaced log buffer with client-side text/regex filter and best-effort
    severity colouring (heuristic, since on-disk sysklogd doesn't store
    <PRI>).  Live tail, rotations and download wire up in the next step. */
+/* ==========================================================================
+   Maintenance > Diagnostics
+   ========================================================================== */
+.diag-card { display: flex; flex-direction: column; }
+.diag-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.diag-tab {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.diag-tab:hover { color: var(--fg); border-color: var(--fg-muted); }
+.diag-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.diag-form { padding: 0.9rem 1rem 0.4rem; }
+/* The [hidden] attribute is how JS shows per-tool option fields, but the
+   author `display:flex` on .diag-field outranks the UA [hidden] rule, so
+   hidden fields would still render.  Restore it for everything inside the
+   form (specificity class+attr beats the bare class). */
+.diag-form [hidden] { display: none; }
+.diag-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem; }
+.diag-row:empty { margin: 0; }
+.diag-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.diag-field-grow { flex: 1 1 16rem; }
+.diag-label { font-size: 0.78rem; color: var(--fg-muted); }
+.diag-hint { font-size: 0.8rem; color: var(--fg-muted); align-self: center; }
+.diag-opts:empty { display: none; }
+.diag-count, .diag-size, .diag-maxhops, .diag-mtr-count, .diag-mtr-size { width: 7rem; }
+.diag-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; white-space: nowrap; padding: 0.15rem 0; }
+.diag-check input { margin: 0; }
+
+.diag-actions { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0 0.5rem; }
+.diag-status { font-size: 0.78rem; color: var(--fg-muted); margin-left: 0.4rem; letter-spacing: 0.02em; }
+.diag-status:not(:empty)::before { content: "●"; margin-right: 0.25rem; font-size: 0.85em; }
+.diag-status.pending::before { color: var(--warning, #c97a00); animation: logs-tail-pulse 1s ease-in-out infinite; }
+.diag-status.err::before { color: var(--danger, #b03030); }
+
+.diag-output { padding: 0.25rem 1rem 1rem; }
+.diag-placeholder { color: var(--fg-muted); font-size: 0.85rem; padding: 1rem 0; }
+.diag-text {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  background: var(--surface-deep, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+  max-height: 55vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.diag-mtr {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.diag-mtr th, .diag-mtr td {
+  text-align: right;
+  padding: 0.3rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.diag-mtr th { color: var(--fg-muted); font-weight: 600; font-size: 0.76rem; }
+.diag-mtr-hop { text-align: right; width: 3rem; }
+.diag-mtr-host { text-align: left; font-family: var(--font-mono); }
+.diag-mtr tbody tr:hover { background: var(--surface); }
+.diag-loss-bad { color: var(--danger); font-weight: 600; }
+
+.diag-dns-head { font-size: 0.9rem; margin: 0.5rem 0; }
+.diag-dns-list { list-style: none; padding: 0; margin: 0; }
+.diag-dns-list li { padding: 0.2rem 0; font-family: var(--font-mono); font-size: 0.85rem; }
+.diag-dns-err { color: var(--danger); font-size: 0.9rem; }
+
 /* On the logs page, #content holds only the logs card — turn it into a
    flex column and clip its own overflow so the card fills the available
    height and the *buffer* scrolls, not the page.  :has scopes this to
