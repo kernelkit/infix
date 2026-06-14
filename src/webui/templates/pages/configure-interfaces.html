@@ -30,7 +30,7 @@
           <th>Type</th>
           <th>Status</th>
           <th>Member of</th>
-          <th>Addresses</th>
+          <th>Config</th>
           <th></th>
         </tr>
       </thead>
@@ -54,7 +54,11 @@
             {{end}}
           </td>
           <td>{{if .MemberOf}}{{.MemberOf}}{{else}}<span class="text-muted">—</span>{{end}}</td>
-          <td>{{if .AddrSummary}}{{.AddrSummary}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td class="iface-cfg-cell">
+            {{range .ConfigTags}}<span class="iface-tag">{{.}}</span>{{end}}
+            {{if .AddrSummary}}<span class="iface-cfg-addr">{{.AddrSummary}}</span>{{end}}
+            {{if and (not .ConfigTags) (not .AddrSummary)}}<span class="text-muted">—</span>{{end}}
+          </td>
           <td style="text-align:right">
             {{if ne .TypeSlug "loopback"}}
             <button type="button" class="btn-icon btn-icon-danger"

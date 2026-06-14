@@ -94,6 +94,7 @@ type cfgIfaceRow struct {
 	AdminEnabled    bool // true when enabled leaf absent (YANG default) or explicitly true
 	MemberOf        string // bridge or lag name this interface belongs to
 	AddrSummary     string
+	ConfigTags      []string        // type-aware overview pills (DHCP, SLAAC, vid N, …)
 	BridgeMembers   []string        // interface names that are ports of this bridge/lag
 	BridgeMemberSet map[string]bool // for checkbox pre-selection
 	PortCandidates  []string        // free ports + current members of this bridge/lag
@@ -2042,6 +2043,7 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJ
 			}
 		}
 		row.AddrSummary = addrSummary(iface)
+		row.ConfigTags = configSummary(&row)
 
 		if row.IsBridge {
 			members := bridgeMembers[iface.Name]
@@ -2646,4 +2648,41 @@ func addrSummary(iface ifaceJSON) string {
 	default:
 		return fmt.Sprintf("%d addresses", len(addrs))
 	}
+}
+
+// configSummary builds the type-aware overview pills for an interface in the
+// Configure list. It mirrors the Status > Interfaces "Data" column but is
+// slanted to configured intent rather than operational result: each role
+// contributes the properties worth seeing without unfolding the row — IP
+// acquisition (DHCP, SLAAC, zeroconf) for L3 interfaces, the tag id for VLANs,
+// the radio mode for WiFi, and 802.1Q for VLAN-filtering bridges. Static
+// addresses are rendered separately via AddrSummary.
+func configSummary(row *cfgIfaceRow) []string {
+	var tags []string
+
+	if row.IsVlan && row.Vlan != nil {
+		tags = append(tags, fmt.Sprintf("vid %d", row.Vlan.ID))
+	}
+	if row.IsWifi && row.WifiMode != "" {
+		tags = append(tags, row.WifiMode)
+	}
+	if row.IsBridge && row.BridgeIs8021Q {
+		tags = append(tags, "802.1Q")
+	}
+	if row.HasIP {
+		if row.DHCPv4Enabled {
+			tags = append(tags, "DHCPv4")
+		}
+		if row.IPv4 != nil && row.IPv4.Autoconf != nil {
+			tags = append(tags, "Zeroconf")
+		}
+		if row.DHCPv6Enabled {
+			tags = append(tags, "DHCPv6")
+		}
+		if row.IPv6 != nil && row.IPv6.SLAACv6 != nil {
+			tags = append(tags, "SLAAC")
+		}
+	}
+
+	return tags
 }

@@ -1099,6 +1099,25 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 .badge-drop   { background: var(--slate-100); color: var(--slate-600); }
 .badge-continue { background: #dbeafe; color: #1e40af; }
 
+/* Type-aware Config column pills in the Configure > Interfaces overview. */
+.iface-cfg-cell { white-space: normal; }
+.iface-tag {
+  display: inline-block;
+  margin: 0.1rem 0.25rem 0.1rem 0;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--slate-100);
+  color: var(--slate-600);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.iface-cfg-addr { color: var(--slate-600); }
+.dark .iface-tag { background: var(--slate-800); color: var(--slate-300); }
+@media (prefers-color-scheme: dark) {
+  .iface-tag { background: var(--slate-800); color: var(--slate-300); }
+}
+
 @media (prefers-color-scheme: dark) {
   .badge-accept { background: rgba(22, 163, 74, 0.2); color: #86efac; }
   .badge-reject { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
