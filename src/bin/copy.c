@@ -138,9 +138,16 @@ static void set_owner(const char *fn, const char *user)
 	if (chown(fn, -1, gid) && errno != EPERM) {
 		const struct group *gr = getgrgid(gid);
 
-		warn("setting group owner %s (%d) on %s",
+		warn("failed setting group owner %s (%d) on %s",
 		     gr ? gr->gr_name : "<unknown>", gid, fn);
 	}
+
+	/* Make sure the group we just set can actually read/write the file.
+	 * umask alone can't: the datastore export goes through a 0600 mkstemp
+	 * temp and cp(1) propagates that mode to the destination.
+	 */
+	if (chmod(fn, 0660) && errno != EPERM)
+		warn("failed setting mode 0660 on %s", fn);
 }
 
 static const char *infix_ds(const char *text, const struct infix_ds **ds)
