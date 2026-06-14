@@ -92,12 +92,27 @@
                 Off
                 {{template "icon-check"}}
               </button>
-              {{if .Capabilities.Has "docs"}}
+              {{if or (.Capabilities.Has "docs") (.Capabilities.Has "netbrowse") (.Capabilities.Has "console")}}
               <div class="dropdown-divider"></div>
+              {{if .Capabilities.Has "docs"}}
               <a class="dropdown-item" href="/guide/" target="_blank" rel="noopener">
                 {{template "icon-book"}}
                 User Guide
               </a>
+              {{end}}
+              {{if .Capabilities.Has "netbrowse"}}
+              <a class="dropdown-item" href="https://network.local/" target="_blank" rel="noopener">
+                {{template "icon-radar"}}
+                Network Browser
+              </a>
+              {{end}}
+              {{if .Capabilities.Has "console"}}
+              {{/* href filled in by JS from the current hostname (ttyd on :7681). */}}
+              <a class="dropdown-item" data-console-link href="#" target="_blank" rel="noopener">
+                {{template "icon-terminal"}}
+                Console
+              </a>
+              {{end}}
               {{end}}
               <div class="dropdown-divider"></div>
               <form method="POST" action="/logout">

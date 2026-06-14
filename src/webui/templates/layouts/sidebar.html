@@ -74,6 +74,26 @@
           </a>
         </li>
         <li>
+          <a href="/routing"
+             hx-get="/routing"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "routing"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/routing.svg')"></span>
+            Routes
+          </a>
+        </li>
+        <li>
+          <a href="/firewall"
+             hx-get="/firewall"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "firewall"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
+            Firewall
+          </a>
+        </li>
+        <li>
           <a href="/dhcp"
              hx-get="/dhcp"
              hx-target="#content"
@@ -103,16 +123,6 @@
             mDNS
           </a>
         </li>
-        {{if .Capabilities.Has "netbrowse"}}
-        {{/* External link to the mDNS network browser at network.local
-             (new tab); not an htmx nav. */}}
-        <li>
-          <a href="https://network.local/" target="_blank" rel="noopener" class="nav-link">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/netbrowse.svg')"></span>
-            Network Browser
-          </a>
-        </li>
-        {{end}}
         <li>
           <a href="/ntp"
              hx-get="/ntp"
@@ -121,26 +131,6 @@
              class="nav-link {{if eq .ActivePage "ntp"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/ntp.svg')"></span>
             NTP
-          </a>
-        </li>
-        <li>
-          <a href="/routing"
-             hx-get="/routing"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "routing"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/routing.svg')"></span>
-            Routes
-          </a>
-        </li>
-        <li>
-          <a href="/firewall"
-             hx-get="/firewall"
-             hx-target="#content"
-             hx-push-url="true"
-             class="nav-link {{if eq .ActivePage "firewall"}}active{{end}}">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/firewall.svg')"></span>
-            Firewall
           </a>
         </li>
         {{if and .Capabilities (.Capabilities.Has "wifi")}}
@@ -334,16 +324,6 @@
             Diagnostics
           </a>
         </li>
-        {{if .Capabilities.Has "console"}}
-        {{/* External link to ttyd on :7681 (new tab); not an htmx nav.
-             href is filled in by JS from the current hostname. */}}
-        <li>
-          <a data-console-link href="#" target="_blank" rel="noopener" class="nav-link">
-            <span class="nav-icon" style="--icon: url('/assets/img/icons/console.svg')"></span>
-            Console
-          </a>
-        </li>
-        {{end}}
         <li>
           <a href="/maintenance/backup"
              hx-get="/maintenance/backup"
