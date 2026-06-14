@@ -273,6 +273,49 @@ func (h *SystemHandler) SupportBundle(w http.ResponseWriter, r *http.Request) {
 // target="running" (default): PUT to running so changes take effect immediately;
 // sets the cfg-unsaved cookie so the persistent notification prompts a save.
 // target="startup": PUT to startup only; reboot required to apply.
+// migrateConfig runs an uploaded .cfg backup through the on-target migrate(1)
+// tool so a config saved by an older release is brought up to the running
+// syntax before it is applied. The config is written to a temp file and
+// migrated in place — migrate only reads stdin from a TTY, so the file path is
+// the reliable interface. A config already at the current version comes back
+// unchanged. An error carrying migrate's stderr is returned for a config newer
+// than the system supports (downgrade) or any other migrate failure.
+func migrateConfig(ctx context.Context, raw []byte) ([]byte, error) {
+	f, err := os.CreateTemp("", "restore-*.cfg")
+	if err != nil {
+		return nil, err
+	}
+	tmp := f.Name()
+	defer os.Remove(tmp)
+
+	if _, err := f.Write(raw); err != nil {
+		f.Close()
+		return nil, err
+	}
+	if err := f.Close(); err != nil {
+		return nil, err
+	}
+
+	var stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, "/usr/sbin/migrate", "-i", "-e", tmp)
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		msg = strings.ReplaceAll(msg, tmp+": ", "")
+		msg = strings.TrimPrefix(msg, "Error: ")
+		if msg == "" {
+			msg = err.Error()
+		}
+		return nil, fmt.Errorf("%s", msg)
+	}
+
+	if notes := strings.TrimSpace(stderr.String()); notes != "" {
+		log.Printf("restore: migrated uploaded config:\n%s", notes)
+	}
+
+	return os.ReadFile(tmp)
+}
+
 func (h *SystemHandler) RestoreConfig(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -304,12 +347,22 @@ func (h *SystemHandler) RestoreConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Bring an older backup up to the running syntax before applying it.
+	migrated, err := migrateConfig(r.Context(), raw)
+	if err != nil {
+		log.Printf("restore: migrate: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `<span class="sc-fd-err">Restore failed: %s</span>`,
+			template.HTMLEscapeString(err.Error()))
+		return
+	}
+
 	target := "running"
 	if r.FormValue("save-to-startup") == "on" {
 		target = "startup"
 	}
 
-	if err := h.RC.PutDatastore(r.Context(), target, check); err != nil {
+	if err := h.RC.PutDatastore(r.Context(), target, json.RawMessage(migrated)); err != nil {
 		log.Printf("restore(%s): %v", target, err)
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, `<span class="sc-fd-err">Restore failed: %s</span>`,

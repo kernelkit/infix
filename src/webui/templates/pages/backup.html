@@ -9,7 +9,7 @@
     <div class="card-header">Backup</div>
     <div class="card-body sc-action-body">
       <p class="sc-desc">Download the current startup configuration as a JSON file.
-	The file format is <pre>startup-config-$hostname-$date-$time.cfg</pre>
+	The file format is <code>startup-config-$hostname-$date-$time.cfg</code>
       </p>
       <div>
         <a href="/config" hx-boost="false" class="btn btn-primary">Download config</a>
@@ -22,6 +22,8 @@
     <div class="card-body sc-action-body">
       <p class="sc-desc">Restore a previously backed-up configuration.  By default
         the restore operation is made to running config, this is the safe default.</p>
+      <p class="sc-desc">If the file was saved by an older release, it is migrated to
+        the current configuration syntax before being applied.</p>
       <form id="restore-form"
             hx-post="/maintenance/backup/restore"
             hx-target="#restore-result"
@@ -37,7 +39,7 @@
           <span class="sc-restore-warn-text">Save to startup — may break system boot!</span>
         </label>
         <div id="restore-result"></div>
-        <div style="margin-top:0.75rem">
+        <div class="sc-form-actions">
           <button type="submit" class="btn btn-primary">Restore</button>
         </div>
       </form>

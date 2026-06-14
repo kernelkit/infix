@@ -2813,6 +2813,19 @@ details.cfg-fold[open] > summary::before { transform: rotate(90deg); }
   margin-top: 0.75rem;
   cursor: pointer;
 }
+
+/* Restore card: let the form fill the body so its file selector and checkbox
+   sit under the leading paragraph, with only the submit button anchored at the
+   bottom (aligned with the other action cards). */
+#restore-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.sc-form-actions {
+  margin-top: auto;
+  padding-top: 0.75rem;
+}
 .sc-restore-warn-text {
   color: var(--warning-fg);
   font-size: 0.875rem;
