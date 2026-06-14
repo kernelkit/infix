@@ -117,11 +117,7 @@ func (fw *FSWatcher) InitialRead() {
 			fw.log.Warn("fswatcher: initial read failed", "path", path, "err", err)
 			continue
 		}
-		if handler.UseMerge {
-			fw.tree.Merge(handler.TreeKey, data)
-		} else {
-			fw.tree.Set(handler.TreeKey, data)
-		}
+		fw.apply(handler, data)
 		fw.log.Debug("fswatcher: initial read", "path", path, "key", handler.TreeKey)
 	}
 	for dir, handler := range fw.dirHandlers {
@@ -130,11 +126,7 @@ func (fw *FSWatcher) InitialRead() {
 			fw.log.Warn("fswatcher: initial read failed", "path", dir, "err", err)
 			continue
 		}
-		if handler.UseMerge {
-			fw.tree.Merge(handler.TreeKey, data)
-		} else {
-			fw.tree.Set(handler.TreeKey, data)
-		}
+		fw.apply(handler, data)
 		fw.log.Debug("fswatcher: initial read", "path", dir, "key", handler.TreeKey)
 	}
 }
@@ -246,10 +238,23 @@ func (fw *FSWatcher) fireHandler(path string, handler WatchHandler) {
 		fw.log.Warn("fswatcher: read failed", "path", path, "err", err)
 		return
 	}
-	if handler.UseMerge {
+	fw.apply(handler, data)
+	fw.log.Debug("fswatcher: updated", "path", path, "key", handler.TreeKey)
+}
+
+// apply writes a ReadFunc result into the tree.  For merge handlers it
+// merges; for plain handlers an empty result deletes the key rather than
+// writing an empty node -- a collector that has "nothing" to report (e.g.
+// the containers feature is enabled but no container is running) must not
+// leave a bare subtree behind, or clients would see operational data where
+// the feature is effectively absent.
+func (fw *FSWatcher) apply(handler WatchHandler, data json.RawMessage) {
+	switch {
+	case handler.UseMerge:
 		fw.tree.Merge(handler.TreeKey, data)
-	} else {
+	case len(data) == 0:
+		fw.tree.Delete(handler.TreeKey)
+	default:
 		fw.tree.Set(handler.TreeKey, data)
 	}
-	fw.log.Debug("fswatcher: updated", "path", path, "key", handler.TreeKey)
 }

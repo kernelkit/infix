@@ -233,6 +233,27 @@ func TestFireHandlerReadError(t *testing.T) {
 	}
 }
 
+// A plain (non-merge) handler that returns an empty result must delete its
+// key, not leave a stale or empty node behind -- e.g. the containers
+// collector returns nil when no container is running.
+func TestFireHandlerEmptyDeletes(t *testing.T) {
+	fw, tr := newTestFSWatcher(t)
+
+	tr.Set("fire/gone", json.RawMessage(`{"container":[{"name":"old"}]}`))
+
+	empty := json.RawMessage(nil)
+	handler := WatchHandler{
+		TreeKey:  "fire/gone",
+		ReadFunc: func(string) (json.RawMessage, error) { return empty, nil },
+	}
+
+	fw.fireHandler("/fake/path", handler)
+
+	if got := tr.Get("fire/gone"); got != nil {
+		t.Errorf("expected key deleted on empty result, got %s", got)
+	}
+}
+
 func TestDebounce(t *testing.T) {
 	fw, tr := newTestFSWatcher(t)
 
@@ -503,6 +524,54 @@ func TestWatchSymlinkReplace(t *testing.T) {
 		select {
 		case <-deadline:
 			t.Fatalf("timed out waiting for symlink replace event; tree = %s", tr.Get("sym/replace"))
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	cancel()
+}
+
+// fw_setenv (U-Boot) and grub-editenv rewrite the env via a temp file +
+// atomic rename, so the env gets a new inode.  A direct file watch misses
+// that; the parent-directory watch used for boot-order must catch it,
+// otherwise operational boot-order stays stale until the next reboot.
+func TestWatchSymlinkAtomicRename(t *testing.T) {
+	fw, tr := newTestFSWatcher(t)
+
+	tmp := t.TempDir()
+	env := filepath.Join(tmp, "uboot.env")
+	os.WriteFile(env, []byte("BOOT_ORDER=net\n"), 0644)
+
+	fw.WatchSymlink(env, WatchHandler{
+		TreeKey: "boot/env",
+		ReadFunc: func(p string) (json.RawMessage, error) {
+			data, _ := os.ReadFile(p)
+			return json.RawMessage(fmt.Sprintf("%q", strings.TrimSpace(string(data)))), nil
+		},
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go fw.Run(ctx)
+	time.Sleep(50 * time.Millisecond)
+
+	// Replace the file the way fw_setenv does: write a temp, rename over.
+	tmpEnv := env + ".tmp"
+	os.WriteFile(tmpEnv, []byte("BOOT_ORDER=primary net\n"), 0644)
+	if err := os.Rename(tmpEnv, env); err != nil {
+		t.Fatalf("rename: %v", err)
+	}
+
+	deadline := time.After(2 * time.Second)
+	for {
+		if got := tr.Get("boot/env"); got != nil && strings.Contains(string(got), "primary net") {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("timed out waiting for atomic-rename event; tree = %s", tr.Get("boot/env"))
 		default:
 			time.Sleep(10 * time.Millisecond)
 		}
