@@ -316,8 +316,14 @@ func main() {
 		Debounce: 200 * time.Millisecond,
 		UseMerge: true,
 	}
+	// Watch the parent directory, not the file: fw_setenv (U-Boot) and
+	// grub-editenv may rewrite the env via a temp file + rename, which
+	// gives it a new inode that a direct file watch never sees.  Watching
+	// the directory catches the Create/Rename (and still catches in-place
+	// writes), so a boot-order change after a RAUC install is reflected
+	// without waiting for a reboot.
 	for _, path := range []string{"/mnt/aux/grub/grubenv", "/mnt/aux/uboot.env"} {
-		if err := fsw.Watch(path, bootOrderHandler); err != nil {
+		if err := fsw.WatchSymlink(path, bootOrderHandler); err != nil {
 			slogLog.Debug("fswatcher boot-order watch skipped", "path", path, "err", err)
 		}
 	}

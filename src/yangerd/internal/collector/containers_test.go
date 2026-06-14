@@ -436,10 +436,17 @@ func TestContainerGracefulDegradation(t *testing.T) {
 	}
 
 	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
-	out := collectContainers(t, runner, fs)
 
-	containers := containerList(t, out)
-	if len(containers) != 0 {
-		t.Fatalf("expected no containers when podman ps fails, got %d", len(containers))
+	c := NewContainerCollector(runner, fs, 30*time.Second)
+	tr := tree.New()
+	if err := c.Collect(context.Background(), tr); err != nil {
+		t.Fatalf("Collect failed: %v", err)
+	}
+
+	// With no containers the key must be absent, not a bare
+	// {"container":[]} node -- otherwise an enabled-but-idle container
+	// feature surfaces as operational data.
+	if raw := tr.Get("infix-containers:containers"); raw != nil {
+		t.Fatalf("expected no containers key when podman ps fails, got %s", raw)
 	}
 }
