@@ -26,8 +26,12 @@ PKGPATH = os.path.join(
     "package"
 )
 def get_boot_order(target):
+    # yangerd populates boot-order from the bootloader env via the
+    # fswatcher; right after a reboot/restart it may not be there yet, so
+    # return None rather than KeyError and let callers poll.
     oper = target.get_dict("/ietf-system:system-state/software")
-    return " ".join(oper["system-state"]["software"]["boot-order"])
+    bo = (oper or {}).get("system-state", {}).get("software", {}).get("boot-order")
+    return " ".join(bo) if bo else None
 
 def set_boot_order(target, order):
     target.call_dict("infix-system", {
@@ -146,7 +150,10 @@ with infamy.Test() as test:
         with test.step("Verify boot order has changed and reboot"):
             print(get_boot_order(target))
             print(old_bootorder)
-            until(lambda: get_boot_order(target) != old_bootorder)
+            # Wait for a populated boot-order that differs from the
+            # original; None means operational has not caught up yet.
+            until(lambda: get_boot_order(target) not in (None, old_bootorder),
+                  attempts=30)
             target.reboot()
 
             if not wait_boot(target, env):
@@ -155,7 +162,10 @@ with infamy.Test() as test:
 
 
         with test.step("Verify that the partition is the booted"):
-            should_boot=get_boot_order(target).split()[0]
+            # After the reboot yangerd repopulates boot-order from the
+            # bootloader env on startup; poll until it is available.
+            until(lambda: get_boot_order(target) is not None, attempts=30)
+            should_boot = get_boot_order(target).split()[0]
             oper = target.get_dict("/ietf-system:system-state/software")
             booted = oper["system-state"]["software"]["booted"]
             print(f"Should boot: {should_boot}, booted: {booted}")
