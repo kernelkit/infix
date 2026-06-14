@@ -39,12 +39,24 @@ def configured_interfaces(dut):
     return {i["name"] for i in cfg["interfaces"]["interface"]}
 
 
-def verify_interfaces(name, dut, want):
-    """Operational interfaces must be exactly the configured set."""
+def operational_interfaces(dut):
     oper = dut.get_data("/ietf-interfaces:interfaces")["interfaces"]["interface"]
-    have = {i["name"] for i in oper}
-    assert have == want, \
-        f"{name}: operational interfaces {sorted(have)} != configured {sorted(want)}"
+    return {i["name"] for i in oper}
+
+
+def interfaces_match(name, dut, want):
+    """True once operational interfaces equal the configured set.
+
+    A preceding test (e.g. a container use_case) may leave veth endpoints
+    that are still being torn down when this test starts, so operational
+    momentarily carries interfaces that are not in the configuration.
+    Rather than asserting on that transient state, poll until the kernel --
+    and thus operational -- has converged on the configured set.
+    """
+    have = operational_interfaces(dut)
+    if have != want:
+        print(f"{name}: operational {sorted(have)} != configured {sorted(want)}, waiting...")
+        return False
     return True
 
 
@@ -75,7 +87,7 @@ with infamy.Test() as test:
     with test.step("Verify operational interfaces match the test-config"):
         def check(name, dut):
             want = configured_interfaces(dut)
-            until(lambda: verify_interfaces(name, dut, want))
+            until(lambda: interfaces_match(name, dut, want), attempts=60)
 
         parallel(*(lambda n=name, d=dut: check(n, d) for name, dut in duts.items()))
 
