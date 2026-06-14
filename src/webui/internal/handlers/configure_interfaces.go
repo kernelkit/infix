@@ -2180,8 +2180,23 @@ func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *ht
 	base := ifacePath(name) + "/" + container
 
 	forwarding := r.FormValue("forwarding") == "true"
-	body := map[string]any{container: map[string]any{"forwarding": forwarding}}
-	if err := h.RC.Patch(r.Context(), base, body); err != nil {
+	// PATCH the interface (which always exists) with the family container
+	// nested inside, so the container is created on first use.  PATCHing
+	// `base` (the ipv4/ipv6 container) directly 400s "Target resource does
+	// not exist" on a fresh interface that has no L3 config yet — which is
+	// exactly the case when enabling DHCP for the first time.  The list
+	// entry must be a single-element array: rousette rejects the bare-object
+	// form with LY_EVALID once an augmented container (ietf-ip:ipv4) is
+	// nested inside.
+	body := map[string]any{
+		"ietf-interfaces:interface": []any{
+			map[string]any{
+				"name":    name,
+				container: map[string]any{"forwarding": forwarding},
+			},
+		},
+	}
+	if err := h.RC.Patch(r.Context(), ifacePath(name), body); err != nil {
 		log.Printf("configure interfaces %s %s settings: forwarding: %v", name, family, err)
 		renderSaveError(w, err)
 		return
