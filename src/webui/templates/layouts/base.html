@@ -23,6 +23,9 @@
       {{template "icon-menu"}}
     </button>
     <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
+    {{/* Device identity (hostname + location/contact popover), loaded async so
+         it stays out of every page's data path. Replaces itself on load. */}}
+    <div class="topbar-identity-slot" hx-get="/identity" hx-trigger="load" hx-swap="outerHTML"></div>
     <div class="topbar-right">
       {{if .Capabilities.Has "docs"}}
       {{/* On-device User's Guide (static mkdocs site at /guide/). */}}

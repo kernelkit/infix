@@ -1,0 +1,17 @@
+{{define "topbar-identity"}}
+{{if .Hostname}}
+<div class="topbar-identity">
+  <a class="topbar-identity-name" href="/configure/system"
+     hx-get="/configure/system" hx-target="#content" hx-push-url="true"
+     title="System identity">
+    {{.Hostname}}{{if or .Location .Contact}}<span class="topbar-identity-caret" aria-hidden="true">▾</span>{{end}}
+  </a>
+  {{if or .Location .Contact}}
+  <div class="topbar-identity-pop" role="tooltip">
+    {{if .Location}}<div class="ti-row"><span class="ti-label">Location</span><span>{{.Location}}</span></div>{{end}}
+    {{if .Contact}}<div class="ti-row"><span class="ti-label">Contact</span><span>{{.Contact}}</span></div>{{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{end}}

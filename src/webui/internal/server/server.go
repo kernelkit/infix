@@ -65,6 +65,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	identityTmpl, err := template.ParseFS(templateFS, "fragments/topbar-identity.html")
+	if err != nil {
+		return nil, err
+	}
 	logsTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "pages/logs.html")
 	if err != nil {
 		return nil, err
@@ -238,10 +242,11 @@ func New(
 	}
 
 	sys := &handlers.SystemHandler{
-		RC:          rc,
-		Template:    swTmpl,
-		SysCtrlTmpl: sysCtrlTmpl,
-		BackupTmpl:  backupTmpl,
+		RC:           rc,
+		Template:     swTmpl,
+		SysCtrlTmpl:  sysCtrlTmpl,
+		BackupTmpl:   backupTmpl,
+		IdentityTmpl: identityTmpl,
 	}
 	logs := &handlers.LogsHandler{Template: logsTmpl}
 	diag := &handlers.DiagnosticsHandler{RC: rc, Template: diagTmpl}
@@ -338,6 +343,7 @@ func New(
 	mux.HandleFunc("GET /nacm", nacm.Overview)
 	mux.HandleFunc("GET /services", services.Overview)
 	mux.HandleFunc("GET /containers", containers.Overview)
+	mux.HandleFunc("GET /identity", sys.Identity)
 
 	// Configure routes.
 	mux.HandleFunc("POST /configure/enter",          cfg.Enter)

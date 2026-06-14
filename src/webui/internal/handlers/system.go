@@ -37,10 +37,11 @@ func raucInstallationStatus(ctx context.Context) (swInstallerState, error) {
 
 // SystemHandler provides reboot, config download, and software install actions.
 type SystemHandler struct {
-	RC          *restconf.Client
-	Template    *template.Template // software page template
-	SysCtrlTmpl *template.Template // system control page template
-	BackupTmpl  *template.Template // backup & restore page template
+	RC           *restconf.Client
+	Template     *template.Template // software page template
+	SysCtrlTmpl  *template.Template // system control page template
+	BackupTmpl   *template.Template // backup & restore page template
+	IdentityTmpl *template.Template // topbar device-identity fragment
 
 	// swSlots caches the last successfully-fetched Software card payload
 	// so /software?installing=1 can keep rendering slot details — the
@@ -314,6 +315,29 @@ func migrateConfig(ctx context.Context, raw []byte) ([]byte, error) {
 	}
 
 	return os.ReadFile(tmp)
+}
+
+// Identity renders the topbar device-identity widget — hostname, plus an
+// optional location/contact hover popover. It is loaded asynchronously via
+// hx-trigger="load" so it stays out of the per-page data path; the topbar
+// persists across htmx content swaps, so this fetches once per full page load.
+// On any fetch error it renders nothing, leaving the topbar slot empty.
+func (h *SystemHandler) Identity(w http.ResponseWriter, r *http.Request) {
+	var resp struct {
+		System struct {
+			Hostname string `json:"hostname"`
+			Location string `json:"location"`
+			Contact  string `json:"contact"`
+		} `json:"ietf-system:system"`
+	}
+	if err := h.RC.Get(r.Context(), "/data/ietf-system:system", &resp); err != nil {
+		log.Printf("identity: %v", err)
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := h.IdentityTmpl.ExecuteTemplate(w, "topbar-identity", resp.System); err != nil {
+		log.Printf("identity: render: %v", err)
+	}
 }
 
 func (h *SystemHandler) RestoreConfig(w http.ResponseWriter, r *http.Request) {

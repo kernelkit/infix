@@ -237,6 +237,83 @@ a:hover {
   display: block;
 }
 
+/* Device identity: hostname shown right of the logo, reading like a titlebar.
+   Location/contact (when set) appear in a hover/focus popover so the bar stays
+   uncluttered. */
+.topbar-identity {
+  position: absolute;
+  left: var(--sidebar-width);
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-left: 0.9rem;
+}
+/* Short divider pinned to the sidebar's right edge, so the hostname reads as
+   the start of the content area rather than part of the logo lockup. */
+.topbar-identity::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 1.4rem;
+  background: var(--sidebar-border);
+}
+.topbar-identity-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  text-decoration: none;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+.topbar-identity-name:hover { background: var(--slate-100); color: var(--fg); }
+.dark .topbar-identity-name:hover { background: var(--slate-800); color: var(--fg); }
+.topbar-identity-caret { font-size: 0.6rem; opacity: 0.6; }
+
+.topbar-identity-pop {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.3rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  white-space: nowrap;
+  z-index: 250;
+  font-size: 0.8rem;
+}
+.topbar-identity:hover .topbar-identity-pop,
+.topbar-identity:focus-within .topbar-identity-pop { display: block; }
+.topbar-identity-pop .ti-row { display: flex; gap: 0.6rem; }
+.topbar-identity-pop .ti-row + .ti-row { margin-top: 0.25rem; }
+.topbar-identity-pop .ti-label {
+  color: var(--fg-muted);
+  font-weight: 600;
+  min-width: 4.5rem;
+}
+
+/* Narrow screens: the hamburger takes over — drop identity so it never
+   competes with the menu button. */
+@media (max-width: 1024px) {
+  .topbar-identity,
+  .topbar-identity-slot { display: none; }
+}
+
 .sidebar-nav {
   flex: 1;
   padding: 0.5rem 0;
