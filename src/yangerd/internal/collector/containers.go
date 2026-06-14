@@ -38,10 +38,20 @@ func (c *ContainerCollector) Interval() time.Duration { return c.interval }
 // "infix-containers:containers".
 func (c *ContainerCollector) Collect(ctx context.Context, t *tree.Tree) error {
 	data := c.collectJSON(ctx)
+	if data == nil {
+		// No containers: remove the key rather than leaving a bare
+		// "containers" node, so clients see the feature as absent.
+		t.Delete("infix-containers:containers")
+		return nil
+	}
 	t.Set("infix-containers:containers", data)
 	return nil
 }
 
+// collectJSON returns the operational containers subtree, or nil when no
+// container exists.  Returning nil (not an empty {"container":[]}) lets the
+// caller drop the key entirely so an enabled-but-idle container feature does
+// not surface as operational data.
 func (c *ContainerCollector) collectJSON(ctx context.Context) json.RawMessage {
 	containers := []interface{}{}
 
@@ -53,13 +63,17 @@ func (c *ContainerCollector) collectJSON(ctx context.Context) json.RawMessage {
 		}
 	}
 
+	if len(containers) == 0 {
+		return nil
+	}
+
 	out := map[string]interface{}{
 		"container": containers,
 	}
 
 	data, err := json.Marshal(out)
 	if err != nil {
-		return json.RawMessage(`{"container":[]}`)
+		return nil
 	}
 	return data
 }
