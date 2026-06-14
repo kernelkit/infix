@@ -8,75 +8,117 @@
 <div class="alert alert-error">{{.Error}}</div>
 {{end}}
 
-<form class="info-card"
-      hx-put="/configure/system/dns"
-      hx-swap="none">
-    <div class="card-header">DNS</div>
+<section class="info-card">
+  <div class="card-header">Search Domains</div>
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead><tr><th>Domain{{template "field-info" (index .Desc "search")}}</th><th></th></tr></thead>
+      <tbody>
+        {{range .DNS.Search}}
+        <tr>
+          <td>{{.}}</td>
+          <td style="text-align:right">
+            <button type="button" class="btn-icon btn-icon-danger"
+                    hx-delete="/configure/system/dns/search/{{. | urlquery}}"
+                    hx-confirm="Remove search domain {{.}}?"
+                    hx-swap="none" title="Remove domain">
+              {{template "icon-trash"}}
+            </button>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="2"><span class="text-muted">No search domains configured.</span></td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <div id="dns-search-add" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+    <form hx-post="/configure/system/dns/search" hx-swap="none" class="user-add-inline">
+      <input class="cfg-input" type="text" name="domain" required placeholder="example.org">
+      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+  </div>
+  <div class="cfg-card-footer">
+    <button type="button" class="btn-add-row" data-show="dns-search-add">+ Add domain</button>
+  </div>
+</section>
 
-    <div class="section-subtitle">Search domains</div>
-    <div class="data-table-wrap">
-      <table class="data-table cfg-table" id="dns-search-table">
-        <thead>
-          <tr><th>Domain</th><th></th></tr>
-        </thead>
-        <tbody id="dns-search-tbody">
-          {{range $i, $d := .DNS.Search}}
-          <tr>
-            <td><input class="cfg-input" type="text"
-                       name="dns_search_{{$i}}" value="{{$d}}"></td>
-            <td>
-              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">
-                {{template "icon-trash"}}
-              </button>
-            </td>
-          </tr>
-          {{end}}
-        </tbody>
-      </table>
-    </div>
-    <div style="padding: 0 0.75rem;">
-      <button type="button" class="btn-add-row" data-table="dns-search-tbody"
-              data-template="dns-search">+ Add domain</button>
-    </div>
-
-    <div class="section-subtitle" style="margin-top:0.75rem">Servers</div>
-    <div class="data-table-wrap">
-      <table class="data-table cfg-table" id="dns-server-table">
-        <thead>
-          <tr>
-            <th>Name / Key</th>
-            <th>Address</th>
-            <th class="cfg-input-sm">Port</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="dns-server-tbody">
-          {{range $i, $s := .DNS.Servers}}
-          <tr>
-            <td><input class="cfg-input" type="text"
-                       name="dns_name_{{$i}}" value="{{$s.Name}}" required></td>
-            <td><input class="cfg-input" type="text"
-                       name="dns_addr_{{$i}}" value="{{$s.UDPAndTCP.Address}}"></td>
-            <td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"
-                       name="dns_port_{{$i}}" value="{{if $s.UDPAndTCP.Port}}{{$s.UDPAndTCP.Port}}{{end}}"
-                       placeholder="53"></td>
-            <td>
-              <button type="button" class="btn-icon btn-icon-danger cfg-delete-row" title="Remove">
-                {{template "icon-trash"}}
-              </button>
-            </td>
-          </tr>
-          {{end}}
-        </tbody>
-      </table>
-    </div>
-    <div class="cfg-card-footer">
-      <button type="button" class="btn-add-row" data-table="dns-server-tbody"
-              data-template="dns-server">+ Add server</button>
-      <button class="btn btn-primary" type="submit">Save</button>
-      <span class="cfg-save-status"></span>
-    </div>
-</form>
+<section class="info-card">
+  <div class="card-header">DNS Servers</div>
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead>
+        <tr>
+          <th>Name{{template "field-info" (index .Desc "name")}}</th>
+          <th>Address{{template "field-info" (index .Desc "address")}}</th>
+          <th class="cfg-input-sm">Port{{template "field-info" (index .Desc "port")}}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $s := .DNS.Servers}}
+        <tr>
+          <td>
+            <button class="key-row-toggle" type="button"
+                    aria-expanded="false" data-target="dns-{{$i}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{$s.Name}}
+            </button>
+          </td>
+          <td>{{if $s.UDPAndTCP.Address}}{{$s.UDPAndTCP.Address}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if $s.UDPAndTCP.Port}}{{$s.UDPAndTCP.Port}}{{else}}<span class="text-muted">53</span>{{end}}</td>
+          <td style="text-align:right">
+            <button type="button" class="btn-icon btn-icon-danger"
+                    hx-delete="/configure/system/dns/servers/{{$s.Name}}"
+                    hx-confirm="Delete DNS server {{$s.Name}}?"
+                    hx-swap="none" title="Delete server">
+              {{template "icon-trash"}}
+            </button>
+          </td>
+        </tr>
+        <tr class="key-detail-row" id="key-detail-dns-{{$i}}">
+          <td colspan="4" class="key-detail-cell">
+            <div class="key-detail-body">
+              <form hx-post="/configure/system/dns/servers/{{$s.Name}}" hx-swap="none">
+                <table class="info-table">
+                  <tr>
+                    <th>Address{{template "field-info" (index $.Desc "address")}}</th>
+                    <td><input class="cfg-input" type="text" name="address"
+                               value="{{$s.UDPAndTCP.Address}}" placeholder="1.1.1.1"></td>
+                  </tr>
+                  <tr>
+                    <th>Port{{template "field-info" (index $.Desc "port")}}</th>
+                    <td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"
+                               name="port" value="{{if $s.UDPAndTCP.Port}}{{$s.UDPAndTCP.Port}}{{end}}"
+                               placeholder="53" style="width:6rem"></td>
+                  </tr>
+                </table>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="4"><span class="text-muted">No DNS servers configured.</span></td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <div id="dns-server-add" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+    <form hx-post="/configure/system/dns/servers" hx-swap="none" class="user-add-inline">
+      <input class="cfg-input" type="text" name="name" required placeholder="name (e.g. cloudflare)">
+      <input class="cfg-input" type="text" name="address" placeholder="address (e.g., 1.1.1.1)">
+      <input class="cfg-input cfg-input-sm" type="number" name="port" min="1" max="65535"
+             placeholder="53" style="width:6rem">
+      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+  </div>
+  <div class="cfg-card-footer">
+    <button type="button" class="btn-add-row" data-show="dns-server-add">+ Add server</button>
+  </div>
+</section>
 {{template "configure-toolbar" .}}
 </div>
 {{end}}

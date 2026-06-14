@@ -4,9 +4,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,9 +44,11 @@ type cfgNTPJSON struct {
 }
 
 type cfgNTPServerJSON struct {
-	Name   string        `json:"name"`
-	UDP    cfgNTPUDPJSON `json:"udp"`
-	Prefer bool          `json:"prefer"`
+	Name            string        `json:"name"`
+	UDP             cfgNTPUDPJSON `json:"udp"`
+	AssociationType string        `json:"association-type,omitempty"`
+	IBurst          bool          `json:"iburst,omitempty"`
+	Prefer          bool          `json:"prefer,omitempty"`
 }
 
 type cfgNTPUDPJSON struct {
@@ -89,14 +93,17 @@ type cfgSystemPageData struct {
 
 type cfgNTPPageData struct {
 	PageData
-	Error string
-	NTP   cfgNTPJSON
+	Error      string
+	NTP        cfgNTPJSON
+	AssocTypes []string          // association-type enum: server / pool / peer
+	Desc       map[string]string // leaf name → YANG description (field-info ⓘ)
 }
 
 type cfgDNSPageData struct {
 	PageData
 	Error string
 	DNS   cfgDNSJSON
+	Desc  map[string]string // leaf name → YANG description (field-info ⓘ)
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -232,6 +239,18 @@ func (h *ConfigureSystemHandler) OverviewNTP(w http.ResponseWriter, r *http.Requ
 	data := cfgNTPPageData{
 		PageData: newPageData(w, r, "configure-ntp", "NTP Client"),
 	}
+	data.AssocTypes = []string{"server", "pool", "peer"}
+	if mgr := h.Schema.Manager(); mgr != nil {
+		srv := "/ietf-system:system/ntp/server"
+		data.Desc = map[string]string{
+			"name":    schema.DescriptionOf(mgr, srv+"/name"),
+			"address": schema.DescriptionOf(mgr, srv+"/udp/address"),
+			"port":    schema.DescriptionOf(mgr, srv+"/udp/port"),
+			"assoc":   schema.DescriptionOf(mgr, srv+"/association-type"),
+			"iburst":  schema.DescriptionOf(mgr, srv+"/iburst"),
+			"prefer":  schema.DescriptionOf(mgr, srv+"/prefer"),
+		}
+	}
 	s, errMsg := h.loadSystem(r)
 	data.Error = errMsg
 	if errMsg == "" {
@@ -245,6 +264,15 @@ func (h *ConfigureSystemHandler) OverviewNTP(w http.ResponseWriter, r *http.Requ
 func (h *ConfigureSystemHandler) OverviewDNS(w http.ResponseWriter, r *http.Request) {
 	data := cfgDNSPageData{
 		PageData: newPageData(w, r, "configure-dns", "DNS Client"),
+	}
+	if mgr := h.Schema.Manager(); mgr != nil {
+		dr := "/ietf-system:system/dns-resolver"
+		data.Desc = map[string]string{
+			"search":  schema.DescriptionOf(mgr, dr+"/search"),
+			"name":    schema.DescriptionOf(mgr, dr+"/server/name"),
+			"address": schema.DescriptionOf(mgr, dr+"/server/udp-and-tcp/address"),
+			"port":    schema.DescriptionOf(mgr, dr+"/server/udp-and-tcp/port"),
+		}
 	}
 	s, errMsg := h.loadSystem(r)
 	data.Error = errMsg
@@ -315,114 +343,220 @@ func (h *ConfigureSystemHandler) SaveClock(w http.ResponseWriter, r *http.Reques
 }
 
 // SaveNTP replaces the NTP server list in the candidate datastore.
-// PUT /configure/system/ntp
-func (h *ConfigureSystemHandler) SaveNTP(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
+// ntpCandPath is the NTP container in the candidate datastore.
+const ntpCandPath = candidatePath + "/ietf-system:system/ietf-system:ntp"
 
-	servers := parseNTPServers(r)
-	ntp := map[string]any{"enabled": true}
-	if len(servers) > 0 {
-		ntp["server"] = servers
-	}
-	body := map[string]any{"ietf-system:ntp": ntp}
-	if err := h.RC.Put(r.Context(), candidatePath+"/ietf-system:system/ntp", body); err != nil {
-		log.Printf("configure system ntp: %v", err)
-		renderSaveError(w, err)
-		return
-	}
-	renderSaved(w, "NTP saved")
+func ntpServerCandPath(name string) string {
+	return ntpCandPath + "/server=" + url.PathEscape(name)
 }
 
-// SaveDNS replaces the DNS resolver config in the candidate datastore.
-// PUT /configure/system/dns
-func (h *ConfigureSystemHandler) SaveDNS(w http.ResponseWriter, r *http.Request) {
+// ntpServerFromForm builds the RESTCONF body for one server, omitting the
+// udp transport when no address is given (empty inet:host is invalid) — so a
+// server can be added by name and have its address filled in via the
+// expand-to-edit form afterwards.
+func ntpServerFromForm(r *http.Request, name string) map[string]any {
+	srv := map[string]any{
+		"name":             name,
+		"association-type": defaultStr(r.FormValue("association-type"), "server"),
+		"iburst":           r.FormValue("iburst") == "true",
+		"prefer":           r.FormValue("prefer") == "true",
+	}
+	if addr := strings.TrimSpace(r.FormValue("address")); addr != "" {
+		udp := map[string]any{"address": addr}
+		if p, err := strconv.ParseUint(strings.TrimSpace(r.FormValue("port")), 10, 16); err == nil && p > 0 {
+			udp["port"] = p
+		}
+		srv["udp"] = udp
+	}
+	return srv
+}
+
+func defaultStr(v, def string) string {
+	if strings.TrimSpace(v) == "" {
+		return def
+	}
+	return v
+}
+
+// AddNTPServer adds an NTP server, creating + enabling the NTP container on
+// first use, then re-renders the page.
+// POST /configure/system/ntp/servers
+func (h *ConfigureSystemHandler) AddNTPServer(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-
-	search := parseSearchList(r)
-	servers := parseDNSServers(r)
-
-	// Omit empty lists entirely — sending null for a YANG list is invalid.
-	dnsResolver := map[string]any{}
-	if len(search) > 0 {
-		dnsResolver["search"] = search
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		renderSaveError(w, fmt.Errorf("server name is required"))
+		return
 	}
-	if len(servers) > 0 {
-		dnsResolver["server"] = servers
-	}
+	// PATCH the system (always present) with the NTP container nested: it is
+	// created + enabled on first use and the server merges into the list.
 	body := map[string]any{
-		"ietf-system:dns-resolver": dnsResolver,
+		"ietf-system:system": map[string]any{
+			"ietf-system:ntp": map[string]any{
+				"enabled": true,
+				"server":  []any{ntpServerFromForm(r, name)},
+			},
+		},
 	}
-	if err := h.RC.Put(r.Context(), candidatePath+"/ietf-system:system/dns-resolver", body); err != nil {
-		log.Printf("configure system dns: %v", err)
+	if err := h.RC.Patch(r.Context(), candidatePath+"/ietf-system:system", body); err != nil {
+		log.Printf("configure ntp add server: %v", err)
 		renderSaveError(w, err)
 		return
 	}
-	renderSaved(w, "DNS saved")
+	renderSavedRedirect(w, "NTP server added", "/configure/ntp")
+}
+
+// SaveNTPServer replaces one NTP server's configuration (per-row edit).
+// POST /configure/system/ntp/servers/{name}
+func (h *ConfigureSystemHandler) SaveNTPServer(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	name := r.PathValue("name")
+	body := map[string]any{"ietf-system:server": []any{ntpServerFromForm(r, name)}}
+	if err := h.RC.Put(r.Context(), ntpServerCandPath(name), body); err != nil {
+		log.Printf("configure ntp save server %q: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSaved(w, "Server saved")
+}
+
+// DeleteNTPServer removes an NTP server.
+// DELETE /configure/system/ntp/servers/{name}
+func (h *ConfigureSystemHandler) DeleteNTPServer(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if err := h.RC.Delete(r.Context(), ntpServerCandPath(name)); err != nil && !restconf.IsNotFound(err) {
+		log.Printf("configure ntp delete server %q: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "NTP server deleted", "/configure/ntp")
+}
+
+// dnsCandPath is the DNS resolver container in the candidate datastore.
+const dnsCandPath = candidatePath + "/ietf-system:system/ietf-system:dns-resolver"
+
+func dnsServerCandPath(name string) string {
+	return dnsCandPath + "/server=" + url.PathEscape(name)
+}
+
+func dnsServerFromForm(r *http.Request, name string) map[string]any {
+	srv := map[string]any{"name": name}
+	if addr := strings.TrimSpace(r.FormValue("address")); addr != "" {
+		ut := map[string]any{"address": addr}
+		if p, err := strconv.ParseUint(strings.TrimSpace(r.FormValue("port")), 10, 16); err == nil && p > 0 {
+			ut["port"] = p
+		}
+		srv["udp-and-tcp"] = ut
+	}
+	return srv
+}
+
+// AddDNSServer adds a DNS server, creating the resolver container on first
+// use, then re-renders the page.
+// POST /configure/system/dns/servers
+func (h *ConfigureSystemHandler) AddDNSServer(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		renderSaveError(w, fmt.Errorf("server name is required"))
+		return
+	}
+	body := map[string]any{
+		"ietf-system:system": map[string]any{
+			"ietf-system:dns-resolver": map[string]any{"server": []any{dnsServerFromForm(r, name)}},
+		},
+	}
+	if err := h.RC.Patch(r.Context(), candidatePath+"/ietf-system:system", body); err != nil {
+		log.Printf("configure dns add server: %v", err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "DNS server added", "/configure/dns")
+}
+
+// SaveDNSServer replaces one DNS server's configuration (per-row edit).
+// POST /configure/system/dns/servers/{name}
+func (h *ConfigureSystemHandler) SaveDNSServer(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	name := r.PathValue("name")
+	body := map[string]any{"ietf-system:server": []any{dnsServerFromForm(r, name)}}
+	if err := h.RC.Put(r.Context(), dnsServerCandPath(name), body); err != nil {
+		log.Printf("configure dns save server %q: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSaved(w, "Server saved")
+}
+
+// DeleteDNSServer removes a DNS server.
+// DELETE /configure/system/dns/servers/{name}
+func (h *ConfigureSystemHandler) DeleteDNSServer(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if err := h.RC.Delete(r.Context(), dnsServerCandPath(name)); err != nil && !restconf.IsNotFound(err) {
+		log.Printf("configure dns delete server %q: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "DNS server deleted", "/configure/dns")
+}
+
+// AddDNSSearch appends a search domain to the resolver's search leaf-list.
+// POST /configure/system/dns/search
+func (h *ConfigureSystemHandler) AddDNSSearch(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	domain := strings.TrimSpace(r.FormValue("domain"))
+	if domain == "" {
+		renderSaveError(w, fmt.Errorf("domain is required"))
+		return
+	}
+	// POST appends to the leaf-list; if the resolver container doesn't exist
+	// yet, create it with this domain via a merge on the system.
+	err := h.RC.PostJSON(r.Context(), dnsCandPath, map[string]any{"ietf-system:search": []any{domain}})
+	if restconf.IsNotFound(err) {
+		err = h.RC.Patch(r.Context(), candidatePath+"/ietf-system:system", map[string]any{
+			"ietf-system:system": map[string]any{
+				"ietf-system:dns-resolver": map[string]any{"search": []any{domain}},
+			},
+		})
+	}
+	if err != nil {
+		log.Printf("configure dns add search: %v", err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "Search domain added", "/configure/dns")
+}
+
+// DeleteDNSSearch removes a search domain.
+// DELETE /configure/system/dns/search/{domain}
+func (h *ConfigureSystemHandler) DeleteDNSSearch(w http.ResponseWriter, r *http.Request) {
+	domain := r.PathValue("domain")
+	path := dnsCandPath + "/search=" + url.PathEscape(domain)
+	if err := h.RC.Delete(r.Context(), path); err != nil && !restconf.IsNotFound(err) {
+		log.Printf("configure dns delete search %q: %v", domain, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "Search domain removed", "/configure/dns")
 }
 
 // ─── Form parsing helpers ─────────────────────────────────────────────────────
 
-// parseNTPServers extracts NTP server entries from form values.
-// Fields: ntp_name_N, ntp_addr_N, ntp_port_N, ntp_prefer_N (checkbox).
-func parseNTPServers(r *http.Request) []cfgNTPServerJSON {
-	var servers []cfgNTPServerJSON
-	for i := 0; ; i++ {
-		name := strings.TrimSpace(r.FormValue("ntp_name_" + strconv.Itoa(i)))
-		if name == "" {
-			break
-		}
-		addr := strings.TrimSpace(r.FormValue("ntp_addr_" + strconv.Itoa(i)))
-		port, _ := strconv.ParseUint(r.FormValue("ntp_port_"+strconv.Itoa(i)), 10, 16)
-		prefer := r.FormValue("ntp_prefer_"+strconv.Itoa(i)) == "on"
-		srv := cfgNTPServerJSON{
-			Name:   name,
-			UDP:    cfgNTPUDPJSON{Address: addr, Port: uint16(port)},
-			Prefer: prefer,
-		}
-		servers = append(servers, srv)
-	}
-	return servers
-}
-
-// parseSearchList extracts DNS search domains from form values.
-// Fields: dns_search_N (one per domain).
-func parseSearchList(r *http.Request) []string {
-	var search []string
-	for i := 0; ; i++ {
-		v := strings.TrimSpace(r.FormValue("dns_search_" + strconv.Itoa(i)))
-		if v == "" {
-			break
-		}
-		search = append(search, v)
-	}
-	return search
-}
-
-// parseDNSServers extracts DNS server entries from form values.
-// Fields: dns_name_N, dns_addr_N, dns_port_N.
-func parseDNSServers(r *http.Request) []cfgDNSServerJSON {
-	var servers []cfgDNSServerJSON
-	for i := 0; ; i++ {
-		name := strings.TrimSpace(r.FormValue("dns_name_" + strconv.Itoa(i)))
-		if name == "" {
-			break
-		}
-		addr := strings.TrimSpace(r.FormValue("dns_addr_" + strconv.Itoa(i)))
-		port, _ := strconv.ParseUint(r.FormValue("dns_port_"+strconv.Itoa(i)), 10, 16)
-		srv := cfgDNSServerJSON{
-			Name:      name,
-			UDPAndTCP: cfgDNSAddrJSON{Address: addr, Port: uint16(port)},
-		}
-		servers = append(servers, srv)
-	}
-	return servers
-}
 
 // SavePreferences patches infix-system augmented fields (motd-banner, text-editor).
 // POST /configure/system/preferences
