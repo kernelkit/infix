@@ -2121,6 +2121,22 @@ function renderCfgLog() {
         span.classList.remove('saved');
       }, 3000);
     }
+
+    // Re-render the whole current tree page from the (now fresh) candidate.
+    // The save handlers only WRITE — they don't echo back what confd
+    // inferred from the change (DHCP option lists, related leaves,
+    // normalised values), and inference can land outside the edited node.
+    // Re-fetching the page the user is on surfaces all of it.  Guarded on
+    // #yang-detail so curated pages that also emit cfgSaved are unaffected.
+    var detail = document.getElementById('yang-detail');
+    if (detail && window.htmx) {
+      var node = (history.state && history.state.yangDetailPath) ||
+                 new URLSearchParams(window.location.search).get('node');
+      if (node) {
+        htmx.ajax('GET', '/configure/tree/node?path=' + encodeURIComponent(node),
+          { target: '#yang-detail', swap: 'innerHTML' });
+      }
+    }
   });
 })();
 

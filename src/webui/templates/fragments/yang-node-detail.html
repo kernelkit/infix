@@ -21,10 +21,12 @@
 
   {{/* ── Edit form — only for writable leaves in non-ReadOnly mode ── */}}
   {{if and (not .ReadOnly) .Config (or (eq .Kind "leaf") (eq .Kind "leaf-list"))}}
+  {{/* hx-swap="none": SaveLeaf returns 204 + a cfgSaved trigger, and the
+       cfgSaved handler re-fetches the whole current tree page from the
+       fresh candidate so confd-inferred values surface. */}}
   <form class="yt-edit-form"
         hx-put="/configure/tree/node?path={{.Path | urlquery}}"
-        hx-target="#yang-detail"
-        hx-swap="innerHTML">
+        hx-swap="none">
     <div class="cfg-card-footer">
       <label class="yt-value-label">
         {{if .UsingDefault -}}

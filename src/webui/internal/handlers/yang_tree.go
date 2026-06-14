@@ -1227,17 +1227,17 @@ func (h *TreeHandler) SaveLeaf(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body := map[string]any{qualName: coerceLeafValue(rawValue, node)}
-	data := &nodeDetailData{Node: node}
 
+	// Emit cfgSaved/cfgError like SaveGroup and let the client re-fetch the
+	// whole current page from the fresh candidate (so confd inference and
+	// normalisation surface) — don't echo the raw input back, which hid it.
 	if putErr := h.RC.Put(r.Context(), candidateDS+path, body); putErr != nil {
-		data.Error = putErr.Error()
-		data.CurrentValue = rawValue
-	} else {
-		data.SavedOK = true
-		data.CurrentValue = rawValue
+		w.Header().Set("HX-Trigger", `{"cfgError":"`+node.Name+": "+putErr.Error()+`"}`)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
 	}
-
-	h.FragTmpl.ExecuteTemplate(w, "yang-node-detail", data)
+	w.Header().Set("HX-Trigger", `{"cfgSaved":"Saved `+node.Name+` to candidate"}`)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // DeleteLeaf serves DELETE /configure/tree/node?path=...
