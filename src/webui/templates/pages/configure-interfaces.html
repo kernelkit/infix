@@ -138,259 +138,11 @@
                      row visually compose one IPv4 group; the Save button at the
                      bottom is bound to the toggles form via the HTML5 `form`
                      attribute, so users see the whole group before clicking Save. */}}
-                {{$ipv4Form := printf "ipv4-form-%s" $r.Name}}
-                {{$ipv4Fold := printf "ipv4-dhcp-%s" $r.Name}}
-                <h5 class="cfg-subsection-head">IPv4{{template "field-info" (index $d "ipv4-address")}}</h5>
-                <form id="{{$ipv4Form}}" hx-post="/configure/interfaces/{{.Name}}/ipv4/settings" hx-swap="none">
-                  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
-                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                      <input type="checkbox" name="forwarding" value="true"
-                             {{if and .IPv4 .IPv4.Forwarding}}checked{{end}}>
-                      Forwarding{{template "field-info" (index $d "ipv4-forwarding")}}
-                    </label>
-                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                      <input type="checkbox" name="dhcp" value="true" data-fold-target="{{$ipv4Fold}}"
-                             {{if .DHCPv4Enabled}}checked{{end}}>
-                      DHCP client{{template "field-info" (index $d "ipv4-dhcp")}}
-                    </label>
-                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                      <input type="checkbox" name="autoconf" value="true"
-                             {{if and .IPv4 .IPv4.Autoconf}}checked{{end}}>
-                      Link-Local (Zeroconf){{template "field-info" (index $d "ipv4-autoconf")}}
-                    </label>
-                  </div>
-                </form>
-
-                {{/* DHCPv4 foldout — always in the DOM, hidden when DHCP is off.
-                     The data-fold-target hook on the DHCP checkbox toggles
-                     this without waiting for a server round-trip so the
-                     foldout is discoverable before clicking Save. */}}
-                <details id="{{$ipv4Fold}}" class="cfg-fold" {{if not .DHCPv4Enabled}}hidden{{end}}>
-                  <summary>DHCP Settings &amp; Options</summary>
-                  <div class="cfg-fold-body">
-                    <form hx-post="/configure/interfaces/{{.Name}}/ipv4/dhcp/settings" hx-swap="none">
-                      <table class="info-table">
-                        <tr>
-                          <th>Client ID</th>
-                          <td><input class="cfg-input cfg-input-sm" type="text" name="client-id"
-                                     value="{{.IPv4.DHCP.ClientID}}" placeholder="default (MAC address)"></td>
-                        </tr>
-                        <tr>
-                          <th>ARP check</th>
-                          <td><label><input type="checkbox" name="arping" value="true"
-                                     {{if or (not .IPv4.DHCP.Arping) (deref .IPv4.DHCP.Arping)}}checked{{end}}> Probe for address collision before use</label></td>
-                        </tr>
-                        <tr>
-                          <th>Route preference</th>
-                          <td><input class="cfg-input cfg-input-sm" type="number" name="route-preference"
-                                     {{if .IPv4.DHCP.RoutePreference}}value="{{deref .IPv4.DHCP.RoutePreference}}"{{end}}
-                                     placeholder="5" min="0" max="255" style="width:6rem"></td>
-                        </tr>
-                      </table>
-                      <div class="cfg-card-footer" style="padding-left:0">
-                        <button class="btn btn-primary btn-sm" type="submit">Save</button>
-                        <span class="cfg-save-status"></span>
-                      </div>
-                    </form>
-                    <h6 class="cfg-subsection-head" style="margin-top:0.75rem">DHCP Options</h6>
-                    {{if .IPv4.DHCP.Options}}
-                    <table class="data-table cfg-table" style="margin-bottom:0.5rem">
-                      <thead><tr><th>Option</th><th>Value</th><th></th></tr></thead>
-                      <tbody>
-                        {{range .IPv4.DHCP.Options}}
-                        <tr>
-                          <td>{{.ID}}</td>
-                          <td>{{if .Value}}{{.Value}}{{else if .Hex}}<span class="text-muted">hex:{{.Hex}}</span>{{else}}<span class="text-muted">—</span>{{end}}</td>
-                          <td style="text-align:right">
-                            <button type="button" class="btn-icon btn-icon-danger"
-                                    hx-delete="/configure/interfaces/{{$r.Name}}/ipv4/dhcp/options/{{.ID}}"
-                                    hx-confirm="Remove option {{.ID}}?"
-                                    hx-target="closest tr" hx-swap="delete" title="Remove option">
-                              {{template "icon-trash"}}
-                            </button>
-                          </td>
-                        </tr>
-                        {{end}}
-                      </tbody>
-                    </table>
-                    {{end}}
-                    {{if $.DHCPv4Options}}
-                    <form hx-post="/configure/interfaces/{{.Name}}/ipv4/dhcp/options" hx-swap="none"
-                          class="user-add-inline">
-                      <select class="cfg-input cfg-input-sm" name="id">
-                        {{range $.DHCPv4Options}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
-                      </select>
-                      <input class="cfg-input cfg-input-sm" type="text" name="value"
-                             placeholder="value (optional)" style="flex:2">
-                      <button class="btn btn-primary btn-sm" type="submit">Add</button>
-                      <span class="cfg-save-status"></span>
-                    </form>
-                    {{end}}
-                  </div>
-                </details>
-
-                {{if and .IPv4 .IPv4.Address}}
-                <table class="info-table" style="margin-bottom:0.5rem">
-                  {{range .IPv4.Address}}
-                  <tr>
-                    <td>{{.IP}}/{{.PrefixLength}}</td>
-                    <td>{{if .Origin}}<span class="text-muted">{{.Origin}}</span>{{end}}</td>
-                    <td class="cfg-reset-col">
-                      {{if or (eq .Origin "") (eq .Origin "static")}}
-                      <button type="button" class="btn-icon btn-icon-danger"
-                              hx-delete="/configure/interfaces/{{$r.Name}}/ipv4/{{.IP}}"
-                              hx-confirm="Remove {{.IP}}?"
-                              hx-swap="none" title="Remove address">
-                        {{template "icon-trash"}}
-                      </button>
-                      {{end}}
-                    </td>
-                  </tr>
-                  {{end}}
-                </table>
-                {{else}}
-                <p class="text-muted" style="font-size:0.85em;margin-bottom:0.5rem">No IPv4 addresses configured.</p>
-                {{end}}
-                <form hx-post="/configure/interfaces/{{.Name}}/ipv4" hx-swap="none" class="user-add-inline">
-                  <input class="cfg-input cfg-input-sm" type="text" name="ip"
-                         placeholder="192.168.1.1" style="flex:2">
-                  <span style="padding:0 0.25rem">/</span>
-                  <input class="cfg-input cfg-input-sm" type="number" name="prefix-length"
-                         placeholder="24" min="0" max="32" style="flex:0 0 5rem">
-                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
-                  <span class="cfg-save-status"></span>
-                </form>
-
-                <div class="cfg-card-footer" style="padding-left:0">
-                  <button form="{{$ipv4Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv4 Settings</button>
-                  <span class="cfg-save-status" data-cfg-status-for="{{$ipv4Form}}"></span>
-                </div>
+                {{template "iface-ipv4-block" .}}
 
                 {{/* IPv6 — mirrors the IPv4 form structure above. */}}
                 {{/* IPv6 — mirrors the IPv4 layout above. */}}
-                {{$ipv6Form := printf "ipv6-form-%s" $r.Name}}
-                {{$ipv6Fold := printf "ipv6-dhcp-%s" $r.Name}}
-                <h5 class="cfg-subsection-head" style="margin-top:0.75rem">IPv6{{template "field-info" (index $d "ipv6-address")}}</h5>
-                <form id="{{$ipv6Form}}" hx-post="/configure/interfaces/{{.Name}}/ipv6/settings" hx-swap="none">
-                  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
-                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                      <input type="checkbox" name="forwarding" value="true"
-                             {{if and .IPv6 .IPv6.Forwarding}}checked{{end}}>
-                      Forwarding{{template "field-info" (index $d "ipv6-forwarding")}}
-                    </label>
-                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                      <input type="checkbox" name="dhcp" value="true" data-fold-target="{{$ipv6Fold}}"
-                             {{if .DHCPv6Enabled}}checked{{end}}>
-                      DHCPv6 client{{template "field-info" (index $d "ipv6-dhcp")}}
-                    </label>
-                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
-                      <input type="checkbox" name="slaac" value="true"
-                             {{if and .IPv6 .IPv6.SLAACv6}}checked{{end}}>
-                      SLAAC{{template "field-info" (index $d "ipv6-slaac")}}
-                    </label>
-                  </div>
-                </form>
-
-                <details id="{{$ipv6Fold}}" class="cfg-fold" {{if not .DHCPv6Enabled}}hidden{{end}}>
-                  <summary>DHCPv6 Settings &amp; Options</summary>
-                  <div class="cfg-fold-body">
-                    <form hx-post="/configure/interfaces/{{.Name}}/ipv6/dhcp/settings" hx-swap="none">
-                      <table class="info-table">
-                        <tr>
-                          <th>DUID</th>
-                          <td><input class="cfg-input cfg-input-sm cfg-input-mono" type="text" name="duid"
-                                     value="{{.IPv6.DHCPv6.DUID}}" placeholder="default (auto-generated)"></td>
-                        </tr>
-                        <tr>
-                          <th>Information only</th>
-                          <td><label><input type="checkbox" name="information-only" value="true"
-                                     {{if and .IPv6.DHCPv6.InformationOnly (deref .IPv6.DHCPv6.InformationOnly)}}checked{{end}}> Request config only, no address (requires SLAAC)</label></td>
-                        </tr>
-                        <tr>
-                          <th>Route preference</th>
-                          <td><input class="cfg-input cfg-input-sm" type="number" name="route-preference"
-                                     {{if .IPv6.DHCPv6.RoutePreference}}value="{{deref .IPv6.DHCPv6.RoutePreference}}"{{end}}
-                                     placeholder="5" min="0" max="255" style="width:6rem"></td>
-                        </tr>
-                      </table>
-                      <div class="cfg-card-footer" style="padding-left:0">
-                        <button class="btn btn-primary btn-sm" type="submit">Save</button>
-                        <span class="cfg-save-status"></span>
-                      </div>
-                    </form>
-                    <h6 class="cfg-subsection-head" style="margin-top:0.75rem">DHCPv6 Options</h6>
-                    {{if .IPv6.DHCPv6.Options}}
-                    <table class="data-table cfg-table" style="margin-bottom:0.5rem">
-                      <thead><tr><th>Option</th><th>Value</th><th></th></tr></thead>
-                      <tbody>
-                        {{range .IPv6.DHCPv6.Options}}
-                        <tr>
-                          <td>{{.ID}}</td>
-                          <td>{{if .Value}}{{.Value}}{{else if .Hex}}<span class="text-muted">hex:{{.Hex}}</span>{{else}}<span class="text-muted">—</span>{{end}}</td>
-                          <td style="text-align:right">
-                            <button type="button" class="btn-icon btn-icon-danger"
-                                    hx-delete="/configure/interfaces/{{$r.Name}}/ipv6/dhcp/options/{{.ID}}"
-                                    hx-confirm="Remove option {{.ID}}?"
-                                    hx-target="closest tr" hx-swap="delete" title="Remove option">
-                              {{template "icon-trash"}}
-                            </button>
-                          </td>
-                        </tr>
-                        {{end}}
-                      </tbody>
-                    </table>
-                    {{end}}
-                    {{if $.DHCPv6Options}}
-                    <form hx-post="/configure/interfaces/{{.Name}}/ipv6/dhcp/options" hx-swap="none"
-                          class="user-add-inline">
-                      <select class="cfg-input cfg-input-sm" name="id">
-                        {{range $.DHCPv6Options}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
-                      </select>
-                      <input class="cfg-input cfg-input-sm" type="text" name="value"
-                             placeholder="value (optional)" style="flex:2">
-                      <button class="btn btn-primary btn-sm" type="submit">Add</button>
-                      <span class="cfg-save-status"></span>
-                    </form>
-                    {{end}}
-                  </div>
-                </details>
-
-                {{if and .IPv6 .IPv6.Address}}
-                <table class="info-table" style="margin-bottom:0.5rem">
-                  {{range .IPv6.Address}}
-                  <tr>
-                    <td class="cfg-input-mono">{{.IP}}/{{.PrefixLength}}</td>
-                    <td>{{if .Origin}}<span class="text-muted">{{.Origin}}</span>{{end}}</td>
-                    <td class="cfg-reset-col">
-                      {{if or (eq .Origin "") (eq .Origin "static")}}
-                      <button type="button" class="btn-icon btn-icon-danger"
-                              hx-delete="/configure/interfaces/{{$r.Name}}/ipv6/{{.IP}}"
-                              hx-confirm="Remove {{.IP}}?"
-                              hx-swap="none" title="Remove address">
-                        {{template "icon-trash"}}
-                      </button>
-                      {{end}}
-                    </td>
-                  </tr>
-                  {{end}}
-                </table>
-                {{else}}
-                <p class="text-muted" style="font-size:0.85em;margin-bottom:0.5rem">No IPv6 addresses configured.</p>
-                {{end}}
-                <form hx-post="/configure/interfaces/{{.Name}}/ipv6" hx-swap="none" class="user-add-inline">
-                  <input class="cfg-input" type="text" name="ip"
-                         placeholder="2001:db8::1" style="flex:2">
-                  <span style="padding:0 0.25rem">/</span>
-                  <input class="cfg-input cfg-input-sm" type="number" name="prefix-length"
-                         placeholder="64" min="0" max="128" style="flex:0 0 5rem">
-                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
-                  <span class="cfg-save-status"></span>
-                </form>
-
-                <div class="cfg-card-footer" style="padding-left:0">
-                  <button form="{{$ipv6Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv6 Settings</button>
-                  <span class="cfg-save-status" data-cfg-status-for="{{$ipv6Form}}"></span>
-                </div>
+                {{template "iface-ipv6-block" .}}
               </div>
               {{end}}{{/* HasIP */}}
 
@@ -1839,3 +1591,264 @@
 
 {{end}}
 
+
+
+{{define "iface-ipv4-block"}}
+<div id="ipv4-block-{{.Name}}" class="ipv4-block">
+                {{$ipv4Form := printf "ipv4-form-%s" $.Name}}
+                {{$ipv4Fold := printf "ipv4-dhcp-%s" $.Name}}
+                <h5 class="cfg-subsection-head">IPv4{{template "field-info" (index $.Desc "ipv4-address")}}</h5>
+                <form id="{{$ipv4Form}}" hx-post="/configure/interfaces/{{.Name}}/ipv4/settings" hx-target="#ipv4-block-{{.Name}}" hx-swap="outerHTML">
+                  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="forwarding" value="true"
+                             {{if and .IPv4 .IPv4.Forwarding}}checked{{end}}>
+                      Forwarding{{template "field-info" (index $.Desc "ipv4-forwarding")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="dhcp" value="true" data-fold-target="{{$ipv4Fold}}"
+                             {{if .DHCPv4Enabled}}checked{{end}}>
+                      DHCP client{{template "field-info" (index $.Desc "ipv4-dhcp")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="autoconf" value="true"
+                             {{if and .IPv4 .IPv4.Autoconf}}checked{{end}}>
+                      Link-Local (Zeroconf){{template "field-info" (index $.Desc "ipv4-autoconf")}}
+                    </label>
+                  </div>
+                </form>
+
+                {{/* DHCPv4 foldout — always in the DOM, hidden when DHCP is off.
+                     The data-fold-target hook on the DHCP checkbox toggles
+                     this without waiting for a server round-trip so the
+                     foldout is discoverable before clicking Save. */}}
+                <details id="{{$ipv4Fold}}" class="cfg-fold" {{if .JustSaved}}open{{end}} {{if not .DHCPv4Enabled}}hidden{{end}}>
+                  <summary>DHCP Settings &amp; Options</summary>
+                  <div class="cfg-fold-body">
+                    <form hx-post="/configure/interfaces/{{.Name}}/ipv4/dhcp/settings" hx-swap="none">
+                      <table class="info-table">
+                        <tr>
+                          <th>Client ID</th>
+                          <td><input class="cfg-input cfg-input-sm" type="text" name="client-id"
+                                     value="{{.IPv4.DHCP.ClientID}}" placeholder="default (MAC address)"></td>
+                        </tr>
+                        <tr>
+                          <th>ARP check</th>
+                          <td><label><input type="checkbox" name="arping" value="true"
+                                     {{if or (not .IPv4.DHCP.Arping) (deref .IPv4.DHCP.Arping)}}checked{{end}}> Probe for address collision before use</label></td>
+                        </tr>
+                        <tr>
+                          <th>Route preference</th>
+                          <td><input class="cfg-input cfg-input-sm" type="number" name="route-preference"
+                                     {{if .IPv4.DHCP.RoutePreference}}value="{{deref .IPv4.DHCP.RoutePreference}}"{{end}}
+                                     placeholder="5" min="0" max="255" style="width:6rem"></td>
+                        </tr>
+                      </table>
+                      <div class="cfg-card-footer" style="padding-left:0">
+                        <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                        <span class="cfg-save-status"></span>
+                      </div>
+                    </form>
+                    <h6 class="cfg-subsection-head" style="margin-top:0.75rem">DHCP Options</h6>
+                    {{if .IPv4.DHCP.Options}}
+                    <table class="data-table cfg-table" style="margin-bottom:0.5rem">
+                      <thead><tr><th>Option</th><th>Value</th><th></th></tr></thead>
+                      <tbody>
+                        {{range .IPv4.DHCP.Options}}
+                        <tr>
+                          <td>{{.ID}}</td>
+                          <td>{{if .Value}}{{.Value}}{{else if .Hex}}<span class="text-muted">hex:{{.Hex}}</span>{{else}}<span class="text-muted">—</span>{{end}}</td>
+                          <td style="text-align:right">
+                            <button type="button" class="btn-icon btn-icon-danger"
+                                    hx-delete="/configure/interfaces/{{$.Name}}/ipv4/dhcp/options/{{.ID}}"
+                                    hx-confirm="Remove option {{.ID}}?"
+                                    hx-target="closest tr" hx-swap="delete" title="Remove option">
+                              {{template "icon-trash"}}
+                            </button>
+                          </td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
+                    {{end}}
+                    {{if $.DHCPv4Options}}
+                    <form hx-post="/configure/interfaces/{{.Name}}/ipv4/dhcp/options" hx-swap="none"
+                          class="user-add-inline">
+                      <select class="cfg-input cfg-input-sm" name="id">
+                        {{range $.DHCPv4Options}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                      </select>
+                      <input class="cfg-input cfg-input-sm" type="text" name="value"
+                             placeholder="value (optional)" style="flex:2">
+                      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                      <span class="cfg-save-status"></span>
+                    </form>
+                    {{end}}
+                  </div>
+                </details>
+
+                {{if and .IPv4 .IPv4.Address}}
+                <table class="info-table" style="margin-bottom:0.5rem">
+                  {{range .IPv4.Address}}
+                  <tr>
+                    <td>{{.IP}}/{{.PrefixLength}}</td>
+                    <td>{{if .Origin}}<span class="text-muted">{{.Origin}}</span>{{end}}</td>
+                    <td class="cfg-reset-col">
+                      {{if or (eq .Origin "") (eq .Origin "static")}}
+                      <button type="button" class="btn-icon btn-icon-danger"
+                              hx-delete="/configure/interfaces/{{$.Name}}/ipv4/{{.IP}}"
+                              hx-confirm="Remove {{.IP}}?"
+                              hx-target="#ipv4-block-{{$.Name}}" hx-swap="outerHTML" title="Remove address">
+                        {{template "icon-trash"}}
+                      </button>
+                      {{end}}
+                    </td>
+                  </tr>
+                  {{end}}
+                </table>
+                {{else}}
+                <p class="text-muted" style="font-size:0.85em;margin-bottom:0.5rem">No IPv4 addresses configured.</p>
+                {{end}}
+                <form hx-post="/configure/interfaces/{{.Name}}/ipv4" hx-target="#ipv4-block-{{.Name}}" hx-swap="outerHTML" class="user-add-inline">
+                  <input class="cfg-input cfg-input-sm" type="text" name="ip"
+                         placeholder="192.168.1.1" style="flex:2">
+                  <span style="padding:0 0.25rem">/</span>
+                  <input class="cfg-input cfg-input-sm" type="number" name="prefix-length"
+                         placeholder="24" min="0" max="32" style="flex:0 0 5rem">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <span class="cfg-save-status"></span>
+                </form>
+
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button form="{{$ipv4Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv4 Settings</button>
+                  <span class="cfg-save-status" data-cfg-status-for="{{$ipv4Form}}"></span>
+                </div>
+</div>
+{{end}}
+
+{{define "iface-ipv6-block"}}
+<div id="ipv6-block-{{.Name}}" class="ipv6-block">
+                {{$ipv6Form := printf "ipv6-form-%s" $.Name}}
+                {{$ipv6Fold := printf "ipv6-dhcp-%s" $.Name}}
+                <h5 class="cfg-subsection-head" style="margin-top:0.75rem">IPv6{{template "field-info" (index $.Desc "ipv6-address")}}</h5>
+                <form id="{{$ipv6Form}}" hx-post="/configure/interfaces/{{.Name}}/ipv6/settings" hx-target="#ipv6-block-{{.Name}}" hx-swap="outerHTML">
+                  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="forwarding" value="true"
+                             {{if and .IPv6 .IPv6.Forwarding}}checked{{end}}>
+                      Forwarding{{template "field-info" (index $.Desc "ipv6-forwarding")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="dhcp" value="true" data-fold-target="{{$ipv6Fold}}"
+                             {{if .DHCPv6Enabled}}checked{{end}}>
+                      DHCPv6 client{{template "field-info" (index $.Desc "ipv6-dhcp")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="slaac" value="true"
+                             {{if and .IPv6 .IPv6.SLAACv6}}checked{{end}}>
+                      SLAAC{{template "field-info" (index $.Desc "ipv6-slaac")}}
+                    </label>
+                  </div>
+                </form>
+
+                <details id="{{$ipv6Fold}}" class="cfg-fold" {{if .JustSaved}}open{{end}} {{if not .DHCPv6Enabled}}hidden{{end}}>
+                  <summary>DHCPv6 Settings &amp; Options</summary>
+                  <div class="cfg-fold-body">
+                    <form hx-post="/configure/interfaces/{{.Name}}/ipv6/dhcp/settings" hx-swap="none">
+                      <table class="info-table">
+                        <tr>
+                          <th>DUID</th>
+                          <td><input class="cfg-input cfg-input-sm cfg-input-mono" type="text" name="duid"
+                                     value="{{.IPv6.DHCPv6.DUID}}" placeholder="default (auto-generated)"></td>
+                        </tr>
+                        <tr>
+                          <th>Information only</th>
+                          <td><label><input type="checkbox" name="information-only" value="true"
+                                     {{if and .IPv6.DHCPv6.InformationOnly (deref .IPv6.DHCPv6.InformationOnly)}}checked{{end}}> Request config only, no address (requires SLAAC)</label></td>
+                        </tr>
+                        <tr>
+                          <th>Route preference</th>
+                          <td><input class="cfg-input cfg-input-sm" type="number" name="route-preference"
+                                     {{if .IPv6.DHCPv6.RoutePreference}}value="{{deref .IPv6.DHCPv6.RoutePreference}}"{{end}}
+                                     placeholder="5" min="0" max="255" style="width:6rem"></td>
+                        </tr>
+                      </table>
+                      <div class="cfg-card-footer" style="padding-left:0">
+                        <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                        <span class="cfg-save-status"></span>
+                      </div>
+                    </form>
+                    <h6 class="cfg-subsection-head" style="margin-top:0.75rem">DHCPv6 Options</h6>
+                    {{if .IPv6.DHCPv6.Options}}
+                    <table class="data-table cfg-table" style="margin-bottom:0.5rem">
+                      <thead><tr><th>Option</th><th>Value</th><th></th></tr></thead>
+                      <tbody>
+                        {{range .IPv6.DHCPv6.Options}}
+                        <tr>
+                          <td>{{.ID}}</td>
+                          <td>{{if .Value}}{{.Value}}{{else if .Hex}}<span class="text-muted">hex:{{.Hex}}</span>{{else}}<span class="text-muted">—</span>{{end}}</td>
+                          <td style="text-align:right">
+                            <button type="button" class="btn-icon btn-icon-danger"
+                                    hx-delete="/configure/interfaces/{{$.Name}}/ipv6/dhcp/options/{{.ID}}"
+                                    hx-confirm="Remove option {{.ID}}?"
+                                    hx-target="closest tr" hx-swap="delete" title="Remove option">
+                              {{template "icon-trash"}}
+                            </button>
+                          </td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
+                    {{end}}
+                    {{if $.DHCPv6Options}}
+                    <form hx-post="/configure/interfaces/{{.Name}}/ipv6/dhcp/options" hx-swap="none"
+                          class="user-add-inline">
+                      <select class="cfg-input cfg-input-sm" name="id">
+                        {{range $.DHCPv6Options}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                      </select>
+                      <input class="cfg-input cfg-input-sm" type="text" name="value"
+                             placeholder="value (optional)" style="flex:2">
+                      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                      <span class="cfg-save-status"></span>
+                    </form>
+                    {{end}}
+                  </div>
+                </details>
+
+                {{if and .IPv6 .IPv6.Address}}
+                <table class="info-table" style="margin-bottom:0.5rem">
+                  {{range .IPv6.Address}}
+                  <tr>
+                    <td class="cfg-input-mono">{{.IP}}/{{.PrefixLength}}</td>
+                    <td>{{if .Origin}}<span class="text-muted">{{.Origin}}</span>{{end}}</td>
+                    <td class="cfg-reset-col">
+                      {{if or (eq .Origin "") (eq .Origin "static")}}
+                      <button type="button" class="btn-icon btn-icon-danger"
+                              hx-delete="/configure/interfaces/{{$.Name}}/ipv6/{{.IP}}"
+                              hx-confirm="Remove {{.IP}}?"
+                              hx-target="#ipv6-block-{{$.Name}}" hx-swap="outerHTML" title="Remove address">
+                        {{template "icon-trash"}}
+                      </button>
+                      {{end}}
+                    </td>
+                  </tr>
+                  {{end}}
+                </table>
+                {{else}}
+                <p class="text-muted" style="font-size:0.85em;margin-bottom:0.5rem">No IPv6 addresses configured.</p>
+                {{end}}
+                <form hx-post="/configure/interfaces/{{.Name}}/ipv6" hx-target="#ipv6-block-{{.Name}}" hx-swap="outerHTML" class="user-add-inline">
+                  <input class="cfg-input" type="text" name="ip"
+                         placeholder="2001:db8::1" style="flex:2">
+                  <span style="padding:0 0.25rem">/</span>
+                  <input class="cfg-input cfg-input-sm" type="number" name="prefix-length"
+                         placeholder="64" min="0" max="128" style="flex:0 0 5rem">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <span class="cfg-save-status"></span>
+                </form>
+
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button form="{{$ipv6Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv6 Settings</button>
+                  <span class="cfg-save-status" data-cfg-status-for="{{$ipv6Form}}"></span>
+                </div>
+</div>
+{{end}}

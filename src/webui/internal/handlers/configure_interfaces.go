@@ -128,6 +128,18 @@ type cfgIfaceRow struct {
 	// "auto-injected placeholder" apart.
 	DHCPv4Enabled bool
 	DHCPv6Enabled bool
+
+	// Page-level bits copied onto each row so the per-interface IPv4/IPv6
+	// blocks can render as standalone fragments — both inline on the full
+	// page and on their own when a save handler re-renders just one block
+	// (to surface confd-inferred values without collapsing the page).
+	Desc          map[string]string
+	DHCPv4Options []schema.IdentityOption
+	DHCPv6Options []schema.IdentityOption
+	// JustSaved marks a post-save re-render (renderIPBlock) so the DHCP
+	// foldout auto-expands to reveal the freshly-inferred options.  False
+	// on the normal page render, so foldouts stay collapsed there.
+	JustSaved bool
 }
 
 // ifaceRadioMirror is the subset of wifi-radio fields we expose on the
@@ -469,6 +481,13 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 	sort.Strings(data.WizardAvailableRadios)
 
 	data.Interfaces = h.buildRows(ifaces, operWrap.Interfaces.Interface)
+	// Copy page-level descriptions + DHCP option enums onto each row so the
+	// IPv4/IPv6 blocks render standalone (see cfgIfaceRow.Desc).
+	for i := range data.Interfaces {
+		data.Interfaces[i].Desc = data.Desc
+		data.Interfaces[i].DHCPv4Options = data.DHCPv4Options
+		data.Interfaces[i].DHCPv6Options = data.DHCPv6Options
+	}
 	// Populate the mirrored radio editor for WiFi interface rows from
 	// the already-fetched candidate hardware tree (no extra fetch).
 	radios := indexWifiRadios(hwCand.Hardware.Component)
@@ -1166,25 +1185,25 @@ func (h *ConfigureInterfacesHandler) SaveGeneral(w http.ResponseWriter, r *http.
 // AddIPv4 adds an IPv4 address to an interface.
 // POST /configure/interfaces/{name}/ipv4
 func (h *ConfigureInterfacesHandler) AddIPv4(w http.ResponseWriter, r *http.Request) {
-	h.addAddr(w, r, "ipv4")
+	h.addAddr(w, r, "ipv4", "IPv4", "iface-ipv4-block")
 }
 
 // DeleteIPv4 removes an IPv4 address from an interface.
 // DELETE /configure/interfaces/{name}/ipv4/{ip}
 func (h *ConfigureInterfacesHandler) DeleteIPv4(w http.ResponseWriter, r *http.Request) {
-	h.deleteAddr(w, r, "ipv4")
+	h.deleteAddr(w, r, "ipv4", "IPv4", "iface-ipv4-block")
 }
 
 // AddIPv6 adds an IPv6 address to an interface.
 // POST /configure/interfaces/{name}/ipv6
 func (h *ConfigureInterfacesHandler) AddIPv6(w http.ResponseWriter, r *http.Request) {
-	h.addAddr(w, r, "ipv6")
+	h.addAddr(w, r, "ipv6", "IPv6", "iface-ipv6-block")
 }
 
 // DeleteIPv6 removes an IPv6 address from an interface.
 // DELETE /configure/interfaces/{name}/ipv6/{ip}
 func (h *ConfigureInterfacesHandler) DeleteIPv6(w http.ResponseWriter, r *http.Request) {
-	h.deleteAddr(w, r, "ipv6")
+	h.deleteAddr(w, r, "ipv6", "IPv6", "iface-ipv6-block")
 }
 
 // SaveBridgePort assigns or updates an interface's bridge membership.
@@ -2103,7 +2122,7 @@ func portCandidatesFor(masterName string, ifaces []ifaceJSON, memberOf map[strin
 	return out
 }
 
-func (h *ConfigureInterfacesHandler) addAddr(w http.ResponseWriter, r *http.Request, family string) {
+func (h *ConfigureInterfacesHandler) addAddr(w http.ResponseWriter, r *http.Request, family, famCap, frag string) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
@@ -2130,10 +2149,12 @@ func (h *ConfigureInterfacesHandler) addAddr(w http.ResponseWriter, r *http.Requ
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "Address added", "/configure/interfaces")
+	// Re-render the IP block in place so the new address appears without
+	// collapsing the interface foldout — ready to add another straight away.
+	h.renderIPBlock(w, r, name, famCap, frag)
 }
 
-func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.Request, family string) {
+func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.Request, family, famCap, frag string) {
 	name := r.PathValue("name")
 	ip := r.PathValue("ip")
 	path := ifacePath(name) + "/ietf-ip:" + family + "/address=" + restconf.EscapeKey(ip)
@@ -2142,7 +2163,7 @@ func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.R
 		renderSaveError(w, err)
 		return
 	}
-	renderSavedRedirect(w, "Address removed", "/configure/interfaces")
+	h.renderIPBlock(w, r, name, famCap, frag)
 }
 
 // SaveIPv4Settings PATCHes the per-interface IPv4 group settings — forwarding
@@ -2151,7 +2172,7 @@ func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.R
 // PUT (enable) or DELETE (disable) per checkbox state; forwarding is PATCHed.
 // POST /configure/interfaces/{name}/ipv4/settings
 func (h *ConfigureInterfacesHandler) SaveIPv4Settings(w http.ResponseWriter, r *http.Request) {
-	h.saveIPSettings(w, r, "ietf-ip:ipv4", "IPv4", map[string]string{
+	h.saveIPSettings(w, r, "ietf-ip:ipv4", "IPv4", "iface-ipv4-block", map[string]string{
 		"dhcp":     "infix-dhcp-client:dhcp",
 		"autoconf": "infix-ip:autoconf",
 	})
@@ -2161,7 +2182,7 @@ func (h *ConfigureInterfacesHandler) SaveIPv4Settings(w http.ResponseWriter, r *
 // the standard ietf-ip "autoconf" container; DHCPv6 is the Infix augment.
 // POST /configure/interfaces/{name}/ipv6/settings
 func (h *ConfigureInterfacesHandler) SaveIPv6Settings(w http.ResponseWriter, r *http.Request) {
-	h.saveIPSettings(w, r, "ietf-ip:ipv6", "IPv6", map[string]string{
+	h.saveIPSettings(w, r, "ietf-ip:ipv6", "IPv6", "iface-ipv6-block", map[string]string{
 		"dhcp":  "infix-dhcpv6-client:dhcp",
 		"slaac": "autoconf",
 	})
@@ -2171,7 +2192,7 @@ func (h *ConfigureInterfacesHandler) SaveIPv6Settings(w http.ResponseWriter, r *
 // presenceMap maps form-field names (e.g. "dhcp") to their YANG presence
 // container key (e.g. "infix-dhcp-client:dhcp"); each one is PUT when checked
 // and DELETEd otherwise. Forwarding is always PATCHed.
-func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *http.Request, container, family string, presenceMap map[string]string) {
+func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *http.Request, container, family, fragName string, presenceMap map[string]string) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
@@ -2220,7 +2241,61 @@ func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *ht
 		}
 	}
 
+	// Re-render just this interface's IP block from the fresh candidate so
+	// confd-inferred values (the DHCP option list, etc.) appear in place,
+	// without collapsing the page.  fragName empty → fall back to a toast
+	// (e.g. families whose block fragment isn't wired up yet).
+	if fragName != "" {
+		h.renderIPBlock(w, r, name, family, fragName)
+		return
+	}
 	renderSaved(w, family+" settings saved")
+}
+
+// renderIPBlock re-renders one interface's IPv4/IPv6 block fragment from the
+// fresh candidate.  Falls back to a plain saved-toast if the interface or
+// schema can't be read, so a save is never reported as failed just because
+// the in-place refresh couldn't be built.
+func (h *ConfigureInterfacesHandler) renderIPBlock(w http.ResponseWriter, r *http.Request, name, family, fragName string) {
+	ifaces, err := h.fetchAllInterfaces(r.Context())
+	if err != nil {
+		renderSaved(w, family+" settings saved")
+		return
+	}
+	rows := h.buildRows(ifaces, nil)
+	var row *cfgIfaceRow
+	for i := range rows {
+		if rows[i].Name == name {
+			row = &rows[i]
+			break
+		}
+	}
+	if row == nil {
+		renderSaved(w, family+" settings saved")
+		return
+	}
+	if mgr := h.Schema.Manager(); mgr != nil {
+		ifPath := "/ietf-interfaces:interfaces/interface"
+		ip4, ip6 := "/ietf-ip:ipv4", "/ietf-ip:ipv6"
+		row.DHCPv4Options = schema.OptionsFor(mgr, ifPath+ip4+"/infix-dhcp-client:dhcp/option/id")
+		row.DHCPv6Options = schema.OptionsFor(mgr, ifPath+ip6+"/infix-dhcpv6-client:dhcp/option/id")
+		row.Desc = map[string]string{
+			"ipv4-address":    schema.DescriptionOf(mgr, ifPath+ip4+"/address/ip"),
+			"ipv4-dhcp":       schema.DescriptionOf(mgr, ifPath+ip4+"/infix-dhcp-client:dhcp"),
+			"ipv4-autoconf":   schema.DescriptionOf(mgr, ifPath+ip4+"/infix-ip:autoconf"),
+			"ipv4-forwarding": schema.DescriptionOf(mgr, ifPath+ip4+"/forwarding"),
+			"ipv6-address":    schema.DescriptionOf(mgr, ifPath+ip6+"/address/ip"),
+			"ipv6-dhcp":       schema.DescriptionOf(mgr, ifPath+ip6+"/infix-dhcpv6-client:dhcp"),
+			"ipv6-slaac":      schema.DescriptionOf(mgr, ifPath+ip6+"/autoconf"),
+			"ipv6-forwarding": schema.DescriptionOf(mgr, ifPath+ip6+"/forwarding"),
+		}
+	}
+	row.JustSaved = true // expand the DHCP foldout to reveal inferred options
+	// Keep the cfgSaved toast behaviour even though we swap the block.
+	w.Header().Set("HX-Trigger", `{"cfgSaved":"`+family+` settings saved"}`)
+	if err := h.Template.ExecuteTemplate(w, fragName, row); err != nil {
+		log.Printf("configure interfaces %s: render %s: %v", name, fragName, err)
+	}
 }
 
 func (h *ConfigureInterfacesHandler) SaveIPv4DHCPSettings(w http.ResponseWriter, r *http.Request) {
