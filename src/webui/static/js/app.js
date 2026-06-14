@@ -68,14 +68,25 @@
       tickerId = setInterval(tick, 1000);
     }
 
-    function hide() {
-      banner.hidden = true;
-      banner.textContent = 'Device unreachable';
-      firstFailureMs = null;
+    // Reconnect: the device is answering again after a disconnect.  It may
+    // have rebooted or been upgraded out of band, in which case
+    // running-config reverted to startup (activated-but-unsaved changes
+    // are gone), operational data is stale, and the in-memory session may
+    // no longer exist.  So we do NOT resume the page the user was on —
+    // we reload it.  A live session re-fetches true post-reboot state; a
+    // dead one makes the server 303-redirect the navigation to /login.
+    // The watchdog only fires `show()` after a >=5 s outage, so this never
+    // triggers on a sub-second blip — only on outages long enough to
+    // plausibly be a reboot.
+    function reconnect() {
+      if (firstFailureMs === null) return; // we were never down
+      banner.hidden = false;
+      banner.textContent = 'Device back online — reloading…';
       if (tickerId !== null) {
         clearInterval(tickerId);
         tickerId = null;
       }
+      window.location.reload();
     }
 
     document.addEventListener('htmx:configRequest', function (evt) {
@@ -93,12 +104,9 @@
       if (!evt.detail) return;
       var xhr = evt.detail.xhr;
       var status = xhr ? xhr.status : 0;
-      // Any HTTP response < 500 means the server is reachable — hide.
-      // (Pre-fix the banner stuck on after the next poll returned 404
-      // because the old check used `successful`, which is true only for
-      // 2xx.)  status === 0 = no response, leave the banner alone;
-      // sendError / timeout handles it.
-      if (status > 0 && status < 500) hide();
+      // Any HTTP response < 500 means the server is reachable again.
+      // status === 0 = no response; leave it to sendError / timeout.
+      if (status > 0 && status < 500) reconnect();
     });
   }
 
