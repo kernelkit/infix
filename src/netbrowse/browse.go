@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"os/exec"
 	"sort"
 	"strings"
@@ -221,7 +222,7 @@ func scan() map[string]Host {
 
 		var url string
 		if meta.adminurl != "" {
-			url = meta.adminurl
+			url = rebaseURLHost(meta.adminurl, link)
 		} else if info.urlTemplate != "" {
 			url = strings.NewReplacer(
 				"{address}", address,
@@ -340,7 +341,7 @@ func parseOperational(root *opRoot) map[string]Host {
 
 			var url string
 			if meta.adminurl != "" {
-				url = meta.adminurl
+				url = rebaseURLHost(meta.adminurl, link)
 			} else if info.urlTemplate != "" {
 				url = strings.NewReplacer(
 					"{address}", addr,
@@ -396,6 +397,30 @@ func scanAuto() map[string]Host {
 		return scan()
 	}
 	return parseOperational(root)
+}
+
+// rebaseURLHost rewrites the host of raw to host, keeping scheme, port, and
+// path. It corrects stale adminurl TXT records: avahi resolves hostname
+// conflicts at runtime by appending -2, -3, … but the advertiser writes the
+// adminurl with its configured hostname and never updates it, so a device
+// renamed infix-2.local still advertises adminurl=http://infix.local — which
+// resolves to the *other* device. The mDNS-resolved host is authoritative.
+// A no-op when raw is unparseable, hostless, or already points at host (the
+// common single-device case).
+func rebaseURLHost(raw, host string) string {
+	if host == "" {
+		return raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return raw
+	}
+	if port := u.Port(); port != "" {
+		u.Host = host + ":" + port
+	} else {
+		u.Host = host
+	}
+	return u.String()
 }
 
 // decode handles avahi's DNS-SD escape sequences in service names:
