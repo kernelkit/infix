@@ -69,10 +69,19 @@ def absent(dut, xpath):
         return True
 
 
-def verify_absent(name, dut):
-    for xpath in ABSENT:
-        assert absent(dut, xpath), \
-            f"{name}: unexpected operational data at {xpath}"
+def features_absent(name, dut):
+    """True once every unconfigured feature subtree is gone.
+
+    Like the interface set, these subtrees can momentarily linger: a
+    preceding test (containers, NTP, a routing protocol) leaves state that
+    yangerd only prunes once the underlying daemon/config is torn down.
+    Poll until operational has converged rather than asserting on the
+    transient overlap.
+    """
+    pending = [xpath for xpath in ABSENT if not absent(dut, xpath)]
+    if pending:
+        print(f"{name}: feature data still present {pending}, waiting...")
+        return False
     return True
 
 
@@ -92,7 +101,13 @@ with infamy.Test() as test:
         parallel(*(lambda n=name, d=dut: check(n, d) for name, dut in duts.items()))
 
     with test.step("Verify unconfigured feature subtrees are absent"):
-        parallel(*(lambda n=name, d=dut: verify_absent(n, d)
+        def check_absent(name, dut):
+            # NTP is pruned by a periodic collector with a 60s poll
+            # interval, so a stale subtree can take a full cycle to clear;
+            # wait comfortably past one interval rather than racing it.
+            until(lambda: features_absent(name, dut), attempts=120)
+
+        parallel(*(lambda n=name, d=dut: check_absent(n, d)
                    for name, dut in duts.items()))
 
     test.succeed()
