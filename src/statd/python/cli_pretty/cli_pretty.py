@@ -579,6 +579,59 @@ def signal_to_status(signal):
     return status
 
 
+def signal_quality_to_status(percent):
+    """Modem signal-quality (0-100%) → colored status word.
+
+    Thresholds chosen so the output vocabulary matches signal_to_status
+    above: a roughly linear -110..-50 dBm modem-quality mapping puts
+    80% near -62 dBm (excellent), 60% near -74 dBm (good), 40% near -86
+    dBm (poor).  Below that is "bad".
+    """
+    if percent is None:
+        return ""
+    try:
+        percent = float(percent)
+    except (TypeError, ValueError):
+        return ""
+    if percent >= 80:
+        return Decore.bright_green("excellent")
+    if percent >= 60:
+        return Decore.green("good")
+    if percent >= 40:
+        return Decore.yellow("poor")
+    return Decore.red("bad")
+
+
+def modem_state_to_status(state):
+    """Color the modem state word: connected/registered green, failed
+    red, transient states yellow, everything else plain."""
+    if not state:
+        return ""
+    if state in ("connected", "registered"):
+        return Decore.green(state)
+    if state == "failed":
+        return Decore.red(state)
+    if state in ("connecting", "enabling", "disabling", "disconnecting",
+                 "enabled", "searching", "initializing", "locked"):
+        return Decore.yellow(state)
+    return state
+
+
+def sim_lock_to_status(state):
+    """Color the SIM lock-state word."""
+    if not state:
+        return ""
+    if state == "unlocked":
+        return Decore.green(state)
+    if state == "not-inserted":
+        return Decore.yellow(state)
+    if state == "permanently-blocked":
+        return Decore.red(state)
+    if state in ("pin-required", "puk-required"):
+        return Decore.yellow(state)
+    return state
+
+
 def datetime_now():
     if UNIT_TEST:
         return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
@@ -895,8 +948,9 @@ class Sensor:
         else:
             return f"{self.value} {self.value_type}"
 
-    def print(self, indent=0):
+    def print(self, indent=0, name_width=None):
         import re
+        nw = name_width if name_width is not None else PadSensor.name
         # Add indentation for child sensors
         indent_str = "  " * indent
 
@@ -916,7 +970,7 @@ class Sensor:
             # Standalone sensor without description: use name as-is
             display_name = self.name
 
-        row = f"{indent_str}{display_name:<{PadSensor.name - len(indent_str)}}"
+        row = f"{indent_str}{display_name:<{nw - len(indent_str)}}"
         # For colored value, pad manually to account for ANSI codes
         value_str = self.get_formatted_value()
         # Count visible characters (strip ANSI codes for length calculation)
@@ -2245,6 +2299,276 @@ def show_services(json):
     service_table.print()
 
 
+def _build_modem_table(modems):
+    """SimpleTable with one row per modem hardware component.  Shared
+    between 'show modem' and the modem section of 'show hardware'."""
+    table = SimpleTable([
+        Column('NAME'),
+        Column('MANUFACTURER', flexible=True),
+        Column('MODEL', flexible=True),
+        Column('STATE'),
+        Column('NETWORK'),
+        Column('SIGNAL'),
+    ])
+    for component in modems:
+        ms = component.get("infix-hardware:modem-state", {})
+        cell = ms.get("cellular", {})
+        name = component.get("name", "unknown")
+        mfg = ms.get("manufacturer", "")
+        model = ms.get("model", "")
+        state = modem_state_to_status(ms.get("state", "unknown"))
+        network = cell.get("network-type", "")
+        signal = signal_quality_to_status(ms.get("signal-quality"))
+        table.row(name, mfg, model, state, network, signal)
+    return table
+
+
+def _build_sim_table(sims):
+    """SimpleTable with one row per SIM hardware component.  Shared
+    between 'show modem' and the SIM section of 'show hardware'."""
+    table = SimpleTable([
+        Column('NAME'),
+        Column('SLOT'),
+        Column('STATE'),
+        Column('OPERATOR', flexible=True),
+    ])
+    for component in sims:
+        ss = component.get("infix-hardware:sim-state", {})
+        name = component.get("name", "unknown")
+        slot = str(ss["slot"]) if ss.get("slot") is not None else ""
+        state = sim_lock_to_status(ss.get("state", ""))
+        operator = ss.get("operator-name", "")
+        table.row(name, slot, state, operator)
+    return table
+
+
+def show_modem(json):
+    components = get_json_data([], json, "ietf-hardware:hardware", "component")
+    modems = [c for c in components if c.get("class") == "infix-hardware:modem"]
+    sims = [c for c in components if c.get("class") == "infix-hardware:sim"]
+
+    if not modems and not sims:
+        print("No cellular modems found.")
+        return
+
+    modem_table = _build_modem_table(modems) if modems else None
+    sim_table = _build_sim_table(sims) if sims else None
+
+    width = max(modem_table.width() if modem_table else 0,
+                sim_table.width() if sim_table else 0,
+                62)
+
+    if modem_table:
+        Decore.title("Cellular Modems", width)
+        modem_table.adjust_padding(width)
+        modem_table.print()
+
+    if sim_table:
+        Decore.title("SIM Cards", width)
+        sim_table.adjust_padding(width)
+        sim_table.print()
+
+
+def _modem_signal_str(ms):
+    parts = []
+    sq = ms.get("signal-quality")
+    if sq is not None:
+        recency = "" if ms.get("signal-quality-recent", True) else " (stale)"
+        word = signal_quality_to_status(sq)
+        head = f"Quality: {sq}% {word}" if word else f"Quality: {sq}%"
+        parts.append(f"{head}{recency}")
+    for key, label, unit in (
+            ("signal-rssi", "RSSI", "dBm"),
+            ("signal-rsrp", "RSRP", "dBm"),
+            ("signal-rsrq", "RSRQ", "dB"),
+            ("signal-sinr", "SINR", "dB")):
+        if key in ms:
+            parts.append(f"{label}: {ms[key]} {unit}")
+    return "  ".join(parts)
+
+
+def _bearers_for_modem(json, modem_name):
+    """Return [(ifname, bearer_state, wwan_dict), ...] for wwan interfaces
+    that reference 'modem_name', preserving sysrepo list order."""
+    interfaces = get_json_data([], json, "ietf-interfaces:interfaces",
+                               "interface")
+    out = []
+    for iface in interfaces:
+        if iface.get("type") != "infix-if-type:modem":
+            continue
+        wwan = iface.get("infix-interfaces:wwan") or {}
+        if wwan.get("modem") != modem_name:
+            continue
+        bearer_state = wwan.get("bearer-state") or {}
+        out.append((iface.get("name", "?"), bearer_state, wwan))
+    return out
+
+
+def show_modem_detail(json, ref):
+    components = get_json_data([], json, "ietf-hardware:hardware", "component")
+    modem = next((c for c in components
+                  if c.get("class") == "infix-hardware:modem"
+                  and c.get("name") == ref), None)
+    if modem is None:
+        print(f"Modem '{ref}' not found.")
+        return
+
+    ms = modem.get("infix-hardware:modem-state", {})
+    cell = ms.get("cellular", {})
+    location = ms.get("location-state", {})
+
+    sim_name = ref.replace("modem", "sim", 1)
+    sim = next((c for c in components
+                if c.get("class") == "infix-hardware:sim"
+                and c.get("name") == sim_name), None)
+    sim_state = sim.get("infix-hardware:sim-state", {}) if sim else {}
+
+    bearers = _bearers_for_modem(json, ref)
+
+    width = 62
+    print(Decore.invert(f"{'MODEM: ' + ref:<{width}}"))
+
+    Decore.title("Hardware Information", width)
+    for label, val in (
+        ("Manufacturer",       ms.get("manufacturer", "")),
+        ("Model",              ms.get("model", "")),
+        ("Hardware Revision",  ms.get("hardware-revision", "")),
+        ("Firmware Version",   ms.get("firmware-version", "")),
+        ("Serial Number",      ms.get("serial-number", "")),
+        ("IMSI",               ms.get("imsi", "")),
+        ("ICCID",              ms.get("iccid", "")),
+    ):
+        if val:
+            print(f"  {label:<20}: {val}")
+    phone = ms.get("phone-number", [])
+    if phone:
+        print(f"  {'Phone Number':<20}: {', '.join(phone)}")
+    carriers = ms.get("supported-carrier", [])
+    if carriers:
+        print(f"  {'Supported Carriers':<20}: {', '.join(carriers)}")
+    selected = ms.get("selected-carrier", "")
+    if selected:
+        print(f"  {'Selected Carrier':<20}: {selected}")
+
+    Decore.title("Status", width)
+    state = ms.get("state", "unknown")
+    print(f"  {'State':<20}: {modem_state_to_status(state)}")
+    if state == "failed":
+        reason = ms.get("state-failed-reason")
+        if reason and reason != "none":
+            print(f"  {'Failed Reason':<20}: {Decore.red(reason)}")
+    power = ms.get("power-state")
+    if power and power != "unknown":
+        print(f"  {'Power State':<20}: {power}")
+    locks = ms.get("enabled-locks") or []
+    if locks:
+        print(f"  {'Locks':<20}: {', '.join(locks)}")
+    sig_str = _modem_signal_str(ms)
+    if sig_str:
+        print(f"  {'Signal':<20}: {sig_str}")
+    last_change = ms.get("last-change")
+    if last_change:
+        print(f"  {'Last Update':<20}: {last_change}")
+
+    if cell:
+        Decore.title("Cellular", width)
+        for label, key in (
+            ("Registration",   "registration-state"),
+            ("Service State",  "service-state"),
+            ("Operator",       "operator-name"),
+            ("Operator ID",    "operator-id"),
+            ("Network Type",   "network-type"),
+        ):
+            val = cell.get(key, "")
+            if val:
+                print(f"  {label:<20}: {val}")
+
+    # SIM Card section is now always rendered (sim-state is always emitted
+    # by yanger).  When the slot is empty, sim_state.state == 'not-inserted'
+    # tells Andrew's "where's my missing SIM" story directly.
+    Decore.title("SIM Card", width)
+    print(f"  {'Name':<20}: {sim.get('name', '') if sim else sim_name}")
+    slot_val = sim_state.get("slot")
+    if slot_val is not None:
+        print(f"  {'Slot':<20}: {slot_val}")
+    lock_state = sim_state.get("state")
+    if lock_state:
+        print(f"  {'Lock State':<20}: {sim_lock_to_status(lock_state)}")
+    sim_op = sim_state.get("operator-name")
+    if sim_op:
+        print(f"  {'Operator':<20}: {sim_op}")
+
+    if bearers:
+        Decore.title("Bearers", width)
+        for ifname, bstate, _wwan in bearers:
+            connected = bstate.get("connected", False)
+            print(f"  {ifname} ({'connected' if connected else 'disconnected'})")
+            if not connected:
+                reason = bstate.get("connection-failed-reason", "")
+                if reason:
+                    print(f"    {'Error':<18}: {reason}")
+            v4 = bstate.get("ipv4-address")
+            v4pfx = bstate.get("ipv4-prefix-length", 0)
+            if v4 and v4pfx:
+                print(f"    {'IPv4':<18}: {v4}/{v4pfx}")
+            v6 = bstate.get("ipv6-address")
+            v6pfx = bstate.get("ipv6-prefix-length", 0)
+            if v6 and v6pfx:
+                print(f"    {'IPv6':<18}: {v6}/{v6pfx}")
+            rx = bstate.get("in-bytes", 0)
+            tx = bstate.get("out-bytes", 0)
+            try:
+                rxi = int(rx)
+                txi = int(tx)
+                if rxi or txi:
+                    print(f"    {'Traffic':<18}: RX {rxi} B  TX {txi} B")
+            except (TypeError, ValueError):
+                pass
+            total_rx = bstate.get("total-in-bytes", 0)
+            total_tx = bstate.get("total-out-bytes", 0)
+            duration = bstate.get("total-duration", 0)
+            try:
+                trxi = int(total_rx)
+                ttxi = int(total_tx)
+                duri = int(duration)
+                if trxi or ttxi:
+                    print(f"    {'Total Traffic':<18}: "
+                          f"RX {trxi} B  TX {ttxi} B  ({duri} s)")
+            except (TypeError, ValueError):
+                pass
+
+    if location:
+        Decore.title("Location", width)
+        src = location.get("source")
+        if src:
+            print(f"  {'Source':<20}: {src}")
+        lat = location.get("latitude")
+        lon = location.get("longitude")
+        alt = location.get("altitude")
+        if lat is not None and lon is not None:
+            pos = f"{lat}, {lon}"
+            if alt is not None:
+                pos += f"  Alt: {alt} m"
+            print(f"  {'GPS':<20}: {pos}")
+        cid = location.get("cell-id")
+        if cid is not None:
+            cell_id = f"CID {cid}"
+            lac = location.get("lac")
+            tac = location.get("tac")
+            if lac is not None:
+                cell_id += f"  LAC {lac}"
+            if tac is not None:
+                cell_id += f"  TAC {tac}"
+            mcc = location.get("mcc")
+            mnc = location.get("mnc")
+            if mcc and mnc:
+                cell_id += f"  MCC {mcc}  MNC {mnc}"
+            print(f"  {'Cell ID':<20}: {cell_id}")
+        loc_change = location.get("last-change")
+        if loc_change:
+            print(f"  {'Last Update':<20}: {loc_change}")
+
+
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
         print("Error, top level \"ietf-hardware:component\" missing")
@@ -2257,8 +2581,18 @@ def show_hardware(json):
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
     wifi_radios = [c for c in components if c.get("class") == "infix-hardware:wifi"]
     gps_receivers = [c for c in components if c.get("class") == "infix-hardware:gps"]
+    modems = [c for c in components if c.get("class") == "infix-hardware:modem"]
+    sims = [c for c in components if c.get("class") == "infix-hardware:sim"]
 
-    width = max(PadSensor.table_width(), 62)
+    # Pre-build modem and SIM tables to get natural widths before computing
+    # the global width used by all section separators.
+    modem_table = _build_modem_table(modems) if modems else None
+    sim_table = _build_sim_table(sims) if sims else None
+
+    width = max(PadSensor.table_width(),
+                modem_table.width() if modem_table else 0,
+                sim_table.width() if sim_table else 0,
+                62)
 
     # Display full-width inverted heading
     print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
@@ -2387,11 +2721,21 @@ def show_hardware(json):
 
         usb_table.print()
 
+    if modem_table:
+        Decore.title("Cellular Modems", width)
+        modem_table.adjust_padding(width)
+        modem_table.print()
+
+    if sim_table:
+        Decore.title("SIM Cards", width)
+        sim_table.adjust_padding(width)
+        sim_table.print()
+
     if sensors:
         Decore.title("Sensors", width)
 
-        # Print header
-        hdr = (f"{'NAME':<{PadSensor.name}}"
+        name_width = PadSensor.name + max(0, width - PadSensor.table_width())
+        hdr = (f"{'NAME':<{name_width}}"
                f"{'VALUE':<{PadSensor.value}}"
                f"{'STATUS':<{PadSensor.status}}")
         print(Decore.invert(hdr))
@@ -2420,7 +2764,7 @@ def show_hardware(json):
             if module_name in children:
                 for child in sorted(children[module_name], key=lambda c: c.get("name", "")):
                     sensor = Sensor(child)
-                    sensor.print(indent=1)
+                    sensor.print(indent=1, name_width=name_width)
 
         # Display standalone sensors (no parent)
         if standalone:
@@ -2428,7 +2772,7 @@ def show_hardware(json):
                 print()  # Add blank line between modules and standalone
             for component in sorted(standalone, key=lambda c: c.get("name", "")):
                 sensor = Sensor(component)
-                sensor.print()
+                sensor.print(name_width=name_width)
 
 
 def resolve_container_network(network, all_ifaces):
@@ -5989,6 +6333,9 @@ def main():
               .add_argument('name', help='Container name')
 
     subparsers.add_parser('show-hardware', help='Show USB ports')
+    subparsers.add_parser('show-modem', help='Show cellular modem overview')
+    subparsers.add_parser('show-modem-detail', help='Show detailed modem info') \
+              .add_argument('name', help='Modem name (e.g. modem0)')
 
     subparsers.add_parser('show-interfaces', help='Show interfaces') \
               .add_argument('-n', '--name', help='Interface name')
@@ -6066,6 +6413,10 @@ def main():
         show_container_detail(json_data, args.name)
     elif args.command == "show-hardware":
         show_hardware(json_data)
+    elif args.command == "show-modem":
+        show_modem(json_data)
+    elif args.command == "show-modem-detail":
+        show_modem_detail(json_data, args.name)
     elif args.command == "show-interfaces":
         show_interfaces(json_data, args.name)
     elif args.command == "show-lldp":

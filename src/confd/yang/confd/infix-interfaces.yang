@@ -36,6 +36,7 @@ module infix-interfaces {
   include infix-if-wifi;
   include infix-if-wireguard;
   include infix-if-ptp;
+  include infix-if-modem;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
@@ -63,6 +64,11 @@ module infix-interfaces {
 
   revision 2026-04-29 {
     description "Add operational state for multicast router ports per bridge.";
+    reference "internal";
+  }
+
+  revision 2026-04-27 {
+    description "Include infix-if-modem submodule for cellular wwan interfaces.";
     reference "internal";
   }
 

@@ -1,2 +1,4 @@
 migratedir          = $(pkgdatadir)/migrate/1.9
-dist_migrate_DATA   = 10-ethernet-advertise.sh
+dist_migrate_DATA   = \
+	10-ethernet-advertise.sh \
+	10-remove-infix-modem.sh

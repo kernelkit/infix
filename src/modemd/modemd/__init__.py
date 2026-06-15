@@ -1,0 +1,1940 @@
+import threading
+import subprocess
+import argparse
+import datetime
+import hashlib
+import signal
+import syslog
+import socket
+import shutil
+import select
+import json
+import enum
+import time
+import os
+import sys
+import ipaddress
+
+rundir  = "/run/modemd"
+smsdir  = "/var/sms"
+pidfile = "/run/modemd.pid"
+debug   = False
+threads = []
+reload_event = threading.Event()
+
+# Vendor-specific AT commands to enable / disable raw NMEA output on the
+# modem's dedicated GPS port.  Used when the udev rules in
+# 77-mm-modem-gps.rules have set ID_MM_PORT_IGNORE on that port — gpsd
+# then reads NMEA directly from /dev/gpsN.  For unrecognised vendors,
+# prepare_location() falls back to ModemManager's high-level options
+# (which keeps MM in charge of the NMEA port).  Keys match the
+# manufacturer string ModemManager reports verbatim.
+GPS_AT_COMMANDS = {
+    "Quectel":         ("AT+QGPS=1", "AT+QGPS=0"),
+    "Sierra Wireless": ("AT+CGPS=1", "AT+CGPS=0"),
+}
+
+# ModemManager --location-{enable,disable}-* flag suffixes per source.
+# 'gps' is handled separately because known vendors take the raw AT path.
+LOCATION_MM_FLAGS = {
+    "agps-msa": ("agps-msa",),
+    "agps-msb": ("agps-msb",),
+    "3gpp":     ("3gpp",),
+    "cdma":     ("cdma-bs",),
+}
+
+syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_SYSLOG)
+
+class Trigger(enum.Enum):
+    POWER = 1
+    RESET = 2
+    RESTART = 3
+
+
+class State(enum.Enum):
+    FAILED = -1
+    DOWN = 0
+    ENABLED = 1
+    CONNECTING = 2
+    CONNECTED = 3
+    UP = 4
+
+
+def info(msg):
+    syslog.syslog(syslog.LOG_INFO, "<info> %s" % msg)
+
+
+def dbg(msg):
+    global debug
+    if debug:
+        syslog.syslog(syslog.LOG_INFO, "<debug> %s" % msg)
+
+
+def err(msg):
+    syslog.syslog(syslog.LOG_ERR, "<error> %s" % msg)
+
+
+def fatal(msg):
+    syslog.syslog(syslog.LOG_ALERT, "<fatal> %s" % msg)
+    sys.exit(1)
+
+
+def opener(path, flags):
+    ret = os.open(path, flags, 0o664)
+    shutil.chown(path, user="root", group="wheel")
+    return ret
+
+
+def rmf(path):
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+
+
+def rmrf(path):
+    for f in os.listdir(path):
+        p = os.path.join(path, f)
+        if os.path.isdir(p):
+            rmrf(p)
+        else:
+            os.remove(p)
+
+
+def mkdir(path):
+    if os.path.isdir(path):
+        return True
+    try:
+        os.mkdir(path, mode=0o755)
+        shutil.chown(path, user="root", group="wheel")
+    except OSError:
+        fatal("Unable to mkdir %s" % path)
+
+
+def fread(path):
+    try:
+        with open(path, "r") as fd:
+            output = fd.read()
+            return output.strip() if output else None
+    except OSError:
+        return None
+
+
+def freadj(path):
+    output = fread(path)
+    if not output:
+        return None
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        dbg("Unable to parse json output")
+        return None
+    finally:
+        return data
+
+
+def fwrite(path, cont):
+    with open(path, "w", opener=opener) as fd:
+        if not fd.write(cont):
+            return False
+    return True
+
+
+def fwritej(path, cont):
+    if fwrite(path, json.dumps(cont)):
+        return True
+    else:
+        return False
+
+
+def now_rfc3339():
+    """Return current UTC time as a yang:date-and-time string.
+
+    Format matches yanger.common.YangDate (+00:00 offset, not Z) so that
+    consumers see identical timestamp formatting regardless of producer.
+    """
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(
+        timespec="seconds")
+
+
+def fwritej_atomic(path, cont):
+    """Write JSON to path via tmp+rename so readers never see a partial file."""
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w", opener=opener) as fd:
+            fd.write(json.dumps(cont))
+        os.rename(tmp, path)
+        return True
+    except OSError:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        return False
+
+
+def runcmdp(cmd1, cmd2, check=True):
+    dbg("Running: %s | %s" % (" ".join(cmd1), " ".join(cmd2)))
+    ret = None
+    try:
+        res1 = subprocess.run(cmd1, check=check, text=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        res2 = subprocess.run(cmd2, input=res1.stdout, check=check, text=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if res1.returncode == 0 and res2.returncode == 0:
+            if res2.stdout:
+                ret = res2.stdout.strip()
+            else:
+                ret = True
+    except subprocess.CalledProcessError:
+        dbg("Piped command failed")
+        dbg(res1.stderr)
+        dbg(res2.stderr)
+        return None
+    finally:
+        return ret
+
+
+def runcmd(cmd, check=True):
+    dbg("Running: %s" % " ".join(cmd))
+    ret = None
+    try:
+        res = subprocess.run(cmd, check=check, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True)
+        if res.returncode == 0:
+            if res.stdout:
+                ret = res.stdout.strip()
+            else:
+                ret = True
+    except subprocess.CalledProcessError as e:
+        dbg("Command %s failed" % cmd[0])
+        dbg(e)
+        return None
+    finally:
+        return ret
+
+
+def runcmdj(cmd):
+    output = runcmd(cmd)
+    if not output:
+        return None
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        dbg("Unable to parse json output")
+        return None
+    finally:
+        return data
+
+
+def list_sms(modem):
+    smslist = []
+
+    output = None
+    if modem:
+        output = runcmdj(["mmcli", "-J", "-m", modem,
+                          "--messaging-list-sms"])
+    if not output:
+        return smslist
+
+    for path in output["modem.messaging.sms"]:
+        output = runcmdj(["mmcli", "-J", "-s", path])
+        if not output:
+            continue
+        props = output["sms"]["properties"]
+        if props["pdu-type"] == "submit":
+            if props["state"] == "--":
+                smslist.append({"path": path,
+                                "type": "notsent"})
+            elif props["state"] == "sent":
+                smslist.append({"path": path,
+                                "type": "sent"})
+        elif props["pdu-type"] == "deliver":
+            if props["state"] == "received":
+                smslist.append({"path": path,
+                                "type": "received",
+                                "payload": output["sms"]})
+
+    return smslist
+
+
+def load_config():
+    hw = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-hardware"])
+    ifaces = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-interfaces"])
+
+    ks = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-keystore"])
+    keys = {}
+    if ks:
+        for key in ks.get("ietf-keystore:keystore", {}) \
+                      .get("symmetric-keys", {}) \
+                      .get("symmetric-key", []):
+            keys[key["name"]] = key.get("cleartext-symmetric-key", "")
+
+    # Cellular modems appear seconds after boot; use physical detection as the
+    # authoritative list rather than sysrepo which may not have them yet.
+    sysj = freadj("/run/system.json") or {}
+    physical = sysj.get("modem", [])
+    if not physical:
+        mj = freadj("/run/modems.json") or {}
+        for i, m in enumerate(mj.get("modems", [])):
+            physical.append({"index": i, "name": "modem%d" % i,
+                              "devpath": m.get("devpath", "")})
+
+    hw_comps, sims = {}, {}
+    for comp in (hw or {}).get("ietf-hardware:hardware", {}).get("component", []):
+        cls = comp.get("class", "")
+        if cls == "infix-hardware:modem":
+            hw_comps[comp["name"]] = comp
+        elif cls == "infix-hardware:sim":
+            sims[comp["name"]] = comp.get("infix-hardware:sim", {})
+
+    modems = {}
+    for phys in physical:
+        name = phys.get("name", "modem%d" % phys.get("index", 0))
+        index = phys.get("index", 0)
+
+        comp = hw_comps.get(name, {})
+        admin = comp.get("state", {}).get("admin-state", "unlocked")
+        if admin == "locked":
+            continue
+
+        ih = comp.get("infix-hardware:modem", {})
+        modems[name] = {
+            "index": index,
+            "preferred-mode": ih.get("preferred-mode"),
+            "allowed-mode": ih.get("allowed-mode", []),
+            "band": ih.get("band", []),
+            "location": ih.get("location"),
+            "bearer": [],
+        }
+
+    for iface in (ifaces or {}).get("ietf-interfaces:interfaces", {}).get("interface", []):
+        if iface.get("type", "") != "infix-if-type:modem":
+            continue
+        wwan = iface.get("infix-interfaces:wwan", {})
+        modem_ref = wwan.get("modem")
+        if not modem_ref or modem_ref not in modems:
+            continue
+
+        sim_ref = wwan.get("sim")
+        if sim_ref and sim_ref in sims and "pin" not in modems[modem_ref]:
+            sim = sims[sim_ref]
+            modems[modem_ref].update({
+                "pin": sim.get("pin"),
+                "puk": sim.get("puk"),
+                "carrier": sim.get("carrier", "default"),
+            })
+
+        bearer_cfg = wwan.get("bearer", {})
+        auth = bearer_cfg.get("authentication")
+        bearer = {
+            "index": len(modems[modem_ref]["bearer"]),
+            "name": iface["name"],
+            "apn": bearer_cfg.get("apn", ""),
+            "ip-type": bearer_cfg.get("ip-type", "ipv4v6"),
+            "roaming": bearer_cfg.get("roaming", False),
+            "route-preference": bearer_cfg.get("route-preference", 200),
+        }
+        if auth:
+            bearer["username"] = auth.get("username", "")
+            bearer["password"] = keys.get(auth.get("password", ""), "")
+
+        modems[modem_ref]["bearer"].append(bearer)
+
+    return list(modems.values())
+
+
+class RpcThread(threading.Thread):
+    path = None
+    server = None
+
+    def __init__(self):
+        global rundir
+        super().__init__(daemon=True, name="rpc")
+        self.exited = False
+        self.stopevent = threading.Event()
+        self.sock = rundir + "/modemd.sock"
+
+    def stop(self):
+        self.stopevent.set()
+
+    def stopped(self):
+        return self.stopevent.is_set()
+
+    def sendsms(self, path, data):
+        info("Sending sms to %s" % data["number"])
+        if not path:
+            err("No modem path yet")
+            return False
+
+        opts = []
+        opts.append('number="%s"' % data["number"])
+        opts.append('text="%s"' % data["text"])
+
+        if not runcmd(["mmcli", "-m", path,
+                       "--messaging-create-sms=%s" % ",".join(opts)]):
+            err("Unable to create sms")
+            return False
+
+        return True
+
+    def rpc(self, rpc, data):
+        global threads
+
+        info("Got rpc %s for modem%d" % (rpc, data["index"]))
+        for th in threads:
+            if th.name.startswith("modem") and th.index == data["index"]:
+                if rpc == "restart":
+                    th.trigger = Trigger.RESTART
+                    th.interrupt = True
+                elif rpc == "reset":
+                    th.trigger = Trigger.RESET
+                    th.interrupt = True
+                elif rpc == "send-sms":
+                    self.sendsms(th.path, data)
+        return True
+
+    def handle(self, msg):
+        if "rpc" not in msg:
+            err("No rpc in msg")
+            return False
+        elif "data" not in msg:
+            err("No data in msg")
+            return False
+        elif "index" not in msg["data"]:
+            err("No index")
+            return False
+
+        if msg["rpc"] == "send-sms":
+            if "number" not in msg["data"]:
+                err("No sms number")
+                return False
+            if "text" not in msg["data"]:
+                err("No sms text")
+                return False
+
+        return self.rpc(msg["rpc"], msg["data"])
+
+    def process(self):
+        conn, addr = self.server.accept()
+        try:
+            while not self.stopped():
+                msg = conn.recv(1024)
+                if msg:
+                    self.handle(json.loads(msg.decode()))
+                else:
+                    break
+        finally:
+            conn.close()
+            return True
+
+    def run(self):
+        rmf(self.sock)
+        self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server.bind(self.sock)
+        self.server.listen(1)
+
+        while not self.stopped():
+            if not self.process():
+                return False
+
+        self.server.close()
+        rmf(self.sock)
+
+        dbg("Exiting rpc")
+        self.exited = True
+        return True
+
+
+class SimThread(threading.Thread):
+    def __init__(self):
+        super().__init__(daemon=True, name="sim")
+        self.exited = False
+        self.stopevent = threading.Event()
+
+    def stop(self):
+        self.stopevent.set()
+
+    def stopped(self):
+        return self.stopevent.is_set()
+
+    def changed(self, index):
+        global threads
+
+        path = "/sys/class/sim/sim%d/present" % index
+        present = int(fread(path))
+        if present is None:
+            return
+        if present == 0:
+            info("sim%d disappeared" % index)
+            return
+
+        info("sim%d appeared" % index)
+        for th in threads:
+            if th.name.startswith("modem") and th.sim["index"] == index:
+                th.trigger = Trigger.POWER
+                th.interrupt = True
+
+    def run(self):
+        if not os.path.exists("/dev/simctrl"):
+            dbg("No /dev/simctrl, SIM slot monitoring not available on this platform")
+            self.exited = True
+            return
+        fd = os.open("/dev/simctrl", os.O_RDONLY)
+        while not self.stopped():
+            res, *_ = select.select([fd], [], [], 10.0)
+            if fd in res:
+                index = int.from_bytes(os.read(fd, 1))
+                self.changed(index)
+
+        dbg("Exiting sim")
+        fd.close()
+        self.exited = True
+        return True
+
+
+class ModemThread(threading.Thread):
+    index = None
+    cfg = None
+
+    def __init__(self, cfg):
+        global rundir
+
+        self.index = cfg["index"]
+        super().__init__(daemon=True, name="modem%d" % self.index)
+        self.stopevent = threading.Event()
+        self.exited = False
+
+        self.cfg = cfg
+        self.prefix = "[modem%d] " % self.index
+        self.rundir = "%s/modem%d" % (rundir, self.index)
+        self.statedir = "%s/state" % self.rundir
+        self.locdir = "%s/location" % self.rundir
+
+        mkdir(self.rundir)
+        mkdir(self.statedir)
+        mkdir(self.locdir)
+
+        # Some modems (e.g. Quectel EM05) reject both --reset and
+        # --factory-reset.  Cache the first such observation so we don't
+        # retry every 30 s for the rest of the thread's lifetime.  Recovery
+        # from a hardware-stuck state on these modems requires a physical
+        # power cycle anyway — see MODEM.md.
+        self._reset_unsupported = False
+
+        # Signature of the last (allow, pref, supported-modes) tuple that
+        # prepare_modes rejected.  Repeats are silent until the user changes
+        # the config (SIGHUP recycles the thread, clearing this) or the
+        # modem reports a different supported-modes set.
+        self._modes_failed_sig = None
+
+        self.init()
+
+    def stop(self):
+        self.stopevent.set()
+
+    def stopped(self):
+        return self.stopevent.is_set()
+
+    def dbg(self, msg):
+        dbg("%s%s" % (self.prefix, msg))
+
+    def info(self, msg):
+        info("%s%s" % (self.prefix, msg))
+
+    def err(self, msg):
+        err("%s%s" % (self.prefix, msg))
+
+    def fatal(self, msg):
+        fatal("%s%s" % (self.prefix, msg))
+
+    def _mmcli(self, *args, check=True):
+        return runcmd(["mmcli", "-m", self.path, *args], check=check)
+
+    def _mmclij(self, *args):
+        return runcmdj(["mmcli", "-J", "-m", self.path, *args])
+
+    def init(self):
+        self.timeout = 1
+        self.path = None
+        self.interfaces = []
+        self.ifaces = []
+        self.status = {}
+        self.state = None
+        self.trigger = None
+        self.iface = None
+        self.sim = None
+        self.failtime = None
+        self.detected = False
+        # Fingerprint of the last state we wrote to state.json — used to
+        # detect transitions and only bump state-last-changed when admin/
+        # oper/alarm state actually changes (RFC 4268 semantics).
+        self.std_fp = None
+        self.std_last_changed = None
+        self.timer1 = 0
+        self.timer1 = 0
+        self.timer2 = 0
+        self.updfail = 0
+        self.connfail = 0
+        self.location = {"enabled": False}
+
+        self.set_state(State.DOWN)
+        self.configure()
+
+    def configure(self):
+        self.bearers = {
+            "list": [],
+            "initial": None,
+            "active": []
+        }
+        bearers = self.cfg.get("bearer")
+        if not bearers:
+            self.err("No bearers configured")
+            return False
+
+        for bearer in sorted(bearers, key=lambda b: b["index"]):
+            bearer["pid"] = "--"
+
+            apn = bearer.get("apn")
+            if not apn:
+                self.err("No APN configured")
+                return False
+
+            self.bearers["list"].append(bearer)
+
+        # at least one bearer is mandatory
+        if len(self.bearers["list"]) == 0:
+            self.err("No bearers evaluated")
+            return False
+
+        # check for duplicate APNs
+        seen = []
+        for bearer in self.bearers["list"]:
+            if bearer["apn"] not in seen:
+                seen.append(bearer["apn"])
+            else:
+                self.err("Duplicate APN '%s'" % bearer["apn"])
+                return False
+
+        if not self.bearers["initial"]:
+            self.bearers["initial"] = self.bearers["list"][0]
+
+        # check location
+        enabled = False
+        sources = []
+        loc = self.cfg.get("location")
+        if loc and loc.get("enabled"):
+            enabled = True
+            sources = loc.get("source", [])
+
+        self.location = {
+            "enabled": enabled,
+            "sources": sources,
+            "state": "down"}
+
+        return True
+
+    def find_bearer(self, apn):
+        for bearer in self.bearers["active"]:
+            if bearer["apn"] == apn:
+                return bearer
+        return None
+
+    def restart(self):
+        self.info("Restarting")
+        self.notif("RESTART")
+        self.pulldown()
+
+    def power(self):
+        self.info("Power-cycling")
+        self.notif("POWER")
+
+        self.pulldown()
+
+        if runcmd(['/usr/libexec/modemd/modem-power',
+                   '-i', str(self.index)]):
+            self.info("Waiting 10s")
+            time.sleep(10)
+        else:
+            self.err("Unable to power-cycle")
+
+        self.init()
+
+    def reset(self):
+        if self._reset_unsupported:
+            # Cached from a previous attempt: skip silently.  The state
+            # machine will keep polling; once the user power-cycles the
+            # hardware modemd will re-detect via init().
+            return
+
+        self.info("Resetting")
+        self.notif("RESET")
+
+        self.pulldown()
+
+        wait = 0
+        if self._mmcli("--reset"):
+            self.info("Performed a normal reset")
+            wait = 5
+        elif self._mmcli("--factory-reset=000000"):
+            self.info("Performed a factory reset")
+            wait = 10
+        else:
+            self.err("Modem rejects --reset and --factory-reset; "
+                     "recovery requires a physical power cycle. "
+                     "Suppressing further reset attempts.")
+            self._reset_unsupported = True
+
+        if wait > 0:
+            self.info("Waiting %ds" % wait)
+            time.sleep(wait)
+
+        self.init()
+
+    def notif(self, msg):
+        data = {
+          "ietf-hardware:hardware": {
+            "component": [{
+              "name": "modem%d" % self.index,
+              "infix-hardware:modem": {
+                "status-update": {"desc": msg}
+              }
+            }]
+          }
+        }
+        note = "%s/notif" % self.rundir
+        fwritej(note, data)
+        if runcmd(["sysrepocfg", "-f", "json", "-N", note]):
+            self.dbg("Sent notification: %s" % msg)
+        rmf(note)
+
+    def get_bearers(self):
+        bearers = []
+        if not self.update():
+            return bearers
+        for path in self.status.get("bearers", []):
+            output = self._mmclij("-b", path)
+            if output and "bearer" in output:
+                bearers.append(output["bearer"])
+        return bearers
+
+    def get_profiles(self):
+        profiles = []
+        output = self._mmclij("--3gpp-profile-manager-list")
+        if not output:
+            return profiles
+        for entry in output["modem"]["3gpp"]["profile-manager"]["list"]:
+            profile = {}
+            for attr in entry.split(", "):
+                (key, value) = attr.split(": ")
+                profile[key] = value
+            profiles.append(profile)
+        return profiles
+
+    def get_conn_failure(self, path):
+        for bearer in self.get_bearers():
+            if bearer["dbus-path"] == path:
+                return bearer["status"]["connection-error"]["message"]
+        return "unknown"
+
+    def update(self):
+        if not self.path:
+            return False
+        output = self._mmclij()
+        if output:
+            output = output.get("modem", {})
+            output = output.get("generic", None)
+            if output:
+                self.status = output
+                self.updfail = 0
+                return True
+
+        self.updfail += 1
+        if self.updfail > 5:
+            self.err("Reinit after too many failures")
+            time.sleep(10)
+            self.init()
+
+        return False
+
+    def iplink(self, iface, action):
+        dbg("Setting link of %s to %s" % (iface, action))
+        if not runcmd(["ip", "link", "set", "dev", iface, action]):
+            self.err("Unable to set link of %s to %s" % (iface, action))
+            return False
+        if not runcmd(["ip", "link", "set", "dev", iface, "state", action]):
+            self.err("Unable to set link state of %s to %s" % (iface, action))
+            return False
+        return True
+
+    def resolvconf(self, iface, action):
+        self.info("About to %s nameservers on %s" % (action, iface["name"]))
+
+        output = runcmd(["resolvconf", "-i"], check=False)
+        if output:
+            for ifc in output.split(" "):
+                self.dbg("Removing nameservers from %s" % ifc)
+                runcmd(["resolvconf", "-d", ifc])
+
+        if action != "add":
+            return True
+
+        count = 0
+        data = ""
+        for dns in (iface["ipv4"]["dns"] + iface["ipv6"]["dns"]):
+            self.dbg("Adding nameserver %s" % dns)
+            data += "nameserver %s\n" % dns
+            count += 1
+
+        if count > 0:
+            path = "%s/resolv.conf" % self.rundir
+            fwrite(path, data)
+            if not runcmdp(["cat", path], ["resolvconf", "-a", iface["name"]]):
+                self.err("Unable to add nameservers on %s" % iface["name"])
+                return False
+
+        return True
+
+    def _derive_gateway(self, ifname):
+        """Derive the peer gateway from the link-scope subnet route on ifname.
+
+        Point-to-point bearers (MBIM/QMI) often report gateway as '--' even
+        though the kernel installs a link-scope subnet route (e.g. /30).  The
+        peer — and therefore the nexthop for the default route — is the only
+        other host in that subnet.
+        """
+        output = runcmdj(["ip", "-j", "route", "show",
+                          "dev", ifname, "scope", "link"])
+        for rt in (output or []):
+            dst = rt.get("dst", "")
+            src = rt.get("prefsrc", "")
+            if not dst or not src or "/" not in dst:
+                continue
+            try:
+                net = ipaddress.ip_network(dst, strict=False)
+                our = ipaddress.ip_address(src)
+                peers = [str(h) for h in net.hosts() if h != our]
+                if peers:
+                    return peers[0]
+            except ValueError:
+                pass
+        return None
+
+    def ipdefroute(self, iface, action):
+        self.info("About to %s default route on %s" % (action, iface["name"]))
+
+        conf = "/etc/net.d/%s.conf" % iface["name"]
+
+        if action != "add":
+            rmf(conf)
+            return True
+
+        if iface["ipv4"]["gateway"] != "--":
+            gw = iface["ipv4"]["gateway"]
+        elif iface["ipv6"]["gateway"] != "--":
+            gw = iface["ipv6"]["gateway"]
+        else:
+            # Gateway not reported by modem (common for point-to-point bearers).
+            # Derive it from the link-scope subnet route on the interface: the
+            # peer is the only other host in the subnet.
+            gw = self._derive_gateway(iface["name"])
+            if not gw:
+                self.err("No gateway address found")
+                return False
+
+        metric = iface["bearer"].get("route-preference", 200)
+
+        # Write route to /etc/net.d/ for netd/staticd/zebra to install.
+        # This keeps the route visible to FRR for redistribution and allows
+        # metric-based failover behind wired/WiFi routes (which use lower
+        # metric values from udhcpc, typically 5).
+        content = "# Generated by modemd -- do not edit\n\n"
+        content += "route {\n"
+        if ":" in gw:
+            content += '    prefix = "::/0"\n'
+        else:
+            content += '    prefix = "0.0.0.0/0"\n'
+        content += '    nexthop = "%s"\n' % gw
+        content += '    distance = %d\n' % metric
+        content += '    tag = 100\n'
+        content += '}\n'
+
+        if fread(conf) == content.strip():
+            return True
+        next_conf = conf + "+"
+        fwrite(next_conf, content)
+        os.rename(next_conf, conf)
+        return True
+
+    def ifupdown(self, iface, action):
+        path = "/var/ifupdown/%s" % self.iface
+        if os.path.isfile(path) or os.access(path, os.X_OK):
+            self.info("Running %s %s" % (path, action))
+            if not runcmd([path, action]):
+                return False
+
+        return True
+
+    def linkdown(self, iface):
+        self.resolvconf(iface, "delete")
+        self.ipdefroute(iface, "delete")
+        self.ifupdown(iface, "down")
+
+        # Flush only wwan-protocol-tagged addresses; leaves any static or
+        # dhcp-protocol addresses intact in case the interface is shared.
+        runcmd(["ip", "addr", "flush", "dev", iface["name"],
+                "proto", "wwan"], check=False)
+
+        self.iplink(iface["name"], "down")
+
+        for i in range(len(self.ifaces)):
+            if self.ifaces[i]["name"] == iface["name"]:
+                del self.ifaces[i]
+
+        return True
+
+    def linkup(self, iface):
+        self.iplink(iface["name"], "up")
+
+        addrs = []
+        for ip in (iface["ipv4"], iface["ipv6"]):
+            if ip["address"] != "--" and ip["prefix"] != "--":
+                addrs.append("%s/%s" % (ip["address"], ip["prefix"]))
+
+        if len(addrs) == 0:
+            self.err("No addresses yet")
+            return False
+
+        # Flush any stale wwan-protocol addresses before adding new ones.
+        # The 'proto wwan' tag (rt_addrprotos entry 7) allows precise cleanup
+        # on disconnect without touching addresses added by other means.
+        runcmd(["ip", "addr", "flush", "dev", iface["name"],
+                "proto", "wwan"], check=False)
+
+        for addr in addrs:
+            self.info("Setting address %s on %s" % (addr, iface["name"]))
+            if not runcmd(["ip", "addr", "replace", addr,
+                           "dev", iface["name"], "proto", "wwan"]):
+                self.err("Unable to set address for %s" % iface["name"])
+                return False
+
+        if not self.ipdefroute(iface, "add"):
+            return False
+
+        if not self.ifupdown(iface, "up"):
+            return False
+
+        if not self.resolvconf(iface, "add"):
+            return False
+
+        self.ifaces.append(iface)
+        return True
+
+    def poweron(self):
+        if self.status.get("power-state", "") == "off":
+            self.info("Powering on")
+            if not self._mmcli("--set-power-state-on"):
+                self.err("Unable to power on")
+                return False
+        return True
+
+    def disable(self):
+        self.info("Disabling")
+        if not self._mmcli("--disable"):
+            self.err("Unable to disable")
+            return False
+        else:
+            return True
+
+    def enable(self):
+        state = self.status.get("state", "unknown")
+        self.info("Enabling (state '%s')" % state)
+
+        if not self.path:
+            return False
+        if state == "unknown" or state == "disabled":
+            if not self._mmcli("--enable"):
+                self.err("Unable to enable")
+                return False
+        return True
+
+    def unlock(self):
+        args = ["--sim=%s" % self.status.get("sim", "0")]
+
+        if self.status.get("unlock-required", "") == "sim-pin":
+            self.info("Unlocking with PIN")
+            pin = self.cfg.get("pin")
+            if not pin:
+                self.err("No PIN defined")
+                return False
+            args.append("--pin=%s" % pin)
+        elif self.status.get("unlock-required", "") == "sim-puk":
+            self.info("Unlocking with PUK")
+            puk = self.cfg.get("puk")
+            if not puk:
+                self.err("No PUK defined")
+                return False
+            args.append("--puk=%s" % puk)
+        else:
+            self.err("Unsupported lock")
+            return False
+
+        self.disable()
+        if not self._mmcli(*args):
+            self.err("Unable to unlock")
+            return False
+        else:
+            return True
+
+    def setcarrier(self):
+        path = "%s/carrier-support" % self.rundir
+        if os.path.exists(path):
+            supported = int(fread(path))
+        else:
+            if runcmd(["/usr/libexec/modemd/modem-carrier",
+                       "--manf", self.manf,
+                       "--model", self.model,
+                       "--check"]):
+                supported = 1
+            else:
+                supported = 0
+
+            fwrite(path, "%d" % supported)
+
+        if supported == 0:
+            self.info("Modem does not support setting a carrier")
+            return True
+
+        path = "%s/supported-carriers" % self.rundir
+        if os.path.exists(path):
+            carriers = freadj(path)
+        else:
+            self.info("Getting supported carriers for %s %s" %
+                      (self.manf, self.model))
+            carriers = runcmdj(["/usr/libexec/modemd/modem-carrier",
+                                "--manf", self.manf,
+                                "--model", self.model,
+                                "--index", str(self.index),
+                                "--list"])
+            if carriers:
+                fwritej(path, carriers)
+
+        if not carriers:
+            self.err("Unable to list supported carriers")
+            return False
+
+        path = "%s/current-carrier" % self.rundir
+        if os.path.exists(path):
+            current = freadj(path)
+        else:
+            output = runcmdj(["/usr/libexec/modemd/modem-carrier",
+                              "--manf", self.manf,
+                              "--model", self.model,
+                              "--index", str(self.index),
+                              "--get"])
+            if output and isinstance(output, dict):
+                current = output.get("name")
+                if current:
+                    fwritej(path, current)
+
+        if not current:
+            self.err("Unable to get current carrier")
+            return False
+
+        self.info("Current carrier is '%s'" % current)
+
+        carrier = self.cfg.get("carrier", "default")
+        if carrier == current:
+            return True
+
+        self.info("Setting carrier '%s' for modem%d" %
+                  (carrier, self.index))
+
+        output = runcmdj(["/usr/libexec/modemd/modem-carrier",
+                          "--manf", self.manf,
+                          "--model", self.model,
+                          "--index", str(self.index),
+                          "--set", carrier])
+        if not output:
+            self.err("Unable to set carrier '%s' on modem%d" %
+                     (carrier, self.index))
+            return False
+
+        fwritej(path, carrier)
+
+        if output.get("action", "") == "reset":
+            self.reset()
+            return False
+        else:
+            return True
+
+    def initialize(self):
+        self.pulldown()
+        self.update()
+        self.poweron()
+
+        if not self.setcarrier():
+            return False
+
+        if self.status.get("state", "") == "locked":
+            if not self.unlock():
+                return False
+
+        return self.enable()
+
+    def get_profile_args(self, bearer):
+        args = [
+            "profile-id=%s" % bearer["pid"],
+            "profile-name=profile%s" % bearer["pid"]
+        ]
+        v = bearer.get("apn")
+        if v:
+            args.append("apn=%s" % v)
+        v = bearer.get("ip-type")
+        if v:
+            args.append("ip-type=%s" % v)
+        v = bearer.get("username")
+        if v:
+            args.append("user=%s" % v)
+        v = bearer.get("password")
+        if v:
+            args.append("password=%s" % v)
+
+        return ",".join(args)
+
+    def get_bearer_args(self, bearer):
+        args = []
+        pid = bearer.get("pid")
+        if pid and pid == "!-":
+            args.append("profile-id=%s" % pid)
+        else:
+            v = bearer.get("apn")
+            if v:
+                args.append("apn=%s" % v)
+            v = bearer.get("ip-type")
+            if v:
+                args.append("ip-type=%s" % v)
+            v = bearer.get("username")
+            if v:
+                args.append("user=%s" % v)
+            v = bearer.get("password")
+            if v:
+                args.append("password=%s" % v)
+
+        v = bearer.get("roaming")
+        if v:
+            args.append("allow-roaming=true")
+        else:
+            args.append("allow-roaming=false")
+
+        return ",".join(args)
+
+    def prepare_profile_bearers(self, bearers):
+        self.info("Preparing profile bearers")
+
+        # wipe auxiliary profiles
+        for p in self.get_profiles():
+            if p["profile-id"] != "1":
+                self.dbg("Deleting profile %s" % p["profile-id"])
+                if not self._mmcli("--3gpp-profile-manager-delete=%s" %
+                                   p["profile-id"]):
+                    self.err("Unable to delete profile")
+                    return False
+
+        # create profiles and bearers
+        pid = 1
+        for bearer in bearers:
+            bearer["pid"] = str(pid)
+            pid += 1
+
+            if pid > len(self.interfaces):
+                self.err("Max. number of bearers reached")
+                break
+            if bearer["pid"] != "1":
+                if not self._mmcli("--3gpp-profile-manager-set="):
+                    self.err("Unable to create profile")
+                    return False
+
+            args = self.get_profile_args(bearer)
+            if not self._mmcli("--3gpp-profile-manager-set=%s" % args):
+                self.err("Unable to configure profile")
+                return False
+
+            args = self.get_bearer_args(bearer)
+            if not self._mmcli("--create-bearer=%s" % args):
+                self.err("Unable to create bearer")
+                return False
+
+            self.info("Created profile bearer %s for '%s'" %
+                      (bearer["pid"], bearer["apn"]))
+            self.bearers["active"].append(bearer)
+        return True
+
+    def prepare_multiplex_bearers(self, bearers):
+        self.info("Preparing multiplex bearers")
+
+        for bearer in bearers:
+            args = self.get_bearer_args(bearer)
+            if not self._mmcli("--create-bearer=multiplex=required,%s" % args):
+                self.err("Unable to create bearer")
+                return False
+            self.info("Created multiplex bearer for '%s'" % bearer["apn"])
+            self.bearers["active"].append(bearer)
+        return True
+
+    def prepare_default_bearer(self, bearer):
+        if not self._mmcli("--create-bearer=%s" % self.get_bearer_args(bearer)):
+            self.err("Unable to create bearer")
+            return False
+
+        self.info("Created default bearer '%s'" % bearer["apn"])
+        self.bearers["active"].append(bearer)
+        return True
+
+    def prepare_bearers(self):
+        self.info("Preparing bearers")
+
+        # wipe existing bearers
+        for bearer in self.get_bearers():
+            self.dbg("Deleting bearer %s" % bearer["dbus-path"])
+            if not self._mmcli("--delete-bearer=%s" % bearer["dbus-path"]):
+                self.err("Unable to delete bearer")
+                return False
+
+        # configure initial bearer (used to attach to network)
+        initial = self.bearers.get("initial")
+        if initial:
+            self.info("Setting initial bearer '%s'" % initial["apn"])
+            if not self._mmcli("--3gpp-set-initial-eps-bearer-settings=%s" %
+                               self.get_bearer_args(initial)):
+                self.err("Unable to set initial bearer")
+
+        # configure dialup bearers
+        count = len(self.bearers["list"])
+        self.info("Configuring %d bearers" % count)
+
+        if len(self.bearers["list"]) == 1:
+            return self.prepare_default_bearer(self.bearers["list"][0])
+        elif len(self.interfaces) == 1:
+            # use multiplex beares in case of 1 interface
+            return self.prepare_multiplex_bearers(self.bearers["list"])
+        else:
+            # use profile beaeres in case of multiple interfaces
+            return self.prepare_profile_bearers(self.bearers["list"])
+
+    def prepare_bands(self):
+        bands = self.cfg.get("band", [])
+        if len(bands) == 0 or "any" in bands:
+            return True
+
+        self.info("Preparing bands")
+        if not self._mmcli("--set-current-bands=%s" % "|".join(bands)):
+            self.err("Unable to set band")
+            return False
+        return True
+
+    def prepare_modes(self):
+        pref = self.cfg.get("preferred-mode")
+        if not pref or pref == "any":
+            pref = "none"
+
+        allow = self.cfg.get("allowed-mode", [])
+        if "any" in allow:
+            allow = []
+
+        supported_modes = self.status.get("supported-modes", [])
+
+        # Same (config, modem-supports) inputs we already rejected — stay
+        # silent so the 3 s prepare-retry loop doesn't spam syslog with
+        # the same error.  Cleared on success below, on SIGHUP (thread
+        # rebuild), or whenever the modem reports a different supported
+        # set.  frozenset so leaf-list reorderings don't defeat the cache.
+        sig = (frozenset(allow), pref, frozenset(supported_modes))
+        if self._modes_failed_sig == sig:
+            return False
+
+        self.info("Preparing modes")
+
+        if pref == "none" and len(allow) == 0:
+            # User didn't pin anything; let the modem choose.
+            self._mmcli("--set-allowed-modes=any", check=False)
+            self._modes_failed_sig = None
+            return True
+
+        # If only preferred-mode is set (no allowed-mode), derive allowed
+        # from supported combinations that have this preferred.  Skipping
+        # this would build an invalid 'allowed: ; preferred: X' string
+        # that never matches.  Pick the widest supported allow-set so the
+        # user gets maximum fallback (e.g. 2g/3g/4g over 4g-only when both
+        # have 'preferred: 4g').
+        if len(allow) == 0:
+            best = None
+            for m in supported_modes:
+                if ("preferred: %s" % pref) not in m:
+                    continue
+                head = m.split("allowed: ", 1)
+                if len(head) != 2:
+                    continue
+                allowed_part = head[1].split(";", 1)[0].strip()
+                candidate = [t.strip() for t in allowed_part.split(",")
+                             if t.strip()]
+                if best is None or len(candidate) > len(best):
+                    best = candidate
+            if not best:
+                supported = "; ".join(supported_modes) or "(none reported)"
+                self.err("Modem does not support preferred mode '%s'. "
+                         "Supported: %s" % (pref, supported))
+                self._modes_failed_sig = sig
+                return False
+            allow = best
+
+        mode = "allowed: %s; preferred: %s" % (", ".join(allow), pref)
+        if mode not in supported_modes:
+            supported = "; ".join(supported_modes) or "(none reported)"
+            self.err("Mode '%s' is not supported. Supported: %s" %
+                     (mode, supported))
+            self._modes_failed_sig = sig
+            return False
+
+        current = self.status.get("current-modes", "")
+        if current == mode:
+            self.info("Mode '%s' already set" % mode)
+            self._modes_failed_sig = None
+            return True
+
+        self.info("Setting mode '%s'" % mode)
+
+        args = ["--set-allowed-modes=%s" % "|".join(allow)]
+        if pref != "none":
+            args.append("--set-preferred-mode=%s" % pref)
+        ok = self._mmcli(*args)
+        if ok:
+            self._modes_failed_sig = None
+        return ok
+
+    def _gps_at_command(self, enable):
+        """Vendor-specific AT command to toggle GPS NMEA, or None.
+
+        Match by substring so 'Quectel' picks up 'Quectel Incorporated' too —
+        ModemManager normalises differently across firmware revisions.
+        """
+        for vendor, cmds in GPS_AT_COMMANDS.items():
+            if vendor in self.manf:
+                return cmds[0] if enable else cmds[1]
+        return None
+
+    def _location_capabilities(self):
+        """YANG source names this modem actually supports.
+
+        Returns None if the capability query itself fails.  Otherwise a
+        set drawn from {gps, agps-msa, agps-msb, 3gpp, cdma}.  Asking
+        ModemManager to enable an unsupported source fails the whole
+        batched mmcli call, so prepare_location() filters against this.
+        """
+        output = self._mmclij("--location-status")
+        if not output:
+            return None
+        caps = output.get("modem", {}).get("location", {}).get("capabilities", "")
+        if isinstance(caps, str):
+            caps = [c.strip() for c in caps.split(",") if c.strip()]
+        mapping = {
+            "3gpp-lac-ci": "3gpp",
+            "gps-raw":     "gps",
+            "gps-nmea":    "gps",
+            "agps-msa":    "agps-msa",
+            "agps-msb":    "agps-msb",
+            "cdma-bs":     "cdma",
+        }
+        return {mapping[c] for c in caps if c in mapping}
+
+    def prepare_location(self):
+        self.info("Preparing location")
+
+        rmrf(self.locdir)
+        if not self.location["enabled"]:
+            return True
+
+        sources = self.location["sources"]
+
+        # GPS via vendor AT command (known vendor) or via MM (fallback).
+        # The AT path doesn't consult MM's --location-status, since
+        # marking the NMEA port ID_MM_PORT_IGNORE removes 'gps' from MM's
+        # capability list even though the hardware is still there.
+        at = self._gps_at_command("gps" in sources)
+        if at is not None:
+            if not self._mmcli("--command=%s" % at):
+                self.err("Unable to send AT command '%s'" % at)
+                self.location["state"] = "failed"
+                return False
+            gps_flags = ()
+        else:
+            gps_flags = ("gps-nmea", "gps-raw")
+
+        # Capability filter for the remaining (MM-managed) sources so
+        # CDMA on an LTE-only modem doesn't fail the whole batched call.
+        caps = self._location_capabilities()
+        if caps is None:
+            self.err("Unable to query modem location capabilities")
+            self.location["state"] = "failed"
+            return False
+
+        flag_map = {**LOCATION_MM_FLAGS, "gps": gps_flags}
+        args = []
+        for source, flags in flag_map.items():
+            if source == "gps" and at is not None:
+                continue   # AT command already handled GPS
+            if source not in caps:
+                if source in sources:
+                    self.err("Modem does not support location source"
+                             " '%s', skipping" % source)
+                continue
+            enabled = source in sources
+            if enabled:
+                self.info("Enabling location source '%s'" % source)
+            else:
+                self.dbg("Disabling location source '%s'" % source)
+            action = "enable" if enabled else "disable"
+            for flag in flags:
+                args.append("--location-%s-%s" % (action, flag))
+
+        if args and not self._mmcli(*args):
+            self.err("Unable to configure location sources")
+            self.location["state"] = "failed"
+            return False
+        return True
+
+    def prepare(self):
+        if not self.detected:
+            return False
+
+        self.connfail = 0
+
+        if not self.prepare_bands():
+            self.err("Unable to prepare bands")
+            return False
+        # prepare_modes logs a specific error on first failure and goes
+        # quiet on cached repeats; don't add a generic line on top.
+        if not self.prepare_modes():
+            return False
+        if not self.prepare_bearers():
+            self.err("Unable to prepare bearers")
+            return False
+        if not self.prepare_location():
+            self.err("Unable to prepare location")
+            return False
+
+        self.info("Waiting for network")
+        return True
+
+    def connect(self):
+        for bearer in self.status.get("bearers", []):
+            self.info("Connecting %s" % bearer)
+            if not self._mmcli("--connect", "--bearer=%s" % bearer):
+                self.connfail += 1
+                self.err("Unable to connect (%d failures)" % self.connfail)
+                self.err("Reason: %s" % self.get_conn_failure(bearer))
+                return False
+        return True
+
+    def pullup(self):
+        count = 0
+        for bearer in self.get_bearers():
+            iface = {
+                "name": bearer["status"]["interface"],
+                "connected": bearer["status"]["connected"],
+                "ipv4": bearer["ipv4-config"],
+                "ipv6": bearer["ipv6-config"],
+                "bearer": self.find_bearer(bearer["properties"]["apn"])
+            }
+            if iface["bearer"] is None:
+                continue
+            if iface["name"] == "--":
+                continue
+            if iface["connected"] != "yes":
+                continue
+            if iface["ipv4"]["address"] == "--":
+                if iface["ipv6"]["address"] == "--":
+                    continue
+            if not self.linkup(iface):
+                self.linkdown(iface)
+                return False
+            else:
+                count += 1
+
+        if count == len(self.bearers["list"]):
+            self.info("All bearers are up")
+            return True
+        else:
+            return False
+
+    def pulldown(self):
+        for bearer in self.get_bearers():
+            iface = {
+                "name": bearer["status"]["interface"],
+                "bearer": self.find_bearer(bearer["properties"]["apn"])
+            }
+
+            if bearer["status"]["connected"] == "yes":
+                self.info("Disconnecting %s" % bearer["dbus-path"])
+                self._mmcli("--disconnect",
+                            "--bearer=%s" % bearer["dbus-path"])
+        for iface in self.ifaces:
+            self.linkdown(iface)
+
+        self.set_state(State.DOWN)
+
+    def set_state(self, state):
+        if state == self.state:
+            return False
+
+        if state == State.UP:
+            self.notif(state.name)
+        elif state == State.DOWN and self.state == State.UP:
+            self.notif(state.name)
+        elif state == State.FAILED:
+            self.notif(state.name)
+
+        rmrf(self.statedir)
+        fwrite("%s/%s" % (self.statedir, state.name.lower()), "1")
+        self.state = state
+        return True
+
+    def check_state(self):
+        self.dbg("State %s (status %s)" %
+                 (self.state.name, self.status.get("state")))
+
+        if self.detected and self.status.get("state", "") == "failed":
+            if self.set_state(State.FAILED):
+                self.err("In failed state because %s" %
+                         self.status.get("state-failed-reason", ""))
+                self.failtime = time.time()
+
+        # state failed
+        if self.state == State.FAILED:
+            elapsed = time.time() - self.failtime
+            if elapsed > 30 and not self._reset_unsupported:
+                self.err("Resetting after being 30s in state failed")
+                self.reset()
+
+        # state down
+        elif self.state == State.DOWN:
+            if self.status.get("state", "") == "disabled":
+                self.enable()
+                self.timeout = 3
+            elif self.status.get("state", "") != "initializing":
+                if self.prepare():
+                    self.set_state(State.ENABLED)
+
+        # state enabled
+        elif self.state == State.ENABLED:
+            if self.status.get("state", "") == "registered":
+                if self.state != "connecting":
+                    if self.connect():
+                        self.set_state(State.CONNECTING)
+                    elif self.connfail > 5 and not self._reset_unsupported:
+                        self.err("Resetting after 5 connection attempts")
+                        self.reset()
+
+        # state connecting
+        elif self.state == State.CONNECTING:
+            if self.status.get("state", "") == "connected":
+                self.set_state(State.CONNECTED)
+
+        # state connected
+        elif self.state == State.CONNECTED:
+            if self.state != State.UP:
+                if self.pullup():
+                    # all bearers are up
+                    self.set_state(State.UP)
+
+        # state up
+        elif self.state == State.UP:
+            self.timeout = 10
+            if self.status.get("state", "") != "connected":
+                self.pulldown()
+
+
+    def check_trigger(self):
+        if self.trigger is not None:
+            if self.trigger == Trigger.RESTART:
+                self.restart()
+            elif self.trigger == Trigger.RESET:
+                self.reset()
+            elif self.trigger == Trigger.POWER:
+                self.power()
+
+        self.trigger = None
+
+    def check_location(self):
+        if not self.location["enabled"]:
+            return
+
+        output = self._mmclij("--location-get")
+        loc = (output or {}).get("modem", {}).get("location", {})
+        gps = loc.get("gps", {})
+        gpp = loc.get("3gpp", {})
+
+        def _pick(d, key):
+            v = d.get(key)
+            return v if v not in (None, "--", "") else None
+
+        data = {"last-change": now_rfc3339()}
+
+        lat = _pick(gps, "latitude")
+        lon = _pick(gps, "longitude")
+        alt = _pick(gps, "altitude")
+        if lat is not None and lon is not None:
+            data["source"]    = "gps"
+            data["latitude"]  = float(lat)
+            data["longitude"] = float(lon)
+            if alt is not None:
+                data["altitude"] = float(alt)
+
+        for src_key, dst_key in (("cid", "cell-id"), ("lac", "lac"),
+                                 ("tac", "tac"), ("mcc", "mcc"),
+                                 ("mnc", "mnc")):
+            v = _pick(gpp, src_key)
+            if v is None:
+                continue
+            if dst_key in ("cell-id", "lac", "tac"):
+                try:
+                    data[dst_key] = int(v, 0) if isinstance(v, str) else int(v)
+                except (TypeError, ValueError):
+                    continue
+            else:
+                data[dst_key] = str(v)
+            data.setdefault("source", "3gpp")
+
+        fwritej_atomic("%s/data.json" % self.locdir, data)
+
+        if "latitude" in data:
+            if self.location["state"] != "up":
+                self.info("Retrieved GPS location [%s, %s]"
+                          % (data["latitude"], data["longitude"]))
+            self.location["state"] = "up"
+        else:
+            self.location["state"] = "down"
+
+    def save_sms(self, sms):
+        global smsdir
+
+        payload = sms["payload"]
+
+        string = "%s,%s,%s" % (payload["properties"]["timestamp"],
+                               payload["content"]["number"],
+                               payload["content"]["text"])
+        m = hashlib.sha256()
+        m.update(string.encode())
+        path = os.path.join(smsdir, m.hexdigest())
+
+        if not os.path.exists(path):
+            self.dbg("Saving SMS to %s" % sms["path"])
+            data = {"modem": self.index, "payload": payload}
+            fwritej(path, data)
+            self.notif("SMS-RECEIVED %s" % os.path.basename(path))
+
+        storage = payload["properties"]["storage"].upper()
+        if storage != "--":
+            if not self._mmcli("--messaging-delete-sms=%s" % sms["path"]):
+                self.err("Unable to delete SMS from %s storage" % storage)
+            else:
+                self.info("Deleted SMS from %s storage" % storage)
+
+    def check_sms(self):
+        if self.state.value < State.ENABLED.value:
+            return
+        state = self.status.get("state", "")
+        if state != "registered" and state != "connected":
+            return
+
+        for sms in list_sms(self.path):
+            if sms["type"] == "notsent":
+                self.dbg("Sending sms %s" % sms)
+                self._mmcli("-s", sms["path"], "--send")
+
+            elif sms["type"] == "sent":
+                self.notif("SMS-SENT")
+                self._mmcli("--messaging-delete-sms=%s" % sms["path"])
+
+            elif sms["type"] == "received":
+                self.save_sms(sms)
+
+    def touch_state(self):
+        """Refresh state.json with current poll time and transition timestamp.
+
+        Two timestamps with different semantics live in state.json:
+
+          last-change         — when modemd last polled (freshness
+                                indicator for modem-state).
+          state-last-changed  — when admin/oper/alarm state last
+                                actually changed (RFC 4268 / standard
+                                ietf-hardware state container).
+
+        The transition fingerprint is the modem state, state-failed-reason,
+        and whether signal-quality is currently below the weak-signal
+        threshold (latter drives the alarm-state 'warning' bit in yanger).
+        """
+        now = now_rfc3339()
+
+        mm_state = self.status.get("state") or "unknown"
+        failed_reason = self.status.get("state-failed-reason", "none")
+        sq = self.status.get("signal-quality")
+        try:
+            weak = isinstance(sq, (int, float)) and sq < 20
+        except TypeError:
+            weak = False
+        fp = (mm_state, failed_reason, weak)
+
+        if fp != self.std_fp:
+            self.std_fp = fp
+            self.std_last_changed = now
+
+        data = {"last-change": now}
+        if self.std_last_changed:
+            data["state-last-changed"] = self.std_last_changed
+        fwritej_atomic("%s/state.json" % self.rundir, data)
+
+    def check(self):
+        timeout = 10 if self.state == State.UP else 3
+        elapsed = time.time() - self.timer1
+        if elapsed > timeout:
+            self.check_trigger()
+            if self.update():
+                self.check_state()
+                self.timer1 = time.time()
+                self.touch_state()
+
+        elapsed = time.time() - self.timer2
+        if elapsed > 30:
+            self.check_location()
+            self.check_sms()
+            self.timer2 = time.time()
+
+    def lookup(self):
+        if self.iface and self.sim:
+            return True
+
+        info = runcmdj(['/usr/libexec/modemd/modem-info',
+                        '-i', str(self.index)])
+        if not info:
+            self.err("No modem info")
+            return False
+
+        ifaces = info.get("interfaces", [])
+        if len(info.get("interfaces", [])) == 0:
+            self.err("No modem interface")
+            return False
+        else:
+            self.iface = ifaces[0]
+
+        self.sim = info.get("sim", None)
+        if not self.sim:
+            self.err("No modem sim")
+            return False
+
+        if self.sim["index"] < 0:
+            self.err("Invalid sim index")
+            return False
+
+        return True
+
+    def query(self):
+        if self.path:
+            return True
+
+        modem = None
+        output = runcmdj(['/usr/libexec/modemd/modem-info'])
+        if output:
+            for m in output:
+                if m.get("index", -1) == self.index:
+                    modem = m
+                    break
+        if modem is None:
+            self.err("Modem not present")
+            return False
+
+        info = modem.get("info")
+        if not info:
+            self.err("Unable to obtain modem info")
+            return False
+
+        path = "%s/manufacturer" % self.rundir
+        self.manf = info.get("manufacturer", "")
+        self.dbg("Manufacturer is '%s'" % self.manf)
+        fwrite(path, self.manf)
+
+        path = "%s/model" % self.rundir
+        self.model = info.get("model", "")
+        self.dbg("Model is '%s'" % self.model)
+        fwrite(path, self.model)
+
+        self.path = modem.get("path")
+        self.dbg("Got path %s" % self.path)
+        return True
+
+    def detect(self):
+        self.info("Detecting")
+
+        path = "%s/detected" % self.rundir
+        if os.path.exists(path):
+            os.remove(path)
+
+        while not self.stopped():
+            if self.lookup() and self.query():
+                fwrite(path, "1")
+                self.info("Detected %s %s" % (self.manf, self.model))
+                return True
+            else:
+                time.sleep(1)
+
+    def run(self):
+        while not self.stopped():
+            self.dbg("state %s, status '%s' (detected %s)" %
+                     (self.state.name,
+                      self.status.get("state", "unknown"),
+                      str(self.detected)))
+
+            if not self.detected:
+                if self.detect() and self.initialize():
+                    self.detected = True
+                else:
+                    time.sleep(3)
+
+            if self.detected:
+                self.check()
+
+            time.sleep(1)
+
+        self.pulldown()
+
+        rmrf(self.statedir)
+        rmrf(self.locdir)
+        rmrf(self.rundir)
+
+        self.dbg("Exiting")
+        self.exited = True
+        return True
+
+
+def sighandler(signum, frame):
+    global threads
+
+    for th in threads:
+        th.stop()
+
+    timeout = 0
+    while timeout < 3:
+        exited = True
+        for th in threads:
+            if isinstance(th, ModemThread) and not th.exited:
+                exited = False
+        if exited:
+            break
+        time.sleep(1)
+        timeout += 1
+
+    if signum == 15:
+        sys.exit(0)
+    else:
+        fatal("Exiting on signal %d" % signum)
+
+
+def start_modem_threads(cfgs):
+    started = []
+    for cfg in cfgs:
+        try:
+            th = ModemThread(cfg)
+            th.start()
+            started.append(th)
+        except Exception as e:
+            err("Failed to start modem%d thread: %s" % (cfg["index"], e))
+    return started
+
+
+def sighup_handler(signum, frame):
+    reload_event.set()
+
+
+def main():
+    global debug
+    syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_DAEMON)
+
+    if os.geteuid() != 0:
+        fatal("Must be root")
+
+    parser = argparse.ArgumentParser(prog="modemd")
+    parser.add_argument("-d", action="store_true")
+    args = parser.parse_args()
+
+    if args.d:
+        debug = True
+    else:
+        with open("/proc/cmdline", 'r') as fd:
+            cmdline = fd.read()
+            if "debug" in cmdline:
+                debug = True
+
+    if debug:
+        runcmd(["mmcli", "-G", "debug"])
+
+    mkdir(rundir)
+    mkdir(smsdir)
+    fwrite(pidfile, str(os.getpid()) + "\n")
+    signal.signal(signal.SIGINT, sighandler)
+    signal.signal(signal.SIGTERM, sighandler)
+    signal.signal(signal.SIGHUP, sighup_handler)
+
+    try:
+        th = RpcThread()
+        th.start()
+    except Exception as e:
+        if debug:
+            print(e)
+        fatal("Rpc thread caught an exception")
+
+    try:
+        th = SimThread()
+        th.start()
+    except Exception as e:
+        if debug:
+            print(e)
+        fatal("SIM thread caught an exception")
+
+    modems = load_config()
+    if not modems:
+        fatal("No modems configured or enabled")
+
+    if not runcmd(['/usr/libexec/modemd/sim-setup']):
+        fatal("Unable to setup SIMs")
+
+    threads.extend(start_modem_threads(modems))
+    if len(threads) == 0:
+        fatal("No modem threads are running")
+
+    while True:
+        if not reload_event.wait(timeout=60):
+            continue
+        reload_event.clear()
+
+        info("Reloading configuration")
+        modem_threads = [th for th in threads if isinstance(th, ModemThread)]
+        for th in modem_threads:
+            th.stop()
+        for th in modem_threads:
+            th.join(timeout=5)
+            if th.is_alive():
+                err("modem%d thread did not stop, orphaning" % th.index)
+        threads[:] = [th for th in threads if th not in modem_threads]
+
+        runcmd(['/usr/libexec/modemd/sim-setup'])
+
+        new_modems = load_config()
+        threads.extend(start_modem_threads(new_modems))
+
+        os.utime(pidfile, None)
+        info("Reload complete")
+
+
+if __name__ == "__main__":
+    main()

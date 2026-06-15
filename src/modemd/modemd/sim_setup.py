@@ -1,0 +1,267 @@
+import subprocess
+import json
+import fcntl
+import struct
+import time
+import syslog
+import sys
+import os
+
+syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_SYSLOG)
+
+def log(msg):
+    syslog.syslog(syslog.LOG_INFO, msg)
+
+
+def err(msg):
+    syslog.syslog(syslog.LOG_ERR, msg)
+
+
+def fatal(msg):
+    syslog.syslog(syslog.LOG_ALERT, msg)
+    sys.exit(1)
+
+
+def runcmd(cmd):
+    ret = None
+    try:
+        res = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True)
+        if res.returncode == 0:
+            if res.stdout:
+                ret = res.stdout.strip()
+            else:
+                ret = True
+    except subprocess.CalledProcessError:
+        return None
+    finally:
+        return ret
+
+
+def runcmdj(cmd):
+    output = runcmd(cmd)
+    if not output:
+        return None
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        return None
+    finally:
+        return data
+
+
+def fread(path):
+    if os.path.exists(path):
+        with open(path, "r") as fd:
+            output = str(fd.read())
+            if output:
+                return output.strip()
+    return None
+
+
+def freadj(path):
+    output = fread(path)
+    if not output:
+        return None
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        err("Unable to parse json output")
+        return None
+    finally:
+        return data
+
+
+def find_modem(setup, index):
+    for modem in setup["modems"]:
+        if modem["index"] == index:
+            return modem
+    return None
+
+
+def find_sim(setup, index):
+    for sim in setup["sims"]:
+        if sim["index"] == index:
+            return sim
+    return None
+
+
+def pwrctl(setup, state):
+    for modem in setup["modems"]:
+        path = "/sys/class/pcie/slot%d/pwrctl" % modem["slot"]
+        if not os.path.exists(path):
+            continue
+        with open(path, "w") as fd:
+            fd.write("%s\n" % state)
+
+
+def sim_ctrl(cmd, slots):
+    req = struct.pack('2i', *slots)
+
+    if not os.path.exists("/dev/simctrl"):
+        return None
+
+    try:
+        fd = os.open("/dev/simctrl", os.O_RDWR)
+    except OSError:
+        fatal("Cannot open sim ctrl")
+
+    try:
+        resp = fcntl.ioctl(fd, cmd, req)
+    except OSError:
+        fatal("Cannot run sim ctrl ioctl")
+
+    if not resp:
+        return None
+    else:
+        return struct.unpack('2i', resp)
+
+
+def sim_get_slots():
+    # NM_SIMIOC_SLOT_GET is 0x80085300 (see linux/nm-sim.h)
+    return sim_ctrl(0x80085300, (0, 0))
+
+
+def sim_set_slots(slots):
+    # NM_SIMIOC_SLOT_SET is 0x40085301 (see linux/nm-sim.h)
+    return sim_ctrl(0x40085301, slots)
+
+
+def slot_setup(setup):
+    slots = []
+    for sim in setup["sims"]:
+        log("Connecting sim%d to slot %d" % (sim["index"], sim["newslot"]))
+        slots.append(sim["newslot"])
+
+    if sim_set_slots(tuple(slots)) is None:
+        return False
+    else:
+        return True
+
+
+def change_setup(setup):
+    log("Changing SIM setup")
+
+    runcmd(["initctl", "stop", "modem-manager"])
+    time.sleep(1)
+
+    pwrctl(setup, "down")
+    time.sleep(1)
+
+    if slot_setup(setup) is False:
+        err("Unable to set up sim slots")
+
+    pwrctl(setup, "up")
+
+    time.sleep(1)
+    runcmd(["initctl", "restart", "modem-manager"])
+
+    return True
+
+
+def swapslot(slot):
+    if slot == 0:
+        return 1
+    elif slot == 1:
+        return 0
+    else:
+        return -1
+
+
+def sim_setup(setup):
+    changed = False
+
+    hw = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-hardware"])
+    ifaces = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-interfaces"])
+    if not hw or not ifaces:
+        err("Cannot read config")
+        return False
+
+    modem_set = set()
+    for comp in hw.get("ietf-hardware:hardware", {}).get("component", []):
+        if comp.get("class", "") == "infix-hardware:modem" \
+                and comp.get("state", {}).get("admin-state", "unlocked") == "unlocked":
+            name = comp["name"]
+            try:
+                modem_set.add(int(name[5:]))
+            except (ValueError, IndexError):
+                pass
+
+    sim_for_modem = {}
+    for iface in ifaces.get("ietf-interfaces:interfaces", {}).get("interface", []):
+        if iface.get("type", "") != "infix-if-type:modem":
+            continue
+        wwan = iface.get("infix-interfaces:wwan", {})
+        modem_ref = wwan.get("modem", "")
+        sim_ref = wwan.get("sim", "")
+        if not modem_ref.startswith("modem") or not sim_ref.startswith("sim"):
+            continue
+        try:
+            midx = int(modem_ref[5:])
+            sidx = int(sim_ref[3:])
+        except (ValueError, IndexError):
+            continue
+        if midx in modem_set:
+            sim_for_modem[midx] = sidx
+
+    for modem_idx, sim_idx in sim_for_modem.items():
+        modem = find_modem(setup, modem_idx)
+        sim = find_sim(setup, sim_idx)
+        if modem and sim:
+            sim["newslot"] = modem["slot"]
+            if sim["newslot"] != sim["slot"]:
+                changed = True
+
+    if not changed:
+        log("SIMs already set up")
+        return True
+
+    if len(setup["modems"]) == 2 and len(setup["sims"]) == 2:
+        for i in range(0, 2):
+            o = 1 if i == 0 else 0
+            if setup["sims"][i]["newslot"] == -1:
+                log("Swapping slot of sim%d" % setup["sims"][i]["index"])
+                setup["sims"][i]["newslot"] = swapslot(setup["sims"][o]["newslot"])
+
+    return change_setup(setup)
+
+
+def read_setup():
+    setup = {
+        "modems": [],
+        "sims": []
+    }
+
+    modules = freadj("/run/modules.json")
+    if not modules:
+        log("No modules.json found, skipping SIM setup")
+        return None
+
+    for module in modules.get("modules", []):
+        if module["slot"] > -1 and module["type"] == "modem":
+            setup["modems"].append({"index": module["index"],
+                                    "slot": module["slot"]})
+
+    slots = sim_get_slots()
+    if slots:
+        for index in range(0, len(slots)):
+            setup["sims"].append({"index": index,
+                                  "slot": slots[index],
+                                  "newslot": -1})
+
+    return setup
+
+
+def main():
+    setup = read_setup()
+    if setup is None:
+        sys.exit(0)
+
+    if sim_setup(setup) is False:
+        fatal("Unable set up SIMs")
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

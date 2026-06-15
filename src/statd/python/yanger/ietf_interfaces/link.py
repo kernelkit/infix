@@ -1,3 +1,5 @@
+import re
+
 from ..host import HOST
 from . import common
 
@@ -5,11 +7,15 @@ from . import bridge
 from . import ethernet
 from . import ip
 from . import lag
+from . import modem
 from . import tun
 from . import veth
 from . import vlan
 from . import wifi
 from . import wireguard
+
+
+_WWAN_RE = re.compile(r"^wwan\d+$")
 
 
 def statistics(iplink):
@@ -28,6 +34,9 @@ def statistics(iplink):
 
 def iplink2yang_type(iplink):
     ifname=iplink["ifname"]
+
+    if _WWAN_RE.match(ifname):
+        return "infix-if-type:modem"
 
     match iplink["link_type"]:
         case "loopback":
@@ -182,6 +191,9 @@ def interface(iplink, ipaddr, systemjson=None):
         case "infix-if-type:wireguard":
             if wg := wireguard.wireguard(iplink):
                 interface["infix-interfaces:wireguard"] = wg
+        case "infix-if-type:modem":
+            if wwan := modem.wwan(iplink["ifname"]):
+                interface["infix-interfaces:wwan"] = wwan
 
     match iplink2yang_lower(iplink):
         case "infix-interfaces:bridge-port":

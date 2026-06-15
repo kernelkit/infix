@@ -1,0 +1,315 @@
+submodule infix-if-modem {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+  import ietf-keystore {
+    prefix ks;
+  }
+  import ietf-hardware {
+    prefix iehw;
+  }
+  import infix-hardware {
+    prefix ih;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description
+    "Cellular modem (wwan) interface configuration for ietf-interfaces.
+
+     A modem interface (type 'infix-if-type:modem') is a network interface
+     created by the kernel when a cellular modem attaches.  The kernel names
+     these wwan[0-9]+ via the wwan subsystem (cdc_mbim, qmi_wwan).
+
+     Each wwan interface references:
+     - A hardware component of class 'ih:modem' (e.g. modem0) via 'modem'.
+     - A hardware component of class 'ih:sim'   (e.g. sim0)   via 'sim'.
+
+     The modem component holds hardware-level config (bands, modes, location).
+     The SIM component holds credentials (PIN/PUK) and carrier profile.
+     This interface holds the bearer (connection) config: APN, credentials,
+     IP addressing type, and routing preference.
+
+     Multi-bearer: configure multiple wwan interfaces referencing the same
+     modem component, each with a different APN.  modemd manages them all in
+     one thread per hardware modem, analogous to multi-SSID on a WiFi radio.
+
+     Routes are written by modemd to /etc/net.d/<ifname>.conf and installed
+     by staticd/zebra through FRR.  The default route is always installed when
+     the bearer is connected; route-preference controls administrative distance
+     so that cellular acts as a natural failover path behind wired and WiFi.";
+
+  revision 2026-05-03 {
+    description
+      "Redesign: rename container modem->wwan, device->modem, active-sim->sim.
+       Rebuild bearer: replace metric+default-route with route-preference (always
+       on), replace auth-type/username/password with authentication presence
+       container referencing keystore, drop dns-enabled/firewall-enabled/apn-type.";
+    reference "internal";
+  }
+  revision 2026-04-27 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  feature modem {
+    description "Cellular modem support is an optional build-time feature in Infix.";
+  }
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:modem')" {
+      description "Applies only to interfaces of type 'modem'.";
+    }
+    container wwan {
+      if-feature modem;
+
+      description
+        "Cellular modem (wwan) interface configuration.
+
+         References a modem hardware component for physical layer config
+         and a SIM hardware component for subscription credentials.
+         The bearer sub-container configures the data connection (APN, auth,
+         IP type, routing preference).";
+
+      leaf modem {
+        type leafref {
+          path "/iehw:hardware/iehw:component/iehw:name";
+        }
+        must "derived-from-or-self(/iehw:hardware/iehw:component[iehw:name=current()]/iehw:class, 'ih:modem')" {
+          error-message "Referenced hardware component must be a cellular modem (class 'ih:modem').";
+        }
+        description
+          "Reference to the modem hardware component (e.g. modem0).
+
+           The hardware component carries physical-layer configuration
+           (bands, modes, location) and is auto-discovered at boot.
+           Its admin-state controls whether the modem is powered
+           (unlocked = enabled, locked = disabled).";
+      }
+
+      leaf sim {
+        type leafref {
+          path "/iehw:hardware/iehw:component/iehw:name";
+        }
+        must "derived-from-or-self(/iehw:hardware/iehw:component[iehw:name=current()]/iehw:class, 'ih:sim')" {
+          error-message "Referenced hardware component must be a SIM card (class 'ih:sim').";
+        }
+        description
+          "Reference to the SIM hardware component (e.g. sim0).
+
+           The SIM component carries PIN/PUK credentials and the carrier
+           profile.  On hardware with a SIM multiplexer, changing this
+           reference switches the active SIM slot.";
+      }
+
+      container bearer {
+        description
+          "Data bearer (connection) configuration.
+
+           These settings are passed to ModemManager by modemd to establish
+           the cellular data connection.  The APN is mandatory; authentication
+           is only needed when the operator requires it.
+
+           When the bearer connects, modemd writes a default route to
+           /etc/net.d/<ifname>.conf so that staticd/zebra installs it via FRR.
+           The route-preference leaf controls the administrative distance,
+           making cellular a natural failover behind lower-preference routes
+           such as wired Ethernet (udhcpc default 5) and WiFi.";
+
+        leaf apn {
+          type string {
+            length "1..64";
+          }
+          description "Access Point Name for the cellular data connection.";
+        }
+
+        leaf ip-type {
+          type enumeration {
+            enum ipv4 {
+              description "Request IPv4 addressing only.";
+            }
+            enum ipv6 {
+              description "Request IPv6 addressing only.";
+            }
+            enum ipv4v6 {
+              description "Request dual-stack IPv4 and IPv6 addressing.";
+            }
+          }
+          default ipv4v6;
+          description
+            "IP addressing type to negotiate with the network during
+             bearer activation (3GPP PDN type).  Use ipv4v6 unless the
+             operator or hardware requires a specific family.";
+        }
+
+        leaf roaming {
+          type boolean;
+          default false;
+          description "Allow data connection when roaming on a foreign network.";
+        }
+
+        leaf route-preference {
+          type uint32;
+          default 200;
+          description
+            "Administrative distance for the bearer default route installed
+             via /etc/net.d/<ifname>.conf into staticd/zebra.
+
+             Higher values mean lower priority.  Default 200 places cellular
+             behind wired Ethernet (udhcpc typically uses 5) and WiFi, making
+             it a natural failover path.  Adjust when multiple cellular modems
+             need relative priority ordering.";
+        }
+
+        container authentication {
+          presence "APN authentication credentials";
+          description
+            "Authentication credentials for the APN.
+
+             If this container is absent, the bearer connects without
+             authentication (suitable for most consumer APNs).  When present,
+             all three leaves — type, username, and password — are required.";
+
+          leaf type {
+            type enumeration {
+              enum pap {
+                description "Password Authentication Protocol.";
+              }
+              enum chap {
+                description "Challenge Handshake Authentication Protocol (recommended).";
+              }
+            }
+            default chap;
+            description "Authentication protocol required by the APN.";
+          }
+
+          leaf username {
+            type string;
+            mandatory true;
+            description "Username for APN authentication.";
+          }
+
+          leaf password {
+            type ks:central-symmetric-key-ref;
+            mandatory true;
+            description
+              "APN password, referenced from the system keystore.
+
+               Store the password as a symmetric key in the keystore and
+               reference it here by key name.  This avoids storing credentials
+               in plaintext in the running or startup configuration.";
+          }
+        }
+      }
+
+      container bearer-state {
+        config false;
+        description
+          "Operational state of the modem's data bearer, mirroring the
+           layout of modem-state / sim-state under ietf-hardware.
+
+           Populated by statd/yanger from modemd's modem-info JSON.
+           When the bearer is disconnected, addresses and counters may
+           be absent; 'connected' and 'connection-failed-reason' tell
+           the rest of the story.";
+
+        leaf path {
+          type string;
+          description
+            "ModemManager D-Bus object path of the underlying bearer
+             (e.g. '/org/freedesktop/ModemManager1/Bearer/0').";
+        }
+
+        leaf connected {
+          type boolean;
+          description "TRUE when the bearer has an active data session.";
+        }
+
+        leaf connection-failed-reason {
+          type string;
+          description
+            "Free-form failure reason reported by ModemManager when
+             a recent connect attempt failed.  Absent on success.";
+        }
+
+        leaf interface {
+          type string;
+          description
+            "Kernel network interface carrying the bearer's data
+             (e.g. 'wwan0').  Same as the parent interface name in
+             single-bearer configurations.";
+        }
+
+        leaf ipv4-address {
+          type inet:ipv4-address;
+          description "IPv4 address assigned by the cellular network.";
+        }
+
+        leaf ipv4-prefix-length {
+          type uint8 { range "0..32"; }
+          description "Prefix length for the assigned IPv4 address.";
+        }
+
+        leaf ipv6-address {
+          type inet:ipv6-address;
+          description "IPv6 address assigned by the cellular network.";
+        }
+
+        leaf ipv6-prefix-length {
+          type uint8 { range "0..128"; }
+          description "Prefix length for the assigned IPv6 address.";
+        }
+
+        leaf in-bytes {
+          type yang:counter64;
+          units "bytes";
+          description "Bytes received over the bearer in the current session.";
+        }
+
+        leaf out-bytes {
+          type yang:counter64;
+          units "bytes";
+          description "Bytes transmitted over the bearer in the current session.";
+        }
+
+        leaf total-in-bytes {
+          type yang:counter64;
+          units "bytes";
+          description
+            "Total bytes received over the bearer across all sessions
+             since the modem was attached.";
+        }
+
+        leaf total-out-bytes {
+          type yang:counter64;
+          units "bytes";
+          description
+            "Total bytes transmitted over the bearer across all sessions
+             since the modem was attached.";
+        }
+
+        leaf total-duration {
+          type uint64;
+          units "seconds";
+          description
+            "Cumulative connected time across all sessions since the
+             modem was attached.";
+        }
+      }
+    }
+  }
+}
