@@ -2976,12 +2976,21 @@ the plugins and extensions we rely on are available, so instead we do
 recommend using <code>pipx</code> to install the necessary tooling:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>$<span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>pipx
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>$<span class="w"> </span>pipx<span class="w"> </span>install<span class="w"> </span>mkdocs
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>$<span class="w"> </span>pipx<span class="w"> </span>inject<span class="w"> </span>mkdocs<span class="w"> </span>mkdocs-material<span class="w"> </span>pymdown-extensions<span class="w"> </span>mkdocs-callouts<span class="w"> </span>mike<span class="w"> </span>mkdocs-to-pdf
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>$<span class="w"> </span>pipx<span class="w"> </span>inject<span class="w"> </span>mkdocs<span class="w"> </span>mkdocs-material<span class="w"> </span>pymdown-extensions<span class="w"> </span>mkdocs-callouts<span class="w"> </span>mike<span class="w"> </span>mkdocs-to-pdf<span class="w"> </span>mkdocs-glightbox
 </code></pre></div>
-<p>The last two packages, <code>mike</code> and <code>mkdocs-to-pdf</code>, are used for online
-versioning and PDF generation by GitHub Actions, but since they are in
-the <code>mkdocs.yml</code> file, everyone who wants to preview the documentation
-have to install all the tooling.</p>
+<p>The <code>mike</code> and <code>mkdocs-to-pdf</code> packages are used for online versioning
+and PDF generation by GitHub Actions, but since every plugin is listed
+in <code>mkdocs.yml</code>, anyone who wants to preview the documentation has to
+install all the tooling.</p>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>MkDocs is also required to <strong>build a WebUI image</strong>.  The build bundles
+the User's Guide into the image (served on-device at <code>/guide/</code>), so
+<code>make</code> runs <code>mkdocs build</code> from <code>post-build.sh</code> when the <code>webui</code>
+package is selected.  If MkDocs is missing the build still succeeds,
+but the image ships without the on-device guide.  Minimal images and
+any build without the <code>webui</code> package skip this step entirely.</p>
+</div>
 <p>Preview with:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$ cd ~/src/infix/
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>$ mkdocs serve
