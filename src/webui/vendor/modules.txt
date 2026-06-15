@@ -1,0 +1,14 @@
+# github.com/google/go-cmp v0.7.0
+## explicit; go 1.21
+github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/internal/diff
+github.com/google/go-cmp/cmp/internal/flags
+github.com/google/go-cmp/cmp/internal/function
+github.com/google/go-cmp/cmp/internal/value
+# github.com/openconfig/goyang v1.6.3 => ./internal/goyang
+## explicit; go 1.22.0
+github.com/openconfig/goyang/pkg/indent
+github.com/openconfig/goyang/pkg/yang
+# github.com/pborman/getopt v1.1.0
+## explicit; go 1.13
+# github.com/openconfig/goyang => ./internal/goyang

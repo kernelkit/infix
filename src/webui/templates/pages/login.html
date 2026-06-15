@@ -1,0 +1,54 @@
+{{define "login.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{.CsrfToken}}">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  <title>Login</title>
+  <link rel="icon" type="image/png" href="/assets/img/jack.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/htmx.min.js"></script>
+  <script src="/assets/js/app.js"></script>
+</head>
+<body class="login-page">
+  <div id="page-progress" class="page-progress" aria-hidden="true"></div>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        {{template "icon-user-lg"}}
+        <h1>Login</h1>
+      </div>
+      {{if .Error}}
+      <div class="alert alert-error" role="alert">{{.Error}}</div>
+      {{end}}
+      <form method="POST" action="/login">
+        <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+        <div class="form-group">
+          <label for="username">Username</label>
+          {{/* data-autofocus instead of autofocus: the focus is applied
+               from JS when the page becomes visible, so loading /login
+               in a background tab / on another desktop doesn't pull
+               the browser window forward in Linux WMs (Cinnamon /
+               Muffin treat focus-on-load as an attention hint). */}}
+          <input type="text" id="username" name="username"
+                 autocomplete="username" required data-autofocus>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password"
+                 autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Log in</button>
+      </form>
+    </div>
+    <button id="login-theme-toggle" class="login-theme-btn" aria-label="Toggle theme">
+      {{template "icon-login-theme-auto"}}
+      {{template "icon-login-theme-light"}}
+      {{template "icon-login-theme-dark"}}
+    </button>
+  </div>
+</body>
+</html>
+{{end}}

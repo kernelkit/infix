@@ -1,0 +1,163 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{.CsrfToken}}">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  {{if .RetryAfter}}<meta http-equiv="refresh" content="{{.RetryAfter}}">{{end}}
+  <title>{{.PageTitle}}</title>
+  <link rel="icon" type="image/png" href="/assets/img/jack.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/htmx.min.js"></script>
+  <script src="/assets/js/app.js"></script>
+</head>
+<body hx-boost="true">
+  <div id="page-progress" class="page-progress" aria-hidden="true"></div>
+  <div id="conn-banner" class="conn-banner" hidden>Device unreachable</div>
+  <div hidden hx-get="/device-status" hx-trigger="every 5s" hx-swap="none"></div>
+  <div class="topbar">
+    <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu" aria-expanded="false">
+      {{template "icon-menu"}}
+    </button>
+    <img src="/assets/img/logo.png" alt="Infix" class="topbar-logo">
+    {{/* Device identity (hostname + location/contact popover), loaded async so
+         it stays out of every page's data path. Replaces itself on load. */}}
+    <div class="topbar-identity-slot" hx-get="/identity" hx-trigger="load" hx-swap="outerHTML"></div>
+    <div class="topbar-right">
+      {{if .Capabilities.Has "docs"}}
+      {{/* On-device User's Guide (static mkdocs site at /guide/). */}}
+      <a class="topbar-link" href="/guide/" target="_blank" rel="noopener"
+         title="Open the User Guide in a new tab" aria-label="User Guide">
+        {{template "icon-book"}}
+      </a>
+      {{end}}
+      {{if .Capabilities.Has "netbrowse"}}
+      {{/* mDNS network browser — fixed network.local vhost, so a static
+           href (no JS, no CSP concern). */}}
+      <a class="topbar-link" href="https://network.local/" target="_blank" rel="noopener"
+         title="Browse mDNS neighbors (network.local) in a new tab" aria-label="Network browser">
+        {{template "icon-radar"}}
+      </a>
+      {{end}}
+      {{if .Capabilities.Has "console"}}
+      {{/* Web console (ttyd) on :7681. href is set by JS from the current
+           hostname since the port differs and CSP forbids inline script. */}}
+      <a class="topbar-link" data-console-link href="#" target="_blank" rel="noopener"
+         title="Open web console (terminal) in a new tab" aria-label="Web console">
+        {{template "icon-terminal"}}
+      </a>
+      {{end}}
+      <div class="user-menu" id="user-menu">
+            <button class="user-menu-btn" id="user-menu-btn" aria-haspopup="true" aria-expanded="false">
+              {{template "icon-user"}}
+              <span>{{.Username}}</span>
+              {{template "icon-chevron-down"}}
+            </button>
+            <div class="user-dropdown" id="user-dropdown">
+              <div class="dropdown-section-label">Theme</div>
+              <button class="dropdown-item theme-opt" data-theme="auto">
+                {{template "icon-contrast"}}
+                Auto
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item theme-opt" data-theme="light">
+                {{template "icon-sun"}}
+                Light
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item theme-opt" data-theme="dark">
+                {{template "icon-moon"}}
+                Dark
+                {{template "icon-check"}}
+              </button>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-section-label">Auto-logout</div>
+              <button class="dropdown-item timeout-opt" data-timeout="300">
+                {{template "icon-clock"}}
+                5 min
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item timeout-opt" data-timeout="900">
+                {{template "icon-clock"}}
+                15 min
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item timeout-opt" data-timeout="1800">
+                {{template "icon-clock"}}
+                30 min
+                {{template "icon-check"}}
+              </button>
+              <button class="dropdown-item timeout-opt" data-timeout="0">
+                {{template "icon-circle-slash"}}
+                Off
+                {{template "icon-check"}}
+              </button>
+              {{if or (.Capabilities.Has "docs") (.Capabilities.Has "netbrowse") (.Capabilities.Has "console")}}
+              <div class="dropdown-divider"></div>
+              {{if .Capabilities.Has "docs"}}
+              <a class="dropdown-item" href="/guide/" target="_blank" rel="noopener">
+                {{template "icon-book"}}
+                User Guide
+              </a>
+              {{end}}
+              {{if .Capabilities.Has "netbrowse"}}
+              <a class="dropdown-item" href="https://network.local/" target="_blank" rel="noopener">
+                {{template "icon-radar"}}
+                Network Browser
+              </a>
+              {{end}}
+              {{if .Capabilities.Has "console"}}
+              {{/* href filled in by JS from the current hostname (ttyd on :7681). */}}
+              <a class="dropdown-item" data-console-link href="#" target="_blank" rel="noopener">
+                {{template "icon-terminal"}}
+                Console
+              </a>
+              {{end}}
+              {{end}}
+              <div class="dropdown-divider"></div>
+              <form method="POST" action="/logout">
+                <input type="hidden" name="csrf" value="{{.CsrfToken}}">
+                <button type="submit" class="dropdown-item dropdown-item-danger">
+                  {{template "icon-log-out"}}
+                  Logout
+                </button>
+              </form>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="layout">
+    {{template "sidebar" .}}
+    <div class="main-column">
+      {{if .CfgUnsaved}}
+      <div id="cfg-unsaved-banner" class="cfg-unsaved-banner">
+        {{template "icon-triangle-alert"}}
+        Running config has unsaved changes — will be lost on reboot.
+        <button type="button" class="btn btn-sm btn-primary cfg-unsaved-save-btn"
+                title="Copy running config to startup config so changes survive a reboot."
+                hx-post="/configure/save"
+                hx-swap="none"
+                hx-confirm="Save running configuration to startup?">
+          Save to startup
+        </button>
+      </div>
+      {{end}}
+      <main id="content">
+        {{block "content" .}}{{end}}
+      </main>
+    </div>
+  </div>
+  <dialog id="confirm-dialog" aria-modal="true">
+    <p class="dialog-message" id="dialog-message"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-primary" id="dialog-confirm" autofocus>Confirm</button>
+      <button class="btn btn-outline" id="dialog-cancel">Cancel</button>
+    </div>
+  </dialog>
+</body>
+</html>
+{{end}}

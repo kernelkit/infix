@@ -1,0 +1,114 @@
+{{define "configure-ntp.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">NTP Servers</div>
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead>
+        <tr>
+          <th>Name{{template "field-info" (index .Desc "name")}}</th>
+          <th>Address{{template "field-info" (index .Desc "address")}}</th>
+          <th class="cfg-input-sm">Port{{template "field-info" (index .Desc "port")}}</th>
+          <th>Prefer{{template "field-info" (index .Desc "prefer")}}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $s := .NTP.Servers}}
+        <tr>
+          <td>
+            <button class="key-row-toggle" type="button"
+                    aria-expanded="false" data-target="ntp-{{$i}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{$s.Name}}
+            </button>
+          </td>
+          <td>{{if $s.UDP.Address}}{{$s.UDP.Address}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if $s.UDP.Port}}{{$s.UDP.Port}}{{else}}<span class="text-muted">123</span>{{end}}</td>
+          <td style="text-align:center">{{if $s.Prefer}}★{{end}}</td>
+          <td style="text-align:right">
+            <button type="button" class="btn-icon btn-icon-danger"
+                    hx-delete="/configure/system/ntp/servers/{{$s.Name}}"
+                    hx-confirm="Delete NTP server {{$s.Name}}?"
+                    hx-swap="none" title="Delete server">
+              {{template "icon-trash"}}
+            </button>
+          </td>
+        </tr>
+        <tr class="key-detail-row" id="key-detail-ntp-{{$i}}">
+          <td colspan="5" class="key-detail-cell">
+            <div class="key-detail-body">
+              <form hx-post="/configure/system/ntp/servers/{{$s.Name}}" hx-swap="none">
+                <table class="info-table">
+                  <tr>
+                    <th>Address{{template "field-info" (index $.Desc "address")}}</th>
+                    <td><input class="cfg-input" type="text" name="address"
+                               value="{{$s.UDP.Address}}" placeholder="address (e.g., pool.ntp.org)"></td>
+                  </tr>
+                  <tr>
+                    <th>Port{{template "field-info" (index $.Desc "port")}}</th>
+                    <td><input class="cfg-input cfg-input-sm" type="number" min="1" max="65535"
+                               name="port" value="{{if $s.UDP.Port}}{{$s.UDP.Port}}{{end}}"
+                               placeholder="123" style="width:6rem"></td>
+                  </tr>
+                  <tr>
+                    <th>Association{{template "field-info" (index $.Desc "assoc")}}</th>
+                    <td>
+                      <select class="cfg-input" name="association-type">
+                        {{range $.AssocTypes}}
+                        <option value="{{.}}" {{if eq . $s.AssociationType}}selected{{end}}>{{.}}</option>
+                        {{end}}
+                      </select>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>iburst{{template "field-info" (index $.Desc "iburst")}}</th>
+                    <td><label><input type="checkbox" name="iburst" value="true"
+                               {{if $s.IBurst}}checked{{end}}> Send an initial burst for faster sync</label></td>
+                  </tr>
+                  <tr>
+                    <th>Prefer{{template "field-info" (index $.Desc "prefer")}}</th>
+                    <td><label><input type="checkbox" name="prefer" value="true"
+                               {{if $s.Prefer}}checked{{end}}> Mark as the preferred source</label></td>
+                  </tr>
+                </table>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5"><span class="text-muted">No NTP servers configured.</span></td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  {{/* Hidden add-server form, revealed by the + Add server button (data-show) */}}
+  <div id="ntp-add-row" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+    <form hx-post="/configure/system/ntp/servers" hx-swap="none" class="user-add-inline">
+      <input class="cfg-input" type="text" name="name" required placeholder="name (label)">
+      <input class="cfg-input" type="text" name="address" placeholder="address (e.g., pool.ntp.org)">
+      <input class="cfg-input cfg-input-sm" type="number" name="port" min="1" max="65535"
+             placeholder="123" style="width:6rem">
+      <label style="white-space:nowrap"><input type="checkbox" name="prefer" value="true"> Prefer</label>
+      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+  </div>
+  <div class="cfg-card-footer">
+    <button type="button" class="btn-add-row" data-show="ntp-add-row">+ Add server</button>
+  </div>
+</section>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}

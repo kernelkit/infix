@@ -1,0 +1,184 @@
+{{define "configure-system.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/system"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  {{/* ── Identity ─────────────────────────────────────────────────────── */}}
+  <form class="info-card"
+        hx-post="/configure/system/identity"
+        hx-swap="none">
+    <div class="card-header">Identity</div>
+    <table class="info-table">
+      <tr>
+        <th>Hostname{{template "field-info" (index $d "hostname")}}</th>
+        <td><input class="cfg-input" type="text" name="hostname" value="{{.Hostname}}" required></td>
+        <td class="cfg-reset-col"></td>
+      </tr>
+      <tr>
+        <th>Contact{{template "field-info" (index $d "contact")}}</th>
+        <td><input class="cfg-input" type="text" name="contact" value="{{.Contact}}"></td>
+        <td class="cfg-reset-col">
+          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                  hx-delete="/configure/leaf?path=/ietf-system:system/contact&redirect=/configure/system"
+                  hx-swap="none"
+                  hx-confirm="Reset contact to its YANG default?">{{template "icon-reset"}}</button>
+        </td>
+      </tr>
+      <tr>
+        <th>Location{{template "field-info" (index $d "location")}}</th>
+        <td><input class="cfg-input" type="text" name="location" value="{{.Location}}"></td>
+        <td class="cfg-reset-col">
+          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                  hx-delete="/configure/leaf?path=/ietf-system:system/location&redirect=/configure/system"
+                  hx-swap="none"
+                  hx-confirm="Reset location to its YANG default?">{{template "icon-reset"}}</button>
+        </td>
+      </tr>
+    </table>
+    <div class="cfg-card-footer">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
+    </div>
+  </form>
+
+  {{/* ── Date & Time ──────────────────────────────────────────────────
+       One table for all three rows so the value and action columns
+       line up.  The two write paths have different semantics (Set time
+       = immediate RPC, Timezone = candidate save), so they're declared
+       as sibling <form>s and bound to the table's inputs / buttons via
+       the HTML5 form="…" attribute.  The System time row's
+       data-server-time seeds the JS-driven live tick (initDatetimePicker
+       in app.js). */}}
+  <div class="info-card">
+    <div class="card-header">Date &amp; Time</div>
+
+    <form id="cfg-clock-now" hx-post="/maintenance/system/datetime"
+          hx-swap="none"></form>
+
+    <table class="info-table info-table-fixed">
+      <colgroup>
+        <col style="width:9rem">
+        <col>
+        <col style="width:5.5rem">
+      </colgroup>
+      <tr>
+        <th>System time</th>
+        <td colspan="2">
+          {{/* Span pads itself to match the Set time input's border+left
+               padding (1px + 0.6rem), so plain text and the input text
+               start at the same x-position. */}}
+          {{if .CurrentDatetime}}<span id="sc-system-time" data-server-time="{{.CurrentDatetime}}" style="display:inline-block;padding-left:calc(0.6rem + 1px);"></span>{{else}}<span class="text-muted">unavailable</span>{{end}}
+        </td>
+      </tr>
+      <tr>
+        <th>Set time{{template "field-info" "Manually set the device system clock.  The time you enter is interpreted in your browser's local timezone and converted to UTC on submit."}}</th>
+        <td>
+          <input type="datetime-local" id="sc-dt-input" name="datetime"
+                 form="cfg-clock-now"
+                 class="cfg-input" step="1" required>
+        </td>
+        <td class="cfg-reset-col">
+          <button type="submit" form="cfg-clock-now"
+                  class="btn btn-primary btn-sm"
+                  title="Set the system clock immediately.">Set</button>
+        </td>
+      </tr>
+      <tr>
+        <th>Timezone{{template "field-info" (index $d "timezone")}}</th>
+        <td>
+          {{$tz := .Timezone}}
+          <select class="cfg-input" name="timezone" form="cfg-clock-tz">
+            {{/* The IANA YANG enum has no UTC / Etc-UTC entry, so when
+                 timezone-name isn't configured we surface that explicitly
+                 instead of letting the browser default to the
+                 alphabetically-first option. Infix interprets an unset
+                 leaf as UTC. */}}
+            {{if eq $tz ""}}<option value="" selected>UTC (default)</option>{{end}}
+            {{range .TimezoneOptions}}<option {{if eq . $tz}}selected{{end}}>{{.}}</option>{{end}}
+          </select>
+        </td>
+        <td class="cfg-reset-col">
+          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                  hx-delete="/configure/leaf?path=/ietf-system:system/clock/timezone-name&redirect=/configure/system"
+                  hx-swap="none"
+                  hx-confirm="Reset timezone to its YANG default?">{{template "icon-reset"}}</button>
+        </td>
+      </tr>
+    </table>
+
+    <form id="cfg-clock-tz" hx-post="/configure/system/clock" hx-swap="none">
+      <div class="cfg-card-footer">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <span class="cfg-save-status"></span>
+      </div>
+    </form>
+  </div>
+
+  {{/* ── Preferences ─────────────────────────────────────────────────── */}}
+  <form class="info-card info-grid-span-2"
+        hx-post="/configure/system/preferences"
+        hx-swap="none">
+    <div class="card-header">Preferences</div>
+    <table class="info-table">
+      <tr>
+        <th>Text editor{{template "field-info" (index $d "text-editor")}}</th>
+        <td>
+          <select class="cfg-input" name="text_editor">
+            {{range .TextEditorOptions}}
+            <option value="{{.Value}}" {{if eq .Value $.TextEditor}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>
+            {{end}}
+          </select>
+        </td>
+        <td class="cfg-reset-col">
+          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                  hx-delete="/configure/leaf?path=/ietf-system:system/infix-system:text-editor&redirect=/configure/system"
+                  hx-swap="none"
+                  hx-confirm="Reset text editor to its YANG default?">{{template "icon-reset"}}</button>
+        </td>
+      </tr>
+      <tr>
+        <th>Login banner{{template "field-info" (index $d "motd-banner")}}</th>
+        <td>
+          <textarea class="cfg-input cfg-input-mono" name="motd_banner" rows="4"
+                    placeholder="Displayed after SSH/console login…">{{.MotdBanner}}</textarea>
+        </td>
+        <td class="cfg-reset-col">
+          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                  hx-delete="/configure/leaf?path=/ietf-system:system/infix-system:motd-banner&redirect=/configure/system"
+                  hx-swap="none"
+                  hx-confirm="Reset login banner to its YANG default?">{{template "icon-reset"}}</button>
+        </td>
+      </tr>
+    </table>
+    <div class="cfg-card-footer">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <span class="cfg-save-status"></span>
+    </div>
+  </form>
+
+</section>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}{{/* end {{else}} — schema ready */}}
+
+{{end}}
+

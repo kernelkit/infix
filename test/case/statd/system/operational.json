@@ -111,6 +111,18 @@
           "mount-point": "/cfg",
           "size": "14073",
           "used": "67"
+        },
+        {
+          "available": "51072",
+          "mount-point": "/run",
+          "size": "51200",
+          "used": "128"
+        },
+        {
+          "available": "102160",
+          "mount-point": "/tmp",
+          "size": "102400",
+          "used": "240"
         }
       ],
       "load-average": {

@@ -122,13 +122,21 @@ recommend using `pipx` to install the necessary tooling:
 ```bash
 $ sudo apt install pipx
 $ pipx install mkdocs
-$ pipx inject mkdocs mkdocs-material pymdown-extensions mkdocs-callouts mike mkdocs-to-pdf
+$ pipx inject mkdocs mkdocs-material pymdown-extensions mkdocs-callouts mike mkdocs-to-pdf mkdocs-glightbox
 ```
 
-The last two packages, `mike` and `mkdocs-to-pdf`, are used for online
-versioning and PDF generation by GitHub Actions, but since they are in
-the `mkdocs.yml` file, everyone who wants to preview the documentation
-have to install all the tooling.
+The `mike` and `mkdocs-to-pdf` packages are used for online versioning
+and PDF generation by GitHub Actions, but since every plugin is listed
+in `mkdocs.yml`, anyone who wants to preview the documentation has to
+install all the tooling.
+
+> [!IMPORTANT]
+> MkDocs is also required to **build a WebUI image**.  The build bundles
+> the User's Guide into the image (served on-device at `/guide/`), so
+> `make` runs `mkdocs build` from `post-build.sh` when the `webui`
+> package is selected.  If MkDocs is missing the build still succeeds,
+> but the image ships without the on-device guide.  Minimal images and
+> any build without the `webui` package skip this step entirely.
 
 Preview with:
 

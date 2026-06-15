@@ -1,0 +1,71 @@
+{{define "backup.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="info-grid">
+
+  <section class="info-card">
+    <div class="card-header">Backup</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">Download the current startup configuration as a JSON file.
+	The file format is <code>startup-config-$hostname-$date-$time.cfg</code>
+      </p>
+      <div>
+        <a href="/config" hx-boost="false" class="btn btn-primary">Download config</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Restore</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">Restore a previously backed-up configuration.  By default
+        the restore operation is made to running config, this is the safe default.</p>
+      <p class="sc-desc">If the file was saved by an older release, it is migrated to
+        the current configuration syntax before being applied.</p>
+      <form id="restore-form"
+            hx-post="/maintenance/backup/restore"
+            hx-target="#restore-result"
+            hx-swap="innerHTML"
+            hx-encoding="multipart/form-data"
+            hx-confirm="Apply this configuration to the running system?"
+            hx-headers='{"X-CSRF-Token": "{{.CsrfToken}}"}'>
+        <div class="sc-dt-row">
+          <input type="file" name="config" accept=".json" required class="cfg-input">
+        </div>
+        <label class="sc-restore-label">
+          <input type="checkbox" name="save-to-startup" id="restore-startup-cb">
+          <span class="sc-restore-warn-text">Save to startup — may break system boot!</span>
+        </label>
+        <div id="restore-result"></div>
+        <div class="sc-form-actions">
+          <button type="submit" class="btn btn-primary">Restore</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="info-card">
+    <div class="card-header">Support Bundle</div>
+    <div class="card-body sc-action-body">
+      <p class="sc-desc">Collect system state — configuration, logs, routing,
+        interfaces, hardware inventory, and container and service status — into a
+        single archive to attach to a support ticket.  Collection can take up to
+        a minute.</p>
+      <div class="sc-dt-row">
+        <input type="password" class="cfg-input support-pass"
+               placeholder="Encryption password (optional)" autocomplete="new-password">
+      </div>
+      <p class="sc-desc sc-hint">Leave blank for a plain <code>.tar.gz</code>, or set
+        a password to encrypt the bundle (GPG) before download.</p>
+      <div style="margin-top:0.75rem">
+        <button type="button" class="btn btn-primary support-generate"
+                data-csrf="{{.CsrfToken}}">Download support</button>
+      </div>
+      <p class="support-status" aria-live="polite"></p>
+    </div>
+  </section>
+
+</div>
+{{end}}

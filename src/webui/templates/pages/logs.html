@@ -1,0 +1,90 @@
+{{define "logs.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{template "logs-card" .}}
+{{end}}
+
+{{/* The whole card is the htmx swap target for tab changes — server
+     re-renders the strip with the right tab marked active each time,
+     no JS state to sync.  Side effect: filter clears on tab change,
+     which matches "new log, fresh look" intent.
+
+     Load earlier walks back through the current file; once exhausted,
+     the button re-labels to "Load previous from <rotation>" and
+     starts paging into rotated archives.  Live tail is JS-driven via
+     EventSource and survives only within a tab; switching tabs closes
+     the stream. */}}
+{{define "logs-card"}}
+<section class="info-card logs-card">
+  <div class="card-header">Logs</div>
+
+  <div class="logs-tabs" role="tablist">
+    {{range .Sources}}
+    <button class="logs-tab {{if eq .Key $.Active}}active{{end}}"
+            type="button" role="tab"
+            hx-get="/maintenance/logs/{{.Key}}"
+            hx-target="closest .logs-card"
+            hx-swap="outerHTML"
+            {{if eq .Key $.Active}}aria-selected="true"{{end}}>
+      <span class="logs-tab-label">{{.Label}}</span>
+      {{if .Empty}}<span class="logs-tab-empty">empty</span>{{end}}
+    </button>
+    {{end}}
+  </div>
+
+  {{template "logs-body" .}}
+</section>
+{{end}}
+
+{{define "logs-body"}}
+<div id="logs-body" class="logs-body" data-source="{{.Source.Key}}">
+  <div class="logs-toolbar">
+    <input type="text" class="cfg-input logs-filter"
+           placeholder="Filter (Ctrl/⌘-F) — text or /regex/, case-insensitive">
+    <label class="logs-toggle"
+           title="Stream new entries as they're written.  Auto-scrolls only while you're at the bottom of the buffer.">
+      <input type="checkbox" name="tail" class="logs-tail-cb"> Live tail
+      <span class="logs-tail-status" aria-live="polite"></span>
+    </label>
+    <a href="/maintenance/logs/{{.Source.Key}}/download"
+       class="btn btn-sm logs-download"
+       hx-boost="false"
+       title="Download the full archive — current file plus every rotated/compressed predecessor, concatenated chronologically.">
+      <span class="nav-icon" style="--icon: url('/assets/img/icons/download.svg')"></span>
+      Download
+    </a>
+  </div>
+
+  {{if .Source.Lines}}
+  <div class="logs-content" tabindex="0">
+    {{/* sourceContent's field names mirror earlierData so the same
+         logs-earlier template renders both the initial buffer (.Source)
+         and the Earlier-handler response. */}}
+    {{template "logs-earlier" .Source}}
+  </div>
+  <div class="logs-status">
+    Source: <code>{{.Source.Path}}</code>
+  </div>
+  {{else}}
+  <p class="empty-message">No entries in <code>{{.Source.Path}}</code> yet.</p>
+  {{end}}
+</div>
+{{end}}
+
+{{/* Combined load-more button + lines fragment.  Used both as the
+     initial buffer and as the response to /earlier requests — the old
+     button is replaced via outerHTML by [new button, new lines],
+     keeping chronology in the DOM correct.
+
+     The button's label depends on whether the next click stays in the
+     current file ("Load earlier") or crosses into a rotation
+     ("Load previous from messages.0"). */}}
+{{define "logs-earlier"}}
+{{with .Next}}<button type="button" class="btn btn-sm logs-load-earlier"
+        hx-get="/maintenance/logs/{{$.Key}}/earlier?file={{.File}}&skip={{.Skip}}"
+        hx-target="this"
+        hx-swap="outerHTML">{{if .IsPrev}}Load previous from <code>{{.FileLabel}}</code>{{else}}Load earlier{{end}}</button>
+{{end}}{{range .Lines}}<div class="logs-line {{with .Class}}logs-{{.}}{{end}}">{{.Text}}</div>
+{{end}}{{end}}

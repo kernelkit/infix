@@ -1,0 +1,10 @@
+{{define "wizard-psk-picker.html"}}
+{{$id := "add-iface-wifi-psk"}}{{if .ID}}{{$id = .ID}}{{end}}
+<select class="cfg-input" name="secret" id="{{$id}}">
+  {{if .Keys}}
+    {{range .Keys}}<option value="{{.Name}}" data-key-value="{{.Value}}"{{if eq .Name $.Selected}} selected{{end}}>{{.Name}}</option>{{end}}
+  {{else}}
+    <option value="" disabled selected>No keystore symmetric keys</option>
+  {{end}}
+</select>
+{{end}}

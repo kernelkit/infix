@@ -1,0 +1,157 @@
+{{define "dashboard.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+  <div class="info-card">
+    <div class="card-header">System Information</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{if .Hostname}}<tr><th>Hostname</th><td>{{.Hostname}}</td></tr>{{end}}
+        {{if .Contact}}<tr><th>Contact</th><td>{{.Contact}}</td></tr>{{end}}
+        {{if .Location}}<tr><th>Location</th><td>{{.Location}}</td></tr>{{end}}
+        {{if .OSName}}<tr><th>OS</th><td>{{.OSName}} {{.OSVersion}}</td></tr>{{end}}
+        {{if .Machine}}<tr><th>Architecture</th><td>{{.Machine}}</td></tr>{{end}}
+        {{if .Software}}<tr><th>Boot Partition</th><td>{{.Software}}</td></tr>{{end}}
+      </table>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="card-header">Runtime</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{if .Uptime}}<tr><th>Uptime</th><td><span class="num">{{.Uptime}}</span></td></tr>{{end}}
+        {{if .CurrentTime}}<tr><th>Current Time</th><td><span class="num">{{.CurrentTime}}</span></td></tr>{{end}}
+        {{if .MemTotal}}
+        <tr>
+          <th>Memory</th>
+          <td>
+            <div class="health-bar-track" style="margin-bottom:0.25rem">
+              <div class="health-bar-fill {{.MemClass}}" style="width:{{.MemPercent}}%"></div>
+            </div>
+            <span class="num">{{.MemUsed}} / {{.MemTotal}} MiB ({{.MemPercent}}%)</span>
+          </td>
+        </tr>
+        {{end}}
+        {{if .Load1}}
+        <tr>
+          <th>Load Average</th>
+          <td><span class="num">{{.Load1}} &middot; {{.Load5}} &middot; {{.Load15}}</span></td>
+        </tr>
+        {{end}}
+      </table>
+    </div>
+  </div>
+
+  {{if .Board.Model}}
+  <div class="info-card">
+    <div class="card-header">Board</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
+        {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
+        {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
+        {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
+        {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td>{{.Board.BaseMAC}}</td></tr>{{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+
+  {{if .KeyVitals}}
+  <div class="info-card">
+    <div class="card-header">Key Vitals
+      <a href="/hardware"
+         hx-get="/hardware"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">All sensors &rarr;</a>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{range .KeyVitals}}
+        <tr><th>{{.Name}}</th><td><span class="num">{{.Value}}</span></td></tr>
+        {{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .Disks}}
+  <div class="info-card">
+    <div class="card-header">Disk Usage</div>
+    {{range .Disks}}
+    <div class="disk-item">
+      <div class="disk-item-header">
+        <span class="disk-mount">{{.Mount}}{{if .ReadOnly}} <span class="disk-tag">read-only</span>{{end}}</span>
+        <span class="num disk-pct">{{.Percent}}%</span>
+      </div>
+      <div class="health-bar-track">
+        <div class="health-bar-fill {{.Class}}" style="width:{{.Percent}}%"></div>
+      </div>
+      <div class="disk-stats">{{.Available}} free of {{.Size}}</div>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+
+  <div class="info-card">
+    <div class="card-header">Connectivity</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        <tr>
+          <th>Gateway</th>
+          <td>
+            {{range .Gateways}}<div><span class="reach-slot" hx-get="/dashboard/reachability?ip={{.Addr | urlquery}}&amp;iface={{.Iface | urlquery}}" hx-trigger="load" hx-swap="innerHTML"><span class="status-dot reach-pending"></span></span>{{.Addr}}{{if .Iface}} <span class="text-muted">via {{.Iface}}</span>{{end}}</div>{{else}}<span class="text-muted">none</span>{{end}}
+          </td>
+        </tr>
+        <tr>
+          <th>Internet</th>
+          <td><span class="reach-slot" hx-get="/dashboard/reachability?ip={{.InternetProbe | urlquery}}" hx-trigger="load" hx-swap="innerHTML"><span class="status-dot reach-pending"></span></span>{{.InternetProbe}}</td>
+        </tr>
+        <tr>
+          <th>DNS</th>
+          <td>
+            {{range .DNSServers}}<div>{{.Address}} <span class="dns-origin">{{if eq .Origin "dhcp"}}DHCP{{if .Interface}} &middot; {{.Interface}}{{end}}{{else}}{{.Origin}}{{end}}</span></div>{{else}}<span class="text-muted">none</span>{{end}}
+          </td>
+        </tr>
+        {{if .DNSSearch}}
+        <tr><th>Search</th><td>{{range $i, $s := .DNSSearch}}{{if $i}}, {{end}}{{$s}}{{end}}</td></tr>
+        {{end}}
+        {{if .NTPSync}}
+        <tr><th>Time</th><td><span class="status-dot status-up"></span>synced &middot; {{.NTPSync}}</td></tr>
+        {{end}}
+      </table>
+    </div>
+  </div>
+
+  {{if .Addresses}}
+  <div class="info-card">
+    <div class="card-header">Addresses
+      <a href="/interfaces"
+         hx-get="/interfaces"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">All interfaces &rarr;</a>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{range .Addresses}}
+        <tr>
+          <th><span class="status-dot {{if .Up}}status-up{{else}}status-down{{end}}"></span>{{.Name}}</th>
+          <td>{{range $i, $a := .Addrs}}{{if $i}}<br>{{end}}{{$a}}{{end}}</td>
+        </tr>
+        {{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+</section>
+{{end}}

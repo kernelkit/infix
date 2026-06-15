@@ -45,6 +45,9 @@ jobs:
           target: ${{ matrix.target }}
           enabled: ${{ inputs.use_cache }}
 
+      # WebUI images bundle the mkdocs User's Guide via post-build.sh.
+      - uses: ./.github/actions/setup-mkdocs
+
       - name: Configure & Build
         env:
           INFIX_RELEASE: ${{ steps.vars.outputs.ver }}

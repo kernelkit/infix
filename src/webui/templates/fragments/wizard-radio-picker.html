@@ -1,0 +1,14 @@
+{{define "wizard-radio-picker.html"}}
+{{$id := "add-iface-wifi-radio"}}{{if .ID}}{{$id = .ID}}{{end}}
+<select class="cfg-input" name="radio" id="{{$id}}" required>
+  {{if .Radios}}
+    {{range $i, $r := .Radios}}<option value="{{$r.Name}}"
+            data-ap-ready="{{$r.APReady}}"
+            data-country="{{$r.Country}}"
+            data-band="{{$r.Band}}"
+            data-channel="{{$r.Channel}}"{{if eq $r.Name $.Selected}} selected{{else if and (eq $.Selected "") (eq $i 0)}} selected{{end}}>{{$r.Label}}</option>{{end}}
+  {{else}}
+    <option value="" disabled selected>No configured WiFi radios</option>
+  {{end}}
+</select>
+{{end}}

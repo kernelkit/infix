@@ -1,0 +1,9 @@
+{{define "wizard-wgkey-picker.html"}}
+<select class="cfg-input" name="private-key" id="add-iface-wg-key" required>
+  {{if .Keys}}
+    {{range .Keys}}<option value="{{.}}"{{if eq . $.Selected}} selected{{end}}>{{.}}</option>{{end}}
+  {{else}}
+    <option value="" disabled selected>No keystore keys</option>
+  {{end}}
+</select>
+{{end}}

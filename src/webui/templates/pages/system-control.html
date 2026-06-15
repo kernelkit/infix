@@ -1,0 +1,72 @@
+{{define "system-control.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="info-grid">
+
+  <section class="info-card">
+    <div class="card-header">Power</div>
+    <div class="sc-danger-body">
+
+      <div class="sc-danger-item">
+        <div class="sc-danger-text">
+          <strong>Reboot{{template "field-info" "Restart the device. The running configuration is preserved. Any unsaved changes (running config not yet copied to startup) will be lost on reboot."}}</strong>
+        </div>
+        <button class="btn btn-primary"
+                hx-post="/maintenance/system/reboot"
+                hx-confirm="Reboot the device?"
+                hx-target="#content"
+                hx-swap="innerHTML">Reboot</button>
+      </div>
+
+      <div class="sc-danger-sep"></div>
+
+      <div class="sc-danger-item">
+        <div class="sc-danger-text">
+          <strong>Shutdown{{template "field-info" "Power off the device. Physical access is required to bring it back online."}}</strong>
+        </div>
+        <button class="btn btn-secondary"
+                hx-post="/maintenance/system/shutdown"
+                hx-confirm="Shut down the device?"
+                hx-target="#content"
+                hx-swap="innerHTML">Shut down</button>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="info-card sc-danger-card">
+    <div class="card-header">Danger Zone</div>
+    <div class="sc-danger-body">
+
+      <div class="sc-danger-item">
+        <div class="sc-danger-text">
+          <strong>Reset running config{{template "field-info" "Replaces the running configuration with factory defaults. No reboot — takes effect immediately. Use the persistent notification to save to startup."}}</strong>
+          <div id="sc-fd-result"></div>
+        </div>
+        <button class="btn btn-danger-outline"
+                hx-post="/maintenance/system/factory-default"
+                hx-confirm="Reset running configuration to factory defaults? This cannot be undone."
+                hx-target="#sc-fd-result"
+                hx-swap="innerHTML">Reset running config</button>
+      </div>
+
+      <div class="sc-danger-sep"></div>
+
+      <div class="sc-danger-item">
+        <div class="sc-danger-text">
+          <strong>Factory reset{{template "field-info" "Wipes all configuration and non-volatile storage, then reboots. The device may become unreachable on the network. This cannot be undone."}}</strong>
+        </div>
+        <button class="btn btn-danger-outline"
+                hx-post="/maintenance/system/factory-reset"
+                hx-confirm="Wipe all configuration and reboot? This cannot be undone."
+                hx-target="#content"
+                hx-swap="innerHTML">Factory reset</button>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+{{end}}

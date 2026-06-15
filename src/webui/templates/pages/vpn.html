@@ -1,0 +1,69 @@
+{{define "vpn.html"}}{{template "base" .}}{{end}}
+
+{{define "content"}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Tunnels}}
+{{range .Tunnels}}
+<section class="info-card">
+  <div class="card-header">
+    <span class="iface-status {{if eq .OperStatus "up"}}iface-up{{else}}iface-down{{end}}"></span>
+    {{.Name}}{{if .ListenPort}} <span class="text-muted">:{{.ListenPort}}</span>{{end}}
+    <a href="/configure/interfaces"
+       hx-get="/configure/interfaces"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  {{if .Addresses}}
+  <div class="card-body">
+    {{range .Addresses}}<span class="badge badge-drop">{{.}}</span> {{end}}
+  </div>
+  {{end}}
+  {{if .Peers}}
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Public Key</th>
+          <th>Endpoint</th>
+          <th>Status</th>
+          <th>Last Handshake</th>
+          <th>RX</th>
+          <th>TX</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Peers}}
+        <tr>
+          <td class="num" title="{{.PublicKey}}">{{.PublicKeyShort}}</td>
+          <td>{{if .Endpoint}}{{.Endpoint}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td><span class="iface-status {{if eq .Status "up"}}iface-up{{else}}iface-down{{end}}"></span> {{.Status}}</td>
+          <td class="text-muted">{{.LastHandshake}}</td>
+          <td class="num">{{.RxBytes}}</td>
+          <td class="num">{{.TxBytes}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="empty-message">No peers configured.</p>
+  {{end}}
+</section>
+{{end}}
+{{else if not .Error}}
+<section class="info-card">
+  <div class="card-header">WireGuard
+    <a href="/configure/interfaces"
+       hx-get="/configure/interfaces"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  <p class="empty-message">No WireGuard tunnels configured.</p>
+</section>
+{{end}}
+{{end}}

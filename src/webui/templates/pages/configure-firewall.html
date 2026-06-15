@@ -1,0 +1,734 @@
+{{define "configure-firewall.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/firewall"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if not .Active}}
+
+<section class="info-card">
+  <div class="card-header">Firewall</div>
+  <p class="empty-message">Firewall is not configured on this device.</p>
+  <div class="cfg-card-footer">
+    <button class="btn btn-primary"
+            hx-post="/configure/firewall/enable"
+            hx-swap="none">Enable Firewall</button>
+    <span class="cfg-save-status"></span>
+  </div>
+</section>
+
+{{else}}
+
+<section class="info-grid">
+
+  {{/* ── Global settings ─────────────────────────────────────────────── */}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Global Settings</div>
+    <form hx-post="/configure/firewall/settings" hx-swap="none">
+      <table class="info-table">
+        <tr>
+          <th>Enabled{{template "field-info" (index $d "enabled")}}</th>
+          <td>
+            <div class="yt-bool-group">
+              <label><input type="radio" name="enabled" value="true"  {{if     .Enabled}}checked{{end}}> Yes</label>
+              <label><input type="radio" name="enabled" value="false" {{if not .Enabled}}checked{{end}}> No</label>
+            </div>
+          </td>
+          <td class="cfg-reset-col">
+            <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                    hx-delete="/configure/leaf?path=/infix-firewall:firewall/enabled&redirect=/configure/firewall"
+                    hx-swap="none"
+                    hx-confirm="Reset enabled to its YANG default?">{{template "icon-reset"}}</button>
+          </td>
+        </tr>
+        <tr>
+          <th>Default zone{{template "field-info" (index $d "default")}}</th>
+          <td>
+            <select class="cfg-input" name="default" {{if not .Zones}}disabled{{end}}>
+              {{if not .Zones}}
+              <option value="">— add a zone first —</option>
+              {{end}}
+              {{range .Zones}}
+              <option value="{{.Name}}" {{if eq .Name $.Default}}selected{{end}}>{{.Name}}</option>
+              {{end}}
+            </select>
+          </td>
+          <td class="cfg-reset-col">
+            <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                    hx-delete="/configure/leaf?path=/infix-firewall:firewall/default&redirect=/configure/firewall"
+                    hx-swap="none"
+                    hx-confirm="Reset default zone to its YANG default?">{{template "icon-reset"}}</button>
+          </td>
+        </tr>
+        <tr>
+          <th>Logging{{template "field-info" (index $d "logging")}}</th>
+          <td>
+            {{$log := .Logging}}
+            <select class="cfg-input" name="logging">
+              {{range .LoggingOptions}}
+              <option value="{{.Value}}" {{if eq $log .Value}}selected{{end}}>{{.Label}}</option>
+              {{end}}
+            </select>
+          </td>
+          <td class="cfg-reset-col">
+            <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                    hx-delete="/configure/leaf?path=/infix-firewall:firewall/logging&redirect=/configure/firewall"
+                    hx-swap="none"
+                    hx-confirm="Reset logging to its YANG default?">{{template "icon-reset"}}</button>
+          </td>
+        </tr>
+      </table>
+      <div class="cfg-card-footer">
+        <button class="btn btn-primary btn-sm" type="submit">Save</button>
+        <span class="cfg-save-status"></span>
+      </div>
+    </form>
+  </section>
+
+  {{/* ── Zones ───────────────────────────────────────────────────────── */}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Zones</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            <th>Name{{template "field-info" (index $d "zone-name")}}</th>
+            <th>Action{{template "field-info" (index $d "zone-action")}}</th>
+            <th>Description{{template "field-info" (index $d "zone-description")}}</th>
+            <th style="text-align:center">Interfaces</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $z := .Zones}}
+          <tr>
+            <td>
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="zone-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Name}}
+                {{if .Immutable}}<span class="text-muted" style="font-size:0.75em;margin-left:0.4em">(system)</span>{{end}}
+              </button>
+            </td>
+            <td>{{if .Action}}{{.Action}}{{else}}reject{{end}}</td>
+            <td>{{if .Description}}{{.Description}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+            <td style="text-align:center">{{.IfaceCount}}</td>
+            <td style="text-align:right">
+              {{if not .Immutable}}
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/firewall/zones/{{.Name}}"
+                      hx-confirm="Delete zone {{.Name}}?"
+                      hx-swap="none"
+                      title="Delete zone">
+                {{template "icon-trash"}}
+              </button>
+              {{end}}
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-zone-{{$i}}">
+            <td colspan="5" class="key-detail-cell">
+              <div class="key-detail-body">
+                {{if .Immutable}}
+                <p class="empty-message">This zone is system-defined and cannot be modified.</p>
+                {{if .Interface}}<p class="text-muted" style="margin-top:0.5rem">Interfaces: {{range $j, $iface := .Interface}}{{if $j}}, {{end}}{{$iface}}{{end}}</p>{{end}}
+                {{if .Network}}<p class="text-muted" style="margin-top:0.25rem">Networks: {{.NetworksTxt}}</p>{{end}}
+                {{if .Service}}<p class="text-muted" style="margin-top:0.25rem">Services: {{.ServicesTxt}}</p>{{end}}
+                {{else}}
+                <form hx-post="/configure/firewall/zones/{{.Name}}" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Action{{template "field-info" (index $d "zone-action")}}</th>
+                      <td>
+                        {{$action := .Action}}
+                        <div class="yt-bool-group">
+                          {{range $.ActionOptions}}
+                          <label><input type="radio" name="action" value="{{.Value}}"
+                                 {{if or (eq $action .Value) (and (eq $action "") .IsDefault)}}checked{{end}}> {{.Label}}</label>
+                          {{end}}
+                        </div>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{printf "/infix-firewall:firewall/zone=%s/action" .Name | urlquery}}&redirect=/configure/firewall"
+                                hx-swap="none"
+                                hx-confirm="Reset action to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Description{{template "field-info" (index $d "zone-description")}}</th>
+                      <td><input class="cfg-input" type="text" name="description"
+                                 value="{{.Description}}" placeholder="Optional description"></td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{printf "/infix-firewall:firewall/zone=%s/description" .Name | urlquery}}&redirect=/configure/firewall"
+                                hx-swap="none"
+                                hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    {{if .Network}}
+                    <tr>
+                      <th>Networks</th>
+                      <td colspan="2">
+                        <span class="text-muted">{{.NetworksTxt}}</span>
+                        <span class="text-muted" style="font-size:0.8em;display:block;margin-top:0.2em">Use Configure → Advanced to modify networks.</span>
+                      </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                      <th>Interfaces{{template "field-info" (index $d "zone-interface")}}</th>
+                      <td>
+                        {{if $.AllInterfaces}}
+                        <div class="fw-check-scroll">
+                          <div class="fw-check-grid">
+                            {{range $.AllInterfaces}}
+                            <label><input type="checkbox" name="interfaces" value="{{.}}" {{if index $z.IfaceSet .}}checked{{end}}> {{.}}</label>
+                            {{end}}
+                          </div>
+                        </div>
+                        {{else}}
+                        <textarea class="cfg-input" name="interfaces" rows="3"
+                                  placeholder="One interface per line (e.g. eth0)">{{range $j, $iface := .Interface}}{{if $j}}
+{{end}}{{$iface}}{{end}}</textarea>
+                        {{end}}
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/firewall/zones/{{.Name}}/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Clear interfaces from zone {{.Name}}?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    {{end}}
+                    <tr>
+                      <th>Services{{template "field-info" (index $d "zone-service")}}</th>
+                      <td>
+                        {{if $.ServiceOptions}}
+                        <select class="cfg-input" name="services" multiple size="8">
+                          {{range $.ServiceOptions}}
+                          <option value="{{.Value}}" {{if index $z.ServiceSet .Value}}selected{{end}}>{{.Label}}</option>
+                          {{end}}
+                        </select>
+                        {{else}}
+                        <textarea class="cfg-input" name="services" rows="3"
+                                  placeholder="One service per line (e.g. ssh, http)">{{.ServicesTxt}}</textarea>
+                        {{end}}
+                        <span class="text-muted" style="font-size:0.8em;display:block;margin-top:0.25em">Applied when action is reject or drop. Ctrl/⌘-click to select multiple.</span>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/firewall/zones/{{.Name}}/services"
+                                hx-swap="none"
+                                hx-confirm="Clear services from zone {{.Name}}?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <button type="button" class="btn btn-sm" data-close-detail="zone-{{$i}}">Cancel</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+
+                {{/* Port forwarding (DNAT) — own forms, edits land directly. */}}
+                <h5 class="cfg-subsection-head" style="margin-top:1rem">Port Forwarding</h5>
+                {{if .PortForward}}
+                <table class="data-table cfg-table" style="margin-bottom:0.5rem">
+                  <thead>
+                    <tr>
+                      <th style="width:8em">Port</th>
+                      <th style="width:5em">Proto</th>
+                      <th>To address</th>
+                      <th style="width:6em">To port</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{range .PortForward}}
+                    <tr>
+                      <td>{{.Lower}}{{if gt .Upper .Lower}}-{{.Upper}}{{end}}</td>
+                      <td>{{.Proto}}</td>
+                      <td>{{if and .To .To.Addr}}{{.To.Addr}}{{else}}<span class="text-muted">— local —</span>{{end}}</td>
+                      <td>{{if and .To .To.Port}}{{.To.Port}}{{else}}<span class="text-muted">same</span>{{end}}</td>
+                      <td style="text-align:right">
+                        <button type="button" class="btn-icon btn-icon-danger"
+                                hx-delete="/configure/firewall/zones/{{$z.Name}}/port-forwards/{{.Lower}}/{{.Proto}}"
+                                hx-confirm="Remove port-forward {{.Lower}}/{{.Proto}}?"
+                                hx-swap="none"
+                                title="Remove port-forward">
+                          {{template "icon-trash"}}
+                        </button>
+                      </td>
+                    </tr>
+                    {{end}}
+                  </tbody>
+                </table>
+                {{end}}
+                <form hx-post="/configure/firewall/zones/{{.Name}}/port-forwards" hx-swap="none"
+                      class="user-add-inline" style="flex-wrap:wrap">
+                  <input class="cfg-input cfg-input-sm" type="number" name="lower"
+                         min="1" max="65535" placeholder="port" required style="width:6rem">
+                  <input class="cfg-input cfg-input-sm" type="number" name="upper"
+                         min="1" max="65535" placeholder="upper" style="width:6rem">
+                  <select class="cfg-input cfg-input-sm" name="proto" required style="width:5rem">
+                    {{range $.ProtoOptions}}
+                    <option value="{{.Value}}" {{if .IsDefault}}selected{{end}}>{{.Label}}</option>
+                    {{end}}
+                  </select>
+                  <input class="cfg-input cfg-input-sm" type="text" name="to-addr"
+                         placeholder="to addr (optional)" style="flex:2;min-width:10rem">
+                  <input class="cfg-input cfg-input-sm" type="number" name="to-port"
+                         min="1" max="65535" placeholder="to port" style="width:7rem">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <span class="cfg-save-status"></span>
+                </form>
+                {{end}}
+              </div>
+            </td>
+          </tr>
+          {{end}}
+
+          {{if not .Zones}}
+          <tr><td colspan="5" class="yt-table-empty">No zones configured</td></tr>
+          {{end}}
+
+          {{/* Hidden add-zone row */}}
+          <tr id="add-zone-row" hidden>
+            <td colspan="5" class="key-detail-cell">
+              <form hx-post="/configure/firewall/zones" hx-swap="none" class="user-add-inline">
+                <input class="cfg-input" type="text" name="name" required
+                       pattern="[a-zA-Z0-9\-_]+" placeholder="Zone name">
+                <div class="yt-bool-group" style="display:inline-flex">
+                  {{range .ActionOptions}}
+                  <label><input type="radio" name="action" value="{{.Value}}" {{if .IsDefault}}checked{{end}}> {{.Label}}</label>
+                  {{end}}
+                </div>
+                <input class="cfg-input" type="text" name="description"
+                       placeholder="Description (optional)">
+                <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                <button type="button" class="btn btn-sm" data-hide="add-zone-row">Cancel</button>
+                <span class="cfg-save-status"></span>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-show="add-zone-row">+ Add Zone</button>
+    </div>
+  </section>
+
+  {{/* ── Policies ─────────────────────────────────────────────────────── */}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Policies</div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            <th>Name{{template "field-info" (index $d "policy-name")}}</th>
+            <th>Action{{template "field-info" (index $d "policy-action")}}</th>
+            <th>Ingress{{template "field-info" (index $d "policy-ingress")}}</th>
+            <th>Egress{{template "field-info" (index $d "policy-egress")}}</th>
+            <th style="text-align:center">Masquerade{{template "field-info" (index $d "policy-masquerade")}}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $p := .Policies}}
+          <tr>
+            <td>
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="policy-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Name}}
+                {{if .Immutable}}<span class="text-muted" style="font-size:0.75em;margin-left:0.4em">(system)</span>{{end}}
+              </button>
+            </td>
+            <td>{{if .Action}}{{.Action}}{{else}}reject{{end}}</td>
+            <td>{{if .IngressDisplay}}{{.IngressDisplay}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+            <td>{{if .EgressDisplay}}{{.EgressDisplay}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+            <td style="text-align:center">{{.MasqDisplay}}</td>
+            <td style="text-align:right">
+              {{if not .Immutable}}
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/firewall/policies/{{.Name}}"
+                      hx-confirm="Delete policy {{.Name}}?"
+                      hx-swap="none"
+                      title="Delete policy">
+                {{template "icon-trash"}}
+              </button>
+              {{end}}
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-policy-{{$i}}">
+            <td colspan="6" class="key-detail-cell">
+              <div class="key-detail-body">
+                {{if .Immutable}}
+                <p class="empty-message">This policy is system-defined and cannot be modified.</p>
+                {{else}}
+                <form hx-post="/configure/firewall/policies/{{.Name}}" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Action{{template "field-info" (index $d "policy-action")}}</th>
+                      <td>
+                        {{$action := .Action}}
+                        <select class="cfg-input" name="action">
+                          {{range $.PolicyActionOptions}}
+                          <option value="{{.Value}}" {{if or (eq $action .Value) (and (eq $action "") .IsDefault)}}selected{{end}}>{{.Label}}</option>
+                          {{end}}
+                        </select>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{printf "/infix-firewall:firewall/policy=%s/action" .Name | urlquery}}&redirect=/configure/firewall"
+                                hx-swap="none"
+                                hx-confirm="Reset action to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Ingress zones{{template "field-info" (index $d "policy-ingress")}}</th>
+                      <td colspan="2">
+                        <details class="cfg-multi">
+                          <summary class="cfg-multi-summary">{{if .IngressDisplay}}{{.IngressDisplay}}{{else}}(None){{end}}</summary>
+                          <div class="cfg-multi-body">
+                            {{range $.ZoneNames}}
+                            <label class="cfg-multi-item">
+                              <input type="checkbox" name="ingress" value="{{.}}" {{if index $p.IngressSet .}}checked{{end}}>
+                              {{.}}
+                            </label>
+                            {{end}}
+                          </div>
+                        </details>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Egress zones{{template "field-info" (index $d "policy-egress")}}</th>
+                      <td colspan="2">
+                        <details class="cfg-multi">
+                          <summary class="cfg-multi-summary">{{if .EgressDisplay}}{{.EgressDisplay}}{{else}}(None){{end}}</summary>
+                          <div class="cfg-multi-body">
+                            {{range $.ZoneNames}}
+                            <label class="cfg-multi-item">
+                              <input type="checkbox" name="egress" value="{{.}}" {{if index $p.EgressSet .}}checked{{end}}>
+                              {{.}}
+                            </label>
+                            {{end}}
+                          </div>
+                        </details>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Masquerade{{template "field-info" (index $d "policy-masquerade")}}</th>
+                      <td>
+                        <div class="yt-bool-group">
+                          <label><input type="radio" name="masquerade" value="true"  {{if .Masquerade}}checked{{end}}> Yes</label>
+                          <label><input type="radio" name="masquerade" value="false" {{if not .Masquerade}}checked{{end}}> No</label>
+                        </div>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{printf "/infix-firewall:firewall/policy=%s/masquerade" .Name | urlquery}}&redirect=/configure/firewall"
+                                hx-swap="none"
+                                hx-confirm="Reset masquerade to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <button type="button" class="btn btn-sm" data-close-detail="policy-{{$i}}">Cancel</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+                {{end}}
+              </div>
+            </td>
+          </tr>
+          {{end}}
+
+          {{if not .Policies}}
+          <tr><td colspan="6" class="yt-table-empty">No policies configured</td></tr>
+          {{end}}
+
+          {{/* Hidden add-policy row */}}
+          <tr id="add-policy-row" hidden>
+            <td colspan="6" class="key-detail-cell">
+              <form hx-post="/configure/firewall/policies" hx-swap="none">
+                <table class="info-table">
+                  <tr>
+                    <th>Name{{template "field-info" (index $d "policy-name")}}</th>
+                    <td colspan="2"><input class="cfg-input" type="text" name="name" required
+                               pattern="[a-zA-Z0-9\-_]+" placeholder="e.g. LAN-to-WAN"></td>
+                  </tr>
+                  <tr>
+                    <th>Action{{template "field-info" (index $d "policy-action")}}</th>
+                    <td colspan="2">
+                      <select class="cfg-input" name="action">
+                        {{range .PolicyActionOptions}}
+                        <option value="{{.Value}}" {{if .IsDefault}}selected{{end}}>{{.Label}}</option>
+                        {{end}}
+                      </select>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Ingress zones{{template "field-info" (index $d "policy-ingress")}}</th>
+                    <td colspan="2">
+                      <details class="cfg-multi">
+                        <summary class="cfg-multi-summary">(None)</summary>
+                        <div class="cfg-multi-body">
+                          {{range .ZoneNames}}
+                          <label class="cfg-multi-item">
+                            <input type="checkbox" name="ingress" value="{{.}}"> {{.}}
+                          </label>
+                          {{end}}
+                        </div>
+                      </details>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Egress zones{{template "field-info" (index $d "policy-egress")}}</th>
+                    <td colspan="2">
+                      <details class="cfg-multi">
+                        <summary class="cfg-multi-summary">(None)</summary>
+                        <div class="cfg-multi-body">
+                          {{range .ZoneNames}}
+                          <label class="cfg-multi-item">
+                            <input type="checkbox" name="egress" value="{{.}}"> {{.}}
+                          </label>
+                          {{end}}
+                        </div>
+                      </details>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Masquerade{{template "field-info" (index $d "policy-masquerade")}}</th>
+                    <td colspan="2">
+                      <div class="yt-bool-group">
+                        <label><input type="radio" name="masquerade" value="true"> Yes</label>
+                        <label><input type="radio" name="masquerade" value="false" checked> No</label>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <button type="button" class="btn btn-sm" data-hide="add-policy-row">Cancel</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-show="add-policy-row">+ Add Policy</button>
+    </div>
+  </section>
+
+  {{/* ── Custom Services ──────────────────────────────────────────────── */}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Services</div>
+    <p class="text-muted" style="font-size:0.85em;margin:0 1rem 0.5rem">
+      Define port/protocol bundles by name, e.g. <code>myapp = tcp 8080</code>.
+      Custom services appear in the zone Services picker alongside the built-in ones.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            <th>Name{{template "field-info" (index $d "service-name")}}</th>
+            <th>Description{{template "field-info" (index $d "service-description")}}</th>
+            <th>Ports</th>
+            <th>Destination{{template "field-info" (index $d "service-destination")}}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $s := .Services}}
+          <tr>
+            <td>
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="service-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Name}}
+              </button>
+            </td>
+            <td>{{if .Description}}{{.Description}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+            <td>{{if .PortsDisplay}}<code>{{.PortsDisplay}}</code>{{else}}<span class="text-muted">—</span>{{end}}</td>
+            <td>{{if .Destination}}<code>{{.Destination}}</code>{{else}}<span class="text-muted">any</span>{{end}}</td>
+            <td style="text-align:right">
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/firewall/services/{{.Name}}"
+                      hx-confirm="Delete service {{.Name}}?"
+                      hx-swap="none"
+                      title="Delete service">
+                {{template "icon-trash"}}
+              </button>
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-service-{{$i}}">
+            <td colspan="5" class="key-detail-cell">
+              <div class="key-detail-body">
+                <form hx-post="/configure/firewall/services/{{.Name}}" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Description{{template "field-info" (index $d "service-description")}}</th>
+                      <td colspan="2"><input class="cfg-input" type="text" name="description"
+                                 value="{{.Description}}" placeholder="Optional description"></td>
+                    </tr>
+                    <tr>
+                      <th>Destination{{template "field-info" (index $d "service-destination")}}</th>
+                      <td colspan="2"><input class="cfg-input" type="text" name="destination"
+                                 value="{{.Destination}}" placeholder="Optional IP address or prefix"></td>
+                    </tr>
+                    <tr>
+                      <th>Ports</th>
+                      <td colspan="2">
+                        <table class="info-table info-table-sub" style="margin-bottom:0.25rem">
+                          <thead>
+                            <tr>
+                              <th style="width:6em">Lower{{template "field-info" (index $d "service-port-lower")}}</th>
+                              <th style="width:6em">Upper{{template "field-info" (index $d "service-port-upper")}}</th>
+                              <th>Proto{{template "field-info" (index $d "service-port-proto")}}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {{range .Port}}
+                            <tr>
+                              <td><input class="cfg-input cfg-input-sm" type="number"
+                                         name="port-lower" min="1" max="65535"
+                                         value="{{.Lower}}"></td>
+                              <td><input class="cfg-input cfg-input-sm" type="number"
+                                         name="port-upper" min="1" max="65535"
+                                         value="{{if gt .Upper .Lower}}{{.Upper}}{{end}}"
+                                         placeholder="—"></td>
+                              <td>
+                                <select class="cfg-input cfg-input-sm" name="port-proto">
+                                  {{$cur := .Proto}}
+                                  {{range $.ProtoOptions}}
+                                  <option value="{{.Value}}" {{if eq $cur .Value}}selected{{end}}>{{.Label}}</option>
+                                  {{end}}
+                                </select>
+                              </td>
+                            </tr>
+                            {{end}}
+                            {{/* One blank row so the user can add another port without losing their session. */}}
+                            <tr>
+                              <td><input class="cfg-input cfg-input-sm" type="number" name="port-lower" min="1" max="65535"></td>
+                              <td><input class="cfg-input cfg-input-sm" type="number" name="port-upper" min="1" max="65535" placeholder="—"></td>
+                              <td>
+                                <select class="cfg-input cfg-input-sm" name="port-proto">
+                                  {{range $.ProtoOptions}}
+                                  <option value="{{.Value}}">{{.Label}}</option>
+                                  {{end}}
+                                </select>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <span class="text-muted" style="font-size:0.8em">Leave "Upper" blank for a single port. Blank "Lower" rows are ignored.</span>
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <button type="button" class="btn btn-sm" data-close-detail="service-{{$i}}">Cancel</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {{end}}
+
+          {{if not .Services}}
+          <tr><td colspan="5" class="yt-table-empty">No custom services configured</td></tr>
+          {{end}}
+
+          {{/* Hidden add-service row */}}
+          <tr id="add-service-row" hidden>
+            <td colspan="5" class="key-detail-cell">
+              <form hx-post="/configure/firewall/services" hx-swap="none">
+                <table class="info-table">
+                  <tr>
+                    <th>Name{{template "field-info" (index $d "service-name")}}</th>
+                    <td colspan="2"><input class="cfg-input" type="text" name="name" required
+                               pattern="[a-zA-Z0-9\-_]+" placeholder="e.g. myapp"></td>
+                  </tr>
+                  <tr>
+                    <th>Description{{template "field-info" (index $d "service-description")}}</th>
+                    <td colspan="2"><input class="cfg-input" type="text" name="description"
+                               placeholder="Optional description"></td>
+                  </tr>
+                  <tr>
+                    <th>Destination{{template "field-info" (index $d "service-destination")}}</th>
+                    <td colspan="2"><input class="cfg-input" type="text" name="destination"
+                               placeholder="Optional IP address or prefix"></td>
+                  </tr>
+                  <tr>
+                    <th>Port</th>
+                    <td colspan="2">
+                      <table class="info-table info-table-sub" style="margin-bottom:0.25rem">
+                        <thead>
+                          <tr>
+                            <th style="width:6em">Lower{{template "field-info" (index $d "service-port-lower")}}</th>
+                            <th style="width:6em">Upper{{template "field-info" (index $d "service-port-upper")}}</th>
+                            <th>Proto{{template "field-info" (index $d "service-port-proto")}}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><input class="cfg-input cfg-input-sm" type="number" name="port-lower" min="1" max="65535" required></td>
+                            <td><input class="cfg-input cfg-input-sm" type="number" name="port-upper" min="1" max="65535" placeholder="—"></td>
+                            <td>
+                              <select class="cfg-input cfg-input-sm" name="port-proto">
+                                {{range .ProtoOptions}}
+                                <option value="{{.Value}}" {{if .IsDefault}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
+                              </select>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <span class="text-muted" style="font-size:0.8em">Add more ports after creating the service.</span>
+                    </td>
+                  </tr>
+                </table>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <button type="button" class="btn btn-sm" data-hide="add-service-row">Cancel</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-show="add-service-row">+ Add Service</button>
+    </div>
+  </section>
+
+</section>
+{{end}}
+
+{{template "configure-toolbar" .}}
+</div>
+{{end}}{{/* end {{else}} — schema ready */}}
+
+{{end}}
+

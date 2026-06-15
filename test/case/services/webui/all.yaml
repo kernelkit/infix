@@ -1,0 +1,3 @@
+---
+- name: Web UI Login and CSRF Protection
+  case: login_csrf/test.py

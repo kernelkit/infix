@@ -1,0 +1,1858 @@
+{{define "configure-interfaces.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/interfaces"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-card">
+  <div class="card-header">Interfaces</div>
+  <div class="data-table-wrap">
+    <table class="data-table cfg-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Member of</th>
+          <th>Config</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $i, $r := .Interfaces}}
+        <tr>
+          <td>
+            <button class="key-row-toggle" type="button"
+                    aria-expanded="false" data-target="iface-{{$i}}">
+              <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Name}}
+            </button>
+          </td>
+          <td>{{.TypeDisplay}}</td>
+          <td>
+            {{if eq .OperStatus "up"}}
+            <span class="status-dot status-up"></span>up
+            {{else if eq .OperStatus "down"}}
+            <span class="status-dot status-down"></span>down
+            {{else}}
+            <span class="text-muted">{{.OperStatus}}</span>
+            {{end}}
+          </td>
+          <td>{{if .MemberOf}}{{.MemberOf}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td class="iface-cfg-cell">
+            {{range .ConfigTags}}<span class="iface-tag">{{.}}</span>{{end}}
+            {{if .AddrSummary}}<span class="iface-cfg-addr">{{.AddrSummary}}</span>{{end}}
+            {{if and (not .ConfigTags) (not .AddrSummary)}}<span class="text-muted">—</span>{{end}}
+          </td>
+          <td style="text-align:right">
+            {{if ne .TypeSlug "loopback"}}
+            <button type="button" class="btn-icon btn-icon-danger"
+                    hx-delete="/configure/interfaces/{{.Name}}"
+                    hx-confirm="Delete interface {{.Name}}?"
+                    hx-swap="none" title="Delete interface">
+              {{template "icon-trash"}}
+            </button>
+            {{end}}
+          </td>
+        </tr>
+
+        {{/* ── Fold-out edit form ───────────────────────────────────────── */}}
+        <tr class="key-detail-row" id="key-detail-iface-{{$i}}">
+          <td colspan="6" class="key-detail-cell">
+            <div class="key-detail-body">
+
+              {{/* ── General ──────────────────────────────────────────── */}}
+              {{$ip := printf "/ietf-interfaces:interfaces/interface=%s" .Name}}
+              <form hx-post="/configure/interfaces/{{.Name}}" hx-swap="none">
+                <h4 class="cfg-section-head">General</h4>
+                <table class="info-table">
+                  <tr>
+                    <th>Description{{template "field-info" (index $d "description")}}</th>
+                    <td>
+                      <input class="cfg-input" type="text" name="description"
+                             value="{{.Description}}" placeholder="Optional description">
+                    </td>
+                    <td class="cfg-reset-col">
+                      <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                              hx-delete="/configure/leaf?path={{$ip}}/description&redirect=/configure/interfaces"
+                              hx-swap="none"
+                              hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Enabled{{template "field-info" (index $d "enabled")}}</th>
+                    <td>
+                      <div class="yt-bool-group">
+                        <label><input type="radio" name="enabled" value="true"  {{if .AdminEnabled}}checked{{end}}> Yes</label>
+                        <label><input type="radio" name="enabled" value="false" {{if not .AdminEnabled}}checked{{end}}> No</label>
+                      </div>
+                    </td>
+                    <td class="cfg-reset-col">
+                      <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                              hx-delete="/configure/leaf?path={{$ip}}/enabled&redirect=/configure/interfaces"
+                              hx-swap="none"
+                              hx-confirm="Reset enabled to its YANG default?">{{template "icon-reset"}}</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>MAC address{{template "field-info" (index $d "mac")}}</th>
+                    <td>
+                      <input class="cfg-input cfg-input-mono" type="text" name="mac"
+                             value="{{if .CustomPhysAddress}}{{.CustomPhysAddress.Static}}{{end}}"
+                             placeholder="{{if .PhysAddress}}{{.PhysAddress}} (default){{else}}aa:bb:cc:dd:ee:ff{{end}}"
+                             pattern="[0-9a-fA-F][02468aAcCeE](:[0-9a-fA-F]{2}){5}"
+                             title="Unicast MAC, lower-case or upper-case hex, e.g. 02:11:22:33:44:55">
+                    </td>
+                    <td class="cfg-reset-col">
+                      <button type="button" class="btn btn-secondary btn-sm" title="Clear custom MAC"
+                              hx-delete="/configure/leaf?path={{$ip}}/infix-interfaces:custom-phys-address&redirect=/configure/interfaces"
+                              hx-swap="none"
+                              hx-confirm="Clear the custom MAC override?">{{template "icon-reset"}}</button>
+                    </td>
+                  </tr>
+                </table>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                  <button type="button" class="btn btn-sm" data-close-detail="iface-{{$i}}">Cancel</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+
+              {{/* ── IP Addresses ──────────────────────────────────────── */}}
+              {{if .HasIP}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">IP Addresses</h4>
+
+                {{/* IPv4.  Toggles, DHCP foldout, address list, and add-address
+                     row visually compose one IPv4 group; the Save button at the
+                     bottom is bound to the toggles form via the HTML5 `form`
+                     attribute, so users see the whole group before clicking Save. */}}
+                {{template "iface-ipv4-block" .}}
+
+                {{/* IPv6 — mirrors the IPv4 form structure above. */}}
+                {{/* IPv6 — mirrors the IPv4 layout above. */}}
+                {{template "iface-ipv6-block" .}}
+              </div>
+              {{end}}{{/* HasIP */}}
+
+
+              {{/* ── Bridge port editor ──────────────────────────────── */}}
+              {{if .IsBridgePort}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">Bridge Port Settings</h4>
+                <form hx-post="/configure/interfaces/{{.Name}}/bridge-port" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Bridge{{template "field-info" (index $d "bp-bridge")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="text" name="bridge"
+                                 value="{{if .BridgePort}}{{.BridgePort.Bridge}}{{end}}" required></td>
+                    </tr>
+                    {{$bpPath := printf "/ietf-interfaces:interfaces/interface=%s/infix-interfaces:bridge-port" .Name}}
+                    {{if .ParentBridgeIs8021Q}}
+                    <tr>
+                      <th>PVID{{template "field-info" (index $d "bp-pvid")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="number" name="pvid"
+                                 {{if and .BridgePort .BridgePort.PVID}}value="{{deref .BridgePort.PVID}}"{{end}}
+                                 min="1" max="4094" placeholder="—"></td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$bpPath}}/pvid&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset PVID to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    {{end}}
+                    <tr>
+                      <th>Flood unknown{{template "field-info" (index $d "bp-flood")}}</th>
+                      <td>
+                        <div class="yt-bool-group">
+                          <label><input type="checkbox" name="flood-broadcast"
+                                 {{if or (not .BridgePort) (not .BridgePort.Flood) (not .BridgePort.Flood.Broadcast) (deref .BridgePort.Flood.Broadcast)}}checked{{end}}> broadcast</label>
+                          <label><input type="checkbox" name="flood-unicast"
+                                 {{if or (not .BridgePort) (not .BridgePort.Flood) (not .BridgePort.Flood.Unicast) (deref .BridgePort.Flood.Unicast)}}checked{{end}}> unicast</label>
+                          <label><input type="checkbox" name="flood-multicast"
+                                 {{if or (not .BridgePort) (not .BridgePort.Flood) (not .BridgePort.Flood.Multicast) (deref .BridgePort.Flood.Multicast)}}checked{{end}}> multicast</label>
+                        </div>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG defaults"
+                                hx-delete="/configure/leaf?path={{$bpPath}}/flood&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset flood flags to YANG defaults?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Multicast router{{template "field-info" (index $d "bp-mc-router")}}</th>
+                      <td>
+                        {{/* YANG default is auto. */}}
+                        {{$mr := "auto"}}{{if and .BridgePort .BridgePort.Multicast .BridgePort.Multicast.Router}}{{$mr = .BridgePort.Multicast.Router}}{{end}}
+                        <select class="cfg-input cfg-input-sm" name="mc-router">
+                          {{range $.MCRouterOptions}}
+                          <option value="{{.Value}}" {{if eq $mr .Value}}selected{{end}}>{{.Label}}</option>
+                          {{end}}
+                        </select>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$bpPath}}/multicast/router&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset multicast router to YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Multicast fast-leave{{template "field-info" (index $d "bp-mc-fast-leave")}}</th>
+                      <td>
+                        {{/* Hidden companion lets the handler distinguish
+                             "form omitted the field" from "user unchecked". */}}
+                        <input type="hidden" name="mc-fast-leave-present" value="1">
+                        <label><input type="checkbox" name="mc-fast-leave"
+                               {{if and .BridgePort .BridgePort.Multicast .BridgePort.Multicast.FastLeave (deref .BridgePort.Multicast.FastLeave)}}checked{{end}}>
+                               Drop groups immediately on IGMP/MLD leave</label>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$bpPath}}/multicast/fast-leave&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset fast-leave to YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save Bridge Port</button>
+                    <button type="button" class="btn btn-outline btn-sm"
+                            hx-delete="/configure/interfaces/{{.Name}}/bridge-port"
+                            hx-swap="none"
+                            hx-confirm="Detach {{.Name}} from bridge {{if .BridgePort}}{{.BridgePort.Bridge}}{{end}}?">Detach</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+              {{end}}{{/* IsBridgePort */}}
+
+
+              {{/* ── LAG port editor ─────────────────────────────────── */}}
+              {{if .IsLagPort}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">LAG Port Settings</h4>
+                <p class="text-muted" style="font-size:0.9em">
+                  LACP state is operational-only; configure the LAG itself on its own row.
+                </p>
+                <form hx-post="/configure/interfaces/{{.Name}}/lag-port" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>LAG{{template "field-info" (index $d "lp-lag")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="text" name="lag"
+                                 value="{{if .LagPort}}{{.LagPort.LAG}}{{end}}" required></td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save LAG Port</button>
+                    <button type="button" class="btn btn-outline btn-sm"
+                            hx-delete="/configure/interfaces/{{.Name}}/lag-port"
+                            hx-swap="none"
+                            hx-confirm="Detach {{.Name}} from LAG {{if .LagPort}}{{.LagPort.LAG}}{{end}}?">Detach</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+              {{end}}{{/* IsLagPort */}}
+
+
+              {{/* ── Ethernet ────────────────────────────────────────── */}}
+              {{if eq .TypeSlug "ethernet"}}
+              {{$ep := printf "%s/ieee802-ethernet-interface:ethernet" $ip}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">Ethernet</h4>
+                <form hx-post="/configure/interfaces/{{.Name}}/ethernet" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Auto-negotiation{{template "field-info" (index $d "eth-autoneg")}}</th>
+                      <td><label><input type="checkbox" name="autoneg" {{if .EthAutoneg}}checked{{end}}> Enabled</label></td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$ep}}/auto-negotiation/enable&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset auto-negotiation to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <th>Advertised speeds{{template "field-info" (index $d "eth-advertised")}}</th>
+                      <td>
+                        {{if .EthSupported}}
+                        {{$advertised := .EthAdvertised}}
+                        <details class="cfg-multi">
+                          <summary class="cfg-multi-summary">
+                            {{if $advertised}}
+                              {{range $i, $v := $advertised}}{{if $i}}, {{end}}{{shortPMD $v}}{{end}}
+                            {{else}}(All){{end}}
+                          </summary>
+                          <div class="cfg-multi-body">
+                            <label class="cfg-multi-item cfg-multi-all">
+                              <input type="checkbox" data-multi-all {{if not $advertised}}checked{{end}}>
+                              (All)
+                            </label>
+                            {{range .EthSupported}}
+                            {{$cur := .}}
+                            {{$selected := false}}
+                            {{range $advertised}}{{if eq . $cur}}{{$selected = true}}{{end}}{{end}}
+                            <label class="cfg-multi-item">
+                              <input type="checkbox" name="advertised" value="{{.}}" {{if $selected}}checked{{end}}>
+                              {{shortPMD .}}
+                            </label>
+                            {{end}}
+                          </div>
+                        </details>
+                        {{else}}
+                        <span class="text-muted">No supported-PMD data from device.</span>
+                        {{end}}
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/interfaces/{{.Name}}/ethernet/advertised"
+                                hx-swap="none"
+                                hx-confirm="Reset advertised speeds to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <th>Duplex{{template "field-info" (index $d "eth-duplex")}}</th>
+                      <td>
+                        <label><input type="radio" name="duplex" value="" {{if eq .EthDuplex ""}}checked{{end}}> Auto</label>
+                        <label style="margin-left:1em"><input type="radio" name="duplex" value="full" {{if eq .EthDuplex "full"}}checked{{end}}> Full</label>
+                        <label style="margin-left:1em"><input type="radio" name="duplex" value="half" {{if eq .EthDuplex "half"}}checked{{end}}> Half</label>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$ep}}/duplex&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset duplex to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <th>MDI-X{{template "field-info" (index $d "eth-mdix")}}</th>
+                      <td>
+                        <label><input type="radio" name="mdix" value="" {{if eq .MDIXState ""}}checked{{end}}> Auto-MDIX</label>
+                        <label style="margin-left:1em"><input type="radio" name="mdix" value="false" {{if eq .MDIXState "false"}}checked{{end}}> Force MDI</label>
+                        <label style="margin-left:1em"><input type="radio" name="mdix" value="true" {{if eq .MDIXState "true"}}checked{{end}}> Force MDI-X</label>
+                      </td>
+                      <td class="cfg-reset-col">
+                        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                hx-delete="/configure/leaf?path={{$ep}}/infix-ethernet-interface:mdi-x&redirect=/configure/interfaces"
+                                hx-swap="none"
+                                hx-confirm="Reset MDI-X to its YANG default?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer">
+                    <button class="btn btn-primary" type="submit">Save</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+              {{end}}{{/* TypeSlug ethernet */}}
+
+
+              {{/* ── WiFi interface editor ───────────────────────────── */}}
+              {{/* Radio + PSK pickers mirror the Add-Interface wizard
+                   pattern: each picker has Edit / + New buttons that
+                   toggle an inline form (radio: name/country/band/
+                   channel; PSK: name/passphrase). The forms POST to
+                   the wizard endpoints and HTMX swaps the picker
+                   <select> in place — picker-id is a hidden form
+                   input scoped to this row so the endpoint renders
+                   the picker with the right id attribute. */}}
+              {{if .IsWifi}}
+              {{$ifname := .Name}}
+              {{$radioPickerID := printf "wifi-row-%s-radio" $ifname}}
+              {{$radioFormID   := printf "wifi-row-%s-radio-form" $ifname}}
+              {{$radioNameID   := printf "wifi-row-%s-radio-name" $ifname}}
+              {{$pskPickerID   := printf "wifi-row-%s-psk" $ifname}}
+              {{$pskFormID     := printf "wifi-row-%s-psk-form" $ifname}}
+              {{$pskNameID     := printf "wifi-row-%s-psk-name" $ifname}}
+              {{$pskValueID    := printf "wifi-row-%s-psk-value" $ifname}}
+              {{$curRadio      := ""}}{{if .WiFi}}{{$curRadio = .WiFi.Radio}}{{end}}
+              {{$curSecret     := ""}}
+              {{if and .WiFi .WiFi.AccessPoint .WiFi.AccessPoint.Security}}{{$curSecret = .WiFi.AccessPoint.Security.Secret}}{{end}}
+              {{if and .WiFi .WiFi.Station .WiFi.Station.Security}}{{$curSecret = .WiFi.Station.Security.Secret}}{{end}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">WiFi {{if eq .WifiMode "access-point"}}(Access Point){{else if eq .WifiMode "station"}}(Station){{end}}</h4>
+                <form hx-post="/configure/interfaces/{{$ifname}}/wifi" hx-swap="none">
+                  <input type="hidden" name="mode" value="{{.WifiMode}}">
+                  <table class="info-table">
+                    <tr>
+                      <th>Radio{{template "field-info" (index $d "wifi-radio")}}</th>
+                      <td>
+                        <div class="ks-picker-row">
+                          {{template "wizard-radio-picker.html" (dict "Radios" $.WizardWifiRadios "Selected" $curRadio "ID" $radioPickerID)}}
+                          <button type="button" class="btn btn-secondary btn-sm"
+                                  data-edit-form="{{$radioFormID}}"
+                                  data-edit-source="{{$radioPickerID}}"
+                                  data-show="{{$radioFormID}}">Edit</button>
+                          <button type="button" class="btn btn-secondary btn-sm"
+                                  data-add-form="{{$radioFormID}}"
+                                  data-show="{{$radioFormID}}">+ New</button>
+                        </div>
+                        <div id="{{$radioFormID}}" hidden class="ks-create-form">
+                          <input type="hidden" name="picker-id" value="{{$radioPickerID}}">
+                          <table class="info-table info-table-sub">
+                            <tr>
+                              <th>Radio name</th>
+                              <td>
+                                <select class="cfg-input cfg-input-sm" name="radio-name" id="{{$radioNameID}}" required>
+                                  {{if $.WizardAvailableRadios}}
+                                    <option value="" disabled selected>— pick detected radio —</option>
+                                    {{range $.WizardAvailableRadios}}<option value="{{.}}">{{.}}</option>{{end}}
+                                  {{else}}
+                                    <option value="" disabled selected>No unconfigured WiFi radios detected</option>
+                                  {{end}}
+                                </select>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Country code</th>
+                              <td>
+                                <select class="cfg-input cfg-input-sm" name="country-code" required>
+                                  <option value="" disabled selected>— country —</option>
+                                  {{range $.WizardCountryOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                                </select>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Band</th>
+                              <td>
+                                <select class="cfg-input cfg-input-sm" name="band">
+                                  <option value="" selected>— auto-pick band —</option>
+                                  {{range $.WizardBandOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                                </select>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Channel</th>
+                              <td>
+                                <input class="cfg-input cfg-input-sm" type="text" name="channel"
+                                       value="auto" pattern="auto|[0-9]+">
+                              </td>
+                            </tr>
+                          </table>
+                          <div class="ks-create-actions">
+                            <button type="button" class="btn btn-primary btn-sm"
+                                    hx-post="/configure/interfaces/wizard/radio"
+                                    hx-include="closest .ks-create-form"
+                                    hx-target="#{{$radioPickerID}}"
+                                    hx-swap="outerHTML"
+                                    data-ks-create-success="{{$radioFormID}}">Save</button>
+                            <button type="button" class="btn btn-sm"
+                                    data-hide="{{$radioFormID}}">Cancel</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    {{if and .WiFi .WiFi.AccessPoint}}
+                    {{$ap := .WiFi.AccessPoint}}
+                    <tr>
+                      <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="text" name="ssid"
+                                 value="{{$ap.SSID}}" maxlength="32" required></td>
+                    </tr>
+                    <tr>
+                      <th>Hidden SSID{{template "field-info" (index $d "wifi-hidden")}}</th>
+                      <td>
+                        <label><input type="checkbox" name="hidden"
+                               {{if and $ap.Hidden (deref $ap.Hidden)}}checked{{end}}>
+                               Don't broadcast SSID in beacons</label>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Security mode{{template "field-info" (index $d "wifi-sec-mode")}}</th>
+                      <td>
+                        {{$sm := "wpa2-wpa3-personal"}}{{if and $ap.Security $ap.Security.Mode}}{{$sm = $ap.Security.Mode}}{{end}}
+                        <select class="cfg-input cfg-input-sm" name="sec-mode">
+                          {{range $.WiFiSecOptionsAP}}
+                          <option value="{{.Value}}" {{if eq $sm .Value}}selected{{end}}>{{.Label}}</option>
+                          {{end}}
+                        </select>
+                      </td>
+                    </tr>
+                    {{else if and .WiFi .WiFi.Station}}
+                    {{$sta := .WiFi.Station}}
+                    <tr>
+                      <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="text" name="ssid"
+                                 value="{{$sta.SSID}}" maxlength="32" required></td>
+                    </tr>
+                    <tr>
+                      <th>Security mode{{template "field-info" (index $d "wifi-sec-mode")}}</th>
+                      <td>
+                        {{$sm := "auto"}}{{if and $sta.Security $sta.Security.Mode}}{{$sm = $sta.Security.Mode}}{{end}}
+                        <select class="cfg-input cfg-input-sm" name="sec-mode">
+                          {{range $.WiFiSecOptionsSta}}
+                          <option value="{{.Value}}" {{if eq $sm .Value}}selected{{end}}>{{.Label}}</option>
+                          {{end}}
+                        </select>
+                      </td>
+                    </tr>
+                    {{end}}
+                    <tr>
+                      <th>PSK{{template "field-info" (index $d "wifi-secret")}}</th>
+                      <td>
+                        <div class="ks-picker-row">
+                          {{template "wizard-psk-picker.html" (dict "Keys" $.WizardSymKeys "Selected" $curSecret "ID" $pskPickerID)}}
+                          <button type="button" class="btn btn-secondary btn-sm"
+                                  data-edit-form="{{$pskFormID}}"
+                                  data-edit-source="{{$pskPickerID}}"
+                                  data-edit-name-target="{{$pskNameID}}"
+                                  data-show="{{$pskFormID}}">Edit</button>
+                          <button type="button" class="btn btn-secondary btn-sm"
+                                  data-add-form="{{$pskFormID}}"
+                                  data-show="{{$pskFormID}}">+ New</button>
+                        </div>
+                        <div id="{{$pskFormID}}" hidden class="ks-create-form">
+                          <input type="hidden" name="picker-id" value="{{$pskPickerID}}">
+                          <table class="info-table info-table-sub">
+                            <tr>
+                              <th>Key name</th>
+                              <td>
+                                <input class="cfg-input cfg-input-sm" type="text"
+                                       id="{{$pskNameID}}"
+                                       name="key-name" autocomplete="off" required>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Passphrase</th>
+                              <td>
+                                <div class="cfg-secret-wrap">
+                                  <input class="cfg-input cfg-input-sm cfg-input-mask"
+                                         type="text" name="key-value"
+                                         id="{{$pskValueID}}"
+                                         autocomplete="off"
+                                         spellcheck="false"
+                                         minlength="8" maxlength="63" required
+                                         data-1p-ignore="true"
+                                         data-lpignore="true"
+                                         data-bwignore="true"
+                                         data-form-type="other">
+                                  <button type="button" class="btn-icon cfg-secret-toggle"
+                                          aria-label="Show / hide passphrase"
+                                          data-toggle-mask="{{$pskValueID}}">👁</button>
+                                </div>
+                              </td>
+                            </tr>
+                          </table>
+                          <div class="ks-create-actions">
+                            <button type="button" class="btn btn-primary btn-sm"
+                                    hx-post="/configure/interfaces/wizard/sym-key"
+                                    hx-include="closest .ks-create-form"
+                                    hx-target="#{{$pskPickerID}}"
+                                    hx-swap="outerHTML"
+                                    data-ks-create-success="{{$pskFormID}}">Save</button>
+                            <button type="button" class="btn btn-sm"
+                                    data-hide="{{$pskFormID}}">Cancel</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save WiFi</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+              {{end}}{{/* IsWifi */}}
+
+
+              {{/* ── Bridge editor ────────────────────────────────────── */}}
+              {{if .IsBridge}}
+              <div style="margin-top:1rem">
+
+                {{/* Bridge settings */}}
+                <h4 class="cfg-section-head">Bridge Settings</h4>
+                <form hx-post="/configure/interfaces/{{.Name}}/bridge" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Type{{template "field-info" (index $d "bridge-type")}}</th>
+                      <td colspan="2">
+                        <div class="yt-bool-group">
+                          <label><input type="radio" name="bridge-type" value="ieee8021d"
+                                 {{if not .BridgeIs8021Q}}checked{{end}}> 802.1D (simple)</label>
+                          <label><input type="radio" name="bridge-type" value="ieee8021q"
+                                 {{if .BridgeIs8021Q}}checked{{end}}> 802.1Q (VLAN filtering)</label>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th style="vertical-align:top">Ports</th>
+                      <td colspan="2">
+                        {{if $r.PortCandidates}}
+                        <div class="fw-check-scroll">
+                          <div class="fw-check-grid">
+                            {{range $r.PortCandidates}}
+                            <label><input type="checkbox" name="members" value="{{.}}"
+                                   {{if index $r.BridgeMemberSet .}}checked{{end}}> {{.}}</label>
+                            {{end}}
+                          </div>
+                        </div>
+                        {{else}}
+                        <span class="text-muted" style="font-size:0.85em">No candidate port interfaces available.</span>
+                        {{end}}
+                      </td>
+                    </tr>
+                  </table>
+
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save Bridge</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+
+                {{$brPath := printf "/ietf-interfaces:interfaces/interface=%s/infix-interfaces:bridge" .Name}}
+                {{/* STP — own form, save inside the fold-out so the
+                     section is self-contained. YANG defaults are
+                     rendered inline (value="..." not a placeholder)
+                     so the user sees the actual default; the reset
+                     button drops the candidate value and lets YANG
+                     re-apply. */}}
+                <form hx-post="/configure/interfaces/{{.Name}}/bridge/stp" hx-swap="none">
+                  <details style="margin-top:0.75rem">
+                    <summary style="cursor:pointer;font-size:0.9em;color:var(--text-muted);padding:0.25rem 0">
+                      Spanning Tree Protocol
+                    </summary>
+                    <table class="info-table" style="margin-top:0.5rem">
+                      <tr>
+                        <th>Protocol{{template "field-info" (index $d "stp-force")}}</th>
+                        <td>
+                          {{$stpForce := "rstp"}}{{if and .Bridge .Bridge.STP.ForceProtocol}}{{$stpForce = .Bridge.STP.ForceProtocol}}{{end}}
+                          <select class="cfg-input" name="stp-force-protocol">
+                            {{range $.STPProtoOptions}}
+                            <option value="{{.Value}}" {{if eq $stpForce .Value}}selected{{end}}>{{.Label}}</option>
+                            {{end}}
+                          </select>
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/stp/force-protocol&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset force-protocol to YANG default (rstp)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Hello time (s){{template "field-info" (index $d "stp-hello")}}</th>
+                        <td>
+                          <input class="cfg-input cfg-input-sm" type="number" name="stp-hello-time"
+                                 value="{{if and .Bridge .Bridge.STP.HelloTime}}{{.Bridge.STP.HelloTime}}{{else}}2{{end}}"
+                                 min="1" max="10">
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/stp/hello-time&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset hello time to YANG default (2)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Forward delay (s){{template "field-info" (index $d "stp-fwd-delay")}}</th>
+                        <td>
+                          <input class="cfg-input cfg-input-sm" type="number" name="stp-forward-delay"
+                                 value="{{if and .Bridge .Bridge.STP.ForwardDelay}}{{.Bridge.STP.ForwardDelay}}{{else}}15{{end}}"
+                                 min="4" max="30">
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/stp/forward-delay&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset forward delay to YANG default (15)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Max age (s){{template "field-info" (index $d "stp-max-age")}}</th>
+                        <td>
+                          <input class="cfg-input cfg-input-sm" type="number" name="stp-max-age"
+                                 value="{{if and .Bridge .Bridge.STP.MaxAge}}{{.Bridge.STP.MaxAge}}{{else}}20{{end}}"
+                                 min="6" max="40">
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/stp/max-age&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset max age to YANG default (20)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Transmit hold count{{template "field-info" (index $d "stp-hold-count")}}</th>
+                        <td>
+                          <input class="cfg-input cfg-input-sm" type="number" name="stp-transmit-hold-count"
+                                 value="{{if and .Bridge .Bridge.STP.TransmitHoldCount}}{{.Bridge.STP.TransmitHoldCount}}{{else}}6{{end}}"
+                                 min="1" max="10">
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/stp/transmit-hold-count&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset transmit hold count to YANG default (6)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Max hops{{template "field-info" (index $d "stp-max-hops")}}</th>
+                        <td>
+                          <input class="cfg-input cfg-input-sm" type="number" name="stp-max-hops"
+                                 value="{{if and .Bridge .Bridge.STP.MaxHops}}{{.Bridge.STP.MaxHops}}{{else}}20{{end}}"
+                                 min="1" max="255">
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/stp/max-hops&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset max hops to YANG default (20)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                    </table>
+                    <div class="cfg-card-footer" style="padding-left:0;margin-top:0.5rem">
+                      <button class="btn btn-primary btn-sm" type="submit">Save STP</button>
+                      <span class="cfg-save-status"></span>
+                    </div>
+                  </details>
+                </form>
+
+                {{/* Multicast Snooping — parallel STP layout. YANG
+                     defaults inline: querier=auto, query-interval=125. */}}
+                <form hx-post="/configure/interfaces/{{.Name}}/bridge/multicast" hx-swap="none">
+                  <details style="margin-top:0.5rem">
+                    <summary style="cursor:pointer;font-size:0.9em;color:var(--text-muted);padding:0.25rem 0">
+                      Multicast Snooping
+                    </summary>
+                    <table class="info-table" style="margin-top:0.5rem">
+                      <tr>
+                        <th>Snooping{{template "field-info" (index $d "mc-snoop")}}</th>
+                        <td>
+                          <label><input type="checkbox" name="snooping"
+                                 {{if or (not .Bridge) (not .Bridge.Multicast) (not .Bridge.Multicast.Snooping) (deref .Bridge.Multicast.Snooping)}}checked{{end}}>
+                                 Enable IGMP/MLD snooping</label>
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/multicast/snooping&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset snooping to YANG default (true)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Querier{{template "field-info" (index $d "mc-querier")}}</th>
+                        <td>
+                          {{$q := "auto"}}{{if and .Bridge .Bridge.Multicast .Bridge.Multicast.Querier}}{{$q = .Bridge.Multicast.Querier}}{{end}}
+                          <select class="cfg-input cfg-input-sm" name="querier">
+                            {{range $.WiFiQuerierOptions}}
+                            <option value="{{.Value}}" {{if eq $q .Value}}selected{{end}}>{{.Label}}</option>
+                            {{end}}
+                          </select>
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/multicast/querier&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset querier to YANG default (auto)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Query interval (s){{template "field-info" (index $d "mc-query-int")}}</th>
+                        <td>
+                          <input class="cfg-input cfg-input-sm" type="number" name="query-interval"
+                                 value="{{if and .Bridge .Bridge.Multicast .Bridge.Multicast.QueryInterval}}{{deref .Bridge.Multicast.QueryInterval}}{{else}}125{{end}}"
+                                 min="1" max="3600">
+                        </td>
+                        <td class="cfg-reset-col">
+                          <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                                  hx-delete="/configure/leaf?path={{$brPath}}/multicast/query-interval&redirect=/configure/interfaces"
+                                  hx-swap="none"
+                                  hx-confirm="Reset query interval to YANG default (125)?">{{template "icon-reset"}}</button>
+                        </td>
+                      </tr>
+                    </table>
+                    <div class="cfg-card-footer" style="padding-left:0;margin-top:0.5rem">
+                      <button class="btn btn-primary btn-sm" type="submit">Save Multicast</button>
+                      <span class="cfg-save-status"></span>
+                    </div>
+                  </details>
+                </form>
+
+                {{/* 802.1Q VLANs — matrix layout: rows = VLAN, columns
+                     = bridge ports + self, cells = U/T/-. Click VID to
+                     expand the existing per-port checkbox editor. */}}
+                {{if .BridgeIs8021Q}}
+                <h4 class="cfg-section-head" style="margin-top:1rem">VLANs</h4>
+                <div class="data-table-wrap">
+                  <table class="data-table cfg-table">
+                    <thead>
+                      <tr>
+                        <th>VID</th>
+                        {{range $r.BridgeMembers}}<th>{{.}}</th>{{end}}
+                        <th>{{$r.Name}}<br><span class="text-muted" style="font-size:0.75em">(self)</span></th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{range $vi, $vlan := .VLANRows}}
+                      <tr>
+                        <td>
+                          <button class="key-row-toggle" type="button"
+                                  aria-expanded="false" data-target="vlan-{{$i}}-{{$vi}}">
+                            <span class="key-row-arrow" aria-hidden="true">▶</span>{{.VID}}
+                          </button>
+                        </td>
+                        {{range $r.BridgeMembers}}
+                          {{if index $vlan.UntaggedSet .}}<td><strong>U</strong></td>
+                          {{else if index $vlan.TaggedSet .}}<td><strong>T</strong></td>
+                          {{else}}<td class="text-muted">—</td>{{end}}
+                        {{end}}
+                        {{if index $vlan.UntaggedSet $r.Name}}<td><strong>U</strong></td>
+                        {{else if index $vlan.TaggedSet $r.Name}}<td><strong>T</strong></td>
+                        {{else}}<td class="text-muted">—</td>{{end}}
+                        <td style="text-align:right">
+                          <button type="button" class="btn-icon btn-icon-danger"
+                                  hx-delete="/configure/interfaces/{{$r.Name}}/bridge/vlans/{{.VID}}"
+                                  hx-confirm="Delete VLAN {{.VID}}?"
+                                  hx-swap="none" title="Delete VLAN">
+                            {{template "icon-trash"}}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr class="key-detail-row" id="key-detail-vlan-{{$i}}-{{$vi}}">
+                        <td colspan="{{add (len $r.BridgeMembers) 3}}" class="key-detail-cell">
+                          <div class="key-detail-body">
+                            <form hx-post="/configure/interfaces/{{$r.Name}}/bridge/vlans/{{.VID}}" hx-swap="none">
+                              <table class="info-table">
+                                <tr>
+                                  <th>Untagged</th>
+                                  <td>
+                                    <div class="fw-check-scroll">
+                                      <div class="fw-check-grid">
+                                        {{range $r.BridgeMembers}}
+                                        <label><input type="checkbox" name="untagged" value="{{.}}"
+                                               {{if index $vlan.UntaggedSet .}}checked{{end}}> {{.}}</label>
+                                        {{end}}
+                                        <label><input type="checkbox" name="untagged" value="{{$r.Name}}"
+                                               {{if index $vlan.UntaggedSet $r.Name}}checked{{end}}> {{$r.Name}} (self)</label>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <th>Tagged</th>
+                                  <td>
+                                    <div class="fw-check-scroll">
+                                      <div class="fw-check-grid">
+                                        {{range $r.BridgeMembers}}
+                                        <label><input type="checkbox" name="tagged" value="{{.}}"
+                                               {{if index $vlan.TaggedSet .}}checked{{end}}> {{.}}</label>
+                                        {{end}}
+                                        <label><input type="checkbox" name="tagged" value="{{$r.Name}}"
+                                               {{if index $vlan.TaggedSet $r.Name}}checked{{end}}> {{$r.Name}} (self)</label>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              </table>
+                              <div class="cfg-card-footer" style="padding-left:0">
+                                <button class="btn btn-primary btn-sm" type="submit">Save VLAN</button>
+                                <button type="button" class="btn btn-sm" data-close-detail="vlan-{{$i}}-{{$vi}}">Cancel</button>
+                                <span class="cfg-save-status"></span>
+                              </div>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                      {{end}}
+
+                      {{if not .VLANRows}}
+                      <tr><td colspan="{{add (len $r.BridgeMembers) 3}}" class="yt-table-empty">No VLANs configured</td></tr>
+                      {{end}}
+
+                      {{/* Add VLAN inline row */}}
+                      <tr id="add-vlan-row-{{$i}}" hidden>
+                        <td colspan="{{add (len $r.BridgeMembers) 3}}" class="key-detail-cell">
+                          <form hx-post="/configure/interfaces/{{.Name}}/bridge/vlans" hx-swap="none">
+                            <table class="info-table">
+                              <tr>
+                                <th>VID</th>
+                                <td><input class="cfg-input cfg-input-sm" type="number"
+                                           name="vid" required min="1" max="4094"
+                                           placeholder="1–4094"></td>
+                              </tr>
+                              <tr>
+                                <th>Untagged</th>
+                                <td>
+                                  <div class="fw-check-scroll">
+                                    <div class="fw-check-grid">
+                                      {{range .BridgeMembers}}
+                                      <label><input type="checkbox" name="untagged" value="{{.}}"> {{.}}</label>
+                                      {{end}}
+                                      <label><input type="checkbox" name="untagged" value="{{.Name}}"> {{.Name}} (self)</label>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr>
+                                <th>Tagged</th>
+                                <td>
+                                  <div class="fw-check-scroll">
+                                    <div class="fw-check-grid">
+                                      {{range .BridgeMembers}}
+                                      <label><input type="checkbox" name="tagged" value="{{.}}"> {{.}}</label>
+                                      {{end}}
+                                      <label><input type="checkbox" name="tagged" value="{{.Name}}"> {{.Name}} (self)</label>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                            <div class="cfg-card-footer" style="padding-left:0">
+                              <button class="btn btn-primary btn-sm" type="submit">Add VLAN</button>
+                              <button type="button" class="btn btn-sm" data-hide="add-vlan-row-{{$i}}">Cancel</button>
+                              <span class="cfg-save-status"></span>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="cfg-card-footer" style="padding:0.5rem 0 0">
+                  <button type="button" class="btn-add-row" data-show="add-vlan-row-{{$i}}">+ Add VLAN</button>
+                </div>
+                {{end}}{{/* BridgeIs8021Q */}}
+              </div>
+              {{end}}{{/* IsBridge */}}
+
+              {{/* ── LAG editor ───────────────────────────────────────── */}}
+              {{if .IsLag}}
+              <div style="margin-top:1rem">
+                <h4 class="cfg-section-head">Members</h4>
+                {{if $r.PortCandidates}}
+                <form hx-post="/configure/interfaces/{{.Name}}/lag/members" hx-swap="none">
+                  <div class="fw-check-scroll" style="margin-bottom:0.5rem">
+                    <div class="fw-check-grid">
+                      {{range $r.PortCandidates}}
+                      <label><input type="checkbox" name="members" value="{{.}}"
+                             {{if index $r.BridgeMemberSet .}}checked{{end}}> {{.}}</label>
+                      {{end}}
+                    </div>
+                  </div>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save Members</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+                {{else}}
+                <p class="text-muted" style="font-size:0.85em">No candidate port interfaces available.</p>
+                {{end}}
+
+                <h4 class="cfg-section-head" style="margin-top:1rem">LAG Settings</h4>
+                <form hx-post="/configure/interfaces/{{.Name}}/lag" hx-swap="none">
+                  {{$lagMode := ""}}{{if and .Lag .Lag.Mode}}{{$lagMode = .Lag.Mode}}{{end}}
+                  <table class="info-table">
+                    <tr>
+                      <th>Mode{{template "field-info" (index $d "lag-mode")}}</th>
+                      <td colspan="2">
+                        <div class="yt-bool-group">
+                          {{range $.LagModeOptions}}
+                          <label><input type="radio" name="mode" value="{{.Value}}"
+                                 {{if or (eq $lagMode .Value) (and (eq $lagMode "") .IsDefault)}}checked{{end}}> {{.Label}}</label>
+                          {{end}}
+                        </div>
+                      </td>
+                    </tr>
+                    {{if $.LagHashOptions}}
+                    <tr>
+                      <th>Hash policy{{template "field-info" (index $d "lag-hash")}}</th>
+                      <td colspan="2">
+                        {{$lagHash := ""}}{{if and .Lag .Lag.Hash}}{{$lagHash = .Lag.Hash}}{{end}}
+                        <select class="cfg-input" name="hash">
+                          {{range $.LagHashOptions}}
+                          <option value="{{.Value}}" {{if eq $lagHash .Value}}selected{{end}}>{{.Label}}</option>
+                          {{end}}
+                        </select>
+                      </td>
+                    </tr>
+                    {{end}}
+                    {{/* LACP options — hidden unless mode=lacp via JS or always shown */}}
+                    <tr>
+                      <th>LACP mode{{template "field-info" (index $d "lacp-mode")}}</th>
+                      <td colspan="2">
+                        {{$lacpMode := ""}}{{if and .Lag .Lag.LACP.Mode}}{{$lacpMode = .Lag.LACP.Mode}}{{end}}
+                        <select class="cfg-input" name="lacp-mode">
+                          <option value="">— active —</option>
+                          <option value="active"  {{if eq $lacpMode "active"}}selected{{end}}>Active</option>
+                          <option value="passive" {{if eq $lacpMode "passive"}}selected{{end}}>Passive</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>LACP rate{{template "field-info" (index $d "lacp-rate")}}</th>
+                      <td colspan="2">
+                        {{$lacpRate := ""}}{{if and .Lag .Lag.LACP.Rate}}{{$lacpRate = .Lag.LACP.Rate}}{{end}}
+                        <select class="cfg-input" name="lacp-rate">
+                          <option value="slow" {{if eq $lacpRate "slow"}}selected{{end}}>Slow (30 s)</option>
+                          <option value="fast" {{if eq $lacpRate "fast"}}selected{{end}}>Fast (1 s)</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>System priority{{template "field-info" (index $d "lacp-sysprio")}}</th>
+                      <td colspan="2">
+                        <input class="cfg-input cfg-input-sm" type="number" name="lacp-system-priority"
+                               {{if and .Lag .Lag.LACP.SystemPriority}}value="{{.Lag.LACP.SystemPriority}}"{{end}}
+                               min="0" max="65535" placeholder="default">
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save LAG Settings</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+              {{end}}{{/* IsLag */}}
+
+            </div>{{/* key-detail-body */}}
+          </td>
+        </tr>
+        {{end}}{{/* range Interfaces */}}
+      </tbody>
+    </table>
+  </div>
+  <div class="cfg-card-footer">
+    <button class="btn btn-secondary" data-show-modal="add-iface-dialog">+ Add Interface</button>
+  </div>
+</section>
+
+{{/* ── Add Interface modal dialog ───────────────────────────────────────
+     One <form>, multiple per-type <fieldset disabled>. The type pulldown
+     enables exactly one fieldset so only its inputs submit. Bridge type
+     adds a vlan-filtering radio (default plain). Ethernet uses a
+     datalist-backed input that doubles as a "Restore deleted interface"
+     picker for free-form names and known unconfigured interfaces alike.
+     Unsupported types share one panel pointing to Advanced YANG tree. */}}
+<dialog id="add-iface-dialog" class="iface-modal">
+  <form hx-post="/configure/interfaces" hx-swap="none" class="iface-modal-form">
+    <header class="iface-modal-header">
+      <h3>Add Interface</h3>
+      <button type="button" class="btn-close" aria-label="Close"
+              data-close-modal="add-iface-dialog">×</button>
+    </header>
+
+    <div class="iface-modal-body">
+      <table class="info-table">
+        <tr>
+          <th>Interface Type{{template "field-info" (index $d "type")}}</th>
+          <td>
+            <select class="cfg-input" name="type" id="add-iface-type-select" required>
+              {{range .WizardTypes}}
+              <option value="{{.Value}}" data-slug="{{.Slug}}">{{.Label}}</option>
+              {{end}}
+            </select>
+          </td>
+        </tr>
+      </table>
+
+      {{/* Bridge */}}
+      <fieldset class="iface-fields" id="iface-fields-bridge" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Bridge Type{{template "field-info" (index $d "bridge-type")}}</th>
+            <td>
+              <label class="yt-bool-group-label">
+                <input type="radio" name="bridge-type" value="ieee8021d" checked>
+                802.1D (simple)
+              </label>
+              <label class="yt-bool-group-label">
+                <input type="radio" name="bridge-type" value="ieee8021q">
+                802.1Q (VLAN filtering)
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "bridge"}}" required></td>
+          </tr>
+          {{if .FreePortCandidates}}
+          <tr>
+            <th>Bridge Ports{{template "field-info" (index $d "bridge-port-bridge")}}</th>
+            <td>
+              <div class="fw-check-grid">
+                {{range .FreePortCandidates}}
+                <label><input type="checkbox" name="members" value="{{.}}"> {{.}}</label>
+                {{end}}
+              </div>
+            </td>
+          </tr>
+          {{end}}
+        </table>
+      </fieldset>
+
+      {{/* LAG */}}
+      <fieldset class="iface-fields" id="iface-fields-lag" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Mode{{template "field-info" (index $d "lag-mode")}}</th>
+            <td>
+              <select class="cfg-input" name="mode">
+                {{range .LagModeOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "lag"}}" required></td>
+          </tr>
+          {{if .FreePortCandidates}}
+          <tr>
+            <th>LAG Ports{{template "field-info" "Interfaces to enslave to this LAG. Bonded ports share traffic according to the selected mode."}}</th>
+            <td>
+              <div class="fw-check-grid">
+                {{range .FreePortCandidates}}
+                <label><input type="checkbox" name="members" value="{{.}}"> {{.}}</label>
+                {{end}}
+              </div>
+            </td>
+          </tr>
+          {{end}}
+        </table>
+      </fieldset>
+
+      {{/* VLAN — name auto-built from <parent>.<vid> via JS as the user
+           changes either input; user can still override by typing. */}}
+      <fieldset class="iface-fields" id="iface-fields-vlan" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Parent interface{{template "field-info" (index $d "vlan-lower")}}</th>
+            <td>
+              <select class="cfg-input" name="lower-layer-if" id="add-iface-vlan-parent" required>
+                {{range $i, $n := .AllNames}}<option value="{{$n}}"{{if eq $i 0}} selected{{end}}>{{$n}}</option>{{end}}
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th>VLAN ID{{template "field-info" (index $d "vlan-id")}}</th>
+            <td><input class="cfg-input cfg-input-sm" type="number" name="vid"
+                       id="add-iface-vlan-vid" value="1" min="1" max="4094" required></td>
+          </tr>
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       id="add-iface-vlan-name" value="{{.VlanDefaultName}}" required></td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* Ethernet — re-bind a previously deleted physical interface.
+           Ethernet names are tied to detected hardware, so this is a
+           plain <select> rather than a free-form input. */}}
+      <fieldset class="iface-fields" id="iface-fields-ethernet" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td>
+              <select class="cfg-input" name="name" required>
+                {{if .UnconfiguredPhysical}}
+                  {{range .UnconfiguredPhysical}}<option value="{{.}}">{{.}}</option>{{end}}
+                {{else}}
+                  <option value="" disabled selected>No detected interfaces to re-bind</option>
+                {{end}}
+              </select>
+            </td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* VETH */}}
+      <fieldset class="iface-fields" id="iface-fields-veth" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "veth"}}" required></td>
+          </tr>
+          <tr>
+            <th>Peer name{{template "field-info" (index $d "veth-peer")}}</th>
+            <td><input class="cfg-input" type="text" name="peer"
+                       value="{{index .WizardNames "veth-peer"}}" required></td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* Dummy */}}
+      <fieldset class="iface-fields" id="iface-fields-dummy" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "dummy"}}" required></td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* Loopback */}}
+      <fieldset class="iface-fields" id="iface-fields-loopback" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "loopback"}}" required></td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* GRE — point-to-point tunnel. tunnel-common requires local and
+           remote IPs of the same family. */}}
+      <fieldset class="iface-fields" id="iface-fields-gre" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "gre"}}" required></td>
+          </tr>
+          <tr>
+            <th>Local address{{template "field-info" (index $d "gre-local")}}</th>
+            <td><input class="cfg-input" type="text" name="local"
+                       placeholder="e.g. 192.0.2.1" required></td>
+          </tr>
+          <tr>
+            <th>Remote address{{template "field-info" (index $d "gre-remote")}}</th>
+            <td><input class="cfg-input" type="text" name="remote"
+                       placeholder="e.g. 192.0.2.2" required></td>
+          </tr>
+          <tr>
+            <th>PMTU discovery{{template "field-info" (index $d "gre-pmtu")}}</th>
+            <td>
+              <label class="yt-bool-group-label">
+                <input type="radio" name="pmtu-discovery" value="true" checked> On
+              </label>
+              <label class="yt-bool-group-label">
+                <input type="radio" name="pmtu-discovery" value="false"> Off
+              </label>
+            </td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* GRETAP — like GRE but carries Ethernet frames. Same backend
+           container (infix-interfaces:gre); YANG when-clause discriminates
+           by if:type. */}}
+      <fieldset class="iface-fields" id="iface-fields-gretap" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "gretap"}}" required></td>
+          </tr>
+          <tr>
+            <th>Local address{{template "field-info" (index $d "gre-local")}}</th>
+            <td><input class="cfg-input" type="text" name="local"
+                       placeholder="e.g. 192.0.2.1" required></td>
+          </tr>
+          <tr>
+            <th>Remote address{{template "field-info" (index $d "gre-remote")}}</th>
+            <td><input class="cfg-input" type="text" name="remote"
+                       placeholder="e.g. 192.0.2.2" required></td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* VXLAN — VNI mandatory (0..16777215); UDP port defaults to 4789. */}}
+      <fieldset class="iface-fields" id="iface-fields-vxlan" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "vxlan"}}" required></td>
+          </tr>
+          <tr>
+            <th>Local address{{template "field-info" (index $d "vxlan-local")}}</th>
+            <td><input class="cfg-input" type="text" name="local"
+                       placeholder="e.g. 192.0.2.1" required></td>
+          </tr>
+          <tr>
+            <th>Remote address{{template "field-info" (index $d "vxlan-remote")}}</th>
+            <td><input class="cfg-input" type="text" name="remote"
+                       placeholder="e.g. 239.1.1.1 (multicast or unicast)" required></td>
+          </tr>
+          <tr>
+            <th>VNI{{template "field-info" (index $d "vxlan-vni")}}</th>
+            <td><input class="cfg-input cfg-input-sm" type="number" name="vni"
+                       value="1" min="0" max="16777215" required></td>
+          </tr>
+          <tr>
+            <th>UDP port{{template "field-info" (index $d "vxlan-port")}}</th>
+            <td><input class="cfg-input cfg-input-sm" type="number" name="remote-port"
+                       min="0" max="65535" placeholder="4789"></td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* WireGuard — private-key references a keystore asymmetric-key by
+           name. The YANG `must` clause additionally enforces X25519 format
+           at commit; we expose all asym keys here and let the backend
+           validate. Inline keystore key creation is a Phase 4 follow-up
+           (same keystore-integration work as the WiFi PSK picker). */}}
+      <fieldset class="iface-fields" id="iface-fields-wireguard" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       value="{{index .WizardNames "wireguard"}}" required></td>
+          </tr>
+          <tr>
+            <th>Private key{{template "field-info" (index $d "wg-key")}}</th>
+            <td>
+              <div class="ks-picker-row">
+                {{template "wizard-wgkey-picker.html" (dict "Keys" .WizardAsymKeys "Selected" "")}}
+                <button type="button" class="btn btn-secondary btn-sm"
+                        id="add-wg-key-edit-btn"
+                        data-edit-form="add-wg-key-form"
+                        data-edit-source="add-iface-wg-key"
+                        data-edit-name-target="add-wg-key-name"
+                        data-show="add-wg-key-form">Edit</button>
+                <button type="button" class="btn btn-secondary btn-sm"
+                        data-add-form="add-wg-key-form"
+                        data-show="add-wg-key-form">+ New</button>
+              </div>
+              <div id="add-wg-key-form" hidden class="ks-create-form">
+                <table class="info-table info-table-sub">
+                  <tr>
+                    <th>Key name{{template "field-info" "The keystore entry's identifier. Reuse an existing name to replace the key bytes for that entry."}}</th>
+                    <td>
+                      <input class="cfg-input cfg-input-sm" type="text"
+                             id="add-wg-key-name"
+                             name="key-name" autocomplete="off" required>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>PEM{{template "field-info" "Optional — paste a PEM-encoded X25519 private key here if you want to import an existing one. Leave empty to generate a fresh keypair via `wg genkey` on the target."}}</th>
+                    <td>
+                      <textarea class="cfg-input cfg-input-mono" name="key-value" rows="6"
+                                placeholder="-----BEGIN PRIVATE KEY-----&#10;… (paste here to import, leave empty to generate) …&#10;-----END PRIVATE KEY-----"></textarea>
+                    </td>
+                  </tr>
+                </table>
+                <div class="ks-create-actions">
+                  <button type="button" class="btn btn-primary btn-sm"
+                          hx-post="/configure/interfaces/wizard/wg-genkey"
+                          hx-include="closest .ks-create-form"
+                          hx-target="#add-iface-wg-key"
+                          hx-swap="outerHTML"
+                          data-ks-create-success="add-wg-key-form">Generate</button>
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          hx-post="/configure/interfaces/wizard/asym-key"
+                          hx-include="closest .ks-create-form"
+                          hx-target="#add-iface-wg-key"
+                          hx-swap="outerHTML"
+                          data-ks-create-success="add-wg-key-form">Save pasted PEM</button>
+                  <button type="button" class="btn btn-sm"
+                          data-hide="add-wg-key-form">Cancel</button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <th>Listen port{{template "field-info" (index $d "wg-port")}}</th>
+            <td><input class="cfg-input cfg-input-sm" type="number" name="listen-port"
+                       min="0" max="65535" placeholder="51820"></td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* WiFi — radio reference is mandatory; mode (Station / AP) drives
+           which security mode options apply and whether the PSK picker
+           shows. AP-only fields (hidden checkbox + AP security modes) are
+           swapped in by JS based on the mode radio. */}}
+      <fieldset class="iface-fields" id="iface-fields-wifi" hidden disabled>
+        <table class="info-table">
+          <tr>
+            <th>Mode{{template "field-info" (index $d "wifi-mode")}}</th>
+            <td>
+              <label class="yt-bool-group-label">
+                <input type="radio" name="wifi-mode" value="station" id="add-iface-wifi-mode-sta" checked>
+                Station (client)
+              </label>
+              <label class="yt-bool-group-label">
+                <input type="radio" name="wifi-mode" value="access-point" id="add-iface-wifi-mode-ap">
+                Access Point
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input" type="text" name="name"
+                       id="add-iface-wifi-name"
+                       value="{{index .WizardNames "wifi"}}" required></td>
+          </tr>
+          <tr>
+            <th>Radio{{template "field-info" (index $d "wifi-radio")}}</th>
+            <td>
+              <div class="ks-picker-row">
+                {{template "wizard-radio-picker.html" (dict "Radios" .WizardWifiRadios "Selected" "")}}
+                <button type="button" class="btn btn-secondary btn-sm"
+                        id="add-wifi-radio-edit-btn"
+                        data-edit-form="add-wifi-radio-form"
+                        data-edit-source="add-iface-wifi-radio"
+                        data-show="add-wifi-radio-form">Edit</button>
+                <button type="button" class="btn btn-secondary btn-sm"
+                        data-add-form="add-wifi-radio-form"
+                        data-show="add-wifi-radio-form">+ New</button>
+              </div>
+              <div id="add-wifi-radio-form" hidden class="ks-create-form">
+                <table class="info-table info-table-sub">
+                  <tr>
+                    <th>Radio name</th>
+                    <td>
+                      <select class="cfg-input cfg-input-sm" name="radio-name" id="add-wifi-radio-name" required>
+                        {{if .WizardAvailableRadios}}
+                          <option value="" disabled selected>— pick detected radio —</option>
+                          {{range .WizardAvailableRadios}}<option value="{{.}}">{{.}}</option>{{end}}
+                        {{else}}
+                          <option value="" disabled selected>No unconfigured WiFi radios detected</option>
+                        {{end}}
+                        {{/* Edit-mode injects the selected radio's name as an extra option via JS. */}}
+                      </select>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Country code{{template "field-info" "ISO 3166-1 country code — required. Regulators tie the radio's channel/power allowance to this; '00' (world) cannot be used in Access Point mode."}}</th>
+                    <td>
+                      <select class="cfg-input cfg-input-sm" name="country-code" id="add-wifi-radio-country" required>
+                        <option value="" disabled selected>— country —</option>
+                        {{range .WizardCountryOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                      </select>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Band{{template "field-info" "WiFi band — leave empty to let the driver pick. Required on the radio component for Access Point mode."}}</th>
+                    <td>
+                      <select class="cfg-input cfg-input-sm" name="band" id="add-wifi-radio-band">
+                        <option value="" selected>— auto-pick band —</option>
+                        {{range .WizardBandOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                      </select>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Channel{{template "field-info" "'auto' or a numeric channel (1–196). Required on the radio for AP mode."}}</th>
+                    <td>
+                      <input class="cfg-input cfg-input-sm" type="text" name="channel"
+                             id="add-wifi-radio-channel"
+                             value="auto" pattern="auto|[0-9]+">
+                    </td>
+                  </tr>
+                </table>
+                <div class="ks-create-actions">
+                  <button type="button" class="btn btn-primary btn-sm"
+                          hx-post="/configure/interfaces/wizard/radio"
+                          hx-include="closest .ks-create-form"
+                          hx-target="#add-iface-wifi-radio"
+                          hx-swap="outerHTML"
+                          data-ks-create-success="add-wifi-radio-form">Save</button>
+                  <button type="button" class="btn btn-sm"
+                          data-hide="add-wifi-radio-form">Cancel</button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>
+            <td><input class="cfg-input" type="text" name="ssid"
+                       id="add-iface-wifi-ssid" maxlength="32" required></td>
+          </tr>
+          <tr>
+            <th>Security{{template "field-info" (index $d "wifi-sec-mode")}}</th>
+            <td>
+              {{/* Station options — visible by default since station is the
+                   default mode. JS swaps these for AP options when mode=AP. */}}
+              <select class="cfg-input" name="security-mode" id="add-iface-wifi-sec">
+                <optgroup label="Station modes" data-mode-group="station">
+                  <option value="auto" selected>auto (WPA3/WPA2)</option>
+                  <option value="disabled">disabled (open)</option>
+                </optgroup>
+                <optgroup label="Access Point modes" data-mode-group="access-point" hidden disabled>
+                  <option value="wpa2-wpa3-personal">wpa2-wpa3-personal</option>
+                  <option value="wpa3-personal">wpa3-personal</option>
+                  <option value="wpa2-personal">wpa2-personal</option>
+                  <option value="open">open (no security)</option>
+                </optgroup>
+              </select>
+            </td>
+          </tr>
+          <tr id="add-iface-wifi-psk-row">
+            <th>PSK{{template "field-info" (index $d "wifi-secret")}}</th>
+            <td>
+              <div class="ks-picker-row">
+                {{template "wizard-psk-picker.html" (dict "Keys" .WizardSymKeys "Selected" "")}}
+                <button type="button" class="btn btn-secondary btn-sm"
+                        id="add-wifi-psk-edit-btn"
+                        data-edit-form="add-wifi-psk-form"
+                        data-edit-source="add-iface-wifi-psk"
+                        data-edit-name-target="add-wifi-psk-name"
+                        data-show="add-wifi-psk-form">Edit</button>
+                <button type="button" class="btn btn-secondary btn-sm"
+                        data-add-form="add-wifi-psk-form"
+                        data-show="add-wifi-psk-form">+ New</button>
+              </div>
+              <div id="add-wifi-psk-form" hidden class="ks-create-form">
+                <table class="info-table info-table-sub">
+                  <tr>
+                    <th>Key name{{template "field-info" "The keystore entry's identifier. Reuse an existing name to replace its passphrase."}}</th>
+                    <td>
+                      <input class="cfg-input cfg-input-sm" type="text"
+                             id="add-wifi-psk-name"
+                             name="key-name" autocomplete="off" required>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Passphrase{{template "field-info" "WPA2/WPA3 PSK passphrase — 8–63 printable characters."}}</th>
+                    <td>
+                      <div class="cfg-secret-wrap">
+                        <input class="cfg-input cfg-input-sm cfg-input-mask"
+                               type="text" name="key-value"
+                               id="add-wifi-psk-value"
+                               autocomplete="off"
+                               spellcheck="false"
+                               minlength="8" maxlength="63" required
+                               data-1p-ignore="true"
+                               data-lpignore="true"
+                               data-bwignore="true"
+                               data-form-type="other">
+                        <button type="button" class="btn-icon cfg-secret-toggle"
+                                aria-label="Show / hide passphrase"
+                                data-toggle-mask="add-wifi-psk-value">👁</button>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+                <div class="ks-create-actions">
+                  <button type="button" class="btn btn-primary btn-sm"
+                          hx-post="/configure/interfaces/wizard/sym-key"
+                          hx-include="closest .ks-create-form"
+                          hx-target="#add-iface-wifi-psk"
+                          hx-swap="outerHTML"
+                          data-ks-create-success="add-wifi-psk-form">Save</button>
+                  <button type="button" class="btn btn-sm"
+                          data-hide="add-wifi-psk-form">Cancel</button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr id="add-iface-wifi-hidden-row" hidden>
+            <th>Hidden SSID{{template "field-info" (index $d "wifi-hidden")}}</th>
+            <td>
+              <label class="yt-bool-group-label">
+                <input type="checkbox" name="hidden" value="true">
+                Don't broadcast SSID in beacons
+              </label>
+            </td>
+          </tr>
+        </table>
+      </fieldset>
+
+      {{/* Unsupported types fall here: "other" only now. */}}
+      <fieldset class="iface-fields iface-fields-unsupported" id="iface-fields-unsupported" hidden disabled>
+        <p class="empty-message">
+          This interface type isn't supported by the curated form yet.
+          Use the <a href="/yang-tree?node=/ietf-interfaces:interfaces">Advanced YANG tree</a>
+          to configure it.
+        </p>
+      </fieldset>
+    </div>
+
+    <footer class="iface-modal-footer">
+      <button class="btn btn-primary btn-sm" type="submit"
+              id="add-iface-create-btn">OK</button>
+      <button type="button" class="btn btn-sm"
+              data-close-modal="add-iface-dialog">Cancel</button>
+      <span class="cfg-save-status"></span>
+    </footer>
+  </form>
+</dialog>
+
+{{template "configure-toolbar" .}}
+</div>
+{{end}}{{/* else schema ready */}}
+
+{{end}}
+
+
+
+{{define "iface-ipv4-block"}}
+<div id="ipv4-block-{{.Name}}" class="ipv4-block">
+                {{$ipv4Form := printf "ipv4-form-%s" $.Name}}
+                {{$ipv4Fold := printf "ipv4-dhcp-%s" $.Name}}
+                <h5 class="cfg-subsection-head">IPv4{{template "field-info" (index $.Desc "ipv4-address")}}</h5>
+                <form id="{{$ipv4Form}}" hx-post="/configure/interfaces/{{.Name}}/ipv4/settings" hx-target="#ipv4-block-{{.Name}}" hx-swap="outerHTML">
+                  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="forwarding" value="true"
+                             {{if and .IPv4 .IPv4.Forwarding}}checked{{end}}>
+                      Forwarding{{template "field-info" (index $.Desc "ipv4-forwarding")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="dhcp" value="true" data-fold-target="{{$ipv4Fold}}"
+                             {{if .DHCPv4Enabled}}checked{{end}}>
+                      DHCP client{{template "field-info" (index $.Desc "ipv4-dhcp")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="autoconf" value="true"
+                             {{if and .IPv4 .IPv4.Autoconf}}checked{{end}}>
+                      Link-Local (Zeroconf){{template "field-info" (index $.Desc "ipv4-autoconf")}}
+                    </label>
+                  </div>
+                </form>
+
+                {{/* DHCPv4 foldout — always in the DOM, hidden when DHCP is off.
+                     The data-fold-target hook on the DHCP checkbox toggles
+                     this without waiting for a server round-trip so the
+                     foldout is discoverable before clicking Save. */}}
+                <details id="{{$ipv4Fold}}" class="cfg-fold" {{if .JustSaved}}open{{end}} {{if not .DHCPv4Enabled}}hidden{{end}}>
+                  <summary>DHCP Settings &amp; Options</summary>
+                  <div class="cfg-fold-body">
+                    <form hx-post="/configure/interfaces/{{.Name}}/ipv4/dhcp/settings" hx-swap="none">
+                      <table class="info-table">
+                        <tr>
+                          <th>Client ID</th>
+                          <td><input class="cfg-input cfg-input-sm" type="text" name="client-id"
+                                     value="{{.IPv4.DHCP.ClientID}}" placeholder="default (MAC address)"></td>
+                        </tr>
+                        <tr>
+                          <th>ARP check</th>
+                          <td><label><input type="checkbox" name="arping" value="true"
+                                     {{if or (not .IPv4.DHCP.Arping) (deref .IPv4.DHCP.Arping)}}checked{{end}}> Probe for address collision before use</label></td>
+                        </tr>
+                        <tr>
+                          <th>Route preference</th>
+                          <td><input class="cfg-input cfg-input-sm" type="number" name="route-preference"
+                                     {{if .IPv4.DHCP.RoutePreference}}value="{{deref .IPv4.DHCP.RoutePreference}}"{{end}}
+                                     placeholder="5" min="0" max="255" style="width:6rem"></td>
+                        </tr>
+                      </table>
+                      <div class="cfg-card-footer" style="padding-left:0">
+                        <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                        <span class="cfg-save-status"></span>
+                      </div>
+                    </form>
+                    <h6 class="cfg-subsection-head" style="margin-top:0.75rem">DHCP Options</h6>
+                    {{if .IPv4.DHCP.Options}}
+                    <table class="data-table cfg-table" style="margin-bottom:0.5rem">
+                      <thead><tr><th>Option</th><th>Value</th><th></th></tr></thead>
+                      <tbody>
+                        {{range .IPv4.DHCP.Options}}
+                        <tr>
+                          <td>{{.ID}}</td>
+                          <td>{{if .Value}}{{.Value}}{{else if .Hex}}<span class="text-muted">hex:{{.Hex}}</span>{{else}}<span class="text-muted">—</span>{{end}}</td>
+                          <td style="text-align:right">
+                            <button type="button" class="btn-icon btn-icon-danger"
+                                    hx-delete="/configure/interfaces/{{$.Name}}/ipv4/dhcp/options/{{.ID}}"
+                                    hx-confirm="Remove option {{.ID}}?"
+                                    hx-target="closest tr" hx-swap="delete" title="Remove option">
+                              {{template "icon-trash"}}
+                            </button>
+                          </td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
+                    {{end}}
+                    {{if $.DHCPv4Options}}
+                    <form hx-post="/configure/interfaces/{{.Name}}/ipv4/dhcp/options" hx-swap="none"
+                          class="user-add-inline">
+                      <select class="cfg-input cfg-input-sm" name="id">
+                        {{range $.DHCPv4Options}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                      </select>
+                      <input class="cfg-input cfg-input-sm" type="text" name="value"
+                             placeholder="value (optional)" style="flex:2">
+                      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                      <span class="cfg-save-status"></span>
+                    </form>
+                    {{end}}
+                  </div>
+                </details>
+
+                {{if and .IPv4 .IPv4.Address}}
+                <table class="info-table" style="margin-bottom:0.5rem">
+                  {{range .IPv4.Address}}
+                  <tr>
+                    <td>{{.IP}}/{{.PrefixLength}}</td>
+                    <td>{{if .Origin}}<span class="text-muted">{{.Origin}}</span>{{end}}</td>
+                    <td class="cfg-reset-col">
+                      {{if or (eq .Origin "") (eq .Origin "static")}}
+                      <button type="button" class="btn-icon btn-icon-danger"
+                              hx-delete="/configure/interfaces/{{$.Name}}/ipv4/{{.IP}}"
+                              hx-confirm="Remove {{.IP}}?"
+                              hx-target="#ipv4-block-{{$.Name}}" hx-swap="outerHTML" title="Remove address">
+                        {{template "icon-trash"}}
+                      </button>
+                      {{end}}
+                    </td>
+                  </tr>
+                  {{end}}
+                </table>
+                {{else}}
+                <p class="text-muted" style="font-size:0.85em;margin-bottom:0.5rem">No IPv4 addresses configured.</p>
+                {{end}}
+                <form hx-post="/configure/interfaces/{{.Name}}/ipv4" hx-target="#ipv4-block-{{.Name}}" hx-swap="outerHTML" class="user-add-inline">
+                  <input class="cfg-input cfg-input-sm" type="text" name="ip"
+                         placeholder="192.168.1.1" style="flex:2">
+                  <span style="padding:0 0.25rem">/</span>
+                  <input class="cfg-input cfg-input-sm" type="number" name="prefix-length"
+                         placeholder="24" min="0" max="32" style="flex:0 0 5rem">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <span class="cfg-save-status"></span>
+                </form>
+
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button form="{{$ipv4Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv4 Settings</button>
+                  <span class="cfg-save-status{{if .SavedMsg}} saved{{end}}" data-cfg-status-for="{{$ipv4Form}}">{{if .SavedMsg}}✓ {{.SavedMsg}}{{end}}</span>
+                </div>
+</div>
+{{end}}
+
+{{define "iface-ipv6-block"}}
+<div id="ipv6-block-{{.Name}}" class="ipv6-block">
+                {{$ipv6Form := printf "ipv6-form-%s" $.Name}}
+                {{$ipv6Fold := printf "ipv6-dhcp-%s" $.Name}}
+                <h5 class="cfg-subsection-head" style="margin-top:0.75rem">IPv6{{template "field-info" (index $.Desc "ipv6-address")}}</h5>
+                <form id="{{$ipv6Form}}" hx-post="/configure/interfaces/{{.Name}}/ipv6/settings" hx-target="#ipv6-block-{{.Name}}" hx-swap="outerHTML">
+                  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem">
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="forwarding" value="true"
+                             {{if and .IPv6 .IPv6.Forwarding}}checked{{end}}>
+                      Forwarding{{template "field-info" (index $.Desc "ipv6-forwarding")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="dhcp" value="true" data-fold-target="{{$ipv6Fold}}"
+                             {{if .DHCPv6Enabled}}checked{{end}}>
+                      DHCPv6 client{{template "field-info" (index $.Desc "ipv6-dhcp")}}
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+                      <input type="checkbox" name="slaac" value="true"
+                             {{if and .IPv6 .IPv6.SLAACv6}}checked{{end}}>
+                      SLAAC{{template "field-info" (index $.Desc "ipv6-slaac")}}
+                    </label>
+                  </div>
+                </form>
+
+                <details id="{{$ipv6Fold}}" class="cfg-fold" {{if .JustSaved}}open{{end}} {{if not .DHCPv6Enabled}}hidden{{end}}>
+                  <summary>DHCPv6 Settings &amp; Options</summary>
+                  <div class="cfg-fold-body">
+                    <form hx-post="/configure/interfaces/{{.Name}}/ipv6/dhcp/settings" hx-swap="none">
+                      <table class="info-table">
+                        <tr>
+                          <th>DUID</th>
+                          <td><input class="cfg-input cfg-input-sm cfg-input-mono" type="text" name="duid"
+                                     value="{{.IPv6.DHCPv6.DUID}}" placeholder="default (auto-generated)"></td>
+                        </tr>
+                        <tr>
+                          <th>Information only</th>
+                          <td><label><input type="checkbox" name="information-only" value="true"
+                                     {{if and .IPv6.DHCPv6.InformationOnly (deref .IPv6.DHCPv6.InformationOnly)}}checked{{end}}> Request config only, no address (requires SLAAC)</label></td>
+                        </tr>
+                        <tr>
+                          <th>Route preference</th>
+                          <td><input class="cfg-input cfg-input-sm" type="number" name="route-preference"
+                                     {{if .IPv6.DHCPv6.RoutePreference}}value="{{deref .IPv6.DHCPv6.RoutePreference}}"{{end}}
+                                     placeholder="5" min="0" max="255" style="width:6rem"></td>
+                        </tr>
+                      </table>
+                      <div class="cfg-card-footer" style="padding-left:0">
+                        <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                        <span class="cfg-save-status"></span>
+                      </div>
+                    </form>
+                    <h6 class="cfg-subsection-head" style="margin-top:0.75rem">DHCPv6 Options</h6>
+                    {{if .IPv6.DHCPv6.Options}}
+                    <table class="data-table cfg-table" style="margin-bottom:0.5rem">
+                      <thead><tr><th>Option</th><th>Value</th><th></th></tr></thead>
+                      <tbody>
+                        {{range .IPv6.DHCPv6.Options}}
+                        <tr>
+                          <td>{{.ID}}</td>
+                          <td>{{if .Value}}{{.Value}}{{else if .Hex}}<span class="text-muted">hex:{{.Hex}}</span>{{else}}<span class="text-muted">—</span>{{end}}</td>
+                          <td style="text-align:right">
+                            <button type="button" class="btn-icon btn-icon-danger"
+                                    hx-delete="/configure/interfaces/{{$.Name}}/ipv6/dhcp/options/{{.ID}}"
+                                    hx-confirm="Remove option {{.ID}}?"
+                                    hx-target="closest tr" hx-swap="delete" title="Remove option">
+                              {{template "icon-trash"}}
+                            </button>
+                          </td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
+                    {{end}}
+                    {{if $.DHCPv6Options}}
+                    <form hx-post="/configure/interfaces/{{.Name}}/ipv6/dhcp/options" hx-swap="none"
+                          class="user-add-inline">
+                      <select class="cfg-input cfg-input-sm" name="id">
+                        {{range $.DHCPv6Options}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                      </select>
+                      <input class="cfg-input cfg-input-sm" type="text" name="value"
+                             placeholder="value (optional)" style="flex:2">
+                      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                      <span class="cfg-save-status"></span>
+                    </form>
+                    {{end}}
+                  </div>
+                </details>
+
+                {{if and .IPv6 .IPv6.Address}}
+                <table class="info-table" style="margin-bottom:0.5rem">
+                  {{range .IPv6.Address}}
+                  <tr>
+                    <td class="cfg-input-mono">{{.IP}}/{{.PrefixLength}}</td>
+                    <td>{{if .Origin}}<span class="text-muted">{{.Origin}}</span>{{end}}</td>
+                    <td class="cfg-reset-col">
+                      {{if or (eq .Origin "") (eq .Origin "static")}}
+                      <button type="button" class="btn-icon btn-icon-danger"
+                              hx-delete="/configure/interfaces/{{$.Name}}/ipv6/{{.IP}}"
+                              hx-confirm="Remove {{.IP}}?"
+                              hx-target="#ipv6-block-{{$.Name}}" hx-swap="outerHTML" title="Remove address">
+                        {{template "icon-trash"}}
+                      </button>
+                      {{end}}
+                    </td>
+                  </tr>
+                  {{end}}
+                </table>
+                {{else}}
+                <p class="text-muted" style="font-size:0.85em;margin-bottom:0.5rem">No IPv6 addresses configured.</p>
+                {{end}}
+                <form hx-post="/configure/interfaces/{{.Name}}/ipv6" hx-target="#ipv6-block-{{.Name}}" hx-swap="outerHTML" class="user-add-inline">
+                  <input class="cfg-input" type="text" name="ip"
+                         placeholder="2001:db8::1" style="flex:2">
+                  <span style="padding:0 0.25rem">/</span>
+                  <input class="cfg-input cfg-input-sm" type="number" name="prefix-length"
+                         placeholder="64" min="0" max="128" style="flex:0 0 5rem">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <span class="cfg-save-status"></span>
+                </form>
+
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button form="{{$ipv6Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv6 Settings</button>
+                  <span class="cfg-save-status{{if .SavedMsg}} saved{{end}}" data-cfg-status-for="{{$ipv6Form}}">{{if .SavedMsg}}✓ {{.SavedMsg}}{{end}}</span>
+                </div>
+</div>
+{{end}}

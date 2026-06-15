@@ -47,10 +47,10 @@ int main(int argc, char **argv)
 		json_object_set_new(json, "last-error", json_string(strval));
 	props = rauc_installer_get_progress(rauc);
 	if(props) {
-		GVariant *val;
+		gint32 pct;
 		progress = json_object();
-		g_variant_get(props, "(@isi)", &val, &strval, NULL);
-		json_object_set_new(progress, "percentage",  json_string(g_variant_print(val, FALSE)));
+		g_variant_get(props, "(isi)", &pct, &strval, NULL);
+		json_object_set_new(progress, "percentage", json_integer(pct));
 		json_object_set_new(progress, "message", json_string(strval));
 		json_object_set_new(json, "progress", progress);
 	}

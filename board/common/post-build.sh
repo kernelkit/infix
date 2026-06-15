@@ -120,3 +120,29 @@ grep -qsE '^/bin/clish$$' "$TARGET_DIR/etc/shells" \
 if [ "$BR2_PACKAGE_HOST_PYTHON_YANGDOC" = "y" ]; then
    mkyangdoc "$BINARIES_DIR/yangdoc.html"
 fi
+
+# Bundle the mkdocs User's Guide into the rootfs, served by the WebUI's
+# nginx at /guide/.  Only when the WebUI is present (nothing serves it
+# otherwise, and it keeps minimal images small) and mkdocs is on the build
+# host.  Best-effort: a failed build warns but does not abort the image
+# build, and the WebUI hides its User Guide entry when the docs are absent.
+mkuserguide()
+{
+    local cfg dst
+    cfg="$(readlink -f "$common/../..")/mkdocs.yml"
+    dst="$TARGET_DIR/var/www/guide"
+
+    if ! command -v mkdocs >/dev/null 2>&1; then
+        ixmsg "mkdocs not found, skipping User's Guide bundling"
+        return
+    fi
+    ixmsg "Building User's Guide into $dst"
+    if ! mkdocs build -f "$cfg" -d "$dst" --clean --quiet; then
+        ixmsg "WARNING: mkdocs build failed, shipping without on-device User's Guide"
+        rm -rf "$dst"
+    fi
+}
+
+if [ "$BR2_PACKAGE_WEBUI" = "y" ]; then
+    mkuserguide
+fi

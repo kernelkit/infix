@@ -257,8 +257,15 @@ def add_software(out):
     insert(out, "infix-system:software", software)
 
 def add_hostname(out):
-    hostname =  HOST.run(tuple(["hostname"]))
+    hostname = HOST.run(tuple(["hostname"]))
     out["hostname"] = hostname.strip()
+
+def add_contact_location(out):
+    for name in ("contact", "location"):
+        data = HOST.run_json(("copy", "running", "-x", f"/system/{name}"), {})
+        val = data.get("ietf-system:system", {}).get(name)
+        if val:
+            out[name] = val
 
 def add_timezone(out):
     path = HOST.run(tuple("realpath /etc/localtime".split()), "")
@@ -415,9 +422,14 @@ def add_resource_usage(out):
     except (FileNotFoundError, ValueError):
         pass
 
-    # Filesystem usage
+    # Filesystem usage.  /run and /tmp are tmpfs (RAM-backed) and easily the
+    # scarcest writable storage on small embedded boards — surface them so
+    # operators can tell when the box is about to start dropping logs or
+    # failing to spool config diffs.  / is the read-only rootfs (squashfs);
+    # always 100 % used by design but kept in the list so a flag/limit
+    # consumer can recognise it.
     filesystems = []
-    for mount in ["/", "/var", "/cfg"]:
+    for mount in ["/", "/var", "/cfg", "/run", "/tmp"]:
         try:
             result = HOST.run_multiline(["df", "-k", mount], [])
             if len(result) > 1:
@@ -448,6 +460,7 @@ def operational():
     out_state = out["ietf-system:system-state"]
     out_system = out["ietf-system:system"]
     add_hostname(out_system)
+    add_contact_location(out_system)
     add_users(out_system)
     add_timezone(out_system)
     add_software(out_state)

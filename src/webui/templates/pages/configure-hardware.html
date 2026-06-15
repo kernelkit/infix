@@ -1,0 +1,274 @@
+{{define "configure-hardware.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/hardware"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Hardware
+      <a href="/hardware"
+         hx-get="/hardware"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">Status &rarr;</a>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Class</th>
+            <th>Description</th>
+            <th>State</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $c := .Configured}}
+          <tr>
+            <td>
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="hw-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{$c.Name}}
+              </button>
+            </td>
+            <td>{{$c.ClassDisplay}}</td>
+            <td>{{if $c.Description}}{{$c.Description}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+            <td>
+              {{if $c.IsUSB}}
+                {{if $c.Unlocked}}<span class="status-dot status-up"></span>unlocked
+                {{else}}<span class="status-dot status-down"></span>locked{{end}}
+              {{else if $c.IsWiFi}}
+                <span class="status-dot status-up"></span>{{$c.CountryCode}}{{if $c.Band}} &middot; {{$c.Band}}{{end}}
+              {{else if $c.IsGPS}}
+                <span class="status-dot status-up"></span>configured
+              {{else}}<span class="text-muted">&mdash;</span>{{end}}
+            </td>
+            <td style="text-align:right">
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/hardware/{{$c.Name}}"
+                      hx-confirm="Remove running configuration for {{$c.Name}}?"
+                      hx-swap="none" title="Remove configuration">
+                {{template "icon-trash"}}
+              </button>
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-hw-{{$i}}">
+            <td colspan="5" class="key-detail-cell">
+              <div class="key-detail-body">
+                {{if $c.IsUSB}}{{template "hw-usb-form" $c}}{{end}}
+                {{if $c.IsWiFi}}{{template "wifi-radio-form" $c}}{{end}}
+                {{if $c.IsGPS}}{{template "hw-gps-form" $c}}{{end}}
+              </div>
+            </td>
+          </tr>
+          {{end}}
+
+          {{if not .Configured}}
+          <tr><td colspan="5" class="yt-table-empty">No hardware components configured yet{{if .HasAvailable}} — use <em>Add hardware</em> below to configure detected devices{{end}}.</td></tr>
+          {{end}}
+
+          {{if .HasAvailable}}
+          {{/* Hidden add row */}}
+          <tr id="add-hw-row" hidden>
+            <td colspan="5" class="key-detail-cell">
+              <form hx-post="/configure/hardware" hx-swap="none" id="add-hw-form" class="user-add-inline">
+                <input type="hidden" name="class" id="add-hw-class">
+                <select class="cfg-input" name="name" id="add-hw-picker" required style="min-width:14rem">
+                  <option value="">— select hardware —</option>
+                  {{if .AvailableUSB}}
+                  <optgroup label="USB ports">
+                    {{range .AvailableUSB}}<option value="{{.Name}}" data-class="usb">{{.Name}}</option>{{end}}
+                  </optgroup>
+                  {{end}}
+                  {{if .AvailableWiFi}}
+                  <optgroup label="WiFi radios">
+                    {{range .AvailableWiFi}}<option value="{{.Name}}" data-class="wifi">{{.Name}}</option>{{end}}
+                  </optgroup>
+                  {{end}}
+                  {{if .AvailableGPS}}
+                  <optgroup label="GPS receivers">
+                    {{range .AvailableGPS}}<option value="{{.Name}}" data-class="gps">{{.Name}}</option>{{end}}
+                  </optgroup>
+                  {{end}}
+                </select>
+
+                <span id="add-hw-wifi-fields" hidden style="display:contents">
+                  <select class="cfg-input cfg-input-sm" name="country-code" id="add-hw-wifi-country">
+                    <option value="">— country —</option>
+                    {{range .CountryOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+                  </select>
+                </span>
+
+                <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                <button type="button" class="btn btn-sm" data-hide="add-hw-row">Cancel</button>
+                <span class="cfg-save-status"></span>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+
+    {{if .HasAvailable}}
+    <div class="cfg-card-footer">
+      <button class="btn btn-secondary" data-show="add-hw-row">+ Add hardware</button>
+    </div>
+    {{end}}
+  </section>
+</section>
+
+{{template "configure-toolbar" .}}
+</div>
+{{end}}{{/* else schema ready */}}
+
+{{end}}
+
+{{define "hw-usb-form"}}
+{{$p := printf "/ietf-hardware:hardware/component=%s" .Name}}
+<form hx-post="/configure/hardware/usb/{{.Name}}" hx-swap="none" class="cfg-radio-form">
+  <table class="info-table">
+    <tr>
+      <th>Description{{template "field-info" .DescDescription}}</th>
+      <td>
+        <input class="cfg-input cfg-input-sm" type="text" name="description"
+               value="{{.Description}}">
+      </td>
+      <td class="cfg-reset-col">
+        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                hx-delete="/configure/leaf?path={{$p}}/description&redirect=/configure/hardware"
+                hx-swap="none"
+                hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
+      </td>
+    </tr>
+    <tr>
+      <th>State{{template "field-info" .DescAdminState}}</th>
+      <td>
+        <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;font-weight:normal">
+          <input type="checkbox" name="enabled" value="true" {{if .Unlocked}}checked{{end}}>
+          unlocked
+        </label>
+      </td>
+      <td class="cfg-reset-col">
+        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                hx-delete="/configure/leaf?path={{$p}}/state/admin-state&redirect=/configure/hardware"
+                hx-swap="none"
+                hx-confirm="Reset state to its YANG default?">{{template "icon-reset"}}</button>
+      </td>
+    </tr>
+  </table>
+  <div class="cfg-card-footer">
+    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+    <span class="cfg-save-status"></span>
+  </div>
+</form>
+{{end}}
+
+{{define "wifi-radio-form"}}
+{{$p := printf "/ietf-hardware:hardware/component=%s" .Name}}
+{{$rp := printf "%s/infix-hardware:wifi-radio" $p}}
+<form hx-post="/configure/hardware/wifi/{{.Name}}" hx-swap="none" class="cfg-radio-form">
+  <table class="info-table">
+    <tr>
+      <th>Description{{template "field-info" .DescDescription}}</th>
+      <td>
+        <input class="cfg-input cfg-input-sm" type="text" name="description"
+               value="{{.Description}}">
+      </td>
+      <td class="cfg-reset-col">
+        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                hx-delete="/configure/leaf?path={{$p}}/description&redirect=/configure/hardware"
+                hx-swap="none"
+                hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
+      </td>
+    </tr>
+    <tr>
+      <th>Country code{{template "field-info" .DescCountry}}</th>
+      <td>
+        <select class="cfg-input cfg-input-sm" name="country-code" required>
+          {{$selected := .CountryCode}}
+          {{range .CountryOptions}}<option value="{{.Value}}" {{if eq .Value $selected}}selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+      </td>
+      <td class="cfg-reset-col"></td>
+    </tr>
+    <tr>
+      <th>Band{{template "field-info" .DescBand}}</th>
+      <td>
+        <select class="cfg-input cfg-input-sm" name="band">
+          <option value=""></option>
+          {{$selectedBand := .Band}}
+          {{range .BandOptions}}<option value="{{.Value}}" {{if eq .Value $selectedBand}}selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+      </td>
+      <td class="cfg-reset-col">
+        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                hx-delete="/configure/leaf?path={{$rp}}/band&redirect=/configure/hardware"
+                hx-swap="none"
+                hx-confirm="Reset band to its YANG default?">{{template "icon-reset"}}</button>
+      </td>
+    </tr>
+    <tr>
+      <th>Channel{{template "field-info" .DescChannel}}</th>
+      <td>
+        <input class="cfg-input cfg-input-sm" type="text" name="channel"
+               value="{{.Channel}}"
+               pattern="auto|[0-9]+" style="width:8rem">
+      </td>
+      <td class="cfg-reset-col">
+        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                hx-delete="/configure/leaf?path={{$rp}}/channel&redirect=/configure/hardware"
+                hx-swap="none"
+                hx-confirm="Reset channel to its YANG default?">{{template "icon-reset"}}</button>
+      </td>
+    </tr>
+  </table>
+  <div class="cfg-card-footer">
+    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+    <span class="cfg-save-status"></span>
+  </div>
+</form>
+{{end}}
+
+{{define "hw-gps-form"}}
+{{$p := printf "/ietf-hardware:hardware/component=%s" .Name}}
+<form hx-post="/configure/hardware/gps/{{.Name}}" hx-swap="none" class="cfg-radio-form">
+  <table class="info-table">
+    <tr>
+      <th>Description{{template "field-info" .DescDescription}}</th>
+      <td>
+        <input class="cfg-input cfg-input-sm" type="text" name="description"
+               value="{{.Description}}">
+      </td>
+      <td class="cfg-reset-col">
+        <button type="button" class="btn btn-secondary btn-sm" title="Reset to YANG default"
+                hx-delete="/configure/leaf?path={{$p}}/description&redirect=/configure/hardware"
+                hx-swap="none"
+                hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
+      </td>
+    </tr>
+  </table>
+  <div class="cfg-card-footer">
+    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+    <span class="cfg-save-status"></span>
+  </div>
+</form>
+{{end}}
+
