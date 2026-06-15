@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     ethtool \
     fakeroot \
     file \
+    font-dejavu \
     gcc \
     git \
     graphviz \
@@ -24,6 +25,7 @@ RUN apk add --no-cache \
     nmap \
     openssh-client \
     openssl \
+    pandoc-cli \
     python3-dev \
     qemu-img \
     qemu-system-x86_64 \
@@ -33,7 +35,8 @@ RUN apk add --no-cache \
     squashfs-tools \
     sshpass \
     tcpdump \
-    tshark
+    tshark \
+    weasyprint
 
 ARG MTOOL_VERSION="3.0"
 RUN wget https://github.com/troglobit/mtools/releases/download/v3.0/mtools-$MTOOL_VERSION.tar.gz -O /tmp/mtools-$MTOOL_VERSION.tar.gz

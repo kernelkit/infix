@@ -17,7 +17,7 @@ import netconf_client.connect
 import netconf_client.ncclient
 from infamy.transport import Transport,infer_put_dict
 from netconf_client.error import RpcError
-from . import env, netutil
+from . import env, netutil, coverage
 
 
 def netconf_syn(addr):
@@ -249,6 +249,7 @@ class Device(Transport):
         })
 
     def get(self, xpath, parse=True):
+        coverage.track_xpath(xpath)
         xpath_filter = self._build_xpath_filter(xpath)
         response = self.ncc.get(filter=xpath_filter)
         return self._parse_response(response, parse)
@@ -263,6 +264,7 @@ class Device(Transport):
         return data.print_dict()
 
     def get_data(self, xpath=None, parse=True):
+        coverage.track_xpath(xpath)
         xpath_filter = self._build_xpath_filter(xpath, get_data_xpath=True)
         response = self.ncc.get_data(datastore="ds:operational", filter=xpath_filter)
         parsed_data = self._parse_response(response, parse)
@@ -273,6 +275,7 @@ class Device(Transport):
         return parsed_data
 
     def get_config(self, xpath):
+        coverage.track_xpath(xpath)
         xpath_filter = self._build_xpath_filter(xpath)
         response = self.ncc.get_config(source="running", filter=xpath_filter)
         return self._parse_response(response, True)
@@ -317,6 +320,8 @@ class Device(Transport):
         """PUT full configuration of all models to running-config"""
         config = ""
         infer_put_dict(self.name, models)
+        for mod, data in models.items():
+            coverage.track_dict(mod, data)
 
         for model in models.keys():
             try:
@@ -349,6 +354,7 @@ class Device(Transport):
                            f"Available models can be checked with get_schema_list()") from None
         lyd = mod.parse_data_dict(edit, no_state=True, validate=False)
         config = lyd.print_mem("xml", with_siblings=True, pretty=False)
+        coverage.track_dict(modname, edit)
         # print(f"Send new XML config: {config}")
         return self.put_config(config, retries=retries)
 
@@ -358,6 +364,7 @@ class Device(Transport):
 
     def call_dict(self, modname, call):
         """Call RPC, Python dictionary version"""
+        coverage.track_dict(modname, call)
         try:
             mod = self.ly.get_module(modname)
         except libyang.util.LibyangError:
@@ -374,6 +381,7 @@ class Device(Transport):
         the action's input leaves.  Defaults to an empty input for
         actions that take no parameters.
         """
+        coverage.track_xpath(xpath)
         action={}
         pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
         match = re.search(pattern, xpath)
@@ -416,6 +424,7 @@ class Device(Transport):
             f.write(data.schema)
 
     def delete_xpath(self, xpath):
+        coverage.track_xpath(xpath)
         # Split out the model and the container from xpath'
         pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
         match = re.search(pattern, xpath)

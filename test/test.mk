@@ -10,6 +10,11 @@ LOGO               ?= $(test-dir)/../doc/logo.png[top=40%, align=right, pdfwidth
 UNIT_TESTS         ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml
 TESTS              ?= $(test-dir)/case/all.yaml
 
+yang_extractor     := $(test-dir)/utils/extract_xpaths.py
+coverage_reporter  := $(test-dir)/utils/coverage_report.py
+YANG_DIR           ?= $(BR2_EXTERNAL_INFIX_PATH)/src/confd/yang/confd
+xpaths_all_csv     := $(test-dir)/.log/xpaths_all.csv
+
 base := -b $(base-dir)
 
 TEST_MODE ?= qeneth
@@ -30,9 +35,15 @@ endif
 
 test:
 	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) \
-		sh -c '$(ninepm) -v $(TESTS); rc=$$?; \
+		sh -c 'test -f $(xpaths_all_csv) || python3 $(yang_extractor) $(YANG_DIR) $(xpaths_all_csv) || true; \
+		       $(ninepm) -v $(TESTS); rc=$$?; \
 		       $(ninepm_report) github   $(test-dir)/.log/last/result.json; \
 		       $(ninepm_report) asciidoc $(test-dir)/.log/last/result.json; \
+		       python3 $(coverage_reporter) \
+		           $(xpaths_all_csv) \
+		           $(test-dir)/.log/last/xpath_coverage.log \
+		           $(test-dir)/.log/last/xpath_coverage_report.md \
+		           2>/dev/null || true; \
 		       chmod -R 777 $(test-dir)/.log; \
 		       exit $$rc'
 
@@ -63,9 +74,24 @@ test-report:
 		--logo "$(LOGO)" \
 		-o $(test-report)
 
+xpath_coverage_report_md   := $(test-dir)/.log/last/xpath_coverage_report.md
+xpath_coverage_report_css  := $(test-dir)/utils/coverage_report.css
+xpath_coverage_report_pdf  := $(BINARIES_DIR)/xpath-coverage-report.pdf
+xpath_coverage_renderer    := $(test-dir)/utils/render_coverage_pdf.sh
+xpath_coverage_logo        := $(abspath $(test-dir)/../doc/logo.png)
+# Rendered inside the infix-test container, which carries pandoc, weasyprint
+# and the fonts; make variables are expanded on the host and passed as args.
+xpath-coverage-report:
+	$(test-dir)/env $(base) $(xpath_coverage_renderer) \
+		$(xpath_coverage_report_md) \
+		$(xpath_coverage_report_css) \
+		$(xpath_coverage_logo) \
+		"$(subst ",,$(INFIX_NAME)) $(INFIX_VERSION)" \
+		$(xpath_coverage_report_pdf)
+
 # Unit tests run with random (-r) hostname and container name to
 # prevent race conditions when running in CI environments.
 test-unit:
 	$(test-dir)/env -r $(base) $(ninepm) -v $(UNIT_TESTS)
 
-.PHONY: test test-sh test-unit test-spec
+.PHONY: test test-sh test-unit test-spec xpath-coverage-report

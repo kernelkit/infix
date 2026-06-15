@@ -143,3 +143,15 @@ jobs:
         with:
           name: test-report
           path: output/images/test-report.pdf
+
+      - name: Generate XPath Coverage Report for ${{ env.TARGET }}
+        if: always()
+        run: |
+          make test-dir="$(pwd)/$TEST_PATH" xpath-coverage-report
+
+      - name: Upload XPath Coverage Report as Artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: xpath-coverage-report
+          path: output/images/xpath-coverage-report.pdf

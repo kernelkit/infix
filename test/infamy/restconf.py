@@ -11,7 +11,7 @@ from requests.auth import HTTPBasicAuth
 from urllib3.exceptions import InsecureRequestWarning
 from dataclasses import dataclass
 from infamy.transport import Transport, infer_put_dict
-from . import env
+from . import env, coverage
 
 # We know we have a self-signed certificate, silence warning about it
 warnings.simplefilter('ignore', InsecureRequestWarning)
@@ -258,6 +258,7 @@ class Device(Transport):
 
     def get_config_dict(self, xpath):
         """Get all configuration matching @xpath as dictionary"""
+        coverage.track_xpath(xpath)
         # Strip leading slash if present (for compatibility with NETCONF xpath style)
         xpath = xpath.lstrip('/')
 
@@ -295,6 +296,8 @@ class Device(Transport):
             retries: Number of retry attempts on failure (default 3)
         """
         infer_put_dict(self.name, models)
+        for mod, data in models.items():
+            coverage.track_dict(mod, data)
 
         # Copy running to candidate first (to preserve existing config)
         self.copy("running", "candidate")
@@ -343,6 +346,7 @@ class Device(Transport):
         # Copy candidate to running (acts as "commit", triggers sysrepo callbacks)
         self.copy("candidate", "running")
 
+
     def patch_config(self, xpath, edit, retries=3):
         """PATCH configuration directly to running datastore
 
@@ -356,6 +360,7 @@ class Device(Transport):
             edit:    Configuration dictionary
             retries: Number of retry attempts on failure (default 3)
         """
+        coverage.track_dict(xpath, edit)
         try:
             mod = self.lyctx.get_module(xpath)
         except libyang.util.LibyangError:
@@ -406,6 +411,7 @@ class Device(Transport):
             raise last_error
 
     def call_dict(self, model, call):
+        coverage.track_dict(model, call)
         pass # Need implementation
 
     def call_rpc(self, rpc):
@@ -426,6 +432,7 @@ class Device(Transport):
 
     def get_data(self, xpath=None, parse=True):
         """Get operational data"""
+        coverage.track_xpath(xpath)
         uri = xpath_to_uri(xpath) if xpath is not None else None
         data = self.get_operational(uri, parse)
 
@@ -453,6 +460,7 @@ class Device(Transport):
         self.call_rpc("ietf-system:system-restart")
 
     def call_action(self, xpath, input_data=None):
+        coverage.track_xpath(xpath)
         path = xpath_to_uri(xpath)
         url = f"{self.restconf_url}/data{path}"
 
@@ -484,6 +492,7 @@ class Device(Transport):
 
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
+        coverage.track_xpath(xpath)
         path = f"/ds/ietf-datastores:running{xpath_to_uri(xpath)}"
         url = f"{self.restconf_url}{path}"
         response = requests_workaround_delete(url, headers=self.headers,
