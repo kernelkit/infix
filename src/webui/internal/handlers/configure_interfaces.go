@@ -141,6 +141,11 @@ type cfgIfaceRow struct {
 	// foldout auto-expands to reveal the freshly-inferred options.  False
 	// on the normal page render, so foldouts stay collapsed there.
 	JustSaved bool
+	// SavedMsg carries a confirmation rendered inline in the block footer on
+	// a post-save re-render.  The block is swapped via outerHTML, so the
+	// triggering form (and its status span) is gone by the time any JS event
+	// fires — server-rendering the confirmation is the only reliable place.
+	SavedMsg string
 }
 
 // ifaceRadioMirror is the subset of wifi-radio fields we expose on the
@@ -1130,12 +1135,71 @@ func (h *ConfigureInterfacesHandler) DeleteInterface(w http.ResponseWriter, r *h
 		renderSaveError(w, fmt.Errorf("loopback interface cannot be deleted"))
 		return
 	}
+	// Clear other interfaces' references to this one first: detach enslaved
+	// bridge/LAG members, and refuse outright if a VLAN is stacked on top.
+	// Otherwise the dangling leafref fails the next Apply with an opaque
+	// "Invalid input data" and no hint which node broke.
+	if err := h.resolveDependents(r.Context(), name); err != nil {
+		log.Printf("configure interfaces %s resolve dependents: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
 	if err := h.RC.Delete(r.Context(), ifacePath(name)); err != nil && !restconf.IsNotFound(err) {
 		log.Printf("configure interfaces %s delete: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
 	renderSavedRedirect(w, name+" deleted", "/configure/interfaces")
+}
+
+// resolveDependents prepares the named interface for deletion by clearing every
+// other interface's reference to it, so the delete doesn't leave a dangling
+// leafref that fails the next Apply with an opaque "Invalid input data" and no
+// hint which node broke.
+//
+//   - Enslaved bridge/LAG members are detached; they survive as standalone
+//     interfaces, only the membership is dropped.
+//   - VLANs stacked on the master via lower-layer-if can't survive without it,
+//     so rather than silently deleting an interface the user didn't name, the
+//     delete is refused and the VLANs named — removing them first is the user's
+//     call.
+//
+// The VLAN check runs before any detach, so a refused delete leaves the
+// candidate untouched.
+func (h *ConfigureInterfacesHandler) resolveDependents(ctx context.Context, master string) error {
+	ifaces, err := h.fetchAllInterfaces(ctx)
+	if err != nil {
+		return err
+	}
+
+	var vlans []string
+	for _, iface := range ifaces {
+		if iface.Vlan != nil && iface.Vlan.LowerLayerIf == master {
+			vlans = append(vlans, iface.Name)
+		}
+	}
+	if len(vlans) > 0 {
+		noun, verb, pron := "VLAN", "is", "it"
+		if len(vlans) > 1 {
+			noun, verb, pron = "VLANs", "are", "them"
+		}
+		return fmt.Errorf("cannot delete %s: %s %s %s built on it — delete %s first",
+			master, noun, strings.Join(vlans, ", "), verb, pron)
+	}
+
+	for _, iface := range ifaces {
+		switch {
+		case iface.BridgePort != nil && iface.BridgePort.Bridge == master:
+			if err := h.removeInterfaceAugment(ctx, iface.Name, "infix-interfaces:bridge-port"); err != nil {
+				return fmt.Errorf("detach %s from bridge %s: %w", iface.Name, master, err)
+			}
+		case iface.LagPort != nil && iface.LagPort.LAG == master:
+			if err := h.removeInterfaceAugment(ctx, iface.Name, "infix-interfaces:lag-port"); err != nil {
+				return fmt.Errorf("detach %s from lag %s: %w", iface.Name, master, err)
+			}
+		}
+	}
+	return nil
 }
 
 // SaveGeneral saves description, enabled, and optional custom MAC for any
@@ -1149,12 +1213,14 @@ func (h *ConfigureInterfacesHandler) SaveGeneral(w http.ResponseWriter, r *http.
 	}
 	name := r.PathValue("name")
 	enabled := r.FormValue("enabled") != "false"
+	// PATCH on a list element needs the entry wrapped in a single-element
+	// array, not a bare object — a bare object fails YANG validation (LY_EVALID).
 	body := map[string]any{
-		"ietf-interfaces:interface": map[string]any{
+		"ietf-interfaces:interface": []map[string]any{{
 			"name":        name,
 			"enabled":     enabled,
 			"description": strings.TrimSpace(r.FormValue("description")),
-		},
+		}},
 	}
 	if err := h.RC.Patch(r.Context(), ifacePath(name), body); err != nil {
 		log.Printf("configure interfaces %s general: %v", name, err)
@@ -2153,7 +2219,7 @@ func (h *ConfigureInterfacesHandler) addAddr(w http.ResponseWriter, r *http.Requ
 	}
 	// Re-render the IP block in place so the new address appears without
 	// collapsing the interface foldout — ready to add another straight away.
-	h.renderIPBlock(w, r, name, famCap, frag)
+	h.renderIPBlock(w, r, name, famCap, frag, "Address added")
 }
 
 func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.Request, family, famCap, frag string) {
@@ -2165,7 +2231,7 @@ func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.R
 		renderSaveError(w, err)
 		return
 	}
-	h.renderIPBlock(w, r, name, famCap, frag)
+	h.renderIPBlock(w, r, name, famCap, frag, "Address removed")
 }
 
 // SaveIPv4Settings PATCHes the per-interface IPv4 group settings — forwarding
@@ -2248,7 +2314,7 @@ func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *ht
 	// without collapsing the page.  fragName empty → fall back to a toast
 	// (e.g. families whose block fragment isn't wired up yet).
 	if fragName != "" {
-		h.renderIPBlock(w, r, name, family, fragName)
+		h.renderIPBlock(w, r, name, family, fragName, family+" settings saved")
 		return
 	}
 	renderSaved(w, family+" settings saved")
@@ -2258,10 +2324,10 @@ func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *ht
 // fresh candidate.  Falls back to a plain saved-toast if the interface or
 // schema can't be read, so a save is never reported as failed just because
 // the in-place refresh couldn't be built.
-func (h *ConfigureInterfacesHandler) renderIPBlock(w http.ResponseWriter, r *http.Request, name, family, fragName string) {
+func (h *ConfigureInterfacesHandler) renderIPBlock(w http.ResponseWriter, r *http.Request, name, family, fragName, savedMsg string) {
 	ifaces, err := h.fetchAllInterfaces(r.Context())
 	if err != nil {
-		renderSaved(w, family+" settings saved")
+		renderSaved(w, savedMsg)
 		return
 	}
 	rows := h.buildRows(ifaces, nil)
@@ -2273,7 +2339,7 @@ func (h *ConfigureInterfacesHandler) renderIPBlock(w http.ResponseWriter, r *htt
 		}
 	}
 	if row == nil {
-		renderSaved(w, family+" settings saved")
+		renderSaved(w, savedMsg)
 		return
 	}
 	if mgr := h.Schema.Manager(); mgr != nil {
@@ -2293,8 +2359,12 @@ func (h *ConfigureInterfacesHandler) renderIPBlock(w http.ResponseWriter, r *htt
 		}
 	}
 	row.JustSaved = true // expand the DHCP foldout to reveal inferred options
-	// Keep the cfgSaved toast behaviour even though we swap the block.
-	w.Header().Set("HX-Trigger", `{"cfgSaved":"`+family+` settings saved"}`)
+	row.SavedMsg = savedMsg
+	// The block is swapped via outerHTML, so the confirmation is rendered into
+	// the block footer (above) rather than chased by JS across the swap; the
+	// log-only event just records it in the Configure activity panel.
+	msgJSON, _ := json.Marshal(savedMsg)
+	w.Header().Set("HX-Trigger", `{"cfgLogged":`+string(msgJSON)+`}`)
 	if err := h.Template.ExecuteTemplate(w, fragName, row); err != nil {
 		log.Printf("configure interfaces %s: render %s: %v", name, fragName, err)
 	}

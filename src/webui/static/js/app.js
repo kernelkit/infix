@@ -1679,20 +1679,33 @@
 // ─── Confirm dialog ────────────────────────────────────────────────────────
 // openModal(message, onConfirm) shows the shared <dialog> and calls onConfirm
 // if the user clicks Confirm, or does nothing on Cancel.
-function openModal(message, onConfirm) {
+// openModal shows the shared confirm dialog. With opts.alert it becomes a
+// single-button alert (one "Dismiss", no Cancel) for errors the user can only
+// acknowledge — e.g. a rejected Apply. The Cancel button and OK label are
+// restored on close so the dialog returns to confirm() defaults.
+function openModal(message, onConfirm, opts) {
+  opts = opts || {};
   var dlg = document.getElementById('confirm-dialog');
+  if (!dlg) { // fallback if dialog missing
+    if (opts.alert) window.alert(message);
+    else if (onConfirm) onConfirm();
+    return;
+  }
   var msg = document.getElementById('dialog-message');
   var ok  = document.getElementById('dialog-confirm');
   var no  = document.getElementById('dialog-cancel');
-  if (!dlg) { onConfirm(); return; } // fallback if dialog missing
   msg.textContent = message;
+
+  var okLabel = ok.textContent;
+  if (opts.alert) { no.hidden = true; ok.textContent = 'Dismiss'; }
 
   function cleanup() {
     ok.removeEventListener('click', handleOK);
     no.removeEventListener('click', handleNo);
+    if (opts.alert) { no.hidden = false; ok.textContent = okLabel; }
     dlg.close();
   }
-  function handleOK()  { cleanup(); onConfirm(); }
+  function handleOK()  { cleanup(); if (onConfirm) onConfirm(); }
   function handleNo()  { cleanup(); }
 
   ok.addEventListener('click', handleOK);
@@ -1876,6 +1889,89 @@ function openModal(message, onConfirm) {
       if (d !== node && d.open) d.removeAttribute('open');
     });
   }, true);
+})();
+
+// ─── YANG tree: selected-node highlight + deep-link reveal ──────────────────
+// Two related orientation fixes for the tree editor:
+//   1. Clicking a node loads it in the right pane but left no cue of where you
+//      are — mark the clicked summary .yt-active.
+//   2. A status-page "Configure →" deep link (/configure/tree?path=…) only
+//      filled the right pane, leaving the left tree collapsed and the user
+//      disoriented.  Walk the ancestor chain, opening each <details> in turn —
+//      children load lazily over htmx on toggle, so wait for each level's swap
+//      before descending — then highlight and scroll the target into view.
+(function() {
+  function setActive(summary) {
+    document.querySelectorAll('.yt-label.yt-active').forEach(function (s) {
+      if (s !== summary) s.classList.remove('yt-active');
+    });
+    if (summary) summary.classList.add('yt-active');
+  }
+
+  document.addEventListener('click', function (e) {
+    var summary = e.target.closest && e.target.closest('summary[data-yang-path]');
+    if (summary) setActive(summary);
+  });
+
+  // Load a node's children into its .yt-children with a direct htmx.ajax
+  // request, resolving with the children <ul>.  We deliberately do NOT route
+  // through the node's lazy "toggle once" trigger: the toggle event from a
+  // programmatic .open is async and, on a freshly htmx-swapped tree, did not
+  // reliably reach htmx — the node opened but its body stayed empty until a
+  // manual reload.  htmx.ajax sidesteps all of that.
+  function loadChildren(details) {
+    var childUl = details.querySelector(':scope > .yt-children');
+    if (!childUl || childUl.children.length) return Promise.resolve(childUl);
+    var url = details.getAttribute('hx-get');
+    if (!url || !window.htmx || !window.htmx.ajax) return Promise.resolve(childUl);
+    return window.htmx.ajax('GET', url, { target: childUl, swap: 'innerHTML' })
+      .then(function () { return childUl; });
+  }
+
+  function step(ul, target) {
+    var best = null;
+    ul.querySelectorAll(':scope > li > details.yt-node > summary[data-yang-path]').forEach(function (s) {
+      var p = s.getAttribute('data-yang-path');
+      if (p === target || target.indexOf(p + '/') === 0) {
+        if (!best || p.length > best.getAttribute('data-yang-path').length) best = s;
+      }
+    });
+    if (!best) return;
+
+    var details  = best.parentElement;
+    var isTarget = best.getAttribute('data-yang-path') === target;
+    details.open = true; // chevron + reveal the children area
+
+    if (isTarget) {
+      // Highlight and scroll right away — neither depends on the child load —
+      // then pull in the target's own children so its subtree shows.
+      setActive(best);
+      best.scrollIntoView({ block: 'center' });
+      loadChildren(details);
+      return;
+    }
+    // Ancestor: load its children, then descend toward the target.
+    loadChildren(details).then(function (childUl) {
+      if (childUl) step(childUl, target);
+    });
+  }
+
+  function initReveal() {
+    var tree = document.querySelector('.yang-tree[data-initial-path]');
+    if (!tree) return;
+    var target = tree.getAttribute('data-initial-path');
+    tree.removeAttribute('data-initial-path'); // process once
+    var rootChildren = tree.querySelector('.yt-children');
+    if (!target || !rootChildren) return;
+    // Defer a tick: on an htmx navigation the tree was just swapped in and htmx
+    // is still settling, so a child load triggered now is dropped (the node
+    // then highlights only after a manual reload).  On a full reload it's
+    // already settled, so the tick is harmless.
+    setTimeout(function () { step(rootChildren, target); }, 0);
+  }
+
+  document.addEventListener('DOMContentLoaded', initReveal);
+  document.addEventListener('htmx:afterSwap', initReveal);
 })();
 
 // ─── ⓘ field-info tooltip (position:fixed to escape overflow clipping) ───────
@@ -2108,6 +2204,28 @@ function renderCfgLog() {
       if (input && input.value) saveURL(input.value);
     });
   })();
+
+  // cfgLogged records a save in the activity panel only — used when the
+  // handler swaps the whole block via outerHTML and renders its own inline
+  // confirmation, so there's no span for the page JS to chase.
+  document.addEventListener('cfgLogged', function(e) {
+    cfgLog('ok', e.detail && e.detail.value ? e.detail.value : 'Saved');
+  });
+
+  // cfgApplyError fires when Apply / Apply & Save reaches the device but the
+  // candidate is rejected (e.g. deleting a still-referenced interface). The
+  // backend returns 200 + this trigger instead of 502 so the connection
+  // monitor stays quiet — the box is fine, the config isn't. The toolbar
+  // optimistically logged success before issuing the request; drop that entry
+  // and show the real reason.
+  document.addEventListener('cfgApplyError', function(e) {
+    var msg = (e.detail && e.detail.value) || 'The device rejected the configuration.';
+    if (cfgLogEntries.length && cfgLogEntries[cfgLogEntries.length - 1].level === 'ok') {
+      cfgLogEntries.pop();
+    }
+    cfgLog('error', msg);
+    openModal('Configuration not applied: ' + msg, null, { alert: true });
+  });
 
   document.addEventListener('cfgSaved', function(e) {
     var msg = e.detail && e.detail.value ? e.detail.value : 'Saved';

@@ -3,6 +3,8 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -74,13 +76,37 @@ func (h *ConfigureHandler) Enter(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// applyError surfaces a failed datastore copy from Apply / Apply&Save / Save.
+// A RESTCONF error means the device answered and rejected the config — almost
+// always a validation failure (e.g. deleting an interface other nodes still
+// reference). The device is reachable, so report the reason inline via an
+// HX-Trigger and a 200, NOT a 502: the front-end's connection monitor reads
+// 502/503/504 as "device disconnected", which is exactly wrong here. Only a
+// transport failure (no RESTCONF response at all) is a real gateway error.
+func applyError(w http.ResponseWriter, op string, err error) {
+	log.Printf("configure %s: %v", op, err)
+	var re *restconf.Error
+	if errors.As(err, &re) {
+		// parseError always populates Message (server text, else HTTP status
+		// text), so a single fallback covers the otherwise-unreachable empty.
+		msg := re.Message
+		if msg == "" {
+			msg = "the device rejected the configuration"
+		}
+		b, _ := json.Marshal(msg)
+		w.Header().Set("HX-Trigger", `{"cfgApplyError":`+string(b)+`}`)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	http.Error(w, "Could not reach the device: "+err.Error(), http.StatusBadGateway)
+}
+
 // Apply copies candidate → running, activating all staged changes atomically.
 // Sets the cfg-unsaved cookie so the persistent banner appears until startup is saved.
 // POST /configure/apply
 func (h *ConfigureHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	if err := h.RC.CopyDatastore(r.Context(), "candidate", "running"); err != nil {
-		log.Printf("configure apply: %v", err)
-		http.Error(w, "Could not apply configuration: "+err.Error(), http.StatusBadGateway)
+		applyError(w, "apply", err)
 		return
 	}
 	setCfgUnsaved(w)
@@ -104,13 +130,11 @@ func (h *ConfigureHandler) Abort(w http.ResponseWriter, r *http.Request) {
 // POST /configure/apply-and-save
 func (h *ConfigureHandler) ApplyAndSave(w http.ResponseWriter, r *http.Request) {
 	if err := h.RC.CopyDatastore(r.Context(), "candidate", "running"); err != nil {
-		log.Printf("configure apply-and-save: %v", err)
-		http.Error(w, "Could not apply configuration: "+err.Error(), http.StatusBadGateway)
+		applyError(w, "apply-and-save", err)
 		return
 	}
 	if err := h.RC.CopyDatastore(r.Context(), "running", "startup"); err != nil {
-		log.Printf("configure apply-and-save (save): %v", err)
-		http.Error(w, "Could not save configuration: "+err.Error(), http.StatusBadGateway)
+		applyError(w, "apply-and-save (save)", err)
 		return
 	}
 	clearCfgUnsaved(w)
@@ -142,8 +166,7 @@ func (h *ConfigureHandler) DeleteLeaf(w http.ResponseWriter, r *http.Request) {
 // POST /configure/save
 func (h *ConfigureHandler) Save(w http.ResponseWriter, r *http.Request) {
 	if err := h.RC.CopyDatastore(r.Context(), "running", "startup"); err != nil {
-		log.Printf("configure save: %v", err)
-		http.Error(w, "Could not save configuration: "+err.Error(), http.StatusBadGateway)
+		applyError(w, "save", err)
 		return
 	}
 	clearCfgUnsaved(w)

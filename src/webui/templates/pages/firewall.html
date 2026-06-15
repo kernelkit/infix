@@ -10,7 +10,13 @@
 <section class="info-grid">
 
   <div class="info-card">
-    <div class="card-header">Firewall Status</div>
+    <div class="card-header">Firewall Status
+      <a href="/configure/firewall"
+         hx-get="/configure/firewall"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+    </div>
     <table class="info-table">
       <tr>
         <th>Firewall</th>

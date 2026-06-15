@@ -9,7 +9,13 @@
 
 {{if .NTP}}
 <section class="info-card">
-  <h2>NTP</h2>
+  <div class="card-header">NTP
+    <a href="/configure/ntp"
+       hx-get="/configure/ntp"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
   <table class="info-table">
     <tr>
       <th>Sync Status</th>
@@ -69,8 +75,8 @@
 {{else if not .Error}}
 <section class="info-card">
   <div class="card-header">NTP
-    <a href="/configure/tree?path=/ietf-system:system/ntp"
-       hx-get="/configure/tree?path=/ietf-system:system/ntp"
+    <a href="/configure/ntp"
+       hx-get="/configure/ntp"
        hx-target="#content"
        hx-push-url="true"
        class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>

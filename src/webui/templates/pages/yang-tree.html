@@ -18,7 +18,7 @@
     {{/* ── Left pane: navigation tree ───────────────────────── */}}
     <div class="yang-tree-pane info-card">
       <div class="card-header">{{if .ReadOnly}}View all{{else}}Edit all{{end}}</div>
-      <ul class="yang-tree">
+      <ul class="yang-tree"{{if .InitialPath}} data-initial-path="{{.InitialPath}}"{{end}}>
         <li>
           <details class="yt-node" open>
             <summary class="yt-label">

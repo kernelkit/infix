@@ -11,6 +11,11 @@
   <div class="card-header">
     <span class="iface-status {{if eq .OperStatus "up"}}iface-up{{else}}iface-down{{end}}"></span>
     {{.Name}}{{if .ListenPort}} <span class="text-muted">:{{.ListenPort}}</span>{{end}}
+    <a href="/configure/interfaces"
+       hx-get="/configure/interfaces"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
   </div>
   {{if .Addresses}}
   <div class="card-body">
@@ -51,7 +56,13 @@
 {{end}}
 {{else if not .Error}}
 <section class="info-card">
-  <div class="card-header">WireGuard</div>
+  <div class="card-header">WireGuard
+    <a href="/configure/interfaces"
+       hx-get="/configure/interfaces"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
   <p class="empty-message">No WireGuard tunnels configured.</p>
 </section>
 {{end}}

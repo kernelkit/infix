@@ -1724,7 +1724,7 @@
 
                 <div class="cfg-card-footer" style="padding-left:0">
                   <button form="{{$ipv4Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv4 Settings</button>
-                  <span class="cfg-save-status" data-cfg-status-for="{{$ipv4Form}}"></span>
+                  <span class="cfg-save-status{{if .SavedMsg}} saved{{end}}" data-cfg-status-for="{{$ipv4Form}}">{{if .SavedMsg}}✓ {{.SavedMsg}}{{end}}</span>
                 </div>
 </div>
 {{end}}
@@ -1852,7 +1852,7 @@
 
                 <div class="cfg-card-footer" style="padding-left:0">
                   <button form="{{$ipv6Form}}" type="submit" class="btn btn-primary btn-sm">Save IPv6 Settings</button>
-                  <span class="cfg-save-status" data-cfg-status-for="{{$ipv6Form}}"></span>
+                  <span class="cfg-save-status{{if .SavedMsg}} saved{{end}}" data-cfg-status-for="{{$ipv6Form}}">{{if .SavedMsg}}✓ {{.SavedMsg}}{{end}}</span>
                 </div>
 </div>
 {{end}}

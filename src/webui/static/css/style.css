@@ -3020,6 +3020,14 @@ details.cfg-fold[open] > summary::before { transform: rotate(90deg); }
   background: var(--border-subtle);
   color: var(--primary);
 }
+/* Currently-selected node: set on click and when arriving via a status-page
+   "Configure →" deep link, so the left tree shows where the right pane is. */
+.yt-label.yt-active {
+  background: var(--border-subtle);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--primary);
+}
 
 /* Chevron rotates on open */
 .yt-chevron {

@@ -5,7 +5,13 @@
 
 {{if .Containers}}
 <section class="info-card">
-  <div class="card-header">Containers</div>
+  <div class="card-header">Containers
+    <a href="/configure/tree?path=/infix-containers:containers"
+       hx-get="/configure/tree?path=/infix-containers:containers"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
   <div class="data-table-wrap">
     <table class="data-table">
       <thead><tr>
@@ -45,7 +51,13 @@
 </section>
 {{else if not .Error}}
 <section class="info-card">
-  <div class="card-header">Containers</div>
+  <div class="card-header">Containers
+    <a href="/configure/tree?path=/infix-containers:containers"
+       hx-get="/configure/tree?path=/infix-containers:containers"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
   <p class="empty-message">No containers configured.</p>
 </section>
 {{end}}
