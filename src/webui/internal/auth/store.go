@@ -11,6 +11,7 @@ import (
 )
 
 const sessionTimeout = 1 * time.Hour
+const maxSessionTimeout = 24 * time.Hour
 
 // sessionEntry is the in-memory state of a single authenticated
 // session.  The user's password is kept alongside the token so the
@@ -22,6 +23,13 @@ type sessionEntry struct {
 	csrfToken  string
 	features   map[string]bool
 	lastSeenAt time.Time
+	timeout    time.Duration // idle timeout; 0 = never expire ("Off")
+}
+
+// expired reports whether an entry has passed its idle timeout.  A zero
+// timeout means the session never idle-expires — the user chose "Off".
+func expired(e *sessionEntry) bool {
+	return e.timeout > 0 && time.Since(e.lastSeenAt) > e.timeout
 }
 
 // SessionStore issues opaque random session tokens backed by an
@@ -62,6 +70,7 @@ func (s *SessionStore) Create(username, password string, features map[string]boo
 		csrfToken:  csrf,
 		features:   features,
 		lastSeenAt: time.Now(),
+		timeout:    sessionTimeout,
 	}
 	s.mu.Unlock()
 	return token, csrf, nil
@@ -73,7 +82,7 @@ func (s *SessionStore) Create(username, password string, features map[string]boo
 func (s *SessionStore) Lookup(token string) (username, password, csrf string, features map[string]bool, ok bool) {
 	s.mu.RLock()
 	e, present := s.sessions[token]
-	if present && time.Since(e.lastSeenAt) <= sessionTimeout {
+	if present && !expired(e) {
 		username, password, csrf, features = e.username, e.password, e.csrfToken, e.features
 		s.mu.RUnlock()
 		return username, password, csrf, features, true
@@ -86,12 +95,28 @@ func (s *SessionStore) Lookup(token string) (username, password, csrf string, fe
 	// expired.
 	if present {
 		s.mu.Lock()
-		if e, ok := s.sessions[token]; ok && time.Since(e.lastSeenAt) > sessionTimeout {
+		if e, ok := s.sessions[token]; ok && expired(e) {
 			delete(s.sessions, token)
 		}
 		s.mu.Unlock()
 	}
 	return "", "", "", nil, false
+}
+
+// SetTimeout updates a session's idle timeout (0 = never expire) so the
+// server-side expiry tracks the client's Auto-logout menu.  Out-of-range
+// values — including a negative from integer overflow on a garbage request —
+// are capped at maxSessionTimeout so a session can't be pinned open
+// indefinitely; 0 still means never.  No-op if the token is unknown.
+func (s *SessionStore) SetTimeout(token string, d time.Duration) {
+	if d < 0 || d > maxSessionTimeout {
+		d = maxSessionTimeout
+	}
+	s.mu.Lock()
+	if e, ok := s.sessions[token]; ok {
+		e.timeout = d
+	}
+	s.mu.Unlock()
 }
 
 // Refresh extends a session's lifetime by resetting its last-seen
@@ -118,10 +143,9 @@ func (s *SessionStore) janitor() {
 	t := time.NewTicker(1 * time.Minute)
 	defer t.Stop()
 	for range t.C {
-		cutoff := time.Now().Add(-sessionTimeout)
 		s.mu.Lock()
 		for token, e := range s.sessions {
-			if e.lastSeenAt.Before(cutoff) {
+			if expired(e) {
 				delete(s.sessions, token)
 			}
 		}

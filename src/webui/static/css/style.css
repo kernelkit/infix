@@ -3,6 +3,10 @@
    ========================================================================== */
 
 :root {
+  /* Native controls (scrollbars, inputs, date pickers) follow the OS
+     light/dark preference while on 'auto'; .dark/.light pin it explicitly. */
+  color-scheme: light dark;
+
   /* --- Primitives: Slate (Neutral) --- */
   --slate-50:  #f8fafc;
   --slate-100: #f1f5f9;

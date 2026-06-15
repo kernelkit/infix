@@ -8,6 +8,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"infix/webui/internal/handlers"
 	"infix/webui/internal/restconf"
@@ -127,6 +129,24 @@ func (h *LoginHandler) DoLogout(w http.ResponseWriter, r *http.Request) {
 	security.ClearToken(w, r)
 
 	fullRedirect(w, r, "/login")
+}
+
+// SetSessionTimeout updates the current session's idle timeout from the
+// client's Auto-logout menu.  The "timeout" form value is seconds; 0 means
+// never expire ("Off").  The store caps the upper bound.
+func (h *LoginHandler) SetSessionTimeout(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie(cookieName)
+	if err != nil {
+		http.Error(w, "no session", http.StatusUnauthorized)
+		return
+	}
+	secs, err := strconv.Atoi(r.FormValue("timeout"))
+	if err != nil || secs < 0 {
+		http.Error(w, "bad timeout", http.StatusBadRequest)
+		return
+	}
+	h.Store.SetTimeout(c.Value, time.Duration(secs)*time.Second)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // fullRedirect forces a full page navigation.  When the request comes

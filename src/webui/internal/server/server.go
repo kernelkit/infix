@@ -297,6 +297,7 @@ func New(
 	mux.HandleFunc("GET /login", login.ShowLogin)
 	mux.HandleFunc("POST /login", login.DoLogin)
 	mux.HandleFunc("POST /logout", login.DoLogout)
+	mux.HandleFunc("POST /session/timeout", login.SetSessionTimeout)
 
 	// Static assets (public).
 	staticServer := http.FileServerFS(staticFS)

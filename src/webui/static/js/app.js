@@ -1387,9 +1387,20 @@
   // Apply saved theme immediately (before DOMContentLoaded to avoid flash)
   applyTheme(getTheme());
 
+  // Follow the OS when on 'auto'.  Colours already track via CSS @media +
+  // color-scheme; re-applying on change keeps the menu indicators and any
+  // theme-derived state in sync.  Ignored when a theme is pinned explicitly.
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+      if (!getTheme()) applyTheme(null);
+    });
+  } catch (_) {}
+
   document.addEventListener('DOMContentLoaded', function() {
-    // Apply checkmarks now that DOM is ready
-    updateDropdownCheck(getTheme() || 'auto');
+    // Re-apply now that the DOM exists: applyTheme() ran in <head> before the
+    // dropdown and login toggle were parsed, so their indicators weren't set
+    // (the login toggle was stuck on its default 'auto' glyph).
+    applyTheme(getTheme());
 
     // Dropdown theme options (main app)
     document.querySelectorAll('.theme-opt').forEach(function(btn) {
@@ -2303,6 +2314,18 @@ function renderCfgLog() {
     if (ms > 0) timerId = setTimeout(doLogout, ms);
   }
 
+  // Mirror the chosen idle timeout to the server so the server-side session
+  // expiry matches the menu — including "Off" (0 = never).  The server starts
+  // each session at its 1 h default; this re-asserts the user's preference on
+  // load and whenever they change it.
+  function syncServerTimeout(secs) {
+    var fd = new FormData();
+    fd.append('timeout', secs);
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) fd.append('csrf', meta.getAttribute('content') || '');
+    fetch('/session/timeout', { method: 'POST', body: fd, credentials: 'same-origin' }).catch(function () {});
+  }
+
   // Background pollers (watchdog, *counters refresh) must NOT extend
   // the idle window — otherwise the timer never reaches the threshold.
   function isPollingPath(p) {
@@ -2314,6 +2337,7 @@ function renderCfgLog() {
 
     updateOpts();
     reset();
+    syncServerTimeout(localStorage.getItem(LS_KEY) || DEFAULT);
 
     // mousemove deliberately omitted: trackpad jitter from a neighbouring
     // window would keep the session alive indefinitely.
@@ -2332,6 +2356,7 @@ function renderCfgLog() {
       localStorage.setItem(LS_KEY, btn.getAttribute('data-timeout'));
       updateOpts();
       reset();
+      syncServerTimeout(btn.getAttribute('data-timeout'));
     });
 
     // Session expired server-side while we were idle: any HX request
