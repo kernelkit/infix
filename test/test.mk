@@ -57,10 +57,11 @@ test-spec:
 	 	-o $(test-specification) $(spec-dir)/Readme.adoc
 
 test-report:
-	asciidoctor-pdf --theme $(spec-dir)/theme.yml \
-		-a logo="image:$(LOGO)" \
-		-a pdf-fontsdir=$(spec-dir)/fonts \
-		-o $(test-report) $(test-dir)/.log/last/report.adoc
+	$(ninepm_report) pdf $(test-dir)/.log/last/result.json \
+		--theme $(spec-dir)/theme.yml \
+		--fontsdir $(spec-dir)/fonts \
+		--logo "$(LOGO)" \
+		-o $(test-report)
 
 # Unit tests run with random (-r) hostname and container name to
 # prevent race conditions when running in CI environments.
