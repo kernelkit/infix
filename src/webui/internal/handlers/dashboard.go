@@ -9,7 +9,9 @@ import (
 	"html/template"
 	"log"
 	"math"
+	"net"
 	"net/http"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -95,6 +97,32 @@ type systemState struct {
 	Clock    clock         `json:"clock"`
 	Software software      `json:"infix-system:software"`
 	Resource resourceUsage `json:"infix-system:resource-usage"`
+	DNS      *dnsResolver  `json:"infix-system:dns-resolver"`
+	NTP      *ntpSources   `json:"infix-system:ntp"`
+}
+
+// dnsResolver mirrors the effective resolver state — servers carry an
+// origin (static vs dhcp) and, for dhcp, the interface they arrived on.
+type dnsResolver struct {
+	Server []dnsServer `json:"server"`
+	Search []string    `json:"search"`
+}
+
+type dnsServer struct {
+	Address   string `json:"address"`
+	Origin    string `json:"origin"`
+	Interface string `json:"interface"`
+}
+
+type ntpSources struct {
+	Sources struct {
+		Source []ntpSource `json:"source"`
+	} `json:"sources"`
+}
+
+type ntpSource struct {
+	Address string `json:"address"`
+	State   string `json:"state"`
 }
 
 type platform struct {
@@ -218,7 +246,28 @@ type dashboardData struct {
 	Disks        []diskEntry
 	Board        boardInfo
 	KeyVitals    []sensorEntry // Overview's at-a-glance subset: CPU/SoC + wifi-radio temperatures and fan RPMs. Status > Hardware has the full inventory.
-	Error        string
+	// Connectivity card.
+	Gateways      []gatewayEntry
+	InternetProbe string // address pinged for the Internet reachability row
+	DNSServers    []dnsServer
+	DNSSearch     []string
+	NTPSync       string // "" / the selected NTP source address
+	// Addresses card.
+	Addresses []ifaceAddrEntry
+	Error     string
+}
+
+// gatewayEntry is a default route's next-hop.
+type gatewayEntry struct {
+	Addr  string
+	Iface string
+}
+
+// ifaceAddrEntry is one L3 interface's addresses for the Addresses card.
+type ifaceAddrEntry struct {
+	Name  string
+	Addrs []string
+	Up    bool
 }
 
 type boardInfo struct {
@@ -252,6 +301,10 @@ type diskEntry struct {
 	ReadOnly  bool
 }
 
+// internetProbe is the address the Connectivity card pings for its Internet
+// reachability row — a well-known, stable anycast resolver.
+const internetProbe = "1.1.1.1"
+
 // DashboardHandler serves the main dashboard page.
 type DashboardHandler struct {
 	Template *template.Template
@@ -278,11 +331,13 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 				Location string `json:"location"`
 			} `json:"ietf-system:system"`
 		}
+		ifaces                   interfacesWrapper
+		routes                   ribWrapper
 		stateErr, hwErr, confErr error
 		wg                       sync.WaitGroup
 	)
 
-	wg.Add(3)
+	wg.Add(5)
 	go func() {
 		defer wg.Done()
 		stateErr = h.RC.Get(ctx, "/data/ietf-system:system-state", &state)
@@ -294,6 +349,20 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer wg.Done()
 		confErr = h.RC.Get(ctx, "/data/ietf-system:system", &sysConf)
+	}()
+	// Connectivity/Addresses cards are best-effort: a failure here logs but
+	// doesn't fault the whole dashboard, so the card simply renders empty.
+	go func() {
+		defer wg.Done()
+		if err := h.RC.Get(ctx, "/data/ietf-interfaces:interfaces", &ifaces); err != nil {
+			log.Printf("restconf interfaces: %v", err)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if err := h.RC.Get(ctx, "/data/ietf-routing:routing", &routes); err != nil {
+			log.Printf("restconf routing: %v", err)
+		}
 	}()
 	wg.Wait()
 
@@ -413,6 +482,25 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		data.Location = sysConf.System.Location
 	}
 
+	// Connectivity & Addresses cards (best-effort, independent of the above).
+	data.Gateways = defaultGateways(routes)
+	data.InternetProbe = internetProbe
+	if stateErr == nil {
+		if dns := state.SystemState.DNS; dns != nil {
+			data.DNSServers = dns.Server
+			data.DNSSearch = dns.Search
+		}
+		if ntp := state.SystemState.NTP; ntp != nil {
+			for _, s := range ntp.Sources.Source {
+				if s.State == "selected" {
+					data.NTPSync = s.Address
+					break
+				}
+			}
+		}
+	}
+	data.Addresses = ifaceAddresses(ifaces)
+
 	tmplName := "dashboard.html"
 	if r.Header.Get("HX-Request") == "true" {
 		tmplName = "content"
@@ -421,6 +509,104 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		log.Printf("template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+// defaultGateways extracts the installed default-route next-hops (v4 and v6).
+func defaultGateways(rw ribWrapper) []gatewayEntry {
+	var ribs []ribJSON
+	if rw.Routing != nil {
+		ribs = rw.Routing.Ribs.Rib
+	} else if rw.Ribs != nil {
+		ribs = rw.Ribs.Rib
+	}
+	var gws []gatewayEntry
+	for _, rib := range ribs {
+		for _, rt := range rib.Routes.Route {
+			if rt.Active == nil {
+				continue // only installed routes
+			}
+			switch rt.destinationPrefix() {
+			case "0.0.0.0/0", "::/0":
+			default:
+				continue
+			}
+			iface, addr := rt.NextHop.resolve()
+			if addr == "" {
+				continue
+			}
+			gws = append(gws, gatewayEntry{Addr: addr, Iface: iface})
+		}
+	}
+	return gws
+}
+
+// ifaceAddresses lists every interface carrying an IP address, loopback last.
+func ifaceAddresses(iw interfacesWrapper) []ifaceAddrEntry {
+	var l3, lo []ifaceAddrEntry
+	for _, ifc := range iw.Interfaces.Interface {
+		var addrs []string
+		for _, ip := range []*ipCfg{ifc.IPv4, ifc.IPv6} {
+			if ip == nil {
+				continue
+			}
+			for _, a := range ip.Address {
+				addrs = append(addrs, fmt.Sprintf("%s/%d", a.IP, int(a.PrefixLength)))
+			}
+		}
+		if len(addrs) == 0 {
+			continue
+		}
+		e := ifaceAddrEntry{Name: ifc.Name, Addrs: addrs, Up: ifc.OperStatus == "up"}
+		if prettyIfType(ifc.Type) == ifTypeLoopback {
+			lo = append(lo, e)
+		} else {
+			l3 = append(l3, e)
+		}
+	}
+	return append(l3, lo...)
+}
+
+// Reachability pings an address and returns a tiny indicator — a pulsing green
+// dot when it replies, a red ✗ otherwise.  Connectivity-card slots load it
+// async (hx-trigger="load") so the dashboard render isn't blocked on a probe.
+// The target is validated as a literal IP so the ping argument can never become
+// an arbitrary host; a link-local IPv6 is scoped with its egress interface.
+func (h *DashboardHandler) Reachability(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	ip := r.URL.Query().Get("ip")
+	addr := net.ParseIP(ip)
+	if addr == nil {
+		fmt.Fprint(w, `<span class="status-dot reach-pending" title="unknown"></span>`)
+		return
+	}
+	target := ip
+	if iface := r.URL.Query().Get("iface"); iface != "" && addr.IsLinkLocalUnicast() && validZone(iface) {
+		target = ip + "%" + iface
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	if err := exec.CommandContext(ctx, "ping", "-c", "1", "-W", "1", target).Run(); err != nil {
+		fmt.Fprintf(w, `<span class="reach-x" title="No reply from %s">&#10007;</span>`,
+			template.HTMLEscapeString(ip))
+		return
+	}
+	fmt.Fprintf(w, `<span class="status-dot status-up reach-pulse" title="%s replied"></span>`,
+		template.HTMLEscapeString(ip))
+}
+
+// validZone guards the IPv6 zone (interface name) passed to ping: a plain
+// interface name, no shell metacharacters (exec args aren't shell-parsed, but
+// keep it tight).
+func validZone(s string) bool {
+	for _, c := range s {
+		ok := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' ||
+			c >= '0' && c <= '9' || c == '.' || c == '_' || c == '-'
+		if !ok {
+			return false
+		}
+	}
+	return s != ""
 }
 
 // softwareVersion returns the version string for the booted software slot.
