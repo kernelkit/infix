@@ -2691,13 +2691,12 @@ details.cfg-fold[open] > summary::before { transform: rotate(90deg); }
 .btn-add-row:hover { text-decoration: underline; }
 
 /* Inline forms inside users table */
-.user-shell-form, .user-add-inline {
+.user-add-inline {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
-.user-shell-form .cfg-input { flex: 1; min-width: 0; }
 .user-add-inline .cfg-input { width: auto; flex: 1; min-width: 8rem; }
 
 /* Add Interface modal dialog */

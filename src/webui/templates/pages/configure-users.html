@@ -43,17 +43,7 @@
                 <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Name}}
               </button>
             </td>
-            <td>
-              <form hx-post="/configure/users/{{.Name}}/shell" hx-swap="none"
-                    class="user-shell-form">
-                <select class="cfg-input" name="shell">
-                  {{$shell := .Shell}}
-                  {{range $.ShellOptions}}<option value="{{.Value}}" {{if or (eq .Value $shell) (and (eq $shell "") .IsDefault)}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>{{end}}
-                </select>
-                <button class="btn btn-primary btn-sm" type="submit">Save</button>
-                <span class="cfg-save-status"></span>
-              </form>
-            </td>
+            <td>{{.ShellLabel}}</td>
             <td style="text-align:center">{{.KeyCount}}</td>
             <td style="text-align:right">
               <button type="button" class="btn-icon btn-icon-danger"
@@ -68,6 +58,21 @@
           <tr class="key-detail-row" id="key-detail-user-{{$i}}">
             <td colspan="4" class="key-detail-cell">
               <div class="key-detail-body">
+
+                {{/* Login shell — match the option's bare .Label against the
+                     user's effective ShellLabel; .Value carries a module prefix
+                     the stored shell does not. */}}
+                <form hx-post="/configure/users/{{.Name}}/shell" hx-swap="none">
+                  <div class="section-subtitle">Login Shell</div>
+                  <select class="cfg-input" name="shell" style="max-width:16rem">
+                    {{$shell := .ShellLabel}}
+                    {{range $.ShellOptions}}<option value="{{.Value}}" {{if eq .Label $shell}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>{{end}}
+                  </select>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
 
                 {{/* Change password */}}
                 <form hx-post="/configure/users/{{.Name}}/password" hx-swap="none">
@@ -145,8 +150,10 @@
           {{/* Hidden add-user row — revealed by the + Add user button */}}
           <tr id="add-user-row" hidden>
             <td colspan="4" class="key-detail-cell">
-              <form hx-post="/configure/users" hx-swap="none" class="user-add-inline">
+              <form hx-post="/configure/users" hx-swap="none" class="user-add-inline"
+                    autocomplete="off">
                 <input class="cfg-input" type="text" name="username" required
+                       autocomplete="off"
                        pattern="[a-zA-Z0-9_][a-zA-Z0-9_.-]*" placeholder="Username">
                 <input class="cfg-input" type="password" name="password" required
                        autocomplete="new-password" placeholder="Password">

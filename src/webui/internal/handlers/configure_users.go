@@ -104,13 +104,27 @@ func (h *ConfigureUsersHandler) Overview(w http.ResponseWriter, r *http.Request)
 	const shellPath = "/ietf-system:system/authentication/user/infix-system:shell"
 	mgr := h.Schema.Manager()
 	data.Loading = mgr == nil
+	var defaultShell string
 	if mgr != nil {
 		data.ShellOptions = schema.OptionsFor(mgr, shellPath)
+		for _, o := range data.ShellOptions {
+			if o.IsDefault {
+				defaultShell = o.Label
+				break
+			}
+		}
 	}
 	for _, u := range raw.System.Auth.Users {
+		// Effective shell: the user's explicit shell, else the YANG default.
+		// Kept bare (no module prefix) so the static cell and the editor's
+		// selected-option test compare directly against the option .Label.
+		shell := schema.StripModulePrefix(u.Shell)
+		if shell == "" {
+			shell = defaultShell
+		}
 		data.Users = append(data.Users, cfgUserDisplay{
 			cfgUserJSON: u,
-			ShellLabel:  schema.StripModulePrefix(u.Shell),
+			ShellLabel:  shell,
 			KeyCount:    len(u.AuthorizedKeys),
 		})
 	}
