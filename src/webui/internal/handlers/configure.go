@@ -3,11 +3,18 @@
 package handlers
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 
 	"infix/webui/internal/restconf"
@@ -28,7 +35,8 @@ var webuiStartTime = time.Now()
 
 // ConfigureHandler manages the candidate datastore lifecycle.
 type ConfigureHandler struct {
-	RC restconf.Fetcher
+	RC       restconf.Fetcher
+	Template *template.Template
 }
 
 func setCfgUnsaved(w http.ResponseWriter) {
@@ -140,6 +148,122 @@ func (h *ConfigureHandler) ApplyAndSave(w http.ResponseWriter, r *http.Request) 
 	clearCfgUnsaved(w)
 	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// configDiffLine is one classified line of unified-diff output.
+type configDiffLine struct {
+	Class string
+	Text  string
+}
+
+// configDiffData is the template payload for the diff modal body.  Neither
+// field set means the configs are identical (rendered as such by the template).
+type configDiffData struct {
+	Lines []configDiffLine
+	Err   string
+}
+
+// ConfigDiff renders a unified diff between startup-config and running-config
+// for the unsaved-changes modal.  Both datastores are fetched over RESTCONF
+// (same serializer → deterministic, low-noise diff), written to temp files,
+// and compared with busybox `diff -u`.  Always responds 200 with an HTML
+// fragment — including on error — so the connection monitor never reads a 5xx
+// as "device disconnected" (same reasoning as applyError).
+// GET /configure/diff
+func (h *ConfigureHandler) ConfigDiff(w http.ResponseWriter, r *http.Request) {
+	var data configDiffData
+	out, err := h.configDiff(r.Context())
+	switch {
+	case err != nil:
+		log.Printf("configure diff: %v", err)
+		data.Err = err.Error()
+	case strings.TrimSpace(out) != "":
+		data.Lines = classifyDiff(out)
+	}
+	if err := h.Template.ExecuteTemplate(w, "config-diff.html", data); err != nil {
+		log.Printf("configure diff: render: %v", err)
+	}
+}
+
+// configDiff fetches startup and running config, writes each to a temp file,
+// and returns the `diff -u` output (empty when the two are identical).
+func (h *ConfigureHandler) configDiff(ctx context.Context) (string, error) {
+	startup, err := h.RC.GetDatastore(ctx, "startup")
+	if err != nil {
+		return "", fmt.Errorf("read startup-config: %w", err)
+	}
+	running, err := h.RC.GetDatastore(ctx, "running")
+	if err != nil {
+		return "", fmt.Errorf("read running-config: %w", err)
+	}
+
+	startupFile, err := writeTempConfig("cfgdiff-startup-*.json", startup)
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(startupFile)
+	runningFile, err := writeTempConfig("cfgdiff-running-*.json", running)
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(runningFile)
+
+	var stdout, stderr bytes.Buffer
+	// busybox diff supports -L (not --label); repeat it for each file.
+	cmd := exec.CommandContext(ctx, "diff", "-u",
+		"-L", "startup-config", "-L", "running-config", startupFile, runningFile)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	// diff exit codes: 0 = identical, 1 = differences (normal), >1 = error.
+	var exit *exec.ExitError
+	if err != nil && (!errors.As(err, &exit) || exit.ExitCode() > 1) {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = err.Error()
+		}
+		return "", fmt.Errorf("diff failed: %s", msg)
+	}
+	return stdout.String(), nil
+}
+
+// writeTempConfig writes data to a fresh 0600 temp file and returns its path.
+func writeTempConfig(pattern string, data []byte) (string, error) {
+	f, err := os.CreateTemp("", pattern)
+	if err != nil {
+		return "", err
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(f.Name())
+		return "", err
+	}
+	return f.Name(), nil
+}
+
+// classifyDiff tags each unified-diff line with a CSS class for colorization.
+func classifyDiff(out string) []configDiffLine {
+	raw := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	lines := make([]configDiffLine, 0, len(raw))
+	for _, ln := range raw {
+		class := "diff-ctx"
+		switch {
+		case strings.HasPrefix(ln, "+++"), strings.HasPrefix(ln, "---"):
+			class = "diff-meta"
+		case strings.HasPrefix(ln, "@@"):
+			class = "diff-hunk"
+		case strings.HasPrefix(ln, "+"):
+			class = "diff-add"
+		case strings.HasPrefix(ln, "-"):
+			class = "diff-del"
+		}
+		lines = append(lines, configDiffLine{Class: class, Text: ln})
+	}
+	return lines
 }
 
 // DeleteLeaf removes a single leaf from the candidate datastore so the YANG

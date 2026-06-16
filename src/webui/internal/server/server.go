@@ -149,6 +149,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	cfgDiffTmpl, err := template.ParseFS(templateFS, "fragments/config-diff.html")
+	if err != nil {
+		return nil, err
+	}
 	ifFuncs := template.FuncMap{
 		"shortPMD": handlers.ShortenPMD,
 		"add":      func(a, b int) int { return a + b },
@@ -262,7 +266,7 @@ func New(
 	nacm := &handlers.NACMHandler{Template: nacmTmpl, RC: rc}
 	services := &handlers.ServicesHandler{Template: servicesTmpl, RC: rc}
 	containers := &handlers.ContainersHandler{Template: containersTmpl, RC: rc}
-	cfg := &handlers.ConfigureHandler{RC: rc}
+	cfg := &handlers.ConfigureHandler{RC: rc, Template: cfgDiffTmpl}
 	cfgSys := &handlers.ConfigureSystemHandler{
 		Template:    cfgSysTmpl,
 		NTPTemplate: cfgNTPTmpl,
@@ -353,6 +357,7 @@ func New(
 	mux.HandleFunc("POST /configure/apply-and-save", cfg.ApplyAndSave)
 	mux.HandleFunc("POST /configure/abort",          cfg.Abort)
 	mux.HandleFunc("POST /configure/save",           cfg.Save)
+	mux.HandleFunc("GET /configure/diff",            cfg.ConfigDiff)
 	mux.HandleFunc("DELETE /configure/leaf",         cfg.DeleteLeaf)
 	mux.HandleFunc("GET /configure/system",           cfgSys.Overview)
 	mux.HandleFunc("GET /configure/ntp",              cfgSys.OverviewNTP)
