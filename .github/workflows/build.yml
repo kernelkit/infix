@@ -125,7 +125,7 @@ jobs:
           target: ${{ env.TARGET }}
 
       # WebUI images bundle the mkdocs User's Guide via post-build.sh.
-      - uses: ./.github/actions/setup-mkdocs
+      - uses: kernelkit/actions/setup-mkdocs@v1.2
 
       - name: Configure ${{ env.TARGET }}
         run: |
