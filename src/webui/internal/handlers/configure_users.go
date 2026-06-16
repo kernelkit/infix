@@ -66,6 +66,8 @@ type cfgUsersPageData struct {
 	Groups       []cfgGroupDisplay
 	Error        string
 	ShellOptions []schema.IdentityOption
+	CryptMethods []CryptMethod
+	Desc         map[string]string // YANG field descriptions for hover tooltips
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -101,7 +103,9 @@ func (h *ConfigureUsersHandler) Overview(w http.ResponseWriter, r *http.Request)
 			data.Error = "Could not read user configuration"
 		}
 	}
-	const shellPath = "/ietf-system:system/authentication/user/infix-system:shell"
+	const userPath = "/ietf-system:system/authentication/user"
+	const shellPath = userPath + "/infix-system:shell"
+	data.CryptMethods = CryptMethods
 	mgr := h.Schema.Manager()
 	data.Loading = mgr == nil
 	var defaultShell string
@@ -112,6 +116,16 @@ func (h *ConfigureUsersHandler) Overview(w http.ResponseWriter, r *http.Request)
 				defaultShell = o.Label
 				break
 			}
+		}
+		data.Desc = map[string]string{
+			"username": schema.DescriptionOf(mgr, userPath+"/name"),
+			"password": schema.DescriptionOf(mgr, userPath+"/password"),
+			"shell":    schema.DescriptionOf(mgr, shellPath),
+			// No YANG leaf models the hash algorithm (it's a property of the
+			// stored crypt-hash); describe the offered set, verified against
+			// the infix-system:crypt-hash typedef.
+			"crypt": "Password hashing algorithm. yescrypt (recommended) is the strongest; " +
+				"SHA-512, SHA-256, and MD5 are offered for compatibility.",
 		}
 	}
 	for _, u := range raw.System.Auth.Users {
@@ -185,7 +199,7 @@ func (h *ConfigureUsersHandler) AddUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	hash, err := HashPassword(password)
+	hash, err := HashPassword(password, r.FormValue("crypt"))
 	if err != nil {
 		log.Printf("configure users add: hash: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -259,7 +273,7 @@ func (h *ConfigureUsersHandler) ChangePassword(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	hash, err := HashPassword(password)
+	hash, err := HashPassword(password, r.FormValue("crypt"))
 	if err != nil {
 		log.Printf("configure users password %q: hash: %v", name, err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

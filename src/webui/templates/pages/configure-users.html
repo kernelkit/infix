@@ -74,15 +74,32 @@
                   </div>
                 </form>
 
-                {{/* Change password */}}
-                <form hx-post="/configure/users/{{.Name}}/password" hx-swap="none">
+                {{/* Change password.  type=text + CSS mask (cfg-input-mask)
+                     dodges the browser password-manager save prompt, same as
+                     the keystore secret fields. */}}
+                <form hx-post="/configure/users/{{.Name}}/password" hx-swap="none" autocomplete="off">
                   <div class="section-subtitle">Change Password</div>
                   <table class="info-table">
                     <tr>
-                      <th>New password</th>
-                      <td><input class="cfg-input" type="password" name="password"
-                                 autocomplete="new-password"
-                                 placeholder="Leave blank to keep current"></td>
+                      <th>New password{{template "field-info" (index $.Desc "password")}}</th>
+                      <td>
+                        <span class="cfg-secret-wrap">
+                          <input class="cfg-input cfg-input-mask" type="text" name="password"
+                                 id="chpw-{{.Name}}" placeholder="Leave blank to keep current"
+                                 autocomplete="off" spellcheck="false"
+                                 data-1p-ignore="true" data-lpignore="true"
+                                 data-bwignore="true" data-form-type="other">
+                          <button type="button" class="btn-icon cfg-secret-toggle"
+                                  data-toggle-mask="chpw-{{.Name}}"
+                                  aria-label="Show / hide password">👁</button>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Hash{{template "field-info" (index $.Desc "crypt")}}</th>
+                      <td><select class="cfg-input" name="crypt">
+                        {{range $.CryptMethods}}<option value="{{.Value}}" {{if .Default}}selected{{end}}>{{.Label}}</option>{{end}}
+                      </select></td>
                     </tr>
                   </table>
                   <div class="cfg-card-footer" style="padding-left:0">
@@ -147,23 +164,55 @@
           </tr>
           {{end}}
 
-          {{/* Hidden add-user row — revealed by the + Add user button */}}
+          {{/* Hidden add-user row — revealed by the + Add user button.  The
+               password is a CSS-masked type=text (cfg-input-mask) to dodge the
+               browser password-manager save prompt, same as keystore secrets. */}}
           <tr id="add-user-row" hidden>
             <td colspan="4" class="key-detail-cell">
-              <form hx-post="/configure/users" hx-swap="none" class="user-add-inline"
-                    autocomplete="off">
-                <input class="cfg-input" type="text" name="username" required
-                       autocomplete="off"
-                       pattern="[a-zA-Z0-9_][a-zA-Z0-9_.-]*" placeholder="Username">
-                <input class="cfg-input" type="password" name="password" required
-                       autocomplete="new-password" placeholder="Password">
-                <select class="cfg-input" name="shell">
-                  {{range .ShellOptions}}<option value="{{.Value}}" {{if .IsDefault}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>{{end}}
-                </select>
-                <button class="btn btn-primary btn-sm" type="submit">Add</button>
-                <button type="button" class="btn btn-sm" data-hide="add-user-row">Cancel</button>
-                <span class="cfg-save-status"></span>
+              <div class="key-detail-body">
+              <form hx-post="/configure/users" hx-swap="none" autocomplete="off">
+                <div class="section-subtitle">Add User</div>
+                <table class="info-table">
+                  <tr>
+                    <th>Username{{template "field-info" (index $.Desc "username")}}</th>
+                    <td><input class="cfg-input" type="text" name="username" required autocomplete="off"
+                               pattern="[a-zA-Z0-9_][a-zA-Z0-9_.-]*" placeholder="Username"></td>
+                  </tr>
+                  <tr>
+                    <th>Password{{template "field-info" (index $.Desc "password")}}</th>
+                    <td>
+                      <span class="cfg-secret-wrap">
+                        <input class="cfg-input cfg-input-mask" type="text" name="password"
+                               id="add-user-password" required placeholder="Password"
+                               autocomplete="off" spellcheck="false"
+                               data-1p-ignore="true" data-lpignore="true"
+                               data-bwignore="true" data-form-type="other">
+                        <button type="button" class="btn-icon cfg-secret-toggle"
+                                data-toggle-mask="add-user-password"
+                                aria-label="Show / hide password">👁</button>
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Hash{{template "field-info" (index $.Desc "crypt")}}</th>
+                    <td><select class="cfg-input" name="crypt">
+                      {{range $.CryptMethods}}<option value="{{.Value}}" {{if .Default}}selected{{end}}>{{.Label}}</option>{{end}}
+                    </select></td>
+                  </tr>
+                  <tr>
+                    <th>Shell{{template "field-info" (index $.Desc "shell")}}</th>
+                    <td><select class="cfg-input" name="shell">
+                      {{range $.ShellOptions}}<option value="{{.Value}}" {{if .IsDefault}}selected{{end}}>{{.Label}}{{if .IsDefault}} (default){{end}}</option>{{end}}
+                    </select></td>
+                  </tr>
+                </table>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <button type="button" class="btn btn-sm" data-hide="add-user-row">Cancel</button>
+                  <span class="cfg-save-status"></span>
+                </div>
               </form>
+              </div>
             </td>
           </tr>
 
