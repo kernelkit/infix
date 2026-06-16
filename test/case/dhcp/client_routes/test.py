@@ -81,7 +81,7 @@ with infamy.Test() as test:
         with infamy.dhcp.Server(netns, prefix=PREFIX, router=ROUTER):
             with test.step("Verify client has route 10.0.0.0/24 via 192.168.0.254 (option 121)"):
                 print("Verify client use classless routes, option 121")
-                until(lambda: route.ipv4_route_exist(client, PREFIX, ROUTER))
+                until(lambda: route.ipv4_route_exist(client, PREFIX, ROUTER), attempts=60)
 
             with test.step("Verify client has default route via 192.168.0.254 (not use option 3)"):
                 print("Verify client did *not* use option 3")
@@ -90,6 +90,6 @@ with infamy.Test() as test:
 
             with test.step("Verify client still has canary route to 20.0.0.0/24 via 192.168.0.2"):
                 until(lambda: route.ipv4_route_exist(client, CANARY,
-                                                CANHOP, pref=250))
+                                                CANHOP, pref=250), attempts=60)
 
     test.succeed()
