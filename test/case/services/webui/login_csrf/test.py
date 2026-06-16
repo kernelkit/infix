@@ -102,6 +102,12 @@ with infamy.Test() as test:
         host = target.location.host
         password = target.location.password
 
+        # The web UI is an optional build-time feature (BR2_PACKAGE_WEBUI);
+        # minimal builds omit it.  infix-services advertises the "web-ui"
+        # feature only when it's built — skip rather than fail otherwise.
+        if not target.has_feature("infix-services", "web-ui"):
+            test.skip()
+
     with test.step("Wait for the web UI to come up"):
         def webui_ready():
             try:
