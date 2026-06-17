@@ -109,17 +109,47 @@ func applyError(w http.ResponseWriter, op string, err error) {
 	http.Error(w, "Could not reach the device: "+err.Error(), http.StatusBadGateway)
 }
 
-// Apply copies candidate → running, activating all staged changes atomically.
-// Sets the cfg-unsaved cookie so the persistent banner appears until startup is saved.
+// Apply copies candidate → running, activating all staged changes atomically,
+// then updates the unsaved-changes banner to match the running-vs-startup state.
 // POST /configure/apply
 func (h *ConfigureHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	if err := h.RC.CopyDatastore(r.Context(), "candidate", "running"); err != nil {
 		applyError(w, "apply", err)
 		return
 	}
-	setCfgUnsaved(w)
+	updateCfgUnsaved(r.Context(), h.RC, w)
 	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// configPair fetches the startup and running datastores — the shared basis for
+// the unsaved-state check (updateCfgUnsaved) and the config diff (configDiff).
+func configPair(ctx context.Context, rc restconf.Fetcher) (startup, running json.RawMessage, err error) {
+	if startup, err = rc.GetDatastore(ctx, "startup"); err != nil {
+		return nil, nil, fmt.Errorf("read startup-config: %w", err)
+	}
+	if running, err = rc.GetDatastore(ctx, "running"); err != nil {
+		return nil, nil, fmt.Errorf("read running-config: %w", err)
+	}
+	return startup, running, nil
+}
+
+// updateCfgUnsaved sets or clears the cfg-unsaved banner cookie to match the
+// actual state: set when running-config differs from startup, cleared when they
+// are byte-identical (an Apply or restore can revert an out-of-band change so
+// nothing is unsaved).  Byte comparison is reliable given the shared serializer
+// (the basis the config diff uses); a read error fails open and shows the
+// banner.  Call after any operation that writes running-config.
+func updateCfgUnsaved(ctx context.Context, rc restconf.Fetcher, w http.ResponseWriter) {
+	startup, running, err := configPair(ctx, rc)
+	if err != nil {
+		log.Printf("configure: unsaved-state check: %v", err)
+	}
+	if err == nil && bytes.Equal(running, startup) {
+		clearCfgUnsaved(w)
+	} else {
+		setCfgUnsaved(w)
+	}
 }
 
 // Abort copies running → candidate, discarding all staged changes.
@@ -188,13 +218,9 @@ func (h *ConfigureHandler) ConfigDiff(w http.ResponseWriter, r *http.Request) {
 // configDiff fetches startup and running config, writes each to a temp file,
 // and returns the `diff -u` output (empty when the two are identical).
 func (h *ConfigureHandler) configDiff(ctx context.Context) (string, error) {
-	startup, err := h.RC.GetDatastore(ctx, "startup")
+	startup, running, err := configPair(ctx, h.RC)
 	if err != nil {
-		return "", fmt.Errorf("read startup-config: %w", err)
-	}
-	running, err := h.RC.GetDatastore(ctx, "running")
-	if err != nil {
-		return "", fmt.Errorf("read running-config: %w", err)
+		return "", err
 	}
 
 	startupFile, err := writeTempConfig("cfgdiff-startup-*.json", startup)

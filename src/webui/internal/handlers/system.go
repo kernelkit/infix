@@ -395,7 +395,9 @@ func (h *SystemHandler) RestoreConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if target == "running" {
-		setCfgUnsaved(w)
+		// Restoring the same config that's already in startup leaves nothing
+		// unsaved, so reflect the actual running-vs-startup state.
+		updateCfgUnsaved(r.Context(), h.RC, w)
 		w.Header().Set("HX-Refresh", "true")
 		w.WriteHeader(http.StatusNoContent)
 		return
