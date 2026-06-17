@@ -2555,6 +2555,17 @@ details[open] > .cfg-multi-summary {
   font-size: 0.875rem;
   flex-shrink: 0;
 }
+/* "Show diff" pairs with the filled "Save to startup" — same primary hue,
+   outlined so the save action stays visually dominant; fills on hover. */
+.cfg-unsaved-diff-btn {
+  background: transparent;
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.cfg-unsaved-diff-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
 
 /* cfgError inline feedback */
 .cfg-save-status.error { color: var(--danger); cursor: pointer; }
@@ -2691,13 +2702,12 @@ details.cfg-fold[open] > summary::before { transform: rotate(90deg); }
 .btn-add-row:hover { text-decoration: underline; }
 
 /* Inline forms inside users table */
-.user-shell-form, .user-add-inline {
+.user-add-inline {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
-.user-shell-form .cfg-input { flex: 1; min-width: 0; }
 .user-add-inline .cfg-input { width: auto; flex: 1; min-width: 8rem; }
 
 /* Add Interface modal dialog */
@@ -2756,6 +2766,21 @@ details.cfg-fold[open] > summary::before { transform: rotate(90deg); }
   padding: 0.6rem 1rem;
   border-top: 1px solid var(--border);
 }
+
+/* Configuration diff modal (startup vs running) */
+.diff-modal { min-width: 52rem; }
+.diff-subtitle { color: var(--fg-muted); font-weight: normal; font-size: 0.8em; }
+.diff-modal .iface-modal-body { padding: 0; max-height: 70vh; overflow: auto; }
+.config-diff-body { font-size: 0.8rem; }
+.config-diff { font-family: var(--font-mono); }
+.diff-line { display: block; white-space: pre; padding: 0 0.75rem; }
+.diff-meta { color: var(--fg-muted); }
+.diff-hunk { color: var(--fg-muted); background: var(--border-subtle); }
+.diff-add { background: rgba(34, 197, 94, 0.14); color: var(--green-600); }
+.diff-del { background: rgba(239, 68, 68, 0.14); color: var(--red-600); }
+.diff-status { padding: 1rem; color: var(--fg-muted); }
+.diff-status-error { color: var(--danger); }
+
 .iface-fields {
   border: none;
   padding: 0;

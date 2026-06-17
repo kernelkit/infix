@@ -1728,7 +1728,9 @@ func (h *TreeHandler) TogglePresence(w http.ResponseWriter, r *http.Request) {
 		exists = true
 	}
 
-	setCfgUnsaved(w)
+	// No setCfgUnsaved here — this only modifies candidate. The cfg-unsaved
+	// banner is specifically about "running differs from startup," set after
+	// Apply / RestoreConfig-to-running (matching the other tree-edit handlers).
 
 	// Re-render the right-pane leaf group with the updated presence state.
 	gd := h.buildLeafGroup(r, mgr, path, node.Name, "container")

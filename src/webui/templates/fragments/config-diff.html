@@ -1,0 +1,9 @@
+{{define "config-diff.html"}}
+{{- if .Err}}
+<div class="diff-status diff-status-error">Could not produce diff: {{.Err}}</div>
+{{- else if .Lines}}
+<div class="config-diff">{{range .Lines}}<span class="diff-line {{.Class}}">{{.Text}}</span>{{end}}</div>
+{{- else}}
+<div class="diff-status">Running and startup configuration are identical.</div>
+{{- end}}
+{{end}}

@@ -31,6 +31,11 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2026-06-17 {
+    description "Add web-ui feature, advertised when the web management
+                 interface (webui) is built into the image.";
+    reference "internal";
+  }
   revision 2026-03-20 {
     description "Add hostname leaf to mdns container for avahi host-name override.
                  Add neighbors container to mdns for mDNS-SD neighbor table.
@@ -69,6 +74,13 @@ module infix-services {
   revision 2023-08-22 {
     description "Initial revision, add SSDP and mDNS-SD enable/disable only.";
     reference "internal";
+  }
+
+  feature web-ui {
+    description "The web management interface (webui) is an optional build-time
+                 feature in Infix.  Advertised when it is built; it gates no
+                 data nodes — the /web service tree (including restconf) is
+                 present regardless, so the feature is a pure capability flag.";
   }
 
   /*

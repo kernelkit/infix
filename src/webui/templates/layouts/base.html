@@ -144,6 +144,14 @@
                 hx-confirm="Save running configuration to startup?">
           Save to startup
         </button>
+        <button type="button" class="btn btn-sm cfg-unsaved-diff-btn"
+                title="Show what differs between running and startup configuration."
+                hx-get="/configure/diff"
+                hx-target="#config-diff-body"
+                hx-swap="innerHTML"
+                data-show-modal="config-diff-dialog">
+          Show diff
+        </button>
       </div>
       {{end}}
       <main id="content">
@@ -157,6 +165,28 @@
       <button class="btn btn-primary" id="dialog-confirm" autofocus>Confirm</button>
       <button class="btn btn-outline" id="dialog-cancel">Cancel</button>
     </div>
+  </dialog>
+  <dialog id="config-diff-dialog" class="iface-modal diff-modal" aria-modal="true">
+    <header class="iface-modal-header">
+      <h3>Configuration diff <span class="diff-subtitle">startup &rarr; running</span></h3>
+      <button type="button" class="btn-close" aria-label="Close"
+              data-close-modal="config-diff-dialog">&times;</button>
+    </header>
+    <div class="iface-modal-body">
+      <div id="config-diff-body" class="config-diff-body">
+        <div class="diff-status">Loading&hellip;</div>
+      </div>
+    </div>
+    <footer class="iface-modal-footer">
+      <button type="button" class="btn btn-sm btn-primary"
+              title="Copy running config to startup config so changes survive a reboot."
+              hx-post="/configure/save"
+              hx-swap="none">
+        Save to startup
+      </button>
+      <button type="button" class="btn btn-sm"
+              data-close-modal="config-diff-dialog">Close</button>
+    </footer>
   </dialog>
 </body>
 </html>
