@@ -626,12 +626,12 @@ type Uses struct {
 	Extensions []*Statement `yang:"Ext" json:"-"`
 
 	Augment     []*Augment `yang:"augment" json:",omitempty"`
-	Description *Value    `yang:"description" json:",omitempty"`
-	IfFeature   []*Value  `yang:"if-feature" json:"-"`
-	Refine      []*Refine `yang:"refine" json:"-"`
-	Reference   *Value    `yang:"reference" json:"-"`
-	Status      *Value    `yang:"status" json:"-"`
-	When        *Value    `yang:"when" json:",omitempty"`
+	Description *Value     `yang:"description" json:",omitempty"`
+	IfFeature   []*Value   `yang:"if-feature" json:"-"`
+	Refine      []*Refine  `yang:"refine" json:"-"`
+	Reference   *Value     `yang:"reference" json:"-"`
+	Status      *Value     `yang:"status" json:"-"`
+	When        *Value     `yang:"when" json:",omitempty"`
 }
 
 func (Uses) Kind() string             { return "uses" }
