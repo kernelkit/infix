@@ -46,7 +46,7 @@ jobs:
           enabled: ${{ inputs.use_cache }}
 
       # WebUI images bundle the mkdocs User's Guide via post-build.sh.
-      - uses: ./.github/actions/setup-mkdocs
+      - uses: kernelkit/actions/setup-mkdocs@v1.2
 
       - name: Configure & Build
         env:
