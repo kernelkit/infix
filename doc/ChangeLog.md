@@ -9,6 +9,7 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.35 (LTS)
+- Upgrade Buildroot to 2025.02.15 (LTS)
 - Add basic web interface: static status pages and a tree view of operational
   status.  Curated configuration pages for some common tasks and a YANG tree
   editor for the rest.  Also includes a maintenance section for firmware
