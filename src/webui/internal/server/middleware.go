@@ -3,6 +3,7 @@
 package server
 
 import (
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,7 +20,7 @@ const cookieName = "session"
 // the token up in the in-memory store, and attaches the session's
 // credentials to the context.  Unauthenticated requests are
 // redirected to /login (or get a 401 if the request comes from HTMX).
-func authMiddleware(store *auth.SessionStore, next http.Handler) http.Handler {
+func authMiddleware(store *auth.SessionStore, rc restconf.Fetcher, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isPublicPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
@@ -38,11 +39,13 @@ func authMiddleware(store *auth.SessionStore, next http.Handler) http.Handler {
 			return
 		}
 
+		polling := isPollingPath(r.URL.Path)
+
 		// Sliding window: extend the session on user-driven requests.
 		// Background polling endpoints are excluded so an idle user
 		// (just leaving the dashboard open in a tab) still hits the
 		// timeout.
-		if !isPollingPath(r.URL.Path) {
+		if !polling {
 			store.Refresh(cookie.Value)
 		}
 
@@ -51,6 +54,19 @@ func authMiddleware(store *auth.SessionStore, next http.Handler) http.Handler {
 			Password: password,
 		})
 		ctx = security.WithToken(ctx, csrf)
+
+		// The console / netbrowse shortcuts are toggleable in running-config at
+		// runtime, unlike the other (per-boot) capabilities baked into the
+		// session at login.  Re-read them on full page loads — the only time
+		// the topbar/user-menu that host them re-render — so toggling takes
+		// effect on reload without re-login.  htmx fragment swaps and pollers
+		// never re-draw them, so they're skipped (no read per request).
+		fullPageLoad := !polling && r.Header.Get("HX-Request") != "true"
+		if rc != nil && fullPageLoad {
+			features = maps.Clone(features) // don't mutate the shared session map
+			handlers.ApplyWebShortcuts(ctx, rc, features)
+		}
+
 		ctx = handlers.ContextWithCapabilities(ctx, handlers.NewCapabilities(features))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

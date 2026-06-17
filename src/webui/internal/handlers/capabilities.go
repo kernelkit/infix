@@ -109,6 +109,14 @@ func DetectWebShortcuts(ctx context.Context, rc restconf.Fetcher) (console, netb
 	return cfg.Web.Console.Enabled, cfg.Web.Netbrowse.Enabled
 }
 
+// ApplyWebShortcuts writes the console/netbrowse capability flags into features
+// from running-config.  These two are the only config-toggleable shortcuts, so
+// keeping the keys in one place lets both login (baking into the session) and
+// the per-page-load refresh share them.
+func ApplyWebShortcuts(ctx context.Context, rc restconf.Fetcher, features map[string]bool) {
+	features["console"], features["netbrowse"] = DetectWebShortcuts(ctx, rc)
+}
+
 func DetectCapabilities(ctx context.Context, rc restconf.Fetcher) *Capabilities {
 	var lib yangLibrary
 	if err := rc.Get(ctx, "/data/ietf-yang-library:yang-library", &lib); err != nil {

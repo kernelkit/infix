@@ -79,9 +79,7 @@ func (h *LoginHandler) DoLogin(w http.ResponseWriter, r *http.Request) {
 	// The external web-app shortcuts (console/ttyd, netbrowse) are
 	// config-gated; fold them into the same feature map so templates gate
 	// on .Capabilities.Has "console" / "netbrowse".
-	console, netbrowse := handlers.DetectWebShortcuts(ctx, h.RC)
-	caps.Features()["console"] = console
-	caps.Features()["netbrowse"] = netbrowse
+	handlers.ApplyWebShortcuts(ctx, h.RC, caps.Features())
 	// The User's Guide is bundled at build time (a filesystem check, not
 	// config); gate the Help entry on its presence.
 	caps.Features()["docs"] = handlers.DetectDocs()

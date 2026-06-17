@@ -480,7 +480,7 @@ func New(
 	mux.HandleFunc("GET /status/tree/children", statusTreeH.TreeChildren)
 	mux.HandleFunc("GET /status/tree/node",     statusTreeH.TreeNode)
 
-	handler := authMiddleware(store, mux)
+	handler := authMiddleware(store, rc, mux)
 	handler = csrfMiddleware(handler)
 	handler = securityHeadersMiddleware(handler)
 	return handler, nil
