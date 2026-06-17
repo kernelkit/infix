@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /src/webui
+    schedule:
+      interval: weekly
+    # goyang is pinned to our kernelkit fork via a replace directive and
+    # stepped by hand when we add patches; leave it for Dependabot to ignore.
+    ignore:
+      - dependency-name: github.com/openconfig/goyang
+
+  - package-ecosystem: gomod
+    directory: /src/netbrowse
+    schedule:
+      interval: weekly
