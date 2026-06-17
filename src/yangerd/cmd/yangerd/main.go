@@ -17,6 +17,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/bridgebatch"
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
 	"github.com/kernelkit/infix/src/yangerd/internal/config"
+	"github.com/kernelkit/infix/src/yangerd/internal/containermonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/dbusmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/ethmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/frrvty"
@@ -235,6 +236,17 @@ func main() {
 		}()
 	}
 
+	if cfg.EnableContainers {
+		ctrmon := containermonitor.New(t, cmd, fs, slogLog)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := ctrmon.Run(ctx); err != nil && ctx.Err() == nil {
+				slogLog.Error("containermonitor exited", "err", err)
+			}
+		}()
+	}
+
 	zapi := zapiwatcher.New(t, frrvty.New(""), slogLog)
 	wg.Add(1)
 	go func() {
@@ -338,19 +350,8 @@ func main() {
 			slogLog.Warn("fswatcher dns watch failed", "path", path, "err", err)
 		}
 	}
-	if cfg.EnableContainers {
-		containerHandler := fswatcher.WatchHandler{
-			TreeKey: "infix-containers:containers",
-			ReadFunc: func(_ string) (json.RawMessage, error) {
-				return collector.CollectContainers(cmd, fs), nil
-			},
-			Debounce: 500 * time.Millisecond,
-		}
-		os.MkdirAll("/run/libpod/events", 0755)
-		if err := fsw.WatchDir("/run/libpod/events", containerHandler); err != nil {
-			slogLog.Warn("fswatcher container watch failed", "err", err)
-		}
-	}
+	// Container operational data is handled by containermonitor (a
+	// `podman events` stream), not the fswatcher.
 	fsw.InitialRead()
 	wg.Add(1)
 	go func() {
