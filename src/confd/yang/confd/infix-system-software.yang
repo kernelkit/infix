@@ -16,10 +16,18 @@ submodule infix-system-software {
     prefix sys;
   }
 
+  import infix-schedule {
+    prefix infix-schedule;
+  }
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Software status and upgrade.";
 
+  revision 2026-06-17 {
+    description "Add check-update config, triggered from a referenced schedule";
+    reference "Internal";
+  }
   revision 2024-12-16 {
     description "Add boot-order operational data";
     reference "Internal";
@@ -80,6 +88,45 @@ submodule infix-system-software {
         "The last error encountered by the installer service.";
     }
   }
+  augment "/sys:system" {
+    container software {
+      description
+        "Software management configuration.";
+
+      container check-update {
+        description
+          "Policy for automatic software update checks.
+
+           When 'enabled' and 'schedule' references a schedule, the system
+           checks the configured URL for a newer release on each occurrence
+           and logs a notification if one is found.";
+
+        leaf enabled {
+          type boolean;
+          default false;
+          description
+            "Enable automatic update checks.";
+        }
+
+        leaf schedule {
+          type infix-schedule:schedule-ref;
+          description
+            "The schedule whose occurrences trigger an update check.
+             Without a referenced schedule no checks are performed.";
+        }
+
+        leaf update-url {
+          type string;
+          default "https://github.com/kernelkit/infix";
+          description
+            "Base URL of the update source.  The check script appends
+             /releases/latest and follows the redirect to determine the
+             latest release tag.  Override for customer-specific channels.";
+        }
+      }
+    }
+  }
+
   augment "/sys:system-state" {
     container software {
       description

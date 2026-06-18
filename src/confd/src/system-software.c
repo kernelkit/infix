@@ -89,6 +89,14 @@ static int infix_system_sw_set_boot_order(sr_session_ctx_t *session, uint32_t su
 	return SR_ERR_OK;
 }
 
+/* Scheduler consumer for check-update. */
+static const struct cron_consumer check_update_consumer = {
+	.path	      = "/ietf-system:system/infix-system:software/check-update",
+	.sched_leaf   = "schedule",
+	.enabled_leaf = "enabled",
+	.command      = "/usr/sbin/check-update",
+};
+
 int system_sw_rpc_init(struct confd *confd)
 {
 	int rc = 0;
@@ -97,6 +105,8 @@ int system_sw_rpc_init(struct confd *confd)
 		     infix_system_sw_install, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, "/infix-system:set-boot-order",
 		     infix_system_sw_set_boot_order, NULL, &confd->sub);
+
+	schedule_consumer_register(&check_update_consumer);
 
 fail:
 	return rc;

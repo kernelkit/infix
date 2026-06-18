@@ -11,7 +11,9 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -199,15 +201,15 @@ type hardwareWrapper struct {
 }
 
 type hwComponentJSON struct {
-	Name        string         `json:"name"`
-	Class       string         `json:"class"`
-	Description string         `json:"description"`
-	Parent      string         `json:"parent"`
-	MfgName     string         `json:"mfg-name"`
-	ModelName   string         `json:"model-name"`
-	SerialNum   string         `json:"serial-num"`
-	HardwareRev string         `json:"hardware-rev"`
-	PhysAddress string         `json:"infix-hardware:phys-address"`
+	Name        string           `json:"name"`
+	Class       string           `json:"class"`
+	Description string           `json:"description"`
+	Parent      string           `json:"parent"`
+	MfgName     string           `json:"mfg-name"`
+	ModelName   string           `json:"model-name"`
+	SerialNum   string           `json:"serial-num"`
+	HardwareRev string           `json:"hardware-rev"`
+	PhysAddress string           `json:"infix-hardware:phys-address"`
 	WiFiRadio   *wifiRadioHWJSON `json:"infix-hardware:wifi-radio"`
 	GPSReceiver *struct{}        `json:"infix-hardware:gps-receiver"`
 	SensorData  *struct {
@@ -226,26 +228,26 @@ type hwComponentJSON struct {
 
 type dashboardData struct {
 	PageData
-	Hostname     string
-	Contact      string
-	Location     string
-	OSName       string
-	OSVersion    string
-	Machine      string
-	CurrentTime  string
-	Software     string
-	Uptime       string
-	MemTotal     int64
-	MemUsed      int64
-	MemPercent   int
-	MemClass     string
-	Load1        string
-	Load5        string
-	Load15       string
-	CPUClass     string
-	Disks        []diskEntry
-	Board        boardInfo
-	KeyVitals    []sensorEntry // Overview's at-a-glance subset: CPU/SoC + wifi-radio temperatures and fan RPMs. Status > Hardware has the full inventory.
+	Hostname    string
+	Contact     string
+	Location    string
+	OSName      string
+	OSVersion   string
+	Machine     string
+	CurrentTime string
+	Software    string
+	Uptime      string
+	MemTotal    int64
+	MemUsed     int64
+	MemPercent  int
+	MemClass    string
+	Load1       string
+	Load5       string
+	Load15      string
+	CPUClass    string
+	Disks       []diskEntry
+	Board       boardInfo
+	KeyVitals   []sensorEntry // Overview's at-a-glance subset: CPU/SoC + wifi-radio temperatures and fan RPMs. Status > Hardware has the full inventory.
 	// Connectivity card.
 	Gateways      []gatewayEntry
 	InternetProbe string // address pinged for the Internet reachability row
@@ -254,7 +256,11 @@ type dashboardData struct {
 	NTPSync       string // "" / the selected NTP source address
 	// Addresses card.
 	Addresses []ifaceAddrEntry
-	Error     string
+	// Software-update banner — shown only when an update is available.
+	UpdateAvailable bool
+	UpdateMessage   string // verbatim CLI/login-banner notice
+	UpdateURL       string // release URL extracted from the notice
+	Error           string
 }
 
 // gatewayEntry is a default route's next-hop.
@@ -304,6 +310,31 @@ type diskEntry struct {
 // internetProbe is the address the Connectivity card pings for its Internet
 // reachability row — a well-known, stable anycast resolver.
 const internetProbe = "1.1.1.1"
+
+// updateNoticeFile holds the software-update notice written by
+// /usr/sbin/check-update — the same text the CLI shows at login.
+// A package var so tests can point it elsewhere.
+var updateNoticeFile = "/run/os-update"
+
+var updateURLRe = regexp.MustCompile(`https?://\S+`)
+
+// readUpdateNotice returns the software-update message verbatim (as shown in
+// the CLI login banner) and the release URL extracted from it. Both are empty
+// when no update is pending or the notice file is absent/empty.
+func readUpdateNotice() (msg, url string) {
+	b, err := os.ReadFile(updateNoticeFile)
+	if err != nil {
+		return "", ""
+	}
+	msg = strings.TrimSpace(string(b))
+	if msg == "" {
+		return "", ""
+	}
+	if u := updateURLRe.FindString(msg); u != "" {
+		url = strings.TrimRight(u, ").,;")
+	}
+	return msg, url
+}
 
 // DashboardHandler serves the main dashboard page.
 type DashboardHandler struct {
@@ -500,6 +531,14 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	data.Addresses = ifaceAddresses(ifaces)
+
+	// Software-update banner: surfaces the same notice as the CLI login
+	// banner (written by check-update to the notice file).
+	if msg, url := readUpdateNotice(); msg != "" {
+		data.UpdateAvailable = true
+		data.UpdateMessage = msg
+		data.UpdateURL = url
+	}
 
 	tmplName := "dashboard.html"
 	if r.Header.Get("HX-Request") == "true" {

@@ -8,6 +8,21 @@
 {{end}}
 
 <section class="info-grid">
+  {{if .UpdateAvailable}}
+  <div class="info-card info-grid-full update-card">
+    <div class="card-header update-card-header">
+      <span class="update-card-icon" aria-hidden="true">&#x2B06;</span> Software Update Available
+    </div>
+    <div class="card-body update-card-body">
+      <p class="update-card-msg">{{.UpdateMessage}}</p>
+      {{if .UpdateURL}}
+      <a href="{{.UpdateURL}}" target="_blank" rel="noopener noreferrer"
+         class="btn btn-primary update-card-action">View release &rarr;</a>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
   <div class="info-card">
     <div class="card-header">System Information</div>
     <div class="card-body" style="padding:0">

@@ -36,7 +36,7 @@ else
 CONFD_CONF_OPTS += --disable-gps
 endif
 define CONFD_INSTALL_EXTRA
-	for fn in confd.conf resolvconf.conf; do \
+	for fn in confd.conf crond.conf resolvconf.conf; do \
 		cp $(CONFD_PKGDIR)/$$fn  $(FINIT_D)/available/; \
 		ln -sf ../available/$$fn $(FINIT_D)/enabled/$$fn; \
 	done

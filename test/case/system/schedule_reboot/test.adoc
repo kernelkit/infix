@@ -1,0 +1,21 @@
+=== Schedule Reboot
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/schedule_reboot]
+
+==== Description
+
+Verify that it is possible to schedule a system reboot using the
+infix-schedule module.
+
+==== Topology
+
+image::topology.svg[Schedule Reboot topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Schedule a reboot
+. Wait for reboot
+. Verify system is back up
+
+

@@ -50,6 +50,7 @@ confd_plugin_la_SOURCES =			\
           if-wireguard.c			\
 	keystore.c				\
 	system.c				\
+	schedule.c				\
 	ntp.c					\
 	ptp.c					\
 	syslog.c				\

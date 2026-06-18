@@ -579,6 +579,43 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   padding: 1.25rem;
 }
 
+/* Dashboard software-update banner — amber "attention" treatment, bright
+   and theme-aware, but built from the same card primitives as everything
+   else. Spans the full info-grid width and sits at the top. */
+.update-card {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  box-shadow: 0 0 0 1px var(--warning-border), var(--shadow-sm);
+}
+.update-card .update-card-header {
+  background: var(--warning);
+  color: #fff;
+  border-bottom-color: var(--warning-border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.update-card .update-card-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+.update-card .update-card-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  flex-wrap: wrap;
+}
+.update-card .update-card-msg {
+  margin: 0;
+  color: var(--warning-fg);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.update-card .update-card-action {
+  flex: none;
+}
+
 
 /* ==========================================================================
    Tables

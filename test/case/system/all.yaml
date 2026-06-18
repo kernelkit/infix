@@ -22,3 +22,6 @@
 
 - name: System Upgrade
   case: upgrade/test.py
+
+- name: Schedule Reboot
+  case: schedule_reboot/test.py
