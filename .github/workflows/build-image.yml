@@ -223,15 +223,6 @@ jobs:
             output/images/*-emmc.img*
           retention-days: 30
 
-      - name: Create checksums
-        run: |
-          cd output/images/
-          for file in *-sdcard.img *-emmc.img; do
-            if [ -f "$file" ]; then
-              sha256sum "$file" > "$file.sha256"
-            fi
-          done
-
       - name: Upload to release
         uses: ncipollo/release-action@v1
         with:
@@ -242,7 +233,7 @@ jobs:
           prerelease: true
           tag: "latest-boot"
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "output/images/*-sdcard.img*,output/images/*-emmc.img*"
+          artifacts: "output/images/*-sdcard.img,output/images/*-emmc.img"
 
       - name: Generate summary
         run: |
