@@ -1,6 +1,6 @@
 #!/bin/sh
-# Check for available firmware updates and notify on login if one exists.
-# Called by the scheduler when predefined-action infix-schedule:check-update fires.
+# Check for available software updates and notify on login if one exists.
+# Called by the scheduler.
 
 NOTIFY_FILE=/run/infix-update
 TAG=infix-update
@@ -46,7 +46,7 @@ newer() {
 
 if [ "$IS_RELEASE" = false ] || newer "$LATEST" "$VERSION"; then
     RELEASE_URL="${UPDATE_URL}/releases/${LATEST_TAG}"
-    MSG="Firmware update available: ${LATEST_TAG}, running ${VERSION} (see ${RELEASE_URL})"
+    MSG="Software update available: ${LATEST_TAG}, running ${VERSION} (see ${RELEASE_URL})"
     logger -t "$TAG" "$MSG"
     printf '%s\n' "$MSG" > "$NOTIFY_FILE"
 else

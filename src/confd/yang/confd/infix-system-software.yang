@@ -95,7 +95,7 @@ submodule infix-system-software {
 
       container check-update {
         description
-          "Policy for automatic firmware update checks.
+          "Policy for automatic software update checks.
 
            When 'enabled' and 'schedule' references a schedule, the system
            checks the configured URL for a newer release on each occurrence

@@ -12,7 +12,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt", "netconf")
 
-    with test.step("Define a schedule and point scheduled-reboot at it"):
+    with test.step("Schedule a reboot"):
         target.put_config_dicts({
             "ietf-system": {
                 "system": {
