@@ -60,7 +60,7 @@ func TestContainerBasicInfo(t *testing.T) {
 					"Ports": []
 				}
 			]`),
-			"podman inspect web": []byte(`[{}]`),
+			"podman inspect web": []byte(`[{"Path":"nginx","Args":["-g","daemon off;"]}]`),
 			"podman stats --no-stream --format json --no-reset web": []byte(`[]`),
 		},
 		Errors: map[string]error{},
@@ -87,8 +87,8 @@ func TestContainerBasicInfo(t *testing.T) {
 	if c["status"] != "Up 2 hours" {
 		t.Fatalf("status mismatch: %v", c["status"])
 	}
-	if c["command"] != "nginx -g daemon off;" {
-		t.Fatalf("command mismatch: %v", c["command"])
+	if c["cmdline"] != "nginx -g daemon off;" {
+		t.Fatalf("cmdline mismatch: %v", c["cmdline"])
 	}
 	if c["running"] != true {
 		t.Fatalf("running expected true, got %v", c["running"])

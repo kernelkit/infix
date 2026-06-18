@@ -362,12 +362,20 @@ func (c *ContainerCollector) container(ctx context.Context, ps map[string]interf
 		"status":   asString(ps["Status"]),
 	}
 
-	cmd := strings.Join(asStringSlice(ps["Command"]), " ")
-	if cmd != "" {
-		out["command"] = cmd
+	inspect := c.podmanInspect(ctx, name)
+
+	// Report the actual running command line as the config-false
+	// "cmdline" leaf (an unrestricted string), built from inspect's
+	// Path + Args like the legacy yanger collector.  Do NOT report it
+	// into the config-true "command" leaf: that leaf has a restrictive
+	// pattern and a real command line (e.g. one containing "&&" or
+	// quotes) fails YANG validation, which rejects the entire
+	// containers subtree on read.
+	if path := asString(inspect["Path"]); path != "" {
+		parts := append([]string{path}, asStringSlice(inspect["Args"])...)
+		out["cmdline"] = strings.Join(parts, " ")
 	}
 
-	inspect := c.podmanInspect(ctx, name)
 	if net := c.network(ps, inspect); len(net) > 0 {
 		out["network"] = net
 	}
