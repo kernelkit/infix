@@ -312,9 +312,9 @@ type diskEntry struct {
 const internetProbe = "1.1.1.1"
 
 // updateNoticeFile holds the software-update notice written by
-// /usr/sbin/infix-check-update — the same text the CLI shows at login.
+// /usr/sbin/check-update — the same text the CLI shows at login.
 // A package var so tests can point it elsewhere.
-var updateNoticeFile = "/run/infix-update"
+var updateNoticeFile = "/run/os-update"
 
 var updateURLRe = regexp.MustCompile(`https?://\S+`)
 
@@ -533,7 +533,7 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	data.Addresses = ifaceAddresses(ifaces)
 
 	// Software-update banner: surfaces the same notice as the CLI login
-	// banner (written by infix-check-update to the notice file).
+	// banner (written by check-update to the notice file).
 	if msg, url := readUpdateNotice(); msg != "" {
 		data.UpdateAvailable = true
 		data.UpdateMessage = msg

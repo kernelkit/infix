@@ -94,7 +94,7 @@ static const struct cron_consumer check_update_consumer = {
 	.path	      = "/ietf-system:system/infix-system:software/check-update",
 	.sched_leaf   = "schedule",
 	.enabled_leaf = "enabled",
-	.command      = "/usr/sbin/infix-check-update",
+	.command      = "/usr/sbin/check-update",
 };
 
 int system_sw_rpc_init(struct confd *confd)

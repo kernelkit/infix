@@ -2,8 +2,8 @@
 # Check for available software updates and notify on login if one exists.
 # Called by the scheduler.
 
-NOTIFY_FILE=/run/infix-update
-TAG=infix-update
+NOTIFY_FILE=/run/os-update
+TAG=os-update
 
 # Source os-release for VERSION and IMAGE_ID
 if [ ! -f /etc/os-release ]; then
