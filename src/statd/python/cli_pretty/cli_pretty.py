@@ -916,7 +916,12 @@ class Sensor:
             # Standalone sensor without description: use name as-is
             display_name = self.name
 
-        row = f"{indent_str}{display_name:<{PadSensor.name - len(indent_str)}}"
+        # Truncate over-long names so they never spill into the VALUE column
+        # (e.g. unmapped switch-PHY hwmon names derived from the DT path).
+        field = PadSensor.name - len(indent_str)
+        if len(display_name) >= field:
+            display_name = display_name[:field - 2] + "…"
+        row = f"{indent_str}{display_name:<{field}}"
         # For colored value, pad manually to account for ANSI codes
         value_str = self.get_formatted_value()
         # Count visible characters (strip ANSI codes for length calculation)
@@ -2245,6 +2250,13 @@ def show_services(json):
     service_table.print()
 
 
+def sensor_sort_key(component):
+    """Natural sort key for sensor names: digit runs compare numerically so
+    e2 sorts before e10, while keeping ap-cpu/cp0-ic/sfp groups together."""
+    name = component.get("name", "")
+    return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', name)]
+
+
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
         print("Error, top level \"ietf-hardware:component\" missing")
@@ -2418,15 +2430,16 @@ def show_hardware(json):
             print(f"\n{module_name}:")
 
             if module_name in children:
-                for child in sorted(children[module_name], key=lambda c: c.get("name", "")):
+                for child in sorted(children[module_name], key=sensor_sort_key):
                     sensor = Sensor(child)
                     sensor.print(indent=1)
 
-        # Display standalone sensors (no parent)
+        # Display standalone sensors (no parent), naturally sorted so port
+        # temperatures read e1, e2, ... e28 rather than e1, e10, e11, ...
         if standalone:
             if modules:
                 print()  # Add blank line between modules and standalone
-            for component in sorted(standalone, key=lambda c: c.get("name", "")):
+            for component in sorted(standalone, key=sensor_sort_key):
                 sensor = Sensor(component)
                 sensor.print()
 

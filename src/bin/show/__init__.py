@@ -544,6 +544,13 @@ def mdns(args: List[str]) -> None:
     cli_pretty(data, "show-mdns")
 
 
+# Sensor names that represent the SoC/CPU temperature (not per-port PHYs).
+# Matches "cpu"/"soc"/"core", and Marvell CN913x "ap-*" / "cp<N>-*" zones.
+# Note the hyphen after "cp<N>" so mangled PHY names like "cp0busbus…" never
+# match.
+SOC_TEMP_RE = re.compile(r'^(cpu|soc|core|ap-|cp\d+-)')
+
+
 def system(args: List[str]) -> None:
     # Get system state from sysrepo
     data = get_json("/ietf-system:system-state")
@@ -562,6 +569,7 @@ def system(args: List[str]) -> None:
     fan_rpm = None
     if hardware_data and "ietf-hardware:hardware" in hardware_data:
         components = hardware_data.get("ietf-hardware:hardware", {}).get("component", [])
+        soc_temps = []
         for component in components:
             sensor_data = component.get("sensor-data", {})
             if not sensor_data:
@@ -570,15 +578,20 @@ def system(args: List[str]) -> None:
             name = component.get("name", "")
             value_type = sensor_data.get("value-type")
 
-            # Only capture CPU/SoC temperature (ignore phy, sfp, etc.)
-            # Different platforms use different names: cpu, soc, core, etc.
-            if value_type == "celsius" and name in ("cpu", "soc", "core") and cpu_temp is None:
-                temp_millidegrees = sensor_data.get("value", 0)
-                cpu_temp = temp_millidegrees / 1000.0
+            # Capture SoC/CPU temperature, ignoring per-port phy, sfp, etc.
+            # Platforms name the zone differently: a plain "cpu"/"soc"/"core",
+            # or, on Marvell CN913x, an "ap-*" (application processor) or
+            # "cp<N>-*" (communication processor) cluster.  Collect them all
+            # and report the hottest as the representative SoC temperature.
+            if value_type == "celsius" and SOC_TEMP_RE.match(name):
+                soc_temps.append(sensor_data.get("value", 0) / 1000.0)
 
             # Capture fan speed if available
             elif value_type == "rpm" and fan_rpm is None:
                 fan_rpm = sensor_data.get("value", 0)
+
+        if soc_temps:
+            cpu_temp = max(soc_temps)
 
     if cpu_temp is not None:
         runtime["cpu_temp"] = cpu_temp
