@@ -1,6 +1,0 @@
-module test-module {
-  prefix "t";
-  namespace "urn:t";
-
-  import import-not-found { prefix "i"; }
-}

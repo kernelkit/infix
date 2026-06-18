@@ -5,10 +5,8 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/openconfig/goyang v1.6.3 => ./internal/goyang
+# github.com/openconfig/goyang v1.6.3 => github.com/kernelkit/goyang v1.6.4-0.20260617163501-afcacf84230c
 ## explicit; go 1.22.0
 github.com/openconfig/goyang/pkg/indent
 github.com/openconfig/goyang/pkg/yang
-# github.com/pborman/getopt v1.1.0
-## explicit; go 1.13
-# github.com/openconfig/goyang => ./internal/goyang
+# github.com/openconfig/goyang => github.com/kernelkit/goyang v1.6.4-0.20260617163501-afcacf84230c

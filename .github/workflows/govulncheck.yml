@@ -1,0 +1,68 @@
+name: Go Vulnerability Scan
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/webui/**'
+      - 'src/netbrowse/**'
+      - '.github/workflows/govulncheck.yml'
+  pull_request:
+    paths:
+      - 'src/webui/**'
+      - 'src/netbrowse/**'
+      - '.github/workflows/govulncheck.yml'
+  schedule:
+    - cron: '5 0 * * 6'  # Saturday at 00:05 UTC, same as Coverity
+  workflow_dispatch:
+
+jobs:
+  govulncheck:
+    if: ${{ github.repository_owner == 'kernelkit' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - src/webui
+          - src/netbrowse
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Scan ${{ matrix.module }}
+        working-directory: ${{ matrix.module }}
+        run: |
+          # Full report, for the run summary.  govulncheck exits non-zero
+          # whenever it finds anything, so don't let it fail the step here.
+          {
+            echo "## govulncheck: ${{ matrix.module }}"
+            echo '```'
+            govulncheck ./... || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          # Gate on vulnerabilities reachable from our code through a
+          # dependency.  govulncheck's call-graph analysis is transitive,
+          # so indirect use counts too (we call a dep that calls the bad
+          # symbol).  trace[0] is the vulnerable symbol; we key on the
+          # module it lives in.  A chain that bottoms out in stdlib is
+          # fixed by bumping the Buildroot host Go, not this module's
+          # go.mod, so it's reported above but doesn't fail the build.
+          # Keep the json scan and jq unguarded so a tool failure fails the
+          # gate closed; only grep's no-match exit (all-clear) is tolerated.
+          govulncheck -format json ./... > scan.json || true
+          called=$(jq -r 'select(.finding.trace[0].function != null) |
+                          .finding.trace[0].module' scan.json | sort -u)
+          vulns=$(printf '%s' "$called" | grep -vx stdlib || true)
+          if [ -n "$vulns" ]; then
+            echo "::error::Called vulnerabilities in dependencies: $(echo "$vulns" | paste -sd, -)"
+            exit 1
+          fi
