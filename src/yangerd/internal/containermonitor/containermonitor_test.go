@@ -64,7 +64,8 @@ func TestEventTriggersRefresh(t *testing.T) {
 	// A container "died" event, newline-framed as podman emits it.
 	go m.readEvents(strings.NewReader(`{"Type":"container","Status":"died","Name":"gone"}` + "\n"))
 
-	deadline := time.After(2 * time.Second)
+	// Must comfortably exceed debounceDelay, or this races the re-read.
+	deadline := time.After(debounceDelay + 3*time.Second)
 	for {
 		if tr.Get(treeKey) == nil && calls > 0 {
 			break
