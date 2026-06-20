@@ -31,8 +31,15 @@ import (
 const (
 	treeKey = "infix-containers:containers"
 
-	// debounceDelay coalesces bursts of events into one re-read.
-	debounceDelay = 200 * time.Millisecond
+	// debounceDelay coalesces bursts of events into one re-read.  It is
+	// deliberately generous: container lifecycle events fire while confd
+	// is still running its own `podman` start/stop/rm operations, so
+	// re-reading too eagerly makes yangerd's `podman ps/inspect/stats`
+	// contend with confd for the libpod lock on a CPU-starved guest.
+	// Waiting for the churn to settle keeps yangerd off confd's back
+	// during config apply/reset; a couple of seconds of staleness in
+	// operational data is harmless.
+	debounceDelay = 2 * time.Second
 )
 
 // ContainerMonitor subscribes to container lifecycle events via a
