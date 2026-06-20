@@ -30,6 +30,8 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Fix #941: a VETH pair can now connect two containers directly, with both
+  ends assigned to containers.
 - Enabling IP masquerading in the firewall no longer enables IP forwarding on
   all interfaces.  This has been an issue ever since the firewall support was
   introduced in v25.10.0

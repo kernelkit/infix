@@ -1,0 +1,33 @@
+=== VETH Pair Between Two Containers
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/internal_link]
+
+==== Description
+
+Verify that a VETH pair can connect two containers directly, with *both*
+ends handed to containers and neither remaining in the host namespace.
+
+....
+  .------------.                          .------------.
+  |    left    |                          |    right   |
+  |  veth0a ===|========= veth ===========|=== veth0b  |
+  '------------' 10.0.0.1        10.0.0.2 '------------'
+....
+
+The pair is created in the host namespace then each end is moved into
+its container when starting up.  Connectivity is verified by pinging
+across the pair, from inside one container's network namespace to the
+other end's address.
+
+==== Topology
+
+image::topology.svg[VETH Pair Between Two Containers topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Create VETH pair with both ends assigned to containers
+. Verify both containers have started
+. Verify {LEFT} reaches {RIGHT} over the internal VETH pair
+
+

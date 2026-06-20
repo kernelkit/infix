@@ -18,6 +18,9 @@
 - name: Container with VETH Pair
   case: veth/test.py
 
+- name: VETH Pair Between Two Containers
+  case: internal_link/test.py
+
 - name: Container Volume Persistence
   case: volume/test.py
 
