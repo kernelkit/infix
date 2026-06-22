@@ -511,6 +511,56 @@ static confd_dependency_t dep_radio_components(struct lyd_node **diff, struct ly
 	return result;
 }
 
+static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	struct lyd_node *schedules, *sched;
+
+	schedules = lydx_get_xpathf(config, "/ietf-system:system/infix-schedule:schedules");
+	if (!schedules)
+		return CONFD_DEP_DONE;
+
+	LYX_LIST_FOR_EACH(lyd_child(schedules), sched, "schedule") {
+		const char *name = lydx_get_cattr(sched, "name");
+		struct ly_set *users;
+		int touched;
+		char xpath[256];
+		uint32_t i;
+
+		if (!name)
+			continue;
+
+		/* A removed consumer is only in the diff, with its old reference. */
+		users = lydx_find_xpathf(*diff, "/ietf-system:system//*[schedule='%s']", name);
+		touched = users && users->count > 0;
+		ly_set_free(users, NULL);
+
+		/* One that only toggled 'enabled' keeps its reference in config. */
+		users = lydx_find_xpathf(config, "/ietf-system:system//*[schedule='%s']", name);
+		for (i = 0; users && i < users->count && !touched; i++) {
+			char *upath = lyd_path(users->dnodes[i], LYD_PATH_STD, NULL, 0);
+
+			if (upath && lydx_get_xpathf(*diff, "%s", upath))
+				touched = 1;
+			free(upath);
+		}
+		ly_set_free(users, NULL);
+
+		if (!touched)
+			continue;
+
+		snprintf(xpath, sizeof(xpath),
+			 "/ietf-system:system/infix-schedule:schedules/schedule[name='%s']", name);
+		result = add_dependencies(diff, xpath, name);
+		if (result == CONFD_DEP_ERROR) {
+			ERROR("Failed to add schedule '%s' to diff", name);
+			return result;
+		}
+	}
+
+	return result;
+}
+
 static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config)
 {
 	confd_dependency_t result;
@@ -532,6 +582,10 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		return result;
 
 	result = dep_radio_components(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_schedule_consumers(diff, config);
 	if (result == CONFD_DEP_ERROR)
 		return result;
 

@@ -32,6 +32,10 @@ All notable changes to the project are documented in this file.
   value it sets
 - The CLI `configure` command takes an optional path to start in a
   sub-context directly, e.g., `configure system authentication`
+- Add support for unattended software upgrades, letting a unit track an RSS/Atom
+  release feed on a schedule and install a newer release to the inactive
+  partition on its own, then either reboot to activate it or leave it staged for
+  the next reboot
 
 [v26.08.0][] - 2026-09-01
 -------------------------

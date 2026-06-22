@@ -194,6 +194,218 @@ now the preferred boot source.
 To upgrade the remaining partition (`primary`), run the `upgrade URL`
 command again, and (optionally) reboot.
 
+## Unattended Updates
+
+The upgrade above is operator-driven: you pick a bundle, run `upgrade`,
+and reboot.  Infix can also perform that same install on its own, on a
+recurring [schedule][6].
+
+Two independent features share one update source:
+
+- **Update checks** (`check-update`) look for a newer release and log a
+  notification, shown on the next login.  Nothing is downloaded or
+  installed
+- **Unattended updates** (`unattended-update`) also download and install
+  the new release, exactly as a manual `upgrade` would
+
+### Update Source
+
+Both features read the same `update-url`, which points at an RSS/Atom feed
+of releases.  It defaults to the Infix project's release feed:
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set system software update-url https://github.com/kernelkit/infix/releases.atom</b>
+admin@example:/config/> <b>set system software allow-prerelease false</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
+The newest entry the feed offers decides the latest version.  Each entry
+must link to its release page as `<base>/releases/tag/<tag>`, and that is
+where the version tag comes from.  Override `update-url` to follow a fork
+or a customer-specific release channel.
+
+Feeds commonly list release candidates alongside finished releases.  By
+default those are ignored, so only a final release is ever installed; set
+`allow-prerelease` to `true` to consider them.
+
+A feed carries no asset list, so the per-platform bundle is fetched by
+convention from:
+
+```
+<base>/releases/download/<tag>/<image-id>-<tag>.pkg
+```
+
+where `<image-id>` is the running system's `IMAGE_ID`, e.g.
+`infix-aarch64`.  RAUC streams the bundle straight from that URL.  Nothing
+is staged on disk first, so the update needs no free space for the image,
+but the server must support HTTP range requests.
+
+### Hosting Your Own Feed
+
+Any static web server will do.  The feed and the bundles are plain files,
+and the device fetches the feed, then the `.pkg` whose URL it derives from
+the feed.
+
+Atom and RSS 2.0 both work.  An Atom feed carries one `<entry>` per
+release, each with a `<link>` whose `href` ends in `/releases/tag/<tag>`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example Infix releases</title>
+  <entry>
+    <title>v26.08.1</title>
+    <updated>2026-08-20T10:00:00Z</updated>
+    <link href="https://releases.example.com/infix/releases/tag/v26.08.1"/>
+  </entry>
+  <entry>
+    <title>v26.05.0</title>
+    <updated>2026-05-14T10:00:00Z</updated>
+    <link href="https://releases.example.com/infix/releases/tag/v26.05.0"/>
+  </entry>
+</feed>
+```
+
+An RSS 2.0 feed carries the same URLs, as the text of an `<item>` element's
+`<link>` rather than an attribute:
+
+```xml
+<?xml version="1.0"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>v26.08.1</title>
+      <link>https://releases.example.com/infix/releases/tag/v26.08.1</link>
+    </item>
+  </channel>
+</rss>
+```
+
+Everything before `/releases/tag/` in that URL becomes the base URL, so
+the example above resolves bundles under
+`https://releases.example.com/infix/releases/download/<tag>/`.  Lay the
+files out to match, naming the feed whatever `update-url` points at:
+
+```
+infix/
+├── releases.atom
+└── releases
+    └── download
+        └── v26.08.1
+            ├── infix-aarch64-v26.08.1.pkg
+            └── infix-x86_64-v26.08.1.pkg
+```
+
+Then point the device at the feed:
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set system software update-url https://releases.example.com/infix/releases.atom</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
+**Requirements:**
+
+- **Atom or RSS 2.0.**  Atom is tried first, reading the `href` attribute
+  of each entry's `link`.  When that finds nothing, the URLs are read from
+  the text of each RSS item's `link` instead
+- **Newest entry first.**  Selection follows feed order, so the first
+  entry that passes the pre-release filter wins.  A feed listing releases
+  oldest-first offers the oldest release
+- **The tag is the last path segment** of the release URL, and it goes
+  verbatim into the bundle filename.  A tag containing `-rc`, `-alpha` or
+  `-beta` counts as a pre-release, which is skipped unless
+  `allow-prerelease` is `true`
+- **One bundle per platform**, named `<image-id>-<tag>.pkg`.  A device
+  looks only for its own `IMAGE_ID`, so one feed can serve several
+  platforms
+- **HTTP range requests.**  RAUC streams the bundle instead of downloading
+  it whole, so a server that ignores `Range` fails the install.  BusyBox
+  `httpd` and nginx both work; Python's `http.server` does not
+
+Infix uses the `/releases/tag/<tag>` URL only to derive the base and as a
+human-readable link in the update-check notification.  The page itself
+does not have to exist.
+
+> [!TIP]
+> Serving the feed over HTTPS requires a correct clock on the device, or
+> certificate validation fails and every occurrence is skipped.  Plain
+> HTTP avoids that on an isolated network.
+
+### Enabling Unattended Updates
+
+Unattended updates are off by default and need a [schedule][6] to trigger
+them.  The example below installs new releases during a nightly
+maintenance window, leaving the reboot to the operator.
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set system schedule nightly recurrence frequency daily</b>
+admin@example:/config/> <b>set system schedule nightly recurrence byhour 3</b>
+admin@example:/config/> <b>set system software unattended-update enabled true</b>
+admin@example:/config/> <b>set system software unattended-update schedule nightly</b>
+admin@example:/config/> <b>set system software unattended-update reboot manual</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
+
+**Parameters:**
+
+- `enabled`: Enable unattended updates (default: `false`).  Without a
+  referenced schedule no updates are performed either way
+- `schedule`: The [schedule][6] whose occurrences trigger an update
+- `reboot`: What to do after a successful install
+    - `manual` (default): Install and flip the boot-order, but do not
+      reboot.  The new image activates the next time the operator reboots
+    - `immediate`: Reboot automatically to activate the new image at once
+
+### What Happens on Each Occurrence
+
+1. The feed is queried for the latest release.  If it cannot be reached,
+   the occurrence is logged and skipped, and the job exits successfully
+2. If the latest release is not newer than the running version, nothing
+   happens
+3. Otherwise the platform bundle is installed to the *inactive* partition,
+   and the boot-order is flipped to activate it on the next boot.  The
+   partition currently running is left untouched as a fallback
+4. Depending on the `reboot` policy, the system either reboots or logs
+   that a reboot is needed
+
+A single-instance lock means occurrences never overlap: if an install is
+still running when the next one fires, the new occurrence is skipped.
+
+> [!IMPORTANT]
+> Rollback safety is identical to a manual `upgrade`: the previously
+> running image remains on the other partition, and the bootloader falls
+> back to it if the new image does not boot.  Infix does no health check
+> on the new image beyond that, so see the caution under
+> [Upgrading](#upgrading) about upgrading only one partition at a time.
+
+### Monitoring
+
+Operator-facing messages go to `/var/log/messages`, while skipped
+occurrences are logged at `daemon.info`/`daemon.debug` in
+`/var/log/syslog`:
+
+```sh
+admin@example:~$ grep unattended-update /var/log/messages
+unattended-update: Installing v26.08.1 from https://.../infix-aarch64-v26.08.1.pkg (running v26.05.0)
+unattended-update: Installed v26.08.1; reboot to activate the new image
+```
+
+| Message                                      | Meaning                          |
+|----------------------------------------------|----------------------------------|
+| `Installing <tag> from <url> (running <ver>)`| Install started                  |
+| `Installed <tag>; reboot to activate …`      | Success, `reboot manual`         |
+| `No update available (current: …, latest: …)`| Ran, nothing to do               |
+| `Skipped: failed to query latest release …`  | Feed unreachable                 |
+| `Another update is already in progress …`    | Previous occurrence still running|
+
+`show software` reports installation state, slot contents and the boot
+order, both during and after the install.
+
+> [!TIP]
+> A system running a development build has no comparable version number
+> and is always considered upgradable, so an unattended update on a dev
+> build installs the latest release from the feed on the first occurrence.
+
 ## Configuration Migration
 
 The example above illustrated an upgrade from Infix v25.01.0 to
@@ -472,6 +684,7 @@ Continued configuration is done as with any unit after factory reset.
 [3]: boot.md#system-boot
 [4]: management.md#console-port
 [5]: scripting.md#-backup-configuration-using-sysrepocfg-and-scp
+[6]: schedule.md
 
 [^1]: In failure config, Infix puts all Ethernet ports as individual
     interfaces. With direct access, one can connect with e.g., SSH,

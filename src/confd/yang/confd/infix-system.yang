@@ -32,6 +32,12 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2026-09-11 {
+    description "Add unattended-update, a shared software/update-url naming an
+                 RSS/Atom release feed, and allow-prerelease (see the
+                 infix-system-software submodule).";
+    reference "internal";
+  }
   revision 2026-09-08 {
     description "Add /system/advanced, for low-level system customization:
                   - rc.ds: user scripts run once at boot, extracted from the
