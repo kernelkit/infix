@@ -102,6 +102,9 @@ fi
 # Drop Buildroot default pam_lastlog.so from login chain
 sed -i '/^[^#]*pam_lastlog.so/s/^/# /' "$TARGET_DIR/etc/pam.d/login"
 
+# Scratch dir for unattended-update's scheduled job (run as 'admin') to stage large downloads
+mkdir -p "$TARGET_DIR/var/lib/misc/unattended-update"
+
 # Allow bash to be login shells, it is added automatically when selected
 # in menuyconfig, but not when BusyBox provides a symlink (for ash).
 # The /bin/{true,false} are old UNIX beart means of disabling a user.

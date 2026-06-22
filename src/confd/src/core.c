@@ -505,6 +505,42 @@ static confd_dependency_t dep_radio_components(struct lyd_node **diff, struct ly
 	return result;
 }
 
+static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	const struct cron_consumer **consumers;
+	size_t i, count;
+
+	consumers = schedule_consumers(&count);
+	for (i = 0; i < count; i++) {
+		const struct cron_consumer *c = consumers[i];
+		struct lyd_node *dnode, *cnode;
+		const char *name;
+		char xpath[256];
+
+		dnode = lydx_get_xpathf(*diff, "%s", c->path);
+		if (!dnode)
+			continue;
+
+		cnode = lydx_get_xpathf(config, "%s", c->path);
+		name  = cnode ? lydx_get_cattr(cnode, c->sched_leaf) : NULL;
+		if (!name)
+			name = lydx_get_cattr(dnode, c->sched_leaf);
+		if (!name)
+			continue;
+
+		snprintf(xpath, sizeof(xpath),
+			 "/ietf-system:system/infix-schedule:schedules/schedule[name='%s']", name);
+		result = add_dependencies(diff, xpath, name);
+		if (result == CONFD_DEP_ERROR) {
+			ERROR("Failed to add schedule '%s' to diff for consumer %s", name, c->path);
+			return result;
+		}
+	}
+
+	return result;
+}
+
 static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config)
 {
 	confd_dependency_t result;
@@ -526,6 +562,10 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		return result;
 
 	result = dep_radio_components(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_schedule_consumers(diff, config);
 	if (result == CONFD_DEP_ERROR)
 		return result;
 

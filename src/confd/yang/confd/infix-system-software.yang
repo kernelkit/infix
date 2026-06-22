@@ -24,6 +24,13 @@ submodule infix-system-software {
   contact      "kernelkit@googlegroups.com";
   description  "Software status and upgrade.";
 
+  revision 2026-07-02 {
+    description "Add unattended-update config, triggered from a referenced
+                 schedule, and lift update-url to the shared software
+                 container so check-update and unattended-update use one
+                 update source.";
+    reference "Internal";
+  }
   revision 2026-06-17 {
     description "Add check-update config, triggered from a referenced schedule";
     reference "Internal";
@@ -93,13 +100,24 @@ submodule infix-system-software {
       description
         "Software management configuration.";
 
+      leaf update-url {
+        type string;
+        default "https://github.com/kernelkit/infix";
+        description
+          "Base URL of the update source, shared by check-update and
+           unattended-update.  The latest release tag is resolved from
+           <update-url>/releases/latest, and the per-platform bundle asset
+           is fetched from that release.  Override for customer-specific
+           channels.";
+      }
+
       container check-update {
         description
           "Policy for automatic software update checks.
 
            When 'enabled' and 'schedule' references a schedule, the system
-           checks the configured URL for a newer release on each occurrence
-           and logs a notification if one is found.";
+           checks the configured update-url for a newer release on each
+           occurrence and logs a notification if one is found.";
 
         leaf enabled {
           type boolean;
@@ -114,14 +132,54 @@ submodule infix-system-software {
             "The schedule whose occurrences trigger an update check.
              Without a referenced schedule no checks are performed.";
         }
+      }
 
-        leaf update-url {
-          type string;
-          default "https://github.com/kernelkit/infix";
+      container unattended-update {
+        description
+          "Policy for automatic, unattended software upgrades.
+
+           When 'enabled' and 'schedule' references a schedule, the system
+           checks the configured update-url for a newer release on each
+           occurrence and, if one is found, downloads and installs the
+           per-platform bundle to the inactive slot exactly as a manual
+           'upgrade' would: the boot-order is flipped to activate the new
+           image on the next reboot, and the previously running slot is
+           left intact as a fallback.
+
+           The 'reboot' leaf governs whether that reboot happens
+           automatically or is left to the operator.";
+
+        leaf enabled {
+          type boolean;
+          default false;
           description
-            "Base URL of the update source.  The check script appends
-             /releases/latest and follows the redirect to determine the
-             latest release tag.  Override for customer-specific channels.";
+            "Enable automatic unattended upgrades.";
+        }
+
+        leaf schedule {
+          type infix-schedule:schedule-ref;
+          description
+            "The schedule whose occurrences trigger an unattended upgrade.
+             Without a referenced schedule no upgrades are performed.";
+        }
+
+        leaf reboot {
+          type enumeration {
+            enum manual {
+              description
+                "Install and flip the boot-order, but do not reboot.  The
+                 new image activates the next time the operator reboots.";
+            }
+            enum immediate {
+              description
+                "Reboot automatically after a successful install to activate
+                 the new image at once.";
+            }
+          }
+          default manual;
+          description
+            "What to do once a bundle has been installed to the inactive
+             slot.";
         }
       }
     }

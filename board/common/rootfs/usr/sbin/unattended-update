@@ -1,0 +1,85 @@
+#!/bin/sh
+# Download and install a newer release, unattended.  Called by the scheduler.
+#
+# Installs to the inactive slot like a manual 'upgrade': RAUC flips the
+# boot-order to activate on next reboot, leaving the old slot as fallback.
+# The 'reboot' config policy decides whether that reboot is automatic.
+
+TAG=unattended-update
+# Scratch dir is used for the lock and the download bundle
+SCRATCH=/var/lib/misc/unattended-update
+LOCKFILE=$SCRATCH/lock
+
+. /usr/libexec/infix/update-common
+
+# Read the reboot policy (manual|immediate) from running-config; default manual.
+read_reboot_policy() {
+    policy=$(copy running-config \
+        -x '/ietf-system:system/infix-system:software/unattended-update/reboot' \
+        2>/dev/null \
+        | jq -r '.. | objects | .reboot? // empty')
+    [ -n "$policy" ] && printf '%s' "$policy" || printf 'manual'
+}
+
+# Single-instance guard -- also avoids racing a manual 'upgrade' or an
+# overlapping tick if a previous run is still installing.
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+    logger -t "$TAG" "An update is already in progress, skipping"
+    exit 0
+fi
+
+update_probe
+rc=$?
+if [ $rc -eq 1 ]; then
+    exit 1
+fi
+if [ $rc -eq 2 ]; then
+    logger -p daemon.info -t "$TAG" "Skipped: could not reach ${API_URL}"
+    exit 0
+fi
+
+if ! update_available; then
+    logger -p daemon.debug -t "$TAG" "No update available (current: $VERSION, latest: $LATEST)"
+    exit 0
+fi
+
+TARBALL_URL=$(update_tarball_url)
+if [ -z "$TARBALL_URL" ]; then
+    logger -t "$TAG" "Update ${LATEST_TAG} found, but no tarball '${IMAGE_ID}-${LATEST}.tar.gz' in release; skipping"
+    exit 1
+fi
+MEMBER=$(update_tarball_member)
+
+# Stage the bundle next to the lock.  Clean up on any exit.
+PKG=$SCRATCH/bundle.pkg
+trap 'rm -f "$PKG"' EXIT
+
+# The release ships the .pkg inside a tarball, so stream it through tar and
+# write out only the bundle member -- we never store the full archive.
+logger -t "$TAG" "Downloading ${LATEST_TAG} bundle from ${TARBALL_URL}"
+set -o pipefail
+if ! curl -sSfL --max-time 1800 "$TARBALL_URL" | tar -xzOf - "$MEMBER" > "$PKG"; then
+    logger -t "$TAG" "ERROR: failed to download or extract '${MEMBER}' from ${TARBALL_URL}"
+    exit 1
+fi
+if [ ! -s "$PKG" ]; then
+    logger -t "$TAG" "ERROR: extracted bundle is empty; '${MEMBER}' not found in tarball?"
+    exit 1
+fi
+
+logger -t "$TAG" "Installing ${LATEST_TAG} (running ${VERSION})"
+if ! rauc install "$PKG"; then
+    logger -t "$TAG" "ERROR: installation of ${LATEST_TAG} failed"
+    exit 1
+fi
+rm -f "$PKG"
+
+POLICY=$(read_reboot_policy)
+if [ "$POLICY" = immediate ]; then
+    logger -t "$TAG" "Installed ${LATEST_TAG}; reboot policy 'immediate', rebooting to activate"
+    sleep 2
+    /usr/sbin/reboot
+else
+    logger -t "$TAG" "Installed ${LATEST_TAG}; reboot to activate the new image"
+fi

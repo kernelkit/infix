@@ -1,0 +1,74 @@
+# Shared helpers for check-update and unattended-update.  Sourced, not run;
+# the caller sets TAG first.
+
+# Read the shared update-url from running-config, fall back to upstream.
+update_read_url() {
+    url=$(copy running-config \
+        -x '/ietf-system:system/infix-system:software/update-url' \
+        2>/dev/null \
+        | jq -r '.. | objects | ."update-url"? // empty')
+    [ -n "$url" ] && printf '%s' "$url" || printf 'https://github.com/kernelkit/infix'
+}
+
+# Is $1 strictly newer than $2?
+newer() {
+    [ "$1" = "$2" ] && return 1
+    [ "$(printf '%s\n%s' "$1" "$2" | sort -V | tail -1)" = "$1" ]
+}
+
+# Gather running and latest version info.
+# Returns: 0 ok, 1 fatal (no os-release), 2 release API unreachable.
+update_probe() {
+    if [ ! -f /etc/os-release ]; then
+        logger -t "$TAG" "ERROR: /etc/os-release not found"
+        return 1
+    fi
+    . /etc/os-release
+
+    # Dev/dirty builds have no comparable semver -- always treat as upgradable.
+    IS_RELEASE=true
+    if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+        IS_RELEASE=false
+    fi
+
+    UPDATE_URL=$(update_read_url)
+
+    # Derive the GitHub release API URL from the configured update URL.
+    # https://github.com/org/repo -> https://api.github.com/repos/org/repo
+    REPO=$(echo "$UPDATE_URL" | sed 's|https://github.com/||; s|/*$||')
+    API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+
+    RELEASE_JSON=$(curl -sSL --max-time 10 "$API_URL" 2>/dev/null)
+    LATEST_TAG=$(printf '%s' "$RELEASE_JSON" | jq -r '.tag_name // empty')
+    if [ -z "$LATEST_TAG" ]; then
+        return 2
+    fi
+    LATEST=${LATEST_TAG#v}
+    return 0
+}
+
+# Should the latest release be applied over the running version?
+# Requires update_probe() to have run.  Returns 0 if an update is available.
+update_available() {
+    [ "$IS_RELEASE" = false ] && return 0
+    newer "$LATEST" "$VERSION"
+}
+
+# Print the download URL of this platform's release tarball, or nothing if it
+# is missing.  Releases ship no standalone bundle; the RAUC .pkg is packed in
+# a per-platform tarball named "<IMAGE_ID>-<version>.tar.gz", e.g.
+# "infix-x86_64-26.06.0.tar.gz".
+update_tarball_url() {
+    name="${IMAGE_ID}-${LATEST}.tar.gz"
+    printf '%s' "$RELEASE_JSON" \
+        | jq -r --arg n "$name" \
+            '.assets[]? | select(.name == $n) | .browser_download_url' \
+        | head -1
+}
+
+# Print the path of the RAUC bundle inside that tarball.  The archive unpacks
+# to a "<IMAGE_ID>-<version>/" directory holding "<IMAGE_ID>-v<version>.pkg"
+# -- note the 'v' on the bundle name but not on the directory.
+update_tarball_member() {
+    printf '%s-%s/%s-v%s.pkg' "$IMAGE_ID" "$LATEST" "$IMAGE_ID" "$LATEST"
+}

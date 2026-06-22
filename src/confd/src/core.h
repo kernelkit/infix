@@ -224,6 +224,7 @@ struct cron_consumer {
 	const char *command;	  /* what crond runs on each occurrence */
 };
 int schedule_consumer_register(const struct cron_consumer *consumer);
+const struct cron_consumer **schedule_consumers(size_t *count);
 int schedule_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* containers.c */
