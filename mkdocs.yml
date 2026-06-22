@@ -52,14 +52,15 @@ nav:
       - SNMP: snmp.md
       - TFTP Server: tftp.md
   - System:
+      - Access Control (NACM): nacm.md
       - Boot Procedure: boot.md
       - Configuration: system.md
-      - Access Control (NACM): nacm.md
       - Hardware Info & Status: hardware.md
-      - Management: management.md
       - Keystore: keystore.md
-      - Syslog Support: syslog.md
+      - Management: management.md
+      - Scheduling: schedule.md
       - Support Data: support.md
+      - Syslog Support: syslog.md
       - Upgrade: upgrade.md
   - Scripting:
       - Introduction: scripting.md

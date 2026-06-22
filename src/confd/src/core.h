@@ -218,14 +218,13 @@ int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t
 int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* schedule.c */
-/* A feature registers cron consumer to run a command on a schedule. */
 struct cron_consumer {
-	const char *path;	  /* xpath of the container holding the schedule-ref leaf */
-	const char *sched_leaf;	  /* name of the schedule-ref leaf within 'path' */
-	const char *enabled_leaf; /* boolean leaf in 'path' that gates the job; NULL = active whenever a schedule is referenced */
-	const char *command;	  /* what crond runs on each occurrence */
+	const char *path;
+	const char *sched_leaf;
+	const char *enabled_leaf;
+	const char *command;
 };
-int schedule_consumer_register(const struct cron_consumer *consumer);
+const struct cron_consumer *schedule_consumer(size_t i);
 int schedule_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* containers.c */
