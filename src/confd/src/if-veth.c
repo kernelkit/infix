@@ -21,23 +21,28 @@
 bool veth_is_primary(struct lyd_node *cif)
 {
 	struct lyd_node *peer, *veth;
+	bool self_cni, peer_cni;
 	const char *peername;
 
 	veth = lydx_get_child(cif, "veth");
 	peername = lydx_get_cattr(veth, "peer");
 	peer = lydx_find_by_name(lyd_parent(cif), "interface", peername);
 
-	/* At the moment, CNI code relies on one side of the pair
-	 * remaining in the host namespace, and that that interface
-	 * takes care of creating the pair.
-	 */
-	if (lydx_get_child(cif, "container-network"))
-		return false;
-	if (lydx_get_child(peer, "container-network"))
-		return true;
+	self_cni = lydx_get_child(cif, "container-network") != NULL;
+	peer_cni = lydx_get_child(peer, "container-network") != NULL;
 
-	return strcmp(lydx_get_cattr(cif, "name"),
-		      lydx_get_cattr(veth, "peer")) < 0;
+	/* When exactly one end is handed to a container (CNI host-device),
+	 * the other end stays in the host namespace and creates the pair.
+	 */
+	if (self_cni != peer_cni)
+		return peer_cni;
+
+	/* Neither or both ends are container interfaces: pick a stable
+	 * primary by name so exactly one end creates the pair.  When both
+	 * ends are containers the pair is still created in the host
+	 * namespace first, then moved into each container by CNI host-device.
+	 */
+	return strcmp(lydx_get_cattr(cif, "name"), peername) < 0;
 }
 
 int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path)

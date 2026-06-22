@@ -668,11 +668,9 @@ set:
 
 For an example of both, see the next section.
 
-> [!IMPORTANT]
-> **VETH Pair Limitation:** When using VETH pairs with containers, at least
-> one side of the pair must remain in the host namespace. It is currently
-> not possible to create VETH pairs where both ends are assigned to different
-> containers. One end must always be accessible from the host.
+> [!TIP]
+> Both ends of a VETH pair may be assigned to containers, connecting two
+> containers directly without involving the host namespace.
 
 [^3]: Something which the container bridge network type does behind the
     scenes with one end of an automatically created VETH pair.

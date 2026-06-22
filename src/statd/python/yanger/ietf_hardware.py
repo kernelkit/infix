@@ -149,6 +149,36 @@ def normalize_sensor_name(name):
     return name
 
 
+def _dt_phandle(path):
+    """Read a device-tree phandle cell as a normalized hex string.
+
+    phandle/phy-handle properties are 4-byte big-endian cells.  Read them via
+    od(1) so the binary content survives the text-based HOST transport (works
+    both locally and over the ssh-style remote transport).
+    """
+    out = HOST.run(("od", "-An", "-tx1", path), default="")
+    return "".join(out.split()) if out else None
+
+
+def phy_handle_to_ifname():
+    """Map a PHY's device-tree phandle to the interface it drives.
+
+    DSA user ports carry a "phy-handle" pointing at the PHY that serves them.
+    The reverse map lets us name a switch PHY's hwmon temperature sensor after
+    the front-panel port (e.g. e1) instead of the unreadable name the kernel
+    derives from the full device-tree path (cp0busbusf2000000mdio...).
+    """
+    mapping = {}
+    for ifname in HOST.run(("ls", "/sys/class/net"), default="").split():
+        handle_path = os.path.join("/sys/class/net", ifname, "of_node", "phy-handle")
+        if not HOST.exists(handle_path):
+            continue
+        handle = _dt_phandle(handle_path)
+        if handle:
+            mapping[handle] = ifname
+    return mapping
+
+
 def get_wifi_phy_info():
     """
     Discover WiFi PHYs using iw list command.
@@ -218,6 +248,7 @@ def hwmon_sensor_components():
     """
     components = []
     device_sensors = {}  # Track {device_base_name: [list of sensor components]}
+    phy_ifname = phy_handle_to_ifname()
 
     def add_sensor(base_name, sensor_component):
         """Helper to track sensors per device"""
@@ -243,6 +274,16 @@ def hwmon_sensor_components():
                     device_name = HOST.read(device_name_path).strip()
 
                 base_name = normalize_sensor_name(device_name)
+
+                # Switch PHYs get an hwmon name derived from their full
+                # device-tree path (e.g. cp0busbusf2000000mdio12a200switch2mdio01).
+                # If this PHY drives a known port, name the sensor after that
+                # port (e1, e2, ...) instead.
+                phandle_path = os.path.join(hwmon_path, "device", "of_node", "phandle")
+                if HOST.exists(phandle_path):
+                    ifname = phy_ifname.get(_dt_phandle(phandle_path))
+                    if ifname:
+                        base_name = ifname
 
                 # Helper to create sensor component with human-readable description
                 def create_sensor(sensor_name, value, value_type, value_scale, label=None):

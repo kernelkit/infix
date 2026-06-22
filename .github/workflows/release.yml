@@ -83,17 +83,6 @@ jobs:
           pattern: "artifact-*"
           merge-multiple: true
 
-      - name: Create checksums ...
-        run: |
-          for file in *.tar.gz; do
-              sha256sum $file > $file.sha256
-          done
-          if ls *.qcow2 &>/dev/null; then
-            for file in *.qcow2; do
-              sha256sum "$file" > "$file.sha256"
-            done
-          fi
-
       - name: Extract ChangeLog entry ...
         run: |
           cat doc/ChangeLog.md | ./utils/extract-changelog.sh > release.md
@@ -106,7 +95,7 @@ jobs:
           makeLatest: ${{ steps.rel.outputs.latest }}
           discussionCategory: ${{ steps.rel.outputs.cat }}
           bodyFile: release.md
-          artifacts: "*.tar.gz*,*.qcow2*"
+          artifacts: "*.tar.gz,*.qcow2"
 
       - name: Summary
         run: |

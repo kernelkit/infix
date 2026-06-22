@@ -272,7 +272,7 @@ other contributions that are not aligned to this Code of Conduct."*
 [PEP-8]:    https://peps.python.org/pep-0008/
 [RDD]:      https://tom.preston-werner.com/2010/08/23/readme-driven-development
 [cbeams]:   https://cbea.ms/git-commit/#seven-rules
-[conduct]:    CODE-OF-CONDUCT.md
+[conduct]:    CODE_OF_CONDUCT.md
 [DCO]:        https://developercertificate.org/
 [closing]:    https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests
 [gpg-verify]: https://docs.github.com/en/authentication/managing-commit-signature-verification

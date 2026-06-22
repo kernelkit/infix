@@ -22,10 +22,12 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
         _, data_if = env.ltop.xlate("target", "data")
         _, mgmt_if = env.ltop.xlate("target", "mgmt")
-        _, unused_if = env.ltop.xlate("target", "unused")
         _, host_data = env.ltop.xlate("host", "data")
         TARGET_IP = "192.168.1.1"
         HOST_IP = "192.168.1.42"
+        # A dummy interface stands in for an unused port: it is not placed
+        # in any zone, so it must fall back to the default zone.
+        UNUSED_IF = "dummy0"
 
     with test.step("Configure basic end-device firewall"):
         target.put_config_dicts({
@@ -41,6 +43,11 @@ with infamy.Test() as test:
                                     "prefix-length": 24
                                 }]
                             }
+                        },
+                        {
+                            "name": UNUSED_IF,
+                            "type": "infix-if-type:dummy",
+                            "enabled": True
                         }
                     ]
                 }
@@ -119,16 +126,14 @@ with infamy.Test() as test:
         assert "http" in public_zone["service"]
 
     with test.step("Verify unused interface assigned to default zone"):
-        data = target.get_data("/infix-firewall:firewall")
-        fw = data["firewall"]
+        def unused_in_default_zone():
+            data = target.get_data("/infix-firewall:firewall")
+            fw = data["firewall"]
+            assert fw["default"] == "public-untrusted-net", "Default zone should be 'public-untrusted-net'"
+            zones = {zone["name"]: zone for zone in fw["zone"]}
+            return UNUSED_IF in zones["public-untrusted-net"].get("interface", [])
 
-        assert fw["default"] == "public-untrusted-net", "Default zone should be 'public-untrusted-net'"
-
-        zones = {zone["name"]: zone for zone in fw["zone"]}
-        public_zone = zones["public-untrusted-net"]
-
-        assert unused_if in public_zone["interface"], \
-            f"Unused interface {unused_if} should be in default zone 'public-untrusted-net', got interfaces: {public_zone['interface']}"
+        until(unused_in_default_zone, attempts=10)
 
     with infamy.IsolatedMacVlan(host_data) as ns:
         ns.addip(HOST_IP)

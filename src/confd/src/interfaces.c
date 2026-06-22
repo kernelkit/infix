@@ -518,6 +518,14 @@ static int veth_gen_del(struct lyd_node *dif, FILE *sh)
 	if (!veth_is_primary(dif))
 		return 0;
 
+	/* When the primary end is itself a container interface it currently
+	 * lives in the container's namespace, so a host-namespace delete here
+	 * would fail and abort the teardown.  Its removal is handled after the
+	 * container is gone, see cni_netdag_gen_iface().
+	 */
+	if (lydx_get_child(dif, "container-network"))
+		return 0;
+
 	return link_gen_del(dif, sh);
 }
 
@@ -571,6 +579,28 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
+/*
+ * Both ends of a veth pair can be handed to containers, leaving no
+ * host-side interface to create the pair.  Have the primary end create it
+ * in the host namespace early (NETDAG_INIT_PHYS, before the container is
+ * (re)started); CNI host-device then moves each end into its container.
+ */
+static int veth_gen_host(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	FILE *ip;
+	int err;
+
+	ip = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PHYS, "init.ip");
+	if (!ip)
+		return -EIO;
+
+	err = veth_gen(dif, cif, ip);
+	fclose(ip);
+
+	return err;
+}
+
 static sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname, const char *iftype)
 {
 	if (!strcmp(iftype, "infix-if-type:ethernet")) {
@@ -604,8 +634,13 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 
 	if ((err = cni_netdag_gen_iface(net, ifname, dif, cif))) {
 		/* error or managed by CNI/podman */
-		if (err > 0)
+		if (err > 0) {
 			err = 0; /* done, nothing more to do here */
+
+			if (op == LYDX_OP_CREATE && lydx_get_child(cif, "veth") &&
+			    veth_is_primary(cif))
+				err = veth_gen_host(net, dif, cif);
+		}
 		goto err;
 	}
 
