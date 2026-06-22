@@ -43,6 +43,10 @@ All notable changes to the project are documented in this file.
   editor, show mesh peers on the WiFi and interface status pages, and add
   an editor section for access point roaming (802.11k/r/v, band steering,
   OKC).
+- Add support for unattended software upgrades, letting a unit track an RSS/Atom
+  release feed on a schedule and install a newer release to the inactive
+  partition on its own, then either reboot to activate it or leave it staged for
+  the next reboot
 
 ### Fixes
 

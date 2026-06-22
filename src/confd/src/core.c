@@ -563,6 +563,44 @@ static confd_dependency_t dep_radio_components(struct lyd_node **diff, struct ly
 	return result;
 }
 
+static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	const struct cron_consumer *consumer;
+	size_t i;
+
+	for (i = 0; (consumer = schedule_consumer(i)); i++) {
+		struct lyd_node *node;
+		const char *name;
+		char xpath[256];
+
+		node = lydx_get_xpathf(*diff, "%s", consumer->path);
+		if (!node)
+			continue;
+
+		/* A diff that only toggles 'enabled' keeps the ref in config. */
+		name = lydx_get_cattr(node, consumer->sched_leaf);
+		if (!name) {
+			node = lydx_get_xpathf(config, "%s", consumer->path);
+			name = node ? lydx_get_cattr(node, consumer->sched_leaf) : NULL;
+		}
+		if (!name)
+			continue;
+
+		snprintf(xpath, sizeof(xpath),
+			 "/ietf-system:system/infix-schedule:schedules/schedule[name='%s']", name);
+		result = add_dependencies(diff, xpath, name);
+		if (result == CONFD_DEP_ERROR) {
+			ERROR("Failed to add schedule %s to diff for %s", name, consumer->path);
+			return result;
+		}
+
+		DEBUG("Added schedule %s to diff for %s", name, consumer->path);
+	}
+
+	return result;
+}
+
 static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config)
 {
 	confd_dependency_t result;
@@ -584,6 +622,10 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		return result;
 
 	result = dep_radio_components(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_schedule_consumers(diff, config);
 	if (result == CONFD_DEP_ERROR)
 		return result;
 

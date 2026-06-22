@@ -1,0 +1,7 @@
+{
+    "ietf-system:system": {
+	"infix-system:software": {
+	    "update-url": "https://github.com/kernelkit/infix/releases.atom"
+	}
+    }
+}
