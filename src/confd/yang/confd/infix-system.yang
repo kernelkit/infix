@@ -32,6 +32,11 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2026-07-02 {
+    description "Add unattended-update and shared software/update-url (see the
+                 infix-system-software submodule).";
+    reference "internal";
+  }
   revision 2026-06-17 {
     description "Add scheduled-reboot, triggered from a referenced schedule.";
     reference "internal";

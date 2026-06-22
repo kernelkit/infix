@@ -505,6 +505,65 @@ static confd_dependency_t dep_radio_components(struct lyd_node **diff, struct ly
 	return result;
 }
 
+static int schedule_ref_touched(struct lyd_node *tree, struct lyd_node *diff, const char *name)
+{
+	struct ly_set *refs;
+	int touched = 0;
+	uint32_t i;
+
+	refs = lydx_find_xpathf(tree, "//*[. = '%s']", name);
+	if (!refs)
+		return 0;
+
+	for (i = 0; i < refs->count && !touched; i++) {
+		struct lyd_node *owner = lyd_parent(refs->dnodes[i]);
+		char *opath;
+
+		if (!owner)
+			continue;
+
+		opath = lyd_path(owner, LYD_PATH_STD, NULL, 0);
+		if (opath && lydx_get_xpathf(diff, "%s", opath))
+			touched = 1;
+		free(opath);
+	}
+	ly_set_free(refs, NULL);
+
+	return touched;
+}
+
+
+static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct lyd_node *config)
+{
+	confd_dependency_t result = CONFD_DEP_DONE;
+	struct lyd_node *schedules, *sched;
+
+	schedules = lydx_get_xpathf(config, "/ietf-system:system/infix-schedule:schedules");
+	if (!schedules)
+		return CONFD_DEP_DONE;
+
+	LYX_LIST_FOR_EACH(lyd_child(schedules), sched, "schedule") {
+		const char *name = lydx_get_cattr(sched, "name");
+		char xpath[256];
+		if (!name)
+			continue;
+
+		if (!schedule_ref_touched(config, *diff, name) &&
+		    !schedule_ref_touched(*diff, *diff, name))
+			continue;
+
+		snprintf(xpath, sizeof(xpath),
+			 "/ietf-system:system/infix-schedule:schedules/schedule[name='%s']", name);
+		result = add_dependencies(diff, xpath, name);
+		if (result == CONFD_DEP_ERROR) {
+			ERROR("Failed to add schedule '%s' to diff", name);
+			return result;
+		}
+	}
+
+	return result;
+}
+
 static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config)
 {
 	confd_dependency_t result;
@@ -526,6 +585,10 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		return result;
 
 	result = dep_radio_components(diff, config);
+	if (result == CONFD_DEP_ERROR)
+		return result;
+
+	result = dep_schedule_consumers(diff, config);
 	if (result == CONFD_DEP_ERROR)
 		return result;
 

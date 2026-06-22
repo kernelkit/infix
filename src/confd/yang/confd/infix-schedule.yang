@@ -14,6 +14,12 @@ module infix-schedule {
   contact      "kernelkit@googlegroups.com";
   description  "Infix deviations and augments to ietf-schedule";
 
+  revision 2026-07-15 {
+    description
+      "Constrain schedule name to a bounded identifier so features can
+       reference it verbatim (e.g. in a resolved XPath).";
+    reference "internal";
+  }
   revision 2026-06-17 {
     description
       "Initial revision - system scheduling.
@@ -131,9 +137,15 @@ module infix-schedule {
            action of their own; features trigger off a schedule by pointing
            a schedule-ref leaf at its name.";
         leaf name {
-          type string;
+          type string {
+            length "1..64";
+            pattern '[a-zA-Z0-9][a-zA-Z0-9_.-]*';
+          }
           description
-            "Unique name identifying this schedule.";
+            "Unique name identifying this schedule.  Restricted to a bounded
+             identifier (letters, digits, '_', '.', '-') so features can use
+             it verbatim, e.g. in the XPath the scheduler builds to resolve a
+             schedule-ref.";
         }
         leaf enabled {
           type boolean;

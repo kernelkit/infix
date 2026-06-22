@@ -3,3 +3,8 @@
 /sbin/factory f 4750 root wheel  - - - - -
 
 /var/lib/avahi-autoipd  d 0755 avahi avahi - - - - -
+
+# Scratch area for scheduled jobs (run as 'admin', a wheel member) to stage
+# downloads, e.g. unattended-update's install bundle.  setgid so staged files
+# inherit the wheel group; no access for other.
+/var/lib/misc/unattended-update  d 2770 root wheel - - - - -
