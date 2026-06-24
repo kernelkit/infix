@@ -1,0 +1,3 @@
+# Build artifacts (root-level binaries only; do not match cmd/ source dirs)
+/yangerd
+/yangerctl

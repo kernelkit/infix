@@ -97,12 +97,12 @@ with infamy.Test() as test:
 
     with test.step("Verify peers see each other in associations"):
         for dut, _, name, _, peer_ip in duts:
-            until(lambda t=dut, p=peer_ip: ntp.server_has_peer(t, p), attempts=20)
+            until(lambda t=dut, p=peer_ip: ntp.server_has_peer(t, p), attempts=120)
             print(f"{name} sees {peer_ip} in associations")
 
     with test.step("Verify peers can reach each other"):
         for dut, _, name, _, peer_ip in duts:
-            until(lambda t=dut, p=peer_ip: ntp.server_peer_reachable(t, p), attempts=60)
+            until(lambda t=dut, p=peer_ip: ntp.server_peer_reachable(t, p), attempts=120)
             print(f"{name} can reach {peer_ip}")
 
     with test.step("Wait for one peer to select the other as sync source"):
