@@ -654,10 +654,17 @@ def main():
         err = 1
 
     os.umask(0o337)
+    # Write atomically: confd reads system.json as soon as ixinit signals
+    # done, so a truncated in-place write could be read half-written.  Write
+    # to a temp file in the same dir, then rename (atomic on the same fs).
     # pylint: disable=invalid-name
-    with open(SYSTEM_JSON, "w", encoding="ascii") as f:
+    tmp = SYSTEM_JSON + ".tmp"
+    with open(tmp, "w", encoding="ascii") as f:
         json.dump(out, f)
-    shutil.chown(SYSTEM_JSON, user="root", group="wheel")
+        f.flush()
+        os.fsync(f.fileno())
+    shutil.chown(tmp, user="root", group="wheel")
+    os.replace(tmp, SYSTEM_JSON)
     return err
 
 

@@ -15,6 +15,15 @@ truncate -s 0 $imgdir/{{name}}.mactab
 echo "{{qn_name}}	{{qn_mac}}" >>$imgdir/{{name}}.mactab
 {{/links}}
 
+# Number of mac80211_hwsim radios for this node = radioN carrier ports the
+# topology wired to it.  Read at boot by 00-hwsim (fw_cfg opt/wifi); 0 means
+# no radios, so the node stays wifi-free.
+radios=0
+{{#links}}
+case "{{qn_name}}" in radio[0-9]*) radios=$((radios + 1));; esac
+{{/links}}
+echo "$radios" > $imgdir/{{name}}.wifi
+
 {{#qn_gps}}
 mkfifo /tmp/{{name}}-gps.in /tmp/{{name}}-gps.out 2>/dev/null
 mkfifo /tmp/{{name}}-gps1.in /tmp/{{name}}-gps1.out 2>/dev/null
@@ -24,6 +33,7 @@ exec qemu-system-x86_64 -M pc,accel=kvm:tcg -cpu max \
   -m {{#qn_mem}}{{qn_mem}}{{/qn_mem}}{{^qn_mem}}256M{{/qn_mem}} \
 {{> ../qeneth/templates/inc/qemu-links}}
     -fw_cfg name=opt/mactab,file=$imgdir/{{name}}.mactab \
+    -fw_cfg name=opt/wifi,file=$imgdir/{{name}}.wifi \
     -bios $bios \
     -drive file={{name}}.qcow2,if=virtio,format=qcow2,bus=0,unit=1 \
     $usb_cmd \

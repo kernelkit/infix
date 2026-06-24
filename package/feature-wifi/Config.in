@@ -18,6 +18,18 @@ config BR2_PACKAGE_FEATURE_WIFI
 	help
 	  Enables WiFi in Infix. Enables all requried applications.
 
+config BR2_PACKAGE_FEATURE_WIFI_HWSIM
+	bool "Virtual Wi-Fi radios (mac80211_hwsim)"
+	depends on BR2_PACKAGE_FEATURE_WIFI
+	help
+	  Build the mac80211_hwsim virtual radio driver (as a module) for the
+	  QEMU test target, to exercise AP, station, and mesh modes without
+	  physical WiFi adapters. The module is autoloaded at boot (see the
+	  x86_64 /etc/modules-load.d) and frames are bridged between guests by
+	  the wifimedium relay.
+
+	  Leave disabled on real hardware; it only provides simulated radios.
+
 config BR2_PACKAGE_FEATURE_WIFI_MEDIATEK
        bool "Mediatek WiFi Devices"
        depends on BR2_PACKAGE_FEATURE_WIFI

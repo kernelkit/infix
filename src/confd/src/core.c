@@ -571,14 +571,6 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			}
 			max_dep--;
 		}
-#if 0
-		/* Debug: print diff to file */
-		FILE *f = fopen("/tmp/confd-diff.json", "w");
-		if (f) {
-			lyd_print_file(f, diff, LYD_JSON, LYD_PRINT_SIBLINGS);
-			fclose(f);
-		}
-#endif
 	}
 
 	/* ietf-hardware */
@@ -728,8 +720,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	confd.root = json_load_file("/run/system.json", 0, NULL);
-	if (!confd.root)
+	if (!confd.root) {
+		ERROR("failed loading /run/system.json, system probe incomplete");
+		rc = SR_ERR_SYS;
 		goto err;
+	}
 
 	/* An optional file that contains hardware specific quirks for
 	 * the network interfaces on running board.
