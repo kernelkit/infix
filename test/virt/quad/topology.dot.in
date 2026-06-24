@@ -21,28 +21,34 @@ graph "quad" {
 	];
 
         dut1 [
-	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut1 | { <e5> e5 | <e6> e6 | <e7> e7 | <e8> e8}",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut1 | { <e5> e5 | <e6> e6 | <e7> e7 | <e8> e8 } | { <radio0> radio0 | <radio1> radio1 | <radio2> radio2 | <radio3> radio3 }",
 	    pos="10,30!",
-	    provides="infix watchdog gps",
+	    provides="infix watchdog gps wifi wifi-dualband",
 	    expected_boot="primary",
 	    qn_console=9001,
 	    qn_mem="384M",
 	    qn_usb="dut1.usb",
 	    qn_gps="true"
+	    // NB: dut1 has two extra radios, radio2 and radio3, wired to the
+	    // dedicated cell2 (below).  With both on one cell this DUT runs a
+	    // dual-band AP whose 2.4GHz and 5GHz BSSes share a single cell -- the
+	    // only way a single-radio client can hear both bands and be band-
+	    // steered (wifi_band_steering).  radio0/radio1 stay on the general
+	    // cells.  The hwsim radio count is raised in package/feature-wifi.
 	    ];
         dut2 [
-	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut2 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut2 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8 } | { <radio0> radio0 | <radio1> radio1 | <radio2> radio2 }",
 	    pos="0,20!",
-	    provides="infix watchdog",
+	    provides="infix watchdog wifi",
 	    expected_boot="primary",
 	    qn_console=9002,
 	    qn_mem="384M",
 	    qn_usb="dut2.usb"
 	];
 	dut3 [
-	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut3 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut3 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8 } | { <radio0> radio0 | <radio1> radio1 }",
 	    pos="0,10!",
-	    provides="infix watchdog",
+	    provides="infix watchdog wifi",
 	    expected_boot="primary",
 	    qn_console=9003,
 	    qn_mem="384M",
@@ -50,14 +56,29 @@ graph "quad" {
 	];
 
 	dut4 [
-	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut4 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut4 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8 } | { <radio0> radio0 | <radio1> radio1 }",
 	    pos="10,0!",
-	    provides="infix watchdog",
+	    provides="infix watchdog wifi",
 	    expected_boot="primary",
 	    qn_console=9004,
 	    qn_mem="384M",
 	    qn_usb="dut4.usb"
 	];
+
+	// Wireless cells.  A node with qn_hub="true" is a shared multicast
+	// medium (one QEMU socket multicast group), not a guest: every radio
+	// wired to it is "in range" of every other, like a real RF cell.
+
+	cell0 [label="cell0\n(radio0)", provides="wifi-radio", qn_hub="true",
+	       pos="-6,22!", color="cornflowerblue", fontcolor="cornflowerblue", style="dashed"];
+	cell1 [label="cell1\n(radio1)", provides="wifi-radio", qn_hub="true",
+	       pos="-6,8!", color="cornflowerblue", fontcolor="cornflowerblue", style="dashed"];
+	// Dedicated band-steering cell, separate from the general cells above so
+	// the AP's shared SSID never leaks onto cell0/cell1.  dut1 wires two
+	// radios here for a dual-band AP (radio2=2.4GHz, radio3=5GHz) and dut2
+	// joins with a single dual-band radio (radio2) as the client.
+	cell2 [label="cell2\n(band steering)", provides="wifi-radio", qn_hub="true",
+	       pos="-6,15!", color="mediumseagreen", fontcolor="mediumseagreen", style="dashed"];
 
 	host:d1a -- dut1:e1 [provides="mgmt", color="lightgray"]
 	host:d1b -- dut1:e2 [provides="ieee-mc"]
@@ -79,7 +100,10 @@ graph "quad" {
 	host:d4c -- dut4:e3 [provides="ieee-mc"]
 	host:d4d -- dut4:e4 [provides="ieee-mc"]
 
-        // Lag
+	// Wired inter-DUT fabric (full mesh): ring + cross-links + a two-link
+	// lag between dut2 and dut3.  General-purpose links the non-wifi
+	// multi-DUT tests map onto; kept plain (wifi rides the cells above).
+	// Lag
 	dut2:e7 -- dut3:e6 [color="black", penwidth="3"]
 	dut2:e8 -- dut3:e5 [color="black", penwidth="3"]
 
@@ -91,4 +115,31 @@ graph "quad" {
 	// Cross-links
 	dut1:e6 -- dut3:e7 [color="red"]
 	dut2:e6 -- dut4:e7 [color="red"]
+
+	// Wireless adjacency: every radio joins its cell, so all radios on the
+	// same index hear each other (full mesh per cell).  The carrier port is
+	// named after the radio, so it becomes the Linux netdev radioN that the
+	// wifimedium relay pairs with phy radioN.
+	// provides lists the bands each radio supports, one wifi<band> token per
+	// band (mac80211_hwsim is tri-band).  On real hardware a band-specific
+	// radio advertises only its own bands, so a test requiring e.g. wifi5GHz
+	// maps only onto a 5GHz-capable radio.
+	dut1:radio0 -- cell0 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+	dut2:radio0 -- cell0 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+	dut3:radio0 -- cell0 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+	dut4:radio0 -- cell0 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+
+	dut1:radio1 -- cell1 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+	dut2:radio1 -- cell1 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+	dut3:radio1 -- cell1 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+	dut4:radio1 -- cell1 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+
+	// Band-steering cell: dut1's two extra radios form a dual-band AP
+	// (radio2=2.4GHz, radio3=5GHz) whose BSSes share this one cell, and
+	// dut2's extra radio (radio2) is the single-radio client that hears
+	// both bands.  Only dut1 has two radios here, so it is the sole node the
+	// dual-band AP can map onto (wifi_band_steering).
+	dut1:radio2 -- cell2 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+	dut1:radio3 -- cell2 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
+	dut2:radio2 -- cell2 [provides="wifi2.4GHz wifi5GHz wifi6GHz"]
 }

@@ -297,6 +297,36 @@ image.  The device will boot into test mode on first power-on.
 > unless `startup_override()` is called first (or the marker is removed
 > and a normal startup config is saved).
 
+Simulated Wi-Fi
+---------------
+
+The virtual topology has no real radios, so Wi-Fi tests run against
+`mac80211_hwsim` devices and the "air" between guests is faked.  A small
+relay, `wifimedium` (`package/feature-wifi/wifimedium`), takes every frame
+a radio transmits, forwards it to the other guests, and injects what
+arrives back into the local radios.
+
+Each radio (`radio0`, `radio1`, ...) is paired with a carrier NIC of the
+same name, and that carrier joins the multicast group (a *cell*) the
+topology wires it to.  Two radios hear each other only when their carriers
+share a cell.  Radios on the same cell that tune to different channels are
+still kept apart, as on real hardware.
+
+By convention the two general cells carry `radio0` and `radio1` across all
+DUTs, so most tests put communicating radios on the same index: a station
+joins an AP on the same `radioN`.  The mesh-roaming test, for instance,
+uses `radio1` for both the gateway APs and the client.  That is only a
+convention, though.  A cell can carry any set of radios, including two of
+the *same* DUT.  The band-steering test relies on that: it wires one DUT's
+`radio2` (2.4GHz) and `radio3` (5GHz) onto a dedicated cell so a single
+client radio hears the same SSID on both bands.
+
+How many radios each DUT gets depends on the topology.  The number of
+`radioN` ports wired to a node is passed in via the `opt/wifi` fw_cfg and
+loaded at boot by the `00-hwsim` script, so a node with no wifi links has
+no radios at all.  The wiring for the standard suite lives in
+`test/virt/quad`.
+
 [9PM]:    https://github.com/rical/9pm
 [Qeneth]: https://github.com/wkz/qeneth
 [TAP]:    https://testanything.org/

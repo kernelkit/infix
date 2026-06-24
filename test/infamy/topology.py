@@ -44,10 +44,14 @@ class Topology:
             self.g.add_node(name, **attrs)
 
         for e in self.dotg.get_edges():
-            sn, sp = e.get_source().split(":")
-            dn, dp = e.get_destination().split(":")
-
             attrs = {_qstrip(k): _qstrip(v) for k, v in e.get_attributes().items()}
+
+            # An endpoint may be port-less, e.g. a medium node that models a
+            # shared wireless cell ("dut1:radio0 -- cell0"): the cell is just a
+            # node every radio joins, it carries no port of its own.
+            sn, _, sp = e.get_source().partition(":")
+            dn, _, dp = e.get_destination().partition(":")
+
             attrs[sn] = sp
             attrs[dn] = dp
 

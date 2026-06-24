@@ -1,0 +1,12 @@
+---
+- name: WiFi AP and Station Association across two DUTs
+  case: wifi_ap_station_2dut/test.py
+
+- name: WiFi Access Point serving three Stations
+  case: wifi_ap_multi_station/test.py
+
+- name: WiFi Mesh backhaul with roaming Access Points
+  case: wifi_mesh_roaming/test.py
+
+- name: WiFi Band Steering across a dual-band Access Point
+  case: wifi_band_steering/test.py

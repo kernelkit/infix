@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: wifi&#45;ap&#45;multi&#45;station Pages: 1 -->
+<svg width="980pt" height="519pt"
+ viewBox="0.00 0.00 979.99 519.45" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 515.45)">
+<title>wifi&#45;ap&#45;multi&#45;station</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-515.45 975.99,-515.45 975.99,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-209.72 0,-301.72 108,-301.72 108,-209.72 0,-209.72"/>
+<text text-anchor="middle" x="25" y="-252.02" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-209.72 50,-301.72 "/>
+<text text-anchor="middle" x="79" y="-286.52" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="50,-278.72 108,-278.72 "/>
+<text text-anchor="middle" x="79" y="-263.52" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+<polyline fill="none" stroke="black" points="50,-255.72 108,-255.72 "/>
+<text text-anchor="middle" x="79" y="-240.52" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt3</text>
+<polyline fill="none" stroke="black" points="50,-232.72 108,-232.72 "/>
+<text text-anchor="middle" x="79" y="-217.52" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt4</text>
+</g>
+<!-- ap -->
+<g id="node2" class="node">
+<title>ap</title>
+<polygon fill="none" stroke="black" points="476.95,-232.72 476.95,-278.72 559.95,-278.72 559.95,-232.72 476.95,-232.72"/>
+<text text-anchor="middle" x="501.95" y="-263.52" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="476.95,-255.72 526.95,-255.72 "/>
+<text text-anchor="middle" x="501.95" y="-240.52" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="526.95,-232.72 526.95,-278.72 "/>
+<text text-anchor="middle" x="543.45" y="-252.02" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap</text>
+</g>
+<!-- host&#45;&#45;ap -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;ap:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-290.72C108,-290.72 476.45,-267.72 476.45,-267.72"/>
+</g>
+<!-- station1 -->
+<g id="node3" class="node">
+<title>station1</title>
+<polygon fill="none" stroke="black" points="838.99,-464.95 838.99,-510.95 971.99,-510.95 971.99,-464.95 838.99,-464.95"/>
+<text text-anchor="middle" x="863.99" y="-495.75" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="838.99,-487.95 888.99,-487.95 "/>
+<text text-anchor="middle" x="863.99" y="-472.75" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="888.99,-464.95 888.99,-510.95 "/>
+<text text-anchor="middle" x="930.49" y="-484.25" font-family="DejaVu Sans Mono, Book" font-size="14.00">station1</text>
+</g>
+<!-- host&#45;&#45;station1 -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;station1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-267.72C108,-267.72 838.49,-499.95 838.49,-499.95"/>
+</g>
+<!-- station2 -->
+<g id="node4" class="node">
+<title>station2</title>
+<polygon fill="none" stroke="black" points="838.99,-232.72 838.99,-278.72 971.99,-278.72 971.99,-232.72 838.99,-232.72"/>
+<text text-anchor="middle" x="863.99" y="-263.52" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="838.99,-255.72 888.99,-255.72 "/>
+<text text-anchor="middle" x="863.99" y="-240.52" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="888.99,-232.72 888.99,-278.72 "/>
+<text text-anchor="middle" x="930.49" y="-252.02" font-family="DejaVu Sans Mono, Book" font-size="14.00">station2</text>
+</g>
+<!-- host&#45;&#45;station2 -->
+<g id="edge3" class="edge">
+<title>host:mgmt3&#45;&#45;station2:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-243.72C108,-243.72 838.49,-267.72 838.49,-267.72"/>
+</g>
+<!-- station3 -->
+<g id="node5" class="node">
+<title>station3</title>
+<polygon fill="none" stroke="black" points="838.99,-0.5 838.99,-46.5 971.99,-46.5 971.99,-0.5 838.99,-0.5"/>
+<text text-anchor="middle" x="863.99" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="838.99,-23.5 888.99,-23.5 "/>
+<text text-anchor="middle" x="863.99" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="888.99,-0.5 888.99,-46.5 "/>
+<text text-anchor="middle" x="930.49" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">station3</text>
+</g>
+<!-- host&#45;&#45;station3 -->
+<g id="edge4" class="edge">
+<title>host:mgmt4&#45;&#45;station3:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-220.72C108,-220.72 838.49,-35.5 838.49,-35.5"/>
+</g>
+<!-- cell -->
+<g id="node6" class="node">
+<title>cell</title>
+<polygon fill="none" stroke="black" points="684.97,-237.72 684.97,-273.72 738.97,-273.72 738.97,-237.72 684.97,-237.72"/>
+<text text-anchor="middle" x="711.97" y="-252.02" font-family="DejaVu Sans Mono, Book" font-size="14.00">cell</text>
+</g>
+<!-- ap&#45;&#45;cell -->
+<g id="edge5" class="edge">
+<title>ap:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M501.45,-232.72C501.45,-232.72 628.02,-246.55 684.88,-252.76"/>
+</g>
+<!-- station1&#45;&#45;cell -->
+<g id="edge6" class="edge">
+<title>station1:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M838.49,-475.95C838.49,-475.95 752.54,-326.34 722.32,-273.75"/>
+</g>
+<!-- station2&#45;&#45;cell -->
+<g id="edge7" class="edge">
+<title>station2:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M838.49,-243.72C838.49,-243.72 776.28,-249.62 739.11,-253.15"/>
+</g>
+<!-- station3&#45;&#45;cell -->
+<g id="edge8" class="edge">
+<title>station3:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M838.49,-11.5C838.49,-11.5 750.9,-180.57 721.48,-237.37"/>
+</g>
+</g>
+</svg>

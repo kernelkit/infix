@@ -1,0 +1,44 @@
+graph "wifi-ap-station-2dut" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt2> mgmt2 }",
+	    pos="0,0!",
+	    requires="controller",
+	];
+
+	ap [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | ap",
+	    pos="6,2!",
+	    requires="infix",
+	];
+
+	station [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | station",
+	    pos="6,-2!",
+	    requires="infix",
+	];
+
+	// The wireless cell the ap and the station share, modelled as a medium
+	// node both join (one radio each, same index -> same cell):
+	//   * physical: maps onto a real over-the-air RF cell;
+	//   * virtual (qeneth): maps onto one of the multicast cells over which
+	//     the wifimedium relay bridges mac80211_hwsim frames.
+	// The mapper guarantees the two DUTs actually share this medium.
+	cell [
+	    label="cell",
+	    pos="9,0!",
+	    requires="wifi-radio",
+	];
+
+	host:mgmt1 -- ap:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- station:mgmt [requires="mgmt", color="lightgray"]
+
+	ap:wifi -- cell      [requires="wifi2.4GHz", style="dashed"]
+	station:wifi -- cell [requires="wifi2.4GHz", style="dashed"]
+}

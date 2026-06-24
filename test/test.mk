@@ -18,7 +18,7 @@ xpaths_all_csv     := $(test-dir)/.log/xpaths_all.csv
 base := -b $(base-dir)
 
 TEST_MODE ?= qeneth
-mode-qeneth := -q $(test-dir)/virt/quad
+mode-qeneth := -q $(or $(QTOPOLOGY),$(test-dir)/virt/quad)
 mode-host   := -t $(or $(TOPOLOGY),/etc/infamy.dot)
 mode-run    := -t $(BINARIES_DIR)/qemu.dot
 mode        := $(mode-$(TEST_MODE))

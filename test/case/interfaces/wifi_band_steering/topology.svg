@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: wifi&#45;band&#45;steering Pages: 1 -->
+<svg width="1032pt" height="78pt"
+ viewBox="0.00 0.00 1032.09 78.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 74)">
+<title>wifi&#45;band&#45;steering</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-74 1028.09,-74 1028.09,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-12 0,-58 108,-58 108,-12 0,-12"/>
+<text text-anchor="middle" x="25" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-12 50,-58 "/>
+<text text-anchor="middle" x="79" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="50,-35 108,-35 "/>
+<text text-anchor="middle" x="79" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- ap -->
+<g id="node2" class="node">
+<title>ap</title>
+<polygon fill="none" stroke="black" points="468.55,-0.5 468.55,-69.5 551.55,-69.5 551.55,-0.5 468.55,-0.5"/>
+<text text-anchor="middle" x="493.55" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="468.55,-46.5 518.55,-46.5 "/>
+<text text-anchor="middle" x="493.55" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">lo</text>
+<polyline fill="none" stroke="black" points="468.55,-23.5 518.55,-23.5 "/>
+<text text-anchor="middle" x="493.55" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">hi</text>
+<polyline fill="none" stroke="black" points="518.55,-0.5 518.55,-69.5 "/>
+<text text-anchor="middle" x="535.05" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">ap</text>
+</g>
+<!-- host&#45;&#45;ap -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;ap:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-47C108,-47 468.05,-58 468.05,-58"/>
+</g>
+<!-- client -->
+<g id="node3" class="node">
+<title>client</title>
+<polygon fill="none" stroke="black" points="908.09,-12 908.09,-58 1024.09,-58 1024.09,-12 908.09,-12"/>
+<text text-anchor="middle" x="933.09" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="908.09,-35 958.09,-35 "/>
+<text text-anchor="middle" x="933.09" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="958.09,-12 958.09,-58 "/>
+<text text-anchor="middle" x="991.09" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">client</text>
+</g>
+<!-- host&#45;&#45;client -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;client:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-23C108,-23 908.09,-47 908.09,-47"/>
+</g>
+<!-- cell -->
+<g id="node4" class="node">
+<title>cell</title>
+<polygon fill="none" stroke="black" points="668.07,-16 668.07,-54 808.07,-54 808.07,-16 668.07,-16"/>
+<text text-anchor="middle" x="738.07" y="-38.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">cell</text>
+<text text-anchor="middle" x="738.07" y="-23.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">(2.4GHz + 5GHz)</text>
+</g>
+<!-- ap&#45;&#45;cell -->
+<g id="edge3" class="edge">
+<title>ap:lo&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M468.05,-35C468.05,-35 587.82,-35 667.83,-35"/>
+</g>
+<!-- ap&#45;&#45;cell -->
+<g id="edge4" class="edge">
+<title>ap:hi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M493.05,0C493.05,0 595.45,-14.63 667.85,-24.97"/>
+</g>
+<!-- client&#45;&#45;cell -->
+<g id="edge5" class="edge">
+<title>client:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M908.09,-23C908.09,-23 855.04,-26.74 808.2,-30.05"/>
+</g>
+</g>
+</svg>
