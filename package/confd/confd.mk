@@ -38,6 +38,8 @@ endif
 define CONFD_INSTALL_EXTRA
 	for fn in confd.conf crond.conf resolvconf.conf; do \
 		cp $(CONFD_PKGDIR)/$$fn  $(FINIT_D)/available/; \
+	done
+	for fn in confd.conf resolvconf.conf; do \
 		ln -sf ../available/$$fn $(FINIT_D)/enabled/$$fn; \
 	done
 	cp $(CONFD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/confd.conf
