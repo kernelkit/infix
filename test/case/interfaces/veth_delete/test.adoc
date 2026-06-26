@@ -23,8 +23,7 @@ image::topology.svg[Verify that VETH Pairs Can Be Deleted topology, align=center
 . Verify interfaces 'veth0a' and 'veth0b' exist
 . Set IP address on target:data1 (dummy op)
 . Set IP address on target:data2 (dummy op)
-. Reset configuration
-. Verify target:data1 and target:data2 still exist
-. Verify VETH pair have been removed
+. Delete VETH pair
+. Verify VETH pair has been removed
 
 

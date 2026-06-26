@@ -29,5 +29,6 @@ image::topology.svg[VETH Pair Between Two Containers topology, align=center, sca
 . Create VETH pair with both ends assigned to containers
 . Verify both containers have started
 . Verify {LEFT} reaches {RIGHT} over the internal VETH pair
+. Remove containers and VETH pair, verify clean teardown
 
 

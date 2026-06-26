@@ -415,13 +415,15 @@ int cni_netdag_gen_iface(struct dagger *net, const char *ifname,
 
 		fprintf(fp, "container -a -f delete network %s >/dev/null\n", ifname);
 
-		/* If this end belongs to a veth pair, the kernel keeps the pair
-		 * alive after CNI host-device returns the interface to the host
-		 * namespace.  Remove it here, once the container is gone, so the
-		 * pair does not linger and block a later re-creation.  Tolerant:
-		 * the peer's teardown may already have removed it.
+		/* When both ends of a veth pair are in containers, neither end
+		 * is torn down from the host namespace, so the kernel keeps the
+		 * pair alive after CNI host-device returns the interfaces here.
+		 * Have the primary end delete it, once its container is gone.
+		 * When the peer is a host interface it is the primary and deletes
+		 * the pair itself (veth_gen_del); we must not race it here.
+		 * Tolerant: the pair may already be gone.
 		 */
-		if (lydx_get_child(dif, "veth"))
+		if (lydx_get_child(dif, "veth") && veth_is_primary(dif))
 			fprintf(fp, "ip link del dev %s 2>/dev/null || true\n", ifname);
 
 		fclose(fp);
