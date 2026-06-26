@@ -11,7 +11,9 @@
 #include "core.h"
 
 #define XPATH_BASE    "/ietf-system:system/infix-schedule:schedules"
-#define CRONTAB_FILE  "/var/spool/cron/crontabs/admin"
+#define CRONTAB_DIR   "/var/spool/cron/crontabs"
+#define CRONTAB_FILE  CRONTAB_DIR "/admin"
+#define CRONTAB_NEXT  CRONTAB_DIR "/admin.next"
 
 /* Features register a consumer to run a command on a schedule. */
 static const struct cron_consumer **consumers;
@@ -219,21 +221,23 @@ static int schedule_to_cron(struct lyd_node *config, const char *name,
 }
 
 /*
- * Rebuild the crontab from every registered consumer.  Each consumer points
- * at a feature container holding a schedule-ref; we resolve that to cron
- * fields and emit one line running the consumer's own command.
+ * Generate the next crontab from every registered consumer.  Each consumer
+ * points at a feature container holding a schedule-ref; we resolve that to
+ * cron fields and emit one line running the consumer's own command.  Written
+ * to CRONTAB_NEXT, promoted in SR_EV_DONE.  Returns the active job count;
+ * CRONTAB_NEXT is removed when there are none, so DONE knows to stop crond.
  */
-static void apply_schedules(struct lyd_node *config)
+static int gen_schedules(struct lyd_node *config)
 {
 	int count = 0;
 	FILE *fp;
 	size_t i;
 
-	makepath("/var/spool/cron/crontabs");
-	fp = fopen(CRONTAB_FILE, "w");
+	makepath(CRONTAB_DIR);
+	fp = fopen(CRONTAB_NEXT, "w");
 	if (!fp) {
-		ERROR("schedule: failed to open %s", CRONTAB_FILE);
-		return;
+		ERROR("schedule: failed to open %s", CRONTAB_NEXT);
+		return -1;
 	}
 	fprintf(fp, "# Managed by infix-schedule\n");
 
@@ -269,16 +273,41 @@ static void apply_schedules(struct lyd_node *config)
 
 out:
 	fclose(fp);
-	crond_apply(count > 0);
-	NOTE("schedule: %d active job(s) written to crontab", count);
+	if (!count)
+		(void)remove(CRONTAB_NEXT);
+
+	return count;
 }
 
 int schedule_change(sr_session_ctx_t *session, struct lyd_node *config,
 		    struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	if (event != SR_EV_DONE && event != SR_EV_ENABLED)
+	if (diff && !lydx_get_xpathf(diff, XPATH_BASE))
 		return SR_ERR_OK;
 
-	apply_schedules(config);
+	switch (event) {
+	case SR_EV_ENABLED:	/* first time, on register */
+	case SR_EV_CHANGE:	/* regular change */
+		gen_schedules(config);
+		break;
+
+	case SR_EV_ABORT:	/* user abort, or another plugin failed */
+		(void)remove(CRONTAB_NEXT);
+		break;
+
+	case SR_EV_DONE:
+		if (fexist(CRONTAB_NEXT)) {
+			(void)rename(CRONTAB_NEXT, CRONTAB_FILE);
+			crond_apply(1);
+		} else {
+			(void)remove(CRONTAB_FILE);
+			crond_apply(0);
+		}
+		break;
+
+	default:
+		break;
+	}
+
 	return SR_ERR_OK;
 }
