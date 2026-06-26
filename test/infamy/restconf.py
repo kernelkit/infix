@@ -502,3 +502,23 @@ class Device(Transport):
         response.raise_for_status()
 
         return True
+
+    def delete_xpaths(self, xpaths):
+        """Delete several xpaths in a single transaction.
+
+        Needed when the targets reference one another, e.g. both ends of a
+        VETH pair (mutually mandatory leafrefs), and so cannot be removed
+        one at a time.  Stage the deletions in the candidate datastore, then
+        copy it to running so they commit and validate together.
+        """
+        self.copy("running", "candidate")
+        for xpath in xpaths:
+            coverage.track_xpath(xpath)
+            path = f"/ds/ietf-datastores:candidate{xpath_to_uri(xpath)}"
+            url = f"{self.restconf_url}{path}"
+            response = requests_workaround_delete(url, headers=self.headers,
+                                                  auth=self.auth, verify=False)
+            response.raise_for_status()
+        self.copy("candidate", "running")
+
+        return True

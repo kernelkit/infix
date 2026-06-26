@@ -455,3 +455,47 @@ class Device(Transport):
         # Apply the configuration change
         return self.put_config(lyd.print_mem("xml", with_siblings=True,
                                              pretty=False))
+
+    def delete_xpaths(self, xpaths):
+        """Delete several xpaths in a single transaction.
+
+        Needed when the targets reference one another, e.g. both ends of a
+        VETH pair (mutually mandatory leafrefs), and so cannot be removed
+        one at a time.
+        """
+        pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
+
+        # Group xpaths by their top-level module/container so each is
+        # removed from a single fetched config tree (one diff per module).
+        groups = {}
+        order = []
+        for xpath in xpaths:
+            coverage.track_xpath(xpath)
+            match = re.search(pattern, xpath)
+            if not match:
+                raise ValueError(f"Failed parsing xpath:{xpath}")
+            modpath = f"/{match.group('module')}:{match.group('path')}"
+            if modpath not in groups:
+                groups[modpath] = (match.group('module'), [])
+                order.append(modpath)
+            groups[modpath][1].append(xpath)
+
+        edit = ""
+        for modpath in order:
+            module, paths = groups[modpath]
+            old = self.get_config_dict(modpath)
+            new = copy.deepcopy(old)
+            for xpath in paths:
+                if not libyang.xpath_del(new, xpath):
+                    raise ValueError(f"Failed to delete specified xpath: {xpath}")
+
+            mod = self.ly.get_module(module)
+            oldd = mod.parse_data_dict(old, no_state=True, validate=False)
+            newd = mod.parse_data_dict(new, no_state=True, validate=False)
+
+            lyd = oldd.diff(newd)
+            if lyd is None:
+                raise ValueError(f"Failed generating diff for {modpath}")
+            edit += lyd.print_mem("xml", with_siblings=True, pretty=False)
+
+        return self.put_config(edit)
