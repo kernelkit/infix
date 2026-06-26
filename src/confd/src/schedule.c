@@ -176,11 +176,13 @@ done:
 	snprintf(expr, sz, "%s %s %s %s %s", min, hr, dom, mon, dow);
 }
 
-static void reload_crond(void)
+static void crond_apply(int active)
 {
-	char *args[] = { "pkill", "-HUP", "crond", NULL };
-
-	runbg(args, 0);
+	if (active) {
+		finit_enable("crond");
+	} else {
+		finit_disable("crond");
+	}
 }
 
 /*
@@ -267,7 +269,7 @@ static void apply_schedules(struct lyd_node *config)
 
 out:
 	fclose(fp);
-	reload_crond();
+	crond_apply(count > 0);
 	NOTE("schedule: %d active job(s) written to crontab", count);
 }
 
