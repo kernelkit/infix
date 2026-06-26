@@ -28,5 +28,6 @@ image::topology.svg[Container with VETH Pair topology, align=center, scaledwidth
 . Verify container 'web-br0-veth' has started
 . Verify basic DUT connectivity, host:data can ping DUT 10.0.0.2
 . Verify container 'web-br0-veth' is reachable on http://10.0.0.2:91
+. Remove container and VETH pair, verify clean teardown
 
 
