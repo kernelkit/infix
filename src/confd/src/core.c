@@ -439,7 +439,7 @@ static confd_dependency_t dep_radio_components(struct lyd_node **diff, struct ly
 				class = lyd_get_value(class_node);
 		}
 
-		if (strcmp(class, "infix-hardware:wifi"))
+		if (!class || strcmp(class, "infix-hardware:wifi"))
 			continue;
 
 		/* Find all interfaces that reference this radio */
