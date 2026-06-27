@@ -237,7 +237,7 @@ static const char *wifi_find_higher_band_twin(struct lyd_node *config,
 {
 	struct lyd_node *cifs, *cif;
 
-	if (strcmp(current_band, "2.4GHz"))
+	if (!current_band || !current_ssid || strcmp(current_band, "2.4GHz"))
 		return NULL;
 
 	cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
@@ -252,13 +252,13 @@ static const char *wifi_find_higher_band_twin(struct lyd_node *config,
 		if (!ap)
 			continue;
 		ssid = lydx_get_cattr(ap, "ssid");
-		if (strcmp(ssid, current_ssid))
+		if (!ssid || strcmp(ssid, current_ssid))
 			continue;
 		radio = lydx_get_cattr(wifi, "radio");
 		radio_node = lydx_get_xpathf(config,
 			"/hardware/component[name='%s']/wifi-radio", radio);
 		band = lydx_get_cattr(radio_node, "band");
-		if (!strcmp(band, "5GHz") || !strcmp(band, "6GHz"))
+		if (band && (!strcmp(band, "5GHz") || !strcmp(band, "6GHz")))
 			return lydx_get_cattr(cif, "name");
 	}
 

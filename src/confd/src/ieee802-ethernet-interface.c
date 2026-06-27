@@ -237,7 +237,7 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 			err = -EINVAL;
 			goto out;
 		}
-		if (n != 1) {
+		if (n != 1 || !forced) {
 			sr_session_set_error_message(net->session,
 				"%s: auto-negotiation/enable=false requires exactly one "
 				"advertised-pmd-types entry (have %d)", ifname, n);

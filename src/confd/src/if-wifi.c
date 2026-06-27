@@ -283,7 +283,7 @@ static int wifi_center_chan_160(int ch)
  */
 static int wifi_chan_to_freq(int channel, const char *band)
 {
-	if (!strcmp(band, "6GHz"))
+	if (band && !strcmp(band, "6GHz"))
 		return 5950 + channel * 5;
 
 	if (channel >= 1 && channel <= 13)
@@ -392,7 +392,7 @@ int wifi_gen_mesh(struct lyd_node *cif)
 			int center = wifi_center_chan_80(channel);
 
 			fprintf(wpa_supplicant, "  ht40=1\n");
-			if (!strcmp(band, "6GHz"))
+			if (band && !strcmp(band, "6GHz"))
 				fprintf(wpa_supplicant, "  he=1\n");
 			else
 				fprintf(wpa_supplicant, "  vht=1\n");
@@ -403,7 +403,7 @@ int wifi_gen_mesh(struct lyd_node *cif)
 			int center = wifi_center_chan_160(channel);
 
 			fprintf(wpa_supplicant, "  ht40=1\n");
-			if (!strcmp(band, "6GHz"))
+			if (band && !strcmp(band, "6GHz"))
 				fprintf(wpa_supplicant, "  he=1\n");
 			else
 				fprintf(wpa_supplicant, "  vht=1\n");
