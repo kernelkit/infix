@@ -25,3 +25,6 @@
 
 - name: Schedule Reboot
   case: schedule_reboot/test.py
+
+- name: Boot From Factory Config
+  case: factory_config/test.py
