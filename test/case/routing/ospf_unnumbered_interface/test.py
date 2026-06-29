@@ -186,7 +186,7 @@ with infamy.Test() as test:
         with test.step("Verify there are no OSPF HELLO packets on PC:data"):
             assert(route.ospf_get_interface_passive(R1, "0.0.0.0", R1data))
             print("Verify that no hello packets are recieved from passive interfaces")
-            ns0.must_not_receive("ip proto 89", timeout=15) # Default hello time 10s
+            ns0.must_not_receive("ip proto 89", duration=15) # Default hello time 10s
 
         with test.step("Test connectivity from PC:data to 192.168.200.1"):
             ns0.must_reach("192.168.200.1")

@@ -62,6 +62,7 @@ class IsolatedMacVlans:
         self.ifmap, self.lo, self.set_up = ifmap, lo, set_up
         self.mode = mode
         self.ping_timeout = env.ENV.attr("ping_timeout", 5)
+        self.default_receive_duration = env.ENV.attr("default_receive_duration", 10)
 
     def start(self):
         self.sleeper = subprocess.Popen(["unshare", "-r", "-n", "sh", "-c",
@@ -86,7 +87,7 @@ class IsolatedMacVlans:
 
                 if self.set_up:
                     self.run(["ip", "link", "set", "dev", ifname, "up"])
-                    
+
         except Exception as e:
             self.__exit__(None, None, None)
             raise e
@@ -272,11 +273,11 @@ class IsolatedMacVlans:
 
         raise Exception(res)
 
-    def must_receive(self, expr, ifname, timeout=None, must=True):
-        timeout = timeout if timeout else self.ping_timeout
+    def must_receive(self, expr, ifname, duration=None, must=True):
+        duration = duration if duration else self.default_receive_duration
 
         tshark = self.run(["tshark", "-nl", f"-i{ifname}",
-                           f"-aduration:{timeout}", "-c1", expr],
+                           f"-aduration:{duration}", "-c1", expr],
                           stdin=subprocess.DEVNULL,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -336,9 +337,9 @@ class IsolatedMacVlan(IsolatedMacVlans):
         return super().addip(ifname=self._ifname, addr=addr,
                              prefix_length=prefix_length, proto=proto)
 
-    def must_receive(self, expr, timeout=None, ifname=None, must=True):
+    def must_receive(self, expr, duration=None, ifname=None, must=True):
         ifname = ifname if ifname else self._ifname
-        return super().must_receive(expr=expr, ifname=ifname, timeout=timeout, must=must)
+        return super().must_receive(expr=expr, ifname=ifname, duration=duration, must=must)
 
     def pcap(self, expr, ifname=None):
         ifname = ifname if ifname else self._ifname
