@@ -133,7 +133,7 @@ with infamy.Test() as test:
 
             print("Starting IPv4 multicast sender")
             with mcast.MCastSender(send_ns, ipv4_multicast_group):
-                             
+
                 with test.step("Verify that 224.1.1.1 is flooded to host:data2 and host:data3"):
                     infamy.parallel(
                         lambda: receive_ns.must_receive(f"ip dst {ipv4_multicast_group}"),
@@ -150,10 +150,10 @@ with infamy.Test() as test:
                         nojoin_ns.must_not_receive(f"ip dst {ipv4_multicast_group}")
 
         with test.step("Start MAC multicast sender on host:data1, group 01:00:00:01:02:03"):
-            
+
             print("Starting MAC multicast sender")
             with mcast.MacMCastSender(send_ns, mac_multicast_group):
-                
+
                 with test.step("Verify MAC multicast 01:00:00:01:02:03 is flooded to host:data2 and host:data3"):
                     infamy.parallel(
                         lambda: receive_ns.must_receive(f"ether dst {mac_multicast_group}"),
@@ -162,10 +162,10 @@ with infamy.Test() as test:
                 with test.step("Enable MAC multicast filter on host:data2, group 01:00:00:01:02:03"):
                     set_static_multicast_filter(target, mac_multicast_group, mreceive)
                     until(lambda: iface.exist_bridge_multicast_filter(target, mac_multicast_group, mreceive, "br0"))
-                
+
                     with test.step("Verify that the MAC group is still forwarded to host:data2"):
                         receive_ns.must_receive(f"ether dst {mac_multicast_group}"),
-                                
+
                     with test.step("Verify that the MAC group is no longer forwarded to host:data3"):
                         nojoin_ns.must_not_receive(f"ether dst {mac_multicast_group}")
 
