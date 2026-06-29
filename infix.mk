@@ -4,10 +4,12 @@ oem-dir := $(call qstrip,$(INFIX_OEM_PATH))
 INFIX_TOPDIR = $(if $(oem-dir),$(oem-dir),$(BR2_EXTERNAL_INFIX_PATH))
 
 # Unless the user specifies an explicit build id, source it from git.
-# The build id also becomes the image version, unless an official
-# release is being built.
-export INFIX_BUILD_ID ?= $(shell git -C $(INFIX_TOPDIR) describe --dirty --always --tags)
-export INFIX_VERSION = $(if $(INFIX_RELEASE),$(INFIX_RELEASE),$(INFIX_BUILD_ID))
+# Exclude the moving 'latest*' tags so the version always resolves to a
+# real release tag, see issue #1524.  The build id is also the version
+# shown to users; INFIX_RELEASE only labels the release channel and names
+# artifacts (see INFIX_ARTIFACT below).
+export INFIX_BUILD_ID ?= $(shell git -C $(INFIX_TOPDIR) describe --dirty --always --tags --exclude 'latest*')
+export INFIX_VERSION = $(INFIX_BUILD_ID)
 export INFIX_ARTIFACT = $(call qstrip,$(INFIX_IMAGE_ID)$(if $(INFIX_RELEASE),-$(INFIX_RELEASE)))
 
 INFIX_CFLAGS:=-Wall -Werror -Wextra -Wno-unused-parameter -Wformat=2 -Wformat-overflow=2 -Winit-self -Wstrict-overflow=4 -Wno-format-truncation -Wno-format-nonliteral
