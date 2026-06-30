@@ -21,6 +21,13 @@ def factory_hostname(tgtssh):
     cfg = json.loads(tgtssh.runsh(f"cat {FACTORY}").stdout)
     return cfg.get("ietf-system:system", {}).get("hostname")
 
+def cleanup(env):
+    """Restore the rig to the clean per-test baseline for the next test."""
+    print("Restoring device to clean test baseline")
+    target = env.attach("target", "mgmt", "netconf")
+    target.reboot()
+    if not wait_boot(target, env):
+        test.fail("Device did not come back while restoring baseline")
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -43,6 +50,7 @@ with infamy.Test() as test:
         target.reboot()
         if not wait_boot(target, env):
             test.fail("Device did not boot from factory config")
+        test.push_test_cleanup(lambda: cleanup(env))
 
     with test.step("Verify device is usable and not in failure-config"):
         target = env.attach("target", "mgmt", test_reset=False)
