@@ -110,9 +110,10 @@ config INFIX_OEM_PATH
 	  directory (absolute path) and the Infix post-build.sh will call `git
 	  describe -C $INFIX_OEM_PATH`.
 
-	  Note: for release builds the global variable INFIX_RELEASE overrides
-	  the version information derived from `git describe`.  However, the
-	  GIT version is always saved as the BUILD_ID in /etc/os-releases.
+	  Note: the OS version (VERSION, VERSION_ID, BUILD_ID in
+	  /etc/os-release) is always derived from `git describe`.  The global
+	  variable INFIX_RELEASE does not change it; it only labels the release
+	  channel (IMAGE_VERSION) and names the published artifacts.
 
 endmenu
 

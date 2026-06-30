@@ -2,26 +2,20 @@
 # Generate ietf-system.yang hostname based on:
 #  1. Command line argument + MAC suffix
 #  2. Specific hostname from qemu_fw_cfg, from Qeneth
-#  3. /etc/hostname from squashfs + MAC suffix
+#  3. Default hostname + MAC suffix
+#
+# The MAC suffix is emitted as the %m format specifier, expanded by confd
+# at apply time, so the actual MAC never ends up baked into a saved
+# configuration (issue #1554).
 #
 set -e
 
-gen()
-{
-    base_mac=$(jq -r '.["mac-address"]' /run/system.json)
-    if [ -z "$base_mac" ] || [ "$base_mac" = "null" ]; then
-	base_mac=00:00:00:00:00:00
-    fi
-
-    echo "$1-$(echo $base_mac | tail -c 9 | tr ':' '-')"
-}
-
 if [ "$1" ]; then
-    sysname=$(gen "$1")
+    sysname="$1-%m"
 elif [ -f "/sys/firmware/qemu_fw_cfg/by_name/opt/hostname/raw" ]; then
     sysname="$(cat /sys/firmware/qemu_fw_cfg/by_name/opt/hostname/raw)"
 else
-    sysname=$(gen "$(cat /etc/hostname)")
+    sysname="%h-%m"
 fi
 
 cat <<EOF
