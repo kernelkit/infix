@@ -1,0 +1,983 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 700 500"
+   version="1.1"
+   id="svg220"
+   sodipodi:docname="vpn-hub-spoke.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview222"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.8885714"
+     inkscape:cx="350.00001"
+     inkscape:cy="225.56733"
+     inkscape:window-width="1920"
+     inkscape:window-height="1014"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg220" />
+  <defs
+     id="defs40">
+    <linearGradient
+       id="bgGrad"
+       x1="0%"
+       y1="0%"
+       x2="100%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#fafbfc;stop-opacity:1"
+         id="stop2" />
+      <stop
+         offset="100%"
+         style="stop-color:#f3f4f6;stop-opacity:1"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       id="siteGrad"
+       x1="0%"
+       y1="0%"
+       x2="0%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#3b82f6;stop-opacity:1"
+         id="stop7" />
+      <stop
+         offset="100%"
+         style="stop-color:#2563eb;stop-opacity:1"
+         id="stop9" />
+    </linearGradient>
+    <linearGradient
+       id="routerGrad"
+       x1="0%"
+       y1="0%"
+       x2="0%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#ef4444;stop-opacity:1"
+         id="stop12" />
+      <stop
+         offset="100%"
+         style="stop-color:#dc2626;stop-opacity:1"
+         id="stop14" />
+    </linearGradient>
+    <linearGradient
+       id="hubGrad"
+       x1="0%"
+       y1="0%"
+       x2="0%"
+       y2="100%">
+      <stop
+         offset="0%"
+         style="stop-color:#f59e0b;stop-opacity:1"
+         id="stop17" />
+      <stop
+         offset="100%"
+         style="stop-color:#d97706;stop-opacity:1"
+         id="stop19" />
+    </linearGradient>
+    <filter
+       id="shadow"
+       x="-0.054666667"
+       y="-0.082"
+       width="1.1093333"
+       height="1.184">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="3"
+         id="feGaussianBlur22" />
+      <feOffset
+         dx="0"
+         dy="2"
+         result="offsetblur"
+         id="feOffset24" />
+      <feComponentTransfer
+         id="feComponentTransfer28">
+        <feFuncA
+           type="linear"
+           slope="0.2"
+           id="feFuncA26" />
+      </feComponentTransfer>
+      <feMerge
+         id="feMerge34">
+        <feMergeNode
+           id="feMergeNode30" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode32" />
+      </feMerge>
+    </filter>
+    <marker
+       id="arrow"
+       markerWidth="8"
+       markerHeight="8"
+       refX="7"
+       refY="4"
+       orient="auto">
+      <path
+         d="M 0,0 V 8 L 8,4 Z"
+         fill="#10b981"
+         id="path37" />
+    </marker>
+    <radialGradient
+       id="cloudGrad"
+       cx="220.99805"
+       cy="209.29596"
+       gradientTransform="matrix(1.3416408,0,0,0.74535599,215.52724,137.78745)"
+       fx="220.99805"
+       fy="209.29596"
+       r="51.988579"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         offset="0%"
+         style="stop-color:#ffffff;stop-opacity:1"
+         id="stop22" />
+      <stop
+         offset="70%"
+         style="stop-color:#dbeafe;stop-opacity:1"
+         id="stop24" />
+      <stop
+         offset="100%"
+         style="stop-color:#93c5fd;stop-opacity:1"
+         id="stop26" />
+    </radialGradient>
+    <filter
+       id="shadow-7"
+       x="-0.061678832"
+       y="-0.11266667"
+       width="1.1233577"
+       height="1.252">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="3"
+         id="feGaussianBlur29" />
+      <feOffset
+         dx="0"
+         dy="2"
+         result="offsetblur"
+         id="feOffset31" />
+      <feComponentTransfer
+         id="feComponentTransfer35">
+        <feFuncA
+           type="linear"
+           slope="0.2"
+           id="feFuncA33" />
+      </feComponentTransfer>
+      <feMerge
+         id="feMerge41">
+        <feMergeNode
+           id="feMergeNode37" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode39" />
+      </feMerge>
+    </filter>
+  </defs>
+  <style
+     id="style26">
+    @media (prefers-color-scheme: dark) {
+      #bgGrad stop:first-child { stop-color: #1f2937; }
+      #bgGrad stop:last-child { stop-color: #111827; }
+      #siteGrad stop:first-child { stop-color: #2563eb; }
+      #siteGrad stop:last-child { stop-color: #1e40af; }
+      #routerGrad stop:first-child { stop-color: #dc2626; }
+      #routerGrad stop:last-child { stop-color: #b91c1c; }
+      #hubGrad stop:first-child { stop-color: #f59e0b; }
+      #hubGrad stop:last-child { stop-color: #d97706; }
+      rect[fill=&quot;#fff&quot;], rect[fill=&quot;#ffffff&quot;] { fill: #374151; }
+      rect[stroke=&quot;#e5e7eb&quot;] { stroke: #4b5563; }
+      text[fill=&quot;#6b7280&quot;] { fill: #d1d5db; }
+      circle[fill=&quot;#60a5fa&quot;] { fill: #3b82f6; }
+      line[stroke=&quot;#94a3b8&quot;] { stroke: #6b7280; }
+      rect[fill=&quot;#fbbf24&quot;] { fill: #f59e0b; }
+      rect[fill=&quot;#fca5a5&quot;] { fill: #fca5a5; }
+    }
+  </style>
+  <!-- Physical Internet connections (solid lines) -->
+  <!-- VPN Tunnels -->
+  <line
+     x1="149.87024"
+     y1="94.852066"
+     x2="262.66898"
+     y2="194.88768"
+     stroke="#10b981"
+     stroke-width="2.6"
+     stroke-dasharray="10,6"
+     marker-end="url(#arrow)"
+     id="line44" />
+  <g
+     transform="translate(155,83)"
+     id="g52">
+    <rect
+       width="8"
+       height="10"
+       rx="1.5"
+       fill="#10b981"
+       id="rect46"
+       x="0"
+       y="0" />
+    <path
+       d="m 1.5,0 v -2.5 a 2.5,2.5 0 0 1 5,0 V 0"
+       fill="none"
+       stroke="#10b981"
+       stroke-width="1.2"
+       id="path48" />
+    <circle
+       cx="4"
+       cy="6"
+       r="1.2"
+       fill="#ffffff"
+       id="circle50" />
+  </g>
+  <line
+     x1="550.13788"
+     y1="94.850327"
+     x2="437.03882"
+     y2="193.65047"
+     stroke="#10b981"
+     stroke-width="2.6"
+     stroke-dasharray="10,6"
+     marker-end="url(#arrow)"
+     id="line54" />
+  <g
+     transform="translate(537,83)"
+     id="g62">
+    <rect
+       width="8"
+       height="10"
+       rx="1.5"
+       fill="#10b981"
+       id="rect56"
+       x="0"
+       y="0" />
+    <path
+       d="m 1.5,0 v -2.5 a 2.5,2.5 0 0 1 5,0 V 0"
+       fill="none"
+       stroke="#10b981"
+       stroke-width="1.2"
+       id="path58" />
+    <circle
+       cx="4"
+       cy="6"
+       r="1.2"
+       fill="#ffffff"
+       id="circle60" />
+  </g>
+  <line
+     x1="348.10764"
+     y1="399.8786"
+     x2="348.10764"
+     y2="311.25961"
+     stroke="#10b981"
+     stroke-width="2.6"
+     stroke-dasharray="10, 6"
+     marker-end="url(#arrow)"
+     id="line64" />
+  <g
+     transform="translate(346,383)"
+     id="g72">
+    <rect
+       width="8"
+       height="10"
+       rx="1.5"
+       fill="#10b981"
+       id="rect66"
+       x="0"
+       y="0" />
+    <path
+       d="m 1.5,0 v -2.5 a 2.5,2.5 0 0 1 5,0 V 0"
+       fill="none"
+       stroke="#10b981"
+       stroke-width="1.2"
+       id="path68" />
+    <circle
+       cx="4"
+       cy="6"
+       r="1.2"
+       fill="#ffffff"
+       id="circle70" />
+  </g>
+  <!-- Hub (Center) -->
+  <g
+     filter="url(#shadow)"
+     id="g114">
+    <rect
+       x="260"
+       y="195"
+       width="180"
+       height="110"
+       rx="12"
+       fill="#fff"
+       stroke="#e5e7eb"
+       stroke-width="2"
+       id="rect82" />
+    <!-- Header -->
+    <rect
+       x="260"
+       y="195"
+       width="180"
+       height="38"
+       rx="12"
+       fill="url(#siteGrad)"
+       id="rect84" />
+    <rect
+       x="260"
+       y="220"
+       width="180"
+       height="13"
+       fill="url(#siteGrad)"
+       id="rect86" />
+    <text
+       x="350"
+       y="220"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="15"
+       font-weight="700"
+       fill="#fff"
+       id="text88">Headquarters</text>
+    <!-- Hub Router -->
+    <rect
+       x="278"
+       y="243"
+       width="144"
+       height="38"
+       rx="8"
+       fill="url(#hubGrad)"
+       id="rect90" />
+    <rect
+       x="280"
+       y="245"
+       width="140"
+       height="18"
+       rx="6"
+       fill="#fbbf24"
+       opacity="0.3"
+       id="rect92" />
+    <text
+       x="350"
+       y="267"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="13"
+       font-weight="700"
+       fill="#fff"
+       id="text94">HUB</text>
+    <!-- Local Network -->
+    <line
+       x1="260"
+       y1="250"
+       x2="180"
+       y2="250"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line96" />
+    <line
+       x1="180"
+       y1="220"
+       x2="180"
+       y2="280"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line98" />
+    <circle
+       cx="172"
+       cy="225"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle100" />
+    <line
+       x1="180"
+       y1="225"
+       x2="174"
+       y2="225"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line102" />
+    <circle
+       cx="172"
+       cy="250"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle104" />
+    <line
+       x1="180"
+       y1="250"
+       x2="174"
+       y2="250"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line106" />
+    <circle
+       cx="172"
+       cy="275"
+       r="5"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle108" />
+    <line
+       x1="180"
+       y1="275"
+       x2="174"
+       y2="275"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line110" />
+    <text
+       x="130"
+       y="252"
+       text-anchor="middle"
+       font-family="'SF Mono', 'Monaco', monospace"
+       font-size="8"
+       font-weight="600"
+       fill="#6b7280"
+       id="text112">192.168.0.0/24</text>
+  </g>
+  <!-- Spoke A (Top Left) -->
+  <g
+     filter="url(#shadow)"
+     id="g148">
+    <rect
+       x="40"
+       y="30"
+       width="150"
+       height="100"
+       rx="12"
+       fill="#fff"
+       stroke="#e5e7eb"
+       stroke-width="2"
+       id="rect116" />
+    <!-- Header -->
+    <rect
+       x="40"
+       y="30"
+       width="150"
+       height="32"
+       rx="12"
+       fill="url(#siteGrad)"
+       id="rect118" />
+    <rect
+       x="40"
+       y="51"
+       width="150"
+       height="11"
+       fill="url(#siteGrad)"
+       id="rect120" />
+    <text
+       x="115"
+       y="51"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="14"
+       font-weight="700"
+       fill="#fff"
+       id="text122">Branch A</text>
+    <!-- Router -->
+    <rect
+       x="55"
+       y="70"
+       width="120"
+       height="30"
+       rx="6"
+       fill="url(#routerGrad)"
+       id="rect124" />
+    <rect
+       x="57"
+       y="72"
+       width="116"
+       height="14"
+       rx="4"
+       fill="#fca5a5"
+       opacity="0.3"
+       id="rect126" />
+    <text
+       x="115"
+       y="89"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="11"
+       font-weight="600"
+       fill="#fff"
+       id="text128">Spoke</text>
+    <!-- Local Network -->
+    <line
+       x1="115"
+       y1="100"
+       x2="115"
+       y2="107"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line130" />
+    <line
+       x1="90"
+       y1="107"
+       x2="140"
+       y2="107"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line132" />
+    <circle
+       cx="95"
+       cy="115"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle134" />
+    <line
+       x1="95"
+       y1="107"
+       x2="95"
+       y2="113"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line136" />
+    <circle
+       cx="115"
+       cy="115"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle138" />
+    <line
+       x1="115"
+       y1="107"
+       x2="115"
+       y2="113"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line140" />
+    <circle
+       cx="135"
+       cy="115"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle142" />
+    <line
+       x1="135"
+       y1="107"
+       x2="135"
+       y2="113"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line144" />
+    <text
+       x="115"
+       y="128"
+       text-anchor="middle"
+       font-family="'SF Mono', 'Monaco', monospace"
+       font-size="7"
+       font-weight="600"
+       fill="#6b7280"
+       id="text146">192.168.1.0/24</text>
+  </g>
+  <!-- Spoke B (Top Right) -->
+  <g
+     filter="url(#shadow)"
+     id="g182">
+    <rect
+       x="510"
+       y="30"
+       width="150"
+       height="100"
+       rx="12"
+       fill="#fff"
+       stroke="#e5e7eb"
+       stroke-width="2"
+       id="rect150" />
+    <!-- Header -->
+    <rect
+       x="510"
+       y="30"
+       width="150"
+       height="32"
+       rx="12"
+       fill="url(#siteGrad)"
+       id="rect152" />
+    <rect
+       x="510"
+       y="51"
+       width="150"
+       height="11"
+       fill="url(#siteGrad)"
+       id="rect154" />
+    <text
+       x="585"
+       y="51"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="14"
+       font-weight="700"
+       fill="#fff"
+       id="text156">Branch B</text>
+    <!-- Router -->
+    <rect
+       x="525"
+       y="70"
+       width="120"
+       height="30"
+       rx="6"
+       fill="url(#routerGrad)"
+       id="rect158" />
+    <rect
+       x="527"
+       y="72"
+       width="116"
+       height="14"
+       rx="4"
+       fill="#fca5a5"
+       opacity="0.3"
+       id="rect160" />
+    <text
+       x="585"
+       y="89"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="11"
+       font-weight="600"
+       fill="#fff"
+       id="text162">Spoke</text>
+    <!-- Local Network -->
+    <line
+       x1="585"
+       y1="100"
+       x2="585"
+       y2="107"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line164" />
+    <line
+       x1="560"
+       y1="107"
+       x2="610"
+       y2="107"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line166" />
+    <circle
+       cx="565"
+       cy="115"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle168" />
+    <line
+       x1="565"
+       y1="107"
+       x2="565"
+       y2="113"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line170" />
+    <circle
+       cx="585"
+       cy="115"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle172" />
+    <line
+       x1="585"
+       y1="107"
+       x2="585"
+       y2="113"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line174" />
+    <circle
+       cx="605"
+       cy="115"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle176" />
+    <line
+       x1="605"
+       y1="107"
+       x2="605"
+       y2="113"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line178" />
+    <text
+       x="585"
+       y="125"
+       text-anchor="middle"
+       font-family="'SF Mono', 'Monaco', monospace"
+       font-size="7"
+       font-weight="600"
+       fill="#6b7280"
+       id="text180">192.168.2.0/24</text>
+  </g>
+  <!-- Spoke C (Bottom) -->
+  <g
+     filter="url(#shadow)"
+     id="g216">
+    <rect
+       x="275"
+       y="370"
+       width="150"
+       height="100"
+       rx="12"
+       fill="#fff"
+       stroke="#e5e7eb"
+       stroke-width="2"
+       id="rect184" />
+    <!-- Header -->
+    <rect
+       x="275"
+       y="370"
+       width="150"
+       height="32"
+       rx="12"
+       fill="url(#siteGrad)"
+       id="rect186" />
+    <rect
+       x="275"
+       y="391"
+       width="150"
+       height="11"
+       fill="url(#siteGrad)"
+       id="rect188" />
+    <text
+       x="350"
+       y="391"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="14"
+       font-weight="700"
+       fill="#fff"
+       id="text190">Branch C</text>
+    <!-- Router -->
+    <rect
+       x="290"
+       y="410"
+       width="120"
+       height="30"
+       rx="6"
+       fill="url(#routerGrad)"
+       id="rect192" />
+    <rect
+       x="292"
+       y="412"
+       width="116"
+       height="14"
+       rx="4"
+       fill="#fca5a5"
+       opacity="0.3"
+       id="rect194" />
+    <text
+       x="350"
+       y="429"
+       text-anchor="middle"
+       font-family="system-ui, -apple-system, sans-serif"
+       font-size="11"
+       font-weight="600"
+       fill="#fff"
+       id="text196">Spoke</text>
+    <!-- Local Network -->
+    <line
+       x1="350"
+       y1="440"
+       x2="350"
+       y2="447"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line198" />
+    <line
+       x1="325"
+       y1="447"
+       x2="375"
+       y2="447"
+       stroke="#94a3b8"
+       stroke-width="1.5"
+       id="line200" />
+    <circle
+       cx="330"
+       cy="455"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle202" />
+    <line
+       x1="330"
+       y1="447"
+       x2="330"
+       y2="453"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line204" />
+    <circle
+       cx="350"
+       cy="455"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle206" />
+    <line
+       x1="350"
+       y1="447"
+       x2="350"
+       y2="453"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line208" />
+    <circle
+       cx="370"
+       cy="455"
+       r="4"
+       fill="#60a5fa"
+       stroke="#2563eb"
+       stroke-width="1"
+       id="circle210" />
+    <line
+       x1="370"
+       y1="447"
+       x2="370"
+       y2="453"
+       stroke="#94a3b8"
+       stroke-width="1"
+       id="line212" />
+    <text
+       x="350"
+       y="465"
+       text-anchor="middle"
+       font-family="'SF Mono', 'Monaco', monospace"
+       font-size="7"
+       font-weight="600"
+       fill="#6b7280"
+       id="text214">192.168.3.0/24</text>
+  </g>
+  <g
+     transform="matrix(0.98466939,0,0,1.0000859,498.17175,113.77759)"
+     id="g97">
+    <rect
+       width="10"
+       height="12"
+       rx="2"
+       fill="#10b981"
+       id="rect91"
+       x="0"
+       y="0" />
+    <path
+       d="m 2,0 v -3 a 3,3 0 0 1 6,0 v 3"
+       fill="none"
+       stroke="#10b981"
+       stroke-width="1.5"
+       id="path93" />
+    <circle
+       cx="5"
+       cy="7"
+       r="1.5"
+       fill="#ffffff"
+       id="circle95" />
+  </g>
+  <text
+     x="446.42084"
+     y="148.79063"
+     text-anchor="middle"
+     font-family="system-ui, '-apple-system', sans-serif"
+     font-size="10.9158px"
+     font-weight="600"
+     fill="#059669"
+     id="text99"
+     transform="scale(0.99226244,1.0077979)"
+     style="stroke-width:0.992348">Encrypted VPN</text>
+  <g
+     transform="matrix(0.98466939,0,0,1.0000859,193.71492,114.69643)"
+     id="g97-3">
+    <rect
+       width="10"
+       height="12"
+       rx="2"
+       fill="#10b981"
+       id="rect91-6"
+       x="0"
+       y="0" />
+    <path
+       d="m 2,0 v -3 a 3,3 0 0 1 6,0 v 3"
+       fill="none"
+       stroke="#10b981"
+       stroke-width="1.5"
+       id="path93-7" />
+    <circle
+       cx="5"
+       cy="7"
+       r="1.5"
+       fill="#ffffff"
+       id="circle95-5" />
+  </g>
+  <text
+     x="254.16939"
+     y="144.61209"
+     text-anchor="middle"
+     font-family="system-ui, '-apple-system', sans-serif"
+     font-size="10.9158px"
+     font-weight="600"
+     fill="#059669"
+     id="text99-3"
+     transform="scale(0.99226244,1.0077979)"
+     style="stroke-width:0.992348">Encrypted VPN</text>
+  <g
+     transform="matrix(0.98466939,0,0,1.0000859,333.47081,353.92815)"
+     id="g97-5">
+    <rect
+       width="10"
+       height="12"
+       rx="2"
+       fill="#10b981"
+       id="rect91-62"
+       x="0"
+       y="0" />
+    <path
+       d="m 2,0 v -3 a 3,3 0 0 1 6,0 v 3"
+       fill="none"
+       stroke="#10b981"
+       stroke-width="1.5"
+       id="path93-9" />
+    <circle
+       cx="5"
+       cy="7"
+       r="1.5"
+       fill="#ffffff"
+       id="circle95-1" />
+  </g>
+  <text
+     x="393.52994"
+     y="352.21753"
+     text-anchor="middle"
+     font-family="system-ui, '-apple-system', sans-serif"
+     font-size="10.9158px"
+     font-weight="600"
+     fill="#059669"
+     id="text99-2"
+     transform="scale(0.99226244,1.0077979)"
+     style="stroke-width:0.992348">Encrypted VPN</text>
+</svg>
