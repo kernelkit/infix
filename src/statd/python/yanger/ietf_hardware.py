@@ -591,8 +591,9 @@ def convert_iw_phy_info_for_yanger(phy_info):
     for band in phy_info.get("bands", []):
         band_data = {
             "band": str(band.get("band", 0)),
-            "name": band.get("name", "Unknown")
         }
+        if band.get("name"):
+            band_data["name"] = band["name"]
 
         # Add capability flags (iw.py uses snake_case: ht_capable, vht_capable, he_capable)
         if band.get("ht_capable"):

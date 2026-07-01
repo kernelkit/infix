@@ -176,19 +176,25 @@ def parse_phy_info(phy_name):
     if current_band and current_band.get('frequencies'):
         result['bands'].append(current_band)
 
-    # Determine band names and assign band numbers
+    # Keep only the bands Infix supports (2.4/5/6 GHz), naming them by their
+    # first frequency.  Hardware may expose others (e.g. S1G on hwsim) that we
+    # neither configure nor report.
+    bands = []
     for band in result['bands']:
-        if band['frequencies']:
-            freq = band['frequencies'][0]
-            if 2400 <= freq <= 2500:
-                band['name'] = '2.4GHz'
-                band['band'] = 1
-            elif 5150 <= freq <= 5900:
-                band['name'] = '5GHz'
-                band['band'] = 2
-            elif 5955 <= freq <= 7115:
-                band['name'] = '6GHz'
-                band['band'] = 3
+        freq = band['frequencies'][0]
+        if 2400 <= freq <= 2500:
+            band['name'] = '2.4GHz'
+            band['band'] = 1
+        elif 5150 <= freq <= 5900:
+            band['name'] = '5GHz'
+            band['band'] = 2
+        elif 5955 <= freq <= 7115:
+            band['name'] = '6GHz'
+            band['band'] = 3
+        else:
+            continue
+        bands.append(band)
+    result['bands'] = bands
 
     # Set max TX power
     if max_power is not None:
