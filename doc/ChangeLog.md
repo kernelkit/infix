@@ -3,8 +3,24 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.06.0][] - 2026-06-30
+[v26.06.0][] - 2026-07-01
 -------------------------
+
+> [!NOTE]
+> Noteworthy changes and additions in this release:
+>
+> **🌐 Web Interface:** Infix gets its first-ever web interface!  Browse live
+> status and a full operational tree, handle common tasks from curated
+> configuration pages, and drop into a YANG tree editor for everything else.
+> A maintenance section covers firmware upgrade, backup & restore, and more.
+>
+> **📶 Wi-Fi Roaming & Mesh:** Access points sharing an SSID can hand clients
+> off seamlessly with 802.11k/v/r, form a cable-free 802.11s mesh backhaul,
+> and steer dual-band clients onto the faster 5/6 GHz band.
+>
+> **🗓️ System Scheduling:** Reusable time schedules based on ietf-schedule
+> (RFC 9922) let features like scheduled reboot and software update checks
+> run on a recurring, cron-style calendar.
 
 ### Changes
 
