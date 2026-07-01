@@ -304,6 +304,7 @@ in-octets          : 148388
 out-octets         : 24555
 mode               : station
 ssid               : MyNetwork
+bssid              : b4:fb:e4:17:b6:a7
 signal             : -45 dBm (good)
 rx bitrate         : 72.2 Mbps
 tx bitrate         : 86.6 Mbps
@@ -318,6 +319,11 @@ CoffeeShop           00:1a:2b:3c:4d:5e  Open           bad           1
 In the CLI, signal strength is reported as: excellent, good, fair or bad.
 For precise signal strength values in dBm, use NETCONF or RESTCONF to access
 the `signal-strength` leaf in the operational datastore.
+
+When connected, `bssid` shows the MAC address of the access point the
+station is associated to.  It appears only while connected.  When several
+access points share one SSID (a roaming network), the `bssid` is what
+tells them apart, and it changes as the station roams between them.
 
 ## Passphrase Requirements
 
@@ -378,6 +384,7 @@ operational status : up
 physical address   : f0:09:0d:36:5f:86
 mode               : station
 ssid               : MyHomeNetwork
+bssid              : b4:fb:e4:17:b6:a7
 signal             : -52 dBm (good)
 </code></pre>
 

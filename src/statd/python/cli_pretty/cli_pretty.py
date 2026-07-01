@@ -1762,8 +1762,11 @@ class Iface:
                 station = self.wifi.get('station', {})
                 signal = station.get('signal-strength')
                 ssid = station.get('ssid', "----")
+                bssid = station.get('bssid')
                 print(f"{'mode':<{19}}: {mode}")
                 print(f"{'ssid':<{19}}: {ssid}")
+                if bssid is not None:
+                    print(f"{'bssid':<{19}}: {bssid}")
                 if signal is not None:
                     signal_status = signal_to_status(signal)
                     print(f"{'signal':<{19}}: {signal} dBm ({signal_status})")

@@ -83,6 +83,8 @@ def wifi_station(ifname):
     if link.get('connected'):
         if link.get('ssid'):
             station_data['ssid'] = link['ssid']
+        if link.get('bssid'):
+            station_data['bssid'] = link['bssid']
         if link.get('signal-strength') is not None:
             station_data['signal-strength'] = link['signal-strength']
         if link.get('rx-speed') is not None:
