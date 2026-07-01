@@ -48,6 +48,13 @@ submodule infix-if-wifi {
      - Security: WPA2/WPA3 with keystore integration
      - Operational state: Connection status, RSSI, client lists";
 
+  revision 2026-07-01 {
+    description
+      "Add station 'bssid' operational leaf: the BSSID the station is
+       currently associated to, to tell roaming-ESS access points apart.";
+    reference "internal";
+  }
+
   revision 2026-03-06 {
     description
       "Adding mesh support and roaming.
@@ -238,6 +245,18 @@ submodule infix-if-wifi {
             }
 
             /* Operational state */
+
+            leaf bssid {
+              config false;
+              type yang:mac-address;
+              description
+                "BSSID (MAC address) of the access point the station is
+                 currently associated to.
+
+                 Only present while connected.  With several access points
+                 sharing one SSID (a roaming ESS), this identifies which one
+                 the station is on.";
+            }
 
             leaf signal-strength {
               config false;
