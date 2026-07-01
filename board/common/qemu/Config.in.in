@@ -253,3 +253,19 @@ config QEMU_NET_PORTS
 	int "Number of Rocker switch ports"
 	depends on QEMU_NET_ROCKER
 	default 10
+
+comment "Wireless"
+
+config QEMU_WIFI_RADIOS
+	int "Number of virtual WiFi radios (mac80211_hwsim)"
+	default 0
+	help
+	  Number of simulated 802.11 radios to create with mac80211_hwsim.
+	  The count is passed to the guest via the opt/wifi fw_cfg and loaded
+	  by the 00-hwsim boot script.
+
+	  0 (default) means no radios, so nothing wireless clutters the guest.
+	  Set a small number (e.g. 2) for local AP/station experiments.
+
+	  Note: 'make run' is a single guest with no inter-guest wireless
+	  medium, so these radios only reach each other within this one guest.
