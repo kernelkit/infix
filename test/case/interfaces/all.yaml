@@ -52,3 +52,6 @@
 
 - name: Layer-2/3 Tunnel Tests
   suite: tunnels.yaml
+
+- name: WiFi Tests
+  suite: wifi.yaml

@@ -1,0 +1,54 @@
+graph "wifi-band-steering" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt2> mgmt2 }",
+	    pos="0,0!",
+	    requires="controller",
+	];
+
+	// One dual-band Access Point with two radios on the *same* cell: one
+	// serves the SSID on 2.4GHz, the other serves the same SSID on 5GHz.
+	// "wifi-dualband" pins it to the quad DUT that wires two extra radios to
+	// the dedicated band-steering cell, the only node where both BSSes share
+	// one cell (see test/virt/quad).
+	ap [
+	    label="{ <mgmt> mgmt | <lo> lo | <hi> hi } | ap",
+	    pos="6,0!",
+	    requires="infix wifi-dualband",
+	];
+
+	// One client with a single dual-band radio.  Because both AP BSSes live
+	// on the one cell, this single radio hears the SSID on both bands and is
+	// the device band steering nudges onto 5GHz.
+	client [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | client",
+	    pos="12,0!",
+	    requires="infix",
+	];
+
+	// A single wireless cell carrying both bands.  The medium is
+	// frequency-aware (the wifimedium relay preserves each frame's frequency
+	// and mac80211 channel-filters), so 2.4GHz and 5GHz coexist on one cell:
+	//   * physical: one over-the-air neighbourhood the client scans;
+	//   * virtual (qeneth): one multicast cell the AP's two radios and the
+	//     client's radio all join.
+	cell [
+	    label="cell\n(2.4GHz + 5GHz)",
+	    pos="9,0!",
+	    requires="wifi-radio",
+	];
+
+	host:mgmt1 -- ap:mgmt     [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- client:mgmt [requires="mgmt", color="lightgray"]
+
+	// Both AP radios and the client's single radio share the one cell.
+	ap:lo -- cell     [requires="wifi2.4GHz", style="dashed"]
+	ap:hi -- cell     [requires="wifi5GHz", style="dashed"]
+	client:wifi -- cell [requires="wifi2.4GHz wifi5GHz", style="dashed"]
+}
