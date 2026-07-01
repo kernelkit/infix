@@ -47,5 +47,5 @@ END { if (buf) print buf }
 cat <<EOF
 
 > [!TIP]
-> **Try Infix in GNS3!** Download the appliance from the [GNS3 Marketplace](https://gns3.com/marketplace/appliances/infix) to test Infix in a virtual network environment without hardware.
+> **Try Infix in GNS3!**  See the blog post for details <https://www.kernelkit.org/posts/infix-in-gns3/>
 EOF
