@@ -3,13 +3,18 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[UNRELEASED][]
---------------
+[v26.08.0][UNRELEASED]
+-------------------------
 
 ### Changes
 
 - Add support for firewall address-set (ipset): named sets of IP addresses and
   networks, usable as zone sources for per-IP access control, issue #1189
+
+### Fixes
+
+- Fix annoying "cannot deselect all services" or reset to YANG default in the
+  web interface's firewall configuration page
 
 [v26.06.0][] - 2026-07-01
 -------------------------
@@ -2214,6 +2219,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.06.0...HEAD
+[v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0
 [v26.06.0]:   https://github.com/kernelkit/infix/compare/v26.05.0...v26.06.0
 [v26.05.0]:   https://github.com/kernelkit/infix/compare/v26.04.0...v26.05.0
 [v26.04.0]:   https://github.com/kernelkit/infix/compare/v26.03.0...v26.04.0

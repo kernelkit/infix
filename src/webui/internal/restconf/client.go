@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -79,6 +81,12 @@ func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Resp
 
 // Get fetches a RESTCONF resource, decoding the JSON response into target.
 // User credentials are taken from the request context (set by auth middleware).
+// Get sends a GET request and decodes the JSON response into target.
+//
+// NOTE: deep-path GETs (keyed list entries, nested containers) return the
+// requested node nested under its full parent path, not bare as the RFC
+// 8040 examples may suggest.  Wrapper structs must model the nesting from
+// the top-level container down, or the decode silently matches nothing.
 func (c *Client) Get(ctx context.Context, path string, target any) error {
 	resp, err := c.doRequest(ctx, http.MethodGet, path)
 	if err != nil {
@@ -88,7 +96,20 @@ func (c *Client) Get(ctx context.Context, path string, target any) error {
 	if resp.StatusCode != http.StatusOK {
 		return parseError(resp)
 	}
-	return json.NewDecoder(resp.Body).Decode(target)
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(data, target); err != nil {
+		return err
+	}
+	// Tripwire for the nesting trap above: content arrived but nothing
+	// in the wrapper matched it.
+	if v := reflect.ValueOf(target); len(data) > 2 &&
+		v.Kind() == reflect.Pointer && v.Elem().IsZero() {
+		log.Printf("restconf: GET %s decoded to zero %T, wrapper shape mismatch?", path, target)
+	}
+	return nil
 }
 
 // Post sends a POST request to a RESTCONF RPC endpoint.

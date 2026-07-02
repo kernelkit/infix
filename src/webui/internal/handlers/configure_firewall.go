@@ -26,11 +26,6 @@ type cfgFwWrapper struct {
 	Firewall *firewallJSON `json:"infix-firewall:firewall,omitempty"`
 }
 
-// cfgFwZoneWrapper is used when reading a single zone by path.
-type cfgFwZoneWrapper struct {
-	Zone []zoneJSON `json:"infix-firewall:zone"`
-}
-
 // ─── Template display rows ────────────────────────────────────────────────────
 
 type cfgZoneRow struct {
@@ -63,6 +58,31 @@ type cfgAddrSetRow struct {
 	EntriesTxt string // one entry per line for the textarea
 }
 
+func zoneConfigBody(cur zoneJSON) map[string]any {
+	zone := map[string]any{
+		"name": cur.Name,
+	}
+	if cur.Action != "" {
+		zone["action"] = cur.Action
+	}
+	if cur.Description != "" {
+		zone["description"] = cur.Description
+	}
+	if len(cur.Interface) > 0 {
+		zone["interface"] = cur.Interface
+	}
+	if len(cur.Network) > 0 {
+		zone["network"] = cur.Network
+	}
+	if len(cur.AddressSet) > 0 {
+		zone["address-set"] = cur.AddressSet
+	}
+	if len(cur.Service) > 0 {
+		zone["service"] = cur.Service
+	}
+	return zone
+}
+
 // toSet builds a membership map for template "index" lookups.
 func toSet(ss []string) map[string]bool {
 	set := make(map[string]bool, len(ss))
@@ -70,11 +90,6 @@ func toSet(ss []string) map[string]bool {
 		set[s] = true
 	}
 	return set
-}
-
-// cfgFwSvcWrapper is used when reading a single service by path.
-type cfgFwSvcWrapper struct {
-	Service []fwServiceJSON `json:"infix-firewall:service"`
 }
 
 // ─── Template data ────────────────────────────────────────────────────────────
@@ -342,15 +357,15 @@ func (h *ConfigureFirewallHandler) SaveZone(w http.ResponseWriter, r *http.Reque
 	}
 	name := r.PathValue("name")
 
-	var wrap cfgFwZoneWrapper
+	var wrap firewallWrapper // keyed GETs nest the zone under its full parent path
 	if err := h.RC.Get(r.Context(), fwConfigPath+"/zone="+url.PathEscape(name), &wrap); err != nil {
 		log.Printf("configure firewall zone save %q: GET: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
 	cur := zoneJSON{Name: name}
-	if len(wrap.Zone) > 0 {
-		cur = wrap.Zone[0]
+	if len(wrap.Firewall.Zone) > 0 {
+		cur = wrap.Firewall.Zone[0]
 	}
 
 	cur.Action = r.FormValue("action")
@@ -374,20 +389,7 @@ func (h *ConfigureFirewallHandler) SaveZone(w http.ResponseWriter, r *http.Reque
 	}
 	cur.AddressSet = sets
 
-	zone := map[string]any{
-		"name":        cur.Name,
-		"action":      cur.Action,
-		"interface":   cur.Interface,
-		"service":     cur.Service,
-		"address-set": cur.AddressSet,
-	}
-	if cur.Description != "" {
-		zone["description"] = cur.Description
-	}
-	if len(cur.Network) > 0 {
-		zone["network"] = cur.Network
-	}
-	body := map[string]any{"infix-firewall:zone": []map[string]any{zone}}
+	body := map[string]any{"infix-firewall:zone": []map[string]any{zoneConfigBody(cur)}}
 	if err := h.RC.Put(r.Context(), fwConfigPath+"/zone="+url.PathEscape(name), body); err != nil {
 		log.Printf("configure firewall zone save %q: PUT: %v", name, err)
 		renderSaveError(w, err)
@@ -396,55 +398,38 @@ func (h *ConfigureFirewallHandler) SaveZone(w http.ResponseWriter, r *http.Reque
 	renderSavedRedirect(w, "Zone saved", "/configure/firewall")
 }
 
-// ResetZoneLeafList clears a leaf-list (interface or service) on a zone by
-// re-PUTting the zone container without that field. RFC 8040 leaf-list
-// DELETE requires per-entry key predicates, so a bulk clear has to go
-// through the parent.
+// ResetZoneLeafList clears a leaf-list (interface or service) on a zone.
+// RFC 8040 leaf-list DELETE requires per-entry key predicates, so each
+// instance is deleted individually.  Deliberately avoids rebuilding the
+// zone with PUT: the reset must not be able to touch anything else.
 func (h *ConfigureFirewallHandler) resetZoneLeafList(w http.ResponseWriter, r *http.Request, leaf string) {
 	name := r.PathValue("name")
-	var wrap cfgFwZoneWrapper
+	var wrap firewallWrapper // keyed GETs nest the zone under its full parent path
 	if err := h.RC.Get(r.Context(), fwConfigPath+"/zone="+url.PathEscape(name), &wrap); err != nil {
 		log.Printf("configure firewall zone reset %s/%s: GET: %v", name, leaf, err)
 		renderSaveError(w, err)
 		return
 	}
-	cur := zoneJSON{Name: name}
-	if len(wrap.Zone) > 0 {
-		cur = wrap.Zone[0]
-	}
-	switch leaf {
-	case "interface":
-		cur.Interface = nil
-	case "service":
-		cur.Service = nil
+	var values []string
+	if len(wrap.Firewall.Zone) > 0 {
+		switch leaf {
+		case "interface":
+			values = wrap.Firewall.Zone[0].Interface
+		case "service":
+			values = wrap.Firewall.Zone[0].Service
+		}
 	}
 
-	zone := map[string]any{
-		"name":   cur.Name,
-		"action": cur.Action,
+	for _, val := range values {
+		path := fmt.Sprintf("%s/zone=%s/%s=%s", fwConfigPath,
+			restconf.EscapeKey(name), leaf, restconf.EscapeKey(val))
+		if err := h.RC.Delete(r.Context(), path); err != nil && !restconf.IsNotFound(err) {
+			log.Printf("configure firewall zone reset %s/%s=%s: %v", name, leaf, val, err)
+			renderSaveError(w, err)
+			return
+		}
 	}
-	if cur.Description != "" {
-		zone["description"] = cur.Description
-	}
-	if len(cur.Interface) > 0 {
-		zone["interface"] = cur.Interface
-	}
-	if len(cur.Network) > 0 {
-		zone["network"] = cur.Network
-	}
-	if len(cur.AddressSet) > 0 {
-		zone["address-set"] = cur.AddressSet
-	}
-	if len(cur.Service) > 0 {
-		zone["service"] = cur.Service
-	}
-	body := map[string]any{"infix-firewall:zone": []map[string]any{zone}}
-	if err := h.RC.Put(r.Context(), fwConfigPath+"/zone="+url.PathEscape(name), body); err != nil {
-		log.Printf("configure firewall zone reset %s/%s: PUT: %v", name, leaf, err)
-		renderSaveError(w, err)
-		return
-	}
-	renderSaved(w, "Reset to default")
+	renderSavedRedirect(w, "Reset to default", "/configure/firewall")
 }
 
 // ResetZoneInterfaces clears the zone's interface leaf-list.
