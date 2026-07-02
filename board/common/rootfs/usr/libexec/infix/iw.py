@@ -213,7 +213,9 @@ def parse_phy_info(phy_name):
 
             # Map driver to manufacturer
             driver_lower = driver_name.lower()
-            if 'mt' in driver_lower or 'mediatek' in driver_lower:
+            if 'hwsim' in driver_lower:
+                result['manufacturer'] = 'Virtual (hwsim)'
+            elif 'mt' in driver_lower or 'mediatek' in driver_lower:
                 result['manufacturer'] = 'MediaTek Inc.'
             elif 'rtw' in driver_lower or 'realtek' in driver_lower:
                 result['manufacturer'] = 'Realtek Semiconductor Corp.'

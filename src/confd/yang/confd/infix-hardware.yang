@@ -21,6 +21,12 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-07-02 {
+    description "Widen wifi max-interfaces ap/station to uint16, virtual
+                 radios (mac80211_hwsim) report combinations up to 2048.";
+    reference "internal";
+  }
+
   revision 2026-03-01 {
     description "Add channel-width leaf for WiFi radio container.";
     reference "internal";
@@ -457,13 +463,13 @@ module infix-hardware {
           "Maximum number of virtual interfaces supported by this radio.";
 
         leaf ap {
-          type uint8;
+          type uint16;
           description
             "Maximum number of AP interfaces.";
         }
 
         leaf station {
-          type uint8;
+          type uint16;
           description
             "Maximum number of station interfaces.";
         }
