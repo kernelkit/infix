@@ -3,6 +3,14 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[UNRELEASED][]
+--------------
+
+### Changes
+
+- Add support for firewall address-set (ipset): named sets of IP addresses and
+  networks, usable as zone sources for per-IP access control, issue #1189
+
 [v26.06.0][] - 2026-07-01
 -------------------------
 

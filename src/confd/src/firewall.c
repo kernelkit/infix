@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <dirent.h>
+#include <arpa/inet.h>
 
 #include <srx/common.h>
 #include <srx/lyx.h>
@@ -24,6 +25,11 @@
 #define FIREWALLD_ZONES_DIR    FIREWALLD_DIR_NEXT "/zones"
 #define FIREWALLD_SERVICES_DIR FIREWALLD_DIR_NEXT "/services"
 #define FIREWALLD_POLICIES_DIR FIREWALLD_DIR_NEXT "/policies"
+#define FIREWALLD_IPSETS_DIR   FIREWALLD_DIR_NEXT "/ipsets"
+#define IPSETS_ACTIVE_DIR      FIREWALLD_DIR "/ipsets"
+#define ADDRSET_RUNDIR         "/run/confd/address-sets"
+
+#define ENTRY_STRLEN           64	/* worst-case ip-prefix + margin */
 
 static struct {
 	const char *yang;
@@ -62,6 +68,148 @@ static const char *policy_action_to_target(const char *action)
 	}
 
 	return policy_action_map[0].yang;
+}
+
+struct prefix {
+	int     af;
+	uint8_t addr[16];
+	int     len;
+};
+
+static int prefix_parse(const char *str, struct prefix *p)
+{
+	char buf[ENTRY_STRLEN];
+	char *sep;
+
+	strlcpy(buf, str, sizeof(buf));
+	sep = strchr(buf, '/');
+	if (sep) {
+		*sep++ = 0;
+		p->len = atoi(sep);
+	} else {
+		p->len = -1;
+	}
+
+	if (inet_pton(AF_INET, buf, p->addr) == 1) {
+		p->af = AF_INET;
+		if (p->len < 0)
+			p->len = 32;
+		return 0;
+	}
+	if (inet_pton(AF_INET6, buf, p->addr) == 1) {
+		p->af = AF_INET6;
+		if (p->len < 0)
+			p->len = 128;
+		return 0;
+	}
+
+	return -1;
+}
+
+static bool prefix_overlap(const char *a, const char *b)
+{
+	struct prefix pa, pb;
+	int len, i;
+
+	if (prefix_parse(a, &pa) || prefix_parse(b, &pb) || pa.af != pb.af)
+		return false;
+
+	len = pa.len < pb.len ? pa.len : pb.len;
+	for (i = 0; i < len / 8; i++) {
+		if (pa.addr[i] != pb.addr[i])
+			return false;
+	}
+	if (len % 8) {
+		uint8_t mask = 0xff << (8 - len % 8);
+
+		if ((pa.addr[i] & mask) != (pb.addr[i] & mask))
+			return false;
+	}
+
+	return true;
+}
+
+static bool shadow_has(const char *name, const char *entry)
+{
+	char line[ENTRY_STRLEN];
+	bool found = false;
+	FILE *fp;
+
+	fp = fopenf("r", ADDRSET_RUNDIR "/%s", name);
+	if (!fp)
+		return false;
+
+	while (fgets(line, sizeof(line), fp)) {
+		chomp(line);
+		if (!strcmp(line, entry)) {
+			found = true;
+			break;
+		}
+	}
+	fclose(fp);
+
+	return found;
+}
+
+static int shadow_add(const char *name, const char *entry)
+{
+	char line[ENTRY_STRLEN];
+	FILE *fp;
+
+	if (fmkpath(0755, ADDRSET_RUNDIR) && errno != EEXIST) {
+		ERRNO("Failed creating " ADDRSET_RUNDIR);
+		return -1;
+	}
+
+	fp = fopenf("a+", ADDRSET_RUNDIR "/%s", name);
+	if (!fp) {
+		ERRNO("Failed recording dynamic entry for address-set %s", name);
+		return -1;
+	}
+
+	while (fgets(line, sizeof(line), fp)) {
+		chomp(line);
+		if (!strcmp(line, entry)) {
+			fclose(fp);
+			return 0;
+		}
+	}
+
+	fprintf(fp, "%s\n", entry);
+	fclose(fp);
+
+	return 0;
+}
+
+static int shadow_del(const char *name, const char *entry)
+{
+	char curr[sizeof(ADDRSET_RUNDIR) + ENTRY_STRLEN], next[sizeof(curr) + 1];
+	char line[ENTRY_STRLEN];
+	FILE *in, *out;
+
+	snprintf(curr, sizeof(curr), ADDRSET_RUNDIR "/%s", name);
+	snprintf(next, sizeof(next), "%s+", curr);
+
+	in = fopen(curr, "r");
+	if (!in)
+		return -1;
+
+	out = fopen(next, "w");
+	if (!out) {
+		fclose(in);
+		return -1;
+	}
+
+	while (fgets(line, sizeof(line), in)) {
+		chomp(line);
+		if (!strcmp(line, entry))
+			continue;
+		fprintf(out, "%s\n", line);
+	}
+	fclose(in);
+	fclose(out);
+
+	return rename(next, curr);
 }
 
 static void mark_interfaces_used(struct lyd_node *cfg, char **ifaces)
@@ -177,6 +325,9 @@ static int generate_zone(struct lyd_node *cfg, const char *name, char **ifaces)
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "network")
 		fprintf(fp, "  <source address=\"%s\"/>\n", lyd_get_value(node));
 
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "address-set")
+		fprintf(fp, "  <source ipset=\"%s\"/>\n", lyd_get_value(node));
+
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "service")
 		fprintf(fp, "  <service name=\"%s\"/>\n", lyd_get_value(node));
 
@@ -215,6 +366,85 @@ static int generate_zone(struct lyd_node *cfg, const char *name, char **ifaces)
 	}
 
 	fprintf(fp, "</zone>\n");
+
+	return close_file(fp);
+}
+
+/*
+ * Dynamic entries, added at runtime with the add action, are folded
+ * into the generated ipset as regular entries so they survive the
+ * firewalld reload triggered by configuration changes.  Entries that
+ * overlap new static configuration are dropped -- config wins, and
+ * nftables refuses overlapping elements in interval sets.
+ */
+static void merge_dynamic(FILE *fp, struct lyd_node *cfg, const char *name)
+{
+	char line[ENTRY_STRLEN];
+	FILE *sf;
+
+	sf = fopenf("r", ADDRSET_RUNDIR "/%s", name);
+	if (!sf)
+		return;
+
+	while (fgets(line, sizeof(line), sf)) {
+		struct lyd_node *node;
+		bool skip = false;
+
+		chomp(line);
+		if (!line[0])
+			continue;
+
+		LYX_LIST_FOR_EACH(lyd_child(cfg), node, "entry") {
+			if (prefix_overlap(line, lyd_get_value(node))) {
+				skip = true;
+				break;
+			}
+		}
+
+		if (skip) {
+			NOTE("address-set %s: dropping dynamic entry %s, overlaps static entry",
+			     name, line);
+			continue;
+		}
+
+		fprintf(fp, "  <entry>%s</entry>\n", line);
+	}
+	fclose(sf);
+}
+
+static int generate_ipset(struct lyd_node *cfg, const char *name)
+{
+	const char *family, *timeout, *desc;
+	struct lyd_node *node;
+	FILE *fp;
+
+	fp = open_file(FIREWALLD_IPSETS_DIR, name);
+	if (!fp)
+		return SR_ERR_SYS;
+
+	desc = lydx_get_cattr(cfg, "description");
+	family = lydx_get_cattr(cfg, "family");
+	timeout = lydx_get_cattr(cfg, "timeout");
+
+	fprintf(fp, "<ipset type=\"hash:net\">\n");
+	fprintf(fp, "  <short>%s</short>\n", name);
+
+	if (desc)
+		fprintf(fp, "  <description>%s</description>\n", desc);
+
+	fprintf(fp, "  <option name=\"family\" value=\"%s\"/>\n",
+		family && !strcmp(family, "ipv6") ? "inet6" : "inet");
+
+	if (timeout)
+		fprintf(fp, "  <option name=\"timeout\" value=\"%s\"/>\n", timeout);
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "entry")
+		fprintf(fp, "  <entry>%s</entry>\n", lyd_get_value(node));
+
+	if (!timeout)
+		merge_dynamic(fp, cfg, name);
+
+	fprintf(fp, "</ipset>\n");
 
 	return close_file(fp);
 }
@@ -511,7 +741,15 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		if (!fisdir(FIREWALLD_DIR_NEXT)) {
 			/* Firewall is disabled */
 			finit_disable("firewalld");
+			rmrf(ADDRSET_RUNDIR);
 			return SR_ERR_OK;
+		}
+
+		/* Drop dynamic state of deleted address-sets */
+		clist = lydx_get_descendant(diff, "firewall", "address-set", NULL);
+		LYX_LIST_FOR_EACH(clist, cnode, "address-set") {
+			if (lydx_get_op(cnode) == LYDX_OP_DELETE)
+				erasef(ADDRSET_RUNDIR "/%s", lydx_get_cattr(cnode, "name"));
 		}
 
 		/* Firewall is enabled, roll in new configuration */
@@ -551,7 +789,8 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	if (fmkpath(0755, FIREWALLD_DIR_NEXT) ||
 	    fmkpath(0755, FIREWALLD_ZONES_DIR) ||
 	    fmkpath(0755, FIREWALLD_SERVICES_DIR) ||
-	    fmkpath(0755, FIREWALLD_POLICIES_DIR)) {
+	    fmkpath(0755, FIREWALLD_POLICIES_DIR) ||
+	    fmkpath(0755, FIREWALLD_IPSETS_DIR)) {
 		ERRNO("Failed creating " FIREWALLD_DIR_NEXT " directory structure");
 		err = SR_ERR_SYS;
 		goto done;
@@ -621,6 +860,11 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		clist = lydx_get_descendant(tree, "firewall", "service", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "service")
 			generate_service(cnode, lydx_get_cattr(cnode, "name"));
+
+		/* Regenerate all address-sets, incl. dynamic entries */
+		clist = lydx_get_descendant(tree, "firewall", "address-set", NULL);
+		LYX_LIST_FOR_EACH(clist, cnode, "address-set")
+			generate_ipset(cnode, lydx_get_cattr(cnode, "name"));
 
 		/* Regenerate all policies with sequential priority allocation */
 		clist = lydx_get_descendant(tree, "firewall", "policy", NULL);
@@ -701,6 +945,128 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	return SR_ERR_OK;
 }
 
+static int addrset_flush(const char *name)
+{
+	char line[ENTRY_STRLEN];
+	FILE *fp;
+
+	fp = fopenf("r", ADDRSET_RUNDIR "/%s", name);
+	if (!fp)
+		return SR_ERR_OK;	/* no dynamic entries */
+
+	while (fgets(line, sizeof(line), fp)) {
+		chomp(line);
+		if (!line[0])
+			continue;
+
+		if (systemf("firewall ipset del %s %s", name, line))
+			ERROR("address-set %s: failed removing dynamic entry %s", name, line);
+	}
+	fclose(fp);
+
+	erasef(ADDRSET_RUNDIR "/%s", name);
+	return SR_ERR_OK;
+}
+
+/*
+ * Canonicalize like firewalld: host entries lose their prefix length,
+ * IPv6 is compressed.  Keeps shadow file lookups exact-match.
+ */
+static const char *entry_canon(const char *entry, char *buf, size_t len)
+{
+	char addr[INET6_ADDRSTRLEN];
+	struct prefix p;
+
+	if (prefix_parse(entry, &p) || !inet_ntop(p.af, p.addr, addr, sizeof(addr)))
+		return entry;
+
+	if ((p.af == AF_INET && p.len == 32) || (p.af == AF_INET6 && p.len == 128))
+		snprintf(buf, len, "%s", addr);
+	else
+		snprintf(buf, len, "%s/%d", addr, p.len);
+
+	return buf;
+}
+
+static int addrset(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
+		   const sr_val_t *input, const size_t input_cnt, sr_event_t event,
+		   uint32_t request_id, sr_val_t **output, size_t *output_cnt, void *priv)
+{
+	char buf[strlen(xpath) + 1], canon[ENTRY_STRLEN], name[65];
+	const char *cmd = (const char *)priv;
+	const char *entry = NULL;
+	sr_xpath_ctx_t state = {};
+	sr_session_ctx_t *cfg;
+	char *val;
+	bool timeout;
+
+	/* /infix-firewall:firewall/address-set[name='allowed']/add */
+	strlcpy(buf, xpath, sizeof(buf));
+	val = sr_xpath_key_value(buf, "address-set", "name", &state);
+	if (!val)
+		return SR_ERR_INTERNAL;
+	strlcpy(name, val, sizeof(name));
+
+	if (input_cnt > 0)
+		entry = entry_canon(input[0].data.string_val, canon, sizeof(canon));
+
+	if (sr_session_start(sr_session_get_connection(session), SR_DS_RUNNING, &cfg))
+		return SR_ERR_INTERNAL;
+
+	val = srx_get_str(cfg, XPATH "/address-set[name='%s']/name", name);
+	if (!val) {
+		sr_session_stop(cfg);
+		sr_session_set_error_message(session, "No such address-set: %s", name);
+		return SR_ERR_INVAL_ARG;
+	}
+	free(val);
+
+	val = srx_get_str(cfg, XPATH "/address-set[name='%s']/timeout", name);
+	timeout = val != NULL;
+	free(val);
+	sr_session_stop(cfg);
+
+	DEBUG("address-set %s: %s %s", name, cmd, entry ?: "");
+
+	if (!strcmp(cmd, "add")) {
+		if (systemf("firewall ipset add %s %s", name, entry)) {
+			sr_session_set_error_message(session, "Failed adding %s to address-set %s, "
+						     "see log for details", entry, name);
+			return SR_ERR_OPERATION_FAILED;
+		}
+
+		if (!timeout)
+			shadow_add(name, entry);
+
+		return SR_ERR_OK;
+	}
+
+	if (timeout) {
+		sr_session_set_error_message(session, "Entries in address-set %s expire on "
+					     "their own (timeout set)", name);
+		return SR_ERR_UNSUPPORTED;
+	}
+
+	if (!strcmp(cmd, "flush"))
+		return addrset_flush(name);
+
+	/* remove */
+	if (!shadow_has(name, entry)) {
+		sr_session_set_error_message(session, "%s is not a dynamic entry in address-set %s, "
+					     "static entries are removed via configuration", entry, name);
+		return SR_ERR_INVAL_ARG;
+	}
+
+	if (systemf("firewall ipset del %s %s", name, entry)) {
+		sr_session_set_error_message(session, "Failed removing %s from address-set %s, "
+					     "see log for details", entry, name);
+		return SR_ERR_OPERATION_FAILED;
+	}
+
+	shadow_del(name, entry);
+	return SR_ERR_OK;
+}
+
 static int lockdown(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 		    const sr_val_t *input, const size_t input_cnt, sr_event_t event,
 		    uint32_t request_id, sr_val_t **output, size_t *output_cnt, void *priv)
@@ -723,6 +1089,9 @@ int firewall_rpc_init(struct confd *confd)
 	int rc;
 
 	REGISTER_RPC(confd->session, XPATH "/lockdown-mode", lockdown, NULL, &confd->sub);
+	REGISTER_RPC(confd->session, XPATH "/address-set/add",    addrset, "add",    &confd->sub);
+	REGISTER_RPC(confd->session, XPATH "/address-set/remove", addrset, "remove", &confd->sub);
+	REGISTER_RPC(confd->session, XPATH "/address-set/flush",  addrset, "flush",  &confd->sub);
 
 	return SR_ERR_OK;
 fail:

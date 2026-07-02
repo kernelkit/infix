@@ -1,0 +1,61 @@
+{
+  "infix-firewall:firewall": {
+    "default": "public",
+    "logging": "all",
+    "zone": [
+      {
+        "name": "mgmt",
+        "action": "accept",
+        "interface": ["e0"],
+        "service": ["ssh", "netconf", "restconf"]
+      },
+      {
+        "name": "public",
+        "action": "drop",
+        "interface": ["e1"]
+      },
+      {
+        "name": "trusted",
+        "action": "accept",
+        "address-set": ["allowed", "greylist"]
+      }
+    ],
+    "address-set": [
+      {
+        "name": "allowed",
+        "family": "ipv4",
+        "current": [
+          {
+            "entry": "192.168.1.40",
+            "dynamic": false
+          },
+          {
+            "entry": "192.168.1.50",
+            "dynamic": true
+          }
+        ]
+      },
+      {
+        "name": "greylist",
+        "family": "ipv4",
+        "timeout": 10,
+        "current": [
+          {
+            "entry": "192.168.1.60",
+            "dynamic": true,
+            "expires": 7
+          }
+        ]
+      }
+    ],
+    "policy": [
+      {
+        "name": "public-to-mgmt",
+        "action": "reject",
+        "priority": 100,
+        "ingress": ["public"],
+        "egress": ["mgmt"]
+      }
+    ]
+  }
+}

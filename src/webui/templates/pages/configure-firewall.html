@@ -112,6 +112,7 @@
             <th>Action{{template "field-info" (index $d "zone-action")}}</th>
             <th>Description{{template "field-info" (index $d "zone-description")}}</th>
             <th style="text-align:center">Interfaces</th>
+            <th>Address sets{{template "field-info" (index $d "zone-address-set")}}</th>
             <th></th>
           </tr>
         </thead>
@@ -128,6 +129,7 @@
             <td>{{if .Action}}{{.Action}}{{else}}reject{{end}}</td>
             <td>{{if .Description}}{{.Description}}{{else}}<span class="text-muted">—</span>{{end}}</td>
             <td style="text-align:center">{{.IfaceCount}}</td>
+            <td>{{if .AddressSet}}{{.AddrSetsTxt}}{{else}}<span class="text-muted">—</span>{{end}}</td>
             <td style="text-align:right">
               {{if not .Immutable}}
               <button type="button" class="btn-icon btn-icon-danger"
@@ -141,12 +143,13 @@
             </td>
           </tr>
           <tr class="key-detail-row" id="key-detail-zone-{{$i}}">
-            <td colspan="5" class="key-detail-cell">
+            <td colspan="6" class="key-detail-cell">
               <div class="key-detail-body">
                 {{if .Immutable}}
                 <p class="empty-message">This zone is system-defined and cannot be modified.</p>
                 {{if .Interface}}<p class="text-muted" style="margin-top:0.5rem">Interfaces: {{range $j, $iface := .Interface}}{{if $j}}, {{end}}{{$iface}}{{end}}</p>{{end}}
                 {{if .Network}}<p class="text-muted" style="margin-top:0.25rem">Networks: {{.NetworksTxt}}</p>{{end}}
+                {{if .AddressSet}}<p class="text-muted" style="margin-top:0.25rem">Address sets: {{.AddrSetsTxt}}</p>{{end}}
                 {{if .Service}}<p class="text-muted" style="margin-top:0.25rem">Services: {{.ServicesTxt}}</p>{{end}}
                 {{else}}
                 <form hx-post="/configure/firewall/zones/{{.Name}}" hx-swap="none">
@@ -211,6 +214,24 @@
                                 hx-delete="/configure/firewall/zones/{{.Name}}/interfaces"
                                 hx-swap="none"
                                 hx-confirm="Clear interfaces from zone {{.Name}}?">{{template "icon-reset"}}</button>
+                      </td>
+                    </tr>
+                    {{end}}
+                    {{if $.AddressSetNames}}
+                    <tr>
+                      <th>Address sets{{template "field-info" (index $d "zone-address-set")}}</th>
+                      <td colspan="2">
+                        <details class="cfg-multi">
+                          <summary class="cfg-multi-summary">{{if .AddressSet}}{{.AddrSetsTxt}}{{else}}(None){{end}}</summary>
+                          <div class="cfg-multi-body">
+                            {{range $.AddressSetNames}}
+                            <label class="cfg-multi-item">
+                              <input type="checkbox" name="address-sets" value="{{.}}" {{if index $z.AddrSetSet .}}checked{{end}}>
+                              {{.}}
+                            </label>
+                            {{end}}
+                          </div>
+                        </details>
                       </td>
                     </tr>
                     {{end}}
@@ -723,6 +744,160 @@
     </div>
   </section>
 
+  {{/* ── Address Sets ─────────────────────────────────────────────────── */}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Address Sets</div>
+    <p class="text-muted" style="font-size:0.85em;margin:0 1rem 0.5rem">
+      Named sets of IP addresses and networks, usable as zone sources.
+      Entries configured here are static; dynamic entries can be added at
+      runtime from the CLI or over NETCONF/RESTCONF, see the Firewall
+      status page for the live contents.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            <th>Name{{template "field-info" (index $d "addrset-name")}}</th>
+            <th>Description{{template "field-info" (index $d "addrset-description")}}</th>
+            <th>Family{{template "field-info" (index $d "addrset-family")}}</th>
+            <th>Timeout{{template "field-info" (index $d "addrset-timeout")}}</th>
+            <th style="text-align:center">Entries</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $s := .AddressSets}}
+          <tr>
+            <td>
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="addrset-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{.Name}}
+              </button>
+            </td>
+            <td>{{if .Description}}{{.Description}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+            <td>{{.Family}}</td>
+            <td>{{if .Timeout}}{{.Timeout}} s{{else}}<span class="text-muted">—</span>{{end}}</td>
+            <td style="text-align:center">{{len .Entry}}</td>
+            <td style="text-align:right">
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/firewall/address-sets/{{.Name}}"
+                      hx-confirm="Delete address-set {{.Name}}?"
+                      hx-swap="none"
+                      title="Delete address-set">
+                {{template "icon-trash"}}
+              </button>
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-addrset-{{$i}}">
+            <td colspan="6" class="key-detail-cell">
+              <div class="key-detail-body">
+                <form hx-post="/configure/firewall/address-sets/{{.Name}}" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Description{{template "field-info" (index $d "addrset-description")}}</th>
+                      <td colspan="2"><input class="cfg-input" type="text" name="description"
+                                 value="{{.Description}}" placeholder="Optional description"></td>
+                    </tr>
+                    <tr>
+                      <th>Family{{template "field-info" (index $d "addrset-family")}}</th>
+                      <td colspan="2">
+                        {{$fam := .Family}}
+                        <div class="yt-bool-group">
+                          {{range $.FamilyOptions}}
+                          <label><input type="radio" name="family" value="{{.Value}}"
+                                 {{if or (eq $fam .Value) (and (eq $fam "") .IsDefault)}}checked{{end}}> {{.Label}}</label>
+                          {{end}}
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Timeout{{template "field-info" (index $d "addrset-timeout")}}</th>
+                      <td colspan="2">
+                        <input class="cfg-input cfg-input-sm" type="number" name="timeout"
+                               min="1" value="{{if .Timeout}}{{.Timeout}}{{end}}" placeholder="—" style="width:8rem"> seconds
+                        <span class="text-muted" style="font-size:0.8em;display:block;margin-top:0.25em">Timeout sets are dynamic-only: entries expire on their own and static entries cannot be configured.</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Entries{{template "field-info" (index $d "addrset-entry")}}</th>
+                      <td colspan="2">
+                        <textarea class="cfg-input" name="entries" rows="5"
+                                  placeholder="One address or prefix per line, e.g. 192.168.1.40 or 10.0.0.0/24">{{.EntriesTxt}}</textarea>
+                      </td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <button type="button" class="btn btn-sm" data-close-detail="addrset-{{$i}}">Cancel</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {{end}}
+
+          {{if not .AddressSets}}
+          <tr><td colspan="6" class="yt-table-empty">No address-sets configured</td></tr>
+          {{end}}
+
+          {{/* Hidden add-address-set row */}}
+          <tr id="add-addrset-row" hidden>
+            <td colspan="6" class="key-detail-cell">
+              <form hx-post="/configure/firewall/address-sets" hx-swap="none">
+                <table class="info-table">
+                  <tr>
+                    <th>Name{{template "field-info" (index $d "addrset-name")}}</th>
+                    <td colspan="2"><input class="cfg-input" type="text" name="name" required
+                               pattern="[a-zA-Z0-9\-_]+" placeholder="e.g. allowed"></td>
+                  </tr>
+                  <tr>
+                    <th>Description{{template "field-info" (index $d "addrset-description")}}</th>
+                    <td colspan="2"><input class="cfg-input" type="text" name="description"
+                               placeholder="Optional description"></td>
+                  </tr>
+                  <tr>
+                    <th>Family{{template "field-info" (index $d "addrset-family")}}</th>
+                    <td colspan="2">
+                      <div class="yt-bool-group">
+                        {{range .FamilyOptions}}
+                        <label><input type="radio" name="family" value="{{.Value}}" {{if .IsDefault}}checked{{end}}> {{.Label}}</label>
+                        {{end}}
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Timeout{{template "field-info" (index $d "addrset-timeout")}}</th>
+                    <td colspan="2">
+                      <input class="cfg-input cfg-input-sm" type="number" name="timeout"
+                             min="1" placeholder="—" style="width:8rem"> seconds
+                      <span class="text-muted" style="font-size:0.8em;display:block;margin-top:0.25em">Leave blank for a regular set with static entries.</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Entries{{template "field-info" (index $d "addrset-entry")}}</th>
+                    <td colspan="2">
+                      <textarea class="cfg-input" name="entries" rows="5"
+                                placeholder="One address or prefix per line, e.g. 192.168.1.40 or 10.0.0.0/24"></textarea>
+                    </td>
+                  </tr>
+                </table>
+                <div class="cfg-card-footer" style="padding-left:0">
+                  <button class="btn btn-primary btn-sm" type="submit">Add</button>
+                  <button type="button" class="btn btn-sm" data-hide="add-addrset-row">Cancel</button>
+                  <span class="cfg-save-status"></span>
+                </div>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-show="add-addrset-row">+ Add Address Set</button>
+    </div>
+  </section>
+
 </section>
 {{end}}
 
@@ -731,4 +906,3 @@
 {{end}}{{/* end {{else}} — schema ready */}}
 
 {{end}}
-

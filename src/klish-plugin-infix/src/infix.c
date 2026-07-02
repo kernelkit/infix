@@ -297,6 +297,64 @@ int infix_firewall_services(kcontext_t *ctx)
 		      "| sed 's/^(//; s/,)$//' | tr \"'\" '\"' | jq -r '.[]' 2>/dev/null");
 }
 
+/*
+ * Completion function for firewall address-sets (ipsets).
+ * D-Bus returns variant format: (['set1', 'set2'],)
+ */
+int infix_firewall_addrsets(kcontext_t *ctx)
+{
+	(void)ctx;
+	return firewall_dbus_completion("ipset", "getIPSets",
+		"sed 's/^(//; s/,)$//' | tr \"'\" '\"' | jq -r '.[]' 2>/dev/null");
+}
+
+/*
+ * Send address-set action (add/remove/flush) using the rpc tool, as the
+ * logged-in user to honor NACM.  srp_rpc from klish-plugin-sysrepo only
+ * handles fixed xpaths, these actions live on list entries.
+ */
+int infix_firewall_addrset_action(kcontext_t *ctx)
+{
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *name, *op;
+	char xpath[128];
+	char *argv[8];
+	kparg_t *parg;
+	int i = 0;
+
+	parg = kpargv_find(pargv, "setname");
+	if (!parg) {
+		fprintf(stderr, ERRMSG "missing address-set name\n");
+		return -1;
+	}
+	name = kparg_value(parg);
+
+	if (kpargv_find(pargv, "add"))
+		op = "add";
+	else if (kpargv_find(pargv, "remove"))
+		op = "remove";
+	else
+		op = "flush";
+
+	snprintf(xpath, sizeof(xpath),
+		 "/infix-firewall:firewall/address-set[name='%s']/%s", name, op);
+
+	argv[i++] = "doas";
+	argv[i++] = "-u";
+	argv[i++] = (char *)cd_home(ctx);
+	argv[i++] = "rpc";
+	argv[i++] = xpath;
+
+	parg = kpargv_find(pargv, "entry");
+	if (parg) {
+		argv[i++] = "entry";
+		argv[i++] = (char *)kparg_value(parg);
+	}
+	argv[i] = NULL;
+
+	return run(argv);
+}
+
 int infix_copy(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
@@ -689,6 +747,8 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("firewall_zones", infix_firewall_zones));
 	kplugin_add_syms(plugin, ksym_new("firewall_policies", infix_firewall_policies));
 	kplugin_add_syms(plugin, ksym_new("firewall_services", infix_firewall_services));
+	kplugin_add_syms(plugin, ksym_new("firewall_addrsets", infix_firewall_addrsets));
+	kplugin_add_syms(plugin, ksym_new("firewall_addrset_action", infix_firewall_addrset_action));
 	kplugin_add_syms(plugin, ksym_new("set_boot_order", infix_set_boot_order));
 	kplugin_add_syms(plugin, ksym_new("shell", infix_shell));
 	kplugin_add_syms(plugin, ksym_new("ssh_connect",           infix_ssh_connect));

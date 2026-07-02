@@ -37,3 +37,6 @@
     - "json/bloated.json"
     - "show-interfaces"
     - "-n br0"
+
+- case: firewall_overview.sh
+  name: "firewall-overview"
