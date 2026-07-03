@@ -190,6 +190,9 @@ To apply a single snippet to the current output directory:
     make apply-ext4         # build an ext4 rootfs (needed for boards
                             # whose bootloader lacks squashfs support,
                             # e.g. Marvell ESPRESSObin)
+    make apply-mirror       # prefer an internal download mirror
+                            # (BR2_PRIMARY_SITE) over upstream sites,
+                            # see utils/mirror-sync.sh for populating it
 
 The `apply-*` targets require an existing `.config` (i.e. you must have
 already run a `make <board>_defconfig`).  The snippet is merged using
