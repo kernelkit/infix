@@ -46,11 +46,6 @@ type containerListWrapper struct {
 	} `json:"infix-containers:containers"`
 }
 
-// containerResourceUsageWrapper wraps the RESTCONF resource-usage response.
-type containerResourceUsageWrapper struct {
-	ResourceUsage containerResourceUsageJSON `json:"infix-containers:resource-usage"`
-}
-
 // ContainerEntry holds display-ready data for a single container row.
 type ContainerEntry struct {
 	Name     string
@@ -106,13 +101,16 @@ func (h *ContainersHandler) Overview(w http.ResponseWriter, r *http.Request) {
 				defer wg.Done()
 				path := fmt.Sprintf("/data/infix-containers:containers/container=%s/resource-usage",
 					url.PathEscape(name))
-				var w containerResourceUsageWrapper
+				var w containerListWrapper // keyed GETs nest under the full parent path
 				if err := h.RC.Get(ctx, path, &w); err != nil {
 					log.Printf("restconf resource-usage %s: %v", name, err)
 					return
 				}
+				if len(w.Containers.Container) == 0 {
+					return
+				}
 				mu.Lock()
-				usages[idx] = w.ResourceUsage
+				usages[idx] = w.Containers.Container[0].ResourceUsage
 				mu.Unlock()
 			}(i, c.Name)
 		}
