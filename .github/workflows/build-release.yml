@@ -54,7 +54,7 @@ jobs:
         run: |
           target=${{ matrix.target }}_defconfig
           echo "Building $target ..."
-          make $target
+          make $target apply-mirror
           make
 
       - name: Generate SBOM from Build

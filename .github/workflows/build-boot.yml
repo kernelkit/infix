@@ -78,7 +78,7 @@ jobs:
 
       - name: Configure ${{ matrix.defconfig }}_defconfig
         run: |
-          make ${{ matrix.defconfig }}_defconfig
+          make ${{ matrix.defconfig }}_defconfig apply-mirror
 
       - name: Build ${{ matrix.defconfig }}_defconfig
         run: |
