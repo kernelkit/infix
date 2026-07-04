@@ -37,7 +37,7 @@ EOF
 }
 
 if [ -f "$TARGET_DIR/etc/rauc/system.conf" ]; then
-    sed -i "s/compatible=.*/compatible=$INFIX_COMPATIBLE/" "$TARGET_DIR/etc/rauc/system.conf"
+    sed -i "s/compatible=.*/compatible=$IX_COMPATIBLE/" "$TARGET_DIR/etc/rauc/system.conf"
 fi
 
 if [ -n "${ID_LIKE}" ]; then
@@ -53,40 +53,40 @@ cp "$TARGET_DIR/etc/hostname" "$TARGET_DIR/etc/hostname.d/10-default"
 ixmsg "Creating /etc/os-release"
 rm -f "$TARGET_DIR/etc/os-release"
 {
-    echo "NAME=\"$INFIX_NAME\""
-    echo "ID=$INFIX_ID"
-    echo "PRETTY_NAME=\"$INFIX_TAGLINE $INFIX_VERSION\""
+    echo "NAME=\"$IX_NAME\""
+    echo "ID=$IX_ID"
+    echo "PRETTY_NAME=\"$IX_TAGLINE $INFIX_VERSION\""
     echo "ID_LIKE=\"${ID}\""
     echo "DEFAULT_HOSTNAME=$BR2_TARGET_GENERIC_HOSTNAME"
     echo "VERSION=\"${INFIX_VERSION}\""
     echo "VERSION_ID=${INFIX_VERSION}"
     echo "BUILD_ID=\"${INFIX_BUILD_ID}\""
-    if [ -n "$INFIX_IMAGE_ID" ]; then
-	echo "IMAGE_ID=\"$INFIX_IMAGE_ID\""
+    if [ -n "$IX_IMAGE_ID" ]; then
+	echo "IMAGE_ID=\"$IX_IMAGE_ID\""
     fi
     if [ -n "$INFIX_RELEASE" ]; then
 	echo "IMAGE_VERSION=\"$INFIX_RELEASE\""
     fi
-    echo "ARCHITECTURE=\"${INFIX_ARCH}\""
-    echo "HOME_URL=$INFIX_HOME"
-    if [ -n "$INFIX_VENDOR" ]; then
-	echo "VENDOR_NAME=\"$INFIX_VENDOR\""
+    echo "ARCHITECTURE=\"${IX_ARCH}\""
+    echo "HOME_URL=$IX_HOME"
+    if [ -n "$IX_VENDOR" ]; then
+	echo "VENDOR_NAME=\"$IX_VENDOR\""
     fi
-    if [ -n "$INFIX_VENDOR_HOME" ]; then
-	echo "VENDOR_HOME=\"$INFIX_VENDOR_HOME\""
+    if [ -n "$IX_VENDOR_HOME" ]; then
+	echo "VENDOR_HOME=\"$IX_VENDOR_HOME\""
     fi
-    if [ -n "$INFIX_DOC" ]; then
-	echo "DOCUMENTATION_URL=\"$INFIX_DOC\""
+    if [ -n "$IX_DOC" ]; then
+	echo "DOCUMENTATION_URL=\"$IX_DOC\""
     fi
-    if [ -n "$INFIX_SUPPORT" ]; then
-	echo "SUPPORT_URL=\"$INFIX_SUPPORT\""
+    if [ -n "$IX_SUPPORT" ]; then
+	echo "SUPPORT_URL=\"$IX_SUPPORT\""
     fi
-    if [ -n "$INFIX_DESC" ]; then
-	echo "INFIX_DESC=\"$INFIX_DESC\""
+    if [ -n "$IX_DESC" ]; then
+	echo "INFIX_DESC=\"$IX_DESC\""
     fi
 } > "$TARGET_DIR/etc/os-release"
 
-echo "$INFIX_TAGLINE $INFIX_VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
+echo "$IX_TAGLINE $INFIX_VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
 ixmsg "Creating /etc/version: $(cat "$TARGET_DIR/etc/version")"
 
 # In case of ambguities, this is what the image was built from

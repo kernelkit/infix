@@ -11,7 +11,7 @@ source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-readme/Config.in"
 
 endmenu
 
-config QEMU_SCRIPTS
+config IX_QEMU_SCRIPTS
 	bool "QEMU scripts"
 	default y
 	help
@@ -19,20 +19,20 @@ config QEMU_SCRIPTS
 	  directory, which can be used to launch virtual Infix
 	  instances.
 
-menuconfig TRUSTED_KEYS
+menuconfig IX_TRUSTED_KEYS
 	bool "Trusted keys for image"
 	help
 	 Keys that will be accepted for this image
 
-config TRUSTED_KEYS_DEVELOPMENT
+config IX_TRUSTED_KEYS_DEVELOPMENT
 	bool "Development key"
-	depends on TRUSTED_KEYS
+	depends on IX_TRUSTED_KEYS
 
-config TRUSTED_KEYS_DEVELOPMENT_PATH
+config IX_TRUSTED_KEYS_DEVELOPMENT_PATH
 	string
-	depends on TRUSTED_KEYS_DEVELOPMENT
+	depends on IX_TRUSTED_KEYS_DEVELOPMENT
 	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.crt"
 
-config TRUSTED_KEYS_EXTRA_PATH
+config IX_TRUSTED_KEYS_EXTRA_PATH
 	string "Path to extra keys to include in image"
-	depends on TRUSTED_KEYS
+	depends on IX_TRUSTED_KEYS

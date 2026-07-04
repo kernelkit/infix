@@ -2,7 +2,7 @@ source "$BR2_EXTERNAL_INFIX_PATH/board/Config.in"
 
 menu "Branding"
 
-config INFIX_VENDOR
+config IX_VENDOR
 	string "Vendor name"
 	default "KernelKit"
 	help
@@ -15,7 +15,7 @@ config INFIX_VENDOR
 
 	  Used for VENDOR_NAME in /etc/os-release and GNS3 appliance files.
 
-config INFIX_VENDOR_HOME
+config IX_VENDOR_HOME
 	string "Vendor URL"
 	help
 	  The homepage of the OS vendor.  The value should be in RFC3986
@@ -24,14 +24,14 @@ config INFIX_VENDOR_HOME
 
 	  Optional, used for VENDOR_HOME in /etc/os-release
 
-config INFIX_NAME
+config IX_NAME
 	string "Operating system name"
 	default "Infix"
 	help
 	  Mandatory.  Used for identifying the OS as NAME in /etc/os-release
 	  and product_name in GNS3 appliance files.
 
-config INFIX_ID
+config IX_ID
 	string "Operating system identifier"
 	default "infix"
 	help
@@ -43,9 +43,9 @@ config INFIX_ID
 	  Mandatory.  Used for identifying the OS as ID in /etc/os-release and
 	  in the generated image name: ID-ARCH-VERSION.img
 
-config INFIX_IMAGE_ID
+config IX_IMAGE_ID
 	string "Operating system image name"
-	default "${INFIX_ID}-${BR2_ARCH}"
+	default "${IX_ID}-${BR2_ARCH}"
 	help
 	  A lower-case string (no spaces or other characters outside of 0–9,
 	  a–z, ".", "_" and "-"), for naming critical image files, directories
@@ -54,18 +54,18 @@ config INFIX_IMAGE_ID
 	  Mandatory.  When INFIX_RELEASE is set, this string is appended to
 	  the IMAGE_ID with a '-' separator.
 
-config INFIX_COMPATIBLE
+config IX_COMPATIBLE
 	string "Operating system compatible string"
-	default "${INFIX_IMAGE_ID}"
+	default "${IX_IMAGE_ID}"
 	help
 	  A lower-case string (no spaces or other characters outside of 0–9,
 	  a–z, ".", "_" and "-"), used for image identification at upgrade.
 	  E.g., the RAUC [system] compatible string.
 
-	  Mandatory.  Defaults to $INFIX_IMAGE_ID, which in turn is composed
-	  of $INFIX_ID-$BR2_ARCH.
+	  Mandatory.  Defaults to $IX_IMAGE_ID, which in turn is composed
+	  of $IX_ID-$BR2_ARCH.
 
-config INFIX_TAGLINE
+config IX_TAGLINE
 	string "Operating system tagline"
 	default "Infix OS — Immutable.Friendly.Secure"
 	help
@@ -74,25 +74,25 @@ config INFIX_TAGLINE
 
 	  This is also show at boot when the system init process starts.
 
-config INFIX_DESC
+config IX_DESC
 	string "Operating system description"
 	help
 	  Optional.  Used for long description texts about the OS.  E.g.,
 	  the GNS3 appliance file description field.  Saved in the file
-	  /etc/os-release as INFIX_DESC.
+	  /etc/os-release as IX_DESC.
 
-config INFIX_HOME
+config IX_HOME
 	string "Operating system URL"
 	help
 	  Used for identifying the OS, e.g. as HOME_URL in /etc/os-release
 
-config INFIX_DOC
+config IX_DOC
 	string "Operating system docs"
 	help
 	  Optional.  Main documentation URL, will be shown in /etc/os-release
 	  as DOCUMENTATION_URL.
 
-config INFIX_SUPPORT
+config IX_SUPPORT
 	string "Operating system support"
 	help
 	  Main support page for the operating system, if there is any.  This
@@ -102,13 +102,13 @@ config INFIX_SUPPORT
 	  Optional.  Shown, e.g., as SUPPORT_URL in /etc/os-release or
 	  maintainer_email in .gns3a.
 
-config INFIX_OEM_PATH
+config IX_OEM_PATH
 	string "Path to OEM br2-external"
 	help
 	  A br2-external using Infix will likely want to version the branded
 	  OS using their own GIT tags.  Set this variable to point to the base
 	  directory (absolute path) and the Infix post-build.sh will call `git
-	  describe -C $INFIX_OEM_PATH`.
+	  describe -C $IX_OEM_PATH`.
 
 	  Note: the OS version (VERSION, VERSION_ID, BUILD_ID in
 	  /etc/os-release) is always derived from `git describe`.  The global
@@ -118,7 +118,7 @@ config INFIX_OEM_PATH
 endmenu
 
 # For /etc/os-release, uses CondtionArchitechture= from systemd.unit(5)
-config INFIX_ARCH
+config IX_ARCH
 	string
 	default "arm"     if BR2_arm
 	default "arm64"   if BR2_aarch64

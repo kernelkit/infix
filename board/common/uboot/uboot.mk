@@ -25,7 +25,7 @@ define UBOOT_PRE_BUILD_INSTALL_KEY
 	$(HOST_DIR)/bin/dtc -a 1024 <(echo '/dts-v1/; / { signature {}; };') \
 		>$(@D)/infix-key.dtb
 	$(foreach key, \
-		$(call qstrip,$(TRUSTED_KEYS_DEVELOPMENT_PATH)) $(call qstrip,$(TRUSTED_KEYS_EXTRA_PATH)),\
+		$(call qstrip,$(IX_TRUSTED_KEYS_DEVELOPMENT_PATH)) $(call qstrip,$(IX_TRUSTED_KEYS_EXTRA_PATH)),\
 		$(call uboot-add-pubkey,$(key),$(@D)/infix-key.dtb))
 	$(HOST_DIR)/bin/dtc -I dtb -O dts \
 		<$(@D)/infix-key.dtb \

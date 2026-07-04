@@ -1,4 +1,4 @@
-menuconfig IMAGE_ITB_DL_RELEASE
+menuconfig IX_IMAGE_ITB_DL_RELEASE
 	bool "Download existing release"
 	depends on !BR2_TARGET_ROOTFS_SQUASHFS
 	help
@@ -7,9 +7,9 @@ menuconfig IMAGE_ITB_DL_RELEASE
 	  Infix image, to create a full disk image that can be
 	  provisioned to an SD-card or eMMC.
 
-config IMAGE_ITB_DL_RELEASE_URL
+config IX_IMAGE_ITB_DL_RELEASE_URL
 	string "URL"
-	depends on IMAGE_ITB_DL_RELEASE
+	depends on IX_IMAGE_ITB_DL_RELEASE
 	default "https://github.com/kernelkit/infix/releases/download/latest/infix-${BR2_ARCH}.tar.gz"
 	help
 	  URL to release tarball.

@@ -16,7 +16,7 @@ die()
 #      DISK_IMAGE_SIZE="512"
 #      etc.
 #
-# Nested variables, like INFIX_COMPATIBLE="${INFIX_IMAGE_ID}"
+# Nested variables, like IX_COMPATIBLE="${IX_IMAGE_ID}"
 # are handled by sourcing the file in a subshell.
 #
 # shellcheck disable=SC1090

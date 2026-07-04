@@ -33,7 +33,7 @@ Arguments:
 
 Description:
   When called from Buildroot (no options), uses environment variables:
-    BINARIES_DIR, BUILD_DIR, BR2_EXTERNAL_INFIX_PATH, RELEASE, INFIX_ID
+    BINARIES_DIR, BUILD_DIR, BR2_EXTERNAL_INFIX_PATH, RELEASE, IX_ID
 
   When called with -b/-r options, enters standalone mode and combines artifacts
   from separate boot and rootfs sources. Useful for CI or manual image creation.
@@ -484,7 +484,7 @@ if [ -n "$STANDALONE" ]; then
     export BUILD_DIR="$BOOT_DIR/build"
     export BR2_EXTERNAL_INFIX_PATH
     export RELEASE="${RELEASE:-""}"
-    export INFIX_ID="${INFIX_ID:-"infix"}"
+    export IX_ID="${IX_ID:-"infix"}"
 
     # Add host tools to PATH (for genimage, bmaptool, etc.)
     for dir in "$BOOT_DIR" "$ROOT_DIR"; do
@@ -550,7 +550,7 @@ fi
 
 # Set defaults for optional variables
 : "${RELEASE:=""}"
-: "${INFIX_ID:="infix"}"
+: "${IX_ID:="infix"}"
 
 # Download bootloader if requested
 if [ -n "$DOWNLOAD_BOOT" ]; then
@@ -626,12 +626,12 @@ fi
 # For boot-only mode, append "-boot" to the target name in the image filename
 if [ -n "$BOOT_ONLY" ]; then
     sed "s|#VERSION#|${RELEASE}|" "$GENIMAGE_TEMPLATE" | \
-    sed "s|#INFIX_ID#|${INFIX_ID}|" | \
+    sed "s|#IX_ID#|${IX_ID}|" | \
     sed "s|#TARGET#|${TARGET}|" | \
     sed "s|-${TARGET}\.img|-${TARGET}-boot.img|" > "$GENIMAGE_CFG"
 else
     sed "s|#VERSION#|${RELEASE}|" "$GENIMAGE_TEMPLATE" | \
-    sed "s|#INFIX_ID#|${INFIX_ID}|" | \
+    sed "s|#IX_ID#|${IX_ID}|" | \
     sed "s|#TARGET#|${TARGET}|" > "$GENIMAGE_CFG"
 fi
 

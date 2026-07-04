@@ -173,7 +173,7 @@ jobs:
           export BUILD_DIR=$PWD/build
           export BR2_EXTERNAL_INFIX_PATH=$PWD
           export RELEASE=""
-          export INFIX_ID="infix"
+          export IX_ID="infix"
 
           for target in $TARGETS; do
             export BINARIES_DIR=$PWD/output_${target}/images

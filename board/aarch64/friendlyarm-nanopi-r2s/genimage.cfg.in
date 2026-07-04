@@ -26,7 +26,7 @@ image var.ext4 {
 	}
 }
 
-image #INFIX_ID##VERSION#-nanopi-r2s-sdcard.img {
+image #IX_ID##VERSION#-nanopi-r2s-sdcard.img {
 	hdimage {
 		partition-table-type = "gpt"
 	}

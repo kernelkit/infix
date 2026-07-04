@@ -1,85 +1,85 @@
 mainmenu "QEMU Virtualization"
 
-config QEMU_ARCH_IS_32
+config IX_QEMU_ARCH_IS_32
 	bool
 
-config QEMU_ARCH_IS_64
+config IX_QEMU_ARCH_IS_64
 	bool
 
 choice
 	prompt "Target Architecture"
 	default @ARCH@
 
-config QEMU_riscv64
-	bool "risv64"
-	select QEMU_ARCH_IS_64
+config IX_QEMU_riscv64
+	bool "riscv64"
+	select IX_QEMU_ARCH_IS_64
 
-config QEMU_x86_64
+config IX_QEMU_x86_64
 	bool "x86_64"
-	select QEMU_ARCH_IS_64
+	select IX_QEMU_ARCH_IS_64
 
-config QEMU_arm
+config IX_QEMU_arm
 	bool "AArch32 (little endian)"
-	select QEMU_ARCH_IS_32
+	select IX_QEMU_ARCH_IS_32
 
-config QEMU_aarch64
+config IX_QEMU_aarch64
 	bool "AArch64 (little endian)"
-	select QEMU_ARCH_IS_64
+	select IX_QEMU_ARCH_IS_64
 
 endchoice
 
 choice
 	prompt "Loader"
-	default QEMU_LOADER_KERNEL
+	default IX_QEMU_LOADER_KERNEL
 
-config QEMU_LOADER_KERNEL
+config IX_QEMU_LOADER_KERNEL
 	bool "Kernel"
 
-config QEMU_LOADER_UBOOT
+config IX_QEMU_LOADER_UBOOT
 	bool "U-Boot"
-	depends on QEMU_aarch64
+	depends on IX_QEMU_aarch64
 
-config QEMU_LOADER_OVMF
+config IX_QEMU_LOADER_OVMF
 	bool "OVMF (UEFI)"
-	depends on QEMU_x86_64
+	depends on IX_QEMU_x86_64
 
 endchoice
 
 choice
      prompt "Rootfs type"
-     default QEMU_ROOTFS_INITRD
+     default IX_QEMU_ROOTFS_INITRD
 
-config QEMU_ROOTFS_MMC
+config IX_QEMU_ROOTFS_MMC
      bool "MMC"
-     depends on QEMU_aarch64
+     depends on IX_QEMU_aarch64
 
-config QEMU_ROOTFS_INITRD
+config IX_QEMU_ROOTFS_INITRD
      bool "Initrd"
-     depends on QEMU_LOADER_KERNEL
+     depends on IX_QEMU_LOADER_KERNEL
 
-config QEMU_ROOTFS_VSCSI
+config IX_QEMU_ROOTFS_VSCSI
      bool "Virtio SCSI"
 
 endchoice
 
 choice
      prompt "Console"
-     default QEMU_CONSOLE_SERIAL if QEMU_arm
-     default QEMU_CONSOLE_VIRTIO
+     default IX_QEMU_CONSOLE_SERIAL if IX_QEMU_arm
+     default IX_QEMU_CONSOLE_VIRTIO
 
-config QEMU_CONSOLE_VIRTIO
+config IX_QEMU_CONSOLE_VIRTIO
      bool "Virtio (hvc0)"
 
-config QEMU_CONSOLE_SERIAL
+config IX_QEMU_CONSOLE_SERIAL
      bool "Serial (ttyS0/ttyAMA0)"
-     depends on !QEMU_LOADER_OVMF
+     depends on !IX_QEMU_LOADER_OVMF
 endchoice
 
-config QEMU_MACHINE
+config IX_QEMU_MACHINE
 	string "Select emulated machine"
-	default "qemu-system-arm     -M virt,accel=kvm:tcg -cpu max" if QEMU_arm
-	default "qemu-system-aarch64 -M virt,accel=kvm:tcg -cpu cortex-a53" if QEMU_aarch64
-	default "qemu-system-x86_64  -M pc,accel=kvm:tcg   -cpu max" if QEMU_x86_64
+	default "qemu-system-arm     -M virt,accel=kvm:tcg -cpu max" if IX_QEMU_arm
+	default "qemu-system-aarch64 -M virt,accel=kvm:tcg -cpu cortex-a53" if IX_QEMU_aarch64
+	default "qemu-system-x86_64  -M pc,accel=kvm:tcg   -cpu max" if IX_QEMU_x86_64
 	help
 	  You should not have to change this setting, although you may
 	  want to tweak it, or change the acceleration.
@@ -88,7 +88,7 @@ config QEMU_MACHINE
 	  the defconfig you started with.  Currently Infix supports
 	  arm (AArch32), aarch64 (ARM64), and x86_64 (AMD64).
 
-config QEMU_MACHINE_RAM
+config IX_QEMU_MACHINE_RAM
 	string "RAM size (k/M/G)"
 	default "448M"
 	help
@@ -96,62 +96,62 @@ config QEMU_MACHINE_RAM
 	  if you get kernel panic with: "System is deadlocked on memory",
 	  try increasing this one.
 
-config QEMU_KERNEL
+config IX_QEMU_KERNEL
 	string
-	depends on QEMU_LOADER_KERNEL
-	default "../zImage"  if QEMU_arm
-	default "../Image"   if QEMU_aarch64
-	default "../bzImage" if QEMU_x86_64
+	depends on IX_QEMU_LOADER_KERNEL
+	default "../zImage"  if IX_QEMU_arm
+	default "../Image"   if IX_QEMU_aarch64
+	default "../bzImage" if IX_QEMU_x86_64
 
-config QEMU_BIOS
+config IX_QEMU_BIOS
 	string
-	depends on !QEMU_LOADER_KERNEL
-	default "../u-boot.bin" if QEMU_LOADER_UBOOT
-	default "../OVMF.fd"    if QEMU_LOADER_OVMF
+	depends on !IX_QEMU_LOADER_KERNEL
+	default "../u-boot.bin" if IX_QEMU_LOADER_UBOOT
+	default "../OVMF.fd"    if IX_QEMU_LOADER_OVMF
 
-config QEMU_ROOTFS
+config IX_QEMU_ROOTFS
 	string
-	default "@DISK_IMG@" if !QEMU_ROOTFS_INITRD
-	default "../rootfs.squashfs" if QEMU_ROOTFS_INITRD
+	default "@DISK_IMG@" if !IX_QEMU_ROOTFS_INITRD
+	default "../rootfs.squashfs" if IX_QEMU_ROOTFS_INITRD
 
-config QEMU_DTB_EXTEND
+config IX_QEMU_DTB_EXTEND
 	bool
-	depends on QEMU_LOADER_UBOOT
-	default y if QEMU_aarch64
+	depends on IX_QEMU_LOADER_UBOOT
+	default y if IX_QEMU_aarch64
 
-if QEMU_ROOTFS_INITRD
+if IX_QEMU_ROOTFS_INITRD
 
-config QEMU_RW
+config IX_QEMU_RW
 	string "Writable /cfg layer"
-	depends on QEMU_ROOTFS_INITRD
+	depends on IX_QEMU_ROOTFS_INITRD
 	default "cfg.ext4"
 
-config QEMU_RW_VAR_OPT
+config IX_QEMU_RW_VAR_OPT
 	bool "Separate writable /var"
 
-if QEMU_RW_VAR_OPT
-config QEMU_RW_VAR_SIZE
+if IX_QEMU_RW_VAR_OPT
+config IX_QEMU_RW_VAR_SIZE
 	string "Size of /var"
 	default "256M"
-config QEMU_RW_VAR
+config IX_QEMU_RW_VAR
 	string "Writable /var layer"
 	default "var.ext4"
 endif
 
 endif
 
-config QEMU_VPD
+config IX_QEMU_VPD
 	bool "Emulate a Vital Product Data (VPD) Memory"
 
-config QEMU_HOST
+config IX_QEMU_HOST
 	string "Export host filesystem path"
 	default "/tmp"
 
-config QEMU_APPEND
+config IX_QEMU_APPEND
 	string "Extra kernel options"
-	depends on !QEMU_ROOTFS_MMC
+	depends on !IX_QEMU_ROOTFS_MMC
 
-config QEMU_EXTRA
+config IX_QEMU_EXTRA
 	string "Extra QEMU options"
 
 
@@ -159,72 +159,72 @@ comment "RTC"
 
 choice
 	prompt "Mode"
-	default QEMU_RTC_UTC
+	default IX_QEMU_RTC_UTC
 
-config QEMU_RTC_UTC
+config IX_QEMU_RTC_UTC
 	bool "UTC"
 
-config QEMU_RTC_LOCAL
+config IX_QEMU_RTC_LOCAL
 	bool "Local time"
 
-config QEMU_RTC_RANDOM
+config IX_QEMU_RTC_RANDOM
 	bool "Random"
 
 endchoice
 
 choice
 	prompt "Clock"
-	default QEMU_CLOCK_HOST
+	default IX_QEMU_CLOCK_HOST
 
-config QEMU_CLOCK_HOST
+config IX_QEMU_CLOCK_HOST
 	bool "Host clock"
 
-config QEMU_CLOCK_RT
+config IX_QEMU_CLOCK_RT
 	bool "Independent (monotonic)"
 
-config QEMU_CLOCK_VM
+config IX_QEMU_CLOCK_VM
 	bool "Virtual"
 
 endchoice
 
-config QEMU_RTC
+config IX_QEMU_RTC
 	string
-	default "utc"       if QEMU_RTC_UTC
-	default "localtime" if QEMU_RTC_LOCAL
-	default "random"    if QEMU_RTC_RANDOM
+	default "utc"       if IX_QEMU_RTC_UTC
+	default "localtime" if IX_QEMU_RTC_LOCAL
+	default "random"    if IX_QEMU_RTC_RANDOM
 
-config QEMU_CLOCK
+config IX_QEMU_CLOCK
 	string
-	default "host"      if QEMU_CLOCK_HOST
-	default "rt"        if QEMU_CLOCK_RT
-	default "vm"        if QEMU_CLOCK_VM
+	default "host"      if IX_QEMU_CLOCK_HOST
+	default "rt"        if IX_QEMU_CLOCK_RT
+	default "vm"        if IX_QEMU_CLOCK_VM
 
 comment "Networking"
 
 choice
      prompt "Network Mode"
-     default QEMU_NET_USER
+     default IX_QEMU_NET_USER
 
-config QEMU_NET_NONE
+config IX_QEMU_NET_NONE
      bool "None"
 
-config QEMU_NET_BRIDGE
+config IX_QEMU_NET_BRIDGE
      bool "Bridged"
 
-config QEMU_NET_USER
+config IX_QEMU_NET_USER
      bool "User"
 
-config QEMU_NET_TAP
+config IX_QEMU_NET_TAP
      bool "TAP"
 
-config QEMU_NET_ROCKER
+config IX_QEMU_NET_ROCKER
      bool "Rocker"
 
 endchoice
 
-config QEMU_NET_MODEL
+config IX_QEMU_NET_MODEL
 	string "Interface model"
-	default "virtio-net-device" if QEMU_arm
+	default "virtio-net-device" if IX_QEMU_arm
 	default "virtio-net-pci"
 	help
 	  The default, virtio-net-pci, NIC works for most use-cases, but
@@ -233,23 +233,23 @@ config QEMU_NET_MODEL
 
 	  Note: ARM 32-bit uses virtio-net-device (MMIO) by default.
 
-config QEMU_NET_BRIDGE_DEV
+config IX_QEMU_NET_BRIDGE_DEV
 	string "Bridge device"
-	depends on QEMU_NET_BRIDGE
+	depends on IX_QEMU_NET_BRIDGE
 	default "virbr0"
 
-config QEMU_NET_USER_OPTS
+config IX_QEMU_NET_USER_OPTS
 	string "User mode options"
-	depends on QEMU_NET_USER
+	depends on IX_QEMU_NET_USER
 	help
 	  Extra -nic user,<OPTIONS>
 
-config QEMU_NET_TAP_N
+config IX_QEMU_NET_TAP_N
 	int "Number of TAPs"
-	depends on QEMU_NET_TAP
+	depends on IX_QEMU_NET_TAP
 	default 1
 
-config QEMU_NET_PORTS
+config IX_QEMU_NET_PORTS
 	int "Number of Rocker switch ports"
-	depends on QEMU_NET_ROCKER
+	depends on IX_QEMU_NET_ROCKER
 	default 10
