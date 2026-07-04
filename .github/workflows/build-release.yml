@@ -70,6 +70,25 @@ jobs:
         run: |
           make test-spec
 
+      # rootfs.squashfs is still present here; it is stripped from the
+      # tarball below.  mkimage pulls the rpi64 bootloader from the
+      # latest-boot release and uses the freshly built host genimage.
+      - name: Build Raspberry Pi image
+        if: matrix.target == 'aarch64'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./utils/mkimage.sh -d -r output raspberrypi-rpi64
+          mkdir -p rpi-image
+          mv output/images/*-rpi64-sdcard.img rpi-image/
+          xz -T0 rpi-image/*-rpi64-sdcard.img
+
+      - uses: actions/upload-artifact@v7
+        if: matrix.target == 'aarch64'
+        with:
+          name: artifact-rpi64-image
+          path: rpi-image/*.img.xz
+
       - name: Prepare Artifacts
         run: |
           cd output/
@@ -98,3 +117,8 @@ jobs:
         with:
           name: artifact-disk-image-${{ matrix.target }}
           path: output/images/*.qcow2
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: artifact-pkg-${{ matrix.target }}
+          path: output/images/*.pkg

@@ -95,7 +95,7 @@ jobs:
           makeLatest: ${{ steps.rel.outputs.latest }}
           discussionCategory: ${{ steps.rel.outputs.cat }}
           bodyFile: release.md
-          artifacts: "*.tar.gz,*.qcow2"
+          artifacts: "*.tar.gz,*.qcow2,*.pkg,*.img.xz"
 
       - name: Summary
         run: |
