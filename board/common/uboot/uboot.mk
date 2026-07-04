@@ -46,3 +46,12 @@ define UBOOT_PRE_BUILD_INSTALL_ENV
 		$(@D)/arch/$(UBOOT_ARCH)/dts/
 endef
 UBOOT_PRE_BUILD_HOOKS += UBOOT_PRE_BUILD_INSTALL_ENV
+
+# Stamp non-release builds so they cannot be mistaken for a release,
+# U-Boot's setlocalversion picks up .scmversion, see issue #919.
+define UBOOT_PRE_BUILD_DEVEL_VERSION
+	echo "-DEVEL" >$(@D)/.scmversion
+endef
+ifeq ($(INFIX_RELEASE),)
+UBOOT_PRE_BUILD_HOOKS += UBOOT_PRE_BUILD_DEVEL_VERSION
+endif
