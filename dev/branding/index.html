@@ -2778,7 +2778,7 @@ check this for you and you may end up with odd results.</p>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
 <p>To get a proper GIT revision (hash) from your OS spin, remember to set
-in menuconfig <code>INFIX_OEM_PATH</code>.  When unset, the Infix <code>post-build.sh</code>
+in menuconfig <code>IX_OEM_PATH</code>.  When unset, the Infix <code>post-build.sh</code>
 script defaults to the Infix base path.  The revision is stored in the
 file <code>/etc/os-release</code> as <code>BUILD_ID</code>, also in the file <code>/etc/version</code>.
 See below for more info.</p>
@@ -3125,7 +3125,7 @@ scripts or usage in generated filenames.</p>
 <p><strong>Default:</strong> <code>$(git describe --always --dirty --tags)</code>, from the <em>top
 directory</em>. By default, the top directory refers to the root of the
 Infix source tree, but this can be changed by setting the branding
-variable <code>INFIX_OEM_PATH</code>, e.g. in a <code>defconfig</code> file or via <code>make
+variable <code>IX_OEM_PATH</code>, e.g. in a <code>defconfig</code> file or via <code>make
 menuconfig</code>, to the path of an enclosing br2-external.</p>
 <h4 id="infix_release"><code>INFIX_RELEASE</code><a class="headerlink" href="#infix_release" title="Permanent link">¶</a></h4>
 <p>Used for <code>VERSION</code> and <code>VERSION_ID</code> in <code>/etc/os-release</code> and

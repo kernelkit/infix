@@ -3027,6 +3027,9 @@ defconfigs with settings that are only useful during development.</p>
 make apply-ext4         # build an ext4 rootfs (needed for boards
                         # whose bootloader lacks squashfs support,
                         # e.g. Marvell ESPRESSObin)
+make apply-mirror       # prefer an internal download mirror
+                        # (BR2_PRIMARY_SITE) over upstream sites,
+                        # see utils/mirror-sync.sh for populating it
 </code></pre></div>
 <p>The <code>apply-*</code> targets require an existing <code>.config</code> (i.e. you must have
 already run a <code>make &lt;board&gt;_defconfig</code>).  The snippet is merged using
