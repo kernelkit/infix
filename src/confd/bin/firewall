@@ -103,6 +103,20 @@ panic_off()
     logger -p user.emerg "LOCKDOWN MODE DEACTIVATED - Normal network operation restored"
 }
 
+ipset_call()
+{
+    method=$1
+    name=$2
+    entry=$3
+
+    if ! output=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+		       --method "$INTERFACE.ipset.$method" "$name" "$entry" 2>&1); then
+	logger -t firewall -p daemon.err "ipset $method $name $entry: $output"
+	print "Error: $output" >&2
+	return 1
+    fi
+}
+
 panic_status()
 {
     if is_panic_enabled; then
@@ -294,6 +308,7 @@ OPTIONS:
 COMMANDS:
     reload               Reload firewall configuration
     panic OPERATION      Emergency panic mode: <on | off | status>
+    ipset CMD SET ENTRY  Runtime ipset operation: <add | del> SET ENTRY
     show                 Show comprehensive firewall status and configuration
     help                 Show this help message
 
@@ -382,6 +397,21 @@ main()
 		*)
 		    echo "Error: Invalid panic operation '$2'" >&2
 		    echo "Use: $0 panic {on|off|status}" >&2
+		    exit 1
+		    ;;
+	    esac
+	    ;;
+	ipset)
+	    case "${2:-}" in
+		add)
+		    ipset_call addEntry "$3" "$4"
+		    ;;
+		del)
+		    ipset_call removeEntry "$3" "$4"
+		    ;;
+		*)
+		    echo "Error: Invalid ipset operation '$2'" >&2
+		    echo "Use: $0 ipset {add|del} SET ENTRY" >&2
 		    exit 1
 		    ;;
 	    esac

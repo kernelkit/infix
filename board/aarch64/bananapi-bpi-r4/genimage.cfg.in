@@ -24,7 +24,7 @@ image var.ext4 {
         }
 }
 
-image #INFIX_ID##VERSION#-bpi-r4-#TARGET#.img {
+image #IX_ID##VERSION#-bpi-r4-#TARGET#.img {
         hdimage {
                 partition-table-type = "gpt"
                 gpt-no-backup = true

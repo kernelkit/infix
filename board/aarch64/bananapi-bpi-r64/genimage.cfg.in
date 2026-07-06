@@ -24,7 +24,7 @@ image var.ext4 {
         }
 }
 
-image #INFIX_ID##VERSION#-bpi-r64-#TARGET#.img {
+image #IX_ID##VERSION#-bpi-r64-#TARGET#.img {
         hdimage {
                 partition-table-type = "hybrid"
                 # MT7622 TF-A partition driver detects GPT by checking MBR[0]

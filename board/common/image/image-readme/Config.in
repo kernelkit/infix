@@ -1,4 +1,4 @@
-config IMAGE_README
+config IX_IMAGE_README
 	bool "Install README.md in images"
 	help
 	  Install a README.md with useful information about getting

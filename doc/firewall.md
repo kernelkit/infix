@@ -223,6 +223,96 @@ The firewall includes over 100 pre-defined services, such as:
 > See the YANG model for the full list, or tap the ++question++ key
 > when setting up an allowed host service in a zone `set service`
 
+## Address Sets
+
+Address sets are named collections of IP addresses and networks that can be
+used as zone *sources*, alongside the `network` setting.  Traffic from a
+member of the set is classified into that zone regardless of which interface
+it arrives on.  Since source matching takes precedence over interface
+matching, an address set in a trusted zone can selectively lift devices out
+of a restrictive interface zone.
+
+This enables per-IP access control: block everything by default and grant
+individual end devices access at runtime.
+
+> [!IMPORTANT]
+> Assigning an address set to a zone only decides which zone the source IP
+> belongs to.  It does **not** by itself grant access to the device.  Access
+> to HOST services is still controlled by the zone's `action` and `service`
+> settings.  A common pattern is to keep the interface or default zone
+> restrictive (`reject`/`drop`) and attach the address set to a separate
+> trusted zone with `action accept`, as shown below.
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit firewall address-set allowed</b>
+admin@example:/config/firewall/…/allowed/> <b>set description "End devices granted access"</b>
+admin@example:/config/firewall/…/allowed/> <b>set entry 192.168.1.40</b>
+admin@example:/config/firewall/…/allowed/> <b>end</b>
+admin@example:/config/firewall/> <b>edit zone trusted</b>
+admin@example:/config/firewall/…/trusted/> <b>set action accept</b>
+admin@example:/config/firewall/…/trusted/> <b>set address-set allowed</b>
+admin@example:/config/firewall/…/trusted/> <b>leave</b>
+</code></pre>
+
+### Static and Dynamic Entries
+
+Entries come in two kinds:
+
+- **Static** entries are set in the configuration, like `192.168.1.40`
+  above, and are restored at boot
+- **Dynamic** entries are added and removed at runtime using the `add`,
+  `remove`, and `flush` actions.  They take effect immediately and survive
+  firewall configuration changes, but are *not* saved to the configuration,
+  so a reboot starts from a clean slate
+
+From admin-exec context in the CLI:
+
+<pre class="cli"><code>admin@example:/> <b>firewall address-set allowed add 192.168.1.42</b>
+admin@example:/> <b>show firewall address-set allowed</b>
+name                : allowed
+family              : ipv4
+timeout             : none
+
+ENTRY            TYPE     EXPIRES
+192.168.1.40     static
+192.168.1.42     dynamic
+admin@example:/> <b>firewall address-set allowed remove 192.168.1.42</b>
+</code></pre>
+
+The same actions are available over NETCONF and RESTCONF, e.g., allowing a
+device from a network management system:
+
+```json
+~$ curl -kX POST -u admin:admin -H "Content-Type: application/yang-data+json" \
+        -d '{"infix-firewall:input": {"entry": "192.168.1.42"}}'              \
+        https://example.local/restconf/data/infix-firewall:firewall/address-set=allowed/add
+```
+
+Static entries can only be removed by changing the configuration, the
+`remove` action manages dynamic entries only.  The `flush` action removes
+all dynamic entries at once, leaving static entries in place.
+
+### Expiring Entries
+
+An address set can be created with a `timeout`, giving every dynamic entry a
+limited lifetime.  Such sets are dynamic-only: static entries cannot be
+configured, and entries cannot be removed manually, they expire on their
+own.  This suits time-limited access grants and automated ban lists.
+
+<pre class="cli"><code>admin@example:/config/firewall/> <b>edit address-set banned</b>
+admin@example:/config/firewall/…/banned/> <b>set timeout 3600</b>
+admin@example:/config/firewall/…/banned/> <b>leave</b>
+admin@example:/> <b>firewall address-set banned add 203.0.113.99</b>
+</code></pre>
+
+The remaining lifetime of each entry is shown in the `EXPIRES` column of
+<kbd>show firewall address-set</kbd>.
+
+> [!NOTE]
+> Entries in timeout sets do not survive firewall configuration changes,
+> the set is flushed when the firewall configuration is rebuilt.  Regular
+> (non-timeout) sets keep their dynamic entries over configuration changes.
+
 ## Examples
 
 ### End Device Protection

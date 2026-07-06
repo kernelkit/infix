@@ -1,6 +1,6 @@
-config IMAGE_ITB_AUX
+config IX_IMAGE_ITB_AUX
 	bool "aux partition"
-	depends on IMAGE_ITB_ROOTFS
+	depends on IX_IMAGE_ITB_ROOTFS
 	select BR2_PACKAGE_HOST_UBOOT_TOOLS
 	select BR2_PACKAGE_HOST_GENIMAGE
 	help

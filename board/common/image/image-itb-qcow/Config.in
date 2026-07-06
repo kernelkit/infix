@@ -1,6 +1,6 @@
-menuconfig IMAGE_ITB_QCOW
+menuconfig IX_IMAGE_ITB_QCOW
 	bool "QEMU disk image (ITB)"
-	depends on (IMAGE_ITB_ROOTFS && IMAGE_ITB_AUX) || IMAGE_ITB_DL_RELEASE
+	depends on (IX_IMAGE_ITB_ROOTFS && IX_IMAGE_ITB_AUX) || IX_IMAGE_ITB_DL_RELEASE
 	select BR2_PACKAGE_HOST_GENIMAGE
 	help
 	  Compose a full disk image with redundant Linux OS partitions,
@@ -11,9 +11,9 @@ menuconfig IMAGE_ITB_QCOW
 	  - Creating a GNS3 appliance
 	  - Developing/debugging issues in the boot process in QEMU
 
-menuconfig IMAGE_ITB_QCOW_SIZE
+menuconfig IX_IMAGE_ITB_QCOW_SIZE
 	string "Image size"
-	depends on IMAGE_ITB_QCOW
+	depends on IX_IMAGE_ITB_QCOW
 	default "512M"
 	help
 	  Create a disk image of this size.  A K/M/G suffix may be used
@@ -26,22 +26,22 @@ menuconfig IMAGE_ITB_QCOW_SIZE
 
 choice
 	prompt "Bootloader"
-	depends on IMAGE_ITB_QCOW
-	default IMAGE_ITB_QCOW_BOOT_EFI if BR2_x86_64
-	default IMAGE_ITB_QCOW_BOOT_NONE
+	depends on IX_IMAGE_ITB_QCOW
+	default IX_IMAGE_ITB_QCOW_BOOT_EFI if BR2_x86_64
+	default IX_IMAGE_ITB_QCOW_BOOT_NONE
 
-config IMAGE_ITB_QCOW_BOOT_NONE
+config IX_IMAGE_ITB_QCOW_BOOT_NONE
 	bool "None"
 	help
 	  Do not create any bootloader partition in the disk image.
 
-config IMAGE_ITB_QCOW_BOOT_EFI
+config IX_IMAGE_ITB_QCOW_BOOT_EFI
 	bool "EFI"
 	help
 	  Create a boot partition from a directory containing an EFI
 	  boot application, e.g. GRUB.
 
-config IMAGE_ITB_QCOW_BOOT_BIN
+config IX_IMAGE_ITB_QCOW_BOOT_BIN
 	bool "Binary"
 	help
 	  Create a boot partition from a raw image containing the boot
@@ -49,18 +49,18 @@ config IMAGE_ITB_QCOW_BOOT_BIN
 
 endchoice
 
-config IMAGE_ITB_QCOW_BOOT_DATA
+config IX_IMAGE_ITB_QCOW_BOOT_DATA
 	string "Bootloader data"
-	depends on IMAGE_ITB_QCOW
-	depends on IMAGE_ITB_QCOW_BOOT_EFI || IMAGE_ITB_QCOW_BOOT_BIN
+	depends on IX_IMAGE_ITB_QCOW
+	depends on IX_IMAGE_ITB_QCOW_BOOT_EFI || IX_IMAGE_ITB_QCOW_BOOT_BIN
 	default "${BINARIES_DIR}/efi-part/EFI" if BR2_x86_64
 	help
 	  Path to the directory or file holding the bootloader data.
 
-config IMAGE_ITB_QCOW_BOOT_OFFSET
+config IX_IMAGE_ITB_QCOW_BOOT_OFFSET
 	hex "Bootloader offset"
-	depends on IMAGE_ITB_QCOW
-	depends on IMAGE_ITB_QCOW_BOOT_EFI || IMAGE_ITB_QCOW_BOOT_BIN
+	depends on IX_IMAGE_ITB_QCOW
+	depends on IX_IMAGE_ITB_QCOW_BOOT_EFI || IX_IMAGE_ITB_QCOW_BOOT_BIN
 	default 0x8000
 	help
 	  Offset at which the bootloader partition is placed. Remember

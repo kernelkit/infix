@@ -21,8 +21,13 @@ type wgConfigJSON struct {
 }
 
 // wgIfaceConfigWrapper is used to fetch per-interface WireGuard config.
+// Keyed GETs nest the requested node under its full parent path.
 type wgIfaceConfigWrapper struct {
-	WireGuard *wgConfigJSON `json:"infix-interfaces:wireguard"`
+	Interfaces struct {
+		Interface []struct {
+			WireGuard *wgConfigJSON `json:"infix-interfaces:wireguard"`
+		} `json:"interface"`
+	} `json:"ietf-interfaces:interfaces"`
 }
 
 // WGPeer holds display-ready data for a single WireGuard peer.
@@ -128,8 +133,9 @@ func buildWGTunnel(ctx context.Context, rc *restconf.Client, iface ifaceJSON) WG
 	// Fetch ListenPort from config endpoint (separate from oper-state).
 	var cfgWrap wgIfaceConfigWrapper
 	path := fmt.Sprintf("/data/ietf-interfaces:interfaces/interface=%s/infix-interfaces:wireguard", iface.Name)
-	if err := rc.Get(ctx, path, &cfgWrap); err == nil && cfgWrap.WireGuard != nil {
-		tunnel.ListenPort = cfgWrap.WireGuard.ListenPort
+	if err := rc.Get(ctx, path, &cfgWrap); err == nil &&
+		len(cfgWrap.Interfaces.Interface) > 0 && cfgWrap.Interfaces.Interface[0].WireGuard != nil {
+		tunnel.ListenPort = cfgWrap.Interfaces.Interface[0].WireGuard.ListenPort
 	}
 
 	// Build peers from embedded peer-status.

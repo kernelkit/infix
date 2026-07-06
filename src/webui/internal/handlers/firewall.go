@@ -19,13 +19,32 @@ type firewallWrapper struct {
 }
 
 type firewallJSON struct {
-	Enabled  *yangBool     `json:"enabled"` // YANG default: true; nil means enabled
-	Default  string        `json:"default"`
-	Logging  string        `json:"logging"`
-	Lockdown yangBool      `json:"lockdown"`
-	Zone     []zoneJSON    `json:"zone"`
-	Policy   []policyJSON  `json:"policy"`
-	Service  []fwServiceJSON `json:"service"`
+	Enabled    *yangBool        `json:"enabled"` // YANG default: true; nil means enabled
+	Default    string           `json:"default"`
+	Logging    string           `json:"logging"`
+	Lockdown   yangBool         `json:"lockdown"`
+	Zone       []zoneJSON       `json:"zone"`
+	Policy     []policyJSON     `json:"policy"`
+	Service    []fwServiceJSON  `json:"service"`
+	AddressSet []addressSetJSON `json:"address-set"`
+}
+
+// addressSetJSON models a named set of IP addresses/networks usable as zone
+// source. The current list is operational state: the live set contents,
+// including dynamic entries added at runtime.
+type addressSetJSON struct {
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Family      string           `json:"family"`
+	Timeout     yangInt64        `json:"timeout"`
+	Entry       []string         `json:"entry"`
+	Current     []addrSetCurJSON `json:"current"`
+}
+
+type addrSetCurJSON struct {
+	Entry   string     `json:"entry"`
+	Dynamic bool       `json:"dynamic"`
+	Expires *yangInt64 `json:"expires"`
 }
 
 // fwServiceJSON models a user-defined firewall service (port + protocol bundle).
@@ -50,6 +69,7 @@ type zoneJSON struct {
 	Description string            `json:"description"`
 	Interface   []string          `json:"interface"`
 	Network     []string          `json:"network"`
+	AddressSet  []string          `json:"address-set"`
 	Service     []string          `json:"service"`
 	PortForward []portForwardJSON `json:"port-forward"`
 	Immutable   bool              `json:"immutable"`
@@ -92,6 +112,7 @@ type firewallData struct {
 	Matrix      []matrixRow
 	Zones       []zoneEntry
 	Policies    []policyEntry
+	AddressSets []addressSetEntry
 	Error       string
 }
 
@@ -110,11 +131,25 @@ type matrixCell struct {
 }
 
 type zoneEntry struct {
-	Name       string
-	Action     string
-	Interfaces string
-	Networks   string
-	Services   string // services allowed to HOST from this zone
+	Name        string
+	Action      string
+	Interfaces  string
+	Networks    string
+	AddressSets string
+	Services    string // services allowed to HOST from this zone
+}
+
+type addressSetEntry struct {
+	Name    string
+	Family  string
+	Timeout string // "3600 s" for expiring sets, "" otherwise
+	Entries []addressSetEntryRow
+}
+
+type addressSetEntryRow struct {
+	Entry   string
+	Dynamic bool
+	Expires string // remaining lifetime, "" when not expiring
 }
 
 type policyEntry struct {
@@ -169,12 +204,37 @@ func (h *FirewallHandler) Overview(w http.ResponseWriter, r *http.Request) {
 
 		for _, z := range f.Zone {
 			data.Zones = append(data.Zones, zoneEntry{
-				Name:       z.Name,
-				Action:     z.Action,
-				Interfaces: strings.Join(z.Interface, ", "),
-				Networks:   strings.Join(z.Network, ", "),
-				Services:   strings.Join(z.Service, ", "),
+				Name:        z.Name,
+				Action:      z.Action,
+				Interfaces:  strings.Join(z.Interface, ", "),
+				Networks:    strings.Join(z.Network, ", "),
+				AddressSets: strings.Join(z.AddressSet, ", "),
+				Services:    strings.Join(z.Service, ", "),
 			})
+		}
+
+		for _, s := range f.AddressSet {
+			set := addressSetEntry{
+				Name:   s.Name,
+				Family: s.Family,
+			}
+			if set.Family == "" {
+				set.Family = "ipv4" // YANG default
+			}
+			if s.Timeout > 0 {
+				set.Timeout = formatDuration(int64(s.Timeout))
+			}
+			for _, cur := range s.Current {
+				row := addressSetEntryRow{
+					Entry:   cur.Entry,
+					Dynamic: cur.Dynamic,
+				}
+				if cur.Expires != nil {
+					row.Expires = formatDuration(int64(*cur.Expires))
+				}
+				set.Entries = append(set.Entries, row)
+			}
+			data.AddressSets = append(data.AddressSets, set)
 		}
 
 		for _, p := range f.Policy {

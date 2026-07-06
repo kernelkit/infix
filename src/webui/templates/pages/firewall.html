@@ -90,6 +90,7 @@
           <th>Action</th>
           <th>Interfaces</th>
           <th>Networks</th>
+          <th>Address Sets</th>
           <th>Host Services</th>
         </tr>
       </thead>
@@ -100,7 +101,42 @@
           <td><span class="badge badge-{{.Action}}">{{.Action}}</span></td>
           <td>{{.Interfaces}}</td>
           <td>{{if .Networks}}{{.Networks}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>{{if .AddressSets}}{{.AddressSets}}{{else}}<span class="text-muted">—</span>{{end}}</td>
           <td>{{if .Services}}{{.Services}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {{end}}
+
+  {{if .AddressSets}}
+  <div class="info-card info-grid-span-2">
+    <div class="card-header">Address Sets</div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Family</th>
+          <th>Timeout</th>
+          <th>Entries</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .AddressSets}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td>{{.Family}}</td>
+          <td>{{if .Timeout}}{{.Timeout}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+          <td>
+            {{if .Entries}}
+            {{range $i, $e := .Entries}}{{if $i}}, {{end}}<code>{{.Entry}}</code>{{if .Dynamic}} <span class="badge badge-neutral" title="Added at runtime, not saved to configuration{{if .Expires}}, expires in {{.Expires}}{{end}}">dyn{{if .Expires}} {{.Expires}}{{end}}</span>{{end}}{{end}}
+            {{else}}
+            <span class="text-muted">(empty)</span>
+            {{end}}
+          </td>
         </tr>
         {{end}}
       </tbody>

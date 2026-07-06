@@ -4149,11 +4149,17 @@ def show_firewall(json):
     # Create tables
     zone_table = firewall_zone_table(json)
     policy_table = firewall_policy_table(json)
+    address_set_table = firewall_address_set_table(json)
 
     # Add zone table
     if zone_table:
         canvas.add_title("Zones")
         canvas.add_table(zone_table)
+        canvas.add_spacing()
+
+    if address_set_table:
+        canvas.add_title("Address Sets")
+        canvas.add_table(address_set_table)
         canvas.add_spacing()
 
     # Add policy table
@@ -4447,13 +4453,13 @@ def firewall_matrix(fw, width=None):
     zones = fw.get('zone', [])
     policies = fw.get('policy', [])
 
-    # Build zone list - include zones with interfaces OR networks
+    # Build zone list - include zones with interfaces, networks, or address-set sources
     zone_names = []
     for z in zones:
         interfaces = z.get('interface', [])
         networks = z.get('network', [])
-        # Include if zone has interfaces OR networks (non-empty lists)
-        if interfaces or networks:
+        address_sets = z.get('address-set', [])
+        if interfaces or networks or address_sets:
             zone_names.append(z['name'])
 
     # Always add the implicit HOST zone
@@ -4558,6 +4564,7 @@ def firewall_zone_table(json):
         Column('NAME', flexible=True),
         Column('TYPE'),
         Column('DATA', flexible=True),
+        Column('ADDR SET'),
         Column('ALLOWED HOST SERVICES', flexible=True)
     ])
 
@@ -4566,6 +4573,7 @@ def firewall_zone_table(json):
         action = zone.get('action', 'reject')
         interface_list = zone.get('interface', [])
         network_list = zone.get('network', [])
+        address_set_list = zone.get('address-set', [])
         port_forwards = zone.get('port-forward', [])
         services = zone.get('service', [])
 
@@ -4586,7 +4594,7 @@ def firewall_zone_table(json):
         if interface_list:
             interfaces = compress_interface_list(interface_list)
             config_lines.append(("iif", interfaces))
-        else:
+        elif not network_list and not address_set_list and not port_forwards:
             config_lines.append(("iif", "(none)"))
 
         # Networks
@@ -4599,14 +4607,21 @@ def firewall_zone_table(json):
             pf_display = format_port_forwards(port_forwards)
             config_lines.append(("fwd", pf_display))
 
-        # Add first line with zone name and services
-        if config_lines:
-            first_type, first_data = config_lines[0]
-            zone_table.row(locked, name, first_type, first_data, services_display)
+        addr_rows = address_set_list[:] if address_set_list else ["(none)"]
+        row_count = max(len(config_lines), len(addr_rows))
+        if not config_lines:
+            config_lines = [("", "")]
 
-            # Add additional configuration lines as separate rows
-            for config_type, config_data in config_lines[1:]:
-                zone_table.row('', '', config_type, config_data, '')
+        for i in range(row_count):
+            if i < len(config_lines):
+                config_type, config_data = config_lines[i]
+            else:
+                config_type, config_data = "", ""
+            addr_set = addr_rows[i] if i < len(addr_rows) else ""
+            if i == 0:
+                zone_table.row(locked, name, config_type, config_data, addr_set, services_display)
+            else:
+                zone_table.row('', '', config_type, config_data, addr_set, '')
 
     return zone_table
 
@@ -4645,6 +4660,9 @@ def show_firewall_zone(json, zone_name=None):
         networks = zone.get('network', [])
         if not networks:
             networks = ""
+        address_sets = zone.get('address-set', [])
+        if not address_sets:
+            address_sets = ""
         services = zone.get('service', [])
         action = zone.get('action', 'reject')
 
@@ -4660,6 +4678,7 @@ def show_firewall_zone(json, zone_name=None):
         print(f"{'action':<20}: {action}")
         print(f"{'interface':<20}: {compress_interface_list(interfaces)}")
         print(f"{'networks':<20}: {', '.join(networks)}")
+        print(f"{'address-sets':<20}: {', '.join(address_sets)}")
         print(f"{'services (to HOST)':<20}: {services_display}")
 
         # Show port forwards if any
@@ -4926,6 +4945,75 @@ def show_firewall_service(json, name=None):
         if service_table:
             service_table.min_width = 72
             service_table.print()
+
+
+def firewall_address_set_table(json):
+    """Create firewall address-sets table (returns SimpleTable or None)"""
+    fw = json.get('infix-firewall:firewall', {})
+    sets = fw.get('address-set', [])
+
+    if not sets:
+        return None
+
+    set_table = SimpleTable([
+        Column('NAME', flexible=True),
+        Column('FAMILY'),
+        Column('TIMEOUT'),
+        Column('STATIC'),
+        Column('DYNAMIC')
+    ])
+    for aset in sets:
+        current = aset.get('current', [])
+        dynamic = sum(1 for cur in current if cur.get('dynamic'))
+        timeout = aset.get('timeout')
+        set_table.row(aset.get('name', ''),
+                      aset.get('family', 'ipv4'),
+                      f"{timeout} sec" if timeout else '',
+                      str(len(current) - dynamic),
+                      str(dynamic))
+    return set_table
+
+
+def show_firewall_address_set(json, name=None):
+    """Show firewall address-sets table or specific set details"""
+    fw = json.get('infix-firewall:firewall', {})
+    sets = fw.get('address-set', [])
+
+    if name:
+        aset = next((s for s in sets if s.get('name') == name), None)
+        if not aset:
+            print(f"Address-set '{name}' not found")
+            return
+
+        timeout = aset.get('timeout')
+        print(format_description('description', aset.get('description', '')))
+        print(f"{'name':<20}: {name}")
+        print(f"{'family':<20}: {aset.get('family', 'ipv4')}")
+        print(f"{'timeout':<20}: {f'{timeout} sec' if timeout else 'none'}")
+        print()
+
+        entry_table = SimpleTable([
+            Column('ENTRY'),
+            Column('TYPE'),
+            Column('EXPIRES')
+        ])
+        for cur in aset.get('current', []):
+            expires = cur.get('expires')
+            entry_table.row(cur.get('entry', ''),
+                            'dynamic' if cur.get('dynamic') else 'static',
+                            f"{expires} sec" if expires is not None else '')
+        if entry_table.rows:
+            entry_table.min_width = 56
+            entry_table.print()
+        else:
+            print("(no entries)")
+    else:
+        set_table = firewall_address_set_table(json)
+        if set_table and set_table.rows:
+            set_table.min_width = 72
+            set_table.print()
+        else:
+            print("No address-sets configured")
 
 
 def show_ospf(json_data):
@@ -6018,6 +6106,8 @@ def main():
               .add_argument('name', nargs='?', help='Policy name')
     subparsers.add_parser('show-firewall-service', help='Show firewall services') \
               .add_argument('name', nargs='?', help='Service name')
+    subparsers.add_parser('show-firewall-address-set', help='Show firewall address-sets') \
+              .add_argument('name', nargs='?', help='Address-set name')
     subparsers.add_parser('show-firewall-log', help='Show firewall log') \
               .add_argument('limit', nargs='?', help='Last N lines, default: all')
 
@@ -6095,6 +6185,8 @@ def main():
         show_firewall_policy(json_data, args.name)
     elif args.command == "show-firewall-service":
         show_firewall_service(json_data, args.name)
+    elif args.command == "show-firewall-address-set":
+        show_firewall_address_set(json_data, args.name)
     elif args.command == "show-firewall-log":
         show_firewall_logs(args.limit)
     elif args.command == "show-nacm":

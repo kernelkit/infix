@@ -28,7 +28,7 @@ Verify the result after a build by inspecting:
 
 > [!IMPORTANT]
 > To get a proper GIT revision (hash) from your OS spin, remember to set
-> in menuconfig `INFIX_OEM_PATH`.  When unset, the Infix `post-build.sh`
+> in menuconfig `IX_OEM_PATH`.  When unset, the Infix `post-build.sh`
 > script defaults to the Infix base path.  The revision is stored in the
 > file `/etc/os-release` as `BUILD_ID`, also in the file `/etc/version`.
 > See below for more info.
@@ -427,7 +427,7 @@ Used for `BUILD_ID` in `/etc/os-release`.
 **Default:** `$(git describe --always --dirty --tags)`, from the _top
 directory_. By default, the top directory refers to the root of the
 Infix source tree, but this can be changed by setting the branding
-variable `INFIX_OEM_PATH`, e.g. in a `defconfig` file or via `make
+variable `IX_OEM_PATH`, e.g. in a `defconfig` file or via `make
 menuconfig`, to the path of an enclosing br2-external.
 
 #### `INFIX_RELEASE`

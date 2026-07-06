@@ -25,7 +25,7 @@ define UBOOT_PRE_BUILD_INSTALL_KEY
 	$(HOST_DIR)/bin/dtc -a 1024 <(echo '/dts-v1/; / { signature {}; };') \
 		>$(@D)/infix-key.dtb
 	$(foreach key, \
-		$(call qstrip,$(TRUSTED_KEYS_DEVELOPMENT_PATH)) $(call qstrip,$(TRUSTED_KEYS_EXTRA_PATH)),\
+		$(call qstrip,$(IX_TRUSTED_KEYS_DEVELOPMENT_PATH)) $(call qstrip,$(IX_TRUSTED_KEYS_EXTRA_PATH)),\
 		$(call uboot-add-pubkey,$(key),$(@D)/infix-key.dtb))
 	$(HOST_DIR)/bin/dtc -I dtb -O dts \
 		<$(@D)/infix-key.dtb \
@@ -46,3 +46,12 @@ define UBOOT_PRE_BUILD_INSTALL_ENV
 		$(@D)/arch/$(UBOOT_ARCH)/dts/
 endef
 UBOOT_PRE_BUILD_HOOKS += UBOOT_PRE_BUILD_INSTALL_ENV
+
+# Stamp non-release builds so they cannot be mistaken for a release,
+# U-Boot's setlocalversion picks up .scmversion, see issue #919.
+define UBOOT_PRE_BUILD_DEVEL_VERSION
+	echo "-DEVEL" >$(@D)/.scmversion
+endef
+ifeq ($(INFIX_RELEASE),)
+UBOOT_PRE_BUILD_HOOKS += UBOOT_PRE_BUILD_DEVEL_VERSION
+endif

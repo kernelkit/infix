@@ -39,7 +39,7 @@ image var.ext4 {
 	}
 }
 
-image #INFIX_ID##VERSION#-sama7g54-ek-#TARGET#.img {
+image #IX_ID##VERSION#-sama7g54-ek-#TARGET#.img {
 	hdimage {
 		partition-table-type = "hybrid"
 	}

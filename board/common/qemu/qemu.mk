@@ -10,7 +10,7 @@ qemu-kconfig = \
 	BR2_CONFIG="$(BINARIES_DIR)/qemu/.config" \
 	$(BUILD_DIR)/buildroot-config/$(1) $(2) "$(BINARIES_DIR)/qemu/Config.in"
 
-ifeq ($(QEMU_SCRIPTS),y)
+ifeq ($(IX_QEMU_SCRIPTS),y)
 
 .PHONY: run
 run:
@@ -33,7 +33,7 @@ $(BINARIES_DIR)/qemu/run.sh: $(QEMU_SCRIPTS_DIR)/run.sh
 $(BINARIES_DIR)/qemu/Config.in: $(QEMU_SCRIPTS_DIR)/Config.in.in
 	@mkdir -p $(dir $@)
 	@sed \
-		-e "s:@ARCH@:QEMU_$(BR2_ARCH):" \
+		-e "s:@ARCH@:IX_QEMU_$(BR2_ARCH):" \
 		-e "s:@DISK_IMG@:../$(INFIX_ARTIFACT).qcow2:" \
 	< $< >$@
 

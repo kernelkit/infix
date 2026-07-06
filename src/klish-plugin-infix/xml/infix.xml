@@ -134,6 +134,13 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="FIREWALL_ADDRSETS">
+  <COMPL>
+    <ACTION sym="firewall_addrsets@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <PTYPE name="BOOT_TARGET">
   <COMPL>
     <ACTION sym="boot_targets@infix"/>
@@ -811,6 +818,14 @@ echo "Public:  $pub"
           copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall-service "$KLISH_PARAM_name" |pager
         </ACTION>
       </COMMAND>
+      <COMMAND name="address-set" help="Show firewall address-sets">
+        <SWITCH name="optional" min="0">
+          <PARAM name="name" ptype="/FIREWALL_ADDRSETS" help="Address-set name"/>
+        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall-address-set "$KLISH_PARAM_name" |pager
+        </ACTION>
+      </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       copy operational -x /infix-firewall:firewall | /usr/libexec/statd/cli-pretty show-firewall |pager
@@ -826,6 +841,22 @@ echo "Public:  $pub"
   </COMMAND>
 
   <COMMAND name="firewall" help="Control the firewall" mode="switch">
+    <COMMAND name="address-set" help="Manage dynamic address-set entries">
+      <PARAM name="setname" ptype="/FIREWALL_ADDRSETS" help="Address-set name"/>
+      <SWITCH name="op">
+        <COMMAND name="add" help="Add dynamic entry, not saved to configuration">
+          <PARAM name="entry" ptype="/STRING" help="IP address or network prefix"/>
+          <ACTION sym="firewall_addrset_action@infix"/>
+        </COMMAND>
+        <COMMAND name="remove" help="Remove dynamic entry">
+          <PARAM name="entry" ptype="/STRING" help="IP address or network prefix"/>
+          <ACTION sym="firewall_addrset_action@infix"/>
+        </COMMAND>
+        <COMMAND name="flush" help="Remove all dynamic entries">
+          <ACTION sym="firewall_addrset_action@infix"/>
+        </COMMAND>
+      </SWITCH>
+    </COMMAND>
     <COMMAND name="lockdown" help="Emergency lockdown mode">
       <PARAM name="operation" ptype="/STRING" help="Lockdown commands.">
         <COMPL>

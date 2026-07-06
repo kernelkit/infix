@@ -40,7 +40,7 @@ usage()
     echo "  ARGS1  Args before the '--' separator are for kernel space"
     echo "  --     Separator"
     echo "  ARGS2  Args after the '--' separator are for the init process"
-    echo "         Also, qemu.cfg has QEMU_APPEND which can affect this."
+    echo "         Also, qemu.cfg has IX_QEMU_APPEND which can affect this."
     echo
     echo "Example:"
     echo "  $prognm -- finit.debug"
@@ -62,45 +62,45 @@ load_qemucfg()
     # shellcheck disable=SC1090
     .  "./.config"
 
-    [ "$CONFIG_QEMU_MACHINE" ] || die "Missing QEMU_MACHINE"
-    [ "$CONFIG_QEMU_ROOTFS"  ] || die "Missing QEMU_ROOTFS"
+    [ "$CONFIG_IX_QEMU_MACHINE" ] || die "Missing IX_QEMU_MACHINE"
+    [ "$CONFIG_IX_QEMU_ROOTFS"  ] || die "Missing IX_QEMU_ROOTFS"
 
-    [ -n "$CONFIG_QEMU_KERNEL" ] && [ -n "$CONFIG_QEMU_BIOS" ] \
-	&& die "QEMU_KERNEL conflicts with QEMU_BIOS"
+    [ -n "$CONFIG_IX_QEMU_KERNEL" ] && [ -n "$CONFIG_IX_QEMU_BIOS" ] \
+	&& die "IX_QEMU_KERNEL conflicts with IX_QEMU_BIOS"
 
-    [ -z "$CONFIG_QEMU_KERNEL" ] && [ -z "$CONFIG_QEMU_BIOS" ] \
-	&& die "QEMU_KERNEL or QEMU_BIOS must be set"
+    [ -z "$CONFIG_IX_QEMU_KERNEL" ] && [ -z "$CONFIG_IX_QEMU_BIOS" ] \
+	&& die "IX_QEMU_KERNEL or IX_QEMU_BIOS must be set"
 }
 
 loader_args()
 {
-    if [ "$CONFIG_QEMU_BIOS" ]; then
-	echo -n "-bios $CONFIG_QEMU_BIOS "
-    elif [ "$CONFIG_QEMU_KERNEL" ]; then
-	echo -n "-kernel $CONFIG_QEMU_KERNEL "
+    if [ "$CONFIG_IX_QEMU_BIOS" ]; then
+	echo -n "-bios $CONFIG_IX_QEMU_BIOS "
+    elif [ "$CONFIG_IX_QEMU_KERNEL" ]; then
+	echo -n "-kernel $CONFIG_IX_QEMU_KERNEL "
     fi
 }
 
 append_args()
 {
     # ARM 32-bit doesn't support virtio console properly, always use serial
-    if [ "$CONFIG_QEMU_arm" ]; then
+    if [ "$CONFIG_IX_QEMU_arm" ]; then
 	echo -n "console=ttyAMA0 "
-    elif [ "$CONFIG_QEMU_CONSOLE_VIRTIO" ]; then
+    elif [ "$CONFIG_IX_QEMU_CONSOLE_VIRTIO" ]; then
 	echo -n "console=hvc0 "
-    elif [ "$CONFIG_QEMU_x86_64" ]; then
+    elif [ "$CONFIG_IX_QEMU_x86_64" ]; then
 	echo -n "console=ttyS0 "
-    elif [ "$CONFIG_QEMU_aarch64" ]; then
+    elif [ "$CONFIG_IX_QEMU_aarch64" ]; then
 	echo -n "console=ttyAMA0 "
     else
 	die "Unknown console"
     fi
 
-    if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
+    if [ "$CONFIG_IX_QEMU_ROOTFS_INITRD" = "y" ]; then
 	# Size of initrd, rounded up to nearest kb
-	size=$((($(stat -c %s "$CONFIG_QEMU_ROOTFS") + 1023) >> 10))
+	size=$((($(stat -c %s "$CONFIG_IX_QEMU_ROOTFS") + 1023) >> 10))
 	echo -n "root=/dev/ram0 ramdisk_size=${size} "
-    elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
+    elif [ "$CONFIG_IX_QEMU_ROOTFS_VSCSI" = "y" ]; then
 	echo -n "root=PARTLABEL=primary "
     fi
 
@@ -110,20 +110,20 @@ append_args()
 	echo -n "debug "
     fi
 
-    echo -n "${QEMU_APPEND} ${QEMU_EXTRA_APPEND} "
+    echo -n "${IX_QEMU_APPEND} ${QEMU_EXTRA_APPEND} "
 }
 
 rootfs_args()
 {
-    if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
-	echo -n "-initrd $CONFIG_QEMU_ROOTFS "
-    elif [ "$CONFIG_QEMU_ROOTFS_MMC" = "y" ]; then
+    if [ "$CONFIG_IX_QEMU_ROOTFS_INITRD" = "y" ]; then
+	echo -n "-initrd $CONFIG_IX_QEMU_ROOTFS "
+    elif [ "$CONFIG_IX_QEMU_ROOTFS_MMC" = "y" ]; then
 	echo -n "-device sdhci-pci "
 	echo -n "-device sd-card,drive=mmc "
-	echo -n "-drive id=mmc,file=$CONFIG_QEMU_ROOTFS,if=none,format=raw "
-    elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
+	echo -n "-drive id=mmc,file=$CONFIG_IX_QEMU_ROOTFS,if=none,format=raw "
+    elif [ "$CONFIG_IX_QEMU_ROOTFS_VSCSI" = "y" ]; then
 	# ARM 32-bit virt machine uses MMIO virtio devices, not PCI
-	if [ "$CONFIG_QEMU_arm" ]; then
+	if [ "$CONFIG_IX_QEMU_arm" ]; then
 	    echo -n "-drive file=qemu.qcow2,if=none,format=qcow2,id=rootfs "
 	    echo -n "-device virtio-blk-device,drive=rootfs "
 	else
@@ -140,9 +140,9 @@ serial_args()
     echo -n "-chardev stdio,id=console0,mux=on "
     echo -n "-mon chardev=console0 "
 
-    if [ "$CONFIG_QEMU_CONSOLE_VIRTIO" ]; then
+    if [ "$CONFIG_IX_QEMU_CONSOLE_VIRTIO" ]; then
 	echo -n "-device virtconsole,nr=0,name=console,chardev=console0 "
-    elif [ "$CONFIG_QEMU_CONSOLE_SERIAL" ]; then
+    elif [ "$CONFIG_IX_QEMU_CONSOLE_SERIAL" ]; then
 	echo -n "-serial chardev:console0 "
     else
 	die "Unknown console"
@@ -175,7 +175,7 @@ usb_args()
 
 rw_args()
 {
-    [ "$CONFIG_QEMU_RW" ] ||  return
+    [ "$CONFIG_IX_QEMU_RW" ] ||  return
 
     command -v mkfs.ext4 >/dev/null || die "$prognm: cannot find mkfs.ext4"
 
@@ -184,45 +184,45 @@ rw_args()
 	mkfs.ext4 -L aux "aux.ext4" >/dev/null 2>&1
     fi
 
-    if ! [ -f "$CONFIG_QEMU_RW" ]; then
-	dd if=/dev/zero of="$CONFIG_QEMU_RW" bs=16M count=1 >/dev/null 2>&1
-	mkfs.ext4 -L cfg "$CONFIG_QEMU_RW" >/dev/null 2>&1
+    if ! [ -f "$CONFIG_IX_QEMU_RW" ]; then
+	dd if=/dev/zero of="$CONFIG_IX_QEMU_RW" bs=16M count=1 >/dev/null 2>&1
+	mkfs.ext4 -L cfg "$CONFIG_IX_QEMU_RW" >/dev/null 2>&1
     fi
 
     # ARM 32-bit virt machine uses MMIO virtio devices, not PCI
-    if [ "$CONFIG_QEMU_arm" ]; then
+    if [ "$CONFIG_IX_QEMU_arm" ]; then
 	echo -n "-drive file=aux.ext4,if=none,format=raw,id=aux "
 	echo -n "-device virtio-blk-device,drive=aux "
-	echo -n "-drive file=$CONFIG_QEMU_RW,if=none,format=raw,id=cfg "
+	echo -n "-drive file=$CONFIG_IX_QEMU_RW,if=none,format=raw,id=cfg "
 	echo -n "-device virtio-blk-device,drive=cfg "
 
-	if [ "$CONFIG_QEMU_RW_VAR_OPT" ]; then
-	    if ! [ -f "$CONFIG_QEMU_RW_VAR" ]; then
-		dd if=/dev/zero of="$CONFIG_QEMU_RW_VAR" bs=$CONFIG_QEMU_RW_VAR_SIZE count=1 >/dev/null 2>&1
-		mkfs.ext4 -L var "$CONFIG_QEMU_RW_VAR" >/dev/null 2>&1
+	if [ "$CONFIG_IX_QEMU_RW_VAR_OPT" ]; then
+	    if ! [ -f "$CONFIG_IX_QEMU_RW_VAR" ]; then
+		dd if=/dev/zero of="$CONFIG_IX_QEMU_RW_VAR" bs=$CONFIG_IX_QEMU_RW_VAR_SIZE count=1 >/dev/null 2>&1
+		mkfs.ext4 -L var "$CONFIG_IX_QEMU_RW_VAR" >/dev/null 2>&1
 	    fi
-	    echo -n "-drive file=$CONFIG_QEMU_RW_VAR,if=none,format=raw,id=var "
+	    echo -n "-drive file=$CONFIG_IX_QEMU_RW_VAR,if=none,format=raw,id=var "
 	    echo -n "-device virtio-blk-device,drive=var "
 	fi
     else
 	echo -n "-drive file=aux.ext4,if=virtio,format=raw,bus=0,unit=3 "
-	echo -n "-drive file=$CONFIG_QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "
+	echo -n "-drive file=$CONFIG_IX_QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "
 
-	if [ "$CONFIG_QEMU_RW_VAR_OPT" ]; then
-	    if ! [ -f "$CONFIG_QEMU_RW_VAR" ]; then
-		dd if=/dev/zero of="$CONFIG_QEMU_RW_VAR" bs=$CONFIG_QEMU_RW_VAR_SIZE count=1 >/dev/null 2>&1
-		mkfs.ext4 -L var "$CONFIG_QEMU_RW_VAR" >/dev/null 2>&1
+	if [ "$CONFIG_IX_QEMU_RW_VAR_OPT" ]; then
+	    if ! [ -f "$CONFIG_IX_QEMU_RW_VAR" ]; then
+		dd if=/dev/zero of="$CONFIG_IX_QEMU_RW_VAR" bs=$CONFIG_IX_QEMU_RW_VAR_SIZE count=1 >/dev/null 2>&1
+		mkfs.ext4 -L var "$CONFIG_IX_QEMU_RW_VAR" >/dev/null 2>&1
 	    fi
-	    echo -n "-drive file=$CONFIG_QEMU_RW_VAR,if=virtio,format=raw,bus=0,unit=2 "
+	    echo -n "-drive file=$CONFIG_IX_QEMU_RW_VAR,if=virtio,format=raw,bus=0,unit=2 "
 	fi
     fi
 }
 
 host_args()
 {
-    [ "$CONFIG_QEMU_HOST" ] || return
+    [ "$CONFIG_IX_QEMU_HOST" ] || return
 
-    echo -n "-virtfs local,path=$CONFIG_QEMU_HOST,security_model=none,writeout=immediate,mount_tag=hostfs "
+    echo -n "-virtfs local,path=$CONFIG_IX_QEMU_HOST,security_model=none,writeout=immediate,mount_tag=hostfs "
 }
 
 net_dev_args()
@@ -230,7 +230,7 @@ net_dev_args()
     name="e$1"
     mac=$(printf "02:00:00:00:00:%02x" "$1")
 
-    echo -n "-device $CONFIG_QEMU_NET_MODEL,netdev=$name,mac=$mac "
+    echo -n "-device $CONFIG_IX_QEMU_NET_MODEL,netdev=$name,mac=$mac "
     echo "$name	$mac" >>"$mactab"
 }
 
@@ -252,29 +252,29 @@ net_args()
     :> "$mactab"
     echo -n "-fw_cfg name=opt/mactab,file=$mactab "
 
-    if [ "$CONFIG_QEMU_NET_BRIDGE" = "y" ]; then
-	echo -n "-netdev bridge,id=e1,br=$CONFIG_QEMU_NET_BRIDGE_DEV "
+    if [ "$CONFIG_IX_QEMU_NET_BRIDGE" = "y" ]; then
+	echo -n "-netdev bridge,id=e1,br=$CONFIG_IX_QEMU_NET_BRIDGE_DEV "
 	net_dev_args 1
-    elif [ "$CONFIG_QEMU_NET_TAP" = "y" ]; then
-	for i in $(seq 1 "$CONFIG_QEMU_NET_TAP_N"); do
+    elif [ "$CONFIG_IX_QEMU_NET_TAP" = "y" ]; then
+	for i in $(seq 1 "$CONFIG_IX_QEMU_NET_TAP_N"); do
 	    echo -n "-netdev tap,id=e$i,ifname=qtap$i "
 	    net_dev_args "$i"
 	done
-    elif [ "$CONFIG_QEMU_NET_ROCKER" = "y" ]; then
+    elif [ "$CONFIG_IX_QEMU_NET_ROCKER" = "y" ]; then
 	sw=sw0			# Only single switch support atm.
 	echo -n "-device '{\"driver\":\"rocker\", \"name\":\"${sw}\", "
 	echo -n "\"fp_start_macaddr\":\"02:00:00:00:00:01\", "
 	echo -n "\"ports\":["
-	for i in $(seq 1 "$CONFIG_QEMU_NET_PORTS"); do
+	for i in $(seq 1 "$CONFIG_IX_QEMU_NET_PORTS"); do
 	    [ "$i" -gt 1 ] && echo -n ", "
 	    echo -n "\"${sw}p${i}\""
 	done
 	echo -n "]}' "
-	for i in $(seq 1 "$CONFIG_QEMU_NET_PORTS"); do
+	for i in $(seq 1 "$CONFIG_IX_QEMU_NET_PORTS"); do
 	    rocker_port_args 0 "$i"
 	done
-    elif [ "$CONFIG_QEMU_NET_USER" = "y" ]; then
-	[ "$CONFIG_QEMU_NET_USER_OPTS" ] && useropts=",$CONFIG_QEMU_NET_USER_OPTS"
+    elif [ "$CONFIG_IX_QEMU_NET_USER" = "y" ]; then
+	[ "$CONFIG_IX_QEMU_NET_USER_OPTS" ] && useropts=",$CONFIG_IX_QEMU_NET_USER_OPTS"
 	echo -n "-netdev user,id=e1${useropts} "
 	net_dev_args 1
     else
@@ -285,7 +285,7 @@ net_args()
 # Vital Product data
 vpd_args()
 {
-    [ "$CONFIG_QEMU_VPD" = "y" ] || return
+    [ "$CONFIG_IX_QEMU_VPD" = "y" ] || return
 
     vpd_file="${qdir}/vpd"
 
@@ -324,8 +324,8 @@ random_date()
 
 rtc_args()
 {
-    rtc="${CONFIG_QEMU_RTC:-utc}"
-    clock="${CONFIG_QEMU_CLOCK:-host}"
+    rtc="${CONFIG_IX_QEMU_RTC:-utc}"
+    clock="${CONFIG_IX_QEMU_CLOCK:-host}"
     if [ "$rtc" = "random" ]; then
 	rtc=$(random_date)
     fi
@@ -358,28 +358,28 @@ extract_squashfs()
 run_qemu()
 {
     # Auto-extract rootfs.squashfs from rootfs.itb if needed for initrd mode
-    if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ] && [ ! -f "$CONFIG_QEMU_ROOTFS" ]; then
-	itb="${CONFIG_QEMU_ROOTFS%.squashfs}.itb"
+    if [ "$CONFIG_IX_QEMU_ROOTFS_INITRD" = "y" ] && [ ! -f "$CONFIG_IX_QEMU_ROOTFS" ]; then
+	itb="${CONFIG_IX_QEMU_ROOTFS%.squashfs}.itb"
 	if [ -f "$itb" ]; then
-	    extract_squashfs "$itb" "$CONFIG_QEMU_ROOTFS"
+	    extract_squashfs "$itb" "$CONFIG_IX_QEMU_ROOTFS"
 	else
-	    die "Missing $CONFIG_QEMU_ROOTFS and cannot find $itb to extract it from"
+	    die "Missing $CONFIG_IX_QEMU_ROOTFS and cannot find $itb to extract it from"
 	fi
     fi
 
-    if [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
+    if [ "$CONFIG_IX_QEMU_ROOTFS_VSCSI" = "y" ]; then
 	if ! qemu-img check "qemu.qcow2"; then
 	    rm -f "qemu.qcow2"
 	fi
 	if [ ! -f "qemu.qcow2" ]; then
 	    echo "Creating qcow2 disk image for Qemu ..."
-	    qemu-img create -f qcow2 -o backing_file="$CONFIG_QEMU_ROOTFS" \
+	    qemu-img create -f qcow2 -o backing_file="$CONFIG_IX_QEMU_ROOTFS" \
 		     -F qcow2 "qemu.qcow2" > /dev/null
 	fi
     fi
 
     read -r qemu <<EOF
-	$CONFIG_QEMU_MACHINE -nodefaults -m $CONFIG_QEMU_MACHINE_RAM \
+	$CONFIG_IX_QEMU_MACHINE -nodefaults -m $CONFIG_IX_QEMU_MACHINE_RAM \
 	  $(loader_args) \
 	  $(rootfs_args) \
 	  $(serial_args) \
@@ -391,14 +391,14 @@ run_qemu()
 	  $(rtc_args) \
 	  $(vpd_args) \
 	  $(gdb_args) \
-	  $CONFIG_QEMU_EXTRA
+	  $CONFIG_IX_QEMU_EXTRA
 EOF
     # Save resulting command to a script, because I cannot for the life
     # of me figure out how to embed the JSON snippet for Rocker and run
     # it here without issues, spent way too much time on it -- Joachim
     run=$(mktemp -t run.qemu.XXX)
     echo "#!/bin/sh" > "$run"
-    if [ "$CONFIG_QEMU_KERNEL" ]; then
+    if [ "$CONFIG_IX_QEMU_KERNEL" ]; then
 	echo "$qemu -append \"$(append_args)\" $*" >> "$run"
     else
 	echo "$qemu $*" >> "$run"
@@ -419,9 +419,9 @@ EOF
 
 dtb_args()
 {
-    [ "$CONFIG_QEMU_LOADER_UBOOT" ] || return
+    [ "$CONFIG_IX_QEMU_LOADER_UBOOT" ] || return
 
-    if [ "$CONFIG_QEMU_DTB_EXTEND" ]; then
+    if [ "$CONFIG_IX_QEMU_DTB_EXTEND" ]; then
 	# On the current architecture, QEMU will generate an internal
 	# DT based on the system configuration.
 
@@ -445,12 +445,12 @@ dtb_args()
 
 generate_dot()
 {
-    [ "$CONFIG_QEMU_NET_TAP" = "y" ] || return
+    [ "$CONFIG_IX_QEMU_NET_TAP" = "y" ] || return
 
     hostports="<qtap1> qtap1"
     targetports="<e1> e1"
     edges="host:qtap1 -- target:e1 [kind=mgmt];"
-    for tap in $(seq 2 $((CONFIG_QEMU_NET_TAP_N - 1))); do
+    for tap in $(seq 2 $((CONFIG_IX_QEMU_NET_TAP_N - 1))); do
 	hostports="$hostports | <qtap$tap> qtap$tap "
 	targetports="$targetports | <e$tap> e$tap "
 	edges="$edges host:qtap$tap -- target:e$tap;"
@@ -485,7 +485,7 @@ EOF
 
 menuconfig()
 {
-    grep -q QEMU_MACHINE Config.in || die "$prognm: must be run from the $$O/images/qemu directory"
+    grep -q IX_QEMU_MACHINE Config.in || die "$prognm: must be run from the $$O/images/qemu directory"
     command -v kconfig-mconf >/dev/null || die "$prognm: cannot find kconfig-mconf for menuconfig"
     exec kconfig-mconf Config.in
 }

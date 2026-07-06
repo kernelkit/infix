@@ -58,7 +58,7 @@ SPEC_Q :=
 endif
 
 test-spec:
-	@esc_infix_name="$(echo $(INFIX_NAME) | sed 's/\//\\\//g')"; \
+	@esc_infix_name="$(echo $(IX_NAME) | sed 's/\//\\\//g')"; \
 	sed 's/{REPLACE}/$(subst ",,$(esc_infix_name)) $(INFIX_VERSION)/' \
 		$(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
 	$(SPEC_Q)$(spec-dir)/generate_spec.py -s $(test-dir)/case/all.yaml -r $(BR2_EXTERNAL_INFIX_PATH) $(SPEC_DEBUG)
@@ -86,7 +86,7 @@ xpath-coverage-report:
 		$(xpath_coverage_report_md) \
 		$(xpath_coverage_report_css) \
 		$(xpath_coverage_logo) \
-		"$(subst ",,$(INFIX_NAME)) $(INFIX_VERSION)" \
+		"$(subst ",,$(IX_NAME)) $(INFIX_VERSION)" \
 		$(xpath_coverage_report_pdf)
 
 # Unit tests run with random (-r) hostname and container name to

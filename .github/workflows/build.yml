@@ -129,7 +129,7 @@ jobs:
 
       - name: Configure ${{ env.TARGET }}
         run: |
-          make ${{ env.TARGET }}_defconfig
+          make ${{ env.TARGET }}_defconfig apply-mirror
 
       - name: Cleanup stale containers and ports
         run: |

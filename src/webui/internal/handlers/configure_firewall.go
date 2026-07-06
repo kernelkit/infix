@@ -26,11 +26,6 @@ type cfgFwWrapper struct {
 	Firewall *firewallJSON `json:"infix-firewall:firewall,omitempty"`
 }
 
-// cfgFwZoneWrapper is used when reading a single zone by path.
-type cfgFwZoneWrapper struct {
-	Zone []zoneJSON `json:"infix-firewall:zone"`
-}
-
 // ─── Template display rows ────────────────────────────────────────────────────
 
 type cfgZoneRow struct {
@@ -38,8 +33,10 @@ type cfgZoneRow struct {
 	IfaceCount  int
 	IfaceSet    map[string]bool
 	ServiceSet  map[string]bool
+	AddrSetSet  map[string]bool
 	ServicesTxt string // fallback when ServiceOptions unavailable
 	NetworksTxt string // comma-separated, shown read-only when zone uses networks
+	AddrSetsTxt string // comma-separated address-set sources
 }
 
 type cfgPolicyRow struct {
@@ -56,9 +53,43 @@ type cfgServiceRow struct {
 	PortsDisplay string // "tcp:80,443; udp:53" — at-a-glance
 }
 
-// cfgFwSvcWrapper is used when reading a single service by path.
-type cfgFwSvcWrapper struct {
-	Service []fwServiceJSON `json:"infix-firewall:service"`
+type cfgAddrSetRow struct {
+	addressSetJSON
+	EntriesTxt string // one entry per line for the textarea
+}
+
+func zoneConfigBody(cur zoneJSON) map[string]any {
+	zone := map[string]any{
+		"name": cur.Name,
+	}
+	if cur.Action != "" {
+		zone["action"] = cur.Action
+	}
+	if cur.Description != "" {
+		zone["description"] = cur.Description
+	}
+	if len(cur.Interface) > 0 {
+		zone["interface"] = cur.Interface
+	}
+	if len(cur.Network) > 0 {
+		zone["network"] = cur.Network
+	}
+	if len(cur.AddressSet) > 0 {
+		zone["address-set"] = cur.AddressSet
+	}
+	if len(cur.Service) > 0 {
+		zone["service"] = cur.Service
+	}
+	return zone
+}
+
+// toSet builds a membership map for template "index" lookups.
+func toSet(ss []string) map[string]bool {
+	set := make(map[string]bool, len(ss))
+	for _, s := range ss {
+		set[s] = true
+	}
+	return set
 }
 
 // ─── Template data ────────────────────────────────────────────────────────────
@@ -74,12 +105,15 @@ type cfgFirewallPageData struct {
 	ZoneNames           []string // for policy ingress/egress multi-select
 	Policies            []cfgPolicyRow
 	Services            []cfgServiceRow
+	AddressSets         []cfgAddrSetRow
+	AddressSetNames     []string // for zone source multi-select
 	ProtoOptions        []schema.IdentityOption
 	Desc                map[string]string
 	LoggingOptions      []schema.IdentityOption
 	ActionOptions       []schema.IdentityOption
 	PolicyActionOptions []schema.IdentityOption
 	ServiceOptions      []schema.IdentityOption
+	FamilyOptions       []schema.IdentityOption
 	AllInterfaces       []string
 	Error               string
 }
@@ -107,6 +141,7 @@ func (h *ConfigureFirewallHandler) Overview(w http.ResponseWriter, r *http.Reque
 		zPath := fwPath + "/zone"
 		pPath := fwPath + "/policy"
 		sPath := fwPath + "/service"
+		aPath := fwPath + "/address-set"
 		data.Desc = map[string]string{
 			"enabled":             schema.DescriptionOf(mgr, fwPath+"/enabled"),
 			"default":             schema.DescriptionOf(mgr, fwPath+"/default"),
@@ -127,12 +162,19 @@ func (h *ConfigureFirewallHandler) Overview(w http.ResponseWriter, r *http.Reque
 			"service-port-lower":  schema.DescriptionOf(mgr, sPath+"/port/lower"),
 			"service-port-upper":  schema.DescriptionOf(mgr, sPath+"/port/upper"),
 			"service-port-proto":  schema.DescriptionOf(mgr, sPath+"/port/proto"),
+			"zone-address-set":    schema.DescriptionOf(mgr, zPath+"/address-set"),
+			"addrset-name":        schema.DescriptionOf(mgr, aPath+"/name"),
+			"addrset-description": schema.DescriptionOf(mgr, aPath+"/description"),
+			"addrset-family":      schema.DescriptionOf(mgr, aPath+"/family"),
+			"addrset-timeout":     schema.DescriptionOf(mgr, aPath+"/timeout"),
+			"addrset-entry":       schema.DescriptionOf(mgr, aPath+"/entry"),
 		}
 		data.LoggingOptions = schema.OptionsFor(mgr, fwPath+"/logging")
 		data.ActionOptions = schema.OptionsFor(mgr, zPath+"/action")
 		data.PolicyActionOptions = schema.OptionsFor(mgr, pPath+"/action")
 		data.ServiceOptions = schema.OptionsFor(mgr, zPath+"/service")
 		data.ProtoOptions = schema.OptionsFor(mgr, sPath+"/port/proto")
+		data.FamilyOptions = schema.OptionsFor(mgr, aPath+"/family")
 	}
 
 	fw, active, err := h.fetchFirewall(r.Context())
@@ -150,44 +192,45 @@ func (h *ConfigureFirewallHandler) Overview(w http.ResponseWriter, r *http.Reque
 		data.Default = fw.Default
 		data.Logging = fw.Logging
 		for _, z := range fw.Zone {
-			ifaceSet := make(map[string]bool, len(z.Interface))
-			for _, iface := range z.Interface {
-				ifaceSet[iface] = true
-			}
-			svcSet := make(map[string]bool, len(z.Service))
-			for _, svc := range z.Service {
-				svcSet[svc] = true
-			}
 			data.Zones = append(data.Zones, cfgZoneRow{
 				zoneJSON:    z,
 				IfaceCount:  len(z.Interface),
-				IfaceSet:    ifaceSet,
-				ServiceSet:  svcSet,
+				IfaceSet:    toSet(z.Interface),
+				ServiceSet:  toSet(z.Service),
+				AddrSetSet:  toSet(z.AddressSet),
 				ServicesTxt: strings.Join(z.Service, "\n"),
 				NetworksTxt: strings.Join(z.Network, ", "),
+				AddrSetsTxt: strings.Join(z.AddressSet, ", "),
 			})
 			data.ZoneNames = append(data.ZoneNames, z.Name)
+		}
+		for _, s := range fw.AddressSet {
+			if s.Family == "" {
+				// Display the schema default when the leaf is unset.
+				for _, opt := range data.FamilyOptions {
+					if opt.IsDefault {
+						s.Family = opt.Value
+					}
+				}
+			}
+			data.AddressSets = append(data.AddressSets, cfgAddrSetRow{
+				addressSetJSON: s,
+				EntriesTxt:     strings.Join(s.Entry, "\n"),
+			})
+			data.AddressSetNames = append(data.AddressSetNames, s.Name)
 		}
 		for _, p := range fw.Policy {
 			masq := "—"
 			if p.Masquerade {
 				masq = "Yes"
 			}
-			ingressSet := make(map[string]bool, len(p.Ingress))
-			for _, z := range p.Ingress {
-				ingressSet[z] = true
-			}
-			egressSet := make(map[string]bool, len(p.Egress))
-			for _, z := range p.Egress {
-				egressSet[z] = true
-			}
 			data.Policies = append(data.Policies, cfgPolicyRow{
 				policyJSON:     p,
 				IngressDisplay: strings.Join(p.Ingress, ", "),
 				EgressDisplay:  strings.Join(p.Egress, ", "),
 				MasqDisplay:    masq,
-				IngressSet:     ingressSet,
-				EgressSet:      egressSet,
+				IngressSet:     toSet(p.Ingress),
+				EgressSet:      toSet(p.Egress),
 			})
 		}
 		for _, s := range fw.Service {
@@ -303,7 +346,7 @@ func (h *ConfigureFirewallHandler) DeleteZone(w http.ResponseWriter, r *http.Req
 	renderSavedRedirect(w, "Zone deleted", "/configure/firewall")
 }
 
-// SaveZone updates a zone's action, description, interfaces, and services.
+// SaveZone updates a zone's action, description, interfaces, address-sets, and services.
 // Uses read-modify-write to preserve fields not managed by this UI (network,
 // port-forward). Note: port-forward entries are lost on save (Phase 3 limitation).
 // POST /configure/firewall/zones/{name}
@@ -314,15 +357,15 @@ func (h *ConfigureFirewallHandler) SaveZone(w http.ResponseWriter, r *http.Reque
 	}
 	name := r.PathValue("name")
 
-	var wrap cfgFwZoneWrapper
+	var wrap firewallWrapper // keyed GETs nest the zone under its full parent path
 	if err := h.RC.Get(r.Context(), fwConfigPath+"/zone="+url.PathEscape(name), &wrap); err != nil {
 		log.Printf("configure firewall zone save %q: GET: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
 	cur := zoneJSON{Name: name}
-	if len(wrap.Zone) > 0 {
-		cur = wrap.Zone[0]
+	if len(wrap.Firewall.Zone) > 0 {
+		cur = wrap.Firewall.Zone[0]
 	}
 
 	cur.Action = r.FormValue("action")
@@ -340,20 +383,13 @@ func (h *ConfigureFirewallHandler) SaveZone(w http.ResponseWriter, r *http.Reque
 		svcs = []string{}
 	}
 	cur.Service = svcs
+	sets := r.Form["address-sets"]
+	if sets == nil {
+		sets = []string{}
+	}
+	cur.AddressSet = sets
 
-	zone := map[string]any{
-		"name":      cur.Name,
-		"action":    cur.Action,
-		"interface": cur.Interface,
-		"service":   cur.Service,
-	}
-	if cur.Description != "" {
-		zone["description"] = cur.Description
-	}
-	if len(cur.Network) > 0 {
-		zone["network"] = cur.Network
-	}
-	body := map[string]any{"infix-firewall:zone": []map[string]any{zone}}
+	body := map[string]any{"infix-firewall:zone": []map[string]any{zoneConfigBody(cur)}}
 	if err := h.RC.Put(r.Context(), fwConfigPath+"/zone="+url.PathEscape(name), body); err != nil {
 		log.Printf("configure firewall zone save %q: PUT: %v", name, err)
 		renderSaveError(w, err)
@@ -362,52 +398,38 @@ func (h *ConfigureFirewallHandler) SaveZone(w http.ResponseWriter, r *http.Reque
 	renderSavedRedirect(w, "Zone saved", "/configure/firewall")
 }
 
-// ResetZoneLeafList clears a leaf-list (interface or service) on a zone by
-// re-PUTting the zone container without that field. RFC 8040 leaf-list
-// DELETE requires per-entry key predicates, so a bulk clear has to go
-// through the parent.
+// ResetZoneLeafList clears a leaf-list (interface or service) on a zone.
+// RFC 8040 leaf-list DELETE requires per-entry key predicates, so each
+// instance is deleted individually.  Deliberately avoids rebuilding the
+// zone with PUT: the reset must not be able to touch anything else.
 func (h *ConfigureFirewallHandler) resetZoneLeafList(w http.ResponseWriter, r *http.Request, leaf string) {
 	name := r.PathValue("name")
-	var wrap cfgFwZoneWrapper
+	var wrap firewallWrapper // keyed GETs nest the zone under its full parent path
 	if err := h.RC.Get(r.Context(), fwConfigPath+"/zone="+url.PathEscape(name), &wrap); err != nil {
 		log.Printf("configure firewall zone reset %s/%s: GET: %v", name, leaf, err)
 		renderSaveError(w, err)
 		return
 	}
-	cur := zoneJSON{Name: name}
-	if len(wrap.Zone) > 0 {
-		cur = wrap.Zone[0]
-	}
-	switch leaf {
-	case "interface":
-		cur.Interface = nil
-	case "service":
-		cur.Service = nil
+	var values []string
+	if len(wrap.Firewall.Zone) > 0 {
+		switch leaf {
+		case "interface":
+			values = wrap.Firewall.Zone[0].Interface
+		case "service":
+			values = wrap.Firewall.Zone[0].Service
+		}
 	}
 
-	zone := map[string]any{
-		"name":   cur.Name,
-		"action": cur.Action,
+	for _, val := range values {
+		path := fmt.Sprintf("%s/zone=%s/%s=%s", fwConfigPath,
+			restconf.EscapeKey(name), leaf, restconf.EscapeKey(val))
+		if err := h.RC.Delete(r.Context(), path); err != nil && !restconf.IsNotFound(err) {
+			log.Printf("configure firewall zone reset %s/%s=%s: %v", name, leaf, val, err)
+			renderSaveError(w, err)
+			return
+		}
 	}
-	if cur.Description != "" {
-		zone["description"] = cur.Description
-	}
-	if len(cur.Interface) > 0 {
-		zone["interface"] = cur.Interface
-	}
-	if len(cur.Network) > 0 {
-		zone["network"] = cur.Network
-	}
-	if len(cur.Service) > 0 {
-		zone["service"] = cur.Service
-	}
-	body := map[string]any{"infix-firewall:zone": []map[string]any{zone}}
-	if err := h.RC.Put(r.Context(), fwConfigPath+"/zone="+url.PathEscape(name), body); err != nil {
-		log.Printf("configure firewall zone reset %s/%s: PUT: %v", name, leaf, err)
-		renderSaveError(w, err)
-		return
-	}
-	renderSaved(w, "Reset to default")
+	renderSavedRedirect(w, "Reset to default", "/configure/firewall")
 }
 
 // ResetZoneInterfaces clears the zone's interface leaf-list.
@@ -690,6 +712,89 @@ func (h *ConfigureFirewallHandler) DeleteService(w http.ResponseWriter, r *http.
 		return
 	}
 	renderSavedRedirect(w, "Service deleted", "/configure/firewall")
+}
+
+// ─── Address-sets CRUD ───────────────────────────────────────────────────────
+
+// parseAddressSet builds the RESTCONF address-set body from the add/save
+// form. Entries come from a textarea, one address or prefix per line.
+func parseAddressSet(r *http.Request, name string) (map[string]any, error) {
+	set := map[string]any{"name": name}
+	if desc := strings.TrimSpace(r.FormValue("description")); desc != "" {
+		set["description"] = desc
+	}
+	if fam := r.FormValue("family"); fam != "" {
+		set["family"] = fam
+	}
+	if t := strings.TrimSpace(r.FormValue("timeout")); t != "" {
+		tv, err := strconv.Atoi(t)
+		if err != nil || tv < 1 {
+			return nil, fmt.Errorf("timeout must be a positive number of seconds")
+		}
+		set["timeout"] = tv
+	}
+	entries := []string{}
+	for _, line := range strings.Split(r.FormValue("entries"), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			entries = append(entries, line)
+		}
+	}
+	if len(entries) > 0 {
+		set["entry"] = entries
+	}
+	return set, nil
+}
+
+func (h *ConfigureFirewallHandler) putAddressSet(w http.ResponseWriter, r *http.Request, name, saved string) {
+	set, err := parseAddressSet(r, name)
+	if err != nil {
+		renderSaveError(w, err)
+		return
+	}
+	body := map[string]any{"infix-firewall:address-set": []map[string]any{set}}
+	if err := h.RC.Put(r.Context(), fwConfigPath+"/address-set="+restconf.EscapeKey(name), body); err != nil {
+		log.Printf("configure firewall address-set save %q: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, saved, "/configure/firewall")
+}
+
+// AddAddressSet creates a new address-set.
+// POST /configure/firewall/address-sets
+func (h *ConfigureFirewallHandler) AddAddressSet(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		renderSaveError(w, fmt.Errorf("address-set name is required"))
+		return
+	}
+	h.putAddressSet(w, r, name, "Address-set added")
+}
+
+// SaveAddressSet updates an existing address-set.
+// POST /configure/firewall/address-sets/{name}
+func (h *ConfigureFirewallHandler) SaveAddressSet(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	h.putAddressSet(w, r, r.PathValue("name"), "Address-set saved")
+}
+
+// DeleteAddressSet removes an address-set.
+// DELETE /configure/firewall/address-sets/{name}
+func (h *ConfigureFirewallHandler) DeleteAddressSet(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if err := h.RC.Delete(r.Context(), fwConfigPath+"/address-set="+restconf.EscapeKey(name)); err != nil {
+		log.Printf("configure firewall address-set delete %q: %v", name, err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSavedRedirect(w, "Address-set deleted", "/configure/firewall")
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

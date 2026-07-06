@@ -1369,15 +1369,22 @@ func (h *ConfigureInterfacesHandler) ResetEthernetAdvertised(w http.ResponseWrit
 	name := r.PathValue("name")
 	base := ifacePath(name) + "/ieee802-ethernet-interface:ethernet"
 
+	// Keyed GETs nest the requested node under its full parent path.
 	var resp struct {
-		AN struct {
-			Enable *bool `json:"enable"`
-		} `json:"ieee802-ethernet-interface:auto-negotiation"`
+		Interfaces struct {
+			Interface []struct {
+				Ethernet struct {
+					AN struct {
+						Enable *bool `json:"enable"`
+					} `json:"auto-negotiation"`
+				} `json:"ieee802-ethernet-interface:ethernet"`
+			} `json:"interface"`
+		} `json:"ietf-interfaces:interfaces"`
 	}
 	enable := true // YANG default
 	if err := h.RC.Get(r.Context(), base+"/auto-negotiation", &resp); err == nil {
-		if resp.AN.Enable != nil {
-			enable = *resp.AN.Enable
+		if ifs := resp.Interfaces.Interface; len(ifs) > 0 && ifs[0].Ethernet.AN.Enable != nil {
+			enable = *ifs[0].Ethernet.AN.Enable
 		}
 	} else if !restconf.IsNotFound(err) {
 		log.Printf("configure interfaces %s reset advertised get: %v", name, err)

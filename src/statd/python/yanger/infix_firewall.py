@@ -7,8 +7,37 @@ for the full API, see:
                     --object-path /org/fedoraproject/FirewallD1
 """
 import dbus
+import ipaddress
 import re
 from . import common
+from .host import HOST
+
+SHADOW_DIR = "/run/confd/address-sets"
+
+
+def normalize_entry(entry):
+    """Match firewalld entry normalization: bare address for host entries"""
+    try:
+        net = ipaddress.ip_network(str(entry), strict=False)
+    except ValueError:
+        return str(entry)
+
+    if net.prefixlen == net.max_prefixlen:
+        return str(net.network_address)
+    return str(net)
+
+
+def split_sources(sources):
+    """Zone sources are IP networks or 'ipset:NAME' address-set references"""
+    networks = []
+    ipsets = []
+    for src in sources:
+        src = str(src)
+        if src.startswith("ipset:"):
+            ipsets.append(src[len("ipset:"):])
+        else:
+            networks.append(src)
+    return networks, ipsets
 
 
 def get_interface(interface="org.fedoraproject.FirewallD1"):
@@ -52,13 +81,15 @@ def get_zone_data(fw, name):
         elif not short:
             short = ""
 
+        networks, ipsets = split_sources(settings.get('sources', []))
         zone = {
             "name": name,
             "short": short,
             "immutable": immutable,
             "description": settings.get('description', ''),
             "interface": list(settings.get('interfaces', [])),
-            "network": list(settings.get('sources', [])),
+            "network": networks,
+            "address-set": ipsets,
             "action": action.get(target, "accept"),
             "service": list(settings.get('services', []))
         }
@@ -132,8 +163,10 @@ def get_zones(fw):
         for name, zone_info in active_zones.items():
             zone_data = get_zone_data(fwz, name)
             if zone_data:
+                networks, ipsets = split_sources(zone_info.get('sources', []))
                 zone_data['interface'] = list(zone_info.get('interfaces', []))
-                zone_data['network'] = list(zone_info.get('sources', []))
+                zone_data['network'] = networks
+                zone_data['address-set'] = ipsets
                 zones.append(zone_data)
 
     except Exception as e:
@@ -281,6 +314,100 @@ def get_policies(fw):
     return policies
 
 
+def nft_set_elems(name):
+    """Live contents of firewalld's nftables set
+
+    The kernel is the only source that sees entries in timeout sets,
+    and the only one tracking per-entry expiry.  The firewalld table
+    is owner-protected, but reading is fine.
+    """
+    data = HOST.run_json(("nft", "-j", "list", "set", "inet", "firewalld", name),
+                         default={})
+    for obj in data.get("nftables", []):
+        if "set" in obj:
+            return obj["set"].get("elem", [])
+    return []
+
+
+def nft_elem_parse(elem):
+    """Return (entry, expires) from an nft JSON set element"""
+    expires = None
+    if isinstance(elem, dict) and "elem" in elem:
+        expires = elem["elem"].get("expires")
+        elem = elem["elem"].get("val")
+
+    if isinstance(elem, dict) and "prefix" in elem:
+        entry = f"{elem['prefix']['addr']}/{elem['prefix']['len']}"
+    elif isinstance(elem, dict) and "range" in elem:
+        entry = f"{elem['range'][0]}-{elem['range'][1]}"
+    else:
+        entry = str(elem)
+
+    return normalize_entry(entry), expires
+
+
+def get_address_set(fwi, name):
+    try:
+        settings = fwi.getIPSetSettings(name)
+        # (version, short, description, type, options, entries)
+        options = settings[4]
+        tracked = [normalize_entry(e) for e in settings[5]]
+    except Exception as e:
+        common.LOG.warning("Failed querying ipset %s via D-Bus: %s", name, e)
+        return None
+
+    aset = {"name": str(name)}
+
+    description = str(settings[2])
+    if description:
+        aset["description"] = description
+
+    aset["family"] = "ipv6" if options.get("family") == "inet6" else "ipv4"
+
+    timeout = int(options.get("timeout", 0))
+    if timeout:
+        aset["timeout"] = timeout
+
+    lines = HOST.read_multiline(f"{SHADOW_DIR}/{name}", default=[])
+    shadow = {normalize_entry(line) for line in lines if line}
+
+    static = [e for e in tracked if e not in shadow]
+    if static:
+        aset["entry"] = static
+
+    current = []
+    for elem in nft_set_elems(name):
+        entry, expires = nft_elem_parse(elem)
+        cur = {"entry": entry, "dynamic": bool(timeout) or entry in shadow}
+        if expires is not None:
+            cur["expires"] = int(expires)
+        current.append(cur)
+    if current:
+        aset["current"] = current
+
+    return aset
+
+
+def get_address_sets():
+    sets = []
+    fwi = get_interface("org.fedoraproject.FirewallD1.ipset")
+    if not fwi:
+        return sets
+
+    try:
+        names = fwi.getIPSets()
+    except Exception as e:
+        common.LOG.warning("Failed querying ipsets: %s", e)
+        return sets
+
+    for name in names:
+        data = get_address_set(fwi, name)
+        if data:
+            sets.append(data)
+
+    return sets
+
+
 def get_service_data(fw, name):
     try:
         settings = fw.getServiceSettings2(name)
@@ -359,5 +486,9 @@ def operational():
     services = get_services(fw)
     if services:
         data["infix-firewall:firewall"]["service"] = services
+
+    address_sets = get_address_sets()
+    if address_sets:
+        data["infix-firewall:firewall"]["address-set"] = address_sets
 
     return data

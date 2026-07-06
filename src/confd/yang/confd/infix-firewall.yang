@@ -27,6 +27,13 @@ module infix-firewall {
   contact      "kernelkit@googlegroups.com";
   description  "Zone-based firewall inspired by firewalld concepts.";
 
+  revision 2026-07-02 {
+    description "Add address-set support: named sets of IP addresses and
+                 networks, usable as zone sources.  Includes add/remove/flush
+                 actions for managing dynamic entries at runtime.";
+    reference "internal";
+  }
+
   revision 2025-04-26 {
     description "Initial revision.";
     reference "internal";
@@ -93,6 +100,14 @@ module infix-firewall {
       }
     }
     description "Action for traffic that does not match any specific service or port entry.";
+  }
+
+  typedef set-entry {
+    description "A member of an address-set: a host address or a network prefix.";
+    type union {
+      type inet:ip-address;
+      type inet:ip-prefix;
+    }
   }
 
   typedef protocol-type {
@@ -218,6 +233,21 @@ module infix-firewall {
       leaf-list network {
         description "IP networks assigned to this zone.";
         type inet:ip-prefix;
+      }
+
+      leaf-list address-set {
+        description "Address sets whose members are sources for this zone.
+
+                     Like 'network', but members can also be added and removed
+                     at runtime using the address-set add/remove actions.
+
+                     Source matching takes precedence over interface matching,
+                     so a member of an address set is classified into this zone
+                     even when its traffic arrives on an interface assigned to
+                     another zone.";
+        type leafref {
+          path "../../address-set/name";
+        }
       }
 
       leaf-list service {
@@ -457,6 +487,129 @@ module infix-firewall {
           type inet:ip-prefix;
         }
         description "Destination IP address/group to match this service to.";
+      }
+    }
+
+    list address-set {
+      description "Named sets of IP addresses and networks, usable as zone sources.
+
+                   Entries configured here are static: part of the configuration
+                   and restored at boot.  Entries can also be added and removed
+                   at runtime with the add/remove actions.  Dynamic entries are
+                   not saved to the configuration and are lost on reboot.
+
+                   The 'current' list shows the actual contents of the set,
+                   both static and dynamic entries.";
+      key "name";
+
+      must "not(timeout) or count(entry) = 0" {
+        error-message "Address sets with a timeout cannot have static entries";
+      }
+
+      leaf name {
+        description "Name of the address set.";
+        type ident;
+      }
+
+      leaf description {
+        description "Free-form description of the address set.";
+        type string {
+          pattern '[^\p{Cc}<>&]*';
+        }
+      }
+
+      leaf family {
+        description "Address family of the set.  A set holds either IPv4 or
+                     IPv6 entries, never both.";
+        type enumeration {
+          enum ipv4;
+          enum ipv6;
+        }
+        default ipv4;
+      }
+
+      leaf timeout {
+        description "Lifetime for dynamic entries, making the set dynamic-only.
+
+                     Entries added with the add action expire after this many
+                     seconds.  Static entries cannot be configured, and dynamic
+                     entries cannot be removed or flushed, they expire on their
+                     own.  Changes to the firewall configuration flush all
+                     entries from timeout sets early.";
+        type uint32 {
+          range "1..max";
+        }
+        units "seconds";
+      }
+
+      leaf-list entry {
+        description "Static entries, part of the configuration.";
+        type set-entry;
+
+        must "not(contains(., ':')) or ../family = 'ipv6'" {
+          error-message "IPv6 entry in an IPv4 address-set";
+        }
+        must "contains(., ':') or ../family = 'ipv4'" {
+          error-message "IPv4 entry in an IPv6 address-set";
+        }
+      }
+
+      list current {
+        description "Entries currently active in the set.";
+        config false;
+        key "entry";
+
+        leaf entry {
+          description "Set member.";
+          type set-entry;
+        }
+
+        leaf dynamic {
+          description "Entry was added at runtime, not part of the configuration.";
+          type boolean;
+        }
+
+        leaf expires {
+          description "Seconds until this entry expires and is removed.";
+          type uint32;
+          units "seconds";
+        }
+      }
+
+      action add {
+        description "Add a dynamic entry to the set.
+
+                     The entry takes effect immediately but is not saved to the
+                     configuration, i.e., it is lost on reboot.  For permanent
+                     entries, use the 'entry' list instead.";
+        input {
+          leaf entry {
+            description "Host address or network prefix to add.";
+            type set-entry;
+            mandatory true;
+          }
+        }
+      }
+
+      action remove {
+        description "Remove a dynamic entry from the set.
+
+                     Static entries cannot be removed with this action, only
+                     by changing the configuration.  Entries in timeout sets
+                     cannot be removed, they expire on their own.";
+        input {
+          leaf entry {
+            description "Host address or network prefix to remove.";
+            type set-entry;
+            mandatory true;
+          }
+        }
+      }
+
+      action flush {
+        description "Remove all dynamic entries from the set.  Static entries
+                     remain.  Not supported for timeout sets, their entries
+                     expire on their own.";
       }
     }
 
