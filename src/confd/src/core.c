@@ -508,7 +508,7 @@ static confd_dependency_t dep_radio_components(struct lyd_node **diff, struct ly
 static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct lyd_node *config)
 {
 	confd_dependency_t result = CONFD_DEP_DONE;
-	const struct cron_consumer **consumers;
+	const struct cron_consumer *const *consumers;
 	size_t i, count;
 
 	consumers = schedule_consumers(&count);
