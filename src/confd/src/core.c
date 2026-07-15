@@ -529,6 +529,9 @@ static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct 
 		if (!name)
 			continue;
 
+		/* Safe to interpolate: infix-schedule constrains the schedule
+		 * name to a bounded identifier (no quotes, length 1..64), so it
+		 * neither breaks the XPath literal nor overflows xpath[]. */
 		snprintf(xpath, sizeof(xpath),
 			 "/ietf-system:system/infix-schedule:schedules/schedule[name='%s']", name);
 		result = add_dependencies(diff, xpath, name);

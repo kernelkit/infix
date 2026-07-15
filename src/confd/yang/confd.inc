@@ -58,5 +58,5 @@ MODULES=(
 	"ieee802-dot1as-gptp@2025-12-10.yang"
 	"infix-ptp@2026-04-07.yang"
 	"ietf-schedule@2026-03-10.yang -e icalendar-recurrence"
-	"infix-schedule@2026-06-17.yang"
+	"infix-schedule@2026-07-15.yang"
 )

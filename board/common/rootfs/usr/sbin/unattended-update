@@ -22,10 +22,16 @@ read_reboot_policy() {
 }
 
 # Single-instance guard -- also avoids racing a manual 'upgrade' or an
-# overlapping tick if a previous run is still installing.
+# overlapping tick if a previous run is still installing.  Open the lock
+# explicitly first: a missing or unwritable scratch dir must fail loudly here,
+# not slip through to flock and get misreported as "already in progress".
+if ! { true >> "$LOCKFILE"; } 2>/dev/null; then
+    logger -t "$TAG" "ERROR: cannot open lock $LOCKFILE; is $SCRATCH present and writable?"
+    exit 1
+fi
 exec 9>"$LOCKFILE"
 if ! flock -n 9; then
-    logger -t "$TAG" "An update is already in progress, skipping"
+    logger -t "$TAG" "Another update is already in progress, skipping"
     exit 0
 fi
 

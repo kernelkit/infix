@@ -104,11 +104,14 @@ submodule infix-system-software {
         type string;
         default "https://github.com/kernelkit/infix";
         description
-          "Base URL of the update source, shared by check-update and
-           unattended-update.  The latest release tag is resolved from
-           <update-url>/releases/latest, and the per-platform bundle asset
-           is fetched from that release.  Override for customer-specific
-           channels.";
+          "GitHub repository whose releases provide software updates, shared
+           by check-update and unattended-update.  Must be of the form
+           'https://github.com/<org>/<repo>': the latest release is queried
+           via the GitHub REST API (derived as
+           api.github.com/repos/<org>/<repo>/releases/latest) and the
+           per-platform bundle is fetched from that release's assets.  Only
+           GitHub-hosted repositories are supported; override for a fork or a
+           customer-specific channel.";
       }
 
       container check-update {
