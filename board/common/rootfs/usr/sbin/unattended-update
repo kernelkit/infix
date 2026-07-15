@@ -41,7 +41,7 @@ if [ $rc -eq 1 ]; then
     exit 1
 fi
 if [ $rc -eq 2 ]; then
-    logger -p daemon.info -t "$TAG" "Skipped: could not reach ${API_URL}"
+    logger -p daemon.info -t "$TAG" "Skipped: failed to query latest release from ${API_URL}"
     exit 0
 fi
 
@@ -64,7 +64,6 @@ trap 'rm -f "$PKG"' EXIT
 # The release ships the .pkg inside a tarball, so stream it through tar and
 # write out only the bundle member -- we never store the full archive.
 logger -t "$TAG" "Downloading ${LATEST_TAG} bundle from ${TARBALL_URL}"
-set -o pipefail
 if ! curl -sSfL --max-time 1800 "$TARBALL_URL" | tar -xzOf - "$MEMBER" > "$PKG"; then
     logger -t "$TAG" "ERROR: failed to download or extract '${MEMBER}' from ${TARBALL_URL}"
     exit 1

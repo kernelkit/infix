@@ -13,7 +13,7 @@ if [ $rc -eq 1 ]; then
     exit 1
 fi
 if [ $rc -eq 2 ]; then
-    logger -p daemon.info -t "$TAG" "Update check skipped: could not reach ${API_URL}"
+    logger -p daemon.info -t "$TAG" "Update check skipped: failed to query latest release from ${API_URL}"
     exit 0
 fi
 

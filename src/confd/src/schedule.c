@@ -39,7 +39,8 @@ int schedule_consumer_register(const struct cron_consumer *consumer)
 /* Read-only view of the registered consumers, for the dependency tracker. */
 const struct cron_consumer **schedule_consumers(size_t *count)
 {
-	*count = consumer_count;
+	if (count)
+		*count = consumer_count;
 	return consumers;
 }
 

@@ -2,12 +2,12 @@ Change Log
 ==========
 
 All notable changes to the project are documented in this file.
-[v26.08.0][UNRELEASED] - 
+[v26.08.0][UNRELEASED]
 -------------------------
 ### Changes
 - Add support for unattended software upgrades, letting a unit fetch a newer release on a
   schedule and install it to the inactive partition on its own, then either
-  reboot to activate it or leave it staged for the next reboot
+  reboot to activate it or leave it staged for the next reboot.
 
 ### Fixes
 

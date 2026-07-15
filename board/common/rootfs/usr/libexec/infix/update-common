@@ -17,7 +17,7 @@ newer() {
 }
 
 # Gather running and latest version info.
-# Returns: 0 ok, 1 fatal (no os-release), 2 release API unreachable.
+# Returns: 0 ok, 1 fatal (no os-release), 2 failed to query latest release tag.
 update_probe() {
     if [ ! -f /etc/os-release ]; then
         logger -t "$TAG" "ERROR: /etc/os-release not found"
@@ -38,7 +38,7 @@ update_probe() {
     REPO=$(echo "$UPDATE_URL" | sed 's|https://github.com/||; s|/*$||')
     API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 
-    RELEASE_JSON=$(curl -sSL --max-time 10 "$API_URL" 2>/dev/null)
+    RELEASE_JSON=$(curl -sSfL --max-time 10 "$API_URL" 2>/dev/null) || return 2
     LATEST_TAG=$(printf '%s' "$RELEASE_JSON" | jq -r '.tag_name // empty')
     if [ -z "$LATEST_TAG" ]; then
         return 2
