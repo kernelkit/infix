@@ -1,0 +1,11 @@
+---
+- settings:
+    test-spec: <case>.adoc
+
+- name: RIPv2 Redistribution
+  case: ripv2.py
+  opts: ["--version", "RIPv2"]
+
+- name: RIPng Redistribution
+  case: ripng.py
+  opts: ["--version", "RIPng"]
