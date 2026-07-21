@@ -93,6 +93,9 @@ All notable changes to the project are documented in this file.
   release feed on a schedule and install a newer release to the inactive
   partition on its own, then either reboot to activate it or leave it staged for
   the next reboot
+- Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
+  ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
+  `ripng`/`ospfv3` type and the IPv6 address-family
 
 ### Fixes
 

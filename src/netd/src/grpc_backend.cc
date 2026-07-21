@@ -87,7 +87,8 @@ extern "C" void grpc_backend_cleanup(void)
 	DEBUG("grpc: finalized");
 }
 
-extern "C" int grpc_backend_apply(struct route_head *routes, struct rip_config *rip)
+extern "C" int grpc_backend_apply(struct route_head *routes, struct rip_config *rip,
+				  struct rip_config *ripng)
 {
 	frr::CreateCandidateResponse create_resp;
 	frr::LoadToCandidateResponse load_resp;
@@ -108,6 +109,9 @@ extern "C" int grpc_backend_apply(struct route_head *routes, struct rip_config *
 		ERROR("grpc: not initialized");
 		return -1;
 	}
+
+	if (ripng->enabled)
+		DEBUG("grpc: RIPng not supported via gRPC backend, ignoring");
 
 	/* Build JSON configuration for both static routes and RIP */
 	json_config = build_routing_json(routes, rip);
