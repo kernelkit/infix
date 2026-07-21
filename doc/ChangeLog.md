@@ -43,6 +43,9 @@ All notable changes to the project are documented in this file.
   editor, show mesh peers on the WiFi and interface status pages, and add
   an editor section for access point roaming (802.11k/r/v, band steering,
   OKC).
+- Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
+  ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
+  `ripng`/`ospfv3` type and the IPv6 address-family
 
 ### Fixes
 
