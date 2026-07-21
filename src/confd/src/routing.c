@@ -14,8 +14,13 @@
 #define OSPFD_CONF "/etc/frr/ospfd.conf"
 #define OSPFD_CONF_NEXT OSPFD_CONF "+"
 #define OSPFD_CONF_PREV OSPFD_CONF "-"
+#define OSPF6D_CONF "/etc/frr/ospf6d.conf"
+#define OSPF6D_CONF_NEXT OSPF6D_CONF "+"
+#define OSPF6D_CONF_PREV OSPF6D_CONF "-"
 #define RIPD_SIGNAL "/run/ripd_enabled"
 #define RIPD_SIGNAL_NEXT RIPD_SIGNAL "+"
+#define RIPNGD_SIGNAL "/run/ripngd_enabled"
+#define RIPNGD_SIGNAL_NEXT RIPNGD_SIGNAL "+"
 #define BFDD_SIGNAL "/run/bfd_enabled" /* Just signal that bfd should be enabled*/
 #define BFDD_SIGNAL_NEXT BFDD_SIGNAL "+"
 #define FRR_DAEMONS "/etc/frr/daemons"
@@ -29,14 +34,14 @@ no log unique-id\n\
 log syslog warnings\n\
 log facility local2\n"
 
-int parse_rip(sr_session_ctx_t *session, struct lyd_node *rip, FILE *fp)
+int parse_rip(sr_session_ctx_t *session, struct lyd_node *rip, FILE *fp, int ripng)
 {
 	struct lyd_node *interfaces, *timers, *default_route, *interface, *tmp;
 	const char *default_metric, *distance;
 	int num_interfaces = 0;
 
-	/* Generate libconfuse format for RIP */
-	fputs("\nrip {\n", fp);
+	/* Generate libconfuse format for RIPv2 (rip) or RIPng (ripng) */
+	fputs(ripng ? "\nripng {\n" : "\nrip {\n", fp);
 	fputs("\tenabled = true\n", fp);
 
 	/* Global RIP parameters */
@@ -45,7 +50,7 @@ int parse_rip(sr_session_ctx_t *session, struct lyd_node *rip, FILE *fp)
 		fprintf(fp, "\tdefault-metric = %s\n", default_metric);
 
 	distance = lydx_get_cattr(rip, "distance");
-	if (distance)
+	if (distance && !ripng)	/* FRR ripngd has no 'distance' command */
 		fprintf(fp, "\tdistance = %s\n", distance);
 
 	/* Timers */
@@ -76,12 +81,14 @@ int parse_rip(sr_session_ctx_t *session, struct lyd_node *rip, FILE *fp)
 	/* Debug options - use system commands since FRR doesn't support via northbound */
 	struct lyd_node *debug = lydx_get_child(rip, "debug");
 	if (debug) {
+		const char *proto = ripng ? "ripng" : "rip";
+
 		if (lydx_get_bool(debug, "events"))
-			fputs("\tsystem = \"vtysh -c 'debug rip events'\"\n", fp);
+			fprintf(fp, "\tsystem = \"vtysh -c 'debug %s events'\"\n", proto);
 		if (lydx_get_bool(debug, "packet"))
-			fputs("\tsystem = \"vtysh -c 'debug rip packet'\"\n", fp);
+			fprintf(fp, "\tsystem = \"vtysh -c 'debug %s packet'\"\n", proto);
 		if (lydx_get_bool(debug, "kernel"))
-			fputs("\tsystem = \"vtysh -c 'debug rip zebra'\"\n", fp);
+			fprintf(fp, "\tsystem = \"vtysh -c 'debug %s zebra'\"\n", proto);
 	}
 
 	/* Networks (interfaces) - output as list */
@@ -351,7 +358,7 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	parse_ospf_static_neighbors(areas, fp);
 	default_route = lydx_get_child(ospf, "default-route-advertise");
 	if (default_route) {
-		/* enable is obsolete in favor for enabled. */
+		/* 'enable' is obsolete, superseded by 'enabled'. */
 		if ((lydx_get_child(default_route, "enable") && lydx_get_bool(default_route, "enable"))
 		    || lydx_get_bool(default_route, "enabled")) {
 			fputs("  default-information originate", fp);
@@ -370,10 +377,211 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 		return 0;
 	}
 
+	/* Only ever set the shared BFDD signal here; routing_change resets it
+	 * once per commit so multiple OSPF instances (v2 + v3) don't clobber
+	 * each other's BFD request. */
 	if (bfd_enabled)
 		(void)touch(BFDD_SIGNAL_NEXT);
-	else
-		(void)remove(BFDD_SIGNAL_NEXT);
+
+	return 0;
+}
+
+/*
+ * OSPFv3 (FRR ospf6d) network types: broadcast, point-to-point and
+ * point-to-multipoint.  There is no NBMA/non-broadcast variant, so 'hybrid'
+ * maps to point-to-multipoint; non-broadcast is rejected by YANG for OSPFv3.
+ */
+static const char *ospf6_network_type(const char *yang_type)
+{
+	if (!strcmp(yang_type, "hybrid"))
+		return "point-to-multipoint";
+
+	/* broadcast, point-to-point, point-to-multipoint pass through */
+	return yang_type;
+}
+
+static int parse_ospf6_interfaces(struct lyd_node *areas, FILE *fp)
+{
+	struct lyd_node *interface, *interfaces, *area;
+	int num_bfd_enabled = 0;
+
+	LY_LIST_FOR(lyd_child(areas), area) {
+		const char *area_id;
+
+		interfaces = lydx_get_child(area, "interfaces");
+		area_id = lydx_get_cattr(area, "area-id");
+
+		LY_LIST_FOR(lyd_child(interfaces), interface) {
+			const char *hello, *dead, *retransmit, *transmit, *interface_type, *cost, *priority;
+
+			if (lydx_get_bool(interface, "enabled")) {
+				int passive = 0, bfd_enabled = 0;
+				struct lyd_node *bfd;
+
+				bfd = lydx_get_child(interface, "bfd");
+				bfd_enabled = lydx_get_bool(bfd, "enabled");
+				num_bfd_enabled += bfd_enabled;
+
+				passive = lydx_get_bool(interface, "passive");
+				fprintf(fp, "interface %s\n", lydx_get_cattr(interface, "name"));
+
+				hello = lydx_get_cattr(interface, "hello-interval");
+				dead = lydx_get_cattr(interface, "dead-interval");
+				retransmit = lydx_get_cattr(interface, "retransmit-interval");
+				transmit = lydx_get_cattr(interface, "transmit-delay");
+				interface_type = lydx_get_cattr(interface, "interface-type");
+				cost = lydx_get_cattr(interface, "cost");
+				priority = lydx_get_cattr(interface, "priority");
+
+				/* Set the network type before joining the area; ospf6d
+				 * ignores a network-type change on an interface that is
+				 * already active in OSPF. */
+				if (interface_type)
+					fprintf(fp, "  ipv6 ospf6 network %s\n", ospf6_network_type(interface_type));
+				fprintf(fp, "  ipv6 ospf6 area %s\n", area_id);
+				if (dead)
+					fprintf(fp, "  ipv6 ospf6 dead-interval %s\n", dead);
+				if (hello)
+					fprintf(fp, "  ipv6 ospf6 hello-interval %s\n", hello);
+				if (retransmit)
+					fprintf(fp, "  ipv6 ospf6 retransmit-interval %s\n", retransmit);
+				if (transmit)
+					fprintf(fp, "  ipv6 ospf6 transmit-delay %s\n", transmit);
+				if (priority)
+					fprintf(fp, "  ipv6 ospf6 priority %s\n", priority);
+				if (bfd_enabled)
+					fputs("  ipv6 ospf6 bfd\n", fp);
+				if (passive)
+					fputs("  ipv6 ospf6 passive\n", fp);
+				if (cost)
+					fprintf(fp, "  ipv6 ospf6 cost %s\n", cost);
+			}
+		}
+	}
+
+	return num_bfd_enabled;
+}
+
+static void parse_ospf6_redistribute(struct lyd_node *redistributes, FILE *fp)
+{
+	struct lyd_node *tmp;
+
+	LY_LIST_FOR(lyd_child(redistributes), tmp) {
+		const char *protocol = lydx_get_cattr(tmp, "protocol");
+
+		/* Map the shared Infix redistribute enum to ospf6d sources.
+		 * 'ospf' would mean redistributing OSPFv3 into itself, skip it;
+		 * 'rip' means RIPng for an IPv6 IGP. */
+		if (!strcmp(protocol, "ospf"))
+			continue;
+		if (!strcmp(protocol, "rip"))
+			protocol = "ripng";
+
+		fprintf(fp, "  redistribute %s\n", protocol);
+	}
+}
+
+static int parse_ospf6_areas(struct lyd_node *areas, FILE *fp)
+{
+	int areas_configured = 0;
+	struct lyd_node *area;
+
+	LY_LIST_FOR(lyd_child(areas), area) {
+		const char *area_id, *area_type;
+		int summary;
+
+		area_id = lydx_get_cattr(area, "area-id");
+		area_type = lydx_get_cattr(area, "area-type");
+		summary = lydx_get_bool(area, "summary");
+
+		if (area_type) {
+			/* ospf6d supports 'stub [no-summary]' and 'nssa'; it has
+			 * no 'default-cost' and no totally-NSSA (nssa no-summary). */
+			if (!strcmp(area_type, "ietf-ospf:nssa-area"))
+				fprintf(fp, "  area %s nssa\n", area_id);
+			else if (!strcmp(area_type, "ietf-ospf:stub-area"))
+				fprintf(fp, "  area %s stub %s\n", area_id, !summary ? "no-summary" : "");
+		}
+		areas_configured++;
+	}
+
+	return areas_configured;
+}
+
+int parse_ospf6(sr_session_ctx_t *session, struct lyd_node *ospf)
+{
+	struct lyd_node *areas, *default_route, *debug;
+	const char *router_id;
+	int bfd_enabled = 0;
+	int num_areas = 0;
+	FILE *fp;
+
+	(void)session;
+
+	fp = fopen(OSPF6D_CONF_NEXT, "w");
+	if (!fp) {
+		ERRNO("Failed to open %s", OSPF6D_CONF_NEXT);
+		return SR_ERR_INTERNAL;
+	}
+
+	/* Handle OSPFv3 debug configuration.  ospf6d debug categories differ
+	 * from ospfd; bfd and default-information have no ospf6 equivalent. */
+	debug = lydx_get_child(ospf, "debug");
+	if (debug) {
+		int any_debug = 0;
+
+		if (lydx_get_bool(debug, "packet")) {
+			fputs("debug ospf6 message all\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "ism")) {
+			fputs("debug ospf6 interface\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "nsm")) {
+			fputs("debug ospf6 neighbor\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "nssa")) {
+			fputs("debug ospf6 nssa\n", fp);
+			any_debug = 1;
+		}
+
+		if (any_debug) {
+			fputs("log syslog debugging\n", fp);
+			fputs("!\n", fp);
+		}
+	}
+
+	areas = lydx_get_child(ospf, "areas");
+	router_id = lydx_get_cattr(ospf, "explicit-router-id");
+	bfd_enabled = parse_ospf6_interfaces(areas, fp);
+	fputs("router ospf6\n", fp);
+	num_areas = parse_ospf6_areas(areas, fp);
+	parse_ospf6_redistribute(lydx_get_child(ospf, "redistribute"), fp);
+	default_route = lydx_get_child(ospf, "default-route-advertise");
+	if (default_route) {
+		/* 'enable' is obsolete, superseded by 'enabled'. */
+		if ((lydx_get_child(default_route, "enable") && lydx_get_bool(default_route, "enable"))
+		    || lydx_get_bool(default_route, "enabled")) {
+			fputs("  default-information originate", fp);
+			if (lydx_get_bool(default_route, "always"))
+				fputs(" always", fp);
+			fputs("\n", fp);
+		}
+	}
+
+	if (router_id)
+		fprintf(fp, "  ospf6 router-id %s\n", router_id);
+	fclose(fp);
+
+	if (!num_areas) {
+		(void)remove(OSPF6D_CONF_NEXT);
+		return 0;
+	}
+
+	if (bfd_enabled)
+		(void)touch(BFDD_SIGNAL_NEXT);
 
 	return 0;
 }
@@ -443,7 +651,7 @@ static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *paren
  * Generate the complete /etc/frr/daemons file.  Written atomically as a
  * single unit so the file is always consistent and easy to read.
  */
-static void frr_daemons_write(int ospfd, int ripd, int bfdd)
+static void frr_daemons_write(int ospfd, int ospf6d, int ripd, int ripngd, int bfdd)
 {
 	const char *next = FRR_DAEMONS "+";
 	FILE *fp;
@@ -459,11 +667,11 @@ static void frr_daemons_write(int ospfd, int ripd, int bfdd)
 	fprintf(fp,
 		"# Generated by Infix confd\n"
 		"ospfd=%s\n"
+		"ospf6d=%s\n"
 		"ripd=%s\n"
+		"ripngd=%s\n"
 		"bfdd=%s\n"
 		"bgpd=no\n"
-		"ospf6d=no\n"
-		"ripngd=no\n"
 		"isisd=no\n"
 		"pimd=no\n"
 		"pim6d=no\n"
@@ -473,9 +681,11 @@ static void frr_daemons_write(int ospfd, int ripd, int bfdd)
 		"vrrpd=no\n"
 		"pathd=no\n"
 		"\n",
-		ospfd ? "yes" : "no",
-		ripd  ? "yes" : "no",
-		bfdd  ? "yes" : "no");
+		ospfd  ? "yes" : "no",
+		ospf6d ? "yes" : "no",
+		ripd   ? "yes" : "no",
+		ripngd ? "yes" : "no",
+		bfdd   ? "yes" : "no");
 
 	/* Global settings and per-daemon options */
 	fputs(
@@ -484,7 +694,9 @@ static void frr_daemons_write(int ospfd, int ripd, int bfdd)
 		"zebra_options=\"  -A 127.0.0.1 -s 90000000\"\n"
 		"mgmtd_options=\"  -A 127.0.0.1\"\n"
 		"ospfd_options=\"  -A 127.0.0.1\"\n"
+		"ospf6d_options=\" -A 127.0.0.1\"\n"
 		"ripd_options=\"   -A 127.0.0.1\"\n"
+		"ripngd_options=\" -A 127.0.0.1\"\n"
 		"staticd_options=\"-A 127.0.0.1\"\n"
 		"bfdd_options=\"   -A 127.0.0.1\"\n"
 		"\n"
@@ -498,7 +710,7 @@ static void frr_daemons_write(int ospfd, int ripd, int bfdd)
 
 int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	int netd_enabled = 0, ospfd_enabled = 0, bfdd_enabled = 0, ripd_enabled = 0;
+	int netd_enabled = 0, ospfd_enabled = 0, ospf6d_enabled = 0, bfdd_enabled = 0, ripd_enabled = 0, ripngd_enabled = 0;
 	struct lyd_node *cplane, *cplanes;
 	int rc = SR_ERR_OK;
 	FILE *fp;
@@ -521,13 +733,19 @@ int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 		/* Check if passed validation in previous event */
 		netd_enabled = fexist(NETD_CONF_NEXT);
 		ospfd_enabled = fexist(OSPFD_CONF_NEXT);
+		ospf6d_enabled = fexist(OSPF6D_CONF_NEXT);
 		bfdd_enabled = fexist(BFDD_SIGNAL_NEXT);
 		ripd_enabled = fexist(RIPD_SIGNAL_NEXT);
+		ripngd_enabled = fexist(RIPNGD_SIGNAL_NEXT);
 		goto activate;
 
 	default:
 		return SR_ERR_OK;
 	}
+
+	/* Reset the shared BFDD signal; parse_ospf/parse_ospf6 re-set it if any
+	 * OSPF instance enables BFD this commit. */
+	(void)remove(BFDD_SIGNAL_NEXT);
 
 	cplanes = lydx_get_descendant(config, "routing", "control-plane-protocols", "control-plane-protocol", NULL);
 
@@ -550,10 +768,18 @@ int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 				netd_enabled = 1;
 		} else if (!strcmp(type, "infix-routing:ospfv2")) {
 			parse_ospf(session, lydx_get_child(cplane, "ospf"));
+		} else if (!strcmp(type, "infix-routing:ospfv3")) {
+			parse_ospf6(session, lydx_get_child(cplane, "ospf"));
 		} else if (!strcmp(type, "infix-routing:ripv2")) {
-			num = parse_rip(session, lydx_get_child(cplane, "rip"), fp);
+			num = parse_rip(session, lydx_get_child(cplane, "rip"), fp, 0);
 			if (num > 0) {
 				touch(RIPD_SIGNAL_NEXT);
+				netd_enabled = 1;
+			}
+		} else if (!strcmp(type, "infix-routing:ripng")) {
+			num = parse_rip(session, lydx_get_child(cplane, "rip"), fp, 1);
+			if (num > 0) {
+				touch(RIPNGD_SIGNAL_NEXT);
 				netd_enabled = 1;
 			}
 		}
@@ -569,12 +795,14 @@ int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 	/* For SR_EV_ENABLED we activate immediately (no SR_EV_DONE follows) */
 	netd_enabled = fexist(NETD_CONF_NEXT);
 	ospfd_enabled = fexist(OSPFD_CONF_NEXT);
+	ospf6d_enabled = fexist(OSPF6D_CONF_NEXT);
 	bfdd_enabled = fexist(BFDD_SIGNAL_NEXT);
 	ripd_enabled = fexist(RIPD_SIGNAL_NEXT);
+	ripngd_enabled = fexist(RIPNGD_SIGNAL_NEXT);
 
 activate:
 	/* Generate complete /etc/frr/daemons (for watchfrr/frrinit.sh) */
-	frr_daemons_write(ospfd_enabled, ripd_enabled, bfdd_enabled);
+	frr_daemons_write(ospfd_enabled, ospf6d_enabled, ripd_enabled, ripngd_enabled, bfdd_enabled);
 
 	if (bfdd_enabled)
 		(void)rename(BFDD_SIGNAL_NEXT, BFDD_SIGNAL);
@@ -589,10 +817,23 @@ activate:
 		(void)remove(OSPFD_CONF);
 	}
 
+	if (ospf6d_enabled) {
+		(void)remove(OSPF6D_CONF_PREV);
+		(void)rename(OSPF6D_CONF, OSPF6D_CONF_PREV);
+		(void)rename(OSPF6D_CONF_NEXT, OSPF6D_CONF);
+	} else {
+		(void)remove(OSPF6D_CONF);
+	}
+
 	if (ripd_enabled)
 		(void)rename(RIPD_SIGNAL_NEXT, RIPD_SIGNAL);
 	else
 		(void)remove(RIPD_SIGNAL);
+
+	if (ripngd_enabled)
+		(void)rename(RIPNGD_SIGNAL_NEXT, RIPNGD_SIGNAL);
+	else
+		(void)remove(RIPNGD_SIGNAL);
 
 	/* netd handles both static routes and RIP, assembles frr.conf */
 	if (netd_enabled) {
@@ -608,8 +849,12 @@ activate:
 	ospfd_enabled ? finit_enable("ospfd") : finit_disable("ospfd");
 	if (ospfd_enabled)
 		finit_reload("ospfd");
-	ripd_enabled  ? finit_enable("ripd")  : finit_disable("ripd");
-	bfdd_enabled  ? finit_enable("bfdd")  : finit_disable("bfdd");
+	ospf6d_enabled ? finit_enable("ospf6d") : finit_disable("ospf6d");
+	if (ospf6d_enabled)
+		finit_reload("ospf6d");
+	ripd_enabled   ? finit_enable("ripd")   : finit_disable("ripd");
+	ripngd_enabled ? finit_enable("ripngd") : finit_disable("ripngd");
+	bfdd_enabled   ? finit_enable("bfdd")   : finit_disable("bfdd");
 
 	/*
 	 * Signal netd to reload - it assembles /etc/frr/frr.conf and

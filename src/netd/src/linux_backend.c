@@ -406,7 +406,8 @@ static int kernel_read_routes(struct route_head *routes, int family)
 	return 0;
 }
 
-int linux_backend_apply(struct route_head *routes, struct rip_config *rip)
+int linux_backend_apply(struct route_head *routes, struct rip_config *rip,
+			struct rip_config *ripng)
 {
 	struct route_head kernel_routes = TAILQ_HEAD_INITIALIZER(kernel_routes);
 	struct route *r, *tmp;
@@ -414,8 +415,8 @@ int linux_backend_apply(struct route_head *routes, struct rip_config *rip)
 	int errors = 0;
 	int added = 0;
 
-	if (rip->enabled)
-		DEBUG("Linux backend: RIP not supported without FRR");
+	if (rip->enabled || ripng->enabled)
+		DEBUG("Linux backend: RIP/RIPng not supported without FRR");
 
 	/* Read current static routes from kernel (both IPv4 and IPv6) */
 	kernel_read_routes(&kernel_routes, AF_INET);

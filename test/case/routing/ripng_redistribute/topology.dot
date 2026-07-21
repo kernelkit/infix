@@ -1,0 +1,39 @@
+graph "ripng-redistribute" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+	size=10
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	PC [
+	    label="PC | { <mgmt3> mgmt3 | \n\n | <mgmt1> mgmt1 | \n\n | <mgmt2> mgmt2 }",
+	    pos="20,50!",
+	    requires="controller",
+	];
+
+	R3 [
+	    label="{ <mgmt> mgmt | <link> link } | R3 (OSPFv3) \n 2001:db8:100::1/128 \n(lo)",
+	    pos="100,100!",
+	    requires="infix",
+	];
+
+        R1 [
+	    label="{  <ospf> ospf | <mgmt> mgmt | <rip> rip } | R1 (ASBR)",
+	    pos="91,50!",
+	    requires="infix",
+	];
+
+	R2 [
+	    label="{ <link> link | <mgmt> mgmt } | R2 (RIPng) \n 2001:db8:200::1/128 \n(lo)",
+	    pos="100,10!",
+	    requires="infix",
+	];
+
+	PC:mgmt3 -- R3:mgmt [requires="mgmt", color="lightgray"]
+	PC:mgmt1 -- R1:mgmt [requires="mgmt", color="lightgray"]
+	PC:mgmt2 -- R2:mgmt [requires="mgmt", color="lightgray"]
+	R3:link -- R1:ospf  [label="2001:db8:60::/64", headlabel="::1", taillabel="::2", labeldistance=2, fontcolor="black", color="blue"]
+	R1:rip -- R2:link  [label="2001:db8:50::/64", headlabel="::2", taillabel="::1", labeldistance=2, fontcolor="black", color="black"]
+}

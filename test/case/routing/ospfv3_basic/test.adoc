@@ -1,0 +1,31 @@
+=== OSPFv3 Basic
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/ospfv3_basic]
+
+==== Description
+
+Verifies basic OSPFv3 (OSPF for IPv6) functionality by configuring two routers
+(R1 and R2) with OSPFv3 on their interconnecting link.  The test ensures OSPFv3
+neighbors are established, routes are exchanged between the routers, and
+end-to-end IPv6 connectivity is achieved.
+
+An end-device (HOST) is connected to R2 on an interface without OSPFv3 enabled.
+This verifies that OSPFv3 status information remains accessible when a router
+has non-OSPFv3 interfaces.
+
+Note: OSPFv3 has no IPv4 address to derive a router-id from, so an
+explicit-router-id is configured on every router.
+
+==== Topology
+
+image::topology.svg[OSPFv3 Basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUTs
+. Configure targets
+. Wait for OSPFv3 routes
+. Verify R2 OSPFv3 neighbors with non-OSPFv3 interface
+. Test connectivity from PC:data to 2001:db8:200::1
+
+

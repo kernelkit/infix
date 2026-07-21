@@ -5016,16 +5016,30 @@ def show_firewall_address_set(json, name=None):
             print("No address-sets configured")
 
 
+def _find_ospf_instance(json_data):
+    """Select the OSPF control-plane-protocol matching the requested address
+    family.  json_data may carry an '_afi' hint ('ipv4' or 'ipv6', default
+    'ipv4'); falls back to the first OSPF instance for backward compat."""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+    want_type = 'ospfv3' if json_data.get('_afi') == 'ipv6' else 'ospfv2'
+    fallback = None
+    for protocol in protocols:
+        if 'ietf-ospf:ospf' not in protocol:
+            continue
+        if fallback is None:
+            fallback = protocol
+        if want_type in protocol.get('type', ''):
+            return protocol
+    return fallback
+
+
 def show_ospf(json_data):
     """Show OSPF general instance information"""
     routing = json_data.get('ietf-routing:routing', {})
     protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
 
-    ospf_instance = None
-    for protocol in protocols:
-        if 'ietf-ospf:ospf' in protocol:
-            ospf_instance = protocol
-            break
+    ospf_instance = _find_ospf_instance(json_data)
 
     if not ospf_instance:
         print("OSPF is not configured or running")
@@ -5096,11 +5110,7 @@ def show_ospf_interfaces(json_data):
     routing = json_data.get('ietf-routing:routing', {})
     protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
 
-    ospf_instance = None
-    for protocol in protocols:
-        if 'ietf-ospf:ospf' in protocol:
-            ospf_instance = protocol
-            break
+    ospf_instance = _find_ospf_instance(json_data)
 
     if not ospf_instance:
         print("OSPF is not configured or running")
@@ -5319,11 +5329,7 @@ def show_ospf_neighbor(json_data):
     routing = json_data.get('ietf-routing:routing', {})
     protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
 
-    ospf_instance = None
-    for protocol in protocols:
-        if 'ietf-ospf:ospf' in protocol:
-            ospf_instance = protocol
-            break
+    ospf_instance = _find_ospf_instance(json_data)
 
     if not ospf_instance:
         print("OSPF is not configured or running")
@@ -5405,11 +5411,7 @@ def show_ospf_routes(json_data):
     routing = json_data.get('ietf-routing:routing', {})
     protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
 
-    ospf_instance = None
-    for protocol in protocols:
-        if 'ietf-ospf:ospf' in protocol:
-            ospf_instance = protocol
-            break
+    ospf_instance = _find_ospf_instance(json_data)
 
     if not ospf_instance:
         print("OSPF is not configured or running")
