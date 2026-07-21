@@ -1,0 +1,76 @@
+=== OSPFv3 with Multiple Areas
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/ospf_multiarea]
+
+==== Description
+
+This test evaluates various OSPFv3 features across three areas (one NSSA
+area) to ensure that route distribution is deterministic (based on cost).  It
+also tests link failures using BFD, though BFD is not yet implemented in test
+framework (Infamy).
+
+This test also verifies broadcast and point-to-point interface types on the
+transit links, and explicit router-id.
+
+OSPFv2 runs the NSSA area as totally-NSSA (summary false), so R3 must see a
+default route and none of the area 0 networks.  OSPFv3 has no totally-NSSA, so
+there R3 is expected to learn the same networks as inter-area summaries.
+....
+                     Area 0
+              +--------+   +--------+
+              |   R1   +---+   R2   |
+              |  (lo)  |   |  (lo)  |
+              +---+----+   +----+---+
+                  |             |
+          Area 2  |             |  Area 1
+                  |             |
+              +---+----+   +----+---+
+              |   R4   |   |   R3   |
+              |  (lo)  |   |  (lo)  |
+              +---+----+   +----+---+
+          R4:data |             | R3:data
+                  |             |
+             PC:data4      PC:data3
+
+  Cross links: R1 - R3 (Area 1), R2 - R4 (Area 2)
+....
+The test is run once per address family, with the following addresses:
+
+[cols="2,2,2",options="header"]
+|===
+|Node                 |IPv4          |IPv6
+|R1 lo                |10.0.0.1/32   |2001:db8::1/128
+|R2 lo                |10.0.0.2/32   |2001:db8::2/128
+|R3 lo                |10.0.0.3/32   |2001:db8::3/128
+|R4 lo                |10.0.0.4/32   |2001:db8::4/128
+|R1 stub (lo)         |11.0.8.0/24   |2001:db8:8::/64
+|R2 stubs (lo)        |11.0.9.0/24 - 11.0.15.0/24 |2001:db8:200::/64 - 2001:db8:206::/64
+|R1 - R2 (Area 0)     |10.0.12.0/30  |2001:db8:12::/64
+|R2 - R3 (Area 1)     |10.0.23.0/30  |2001:db8:23::/64
+|R1 - R3 (Area 1)     |10.0.13.0/30  |2001:db8:13::/64
+|R4 - R1 (Area 2)     |10.0.41.0/30  |2001:db8:41::/64
+|R2 - R4 (Area 2)     |10.0.24.0/30  |2001:db8:24::/64
+|R3:data - PC:data3   |192.168.3.0/24 |2001:db8:3::/64
+|R4:data - PC:data4   |192.168.4.0/24 |2001:db8:4::/64
+|===
+
+==== Topology
+
+image::topology.svg[OSPFv3 with Multiple Areas topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUTs
+. Configure targets
+. Wait for all neighbors to peer
+. Wait for routes from OSPFv3 on all routers
+. Verify Area 0.0.0.1 on R3 is NSSA area
+. Verify R1:ring2 is of type point-to-point
+. Verify R4:ring1 is of type point-to-point
+. Verify what the NSSA area lets through to R3
+. Testing connectivity through NSSA area, from PC:data3 to R1's stub network
+. Verify that the route to R3 from PC:data4 goes through R1
+. Break link R1:ring2 --- R4:ring1
+. Verify that the route to R3 from PC:data4 fails over through R2
+
+
