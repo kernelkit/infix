@@ -1,4 +1,7 @@
 graph "3r-p2mp" {
+	labelloc="b";
+	label="IPv4 addresses shown, the IPv6 run uses the matching 2001:db8: prefixes";
+	fontname="DejaVu Serif, Book";
 	layout="neato";
 	overlap="false";
 	esep="+20";

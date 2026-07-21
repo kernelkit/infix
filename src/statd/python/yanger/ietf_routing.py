@@ -52,6 +52,7 @@ def add_protocol(routes, proto):
         'ospf': 'ietf-ospf:ospfv2',
         'ospf6': 'ietf-ospf:ospfv3',
         'rip': 'ietf-rip:rip',
+        'ripng': 'ietf-rip:rip',
     }
 
     out = {}

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""RIP Multi-hop
+"""{version} Multi-hop
 
-Verifies RIP functionality across multiple hops with three routers in a line
-topology (R1 -- R2 -- R3). This test ensures:
+Verifies {version} functionality across multiple hops with three routers in a
+line topology (R1 -- R2 -- R3). This test ensures:
 - RIP routes propagate through multiple hops
 - R2 (middle router) has two RIP neighbors
 - End-to-end connectivity works across the RIP network
@@ -16,224 +16,140 @@ import infamy.route as route
 from infamy.util import until, parallel
 
 
-def config_r1(target, data, link):
+class ArgumentParser(infamy.ArgumentParser):
+    def __init__(self):
+        super().__init__()
+        self.add_argument("--version", type=str.lower, choices=["ripv2", "ripng"])
+
+
+PARAM = {
+    "ripv2": {
+        "af":      "ipv4",
+        "len":     24,
+        "hostlen": 32,
+        "R1data":  "192.168.10.1",
+        "R1link":  "192.168.50.1",
+        "R1lo":    "192.168.11.1",
+        "R2west":  "192.168.50.2",
+        "R2east":  "192.168.60.1",
+        "R2lo":    "192.168.22.1",
+        "R3link":  "192.168.60.2",
+        "R3data":  "192.168.70.1",
+        "R3lo":    "192.168.33.1",
+        "R1net":   "192.168.10.0/24",
+        "R3net":   "192.168.70.0/24",
+        "PC1":     "192.168.10.2",
+        "PC2":     "192.168.70.2",
+        # RIPv2 peers over the interface addresses, RIPng over link-local
+        "neighbors": ["192.168.50.1", "192.168.60.2"],
+    },
+    "ripng": {
+        "af":      "ipv6",
+        "len":     64,
+        "hostlen": 128,
+        "R1data":  "2001:db8:10::1",
+        "R1link":  "2001:db8:50::1",
+        "R1lo":    "2001:db8:11::1",
+        "R2west":  "2001:db8:50::2",
+        "R2east":  "2001:db8:60::1",
+        "R2lo":    "2001:db8:22::1",
+        "R3link":  "2001:db8:60::2",
+        "R3data":  "2001:db8:70::1",
+        "R3lo":    "2001:db8:33::1",
+        "R1net":   "2001:db8:10::/64",
+        "R3net":   "2001:db8:70::/64",
+        "PC1":     "2001:db8:10::2",
+        "PC2":     "2001:db8:70::2",
+    },
+}
+
+
+def iface(p, name, addr, prefix_length=None, forwarding=True):
+    """Interface with a single address of the tested address family"""
+    ip = {"address": [{"ip": addr, "prefix-length": prefix_length or p["len"]}]}
+    if forwarding:
+        ip["forwarding"] = True
+
+    return {"name": name, "enabled": True, p["af"]: ip}
+
+
+def rip(p, links):
+    return {
+        "type": f"infix-routing:{p['version']}",
+        "name": "default",
+        "rip": {
+            "timers": {
+                "update-interval": 5,
+                "invalid-interval": 15,
+                "flush-interval": 20
+            },
+            "redistribute": {
+                "redistribute": [{
+                    "protocol": "connected"
+                }]
+            },
+            "interfaces": {
+                "interface": [{"interface": link} for link in links]
+            }
+        }
+    }
+
+
+def config_router(target, name, interfaces, links, p):
+    """One router, 'interfaces' are (ifname, address) and 'links' run RIP"""
     target.put_config_dicts({
         "ietf-interfaces": {
             "interfaces": {
-                "interface": [{
-                    "name": data,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.10.1",
-                            "prefix-length": 24
-                        }]
-                    }
-                }, {
-                    "name": link,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.50.1",
-                            "prefix-length": 24
-                        }]
-                    }
-                }, {
-                    "name": "lo",
-                    "enabled": True,
-                    "ipv4": {
-                        "address": [{
-                            "ip": "192.168.11.1",
-                            "prefix-length": 32
-                        }]
-                    }
-                }]
+                "interface": [iface(p, ifname, addr) for ifname, addr in interfaces] +
+                             [iface(p, "lo", p[f"{name}lo"], p["hostlen"], forwarding=False)]
             }
         },
         "ietf-system": {
             "system": {
-                "hostname": "R1"
+                "hostname": name
             }
         },
         "ietf-routing": {
             "routing": {
                 "control-plane-protocols": {
-                    "control-plane-protocol": [{
-                        "type": "infix-routing:ripv2",
-                        "name": "default",
-                        "rip": {
-                            "timers": {
-                                "update-interval": 5,
-                                "invalid-interval": 15,
-                                "flush-interval": 20
-                            },
-                            "redistribute": {
-                                "redistribute": [{
-                                    "protocol": "connected"
-                                }]
-                            },
-                            "interfaces": {
-                                "interface": [{
-                                    "interface": link
-                                }]
-                            }
-                        }
-                    }]
+                    "control-plane-protocol": [rip(p, links)]
                 }
             }
         }
     })
 
 
-def config_r2(target, west, east):
-    target.put_config_dicts({
-        "ietf-interfaces": {
-            "interfaces": {
-                "interface": [{
-                    "name": west,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.50.2",
-                            "prefix-length": 24
-                        }]
-                    }
-                }, {
-                    "name": east,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.60.1",
-                            "prefix-length": 24
-                        }]
-                    }
-                }, {
-                    "name": "lo",
-                    "enabled": True,
-                    "ipv4": {
-                        "address": [{
-                            "ip": "192.168.22.1",
-                            "prefix-length": 32
-                        }]
-                    }
-                }]
-            }
-        },
-        "ietf-system": {
-            "system": {
-                "hostname": "R2"
-            }
-        },
-        "ietf-routing": {
-            "routing": {
-                "control-plane-protocols": {
-                    "control-plane-protocol": [{
-                        "type": "infix-routing:ripv2",
-                        "name": "default",
-                        "rip": {
-                            "timers": {
-                                "update-interval": 5,
-                                "invalid-interval": 15,
-                                "flush-interval": 20
-                            },
-                            "redistribute": {
-                                "redistribute": [{
-                                    "protocol": "connected"
-                                }]
-                            },
-                            "interfaces": {
-                                "interface": [{
-                                    "interface": west
-                                }, {
-                                    "interface": east
-                                }]
-                            }
-                        }
-                    }]
-                }
-            }
-        }
-    })
+def rip_neighbors(target, p):
+    """RIP neighbor addresses of an instance, as reported in operational data"""
+    routing_data = target.get_data("/ietf-routing:routing/control-plane-protocols")
+    protocols = routing_data.get("routing", {}).get("control-plane-protocols", {}).get("control-plane-protocol", [])
+    if not protocols:
+        raise Exception("No protocols found")
 
+    rip = None
+    for protocol in protocols:
+        if protocol.get("type") == f"infix-routing:{p['version']}" and protocol.get("name") == "default":
+            rip = protocol.get("rip", {})
+            break
 
-def config_r3(target, link, data):
-    target.put_config_dicts({
-        "ietf-interfaces": {
-            "interfaces": {
-                "interface": [{
-                    "name": link,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.60.2",
-                            "prefix-length": 24
-                        }]
-                    }
-                }, {
-                    "name": data,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.70.1",
-                            "prefix-length": 24
-                        }]
-                    }
-                }, {
-                    "name": "lo",
-                    "enabled": True,
-                    "ipv4": {
-                        "address": [{
-                            "ip": "192.168.33.1",
-                            "prefix-length": 32
-                        }]
-                    }
-                }]
-            }
-        },
-        "ietf-system": {
-            "system": {
-                "hostname": "R3"
-            }
-        },
-        "ietf-routing": {
-            "routing": {
-                "control-plane-protocols": {
-                    "control-plane-protocol": [{
-                        "type": "infix-routing:ripv2",
-                        "name": "default",
-                        "rip": {
-                            "timers": {
-                                "update-interval": 5,
-                                "invalid-interval": 15,
-                                "flush-interval": 20
-                            },
-                            "redistribute": {
-                                "redistribute": [{
-                                    "protocol": "connected"
-                                }]
-                            },
-                            "interfaces": {
-                                "interface": [{
-                                    "interface": link
-                                }]
-                            }
-                        }
-                    }]
-                }
-            }
-        }
-    })
+    if not rip:
+        raise Exception("RIP protocol not found in control-plane-protocols")
+
+    neighbors = rip.get(p["af"], {}).get("neighbors", {}).get("neighbor", [])
+
+    return [neighbor.get(f"{p['af']}-address") for neighbor in neighbors]
 
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
-        env = infamy.Env()
+        env = infamy.Env(args=ArgumentParser())
+        version = env.args.version
+        param = PARAM[version] | {"version": version}
+        af, plen = param["af"], param["hostlen"]
+
+        def lo(name):
+            return f"{param[f'{name}lo']}/{plen}"
+
         R1, R2, R3 = parallel(lambda: env.attach("R1", "mgmt"),
                               lambda: env.attach("R2", "mgmt"),
                               lambda: env.attach("R3", "mgmt"))
@@ -246,73 +162,54 @@ with infamy.Test() as test:
         _, R3link = env.ltop.xlate("R3", "link")
         _, R3data = env.ltop.xlate("R3", "data")
 
-        parallel(lambda: config_r1(R1, R1data, R1link),
-                 lambda: config_r2(R2, R2west, R2east),
-                 lambda: config_r3(R3, R3link, R3data))
+        parallel(lambda: config_router(R1, "R1", [(R1data, param["R1data"]),
+                                                  (R1link, param["R1link"])], [R1link], param),
+                 lambda: config_router(R2, "R2", [(R2west, param["R2west"]),
+                                                  (R2east, param["R2east"])], [R2west, R2east], param),
+                 lambda: config_router(R3, "R3", [(R3link, param["R3link"]),
+                                                  (R3data, param["R3data"])], [R3link], param))
 
-    with test.step("Wait for RIP routes to be exchanged"):
+    with test.step(f"Wait for {version} routes to be exchanged"):
         print("Waiting for RIP routes to propagate...")
         # R1 should learn R2's loopback
-        until(lambda: route.ipv4_route_exist(R1, "192.168.22.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R1, lo("R2"), af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
         # R1 should learn R3's loopback (via R2)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.33.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R1, lo("R3"), af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
         # R2 should learn R1's loopback
-        until(lambda: route.ipv4_route_exist(R2, "192.168.11.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R2, lo("R1"), af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
         # R2 should learn R3's loopback
-        until(lambda: route.ipv4_route_exist(R2, "192.168.33.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R2, lo("R3"), af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
         # R3 should learn R2's loopback
-        until(lambda: route.ipv4_route_exist(R3, "192.168.22.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R3, lo("R2"), af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
         # R3 should learn R1's loopback (via R2)
-        until(lambda: route.ipv4_route_exist(R3, "192.168.11.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
-        until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", proto="ietf-rip:rip", active_check=True), attempts=40)
-        until(lambda: route.ipv4_route_exist(R3, "192.168.10.0/24", proto="ietf-rip:rip", active_check=True), attempts=40)
-        until(lambda: route.ipv4_route_exist(R2, "192.168.70.0/24", proto="ietf-rip:rip", active_check=True), attempts=40)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.70.0/24", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R3, lo("R1"), af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R2, param["R1net"], af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R3, param["R1net"], af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R2, param["R3net"], af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.route_exist(R1, param["R3net"], af=af, proto="ietf-rip:rip", active_check=True), attempts=40)
 
-    with test.step("Verify R2 has two RIP neighbors"):
+    with test.step(f"Verify R2 has two {version} neighbors"):
         print("Checking R2 has two RIP neighbors...")
-        # R2 should have neighbors: 192.168.50.1 (R1) and 192.168.60.2 (R3)
-        # Query without predicates to avoid RESTCONF encoding issues
-        routing_data = R2.get_data("/ietf-routing:routing/control-plane-protocols")
+        neighbors = rip_neighbors(R2, param)
+        assert len(neighbors) == 2, f"Expected 2 neighbors, found {len(neighbors)}"
 
-        # Navigate to RIP protocol
-        protocols = routing_data.get("routing", {}).get("control-plane-protocols", {}).get("control-plane-protocol", [])
-        if not protocols:
-            raise Exception("No protocols found")
-
-        # Find RIP protocol
-        rip = None
-        for protocol in protocols:
-            if protocol.get("type") == "infix-routing:ripv2" and protocol.get("name") == "default":
-                rip = protocol.get("rip", {})
-                break
-
-        if not rip:
-            raise Exception("RIP protocol not found in control-plane-protocols")
-
-        ipv4_data = rip.get("ipv4", {})
-        neighbors_data = ipv4_data.get("neighbors", {})
-        neighbor_list = neighbors_data.get("neighbor", [])
-
-        assert len(neighbor_list) == 2, f"Expected 2 neighbors, found {len(neighbor_list)}"
-
-        neighbor_ips = [n.get("ipv4-address") for n in neighbor_list]
-        assert "192.168.50.1" in neighbor_ips, "R1 not in neighbor list"
-        assert "192.168.60.2" in neighbor_ips, "R3 not in neighbor list"
-        print(f"R2 has correct neighbors: {neighbor_ips}")
+        # RIPng peers over link-local addresses, which are not known in advance
+        for peer in param.get("neighbors", []):
+            assert peer in neighbors, f"{peer} not in neighbor list"
+        print(f"R2 has correct neighbors: {neighbors}")
 
     with test.step("Test end-to-end connectivity PC:data1 to R3 loopback"):
         _, hport1 = env.ltop.xlate("PC", "data1")
         with infamy.IsolatedMacVlan(hport1) as ns1:
-            ns1.addip("192.168.10.2")
-            ns1.addroute("192.168.33.1/32", "192.168.10.1")
-            ns1.must_reach("192.168.33.1")
+            ns1.addip(param["PC1"], prefix_length=param["len"], proto=af)
+            ns1.addroute(lo("R3"), param["R1data"], proto=af)
+            ns1.must_reach(param["R3lo"])
 
     with test.step("Test end-to-end connectivity PC:data2 to R1 loopback"):
         _, hport2 = env.ltop.xlate("PC", "data2")
         with infamy.IsolatedMacVlan(hport2) as ns2:
-            ns2.addip("192.168.70.2")
-            ns2.addroute("192.168.11.1/32", "192.168.70.1")
-            ns2.must_reach("192.168.11.1")
+            ns2.addip(param["PC2"], prefix_length=param["len"], proto=af)
+            ns2.addroute(lo("R1"), param["R3data"], proto=af)
+            ns2.must_reach(param["R1lo"])
 
     test.succeed()

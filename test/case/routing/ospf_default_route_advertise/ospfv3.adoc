@@ -1,18 +1,18 @@
-=== OSPF Default Route Advertise
+=== OSPFv3 Default Route Advertise
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/ospf_default_route_advertise]
 
 ==== Description
 
-Verify _default-route-advertising_ in OSPF, sometimes called 'redistribute origin'. Verify both
-always (regardless if a local default route exist or not) and only redistribute
-when local default route exist.
+Verify _default-route-advertising_ in OSPFv3, sometimes called 'redistribute
+origin'.  Verify both 'always' (regardless of whether a local default route
+exists) and the conditional mode (only redistribute when a local default route
+exists).
 
-The test is performed by setting a default route on R1 to 192.168.10.2, and setting
-_default-route-advertising_ in OSPF, this will result that R2 will see a default route.
-
-When set interface R1:data down, OSPF will no longer redistribute default route to R2,
-unless _always_ is set for _default-route-advertising_.
+R1 has a default route via its data interface and enables
+default-route-advertise, so R2 learns a default route via OSPFv3.  When
+R1:data is taken down the local default is withdrawn and R2 loses the default
+route, unless 'always' is set.
 ....
  +-------------------+      Area 0            +------------------+
  |       R1          |.1  192.168.50.0/24   .2|      R2          |
@@ -30,10 +30,12 @@ unless _always_ is set for _default-route-advertising_.
           |                                               |
           +-----------------------------------------------+
 ....
+The OSPFv3 run uses the same topology with 2001:db8:10::/64,
+2001:db8:20::/64 and 2001:db8:50::/64 respectively.
 
 ==== Topology
 
-image::topology.svg[OSPF Default Route Advertise topology, align=center, scaledwidth=75%]
+image::topology.svg[OSPFv3 Default Route Advertise topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 
@@ -41,14 +43,14 @@ image::topology.svg[OSPF Default Route Advertise topology, align=center, scaledw
 . Configure targets
 . Verify R1 has an active static default route
 . Wait for all neighbors to peer
-. Verify R2 has a default route and 192.168.100.1/32 from OSPF
-. Verify connectivity from PC:data2 to 10.10.10.10
+. Verify R2 has a default route and R1's loopback from OSPFv3
+. Verify connectivity from PC:data2 to R1's dummy interface
 . Disable link PC:data1 <--> R1:data (take default gateway down)
-. Verify R2 does not have a default route but a 192.168.100.1/32 from OSPF
-. Verify no connectivity from PC:data2 to 10.10.10.10
+. Verify R2 loses the default route but keeps R1's loopback from OSPFv3
+. Verify no connectivity from PC:data2 to R1's dummy interface
 . Enable redistribute default route 'always' on R1
 . Wait for all neighbors to peer
-. Verify R2 has a default route and 192.168.100.1/32 from OSPF
-. Verify connectivity from PC:data2 to 10.10.10.10
+. Verify R2 has a default route and R1's loopback from OSPFv3
+. Verify connectivity from PC:data2 to R1's dummy interface
 
 
