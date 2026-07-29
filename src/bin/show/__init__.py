@@ -82,6 +82,8 @@ def tftp(args: List[str]) -> None:
 
 
 def hardware(args: List[str]) -> None:
+    ref = args[0] if args else None
+
     data = get_json("/ietf-hardware:hardware")
     if not data:
         print("No hardware data retrieved.")
@@ -90,7 +92,11 @@ def hardware(args: List[str]) -> None:
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
-    cli_pretty(data, "show-hardware")
+
+    if ref:
+        cli_pretty(data, "show-hardware-detail", ref)
+    else:
+        cli_pretty(data, "show-hardware")
 
 
 def modem(args: List[str]) -> None:

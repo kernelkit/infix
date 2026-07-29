@@ -22,6 +22,13 @@
  *   withdraws the default route.  Then delete the interface — either the real
  *   wwan one or the dummy placeholder.
  *
+ * For modem components anchored to a USB port (component uri leaf-list,
+ * see hardware.c), a generated udev rule names the netdev after the
+ * configured interface as it appears, so enumeration order never
+ * decides interface names.  A modem that shows up only after the
+ * probe-timeout expired is out of luck for this boot: the dummy holds
+ * the name until reboot, same recovery model as WiFi.
+ *
  * Address management is handled by modemd (analogous to the udhcpc script for
  * DHCP).  modemd uses 'ip addr add ... proto wwan' so that protocol-tagged flush
  * on disconnect is precise and does not touch addresses added by other means.
@@ -74,7 +81,7 @@ int modem_add_iface(struct lyd_node *cif, struct dagger *net)
 	}
 
 	/* If interface doesn't exist, create a dummy placeholder so downstream IP config works.
-	 * modemd will reconfigure the real interface once the modem attaches. */
+	 * Recovery when the modem shows up later is a reboot, see the file header. */
 	fprintf(sh, "if ! ip link show %s >/dev/null 2>&1; then\n", ifname);
 	fprintf(sh, "    logger -t modem \"%s: interface not yet available, creating dummy placeholder\"\n", ifname);
 	fprintf(sh, "    ip link add %s type dummy\n", ifname);

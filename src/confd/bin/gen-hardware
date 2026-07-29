@@ -69,10 +69,23 @@ EOF
 gen_modem()
 {
     modem="$1"
+
+    # Anchor the component to the probed USB port so the system can
+    # bind this component name to the physical device deterministically.
+    uri=$(jq -r --arg m "$modem" \
+	  '.["modem"][] | select(.name == $m) | .uri // empty' \
+	  /run/system.json 2>/dev/null)
+
+    uri_line=""
+    if [ -n "$uri" ]; then
+	uri_line="
+    \"uri\": [ \"$uri\" ],"
+    fi
+
     cat <<EOF
 {
     "name": "$modem",
-    "class": "infix-hardware:modem",
+    "class": "infix-hardware:modem",$uri_line
     "state": {
 	"admin-state": "unlocked"
     }

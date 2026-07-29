@@ -131,6 +131,15 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="HW_COMPONENTS">
+  <COMPL>
+    <ACTION sym="script">
+      jq -r '(.["usb-ports"][]?.name), (.modem[]?.name)' /run/system.json 2>/dev/null
+    </ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <PTYPE name="FIREWALL_ZONES">
   <COMPL>
     <ACTION sym="firewall_zones@infix"/>
@@ -700,8 +709,11 @@ echo "Public:  $pub"
   </COMMAND>
 
   <COMMAND name="hardware" help="Show hardware information">
+    <SWITCH name="optional" min="0" max="1">
+      <PARAM name="ref" ptype="/HW_COMPONENTS" help="Component name (e.g. modem0)" />
+    </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      show hardware |pager
+      show hardware "$KLISH_PARAM_ref" |pager
     </ACTION>
   </COMMAND>
 

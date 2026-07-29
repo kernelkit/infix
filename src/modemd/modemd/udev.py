@@ -7,6 +7,8 @@ import sys
 import re
 import os
 
+from .info import device_devpath
+
 MODEMS = "/run/modems.json"
 SYSTEM = "/run/system.json"
 LOCK = "/var/lock/modems.lock"
@@ -115,13 +117,18 @@ def update_system_json(modems_list):
 
     entries = []
     for i, m in enumerate(modems_list):
-        entries.append({
+        devpath = m.get("devpath", "")
+        port = os.path.basename(devpath) if devpath else ""
+        entry = {
             "index": i,
             "name": "modem%d" % i,
-            "devpath": m.get("devpath", ""),
+            "devpath": devpath,
             "vid": m.get("vendor", ""),
             "pid": m.get("product", ""),
-        })
+        }
+        if port:
+            entry["uri"] = "usb:///sys/bus/usb/devices/%s" % port
+        entries.append(entry)
 
     if not entries:
         data.pop("modem", None)
@@ -189,8 +196,19 @@ def update(d):
     info("Updated modem %s" % devpath)
 
 
+def usb_device_dir(devpath):
+    """USB device (port) directory for a udev $DEVPATH; shares the
+    idVendor walk with modem-info so all producers agree on the port
+    token regardless of how many sysfs levels the triggering device
+    sits below the USB device."""
+    return device_devpath("/sys/%s" % devpath)
+
+
 def add_tty(devpath):
-    devpath = os.path.realpath("/sys/%s/../../../../" % devpath)
+    devpath = usb_device_dir(devpath)
+    if not devpath:
+        err("No USB device for tty")
+        return False
 
     info("Adding tty device %s" % devpath)
 
@@ -212,7 +230,10 @@ def add_tty(devpath):
 
 
 def add_net(devpath):
-    devpath = os.path.realpath("/sys/%s/../../../" % devpath)
+    devpath = usb_device_dir(devpath)
+    if not devpath:
+        err("No USB device for net interface")
+        return False
 
     info("Adding net device %s" % devpath)
 
@@ -240,7 +261,10 @@ def add_net(devpath):
 
 
 def add_usbmisc(devpath):
-    devpath = os.path.realpath("/sys/%s/../../../" % devpath)
+    devpath = usb_device_dir(devpath)
+    if not devpath:
+        err("No USB device for usbmisc")
+        return False
 
     info("Adding usbmisc device %s" % devpath)
 

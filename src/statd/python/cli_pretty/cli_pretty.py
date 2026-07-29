@@ -2432,6 +2432,13 @@ def _bearers_for_modem(json, modem_name):
     return out
 
 
+def _usb_id(ms):
+    """VID:PID string from modem-state, or '' when not probed."""
+    vid = ms.get("usb-vendor-id", "")
+    pid = ms.get("usb-product-id", "")
+    return f"{vid}:{pid}" if vid and pid else ""
+
+
 def show_modem_detail(json, ref):
     components = get_json_data([], json, "ietf-hardware:hardware", "component")
     modem = next((c for c in components
@@ -2463,6 +2470,8 @@ def show_modem_detail(json, ref):
         ("Hardware Revision",  ms.get("hardware-revision", "")),
         ("Firmware Version",   ms.get("firmware-version", "")),
         ("Serial Number",      ms.get("serial-number", "")),
+        ("USB ID",             _usb_id(ms)),
+        ("URI",                ", ".join(modem.get("uri", []))),
         ("IMSI",               ms.get("imsi", "")),
         ("ICCID",              ms.get("iccid", "")),
     ):
@@ -2798,6 +2807,42 @@ def show_hardware(json):
             for component in sorted(standalone, key=sensor_sort_key):
                 sensor = Sensor(component)
                 sensor.print(name_width=name_width)
+
+
+def show_hardware_detail(json, ref):
+    """Per-component detail view: identification and state for any
+    hardware component.  The URI line is copy-paste ready for anchoring
+    the component in the configuration."""
+    components = get_json_data([], json, "ietf-hardware:hardware", "component")
+    comp = next((c for c in components if c.get("name") == ref), None)
+    if comp is None:
+        print(f"Hardware component '{ref}' not found.")
+        return
+
+    width = 62
+    print(Decore.invert(f"{'COMPONENT: ' + ref:<{width}}"))
+
+    cls = comp.get("class", "")
+    state = comp.get("state", {})
+    ms = comp.get("infix-hardware:modem-state", {})
+
+    for label, val in (
+        ("Name",         comp.get("name", "")),
+        ("Class",        cls.split(":")[-1]),
+        ("Model",        comp.get("model-name", "") or ms.get("model", "")),
+        ("Manufacturer", comp.get("mfg-name", "") or ms.get("manufacturer", "")),
+        ("USB ID",       _usb_id(ms)),
+        ("URI",          ", ".join(comp.get("uri", []))),
+        ("Admin State",  state.get("admin-state", "")),
+        ("Oper State",   state.get("oper-state", "")),
+        ("Alarm State",  state.get("alarm-state", "")),
+    ):
+        if val:
+            print(f"  {label:<20}: {val}")
+
+    if cls == "infix-hardware:modem":
+        print()
+        print(f"See 'show modem {ref}' for cellular status.")
 
 
 def resolve_container_network(network, all_ifaces):
@@ -6559,6 +6604,9 @@ def main():
               .add_argument('name', help='Container name')
 
     subparsers.add_parser('show-hardware', help='Show USB ports')
+    subparsers.add_parser('show-hardware-detail',
+                          help='Show detailed hardware component info') \
+              .add_argument('name', help='Component name (e.g. modem0)')
     subparsers.add_parser('show-modem', help='Show cellular modem overview')
     subparsers.add_parser('show-modem-detail', help='Show detailed modem info') \
               .add_argument('name', help='Modem name (e.g. modem0)')
@@ -6645,6 +6693,8 @@ def main():
         show_container_detail(json_data, args.name)
     elif args.command == "show-hardware":
         show_hardware(json_data)
+    elif args.command == "show-hardware-detail":
+        show_hardware_detail(json_data, args.name)
     elif args.command == "show-modem":
         show_modem(json_data)
     elif args.command == "show-modem-detail":
