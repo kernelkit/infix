@@ -1,3 +1,5 @@
+import os
+
 from .common import LOG
 from .host import HOST
 
@@ -160,8 +162,29 @@ def _sim_to_hw_state(sim_raw):
     return state
 
 
+def _probed_modems():
+    """Probed modem entries from system.json, keyed by USB port token.
+    Carries the attachment uri and VID:PID for each physical modem,
+    whether managed by the modem daemon or not."""
+    probed = {}
+    for entry in HOST.read_json("/run/system.json", {}).get("modem", []):
+        port = os.path.basename(entry.get("devpath", ""))
+        if port:
+            probed[port] = entry
+    return probed
+
+
+def _usb_ids(phys):
+    """usb-vendor-id/usb-product-id leaves from a probed entry."""
+    return {leaf: phys[key]
+            for key, leaf in (("vid", "usb-vendor-id"),
+                              ("pid", "usb-product-id"))
+            if phys.get(key)}
+
+
 def operational():
     modems = HOST.run_json(['/usr/libexec/modemd/modem-info'], [])
+    probed = _probed_modems()
 
     hw_components = []
     for modem in modems:
@@ -186,6 +209,13 @@ def operational():
             "name": name,
             "class": "infix-hardware:modem",
         }
+
+        port = os.path.basename(modem.get("devpath", ""))
+        phys = probed.pop(port, None) if port else None
+        if phys:
+            if phys.get("uri"):
+                component["uri"] = [phys["uri"]]
+            hw_state.update(_usb_ids(phys))
 
         # Standard ietf-hardware state container — drives 'show hardware'
         # and gives generic NETCONF clients a meaningful view of the
@@ -221,6 +251,33 @@ def operational():
             if sim_hw_state:
                 sim_component["infix-hardware:sim-state"] = sim_hw_state
             hw_components.append(sim_component)
+
+    # Probed modems not managed (yet): the modem daemon may be stopped
+    # or the device unconfigured.  Surface them with their attachment
+    # uri so 'show hardware modemN' tells the user what to configure.
+    used = {c["name"] for c in hw_components}
+    for phys in probed.values():
+        hw_state = _usb_ids(phys)
+
+        name = phys.get("name", "modem%d" % phys.get("index", 0))
+        idx = phys.get("index", 0)
+        while name in used:
+            idx += 1
+            name = "modem%d" % idx
+        used.add(name)
+
+        component = {
+            "name": name,
+            "class": "infix-hardware:modem",
+            "state": {
+                "oper-state": "unknown",
+            },
+        }
+        if phys.get("uri"):
+            component["uri"] = [phys["uri"]]
+        if hw_state:
+            component["infix-hardware:modem-state"] = hw_state
+        hw_components.append(component)
 
     if not hw_components:
         return {}

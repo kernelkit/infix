@@ -753,7 +753,8 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	}
 
 	/* ietf-hardware, before the interfaces: netdevs behind a USB port
-	 * appear only once the port is unlocked. */
+	 * appear only once the port is unlocked, and a modem netdev gets
+	 * its name from the udev rules written here. */
 	if ((rc = hardware_change(session, config, diff, event, confd)))
 		goto free_diff;
 

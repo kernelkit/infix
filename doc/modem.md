@@ -138,13 +138,36 @@ If `show modem` already lists `modem0` and `sim0`, the components were
 auto-discovered into the factory-default configuration and you can skip
 ahead to Step 3.
 
-Otherwise, add them manually.  The class is inferred from the component
-name (`modemN` → `infix-hardware:modem`, `simN` → `infix-hardware:sim`).
-The `admin-state` must be set explicitly.  There is no implicit default,
+Otherwise, add them manually.  Start by finding the modem's USB
+attachment point.  Detected modems are always visible in the hardware
+detail view, even before they are configured:
+
+<pre class="cli"><code>admin@example:/> <b>show hardware modem0</b>
+<span class="header">COMPONENT: modem0                                             </span>
+  Name                : modem0
+  Class               : modem
+  USB ID              : 2c7c:0125
+  URI                 : usb:///sys/bus/usb/devices/3-1.2.1
+  Oper State          : unknown
+
+See 'show modem modem0' for cellular status.
+</code></pre>
+
+Copy the `URI` value into the component configuration.  It anchors the
+component to the physical USB port, so the data interface always gets
+the name you configured, no matter in which order the hardware
+enumerates.  Anchoring also acts as a lock: once every modem component
+is anchored, a modem plugged into any other port is detected and shown,
+but stays unmanaged until it too is configured.
+
+The class is inferred from the component name (`modemN` →
+`infix-hardware:modem`, `simN` → `infix-hardware:sim`).  The
+`admin-state` must be set explicitly.  There is no implicit default,
 and without `unlocked` the cellular subsystem stays inactive:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit hardware component modem0</b>
+admin@example:/config/hardware/component/modem0/> <b>set uri usb:///sys/bus/usb/devices/3-1.2.1</b>
 admin@example:/config/hardware/component/modem0/> <b>set state admin-state unlocked</b>
 admin@example:/config/hardware/component/modem0/> <b>end</b>
 admin@example:/config/hardware/> <b>edit component sim0</b>
@@ -180,16 +203,16 @@ admin@example:/config/hardware/component/modem0/modem/> <b>leave</b>
 With `probe-timeout` at its default of 30, the system waits up to 30
 seconds for the wwan interface to appear before proceeding.  For most
 modems it is ready in 2-5 seconds.  If the modem has not appeared
-within the timeout, a dummy placeholder interface is created and a
-reboot is required for the real interface to take over.  Set
+within the timeout, a dummy placeholder interface is created so the
+rest of the configuration can be applied, and a reboot is required
+once the hardware is available, same as for WiFi radios.  Set
 `probe-timeout 0` to disable waiting entirely.
 
 > [!NOTE]
 > Some Quectel modules (e.g. EM05) re-enumerate the USB device several
 > times during a cold-boot firmware-init sequence that takes around 50
-> to 60 seconds.  Bump `probe-timeout` to 90 for those, otherwise the
-> dummy placeholder fires before the modem settles and the real
-> interface ends up with a different name (`wwan1` instead of `wwan0`).
+> to 60 seconds.  Bump `probe-timeout` to 90 for those, so the
+> interface is in place before the configuration is applied.
 
 ### 3. Configure the Bearer (APN)
 
@@ -478,10 +501,8 @@ is required; the modem only needs to be registered on the network:
 
 - The modem was not enumerated by the kernel before the system
   applied the configuration
-- Create the modem hardware configuration container (see Step 2),
-  which enables the default 30-second probe-timeout so the system
-  waits for the wwan interface before falling back to a dummy
-  placeholder
+- Increase `probe-timeout` (see Slow USB Modems above) to cover the
+  modem's boot time, then reboot with the modem in place
 
 **High latency or poor signal**
 

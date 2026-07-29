@@ -95,10 +95,15 @@ def hardware(args: List[str]) -> None:
 
     if args:
         hw = data.get("ietf-hardware:hardware", {})
-        hw["component"] = [c for c in hw.get("component", []) if c.get("name") == args[0]]
-        if not hw["component"]:
+        comps = [c for c in hw.get("component", []) if c.get("name") == args[0]]
+        if not comps:
             print(f"No hardware component named {args[0]}.")
             return
+        # A modem gets the detail view, with the URI to anchor it by
+        if not RAW_OUTPUT and comps[0].get("class") == "infix-hardware:modem":
+            cli_pretty(data, "show-hardware-detail", args[0])
+            return
+        hw["component"] = comps
 
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))

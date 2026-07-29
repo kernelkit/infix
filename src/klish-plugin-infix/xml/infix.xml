@@ -122,17 +122,20 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
-<PTYPE name="WIFI_RADIOS">
-  <COMPL>
-    <ACTION sym="wifi_radios@infix"/>
-  </COMPL>
-  <ACTION sym="STRING"/>
-</PTYPE>
-
 <PTYPE name="MODEMS">
   <COMPL>
     <ACTION sym="script">
       jq -r '.modem[]? | "modem" + (.index|tostring)' /run/system.json 2>/dev/null
+    </ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="HW_COMPONENTS">
+  <COMPL>
+    <ACTION sym="script">
+      ls /sys/class/ieee80211/ 2>/dev/null
+      jq -r '(.["usb-ports"][]?.name), (.modem[]?.name)' /run/system.json 2>/dev/null
     </ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
@@ -725,7 +728,7 @@ echo "Public:  $pub"
   </COMMAND>
 
   <COMMAND name="hardware" help="Show hardware information, or one component">
-    <PARAM name="component" ptype="/WIFI_RADIOS" help="Hardware component, e.g. radio0" min="0" max="1">
+    <PARAM name="component" ptype="/HW_COMPONENTS" help="Hardware component, e.g. radio0 or modem0" min="0" max="1">
       <SWITCH name="optional" min="0">
         <COMMAND name="survey" help="Scan all channels on a WiFi radio and show how busy each one is">
           <ACTION sym="script" in="tty" out="tty" interrupt="true">
