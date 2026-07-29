@@ -620,48 +620,45 @@ def probe_ptp_capabilities(out):
         out.setdefault("interfaces", {}).update(ifaces)
 
 
-def _usb_root_from_sysfs(dev_path):
+def _usb_device_from_sysfs(dev_path):
+    """Deepest ancestor that is a USB device directory (has idVendor),
+    i.e. the port-level node like .../3-1.2/3-1.2.1 — not the bus root.
+    Port-level paths keep two modems on the same bus apart and match
+    the /sys/bus/usb/devices/<port> shortcut users can inspect."""
     p = dev_path
     while p not in ("/", "/sys"):
-        parent = os.path.realpath(os.path.join(p, ".."))
-        basename = os.path.basename(parent)
-        if basename.startswith("usb") and basename[3:].isdigit():
-            return parent
-        p = parent
+        if os.path.isfile(os.path.join(p, "idVendor")):
+            return p
+        p = os.path.dirname(p)
     return None
 
 
-def _read_usb_vid_pid(dev_path):
-    p = dev_path
-    while p not in ("/", "/sys"):
-        try:
-            vid = open(os.path.join(p, "idVendor")).read().strip()
-            pid = open(os.path.join(p, "idProduct")).read().strip()
-            return vid, pid
-        except OSError:
-            pass
-        p = os.path.dirname(p)
-    return "", ""
-
-
 def probe_modems(out):
-    """devpath is the USB bus root; ModemManager matches by path prefix.
-    seen_roots deduplicates cdc-wdm and ttyUSB ports of the same physical modem."""
-    seen_roots = set()
+    """One entry per physical modem; devpath is the USB device (port)
+    directory, deduplicating the cdc-wdm and ttyUSB ports it exposes.
+    The uri is the copy-paste form users put in the hardware component
+    configuration to anchor a component to this port."""
+    seen = set()
     modems = []
     idx = 0
 
     def add_modem(dev_path):
         nonlocal idx
-        usb_root = _usb_root_from_sysfs(dev_path)
-        if usb_root is None or usb_root in seen_roots:
+        usb_dev = _usb_device_from_sysfs(dev_path)
+        if usb_dev is None or usb_dev in seen:
             return
-        seen_roots.add(usb_root)
-        vid, pid = _read_usb_vid_pid(dev_path)
+        seen.add(usb_dev)
+        try:
+            vid = open(os.path.join(usb_dev, "idVendor")).read().strip()
+            pid = open(os.path.join(usb_dev, "idProduct")).read().strip()
+        except OSError:
+            vid, pid = "", ""
+        port = os.path.basename(usb_dev)
         modems.append({
             "index": idx,
             "name": "modem%d" % idx,
-            "devpath": usb_root,
+            "devpath": usb_dev,
+            "uri": "usb:///sys/bus/usb/devices/%s" % port,
             "vid": vid,
             "pid": pid,
         })

@@ -288,25 +288,76 @@ def load_config():
         elif cls == "infix-hardware:sim":
             sims[comp["name"]] = comp.get("infix-hardware:sim", {})
 
-    modems = {}
-    for phys in physical:
-        name = phys.get("name", "modem%d" % phys.get("index", 0))
-        index = phys.get("index", 0)
+    def uri_port(comp):
+        """USB port token from the component's uri leaf-list, or None.
+        Same parse as confd: trailing slashes trimmed, token restricted
+        to the sysfs port alphabet.  Other URI schemes are ignored."""
+        for u in comp.get("uri", []):
+            if not u.startswith("usb:"):
+                continue
+            port = os.path.basename(u.rstrip("/"))
+            if port and set(port) <= set("0123456789.-"):
+                return port
+            err("Malformed usb URI '%s', expected .../<port>" % u)
+        return None
 
-        comp = hw_comps.get(name, {})
-        admin = comp.get("state", {}).get("admin-state", "unlocked")
-        if admin == "locked":
-            continue
-
-        ih = comp.get("infix-hardware:modem", {})
-        modems[name] = {
+    def modem_cfg(index, ih, port):
+        return {
             "index": index,
+            "usb-port": port,
             "preferred-mode": ih.get("preferred-mode"),
             "allowed-mode": ih.get("allowed-mode", []),
             "band": ih.get("band", []),
             "location": ih.get("location"),
             "bearer": [],
         }
+
+    modems = {}
+    claimed = set()
+    ports = {name: uri_port(comp) for name, comp in hw_comps.items()}
+    anchored = any(ports.values())
+
+    # Components anchored to a USB port are authoritative: the thread is
+    # started from config alone and binds to the device at that port,
+    # whether it has enumerated yet or not.
+    for name in sorted(hw_comps):
+        comp = hw_comps[name]
+        port = ports[name]
+        if not port:
+            continue
+        if port in claimed:
+            err("Modem %s: USB port %s already claimed by another "
+                "component, skipping" % (name, port))
+            continue
+        claimed.add(port)
+        if comp.get("state", {}).get("admin-state", "unlocked") == "locked":
+            continue
+        if not name.startswith("modem") or not name[5:].isdigit():
+            err("Cannot manage anchored modem component '%s', "
+                "must be named modemN" % name)
+            continue
+        modems[name] = modem_cfg(int(name[5:]),
+                                 comp.get("infix-hardware:modem", {}), port)
+
+    # Unanchored: legacy positional behavior, joined by component name.
+    # Once any component is anchored the config is authoritative for the
+    # whole system: unconfigured devices are no longer auto-managed.
+    for phys in physical:
+        name = phys.get("name", "modem%d" % phys.get("index", 0))
+        port = os.path.basename(phys.get("devpath", ""))
+        if name in modems or (port and port in claimed):
+            continue
+
+        comp = hw_comps.get(name, {})
+        if ports.get(name):
+            continue
+        if anchored and not comp:
+            continue
+        if comp.get("state", {}).get("admin-state", "unlocked") == "locked":
+            continue
+
+        modems[name] = modem_cfg(phys.get("index", 0),
+                                 comp.get("infix-hardware:modem", {}), None)
 
     for iface in (ifaces or {}).get("ietf-interfaces:interfaces", {}).get("interface", []):
         if iface.get("type", "") != "infix-if-type:modem":
@@ -507,6 +558,7 @@ class ModemThread(threading.Thread):
         self.exited = False
 
         self.cfg = cfg
+        self.port = cfg.get("usb-port")
         self.prefix = "[modem%d] " % self.index
         self.rundir = "%s/modem%d" % (rundir, self.index)
         self.statedir = "%s/state" % self.rundir
@@ -532,6 +584,9 @@ class ModemThread(threading.Thread):
         self.init()
 
     def stop(self):
+        # Retract the component -> port binding so modem-info does not
+        # keep reporting this modem under a stale component identity.
+        rmf("%s/port" % self.rundir)
         self.stopevent.set()
 
     def stopped(self):
@@ -1715,8 +1770,12 @@ class ModemThread(threading.Thread):
         if self.iface and self.sim:
             return True
 
-        info = runcmdj(['/usr/libexec/modemd/modem-info',
-                        '-i', str(self.index)])
+        if self.port:
+            cmd = ['/usr/libexec/modemd/modem-info',
+                   '-i', str(self.index), '-p', self.port]
+        else:
+            cmd = ['/usr/libexec/modemd/modem-info', '-i', str(self.index)]
+        info = runcmdj(cmd)
         if not info:
             self.err("No modem info")
             return False
@@ -1747,7 +1806,13 @@ class ModemThread(threading.Thread):
         output = runcmdj(['/usr/libexec/modemd/modem-info'])
         if output:
             for m in output:
-                if m.get("index", -1) == self.index:
+                # Anchored: match by the USB port from the component's
+                # configured uri; never grab a modem at another port.
+                if self.port:
+                    if os.path.basename(m.get("devpath", "")) == self.port:
+                        modem = m
+                        break
+                elif m.get("index", -1) == self.index:
                     modem = m
                     break
         if modem is None:
@@ -1768,6 +1833,12 @@ class ModemThread(threading.Thread):
         self.model = info.get("model", "")
         self.dbg("Model is '%s'" % self.model)
         fwrite(path, self.model)
+
+        # Publish the component -> USB port binding; modem-info uses it
+        # to report this modem under the configured component name
+        # rather than the probe enumeration order.
+        if self.port:
+            fwrite("%s/port" % self.rundir, self.port)
 
         self.path = modem.get("path")
         self.dbg("Got path %s" % self.path)

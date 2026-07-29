@@ -1,6 +1,7 @@
 import subprocess
 import argparse
 import syslog
+import glob
 import json
 import sys
 import os
@@ -172,23 +173,40 @@ def _sim_lock_state(unlock_required):
 
 
 def device_devpath(devpath):
-    path = devpath
-    while path != "/sys":
-        path = os.path.realpath("%s/.." % path)
-        subdir = os.path.basename(path)
-        r = re.search(r"usb\d", subdir)
-        if r:
+    """USB device (port) directory of the modem, e.g. .../3-1.2/3-1.2.1.
+    The deepest ancestor with an idVendor attribute; its basename is the
+    system-unique port token used for matching against system.json and
+    against configured component URIs."""
+    path = os.path.realpath(devpath)
+    while path not in ("/", "/sys"):
+        if os.path.isfile("%s/idVendor" % path):
             return path
+        path = os.path.dirname(path)
     return None
 
 
 def modem_get_module(devpath):
+    port = os.path.basename(devpath) if devpath else ""
+
+    # Anchored modems: the modem daemon publishes its component ->
+    # USB port binding, authoritative over probe enumeration order.
+    if port:
+        for pfile in glob.glob("/run/modemd/modem*/port"):
+            if fread(pfile) != port:
+                continue
+            try:
+                idx = int(os.path.basename(os.path.dirname(pfile))[5:])
+            except ValueError:
+                continue
+            return {"index": idx, "slot": idx,
+                    "paths": [devpath], "type": "modem"}
+
     # Prefer system.json (new canonical source written by 00-probe)
     if os.path.exists("/run/system.json"):
         with open("/run/system.json", "r") as fd:
             data = json.load(fd)
         for modem in data.get("modem", []):
-            if devpath in modem.get("devpath", ""):
+            if port and port == os.path.basename(modem.get("devpath", "")):
                 idx = modem.get("index", 0)
                 return {"index": idx, "slot": idx,
                         "paths": [modem["devpath"]], "type": "modem"}
@@ -245,20 +263,25 @@ def sysfs_interfaces(devpath):
     try:
         for iface in os.listdir("/sys/class/net"):
             p = os.path.realpath("/sys/class/net/%s" % iface)
-            if p.startswith(devpath):
+            if p.startswith(devpath + "/"):
                 ifaces.append(iface)
     except OSError:
         pass
     return ifaces
 
 
-def print_modem(index):
+def print_modem(index, port=None):
+    def match(modem):
+        if port:
+            return port == os.path.basename(modem.get("devpath", ""))
+        return modem.get("index") == index
+
     # Try system.json first (canonical source written by 00-probe)
     if os.path.exists("/run/system.json"):
         with open("/run/system.json", "r") as fd:
             data = json.load(fd)
         for modem in data.get("modem", []):
-            if modem.get("index") == index:
+            if match(modem):
                 module = {"index": index, "slot": index,
                           "paths": [modem["devpath"]], "type": "modem"}
                 modem["sim"] = modem_get_sim(module) or \
@@ -274,14 +297,17 @@ def print_modem(index):
             data = json.load(fd)
         for modem in data.get("modems", []):
             module = modem_get_module(modem["devpath"])
-            if module and module["index"] == index:
-                modem["slot"] = module["slot"]
-                modem["sim"] = modem_get_sim(module) or \
-                    {"index": 0, "name": "sim0", "slot": 0, "present": True}
-                if not modem.get("interfaces"):
-                    modem["interfaces"] = sysfs_interfaces(modem["devpath"])
-                print(json.dumps(modem))
-                sys.exit(0)
+            if not module:
+                continue
+            if not (match(modem) if port else module["index"] == index):
+                continue
+            modem["slot"] = module["slot"]
+            modem["sim"] = modem_get_sim(module) or \
+                {"index": 0, "name": "sim0", "slot": 0, "present": True}
+            if not modem.get("interfaces"):
+                modem["interfaces"] = sysfs_interfaces(modem["devpath"])
+            print(json.dumps(modem))
+            sys.exit(0)
 
     print(json.dumps({}))
     sys.exit(0)
@@ -338,7 +364,8 @@ def print_all():
 
         modem = {
             "index": index,
-            "path": mpath
+            "path": mpath,
+            "devpath": devpath,
         }
 
         modem["info"] = {
@@ -532,6 +559,8 @@ def print_all():
 def main():
     parser = argparse.ArgumentParser(prog='modem-info')
     parser.add_argument("-i", "--index", default=0, help="Modem index")
+    parser.add_argument("-p", "--port", default=None,
+                        help="USB port token, e.g. 3-1.2.1")
     args = parser.parse_args()
 
     with open("/proc/cmdline", 'r') as fd:
@@ -539,7 +568,9 @@ def main():
         if "debug" in cmdline:
             debug = True
 
-    if args.index:
+    if args.port:
+        print_modem(int(args.index) if args.index else 0, port=args.port)
+    elif args.index:
         print_modem(int(args.index))
     else:
         print_all()
