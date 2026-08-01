@@ -441,7 +441,7 @@ static void ds_push_resolver(struct mdns_ctx *ctx, struct avahi_service *svc,
 		return;
 	}
 
-	err = sr_apply_changes(ctx->sr_ses, 0);
+	err = sr_apply_changes(ctx->sr_ses, SYSREPO_TIMEOUT);
 	if (err)
 		ERROR("mdns: sr_apply_changes: %s", sr_strerror(err));
 }
@@ -470,7 +470,7 @@ static void ds_delete_neighbor(struct mdns_ctx *ctx, const char *hostname)
 static void ds_clear_all(struct mdns_ctx *ctx)
 {
 	sr_delete_item(ctx->sr_ses, XPATH_BASE, 0);
-	sr_apply_changes(ctx->sr_ses, 0);
+	sr_apply_changes(ctx->sr_ses, SYSREPO_TIMEOUT);
 }
 
 /* --------------------------------------------------------------------------
@@ -641,7 +641,7 @@ static void service_browser_cb(AvahiServiceBrowser *b,
 			}
 		}
 
-		sr_apply_changes(ctx->sr_ses, 0);
+		sr_apply_changes(ctx->sr_ses, SYSREPO_TIMEOUT);
 		break;
 	}
 

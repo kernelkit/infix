@@ -14,7 +14,6 @@
 #include <limits.h>
 
 #include <srx/common.h>
-#define SYSREPO_TIMEOUT 60000 /* 60s, this is the timeout we use in our frontends. */
 
 sr_subscription_ctx_t *sub = NULL;
 sr_conn_ctx_t *conn;

@@ -23,7 +23,7 @@ static int rpc(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 	DEBUG("%s", xpath);
 
 	sr_session_switch_ds(session, SR_DS_RUNNING);
-	rc = sr_copy_config(session, NULL, SR_DS_FACTORY_DEFAULT, 60000);
+	rc = sr_copy_config(session, NULL, SR_DS_FACTORY_DEFAULT, SYSREPO_TIMEOUT);
 	if (rc) {
 		sr_session_set_netconf_error(session, "application", "operation-failed",
                          NULL, xpath, sr_strerror(rc), 0);
