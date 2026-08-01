@@ -10,6 +10,12 @@
 
 extern int debug;
 
+/*
+ * Default timeout (ms) for sysrepo operations, same as our frontends.
+ * Use instead of 0 -- callbacks may be starved out on loaded systems.
+ */
+#define SYSREPO_TIMEOUT 60000
+
 /* In IETF referred to LOG_AUDIT */
 #ifndef LOG_AUDIT
 #define LOG_AUDIT 	(13<<3)	/* Log audit, for audit trails */
