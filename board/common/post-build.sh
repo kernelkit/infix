@@ -146,3 +146,14 @@ mkuserguide()
 if [ "$BR2_PACKAGE_WEBUI" = "y" ]; then
     mkuserguide
 fi
+
+# The common rootfs skeleton carries confs for optional daemons, drop
+# them when the daemon is not part of this image.
+if [ "$BR2_PACKAGE_TTYD" != "y" ]; then
+    rm -f "$TARGET_DIR/etc/finit.d/available/ttyd.conf" \
+	  "$TARGET_DIR/etc/nginx/available/ttyd.conf"
+fi
+
+# Drop dangling Finit enabled/*.conf symlinks, e.g., optional services
+# not part of this image, they cause noise at every initctl reload.
+find "$TARGET_DIR/etc/finit.d/enabled" -xtype l -delete 2>/dev/null

@@ -46,6 +46,13 @@ All notable changes to the project are documented in this file.
   hold up other users for minutes.  Snapshots now run in a separate
   low-priority process, `statd-journal`, reading status in small chunks to
   let other users interleave
+- Fix noisy logs on minimal builds, repeated on every configuration change:
+
+        finit[1]: Skipping /etc/finit.d/enabled/webui.conf, dangling symlink: No such file or directory
+        finit[1]: service_register():/etc/finit.d/enabled/ttyd.conf: skipping ttyd: No such file or directory
+
+  Optional services not included in the image are now skipped when enabled
+  in the configuration, and leftover confs are dropped at build time
 
 [ma13]: https://github.com/troglobit/mdns-alias/releases/tag/v1.3
 

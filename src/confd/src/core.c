@@ -57,6 +57,12 @@ int finit_enable(const char *svc)
 				 (int)(at - svc), svc);
 	}
 
+	if (!fexist(src)) {
+		/* Optional service not part of this image, avoid dangling symlink */
+		INFO("%s is not available in this image, cannot enable", svc);
+		return 0;
+	}
+
 	snprintf(dst, sizeof(dst), FINIT_RCSD "/enabled/%s.conf", svc);
 	if (symlink(src, dst) && errno != EEXIST) {
 		ERRNO("failed enabling %s", svc);
