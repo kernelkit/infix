@@ -17,6 +17,8 @@ All notable changes to the project are documented in this file.
   networks, usable as zone sources for per-IP access control, issue #1189
 - Build RPi64 SD card images in release builds
 - Include .pkg files in release builds
+- The `statd` service now logs at `notice` level by default, like other
+  services, and supports `-v <level>` to adjust verbosity at runtime
 
 ### Fixes
 

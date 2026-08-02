@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sysrepo.h>
+#include <sysrepo/version.h>
 #include <ev.h>
 #include <string.h>
 #include <errno.h>
@@ -463,21 +465,86 @@ static int subscribe_to_all(struct statd *statd)
 	return SR_ERR_OK;
 }
 
+static void version_print(void)
+{
+	printf("statd - status daemon v%s, compiled with libsysrepo v%s\n\n",
+	       STATD_VERSION, SR_VERSION);
+}
+
+static void help_print(void)
+{
+	printf("Usage:\n"
+	       "  statd [-h] [-V] [-v <level>]\n"
+	       "\n"
+	       "Options:\n"
+	       "  -h, --help           Prints usage help.\n"
+	       "  -V, --version        Prints version information.\n"
+	       "  -v, --verbosity <level>\n"
+	       "                       Change verbosity to a level (none, error, warning, info, debug).\n"
+	       "\n");
+}
+
 int main(int argc, char *argv[])
 {
 	struct ev_signal sigint_watcher, sigusr1_watcher, sighup_watcher;
 	int log_opts = LOG_PID | LOG_NDELAY;
+	int log_level = LOG_NOTICE;
 	struct statd statd = {};
-	const char *env;
+	int opt;
 	int err;
 
-	env = getenv("DEBUG");
-	if (env || (argc > 1 && !strcmp(argv[1], "-d"))) {
+	struct option options[] = {
+		{"help",      no_argument,       NULL, 'h'},
+		{"version",   no_argument,       NULL, 'V'},
+		{"verbosity", required_argument, NULL, 'v'},
+		{NULL,        0,                 NULL, 0},
+	};
+
+	opterr = 0;
+	while ((opt = getopt_long(argc, argv, "hVv:", options, NULL)) != -1) {
+		switch (opt) {
+		case 'h':
+			version_print();
+			help_print();
+			return EXIT_SUCCESS;
+		case 'V':
+			version_print();
+			return EXIT_SUCCESS;
+		case 'v':
+			if (!strcmp(optarg, "none"))
+				log_level = LOG_EMERG;
+			else if (!strcmp(optarg, "error"))
+				log_level = LOG_ERR;
+			else if (!strcmp(optarg, "warning"))
+				log_level = LOG_WARNING;
+			else if (!strcmp(optarg, "info"))
+				log_level = LOG_INFO;
+			else if (!strcmp(optarg, "debug")) {
+				log_level = LOG_DEBUG;
+				debug = 1;
+			} else {
+				fprintf(stderr, "statd error: Invalid verbosity \"%s\"\n", optarg);
+				return EXIT_FAILURE;
+			}
+			break;
+		default:
+			fprintf(stderr, "statd error: Invalid option or missing argument: -%c\n", optopt);
+			return EXIT_FAILURE;
+		}
+	}
+
+	if (optind < argc) {
+		fprintf(stderr, "statd error: Redundant parameters\n");
+		return EXIT_FAILURE;
+	}
+
+	if (getenv("DEBUG")) {
 		log_opts |= LOG_PERROR;
 		debug = 1;
 	}
 
 	openlog("statd", log_opts, LOG_DAEMON);
+	setlogmask(LOG_UPTO(log_level));
 
 	TAILQ_INIT(&statd.subs);
 	statd.ev_loop = EV_DEFAULT;
