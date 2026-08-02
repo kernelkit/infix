@@ -97,7 +97,8 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 
 	err = fsystemv(yanger_args, NULL, stream, NULL);
 	if (err) {
-		ERROR("Error, running yanger");
+		ERROR("Error, running yanger %s%s%s, exit code %d", yanger_args[1],
+		      yanger_args[3] ? " " : "", yanger_args[3] ?: "", err);
 		fclose(stream);
 		return SR_ERR_SYS;
 	}
@@ -191,8 +192,9 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 	}
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding interface yanger data");
+		ERROR("Error adding yanger data for %s", ifname ?: model);
 
+	free(ifname);
 	sr_release_context(con);
 
 	return SR_ERR_OK;
@@ -227,7 +229,7 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Error adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -263,7 +265,7 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Error adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -299,7 +301,7 @@ static int sr_rip_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Error adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -335,7 +337,7 @@ static int sr_bfd_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Error adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
