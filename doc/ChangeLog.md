@@ -19,14 +19,6 @@ All notable changes to the project are documented in this file.
 
 - Fix annoying "cannot deselect all services" or reset to YANG default in the
   web interface's firewall configuration page
-- Fix `statd` timeout warnings in the log.  Updates to the mDNS neighbor
-  table, and status snapshots, could fail with:
-
-        statd[3658]: mdns: sr_apply_changes: Timeout expired
-        statd[3658]: Error, getting operational data: User callback failed
-
-  Such operations are now allowed up to 60 seconds to complete, same as for
-  other services in the system
 
 [v26.06.0][] - 2026-07-01
 -------------------------

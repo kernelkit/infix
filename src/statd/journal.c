@@ -133,7 +133,7 @@ static void journal_timer_cb(struct ev_loop *, struct ev_timer *w, int)
 	 * This triggers our own operational callbacks running in main thread
 	 */
 	DEBUG("Calling sr_get_data on session %p", jctx->sr_query_ses);
-	err = sr_get_data(jctx->sr_query_ses, "/*", 0, SYSREPO_TIMEOUT, 0, &sr_data);
+	err = sr_get_data(jctx->sr_query_ses, "/*", 0, 0, 0, &sr_data);
 	if (err != SR_ERR_OK) {
 		ERROR("Error, getting operational data: %s", sr_strerror(err));
 		sr_release_context(con);
