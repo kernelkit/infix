@@ -29,7 +29,15 @@ All notable changes to the project are documented in this file.
 
         statd[3558]: mdns: operational datastore busy, retrying ...
 
-[ma13]: https://github.com/troglobit/mdns-alias/releases/tag/v1.3
+- Fix interface setup failures after an interrupted or failed configuration
+  change.  Leftover interfaces could break all subsequent changes to the
+  interface configuration, until reboot, logged as:
+
+        dagger[2599]: Aborting: /run/net/131/action/init/br0/50-init.ip failed with exitcode 1
+        confd[2599]: Failed to apply interface configuration
+
+  with `RTNETLINK answers: File exists` in the failing script's log.
+  Creating and deleting interfaces is now tolerant to such leftovers
 
 [v26.06.0][] - 2026-07-01
 -------------------------
