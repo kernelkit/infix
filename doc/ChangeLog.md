@@ -22,6 +22,12 @@ All notable changes to the project are documented in this file.
 
 - Fix annoying "cannot deselect all services" or reset to YANG default in the
   web interface's firewall configuration page
+- Fix sporadic slow response, or timeouts, when reading device status while
+  mDNS neighbors are being discovered, e.g., after an mDNS restart.  Updates
+  to the neighbor table are now batched, and politely retried when other users
+  or services keep the system busy, logged as:
+
+        statd[3558]: mdns: operational datastore busy, retrying ...
 
 [ma13]: https://github.com/troglobit/mdns-alias/releases/tag/v1.3
 
