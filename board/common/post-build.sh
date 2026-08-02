@@ -146,3 +146,8 @@ mkuserguide()
 if [ "$BR2_PACKAGE_WEBUI" = "y" ]; then
     mkuserguide
 fi
+
+# Drop dangling Finit enabled/*.conf symlinks, e.g., optional services
+# not part of this image, they cause noise at every initctl reload.
+# NOTE: must be the last step before creating the image!
+find "$TARGET_DIR/etc/finit.d/enabled" -xtype l -delete 2>/dev/null
