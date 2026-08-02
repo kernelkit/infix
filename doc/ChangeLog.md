@@ -40,6 +40,14 @@ All notable changes to the project are documented in this file.
 
   with `RTNETLINK answers: File exists` in the failing script's log.
   Creating and deleting interfaces is now tolerant to such leftovers
+- Fix slow response, or timeouts, when configuring the system or reading
+  status while a periodic status snapshot is in progress.  On slower systems
+  with a big configuration, the snapshot, taken every five minutes, could
+  hold up other users for minutes.  Snapshots now run in a separate
+  low-priority process, `statd-journal`, reading status in small chunks to
+  let other users interleave
+
+[ma13]: https://github.com/troglobit/mdns-alias/releases/tag/v1.3
 
 [v26.06.0][] - 2026-07-01
 -------------------------

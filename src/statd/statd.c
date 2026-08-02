@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/stat.h>
-#include <pthread.h>
 
 #include <asm/types.h>
 #include <sys/socket.h>
@@ -69,10 +68,9 @@ struct sub {
 struct statd {
 	struct sub_head subs;
 	sr_session_ctx_t *sr_ses;        /* Provider session with callbacks */
-	sr_session_ctx_t *sr_query_ses;  /* Consumer session for queries */
 	sr_conn_ctx_t *sr_conn;          /* Connection (owns YANG context) */
 	struct ev_loop *ev_loop;
-	struct journal_ctx journal;      /* Journal thread context */
+	struct journal_ctx journal;      /* Periodic operational snapshots */
 	struct mdns_ctx mdns;            /* mDNS neighbor monitor */
 };
 
@@ -558,7 +556,7 @@ int main(int argc, char *argv[])
 	}
 	DEBUG("Connected to sysrepo");
 
-	/* Session 1: Provider with operational callbacks */
+	/* Provider session with operational callbacks */
 	err = sr_session_start(statd.sr_conn, SR_DS_OPERATIONAL, &statd.sr_ses);
 	if (err) {
 		ERROR("Error, start provider session: %s", sr_strerror(err));
@@ -567,19 +565,8 @@ int main(int argc, char *argv[])
 	}
 	DEBUG("Provider session started (%p)", statd.sr_ses);
 
-	/* Session 2: Consumer for querying operational data */
-	err = sr_session_start(statd.sr_conn, SR_DS_OPERATIONAL, &statd.sr_query_ses);
-	if (err) {
-		ERROR("Error, start query session: %s", sr_strerror(err));
-		sr_session_stop(statd.sr_ses);
-		sr_disconnect(statd.sr_conn);
-		return EXIT_FAILURE;
-	}
-	DEBUG("Query session started (%p)", statd.sr_query_ses);
-
 	err = subscribe_to_all(&statd);
 	if (err) {
-		sr_session_stop(statd.sr_query_ses);
 		sr_session_stop(statd.sr_ses);
 		sr_disconnect(statd.sr_conn);
 		return EXIT_FAILURE;
@@ -597,9 +584,8 @@ int main(int argc, char *argv[])
 	sighup_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sighup_watcher);
 
-	err = journal_start(&statd.journal, statd.sr_query_ses);
+	err = journal_start(&statd.journal, statd.ev_loop);
 	if (err) {
-		sr_session_stop(statd.sr_query_ses);
 		sr_session_stop(statd.sr_ses);
 		sr_disconnect(statd.sr_conn);
 		return EXIT_FAILURE;
@@ -621,7 +607,6 @@ int main(int argc, char *argv[])
 	journal_stop(&statd.journal);
 
 	unsub_to_all(&statd);
-	sr_session_stop(statd.sr_query_ses);
 	sr_session_stop(statd.sr_ses);
 	sr_disconnect(statd.sr_conn);
 
