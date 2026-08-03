@@ -97,7 +97,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 
 	err = fsystemv(yanger_args, NULL, stream, NULL);
 	if (err) {
-		ERROR("Error, running yanger %s%s%s, exit code %d", yanger_args[1],
+		ERROR("Error calling yanger %s%s%s, exit code %d", yanger_args[1],
 		      yanger_args[3] ? " " : "", yanger_args[3] ?: "", err);
 		fclose(stream);
 		return SR_ERR_SYS;
@@ -113,7 +113,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 
 	err = lyd_parse_data_fd(ctx, fd, LYD_JSON, LYD_PARSE_ONLY, 0, parent);
 	if (err)
-		ERROR("Error, parsing yanger data (%d): %s", err, ly_errmsg(ctx));
+		ERROR("Failed parsing yanger data (%d): %s", err, ly_errmsg(ctx));
 
 	fclose(stream);
 	/* Note: fclose() already closes the underlying fd from fdopen() */
@@ -136,12 +136,12 @@ static char *xpath_extract(const char *xpath, const char *key)
 
 	end = strchr(ptr, '\'');
 	if (!end) {
-		ERROR("Can't find end quote for %s (sanity check)", key);
+		ERROR("Cannot find end quote for %s (sanity check)", key);
 		return NULL;
 	}
 
 	if ((end - ptr) >= XPATH_MAX) {
-		ERROR("Value for %s is to long (sanity check)", key);
+		ERROR("Value for %s is too long (sanity check)", key);
 		return NULL;
 	}
 
@@ -175,13 +175,13 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
@@ -192,7 +192,7 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 	}
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data for %s", ifname ?: model);
+		ERROR("Failed adding yanger data for %s", ifname ?: model);
 
 	free(ifname);
 	sr_release_context(con);
@@ -217,19 +217,19 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data for %s", yanger_args[1]);
+		ERROR("Failed adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -253,19 +253,19 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data for %s", yanger_args[1]);
+		ERROR("Failed adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -285,23 +285,23 @@ static int sr_rip_cb(sr_session_ctx_t *session, uint32_t, const char *,
 	sr_conn_ctx_t *con;
 	sr_error_t err;
 
-	DEBUG("Incoming rip query for xpath: %s", xpath);
+	DEBUG("Incoming RIP query for xpath: %s", xpath);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data for %s", yanger_args[1]);
+		ERROR("Failed adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -325,19 +325,19 @@ static int sr_bfd_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data for %s", yanger_args[1]);
+		ERROR("Failed adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -386,14 +386,14 @@ static int subscribe(struct statd *statd, char *model, char *xpath,
 				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
 				    &sub->sr_sub);
 	if (err) {
-		ERROR("Error, subscribing to path \"%s\": %s", xpath, sr_strerror(err));
+		ERROR("Failed subscribing to path \"%s\": %s", xpath, sr_strerror(err));
 		free(sub);
 		return err;
 	}
 
 	err = sr_get_event_pipe(sub->sr_sub, &sr_ev_pipe);
 	if (err) {
-		ERROR("Error, getting sysrepo event pipe: %s", sr_strerror(err));
+		ERROR("Error getting sysrepo event pipe: %s", sr_strerror(err));
 		sr_unsubscribe(sub->sr_sub);
 		free(sub);
 		return err;
