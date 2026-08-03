@@ -12,6 +12,9 @@ All notable changes to the project are documented in this file.
 - Upgrade Buildroot to 2025.02.15 (LTS)
 - Add support for firewall address-set (ipset): named sets of IP addresses and
   networks, usable as zone sources for per-IP access control, issue #1189
+- Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
+  ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
+  `ripng`/`ospfv3` type and the IPv6 address-family
 - Build RPi64 SD card images in release builds
 - Include .pkg files in release builds
 
