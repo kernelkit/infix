@@ -1,0 +1,401 @@
+#!/usr/bin/env python3
+"""wifimedium - a virtual WiFi medium for mac80211_hwsim, extended over Ethernet.
+
+mac80211_hwsim simulates 802.11 radios in software.  By default all radios in
+one kernel share an in-kernel medium; radios in *different* kernels (i.e.
+different QEMU guests) cannot hear each other.  The moment a userspace process
+registers on the hwsim generic-netlink family, the kernel stops delivering
+frames itself and hands every transmitted frame to that process, which becomes
+responsible for delivery.
+
+This daemon is that process.  On each DUT it:
+
+  * registers on the "mac80211_hwsim" genl family and receives every frame the
+    local radios transmit (HWSIM_CMD_FRAME),
+  * acknowledges each transmit back to the kernel (HWSIM_CMD_TX_INFO_FRAME) so
+    mac80211's TX path completes, and
+  * relays the frame per radio: each radio (phy radioN) is paired by name with a
+    carrier NIC (netdev radioN) that joins one multicast "cell" -- a QEMU socket
+    multicast group shared by every DUT's radioN (see test/virt/quad and
+    test/qeneth).  A radio's frame is sent only onto its own carrier, and a
+    carrier's frames are injected only into its own radio
+    (HWSIM_CMD_FRAME with HWSIM_ATTR_ADDR_RECEIVER).
+
+Each cell is a shared medium: every DUT's radioN is "in range" of every other
+radioN.  Radios on different indices are on different cells, so two radios
+communicate only if they share an index -- the convention the test topologies
+follow (a station uses the same radio index as the AP it joins).  Channel
+filtering in mac80211 still separates radios that share a cell but tune to
+different frequencies.
+
+This is intended for the QEMU/qeneth test topology only.  On real hardware the
+radios use the air, there are no radioN carrier netdevs, and this daemon idles.
+See doc/wifi.md.
+"""
+import os
+import socket
+import struct
+import time
+import subprocess
+import sys
+import select
+
+# ---- generic netlink / hwsim ABI (drivers/net/wireless/virtual/mac80211_hwsim.h)
+NETLINK_GENERIC = 16
+GENL_ID_CTRL = 16
+CTRL_CMD_GETFAMILY = 3
+CTRL_ATTR_FAMILY_ID = 1
+CTRL_ATTR_FAMILY_NAME = 2
+CTRL_ATTR_MCAST_GROUPS = 7
+CTRL_ATTR_MCAST_GRP_NAME = 1
+CTRL_ATTR_MCAST_GRP_ID = 2
+
+SOL_NETLINK = 270
+NETLINK_ADD_MEMBERSHIP = 1
+
+HWSIM_CMD_REGISTER = 1
+HWSIM_CMD_FRAME = 2
+HWSIM_CMD_TX_INFO_FRAME = 3
+
+HWSIM_ATTR_ADDR_RECEIVER = 1
+HWSIM_ATTR_ADDR_TRANSMITTER = 2
+HWSIM_ATTR_FRAME = 3
+HWSIM_ATTR_FLAGS = 4
+HWSIM_ATTR_RX_RATE = 5
+HWSIM_ATTR_SIGNAL = 6
+HWSIM_ATTR_TX_INFO = 7
+HWSIM_ATTR_COOKIE = 8
+HWSIM_ATTR_FREQ = 19
+HWSIM_ATTR_TX_INFO_FLAGS = 21
+
+HWSIM_TX_STAT_ACK = 1 << 2
+
+# Signal/rate reported for injected (received) frames.  A strong, fixed signal
+# keeps mac80211 happy; the exact value is not significant for a virtual cell.
+RX_SIGNAL = -30
+RX_RATE = 0
+
+# The medium is carried as raw Ethernet frames with a custom EtherType on the
+# configured interface -- no IP addressing needed (the carrier link has none).
+# A broadcast destination means every DUT on the segment is "in range".
+ETH_P_WIFIMEDIUM = 0x88B5         # local-experimental EtherType
+ETH_BROADCAST = b"\xff\xff\xff\xff\xff\xff"
+ETYPE = struct.pack("!H", ETH_P_WIFIMEDIUM)
+SOL_PACKET = 263
+PACKET_IGNORE_OUTGOING = 23       # don't deliver our own TX back to the socket
+
+NLMSG_HDR = struct.Struct("=IHHII")     # len, type, flags, seq, pid
+GENL_HDR = struct.Struct("=BBH")        # cmd, version, reserved
+
+
+DEBUG = bool(os.environ.get("WIFIMEDIUM_DEBUG"))
+
+
+def log(msg):
+    sys.stderr.write(f"wifimedium: {msg}\n")
+    sys.stderr.flush()
+
+
+def dbg(msg):
+    if DEBUG:
+        log(msg)
+
+
+def nla_align(n):
+    return (n + 3) & ~3
+
+
+def put_attr(atype, payload):
+    hdr = struct.pack("=HH", len(payload) + 4, atype)
+    return hdr + payload + b"\0" * (nla_align(len(payload) + 4) - (len(payload) + 4))
+
+
+def parse_attrs(buf):
+    attrs = {}
+    off = 0
+    while off + 4 <= len(buf):
+        alen, atype = struct.unpack_from("=HH", buf, off)
+        if alen < 4:
+            break
+        attrs[atype & 0x7fff] = buf[off + 4:off + alen]
+        off += nla_align(alen)
+    return attrs
+
+
+class Netlink:
+    """Minimal generic-netlink client for the hwsim family."""
+
+    def __init__(self):
+        self.sock = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_GENERIC)
+        self.sock.bind((0, 0))
+        self.seq = 0
+        # NB: the genl family is "MAC80211_HWSIM" (uppercase); the lowercase
+        # "mac80211_hwsim" is the platform driver name, not the family.
+        self.family_id, self.mcast_id = self._resolve("MAC80211_HWSIM", "config")
+
+    def fileno(self):
+        return self.sock.fileno()
+
+    def _send(self, family_id, cmd, attrs=b"", flags=0):
+        self.seq += 1
+        payload = GENL_HDR.pack(cmd, 1, 0) + attrs
+        msg = NLMSG_HDR.pack(NLMSG_HDR.size + len(payload), family_id,
+                             flags | 1, self.seq, 0) + payload  # NLM_F_REQUEST
+        self.sock.send(msg)
+
+    def _resolve(self, name, grpname):
+        self._send(GENL_ID_CTRL, CTRL_CMD_GETFAMILY,
+                   put_attr(CTRL_ATTR_FAMILY_NAME, name.encode() + b"\0"))
+        data = self.sock.recv(65536)
+        _, mtype, _, _, _ = NLMSG_HDR.unpack_from(data, 0)
+        if mtype == 2:  # NLMSG_ERROR (also used for ACKs; err<0 is a failure)
+            err = struct.unpack_from("=i", data, NLMSG_HDR.size)[0]
+            raise RuntimeError(f"genl GETFAMILY({name}) failed: "
+                               f"{os.strerror(-err) if err else 'empty reply'}")
+        attrs = parse_attrs(data[NLMSG_HDR.size + GENL_HDR.size:])
+        family_id = struct.unpack("=H", attrs[CTRL_ATTR_FAMILY_ID][:2])[0]
+
+        mcast_id = None
+        for _, grp in _parse_nested(attrs.get(CTRL_ATTR_MCAST_GROUPS, b"")):
+            gattrs = parse_attrs(grp)
+            gname = gattrs.get(CTRL_ATTR_MCAST_GRP_NAME, b"").rstrip(b"\0").decode()
+            if gname == grpname:
+                mcast_id = struct.unpack("=I", gattrs[CTRL_ATTR_MCAST_GRP_ID])[0]
+        if mcast_id is None:
+            raise RuntimeError(f"hwsim multicast group '{grpname}' not found")
+        return family_id, mcast_id
+
+    def register(self):
+        self.sock.setsockopt(SOL_NETLINK, NETLINK_ADD_MEMBERSHIP, self.mcast_id)
+        self._send(self.family_id, HWSIM_CMD_REGISTER)
+
+    def recv(self):
+        return self.sock.recv(65536)
+
+    def inject(self, receiver, frame, freq):
+        attrs = put_attr(HWSIM_ATTR_ADDR_RECEIVER, receiver)
+        attrs += put_attr(HWSIM_ATTR_FRAME, frame)
+        attrs += put_attr(HWSIM_ATTR_RX_RATE, struct.pack("=I", RX_RATE))
+        attrs += put_attr(HWSIM_ATTR_SIGNAL, struct.pack("=i", RX_SIGNAL))
+        if freq:
+            attrs += put_attr(HWSIM_ATTR_FREQ, struct.pack("=I", freq))
+        self._send(self.family_id, HWSIM_CMD_FRAME, attrs)
+
+    def tx_ack(self, transmitter, flags, tx_info, tx_info_flags, cookie):
+        attrs = put_attr(HWSIM_ATTR_ADDR_TRANSMITTER, transmitter)
+        attrs += put_attr(HWSIM_ATTR_FLAGS, struct.pack("=I", flags | HWSIM_TX_STAT_ACK))
+        attrs += put_attr(HWSIM_ATTR_SIGNAL, struct.pack("=i", RX_SIGNAL))
+        if tx_info:
+            attrs += put_attr(HWSIM_ATTR_TX_INFO, tx_info)
+        if tx_info_flags:
+            attrs += put_attr(HWSIM_ATTR_TX_INFO_FLAGS, tx_info_flags)
+        if cookie:
+            attrs += put_attr(HWSIM_ATTR_COOKIE, cookie)
+        self._send(self.family_id, HWSIM_CMD_TX_INFO_FRAME, attrs)
+
+
+def _parse_nested(buf):
+    off = 0
+    while off + 4 <= len(buf):
+        alen, atype = struct.unpack_from("=HH", buf, off)
+        if alen < 4:
+            break
+        yield atype & 0x7fff, buf[off + 4:off + alen]
+        off += nla_align(alen)
+
+
+def radio_addr1(phy):
+    """The address mac80211_hwsim identifies a radio by on the medium.
+
+    A hwsim radio has three addresses (kernel new_radio()).  sysfs 'macaddress'
+    is addresses[0]; the address the kernel stamps as HWSIM_ATTR_ADDR_TRANSMITTER
+    and matches HWSIM_ATTR_ADDR_RECEIVER against (its rhashtable key) is
+    addresses[1] -- addresses[0] with bit 0x40 set in the first octet, for the
+    default no-perm_addr radios we use.  So both the transmitter we observe and
+    the receiver we must inject to are this 0x40 variant, not the sysfs value.
+    (Note custom-phys-address changes the vif/netdev MAC, not these.)
+    """
+    with open(f"/sys/class/ieee80211/{phy}/macaddress") as fh:
+        addr = bytearray.fromhex(fh.read().strip().replace(":", ""))
+    addr[0] |= 0x40
+    return bytes(addr)
+
+
+def open_medium(ifname):
+    """Raw-Ethernet socket on the medium interface, or (None, None).
+
+    Returns (sock, mac); mac is the interface's own (unique) address, used as
+    the Ethernet source and to drop frames we transmitted ourselves -- the
+    multicast cell loops our own frames back to us."""
+    if not ifname:
+        return None, None
+    # The carrier NIC is unconfigured (it is not a real DUT port), so Infix
+    # leaves it administratively down -- a raw packet socket on a down link
+    # carries no frames.  Bring it up; wifimedium owns the medium, like hwsim0.
+    ifup(ifname)
+    sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW,
+                         socket.htons(ETH_P_WIFIMEDIUM))
+    sock.bind((ifname, ETH_P_WIFIMEDIUM))
+    # Don't receive our own transmitted frames (avoids a self-feedback path
+    # and any reliance on the source MAC, which can collide between guests).
+    try:
+        sock.setsockopt(SOL_PACKET, PACKET_IGNORE_OUTGOING, 1)
+    except OSError:
+        pass  # pre-4.20 kernels; the length check below still applies
+    with open(f"/sys/class/net/{ifname}/address") as fh:
+        mac = bytes.fromhex(fh.read().strip().replace(":", ""))
+    return sock, mac
+
+
+# Wire format on the medium: 6-byte transmitter MAC, 4-byte LE freq, then the
+# raw 802.11 frame.
+WIRE = struct.Struct("=6sI")
+
+
+def wait_radios_renamed(timeout=20):
+    """Wait until the hwsim phys have been renamed phyN -> radioN.
+
+    60-rename-wifi-phy.rules renames each phy *asynchronously* (a udev RUN),
+    and the carrier NICs are already named radioN (mactab/nameif, early boot).
+    We pair phy and carrier by name, so discovering while a phy is still 'phyN'
+    would miss it -- and we discover only once.  This raced our start (gated
+    merely on the module load) and left some boots relaying nothing until a
+    restart.  Block until every phy is renamed (no 'phyN' left) and the set has
+    settled, so discovery sees radioN phys that match the radioN carriers.
+    """
+    base = "/sys/class/ieee80211"
+    prev, stable = None, 0
+    for _ in range(timeout * 4):
+        phys = sorted(os.listdir(base)) if os.path.isdir(base) else []
+        if phys and not any(p.startswith("phy") for p in phys):
+            if phys == prev:
+                stable += 1
+                if stable >= 2:          # unchanged for ~0.5s
+                    return
+            else:
+                stable = 0
+        prev = phys
+        time.sleep(0.25)
+
+
+def discover_radios():
+    """Pair each local hwsim radio with its multicast carrier interface.
+
+    A radio's phy is named radioN (60-rename-wifi-phy.rules) under
+    /sys/class/ieee80211/.  In the qeneth test topology each radio also has a
+    carrier NIC of the SAME name under /sys/class/net/ -- the topology names the
+    port radioN, so the mactab/nameif rename the carrier to match -- joined to
+    one multicast cell shared by every DUT's radioN.  Pairing them by name gives
+    a per-radio relay: a radio's frames go onto its own carrier (its cell) and a
+    carrier's frames are injected only into its own radio.
+
+    Returns a list of {name, addr1, sock, mac}.  A phy with no matching carrier
+    netdev (e.g. real hardware) is skipped, so the daemon simply idles there.
+    """
+    wait_radios_renamed()
+    radios = []
+    base = "/sys/class/ieee80211"
+    if not os.path.isdir(base):
+        return radios
+    for phy in sorted(os.listdir(base)):
+        if not os.path.isdir(f"/sys/class/net/{phy}"):
+            continue          # no carrier of this name -> not a relayed radio
+        sock, mac = open_medium(phy)
+        if sock:
+            radios.append({"name": phy, "addr1": radio_addr1(phy),
+                           "sock": sock, "mac": mac})
+    return radios
+
+
+def ifup(ifname):
+    """Bring an interface up (best effort)."""
+    subprocess.run(["ip", "link", "set", ifname, "up"], check=False)
+
+
+def main():
+    # The hwsim monitor interface is down after boot; bring it up so the
+    # simulated medium is observable (tcpdump -i hwsim0) and active.
+    ifup("hwsim0")
+
+    # Discover carriers first.  With none -- e.g. 'make run', which creates
+    # radios but no inter-guest medium -- registering on the hwsim family would
+    # make the kernel hand us every frame with nowhere to relay it, breaking
+    # delivery between this guest's own radios.  So leave the medium to the
+    # kernel and idle instead of registering.
+    radios = discover_radios()
+    if not radios:
+        log("no radio carriers found; leaving local hwsim medium to the kernel")
+        while True:
+            time.sleep(3600)
+
+    nl = Netlink()
+    nl.register()
+    log(f"registered on hwsim family {nl.family_id}; "
+        f"radios={' '.join(r['name'] for r in radios)}")
+
+    # TX routing: a frame's transmitter (addresses[1]) -> that radio's carrier.
+    by_addr1 = {r["addr1"]: r for r in radios}
+    dbg(f"netlink portid={nl.sock.getsockname()[0]}; "
+        + "; ".join(f"{r['name']} addr1={r['addr1'].hex()} "
+                    f"carrier={r['mac'].hex()}" for r in radios))
+
+    socks = [nl] + [r["sock"] for r in radios]
+    while True:
+        ready, _, _ = select.select(socks, [], [])
+
+        if nl in ready:
+            data = nl.recv()
+            off = 0
+            while off + NLMSG_HDR.size <= len(data):
+                mlen, mtype, _, _, _ = NLMSG_HDR.unpack_from(data, off)
+                if mlen < NLMSG_HDR.size:
+                    break
+                if mtype == nl.family_id and \
+                   data[off + NLMSG_HDR.size] == HWSIM_CMD_FRAME:
+                    a = parse_attrs(data[off + NLMSG_HDR.size + GENL_HDR.size:
+                                         off + mlen])
+                    tx = a.get(HWSIM_ATTR_ADDR_TRANSMITTER)
+                    frame = a.get(HWSIM_ATTR_FRAME)
+                    if tx and frame:
+                        freq = struct.unpack("=I", a[HWSIM_ATTR_FREQ])[0] \
+                            if HWSIM_ATTR_FREQ in a else 0
+                        flags = struct.unpack("=I", a[HWSIM_ATTR_FLAGS])[0] \
+                            if HWSIM_ATTR_FLAGS in a else 0
+                        # Complete the kernel TX path regardless of delivery.
+                        nl.tx_ack(tx, flags, a.get(HWSIM_ATTR_TX_INFO),
+                                  a.get(HWSIM_ATTR_TX_INFO_FLAGS),
+                                  a.get(HWSIM_ATTR_COOKIE))
+                        # Send only onto the transmitting radio's own carrier.
+                        r = by_addr1.get(tx)
+                        if r:
+                            r["sock"].send(ETH_BROADCAST + r["mac"] + ETYPE +
+                                           WIRE.pack(tx, freq) + frame)
+                            dbg(f"tx {r['name']} freq={freq} len={len(frame)}")
+                        else:
+                            dbg(f"tx from unknown radio {tx.hex()} -- dropped")
+                off += nla_align(mlen)
+
+        for r in radios:
+            if r["sock"] not in ready:
+                continue
+            pkt = r["sock"].recv(65536)
+            if len(pkt) < 14 + WIRE.size:
+                continue
+            # The cell multicasts our own frames back to us; PACKET_IGNORE_-
+            # OUTGOING does not catch that looped copy, so drop anything whose
+            # Ethernet source is our own carrier (carrier MACs are unique per
+            # DUT; transmitter addrs are not, so we must key on the carrier).
+            if pkt[6:12] == r["mac"]:
+                continue
+            tx, freq = WIRE.unpack_from(pkt, 14)
+            frame = pkt[14 + WIRE.size:]
+            # Inject into THIS radio only -- its carrier is its cell.
+            nl.inject(r["addr1"], frame, freq)
+            dbg(f"rx {r['name']} tx={tx.hex()} freq={freq} len={len(frame)}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

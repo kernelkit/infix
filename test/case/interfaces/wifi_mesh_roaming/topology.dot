@@ -1,0 +1,79 @@
+graph "wifi-mesh-roaming" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt2> mgmt2 | <mgmt3> mgmt3 | <mgmt4> mgmt4 | <lan> lan }",
+	    pos="0,0!",
+	    requires="controller",
+	];
+
+	gw1 [
+	    label="{ <mgmt> mgmt | <uplink> uplink | <mesh> mesh | <ap> ap } | gw1",
+	    pos="6,4!",
+	    requires="infix",
+	];
+
+	gw2 [
+	    label="{ <mgmt> mgmt | <mesh> mesh | <ap> ap } | gw2",
+	    pos="9,0!",
+	    requires="infix",
+	];
+
+	gw3 [
+	    label="{ <mgmt> mgmt | <mesh> mesh | <ap> ap } | gw3",
+	    pos="6,-4!",
+	    requires="infix",
+	];
+
+	client [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | client",
+	    pos="13,0!",
+	    requires="infix",
+	];
+
+	// Two wireless cells, each a medium node the relevant radios join.  The
+	// three gw nodes form the 802.11s mesh backhaul on their radio0 (the
+	// "mesh" cell); their roaming AP and the client all live on radio1 (the
+	// "ap" cell), so the client is in range of every gw's AP and can roam.
+	// Communicating radios share an index -> the same cell (see doc/wifi.md):
+	//   * physical: maps onto two over-the-air RF cells;
+	//   * virtual (qeneth): maps onto two multicast cells the wifimedium
+	//     relay bridges mac80211_hwsim frames over.
+	mesh [
+	    label="mesh-cell",
+	    pos="6,0!",
+	    requires="wifi-radio",
+	];
+
+	ap [
+	    label="ap-cell",
+	    pos="11,0!",
+	    requires="wifi-radio",
+	];
+
+	host:mgmt1 -- gw1:mgmt    [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- gw2:mgmt    [requires="mgmt", color="lightgray"]
+	host:mgmt3 -- gw3:mgmt    [requires="mgmt", color="lightgray"]
+	host:mgmt4 -- client:mgmt [requires="mgmt", color="lightgray"]
+
+	// Wired uplink: the rest of the LAN sits behind gw1.  gw2/gw3 reach it
+	// only over the mesh backhaul, so traffic to a client on their APs must
+	// cross the mesh.
+	host:lan -- gw1:uplink [color="black"]
+
+	// Mesh backhaul (radio0, 5GHz)
+	gw1:mesh -- mesh [requires="wifi5GHz", style="dashed"]
+	gw2:mesh -- mesh [requires="wifi5GHz", style="dashed"]
+	gw3:mesh -- mesh [requires="wifi5GHz", style="dashed"]
+
+	// Roaming AP cell (radio1, 2.4GHz): the gw APs and the client
+	gw1:ap -- ap     [requires="wifi2.4GHz", style="dashed"]
+	gw2:ap -- ap     [requires="wifi2.4GHz", style="dashed"]
+	gw3:ap -- ap     [requires="wifi2.4GHz", style="dashed"]
+	client:wifi -- ap [requires="wifi2.4GHz", style="dashed"]
+}

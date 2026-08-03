@@ -1,0 +1,47 @@
+#!/bin/sh
+# Load mac80211_hwsim virtual radios sized to this DUT's topology, then wait
+# for udev to rename the phys (phyN -> radioN) before returning.
+#
+# The radio count comes from a dedicated fw_cfg file (opt/wifi) that qeneth
+# writes per node from the number of radioN carrier ports the topology wired
+# to it.  A node with no wifi links gets 0 (or no file), so hwsim is not loaded
+# at all -- no phys, nothing clutters its interface view.
+#
+# Runs early in ixinit, before 00-probe, so the system probe records the radios
+# by their final radioN names.  ixinit is past the <pid/syslogd> / udev-settle
+# barrier, so 60-rename-wifi-phy.rules (phyN -> radioN) and
+# 70-remove-virtual-wifi-interfaces.rules (drop the stray wlanN) are loaded and
+# fire on the phy add events.  On success it sets the <usr/hwsim> condition so
+# wifimedium starts only where radios exist.  Installed only with
+# BR2_PACKAGE_FEATURE_WIFI_HWSIM.
+
+wifi=/sys/firmware/qemu_fw_cfg/by_name/opt/wifi/raw
+ieee=/sys/class/ieee80211
+
+# Number of radios to create, from the topology (via fw_cfg).
+radios=0
+[ -r "$wifi" ] && radios=$(cat "$wifi" 2>/dev/null)
+
+# No radios wanted -> don't load hwsim, keep the view wifi-free.
+[ "$radios" -gt 0 ] 2>/dev/null || exit 0
+
+modprobe mac80211_hwsim radios="$radios" || exit 0
+
+# Wait (bounded ~10s) for the phyN -> radioN rename to finish: the class has
+# entries and none are still named phyN.  The rename is a udev RUN, so it lags
+# modprobe's return.  On timeout the radios never settled -- fail (and log) so
+# it is visible why 00-probe may record stale phyN names.
+TIMEOUT=100
+i=0
+while [ "$i" -lt "$TIMEOUT" ]; do
+	names=$(ls "$ieee" 2>/dev/null)
+	if [ -n "$names" ] && ! echo "$names" | grep -q '^phy'; then
+		initctl -bq cond set hwsim
+		exit 0
+	fi
+	i=$((i + 1))
+	sleep 0.1
+done
+
+logger -p user.err -t 00-hwsim "timed out waiting for hwsim phys to be renamed radioN"
+exit 1

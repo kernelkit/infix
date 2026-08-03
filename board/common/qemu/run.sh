@@ -310,6 +310,16 @@ EOF
     echo -n "-fw_cfg name=opt/vpd,file=$vpd_file"
 }
 
+wifi_args()
+{
+    # Number of mac80211_hwsim radios for the guest, read at boot by 00-hwsim
+    # (fw_cfg opt/wifi).  Default 0 -> no radios, no wifi clutter.
+    radios=${CONFIG_QEMU_WIFI_RADIOS:-0}
+    wifi="${qdir}/wifi"
+    echo "$radios" > "$wifi"
+    echo -n "-fw_cfg name=opt/wifi,file=$wifi "
+}
+
 wdt_args()
 {
     echo -n "-device i6300esb "
@@ -387,6 +397,7 @@ run_qemu()
 	  $(usb_args) \
 	  $(host_args) \
 	  $(net_args) \
+	  $(wifi_args) \
 	  $(wdt_args) \
 	  $(rtc_args) \
 	  $(vpd_args) \

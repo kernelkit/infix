@@ -43,5 +43,12 @@ for iface in $ports; do
 	ip link set "$iface" group port
 done
 
+# The mac80211_hwsim monitor tap (hwsim test images only) is a debug
+# observer, not a user-facing interface.  It cannot be deleted (no rtnl
+# link ops), so classify it as internal like the DSA CPU interfaces.
+if [ -d /sys/class/net/hwsim0 ]; then
+	ip link set dev hwsim0 group internal
+fi
+
 # At least loopback in iface group
 ip link set lo group iface

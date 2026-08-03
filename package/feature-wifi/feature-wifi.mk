@@ -14,6 +14,15 @@ define FEATURE_WIFI_LINUX_CONFIG_FIXUPS
 	$(call KCONFIG_SET_OPT,CONFIG_CFG80211,m)
 	$(call KCONFIG_ENABLE_OPT,CONFIG_MAC80211_MESH)
 
+	# Virtual radio for automated testing (mac80211_hwsim), built as a
+	# module and gated behind BR2_PACKAGE_FEATURE_WIFI_HWSIM so it is not
+	# built on real boards.  When selected, the module is loaded early in
+	# ixinit by 00-hwsim -- sized to the DUT's topology, so radio-less nodes
+	# load nothing -- and bridged between QEMU guests by the wifimedium relay
+	# (both installed by FEATURE_WIFI_INSTALL_HWSIM below).
+	$(if $(BR2_PACKAGE_FEATURE_WIFI_HWSIM),
+		$(call KCONFIG_SET_OPT,CONFIG_MAC80211_HWSIM,m))
+
 	$(if $(filter y,$(BR2_PACKAGE_FEATURE_WIFI_MEDIATEK)),
 		$(call KCONFIG_ENABLE_OPT,CONFIG_MT7601U)
 		$(call KCONFIG_ENABLE_OPT,CONFIG_MT76x0U)
@@ -75,6 +84,21 @@ define FEATURE_WIFI_INSTALL_IN_ROMFS
         cp $(FEATURE_WIFI_PKGDIR)/70-remove-virtual-wifi-interfaces.rules $(TARGET_DIR)/etc/udev/rules.d/70-remove-virtual-wifi-interfaces.rules
 endef
 FEATURE_WIFI_POST_INSTALL_TARGET_HOOKS += FEATURE_WIFI_INSTALL_IN_ROMFS
+
+# Virtual-radio (mac80211_hwsim) runtime, installed only when the option is
+# selected: the 00-hwsim ixinit script loads the module sized to the opt/wifi
+# fw_cfg qeneth writes per node (no radios -> not loaded), and the wifimedium
+# relay + its Finit service bridge hwsim frames between QEMU guests so they can
+# associate "wirelessly".
+ifeq ($(BR2_PACKAGE_FEATURE_WIFI_HWSIM),y)
+define FEATURE_WIFI_INSTALL_HWSIM
+	$(INSTALL) -D -m 0755 $(FEATURE_WIFI_PKGDIR)/00-hwsim $(TARGET_DIR)/usr/libexec/infix/init.d/00-hwsim
+	$(INSTALL) -D -m 0755 $(FEATURE_WIFI_PKGDIR)/wifimedium $(TARGET_DIR)/usr/libexec/infix/wifimedium
+	$(INSTALL) -D -m 0644 $(FEATURE_WIFI_PKGDIR)/wifimedium.conf $(TARGET_DIR)/etc/finit.d/available/wifimedium.conf
+	ln -sf ../available/wifimedium.conf $(TARGET_DIR)/etc/finit.d/enabled/wifimedium.conf
+endef
+FEATURE_WIFI_POST_INSTALL_TARGET_HOOKS += FEATURE_WIFI_INSTALL_HWSIM
+endif
 
 
 $(eval $(generic-package))
