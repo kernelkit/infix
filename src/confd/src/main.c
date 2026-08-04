@@ -655,10 +655,11 @@ int main(int argc, char **argv)
 			else if (!strcmp(optarg, "warning"))
 				log_level = LOG_WARNING;
 			else if (!strcmp(optarg, "info"))
-				log_level = LOG_NOTICE;
-			else if (!strcmp(optarg, "debug"))
+				log_level = LOG_INFO;
+			else if (!strcmp(optarg, "debug")) {
 				log_level = LOG_DEBUG;
-			else {
+				debug = 1;
+			} else {
 				fprintf(stderr, "confd error: Invalid verbosity \"%s\"\n", optarg);
 				return EXIT_FAILURE;
 			}

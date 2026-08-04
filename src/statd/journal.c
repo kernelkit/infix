@@ -1,31 +1,46 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+/*
+ * Periodic snapshots of the operational datastore for post-mortem and
+ * trend analysis: /var/lib/statd/operational.json is always the latest,
+ * with gzipped timestamped archives kept according to the retention
+ * policy in journal_retention.c.
+ *
+ * The work runs in a forked child, renamed statd-journal, at reduced
+ * priority.  This keeps statd's event loop free to serve operational
+ * get callbacks -- including those triggered by the snapshot itself.
+ * The dump is chunked per YANG module, releasing all datastore locks
+ * between each read, so configuration changes and status queries from
+ * interactive users interleave with the dump instead of queueing up
+ * behind one long read.
+ */
+
+#include <errno.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sysrepo.h>
-#include <ev.h>
 #include <string.h>
-#include <errno.h>
-#include <time.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
-#include <pthread.h>
-#include <dirent.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 #include <zlib.h>
+
+#include <ev.h>
+#include <libyang/libyang.h>
+#include <sysrepo.h>
 
 #include <srx/common.h>
 
 #include "journal.h"
 
-#define JOURNAL_DIR "/var/lib/statd"
-#define DUMP_FILE "/var/lib/statd/operational.json"
-#define DUMP_INTERVAL 300.0  /* 5 minutes in seconds */
-
-static void journal_stop_cb(struct ev_loop *loop, struct ev_async *, int)
-{
-	DEBUG("Journal thread stop signal received");
-	ev_break(loop, EVBREAK_ALL);
-}
+#define JOURNAL_DIR   "/var/lib/statd"
+#define DUMP_FILE     JOURNAL_DIR "/operational.json"
+#define DUMP_INTERVAL 300.0	/* seconds of rest between snapshots */
+#define CHUNK_DELAY   50000	/* us breather between module reads */
+#define CHUNK_TIMEOUT 10000	/* ms, keep short: the read holds module locks
+				 * that configuration changes wait on */
 
 static void get_timestamp_filename(char *buf, size_t len, time_t ts)
 {
@@ -102,131 +117,187 @@ static int create_snapshot(const struct lyd_node *tree)
 	return 0;
 }
 
-static void journal_timer_cb(struct ev_loop *, struct ev_timer *w, int)
+/*
+ * Read operational data one module at a time, merging into a single
+ * tree.  Every sr_get_data() releases its locks on return, giving
+ * other datastore users a chance to run between chunks.
+ */
+static struct lyd_node *dump_modules(sr_session_ctx_t *ses, const struct ly_ctx *ctx,
+				     int *skipped)
 {
-	struct journal_ctx *jctx = (struct journal_ctx *)w->data;
-	struct timespec start, end;
-	struct snapshot *snapshots = NULL;
-	sr_conn_ctx_t *con;
-	const struct ly_ctx *ctx;
-	sr_data_t *sr_data = NULL;
-	sr_error_t err;
-	int snapshot_count = 0;
-	long duration_ms;
+	const struct lys_module *mod;
+	struct lyd_node *tree = NULL;
+	uint32_t idx = 0;
 
-	clock_gettime(CLOCK_MONOTONIC, &start);
-	DEBUG("Starting operational datastore dump");
+	while ((mod = ly_ctx_get_module_iter(ctx, &idx))) {
+		char xpath[300];
+		sr_data_t *data;
+		int err;
 
-	con = sr_session_get_connection(jctx->sr_query_ses);
-	if (!con) {
-		ERROR("Error, getting sr connection for dump");
-		return;
-	}
+		if (!mod->implemented || !mod->compiled || !mod->compiled->data)
+			continue;
 
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Error, acquiring context for dump");
-		return;
-	}
-
-	/* Query ALL operational data via second session
-	 * This triggers our own operational callbacks running in main thread
-	 */
-	DEBUG("Calling sr_get_data on session %p", jctx->sr_query_ses);
-	err = sr_get_data(jctx->sr_query_ses, "/*", 0, 0, 0, &sr_data);
-	if (err != SR_ERR_OK) {
-		ERROR("Error, getting operational data: %s", sr_strerror(err));
-		sr_release_context(con);
-		return;
-	}
-	DEBUG("sr_get_data succeeded, got data tree: %p", sr_data ? sr_data->tree : NULL);
-
-	/* Create timestamped snapshot */
-	if (sr_data && sr_data->tree) {
-		if (create_snapshot(sr_data->tree) != 0) {
-			sr_release_data(sr_data);
-			sr_release_context(con);
-			return;
+		snprintf(xpath, sizeof(xpath), "/%s:*", mod->name);
+		err = sr_get_data(ses, xpath, 0, CHUNK_TIMEOUT, 0, &data);
+		if (err) {
+			INFO("Skipping %s: %s", mod->name, sr_strerror(err));
+			(*skipped)++;
+			continue;
 		}
+
+		if (data) {
+			if (data->tree && lyd_merge_siblings(&tree, data->tree, 0))
+				ERROR("Error, merging %s data", mod->name);
+			sr_release_data(data);
+		}
+
+		usleep(CHUNK_DELAY);
+	}
+
+	return tree;
+}
+
+/*
+ * Forked child: fresh sysrepo connection, dump, archive, retention,
+ * then _exit() -- never touch inherited statd state.
+ */
+static void snapshot_process(void)
+{
+	struct snapshot *snapshots = NULL;
+	sr_session_ctx_t *ses = NULL;
+	sr_conn_ctx_t *conn = NULL;
+	struct timespec start, end;
+	const struct ly_ctx *ctx;
+	struct lyd_node *tree;
+	int rc = EXIT_FAILURE;
+	int skipped = 0;
+	int count = 0;
+	long ms;
+
+	prctl(PR_SET_NAME, "statd-journal", 0, 0, 0);
+	closelog();	/* drop log connection inherited from statd */
+	openlog("statd-journal", LOG_PID | LOG_NDELAY | (debug ? LOG_PERROR : 0), LOG_DAEMON);
+	nice(10);
+
+	NOTE("Starting operational datastore snapshot");
+	clock_gettime(CLOCK_MONOTONIC, &start);
+
+	if (mkdir(JOURNAL_DIR, 0755) && errno != EEXIST)
+		ERROR("Error, creating directory " JOURNAL_DIR ": %s", strerror(errno));
+
+	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
+		ERROR("Error, connecting to sysrepo");
+		_exit(rc);
+	}
+	if (sr_session_start(conn, SR_DS_OPERATIONAL, &ses)) {
+		ERROR("Error, starting session");
+		goto done;
+	}
+
+	ctx = sr_acquire_context(conn);
+	if (!ctx) {
+		ERROR("Error, acquiring context");
+		goto done;
+	}
+
+	tree = dump_modules(ses, ctx, &skipped);
+	if (tree) {
+		rc = create_snapshot(tree) ? EXIT_FAILURE : EXIT_SUCCESS;
+		lyd_free_all(tree);
 	} else {
 		DEBUG("No operational data to dump");
+		rc = EXIT_SUCCESS;
 	}
+	sr_release_context(conn);
 
-	sr_release_data(sr_data);
-	sr_release_context(con);
-
-	/* Apply retention policy */
-	if (journal_scan_snapshots(JOURNAL_DIR, &snapshots, &snapshot_count) == 0) {
-		DEBUG("Applying retention policy to %d snapshots", snapshot_count);
-		journal_apply_retention_policy(JOURNAL_DIR, snapshots, snapshot_count, time(NULL));
+	if (journal_scan_snapshots(JOURNAL_DIR, &snapshots, &count) == 0) {
+		DEBUG("Applying retention policy to %d snapshots", count);
+		journal_apply_retention_policy(JOURNAL_DIR, snapshots, count, time(NULL));
 		free(snapshots);
 	}
 
 	clock_gettime(CLOCK_MONOTONIC, &end);
-	duration_ms = (end.tv_sec - start.tv_sec) * 1000 +
-		      (end.tv_nsec - start.tv_nsec) / 1000000;
-
-	INFO("Journal snapshot created and retention applied (took %ld ms)", duration_ms);
+	ms = (end.tv_sec - start.tv_sec) * 1000 +
+	     (end.tv_nsec - start.tv_nsec) / 1000000;
+	if (skipped)
+		NOTE("Snapshot created and retention applied (took %ld ms, %d modules busy, skipped)",
+		     ms, skipped);
+	else
+		NOTE("Snapshot created and retention applied (took %ld ms)", ms);
+done:
+	if (ses)
+		sr_session_stop(ses);
+	sr_disconnect(conn);
+	_exit(rc);
 }
 
-static void *journal_thread_fn(void *arg)
+/*
+ * The timer is one-shot, re-armed only when the previous snapshot has
+ * finished.  Snapshots can thus never overlap, and DUMP_INTERVAL is
+ * the rest between them rather than a fixed cadence -- on a slow, or
+ * busy, system snapshots are simply taken further apart.
+ */
+static void journal_rearm(struct journal_ctx *jctx)
 {
-	struct journal_ctx *jctx = (struct journal_ctx *)arg;
-	struct ev_timer journal_timer;
-
-	INFO("Journal thread started");
-
-	if (mkdir("/var/lib/statd", 0755) != 0 && errno != EEXIST) {
-		ERROR("Error, creating directory /var/lib/statd: %s", strerror(errno));
-	}
-
-	jctx->journal_loop = ev_loop_new(EVFLAG_AUTO);
-	if (!jctx->journal_loop) {
-		ERROR("Error, creating journal thread event loop");
-		return NULL;
-	}
-
-	/* Setup async watcher for stop signal */
-	ev_async_init(&jctx->journal_stop, journal_stop_cb);
-	ev_async_start(jctx->journal_loop, &jctx->journal_stop);
-
-	/* Setup timer for periodic dumps */
-	ev_timer_init(&journal_timer, journal_timer_cb, DUMP_INTERVAL, DUMP_INTERVAL);
-	journal_timer.data = jctx;
-	ev_timer_start(jctx->journal_loop, &journal_timer);
-
-	DEBUG("Journal thread entering event loop");
-	ev_run(jctx->journal_loop, 0);
-
-	ev_timer_stop(jctx->journal_loop, &journal_timer);
-	ev_async_stop(jctx->journal_loop, &jctx->journal_stop);
-	ev_loop_destroy(jctx->journal_loop);
-
-	INFO("Journal thread exiting");
-	return NULL;
+	ev_timer_set(&jctx->timer, DUMP_INTERVAL, 0.0);
+	ev_timer_start(jctx->loop, &jctx->timer);
 }
 
-int journal_start(struct journal_ctx *jctx, sr_session_ctx_t *sr_query_ses)
+static void journal_child_cb(struct ev_loop *loop, struct ev_child *w, int revents)
 {
-	int err;
+	struct journal_ctx *jctx = (struct journal_ctx *)
+		((char *)w - offsetof(struct journal_ctx, child));
 
-	jctx->sr_query_ses = sr_query_ses;
-	jctx->journal_thread_running = 1;
+	(void)revents;
 
-	err = pthread_create(&jctx->journal_thread, NULL, journal_thread_fn, jctx);
-	if (err) {
-		ERROR("Error, creating journal thread: %s", strerror(err));
-		return err;
+	ev_child_stop(loop, w);
+	jctx->pid = 0;
+
+	if (!WIFEXITED(w->rstatus) || WEXITSTATUS(w->rstatus))
+		ERROR("Journal snapshot failed, status %d", w->rstatus);
+
+	journal_rearm(jctx);
+}
+
+static void journal_timer_cb(struct ev_loop *loop, ev_timer *w, int revents)
+{
+	struct journal_ctx *jctx = (struct journal_ctx *)
+		((char *)w - offsetof(struct journal_ctx, timer));
+	pid_t pid;
+
+	(void)revents;
+
+	pid = fork();
+	if (pid < 0) {
+		ERRNO("Failed forking journal snapshot process");
+		journal_rearm(jctx);
+		return;
 	}
+	if (!pid)
+		snapshot_process();	/* never returns */
 
-	INFO("Periodic operational dump enabled (every %.0f seconds)", DUMP_INTERVAL);
+	jctx->pid = pid;
+	ev_child_init(&jctx->child, journal_child_cb, pid, 0);
+	ev_child_start(loop, &jctx->child);
+}
+
+int journal_start(struct journal_ctx *jctx, struct ev_loop *loop)
+{
+	jctx->loop = loop;
+	jctx->pid  = 0;
+
+	ev_timer_init(&jctx->timer, journal_timer_cb, DUMP_INTERVAL, 0.0);
+	ev_timer_start(loop, &jctx->timer);
+
+	NOTE("Periodic operational snapshot enabled (every %.0f seconds)", DUMP_INTERVAL);
 	return 0;
 }
 
 void journal_stop(struct journal_ctx *jctx)
 {
-	/* Signal thread to exit immediately via async watcher */
-	jctx->journal_thread_running = 0;
-	ev_async_send(jctx->journal_loop, &jctx->journal_stop);
-	pthread_join(jctx->journal_thread, NULL);
+	ev_timer_stop(jctx->loop, &jctx->timer);
+
+	/* Snapshot in progress completes on its own, reaped by init */
+	if (jctx->pid)
+		ev_child_stop(jctx->loop, &jctx->child);
 }

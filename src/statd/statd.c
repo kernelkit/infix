@@ -1,15 +1,16 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sysrepo.h>
+#include <sysrepo/version.h>
 #include <ev.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
 #include <sys/stat.h>
-#include <pthread.h>
 
 #include <asm/types.h>
 #include <sys/socket.h>
@@ -67,10 +68,9 @@ struct sub {
 struct statd {
 	struct sub_head subs;
 	sr_session_ctx_t *sr_ses;        /* Provider session with callbacks */
-	sr_session_ctx_t *sr_query_ses;  /* Consumer session for queries */
 	sr_conn_ctx_t *sr_conn;          /* Connection (owns YANG context) */
 	struct ev_loop *ev_loop;
-	struct journal_ctx journal;      /* Journal thread context */
+	struct journal_ctx journal;      /* Periodic operational snapshots */
 	struct mdns_ctx mdns;            /* mDNS neighbor monitor */
 };
 
@@ -97,7 +97,8 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 
 	err = fsystemv(yanger_args, NULL, stream, NULL);
 	if (err) {
-		ERROR("Error, running yanger");
+		ERROR("Error calling yanger %s%s%s, exit code %d", yanger_args[1],
+		      yanger_args[3] ? " " : "", yanger_args[3] ?: "", err);
 		fclose(stream);
 		return SR_ERR_SYS;
 	}
@@ -112,7 +113,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 
 	err = lyd_parse_data_fd(ctx, fd, LYD_JSON, LYD_PARSE_ONLY, 0, parent);
 	if (err)
-		ERROR("Error, parsing yanger data (%d): %s", err, ly_errmsg(ctx));
+		ERROR("Failed parsing yanger data (%d): %s", err, ly_errmsg(ctx));
 
 	fclose(stream);
 	/* Note: fclose() already closes the underlying fd from fdopen() */
@@ -135,12 +136,12 @@ static char *xpath_extract(const char *xpath, const char *key)
 
 	end = strchr(ptr, '\'');
 	if (!end) {
-		ERROR("Can't find end quote for %s (sanity check)", key);
+		ERROR("Cannot find end quote for %s (sanity check)", key);
 		return NULL;
 	}
 
 	if ((end - ptr) >= XPATH_MAX) {
-		ERROR("Value for %s is to long (sanity check)", key);
+		ERROR("Value for %s is too long (sanity check)", key);
 		return NULL;
 	}
 
@@ -174,13 +175,13 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
@@ -191,8 +192,9 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 	}
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding interface yanger data");
+		ERROR("Failed adding yanger data for %s", ifname ?: model);
 
+	free(ifname);
 	sr_release_context(con);
 
 	return SR_ERR_OK;
@@ -215,19 +217,19 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Failed adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -251,19 +253,19 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Failed adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -283,23 +285,23 @@ static int sr_rip_cb(sr_session_ctx_t *session, uint32_t, const char *,
 	sr_conn_ctx_t *con;
 	sr_error_t err;
 
-	DEBUG("Incoming rip query for xpath: %s", xpath);
+	DEBUG("Incoming RIP query for xpath: %s", xpath);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Failed adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -323,19 +325,19 @@ static int sr_bfd_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting sr connection");
+		ERROR("Error getting sysrepo connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context");
+		ERROR("Failed acquiring sysrepo context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
-		ERROR("Error adding yanger data");
+		ERROR("Failed adding yanger data for %s", yanger_args[1]);
 
 	sr_release_context(con);
 
@@ -384,14 +386,14 @@ static int subscribe(struct statd *statd, char *model, char *xpath,
 				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
 				    &sub->sr_sub);
 	if (err) {
-		ERROR("Error, subscribing to path \"%s\": %s", xpath, sr_strerror(err));
+		ERROR("Failed subscribing to path \"%s\": %s", xpath, sr_strerror(err));
 		free(sub);
 		return err;
 	}
 
 	err = sr_get_event_pipe(sub->sr_sub, &sr_ev_pipe);
 	if (err) {
-		ERROR("Error, getting sysrepo event pipe: %s", sr_strerror(err));
+		ERROR("Error getting sysrepo event pipe: %s", sr_strerror(err));
 		sr_unsubscribe(sub->sr_sub);
 		free(sub);
 		return err;
@@ -463,21 +465,86 @@ static int subscribe_to_all(struct statd *statd)
 	return SR_ERR_OK;
 }
 
+static void version_print(void)
+{
+	printf("statd - status daemon v%s, compiled with libsysrepo v%s\n\n",
+	       STATD_VERSION, SR_VERSION);
+}
+
+static void help_print(void)
+{
+	printf("Usage:\n"
+	       "  statd [-h] [-V] [-v <level>]\n"
+	       "\n"
+	       "Options:\n"
+	       "  -h, --help           Prints usage help.\n"
+	       "  -V, --version        Prints version information.\n"
+	       "  -v, --verbosity <level>\n"
+	       "                       Change verbosity to a level (none, error, warning, info, debug).\n"
+	       "\n");
+}
+
 int main(int argc, char *argv[])
 {
 	struct ev_signal sigint_watcher, sigusr1_watcher, sighup_watcher;
 	int log_opts = LOG_PID | LOG_NDELAY;
+	int log_level = LOG_NOTICE;
 	struct statd statd = {};
-	const char *env;
+	int opt;
 	int err;
 
-	env = getenv("DEBUG");
-	if (env || (argc > 1 && !strcmp(argv[1], "-d"))) {
+	struct option options[] = {
+		{"help",      no_argument,       NULL, 'h'},
+		{"version",   no_argument,       NULL, 'V'},
+		{"verbosity", required_argument, NULL, 'v'},
+		{NULL,        0,                 NULL, 0},
+	};
+
+	opterr = 0;
+	while ((opt = getopt_long(argc, argv, "hVv:", options, NULL)) != -1) {
+		switch (opt) {
+		case 'h':
+			version_print();
+			help_print();
+			return EXIT_SUCCESS;
+		case 'V':
+			version_print();
+			return EXIT_SUCCESS;
+		case 'v':
+			if (!strcmp(optarg, "none"))
+				log_level = LOG_EMERG;
+			else if (!strcmp(optarg, "error"))
+				log_level = LOG_ERR;
+			else if (!strcmp(optarg, "warning"))
+				log_level = LOG_WARNING;
+			else if (!strcmp(optarg, "info"))
+				log_level = LOG_INFO;
+			else if (!strcmp(optarg, "debug")) {
+				log_level = LOG_DEBUG;
+				debug = 1;
+			} else {
+				fprintf(stderr, "statd error: Invalid verbosity \"%s\"\n", optarg);
+				return EXIT_FAILURE;
+			}
+			break;
+		default:
+			fprintf(stderr, "statd error: Invalid option or missing argument: -%c\n", optopt);
+			return EXIT_FAILURE;
+		}
+	}
+
+	if (optind < argc) {
+		fprintf(stderr, "statd error: Redundant parameters\n");
+		return EXIT_FAILURE;
+	}
+
+	if (getenv("DEBUG")) {
 		log_opts |= LOG_PERROR;
 		debug = 1;
 	}
 
 	openlog("statd", log_opts, LOG_DAEMON);
+	setlogmask(LOG_UPTO(log_level));
 
 	TAILQ_INIT(&statd.subs);
 	statd.ev_loop = EV_DEFAULT;
@@ -491,7 +558,7 @@ int main(int argc, char *argv[])
 	}
 	DEBUG("Connected to sysrepo");
 
-	/* Session 1: Provider with operational callbacks */
+	/* Provider session with operational callbacks */
 	err = sr_session_start(statd.sr_conn, SR_DS_OPERATIONAL, &statd.sr_ses);
 	if (err) {
 		ERROR("Error, start provider session: %s", sr_strerror(err));
@@ -500,19 +567,8 @@ int main(int argc, char *argv[])
 	}
 	DEBUG("Provider session started (%p)", statd.sr_ses);
 
-	/* Session 2: Consumer for querying operational data */
-	err = sr_session_start(statd.sr_conn, SR_DS_OPERATIONAL, &statd.sr_query_ses);
-	if (err) {
-		ERROR("Error, start query session: %s", sr_strerror(err));
-		sr_session_stop(statd.sr_ses);
-		sr_disconnect(statd.sr_conn);
-		return EXIT_FAILURE;
-	}
-	DEBUG("Query session started (%p)", statd.sr_query_ses);
-
 	err = subscribe_to_all(&statd);
 	if (err) {
-		sr_session_stop(statd.sr_query_ses);
 		sr_session_stop(statd.sr_ses);
 		sr_disconnect(statd.sr_conn);
 		return EXIT_FAILURE;
@@ -530,9 +586,8 @@ int main(int argc, char *argv[])
 	sighup_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sighup_watcher);
 
-	err = journal_start(&statd.journal, statd.sr_query_ses);
+	err = journal_start(&statd.journal, statd.ev_loop);
 	if (err) {
-		sr_session_stop(statd.sr_query_ses);
 		sr_session_stop(statd.sr_ses);
 		sr_disconnect(statd.sr_conn);
 		return EXIT_FAILURE;
@@ -554,7 +609,6 @@ int main(int argc, char *argv[])
 	journal_stop(&statd.journal);
 
 	unsub_to_all(&statd);
-	sr_session_stop(statd.sr_query_ses);
 	sr_session_stop(statd.sr_ses);
 	sr_disconnect(statd.sr_conn);
 

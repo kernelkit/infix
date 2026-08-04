@@ -214,7 +214,7 @@
     "forking": false,
     "status": "running",
     "origin": "/etc/finit.d/enabled/statd.conf",
-    "command": "statd -f -p /run/statd.pid -n",
+    "command": "statd",
     "condition": [ "+pid/confd" ],
     "restarts": 0,
     "pidfile": "/run/statd.pid",
