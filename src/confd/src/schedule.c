@@ -36,6 +36,14 @@ int schedule_consumer_register(const struct cron_consumer *consumer)
 	return 0;
 }
 
+/* Read-only view of the registered consumers, for the dependency tracker. */
+const struct cron_consumer *const *schedule_consumers(size_t *count)
+{
+	if (count)
+		*count = consumer_count;
+	return consumers;
+}
+
 /*
  * Convert ietf-schedule recurrence to a 5-field cron expression.
  *
