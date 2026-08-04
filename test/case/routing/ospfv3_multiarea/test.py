@@ -54,7 +54,6 @@ def config_target1(target, ring1, ring2, cross):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "10.0.0.1",
                             "areas": {
                                 "area": [
@@ -102,7 +101,6 @@ def config_target2(target, ring1, ring2, cross):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "1.1.1.1",
                             "areas": {
                                 "area": [
@@ -150,7 +148,6 @@ def config_target3(target, ring2, cross, link):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "10.0.0.3",
                             "areas": {
                                 "area": [{
@@ -194,7 +191,6 @@ def config_target4(target, ring1, cross, link):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "10.0.0.4",
                             "areas": {
                                 "area": [{

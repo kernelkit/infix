@@ -68,7 +68,6 @@ def config(target, params):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": rid,
                             "areas": {
                                 "area": [{

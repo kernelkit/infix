@@ -29,11 +29,13 @@ module infix-routing {
   revision 2026-07-22 {
     description "Add IPv6 dynamic routing support (RIPng and OSPFv3).
                  Introduce the ripng and ospfv3 routing-type identities,
-                 expose the ietf-rip and ietf-ospf IPv6 address-families
-                 (previously deviated not-supported), restrict OSPFv3
-                 interfaces to the network types FRR ospf6d supports
-                 (no non-broadcast, no static neighbors), and extend the OSPF
-                 local-rib and neighbor augments to OSPFv3.";
+                 expose the ietf-rip IPv6 address-family for RIPng (previously
+                 deviated not-supported), restrict OSPFv3 interfaces to the
+                 network types FRR ospf6d supports (no non-broadcast, no static
+                 neighbors), and extend the OSPF local-rib and neighbor augments
+                 to OSPFv3.  The OSPF address-family leaf remains not-supported:
+                 FRR ospf6d carries IPv6 only, IPv4-over-OSPFv3 (RFC 5838) is
+                 not supported.";
     reference "RFC 8695, RFC 2080, RFC 5340, RFC 9129";
   }
 
@@ -397,6 +399,13 @@ module infix-routing {
   }
 
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:spf-control" {
+    deviate not-supported;
+  }
+
+  /* FRR ospf6d carries IPv6 routes only; IPv4-over-OSPFv3 (RFC 5838) is not
+     supported.  OSPFv2 vs OSPFv3 is selected by the control-plane-protocol
+     type, so the address-family leaf is omitted. */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:address-family" {
     deviate not-supported;
   }
 

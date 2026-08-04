@@ -309,12 +309,10 @@ admin@example:/>
 
 The system also supports OSPF for IPv6, i.e., OSPFv3.  It uses the same
 `ietf-ospf` model as OSPFv2, selected by the control plane protocol type
-`ospfv3` and the `address-family ipv6` setting.  OSPFv3 has no IPv4
-interface address to derive a router ID from, so an `explicit-router-id`
-must be set.
+`ospfv3`.  OSPFv3 has no IPv4 interface address to derive a router ID
+from, so an `explicit-router-id` must be set.
 
 <pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv3 name default ospf</b>
-admin@example:/config/routing/…/ospf/> <b>set address-family ipv6</b>
 admin@example:/config/routing/…/ospf/> <b>set explicit-router-id 1.1.1.1</b>
 admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 enabled</b>
 admin@example:/config/routing/…/ospf/> <b>leave</b>
@@ -335,6 +333,8 @@ redistribution and default route advertisement work the same way as for
 OSPFv3 runs on FRR's `ospf6d`, which does not implement every feature
 available for OSPFv2:
 
+- OSPFv3 carries IPv6 routes only; IPv4-over-OSPFv3 (RFC 5838) is not
+  supported, so there is no `address-family` setting.
 - `explicit-router-id` is required (there is no IPv4 address to derive it
   from).
 - Interface types are limited to `broadcast`, `point-to-point` and

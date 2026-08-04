@@ -89,7 +89,6 @@ def config_r1_gateway(target, rip_link, ospf_link):
                         "type": "infix-routing:ospfv3",
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "1.1.1.1",
                             "redistribute": {
                                 "redistribute": [{
@@ -216,7 +215,6 @@ def config_r3_ospf(target, link):
                         "type": "infix-routing:ospfv3",
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "3.3.3.3",
                             "redistribute": {
                                 "redistribute": [{

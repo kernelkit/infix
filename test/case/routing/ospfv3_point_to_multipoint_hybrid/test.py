@@ -72,7 +72,6 @@ def config_target1(target, link, data):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "1.1.1.1",
                             "redistribute": {
                                 "redistribute": [{"protocol": "connected"}]
@@ -152,7 +151,6 @@ def config_target2(target, link1, link2):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "2.2.2.2",
                             "redistribute": {
                                 "redistribute": [{"protocol": "connected"}]
@@ -232,7 +230,6 @@ def config_target3(target, link, data):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "3.3.3.3",
                             "redistribute": {
                                 "redistribute": [{"protocol": "connected"}]

@@ -94,7 +94,6 @@ def config_target1(target, data, link):
                             "type": OSPFV3,
                             "name": "default",
                             "ospf": {
-                                "address-family": "ipv6",
                                 "explicit-router-id": "1.1.1.1",
                                 "default-route-advertise": {
                                     "enabled": True
@@ -171,7 +170,6 @@ def config_target2(target, data, link):
                         "type": OSPFV3,
                         "name": "default",
                         "ospf": {
-                            "address-family": "ipv6",
                             "explicit-router-id": "2.2.2.2",
                             "areas": {
                                 "area": [{
