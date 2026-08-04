@@ -35,6 +35,24 @@
 - name: OSPF Point-to-Multipoint
   case: ospf_point_to_multipoint/test.py
 
+- name: OSPFv3 Basic
+  case: ospfv3_basic/test.py
+
+- name: OSPFv3 Default Route Advertise
+  case: ospfv3_default_route_advertise/test.py
+
+- name: "Route preference: OSPFv3 vs Static"
+  case: route_pref_ospfv3/test.py
+
+- name: OSPFv3 with Multiple Areas
+  case: ospfv3_multiarea/test.py
+
+- name: OSPFv3 Point-to-Multipoint Hybrid
+  case: ospfv3_point_to_multipoint_hybrid/test.py
+
+- name: OSPFv3 BFD
+  case: ospfv3_bfd/test.py
+
 - name: RIP Basic
   case: rip_basic/test.py
 
@@ -46,3 +64,15 @@
 
 - name: RIP Multi-hop
   case: rip_multihop/test.py
+
+- name: RIPng Basic
+  case: ripng_basic/test.py
+
+- name: RIPng Passive Interface
+  case: ripng_passive_interface/test.py
+
+- name: RIPng Redistribution
+  case: ripng_redistribute/test.py
+
+- name: RIPng Multi-hop
+  case: ripng_multihop/test.py

@@ -7,8 +7,8 @@ Currently supported YANG models:
 | ietf-routing              | Base model for all other models |
 | ietf-ipv4-unicast-routing | Static IPv4 unicast routing     |
 | ietf-ipv6-unicast-routing | Static IPv6 unicast routing     |
-| ietf-ospf                 | OSPF routing                    |
-| ietf-rip                  | RIP routing                     |
+| ietf-ospf                 | OSPFv2 and OSPFv3 routing        |
+| ietf-rip                  | RIPv2 and RIPng routing          |
 | infix-routing             | Infix deviations and extensions |
 
 The base model, ietf-routing, is where all the other models hook in.  It
@@ -305,6 +305,62 @@ admin@example:/>
 </code></pre>
 
 
+## OSPFv3 Routing
+
+The system also supports OSPF for IPv6, i.e., OSPFv3.  It uses the same
+`ietf-ospf` model as OSPFv2, selected by the control plane protocol type
+`ospfv3`.  OSPFv3 has no IPv4 interface address to derive a router ID
+from, so an `explicit-router-id` must be set.
+
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv3 name default ospf</b>
+admin@example:/config/routing/…/ospf/> <b>set explicit-router-id 1.1.1.1</b>
+admin@example:/config/routing/…/ospf/> <b>set area 0.0.0.0 interface e0 enabled</b>
+admin@example:/config/routing/…/ospf/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+> [!TIP]
+> Remember to enable [IPv6 forwarding](ip.md#ipv6-forwarding) for all the
+> interfaces you want to route between.
+
+Areas, interface settings (cost, timers, BFD, `point-to-point`),
+redistribution and default route advertisement work the same way as for
+[OSPFv2](#ospfv2-routing), with the differences listed below.
+
+
+### Differences from OSPFv2
+
+OSPFv3 runs on FRR's `ospf6d`, which does not implement every feature
+available for OSPFv2:
+
+- OSPFv3 carries IPv6 routes only; IPv4-over-OSPFv3 (RFC 5838) is not
+  supported, so there is no `address-family` setting.
+- `explicit-router-id` is required (there is no IPv4 address to derive it
+  from).
+- Interface types are limited to `broadcast`, `point-to-point` and
+  multicast Point-to-Multipoint (`hybrid`).  Non-broadcast interfaces and
+  static neighbors are not supported and are rejected by the model.
+- NSSA areas are supported as regular NSSA only; the `summary` flag has no
+  effect (no totally-NSSA).  Stub areas do support totally-stubby
+  (`summary false`).
+- Per-area `default-cost` is not available.
+
+
+### OSPFv3 status
+
+The CLI mirrors the OSPFv2 commands under `show ipv6 ospf`:
+
+<pre class="cli"><code>admin@example:/> <b>show ipv6 ospf</b>
+admin@example:/> <b>show ipv6 ospf neighbor</b>
+admin@example:/> <b>show ipv6 ospf interface</b>
+admin@example:/> <b>show ipv6 ospf route</b>
+</code></pre>
+
+Debug logging is configured under the `ospfv3` protocol `debug` container,
+analogous to OSPFv2.  Available categories are `packet`, `ism`, `nsm` and
+`nssa`.
+
+
 ## RIP Routing
 
 The system supports RIP dynamic routing for IPv4, i.e., RIPv2.  To enable
@@ -425,6 +481,51 @@ admin@example:/>
 </code></pre>
 
 
+## RIPng Routing
+
+RIPng is RIP for IPv6.  It uses the same `ietf-rip` model as RIPv2,
+selected by the control plane protocol type `ripng`:
+
+<pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ripng name default rip</b>
+admin@example:/config/routing/…/rip/> <b>set interfaces interface e0</b>
+admin@example:/config/routing/…/rip/> <b>set interfaces interface e1</b>
+admin@example:/config/routing/…/rip/> <b>leave</b>
+admin@example:/>
+</code></pre>
+
+> [!TIP]
+> Remember to enable [IPv6 forwarding](ip.md#ipv6-forwarding) for all the
+> interfaces you want to route between.
+
+Passive interfaces, redistribution (`set redistribute connected` /
+`static`) and timers are configured the same way as for
+[RIPv2](#rip-routing), with the differences below.
+
+
+### Differences from RIPv2
+
+RIPng runs on FRR's `ripngd`:
+
+- RIPng has no protocol version, so the per-interface `send-version` and
+  `receive-version` settings do not apply.
+- The global `distance` and unicast `neighbor` settings are not supported
+  (`ripngd` has no such commands).
+- `set redistribute ospf` redistributes OSPFv3, as there is no OSPFv2 in
+  an IPv6 domain.
+
+
+### RIPng status
+
+RIPng-learned routes appear in the [IPv6 routing table](#ipv6-routing-table):
+
+<pre class="cli"><code>admin@example:/> <b>show ipv6 route</b>
+</code></pre>
+
+Debug logging is configured under the `ripng` protocol `debug` container,
+analogous to RIPv2.  Available categories are `events`, `packet` and
+`kernel`.
+
+
 ## View routing table
 
 The routing table can be inspected from the operational datastore, XPath
@@ -500,7 +601,8 @@ Default distances used (lower numeric value wins):
 | 0            | Kernel routes, i.e., connected routes   |
 | 1            | Static routes                           |
 | 5            | DHCP routes                             |
-| 110          | OSPF                                    |
+| 110          | OSPF (OSPFv2 and OSPFv3)                 |
+| 120          | RIP (RIPv2 and RIPng)                   |
 | 254          | IPv4LL (ZeroConf) device routes         |
 | 255          | Route will not be used or redistributed |
 
@@ -527,6 +629,8 @@ The source protocol describes the origin of the route.
 | kernel       | Added when setting a subnet address on an interface |
 | static       | User created, learned from DHCP, or IPv4LL          |
 | ospfv2       | Routes learned from OSPFv2                          |
+| ospfv3       | Routes learned from OSPFv3                          |
+| rip          | Routes learned from RIPv2 or RIPng                  |
 
 The YANG model *ietf-routing* support multiple ribs but only two are
 currently supported, namely `ipv4` and `ipv6`.

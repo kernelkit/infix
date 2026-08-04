@@ -5,6 +5,7 @@
 
 #include "netd.h"
 
-int config_load(struct route_head *routes, struct rip_config *rip_cfg);
+int config_load(struct route_head *routes, struct rip_config *rip_cfg,
+		struct rip_config *ripng_cfg);
 
 #endif /* NETD_CONFIG_H_ */

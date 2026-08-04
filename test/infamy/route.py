@@ -57,19 +57,19 @@ def ipv6_route_exist(target, dest, nexthop=None, proto=None, pref=None, active_c
     return _exist_route(target, dest, nexthop=nexthop, ip="ipv6", proto=proto, pref=pref, active_check=active_check)
 
 
-def _get_ospf_status(target):
+def _get_ospf_status(target, proto="infix-routing:ospfv2"):
     xpath = "/ietf-routing:routing/control-plane-protocols"
     protos = target.get_data(xpath)["routing"]["control-plane-protocols"]
     rib = protos.get("control-plane-protocol", {})
     for p in rib:
-        if p["type"] == "infix-routing:ospfv2":
+        if p["type"] == proto:
             return p.get("ospf") or p.get("ietf-ospf:ospf", {})
 
     return {}
 
 
-def _get_ospf_status_area(target, area_id):
-    ospf = _get_ospf_status(target)
+def _get_ospf_status_area(target, area_id, proto="infix-routing:ospfv2"):
+    ospf = _get_ospf_status(target, proto)
     for area in ospf.get("areas", {}).get("area", {}):
         if area["area-id"] == area_id:
             return area
@@ -77,8 +77,8 @@ def _get_ospf_status_area(target, area_id):
     return {}
 
 
-def _get_ospf_status_area_interface(target, area_id, ifname):
-    area = _get_ospf_status_area(target, area_id)
+def _get_ospf_status_area_interface(target, area_id, ifname, proto="infix-routing:ospfv2"):
+    area = _get_ospf_status_area(target, area_id, proto)
     for interface in area.get("interfaces", {}).get("interface", {}):
         if interface.get("name") == ifname:
             return interface
@@ -86,8 +86,8 @@ def _get_ospf_status_area_interface(target, area_id, ifname):
     return {}
 
 
-def ospf_get_neighbor(target, area_id, ifname, neighbour_id, full=True):
-    ospf_interface = _get_ospf_status_area_interface(target, area_id, ifname)
+def ospf_get_neighbor(target, area_id, ifname, neighbour_id, full=True, proto="infix-routing:ospfv2"):
+    ospf_interface = _get_ospf_status_area_interface(target, area_id, ifname, proto)
     for neighbor in ospf_interface.get("neighbors", {}).get("neighbor", {}):
         if neighbor.get("neighbor-router-id") == neighbour_id:
             if full is False:
@@ -98,26 +98,26 @@ def ospf_get_neighbor(target, area_id, ifname, neighbour_id, full=True):
     return False
 
 
-def ospf_get_interface_type(target, area_id, ifname):
-    ospf_interface = _get_ospf_status_area_interface(target, area_id, ifname)
+def ospf_get_interface_type(target, area_id, ifname, proto="infix-routing:ospfv2"):
+    ospf_interface = _get_ospf_status_area_interface(target, area_id, ifname, proto)
     return ospf_interface.get("interface-type", None)
 
 
-def ospf_get_interface_passive(target, area_id, ifname):
-    ospf_interface = _get_ospf_status_area_interface(target, area_id, ifname)
+def ospf_get_interface_passive(target, area_id, ifname, proto="infix-routing:ospfv2"):
+    ospf_interface = _get_ospf_status_area_interface(target, area_id, ifname, proto)
     return ospf_interface.get("passive", False)
 
 
-def ospf_is_area_nssa(target, area_id):
-    area = _get_ospf_status_area(target, area_id)
+def ospf_is_area_nssa(target, area_id, proto="infix-routing:ospfv2"):
+    area = _get_ospf_status_area(target, area_id, proto)
     if area.get("area-type", "") == "ietf-ospf:nssa-area":
         return True
 
     return False
 
 
-def ospf_has_neighbors(target):
-    ospf = _get_ospf_status(target)
+def ospf_has_neighbors(target, proto="infix-routing:ospfv2"):
+    ospf = _get_ospf_status(target, proto)
     for area in ospf.get("areas", {}).get("area", []):
         for interface in area.get("interfaces", {}).get("interface", []):
             if interface.get("neighbors"):

@@ -387,8 +387,10 @@ def bfd(args: List[str]) -> None:
         print(f"Unknown BFD subcommand: {subcommand}")
 
 
-def ospf(args: List[str]) -> None:
-    """Handle show ospf [subcommand] [ifname] [detail]
+def _ospf(args: List[str], afi: str) -> None:
+    """Handle show [ip|ipv6] ospf [subcommand] [ifname] [detail]
+
+    afi selects the address family: 'ipv4' (OSPFv2) or 'ipv6' (OSPFv3).
 
     Subcommands:
         (none)      - General OSPF instance information
@@ -408,6 +410,9 @@ def ospf(args: List[str]) -> None:
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
+
+    # Tell the formatters which address family (OSPFv2 vs OSPFv3) to select.
+    data['_afi'] = afi
 
     # Parse arguments: subcommand, optional interface name, optional detail flag
     subcommand = args[0] if len(args) > 0 and args[0] else ""
@@ -452,6 +457,16 @@ def ospf(args: List[str]) -> None:
         cli_pretty(data, "show-ospf-routes")
     else:
         print(f"Unknown OSPF subcommand: {subcommand}")
+
+
+def ospf(args: List[str]) -> None:
+    """Show OSPFv2 (IPv4) operational status."""
+    _ospf(args, "ipv4")
+
+
+def ospf6(args: List[str]) -> None:
+    """Show OSPFv3 (IPv6) operational status."""
+    _ospf(args, "ipv6")
 
 
 def rip(args: List[str]) -> None:
@@ -761,6 +776,7 @@ def execute_command(command: str, args: List[str]):
         'nacm': nacm,
         'ntp': ntp,
         'ospf': ospf,
+        'ospf6': ospf6,
         'ptp': ptp,
         'rip': rip,
         'routes': routes,

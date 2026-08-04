@@ -26,6 +26,19 @@ module infix-routing {
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing, ietf-ospf, and ietf-rip.";
 
+  revision 2026-07-22 {
+    description "Add IPv6 dynamic routing support (RIPng and OSPFv3).
+                 Introduce the ripng and ospfv3 routing-type identities,
+                 expose the ietf-rip IPv6 address-family for RIPng (previously
+                 deviated not-supported), restrict OSPFv3 interfaces to the
+                 network types FRR ospf6d supports (no non-broadcast, no static
+                 neighbors), and extend the OSPF local-rib and neighbor augments
+                 to OSPFv3.  The OSPF address-family leaf remains not-supported:
+                 FRR ospf6d carries IPv6 only, IPv4-over-OSPFv3 (RFC 5838) is
+                 not supported.";
+    reference "RFC 8695, RFC 2080, RFC 5340, RFC 9129";
+  }
+
   revision 2026-03-11 {
     description "Remove interface-type deviation to expose standard ietf-ospf
                  interface types including point-to-multipoint and hybrid.
@@ -158,10 +171,20 @@ module infix-routing {
     base infix-routing-type;
     description "OSPFv2 (IPv4) routing protocol";
   }
+  identity ospfv3 {
+    base ospf:ospfv3;
+    base infix-routing-type;
+    description "OSPFv3 (IPv6) routing protocol";
+  }
   identity ripv2 {
     base rip:ripv2;
     base infix-routing-type;
     description "RIPv2 (IPv4) routing protocol";
+  }
+  identity ripng {
+    base rip:ripng;
+    base infix-routing-type;
+    description "RIPng (IPv6) routing protocol";
   }
   identity bfdv1 {
     base bfd-types:bfdv1;
@@ -379,6 +402,9 @@ module infix-routing {
     deviate not-supported;
   }
 
+  /* FRR ospf6d carries IPv6 routes only; IPv4-over-OSPFv3 (RFC 5838) is not
+     supported.  OSPFv2 vs OSPFv3 is selected by the control-plane-protocol
+     type, so the address-family leaf is omitted. */
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:address-family" {
     deviate not-supported;
   }
@@ -456,6 +482,18 @@ module infix-routing {
     deviate add {
       must "../../ospf:interface-type = 'point-to-multipoint' or ../../ospf:interface-type = 'non-broadcast'" {
         error-message "Static neighbors are only applicable to point-to-multipoint or non-broadcast interface types.";
+      }
+    }
+  }
+  /* OSPFv3 (FRR ospf6d) supports only broadcast, point-to-point and
+     point-to-multipoint network types -- no non-broadcast (NBMA) and no
+     static neighbors. */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface" {
+    deviate add {
+      must "not(derived-from-or-self(../../../../../rt:type, 'infix-rt:ospfv3')) or "
+         + "(not(ospf:interface-type = 'non-broadcast') and "
+         + "count(ospf:static-neighbors/ospf:neighbor) = 0)" {
+        error-message "OSPFv3 does not support non-broadcast interfaces or static neighbors.";
       }
     }
   }
@@ -667,11 +705,6 @@ module infix-routing {
     description "Number of routes is not tracked separately.";
   }
 
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:ipv6" {
-    deviate not-supported;
-    description "RIPng (IPv6) is not currently supported in Infix.";
-  }
-
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:statistics" {
     deviate not-supported;
     description "Global statistics are not collected.";
@@ -783,9 +816,10 @@ module infix-routing {
    */
   augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
         + "ospf:ospf/ospf:local-rib/ospf:route" {
-    when "derived-from-or-self(../../../rt:type, 'infix-routing:ospfv2')" {
+    when "derived-from-or-self(../../../rt:type, 'infix-rt:ospfv2') or "
+       + "derived-from-or-self(../../../rt:type, 'infix-rt:ospfv3')" {
       description
-        "This augmentation is only valid for OSPFv2.";
+        "This augmentation is valid for OSPFv2 and OSPFv3.";
     }
     description
       "Infix extension to add area information to OSPF routes.";
@@ -807,9 +841,10 @@ module infix-routing {
   augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
         + "ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/"
         + "ospf:neighbors/ospf:neighbor" {
-    when "derived-from-or-self(../../../../../../../rt:type, 'infix-routing:ospfv2')" {
+    when "derived-from-or-self(../../../../../../../rt:type, 'infix-rt:ospfv2') or "
+       + "derived-from-or-self(../../../../../../../rt:type, 'infix-rt:ospfv3')" {
       description
-        "This augmentation is only valid for OSPFv2.";
+        "This augmentation is valid for OSPFv2 and OSPFv3.";
     }
     description
       "Infix extension to add uptime information to OSPF neighbors.";
