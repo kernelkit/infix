@@ -19,6 +19,10 @@ All notable changes to the project are documented in this file.
 - Include .pkg files in release builds
 - The `statd` service now logs at `notice` level by default, like other
   services, and supports `-v <level>` to adjust verbosity at runtime
+- `/bin/sh` is now provided by Busybox ash instead of Bash, speeding up
+  boot and configuration changes, issue #961.  Same rationale as Debian's
+  dash-as-/bin/sh.  Bash remains available for interactive use and for
+  scripts using `#!/bin/bash`
 
 ### Fixes
 
