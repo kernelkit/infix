@@ -131,7 +131,7 @@ static int netdag_gen_ethtool_flow_control(struct dagger *net, struct lyd_node *
 		return -EIO;
 
 	/* Check if the NIC supports pause frames at all */
-	fprintf(fp, "[[ -n $(ethtool --json %s | jq '.[] | select(.\"supported-pause-frame-use\" == \"No\")') ]] && exit 0\n", ifname);
+	fprintf(fp, "[ -n \"$(ethtool --json %s | jq '.[] | select(.\"supported-pause-frame-use\" == \"No\")')\" ] && exit 0\n", ifname);
 
 	/* Disable flow control */
 	fprintf(fp, "ethtool --pause %s autoneg %s rx off tx off\n",
@@ -189,7 +189,7 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 	if (!fp)
 		return -EIO;
 
-	fprintf(fp, "[[ -n $(ethtool --json %s | jq '.[] | select(.\"supports-auto-negotiation\" == false)') ]] && exit 0\n", ifname);
+	fprintf(fp, "[ -n \"$(ethtool --json %s | jq '.[] | select(.\"supports-auto-negotiation\" == false)')\" ] && exit 0\n", ifname);
 
 	duplex = lydx_get_cattr(eth, "duplex");
 

@@ -67,7 +67,7 @@ action_exec()
 EOF
 	    $TIME -f "$TIMEFMT" -o $meta.time $work >>"$work.log" 2>&1 || code=$?
 
-	    echo -ne "\t" >>$meta
+	    printf '\t' >>$meta
 	    # busybox's time(1) will happily write "Command exited
 	    # with non-zero status" and similar messages to the
 	    # output, even when -f is used. Work around that by only
