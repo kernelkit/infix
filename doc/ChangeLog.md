@@ -10,6 +10,10 @@ All notable changes to the project are documented in this file.
 
 - Upgrade Linux kernel to 6.18.49 (LTS)
 - Upgrade FRR to 10.5.5
+- `/bin/sh` is now provided by Busybox ash instead of Bash, speeding up
+  boot and configuration changes, issue #961.  Same rationale as Debian's
+  dash-as-/bin/sh.  Bash remains available for interactive use and for
+  scripts using `#!/bin/bash`
 
 [v26.08.0][] - 2026-09-01
 -------------------------
