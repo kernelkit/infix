@@ -32,6 +32,10 @@ All notable changes to the project are documented in this file.
   value it sets
 - The CLI `configure` command takes an optional path to start in a
   sub-context directly, e.g., `configure system authentication`
+- `/bin/sh` is now provided by Busybox ash instead of Bash, speeding up
+  boot and configuration changes, issue #961.  Same rationale as Debian's
+  dash-as-/bin/sh.  Bash remains available for interactive use and for
+  scripts using `#!/bin/bash`
 
 [v26.08.0][] - 2026-09-01
 -------------------------
