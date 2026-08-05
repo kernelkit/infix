@@ -7,7 +7,7 @@ fi
 ifname=$1
 timeout=$2
 while true; do
-    if ip link show $ifname &>/dev/null; then
+    if ip link show $ifname >/dev/null 2>&1; then
         break
     fi
 
