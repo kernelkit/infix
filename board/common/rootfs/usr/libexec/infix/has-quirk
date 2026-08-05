@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 IFQUIRKSFILE=${IFQUIRKSFILE:-/etc/product/interface-quirks.json}
 
@@ -26,10 +26,18 @@ ethtoolmatch()
 {
     local pattern="${1#@ethtool:}"
 
-    grep -qFxvf \
-	 <(ethtool -i "$ifname") \
-	 <(echo -n "$pattern" | awk -v FS="=" -v RS=";" '{ printf("%s: %s\n", $1, $2); }') \
-	&& return
+    # All key=val pairs of the pattern must match a "key: val" line
+    ethtool -i "$ifname" | awk -v pat="$pattern" '
+	BEGIN {
+		n = split(pat, kv, ";");
+		for (i = 1; i <= n; i++) {
+			eq = index(kv[i], "=");
+			want[substr(kv[i], 1, eq - 1) ": " substr(kv[i], eq + 1)] = 1;
+		}
+	}
+	($0 in want) { delete want[$0]; found++; }
+	END { exit(found < n); }
+    ' || return
 
     match "@ethtool:$pattern"
 }
