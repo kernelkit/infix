@@ -28,7 +28,7 @@ with infamy.Test() as test:
         tgtssh = env.attach("target", "mgmt", "ssh")
 
     with test.step("Clean up old log files from previous test runs"):
-        tgtssh.runsh("sudo rm -f /var/log/{exact-errors,no-debug,baseline}")
+        tgtssh.runsh("sudo rm -f /var/log/exact-errors /var/log/no-debug /var/log/baseline")
 
     with test.step("Configure syslog with advanced-compare"):
         target.put_config_dicts({

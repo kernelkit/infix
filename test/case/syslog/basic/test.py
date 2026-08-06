@@ -55,7 +55,7 @@ with infamy.Test() as test:
         })
 
     with test.step("Verify log files have been created"):
-        user = tgtssh.runsh("ls /var/log/{foo,bar.log}").stdout
+        user = tgtssh.runsh("ls /var/log/foo /var/log/bar.log").stdout
         if "/var/log/foo" not in user:
             test.fail()
         if "/var/log/bar.log" not in user:

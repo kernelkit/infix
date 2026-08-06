@@ -47,7 +47,7 @@ with infamy.Test() as test:
         serverssh = env.attach("server", "mgmt", "ssh")
 
     with test.step("Clean up old log files on server"):
-        serverssh.runsh("sudo rm -f /var/log/{router1,router2,all-hosts}")
+        serverssh.runsh("sudo rm -f /var/log/router1 /var/log/router2 /var/log/all-hosts")
 
     with test.step("Configure server as syslog sink with hostname filtering"):
         _, server_link = env.ltop.xlate("server", "link")
