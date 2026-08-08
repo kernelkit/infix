@@ -26,7 +26,7 @@ with infamy.Test() as test:
         tgtssh = env.attach("target", "mgmt", "ssh")
 
     with test.step("Clean up old log files"):
-        tgtssh.runsh("sudo rm -f /var/log/{myapp,not-error,case-test,baseline}")
+        tgtssh.runsh("sudo rm -f /var/log/myapp /var/log/not-error /var/log/case-test /var/log/baseline")
 
     with test.step("Configure syslog with property filters"):
         target.put_config_dicts({

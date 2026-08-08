@@ -10,15 +10,55 @@ All notable changes to the project are documented in this file.
 
 - Upgrade Linux kernel to 6.18.43 (LTS)
 - Upgrade Buildroot to 2025.02.15 (LTS)
+- Upgrade mdns-alias to [v1.3][ma13]: fixes crash on hostname change while
+  disconnected from Avahi, treats entry group failures and CNAME collisions
+  as transient (retried instead of exiting), and quieter logs by default
 - Add support for firewall address-set (ipset): named sets of IP addresses and
   networks, usable as zone sources for per-IP access control, issue #1189
 - Build RPi64 SD card images in release builds
 - Include .pkg files in release builds
+- The `statd` service now logs at `notice` level by default, like other
+  services, and supports `-v <level>` to adjust verbosity at runtime
+- `/bin/sh` is now provided by Busybox ash instead of Bash, speeding up
+  boot and configuration changes, issue #961.  Same rationale as Debian's
+  dash-as-/bin/sh.  Bash remains available for interactive use and for
+  scripts using `#!/bin/bash`
 
 ### Fixes
 
 - Fix annoying "cannot deselect all services" or reset to YANG default in the
   web interface's firewall configuration page
+- Fix sporadic slow response, or timeouts, when reading device status while
+  mDNS neighbors are being discovered, e.g., after an mDNS restart.  Updates
+  to the neighbor table are now batched, and politely retried when other users
+  or services keep the system busy, logged as:
+
+        statd[3558]: mdns: operational datastore busy, retrying ...
+
+- Fix interface setup failures after an interrupted or failed configuration
+  change.  Leftover interfaces could break all subsequent changes to the
+  interface configuration, until reboot, logged as:
+
+        dagger[2599]: Aborting: /run/net/131/action/init/br0/50-init.ip failed with exitcode 1
+        confd[2599]: Failed to apply interface configuration
+
+  with `RTNETLINK answers: File exists` in the failing script's log.
+  Creating and deleting interfaces is now tolerant to such leftovers
+- Fix slow response, or timeouts, when configuring the system or reading
+  status while a periodic status snapshot is in progress.  On slower systems
+  with a big configuration, the snapshot, taken every five minutes, could
+  hold up other users for minutes.  Snapshots now run in a separate
+  low-priority process, `statd-journal`, reading status in small chunks to
+  let other users interleave
+- Fix noisy logs on minimal builds, repeated on every configuration change:
+
+        finit[1]: Skipping /etc/finit.d/enabled/webui.conf, dangling symlink: No such file or directory
+        finit[1]: service_register():/etc/finit.d/enabled/ttyd.conf: skipping ttyd: No such file or directory
+
+  Optional services not included in the image are now skipped when enabled
+  in the configuration, and leftover confs are dropped at build time
+
+[ma13]: https://github.com/troglobit/mdns-alias/releases/tag/v1.3
 
 [v26.06.0][] - 2026-07-01
 -------------------------

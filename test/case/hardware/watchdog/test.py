@@ -42,6 +42,10 @@ with infamy.Test() as test:
         tgtssh.runsh(f"""
         lockup()
         {{
+            # Detach: a backgrounded function in POSIX sh holds a copy
+            # of the session's stdout, keeping the SSH channel open
+            exec </dev/null >/dev/null 2>&1
+
             # Give the SSH session some time to properly shut down
             sleep 3
 
@@ -51,7 +55,7 @@ with infamy.Test() as test:
                 time_secs={dog['timeout'] * 2}
         }}
 
-        lockup </dev/null &>/dev/null &
+        lockup &
         """)
 
     with test.step("Wait for the watchdog to trip"):

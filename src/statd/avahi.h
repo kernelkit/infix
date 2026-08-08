@@ -61,6 +61,8 @@ struct mdns_ctx {
 	unsigned int             fail_count;   /* Non-zero while avahi-daemon is absent */
 	ev_timer                 reconn_timer; /* Free+recreate client after brief delay */
 	ev_timer                 retry_timer;  /* Deferred warn-log timer */
+	ev_timer                 apply_timer;  /* Debounced DS apply, with retry */
+	unsigned int             apply_retries;
 	LIST_HEAD(, avahi_neighbor)   neighbors;
 	LIST_HEAD(, avahi_service)    services;    /* Flat list; keyed by 5-tuple */
 	LIST_HEAD(, avahi_type_entry) type_entries;

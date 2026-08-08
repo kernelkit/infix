@@ -507,13 +507,26 @@ static int eth_gen_del(struct lyd_node *dif, FILE *ip)
 	return 0;
 }
 
-static int link_gen_del(struct lyd_node *dif, FILE *ip)
+/*
+ * Tolerate the interface already being gone, e.g., leftover state from
+ * an earlier, partially applied generation -- a failed teardown would
+ * abort the whole generation.
+ */
+static int link_gen_del(struct dagger *net, struct lyd_node *dif)
 {
-	fprintf(ip, "link del dev %s\n", lydx_get_cattr(dif, "name"));
+	const char *ifname = lydx_get_cattr(dif, "name");
+	FILE *sh;
+
+	sh = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit-del.sh");
+	if (!sh)
+		return -EIO;
+
+	fprintf(sh, "ip link del dev %s 2>/dev/null || true\n", ifname);
+	fclose(sh);
 	return 0;
 }
 
-static int veth_gen_del(struct lyd_node *dif, FILE *sh)
+static int veth_gen_del(struct dagger *net, struct lyd_node *dif)
 {
 	if (!veth_is_primary(dif))
 		return 0;
@@ -526,7 +539,7 @@ static int veth_gen_del(struct lyd_node *dif, FILE *sh)
 	if (lydx_get_child(dif, "container-network"))
 		return 0;
 
-	return link_gen_del(dif, sh);
+	return link_gen_del(net, dif);
 }
 
 static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
@@ -537,10 +550,6 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	FILE *ip;
 
 	DEBUG_IFACE(dif, "");
-
-	ip = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit.ip");
-	if (!ip)
-		return -EIO;
 
 	type = iftype_from_iface(dif);
 	if (type == IFT_UNKNOWN)
@@ -554,11 +563,14 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	switch (type) {
 	case IFT_ETH:
 	case IFT_LO:
+		ip = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit.ip");
+		if (!ip)
+			return -EIO;
 		eth_gen_del(dif, ip);
+		fclose(ip);
 		break;
 	case IFT_VETH:
-		veth_gen_del(dif, ip);
-		break;
+		return veth_gen_del(net, dif);
 	case IFT_WIFI:
 		wifi_del_iface(dif, net);
 		break;
@@ -571,11 +583,9 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_VXLAN:
 	case IFT_WIREGUARD:
 	case IFT_UNKNOWN:
-		link_gen_del(dif, ip);
-		break;
+		return link_gen_del(net, dif);
 	}
 
-	fclose(ip);
 	return 0;
 }
 
@@ -615,6 +625,49 @@ static sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifnam
 	}
 
 	return SR_ERR_OK;
+}
+
+/*
+ * A netlink-created interface may linger from an earlier, partially
+ * applied generation, causing our `link add` to fail with EEXIST and
+ * abort the whole generation.  Remove any leftover before creating.
+ */
+static int netdag_gen_ensure_absent(struct dagger *net, struct lyd_node *cif)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	const char *peer = NULL;
+	FILE *sh;
+
+	switch (iftype_from_iface(cif)) {
+	case IFT_BRIDGE:
+	case IFT_DUMMY:
+	case IFT_GRE:
+	case IFT_GRETAP:
+	case IFT_LAG:
+	case IFT_VLAN:
+	case IFT_VXLAN:
+	case IFT_WIREGUARD:
+		break;
+	case IFT_VETH:
+		/* primary's `link add` creates both ends */
+		if (!veth_is_primary(cif))
+			return 0;
+		peer = lydx_get_cattr(lydx_get_child(cif, "veth"), "peer");
+		break;
+	default:
+		return 0;
+	}
+
+	sh = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PRE, "ensure-absent.sh");
+	if (!sh)
+		return -EIO;
+
+	fprintf(sh, "ip link del dev %s 2>/dev/null || true\n", ifname);
+	if (peer)
+		fprintf(sh, "ip link del dev %s 2>/dev/null || true\n", peer);
+	fclose(sh);
+
+	return 0;
 }
 
 static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net,
@@ -683,7 +736,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	}
 
 	if (op == LYDX_OP_CREATE) {
-		err = netdag_gen_afspec_add(session, net, dif, cif, ip);
+		err = netdag_gen_ensure_absent(net, cif);
+		err = err ? : netdag_gen_afspec_add(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
 	}

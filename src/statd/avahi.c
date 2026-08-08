@@ -355,6 +355,57 @@ static int sr_setstr(sr_session_ctx_t *ses, const char *xpath, const char *val)
 }
 
 /*
+ * Resolver events arrive in bursts, e.g., browse storms after an avahi
+ * restart.  Instead of one sr_apply_changes() per event, coalesce all
+ * edits staged on ctx->sr_ses and apply once the burst settles.  On
+ * datastore contention, back off and retry rather than block -- this
+ * loop also serves all operational get callbacks.
+ */
+#define MDNS_APPLY_DEBOUNCE  0.5
+#define MDNS_APPLY_TIMEOUT   1000	/* ms */
+#define MDNS_APPLY_RETRY_MAX 6		/* caps backoff at 0.5 * 2^6 = 32 s */
+
+static void ds_apply_cb(struct ev_loop *loop, ev_timer *w, int revents)
+{
+	struct mdns_ctx *ctx = (struct mdns_ctx *)
+		((char *)w - offsetof(struct mdns_ctx, apply_timer));
+	int err;
+
+	(void)loop;
+	(void)revents;
+
+	err = sr_apply_changes(ctx->sr_ses, MDNS_APPLY_TIMEOUT);
+	switch (err) {
+	case SR_ERR_OK:
+		ctx->apply_retries = 0;
+		break;
+	case SR_ERR_TIME_OUT:
+	case SR_ERR_LOCKED:
+		if (ctx->apply_retries < MDNS_APPLY_RETRY_MAX)
+			ctx->apply_retries++;
+		if (ctx->apply_retries == 3)
+			NOTE("mdns: operational datastore busy, retrying ...");
+		ev_timer_set(&ctx->apply_timer, MDNS_APPLY_DEBOUNCE * (1 << ctx->apply_retries), 0.0);
+		ev_timer_start(ctx->loop, &ctx->apply_timer);
+		break;
+	default:
+		ERROR("mdns: sr_apply_changes: %s", sr_strerror(err));
+		sr_discard_changes(ctx->sr_ses);
+		ctx->apply_retries = 0;
+		break;
+	}
+}
+
+static void ds_schedule_apply(struct mdns_ctx *ctx)
+{
+	if (ev_is_active(&ctx->apply_timer))
+		return;
+
+	ev_timer_init(&ctx->apply_timer, ds_apply_cb, MDNS_APPLY_DEBOUNCE, 0.0);
+	ev_timer_start(ctx->loop, &ctx->apply_timer);
+}
+
+/*
  * Return an XPath string literal quoting val: single-quoted unless val
  * contains a single quote, in which case double quotes are used instead.
  * buf must be at least strlen(val)+3 bytes.
@@ -437,13 +488,12 @@ static void ds_push_resolver(struct mdns_ctx *ctx, struct avahi_service *svc,
 	}
 
 	if (err) {
+		/* drops any coalesced edits too, later events repopulate */
 		sr_discard_changes(ctx->sr_ses);
 		return;
 	}
 
-	err = sr_apply_changes(ctx->sr_ses, 0);
-	if (err)
-		ERROR("mdns: sr_apply_changes: %s", sr_strerror(err));
+	ds_schedule_apply(ctx);
 }
 
 static void ds_delete_service(struct mdns_ctx *ctx, const char *hostname, const char *name)
@@ -470,7 +520,7 @@ static void ds_delete_neighbor(struct mdns_ctx *ctx, const char *hostname)
 static void ds_clear_all(struct mdns_ctx *ctx)
 {
 	sr_delete_item(ctx->sr_ses, XPATH_BASE, 0);
-	sr_apply_changes(ctx->sr_ses, 0);
+	ds_schedule_apply(ctx);
 }
 
 /* --------------------------------------------------------------------------
@@ -641,7 +691,7 @@ static void service_browser_cb(AvahiServiceBrowser *b,
 			}
 		}
 
-		sr_apply_changes(ctx->sr_ses, 0);
+		ds_schedule_apply(ctx);
 		break;
 	}
 
@@ -788,6 +838,7 @@ static void reconn_cb(struct ev_loop *loop, ev_timer *w, int revents)
  * that a normal daemon restart cancels this timer before it fires.
  */
 #define MDNS_WARN_DELAY 10.0
+#define MDNS_FAIL_ESCALATE 3	/* NOTE level after 3 x MDNS_WARN_DELAY */
 
 static void mdns_retry_cb(struct ev_loop *loop, ev_timer *w, int revents)
 {
@@ -798,8 +849,12 @@ static void mdns_retry_cb(struct ev_loop *loop, ev_timer *w, int revents)
 	(void)revents;
 	ctx->fail_count++;
 
-	if (mdns_is_enabled(ctx))
-		WARN("mdns: mDNS daemon not responding, will reconnect automatically");
+	if (mdns_is_enabled(ctx)) {
+		if (ctx->fail_count >= MDNS_FAIL_ESCALATE)
+			NOTE("mdns: mDNS daemon still not responding, will keep trying");
+		else
+			INFO("mdns: mDNS daemon not responding, will reconnect automatically");
+	}
 }
 
 static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
@@ -813,7 +868,10 @@ static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 		if (ctx->fail_count > 0) {
 			ev_timer_stop(ctx->loop, &ctx->reconn_timer);
 			ev_timer_stop(ctx->loop, &ctx->retry_timer);
-			NOTE("mdns: mDNS daemon reconnected");
+			if (ctx->fail_count >= MDNS_FAIL_ESCALATE)
+				NOTE("mdns: mDNS daemon reconnected");
+			else
+				INFO("mdns: mDNS daemon reconnected");
 			ctx->fail_count = 0;
 		}
 		INFO("mdns: client running");
@@ -850,16 +908,15 @@ static void client_cb(AvahiClient *c, AvahiClientState state, void *userdata)
 			ev_timer_start(ctx->loop, &ctx->retry_timer);
 		}
 
-		{
+		while (!LIST_EMPTY(&ctx->type_entries)) {
 			struct avahi_type_entry *te;
 
-			while (!LIST_EMPTY(&ctx->type_entries)) {
-				te = LIST_FIRST(&ctx->type_entries);
-				avahi_service_browser_free(te->browser);
-				LIST_REMOVE(te, link);
-				free(te);
-			}
+			te = LIST_FIRST(&ctx->type_entries);
+			avahi_service_browser_free(te->browser);
+			LIST_REMOVE(te, link);
+			free(te);
 		}
+
 		if (ctx->type_browser) {
 			avahi_service_type_browser_free(ctx->type_browser);
 			ctx->type_browser = NULL;
@@ -929,11 +986,11 @@ void mdns_ctx_reconnect(struct mdns_ctx *ctx)
 	int avahi_err;
 
 	if (!mdns_is_enabled(ctx)) {
-		NOTE("mdns: mDNS is disabled, ignoring reconnect request");
+		INFO("mdns: mDNS is disabled, ignoring reconnect request");
 		return;
 	}
 
-	NOTE("mdns: reconnecting on request");
+	INFO("mdns: reconnecting on request");
 
 	ev_timer_stop(ctx->loop, &ctx->reconn_timer);
 	ev_timer_stop(ctx->loop, &ctx->retry_timer);
@@ -973,6 +1030,8 @@ void mdns_ctx_exit(struct mdns_ctx *ctx)
 		ev_timer_stop(ctx->loop, &ctx->reconn_timer);
 	if (ev_is_active(&ctx->retry_timer))
 		ev_timer_stop(ctx->loop, &ctx->retry_timer);
+	if (ev_is_active(&ctx->apply_timer))
+		ev_timer_stop(ctx->loop, &ctx->apply_timer);
 
 	/* Free browsers explicitly before freeing the client */
 	while (!LIST_EMPTY(&ctx->type_entries)) {
@@ -991,7 +1050,9 @@ void mdns_ctx_exit(struct mdns_ctx *ctx)
 	}
 
 	if (ctx->sr_ses) {
-		ds_clear_all(ctx);
+		/* event loop is going away, flush synchronously */
+		sr_delete_item(ctx->sr_ses, XPATH_BASE, 0);
+		sr_apply_changes(ctx->sr_ses, MDNS_APPLY_TIMEOUT);
 		sr_session_stop(ctx->sr_ses);
 		ctx->sr_ses = NULL;
 	}
