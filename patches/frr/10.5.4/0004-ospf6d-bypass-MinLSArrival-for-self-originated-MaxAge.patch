@@ -1,0 +1,96 @@
+From e77f915ebd328e913669054996a22e11fbd60a6c Mon Sep 17 00:00:00 2001
+From: harini <hnattamaisub@nvidia.com>
+Date: Thu, 28 May 2026 21:45:05 -0700
+Subject: [PATCH] ospf6d: bypass MinLSArrival for self-originated MaxAge LSAs
+
+[This was part of PR 22103]
+
+Deployment / how this surfaced:
+The failure was observed in an EVPN VXLAN L2VPN setup with the
+following ingredients:
+  - Several VTEP nodes (TOR / border-TOR roles) terminating EVPN
+    type-2/3/5 routes.
+  - iBGP EVPN sessions between VTEPs, sourced from each VTEP's
+    IPv6 loopback (multi-hop iBGP through one or more spines).
+  - OSPFv3 (IPv6) as the underlay, advertising the VTEP loopback
+    /128s area-wide via Intra-Area-Prefix-LSAs.
+
+Trigger is a plain `systemctl stop frr` followed shortly by
+`systemctl start frr` on one VTEP X (the "DUT").  After the restart,
+ospf6d on X reforms adjacencies but never re-injects the remote VTEP
+loopback /128s into zebra's RIB.  With those loopbacks missing,
+multi-hop iBGP nexthop resolution on X fails (BGP "nexthop_set
+failed"), EVPN L2VPN sessions to X stay down, and remote bridging /
+routing traffic to hosts behind X is indefinitely broken.
+
+Rootcause and fix:
+After the restart X re-originates its self LSAs from
+InitialSequenceNumber (0x80000001).  Meanwhile X's OSPFv3 peers
+still hold the pre-restart instance at a higher seqnum S, and
+re-flood it back to X at MaxAge as the bounce-back synchronisation
+described in RFC 2328 section 13.4.
+
+For (self-originated, MaxAge) LSAs that arrive within 1 second
+(MinLSArrival, default 1000 ms) of X's just-installed fresh instance,
+in ospf6_receive_lsa() calls ospf6_lsa_check_min_arrival()
+which returns true and silently drops the bounce-back.  This prevents
+ospf6_install_lsa() from running, the self-originated handler
+is never reached, and X never advances its seqnum past S.
+Every peer keeps believing the stale MaxAge S is X's most recent
+LSA, BGP nexthop tracking for X's loopback fails to resolve, and EVPN
+sessions to X never re-establish.
+
+This issue is rarely reproduces because of timing.
+The race window is exactly MinLSArrival wide.
+
+Fix:
+Scope of the bypass is intentionally narrow: only (self_originated &&
+MaxAge).  Ordinary rapid floods from other routers, non-MaxAge
+self-originated LSAs  is untouched.
+
+Signed-off-by: harini <hnattamaisub@nvidia.com>
+Upstream: https://github.com/FRRouting/frr/pull/23005 (stable/10.5 backport of #22103)
+---
+ ospf6d/ospf6_flood.c | 22 +++++++++++++++++-----
+ 1 file changed, 17 insertions(+), 5 deletions(-)
+
+diff --git a/ospf6d/ospf6_flood.c b/ospf6d/ospf6_flood.c
+index 08b4dde9f71f..3c72d3b25b24 100644
+--- a/ospf6d/ospf6_flood.c
++++ b/ospf6d/ospf6_flood.c
+@@ -1001,8 +1001,23 @@ void ospf6_receive_lsa(struct ospf6_neighbor *from,
+ 		/* in case we have no database copy */
+ 		ismore_recent = -1;
+ 
+-		/* (a) MinLSArrival check */
+-		if (old) {
++		self_originated = (new->header->adv_router ==
++				   from->ospf6_if->area->ospf6->router_id);
++
++		/* After any restart of DUT node, receiving self-originated
++		 * LSAs with MaxAge from peers within 1 second (MinLSArrival,
++		 * default 1000 ms) can make ospf6_lsa_check_min_arrival()
++		 * return true, which prevents ospf6_install_lsa() from being
++		 * called and results in a sequence-number race.  So hardened
++		 * the check accordingly to bypass MinLSArrival only for
++		 * self-originated MaxAge LSAs.  This is in compliance with
++		 * RFC 2328 §13.4.
++		 */
++		if (old && self_originated && OSPF6_LSA_IS_MAXAGE(new)) {
++			if (IS_OSPF6_DEBUG_FLOODING || IS_OSPF6_DEBUG_FLOOD_TYPE(new->header->type))
++				zlog_debug("Bypassing MinLSArrival for self-originated MaxAge LSA %s (RFC 2328 13.4)",
++					   new->name);
++		} else if (old) {
+ 			if (ospf6_lsa_check_min_arrival(old, from)) {
+ 				ospf6_lsa_delete(new);
+ 				return; /* examin next lsa */
+@@ -1019,9 +1034,6 @@ void ospf6_receive_lsa(struct ospf6_neighbor *from,
+ 		if (old)
+ 			ospf6_flood_clear(old);
+ 
+-		self_originated = (new->header->adv_router
+-				   == from->ospf6_if->area->ospf6->router_id);
+-
+ 		/* Received non-self-originated Grace LSA. */
+ 		if (IS_GRACE_LSA(new) && !self_originated) {
+ 			struct ospf6 *ospf6;
