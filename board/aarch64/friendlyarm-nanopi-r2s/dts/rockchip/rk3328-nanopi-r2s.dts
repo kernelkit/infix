@@ -1,4 +1,9 @@
-#include <arm64/rockchip/rk3328-nanopi-r2s.dts>
+#include <arm64/rockchip/rk3328-nanopi-r2s-plus.dts>
+/*
+ * The Plus variant adds an on-board 32 GB eMMC. The same image
+ * works on both variants; on the plain R2S the eMMC controller
+ * simply finds no media and the SD card is used as before.
+ */
 #include "infix.dtsi"
 
 &rtl8153 {
