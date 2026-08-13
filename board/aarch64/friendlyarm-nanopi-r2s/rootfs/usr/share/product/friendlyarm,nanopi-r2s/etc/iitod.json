@@ -52,19 +52,15 @@
 		]
 	    },
 
+
 	    "nanopi-r2s:green:lan": {
 		"rules": [
-		    { "if": "locate",  "then": "@blink-1hz" },
-		    { "if": "panic",   "then": "@blink-5hz" },
-		    { "if": "startup", "then": "@on" }
+		    { "if": "true", "then": { "trigger": "netdev", "device_name": "lan", "link": 1, "rx": 1, "tx": 1 } }
 		]
 	    },
-
 	    "nanopi-r2s:green:wan": {
 		"rules": [
-		    { "if": "locate", "then": "@blink-1hz" },
-		    { "if": "panic",  "then": "@blink-5hz" },
-		    { "if": "wan-up", "then": "@on" }
+		    { "if": "true", "then": { "trigger": "netdev", "device_name": "wan", "link": 1, "rx": 1, "tx": 1 } }
 		]
 	    }
 	}
