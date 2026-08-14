@@ -691,3 +691,144 @@ func TestNextDelay(t *testing.T) {
 		})
 	}
 }
+
+func TestSplitSources(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       []string
+		networks []string
+		ipsets   []string
+	}{
+		{
+			name:     "mixed sources",
+			in:       []string{"10.0.0.0/8", "ipset:allowed", "192.168.1.0/24"},
+			networks: []string{"10.0.0.0/8", "192.168.1.0/24"},
+			ipsets:   []string{"allowed"},
+		},
+		{
+			name:   "only ipsets",
+			in:     []string{"ipset:allowed", "ipset:greylist"},
+			ipsets: []string{"allowed", "greylist"},
+		},
+		{
+			name:     "only networks",
+			in:       []string{"10.0.0.0/8"},
+			networks: []string{"10.0.0.0/8"},
+		},
+		{name: "empty"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			networks, ipsets := splitSources(tc.in)
+			if !reflect.DeepEqual(networks, tc.networks) || !reflect.DeepEqual(ipsets, tc.ipsets) {
+				t.Fatalf("splitSources(%v) = %v, %v, want %v, %v",
+					tc.in, networks, ipsets, tc.networks, tc.ipsets)
+			}
+		})
+	}
+}
+
+func TestNormalizeEntry(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{"192.168.1.40", "192.168.1.40"},
+		{"192.168.1.40/32", "192.168.1.40"},
+		{"192.168.1.40/24", "192.168.1.0/24"},
+		{"10.0.0.0/8", "10.0.0.0/8"},
+		{"2001:db8::1/128", "2001:db8::1"},
+		{"2001:db8::/64", "2001:db8::/64"},
+		{"1.2.3.4-1.2.3.9", "1.2.3.4-1.2.3.9"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.in, func(t *testing.T) {
+			if got := normalizeEntry(tc.in); got != tc.want {
+				t.Fatalf("normalizeEntry(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNftElemParse(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      any
+		entry   string
+		expires int
+	}{
+		{
+			name:    "plain address",
+			in:      "192.168.1.42",
+			entry:   "192.168.1.42",
+			expires: -1,
+		},
+		{
+			name:    "prefix",
+			in:      map[string]any{"prefix": map[string]any{"addr": "10.0.0.0", "len": float64(8)}},
+			entry:   "10.0.0.0/8",
+			expires: -1,
+		},
+		{
+			name: "timeout element",
+			in: map[string]any{"elem": map[string]any{
+				"val":     "10.0.0.1",
+				"timeout": float64(10),
+				"expires": float64(7),
+			}},
+			entry:   "10.0.0.1",
+			expires: 7,
+		},
+		{
+			name: "wrapped prefix with expiry",
+			in: map[string]any{"elem": map[string]any{
+				"val":     map[string]any{"prefix": map[string]any{"addr": "10.1.0.0", "len": float64(16)}},
+				"expires": float64(42),
+			}},
+			entry:   "10.1.0.0/16",
+			expires: 42,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			entry, expires := nftElemParse(tc.in)
+			if entry != tc.entry || expires != tc.expires {
+				t.Fatalf("nftElemParse() = %q, %d, want %q, %d",
+					entry, expires, tc.entry, tc.expires)
+			}
+		})
+	}
+}
+
+func TestParseNftSetElems(t *testing.T) {
+	out := []byte(`{"nftables": [
+		{"metainfo": {"version": "1.0.9"}},
+		{"set": {"family": "inet", "name": "allowed", "table": "firewalld",
+			"type": "ipv4_addr",
+			"elem": ["192.168.1.40", {"elem": {"val": "192.168.1.42", "expires": 5}}]}}
+	]}`)
+
+	elems := parseNftSetElems(out)
+	if len(elems) != 2 {
+		t.Fatalf("expected 2 elements, got %d: %#v", len(elems), elems)
+	}
+
+	entry, expires := nftElemParse(elems[0])
+	if entry != "192.168.1.40" || expires != -1 {
+		t.Fatalf("elem 0: got %q, %d", entry, expires)
+	}
+	entry, expires = nftElemParse(elems[1])
+	if entry != "192.168.1.42" || expires != 5 {
+		t.Fatalf("elem 1: got %q, %d", entry, expires)
+	}
+
+	if elems := parseNftSetElems([]byte(`{}`)); elems != nil {
+		t.Fatalf("expected nil for empty document, got %#v", elems)
+	}
+	if elems := parseNftSetElems([]byte(`garbage`)); elems != nil {
+		t.Fatalf("expected nil for invalid JSON, got %#v", elems)
+	}
+}
