@@ -3,6 +3,7 @@ module github.com/kernelkit/infix/src/yangerd
 go 1.23.0
 
 require (
+	github.com/facebook/time v0.0.0-20250531133328-3ef67721da27
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/mdlayher/genetlink v1.3.2

@@ -5,24 +5,81 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/facebook/time/ntp/chrony"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
-// NTPCollector gathers ietf-ntp operational data by running chronyc
-// commands (sources, sourcestats, tracking, serverstats) and ss to
+// chronySock is chronyd's command (cmdmon) Unix socket.  The UDP
+// command port would suffice for most queries, but serverstats is
+// PERMIT_AUTH in chronyd, which only the Unix socket satisfies.
+const chronySock = "/run/chrony/chronyd.sock"
+
+// cmdmonClient is the subset of chrony.Client used by NTPCollector,
+// broken out so tests can fake chronyd replies.
+type cmdmonClient interface {
+	Communicate(packet chrony.RequestPacket) (chrony.ResponsePacket, error)
+}
+
+// dialChrony connects to chronyd's cmdmon socket.  SOCK_DGRAM over
+// AF_UNIX has no connection state, so the client must bind its own
+// socket for the replies, in a directory chronyd can write to -- the
+// same dance chronyc does.
+func dialChrony() (cmdmonClient, func() error, error) {
+	local := &net.UnixAddr{
+		Name: fmt.Sprintf("/run/chrony/yangerd.%d.sock", os.Getpid()),
+		Net:  "unixgram",
+	}
+	remote := &net.UnixAddr{Name: chronySock, Net: "unixgram"}
+
+	os.Remove(local.Name) /* stale socket from a crashed run */
+	conn, err := net.DialUnix("unixgram", local, remote)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	closeFn := func() error {
+		err := conn.Close()
+		os.Remove(local.Name)
+		return err
+	}
+
+	// chronyd runs unprivileged and must be able to send replies here
+	if err := os.Chmod(local.Name, 0666); err != nil {
+		closeFn()
+		return nil, nil, err
+	}
+	if err := conn.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		closeFn()
+		return nil, nil, err
+	}
+	return &chrony.Client{Connection: conn}, closeFn, nil
+}
+
+// ntpSource pairs a source's data and stats replies, fetched by the
+// same cmdmon source index.  stats may be nil if that request failed.
+type ntpSource struct {
+	data  *chrony.ReplySourceData
+	stats *chrony.ReplySourceStats
+}
+
+// NTPCollector gathers ietf-ntp operational data from chronyd over the
+// native cmdmon protocol (the same channel chronyc uses), plus ss to
 // detect the NTP listening port.
 type NTPCollector struct {
 	cmd      CommandRunner
+	dial     func() (cmdmonClient, func() error, error)
 	interval time.Duration
 }
 
 // NewNTPCollector creates an NTPCollector with the given dependencies.
 func NewNTPCollector(cmd CommandRunner, interval time.Duration) *NTPCollector {
-	return &NTPCollector{cmd: cmd, interval: interval}
+	return &NTPCollector{cmd: cmd, dial: dialChrony, interval: interval}
 }
 
 // Name implements Collector.
@@ -38,15 +95,26 @@ func (c *NTPCollector) Interval() time.Duration { return c.interval }
 //     list with address, mode, state, stratum and poll for each chrony
 //     source (Infix augmentation of ietf-system).
 func (c *NTPCollector) Collect(ctx context.Context, t *tree.Tree) error {
-	// Run chronyc sources once and share between addAssociations and addSources.
-	sourcesOut, _ := c.cmd.Run(ctx, "chronyc", "-c", "sources")
+	var srcs []ntpSource
 
 	ntp := make(map[string]interface{})
 
-	c.addAssociations(ctx, ntp, sourcesOut)
-	c.addClockState(ctx, ntp)
-	c.addServerStatus(ctx, ntp)
-	c.addServerStats(ctx, ntp)
+	client, closeConn, err := c.dial()
+	if err == nil {
+		defer closeConn()
+
+		srcs = getSources(client)
+		addAssociations(ntp, srcs)
+		addClockState(client, ntp)
+		addServerStats(client, ntp)
+
+		// Only probe the listening port when chronyd actually answered;
+		// otherwise a stale ss line would keep the tree key alive after
+		// chronyd stopped.
+		if len(ntp) > 0 {
+			c.addServerStatus(ctx, ntp)
+		}
+	}
 
 	if len(ntp) > 0 {
 		if data, err := json.Marshal(ntp); err == nil {
@@ -66,7 +134,7 @@ func (c *NTPCollector) Collect(ctx context.Context, t *tree.Tree) error {
 	// operational data -- a phantom "selected" server chronyc no longer
 	// reports.  Merge only overwrites the keys it is given, so we must
 	// hand it an empty source list to clear a previously-populated one.
-	sources := c.addSources(sourcesOut)
+	sources := addSources(srcs)
 	if sources == nil {
 		sources = map[string]interface{}{
 			"sources": map[string]interface{}{
@@ -83,133 +151,96 @@ func (c *NTPCollector) Collect(ctx context.Context, t *tree.Tree) error {
 	return nil
 }
 
-// addAssociations parses chronyc sources and sourcestats CSV output
-// into the associations/association list.
-//
-// chronyc -c sources format (comma-separated):
-//
-//	[0] Mode: ^ server, = peer, # refclock (skipped)
-//	[1] State: * selected, + candidate, - outlier, ? unusable, x falseticker, ~ unstable
-//	[2] Address (IP)
-//	[3] Stratum
-//	[4] Poll interval (log2 seconds)
-//	[5] Reach (octal reachability register)
-//	[6] LastRx (seconds since last response)
-//	[7] Last offset (seconds)
-//	[8] Offset at last update (seconds)
-//	[9] Error estimate (seconds)
-//
-// chronyc -c sourcestats format:
-//
-//	[0] Address
-//	[1] NP
-//	[2] NR
-//	[3] Span
-//	[4] Frequency (ppm)
-//	[5] Freq Skew (ppm)
-//	[6] Offset (seconds)
-//	[7] Std Dev (seconds)
-func (c *NTPCollector) addAssociations(ctx context.Context, ntp map[string]interface{}, sourcesOut []byte) {
-	if len(sourcesOut) == 0 {
-		return
+// getSources fetches source data and stats for every chrony source.
+// Data and stats share the same cmdmon index space, so no address
+// matching is needed.
+func getSources(client cmdmonClient) []ntpSource {
+	resp, err := client.Communicate(chrony.NewSourcesPacket())
+	if err != nil {
+		return nil
+	}
+	sources, ok := resp.(*chrony.ReplySources)
+	if !ok {
+		return nil
 	}
 
-	// Build stats map from sourcestats for offset/dispersion
-	statsMap := make(map[string]map[string]string)
-	statsOut, err := c.cmd.Run(ctx, "chronyc", "-c", "sourcestats")
-	if err == nil {
-		for _, line := range splitLines(string(statsOut)) {
-			parts := strings.Split(line, ",")
-			if len(parts) >= 8 {
-				statsMap[parts[0]] = map[string]string{
-					"offset":  parts[6],
-					"std_dev": parts[7],
-				}
-			}
-		}
-	}
-
-	modeMap := map[string]string{
-		"^": "ietf-ntp:client",
-		"=": "ietf-ntp:active",
-		"#": "ietf-ntp:broadcast-client",
-	}
-
-	var associations []interface{}
-	for _, line := range splitLines(string(sourcesOut)) {
-		parts := strings.Split(line, ",")
-		if len(parts) < 10 {
-			continue
-		}
-
-		modeIndicator := parts[0]
-		// Skip reference clocks — they have names like "GPS", not IP addresses
-		if modeIndicator == "#" {
-			continue
-		}
-
-		stateIndicator := parts[1]
-		address := parts[2]
-		stratum, err := strconv.Atoi(parts[3])
+	srcs := make([]ntpSource, 0, sources.NSources)
+	for i := 0; i < sources.NSources; i++ {
+		resp, err := client.Communicate(chrony.NewSourceDataPacket(int32(i)))
 		if err != nil {
 			continue
 		}
+		data, ok := resp.(*chrony.ReplySourceData)
+		if !ok {
+			continue
+		}
+
+		src := ntpSource{data: data}
+		if resp, err := client.Communicate(chrony.NewSourceStatsPacket(int32(i))); err == nil {
+			if stats, ok := resp.(*chrony.ReplySourceStats); ok {
+				src.stats = stats
+			}
+		}
+		srcs = append(srcs, src)
+	}
+
+	return srcs
+}
+
+// addAssociations builds the associations/association list from chrony
+// source data and stats.
+func addAssociations(ntp map[string]interface{}, srcs []ntpSource) {
+	modeMap := map[chrony.ModeType]string{
+		chrony.SourceModeClient: "ietf-ntp:client",
+		chrony.SourceModePeer:   "ietf-ntp:active",
+	}
+
+	var associations []interface{}
+	for _, src := range srcs {
+		d := src.data
+
+		// Skip reference clocks — they have refids, not addresses
+		if d.Mode == chrony.SourceModeRef {
+			continue
+		}
+
 		// YANG requires stratum 1..16
+		stratum := int(d.Stratum)
 		if stratum < 1 || stratum > 16 {
 			continue
 		}
 
+		mode := modeMap[d.Mode]
+		if mode == "" {
+			mode = "ietf-ntp:client"
+		}
+
 		assoc := map[string]interface{}{
-			"address":      address,
-			"local-mode":   modeMap[modeIndicator],
+			"address":      d.IPAddr.String(),
+			"local-mode":   mode,
 			"isconfigured": true,
 			"stratum":      stratum,
-		}
-		if assoc["local-mode"] == nil {
-			assoc["local-mode"] = "ietf-ntp:client"
+			"reach":        int(d.Reachability),
+			"poll":         int(d.Poll),
+			"now":          int(d.SinceSample),
 		}
 
 		// Current sync source
-		if stateIndicator == "*" {
+		if d.State == chrony.SourceStateSync {
 			assoc["prefer"] = true
 		}
 
-		// Reachability register (octal → decimal)
-		if reach, err := strconv.ParseInt(parts[5], 8, 32); err == nil {
-			assoc["reach"] = int(reach)
-		}
-
-		// Poll interval (log2 seconds)
-		if poll, err := strconv.Atoi(parts[4]); err == nil {
-			assoc["poll"] = poll
-		}
-
-		// Time since last packet
-		if now, err := strconv.Atoi(parts[6]); err == nil {
-			assoc["now"] = now
-		}
-
-		// Offset: prefer sourcestats if available, else sources[7]
+		// Offset: prefer sourcestats estimate over the last sample.
 		// Convert seconds → milliseconds with 3 fraction digits
-		if stats, ok := statsMap[address]; ok {
-			if offsetSec, err := strconv.ParseFloat(stats["offset"], 64); err == nil {
-				assoc["offset"] = fmt.Sprintf("%.3f", offsetSec*1000.0)
-			}
-		} else if offsetSec, err := strconv.ParseFloat(parts[7], 64); err == nil {
-			assoc["offset"] = fmt.Sprintf("%.3f", offsetSec*1000.0)
+		if src.stats != nil {
+			assoc["offset"] = fmt.Sprintf("%.3f", src.stats.EstimatedOffset*1000.0)
+			assoc["dispersion"] = fmt.Sprintf("%.3f", src.stats.StandardDeviation*1000.0)
+		} else {
+			assoc["offset"] = fmt.Sprintf("%.3f", d.LatestMeas*1000.0)
 		}
 
-		// Delay: error estimate from sources[9], seconds → milliseconds
-		if delaySec, err := strconv.ParseFloat(parts[9], 64); err == nil {
-			assoc["delay"] = fmt.Sprintf("%.3f", math.Abs(delaySec)*1000.0)
-		}
-
-		// Dispersion: std_dev from sourcestats, seconds → milliseconds
-		if stats, ok := statsMap[address]; ok {
-			if dispSec, err := strconv.ParseFloat(stats["std_dev"], 64); err == nil {
-				assoc["dispersion"] = fmt.Sprintf("%.3f", dispSec*1000.0)
-			}
-		}
+		// Delay: error estimate of the last sample, seconds → milliseconds
+		assoc["delay"] = fmt.Sprintf("%.3f", math.Abs(d.LatestMeasErr)*1000.0)
 
 		associations = append(associations, assoc)
 	}
@@ -221,71 +252,56 @@ func (c *NTPCollector) addAssociations(ctx context.Context, ntp map[string]inter
 	}
 }
 
-// sourceStateMap maps chronyc source-state indicators to YANG
-// infix-system source-state enum values.
-var sourceStateMap = map[string]string{
-	"*": "selected",
-	"+": "candidate",
-	"-": "outlier",
-	"?": "unusable",
-	"x": "falseticker",
-	"~": "unstable",
+// sourceStateMap maps chrony source states to YANG infix-system
+// source-state enum values.
+var sourceStateMap = map[chrony.SourceStateType]string{
+	chrony.SourceStateSync:        "selected",
+	chrony.SourceStateCandidate:   "candidate",
+	chrony.SourceStateOutlier:     "outlier",
+	chrony.SourceStateUnreach:     "unusable",
+	chrony.SourceStateFalseTicker: "falseticker",
+	chrony.SourceStateJittery:     "unstable",
 }
 
-// sourceModeMap maps chronyc mode indicators to YANG
-// infix-system source-mode enum values.
-var sourceModeMap = map[string]string{
-	"^": "server",
-	"=": "peer",
-	"#": "local-clock",
+// sourceModeMap maps chrony source modes to YANG infix-system
+// source-mode enum values.
+var sourceModeMap = map[chrony.ModeType]string{
+	chrony.SourceModeClient: "server",
+	chrony.SourceModePeer:   "peer",
+	chrony.SourceModeRef:    "local-clock",
 }
 
-// addSources builds the infix-system:ntp/sources/source list from
-// chronyc -c sources output.  Reference clocks (mode #) and sources
-// with invalid stratum are skipped, matching the Python yanger
-// ietf_system.py add_ntp() behaviour.
-func (c *NTPCollector) addSources(sourcesOut []byte) map[string]interface{} {
-	if len(sourcesOut) == 0 {
-		return nil
-	}
-
+// addSources builds the infix-system:ntp/sources/source list.
+// Reference clocks and sources with invalid stratum are skipped,
+// matching the Python yanger ietf_system.py add_ntp() behaviour.
+func addSources(srcs []ntpSource) map[string]interface{} {
 	var sources []interface{}
-	for _, line := range splitLines(string(sourcesOut)) {
-		parts := strings.Split(line, ",")
-		if len(parts) < 10 {
+	for _, src := range srcs {
+		d := src.data
+
+		if d.Mode == chrony.SourceModeRef {
+			continue
+		}
+		if d.Stratum > 16 {
 			continue
 		}
 
-		modeIndicator := parts[0]
-		if modeIndicator == "#" {
-			continue
-		}
-
-		stratum, err := strconv.Atoi(parts[3])
-		if err != nil || stratum > 16 {
-			continue
-		}
-
-		mode := sourceModeMap[modeIndicator]
+		mode := sourceModeMap[d.Mode]
 		if mode == "" {
 			mode = "server"
 		}
-		state := sourceStateMap[parts[1]]
+		state := sourceStateMap[d.State]
 		if state == "" {
 			continue
 		}
 
-		src := map[string]interface{}{
-			"address": parts[2],
+		sources = append(sources, map[string]interface{}{
+			"address": d.IPAddr.String(),
 			"mode":    mode,
 			"state":   state,
-			"stratum": stratum,
-		}
-		if poll, err := strconv.Atoi(parts[4]); err == nil {
-			src["poll"] = poll
-		}
-
-		sources = append(sources, src)
+			"stratum": int(d.Stratum),
+			"poll":    int(d.Poll),
+		})
 	}
 
 	if len(sources) == 0 {
@@ -299,46 +315,72 @@ func (c *NTPCollector) addSources(sourcesOut []byte) map[string]interface{} {
 	}
 }
 
-// addClockState parses chronyc tracking CSV output into the clock-state
-// container.
-//
-// chronyc -c tracking format (comma-separated):
-//
-//	[0]  Ref-ID (hex IP, e.g. "C0A80101")
-//	[1]  Ref-ID name (e.g. "router.local")
-//	[2]  Stratum
-//	[3]  Ref time (seconds since epoch)
-//	[4]  System time offset (seconds)
-//	[5]  Last offset (seconds)
-//	[6]  RMS offset (seconds)
-//	[7]  Frequency (ppm)
-//	[8]  Residual frequency (ppm)
-//	[9]  Skew (ppm)
-//	[10] Root delay (seconds)
-//	[11] Root dispersion (seconds)
-//	[12] Update interval (seconds)
-//	[13] Leap status (e.g. "Normal", "Not synchronised")
-func (c *NTPCollector) addClockState(ctx context.Context, ntp map[string]interface{}) {
-	out, err := c.cmd.Run(ctx, "chronyc", "-c", "tracking")
-	if err != nil || len(out) == 0 {
-		return
+// chrony LeapStatus from tracking: 0 normal, 1 insert, 2 delete,
+// 3 not synchronised.
+const leapUnsynchronised = 3
+
+// clockRefid renders the tracking reference ID in a form the RFC 9249
+// refid union accepts: an IPv4 address, a uint32, or exactly four
+// characters.  The uint32 member must be a JSON number -- libyang
+// rejects number-typed union members encoded as strings.
+func clockRefid(t *chrony.Tracking) interface{} {
+	if t.IPAddr != nil && !t.IPAddr.IsUnspecified() {
+		if ip4 := t.IPAddr.To4(); ip4 != nil {
+			return ip4.String()
+		}
+		// IPv6 sources have no representable address: chrony
+		// stores a hash of it in the refid
+		return t.RefID
+	}
+	if t.RefID != 0 {
+		// Reference clock, e.g. "GPS": RFC 5905 refids are four
+		// bytes, space-padded
+		if s := refidToASCII(t.RefID); s != "" {
+			return (s + "    ")[:4]
+		}
+		// Non-printable refid, e.g. chronyd's local reference
+		// 0x7F7F0101: render as the pseudo-IP it encodes
+		refid := t.RefID
+		return fmt.Sprintf("%d.%d.%d.%d",
+			refid>>24, refid>>16&0xff, refid>>8&0xff, refid&0xff)
+	}
+	return "0.0.0.0"
+}
+
+// refidToASCII decodes a printable refid name like "GPS", or returns ""
+// when any byte is non-printable (a hash or pseudo-IP, not a name).
+func refidToASCII(refid uint32) string {
+	var s []byte
+
+	for i := 3; i >= 0; i-- {
+		c := byte(refid >> (8 * i))
+		if c == 0 {
+			continue
+		}
+		if c < ' ' || c > '~' {
+			return ""
+		}
+		s = append(s, c)
 	}
 
-	lines := splitLines(string(out))
-	if len(lines) == 0 {
+	return string(s)
+}
+
+// addClockState fills the clock-state container from chrony tracking.
+func addClockState(client cmdmonClient, ntp map[string]interface{}) {
+	resp, err := client.Communicate(chrony.NewTrackingPacket())
+	if err != nil {
 		return
 	}
-
-	parts := strings.Split(lines[0], ",")
-	if len(parts) < 14 {
+	tracking, ok := resp.(*chrony.ReplyTracking)
+	if !ok {
 		return
 	}
 
 	ss := make(map[string]interface{})
 
 	// Stratum: chronyd uses 0 for "not synchronized", YANG requires 1-16
-	stratumRaw, _ := strconv.Atoi(parts[2])
-	stratum := stratumRaw
+	stratum := int(tracking.Stratum)
 	if stratum == 0 {
 		stratum = 16
 	}
@@ -350,87 +392,42 @@ func (c *NTPCollector) addClockState(ctx context.Context, ntp map[string]interfa
 	}
 	ss["clock-stratum"] = stratum
 
-	// Reference ID
-	refidIP := parts[0]
-	refidName := parts[1]
-	if refidName != "" {
-		// NTP refids are always 4 bytes; pad/truncate to exactly 4 chars
-		padded := refidName + "    "
-		ss["clock-refid"] = padded[:4]
-	} else if len(refidIP) == 8 {
-		a, e1 := strconv.ParseInt(refidIP[0:2], 16, 32)
-		b, e2 := strconv.ParseInt(refidIP[2:4], 16, 32)
-		cv, e3 := strconv.ParseInt(refidIP[4:6], 16, 32)
-		d, e4 := strconv.ParseInt(refidIP[6:8], 16, 32)
-		if e1 == nil && e2 == nil && e3 == nil && e4 == nil {
-			ss["clock-refid"] = fmt.Sprintf("%d.%d.%d.%d", a, b, cv, d)
-		} else {
-			ss["clock-refid"] = refidIP
-		}
-	} else if refidIP != "" {
-		ss["clock-refid"] = refidIP
-	} else {
-		ss["clock-refid"] = "0.0.0.0"
-	}
+	ss["clock-refid"] = clockRefid(&tracking.Tracking)
 
 	// Frequencies (ppm → Hz with nominal 1GHz)
-	if freqPPM, err := strconv.ParseFloat(parts[7], 64); err == nil {
-		nominal := 1000000000.0
-		actual := nominal * (1.0 + freqPPM/1000000.0)
-		ss["nominal-freq"] = fmt.Sprintf("%.4f", nominal)
-		ss["actual-freq"] = fmt.Sprintf("%.4f", actual)
-	}
+	nominal := 1000000000.0
+	actual := nominal * (1.0 + tracking.FreqPPM/1000000.0)
+	ss["nominal-freq"] = fmt.Sprintf("%.4f", nominal)
+	ss["actual-freq"] = fmt.Sprintf("%.4f", actual)
 
 	// Clock precision (fixed estimate, ~1µs)
 	ss["clock-precision"] = -20
 
-	// Clock offset (system-time column[4], seconds → milliseconds)
-	if offsetSec, err := strconv.ParseFloat(parts[4], 64); err == nil {
-		ss["clock-offset"] = fmt.Sprintf("%.3f", offsetSec*1000.0)
-	}
+	// Clock offset (seconds → milliseconds)
+	ss["clock-offset"] = fmt.Sprintf("%.3f", tracking.CurrentCorrection*1000.0)
 
-	// Root delay (seconds → milliseconds)
-	if rootDelay, err := strconv.ParseFloat(parts[10], 64); err == nil {
-		ss["root-delay"] = fmt.Sprintf("%.3f", rootDelay*1000.0)
-	}
+	// Root delay and dispersion (seconds → milliseconds)
+	ss["root-delay"] = fmt.Sprintf("%.3f", tracking.RootDelay*1000.0)
+	ss["root-dispersion"] = fmt.Sprintf("%.3f", tracking.RootDispersion*1000.0)
 
-	// Root dispersion (seconds → milliseconds)
-	if rootDisp, err := strconv.ParseFloat(parts[11], 64); err == nil {
-		ss["root-dispersion"] = fmt.Sprintf("%.3f", rootDisp*1000.0)
-	}
-
-	// Reference time (epoch seconds → ISO 8601)
-	if refTime, err := strconv.ParseFloat(parts[3], 64); err == nil && refTime > 0 {
-		sec := int64(refTime)
-		nsec := int64((refTime - float64(sec)) * 1e9)
-		t := time.Unix(sec, nsec).UTC()
-		ss["reference-time"] = t.Format("2006-01-02T15:04:05.000") + "Z"
+	// Reference time (ISO 8601)
+	if !tracking.RefTime.IsZero() && tracking.RefTime.Unix() > 0 {
+		ss["reference-time"] = tracking.RefTime.UTC().Format("2006-01-02T15:04:05.000") + "Z"
 	}
 
 	// Sync state based on leap status
-	leapStatus := strings.TrimSpace(parts[13])
-	if leapStatus == "Not synchronised" || stratum == 16 {
+	if tracking.LeapStatus == leapUnsynchronised || stratum == 16 {
 		ss["sync-state"] = "ietf-ntp:clock-never-set"
 	} else {
 		ss["sync-state"] = "ietf-ntp:clock-synchronized"
 	}
 
 	// Infix augmentations
-	if lastOffset, err := strconv.ParseFloat(parts[5], 64); err == nil {
-		ss["infix-ntp:last-offset"] = fmt.Sprintf("%.9f", lastOffset)
-	}
-	if rmsOffset, err := strconv.ParseFloat(parts[6], 64); err == nil {
-		ss["infix-ntp:rms-offset"] = fmt.Sprintf("%.9f", rmsOffset)
-	}
-	if residualFreq, err := strconv.ParseFloat(parts[8], 64); err == nil {
-		ss["infix-ntp:residual-freq"] = fmt.Sprintf("%.3f", residualFreq)
-	}
-	if skew, err := strconv.ParseFloat(parts[9], 64); err == nil {
-		ss["infix-ntp:skew"] = fmt.Sprintf("%.3f", skew)
-	}
-	if updateInterval, err := strconv.ParseFloat(parts[12], 64); err == nil {
-		ss["infix-ntp:update-interval"] = fmt.Sprintf("%.1f", updateInterval)
-	}
+	ss["infix-ntp:last-offset"] = fmt.Sprintf("%.9f", tracking.LastOffset)
+	ss["infix-ntp:rms-offset"] = fmt.Sprintf("%.9f", tracking.RMSOffset)
+	ss["infix-ntp:residual-freq"] = fmt.Sprintf("%.3f", tracking.ResidFreqPPM)
+	ss["infix-ntp:skew"] = fmt.Sprintf("%.3f", tracking.SkewPPM)
+	ss["infix-ntp:update-interval"] = fmt.Sprintf("%.1f", tracking.LastUpdateInterval)
 
 	ntp["clock-state"] = map[string]interface{}{
 		"system-status": ss,
@@ -481,51 +478,33 @@ func (c *NTPCollector) addServerStatus(ctx context.Context, ntp map[string]inter
 	}
 }
 
-// addServerStats parses chronyc serverstats CSV into ntp-statistics.
-//
-// chronyc -c serverstats format:
-//
-//	[0] NTP packets received
-//	[1] NTP packets dropped
-//	[2] Cmd packets received
-//	[3] Cmd packets dropped
-//	[4] Client log size active
-//	[5] Client log memory
-//	[6] Rate limit drops
-//	[7] NTP packets sent
-//	[8] NTP packets send fail
-func (c *NTPCollector) addServerStats(ctx context.Context, ntp map[string]interface{}) {
-	out, err := c.cmd.Run(ctx, "chronyc", "-c", "serverstats")
-	if err != nil || len(out) == 0 {
+// addServerStats fills ntp-statistics from chrony server stats.  The
+// reply version depends on the chronyd version, but all carry the NTP
+// packets received/dropped counters.  chronyd does not count sent
+// packets, so packet-sent/packet-sent-fail are not reported.
+func addServerStats(client cmdmonClient, ntp map[string]interface{}) {
+	resp, err := client.Communicate(chrony.NewServerStatsPacket())
+	if err != nil {
 		return
 	}
 
-	lines := splitLines(string(out))
-	if len(lines) == 0 {
+	var received, dropped uint64
+	switch r := resp.(type) {
+	case *chrony.ReplyServerStats:
+		received, dropped = uint64(r.NTPHits), uint64(r.NTPDrops)
+	case *chrony.ReplyServerStats2:
+		received, dropped = uint64(r.NTPHits), uint64(r.NTPDrops)
+	case *chrony.ReplyServerStats3:
+		received, dropped = uint64(r.NTPHits), uint64(r.NTPDrops)
+	case *chrony.ReplyServerStats4:
+		received, dropped = r.NTPHits, r.NTPDrops
+	default:
 		return
 	}
 
-	parts := strings.Split(lines[0], ",")
-	if len(parts) < 9 {
-		return
-	}
-
-	stats := make(map[string]interface{})
-	if v, err := strconv.Atoi(parts[0]); err == nil {
-		stats["packet-received"] = v
-	}
-	if v, err := strconv.Atoi(parts[1]); err == nil {
-		stats["packet-dropped"] = v
-	}
-	if v, err := strconv.Atoi(parts[7]); err == nil {
-		stats["packet-sent"] = v
-	}
-	if v, err := strconv.Atoi(parts[8]); err == nil {
-		stats["packet-sent-fail"] = v
-	}
-
-	if len(stats) > 0 {
-		ntp["ntp-statistics"] = stats
+	ntp["ntp-statistics"] = map[string]interface{}{
+		"packet-received": received,
+		"packet-dropped":  dropped,
 	}
 }
 
