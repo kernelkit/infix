@@ -7,9 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -31,6 +35,10 @@ const (
 
 	dnsmasqLeaseFile = "/var/lib/misc/dnsmasq.leases"
 
+	// Written by confd's address-set add/remove actions: one file per
+	// set, listing the entries that are dynamic (not in the config).
+	addrsetShadowDir = "/run/confd/address-sets"
+
 	dhcpTreeKey     = "infix-dhcp-server:dhcp-server"
 	firewallTreeKey = "infix-firewall:firewall"
 )
@@ -40,11 +48,32 @@ const (
 type DBusMonitor struct {
 	tree *tree.Tree
 	log  *slog.Logger
+
+	mu   sync.Mutex
+	conn *dbus.Conn // current bus connection, nil while disconnected
 }
 
-// New creates a DBusMonitor.
+// New creates a DBusMonitor.  Address-set contents are served through
+// an on-demand tree provider rather than the cached firewall tree:
+// dynamic entries come and go without any firewalld signal (add/remove
+// actions, per-entry timeouts expiring in the kernel), so they must be
+// read fresh on every query.
 func New(t *tree.Tree, log *slog.Logger) *DBusMonitor {
-	return &DBusMonitor{tree: t, log: log}
+	m := &DBusMonitor{tree: t, log: log}
+	t.RegisterProvider(firewallTreeKey, m.addressSetOverlay)
+	return m
+}
+
+func (m *DBusMonitor) setConn(conn *dbus.Conn) {
+	m.mu.Lock()
+	m.conn = conn
+	m.mu.Unlock()
+}
+
+func (m *DBusMonitor) getConn() *dbus.Conn {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.conn
 }
 
 // Run starts the monitor loop. It connects to the system bus, subscribes
@@ -80,6 +109,7 @@ func (m *DBusMonitor) Run(ctx context.Context) error {
 		}
 
 		delay = bo.Initial
+		m.setConn(conn)
 
 		if err := m.refreshDHCP(conn); err != nil {
 			m.log.Warn("dbus monitor: initial dhcp refresh failed", "err", err)
@@ -89,6 +119,7 @@ func (m *DBusMonitor) Run(ctx context.Context) error {
 		}
 
 		err = m.processSignals(ctx, conn)
+		m.setConn(nil)
 		_ = conn.Close()
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -309,8 +340,13 @@ func (m *DBusMonitor) getFirewallZones(obj dbus.BusObject) []map[string]any {
 		if ifaces := firstStringList(zoneInfo, "interfaces", getStringList(settings, "interfaces")); len(ifaces) > 0 {
 			zone["interface"] = ifaces
 		}
-		if networks := firstStringList(zoneInfo, "sources", getStringList(settings, "sources")); len(networks) > 0 {
+		sources := firstStringList(zoneInfo, "sources", getStringList(settings, "sources"))
+		networks, ipsets := splitSources(sources)
+		if len(networks) > 0 {
 			zone["network"] = networks
+		}
+		if len(ipsets) > 0 {
+			zone["address-set"] = ipsets
 		}
 		if services := getStringList(settings, "services"); len(services) > 0 {
 			zone["service"] = services
@@ -446,6 +482,234 @@ func (m *DBusMonitor) getFirewallServices(obj dbus.BusObject, wanted map[string]
 	}
 
 	return services
+}
+
+// addressSetOverlay is the on-demand tree provider for the firewall
+// subtree.  It returns a fresh {"address-set": [...]} overlay, or nil
+// when firewalld is unreachable or has no sets.
+func (m *DBusMonitor) addressSetOverlay() json.RawMessage {
+	conn := m.getConn()
+	if conn == nil {
+		return nil
+	}
+
+	obj := conn.Object(firewalldBusName, dbus.ObjectPath(firewalldPath))
+	sets := m.getAddressSets(obj)
+	if len(sets) == 0 {
+		return nil
+	}
+
+	raw, err := json.Marshal(map[string]any{"address-set": sets})
+	if err != nil {
+		return nil
+	}
+	return raw
+}
+
+func (m *DBusMonitor) getAddressSets(obj dbus.BusObject) []map[string]any {
+	var names []string
+	if call := obj.Call(firewalldInterface+".ipset.getIPSets", 0); call.Err != nil {
+		m.log.Debug("dbus monitor: firewalld ipset.getIPSets failed", "err", call.Err)
+		return nil
+	} else if err := call.Store(&names); err != nil {
+		m.log.Warn("dbus monitor: firewalld ipset.getIPSets decode failed", "err", err)
+		return nil
+	}
+
+	sets := make([]map[string]any, 0, len(names))
+	for _, name := range names {
+		if aset := m.getAddressSet(obj, name); aset != nil {
+			sets = append(sets, aset)
+		}
+	}
+	return sets
+}
+
+func (m *DBusMonitor) getAddressSet(obj dbus.BusObject, name string) map[string]any {
+	call := obj.Call(firewalldInterface+".ipset.getIPSetSettings", 0, name)
+	if call.Err != nil {
+		m.log.Warn("dbus monitor: firewalld ipset.getIPSetSettings failed", "ipset", name, "err", call.Err)
+		return nil
+	}
+	if len(call.Body) == 0 {
+		return nil
+	}
+
+	// (version, short, description, type, options, entries)
+	fields, ok := call.Body[0].([]any)
+	if !ok || len(fields) < 6 {
+		m.log.Warn("dbus monitor: firewalld ipset settings: unexpected shape", "ipset", name)
+		return nil
+	}
+
+	options := variantMap(fields[4])
+	tracked := toStringSlice(fields[5])
+
+	aset := map[string]any{"name": name}
+
+	if desc := fmt.Sprint(fields[2]); desc != "" {
+		aset["description"] = desc
+	}
+
+	family := "ipv4"
+	if getString(options, "family") == "inet6" {
+		family = "ipv6"
+	}
+	aset["family"] = family
+
+	timeout := getInt(options, "timeout", 0)
+	if timeout > 0 {
+		aset["timeout"] = timeout
+	}
+
+	shadow := readShadowEntries(name)
+
+	static := []string{}
+	for _, e := range tracked {
+		e = normalizeEntry(e)
+		if !shadow[e] {
+			static = append(static, e)
+		}
+	}
+	if len(static) > 0 {
+		aset["entry"] = static
+	}
+
+	current := []map[string]any{}
+	for _, elem := range nftSetElems(name) {
+		entry, expires := nftElemParse(elem)
+		cur := map[string]any{
+			"entry":   entry,
+			"dynamic": timeout > 0 || shadow[entry],
+		}
+		if expires >= 0 {
+			cur["expires"] = expires
+		}
+		current = append(current, cur)
+	}
+	if len(current) > 0 {
+		aset["current"] = current
+	}
+
+	return aset
+}
+
+func readShadowEntries(name string) map[string]bool {
+	shadow := map[string]bool{}
+	data, err := os.ReadFile(filepath.Join(addrsetShadowDir, name))
+	if err != nil {
+		return shadow
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			shadow[normalizeEntry(line)] = true
+		}
+	}
+	return shadow
+}
+
+// nftSetElems returns the live contents of firewalld's nftables set.
+// The kernel is the only source that sees entries in timeout sets, and
+// the only one tracking per-entry expiry.  The firewalld table is
+// owner-protected, but reading is fine.
+func nftSetElems(name string) []any {
+	out, err := exec.Command("nft", "-j", "list", "set", "inet", "firewalld", name).Output()
+	if err != nil {
+		return nil
+	}
+	return parseNftSetElems(out)
+}
+
+func parseNftSetElems(out []byte) []any {
+	var doc struct {
+		Nftables []map[string]json.RawMessage `json:"nftables"`
+	}
+	if json.Unmarshal(out, &doc) != nil {
+		return nil
+	}
+	for _, obj := range doc.Nftables {
+		raw, ok := obj["set"]
+		if !ok {
+			continue
+		}
+		var set struct {
+			Elem []any `json:"elem"`
+		}
+		if json.Unmarshal(raw, &set) == nil {
+			return set.Elem
+		}
+	}
+	return nil
+}
+
+// nftElemParse returns (entry, expires) from an nft JSON set element.
+// expires is -1 when the element carries no expiry.
+func nftElemParse(elem any) (string, int) {
+	expires := -1
+	if wrap, ok := elem.(map[string]any); ok {
+		if inner, ok := wrap["elem"].(map[string]any); ok {
+			if e, ok := inner["expires"]; ok {
+				expires = getNum(e)
+			}
+			elem = inner["val"]
+		}
+	}
+
+	var entry string
+	switch v := elem.(type) {
+	case map[string]any:
+		if p, ok := v["prefix"].(map[string]any); ok {
+			entry = fmt.Sprintf("%v/%d", p["addr"], getNum(p["len"]))
+		} else if r, ok := v["range"].([]any); ok && len(r) == 2 {
+			entry = fmt.Sprintf("%v-%v", r[0], r[1])
+		} else {
+			entry = fmt.Sprint(v)
+		}
+	default:
+		entry = fmt.Sprint(v)
+	}
+
+	return normalizeEntry(entry), expires
+}
+
+func getNum(v any) int {
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	}
+	return -1
+}
+
+// normalizeEntry matches firewalld's entry normalization: host bits are
+// masked off prefixes and full-length prefixes reduce to bare addresses.
+func normalizeEntry(entry string) string {
+	if p, err := netip.ParsePrefix(entry); err == nil {
+		p = p.Masked()
+		if p.Bits() == p.Addr().BitLen() {
+			return p.Addr().String()
+		}
+		return p.String()
+	}
+	if a, err := netip.ParseAddr(entry); err == nil {
+		return a.String()
+	}
+	return entry
+}
+
+// splitSources separates zone sources into IP networks and
+// "ipset:NAME" address-set references.
+func splitSources(sources []string) (networks, ipsets []string) {
+	for _, src := range sources {
+		if name, ok := strings.CutPrefix(src, "ipset:"); ok {
+			ipsets = append(ipsets, name)
+		} else {
+			networks = append(networks, src)
+		}
+	}
+	return networks, ipsets
 }
 
 func (m *DBusMonitor) clearTreeKey(key string) {
@@ -773,6 +1037,10 @@ func variantMap(v any) map[string]any {
 	case map[string]dbus.Variant:
 		for k, vv := range m {
 			out[k] = vv.Value()
+		}
+	case map[string]string:
+		for k, vv := range m {
+			out[k] = vv
 		}
 	case map[string]any:
 		for k, vv := range m {
