@@ -26,6 +26,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/ipc"
 	"github.com/kernelkit/infix/src/yangerd/internal/iwmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/lldpmonitor"
+	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/monitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/sysreaders"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
@@ -246,6 +247,15 @@ func main() {
 			}
 		}()
 	}
+
+	ptpmon := ptpmonitor.New(t, slogLog)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := ptpmon.Run(ctx); err != nil && ctx.Err() == nil {
+			slogLog.Error("ptpmonitor exited", "err", err)
+		}
+	}()
 
 	zapi := zapiwatcher.New(t, frrvty.New(""), slogLog)
 	wg.Add(1)
