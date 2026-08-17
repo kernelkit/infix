@@ -6,6 +6,7 @@
 DEST="org.fedoraproject.FirewallD1"
 OBJECT="/org/fedoraproject/FirewallD1"
 INTERFACE="org.fedoraproject.FirewallD1"
+ADDRSET_DIR="/run/confd/address-sets"
 VERBOSE=0
 
 print() {
@@ -115,6 +116,25 @@ ipset_call()
 	print "Error: $output" >&2
 	return 1
     fi
+}
+
+# Dynamic address-set entries only exist in the runtime config; a reload
+# rebuilds the sets from the generated ipset XML, which holds static
+# entries only.  Re-apply the dynamic entries tracked by confd's
+# add/remove action handlers, so they survive the reload without being
+# baked into the XML (which would resurrect entries removed while the
+# reload was in flight).
+addrset_resync()
+{
+    for file in "$ADDRSET_DIR"/*; do
+	[ -f "$file" ] || continue
+	name=$(basename "$file")
+
+	while IFS= read -r entry; do
+	    [ -n "$entry" ] || continue
+	    ipset_call addEntry "$name" "$entry"
+	done < "$file"
+    done
 }
 
 panic_status()
@@ -377,6 +397,8 @@ main()
 		    exit 1
 		fi
 	    fi
+
+	    addrset_resync
 	    ;;
 	panic)
 	    if ! check_firewalld; then

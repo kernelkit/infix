@@ -26,7 +26,7 @@ graph "quad" {
 	    provides="infix watchdog gps",
 	    expected_boot="primary",
 	    qn_console=9001,
-	    qn_mem="384M",
+	    qn_mem="512M",
 	    qn_usb="dut1.usb",
 	    qn_gps="true"
 	    ];
@@ -36,7 +36,7 @@ graph "quad" {
 	    provides="infix watchdog",
 	    expected_boot="primary",
 	    qn_console=9002,
-	    qn_mem="384M",
+	    qn_mem="512M",
 	    qn_usb="dut2.usb"
 	];
 	dut3 [
@@ -45,7 +45,7 @@ graph "quad" {
 	    provides="infix watchdog",
 	    expected_boot="primary",
 	    qn_console=9003,
-	    qn_mem="384M",
+	    qn_mem="512M",
 	    qn_usb="dut3.usb"
 	];
 
@@ -55,7 +55,7 @@ graph "quad" {
 	    provides="infix watchdog",
 	    expected_boot="primary",
 	    qn_console=9004,
-	    qn_mem="384M",
+	    qn_mem="512M",
 	    qn_usb="dut4.usb"
 	];
 

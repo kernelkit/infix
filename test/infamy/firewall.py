@@ -30,6 +30,17 @@ class Firewall:
         self.dstns = dest
 
     @staticmethod
+    def _match(expected, actual):
+        """Deep subset match with type-tolerant scalar comparison"""
+        if isinstance(expected, dict) and isinstance(actual, dict):
+            return all(k in actual and Firewall._match(v, actual[k])
+                       for k, v in expected.items())
+        if isinstance(expected, list) and isinstance(actual, list):
+            return all(any(Firewall._match(e, a) for a in actual)
+                       for e in expected)
+        return str(expected) == str(actual)
+
+    @staticmethod
     def wait_for_operational(target, expected_zones, timeout=30):
         """Wait for firewall config to be activated/available in operational"""
         def check_operational():
@@ -46,9 +57,9 @@ class Firewall:
                 for zone_name, expected in expected_zones.items():
                     if zone_name not in zones:
                         return False
-                    for key, value in expected.items():
-                        if zones[zone_name].get(key) != value:
-                            return False
+                    if not Firewall._match(expected, zones[zone_name]):
+                        return False
+
                 return True
             except:
                 return False

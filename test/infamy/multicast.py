@@ -65,7 +65,10 @@ class MacMCastSender:
         send_cmd = (
             "from scapy.all import sendp, Ether; "
             f"pkt=Ether(src='aa:bb:cc:dd:ee:ff', dst='{self.group}', type=0xdead); "
-            "sendp(pkt, iface='iface', count=50, inter=1./10)"
+            # loop until SIGINT (set on __exit__), like the IPv4 MCastSender's
+            # msend; a fixed count would drain before later verification steps
+            # run and they would capture nothing.
+            "sendp(pkt, iface='iface', inter=1./10, loop=1)"
         )
         self.proc = self.netns.popen(["python3", "-c", send_cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return self  
