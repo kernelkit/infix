@@ -2293,6 +2293,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#simulated-wi-fi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simulated Wi-Fi
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2548,6 +2559,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simulated-wi-fi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simulated Wi-Fi
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2878,6 +2900,30 @@ the <code>test-config</code>, so any configuration changes are lost on reboot
 unless <code>startup_override()</code> is called first (or the marker is removed
 and a normal startup config is saved).</p>
 </div>
+<h2 id="simulated-wi-fi">Simulated Wi-Fi<a class="headerlink" href="#simulated-wi-fi" title="Permanent link">¶</a></h2>
+<p>The virtual topology has no real radios, so Wi-Fi tests run against
+<code>mac80211_hwsim</code> devices and the "air" between guests is faked.  A small
+relay, <code>wifimedium</code> (<code>package/feature-wifi/wifimedium</code>), takes every frame
+a radio transmits, forwards it to the other guests, and injects what
+arrives back into the local radios.</p>
+<p>Each radio (<code>radio0</code>, <code>radio1</code>, ...) is paired with a carrier NIC of the
+same name, and that carrier joins the multicast group (a <em>cell</em>) the
+topology wires it to.  Two radios hear each other only when their carriers
+share a cell.  Radios on the same cell that tune to different channels are
+still kept apart, as on real hardware.</p>
+<p>By convention the two general cells carry <code>radio0</code> and <code>radio1</code> across all
+DUTs, so most tests put communicating radios on the same index: a station
+joins an AP on the same <code>radioN</code>.  The mesh-roaming test, for instance,
+uses <code>radio1</code> for both the gateway APs and the client.  That is only a
+convention, though.  A cell can carry any set of radios, including two of
+the <em>same</em> DUT.  The band-steering test relies on that: it wires one DUT's
+<code>radio2</code> (2.4GHz) and <code>radio3</code> (5GHz) onto a dedicated cell so a single
+client radio hears the same SSID on both bands.</p>
+<p>How many radios each DUT gets depends on the topology.  The number of
+<code>radioN</code> ports wired to a node is passed in via the <code>opt/wifi</code> fw_cfg and
+loaded at boot by the <code>00-hwsim</code> script, so a node with no wifi links has
+no radios at all.  The wiring for the standard suite lives in
+<code>test/virt/quad</code>.</p>
 
 
 
