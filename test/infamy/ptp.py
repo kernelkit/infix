@@ -84,11 +84,19 @@ def is_own_gm(target, inst_idx=0):
 
 
 def has_converged(target, threshold_ns=100_000, inst_idx=0):
-    """True when |offset-from-time-transmitter| < threshold_ns."""
+    """True when |offset-from-time-transmitter| < threshold_ns.
+
+    Prints the offset while unconverged, so a failed until() wait
+    shows the offset trend in the test log.
+    """
     off = offset_ns(target, inst_idx)
     if off is None:
+        print(f"{target.name}: no offset-from-time-transmitter")
         return False
-    return abs(off) < threshold_ns
+    if abs(off) < threshold_ns:
+        return True
+    print(f"{target.name}: offset {off} ns, threshold {threshold_ns} ns")
+    return False
 
 
 def port_state_dbg(target, port_idx=1, inst_idx=0):

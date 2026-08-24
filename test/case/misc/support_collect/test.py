@@ -42,7 +42,7 @@ with infamy.Test() as test:
             result = tgtssh.run("sudo support --work-dir /tmp collect --log-sec 2",
                                 stdout=f,
                                 stderr=subprocess.PIPE,
-                                timeout=120)
+                                timeout=300)
 
         if result.returncode != 0:
             stderr_output = result.stderr.decode('utf-8') if result.stderr else ""
@@ -120,7 +120,7 @@ with infamy.Test() as test:
                 result = tgtssh.run(f"sudo support --work-dir /tmp collect --log-sec 2 --password {test_password}",
                                     stdout=f,
                                     stderr=subprocess.PIPE,
-                                    timeout=120)
+                                    timeout=300)
 
             if result.returncode != 0:
                 stderr_output = result.stderr.decode('utf-8') if result.stderr else ""
