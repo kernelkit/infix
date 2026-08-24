@@ -1,0 +1,67 @@
+{
+    "input": {
+	"path": {
+	    "locate":       { "path": "/run/led/locate" },
+
+	    "status-prime": { "path": "/run/led/status-prime" },
+	    "status-ok":    { "path": "/run/led/status-ok" },
+	    "status-err":   { "path": "/run/led/status-err" },
+	    "status-crit":  { "path": "/run/led/status-crit" },
+
+	    "startup":   { "path": "/run/finit/cond/usr/startup-config-ok" },
+	    "fail-safe": { "path": "/run/finit/cond/usr/failure-config-ok" },
+	    "panic":     { "path": "/run/finit/cond/usr/failure-config-error" }
+	}
+    },
+
+    "output": {
+	"led": {
+	    "red:status": {
+		"rules": [
+		    { "if": "locate", "then": "@off" },
+		    { "if": "panic", "then": "@blink-5hz" },
+		    { "if": "fail-safe", "then": "@blink-5hz" },
+		    { "if": "status-crit", "then": "@blink-1hz" },
+		    { "if": "status-err", "then": "@on" }
+		]
+	    },
+	    "green:status": {
+		"rules": [
+		    { "if": "locate", "then": "@off" },
+		    { "if": "panic", "then": "@off" },
+		    { "if": "fail-safe", "then": "@off" },
+		    { "if": "status-crit", "then": "@off" },
+		    { "if": "status-err", "then": "@off" },
+		    { "if": "status-prime", "then": "@blink-1hz" },
+		    { "if": "status-ok", "then": "@on" },
+		    { "if": "startup", "then": "@on" },
+		    { "if": "true", "then": "@blink-1hz" }
+		]
+	    },
+	    "blue:status": {
+		"rules": [
+		    { "if": "locate", "then": "@blink-1hz" }
+		]
+	    }
+	}
+    },
+
+    "aliases": {
+	"on": {
+	    "brightness": true
+	},
+	"off": {
+	    "brightness": false
+	},
+	"blink-1hz": {
+	    "trigger": "timer",
+	    "delay_on": 500,
+	    "delay_off": 500
+	},
+	"blink-5hz": {
+	    "trigger": "timer",
+	    "delay_on": 100,
+	    "delay_off": 100
+	}
+    }
+}

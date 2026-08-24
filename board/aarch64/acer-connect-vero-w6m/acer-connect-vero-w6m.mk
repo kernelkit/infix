@@ -1,2 +1,7 @@
+define ACER_CONNECT_VERO_W6M_LINUX_CONFIG_FIXUPS
+	$(call KCONFIG_ENABLE_OPT,CONFIG_LEDS_CLASS_MULTICOLOR)
+	$(call KCONFIG_SET_OPT,CONFIG_LEDS_KTD202X,m)
+endef
+
 $(eval $(ix-board))
 $(eval $(generic-package))
