@@ -139,8 +139,8 @@ def config_target2(target, data, link, ospf):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
+        R1, R2 = parallel(lambda: env.attach("R1", "mgmt"),
+                          lambda: env.attach("R2", "mgmt"))
 
     with test.step("Set up TPMR between R1ospf and R2ospf"):
         ospf_breaker = TPMR(env.ltop.xlate("PC", "R1_ospf")[1], env.ltop.xlate("PC", "R2_ospf")[1]).start()

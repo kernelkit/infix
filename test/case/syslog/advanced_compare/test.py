@@ -8,7 +8,7 @@ actions (log vs block/stop).
 """
 
 import infamy
-from infamy.util import until
+from infamy.util import parallel, until
 
 TEST_MESSAGES = [
     ("daemon.emerg",   "Emergency: system is unusable"),
@@ -24,8 +24,8 @@ TEST_MESSAGES = [
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Clean up old log files from previous test runs"):
         tgtssh.runsh("sudo rm -f /var/log/{exact-errors,no-debug,baseline}")

@@ -24,13 +24,14 @@ Test that two VLANs are correctly separated in the bridge
 ....
 """
 import infamy
+from infamy.util import parallel
 import subprocess
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        dut1 = env.attach("dut1", "mgmt")
-        dut2 = env.attach("dut2", "mgmt")
+        dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
+                              lambda: env.attach("dut2", "mgmt"))
 
     with test.step("Configure DUTs"):
         _, tport10 = env.ltop.xlate("dut1", "data1")

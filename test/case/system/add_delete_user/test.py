@@ -19,8 +19,8 @@ hashed_password = "$y$j9T$SALT$gx4K1wugXsm3JDLwYZtnbr37FGGvljotXwIBGOxaGf2"
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = util.parallel(lambda: env.attach("target", "mgmt"),
+                                       lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Add new user 'newuser01' with password 'newuser01password'"):
         target.put_config_dicts({

@@ -10,7 +10,7 @@ factory-config on the next boot, as on a factory-fresh device.
 import json
 
 import infamy
-from infamy.util import wait_boot
+from infamy.util import parallel, wait_boot
 
 STARTUP = "/cfg/startup-config.cfg"
 FACTORY = "/etc/factory-config.cfg"
@@ -32,8 +32,8 @@ def cleanup(env):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Determine factory-config hostname"):
         expected = factory_hostname(tgtssh)

@@ -11,6 +11,7 @@ first DUT.  On host, verify connectivity with the second DUT through tunnel.
 """
 
 import infamy
+from infamy.util import parallel
 
 
 class ArgumentParser(infamy.ArgumentParser):
@@ -23,8 +24,8 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
-        left = env.attach("left", "mgmt")
-        right = env.attach("right", "mgmt")
+        left, right = parallel(lambda: env.attach("left", "mgmt"),
+                               lambda: env.attach("right", "mgmt"))
         tunnel = env.args.tunnel
 
     with test.step("Configure DUTs with tunnel {tunnel}"):

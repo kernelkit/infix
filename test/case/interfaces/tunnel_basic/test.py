@@ -12,6 +12,7 @@ connectivity with the second DUT through the tunnel.
 """
 
 import infamy
+from infamy.util import parallel
 
 
 class ArgumentParser(infamy.ArgumentParser):
@@ -25,8 +26,8 @@ with infamy.Test() as test:
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
         tunnel = env.args.tunnel
-        left = env.attach("left", "mgmt")
-        right = env.attach("right", "mgmt")
+        left, right = parallel(lambda: env.attach("left", "mgmt"),
+                               lambda: env.attach("right", "mgmt"))
 
     with test.step(f"Configure DUTs with tunnel {tunnel}"):
         container_left4 = {

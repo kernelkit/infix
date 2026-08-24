@@ -21,8 +21,8 @@ The test is run for both IEEE 1588-2019 (UDP/IPv4, E2E) and IEEE 802.1AS
 """
 
 import infamy
+from infamy.util import parallel, until
 import infamy.ptp as ptp
-from infamy import until
 
 
 class ArgumentParser(infamy.ArgumentParser):
@@ -135,9 +135,9 @@ with infamy.Test() as test:
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
         profile  = env.args.profile
-        gm       = env.attach("gm",       "mgmt")
-        bc       = env.attach("bc",       "mgmt")
-        receiver = env.attach("receiver", "mgmt")
+        gm, bc, receiver = parallel(lambda: env.attach("gm",       "mgmt"),
+                                    lambda: env.attach("bc",       "mgmt"),
+                                    lambda: env.attach("receiver", "mgmt"))
 
         _, gm_iface    = env.ltop.xlate("gm",       "data")
         _, bc_uplink   = env.ltop.xlate("bc",       "uplink")

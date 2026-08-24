@@ -573,10 +573,10 @@ def disable_link(target, link):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
-        R3 = env.attach("R3", "mgmt")
-        R4 = env.attach("R4", "mgmt")
+        R1, R2, R3, R4 = parallel(lambda: env.attach("R1", "mgmt"),
+                                  lambda: env.attach("R2", "mgmt"),
+                                  lambda: env.attach("R3", "mgmt"),
+                                  lambda: env.attach("R4", "mgmt"))
 
         _, R1ring1 = env.ltop.xlate("R1", "ring1")
         _, R1ring2 = env.ltop.xlate("R1", "ring2")

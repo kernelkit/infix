@@ -8,6 +8,7 @@ substring matching and complex regex patterns.
 """
 
 import infamy
+from infamy.util import parallel
 import time
 
 TEST_MESSAGES = [
@@ -22,8 +23,8 @@ TEST_MESSAGES = [
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Clean up old log files from previous test runs"):
         tgtssh.runsh("sudo rm -f /var/log/{errors,routers,all-messages}")

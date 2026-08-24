@@ -9,12 +9,13 @@ base MAC address.  E.g., ix-01-01-01.
 """
 import re
 import infamy
+from infamy.util import parallel
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
         FMT = "%h-%m"
         NEW = "h0stn4m3"
 

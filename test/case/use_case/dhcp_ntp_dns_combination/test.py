@@ -7,7 +7,7 @@ servers from a DHCP server.
 """
 import infamy
 import infamy.iface as iface
-from infamy.util import until
+from infamy.util import parallel, until
 
 def any_dhcp_address(target, iface_name):
     try:
@@ -61,8 +61,8 @@ with infamy.Test() as test:
 
     with test.step("Set up topology and configure static IP on client"):
         env = infamy.Env()
-        server = env.attach("server", "mgmt")
-        client = env.attach("client", "mgmt")
+        server, client = parallel(lambda: env.attach("server", "mgmt"),
+                                  lambda: env.attach("client", "mgmt"))
 
         client_data = client["server"]
         server_data = server["client"]

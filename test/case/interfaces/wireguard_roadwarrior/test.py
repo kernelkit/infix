@@ -317,10 +317,10 @@ client2_public_key = "Om9CPLYdK3l93GauKrq5WXo/gbcD+1CeqFpobRLLkB4="
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        server = env.attach("server", "mgmt")
-        router = env.attach("router", "mgmt")
-        client1 = env.attach("client1", "mgmt")
-        client2 = env.attach("client2", "mgmt")
+        server, router, client1, client2 = util.parallel(lambda: env.attach("server", "mgmt"),
+                                                         lambda: env.attach("router", "mgmt"),
+                                                         lambda: env.attach("client1", "mgmt"),
+                                                         lambda: env.attach("client2", "mgmt"))
 
     _, hport_server = env.ltop.xlate("host", "data")
     _, hport_client1 = env.ltop.xlate("host", "data1")

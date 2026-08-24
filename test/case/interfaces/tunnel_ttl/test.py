@@ -16,6 +16,7 @@ many hops and the TTL would reach zero before the last routing step.)
 """
 
 import infamy
+from infamy.util import parallel
 
 
 class ArgumentParser(infamy.ArgumentParser):
@@ -65,9 +66,9 @@ with infamy.Test() as test:
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
         tunnel = env.args.tunnel
-        r1 = env.attach("R1", "mgmt")
-        r2 = env.attach("R2", "mgmt")
-        r3 = env.attach("R3", "mgmt")
+        r1, r2, r3 = parallel(lambda: env.attach("R1", "mgmt"),
+                              lambda: env.attach("R2", "mgmt"),
+                              lambda: env.attach("R3", "mgmt"))
 
     with test.step(f"Configure R1 with {tunnel} tunnel to R3"):
         # R1: Entry point, west facing PC, east facing R2, tunnel to R3

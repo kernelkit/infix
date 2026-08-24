@@ -122,8 +122,8 @@ def dut_init(dut, addr, peer):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env(edge_mappings=infamy.lag.edge_mappings)
-        dut1 = env.attach("dut1")
-        dut2 = env.attach("dut2")
+        dut1, dut2 = parallel(lambda: env.attach("dut1"),
+                              lambda: env.attach("dut2"))
 
     _, mon = env.ltop.xlate("host", "mon")
     with infamy.IsolatedMacVlan(mon) as ns:

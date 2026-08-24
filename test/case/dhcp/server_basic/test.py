@@ -11,7 +11,7 @@ a default route to the server.
 import infamy
 import infamy.iface as iface
 import infamy.route as route
-from infamy.util import until
+from infamy.util import parallel, until
 
 
 def verify_hostname(dut, hostname):
@@ -30,8 +30,8 @@ with infamy.Test() as test:
     HOSTNM2 = 'client'
     with test.step("Set up topology and attach to client and server DUTs"):
         env = infamy.Env()
-        client = env.attach("client", "mgmt")
-        server = env.attach("server", "mgmt")
+        client, server = parallel(lambda: env.attach("client", "mgmt"),
+                                  lambda: env.attach("server", "mgmt"))
 
     with test.step("Configure DHCP server and client's hostname"):
         server.put_config_dicts({

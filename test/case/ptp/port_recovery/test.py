@@ -13,8 +13,8 @@ configured threshold.
 """
 
 import infamy
+from infamy.util import parallel, until
 import infamy.ptp as ptp
-from infamy import until
 
 
 def configure_oc(iface, ip, priority1, client_only, dm="e2e"):
@@ -85,8 +85,8 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to DUTs"):
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
-        gm       = env.attach("gm",       "mgmt")
-        receiver = env.attach("receiver", "mgmt")
+        gm, receiver = parallel(lambda: env.attach("gm",       "mgmt"),
+                                lambda: env.attach("receiver", "mgmt"))
 
         _, gm_iface       = env.ltop.xlate("gm",       "data")
         _, receiver_iface = env.ltop.xlate("receiver", "data")

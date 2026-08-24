@@ -24,11 +24,11 @@ from infamy.util import parallel
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        dut1 = env.attach("dut1", "mgmt")
+        dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
+                              lambda: env.attach("dut2", "mgmt"))
         _, d1send = env.ltop.xlate("dut1", "data1")
         _, d1receiver = env.ltop.xlate("dut1", "data2")
         _, d1trunk = env.ltop.xlate("dut1", "link")
-        dut2 = env.attach("dut2", "mgmt")
         _, d2receive = env.ltop.xlate("dut2", "data1")
         _, d2sender = env.ltop.xlate("dut2", "data2")
         _, d2trunk = env.ltop.xlate("dut2", "link")

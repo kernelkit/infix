@@ -24,7 +24,7 @@ ping of the hostname.
 import infamy
 import infamy.iface as iface
 import infamy.route as route
-from infamy.util import until
+from infamy.util import parallel, until
 
 
 def has_dns_server(data, dns_servers):
@@ -83,10 +83,10 @@ with infamy.Test() as test:
 
     with test.step("Set up topology and attach to client and server DUTs"):
         env = infamy.Env()
-        server = env.attach("server", "mgmt")
-        client1 = env.attach("client1", "mgmt")
-        client2 = env.attach("client2", "mgmt")
-        client3 = env.attach("client3", "mgmt")
+        server, client1, client2, client3 = parallel(lambda: env.attach("server", "mgmt"),
+                                                     lambda: env.attach("client1", "mgmt"),
+                                                     lambda: env.attach("client2", "mgmt"),
+                                                     lambda: env.attach("client3", "mgmt"))
 
     with test.step("Configure DHCP server"):
         server.put_config_dicts({

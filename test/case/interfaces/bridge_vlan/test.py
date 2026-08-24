@@ -10,12 +10,13 @@ image::bridge-vlan.svg[align=center, scaledwidth=75%]
 
 """
 import infamy
+from infamy.util import parallel
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        dut1 = env.attach("dut1", "mgmt")
-        dut2 = env.attach("dut2", "mgmt")
+        dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
+                              lambda: env.attach("dut2", "mgmt"))
 
     with test.step("Configure DUTs"):
         dut1.put_config_dicts({"ietf-interfaces": {

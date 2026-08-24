@@ -24,8 +24,8 @@ always P2P (mandated by the standard) and Layer 2 transport is used.
 """
 
 import infamy
+from infamy.util import parallel, until
 import infamy.ptp as ptp
-from infamy import until
 
 
 class ArgumentParser(infamy.ArgumentParser):
@@ -136,9 +136,9 @@ with infamy.Test() as test:
         env = infamy.Env(args=arg)
         profile  = env.args.profile
         dm       = "p2p" if profile == "ieee802-dot1as" else env.args.delay_mechanism
-        gm       = env.attach("gm",       "mgmt")
-        tc       = env.attach("tc",       "mgmt")
-        receiver = env.attach("receiver", "mgmt")
+        gm, tc, receiver = parallel(lambda: env.attach("gm",       "mgmt"),
+                                    lambda: env.attach("tc",       "mgmt"),
+                                    lambda: env.attach("receiver", "mgmt"))
 
         gm_iface       = gm["data"]
         tc_uplink      = tc["uplink"]

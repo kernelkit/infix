@@ -18,7 +18,7 @@ should then select srv1 (lower stratum) as its sync source.
 """
 
 import infamy
-from infamy import until
+from infamy.util import parallel, until
 import infamy.ntp as ntp
 import infamy.ntp_server as ntp_server
 
@@ -32,8 +32,8 @@ ips = {
 with infamy.Test() as test:
     with test.step("Set up topology and attach to devices"):
         env = infamy.Env()
-        srv2 = env.attach("srv2", "mgmt")
-        client = env.attach("client", "mgmt")
+        srv2, client = parallel(lambda: env.attach("srv2", "mgmt"),
+                                lambda: env.attach("client", "mgmt"))
 
         _, swp1 = env.ltop.xlate("srv2", "swp1")
         _, swp2 = env.ltop.xlate("srv2", "swp2")

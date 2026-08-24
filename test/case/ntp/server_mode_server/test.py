@@ -16,15 +16,15 @@ The test verifies both servers operate correctly and serve accurate time.
 """
 
 import infamy
-from infamy import until
+from infamy.util import parallel, until
 import infamy.ntp as ntp
 
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to devices"):
         env = infamy.Env()
-        upstream = env.attach("upstream", "mgmt")
-        downstream = env.attach("downstream", "mgmt")
+        upstream, downstream = parallel(lambda: env.attach("upstream", "mgmt"),
+                                        lambda: env.attach("downstream", "mgmt"))
 
         # Get interface names for each device
         _, upstream_data1 = env.ltop.xlate("upstream", "data1")

@@ -27,8 +27,7 @@ max_frequency in the YANG model — see TODO.org.
 
 import infamy
 import infamy.ptp as ptp
-from infamy import until
-from infamy.util import parallel
+from infamy.util import parallel, until
 
 STEP_SEC = 10
 
@@ -104,8 +103,8 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to DUTs"):
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
-        gm       = env.attach("gm",       "mgmt")
-        receiver = env.attach("receiver", "mgmt")
+        gm, receiver = parallel(lambda: env.attach("gm",       "mgmt"),
+                                lambda: env.attach("receiver", "mgmt"))
 
         _, gm_iface       = env.ltop.xlate("gm",       "data")
         _, receiver_iface = env.ltop.xlate("receiver", "data")

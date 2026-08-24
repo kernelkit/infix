@@ -5,6 +5,7 @@ Remote syslog
 Verify logging to remote, acting as a remote, and RFC5424 log format.
 """
 import infamy
+from infamy.util import parallel
 
 def syslog_check(clientssh, serverssh):
     clientssh.runsh("logger -t test -m client -p security.notice TestMessage")
@@ -14,10 +15,10 @@ def syslog_check(clientssh, serverssh):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to client and server DUTs"):
         env = infamy.Env()
-        client = env.attach("client", "mgmt")
-        server = env.attach("server", "mgmt")
-        clientssh = env.attach("client", "mgmt", "ssh")
-        serverssh = env.attach("server", "mgmt", "ssh")
+        client, server, clientssh, serverssh = parallel(lambda: env.attach("client", "mgmt"),
+                                                        lambda: env.attach("server", "mgmt"),
+                                                        lambda: env.attach("client", "mgmt", "ssh"),
+                                                        lambda: env.attach("server", "mgmt", "ssh"))
 
     with test.step("Configure client DUT as syslog client with server DUT as remote, and configure server DUT as syslog server"):
         _, client_link = env.ltop.xlate("client", "link")

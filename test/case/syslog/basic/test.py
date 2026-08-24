@@ -9,13 +9,14 @@ path `file:foo`.
 """
 
 import infamy
+from infamy.util import parallel
 import infamy.ssh as ssh
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
         factory = env.get_password("target")
         address = target.get_mgmt_ip()
 

@@ -6,13 +6,13 @@ Verify IPv6 autoconf on a bridge is properly set up for global prefix.
 See issue #473 for details.
 """
 import infamy
-from infamy.util import until
+from infamy.util import parallel, until
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Setting up bridge with IPv6 SLAAC for global prefix on target:data"):
         _, tport = env.ltop.xlate("target", "data")

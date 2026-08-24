@@ -11,15 +11,15 @@ Verify NTP server and client work together:
 """
 
 import infamy
-from infamy import until
+from infamy.util import parallel, until
 import infamy.ntp as ntp
 
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to devices"):
         env = infamy.Env()
-        server = env.attach("server", "mgmt")
-        client = env.attach("client", "mgmt")
+        server, client = parallel(lambda: env.attach("server", "mgmt"),
+                                  lambda: env.attach("client", "mgmt"))
 
         _, server_data = env.ltop.xlate("server", "data")
         _, client_data = env.ltop.xlate("client", "data")

@@ -464,9 +464,9 @@ def configure_client2(dut):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        server = env.attach("server", "mgmt")
-        client1 = env.attach("client1", "mgmt")
-        client2 = env.attach("client2", "mgmt")
+        server, client1, client2 = util.parallel(lambda: env.attach("server", "mgmt"),
+                                                 lambda: env.attach("client1", "mgmt"),
+                                                 lambda: env.attach("client2", "mgmt"))
 
     _, hclient1 = env.ltop.xlate("host", "data1")
     _, hserver  = env.ltop.xlate("host", "data2")

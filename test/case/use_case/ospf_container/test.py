@@ -574,10 +574,10 @@ def config_abr(target, data, link1, link2, link3):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
-        R3 = env.attach("R3", "mgmt")
-        ABR = env.attach("ABR", "mgmt")
+        R1, R2, R3, ABR = util.parallel(lambda: env.attach("R1", "mgmt"),
+                                        lambda: env.attach("R2", "mgmt"),
+                                        lambda: env.attach("R3", "mgmt"),
+                                        lambda: env.attach("ABR", "mgmt"))
         if not R1.has_model("infix-containers"):
             test.skip()
         if not R2.has_model("infix-containers"):
