@@ -186,8 +186,8 @@ with infamy.Test() as test:
         _, R1link = env.ltop.xlate("R1", "link")
         _, R2data = env.ltop.xlate("R2", "data")
 
-        parallel(config_target1(R1, R1data, R1link),
-                 config_target2(R2, R2link, R2data))
+        parallel(lambda: config_target1(R1, R1data, R1link),
+                 lambda: config_target2(R2, R2link, R2data))
 
     with test.step("Wait for RIP routes to be exchanged"):
         print("Waiting for RIP routes to propagate...")
@@ -197,6 +197,8 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-rip:rip"), attempts=40)
         # R2 should learn R1's static route (redistributed)
         until(lambda: route.ipv4_route_exist(R2, "192.168.33.1/32", proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.60.0/24", proto="ietf-rip:rip"), attempts=40)
 
     with test.step("Test connectivity from PC:data1 to R2 loopback via RIP"):
         _, hport0 = env.ltop.xlate("PC", "data1")
