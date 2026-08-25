@@ -19,6 +19,9 @@ All notable changes to the project are documented in this file.
 - Include .pkg files in release builds
 - The `statd` service now logs at `notice` level by default, like other
   services, and supports `-v <level>` to adjust verbosity at runtime
+- Hardware sensors are now children of the component they measure, so the
+  CPU temperature belongs to the CPU component, and VPD components are
+  named after the board they sit on, `vpd-cpu`, `vpd-product`
 
 ### Added
 
@@ -38,6 +41,8 @@ All notable changes to the project are documented in this file.
   or services keep the system busy, logged as:
 
         statd[3558]: mdns: operational datastore busy, retrying ...
+- Fix missing CPU temperature in `show system` and the web interface on
+  SparX-5, LAN969x, and x86 boards
 
 [ma13]: https://github.com/troglobit/mdns-alias/releases/tag/v1.3
 

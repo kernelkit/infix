@@ -1,0 +1,16 @@
+#!/bin/sh
+# Synthetic system state, hand written rather than captured from a
+# device, to cover sensors no board in the test rig has: an SoC die
+# temperature from hwmon (Microchip s5_temp), one from a thermal zone
+# (cpu-thermal), and a fan.  Verifies that both land under the CPU
+# component, and that the fan does not.
+#
+# The VPD is named "cpu", as on Alder, so the CPU component has to pick
+# another name rather than collide with it.
+
+yang_models="ietf-hardware"
+
+cli_commands="show-hardware"
+
+. $(readlink -f $(dirname $0)/../test.sh)
+main "$@"

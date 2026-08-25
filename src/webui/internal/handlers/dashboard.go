@@ -178,6 +178,7 @@ type filesystemFS struct {
 // Short forms of hardware-class identities — see shortClass(). Kept here so
 // the dashboard and Status > Hardware handlers route the same way.
 const (
+	classCPU     = "cpu"     // ietf-hardware:cpu
 	classChassis = "chassis" // ietf-hardware:chassis
 	classUSB     = "usb"     // infix-hardware:usb
 	classWiFi    = "wifi"    // infix-hardware:wifi
@@ -707,8 +708,9 @@ func keyVital(c hwComponentJSON, classByName map[string]string) (sensorEntry, bo
 	switch c.SensorData.ValueType {
 	case "celsius":
 		switch {
-		case c.Name == "cpu", c.Name == "soc", c.Name == "core":
-			// CPU / SoC / core temperatures.
+		case classByName[c.Parent] == classCPU:
+			// SoC die temperatures, however the platform names the
+			// hwmon device or thermal zone underneath.
 		case classByName[c.Parent] == classWiFi:
 			// WiFi radio temperatures whose sensor-data lives under
 			// the radio component as a child.

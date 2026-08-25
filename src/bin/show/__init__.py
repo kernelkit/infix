@@ -544,15 +544,8 @@ def mdns(args: List[str]) -> None:
     cli_pretty(data, "show-mdns")
 
 
-# Sensor names that represent the SoC/CPU temperature (not per-port PHYs).
-# Matches "cpu"/"soc"/"core", and Marvell CN913x "ap-*" / "cp<N>-*" zones.
-# Note the hyphen after "cp<N>" so mangled PHY names like "cp0busbus…" never
-# match.
-SOC_TEMP_RE = re.compile(r'^(cpu|soc|core|ap-|cp\d+-)')
-
-
 def system(args: List[str]) -> None:
-    # Get system state from sysrepo
+    """Get system state from sysrepo"""
     data = get_json("/ietf-system:system-state")
     if not data:
         print("No system data retrieved.")
@@ -569,21 +562,20 @@ def system(args: List[str]) -> None:
     fan_rpm = None
     if hardware_data and "ietf-hardware:hardware" in hardware_data:
         components = hardware_data.get("ietf-hardware:hardware", {}).get("component", [])
+        # A sensor says nothing in its name, what it measures follows from
+        # the component it belongs to, see doc/hardware.md
+        classes = {c.get("name"): c.get("class") for c in components}
         soc_temps = []
         for component in components:
             sensor_data = component.get("sensor-data", {})
             if not sensor_data:
                 continue
 
-            name = component.get("name", "")
+            parent = classes.get(component.get("parent"))
             value_type = sensor_data.get("value-type")
 
-            # Capture SoC/CPU temperature, ignoring per-port phy, sfp, etc.
-            # Platforms name the zone differently: a plain "cpu"/"soc"/"core",
-            # or, on Marvell CN913x, an "ap-*" (application processor) or
-            # "cp<N>-*" (communication processor) cluster.  Collect them all
-            # and report the hottest as the representative SoC temperature.
-            if value_type == "celsius" and SOC_TEMP_RE.match(name):
+            # An SoC may report several dies or clusters, take the hottest
+            if value_type == "celsius" and parent == "iana-hardware:cpu":
                 soc_temps.append(sensor_data.get("value", 0) / 1000.0)
 
             # Capture fan speed if available

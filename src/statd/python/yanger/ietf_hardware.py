@@ -3,7 +3,7 @@ import os
 import re
 import sys
 
-from .common import insert, YangDate
+from .common import insert, LOG, YangDate
 from .host import HOST
 
 
@@ -19,7 +19,10 @@ def vpd_vendor_extensions(data):
 
 def vpd_component(vpd):
     component = {}
-    component["name"] = vpd.get("board")
+    # Board authors name these in the device tree, as "cpu", "power",
+    # "product", short words that collide with everything else sharing
+    # the component namespace.  Say what they are.
+    component["name"] = f"vpd-{vpd.get('board')}"
     component["infix-hardware:vpd-data"] = {}
 
     if vpd.get("data"):
@@ -122,31 +125,69 @@ def normalize_sensor_name(name):
       sfp_2 -> sfp2
       mt7915_phy0 -> phy0
       marvell_alaska_tomte_phy7 -> phy7
-      cpu_thermal -> cpu
+      cpu_thermal -> cpu-thermal
+      s5_temp -> s5-temp
       pwmfan -> pwmfan
 
     Strategy:
-      1. Strip common suffixes like -thermal/_thermal
-      2. Extract well-known sensor type names (phy, sfp, fan, etc.) from
-         the end of the name, stripping any vendor/chipset prefix
-      3. Remove underscores before trailing numbers (sfp_2 -> sfp2)
+      1. Drop the vendor/chipset prefix of a per-port device, where the
+         type and index are what identify it (mt7915_phy0 -> phy0)
+      2. Remove underscores before trailing numbers (sfp_2 -> sfp2)
+      3. Keep the rest as one name (s5_temp -> s5-temp)
+
+    A thermal zone and the hwmon device the kernel mirrors it as differ
+    only in their separators, so this also makes the two spellings of
+    one sensor come out identical, which is how the mirror is spotted.
+
+    Names are list keys, nothing more.  What a sensor measures is
+    conveyed by the class of the component it belongs to, see
+    doc/hardware.md, so a name must stay unique rather than descriptive.
     """
-    import re
-
-    # Strip common suffixes
-    name = name.replace("-thermal", "").replace("_thermal", "")
-
-    # Extract well-known sensor types from end of name, stripping any prefix
-    # This handles: mt7915_phy0 -> phy0, marvell_alaska_phy7 -> phy7, etc.
-    sensor_types = r'(phy|sfp|fan|temp|sensor|psu|cpu|gpu|memory|disk)'
-    match = re.search(rf'.*_({sensor_types}\d*)$', name)
+    # Per-port devices: mt7915_phy0 -> phy0, marvell_alaska_phy7 -> phy7
+    match = re.search(r'.*_((phy|sfp)\d*)$', name)
     if match:
         name = match.group(1)
 
     # Remove underscores before trailing numbers (sfp_2 -> sfp2)
     name = re.sub(r'_(\d+)$', r'\1', name)
 
-    return name
+    return name.replace("_", "-")
+
+
+CPU_COMPONENT = "cpu"
+
+# hwmon device names and thermal zone types that report an SoC die
+# temperature, after normalization: a plain cpu/soc/core, Intel and AMD
+# (coretemp, k10temp), Microchip SparX-5 and LAN969x (s5-temp), or a
+# Marvell CN913x application (ap) or communication (cp<N>) processor
+# cluster.
+#
+# Recognizing vendor names cannot be avoided, but this is the only place
+# it happens.  Northbound, the sensors are found through the class of
+# their parent component, see doc/hardware.md.
+SOC_TEMP_SOURCE = re.compile(
+    r'^(cpu\d*|soc\d*|core\d*|coretemp|k10temp|s5-temp|ap|cp\d+)(-.*)?$')
+
+
+def cpu_component(sensors):
+    """
+    Create the SoC component that die temperature sensors belong to.
+
+    Only created when something references it, boards without a die
+    sensor have nothing to say about their SoC.
+    """
+    if not any(sensor.get("parent") == CPU_COMPONENT for sensor in sensors):
+        return []
+
+    return [{
+        "name": CPU_COMPONENT,
+        "class": "iana-hardware:cpu",
+        "parent": "mainboard",
+        "state": {
+            "admin-state": "unknown",
+            "oper-state": "enabled"
+        }
+    }]
 
 
 def _dt_phandle(path):
@@ -234,9 +275,11 @@ def get_wifi_phy_info():
     return phy_info
 
 
-def hwmon_sensor_components():
+def hwmon_sensor_components(mirrored):
     """
     Discover hwmon sensors and create sensor components with parent/child relationships.
+
+    Devices named in "mirrored" are skipped, see the thermal zones.
     Returns a list of hardware components with sensor-data for temperature,
     fan, voltage, current, and power sensors.
 
@@ -267,6 +310,13 @@ def hwmon_sensor_components():
                     continue
 
                 device_name = HOST.read(name_path).strip()
+
+                # With THERMAL_HWMON the kernel mirrors every thermal
+                # zone as an hwmon device, named after the zone with the
+                # separators changed.  Both spell the same sensor, and
+                # the zone is already accounted for.
+                if normalize_sensor_name(device_name) in mirrored:
+                    continue
 
                 # Check if device/name exists (e.g., for WiFi radios) and use that instead
                 device_name_path = os.path.join(hwmon_path, "device", "name")
@@ -447,21 +497,24 @@ def hwmon_sensor_components():
 
     # Now create parent/child relationships
     for base_name, sensors in device_sensors.items():
-        if len(sensors) > 1:
-            # Multiple sensors: create parent component
-            parent = {
+        if SOC_TEMP_SOURCE.match(base_name):
+            # SoC die sensors belong to the CPU, whatever the vendor
+            # called the hwmon device
+            parent = CPU_COMPONENT
+        elif len(sensors) > 1:
+            # Multi-sensor devices, like SFP modules, head their own
+            parent = base_name
+            components.append({
                 "name": base_name,
-                "class": "iana-hardware:module",  # Use "module" for multi-sensor devices like SFP
-            }
-            components.append(parent)
-
-            # Add parent reference to all child sensors
-            for sensor in sensors:
-                sensor["parent"] = base_name
-                components.append(sensor)
+                "class": "iana-hardware:module",
+            })
         else:
-            # Single sensor: add without parent
-            components.extend(sensors)
+            parent = None
+
+        for sensor in sensors:
+            if parent:
+                sensor["parent"] = parent
+        components.extend(sensors)
 
     # Enrich WiFi PHY sensors with descriptive information
     wifi_info = get_wifi_phy_info()
@@ -495,22 +548,13 @@ def thermal_sensor_components():
         for zone_path in thermal_zones:
             try:
                 # Read zone type (e.g., "cpu-thermal", "gpu-thermal")
-                type_path = os.path.join(zone_path, "type")
-                if not HOST.exists(type_path):
+                zone_type = HOST.read(os.path.join(zone_path, "type"))
+                temp = HOST.read(os.path.join(zone_path, "temp"))
+                if not zone_type or not temp:
                     continue
 
-                zone_type = HOST.read(type_path).strip()
-
-                # Read temperature in millidegrees Celsius
-                temp_path = os.path.join(zone_path, "temp")
-                if not HOST.exists(temp_path):
-                    continue
-
-                temp_millidegrees = int(HOST.read(temp_path).strip())
-
-                # Create component with sensor-data
-                # Component name: strip "-thermal" suffix for cleaner display
-                component_name = normalize_sensor_name(zone_type)
+                temp_millidegrees = int(temp.strip())
+                component_name = normalize_sensor_name(zone_type.strip())
 
                 component = {
                     "name": component_name,
@@ -524,6 +568,9 @@ def thermal_sensor_components():
                         "oper-status": "ok"
                     }
                 }
+
+                if SOC_TEMP_SOURCE.match(component_name):
+                    component["parent"] = CPU_COMPONENT
 
                 components.append(component)
 
@@ -871,19 +918,56 @@ def gps_receiver_components():
     return components
 
 
+def unique_names(components):
+    """
+    Components are keyed by name, so a duplicate is not a cosmetic
+    problem: it fails every client parsing the tree.  Producers avoid
+    collisions by construction, this is the net under them.
+
+    Note that a renamed component keeps any children pointing at the
+    original name, so this really is a last resort, not a mechanism to
+    rely on.
+    """
+    taken = set()
+
+    for component in components:
+        name = component.get("name")
+        if name not in taken:
+            taken.add(name)
+            continue
+
+        unique = name
+        seq = 1
+        while unique in taken:
+            unique = f"{name}-{seq}"
+            seq += 1
+
+        LOG.warning(f"Duplicate hardware component \"{name}\", renaming "
+                    f"one of them \"{unique}\"")
+        component["name"] = unique
+        taken.add(unique)
+
+    return components
+
+
 def operational():
     systemjson = HOST.read_json("/run/system.json", {})
+    # Thermal zones first: the kernel mirrors each one as an hwmon
+    # device, which carries nothing the zone does not.
+    thermal = thermal_sensor_components()
+    sensors = thermal + hwmon_sensor_components({c["name"] for c in thermal})
+    inventory = (motherboard_component(systemjson) +
+                 vpd_components(systemjson) +
+                 usb_port_components(systemjson))
 
     return {
         "ietf-hardware:hardware": {
-            "component":
-            motherboard_component(systemjson) +
-            vpd_components(systemjson) +
-            usb_port_components(systemjson) +
-            hwmon_sensor_components() +
-            thermal_sensor_components() +
-            wifi_radio_components() +
-            gps_receiver_components() +
-            [],
+            "component": unique_names(
+                inventory +
+                cpu_component(sensors) +
+                sensors +
+                wifi_radio_components() +
+                gps_receiver_components()
+            ),
         },
     }

@@ -3,6 +3,34 @@
 The hardware infomation and status is handled by the YANG model [IETF
 hardware][1], with deviations and augmentations in _infix-hardware_.
 
+## Sensors
+
+Temperature, fan, voltage, current, and power readings are components of
+class `sensor`, one per reading.  A sensor name is a list key and nothing
+more: what a sensor measures follows from the component it belongs to,
+named by its `parent`.  Clients must select on class, never on names,
+which vary with the SoC, the driver, and the board.
+
+The SoC die temperature, for instance, is any `celsius` sensor whose
+parent has class `cpu`:
+
+```
+/ietf-hardware:hardware/component[class='iana-hardware:sensor']
+```
+
+with `parent` resolving to the component of class `iana-hardware:cpu`.
+An SoC reporting several dies or clusters yields several such sensors,
+and the hottest is the one to report.  Over RESTCONF:
+
+```sh
+curl -su admin:admin \
+     https://example/restconf/data/ietf-hardware:hardware/component
+```
+
+Which hwmon device or thermal zone belongs to which component is decided
+when the data is collected, and is the only place platform specific names
+are recognized.
+
 ## GPS/GNSS Receivers
 
 Infix supports GPS/GNSS receivers for hardware status monitoring and NTP

@@ -212,6 +212,8 @@ cli_exec()
 
 cli_gen()
 {
+    [ "$cli_commands" ] || return 0
+
     mkdir -p "$casedir/cli"
 
     set $cli_commands
@@ -225,6 +227,8 @@ cli_check()
 {
     local diff=
     local status=
+
+    [ "$cli_commands" ] || return 0
 
     set $cli_commands
     while [ $# -gt 0 ]; do
