@@ -1,10 +1,11 @@
 From cbc7109adb79cf7e1f20e1e93421511a93ab9e05 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 12 Aug 2026 10:08:53 +0200
-Subject: [PATCH 51/51] net: dsa: mv88e6xxx: Derive LED names from device name
+Subject: [PATCH 51/64] net: dsa: mv88e6xxx: Derive LED names from device name
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 LED devices were named "<model>:0<port>:0<led>", e.g.
 "mv88e6390:01:00:port:lednum". Since chip->info->name is the model name, two

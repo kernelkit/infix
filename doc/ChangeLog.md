@@ -24,6 +24,9 @@ All notable changes to the project are documented in this file.
 
 - Add NanoPi R2S Plus support (on-board 32 GB eMMC), including U-Boot
   device tree selection so the eMMC is enabled when present
+- Add Microchip EV23X71A (Laguna) support: LAN969x switch with 24 GbE
+  copper ports, four SFP+ cages, and a management port, booting Infix
+  from eMMC with the usual A/B slots
 
 ### Fixes
 

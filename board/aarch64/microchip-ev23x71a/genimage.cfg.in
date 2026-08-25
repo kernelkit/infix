@@ -1,0 +1,81 @@
+image cfg.ext4 {
+        empty = true
+        temporary = true
+        size = 128M
+        ext4 {
+                label = "cfg"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
+        }
+}
+
+# The /var partition will be expanded automatically at first boot
+# to use the full size of the eMMC.
+image var.ext4 {
+        empty = true
+        temporary = true
+        size = 128M
+        ext4 {
+                label = "var"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
+        }
+}
+
+image #IX_ID##VERSION#-ev23x71a-#TARGET#.img {
+        hdimage {
+                partition-table-type = "gpt"
+                gpt-no-backup = true
+        }
+
+	# BL1, in ROM, looks up the FIP by GPT partition name, so these
+	# two must keep their names.  Microchip's own layout gives them
+	# 128 MiB each, which a 1 MiB image does not need.
+	partition fip {
+		image = "fip.bin"
+		offset = 1M
+		size = 4M
+	}
+
+	partition fip.bak {
+		image = "fip.bin"
+		size = 4M
+	}
+
+	# Not used by Infix, its boot logic is stateless, but kept so a
+	# vendor U-Boot has somewhere of its own to save an environment.
+	partition Env {
+		size = 2M
+	}
+
+        partition aux {
+                partition-uuid = D4EF35A0-0652-45A1-B3DE-D63339C82035
+                image = "aux.ext4"
+        }
+
+        partition primary {
+                partition-type-uuid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4
+                bootable = true
+                size = 250M
+                image = "rootfs.squashfs"
+        }
+
+        partition secondary {
+                partition-type-uuid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4
+                bootable = true
+                size = 250M
+                image = "rootfs.squashfs"
+        }
+
+        partition cfg {
+                partition-uuid = 7aa497f0-73b5-47e5-b2ab-8752d8a48105
+                image = "cfg.ext4"
+        }
+
+        partition var {
+                partition-uuid = 8046A06A-E45A-4A14-A6AD-6684704A393F
+                image = "var.ext4"
+        }
+}

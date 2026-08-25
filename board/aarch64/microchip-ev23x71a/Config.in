@@ -1,0 +1,7 @@
+config BR2_PACKAGE_MICROCHIP_EV23X71A
+	bool "Microchip EV23X71A (Laguna)"
+	depends on BR2_aarch64
+	help
+	  Support for the Microchip EV23X71A evaluation board, based on
+	  the LAN969x (Laguna) family of TSN capable switches.  24 GbE
+	  copper ports, 4 SFP+ ports, and a separate management port.

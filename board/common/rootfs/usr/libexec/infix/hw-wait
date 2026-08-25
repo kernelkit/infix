@@ -4,6 +4,11 @@
 
 ident=$(basename "$0")
 
+# Seconds to wait, boards with very slow switch cores raise this in
+# their product specific /etc/default/hw-wait
+HW_WAIT_TIMEOUT=10
+[ -r /etc/default/hw-wait ] && . /etc/default/hw-wait
+
 report()
 {
     if [ -r "/tmp/$ident" ]; then
@@ -14,7 +19,7 @@ report()
     rm -f "/tmp/$ident"
 }
 
-for _ in $(seq 50); do
+for _ in $(seq $((HW_WAIT_TIMEOUT * 5))); do
     again=
 
     for dl in /sys/class/devlink/*; do

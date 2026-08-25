@@ -1,8 +1,9 @@
 From bf77eac4d9bc46717a5ce5cf30bd66e17d11b16e Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 06:44:41 +0100
-Subject: [PATCH 07/51] net: bridge: Ignore router ports when forwarding L2
+Subject: [PATCH 07/64] net: bridge: Ignore router ports when forwarding L2
  multicast
+Organization: Wires
 
 Multicast router ports are either statically configured or learned from
 control protocol traffic (IGMP/MLD/PIM).  These protocols regulate IP

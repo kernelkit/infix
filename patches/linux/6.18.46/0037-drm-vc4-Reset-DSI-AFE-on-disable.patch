@@ -1,7 +1,8 @@
 From 10c7894512493d96255f5b04c173e3c221d02ecc Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Thu, 26 May 2022 18:56:19 +0100
-Subject: [PATCH 37/51] drm: vc4: Reset DSI AFE on disable
+Subject: [PATCH 37/64] drm: vc4: Reset DSI AFE on disable
+Organization: Wires
 
 vc4_dsi_bridge_disable wasn't resetting things during shutdown,
 so add that in.

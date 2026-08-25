@@ -1,7 +1,8 @@
 From cbdcda769e36b4c2c4870b01a02efd4223f327e1 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 14 Jan 2026 18:22:41 +0100
-Subject: [PATCH 28/51] net: dsa: mv88e6xxx: Add LED support for 6393X
+Subject: [PATCH 28/64] net: dsa: mv88e6xxx: Add LED support for 6393X
+Organization: Wires
 
 Original commit:
 commit 462277b926140ee2d231317e92afb6cabf640268

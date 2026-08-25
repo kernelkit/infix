@@ -1,10 +1,11 @@
 From 2c62214c6d20bd98ebb4096f65e4c6dbff4796d0 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 7 Apr 2026 07:34:52 +0200
-Subject: [PATCH 47/51] net: phy: sfp: add OEM SFP-10G-T-I quirk
+Subject: [PATCH 47/64] net: phy: sfp: add OEM SFP-10G-T-I quirk
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 The industrial-temperature variant of the OEM SFP-10G-T copper module
 reports vendor PN "SFP-10G-T-I".  Unlike the base "SFP-10G-T" which is a

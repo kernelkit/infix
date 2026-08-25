@@ -1,0 +1,43 @@
+From 6b81edd0d7bd3231106757846a8ad0442b0ed3ea Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 21 Aug 2026 14:37:27 +0200
+Subject: [PATCH 3/3] board: microchip: lan969x: honor ENV_IS_NOWHERE
+Organization: Wires
+
+env_get_location() returns the environment location matching the medium
+Trusted Firmware booted from, and never ENVL_NOWHERE.  A system that
+keeps its environment in the control device tree, and therefore builds
+no environment driver at all, fails to boot: env_driver_lookup() finds
+nothing at prio 0, so env_init() returns -ENODEV.  This happens before
+the console is up, and the initcall list reports the failure one entry
+late, at init_baud_rate, which makes it needlessly hard to place.
+
+Return ENVL_NOWHERE when no location driver is built, as
+board/kontron/sl28/sl28.c already does.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ board/microchip/lan969x/lan969x.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/board/microchip/lan969x/lan969x.c b/board/microchip/lan969x/lan969x.c
+index bc357159ecd..2694604ef6d 100644
+--- a/board/microchip/lan969x/lan969x.c
++++ b/board/microchip/lan969x/lan969x.c
+@@ -77,6 +77,16 @@ enum env_location env_get_location(enum env_operation op, int prio)
+ {
+ 	boot_source_type_t boot_source = tfa_get_boot_source();
+ 
++	/*
++	 * Systems keeping the environment in the control device tree
++	 * build no location driver at all.  Asking for one that was
++	 * never built fails env_init() with -ENODEV.
++	 */
++	if (!CONFIG_IS_ENABLED(ENV_IS_IN_MMC) &&
++	    !CONFIG_IS_ENABLED(ENV_IS_IN_SPI_FLASH) &&
++	    !CONFIG_IS_ENABLED(ENV_IS_IN_FAT))
++		return prio == 0 ? ENVL_NOWHERE : ENVL_UNKNOWN;
++
+ 	switch(boot_source) {
+ 	case BOOT_SOURCE_EMMC:
+ 		return prio == 0 ? ENVL_MMC : ENVL_UNKNOWN;

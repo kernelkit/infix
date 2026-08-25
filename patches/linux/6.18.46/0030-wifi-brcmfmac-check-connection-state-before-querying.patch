@@ -1,11 +1,12 @@
 From 854fa7b14fd0e6612884a3020279f613daeaf07f Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Mon, 19 Jan 2026 13:06:53 +0100
-Subject: [PATCH 30/51] wifi: brcmfmac: check connection state before querying
+Subject: [PATCH 30/64] wifi: brcmfmac: check connection state before querying
  station info
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 In station mode, brcmf_cfg80211_get_station() queries the firmware for
 station info even when not connected to an AP. This results in error

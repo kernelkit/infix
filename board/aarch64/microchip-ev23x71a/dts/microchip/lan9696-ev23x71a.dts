@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Infix OS device tree for Microchip EV23X71A (Laguna)
+ */
+
+#include <arm64/microchip/lan9696-ev23x71a.dts>
+#include "infix.dtsi"

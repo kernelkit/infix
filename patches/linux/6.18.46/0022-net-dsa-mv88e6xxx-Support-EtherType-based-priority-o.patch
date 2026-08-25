@@ -1,8 +1,9 @@
 From e474fdde8c8131bbf996112e274f9842c659aa42 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 22 Mar 2024 16:15:43 +0100
-Subject: [PATCH 22/51] net: dsa: mv88e6xxx: Support EtherType based priority
+Subject: [PATCH 22/64] net: dsa: mv88e6xxx: Support EtherType based priority
  overrides
+Organization: Wires
 
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    | 64 +++++++++++++++++++++++++++++

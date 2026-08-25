@@ -1,11 +1,12 @@
 From cfe3cae54505d0b52f2bd314ed3c6492f4a8e0a7 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 22 Apr 2026 10:24:43 +0200
-Subject: [PATCH 50/51] PCI: mediatek-gen3: Fix PERST# control timing during
+Subject: [PATCH 50/64] PCI: mediatek-gen3: Fix PERST# control timing during
  system startup
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 Some of MediaTek's chips (mt7986 amongst them) stop generating REFCLK
 if the PCIE_PHY_RSTB signal of the PCIe controller is asserted.

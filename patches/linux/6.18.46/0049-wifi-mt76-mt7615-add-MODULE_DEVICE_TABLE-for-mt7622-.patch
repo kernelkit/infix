@@ -1,8 +1,9 @@
 From bd2d7c32a849c3aae185d6480b8331a53523bd52 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 28 Apr 2026 15:30:01 +0200
-Subject: [PATCH 49/51] wifi: mt76: mt7615: add MODULE_DEVICE_TABLE for mt7622
+Subject: [PATCH 49/64] wifi: mt76: mt7615: add MODULE_DEVICE_TABLE for mt7622
  wmac
+Organization: Wires
 
 Without MODULE_DEVICE_TABLE(of, ...) the OF compatible alias is never
 exported to modules.alias, so udev cannot autoload mt7615e when the

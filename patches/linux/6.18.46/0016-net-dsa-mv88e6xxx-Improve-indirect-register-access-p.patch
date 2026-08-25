@@ -1,8 +1,9 @@
 From 5810a287ae29b817a4294ebed04358f730f65065 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
-Subject: [PATCH 16/51] net: dsa: mv88e6xxx: Improve indirect register access
+Subject: [PATCH 16/64] net: dsa: mv88e6xxx: Improve indirect register access
  perf on 6393
+Organization: Wires
 
 When operating in multi-chip mode, the 6393 family maps a subset of
 commonly used global registers to the outermost address space (in
