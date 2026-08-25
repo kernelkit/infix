@@ -1,0 +1,74 @@
+From 0000000000000000000000000000000000000001 Mon Sep 17 00:00:00 2001
+From: Mattias Walstrom <mattias.walstrom@wires.se>
+Date: Tue, 25 Aug 2026 09:00:00 +0200
+Subject: [PATCH 53/53] net: dsa: mv88e6xxx: DEBUG: log hardware timestamps at
+ risk of wrap error
+
+NOT FOR UPSTREAM - debug instrumentation.
+
+Hardware timestamps are reconstructed against the timecounter's
+cycle_last; a timestamp more than half a counter wrap away converts
+exactly one wrap (2^34 ns on 4ns/tick devices) off. With the refresh
+period at 2s, a legitimate conversion is never more than ~2.5s
+(~0x25000000 ticks) from cycle_last.
+
+Warn on every conversion in the 4.3s-12.9s band (raw delta between
+0x40000000 and 0xc0000000 ticks): these are the candidates for a
+2^34 ns wrap error, and the log tells us which port, direction, and
+how far off - i.e. whether the refresh work stalled or the timestamp
+sat latched too long.
+---
+ drivers/net/dsa/mv88e6xxx/hwtstamp.c | 24 ++++++++++++++++++++++--
+ 1 file changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/hwtstamp.c b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
+index 3333333333333..4444444444444 100644
+--- a/drivers/net/dsa/mv88e6xxx/hwtstamp.c
++++ b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
+@@ -20,6 +20,26 @@
+
+ #define SKB_PTP_TYPE(__skb) (*(unsigned int *)((__skb)->cb))
+
++/* DEBUG: must be called with the reg lock held.  Warn on conversions in
++ * the danger band around half a counter wrap from cycle_last; on 4ns/tick
++ * devices these risk coming out exactly 2^34 ns off.
++ */
++static u64 mv88e6xxx_hwts_cyc2time(struct mv88e6xxx_chip *chip, int port,
++				   const char *dir, u32 raw)
++{
++	u32 last = (u32)chip->tstamp_tc.cycle_last;
++	u32 delta = raw - last;
++	u64 ns;
++
++	ns = timecounter_cyc2time(&chip->tstamp_tc, raw);
++	if (delta > 0x40000000 && delta < 0xc0000000)
++		dev_warn(chip->dev,
++			 "p%d: %s hwtstamp %08x is %u ticks from cycle_last %08x, converted %llu - possible 2^34 ns wrap\n",
++			 port, dir, raw, delta, last, ns);
++
++	return ns;
++}
++
+ static int mv88e6xxx_port_ptp_read(struct mv88e6xxx_chip *chip, int port,
+ 				   int addr, u16 *data, int len)
+ {
+@@ -291,7 +311,7 @@ static void mv88e6xxx_get_rxts(struct mv88e6xxx_chip *chip,
+ 			ns = timehi << 16 | timelo;
+
+ 			mv88e6xxx_reg_lock(chip);
+-			ns = timecounter_cyc2time(&chip->tstamp_tc, ns);
++			ns = mv88e6xxx_hwts_cyc2time(chip, ps->port_id, "rx", ns);
+ 			mv88e6xxx_reg_unlock(chip);
+ 			shwt = skb_hwtstamps(skb);
+ 			memset(shwt, 0, sizeof(*shwt));
+@@ -411,7 +431,7 @@ static int mv88e6xxx_txtstamp_work(struct mv88e6xxx_chip *chip,
+ 	memset(&shhwtstamps, 0, sizeof(shhwtstamps));
+ 	time_raw = ((u32)departure_block[2] << 16) | departure_block[1];
+ 	mv88e6xxx_reg_lock(chip);
+-	ns = timecounter_cyc2time(&chip->tstamp_tc, time_raw);
++	ns = mv88e6xxx_hwts_cyc2time(chip, ps->port_id, "tx", time_raw);
+ 	mv88e6xxx_reg_unlock(chip);
+ 	shhwtstamps.hwtstamp = ns_to_ktime(ns);
+
+--
+2.43.0

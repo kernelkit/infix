@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Mattias Walstrom <mattias.walstrom@wires.se>
+Date: Mon, 24 Aug 2026 14:35:00 +0200
+Subject: [PATCH 52/52] net: dsa: mv88e6xxx: Shorten PTP timecounter refresh
+ period
+
+Hardware timestamps are reconstructed with timecounter_cyc2time(),
+which is only correct for timestamps within half a counter wrap of
+cycle_last. On 250MHz devices (4ns/tick, e.g. 88E6190) the 32-bit
+counter wraps every 2^34 ns (~17.2s), so half a wrap is ~8.6s. The
+overflow work refreshes cycle_last every 8s, leaving only ~0.6s of
+margin for delayed_work scheduling latency.
+
+On a loaded system the work can slip past that margin, and timestamps
+then convert exactly one wrap (2^34 ns) off. Fed to ptp4l, such a
+sample either steps the clock ~17.2s away (recovery at max_adj takes
+hours) or repeatedly slams the PI servo into its frequency clamp, so
+the clock never converges.
+
+Refresh every 2s instead, giving ~6.6s of margin on the fastest
+(4ns/tick) devices. The 8ns and 10ns devices wrap even slower, so the
+margin there is larger still. The cost is one TAI read per 2s.
+
+Observed on a CN9130 board with three 88E6190 switches: offsets
+reported as -2^34 ns + slew, with sporadic outliers at exactly
+true_offset + 2^34 ns.
+---
+ drivers/net/dsa/mv88e6xxx/ptp.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/ptp.c b/drivers/net/dsa/mv88e6xxx/ptp.c
+index 1111111111111..2222222222222 100644
+--- a/drivers/net/dsa/mv88e6xxx/ptp.c
++++ b/drivers/net/dsa/mv88e6xxx/ptp.c
+@@ -480,7 +480,7 @@ static u64 mv88e6xxx_ptp_clock_read(struct cyclecounter *cc)
+ /* With a 250MHz input clock, the 32-bit timestamp counter overflows in ~17.2
+  * seconds; this task forces periodic reads so that we don't miss any.
+  */
+-#define MV88E6XXX_TAI_OVERFLOW_PERIOD (HZ * 8)
++#define MV88E6XXX_TAI_OVERFLOW_PERIOD (HZ * 2)
+ static void mv88e6xxx_ptp_overflow_check(struct work_struct *work)
+ {
+ 	struct delayed_work *dw = to_delayed_work(work);
+--
+2.43.0
