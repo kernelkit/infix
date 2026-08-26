@@ -1,0 +1,18 @@
+config BR2_PACKAGE_MBEDTLS_ATF
+	bool "mbedtls-atf"
+	depends on BR2_TARGET_ARM_TRUSTED_FIRMWARE
+	help
+	  mbed TLS sources for Arm Trusted Firmware.
+
+	  Platforms with Trusted Board Boot, e.g. Microchip LAN969x
+	  (Laguna), authenticate each image in the FIP against a chain
+	  of X.509 certificates.  ATF parses those with mbed TLS, which
+	  it compiles into BL1 and BL2 from source, pointed out by the
+	  MBEDTLS_DIR build variable.  Nothing is installed on target.
+
+	  This is separate from the mbedtls package, which tracks the
+	  3.x series for use as a library.  ATF 2.8 builds only against
+	  the 2.28 LTS series, and expects sources, such as
+	  library/rsa_internal.c, that 3.x no longer has.
+
+	  https://www.trustedfirmware.org/projects/mbed-tls/

@@ -1,0 +1,15 @@
+[7mHARDWARE COMPONENTS                                           [0m
+──────────────────────────────────────────────────────────────
+[1mBoard Information[0m
+Model               : EV23X71A
+Manufacturer        : Microchip
+Base MAC Address    : 00:a0:85:00:03:00
+──────────────────────────────────────────────────────────────
+[1mSensors[0m
+[7mNAME                          VALUE                 STATUS    [0m
+
+cpu:
+  Thermal                     [32m48.0 °C[39m               ok        
+  S5 Temp                     [32m59.5 °C[39m               ok        
+
+pwmfan                        3200 RPM              ok        

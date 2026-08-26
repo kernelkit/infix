@@ -1,11 +1,12 @@
 From df1dd24ec79a6b653484d44a47c2e4856284ca01 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Sat, 4 Apr 2026 18:04:19 +0200
-Subject: [PATCH 41/51] drm/bridge: tc358762: Set pre_enabled on pre_enable to
+Subject: [PATCH 41/64] drm/bridge: tc358762: Set pre_enabled on pre_enable to
  prevent regulator imbalance
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 The RPi cherry-pick moved tc358762_init() to pre_enable but dropped the pre_enabled = true assignment.
 Without it, post_disable always bails out early and never disables the regulator.

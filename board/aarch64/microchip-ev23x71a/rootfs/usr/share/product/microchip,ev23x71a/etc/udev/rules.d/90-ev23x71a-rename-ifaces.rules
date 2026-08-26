@@ -1,0 +1,41 @@
+# Rename LAN969x switch ports by device tree node path.
+#
+# The sparx5 driver leaves naming to the kernel, which hands out eth0
+# and up in probe order.  Match on OF_FULLNAME instead, which the port
+# netdevs carry now that their of_node is populated, and give them the
+# names on the front panel.
+#
+# EV23X71A port layout (switch@e00c0000, ethernet-ports):
+#   port@0 .. port@23  1G copper over QSGMII, e1 .. e24
+#   port@24 .. port@27 10G SFP+, e25 .. e28
+#   port@29            1G RGMII management, e29, as in the Microchip docs
+
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@0", NAME="e1"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@1", NAME="e2"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@2", NAME="e3"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@3", NAME="e4"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@4", NAME="e5"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@5", NAME="e6"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@6", NAME="e7"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@7", NAME="e8"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@8", NAME="e9"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@9", NAME="e10"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@10", NAME="e11"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@11", NAME="e12"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@12", NAME="e13"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@13", NAME="e14"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@14", NAME="e15"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@15", NAME="e16"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@16", NAME="e17"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@17", NAME="e18"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@18", NAME="e19"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@19", NAME="e20"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@20", NAME="e21"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@21", NAME="e22"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@22", NAME="e23"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@23", NAME="e24"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@24", NAME="e25"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@25", NAME="e26"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@26", NAME="e27"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@27", NAME="e28"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@29", NAME="e29"

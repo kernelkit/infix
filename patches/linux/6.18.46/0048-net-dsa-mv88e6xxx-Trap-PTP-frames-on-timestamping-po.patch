@@ -1,8 +1,9 @@
 From 4519c34f0aa0fac92c47f13523c11134d4dbf83f Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 17 Apr 2026 09:13:04 +0000
-Subject: [PATCH 48/51] net: dsa: mv88e6xxx: Trap PTP frames on timestamping
+Subject: [PATCH 48/64] net: dsa: mv88e6xxx: Trap PTP frames on timestamping
  ports, on 6393X
+Organization: Wires
 
 Similar to the Peridot (6390), the designation of PTP frames as
 management (and the destination port) must be explicitly

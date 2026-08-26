@@ -114,6 +114,75 @@ The output is `netboot.scr` which we symlink to above in the dnsmasq
 setup step.
 
 
+## Bootfile rootfs.itb
+
+By default, the U-Boot downloads whatever the DHCP server hands out as
+the boot file, so point that straight at a `rootfs.itb`:
+
+```
+cd /srv/ftp
+ln -sf ix/ev23x71a/rootfs.itb /srv/ftp/bootfile-enp17s0
+```
+
+U-Boot validates the image signature, finds the SquashFS inside it, and
+boots it as a RAM disk with `rauc.slot=net`, so the running system knows
+it came off the network rather than from a slot.
+
+This is also how a device with empty storage comes up on its own.  With
+no `aux` partition there is no primary or secondary slot to try, so
+`ixpreboot` reports
+
+```
+NO BOOTABLE MEDIA FOUND, falling back to netboot
+```
+
+and goes straight to DHCP.  A factory fresh board therefore reaches a
+running system with nobody at the console.
+
+
+## Installing to Onboard Storage
+
+A netbooted device is a complete system, so it can install itself.
+Build the bootloader and the Infix image separately, then combine them:
+
+```
+make <board>_boot_defconfig O=x-boot && make O=x-boot
+make <arch>_defconfig && make
+utils/mkimage.sh -b x-boot -r output -t emmc <board>
+```
+
+The netbooted system starts from the factory configuration, which does
+not necessarily bring up a management interface, so give it an address
+first:
+
+```
+admin@board:~$ sudo udhcpc -i e29
+```
+
+Then stream the image from the PC.  Most of it is empty filesystem, so
+compressing it on the way saves a lot of wire time:
+
+```
+gzip -c x-boot/images/*-emmc.img \
+    | ssh admin@board.local 'gunzip | sudo dd of=/dev/mmcblk0 bs=1M conv=fsync'
+```
+
+Nothing on the target is mounted from the medium while netbooted, so the
+write is safe.  When it completes the kernel re-reads the partition
+table and complains:
+
+```
+GPT:Primary header thinks Alt. header is not at the end of the disk.
+GPT:Alternate GPT header not at the end of the disk.
+GPT: Use GNU Parted to correct GPT errors.
+```
+
+That is expected.  The table describes the image, not the medium it
+landed on.  The first boot of the installed system moves the backup
+header with `sgdisk -e`, grows the last partition to fill the medium, and
+resizes the filesystem, in two stages with a reboot in between.
+
+
 ## U-Boot Commands
 
 U-Boot is a maze of environment variables, some with values, some wrap

@@ -1,8 +1,9 @@
 From be81d065db8772a936a8aa82a58cbb64e04e9c20 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Fri, 20 Sep 2024 12:05:18 +0100
-Subject: [PATCH 34/51] drm: vc4: dsi: enable video and then retry failed
+Subject: [PATCH 34/64] drm: vc4: dsi: enable video and then retry failed
  transfers
+Organization: Wires
 
 The DSI block appears to be able to come up stuck in a condition where
 it leaves the lanes in HS mode or just jabbering. This stops LP

@@ -19,11 +19,17 @@ All notable changes to the project are documented in this file.
 - Include .pkg files in release builds
 - The `statd` service now logs at `notice` level by default, like other
   services, and supports `-v <level>` to adjust verbosity at runtime
+- Hardware sensors are now children of the component they measure, so the
+  CPU temperature belongs to the CPU component, and VPD components are
+  named after the board they sit on, `vpd-cpu`, `vpd-product`
 
 ### Added
 
 - Add NanoPi R2S Plus support (on-board 32 GB eMMC), including U-Boot
   device tree selection so the eMMC is enabled when present
+- Add Microchip EV23X71A (Laguna) support: LAN969x switch with 24 GbE
+  copper ports, four SFP+ cages, and a management port, booting Infix
+  from eMMC with the usual A/B slots
 
 ### Fixes
 
@@ -35,6 +41,8 @@ All notable changes to the project are documented in this file.
   or services keep the system busy, logged as:
 
         statd[3558]: mdns: operational datastore busy, retrying ...
+- Fix missing CPU temperature in `show system` and the web interface on
+  SparX-5, LAN969x, and x86 boards
 
 [ma13]: https://github.com/troglobit/mdns-alias/releases/tag/v1.3
 

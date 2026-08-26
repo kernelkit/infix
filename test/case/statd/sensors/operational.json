@@ -1,0 +1,74 @@
+{
+  "ietf-hardware:hardware": {
+    "component": [
+      {
+        "name": "mainboard",
+        "class": "iana-hardware:chassis",
+        "mfg-name": "Microchip",
+        "model-name": "EV23X71A",
+        "infix-hardware:phys-address": "00:a0:85:00:03:00",
+        "state": {
+          "admin-state": "unknown",
+          "oper-state": "enabled"
+        }
+      },
+      {
+        "name": "vpd-cpu",
+        "infix-hardware:vpd-data": {
+          "product-name": "CPU board",
+          "serial-number": "0123456789"
+        },
+        "class": "infix-hardware:vpd",
+        "model-name": "CPU board",
+        "serial-num": "0123456789"
+      },
+      {
+        "name": "cpu",
+        "class": "iana-hardware:cpu",
+        "parent": "mainboard",
+        "state": {
+          "admin-state": "unknown",
+          "oper-state": "enabled"
+        }
+      },
+      {
+        "name": "cpu-thermal",
+        "class": "iana-hardware:sensor",
+        "sensor-data": {
+          "value": 48000,
+          "value-type": "celsius",
+          "value-scale": "milli",
+          "value-precision": 0,
+          "value-timestamp": "2026-01-02T20:43:23+00:00",
+          "oper-status": "ok"
+        },
+        "parent": "cpu"
+      },
+      {
+        "name": "s5-temp",
+        "class": "iana-hardware:sensor",
+        "sensor-data": {
+          "value": 59500,
+          "value-type": "celsius",
+          "value-scale": "milli",
+          "value-precision": 0,
+          "value-timestamp": "2026-01-02T20:43:23+00:00",
+          "oper-status": "ok"
+        },
+        "parent": "cpu"
+      },
+      {
+        "name": "pwmfan",
+        "class": "iana-hardware:sensor",
+        "sensor-data": {
+          "value": 3200,
+          "value-type": "rpm",
+          "value-scale": "units",
+          "value-precision": 0,
+          "value-timestamp": "2026-01-02T20:43:23+00:00",
+          "oper-status": "ok"
+        }
+      }
+    ]
+  }
+}

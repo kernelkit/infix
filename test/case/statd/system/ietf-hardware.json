@@ -13,7 +13,7 @@
         }
       },
       {
-        "name": "product",
+        "name": "vpd-product",
         "infix-hardware:vpd-data": {}
       },
       {

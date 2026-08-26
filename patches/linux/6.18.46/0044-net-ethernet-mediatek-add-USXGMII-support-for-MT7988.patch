@@ -1,10 +1,11 @@
 From 198e2e4dd0c98e9b97c372503c6a6fd2253d166b Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:15:43 +0200
-Subject: [PATCH 44/51] net: ethernet: mediatek: add USXGMII support for MT7988
+Subject: [PATCH 44/64] net: ethernet: mediatek: add USXGMII support for MT7988
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 Add support for the USXGMII path used by gmac1 and gmac2 on the MT7988
 SoC (BananaPi BPI-R4). Changes:

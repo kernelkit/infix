@@ -1,7 +1,8 @@
 From 98cae179b9f4aa535686fb10031183b0d7b98294 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Tue, 9 Jan 2024 18:44:49 +0000
-Subject: [PATCH 40/51] drm/bridge: tc358762: revert move ops to enable
+Subject: [PATCH 40/64] drm/bridge: tc358762: revert move ops to enable
+Organization: Wires
 
 Reverts 8a4b2fc9c91a ("drm/bridge: tc358762: Split register programming from pre-enable to enable")
 as we want the config commands sent before video starts.

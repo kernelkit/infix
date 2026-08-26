@@ -14,7 +14,7 @@
       },
       {
         "infix-hardware:vpd-data": {},
-        "name": "product"
+        "name": "vpd-product"
       },
       {
         "class": "infix-hardware:usb",

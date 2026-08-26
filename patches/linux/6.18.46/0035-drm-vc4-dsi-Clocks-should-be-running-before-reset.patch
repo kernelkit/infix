@@ -1,7 +1,8 @@
 From 68d70ad3bf8403c46abbb915082ecd62f22b67f0 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Wed, 8 Jun 2022 17:23:47 +0100
-Subject: [PATCH 35/51] drm: vc4: dsi: Clocks should be running before reset
+Subject: [PATCH 35/64] drm: vc4: dsi: Clocks should be running before reset
+Organization: Wires
 
 The initialisation sequence differs slightly from the documentation
 in that the clocks are meant to be running before resets and

@@ -1,11 +1,12 @@
 From 38ed86d1c1b291c40e6a15681acc09234014a271 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Thu, 15 Jan 2026 22:47:37 +0100
-Subject: [PATCH 29/51] wifi: brcmfmac: support deletion and recreation of
+Subject: [PATCH 29/64] wifi: brcmfmac: support deletion and recreation of
  primary interface
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 The Broadcom FullMAC firmware does not allow the primary interface
 (bsscfgidx 0) to be deleted - it always exists in firmware. However,

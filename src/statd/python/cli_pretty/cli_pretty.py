@@ -2253,11 +2253,15 @@ def show_services(json):
     service_table.print()
 
 
-def sensor_sort_key(component):
-    """Natural sort key for sensor names: digit runs compare numerically so
-    e2 sorts before e10, while keeping ap-cpu/cp0-ic/sfp groups together."""
-    name = component.get("name", "")
+def natural_key(name):
+    """Natural sort key: digit runs compare numerically so e2 sorts before
+    e10, while keeping ap-cpu/cp0-ic/sfp groups together."""
     return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', name)]
+
+
+def sensor_sort_key(component):
+    """Natural sort key for a sensor component."""
+    return natural_key(component.get("name", ""))
 
 
 def show_hardware(json):
@@ -2424,23 +2428,19 @@ def show_hardware(json):
             else:
                 standalone.append(component)
 
-        # Get all parent modules (non-sensor components)
-        modules = [c for c in components if c.get("class") == "iana-hardware:module"]
+        # Anything with sensors of its own heads a group, an SFP module,
+        # the CPU, a WiFi radio, ...
+        for parent_name in sorted(children, key=natural_key):
+            print(f"\n{parent_name}:")
 
-        # Display modules with their child sensors (indented)
-        for module in sorted(modules, key=lambda m: m.get("name", "")):
-            module_name = module.get("name", "unknown")
-            print(f"\n{module_name}:")
-
-            if module_name in children:
-                for child in sorted(children[module_name], key=sensor_sort_key):
-                    sensor = Sensor(child)
-                    sensor.print(indent=1)
+            for child in sorted(children[parent_name], key=sensor_sort_key):
+                sensor = Sensor(child)
+                sensor.print(indent=1)
 
         # Display standalone sensors (no parent), naturally sorted so port
         # temperatures read e1, e2, ... e28 rather than e1, e10, e11, ...
         if standalone:
-            if modules:
+            if children:
                 print()  # Add blank line between modules and standalone
             for component in sorted(standalone, key=sensor_sort_key):
                 sensor = Sensor(component)

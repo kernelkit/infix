@@ -1,7 +1,8 @@
 From c3a1c9134ffd977fde5029ade219b2264be78b6e Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:15:56 +0200
-Subject: [PATCH 45/51] arm64: dts: mediatek: mt7988a: add USXGMII PCS nodes
+Subject: [PATCH 45/64] arm64: dts: mediatek: mt7988a: add USXGMII PCS nodes
+Organization: Wires
 
 Add device nodes for the two USXGMII subsystem blocks (usxgmiisys0 at
 0x10080000 and usxgmiisys1 at 0x10081000), each referencing its clock,

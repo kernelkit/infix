@@ -1,7 +1,8 @@
 From 29c6177a89963064bee65d75e8c3eb627b59eef3 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Wed, 20 Nov 2024 13:58:08 +0000
-Subject: [PATCH 38/51] drm: vc4: dsi: Handle the different command FIFO widths
+Subject: [PATCH 38/64] drm: vc4: dsi: Handle the different command FIFO widths
+Organization: Wires
 
 DSI0 and DSI1 have different widths for the command FIFO (24bit
 vs 32bit), but the driver was assuming the 32bit width of DSI1

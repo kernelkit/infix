@@ -1,8 +1,9 @@
 From ac1320e82a14564a734664a0a8f7a0c116aaccdd Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
-Subject: [PATCH 20/51] net: dsa: Support MDB memberships whose L2 addresses
+Subject: [PATCH 20/64] net: dsa: Support MDB memberships whose L2 addresses
  overlap
+Organization: Wires
 
 Multiple IP multicast groups (32 for v4, 2^80 for v6) map to the same
 L2 address. This means that switchdev drivers may receive multiple MDB

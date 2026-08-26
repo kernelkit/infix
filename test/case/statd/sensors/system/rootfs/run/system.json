@@ -1,0 +1,16 @@
+{
+    "vendor": "Microchip",
+    "product-name": "EV23X71A",
+    "mac-address": "00:a0:85:00:03:00",
+    "vpd": {
+        "cpu": {
+            "board": "cpu",
+            "available": true,
+            "trusted": true,
+            "data": {
+                "product-name": "CPU board",
+                "serial-number": "0123456789"
+            }
+        }
+    }
+}

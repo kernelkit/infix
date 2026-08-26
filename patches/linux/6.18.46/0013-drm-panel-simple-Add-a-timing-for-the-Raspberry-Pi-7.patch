@@ -1,8 +1,9 @@
 From 7106cd3a9e250c5e3974dd642d8cc19af5ef2ac7 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 20 Aug 2025 21:38:24 +0200
-Subject: [PATCH 13/51] drm/panel-simple: Add a timing for the Raspberry Pi 7"
+Subject: [PATCH 13/64] drm/panel-simple: Add a timing for the Raspberry Pi 7"
  panel
+Organization: Wires
 
 The Raspberry Pi 7" 800x480 panel uses a Toshiba TC358762 DSI
 to DPI bridge chip, so there is a requirement for the timings
