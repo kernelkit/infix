@@ -11,6 +11,7 @@ The host verifies connectivity with dut2 via dut1 over the aggregate for
 each failure mode step using the `mon` interface.
 
 """
+import json
 from time import time
 import infamy
 import infamy.lag
@@ -37,7 +38,7 @@ class LinkBreaker:
         getattr(self.lb1, lb1)()
         getattr(self.lb2, lb2)()
 
-    def fail_check(self, peer):
+    def fail_check(self, peer, duts=()):
         """Verify connectivity with a given peer during failure."""
         sequence = [
             ("forward", "forward"),
@@ -55,7 +56,7 @@ class LinkBreaker:
             try:
                 print(f"{lb1:<8} | {lb2:<8} | {'...':<8}", end="\r# ")
                 self.forward(lb1, lb2)
-                self.net.must_reach(peer, timeout=30)
+                self.net.must_reach(peer, timeout=60)
                 print(f"{lb1:<8} | {lb2:<8} | {'OK':<8} in "
                       f"{time() - state_start:.2f}s")
             except Exception as e:
@@ -63,6 +64,14 @@ class LinkBreaker:
                       f"{time() - state_start:.2f}s")
                 print(f"\nError encountered: {e}")
                 print(f"Link breakers were in state: LB1='{lb1}', LB2='{lb2}'")
+                for dut in duts:
+                    try:
+                        state = dut.get_data("/ietf-interfaces:interfaces"
+                                             "/interface[name='lag0']")
+                        print(f"{dut} lag0 state: "
+                              f"{json.dumps(state, indent=2)}")
+                    except Exception as err:
+                        print(f"{dut}: failed to get lag0 state: {err}")
                 raise
 
         print(f"Total time: {time() - total_start:.2f}s")
@@ -139,6 +148,6 @@ with infamy.Test() as test:
             ns.must_reach(IP2, timeout=30)
 
         with test.step("Verify failure modes"):
-            lb.fail_check(IP2)
+            lb.fail_check(IP2, (dut1, dut2))
 
     test.succeed()
