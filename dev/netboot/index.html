@@ -2138,6 +2138,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bootfile-rootfsitb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootfile rootfs.itb
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installing-to-onboard-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing to Onboard Storage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#u-boot-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2363,6 +2385,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bootfile-rootfsitb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootfile rootfs.itb
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installing-to-onboard-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing to Onboard Storage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#u-boot-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2529,13 +2573,57 @@ FIT format header, this is done by first converting it on the PC:</p>
 </code></pre></div>
 <p>The output is <code>netboot.scr</code> which we symlink to above in the dnsmasq
 setup step.</p>
+<h2 id="bootfile-rootfsitb">Bootfile rootfs.itb<a class="headerlink" href="#bootfile-rootfsitb" title="Permanent link">¶</a></h2>
+<p>By default, the U-Boot downloads whatever the DHCP server hands out as
+the boot file, so point that straight at a <code>rootfs.itb</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>cd /srv/ftp
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ln -sf ix/ev23x71a/rootfs.itb /srv/ftp/bootfile-enp17s0
+</code></pre></div>
+<p>U-Boot validates the image signature, finds the SquashFS inside it, and
+boots it as a RAM disk with <code>rauc.slot=net</code>, so the running system knows
+it came off the network rather than from a slot.</p>
+<p>This is also how a device with empty storage comes up on its own.  With
+no <code>aux</code> partition there is no primary or secondary slot to try, so
+<code>ixpreboot</code> reports</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>NO BOOTABLE MEDIA FOUND, falling back to netboot
+</code></pre></div>
+<p>and goes straight to DHCP.  A factory fresh board therefore reaches a
+running system with nobody at the console.</p>
+<h2 id="installing-to-onboard-storage">Installing to Onboard Storage<a class="headerlink" href="#installing-to-onboard-storage" title="Permanent link">¶</a></h2>
+<p>A netbooted device is a complete system, so it can install itself.
+Build the bootloader and the Infix image separately, then combine them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>make &lt;board&gt;_boot_defconfig O=x-boot &amp;&amp; make O=x-boot
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>make &lt;arch&gt;_defconfig &amp;&amp; make
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>utils/mkimage.sh -b x-boot -r output -t emmc &lt;board&gt;
+</code></pre></div>
+<p>The netbooted system starts from the factory configuration, which does
+not necessarily bring up a management interface, so give it an address
+first:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>admin@board:~$ sudo udhcpc -i e29
+</code></pre></div>
+<p>Then stream the image from the PC.  Most of it is empty filesystem, so
+compressing it on the way saves a lot of wire time:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>gzip -c x-boot/images/*-emmc.img \
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    | ssh admin@board.local 'gunzip | sudo dd of=/dev/mmcblk0 bs=1M conv=fsync'
+</code></pre></div>
+<p>Nothing on the target is mounted from the medium while netbooted, so the
+write is safe.  When it completes the kernel re-reads the partition
+table and complains:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>GPT:Primary header thinks Alt. header is not at the end of the disk.
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>GPT:Alternate GPT header not at the end of the disk.
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>GPT: Use GNU Parted to correct GPT errors.
+</code></pre></div>
+<p>That is expected.  The table describes the image, not the medium it
+landed on.  The first boot of the installed system moves the backup
+header with <code>sgdisk -e</code>, grows the last partition to fill the medium, and
+resizes the filesystem, in two stages with a reboot in between.</p>
 <h2 id="u-boot-commands">U-Boot Commands<a class="headerlink" href="#u-boot-commands" title="Permanent link">¶</a></h2>
 <p>U-Boot is a maze of environment variables, some with values, some wrap
 commands, and most are undocumented.  We will use a prefix for our
 variables to ensure we do not overwrite anything you may want to use
 later.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="o">==</span>&gt;<span class="w"> </span>setenv<span class="w"> </span>ixboot<span class="w"> </span><span class="s1">'dhcp &amp;&amp; source \${fileaddr}'</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="o">==</span>&gt;<span class="w"> </span>saveenv
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="o">==</span>&gt;<span class="w"> </span>setenv<span class="w"> </span>ixboot<span class="w"> </span><span class="s1">'dhcp &amp;&amp; source \${fileaddr}'</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="o">==</span>&gt;<span class="w"> </span>saveenv
 </code></pre></div>
 <div class="footnote">
 <hr>

@@ -1575,6 +1575,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
+  <a href="#sensors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sensors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#gpsgnss-receivers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2375,6 +2386,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
+  <a href="#sensors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sensors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#gpsgnss-receivers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2534,6 +2556,25 @@
 <h1 id="hardware-information-and-status">Hardware Information and Status<a class="headerlink" href="#hardware-information-and-status" title="Permanent link">¶</a></h1>
 <p>The hardware infomation and status is handled by the YANG model <a href="https://www.rfc-editor.org/rfc/rfc8348.html">IETF
 hardware</a>, with deviations and augmentations in <em>infix-hardware</em>.</p>
+<h2 id="sensors">Sensors<a class="headerlink" href="#sensors" title="Permanent link">¶</a></h2>
+<p>Temperature, fan, voltage, current, and power readings are components of
+class <code>sensor</code>, one per reading.  A sensor name is a list key and nothing
+more: what a sensor measures follows from the component it belongs to,
+named by its <code>parent</code>.  Clients must select on class, never on names,
+which vary with the SoC, the driver, and the board.</p>
+<p>The SoC die temperature, for instance, is any <code>celsius</code> sensor whose
+parent has class <code>cpu</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/ietf-hardware:hardware/component[class='iana-hardware:sensor']
+</code></pre></div>
+<p>with <code>parent</code> resolving to the component of class <code>iana-hardware:cpu</code>.
+An SoC reporting several dies or clusters yields several such sensors,
+and the hottest is the one to report.  Over RESTCONF:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>-su<span class="w"> </span>admin:admin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">     </span>https://example/restconf/data/ietf-hardware:hardware/component
+</code></pre></div>
+<p>Which hwmon device or thermal zone belongs to which component is decided
+when the data is collected, and is the only place platform specific names
+are recognized.</p>
 <h2 id="gpsgnss-receivers">GPS/GNSS Receivers<a class="headerlink" href="#gpsgnss-receivers" title="Permanent link">¶</a></h2>
 <p>Infix supports GPS/GNSS receivers for hardware status monitoring and NTP
 time synchronization.  USB GPS receivers using the USB ACM interface are
@@ -2610,24 +2651,24 @@ admin@example:/config/&gt; <b>leave</b>
 <h2 id="usb-ports">USB Ports<a class="headerlink" href="#usb-ports" title="Permanent link">¶</a></h2>
 <p>For Infix to be able to control USB port(s), a device tree modification
 is needed (see <em>alder.dtsi</em> for full example).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="w"> </span><span class="err">chose</span><span class="kc">n</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">   </span><span class="err">i</span><span class="kc">nf</span><span class="err">ix</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">ts</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="err">&lt;&amp;cp</span><span class="mi">0</span><span class="err">_usb</span><span class="mi">3</span><span class="err">_</span><span class="mi">1</span><span class="err">&gt;;</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">t</span><span class="mi">-</span><span class="kc">na</span><span class="err">mes</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="s2">"USB"</span><span class="err">;</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">   </span><span class="p">}</span><span class="err">;</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w"> </span><span class="p">}</span><span class="err">;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="w"> </span><span class="err">chose</span><span class="kc">n</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">   </span><span class="err">i</span><span class="kc">nf</span><span class="err">ix</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">ts</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="err">&lt;&amp;cp</span><span class="mi">0</span><span class="err">_usb</span><span class="mi">3</span><span class="err">_</span><span class="mi">1</span><span class="err">&gt;;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">     </span><span class="err">usb</span><span class="mi">-</span><span class="err">por</span><span class="kc">t</span><span class="mi">-</span><span class="kc">na</span><span class="err">mes</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="s2">"USB"</span><span class="err">;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">   </span><span class="p">}</span><span class="err">;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w"> </span><span class="p">}</span><span class="err">;</span>
 </code></pre></div>
 <p>Two USB ports are also exposed in QEMU for test purpose.</p>
 <p>All USB ports in the system will be disabled during boot due to the file
 <code>board/common/rootfs/etc/modprobe.d/usbcore.conf</code>.  If you do not want
 Infix to control USB port(s), remove the file or manually enable the USB
 bus, here is an example:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Enable the bus</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/bus/usb/devices/usb1/authorized
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Enable the bus</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/bus/usb/devices/usb1/authorized
 </code></pre></div>
 <p>And then enable sub-devices (e.g. USB memory)</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Enable a device plugged into usb1</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w">  </span>/sys/bus/usb/devices/usb1/1-1/authorized
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Enable a device plugged into usb1</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w">  </span>/sys/bus/usb/devices/usb1/1-1/authorized
 </code></pre></div>
 <h3 id="current-status_1">Current status<a class="headerlink" href="#current-status_1" title="Permanent link">¶</a></h3>
 <pre class="cli"><code>admin@example:/&gt; <b>show hardware</b>
