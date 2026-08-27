@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- Upgrade Linux kernel to 6.18.46 (LTS)
+- Upgrade Linux kernel to 6.18.47 (LTS)
 - Upgrade Buildroot to 2025.02.17 (LTS)
 - Upgrade mdns-alias to [v1.3][ma13]: fixes crash on hostname change while
   disconnected from Avahi, treats entry group failures and CNAME collisions

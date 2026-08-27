@@ -1,0 +1,43 @@
+From 1736400a2161d44520d3cf85c3b3107eb9607092 Mon Sep 17 00:00:00 2001
+From: Daniel Machon <daniel.machon@microchip.com>
+Date: Wed, 6 May 2026 09:25:39 +0200
+Subject: [PATCH 54/64] net: sparx5: configure serdes for 1000BASE-X in
+ sparx5_port_init()
+
+sparx5_port_init() only invokes sparx5_serdes_set() and the associated
+shadow-device enable and low-speed device switch for SGMII and QSGMII.
+On any port with a high-speed primary device (DEV5G/DEV10G/DEV25G)
+configured for 1000BASE-X the serdes is therefore left uninitialized,
+the DEV2G5 shadow is never enabled, and the port stays pointed at its
+high-speed device rather than the DEV2G5. The PCS1G block looks
+healthy in isolation, but no frames reach the link partner.
+
+Add 1000BASE-X to the check so the same three steps run.
+
+Note: the same issue might apply to 2500BASE-X, but that will,
+eventually, be addressed in a separate commit.
+
+Reported-by: Andrew Lunn <andrew@lunn.ch>
+Fixes: 946e7fd5053a ("net: sparx5: add port module support")
+Signed-off-by: Daniel Machon <daniel.machon@microchip.com>
+Link: https://patch.msgid.link/20260506-misc-fixes-sparx5-lan969x-v2-4-fb236aa96908@microchip.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+(cherry picked from commit 41ae14071cd7f6a7770e2fe1f8a0859d4c2c6ba4)
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_port.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+index 04bc8fffaf96..62c49893de3c 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+@@ -1128,7 +1128,8 @@ int sparx5_port_init(struct sparx5 *sparx5,
+ 		DEV2G5_PCS1G_SD_CFG(port->portno));
+ 
+ 	if (conf->portmode == PHY_INTERFACE_MODE_QSGMII ||
+-	    conf->portmode == PHY_INTERFACE_MODE_SGMII) {
++	    conf->portmode == PHY_INTERFACE_MODE_SGMII ||
++	    conf->portmode == PHY_INTERFACE_MODE_1000BASEX) {
+ 		err = sparx5_serdes_set(sparx5, port, conf);
+ 		if (err)
+ 			return err;

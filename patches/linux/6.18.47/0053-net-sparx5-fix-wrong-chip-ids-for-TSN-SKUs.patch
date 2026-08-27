@@ -1,0 +1,52 @@
+From 044ae485766bb311ba5005a29453f53fbeb2bd5f Mon Sep 17 00:00:00 2001
+From: Daniel Machon <daniel.machon@microchip.com>
+Date: Wed, 6 May 2026 09:25:38 +0200
+Subject: [PATCH 53/64] net: sparx5: fix wrong chip ids for TSN SKUs
+
+The TSN SKUs in enum spx5_target_chiptype have incorrect IDs:
+
+  SPX5_TARGET_CT_7546TSN    = 0x47546,
+  SPX5_TARGET_CT_7549TSN    = 0x47549,
+  SPX5_TARGET_CT_7552TSN    = 0x47552,
+  SPX5_TARGET_CT_7556TSN    = 0x47556,
+  SPX5_TARGET_CT_7558TSN    = 0x47558,
+
+The value read back from the chip is GCB_CHIP_ID_PART_ID, which is a
+GENMASK(27, 12) field, i.e. at most 16 bits wide. It can never match
+these IDs, so probing a TSN part fails with a "Target not supported"
+error.
+
+Fix the enum to use the actual 16-bit part IDs returned by the
+hardware: 0x0546, 0x0549, 0x0552, 0x0556 and 0x0558.
+
+Reported-by: Andrew Lunn <andrew@lunn.ch>
+Fixes: 3cfa11bac9bb ("net: sparx5: add the basic sparx5 driver")
+Signed-off-by: Daniel Machon <daniel.machon@microchip.com>
+Link: https://patch.msgid.link/20260506-misc-fixes-sparx5-lan969x-v2-3-fb236aa96908@microchip.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+(cherry picked from commit b131dc93f7bf1b1461f5bde0c06c4c2384aa5b58)
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_main.h | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index fe7d8bcc0cd9..2f1b50ba8ad3 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -31,11 +31,11 @@ enum spx5_target_chiptype {
+ 	SPX5_TARGET_CT_7552       = 0x7552,  /* SparX-5-128 Enterprise */
+ 	SPX5_TARGET_CT_7556       = 0x7556,  /* SparX-5-160 Enterprise */
+ 	SPX5_TARGET_CT_7558       = 0x7558,  /* SparX-5-200 Enterprise */
+-	SPX5_TARGET_CT_7546TSN    = 0x47546, /* SparX-5-64i Industrial */
+-	SPX5_TARGET_CT_7549TSN    = 0x47549, /* SparX-5-90i Industrial */
+-	SPX5_TARGET_CT_7552TSN    = 0x47552, /* SparX-5-128i Industrial */
+-	SPX5_TARGET_CT_7556TSN    = 0x47556, /* SparX-5-160i Industrial */
+-	SPX5_TARGET_CT_7558TSN    = 0x47558, /* SparX-5-200i Industrial */
++	SPX5_TARGET_CT_7546TSN    = 0x0546,  /* SparX-5-64i Industrial */
++	SPX5_TARGET_CT_7549TSN    = 0x0549,  /* SparX-5-90i Industrial */
++	SPX5_TARGET_CT_7552TSN    = 0x0552,  /* SparX-5-128i Industrial */
++	SPX5_TARGET_CT_7556TSN    = 0x0556,  /* SparX-5-160i Industrial */
++	SPX5_TARGET_CT_7558TSN    = 0x0558,  /* SparX-5-200i Industrial */
+ 	SPX5_TARGET_CT_LAN9694    = 0x9694,  /* lan969x-40 */
+ 	SPX5_TARGET_CT_LAN9691VAO = 0x9691,  /* lan969x-40-VAO */
+ 	SPX5_TARGET_CT_LAN9694TSN = 0x9695,  /* lan969x-40-TSN */
