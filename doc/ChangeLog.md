@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.08.0][UNRELEASED]
+[v26.08.0][] - 2026-09-01
 -------------------------
 
 ### Changes
@@ -22,6 +22,15 @@ All notable changes to the project are documented in this file.
 - Hardware sensors are now children of the component they measure, so the
   CPU temperature belongs to the CPU component, and VPD components are
   named after the board they sit on, `vpd-cpu`, `vpd-product`
+- Services can now bind to addresses not yet assigned to an interface,
+  e.g., a floating virtual IP address managed by a routing daemon,
+  issue #1022
+- Wi-Fi interfaces in station mode now show the BSSID of the connected
+  access point in their operational status
+- All Infix build options have been renamed to use a common `IX_` prefix,
+  e.g., `INFIX_IMAGE_ID` is now `IX_IMAGE_ID`.  External trees and saved
+  defconfigs referencing the old names must be updated, issue #1305
+- Add LED support to Acer Connect Vero W6M
 
 ### Added
 
@@ -43,6 +52,19 @@ All notable changes to the project are documented in this file.
         statd[3558]: mdns: operational datastore busy, retrying ...
 - Fix missing CPU temperature in `show system` and the web interface on
   SparX-5, LAN969x, and x86 boards
+- Fix status LED never leaving the boot-in-progress blink pattern: the
+  conditions driving it were never signaled.  The console now also shows a
+  critical error banner when the system falls back to the failure config
+- Fix port LEDs on systems with multiple switch chips
+- Fix web interface not starting on fresh installs on several boards: the
+  factory config was missing the entry for the self-signed HTTPS
+  certificate generated on first boot
+- Fix invalid LLDP operational data when a remote device is heard on more
+  than one of its ports, causing NETCONF/RESTCONF clients to reject the
+  entire neighbor list
+- Fix Wi-Fi radios advertising unsupported bands, only 2.4/5/6 GHz are
+  supported, and a race at radio setup that could remove the wrong
+  interface
 
 [ma13]: https://github.com/troglobit/mdns-alias/releases/tag/v1.3
 
@@ -2248,7 +2270,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.06.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.08.0...HEAD
 [v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0
 [v26.06.0]:   https://github.com/kernelkit/infix/compare/v26.05.0...v26.06.0
 [v26.05.0]:   https://github.com/kernelkit/infix/compare/v26.04.0...v26.05.0
