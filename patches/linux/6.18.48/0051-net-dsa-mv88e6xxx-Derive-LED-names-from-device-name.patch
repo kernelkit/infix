@@ -1,0 +1,32 @@
+From 0f00f31d095372862c728ba1415dc4e7d1c24599 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Wed, 12 Aug 2026 10:08:53 +0200
+Subject: [PATCH 51/64] net: dsa: mv88e6xxx: Derive LED names from device name
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+LED devices were named "<model>:0<port>:0<led>", e.g.
+"mv88e6390:01:00:port:lednum". Since chip->info->name is the model name, two
+switches of the same model in one system produce colliding LED names.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ drivers/net/dsa/mv88e6xxx/leds.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/leds.c b/drivers/net/dsa/mv88e6xxx/leds.c
+index 7c5904300849..2c09c37be077 100644
+--- a/drivers/net/dsa/mv88e6xxx/leds.c
++++ b/drivers/net/dsa/mv88e6xxx/leds.c
+@@ -874,8 +874,8 @@ int mv88e6xxx_port_setup_leds(struct mv88e6xxx_chip *chip, int port)
+ 		init_data.default_label = ":port";
+ 		init_data.fwnode = led;
+ 		init_data.devname_mandatory = true;
+-		init_data.devicename = kasprintf(GFP_KERNEL, "%s:0%d:0%d", chip->info->name,
+-						 port, led_num);
++		init_data.devicename = kasprintf(GFP_KERNEL, "%s.%d:%d",
++						 dev_name(chip->dev), port, led_num);
+ 		if (!init_data.devicename) {
+ 			ret = -ENOMEM;
+ 			goto err_put_led;
