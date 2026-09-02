@@ -50,43 +50,43 @@ with infamy.Test() as test:
         )
         wifi.skip_unless_supported(test, ap, station)
 
-    with test.step("Configure the ap as an Access Point on radio0"):
-        ap.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [
-                wifi.radio("radio0", band="2.4GHz", channel=1)]}},
-            "ietf-keystore": wifi.keystore({"wifi": PSK}),
-            "ietf-interfaces": {"interfaces": {"interface": [
-                # hwsim defaults every radio0 to 02:00:00:00:00:00, so the AP
-                # and the station would otherwise share a MAC -- give each a
-                # unique address.
-                wifi.iface("wifi0", "02:00:00:00:00:01", {
-                    "radio": "radio0",
-                    "access-point": {
-                        "ssid": SSID,
-                        "security": {"mode": "wpa2-wpa3-personal", "secret": "wifi"},
-                    },
-                }, ipv4={"address": [{"ip": AP_IP, "prefix-length": 24}]}),
-            ]}},
-            "infix-dhcp-server": {"dhcp-server": {"subnet": [{
-                "subnet": SUBNET,
-                "pool": {"start-address": LEASE, "end-address": LEASE},
-            }]}},
-        })
-
-    with test.step("Configure the station on radio0"):
-        station.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [wifi.radio("radio0")]}},
-            "ietf-keystore": wifi.keystore({"wifi": PSK}),
-            "ietf-interfaces": {"interfaces": {"interface": [
-                wifi.iface("wifi0", "02:00:00:00:00:02", {
-                    "radio": "radio0",
-                    "station": {
-                        "ssid": SSID,
-                        "security": {"mode": "auto", "secret": "wifi"},
-                    },
-                }, ipv4={"infix-dhcp-client:dhcp": {}}),
-            ]}},
-        })
+    with test.step("Configure the ap as an Access Point and the station on radio0"):
+        parallel(
+            lambda: ap.put_config_dicts({
+                "ietf-hardware": {"hardware": {"component": [
+                    wifi.radio("radio0", band="2.4GHz", channel=1)]}},
+                "ietf-keystore": wifi.keystore({"wifi": PSK}),
+                "ietf-interfaces": {"interfaces": {"interface": [
+                    # hwsim defaults every radio0 to 02:00:00:00:00:00, so the AP
+                    # and the station would otherwise share a MAC -- give each a
+                    # unique address.
+                    wifi.iface("wifi0", "02:00:00:00:00:01", {
+                        "radio": "radio0",
+                        "access-point": {
+                            "ssid": SSID,
+                            "security": {"mode": "wpa2-wpa3-personal", "secret": "wifi"},
+                        },
+                    }, ipv4={"address": [{"ip": AP_IP, "prefix-length": 24}]}),
+                ]}},
+                "infix-dhcp-server": {"dhcp-server": {"subnet": [{
+                    "subnet": SUBNET,
+                    "pool": {"start-address": LEASE, "end-address": LEASE},
+                }]}},
+            }),
+            lambda: station.put_config_dicts({
+                "ietf-hardware": {"hardware": {"component": [wifi.radio("radio0")]}},
+                "ietf-keystore": wifi.keystore({"wifi": PSK}),
+                "ietf-interfaces": {"interfaces": {"interface": [
+                    wifi.iface("wifi0", "02:00:00:00:00:02", {
+                        "radio": "radio0",
+                        "station": {
+                            "ssid": SSID,
+                            "security": {"mode": "auto", "secret": "wifi"},
+                        },
+                    }, ipv4={"infix-dhcp-client:dhcp": {}}),
+                ]}},
+            }),
+        )
 
     with test.step("Verify the station associates to the ap over the wifi link"):
         until(lambda: wifi.associated(station, SSID), attempts=60, interval=2)

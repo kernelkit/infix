@@ -88,116 +88,114 @@ with infamy.Test() as test:
                                                      lambda: env.attach("client2", "mgmt"),
                                                      lambda: env.attach("client3", "mgmt"))
 
-    with test.step("Configure DHCP server"):
-        server.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [
-                        {
-                            "name": server["client1"],
-                            "ipv4": {
-                                "address": [{
-                                    "ip": SERVER1,
-                                    "prefix-length": 24
-                                }]
-                            }
-                        }, {
-                            "name": "br0",
-                            "type": "infix-if-type:bridge",
-                            "ipv4": {
-                                "address": [{
-                                    "ip": SERVER2,
-                                    "prefix-length": 24,
-                                }]
-                            }
-                        }, {
-                            "name": server["client2"],
-                            "infix-interfaces:bridge-port": {
-                                "bridge": "br0"
-                            }
-                        }, {
-                            "name": server["client3"],
-                            "infix-interfaces:bridge-port": {
-                                "bridge": "br0"
-                            }
-                        },
-                    ]
-                }
-            },
-            "infix-dhcp-server": {
-                "dhcp-server": {
-                    "option": [
-                        {
-                            "id": "dns-server",
-                            "address": "auto"
-                        },
-                    ],
-                    # No client should get the static host lease on this
-                    # subnet.  Only a pool address and global options.
-                    "subnet": [
-                        {
-                            "subnet": "192.168.1.0/24",
-                            "option": [{
-                                "id": "router",
-                                "address": "auto"
-                            }],
-                            "pool": {
-                                "start-address": POOL1,
-                                "end-address":   POOL1
-                            },
-                            # Decoy, client2 should not get this lease!
-                            "host": [{
-                                "address": ADDR1,
-                                "match": {
-                                    "hostname": HOSTNM2
-                                },
-                                "option": [{
-                                    "id": "classless-static-route",
-                                    "static-route": [{
-                                        "destination": "0.0.0.0/0",
-                                        "next-hop": GW1
-                                    }]
-                                }]
-                            }]
-                        },
-                        {
-                            "subnet": "192.168.2.0/24",
-                            "option": [
-                                {
-                                    "id": "ntp-server",
-                                    "address": "auto"
-                                }, {
-                                    # Verify correct option selection in
-                                    # client: option 3 < option 121
-                                    "id": "router",
-                                    "address": "auto"
-                                }
-                            ],
-                            "pool": {
-                                "start-address": POOL2,
-                                "end-address":   POOL2
-                            },
-                            "host": [{
-                                "address": ADDR2,
-                                "match": {
-                                    "hostname": HOSTNM2
-                                },
-                                "option": [{
-                                    "id": "classless-static-route",
-                                    "static-route": [{
-                                        "destination": "0.0.0.0/0",
-                                        "next-hop": GW2
-                                    }]
-                                }]
-                            }]
-                        },
-                    ]
-                }
-            }})
-
-    with test.step("Configure client hostnames"):
+    with test.step("Configure DHCP server and client hostnames"):
         # Set hostnames first, before enabling DHCP clients
         parallel(
+            lambda: server.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [
+                            {
+                                "name": server["client1"],
+                                "ipv4": {
+                                    "address": [{
+                                        "ip": SERVER1,
+                                        "prefix-length": 24
+                                    }]
+                                }
+                            }, {
+                                "name": "br0",
+                                "type": "infix-if-type:bridge",
+                                "ipv4": {
+                                    "address": [{
+                                        "ip": SERVER2,
+                                        "prefix-length": 24,
+                                    }]
+                                }
+                            }, {
+                                "name": server["client2"],
+                                "infix-interfaces:bridge-port": {
+                                    "bridge": "br0"
+                                }
+                            }, {
+                                "name": server["client3"],
+                                "infix-interfaces:bridge-port": {
+                                    "bridge": "br0"
+                                }
+                            },
+                        ]
+                    }
+                },
+                "infix-dhcp-server": {
+                    "dhcp-server": {
+                        "option": [
+                            {
+                                "id": "dns-server",
+                                "address": "auto"
+                            },
+                        ],
+                        # No client should get the static host lease on this
+                        # subnet.  Only a pool address and global options.
+                        "subnet": [
+                            {
+                                "subnet": "192.168.1.0/24",
+                                "option": [{
+                                    "id": "router",
+                                    "address": "auto"
+                                }],
+                                "pool": {
+                                    "start-address": POOL1,
+                                    "end-address":   POOL1
+                                },
+                                # Decoy, client2 should not get this lease!
+                                "host": [{
+                                    "address": ADDR1,
+                                    "match": {
+                                        "hostname": HOSTNM2
+                                    },
+                                    "option": [{
+                                        "id": "classless-static-route",
+                                        "static-route": [{
+                                            "destination": "0.0.0.0/0",
+                                            "next-hop": GW1
+                                        }]
+                                    }]
+                                }]
+                            },
+                            {
+                                "subnet": "192.168.2.0/24",
+                                "option": [
+                                    {
+                                        "id": "ntp-server",
+                                        "address": "auto"
+                                    }, {
+                                        # Verify correct option selection in
+                                        # client: option 3 < option 121
+                                        "id": "router",
+                                        "address": "auto"
+                                    }
+                                ],
+                                "pool": {
+                                    "start-address": POOL2,
+                                    "end-address":   POOL2
+                                },
+                                "host": [{
+                                    "address": ADDR2,
+                                    "match": {
+                                        "hostname": HOSTNM2
+                                    },
+                                    "option": [{
+                                        "id": "classless-static-route",
+                                        "static-route": [{
+                                            "destination": "0.0.0.0/0",
+                                            "next-hop": GW2
+                                        }]
+                                    }]
+                                }]
+                            },
+                        ]
+                    }
+                }}),
             lambda: client1.put_config_dicts({
                 "ietf-system": {
                     "system": {

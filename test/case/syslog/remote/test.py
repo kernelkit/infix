@@ -24,108 +24,109 @@ with infamy.Test() as test:
         _, client_link = env.ltop.xlate("client", "link")
         _, server_link = env.ltop.xlate("server", "link")
 
-        client.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": client_link,
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": "10.0.0.2",
-                                "prefix-length": 24,
-                            }]
-                        }
-                    }]
-                }
-            },
-            "ietf-syslog": {
-                "syslog": {
-                    "actions": {
-                        "file": {
-                            "log-file": [{
-                                "name": "file:security",
-                                "facility-filter": {
-                                    "facility-list": [{
-                                        "facility": "auth",
-                                        "severity": "all"
-                                    }, {
-                                        "facility": "audit",
-                                        "severity": "all"
-                                    }]
-                                },
-                                "infix-syslog:log-format": "rfc5424"
-                            }]
-                        },
-                        "remote": {
-                            "destination": [{
-                                "name": "server",
-                                "udp": {
-                                    "address": "10.0.0.1"
-                                },
-                                "facility-filter": {
-                                    "facility-list": [{
-                                        "facility": "audit",
-                                        "severity": "all"
-                                    }, {
-                                        "facility": "auth",
-                                        "severity": "all"
-                                    }]
-                                },
-                                "infix-syslog:log-format": "rfc5424"
-                            }]
-                        }
-                    }
-                }
-            }
-        })
-
-    server.put_config_dicts({
-        "ietf-interfaces": {
-            "interfaces": {
-                "interface": [{
-                    "name": server_link,
-                    "enabled": True,
-                    "ipv4": {
-                        "address": [{
-                            "ip": "10.0.0.1",
-                            "prefix-length": 24,
-                        }]
-                    }
-                }]
-            }
-        },
-        "ietf-syslog": {
-            "syslog": {
-                "actions": {
-                    "file": {
-                        "log-file": [{
-                            "name": "file:security",
-                            "facility-filter": {
-                                "facility-list": [{
-                                    "facility": "auth",
-                                    "severity": "all"
-                                }, {
-                                    "facility": "audit",
-                                    "severity": "all"
+        parallel(
+            lambda: client.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": client_link,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "10.0.0.2",
+                                    "prefix-length": 24,
                                 }]
-                            },
-                            "infix-syslog:log-format": "rfc5424"
+                            }
                         }]
                     }
                 },
-                "infix-syslog:server": {
-                    "enabled": True,
-                    "listen": {
-                        "udp": [{
-                            "port": 514,
-                            "address": "10.0.0.1"
-                        }]
+                "ietf-syslog": {
+                    "syslog": {
+                        "actions": {
+                            "file": {
+                                "log-file": [{
+                                    "name": "file:security",
+                                    "facility-filter": {
+                                        "facility-list": [{
+                                            "facility": "auth",
+                                            "severity": "all"
+                                        }, {
+                                            "facility": "audit",
+                                            "severity": "all"
+                                        }]
+                                    },
+                                    "infix-syslog:log-format": "rfc5424"
+                                }]
+                            },
+                            "remote": {
+                                "destination": [{
+                                    "name": "server",
+                                    "udp": {
+                                        "address": "10.0.0.1"
+                                    },
+                                    "facility-filter": {
+                                        "facility-list": [{
+                                            "facility": "audit",
+                                            "severity": "all"
+                                        }, {
+                                            "facility": "auth",
+                                            "severity": "all"
+                                        }]
+                                    },
+                                    "infix-syslog:log-format": "rfc5424"
+                                }]
+                            }
+                        }
                     }
                 }
-            }
-        }
-    })
+            }),
+            lambda: server.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": server_link,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "10.0.0.1",
+                                    "prefix-length": 24,
+                                }]
+                            }
+                        }]
+                    }
+                },
+                "ietf-syslog": {
+                    "syslog": {
+                        "actions": {
+                            "file": {
+                                "log-file": [{
+                                    "name": "file:security",
+                                    "facility-filter": {
+                                        "facility-list": [{
+                                            "facility": "auth",
+                                            "severity": "all"
+                                        }, {
+                                            "facility": "audit",
+                                            "severity": "all"
+                                        }]
+                                    },
+                                    "infix-syslog:log-format": "rfc5424"
+                                }]
+                            }
+                        },
+                        "infix-syslog:server": {
+                            "enabled": True,
+                            "listen": {
+                                "udp": [{
+                                    "port": 514,
+                                    "address": "10.0.0.1"
+                                }]
+                            }
+                        }
+                    }
+                }
+            }),
+        )
 
     with test.step("Send security:notice log message from client and verify reception of client log message, incl. sorting to /log/security on server"):
         infamy.until(lambda: syslog_check(clientssh, serverssh) == True)

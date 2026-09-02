@@ -146,19 +146,17 @@ with infamy.Test() as test:
         receiver_iface = receiver["data"]
         threshold_ns = env.args.threshold_ns or ptp.default_threshold(env, "tc")
 
-    with test.step(f"Configure grandmaster (OC, priority1=1, {dm})"):
-        gm.put_config_dicts(configure_oc(gm_iface, priority1=1,
-                                         profile=profile, ip="192.168.100.1", dm=dm))
-
-    with test.step(f"Configure transparent clock ({dm}-tc, {profile})"):
-        tc.put_config_dicts(configure_tc(tc_uplink, tc_dnlink, profile=profile, dm=dm,
-                                         uplink_ip="192.168.100.2",
-                                         dnlink_ip="192.168.101.1"))
-
-    with test.step("Configure time receiver (OC, priority1=128, client-only)"):
-        receiver.put_config_dicts(configure_oc(receiver_iface, priority1=128,
-                                               profile=profile, client_only=True,
-                                               ip="192.168.101.2", dm=dm))
+    with test.step(f"Configure grandmaster (OC, priority1=1, {dm}), transparent clock ({dm}-tc, {profile}) and time receiver (OC, priority1=128, client-only)"):
+        parallel(
+            lambda: gm.put_config_dicts(configure_oc(gm_iface, priority1=1,
+                                             profile=profile, ip="192.168.100.1", dm=dm)),
+            lambda: tc.put_config_dicts(configure_tc(tc_uplink, tc_dnlink, profile=profile, dm=dm,
+                                             uplink_ip="192.168.100.2",
+                                             dnlink_ip="192.168.101.1")),
+            lambda: receiver.put_config_dicts(configure_oc(receiver_iface, priority1=128,
+                                                   profile=profile, client_only=True,
+                                                   ip="192.168.101.2", dm=dm)),
+        )
 
     with test.step("Wait for grandmaster port to become time-transmitter"):
         until(lambda: ptp.is_time_transmitter(gm), attempts=60)

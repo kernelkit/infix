@@ -35,78 +35,78 @@ with infamy.Test() as test:
         _, downstream_conn = env.ltop.xlate("downstream", "conn")
         _, hport2 = env.ltop.xlate("host", "data2")
 
-    with test.step("Configure upstream NTP server with local reference clock"):
-        upstream.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": upstream_data1,
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.1.1",
-                                "prefix-length": 24
-                            }]
-                        }
-                    }, {
-                        "name": upstream_conn,
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.3.1",
-                                "prefix-length": 24
-                            }]
-                        }
-                    }]
-                }
-            },
-            "ietf-ntp": {
-                "ntp": {
-                    "refclock-master": {
-                        "master-stratum": 8
-                    }
-                }
-            }
-        })
-
-    with test.step("Configure downstream NTP server syncing from upstream"):
-        downstream.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": downstream_data2,
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.2.1",
-                                "prefix-length": 24
-                            }]
-                        }
-                    }, {
-                        "name": downstream_conn,
-                        "enabled": True,
-                        "ipv4": {
-                        "address": [{
-                            "ip": "192.168.3.2",
-                            "prefix-length": 24
+    with test.step("Configure upstream NTP server with local reference clock and downstream NTP server syncing from upstream"):
+        parallel(
+            lambda: upstream.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": upstream_data1,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.1.1",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }, {
+                            "name": upstream_conn,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.3.1",
+                                    "prefix-length": 24
+                                }]
+                            }
                         }]
+                    }
+                },
+                "ietf-ntp": {
+                    "ntp": {
+                        "refclock-master": {
+                            "master-stratum": 8
                         }
-                    }]
-                }
-            },
-            "ietf-ntp": {
-                "ntp": {
-                    "unicast-configuration": [{
-                        "address": "192.168.3.1",
-                        "type": "uc-server",
-                        "iburst": True
-                    }],
-                    "refclock-master": {
-                        "master-stratum": 10
                     }
                 }
-            }
-        })
+            }),
+            lambda: downstream.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": downstream_data2,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.2.1",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }, {
+                            "name": downstream_conn,
+                            "enabled": True,
+                            "ipv4": {
+                            "address": [{
+                                "ip": "192.168.3.2",
+                                "prefix-length": 24
+                            }]
+                            }
+                        }]
+                    }
+                },
+                "ietf-ntp": {
+                    "ntp": {
+                        "unicast-configuration": [{
+                            "address": "192.168.3.1",
+                            "type": "uc-server",
+                            "iburst": True
+                        }],
+                        "refclock-master": {
+                            "master-stratum": 10
+                        }
+                    }
+                }
+            }),
+        )
 
     with infamy.IsolatedMacVlan(hport1) as ns1:
         ns1.addip("192.168.1.2")
