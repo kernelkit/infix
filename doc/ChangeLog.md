@@ -10,6 +10,8 @@ All notable changes to the project are documented in this file.
 
 - Upgrade Linux kernel to 6.18.50 (LTS)
 - Upgrade FRR to 10.5.5
+- Add per-server `minpoll` and `maxpoll` options to the NTP client
+  configuration, for tuning how often each server is polled
 
 [v26.08.0][] - 2026-09-01
 -------------------------
