@@ -49,70 +49,71 @@ with infamy.Test() as test:
             "vni": 4
         })
 
-        left.put_config_dicts({"ietf-interfaces": {
-            "interfaces": {
-                "interface": [{
-                    "name": left["link"],
-                    "ipv4": {
-                        "address": [{
-                            "ip": "192.168.50.1",
-                            "prefix-length": 24
-                        }],
-                        "forwarding": True
-                    }
-                }, {
-                    "name": left["data"],
-                    "bridge-port": {
-                        "bridge": "br0"
-                    }
-                }, {
-                    "name": "br0",
-                    "type": "infix-if-type:bridge"
-                }, {
-                    "name": f"{tunnel}0",
-                    "type": f"infix-if-type:{tunnel}",
-                    CONTAINER_TYPE: container_left,
-                    "bridge-port": {
-                        "bridge": "br0"
-                    }
-
-                }]
-            }
-        }})
-
-        right.put_config_dicts({
-            "ietf-interfaces": {
+        parallel(
+            lambda: left.put_config_dicts({"ietf-interfaces": {
                 "interfaces": {
                     "interface": [{
-                        "name": right["link"],
+                        "name": left["link"],
                         "ipv4": {
                             "address": [{
-                                "ip": "192.168.50.2",
+                                "ip": "192.168.50.1",
                                 "prefix-length": 24
                             }],
                             "forwarding": True
-                        },
-                        "ipv6": {
-                            "address": [{
-                                "ip": "2001:db8:3c4d:50::2",
-                                "prefix-length": 64
-                            }]
                         }
+                    }, {
+                        "name": left["data"],
+                        "bridge-port": {
+                            "bridge": "br0"
+                        }
+                    }, {
+                        "name": "br0",
+                        "type": "infix-if-type:bridge"
                     }, {
                         "name": f"{tunnel}0",
                         "type": f"infix-if-type:{tunnel}",
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.10.2",
-                                "prefix-length": 24
-                            }],
-                            "forwarding": True
-                        },
-                        CONTAINER_TYPE: container_right,
+                        CONTAINER_TYPE: container_left,
+                        "bridge-port": {
+                            "bridge": "br0"
+                        }
+
                     }]
                 }
-            }
-        })
+            }}),
+            lambda: right.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": right["link"],
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.50.2",
+                                    "prefix-length": 24
+                                }],
+                                "forwarding": True
+                            },
+                            "ipv6": {
+                                "address": [{
+                                    "ip": "2001:db8:3c4d:50::2",
+                                    "prefix-length": 64
+                                }]
+                            }
+                        }, {
+                            "name": f"{tunnel}0",
+                            "type": f"infix-if-type:{tunnel}",
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.10.2",
+                                    "prefix-length": 24
+                                }],
+                                "forwarding": True
+                            },
+                            CONTAINER_TYPE: container_right,
+                        }]
+                    }
+                }
+            }),
+        )
 
     _, hport = env.ltop.xlate("host", "data")
     with test.step(f"Test connectivity host:data to right:{tunnel}0 at 192.168.10.2"):

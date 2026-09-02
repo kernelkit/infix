@@ -197,26 +197,26 @@ with infamy.Test() as test:
 
     with test.step("Configure client hostnames"):
         # Set hostnames first, before enabling DHCP clients
-        client1.put_config_dicts({
-            "ietf-system": {
-                "system": {
-                    "hostname": HOSTNM1,
-                }
-            }})
-
-        client2.put_config_dicts({
-            "ietf-system": {
-                "system": {
-                    "hostname": HOSTNM2,
-                }
-            }})
-
-        client3.put_config_dicts({
-            "ietf-system": {
-                "system": {
-                    "hostname": HOSTNM3,
-                }
-            }})
+        parallel(
+            lambda: client1.put_config_dicts({
+                "ietf-system": {
+                    "system": {
+                        "hostname": HOSTNM1,
+                    }
+                }}),
+            lambda: client2.put_config_dicts({
+                "ietf-system": {
+                    "system": {
+                        "hostname": HOSTNM2,
+                    }
+                }}),
+            lambda: client3.put_config_dicts({
+                "ietf-system": {
+                    "system": {
+                        "hostname": HOSTNM3,
+                    }
+                }}),
+        )
 
         # Wait for hostnames to be applied in operational datastore
         print("Waiting for client hostnames to take ...")
@@ -233,98 +233,98 @@ with infamy.Test() as test:
         # the server is behaving correctly.
 
         print("Enable DHCP clients ...")
-        client1.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": client1["server"],
-                        "ipv4": {
-                            "infix-dhcp-client:dhcp": {
-                                "option": [
-                                    {"id": "hostname", "value": "auto"},
-                                    {"id": "router"},
-                                    {"id": "dns-server"},
-                                    {"id": "ntp-server"},
-                                    {"id": 121}
-                                ]
+        parallel(
+            lambda: client1.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": client1["server"],
+                            "ipv4": {
+                                "infix-dhcp-client:dhcp": {
+                                    "option": [
+                                        {"id": "hostname", "value": "auto"},
+                                        {"id": "router"},
+                                        {"id": "dns-server"},
+                                        {"id": "ntp-server"},
+                                        {"id": 121}
+                                    ]
+                                }
                             }
-                        }
-                    }]
-                }
-            },
-            "ietf-system": {
-                "system": {
-                    "ntp": {"enabled": True},
-                }
-            }})
-
-        client2.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": client2["server"],
-                        "ipv4": {
-                            "infix-dhcp-client:dhcp": {
-                                "option": [
-                                    {"id": "hostname", "value": "auto"},
-                                    {"id": "router"},
-                                    {"id": "dns-server"},
-                                    {"id": "ntp-server"},
-                                    {"id": 121}
-                                ]
+                        }]
+                    }
+                },
+                "ietf-system": {
+                    "system": {
+                        "ntp": {"enabled": True},
+                    }
+                }}),
+            lambda: client2.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": client2["server"],
+                            "ipv4": {
+                                "infix-dhcp-client:dhcp": {
+                                    "option": [
+                                        {"id": "hostname", "value": "auto"},
+                                        {"id": "router"},
+                                        {"id": "dns-server"},
+                                        {"id": "ntp-server"},
+                                        {"id": 121}
+                                    ]
+                                }
                             }
-                        }
-                    }]
-                }
-            },
-            "ietf-system": {
-                "system": {
-                    "ntp": {"enabled": True},
-                }
-            }})
-
-        client3.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": client3["server"],
-                        "ipv4": {
-                            "infix-dhcp-client:dhcp": {
-                                "option": [
-                                    {"id": "hostname", "value": "auto"},
-                                    {"id": "router"},
-                                    {"id": "dns-server"},
-                                    {"id": "ntp-server"},
-                                    {"id": 121}
-                                ]
+                        }]
+                    }
+                },
+                "ietf-system": {
+                    "system": {
+                        "ntp": {"enabled": True},
+                    }
+                }}),
+            lambda: client3.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": client3["server"],
+                            "ipv4": {
+                                "infix-dhcp-client:dhcp": {
+                                    "option": [
+                                        {"id": "hostname", "value": "auto"},
+                                        {"id": "router"},
+                                        {"id": "dns-server"},
+                                        {"id": "ntp-server"},
+                                        {"id": 121}
+                                    ]
+                                }
                             }
-                        }
-                    }]
-                }
-            },
-            "ietf-system": {
-                "system": {
-                    "ntp": {"enabled": True},
-                    "dns-resolver": {
-                        "search": [
-                          "example.com",
-                          "kernelkit.org"
-                        ],
-                        "server": [
-                          {
-                            "name": "static",
-                            "udp-and-tcp": {
-                              "address": "1.2.3.4"
+                        }]
+                    }
+                },
+                "ietf-system": {
+                    "system": {
+                        "ntp": {"enabled": True},
+                        "dns-resolver": {
+                            "search": [
+                              "example.com",
+                              "kernelkit.org"
+                            ],
+                            "server": [
+                              {
+                                "name": "static",
+                                "udp-and-tcp": {
+                                  "address": "1.2.3.4"
+                                }
+                              }
+                            ],
+                            "options": {
+                              "timeout": 3,
+                              "attempts": 5
                             }
-                          }
-                        ],
-                        "options": {
-                          "timeout": 3,
-                          "attempts": 5
-                        }
-                    },
-                }
-            }})
+                        },
+                    }
+                }}),
+        )
 
     with test.step("Verify DHCP client1 get correct lease"):
         until(lambda: iface.address_exist(client1, client1["server"], POOL1))

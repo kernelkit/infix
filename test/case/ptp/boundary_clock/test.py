@@ -146,11 +146,13 @@ with infamy.Test() as test:
         threshold_ns = env.args.threshold_ns or ptp.default_threshold(env, "receiver", hops=2)
 
     with test.step(f"Configure grandmaster (OC, {profile}, priority1=1) and boundary clock (BC, {profile}, priority1=64, two ports)"):
-        gm.put_config_dicts(configure_oc(gm_iface, priority1=1,
-                                         profile=profile, ip="192.168.100.1"))
-        bc.put_config_dicts(configure_bc(bc_uplink, bc_dnlink, profile=profile,
-                                         uplink_ip="192.168.100.2",
-                                         dnlink_ip="192.168.101.1"))
+        parallel(
+            lambda: gm.put_config_dicts(configure_oc(gm_iface, priority1=1,
+                                             profile=profile, ip="192.168.100.1")),
+            lambda: bc.put_config_dicts(configure_bc(bc_uplink, bc_dnlink, profile=profile,
+                                             uplink_ip="192.168.100.2",
+                                             dnlink_ip="192.168.101.1")),
+        )
 
     with test.step("Wait for BC uplink port to become time-receiver"):
         until(lambda: ptp.is_time_receiver(bc, port_idx=1), attempts=60)

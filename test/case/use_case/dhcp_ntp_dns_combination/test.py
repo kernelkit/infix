@@ -68,41 +68,42 @@ with infamy.Test() as test:
         server_data = server["client"]
 
         # Configure server with static IP and NTP server
-        server.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": server_data,
-                        "type": "infix-if-type:ethernet",
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{"ip": SERVER_IP, "prefix-length": 24}]
-                        }
-                    }]
+        parallel(
+            lambda: server.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": server_data,
+                            "type": "infix-if-type:ethernet",
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{"ip": SERVER_IP, "prefix-length": 24}]
+                            }
+                        }]
+                    }
+                },
+                "ietf-ntp": {
+                    "ntp": {
+                        "refclock-master": {"master-stratum": 8}
+                    }
                 }
-            },
-            "ietf-ntp": {
-                "ntp": {
-                    "refclock-master": {"master-stratum": 8}
+            }),
+            # Configure client with static IP
+            lambda: client.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": client_data,
+                            "type": "infix-if-type:ethernet",
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{"ip": CLIENT_STATIC_IP, "prefix-length": 24}]
+                            }
+                        }]
+                    }
                 }
-            }
-        })
-
-        # Configure client with static IP
-        client.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": client_data,
-                        "type": "infix-if-type:ethernet",
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{"ip": CLIENT_STATIC_IP, "prefix-length": 24}]
-                        }
-                    }]
-                }
-            }
-        })
+            }),
+        )
 
         until(lambda: iface.address_exist(client, client_data, CLIENT_STATIC_IP, proto="static"))
         print("Initial IP connectivity established")

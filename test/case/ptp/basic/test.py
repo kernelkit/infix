@@ -89,12 +89,14 @@ with infamy.Test() as test:
         threshold_ns = env.args.threshold_ns or ptp.default_threshold(env, "receiver")
 
     with test.step(f"Configure grandmaster (OC, {profile}, priority1=1) and time receiver ({profile}, priority1=128, client-only)"):
-        gm.put_config_dicts(configure_oc(gm_iface, priority1=1,
-                                         client_only=False, profile=profile,
-                                         ip="192.168.100.1"))
-        receiver.put_config_dicts(configure_oc(receiver_iface, priority1=128,
-                                               client_only=True, profile=profile,
-                                               ip="192.168.100.2"))
+        parallel(
+            lambda: gm.put_config_dicts(configure_oc(gm_iface, priority1=1,
+                                             client_only=False, profile=profile,
+                                             ip="192.168.100.1")),
+            lambda: receiver.put_config_dicts(configure_oc(receiver_iface, priority1=128,
+                                                   client_only=True, profile=profile,
+                                                   ip="192.168.100.2")),
+        )
 
     with test.step("Wait for grandmaster and time receiver ports to reach active states"):
         parallel(lambda: until(lambda: ptp.is_time_transmitter(gm), attempts=60),

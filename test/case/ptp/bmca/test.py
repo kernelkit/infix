@@ -89,10 +89,12 @@ with infamy.Test() as test:
         _, if_beta  = env.ltop.xlate("beta",  "data")
 
     with test.step(f"Configure both DUTs ({profile}); alpha has lower priority1"):
-        alpha.put_config_dicts(configure_oc(if_alpha, priority1=1,
-                                            profile=profile, ip="192.168.100.1"))
-        beta.put_config_dicts(configure_oc(if_beta, priority1=128,
-                                           profile=profile, ip="192.168.100.2"))
+        parallel(
+            lambda: alpha.put_config_dicts(configure_oc(if_alpha, priority1=1,
+                                                profile=profile, ip="192.168.100.1")),
+            lambda: beta.put_config_dicts(configure_oc(if_beta, priority1=128,
+                                               profile=profile, ip="192.168.100.2")),
+        )
 
     with test.step("Verify initial election: alpha is grandmaster, beta is time receiver"):
         parallel(lambda: until(lambda: ptp.is_own_gm(alpha), attempts=60),

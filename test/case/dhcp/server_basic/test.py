@@ -34,43 +34,44 @@ with infamy.Test() as test:
                                   lambda: env.attach("server", "mgmt"))
 
     with test.step("Configure DHCP server and client's hostname"):
-        server.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": server["link"],
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.2.1",
-                                "prefix-length": 24
-                            }]
-                        }
-                    }]
-                }
-            },
-            "infix-dhcp-server": {
-                "dhcp-server": {
-                    "subnet": [{
-                        "subnet": "192.168.2.0/24",
-                        "option": [{
-                            "id": "hostname",
-                            "name": HOSTNM2
-                        }],
-                        "pool": {
-                            "start-address": ADDRESS,
-                            "end-address":   ADDRESS,
-                        }
-                    }]
-                }
-            },
-            "ietf-system": {
-                "system": {"hostname": "server.example.com"}
-            }})
-
-        client.put_config_dicts({
-            "ietf-system": {
-                "system": {"hostname": HOSTNM1}
-            }})
+        parallel(
+            lambda: server.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": server["link"],
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.2.1",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }]
+                    }
+                },
+                "infix-dhcp-server": {
+                    "dhcp-server": {
+                        "subnet": [{
+                            "subnet": "192.168.2.0/24",
+                            "option": [{
+                                "id": "hostname",
+                                "name": HOSTNM2
+                            }],
+                            "pool": {
+                                "start-address": ADDRESS,
+                                "end-address":   ADDRESS,
+                            }
+                        }]
+                    }
+                },
+                "ietf-system": {
+                    "system": {"hostname": "server.example.com"}
+                }}),
+            lambda: client.put_config_dicts({
+                "ietf-system": {
+                    "system": {"hostname": HOSTNM1}
+                }}),
+        )
 
     with test.step("Verify DHCP client's original hostname"):
         until(lambda: verify_hostname(client, HOSTNM1))
