@@ -79,7 +79,11 @@ for change in $changes; do
 done
 
 TMPDIR=`mktemp -d`
-$MERGE_CONFIG -O "$TMPDIR" "$base" "$changes"
+
+# Concatenate the changes with awk. This terminates every line, so a file
+# without a trailing newline won't glue its last line to the next file's first.
+awk '{print}' $changes > "$TMPDIR/changes.conf"
+$MERGE_CONFIG -O "$TMPDIR" "$base" "$TMPDIR/changes.conf"
 
 O="$TMPDIR" make savedefconfig
 mv "$TMPDIR"/defconfig "$output"
