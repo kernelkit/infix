@@ -269,8 +269,8 @@ with infamy.Test() as test:
         _, R2link = env.ltop.xlate("R2", "link")
         _, R1link= env.ltop.xlate("R1", "link")
 
-        parallel(config_target1(R1, R1data, R1link),
-                 config_target2(R2, R2data, R2link))
+        parallel(lambda: config_target1(R1, R1data, R1link),
+                 lambda: config_target2(R2, R2data, R2link))
     with test.step("Verify R2 has a default route and 192.168.100.1/32 from OSPF"):
         print("Waiting for OSPF routes...")
         until(lambda: route.ipv4_route_exist(R2, "0.0.0.0/0", proto="ietf-ospf:ospfv2"), attempts=200)

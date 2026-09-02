@@ -123,8 +123,8 @@ with infamy.Test() as test:
         _, R2data = env.ltop.xlate("R2", "data")
         _, R2link = env.ltop.xlate("R2", "link")
 
-        parallel(config_target1(R1, R1data1, R1data2, R1link), 
-                 config_target2(R2, R2data, R2link))
+        parallel(lambda: config_target1(R1, R1data1, R1data2, R1link), 
+                 lambda: config_target2(R2, R2data, R2link))
 
         _, hport_data12 = env.ltop.xlate("PC", "data12")
         ns0 = infamy.IsolatedMacVlan(hport_data12).start()

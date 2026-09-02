@@ -266,18 +266,18 @@ with infamy.Test() as test:
             with test.step("Verify group 224.1.1.1 is flooded to host:data12"):
                 d2receive_ns.must_receive("ip dst 224.1.1.1")
             with test.step("Verify group 224.2.2.2 on host:data11, 224.1.1.1 on host:data21, 224.2.2.2 on host:data12 and 224.1.1.1 on host:data22 is not received"):
-                parallel(d1send_ns.must_not_receive("host 224.2.2.2"),
-                         d1receive_ns.must_not_receive("host 224.1.1.1"),
-                         d2receive_ns.must_not_receive("host 224.2.2.2"),
-                         d2send_ns.must_not_receive("host 224.1.1.1"))
+                parallel(lambda: d1send_ns.must_not_receive("host 224.2.2.2"),
+                         lambda: d1receive_ns.must_not_receive("host 224.1.1.1"),
+                         lambda: d2receive_ns.must_not_receive("host 224.2.2.2"),
+                         lambda: d2send_ns.must_not_receive("host 224.1.1.1"))
             with test.step("Join multicast group 224.2.2.2 on host:data21"):
                 vlan55_receiver = mcast.MCastReceiver(d1receive_ns, "224.2.2.2")
             with vlan55_receiver:
                 with test.step("Verify group 224.2.2.2 on host:data11, 224.1.1.1 on host:data21, 224.2.2.2 on host:data12 and 224.1.1.1 on host:data22 is not received"):
-                    parallel(d1send_ns.must_not_receive("host 224.2.2.2"),
-                             d1receive_ns.must_not_receive("host 224.1.1.1"),
-                             d1send_ns.must_not_receive("host 224.2.2.2"),
-                             d2send_ns.must_not_receive("host 224.1.1.1"))
+                    parallel(lambda: d1send_ns.must_not_receive("host 224.2.2.2"),
+                             lambda: d1receive_ns.must_not_receive("host 224.1.1.1"),
+                             lambda: d1send_ns.must_not_receive("host 224.2.2.2"),
+                             lambda: d2send_ns.must_not_receive("host 224.1.1.1"))
                 with test.step("Verify group 224.2.2.2 is forwarded to host:data21"):
                     d1receive_ns.must_receive("host 224.2.2.2")
                 with test.step("Verify group 224.1.1.1 is forwarded to host:data12"):

@@ -153,7 +153,7 @@ with infamy.Test() as test:
         _, R2link = env.ltop.xlate("R2", "link")
         _, R2ospf = env.ltop.xlate("R2", "ospf")
 
-        parallel(config_target1(R1, R1data, R1link, R1ospf), config_target2(R2, R2data, R2link, R2ospf))
+        parallel(lambda: config_target1(R1, R1data, R1link, R1ospf), lambda: config_target2(R2, R2data, R2link, R2ospf))
 
     with test.step("Set up persistent MacVlan namespaces"):
         _, hport_data1 = env.ltop.xlate("PC", "data1")

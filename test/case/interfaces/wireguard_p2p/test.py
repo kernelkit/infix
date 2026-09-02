@@ -47,7 +47,7 @@ with infamy.Test() as test:
                                     lambda: env.attach("right", "mgmt"))
 
     with test.step("Configure WireGuard tunnel on DUTs"):
-        util.parallel(left.put_config_dicts({
+        util.parallel(lambda: left.put_config_dicts({
             "ietf-keystore": {
                 "keystore": {
                     "asymmetric-keys": {
@@ -140,7 +140,7 @@ with infamy.Test() as test:
                 }
             }
         }),
-        right.put_config_dicts({
+        lambda: right.put_config_dicts({
             "ietf-keystore": {
                 "keystore": {
                     "asymmetric-keys": {

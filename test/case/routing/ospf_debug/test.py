@@ -231,8 +231,8 @@ with infamy.Test() as test:
         _, R1link = env.ltop.xlate("R1", "link")
         _, R2link = env.ltop.xlate("R2", "link")
 
-        parallel(config_target1(R1, R1link, enable_debug=False),
-                 config_target2(R2, R2link))
+        parallel(lambda: config_target1(R1, R1link, enable_debug=False),
+                 lambda: config_target2(R2, R2link))
 
     with test.step("Wait for OSPF adjacency to form"):
         until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)

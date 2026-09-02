@@ -594,10 +594,10 @@ with infamy.Test() as test:
         _, R4cross = env.ltop.xlate("R4", "cross")
 
     with test.step("Configure targets"):
-        parallel(config_target1(R1, R1ring1, R1ring2, R1cross),
-                 config_target2(R2, R2ring1, R2ring2, R2cross),
-                 config_target3(R3, R3ring2, R3cross, R3data),
-                 config_target4(R4, R4ring1, R4cross, R4data))
+        parallel(lambda: config_target1(R1, R1ring1, R1ring2, R1cross),
+                 lambda: config_target2(R2, R2ring1, R2ring2, R2cross),
+                 lambda: config_target3(R3, R3ring2, R3cross, R3data),
+                 lambda: config_target4(R4, R4ring1, R4cross, R4data))
 
     with test.step("Wait for all neighbors to peer"):
         print("Waiting for neighbors to peer")
