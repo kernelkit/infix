@@ -329,7 +329,9 @@ with infamy.Test() as test:
     with test.step("Configure DUTs"):
         util.parallel(
             lambda: configure_server(server, server_public_key, server_private_key, client1_public_key, client2_public_key),
-            lambda: configure_router(router),
+            lambda: configure_router(router)
+        )
+        util.parallel(
             lambda: configure_client(client1, 1, client1_private_key, client1_public_key, server_public_key),
             lambda: configure_client(client2, 2, client2_private_key, client2_public_key, server_public_key)
         )
@@ -352,8 +354,8 @@ with infamy.Test() as test:
 
         with test.step("Verify IPv4 connectivity with ping 192.168.0.2 from host:data1 and host:data2"):
             util.parallel(
-                lambda: ns_client1.must_reach("192.168.0.2"),
-                lambda: ns_client2.must_reach("192.168.0.2")
+                lambda: ns_client1.must_reach("192.168.0.2", timeout=15),
+                lambda: ns_client2.must_reach("192.168.0.2", timeout=15)
             )
 
     test.succeed()
