@@ -3,7 +3,7 @@
 cat <<EOF
 {
   "infix-meta:meta": {
-    "infix-meta:version": "@VERSION@"
+    "version": "@VERSION@"
   }
 }
 EOF
