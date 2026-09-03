@@ -1,0 +1,35 @@
+From e31a2c7c55f415a568adeef670ec77eee691508a Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 19 Aug 2026 11:38:37 +0200
+Subject: [PATCH 64/64] arm64: dts: microchip: ev23x71a: enable eMMC
+
+The board has an 8-bit eMMC on SDMMC0, and defines the emmc_sd pinctrl
+group for it, but nothing enables the controller.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts b/arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts
+index 4012ea7d07bb..7f12fc5c321f 100644
+--- a/arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts
++++ b/arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts
+@@ -463,6 +463,17 @@ phy27: phy@27 {
+ 	};
+ };
+ 
++&sdmmc0 {
++	pinctrl-0 = <&emmc_sd_pins>;
++	pinctrl-names = "default";
++	max-frequency = <100000000>;
++	bus-width = <8>;
++	mmc-ddr-1_8v;
++	mmc-hs200-1_8v;
++	non-removable;
++	status = "okay";
++};
++
+ &serdes {
+ 	status = "okay";
+ };

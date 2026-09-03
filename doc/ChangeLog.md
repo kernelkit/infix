@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Upgrade Linux kernel to 6.18.49 (LTS)
 - Upgrade FRR to 10.5.5
 
 [v26.08.0][] - 2026-09-01
