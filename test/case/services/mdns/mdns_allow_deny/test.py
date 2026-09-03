@@ -12,6 +12,7 @@ with three scenarios:
 """
 import re
 import infamy
+from infamy.util import parallel
 
 
 def mdns_scan():
@@ -64,8 +65,8 @@ def check(expected, allow=None, deny=None):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        dut = env.attach("dut", "mgmt")
-        ssh = env.attach("dut", "mgmt", "ssh")
+        dut, ssh = parallel(lambda: env.attach("dut", "mgmt"),
+                            lambda: env.attach("dut", "mgmt", "ssh"))
         _, p1 = env.ltop.xlate("dut", "p1")
         _, p2 = env.ltop.xlate("dut", "p2")
         _, p3 = env.ltop.xlate("dut", "p3")

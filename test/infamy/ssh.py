@@ -70,6 +70,9 @@ class Device(object):
         self.location = location
         if wait:
             util.until(lambda: ssh_syn(location.host, location.port))
+            util.until(lambda: self.run("true", stdout=subprocess.DEVNULL,
+                                        stderr=subprocess.DEVNULL).returncode == 0,
+                       attempts=30)
 
     def __str__(self):
         nm = f"{self.name}"
