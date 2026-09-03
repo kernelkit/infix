@@ -3,6 +3,13 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.09.0][UNRELEASED]
+-------------------------
+
+### Changes
+
+- Upgrade FRR to 10.5.5
+
 [v26.08.0][] - 2026-09-01
 -------------------------
 
@@ -2271,6 +2278,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.08.0...HEAD
+[v26.09.0]:   https://github.com/kernelkit/infix/compare/v26.08.0...v26.09.0
 [v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0
 [v26.06.0]:   https://github.com/kernelkit/infix/compare/v26.05.0...v26.06.0
 [v26.05.0]:   https://github.com/kernelkit/infix/compare/v26.04.0...v26.05.0
