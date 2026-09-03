@@ -18,7 +18,7 @@ FACTORY = "/etc/factory-config.cfg"
 
 def factory_hostname(tgtssh):
     """Read the hostname the factory-config will boot with."""
-    cfg = json.loads(tgtssh.runsh(f"cat {FACTORY}").stdout)
+    cfg = json.loads(tgtssh.runsh(f"cat {FACTORY}", check=True).stdout)
     return cfg.get("ietf-system:system", {}).get("hostname")
 
 def cleanup(env):
