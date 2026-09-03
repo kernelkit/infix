@@ -32,9 +32,7 @@ image::topology.svg[PTP transparent clock (P2P) topology, align=center, scaledwi
 ==== Sequence
 
 . Set up topology and attach to DUTs
-. Configure grandmaster (OC, priority1=1, {dm})
-. Configure transparent clock ({dm}-tc, {profile})
-. Configure time receiver (OC, priority1=128, client-only)
+. Configure grandmaster (OC, priority1=1, {dm}), transparent clock ({dm}-tc, {profile}) and time receiver (OC, priority1=128, client-only)
 . Wait for grandmaster port to become time-transmitter
 . Wait for time receiver to reach time-receiver state
 . Verify time receiver steps-removed equals 1

@@ -7,7 +7,7 @@ content in the volume on restart.
 
 """
 import infamy
-from infamy.util import until, curl
+from infamy.util import curl, parallel, until
 
 with infamy.Test() as test:
     NAME = "web-volume"
@@ -16,8 +16,8 @@ with infamy.Test() as test:
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
         addr = target.get_mgmt_ip()
         URL = f"http://[{addr}]:{PORT}/index.html"
 

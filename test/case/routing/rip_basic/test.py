@@ -177,8 +177,8 @@ def config_target2(target, link, data):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
+        R1, R2 = parallel(lambda: env.attach("R1", "mgmt"),
+                          lambda: env.attach("R2", "mgmt"))
 
     with test.step("Configure targets"):
         _, R1data = env.ltop.xlate("R1", "data")

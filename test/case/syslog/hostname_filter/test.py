@@ -7,8 +7,8 @@ on the hostname.  Tests log sink scenario with multiple remote clients.
 """
 
 import infamy
+from infamy.util import parallel, until
 import infamy.iface as iface
-from infamy import until
 
 TEST_MESSAGES = [
     ("router1", "Message from router1"),
@@ -41,10 +41,10 @@ def verify_log_content(ssh, logfile, expected_hosts, test):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to DUTs"):
         env = infamy.Env()
-        client = env.attach("client", "mgmt")
-        server = env.attach("server", "mgmt")
-        clientssh = env.attach("client", "mgmt", "ssh")
-        serverssh = env.attach("server", "mgmt", "ssh")
+        client, server, clientssh, serverssh = parallel(lambda: env.attach("client", "mgmt"),
+                                                        lambda: env.attach("server", "mgmt"),
+                                                        lambda: env.attach("client", "mgmt", "ssh"),
+                                                        lambda: env.attach("server", "mgmt", "ssh"))
 
     with test.step("Clean up old log files on server"):
         serverssh.runsh("sudo rm -f /var/log/{router1,router2,all-hosts}")

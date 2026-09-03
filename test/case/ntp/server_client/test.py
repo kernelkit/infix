@@ -11,80 +11,80 @@ Verify NTP server and client work together:
 """
 
 import infamy
-from infamy import until
+from infamy.util import parallel, until
 import infamy.ntp as ntp
 
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to devices"):
         env = infamy.Env()
-        server = env.attach("server", "mgmt")
-        client = env.attach("client", "mgmt")
+        server, client = parallel(lambda: env.attach("server", "mgmt"),
+                                  lambda: env.attach("client", "mgmt"))
 
         _, server_data = env.ltop.xlate("server", "data")
         _, client_data = env.ltop.xlate("client", "data")
 
-    with test.step("Configure NTP server using ietf-ntp model"):
-        server.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": server_data,
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.3.1",
-                                "prefix-length": 24
-                            }]
-                        }
-                    }]
-                }
-            },
-            "ietf-ntp": {
-                "ntp": {
-                    "refclock-master": {
-                        "master-stratum": 8
-                    },
+    with test.step("Configure NTP server using ietf-ntp model and NTP client using ietf-system:ntp model"):
+        parallel(
+            lambda: server.put_config_dicts({
+                "ietf-interfaces": {
                     "interfaces": {
-                        "interface": [
-                            {"name": server_data}
-                        ]
-                    }
-                }
-            }
-        })
-
-    with test.step("Configure NTP client using ietf-system:ntp model"):
-        client.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": client_data,
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                                "ip": "192.168.3.2",
-                                "prefix-length": 24
-                            }]
-                        }
-                    }]
-                }
-            },
-            "ietf-system": {
-                "system": {
-                    "ntp": {
-                        "enabled": True,
-                        "server": [{
-                            "name": "ntp-server",
-                            "udp": {
-                                "address": "192.168.3.1"
-                            },
-                            "iburst": True
+                        "interface": [{
+                            "name": server_data,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.3.1",
+                                    "prefix-length": 24
+                                }]
+                            }
                         }]
                     }
+                },
+                "ietf-ntp": {
+                    "ntp": {
+                        "refclock-master": {
+                            "master-stratum": 8
+                        },
+                        "interfaces": {
+                            "interface": [
+                                {"name": server_data}
+                            ]
+                        }
+                    }
                 }
-            }
-        })
+            }),
+            lambda: client.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": client_data,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.3.2",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }]
+                    }
+                },
+                "ietf-system": {
+                    "system": {
+                        "ntp": {
+                            "enabled": True,
+                            "server": [{
+                                "name": "ntp-server",
+                                "udp": {
+                                    "address": "192.168.3.1"
+                                },
+                                "iburst": True
+                            }]
+                        }
+                    }
+                }
+            }),
+        )
 
     with test.step("Verify NTP server has received packets"):
         until(lambda: ntp.server_has_received_packets(server), attempts=30)

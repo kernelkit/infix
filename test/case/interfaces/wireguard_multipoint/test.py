@@ -464,15 +464,15 @@ def configure_client2(dut):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        server = env.attach("server", "mgmt")
-        client1 = env.attach("client1", "mgmt")
-        client2 = env.attach("client2", "mgmt")
+        server, client1, client2 = util.parallel(lambda: env.attach("server", "mgmt"),
+                                                 lambda: env.attach("client1", "mgmt"),
+                                                 lambda: env.attach("client2", "mgmt"))
 
     _, hclient1 = env.ltop.xlate("host", "data1")
     _, hserver  = env.ltop.xlate("host", "data2")
 
     with test.step("Configure server, client1 and client2"):
-        util.parallel(configure_server(server), configure_client1(client1), configure_client2(client2))
+        util.parallel(lambda: configure_server(server), lambda: configure_client1(client1), lambda: configure_client2(client2))
 
     with infamy.IsolatedMacVlan(hserver) as nsserver, infamy.IsolatedMacVlan(hclient1) as nsclient1:
         nsserver.addip("192.168.0.1")
@@ -485,25 +485,25 @@ with infamy.Test() as test:
         nsclient1.addroute("default", "2001:db8:3c4d:01::2", proto="ipv6")
 
         with test.step("Verify IPv4 connectivity with ping 10.0.0.1, 10.0.0.2 and 10.0.0.3 from host:data1"):
-            util.parallel(nsclient1.must_reach("10.0.0.1"),
-                          nsclient1.must_reach("10.0.0.2"),
-                          nsclient1.must_reach("10.0.0.3"))
+            util.parallel(lambda: nsclient1.must_reach("10.0.0.1"),
+                          lambda: nsclient1.must_reach("10.0.0.2"),
+                          lambda: nsclient1.must_reach("10.0.0.3"))
 
         with test.step("Verify IPv4 connectivity with ping 10.0.0.1 and 10.0.0.2 from host:data2"):
-            util.parallel(nsserver.must_reach("10.0.0.1"),
-                          nsserver.must_reach("10.0.0.2"))
+            util.parallel(lambda: nsserver.must_reach("10.0.0.1"),
+                          lambda: nsserver.must_reach("10.0.0.2"))
 
         with test.step("Verify host:data2 can not ping 10.0.0.3"):
             nsserver.must_not_reach("10.0.0.3") # Not in allowed IPs
 
         with test.step("Verify IPv6 connectivity with ping fd00:0::1, fd00:0::2 and fd00:0::3 from host:data1"):
-            util.parallel(nsclient1.must_reach("fd00:0::1"),
-                          nsclient1.must_reach("fd00:0::2"),
-                          nsclient1.must_reach("fd00:0::3"))
+            util.parallel(lambda: nsclient1.must_reach("fd00:0::1"),
+                          lambda: nsclient1.must_reach("fd00:0::2"),
+                          lambda: nsclient1.must_reach("fd00:0::3"))
 
         with test.step("Verify IPv6 connectivity with ping fd00:0:1 and fd00:0:2 from host:data2"):
-            util.parallel(nsserver.must_reach("fd00:0::1"),
-                          nsserver.must_reach("fd00:0::2"))
+            util.parallel(lambda: nsserver.must_reach("fd00:0::1"),
+                          lambda: nsserver.must_reach("fd00:0::2"))
 
         with test.step("Verify host:data2 can not ping fd00:0::3"):
             nsserver.must_not_reach("fd00:0::3") # Not in allowed IPs

@@ -220,9 +220,9 @@ def config_target2(target, link):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R1ssh = env.attach("R1", "mgmt", "ssh")
-        R2 = env.attach("R2", "mgmt")
+        R1, R1ssh, R2 = parallel(lambda: env.attach("R1", "mgmt"),
+                                 lambda: env.attach("R1", "mgmt", "ssh"),
+                                 lambda: env.attach("R2", "mgmt"))
 
     with test.step("Clean up old log files from previous test runs"):
         R1ssh.runsh("sudo rm -f /var/log/ospf-debug")
@@ -231,8 +231,8 @@ with infamy.Test() as test:
         _, R1link = env.ltop.xlate("R1", "link")
         _, R2link = env.ltop.xlate("R2", "link")
 
-        parallel(config_target1(R1, R1link, enable_debug=False),
-                 config_target2(R2, R2link))
+        parallel(lambda: config_target1(R1, R1link, enable_debug=False),
+                 lambda: config_target2(R2, R2link))
 
     with test.step("Wait for OSPF adjacency to form"):
         until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)

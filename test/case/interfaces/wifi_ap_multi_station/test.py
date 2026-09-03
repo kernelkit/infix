@@ -96,9 +96,8 @@ with infamy.Test() as test:
             }]}},
         })
 
-    for name, mac, dut in stations:
-        with test.step("Configure the station on radio0"):
-            print(f"Configuring {name}")
+    with test.step("Configure the stations on radio0"):
+        def configure_station(mac, dut):
             dut.put_config_dicts({
                 "ietf-hardware": {"hardware": {"component": [wifi.radio("radio0")]}},
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
@@ -112,6 +111,9 @@ with infamy.Test() as test:
                     }, ipv4={"infix-dhcp-client:dhcp": {}}),
                 ]}},
             })
+
+        parallel(*[lambda mac=mac, dut=dut: configure_station(mac, dut)
+                   for _name, mac, dut in stations])
 
     for name, _mac, dut in stations:
         with test.step("Verify the station associates to the ap over the wifi link"):

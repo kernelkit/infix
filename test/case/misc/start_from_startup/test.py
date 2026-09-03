@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import infamy
-from infamy.util import wait_boot
+from infamy.util import parallel, wait_boot
 
 with infamy.Test() as test:
     with test.step("Initialize"):
@@ -17,8 +17,8 @@ with infamy.Test() as test:
         target.reboot()
         if not wait_boot(target, env):
             test.fail()
-        target = env.attach("target", "mgmt", test_reset=False)
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt", test_reset=False),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Verify user admin is now in wheel group"):
         if not tgtssh.runsh("grep wheel /etc/group | grep 'admin'"):

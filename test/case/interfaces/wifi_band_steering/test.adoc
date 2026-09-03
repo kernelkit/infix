@@ -41,8 +41,7 @@ image::topology.svg[WiFi Band Steering across a dual-band Access Point topology,
 ==== Sequence
 
 . Set up topology and attach to the ap and the client
-. Configure the dual-band AP: one BSS on 2.4GHz, one on 5GHz
-. Configure the client with a single dual-band station radio
+. Configure the dual-band AP and the client with a single dual-band station radio
 . Verify the client associates to the 'campus' SSID
 . Verify band steering put the client on the 5GHz BSS
 . Verify the client leases an address over 5GHz

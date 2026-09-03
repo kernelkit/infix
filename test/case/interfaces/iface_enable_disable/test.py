@@ -9,9 +9,9 @@ Both admin-status and oper-status are verified.
 """
 
 import infamy
+from infamy.util import parallel, until
 import infamy.iface as iface
 
-from infamy import until
 
 def print_error_message(iface, param, exp_val, act_val):
     return f"'{param}' failure for interface '{iface}'. Expected '{exp_val}', Actual: '{act_val}'"
@@ -65,8 +65,8 @@ def configure_interface(target, iface_name, iface_type=None, enabled=True, ip_ad
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        target1 = env.attach("target1", "mgmt")
-        target2 = env.attach("target2", "mgmt")
+        target1, target2 = parallel(lambda: env.attach("target1", "mgmt"),
+                                    lambda: env.attach("target2", "mgmt"))
 
         _, data1 = env.ltop.xlate("target1", "data")
         _, link1 = env.ltop.xlate("target1", "link")

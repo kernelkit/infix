@@ -23,8 +23,7 @@ image::topology.svg[NTP Server Mode topology, align=center, scaledwidth=75%]
 ==== Sequence
 
 . Set up topology and attach to devices
-. Configure upstream NTP server with local reference clock
-. Configure downstream NTP server syncing from upstream
+. Configure upstream NTP server with local reference clock and downstream NTP server syncing from upstream
 . Verify network connectivity with upstream NTP server
 . Query time from upstream NTP server
 . Verify upstream NTP server statistics

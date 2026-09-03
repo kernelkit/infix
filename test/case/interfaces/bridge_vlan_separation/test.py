@@ -24,13 +24,14 @@ Test that two VLANs are correctly separated in the bridge
 ....
 """
 import infamy
+from infamy.util import parallel
 import subprocess
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        dut1 = env.attach("dut1", "mgmt")
-        dut2 = env.attach("dut2", "mgmt")
+        dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
+                              lambda: env.attach("dut2", "mgmt"))
 
     with test.step("Configure DUTs"):
         _, tport10 = env.ltop.xlate("dut1", "data1")
@@ -40,107 +41,108 @@ with infamy.Test() as test:
         _, tport21 = env.ltop.xlate("dut2", "data2")
         _, tport22 = env.ltop.xlate("dut2", "link")
 
-        dut1.put_config_dicts({"ietf-interfaces": {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": "br0",
-                        "type": "infix-if-type:bridge",
-                        "enabled": True,
-                        "bridge": {
-                            "vlans": {
-                                "vlan": [
-                                    {
-                                        "vid": 10,
-                                        "untagged": [ tport10 ],
-                                        "tagged":   [ "br0", tport12 ]
-                                    },
-                                    {
-                                        "vid": 20,
-                                        "untagged": [ tport11 ],
-                                        "tagged":   [ "br0", tport12 ]
-                                    }
-                                ]
+        parallel(
+            lambda: dut1.put_config_dicts({"ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": "br0",
+                            "type": "infix-if-type:bridge",
+                            "enabled": True,
+                            "bridge": {
+                                "vlans": {
+                                    "vlan": [
+                                        {
+                                            "vid": 10,
+                                            "untagged": [ tport10 ],
+                                            "tagged":   [ "br0", tport12 ]
+                                        },
+                                        {
+                                            "vid": 20,
+                                            "untagged": [ tport11 ],
+                                            "tagged":   [ "br0", tport12 ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": tport10,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "pvid": 10,
+                                "bridge": "br0"
+                            }
+                        },
+                        {
+                            "name": tport11,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "pvid": 20,
+                                "bridge": "br0"
+                            }
+                        },
+                        {
+                            "name": tport12,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "bridge": "br0",
                             }
                         }
-                    },
-                    {
-                        "name": tport10,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "pvid": 10,
-                            "bridge": "br0"
-                        }
-                    },
-                    {
-                        "name": tport11,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "pvid": 20,
-                            "bridge": "br0"
-                        }
-                    },
-                    {
-                        "name": tport12,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "bridge": "br0",
-                        }
-                    }
-                ]
-            }
-        }})
-
-        dut2.put_config_dicts({"ietf-interfaces": {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": "br0",
-                        "type": "infix-if-type:bridge",
-                        "enabled": True,
-                        "bridge": {
-                            "vlans": {
-                                "vlan": [
-                                    {
-                                        "vid": 10,
-                                        "untagged": [ tport20 ],
-                                        "tagged":   [ "br0", tport22 ]
-                                    },
-                                    {
-                                        "vid": 20,
-                                        "untagged": [ tport21 ],
-                                        "tagged":   [ "br0", tport22 ]
-                                    }
-                                ]
+                    ]
+                }
+            }}),
+            lambda: dut2.put_config_dicts({"ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": "br0",
+                            "type": "infix-if-type:bridge",
+                            "enabled": True,
+                            "bridge": {
+                                "vlans": {
+                                    "vlan": [
+                                        {
+                                            "vid": 10,
+                                            "untagged": [ tport20 ],
+                                            "tagged":   [ "br0", tport22 ]
+                                        },
+                                        {
+                                            "vid": 20,
+                                            "untagged": [ tport21 ],
+                                            "tagged":   [ "br0", tport22 ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": tport20,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "pvid": 10,
+                                "bridge": "br0"
+                            }
+                        },
+                        {
+                            "name": tport21,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "pvid": 20,
+                                "bridge": "br0"
+                            }
+                        },
+                        {
+                            "name": tport22,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "bridge": "br0",
                             }
                         }
-                    },
-                    {
-                        "name": tport20,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "pvid": 10,
-                            "bridge": "br0"
-                        }
-                    },
-                    {
-                        "name": tport21,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "pvid": 20,
-                            "bridge": "br0"
-                        }
-                    },
-                    {
-                        "name": tport22,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "bridge": "br0",
-                        }
-                    }
-                ]
-            }
-        }})
+                    ]
+                }
+            }}),
+        )
 
 
     _, hport10 = env.ltop.xlate("host", "data10")

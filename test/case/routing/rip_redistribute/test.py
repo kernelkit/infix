@@ -245,9 +245,9 @@ def config_r3_ospf(target, link):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
-        R3 = env.attach("R3", "mgmt")
+        R1, R2, R3 = parallel(lambda: env.attach("R1", "mgmt"),
+                              lambda: env.attach("R2", "mgmt"),
+                              lambda: env.attach("R3", "mgmt"))
 
     with test.step("Configure routers"):
         _, R1rip = env.ltop.xlate("R1", "rip")
@@ -255,9 +255,9 @@ with infamy.Test() as test:
         _, R2link = env.ltop.xlate("R2", "link")
         _, R3link = env.ltop.xlate("R3", "link")
 
-        parallel(config_r1_gateway(R1, R1rip, R1ospf),
-                 config_r2_rip(R2, R2link),
-                 config_r3_ospf(R3, R3link))
+        parallel(lambda: config_r1_gateway(R1, R1rip, R1ospf),
+                 lambda: config_r2_rip(R2, R2link),
+                 lambda: config_r3_ospf(R3, R3link))
 
     with test.step("Wait for OSPF to converge on R1-R3 link"):
         print("Waiting for OSPF convergence...")

@@ -13,7 +13,7 @@ the old '-x hostname:' argument from when it was first started.
 """
 
 import infamy
-from infamy.util import until
+from infamy.util import parallel, until
 
 
 def udhcpc_cmdline(ssh, ifname):
@@ -40,8 +40,8 @@ with infamy.Test() as test:
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        client = env.attach("client", "mgmt")
-        clissh = env.attach("client", "mgmt", "ssh")
+        client, clissh = parallel(lambda: env.attach("client", "mgmt"),
+                                  lambda: env.attach("client", "mgmt", "ssh"))
         _, port = env.ltop.xlate("client", "mgmt")
 
     with test.step(f"Configure initial hostname '{HOSTNM_A}'"):

@@ -12,6 +12,7 @@ timeout.
 """
 import base64
 import infamy
+from infamy.util import parallel
 import json
 import subprocess
 import time
@@ -19,8 +20,8 @@ import time
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Verify the presence of a watchdog device"):
         wctl = tgtssh.run(["watchdogctl"], stdout=subprocess.PIPE)

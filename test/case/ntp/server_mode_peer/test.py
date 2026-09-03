@@ -20,7 +20,7 @@ selected as sync source by the other peer.
 """
 
 import infamy
-from infamy import until
+from infamy.util import parallel, until
 import infamy.ntp as ntp
 
 
@@ -79,8 +79,8 @@ def has_selected_peer(peers):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to devices"):
         env = infamy.Env()
-        peer1 = env.attach("peer1", "mgmt")
-        peer2 = env.attach("peer2", "mgmt")
+        peer1, peer2 = parallel(lambda: env.attach("peer1", "mgmt"),
+                                lambda: env.attach("peer2", "mgmt"))
 
         _, if1 = env.ltop.xlate("peer1", "data")
         _, if2 = env.ltop.xlate("peer2", "data")

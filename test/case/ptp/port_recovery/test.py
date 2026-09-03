@@ -13,8 +13,8 @@ configured threshold.
 """
 
 import infamy
+from infamy.util import parallel, until
 import infamy.ptp as ptp
-from infamy import until
 
 
 def configure_oc(iface, ip, priority1, client_only, dm="e2e"):
@@ -85,18 +85,20 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to DUTs"):
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
-        gm       = env.attach("gm",       "mgmt")
-        receiver = env.attach("receiver", "mgmt")
+        gm, receiver = parallel(lambda: env.attach("gm",       "mgmt"),
+                                lambda: env.attach("receiver", "mgmt"))
 
         _, gm_iface       = env.ltop.xlate("gm",       "data")
         _, receiver_iface = env.ltop.xlate("receiver", "data")
         threshold_ns = env.args.threshold_ns or ptp.default_threshold(env, "receiver")
 
     with test.step("Configure grandmaster (priority1=1) and time receiver (client-only)"):
-        gm.put_config_dicts(configure_oc(gm_iface, "192.168.100.1",
-                                         priority1=1, client_only=False))
-        receiver.put_config_dicts(configure_oc(receiver_iface, "192.168.100.2",
-                                               priority1=128, client_only=True))
+        parallel(
+            lambda: gm.put_config_dicts(configure_oc(gm_iface, "192.168.100.1",
+                                             priority1=1, client_only=False)),
+            lambda: receiver.put_config_dicts(configure_oc(receiver_iface, "192.168.100.2",
+                                                   priority1=128, client_only=True)),
+        )
 
     with test.step("Wait for initial convergence"):
         until(lambda: ptp.is_time_receiver(receiver) and ptp.has_converged(receiver, threshold_ns),

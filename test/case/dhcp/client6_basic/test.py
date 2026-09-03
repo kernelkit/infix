@@ -7,6 +7,7 @@ DHCPv6 server that is then set on the interface.
 """
 
 import infamy
+from infamy.util import parallel
 import infamy.dhcp
 import infamy.iface as iface
 import infamy.route as route
@@ -33,8 +34,8 @@ with infamy.Test() as test:
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        client = env.attach("client", "mgmt")
-        tgtssh = env.attach("client", "mgmt", "ssh")
+        client, tgtssh = parallel(lambda: env.attach("client", "mgmt"),
+                                  lambda: env.attach("client", "mgmt", "ssh"))
         _, host = env.ltop.xlate("host", "data")
         _, port = env.ltop.xlate("client", "data")
 

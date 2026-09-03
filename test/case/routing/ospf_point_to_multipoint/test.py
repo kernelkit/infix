@@ -293,9 +293,9 @@ def config_target3(target, link, data):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
-        R3 = env.attach("R3", "mgmt")
+        R1, R2, R3 = parallel(lambda: env.attach("R1", "mgmt"),
+                              lambda: env.attach("R2", "mgmt"),
+                              lambda: env.attach("R3", "mgmt"))
 
 
     with test.step("Configure targets"):
@@ -306,9 +306,9 @@ with infamy.Test() as test:
         _, R3link = env.ltop.xlate("R3", "link")
         _, R3data = env.ltop.xlate("R3", "data")
 
-        parallel(config_target1(R1, R1link, R1data),
-                 config_target2(R2, R2link1, R2link2),
-                 config_target3(R3, R3link, R3data))
+        parallel(lambda: config_target1(R1, R1link, R1data),
+                 lambda: config_target2(R2, R2link1, R2link2),
+                 lambda: config_target3(R3, R3link, R3data))
 
     with test.step("Wait for OSPF routes"):
         print("Waiting for OSPF routes from all routers")

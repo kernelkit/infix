@@ -78,45 +78,45 @@ with infamy.Test() as test:
         )
         wifi.skip_unless_supported(test, ap, client)
 
-    with test.step("Configure the dual-band AP: one BSS on 2.4GHz, one on 5GHz"):
+    with test.step("Configure the dual-band AP and the client with a single dual-band station radio"):
         # radio2 and radio3 are dut1's two extra radios, both wired to the
         # dedicated band-steering cell (cell2) in test/virt/quad.
-        ap.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [
-                wifi.radio("radio2", band="2.4GHz", channel=1),
-                wifi.radio("radio3", band="5GHz", channel=36),
-            ]}},
-            "ietf-keystore": wifi.keystore({"wifi": PSK}),
-            "ietf-interfaces": {"interfaces": {"interface": [
-                {"name": "br0", "type": "infix-if-type:bridge", "enabled": True,
-                 "ietf-ip:ipv4": {"address": [
-                     {"ip": AP_IP, "prefix-length": 24}]}},
-                ap_bss("wifi0", "radio2", AP_BSSID_24),
-                ap_bss("wifi1", "radio3", AP_BSSID_5),
-            ]}},
-            "infix-dhcp-server": {"dhcp-server": {"subnet": [{
-                "subnet": SUBNET,
-                "pool": {"start-address": POOL_START, "end-address": POOL_END},
-            }]}},
-        })
-
-    with test.step("Configure the client with a single dual-band station radio"):
-        # radio2 is the client DUT's extra radio on the band-steering cell
-        # (cell2).  No band/channel pinned: the one radio scans both bands and
-        # lets band steering decide where it lands.
-        client.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [wifi.radio("radio2")]}},
-            "ietf-keystore": wifi.keystore({"wifi": PSK}),
-            "ietf-interfaces": {"interfaces": {"interface": [
-                wifi.iface("wifi0", CLIENT_MAC, {
-                    "radio": "radio2",
-                    "station": {
-                        "ssid": SSID,
-                        "security": {"mode": "auto", "secret": "wifi"},
-                    },
-                }, ipv4={"infix-dhcp-client:dhcp": {}}),
-            ]}},
-        })
+        parallel(
+            lambda: ap.put_config_dicts({
+                "ietf-hardware": {"hardware": {"component": [
+                    wifi.radio("radio2", band="2.4GHz", channel=1),
+                    wifi.radio("radio3", band="5GHz", channel=36),
+                ]}},
+                "ietf-keystore": wifi.keystore({"wifi": PSK}),
+                "ietf-interfaces": {"interfaces": {"interface": [
+                    {"name": "br0", "type": "infix-if-type:bridge", "enabled": True,
+                     "ietf-ip:ipv4": {"address": [
+                         {"ip": AP_IP, "prefix-length": 24}]}},
+                    ap_bss("wifi0", "radio2", AP_BSSID_24),
+                    ap_bss("wifi1", "radio3", AP_BSSID_5),
+                ]}},
+                "infix-dhcp-server": {"dhcp-server": {"subnet": [{
+                    "subnet": SUBNET,
+                    "pool": {"start-address": POOL_START, "end-address": POOL_END},
+                }]}},
+            }),
+            # radio2 is the client DUT's extra radio on the band-steering cell
+            # (cell2).  No band/channel pinned: the one radio scans both bands and
+            # lets band steering decide where it lands.
+            lambda: client.put_config_dicts({
+                "ietf-hardware": {"hardware": {"component": [wifi.radio("radio2")]}},
+                "ietf-keystore": wifi.keystore({"wifi": PSK}),
+                "ietf-interfaces": {"interfaces": {"interface": [
+                    wifi.iface("wifi0", CLIENT_MAC, {
+                        "radio": "radio2",
+                        "station": {
+                            "ssid": SSID,
+                            "security": {"mode": "auto", "secret": "wifi"},
+                        },
+                    }, ipv4={"infix-dhcp-client:dhcp": {}}),
+                ]}},
+            }),
+        )
 
     with test.step("Verify the client associates to the 'campus' SSID"):
         until(lambda: wifi.associated(client, SSID), attempts=60, interval=2)

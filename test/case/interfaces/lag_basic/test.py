@@ -24,9 +24,9 @@ class DumbLinkBreaker:
         self.env = sys
         self.dut = dut
         self.net = netns
-        self.tgt = {}
-        for i, (name, _) in dut.items():
-            self.tgt[i] = env.attach(name, "mgmt", "ssh")
+        self.tgt = dict(zip(dut.keys(),
+                            parallel(*(lambda n=name: env.attach(n, "mgmt", "ssh")
+                                       for name, _ in dut.values()))))
 
     def set_link(self, link, updown):
         """Set link up or down, verify before returning."""
@@ -136,8 +136,8 @@ def dut_init(dut, mode, addr):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env(edge_mappings=infamy.lag.edge_mappings)
-        dut1 = env.attach("dut1", "mgmt")
-        dut2 = env.attach("dut2", "mgmt")
+        dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
+                              lambda: env.attach("dut2", "mgmt"))
 
     _, mon = env.ltop.xlate("host", "mon")
     with infamy.IsolatedMacVlan(mon) as ns:

@@ -195,16 +195,16 @@ def config_target2(target, link):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
+        R1, R2 = parallel(lambda: env.attach("R1", "mgmt"),
+                          lambda: env.attach("R2", "mgmt"))
 
         _, R1data = env.ltop.xlate("R1", "data")
         _, R2link = env.ltop.xlate("R2", "link")
         _, R1link = env.ltop.xlate("R1", "link")
 
     with test.step("Configure targets"):
-        parallel(config_target1(R1, R1data, R1link),
-                 config_target2(R2, R2link))
+        parallel(lambda: config_target1(R1, R1data, R1link),
+                 lambda: config_target2(R2, R2link))
 
     with test.step("Wait for routes"):
         until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32"))
@@ -232,7 +232,7 @@ with infamy.Test() as test:
                      lambda: until(lambda: route.ipv6_route_exist(R1, "2001:db8:3c4d:200::1/128") is False))
 
         with test.step("Verify R2 is no longer reachable on either IPv4 or IPv6 from PC:data"):
-            infamy.parallel(ns0.must_not_reach("192.168.200.1"),
-                            ns0.must_not_reach("2001:db8:3c4d:200::1"))
+            infamy.parallel(lambda: ns0.must_not_reach("192.168.200.1"),
+                            lambda: ns0.must_not_reach("2001:db8:3c4d:200::1"))
 
     test.succeed()

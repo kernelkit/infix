@@ -19,8 +19,7 @@ image::topology.svg[NTP Server and Client Interoperability topology, align=cente
 ==== Sequence
 
 . Set up topology and attach to devices
-. Configure NTP server using ietf-ntp model
-. Configure NTP client using ietf-system:ntp model
+. Configure NTP server using ietf-ntp model and NTP client using ietf-system:ntp model
 . Verify NTP server has received packets
 . Verify NTP client has synchronized
 

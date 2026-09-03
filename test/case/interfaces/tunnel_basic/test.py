@@ -12,6 +12,7 @@ connectivity with the second DUT through the tunnel.
 """
 
 import infamy
+from infamy.util import parallel
 
 
 class ArgumentParser(infamy.ArgumentParser):
@@ -25,8 +26,8 @@ with infamy.Test() as test:
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
         tunnel = env.args.tunnel
-        left = env.attach("left", "mgmt")
-        right = env.attach("right", "mgmt")
+        left, right = parallel(lambda: env.attach("left", "mgmt"),
+                               lambda: env.attach("right", "mgmt"))
 
     with test.step(f"Configure DUTs with tunnel {tunnel}"):
         container_left4 = {
@@ -63,137 +64,138 @@ with infamy.Test() as test:
                 "vni": 6
             })
 
-        left.put_config_dicts({"ietf-interfaces": {
-            "interfaces": {
-                "interface": [{
-                    "name": left["link"],
-                    "ipv4": {
-                        "address": [{
-                            "ip": "192.168.50.1",
-                            "prefix-length": 24
-                        }],
-                        "forwarding": True
-                    },
-                    "ipv6": {
-                        "address": [{
-                            "ip": "2001:db8:3c4d:50::1",
-                            "prefix-length": 64
-                        }],
-                        "forwarding": True
-                    }
-                }, {
-                    "name": left["data"],
-                    "ipv4": {
-                        "address": [{
-                            "ip": "192.168.10.1",
-                            "prefix-length": 24
-                        }],
-                        "forwarding": True
-                    },
-                    "ipv6": {
-                        "address": [{
-                            "ip": "2001:db8:3c4d:10::1",
-                            "prefix-length": 64
-                        }],
-                        "forwarding": True
-                    }
-                }, {
-                    "name": f"{tunnel}4",
-                    "type": f"infix-if-type:{tunnel}",
-                    "ipv4": {
-                        "address": [{
-                            "ip": "192.168.30.1",
-                            "prefix-length": 24
-                        }],
-                        "forwarding": True
-                    },
-                    CONTAINER_TYPE: container_left4
-                }, {
-                    "name": f"{tunnel}6",
-                    "type": f"infix-if-type:{tunnel}",
-                    "ipv6": {
-                        "address": [{
-                            "ip": "2001:db8:3c4d:30::1",
-                            "prefix-length": 64
-                        }],
-                        "forwarding": True
-                    },
-                    CONTAINER_TYPE: container_left6
-                }]
-            }
-        }})
-
-        right.put_config_dicts({
-            "ietf-interfaces": {
+        parallel(
+            lambda: left.put_config_dicts({"ietf-interfaces": {
                 "interfaces": {
                     "interface": [{
-                        "name": right["link"],
+                        "name": left["link"],
                         "ipv4": {
                             "address": [{
-                                "ip": "192.168.50.2",
+                                "ip": "192.168.50.1",
                                 "prefix-length": 24
                             }],
                             "forwarding": True
                         },
                         "ipv6": {
                             "address": [{
-                                "ip": "2001:db8:3c4d:50::2",
+                                "ip": "2001:db8:3c4d:50::1",
                                 "prefix-length": 64
-                            }]
+                            }],
+                            "forwarding": True
+                        }
+                    }, {
+                        "name": left["data"],
+                        "ipv4": {
+                            "address": [{
+                                "ip": "192.168.10.1",
+                                "prefix-length": 24
+                            }],
+                            "forwarding": True
+                        },
+                        "ipv6": {
+                            "address": [{
+                                "ip": "2001:db8:3c4d:10::1",
+                                "prefix-length": 64
+                            }],
+                            "forwarding": True
                         }
                     }, {
                         "name": f"{tunnel}4",
                         "type": f"infix-if-type:{tunnel}",
                         "ipv4": {
                             "address": [{
-                                "ip": "192.168.30.2",
+                                "ip": "192.168.30.1",
                                 "prefix-length": 24
                             }],
                             "forwarding": True
                         },
-                        CONTAINER_TYPE: container_right4
+                        CONTAINER_TYPE: container_left4
                     }, {
-                        "name": f"{tunnel}",
+                        "name": f"{tunnel}6",
                         "type": f"infix-if-type:{tunnel}",
                         "ipv6": {
                             "address": [{
-                                "ip": "2001:db8:3c4d:30::2",
+                                "ip": "2001:db8:3c4d:30::1",
                                 "prefix-length": 64
-                            }]
+                            }],
+                            "forwarding": True
                         },
-                        CONTAINER_TYPE: container_right6
+                        CONTAINER_TYPE: container_left6
                     }]
                 }
-            },
-            "ietf-routing": {
-                "routing": {
-                    "control-plane-protocols": {
-                        "control-plane-protocol": [{
-                            "type": "infix-routing:static",
-                            "name": "default",
-                            "static-routes": {
-                                "ipv4": {
-                                    "route": [{
-                                        "destination-prefix": "192.168.10.0/24",
-                                        "next-hop": {
-                                            "next-hop-address": "192.168.30.1"
-                                        }
-                                    }]
-                                },
-                                "ipv6": {
-                                    "route": [{
-                                        "destination-prefix": "2001:db8:3c4d:10::/64",
-                                        "next-hop": {
-                                            "next-hop-address": "2001:db8:3c4d:30::1"
-                                        }
-                                    }]
-                                }
+            }}),
+            lambda: right.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": right["link"],
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.50.2",
+                                    "prefix-length": 24
+                                }],
+                                "forwarding": True
+                            },
+                            "ipv6": {
+                                "address": [{
+                                    "ip": "2001:db8:3c4d:50::2",
+                                    "prefix-length": 64
+                                }]
                             }
+                        }, {
+                            "name": f"{tunnel}4",
+                            "type": f"infix-if-type:{tunnel}",
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.30.2",
+                                    "prefix-length": 24
+                                }],
+                                "forwarding": True
+                            },
+                            CONTAINER_TYPE: container_right4
+                        }, {
+                            "name": f"{tunnel}",
+                            "type": f"infix-if-type:{tunnel}",
+                            "ipv6": {
+                                "address": [{
+                                    "ip": "2001:db8:3c4d:30::2",
+                                    "prefix-length": 64
+                                }]
+                            },
+                            CONTAINER_TYPE: container_right6
                         }]
                     }
+                },
+                "ietf-routing": {
+                    "routing": {
+                        "control-plane-protocols": {
+                            "control-plane-protocol": [{
+                                "type": "infix-routing:static",
+                                "name": "default",
+                                "static-routes": {
+                                    "ipv4": {
+                                        "route": [{
+                                            "destination-prefix": "192.168.10.0/24",
+                                            "next-hop": {
+                                                "next-hop-address": "192.168.30.1"
+                                            }
+                                        }]
+                                    },
+                                    "ipv6": {
+                                        "route": [{
+                                            "destination-prefix": "2001:db8:3c4d:10::/64",
+                                            "next-hop": {
+                                                "next-hop-address": "2001:db8:3c4d:30::1"
+                                            }
+                                        }]
+                                    }
+                                }
+                            }]
+                        }
+                    }
                 }
-            }
-        })
+            }),
+        )
 
     _, hport = env.ltop.xlate("host", "data")
     with test.step("Verify connectivity host:data to 10.0.0.2"):

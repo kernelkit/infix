@@ -123,9 +123,10 @@ with infamy.Test() as test:
 
     with test.step("Configure gw1, gw2, gw3 as mesh nodes with a roaming AP"):
         _, gw1_uplink = env.ltop.xlate("gw1", "uplink")
-        for name, dut, mesh_mac, ap_mac in gws:
-            dut.put_config_dicts(gw_config(mesh_mac, ap_mac,
-                                           uplink=gw1_uplink if name == "gw1" else None))
+        parallel(*[lambda name=name, dut=dut, mesh_mac=mesh_mac, ap_mac=ap_mac:
+                   dut.put_config_dicts(gw_config(mesh_mac, ap_mac,
+                                                  uplink=gw1_uplink if name == "gw1" else None))
+                   for name, dut, mesh_mac, ap_mac in gws])
 
     with test.step("Configure the client as a station for the 'campus' SSID"):
         # The client joins the gw APs, which run on radio1 (2.4GHz).  In the

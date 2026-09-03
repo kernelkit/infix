@@ -128,16 +128,16 @@ def config_target2(target, link):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
+        R1, R2 = parallel(lambda: env.attach("R1", "mgmt"),
+                          lambda: env.attach("R2", "mgmt"))
 
     with test.step("Configure targets"):
         _, R1data = env.ltop.xlate("R1", "data")
         _, R2link = env.ltop.xlate("R2", "link")
         _, R1link = env.ltop.xlate("R1", "link")
 
-        parallel(config_target1(R1, R1data, R1link),
-                 config_target2(R2, R2link))
+        parallel(lambda: config_target1(R1, R1data, R1link),
+                 lambda: config_target2(R2, R2link))
 
     with test.step("Wait for RIP to exchange routes"):
         print("Waiting for RIP routes to propagate...")

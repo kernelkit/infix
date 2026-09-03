@@ -23,9 +23,7 @@ image::topology.svg[GRE Tunnel TTL Verification topology, align=center, scaledwi
 ==== Sequence
 
 . Set up topology and attach to target DUTs
-. Configure R1 with gre tunnel to R3
-. Configure R2 as intermediate router (underlay forwarding)
-. Configure R3 with gre tunnel to R1
+. Configure gre tunnel from R1 to R3, with R2 as intermediate router
 . Send ping from PC:west to PC:east with low TTL
 . Verify packets arrived at PC:east
 

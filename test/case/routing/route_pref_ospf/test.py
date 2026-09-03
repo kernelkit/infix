@@ -139,8 +139,8 @@ def config_target2(target, data, link, ospf):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
+        R1, R2 = parallel(lambda: env.attach("R1", "mgmt"),
+                          lambda: env.attach("R2", "mgmt"))
 
     with test.step("Set up TPMR between R1ospf and R2ospf"):
         ospf_breaker = TPMR(env.ltop.xlate("PC", "R1_ospf")[1], env.ltop.xlate("PC", "R2_ospf")[1]).start()
@@ -153,7 +153,7 @@ with infamy.Test() as test:
         _, R2link = env.ltop.xlate("R2", "link")
         _, R2ospf = env.ltop.xlate("R2", "ospf")
 
-        parallel(config_target1(R1, R1data, R1link, R1ospf), config_target2(R2, R2data, R2link, R2ospf))
+        parallel(lambda: config_target1(R1, R1data, R1link, R1ospf), lambda: config_target2(R2, R2data, R2link, R2ospf))
 
     with test.step("Set up persistent MacVlan namespaces"):
         _, hport_data1 = env.ltop.xlate("PC", "data1")

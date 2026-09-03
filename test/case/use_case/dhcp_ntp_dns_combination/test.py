@@ -7,7 +7,7 @@ servers from a DHCP server.
 """
 import infamy
 import infamy.iface as iface
-from infamy.util import until
+from infamy.util import parallel, until
 
 def any_dhcp_address(target, iface_name):
     try:
@@ -61,48 +61,49 @@ with infamy.Test() as test:
 
     with test.step("Set up topology and configure static IP on client"):
         env = infamy.Env()
-        server = env.attach("server", "mgmt")
-        client = env.attach("client", "mgmt")
+        server, client = parallel(lambda: env.attach("server", "mgmt"),
+                                  lambda: env.attach("client", "mgmt"))
 
         client_data = client["server"]
         server_data = server["client"]
 
         # Configure server with static IP and NTP server
-        server.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": server_data,
-                        "type": "infix-if-type:ethernet",
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{"ip": SERVER_IP, "prefix-length": 24}]
-                        }
-                    }]
+        parallel(
+            lambda: server.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": server_data,
+                            "type": "infix-if-type:ethernet",
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{"ip": SERVER_IP, "prefix-length": 24}]
+                            }
+                        }]
+                    }
+                },
+                "ietf-ntp": {
+                    "ntp": {
+                        "refclock-master": {"master-stratum": 8}
+                    }
                 }
-            },
-            "ietf-ntp": {
-                "ntp": {
-                    "refclock-master": {"master-stratum": 8}
+            }),
+            # Configure client with static IP
+            lambda: client.put_config_dicts({
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [{
+                            "name": client_data,
+                            "type": "infix-if-type:ethernet",
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{"ip": CLIENT_STATIC_IP, "prefix-length": 24}]
+                            }
+                        }]
+                    }
                 }
-            }
-        })
-
-        # Configure client with static IP
-        client.put_config_dicts({
-            "ietf-interfaces": {
-                "interfaces": {
-                    "interface": [{
-                        "name": client_data,
-                        "type": "infix-if-type:ethernet",
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{"ip": CLIENT_STATIC_IP, "prefix-length": 24}]
-                        }
-                    }]
-                }
-            }
-        })
+            }),
+        )
 
         until(lambda: iface.address_exist(client, client_data, CLIENT_STATIC_IP, proto="static"))
         print("Initial IP connectivity established")

@@ -23,8 +23,7 @@ The test is run for both IEEE 1588-2019 (UDP/IPv4, E2E) and IEEE 802.1AS
 
 import infamy
 import infamy.ptp as ptp
-from infamy import until
-from infamy.util import parallel
+from infamy.util import parallel, until
 
 
 class ArgumentParser(infamy.ArgumentParser):
@@ -83,17 +82,19 @@ with infamy.Test() as test:
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
         profile = env.args.profile
-        alpha = env.attach("alpha", "mgmt")
-        beta  = env.attach("beta",  "mgmt")
+        alpha, beta = parallel(lambda: env.attach("alpha", "mgmt"),
+                               lambda: env.attach("beta",  "mgmt"))
 
         _, if_alpha = env.ltop.xlate("alpha", "data")
         _, if_beta  = env.ltop.xlate("beta",  "data")
 
     with test.step(f"Configure both DUTs ({profile}); alpha has lower priority1"):
-        alpha.put_config_dicts(configure_oc(if_alpha, priority1=1,
-                                            profile=profile, ip="192.168.100.1"))
-        beta.put_config_dicts(configure_oc(if_beta, priority1=128,
-                                           profile=profile, ip="192.168.100.2"))
+        parallel(
+            lambda: alpha.put_config_dicts(configure_oc(if_alpha, priority1=1,
+                                                profile=profile, ip="192.168.100.1")),
+            lambda: beta.put_config_dicts(configure_oc(if_beta, priority1=128,
+                                               profile=profile, ip="192.168.100.2")),
+        )
 
     with test.step("Verify initial election: alpha is grandmaster, beta is time receiver"):
         parallel(lambda: until(lambda: ptp.is_own_gm(alpha), attempts=60),

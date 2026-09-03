@@ -43,11 +43,11 @@ right_public_key = "2pytpunN+e3V9e5asMXP+UqKoerFm08KWzcFYoWP41k="
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        left = env.attach("left", "mgmt")
-        right = env.attach("right", "mgmt")
+        left, right = util.parallel(lambda: env.attach("left", "mgmt"),
+                                    lambda: env.attach("right", "mgmt"))
 
     with test.step("Configure WireGuard tunnel on DUTs"):
-        util.parallel(left.put_config_dicts({
+        util.parallel(lambda: left.put_config_dicts({
             "ietf-keystore": {
                 "keystore": {
                     "asymmetric-keys": {
@@ -140,7 +140,7 @@ with infamy.Test() as test:
                 }
             }
         }),
-        right.put_config_dicts({
+        lambda: right.put_config_dicts({
             "ietf-keystore": {
                 "keystore": {
                     "asymmetric-keys": {

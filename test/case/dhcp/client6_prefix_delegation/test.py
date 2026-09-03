@@ -9,7 +9,7 @@ routers to obtain a prefix for distribution to downstream networks.
 
 import infamy, infamy.dhcp
 import infamy.iface as iface
-from infamy.util import until
+from infamy.util import parallel, until
 import time
 
 
@@ -38,8 +38,8 @@ with infamy.Test() as test:
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        client = env.attach("client", "mgmt")
-        tgtssh = env.attach("client", "mgmt", "ssh")
+        client, tgtssh = parallel(lambda: env.attach("client", "mgmt"),
+                                  lambda: env.attach("client", "mgmt", "ssh"))
         _, host = env.ltop.xlate("host", "data")
         _, port = env.ltop.xlate("client", "data")
 

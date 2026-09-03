@@ -27,12 +27,13 @@ Ping through two bridges on two different DUTs.
 """
 
 import infamy
+from infamy.util import parallel
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        dut1 = env.attach("dut1", "mgmt")
-        dut2 = env.attach("dut2", "mgmt")
+        dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
+                              lambda: env.attach("dut2", "mgmt"))
 
     with test.step("Configure a bridge with triple physical port"):
         _, tport11 = env.ltop.xlate("dut1", "data1")
@@ -41,89 +42,90 @@ with infamy.Test() as test:
         _, tport22 = env.ltop.xlate("dut2", "data2")
         _, tport2_link = env.ltop.xlate("dut2", "link")
 
-        dut1.put_config_dicts({"ietf-interfaces": {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": "br0",
-                        "type": "infix-if-type:bridge",
-                        "enabled": True,
-                        "bridge": {
-                            "vlans": {
-                                "vlan": [
-                                    {
-                                        "vid": 10,
-                                        "untagged": [ tport11 ],
-                                        "tagged":   [ "br0", tport1_link ]
-                                    }
-                                ]
+        parallel(
+            lambda: dut1.put_config_dicts({"ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": "br0",
+                            "type": "infix-if-type:bridge",
+                            "enabled": True,
+                            "bridge": {
+                                "vlans": {
+                                    "vlan": [
+                                        {
+                                            "vid": 10,
+                                            "untagged": [ tport11 ],
+                                            "tagged":   [ "br0", tport1_link ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": tport11,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "pvid": 10,
+                                "bridge": "br0"
+                            }
+                        },
+                        {
+                            "name": tport1_link,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "bridge": "br0",
                             }
                         }
-                    },
-                    {
-                        "name": tport11,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "pvid": 10,
-                            "bridge": "br0"
-                        }
-                    },
-                    {
-                        "name": tport1_link,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "bridge": "br0",
-                        }
-                    }
-                ]
-            }
-        }})
-
-        dut2.put_config_dicts({"ietf-interfaces": {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": "br0",
-                        "type": "infix-if-type:bridge",
-                        "enabled": True,
-                        "bridge": {
-                            "vlans": {
-                                "vlan": [
-                                    {
-                                        "vid": 10,
-                                        "untagged": [ tport21, tport22 ],
-                                        "tagged":   [ "br0", tport2_link ]
-                                    }
-                                ]
+                    ]
+                }
+            }}),
+            lambda: dut2.put_config_dicts({"ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": "br0",
+                            "type": "infix-if-type:bridge",
+                            "enabled": True,
+                            "bridge": {
+                                "vlans": {
+                                    "vlan": [
+                                        {
+                                            "vid": 10,
+                                            "untagged": [ tport21, tport22 ],
+                                            "tagged":   [ "br0", tport2_link ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": tport21,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "pvid": 10,
+                                "bridge": "br0"
+                            }
+                        },
+                        {
+                            "name": tport22,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "pvid": 10,
+                                "bridge": "br0"
+                            }
+                        },
+                        {
+                            "name": tport2_link,
+                            "enabled": True,
+                            "infix-interfaces:bridge-port": {
+                                "bridge": "br0",
                             }
                         }
-                    },
-                    {
-                        "name": tport21,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "pvid": 10,
-                            "bridge": "br0"
-                        }
-                    },
-                    {
-                        "name": tport22,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "pvid": 10,
-                            "bridge": "br0"
-                        }
-                    },
-                    {
-                        "name": tport2_link,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "bridge": "br0",
-                        }
-                    }
-                ]
-            }
-        }})
+                    ]
+                }
+            }}),
+        )
 
     with test.step("Verify ping 10.0.0.3 and 10.0.0.4 from host:data11"):
 

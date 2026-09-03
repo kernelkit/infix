@@ -198,9 +198,9 @@ def config_host(target, link):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
-        R1 = env.attach("R1", "mgmt")
-        R2 = env.attach("R2", "mgmt")
-        HOST = env.attach("HOST", "mgmt")
+        R1, R2, HOST = parallel(lambda: env.attach("R1", "mgmt"),
+                                lambda: env.attach("R2", "mgmt"),
+                                lambda: env.attach("HOST", "mgmt"))
 
     with test.step("Configure targets"):
         _, R1data = env.ltop.xlate("R1", "data")
@@ -209,9 +209,9 @@ with infamy.Test() as test:
         _, R2data = env.ltop.xlate("R2", "data")
         _, HOSTlink = env.ltop.xlate("HOST", "link")
 
-        parallel(config_target1(R1, R1data, R1link),
-                 config_target2(R2, R2link, R2data),
-                 config_host(HOST, HOSTlink))
+        parallel(lambda: config_target1(R1, R1data, R1link),
+                 lambda: config_target2(R2, R2link, R2data),
+                 lambda: config_host(HOST, HOSTlink))
     with test.step("Wait for OSPF routes"):
         until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
         until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2"), attempts=200)

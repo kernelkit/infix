@@ -27,8 +27,7 @@ max_frequency in the YANG model — see TODO.org.
 
 import infamy
 import infamy.ptp as ptp
-from infamy import until
-from infamy.util import parallel
+from infamy.util import parallel, until
 
 STEP_SEC = 10
 
@@ -104,18 +103,20 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to DUTs"):
         arg = ArgumentParser()
         env = infamy.Env(args=arg)
-        gm       = env.attach("gm",       "mgmt")
-        receiver = env.attach("receiver", "mgmt")
+        gm, receiver = parallel(lambda: env.attach("gm",       "mgmt"),
+                                lambda: env.attach("receiver", "mgmt"))
 
         _, gm_iface       = env.ltop.xlate("gm",       "data")
         _, receiver_iface = env.ltop.xlate("receiver", "data")
         threshold_ns = env.args.threshold_ns or ptp.default_threshold(env, "receiver")
 
     with test.step("Configure grandmaster (OC, IEEE 1588, priority1=1) and time receiver"):
-        gm.put_config_dicts(configure_oc(gm_iface, priority1=1,
-                                         client=False, ip="192.168.100.1"))
-        receiver.put_config_dicts(configure_oc(receiver_iface, priority1=128,
-                                               client=True, ip="192.168.100.2"))
+        parallel(
+            lambda: gm.put_config_dicts(configure_oc(gm_iface, priority1=1,
+                                             client=False, ip="192.168.100.1")),
+            lambda: receiver.put_config_dicts(configure_oc(receiver_iface, priority1=128,
+                                                   client=True, ip="192.168.100.2")),
+        )
 
     with test.step("Wait for grandmaster and time receiver ports to reach active states"):
         def gm_ready():

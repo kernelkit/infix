@@ -7,7 +7,7 @@ message properties with different operators, case-insensitivity, and negation.
 """
 
 import infamy
-from infamy.util import until
+from infamy.util import parallel, until
 
 TEST_MESSAGES = [
     ("myapp", "Application startup"),
@@ -22,8 +22,8 @@ TEST_MESSAGES = [
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target = env.attach("target", "mgmt")
-        tgtssh = env.attach("target", "mgmt", "ssh")
+        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
+                                  lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Clean up old log files"):
         tgtssh.runsh("sudo rm -f /var/log/{myapp,not-error,case-test,baseline}")
