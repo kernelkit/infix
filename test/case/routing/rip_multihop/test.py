@@ -253,21 +253,21 @@ with infamy.Test() as test:
     with test.step("Wait for RIP routes to be exchanged"):
         print("Waiting for RIP routes to propagate...")
         # R1 should learn R2's loopback
-        until(lambda: route.ipv4_route_exist(R1, "192.168.22.1/32", proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.22.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
         # R1 should learn R3's loopback (via R2)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.33.1/32", proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.33.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
         # R2 should learn R1's loopback
-        until(lambda: route.ipv4_route_exist(R2, "192.168.11.1/32", proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.11.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
         # R2 should learn R3's loopback
-        until(lambda: route.ipv4_route_exist(R2, "192.168.33.1/32", proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.33.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
         # R3 should learn R2's loopback
-        until(lambda: route.ipv4_route_exist(R3, "192.168.22.1/32", proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.ipv4_route_exist(R3, "192.168.22.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
         # R3 should learn R1's loopback (via R2)
-        until(lambda: route.ipv4_route_exist(R3, "192.168.11.1/32", proto="ietf-rip:rip"), attempts=40)
-        until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", proto="ietf-rip:rip"), attempts=40)
-        until(lambda: route.ipv4_route_exist(R3, "192.168.10.0/24", proto="ietf-rip:rip"), attempts=40)
-        until(lambda: route.ipv4_route_exist(R2, "192.168.70.0/24", proto="ietf-rip:rip"), attempts=40)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.70.0/24", proto="ietf-rip:rip"), attempts=40)
+        until(lambda: route.ipv4_route_exist(R3, "192.168.11.1/32", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.ipv4_route_exist(R3, "192.168.10.0/24", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.70.0/24", proto="ietf-rip:rip", active_check=True), attempts=40)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.70.0/24", proto="ietf-rip:rip", active_check=True), attempts=40)
 
     with test.step("Verify R2 has two RIP neighbors"):
         print("Checking R2 has two RIP neighbors...")
