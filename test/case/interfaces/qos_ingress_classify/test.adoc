@@ -1,0 +1,42 @@
+=== QoS Ingress Classification and Egress Remarking
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_ingress_classify]
+
+==== Description
+
+Configure the trust order, default priority, the standard PCP and DSCP
+presets, and remarking on transmit, then verify the rendering:
+
+ - trust dscp-pcp, DSCP first then PCP
+ - default priority 2
+ - PCP preset ieee: PCP n to priority n
+ - DSCP preset ietf: RFC 4594 groups, e.g. EF (46) to priority 5
+ - remark pcp and dscp from priority: priority 5 to PCP 5 and DSCP 40
+
+On a port whose driver has DCB operations the kernel's DCB tables must
+match, and the operational datastore reports classification and
+remarking as offloaded.  On any other port the same classification must
+be rendered as tc flower rules on the port's ingress, in trust order,
+with a catch-all for the default priority, and DSCP remarking as pedit
+rules on its egress; PCP remarking needs driver support.
+Removing the configuration returns the port to the defaults: trust pcp
+with default priority 0, and no remarking.
+
+==== Topology
+
+image::topology.svg[QoS Ingress Classification and Egress Remarking topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure trust dscp-pcp, default priority 2, presets, and remarking
+. Verify dcb apptrust order is dscp pcp
+. Verify dcb app default priority and PCP and DSCP maps
+. Verify dcb rewr priority to PCP and DSCP maps
+. Verify classification and remarking are reported as offloaded
+. Verify tc flower rules: DSCP block before PCP block, then default
+. Verify DSCP remarking as pedit rules on egress
+. Verify classification is not reported as offloaded
+. Remove qos configuration and verify the defaults are back
+
+

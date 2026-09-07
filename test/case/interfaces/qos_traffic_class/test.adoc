@@ -1,0 +1,34 @@
+=== QoS Traffic Classes and Transmission Selection
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_traffic_class]
+
+==== Description
+
+Configure a custom priority to traffic class map on a port with the two
+lowest classes weighted 2:1 and the rest strict priority, and verify the
+root qdisc reflects it.  A driver with mqprio offload shows an offloaded
+mqprio with the same map; otherwise the kernel runs an ets qdisc with the
+strict bands first, the weights as quanta, and the priomap inverted as
+802.1Q numbering requires.
+
+The port's class count comes from its transmit queues, or eight for a
+single-queue port.  Switching the table to the ieee-sr preset must put
+the SR classes, priorities 2 and 3, on the two highest classes.  Removing
+the qos container must restore the default table, IEEE 802.1Q-2022
+Table 8-5, and the operational datastore must report whether transmission
+selection is offloaded throughout.
+
+==== Topology
+
+image::topology.svg[QoS Traffic Classes and Transmission Selection topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure a custom map, the two lowest classes weighted 2:1
+. Verify the root qdisc carries the custom map and weights
+. Verify the offload capability matches the qdisc
+. Switch to the ieee-sr preset and verify SR classes on top
+. Remove qos configuration and verify the default table is back
+
+
