@@ -1,0 +1,32 @@
+=== QoS Defaults Out of the Box
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_factory_default]
+
+==== Description
+
+An interface without any qos configuration is fully specified by the
+model's defaults, and every physical port runs them from boot:
+
+ - trust PCP, the tag of VLAN-tagged frames, with default priority 0
+   for everything else
+ - one traffic class per transmit queue, eight on a single-queue port,
+   mapped per IEEE 802.1Q-2022 Table 8-5 with strict priority throughout
+
+Verify that the running configuration carries no qos container, that the
+class count follows the queue count rule, that the root qdisc carries the
+Table 8-5 map for it, and that classification is in place: in the DCB
+tables on a port whose driver has them, as tc flower rules otherwise.
+
+==== Topology
+
+image::topology.svg[QoS Defaults Out of the Box topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Verify the running configuration has no qos container
+. Verify the class count is the queue count, or eight for one queue
+. Verify the root qdisc carries the Table 8-5 map, all strict
+. Verify classification trusts PCP by default
+
+
