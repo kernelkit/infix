@@ -26,7 +26,9 @@ Supported:
 Not yet done:
 
 - TSN queueing.  PSFP and time aware shaping need `NET_SCH_TAPRIO`,
-  `NET_ACT_GATE`, `NET_SCH_ETS`, and `NET_SCH_CBS`, all currently off
+  `NET_ACT_GATE`, and `NET_SCH_CBS`, all currently off.  Ingress
+  classification (`dcb`) and traffic classes (`mqprio`) are configurable
+  from the QoS model but not yet verified on this board
 - HSR/PRP offload, see above
 - MAC addresses.  With no environment in flash the board falls back to
   `lan969x_otp_get_mac()`, which derives 30 addresses for this board
