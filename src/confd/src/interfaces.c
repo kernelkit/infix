@@ -713,6 +713,10 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 			goto err_close_ip;
 	}
 
+	err = netdag_gen_qos(session, net, cif, dif);
+	if (err)
+		goto err_close_ip;
+
 	/* Set Addresses */
 	err = err ? : netdag_gen_link_mtu(ip, dif);
 	err = err ? : netdag_gen_link_addr(ip, cif, dif);

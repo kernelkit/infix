@@ -140,14 +140,71 @@ def ptp_capabilities(ifname, systemjson):
     return result or None
 
 
-def interface(iplink, ipaddr, systemjson=None):
+# Trust orders a driver's dcb apptrust accepts, keyed by driver name; the
+# kernel has no query for it.  Same table as confd's qos validation.
+QOS_TRUST_ORDERS = {
+    "sparx5-switch":  ["pcp", "dscp", "dscp-pcp"],
+    "lan966x-switch": ["pcp", "dscp", "dscp-pcp"],
+}
+
+
+def qos_capabilities(iplink, qdiscs):
+    """Return infix-interfaces:qos/capabilities dict for a link, or None"""
+    ifname = iplink["ifname"]
+    result = {}
+
+    # One class per transmit queue, at most eight.  A single queue has
+    # no queue structure to respect, so the kernel's eight classes apply,
+    # which is the model's default and left implicit.
+    txq = iplink.get("num_tx_queues", 1)
+    if 1 < txq < 8:
+        result["max-traffic-classes"] = txq
+
+    driver = None
+    if uevent := HOST.read(f"/sys/class/net/{ifname}/device/uevent"):
+        for line in uevent.splitlines():
+            if line.startswith("DRIVER="):
+                driver = line[7:].strip()
+    if trust := QOS_TRUST_ORDERS.get(driver):
+        result["supported-trust-order"] = trust
+
+    # Stages the driver runs.  DCB tables exist only on drivers with the
+    # operations, so only those ports are asked.  The root qdisc is only
+    # ever mqprio with hw offload, which the kernel refuses without driver
+    # support, so its presence means the driver schedules the classes;
+    # ets means the kernel does.  mqprio never sets the offloaded flag.
+    offload = []
+    if trust:
+        app = HOST.run_json(["dcb", "-j", "app", "show", "dev", ifname], {})
+        if app.get("dscp_prio") or app.get("pcp_prio"):
+            offload.append("classification")
+        rewr = HOST.run_json(["dcb", "-j", "rewr", "show", "dev", ifname], {})
+        if rewr.get("prio_pcp") or rewr.get("prio_dscp"):
+            offload.append("remarking")
+
+    for qdisc in qdiscs.get(ifname, []):
+        if qdisc.get("root") and qdisc.get("kind") == "mqprio":
+            offload.append("transmission-selection")
+
+    if offload:
+        result["offload"] = offload
+
+    return result or None
+
+
+def interface(iplink, ipaddr, systemjson=None, qdiscs=None):
     interface = interface_common(iplink, ipaddr)
 
     if systemjson is None:
         systemjson = {}
+    if qdiscs is None:
+        qdiscs = {}
 
     if ptpcap := ptp_capabilities(iplink["ifname"], systemjson):
         interface["infix-interfaces:ptp-capabilities"] = ptpcap
+
+    if qoscap := qos_capabilities(iplink, qdiscs):
+        interface["infix-interfaces:qos"] = {"capabilities": qoscap}
 
     match interface["type"]:
         case "infix-if-type:bridge":
@@ -201,6 +258,11 @@ def interfaces(ifname=None):
     addrs = common.ipaddrs(ifname)
     systemjson = HOST.read_json("/run/system.json", {})
 
+    qdiscs = {}
+    for qdisc in HOST.run_json(["tc", "-j", "qdisc", "show"], []):
+        if dev := qdisc.get("dev"):
+            qdiscs.setdefault(dev, []).append(qdisc)
+
     interfaces = []
     for ifname, iplink in links.items():
         if iplink.get("group") == "internal":
@@ -212,6 +274,6 @@ def interfaces(ifname=None):
 
         ipaddr = addrs.get(ifname, {})
 
-        interfaces.append(interface(iplink, ipaddr, systemjson))
+        interfaces.append(interface(iplink, ipaddr, systemjson, qdiscs))
 
     return interfaces
