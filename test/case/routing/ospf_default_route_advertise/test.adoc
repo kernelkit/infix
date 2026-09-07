@@ -39,6 +39,8 @@ image::topology.svg[OSPF Default Route Advertise topology, align=center, scaledw
 
 . Set up topology and attach to target DUTs
 . Configure targets
+. Verify R1 has an active static default route
+. Wait for all neighbors to peer
 . Verify R2 has a default route and 192.168.100.1/32 from OSPF
 . Verify connectivity from PC:data2 to 10.10.10.10
 . Disable link PC:data1 <--> R1:data (take default gateway down)
