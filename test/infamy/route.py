@@ -12,6 +12,13 @@ def _get_routes(target, protocol):
         return r.get("routes", {}).get("route", {})
     return {}
 
+def _installed(route):
+    """True if at least one next-hop of the route is installed in the FIB"""
+    nh = route.get("next-hop", {})
+    hops = nh.get("next-hop-list", {}).get("next-hop", [nh])
+    return any("installed" in h or "infix-routing:installed" in h for h in hops)
+
+
 def _exist_route(target, dest, nexthop=None, ip=None, proto=None, pref=None, active_check=False):
     routes = _get_routes(target, ip)
     for r in routes:
@@ -41,7 +48,7 @@ def _exist_route(target, dest, nexthop=None, ip=None, proto=None, pref=None, act
                 if nh_addr != nexthop:
                     continue
 
-        if active_check and "active" not in r:
+        if active_check and ("active" not in r or not _installed(r)):
             continue
 
         return True

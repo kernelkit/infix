@@ -271,12 +271,20 @@ with infamy.Test() as test:
 
         parallel(lambda: config_target1(R1, R1data, R1link),
                  lambda: config_target2(R2, R2data, R2link))
+
+    with test.step("Verify R1 has an active static default route"):
+        until(lambda: route.ipv4_route_exist(R1, "0.0.0.0/0", proto="ietf-routing:static", active_check=True), attempts=60)
+
+    with test.step("Wait for all neighbors to peer"):
+        until(lambda: route.ospf_get_neighbor(R1, "0.0.0.0", R1link, "2.2.2.2"), attempts=200)
+        until(lambda: route.ospf_get_neighbor(R2, "0.0.0.0", R2link, "1.1.1.1"), attempts=200)
+
     with test.step("Verify R2 has a default route and 192.168.100.1/32 from OSPF"):
         print("Waiting for OSPF routes...")
-        until(lambda: route.ipv4_route_exist(R2, "0.0.0.0/0", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.20.0/24", proto="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "0.0.0.0/0", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.20.0/24", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
 
     with test.step("Verify connectivity from PC:data2 to 10.10.10.10"):
         _, hport0 = env.ltop.xlate("PC", "data2")
@@ -289,8 +297,8 @@ with infamy.Test() as test:
         disable_interface(R1, R1data)
 
     with test.step("Verify R2 does not have a default route but a 192.168.100.1/32 from OSPF"):
-        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
         until(lambda: route.ipv4_route_exist(R2, "0.0.0.0/0", proto="ietf-ospf:ospfv2") == False, attempts=200)
 
     with test.step("Verify no connectivity from PC:data2 to 10.10.10.10"):
@@ -309,10 +317,10 @@ with infamy.Test() as test:
 
     with test.step("Verify R2 has a default route and 192.168.100.1/32 from OSPF"):
         print("Waiting for OSPF routes...")
-        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.20.0/24", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "0.0.0.0/0", proto="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.20.0/24", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "0.0.0.0/0", proto="ietf-ospf:ospfv2", active_check=True), attempts=200)
 
     with test.step("Verify connectivity from PC:data2 to 10.10.10.10"):
         _, hport0 = env.ltop.xlate("PC", "data2")
