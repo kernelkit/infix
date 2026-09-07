@@ -180,6 +180,10 @@ int ppp_gen(sr_session_ctx_t *session, struct lyd_node *dif, struct lyd_node *ci
 int ppp_del(struct lyd_node *dif, struct dagger *net);
 int ppp_add_deps(struct lyd_node *cif);
 
+/* if-qos.c */
+int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *cif,
+		   struct lyd_node *dif);
+
 /* infix-if-wireguard */
 int wireguard_validate_peers(sr_session_ctx_t *session, struct lyd_node *cif);
 int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip,  struct dagger *net);
