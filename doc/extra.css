@@ -113,6 +113,12 @@ body {
     min-width: 0;
 }
 
+/* Material's 1.4 line height leaves gaps between box-drawing characters
+ * in CLI output and diagrams.  Applies to code blocks as a whole. */
+.md-typeset pre {
+    line-height: 1.15;
+}
+
 /* CLI terminal output styling */
 .md-typeset pre.cli .title {
     font-weight: bold;
