@@ -56,6 +56,9 @@
 - name: Layer-2 IPv6 Multicast Filtering Tests
   suite: mld.yaml
 
+- name: Quality of Service Tests
+  suite: qos.yaml
+
 - name: Layer-2/3 Tunnel Tests
   suite: tunnels.yaml
 
