@@ -36,10 +36,18 @@ module infix-interfaces {
   include infix-if-wifi;
   include infix-if-wireguard;
   include infix-if-ptp;
+  include infix-if-qos;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2026-09-07 {
+    description "Add per-interface QoS: ingress classification, traffic
+                 class table and transmission selection, see
+                 infix-if-qos@2026-09-07.";
+    reference "internal";
+  }
 
   revision 2026-06-11 {
     description "Fix WireGuard key-format must expressions, see
