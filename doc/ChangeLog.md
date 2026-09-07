@@ -21,6 +21,14 @@ All notable changes to the project are documented in this file.
   per port, and a Health card listing services that are not running, a
   pending reboot, and sensor readings.  Disk Usage no longer lists the
   read-only root filesystem
+- Add per-interface Quality of Service configuration: which header field
+  a port trusts (PCP, DSCP, or both in order), the default priority, PCP
+  and DSCP to priority maps with standard presets, an egress traffic
+  class table with strict-priority or weighted transmission selection per
+  class, and PCP and DSCP remarking on transmit.  The defaults are on out
+  of the box on every port: trust PCP, one traffic class per
+  transmit queue mapped per IEEE 802.1Q-2022 Table 8-5, replacing the
+  fixed boot-time queue setup, see [QoS][]
 
 ### Fixes
 
@@ -184,6 +192,7 @@ All notable changes to the project are documented in this file.
 [limits]: https://www.kernelkit.org/infix/latest/limitations/
 [migrate]: https://www.kernelkit.org/infix/latest/upgrade/#configuration-migration
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
+[QoS]: https://www.kernelkit.org/infix/latest/qos/
 [snmp]: https://www.kernelkit.org/infix/latest/snmp/
 [tftp]: https://www.kernelkit.org/infix/latest/tftp/
 [tactical]: https://github.com/kernelkit/infix/blob/main/board/aarch64/novarq-tactical-1000/README.md
