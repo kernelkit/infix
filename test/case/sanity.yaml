@@ -13,3 +13,7 @@
   name: "Verify Software Version"
   infamy:
     specification: False
+
+# This typically reveals problems triggered or caused by previous test runs.
+- case: misc/operational_all/test.py
+  name: "Get Operational Baseline"
