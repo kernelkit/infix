@@ -23,6 +23,11 @@ class Transport(ABC):
         pass
 
     @abstractmethod
+    def get_factory(self, xpath=None):
+        """Get factory-default datastore contents matching xpath"""
+        pass
+
+    @abstractmethod
     def patch_config(self, modname, edit):
         pass
 
