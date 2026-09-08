@@ -1,0 +1,15 @@
+---
+- case: meta/reproducible.py
+  name: "Ensure Reproducible Env"
+  infamy:
+    specification: False
+
+- case: meta/bootorder.py
+  name: "Verify Bootorder"
+  infamy:
+    specification: False
+
+- case: meta/check-version.py
+  name: "Verify Software Version"
+  infamy:
+    specification: False

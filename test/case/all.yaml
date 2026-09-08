@@ -2,21 +2,9 @@
 - settings:
     test-spec: Readme.adoc
 
-- case: meta/reproducible.py
-  name: "Ensure Reproducible Env"
-  infamy:
-    specification: False
-
-- case: meta/bootorder.py
-  name: "Verify Bootorder"
-  infamy:
-    specification: False
-
-- case: meta/check-version.py
-  name: "Verify Software Version"
-  infamy:
-    specification: False
-
+- name: "Initial Sanity Checks"
+  suite: sanity.yaml
+  abort: true
 
 - name: "System"
   suite: system/all.yaml
