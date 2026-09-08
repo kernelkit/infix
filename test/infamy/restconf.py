@@ -66,6 +66,9 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0)
             response = requests_workaround(method, url, json, headers, auth,
                                            verify, retry)
         else:
+            # The RESTCONF error body names the offending node and why
+            if response.text:
+                print(f"{method} {url}: HTTP {response.status_code}: {response.text.strip()}")
             raise e
 
     return response
