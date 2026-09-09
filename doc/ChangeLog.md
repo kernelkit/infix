@@ -13,6 +13,14 @@ All notable changes to the project are documented in this file.
 - Add per-server `minpoll` and `maxpoll` options to the NTP client
   configuration, for tuning how often each server is polled
 
+### Added
+
+- Add `/system/advanced` for low-level system customization, issue #463:
+  - `rc.d`: user scripts stored in the configuration, run once at boot
+    after the startup configuration has been applied, in the order listed
+  - `default`: daemon environment files written to `/etc/default`, e.g.,
+    extra `ptp4l` command line options
+
 [v26.08.0][] - 2026-09-01
 -------------------------
 
