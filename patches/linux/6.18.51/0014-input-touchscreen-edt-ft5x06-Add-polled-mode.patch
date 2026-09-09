@@ -1,16 +1,19 @@
 From 86ddc730aceac8bae64ff0b3627f4aee22129430 Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Thu, 21 Aug 2025 11:20:23 +0200
-Subject: [PATCH 14/68] input:touchscreen:edt-ft5x06: Add polled mode
+Subject: [PATCH 14/75] input:touchscreen:edt-ft5x06: Add polled mode
+Organization: Wires
 
 Not all hardware has interrupts therefore we need
 to poll the touchscreen.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/input/touchscreen/edt-ft5x06.c | 74 ++++++++++++++++++++------
  1 file changed, 58 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/input/touchscreen/edt-ft5x06.c b/drivers/input/touchscreen/edt-ft5x06.c
-index 4efdb467b6c6..6ec1078081d5 100644
+index 4efdb467b6c61..6ec1078081d58 100644
 --- a/drivers/input/touchscreen/edt-ft5x06.c
 +++ b/drivers/input/touchscreen/edt-ft5x06.c
 @@ -77,6 +77,9 @@
@@ -157,3 +160,6 @@ index 4efdb467b6c6..6ec1078081d5 100644
  
  	gpiod_set_value_cansleep(reset_gpio, 1);
  	usleep_range(1000, 2000);
+-- 
+2.43.0
+

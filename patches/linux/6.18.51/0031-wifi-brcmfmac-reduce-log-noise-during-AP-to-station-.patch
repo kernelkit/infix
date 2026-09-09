@@ -1,11 +1,12 @@
 From afba0e145067680528a254a5f9870ea170c47b6d Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Tue, 20 Jan 2026 20:18:45 +0100
-Subject: [PATCH 31/68] wifi: brcmfmac: reduce log noise during AP to station
+Subject: [PATCH 31/75] wifi: brcmfmac: reduce log noise during AP to station
  transition
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 When transitioning from AP mode to station mode (e.g., hostapd stopping
 and wpa_supplicant starting), several non-fatal errors can occur:
@@ -22,12 +23,13 @@ Suppress the ERESTARTSYS error in stop_ap and downgrade the MPC error
 to debug level to reduce log spam during normal operation.
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  .../wireless/broadcom/brcm80211/brcmfmac/cfg80211.c | 13 +++++++++----
  1 file changed, 9 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index 88dac288a398..0081ceb6c782 100644
+index 88dac288a3986..0081ceb6c7829 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -1030,13 +1030,15 @@ static void brcmf_scan_config_mpc(struct brcmf_if *ifp, int mpc)
@@ -62,3 +64,6 @@ index 88dac288a398..0081ceb6c782 100644
  		err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
  		if (err < 0)
  			bphy_err(drvr, "BRCMF_C_DOWN error %d\n", err);
+-- 
+2.43.0
+

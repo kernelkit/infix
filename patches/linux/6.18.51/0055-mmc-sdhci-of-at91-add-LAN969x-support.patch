@@ -1,7 +1,8 @@
 From 4a27680c3200433d273184c85c94fbcbfd0794a6 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:35:44 +0200
-Subject: [PATCH 55/68] mmc: sdhci-of-at91: add LAN969x support
+Subject: [PATCH 55/75] mmc: sdhci-of-at91: add LAN969x support
+Organization: Wires
 
 The LAN969x SDMMC controller is an Atmel SDMMC IP block, but the driver
 has no compatible for it, so the eMMC on LAN969x boards never probes.
@@ -18,7 +19,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 28 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/mmc/host/sdhci-of-at91.c b/drivers/mmc/host/sdhci-of-at91.c
-index 7c4ac65f247d..5dcb88cba0d9 100644
+index 7c4ac65f247d3..5dcb88cba0d9c 100644
 --- a/drivers/mmc/host/sdhci-of-at91.c
 +++ b/drivers/mmc/host/sdhci-of-at91.c
 @@ -39,6 +39,9 @@ struct sdhci_at91_soc_data {
@@ -108,3 +109,6 @@ index 7c4ac65f247d..5dcb88cba0d9 100644
  
  	ret = sdhci_add_host(host);
  	if (ret)
+-- 
+2.43.0
+

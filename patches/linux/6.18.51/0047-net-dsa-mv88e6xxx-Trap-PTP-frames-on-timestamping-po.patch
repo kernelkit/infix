@@ -1,8 +1,9 @@
 From 5355db17a67b19cf357391cf70688825d87ca312 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 17 Apr 2026 09:13:04 +0000
-Subject: [PATCH 47/68] net: dsa: mv88e6xxx: Trap PTP frames on timestamping
+Subject: [PATCH 47/75] net: dsa: mv88e6xxx: Trap PTP frames on timestamping
  ports, on 6393X
+Organization: Wires
 
 Similar to the Peridot (6390), the designation of PTP frames as
 management (and the destination port) must be explicitly
@@ -12,6 +13,8 @@ on a per-port basis, rather than a chip-global setting.
 Therefore, make sure to classify PTP frames as management, and route
 them towards the CPU port whenever hardware timestamping is enabled on
 a port.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c     |  2 +-
  drivers/net/dsa/mv88e6xxx/hwtstamp.c | 26 ++++++++++++++++++++++++++
@@ -23,7 +26,7 @@ a port.
  7 files changed, 67 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 7bc3169839d3..1d1edf84b224 100644
+index 7bc3169839d3b..1d1edf84b224e 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -5689,7 +5689,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
@@ -36,7 +39,7 @@ index 7bc3169839d3..1d1edf84b224 100644
  	.pcs_ops = &mv88e6393x_pcs_ops,
  };
 diff --git a/drivers/net/dsa/mv88e6xxx/hwtstamp.c b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
-index 6e6472a3b75a..446e1c616752 100644
+index 6e6472a3b75ad..446e1c616752d 100644
 --- a/drivers/net/dsa/mv88e6xxx/hwtstamp.c
 +++ b/drivers/net/dsa/mv88e6xxx/hwtstamp.c
 @@ -13,6 +13,7 @@
@@ -80,7 +83,7 @@ index 6e6472a3b75a..446e1c616752 100644
  {
  	const struct mv88e6xxx_ptp_ops *ptp_ops = chip->info->ops->ptp_ops;
 diff --git a/drivers/net/dsa/mv88e6xxx/hwtstamp.h b/drivers/net/dsa/mv88e6xxx/hwtstamp.h
-index c359821d5a6e..c51cd1ab2978 100644
+index c359821d5a6ea..c51cd1ab29788 100644
 --- a/drivers/net/dsa/mv88e6xxx/hwtstamp.h
 +++ b/drivers/net/dsa/mv88e6xxx/hwtstamp.h
 @@ -129,6 +129,8 @@ int mv88e6xxx_hwtstamp_setup(struct mv88e6xxx_chip *chip);
@@ -93,7 +96,7 @@ index c359821d5a6e..c51cd1ab2978 100644
  int mv88e6165_global_disable(struct mv88e6xxx_chip *chip);
  
 diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
-index 1985b8553611..843972077576 100644
+index 1985b85536112..843972077576c 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.c
 +++ b/drivers/net/dsa/mv88e6xxx/port.c
 @@ -1484,6 +1484,16 @@ int mv88e6393x_port_set_upstream_port(struct mv88e6xxx_chip *chip, int port,
@@ -114,7 +117,7 @@ index 1985b8553611..843972077576 100644
  {
  	u16 ptr;
 diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
-index f4a56671fc4c..5f733f84b348 100644
+index f4a56671fc4c2..5f733f84b3481 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.h
 +++ b/drivers/net/dsa/mv88e6xxx/port.h
 @@ -283,6 +283,8 @@
@@ -136,7 +139,7 @@ index f4a56671fc4c..5f733f84b348 100644
  int mv88e6xxx_port_set_message_port(struct mv88e6xxx_chip *chip, int port,
  				    bool message_port);
 diff --git a/drivers/net/dsa/mv88e6xxx/ptp.c b/drivers/net/dsa/mv88e6xxx/ptp.c
-index f7603573d3a9..327a9f786437 100644
+index f7603573d3a98..327a9f786437a 100644
 --- a/drivers/net/dsa/mv88e6xxx/ptp.c
 +++ b/drivers/net/dsa/mv88e6xxx/ptp.c
 @@ -444,6 +444,29 @@ const struct mv88e6xxx_ptp_ops mv88e6390_ptp_ops = {
@@ -170,7 +173,7 @@ index f7603573d3a9..327a9f786437 100644
  {
  	struct mv88e6xxx_chip *chip = cc_to_chip(cc);
 diff --git a/drivers/net/dsa/mv88e6xxx/ptp.h b/drivers/net/dsa/mv88e6xxx/ptp.h
-index 95bdddb0bf39..54dce1fbf1aa 100644
+index 95bdddb0bf39f..54dce1fbf1aa2 100644
 --- a/drivers/net/dsa/mv88e6xxx/ptp.h
 +++ b/drivers/net/dsa/mv88e6xxx/ptp.h
 @@ -75,6 +75,7 @@ void mv88e6xxx_ptp_free(struct mv88e6xxx_chip *chip);
@@ -181,3 +184,6 @@ index 95bdddb0bf39..54dce1fbf1aa 100644
  
  #else /* !CONFIG_NET_DSA_MV88E6XXX_PTP */
  
+-- 
+2.43.0
+

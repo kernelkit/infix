@@ -1,11 +1,12 @@
 From d28be721b2a274fb6594b3d8d307595eb7ec5492 Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 22 Apr 2026 10:24:43 +0200
-Subject: [PATCH 49/68] PCI: mediatek-gen3: Fix PERST# control timing during
+Subject: [PATCH 49/75] PCI: mediatek-gen3: Fix PERST# control timing during
  system startup
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 Some of MediaTek's chips (mt7986 amongst them) stop generating REFCLK
 if the PCIE_PHY_RSTB signal of the PCIe controller is asserted.
@@ -25,12 +26,14 @@ internal reset.
 
 Backport of upstream commit b6e0223ab75e ("PCI: mediatek-gen3: Fix
 PERST# control timing during system startup").
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/pci/controller/pcie-mediatek-gen3.c | 31 +++++++++++++++++----
  1 file changed, 25 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/pci/controller/pcie-mediatek-gen3.c b/drivers/pci/controller/pcie-mediatek-gen3.c
-index e45c43ccc84c..af84bc63bcad 100644
+index e45c43ccc84c2..af84bc63bcad5 100644
 --- a/drivers/pci/controller/pcie-mediatek-gen3.c
 +++ b/drivers/pci/controller/pcie-mediatek-gen3.c
 @@ -479,16 +479,35 @@ static int mtk_pcie_startup_port(struct mtk_gen3_pcie *pcie)
@@ -75,3 +78,6 @@ index e45c43ccc84c..af84bc63bcad 100644
  		writel_relaxed(val, pcie->base + PCIE_RST_CTRL_REG);
  	}
  
+-- 
+2.43.0
+

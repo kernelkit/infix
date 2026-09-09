@@ -258,7 +258,11 @@ Configured under `qos egress remark`, both leaves default to `none`:
 PCP is set to the priority, DSCP to the class selector with the same
 number, CS0 to CS7.  Together with a trust order on the receiving port,
 a downstream device then sees this device's classification rather than
-the sender's marking:
+the sender's marking.  With `none` nothing is rewritten by configuration,
+and what a tagged frame leaves with depends on the path it took: frames
+the kernel forwards keep the PCP they arrived with, while a switch fabric
+encodes the PCP from the frame's priority, as an IEEE 802.1Q bridge
+does[^16].  With the default `pcp-map` the two are the same:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos egress remark</b>
 admin@example:/config/interface/e1/qos/egress/remark/> <b>set pcp from-priority</b>
@@ -378,9 +382,9 @@ Driver support in the Linux kernel, as of 6.18:
 | Driver                              | Classification | Remarking     | Traffic classes |
 |-------------------------------------|----------------|---------------|-----------------|
 | Microchip `sparx5`, `lan966x`       | hardware       | hardware      | hardware        |
+| DSA `mv88e6xxx`, Marvell LinkStreet | hardware[^15]  | hardware[^15] | hardware        |
 | Data-center NICs[^12]               | software[^14]  | DSCP, software| hardware        |
 | DSA `felix`, `ksz`                  | software[^14]  | DSCP, software| hardware        |
-| DSA `mv88e6xxx`, Marvell LinkStreet | software       | DSCP, software| hardware        |
 | Other NICs and SoC MACs[^13]        | software       | DSCP, software| software        |
 /// table-caption
 QoS support per driver family.
@@ -388,19 +392,19 @@ QoS support per driver family.
 
 On a switch whose driver lacks DCB the fabric keeps classifying
 port-to-port traffic by its own defaults while the kernel classifies the
-CPU path per configuration, see [Marvell LinkStreet](#marvell-linkstreet)
-below.  PCP remarking has no software counterpart; where the driver lacks
-it the setting is accepted and noted in the system log.  Per-board notes
-live in the board's `README.md` under `board/`.
+CPU path per configuration.  PCP remarking has no software counterpart;
+where the driver lacks it the setting is accepted and noted in the system
+log.  Per-board notes live in the board's `README.md` under `board/`.
 
 
 ### Marvell LinkStreet
 
 This family of switch chips is managed by the `mv88e6xxx` driver in the
-Linux kernel.  The driver has no DCB support, so ingress classification
-is fixed by the hardware defaults below, while the traffic class table
-_is_ offloaded.  This section is _only_ valid for generations with 8
-output queues per port.
+Linux kernel.  The system carries patches that expose the per-port
+classification and remarking tables of the 88E6390 and 88E6393X
+generations through DCB, so ingress classification, remarking and the
+traffic class table are all offloaded on these chips.  This section is
+_only_ valid for generations with 8 output queues per port.
 
 ![Marvell LinkStreet offloading](img/qos-hw-mvls.svg){ width=600 }
 /// figure-caption
@@ -412,40 +416,47 @@ ingress, here interface _e1_ and _e3_.  In this example, both packets
 are forwarded to the same outgoing interface (_e2_), subject to output
 queueing.
 
-Both PCP and DSCP are considered when selecting the output queue of an
-incoming frame.  PCP to queue mapping is done 1:1.  For IP packets, the
-3 most significant bits of the DSCP select the queue:
+Each port has its own PCP and DSCP tables, so the `pcp-map`, `dscp-map`
+and `default-priority` settings apply as configured, and all four trust
+orders are accepted.  Two hardware details show through:
 
-| PCP | DSCP  | Queue | Weight |
-|----:|------:|------:|-------:|
-|   0 |   0-7 |     0 |      1 |
-|   1 |  8-15 |     1 |      2 |
-|   2 | 16-23 |     2 |      3 |
-|   3 | 24-31 |     3 |      6 |
-|   4 | 32-39 |     4 |     12 |
-|   5 | 40-47 |     5 |     17 |
-|   6 | 48-55 |     6 |     25 |
-|   7 | 56-63 |     7 |     33 |
+- A frame that is both VLAN-tagged and IP always takes its _frame_
+  priority, the value written back as PCP on egress, from the tag.  The
+  trust order `dscp-pcp` decides only which field selects the output
+  queue.
+- The PCP of every tagged frame encodes the frame's priority, on one
+  chip as across a cascade of chips, which only carry the priority
+  between them.  The `remark pcp` setting therefore changes nothing on
+  these switches; the DEI comes from the frame's color, never from a
+  table.
+- Frames the CPU itself sends, routed or locally originated, are injected
+  past the tables, so their DSCP is remarked by the kernel instead and
+  their PCP comes from the VLAN interface settings described below.
+
+The `traffic-class-table` applies to hardware forwarded frames as well:
+each priority is queued in the first queue of its traffic class.  The
+class algorithms and weights are not offloaded, however.  The switch
+serves its eight queues by the fixed Weighted Round Robin (WRR)[^11]
+weights below, whatever the `traffic-class` list says, for frames the
+CPU sends as well as for forwarded ones.
+
+| Queue | Weight |
+|------:|-------:|
+|     0 |      1 |
+|     1 |      2 |
+|     2 |      3 |
+|     3 |      6 |
+|     4 |     12 |
+|     5 |     17 |
+|     6 |     25 |
+|     7 |     33 |
 /// table-caption
-Marvell LinkStreet default PCP and DSCP to queue mapping and WRR weights.
+Marvell LinkStreet WRR weights per output queue.
 ///
 
-For packets containing both a VLAN tag and an IP header, PCP takes
-precedence over DSCP.  In cases where neither is available, packets are
-always assigned to queue 0.
-
-Each port's set of 8 egress queues operate on a Weighted Round Robin
-(WRR)[^11] schedule, using the weights listed in the table above.  The
-sum of all weights adds up to 99, meaning that the weight of any given
-queue is roughly equivalent to the percentage of the available bandwidth
-reserved for it.
-
-Any priority marks available on ingress are left unmodified when the
-frame egresses an output port.  In the case when an IP packet ingresses
-_without_ a VLAN tag, and is to egress _with_ a VLAN tag, its PCP is set
-to the 3 most significant bits of the DSCP.  If no priority information
-is available in the frame on ingress (i.e. untagged non-IP), then packets
-will egress out of tagged ports with PCP set to 0.
+The sum of all weights adds up to 99, meaning that the weight of any
+given queue is roughly equivalent to the percentage of the available
+bandwidth reserved for it.
 
 
 ## VLAN Interfaces
@@ -519,3 +530,10 @@ Hardware and software QoS handling.
        and `e1000`, and `virtio_net` in QEMU
 [^14]: These drivers take a DSCP map but not the PCP map or trust order;
        the table is programmed as a whole, so it falls back to software
+[^15]: 88E6390 and 88E6393X generations, through patches carried by the
+       system until they land upstream.  Older generations classify by
+       their hardware defaults and are offloaded like `felix` and `ksz`.
+[^16]: Clause 6.9.3 of IEEE Std 802.1Q-2022, the PCP encoding table.
+       The received PCP is only kept because the default tables decode
+       and encode it to itself; once classification changes the
+       priority, the transmitted PCP follows.

@@ -1,7 +1,8 @@
 From ca1fa79320f7d4e336f03350959eb98ad7713117 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Fri, 31 Oct 2025 13:18:12 +0100
-Subject: [PATCH 51/68] phy: sparx5-serdes: make it selectable for ARCH_LAN969X
+Subject: [PATCH 51/75] phy: sparx5-serdes: make it selectable for ARCH_LAN969X
+Organization: Wires
 
 LAN969x uses the SparX-5 SERDES driver, so make it selectable for
 ARCH_LAN969X.
@@ -13,12 +14,13 @@ Tested-by: Vladimir Oltean <vladimir.oltean@nxp.com>
 Link: https://patch.msgid.link/20251031121834.665987-1-robert.marko@sartura.hr
 Signed-off-by: Vinod Koul <vkoul@kernel.org>
 (cherry picked from commit d543d3eb06873f0ab8edb0d1f8364e9af93544a0)
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/phy/microchip/Kconfig | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/phy/microchip/Kconfig b/drivers/phy/microchip/Kconfig
-index 2f0045e874ac..2e6d1224711e 100644
+index 2f0045e874ac8..2e6d1224711e3 100644
 --- a/drivers/phy/microchip/Kconfig
 +++ b/drivers/phy/microchip/Kconfig
 @@ -6,7 +6,7 @@
@@ -30,3 +32,6 @@ index 2f0045e874ac..2e6d1224711e 100644
  	depends on OF
  	depends on HAS_IOMEM
  	help
+-- 
+2.43.0
+

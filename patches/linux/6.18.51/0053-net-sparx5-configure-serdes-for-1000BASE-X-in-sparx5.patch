@@ -1,8 +1,9 @@
 From 4d0993d4508ca2c4f95d4799d93d6f3effcc145c Mon Sep 17 00:00:00 2001
 From: Daniel Machon <daniel.machon@microchip.com>
 Date: Wed, 6 May 2026 09:25:39 +0200
-Subject: [PATCH 53/68] net: sparx5: configure serdes for 1000BASE-X in
+Subject: [PATCH 53/75] net: sparx5: configure serdes for 1000BASE-X in
  sparx5_port_init()
+Organization: Wires
 
 sparx5_port_init() only invokes sparx5_serdes_set() and the associated
 shadow-device enable and low-speed device switch for SGMII and QSGMII.
@@ -23,12 +24,13 @@ Signed-off-by: Daniel Machon <daniel.machon@microchip.com>
 Link: https://patch.msgid.link/20260506-misc-fixes-sparx5-lan969x-v2-4-fb236aa96908@microchip.com
 Signed-off-by: Jakub Kicinski <kuba@kernel.org>
 (cherry picked from commit 41ae14071cd7f6a7770e2fe1f8a0859d4c2c6ba4)
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/ethernet/microchip/sparx5/sparx5_port.c | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
-index 04bc8fffaf96..62c49893de3c 100644
+index 04bc8fffaf961..62c49893de3c3 100644
 --- a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
 +++ b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
 @@ -1128,7 +1128,8 @@ int sparx5_port_init(struct sparx5 *sparx5,
@@ -41,3 +43,6 @@ index 04bc8fffaf96..62c49893de3c 100644
  		err = sparx5_serdes_set(sparx5, port, conf);
  		if (err)
  			return err;
+-- 
+2.43.0
+

@@ -145,6 +145,7 @@ def ptp_capabilities(ifname, systemjson):
 QOS_TRUST_ORDERS = {
     "sparx5-switch":  ["pcp", "dscp", "dscp-pcp"],
     "lan966x-switch": ["pcp", "dscp", "dscp-pcp"],
+    "mv88e6085":      ["pcp", "dscp", "pcp-dscp", "dscp-pcp"],
 }
 
 

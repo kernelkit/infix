@@ -1,8 +1,9 @@
 From d546eb64be5c440da749033791f4b798f60142ce Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:37:48 +0200
-Subject: [PATCH 56/68] mmc: sdhci-of-at91: stop SDCLK on reset and add eMMC
+Subject: [PATCH 56/75] mmc: sdhci-of-at91: stop SDCLK on reset and add eMMC
  hardware reset
+Organization: Wires
 
 The controller is reset, and its signaling mode changed, with SDCLK
 still running.  Both require the clock to be stopped, otherwise the
@@ -20,7 +21,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 50 insertions(+)
 
 diff --git a/drivers/mmc/host/sdhci-of-at91.c b/drivers/mmc/host/sdhci-of-at91.c
-index 5dcb88cba0d9..6a9e4a7fa705 100644
+index 5dcb88cba0d9c..6a9e4a7fa705f 100644
 --- a/drivers/mmc/host/sdhci-of-at91.c
 +++ b/drivers/mmc/host/sdhci-of-at91.c
 @@ -25,6 +25,7 @@
@@ -139,3 +140,6 @@ index 5dcb88cba0d9..6a9e4a7fa705 100644
  	priv->mainck = devm_clk_get(&pdev->dev, "baseclk");
  	if (IS_ERR(priv->mainck)) {
  		if (soc_data->baseclk_is_generated_internally)
+-- 
+2.43.0
+

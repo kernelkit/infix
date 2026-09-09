@@ -1,7 +1,8 @@
 From cb195a8aa0a95c1f488354a849ade0588f0a2218 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 2 Mar 2026 12:20:11 +0100
-Subject: [PATCH 58/68] arm64: dts: microchip: add LAN969x clock header file
+Subject: [PATCH 58/75] arm64: dts: microchip: add LAN969x clock header file
+Organization: Wires
 
 LAN969x uses hardware clock indexes, so document theses in a header to make
 them humanly readable.
@@ -11,6 +12,7 @@ Reviewed-by: Claudiu Beznea <claudiu.beznea@tuxon.dev>
 Link: https://lore.kernel.org/r/20260302112153.464422-4-robert.marko@sartura.hr
 Signed-off-by: Claudiu Beznea <claudiu.beznea@tuxon.dev>
 (cherry picked from commit 229eeb0ad913c1bb2dd6027e5983d1e4c409abd0)
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  arch/arm64/boot/dts/microchip/clk-lan9691.h | 24 +++++++++++++++++++++
  1 file changed, 24 insertions(+)
@@ -18,7 +20,7 @@ Signed-off-by: Claudiu Beznea <claudiu.beznea@tuxon.dev>
 
 diff --git a/arch/arm64/boot/dts/microchip/clk-lan9691.h b/arch/arm64/boot/dts/microchip/clk-lan9691.h
 new file mode 100644
-index 000000000000..0f2d7a0f881e
+index 0000000000000..0f2d7a0f881ef
 --- /dev/null
 +++ b/arch/arm64/boot/dts/microchip/clk-lan9691.h
 @@ -0,0 +1,24 @@
@@ -46,3 +48,6 @@ index 000000000000..0f2d7a0f881e
 +#define GCK_GATE_HMATRIX	14
 +
 +#endif
+-- 
+2.43.0
+

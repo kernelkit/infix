@@ -1,8 +1,9 @@
 From e0eb904a443ac9bff54ace0855dad7c6b5395cfe Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Fri, 20 Sep 2024 12:05:18 +0100
-Subject: [PATCH 33/68] drm: vc4: dsi: enable video and then retry failed
+Subject: [PATCH 33/75] drm: vc4: dsi: enable video and then retry failed
  transfers
+Organization: Wires
 
 The DSI block appears to be able to come up stuck in a condition where
 it leaves the lanes in HS mode or just jabbering. This stops LP
@@ -13,12 +14,13 @@ Enabling video briefly clears that condition, so if we detect the
 error condition, enable video mode and then retry.
 
 Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/gpu/drm/vc4/vc4_dsi.c | 54 +++++++++++++++++++++++++++++------
  1 file changed, 46 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/gpu/drm/vc4/vc4_dsi.c b/drivers/gpu/drm/vc4/vc4_dsi.c
-index 458e5d987964..439d7a04127d 100644
+index 458e5d9879645..439d7a04127d8 100644
 --- a/drivers/gpu/drm/vc4/vc4_dsi.c
 +++ b/drivers/gpu/drm/vc4/vc4_dsi.c
 @@ -286,6 +286,8 @@
@@ -111,3 +113,6 @@ index 458e5d987964..439d7a04127d 100644
  static const struct component_ops vc4_dsi_ops;
  static int vc4_dsi_host_attach(struct mipi_dsi_host *host,
  			       struct mipi_dsi_device *device)
+-- 
+2.43.0
+

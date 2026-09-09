@@ -1,7 +1,8 @@
 From 5147ffc01f1ede62ecfc418b9e5adb10822946a6 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Wed, 20 Nov 2024 13:58:08 +0000
-Subject: [PATCH 37/68] drm: vc4: dsi: Handle the different command FIFO widths
+Subject: [PATCH 37/75] drm: vc4: dsi: Handle the different command FIFO widths
+Organization: Wires
 
 DSI0 and DSI1 have different widths for the command FIFO (24bit
 vs 32bit), but the driver was assuming the 32bit width of DSI1
@@ -12,12 +13,13 @@ formatting code needs updating.
 Handle the difference via the variant structure.
 
 Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/gpu/drm/vc4/vc4_dsi.c | 64 ++++++++++++++++++++++++-----------
  1 file changed, 44 insertions(+), 20 deletions(-)
 
 diff --git a/drivers/gpu/drm/vc4/vc4_dsi.c b/drivers/gpu/drm/vc4/vc4_dsi.c
-index 9756821ebf27..b1cc30b8aa79 100644
+index 9756821ebf27c..b1cc30b8aa797 100644
 --- a/drivers/gpu/drm/vc4/vc4_dsi.c
 +++ b/drivers/gpu/drm/vc4/vc4_dsi.c
 @@ -44,7 +44,6 @@
@@ -148,3 +150,6 @@ index 9756821ebf27..b1cc30b8aa79 100644
  	.broken_axi_workaround	= true,
  	.debugfs_name		= "dsi1_regs",
  	.regs			= dsi1_regs,
+-- 
+2.43.0
+
