@@ -13,3 +13,6 @@
 
 - name: QoS Defaults Out of the Box
   case: qos_factory_default/test.py
+
+- name: QoS Bridge Classification and Remarking
+  case: qos_bridge_classify/test.py
