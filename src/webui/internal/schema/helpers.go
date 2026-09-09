@@ -51,5 +51,44 @@ func DescriptionOf(mgr *Manager, path string) string {
 	if err != nil || node == nil {
 		return ""
 	}
-	return node.Description
+	return Reflow(node.Description)
+}
+
+// Reflow joins the hard-wrapped lines of a YANG description into one line
+// per paragraph.  Paragraphs are separated by a blank line and lines that
+// start a list item (- or *) keep their line break.
+func Reflow(desc string) string {
+	var out strings.Builder
+	var para strings.Builder
+
+	flush := func() {
+		if para.Len() > 0 {
+			if out.Len() > 0 {
+				out.WriteString("\n\n")
+			}
+			out.WriteString(para.String())
+			para.Reset()
+		}
+	}
+
+	for _, line := range strings.Split(desc, "\n") {
+		line = strings.TrimSpace(line)
+		switch {
+		case line == "":
+			flush()
+		case strings.HasPrefix(line, "- ") || strings.HasPrefix(line, "* "):
+			if para.Len() > 0 {
+				para.WriteString("\n")
+			}
+			para.WriteString(line)
+		case para.Len() > 0:
+			para.WriteString(" ")
+			para.WriteString(line)
+		default:
+			para.WriteString(line)
+		}
+	}
+	flush()
+
+	return out.String()
 }

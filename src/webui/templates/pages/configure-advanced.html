@@ -1,0 +1,271 @@
+{{define "configure-advanced.html"}}
+{{template "base" .}}
+{{end}}
+
+{{define "content"}}
+<div class="configure-page">
+{{if .Loading}}
+<div class="alert alert-info"
+     hx-get="/configure/advanced"
+     hx-trigger="every 3s"
+     hx-target="#content"
+     hx-swap="innerHTML">
+  Downloading YANG schema from device&hellip; this takes a moment on first login.
+</div>
+{{template "configure-toolbar" .}}
+</div>
+{{else}}
+{{$d := .Desc}}
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+<section class="info-grid">
+
+  {{/* ── Boot scripts ─────────────────────────────────────────── */}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Boot scripts{{template "field-info" (index $d "rc.d")}}</div>
+
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            <th class="rcd-handle-col"></th>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <th>Description{{template "field-info" (index $d "description")}}</th>
+            <th style="text-align:center">Enabled{{template "field-info" (index $d "s-enabled")}}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rcd-scripts">
+          {{range $i, $s := .Scripts}}
+          <tr class="rcd-row" data-name="{{$s.Name}}">
+            <td class="rcd-handle-col">
+              <span class="rcd-drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag to reorder">{{template "icon-grip"}}</span>
+            </td>
+            <td>
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="rcd-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{$s.Name}}
+              </button>
+            </td>
+            <td>{{$s.Description}}</td>
+            <td style="text-align:center">
+              <input type="checkbox" name="enabled" value="true" {{if $s.Enabled}}checked{{end}}
+                     hx-post="/configure/advanced/rc.d/scripts/{{$s.Name}}/enabled"
+                     hx-trigger="change" hx-swap="none"
+                     title="Enable or disable this script">
+            </td>
+            <td style="text-align:right;white-space:nowrap">
+              <button type="button" class="btn-icon key-row-toggle" data-target="rcd-{{$i}}"
+                      aria-expanded="false" title="Edit script">{{template "icon-edit"}}</button>
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/advanced/rc.d/scripts/{{$s.Name}}"
+                      hx-confirm="Delete boot script {{$s.Name}}?"
+                      hx-swap="none" title="Delete script">
+                {{template "icon-trash"}}
+              </button>
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-rcd-{{$i}}">
+            <td colspan="5" class="key-detail-cell">
+              <div class="key-detail-body">
+                <form hx-post="/configure/advanced/rc.d/scripts/{{$s.Name}}" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Name{{template "field-info" (index $d "name")}}</th>
+                      <td><input class="cfg-input cfg-input-mono" type="text" value="{{$s.Name}}" readonly></td>
+                    </tr>
+                    <tr>
+                      <th>Description{{template "field-info" (index $d "description")}}</th>
+                      <td><input class="cfg-input" type="text" name="description" value="{{$s.Description}}"></td>
+                    </tr>
+                    <tr>
+                      <th>Enabled{{template "field-info" (index $d "s-enabled")}}</th>
+                      <td><label><input type="checkbox" name="enabled" value="true"
+                                 {{if $s.Enabled}}checked{{end}}> Run this script at boot</label></td>
+                    </tr>
+                    <tr>
+                      <th>Content{{template "field-info" (index $d "content")}}</th>
+                      <td><textarea class="cfg-input cfg-input-mono rcd-content" name="content" rows="12"
+                                    spellcheck="false" required>{{$s.Content}}</textarea></td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {{else}}
+          <tr><td colspan="5"><span class="text-muted">No boot scripts configured.</span></td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="cfg-card-footer">
+      <span class="cfg-save-status" id="rcd-order-status"></span>
+    </div>
+
+    {{/* Hidden add-script form, revealed by the + Add script button (data-show) */}}
+    <div id="rcd-add-row" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+      <form hx-post="/configure/advanced/rc.d/scripts" hx-swap="none">
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "name")}}</th>
+            <td><input class="cfg-input cfg-input-mono" type="text" name="name" required
+                       maxlength="64" pattern="[a-zA-Z0-9_][a-zA-Z0-9_.-]*"
+                       placeholder="e.g. fixup-routes"></td>
+          </tr>
+          <tr>
+            <th>Description{{template "field-info" (index $d "description")}}</th>
+            <td><input class="cfg-input" type="text" name="description" placeholder="What the script does"></td>
+          </tr>
+          <tr>
+            <th>Enabled{{template "field-info" (index $d "s-enabled")}}</th>
+            <td><label><input type="checkbox" name="enabled" value="true" checked> Run this script at boot</label></td>
+          </tr>
+          <tr>
+            <th>Content{{template "field-info" (index $d "content")}}</th>
+            <td><textarea class="cfg-input cfg-input-mono rcd-content" name="content" rows="12"
+                          spellcheck="false" required
+                          placeholder="#!/bin/sh&#10;logger -t rc.d &quot;hello world&quot;"></textarea></td>
+          </tr>
+        </table>
+        <div class="cfg-card-footer" style="padding-left:0">
+          <button class="btn btn-primary btn-sm" type="submit">Add</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-hide="rcd-add-row">Cancel</button>
+          <span class="cfg-save-status"></span>
+        </div>
+      </form>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-show="rcd-add-row">+ Add script</button>
+    </div>
+  </section>
+
+  {{/* ── Daemon defaults ──────────────────────────────── */}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">Daemon defaults{{template "field-info" (index $d "default")}}</div>
+
+    <div class="data-table-wrap">
+      <table class="data-table cfg-table">
+        <thead>
+          <tr>
+            <th>Name{{template "field-info" (index $d "f-name")}}</th>
+            <th>Description{{template "field-info" (index $d "f-description")}}</th>
+            <th style="text-align:center">Enabled{{template "field-info" (index $d "f-enabled")}}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $i, $f := .Files}}
+          <tr>
+            <td>
+              <button class="key-row-toggle" type="button"
+                      aria-expanded="false" data-target="def-{{$i}}">
+                <span class="key-row-arrow" aria-hidden="true">▶</span>{{$f.Name}}
+              </button>
+            </td>
+            <td>{{$f.Description}}</td>
+            <td style="text-align:center">
+              <input type="checkbox" name="enabled" value="true" {{if $f.Enabled}}checked{{end}}
+                     hx-post="/configure/advanced/default/files/{{$f.Name}}/enabled"
+                     hx-trigger="change" hx-swap="none"
+                     title="Enable or disable this file">
+            </td>
+            <td style="text-align:right;white-space:nowrap">
+              <button type="button" class="btn-icon key-row-toggle" data-target="def-{{$i}}"
+                      aria-expanded="false" title="Edit file">{{template "icon-edit"}}</button>
+              <button type="button" class="btn-icon btn-icon-danger"
+                      hx-delete="/configure/advanced/default/files/{{$f.Name}}"
+                      hx-confirm="Delete /etc/default/{{$f.Name}}?"
+                      hx-swap="none" title="Delete file">
+                {{template "icon-trash"}}
+              </button>
+            </td>
+          </tr>
+          <tr class="key-detail-row" id="key-detail-def-{{$i}}">
+            <td colspan="4" class="key-detail-cell">
+              <div class="key-detail-body">
+                <form hx-post="/configure/advanced/default/files/{{$f.Name}}" hx-swap="none">
+                  <table class="info-table">
+                    <tr>
+                      <th>Name{{template "field-info" (index $d "f-name")}}</th>
+                      <td><input class="cfg-input cfg-input-mono" type="text" value="{{$f.Name}}" readonly></td>
+                    </tr>
+                    <tr>
+                      <th>Description{{template "field-info" (index $d "f-description")}}</th>
+                      <td><input class="cfg-input" type="text" name="description" value="{{$f.Description}}"></td>
+                    </tr>
+                    <tr>
+                      <th>Enabled{{template "field-info" (index $d "f-enabled")}}</th>
+                      <td><label><input type="checkbox" name="enabled" value="true"
+                                 {{if $f.Enabled}}checked{{end}}> Install this file</label></td>
+                    </tr>
+                    <tr>
+                      <th>Content{{template "field-info" (index $d "f-content")}}</th>
+                      <td><textarea class="cfg-input cfg-input-mono rcd-content" name="content" rows="6"
+                                    spellcheck="false" required>{{$f.Content}}</textarea></td>
+                    </tr>
+                  </table>
+                  <div class="cfg-card-footer" style="padding-left:0">
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                    <span class="cfg-save-status"></span>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4"><span class="text-muted">No daemon defaults configured.</span></td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+
+    {{/* Hidden add-file form, revealed by the + Add file button (data-show) */}}
+    <div id="def-add-row" hidden class="cfg-add-panel" style="padding:0.5rem 0.75rem">
+      <form hx-post="/configure/advanced/default/files" hx-swap="none">
+        <table class="info-table">
+          <tr>
+            <th>Name{{template "field-info" (index $d "f-name")}}</th>
+            <td><input class="cfg-input cfg-input-mono" type="text" name="name" required
+                       maxlength="64" pattern="[a-zA-Z0-9_][a-zA-Z0-9_.-]*"
+                       placeholder="e.g. ptp4l"></td>
+          </tr>
+          <tr>
+            <th>Description{{template "field-info" (index $d "f-description")}}</th>
+            <td><input class="cfg-input" type="text" name="description" placeholder="What the file changes"></td>
+          </tr>
+          <tr>
+            <th>Enabled{{template "field-info" (index $d "f-enabled")}}</th>
+            <td><label><input type="checkbox" name="enabled" value="true" checked> Install this file</label></td>
+          </tr>
+          <tr>
+            <th>Content{{template "field-info" (index $d "f-content")}}</th>
+            <td><textarea class="cfg-input cfg-input-mono rcd-content" name="content" rows="6"
+                          spellcheck="false" required
+                          placeholder="PTP4L_ARGS=&quot;--ptp_minor_version 0&quot;"></textarea></td>
+          </tr>
+        </table>
+        <div class="cfg-card-footer" style="padding-left:0">
+          <button class="btn btn-primary btn-sm" type="submit">Add</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-hide="def-add-row">Cancel</button>
+          <span class="cfg-save-status"></span>
+        </div>
+      </form>
+    </div>
+    <div class="cfg-card-footer">
+      <button type="button" class="btn-add-row" data-show="def-add-row">+ Add file</button>
+    </div>
+  </section>
+
+</section>
+{{template "configure-toolbar" .}}
+</div>
+{{end}}{{/* end {{else}}, schema ready */}}
+
+{{end}}
