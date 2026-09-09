@@ -19,6 +19,8 @@
   HidePasswords = n
   EnableNACM = y
   Oneliners = n
+  Secret.1 = /ietf-system:system/authentication/user/password
+  Secret.2 = /ietf-keystore:keystore/symmetric-keys/symmetric-key/cleartext-symmetric-key
 </PLUGIN>
 
 <PTYPE name="CFG">
@@ -205,12 +207,12 @@
   <PARAM name="topic" ptype="/STRING" min="0" help="Help topic">
     <COMPL>
       <ACTION sym="printl">configure</ACTION>
+      <ACTION sym="printl">edit</ACTION>
       <ACTION sym="printl">introduction</ACTION>
       <ACTION sym="printl">keybindings</ACTION>
       <ACTION sym="printl">netcalc</ACTION>
       <ACTION sym="printl">quick</ACTION>
       <ACTION sym="printl">tcpdump</ACTION>
-      <ACTION sym="printl">text-editor</ACTION>
       <ACTION sym="printl">upgrade</ACTION>
     </COMPL>
   </PARAM>
@@ -1044,22 +1046,13 @@ echo "Public:  $pub"
   <ACTION sym="srp_top@sysrepo"/>
 </COMMAND>
 
-<COMMAND name="edit" help="Descend to the specified configuration node">
+<COMMAND name="edit" help="Descend to configuration node, or edit a setting interactively">
   <PARAM name="path" ptype="/PLINE_EDIT" max="100"/>
   <ACTION sym="srp_edit@sysrepo"/>
+  <ACTION sym="srp_helper@sysrepo" exec_on="fail" in="tty" out="tty" interrupt="true">edit</ACTION>
 </COMMAND>
 
 <!-- Edit -->
-
-<COMMAND name="text-editor" help="Modify binary content in a text editor">
-  <PARAM name="path" ptype="/PLINE_SET" max="100"/>
-  <ACTION sym="srp_helper@sysrepo" in="tty" out="tty" interrupt="true"/>
-</COMMAND>
-
-<COMMAND name="change" help="Interactively change setting, e.g. password">
-  <PARAM name="path" ptype="/PLINE_SET" max="100"/>
-  <ACTION sym="srp_helper@sysrepo" in="tty" out="tty" interrupt="true"/>
-</COMMAND>
 
 <COMMAND name="set" help="Set configuration setting">
   <PARAM name="path" ptype="/PLINE_SET" max="100"/>

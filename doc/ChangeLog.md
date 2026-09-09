@@ -20,6 +20,10 @@ All notable changes to the project are documented in this file.
     after the startup configuration has been applied, in the order listed
   - `default`: daemon environment files written to `/etc/default`, e.g.,
     extra `ptp4l` command line options
+- The CLI `edit` command now also edits settings interactively: passwords
+  and keys are prompted for, `binary` settings open in the text editor, and
+  `string` settings are edited on a line prefilled with the current value.
+  The `text-editor` and `change` commands are removed
 
 [v26.08.0][] - 2026-09-01
 -------------------------

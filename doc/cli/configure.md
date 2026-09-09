@@ -13,7 +13,7 @@ admin@host:/config/>
   delete       Delete configuration setting(s)
   diff         Summarize uncommitted changes
   do           Execute operational mode command
-  edit         Descend to the specified configuration node
+  edit         Descend to configuration node, or edit a setting interactively
   end          Alias to up, leave this subsection/node
   exit         Ascend to the parent configuration node, or abort (from top)
   leave        Finalize candidate and apply to running-config
@@ -21,7 +21,6 @@ admin@host:/config/>
   rollback     Restore candidate to running-config
   set          Set configuration setting
   show         Show configuration
-  text-editor  Modify binary content in a text editor
   top          Ascend to the configuration root
   up           Ascend to the parent configuration node
 ```
@@ -179,8 +178,7 @@ admin@host:/config/system/authentication/user/admin/authorized-key/example@host/
 > **Note**
 >
 > The `ssh-keygen` program already base64 encodes the public key data,
-> so there is no need to use the `text-editor` command, `set` does the
-> job.
+> so there is no need to use the `edit` command, `set` does the job.
 
 ----
 
