@@ -1,0 +1,151 @@
+From a6533587122f88dc0b394b232e96fc4aa0628953 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 22 Sep 2026 13:53:23 +0200
+Subject: [PATCH 73/79] net: dsa: Support the IEEE ETS managed object
+Organization: Wires
+
+A switch port's transmission selection is configured today through the
+ets queuing discipline, which numbers its bands the other way round
+from 802.1Q traffic classes and measures each share in bytes rather
+than as a percentage of the port.  Every driver offloading it has to
+undo that, and userspace has to redo it.  The DCB ETS object is the
+same information in the form the standard states it: a priority to
+traffic class map, an algorithm per class, and a share per class.
+
+Add port_get_ets and port_set_ets switch ops and wire them to
+ieee_getets and ieee_setets.  The core checks what 802.1Qaz requires
+of any layout, that the shares of the classes selected by ETS add up
+to the whole port and that no other class claims a share, and leaves
+the driver to accept or refuse the algorithms it implements.
+
+The object is read back from the driver rather than cached per port,
+so a switch with one ETS configuration for all its ports needs no
+mirroring, unlike the classification and rewrite tables.  A port whose
+driver has no ETS support now fails the request: dcbnl skips the
+attribute when the operation is missing and reports success, which
+would otherwise tell userspace a configuration had been applied that
+was not.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ include/net/dsa.h | 14 ++++++++++
+ net/dsa/user.c    | 68 +++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 82 insertions(+)
+
+diff --git a/include/net/dsa.h b/include/net/dsa.h
+index 3a36904e57f81..fa47901fa9a98 100644
+--- a/include/net/dsa.h
++++ b/include/net/dsa.h
+@@ -849,6 +849,8 @@ static inline bool dsa_port_tree_same(const struct dsa_port *a,
+ 
+ typedef int dsa_fdb_dump_cb_t(const unsigned char *addr, u16 vid,
+ 			      bool is_static, void *data);
++struct ieee_ets;
++
+ struct dsa_switch_ops {
+ 	/*
+ 	 * Tagging protocol helpers called for the CPU ports and DSA links.
+@@ -989,6 +991,18 @@ struct dsa_switch_ops {
+ 				      u8 dscp);
+ 	int	(*port_del_dscp_rewr)(struct dsa_switch *ds, int port, u8 prio);
+ 
++	/*
++	 * IEEE 802.1Qaz Enhanced Transmission Selection: the priority to
++	 * traffic class map, the transmission selection algorithm of each
++	 * class, and the share of the port the classes selected by ETS
++	 * get.  The getter reports what the port runs, and the number of
++	 * traffic classes it has in ets_cap.
++	 */
++	int	(*port_get_ets)(struct dsa_switch *ds, int port,
++				struct ieee_ets *ets);
++	int	(*port_set_ets)(struct dsa_switch *ds, int port,
++				struct ieee_ets *ets);
++
+ 	/*
+ 	 * Suspend and resume
+ 	 */
+diff --git a/net/dsa/user.c b/net/dsa/user.c
+index 349bacfebb086..e9809fda8d89e 100644
+--- a/net/dsa/user.c
++++ b/net/dsa/user.c
+@@ -3040,9 +3040,77 @@ static const struct ethtool_ops dsa_user_ethtool_ops = {
+ 	.get_mm_stats		= dsa_user_get_mm_stats,
+ };
+ 
++/* The shares of the classes selected by ETS add up to the whole port,
++ * and a class selected by another algorithm has no share.
++ */
++static int dsa_user_dcbnl_ets_validate(struct net_device *dev,
++				       struct ieee_ets *ets)
++{
++	unsigned int total = 0;
++	int tc;
++
++	for (tc = 0; tc < IEEE_8021QAZ_MAX_TCS; tc++) {
++		if (ets->prio_tc[tc] >= IEEE_8021QAZ_MAX_TCS) {
++			netdev_err(dev, "Priority %d maps to traffic class %u\n",
++				   tc, ets->prio_tc[tc]);
++			return -ERANGE;
++		}
++
++		if (ets->tc_tsa[tc] == IEEE_8021QAZ_TSA_ETS) {
++			total += ets->tc_tx_bw[tc];
++			continue;
++		}
++
++		if (ets->tc_tx_bw[tc]) {
++			netdev_err(dev, "Traffic class %d has a bandwidth share but is not selected by ETS\n",
++				   tc);
++			return -EINVAL;
++		}
++	}
++
++	if (total && total != 100) {
++		netdev_err(dev, "ETS bandwidth shares add up to %u, not 100\n",
++			   total);
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static int __maybe_unused dsa_user_dcbnl_ieee_getets(struct net_device *dev,
++						     struct ieee_ets *ets)
++{
++	struct dsa_port *dp = dsa_user_to_port(dev);
++	struct dsa_switch *ds = dp->ds;
++
++	if (!ds->ops->port_get_ets)
++		return -EOPNOTSUPP;
++
++	return ds->ops->port_get_ets(ds, dp->index, ets);
++}
++
++static int __maybe_unused dsa_user_dcbnl_ieee_setets(struct net_device *dev,
++						     struct ieee_ets *ets)
++{
++	struct dsa_port *dp = dsa_user_to_port(dev);
++	struct dsa_switch *ds = dp->ds;
++	int err;
++
++	if (!ds->ops->port_set_ets)
++		return -EOPNOTSUPP;
++
++	err = dsa_user_dcbnl_ets_validate(dev, ets);
++	if (err)
++		return err;
++
++	return ds->ops->port_set_ets(ds, dp->index, ets);
++}
++
+ static const struct dcbnl_rtnl_ops __maybe_unused dsa_user_dcbnl_ops = {
+ 	.ieee_setapp		= dsa_user_dcbnl_ieee_setapp,
+ 	.ieee_delapp		= dsa_user_dcbnl_ieee_delapp,
++	.ieee_getets		= dsa_user_dcbnl_ieee_getets,
++	.ieee_setets		= dsa_user_dcbnl_ieee_setets,
+ 	.dcbnl_setapptrust	= dsa_user_dcbnl_set_apptrust,
+ 	.dcbnl_getapptrust	= dsa_user_dcbnl_get_apptrust,
+ 	.dcbnl_setrewr		= dsa_user_dcbnl_setrewr,
+-- 
+2.43.0
+

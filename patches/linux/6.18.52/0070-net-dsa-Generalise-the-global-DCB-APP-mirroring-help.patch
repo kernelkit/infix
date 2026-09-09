@@ -1,0 +1,73 @@
+From 66ba975c966cd266225264bf6fe168d061591562 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 22 Sep 2026 13:51:07 +0200
+Subject: [PATCH 70/79] net: dsa: Generalise the global DCB APP mirroring
+ helper
+Organization: Wires
+
+A switch with one classification table for all its ports programs it
+once, and the core keeps every other port's APP table in step so each
+netdev reads back what the hardware does.  The helper that does this
+mirroring is written against any APP entry, but is named and documents
+itself as if only DSCP had that property.
+
+Rename it and reword, no change in behaviour.  The PCP selector needs
+the same treatment.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ net/dsa/user.c | 16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/net/dsa/user.c b/net/dsa/user.c
+index b881c177628ce..193e54b7d85ea 100644
+--- a/net/dsa/user.c
++++ b/net/dsa/user.c
+@@ -2243,11 +2243,13 @@ dsa_user_dcbnl_set_default_prio(struct net_device *dev, struct dcb_app *app)
+ 	return 0;
+ }
+ 
+-/* Update the DSCP prio entries on all user ports of the switch in case
+- * the switch supports global DSCP prio instead of per port DSCP prios.
++/* Update the APP entry on all user ports of the switch in case the
++ * switch has one classification table instead of one per port.  Only
++ * the other ports' tables are touched; hardware was programmed by the
++ * caller.
+  */
+-static int dsa_user_dcbnl_ieee_global_dscp_setdel(struct net_device *dev,
+-						  struct dcb_app *app, bool del)
++static int dsa_user_dcbnl_ieee_global_app_setdel(struct net_device *dev,
++						 struct dcb_app *app, bool del)
+ {
+ 	int (*setdel)(struct net_device *dev, struct dcb_app *app);
+ 	struct dsa_port *dp = dsa_user_to_port(dev);
+@@ -2289,7 +2291,7 @@ static int dsa_user_dcbnl_ieee_global_dscp_setdel(struct net_device *dev,
+ 
+ 		restore_err = setdel(user, app);
+ 		if (restore_err)
+-			netdev_err(user, "Failed to restore DSCP prio entry configuration\n");
++			netdev_err(user, "Failed to restore APP entry configuration\n");
+ 	}
+ 
+ 	return err;
+@@ -2329,7 +2331,7 @@ dsa_user_dcbnl_add_dscp_prio(struct net_device *dev, struct dcb_app *app)
+ 	if (!ds->dscp_prio_mapping_is_global)
+ 		return 0;
+ 
+-	err = dsa_user_dcbnl_ieee_global_dscp_setdel(dev, app, false);
++	err = dsa_user_dcbnl_ieee_global_app_setdel(dev, app, false);
+ 	if (err) {
+ 		if (ds->ops->port_del_dscp_prio)
+ 			ds->ops->port_del_dscp_prio(ds, port, dscp, new_prio);
+@@ -2438,7 +2440,7 @@ dsa_user_dcbnl_del_dscp_prio(struct net_device *dev, struct dcb_app *app)
+ 	if (!ds->dscp_prio_mapping_is_global)
+ 		return 0;
+ 
+-	err = dsa_user_dcbnl_ieee_global_dscp_setdel(dev, app, true);
++	err = dsa_user_dcbnl_ieee_global_app_setdel(dev, app, true);
+ 	if (err) {
+ 		if (ds->ops->port_add_dscp_prio)
+ 			ds->ops->port_add_dscp_prio(ds, port, dscp,
+-- 
+2.43.0
+
