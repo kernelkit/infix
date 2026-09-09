@@ -1,0 +1,27 @@
+=== Daemon Default Files (/etc/default)
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/etc_default]
+
+==== Description
+
+Verify that files stored in the configuration, under
+/system/advanced/defaults, are written to /etc/default, that a file
+shadowing one shipped with the system is restored when the entry is
+disabled, and that a file is removed when the entry is deleted.
+
+==== Topology
+
+image::topology.svg[Daemon Default Files (/etc/default) topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Record original /etc/default/chronyd
+. Configure a new file and one shadowing chronyd
+. Verify both files are installed in /etc/default
+. Disable the shadowing entry
+. Verify original /etc/default/chronyd is restored
+. Delete the new file entry
+. Verify /etc/default/infamy-test is removed
+
+
