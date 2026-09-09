@@ -599,7 +599,7 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 		NOTE("Loading %s ...", config_path);
 		if (load_config(conn, sess, config_path, timeout_ms)) {
 			handle_startup_failure(sess, failure_path, conn, timeout_ms);
-			return 0; /* continue running even in fail-secure */
+			return 1; /* fail-secure, keep running */
 		}
 
 		NOTE("Loaded %s successfully, syncing startup datastore.", config_path);
@@ -847,14 +847,18 @@ int main(int argc, char **argv)
 		 * sr_replace_config() will trigger their change callbacks.
 		 * The event pump process processes those callbacks. */
 		conout(3, "Loading startup-config");
-		if (bootstrap_config(conn, sess, factory_path, startup_path,
-				     failure_path, test_path, timeout_ms)) {
+		r = bootstrap_config(conn, sess, factory_path, startup_path,
+				     failure_path, test_path, timeout_ms);
+		if (r < 0) {
 			kill(pump_pid, SIGTERM);
 			waitpid(pump_pid, NULL, 0);
 			conout(1, NULL);
 			goto cleanup;
 		}
-		conout(0, NULL);
+		if (r > 0)
+			conout(2, "Failed loading startup-config, running failure-config");
+		else
+			conout(0, NULL);
 
 		/* Phase 11: Stop event pump — bootstrap is done */
 		kill(pump_pid, SIGTERM);
