@@ -7,19 +7,16 @@ Clearing the startup-config makes confd bootstrap running from the
 factory-config on the next boot, as on a factory-fresh device.
 """
 
-import json
-
 import infamy
-from infamy.util import parallel, wait_boot
+from infamy.util import parallel, until, wait_boot
 
 STARTUP = "/cfg/startup-config.cfg"
-FACTORY = "/etc/factory-config.cfg"
 
 
-def factory_hostname(tgtssh):
+def factory_hostname(target):
     """Read the hostname the factory-config will boot with."""
-    cfg = json.loads(tgtssh.runsh(f"cat {FACTORY}", check=True).stdout)
-    return cfg.get("ietf-system:system", {}).get("hostname")
+    factory = target.get_factory("/ietf-system:system/hostname")
+    return factory.print_dict().get("system", {}).get("hostname")
 
 def cleanup(env):
     """Restore the rig to the clean per-test baseline for the next test."""
@@ -36,14 +33,14 @@ with infamy.Test() as test:
                                   lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Determine factory-config hostname"):
-        expected = factory_hostname(tgtssh)
+        expected = factory_hostname(target)
         assert expected, "Could not read hostname from factory-config"
         print(f"Factory config hostname is {expected!r}")
 
     with test.step("Clear startup-config so the device boots from factory"):
         # No startup-config on the startup boot path -> confd bootstraps
         # running from the factory-config.
-        tgtssh.runsh(f"rm -f {STARTUP}")
+        until(lambda: tgtssh.runsh(f"rm -f {STARTUP}").returncode == 0)
         target.startup_override()
 
     with test.step("Reboot onto the factory config"):
