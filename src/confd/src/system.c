@@ -287,6 +287,18 @@ err:
 	return rc;
 }
 
+/* Emit ' OPTION VALUE' for a per-server leaf, if set */
+static void ntp_option(FILE *fp, sr_session_ctx_t *session, const char *xpath,
+		       const char *leaf, const char *option)
+{
+	char *val = srx_get_str(session, "%s/%s", xpath, leaf);
+
+	if (val) {
+		fprintf(fp, " %s %s", option, val);
+		free(val);
+	}
+}
+
 static int change_ntp_client(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	sr_change_iter_t *iter = NULL;
@@ -392,11 +404,7 @@ static int change_ntp_client(sr_session_ctx_t *session, struct lyd_node *config,
 				free(type);
 			free(ptr);
 
-			ptr = srx_get_str(session, "%s/udp/port", xpath);
-			if (ptr) {
-				fprintf(fp, " port %s", ptr);
-				free(ptr);
-			}
+			ntp_option(fp, session, xpath, "udp/port", "port");
 		}
 
 		if (server) {
@@ -404,6 +412,8 @@ static int change_ntp_client(sr_session_ctx_t *session, struct lyd_node *config,
 				fprintf(fp, " iburst");
 			if (srx_enabled(session, "%s/prefer", xpath) > 0)
 				fprintf(fp, " prefer");
+			ntp_option(fp, session, xpath, "infix-system:minpoll", "minpoll");
+			ntp_option(fp, session, xpath, "infix-system:maxpoll", "maxpoll");
 		}
 		fprintf(fp, "\n");
 		fclose(fp);

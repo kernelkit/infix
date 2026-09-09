@@ -488,6 +488,17 @@ metrics (default config).
 * `prefer true`: The NTP client will try to use the preferred server
 as the primary source unless it becomes unreachable or unusable.
 
+Each server also accepts `minpoll` and `maxpoll` options, bounding how
+often it is polled, expressed as log2 seconds:
+
+<pre class="cli"><code>admin@example:/config/system/ntp/> <b>set server ntp-pool minpoll 4</b>
+admin@example:/config/system/ntp/> <b>set server ntp-pool maxpoll 8</b>
+</code></pre>
+
+The defaults, 6 (64 seconds) and 10 (1024 seconds), suit most
+deployments.  Lower values give faster convergence and failover on local
+networks, at the cost of more NTP traffic.
+
 
 ### Show NTP Sources
 

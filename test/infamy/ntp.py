@@ -95,41 +95,52 @@ def server_query(netns, server_ip, expected_stratum=None):
     return True
 
 
-def server_has_associations(target):
-    """Verify NTP server (ietf-ntp) has any associations."""
+def server_get_associations(target):
+    """Get list of NTP associations (ietf-ntp) from operational state."""
     try:
         data = target.get_data("/ietf-ntp:ntp/associations")
         if not data:
-            return False
-
-        associations = data.get("ntp", {}).get("associations", {}).get("association", [])
-        return len(associations) > 0
+            return []
+        return data.get("ntp", {}).get("associations", {}).get("association", [])
     except Exception:
-        return False
+        return []
+
+
+def server_has_associations(target):
+    """Verify NTP server (ietf-ntp) has any associations."""
+    return len(server_get_associations(target)) > 0
+
+
+def server_source_synced(target, address, max_offset_ms=50.0):
+    """Verify NTP server (ietf-ntp) has selected the given source and
+    converged on it, i.e., the estimated offset is small.
+
+    Waiting only for the association to exist is not enough: the server
+    may still be stepping/slewing its clock, serving time that moves
+    around.  Any client sampling both this server and its upstream
+    during that window collects inconsistent measurements and chronyd
+    flags the upstream as having too much variability, excluding it
+    from selection for several poll intervals.
+    """
+    for assoc in server_get_associations(target):
+        if assoc.get("address") != address:
+            continue
+        if not assoc.get("prefer") or assoc.get("offset") is None:
+            return False
+        return abs(float(assoc["offset"])) <= max_offset_ms
+
+    return False
 
 
 def server_has_peer(target, peer_address):
     """Verify NTP server (ietf-ntp) has a peer association with given address."""
-    try:
-        data = target.get_data("/ietf-ntp:ntp/associations")
-        if not data:
-            return False
+    # local-mode is "ietf-ntp:active" or "active" depending on namespace handling
+    for assoc in server_get_associations(target):
+        if (assoc.get("address") == peer_address and
+            assoc.get("local-mode", "") in ("ietf-ntp:active", "active")):
+            return True
 
-        associations = data.get("ntp", {}).get("associations", {}).get("association", [])
-        if not associations:
-            return False
-
-        # Check if peer association exists with the given address
-        # local-mode will be "ietf-ntp:active" or "active" depending on namespace handling
-        for assoc in associations:
-            local_mode = assoc.get("local-mode", "")
-            if (assoc.get("address") == peer_address and
-                (local_mode == "ietf-ntp:active" or local_mode == "active")):
-                return True
-
-        return False
-    except Exception:
-        return False
+    return False
 
 
 def server_peer_reachable(target, peer_address):

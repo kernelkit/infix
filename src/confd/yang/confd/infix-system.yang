@@ -32,6 +32,10 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2026-09-01 {
+    description "Add per-server minpoll/maxpoll to NTP client configuration.";
+    reference "internal";
+  }
   revision 2026-06-17 {
     description "Add scheduled-reboot, triggered from a referenced schedule.";
     reference "internal";
@@ -205,6 +209,14 @@ module infix-system {
    * Typedefs
    */
 
+  typedef poll-interval {
+    type int8 {
+      range "-7..24";
+    }
+    units "log2 seconds";
+    description "NTP poll interval, as log2 seconds.";
+  }
+
   typedef crypt-hash {
     type string {
       pattern
@@ -367,6 +379,34 @@ module infix-system {
          regardless of transient distance fluctuations.  Setting it to 0.0 disables
          stratum weighting; selection is then based purely on measured
          synchronization distance.";
+    }
+  }
+
+  augment "/sys:system/sys:ntp/sys:server" {
+    description "Per-server poll interval limits for the NTP client.";
+
+    leaf minpoll {
+      type poll-interval;
+      default "6";
+      description
+        "Minimum poll interval, default 6 (64 seconds).  Values below
+         6 should not be used with public servers on the Internet.";
+      reference
+        "RFC 5905: Network Time Protocol Version 4: Protocol and
+         Algorithms Specification, Section 7.2";
+    }
+
+    leaf maxpoll {
+      must ". >= ../minpoll" {
+        error-message "maxpoll must be greater than or equal to minpoll";
+      }
+      type poll-interval;
+      default "10";
+      description
+        "Maximum poll interval, default 10 (1024 seconds).";
+      reference
+        "RFC 5905: Network Time Protocol Version 4: Protocol and
+         Algorithms Specification, Section 7.2";
     }
   }
 

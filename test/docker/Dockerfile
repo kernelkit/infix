@@ -3,6 +3,7 @@ FROM alpine:3.18.0
 # NOTE: please add packages alphabetically!
 RUN apk add --no-cache \
     busybox-extras \
+    chrony \
     curl \
     dhcp-server-vanilla \
     dnsmasq \
