@@ -1,0 +1,736 @@
+From 9fc06924cba65cf9038e021b45d3c92badbf4bd8 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 9 Sep 2026 17:10:33 +0200
+Subject: [PATCH 68/71] net: dsa: mv88e6xxx: Add DCB priority classification
+Organization: Wires
+
+The 6390 family classifies frames per port from the tag PCP through the
+IEEE Priority Mapping Table, from the DSCP through the IP Priority
+Mapping Table, and falls back to the port default priority.  Which
+sources are trusted, and which wins when a frame is both tagged and
+IP, is set by InitialPri and TagIfBoth in Port Control 0.  None of it
+is reachable from userspace, the driver hardcodes identity mappings
+and trusts both sources at setup.
+
+Expose the tables and the trust order through the DSA DCB ops:
+
+    dcb app add dev lan1 default-prio 2 pcp-prio 5nd:5 dscp-prio 46:5
+    dcb apptrust set dev lan1 order dscp pcp
+
+A deleted entry has its Dis*Pri bits set so the port default applies,
+and is skipped when the table is read back at init.  The frame and
+queue priorities are always set to the same value.  When a frame is
+both tagged and IP the frame priority comes from the tag regardless,
+TagIfBoth only selects the source of the queue priority.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 217 +++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/chip.h |  15 ++
+ drivers/net/dsa/mv88e6xxx/port.c | 265 +++++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/port.h |  42 +++++
+ 4 files changed, 539 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 1d1edf84b224..bf5d544507c4 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -4847,6 +4847,12 @@ static const struct mv88e6xxx_ops mv88e6190_ops = {
+ 	.port_set_speed_duplex = mv88e6390_port_set_speed_duplex,
+ 	.port_max_speed_mode = mv88e6390_port_max_speed_mode,
+ 	.port_tag_remap = mv88e6390_port_tag_remap,
++	.port_get_default_prio = mv88e6390_port_get_default_prio,
++	.port_set_default_prio = mv88e6390_port_set_default_prio,
++	.port_get_dscp_prio = mv88e6390_port_get_dscp_prio,
++	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
++	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
++	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -4907,6 +4913,12 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
+ 	.port_set_speed_duplex = mv88e6390x_port_set_speed_duplex,
+ 	.port_max_speed_mode = mv88e6390x_port_max_speed_mode,
+ 	.port_tag_remap = mv88e6390_port_tag_remap,
++	.port_get_default_prio = mv88e6390_port_get_default_prio,
++	.port_set_default_prio = mv88e6390_port_set_default_prio,
++	.port_get_dscp_prio = mv88e6390_port_get_dscp_prio,
++	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
++	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
++	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -4967,6 +4979,12 @@ static const struct mv88e6xxx_ops mv88e6191_ops = {
+ 	.port_set_speed_duplex = mv88e6390_port_set_speed_duplex,
+ 	.port_max_speed_mode = mv88e6390_port_max_speed_mode,
+ 	.port_tag_remap = mv88e6390_port_tag_remap,
++	.port_get_default_prio = mv88e6390_port_get_default_prio,
++	.port_set_default_prio = mv88e6390_port_set_default_prio,
++	.port_get_dscp_prio = mv88e6390_port_get_dscp_prio,
++	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
++	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
++	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+ 	.port_set_mcast_flood = mv88e6352_port_set_mcast_flood,
+@@ -5131,6 +5149,12 @@ static const struct mv88e6xxx_ops mv88e6290_ops = {
+ 	.port_set_speed_duplex = mv88e6390_port_set_speed_duplex,
+ 	.port_max_speed_mode = mv88e6390_port_max_speed_mode,
+ 	.port_tag_remap = mv88e6390_port_tag_remap,
++	.port_get_default_prio = mv88e6390_port_get_default_prio,
++	.port_set_default_prio = mv88e6390_port_set_default_prio,
++	.port_get_dscp_prio = mv88e6390_port_get_dscp_prio,
++	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
++	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
++	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -5519,6 +5543,12 @@ static const struct mv88e6xxx_ops mv88e6390_ops = {
+ 	.port_set_speed_duplex = mv88e6390_port_set_speed_duplex,
+ 	.port_max_speed_mode = mv88e6390_port_max_speed_mode,
+ 	.port_tag_remap = mv88e6390_port_tag_remap,
++	.port_get_default_prio = mv88e6390_port_get_default_prio,
++	.port_set_default_prio = mv88e6390_port_set_default_prio,
++	.port_get_dscp_prio = mv88e6390_port_get_dscp_prio,
++	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
++	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
++	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -5583,6 +5613,12 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
+ 	.port_set_speed_duplex = mv88e6390x_port_set_speed_duplex,
+ 	.port_max_speed_mode = mv88e6390x_port_max_speed_mode,
+ 	.port_tag_remap = mv88e6390_port_tag_remap,
++	.port_get_default_prio = mv88e6390_port_get_default_prio,
++	.port_set_default_prio = mv88e6390_port_set_default_prio,
++	.port_get_dscp_prio = mv88e6390_port_get_dscp_prio,
++	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
++	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
++	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -5646,6 +5682,12 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+ 	.port_set_speed_duplex = mv88e6393x_port_set_speed_duplex,
+ 	.port_max_speed_mode = mv88e6393x_port_max_speed_mode,
+ 	.port_tag_remap = mv88e6390_port_tag_remap,
++	.port_get_default_prio = mv88e6390_port_get_default_prio,
++	.port_set_default_prio = mv88e6390_port_set_default_prio,
++	.port_get_dscp_prio = mv88e6390_port_get_dscp_prio,
++	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
++	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
++	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_set_policy = mv88e6393x_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -7155,6 +7197,171 @@ static int mv88e6xxx_crosschip_lag_leave(struct dsa_switch *ds, int sw_index,
+ 	return err_sync ? : err_pvt;
+ }
+ 
++static int mv88e6xxx_port_get_default_prio(struct dsa_switch *ds, int port)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_get_default_prio)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_get_default_prio(chip, port);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_set_default_prio(struct dsa_switch *ds, int port,
++					   u8 prio)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_default_prio)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_default_prio(chip, port, prio);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_get_dscp_prio(struct dsa_switch *ds, int port,
++					u8 dscp)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_get_dscp_prio)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_get_dscp_prio(chip, port, dscp);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_add_dscp_prio(struct dsa_switch *ds, int port,
++					u8 dscp, u8 prio)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_dscp_prio)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_dscp_prio(chip, port, dscp, prio);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++/* Only clear the entry if it still holds the priority being deleted,
++ * another APP entry for the same code point may have taken it over.
++ */
++static int mv88e6xxx_port_del_dscp_prio(struct dsa_switch *ds, int port,
++					u8 dscp, u8 prio)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_dscp_prio)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_get_dscp_prio(chip, port, dscp);
++	if (err == prio)
++		err = chip->info->ops->port_set_dscp_prio(chip, port, dscp, -1);
++	else if (err >= 0 || err == -EOPNOTSUPP)
++		err = 0;
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_get_pcp_prio(struct dsa_switch *ds, int port,
++				       u8 pcp, u8 dei)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_get_pcp_prio)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_get_pcp_prio(chip, port, pcp, dei);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_add_pcp_prio(struct dsa_switch *ds, int port,
++				       u8 pcp, u8 dei, u8 prio)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_pcp_prio)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_pcp_prio(chip, port, pcp, dei, prio);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_del_pcp_prio(struct dsa_switch *ds, int port,
++				       u8 pcp, u8 dei, u8 prio)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_pcp_prio)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_get_pcp_prio(chip, port, pcp, dei);
++	if (err == prio)
++		err = chip->info->ops->port_set_pcp_prio(chip, port, pcp, dei,
++							 -1);
++	else if (err >= 0 || err == -EOPNOTSUPP)
++		err = 0;
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_dcb_set_apptrust(struct dsa_switch *ds, int port,
++				      const u8 *sel, int nsel)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	mv88e6xxx_reg_lock(chip);
++	err = mv88e6xxx_port_set_apptrust(chip, port, sel, nsel);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_dcb_get_apptrust(struct dsa_switch *ds, int port,
++				      u8 *sel, int *nsel)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	mv88e6xxx_reg_lock(chip);
++	err = mv88e6xxx_port_get_apptrust(chip, port, sel, nsel);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
+ static int mv88e6xxx_port_add_etype_prio(struct dsa_switch *ds, int port,
+ 					 u16 etype, u8 prio)
+ {
+@@ -7341,6 +7548,16 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+ 	.crosschip_lag_change	= mv88e6xxx_crosschip_lag_change,
+ 	.crosschip_lag_join	= mv88e6xxx_crosschip_lag_join,
+ 	.crosschip_lag_leave	= mv88e6xxx_crosschip_lag_leave,
++	.port_get_default_prio	= mv88e6xxx_port_get_default_prio,
++	.port_set_default_prio	= mv88e6xxx_port_set_default_prio,
++	.port_get_dscp_prio	= mv88e6xxx_port_get_dscp_prio,
++	.port_add_dscp_prio	= mv88e6xxx_port_add_dscp_prio,
++	.port_del_dscp_prio	= mv88e6xxx_port_del_dscp_prio,
++	.port_get_pcp_prio	= mv88e6xxx_port_get_pcp_prio,
++	.port_add_pcp_prio	= mv88e6xxx_port_add_pcp_prio,
++	.port_del_pcp_prio	= mv88e6xxx_port_del_pcp_prio,
++	.port_set_apptrust	= mv88e6xxx_dcb_set_apptrust,
++	.port_get_apptrust	= mv88e6xxx_dcb_get_apptrust,
+ 	.port_add_etype_prio	= mv88e6xxx_port_add_etype_prio,
+ 	.port_del_etype_prio	= mv88e6xxx_port_del_etype_prio,
+ 	.port_setup_tc		= mv88e6xxx_port_setup_tc,
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index 5d5e7ab63fca..bb5739cf8cf9 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -576,6 +576,21 @@ struct mv88e6xxx_ops {
+ 
+ 	int (*port_tag_remap)(struct mv88e6xxx_chip *chip, int port);
+ 
++	/* Per-port priority classification, a negative prio disables
++	 * the entry so the port default applies.
++	 */
++	int (*port_get_default_prio)(struct mv88e6xxx_chip *chip, int port);
++	int (*port_set_default_prio)(struct mv88e6xxx_chip *chip, int port,
++				     u8 prio);
++	int (*port_get_dscp_prio)(struct mv88e6xxx_chip *chip, int port,
++				  u8 dscp);
++	int (*port_set_dscp_prio)(struct mv88e6xxx_chip *chip, int port,
++				  u8 dscp, int prio);
++	int (*port_get_pcp_prio)(struct mv88e6xxx_chip *chip, int port,
++				 u8 pcp, u8 dei);
++	int (*port_set_pcp_prio)(struct mv88e6xxx_chip *chip, int port,
++				 u8 pcp, u8 dei, int prio);
++
+ 	int (*port_set_policy)(struct mv88e6xxx_chip *chip, int port,
+ 			       enum mv88e6xxx_policy_mapping mapping,
+ 			       enum mv88e6xxx_policy_action action);
+diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
+index 843972077576..f7991eeb9d17 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.c
++++ b/drivers/net/dsa/mv88e6xxx/port.c
+@@ -9,6 +9,7 @@
+  */
+ 
+ #include <linux/bitfield.h>
++#include <linux/dcbnl.h>
+ #include <linux/if_bridge.h>
+ #include <linux/phy.h>
+ #include <linux/phylink.h>
+@@ -1096,6 +1097,83 @@ int mv88e6xxx_port_set_fid(struct mv88e6xxx_chip *chip, int port, u16 fid)
+ 	return 0;
+ }
+ 
++/* Offset 0x04: Port Control 0, InitialPri and TagIfBoth
++ *
++ * When a frame is both tagged and IP, and both sources are trusted, the
++ * frame priority (FPri) always comes from the tag; TagIfBoth only picks
++ * the source of the queue priority (QPri) and color.
++ */
++
++int mv88e6xxx_port_set_apptrust(struct mv88e6xxx_chip *chip, int port,
++				const u8 *sel, int nsel)
++{
++	u16 reg, bits = 0;
++	int i, err;
++
++	if (nsel > 2)
++		goto invalid;
++
++	for (i = 0; i < nsel; i++) {
++		switch (sel[i]) {
++		case DCB_APP_SEL_PCP:
++			if (bits & MV88E6185_PORT_CTL0_USE_TAG)
++				goto invalid;
++			bits |= MV88E6185_PORT_CTL0_USE_TAG;
++			if (i == 0 && nsel == 2)
++				bits |= MV88E6XXX_PORT_CTL0_TAG_IF_BOTH;
++			break;
++		case IEEE_8021QAZ_APP_SEL_DSCP:
++			if (bits & MV88E6185_PORT_CTL0_USE_IP)
++				goto invalid;
++			bits |= MV88E6185_PORT_CTL0_USE_IP;
++			break;
++		default:
++			goto invalid;
++		}
++	}
++
++	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_CTL0, &reg);
++	if (err)
++		return err;
++
++	reg &= ~(MV88E6185_PORT_CTL0_USE_TAG | MV88E6185_PORT_CTL0_USE_IP |
++		 MV88E6XXX_PORT_CTL0_TAG_IF_BOTH);
++	reg |= bits;
++
++	return mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_CTL0, reg);
++
++invalid:
++	dev_err(chip->dev, "p%d: supported trust orders: pcp, dscp, pcp dscp, dscp pcp\n",
++		port);
++	return -EINVAL;
++}
++
++int mv88e6xxx_port_get_apptrust(struct mv88e6xxx_chip *chip, int port,
++				u8 *sel, int *nsel)
++{
++	u16 reg;
++	int err;
++
++	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_CTL0, &reg);
++	if (err)
++		return err;
++
++	*nsel = 0;
++
++	if (reg & MV88E6185_PORT_CTL0_USE_TAG &&
++	    reg & MV88E6XXX_PORT_CTL0_TAG_IF_BOTH)
++		sel[(*nsel)++] = DCB_APP_SEL_PCP;
++
++	if (reg & MV88E6185_PORT_CTL0_USE_IP)
++		sel[(*nsel)++] = IEEE_8021QAZ_APP_SEL_DSCP;
++
++	if (reg & MV88E6185_PORT_CTL0_USE_TAG &&
++	    !(reg & MV88E6XXX_PORT_CTL0_TAG_IF_BOTH))
++		sel[(*nsel)++] = DCB_APP_SEL_PCP;
++
++	return 0;
++}
++
+ /* Offset 0x07: Default Port VLAN ID & Priority */
+ 
+ int mv88e6xxx_port_get_pvid(struct mv88e6xxx_chip *chip, int port, u16 *pvid)
+@@ -1136,6 +1214,51 @@ int mv88e6xxx_port_set_pvid(struct mv88e6xxx_chip *chip, int port, u16 pvid)
+ 	return 0;
+ }
+ 
++/* The default frame priority (FPri) lives here, the default queue
++ * priority (QPri) in Port Control 2.  Both are set to the same value.
++ */
++int mv88e6390_port_get_default_prio(struct mv88e6xxx_chip *chip, int port)
++{
++	u16 reg;
++	int err;
++
++	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_DEFAULT_VLAN,
++				  &reg);
++	if (err)
++		return err;
++
++	return FIELD_GET(MV88E6XXX_PORT_DEFAULT_VLAN_FPRI_MASK, reg);
++}
++
++int mv88e6390_port_set_default_prio(struct mv88e6xxx_chip *chip, int port,
++				    u8 prio)
++{
++	u16 reg;
++	int err;
++
++	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_DEFAULT_VLAN,
++				  &reg);
++	if (err)
++		return err;
++
++	reg &= ~MV88E6XXX_PORT_DEFAULT_VLAN_FPRI_MASK;
++	reg |= FIELD_PREP(MV88E6XXX_PORT_DEFAULT_VLAN_FPRI_MASK, prio);
++
++	err = mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_DEFAULT_VLAN,
++				   reg);
++	if (err)
++		return err;
++
++	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_CTL2, &reg);
++	if (err)
++		return err;
++
++	reg &= ~MV88E6390_PORT_CTL2_DEFAULT_QPRI_MASK;
++	reg |= FIELD_PREP(MV88E6390_PORT_CTL2_DEFAULT_QPRI_MASK, prio);
++
++	return mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_CTL2, reg);
++}
++
+ /* Offset 0x08: Port Control 2 Register */
+ 
+ static const char * const mv88e6xxx_port_8021q_mode_names[] = {
+@@ -1647,6 +1770,80 @@ int mv88e6393x_port_led_read(struct mv88e6xxx_chip *chip, int port,
+ 	return 0;
+ }
+ 
++/* Offset 0x17: IP Priority Mapping Table
++ *
++ * One entry per DSCP, holding the frame and queue priority assigned
++ * to IPv4 and IPv6 frames.  A disabled entry leaves the port default.
++ */
++
++static int mv88e6390_port_ippmt_write(struct mv88e6xxx_chip *chip, int port,
++				      u8 ptr, u16 data)
++{
++	u16 reg;
++
++	reg = MV88E6390_PORT_IP_PRIO_MAP_TABLE_UPDATE |
++		FIELD_PREP(MV88E6390_PORT_IP_PRIO_MAP_TABLE_PTR_MASK, ptr) |
++		(data & MV88E6390_PORT_IP_PRIO_MAP_TABLE_DATA_MASK);
++
++	return mv88e6xxx_port_write(chip, port,
++				    MV88E6390_PORT_IP_PRIO_MAP_TABLE, reg);
++}
++
++static int mv88e6390_port_ippmt_read(struct mv88e6xxx_chip *chip, int port,
++				     u8 ptr, u16 *data)
++{
++	u16 reg;
++	int err;
++
++	reg = FIELD_PREP(MV88E6390_PORT_IP_PRIO_MAP_TABLE_PTR_MASK, ptr);
++
++	err = mv88e6xxx_port_write(chip, port,
++				   MV88E6390_PORT_IP_PRIO_MAP_TABLE, reg);
++	if (err)
++		return err;
++
++	err = mv88e6xxx_port_read(chip, port,
++				  MV88E6390_PORT_IP_PRIO_MAP_TABLE, &reg);
++	if (err)
++		return err;
++
++	*data = reg & MV88E6390_PORT_IP_PRIO_MAP_TABLE_DATA_MASK;
++
++	return 0;
++}
++
++int mv88e6390_port_get_dscp_prio(struct mv88e6xxx_chip *chip, int port,
++				 u8 dscp)
++{
++	u16 data;
++	int err;
++
++	err = mv88e6390_port_ippmt_read(chip, port, dscp, &data);
++	if (err)
++		return err;
++
++	if (data & (MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_QPRI |
++		    MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_FPRI))
++		return -EOPNOTSUPP;
++
++	return FIELD_GET(MV88E6390_PORT_IP_PRIO_MAP_TABLE_FPRI_MASK, data);
++}
++
++int mv88e6390_port_set_dscp_prio(struct mv88e6xxx_chip *chip, int port,
++				 u8 dscp, int prio)
++{
++	u16 data;
++
++	if (prio < 0)
++		data = MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_QPRI |
++			MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_FPRI;
++	else
++		data = FIELD_PREP(MV88E6390_PORT_IP_PRIO_MAP_TABLE_QPRI_MASK, prio) |
++			FIELD_PREP(MV88E6390_PORT_IP_PRIO_MAP_TABLE_FPRI_MASK, prio);
++
++	return mv88e6390_port_ippmt_write(chip, port, dscp, data);
++}
++
+ /* Offset 0x18: Port IEEE Priority Remapping Registers [0-3]
+  * Offset 0x19: Port IEEE Priority Remapping Registers [4-7]
+  */
+@@ -1711,6 +1908,74 @@ int mv88e6390_port_tag_remap(struct mv88e6xxx_chip *chip, int port)
+ 	return 0;
+ }
+ 
++static int mv88e6xxx_port_ieeepmt_read(struct mv88e6xxx_chip *chip,
++				       int port, u16 table, u8 ptr, u16 *data)
++{
++	u16 reg;
++	int err;
++
++	reg = table |
++		FIELD_PREP(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_PTR_MASK, ptr);
++
++	err = mv88e6xxx_port_write(chip, port,
++				   MV88E6390_PORT_IEEE_PRIO_MAP_TABLE, reg);
++	if (err)
++		return err;
++
++	err = mv88e6xxx_port_read(chip, port,
++				  MV88E6390_PORT_IEEE_PRIO_MAP_TABLE, &reg);
++	if (err)
++		return err;
++
++	*data = reg & MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DATA_MASK;
++
++	return 0;
++}
++
++static u16 mv88e6390_port_ingress_pcp_table(u8 dei)
++{
++	if (dei)
++		return MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_INGRESS_PCP_DEI;
++
++	return MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_INGRESS_PCP;
++}
++
++int mv88e6390_port_get_pcp_prio(struct mv88e6xxx_chip *chip, int port,
++				u8 pcp, u8 dei)
++{
++	u16 data;
++	int err;
++
++	err = mv88e6xxx_port_ieeepmt_read(chip, port,
++					  mv88e6390_port_ingress_pcp_table(dei),
++					  pcp, &data);
++	if (err)
++		return err;
++
++	if (data & (MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_QPRI |
++		    MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_FPRI))
++		return -EOPNOTSUPP;
++
++	return FIELD_GET(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_FPRI_MASK, data);
++}
++
++int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
++				u8 pcp, u8 dei, int prio)
++{
++	u16 data;
++
++	if (prio < 0)
++		data = MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_QPRI |
++			MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_FPRI;
++	else
++		data = FIELD_PREP(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_QPRI_MASK, prio) |
++			FIELD_PREP(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_FPRI_MASK, prio);
++
++	return mv88e6xxx_port_ieeepmt_write(chip, port,
++					    mv88e6390_port_ingress_pcp_table(dei),
++					    pcp, data);
++}
++
+ /* Offset 0x0E: Policy Control Register */
+ 
+ static int
+diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
+index 5f733f84b348..a9f2ed6ca79c 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.h
++++ b/drivers/net/dsa/mv88e6xxx/port.h
+@@ -211,6 +211,7 @@
+ 
+ /* Offset 0x07: Default Port VLAN ID & Priority */
+ #define MV88E6XXX_PORT_DEFAULT_VLAN		0x07
++#define MV88E6XXX_PORT_DEFAULT_VLAN_FPRI_MASK	0xe000
+ #define MV88E6XXX_PORT_DEFAULT_VLAN_MASK	0x0fff
+ 
+ /* Offset 0x08: Port Control 2 Register */
+@@ -235,6 +236,7 @@
+ #define MV88E6XXX_PORT_CTL2_EGRESS_MONITOR		0x0020
+ #define MV88E6XXX_PORT_CTL2_INGRESS_MONITOR		0x0010
+ #define MV88E6095_PORT_CTL2_CPU_PORT_MASK		0x000f
++#define MV88E6390_PORT_CTL2_DEFAULT_QPRI_MASK		0x0007
+ 
+ /* Offset 0x09: Egress Rate Control */
+ #define MV88E6XXX_PORT_EGRESS_RATE_CTL1		0x09
+@@ -449,6 +451,17 @@
+ /* Offset 0x16: LED Control (6393X family) */
+ #define MV88E6393X_PORT_LED_CONTROL		0x16
+ 
++/* Offset 0x17: IP Priority Mapping Table */
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE			0x17
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE_UPDATE			0x8000
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE_PTR_MASK		0x7e00
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE_DATA_MASK		0x01ff
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE_YELLOW			0x0100
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_QPRI		0x0080
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE_QPRI_MASK		0x0070
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_FPRI		0x0008
++#define MV88E6390_PORT_IP_PRIO_MAP_TABLE_FPRI_MASK		0x0007
++
+ /* Offset 0x18: IEEE Priority Mapping Table */
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE			0x18
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_UPDATE		0x8000
+@@ -457,11 +470,25 @@
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_GREEN_PCP	0x1000
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_YELLOW_PCP	0x2000
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_AVB_PCP	0x3000
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_INGRESS_PCP_DEI	0x4000
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_GREEN_DSCP	0x5000
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_YELLOW_DSCP	0x6000
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_AVB_DSCP	0x7000
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_PTR_MASK		0x0e00
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DATA_MASK		0x01ff
++/* Ingress PCP tables */
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_YELLOW		0x0100
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_QPRI		0x0080
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_QPRI_MASK		0x0070
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_FPRI		0x0008
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_FPRI_MASK		0x0007
++/* Egress PCP tables */
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_VID		0x0010
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_PCP		0x0008
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_PCP_MASK		0x0007
++/* Egress DSCP tables */
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EN_DSCP		0x0040
++#define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DSCP_MASK		0x003f
+ 
+ /* Offset 0x18: Port IEEE Priority Remapping Registers (0-3) */
+ #define MV88E6095_PORT_IEEE_PRIO_REMAP_0123	0x18
+@@ -543,6 +570,21 @@ int mv88e6xxx_port_set_8021q_mode(struct mv88e6xxx_chip *chip, int port,
+ 				  u16 mode);
+ int mv88e6095_port_tag_remap(struct mv88e6xxx_chip *chip, int port);
+ int mv88e6390_port_tag_remap(struct mv88e6xxx_chip *chip, int port);
++int mv88e6xxx_port_set_apptrust(struct mv88e6xxx_chip *chip, int port,
++				const u8 *sel, int nsel);
++int mv88e6xxx_port_get_apptrust(struct mv88e6xxx_chip *chip, int port,
++				u8 *sel, int *nsel);
++int mv88e6390_port_get_default_prio(struct mv88e6xxx_chip *chip, int port);
++int mv88e6390_port_set_default_prio(struct mv88e6xxx_chip *chip, int port,
++				    u8 prio);
++int mv88e6390_port_get_dscp_prio(struct mv88e6xxx_chip *chip, int port,
++				 u8 dscp);
++int mv88e6390_port_set_dscp_prio(struct mv88e6xxx_chip *chip, int port,
++				 u8 dscp, int prio);
++int mv88e6390_port_get_pcp_prio(struct mv88e6xxx_chip *chip, int port,
++				u8 pcp, u8 dei);
++int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
++				u8 pcp, u8 dei, int prio);
+ int mv88e6xxx_port_set_egress_mode(struct mv88e6xxx_chip *chip, int port,
+ 				   enum mv88e6xxx_egress_mode mode);
+ int mv88e6085_port_set_frame_mode(struct mv88e6xxx_chip *chip, int port,
+-- 
+2.43.0
+

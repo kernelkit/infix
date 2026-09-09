@@ -1,0 +1,45 @@
+From c6ee65a44bd5e1599f3f7c6a114d48e2cc0bf618 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 9 Sep 2026 17:04:21 +0200
+Subject: [PATCH 65/71] net: dsa: Skip DCB default priority init on unsupported
+ switches
+Organization: Wires
+
+A driver serving several chip generations has one dsa_switch_ops for
+all of them, so port_get_default_prio is set even for chips that have
+no per-port default priority.  Returning -EOPNOTSUPP from it today
+fails DCB init, and with it user port registration.
+
+Treat -EOPNOTSUPP as "no entry", as the DSCP init loop already does.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ net/dsa/user.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/net/dsa/user.c b/net/dsa/user.c
+index c0019d0c1172..b881c177628c 100644
+--- a/net/dsa/user.c
++++ b/net/dsa/user.c
+@@ -2511,12 +2511,13 @@ static int dsa_user_dcbnl_init(struct net_device *dev)
+ 			.priority = prio,
+ 		};
+ 
+-		if (prio < 0)
++		if (prio >= 0) {
++			err = dcb_ieee_setapp(dev, &app);
++			if (err)
++				return err;
++		} else if (prio != -EOPNOTSUPP) {
+ 			return prio;
+-
+-		err = dcb_ieee_setapp(dev, &app);
+-		if (err)
+-			return err;
++		}
+ 	}
+ 
+ 	if (ds->ops->port_get_dscp_prio) {
+-- 
+2.43.0
+

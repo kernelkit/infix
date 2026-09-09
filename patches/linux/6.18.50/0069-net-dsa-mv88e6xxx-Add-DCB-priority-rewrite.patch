@@ -1,0 +1,433 @@
+From 17dac68ffefb311f4e208be0f6a4fcb82371a0b1 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 9 Sep 2026 17:12:40 +0200
+Subject: [PATCH 69/71] net: dsa: mv88e6xxx: Add DCB priority rewrite
+Organization: Wires
+
+On egress the 6390 family looks up the frame priority assigned at
+ingress in the IEEE Priority Mapping Table to rewrite the PCP of tagged
+frames and, when enabled, the DSCP of IP frames.  The driver programs
+an identity PCP rewrite at setup and leaves DSCP rewrite off, with no
+way to change either.
+
+Hook the tables up to the DSA DCB rewrite ops:
+
+    dcb rewr add dev lan1 prio-pcp 5:5nd prio-dscp 5:40
+    dcb rewr del dev lan1 prio-pcp 5:5nd
+
+Deleting a PCP entry sets DisPCP for that priority, so tagged frames
+keep their PCP.  DSCP marking is also gated per port by Update DSCP in
+Port Control 3, which is set while any priority has an entry.  The
+green and yellow tables are kept equal since the color is not used, and
+the AVB tables are left as they are.  The DEI of a remarked frame
+follows its color and cannot be set from the table, so only DEI 0
+entries are accepted.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 140 +++++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/chip.h |  12 +++
+ drivers/net/dsa/mv88e6xxx/port.c | 125 +++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/port.h |  13 +++
+ 4 files changed, 290 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index bf5d544507c4..1dac45b89754 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -4853,6 +4853,10 @@ static const struct mv88e6xxx_ops mv88e6190_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
++	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
++	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
++	.port_set_dscp_rewr = mv88e6390_port_set_dscp_rewr,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -4919,6 +4923,10 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
++	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
++	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
++	.port_set_dscp_rewr = mv88e6390_port_set_dscp_rewr,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -4985,6 +4993,10 @@ static const struct mv88e6xxx_ops mv88e6191_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
++	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
++	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
++	.port_set_dscp_rewr = mv88e6390_port_set_dscp_rewr,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+ 	.port_set_mcast_flood = mv88e6352_port_set_mcast_flood,
+@@ -5155,6 +5167,10 @@ static const struct mv88e6xxx_ops mv88e6290_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
++	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
++	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
++	.port_set_dscp_rewr = mv88e6390_port_set_dscp_rewr,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -5549,6 +5565,10 @@ static const struct mv88e6xxx_ops mv88e6390_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
++	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
++	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
++	.port_set_dscp_rewr = mv88e6390_port_set_dscp_rewr,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -5619,6 +5639,10 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
++	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
++	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
++	.port_set_dscp_rewr = mv88e6390_port_set_dscp_rewr,
+ 	.port_set_policy = mv88e6352_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -5688,6 +5712,10 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
++	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
++	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
++	.port_set_dscp_rewr = mv88e6390_port_set_dscp_rewr,
+ 	.port_set_policy = mv88e6393x_port_set_policy,
+ 	.port_set_frame_mode = mv88e6351_port_set_frame_mode,
+ 	.port_set_ucast_flood = mv88e6352_port_set_ucast_flood,
+@@ -7336,6 +7364,112 @@ static int mv88e6xxx_port_del_pcp_prio(struct dsa_switch *ds, int port,
+ 	return err;
+ }
+ 
++static int mv88e6xxx_port_get_pcp_rewr(struct dsa_switch *ds, int port,
++				       u8 prio, u8 *pcp, u8 *dei)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_get_pcp_rewr)
++		return -EOPNOTSUPP;
++
++	*dei = 0;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_get_pcp_rewr(chip, port, prio, pcp);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++/* The DEI of a remarked frame follows its color, it cannot be set from
++ * the table, so only the DEI 0 entries can be honored.
++ */
++static int mv88e6xxx_port_set_pcp_rewr(struct dsa_switch *ds, int port,
++				       u8 prio, u8 pcp, u8 dei)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_pcp_rewr)
++		return -EOPNOTSUPP;
++
++	if (dei) {
++		dev_err(chip->dev, "p%d: PCP rewrite cannot set DEI\n", port);
++		return -EINVAL;
++	}
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_pcp_rewr(chip, port, prio, pcp);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_del_pcp_rewr(struct dsa_switch *ds, int port,
++				       u8 prio)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_pcp_rewr)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_pcp_rewr(chip, port, prio, -1);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_get_dscp_rewr(struct dsa_switch *ds, int port,
++					u8 prio, u8 *dscp)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_get_dscp_rewr)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_get_dscp_rewr(chip, port, prio, dscp);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_set_dscp_rewr(struct dsa_switch *ds, int port,
++					u8 prio, u8 dscp)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_dscp_rewr)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_dscp_rewr(chip, port, prio, dscp);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
++static int mv88e6xxx_port_del_dscp_rewr(struct dsa_switch *ds, int port,
++					u8 prio)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	if (!chip->info->ops->port_set_dscp_rewr)
++		return -EOPNOTSUPP;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_dscp_rewr(chip, port, prio, -1);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
+ static int mv88e6xxx_dcb_set_apptrust(struct dsa_switch *ds, int port,
+ 				      const u8 *sel, int nsel)
+ {
+@@ -7558,6 +7692,12 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+ 	.port_del_pcp_prio	= mv88e6xxx_port_del_pcp_prio,
+ 	.port_set_apptrust	= mv88e6xxx_dcb_set_apptrust,
+ 	.port_get_apptrust	= mv88e6xxx_dcb_get_apptrust,
++	.port_get_pcp_rewr	= mv88e6xxx_port_get_pcp_rewr,
++	.port_set_pcp_rewr	= mv88e6xxx_port_set_pcp_rewr,
++	.port_del_pcp_rewr	= mv88e6xxx_port_del_pcp_rewr,
++	.port_get_dscp_rewr	= mv88e6xxx_port_get_dscp_rewr,
++	.port_set_dscp_rewr	= mv88e6xxx_port_set_dscp_rewr,
++	.port_del_dscp_rewr	= mv88e6xxx_port_del_dscp_rewr,
+ 	.port_add_etype_prio	= mv88e6xxx_port_add_etype_prio,
+ 	.port_del_etype_prio	= mv88e6xxx_port_del_etype_prio,
+ 	.port_setup_tc		= mv88e6xxx_port_setup_tc,
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index bb5739cf8cf9..c0af84346b89 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -591,6 +591,18 @@ struct mv88e6xxx_ops {
+ 	int (*port_set_pcp_prio)(struct mv88e6xxx_chip *chip, int port,
+ 				 u8 pcp, u8 dei, int prio);
+ 
++	/* Egress remarking from the frame priority, a negative code
++	 * point disables it for that priority.
++	 */
++	int (*port_get_pcp_rewr)(struct mv88e6xxx_chip *chip, int port,
++				 u8 prio, u8 *pcp);
++	int (*port_set_pcp_rewr)(struct mv88e6xxx_chip *chip, int port,
++				 u8 prio, int pcp);
++	int (*port_get_dscp_rewr)(struct mv88e6xxx_chip *chip, int port,
++				  u8 prio, u8 *dscp);
++	int (*port_set_dscp_rewr)(struct mv88e6xxx_chip *chip, int port,
++				  u8 prio, int dscp);
++
+ 	int (*port_set_policy)(struct mv88e6xxx_chip *chip, int port,
+ 			       enum mv88e6xxx_policy_mapping mapping,
+ 			       enum mv88e6xxx_policy_action action);
+diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
+index f7991eeb9d17..92618049e889 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.c
++++ b/drivers/net/dsa/mv88e6xxx/port.c
+@@ -1976,6 +1976,131 @@ int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 					    pcp, data);
+ }
+ 
++/* Egress remarking uses the frame priority assigned at ingress to look
++ * up the PCP written to tagged frames and the DSCP written to IP frames.
++ * Green and yellow frames have separate tables, both are kept equal as
++ * the driver does not use the color.  The AVB tables are left alone.
++ */
++int mv88e6390_port_get_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
++				u8 prio, u8 *pcp)
++{
++	u16 data;
++	int err;
++
++	err = mv88e6xxx_port_ieeepmt_read(chip, port,
++					  MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_GREEN_PCP,
++					  prio, &data);
++	if (err)
++		return err;
++
++	if (data & MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_PCP)
++		return -ENOENT;
++
++	*pcp = FIELD_GET(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_PCP_MASK, data);
++
++	return 0;
++}
++
++int mv88e6390_port_set_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
++				u8 prio, int pcp)
++{
++	u16 data;
++	int err;
++
++	if (pcp < 0)
++		data = MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_PCP;
++	else
++		data = FIELD_PREP(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_PCP_MASK, pcp);
++
++	err = mv88e6xxx_port_ieeepmt_write(chip, port,
++					   MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_GREEN_PCP,
++					   prio, data);
++	if (err)
++		return err;
++
++	return mv88e6xxx_port_ieeepmt_write(chip, port,
++					    MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_YELLOW_PCP,
++					    prio, data);
++}
++
++/* Port Control 3 gates DSCP marking for the whole port, keep it set as
++ * long as any priority has an enabled entry.
++ */
++static int mv88e6390_port_update_dscp(struct mv88e6xxx_chip *chip, int port)
++{
++	u16 table = MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_GREEN_DSCP;
++	bool enable = false;
++	u16 data, reg;
++	int err, prio;
++
++	for (prio = 0; prio < 8 && !enable; prio++) {
++		err = mv88e6xxx_port_ieeepmt_read(chip, port, table, prio,
++						  &data);
++		if (err)
++			return err;
++
++		enable = data & MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EN_DSCP;
++	}
++
++	err = mv88e6xxx_port_read(chip, port, MV88E6390_PORT_CTL3, &reg);
++	if (err)
++		return err;
++
++	if (enable)
++		reg |= MV88E6390_PORT_CTL3_UPDATE_DSCP;
++	else
++		reg &= ~MV88E6390_PORT_CTL3_UPDATE_DSCP;
++
++	return mv88e6xxx_port_write(chip, port, MV88E6390_PORT_CTL3, reg);
++}
++
++int mv88e6390_port_get_dscp_rewr(struct mv88e6xxx_chip *chip, int port,
++				 u8 prio, u8 *dscp)
++{
++	u16 data;
++	int err;
++
++	err = mv88e6xxx_port_ieeepmt_read(chip, port,
++					  MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_GREEN_DSCP,
++					  prio, &data);
++	if (err)
++		return err;
++
++	if (!(data & MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EN_DSCP))
++		return -ENOENT;
++
++	*dscp = FIELD_GET(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DSCP_MASK, data);
++
++	return 0;
++}
++
++int mv88e6390_port_set_dscp_rewr(struct mv88e6xxx_chip *chip, int port,
++				 u8 prio, int dscp)
++{
++	u16 data;
++	int err;
++
++	if (dscp < 0)
++		data = 0;
++	else
++		data = MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EN_DSCP |
++			FIELD_PREP(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DSCP_MASK, dscp);
++
++	err = mv88e6xxx_port_ieeepmt_write(chip, port,
++					   MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_GREEN_DSCP,
++					   prio, data);
++	if (err)
++		return err;
++
++	err = mv88e6xxx_port_ieeepmt_write(chip, port,
++					   MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EGRESS_YELLOW_DSCP,
++					   prio, data);
++	if (err)
++		return err;
++
++	return mv88e6390_port_update_dscp(chip, port);
++}
++
+ /* Offset 0x0E: Policy Control Register */
+ 
+ static int
+diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
+index a9f2ed6ca79c..ef5028707ec5 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.h
++++ b/drivers/net/dsa/mv88e6xxx/port.h
+@@ -490,6 +490,11 @@
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_EN_DSCP		0x0040
+ #define MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DSCP_MASK		0x003f
+ 
++/* Offset 0x19: Port Control 3 */
++#define MV88E6390_PORT_CTL3				0x19
++#define MV88E6390_PORT_CTL3_UPDATE_DSCP			0x0020
++#define MV88E6390_PORT_CTL3_UPDATE_DEI			0x0008
++
+ /* Offset 0x18: Port IEEE Priority Remapping Registers (0-3) */
+ #define MV88E6095_PORT_IEEE_PRIO_REMAP_0123	0x18
+ 
+@@ -585,6 +590,14 @@ int mv88e6390_port_get_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 				u8 pcp, u8 dei);
+ int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 				u8 pcp, u8 dei, int prio);
++int mv88e6390_port_get_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
++				u8 prio, u8 *pcp);
++int mv88e6390_port_set_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
++				u8 prio, int pcp);
++int mv88e6390_port_get_dscp_rewr(struct mv88e6xxx_chip *chip, int port,
++				 u8 prio, u8 *dscp);
++int mv88e6390_port_set_dscp_rewr(struct mv88e6xxx_chip *chip, int port,
++				 u8 prio, int dscp);
+ int mv88e6xxx_port_set_egress_mode(struct mv88e6xxx_chip *chip, int port,
+ 				   enum mv88e6xxx_egress_mode mode);
+ int mv88e6085_port_set_frame_mode(struct mv88e6xxx_chip *chip, int port,
+-- 
+2.43.0
+

@@ -1,0 +1,59 @@
+From dfebe77c256a3097e6a8aa1735065de60df467b6 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 11 Sep 2026 15:54:16 +0200
+Subject: [PATCH 71/71] net: dsa: tag_dsa: Read the tag priority before the
+ header is stripped
+Organization: Wires
+
+Routed frames left the switch with a priority unrelated to their
+DSCP, constant for a given sender.  The tag priority is copied to
+skb->priority after the DSA header has been removed, and for untagged
+frames dsa_strip_etype_header() has by then moved the MAC addresses
+over the old header bytes, so the value read is a byte of the source
+MAC address.  Tagged frames were unaffected since the 802.1Q tag
+written in place keeps the PCP bits where the DSA PRI field was.
+
+Read the priority right after the header is parsed.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ net/dsa/tag_dsa.c | 16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/net/dsa/tag_dsa.c b/net/dsa/tag_dsa.c
+index 55c296e0b5b0..35595aa21f52 100644
+--- a/net/dsa/tag_dsa.c
++++ b/net/dsa/tag_dsa.c
+@@ -276,6 +276,15 @@ static struct sk_buff *dsa_rcv_ll(struct sk_buff *skb, struct net_device *dev,
+ 	if (!skb->dev)
+ 		return NULL;
+ 
++	/* Ideally we would have a way of configuring the mapping of PCP
++	 * bits to skb->priority on DSA ports (like ingress-qos-map for
++	 * vlan interfaces). For now, assume that a 1:1 mapping is more
++	 * useful than ignoring the priority altogether.  Read it before
++	 * the header is stripped below, which moves the MAC addresses
++	 * over these bytes.
++	 */
++	skb->priority = dsa_header[2] >> 5;
++
+ 	/* When using LAG offload, skb->dev is not a DSA user interface,
+ 	 * so we cannot call dsa_default_offload_fwd_mark and we need to
+ 	 * special-case it.
+@@ -325,13 +334,6 @@ static struct sk_buff *dsa_rcv_ll(struct sk_buff *skb, struct net_device *dev,
+ 		dsa_strip_etype_header(skb, DSA_HLEN + extra);
+ 	}
+ 
+-	/* Ideally we would have a way of configuring the mapping of PCP
+-	 * bits to skb->priority on DSA ports (like ingress-qos-map for
+-	 * vlan interfaces). For now, assume that a 1:1 mapping is more
+-	 * useful than ignoring the priority altogether.
+-	 */
+-	skb->priority = dsa_header[2] >> 5;
+-
+ 	return skb;
+ }
+ 
+-- 
+2.43.0
+

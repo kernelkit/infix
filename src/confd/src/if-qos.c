@@ -108,10 +108,12 @@ static bool qos_is_explicit(struct lyd_node *node)
  */
 static const struct {
 	const char *driver;
-	const char *orders[4];
+	const char *orders[5];
+	bool pcp_encoded;	/* fabric always encodes PCP from the priority */
 } dcb_drivers[] = {
-	{ "sparx5-switch",  { "pcp", "dscp", "dscp-pcp", NULL } },
-	{ "lan966x-switch", { "pcp", "dscp", "dscp-pcp", NULL } },
+	{ "sparx5-switch",  { "pcp", "dscp", "dscp-pcp", NULL }, false },
+	{ "lan966x-switch", { "pcp", "dscp", "dscp-pcp", NULL }, false },
+	{ "mv88e6085",      { "pcp", "dscp", "pcp-dscp", "dscp-pcp", NULL }, true },
 };
 
 /*
@@ -146,6 +148,26 @@ static bool qos_is_port(const char *ifname)
 
 	snprintf(path, sizeof(path), "/sys/class/net/%s/device", ifname);
 	return access(path, F_OK) == 0;
+}
+
+/* Switch port behind a DSA conduit: the fabric never sees frames the CPU sends. */
+static bool qos_is_dsa(const char *ifname)
+{
+	char path[PATH_MAX], line[128];
+	bool dsa = false;
+	FILE *fp;
+
+	snprintf(path, sizeof(path), "/sys/class/net/%s/uevent", ifname);
+	fp = fopen(path, "r");
+	if (!fp)
+		return false;
+
+	while (fgets(line, sizeof(line), fp))
+		if (!strcmp(chomp(line), "DEVTYPE=dsa"))
+			dsa = true;
+	fclose(fp);
+
+	return dsa;
 }
 
 static const char *qos_driver(const char *ifname, char *buf, size_t len)
@@ -183,6 +205,20 @@ static int qos_dcb_driver(const char *ifname)
 				return i;
 
 	return -1;
+}
+
+/*
+ * A switch fabric that encodes the PCP from the frame priority on every
+ * port, as an 802.1Q bridge does, is left to it: the tables it boots
+ * with are the identity encoding and are never disabled, so a cascade
+ * of chips, which carries only the priority between them, behaves like
+ * a single chip.  remark pcp then changes nothing.
+ */
+static bool qos_pcp_encoded(const char *ifname)
+{
+	int i = qos_dcb_driver(ifname);
+
+	return i >= 0 && dcb_drivers[i].pcp_encoded;
 }
 
 /* Unknown drivers are not limited: without DCB the order is honoured in software. */
@@ -569,9 +605,12 @@ static void gen_remark(FILE *fp, const char *ifname, struct lyd_node *remark)
 	if (qos_dcb_driver(ifname) < 0) {
 		fputs("rewr_err=1\n", fp);
 	} else {
-		fprintf(fp, "dcb rewr flush dev %s prio-pcp prio-dscp 2>/dev/null || rewr_err=1\n", ifname);
+		bool encoded = qos_pcp_encoded(ifname);
+
+		fprintf(fp, "dcb rewr flush dev %s%s prio-dscp 2>/dev/null || rewr_err=1\n", ifname,
+			encoded ? "" : " prio-pcp");
 		/* One code point per priority, a DEI 1 entry would replace the DEI 0 one */
-		if (pcp && !strcmp(pcp, "from-priority")) {
+		if (!encoded && pcp && !strcmp(pcp, "from-priority")) {
 			fprintf(fp, "dcb rewr add dev %s prio-pcp", ifname);
 			for (i = 0; i < NUM_PRIO; i++)
 				fprintf(fp, " %d:%dnd", i, i);
@@ -585,10 +624,19 @@ static void gen_remark(FILE *fp, const char *ifname, struct lyd_node *remark)
 		}
 	}
 
+	/*
+	 * On a DSA switch the hardware tables only see forwarded frames;
+	 * frames the CPU sends are injected past them, so those are
+	 * remarked by the kernel on the port's egress as well.
+	 */
 	if (dscp && !strcmp(dscp, "from-priority")) {
-		fputs("if [ $rewr_err -ne 0 ]; then\n", fp);
+		bool dsa = qos_is_dsa(ifname);
+
+		if (!dsa)
+			fputs("if [ $rewr_err -ne 0 ]; then\n", fp);
 		gen_remark_pedit(fp, ifname);
-		fputs("fi\n", fp);
+		if (!dsa)
+			fputs("fi\n", fp);
 	}
 }
 
@@ -671,7 +719,8 @@ static int gen_reset(struct dagger *net, const char *ifname)
 	fprintf(fp, "tc qdisc del dev %s root 2>/dev/null\n", ifname);
 	fprintf(fp, "tc qdisc del dev %s clsact 2>/dev/null\n", ifname);
 	fprintf(fp, "dcb app flush dev %s default-prio pcp-prio dscp-prio 2>/dev/null\n", ifname);
-	fprintf(fp, "dcb rewr flush dev %s prio-pcp prio-dscp 2>/dev/null\n", ifname);
+	fprintf(fp, "dcb rewr flush dev %s%s prio-dscp 2>/dev/null\n", ifname,
+		qos_pcp_encoded(ifname) ? "" : " prio-pcp");
 	fprintf(fp, "dcb apptrust set dev %s order 2>/dev/null\n", ifname);
 	fputs("exit 0\n", fp);
 	fclose(fp);
