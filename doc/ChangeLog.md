@@ -24,6 +24,13 @@ All notable changes to the project are documented in this file.
   and keys are prompted for, `binary` settings open in the text editor, and
   `string` settings are edited on a line prefilled with the current value.
   The `text-editor` and `change` commands are removed
+- Add CLI `edit` and `clear` verbs to admin-exec: `edit datetime` and
+  `edit boot-order` prompt with the current value, `clear dhcp-server
+  statistics` replaces `dhcp-server clear-statistics`.  `set datetime` now
+  also accepts free-form input, e.g., `14:05`, and echoes the ISO-8601
+  value it sets
+- The CLI `configure` command takes an optional path to start in a
+  sub-context directly, e.g., `configure system authentication`
 
 [v26.08.0][] - 2026-09-01
 -------------------------

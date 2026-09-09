@@ -51,9 +51,11 @@ Available commands can be seen by pressing `?` at the prompt:
 
 ```
 admin@host:/>
+  clear          Clear runtime state, e.g., statistics
   configure      Create new candidate-config based on running-config
   copy           Copy file or configuration, e.g., copy running-config startup-config
   dir            List available configuration files
+  edit           Edit system state interactively, e.g., current date/time
   exit           Exit from CLI (log out)
   factory-reset  Restore the system to factory default state
   follow         Monitor a log file, use Ctrl-C to abort
@@ -95,6 +97,9 @@ admin@host-12-34-56:/> configure
 admin@host-12-34-56:/config/> ...             # Try: Tab or ?
 admin@host-12-34-56:/config/> leave
 ```
+
+The `configure` command also takes an optional path, to start out in a
+sub-context directly, e.g., `configure system authentication`.
 
 The `leave` command activates the changes by issuing a transaction to,
 essentially, copy the *candidate* back to *running*.  Depending on the

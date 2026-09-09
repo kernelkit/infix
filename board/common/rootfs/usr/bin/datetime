@@ -1,0 +1,62 @@
+#!/bin/sh
+# Set system date and time via the set-current-datetime RPC.
+#
+#    datetime [-e] [VALUE]
+#
+# With -e the current time is offered for editing in a prompt.  VALUE
+# is converted to the ISO-8601 format required by the RPC, and the
+# result is echoed before setting so mistakes are easy to spot.
+
+usage()
+{
+	cat >&2 <<EOT
+Usage: datetime [-e] [VALUE]
+
+VALUE is local time unless a zone is given:
+  2026-09-09T14:05:00+02:00   ISO-8601, as used by NETCONF/RESTCONF
+  2026-09-09T14:05:00         same, local time
+  2026-09-09 14:05[:00]
+  2026-09-09                  midnight
+  14:05[:00]                  today
+  09.09-14:05                 mm.dd-HH:MM, this year
+EOT
+	exit 1
+}
+
+edit=
+if [ "$1" = "-e" ]; then
+	edit=1
+	shift
+fi
+value=$1
+
+if [ -n "$edit" ]; then
+	tmp=$(mktemp) || exit 1
+	date -Isec > "$tmp"
+	if ! askline datetime "$tmp"; then
+		rm -f "$tmp"
+		exit 1
+	fi
+	value=$(cat "$tmp")
+	rm -f "$tmp"
+fi
+[ -n "$value" ] || usage
+
+case $value in
+	[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z | \
+	[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9][+-][0-9][0-9]:[0-9][0-9])
+		iso=$value
+		;;
+	*)
+		# Let date(1) parse anything else as local time, it does not
+		# know the ISO-8601 'T' separator.
+		plain=$(printf '%s' "$value" | sed 's/T/ /')
+		if ! iso=$(date -d "$plain" -Isec 2>/dev/null); then
+			echo "Cannot parse '$value'" >&2
+			usage
+		fi
+		;;
+esac
+
+echo "Setting datetime $iso"
+exec rpc /ietf-system:set-current-datetime current-datetime "$iso"
