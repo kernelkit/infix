@@ -13,6 +13,11 @@ All notable changes to the project are documented in this file.
 - Add per-server `minpoll` and `maxpoll` options to the NTP client
   configuration, for tuning how often each server is polled
 
+### Fixes
+
+- Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
+
+
 [v26.08.0][] - 2026-09-01
 -------------------------
 

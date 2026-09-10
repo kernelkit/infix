@@ -1,0 +1,87 @@
+From bfde245c25f2c8997c9c2d2a64fc33dbca194e64 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Tue, 30 Jun 2026 15:42:48 +0200
+Subject: [PATCH 64/68] wifi: brcmfmac: survey the requested interface, not the
+ primary
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+brcmf_cfg80211_dump_survey() and its helper brcmf_set_channel() always
+operated on the primary interface (cfg_to_ndev()), ignoring the netdev
+that cfg80211 passed in. A survey requested on a secondary interface
+therefore programmed the chanspec on, and read PHY noise from, the wrong
+interface.
+
+Use the interface that the survey was requested on. Pass the brcmf_if
+down to brcmf_set_channel() instead of having it look up the primary.
+
+While here, bring the interface up before the channel is set rather than
+after: setting the chanspec on a down interface can fail. The set_channel
+failure path now exits through the common 'exit' label so that mpc, which
+is disabled just above, is re-enabled instead of being left off.
+
+Fixes: 6c04deae1438 ("brcmfmac: Add dump_survey cfg80211 ops for HostApd AutoChannelSelection")
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .../broadcom/brcm80211/brcmfmac/cfg80211.c    | 20 ++++++++++---------
+ 1 file changed, 11 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+index 0081ceb6c7829..8b245460262d9 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+@@ -8124,11 +8124,11 @@ brcmf_dump_obss(struct brcmf_if *ifp, struct cca_msrmnt_query req,
+ }
+ 
+ static s32
+-brcmf_set_channel(struct brcmf_cfg80211_info *cfg, struct ieee80211_channel *chan)
++brcmf_set_channel(struct brcmf_cfg80211_info *cfg, struct brcmf_if *ifp,
++		  struct ieee80211_channel *chan)
+ {
+ 	u16 chspec = 0;
+ 	int err = 0;
+-	struct brcmf_if *ifp = netdev_priv(cfg_to_ndev(cfg));
+ 
+ 	if (chan->flags & IEEE80211_CHAN_DISABLED)
+ 		return -EINVAL;
+@@ -8159,7 +8159,7 @@ brcmf_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
+ 			   int idx, struct survey_info *info)
+ {
+ 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
+-	struct brcmf_if *ifp = netdev_priv(cfg_to_ndev(cfg));
++	struct brcmf_if *ifp = netdev_priv(ndev);
+ 	struct brcmf_dump_survey survey = {};
+ 	struct ieee80211_supported_band *band;
+ 	enum nl80211_band band_id;
+@@ -8190,21 +8190,23 @@ brcmf_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
+ 	if (band_id == NUM_NL80211_BANDS)
+ 		return -ENOENT;
+ 
+-	/* Setting current channel to the requested channel */
+-	info->filled = 0;
+-	if (brcmf_set_channel(cfg, info->channel))
+-		return 0;
+-
+ 	/* Disable mpc */
+ 	brcmf_set_mpc(ifp, 0);
+ 
+-	/* Set interface up, explicitly. */
++	/* Set interface up before any channel operations. */
+ 	err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1);
+ 	if (err) {
+ 		brcmf_err("set interface up failed, err = %d\n", err);
+ 		goto exit;
+ 	}
+ 
++	/* Setting current channel to the requested channel */
++	info->filled = 0;
++	if (brcmf_set_channel(cfg, ifp, info->channel)) {
++		err = 0;
++		goto exit;
++	}
++
+ 	/* Get noise value */
+ 	err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_PHY_NOISE, &noise);
+ 	if (err) {
