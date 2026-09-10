@@ -1753,9 +1753,9 @@ class Iface:
                 mesh_id = mesh.get('mesh-id', "----")
                 peers_data = mesh.get("peers", {})
                 peers = peers_data.get("peer", [])
-                print(f"{'mode':<{20}}: {mode}")
-                print(f"{'mesh-id':<{20}}: {mesh_id}")
-                print(f"{'connected peers':<{20}}: {len(peers)}")
+                print(f"{'mode':<{19}}: {mode}")
+                print(f"{'mesh-id':<{19}}: {mesh_id}")
+                print(f"{'connected peers':<{19}}: {len(peers)}")
                 self.pr_wifi_peers()
             else:
                 mode = "station"
