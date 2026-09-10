@@ -10,9 +10,8 @@ stratum level.
 This test validates NTP clock selection algorithm by configuring a client
 to sync from two servers with different stratum levels:
 
-- srv1: Test PC running chronyd, serving its local clock at stratum 5
-  with an honest root distance so clients tolerate startup transients
-- srv2: NTP server DUT syncing from srv1 (stratum 6)
+- srv1: Test PC running BusyBox ntpd, serving its local clock (-l)
+- srv2: NTP server DUT syncing from srv1 (one stratum higher)
 - client: NTP client DUT syncing from both servers
 
 Both servers sync to the same time source (srv2 syncs from srv1),

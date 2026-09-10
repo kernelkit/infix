@@ -7,9 +7,8 @@ stratum level.
 This test validates NTP clock selection algorithm by configuring a client
 to sync from two servers with different stratum levels:
 
-- srv1: Test PC running chronyd, serving its local clock at stratum 5
-  with an honest root distance so clients tolerate startup transients
-- srv2: NTP server DUT syncing from srv1 (stratum 6)
+- srv1: Test PC running BusyBox ntpd, serving its local clock (-l)
+- srv2: NTP server DUT syncing from srv1 (one stratum higher)
 - client: NTP client DUT syncing from both servers
 
 Both servers sync to the same time source (srv2 syncs from srv1),
@@ -32,7 +31,7 @@ import infamy.ntp_server as ntp_server
 
 # Network configuration
 ips = {
-    "srv1":   "192.168.1.1",   # chronyd on test PC
+    "srv1":   "192.168.1.1",   # BusyBox ntpd on test PC
     "srv2":   "192.168.1.2",   # Infix NTP server
     "client": "192.168.1.3"    # Infix NTP client
 }
@@ -172,7 +171,7 @@ with infamy.Test() as test:
                                 and srv1_stratum < srv2_stratum)
 
                 # srv2 synced before the client was configured, so the
-                # client's iburst samples already carry stratum 6
+                # client's iburst samples already carry the higher stratum
                 until(check_stratums, attempts=30)
                 print(f"srv1 and srv2 stratums verified as different")
 
