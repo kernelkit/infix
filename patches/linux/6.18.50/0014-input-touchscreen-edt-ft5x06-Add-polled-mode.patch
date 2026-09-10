@@ -1,7 +1,8 @@
 From 4d0c53b5030426e90d010f9afbdfc221eb210a90 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Thu, 21 Aug 2025 11:20:23 +0200
-Subject: [PATCH 14/64] input:touchscreen:edt-ft5x06: Add polled mode
+Subject: [PATCH 14/68] input:touchscreen:edt-ft5x06: Add polled mode
+Organization: Wires
 
 Not all hardware has interrupts therefore we need
 to poll the touchscreen.
@@ -10,7 +11,7 @@ to poll the touchscreen.
  1 file changed, 58 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/input/touchscreen/edt-ft5x06.c b/drivers/input/touchscreen/edt-ft5x06.c
-index 4efdb467b6c6..6ec1078081d5 100644
+index 4efdb467b6c61..6ec1078081d58 100644
 --- a/drivers/input/touchscreen/edt-ft5x06.c
 +++ b/drivers/input/touchscreen/edt-ft5x06.c
 @@ -77,6 +77,9 @@

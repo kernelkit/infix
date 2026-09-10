@@ -1,8 +1,9 @@
 From e04ddb66fd53160f10f0ab7607c32cf6f006acdf Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
-Subject: [PATCH 08/64] net: bridge: drop delay for applying strict multicast
+Subject: [PATCH 08/68] net: bridge: drop delay for applying strict multicast
  filtering
+Organization: Wires
 
 This *local* patch drops the initial delay before applying strict multicast
 filtering, introduced in [1] and recently updated in [2].
@@ -24,7 +25,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  2 files changed, 8 insertions(+), 38 deletions(-)
 
 diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
-index 6fb2791714f0..36826beae7f8 100644
+index 6fb2791714f07..36826beae7f84 100644
 --- a/net/bridge/br_multicast.c
 +++ b/net/bridge/br_multicast.c
 @@ -1760,10 +1760,6 @@ static void br_ip6_multicast_querier_expired(struct timer_list *t)
@@ -163,7 +164,7 @@ index 6fb2791714f0..36826beae7f8 100644
  #endif
  
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index d8ab2557cd79..68ddec76d820 100644
+index d8ab2557cd798..68ddec76d820f 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -80,7 +80,6 @@ struct bridge_mcast_own_query {
