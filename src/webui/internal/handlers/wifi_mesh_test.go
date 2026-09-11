@@ -481,3 +481,49 @@ func TestSensorLabel(t *testing.T) {
 		}
 	}
 }
+
+// Key Vitals has no group headings, so each row names the component it
+// measures, and only says which reading when one component has several.
+func TestKeyVitalLabels(t *testing.T) {
+	classes := map[string]string{"cpu": classCPU, "radio0": classWiFi}
+
+	vitals := func(fixture string) []sensorEntry {
+		t.Helper()
+		var hw hardwareWrapper
+		if err := json.Unmarshal([]byte(fixture), &hw); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		var out []sensorEntry
+		for _, c := range hw.Hardware.Component {
+			if v, ok := keyVital(c, classes); ok {
+				out = append(out, v)
+			}
+		}
+		disambiguateVitals(out)
+		return out
+	}
+
+	const celsius = `"sensor-data":{"value":44600,"value-type":"celsius","value-scale":"milli","oper-status":"ok"}`
+	got := vitals(`{"ietf-hardware:hardware":{"component":[
+{"name":"cpu-thermal","parent":"cpu",` + celsius + `},
+{"name":"radio0-temp","parent":"radio0","description":"Temperature",` + celsius + `},
+{"name":"sfp0",` + celsius + `}]}}`)
+
+	want := []string{"cpu", "radio0", "sfp0"}
+	if len(got) != len(want) {
+		t.Fatalf("vitals = %+v, want %v", got, want)
+	}
+	for i, w := range want {
+		if got[i].Name != w {
+			t.Errorf("vital %d = %q, want %q", i, got[i].Name, w)
+		}
+	}
+
+	// Two dies on one SoC: now the reading has to be named too.
+	got = vitals(`{"ietf-hardware:hardware":{"component":[
+{"name":"cpu-die0","parent":"cpu",` + celsius + `},
+{"name":"cpu-die1","parent":"cpu",` + celsius + `}]}}`)
+	if len(got) != 2 || got[0].Name != "cpu Die0" || got[1].Name != "cpu Die1" {
+		t.Errorf("duplicate parents = %+v", got)
+	}
+}

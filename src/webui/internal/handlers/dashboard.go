@@ -289,6 +289,9 @@ type sensorEntry struct {
 	Name  string
 	Value string
 	Type  string // "temperature", "fan", "voltage", etc.
+	// detail names the reading itself, appended to Name only when one
+	// component contributes more than one row.
+	detail string
 }
 
 type wifiEntry struct {
@@ -505,6 +508,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+	disambiguateVitals(data.KeyVitals)
 
 	if confErr != nil {
 		log.Printf("restconf system config: %v", confErr)
@@ -731,11 +736,36 @@ func keyVital(c hwComponentJSON, classByName map[string]string) (sensorEntry, bo
 	default:
 		return sensorEntry{}, false
 	}
+	// Key Vitals is a flat list with no headings, so a row has to name
+	// the thing it measures. That is the parent component, the CPU or
+	// the radio; the sensor's own name is a list key and says nothing.
+	label := sensorLabel(c.Name, c.Parent, c.Description)
+	name := c.Parent
+	if name == "" {
+		name = label
+		label = ""
+	}
 	return sensorEntry{
-		Name:  c.Name,
-		Value: formatSensor(c.SensorData.ValueType, int64(c.SensorData.Value), c.SensorData.ValueScale),
-		Type:  c.SensorData.ValueType,
+		Name:   name,
+		detail: label,
+		Value:  formatSensor(c.SensorData.ValueType, int64(c.SensorData.Value), c.SensorData.ValueScale),
+		Type:   c.SensorData.ValueType,
 	}, true
+}
+
+// disambiguateVitals keeps the rows tellable apart when one component
+// reports several of them, an SoC with a sensor per die, say. Only then
+// is the sensor's own label worth the width.
+func disambiguateVitals(vitals []sensorEntry) {
+	seen := map[string]int{}
+	for _, v := range vitals {
+		seen[v.Name]++
+	}
+	for i := range vitals {
+		if seen[vitals[i].Name] > 1 && vitals[i].detail != "" {
+			vitals[i].Name += " " + vitals[i].detail
+		}
+	}
 }
 
 // summarizeWiFiRadio collapses an ietf-hardware component's wifi-radio
