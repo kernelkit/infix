@@ -600,6 +600,7 @@ type ifaceDetailData struct {
 	WiFiSSID         string
 	WiFiBSSID        string // station: AP currently associated to
 	WiFiMeshID       string
+	WiFiForwarding   string // mesh: kernel mesh_fwding, "" if unreported
 	WiFiSignal       string
 	WiFiRxSpeed      string
 	WiFiTxSpeed      string
@@ -754,6 +755,7 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 		} else if mp := iface.WiFi.MeshPoint; mp != nil {
 			d.WiFiMode = "Mesh Point"
 			d.WiFiMeshID = mp.MeshID
+			d.WiFiForwarding = wifiForwardingLabel(mp.Forwarding)
 			d.WiFiPeerCount = fmt.Sprintf("%d", len(mp.Peers.Peer))
 			d.WiFiStaTitle = "Mesh Peers"
 			for _, p := range mp.Peers.Peer {
@@ -917,6 +919,19 @@ func formatEthernetLink(bps uint64, duplex string) string {
 		s += " " + duplex
 	}
 	return s
+}
+
+// wifiForwardingLabel renders the mesh forwarding flag statd reads back
+// from the kernel. Absent means the driver did not report it, which is
+// not the same as off, so it renders as nothing at all.
+func wifiForwardingLabel(fwd *bool) string {
+	if fwd == nil {
+		return ""
+	}
+	if *fwd {
+		return "Enabled"
+	}
+	return "Disabled"
 }
 
 // wifiRoamingSummary renders the non-default roaming settings as one

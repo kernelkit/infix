@@ -22,7 +22,7 @@ import (
 // the configure page renders from.
 const wifiIfacesFixture = `{"ietf-interfaces:interfaces":{"interface":[
 {"name":"wifi0-mesh","type":"infix-if-type:wifi","oper-status":"up",
- "infix-interfaces:wifi":{"radio":"phy0","mesh-point":{"mesh-id":"backhaul",
+ "infix-interfaces:wifi":{"radio":"phy0","mesh-point":{"mesh-id":"backhaul","forwarding":false,
    "security":{},
    "peers":{"peer":[{"mac-address":"02:00:00:00:00:01","signal-strength":-55,"connected-time":90,
      "rx-bytes":"2048","tx-bytes":"4096","rx-speed":"650","tx-speed":"1200"}]}}}},
@@ -63,8 +63,14 @@ func TestBuildWiFiInterfaces_MeshPeersAndBSSID(t *testing.T) {
 	if len(mesh) != 1 || mesh[0].Mode != "mesh" || mesh[0].SSID != "backhaul" {
 		t.Fatalf("mesh: got %+v", mesh)
 	}
-	if len(mesh[0].Clients) != 1 {
-		t.Errorf("mesh peers: %+v", mesh[0])
+	if len(mesh[0].Clients) != 1 || mesh[0].Forwarding != "Disabled" {
+		t.Errorf("mesh peers/forwarding: %+v", mesh[0])
+	}
+	// A driver that reports no mesh_fwding must not be read as "off".
+	quiet := decodeWiFiFixture(t)
+	quiet[0].WiFi.MeshPoint.Forwarding = nil
+	if got := buildWiFiInterfaces("phy0", quiet)[0].Forwarding; got != "" {
+		t.Errorf("unreported forwarding = %q, want blank", got)
 	}
 	if mesh[0].Clients[0].Signal != "-55 dBm" || mesh[0].Clients[0].SignalCSS != "signal-good" {
 		t.Errorf("peer signal: %+v", mesh[0].Clients[0])
@@ -108,7 +114,7 @@ func TestBuildDetailData_MeshAndStation(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/interfaces/x", nil)
 
 	d := buildDetailData(req, &ifaces[0])
-	if d.WiFiMode != "Mesh Point" || d.WiFiMeshID != "backhaul" {
+	if d.WiFiMode != "Mesh Point" || d.WiFiMeshID != "backhaul" || d.WiFiForwarding != "Disabled" {
 		t.Errorf("mesh detail: %+v", d)
 	}
 	if d.WiFiPeerCount != "1" || d.WiFiStaTitle != "Mesh Peers" || len(d.WiFiStations) != 1 {
@@ -244,8 +250,11 @@ func TestWiFiPageRendersMeshAndRoaming(t *testing.T) {
 	if strings.Contains(out, "signal-signal-") {
 		t.Error("doubled signal- class prefix")
 	}
+	if !strings.Contains(out, "<th>Forwarding</th><td>Disabled") {
+		t.Error("wifi page missing the kernel's mesh forwarding state")
+	}
 	// Config-only leaves have no place on a status page.
-	for _, never := range []string{"Roaming", "Forwarding", "802.11r"} {
+	for _, never := range []string{"Roaming", "802.11r"} {
 		if strings.Contains(out, never) {
 			t.Errorf("wifi page shows config-only %q", never)
 		}
@@ -268,7 +277,10 @@ func TestIfaceDetailRendersMesh(t *testing.T) {
 			t.Errorf("detail page missing %q", want)
 		}
 	}
-	for _, never := range []string{"Mesh Forwarding", "<th>Roaming</th>"} {
+	if !strings.Contains(out, "Mesh Forwarding") {
+		t.Error("detail page missing the kernel's mesh forwarding state")
+	}
+	for _, never := range []string{"<th>Roaming</th>"} {
 		if strings.Contains(out, never) {
 			t.Errorf("detail page shows config-only %q", never)
 		}

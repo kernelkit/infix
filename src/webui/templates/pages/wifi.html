@@ -83,6 +83,14 @@
   </div>
   {{end}}
 
+  {{if and (eq .Mode "mesh") .Forwarding}}
+  <div class="card-body" style="padding:0">
+    <table class="info-table">
+      <tr><th>Forwarding</th><td>{{.Forwarding}}</td></tr>
+    </table>
+  </div>
+  {{end}}
+
   {{if .Clients}}
   <div class="data-table-wrap">
     <table class="data-table">

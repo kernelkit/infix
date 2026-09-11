@@ -115,6 +115,8 @@ type WiFiInterface struct {
 	RxSpeed     string
 	TxSpeed     string
 	ScanResults []WiFiScan
+	// Mesh mode
+	Forwarding string
 }
 
 // WiFiClient is the template data for a connected station client.
@@ -314,6 +316,7 @@ func buildWiFiInterfaces(radioName string, ifaces []ifaceJSON) []WiFiInterface {
 		} else if mp := iface.WiFi.MeshPoint; mp != nil {
 			wi.Mode = "mesh"
 			wi.SSID = mp.MeshID
+			wi.Forwarding = wifiForwardingLabel(mp.Forwarding)
 			wi.ClientsEmpty = "No mesh peers connected."
 			for _, p := range mp.Peers.Peer {
 				wi.Clients = append(wi.Clients, buildWiFiClient(p))

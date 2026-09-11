@@ -28,6 +28,16 @@ def get_iw_stations(ifname):
     return []
 
 
+def get_iw_mesh_param(ifname):
+    """Get mesh parameters via iw.py (mesh point mode)"""
+    try:
+        data = HOST.run(('/usr/libexec/infix/iw.py', 'mesh', ifname), default='{}')
+        return json.loads(data)
+    except Exception:
+        pass
+    return {}
+
+
 def get_iw_link(ifname):
     """Get link info via iw.py (station mode)"""
     try:
@@ -100,6 +110,10 @@ def wifi_mesh(ifname, info=None):
     mesh_id = info.get('ssid') or get_wpa_status(ifname).get('ssid')
     if mesh_id:
         mesh_data['mesh-id'] = decode_wpa_ssid(mesh_id)
+
+    fwding = get_iw_mesh_param(ifname).get('mesh_fwding')
+    if fwding is not None:
+        mesh_data['forwarding'] = bool(fwding)
 
     peers = get_iw_stations(ifname)
     if peers:
