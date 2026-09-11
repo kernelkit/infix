@@ -1030,25 +1030,47 @@
 // Interface page glue (replaces inline hx-on / inline <script>, which CSP
 // blocks under the `script-src 'self'` policy in middleware.go).
 (function () {
+  // Show or hide a block and keep its controls in step. A hidden control
+  // still takes part in constraint validation and still submits, so it
+  // has to be disabled as well. Enabling skips anything inside a nested
+  // block that is itself still hidden, e.g. the 802.11r sub-rows of an
+  // unticked 802.11r.
+  function setBlockEnabled(el, on) {
+    el.hidden = !on;
+    el.querySelectorAll('input,select,textarea,button').forEach(function (ctrl) {
+      if (on && ctrl.closest('[hidden]')) return;
+      ctrl.disabled = !on;
+    });
+  }
+
   // A checkbox marked [data-fold-target="<id> <id>…"] toggles the matching
   // <details> (or any elements with those ids) immediately on change. Used
   // for the DHCP / DHCPv6 settings foldouts on Configure → Interface: the
   // foldout is always in the DOM but starts hidden when the client isn't
   // enabled. This lets the user see the settings form before clicking Save
   // IPvX Settings and confirms the section exists even when DHCP is off.
-  // Also used for the 802.11r/v sub-rows in the WiFi editor. Controls inside
-  // a hidden target are disabled too: a hidden input still takes part in
-  // constraint validation and would block submit with no visible message.
+  // Also used for the 802.11r/v sub-rows in the WiFi editor.
   document.addEventListener('change', function (evt) {
     var cb = evt.target;
     if (!cb || !cb.matches || !cb.matches('input[type="checkbox"][data-fold-target]')) return;
     cb.getAttribute('data-fold-target').split(/\s+/).forEach(function (id) {
       var target = document.getElementById(id);
-      if (!target) return;
-      target.hidden = !cb.checked;
-      target.querySelectorAll('input,select,textarea,button').forEach(function (el) {
-        el.disabled = !cb.checked;
-      });
+      if (target) setBlockEnabled(target, cb.checked);
+    });
+  });
+
+  // WiFi interface editor: the mode radios reveal the rows belonging to
+  // the selected mode, so an interface can be switched between station,
+  // access point and mesh point in place. The form posts the whole wifi
+  // container, so the mode the user leaves behind is replaced.
+  document.addEventListener('change', function (evt) {
+    var radio = evt.target;
+    if (!radio || !radio.matches || !radio.matches('input[name="mode"]')) return;
+    var form = radio.closest('[data-wifi-editor]');
+    if (!form) return;
+    form.querySelectorAll('[data-wifi-modes]').forEach(function (el) {
+      var modes = el.getAttribute('data-wifi-modes').split(/\s+/);
+      setBlockEnabled(el, modes.indexOf(radio.value) !== -1);
     });
   });
 

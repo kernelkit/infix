@@ -54,6 +54,9 @@ All notable changes to the project are documented in this file.
   `radio0` name first, so `show hardware` and the WebUI could no longer
   match interfaces to their radio. The sensor is now a child of the
   radio component, named `radio0-temp`
+- WebUI: a WiFi interface can be switched between station, access point
+  and mesh point from the interface editor. The mode used to be fixed
+  when the interface was created
 
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 

@@ -393,10 +393,17 @@
               {{if and .WiFi .WiFi.Station .WiFi.Station.Security}}{{$curSecret = .WiFi.Station.Security.Secret}}{{end}}
               {{if and .WiFi .WiFi.MeshPoint .WiFi.MeshPoint.Security}}{{$curSecret = .WiFi.MeshPoint.Security.Secret}}{{end}}
               {{$secretDesc := index $d "wifi-secret"}}{{if eq .WifiMode "mesh-point"}}{{$secretDesc = index $d "wifi-mesh-secret"}}{{end}}
+              {{$ap := ""}}{{if .WiFi}}{{$ap = .WiFi.AccessPoint}}{{end}}
+              {{$sta := ""}}{{if .WiFi}}{{$sta = .WiFi.Station}}{{end}}
+              {{$mp := ""}}{{if .WiFi}}{{$mp = .WiFi.MeshPoint}}{{end}}
+              {{$ssid := ""}}{{if $ap}}{{$ssid = $ap.SSID}}{{else if $sta}}{{$ssid = $sta.SSID}}{{end}}
               <div style="margin-top:1rem">
-                <h4 class="cfg-section-head">WiFi {{if eq .WifiMode "access-point"}}(Access Point){{else if eq .WifiMode "station"}}(Station){{else if eq .WifiMode "mesh-point"}}(Mesh Point){{end}}</h4>
-                <form hx-post="/configure/interfaces/{{$ifname}}/wifi" hx-swap="none">
-                  <input type="hidden" name="mode" value="{{.WifiMode}}">
+                <h4 class="cfg-section-head">WiFi</h4>
+                {{/* Every mode's fields are rendered; data-wifi-modes on a
+                     row lists the modes it belongs to and the mode radios
+                     reveal the matching set, so an interface can be
+                     switched between station, AP and mesh in place. */}}
+                <form hx-post="/configure/interfaces/{{$ifname}}/wifi" hx-swap="none" data-wifi-editor>
                   <table class="info-table">
                     <tr>
                       <th>Radio{{template "field-info" (index $d "wifi-radio")}}</th>
@@ -466,67 +473,79 @@
                         </div>
                       </td>
                     </tr>
-                    {{if and .WiFi .WiFi.AccessPoint}}
-                    {{$ap := .WiFi.AccessPoint}}
                     <tr>
+                      <th>Mode{{template "field-info" (index $d "wifi-mode")}}</th>
+                      <td>
+                        <label class="yt-bool-group-label"><input type="radio" name="mode"
+                               value="station" {{if eq .WifiMode "station"}}checked{{end}}>
+                               Station (client)</label>
+                        <label class="yt-bool-group-label"><input type="radio" name="mode"
+                               value="access-point" {{if eq .WifiMode "access-point"}}checked{{end}}>
+                               Access Point</label>
+                        <label class="yt-bool-group-label"><input type="radio" name="mode"
+                               value="mesh-point" {{if eq .WifiMode "mesh-point"}}checked{{end}}>
+                               Mesh Point (802.11s)</label>
+                      </td>
+                    </tr>
+                    {{/* An interface with no mode configured is in scan-only
+                         mode; it shows no mode-specific field until one of
+                         the mode radios is picked. */}}
+                    {{$named := or (eq .WifiMode "station") (eq .WifiMode "access-point")}}
+                    <tr data-wifi-modes="station access-point" {{if not $named}}hidden{{end}}>
                       <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>
                       <td><input class="cfg-input cfg-input-sm" type="text" name="ssid"
-                                 value="{{$ap.SSID}}" maxlength="32" required></td>
+                                 value="{{$ssid}}" maxlength="32" required
+                                 {{if not $named}}disabled{{end}}></td>
                     </tr>
-                    <tr>
+                    <tr data-wifi-modes="mesh-point" {{if ne .WifiMode "mesh-point"}}hidden{{end}}>
+                      <th>Mesh ID{{template "field-info" (index $d "wifi-mesh-id")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="text" name="mesh-id"
+                                 value="{{if $mp}}{{$mp.MeshID}}{{end}}" maxlength="32" required
+                                 {{if ne .WifiMode "mesh-point"}}disabled{{end}}></td>
+                    </tr>
+                    <tr data-wifi-modes="mesh-point" {{if ne .WifiMode "mesh-point"}}hidden{{end}}>
+                      <th>Forwarding{{template "field-info" (index $d "wifi-forwarding")}}</th>
+                      <td>
+                        <label><input type="checkbox" name="forwarding" value="true"
+                               {{if or (not $mp) (not $mp.Forwarding) (deref $mp.Forwarding)}}checked{{end}}
+                               {{if ne .WifiMode "mesh-point"}}disabled{{end}}>
+                               Relay traffic for other mesh points</label>
+                        <input type="hidden" name="forwarding" value="false">
+                      </td>
+                    </tr>
+                    <tr data-wifi-modes="access-point" {{if ne .WifiMode "access-point"}}hidden{{end}}>
                       <th>Hidden SSID{{template "field-info" (index $d "wifi-hidden")}}</th>
                       <td>
                         <label><input type="checkbox" name="hidden"
-                               {{if and $ap.Hidden (deref $ap.Hidden)}}checked{{end}}>
+                               {{if and $ap $ap.Hidden (deref $ap.Hidden)}}checked{{end}}
+                               {{if ne .WifiMode "access-point"}}disabled{{end}}>
                                Don't broadcast SSID in beacons</label>
                       </td>
                     </tr>
-                    <tr>
+                    <tr data-wifi-modes="access-point" {{if ne .WifiMode "access-point"}}hidden{{end}}>
                       <th>Security mode{{template "field-info" (index $d "wifi-sec-mode")}}</th>
                       <td>
-                        {{$sm := "wpa2-wpa3-personal"}}{{if and $ap.Security $ap.Security.Mode}}{{$sm = $ap.Security.Mode}}{{end}}
-                        <select class="cfg-input cfg-input-sm" name="sec-mode">
+                        {{$sm := "wpa2-wpa3-personal"}}{{if and $ap $ap.Security $ap.Security.Mode}}{{$sm = $ap.Security.Mode}}{{end}}
+                        <select class="cfg-input cfg-input-sm" name="sec-mode"
+                                {{if ne .WifiMode "access-point"}}disabled{{end}}>
                           {{range $.WiFiSecOptionsAP}}
                           <option value="{{.Value}}" {{if eq $sm .Value}}selected{{end}}>{{.Label}}</option>
                           {{end}}
                         </select>
                       </td>
                     </tr>
-                    {{else if and .WiFi .WiFi.Station}}
-                    {{$sta := .WiFi.Station}}
-                    <tr>
-                      <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>
-                      <td><input class="cfg-input cfg-input-sm" type="text" name="ssid"
-                                 value="{{$sta.SSID}}" maxlength="32" required></td>
-                    </tr>
-                    <tr>
+                    <tr data-wifi-modes="station" {{if ne .WifiMode "station"}}hidden{{end}}>
                       <th>Security mode{{template "field-info" (index $d "wifi-sec-mode")}}</th>
                       <td>
-                        {{$sm := "auto"}}{{if and $sta.Security $sta.Security.Mode}}{{$sm = $sta.Security.Mode}}{{end}}
-                        <select class="cfg-input cfg-input-sm" name="sec-mode">
+                        {{$sm := "auto"}}{{if and $sta $sta.Security $sta.Security.Mode}}{{$sm = $sta.Security.Mode}}{{end}}
+                        <select class="cfg-input cfg-input-sm" name="sec-mode"
+                                {{if ne .WifiMode "station"}}disabled{{end}}>
                           {{range $.WiFiSecOptionsSta}}
                           <option value="{{.Value}}" {{if eq $sm .Value}}selected{{end}}>{{.Label}}</option>
                           {{end}}
                         </select>
                       </td>
                     </tr>
-                    {{else if and .WiFi .WiFi.MeshPoint}}
-                    {{$mp := .WiFi.MeshPoint}}
-                    <tr>
-                      <th>Mesh ID{{template "field-info" (index $d "wifi-mesh-id")}}</th>
-                      <td><input class="cfg-input cfg-input-sm" type="text" name="mesh-id"
-                                 value="{{$mp.MeshID}}" maxlength="32" required></td>
-                    </tr>
-                    <tr>
-                      <th>Forwarding{{template "field-info" (index $d "wifi-forwarding")}}</th>
-                      <td>
-                        <label><input type="checkbox" name="forwarding" value="true"
-                               {{if or (not $mp.Forwarding) (deref $mp.Forwarding)}}checked{{end}}>
-                               Relay traffic for other mesh points</label>
-                        <input type="hidden" name="forwarding" value="false">
-                      </td>
-                    </tr>
-                    {{end}}
                     <tr>
                       <th>PSK{{template "field-info" $secretDesc}}</th>
                       <td>
@@ -587,14 +606,13 @@
                       </td>
                     </tr>
                   </table>
-                  {{if and .WiFi .WiFi.AccessPoint}}
                   {{/* Roaming: dot11k/r/v are presence containers, so a
                        ticked box means "present". Sub-fields only make
                        sense once their parent is ticked; data-fold-target
                        toggles the rows client-side, and they start
                        disabled when hidden so a stale value can't block
                        form validation. */}}
-                  {{$rm := .WiFi.AccessPoint.Roaming}}
+                  {{$rm := ""}}{{if $ap}}{{$rm = $ap.Roaming}}{{end}}
                   {{$hasK := false}}{{$hasR := false}}{{$hasV := false}}{{$okc := true}}{{$bs := true}}
                   {{$md := "4f57"}}{{$nas := "auto"}}
                   {{if $rm}}
@@ -605,7 +623,9 @@
                   {{end}}
                   {{$dot11rRows := printf "wifi-row-%s-dot11r-md wifi-row-%s-dot11r-nas" $ifname $ifname}}
                   {{$dot11vRows := printf "wifi-row-%s-dot11v-bs" $ifname}}
-                  <details class="cfg-fold" {{if or $hasK $hasR $hasV}}open{{end}}>
+                  <details class="cfg-fold" data-wifi-modes="access-point"
+                           {{if ne .WifiMode "access-point"}}hidden{{end}}
+                           {{if or $hasK $hasR $hasV}}open{{end}}>
                     <summary>Roaming (802.11k/r/v)</summary>
                     <div class="cfg-fold-body">
                       <table class="info-table">
@@ -649,7 +669,6 @@
                       </table>
                     </div>
                   </details>
-                  {{end}}
                   <div class="cfg-card-footer" style="padding-left:0">
                     <button class="btn btn-primary btn-sm" type="submit">Save WiFi</button>
                     <span class="cfg-save-status"></span>

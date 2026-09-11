@@ -289,14 +289,16 @@ func TestConfigureInterfacesRendersMeshAndRoamingEditors(t *testing.T) {
 	}
 	cfgIfaces := cw.Interfaces.Interface
 
-	rows := make([]cfgIfaceRow, 0, 2)
-	for _, iface := range cfgIfaces[:2] {
+	rows := make([]cfgIfaceRow, 0, len(cfgIfaces))
+	for _, iface := range cfgIfaces {
 		row := cfgIfaceRow{ifaceJSON: iface, TypeSlug: "wifi", TypeDisplay: "WiFi", IsWifi: true, Desc: map[string]string{}}
 		switch {
 		case iface.WiFi.AccessPoint != nil:
 			row.WifiMode = "access-point"
 		case iface.WiFi.MeshPoint != nil:
 			row.WifiMode = "mesh-point"
+		case iface.WiFi.Station != nil:
+			row.WifiMode = "station"
 		}
 		row.ConfigTags = configSummary(&row)
 		rows = append(rows, row)
@@ -313,7 +315,7 @@ func TestConfigureInterfacesRendersMeshAndRoamingEditors(t *testing.T) {
 	}
 	out := buf.String()
 	for _, want := range []string{
-		`WiFi (Mesh Point)`, `name="mesh-id"`, `value="backhaul"`,
+		`value="mesh-point" checked`, `name="mesh-id"`, `value="backhaul"`,
 		`name="forwarding"`, `Roaming (802.11k/r/v)`,
 		`name="dot11k" checked`, `name="mobility-domain"`, `value="hash"`, `data-fold-target="wifi-row-wifi1-ap-dot11r-md wifi-row-wifi1-ap-dot11r-nas"`,
 		`add-iface-wifi-mode-mesh`, `add-iface-wifi-meshid-row`,
@@ -326,5 +328,54 @@ func TestConfigureInterfacesRendersMeshAndRoamingEditors(t *testing.T) {
 	// Forwarding is explicitly false in the fixture, so the box is unticked.
 	if regexp.MustCompile(`name="forwarding"\s+checked`).MatchString(out) {
 		t.Error("forwarding checkbox should not be checked")
+	}
+}
+
+// A station's editor must still offer the access-point and mesh-point
+// fields, hidden and disabled, so the mode can be switched in place.
+func TestConfigureInterfacesRendersModeSwitch(t *testing.T) {
+	tmpl := realTemplates(t, IfaceTemplateFuncs(), "layouts/*.html", "fragments/configure-toolbar.html",
+		"fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html",
+		"fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
+
+	var cw interfacesWrapper
+	if err := json.Unmarshal([]byte(wifiCfgFixture), &cw); err != nil {
+		t.Fatalf("decode config fixture: %v", err)
+	}
+	var sta ifaceJSON
+	for _, iface := range cw.Interfaces.Interface {
+		if iface.WiFi != nil && iface.WiFi.Station != nil {
+			sta = iface
+		}
+	}
+	row := cfgIfaceRow{ifaceJSON: sta, TypeSlug: "wifi", IsWifi: true, WifiMode: "station", Desc: map[string]string{}}
+
+	var buf bytes.Buffer
+	err := tmpl.ExecuteTemplate(&buf, "content", cfgIfacePageData{
+		Interfaces: []cfgIfaceRow{row}, Desc: map[string]string{}, WizardNames: map[string]string{},
+	})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+
+	for _, want := range []string{
+		`name="mode"`, `value="station" checked`, `value="access-point" `, `value="mesh-point" `,
+		`data-wifi-editor`, `data-wifi-modes="mesh-point"`, `data-wifi-modes="access-point"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("station editor missing %q", want)
+		}
+	}
+	// The other modes' inputs must be disabled, or they would submit and
+	// their required fields would block the form.
+	if !regexp.MustCompile(`name="mesh-id"[^>]*disabled`).MatchString(out) {
+		t.Error("mesh-id should be disabled in a station editor")
+	}
+	if !regexp.MustCompile(`(?s)<details class="cfg-fold" data-wifi-modes="access-point"\s+hidden`).MatchString(out) {
+		t.Error("roaming section should be hidden in a station editor")
+	}
+	if regexp.MustCompile(`name="ssid"[^>]*disabled`).MatchString(out) {
+		t.Error("ssid should stay enabled in a station editor")
 	}
 }

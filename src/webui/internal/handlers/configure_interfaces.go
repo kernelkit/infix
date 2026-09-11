@@ -1772,9 +1772,10 @@ func (h *ConfigureInterfacesHandler) SaveBridgeMulticast(w http.ResponseWriter, 
 // SaveWifi replaces the interface's wifi container whole (radio plus the
 // mode container) so unticked presence containers and leaves reverted to
 // their defaults actually go away, then PATCHes the mirrored wifi-radio
-// component when the form also carried radio fields. The mode (station,
-// access-point or mesh-point) is fixed at wizard-create time and not
-// switched here.
+// component when the form also carried radio fields. Replacing the
+// container is also what lets the editor switch an interface between
+// station, access-point and mesh-point: the mode left behind goes away
+// with the rest.
 // POST /configure/interfaces/{name}/wifi
 func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
