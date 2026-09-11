@@ -6,37 +6,59 @@ This command gathers configuration files, logs, network state, and other
 system information into a single compressed archive.
 
 > [!NOTE]
-> The `support collect` command should be run with `sudo` to collect
-> complete system information (kernel logs, hardware details, etc.).
-> Use the `--unprivileged` option to run as a regular user in degraded
-> data collection mode.
+> `support collect` needs root for kernel logs, hardware details and the
+> full configuration, so run it with `sudo`. Without root it refuses;
+> `--unprivileged` lets it run anyway and collect what your user may
+> read, the rest is noted as missing in the archive.
 
 ## Collecting Support Data
 
-To collect support data and save it to a file:
+On the device, collect to a file with `-o`. Progress goes to stderr and
+the path of the archive is the only thing printed on stdout:
 
 ```bash
-admin@host:~$ sudo support collect > support-data.tar.gz
+admin@host:~$ sudo support collect -o /var/lib/support
 Starting support data collection from host...
 Collecting to: /var/lib/support
 This may take up to a minute. Please wait...
 Tailing /var/log/messages for 30 seconds (please wait)...
 Log tail complete.
 Collection complete. Creating archive...
-admin@host:~$ ls -l support-data.tar.gz
--rw-rw-r-- 1 admin admin 508362 nov 30 13:05 support-data.tar.gz
+/var/lib/support/support-host-2026-09-11T13:05:42+02:00.tar.gz
 ```
 
-The command can also be run remotely via SSH from your workstation:
+Given a directory, the file gets the canonical name shown above. Given a
+file name, that name is used. Either way the file is created with mode
+0600. Secrets are redacted from the configuration, see below, but the
+archive still holds every log on the device. Fetch it with `scp` and
+remove it, or leave that to `support clean`.
+
+Without `-o` the archive goes to stdout, which is what you want when
+running the command from your workstation over SSH:
 
 ```bash
 $ ssh admin@host 'sudo support collect' > support-data.tar.gz
 ...
 ```
 
-The collection process may take up to a minute depending on system load
-and the amount of logging data. Progress messages are shown during the
-collection process.
+On the device itself, prefer `-o`. A session that drops mid-way then
+leaves the archive behind rather than taking the only copy with it.
+
+The collection may take up to a minute depending on system load and the
+amount of logging data.
+
+Each command is run with a timeout, so a wedged driver or daemon cannot
+stall the collection; the archive then holds a note in place of that
+command's output. If the collection itself fails, the log is kept next
+to the working directory, for instance:
+
+```
+/var/lib/support/support-host-2026-09-11T13:05:42+02:00.log
+```
+
+It shows what was collected and what failed. Use `support clean` to
+remove old collection directories and logs.
+
 
 ## Encrypted Collection
 
@@ -45,24 +67,27 @@ with GPG using a password. This needs gpg on the device, which the
 `BR2_PACKAGE_SUPPORT_ENCRYPT` build option adds.
 
 ```bash
-admin@host:~$ sudo support collect -p mypassword > support-data.tar.gz.gpg
+admin@host:~$ sudo support collect -p mypassword -o /var/lib/support
 Starting support data collection from host...
 Collecting to: /var/lib/support
 This may take up to a minute. Please wait...
 ...
 Collection complete. Creating archive...
 Encrypting with GPG...
+
+WARNING: Remember to share the encryption password out-of-band!
+         Do not send it in the same email as the encrypted file.
+/var/lib/support/support-host-2026-09-11T13:05:42+02:00.tar.gz.gpg
 ```
 
-The `support collect` command even supports omitting `mypassword` and
-will then prompt interactively for the password.  This works over SSH too,
-but the local ssh client may then echo the password.
+Given a directory, `-o` appends `.gpg` to the canonical name. The
+password may be left out, the command then prompts for it. That works
+over SSH too, but the local ssh client may echo what you type, so pipe
+it on stdin instead:
 
-> [!TIP]
-> To hide the encryption password for an SSH session, the script supports
-> reading from stdin:
-> `echo "$MYSECRET" | ssh user@device 'sudo support collect -p' >
-> file.tar.gz.gpg`
+```bash
+$ echo "$MYSECRET" | ssh admin@host 'sudo support collect -p' > support-data.tar.gz.gpg
+```
 
 After transferring the resulting file to your workstation, decrypt it
 with the password:
