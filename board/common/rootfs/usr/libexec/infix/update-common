@@ -1,0 +1,96 @@
+# Shared helpers for check-update and unattended-update.  Sourced, not run;
+# the caller sets TAG first.
+
+# Read the shared update-url (an RSS/Atom release feed) from running-config.
+update_read_url() {
+    url=$(copy running-config \
+        -x '/ietf-system:system/infix-system:software/update-url' \
+        2>/dev/null \
+        | jq -r '.. | objects | ."update-url"? // empty')
+    [ -n "$url" ] && printf '%s' "$url" \
+        || printf 'https://github.com/kernelkit/infix/releases.atom'
+}
+
+# Read whether pre-releases may be installed; default false.
+update_read_prerelease() {
+    val=$(copy running-config \
+        -x '/ietf-system:system/infix-system:software/allow-prerelease' \
+        2>/dev/null \
+        | jq -r '.. | objects | ."allow-prerelease"? // empty')
+    [ "$val" = true ] && printf 'true' || printf 'false'
+}
+
+# Is $1 strictly newer than $2?
+newer() {
+    [ "$1" = "$2" ] && return 1
+    [ "$(printf '%s\n%s' "$1" "$2" | sort -V | tail -1)" = "$1" ]
+}
+
+# Gather running and latest version info.
+# Returns: 0 ok, 1 fatal (no os-release), 2 failed to query latest release tag.
+update_probe() {
+    if [ ! -f /etc/os-release ]; then
+        logger -t "$TAG" "ERROR: /etc/os-release not found"
+        return 1
+    fi
+    . /etc/os-release
+
+    # Dev/dirty builds have no comparable semver -- always treat as upgradable.
+    IS_RELEASE=true
+    if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+        IS_RELEASE=false
+    fi
+
+    UPDATE_URL=$(update_read_url)
+    ALLOW_PRERELEASE=$(update_read_prerelease)
+
+    FEED=$(curl -sSfL --max-time 10 "$UPDATE_URL" 2>/dev/null) || return 2
+
+    # Every feed entry links to its release page, ".../releases/tag/<tag>",
+    # which is the only place the tag appears in machine-readable form.
+    hrefs=$(printf '%s' "$FEED" \
+        | xmllint --xpath "//*[local-name()='entry']/*[local-name()='link']/@href" - 2>/dev/null \
+        | tr ' ' '\n' | sed -n 's|^href="\(.*\)"$|\1|p')
+
+    # RSS 2.0 has no href attribute, the URL is the <link> element text.
+    [ -n "$hrefs" ] || hrefs=$(printf '%s' "$FEED" \
+        | xmllint --xpath "//*[local-name()='item']/*[local-name()='link']/text()" - 2>/dev/null \
+        | tr -d ' \t' | grep -v '^$')
+
+    [ -n "$hrefs" ] || return 2
+
+
+    if [ "$ALLOW_PRERELEASE" = true ]; then
+        LATEST_TAG=$(printf '%s\n' "$hrefs" | sed 's|.*/||' | head -1)
+    else
+        LATEST_TAG=$(printf '%s\n' "$hrefs" | sed 's|.*/||' \
+            | grep -vE -- '-(rc|alpha|beta)' | head -1)
+    fi
+    [ -n "$LATEST_TAG" ] || return 2
+    LATEST=${LATEST_TAG#v}
+
+    RELEASE_BASE=$(printf '%s\n' "$hrefs" | grep -E "/${LATEST_TAG}\$" | head -1 \
+        | sed "s|/releases/tag/${LATEST_TAG}\$||")
+
+    return 0
+}
+
+# Should the latest release be applied over the running version?
+# Requires update_probe() to have run.  Returns 0 if an update is available.
+update_available() {
+    [ "$IS_RELEASE" = false ] && return 0
+    newer "$LATEST" "$VERSION"
+}
+
+# Print the release page URL of the latest release, for operator-facing logs.
+update_release_url() {
+    [ -n "$RELEASE_BASE" ] || return 0
+    printf '%s/releases/tag/%s' "$RELEASE_BASE" "$LATEST_TAG"
+}
+
+# Print the download URL of this platform's RAUC bundle.
+update_bundle_url() {
+    [ -n "$RELEASE_BASE" ] || return 0
+    printf '%s/releases/download/%s/%s-%s.pkg' \
+        "$RELEASE_BASE" "$LATEST_TAG" "$IMAGE_ID" "$LATEST_TAG"
+}

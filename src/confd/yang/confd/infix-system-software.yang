@@ -24,6 +24,13 @@ submodule infix-system-software {
   contact      "kernelkit@googlegroups.com";
   description  "Software status and upgrade.";
 
+  revision 2026-09-07 {
+    description "Add unattended-update config, triggered from a referenced
+                 schedule.  Lift update-url to the shared software container
+                 so check-update and unattended-update use one update source,
+                 and make it an RSS/Atom release feed.  Add allow-prerelease.";
+    reference "Internal";
+  }
   revision 2026-06-17 {
     description "Add check-update config, triggered from a referenced schedule";
     reference "Internal";
@@ -93,13 +100,40 @@ submodule infix-system-software {
       description
         "Software management configuration.";
 
+      leaf update-url {
+        type string;
+        default "https://github.com/kernelkit/infix/releases.atom";
+        description
+          "RSS/Atom feed listing available releases, shared by check-update
+           and unattended-update.  The newest entry the feed offers decides
+           the latest version; each entry is expected to link to its release
+           page as '<base>/releases/tag/<tag>', from which the tag is read.
+
+           The feed carries no asset list, so the per-platform bundle is
+           fetched by convention from
+           '<base>/releases/download/<tag>/<image-id>-<tag>.pkg', and
+           installed by streaming it straight from that URL.
+
+           Override for a fork or a customer-specific channel.";
+      }
+
+      leaf allow-prerelease {
+        type boolean;
+        default false;
+        description
+          "Consider pre-releases (release candidates, alpha and beta builds)
+           when determining the latest version.  Feeds commonly list them
+           alongside finished releases; by default they are ignored, so only
+           a final release is ever installed.";
+      }
+
       container check-update {
         description
           "Policy for automatic software update checks.
 
            When 'enabled' and 'schedule' references a schedule, the system
-           checks the configured URL for a newer release on each occurrence
-           and logs a notification if one is found.";
+           checks the configured update-url for a newer release on each
+           occurrence and logs a notification if one is found.";
 
         leaf enabled {
           type boolean;
@@ -114,14 +148,54 @@ submodule infix-system-software {
             "The schedule whose occurrences trigger an update check.
              Without a referenced schedule no checks are performed.";
         }
+      }
 
-        leaf update-url {
-          type string;
-          default "https://github.com/kernelkit/infix";
+      container unattended-update {
+        description
+          "Policy for automatic, unattended software upgrades.
+
+           When 'enabled' and 'schedule' references a schedule, the system
+           checks the configured update-url for a newer release on each
+           occurrence and, if one is found, downloads and installs the
+           per-platform bundle to the inactive slot exactly as a manual
+           'upgrade' would: the boot-order is flipped to activate the new
+           image on the next reboot, and the previously running slot is
+           left intact as a fallback.
+
+           The 'reboot' leaf governs whether that reboot happens
+           automatically or is left to the operator.";
+
+        leaf enabled {
+          type boolean;
+          default false;
           description
-            "Base URL of the update source.  The check script appends
-             /releases/latest and follows the redirect to determine the
-             latest release tag.  Override for customer-specific channels.";
+            "Enable automatic unattended upgrades.";
+        }
+
+        leaf schedule {
+          type infix-schedule:schedule-ref;
+          description
+            "The schedule whose occurrences trigger an unattended upgrade.
+             Without a referenced schedule no upgrades are performed.";
+        }
+
+        leaf reboot {
+          type enumeration {
+            enum manual {
+              description
+                "Install and flip the boot-order, but do not reboot.  The
+                 new image activates the next time the operator reboots.";
+            }
+            enum immediate {
+              description
+                "Reboot automatically after a successful install to activate
+                 the new image at once.";
+            }
+          }
+          default manual;
+          description
+            "What to do once a bundle has been installed to the inactive
+             slot.";
         }
       }
     }
