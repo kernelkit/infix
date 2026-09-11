@@ -1042,17 +1042,28 @@ function setBlockEnabled(el, on) {
   });
 }
 
-// The inline "+ New" forms (keystore key, WiFi radio) are rendered hidden
+// Blocks that start hidden and are opened later — the inline "+ New" key
+// and radio forms, the "+ Add" rows on the keystore, users, routes, DNS,
+// NTP, firewall and hardware pages, the DHCP foldouts — are rendered
 // inside the form they belong to, with required fields. Disable them up
-// front so they only take part once the user opens one.
+// front so they only take part once opened. Only blocks a reveal hook
+// controls are touched, since that hook is what enables them again.
 (function () {
-  function disableHiddenCreateForms() {
-    document.querySelectorAll('.ks-create-form[hidden]').forEach(function (el) {
-      setBlockEnabled(el, false);
+  function disableHiddenBlocks() {
+    var ids = {};
+    document.querySelectorAll('[data-show]').forEach(function (b) {
+      ids[b.getAttribute('data-show')] = true;
+    });
+    document.querySelectorAll('[data-fold-target]').forEach(function (b) {
+      b.getAttribute('data-fold-target').split(/\s+/).forEach(function (id) { ids[id] = true; });
+    });
+    Object.keys(ids).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.hidden) setBlockEnabled(el, false);
     });
   }
-  document.addEventListener('DOMContentLoaded', disableHiddenCreateForms);
-  document.addEventListener('htmx:afterSwap', disableHiddenCreateForms);
+  document.addEventListener('DOMContentLoaded', disableHiddenBlocks);
+  document.addEventListener('htmx:afterSwap', disableHiddenBlocks);
 })();
 
 // Interface page glue (replaces inline hx-on / inline <script>, which CSP

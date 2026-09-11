@@ -380,10 +380,12 @@ func TestConfigureInterfacesRendersModeSwitch(t *testing.T) {
 	}
 }
 
-// Every block that starts hidden inside a form must be one the page's JS
-// knows to disable, or its required fields silently block the form they
-// sit in: a display:none control is still validated, and the browser
-// cannot focus it to say why, so the Save button looks dead.
+// Every block that starts hidden inside a form must be one a reveal hook
+// controls, or its required fields silently block the form they sit in:
+// a display:none control is still validated, and the browser cannot
+// focus it to say why, so the Save button looks dead. app.js disables
+// the blocks named by data-show and data-fold-target on load, and
+// enables them again when they are opened.
 func TestConfigureInterfacesHiddenBlocksAreDisablable(t *testing.T) {
 	tmpl := realTemplates(t, IfaceTemplateFuncs(), "layouts/*.html", "fragments/configure-toolbar.html",
 		"fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html",
@@ -404,17 +406,21 @@ func TestConfigureInterfacesHiddenBlocksAreDisablable(t *testing.T) {
 		t.Fatalf("render: %v", err)
 	}
 
-	// app.js disables the controls of every .ks-create-form that starts
-	// hidden, on load and after each htmx swap. Anything else that starts
-	// hidden has to bring its own 'disabled'.
 	out := buf.String()
+	revealed := map[string]bool{}
+	for _, m := range regexp.MustCompile(`data-(?:show|fold-target)="([^"]*)"`).FindAllStringSubmatch(out, -1) {
+		for _, id := range strings.Fields(m[1]) {
+			revealed[id] = true
+		}
+	}
+	id := regexp.MustCompile(`id="([^"]*)"`)
 	for _, loc := range regexp.MustCompile(`<div[^>]*\bhidden\b[^>]*>`).FindAllStringIndex(out, -1) {
 		tag := out[loc[0]:loc[1]]
-		if strings.Contains(tag, "ks-create-form") {
+		if m := id.FindStringSubmatch(tag); m != nil && revealed[m[1]] {
 			continue
 		}
 		for _, ctrl := range findRequiredControls(out[loc[1]:closingDiv(out, loc[1])]) {
-			t.Errorf("hidden block %s holds a required control that blocks its form: %s", tag, ctrl)
+			t.Errorf("hidden block %s is opened by no reveal hook, so its required control blocks the form: %s", tag, ctrl)
 		}
 	}
 }
