@@ -7,13 +7,9 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/cli/text-editor/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/cli/edit/">
       
       
-        <link rel="prev" href="../quick/">
-      
-      
-        <link rel="next" href="../upgrade/">
       
       
         
@@ -24,7 +20,7 @@
     
     
       
-        <title>Text Editor - User's Guide</title>
+        <title>Edit Command - User's Guide</title>
       
     
     
@@ -82,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#text-editor" class="md-skip">
+        <a href="#edit-command" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Text Editor
+              Edit Command
             
           </span>
         </div>
@@ -295,10 +291,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -322,11 +316,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked="">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
@@ -347,7 +341,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -530,37 +524,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Text Editor
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../text-editor.md" class="md-nav__link">
         
   
   
@@ -576,76 +543,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
-      
-        <li class="md-nav__item">
-  <a href="#escape-metaalt-control-shift" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Escape Meta/Alt Control Shift
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Escape Meta/Alt Control Shift">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#quick-help-c-h-q" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick help C-h q
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#save-exit-c-x-c-c" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Save &amp; Exit C-x C-c
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#changing-the-editor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changing the Editor
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2403,46 +2300,6 @@
   
 
 
-  <nav class="md-path" aria-label="Navigation">
-    <ol class="md-path__list">
-      
-        
-  
-  
-    <li class="md-path__item">
-      <a href="../.." class="md-path__link">
-        
-  <span class="md-ellipsis">
-    Introduction
-  </span>
-
-      </a>
-    </li>
-  
-
-      
-      
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="../introduction/" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    CLI
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ol>
-  </nav>
-
               
               <article class="md-content__inner md-typeset">
                 
@@ -2453,9 +2310,18 @@
   
 
 
-<h1 id="text-editor">Text Editor<a class="headerlink" href="#text-editor" title="Permanent link">¶</a></h1>
-<p>The CLI built-in <code>text-editor</code> command can be used to edit type <code>binary</code>
-settings in configure context.</p>
+<h1 id="edit-command">Edit Command<a class="headerlink" href="#edit-command" title="Permanent link">¶</a></h1>
+<p>In configure context, <code>edit</code> descends into a container or list entry,
+e.g., <code>edit interface eth0</code>.  Used on a setting it instead modifies the
+current value interactively, depending on the type of setting:</p>
+<ul>
+<li>passwords and keys: prompt without echo, with confirmation</li>
+<li><code>binary</code> settings: open the built-in text editor, e.g., <code>edit content</code>
+   in a boot script, or <code>edit motd-banner</code></li>
+<li><code>string</code> settings: prompt on a single line prefilled with the current
+   value, use the arrow keys to move around and Enter to accept</li>
+</ul>
+<p>Other types are set with <code>set</code>.</p>
 <p>The default editor is a Micro Emacs clone.  Users not familiar with
 terminal based editors may benefit from this introduction.</p>
 <h2 id="escape-metaalt-control-shift">Escape Meta/Alt Control Shift<a class="headerlink" href="#escape-metaalt-control-shift" title="Permanent link">¶</a></h2>

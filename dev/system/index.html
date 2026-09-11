@@ -531,7 +531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/text-editor/" class="md-nav__link">
+      <a href="../cli/text-editor.md" class="md-nav__link">
         
   
   
@@ -1690,6 +1690,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#boot-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boot Scripts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#daemon-default-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Daemon Default Files
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2629,6 +2651,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#boot-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boot Scripts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#daemon-default-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Daemon Default Files
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2757,8 +2801,7 @@ admin@example:/config/system/…/example@host/&gt; <b>leave</b>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The <code>ssh-keygen</code> program already base64 encodes the public key data,
-so there is no need to use the <code>text-editor</code> command, <code>set</code> does the
-job.</p>
+so there is no need to use the <code>edit</code> command, <code>set</code> does the job.</p>
 </div>
 <h2 id="multiple-users">Multiple Users<a class="headerlink" href="#multiple-users" title="Permanent link">¶</a></h2>
 <p>The factory configuration provides three hierarchical user group levels by
@@ -3156,15 +3199,15 @@ the hostname, are restarted when the hostname is changed.</p>
 </div>
 <h2 id="changing-login-banner">Changing Login Banner<a class="headerlink" href="#changing-login-banner" title="Permanent link">¶</a></h2>
 <p>The <code>motd-banner</code> setting is an Infix augment and an example of a
-<code>binary</code> type setting that can be changed interactively with the
-built-in <a href="../cli/text-editor/"><code>text-editor</code> command</a>.</p>
+<code>binary</code> type setting that is changed interactively with the built-in
+<a href="../cli/edit/"><code>edit</code> command</a>.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>See the next section for how to change the editor used to something
 you may be more familiar with.</p>
 </div>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit system</b>
-admin@example:/config/system/&gt; <b>text-editor motd-banner</b>
+admin@example:/config/system/&gt; <b>edit motd-banner</b>
 admin@example:/config/system/&gt; <b>leave</b>
 admin@example:/&gt;
 </code></pre>
@@ -3172,7 +3215,7 @@ admin@example:/&gt;
 <p>Log out and log back in again to inspect the changes.</p>
 <h2 id="changing-the-editor">Changing the Editor<a class="headerlink" href="#changing-the-editor" title="Permanent link">¶</a></h2>
 <p>The system has three different built-in editors that can be used
-as the <code>text-editor</code> command:</p>
+by the <code>edit</code> command:</p>
 <ul>
 <li><code>emacs</code> (Micro Emacs)</li>
 <li><code>nano</code> (GNU Nano)</li>
@@ -3290,6 +3333,68 @@ reference ID, stratum, time offsets, frequency, and root delay.</p>
 <p class="admonition-title">Tip</p>
 <p>The system uses <code>chronyd</code> Network Time Protocol (NTP) daemon.  The
 output shown here is best explained in the <a href="https://chrony-project.org/doc/4.6.1/chronyc.html">Chrony documentation</a>.</p>
+</div>
+<h2 id="boot-scripts">Boot Scripts<a class="headerlink" href="#boot-scripts" title="Permanent link">¶</a></h2>
+<p>For debugging and development it is sometimes useful to run a custom
+script every time the system boots, e.g., to put a hardware component
+in test mode, or to start a data collector for a transient problem.
+Such scripts can be stored in the configuration under
+<code>/system/advanced/rc.ds</code>, so that everything that runs on the system can
+be traced back to the <code>startup-config</code>.</p>
+<p>Scripts are run once at boot, as <code>root</code>, one at a time, in the order
+listed, after the startup configuration has been applied.  A script
+without a <code>#!</code> interpreter line is run by <code>/bin/sh</code>.  Output and exit
+status are logged to the system log, see <code>show log</code>.  Changes to the
+scripts only take effect at the next boot.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Individual scripts can be disabled, e.g., to keep a script around
+without running it.</p>
+</div>
+<p>The script contents is a <code>binary</code> type setting, so like the <a href="#changing-login-banner">login
+banner</a> it is edited with the built-in
+<a href="../cli/edit/"><code>edit</code> command</a>:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit system advanced rc.d phy-test</b>
+admin@example:/config/system/advanced/rc.d/phy-test/&gt; <b>set description "Put PHY in test mode"</b>
+admin@example:/config/system/advanced/rc.d/phy-test/&gt; <b>edit content</b>
+admin@example:/config/system/advanced/rc.d/phy-test/&gt; <b>leave</b>
+admin@example:/&gt; <b>copy running-config startup-config</b>
+admin@example:/&gt; <b>reboot</b>
+</code></pre>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The CLI has no command to reorder scripts.  A new script is always
+added last, so to change the order, delete a script and add it again.
+Alternatively, edit <code>/cfg/startup-config.cfg</code> from a shell and
+reboot.  The WebUI supports reordering scripts by drag-and-drop.</p>
+</div>
+<h2 id="daemon-default-files">Daemon Default Files<a class="headerlink" href="#daemon-default-files" title="Permanent link">¶</a></h2>
+<p>Most system daemons source an environment file, <code>/etc/default/NAME</code>,
+at startup for extra command line options, e.g., <code>PTP4L_ARGS</code> in
+<code>/etc/default/ptp4l</code>.  Such files can be stored in the configuration
+under <code>/system/advanced/defaults</code>, to tune daemon behavior beyond what
+the rest of the configuration exposes.  For example, to force PTP minor
+version 0 for a NIC that does not support anything else:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit system advanced default ptp4l</b>
+admin@example:/config/system/advanced/default/ptp4l/&gt; <b>set description "Intel NIC only speaks PTP v2.0"</b>
+admin@example:/config/system/advanced/default/ptp4l/&gt; <b>edit content</b>
+... enter PTP4L_ARGS="--ptp_minor_version 0" and save ...
+admin@example:/config/system/advanced/default/ptp4l/&gt; <b>leave</b>
+</code></pre>
+
+<p>The file is written when the configuration is activated, and a system
+service with the same name is restarted if its environment changed.  A
+file that shadows one shipped with the system is restored when the
+entry is disabled or removed.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>These files are applied as-is.  A bad setting can prevent a daemon
+from starting, and the configuration may then be lost at next boot if
+the system falls back to its fail-secure mode.  Always test with
+<code>copy running-config startup-config</code> deferred until verified.</p>
 </div>
 
 

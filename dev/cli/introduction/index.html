@@ -602,7 +602,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../text-editor/" class="md-nav__link">
+      <a href="../text-editor.md" class="md-nav__link">
         
   
   
@@ -2435,24 +2435,26 @@ admin-exec or "main" context.  It is used for querying system status,
 managing configuration files/profiles and doing advanced debugging.</p>
 <p>Available commands can be seen by pressing <code>?</code> at the prompt:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@host:/&gt;
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  configure      Create new candidate-config based on running-config
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  copy           Copy file or configuration, e.g., copy running-config startup-config
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  dir            List available configuration files
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  exit           Exit from CLI (log out)
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  factory-reset  Restore the system to factory default state
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  follow         Monitor a log file, use Ctrl-C to abort
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  help           Help system (try also the '?' key)
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  logout         Alias to exit
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  netcalc        IP subnet calculator, with subnetting
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>  password       Password tools
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>  ping           Ping a network host or multicast group
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>  poweroff       Poweroff system (system policy may yield reboot)
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>  reboot         Reboot system
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>  remove         Remove a configuration file
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>  set            Set operations, e.g., current date/time
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>  show           Show system status and configuration files
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>  tcpdump        Capture network traffic
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>  upgrade        Install a software update bundle from remote or local file
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  clear          Clear runtime state, e.g., statistics
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  configure      Create new candidate-config based on running-config
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  copy           Copy file or configuration, e.g., copy running-config startup-config
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  dir            List available configuration files
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  edit           Edit system state interactively, e.g., current date/time
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  exit           Exit from CLI (log out)
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  factory-reset  Restore the system to factory default state
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  follow         Monitor a log file, use Ctrl-C to abort
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  help           Help system (try also the '?' key)
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>  logout         Alias to exit
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>  netcalc        IP subnet calculator, with subnetting
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>  password       Password tools
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>  ping           Ping a network host or multicast group
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>  poweroff       Poweroff system (system policy may yield reboot)
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>  reboot         Reboot system
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>  remove         Remove a configuration file
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>  set            Set operations, e.g., current date/time
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>  show           Show system status and configuration files
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>  tcpdump        Capture network traffic
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>  upgrade        Install a software update bundle from remote or local file
 </code></pre></div>
 <p>The system has three <em>main datastores</em> (or files): <em>factory</em>, <em>startup</em>,
 and <em>running</em> that can be managed and inspected using the <code>copy</code>,
@@ -2476,6 +2478,8 @@ are made:</p>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@host-12-34-56:/config/&gt; ...             # Try: Tab or ?
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@host-12-34-56:/config/&gt; leave
 </code></pre></div>
+<p>The <code>configure</code> command also takes an optional path, to start out in a
+sub-context directly, e.g., <code>configure system authentication</code>.</p>
 <p>The <code>leave</code> command activates the changes by issuing a transaction to,
 essentially, copy the <em>candidate</em> back to <em>running</em>.  Depending on the
 changes made, this can take a few seconds.  If the changes are invalid,
@@ -2510,12 +2514,12 @@ store, so the system will use them for consecutive reboots, use the
 <td>Enter <code>baz</code> sub-sub-context in <code>foo</code> subcontext</td>
 </tr>
 <tr>
-<td><code>change password</code></td>
+<td><code>edit password</code></td>
 <td>Start password dialogue to change a user's password</td>
 </tr>
 <tr>
-<td><code>text-editor foo</code></td>
-<td>Open a text editor to edit binary setting <code>foo</code></td>
+<td><code>edit foo</code></td>
+<td>Edit setting <code>foo</code> interactively, see <code>help edit</code></td>
 </tr>
 <tr>
 <td><code>abort</code></td>

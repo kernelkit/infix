@@ -531,7 +531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/text-editor/" class="md-nav__link">
+      <a href="../cli/text-editor.md" class="md-nav__link">
         
   
   
@@ -3917,7 +3917,7 @@ when deploying similar systems at multiple sites.  When the host loads
 its <code>startup-config</code> (or even <code>factory-config</code>) a temporary file is
 created using the decoded base64 data from the <code>content</code> node.</p>
 <pre class="cli"><code>admin@example:/config/container/ntpd/&gt; <b>edit mount ntpd.conf</b>
-admin@example:/config/container/ntpd/mount/ntpd.conf&gt; <b>text-editor content</b>
+admin@example:/config/container/ntpd/mount/ntpd.conf&gt; <b>edit content</b>
 ... interactive editor starts up ...
 admin@example:/config/container/ntpd/mount/ntpd.conf&gt; <b>set target /etc/ntpd.conf</b>
 admin@example:/config/container/ntpd/mount/ntpd.conf&gt; <b>end</b>
@@ -3934,7 +3934,7 @@ changes made by the container are not preserved, or saved back to the
 host's startup-config.</p>
 </div>
 <p>Infix has three different text editors available.  For more information,
-see <a href="../cli/text-editor/">CLI Text Editor</a>.</p>
+see the <a href="../cli/edit/">CLI edit command</a>.</p>
 <h2 id="example-containers">Example Containers<a class="headerlink" href="#example-containers" title="Permanent link">¶</a></h2>
 <h3 id="system-container">System Container<a class="headerlink" href="#system-container" title="Permanent link">¶</a></h3>
 <p>Let's try out what we've learned by setting up a system container, a
@@ -4003,7 +4003,7 @@ admin@example:/config/container/nftables/&gt; <b>set network host</b>
 admin@example:/config/container/nftables/&gt; <b>set privileged</b>
 admin@example:/config/container/nftables/&gt; <b>edit mount nftables.conf</b>
 admin@example:/config/…/mount/nftables.conf/&gt; <b>set target /etc/nftables.conf</b>
-admin@example:/config/…/mount/nftables.conf/&gt; <b>text-editor content</b>
+admin@example:/config/…/mount/nftables.conf/&gt; <b>edit content</b>
 ... interactive editor starts up where you can paste your rules ...
 admin@example:/config/…/mount/nftables.conf/&gt; <b>leave</b>
 </code></pre>
@@ -4026,7 +4026,7 @@ admin@example:/config/container/ntpd/&gt; <b>set image ghcr.io/kernelkit/curios-
 admin@example:/config/container/ntpd/&gt; <b>set network interface ntpd</b>    # From veth0 above
 admin@example:/config/container/ntpd/&gt; <b>edit mount ntp.conf</b>
 admin@example:/config/container/ntpd/mount/ntp.conf/&gt; <b>set target /etc/ntp.conf</b>
-admin@example:/config/container/ntpd/mount/ntp.conf/&gt; <b>text-editor content</b>
+admin@example:/config/container/ntpd/mount/ntp.conf/&gt; <b>edit content</b>
 ... interactive editor starts up where you can paste your rules ...
 admin@example:/config/container/ntpd/mount/ntp.conf/&gt; <b>end</b>
 admin@example:/config/container/ntpd/&gt; <b>edit volume varlib</b>

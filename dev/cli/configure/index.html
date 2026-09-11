@@ -657,7 +657,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../text-editor/" class="md-nav__link">
+      <a href="../text-editor.md" class="md-nav__link">
         
   
   
@@ -2519,7 +2519,7 @@ followed by Enter.  Available commands, press <code>?</code> at the prompt:</p>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  delete       Delete configuration setting(s)
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  diff         Summarize uncommitted changes
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  do           Execute operational mode command
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>  edit         Descend to the specified configuration node
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>  edit         Descend to configuration node, or edit a setting interactively
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  end          Alias to up, leave this subsection/node
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>  exit         Ascend to the parent configuration node, or abort (from top)
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>  leave        Finalize candidate and apply to running-config
@@ -2527,9 +2527,8 @@ followed by Enter.  Available commands, press <code>?</code> at the prompt:</p>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  rollback     Restore candidate to running-config
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>  set          Set configuration setting
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>  show         Show configuration
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>  text-editor  Modify binary content in a text editor
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  top          Ascend to the configuration root
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>  up           Ascend to the parent configuration node
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>  top          Ascend to the configuration root
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  up           Ascend to the parent configuration node
 </code></pre></div>
 <p>The <code>edit</code> command lets you change to a sub-configure context, e.g.:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@host:/config/&gt; edit interface eth0
@@ -2648,8 +2647,7 @@ remember to verify SSH login and network connectivity before doing so.</p>
 <blockquote>
 <p><strong>Note</strong></p>
 <p>The <code>ssh-keygen</code> program already base64 encodes the public key data,
-so there is no need to use the <code>text-editor</code> command, <code>set</code> does the
-job.</p>
+so there is no need to use the <code>edit</code> command, <code>set</code> does the job.</p>
 </blockquote>
 <hr>
 <h2 id="creating-a-veth-pair">Creating a VETH Pair<a class="headerlink" href="#creating-a-veth-pair" title="Permanent link">¶</a></h2>
