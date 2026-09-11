@@ -17,6 +17,9 @@ cmd_collect()
     # Default values
     LOG_TAIL_SEC=30
     PASSWORD=""
+    OUTPUT=""
+    CMD_TIMEOUT=30
+    HOOK_TIMEOUT=120
 
     # Parse options
     while [ $# -gt 0 ]; do
@@ -40,7 +43,7 @@ cmd_collect()
                     old_stty=$(stty -g 2>/dev/null)
                     stty -echo 2>/dev/null || true
                     printf "Enter encryption password: " >&2
-                    read -r PASSWORD
+                    IFS= read -r PASSWORD
                     echo "" >&2
                     # Restore terminal settings
                     if [ -n "$old_stty" ]; then
@@ -55,13 +58,27 @@ cmd_collect()
                     shift
                 fi
                 ;;
+            --output|-o)
+                if [ -z "$2" ]; then
+                    echo "Error: --output requires a file or directory" >&2
+                    exit 1
+                fi
+                OUTPUT="$2"
+                shift 2
+                ;;
             *)
                 echo "Error: Unknown option '$1'" >&2
-                echo "Usage: $prognm collect [-s N] [-p PASSWORD]" >&2
+                echo "Usage: $prognm collect [-s N] [-p PASSWORD] [-o FILE]" >&2
                 exit 1
                 ;;
         esac
     done
+
+    # Collection cd's to WORK_DIR later, resolve relative paths now
+    case "$OUTPUT" in
+        ""|/*) ;;
+        *)     OUTPUT="$PWD/$OUTPUT" ;;
+    esac
 
     # If WORK_DIR not set globally, try /var/lib/support first (more space,
     # persistent across user sessions). Fall back to $HOME if we can't create/write there
@@ -98,24 +115,63 @@ cmd_collect()
     COLLECT_DIR="${WORK_DIR}/support-$(hostname -s)-$(date -Iseconds)"
     EXEC_LOG="${COLLECT_DIR}/collection.log"
 
-    # Cleanup on exit
+    # Cleanup on exit, the log is kept if the run failed
     cleanup()
     {
-        echo "[$(date -Iseconds)] Cleanup called (signal: ${1:-EXIT})" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Cleanup called (signal: ${1:-EXIT})" >&2
+        rc=$?
         if [ -d "${COLLECT_DIR}" ]; then
-            echo "[$(date -Iseconds)] Removing collection directory: ${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Removing: ${COLLECT_DIR}" >&2
+            if [ "$rc" -ne 0 ] && [ -f "${EXEC_LOG}" ]; then
+                # mv, a full filesystem is a likely reason we are here
+                if mv "${EXEC_LOG}" "${COLLECT_DIR}.log" 2>/dev/null; then
+                    chmod 600 "${COLLECT_DIR}.log"
+                    echo "Collection failed (exit ${rc}), log saved to ${COLLECT_DIR}.log" >&2
+                fi
+            fi
             rm -rf "${COLLECT_DIR}"
-        else
-            echo "[$(date -Iseconds)] Collection directory already gone: ${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Already gone: ${COLLECT_DIR}" >&2
         fi
+        [ -n "${GNUPG_TMP}" ] && rm -rf "${GNUPG_TMP}"
     }
-    trap cleanup EXIT INT TERM
+    trap cleanup EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
 
-    # Create collection directory
-    if ! mkdir -p "${COLLECT_DIR}"; then
-        echo "Error: Cannot create collection directory: ${COLLECT_DIR}" >&2
-        echo "       Check permissions for ${WORK_DIR}" >&2
+    # Plain mkdir below, two collections in the same second must not
+    # share a directory, the first to finish removes it
+    if ! mkdir -p "${WORK_DIR}" 2>/dev/null; then
+        echo "Error: Cannot create work directory: ${WORK_DIR}" >&2
         exit 1
+    fi
+
+    # du says nothing about how well the logs compress, and they are
+    # what a collection is made of, so measure them.  They are stored
+    # once in the collection and again in the archive beside it, on many
+    # devices in the same partition as /cfg.
+    logs=$( { tar czf - -C / var/log var/crash 2>/dev/null || true; } | wc -c )
+    need=$((logs / 512 + 2048))
+    set -- $(df -Pk "${WORK_DIR}" 2>/dev/null | awk 'NR == 2 { print $4, $6 }')
+    if [ -n "$1" ] && [ "$1" -lt "$need" ]; then
+        echo "Error: $2 has $(($1 / 1024)) MB free, collection needs about $(((need + 1023) / 1024)) MB" >&2
+        exit 1
+    fi
+    n=0
+    while ! mkdir "${COLLECT_DIR}" 2>/dev/null; do
+        n=$((n + 1))
+        if [ "$n" -gt 9 ]; then
+            echo "Error: Cannot create collection directory: ${COLLECT_DIR}" >&2
+            echo "       Check permissions for ${WORK_DIR}" >&2
+            exit 1
+        fi
+        COLLECT_DIR="${WORK_DIR}/support-$(hostname -s)-$(date -Iseconds)-${n}"
+        EXEC_LOG="${COLLECT_DIR}/collection.log"
+    done
+
+    # Bound every command, a wedged driver must not stall collection
+    if command -v timeout >/dev/null 2>&1; then
+        TMO="timeout -k 5 ${CMD_TIMEOUT}"
+        HOOK_TMO="timeout -k 5 ${HOOK_TIMEOUT}"
+    else
+        TMO=""
+        HOOK_TMO=""
     fi
 
     # Helper function to run commands with output to specific file
@@ -127,13 +183,19 @@ cmd_collect()
 
 	mkdir -p "${COLLECT_DIR}/$(dirname "$output_file")"
         echo "[$(date -Iseconds)] Collecting: $cmd_desc -> ${output_file}" >> "${EXEC_LOG}" 2>&1
-        if "$@" > "${COLLECT_DIR}/${output_file}" 2>> "${EXEC_LOG}"; then
+        if $TMO "$@" > "${COLLECT_DIR}/${output_file}" 2>> "${EXEC_LOG}"; then
             echo "[$(date -Iseconds)] Success: ${output_file}" >> "${EXEC_LOG}" 2>&1
         else
             exit_code=$?
             echo "[$(date -Iseconds)] Failed (exit ${exit_code}): ${output_file}" >> "${EXEC_LOG}" 2>&1
-            # Create placeholder file indicating failure
-            echo "Command failed with exit code ${exit_code}: $cmd_desc" > "${COLLECT_DIR}/${output_file}"
+            # Create placeholder file indicating failure.  busybox
+            # timeout signals the program, giving 128+SIG, not 124.
+            if [ "${exit_code}" -eq 143 ] || [ "${exit_code}" -eq 137 ] || \
+               [ "${exit_code}" -eq 124 ]; then
+                echo "Command timed out after ${CMD_TIMEOUT}s: $cmd_desc" > "${COLLECT_DIR}/${output_file}"
+            else
+                echo "Command failed with exit code ${exit_code}: $cmd_desc" > "${COLLECT_DIR}/${output_file}"
+            fi
         fi
     }
 
@@ -144,6 +206,13 @@ cmd_collect()
     echo "Work directory: ${WORK_DIR}"            >> "${EXEC_LOG}"
     echo "Collection directory: ${COLLECT_DIR}"   >> "${EXEC_LOG}"
     echo ""                                       >> "${EXEC_LOG}"
+
+    # /var/log alone can be tens of megabytes
+    avail=$(df -k "${WORK_DIR}" 2>/dev/null | awk 'NR==2 {print $4}')
+    if [ -n "$avail" ] && [ "$avail" -lt 20480 ] 2>/dev/null; then
+        echo "Warning: only ${avail} KiB available in ${WORK_DIR}, collection may be incomplete" >&2
+        echo "Available space in ${WORK_DIR}: ${avail} KiB" >> "${EXEC_LOG}"
+    fi
 
     # Inform user that collection is starting (to stderr for SSH visibility)
     echo "Starting support data collection from $(hostname)..." >&2
@@ -357,7 +426,7 @@ cmd_collect()
     for script in $(find "/etc/support.d" -type f -executable 2>/dev/null | sort); do
         echo "[$(date -Iseconds)] Running ${script}..." >> "${EXEC_LOG}" 2>&1
 
-	if "${script}" "${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1; then
+	if $HOOK_TMO "${script}" "${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1; then
             echo "[$(date -Iseconds)] Success: ${script}" >> "${EXEC_LOG}" 2>&1
         else
             exit_code=$?
@@ -384,35 +453,90 @@ cmd_collect()
     echo "[$(date -Iseconds)] Creating archive from: $(basename "${COLLECT_DIR}")" >> "${EXEC_LOG}" 2>&1
 
     # Check if password encryption is requested
-    if [ -n "$PASSWORD" ]; then
-        if ! command -v gpg >/dev/null 2>&1; then
-            echo "Error: --password specified but gpg is not available" >&2
+    if [ -n "$PASSWORD" ] && ! command -v gpg >/dev/null 2>&1; then
+        echo "Error: --password specified but gpg is not available" >&2
+        exit 1
+    fi
+
+    # The passphrase goes to gpg on a private descriptor, never on its
+    # command line where any local process could read it.  gpg gets a
+    # throwaway home so its agent and keyrings stay out of /root.
+    GNUPG_TMP=""
+    archive()
+    {
+        if [ -n "$PASSWORD" ]; then
+            echo "Encrypting with GPG..." >&2
+            echo "[$(date -Iseconds)] Starting tar with GPG encryption" >> "${EXEC_LOG}" 2>&1
+            GNUPG_TMP=$(mktemp -d "${WORK_DIR}/.gnupg-XXXXXX") || return 1
+            tar czf - "$(basename "${COLLECT_DIR}")" 2>> "${EXEC_LOG}" | \
+                GNUPGHOME="$GNUPG_TMP" gpg --batch --yes --pinentry-mode loopback \
+                    --passphrase-fd 3 -c 2>> "${EXEC_LOG}" 3<<EOF
+$PASSWORD
+EOF
+            rc=$?
+            GNUPGHOME="$GNUPG_TMP" gpgconf --kill gpg-agent 2>/dev/null || true
+            return $rc
+        else
+            echo "[$(date -Iseconds)] Starting tar (no encryption)" >> "${EXEC_LOG}" 2>&1
+            tar czf - "$(basename "${COLLECT_DIR}")" 2>> "${EXEC_LOG}"
+        fi
+    }
+
+    # A directory gets the canonical name, same for every front end
+    if [ -d "$OUTPUT" ]; then
+        OUTPUT="${OUTPUT%/}/$(basename "${COLLECT_DIR}").tar.gz"
+        if [ -n "$PASSWORD" ]; then
+            OUTPUT="${OUTPUT}.gpg"
+        fi
+    fi
+
+    # The collection stays on disk while the archive is written beside
+    # it, so the partition needs room for both.  On many devices
+    # /var/lib shares its partition with /cfg.
+    if [ -n "$OUTPUT" ]; then
+        need=$(du -sk "${COLLECT_DIR}" | awk '{ print $1 }')
+        set -- $(df -Pk "$(dirname "$OUTPUT")" 2>/dev/null | awk 'NR == 2 { print $4, $6 }')
+        if [ -n "$1" ] && [ "$1" -lt "$((need + 512))" ]; then
+            echo "Error: $2 has $(($1 / 1024)) MB free, the archive needs about $(((need + 1023) / 1024)) MB" >&2
             exit 1
         fi
-        echo "Encrypting with GPG..." >&2
-        echo "[$(date -Iseconds)] Starting tar with GPG encryption" >> "${EXEC_LOG}" 2>&1
-        tar czf - "$(basename "${COLLECT_DIR}")" 2>> "${EXEC_LOG}" | \
-            gpg --batch --yes --passphrase "$PASSWORD" --pinentry-mode loopback -c 2>> "${EXEC_LOG}"
+    fi
+
+    if [ -n "$OUTPUT" ]; then
+        # Archives hold password hashes and keys, keep them private.
+        # umask only covers creation, so drop any existing file first.
+        rm -f "$OUTPUT"
+        if ! (umask 077; : > "$OUTPUT"); then
+            echo "[$(date -Iseconds)] ERROR: Cannot create ${OUTPUT}" >> "${EXEC_LOG}" 2>&1
+            echo "Error: Cannot create output file ${OUTPUT}" >&2
+            exit 1
+        fi
+        archive > "$OUTPUT"
         tar_exit=$?
-        echo "[$(date -Iseconds)] tar+gpg pipeline exit code: $tar_exit" >> "${EXEC_LOG}" 2>&1
+    else
+        archive
+        tar_exit=$?
+    fi
+    echo "[$(date -Iseconds)] tar exit code: $tar_exit" >> "${EXEC_LOG}" 2>&1
+
+    if [ -n "$PASSWORD" ]; then
         echo "" >&2
         echo "WARNING: Remember to share the encryption password out-of-band!" >&2
         echo "         Do not send it in the same email as the encrypted file." >&2
-        if [ $tar_exit -ne 0 ]; then
-            echo "[$(date -Iseconds)] ERROR: tar+gpg failed with exit code $tar_exit" >> "${EXEC_LOG}" 2>&1
-            exit $tar_exit
-        fi
-    else
-        echo "[$(date -Iseconds)] Starting tar (no encryption)" >> "${EXEC_LOG}" 2>&1
-        tar czf - "$(basename "${COLLECT_DIR}")" 2>> "${EXEC_LOG}"
-        tar_exit=$?
-        echo "[$(date -Iseconds)] tar exit code: $tar_exit" >> "${EXEC_LOG}" 2>&1
-        if [ $tar_exit -ne 0 ]; then
-            echo "[$(date -Iseconds)] ERROR: tar failed with exit code $tar_exit" >> "${EXEC_LOG}" 2>&1
-            exit $tar_exit
-        fi
     fi
+
+    if [ $tar_exit -ne 0 ]; then
+        echo "[$(date -Iseconds)] ERROR: archive failed with exit code $tar_exit" >> "${EXEC_LOG}" 2>&1
+        [ -n "$OUTPUT" ] && rm -f "$OUTPUT"
+        exit $tar_exit
+    fi
+
     echo "[$(date -Iseconds)] Archive creation completed successfully" >> "${EXEC_LOG}" 2>&1
+
+    # With -o the path is the only thing on stdout
+    if [ -n "$OUTPUT" ]; then
+        echo "$OUTPUT"
+    fi
 }
 
 cmd_clean()
@@ -479,6 +603,18 @@ cmd_clean()
             fi
         done
 
+        # Archives and logs left behind by 'collect --output'
+        find "$search_dir" -maxdepth 1 -type f \
+             \( -name "support-*-20*.log" -o -name "support-*-20*.tar.gz*" \) \
+             -mtime "+${days}" 2>/dev/null | while IFS= read -r file; do
+            if [ "$dry_run" -eq 1 ]; then
+                echo "Would remove: $file"
+            else
+                echo "Removing: $file"
+                rm -f "$file"
+            fi
+        done
+
         # Count directories found in this location
         count=$(find "$search_dir" -maxdepth 1 -type d -name "support-*-20*" -mtime "+${days}" 2>/dev/null | wc -l)
         total_count=$((total_count + count))
@@ -512,6 +648,9 @@ usage()
     echo ""
     echo "Options for collect:"
     echo "  -s, --log-sec SEC      Tail /var/log/messages for SEC seconds (default: 30)"
+    echo "  -o, --output FILE      Write archive to FILE instead of stdout, printing"
+    echo "                         its path.  A directory gets the canonical name"
+    echo "                         support-HOST-DATE.tar.gz[.gpg]"
     echo "  -p, --password [PASS]  Encrypt output with GPG. If PASS is omitted, prompts"
     echo "                         interactively or reads from stdin, so possible to do"
     echo "                         echo "\$MYSECRET" | ...   (recommended for security)"
@@ -521,10 +660,12 @@ usage()
     echo "  -d, --days N           Remove directories older than N days (default: 7)"
     echo ""
     echo "Examples:"
+    echo "  sudo $prognm collect -o /var/lib/support"
     echo "  sudo $prognm collect                        > support-data.tar.gz"
     echo "  sudo $prognm collect -p                     > support-data.tar.gz.gpg"
     echo "  sudo $prognm collect --password mypass      > support-data.tar.gz.gpg"
     echo "  sudo $prognm --work-dir /tmp/ram collect    > support-data.tar.gz"
+    echo "  sudo $prognm collect -o /var/lib/support"
     echo "  ssh admin@device 'sudo $prognm collect'     > support-data.tar.gz"
     echo "  $prognm -u collect                          > support-data.tar.gz (degraded)"
     echo "  sudo $prognm clean --dry-run"
