@@ -38,6 +38,33 @@ The collection process may take up to a minute depending on system load
 and the amount of logging data. Progress messages are shown during the
 collection process.
 
+Each command is run with a timeout, so a wedged driver or daemon cannot
+stall the collection; the archive then holds a note in place of that
+command's output. If the collection itself fails, the log is kept next
+to the working directory, for instance:
+
+```
+/var/lib/support/support-host-2026-09-11T13:05:42+02:00.log
+```
+
+It shows what was collected and what failed. Use `support clean` to
+remove old collection directories and logs.
+
+## Collecting to a File
+
+With `-o` the archive is written to a file instead of stdout, and the
+path is printed:
+
+```bash
+admin@host:~$ sudo support collect -o /var/lib/support
+...
+/var/lib/support/support-host-2026-09-11T13:05:42+02:00.tar.gz
+```
+
+Given a directory, the file gets the canonical name shown above. Given a
+file name, that name is used. Either way the file is created with mode
+0600, since the archive contains password hashes and keys.
+
 ## Encrypted Collection
 
 For secure transmission of support data, the archive can be encrypted
