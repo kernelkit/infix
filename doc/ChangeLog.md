@@ -45,6 +45,11 @@ All notable changes to the project are documented in this file.
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
 - Wi-Fi mesh point interfaces showed an empty `mesh-id` in operational
   status (CLI and WebUI).
+- Wi-Fi radio hardware components were renamed `radio0-1`, `radio1-1`, in
+  operational status because the radio's temperature sensor took the
+  `radio0` name first, so `show hardware` and the WebUI could no longer
+  match interfaces to their radio. The sensor is now a child of the
+  radio component, named `radio0-temp`
 
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 
