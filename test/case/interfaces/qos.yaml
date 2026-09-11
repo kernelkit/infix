@@ -1,0 +1,18 @@
+---
+- name: QoS Traffic Classes and Transmission Selection
+  case: qos_traffic_class/test.py
+
+- name: QoS Configuration Validation
+  case: qos_validation/test.py
+
+- name: QoS Ingress Classification and Egress Remarking
+  case: qos_ingress_classify/test.py
+
+- name: QoS DSCP Classification and Remarking End to End
+  case: qos_classify_dscp/test.py
+
+- name: QoS Defaults Out of the Box
+  case: qos_factory_default/test.py
+
+- name: QoS Bridge Classification and Remarking
+  case: qos_bridge_classify/test.py

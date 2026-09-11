@@ -1,0 +1,293 @@
+From 8be7b61e50ba6c9d35dd780114ee0354e77117b9 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 9 Sep 2026 18:31:30 +0200
+Subject: [PATCH 70/71] net: dsa: mv88e6xxx: Queue frames by the mqprio map
+Organization: Wires
+
+The mqprio offload only sets the netdev traffic class layout.  The
+ingress tables assign the queue priority (QPri) equal to the frame
+priority, so switched frames always land in the queue of their
+priority number, whatever map 'tc qdisc add ... mqprio' installed.
+Frames sent by the CPU do follow the map, since the DSA tag carries
+the traffic class of the transmit queue.
+
+Keep the map per port and use the first queue of a priority's traffic
+class as its QPri in the PCP, DSCP and default priority entries.  When
+the map changes, walk the enabled entries and rewrite their QPri.
+Removing the qdisc restores the identity map.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 41 +++++++++++++++++++-
+ drivers/net/dsa/mv88e6xxx/chip.h |  4 ++
+ drivers/net/dsa/mv88e6xxx/port.c | 65 ++++++++++++++++++++++++++++++--
+ drivers/net/dsa/mv88e6xxx/port.h |  1 +
+ 4 files changed, 105 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 1dac45b89754..0821d478c495 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -3398,7 +3398,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 	struct fwnode_handle *port_fwnode;
+ 	struct dsa_switch *ds = chip->ds;
+ 	struct mv88e6xxx_port *p;
+-	int err;
++	int err, i;
+ 	u16 reg;
+ 	u32 val;
+ 
+@@ -3600,6 +3600,9 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 			return err;
+ 	}
+ 
++	for (i = 0; i < ARRAY_SIZE(chip->ports[port].qpri); i++)
++		chip->ports[port].qpri[i] = i;
++
+ 	if (chip->info->ops->port_tag_remap) {
+ 		err = chip->info->ops->port_tag_remap(chip, port);
+ 		if (err)
+@@ -4853,6 +4856,7 @@ static const struct mv88e6xxx_ops mv88e6190_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_sync_qpri = mv88e6390_port_sync_qpri,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -4923,6 +4927,7 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_sync_qpri = mv88e6390_port_sync_qpri,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -4993,6 +4998,7 @@ static const struct mv88e6xxx_ops mv88e6191_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_sync_qpri = mv88e6390_port_sync_qpri,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5167,6 +5173,7 @@ static const struct mv88e6xxx_ops mv88e6290_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_sync_qpri = mv88e6390_port_sync_qpri,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5565,6 +5572,7 @@ static const struct mv88e6xxx_ops mv88e6390_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_sync_qpri = mv88e6390_port_sync_qpri,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5639,6 +5647,7 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_sync_qpri = mv88e6390_port_sync_qpri,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5712,6 +5721,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+ 	.port_set_dscp_prio = mv88e6390_port_set_dscp_prio,
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
++	.port_sync_qpri = mv88e6390_port_sync_qpri,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -7551,6 +7561,32 @@ static int mv88e6xxx_port_del_etype_prio(struct dsa_switch *ds, int port,
+ 	return err;
+ }
+ 
++/* Queue each priority in the first queue of its traffic class, or in the
++ * queue of the same number when no map is installed.
++ */
++static int mv88e6xxx_port_set_qpri(struct mv88e6xxx_chip *chip, int port,
++				   struct tc_mqprio_qopt *qopt)
++{
++	u8 *qpri = chip->ports[port].qpri;
++	int prio, err = 0;
++
++	for (prio = 0; prio < ARRAY_SIZE(chip->ports[port].qpri); prio++) {
++		if (qopt)
++			qpri[prio] = min_t(u8, qopt->offset[qopt->prio_tc_map[prio]], 7);
++		else
++			qpri[prio] = prio;
++	}
++
++	if (!chip->info->ops->port_sync_qpri)
++		return 0;
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_sync_qpri(chip, port);
++	mv88e6xxx_reg_unlock(chip);
++
++	return err;
++}
++
+ static int mv88e6xxx_qos_port_mqprio(struct mv88e6xxx_chip *chip, int port,
+ 				     struct tc_mqprio_qopt_offload *mqprio)
+ {
+@@ -7577,10 +7613,11 @@ static int mv88e6xxx_qos_port_mqprio(struct mv88e6xxx_chip *chip, int port,
+ 	if (err)
+ 		goto out_reset;
+ 
+-	return 0;
++	return mv88e6xxx_port_set_qpri(chip, port, qopt);
+ 
+ out_reset:
+ 	netdev_reset_tc(dev);
++	mv88e6xxx_port_set_qpri(chip, port, NULL);
+ 	return err;
+ 
+ }
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index c0af84346b89..c085ec60c09a 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -306,6 +306,9 @@ struct mv88e6xxx_port {
+ 		refcount_t refcnt;
+ 		u16 proto;
+ 	} etype;
++
++	/* Egress queue per frame priority, from the mqprio map */
++	u8 qpri[8];
+ };
+ 
+ enum mv88e6xxx_region_id {
+@@ -590,6 +593,7 @@ struct mv88e6xxx_ops {
+ 				 u8 pcp, u8 dei);
+ 	int (*port_set_pcp_prio)(struct mv88e6xxx_chip *chip, int port,
+ 				 u8 pcp, u8 dei, int prio);
++	int (*port_sync_qpri)(struct mv88e6xxx_chip *chip, int port);
+ 
+ 	/* Egress remarking from the frame priority, a negative code
+ 	 * point disables it for that priority.
+diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
+index 92618049e889..0162c1e89a20 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.c
++++ b/drivers/net/dsa/mv88e6xxx/port.c
+@@ -1214,8 +1214,17 @@ int mv88e6xxx_port_set_pvid(struct mv88e6xxx_chip *chip, int port, u16 pvid)
+ 	return 0;
+ }
+ 
++/* Frames are queued by their queue priority (QPri), which the ingress
++ * tables assign alongside the frame priority (FPri).  The mqprio map
++ * decides which queue a priority lands in; identity until one is set.
++ */
++static u8 mv88e6xxx_port_qpri(struct mv88e6xxx_chip *chip, int port, u8 prio)
++{
++	return chip->ports[port].qpri[prio & 0x7];
++}
++
+ /* The default frame priority (FPri) lives here, the default queue
+- * priority (QPri) in Port Control 2.  Both are set to the same value.
++ * priority (QPri) in Port Control 2.
+  */
+ int mv88e6390_port_get_default_prio(struct mv88e6xxx_chip *chip, int port)
+ {
+@@ -1254,7 +1263,8 @@ int mv88e6390_port_set_default_prio(struct mv88e6xxx_chip *chip, int port,
+ 		return err;
+ 
+ 	reg &= ~MV88E6390_PORT_CTL2_DEFAULT_QPRI_MASK;
+-	reg |= FIELD_PREP(MV88E6390_PORT_CTL2_DEFAULT_QPRI_MASK, prio);
++	reg |= FIELD_PREP(MV88E6390_PORT_CTL2_DEFAULT_QPRI_MASK,
++			  mv88e6xxx_port_qpri(chip, port, prio));
+ 
+ 	return mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_CTL2, reg);
+ }
+@@ -1838,7 +1848,8 @@ int mv88e6390_port_set_dscp_prio(struct mv88e6xxx_chip *chip, int port,
+ 		data = MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_QPRI |
+ 			MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_FPRI;
+ 	else
+-		data = FIELD_PREP(MV88E6390_PORT_IP_PRIO_MAP_TABLE_QPRI_MASK, prio) |
++		data = FIELD_PREP(MV88E6390_PORT_IP_PRIO_MAP_TABLE_QPRI_MASK,
++				  mv88e6xxx_port_qpri(chip, port, prio)) |
+ 			FIELD_PREP(MV88E6390_PORT_IP_PRIO_MAP_TABLE_FPRI_MASK, prio);
+ 
+ 	return mv88e6390_port_ippmt_write(chip, port, dscp, data);
+@@ -1968,7 +1979,8 @@ int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 		data = MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_QPRI |
+ 			MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_FPRI;
+ 	else
+-		data = FIELD_PREP(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_QPRI_MASK, prio) |
++		data = FIELD_PREP(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_QPRI_MASK,
++				  mv88e6xxx_port_qpri(chip, port, prio)) |
+ 			FIELD_PREP(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_FPRI_MASK, prio);
+ 
+ 	return mv88e6xxx_port_ieeepmt_write(chip, port,
+@@ -1976,6 +1988,51 @@ int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 					    pcp, data);
+ }
+ 
++/* Rewrite the QPri of every enabled entry after the mqprio map changed */
++int mv88e6390_port_sync_qpri(struct mv88e6xxx_chip *chip, int port)
++{
++	int err, i, prio;
++	u16 table, data;
++
++	for (i = 0; i < 64; i++) {
++		err = mv88e6390_port_ippmt_read(chip, port, i, &data);
++		if (err)
++			return err;
++
++		if (data & MV88E6390_PORT_IP_PRIO_MAP_TABLE_DIS_FPRI)
++			continue;
++
++		prio = FIELD_GET(MV88E6390_PORT_IP_PRIO_MAP_TABLE_FPRI_MASK, data);
++		err = mv88e6390_port_set_dscp_prio(chip, port, i, prio);
++		if (err)
++			return err;
++	}
++
++	for (i = 0; i < 16; i++) {
++		table = mv88e6390_port_ingress_pcp_table(i >> 3);
++
++		err = mv88e6xxx_port_ieeepmt_read(chip, port, table, i & 0x7,
++						  &data);
++		if (err)
++			return err;
++
++		if (data & MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_DIS_FPRI)
++			continue;
++
++		prio = FIELD_GET(MV88E6390_PORT_IEEE_PRIO_MAP_TABLE_FPRI_MASK, data);
++		err = mv88e6390_port_set_pcp_prio(chip, port, i & 0x7, i >> 3,
++						  prio);
++		if (err)
++			return err;
++	}
++
++	err = mv88e6390_port_get_default_prio(chip, port);
++	if (err < 0)
++		return err;
++
++	return mv88e6390_port_set_default_prio(chip, port, err);
++}
++
+ /* Egress remarking uses the frame priority assigned at ingress to look
+  * up the PCP written to tagged frames and the DSCP written to IP frames.
+  * Green and yellow frames have separate tables, both are kept equal as
+diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
+index ef5028707ec5..273dacfe2439 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.h
++++ b/drivers/net/dsa/mv88e6xxx/port.h
+@@ -590,6 +590,7 @@ int mv88e6390_port_get_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 				u8 pcp, u8 dei);
+ int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 				u8 pcp, u8 dei, int prio);
++int mv88e6390_port_sync_qpri(struct mv88e6xxx_chip *chip, int port);
+ int mv88e6390_port_get_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
+ 				u8 prio, u8 *pcp);
+ int mv88e6390_port_set_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
+-- 
+2.43.0
+

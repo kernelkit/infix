@@ -13,6 +13,17 @@ All notable changes to the project are documented in this file.
 - Upgrade FRR to 10.5.5
 - Add per-server `minpoll` and `maxpoll` options to the NTP client
   configuration, for tuning how often each server is polled
+- Add per-interface Quality of Service configuration: which header field
+  a port trusts (PCP, DSCP, or both in order), the default priority, PCP
+  and DSCP to priority maps with standard presets, an egress traffic
+  class table with strict-priority or weighted transmission selection per
+  class, and PCP and DSCP remarking on transmit.  The defaults are on out
+  of the box on every port: trust PCP, one traffic class per
+  transmit queue mapped per IEEE 802.1Q-2022 Table 8-5, replacing the
+  fixed boot-time queue setup, see [QoS](qos.md)
+- Marvell LinkStreet 88E6390 and 88E6393X switch ports offload QoS
+  classification, trust order and remarking to the switch, so they apply
+  to hardware forwarded traffic as well
 
 ### Added
 

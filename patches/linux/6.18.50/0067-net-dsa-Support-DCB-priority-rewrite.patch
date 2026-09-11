@@ -1,0 +1,259 @@
+From 2fabecf446caa75c7df994dbe17b2ec88f1cc4ec Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 9 Sep 2026 17:10:32 +0200
+Subject: [PATCH 67/71] net: dsa: Support DCB priority rewrite
+Organization: Wires
+
+The DCB rewrite table maps a priority back to the PCP and DEI, or the
+DSCP, that frames are remarked with on egress.  DSA has no
+dcbnl_setrewr/delrewr, so 'dcb rewr add' on a user port falls through
+to the generic table and succeeds without touching hardware.
+
+Add port_set_pcp_rewr/port_del_pcp_rewr and the DSCP counterparts,
+plus getters to pre-populate the table from hardware at init.  A
+switch holds one code point per priority and selector, so a new entry
+replaces any existing one for that priority, as sparx5 does.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ include/net/dsa.h |  10 +++
+ net/dsa/user.c    | 188 +++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 197 insertions(+), 1 deletion(-)
+
+diff --git a/include/net/dsa.h b/include/net/dsa.h
+index 03def1d584c6..eec90f59b498 100644
+--- a/include/net/dsa.h
++++ b/include/net/dsa.h
+@@ -968,6 +968,16 @@ struct dsa_switch_ops {
+ 				     u8 dei, u8 prio);
+ 	int	(*port_del_pcp_prio)(struct dsa_switch *ds, int port, u8 pcp,
+ 				     u8 dei, u8 prio);
++	int	(*port_get_pcp_rewr)(struct dsa_switch *ds, int port, u8 prio,
++				     u8 *pcp, u8 *dei);
++	int	(*port_set_pcp_rewr)(struct dsa_switch *ds, int port, u8 prio,
++				     u8 pcp, u8 dei);
++	int	(*port_del_pcp_rewr)(struct dsa_switch *ds, int port, u8 prio);
++	int	(*port_get_dscp_rewr)(struct dsa_switch *ds, int port, u8 prio,
++				      u8 *dscp);
++	int	(*port_set_dscp_rewr)(struct dsa_switch *ds, int port, u8 prio,
++				      u8 dscp);
++	int	(*port_del_dscp_rewr)(struct dsa_switch *ds, int port, u8 prio);
+ 
+ 	/*
+ 	 * Suspend and resume
+diff --git a/net/dsa/user.c b/net/dsa/user.c
+index 1060dcff4209..c22fa40ff23a 100644
+--- a/net/dsa/user.c
++++ b/net/dsa/user.c
+@@ -2563,6 +2563,190 @@ static int __maybe_unused dsa_user_dcbnl_ieee_delapp(struct net_device *dev,
+ 	}
+ }
+ 
++/* Egress remarking: the DCB rewrite table maps a priority back to a PCP
++ * and DEI, or to a DSCP.  Hardware holds one code point per priority and
++ * selector, so a new entry replaces any existing one for that priority.
++ */
++static int __maybe_unused
++dsa_user_dcbnl_rewr_validate(struct net_device *dev, struct dcb_app *app)
++{
++	struct dsa_port *dp = dsa_user_to_port(dev);
++	struct dsa_switch *ds = dp->ds;
++	u16 max;
++
++	switch (app->selector) {
++	case DCB_APP_SEL_PCP:
++		if (!ds->ops->port_set_pcp_rewr || !ds->ops->port_del_pcp_rewr)
++			return -EOPNOTSUPP;
++		max = DSA_DCB_PCP_MAX;
++		break;
++	case IEEE_8021QAZ_APP_SEL_DSCP:
++		if (!ds->ops->port_set_dscp_rewr || !ds->ops->port_del_dscp_rewr)
++			return -EOPNOTSUPP;
++		max = 64;
++		break;
++	default:
++		return -EOPNOTSUPP;
++	}
++
++	if (app->protocol >= max || app->priority >= IEEE_8021QAZ_MAX_TCS) {
++		netdev_err(dev, "Rewrite entry %u:%u is invalid\n",
++			   app->priority, app->protocol);
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static int __maybe_unused
++dsa_user_dcbnl_rewr_program(struct net_device *dev, struct dcb_app *app)
++{
++	struct dsa_port *dp = dsa_user_to_port(dev);
++	struct dsa_switch *ds = dp->ds;
++	int port = dp->index;
++
++	if (app->selector == DCB_APP_SEL_PCP)
++		return ds->ops->port_set_pcp_rewr(ds, port, app->priority,
++						  DSA_DCB_PCP(app->protocol),
++						  DSA_DCB_DEI(app->protocol));
++
++	return ds->ops->port_set_dscp_rewr(ds, port, app->priority,
++					   app->protocol);
++}
++
++static int __maybe_unused
++dsa_user_dcbnl_rewr_clear(struct net_device *dev, struct dcb_app *app)
++{
++	struct dsa_port *dp = dsa_user_to_port(dev);
++	struct dsa_switch *ds = dp->ds;
++	int port = dp->index;
++
++	if (app->selector == DCB_APP_SEL_PCP)
++		return ds->ops->port_del_pcp_rewr(ds, port, app->priority);
++
++	return ds->ops->port_del_dscp_rewr(ds, port, app->priority);
++}
++
++/* Protocols currently rewritten for the priority and selector of @app */
++static u64 __maybe_unused
++dsa_user_dcbnl_rewr_mask(struct net_device *dev, struct dcb_app *app)
++{
++	struct dcb_rewr_prio_pcp_map pcp_map;
++	struct dcb_ieee_app_prio_map dscp_map;
++
++	if (app->selector == DCB_APP_SEL_PCP) {
++		dcb_getrewr_prio_pcp_mask_map(dev, &pcp_map);
++		return pcp_map.map[app->priority];
++	}
++
++	dcb_getrewr_prio_dscp_mask_map(dev, &dscp_map);
++	return dscp_map.map[app->priority];
++}
++
++static int __maybe_unused dsa_user_dcbnl_setrewr(struct net_device *dev,
++						 struct dcb_app *app)
++{
++	struct dcb_app old = *app;
++	bool exists;
++	u64 mask;
++	int err;
++
++	err = dsa_user_dcbnl_rewr_validate(dev, app);
++	if (err)
++		return err;
++
++	mask = dsa_user_dcbnl_rewr_mask(dev, app);
++	exists = mask & BIT_ULL(app->protocol);
++
++	if (!exists) {
++		err = dcb_setrewr(dev, app);
++		if (err)
++			return err;
++	}
++
++	err = dsa_user_dcbnl_rewr_program(dev, app);
++	if (err) {
++		if (!exists)
++			dcb_delrewr(dev, app);
++		return err;
++	}
++
++	mask &= ~BIT_ULL(app->protocol);
++	for (old.protocol = 0; mask; old.protocol++, mask >>= 1)
++		if (mask & 1)
++			dcb_delrewr(dev, &old);
++
++	return 0;
++}
++
++static int __maybe_unused dsa_user_dcbnl_delrewr(struct net_device *dev,
++						 struct dcb_app *app)
++{
++	int err;
++
++	err = dsa_user_dcbnl_rewr_validate(dev, app);
++	if (err)
++		return err;
++
++	err = dcb_delrewr(dev, app);
++	if (err)
++		return err;
++
++	err = dsa_user_dcbnl_rewr_clear(dev, app);
++	if (err) {
++		dcb_setrewr(dev, app);
++		return err;
++	}
++
++	return 0;
++}
++
++static int __maybe_unused dsa_user_dcbnl_rewr_init(struct net_device *dev)
++{
++	struct dsa_port *dp = dsa_user_to_port(dev);
++	struct dsa_switch *ds = dp->ds;
++	int port = dp->index;
++	int err, prio;
++
++	for (prio = 0; prio < IEEE_8021QAZ_MAX_TCS; prio++) {
++		struct dcb_app app = { .priority = prio };
++		u8 pcp, dei, dscp;
++
++		if (ds->ops->port_get_pcp_rewr) {
++			err = ds->ops->port_get_pcp_rewr(ds, port, prio,
++							 &pcp, &dei);
++			if (err && err != -ENOENT && err != -EOPNOTSUPP)
++				return err;
++
++			if (!err) {
++				app.selector = DCB_APP_SEL_PCP;
++				app.protocol = dei << 3 | pcp;
++
++				err = dcb_setrewr(dev, &app);
++				if (err)
++					return err;
++			}
++		}
++
++		if (ds->ops->port_get_dscp_rewr) {
++			err = ds->ops->port_get_dscp_rewr(ds, port, prio, &dscp);
++			if (err && err != -ENOENT && err != -EOPNOTSUPP)
++				return err;
++
++			if (!err) {
++				app.selector = IEEE_8021QAZ_APP_SEL_DSCP;
++				app.protocol = dscp;
++
++				err = dcb_setrewr(dev, &app);
++				if (err)
++					return err;
++			}
++		}
++	}
++
++	return 0;
++}
++
+ /* Pre-populate the DCB application priority table with the priorities
+  * configured during switch setup, which we read from hardware here.
+  */
+@@ -2640,7 +2824,7 @@ static int dsa_user_dcbnl_init(struct net_device *dev)
+ 		}
+ 	}
+ 
+-	return 0;
++	return dsa_user_dcbnl_rewr_init(dev);
+ }
+ 
+ static const struct ethtool_ops dsa_user_ethtool_ops = {
+@@ -2683,6 +2867,8 @@ static const struct dcbnl_rtnl_ops __maybe_unused dsa_user_dcbnl_ops = {
+ 	.ieee_delapp		= dsa_user_dcbnl_ieee_delapp,
+ 	.dcbnl_setapptrust	= dsa_user_dcbnl_set_apptrust,
+ 	.dcbnl_getapptrust	= dsa_user_dcbnl_get_apptrust,
++	.dcbnl_setrewr		= dsa_user_dcbnl_setrewr,
++	.dcbnl_delrewr		= dsa_user_dcbnl_delrewr,
+ };
+ 
+ static void dsa_user_get_stats64(struct net_device *dev,
+-- 
+2.43.0
+
