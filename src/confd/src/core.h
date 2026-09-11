@@ -202,6 +202,8 @@ int finit_enablef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_disablef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_deletef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_reloadf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+FILE *fopenp(const char *path, mode_t mode, const char *group);
+FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
 /* interfaces.c */
 int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);

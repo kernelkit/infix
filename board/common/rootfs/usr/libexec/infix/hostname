@@ -10,6 +10,9 @@
 
 HOSTNAME_D="/etc/hostname.d"
 
+# Called from confd, which runs with a restrictive umask
+umask 022
+
 # Find highest priority file (reverse lexicographic)
 set -- "$HOSTNAME_D"/*
 if [ ! -e "$1" ]; then

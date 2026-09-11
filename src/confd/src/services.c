@@ -172,7 +172,7 @@ static int mdns_records(int cmd, svc type)
 		if (cmd == MDNS_UPDATE && !fexistf(AVAHI_SVC_PATH "/%s.service", srv->name))
 			continue;
 
-		fp = fopenf("w", AVAHI_SVC_PATH "/%s.service", srv->name);
+		fp = fopenfp(0640, "avahi", AVAHI_SVC_PATH "/%s.service", srv->name);
 		if (!fp) {
 			ERRNO("failed creating %s.service", srv->name);
 			continue;
@@ -219,7 +219,7 @@ static int mdns_records(int cmd, svc type)
 		} else {
 			FILE *fp;
 
-			fp = fopenf("w", AVAHI_SVC_PATH "/workstation.service");
+			fp = fopenfp(0640, "avahi", AVAHI_SVC_PATH "/workstation.service");
 			if (fp) {
 				fprintf(fp,
 					"<?xml version=\"1.0\" standalone='no'?>\n"
@@ -238,7 +238,7 @@ static int mdns_records(int cmd, svc type)
 			}
 
 			/* TODO: Use device-info YANG model for Apple-compatible model string */
-			fp = fopenf("w", AVAHI_SVC_PATH "/device-info.service");
+			fp = fopenfp(0640, "avahi", AVAHI_SVC_PATH "/device-info.service");
 			if (fp) {
 				fprintf(fp,
 					"<?xml version=\"1.0\" standalone='no'?>\n"
@@ -368,7 +368,7 @@ static void mdns_conf(struct confd *confd, struct lyd_node *cfg)
 	else
 		hostname = fgetkey("/etc/os-release", "DEFAULT_HOSTNAME");
 
-	fp = fopen(AVAHI_CONF, "w");
+	fp = fopenp(AVAHI_CONF, 0640, "avahi");
 	if (!fp) {
 		ERRNO("failed creating %s", AVAHI_CONF);
 		return;

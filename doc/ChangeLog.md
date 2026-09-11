@@ -52,6 +52,8 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Fix OSPF losing its configuration when changed after a factory reset,
+  regression in v26.03.0
 - Fix annoying "cannot deselect all services" or reset to YANG default in the
   web interface's firewall configuration page
 - Fix sporadic slow response, or timeouts, when reading device status while
