@@ -1,0 +1,317 @@
+From 8de159a7296793a1f84ffc91c0f1d7237824030a Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Tue, 30 Jun 2026 15:46:25 +0200
+Subject: [PATCH 66/68] wifi: brcmfmac: let cfg_to_ndev() return NULL and
+ harden its callers
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+cfg_to_ndev() dereferenced the result of brcmf_get_ifp(cfg->pub, 0)
+unconditionally, even though brcmf_get_ifp() can return NULL. Make the
+helper return NULL in that case.
+
+A later change allows the primary interface (bsscfgidx 0) to be removed
+while the wiphy stays registered, so cfg_to_ndev() can legitimately
+return NULL during the lifetime of the device. Audit every caller, and
+the direct brcmf_get_ifp(drvr, 0) users that can run after probe, and
+add the missing NULL checks:
+
+  - brcmf_apsta_add_vif(), brcmf_cfg80211_set_wiphy_params() and
+    brcmf_cfg80211_set_tx_power() return -ENODEV.
+  - brcmf_cfg80211_suspend() / _resume() return 0 so a missing primary
+    interface does not abort system sleep.
+  - brcmf_config_dongle() takes the interface being brought up instead
+    of looking up the primary one, so a secondary interface can still be
+    opened while the primary is absent.
+  - The p2p helpers (get_conn_idx, add_vif, disable/release_p2p_if)
+    return -ENODEV.
+  - brcmf_cfg80211_reg_notifier() uses brcmf_get_ifp(drvr, 0) directly
+    and bails out, since the country iovar has nothing to be issued on.
+  - brcmf_btcoex_set_mode() and brcmf_btcoex_boost_wifi(), reached from
+    the crit_proto ops and the btcoex work, bail out likewise.
+  - brcmf_inetaddr_changed() bails out when it falls back to the primary
+    interface for firmware without arp_version, as its IPv6 twin already
+    does.
+
+The remaining users only compare against cfg_to_ndev() and are already
+NULL-safe. No functional change while the primary interface is present.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .../broadcom/brcm80211/brcmfmac/btcoex.c      |  6 ++
+ .../broadcom/brcm80211/brcmfmac/cfg80211.c    | 55 ++++++++++++++-----
+ .../broadcom/brcm80211/brcmfmac/cfg80211.h    |  4 +-
+ .../broadcom/brcm80211/brcmfmac/core.c        |  5 +-
+ .../broadcom/brcm80211/brcmfmac/p2p.c         | 28 ++++++++--
+ 5 files changed, 78 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/btcoex.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/btcoex.c
+index 67c0c5a92f99..265f3f5d5307 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/btcoex.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/btcoex.c
+@@ -141,6 +141,9 @@ static void brcmf_btcoex_boost_wifi(struct brcmf_btcoex_info *btci,
+ {
+ 	struct brcmf_if *ifp = brcmf_get_ifp(btci->cfg->pub, 0);
+ 
++	if (!ifp)
++		return;
++
+ 	if (trump_sco && !btci->saved_regs_part2) {
+ 		/* this should reduce eSCO agressive
+ 		 * retransmit w/o breaking it
+@@ -454,6 +457,9 @@ int brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif *vif,
+ 	struct brcmf_btcoex_info *btci = cfg->btcoex;
+ 	struct brcmf_if *ifp = brcmf_get_ifp(cfg->pub, 0);
+ 
++	if (!ifp)
++		return -ENODEV;
++
+ 	switch (mode) {
+ 	case BRCMF_BTCOEX_DISABLED:
+ 		brcmf_dbg(INFO, "DHCP session starts\n");
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+index 8b245460262d..fd8c39254d46 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+@@ -822,11 +822,18 @@ struct wireless_dev *brcmf_apsta_add_vif(struct wiphy *wiphy, const char *name,
+ 					 enum nl80211_iftype type)
+ {
+ 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
+-	struct brcmf_if *ifp = netdev_priv(cfg_to_ndev(cfg));
++	struct net_device *ndev = cfg_to_ndev(cfg);
+ 	struct brcmf_pub *drvr = cfg->pub;
+ 	struct brcmf_cfg80211_vif *vif;
++	struct brcmf_if *ifp;
+ 	int err;
+ 
++	if (!ndev) {
++		bphy_err(drvr, "primary interface not available\n");
++		return ERR_PTR(-ENODEV);
++	}
++	ifp = netdev_priv(ndev);
++
+ 	if (type != NL80211_IFTYPE_STATION && type != NL80211_IFTYPE_AP)
+ 		return ERR_PTR(-EINVAL);
+ 
+@@ -1644,10 +1651,13 @@ static s32 brcmf_cfg80211_set_wiphy_params(struct wiphy *wiphy, int radio_idx,
+ {
+ 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
+ 	struct net_device *ndev = cfg_to_ndev(cfg);
+-	struct brcmf_if *ifp = netdev_priv(ndev);
++	struct brcmf_if *ifp;
+ 	s32 err = 0;
+ 
+ 	brcmf_dbg(TRACE, "Enter\n");
++	if (!ndev)
++		return -ENODEV;
++	ifp = netdev_priv(ndev);
+ 	if (!check_vif_up(ifp->vif))
+ 		return -EIO;
+ 
+@@ -2653,13 +2663,18 @@ brcmf_cfg80211_set_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
+ {
+ 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
+ 	struct net_device *ndev = cfg_to_ndev(cfg);
+-	struct brcmf_if *ifp = netdev_priv(ndev);
+ 	struct brcmf_pub *drvr = cfg->pub;
++	struct brcmf_if *ifp;
+ 	s32 err;
+ 	s32 disable;
+ 	u32 qdbm = 127;
+ 
+ 	brcmf_dbg(TRACE, "Enter %d %d\n", type, mbm);
++	if (!ndev) {
++		bphy_err(drvr, "primary interface not available\n");
++		return -ENODEV;
++	}
++	ifp = netdev_priv(ndev);
+ 	if (!check_vif_up(ifp->vif))
+ 		return -EIO;
+ 
+@@ -4173,10 +4188,15 @@ static s32 brcmf_cfg80211_resume(struct wiphy *wiphy)
+ {
+ 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
+ 	struct net_device *ndev = cfg_to_ndev(cfg);
+-	struct brcmf_if *ifp = netdev_priv(ndev);
++	struct brcmf_if *ifp;
+ 
+ 	brcmf_dbg(TRACE, "Enter\n");
+ 
++	/* Nothing to restore if the primary interface has been removed. */
++	if (!ndev)
++		return 0;
++	ifp = netdev_priv(ndev);
++
+ 	if (cfg->wowl.active) {
+ 		brcmf_report_wowl_wakeind(wiphy, ifp);
+ 		brcmf_fil_iovar_int_set(ifp, "wowl_clear", 0);
+@@ -4276,11 +4296,16 @@ static s32 brcmf_cfg80211_suspend(struct wiphy *wiphy,
+ {
+ 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
+ 	struct net_device *ndev = cfg_to_ndev(cfg);
+-	struct brcmf_if *ifp = netdev_priv(ndev);
+ 	struct brcmf_cfg80211_vif *vif;
++	struct brcmf_if *ifp;
+ 
+ 	brcmf_dbg(TRACE, "Enter\n");
+ 
++	/* Nothing to configure if the primary interface has been removed. */
++	if (!ndev)
++		return 0;
++	ifp = netdev_priv(ndev);
++
+ 	/* if the primary net_device is not READY there is nothing
+ 	 * we can do but pray resume goes smoothly.
+ 	 */
+@@ -7787,22 +7812,18 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
+ 	return 0;
+ }
+ 
+-static s32 brcmf_config_dongle(struct brcmf_cfg80211_info *cfg)
++static s32 brcmf_config_dongle(struct brcmf_cfg80211_info *cfg,
++			       struct brcmf_if *ifp)
+ {
+ 	struct brcmf_pub *drvr = cfg->pub;
+-	struct net_device *ndev;
+-	struct wireless_dev *wdev;
+-	struct brcmf_if *ifp;
++	struct net_device *ndev = ifp->ndev;
++	struct wireless_dev *wdev = ndev->ieee80211_ptr;
+ 	s32 power_mode;
+ 	s32 err = 0;
+ 
+ 	if (cfg->dongle_up)
+ 		return err;
+ 
+-	ndev = cfg_to_ndev(cfg);
+-	wdev = ndev->ieee80211_ptr;
+-	ifp = netdev_priv(ndev);
+-
+ 	/* make sure RF is ready for work */
+ 	brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 0);
+ 
+@@ -7842,7 +7863,7 @@ static s32 __brcmf_cfg80211_up(struct brcmf_if *ifp)
+ {
+ 	set_bit(BRCMF_VIF_STATUS_READY, &ifp->vif->sme_state);
+ 
+-	return brcmf_config_dongle(ifp->drvr->config);
++	return brcmf_config_dongle(ifp->drvr->config, ifp);
+ }
+ 
+ static s32 __brcmf_cfg80211_down(struct brcmf_if *ifp)
+@@ -8277,6 +8298,12 @@ static void brcmf_cfg80211_reg_notifier(struct wiphy *wiphy,
+ 	brcmf_dbg(TRACE, "Enter: initiator=%d, alpha=%c%c\n", req->initiator,
+ 		  req->alpha2[0], req->alpha2[1]);
+ 
++	/* The country iovar is issued on the primary interface. */
++	if (!ifp) {
++		bphy_err(drvr, "primary interface not available\n");
++		return;
++	}
++
+ 	err = brcmf_fil_iovar_data_get(ifp, "country", &ccreq, sizeof(ccreq));
+ 	if (err) {
+ 		bphy_err(drvr, "Country code iovar returned err = %d\n", err);
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.h b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.h
+index 273c80f2d483..ee7e9dc17dce 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.h
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.h
+@@ -433,7 +433,9 @@ static inline struct brcmf_cfg80211_vif *wdev_to_vif(struct wireless_dev *wdev)
+ static inline
+ struct net_device *cfg_to_ndev(struct brcmf_cfg80211_info *cfg)
+ {
+-	return brcmf_get_ifp(cfg->pub, 0)->ndev;
++	struct brcmf_if *ifp = brcmf_get_ifp(cfg->pub, 0);
++
++	return ifp ? ifp->ndev : NULL;
+ }
+ 
+ static inline struct brcmf_cfg80211_info *ndev_to_cfg(struct net_device *ndev)
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
+index 7d8ec55571dd..a429748c3614 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
+@@ -1026,8 +1026,11 @@ static int brcmf_inetaddr_changed(struct notifier_block *nb,
+ 	ret = brcmf_fil_iovar_int_get(ifp, "arp_version", &val);
+ 	if (ret)
+ 		val = 1;
+-	if (val == 1)
++	if (val == 1) {
+ 		ifp = drvr->iflist[0];
++		if (!ifp)
++			return NOTIFY_DONE;
++	}
+ 
+ 	/* retrieve the table from firmware */
+ 	ret = brcmf_fil_iovar_data_get(ifp, "arp_hostip", addr_table,
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
+index e1752a513c73..5b550e5a4e77 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
+@@ -2115,8 +2115,12 @@ static int brcmf_p2p_disable_p2p_if(struct brcmf_cfg80211_vif *vif)
+ {
+ 	struct brcmf_cfg80211_info *cfg = wdev_to_cfg(&vif->wdev);
+ 	struct net_device *pri_ndev = cfg_to_ndev(cfg);
+-	struct brcmf_if *ifp = netdev_priv(pri_ndev);
+ 	const u8 *addr = vif->wdev.netdev->dev_addr;
++	struct brcmf_if *ifp;
++
++	if (!pri_ndev)
++		return -ENODEV;
++	ifp = netdev_priv(pri_ndev);
+ 
+ 	return brcmf_fil_iovar_data_set(ifp, "p2p_ifdis", addr, ETH_ALEN);
+ }
+@@ -2125,8 +2129,12 @@ static int brcmf_p2p_release_p2p_if(struct brcmf_cfg80211_vif *vif)
+ {
+ 	struct brcmf_cfg80211_info *cfg = wdev_to_cfg(&vif->wdev);
+ 	struct net_device *pri_ndev = cfg_to_ndev(cfg);
+-	struct brcmf_if *ifp = netdev_priv(pri_ndev);
+ 	const u8 *addr = vif->wdev.netdev->dev_addr;
++	struct brcmf_if *ifp;
++
++	if (!pri_ndev)
++		return -ENODEV;
++	ifp = netdev_priv(pri_ndev);
+ 
+ 	return brcmf_fil_iovar_data_set(ifp, "p2p_ifdel", addr, ETH_ALEN);
+ }
+@@ -2222,8 +2230,13 @@ static struct wireless_dev *brcmf_p2p_create_p2pdev(struct brcmf_p2p_info *p2p,
+ static int brcmf_p2p_get_conn_idx(struct brcmf_cfg80211_info *cfg)
+ {
+ 	int i;
+-	struct brcmf_if *ifp = netdev_priv(cfg_to_ndev(cfg));
++	struct net_device *ndev = cfg_to_ndev(cfg);
++	struct brcmf_if *ifp;
++
++	if (!ndev)
++		return -ENODEV;
+ 
++	ifp = netdev_priv(ndev);
+ 	if (!ifp)
+ 		return -ENODEV;
+ 
+@@ -2255,14 +2268,21 @@ struct wireless_dev *brcmf_p2p_add_vif(struct wiphy *wiphy, const char *name,
+ 				       struct vif_params *params)
+ {
+ 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
+-	struct brcmf_if *ifp = netdev_priv(cfg_to_ndev(cfg));
++	struct net_device *ndev = cfg_to_ndev(cfg);
+ 	struct brcmf_pub *drvr = cfg->pub;
+ 	struct brcmf_cfg80211_vif *vif;
+ 	enum brcmf_fil_p2p_if_types iftype;
++	struct brcmf_if *ifp;
+ 	int err = 0;
+ 	int connidx;
+ 	u8 *p2p_intf_addr;
+ 
++	if (!ndev) {
++		bphy_err(drvr, "primary interface not available\n");
++		return ERR_PTR(-ENODEV);
++	}
++	ifp = netdev_priv(ndev);
++
+ 	if (brcmf_cfg80211_vif_event_armed(cfg))
+ 		return ERR_PTR(-EBUSY);
+ 
