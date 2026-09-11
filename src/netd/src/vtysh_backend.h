@@ -7,6 +7,7 @@
 
 int  vtysh_backend_init(void);
 void vtysh_backend_cleanup(void);
-int  vtysh_backend_apply(struct route_head *routes, struct rip_config *rip);
+int  vtysh_backend_apply(struct route_head *routes, struct rip_config *rip,
+			 struct rip_config *ripng);
 
 #endif /* NETD_VTYSH_BACKEND_H_ */

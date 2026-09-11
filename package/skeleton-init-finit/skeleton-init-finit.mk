@@ -92,7 +92,7 @@ define SKELETON_INIT_FINIT_SET_FRR
 endef
 else
 define SKELETON_INIT_FINIT_SET_FRR
-	for svc in babeld bfdd bgpd mgmtd eigrpd isisd ldpd ospfd ospf6d pathd ripd ripng staticd vrrpd zebra; do	\
+	for svc in babeld bfdd bgpd mgmtd eigrpd isisd ldpd ospfd ospf6d pathd ripd ripngd staticd vrrpd zebra; do	\
 		cp $(SKELETON_INIT_FINIT_AVAILABLE)/frr/$$svc.conf $(FINIT_D)/available/$$svc.conf;		\
 	done
 	ln -sf ../available/zebra.conf $(FINIT_D)/enabled/zebra.conf

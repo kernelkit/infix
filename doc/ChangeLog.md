@@ -32,6 +32,9 @@ All notable changes to the project are documented in this file.
   value it sets
 - The CLI `configure` command takes an optional path to start in a
   sub-context directly, e.g., `configure system authentication`
+- Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
+  ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
+  `ripng`/`ospfv3` type and the IPv6 address-family
 
 [v26.08.0][] - 2026-09-01
 -------------------------

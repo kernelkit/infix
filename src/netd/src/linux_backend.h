@@ -7,7 +7,8 @@
 
 int  linux_backend_init(void);
 void linux_backend_cleanup(void);
-int  linux_backend_apply(struct route_head *routes, struct rip_config *rip);
+int  linux_backend_apply(struct route_head *routes, struct rip_config *rip,
+			 struct rip_config *ripng);
 
 /* Internal netlink operations */
 int netlink_route_add(const struct route *r);

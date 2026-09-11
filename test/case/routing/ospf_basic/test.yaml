@@ -1,0 +1,11 @@
+---
+- settings:
+    test-spec: <case>.adoc
+
+- name: OSPFv2 Basic
+  case: ospfv2.py
+  opts: ["--version", "OSPFv2"]
+
+- name: OSPFv3 Basic
+  case: ospfv3.py
+  opts: ["--version", "OSPFv3"]

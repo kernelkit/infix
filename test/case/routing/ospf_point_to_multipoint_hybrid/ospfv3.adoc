@@ -1,0 +1,47 @@
+=== OSPFv3 Point-to-Multipoint Hybrid
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/ospf_point_to_multipoint_hybrid]
+
+==== Description
+
+Verify OSPFv3 point-to-multipoint hybrid (broadcast) interface type by
+configuring three routers on a shared multi-access network with the
+ietf-ospf 'hybrid' interface type.  This maps to the point-to-multipoint
+network type using multicast for neighbor discovery.
+
+R2 acts as the hub, bridging two physical links (link1, link2) into a
+single broadcast domain (br0).  R1 and R3 each connect to one of R2's
+ports.  The test verifies that all routers form OSPF adjacencies, exchange
+routes, and that the interface type is correctly reported as hybrid.
+
+....
+  +------------------+                                   +------------------+
+  |       R1         |                                   |       R3         |
+  |  10.0.1.1/32     |                                   |  10.0.3.1/32     |
+  |     (lo)         |                                   |     (lo)         |
+  +--------+---------+                                   +--------+---------+
+           |  .1                                                  |  .3
+           |               +------------------+                   |
+           +----link1------+       R2         +------link2--------+
+                           |  10.0.2.1/32     |
+                           |     (lo)         |
+                           | br0: 10.0.123.2  |
+                           +------------------+
+                              10.0.123.0/24
+                        (P2MP hybrid / shared segment)
+....
+The OSPFv3 run uses 2001:db8:123::/64 for the shared segment.
+
+==== Topology
+
+image::topology.svg[OSPFv3 Point-to-Multipoint Hybrid topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUTs
+. Configure targets
+. Wait for OSPFv3 routes
+. Verify interface type is hybrid
+. Verify connectivity between all DUTs
+
+

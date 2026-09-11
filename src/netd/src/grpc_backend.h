@@ -9,7 +9,8 @@ extern "C" {
 
 int  grpc_backend_init(void);
 void grpc_backend_cleanup(void);
-int  grpc_backend_apply(struct route_head *routes, struct rip_config *rip);
+int  grpc_backend_apply(struct route_head *routes, struct rip_config *rip,
+			struct rip_config *ripng);
 
 #ifdef __cplusplus
 }

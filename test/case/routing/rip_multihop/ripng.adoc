@@ -1,11 +1,11 @@
-=== RIP Multi-hop
+=== RIPng Multi-hop
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/rip_multihop]
 
 ==== Description
 
-Verifies RIP functionality across multiple hops with three routers in a line
-topology (R1 -- R2 -- R3). This test ensures:
+Verifies RIPng functionality across multiple hops with three routers in a
+line topology (R1 -- R2 -- R3). This test ensures:
 - RIP routes propagate through multiple hops
 - R2 (middle router) has two RIP neighbors
 - End-to-end connectivity works across the RIP network
@@ -15,14 +15,14 @@ Topology:
 
 ==== Topology
 
-image::topology.svg[RIP Multi-hop topology, align=center, scaledwidth=75%]
+image::topology.svg[RIPng Multi-hop topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 
 . Set up topology and attach to target DUTs
 . Configure routers
-. Wait for RIP routes to be exchanged
-. Verify R2 has two RIP neighbors
+. Wait for RIPng routes to be exchanged
+. Verify R2 has two RIPng neighbors
 . Test end-to-end connectivity PC:data1 to R3 loopback
 . Test end-to-end connectivity PC:data2 to R1 loopback
 
