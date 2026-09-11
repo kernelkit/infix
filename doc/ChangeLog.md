@@ -12,6 +12,11 @@ All notable changes to the project are documented in this file.
 - Upgrade Buildroot to 2025.02.18 (LTS)
 - Upgrade FRR to 10.5.5
 
+### Fixes
+
+- Fix OSPF losing its configuration when changed after a factory reset,
+  regression in v26.03.0
+
 [v26.08.1][] - 2026-09-04
 -------------------------
 
