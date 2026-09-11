@@ -47,6 +47,10 @@ All notable changes to the project are documented in this file.
 ### Fixes
 
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
+- WebUI: "Save" in the interface editor and "OK" in Add Interface
+  did nothing for Wi-Fi and WireGuard interfaces. The inline "+ New"
+  forms for keystore keys and radios kept their required fields active
+  while hidden, which silently blocked the form they sit in
 - Wi-Fi mesh point interfaces showed an empty `mesh-id` in operational
   status (CLI and WebUI).
 - Wi-Fi radio hardware components were renamed `radio0-1`, `radio1-1`, in

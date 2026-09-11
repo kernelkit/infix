@@ -1027,22 +1027,37 @@
   document.addEventListener('htmx:sendError',     finish);
 })();
 
+// Show or hide a block and keep its controls in step. Hiding a control
+// does not bar it from constraint validation: an empty required field in
+// a display:none block makes the browser refuse to submit the form it
+// belongs to, and it cannot focus the field to say why, so the button
+// appears dead. Disabling is what takes it out of validation and out of
+// the submission. Enabling skips anything inside a nested block that is
+// itself still hidden, e.g. the 802.11r sub-rows of an unticked 802.11r.
+function setBlockEnabled(el, on) {
+  el.hidden = !on;
+  el.querySelectorAll('input,select,textarea,button').forEach(function (ctrl) {
+    if (on && ctrl.closest('[hidden]')) return;
+    ctrl.disabled = !on;
+  });
+}
+
+// The inline "+ New" forms (keystore key, WiFi radio) are rendered hidden
+// inside the form they belong to, with required fields. Disable them up
+// front so they only take part once the user opens one.
+(function () {
+  function disableHiddenCreateForms() {
+    document.querySelectorAll('.ks-create-form[hidden]').forEach(function (el) {
+      setBlockEnabled(el, false);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', disableHiddenCreateForms);
+  document.addEventListener('htmx:afterSwap', disableHiddenCreateForms);
+})();
+
 // Interface page glue (replaces inline hx-on / inline <script>, which CSP
 // blocks under the `script-src 'self'` policy in middleware.go).
 (function () {
-  // Show or hide a block and keep its controls in step. A hidden control
-  // still takes part in constraint validation and still submits, so it
-  // has to be disabled as well. Enabling skips anything inside a nested
-  // block that is itself still hidden, e.g. the 802.11r sub-rows of an
-  // unticked 802.11r.
-  function setBlockEnabled(el, on) {
-    el.hidden = !on;
-    el.querySelectorAll('input,select,textarea,button').forEach(function (ctrl) {
-      if (on && ctrl.closest('[hidden]')) return;
-      ctrl.disabled = !on;
-    });
-  }
-
   // A checkbox marked [data-fold-target="<id> <id>…"] toggles the matching
   // <details> (or any elements with those ids) immediately on change. Used
   // for the DHCP / DHCPv6 settings foldouts on Configure → Interface: the
@@ -1208,7 +1223,7 @@
     if (!btn || !btn.hasAttribute || !btn.hasAttribute('data-ks-create-success')) return;
     var form = document.getElementById(btn.getAttribute('data-ks-create-success'));
     if (!form) return;
-    form.hidden = true;
+    setBlockEnabled(form, false);
     form.querySelectorAll('input, textarea').forEach(function (i) { i.value = ''; });
     resetMaskedInputs(form);
   });
@@ -1801,12 +1816,16 @@ function openModal(message, onConfirm, opts) {
     var show = e.target.closest('[data-show]');
     if (show) {
       var el = document.getElementById(show.getAttribute('data-show'));
-      if (el) { el.hidden = false; el.querySelector('input,select,textarea') && el.querySelector('input,select,textarea').focus(); }
+      if (el) {
+        setBlockEnabled(el, true);
+        var first = el.querySelector('input,select,textarea');
+        if (first) first.focus();
+      }
     }
     var hide = e.target.closest('[data-hide]');
     if (hide) {
       var el = document.getElementById(hide.getAttribute('data-hide'));
-      if (el) el.hidden = true;
+      if (el) setBlockEnabled(el, false);
     }
   });
 })();

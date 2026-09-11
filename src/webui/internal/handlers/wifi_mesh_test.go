@@ -379,3 +379,70 @@ func TestConfigureInterfacesRendersModeSwitch(t *testing.T) {
 		t.Error("ssid should stay enabled in a station editor")
 	}
 }
+
+// Every block that starts hidden inside a form must be one the page's JS
+// knows to disable, or its required fields silently block the form they
+// sit in: a display:none control is still validated, and the browser
+// cannot focus it to say why, so the Save button looks dead.
+func TestConfigureInterfacesHiddenBlocksAreDisablable(t *testing.T) {
+	tmpl := realTemplates(t, IfaceTemplateFuncs(), "layouts/*.html", "fragments/configure-toolbar.html",
+		"fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html",
+		"fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
+
+	var cw interfacesWrapper
+	if err := json.Unmarshal([]byte(wifiCfgFixture), &cw); err != nil {
+		t.Fatalf("decode config fixture: %v", err)
+	}
+	row := cfgIfaceRow{ifaceJSON: cw.Interfaces.Interface[0], TypeSlug: "wifi", IsWifi: true,
+		WifiMode: "mesh-point", Desc: map[string]string{}}
+
+	var buf bytes.Buffer
+	err := tmpl.ExecuteTemplate(&buf, "content", cfgIfacePageData{
+		Interfaces: []cfgIfaceRow{row}, Desc: map[string]string{}, WizardNames: map[string]string{},
+	})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+
+	// app.js disables the controls of every .ks-create-form that starts
+	// hidden, on load and after each htmx swap. Anything else that starts
+	// hidden has to bring its own 'disabled'.
+	out := buf.String()
+	for _, loc := range regexp.MustCompile(`<div[^>]*\bhidden\b[^>]*>`).FindAllStringIndex(out, -1) {
+		tag := out[loc[0]:loc[1]]
+		if strings.Contains(tag, "ks-create-form") {
+			continue
+		}
+		for _, ctrl := range findRequiredControls(out[loc[1]:closingDiv(out, loc[1])]) {
+			t.Errorf("hidden block %s holds a required control that blocks its form: %s", tag, ctrl)
+		}
+	}
+}
+
+// closingDiv returns the offset of the </div> matching a <div> that ends
+// at start.
+func closingDiv(s string, start int) int {
+	depth, i := 1, start
+	for depth > 0 {
+		open, close := strings.Index(s[i:], "<div"), strings.Index(s[i:], "</div>")
+		if close < 0 {
+			return len(s)
+		}
+		if open >= 0 && open < close {
+			depth, i = depth+1, i+open+4
+			continue
+		}
+		depth, i = depth-1, i+close+6
+	}
+	return i
+}
+
+func findRequiredControls(s string) []string {
+	var out []string
+	for _, c := range regexp.MustCompile(`<(?:input|select|textarea)[^>]*>`).FindAllString(s, -1) {
+		if strings.Contains(c, "required") && !strings.Contains(c, "disabled") {
+			out = append(out, strings.Join(strings.Fields(c), " "))
+		}
+	}
+	return out
+}
