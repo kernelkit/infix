@@ -1,0 +1,16 @@
+#!/bin/sh
+# Prompt for a single-line value, prefilled with the current one.
+#
+#    askline LABEL FILE
+#
+# FILE holds the current value on entry and the new value on exit.
+# shellcheck disable=SC3045
+
+LABEL=$1
+FILE=$2
+
+current=$(cat "$FILE" 2>/dev/null)
+read -er -p "$LABEL> " -i "$current" value || exit 1
+
+umask 0177
+printf '%s' "$value" > "$FILE"

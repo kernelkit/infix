@@ -51,9 +51,11 @@ Available commands can be seen by pressing `?` at the prompt:
 
 ```
 admin@host:/>
+  clear          Clear runtime state, e.g., statistics
   configure      Create new candidate-config based on running-config
   copy           Copy file or configuration, e.g., copy running-config startup-config
   dir            List available configuration files
+  edit           Edit system state interactively, e.g., current date/time
   exit           Exit from CLI (log out)
   factory-reset  Restore the system to factory default state
   follow         Monitor a log file, use Ctrl-C to abort
@@ -96,6 +98,9 @@ admin@host-12-34-56:/config/> ...             # Try: Tab or ?
 admin@host-12-34-56:/config/> leave
 ```
 
+The `configure` command also takes an optional path, to start out in a
+sub-context directly, e.g., `configure system authentication`.
+
 The `leave` command activates the changes by issuing a transaction to,
 essentially, copy the *candidate* back to *running*.  Depending on the
 changes made, this can take a few seconds.  If the changes are invalid,
@@ -119,8 +124,8 @@ In *configure context* the following commands are available:
 | `set foo bar val` | Set `bar` leaf node in `foo` subcontext to `val`       |
 | `no foo bar`      | Clear/delete configuration made to `bar` in `foo`      |
 | `edit foo baz`    | Enter `baz` sub-sub-context in `foo` subcontext        |
-| `change password` | Start password dialogue to change a user's password    |
-| `text-editor foo` | Open a text editor to edit binary setting `foo`        |
+| `edit password`   | Start password dialogue to change a user's password    |
+| `edit foo`        | Edit setting `foo` interactively, see `help edit`      |
 | `abort`           | Abort changes in configuration, return to admin-exec   |
 | `exit`            | Exit one level sub-context, or abort from top-level    |
 | `leave`           | Save changes to `running-config`, return to admin-exec |

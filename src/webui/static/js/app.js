@@ -2814,3 +2814,147 @@ function renderCfgLog() {
     links.forEach(function (a) { a.href = url; });
   });
 })();
+
+// ─── Configure > Advanced: rc.d script order drag-and-drop ───────────────────
+// Rows are moved in the DOM on drop and the new order is posted at once; the
+// list order in the datastore is the execution order.  On failure the rows
+// snap back to the last order the server confirmed.
+(function () {
+  function csrf() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+  }
+
+  function init(scope) {
+    var tbody = (scope || document).querySelector('#rcd-scripts');
+    if (!tbody || tbody.dataset.dndInit) return;
+    tbody.dataset.dndInit = 'true';
+
+    function rows() {
+      return Array.prototype.slice.call(tbody.querySelectorAll('.rcd-row'));
+    }
+    function detailOf(row) {
+      var next = row.nextElementSibling;
+      return next && next.classList.contains('key-detail-row') ? next : null;
+    }
+    function order() {
+      return rows().map(function (r) { return r.dataset.name; });
+    }
+    function moveRow(row, before) {
+      var detail = detailOf(row);
+      tbody.insertBefore(row, before);
+      if (detail) tbody.insertBefore(detail, row.nextElementSibling);
+    }
+    function restore(names) {
+      var byName = {};
+      rows().forEach(function (r) { byName[r.dataset.name] = r; });
+      names.forEach(function (n) { if (byName[n]) moveRow(byName[n], null); });
+    }
+    function clearIndicators() {
+      tbody.classList.remove('rcd-drop-before');
+      tbody.querySelectorAll('.rcd-drop-before').forEach(function (el) {
+        el.classList.remove('rcd-drop-before');
+      });
+    }
+
+    var confirmed = order();
+    var dragging = null;
+    var insertRef; // row to insert before; undefined = not set, null = append
+
+    tbody.addEventListener('dragstart', function (e) {
+      var handle = e.target.closest && e.target.closest('.rcd-drag-handle');
+      if (!handle) return;
+      dragging = handle.closest('.rcd-row');
+      dragging.classList.add('rcd-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragging.dataset.name);
+    });
+
+    tbody.addEventListener('dragend', function () {
+      if (dragging) dragging.classList.remove('rcd-dragging');
+      dragging = null;
+      insertRef = undefined;
+      clearIndicators();
+    });
+
+    tbody.addEventListener('dragenter', function (e) { e.preventDefault(); });
+
+    tbody.addEventListener('dragover', function (e) {
+      if (!dragging) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      var target = e.target.closest('tr');
+      if (target && target.classList.contains('key-detail-row')) {
+        target = target.previousElementSibling;
+      }
+      clearIndicators();
+      if (!target || !target.classList.contains('rcd-row') || target === dragging) {
+        insertRef = undefined;
+        return;
+      }
+      var rect = target.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) {
+        insertRef = target;
+      } else {
+        var after = detailOf(target) || target;
+        insertRef = after.nextElementSibling;
+        while (insertRef && !insertRef.classList.contains('rcd-row')) {
+          insertRef = insertRef.nextElementSibling;
+        }
+      }
+      if (insertRef) insertRef.classList.add('rcd-drop-before');
+      else tbody.classList.add('rcd-drop-before');
+    });
+
+    tbody.addEventListener('drop', function (e) {
+      e.preventDefault();
+      if (!dragging || insertRef === undefined) return;
+      moveRow(dragging, insertRef);
+      clearIndicators();
+      insertRef = undefined;
+      save();
+    });
+
+    var status = document.getElementById('rcd-order-status');
+    function setStatus(text, ok) {
+      if (!status) return;
+      status.textContent = text;
+      status.classList.toggle('saved', !!ok);
+      if (text) setTimeout(function () { status.textContent = ''; status.classList.remove('saved'); }, 4000);
+    }
+
+    function save() {
+      var names = order();
+      if (names.join('\n') === confirmed.join('\n')) return;
+      var params = new URLSearchParams();
+      names.forEach(function (n) { params.append('order', n); });
+      fetch('/configure/advanced/rc.d/order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRF-Token': csrf(),
+        },
+        body: params.toString(),
+      }).then(function (r) {
+        if (r.ok) {
+          confirmed = names;
+          setStatus('✓ Script order saved', true);
+          document.dispatchEvent(new CustomEvent('cfgSaved', { detail: { value: 'Script order saved' } }));
+          return;
+        }
+        return r.text().then(function (t) {
+          restore(confirmed);
+          var msg = t.replace(/<[^>]*>/g, '').trim() || 'Save failed';
+          setStatus('✗ ' + msg, false);
+          document.dispatchEvent(new CustomEvent('cfgError', { detail: { value: msg } }));
+        });
+      }).catch(function () {
+        restore(confirmed);
+        setStatus('✗ Save failed', false);
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () { init(document); });
+  document.addEventListener('htmx:afterSwap', function (evt) { init(evt.target || document); });
+})();

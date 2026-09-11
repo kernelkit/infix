@@ -871,7 +871,7 @@ its `startup-config` (or even `factory-config`) a temporary file is
 created using the decoded base64 data from the `content` node.
 
 <pre class="cli"><code>admin@example:/config/container/ntpd/> <b>edit mount ntpd.conf</b>
-admin@example:/config/container/ntpd/mount/ntpd.conf> <b>text-editor content</b>
+admin@example:/config/container/ntpd/mount/ntpd.conf> <b>edit content</b>
 ... interactive editor starts up ...
 admin@example:/config/container/ntpd/mount/ntpd.conf> <b>set target /etc/ntpd.conf</b>
 admin@example:/config/container/ntpd/mount/ntpd.conf> <b>end</b>
@@ -888,7 +888,7 @@ the contents are base64 encoded and stored in the candidate datastore.
 > host's startup-config.
 
 Infix has three different text editors available.  For more information,
-see [CLI Text Editor](cli/text-editor.md).
+see the [CLI edit command](cli/edit.md).
 
 
 Example Containers
@@ -975,7 +975,7 @@ admin@example:/config/container/nftables/> <b>set network host</b>
 admin@example:/config/container/nftables/> <b>set privileged</b>
 admin@example:/config/container/nftables/> <b>edit mount nftables.conf</b>
 admin@example:/config/…/mount/nftables.conf/> <b>set target /etc/nftables.conf</b>
-admin@example:/config/…/mount/nftables.conf/> <b>text-editor content</b>
+admin@example:/config/…/mount/nftables.conf/> <b>edit content</b>
 ... interactive editor starts up where you can paste your rules ...
 admin@example:/config/…/mount/nftables.conf/> <b>leave</b>
 </code></pre>
@@ -1003,7 +1003,7 @@ admin@example:/config/container/ntpd/> <b>set image ghcr.io/kernelkit/curios-ntp
 admin@example:/config/container/ntpd/> <b>set network interface ntpd</b>    # From veth0 above
 admin@example:/config/container/ntpd/> <b>edit mount ntp.conf</b>
 admin@example:/config/container/ntpd/mount/ntp.conf/> <b>set target /etc/ntp.conf</b>
-admin@example:/config/container/ntpd/mount/ntp.conf/> <b>text-editor content</b>
+admin@example:/config/container/ntpd/mount/ntp.conf/> <b>edit content</b>
 ... interactive editor starts up where you can paste your rules ...
 admin@example:/config/container/ntpd/mount/ntp.conf/> <b>end</b>
 admin@example:/config/container/ntpd/> <b>edit volume varlib</b>

@@ -67,8 +67,7 @@ admin@example:/config/system/…/example@host/> <b>leave</b>
 
 > [!NOTE]
 > The `ssh-keygen` program already base64 encodes the public key data,
-> so there is no need to use the `text-editor` command, `set` does the
-> job.
+> so there is no need to use the `edit` command, `set` does the job.
 
 ## Multiple Users
 
@@ -394,15 +393,15 @@ to clients, it is up to the clients to request the domain name *option*.
 ## Changing Login Banner
 
 The `motd-banner` setting is an Infix augment and an example of a
-`binary` type setting that can be changed interactively with the
-built-in [`text-editor` command](cli/text-editor.md).
+`binary` type setting that is changed interactively with the built-in
+[`edit` command](cli/edit.md).
 
 > [!TIP]
 > See the next section for how to change the editor used to something
 > you may be more familiar with.
 
 <pre class="cli"><code>admin@example:/config/> <b>edit system</b>
-admin@example:/config/system/> <b>text-editor motd-banner</b>
+admin@example:/config/system/> <b>edit motd-banner</b>
 admin@example:/config/system/> <b>leave</b>
 admin@example:/>
 </code></pre>
@@ -413,7 +412,7 @@ Log out and log back in again to inspect the changes.
 ## Changing the Editor
 
 The system has three different built-in editors that can be used
-as the `text-editor` command:
+by the `edit` command:
 
  - `emacs` (Micro Emacs)
  - `nano` (GNU Nano)
@@ -545,6 +544,74 @@ reference ID, stratum, time offsets, frequency, and root delay.
 > [!TIP]
 > The system uses `chronyd` Network Time Protocol (NTP) daemon.  The
 > output shown here is best explained in the [Chrony documentation][4].
+
+## Boot Scripts
+
+For debugging and development it is sometimes useful to run a custom
+script every time the system boots, e.g., to put a hardware component
+in test mode, or to start a data collector for a transient problem.
+Such scripts can be stored in the configuration under
+`/system/advanced/rc.ds`, so that everything that runs on the system can
+be traced back to the `startup-config`.
+
+Scripts are run once at boot, as `root`, one at a time, in the order
+listed, after the startup configuration has been applied.  A script
+without a `#!` interpreter line is run by `/bin/sh`.  Output and exit
+status are logged to the system log, see `show log`.  Changes to the
+scripts only take effect at the next boot.
+
+> [!TIP]
+> Individual scripts can be disabled, e.g., to keep a script around
+> without running it.
+
+The script contents is a `binary` type setting, so like the [login
+banner](#changing-login-banner) it is edited with the built-in
+[`edit` command](cli/edit.md):
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit system advanced rc.d phy-test</b>
+admin@example:/config/system/advanced/rc.d/phy-test/> <b>set description "Put PHY in test mode"</b>
+admin@example:/config/system/advanced/rc.d/phy-test/> <b>edit content</b>
+admin@example:/config/system/advanced/rc.d/phy-test/> <b>leave</b>
+admin@example:/> <b>copy running-config startup-config</b>
+admin@example:/> <b>reboot</b>
+</code></pre>
+
+> [!NOTE]
+> The CLI has no command to reorder scripts.  A new script is always
+> added last, so to change the order, delete a script and add it again.
+> Alternatively, edit `/cfg/startup-config.cfg` from a shell and
+> reboot.  The WebUI supports reordering scripts by drag-and-drop.
+
+
+## Daemon Default Files
+
+Most system daemons source an environment file, `/etc/default/NAME`,
+at startup for extra command line options, e.g., `PTP4L_ARGS` in
+`/etc/default/ptp4l`.  Such files can be stored in the configuration
+under `/system/advanced/defaults`, to tune daemon behavior beyond what
+the rest of the configuration exposes.  For example, to force PTP minor
+version 0 for a NIC that does not support anything else:
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit system advanced default ptp4l</b>
+admin@example:/config/system/advanced/default/ptp4l/> <b>set description "Intel NIC only speaks PTP v2.0"</b>
+admin@example:/config/system/advanced/default/ptp4l/> <b>edit content</b>
+... enter PTP4L_ARGS="--ptp_minor_version 0" and save ...
+admin@example:/config/system/advanced/default/ptp4l/> <b>leave</b>
+</code></pre>
+
+The file is written when the configuration is activated, and a system
+service with the same name is restarted if its environment changed.  A
+file that shadows one shipped with the system is restored when the
+entry is disabled or removed.
+
+> [!WARNING]
+> These files are applied as-is.  A bad setting can prevent a daemon
+> from starting, and the configuration may then be lost at next boot if
+> the system falls back to its fail-secure mode.  Always test with
+> `copy running-config startup-config` deferred until verified.
+
 
 [1]: https://www.rfc-editor.org/rfc/rfc7317
 [2]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-system%402024-02-29.yang

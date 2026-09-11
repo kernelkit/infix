@@ -1,7 +1,16 @@
-# Text Editor
+# Edit Command
 
-The CLI built-in `text-editor` command can be used to edit type `binary`
-settings in configure context.
+In configure context, `edit` descends into a container or list entry,
+e.g., `edit interface eth0`.  Used on a setting it instead modifies the
+current value interactively, depending on the type of setting:
+
+ - passwords and keys: prompt without echo, with confirmation
+ - `binary` settings: open the built-in text editor, e.g., `edit content`
+   in a boot script, or `edit motd-banner`
+ - `string` settings: prompt on a single line prefilled with the current
+   value, use the arrow keys to move around and Enter to accept
+
+Other types are set with `set`.
 
 The default editor is a Micro Emacs clone.  Users not familiar with
 terminal based editors may benefit from this introduction.

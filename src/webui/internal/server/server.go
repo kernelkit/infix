@@ -149,6 +149,10 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	cfgAdvTmpl, err := template.ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "pages/configure-advanced.html")
+	if err != nil {
+		return nil, err
+	}
 	cfgDiffTmpl, err := template.ParseFS(templateFS, "fragments/config-diff.html")
 	if err != nil {
 		return nil, err
@@ -278,6 +282,7 @@ func New(
 	cfgRoutes := &handlers.ConfigureRoutesHandler{Template: cfgRoutesTmpl, RC: rc, Schema: schemaCache}
 	cfgFw := &handlers.ConfigureFirewallHandler{Template: cfgFwTmpl, RC: rc, Schema: schemaCache}
 	cfgHw := &handlers.ConfigureHardwareHandler{Template: cfgHwTmpl, RC: rc, Schema: schemaCache}
+	cfgAdv := &handlers.ConfigureAdvancedHandler{Template: cfgAdvTmpl, RC: rc, Schema: schemaCache}
 	cfgIf := &handlers.ConfigureInterfacesHandler{Template: cfgIfTmpl, RC: rc, Schema: schemaCache}
 	schemaH := &handlers.SchemaHandler{Cache: schemaCache}
 	dataH := &handlers.DataHandler{RC: rc, Schema: schemaCache}
@@ -373,6 +378,16 @@ func New(
 	mux.HandleFunc("POST /configure/system/dns/search",           cfgSys.AddDNSSearch)
 	mux.HandleFunc("DELETE /configure/system/dns/search/{domain}", cfgSys.DeleteDNSSearch)
 	mux.HandleFunc("POST /configure/system/preferences",  cfgSys.SavePreferences)
+	mux.HandleFunc("GET /configure/advanced",                              cfgAdv.Overview)
+	mux.HandleFunc("POST /configure/advanced/rc.d/order",                  cfgAdv.ReorderScripts)
+	mux.HandleFunc("POST /configure/advanced/rc.d/scripts",                cfgAdv.AddScript)
+	mux.HandleFunc("POST /configure/advanced/rc.d/scripts/{name}",         cfgAdv.SaveScript)
+	mux.HandleFunc("POST /configure/advanced/rc.d/scripts/{name}/enabled", cfgAdv.ToggleScript)
+	mux.HandleFunc("DELETE /configure/advanced/rc.d/scripts/{name}",       cfgAdv.DeleteScript)
+	mux.HandleFunc("POST /configure/advanced/default/files",               cfgAdv.AddFile)
+	mux.HandleFunc("POST /configure/advanced/default/files/{name}",        cfgAdv.SaveFile)
+	mux.HandleFunc("POST /configure/advanced/default/files/{name}/enabled", cfgAdv.ToggleFile)
+	mux.HandleFunc("DELETE /configure/advanced/default/files/{name}",      cfgAdv.DeleteFile)
 	mux.HandleFunc("GET /configure/interfaces",                          cfgIf.Overview)
 	mux.HandleFunc("POST /configure/interfaces",                         cfgIf.CreateInterface)
 	mux.HandleFunc("POST /configure/interfaces/wizard/sym-key",          cfgIf.WizardCreateSymKey)

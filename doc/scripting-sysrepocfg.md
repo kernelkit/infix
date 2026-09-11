@@ -263,9 +263,9 @@ on interface *e0*.
 
 A YANG `binary` type setting is Base64 encoded and requires a little bit
 more tricks.  We take the opportunity to showcase a shell script helper:
-`/usr/bin/text-editor`, which works just like the `text-editor` command
-in the CLI, but this one takes an XPath argument to the binary leaf to
-edit.
+`/usr/bin/text-editor`, which works just like the `edit` command in the
+CLI does for a `binary` setting, but this one takes an XPath argument to
+the leaf to edit.
 
 Stripped down, it looks something like this:
 

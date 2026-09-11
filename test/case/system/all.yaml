@@ -28,3 +28,9 @@
 
 - name: Boot From Factory Config
   case: factory_config/test.py
+
+- name: Boot Scripts (rc.d)
+  case: rc_d/test.py
+
+- name: Daemon Default Files (/etc/default)
+  case: etc_default/test.py

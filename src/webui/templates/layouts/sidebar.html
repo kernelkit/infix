@@ -174,7 +174,7 @@
     </details>
 
     <details class="nav-group-top" id="nav-configure"
-             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-ntp") (eq .ActivePage "configure-dns") (eq .ActivePage "configure-hardware") (eq .ActivePage "configure-interfaces") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-tree")}}open{{end}}>
+             {{if or (eq .ActivePage "configure-system") (eq .ActivePage "configure-ntp") (eq .ActivePage "configure-dns") (eq .ActivePage "configure-hardware") (eq .ActivePage "configure-interfaces") (eq .ActivePage "configure-firewall") (eq .ActivePage "configure-routes") (eq .ActivePage "configure-users") (eq .ActivePage "configure-keystore") (eq .ActivePage "configure-advanced") (eq .ActivePage "configure-tree")}}open{{end}}>
       <summary class="nav-group-summary-top">Configure</summary>
 
       <div class="nav-section-label">System</div>
@@ -217,6 +217,16 @@
              class="nav-link {{if eq .ActivePage "configure-users"}}active{{end}}">
             <span class="nav-icon" style="--icon: url('/assets/img/icons/nacm.svg')"></span>
             Users &amp; Groups
+          </a>
+        </li>
+        <li>
+          <a href="/configure/advanced"
+             hx-get="/configure/advanced"
+             hx-target="#content"
+             hx-push-url="true"
+             class="nav-link {{if eq .ActivePage "configure-advanced"}}active{{end}}">
+            <span class="nav-icon" style="--icon: url('/assets/img/icons/system-advanced.svg')"></span>
+            Advanced
           </a>
         </li>
       </ul>

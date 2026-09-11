@@ -1,0 +1,28 @@
+=== Boot Scripts (rc.d)
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/system/rc_d]
+
+==== Description
+
+Verify that user scripts stored in the configuration, under
+/system/advanced/rc.ds, are extracted to /etc/rc.d and run once at boot,
+in the configured order, and only when enabled.
+
+Two enabled scripts each append their name to a file in /run, a third
+script is disabled and must not run.  After saving to startup-config
+and rebooting, the file must list the two names in configured order.
+
+==== Topology
+
+image::topology.svg[Boot Scripts (rc.d) topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure two enabled scripts and one disabled
+. Verify scripts are extracted to /etc/rc.d in order
+. Save to startup-config and reboot
+. Verify enabled scripts ran once, in order
+. Verify disabled script did not run
+
+

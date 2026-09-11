@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <crypt.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <paths.h>
 #include <pwd.h>
 #include <grp.h>
@@ -31,6 +32,11 @@
 #define XPATH_MOTD_BANNER_ XPATH_BASE_"/infix-system:motd-banner"
 #define XPATH_MOTD_        XPATH_BASE_"/infix-system:motd"
 #define XPATH_EDITOR_      XPATH_BASE_"/infix-system:text-editor"
+#define XPATH_RCD_         XPATH_BASE_"/infix-system:advanced/rc.ds"
+#define RCD_DIR            "/etc/rc.d"
+#define XPATH_DEFAULT_     XPATH_BASE_"/infix-system:advanced/defaults"
+#define DEFAULT_DIR        "/etc/default"
+#define DEFAULT_ORIG       "/run/confd/default"
 #define CLOCK_PATH_       "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_    "/ietf-system:system-state/platform"
 #define PASSWORD_PATH     "/ietf-system:system/authentication/user/password"
@@ -1488,6 +1494,194 @@ static int change_motd_banner(sr_session_ctx_t *session, struct lyd_node *config
 	return SR_ERR_OK;
 }
 
+/* /etc/rc.d is only ever populated from the running configuration, see issue #463 */
+static int rcd_reset(void)
+{
+	rmrf(RCD_DIR);
+	if (mkpath(RCD_DIR, 0755)) {
+		ERRNO("failed creating %s", RCD_DIR);
+		return -1;
+	}
+
+	return 0;
+}
+
+/* Decode base64 data to file fn, created with mode */
+static int write_binary(const char *fn, mode_t mode, const char *what, const char *data)
+{
+	unsigned char *txt;
+	size_t len, pos;
+	int fd, rc = -1;
+
+	txt = base64_decode((const unsigned char *)data, strlen(data), &len);
+	if (!txt) {
+		ERROR("failed base64 decoding of %s", what);
+		return -1;
+	}
+
+	fd = open(fn, O_CREAT | O_WRONLY | O_TRUNC, mode);
+	if (fd < 0) {
+		ERRNO("failed creating %s", fn);
+		goto done;
+	}
+
+	for (pos = 0; pos < len;) {
+		ssize_t n = write(fd, txt + pos, len - pos);
+
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			ERRNO("failed writing %s", fn);
+			close(fd);
+			goto done;
+		}
+		pos += n;
+	}
+
+	rc = close(fd);
+done:
+	free(txt);
+	return rc;
+}
+
+static int rcd_write(int num, const char *name, const char *data)
+{
+	char fn[sizeof(RCD_DIR) + strlen(name) + 8];
+
+	snprintf(fn, sizeof(fn), "%s/%02d-%s", RCD_DIR, num, name);
+	return write_binary(fn, 0700, name, data);
+}
+
+static int change_rc_d(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+{
+	struct lyd_node *rcd, *script;
+	int num = 0, installed = 0;
+
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, XPATH_RCD_))
+		return SR_ERR_OK;
+
+	if (rcd_reset())
+		return SR_ERR_SYS;
+
+	rcd = lydx_get_xpathf(config, XPATH_RCD_);
+	if (!rcd)
+		return SR_ERR_OK;
+
+	LYX_LIST_FOR_EACH(lyd_child(rcd), script, "rc.d") {
+		const char *enabled = lydx_get_cattr(script, "enabled");
+		const char *name = lydx_get_cattr(script, "name");
+
+		num++;
+		if (enabled && !strcmp(enabled, "false"))
+			continue;
+
+		if (rcd_write(num, name, lydx_get_cattr(script, "content")))
+			return SR_ERR_SYS;
+		installed++;
+	}
+
+	NOTE("Installed %d rc.d script(s) in %s, run at next boot", installed, RCD_DIR);
+
+	return SR_ERR_OK;
+}
+
+/*
+ * Files in /etc/default may shadow ones shipped with the system.  The
+ * original, or an empty marker if there was none, is kept in DEFAULT_ORIG
+ * for as long as we manage the file, so it can be restored on removal.
+ */
+static void default_restore(const char *name)
+{
+	char orig[sizeof(DEFAULT_ORIG) + strlen(name) + 2];
+	char fn[sizeof(DEFAULT_DIR) + strlen(name) + 2];
+	struct stat st;
+
+	snprintf(orig, sizeof(orig), "%s/%s", DEFAULT_ORIG, name);
+	snprintf(fn, sizeof(fn), "%s/%s", DEFAULT_DIR, name);
+
+	if (stat(orig, &st))
+		return;		/* not managed by us */
+
+	if (st.st_size) {
+		if (copyfile(orig, fn, 0, 0) <= 0)
+			ERRNO("failed restoring %s", fn);
+	} else
+		erase(fn);
+
+	erase(orig);
+}
+
+static int default_install(const char *name, const char *data)
+{
+	char orig[sizeof(DEFAULT_ORIG) + strlen(name) + 2];
+	char fn[sizeof(DEFAULT_DIR) + strlen(name) + 2];
+
+	snprintf(orig, sizeof(orig), "%s/%s", DEFAULT_ORIG, name);
+	snprintf(fn, sizeof(fn), "%s/%s", DEFAULT_DIR, name);
+
+	if (!fexist(orig)) {
+		if (fexist(fn)) {
+			if (copyfile(fn, orig, 0, 0) <= 0) {
+				ERRNO("failed saving original %s", fn);
+				return -1;
+			}
+		} else if (touch(orig)) {
+			ERRNO("failed creating %s", orig);
+			return -1;
+		}
+	}
+
+	return write_binary(fn, 0644, fn, data);
+}
+
+static int change_default(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+{
+	struct lyd_node *def, *file;
+	struct dirent **d = NULL;
+	int i, num;
+
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, XPATH_DEFAULT_))
+		return SR_ERR_OK;
+
+	if (mkpath(DEFAULT_ORIG, 0755)) {
+		ERRNO("failed creating %s", DEFAULT_ORIG);
+		return SR_ERR_SYS;
+	}
+
+	def = lydx_get_xpathf(config, XPATH_DEFAULT_);
+
+	/* Restore files we manage that are no longer wanted */
+	num = scandir(DEFAULT_ORIG, &d, NULL, alphasort);
+	for (i = 0; i < num; i++) {
+		const char *name = d[i]->d_name;
+		struct lyd_node *node = NULL;
+
+		if (name[0] == '.')
+			continue;
+
+		if (def)
+			node = lydx_get_xpathf(def, "default[name='%s']", name);
+		if (!node || !lydx_is_enabled(node, "enabled"))
+			default_restore(name);
+	}
+	while (num-- > 0)
+		free(d[num]);
+	free(d);
+
+	if (!def)
+		return SR_ERR_OK;
+
+	LYX_LIST_FOR_EACH(lyd_child(def), file, "default") {
+		if (!lydx_is_enabled(file, "enabled"))
+			continue;
+
+		if (default_install(lydx_get_cattr(file, "name"), lydx_get_cattr(file, "content")))
+			return SR_ERR_SYS;
+	}
+
+	return SR_ERR_OK;
+}
+
 static int change_editor(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	const char *alt = "/etc/alternatives/editor";
@@ -1682,6 +1876,10 @@ int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 		return rc;
 	if ((rc = change_motd_banner(session, config, diff, event, confd)))
 		return rc;
+	if ((rc = change_rc_d(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = change_default(session, config, diff, event, confd)))
+		return rc;
 	if ((rc = change_nacm(session, config, diff, event, confd))) /* Must be called after ietf_system_change_auth, which create the users */
 		return rc;
 
@@ -1701,6 +1899,7 @@ int system_rpc_init(struct confd *confd)
 	int rc;
 
 	os_init();
+	rcd_reset();
 
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);

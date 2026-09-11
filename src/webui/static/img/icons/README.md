@@ -36,6 +36,7 @@ untouched.
 | services.svg      | library-big           |
 | software.svg      | hard-drive-download   |
 | status-tree.svg   | text-search           |
+| system-advanced.svg| wrench               |
 | system-control.svg| power                 |
 | system.svg        | settings              |
 | wifi.svg          | wifi                  |

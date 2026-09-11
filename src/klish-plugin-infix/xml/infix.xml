@@ -19,6 +19,8 @@
   HidePasswords = n
   EnableNACM = y
   Oneliners = n
+  Secret.1 = /ietf-system:system/authentication/user/password
+  Secret.2 = /ietf-keystore:keystore/symmetric-keys/symmetric-key/cleartext-symmetric-key
 </PLUGIN>
 
 <PTYPE name="CFG">
@@ -205,12 +207,12 @@
   <PARAM name="topic" ptype="/STRING" min="0" help="Help topic">
     <COMPL>
       <ACTION sym="printl">configure</ACTION>
+      <ACTION sym="printl">edit</ACTION>
       <ACTION sym="printl">introduction</ACTION>
       <ACTION sym="printl">keybindings</ACTION>
       <ACTION sym="printl">netcalc</ACTION>
       <ACTION sym="printl">quick</ACTION>
       <ACTION sym="printl">tcpdump</ACTION>
-      <ACTION sym="printl">text-editor</ACTION>
       <ACTION sym="printl">upgrade</ACTION>
     </COMPL>
   </PARAM>
@@ -240,8 +242,10 @@
   <ACTION sym="nav">pop</ACTION>
 </COMMAND>
 
-<COMMAND name="configure" help="Create new candidate-config based on running-config">
-  <ACTION sym="nav">replace config</ACTION>
+<COMMAND name="configure" help="Create new candidate-config based on running-config, optionally jump to a node">
+  <PARAM name="path" ptype="/PLINE_EDIT" min="0" max="100" help="Configuration node to start in, e.g., system authentication"/>
+  <ACTION sym="srp_edit@sysrepo">configure</ACTION>
+  <ACTION sym="nav" exec_on="success">replace config</ACTION>
 </COMMAND>
 
 <COMMAND name="copy" help="Copy file or configuration, e.g., copy running-config startup-config">
@@ -314,9 +318,9 @@ echo "Public:  $pub"
 </COMMAND>
 
 <COMMAND name="set" help="Set operations, e.g., current date/time" mode="switch">
-  <COMMAND name="datetime" help="Set current date and time, ISO-8601 format">
-    <PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
-    <ACTION sym="srp_rpc@sysrepo">/ietf-system:set-current-datetime</ACTION>
+  <COMMAND name="datetime" help="Set current date and time, ISO-8601 or free-form, see edit datetime">
+    <PARAM name="datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss[Z|+/-hh:mm], yyyy-mm-dd hh:mm, hh:mm, ..."/>
+    <ACTION sym="script">datetime "$KLISH_PARAM_datetime"</ACTION>
   </COMMAND>
 
   <COMMAND name="boot-order" help="Set boot partition order">
@@ -336,9 +340,41 @@ echo "Public:  $pub"
   </COMMAND>
 </COMMAND>
 
-<COMMAND name="dhcp-server" help="DHCP server tools" mode="switch">
-  <COMMAND name="clear-statistics" help="Clear DHCP server statistics">
-    <ACTION sym="srp_rpc@sysrepo">/infix-dhcp-server:dhcp-server/statistics/clear</ACTION>
+<!-- Interactive changes to system state, starting from the current value.
+     Same verb as in configure context, where edit works on settings. -->
+<COMMAND name="edit" help="Edit system state interactively, e.g., current date/time" mode="switch">
+  <COMMAND name="datetime" help="Edit current date and time, prefilled with the current value">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">datetime -e</ACTION>
+  </COMMAND>
+
+  <COMMAND name="boot-order" help="Edit boot partition order, prefilled with the current order">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      tmp=$(mktemp) || exit 1
+      show boot-order > "$tmp"
+      if ! askline boot-order "$tmp"; then
+          rm -f "$tmp"
+          exit 1
+      fi
+      set -- $(cat "$tmp")
+      rm -f "$tmp"
+      [ $# -gt 0 ] || exit 1
+      args=""
+      for target in "$@"; do
+          args="$args boot-order $target"
+      done
+      echo "Setting boot order $*"
+      rpc /infix-system:set-boot-order $args
+    </ACTION>
+  </COMMAND>
+</COMMAND>
+
+<!-- Reset runtime state, unlike 'no' which removes settings.  Candidates
+     for later: interface counters, log buffer, neighbor tables. -->
+<COMMAND name="clear" help="Clear runtime state, e.g., statistics" mode="switch">
+  <COMMAND name="dhcp-server" help="DHCP server" mode="switch">
+    <COMMAND name="statistics" help="Clear DHCP server statistics">
+      <ACTION sym="srp_rpc@sysrepo">/infix-dhcp-server:dhcp-server/statistics/clear</ACTION>
+    </COMMAND>
   </COMMAND>
 </COMMAND>
 
@@ -1044,22 +1080,13 @@ echo "Public:  $pub"
   <ACTION sym="srp_top@sysrepo"/>
 </COMMAND>
 
-<COMMAND name="edit" help="Descend to the specified configuration node">
+<COMMAND name="edit" help="Descend to configuration node, or edit a setting interactively">
   <PARAM name="path" ptype="/PLINE_EDIT" max="100"/>
   <ACTION sym="srp_edit@sysrepo"/>
+  <ACTION sym="srp_helper@sysrepo" exec_on="fail" in="tty" out="tty" interrupt="true">edit</ACTION>
 </COMMAND>
 
 <!-- Edit -->
-
-<COMMAND name="text-editor" help="Modify binary content in a text editor">
-  <PARAM name="path" ptype="/PLINE_SET" max="100"/>
-  <ACTION sym="srp_helper@sysrepo" in="tty" out="tty" interrupt="true"/>
-</COMMAND>
-
-<COMMAND name="change" help="Interactively change setting, e.g. password">
-  <PARAM name="path" ptype="/PLINE_SET" max="100"/>
-  <ACTION sym="srp_helper@sysrepo" in="tty" out="tty" interrupt="true"/>
-</COMMAND>
 
 <COMMAND name="set" help="Set configuration setting">
   <PARAM name="path" ptype="/PLINE_SET" max="100"/>

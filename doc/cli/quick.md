@@ -20,11 +20,11 @@ keybindings are really useful to learn!
 |---------------------|----------------------------------------------------|
 | `help introduction` | An introduction to the CLI                         |
 | `help configure`    | How to use configure context                       |
-| `help text-editor`  | Help with the built-in text-editor command         |
+| `help edit`         | Editing settings interactively, incl. text editor  |
 | `help keybindings`  | Lists available keybindings & other helpful tricks |
 
 > **Tip:** Online Help
 >
 > In `configure` context the `help <setting>` command shows the YANG
 > description text for each node and container.  To reach the admin
-> exec help from configure context, e.g., `do help text-editor`
+> exec help from configure context, e.g., `do help edit`

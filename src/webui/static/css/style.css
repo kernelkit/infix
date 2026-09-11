@@ -2690,7 +2690,7 @@ select.cfg-input {
    to cap the columns and make the input shrink. */
 .info-table .cfg-input { min-width: 0; }
 .info-table-fixed { table-layout: fixed; }
-.cfg-input-mono { font-family: var(--font-mono); font-size: 0.85rem; }
+.cfg-input-mono { font-family: var(--font-mono); font-size: 0.85rem; font-variant-ligatures: none; }
 .cfg-reset-col { width: 1%; white-space: nowrap; padding-left: 0.25rem; }
 .cfg-section-head { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 0.4rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
 .cfg-subsection-head { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin: 0.5rem 0 0.25rem; }
@@ -3434,3 +3434,21 @@ details[open].yt-leaf-item .yt-leaf-name::before { transform: rotate(90deg); }
   font-size: 0.8125rem;
   margin: 0.75rem 1rem 0;
 }
+
+/* Configure > Advanced: rc.d boot scripts */
+.rcd-handle-col { width: 1.5rem; padding-right: 0 !important; }
+.rcd-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+  user-select: none;
+  color: var(--fg-muted);
+  padding: 0.15rem;
+  border-radius: 3px;
+}
+.rcd-drag-handle:hover { color: var(--text); background: var(--hover-bg, rgba(0,0,0,0.06)); }
+.rcd-drag-handle:active { cursor: grabbing; }
+.rcd-row.rcd-dragging { opacity: 0.35; }
+.rcd-row.rcd-drop-before > td { box-shadow: 0 -2px 0 var(--primary) inset; }
+tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) inset; }
+.rcd-content { min-height: 12rem; white-space: pre; overflow-wrap: normal; overflow-x: auto; }

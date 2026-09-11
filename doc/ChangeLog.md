@@ -14,6 +14,25 @@ All notable changes to the project are documented in this file.
 - Add per-server `minpoll` and `maxpoll` options to the NTP client
   configuration, for tuning how often each server is polled
 
+### Added
+
+- Add `/system/advanced` for low-level system customization, issue #463:
+  - `rc.d`: user scripts stored in the configuration, run once at boot
+    after the startup configuration has been applied, in the order listed
+  - `default`: daemon environment files written to `/etc/default`, e.g.,
+    extra `ptp4l` command line options
+- The CLI `edit` command now also edits settings interactively: passwords
+  and keys are prompted for, `binary` settings open in the text editor, and
+  `string` settings are edited on a line prefilled with the current value.
+  The `text-editor` and `change` commands are removed
+- Add CLI `edit` and `clear` verbs to admin-exec: `edit datetime` and
+  `edit boot-order` prompt with the current value, `clear dhcp-server
+  statistics` replaces `dhcp-server clear-statistics`.  `set datetime` now
+  also accepts free-form input, e.g., `14:05`, and echoes the ISO-8601
+  value it sets
+- The CLI `configure` command takes an optional path to start in a
+  sub-context directly, e.g., `configure system authentication`
+
 [v26.08.0][] - 2026-09-01
 -------------------------
 
