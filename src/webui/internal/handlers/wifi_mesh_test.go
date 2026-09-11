@@ -464,3 +464,20 @@ func findRequiredControls(s string) []string {
 	}
 	return out
 }
+
+// A component name is a list key. Under a group heading it is the
+// description that names the reading, and failing that the name with the
+// heading it already sits under taken off the front.
+func TestSensorLabel(t *testing.T) {
+	for _, c := range []struct{ name, parent, desc, want string }{
+		{"radio0-temp", "radio0", "Temperature", "Temperature"},
+		{"cpu-thermal", "cpu", "", "Thermal"},
+		{"sfp1-RX_power", "sfp1", "", "Rx Power"},
+		{"e1", "", "", "e1"},
+		{"odd-one", "cpu", "", "odd-one"},
+	} {
+		if got := sensorLabel(c.name, c.parent, c.desc); got != c.want {
+			t.Errorf("sensorLabel(%q, %q, %q) = %q, want %q", c.name, c.parent, c.desc, got, c.want)
+		}
+	}
+}

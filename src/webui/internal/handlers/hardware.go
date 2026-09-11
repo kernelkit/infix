@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strings"
+	"unicode"
 
 	"infix/webui/internal/restconf"
 )
@@ -48,8 +50,30 @@ type hwSensorGroup struct {
 	Sensors []hwSensorEntry
 }
 
+// sensorLabel is what a sensor is called under its group heading. A
+// component name is a list key, not a label, so prefer the description
+// the collector gave it. Failing that, drop the parent it is already
+// filed under: "sfp1-rx_power" reads "Rx Power" below "sfp1".
+func sensorLabel(name, parent, description string) string {
+	if description != "" {
+		return description
+	}
+	if parent == "" || !strings.HasPrefix(name, parent+"-") {
+		return name
+	}
+	words := strings.FieldsFunc(strings.TrimPrefix(name, parent+"-"), func(r rune) bool {
+		return r == '_' || r == '-'
+	})
+	for i, word := range words {
+		runes := []rune(strings.ToLower(word))
+		runes[0] = unicode.ToUpper(runes[0])
+		words[i] = string(runes)
+	}
+	return strings.Join(words, " ")
+}
+
 type hwSensorEntry struct {
-	Name       string
+	Label      string // description, or the name minus its group heading
 	Value      string
 	Type       string // temperature / fan / volts-DC / etc.
 	OperStatus string // ok / unavailable / nonoperational
@@ -149,7 +173,7 @@ func buildHardwarePage(data *hardwarePageData, comps []hwComponentJSON) {
 
 		if c.SensorData != nil {
 			entry := hwSensorEntry{
-				Name:       c.Name,
+				Label:      sensorLabel(c.Name, c.Parent, c.Description),
 				Value:      formatSensor(c.SensorData.ValueType, int64(c.SensorData.Value), c.SensorData.ValueScale),
 				Type:       c.SensorData.ValueType,
 				OperStatus: c.SensorData.OperStatus,
