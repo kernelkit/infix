@@ -39,6 +39,10 @@ All notable changes to the project are documented in this file.
   boot and configuration changes, issue #961.  Same rationale as Debian's
   dash-as-/bin/sh.  Bash remains available for interactive use and for
   scripts using `#!/bin/bash`
+- WebUI: add 802.11s mesh point support to the WiFi interface wizard and
+  editor, show mesh peers on the WiFi and interface status pages, and add
+  an editor section for access point roaming (802.11k/r/v, band steering,
+  OKC).
 
 ### Fixes
 

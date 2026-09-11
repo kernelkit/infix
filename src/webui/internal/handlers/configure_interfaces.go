@@ -106,7 +106,7 @@ type cfgIfaceRow struct {
 	IsLagPort       bool
 	IsVlan          bool
 	IsWifi          bool
-	WifiMode        string // "station" or "access-point" once known
+	WifiMode        string // "station", "access-point" or "mesh-point" once known
 	HasIP           bool // can carry IP addresses
 	// ParentBridgeIs8021Q says whether the bridge this port is attached
 	// to has VLAN filtering on. PVID only makes sense in that mode, so
@@ -290,7 +290,17 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"wg-key":             descOr(mgr, ifPath+"/infix-interfaces:wireguard/private-key", "Reference to the WireGuard private key (X25519/Curve25519) stored in the keystore."),
 			"wg-port":            descOr(mgr, ifPath+"/infix-interfaces:wireguard/listen-port", "Local UDP port to listen on for incoming WireGuard traffic (default 51820)."),
 			"wifi-radio":         descOr(mgr, ifPath+"/infix-interfaces:wifi/radio", "Parent WiFi radio (hardware component, class=wifi). Configure the radio's band, channel, and country code in Configure › Hardware first."),
-			"wifi-mode":          "Station (client) connects to an existing AP. Access Point creates a network that clients join. Only one Station per radio; multiple APs per radio supported.",
+			"wifi-mode":          "Station (client) connects to an existing AP. Access Point creates a network that clients join. Mesh Point forms an 802.11s peer-to-peer link with other mesh points. One Station or Mesh Point per radio; multiple APs per radio supported. AP and Mesh Point cannot share a radio.",
+			"wifi-mesh-id":       descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/mesh-id", "Mesh network identifier (1–32 characters). All mesh points that should form one mesh must use the same mesh ID."),
+			"wifi-forwarding":    descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/forwarding", "Layer-2 mesh forwarding. Leave on to let this node relay traffic for other mesh points and to bridge the mesh interface into a LAN (mesh portal). Off means only locally destined traffic is received."),
+			"wifi-mesh-secret":   descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/security/secret", "Pre-shared key reference for the WPA3-SAE mesh. All mesh points in the same mesh must share the same key."),
+			"wifi-dot11k":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11k", "802.11k Radio Resource Management: neighbor and beacon reports let clients discover nearby APs before roaming."),
+			"wifi-dot11r":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r", "802.11r Fast BSS Transition: pre-authentication cuts handoff time to under 50 ms. Requires WPA2/WPA3 security, plus identical SSID, passphrase and mobility domain on all APs in the group."),
+			"wifi-dot11r-md":     descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/mobility-domain", "802.11r mobility domain: four hex digits shared by every AP clients roam between, or 'hash' to derive it from the SSID (OpenWrt-compatible)."),
+			"wifi-dot11r-nas":    descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/nas-identifier", "NAS-Identifier for 802.11r key lookup, unique per AP. 'auto' derives <interface>-<hostname>.<mobility-domain>."),
+			"wifi-dot11v":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11v", "802.11v BSS Transition Management: lets the AP suggest a better AP to clients (network-assisted roaming)."),
+			"wifi-band-steering": descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11v/band-steering", "Multi-Band Operation (MBO) band steering nudges dual-band clients toward 5/6 GHz. Only matters when the same SSID is offered on more than one band."),
+			"wifi-okc":           descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/okc", "Opportunistic Key Caching speeds up re-authentication for roaming clients without 802.11r. Safe to leave on; only used when both AP and client support it."),
 			"wifi-ssid":          descOr(mgr, ifPath+"/infix-interfaces:wifi/station/ssid", "WiFi network name (1–32 characters). Case-sensitive; must match the target network for Station mode."),
 			"wifi-sec-mode":      descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/mode", "Security mode. Open is unencrypted (insecure). For AP: wpa2-wpa3-personal is recommended for compatibility + security."),
 			"wifi-secret":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/secret", "Pre-shared key reference — a symmetric key in the keystore. 8–63 characters per the WPA spec."),
@@ -753,7 +763,7 @@ func (h *ConfigureInterfacesHandler) CreateInterface(w http.ResponseWriter, r *h
 		}
 		mode := r.FormValue("wifi-mode")
 		ssid := strings.TrimSpace(r.FormValue("ssid"))
-		if ssid == "" {
+		if ssid == "" && mode != "mesh-point" {
 			renderSaveError(w, fmt.Errorf("SSID is required"))
 			return
 		}
@@ -794,8 +804,15 @@ func (h *ConfigureInterfacesHandler) CreateInterface(w http.ResponseWriter, r *h
 			}
 			sta["security"] = security
 			wifi["station"] = sta
+		case "mesh-point":
+			mp, err := wifiMeshPointFromForm(r)
+			if err != nil {
+				renderSaveError(w, err)
+				return
+			}
+			wifi["mesh-point"] = mp
 		default:
-			renderSaveError(w, fmt.Errorf("WiFi mode must be 'station' or 'access-point'"))
+			renderSaveError(w, fmt.Errorf("WiFi mode must be 'station', 'access-point' or 'mesh-point'"))
 			return
 		}
 		iface["infix-interfaces:wifi"] = wifi
@@ -1752,11 +1769,11 @@ func (h *ConfigureInterfacesHandler) SaveBridgeMulticast(w http.ResponseWriter, 
 	renderSaved(w, "Multicast saved")
 }
 
-// SaveWifi PATCHes the WiFi interface container plus, when the form
-// also carries radio fields, the mirrored wifi-radio component — both
-// in a single PATCH on the candidate root so the interface SSID/sec
-// and the radio's country/band/channel land atomically. The mode
-// (station vs access-point) is fixed at wizard-create time and not
+// SaveWifi replaces the interface's wifi container whole (radio plus the
+// mode container) so unticked presence containers and leaves reverted to
+// their defaults actually go away, then PATCHes the mirrored wifi-radio
+// component when the form also carried radio fields. The mode (station,
+// access-point or mesh-point) is fixed at wizard-create time and not
 // switched here.
 // POST /configure/interfaces/{name}/wifi
 func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Request) {
@@ -1766,61 +1783,154 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 	}
 	name := r.PathValue("name")
 	mode := r.FormValue("mode")
-	if mode != "station" && mode != "access-point" {
-		renderSaveError(w, fmt.Errorf("mode must be 'station' or 'access-point'"))
+	radio := strings.TrimSpace(r.FormValue("radio"))
+	if radio == "" {
+		renderSaveError(w, fmt.Errorf("a WiFi radio reference is required"))
 		return
 	}
-	leaf := map[string]any{"ssid": r.FormValue("ssid")}
-	if secMode := r.FormValue("sec-mode"); secMode != "" {
-		sec := map[string]any{"mode": secMode}
-		if secret := r.FormValue("secret"); secret != "" {
-			sec["secret"] = secret
+	var leaf map[string]any
+	switch mode {
+	case "station", "access-point":
+		leaf = map[string]any{"ssid": r.FormValue("ssid")}
+		secMode := r.FormValue("sec-mode")
+		if secMode != "" {
+			sec := map[string]any{"mode": secMode}
+			if secret := r.FormValue("secret"); secret != "" {
+				sec["secret"] = secret
+			}
+			leaf["security"] = sec
 		}
-		leaf["security"] = sec
+		if mode == "access-point" {
+			if r.FormValue("hidden") == "on" {
+				leaf["hidden"] = true
+			}
+			roaming, err := wifiRoamingFromForm(r)
+			if err != nil {
+				renderSaveError(w, err)
+				return
+			}
+			if _, ok := roaming["dot11r"]; ok && secMode == "open" {
+				renderSaveError(w, fmt.Errorf("802.11r requires WPA2/WPA3 security, not an open network"))
+				return
+			}
+			if len(roaming) > 0 {
+				leaf["roaming"] = roaming
+			}
+		}
+	case "mesh-point":
+		var err error
+		if leaf, err = wifiMeshPointFromForm(r); err != nil {
+			renderSaveError(w, err)
+			return
+		}
+	default:
+		renderSaveError(w, fmt.Errorf("mode must be 'station', 'access-point' or 'mesh-point'"))
+		return
 	}
-	if mode == "access-point" {
-		leaf["hidden"] = r.FormValue("hidden") == "on"
+	wifi := map[string]any{"radio": radio, mode: leaf}
+	body := map[string]any{"infix-interfaces:wifi": wifi}
+	if err := h.RC.Put(r.Context(), ifacePath(name)+"/infix-interfaces:wifi", body); err != nil {
+		log.Printf("configure interfaces %s wifi: %v", name, err)
+		renderSaveError(w, err)
+		return
 	}
-	wifi := map[string]any{mode: leaf}
-	// Picker change re-binds the wifi/radio leaf so the user can move
-	// the interface to a different (already-configured) radio.
-	if radioRef := strings.TrimSpace(r.FormValue("radio")); radioRef != "" {
-		wifi["radio"] = radioRef
-	}
-	iface := map[string]any{
-		"name":                  name,
-		"infix-interfaces:wifi": wifi,
-	}
-	body := map[string]any{
-		"ietf-interfaces:interfaces": map[string]any{
-			"interface": []map[string]any{iface},
-		},
-	}
-	// Radio half of the atomic write — only when the form actually
-	// carried a country (the wifi-radio container's mandatory leaf).
-	// Without it parseWiFiRadio would reject a form whose user only
-	// touched the WiFi side and left the radio fields untouched-empty.
-	radio := strings.TrimSpace(r.FormValue("radio"))
-	if radio != "" && strings.TrimSpace(r.FormValue("country-code")) != "" {
+	// Radio half, only when the form actually carried a country (the
+	// wifi-radio container's mandatory leaf). Without it parseWiFiRadio
+	// would reject a form whose user only touched the WiFi side and left
+	// the radio fields untouched-empty.
+	if strings.TrimSpace(r.FormValue("country-code")) != "" {
 		rc, err := parseWiFiRadio(r)
 		if err != nil {
 			renderSaveError(w, err)
 			return
 		}
-		body["ietf-hardware:hardware"] = map[string]any{
-			"component": []map[string]any{{
-				"name":                      radio,
-				"class":                     "infix-hardware:wifi",
-				"infix-hardware:wifi-radio": rc,
-			}},
+		hw := map[string]any{
+			"ietf-hardware:hardware": map[string]any{
+				"component": []map[string]any{{
+					"name":                      radio,
+					"class":                     "infix-hardware:wifi",
+					"infix-hardware:wifi-radio": rc,
+				}},
+			},
+		}
+		if err := h.RC.Patch(r.Context(), candidatePath, hw); err != nil {
+			log.Printf("configure interfaces %s wifi radio %s: %v", name, radio, err)
+			renderSaveError(w, err)
+			return
 		}
 	}
-	if err := h.RC.Patch(r.Context(), candidatePath, body); err != nil {
-		log.Printf("configure interfaces %s wifi: %v", name, err)
-		renderSaveError(w, err)
-		return
-	}
 	renderSaved(w, "WiFi saved")
+}
+
+// wifiMeshPointFromForm builds the mesh-point container from the wizard
+// or editor form. Both post the forwarding checkbox with a hidden "false"
+// companion, so only an explicit "false" is written; absent means the
+// YANG default (true).
+func wifiMeshPointFromForm(r *http.Request) (map[string]any, error) {
+	meshID := strings.TrimSpace(r.FormValue("mesh-id"))
+	if meshID == "" {
+		return nil, fmt.Errorf("mesh ID is required")
+	}
+	secret := strings.TrimSpace(r.FormValue("secret"))
+	if secret == "" {
+		return nil, fmt.Errorf("a PSK is required for mesh mode (WPA3-SAE)")
+	}
+	mp := map[string]any{
+		"mesh-id":  meshID,
+		"security": map[string]any{"secret": secret},
+	}
+	if r.FormValue("forwarding") == "false" {
+		mp["forwarding"] = false
+	}
+	return mp, nil
+}
+
+// wifiRoamingFromForm builds the access-point/roaming container from the
+// editor's checkboxes. Leaves at their YANG default (okc, band-steering,
+// blank mobility-domain and NAS identifier) are left out so the config
+// only carries what the user changed.
+func wifiRoamingFromForm(r *http.Request) (map[string]any, error) {
+	roaming := map[string]any{}
+	if r.FormValue("okc") != "on" {
+		roaming["okc"] = false
+	}
+	if r.FormValue("dot11k") == "on" {
+		roaming["dot11k"] = map[string]any{}
+	}
+	if r.FormValue("dot11r") == "on" {
+		dot11r := map[string]any{}
+		md := strings.ToLower(strings.TrimSpace(r.FormValue("mobility-domain")))
+		if md != "" {
+			if md != "hash" && !isHex4(md) {
+				return nil, fmt.Errorf("mobility domain must be four hex digits or 'hash'")
+			}
+			dot11r["mobility-domain"] = md
+		}
+		if nas := strings.TrimSpace(r.FormValue("nas-identifier")); nas != "" {
+			dot11r["nas-identifier"] = nas
+		}
+		roaming["dot11r"] = dot11r
+	}
+	if r.FormValue("dot11v") == "on" {
+		dot11v := map[string]any{}
+		if r.FormValue("band-steering") != "on" {
+			dot11v["band-steering"] = false
+		}
+		roaming["dot11v"] = dot11v
+	}
+	return roaming, nil
+}
+
+func isHex4(s string) bool {
+	if len(s) != 4 {
+		return false
+	}
+	for _, c := range s {
+		if !strings.ContainsRune("0123456789abcdef", c) {
+			return false
+		}
+	}
+	return true
 }
 
 // DeleteLagPort detaches an interface from its LAG.
@@ -2063,6 +2173,8 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJ
 				row.WifiMode = "access-point"
 			case iface.WiFi.Station != nil:
 				row.WifiMode = "station"
+			case iface.WiFi.MeshPoint != nil:
+				row.WifiMode = "mesh-point"
 			}
 		}
 		row.EthAutoneg = true // YANG default when no candidate value is set
@@ -2742,6 +2854,9 @@ func configSummary(row *cfgIfaceRow) []string {
 	}
 	if row.IsWifi && row.WifiMode != "" {
 		tags = append(tags, row.WifiMode)
+		if ap := row.WiFi.AccessPoint; ap != nil && wifiRoamingSummary(ap.Roaming) != "" {
+			tags = append(tags, "roaming")
+		}
 	}
 	if row.IsBridge && row.BridgeIs8021Q {
 		tags = append(tags, "802.1Q")

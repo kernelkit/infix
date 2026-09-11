@@ -1030,17 +1030,26 @@
 // Interface page glue (replaces inline hx-on / inline <script>, which CSP
 // blocks under the `script-src 'self'` policy in middleware.go).
 (function () {
-  // A checkbox marked [data-fold-target="<id>"] toggles the matching <details>
-  // (or any element with that id) immediately on change. Used for the DHCP /
-  // DHCPv6 settings foldouts on Configure → Interface: the foldout is always
-  // in the DOM but starts hidden when the client isn't enabled. This lets the
-  // user see the settings form before clicking Save IPvX Settings and confirms
-  // the section exists even when DHCP is off.
+  // A checkbox marked [data-fold-target="<id> <id>…"] toggles the matching
+  // <details> (or any elements with those ids) immediately on change. Used
+  // for the DHCP / DHCPv6 settings foldouts on Configure → Interface: the
+  // foldout is always in the DOM but starts hidden when the client isn't
+  // enabled. This lets the user see the settings form before clicking Save
+  // IPvX Settings and confirms the section exists even when DHCP is off.
+  // Also used for the 802.11r/v sub-rows in the WiFi editor. Controls inside
+  // a hidden target are disabled too: a hidden input still takes part in
+  // constraint validation and would block submit with no visible message.
   document.addEventListener('change', function (evt) {
     var cb = evt.target;
     if (!cb || !cb.matches || !cb.matches('input[type="checkbox"][data-fold-target]')) return;
-    var target = document.getElementById(cb.getAttribute('data-fold-target'));
-    if (target) target.hidden = !cb.checked;
+    cb.getAttribute('data-fold-target').split(/\s+/).forEach(function (id) {
+      var target = document.getElementById(id);
+      if (!target) return;
+      target.hidden = !cb.checked;
+      target.querySelectorAll('input,select,textarea,button').forEach(function (el) {
+        el.disabled = !cb.checked;
+      });
+    });
   });
 
   // Add Interface modal — open via data-show-modal, close via
@@ -1073,13 +1082,40 @@
     }
   });
 
-  // Add Interface modal, WiFi fieldset: mode (Station/AP) drives which
-  // security-mode optgroup is exposed, which AP-only rows are visible,
-  // whether the PSK row applies (open/disabled hide it), and an -ap
-  // suffix on the Name.
-  function refreshWifiSec() {
+  // Add Interface modal, WiFi fieldset: mode (Station/AP/Mesh) drives
+  // which security-mode optgroup is exposed, which AP-only and mesh-only
+  // rows are visible, whether the PSK row applies (open/disabled hide
+  // it), and an -ap / -mesh suffix on the Name. Mesh is always WPA3-SAE,
+  // so it hides the security-mode row and swaps SSID for Mesh ID.
+  function wifiWizardMode() {
     var modeAP = document.getElementById('add-iface-wifi-mode-ap');
-    var isAP = !!(modeAP && modeAP.checked);
+    var modeMesh = document.getElementById('add-iface-wifi-mode-mesh');
+    if (modeMesh && modeMesh.checked) return 'mesh';
+    if (modeAP && modeAP.checked) return 'ap';
+    return 'station';
+  }
+  function setRowEnabled(rowId, on) {
+    var row = document.getElementById(rowId);
+    if (!row) return;
+    row.hidden = !on;
+    row.querySelectorAll('input,select').forEach(function (el) {
+      if (el.type === 'hidden') return;
+      el.disabled = !on;
+      if (el.dataset.wifiRequired === '1') el.required = on;
+    });
+  }
+  function refreshWifiSec() {
+    var mode = wifiWizardMode();
+    var isAP = mode === 'ap';
+    var isMesh = mode === 'mesh';
+    var ssid = document.getElementById('add-iface-wifi-ssid');
+    if (ssid) ssid.dataset.wifiRequired = '1';
+    var meshId = document.getElementById('add-iface-wifi-meshid');
+    if (meshId) meshId.dataset.wifiRequired = '1';
+    setRowEnabled('add-iface-wifi-ssid-row', !isMesh);
+    setRowEnabled('add-iface-wifi-meshid-row', isMesh);
+    setRowEnabled('add-iface-wifi-fwd-row', isMesh);
+    setRowEnabled('add-iface-wifi-sec-row', !isMesh);
     var sec = document.getElementById('add-iface-wifi-sec');
     if (sec) {
       var groups = sec.querySelectorAll('optgroup[data-mode-group]');
@@ -1102,16 +1138,15 @@
     refreshWifiPSK();
     refreshWifiName();
   }
-  // Auto-suffix the Name with "-ap" in AP mode and strip it in Station,
-  // unless the user has manually edited the Name. Matches the in-tree
-  // wifi naming convention (wifi0 / wifi0-ap).
+  // Auto-suffix the Name with "-ap" / "-mesh" by mode and strip it in
+  // Station, unless the user has manually edited the Name. Matches the
+  // in-tree wifi naming convention (wifi0 / wifi0-ap).
   function refreshWifiName() {
     var name = document.getElementById('add-iface-wifi-name');
     if (!name || name.dataset.userEdited === '1') return;
-    var modeAP = document.getElementById('add-iface-wifi-mode-ap');
-    var isAP = !!(modeAP && modeAP.checked);
-    var base = name.value.replace(/-ap$/, '');
-    name.value = isAP ? base + '-ap' : base;
+    var mode = wifiWizardMode();
+    var base = name.value.replace(/-(ap|mesh)$/, '');
+    name.value = mode === 'station' ? base : base + '-' + mode;
   }
   function refreshWifiPSK() {
     var sec = document.getElementById('add-iface-wifi-sec');
@@ -1119,14 +1154,15 @@
     var psk = document.getElementById('add-iface-wifi-psk');
     if (!sec || !pskRow || !psk) return;
     var v = sec.value;
-    var needPSK = v !== 'disabled' && v !== 'open';
+    var needPSK = wifiWizardMode() === 'mesh' || (v !== 'disabled' && v !== 'open');
     pskRow.hidden = !needPSK;
     psk.required = needPSK;
     psk.disabled = !needPSK;
   }
   document.addEventListener('change', function (e) {
     var t = e.target;
-    if (t.id === 'add-iface-wifi-mode-sta' || t.id === 'add-iface-wifi-mode-ap') {
+    if (t.id === 'add-iface-wifi-mode-sta' || t.id === 'add-iface-wifi-mode-ap' ||
+        t.id === 'add-iface-wifi-mode-mesh') {
       refreshWifiSec();
     } else if (t.id === 'add-iface-wifi-sec') {
       refreshWifiPSK();

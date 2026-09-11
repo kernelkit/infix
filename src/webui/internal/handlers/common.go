@@ -4,6 +4,8 @@ package handlers
 
 import (
 	"context"
+	"fmt"
+	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -77,5 +79,47 @@ func newPageData(w http.ResponseWriter, r *http.Request, page, leaf string) Page
 		ActivePage:   page,
 		Capabilities: CapabilitiesFromContext(r.Context()),
 		CfgUnsaved:   cfgUnsavedFromRequest(r),
+	}
+}
+
+// IfaceTemplateFuncs is the FuncMap the configure-interfaces template is
+// parsed with. Exported so tests can parse the real template the same way.
+func IfaceTemplateFuncs() template.FuncMap {
+	return template.FuncMap{
+		"shortPMD": ShortenPMD,
+		"add":      func(a, b int) int { return a + b },
+		"deref": func(v any) any {
+			switch p := v.(type) {
+			case *bool:
+				if p != nil {
+					return *p
+				}
+			case *uint32:
+				if p != nil {
+					return *p
+				}
+			case *int:
+				if p != nil {
+					return *p
+				}
+			}
+			return nil
+		},
+		// dict lets callers pass keyed args to nested templates, e.g.
+		// {{template "foo" (dict "Key" .X "Selected" "")}}.
+		"dict": func(values ...any) (map[string]any, error) {
+			if len(values)%2 != 0 {
+				return nil, fmt.Errorf("dict: odd argument count")
+			}
+			m := make(map[string]any, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				k, ok := values[i].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict: non-string key at position %d", i)
+				}
+				m[k] = values[i+1]
+			}
+			return m, nil
+		},
 	}
 }

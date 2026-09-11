@@ -391,8 +391,10 @@
               {{$curSecret     := ""}}
               {{if and .WiFi .WiFi.AccessPoint .WiFi.AccessPoint.Security}}{{$curSecret = .WiFi.AccessPoint.Security.Secret}}{{end}}
               {{if and .WiFi .WiFi.Station .WiFi.Station.Security}}{{$curSecret = .WiFi.Station.Security.Secret}}{{end}}
+              {{if and .WiFi .WiFi.MeshPoint .WiFi.MeshPoint.Security}}{{$curSecret = .WiFi.MeshPoint.Security.Secret}}{{end}}
+              {{$secretDesc := index $d "wifi-secret"}}{{if eq .WifiMode "mesh-point"}}{{$secretDesc = index $d "wifi-mesh-secret"}}{{end}}
               <div style="margin-top:1rem">
-                <h4 class="cfg-section-head">WiFi {{if eq .WifiMode "access-point"}}(Access Point){{else if eq .WifiMode "station"}}(Station){{end}}</h4>
+                <h4 class="cfg-section-head">WiFi {{if eq .WifiMode "access-point"}}(Access Point){{else if eq .WifiMode "station"}}(Station){{else if eq .WifiMode "mesh-point"}}(Mesh Point){{end}}</h4>
                 <form hx-post="/configure/interfaces/{{$ifname}}/wifi" hx-swap="none">
                   <input type="hidden" name="mode" value="{{.WifiMode}}">
                   <table class="info-table">
@@ -508,9 +510,25 @@
                         </select>
                       </td>
                     </tr>
+                    {{else if and .WiFi .WiFi.MeshPoint}}
+                    {{$mp := .WiFi.MeshPoint}}
+                    <tr>
+                      <th>Mesh ID{{template "field-info" (index $d "wifi-mesh-id")}}</th>
+                      <td><input class="cfg-input cfg-input-sm" type="text" name="mesh-id"
+                                 value="{{$mp.MeshID}}" maxlength="32" required></td>
+                    </tr>
+                    <tr>
+                      <th>Forwarding{{template "field-info" (index $d "wifi-forwarding")}}</th>
+                      <td>
+                        <label><input type="checkbox" name="forwarding" value="true"
+                               {{if or (not $mp.Forwarding) (deref $mp.Forwarding)}}checked{{end}}>
+                               Relay traffic for other mesh points</label>
+                        <input type="hidden" name="forwarding" value="false">
+                      </td>
+                    </tr>
                     {{end}}
                     <tr>
-                      <th>PSK{{template "field-info" (index $d "wifi-secret")}}</th>
+                      <th>PSK{{template "field-info" $secretDesc}}</th>
                       <td>
                         <div class="ks-picker-row">
                           {{template "wizard-psk-picker.html" (dict "Keys" $.WizardSymKeys "Selected" $curSecret "ID" $pskPickerID)}}
@@ -569,6 +587,69 @@
                       </td>
                     </tr>
                   </table>
+                  {{if and .WiFi .WiFi.AccessPoint}}
+                  {{/* Roaming: dot11k/r/v are presence containers, so a
+                       ticked box means "present". Sub-fields only make
+                       sense once their parent is ticked; data-fold-target
+                       toggles the rows client-side, and they start
+                       disabled when hidden so a stale value can't block
+                       form validation. */}}
+                  {{$rm := .WiFi.AccessPoint.Roaming}}
+                  {{$hasK := false}}{{$hasR := false}}{{$hasV := false}}{{$okc := true}}{{$bs := true}}
+                  {{$md := "4f57"}}{{$nas := "auto"}}
+                  {{if $rm}}
+                    {{if $rm.Dot11k}}{{$hasK = true}}{{end}}
+                    {{if $rm.Dot11r}}{{$hasR = true}}{{if $rm.Dot11r.MobilityDomain}}{{$md = $rm.Dot11r.MobilityDomain}}{{end}}{{if $rm.Dot11r.NASIdentifier}}{{$nas = $rm.Dot11r.NASIdentifier}}{{end}}{{end}}
+                    {{if $rm.Dot11v}}{{$hasV = true}}{{if $rm.Dot11v.BandSteering}}{{$bs = deref $rm.Dot11v.BandSteering}}{{end}}{{end}}
+                    {{if $rm.OKC}}{{$okc = deref $rm.OKC}}{{end}}
+                  {{end}}
+                  {{$dot11rRows := printf "wifi-row-%s-dot11r-md wifi-row-%s-dot11r-nas" $ifname $ifname}}
+                  {{$dot11vRows := printf "wifi-row-%s-dot11v-bs" $ifname}}
+                  <details class="cfg-fold" {{if or $hasK $hasR $hasV}}open{{end}}>
+                    <summary>Roaming (802.11k/r/v)</summary>
+                    <div class="cfg-fold-body">
+                      <table class="info-table">
+                        <tr>
+                          <th>802.11k{{template "field-info" (index $d "wifi-dot11k")}}</th>
+                          <td><label><input type="checkbox" name="dot11k" {{if $hasK}}checked{{end}}>
+                              Radio Resource Management (neighbor reports)</label></td>
+                        </tr>
+                        <tr>
+                          <th>802.11r{{template "field-info" (index $d "wifi-dot11r")}}</th>
+                          <td><label><input type="checkbox" name="dot11r" data-fold-target="{{$dot11rRows}}" {{if $hasR}}checked{{end}}>
+                              Fast BSS Transition</label></td>
+                        </tr>
+                        <tr id="wifi-row-{{$ifname}}-dot11r-md" {{if not $hasR}}hidden{{end}}>
+                          <th>Mobility domain{{template "field-info" (index $d "wifi-dot11r-md")}}</th>
+                          <td><input class="cfg-input cfg-input-sm" type="text" name="mobility-domain"
+                                     value="{{$md}}" pattern="[0-9a-fA-F]{4}|hash" placeholder="4f57 or hash"
+                                     {{if not $hasR}}disabled{{end}}></td>
+                        </tr>
+                        <tr id="wifi-row-{{$ifname}}-dot11r-nas" {{if not $hasR}}hidden{{end}}>
+                          <th>NAS identifier{{template "field-info" (index $d "wifi-dot11r-nas")}}</th>
+                          <td><input class="cfg-input cfg-input-sm" type="text" name="nas-identifier"
+                                     value="{{$nas}}" maxlength="253" placeholder="auto"
+                                     {{if not $hasR}}disabled{{end}}></td>
+                        </tr>
+                        <tr>
+                          <th>802.11v{{template "field-info" (index $d "wifi-dot11v")}}</th>
+                          <td><label><input type="checkbox" name="dot11v" data-fold-target="{{$dot11vRows}}" {{if $hasV}}checked{{end}}>
+                              BSS Transition Management</label></td>
+                        </tr>
+                        <tr id="wifi-row-{{$ifname}}-dot11v-bs" {{if not $hasV}}hidden{{end}}>
+                          <th>Band steering{{template "field-info" (index $d "wifi-band-steering")}}</th>
+                          <td><label><input type="checkbox" name="band-steering" {{if $bs}}checked{{end}} {{if not $hasV}}disabled{{end}}>
+                              Steer dual-band clients toward 5/6 GHz (MBO)</label></td>
+                        </tr>
+                        <tr>
+                          <th>OKC{{template "field-info" (index $d "wifi-okc")}}</th>
+                          <td><label><input type="checkbox" name="okc" {{if $okc}}checked{{end}}>
+                              Opportunistic Key Caching</label></td>
+                        </tr>
+                      </table>
+                    </div>
+                  </details>
+                  {{end}}
                   <div class="cfg-card-footer" style="padding-left:0">
                     <button class="btn btn-primary btn-sm" type="submit">Save WiFi</button>
                     <span class="cfg-save-status"></span>
@@ -1379,10 +1460,12 @@
         </table>
       </fieldset>
 
-      {{/* WiFi — radio reference is mandatory; mode (Station / AP) drives
-           which security mode options apply and whether the PSK picker
-           shows. AP-only fields (hidden checkbox + AP security modes) are
-           swapped in by JS based on the mode radio. */}}
+      {{/* WiFi — radio reference is mandatory; mode (Station / AP / Mesh)
+           drives which security mode options apply and whether the PSK
+           picker shows. AP-only fields (hidden checkbox + AP security
+           modes) and mesh-only fields (mesh ID, forwarding) are swapped
+           in by JS based on the mode radio. Mesh is always WPA3-SAE, so
+           the security-mode row is hidden there. */}}
       <fieldset class="iface-fields" id="iface-fields-wifi" hidden disabled>
         <table class="info-table">
           <tr>
@@ -1395,6 +1478,10 @@
               <label class="yt-bool-group-label">
                 <input type="radio" name="wifi-mode" value="access-point" id="add-iface-wifi-mode-ap">
                 Access Point
+              </label>
+              <label class="yt-bool-group-label">
+                <input type="radio" name="wifi-mode" value="mesh-point" id="add-iface-wifi-mode-mesh">
+                Mesh Point (802.11s)
               </label>
             </td>
           </tr>
@@ -1474,12 +1561,27 @@
               </div>
             </td>
           </tr>
-          <tr>
+          <tr id="add-iface-wifi-ssid-row">
             <th>SSID{{template "field-info" (index $d "wifi-ssid")}}</th>
             <td><input class="cfg-input" type="text" name="ssid"
                        id="add-iface-wifi-ssid" maxlength="32" required></td>
           </tr>
-          <tr>
+          <tr id="add-iface-wifi-meshid-row" hidden>
+            <th>Mesh ID{{template "field-info" (index $d "wifi-mesh-id")}}</th>
+            <td><input class="cfg-input" type="text" name="mesh-id"
+                       id="add-iface-wifi-meshid" maxlength="32" disabled></td>
+          </tr>
+          <tr id="add-iface-wifi-fwd-row" hidden>
+            <th>Forwarding{{template "field-info" (index $d "wifi-forwarding")}}</th>
+            <td>
+              <label class="yt-bool-group-label">
+                <input type="checkbox" name="forwarding" value="true" checked>
+                Relay traffic for other mesh points
+              </label>
+              <input type="hidden" name="forwarding" value="false">
+            </td>
+          </tr>
+          <tr id="add-iface-wifi-sec-row">
             <th>Security{{template "field-info" (index $d "wifi-sec-mode")}}</th>
             <td>
               {{/* Station options — visible by default since station is the

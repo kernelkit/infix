@@ -91,15 +91,51 @@ type wifiJSON struct {
 	Radio       string           `json:"radio"`
 	AccessPoint *wifiAPJSON      `json:"access-point"`
 	Station     *wifiStationJSON `json:"station"`
+	MeshPoint   *wifiMeshJSON    `json:"mesh-point"`
 }
 
 type wifiAPJSON struct {
-	SSID     string         `json:"ssid"`
-	Hidden   *bool          `json:"hidden"`
-	Security *wifiSecJSON   `json:"security"`
+	SSID     string           `json:"ssid"`
+	Hidden   *bool            `json:"hidden"`
+	Security *wifiSecJSON     `json:"security"`
+	Roaming  *wifiRoamingJSON `json:"roaming"`
 	Stations struct {
 		Station []wifiStaJSON `json:"station"`
 	} `json:"stations"`
+}
+
+// wifiRoamingJSON mirrors access-point/roaming. dot11k/r/v are presence
+// containers, so a non-nil pointer means "enabled" even when the object
+// is empty.
+type wifiRoamingJSON struct {
+	Dot11k *struct{}       `json:"dot11k"`
+	Dot11r *wifiDot11rJSON `json:"dot11r"`
+	Dot11v *wifiDot11vJSON `json:"dot11v"`
+	OKC    *bool           `json:"okc"`
+}
+
+type wifiDot11rJSON struct {
+	MobilityDomain string `json:"mobility-domain"`
+	NASIdentifier  string `json:"nas-identifier"`
+}
+
+type wifiDot11vJSON struct {
+	BandSteering *bool `json:"band-steering"`
+}
+
+// wifiMeshJSON mirrors the 802.11s mesh-point container. Peers reuse the
+// station shape since the YANG leaves are identical.
+type wifiMeshJSON struct {
+	MeshID     string           `json:"mesh-id"`
+	Forwarding *bool            `json:"forwarding"`
+	Security   *wifiMeshSecJSON `json:"security"`
+	Peers      struct {
+		Peer []wifiStaJSON `json:"peer"`
+	} `json:"peers"`
+}
+
+type wifiMeshSecJSON struct {
+	Secret string `json:"secret"`
 }
 
 type wifiSecJSON struct {
@@ -121,6 +157,7 @@ type wifiStaJSON struct {
 
 type wifiStationJSON struct {
 	SSID           string               `json:"ssid"`
+	BSSID          string               `json:"bssid"`
 	Security       *wifiSecJSON         `json:"security"`
 	SignalStrength *int                 `json:"signal-strength"`
 	RxSpeed        yangInt64            `json:"rx-speed"`
@@ -521,6 +558,9 @@ func makeIfaceEntry(iface ifaceJSON, fwdSet map[string]bool) ifaceEntry {
 			e.Detail = fmt.Sprintf("AP, ssid: %s, stations: %d", ap.SSID, n)
 		} else if st := iface.WiFi.Station; st != nil {
 			e.Detail = fmt.Sprintf("Station, ssid: %s", st.SSID)
+		} else if mp := iface.WiFi.MeshPoint; mp != nil {
+			n := len(mp.Peers.Peer)
+			e.Detail = fmt.Sprintf("Mesh, mesh-id: %s, peers: %d", mp.MeshID, n)
 		}
 	}
 
@@ -556,12 +596,16 @@ type ifaceDetailData struct {
 	SupportedPMDs    []string // short names (what the PHY can do)
 	AdvertisedPMDs   []string // short names (what autoneg announces)
 	Addresses        []addrEntry
-	WiFiMode         string // "Access Point" or "Station"
+	WiFiMode         string // "Access Point", "Station" or "Mesh Point"
 	WiFiSSID         string
+	WiFiBSSID        string // station: AP currently associated to
+	WiFiMeshID       string
 	WiFiSignal       string
 	WiFiRxSpeed      string
 	WiFiTxSpeed      string
 	WiFiStationCount string // e.g. "3" for AP mode
+	WiFiPeerCount    string // mesh mode
+	WiFiStaTitle     string // "Connected Stations" or "Mesh Peers"
 	WGPeerSummary    string // e.g. "3 peers (2 up)"
 	Counters         ifaceCounters
 	EthFrameStats    []kvEntry
@@ -604,7 +648,7 @@ type wgPeerEntry struct {
 type wifiStaEntry struct {
 	MAC       string
 	Signal    string
-	SignalCSS string // "excellent", "good", "poor", "bad"
+	SignalCSS string // see wifiSignalCSS
 	Time      string
 	RxPkts    string
 	TxPkts    string
@@ -638,6 +682,11 @@ func (h *InterfacesHandler) fetchInterface(r *http.Request, name string) (*iface
 }
 
 // buildDetailData converts raw RESTCONF interface data to template data.
+//
+// Only operational data is rendered here. Mesh forwarding and AP roaming
+// are config-only leaves that never reach the operational datastore, and
+// a status page has no business restating running config as if it were
+// state, so they live on the configure page alone.
 func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 	d := ifaceDetailData{
 		Name: iface.Name,
@@ -698,12 +747,22 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 			d.WiFiMode = "Access Point"
 			d.WiFiSSID = ap.SSID
 			d.WiFiStationCount = fmt.Sprintf("%d", len(ap.Stations.Station))
+			d.WiFiStaTitle = "Connected Stations"
 			for _, s := range ap.Stations.Station {
 				d.WiFiStations = append(d.WiFiStations, buildWifiStaEntry(s))
+			}
+		} else if mp := iface.WiFi.MeshPoint; mp != nil {
+			d.WiFiMode = "Mesh Point"
+			d.WiFiMeshID = mp.MeshID
+			d.WiFiPeerCount = fmt.Sprintf("%d", len(mp.Peers.Peer))
+			d.WiFiStaTitle = "Mesh Peers"
+			for _, p := range mp.Peers.Peer {
+				d.WiFiStations = append(d.WiFiStations, buildWifiStaEntry(p))
 			}
 		} else if st := iface.WiFi.Station; st != nil {
 			d.WiFiMode = "Station"
 			d.WiFiSSID = st.SSID
+			d.WiFiBSSID = st.BSSID
 			if st.SignalStrength != nil {
 				d.WiFiSignal = fmt.Sprintf("%d dBm", *st.SignalStrength)
 			}
@@ -860,6 +919,39 @@ func formatEthernetLink(bps uint64, duplex string) string {
 	return s
 }
 
+// wifiRoamingSummary renders the non-default roaming settings as one
+// line, e.g. "802.11k, 802.11r (domain 4f57), 802.11v (band steering)"
+// or "no OKC". Empty when everything is at its default.
+func wifiRoamingSummary(rm *wifiRoamingJSON) string {
+	if rm == nil {
+		return ""
+	}
+	var parts []string
+	if rm.Dot11k != nil {
+		parts = append(parts, "802.11k")
+	}
+	if rm.Dot11r != nil {
+		// GETs omit default leaves, so an absent domain is the YANG
+		// default, the same value the editor shows.
+		md := rm.Dot11r.MobilityDomain
+		if md == "" {
+			md = "4f57"
+		}
+		parts = append(parts, "802.11r (domain "+md+")")
+	}
+	if rm.Dot11v != nil {
+		s := "802.11v"
+		if bs := rm.Dot11v.BandSteering; bs == nil || *bs {
+			s += " (band steering)"
+		}
+		parts = append(parts, s)
+	}
+	if rm.OKC != nil && !*rm.OKC {
+		parts = append(parts, "no OKC")
+	}
+	return strings.Join(parts, ", ")
+}
+
 func buildWifiStaEntry(s wifiStaJSON) wifiStaEntry {
 	e := wifiStaEntry{
 		MAC:     s.MACAddress,
@@ -872,18 +964,8 @@ func buildWifiStaEntry(s wifiStaJSON) wifiStaEntry {
 		TxSpeed: fmt.Sprintf("%.1f Mbps", float64(s.TxSpeed)/10),
 	}
 	if s.SignalStrength != nil {
-		sig := *s.SignalStrength
-		e.Signal = fmt.Sprintf("%d dBm", sig)
-		switch {
-		case sig >= -50:
-			e.SignalCSS = "excellent"
-		case sig >= -60:
-			e.SignalCSS = "good"
-		case sig >= -70:
-			e.SignalCSS = "poor"
-		default:
-			e.SignalCSS = "bad"
-		}
+		e.Signal = fmt.Sprintf("%d dBm", *s.SignalStrength)
+		e.SignalCSS = wifiSignalCSS(*s.SignalStrength)
 	}
 	return e
 }
@@ -900,18 +982,8 @@ func buildWifiScanEntry(sr wifiScanResultJSON) wifiScanEntry {
 		e.Encryption = "Open"
 	}
 	if sr.SignalStrength != nil {
-		sig := *sr.SignalStrength
-		e.Signal = fmt.Sprintf("%d dBm", sig)
-		switch {
-		case sig >= -50:
-			e.SignalCSS = "excellent"
-		case sig >= -60:
-			e.SignalCSS = "good"
-		case sig >= -70:
-			e.SignalCSS = "poor"
-		default:
-			e.SignalCSS = "bad"
-		}
+		e.Signal = fmt.Sprintf("%d dBm", *sr.SignalStrength)
+		e.SignalCSS = wifiSignalCSS(*sr.SignalStrength)
 	}
 	return e
 }

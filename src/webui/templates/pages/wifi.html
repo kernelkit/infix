@@ -75,14 +75,15 @@
   {{if eq .Mode "station"}}
   <div class="card-body" style="padding:0">
     <table class="info-table">
-      {{if .Signal}}<tr><th>Signal</th><td><span class="signal-{{.SignalCSS}}">{{.Signal}}</span></td></tr>{{end}}
+      {{if .BSSID}}<tr><th>BSSID</th><td>{{.BSSID}}</td></tr>{{end}}
+      {{if .Signal}}<tr><th>Signal</th><td><span class="{{.SignalCSS}}">{{.Signal}}</span></td></tr>{{end}}
       {{if .RxSpeed}}<tr><th>RX Speed</th><td>{{.RxSpeed}}</td></tr>{{end}}
       {{if .TxSpeed}}<tr><th>TX Speed</th><td>{{.TxSpeed}}</td></tr>{{end}}
     </table>
   </div>
   {{end}}
 
-  {{if and (eq .Mode "ap") .APClients}}
+  {{if .Clients}}
   <div class="data-table-wrap">
     <table class="data-table">
       <thead>
@@ -97,10 +98,10 @@
         </tr>
       </thead>
       <tbody>
-        {{range .APClients}}
+        {{range .Clients}}
         <tr>
           <td>{{.MAC}}</td>
-          <td>{{if .Signal}}<span class="signal-{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
+          <td>{{if .Signal}}<span class="{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
           <td>{{.ConnTime}}</td>
           <td class="num">{{.RxBytes}}</td>
           <td class="num">{{.TxBytes}}</td>
@@ -111,8 +112,8 @@
       </tbody>
     </table>
   </div>
-  {{else if eq .Mode "ap"}}
-  <p class="empty-message">No stations connected.</p>
+  {{else if .ClientsEmpty}}
+  <p class="empty-message">{{.ClientsEmpty}}</p>
   {{end}}
 
   {{if and (eq .Mode "station") .ScanResults}}
@@ -132,7 +133,7 @@
         <tr>
           <td>{{if .SSID}}{{.SSID}}{{else}}<em>Hidden</em>{{end}}</td>
           <td>{{.BSSID}}</td>
-          <td>{{if .Signal}}<span class="signal-{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
+          <td>{{if .Signal}}<span class="{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
           <td>{{.Channel}}</td>
           <td>{{.Encryption}}</td>
         </tr>
