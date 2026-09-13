@@ -263,6 +263,9 @@ int meta_change_cb(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 /* system-software.c */
 int system_sw_rpc_init(struct confd *confd);
 
+/* support.c */
+int support_rpc_init(struct confd *confd);
+
 /* services.c */
 int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
