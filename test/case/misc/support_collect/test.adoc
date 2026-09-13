@@ -4,9 +4,9 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/support_collect]
 
 ==== Description
 
-Verify that the support collect command works and produces a valid tarball
-with expected content. Tests both the --work-dir global option and GPG
-encryption (when available on target).
+Verify that the support-collect RPC returns a valid archive with the
+expected content, that the archive can be GPG encrypted, and that NACM
+denies the RPC to users outside the admin group.
 
 ==== Topology
 
@@ -15,10 +15,9 @@ image::topology.svg[Support Data Collection topology, align=center, scaledwidth=
 ==== Sequence
 
 . Set up topology and attach to target DUT
-. Check for GPG availability on target
-. Run support collect with --work-dir and short log tail
-. Verify tarball was created and is valid
-. Run support collect with GPG encryption
-. Verify encrypted file and decrypt it
-
-
+. Collect support data with the support-collect RPC
+. Verify the archive returned by the RPC
+. Add user 'supportless', outside the admin NACM group
+. Verify user 'supportless' is denied the support-collect RPC
+. Collect an encrypted archive with the support-collect RPC
+. Decrypt the encrypted archive and verify it

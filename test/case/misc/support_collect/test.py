@@ -1,216 +1,155 @@
 #!/usr/bin/env python3
 """Support data collection
 
-Verify that the support collect command works and produces a valid tarball
-with expected content. Tests both the --work-dir global option and GPG
-encryption (when available on target).
+Verify that the support-collect RPC returns a valid archive with the
+expected content, that the archive can be GPG encrypted, and that NACM
+denies the RPC to users outside the admin group.
 
 """
 
+import base64
+import json
 import os
+import shutil
 import subprocess
 import tarfile
 import tempfile
 import infamy
-from infamy.util import parallel
-import infamy.ssh as ssh
+
+PASSWORD = "test-support-password-123"
+NOBODY = "supportless"
+NOBODY_PASSWORD = "supportless-password"
+# yescrypt hash of NOBODY_PASSWORD
+NOBODY_HASH = "$y$j9T$SALT$bfLUDwjZLjCLQMpOHuw2hOuM6tJAXRcp3awucsABnN2"
+
+EXPECTED = [
+    "collection.log",
+    "running-config.json",
+    "operational-config.json",
+    "system/dmesg.txt",
+    "system/meminfo.txt",
+    "network/ip/addr.json",
+]
+
+
+def verify(local, expected):
+    with tarfile.open(local, "r:gz") as tar:
+        members = tar.getnames()
+        if not members:
+            raise Exception("archive is empty")
+
+        root = members[0].split("/")[0]
+        print(f"Archive {root} contains {len(members)} files/directories")
+
+        missing = [e for e in expected if f"{root}/{e}" not in members]
+        if missing:
+            raise Exception(f"missing from archive: {', '.join(missing)}")
+
+        for name in ("running-config.json", "operational-config.json"):
+            with tar.extractfile(f"{root}/{name}") as f:
+                try:
+                    json.load(f)
+                except json.JSONDecodeError as e:
+                    raise Exception(f"{name} in archive is not valid JSON,"
+                                    f" collection of it failed: {e}")
+
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
-        target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
-                                  lambda: env.attach("target", "mgmt", "ssh"))
+        target = env.attach("target", "mgmt")
 
-    with test.step("Check for GPG availability on target"):
-        result = tgtssh.run("command -v gpg >/dev/null 2>&1", check=False)
-        has_gpg = (result.returncode == 0)
-        if has_gpg:
-            print("GPG is available on target - will test encryption")
-        else:
-            print("GPG not available on target - skipping encryption tests")
+        local = {}
+        for name in ("archive", "encrypted", "decrypted"):
+            fd, path = tempfile.mkstemp(prefix=f"support-{name}-")
+            os.close(fd)
+            local[name] = path
 
-    with test.step("Run support collect with --work-dir and short log tail"):
-        # Create temporary file for output
-        with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tmp:
-            output_file = tmp.name
+        def cleanup():
+            for path in local.values():
+                if os.path.exists(path):
+                    os.remove(path)
 
-        # Use /tmp as work-dir to test the --work-dir option
-        # Run support collect via SSH with short log tail for testing
-        # Capture stdout (the tarball) to file
-        # Note: timeout is generous to handle systems with many network ports
-        # (ethtool collection scales with number of interfaces)
-        with open(output_file, 'wb') as f:
-            result = tgtssh.run("sudo support --work-dir /tmp collect --log-sec 2",
-                                stdout=f,
-                                stderr=subprocess.PIPE,
-                                timeout=300)
+        test.push_test_cleanup(cleanup)
 
-        if result.returncode != 0:
-            stderr_output = result.stderr.decode('utf-8') if result.stderr else ""
-            print(f"support collect failed with return code {result.returncode}")
-            print(f"stderr: {stderr_output}")
+    with test.step("Collect support data with the support-collect RPC"):
+        output = target.rpc_output("infix-system", "support-collect")
 
-            # Try to retrieve the collection.log for debugging
-            print("\n=== Attempting to retrieve collection.log for debugging ===")
-            try:
-                log_result = tgtssh.run("find /tmp -name 'support-*' -type d -exec cat {}/collection.log \\; 2>/dev/null || echo 'No collection.log found'",
-                                       stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE,
-                                       timeout=10,
-                                       check=False)
-                if log_result.stdout:
-                    log_output = log_result.stdout.decode('utf-8')
-                    print(f"collection.log contents:\n{log_output}")
-            except Exception as e:
-                print(f"Could not retrieve collection.log: {e}")
+    with test.step("Verify the archive returned by the RPC"):
+        if "data" not in output:
+            raise Exception(f"RPC returned no inline archive: {output}")
 
-            raise Exception("support collect command failed")
+        raw = base64.b64decode(output["data"])
+        if len(raw) != int(output["size"]):
+            raise Exception(f"RPC reported {output['size']} bytes,"
+                            f" archive is {len(raw)}")
 
-    with test.step("Verify tarball was created and is valid"):
-        if not os.path.exists(output_file):
-            raise Exception(f"Output file {output_file} was not created")
+        print(f"RPC returned {len(raw)} bytes")
+        with open(local["archive"], "wb") as f:
+            f.write(raw)
 
-        file_size = os.path.getsize(output_file)
-        if file_size == 0:
-            raise Exception("Output tarball is empty")
+        verify(local["archive"], EXPECTED)
 
-        print(f"Tarball created: {file_size} bytes")
+    with test.step("Add user 'supportless', outside the admin NACM group"):
+        target.put_config_dicts({
+            "ietf-system": {
+                "system": {
+                    "authentication": {
+                        "user": [
+                            {
+                                "name": NOBODY,
+                                "password": NOBODY_HASH,
+                                "shell": "infix-system:bash"
+                            }
+                        ]
+                    }
+                }
+            }
+        })
+        test.push_test_cleanup(
+            lambda: target.delete_xpath("/ietf-system:system/authentication"
+                                        f"/user[name='{NOBODY}']"))
 
-        # Verify it's a valid tar.gz
+    with test.step("Verify user 'supportless' is denied the support-collect RPC"):
+        other = env.attach("target", "mgmt", test_reset=False,
+                           username=NOBODY, password=NOBODY_PASSWORD)
         try:
-            with tarfile.open(output_file, 'r:gz') as tar:
-                members = tar.getnames()
-                print(f"Tarball contains {len(members)} files/directories")
+            other.rpc_output("infix-system", "support-collect")
+        except Exception as e:
+            print(f"Denied, as expected: {e}")
+        else:
+            raise Exception(f"{NOBODY} was allowed to collect support data")
 
-                # Verify some expected files exist
-                expected_files = [
-                    'collection.log',
-                    'operational-config.json',
-                    'system/dmesg.txt',
-                    'system/meminfo.txt',
-                    'network/ip/addr.json'
-                ]
+    with test.step("Collect an encrypted archive with the support-collect RPC"):
+        try:
+            output = target.rpc_output("infix-system", "support-collect",
+                                       {"password": PASSWORD})
+        except Exception as e:
+            if "gpg is not available" not in str(e):
+                raise
+            print("GPG not available on target - skipping encryption test")
+            output = None
 
-                root_dir = members[0] if members else None
-                for expected in expected_files:
-                    full_path = f"{root_dir}/{expected}" if root_dir else expected
-                    if full_path not in members:
-                        print(f"Warning: Expected file '{expected}' not found in tarball")
-                    else:
-                        print(f"Found: {expected}")
+    with test.step("Decrypt the encrypted archive and verify it"):
+        if output is None:
+            print("Skipped, target has no gpg")
+        elif not shutil.which("gpg"):
+            print("Warning: gpg not available on host - skipping decrypt")
+        else:
+            with open(local["encrypted"], "wb") as f:
+                f.write(base64.b64decode(output["data"]))
 
-        except tarfile.TarError as e:
-            raise Exception(f"Invalid tarball: {e}")
-
-        finally:
-            # Clean up
-            if os.path.exists(output_file):
-                os.remove(output_file)
-
-    if has_gpg:
-        with test.step("Run support collect with GPG encryption"):
-            # Create temporary file for encrypted output
-            with tempfile.NamedTemporaryFile(suffix=".tar.gz.gpg", delete=False) as tmp:
-                encrypted_file = tmp.name
-
-            # Use a test password
-            test_password = "test-support-password-123"
-
-            # Run support collect with encryption
-            with open(encrypted_file, 'wb') as f:
-                result = tgtssh.run(f"sudo support --work-dir /tmp collect --log-sec 2 --password {test_password}",
-                                    stdout=f,
-                                    stderr=subprocess.PIPE,
-                                    timeout=300)
+            with open(local["encrypted"], "rb") as ef, \
+                 open(local["decrypted"], "wb") as df:
+                result = subprocess.run(
+                    ["gpg", "--batch", "--yes", "--passphrase", PASSWORD,
+                     "--pinentry-mode", "loopback", "-d"],
+                    stdin=ef, stdout=df, stderr=subprocess.PIPE, timeout=60)
 
             if result.returncode != 0:
-                stderr_output = result.stderr.decode('utf-8') if result.stderr else ""
-                print(f"support collect with encryption failed: {stderr_output}")
+                raise Exception("failed to decrypt support data:"
+                                f" {result.stderr.decode(errors='replace')}")
 
-                # Try to retrieve the collection.log for debugging
-                print("\n=== Attempting to retrieve collection.log for debugging ===")
-                try:
-                    log_result = tgtssh.run("find /tmp -name 'support-*' -type d -exec cat {}/collection.log \\; 2>/dev/null || echo 'No collection.log found'",
-                                           stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE,
-                                           timeout=10,
-                                           check=False)
-                    if log_result.stdout:
-                        log_output = log_result.stdout.decode('utf-8')
-                        print(f"collection.log contents:\n{log_output}")
-                except Exception as e:
-                    print(f"Could not retrieve collection.log: {e}")
-
-                raise Exception("support collect with --password failed")
-
-        with test.step("Verify encrypted file and decrypt it"):
-            if not os.path.exists(encrypted_file):
-                raise Exception(f"Encrypted output file {encrypted_file} was not created")
-
-            file_size = os.path.getsize(encrypted_file)
-            if file_size == 0:
-                raise Exception("Encrypted output file is empty")
-
-            print(f"Encrypted file created: {file_size} bytes")
-
-            # Create temporary file for decrypted output
-            with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tmp:
-                decrypted_file = tmp.name
-
-            try:
-                # Decrypt the file using gpg
-                with open(encrypted_file, 'rb') as ef:
-                    with open(decrypted_file, 'wb') as df:
-                        decrypt_result = subprocess.run(
-                            ["gpg", "--batch", "--yes", "--passphrase", test_password,
-                             "--pinentry-mode", "loopback", "-d"],
-                            stdin=ef,
-                            stdout=df,
-                            stderr=subprocess.PIPE,
-                            timeout=30
-                        )
-
-                if decrypt_result.returncode != 0:
-                    stderr_output = decrypt_result.stderr.decode('utf-8') if decrypt_result.stderr else ""
-                    print(f"GPG decryption failed: {stderr_output}")
-                    raise Exception("Failed to decrypt GPG-encrypted support data")
-
-                print("Successfully decrypted GPG file")
-
-                # Verify the decrypted file is a valid tarball
-                with tarfile.open(decrypted_file, 'r:gz') as tar:
-                    members = tar.getnames()
-                    print(f"Decrypted tarball contains {len(members)} files/directories")
-
-                    # Verify some expected files exist
-                    expected_files = [
-                        'collection.log',
-                        'operational-config.json',
-                        'system/dmesg.txt'
-                    ]
-
-                    root_dir = members[0] if members else None
-                    for expected in expected_files:
-                        full_path = f"{root_dir}/{expected}" if root_dir else expected
-                        if full_path not in members:
-                            print(f"Warning: Expected file '{expected}' not found in decrypted tarball")
-                        else:
-                            print(f"Found in decrypted tarball: {expected}")
-
-            except tarfile.TarError as e:
-                raise Exception(f"Decrypted file is not a valid tarball: {e}")
-
-            except subprocess.TimeoutExpired:
-                raise Exception("GPG decryption timed out")
-
-            except FileNotFoundError:
-                print("Warning: gpg not available on host system - skipping decryption verification")
-
-            finally:
-                # Clean up
-                if os.path.exists(encrypted_file):
-                    os.remove(encrypted_file)
-                if os.path.exists(decrypted_file):
-                    os.remove(decrypted_file)
+            verify(local["decrypted"], EXPECTED)
 
     test.succeed()
