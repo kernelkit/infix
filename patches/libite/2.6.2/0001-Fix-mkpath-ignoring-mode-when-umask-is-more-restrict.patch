@@ -1,0 +1,127 @@
+From e874608b760d4ef0580e1dc7353a8b34c1086232 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 13 Sep 2026 17:15:10 +0200
+Subject: [PATCH 1/2] Fix mkpath() ignoring mode when umask is more restrictive
+Organization: Wires
+
+mkpath(dir, 0755) with umask 0027 silently creates a 0750 directory,
+since mkdir(2) applies the umask to the requested mode.  Callers pass
+an explicit mode and expect exactly that.
+
+Apply the mode with chmod() after each successful mkdir().
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ ChangeLog.md    |  8 ++++++++
+ src/makepath.c  |  8 +++++++-
+ test/makepath.c | 36 ++++++++++++++++++++++++++++++++++--
+ 3 files changed, 49 insertions(+), 3 deletions(-)
+
+diff --git a/ChangeLog.md b/ChangeLog.md
+index 61406c4..434cca4 100644
+--- a/ChangeLog.md
++++ b/ChangeLog.md
+@@ -4,6 +4,14 @@ Change Log
+ All notable changes to the project are documented in this file.
+ 
+ 
++[UNRELEASED][]
++--------------
++
++### Fixes
++- Fix `mkpath()`, and `fmkpath()`, not applying the given mode when the
++  process umask is more restrictive, e.g., requesting 0755 with umask
++  0027 silently created a 0750 directory
++
+ [v2.6.2][] - 2025-11-22
+ -----------------------
+ 
+diff --git a/src/makepath.c b/src/makepath.c
+index 8cf38d1..0c2f975 100644
+--- a/src/makepath.c
++++ b/src/makepath.c
+@@ -35,6 +35,9 @@
+  * @param dir   Directory to created, relative or absolute
+  * @param mode  A &mode_t mode to create @a dir with
+  *
++ * Directories are created with exactly @a mode, the process umask is
++ * not applied like it is for mkdir(2).
++ *
+  * @returns POSIX OK(0) on success, otherwise -1 with @a errno set.
+  */
+ int mkpath(const char *dir, mode_t mode)
+@@ -51,7 +54,10 @@ int mkpath(const char *dir, mode_t mode)
+ 
+ 	mkpath(dirname(strdupa(dir)), mode);
+ 
+-	return mkdir(dir, mode);
++	if (mkdir(dir, mode))
++		return -1;
++
++	return chmod(dir, mode);
+ }
+ 
+ /**
+diff --git a/test/makepath.c b/test/makepath.c
+index 7ba4482..0d16fc8 100644
+--- a/test/makepath.c
++++ b/test/makepath.c
+@@ -50,6 +50,34 @@ int test_fmkpath(const char *subdir)
+ 	return ret;
+ }
+ 
++/* mkpath() must apply mode as given, not mode & ~umask */
++int test_umask(void)
++{
++	const char *dirs[] = { BASEDIR "/um", BASEDIR "/um/sub", NULL };
++	mode_t old = umask(0077);
++	struct stat sb;
++	int i, ret;
++
++	ret = mkpath(dirs[1], 0755);
++	umask(old);
++	if (ret) {
++		perror("Failed");
++		return ret;
++	}
++
++	for (i = 0; dirs[i]; i++) {
++		if (checkpath(dirs[i]) || stat(dirs[i], &sb))
++			return 1;
++		if ((sb.st_mode & 07777) != 0755) {
++			fprintf(stderr, "Failed: %s mode %04o, expected 0755\n",
++				dirs[i], sb.st_mode & 07777);
++			return 1;
++		}
++	}
++
++	return 0;
++}
++
+ int main(void)
+ {
+ 	int i, ret = 0;
+@@ -66,14 +94,18 @@ int main(void)
+ 
+ 	mkdir(BASEDIR, 0755);
+ 
+-	printf("Pass 1/2: makepath() =========================\n");
++	printf("Pass 1/3: makepath() =========================\n");
+ 	for (i = 0; list[i] && !ret; i++)
+ 		ret |= test_makepath(list[i]);
+ 
+-	printf("Pass 2/2: fmkpath() ==========================\n");
++	printf("Pass 2/3: fmkpath() ==========================\n");
+ 	for (i = 0; list[i] && !ret; i++)
+ 		ret |= test_fmkpath(list[i] + strlen(BASEDIR) + 1);
+ 
++	printf("Pass 3/3: mkpath() with umask ================\n");
++	if (!ret)
++		ret |= test_umask();
++
+ 	printf("Done: Cleaning up ============================\n");
+ 	system("rm -rf " BASEDIR);
+ 
+-- 
+2.43.0
+

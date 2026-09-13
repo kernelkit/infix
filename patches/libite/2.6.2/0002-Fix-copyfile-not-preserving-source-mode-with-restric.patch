@@ -1,0 +1,98 @@
+From b69d8a6013b50cbdfc7586cffd2f36c145e9e53a Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 13 Sep 2026 18:53:40 +0200
+Subject: [PATCH 2/2] Fix copyfile() not preserving source mode with
+ restrictive umask
+Organization: Wires
+
+copyfile() passes the source mode to open(2), which applies the umask,
+so a 0644 file copied with umask 0027 ends up 0640.
+
+Apply the source mode with fchmod() after creating the destination.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ ChangeLog.md    |  2 ++
+ src/copyfile.c  |  8 ++++++++
+ test/copyfile.c | 25 ++++++++++++++++++++++++-
+ 3 files changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/ChangeLog.md b/ChangeLog.md
+index 434cca4..f83a311 100644
+--- a/ChangeLog.md
++++ b/ChangeLog.md
+@@ -8,6 +8,8 @@ All notable changes to the project are documented in this file.
+ --------------
+ 
+ ### Fixes
++- Fix `copyfile()` not preserving the source file mode when the process
++  umask is more restrictive
+ - Fix `mkpath()`, and `fmkpath()`, not applying the given mode when the
+   process umask is more restrictive, e.g., requesting 0755 with umask
+   0027 silently created a 0750 directory
+diff --git a/src/copyfile.c b/src/copyfile.c
+index 64fa804..2abc6fd 100644
+--- a/src/copyfile.c
++++ b/src/copyfile.c
+@@ -208,12 +208,20 @@ ssize_t copyfile(const char *src, const char *dst, int len, int opt)
+ 		goto exit;
+ 	}
+ 
++	/* open(2) applies umask, we want the source file mode */
++	if (fchmod(out, st.st_mode & 07777)) {
++		saved_errno = errno;
++		size = -1;
++		goto close_exit;
++	}
++
+ 	size = do_copy(in, out, num, buffer, BUFSIZ);
+ 	if (size < 0)
+ 		saved_errno = errno;
+ 	else if (keep_mtim)
+ 		set_mtime(in, out);
+ 
++close_exit:
+ 	close(out);
+ 	close(in);
+ 
+diff --git a/test/copyfile.c b/test/copyfile.c
+index f8a5336..b09f177 100644
+--- a/test/copyfile.c
++++ b/test/copyfile.c
+@@ -123,9 +123,32 @@ static int _copyfile()
+ 	return rc;
+ }
+ 
++/* copyfile() must preserve source mode, even with a restrictive umask */
++static int _mode(void)
++{
++	const char *src = "/tmp/libite-mode-src", *dst = "/tmp/libite-mode-dst";
++	struct stat st;
++	mode_t old;
++	int rc = 1;
++
++	if (touch(src) || chmod(src, 0644))
++		return test(1, "copyfile() mode, prepare %s", src);
++
++	old = umask(0077);
++	if (copyfile(src, dst, 0, 0) >= 0 && !stat(dst, &st))
++		rc = (st.st_mode & 07777) != 0644;
++	umask(old);
++
++	erase(src);
++	erase(dst);
++
++	return test(rc, "copyfile() preserves mode 0644 with umask 0077");
++}
++
+ int main(void)
+ {
+ 	return	_fcopyfile() ||
+ 		_copyfile()  ||
+-		_sz();
++		_sz()        ||
++		_mode();
+ }
+-- 
+2.43.0
+
