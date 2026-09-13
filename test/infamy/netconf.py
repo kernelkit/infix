@@ -13,11 +13,25 @@ import re
 
 import libyang
 import lxml
+import types
 import netconf_client.connect
 import netconf_client.ncclient
+import netconf_client.session
 from infamy.transport import Transport,infer_put_dict
 from netconf_client.error import RpcError
 from . import env, netutil, coverage
+
+
+def fromstring(text):
+    """Parse XML, accepting text nodes over libxml2's 10 MB limit"""
+    return lxml.etree.fromstring(text, lxml.etree.XMLParser(huge_tree=True))
+
+
+# The receive thread in netconf_client parses every reply with the
+# default lxml parser and dies silently when that fails, leaving
+# every pending RPC to time out.  A binary leaf is easily over the
+# limit, e.g. the support-collect archive.
+netconf_client.session.etree = types.SimpleNamespace(fromstring=fromstring)
 
 
 def netconf_syn(addr):
@@ -79,7 +93,7 @@ class NccGetDataReply:
 
 class NccGetSchemaReply:
     def __init__(self, raw):
-        self.ele = lxml.etree.fromstring(raw.xml.decode())
+        self.ele = fromstring(raw.xml.decode())
         self.ele = self.ele.find("{urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring}data")
         self.schema = self.ele.text
 
@@ -372,7 +386,13 @@ class Device(Transport):
 
     def call(self, call):
         """Call RPC, XML version"""
-        return self.ncc.dispatch(call)
+        try:
+            return self.ncc.dispatch(call)
+        except TimeoutError:
+            if self.ncc.session.thread.is_alive():
+                raise
+            raise Exception("NETCONF receive thread has died, "
+                            "the reply could not be parsed") from None
 
     def call_dict(self, modname, call):
         """Call RPC, Python dictionary version"""
@@ -385,6 +405,22 @@ class Device(Transport):
                            f"Available models can be checked with get_schema_list()") from None
         lyd = mod.parse_data_dict(call, rpc=True)
         return self.call(lyd.print_mem("xml", with_siblings=True, pretty=False))
+
+    def rpc_output(self, module, rpc, input_data=None):
+        """Call RPC, returning output leaves as a dict of strings"""
+        reply = self.call_dict(module, {rpc: input_data or {}})
+        xml = reply.xml
+        if isinstance(xml, str):
+            xml = xml.encode()
+
+        output = {}
+        for node in fromstring(xml).iter():
+            if len(node) or not node.text:
+                continue
+            leaf = lxml.etree.QName(node).localname
+            output[leaf] = node.text.strip()
+
+        return output
 
     def call_action(self, xpath, input_data=None):
         """Call NETCONF action (contextualized RPC), XML version.

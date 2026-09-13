@@ -56,6 +56,16 @@ class Transport(ABC):
         pass
 
     @abstractmethod
+    def rpc_output(self, module, rpc, input_data=None):
+        """Call RPC `module:rpc`, returning output leaves as a dict.
+
+        `input_data`, if supplied, is a dict of input leaves.  Values
+        are strings on both transports, an RPC without output returns
+        an empty dict.
+        """
+        pass
+
+    @abstractmethod
     def call_action(self, xpath, input_data=None):
         """Invoke a YANG action at `xpath`.
 
