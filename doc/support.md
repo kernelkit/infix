@@ -49,8 +49,11 @@ amount of logging data.
 
 Each command is run with a timeout, so a wedged driver or daemon cannot
 stall the collection; the archive then holds a note in place of that
-command's output. If the collection itself fails, the log is kept next
-to the working directory, for instance:
+command's output. The logs are held in the collection and again in the
+archive beside it, so collection measures them first and refuses when
+the partition cannot hold both, rather than fill it. If the collection
+itself fails, the log is kept next to the working directory, for
+instance:
 
 ```
 /var/lib/support/support-host-2026-09-11T13:05:42+02:00.log
@@ -59,6 +62,43 @@ to the working directory, for instance:
 It shows what was collected and what failed. Use `support clean` to
 remove old collection directories and logs.
 
+## Collecting over NETCONF or RESTCONF
+
+The `infix-system:support-collect` RPC runs the same collection and
+returns the archive base64 encoded:
+
+```bash
+$ curl -ku admin:admin -X POST \
+       -H "Content-Type: application/yang-data+json" \
+       https://host/restconf/operations/infix-system:support-collect \
+    | jq -r '."infix-system:output".data' | base64 -d > support-data.tar.gz
+```
+
+Give a `password` in the input to get the archive encrypted, see
+[Encrypted Collection](#encrypted-collection):
+
+```bash
+$ curl -ku admin:admin -X POST \
+       -H "Content-Type: application/yang-data+json" \
+       -d '{"infix-system:input":{"password":"mypassword"}}' \
+       https://host/restconf/operations/infix-system:support-collect \
+    | jq -r '."infix-system:output".data' | base64 -d > support-data.tar.gz.gpg
+```
+
+Things to know:
+
+- The RPC is denied by default, the caller's group needs a NACM rule
+  that permits it.
+- An archive above 16 MiB is not returned inline.  The reply then holds
+  `size` and `filename` only, and the file is left on the device for
+  you to fetch with `scp`.
+- The RPC has 60 seconds to finish.  On a device with many ports or a
+  lot of logging the collection may take longer, the call then fails
+  with a timeout and nothing is kept.  Collect over SSH instead, see
+  [Collecting Support Data](#collecting-support-data).
+- Over NETCONF the archive is a single XML text node.  Clients built on
+  libxml2, lxml and ncclient among them, refuse text nodes over 10 MB
+  unless opened with `huge_tree=True`.  RESTCONF has no such limit.
 
 ## Encrypted Collection
 
