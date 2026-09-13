@@ -4,9 +4,10 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/support_collect]
 
 ==== Description
 
-Verify that the support collect command works and produces a valid tarball
-with expected content. Tests both the --work-dir global option and GPG
-encryption (when available on target).
+Verify that the support-collect RPC returns a valid archive with the
+expected content, that the archive can be GPG encrypted, and that an
+archive too large to return inline is left on the device and its path
+returned instead.
 
 ==== Topology
 
@@ -15,10 +16,10 @@ image::topology.svg[Support Data Collection topology, align=center, scaledwidth=
 ==== Sequence
 
 . Set up topology and attach to target DUT
-. Check for GPG availability on target
-. Run support collect with --work-dir and short log tail
-. Verify tarball was created and is valid
-. Run support collect with GPG encryption
-. Verify encrypted file and decrypt it
-
-
+. Collect support data with the support-collect RPC
+. Verify the archive returned by the RPC
+. Collect an encrypted archive with the support-collect RPC
+. Decrypt the encrypted archive and verify it
+. Attach to target over ssh and create /var/log/support-test.bin with 17 MB of random data
+. Call the support-collect RPC, verify the reply has 'size' over 16 MiB and 'filename', but no inline 'data'
+. Fetch the archive named in 'filename' from target over ssh, verify its length matches 'size' and it holds the expected files
