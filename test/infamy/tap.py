@@ -31,6 +31,7 @@ import contextlib
 import datetime
 import subprocess
 import sys
+import threading
 import traceback
 
 import infamy.netns
@@ -154,27 +155,26 @@ class TestSkip(TestResult):
 
 
 class CommentWriter:
+    """Prefix every line with '# '.
+
+    Partial lines are buffered per thread and complete lines are written
+    under a lock, so print() from parallel() threads does not interleave.
+    """
     def __init__(self, f):
         self.f = f
-        self.at_nl = True
+        self.lock = threading.Lock()
+        self.local = threading.local()
 
     def write(self, data):
-        if self.at_nl:
-            data = "# " + data
-            self.at_nl = False
-            if not len(data):
-                return
+        lines = (getattr(self.local, "buf", "") + data).split("\n")
+        self.local.buf = lines.pop()
+        if not lines:
+            return
 
-        if data.endswith("\n"):
-            self.at_nl = True
-            data = data[:-1]
-
-        data = data.replace("\n", "\n# ")
-        if self.at_nl:
-            data = data + "\n"
-
-        self.f.write(data)
-        self.flush()
+        with self.lock:
+            for line in lines:
+                self.f.write(f"# {line}\n")
+            self.f.flush()
 
     def flush(self):
         return self.f.flush()
