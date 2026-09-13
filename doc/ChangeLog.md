@@ -33,6 +33,11 @@ All notable changes to the project are documented in this file.
 - The CLI `configure` command takes an optional path to start in a
   sub-context directly, e.g., `configure system authentication`
 
+### Fixes
+
+- Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
+
+
 [v26.08.0][] - 2026-09-01
 -------------------------
 
