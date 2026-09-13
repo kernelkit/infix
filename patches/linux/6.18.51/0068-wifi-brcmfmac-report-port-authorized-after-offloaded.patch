@@ -1,0 +1,117 @@
+From 6241e8c302f55a0992e727a76628743fecbac559 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Thu, 10 Sep 2026 08:29:47 +0200
+Subject: [PATCH 68/68] wifi: brcmfmac: report port authorized after offloaded
+ PSK/SAE handshake
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When the 4-way handshake is offloaded to firmware (BRCMF_PROFILE_FWSUP_PSK
+or _SAE), brcmf_is_linkup() only declares the link up once the firmware
+has signalled BRCMF_E_PSK_SUP with BRCMF_E_STATUS_FWSUP_COMPLETED, so by
+the time the successful connection is reported the controlled port is
+already open. The driver never told cfg80211 about that, however:
+cfg80211_port_authorized() was only called for FT-802.1X roams.
+
+The offload support predates the NL80211_CMD_PORT_AUTHORIZED event and
+its requirement that offloading drivers send it after NL80211_CMD_CONNECT
+or NL80211_CMD_ROAM (commit 503c1fb98ba3 ("cfg80211/nl80211: add a port
+authorized event")), and was not updated when that contract appeared.
+
+wpa_supplicant, when the driver advertises
+NL80211_EXT_FEATURE_4WAY_HANDSHAKE_STA_PSK, hands the PSK to the driver
+and after the connect event waits for NL80211_CMD_PORT_AUTHORIZED before
+entering COMPLETED ("ASSOC INFO: wait for driver port authorized
+indication"). Since no EAPOL frames reach the host either, the
+supplicant sits in ASSOCIATED until its authentication timer fires:
+
+  wifi0: Associated with 12:13:37:13:37:09
+  wifi0: Authentication with 12:13:37:13:37:09 timed out.
+  wifi0: CTRL-EVENT-DISCONNECTED bssid=12:13:37:13:37:09 reason=3
+    locally_generated=1
+
+while the driver trace shows the firmware finished the handshake:
+
+  brcmf_fweh_event_worker event SET_SSID (0:0) ifidx 0 bsscfg 0 ...
+  brcmf_fweh_event_worker event PSK_SUP (46:46) ifidx 0 bsscfg 0 ...
+  brcmf_notify_connect_status Linkup
+  brcmf_bss_connect_done Report connect result - connection succeeded
+
+Report the port as authorized in the link-up path of
+brcmf_notify_connect_status(), right after the connect result, and also
+when BRCMF_E_PSK_SUP completes on an already connected interface, which
+is the firmware having redone the handshake after a roam; the report in
+brcmf_bss_roaming_done() only covered FT-802.1X. The connect result and
+the port authorized notification go through the same wdev event queue,
+so ordering is preserved.
+
+Seen with BCM4345/6 (43455) firmware 7.45.241 on a Raspberry Pi 4 and
+wpa_supplicant 2.12; disabling the offload with
+brcmfmac.feature_disable=0x2000 makes the same setup connect, which
+confirms the missing notification is the only problem.
+
+Fixes: b8a64f0e96c2 ("brcmfmac: support 4-way handshake offloading for WPA/WPA2-PSK")
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .../broadcom/brcm80211/brcmfmac/cfg80211.c    | 32 ++++++++++++++++++-
+ 1 file changed, 31 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+index c17930471845..064daf8c42ec 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+@@ -6705,6 +6705,23 @@ brcmf_bss_connect_done(struct brcmf_cfg80211_info *cfg,
+ 	return 0;
+ }
+ 
++/* With the 4-way handshake offloaded to firmware no EAPOL frames reach the
++ * host, so once the firmware supplicant has completed the port has to be
++ * reported authorized explicitly or the supplicant keeps waiting for it.
++ */
++static void brcmf_report_port_authorized(struct brcmf_if *ifp)
++{
++	struct brcmf_cfg80211_profile *profile = &ifp->vif->profile;
++
++	if (profile->use_fwsup != BRCMF_PROFILE_FWSUP_PSK &&
++	    profile->use_fwsup != BRCMF_PROFILE_FWSUP_SAE)
++		return;
++
++	cfg80211_port_authorized(ifp->ndev, profile->bssid, NULL, 0,
++				 GFP_KERNEL);
++	brcmf_dbg(CONN, "Report port authorized\n");
++}
++
+ static s32
+ brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info *cfg,
+ 			       struct net_device *ndev,
+@@ -6781,8 +6798,13 @@ brcmf_notify_connect_status(struct brcmf_if *ifp,
+ 				  &ifp->vif->sme_state);
+ 			set_bit(BRCMF_VIF_STATUS_CONNECTED,
+ 				&ifp->vif->sme_state);
+-		} else
++		} else {
++			/* For offloaded PSK/SAE brcmf_is_linkup() only fires
++			 * once the firmware supplicant has completed.
++			 */
+ 			brcmf_bss_connect_done(cfg, ndev, e, true);
++			brcmf_report_port_authorized(ifp);
++		}
+ 		brcmf_net_setcarrier(ifp, true);
+ 	} else if (brcmf_is_linkdown(ifp->vif, e)) {
+ 		brcmf_dbg(CONN, "Linkdown\n");
+@@ -6814,6 +6836,14 @@ brcmf_notify_connect_status(struct brcmf_if *ifp,
+ 				  &ifp->vif->sme_state);
+ 		else
+ 			brcmf_bss_connect_done(cfg, ndev, e, false);
++	} else if (e->event_code == BRCMF_E_PSK_SUP &&
++		   e->status == BRCMF_E_STATUS_FWSUP_COMPLETED &&
++		   test_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
++		/* Handshake completed after a roam: brcmf_is_linkup() has
++		 * recorded EAP_SUCCESS without a matching ASSOC_SUCCESS.
++		 */
++		clear_bit(BRCMF_VIF_STATUS_EAP_SUCCESS, &ifp->vif->sme_state);
++		brcmf_report_port_authorized(ifp);
+ 	}
+ 
+ 	return err;

@@ -1,0 +1,45 @@
+From 9ad46fd6ed8fec90b8c82550fa74d0f8d4aa069c Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Tue, 30 Jun 2026 15:43:14 +0200
+Subject: [PATCH 65/68] wifi: brcmfmac: honor caller's rtnl lock when stopping
+ primary interface
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+brcmf_del_if() already takes a 'locked' flag that tells it whether the
+caller holds the rtnl lock, and it passes that flag down to
+brcmf_net_detach(). The bsscfgidx 0 path, however, unconditionally took
+rtnl_lock() around brcmf_netdev_stop(), which deadlocks if a caller
+removes the primary interface while already holding rtnl (for example
+from a cfg80211 op, which all run under rtnl).
+
+Today the primary-interface path is only reached from the detach path
+with locked=false, so this is not yet hit in practice. A subsequent
+change lets userspace remove the primary interface from a cfg80211 op,
+which does hold rtnl. Make the primary stop path respect 'locked' like
+the rest of the function so that path is safe.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
+index 169e62b9d773..7d8ec55571dd 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
+@@ -933,9 +933,11 @@ static void brcmf_del_if(struct brcmf_pub *drvr, s32 bsscfgidx,
+ 	if (ifp->ndev) {
+ 		if (bsscfgidx == 0) {
+ 			if (ifp->ndev->netdev_ops == &brcmf_netdev_ops_pri) {
+-				rtnl_lock();
++				if (!locked)
++					rtnl_lock();
+ 				brcmf_netdev_stop(ifp->ndev);
+-				rtnl_unlock();
++				if (!locked)
++					rtnl_unlock();
+ 			}
+ 		} else {
+ 			netif_stop_queue(ifp->ndev);
