@@ -25,6 +25,10 @@ All notable changes to the project are documented in this file.
   and keys are prompted for, `binary` settings open in the text editor, and
   `string` settings are edited on a line prefilled with the current value.
   The `text-editor` and `change` commands are removed
+- Add `infix-system:support-collect` RPC, for collecting support data over
+  NETCONF or RESTCONF.  The archive is returned base64 encoded, up to 16 MiB,
+  larger ones are left on the device for out-of-band fetching.  Access is
+  denied by default, only the `admin` group may call it
 - Add CLI `edit` and `clear` verbs to admin-exec: `edit datetime` and
   `edit boot-order` prompt with the current value, `clear dhcp-server
   statistics` replaces `dhcp-server clear-statistics`.  `set datetime` now
