@@ -5,12 +5,21 @@ Interface status
 Verify interface status properly propagate changes when an interface
 is disabled and then re-enabled.
 
-Both admin-status and oper-status are verified.
+Both admin-status and oper-status are verified, as well as last-change,
+which must advance with each transition of the operational state.
 """
+
+from datetime import datetime
 
 import infamy
 from infamy.util import parallel, until
 import infamy.iface as iface
+
+
+def dut_now(target):
+    """Return the DUT's current time, to compare against its own timestamps"""
+    data = target.get_data("/ietf-system:system-state/clock/current-datetime")
+    return datetime.fromisoformat(data["system-state"]["clock"]["current-datetime"])
 
 
 def print_error_message(iface, param, exp_val, act_val):
@@ -89,13 +98,23 @@ with infamy.Test() as test:
     with test.step("Verify the interface is disabled"):
         assert_param(target2, iface_under_test, "admin-status", "down")
         assert_param(target2, iface_under_test, "oper-status", "down")
+        disabled_at = iface.get_last_change(target2, iface_under_test)
 
     with test.step("Enable the interface and assign an IP address"):
         configure_interface(target2, iface_under_test, enabled=True, ip_address=target_address)
-    
+
     with test.step("Verify the interface is enabled"):
         assert_param(target2, iface_under_test, "admin-status", "up")
         assert_param(target2, iface_under_test, "oper-status", "up")
+
+    with test.step("Verify last-change reflects the transition to up"):
+        enabled_at = until(lambda: iface.get_last_change(target2, iface_under_test))
+        assert enabled_at <= dut_now(target2), \
+            f"last-change {enabled_at} is in the future"
+        # Disabling a link that was already down is no transition, so no stamp
+        if disabled_at:
+            assert enabled_at >= disabled_at, \
+                f"last-change {enabled_at} predates the disable at {disabled_at}"
 
     with infamy.IsolatedMacVlan(host_send_iface) as send_ns:
         with test.step("Verify it is possible to ping the interface"):

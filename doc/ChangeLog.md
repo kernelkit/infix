@@ -39,6 +39,8 @@ All notable changes to the project are documented in this file.
 - Add `higher-layer-if` and `lower-layer-if` to interface operational
   status, listing the interfaces stacked directly on top of or beneath
   each one, e.g., a VLAN interface and its parent, issue #514
+- Add `last-change` to interface operational status: the time the
+  interface entered its current operational state, issue #514
 
 ### Fixes
 
