@@ -15,10 +15,34 @@
 #define  IFACE_PROBE_TIMEOUT 40
 
 
+/* Absent, null, and false are the only values jq -e treats as unset */
+static bool quirk_is_set(json_t *quirks, const char *quirkname)
+{
+	json_t *val = json_object_get(quirks, quirkname);
+
+	return val && !json_is_null(val) && !json_is_false(val);
+}
+
 bool iface_has_quirk(const char *ifname, const char *quirkname)
 {
-	return systemf("[ $(/usr/libexec/infix/has-quirk %s %s) = true ]",
-		       quirkname, ifname) == 0;
+	const char *pattern;
+	json_t *quirks;
+
+	if (!confd.ifquirks)
+		return false;
+
+	quirks = json_object_get(confd.ifquirks, ifname);
+	if (quirks && quirk_is_set(quirks, quirkname))
+		return true;
+
+	/* @ethtool: patterns match on driver info, left to has-quirk */
+	json_object_foreach(confd.ifquirks, pattern, quirks) {
+		if (!strncmp(pattern, "@ethtool:", 9))
+			return systemf("[ $(/usr/libexec/infix/has-quirk %s %s) = true ]",
+				       quirkname, ifname) == 0;
+	}
+
+	return false;
 }
 
 static bool iface_is_phys(const char *ifname)

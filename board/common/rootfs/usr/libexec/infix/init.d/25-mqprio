@@ -37,13 +37,16 @@ queues()
     echo "$out"
 }
 
+quirks=
+[ -f /etc/product/interface-quirks.json ] && quirks=yes
+
 set $(ip -j -d link show | jq -r '.[] | .ifname, .num_tx_queues')
 while [ "$1" ]; do
     iface="$1"
     txqs="$2"
     shift 2
 
-    [ $(/usr/libexec/infix/has-quirk "broken-mqprio" "$iface") = "true" ] && echo "Skipping $iface, does not support mqprio" && continue
+    [ "$quirks" ] && [ $(/usr/libexec/infix/has-quirk "broken-mqprio" "$iface") = "true" ] && echo "Skipping $iface, does not support mqprio" && continue
     [ $txqs -lt 2 ] && continue
     [ $txqs -gt 8 ] && txqs=8
 
