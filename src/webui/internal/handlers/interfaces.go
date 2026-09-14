@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"time"
 	"fmt"
 	"html/template"
 	"log"
@@ -32,6 +33,9 @@ type ifaceJSON struct {
 	Type              string             `json:"type"`
 	Enabled           *bool              `json:"enabled"`
 	OperStatus        string             `json:"oper-status"`
+	LastChange        string             `json:"last-change"`
+	HigherLayerIf     []string           `json:"higher-layer-if"`
+	LowerLayerIf      []string           `json:"lower-layer-if"`
 	PhysAddress       string             `json:"phys-address"`
 	CustomPhysAddress *customPhysAddress `json:"infix-interfaces:custom-phys-address"`
 	IfIndex           int                `json:"if-index"`
@@ -585,6 +589,9 @@ type ifaceDetailData struct {
 	Type             string
 	Status           string
 	StatusUp         bool
+	LastChange       string   // local time with age, "" if unknown
+	HigherLayer      []string // interfaces stacked on top of this one
+	LowerLayer       []string // interfaces this one is stacked on
 	PhysAddr         string
 	IfIndex          int
 	MTU              int
@@ -696,6 +703,9 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 		StatusUp:  iface.OperStatus == "up",
 		PhysAddr:  iface.PhysAddress,
 		IfIndex:   iface.IfIndex,
+		LastChange:  formatLastChange(iface.LastChange),
+		HigherLayer: iface.HigherLayerIf,
+		LowerLayer:  iface.LowerLayerIf,
 	}
 
 	if iface.IPv4 != nil {
@@ -1003,6 +1013,19 @@ func buildWifiScanEntry(sr wifiScanResultJSON) wifiScanEntry {
 	return e
 }
 
+// formatLastChange renders a YANG date-and-time as local time with its age.
+func formatLastChange(s string) string {
+	if s == "" {
+		return ""
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return s
+	}
+	return fmt.Sprintf("%s (%s ago)", t.Local().Format("2006-01-02 15:04:05"),
+		formatRelDuration(time.Since(t)))
+}
+
 func formatDuration(secs int64) string {
 	if secs < 60 {
 		return fmt.Sprintf("%ds", secs)
@@ -1069,6 +1092,9 @@ func (h *InterfacesHandler) fieldDescriptions() map[string]string {
 	ethPath := ifPath + "/ieee802-ethernet-interface:ethernet"
 	return map[string]string{
 		"mtu":        schema.DescriptionOf(mgr, ifPath+"/ietf-ip:ipv4/mtu"),
+		"last-change":     schema.DescriptionOf(mgr, ifPath+"/last-change"),
+		"higher-layer-if": schema.DescriptionOf(mgr, ifPath+"/higher-layer-if"),
+		"lower-layer-if":  schema.DescriptionOf(mgr, ifPath+"/lower-layer-if"),
 		"speed":      schema.DescriptionOf(mgr, ifPath+"/speed"),
 		"duplex":     schema.DescriptionOf(mgr, ethPath+"/duplex"),
 		"autoneg":    schema.DescriptionOf(mgr, ethPath+"/auto-negotiation/enable"),
