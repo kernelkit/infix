@@ -172,6 +172,9 @@ Bug reports, ideas, and pull requests are welcome.  Start with
 security issue?  Follow the [security policy][security].  Need a hand?
 See [support options][support] or [join us on Discord][discord-url].
 
+Wondering how long a given version keeps receiving updates, and what
+goes into a patch release?  See [releases & support][releases].
+
 ---
 
 <div align="center">
@@ -194,6 +197,7 @@ See [support options][support] or [join us on Discord][discord-url].
 [coc]:             .github/CODE_OF_CONDUCT.md
 [security]:        .github/SECURITY.md
 [support]:         .github/SUPPORT.md
+[releases]:        doc/releases.md
 [Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest "Latest build"
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
