@@ -7,7 +7,8 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/iface_enable_disabl
 Verify interface status properly propagate changes when an interface
 is disabled and then re-enabled.
 
-Both admin-status and oper-status are verified.
+Both admin-status and oper-status are verified, as well as last-change,
+which must advance with each transition of the operational state.
 
 ==== Topology
 
@@ -21,6 +22,7 @@ image::topology.svg[Interface Status topology, align=center, scaledwidth=75%]
 . Verify the interface is disabled
 . Enable the interface and assign an IP address
 . Verify the interface is enabled
+. Verify last-change reflects the transition to up
 . Verify it is possible to ping the interface
 
 

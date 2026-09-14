@@ -1,6 +1,7 @@
 """
 Fetch interface status from remote device.
 """
+from datetime import datetime
 
 
 def get_xpath(iface, path=None):
@@ -101,6 +102,12 @@ def get_phys_address(target, iface):
 def get_oper_status(target, iface):
     """Get interface operational status (up/down/etc)"""
     return get_param(target, iface, "oper-status")
+
+
+def get_last_change(target, iface):
+    """Get when the interface entered its operational status, None if unknown"""
+    stamp = get_param(target, iface, "last-change")
+    return datetime.fromisoformat(stamp) if stamp else None
 
 
 def is_oper_up(target, iface):
