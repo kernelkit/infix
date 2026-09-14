@@ -4,6 +4,7 @@ index              : 11
 mtu                : 1500
 operational status : up
 ip forwarding      : disabled
+lower-layer-if     : e2.30
 physical address   : 00:a0:85:00:03:00
 ipv4 addresses     :
 ipv6 addresses     :

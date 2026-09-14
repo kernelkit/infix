@@ -4,6 +4,9 @@ index              : 16
 mtu                : 1500
 operational status : up
 ip forwarding      : disabled
+lower-layer-if     : e3
+                     veth0b
+higher-layer-if    : br-Q.40
 physical address   : 00:a0:85:00:03:00
 ipv4 addresses     :
 ipv6 addresses     :

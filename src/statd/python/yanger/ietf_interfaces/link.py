@@ -26,6 +26,31 @@ def statistics(iplink):
     return statistics
 
 
+def hidden(iplink):
+    """Interfaces never reported in operational: internal plumbing and CAN"""
+    if iplink.get("group") == "internal":
+        return True
+
+    return iplink.get("link_type") in ("can", "vcan")
+
+
+def layers(ifname):
+    """Directly adjacent interfaces, from the kernel's sysfs upper_/lower_ links"""
+    entries = HOST.listdir(f"/sys/class/net/{ifname}")
+    higher = [e[len("upper_"):] for e in entries if e.startswith("upper_")]
+    lower = [e[len("lower_"):] for e in entries if e.startswith("lower_")]
+    if not higher and not lower:
+        return [], []
+
+    # Neighbors not shown in operational must not be referenced either
+    links = common.iplinks()
+
+    def visible(name):
+        return name in links and not hidden(links[name])
+
+    return sorted(filter(visible, higher)), sorted(filter(visible, lower))
+
+
 def iplink2yang_type(iplink):
     ifname=iplink["ifname"]
 
@@ -149,6 +174,12 @@ def interface(iplink, ipaddr, systemjson=None):
     if ptpcap := ptp_capabilities(iplink["ifname"], systemjson):
         interface["infix-interfaces:ptp-capabilities"] = ptpcap
 
+    higher, lower = layers(iplink["ifname"])
+    if higher:
+        interface["higher-layer-if"] = higher
+    if lower:
+        interface["lower-layer-if"] = lower
+
     match interface["type"]:
         case "infix-if-type:bridge":
             if br := bridge.bridge(iplink):
@@ -203,11 +234,7 @@ def interfaces(ifname=None):
 
     interfaces = []
     for ifname, iplink in links.items():
-        if iplink.get("group") == "internal":
-            continue
-
-        link_type = iplink.get("link_type")
-        if link_type in ("can", "vcan"):
+        if hidden(iplink):
             continue
 
         ipaddr = addrs.get(ifname, {})
