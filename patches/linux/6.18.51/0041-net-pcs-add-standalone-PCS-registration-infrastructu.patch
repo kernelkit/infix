@@ -1,7 +1,8 @@
 From f1cb778901a02fa0165fc781ca5863ac93ed2608 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 5 Apr 2026 11:33:00 +0200
-Subject: [PATCH 41/68] net/pcs: add standalone PCS registration infrastructure
+Subject: [PATCH 41/75] net/pcs: add standalone PCS registration infrastructure
+Organization: Wires
 
 Add a simple registration mechanism that allows platform PCS drivers to
 register their phylink_pcs instances, and consumers (e.g. Ethernet MAC
@@ -12,6 +13,8 @@ registered, devm_of_pcs_get() returns -ENODEV to trigger deferred probe
 in the consumer driver.
 
 Based on work by Daniel Golle <daniel@makrotopia.org>.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/pcs/Kconfig            |  4 ++
  drivers/net/pcs/Makefile           |  1 +
@@ -22,7 +25,7 @@ Based on work by Daniel Golle <daniel@makrotopia.org>.
  create mode 100644 include/linux/pcs/pcs-standalone.h
 
 diff --git a/drivers/net/pcs/Kconfig b/drivers/net/pcs/Kconfig
-index ecbc3530e780..f6b4de7f972c 100644
+index ecbc3530e780c..f6b4de7f972cc 100644
 --- a/drivers/net/pcs/Kconfig
 +++ b/drivers/net/pcs/Kconfig
 @@ -5,6 +5,10 @@
@@ -37,7 +40,7 @@ index ecbc3530e780..f6b4de7f972c 100644
  	tristate "Synopsys DesignWare Ethernet XPCS"
  	select PHYLINK
 diff --git a/drivers/net/pcs/Makefile b/drivers/net/pcs/Makefile
-index 4f7920618b90..0cb0057f2b8e 100644
+index 4f7920618b900..0cb0057f2b8e6 100644
 --- a/drivers/net/pcs/Makefile
 +++ b/drivers/net/pcs/Makefile
 @@ -4,6 +4,7 @@
@@ -50,7 +53,7 @@ index 4f7920618b90..0cb0057f2b8e 100644
  obj-$(CONFIG_PCS_MTK_LYNXI)	+= pcs-mtk-lynxi.o
 diff --git a/drivers/net/pcs/pcs-standalone.c b/drivers/net/pcs/pcs-standalone.c
 new file mode 100644
-index 000000000000..f7b46de59636
+index 0000000000000..f7b46de59636c
 --- /dev/null
 +++ b/drivers/net/pcs/pcs-standalone.c
 @@ -0,0 +1,95 @@
@@ -151,7 +154,7 @@ index 000000000000..f7b46de59636
 +MODULE_LICENSE("GPL");
 diff --git a/include/linux/pcs/pcs-standalone.h b/include/linux/pcs/pcs-standalone.h
 new file mode 100644
-index 000000000000..520835cdeee8
+index 0000000000000..520835cdeee83
 --- /dev/null
 +++ b/include/linux/pcs/pcs-standalone.h
 @@ -0,0 +1,26 @@
@@ -181,3 +184,6 @@ index 000000000000..520835cdeee8
 +}
 +#endif /* CONFIG_PCS_STANDALONE */
 +#endif /* __LINUX_PCS_STANDALONE_H */
+-- 
+2.43.0
+

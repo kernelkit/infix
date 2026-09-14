@@ -1,11 +1,12 @@
 From 0102f18ab9717ec1b35df904417d872a6d5c5661 Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Tue, 20 Jan 2026 20:12:10 +0100
-Subject: [PATCH 30/68] wifi: brcmfmac: suppress log spam for
+Subject: [PATCH 30/75] wifi: brcmfmac: suppress log spam for
  regulatory-restricted channels
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 When scanning, the driver attempts to set each channel and logs an
 error if the firmware rejects it. For regulatory-restricted channels,
@@ -15,12 +16,13 @@ Suppress the error message for -52 errors to avoid spamming the kernel
 log during normal scan operations.
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  .../net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c    | 7 ++++++-
  1 file changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index 4189a127f4b3..88dac288a398 100644
+index 4189a127f4b37..88dac288a3986 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -8133,7 +8133,12 @@ brcmf_set_channel(struct brcmf_cfg80211_info *cfg, struct ieee80211_channel *cha
@@ -37,3 +39,6 @@ index 4189a127f4b3..88dac288a398 100644
  			err = -EINVAL;
  		}
  	} else {
+-- 
+2.43.0
+

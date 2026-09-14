@@ -1,11 +1,12 @@
 From 1c96850095495daca88461c040602ba4adec4db5 Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Tue, 30 Jun 2026 16:05:17 +0200
-Subject: [PATCH 67/68] wifi: brcmfmac: support deletion and recreation of the
+Subject: [PATCH 67/75] wifi: brcmfmac: support deletion and recreation of the
  primary interface
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 The Broadcom FullMAC firmware never deletes the primary interface
 (bsscfgidx 0); it always exists. brcmfmac therefore rejected any attempt
@@ -60,13 +61,14 @@ brcmf_del_if() rtnl-locking fix, since the primary interface can now be
 absent and is removed from a cfg80211 op that holds rtnl.
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  .../broadcom/brcm80211/brcmfmac/cfg80211.c    | 165 +++++++++++++++++-
  .../broadcom/brcm80211/brcmfmac/p2p.c         |  16 +-
  2 files changed, 174 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index fd8c39254d46..c17930471845 100644
+index fd8c39254d466..c179304718455 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -124,6 +124,9 @@ struct cca_msrmnt_query {
@@ -282,7 +284,7 @@ index fd8c39254d46..c17930471845 100644
  	case NL80211_IFTYPE_ADHOC:
  	case NL80211_IFTYPE_AP_VLAN:
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
-index 5b550e5a4e77..b1b85da83371 100644
+index 5b550e5a4e77e..b1b85da83371f 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
 @@ -1156,6 +1156,8 @@ static s32 brcmf_p2p_af_searching_channel(struct brcmf_p2p_info *p2p)
@@ -331,3 +333,6 @@ index 5b550e5a4e77..b1b85da83371 100644
  		msleep(50);
  
  	/* if scan is ongoing, abort current scan. */
+-- 
+2.43.0
+

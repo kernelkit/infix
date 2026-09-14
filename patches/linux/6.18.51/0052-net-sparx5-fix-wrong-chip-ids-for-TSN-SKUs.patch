@@ -1,7 +1,8 @@
 From 6ed593df9824cb72e70265815c9bf2a8ef4aec72 Mon Sep 17 00:00:00 2001
 From: Daniel Machon <daniel.machon@microchip.com>
 Date: Wed, 6 May 2026 09:25:38 +0200
-Subject: [PATCH 52/68] net: sparx5: fix wrong chip ids for TSN SKUs
+Subject: [PATCH 52/75] net: sparx5: fix wrong chip ids for TSN SKUs
+Organization: Wires
 
 The TSN SKUs in enum spx5_target_chiptype have incorrect IDs:
 
@@ -25,12 +26,13 @@ Signed-off-by: Daniel Machon <daniel.machon@microchip.com>
 Link: https://patch.msgid.link/20260506-misc-fixes-sparx5-lan969x-v2-3-fb236aa96908@microchip.com
 Signed-off-by: Jakub Kicinski <kuba@kernel.org>
 (cherry picked from commit b131dc93f7bf1b1461f5bde0c06c4c2384aa5b58)
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/ethernet/microchip/sparx5/sparx5_main.h | 10 +++++-----
  1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
-index fe7d8bcc0cd9..2f1b50ba8ad3 100644
+index fe7d8bcc0cd99..2f1b50ba8ad34 100644
 --- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
 +++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
 @@ -31,11 +31,11 @@ enum spx5_target_chiptype {
@@ -50,3 +52,6 @@ index fe7d8bcc0cd9..2f1b50ba8ad3 100644
  	SPX5_TARGET_CT_LAN9694    = 0x9694,  /* lan969x-40 */
  	SPX5_TARGET_CT_LAN9691VAO = 0x9691,  /* lan969x-40-VAO */
  	SPX5_TARGET_CT_LAN9694TSN = 0x9695,  /* lan969x-40-TSN */
+-- 
+2.43.0
+

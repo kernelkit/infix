@@ -102,14 +102,21 @@ body {
     --md-primary-bg-color: #5c5f5c;
 }
 
-/* Center Markdown Tables (requires md_in_html extension) */
-.center-table {
+/* Center all Markdown tables, like figures */
+.md-typeset .md-typeset__scrollwrap {
     text-align: center;
 }
 
-.md-typeset .center-table :is(td,th):not([align]) {
-    /* Reset alignment for table cells */
-    text-align: initial;
+/* Material forces a 5rem minimum width on header cells, which makes
+ * narrow numeric tables sprawl past the page.  Fit headers to content. */
+.md-typeset table:not([class]) th {
+    min-width: 0;
+}
+
+/* Material's 1.4 line height leaves gaps between box-drawing characters
+ * in CLI output and diagrams.  Applies to code blocks as a whole. */
+.md-typeset pre {
+    line-height: 1.15;
 }
 
 /* CLI terminal output styling */

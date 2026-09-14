@@ -1,8 +1,9 @@
 From 6957ba82acc4cc333310bab9ae2154e3a60192f6 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
-Subject: [PATCH 27/68] net: dsa: mv88e6xxx: Only activate LAG offloading when
+Subject: [PATCH 27/75] net: dsa: mv88e6xxx: Only activate LAG offloading when
  bridged
+Organization: Wires
 
 The current port isolation scheme for mv88e6xxx is detailed here:
 https://lore.kernel.org/netdev/20220203101657.990241-1-tobias@waldekranz.com/
@@ -45,12 +46,14 @@ existing port isolation to work as intended.
 Before joining a bridge, the offload does not offer any performance
 benefit anyway. All ingressing packet will always have to go to the
 CPU; egress traffic always relies on software hashing.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 42 +++++++++++++++-----------------
  1 file changed, 20 insertions(+), 22 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 161ce87a8871..d379799c0a16 100644
+index 161ce87a88716..d379799c0a168 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -3058,6 +3058,7 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,
@@ -139,3 +142,6 @@ index 161ce87a8871..d379799c0a16 100644
  }
  
  static int mv88e6xxx_crosschip_lag_change(struct dsa_switch *ds, int sw_index,
+-- 
+2.43.0
+

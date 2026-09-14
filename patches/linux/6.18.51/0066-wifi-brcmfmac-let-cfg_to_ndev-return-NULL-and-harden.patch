@@ -1,11 +1,12 @@
 From 8de159a7296793a1f84ffc91c0f1d7237824030a Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Tue, 30 Jun 2026 15:46:25 +0200
-Subject: [PATCH 66/68] wifi: brcmfmac: let cfg_to_ndev() return NULL and
+Subject: [PATCH 66/75] wifi: brcmfmac: let cfg_to_ndev() return NULL and
  harden its callers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 cfg_to_ndev() dereferenced the result of brcmf_get_ifp(cfg->pub, 0)
 unconditionally, even though brcmf_get_ifp() can return NULL. Make the
@@ -38,6 +39,7 @@ The remaining users only compare against cfg_to_ndev() and are already
 NULL-safe. No functional change while the primary interface is present.
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  .../broadcom/brcm80211/brcmfmac/btcoex.c      |  6 ++
  .../broadcom/brcm80211/brcmfmac/cfg80211.c    | 55 ++++++++++++++-----
@@ -47,7 +49,7 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  5 files changed, 78 insertions(+), 20 deletions(-)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/btcoex.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/btcoex.c
-index 67c0c5a92f99..265f3f5d5307 100644
+index 67c0c5a92f998..265f3f5d53079 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/btcoex.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/btcoex.c
 @@ -141,6 +141,9 @@ static void brcmf_btcoex_boost_wifi(struct brcmf_btcoex_info *btci,
@@ -71,7 +73,7 @@ index 67c0c5a92f99..265f3f5d5307 100644
  	case BRCMF_BTCOEX_DISABLED:
  		brcmf_dbg(INFO, "DHCP session starts\n");
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index 8b245460262d..fd8c39254d46 100644
+index 8b245460262d9..fd8c39254d466 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -822,11 +822,18 @@ struct wireless_dev *brcmf_apsta_add_vif(struct wiphy *wiphy, const char *name,
@@ -214,7 +216,7 @@ index 8b245460262d..fd8c39254d46 100644
  	if (err) {
  		bphy_err(drvr, "Country code iovar returned err = %d\n", err);
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.h b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.h
-index 273c80f2d483..ee7e9dc17dce 100644
+index 273c80f2d483a..ee7e9dc17dce0 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.h
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.h
 @@ -433,7 +433,9 @@ static inline struct brcmf_cfg80211_vif *wdev_to_vif(struct wireless_dev *wdev)
@@ -229,7 +231,7 @@ index 273c80f2d483..ee7e9dc17dce 100644
  
  static inline struct brcmf_cfg80211_info *ndev_to_cfg(struct net_device *ndev)
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
-index 7d8ec55571dd..a429748c3614 100644
+index 7d8ec55571dde..a429748c36140 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/core.c
 @@ -1026,8 +1026,11 @@ static int brcmf_inetaddr_changed(struct notifier_block *nb,
@@ -246,7 +248,7 @@ index 7d8ec55571dd..a429748c3614 100644
  	/* retrieve the table from firmware */
  	ret = brcmf_fil_iovar_data_get(ifp, "arp_hostip", addr_table,
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
-index e1752a513c73..5b550e5a4e77 100644
+index e1752a513c733..5b550e5a4e77e 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
 @@ -2115,8 +2115,12 @@ static int brcmf_p2p_disable_p2p_if(struct brcmf_cfg80211_vif *vif)
@@ -315,3 +317,6 @@ index e1752a513c73..5b550e5a4e77 100644
  	if (brcmf_cfg80211_vif_event_armed(cfg))
  		return ERR_PTR(-EBUSY);
  
+-- 
+2.43.0
+

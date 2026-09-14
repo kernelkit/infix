@@ -1,11 +1,12 @@
 From 4880a04067ab6dd2ec9206b0e62b6cb013df6730 Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Mon, 19 Jan 2026 13:06:53 +0100
-Subject: [PATCH 29/68] wifi: brcmfmac: check connection state before querying
+Subject: [PATCH 29/75] wifi: brcmfmac: check connection state before querying
  station info
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 In station mode, brcmf_cfg80211_get_station() queries the firmware for
 station info even when not connected to an AP. This results in error
@@ -18,12 +19,13 @@ info in station mode. AP mode is not affected as it needs to query
 info about connected clients regardless of its own connection state.
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c | 5 +++++
  1 file changed, 5 insertions(+)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index 1fc9ecd86d5d..4189a127f4b3 100644
+index 1fc9ecd86d5d9..4189a127f4b37 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -3156,6 +3156,11 @@ brcmf_cfg80211_get_station(struct wiphy *wiphy, struct net_device *ndev,
@@ -38,3 +40,6 @@ index 1fc9ecd86d5d..4189a127f4b3 100644
  	memset(&sta_info_le, 0, sizeof(sta_info_le));
  	memcpy(&sta_info_le, mac, ETH_ALEN);
  	err = brcmf_fil_iovar_data_get(ifp, "tdls_sta_info",
+-- 
+2.43.0
+

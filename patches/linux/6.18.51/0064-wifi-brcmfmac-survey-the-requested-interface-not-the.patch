@@ -1,11 +1,12 @@
 From 816e2e55a050c2be704a7ad54941a5755c9fcc84 Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Tue, 30 Jun 2026 15:42:48 +0200
-Subject: [PATCH 64/68] wifi: brcmfmac: survey the requested interface, not the
+Subject: [PATCH 64/75] wifi: brcmfmac: survey the requested interface, not the
  primary
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 brcmf_cfg80211_dump_survey() and its helper brcmf_set_channel() always
 operated on the primary interface (cfg_to_ndev()), ignoring the netdev
@@ -23,12 +24,13 @@ is disabled just above, is re-enabled instead of being left off.
 
 Fixes: 6c04deae1438 ("brcmfmac: Add dump_survey cfg80211 ops for HostApd AutoChannelSelection")
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  .../broadcom/brcm80211/brcmfmac/cfg80211.c    | 20 ++++++++++---------
  1 file changed, 11 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index 0081ceb6c782..8b245460262d 100644
+index 0081ceb6c7829..8b245460262d9 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -8124,11 +8124,11 @@ brcmf_dump_obss(struct brcmf_if *ifp, struct cca_msrmnt_query req,
@@ -84,3 +86,6 @@ index 0081ceb6c782..8b245460262d 100644
  	/* Get noise value */
  	err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_PHY_NOISE, &noise);
  	if (err) {
+-- 
+2.43.0
+

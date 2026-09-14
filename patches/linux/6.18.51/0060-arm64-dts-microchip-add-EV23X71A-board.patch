@@ -1,7 +1,8 @@
 From 810654ff02e6b74a34b192ea90ddfbb5eb08f298 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 2 Mar 2026 12:20:14 +0100
-Subject: [PATCH 60/68] arm64: dts: microchip: add EV23X71A board
+Subject: [PATCH 60/75] arm64: dts: microchip: add EV23X71A board
+Organization: Wires
 
 Microchip EV23X71A is an LAN9696 based evaluation board.
 
@@ -12,6 +13,7 @@ Tested-by: Daniel Machon <daniel.machon@microchip.com>
 Link: https://lore.kernel.org/r/20260302112153.464422-7-robert.marko@sartura.hr
 Signed-off-by: Claudiu Beznea <claudiu.beznea@tuxon.dev>
 (cherry picked from commit 711cca0f1cfef57018654b969da4041c2bab68d3)
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  arch/arm64/boot/dts/microchip/Makefile        |   1 +
  .../boot/dts/microchip/lan9696-ev23x71a.dts   | 756 ++++++++++++++++++
@@ -19,7 +21,7 @@ Signed-off-by: Claudiu Beznea <claudiu.beznea@tuxon.dev>
  create mode 100644 arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts
 
 diff --git a/arch/arm64/boot/dts/microchip/Makefile b/arch/arm64/boot/dts/microchip/Makefile
-index c6e0313eea0f..09d16fc1ce9a 100644
+index c6e0313eea0f9..09d16fc1ce9ac 100644
 --- a/arch/arm64/boot/dts/microchip/Makefile
 +++ b/arch/arm64/boot/dts/microchip/Makefile
 @@ -1,4 +1,5 @@
@@ -30,7 +32,7 @@ index c6e0313eea0f..09d16fc1ce9a 100644
  dtb-$(CONFIG_ARCH_SPARX5) += sparx5_pcb135.dtb sparx5_pcb135_emmc.dtb
 diff --git a/arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts b/arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts
 new file mode 100644
-index 000000000000..4012ea7d07bb
+index 0000000000000..4012ea7d07bbd
 --- /dev/null
 +++ b/arch/arm64/boot/dts/microchip/lan9696-ev23x71a.dts
 @@ -0,0 +1,756 @@
@@ -790,3 +792,6 @@ index 000000000000..4012ea7d07bb
 +	pinctrl-names = "default";
 +	status = "okay";
 +};
+-- 
+2.43.0
+

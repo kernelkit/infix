@@ -1,0 +1,32 @@
+=== QoS Configuration Validation
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_validation]
+
+==== Description
+
+Verify that traffic class layouts the device cannot render are rejected
+at commit time, with the running configuration left untouched:
+
+ - a strict-priority class below a weighted class
+ - a transmission selection algorithm outside strict-priority and
+   enhanced-transmission-selection
+ - a traffic class beyond the port's class count
+ - a priority mapped to a class beyond the port's class count
+
+The last two apply on ports with fewer than eight classes.  A valid
+layout must still be accepted afterwards.
+
+==== Topology
+
+image::topology.svg[QoS Configuration Validation topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Reject strict-priority class below a weighted class
+. Reject credit-based-shaper algorithm
+. Reject traffic class beyond the port's class count
+. Reject priority mapped beyond the port's class count
+. Accept a valid layout with strict classes above weighted
+
+

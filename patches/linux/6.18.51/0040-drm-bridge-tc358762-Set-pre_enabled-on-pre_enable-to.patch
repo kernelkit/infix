@@ -1,22 +1,24 @@
 From 5c6d36019017dfb3983b4792e597822e8a1d61d7 Mon Sep 17 00:00:00 2001
-From: Mattias Walström <lazzer@gmail.com>
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Sat, 4 Apr 2026 18:04:19 +0200
-Subject: [PATCH 40/68] drm/bridge: tc358762: Set pre_enabled on pre_enable to
+Subject: [PATCH 40/75] drm/bridge: tc358762: Set pre_enabled on pre_enable to
  prevent regulator imbalance
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 The RPi cherry-pick moved tc358762_init() to pre_enable but dropped the pre_enabled = true assignment.
 Without it, post_disable always bails out early and never disables the regulator.
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/gpu/drm/bridge/tc358762.c | 2 ++
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/gpu/drm/bridge/tc358762.c b/drivers/gpu/drm/bridge/tc358762.c
-index 6164932edfec..8da66b06d6b6 100644
+index 6164932edfec9..8da66b06d6b63 100644
 --- a/drivers/gpu/drm/bridge/tc358762.c
 +++ b/drivers/gpu/drm/bridge/tc358762.c
 @@ -205,6 +205,8 @@ static void tc358762_pre_enable(struct drm_bridge *bridge,
@@ -28,3 +30,6 @@ index 6164932edfec..8da66b06d6b6 100644
  }
  
  static int tc358762_attach(struct drm_bridge *bridge,
+-- 
+2.43.0
+

@@ -1,10 +1,11 @@
 From 7b4afd8f8b0d92ddbcbcffb700967edcd0823c9a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:15:43 +0200
-Subject: [PATCH 43/68] net: ethernet: mediatek: add USXGMII support for MT7988
+Subject: [PATCH 43/75] net: ethernet: mediatek: add USXGMII support for MT7988
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+Organization: Wires
 
 Add support for the USXGMII path used by gmac1 and gmac2 on the MT7988
 SoC (BananaPi BPI-R4). Changes:
@@ -26,6 +27,8 @@ SoC (BananaPi BPI-R4). Changes:
 
 Based on work by Henry Yen <henry.yen@mediatek.com> and
 Daniel Golle <daniel@makrotopia.org>.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/ethernet/mediatek/mtk_eth_path.c | 64 ++++++++++++++++++++
  drivers/net/ethernet/mediatek/mtk_eth_soc.c  | 46 +++++++++++++-
@@ -33,7 +36,7 @@ Daniel Golle <daniel@makrotopia.org>.
  3 files changed, 139 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_path.c b/drivers/net/ethernet/mediatek/mtk_eth_path.c
-index b4c01e2878f6..57380776032a 100644
+index b4c01e2878f6f..57380776032a7 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_path.c
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_path.c
 @@ -37,6 +37,12 @@ static const char *mtk_eth_path_name(u64 path)
@@ -126,7 +129,7 @@ index b4c01e2878f6..57380776032a 100644
 +}
 +
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
-index 98cf11a706e1..243503c58c7b 100644
+index 98cf11a706e14..243503c58c7b9 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
 @@ -22,6 +22,7 @@
@@ -211,7 +214,7 @@ index 98cf11a706e1..243503c58c7b 100644
  				 of_fwnode_handle(mac->of_node),
  				 phy_mode, &mtk_phylink_ops);
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.h b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
-index 0168e2fbc619..2b27ef392b76 100644
+index 0168e2fbc6197..2b27ef392b76f 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.h
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
 @@ -567,6 +567,7 @@
@@ -288,3 +291,6 @@ index 0168e2fbc619..2b27ef392b76 100644
  
  int mtk_eth_offload_init(struct mtk_eth *eth, u8 id);
  int mtk_eth_setup_tc(struct net_device *dev, enum tc_setup_type type,
+-- 
+2.43.0
+
