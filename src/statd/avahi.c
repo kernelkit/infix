@@ -36,6 +36,7 @@
 #include <srx/common.h>
 
 #include "avahi.h"
+#include "shared.h"
 
 /* Complete the opaque avahi types declared in avahi-common/watch.h */
 struct AvahiWatch {
@@ -336,15 +337,6 @@ static void free_all(struct mdns_ctx *ctx)
 
 #define XPATH_BASE "/infix-services:mdns/neighbors"
 
-static void format_timestamp(char *buf, size_t sz)
-{
-	struct tm tm;
-	time_t now = time(NULL);
-
-	gmtime_r(&now, &tm);
-	strftime(buf, sz, "%Y-%m-%dT%H:%M:%S+00:00", &tm);
-}
-
 static int sr_setstr(sr_session_ctx_t *ses, const char *xpath, const char *val)
 {
 	int err = sr_set_item_str(ses, xpath, val, NULL, 0);
@@ -449,7 +441,7 @@ static void ds_push_resolver(struct mdns_ctx *ctx, struct avahi_service *svc,
 	}
 
 	/* last-seen */
-	format_timestamp(ts, sizeof(ts));
+	format_timestamp(time(NULL), ts, sizeof(ts));
 	snprintf(xpath, sizeof(xpath),
 		 XPATH_BASE "/neighbor[hostname='%s']/last-seen", svc->hostname);
 	err = err ?: sr_setstr(ctx->sr_ses, xpath, ts);
