@@ -36,6 +36,9 @@ All notable changes to the project are documented in this file.
   boot and configuration changes, issue #961.  Same rationale as Debian's
   dash-as-/bin/sh.  Bash remains available for interactive use and for
   scripts using `#!/bin/bash`
+- Add `higher-layer-if` and `lower-layer-if` to interface operational
+  status, listing the interfaces stacked directly on top of or beneath
+  each one, e.g., a VLAN interface and its parent, issue #514
 
 ### Fixes
 

@@ -59,6 +59,15 @@ class Host(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def listdir(self, path):
+        """Get the entries of directory path
+
+        Returns an empty list if the directory is not readable.
+
+        """
+        pass
+
     def read_multiline(self, path, default=None):
         """Get lines of content from path
 
@@ -121,6 +130,12 @@ class Localhost(Host):
             return os.path.exists(path)
         except OSError:
             return False
+
+    def listdir(self, path):
+        try:
+            return os.listdir(path)
+        except OSError:
+            return []
 
 class Remotehost(Localhost):
     def __init__(self, prefix, capdir):
@@ -188,6 +203,17 @@ class Remotehost(Localhost):
 
         return out
 
+    def listdir(self, path):
+        entries = self._run(("ls", path), default="", log=False).split()
+
+        if self.capdir:
+            dirname = os.path.join(self.capdir, "rootfs", path[1:])
+            os.makedirs(dirname, exist_ok=True)
+            for entry in entries:
+                open(os.path.join(dirname, entry), "a", encoding='utf-8').close()
+
+        return entries
+
 
 class Replayhost(Host):
     def SlugOf(cmd):
@@ -234,3 +260,10 @@ class Replayhost(Host):
         except:
             common.LOG.error(f"No recording found for file \"{path}\"")
             raise
+
+    def listdir(self, path):
+        path = os.path.join(self.replaydir, "rootfs", path[1:])
+        try:
+            return os.listdir(path)
+        except OSError:
+            return []
