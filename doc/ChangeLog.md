@@ -13,6 +13,9 @@ All notable changes to the project are documented in this file.
 - Upgrade FRR to 10.5.5
 - Add per-server `minpoll` and `maxpoll` options to the NTP client
   configuration, for tuning how often each server is polled
+- Document the release and maintenance policy: which versions receive
+  updates, what may go into a patch release, and the levels of long-term
+  maintenance available, see [Releases & Support][relsup]
 
 ### Added
 
@@ -40,6 +43,8 @@ All notable changes to the project are documented in this file.
 ### Fixes
 
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
+
+[relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 
 
 [v26.08.0][] - 2026-09-01

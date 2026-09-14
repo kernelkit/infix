@@ -319,6 +319,11 @@ issues without direct access to the DUT.
 
 ## Upgrading Packages
 
+The steps below describe upgrading on `main`.  Maintained release
+branches take the same kernel and Buildroot patch bumps, ported from
+`main` when a patch release is scheduled.  See [Releases &
+Support](releases.md) for what may go into such a release.
+
 ### Buildroot
 
 The Kernelkit team maintains an internal [fork of Buildroot][9], with

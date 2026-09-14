@@ -74,6 +74,7 @@ nav:
       - Test System Architecture: test-arch.md
       - Virtual Environments: virtual.md
       - Vital Product Data (VPD): vpd.md
+  - Releases & Support: releases.md
   - Origin & Licensing: license.md
 
 theme:

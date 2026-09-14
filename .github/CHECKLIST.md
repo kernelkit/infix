@@ -39,3 +39,17 @@ Recommended checkpoints, use at your own discretion:
 - Ensure the markdown link for the release diff is updated
 - Ensure subrepos are tagged (can be automated, see kernelkit/infix#393)
 - Sync tags for all repo. sync activities
+
+Patch Releases
+--------------
+
+For a patch release on a `vYY.MM.x` branch, see the policy in
+[Releases & Support](../doc/releases.md):
+
+- Port the latest Linux kernel LTS patch level from main
+- Port the latest Buildroot LTS patch level from main
+  - Patch level only, the branch stays on its own kernel and Buildroot
+    LTS line
+- Verify no features or YANG model changes came along with the fixes
+  - Upgrading to a patch release must never require a config migration
+- ChangeLog entry describes this release only, not the series
