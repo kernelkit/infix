@@ -6,9 +6,22 @@ project on GitHub, and Discord, see <https://github.com/kernelkit/infix>:
 &nbsp;&nbsp; :speech_balloon: <https://github.com/orgs/kernelkit/discussions>  
 &nbsp;&nbsp; :bug: <https://github.com/kernelkit/infix/issues>  
 
+The supported version of the project is the latest release.  Older
+release series get a patch release only when there is a reason to make
+one, see [Releases & Support][releases] for the full policy.
+
 Support contracts, development of new features, fast-tracking of reviews
 and contributions, customer branding of Infix, and even customer specific
-features for dedicated products is provided by _Wires_.
+features for dedicated products is provided by the company
+[_Wires_][wires], which also sponsors Infix development.
 
-&nbsp;&nbsp; :globe_with_meridians: <https://www.wires.se>  
+This includes **Infix LTS**, a commercial support contract for products
+that must stay on one version for years: scheduled maintenance of the
+release series the product shipped on, with kernel and Buildroot LTS
+patch bumps and backported fixes.
+
+&nbsp;&nbsp; :globe_with_meridians: <https://wires.se>  
 &nbsp;&nbsp; :e-mail: <mailto:infix@wires.se>
+
+[releases]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
+[wires]:    https://wires.se
