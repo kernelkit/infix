@@ -426,6 +426,29 @@ class Device(Transport):
         )
         response.raise_for_status()  # Raise an exception for HTTP errors
 
+    def rpc_output(self, module, rpc, input_data=None):
+        """Call RPC, returning output leaves as a dict of strings"""
+        coverage.track_dict(module, {rpc: input_data or {}})
+        url = f"{self.rpc_url}/{module}:{rpc}"
+        body = {f"{module}:input": input_data} if input_data else None
+        response = requests_workaround_post(
+            url,
+            json=body,
+            headers=self.headers,
+            auth=self.auth,
+            verify=False
+        )
+        if not response.ok:
+            raise Exception(f"{response.status_code} {response.reason}:"
+                            f" {response.text}")
+        if not response.content:
+            return {}
+
+        data = response.json()
+        output = data.get(f"{module}:output", data)
+
+        return {k: str(v) for k, v in output.items()}
+
     def get_dict(self, xpath=None, parse=True):
         """NETCONF compat function, just wraps get_data"""
         return self.get_data(xpath, parse)

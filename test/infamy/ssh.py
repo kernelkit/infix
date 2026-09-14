@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from . import env, netutil, util
 
 
+# ssh(1) itself failed, the remote command never ran or its exit
+# status could not be collected
+TRANSPORT_ERROR = 255
+
+
 @dataclass
 class Location:
     host: str
@@ -81,6 +86,8 @@ class Device(object):
         return nm + " [SSH]"
 
     def _mangle_subprocess_args(self, args, kwargs):
+        loglevel = kwargs.pop("loglevel", "ERROR")
+
         if not args:
             return None
 
@@ -95,7 +102,7 @@ class Device(object):
         args[0] = ["ssh",
                    "-oStrictHostKeyChecking no",
                    "-oUserKnownHostsFile /dev/null",
-                   "-oLogLevel QUIET",
+                   f"-oLogLevel {loglevel}",
                    f"-l{self.location.username}",
                    self.location.host] + args[0]
 
@@ -108,7 +115,32 @@ class Device(object):
         args, kwargs = self._mangle_subprocess_args(args, kwargs)
         return subprocess.run(*args, **kwargs)
 
+    def run_retry(self, *args, tries=3, **kwargs):
+        """Like run(), but retry transport failures (ssh exit code 255)
+
+        Waits for the SSH port between attempts.  Only for idempotent
+        commands, and stdout must not be a file object, it is not
+        rewound between attempts.
+        """
+        for attempt in range(1, tries + 1):
+            result = self.run(*args, **kwargs)
+            if result.returncode != TRANSPORT_ERROR:
+                return result
+
+            print(f"{self}: ssh transport failure, attempt {attempt}/{tries}")
+            if attempt < tries:
+                util.until(lambda: ssh_syn(self.location.host,
+                                           self.location.port), attempts=30)
+
+        return result
+
     def runsh(self, script, *args, **kwargs):
+        """Run a script, with stderr merged into the captured stdout
+
+        Callers parse that stdout, so ssh(1) stays quiet here, use
+        run() to see transport errors.
+        """
+        kwargs.setdefault("loglevel", "QUIET")
         return self.run("/bin/sh", text=True, input=script,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT, *args, **kwargs)

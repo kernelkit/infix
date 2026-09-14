@@ -386,6 +386,22 @@ class Device(Transport):
         lyd = mod.parse_data_dict(call, rpc=True)
         return self.call(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
+    def rpc_output(self, module, rpc, input_data=None):
+        """Call RPC, returning output leaves as a dict of strings"""
+        reply = self.call_dict(module, {rpc: input_data or {}})
+        xml = reply.xml
+        if isinstance(xml, str):
+            xml = xml.encode()
+
+        output = {}
+        for node in lxml.etree.fromstring(xml).iter():
+            if len(node) or not node.text:
+                continue
+            leaf = lxml.etree.QName(node).localname
+            output[leaf] = node.text.strip()
+
+        return output
+
     def call_action(self, xpath, input_data=None):
         """Call NETCONF action (contextualized RPC), XML version.
 

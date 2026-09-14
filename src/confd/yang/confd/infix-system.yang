@@ -26,12 +26,22 @@ module infix-system {
     prefix infix-schedule;
   }
 
+  import ietf-netconf-acm {
+    prefix nacm;
+    reference
+      "RFC 8341: Network Configuration Access Control Model";
+  }
+
   include infix-system-software;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2026-09-11 {
+    description "Add support-collect RPC, returns a support archive inline.";
+    reference "internal";
+  }
   revision 2026-09-08 {
     description "Add /system/advanced, for low-level system customization:
                   - rc.ds: user scripts run once at boot, extracted from the
@@ -926,4 +936,56 @@ module infix-system {
       type infix-sys:crypt-hash;
     }
   }
+
+  rpc support-collect {
+    nacm:default-deny-all;
+    description
+      "Collect support data and return the resulting archive.
+
+       The archive holds what the support(1) tool gathers: system and
+       kernel logs, running and operational configuration, network and
+       hardware state.  Collection runs in RAM, so a call that returns
+       the archive inline leaves nothing behind on the device.
+
+       The system log is tailed for 5 seconds during collection, to
+       keep the whole operation inside the caller's RPC timeout, see
+       CONFD_TIMEOUT in /etc/default/confd.
+
+       Access is denied by default, the archive contains password
+       hashes, keys, and logs.  Only groups with an explicit NACM
+       permit rule, 'admin' in the factory configuration, may call it.";
+    input {
+      leaf password {
+        type string {
+          length "1..max";
+        }
+        description
+          "Encrypt the archive with GPG, using this password.  The
+           management session is already encrypted, this is for passing
+           the archive on to someone else afterwards.  Fails when the
+           device has no gpg.";
+      }
+    }
+    output {
+      leaf size {
+        type uint32;
+        units bytes;
+        description "Size of the archive, before base64 encoding.";
+      }
+      leaf data {
+        type binary;
+        description
+          "The archive itself.  Omitted when it is larger than the
+           inline limit of 16 MiB, see 'filename'.";
+      }
+      leaf filename {
+        type string;
+        description
+          "Path to the archive on the device.  Present only when the
+           archive was too large to return inline; the caller is then
+           responsible for fetching and removing it.";
+      }
+    }
+  }
+
 }
