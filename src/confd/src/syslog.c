@@ -6,6 +6,8 @@
 
 #include "core.h"
 
+#include <syslog/syslog.h>	/* sysklogd syslogp_r() API */
+
 #define XPATH_BASE_       "/ietf-syslog:syslog"
 #define XPATH_FILE_       XPATH_BASE_"/actions/file"
 #define XPATH_LOG_FILE    XPATH_BASE_"/actions/file/log-file"
@@ -477,4 +479,193 @@ int syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 		return rc;
 
 	return SR_ERR_OK;
+}
+
+/*
+ * RPC: /infix-syslog:log
+ */
+
+static int log_facility(const char *name)
+{
+	static const struct {
+		const char *name;
+		int         facility;
+	} map[] = {
+		{ "kern",      LOG_KERN     },
+		{ "user",      LOG_USER     },
+		{ "mail",      LOG_MAIL     },
+		{ "daemon",    LOG_DAEMON   },
+		{ "auth",      LOG_AUTH     },
+		{ "syslog",    LOG_SYSLOG   },
+		{ "lpr",       LOG_LPR      },
+		{ "news",      LOG_NEWS     },
+		{ "uucp",      LOG_UUCP     },
+		{ "cron",      LOG_CRON     },
+		{ "authpriv",  LOG_AUTHPRIV },
+		{ "ftp",       LOG_FTP      },
+		{ "ntp",       LOG_NTP      },
+		{ "audit",     LOG_AUDIT    },
+		{ "console",   LOG_CONSOLE  },
+		{ "cron2",     LOG_CRON2    },
+		{ "local0",    LOG_LOCAL0   },
+		{ "local1",    LOG_LOCAL1   },
+		{ "local2",    LOG_LOCAL2   },
+		{ "local3",    LOG_LOCAL3   },
+		{ "local4",    LOG_LOCAL4   },
+		{ "local5",    LOG_LOCAL5   },
+		{ "local6",    LOG_LOCAL6   },
+		{ "local7",    LOG_LOCAL7   },
+		/* infix-syslog local facilities */
+		{ "rauc",      LOG_LOCAL0   },
+		{ "container", LOG_LOCAL1   },
+		{ "web",       LOG_LOCAL7   },
+	};
+	const char *ptr;
+
+	if (!name)
+		return LOG_USER;
+
+	/* identityref, strip module prefix */
+	ptr = strchr(name, ':');
+	if (ptr)
+		name = ptr + 1;
+
+	for (size_t i = 0; i < NELEMS(map); i++) {
+		if (!strcmp(map[i].name, name))
+			return map[i].facility;
+	}
+
+	return LOG_USER;
+}
+
+static int log_severity(const char *name)
+{
+	static const char *map[] = {
+		"emergency", "alert", "critical", "error",
+		"warning", "notice", "info", "debug",
+	};
+
+	if (!name)
+		return LOG_NOTICE;
+
+	for (size_t i = 0; i < NELEMS(map); i++) {
+		if (!strcmp(map[i], name))
+			return (int)i;
+	}
+
+	return LOG_NOTICE;
+}
+
+/*
+ * The event session runs as confd, the calling user is only known from
+ * the originator: netopeer2 pushes [nc-sid, username], the CLI and the
+ * rpc tool set their originator name to the user.
+ */
+static const char *log_user(sr_session_ctx_t *session)
+{
+	const char *orig = sr_session_get_orig_name(session);
+	const void *data;
+	uint32_t size;
+
+	if (orig && !strcmp(orig, "netopeer2")) {
+		if (!sr_session_get_orig_data(session, 1, &size, &data) && size > 1)
+			return data;
+	}
+
+	if (orig && orig[0])
+		return orig;
+
+	return sr_session_get_user(session);
+}
+
+/* RFC 5424 PARAM-VALUE: escape '"', '\\', and ']' */
+static char *sd_escape(char *ptr, const char *value)
+{
+	for (; *value; value++) {
+		if (*value == '"' || *value == '\\' || *value == ']')
+			*ptr++ = '\\';
+		*ptr++ = *value;
+	}
+
+	return ptr;
+}
+
+/* Render structured-data list as [id name="value" ...][id2 ...] */
+static char *sd_build(const struct lyd_node *input)
+{
+	struct lyd_node *elem, *param;
+	char *sd, *ptr;
+	size_t len = 1;
+
+	LYX_LIST_FOR_EACH(lyd_child(input), elem, "structured-data") {
+		len += strlen(lydx_get_cattr(elem, "id")) + 2;
+		LYX_LIST_FOR_EACH(lyd_child(elem), param, "param") {
+			len += strlen(lydx_get_cattr(param, "name")) + 4;
+			len += strlen(lydx_get_cattr(param, "value")) * 2;
+		}
+	}
+
+	if (len == 1)
+		return NULL;
+
+	sd = ptr = malloc(len);
+	if (!sd)
+		return NULL;
+
+	LYX_LIST_FOR_EACH(lyd_child(input), elem, "structured-data") {
+		ptr += sprintf(ptr, "[%s", lydx_get_cattr(elem, "id"));
+		LYX_LIST_FOR_EACH(lyd_child(elem), param, "param") {
+			ptr += sprintf(ptr, " %s=\"", lydx_get_cattr(param, "name"));
+			ptr  = sd_escape(ptr, lydx_get_cattr(param, "value"));
+			*ptr++ = '"';
+		}
+		*ptr++ = ']';
+	}
+	*ptr = 0;
+
+	return sd;
+}
+
+static int rpc_log(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+		   const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+		   struct lyd_node *output, void *priv)
+{
+	struct syslog_data log = SYSLOG_DATA_INIT;
+	struct lyd_node *in = (struct lyd_node *)input;
+	const char *msg, *tag, *msgid;
+	char *sd;
+	int pri;
+
+	msg = lydx_get_cattr(in, "message");
+	if (!msg)
+		return SR_ERR_INVAL_ARG;
+
+	pri   = log_facility(lydx_get_cattr(in, "facility")) | log_severity(lydx_get_cattr(in, "severity"));
+	msgid = lydx_get_cattr(in, "msgid");
+	tag   = lydx_get_cattr(in, "app-name");
+	if (!tag)
+		tag = log_user(session);
+
+	log.log_tag = tag;
+	sd = sd_build(in);
+	if (sd)
+		syslogp_r(pri, &log, msgid, "%s", "%s", sd, msg);
+	else
+		syslogp_r(pri, &log, msgid, NULL, "%s", msg);
+	closelog_r(&log);
+	free(sd);
+
+	return SR_ERR_OK;
+}
+
+int syslog_rpc_init(struct confd *confd)
+{
+	int rc;
+
+	REGISTER_RPC_TREE(confd->session, "/infix-syslog:log", rpc_log, NULL, &confd->sub);
+
+	return SR_ERR_OK;
+fail:
+	ERROR("init failed: %s", sr_strerror(rc));
+	return rc;
 }

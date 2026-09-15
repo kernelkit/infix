@@ -133,6 +133,10 @@ typedef enum {
 	if ((rc = register_rpc(s, x, c, a, u)))			\
 		goto fail
 
+#define REGISTER_RPC_TREE(s,x,c,a,u)				\
+	if ((rc = register_rpc_tree(s, x, c, a, u)))		\
+		goto fail
+
 struct confd {
 	sr_session_ctx_t       *session; /* running datastore */
 	sr_session_ctx_t       *startup; /* startup datastore */
@@ -192,6 +196,15 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 	return rc;
 }
 
+static inline int register_rpc_tree(sr_session_ctx_t *session, const char *xpath,
+	sr_rpc_tree_cb cb, void *arg, sr_subscription_ctx_t **sub)
+{
+	int rc = sr_rpc_subscribe_tree(session, xpath, cb, arg, 0, SR_SUBSCR_NO_THREAD, sub);
+	if (rc)
+		ERROR("failed subscribing to %s rpc: %s", xpath, sr_strerror(rc));
+	return rc;
+}
+
 
 /* core.c */
 int finit_enable(const char *svc);
@@ -211,6 +224,7 @@ int interfaces_cand_init(struct confd *confd);
 
 /* syslog.c */
 int syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int syslog_rpc_init(struct confd *confd);
 
 /* system.c */
 int system_rpc_init (struct confd *confd);
