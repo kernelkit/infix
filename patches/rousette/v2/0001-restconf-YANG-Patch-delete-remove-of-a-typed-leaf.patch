@@ -1,0 +1,66 @@
+From 68f5da1c81f2fe16bb11b6341ced616043958eec Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <mattias.walstrom@wires.se>
+Date: Tue, 15 Sep 2026 16:20:46 +0200
+Subject: [PATCH] restconf: YANG Patch delete/remove of a typed leaf
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The edit for an operation without a value was created with newPath2()
+and no value, which only works for leaves whose type accepts the empty
+string. Removing an enumeration or boolean leaf failed with LY_EVALID.
+Create the node opaque, as the DELETE method already does, and set the
+operation as an attribute when it is.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 20 ++++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -388,9 +388,11 @@
+     auto [lyParentPath, lastPathSegment] = asLibyangPathSplit(ctx, uriPath);
+ 
+     if (!valueStr) {
+-        // Some YANG patch operations do not have a value node, e.g., delete or move
++        // Some YANG patch operations do not have a value node, e.g., delete or move.
++        // A leaf cannot be created without a value unless it is opaque, so ask for that;
++        // containers and list entries still come out as regular nodes.
+         auto lyFullPath = asRestconfRequest(ctx, "PATCH", uriPath).path;
+-        auto [parent, node] = ctx.newPath2(lyFullPath);
++        auto [parent, node] = ctx.newPath2(lyFullPath, std::nullopt, libyang::CreationOptions::Opaque);
+         editNode = parent;
+         replacementNode = node;
+     } else if (!lyParentPath.empty()) {
+@@ -639,6 +641,16 @@
+     auto target = childLeafValue(editContainer, "target");
+     auto operation = childLeafValue(editContainer, "operation");
+ 
++    // An opaque node (a typed leaf being deleted) cannot carry metadata; sysrepo reads the
++    // operation from an attribute on those instead, same as for the DELETE method.
++    auto setOperation = [&netconfMod](libyang::DataNode& node, const std::string& op) {
++        if (node.isOpaque()) {
++            node.newAttrOpaqueJSON("ietf-netconf", "operation", op);
++        } else {
++            node.newMeta(netconfMod, "operation", op);
++        }
++    };
++
+     auto [singleEdit, replacementNode] = createEditForPutAndPatch(ctx, requestCtx->req.uri().raw_path + target, yangPatchValueAsJSON(editContainer), libyang::DataFormat::JSON);
+     validateInputMetaAttributes(ctx, *singleEdit);
+ 
+@@ -659,10 +671,10 @@
+             throw ErrorResponse(400, "protocol", "invalid-value", "Leaf 'point' must always come with leaf 'where' set to 'before' or 'after'");
+         }
+ 
+-        replacementNode->newMeta(netconfMod, "operation", operation == "insert" ? "create" : "merge");
++        setOperation(*replacementNode, operation == "insert" ? "create" : "merge");
+         yangInsert(ctx, *replacementNode, where, point);
+     } else {
+-        replacementNode->newMeta(netconfMod, "operation", operation);
++        setOperation(*replacementNode, operation);
+     }
+ 
+     if (!mergedEdits) {
