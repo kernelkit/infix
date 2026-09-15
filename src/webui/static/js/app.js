@@ -2226,12 +2226,19 @@ function renderCfgLog() {
 
   // findSaveStatusSpan locates the status span associated with the form that
   // triggered an htmx event. Lookup order:
-  //   1. .cfg-save-status inside the form
-  //   2. [data-cfg-status-for="<form-id>"] anywhere on the page — used when the
+  //   1. .cfg-save-status inside the enclosing inline "+ New" box
+  //      (.ks-create-form), which posts on its own from inside a larger form
+  //   2. .cfg-save-status inside the form
+  //   3. [data-cfg-status-for="<form-id>"] anywhere on the page — used when the
   //      Save button is bound to the form via the HTML5 `form` attribute and
   //      lives outside the form element
-  //   3. .cfg-save-status inside the enclosing .info-card (shared feedback slot)
+  //   4. .cfg-save-status inside the enclosing .info-card (shared feedback slot)
   function findSaveStatusSpan(e) {
+    var box = e.target && e.target.closest('.ks-create-form');
+    if (box) {
+      var own = box.querySelector('.cfg-save-status');
+      if (own) return own;
+    }
     var form = e.target && e.target.closest('form');
     if (form) {
       var inside = form.querySelector('.cfg-save-status');
