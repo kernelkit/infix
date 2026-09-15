@@ -1542,36 +1542,30 @@ func (h *ConfigureInterfacesHandler) SaveBridge(w http.ResponseWriter, r *http.R
 		bridge["stp"] = stp
 	}
 
+	p := restconf.NewYangPatch(candidatePath)
 	if len(bridge) > 0 {
-		body := map[string]any{"infix-interfaces:bridge": bridge}
-		if err := h.RC.Patch(r.Context(), ifacePath(name)+"/infix-interfaces:bridge", body); err != nil {
-			log.Printf("configure interfaces %s bridge: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
+		p.Merge(ifaceTarget(name)+"/infix-interfaces:bridge", map[string]any{"infix-interfaces:bridge": bridge})
 	}
 
 	// The bridge type choice is expressed via the vlans presence container:
 	// 802.1Q = vlans container present; 802.1D = vlans container absent.
-	vlansPath := ifacePath(name) + "/infix-interfaces:bridge/vlans"
+	// Merge rather than replace, so an existing VLAN table survives a save.
+	vlansTarget := ifaceTarget(name) + "/infix-interfaces:bridge/vlans"
 	if r.FormValue("bridge-type") == "ieee8021q" {
-		body := map[string]any{"vlans": map[string]any{}}
-		if err := h.RC.Put(r.Context(), vlansPath, body); err != nil {
-			log.Printf("configure interfaces %s bridge type 8021q: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
+		p.Merge(vlansTarget, map[string]any{"infix-interfaces:vlans": map[string]any{}})
 	} else {
-		if err := h.RC.Delete(r.Context(), vlansPath); err != nil {
-			// 404 is fine — vlans already absent (802.1D)
-			log.Printf("configure interfaces %s bridge type 8021d (delete vlans): %v", name, err)
-		}
+		p.Remove(vlansTarget)
 	}
 
-	if err := h.applyMembersDiff(r, name, "bridge",
+	if err := h.addMembersDiff(r, p, name, "bridge",
 		func(iface ifaceJSON, master string) bool {
 			return iface.BridgePort != nil && iface.BridgePort.Bridge == master
 		}); err != nil {
+		renderSaveError(w, err)
+		return
+	}
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s bridge: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
@@ -2010,17 +2004,23 @@ func indexWifiRadios(comps []hwComponentJSON) map[string]*ifaceRadioMirror {
 // kind is "bridge" or "lag"; it determines the YANG augment path and body key.
 func (h *ConfigureInterfacesHandler) saveMembersDiff(w http.ResponseWriter, r *http.Request,
 	masterName, kind string, isMember func(ifaceJSON, string) bool, successMsg string) {
-	if err := h.applyMembersDiff(r, masterName, kind, isMember); err != nil {
+	p := restconf.NewYangPatch(candidatePath)
+	if err := h.addMembersDiff(r, p, masterName, kind, isMember); err != nil {
+		renderSaveError(w, err)
+		return
+	}
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s %s members: %v", kind, masterName, err)
 		renderSaveError(w, err)
 		return
 	}
 	renderSaved(w, successMsg)
 }
 
-// applyMembersDiff is the no-response-writing core of saveMembersDiff so it
-// can be reused by callers that compose multiple save steps (e.g. SaveBridge
-// which writes type + members in one form submission).
-func (h *ConfigureInterfacesHandler) applyMembersDiff(r *http.Request,
+// addMembersDiff adds the membership edits to p without sending them, so
+// callers that save more than membership (SaveBridge: type + members) can
+// put everything in one patch.
+func (h *ConfigureInterfacesHandler) addMembersDiff(r *http.Request, p *restconf.YangPatch,
 	masterName, kind string, isMember func(ifaceJSON, string) bool) error {
 
 	ifaces, err := h.fetchAllInterfaces(r.Context())
@@ -2040,19 +2040,12 @@ func (h *ConfigureInterfacesHandler) applyMembersDiff(r *http.Request,
 		}
 		currentlyMember := isMember(iface, masterName)
 		wantMember := submitted[iface.Name]
-		portPath := ifacePath(iface.Name) + "/" + portKey
+		portTarget := ifaceTarget(iface.Name) + "/" + portKey
 
 		if wantMember && !currentlyMember {
-			body := map[string]any{portKey: map[string]any{kind: masterName}}
-			if err := h.RC.Put(r.Context(), portPath, body); err != nil {
-				log.Printf("configure interfaces %s members add %s→%s: %v", kind, iface.Name, masterName, err)
-				return err
-			}
+			p.Replace(portTarget, map[string]any{portKey: map[string]any{kind: masterName}})
 		} else if !wantMember && currentlyMember {
-			if err := h.RC.Delete(r.Context(), portPath); err != nil {
-				log.Printf("configure interfaces %s members remove %s from %s: %v", kind, iface.Name, masterName, err)
-				return err
-			}
+			p.Remove(portTarget)
 		}
 	}
 	return nil
