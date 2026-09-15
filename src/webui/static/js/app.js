@@ -1249,7 +1249,7 @@ function setBlockEnabled(el, on) {
   //     receive the picker's value (for keystore forms whose name input
   //     mirrors the picker). For the radio form, every <input>/<select>
   //     whose name matches a data-<name> attribute on the picker option
-  //     is filled from that attribute (e.g. data-country fills
+  //     is filled from that attribute (e.g. data-country-code fills
   //     name="country-code", data-band fills name="band", …).
   function clearKsForm(formId) {
     var form = document.getElementById(formId);
