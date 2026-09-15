@@ -53,43 +53,65 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("restconf %d: %s", e.StatusCode, e.Tag)
 }
 
+// rcError is one entry of an ietf-restconf errors list.
+type rcError struct {
+	Type    string `json:"error-type"`
+	Tag     string `json:"error-tag"`
+	Path    string `json:"error-path"`
+	Message string `json:"error-message"`
+}
+
+type rcErrors struct {
+	Error []rcError `json:"error"`
+}
+
 // parseError reads a RESTCONF error response body and returns an *Error.
+// Both the plain ietf-restconf:errors envelope and the ietf-yang-patch
+// status report, which nests one errors list per failed edit, are
+// understood.
 func parseError(resp *http.Response) error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
 
 	re := &Error{StatusCode: resp.StatusCode}
 
-	// Try to parse the standard RESTCONF error envelope.
 	var envelope struct {
-		Errors struct {
-			Error []struct {
-				ErrorType    string `json:"error-type"`
-				ErrorTag     string `json:"error-tag"`
-				ErrorPath    string `json:"error-path"`
-				ErrorMessage string `json:"error-message"`
-				ErrorInfo    any    `json:"error-info"`
-			} `json:"error"`
-		} `json:"ietf-restconf:errors"`
+		Errors rcErrors `json:"ietf-restconf:errors"`
+		Patch  struct {
+			Errors     rcErrors `json:"errors"`
+			EditStatus struct {
+				Edit []struct {
+					Errors rcErrors `json:"errors"`
+				} `json:"edit"`
+			} `json:"edit-status"`
+		} `json:"ietf-yang-patch:yang-patch-status"`
 	}
 
-	if json.Unmarshal(body, &envelope) == nil && len(envelope.Errors.Error) > 0 {
-		var parts []string
-		for _, e := range envelope.Errors.Error {
-			msg := e.ErrorMessage
-			if msg == "" {
-				msg = e.ErrorTag
-			}
-			if e.ErrorPath != "" {
-				msg += " (path: " + e.ErrorPath + ")"
-			}
-			parts = append(parts, msg)
+	var errs []rcError
+	if json.Unmarshal(body, &envelope) == nil {
+		errs = append(errs, envelope.Errors.Error...)
+		errs = append(errs, envelope.Patch.Errors.Error...)
+		for _, e := range envelope.Patch.EditStatus.Edit {
+			errs = append(errs, e.Errors.Error...)
 		}
-		re.Type = envelope.Errors.Error[0].ErrorType
-		re.Tag = envelope.Errors.Error[0].ErrorTag
-		re.Message = strings.Join(parts, "; ")
-	} else {
+	}
+	if len(errs) == 0 {
 		re.Message = http.StatusText(resp.StatusCode)
+		return re
 	}
 
+	var parts []string
+	for _, e := range errs {
+		msg := e.Message
+		if msg == "" {
+			msg = e.Tag
+		}
+		if e.Path != "" {
+			msg += " (path: " + e.Path + ")"
+		}
+		parts = append(parts, msg)
+	}
+	re.Type = errs[0].Type
+	re.Tag = errs[0].Tag
+	re.Message = strings.Join(parts, "; ")
 	return re
 }

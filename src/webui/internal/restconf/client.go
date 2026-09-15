@@ -181,6 +181,12 @@ func (c *Client) CopyDatastore(ctx context.Context, src, dst string) error {
 
 // writeJSON encodes body as JSON and sends it with the given HTTP method.
 func (c *Client) writeJSON(ctx context.Context, method, path string, body any) error {
+	return c.write(ctx, method, path, "application/yang-data+json", body)
+}
+
+// write encodes body as JSON and sends it with the given method and
+// Content-Type.
+func (c *Client) write(ctx context.Context, method, path, contentType string, body any) error {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(body); err != nil {
 		return fmt.Errorf("encoding request body: %w", err)
@@ -190,7 +196,7 @@ func (c *Client) writeJSON(ctx context.Context, method, path string, body any) e
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/yang-data+json")
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Accept", "application/yang-data+json")
 	creds := CredentialsFromContext(ctx)
 	req.SetBasicAuth(creds.Username, creds.Password)
