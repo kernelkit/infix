@@ -1,0 +1,27 @@
+=== Syslog Log RPC
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/syslog/rpc_log]
+
+==== Description
+
+Verify the infix-syslog:log RPC, used by the test system to inject
+markers in a DUT's system log.  A message logged with the full RFC 5424
+header must show up in an RFC 5424 formatted log file with the given
+app-name, msgid, and structured data.  A message logged with only the
+mandatory text must fall back to the documented defaults.
+
+==== Topology
+
+image::topology.svg[Syslog Log RPC topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Clean up old log file from previous test runs
+. Configure an RFC 5424 formatted log file for all facilities
+. Log message with severity, facility, app-name, msgid, and structured data
+. Verify RFC 5424 header fields of the logged message
+. Log message with only the mandatory text
+. Verify default app-name is set and msgid and structured data are empty
+
+
