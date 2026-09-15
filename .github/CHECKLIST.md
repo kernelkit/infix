@@ -47,6 +47,10 @@ For a patch release on a `vYY.MM.x` branch, see the policy in
 [Releases & Support](../doc/releases.md):
 
 - Port the latest Linux kernel LTS patch level from main
+- Port the package upgrades the Buildroot fork carries, e.g. FRR, as
+  their own commit *before* the Buildroot bump
+  - A Buildroot bump alone brings them in through the submodule pointer,
+    unreviewed and unmentioned in the ChangeLog
 - Port the latest Buildroot LTS patch level from main
   - Patch level only, the branch stays on its own kernel and Buildroot
     LTS line
