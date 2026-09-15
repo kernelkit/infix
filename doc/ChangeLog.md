@@ -16,6 +16,7 @@ All notable changes to the project are documented in this file.
 - Document the release and maintenance policy: which versions receive
   updates, what may go into a patch release, and the levels of long-term
   maintenance available, see [Releases & Support][relsup]
+- WebUI: Maximum session lifetime is now 24h
 
 ### Added
 

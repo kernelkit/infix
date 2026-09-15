@@ -90,9 +90,9 @@
                 30 min
                 {{template "icon-check"}}
               </button>
-              <button class="dropdown-item timeout-opt" data-timeout="0">
-                {{template "icon-circle-slash"}}
-                Off
+              <button class="dropdown-item timeout-opt" data-timeout="86400">
+                {{template "icon-clock"}}
+                24 h
                 {{template "icon-check"}}
               </button>
               {{if or (.Capabilities.Has "docs") (.Capabilities.Has "netbrowse") (.Capabilities.Has "console")}}

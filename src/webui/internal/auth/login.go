@@ -131,7 +131,7 @@ func (h *LoginHandler) DoLogout(w http.ResponseWriter, r *http.Request) {
 
 // SetSessionTimeout updates the current session's idle timeout from the
 // client's Auto-logout menu.  The "timeout" form value is seconds; 0 means
-// never expire ("Off").  The store caps the upper bound.
+// disable the client-side logout; the store still caps idle sessions.
 func (h *LoginHandler) SetSessionTimeout(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie(cookieName)
 	if err != nil {

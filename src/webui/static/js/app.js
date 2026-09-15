@@ -2376,13 +2376,24 @@ function renderCfgLog() {
   var DEFAULT = '900';
   var timerId = null;
 
+  // The stored choice must be one of the menu's options; anything else,
+  // including the "0" an older build stored for "Off", falls back to the
+  // default. The server caps idle sessions at 24 h regardless.
+  function chosen() {
+    var v = localStorage.getItem(LS_KEY) || DEFAULT;
+    var ok = false;
+    document.querySelectorAll('.timeout-opt').forEach(function(btn) {
+      if (btn.getAttribute('data-timeout') === v) ok = true;
+    });
+    return ok ? v : DEFAULT;
+  }
+
   function getMs() {
-    var n = parseInt(localStorage.getItem(LS_KEY) || DEFAULT, 10);
-    return isNaN(n) ? parseInt(DEFAULT, 10) * 1000 : n * 1000;
+    return parseInt(chosen(), 10) * 1000;
   }
 
   function updateOpts() {
-    var current = localStorage.getItem(LS_KEY) || DEFAULT;
+    var current = chosen();
     document.querySelectorAll('.timeout-opt').forEach(function(btn) {
       btn.classList.toggle('is-active', btn.getAttribute('data-timeout') === current);
     });
@@ -2412,9 +2423,9 @@ function renderCfgLog() {
   }
 
   // Mirror the chosen idle timeout to the server so the server-side session
-  // expiry matches the menu — including "Off" (0 = never).  The server starts
-  // each session at its 1 h default; this re-asserts the user's preference on
-  // load and whenever they change it.
+  // expiry matches the menu. The server starts each session at its 1 h
+  // default; this re-asserts the user's preference on load and whenever
+  // they change it.
   function syncServerTimeout(secs) {
     var fd = new FormData();
     fd.append('timeout', secs);
@@ -2434,7 +2445,7 @@ function renderCfgLog() {
 
     updateOpts();
     reset();
-    syncServerTimeout(localStorage.getItem(LS_KEY) || DEFAULT);
+    syncServerTimeout(chosen());
 
     // mousemove deliberately omitted: trackpad jitter from a neighbouring
     // window would keep the session alive indefinitely.

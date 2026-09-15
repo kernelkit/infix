@@ -23,13 +23,12 @@ type sessionEntry struct {
 	csrfToken  string
 	features   map[string]bool
 	lastSeenAt time.Time
-	timeout    time.Duration // idle timeout; 0 = never expire ("Off")
+	timeout    time.Duration // idle timeout, capped at maxSessionTimeout
 }
 
-// expired reports whether an entry has passed its idle timeout.  A zero
-// timeout means the session never idle-expires — the user chose "Off".
+// expired reports whether an entry has passed its idle timeout.
 func expired(e *sessionEntry) bool {
-	return e.timeout > 0 && time.Since(e.lastSeenAt) > e.timeout
+	return time.Since(e.lastSeenAt) > e.timeout
 }
 
 // SessionStore issues opaque random session tokens backed by an
@@ -103,13 +102,13 @@ func (s *SessionStore) Lookup(token string) (username, password, csrf string, fe
 	return "", "", "", nil, false
 }
 
-// SetTimeout updates a session's idle timeout (0 = never expire) so the
-// server-side expiry tracks the client's Auto-logout menu.  Out-of-range
-// values — including a negative from integer overflow on a garbage request —
-// are capped at maxSessionTimeout so a session can't be pinned open
-// indefinitely; 0 still means never.  No-op if the token is unknown.
+// SetTimeout updates a session's idle timeout so the server-side expiry
+// tracks the client's Auto-logout menu.  "Off" (0), anything above the
+// cap and a negative from integer overflow on a garbage request all
+// become maxSessionTimeout, so a leaked cookie is never valid for longer
+// than a day of idleness.  No-op if the token is unknown.
 func (s *SessionStore) SetTimeout(token string, d time.Duration) {
-	if d < 0 || d > maxSessionTimeout {
+	if d <= 0 || d > maxSessionTimeout {
 		d = maxSessionTimeout
 	}
 	s.mu.Lock()
