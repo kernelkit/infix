@@ -97,6 +97,14 @@ static const struct cron_consumer check_update_consumer = {
 	.command      = "/usr/sbin/check-update",
 };
 
+/* Scheduler consumer for unattended-update. */
+static const struct cron_consumer unattended_update_consumer = {
+	.path	      = "/ietf-system:system/infix-system:software/unattended-update",
+	.sched_leaf   = "schedule",
+	.enabled_leaf = "enabled",
+	.command      = "/usr/sbin/unattended-update",
+};
+
 int system_sw_rpc_init(struct confd *confd)
 {
 	int rc = 0;
@@ -107,6 +115,7 @@ int system_sw_rpc_init(struct confd *confd)
 		     infix_system_sw_set_boot_order, NULL, &confd->sub);
 
 	schedule_consumer_register(&check_update_consumer);
+	schedule_consumer_register(&unattended_update_consumer);
 
 fail:
 	return rc;

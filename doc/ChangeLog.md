@@ -39,6 +39,10 @@ All notable changes to the project are documented in this file.
   boot and configuration changes, issue #961.  Same rationale as Debian's
   dash-as-/bin/sh.  Bash remains available for interactive use and for
   scripts using `#!/bin/bash`
+- Add support for unattended software upgrades, letting a unit track an RSS/Atom
+  release feed on a schedule and install a newer release to the inactive
+  partition on its own, then either reboot to activate it or leave it staged for
+  the next reboot
 
 ### Fixes
 

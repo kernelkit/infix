@@ -1,0 +1,74 @@
+#!/bin/sh
+# Download and install a newer release, unattended.  Called by the scheduler.
+#
+# Installs to the inactive slot like a manual 'upgrade': RAUC flips the
+# boot-order to activate on next reboot, leaving the old slot as fallback.
+# The 'reboot' config policy decides whether that reboot is automatic.
+
+TAG=unattended-update
+# Pre-created by tmpfiles.d, scheduled jobs run as 'admin' and cannot create
+# files in /run themselves.
+LOCKFILE=/run/unattended-update.lock
+
+. /usr/libexec/infix/update-common
+
+# Read the reboot policy (manual|immediate) from running-config; default manual.
+read_reboot_policy() {
+    policy=$(copy running-config \
+        -x '/ietf-system:system/infix-system:software/unattended-update/reboot' \
+        2>/dev/null \
+        | jq -r '.. | objects | .reboot? // empty')
+    [ -n "$policy" ] && printf '%s' "$policy" || printf 'manual'
+}
+
+# Single-instance guard -- also avoids racing a manual 'upgrade' or an
+# overlapping tick if a previous run is still installing.  Open the lock
+# explicitly first: an unwritable lock must fail loudly here, not slip through
+# to flock and get misreported as "already in progress".
+if ! { true >> "$LOCKFILE"; } 2>/dev/null; then
+    logger -t "$TAG" "ERROR: cannot open lock $LOCKFILE"
+    exit 1
+fi
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+    logger -t "$TAG" "Another update is already in progress, skipping"
+    exit 0
+fi
+
+update_probe
+rc=$?
+if [ $rc -eq 1 ]; then
+    exit 1
+fi
+if [ $rc -eq 2 ]; then
+    logger -p daemon.info -t "$TAG" "Skipped: failed to query latest release from ${UPDATE_URL}"
+    exit 0
+fi
+
+if ! update_available; then
+    logger -p daemon.debug -t "$TAG" "No update available (current: $VERSION, latest: $LATEST)"
+    exit 0
+fi
+
+BUNDLE_URL=$(update_bundle_url)
+if [ -z "$BUNDLE_URL" ]; then
+    logger -t "$TAG" "Update ${LATEST_TAG} found, but no bundle URL could be resolved; skipping"
+    exit 1
+fi
+
+# RAUC streams the bundle from the URL, nothing is staged locally.
+logger -t "$TAG" "Installing ${LATEST_TAG} from ${BUNDLE_URL} (running ${VERSION})"
+if ! rauc install "$BUNDLE_URL"; then
+    logger -t "$TAG" "ERROR: installation of ${LATEST_TAG} failed"
+    exit 1
+fi
+
+POLICY=$(read_reboot_policy)
+if [ "$POLICY" = immediate ]; then
+    logger -t "$TAG" "Installed ${LATEST_TAG}; reboot policy 'immediate', rebooting to activate"
+    sync
+    sleep 2
+    /usr/sbin/reboot
+else
+    logger -t "$TAG" "Installed ${LATEST_TAG}; reboot to activate the new image"
+fi
