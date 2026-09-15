@@ -1302,9 +1302,8 @@ func (h *ConfigureInterfacesHandler) SaveEthernet(w http.ResponseWriter, r *http
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	ctx := r.Context()
 	name := r.PathValue("name")
-	base := ifacePath(name) + "/ieee802-ethernet-interface:ethernet"
+	base := ifaceTarget(name) + "/ieee802-ethernet-interface:ethernet"
 
 	autoneg := r.FormValue("autoneg") == "on"
 	var adv []string
@@ -1314,55 +1313,42 @@ func (h *ConfigureInterfacesHandler) SaveEthernet(w http.ResponseWriter, r *http
 		}
 	}
 
-	// auto-negotiation: PUT the whole container so an empty advertised list
-	// actually clears stale entries.  DELETE on an unqualified leaf-list
-	// path fails ("requires exactly one key") under RFC 8040, so omitting
-	// the leaf-list from a container PUT is the cleanest clear.  Safe here
-	// because the container only carries enable + advertised-pmd-types
-	// (negotiation-status is deviate-not-supported in Infix).
+	// auto-negotiation: replace the whole container so an empty advertised
+	// list actually clears stale entries; a leaf-list can't be removed by
+	// an unqualified path.  Safe here because the container only carries
+	// enable + advertised-pmd-types (negotiation-status is
+	// deviate-not-supported in Infix).
 	an := map[string]any{"enable": autoneg}
 	if len(adv) > 0 {
 		an["infix-ethernet-interface:advertised-pmd-types"] = adv
 	}
-	body := map[string]any{"ieee802-ethernet-interface:auto-negotiation": an}
-	if err := h.RC.Put(ctx, base+"/auto-negotiation", body); err != nil {
-		log.Printf("configure interfaces %s ethernet autoneg: %v", name, err)
-		renderSaveError(w, err)
-		return
-	}
+	p := restconf.NewYangPatch(candidatePath).Replace(base+"/auto-negotiation",
+		map[string]any{"ieee802-ethernet-interface:auto-negotiation": an})
 
-	// duplex: PATCH if user picked full/half, DELETE on Auto
+	// duplex: set if user picked full/half, remove on Auto
 	if d := r.FormValue("duplex"); d != "" {
-		body := map[string]any{
+		p.Merge(base, map[string]any{
 			"ieee802-ethernet-interface:ethernet": map[string]any{"duplex": d},
-		}
-		if err := h.RC.Patch(ctx, base, body); err != nil {
-			log.Printf("configure interfaces %s ethernet duplex: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
-	} else if err := h.RC.Delete(ctx, base+"/duplex"); err != nil && !restconf.IsDataMissing(err) {
-		log.Printf("configure interfaces %s ethernet duplex delete: %v", name, err)
-		renderSaveError(w, err)
-		return
+		})
+	} else {
+		p.Remove(base + "/duplex")
 	}
 
 	// mdi-x: only valid when autoneg is off (YANG when).  On autoneg=true
-	// or user picks Auto-MDIX, DELETE so the leaf stays absent.
+	// or user picks Auto-MDIX, remove so the leaf stays absent.
 	mdix := r.FormValue("mdix")
 	if !autoneg && (mdix == "true" || mdix == "false") {
-		body := map[string]any{
+		p.Merge(base, map[string]any{
 			"ieee802-ethernet-interface:ethernet": map[string]any{
 				"infix-ethernet-interface:mdi-x": mdix == "true",
 			},
-		}
-		if err := h.RC.Patch(ctx, base, body); err != nil {
-			log.Printf("configure interfaces %s ethernet mdi-x: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
-	} else if err := h.RC.Delete(ctx, base+"/infix-ethernet-interface:mdi-x"); err != nil && !restconf.IsDataMissing(err) {
-		log.Printf("configure interfaces %s ethernet mdi-x delete: %v", name, err)
+		})
+	} else {
+		p.Remove(base + "/infix-ethernet-interface:mdi-x")
+	}
+
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s ethernet: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
