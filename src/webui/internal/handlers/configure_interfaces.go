@@ -2330,10 +2330,9 @@ func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.R
 	h.renderIPBlock(w, r, name, famCap, frag, "Address removed")
 }
 
-// SaveIPv4Settings PATCHes the per-interface IPv4 group settings — forwarding
-// leaf plus the DHCP-client and link-local autoconf presence containers — in
-// a single round trip from the IPv4 settings form. Each presence container is
-// PUT (enable) or DELETE (disable) per checkbox state; forwarding is PATCHed.
+// SaveIPv4Settings saves the per-interface IPv4 group settings: the
+// forwarding leaf plus the DHCP-client and link-local autoconf presence
+// containers, one patch from the IPv4 settings form.
 // POST /configure/interfaces/{name}/ipv4/settings
 func (h *ConfigureInterfacesHandler) SaveIPv4Settings(w http.ResponseWriter, r *http.Request) {
 	h.saveIPSettings(w, r, "ietf-ip:ipv4", "IPv4", "iface-ipv4-block", map[string]string{
@@ -2354,55 +2353,40 @@ func (h *ConfigureInterfacesHandler) SaveIPv6Settings(w http.ResponseWriter, r *
 
 // saveIPSettings is the shared body of SaveIPv4Settings / SaveIPv6Settings.
 // presenceMap maps form-field names (e.g. "dhcp") to their YANG presence
-// container key (e.g. "infix-dhcp-client:dhcp"); each one is PUT when checked
-// and DELETEd otherwise. Forwarding is always PATCHed.
+// container key (e.g. "infix-dhcp-client:dhcp"); each one is created when
+// checked and removed otherwise.
 func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *http.Request, container, family, fragName string, presenceMap map[string]string) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	name := r.PathValue("name")
-	base := ifacePath(name) + "/" + container
+	base := ifaceTarget(name) + "/" + container
 
 	forwarding := r.FormValue("forwarding") == "true"
-	// PATCH the interface (which always exists) with the family container
-	// nested inside, so the container is created on first use.  PATCHing
-	// `base` (the ipv4/ipv6 container) directly 400s "Target resource does
-	// not exist" on a fresh interface that has no L3 config yet — which is
-	// exactly the case when enabling DHCP for the first time.  The list
-	// entry must be a single-element array: rousette rejects the bare-object
-	// form with LY_EVALID once an augmented container (ietf-ip:ipv4) is
-	// nested inside.
-	body := map[string]any{
+	// The family container is merged nested inside its interface as a
+	// single-element array: rousette rejects the bare-object form with
+	// LY_EVALID once an augmented container (ietf-ip:ipv4) is nested inside.
+	p := restconf.NewYangPatch(candidatePath).Merge(ifaceTarget(name), map[string]any{
 		"ietf-interfaces:interface": []any{
 			map[string]any{
 				"name":    name,
 				container: map[string]any{"forwarding": forwarding},
 			},
 		},
+	})
+	for field, child := range presenceMap {
+		target := base + "/" + child
+		if r.FormValue(field) == "true" {
+			p.Merge(target, map[string]any{child: map[string]any{}})
+		} else {
+			p.Remove(target)
+		}
 	}
-	if err := h.RC.Patch(r.Context(), ifacePath(name), body); err != nil {
-		log.Printf("configure interfaces %s %s settings: forwarding: %v", name, family, err)
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s %s settings: %v", name, family, err)
 		renderSaveError(w, err)
 		return
-	}
-
-	for field, child := range presenceMap {
-		path := base + "/" + child
-		if r.FormValue(field) == "true" {
-			b := map[string]any{child: map[string]any{}}
-			if err := h.RC.Put(r.Context(), path, b); err != nil {
-				log.Printf("configure interfaces %s %s settings: enable %s: %v", name, family, field, err)
-				renderSaveError(w, err)
-				return
-			}
-		} else {
-			if err := h.RC.Delete(r.Context(), path); err != nil && !restconf.IsNotFound(err) {
-				log.Printf("configure interfaces %s %s settings: disable %s: %v", name, family, field, err)
-				renderSaveError(w, err)
-				return
-			}
-		}
 	}
 
 	// Re-render just this interface's IP block from the fresh candidate so
