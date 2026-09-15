@@ -39,6 +39,9 @@ All notable changes to the project are documented in this file.
   boot and configuration changes, issue #961.  Same rationale as Debian's
   dash-as-/bin/sh.  Bash remains available for interactive use and for
   scripts using `#!/bin/bash`
+- Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
+  ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
+  `ripng`/`ospfv3` type and the IPv6 address-family
 
 ### Fixes
 

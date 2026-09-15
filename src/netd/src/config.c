@@ -262,7 +262,7 @@ static int parse_rip_section(cfg_t *cfg_rip, struct rip_config *rip_cfg)
  * Parse a single config file using libconfuse
  */
 static int config_parse_file(const char *path, struct route_head *routes,
-			     struct rip_config *rip_cfg)
+			     struct rip_config *rip_cfg, struct rip_config *ripng_cfg)
 {
 	cfg_opt_t timers_opts[] = {
 		CFG_INT("update", 30, CFGF_NONE),
@@ -299,6 +299,7 @@ static int config_parse_file(const char *path, struct route_head *routes,
 	cfg_opt_t opts[] = {
 		CFG_SEC("route", route_opts, CFGF_MULTI),
 		CFG_SEC("rip", rip_opts, CFGF_NONE),
+		CFG_SEC("ripng", rip_opts, CFGF_NONE),
 		CFG_END()
 	};
 
@@ -342,11 +343,19 @@ static int config_parse_file(const char *path, struct route_head *routes,
 			ERROR("Failed to parse RIP section in %s", path);
 	}
 
+	/* Parse RIPng section if present */
+	cfg_rip = cfg_getsec(cfg, "ripng");
+	if (cfg_rip) {
+		if (parse_rip_section(cfg_rip, ripng_cfg) < 0)
+			ERROR("Failed to parse RIPng section in %s", path);
+	}
+
 	cfg_free(cfg);
 	return 0;
 }
 
-int config_load(struct route_head *routes, struct rip_config *rip_cfg)
+int config_load(struct route_head *routes, struct rip_config *rip_cfg,
+		struct rip_config *ripng_cfg)
 {
 	struct dirent **namelist;
 	char path[PATH_MAX];
@@ -375,7 +384,7 @@ int config_load(struct route_head *routes, struct rip_config *rip_cfg)
 
 		snprintf(path, sizeof(path), "%s/%s", CONF_DIR, name);
 		DEBUG("Loading config %s", path);
-		config_parse_file(path, routes, rip_cfg);
+		config_parse_file(path, routes, rip_cfg, ripng_cfg);
 		free(namelist[i]);
 	}
 
