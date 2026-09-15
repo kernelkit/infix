@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <libyang/libyang.h>
 #include <sysrepo.h>
 #include <sysrepo/netconf_acm.h>
 #include <sysrepo/values.h>
@@ -340,6 +341,9 @@ static int sysrepo_init(sr_conn_ctx_t **conn, sr_session_ctx_t **sess,
 		warnx("NACM setup failed for user %s: %s", user, sr_strerror(err));
 		goto fail;
 	}
+
+	/* Like klish-plugin-sysrepo, lets RPC callbacks see who called */
+	sr_session_set_orig_name(*sess, user);
 
 	return SR_ERR_OK;
 fail:
@@ -859,13 +863,29 @@ static int usage_rpc(int rc)
 	       "Arguments:\n"
 	       "  rpc-xpath          RPC XPath (e.g., /ietf-system:set-current-datetime)\n"
 	       "  key value          Pairs of RPC argument names and values\n"
-	       "                     Values can be comma-separated for lists/leaf-lists\n"
+	       "                     Leaf-list values can be comma-separated\n"
 	       "\n"
 	       "Examples:\n"
 	       "  %s /ietf-system:set-current-datetime current-datetime \"2025-01-01T00:00:00Z\"\n"
 	       "  %s /infix-system:set-boot-order boot-order primary boot-order secondary\n"
 	       "  %s /infix-system:set-boot-order boot-order primary,secondary,net\n"
 	       "\n", prognm, timeout, prognm, prognm, prognm);
+
+	return rc;
+}
+
+static bool is_leaflist(sr_conn_ctx_t *conn, const char *rpc_xpath, const char *key)
+{
+	char xpath[strlen(rpc_xpath) + strlen(key) + 2];
+	const struct lysc_node *node;
+	const struct ly_ctx *ctx;
+	bool rc;
+
+	snprintf(xpath, sizeof(xpath), "%s/%s", rpc_xpath, key);
+	ctx = sr_acquire_context(conn);
+	node = lys_find_path(ctx, NULL, xpath, 0);
+	rc = node && node->nodetype == LYS_LEAFLIST;
+	sr_release_context(conn);
 
 	return rc;
 }
@@ -892,8 +912,8 @@ static int rpc_exec(const char *rpc_xpath, int argc, char *argv[])
 		const char *val = argv[i + 1];
 		char *val_copy, *token, *saveptr;
 
-		/* Check if value contains commas - split into multiple values */
-		if (strchr(val, ',')) {
+		/* Comma-separated values are only a list for leaf-lists */
+		if (strchr(val, ',') && is_leaflist(conn, rpc_xpath, key)) {
 			val_copy = strdup(val);
 			if (!val_copy) {
 				warnx("Memory allocation failed");

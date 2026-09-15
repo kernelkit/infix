@@ -227,6 +227,81 @@
   </ACTION>
 </COMMAND>
 
+<COMMAND name="log" help="Log a message to the system log, e.g., log severity warning Kilroy was here">
+  <SWITCH name="optional" min="0" max="3">
+    <COMMAND name="severity" help="Message severity, default: notice">
+      <PARAM name="severity" ptype="/STRING" help="Severity level">
+        <COMPL>
+          <ACTION sym="printl">emergency</ACTION>
+          <ACTION sym="printl">alert</ACTION>
+          <ACTION sym="printl">critical</ACTION>
+          <ACTION sym="printl">error</ACTION>
+          <ACTION sym="printl">warning</ACTION>
+          <ACTION sym="printl">notice</ACTION>
+          <ACTION sym="printl">info</ACTION>
+          <ACTION sym="printl">debug</ACTION>
+        </COMPL>
+      </PARAM>
+    </COMMAND>
+    <COMMAND name="facility" help="Message facility, default: user">
+      <PARAM name="facility" ptype="/STRING" help="Facility name">
+        <COMPL>
+          <ACTION sym="printl">auth</ACTION>
+          <ACTION sym="printl">authpriv</ACTION>
+          <ACTION sym="printl">console</ACTION>
+          <ACTION sym="printl">cron</ACTION>
+          <ACTION sym="printl">daemon</ACTION>
+          <ACTION sym="printl">ftp</ACTION>
+          <ACTION sym="printl">kern</ACTION>
+          <ACTION sym="printl">local0</ACTION>
+          <ACTION sym="printl">local1</ACTION>
+          <ACTION sym="printl">local2</ACTION>
+          <ACTION sym="printl">local3</ACTION>
+          <ACTION sym="printl">local4</ACTION>
+          <ACTION sym="printl">local5</ACTION>
+          <ACTION sym="printl">local6</ACTION>
+          <ACTION sym="printl">local7</ACTION>
+          <ACTION sym="printl">lpr</ACTION>
+          <ACTION sym="printl">mail</ACTION>
+          <ACTION sym="printl">news</ACTION>
+          <ACTION sym="printl">ntp</ACTION>
+          <ACTION sym="printl">syslog</ACTION>
+          <ACTION sym="printl">user</ACTION>
+          <ACTION sym="printl">uucp</ACTION>
+        </COMPL>
+      </PARAM>
+    </COMMAND>
+    <COMMAND name="msgid" help="Message identifier, e.g., test-start">
+      <PARAM name="msgid" ptype="/STRING" help="RFC 5424 MSGID, printable ASCII, max 32 chars"/>
+    </COMMAND>
+  </SWITCH>
+  <PARAM name="message" ptype="/STRING" max="100" help="Message text, remaining words on the line"/>
+  <ACTION sym="script">
+    set -- /infix-syslog:log
+    if [ -n "$KLISH_PARAM_severity" ]; then
+        set -- "$@" severity "$KLISH_PARAM_severity"
+    fi
+    if [ -n "$KLISH_PARAM_msgid" ]; then
+        set -- "$@" msgid "$KLISH_PARAM_msgid"
+    fi
+    if [ -n "$KLISH_PARAM_facility" ]; then
+        case "$KLISH_PARAM_facility" in
+            rauc|container|web) set -- "$@" facility "infix-syslog:$KLISH_PARAM_facility" ;;
+            *)                  set -- "$@" facility "ietf-syslog:$KLISH_PARAM_facility"  ;;
+        esac
+    fi
+    msg=""
+    i=0
+    while :; do
+        eval "word=\${KLISH_PARAM_message_$i}"
+        [ -n "$word" ] || break
+        msg="${msg:+$msg }$word"
+        i=$((i + 1))
+    done
+    rpc "$@" message "$msg"
+  </ACTION>
+</COMMAND>
+
 <COMMAND name="poweroff" help="Poweroff system (system policy may yield reboot)">
   <ACTION sym="srp_rpc@sysrepo" ptype="STRING">/ietf-system:system-shutdown</ACTION>
 </COMMAND>
