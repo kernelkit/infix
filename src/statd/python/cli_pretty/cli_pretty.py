@@ -1044,6 +1044,9 @@ class Iface:
         self.type = data.get('type', '')
         self.index = data.get('if-index', '')
         self.oper_status = data.get('oper-status', '')
+        self.last_change = data.get('last-change', '')
+        self.higher_layer = data.get('higher-layer-if', [])
+        self.lower_layer = data.get('lower-layer-if', [])
         self.autoneg = get_json_data('unknown', self.data, 'ieee802-ethernet-interface:ethernet',
                                           'auto-negotiation', 'enable')
         self.duplex = get_json_data('', self.data,'ieee802-ethernet-interface:ethernet','duplex')
@@ -1666,12 +1669,18 @@ class Iface:
             print(f"{'mtu':<{19}}: {self.mtu}")
         if self.oper():
             print(f"{'operational status':<{19}}: {self.oper(detail=True)}")
+        if self.last_change:
+            print(f"{'last change':<{19}}: {Date.from_yang(self.last_change).pretty()}")
 
         forwarding = "enabled" if self.name in Iface._routing_ifaces else "disabled"
         print(f"{'ip forwarding':<{19}}: {forwarding}")
 
-        if self.lower_if:
-            print(f"{'lower-layer-if':<{19}}: {self.lower_if}")
+        # Older operational data only has the VLAN augment's lower-layer-if
+        lower = self.lower_layer or ([self.lower_if] if self.lower_if else [])
+        if lower:
+            self._pr_label_list('lower-layer-if', lower)
+        if self.higher_layer:
+            self._pr_label_list('higher-layer-if', self.higher_layer)
 
         if label := self._phy_label():
             print(f"{'link mode':<{19}}: {label}")

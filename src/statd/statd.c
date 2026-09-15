@@ -31,6 +31,7 @@
 
 #include "shared.h"
 #include "journal.h"
+#include "iface.h"
 #include "avahi.h"
 
 /* New kernel feature, not in sys/mman.h yet */
@@ -72,6 +73,7 @@ struct statd {
 	struct ev_loop *ev_loop;
 	struct journal_ctx journal;      /* Periodic operational snapshots */
 	struct mdns_ctx mdns;            /* mDNS neighbor monitor */
+	struct iface_ctx iface;          /* Interface state change tracking */
 };
 
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
@@ -157,7 +159,7 @@ static char *xpath_extract(const char *xpath, const char *key)
 
 static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 			 const char *, const char *xpath, uint32_t,
-			 struct lyd_node **parent, __attribute__((unused)) void *priv)
+			 struct lyd_node **parent, void *priv)
 {
 	char *yanger_args[5] = {
 		YANGER_BINPATH,
@@ -166,6 +168,7 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 		NULL,
 		NULL
 	};
+	struct statd *statd = priv;
 	char *ifname = NULL;
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
@@ -193,6 +196,8 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
 		ERROR("Failed adding yanger data for %s", ifname ?: model);
+	else
+		iface_annotate(&statd->iface, *parent);
 
 	free(ifname);
 	sr_release_context(con);
@@ -382,7 +387,7 @@ static int subscribe(struct statd *statd, char *model, char *xpath,
 	memset(sub, 0, sizeof(struct sub));
 
 	DEBUG("Subscribe to events for \"%s\"", xpath);
-	err = sr_oper_get_subscribe(statd->sr_ses, model, xpath, cb, sub,
+	err = sr_oper_get_subscribe(statd->sr_ses, model, xpath, cb, statd,
 				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
 				    &sub->sr_sub);
 	if (err) {
@@ -596,6 +601,9 @@ int main(int argc, char *argv[])
 	if (mdns_ctx_init(&statd.mdns, statd.ev_loop, statd.sr_conn))
 		INFO("mDNS neighbor monitoring not available");
 
+	if (iface_ctx_init(&statd.iface, statd.ev_loop))
+		WARN("Interface state change tracking not available");
+
 	/* Signal readiness to Finit */
 	pidfile(NULL);
 
@@ -605,6 +613,7 @@ int main(int argc, char *argv[])
 	/* We should never get here during normal operation */
 	INFO("Status daemon shutting down");
 
+	iface_ctx_exit(&statd.iface);
 	mdns_ctx_exit(&statd.mdns);
 	journal_stop(&statd.journal);
 

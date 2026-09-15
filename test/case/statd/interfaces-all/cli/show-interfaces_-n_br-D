@@ -4,6 +4,7 @@ index              : 15
 mtu                : 1500
 operational status : up
 ip forwarding      : disabled
+lower-layer-if     : veth0a.20
 physical address   : 00:a0:85:00:03:00
 ipv4 addresses     : 10.0.0.1/8 (static)
                      192.168.20.1/24 (static)

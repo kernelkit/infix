@@ -39,5 +39,7 @@ image::topology.svg[Verify that All Interface Types Can Be Created topology, ali
 . Verify interfaces 'veth0a.20', 'ethQ.10', 'ethX.30', 'ethQ.10' and 'br-Q.40' are of type 'vlan'
 . Verify GRE interfaces 'gre-v4', 'gre-v6', 'gretap-v4' and 'gretap-v6'
 . Verify VxLAN interfaces 'vxlan-v4' and 'vxlan-v6'
+. Verify higher-layer-if and lower-layer-if of bridge stacks
+. Verify standalone interfaces have no higher-layer-if or lower-layer-if
 
 

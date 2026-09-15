@@ -86,6 +86,9 @@
             }
           ]
         },
+        "higher-layer-if": [
+          "e2.30"
+        ],
         "ieee802-ethernet-interface:ethernet": {
           "auto-negotiation": {
             "enable": false
@@ -108,6 +111,10 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "higher-layer-if": [
+          "br-Q",
+          "e3.10"
+        ],
         "ieee802-ethernet-interface:ethernet": {
           "auto-negotiation": {
             "enable": false
@@ -287,6 +294,12 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "higher-layer-if": [
+          "br-X"
+        ],
+        "lower-layer-if": [
+          "e2"
+        ],
         "infix-interfaces:vlan": {
           "tag-type": "ieee802-dot1q-types:c-vlan",
           "id": 30,
@@ -323,6 +336,9 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "lower-layer-if": [
+          "e2.30"
+        ],
         "infix-interfaces:bridge": {
           "multicast": {
             "snooping": false,
@@ -350,6 +366,9 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "higher-layer-if": [
+          "br-Q"
+        ],
         "infix-interfaces:veth": {
           "peer": "veth0a"
         },
@@ -388,6 +407,9 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "higher-layer-if": [
+          "veth0a.20"
+        ],
         "infix-interfaces:veth": {
           "peer": "veth0b"
         }
@@ -408,6 +430,12 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "higher-layer-if": [
+          "br-D"
+        ],
+        "lower-layer-if": [
+          "veth0a"
+        ],
         "infix-interfaces:vlan": {
           "tag-type": "ieee802-dot1q-types:c-vlan",
           "id": 20,
@@ -471,6 +499,9 @@
             }
           ]
         },
+        "lower-layer-if": [
+          "veth0a.20"
+        ],
         "infix-interfaces:bridge": {
           "multicast": {
             "snooping": false,
@@ -497,6 +528,13 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "higher-layer-if": [
+          "br-Q.40"
+        ],
+        "lower-layer-if": [
+          "e3",
+          "veth0b"
+        ],
         "infix-interfaces:bridge": {
           "vlans": {
             "proto": "ieee802-dot1q-types:c-vlan",
@@ -568,6 +606,9 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "lower-layer-if": [
+          "br-Q"
+        ],
         "infix-interfaces:vlan": {
           "tag-type": "ieee802-dot1q-types:c-vlan",
           "id": 40,
@@ -587,6 +628,9 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
+        "lower-layer-if": [
+          "e3"
+        ],
         "infix-interfaces:vlan": {
           "tag-type": "ieee802-dot1q-types:c-vlan",
           "id": 10,

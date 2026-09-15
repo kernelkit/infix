@@ -26,6 +26,9 @@
         <th>Status</th>
         <td><span class="status-dot {{if .StatusUp}}status-up{{else}}status-down{{end}}"></span>{{.Status}}</td>
       </tr>
+      {{if .LastChange}}<tr><th>Last change{{template "field-info" (index .Desc "last-change")}}</th><td>{{.LastChange}}</td></tr>{{end}}
+      {{if .LowerLayer}}<tr><th>Lower layer{{template "field-info" (index .Desc "lower-layer-if")}}</th><td>{{template "iface-links" .LowerLayer}}</td></tr>{{end}}
+      {{if .HigherLayer}}<tr><th>Higher layer{{template "field-info" (index .Desc "higher-layer-if")}}</th><td>{{template "iface-links" .HigherLayer}}</td></tr>{{end}}
       {{if .PhysAddr}}<tr><th>MAC Address</th><td>{{.PhysAddr}}</td></tr>{{end}}
       {{if .MTU}}<tr><th>MTU{{template "field-info" (index .Desc "mtu")}}</th><td>{{.MTU}}</td></tr>{{end}}
       {{if .Speed}}<tr><th>Speed{{template "field-info" (index .Desc "speed")}}</th><td>{{.Speed}}</td></tr>{{end}}
@@ -176,3 +179,5 @@
 </section>
 {{end}}
 {{end}}
+
+{{define "iface-links"}}{{range $i, $name := .}}{{if $i}}, {{end}}<a href="/interfaces/{{$name}}" hx-get="/interfaces/{{$name}}" hx-target="#content" hx-push-url="true">{{$name}}</a>{{end}}{{end}}

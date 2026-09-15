@@ -19,6 +19,36 @@ slightly longer than sending the entire configuration at once.
 
 import infamy
 import infamy.iface as iface
+from infamy.util import until
+
+
+def layers(target):
+    """Map each interface to its sorted (higher-layer-if, lower-layer-if)"""
+    data = target.get_data("/ietf-interfaces:interfaces")
+    return {
+        entry["name"]: (sorted(entry.get("higher-layer-if", [])),
+                        sorted(entry.get("lower-layer-if", [])))
+        for entry in data["interfaces"]["interface"]
+    }
+
+
+def verify_layers(target, expected):
+    """Verify (higher-layer-if, lower-layer-if) per interface in expected"""
+    expected = {name: (sorted(higher), sorted(lower))
+                for name, (higher, lower) in expected.items()}
+
+    actual = {}
+
+    def matches():
+        actual.update(layers(target))
+        return all(actual.get(name) == want for name, want in expected.items())
+
+    try:
+        until(matches)
+    except Exception as err:
+        diff = {name: (actual.get(name), want)
+                for name, want in expected.items() if actual.get(name) != want}
+        raise AssertionError(f"layer mismatch, (got, expected): {diff}") from err
 
 
 def verify_interface(target, interface, expected_type):
@@ -341,4 +371,30 @@ with infamy.Test() as test:
     with test.step("Verify VxLAN interfaces 'vxlan-v4' and 'vxlan-v6'"):
         verify_interface(target, "vxlan-v4", "vxlan")
         verify_interface(target, "vxlan-v6", "vxlan")
+
+    with test.step("Verify higher-layer-if and lower-layer-if of bridge stacks"):
+        verify_layers(target, {
+            eth_X:     ([eth_X_30], []),
+            eth_X_30:  ([br_X], [eth_X]),
+            br_X:      ([], [eth_X_30]),
+
+            veth_a:    ([veth_a_20], []),
+            veth_a_20: ([br_D], [veth_a]),
+            br_D:      ([], [veth_a_20]),
+
+            eth_Q:     ([br_Q, eth_Q_10], []),
+            veth_b:    ([br_Q], []),
+            eth_Q_10:  ([], [eth_Q]),
+            br_Q:      ([br_Q_40], [eth_Q, veth_b]),
+            br_Q_40:   ([], [br_Q]),
+        })
+
+    with test.step("Verify standalone interfaces have no higher-layer-if or lower-layer-if"):
+        verify_layers(target, {
+            loopback:   ([], []),
+            br_0:       ([], []),
+            "gre-v4":   ([], []),
+            "vxlan-v4": ([], []),
+        })
+
     test.succeed()
