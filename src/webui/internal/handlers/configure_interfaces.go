@@ -1231,8 +1231,8 @@ func (h *ConfigureInterfacesHandler) SaveGeneral(w http.ResponseWriter, r *http.
 	}
 	name := r.PathValue("name")
 	enabled := r.FormValue("enabled") != "false"
-	// PATCH on a list element needs the entry wrapped in a single-element
-	// array, not a bare object — a bare object fails YANG validation (LY_EVALID).
+	// A list element is merged as a single-element array, not a bare
+	// object, which fails YANG validation (LY_EVALID).
 	body := map[string]any{
 		"ietf-interfaces:interface": []map[string]any{{
 			"name":        name,
@@ -1240,28 +1240,20 @@ func (h *ConfigureInterfacesHandler) SaveGeneral(w http.ResponseWriter, r *http.
 			"description": strings.TrimSpace(r.FormValue("description")),
 		}},
 	}
-	if err := h.RC.Patch(r.Context(), ifacePath(name), body); err != nil {
+	p := restconf.NewYangPatch(candidatePath).Merge(ifaceTarget(name), body)
+
+	macTarget := ifaceTarget(name) + "/infix-interfaces:custom-phys-address"
+	if mac := strings.TrimSpace(r.FormValue("mac")); mac != "" {
+		p.Replace(macTarget, map[string]any{
+			"infix-interfaces:custom-phys-address": map[string]any{"static": mac},
+		})
+	} else {
+		p.Remove(macTarget)
+	}
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
 		log.Printf("configure interfaces %s general: %v", name, err)
 		renderSaveError(w, err)
 		return
-	}
-
-	macPath := ifacePath(name) + "/infix-interfaces:custom-phys-address"
-	if mac := strings.TrimSpace(r.FormValue("mac")); mac != "" {
-		macBody := map[string]any{
-			"infix-interfaces:custom-phys-address": map[string]any{"static": mac},
-		}
-		if err := h.RC.Put(r.Context(), macPath, macBody); err != nil {
-			log.Printf("configure interfaces %s mac: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
-	} else {
-		if err := h.RC.Delete(r.Context(), macPath); err != nil && !restconf.IsNotFound(err) {
-			log.Printf("configure interfaces %s mac clear: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
 	}
 
 	renderSaved(w, "Saved")
