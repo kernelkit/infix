@@ -495,7 +495,6 @@ static int export_running(sr_session_ctx_t *sess, const char *path, uint32_t tim
 		return -1;
 	}
 
-	umask(0006);
 	fp = fopen(path, "w");
 	if (!fp) {
 		ERRNO("Failed to open %s for writing", path);
@@ -503,11 +502,13 @@ static int export_running(sr_session_ctx_t *sess, const char *path, uint32_t tim
 		return -1;
 	}
 
+	/* root:wheel for admin group access */
+	if (fchown(fileno(fp), 0, 10) || fchmod(fileno(fp), 0660))
+		ERRNO("Failed setting owner/mode on %s", path);
+
 	lyd_print_file(fp, data ? data->tree : NULL, LYD_JSON, LYD_PRINT_SIBLINGS);
 	fclose(fp);
 	sr_release_data(data);
-
-	chown(path, 0, 10);    /* root:wheel for admin group access */
 
 	return 0;
 }
@@ -661,6 +662,9 @@ int main(int argc, char **argv)
 	};
 
 	opterr = 0;
+	/* Generated files are root-only unless opened with fopenp() */
+	umask(0027);
+
 	while ((opt = getopt_long(argc, argv, "hVv:fF:S:E:t:", options, NULL)) != -1) {
 		switch (opt) {
 		case 'h':

@@ -1,0 +1,45 @@
+From 642c6283e2e495b235f6b44d713a7c56bdf067c0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Fri, 11 Sep 2026 08:55:29 +0200
+Subject: [PATCH 2/2] hostapd: Do not limit the BSSID mask to 40 bits
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+hostapd_validate_bssid_configuration() refused to start when the
+generated BSSID mask needed more than 40 bits, i.e., when the configured
+per-BSS BSSIDs differ from the radio address in the most significant
+octet. That is the case when the BSSIDs are not derived from the OUI of
+the radio address but assigned from a separate, externally managed
+range.
+
+Drop the limit. The mask generation below handles the wider masks
+without change, and the driver is left to reject address combinations it
+cannot support.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/ap/hostapd.c | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index fbcd0218b..3dec46250 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -961,12 +961,6 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
+ 	if (bits < j)
+ 		bits = j;
+ 
+-	if (bits > 40) {
+-		wpa_printf(MSG_ERROR, "Too many bits in the BSSID mask (%u)",
+-			   bits);
+-		return -1;
+-	}
+-
+ 	os_memset(mask, 0xff, ETH_ALEN);
+ 	j = bits / 8;
+ 	for (i = 5; i > 5 - j; i--)
+-- 
+2.43.0
+

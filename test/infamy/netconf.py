@@ -39,6 +39,8 @@ class ModInfo(ModInfoTuple):
 NS = {
     "ietf-netconf-monitoring": "urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring",
     "nc": "urn:ietf:params:xml:ns:netconf:base:1.0",
+    "nmda": "urn:ietf:params:xml:ns:yang:ietf-netconf-nmda",
+    "fd": "urn:ietf:params:xml:ns:yang:ietf-factory-default",
 }
 
 
@@ -279,6 +281,16 @@ class Device(Transport):
         xpath_filter = self._build_xpath_filter(xpath)
         response = self.ncc.get_config(source="running", filter=xpath_filter)
         return self._parse_response(response, True)
+
+    def get_factory(self, xpath=None):
+        """Get factory-default datastore contents matching xpath"""
+        coverage.track_xpath(xpath)
+        xpath_filter = self._build_xpath_filter(xpath, get_data_xpath=True) or ""
+        cmd = f"<get-data xmlns=\"{NS['nmda']}\" xmlns:fd=\"{NS['fd']}\">" \
+            "<datastore>fd:factory-default</datastore>" \
+            f"{xpath_filter}</get-data>"
+        raw, ele = self.ncc._send_rpc(self._ncc_make_rpc(cmd))
+        return self._parse_response(NccGetDataReply(raw, ele), True)
 
     def get_config_dict(self, xpath):
         """Get Python dictionary version of XML configuration"""

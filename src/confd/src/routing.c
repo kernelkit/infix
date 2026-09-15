@@ -300,7 +300,7 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	int num_areas = 0;
 	FILE *fp;
 
-	fp = fopen(OSPFD_CONF_NEXT, "w");
+	fp = fopenp(OSPFD_CONF_NEXT, 0640, "frr");
 	if (!fp) {
 		ERRNO("Failed to open %s", OSPFD_CONF_NEXT);
 		return SR_ERR_INTERNAL;
@@ -448,7 +448,7 @@ static void frr_daemons_write(int ospfd, int ripd, int bfdd)
 	const char *next = FRR_DAEMONS "+";
 	FILE *fp;
 
-	fp = fopen(next, "w");
+	fp = fopenp(next, 0640, "frr");
 	if (!fp) {
 		ERRNO("Failed to open %s", next);
 		return;

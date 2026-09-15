@@ -3,6 +3,21 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.08.2][] - 2026-09-15
+-------------------------
+
+### Changes
+
+- Upgrade Linux kernel to 6.18.52 (LTS)
+- Upgrade Buildroot to 2025.02.18 (LTS)
+- Upgrade FRR to 10.5.5
+
+### Fixes
+
+- Fix Raspberry Pi kernel panic when configuring Wi-Fi, issue #1619
+- Fix OSPF losing its configuration when changed after a factory reset,
+  regression in v26.03.0
+
 [v26.08.1][] - 2026-09-04
 -------------------------
 
@@ -2283,7 +2298,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.08.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.08.1...HEAD
+[v26.08.2]:   https://github.com/kernelkit/infix/compare/v26.08.1...v26.08.2
 [v26.08.1]:   https://github.com/kernelkit/infix/compare/v26.08.0...v26.08.1
 [v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0
 [v26.06.0]:   https://github.com/kernelkit/infix/compare/v26.05.0...v26.06.0

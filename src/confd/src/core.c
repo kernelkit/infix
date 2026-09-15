@@ -4,10 +4,62 @@
 #include <srx/common.h>
 #include <srx/lyx.h>
 
+#include <grp.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "interfaces.h"
 #include "core.h"
 
 struct confd confd;
+
+/*
+ * confd runs with umask 0027, so generated files are readable by root
+ * only.  Use these for files read by a daemon running as another user,
+ * or for the few files that must stay world readable.
+ */
+FILE *fopenp(const char *path, mode_t mode, const char *group)
+{
+	gid_t gid = 0;
+	FILE *fp;
+
+	if (group) {
+		struct group *gr = getgrnam(group);
+
+		if (gr)
+			gid = gr->gr_gid;
+		else
+			ERROR("No group %s, %s will be readable by root only", group, path);
+	}
+
+	fp = fopen(path, "w");
+	if (!fp)
+		return NULL;
+
+	if (fchown(fileno(fp), 0, gid) || fchmod(fileno(fp), mode))
+		ERRNO("Failed setting owner/mode on %s", path);
+
+	return fp;
+}
+
+FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...)
+{
+	va_list ap;
+	char *path;
+	FILE *fp;
+	int len;
+
+	va_start(ap, fmt);
+	len = vasprintf(&path, fmt, ap);
+	va_end(ap);
+	if (len < 0)
+		return NULL;
+
+	fp = fopenp(path, mode, group);
+	free(path);
+
+	return fp;
+}
 
 /*
  * Touch a Finit service .conf file to schedule a synchronized reload.

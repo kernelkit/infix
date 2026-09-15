@@ -225,9 +225,9 @@ class Device(Transport):
         """Wrapper function to get operational datastore"""
         return self.get_datastore("operational", path, parse)
 
-    def get_factory(self, path=None):
-        """Wrapper function to get factory defaults"""
-        return self.get_datastore("factory-default", path)
+    def get_factory(self, xpath=None):
+        """Get factory-default datastore contents matching xpath"""
+        return self.get_datastore("factory-default", xpath)
 
     def post_datastore(self, datastore, data):
         """Actually send a POST to RESTCONF server"""
