@@ -43,6 +43,8 @@ All notable changes to the project are documented in this file.
 ### Fixes
 
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
+- Wi-Fi mesh point interfaces showed an empty `mesh-id` in operational
+  status (CLI and WebUI).
 
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 

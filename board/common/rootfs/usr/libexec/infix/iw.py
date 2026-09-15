@@ -273,7 +273,7 @@ def parse_interface_info(ifname):
         elif stripped.startswith('addr '):
             result['mac'] = stripped.split()[1]
 
-        # SSID (AP mode) or mesh-id (mesh point mode) — kernel uses same attr
+        # SSID, only reported for AP and station interfaces
         elif stripped.startswith('ssid '):
             result['ssid'] = decode_iw_ssid(' '.join(stripped.split()[1:]))
 

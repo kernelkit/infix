@@ -58,14 +58,48 @@ def wifi_ap(ifname):
     return {'access-point': ap_data} if ap_data else {}
 
 
+def decode_wpa_ssid(ssid):
+    """Decode an SSID as wpa_supplicant prints it
+
+    wpa_supplicant runs SSIDs through printf_encode(), so anything
+    outside printable ASCII arrives as \\xHH.  Control characters are
+    dropped, a rogue AP must not get to write escape sequences to a
+    terminal.
+    """
+    try:
+        ssid = ssid.encode().decode('unicode_escape').encode('latin-1').decode('utf-8')
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        pass
+    return ''.join(c for c in ssid if c.isprintable())
+
+
+def get_wpa_status(ifname):
+    """Get wpa_supplicant status as a dict of key=value lines"""
+    data = HOST.run(('wpa_cli', '-i', ifname, 'status'), default='FAIL')
+    if not data or data == 'FAIL':
+        return {}
+
+    status = {}
+    for line in data.splitlines():
+        key, sep, val = line.partition('=')
+        if sep:
+            status[key.strip()] = val.strip()
+
+    return status
+
+
 def wifi_mesh(ifname, info=None):
     """Get operational data for mesh point mode using iw"""
     mesh_data = {}
 
     if info is None:
         info = get_iw_info(ifname)
-    if info.get('ssid'):
-        mesh_data['mesh-id'] = info['ssid']
+    # 'iw dev info' reports no SSID for a mesh interface, so ask
+    # wpa_supplicant, which is the one that joined the mesh.  Absent
+    # until it has, which is the honest answer: no mesh, no mesh id.
+    mesh_id = info.get('ssid') or get_wpa_status(ifname).get('ssid')
+    if mesh_id:
+        mesh_data['mesh-id'] = decode_wpa_ssid(mesh_id)
 
     peers = get_iw_stations(ifname)
     if peers:
@@ -147,13 +181,7 @@ def parse_wpa_scan_result(scan_output):
                     continue
 
                 flags = parts[3].strip()
-                ssid = parts[4].strip() if len(parts) > 4 else ""
-                try:
-                    ssid = ssid.encode().decode('unicode_escape').encode('latin-1').decode('utf-8')
-                except (UnicodeDecodeError, UnicodeEncodeError):
-                    pass
-                # Strip control chars (terminal injection risk from rogue APs)
-                ssid = ''.join(c for c in ssid if c.isprintable())
+                ssid = decode_wpa_ssid(parts[4].strip() if len(parts) > 4 else "")
 
                 # Skip hidden SSIDs (empty or null-filled)
                 if not ssid or ssid.isspace():
