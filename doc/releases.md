@@ -37,6 +37,11 @@ of the series; what moves is the patch level, e.g., Linux 6.18.48 →
 drivers, new behavior, and new regressions, so it only ever happens on
 `main`, in a new series.
 
+The Buildroot LTS is tracked in a fork where a handful of critical
+packages -- the routing stack (FRR), for one -- are kept newer than the
+LTS itself ships.  Those upgrades travel with the Buildroot bump, and
+each gets its own line in the ChangeLog, so they are never a surprise.
+
 ![Where kernel and Buildroot LTS updates go](img/release-branches.svg)
 
 ## Levels of Maintenance
@@ -78,7 +83,8 @@ When a patch release *is* scheduled, the same recipe applies every time:
 
 1. The fix, or fixes, that motivated the release
 2. The latest kernel LTS patch level, ported from `main`
-3. The latest Buildroot LTS patch level, ported from `main`
+3. The latest Buildroot LTS patch level, ported from `main`, along with
+   the package upgrades the fork carries at that point
 
 The last two are the important part.  Someone who takes v26.08.2 for a
 single file permission fix also receives every kernel and Buildroot
@@ -86,10 +92,10 @@ security fix published since v26.08.1, which is usually the larger part
 of their exposure.
 
 > [!IMPORTANT]
-> Ported means the *patch level* only: 6.18.49 → 6.18.51 and 2025.02.17
-> → 2025.02.18.  A patch release never moves to another LTS line, never
-> adds features, and never changes the YANG models, so a device can take
-> it without a configuration migration.
+> Ported means the *patch level* only: 6.18.49 → 6.18.51, 2025.02.17 →
+> 2025.02.18, FRR 10.5.4 → 10.5.5.  A patch release never moves to
+> another LTS line, never adds features, and never changes the YANG
+> models, so a device can take it without a configuration migration.
 
 ### Infix LTS (Commercial)
 
