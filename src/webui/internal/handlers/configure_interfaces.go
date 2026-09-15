@@ -24,7 +24,8 @@ import (
 	"infix/webui/internal/schema"
 )
 
-const ifaceCandPath = candidatePath + "/ietf-interfaces:interfaces"
+const ifaceRoot = "/ietf-interfaces:interfaces"
+const ifaceCandPath = candidatePath + ifaceRoot
 
 // ─── RESTCONF JSON structs (configure-only fields) ───────────────────────────
 
@@ -1828,13 +1829,9 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 		renderSaveError(w, fmt.Errorf("mode must be 'station', 'access-point' or 'mesh-point'"))
 		return
 	}
-	wifi := map[string]any{"radio": radio, mode: leaf}
-	body := map[string]any{"infix-interfaces:wifi": wifi}
-	if err := h.RC.Put(r.Context(), ifacePath(name)+"/infix-interfaces:wifi", body); err != nil {
-		log.Printf("configure interfaces %s wifi: %v", name, err)
-		renderSaveError(w, err)
-		return
-	}
+	// Both halves go in one patch, so a rejected save leaves the
+	// candidate untouched.
+	p := restconf.NewYangPatch(candidatePath)
 	// Radio half, only when the form actually carried a country (the
 	// wifi-radio container's mandatory leaf). Without it parseWiFiRadio
 	// would reject a form whose user only touched the WiFi side and left
@@ -1845,7 +1842,7 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 			renderSaveError(w, err)
 			return
 		}
-		hw := map[string]any{
+		p.Merge(hwRoot, map[string]any{
 			"ietf-hardware:hardware": map[string]any{
 				"component": []map[string]any{{
 					"name":                      radio,
@@ -1853,12 +1850,14 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 					"infix-hardware:wifi-radio": rc,
 				}},
 			},
-		}
-		if err := h.RC.Patch(r.Context(), candidatePath, hw); err != nil {
-			log.Printf("configure interfaces %s wifi radio %s: %v", name, radio, err)
-			renderSaveError(w, err)
-			return
-		}
+		})
+	}
+	wifi := map[string]any{"radio": radio, mode: leaf}
+	p.Replace(ifaceTarget(name)+"/infix-interfaces:wifi", map[string]any{"infix-interfaces:wifi": wifi})
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s wifi: %v", name, err)
+		renderSaveError(w, err)
+		return
 	}
 	renderSaved(w, "WiFi saved")
 }
@@ -1995,7 +1994,13 @@ func (h *ConfigureInterfacesHandler) SaveLAGMembers(w http.ResponseWriter, r *ht
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 func ifacePath(name string) string {
-	return ifaceCandPath + "/interface=" + url.PathEscape(name)
+	return candidatePath + ifaceTarget(name)
+}
+
+// ifaceTarget is the interface's path relative to the datastore, the form
+// a YangPatch edit on the candidate takes.
+func ifaceTarget(name string) string {
+	return ifaceRoot + "/interface=" + url.PathEscape(name)
 }
 
 // indexWifiRadios picks WiFi radio components out of the hardware

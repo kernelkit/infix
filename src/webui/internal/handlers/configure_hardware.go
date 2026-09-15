@@ -28,7 +28,8 @@ import (
 // Status > Hardware shows the full detected inventory (sensors, chassis,
 // VPD, …) — this page stays focused on what the user can configure.
 
-const hwCandPath = candidatePath + "/ietf-hardware:hardware"
+const hwRoot = "/ietf-hardware:hardware"
+const hwCandPath = candidatePath + hwRoot
 
 // hwCompCfgRow is one configured component in the main table. Per-class
 // fields are populated only for the matching Class. IsUSB/IsWiFi/IsGPS
