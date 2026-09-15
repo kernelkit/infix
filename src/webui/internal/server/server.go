@@ -4,7 +4,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -157,44 +156,7 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	ifFuncs := template.FuncMap{
-		"shortPMD": handlers.ShortenPMD,
-		"add":      func(a, b int) int { return a + b },
-		"deref": func(v any) any {
-			switch p := v.(type) {
-			case *bool:
-				if p != nil {
-					return *p
-				}
-			case *uint32:
-				if p != nil {
-					return *p
-				}
-			case *int:
-				if p != nil {
-					return *p
-				}
-			}
-			return nil
-		},
-		// dict lets callers pass keyed args to nested templates, e.g.
-		// {{template "foo" (dict "Key" .X "Selected" "")}}.
-		"dict": func(values ...any) (map[string]any, error) {
-			if len(values)%2 != 0 {
-				return nil, fmt.Errorf("dict: odd argument count")
-			}
-			m := make(map[string]any, len(values)/2)
-			for i := 0; i < len(values); i += 2 {
-				k, ok := values[i].(string)
-				if !ok {
-					return nil, fmt.Errorf("dict: non-string key at position %d", i)
-				}
-				m[k] = values[i+1]
-			}
-			return m, nil
-		},
-	}
-	cfgIfTmpl, err := template.New("").Funcs(ifFuncs).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html", "fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
+	cfgIfTmpl, err := template.New("").Funcs(handlers.IfaceTemplateFuncs()).ParseFS(templateFS, "layouts/*.html", "fragments/configure-toolbar.html", "fragments/wizard-psk-picker.html", "fragments/wizard-wgkey-picker.html", "fragments/wizard-radio-picker.html", "pages/configure-interfaces.html")
 	if err != nil {
 		return nil, err
 	}

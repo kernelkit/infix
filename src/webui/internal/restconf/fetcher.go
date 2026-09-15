@@ -21,6 +21,7 @@ type Fetcher interface {
 	Put(ctx context.Context, path string, body any) error
 	Patch(ctx context.Context, path string, body any) error
 	Delete(ctx context.Context, path string) error
+	YangPatch(ctx context.Context, p *YangPatch) error
 
 	GetDatastore(ctx context.Context, datastore string) (json.RawMessage, error)
 	PutDatastore(ctx context.Context, datastore string, body json.RawMessage) error

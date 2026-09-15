@@ -3,7 +3,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -592,7 +591,7 @@ func (h *ConfigureSystemHandler) SavePreferences(w http.ResponseWriter, r *http.
 // renderSaved writes a success indicator for HTMX to swap into the Save button.
 func renderSaved(w http.ResponseWriter, msg string) {
 	w.Header().Set("Content-Type", "text/html")
-	w.Header().Set("HX-Trigger", `{"cfgSaved":"`+msg+`"}`)
+	hxTrigger(w, "cfgSaved", msg)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -600,8 +599,7 @@ func renderSaved(w http.ResponseWriter, msg string) {
 // the given page path (targeting #content). Use this instead of a bare HX-Location
 // for Add/Delete operations that redirect back to the listing page after success.
 func renderSavedRedirect(w http.ResponseWriter, msg, path string) {
-	b, _ := json.Marshal(msg)
-	w.Header().Set("HX-Trigger", `{"cfgSaved":`+string(b)+`}`)
+	hxTrigger(w, "cfgSaved", msg)
 	w.Header().Set("HX-Location", `{"path":"`+path+`","target":"#content"}`)
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -619,8 +617,7 @@ func renderSaveError(w http.ResponseWriter, err error) {
 		msg = err.Error()
 	}
 	w.Header().Set("Content-Type", "text/html")
-	b, _ := json.Marshal(msg)
-	w.Header().Set("HX-Trigger", `{"cfgError":`+string(b)+`}`)
+	hxTrigger(w, "cfgError", msg)
 	w.WriteHeader(http.StatusUnprocessableEntity)
 	w.Write([]byte(`<span class="cfg-save-error">` + template.HTMLEscapeString(msg) + `</span>`))
 }

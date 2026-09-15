@@ -24,7 +24,8 @@ import (
 	"infix/webui/internal/schema"
 )
 
-const ifaceCandPath = candidatePath + "/ietf-interfaces:interfaces"
+const ifaceRoot = "/ietf-interfaces:interfaces"
+const ifaceCandPath = candidatePath + ifaceRoot
 
 // ─── RESTCONF JSON structs (configure-only fields) ───────────────────────────
 
@@ -106,7 +107,7 @@ type cfgIfaceRow struct {
 	IsLagPort       bool
 	IsVlan          bool
 	IsWifi          bool
-	WifiMode        string // "station" or "access-point" once known
+	WifiMode        string // "station", "access-point" or "mesh-point" once known
 	HasIP           bool // can carry IP addresses
 	// ParentBridgeIs8021Q says whether the bridge this port is attached
 	// to has VLAN filtering on. PVID only makes sense in that mode, so
@@ -290,7 +291,17 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"wg-key":             descOr(mgr, ifPath+"/infix-interfaces:wireguard/private-key", "Reference to the WireGuard private key (X25519/Curve25519) stored in the keystore."),
 			"wg-port":            descOr(mgr, ifPath+"/infix-interfaces:wireguard/listen-port", "Local UDP port to listen on for incoming WireGuard traffic (default 51820)."),
 			"wifi-radio":         descOr(mgr, ifPath+"/infix-interfaces:wifi/radio", "Parent WiFi radio (hardware component, class=wifi). Configure the radio's band, channel, and country code in Configure › Hardware first."),
-			"wifi-mode":          "Station (client) connects to an existing AP. Access Point creates a network that clients join. Only one Station per radio; multiple APs per radio supported.",
+			"wifi-mode":          "Station (client) connects to an existing AP. Access Point creates a network that clients join. Mesh Point forms an 802.11s peer-to-peer link with other mesh points. One Station or Mesh Point per radio; multiple APs per radio supported. AP and Mesh Point cannot share a radio.",
+			"wifi-mesh-id":       descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/mesh-id", "Mesh network identifier (1–32 characters). All mesh points that should form one mesh must use the same mesh ID."),
+			"wifi-forwarding":    descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/forwarding", "Layer-2 mesh forwarding. Leave on to let this node relay traffic for other mesh points and to bridge the mesh interface into a LAN (mesh portal). Off means only locally destined traffic is received."),
+			"wifi-mesh-secret":   descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/security/secret", "Pre-shared key reference for the WPA3-SAE mesh. All mesh points in the same mesh must share the same key."),
+			"wifi-dot11k":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11k", "802.11k Radio Resource Management: neighbor and beacon reports let clients discover nearby APs before roaming."),
+			"wifi-dot11r":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r", "802.11r Fast BSS Transition: pre-authentication cuts handoff time to under 50 ms. Requires WPA2/WPA3 security, plus identical SSID, passphrase and mobility domain on all APs in the group."),
+			"wifi-dot11r-md":     descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/mobility-domain", "802.11r mobility domain: four hex digits shared by every AP clients roam between, or 'hash' to derive it from the SSID (OpenWrt-compatible)."),
+			"wifi-dot11r-nas":    descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/nas-identifier", "NAS-Identifier for 802.11r key lookup, unique per AP. 'auto' derives <interface>-<hostname>.<mobility-domain>."),
+			"wifi-dot11v":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11v", "802.11v BSS Transition Management: lets the AP suggest a better AP to clients (network-assisted roaming)."),
+			"wifi-band-steering": descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11v/band-steering", "Multi-Band Operation (MBO) band steering nudges dual-band clients toward 5/6 GHz. Only matters when the same SSID is offered on more than one band."),
+			"wifi-okc":           descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/okc", "Opportunistic Key Caching speeds up re-authentication for roaming clients without 802.11r. Safe to leave on; only used when both AP and client support it."),
 			"wifi-ssid":          descOr(mgr, ifPath+"/infix-interfaces:wifi/station/ssid", "WiFi network name (1–32 characters). Case-sensitive; must match the target network for Station mode."),
 			"wifi-sec-mode":      descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/mode", "Security mode. Open is unencrypted (insecure). For AP: wpa2-wpa3-personal is recommended for compatibility + security."),
 			"wifi-secret":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/security/secret", "Pre-shared key reference — a symmetric key in the keystore. 8–63 characters per the WPA spec."),
@@ -753,7 +764,7 @@ func (h *ConfigureInterfacesHandler) CreateInterface(w http.ResponseWriter, r *h
 		}
 		mode := r.FormValue("wifi-mode")
 		ssid := strings.TrimSpace(r.FormValue("ssid"))
-		if ssid == "" {
+		if ssid == "" && mode != "mesh-point" {
 			renderSaveError(w, fmt.Errorf("SSID is required"))
 			return
 		}
@@ -794,8 +805,15 @@ func (h *ConfigureInterfacesHandler) CreateInterface(w http.ResponseWriter, r *h
 			}
 			sta["security"] = security
 			wifi["station"] = sta
+		case "mesh-point":
+			mp, err := wifiMeshPointFromForm(r)
+			if err != nil {
+				renderSaveError(w, err)
+				return
+			}
+			wifi["mesh-point"] = mp
 		default:
-			renderSaveError(w, fmt.Errorf("WiFi mode must be 'station' or 'access-point'"))
+			renderSaveError(w, fmt.Errorf("WiFi mode must be 'station', 'access-point' or 'mesh-point'"))
 			return
 		}
 		iface["infix-interfaces:wifi"] = wifi
@@ -1213,8 +1231,8 @@ func (h *ConfigureInterfacesHandler) SaveGeneral(w http.ResponseWriter, r *http.
 	}
 	name := r.PathValue("name")
 	enabled := r.FormValue("enabled") != "false"
-	// PATCH on a list element needs the entry wrapped in a single-element
-	// array, not a bare object — a bare object fails YANG validation (LY_EVALID).
+	// A list element is merged as a single-element array, not a bare
+	// object, which fails YANG validation (LY_EVALID).
 	body := map[string]any{
 		"ietf-interfaces:interface": []map[string]any{{
 			"name":        name,
@@ -1222,28 +1240,20 @@ func (h *ConfigureInterfacesHandler) SaveGeneral(w http.ResponseWriter, r *http.
 			"description": strings.TrimSpace(r.FormValue("description")),
 		}},
 	}
-	if err := h.RC.Patch(r.Context(), ifacePath(name), body); err != nil {
+	p := restconf.NewYangPatch(candidatePath).Merge(ifaceTarget(name), body)
+
+	macTarget := ifaceTarget(name) + "/infix-interfaces:custom-phys-address"
+	if mac := strings.TrimSpace(r.FormValue("mac")); mac != "" {
+		p.Replace(macTarget, map[string]any{
+			"infix-interfaces:custom-phys-address": map[string]any{"static": mac},
+		})
+	} else {
+		p.Remove(macTarget)
+	}
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
 		log.Printf("configure interfaces %s general: %v", name, err)
 		renderSaveError(w, err)
 		return
-	}
-
-	macPath := ifacePath(name) + "/infix-interfaces:custom-phys-address"
-	if mac := strings.TrimSpace(r.FormValue("mac")); mac != "" {
-		macBody := map[string]any{
-			"infix-interfaces:custom-phys-address": map[string]any{"static": mac},
-		}
-		if err := h.RC.Put(r.Context(), macPath, macBody); err != nil {
-			log.Printf("configure interfaces %s mac: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
-	} else {
-		if err := h.RC.Delete(r.Context(), macPath); err != nil && !restconf.IsNotFound(err) {
-			log.Printf("configure interfaces %s mac clear: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
 	}
 
 	renderSaved(w, "Saved")
@@ -1292,9 +1302,8 @@ func (h *ConfigureInterfacesHandler) SaveEthernet(w http.ResponseWriter, r *http
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	ctx := r.Context()
 	name := r.PathValue("name")
-	base := ifacePath(name) + "/ieee802-ethernet-interface:ethernet"
+	base := ifaceTarget(name) + "/ieee802-ethernet-interface:ethernet"
 
 	autoneg := r.FormValue("autoneg") == "on"
 	var adv []string
@@ -1304,55 +1313,42 @@ func (h *ConfigureInterfacesHandler) SaveEthernet(w http.ResponseWriter, r *http
 		}
 	}
 
-	// auto-negotiation: PUT the whole container so an empty advertised list
-	// actually clears stale entries.  DELETE on an unqualified leaf-list
-	// path fails ("requires exactly one key") under RFC 8040, so omitting
-	// the leaf-list from a container PUT is the cleanest clear.  Safe here
-	// because the container only carries enable + advertised-pmd-types
-	// (negotiation-status is deviate-not-supported in Infix).
+	// auto-negotiation: replace the whole container so an empty advertised
+	// list actually clears stale entries; a leaf-list can't be removed by
+	// an unqualified path.  Safe here because the container only carries
+	// enable + advertised-pmd-types (negotiation-status is
+	// deviate-not-supported in Infix).
 	an := map[string]any{"enable": autoneg}
 	if len(adv) > 0 {
 		an["infix-ethernet-interface:advertised-pmd-types"] = adv
 	}
-	body := map[string]any{"ieee802-ethernet-interface:auto-negotiation": an}
-	if err := h.RC.Put(ctx, base+"/auto-negotiation", body); err != nil {
-		log.Printf("configure interfaces %s ethernet autoneg: %v", name, err)
-		renderSaveError(w, err)
-		return
-	}
+	p := restconf.NewYangPatch(candidatePath).Replace(base+"/auto-negotiation",
+		map[string]any{"ieee802-ethernet-interface:auto-negotiation": an})
 
-	// duplex: PATCH if user picked full/half, DELETE on Auto
+	// duplex: set if user picked full/half, remove on Auto
 	if d := r.FormValue("duplex"); d != "" {
-		body := map[string]any{
+		p.Merge(base, map[string]any{
 			"ieee802-ethernet-interface:ethernet": map[string]any{"duplex": d},
-		}
-		if err := h.RC.Patch(ctx, base, body); err != nil {
-			log.Printf("configure interfaces %s ethernet duplex: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
-	} else if err := h.RC.Delete(ctx, base+"/duplex"); err != nil && !restconf.IsDataMissing(err) {
-		log.Printf("configure interfaces %s ethernet duplex delete: %v", name, err)
-		renderSaveError(w, err)
-		return
+		})
+	} else {
+		p.Remove(base + "/duplex")
 	}
 
 	// mdi-x: only valid when autoneg is off (YANG when).  On autoneg=true
-	// or user picks Auto-MDIX, DELETE so the leaf stays absent.
+	// or user picks Auto-MDIX, remove so the leaf stays absent.
 	mdix := r.FormValue("mdix")
 	if !autoneg && (mdix == "true" || mdix == "false") {
-		body := map[string]any{
+		p.Merge(base, map[string]any{
 			"ieee802-ethernet-interface:ethernet": map[string]any{
 				"infix-ethernet-interface:mdi-x": mdix == "true",
 			},
-		}
-		if err := h.RC.Patch(ctx, base, body); err != nil {
-			log.Printf("configure interfaces %s ethernet mdi-x: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
-	} else if err := h.RC.Delete(ctx, base+"/infix-ethernet-interface:mdi-x"); err != nil && !restconf.IsDataMissing(err) {
-		log.Printf("configure interfaces %s ethernet mdi-x delete: %v", name, err)
+		})
+	} else {
+		p.Remove(base + "/infix-ethernet-interface:mdi-x")
+	}
+
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s ethernet: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
@@ -1546,36 +1542,30 @@ func (h *ConfigureInterfacesHandler) SaveBridge(w http.ResponseWriter, r *http.R
 		bridge["stp"] = stp
 	}
 
+	p := restconf.NewYangPatch(candidatePath)
 	if len(bridge) > 0 {
-		body := map[string]any{"infix-interfaces:bridge": bridge}
-		if err := h.RC.Patch(r.Context(), ifacePath(name)+"/infix-interfaces:bridge", body); err != nil {
-			log.Printf("configure interfaces %s bridge: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
+		p.Merge(ifaceTarget(name)+"/infix-interfaces:bridge", map[string]any{"infix-interfaces:bridge": bridge})
 	}
 
 	// The bridge type choice is expressed via the vlans presence container:
 	// 802.1Q = vlans container present; 802.1D = vlans container absent.
-	vlansPath := ifacePath(name) + "/infix-interfaces:bridge/vlans"
+	// Merge rather than replace, so an existing VLAN table survives a save.
+	vlansTarget := ifaceTarget(name) + "/infix-interfaces:bridge/vlans"
 	if r.FormValue("bridge-type") == "ieee8021q" {
-		body := map[string]any{"vlans": map[string]any{}}
-		if err := h.RC.Put(r.Context(), vlansPath, body); err != nil {
-			log.Printf("configure interfaces %s bridge type 8021q: %v", name, err)
-			renderSaveError(w, err)
-			return
-		}
+		p.Merge(vlansTarget, map[string]any{"infix-interfaces:vlans": map[string]any{}})
 	} else {
-		if err := h.RC.Delete(r.Context(), vlansPath); err != nil {
-			// 404 is fine — vlans already absent (802.1D)
-			log.Printf("configure interfaces %s bridge type 8021d (delete vlans): %v", name, err)
-		}
+		p.Remove(vlansTarget)
 	}
 
-	if err := h.applyMembersDiff(r, name, "bridge",
+	if err := h.addMembersDiff(r, p, name, "bridge",
 		func(iface ifaceJSON, master string) bool {
 			return iface.BridgePort != nil && iface.BridgePort.Bridge == master
 		}); err != nil {
+		renderSaveError(w, err)
+		return
+	}
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s bridge: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
@@ -1752,12 +1742,13 @@ func (h *ConfigureInterfacesHandler) SaveBridgeMulticast(w http.ResponseWriter, 
 	renderSaved(w, "Multicast saved")
 }
 
-// SaveWifi PATCHes the WiFi interface container plus, when the form
-// also carries radio fields, the mirrored wifi-radio component — both
-// in a single PATCH on the candidate root so the interface SSID/sec
-// and the radio's country/band/channel land atomically. The mode
-// (station vs access-point) is fixed at wizard-create time and not
-// switched here.
+// SaveWifi replaces the interface's wifi container whole (radio plus the
+// mode container) so unticked presence containers and leaves reverted to
+// their defaults actually go away, then PATCHes the mirrored wifi-radio
+// component when the form also carried radio fields. Replacing the
+// container is also what lets the editor switch an interface between
+// station, access-point and mesh-point: the mode left behind goes away
+// with the rest.
 // POST /configure/interfaces/{name}/wifi
 func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -1766,61 +1757,152 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 	}
 	name := r.PathValue("name")
 	mode := r.FormValue("mode")
-	if mode != "station" && mode != "access-point" {
-		renderSaveError(w, fmt.Errorf("mode must be 'station' or 'access-point'"))
+	radio := strings.TrimSpace(r.FormValue("radio"))
+	if radio == "" {
+		renderSaveError(w, fmt.Errorf("a WiFi radio reference is required"))
 		return
 	}
-	leaf := map[string]any{"ssid": r.FormValue("ssid")}
-	if secMode := r.FormValue("sec-mode"); secMode != "" {
-		sec := map[string]any{"mode": secMode}
-		if secret := r.FormValue("secret"); secret != "" {
-			sec["secret"] = secret
+	var leaf map[string]any
+	switch mode {
+	case "station", "access-point":
+		leaf = map[string]any{"ssid": r.FormValue("ssid")}
+		secMode := r.FormValue("sec-mode")
+		if secMode != "" {
+			sec := map[string]any{"mode": secMode}
+			if secret := r.FormValue("secret"); secret != "" {
+				sec["secret"] = secret
+			}
+			leaf["security"] = sec
 		}
-		leaf["security"] = sec
+		if mode == "access-point" {
+			if r.FormValue("hidden") == "on" {
+				leaf["hidden"] = true
+			}
+			roaming, err := wifiRoamingFromForm(r)
+			if err != nil {
+				renderSaveError(w, err)
+				return
+			}
+			if _, ok := roaming["dot11r"]; ok && secMode == "open" {
+				renderSaveError(w, fmt.Errorf("802.11r requires WPA2/WPA3 security, not an open network"))
+				return
+			}
+			if len(roaming) > 0 {
+				leaf["roaming"] = roaming
+			}
+		}
+	case "mesh-point":
+		var err error
+		if leaf, err = wifiMeshPointFromForm(r); err != nil {
+			renderSaveError(w, err)
+			return
+		}
+	default:
+		renderSaveError(w, fmt.Errorf("mode must be 'station', 'access-point' or 'mesh-point'"))
+		return
 	}
-	if mode == "access-point" {
-		leaf["hidden"] = r.FormValue("hidden") == "on"
-	}
-	wifi := map[string]any{mode: leaf}
-	// Picker change re-binds the wifi/radio leaf so the user can move
-	// the interface to a different (already-configured) radio.
-	if radioRef := strings.TrimSpace(r.FormValue("radio")); radioRef != "" {
-		wifi["radio"] = radioRef
-	}
-	iface := map[string]any{
-		"name":                  name,
-		"infix-interfaces:wifi": wifi,
-	}
-	body := map[string]any{
-		"ietf-interfaces:interfaces": map[string]any{
-			"interface": []map[string]any{iface},
-		},
-	}
-	// Radio half of the atomic write — only when the form actually
-	// carried a country (the wifi-radio container's mandatory leaf).
-	// Without it parseWiFiRadio would reject a form whose user only
-	// touched the WiFi side and left the radio fields untouched-empty.
-	radio := strings.TrimSpace(r.FormValue("radio"))
-	if radio != "" && strings.TrimSpace(r.FormValue("country-code")) != "" {
+	// Both halves go in one patch, so a rejected save leaves the
+	// candidate untouched.
+	p := restconf.NewYangPatch(candidatePath)
+	// Radio half, only when the form actually carried a country (the
+	// wifi-radio container's mandatory leaf). Without it parseWiFiRadio
+	// would reject a form whose user only touched the WiFi side and left
+	// the radio fields untouched-empty.
+	if strings.TrimSpace(r.FormValue("country-code")) != "" {
 		rc, err := parseWiFiRadio(r)
 		if err != nil {
 			renderSaveError(w, err)
 			return
 		}
-		body["ietf-hardware:hardware"] = map[string]any{
-			"component": []map[string]any{{
-				"name":                      radio,
-				"class":                     "infix-hardware:wifi",
-				"infix-hardware:wifi-radio": rc,
-			}},
-		}
+		p.Merge(hwRoot, map[string]any{
+			"ietf-hardware:hardware": map[string]any{
+				"component": []map[string]any{{
+					"name":                      radio,
+					"class":                     "infix-hardware:wifi",
+					"infix-hardware:wifi-radio": rc,
+				}},
+			},
+		})
 	}
-	if err := h.RC.Patch(r.Context(), candidatePath, body); err != nil {
+	wifi := map[string]any{"radio": radio, mode: leaf}
+	p.Replace(ifaceTarget(name)+"/infix-interfaces:wifi", map[string]any{"infix-interfaces:wifi": wifi})
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
 		log.Printf("configure interfaces %s wifi: %v", name, err)
 		renderSaveError(w, err)
 		return
 	}
 	renderSaved(w, "WiFi saved")
+}
+
+// wifiMeshPointFromForm builds the mesh-point container from the wizard
+// or editor form. Both post the forwarding checkbox with a hidden "false"
+// companion, so only an explicit "false" is written; absent means the
+// YANG default (true).
+func wifiMeshPointFromForm(r *http.Request) (map[string]any, error) {
+	meshID := strings.TrimSpace(r.FormValue("mesh-id"))
+	if meshID == "" {
+		return nil, fmt.Errorf("mesh ID is required")
+	}
+	secret := strings.TrimSpace(r.FormValue("secret"))
+	if secret == "" {
+		return nil, fmt.Errorf("a PSK is required for mesh mode (WPA3-SAE)")
+	}
+	mp := map[string]any{
+		"mesh-id":  meshID,
+		"security": map[string]any{"secret": secret},
+	}
+	if r.FormValue("forwarding") == "false" {
+		mp["forwarding"] = false
+	}
+	return mp, nil
+}
+
+// wifiRoamingFromForm builds the access-point/roaming container from the
+// editor's checkboxes. Leaves at their YANG default (okc, band-steering,
+// blank mobility-domain and NAS identifier) are left out so the config
+// only carries what the user changed.
+func wifiRoamingFromForm(r *http.Request) (map[string]any, error) {
+	roaming := map[string]any{}
+	if r.FormValue("okc") != "on" {
+		roaming["okc"] = false
+	}
+	if r.FormValue("dot11k") == "on" {
+		roaming["dot11k"] = map[string]any{}
+	}
+	if r.FormValue("dot11r") == "on" {
+		dot11r := map[string]any{}
+		md := strings.ToLower(strings.TrimSpace(r.FormValue("mobility-domain")))
+		if md != "" {
+			if md != "hash" && !isHex4(md) {
+				return nil, fmt.Errorf("mobility domain must be four hex digits or 'hash'")
+			}
+			dot11r["mobility-domain"] = md
+		}
+		if nas := strings.TrimSpace(r.FormValue("nas-identifier")); nas != "" {
+			dot11r["nas-identifier"] = nas
+		}
+		roaming["dot11r"] = dot11r
+	}
+	if r.FormValue("dot11v") == "on" {
+		dot11v := map[string]any{}
+		if r.FormValue("band-steering") != "on" {
+			dot11v["band-steering"] = false
+		}
+		roaming["dot11v"] = dot11v
+	}
+	return roaming, nil
+}
+
+func isHex4(s string) bool {
+	if len(s) != 4 {
+		return false
+	}
+	for _, c := range s {
+		if !strings.ContainsRune("0123456789abcdef", c) {
+			return false
+		}
+	}
+	return true
 }
 
 // DeleteLagPort detaches an interface from its LAG.
@@ -1884,7 +1966,13 @@ func (h *ConfigureInterfacesHandler) SaveLAGMembers(w http.ResponseWriter, r *ht
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 func ifacePath(name string) string {
-	return ifaceCandPath + "/interface=" + url.PathEscape(name)
+	return candidatePath + ifaceTarget(name)
+}
+
+// ifaceTarget is the interface's path relative to the datastore, the form
+// a YangPatch edit on the candidate takes.
+func ifaceTarget(name string) string {
+	return ifaceRoot + "/interface=" + url.PathEscape(name)
 }
 
 // indexWifiRadios picks WiFi radio components out of the hardware
@@ -1916,17 +2004,23 @@ func indexWifiRadios(comps []hwComponentJSON) map[string]*ifaceRadioMirror {
 // kind is "bridge" or "lag"; it determines the YANG augment path and body key.
 func (h *ConfigureInterfacesHandler) saveMembersDiff(w http.ResponseWriter, r *http.Request,
 	masterName, kind string, isMember func(ifaceJSON, string) bool, successMsg string) {
-	if err := h.applyMembersDiff(r, masterName, kind, isMember); err != nil {
+	p := restconf.NewYangPatch(candidatePath)
+	if err := h.addMembersDiff(r, p, masterName, kind, isMember); err != nil {
+		renderSaveError(w, err)
+		return
+	}
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s %s members: %v", kind, masterName, err)
 		renderSaveError(w, err)
 		return
 	}
 	renderSaved(w, successMsg)
 }
 
-// applyMembersDiff is the no-response-writing core of saveMembersDiff so it
-// can be reused by callers that compose multiple save steps (e.g. SaveBridge
-// which writes type + members in one form submission).
-func (h *ConfigureInterfacesHandler) applyMembersDiff(r *http.Request,
+// addMembersDiff adds the membership edits to p without sending them, so
+// callers that save more than membership (SaveBridge: type + members) can
+// put everything in one patch.
+func (h *ConfigureInterfacesHandler) addMembersDiff(r *http.Request, p *restconf.YangPatch,
 	masterName, kind string, isMember func(ifaceJSON, string) bool) error {
 
 	ifaces, err := h.fetchAllInterfaces(r.Context())
@@ -1946,19 +2040,12 @@ func (h *ConfigureInterfacesHandler) applyMembersDiff(r *http.Request,
 		}
 		currentlyMember := isMember(iface, masterName)
 		wantMember := submitted[iface.Name]
-		portPath := ifacePath(iface.Name) + "/" + portKey
+		portTarget := ifaceTarget(iface.Name) + "/" + portKey
 
 		if wantMember && !currentlyMember {
-			body := map[string]any{portKey: map[string]any{kind: masterName}}
-			if err := h.RC.Put(r.Context(), portPath, body); err != nil {
-				log.Printf("configure interfaces %s members add %s→%s: %v", kind, iface.Name, masterName, err)
-				return err
-			}
+			p.Replace(portTarget, map[string]any{portKey: map[string]any{kind: masterName}})
 		} else if !wantMember && currentlyMember {
-			if err := h.RC.Delete(r.Context(), portPath); err != nil {
-				log.Printf("configure interfaces %s members remove %s from %s: %v", kind, iface.Name, masterName, err)
-				return err
-			}
+			p.Remove(portTarget)
 		}
 	}
 	return nil
@@ -2063,6 +2150,8 @@ func (h *ConfigureInterfacesHandler) buildRows(ifaces []ifaceJSON, oper []ifaceJ
 				row.WifiMode = "access-point"
 			case iface.WiFi.Station != nil:
 				row.WifiMode = "station"
+			case iface.WiFi.MeshPoint != nil:
+				row.WifiMode = "mesh-point"
 			}
 		}
 		row.EthAutoneg = true // YANG default when no candidate value is set
@@ -2241,10 +2330,9 @@ func (h *ConfigureInterfacesHandler) deleteAddr(w http.ResponseWriter, r *http.R
 	h.renderIPBlock(w, r, name, famCap, frag, "Address removed")
 }
 
-// SaveIPv4Settings PATCHes the per-interface IPv4 group settings — forwarding
-// leaf plus the DHCP-client and link-local autoconf presence containers — in
-// a single round trip from the IPv4 settings form. Each presence container is
-// PUT (enable) or DELETE (disable) per checkbox state; forwarding is PATCHed.
+// SaveIPv4Settings saves the per-interface IPv4 group settings: the
+// forwarding leaf plus the DHCP-client and link-local autoconf presence
+// containers, one patch from the IPv4 settings form.
 // POST /configure/interfaces/{name}/ipv4/settings
 func (h *ConfigureInterfacesHandler) SaveIPv4Settings(w http.ResponseWriter, r *http.Request) {
 	h.saveIPSettings(w, r, "ietf-ip:ipv4", "IPv4", "iface-ipv4-block", map[string]string{
@@ -2265,55 +2353,40 @@ func (h *ConfigureInterfacesHandler) SaveIPv6Settings(w http.ResponseWriter, r *
 
 // saveIPSettings is the shared body of SaveIPv4Settings / SaveIPv6Settings.
 // presenceMap maps form-field names (e.g. "dhcp") to their YANG presence
-// container key (e.g. "infix-dhcp-client:dhcp"); each one is PUT when checked
-// and DELETEd otherwise. Forwarding is always PATCHed.
+// container key (e.g. "infix-dhcp-client:dhcp"); each one is created when
+// checked and removed otherwise.
 func (h *ConfigureInterfacesHandler) saveIPSettings(w http.ResponseWriter, r *http.Request, container, family, fragName string, presenceMap map[string]string) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	name := r.PathValue("name")
-	base := ifacePath(name) + "/" + container
+	base := ifaceTarget(name) + "/" + container
 
 	forwarding := r.FormValue("forwarding") == "true"
-	// PATCH the interface (which always exists) with the family container
-	// nested inside, so the container is created on first use.  PATCHing
-	// `base` (the ipv4/ipv6 container) directly 400s "Target resource does
-	// not exist" on a fresh interface that has no L3 config yet — which is
-	// exactly the case when enabling DHCP for the first time.  The list
-	// entry must be a single-element array: rousette rejects the bare-object
-	// form with LY_EVALID once an augmented container (ietf-ip:ipv4) is
-	// nested inside.
-	body := map[string]any{
+	// The family container is merged nested inside its interface as a
+	// single-element array: rousette rejects the bare-object form with
+	// LY_EVALID once an augmented container (ietf-ip:ipv4) is nested inside.
+	p := restconf.NewYangPatch(candidatePath).Merge(ifaceTarget(name), map[string]any{
 		"ietf-interfaces:interface": []any{
 			map[string]any{
 				"name":    name,
 				container: map[string]any{"forwarding": forwarding},
 			},
 		},
+	})
+	for field, child := range presenceMap {
+		target := base + "/" + child
+		if r.FormValue(field) == "true" {
+			p.Merge(target, map[string]any{child: map[string]any{}})
+		} else {
+			p.Remove(target)
+		}
 	}
-	if err := h.RC.Patch(r.Context(), ifacePath(name), body); err != nil {
-		log.Printf("configure interfaces %s %s settings: forwarding: %v", name, family, err)
+	if err := h.RC.YangPatch(r.Context(), p); err != nil {
+		log.Printf("configure interfaces %s %s settings: %v", name, family, err)
 		renderSaveError(w, err)
 		return
-	}
-
-	for field, child := range presenceMap {
-		path := base + "/" + child
-		if r.FormValue(field) == "true" {
-			b := map[string]any{child: map[string]any{}}
-			if err := h.RC.Put(r.Context(), path, b); err != nil {
-				log.Printf("configure interfaces %s %s settings: enable %s: %v", name, family, field, err)
-				renderSaveError(w, err)
-				return
-			}
-		} else {
-			if err := h.RC.Delete(r.Context(), path); err != nil && !restconf.IsNotFound(err) {
-				log.Printf("configure interfaces %s %s settings: disable %s: %v", name, family, field, err)
-				renderSaveError(w, err)
-				return
-			}
-		}
 	}
 
 	// Re-render just this interface's IP block from the fresh candidate so
@@ -2370,8 +2443,7 @@ func (h *ConfigureInterfacesHandler) renderIPBlock(w http.ResponseWriter, r *htt
 	// The block is swapped via outerHTML, so the confirmation is rendered into
 	// the block footer (above) rather than chased by JS across the swap; the
 	// log-only event just records it in the Configure activity panel.
-	msgJSON, _ := json.Marshal(savedMsg)
-	w.Header().Set("HX-Trigger", `{"cfgLogged":`+string(msgJSON)+`}`)
+	hxTrigger(w, "cfgLogged", savedMsg)
 	if err := h.Template.ExecuteTemplate(w, fragName, row); err != nil {
 		log.Printf("configure interfaces %s: render %s: %v", name, fragName, err)
 	}
@@ -2742,6 +2814,9 @@ func configSummary(row *cfgIfaceRow) []string {
 	}
 	if row.IsWifi && row.WifiMode != "" {
 		tags = append(tags, row.WifiMode)
+		if ap := row.WiFi.AccessPoint; ap != nil && wifiRoamingSummary(ap.Roaming) != "" {
+			tags = append(tags, "roaming")
+		}
 	}
 	if row.IsBridge && row.BridgeIs8021Q {
 		tags = append(tags, "802.1Q")

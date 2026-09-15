@@ -49,10 +49,14 @@
       {{end}}
       {{if .WiFiMode}}<tr><th>Mode</th><td>{{.WiFiMode}}</td></tr>{{end}}
       {{if .WiFiSSID}}<tr><th>SSID</th><td>{{.WiFiSSID}}</td></tr>{{end}}
+      {{if .WiFiBSSID}}<tr><th>BSSID</th><td>{{.WiFiBSSID}}</td></tr>{{end}}
+      {{if .WiFiMeshID}}<tr><th>Mesh ID</th><td>{{.WiFiMeshID}}</td></tr>{{end}}
+      {{if .WiFiForwarding}}<tr><th>Mesh Forwarding</th><td>{{.WiFiForwarding}}</td></tr>{{end}}
       {{if .WiFiSignal}}<tr><th>Signal</th><td>{{.WiFiSignal}}</td></tr>{{end}}
       {{if .WiFiRxSpeed}}<tr><th>RX Speed</th><td>{{.WiFiRxSpeed}}</td></tr>{{end}}
       {{if .WiFiTxSpeed}}<tr><th>TX Speed</th><td>{{.WiFiTxSpeed}}</td></tr>{{end}}
       {{if .WiFiStationCount}}<tr><th>Connected Stations</th><td>{{.WiFiStationCount}}</td></tr>{{end}}
+      {{if .WiFiPeerCount}}<tr><th>Mesh Peers</th><td>{{.WiFiPeerCount}}</td></tr>{{end}}
       {{if .WGPeerSummary}}<tr><th>Peers</th><td>{{.WGPeerSummary}}</td></tr>{{end}}
     </table>
     {{if .Addresses}}
@@ -75,7 +79,7 @@
 
 {{if .WiFiStations}}
 <section class="info-card">
-  <div class="card-header">Connected Stations</div>
+  <div class="card-header">{{.WiFiStaTitle}}</div>
   <div class="data-table-wrap">
     <table class="data-table">
     <thead>
@@ -95,7 +99,7 @@
       {{range .WiFiStations}}
       <tr>
         <td>{{.MAC}}</td>
-        <td>{{if .Signal}}<span class="signal-{{.SignalCSS}}">{{.Signal}}</span>{{end}}</td>
+        <td>{{if .Signal}}<span class="{{.SignalCSS}}">{{.Signal}}</span>{{end}}</td>
         <td>{{.Time}}</td>
         <td class="num">{{.RxPkts}}</td>
         <td class="num">{{.TxPkts}}</td>
@@ -130,7 +134,7 @@
       <tr>
         <td>{{if .SSID}}{{.SSID}}{{else}}<em>Hidden</em>{{end}}</td>
         <td>{{.BSSID}}</td>
-        <td>{{if .Signal}}<span class="signal-{{.SignalCSS}}">{{.Signal}}</span>{{end}}</td>
+        <td>{{if .Signal}}<span class="{{.SignalCSS}}">{{.Signal}}</span>{{end}}</td>
         <td>{{.Channel}}</td>
         <td>{{.Encryption}}</td>
       </tr>
