@@ -101,8 +101,7 @@ func applyError(w http.ResponseWriter, op string, err error) {
 		if msg == "" {
 			msg = "the device rejected the configuration"
 		}
-		b, _ := json.Marshal(msg)
-		w.Header().Set("HX-Trigger", `{"cfgApplyError":`+string(b)+`}`)
+		hxTrigger(w, "cfgApplyError", msg)
 		w.WriteHeader(http.StatusOK)
 		return
 	}

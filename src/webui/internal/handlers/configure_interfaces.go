@@ -2443,8 +2443,7 @@ func (h *ConfigureInterfacesHandler) renderIPBlock(w http.ResponseWriter, r *htt
 	// The block is swapped via outerHTML, so the confirmation is rendered into
 	// the block footer (above) rather than chased by JS across the swap; the
 	// log-only event just records it in the Configure activity panel.
-	msgJSON, _ := json.Marshal(savedMsg)
-	w.Header().Set("HX-Trigger", `{"cfgLogged":`+string(msgJSON)+`}`)
+	hxTrigger(w, "cfgLogged", savedMsg)
 	if err := h.Template.ExecuteTemplate(w, fragName, row); err != nil {
 		log.Printf("configure interfaces %s: render %s: %v", name, fragName, err)
 	}

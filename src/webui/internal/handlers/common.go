@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"strconv"
 	"strings"
 
+	"encoding/json"
 	"infix/webui/internal/restconf"
 	"infix/webui/internal/security"
+	"unicode/utf16"
 )
 
 // PageData is the base template data passed to every page.
@@ -65,12 +66,8 @@ func newPageData(w http.ResponseWriter, r *http.Request, page, leaf string) Page
 	// header: only GET handlers reach newPageData, and those don't share
 	// response paths with the save-side helpers (renderSaved /
 	// renderSaveError) that also use HX-Trigger.
-	// strconv.QuoteToASCII escapes non-ASCII as \uXXXX so the header value
-	// survives transit as 7-bit ASCII; browsers decode header bytes as
-	// ISO-8859-1, which would otherwise turn our middle-dot separator into
-	// mojibake on the JS side.
 	if r.Header.Get("HX-Request") == "true" {
-		w.Header().Set("HX-Trigger", `{"setPageTitle":`+strconv.QuoteToASCII(title)+`}`)
+		hxTrigger(w, "setPageTitle", title)
 	}
 	return PageData{
 		Username:     restconf.CredentialsFromContext(r.Context()).Username,
@@ -122,4 +119,29 @@ func IfaceTemplateFuncs() template.FuncMap {
 			return m, nil
 		},
 	}
+}
+
+// hxTrigger sets an HX-Trigger header that fires event with a string
+// detail. The JSON is escaped to 7-bit ASCII: browsers decode header
+// bytes as ISO-8859-1, so raw UTF-8 (an en dash in a range, a middle dot
+// in a title) arrives as mojibake in the event.
+func hxTrigger(w http.ResponseWriter, event, value string) {
+	w.Header().Set("HX-Trigger", `{"`+event+`":`+asciiJSON(value)+`}`)
+}
+
+func asciiJSON(s string) string {
+	b, _ := json.Marshal(s)
+	var sb strings.Builder
+	for _, r := range string(b) {
+		switch {
+		case r < 0x80:
+			sb.WriteRune(r)
+		case r > 0xFFFF:
+			hi, lo := utf16.EncodeRune(r)
+			fmt.Fprintf(&sb, `\u%04x\u%04x`, hi, lo)
+		default:
+			fmt.Fprintf(&sb, `\u%04x`, r)
+		}
+	}
+	return sb.String()
 }
