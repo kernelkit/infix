@@ -22,7 +22,7 @@ def mdns_scan():
     pcap3 = ns3.pcap("host 10.0.3.1 and port 5353")
 
     with pcap1, pcap2, pcap3:
-        ssh.runsh("logger -t scan 'calling avahi-browse ...'")
+        dut.log("calling avahi-browse ...", app_name="scan")
         ssh.runsh("avahi-browse -lat")
 
     def has_packets(output):
