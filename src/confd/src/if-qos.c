@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <dirent.h>
 
@@ -65,6 +66,8 @@ struct qos_egress {
 	uint8_t  map[NUM_PRIO];
 	enum tsa algo[MAX_TC];
 	uint8_t  bandwidth[MAX_TC];	/* percent, ETS classes only */
+	uint64_t rate;		/* bits/s, 0 = no rate limit */
+	uint32_t burst;		/* bytes */
 };
 
 /*
@@ -325,6 +328,18 @@ static int qos_parse_egress(struct lyd_node *egress, const char *ifname, struct 
 		val = lydx_get_cattr(tc, "bandwidth");
 		if (val)
 			eg->bandwidth[id] = strtoul(val, NULL, 10);
+	}
+
+	table = lydx_get_child(egress, "rate-limit");
+	if (table) {
+		val = lydx_get_cattr(table, "rate");
+		eg->rate = val ? strtoull(val, NULL, 10) : 0;
+
+		/* Ten milliseconds at rate, never below one frame */
+		val = lydx_get_cattr(table, "burst");
+		eg->burst = val ? strtoul(val, NULL, 10) : eg->rate / 8 / 100;
+		if (eg->burst < 1518)
+			eg->burst = 1518;
 	}
 
 	return 0;
@@ -691,13 +706,26 @@ static void gen_dcb_log(FILE *fp, const char *ifname, struct lyd_node *ingress,
  */
 static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 {
+	const char *attach = "root";
 	int i, nstrict = 0;
 
 	fprintf(fp, "tc qdisc del dev %s root 2>/dev/null\n", ifname);
+
+	/*
+	 * The rate limit is one bucket on the whole port, so it takes
+	 * the root and the scheduler hangs below it.  mqprio can only
+	 * be the root, so a rate limited port always schedules with ets.
+	 */
+	if (eg->rate) {
+		fprintf(fp, "tc qdisc add dev %s root handle 1: tbf rate %" PRIu64 "bit burst %u"
+			" latency 100ms\n", ifname, eg->rate, eg->burst);
+		attach = "parent 1:1 handle 2:";
+	}
+
 	if (eg->num_tc < 2)
 		return;
 
-	if (qos_mqprio(ifname) && !iface_has_quirk(ifname, "broken-mqprio")) {
+	if (!eg->rate && qos_mqprio(ifname) && !iface_has_quirk(ifname, "broken-mqprio")) {
 		fprintf(fp, "tc qdisc add dev %s root mqprio num_tc %d map", ifname, eg->num_tc);
 		for (i = 0; i < NUM_PRIO; i++)
 			fprintf(fp, " %d", eg->map[i]);
@@ -710,7 +738,7 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 	for (i = eg->num_tc - 1; i >= 0 && eg->algo[i] == TSA_STRICT; i--)
 		nstrict++;
 
-	fprintf(fp, "tc qdisc add dev %s root ets bands %d strict %d", ifname, eg->num_tc, nstrict);
+	fprintf(fp, "tc qdisc add dev %s %s ets bands %d strict %d", ifname, attach, eg->num_tc, nstrict);
 	if (nstrict < eg->num_tc) {
 		fputs(" quanta", fp);
 		for (i = eg->num_tc - 1 - nstrict; i >= 0; i--)
@@ -831,7 +859,8 @@ int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	 */
 	if (lydx_get_op(dif) == LYDX_OP_CREATE ||
 	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class-table", NULL)) ||
-	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class", NULL)))
+	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "traffic-class", NULL)) ||
+	    qos_has_change(lydx_get_descendant(lyd_child(dqos), "egress", "rate-limit", NULL)))
 		gen_egress(fp, ifname, &eg);
 	fclose(fp);
 
