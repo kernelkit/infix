@@ -1027,20 +1027,77 @@
   document.addEventListener('htmx:sendError',     finish);
 })();
 
+// Show or hide a block and keep its controls in step. Hiding a control
+// does not bar it from constraint validation: an empty required field in
+// a display:none block makes the browser refuse to submit the form it
+// belongs to, and it cannot focus the field to say why, so the button
+// appears dead. Disabling is what takes it out of validation and out of
+// the submission. Enabling skips anything inside a nested block that is
+// itself still hidden, e.g. the 802.11r sub-rows of an unticked 802.11r.
+function setBlockEnabled(el, on) {
+  el.hidden = !on;
+  el.querySelectorAll('input,select,textarea,button').forEach(function (ctrl) {
+    if (on && ctrl.closest('[hidden]')) return;
+    ctrl.disabled = !on;
+  });
+}
+
+// Blocks that start hidden and are opened later — the inline "+ New" key
+// and radio forms, the "+ Add" rows on the keystore, users, routes, DNS,
+// NTP, firewall and hardware pages, the DHCP foldouts — are rendered
+// inside the form they belong to, with required fields. Disable them up
+// front so they only take part once opened. Only blocks a reveal hook
+// controls are touched, since that hook is what enables them again.
+(function () {
+  function disableHiddenBlocks() {
+    var ids = {};
+    document.querySelectorAll('[data-show]').forEach(function (b) {
+      ids[b.getAttribute('data-show')] = true;
+    });
+    document.querySelectorAll('[data-fold-target]').forEach(function (b) {
+      b.getAttribute('data-fold-target').split(/\s+/).forEach(function (id) { ids[id] = true; });
+    });
+    Object.keys(ids).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.hidden) setBlockEnabled(el, false);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', disableHiddenBlocks);
+  document.addEventListener('htmx:afterSwap', disableHiddenBlocks);
+})();
+
 // Interface page glue (replaces inline hx-on / inline <script>, which CSP
 // blocks under the `script-src 'self'` policy in middleware.go).
 (function () {
-  // A checkbox marked [data-fold-target="<id>"] toggles the matching <details>
-  // (or any element with that id) immediately on change. Used for the DHCP /
-  // DHCPv6 settings foldouts on Configure → Interface: the foldout is always
-  // in the DOM but starts hidden when the client isn't enabled. This lets the
-  // user see the settings form before clicking Save IPvX Settings and confirms
-  // the section exists even when DHCP is off.
+  // A checkbox marked [data-fold-target="<id> <id>…"] toggles the matching
+  // <details> (or any elements with those ids) immediately on change. Used
+  // for the DHCP / DHCPv6 settings foldouts on Configure → Interface: the
+  // foldout is always in the DOM but starts hidden when the client isn't
+  // enabled. This lets the user see the settings form before clicking Save
+  // IPvX Settings and confirms the section exists even when DHCP is off.
+  // Also used for the 802.11r/v sub-rows in the WiFi editor.
   document.addEventListener('change', function (evt) {
     var cb = evt.target;
     if (!cb || !cb.matches || !cb.matches('input[type="checkbox"][data-fold-target]')) return;
-    var target = document.getElementById(cb.getAttribute('data-fold-target'));
-    if (target) target.hidden = !cb.checked;
+    cb.getAttribute('data-fold-target').split(/\s+/).forEach(function (id) {
+      var target = document.getElementById(id);
+      if (target) setBlockEnabled(target, cb.checked);
+    });
+  });
+
+  // WiFi interface editor: the mode radios reveal the rows belonging to
+  // the selected mode, so an interface can be switched between station,
+  // access point and mesh point in place. The form posts the whole wifi
+  // container, so the mode the user leaves behind is replaced.
+  document.addEventListener('change', function (evt) {
+    var radio = evt.target;
+    if (!radio || !radio.matches || !radio.matches('input[name="mode"]')) return;
+    var form = radio.closest('[data-wifi-editor]');
+    if (!form) return;
+    form.querySelectorAll('[data-wifi-modes]').forEach(function (el) {
+      var modes = el.getAttribute('data-wifi-modes').split(/\s+/);
+      setBlockEnabled(el, modes.indexOf(radio.value) !== -1);
+    });
   });
 
   // Add Interface modal — open via data-show-modal, close via
@@ -1073,13 +1130,40 @@
     }
   });
 
-  // Add Interface modal, WiFi fieldset: mode (Station/AP) drives which
-  // security-mode optgroup is exposed, which AP-only rows are visible,
-  // whether the PSK row applies (open/disabled hide it), and an -ap
-  // suffix on the Name.
-  function refreshWifiSec() {
+  // Add Interface modal, WiFi fieldset: mode (Station/AP/Mesh) drives
+  // which security-mode optgroup is exposed, which AP-only and mesh-only
+  // rows are visible, whether the PSK row applies (open/disabled hide
+  // it), and an -ap / -mesh suffix on the Name. Mesh is always WPA3-SAE,
+  // so it hides the security-mode row and swaps SSID for Mesh ID.
+  function wifiWizardMode() {
     var modeAP = document.getElementById('add-iface-wifi-mode-ap');
-    var isAP = !!(modeAP && modeAP.checked);
+    var modeMesh = document.getElementById('add-iface-wifi-mode-mesh');
+    if (modeMesh && modeMesh.checked) return 'mesh';
+    if (modeAP && modeAP.checked) return 'ap';
+    return 'station';
+  }
+  function setRowEnabled(rowId, on) {
+    var row = document.getElementById(rowId);
+    if (!row) return;
+    row.hidden = !on;
+    row.querySelectorAll('input,select').forEach(function (el) {
+      if (el.type === 'hidden') return;
+      el.disabled = !on;
+      if (el.dataset.wifiRequired === '1') el.required = on;
+    });
+  }
+  function refreshWifiSec() {
+    var mode = wifiWizardMode();
+    var isAP = mode === 'ap';
+    var isMesh = mode === 'mesh';
+    var ssid = document.getElementById('add-iface-wifi-ssid');
+    if (ssid) ssid.dataset.wifiRequired = '1';
+    var meshId = document.getElementById('add-iface-wifi-meshid');
+    if (meshId) meshId.dataset.wifiRequired = '1';
+    setRowEnabled('add-iface-wifi-ssid-row', !isMesh);
+    setRowEnabled('add-iface-wifi-meshid-row', isMesh);
+    setRowEnabled('add-iface-wifi-fwd-row', isMesh);
+    setRowEnabled('add-iface-wifi-sec-row', !isMesh);
     var sec = document.getElementById('add-iface-wifi-sec');
     if (sec) {
       var groups = sec.querySelectorAll('optgroup[data-mode-group]');
@@ -1102,16 +1186,15 @@
     refreshWifiPSK();
     refreshWifiName();
   }
-  // Auto-suffix the Name with "-ap" in AP mode and strip it in Station,
-  // unless the user has manually edited the Name. Matches the in-tree
-  // wifi naming convention (wifi0 / wifi0-ap).
+  // Auto-suffix the Name with "-ap" / "-mesh" by mode and strip it in
+  // Station, unless the user has manually edited the Name. Matches the
+  // in-tree wifi naming convention (wifi0 / wifi0-ap).
   function refreshWifiName() {
     var name = document.getElementById('add-iface-wifi-name');
     if (!name || name.dataset.userEdited === '1') return;
-    var modeAP = document.getElementById('add-iface-wifi-mode-ap');
-    var isAP = !!(modeAP && modeAP.checked);
-    var base = name.value.replace(/-ap$/, '');
-    name.value = isAP ? base + '-ap' : base;
+    var mode = wifiWizardMode();
+    var base = name.value.replace(/-(ap|mesh)$/, '');
+    name.value = mode === 'station' ? base : base + '-' + mode;
   }
   function refreshWifiPSK() {
     var sec = document.getElementById('add-iface-wifi-sec');
@@ -1119,14 +1202,15 @@
     var psk = document.getElementById('add-iface-wifi-psk');
     if (!sec || !pskRow || !psk) return;
     var v = sec.value;
-    var needPSK = v !== 'disabled' && v !== 'open';
+    var needPSK = wifiWizardMode() === 'mesh' || (v !== 'disabled' && v !== 'open');
     pskRow.hidden = !needPSK;
     psk.required = needPSK;
     psk.disabled = !needPSK;
   }
   document.addEventListener('change', function (e) {
     var t = e.target;
-    if (t.id === 'add-iface-wifi-mode-sta' || t.id === 'add-iface-wifi-mode-ap') {
+    if (t.id === 'add-iface-wifi-mode-sta' || t.id === 'add-iface-wifi-mode-ap' ||
+        t.id === 'add-iface-wifi-mode-mesh') {
       refreshWifiSec();
     } else if (t.id === 'add-iface-wifi-sec') {
       refreshWifiPSK();
@@ -1150,7 +1234,7 @@
     if (!btn || !btn.hasAttribute || !btn.hasAttribute('data-ks-create-success')) return;
     var form = document.getElementById(btn.getAttribute('data-ks-create-success'));
     if (!form) return;
-    form.hidden = true;
+    setBlockEnabled(form, false);
     form.querySelectorAll('input, textarea').forEach(function (i) { i.value = ''; });
     resetMaskedInputs(form);
   });
@@ -1165,7 +1249,7 @@
   //     receive the picker's value (for keystore forms whose name input
   //     mirrors the picker). For the radio form, every <input>/<select>
   //     whose name matches a data-<name> attribute on the picker option
-  //     is filled from that attribute (e.g. data-country fills
+  //     is filled from that attribute (e.g. data-country-code fills
   //     name="country-code", data-band fills name="band", …).
   function clearKsForm(formId) {
     var form = document.getElementById(formId);
@@ -1337,7 +1421,9 @@
     var classInput = document.getElementById('add-hw-class');
     if (classInput) classInput.value = cls;
     var wifi = document.getElementById('add-hw-wifi-fields');
-    if (wifi) wifi.hidden = (cls !== 'wifi');
+    // setBlockEnabled, not .hidden: the country select is inside this
+    // nested hidden span, so opening the row left it disabled.
+    if (wifi) setBlockEnabled(wifi, cls === 'wifi');
     var country = document.getElementById('add-hw-wifi-country');
     if (country) country.required = (cls === 'wifi');
   });
@@ -1743,12 +1829,16 @@ function openModal(message, onConfirm, opts) {
     var show = e.target.closest('[data-show]');
     if (show) {
       var el = document.getElementById(show.getAttribute('data-show'));
-      if (el) { el.hidden = false; el.querySelector('input,select,textarea') && el.querySelector('input,select,textarea').focus(); }
+      if (el) {
+        setBlockEnabled(el, true);
+        var first = el.querySelector('input,select,textarea');
+        if (first) first.focus();
+      }
     }
     var hide = e.target.closest('[data-hide]');
     if (hide) {
       var el = document.getElementById(hide.getAttribute('data-hide'));
-      if (el) el.hidden = true;
+      if (el) setBlockEnabled(el, false);
     }
   });
 })();
@@ -2136,12 +2226,19 @@ function renderCfgLog() {
 
   // findSaveStatusSpan locates the status span associated with the form that
   // triggered an htmx event. Lookup order:
-  //   1. .cfg-save-status inside the form
-  //   2. [data-cfg-status-for="<form-id>"] anywhere on the page — used when the
+  //   1. .cfg-save-status inside the enclosing inline "+ New" box
+  //      (.ks-create-form), which posts on its own from inside a larger form
+  //   2. .cfg-save-status inside the form
+  //   3. [data-cfg-status-for="<form-id>"] anywhere on the page — used when the
   //      Save button is bound to the form via the HTML5 `form` attribute and
   //      lives outside the form element
-  //   3. .cfg-save-status inside the enclosing .info-card (shared feedback slot)
+  //   4. .cfg-save-status inside the enclosing .info-card (shared feedback slot)
   function findSaveStatusSpan(e) {
+    var box = e.target && e.target.closest('.ks-create-form');
+    if (box) {
+      var own = box.querySelector('.cfg-save-status');
+      if (own) return own;
+    }
     var form = e.target && e.target.closest('form');
     if (form) {
       var inside = form.querySelector('.cfg-save-status');

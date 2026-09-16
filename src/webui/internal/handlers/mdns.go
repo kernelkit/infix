@@ -3,12 +3,13 @@
 package handlers
 
 import (
-	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 
 	"infix/webui/internal/restconf"
@@ -21,11 +22,11 @@ type mdnsWrapper struct {
 }
 
 type mdnsJSON struct {
-	Enabled    *yangBool        `json:"enabled"`
-	Domain     string           `json:"domain"`
-	Hostname   string           `json:"hostname"`
-	Interfaces mdnsIfacesJSON   `json:"interfaces"`
-	Reflector  mdnsReflJSON     `json:"reflector"`
+	Enabled    *yangBool         `json:"enabled"`
+	Domain     string            `json:"domain"`
+	Hostname   string            `json:"hostname"`
+	Interfaces mdnsIfacesJSON    `json:"interfaces"`
+	Reflector  mdnsReflJSON      `json:"reflector"`
 	Neighbors  mdnsNeighborsJSON `json:"neighbors"`
 }
 
@@ -44,9 +45,9 @@ type mdnsNeighborsJSON struct {
 }
 
 type mdnsNeighborJSON struct {
-	Hostname string           `json:"hostname"`
-	Address  []string         `json:"address"`
-	LastSeen string           `json:"last-seen"`
+	Hostname string            `json:"hostname"`
+	Address  []string          `json:"address"`
+	LastSeen string            `json:"last-seen"`
 	Service  []mdnsServiceJSON `json:"service"`
 }
 
@@ -81,9 +82,9 @@ type mdnsNeighborEntry struct {
 }
 
 type mdnsSvcEntry struct {
-	Label string        // "https", "ssh", etc.
+	Label string // "https", "ssh", etc.
 	Port  uint16
-	URL   template.URL  // non-empty for http/https — safe to use in href
+	URL   template.URL // non-empty for http/https — safe to use in href
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -172,17 +173,9 @@ func buildMDNSSvc(svc mdnsServiceJSON, addr, host string) mdnsSvcEntry {
 	var rawURL string
 	switch svc.Type {
 	case "_http._tcp":
-		if meta.adminurl != "" {
-			rawURL = rebaseURLHost(meta.adminurl, host)
-		} else {
-			rawURL = fmt.Sprintf("http://%s:%d%s", addr, svc.Port, meta.path)
-		}
+		rawURL = mdnsWebURL("http", meta, addr, host, svc.Port)
 	case "_https._tcp":
-		if meta.adminurl != "" {
-			rawURL = rebaseURLHost(meta.adminurl, host)
-		} else {
-			rawURL = fmt.Sprintf("https://%s:%d%s", addr, svc.Port, meta.path)
-		}
+		rawURL = mdnsWebURL("https", meta, addr, host, svc.Port)
 	}
 
 	// Use the DNS-SD instance name for clickable services so that two https
@@ -195,8 +188,23 @@ func buildMDNSSvc(svc mdnsServiceJSON, addr, host string) mdnsSvcEntry {
 	return mdnsSvcEntry{
 		Label: label,
 		Port:  svc.Port,
-		URL:   template.URL(rawURL), // #nosec G203 — URL built from trusted operational data
+		URL:   template.URL(rawURL), // #nosec G203 — mdnsWebURL admits http/https only
 	}
+}
+
+// mdnsWebURL is the link for an _http/_https service. The TXT records come
+// from whatever the LAN advertises, so adminurl is used only when it is an
+// http or https URL with a host, and path is placed as a path, never
+// concatenated, so "@evil" cannot turn into a different host.
+func mdnsWebURL(scheme string, meta mdnsTxtMeta, addr, host string, port uint16) string {
+	if meta.adminurl != "" {
+		if u, err := url.Parse(rebaseURLHost(meta.adminurl, host)); err == nil &&
+			(u.Scheme == "http" || u.Scheme == "https") && u.Host != "" {
+			return u.String()
+		}
+	}
+	u := url.URL{Scheme: scheme, Host: net.JoinHostPort(addr, strconv.Itoa(int(port))), Path: meta.path}
+	return u.String()
 }
 
 // rebaseURLHost rewrites the host of raw to host, keeping scheme, port, and

@@ -4,7 +4,7 @@
   {{if .Radios}}
     {{range $i, $r := .Radios}}<option value="{{$r.Name}}"
             data-ap-ready="{{$r.APReady}}"
-            data-country="{{$r.Country}}"
+            data-country-code="{{$r.Country}}"
             data-band="{{$r.Band}}"
             data-channel="{{$r.Channel}}"{{if eq $r.Name $.Selected}} selected{{else if and (eq $.Selected "") (eq $i 0)}} selected{{end}}>{{$r.Label}}</option>{{end}}
   {{else}}

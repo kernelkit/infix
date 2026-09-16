@@ -1190,11 +1190,11 @@ func (h *TreeHandler) SaveGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if firstErr != "" {
-		w.Header().Set("HX-Trigger", `{"cfgError":"`+firstErr+`"}`)
+		hxTrigger(w, "cfgError", firstErr)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	w.Header().Set("HX-Trigger", `{"cfgSaved":"Saved `+node.Name+` to candidate"}`)
+	hxTrigger(w, "cfgSaved", "Saved "+node.Name+" to candidate")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1232,11 +1232,11 @@ func (h *TreeHandler) SaveLeaf(w http.ResponseWriter, r *http.Request) {
 	// whole current page from the fresh candidate (so confd inference and
 	// normalisation surface) — don't echo the raw input back, which hid it.
 	if putErr := h.RC.Put(r.Context(), candidateDS+path, body); putErr != nil {
-		w.Header().Set("HX-Trigger", `{"cfgError":"`+node.Name+": "+putErr.Error()+`"}`)
+		hxTrigger(w, "cfgError", node.Name+": "+putErr.Error())
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	w.Header().Set("HX-Trigger", `{"cfgSaved":"Saved `+node.Name+` to candidate"}`)
+	hxTrigger(w, "cfgSaved", "Saved "+node.Name+" to candidate")
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -39,10 +39,28 @@ All notable changes to the project are documented in this file.
   boot and configuration changes, issue #961.  Same rationale as Debian's
   dash-as-/bin/sh.  Bash remains available for interactive use and for
   scripts using `#!/bin/bash`
+- WebUI: add 802.11s mesh point support to the WiFi interface wizard and
+  editor, show mesh peers on the WiFi and interface status pages, and add
+  an editor section for access point roaming (802.11k/r/v, band steering,
+  OKC).
 
 ### Fixes
 
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
+- WebUI: "Save" in the interface editor and "OK" in Add Interface
+  did nothing for Wi-Fi and WireGuard interfaces. The inline "+ New"
+  forms for keystore keys and radios kept their required fields active
+  while hidden, which silently blocked the form they sit in
+- Wi-Fi mesh point interfaces showed an empty `mesh-id` in operational
+  status (CLI and WebUI).
+- Wi-Fi radio hardware components were renamed `radio0-1`, `radio1-1`, in
+  operational status because the radio's temperature sensor took the
+  `radio0` name first, so `show hardware` and the WebUI could no longer
+  match interfaces to their radio. The sensor is now a child of the
+  radio component, named `radio0-temp`
+- WebUI: a WiFi interface can be switched between station, access point
+  and mesh point from the interface editor. The mode used to be fixed
+  when the interface was created
 
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 

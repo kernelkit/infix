@@ -273,7 +273,7 @@ def parse_interface_info(ifname):
         elif stripped.startswith('addr '):
             result['mac'] = stripped.split()[1]
 
-        # SSID (AP mode) or mesh-id (mesh point mode) — kernel uses same attr
+        # SSID, only reported for AP and station interfaces
         elif stripped.startswith('ssid '):
             result['ssid'] = decode_iw_ssid(' '.join(stripped.split()[1:]))
 
@@ -583,6 +583,34 @@ def parse_phy_caps(phy_name):
     return {'ht_cap': ht_cap, 'vht_cap': vht_cap}
 
 
+def parse_mesh_param(ifname):
+    """
+    Parse 'iw dev <name> get mesh_param' output for mesh point mode
+    Returns: {param: value}, values as int where they are numeric
+
+    Lines are 'mesh_fwding = 1' or 'mesh_retry_timeout = 100 milliseconds',
+    the unit is dropped.
+    """
+    output = run_iw('dev', ifname, 'get', 'mesh_param')
+    if not output:
+        return {}
+
+    result = {}
+    for line in output.splitlines():
+        key, sep, value = line.partition('=')
+        if not sep:
+            continue
+        key, value = key.strip(), value.split()
+        if not key or not value:
+            continue
+        try:
+            result[key] = int(value[0])
+        except ValueError:
+            result[key] = value[0]
+
+    return result
+
+
 def main():
     if len(sys.argv) < 2:
         print(json.dumps({
@@ -594,6 +622,7 @@ def main():
                 'survey': 'Get channel survey data (requires interface)',
                 'station': 'Get connected stations in AP mode (requires interface)',
                 'link': 'Get link info in station mode (requires interface)',
+                'mesh': 'Get mesh parameters in mesh point mode (requires interface)',
                 'caps': 'Get HT/VHT capability bitmasks (requires PHY/radio)'
             },
             'examples': [
@@ -603,6 +632,7 @@ def main():
                 'iw.py info wlan0',
                 'iw.py station wifi0',
                 'iw.py link wlan0',
+                'iw.py mesh wifi0',
                 'iw.py survey wlan0',
                 'iw.py caps radio0'
             ]
@@ -636,6 +666,11 @@ def main():
                 data = {'error': 'link command requires interface argument'}
             else:
                 data = parse_link(sys.argv[2])
+        elif command == 'mesh':
+            if len(sys.argv) < 3:
+                data = {'error': 'mesh command requires interface argument'}
+            else:
+                data = parse_mesh_param(sys.argv[2])
         elif command == 'survey':
             if len(sys.argv) < 3:
                 data = {'error': 'survey command requires interface argument'}

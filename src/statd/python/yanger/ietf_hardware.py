@@ -516,21 +516,37 @@ def hwmon_sensor_components(mirrored):
                 sensor["parent"] = parent
         components.extend(sensors)
 
-    # Enrich WiFi PHY sensors with descriptive information
-    wifi_info = get_wifi_phy_info()
+    return adopt_wifi_sensors(components, get_wifi_phy_info())
+
+
+def adopt_wifi_sensors(components, wifi_info):
+    """
+    A WiFi PHY's hwmon device is named after the radio, so whatever this
+    builds for it takes the radio's name before wifi_radio_components()
+    gets there, and unique_names() renames the radio instead, breaking
+    the wifi/radio leafref that interfaces are bound by.
+
+    Give the radio its name back.  Its sensors hang off it, the way the
+    die sensors hang off the CPU, and the module head a multi-sensor
+    device would get is dropped: the radio component already is one.
+    """
+    out = []
     for component in components:
         name = component.get("name", "")
-        # Match radio0, radio1, etc. sensors
-        if name.startswith("radio") and name in wifi_info:
-            phy = wifi_info[name]
-            # Add WiFi-specific description
-            component["description"] = phy["description"]
-            # Optionally change class to wifi for WiFi PHY sensors
-            if component.get("class") == "iana-hardware:sensor":
-                # Keep as sensor but we could create a parent WiFi component later if needed
-                pass
+        if name not in wifi_info:
+            out.append(component)
+            continue
 
-    return components
+        if component.get("class") == "iana-hardware:module":
+            continue        # the radio heads its own sensors
+
+        kind = component.get("sensor-data", {}).get("value-type", "sensor")
+        component["name"] = f"{name}-{'temp' if kind == 'celsius' else kind}"
+        component["parent"] = name
+        component["description"] = "Temperature" if kind == "celsius" else kind.title()
+        out.append(component)
+
+    return out
 
 
 def thermal_sensor_components():

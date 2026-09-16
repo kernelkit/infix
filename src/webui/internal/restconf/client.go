@@ -62,9 +62,33 @@ func NewClient(baseURL string, insecureTLS bool) *Client {
 	}
 }
 
+// checkPath rejects a resource path that would not stay inside the RESTCONF
+// tree once the proxy normalises it. Handlers pass some paths straight from
+// the query string, so a ".." segment, a query or fragment, or a raw control
+// character must not reach the wire.
+func checkPath(path string) error {
+	if !strings.HasPrefix(path, "/") || strings.ContainsAny(path, "?#") {
+		return fmt.Errorf("restconf: invalid path %q", path)
+	}
+	for _, r := range path {
+		if r <= ' ' || r == 0x7f {
+			return fmt.Errorf("restconf: invalid path %q", path)
+		}
+	}
+	for _, seg := range strings.Split(path, "/") {
+		if seg == ".." || seg == "." {
+			return fmt.Errorf("restconf: invalid path %q", path)
+		}
+	}
+	return nil
+}
+
 // doRequest builds and executes an HTTP request against the RESTCONF server,
 // setting Accept and Basic Auth from the context. The caller must close Body.
 func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Response, error) {
+	if err := checkPath(path); err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
@@ -181,6 +205,15 @@ func (c *Client) CopyDatastore(ctx context.Context, src, dst string) error {
 
 // writeJSON encodes body as JSON and sends it with the given HTTP method.
 func (c *Client) writeJSON(ctx context.Context, method, path string, body any) error {
+	return c.write(ctx, method, path, "application/yang-data+json", body)
+}
+
+// write encodes body as JSON and sends it with the given method and
+// Content-Type.
+func (c *Client) write(ctx context.Context, method, path, contentType string, body any) error {
+	if err := checkPath(path); err != nil {
+		return err
+	}
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(body); err != nil {
 		return fmt.Errorf("encoding request body: %w", err)
@@ -190,7 +223,7 @@ func (c *Client) writeJSON(ctx context.Context, method, path string, body any) e
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/yang-data+json")
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Accept", "application/yang-data+json")
 	creds := CredentialsFromContext(ctx)
 	req.SetBasicAuth(creds.Username, creds.Password)

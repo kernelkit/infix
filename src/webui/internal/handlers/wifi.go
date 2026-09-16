@@ -100,18 +100,23 @@ type ChannelSurvey struct {
 // WiFiInterface is the template data for a virtual WiFi interface.
 type WiFiInterface struct {
 	Name       string
-	Mode       string // "ap" or "station"
-	SSID       string
+	Mode       string // "ap", "station" or "mesh"
+	SSID       string // mesh-id in mesh mode
 	OperStatus string
 	StatusUp   bool
-	// AP mode
-	APClients []WiFiClient
+	// AP stations or mesh peers; ClientsEmpty is the message shown when
+	// the list is empty in a mode that has one.
+	Clients      []WiFiClient
+	ClientsEmpty string
 	// Station mode
+	BSSID       string
 	Signal      string
 	SignalCSS   string
 	RxSpeed     string
 	TxSpeed     string
 	ScanResults []WiFiScan
+	// Mesh mode
+	Forwarding string
 }
 
 // WiFiClient is the template data for a connected station client.
@@ -301,16 +306,25 @@ func buildWiFiInterfaces(radioName string, ifaces []ifaceJSON) []WiFiInterface {
 			OperStatus: iface.OperStatus,
 			StatusUp:   iface.OperStatus == "up",
 		}
-
 		if ap := iface.WiFi.AccessPoint; ap != nil {
 			wi.Mode = "ap"
 			wi.SSID = ap.SSID
+			wi.ClientsEmpty = "No stations connected."
 			for _, s := range ap.Stations.Station {
-				wi.APClients = append(wi.APClients, buildWiFiClient(s))
+				wi.Clients = append(wi.Clients, buildWiFiClient(s))
+			}
+		} else if mp := iface.WiFi.MeshPoint; mp != nil {
+			wi.Mode = "mesh"
+			wi.SSID = mp.MeshID
+			wi.Forwarding = wifiForwardingLabel(mp.Forwarding)
+			wi.ClientsEmpty = "No mesh peers connected."
+			for _, p := range mp.Peers.Peer {
+				wi.Clients = append(wi.Clients, buildWiFiClient(p))
 			}
 		} else if st := iface.WiFi.Station; st != nil {
 			wi.Mode = "station"
 			wi.SSID = st.SSID
+			wi.BSSID = st.BSSID
 			if st.SignalStrength != nil {
 				sig := *st.SignalStrength
 				wi.Signal = fmt.Sprintf("%d dBm", sig)

@@ -144,7 +144,7 @@
           {{if $g.Parent}}<tr class="sensor-group-hdr"><th colspan="3">{{$g.Parent}}</th></tr>{{end}}
           {{range $g.Sensors}}
           <tr{{if $g.Parent}} class="sensor-child"{{end}}>
-            <th>{{.Name}}</th>
+            <th>{{.Label}}</th>
             <td><span class="num">{{.Value}}</span></td>
             <td style="text-align:right">
               {{if eq .OperStatus "ok"}}

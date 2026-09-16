@@ -136,12 +136,11 @@ func (h *SystemHandler) SetDatetime(w http.ResponseWriter, r *http.Request) {
 			msg = "NTP is active — disable NTP first under Configure > System"
 		}
 		log.Printf("set datetime: %v", err)
-		b, _ := json.Marshal(msg)
-		w.Header().Set("HX-Trigger", `{"cfgError":`+string(b)+`}`)
+		hxTrigger(w, "cfgError", msg)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	w.Header().Set("HX-Trigger", `{"cfgSaved":"System time updated"}`)
+	hxTrigger(w, "cfgSaved", "System time updated")
 	w.WriteHeader(http.StatusOK)
 }
 
