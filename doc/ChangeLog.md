@@ -24,6 +24,9 @@ All notable changes to the project are documented in this file.
   of the box on every port: trust PCP, one traffic class per
   transmit queue mapped per IEEE 802.1Q-2022 Table 8-5, replacing the
   fixed boot-time queue setup, see [QoS](qos.md)
+- Add a per-port egress rate limit under
+  `/interfaces/interface/qos/egress/rate-limit`, one token bucket above
+  the traffic classes, see [QoS](qos.md)
 - Transmission selection is rendered with the `ets` scheduler on every
   port, so drivers that offload it take the class algorithms and weights
   into the switch fabric, not only the priority to class map
