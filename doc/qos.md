@@ -366,7 +366,7 @@ hardware depends on the driver implementing the matching hook:
 | Ingress classification | `dcb app`       | `dcbnl` app ops     | `tc flower`, software |
 | Trust order            | `dcb apptrust`  | `dcbnl_setapptrust` | Rule order, software |
 | Egress remarking       | `dcb rewr`      | `dcbnl_setrewr`     | DSCP only, software  |
-| Traffic class table    | `tc mqprio`     | `ndo_setup_tc`      | `tc ets`, software   |
+| Transmission selection | `tc ets`        | `TC_SETUP_QDISC_ETS`| software             |
 /// table-caption
 QoS features and their Linux backends.
 ///
