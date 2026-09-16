@@ -68,10 +68,10 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		caps["supported-trust-order"] = trust
 	}
 
-	// Stages the driver runs.  The root qdisc is only ever mqprio with
-	// hw offload, which the kernel refuses without driver support, so
-	// its presence means the driver schedules the classes; ets means the
-	// kernel does.  mqprio never sets the offloaded flag.
+	// Stages the driver runs.  ets reports offloaded when the driver
+	// took it.  mqprio never sets that flag, but it is only ever
+	// installed with hw 1, which the kernel refuses without driver
+	// support, so its presence means the same.
 	var offload []string
 	if trust != nil {
 		var app struct {
@@ -94,6 +94,10 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		switch q.Kind {
 		case "mqprio":
 			if q.Root {
+				offload = append(offload, "transmission-selection")
+			}
+		case "ets":
+			if q.Offloaded {
 				offload = append(offload, "transmission-selection")
 			}
 		}
