@@ -195,8 +195,8 @@ def qos_capabilities(iplink, qdiscs):
         result["supported-trust-order"] = trust
 
     # Stages the driver runs.  DCB tables exist only on drivers with the
-    # operations, so only those ports are asked.  ets reports offloaded
-    # when the driver took it.  mqprio never sets that flag,
+    # operations, so only those ports are asked.  ets and tbf report
+    # offloaded when the driver took them.  mqprio never sets that flag,
     # but it is only ever installed with hw 1, which the kernel refuses
     # without driver support, so its presence means the same.
     offload = []
@@ -212,6 +212,8 @@ def qos_capabilities(iplink, qdiscs):
         kind, offloaded = qdisc.get("kind"), qdisc.get("offloaded", False)
         if kind == "mqprio" and qdisc.get("root") or kind == "ets" and offloaded:
             offload.append("transmission-selection")
+        if kind == "tbf" and qdisc.get("root") and offloaded:
+            offload.append("rate-limit")
 
     if offload:
         result["offload"] = offload

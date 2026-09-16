@@ -249,6 +249,30 @@ admin@example:/config/interface/e1/qos/egress/> <b>leave</b>
 </code></pre>
 
 
+### Rate Limit
+
+A port can be held below its link speed with one token bucket on the
+whole port, configured under `qos egress rate-limit`.  `rate` is the
+sustained rate in bits per second and `burst` how many bytes may leave
+at once from a full bucket; left unset, the burst covers ten
+milliseconds at the configured rate, never less than one maximum-size
+frame.  The bucket sits above the traffic classes: it bounds what the
+port sends in total, and transmission selection decides which class
+gets the bounded rate.
+
+<pre class="cli"><code>admin@example:/config/> <b>edit interface e1 qos egress</b>
+admin@example:/config/interface/e1/qos/egress/> <b>set rate-limit rate 10000000</b>
+admin@example:/config/interface/e1/qos/egress/> <b>leave</b>
+</code></pre>
+
+The limit is rendered as a `tc tbf` root qdisc with the scheduler below
+it, so on a port without offload it applies to the frames the CPU
+sends, and on a port whose driver takes the bucket to frames the fabric
+forwards as well; `offload` under `capabilities` then lists
+`rate-limit`.  A rate limited port always schedules with `tc ets`,
+since `tc mqprio` can only be the root qdisc.
+
+
 ### Egress Remarking
 
 Configured under `qos egress remark`, both leaves default to `none`:
@@ -355,8 +379,8 @@ and each port reports it under `qos capabilities`:
 
 `supported-trust-order` is absent when the driver has no ingress
 classification support.  `offload` lists `classification`, `remarking`
-and `transmission-selection` as the driver takes them; a stage not
-listed runs in the kernel.
+`transmission-selection` and `rate-limit` as the driver takes them; a
+stage not listed runs in the kernel.
 
 Each feature maps to one Linux mechanism, and whether it reaches the
 hardware depends on the driver implementing the matching hook:
@@ -367,6 +391,7 @@ hardware depends on the driver implementing the matching hook:
 | Trust order            | `dcb apptrust`  | `dcbnl_setapptrust` | Rule order, software |
 | Egress remarking       | `dcb rewr`      | `dcbnl_setrewr`     | DSCP only, software  |
 | Transmission selection | `tc ets`        | `TC_SETUP_QDISC_ETS`| software             |
+| Port rate limit        | `tc tbf`        | `TC_SETUP_QDISC_TBF`| software             |
 /// table-caption
 QoS features and their Linux backends.
 ///

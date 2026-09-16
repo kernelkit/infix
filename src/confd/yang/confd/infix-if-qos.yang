@@ -72,6 +72,14 @@ submodule infix-if-qos {
    * Typedefs and groupings
    */
 
+  /*
+   * Enabled where tc tbf offloads to the port shaper, or where the CPU is
+   * the forwarding path and software tbf is the real thing.
+   */
+  feature rate-limit {
+    description "Platform supports a port-level egress rate cap.";
+  }
+
   typedef trust-order-type {
     type enumeration {
       enum none {
@@ -178,6 +186,9 @@ submodule infix-if-qos {
             enum transmission-selection {
               description "Traffic classes and transmission selection
                  run in the switch fabric.";
+            }
+            enum rate-limit {
+              description "The port rate limit runs in the switch fabric.";
             }
           }
           description "Pipeline stages the driver has taken into
@@ -484,6 +495,35 @@ submodule infix-if-qos {
             }
             default "none";
             description "DSCP rewrite on transmit.";
+          }
+        }
+
+        /* Rendered as a tc tbf root above the scheduler. */
+        container rate-limit {
+          if-feature "rate-limit";
+          presence "Bounds the transmit rate of the port.";
+          description "One token bucket on the whole port, above the
+             traffic classes.  It bounds what the port sends in total
+             and knows nothing about classes: transmission selection
+             decides which class gets the bounded rate.";
+
+          leaf rate {
+            type uint64 {
+              range "8..max";
+            }
+            units "bits/second";
+            mandatory true;
+            description "Sustained transmit rate.";
+          }
+
+          leaf burst {
+            type uint32 {
+              range "1518..max";
+            }
+            units "bytes";
+            description "Bytes that may leave at once when the bucket is
+               full.  Unset, the daemon sizes it for ten milliseconds
+               at rate, never below one maximum-size frame.";
           }
         }
       }
