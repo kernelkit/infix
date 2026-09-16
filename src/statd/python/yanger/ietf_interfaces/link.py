@@ -195,10 +195,10 @@ def qos_capabilities(iplink, qdiscs):
         result["supported-trust-order"] = trust
 
     # Stages the driver runs.  DCB tables exist only on drivers with the
-    # operations, so only those ports are asked.  The root qdisc is only
-    # ever mqprio with hw offload, which the kernel refuses without driver
-    # support, so its presence means the driver schedules the classes;
-    # ets means the kernel does.  mqprio never sets the offloaded flag.
+    # operations, so only those ports are asked.  ets reports offloaded
+    # when the driver took it.  mqprio never sets that flag,
+    # but it is only ever installed with hw 1, which the kernel refuses
+    # without driver support, so its presence means the same.
     offload = []
     if trust:
         app = HOST.run_json(["dcb", "-j", "app", "show", "dev", ifname], {})
@@ -209,7 +209,8 @@ def qos_capabilities(iplink, qdiscs):
             offload.append("remarking")
 
     for qdisc in qdiscs.get(ifname, []):
-        if qdisc.get("root") and qdisc.get("kind") == "mqprio":
+        kind, offloaded = qdisc.get("kind"), qdisc.get("offloaded", False)
+        if kind == "mqprio" and qdisc.get("root") or kind == "ets" and offloaded:
             offload.append("transmission-selection")
 
     if offload:
