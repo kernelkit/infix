@@ -3170,6 +3170,21 @@ Buildroot itself or upstream backports.</p>
 updates.  The impact of minor LTS release upgrades is expected to have a
 very low impact and should be done as soon there is a patch release of a
 Buildroot LTS available.</p>
+<p>Besides upstream backports, the <code>-kkit</code> branches carry upgrades of a few
+critical packages, FRR in particular, kept newer than the Buildroot LTS
+itself provides.  They ride along when the branch is rebased onto the
+next upstream release, which is why the order matters:</p>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Upgrade the packages the fork owns <strong>before</strong> bumping Buildroot, each
+as its own commit with its own ChangeLog entry.  Bumping Buildroot
+alone pulls them in as a side effect of moving the submodule pointer,
+where neither the reviewer nor the release notes see them.</p>
+</div>
+<p>I.e., two separate commits in Infix, in this order:</p>
+<div class="highlight"><pre><span></span><code>Bump FRR to 10.5.5
+Bump buildroot to 2025.02.18
+</code></pre></div>
 <blockquote>
 <p><strong>Depending on your setup, follow the appropriate steps below.</strong></p>
 </blockquote>
@@ -3215,6 +3230,11 @@ Buildroot LTS available.</p>
 </div>
 <h4 id="continue-here">Continue Here<a class="headerlink" href="#continue-here" title="Permanent link">¶</a></h4>
 <ol>
+<li>
+<p>Upgrade any packages the fork owns, e.g. FRR, on the <strong>current</strong>
+   <code>-kkit</code> branch, then bump the submodule in Infix and land that on
+   its own.  The rebase below carries the upgrade to the new branch</p>
+</li>
 <li>
 <p>Create a new branch based on the <strong>previous</strong> KernelKit Buildroot
    release (e.g.  <code>2025.02.1-kkit</code>) and name it according to the naming

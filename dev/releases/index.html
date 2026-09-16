@@ -2579,6 +2579,10 @@ of the series; what moves is the patch level, e.g., Linux 6.18.48 →
 6.18.49 → 6.18.51.  Changing to a new kernel or Buildroot LTS brings new
 drivers, new behavior, and new regressions, so it only ever happens on
 <code>main</code>, in a new series.</p>
+<p>The Buildroot LTS is tracked in a fork where a handful of critical
+packages -- the routing stack (FRR), for one -- are kept newer than the
+LTS itself ships.  Those upgrades travel with the Buildroot bump, and
+each gets its own line in the ChangeLog, so they are never a surprise.</p>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/release-branches.svg" data-desc-position="bottom"><img alt="Where kernel and Buildroot LTS updates go" src="../img/release-branches.svg"></a></p>
 <h2 id="levels-of-maintenance">Levels of Maintenance<a class="headerlink" href="#levels-of-maintenance" title="Permanent link">¶</a></h2>
 <p>The first two levels are what the open source project itself provides,
@@ -2641,7 +2645,8 @@ release is not the same as a maintained branch.</p>
 <ol>
 <li>The fix, or fixes, that motivated the release</li>
 <li>The latest kernel LTS patch level, ported from <code>main</code></li>
-<li>The latest Buildroot LTS patch level, ported from <code>main</code></li>
+<li>The latest Buildroot LTS patch level, ported from <code>main</code>, along with
+   the package upgrades the fork carries at that point</li>
 </ol>
 <p>The last two are the important part.  Someone who takes v26.08.2 for a
 single file permission fix also receives every kernel and Buildroot
@@ -2649,10 +2654,10 @@ security fix published since v26.08.1, which is usually the larger part
 of their exposure.</p>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
-<p>Ported means the <em>patch level</em> only: 6.18.49 → 6.18.51 and 2025.02.17
-→ 2025.02.18.  A patch release never moves to another LTS line, never
-adds features, and never changes the YANG models, so a device can take
-it without a configuration migration.</p>
+<p>Ported means the <em>patch level</em> only: 6.18.49 → 6.18.51, 2025.02.17 →
+2025.02.18, FRR 10.5.4 → 10.5.5.  A patch release never moves to
+another LTS line, never adds features, and never changes the YANG
+models, so a device can take it without a configuration migration.</p>
 </div>
 <h3 id="infix-lts-commercial">Infix LTS (Commercial)<a class="headerlink" href="#infix-lts-commercial" title="Permanent link">¶</a></h3>
 <p>For products that have to stay on one version for years,
