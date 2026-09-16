@@ -68,9 +68,9 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		caps["supported-trust-order"] = trust
 	}
 
-	// Stages the driver runs.  ets reports offloaded when the driver
-	// took it.  mqprio never sets that flag, but it is only ever
-	// installed with hw 1, which the kernel refuses without driver
+	// Stages the driver runs.  ets and tbf report offloaded when the
+	// driver took them.  mqprio never sets that flag, but it is only
+	// ever installed with hw 1, which the kernel refuses without driver
 	// support, so its presence means the same.
 	var offload []string
 	if trust != nil {
@@ -99,6 +99,10 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 		case "ets":
 			if q.Offloaded {
 				offload = append(offload, "transmission-selection")
+			}
+		case "tbf":
+			if q.Root && q.Offloaded {
+				offload = append(offload, "rate-limit")
 			}
 		}
 	}
