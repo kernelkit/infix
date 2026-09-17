@@ -155,10 +155,25 @@ $ gpg -d support-data.tar.gz.gpg | tar xz
 The support archive includes:
 
 - System identification (hostname, uptime, kernel version)
-- Running and operational configuration (sysrepo datastores)
+- Running, operational and startup configuration, with secrets redacted
 - System logs (`/var/log` directory and live tail of messages log)
 - Network configuration and state (interfaces, routes, neighbors, bridges)
 - FRRouting information (OSPF, BFD status)
 - Container information (podman containers and their configuration)
 - System resource usage (CPU, memory, disk, processes)
 - Hardware information (PCI, USB devices, network interfaces)
+
+## Secrets in the Configuration
+
+The configuration holds private keys, password hashes and other secrets
+that help no one troubleshoot, so `support collect` exports it with
+`copy -r`, which drops every node the YANG models tag
+`nacm:default-deny-all`, and the user passwords. The rest is left
+intact.
+
+Pass `--no-redact` to keep them, for instance when the archive is for
+your own use and stays on your workstation. The RPC always redacts.
+
+The archive still contains every log on the device, which may hold
+usernames, addresses and other details of your network. Treat it as
+confidential and encrypt it before it leaves your control.

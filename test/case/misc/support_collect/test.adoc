@@ -1,13 +1,14 @@
 === Support Data Collection
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/support_collect]
+ifdef::topdoc[:imagesdir: {topdoc}../../misc/support_collect]
 
 ==== Description
 
 Verify that the support-collect RPC returns a valid archive with the
-expected content, that the archive can be GPG encrypted, and that an
-archive too large to return inline is left on the device and its path
-returned instead.
+expected content, that private keys and login hashes are removed from
+the configuration in it, that the archive can be GPG encrypted, and
+that an archive too large to return inline is left on the device and
+its path returned instead.
 
 ==== Topology
 
@@ -16,10 +17,18 @@ image::topology.svg[Support Data Collection topology, align=center, scaledwidth=
 ==== Sequence
 
 . Set up topology and attach to target DUT
-. Collect support data with the support-collect RPC
-. Verify the archive returned by the RPC
-. Collect an encrypted archive with the support-collect RPC
-. Decrypt the encrypted archive and verify it
+. Call the infix-system:support-collect RPC without a password
+. Base64 decode the 'data' reply to a .tar.gz file, verify its length matches the 'size' reply
+. Verify the archive holds collection.log, running-config.json, operational-config.json, system/dmesg.txt, system/meminfo.txt and network/ip/addr.json
+. Verify running-config.json in the archive has the ietf-keystore:keystore container and the admin user
+. Verify the admin user in running-config.json has no password leaf
+. Verify neither running-config.json nor operational-config.json has any password, cleartext-private-key, cleartext-symmetric-key or shared-secret leaf
+. Call the support-collect RPC with password 'test-support-password-123'
+. Base64 decode the reply to a .gpg file, decrypt it with gpg and the same password
+. Verify the decrypted archive holds the same files as the first one
+. Verify the decrypted archive has the same secrets removed
 . Attach to target over ssh and create /var/log/support-test.bin with 17 MB of random data
 . Call the support-collect RPC, verify the reply has 'size' over 16 MiB and 'filename', but no inline 'data'
 . Fetch the archive named in 'filename' from target over ssh, verify its length matches 'size' and it holds the expected files
+
+

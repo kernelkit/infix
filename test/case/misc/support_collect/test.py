@@ -2,9 +2,10 @@
 """Support data collection
 
 Verify that the support-collect RPC returns a valid archive with the
-expected content, that the archive can be GPG encrypted, and that an
-archive too large to return inline is left on the device and its path
-returned instead.
+expected content, that private keys and login hashes are removed from
+the configuration in it, that the archive can be GPG encrypted, and
+that an archive too large to return inline is left on the device and
+its path returned instead.
 
 """
 
@@ -30,6 +31,24 @@ EXPECTED = [
     "system/meminfo.txt",
     "network/ip/addr.json",
 ]
+SECRETS = ("password", "cleartext-private-key", "cleartext-symmetric-key",
+           "shared-secret")
+
+
+def secrets(node, found=None):
+    """Collect (leaf, value) for every secret leaf in a config tree"""
+    if found is None:
+        found = []
+    if isinstance(node, dict):
+        for key, val in node.items():
+            if key.split(":")[-1] in SECRETS and isinstance(val, str):
+                found.append((key, val))
+            else:
+                secrets(val, found)
+    elif isinstance(node, list):
+        for val in node:
+            secrets(val, found)
+    return found
 
 
 def free_kb(ssh, path):
@@ -38,7 +57,23 @@ def free_kb(ssh, path):
     return int(result.stdout.strip())
 
 
-def verify(local, expected):
+def save(local, output):
+    """Decode the archive in an RPC reply to a local file, return its size"""
+    if "data" not in output:
+        raise Exception(f"RPC returned no inline archive: {output}")
+
+    raw = base64.b64decode(output["data"])
+    if len(raw) != int(output["size"]):
+        raise Exception(f"RPC reported {output['size']} bytes,"
+                        f" archive is {len(raw)}")
+
+    with open(local, "wb") as f:
+        f.write(raw)
+
+    return len(raw)
+
+
+def verify_contents(local, expected):
     with tarfile.open(local, "r:gz") as tar:
         members = tar.getnames()
         if not members:
@@ -51,13 +86,52 @@ def verify(local, expected):
         if missing:
             raise Exception(f"missing from archive: {', '.join(missing)}")
 
-        for name in ("running-config.json", "operational-config.json"):
-            with tar.extractfile(f"{root}/{name}") as f:
-                try:
-                    json.load(f)
-                except json.JSONDecodeError as e:
-                    raise Exception(f"{name} in archive is not valid JSON,"
-                                    f" collection of it failed: {e}")
+
+def config(local, name):
+    """Load a JSON configuration file from the archive"""
+    with tarfile.open(local, "r:gz") as tar:
+        root = tar.getnames()[0].split("/")[0]
+        with tar.extractfile(f"{root}/{name}") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError as e:
+                raise Exception(f"{name} in archive is not valid JSON,"
+                                f" collection of it failed: {e}")
+
+
+def admin_user(running):
+    users = running.get("ietf-system:system", {}) \
+                   .get("authentication", {}).get("user", [])
+    admin = [u for u in users if u.get("name") == "admin"]
+    if not admin:
+        raise Exception("running-config.json has no admin user, "
+                        f"users: {[u.get('name') for u in users]}")
+    return admin[0]
+
+
+def verify_keystore_and_admin(local):
+    running = config(local, "running-config.json")
+    if "ietf-keystore:keystore" not in running:
+        raise Exception("running-config.json has no keystore, the factory "
+                        "configuration has two keys in it")
+    admin_user(running)
+    print("running-config.json: keystore and admin user present")
+
+
+def verify_login_hash_removed(local):
+    admin = admin_user(config(local, "running-config.json"))
+    if "password" in admin:
+        raise Exception("running-config.json leaks the admin login hash: "
+                        f"{admin['password']}")
+    print("running-config.json: admin user has no password leaf")
+
+
+def verify_no_secrets(local):
+    for name in ("running-config.json", "operational-config.json"):
+        leaked = [key for key, _ in secrets(config(local, name))]
+        if leaked:
+            raise Exception(f"{name} leaks secrets: {', '.join(leaked)}")
+        print(f"{name}: no secret leaves")
 
 
 with infamy.Test() as test:
@@ -78,25 +152,34 @@ with infamy.Test() as test:
 
         test.push_test_cleanup(cleanup)
 
-    with test.step("Collect support data with the support-collect RPC"):
+    with test.step("Call the infix-system:support-collect RPC without a password"):
         output = target.rpc_output("infix-system", "support-collect")
 
-    with test.step("Verify the archive returned by the RPC"):
-        if "data" not in output:
-            raise Exception(f"RPC returned no inline archive: {output}")
+    with test.step("Base64 decode the 'data' reply to a .tar.gz file, verify "
+                   "its length matches the 'size' reply"):
+        size = save(local["archive"], output)
+        print(f"RPC returned {size} bytes")
 
-        raw = base64.b64decode(output["data"])
-        if len(raw) != int(output["size"]):
-            raise Exception(f"RPC reported {output['size']} bytes,"
-                            f" archive is {len(raw)}")
+    with test.step("Verify the archive holds collection.log, running-config.json, "
+                   "operational-config.json, system/dmesg.txt, system/meminfo.txt "
+                   "and network/ip/addr.json"):
+        verify_contents(local["archive"], EXPECTED)
 
-        print(f"RPC returned {len(raw)} bytes")
-        with open(local["archive"], "wb") as f:
-            f.write(raw)
+    with test.step("Verify running-config.json in the archive has the "
+                   "ietf-keystore:keystore container and the admin user"):
+        verify_keystore_and_admin(local["archive"])
 
-        verify(local["archive"], EXPECTED)
+    with test.step("Verify the admin user in running-config.json has no "
+                   "password leaf"):
+        verify_login_hash_removed(local["archive"])
 
-    with test.step("Collect an encrypted archive with the support-collect RPC"):
+    with test.step("Verify neither running-config.json nor operational-config.json "
+                   "has any password, cleartext-private-key, "
+                   "cleartext-symmetric-key or shared-secret leaf"):
+        verify_no_secrets(local["archive"])
+
+    with test.step("Call the support-collect RPC with password "
+                   "'test-support-password-123'"):
         try:
             output = target.rpc_output("infix-system", "support-collect",
                                        {"password": PASSWORD})
@@ -106,14 +189,14 @@ with infamy.Test() as test:
             print("GPG not available on target - skipping encryption test")
             output = None
 
-    with test.step("Decrypt the encrypted archive and verify it"):
+    with test.step("Base64 decode the reply to a .gpg file, decrypt it with "
+                   "gpg and the same password"):
         if output is None:
             print("Skipped, target has no gpg")
         elif not shutil.which("gpg"):
             raise Exception("gpg is required on the test host")
         else:
-            with open(local["encrypted"], "wb") as f:
-                f.write(base64.b64decode(output["data"]))
+            save(local["encrypted"], output)
 
             with open(local["encrypted"], "rb") as ef, \
                  open(local["decrypted"], "wb") as df:
@@ -126,14 +209,26 @@ with infamy.Test() as test:
                 raise Exception("failed to decrypt support data:"
                                 f" {result.stderr.decode(errors='replace')}")
 
-            verify(local["decrypted"], EXPECTED)
+    with test.step("Verify the decrypted archive holds the same files as the "
+                   "first one"):
+        if output is None:
+            print("Skipped, target has no gpg")
+        else:
+            verify_contents(local["decrypted"], EXPECTED)
+
+    with test.step("Verify the decrypted archive has the same secrets removed"):
+        if output is None:
+            print("Skipped, target has no gpg")
+        else:
+            verify_login_hash_removed(local["decrypted"])
+            verify_no_secrets(local["decrypted"])
 
     with test.step("Attach to target over ssh and create /var/log/support-test.bin "
                    "with 17 MB of random data"):
         tgtssh = env.attach("target", "mgmt", "ssh", test_reset=False)
 
         free = free_kb(tgtssh, WORK_DIR)
-        need = 2 * (os.path.getsize(local["archive"]) // 1024 + BIG_MB * 1024) + 2048
+        need = 2 * (size // 1024 + BIG_MB * 1024) + 2048
         room = free >= need
         print(f"{WORK_DIR}: {free // 1024} MB free, collecting {BIG_MB} MB of extra"
               f" logs needs about {need // 1024} MB")
@@ -173,6 +268,6 @@ with infamy.Test() as test:
             if os.path.getsize(local["big"]) != int(output["size"]):
                 raise Exception(f"RPC reported {output['size']} bytes,"
                                 f" fetched {os.path.getsize(local['big'])}")
-            verify(local["big"], EXPECTED)
+            verify_contents(local["big"], EXPECTED)
 
     test.succeed()
