@@ -25,3 +25,6 @@
 
 - name: QoS Weighted Sharing
   case: qos_weighted_sharing/test.py
+
+- name: QoS Mixed Selection
+  case: qos_mixed_selection/test.py
