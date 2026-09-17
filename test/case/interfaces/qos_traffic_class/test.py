@@ -4,10 +4,10 @@ QoS Traffic Classes and Transmission Selection
 
 Configure a custom priority to traffic class map on a port with the two
 lowest classes sharing 67:33 and the rest strict priority, and verify the
-root qdisc reflects it.  A driver with mqprio offload shows an offloaded
-mqprio with the same map; otherwise the kernel runs an ets qdisc with the
-strict bands first, the shares as quanta of one frame per percent, and
-the priomap inverted as 802.1Q numbering requires.
+root qdisc reflects it: an ets qdisc with the strict bands first, the
+shares as quanta of one frame per percent, and the priomap inverted as
+802.1Q numbering requires.  A driver that offloads it marks the qdisc
+offloaded.
 
 The port's class count comes from its transmit queues, or eight for a
 single-queue port.  Switching the table to the ieee-sr preset must put
@@ -69,8 +69,6 @@ def qdisc_matches(qdisc, num_tc, prio_map, strict, quanta):
     if not qdisc:
         return False
     opts = qdisc.get("options", {})
-    if qdisc["kind"] == "mqprio":
-        return opts.get("map", [])[:8] == prio_map
     if qdisc["kind"] == "ets":
         return (opts.get("bands") == num_tc and opts.get("strict") == strict
                 and opts.get("quanta", []) == quanta
@@ -122,9 +120,9 @@ with infamy.Test() as test:
         print(json.dumps(root_qdisc(tgtssh, port)))
 
     with test.step("Verify the offload capability matches the qdisc"):
-        kind = root_qdisc(tgtssh, port)["kind"]
+        taken = root_qdisc(tgtssh, port).get("offloaded", False)
         until(lambda: ("transmission-selection" in capabilities(target, port).get("offload", []))
-              == (kind == "mqprio"))
+              == taken)
 
     with test.step("Switch to the ieee-sr preset and verify SR classes on top"):
         target.delete_xpath(qos_xpath(port, "/egress"))

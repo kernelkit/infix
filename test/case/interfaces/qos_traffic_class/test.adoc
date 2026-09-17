@@ -6,10 +6,10 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_traffic_class]
 
 Configure a custom priority to traffic class map on a port with the two
 lowest classes sharing 67:33 and the rest strict priority, and verify the
-root qdisc reflects it.  A driver with mqprio offload shows an offloaded
-mqprio with the same map; otherwise the kernel runs an ets qdisc with the
-strict bands first, the shares as quanta of one frame per percent, and
-the priomap inverted as 802.1Q numbering requires.
+root qdisc reflects it: an ets qdisc with the strict bands first, the
+shares as quanta of one frame per percent, and the priomap inverted as
+802.1Q numbering requires.  A driver that offloads it marks the qdisc
+offloaded.
 
 The port's class count comes from its transmit queues, or eight for a
 single-queue port.  Switching the table to the ieee-sr preset must put
