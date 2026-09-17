@@ -13,6 +13,10 @@
   name: "Verify Software Version"
   infamy:
     specification: False
+- case: meta/prune-containers.py
+  name: "Removing old containers"
+  infamy:
+    specification: False
 
 # This typically reveals problems triggered or caused by previous test runs.
 - case: misc/operational_all/test.py
