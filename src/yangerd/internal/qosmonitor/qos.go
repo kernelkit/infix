@@ -69,9 +69,7 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 	}
 
 	// Stages the driver runs.  ets and tbf report offloaded when the
-	// driver took them.  mqprio never sets that flag, but it is only
-	// ever installed with hw 1, which the kernel refuses without driver
-	// support, so its presence means the same.
+	// driver took them.
 	var offload []string
 	if trust != nil {
 		var app struct {
@@ -92,10 +90,6 @@ func capabilities(p port, qdiscs []qdisc) map[string]any {
 
 	for _, q := range qdiscs {
 		switch q.Kind {
-		case "mqprio":
-			if q.Root {
-				offload = append(offload, "transmission-selection")
-			}
 		case "ets":
 			if q.Offloaded {
 				offload = append(offload, "transmission-selection")

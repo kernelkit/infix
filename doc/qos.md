@@ -275,8 +275,7 @@ admin@example:/config/interface/…/egress/> <b>leave</b>
 On a port without offload the limit applies to the frames the CPU
 sends.  Where the driver takes the bucket it applies to the frames the
 fabric forwards as well, and `offload` under `capabilities` then lists
-`rate-limit`.  A rate limited port always schedules with `tc ets`,
-since `tc mqprio` can only be the root qdisc.
+`rate-limit`.
 
 
 ### Egress Remarking

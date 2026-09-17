@@ -37,7 +37,7 @@ func TestBuildSwitchPort(t *testing.T) {
 		Driver:   "sparx5-switch",
 		App:      json.RawMessage(`{"dscp_prio":[[0,0],[46,6]],"pcp_prio":[]}`),
 		Rewr:     json.RawMessage(`{"prio_pcp":[],"prio_dscp":[]}`),
-		Qdiscs:   json.RawMessage(`[{"kind":"mqprio","handle":"8001:","root":true,"options":{}}]`),
+		Qdiscs:   json.RawMessage(`[{"kind":"ets","handle":"8001:","root":true,"offloaded":true,"options":{"bands":4}}]`),
 	}
 	got := buildJSON(t, p)
 	want := map[string]any{"infix-interfaces:qos": map[string]any{
