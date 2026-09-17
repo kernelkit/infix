@@ -7,6 +7,10 @@ pydot==1.4.2
 pyyaml==6.0.1
 passlib==1.7.4
 requests~=2.32.4
+# urllib3 2.8.0 normalises the zone id of an IPv6 link-local URL host as a
+# percent-escape, fe80::1%d2a becomes fe80::1%D2a, and the request fails
+# with a name resolution error.  Stay on 2.7 until it is fixed upstream.
+urllib3~=2.7.0
 pynmea2==1.19.0
 # GHSA-cq46-m9x9-j8w2: scapy <=2.6.1 has pickle deserialization vuln in session
 # loading (-s flag). Low risk: test framework only uses packet crafting (Ether,
