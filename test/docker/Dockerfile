@@ -2,8 +2,11 @@ FROM alpine:3.18.0
 
 # NOTE: please add packages alphabetically!
 RUN apk add --no-cache \
+    bash \
+    bison \
     busybox-extras \
     chrony \
+    coreutils \
     curl \
     dhcp-server-vanilla \
     dnsmasq \
@@ -12,21 +15,29 @@ RUN apk add --no-cache \
     ethtool \
     fakeroot \
     file \
+    flex \
     font-dejavu \
     gcc \
     git \
     graphviz \
+    iperf3 \
     iproute2 \
     iputils \
     jq \
     libc-dev \
+    libnet-dev \
+    libnetfilter_conntrack-dev \
+    libnl3-dev \
+    libpcap-dev \
     libyang-dev \
     linux-headers \
     make \
+    ncurses-dev \
     nmap \
     openssh-client \
     openssl \
     pandoc-cli \
+    pkgconf \
     python3-dev \
     qemu-img \
     qemu-system-x86_64 \
@@ -37,12 +48,28 @@ RUN apk add --no-cache \
     sshpass \
     tcpdump \
     tshark \
-    weasyprint
+    userspace-rcu-dev \
+    weasyprint \
+    zlib-dev
 
 ARG MTOOL_VERSION="3.0"
 RUN wget https://github.com/troglobit/mtools/releases/download/v3.0/mtools-$MTOOL_VERSION.tar.gz -O /tmp/mtools-$MTOOL_VERSION.tar.gz
 RUN cd /tmp/ && tar zxvf mtools-$MTOOL_VERSION.tar.gz
 RUN cd /tmp/mtools-$MTOOL_VERSION && make && make install
+
+# trafgen and mausezahn, traffic generators for the QoS tests.  Alpine
+# has no netsniff-ng package, and mausezahn needs libcli, which is only
+# in edge/testing, so both are built from their release tarballs.
+ARG LIBCLI_VERSION="1.10.7"
+RUN wget https://github.com/dparrish/libcli/archive/refs/tags/V$LIBCLI_VERSION.tar.gz -O /tmp/libcli-$LIBCLI_VERSION.tar.gz
+RUN cd /tmp/ && tar zxf libcli-$LIBCLI_VERSION.tar.gz
+RUN cd /tmp/libcli-$LIBCLI_VERSION && make && make install PREFIX=/usr
+
+ARG NETSNIFF_NG_VERSION="0.6.9"
+RUN wget https://github.com/netsniff-ng/netsniff-ng/archive/refs/tags/v$NETSNIFF_NG_VERSION.tar.gz -O /tmp/netsniff-ng-$NETSNIFF_NG_VERSION.tar.gz
+RUN cd /tmp/ && tar zxf netsniff-ng-$NETSNIFF_NG_VERSION.tar.gz
+RUN cd /tmp/netsniff-ng-$NETSNIFF_NG_VERSION && ./configure --disable-geoip && \
+    make trafgen mausezahn && make trafgen_install mausezahn_install
 
 # Alpine's QEMU package does not bundle this for some reason, copied
 # from Ubuntu
