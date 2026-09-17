@@ -3,8 +3,8 @@ QoS helpers: capabilities, the rendered scheduler, per-class counters,
 and traffic marked the way the tests need it.
 
 Traffic class numbering follows IEEE 802.1Q: class 0 is the lowest.  The
-tc ets qdisc numbers its bands the other way and mqprio has classes of
-its own, so everything here talks in traffic classes and hides both.
+tc ets qdisc numbers its bands the other way, so everything here talks
+in traffic classes and hides that.
 """
 import json
 import re
@@ -37,8 +37,6 @@ TABLE_34_1 = {
 STRICT = "ieee802-dot1q-types:strict-priority"
 ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
 
-# mqprio addresses its traffic classes from this minor number upwards
-MQPRIO_TC_BASE = 0xffe0
 ETS_QUANTUM_UNIT = 1514        # one frame per percent of bandwidth, as rendered
 
 
@@ -101,7 +99,7 @@ def root_qdisc(ssh, port):
 
 
 def scheduler(ssh, port):
-    """The ets or mqprio qdisc: the root, or the child of a tbf root"""
+    """The ets qdisc: the root, or the child of a tbf root"""
     root = root_qdisc(ssh, port)
     if root and root["kind"] == "tbf":
         for qdisc in qdiscs(ssh, port):
@@ -120,8 +118,6 @@ def scheduler_matches(qdisc, num_tc, prio_map, strict=None, quanta=None):
     if not qdisc:
         return False
     opts = qdisc.get("options", {})
-    if qdisc["kind"] == "mqprio":
-        return opts.get("map", [])[:8] == list(prio_map)
     if qdisc["kind"] == "ets":
         if opts.get("bands") != num_tc:
             return False
@@ -149,8 +145,6 @@ def class_stats(ssh, port, num_tc):
         minor = int(handle.split(":")[1], 16)
         if kind == "ets":
             return num_tc - minor         # band 0, minor 1, is the top class
-        if kind == "mqprio" and minor >= MQPRIO_TC_BASE:
-            return minor - MQPRIO_TC_BASE
         return None
 
     if out.startswith("["):
