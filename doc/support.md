@@ -41,7 +41,8 @@ collection process.
 ## Encrypted Collection
 
 For secure transmission of support data, the archive can be encrypted
-with GPG using a password:
+with GPG using a password. This needs gpg on the device, which the
+`BR2_PACKAGE_SUPPORT_ENCRYPT` build option adds.
 
 ```bash
 admin@host:~$ sudo support collect -p mypassword > support-data.tar.gz.gpg
