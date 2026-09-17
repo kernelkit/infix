@@ -114,11 +114,10 @@ static const struct {
 	const char *driver;
 	const char *orders[5];
 	bool pcp_encoded;	/* fabric always encodes PCP from the priority */
-	bool mqprio;		/* offloads the class map through mqprio only */
 } dcb_drivers[] = {
-	{ "sparx5-switch",  { "pcp", "dscp", "dscp-pcp", NULL }, false, false },
-	{ "lan966x-switch", { "pcp", "dscp", "dscp-pcp", NULL }, false, false },
-	{ "mv88e6085",      { "pcp", "dscp", "pcp-dscp", "dscp-pcp", NULL }, true, true },
+	{ "sparx5-switch",  { "pcp", "dscp", "dscp-pcp", NULL }, false },
+	{ "lan966x-switch", { "pcp", "dscp", "dscp-pcp", NULL }, false },
+	{ "mv88e6085",      { "pcp", "dscp", "pcp-dscp", "dscp-pcp", NULL }, true },
 };
 
 /*
@@ -224,19 +223,6 @@ static bool qos_pcp_encoded(const char *ifname)
 	int i = qos_dcb_driver(ifname);
 
 	return i >= 0 && dcb_drivers[i].pcp_encoded;
-}
-
-/*
- * ets carries the whole of transmission selection, and a driver that
- * offloads it says so in the qdisc, so it is what every port gets.
- * The one fabric that offloads the class map through mqprio, and
- * nothing through ets, keeps mqprio until its driver learns ets.
- */
-static bool qos_mqprio(const char *ifname)
-{
-	int i = qos_dcb_driver(ifname);
-
-	return i >= 0 && dcb_drivers[i].mqprio;
 }
 
 /* Unknown drivers are not limited: without DCB the order is honoured in software. */
@@ -698,11 +684,11 @@ static void gen_dcb_log(FILE *fp, const char *ifname, struct lyd_node *ingress,
 }
 
 /*
- * tc mqprio takes the 802.1Q map as-is and offloads the class layout to
- * the driver.  tc ets is the software rendering: band 0 is dequeued
- * first, so class N-1 is band 0, strict bands come first, and quanta are
- * listed for the weighted bands in band order, one frame per percent of
- * share so no band gets less than a frame of credit per round.
+ * tc ets carries the whole layout, and a driver that offloads it says
+ * so in the qdisc: band 0 is dequeued first, so class N-1 is band 0,
+ * strict bands come first, and quanta are listed for the weighted
+ * bands in band order, one frame per percent of share so no band gets
+ * less than a frame of credit per round.
  */
 static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 {
@@ -713,8 +699,7 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 
 	/*
 	 * The rate limit is one bucket on the whole port, so it takes
-	 * the root and the scheduler hangs below it.  mqprio can only
-	 * be the root, so a rate limited port always schedules with ets.
+	 * the root and the scheduler hangs below it.
 	 */
 	if (eg->rate) {
 		fprintf(fp, "tc qdisc add dev %s root handle 1: tbf rate %" PRIu64 "bit burst %u"
@@ -724,16 +709,6 @@ static void gen_egress(FILE *fp, const char *ifname, struct qos_egress *eg)
 
 	if (eg->num_tc < 2)
 		return;
-
-	if (!eg->rate && qos_mqprio(ifname) && !iface_has_quirk(ifname, "broken-mqprio")) {
-		fprintf(fp, "tc qdisc add dev %s root mqprio num_tc %d map", ifname, eg->num_tc);
-		for (i = 0; i < NUM_PRIO; i++)
-			fprintf(fp, " %d", eg->map[i]);
-		fputs(" queues", fp);
-		for (i = 0; i < eg->num_tc; i++)
-			fprintf(fp, " 1@%d", i);
-		fputs(" hw 1 2>/dev/null ||\n", fp);
-	}
 
 	for (i = eg->num_tc - 1; i >= 0 && eg->algo[i] == TSA_STRICT; i--)
 		nstrict++;

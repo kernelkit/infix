@@ -269,8 +269,7 @@ The limit is rendered as a `tc tbf` root qdisc with the scheduler below
 it, so on a port without offload it applies to the frames the CPU
 sends, and on a port whose driver takes the bucket to frames the fabric
 forwards as well; `offload` under `capabilities` then lists
-`rate-limit`.  A rate limited port always schedules with `tc ets`,
-since `tc mqprio` can only be the root qdisc.
+`rate-limit`.
 
 
 ### Egress Remarking
