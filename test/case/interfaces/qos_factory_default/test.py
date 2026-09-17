@@ -84,8 +84,6 @@ with infamy.Test() as test:
             if not qdisc:
                 return False
             opts = qdisc.get("options", {})
-            if qdisc["kind"] == "mqprio":
-                return opts.get("map", [])[:8] == TABLE_8_5[num_tc]
             if qdisc["kind"] == "ets":
                 return (opts.get("bands") == num_tc and opts.get("strict") == num_tc and
                         opts.get("priomap", [])[:8] == [num_tc - 1 - tc for tc in TABLE_8_5[num_tc]])
