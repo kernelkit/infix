@@ -1,0 +1,38 @@
+=== QoS Mixed Selection
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_mixed_selection]
+
+==== Description
+
+Three talkers, marked EF, AF21 and CS1, bridged through the DUT and out
+one egress port that cannot carry them all.  The port is negotiated down
+to 100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s where
+it has no PHY.  The ingress port classifies EF to priority 4, AF21 to 3
+and CS1 to 2, classes 4, 3 and 2 in the default table: EF in a strict
+class above the two weighted ones, which share 60 and 30 percent, with
+the two classes below holding five percent each and carrying nothing.
+
+EF offers 40 percent of what the port drains, the two weighted talkers
+60 percent each, so the port is oversubscribed and both weighted classes
+always have a backlog.  EF must arrive intact, and the two weighted
+flows must divide what EF leaves 2:1, within five points, both of them
+losing more than a tenth of their frames.  The test's own iperf3 control
+traffic, DSCP 0, is classified to priority 7.  Skipped on a switch
+fabric whose scheduler is not offloaded, where forwarded frames never
+meet the configured algorithm.
+
+==== Topology
+
+image::topology.svg[QoS Mixed Selection topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Bridge the two ports, classify by DSCP on ingress, EF strict above AF21 and CS1 at 2:1
+. Slow the egress port so its queues can fill
+. Set up the talker and listener namespaces
+. EF at 40 percent, AF21 and CS1 at 60 percent each
+. Verify EF arrived intact
+. Verify AF21 and CS1 both lost frames and split the rest 2:1
+
+
