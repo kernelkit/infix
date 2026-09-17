@@ -410,7 +410,7 @@ Driver support in the Linux kernel, as of 6.18:
 | Driver                              | Classification | Remarking     | Traffic classes |
 |-------------------------------------|----------------|---------------|-----------------|
 | Microchip `sparx5`, `lan966x`       | hardware       | hardware      | hardware        |
-| DSA `mv88e6xxx`, Marvell LinkStreet | hardware[^15]  | hardware[^15] | hardware        |
+| DSA `mv88e6xxx`, Marvell LinkStreet | hardware[^15]  | hardware[^15] | hardware[^15]   |
 | Data-center NICs[^12]               | software[^14]  | DSCP, software| hardware        |
 | DSA `felix`, `ksz`                  | software[^14]  | DSCP, software| hardware        |
 | Other NICs and SoC MACs[^13]        | software       | DSCP, software| software        |
@@ -461,30 +461,35 @@ orders are accepted.  Two hardware details show through:
   past the tables, so their DSCP is remarked by the kernel instead and
   their PCP comes from the VLAN interface settings described below.
 
-The `traffic-class-table` applies to hardware forwarded frames as well:
-each priority is queued in the first queue of its traffic class.  The
-class algorithms and weights are not offloaded, however.  The switch
-serves its eight queues by the fixed Weighted Round Robin (WRR)[^11]
-weights below, whatever the `traffic-class` list says, for frames the
-CPU sends as well as for forwarded ones.
+The `traffic-class-table` and the `traffic-class` list apply to hardware
+forwarded frames as well: each priority is queued in its traffic class,
+the strict classes are served first, and the weighted classes share the
+rest by Weighted Round Robin (WRR)[^11] with the `bandwidth` shares as
+weights.  The `rate-limit` is the port's own egress shaper.  Three
+hardware details show through:
 
-| Queue | Weight |
-|------:|-------:|
-|     0 |      1 |
-|     1 |      2 |
-|     2 |      3 |
-|     3 |      6 |
-|     4 |     12 |
-|     5 |     17 |
-|     6 |     25 |
-|     7 |     33 |
-/// table-caption
-Marvell LinkStreet WRR weights per output queue.
-///
+- A frame's output queue is chosen where it enters the switch, by the
+  ingress port's tables, so the `traffic-class-table` is one per switch
+  chip, not per port.  The port configured most recently defines it,
+  and every port whose own table differs is no longer offloaded: its
+  `offload` list under `capabilities` leaves out
+  `transmission-selection`.  Give every port the same table.
+- The WRR weights are one set per switch chip as well, defined the
+  same way by the port configured most recently for each weighted
+  class.  Give every port with weighted classes the same shares.
+- A frame crossing from one chip to another inside a device carries its
+  priority between them, as it would between two switches in a network,
+  and the far chip queues it in the class of that priority.  This is the
+  general rule of QoS in a network: classification at the first ingress
+  decides the priority, and every hop after it trusts and queues by that
+  priority.  Steer traffic with the ingress `dscp-map` and `pcp-map`;
+  a `traffic-class-table` other than the identity holds for frames that
+  enter and leave on the same chip.
+- The WRR counts frames where `bandwidth` speaks of bytes, so the shares
+  hold for traffic of similar frame sizes.
 
-The sum of all weights adds up to 99, meaning that the weight of any
-given queue is roughly equivalent to the percentage of the available
-bandwidth reserved for it.
+Without any `qos` configuration the class table is IEEE 802.1Q-2022
+Table 8-5 with every class strict, as on any other port.
 
 
 ## VLAN Interfaces
