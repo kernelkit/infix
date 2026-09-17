@@ -19,3 +19,6 @@
 
 - name: QoS Queue Assignment
   case: qos_queue_assignment/test.py
+
+- name: QoS Strict Priority
+  case: qos_strict_priority/test.py
