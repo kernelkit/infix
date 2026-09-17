@@ -85,6 +85,6 @@ TMPDIR=`mktemp -d`
 awk '{print}' $changes > "$TMPDIR/changes.conf"
 $MERGE_CONFIG -O "$TMPDIR" "$base" "$TMPDIR/changes.conf"
 
-O="$TMPDIR" make savedefconfig
+make O="$TMPDIR" savedefconfig
 mv "$TMPDIR"/defconfig "$output"
 rm -r "$TMPDIR"
