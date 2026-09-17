@@ -944,6 +944,8 @@ module infix-system {
 
        The archive holds system and kernel logs, running and
        operational configuration, and network and hardware state.
+       Private keys, password hashes and other secrets are removed from
+       the configuration first.
 
        The archive comes back in 'data', or is left on the device with
        its path in 'filename' when it is too large to return inline.

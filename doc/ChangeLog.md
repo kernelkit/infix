@@ -16,6 +16,9 @@ All notable changes to the project are documented in this file.
 - Document the release and maintenance policy: which versions receive
   updates, what may go into a patch release, and the levels of long-term
   maintenance available, see [Releases & Support][relsup]
+- `support collect` now redacts private keys, password hashes and other
+  secrets from the configuration files in the archive, use `--no-redact`
+  to keep them.  The environment dump is no longer collected
 
 ### Added
 

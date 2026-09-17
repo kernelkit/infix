@@ -18,6 +18,7 @@ cmd_collect()
     LOG_TAIL_SEC=30
     PASSWORD=""
     OUTPUT=""
+    REDACT=1
     CMD_TIMEOUT=30
     HOOK_TIMEOUT=120
 
@@ -66,9 +67,13 @@ cmd_collect()
                 OUTPUT="$2"
                 shift 2
                 ;;
+            --no-redact|-R)
+                REDACT=0
+                shift
+                ;;
             *)
                 echo "Error: Unknown option '$1'" >&2
-                echo "Usage: $prognm collect [-s N] [-p PASSWORD] [-o FILE]" >&2
+                echo "Usage: $prognm collect [-s N] [-p PASSWORD] [-o FILE] [-R]" >&2
                 exit 1
                 ;;
         esac
@@ -224,21 +229,18 @@ cmd_collect()
     collect hostname.txt hostname
     collect uptime.txt uptime
 
-    # Configuration files
-    collect running-config.json copy running
-    collect operational-config.json copy operational
+    # Configuration, copy -r drops the secrets, see 'copy -h'
+    CP=""
+    [ "$REDACT" -eq 1 ] && CP="-r"
+    collect running-config.json     copy $CP running
+    collect operational-config.json copy $CP operational
+    collect startup-config.cfg      copy $CP startup
 
     # Sysrepo YANG modules
     if command -v sysrepoctl >/dev/null 2>&1; then
         collect sysrepo-modules.txt sysrepoctl -l
     fi
 
-    # Startup config (may not exist on first boot)
-    if [ -f /cfg/startup-config.cfg ]; then
-        cp /cfg/startup-config.cfg "${COLLECT_DIR}/startup-config.cfg" 2>> "${EXEC_LOG}"
-    else
-        echo "No startup-config.cfg found" > "${COLLECT_DIR}/startup-config.cfg"
-    fi
 
     # System logs and runtime data
     if [ -d /var/log ]; then
@@ -412,9 +414,6 @@ cmd_collect()
     else
         collect system/pstree.txt ps fax
     fi
-
-    # Environment and versions
-    collect system/env.txt env
 
     # Network sockets
     if command -v netstat >/dev/null 2>&1; then
@@ -654,6 +653,8 @@ usage()
     echo "  -p, --password [PASS]  Encrypt output with GPG. If PASS is omitted, prompts"
     echo "                         interactively or reads from stdin, so possible to do"
     echo "                         echo "\$MYSECRET" | ...   (recommended for security)"
+    echo "  -R, --no-redact        Keep private keys, password hashes and other secrets"
+    echo "                         in the collected configuration, see 'copy -h'"
     echo ""
     echo "Options for clean:"
     echo "  -n, --dry-run          Show what would be deleted without deleting"
