@@ -22,3 +22,6 @@
 
 - name: QoS Strict Priority
   case: qos_strict_priority/test.py
+
+- name: QoS Weighted Sharing
+  case: qos_weighted_sharing/test.py

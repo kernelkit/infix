@@ -39,6 +39,7 @@ ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
 
 # mqprio addresses its traffic classes from this minor number upwards
 MQPRIO_TC_BASE = 0xffe0
+ETS_QUANTUM_UNIT = 1514        # one frame per percent of bandwidth, as rendered
 
 
 def xpath(port, path=""):
@@ -342,7 +343,7 @@ def run_flows(talker, listener, dst, flows):
 
     Fills in flow.result from the listener side: bytes and packets
     received, lost packets and the loss in percent.  Returns the total
-    bytes received across the flows.
+    datagrams received across the flows.
     """
     servers = {}
     for f in flows:
