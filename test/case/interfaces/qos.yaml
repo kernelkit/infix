@@ -16,3 +16,6 @@
 
 - name: QoS Bridge Classification and Remarking
   case: qos_bridge_classify/test.py
+
+- name: QoS Queue Assignment
+  case: qos_queue_assignment/test.py
