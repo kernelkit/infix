@@ -1,7 +1,7 @@
 From 797dd2550e75613fb6eade3f1244be137a8113b4 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:04:22 +0200
-Subject: [PATCH 70/75] net: dsa: Support the PCP APP selector
+Subject: [PATCH 70/77] net: dsa: Support the PCP APP selector
 Organization: Wires
 
 The DCB APP table can map PCP and DEI to priority through the

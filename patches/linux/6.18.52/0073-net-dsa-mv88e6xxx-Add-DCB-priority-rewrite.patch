@@ -1,7 +1,7 @@
 From 25811498ff5773e47d29b27b2786082653941dde Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:12:40 +0200
-Subject: [PATCH 73/75] net: dsa: mv88e6xxx: Add DCB priority rewrite
+Subject: [PATCH 73/77] net: dsa: mv88e6xxx: Add DCB priority rewrite
 Organization: Wires
 
 On egress the 6390 family looks up the frame priority assigned at

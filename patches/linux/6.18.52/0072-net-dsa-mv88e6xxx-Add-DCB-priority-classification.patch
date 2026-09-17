@@ -1,7 +1,7 @@
 From 7221886d68f43d884fca5b6adf9a9b62b4c8142b Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:10:33 +0200
-Subject: [PATCH 72/75] net: dsa: mv88e6xxx: Add DCB priority classification
+Subject: [PATCH 72/77] net: dsa: mv88e6xxx: Add DCB priority classification
 Organization: Wires
 
 The 6390 family classifies frames per port from the tag PCP through the

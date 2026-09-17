@@ -1,7 +1,7 @@
 From c2319721ee7343981dcd0c57fd16a651db865381 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:10:32 +0200
-Subject: [PATCH 71/75] net: dsa: Support DCB priority rewrite
+Subject: [PATCH 71/77] net: dsa: Support DCB priority rewrite
 Organization: Wires
 
 The DCB rewrite table maps a priority back to the PCP and DEI, or the

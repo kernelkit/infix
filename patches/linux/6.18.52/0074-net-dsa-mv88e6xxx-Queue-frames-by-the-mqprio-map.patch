@@ -1,7 +1,7 @@
 From 48aee1f644470643a38cf236ae913fe08601010e Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 18:31:30 +0200
-Subject: [PATCH 74/75] net: dsa: mv88e6xxx: Queue frames by the mqprio map
+Subject: [PATCH 74/77] net: dsa: mv88e6xxx: Queue frames by the mqprio map
 Organization: Wires
 
 The mqprio offload only sets the netdev traffic class layout.  The

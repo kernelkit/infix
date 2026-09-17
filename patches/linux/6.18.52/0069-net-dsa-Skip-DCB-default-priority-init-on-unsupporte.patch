@@ -1,7 +1,7 @@
 From b0b26eb2286e08e25cb49e75f967105ba162f7d3 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:04:21 +0200
-Subject: [PATCH 69/75] net: dsa: Skip DCB default priority init on unsupported
+Subject: [PATCH 69/77] net: dsa: Skip DCB default priority init on unsupported
  switches
 Organization: Wires
 
