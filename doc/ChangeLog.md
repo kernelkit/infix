@@ -25,6 +25,8 @@ All notable changes to the project are documented in this file.
 
 ### Added
 
+- The CLI accepts an unambiguous prefix of a command name, e.g. `sh int`
+  for `show interface`
 - Add `/system/advanced` for low-level system customization, issue #463:
   - `rc.d`: user scripts stored in the configuration, run once at boot
     after the startup configuration has been applied, in the order listed
