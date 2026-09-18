@@ -4,7 +4,9 @@ _show_completions() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    commands="dhcp interface ntp routes software stp"
+    commands="bfd boot-order container dhcp hardware interface keystore
+              lldp mdns nacm ntp ospf ptp rip routes services software stp
+              system tftp"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
