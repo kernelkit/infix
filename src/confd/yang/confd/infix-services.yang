@@ -368,5 +368,28 @@ module infix-services {
         }
       }
     }
+
+    container files {
+      description "Files served, i.e., world-readable files below the root.";
+      config false;
+
+      list file {
+        key name;
+
+        leaf name {
+          description "File name, relative to the TFTP root.";
+          type string;
+        }
+
+        leaf size {
+          type uint64;
+          units "bytes";
+        }
+
+        leaf modified {
+          type yang:date-and-time;
+        }
+      }
+    }
   }
 }
