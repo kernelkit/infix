@@ -41,9 +41,9 @@ dimension()
     elif [ $total -ge $((512 << M)) ]; then
 	bootsize=$(( 8 << M))
 	auxsize=$((  8 << M))
-	imgsize=$((192 << M))
+	imgsize=$((180 << M))
 	cfgsize=$(( 16 << M))
-	# var is at least ~100M
+	# var is at least ~120M
     else
 	echo "Can't create disk images smaller than 512M"
 	exit 1
