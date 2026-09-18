@@ -1,1 +1,6 @@
-test.adoc
+include::ripv2.adoc[]
+
+<<<
+
+include::ripng.adoc[]
+

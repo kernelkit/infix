@@ -1,0 +1,11 @@
+---
+- settings:
+    test-spec: <case>.adoc
+
+- name: "Route preference: OSPFv2 vs Static"
+  case: ospfv2.py
+  opts: ["--version", "OSPFv2"]
+
+- name: "Route preference: OSPFv3 vs Static"
+  case: ospfv3.py
+  opts: ["--version", "OSPFv3"]

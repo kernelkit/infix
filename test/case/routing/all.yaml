@@ -3,19 +3,19 @@
   case: static_routing/test.py
 
 - name: OSPF Basic
-  case: ospf_basic/test.py
+  suite: ospf_basic/test.yaml
 
 - name: OSPF Unnumbered Interfaces
   case: ospf_unnumbered_interface/test.py
 
 - name: OSPF with Multiple Areas
-  case: ospf_multiarea/test.py
+  suite: ospf_multiarea/test.yaml
 
 - name: OSPF BFD
-  case: ospf_bfd/test.py
+  suite: ospf_bfd/test.yaml
 
 - name: "Route preference: OSPF vs Static"
-  case: route_pref_ospf/test.py
+  suite: route_pref_ospf/test.yaml
 
 - name: "Route preference: DHCP vs Static"
   case: route_pref_dhcp/test.py
@@ -24,25 +24,25 @@
   case: route_pref_255/test.py
 
 - name: OSPF Default Route Advertise
-  case: ospf_default_route_advertise/test.py
+  suite: ospf_default_route_advertise/test.yaml
 
 - name: OSPF Debug Logging
   case: ospf_debug/test.py
 
 - name: OSPF Point-to-Multipoint Hybrid
-  case: ospf_point_to_multipoint_hybrid/test.py
+  suite: ospf_point_to_multipoint_hybrid/test.yaml
 
 - name: OSPF Point-to-Multipoint
   case: ospf_point_to_multipoint/test.py
 
 - name: RIP Basic
-  case: rip_basic/test.py
+  suite: rip_basic/test.yaml
 
 - name: RIP Passive Interface
-  case: rip_passive_interface/test.py
+  suite: rip_passive_interface/test.yaml
 
 - name: RIP Redistribution
-  case: rip_redistribute/test.py
+  suite: rip_redistribute/test.yaml
 
 - name: RIP Multi-hop
-  case: rip_multihop/test.py
+  suite: rip_multihop/test.yaml
