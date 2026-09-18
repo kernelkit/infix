@@ -112,21 +112,29 @@ static const struct location allowed[] = {
 	{ "/tmp/",     0664, ""     },
 };
 
-/* Match a location, both the directory itself and anything below it */
-static bool has_prefix(const char *path, const char *prefix)
+/*
+ * True when path is dir itself, or something below it.  The match ends
+ * on a path component, so /home/jock does not cover /home/jocke.
+ */
+static bool path_within(const char *path, const char *dir)
 {
 	size_t len;
 
-	if (!prefix)
+	if (!path || !dir)
 		return false;
 
-	len = strlen(prefix);
-	if (!strncmp(path, prefix, len))
-		return true;
+	len = strlen(dir);
+	while (len > 1 && dir[len - 1] == '/')
+		len--;
 
-	/* Trailing slash in the table, the path may be without */
-	return len && prefix[len - 1] == '/' && !path[len - 1]
-		&& !strncmp(path, prefix, len - 1);
+	if (strncmp(path, dir, len))
+		return false;
+
+	/* Root is above every path, others end on a component */
+	if (len == 1 && dir[0] == '/')
+		return path[0] == '/';
+
+	return !path[len] || path[len] == '/';
 }
 
 static const struct location *path_lookup(const char *path)
@@ -134,15 +142,38 @@ static const struct location *path_lookup(const char *path)
 	static struct location home = { NULL, 0660, "" };
 
 	home.prefix = getenv("HOME");
-	if (has_prefix(path, home.prefix))
+	if (path_within(path, home.prefix))
 		return &home;
 
 	for (size_t i = 0; i < NELEMS(allowed); i++) {
-		if (has_prefix(path, allowed[i].prefix))
+		if (path_within(path, allowed[i].prefix))
 			return &allowed[i];
 	}
 
 	return NULL;
+}
+
+/*
+ * True for a path inside an allowed location, and for the directories
+ * on the way to one, so a path can be walked to reach them.
+ */
+bool path_traversable(const char *path)
+{
+	const char *home = getenv("HOME");
+
+	if (path_mode(path))
+		return true;
+
+	/* On the way to a location, e.g. /var leading to /var/lib */
+	if (path_within(home, path))
+		return true;
+
+	for (size_t i = 0; i < NELEMS(allowed); i++) {
+		if (path_within(allowed[i].prefix, path))
+			return true;
+	}
+
+	return false;
 }
 
 mode_t path_mode(const char *path)

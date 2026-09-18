@@ -103,7 +103,14 @@
 
 <PTYPE name="FILES">
   <COMPL>
-    <ACTION sym="files@infix">/cfg</ACTION>
+    <ACTION sym="path@infix">/cfg</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="PATH">
+  <COMPL>
+    <ACTION sym="path@infix"/>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
@@ -260,10 +267,10 @@
 
 <COMMAND name="dir" help="List available files">
   <SWITCH name="optional" min="0">
-    <PARAM name="path" ptype="/STRING" help="Directory contents to list"/>
+    <PARAM name="path" ptype="/PATH" help="Directory contents to list"/>
   </SWITCH>
   <ACTION sym="script" in="tty" out="tty" interrupt="true">
-    dir $KLISH_PARAM_path
+    dir "$KLISH_PARAM_path"
   </ACTION>
 </COMMAND>
 

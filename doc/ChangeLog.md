@@ -35,6 +35,8 @@ All notable changes to the project are documented in this file.
   statistics` replaces `dhcp-server clear-statistics`.  `set datetime` now
   also accepts free-form input, e.g., `14:05`, and echoes the ISO-8601
   value it sets
+- The CLI completes file system paths with Tab, for `copy`, `remove`,
+  and `dir`, limited to the directories those commands accept
 - The CLI `configure` command takes an optional path to start in a
   sub-context directly, e.g., `configure system authentication`
 - `/bin/sh` is now provided by Busybox ash instead of Bash, speeding up
