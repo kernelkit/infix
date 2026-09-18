@@ -20,6 +20,7 @@ confd_plugin_la_CFLAGS  =			\
 	$(libcrypto_CFLAGS)			\
 	$(sysrepo_CFLAGS)			\
 	$(libsrx_CFLAGS)			\
+	$(libsyslog_CFLAGS)			\
 	$(CFLAGS)
 
 confd_plugin_la_LIBADD  =			\
@@ -29,7 +30,8 @@ confd_plugin_la_LIBADD  =			\
 	$(libite_LIBS)				\
 	$(libcrypto_LIBS)			\
 	$(sysrepo_LIBS)				\
-	$(libsrx_LIBS)
+	$(libsrx_LIBS)				\
+	$(libsyslog_LIBS)
 
 confd_plugin_la_SOURCES =			\
 	base64.c		base64.h	\

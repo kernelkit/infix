@@ -19,6 +19,12 @@ All notable changes to the project are documented in this file.
 
 ### Added
 
+- Add a `log` RPC to `infix-syslog`, and a matching admin-exec `log`
+  command in the CLI, for injecting messages in the system log over
+  NETCONF/RESTCONF, issue #1639.  The full RFC 5424 header is supported:
+  severity, facility, app-name, msgid, and structured data.  Messages
+  are time stamped on arrival and follow the configured syslog filtering
+  and forwarding rules, like any locally generated message
 - Add `/system/advanced` for low-level system customization, issue #463:
   - `rc.d`: user scripts stored in the configuration, run once at boot
     after the startup configuration has been applied, in the order listed

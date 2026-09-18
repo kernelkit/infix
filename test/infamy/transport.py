@@ -107,3 +107,30 @@ class Transport(ABC):
 
     def startup_override(self):
         self.call_action("/infix-test:test/override-startup")
+
+    def log(self, message, severity=None, facility=None, app_name=None,
+            msgid=None, sd=None):
+        """Log a message on the target, using the infix-syslog:log RPC.
+
+        Defaults to user.notice with app-name set to the calling user.
+        `facility` is a plain name, e.g. "daemon", the module prefix is
+        added here.  `sd` is RFC 5424 structured data, given as a dict
+        of dicts: {"sd-id": {"name": "value", ...}}.
+        """
+        rpc = {"message": message}
+        if severity:
+            rpc["severity"] = severity
+        if facility:
+            module = "infix-syslog" if facility in ("rauc", "container", "web") else "ietf-syslog"
+            rpc["facility"] = f"{module}:{facility}"
+        if app_name:
+            rpc["app-name"] = app_name
+        if msgid:
+            rpc["msgid"] = msgid
+        if sd:
+            rpc["structured-data"] = [{
+                "id": sdid,
+                "param": [{"name": name, "value": value} for name, value in params.items()]
+            } for sdid, params in sd.items()]
+
+        return self.call_dict("infix-syslog", {"log": rpc})
