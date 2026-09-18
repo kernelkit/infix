@@ -9,14 +9,16 @@ on:
       - ci-work
   workflow_dispatch:
 
+# Label events other than 'ci:main' are skipped by check-trigger, keep them
+# in a group of their own so they cannot cancel a run in progress.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'ci:main' && '-label' || '' }}
   cancel-in-progress: true
 
 jobs:
   # Gate all builds through this check to prevent wasted runs.  Only run on
   # 'labeled' events when the label is actually 'ci:main'.  Concurrency control
-  # above handles canceling the 'opened' event when 'labeled' arrives quickly
+  # above handles canceling the 'opened' event when 'ci:main' arrives quickly
   # after (e.g., when creating a PR with ci:main already attached). See #1154.
   check-trigger:
     if: |
