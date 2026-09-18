@@ -6,6 +6,9 @@
 #include <sys/stat.h>
 #include <libite/lite.h>
 
+#define CFG_DIR        "/cfg/"
+#define STARTUP_CONFIG CFG_DIR "startup-config.cfg"
+
 #define ERRMSG "Error: "
 #define DBGMSG "Debug: "
 #define INFMSG "Note: "

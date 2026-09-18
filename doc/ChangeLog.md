@@ -45,6 +45,8 @@ All notable changes to the project are documented in this file.
   statistics` replaces `dhcp-server clear-statistics`.  `set datetime` now
   also accepts free-form input, e.g., `14:05`, and echoes the ISO-8601
   value it sets
+- The CLI `remove` command now offers the startup configuration, and
+  warns that removing it leaves the system booting factory defaults
 - Add CLI `rename` command, for renaming or moving a file without
   copying it, e.g. `rename startup-config backup` to keep a
   configuration before starting over.  Directories in the destination
