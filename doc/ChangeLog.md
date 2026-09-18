@@ -77,6 +77,13 @@ All notable changes to the project are documented in this file.
   as `/interfaces/interface[name='eth0']/if-index`.  SNMP SET, SNMPv3,
   notifications and view-based access control are not supported.
   Disabled by default, see [SNMP][snmp]
+- Add TFTP server for network boot and device provisioning, issue #1542.
+  Read-only, serving `/var/lib/tftpboot` or a directory on USB media, with
+  optional per-client subdirectories.  `show tftp` lists the files served,
+  see [TFTP Server](tftp.md)
+- Add network boot parameters to DHCP server: `boot file`, `server-address`,
+  and `server-name` at global, subnet, or host scope, sent in the BOOTP header
+  fields and as options 66/67
 - The CLI `copy` and `remove` commands now also accept files in `/var/lib`,
   `/var/tmp`, and `/tmp`.  Files written there are world-readable.
   The `.cfg`extension is only added for files in `/cfg`
