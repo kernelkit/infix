@@ -2864,7 +2864,11 @@ function renderCfgLog() {
           headers: { 'X-CSRF-Token': btn.getAttribute('data-csrf') || '' },
           body: body
         }).then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (!r.ok) {
+            return r.text().then(function (t) {
+              throw new Error(t.trim() || ('HTTP ' + r.status));
+            });
+          }
           var name = filenameFromDisposition(r.headers.get('Content-Disposition'), 'support-bundle.tar.gz');
           return r.blob().then(function (blob) { return { blob: blob, name: name }; });
         }).then(function (res) {
@@ -2879,7 +2883,7 @@ function renderCfgLog() {
           setStatus('Downloaded ' + res.name, '');
           if (pass) pass.value = '';
         }).catch(function (e) {
-          setStatus('Failed to generate bundle', 'err');
+          setStatus(e.message || 'Failed to generate bundle', 'err');
           if (window.console) console.warn('[support]', e);
         }).finally(function () {
           btn.disabled = false;

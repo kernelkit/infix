@@ -9,7 +9,7 @@ _copy_completion()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     # Options for the copy command
-    opts="-h -n -q -s -t -u -v"
+    opts="-h -n -q -r -s -t -u -v"
 
     local datastores_dst="running-config startup-config"
     local datastores_src="factory-config operational-state running-config"
@@ -37,7 +37,7 @@ _copy_completion()
     local i
     for ((i=1; i < COMP_CWORD; i++)); do
         case "${COMP_WORDS[i]}" in
-            -h|-n|-q|-s|-v)
+            -h|-n|-q|-r|-s|-v)
                 # Flag without argument
                 ;;
             -t|-u)
