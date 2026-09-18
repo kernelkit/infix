@@ -5,7 +5,8 @@ bin_PROGRAMS     = copy erase files
 
 # Bash completion
 bashcompdir      = $(datadir)/bash-completion/completions
-dist_bashcomp_DATA = copy.bash
+dist_bashcomp_DATA = bash_completion.d/copy bash_completion.d/erase \
+                     bash_completion.d/rpc bash_completion.d/show
 
 copy_SOURCES     = copy.c util.c util.h
 copy_CPPFLAGS    = -D_DEFAULT_SOURCE -D_GNU_SOURCE

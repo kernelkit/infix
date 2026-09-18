@@ -1,0 +1,116 @@
+# bash completion for copy command
+# SPDX-License-Identifier: ISC
+
+# Complete files and directories.
+_copy_files()
+{
+    local cur="$1" reset dir
+    local IFS=$'\n'
+    local -a files hide
+
+    # Hide dotfiles, unless one is being typed.  IFS is a newline here,
+    # so the filter has to be an array, it would not split into words.
+    if [[ ${cur} == */* ]]; then
+        hide=(-X "*/.*")
+    else
+        hide=(-X ".*")
+    fi
+    [[ ${cur##*/} == .* ]] && hide=()
+
+    # compgen output is filenames, keep the shell from globbing them
+    reset=$(shopt -po noglob)
+    set -o noglob
+    files=( $(compgen -f "${hide[@]}" -- "${cur}") )
+    IFS=' '
+    ${reset}
+    IFS=$'\n'
+
+    [[ ${#files[@]} -eq 0 ]] && return
+
+    COMPREPLY+=( "${files[@]}" )
+
+    # Only for file names, it would escape the colon in a URI.  compopt
+    # fails when called outside of completion, e.g. when testing.
+    compopt -o filenames 2>/dev/null
+
+    # When listing, readline marks every directory, but when completing
+    # one it leaves a symlink to a directory unmarked and ends the word
+    # with a space.  Only the sole match is ever completed, so mark that
+    # one here and hold the space back.
+    if [[ ${#COMPREPLY[@]} -eq 1 ]]; then
+        # compgen keeps a leading ~, expand it to test the path
+        dir="${COMPREPLY[0]}"
+        [[ ${dir} == "~/"* ]] && dir="${HOME}/${dir#\~/}"
+
+        if [[ -L ${dir} && -d ${dir} ]]; then
+            COMPREPLY[0]="${COMPREPLY[0]}/"
+            compopt -o nospace 2>/dev/null
+        fi
+    fi
+}
+
+_copy_completion()
+{
+    local cur prev opts argopts uris datastores i arg_count
+    COMPREPLY=()
+
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="-d -f -h -n -r -s -t -u -v -x"
+    argopts="-t|-u|-x"
+    uris="ftp:// http:// https:// scp:// sftp:// tftp://"
+
+    # Timeout, username, and XPath take a value we cannot complete
+    case "${prev}" in
+        ${argopts})
+            return 0
+            ;;
+    esac
+
+    if [[ ${cur} == -* ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+
+    # Determine position, source or destination, skipping options
+    arg_count=0
+    for ((i=1; i < COMP_CWORD; i++)); do
+        case "${COMP_WORDS[i]}" in
+            ${argopts})
+                # Flag with a value, skip it too
+                ((i++))
+                ;;
+            -*)
+                ;;
+            *)
+                ((++arg_count))
+                ;;
+        esac
+    done
+
+    case ${arg_count} in
+        0)
+            datastores="factory-config operational-state running-config startup-config"
+            ;;
+        1)
+            # factory-config and operational-state are not writable
+            datastores="running-config startup-config"
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    COMPREPLY=( $(compgen -W "${datastores} ${uris}" -- "${cur}") )
+    _copy_files "${cur}"
+
+    # A URI is a prefix, not a word, let the user keep typing
+    if [[ ${#COMPREPLY[@]} -eq 1 && ${COMPREPLY[0]} == *:// ]]; then
+        compopt -o nospace 2>/dev/null
+    fi
+
+    return 0
+}
+
+complete -F _copy_completion copy
