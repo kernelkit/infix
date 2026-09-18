@@ -103,6 +103,10 @@ static int run_as_user(const char *user, char *const argv[])
 		return -1;
 
 	if (!pid) {
+		setenv("USER", user, 1);
+		setenv("LOGNAME", user, 1);
+		setenv("HOME", pw->pw_dir, 1);
+
 		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
 			fprintf(stderr, "Aborting, failed dropping privileges to "
 				"(UID:%d GID:%d): %s\n",
@@ -195,7 +199,7 @@ done:
 int infix_erase(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
-	const char *path;
+	const char *path, *user;
 	char *argv[4];
 
 	path = kparg_value(kpargv_find(pargv, "file"));
@@ -204,14 +208,15 @@ int infix_erase(kcontext_t *ctx)
 		return -1;
 	}
 
-	cd_home(ctx);
+	user = cd_home(ctx);
 
 	argv[0] = "erase";
 	argv[1] = "-s";
 	argv[2] = (char *)path;
 	argv[3] = NULL;
 
-	return run(argv);
+	/* Run as the logged-in user, not root (klishd) */
+	return run_as_user(user, argv);
 }
 
 int infix_files(kcontext_t *ctx)

@@ -67,6 +67,9 @@ All notable changes to the project are documented in this file.
   as `/interfaces/interface[name='eth0']/if-index`.  SNMP SET, SNMPv3,
   notifications and view-based access control are not supported.
   Disabled by default, see [SNMP][snmp]
+- The CLI `copy` and `remove` commands now also accept files in `/var/lib`,
+  `/var/tmp`, and `/tmp`.  Files written there are world-readable.
+  The `.cfg`extension is only added for files in `/cfg`
 
 ### Fixes
 
