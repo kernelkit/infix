@@ -7,11 +7,15 @@ G=30
 
 size2int()
 {
-    # Use truncate's error message to convert input like "1K to "1024"
-    # for us.
-    #
-    # - What do you mean by "fragile"?!
-    truncate -s $1 /dev/null 2>&1 | awk '{ print($7); }'
+    local _num=$(echo $1 | sed -e 's/[KkMmGg]//')
+
+    case $1 in
+	*[Kk]) _num=$((_num << K)) ;;
+	*[Mm]) _num=$((_num << M)) ;;
+	*[Gg]) _num=$((_num << G)) ;;
+    esac
+
+    echo $_num
 }
 
 dimension()
