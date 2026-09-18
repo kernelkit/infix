@@ -1,0 +1,554 @@
+From 08883b16de388b3e9780a54dbe3b9c828f356375 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 17 Sep 2026 17:09:45 +0200
+Subject: [PATCH 77/77] net: dsa: mv88e6xxx: Offload the ets qdisc
+Organization: Wires
+
+An ets qdisc on a switch port schedules only what the CPU sends.  The
+mqprio offload puts switched frames in the queue of their traffic
+class, but says nothing about how the queues are served, so the chip
+keeps its power-on weighted round robin whatever algorithm the user
+configured.
+
+Take an ets qdisc at the root, or under an offloaded tbf, and program
+the port from it.  The strict bands become the strict queues in the
+port's schedule mode, the priority map becomes the chip's queue map,
+as for mqprio, and the weighted bands become the round robin weights.
+The chip walks one queue service sequence for all its ports, so the
+weights are shared like the queue map: the most recent request sets
+the weight of the queues it serves by weight, and a port that asked
+for another weight on one of them is no longer reported offloaded.
+The sequence is rebuilt from the chip's weights, interleaved evenly
+with each queue present at least once, and reverts to the power-on
+weights when no port is left.  The sequence counts frames where ets
+quanta count bytes, so the shares hold for frames of similar size.
+
+Frames from the CPU are queued by the traffic class of their transmit
+queue, so lay the queues out one per class and map the priorities as
+the ingress tables do.  Removing the qdisc drops the port's requests,
+the round robin schedule and the queue layout.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c    | 256 ++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/chip.h    |  20 +++
+ drivers/net/dsa/mv88e6xxx/global2.c |  42 +++++
+ drivers/net/dsa/mv88e6xxx/global2.h |   5 +
+ drivers/net/dsa/mv88e6xxx/port.c    |  28 +++
+ drivers/net/dsa/mv88e6xxx/port.h    |  10 ++
+ 6 files changed, 361 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index aab76fadf7530..842a6a85ca294 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -4862,6 +4862,8 @@ static const struct mv88e6xxx_ops mv88e6190_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_sched = mv88e6390_port_set_sched,
++	.set_qos_weights = mv88e6390_g2_set_qos_weights,
+ 	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+@@ -4934,6 +4936,8 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_sched = mv88e6390_port_set_sched,
++	.set_qos_weights = mv88e6390_g2_set_qos_weights,
+ 	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+@@ -5006,6 +5010,8 @@ static const struct mv88e6xxx_ops mv88e6191_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_sched = mv88e6390_port_set_sched,
++	.set_qos_weights = mv88e6390_g2_set_qos_weights,
+ 	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+@@ -5182,6 +5188,8 @@ static const struct mv88e6xxx_ops mv88e6290_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_sched = mv88e6390_port_set_sched,
++	.set_qos_weights = mv88e6390_g2_set_qos_weights,
+ 	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+@@ -5582,6 +5590,8 @@ static const struct mv88e6xxx_ops mv88e6390_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_sched = mv88e6390_port_set_sched,
++	.set_qos_weights = mv88e6390_g2_set_qos_weights,
+ 	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+@@ -5658,6 +5668,8 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_sched = mv88e6390_port_set_sched,
++	.set_qos_weights = mv88e6390_g2_set_qos_weights,
+ 	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+@@ -5733,6 +5745,8 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_sched = mv88e6390_port_set_sched,
++	.set_qos_weights = mv88e6390_g2_set_qos_weights,
+ 	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+@@ -7695,6 +7709,246 @@ static int mv88e6xxx_qos_port_mqprio(struct mv88e6xxx_chip *chip, int port,
+ 	return err;
+ }
+ 
++/* The DSA tag carries the traffic class of the transmit queue, so lay the
++ * queues out one per class and map the priorities like the ingress tables
++ * do, for frames from the CPU to land in the same queue as switched ones.
++ */
++static int mv88e6xxx_port_set_tx_map(struct net_device *dev, const u8 *qpri)
++{
++	int tc, prio, err;
++
++	err = netdev_set_num_tc(dev, 8);
++	if (err)
++		return err;
++
++	for (tc = 0; tc < 8; tc++)
++		netdev_set_tc_queue(dev, tc, 1, tc);
++
++	for (prio = 0; prio < 8; prio++)
++		netdev_set_prio_tc_map(dev, prio, qpri[prio]);
++
++	return 0;
++}
++
++/* Band 0 is dequeued first, queue 7 is served first */
++static u8 mv88e6xxx_ets_queue(const struct tc_ets_qopt_offload_replace_params *p,
++			      u8 band)
++{
++	return p->bands - 1 - min_t(u8, band, p->bands - 1);
++}
++
++/* Whether the chip's sequence serves this port's weighted queues by the
++ * weights its ets asked for; the chip walks one sequence for all ports
++ */
++static bool mv88e6xxx_port_wrr_in_use(struct mv88e6xxx_chip *chip, int port)
++{
++	struct mv88e6xxx_port *mp = &chip->ports[port];
++	int q;
++
++	if (!mp->ets)
++		return false;
++
++	for (q = 0; q < 8; q++)
++		if (mp->wrr[q] && mp->wrr[q] != chip->wrr[q])
++			return false;
++
++	return true;
++}
++
++/* Interleave the queues evenly, each as many times as its weight, in a
++ * sequence that fits the table.  Every queue appears at least once, or
++ * frames in it would never leave the port.
++ */
++static unsigned int mv88e6xxx_wrr_sequence(const u8 *weight, u8 *seq,
++					   unsigned int max)
++{
++	unsigned int total, scale = 1, len, q, best;
++	int credit[8];
++	u8 w[8];
++
++	do {
++		total = 0;
++		for (q = 0; q < 8; q++) {
++			w[q] = max_t(u8, DIV_ROUND_CLOSEST(weight[q], scale), 1);
++			total += w[q];
++		}
++		scale++;
++	} while (total > max);
++
++	memset(credit, 0, sizeof(credit));
++	for (len = 0; len < total; len++) {
++		best = 0;
++		for (q = 0; q < 8; q++) {
++			credit[q] += w[q];
++			if (credit[q] > credit[best])
++				best = q;
++		}
++		credit[best] -= total;
++		seq[len] = best;
++	}
++
++	return len;
++}
++
++/* Load the chip's weights, or its power-on weights when no port asks
++ * for any
++ */
++static int mv88e6xxx_ets_load_weights(struct mv88e6xxx_chip *chip)
++{
++	static const u8 defaults[8] = { 1, 2, 3, 6, 12, 17, 25, 33 };
++	u8 seq[MV88E6390_G2_QOS_WEIGHTS_MAX_LEN];
++	const u8 *weight = chip->wrr;
++	int q;
++
++	for (q = 0; q < 8 && !chip->wrr[q]; q++)
++		;
++	if (q == 8)
++		weight = defaults;
++
++	return chip->info->ops->set_qos_weights(chip, seq,
++						mv88e6xxx_wrr_sequence(weight, seq,
++								       ARRAY_SIZE(seq)));
++}
++
++/* Forget the port's requests; the chip keeps its map and weights as
++ * long as any port asks for them, else the identity map and the
++ * power-on weights come back
++ */
++static int mv88e6xxx_ets_destroy(struct mv88e6xxx_chip *chip, int port)
++{
++	struct net_device *dev = dsa_to_port(chip->ds, port)->user;
++	struct mv88e6xxx_port *mp = &chip->ports[port];
++	int other, q, err;
++
++	mp->ets = false;
++	memset(mp->wrr, 0, sizeof(mp->wrr));
++
++	memset(chip->wrr, 0, sizeof(chip->wrr));
++	for (other = 0; other < mv88e6xxx_num_ports(chip); other++)
++		for (q = 0; q < 8; q++)
++			if (chip->ports[other].wrr[q])
++				chip->wrr[q] = chip->ports[other].wrr[q];
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_sched(chip, port, 0);
++	if (!err)
++		err = mv88e6xxx_ets_load_weights(chip);
++	mv88e6xxx_reg_unlock(chip);
++	if (err)
++		return err;
++
++	netdev_reset_tc(dev);
++
++	return mv88e6xxx_port_set_qpri(chip, port, NULL);
++}
++
++static int mv88e6xxx_ets_replace(struct mv88e6xxx_chip *chip, int port,
++				 struct tc_ets_qopt_offload *qopt)
++{
++	struct tc_ets_qopt_offload_replace_params *p = &qopt->replace_params;
++	struct net_device *dev = dsa_to_port(chip->ds, port)->user;
++	struct mv88e6xxx_port *mp = &chip->ports[port];
++	unsigned int nstrict = 0, band;
++	u8 qpri[8], wrr[8] = {};
++	int prio, other, q, err;
++
++	if (qopt->parent != TC_H_ROOT &&
++	    !(mp->tbf_handle && TC_H_MAJ(qopt->parent) == mp->tbf_handle)) {
++		dev_err(chip->dev, "p%d: ets must be the root or under an offloaded tbf\n",
++			port);
++		return -EOPNOTSUPP;
++	}
++
++	if (!p->bands || p->bands > 8)
++		return -EOPNOTSUPP;
++
++	/* Strict bands come first, with no quantum */
++	while (nstrict < p->bands && !p->quanta[nstrict])
++		nstrict++;
++
++	for (band = nstrict; band < p->bands; band++) {
++		if (!p->quanta[band])
++			return -EOPNOTSUPP;
++
++		wrr[mv88e6xxx_ets_queue(p, band)] = max_t(u8, p->weights[band], 1);
++	}
++
++	/* One sequence per chip: the most recent request defines the
++	 * weight of the queues it serves by weight, a port that asked
++	 * for another weight on one of them is no longer offloaded
++	 */
++	for (other = 0; other < mv88e6xxx_num_ports(chip); other++) {
++		if (other == port || !mv88e6xxx_port_wrr_in_use(chip, other))
++			continue;
++
++		for (q = 0; q < 8; q++) {
++			if (!wrr[q] || !chip->ports[other].wrr[q] ||
++			    wrr[q] == chip->ports[other].wrr[q])
++				continue;
++
++			dev_info(chip->dev, "p%d: weight of queue %d replaces the one p%d asked for, the chip has one set\n",
++				 port, q, other);
++			break;
++		}
++	}
++
++	for (prio = 0; prio < ARRAY_SIZE(qpri); prio++)
++		qpri[prio] = mv88e6xxx_ets_queue(p, p->priomap[prio]);
++
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->port_set_sched(chip, port,
++					      8 - (p->bands - nstrict));
++	if (err)
++		goto out_unlock;
++
++	memcpy(mp->wrr, wrr, sizeof(mp->wrr));
++	mp->ets = true;
++	for (q = 0; q < 8; q++)
++		if (wrr[q])
++			chip->wrr[q] = wrr[q];
++	err = mv88e6xxx_ets_load_weights(chip);
++out_unlock:
++	mv88e6xxx_reg_unlock(chip);
++	if (err)
++		goto out_reset;
++
++	err = mv88e6xxx_port_set_qpri(chip, port, qpri);
++	if (err)
++		goto out_reset;
++
++	err = mv88e6xxx_port_set_tx_map(dev, qpri);
++	if (err)
++		goto out_reset;
++
++	return 0;
++
++out_reset:
++	mv88e6xxx_ets_destroy(chip, port);
++	return err;
++}
++
++static int mv88e6xxx_qos_port_ets(struct mv88e6xxx_chip *chip, int port,
++				  struct tc_ets_qopt_offload *qopt)
++{
++	if (!chip->info->ops->port_set_sched ||
++	    !chip->info->ops->set_qos_weights)
++		return -EOPNOTSUPP;
++
++	switch (qopt->command) {
++	case TC_ETS_REPLACE:
++		return mv88e6xxx_ets_replace(chip, port, qopt);
++	case TC_ETS_DESTROY:
++		return mv88e6xxx_ets_destroy(chip, port);
++	case TC_ETS_STATS:
++		/* Nothing to report, but this is what marks it offloaded */
++		return mv88e6xxx_port_qpri_in_use(chip, port) &&
++		       mv88e6xxx_port_wrr_in_use(chip, port) ? 0 : -EOPNOTSUPP;
++	case TC_ETS_GRAFT:
++	default:
++		return -EOPNOTSUPP;
++	}
++}
++
+ static int mv88e6xxx_qos_port_tbf(struct mv88e6xxx_chip *chip, int port,
+ 				  struct tc_tbf_qopt_offload *qopt)
+ {
+@@ -7761,6 +8015,8 @@ static int mv88e6xxx_port_setup_tc(struct dsa_switch *ds, int port,
+ 		return mv88e6xxx_qos_query_caps(type_data);
+ 	case TC_SETUP_QDISC_MQPRIO:
+ 		return mv88e6xxx_qos_port_mqprio(chip, port, type_data);
++	case TC_SETUP_QDISC_ETS:
++		return mv88e6xxx_qos_port_ets(chip, port, type_data);
+ 	case TC_SETUP_QDISC_TBF:
+ 		return mv88e6xxx_qos_port_tbf(chip, port, type_data);
+ 	default:
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index b443317008875..7bf7cdea0bb12 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -313,6 +313,12 @@ struct mv88e6xxx_port {
+ 	bool qmap;
+ 	u8 qpri[8];
+ 
++	/* Offloaded ets qdisc, with the round robin weight per queue it
++	 * asked for, 0 for queues it serves strictly or not at all
++	 */
++	bool ets;
++	u8 wrr[8];
++
+ 	/* Offloaded tbf qdisc at the root, 0 when none */
+ 	u32 tbf_handle;
+ };
+@@ -481,6 +487,11 @@ struct mv88e6xxx_chip {
+ 	 * that asked most recently.
+ 	 */
+ 	u8 qpri[8];
++
++	/* Round robin weight per queue in the loaded service sequence,
++	 * one sequence per chip like the queue map; 0 where no port asked
++	 */
++	u8 wrr[8];
+ };
+ 
+ struct mv88e6xxx_bus_ops {
+@@ -608,6 +619,15 @@ struct mv88e6xxx_ops {
+ 				 u8 pcp, u8 dei, int prio);
+ 	int (*port_sync_qpri)(struct mv88e6xxx_chip *chip, int port);
+ 
++	/* Transmission selection: the number of highest queues served
++	 * strictly, the rest by weighted round robin; the weights are a
++	 * queue service sequence shared by all ports of the chip.
++	 */
++	int (*port_set_sched)(struct mv88e6xxx_chip *chip, int port,
++			      unsigned int strict);
++	int (*set_qos_weights)(struct mv88e6xxx_chip *chip, const u8 *seq,
++			       unsigned int len);
++
+ 	/* Egress shaper in bits per second, 0 turns it off */
+ 	int (*port_set_egress_rate)(struct mv88e6xxx_chip *chip, int port,
+ 				    u64 bps);
+diff --git a/drivers/net/dsa/mv88e6xxx/global2.c b/drivers/net/dsa/mv88e6xxx/global2.c
+index 3f16a7ef3fa28..a23541e3cb734 100644
+--- a/drivers/net/dsa/mv88e6xxx/global2.c
++++ b/drivers/net/dsa/mv88e6xxx/global2.c
+@@ -297,6 +297,48 @@ int mv88e6xxx_g2_set_switch_mac(struct mv88e6xxx_chip *chip, u8 *addr)
+ 	return err;
+ }
+ 
++/* Offset 0x1C: QoS Weights Register */
++
++static int mv88e6390_g2_qos_weights_write(struct mv88e6xxx_chip *chip,
++					  u8 ptr, u8 data)
++{
++	u16 val = MV88E6XXX_G2_QOS_WEIGHTS_UPDATE |
++		FIELD_PREP(MV88E6390_G2_QOS_WEIGHTS_PTR_MASK, ptr) |
++		FIELD_PREP(MV88E6XXX_G2_QOS_WEIGHTS_DATA_MASK, data);
++
++	return mv88e6xxx_g2_write(chip, MV88E6XXX_G2_QOS_WEIGHTS, val);
++}
++
++/* Load the weighted round robin sequence the queue controller walks on
++ * every port: @len queue numbers, served one frame each in turn.  Two
++ * entries per octet, the earlier one in the low bits, and the length
++ * written last since that is what puts the new table in use.
++ */
++int mv88e6390_g2_set_qos_weights(struct mv88e6xxx_chip *chip, const u8 *seq,
++				 unsigned int len)
++{
++	unsigned int i;
++	u8 data;
++	int err;
++
++	if (!len || len > MV88E6390_G2_QOS_WEIGHTS_MAX_LEN)
++		return -EINVAL;
++
++	for (i = 0; i < len; i += 2) {
++		data = seq[i] & 0x7;
++		if (i + 1 < len)
++			data |= (seq[i + 1] & 0x7) << 4;
++
++		err = mv88e6390_g2_qos_weights_write(chip, i / 2, data);
++		if (err)
++			return err;
++	}
++
++	return mv88e6390_g2_qos_weights_write(chip,
++					      MV88E6390_G2_QOS_WEIGHTS_PTR_LEN,
++					      len);
++}
++
+ /* Offset 0x0E: ATU Statistics */
+ 
+ int mv88e6xxx_g2_atu_stats_set(struct mv88e6xxx_chip *chip, u16 kind, u16 bin)
+diff --git a/drivers/net/dsa/mv88e6xxx/global2.h b/drivers/net/dsa/mv88e6xxx/global2.h
+index 496269c26c508..7d2dda5e18666 100644
+--- a/drivers/net/dsa/mv88e6xxx/global2.h
++++ b/drivers/net/dsa/mv88e6xxx/global2.h
+@@ -266,6 +266,8 @@
+ #define MV88E6XXX_G2_QOS_WEIGHTS_UPDATE		0x8000
+ #define MV88E6352_G2_QOS_WEIGHTS_PTR_MASK	0x3f00
+ #define MV88E6390_G2_QOS_WEIGHTS_PTR_MASK	0x7f00
++#define MV88E6390_G2_QOS_WEIGHTS_PTR_LEN	0x40
++#define MV88E6390_G2_QOS_WEIGHTS_MAX_LEN	128
+ #define MV88E6XXX_G2_QOS_WEIGHTS_DATA_MASK	0x00ff
+ 
+ /* Offset 0x1D: Misc Register */
+@@ -332,6 +334,9 @@ int mv88e6xxx_g2_smi_phy_write_c45(struct mv88e6xxx_chip *chip,
+ 				   int addr, int devad, int reg, u16 val);
+ int mv88e6xxx_g2_set_switch_mac(struct mv88e6xxx_chip *chip, u8 *addr);
+ 
++int mv88e6390_g2_set_qos_weights(struct mv88e6xxx_chip *chip, const u8 *seq,
++				 unsigned int len);
++
+ int mv88e6xxx_g2_get_eeprom8(struct mv88e6xxx_chip *chip,
+ 			     struct ethtool_eeprom *eeprom, u8 *data);
+ int mv88e6xxx_g2_set_eeprom8(struct mv88e6xxx_chip *chip,
+diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
+index 47834060cabf7..be5aed565fafd 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.c
++++ b/drivers/net/dsa/mv88e6xxx/port.c
+@@ -2088,6 +2088,34 @@ int mv88e6390_port_sync_qpri(struct mv88e6xxx_chip *chip, int port)
+ 	return mv88e6390_port_set_default_prio(chip, port, err);
+ }
+ 
++/* Offset 0x1C: Port Queue Control */
++
++static int mv88e6390_port_queue_ctl_write(struct mv88e6xxx_chip *chip,
++					  int port, u8 ptr, u8 data)
++{
++	u16 reg;
++
++	reg = MV88E6390_PORT_QUEUE_CTL_UPDATE |
++		FIELD_PREP(MV88E6390_PORT_QUEUE_CTL_PTR_MASK, ptr) |
++		FIELD_PREP(MV88E6390_PORT_QUEUE_CTL_DATA_MASK, data);
++
++	return mv88e6xxx_port_write(chip, port, MV88E6390_PORT_QUEUE_CTL, reg);
++}
++
++/* Serve the @strict highest queues in strict priority order and the
++ * rest by weighted round robin, with the weights from Global 2.
++ */
++int mv88e6390_port_set_sched(struct mv88e6xxx_chip *chip, int port,
++			     unsigned int strict)
++{
++	u8 mode = min_t(unsigned int, strict,
++			MV88E6390_PORT_QUEUE_CTL_SCHED_STRICT_MASK);
++
++	return mv88e6390_port_queue_ctl_write(chip, port,
++					      MV88E6390_PORT_QUEUE_CTL_PTR_SCHED,
++					      mode);
++}
++
+ /* Egress remarking uses the frame priority assigned at ingress to look
+  * up the PCP written to tagged frames and the DSCP written to IP frames.
+  * Green and yellow frames have separate tables, both are kept equal as
+diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
+index 49674351b5329..1434174a09370 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.h
++++ b/drivers/net/dsa/mv88e6xxx/port.h
+@@ -502,6 +502,14 @@
+ #define MV88E6390_PORT_CTL3_UPDATE_DSCP			0x0020
+ #define MV88E6390_PORT_CTL3_UPDATE_DEI			0x0008
+ 
++/* Offset 0x1C: Port Queue Control */
++#define MV88E6390_PORT_QUEUE_CTL			0x1c
++#define MV88E6390_PORT_QUEUE_CTL_UPDATE			0x8000
++#define MV88E6390_PORT_QUEUE_CTL_PTR_MASK		0x7f00
++#define MV88E6390_PORT_QUEUE_CTL_PTR_SCHED		0x00
++#define MV88E6390_PORT_QUEUE_CTL_DATA_MASK		0x00ff
++#define MV88E6390_PORT_QUEUE_CTL_SCHED_STRICT_MASK	0x07
++
+ /* Offset 0x18: Port IEEE Priority Remapping Registers (0-3) */
+ #define MV88E6095_PORT_IEEE_PRIO_REMAP_0123	0x18
+ 
+@@ -598,6 +606,8 @@ int mv88e6390_port_get_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 				u8 pcp, u8 dei, int prio);
+ int mv88e6390_port_sync_qpri(struct mv88e6xxx_chip *chip, int port);
++int mv88e6390_port_set_sched(struct mv88e6xxx_chip *chip, int port,
++			     unsigned int strict);
+ int mv88e6390_port_set_egress_rate(struct mv88e6xxx_chip *chip, int port,
+ 				   u64 bps);
+ int mv88e6390_port_get_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
+-- 
+2.43.0
+

@@ -46,6 +46,7 @@ confd_plugin_la_SOURCES =			\
 	  if-vlan.c				\
 	  if-gre.c				\
 	  if-vxlan.c				\
+	  if-qos.c				\
 	  if-wifi.c				\
           if-wireguard.c			\
 	keystore.c				\
