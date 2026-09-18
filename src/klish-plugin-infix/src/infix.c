@@ -273,6 +273,31 @@ int infix_path(kcontext_t *ctx)
 	return list_files(ctx, dir);
 }
 
+int infix_rename(kcontext_t *ctx)
+{
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *from, *to;
+	char *argv[8];
+	int i = 0;
+
+	from = kparg_value(kpargv_find(pargv, "from"));
+	to = kparg_value(kpargv_find(pargv, "to"));
+	if (!from || !to)
+		return -1;
+
+	/* Run as the logged-in user, not root (klishd) */
+	argv[i++] = "doas";
+	argv[i++] = "-u";
+	argv[i++] = (char *)cd_home(ctx);
+	argv[i++] = "rename";
+	argv[i++] = "-s";
+	argv[i++] = (char *)from;
+	argv[i++] = (char *)to;
+	argv[i] = NULL;
+
+	return run(argv);
+}
+
 int infix_files(kcontext_t *ctx)
 {
 	const char *path, *word;
@@ -802,6 +827,7 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
 	kplugin_add_syms(plugin, ksym_new("path", infix_path));
+	kplugin_add_syms(plugin, ksym_new("rename", infix_rename));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
 	kplugin_add_syms(plugin, ksym_new("users", infix_users));
 	kplugin_add_syms(plugin, ksym_new("groups", infix_groups));
