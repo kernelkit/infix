@@ -33,7 +33,7 @@ struct infix_ds {
 };
 
 const struct infix_ds infix_config[] = {
-	{ "startup-config",    SR_DS_STARTUP,         true, "/cfg/startup-config.cfg" },
+	{ "startup-config",    SR_DS_STARTUP,         true, STARTUP_CONFIG },
 	{ "running-config",    SR_DS_RUNNING,         true, NULL },
 	/* { "candidate-config",  SR_DS_CANDIDATE,       true, NULL }, */
 	{ "operational-state", SR_DS_OPERATIONAL,     false, NULL },

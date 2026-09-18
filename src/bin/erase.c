@@ -26,6 +26,11 @@ static int do_erase(const char *name)
 		goto out;
 	}
 
+	if (!strcmp(path, STARTUP_CONFIG))
+		fprintf(stderr, "Note: without it the system boots factory defaults"
+			" on next start.\n      To keep this configuration, rename"
+			" it instead.\n");
+
 	if (!yorn("Remove %s, are you sure?", path))
 		goto out;
 

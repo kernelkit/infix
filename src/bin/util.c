@@ -12,8 +12,6 @@
 
 #include "util.h"
 
-#define CFG_DIR "/cfg/"
-
 static char rawgetch(void)
 {
 	struct termios saved, c;
