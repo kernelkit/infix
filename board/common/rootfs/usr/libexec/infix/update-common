@@ -1,0 +1,109 @@
+# Shared helpers for check-update and unattended-update.  Sourced, not run;
+# the caller sets TAG first.
+
+# Read the shared update-url (an RSS/Atom release feed) from running-config.
+# The leaf is mandatory and factory-config supplies it, so an empty result
+# means the software container is absent -- no update source is configured.
+update_read_url() {
+    copy running-config \
+        -x '/ietf-system:system/infix-system:software/update-url' \
+        2>/dev/null \
+        | jq -r '.. | objects | ."update-url"? // empty'
+}
+
+# Read whether pre-releases may be installed; default false.
+update_read_prerelease() {
+    val=$(copy running-config \
+        -x '/ietf-system:system/infix-system:software/allow-prerelease' \
+        2>/dev/null \
+        | jq -r '.. | objects | ."allow-prerelease"? // empty')
+    [ "$val" = true ] && printf 'true' || printf 'false'
+}
+
+# Is $1 strictly newer than $2?
+newer() {
+    [ "$1" = "$2" ] && return 1
+    [ "$(printf '%s\n%s' "$1" "$2" | sort -V | tail -1)" = "$1" ]
+}
+
+# Gather running and latest version info.
+# Returns: 0 ok, 1 fatal (no os-release), 2 failed to query latest release tag,
+#          3 no update-url configured.
+update_probe() {
+    if [ ! -f /etc/os-release ]; then
+        logger -t "$TAG" "ERROR: /etc/os-release not found"
+        return 1
+    fi
+    . /etc/os-release
+
+    UPDATE_URL=$(update_read_url)
+    [ -z "$UPDATE_URL" ] && return 3
+    ALLOW_PRERELEASE=$(update_read_prerelease)
+
+    FEED=$(curl -sSfL --max-time 10 "$UPDATE_URL" 2>/dev/null) || return 2
+
+    # Every feed entry links to its release page, ".../releases/tag/<tag>",
+    # which is the only place the tag appears in machine-readable form.
+    hrefs=$(printf '%s' "$FEED" \
+        | xmllint --xpath "//*[local-name()='entry']/*[local-name()='link']/@href" - 2>/dev/null \
+        | tr ' ' '\n' | sed -n 's|^href="\(.*\)"$|\1|p')
+
+    # RSS 2.0 has no href attribute, the URL is the <link> element text.
+    [ -n "$hrefs" ] || hrefs=$(printf '%s' "$FEED" \
+        | xmllint --xpath "//*[local-name()='item']/*[local-name()='link']/text()" - 2>/dev/null \
+        | tr -d ' \t' | grep -v '^$')
+
+    [ -n "$hrefs" ] || return 2
+
+
+    if [ "$ALLOW_PRERELEASE" = true ]; then
+        LATEST_TAG=$(printf '%s\n' "$hrefs" | sed 's|.*/||' | head -1)
+    else
+        LATEST_TAG=$(printf '%s\n' "$hrefs" | sed 's|.*/||' \
+            | grep -vE -- '-(rc|alpha|beta)' | head -1)
+    fi
+    [ -n "$LATEST_TAG" ] || return 2
+
+    RELEASE_BASE=$(printf '%s\n' "$hrefs" | grep -E "/${LATEST_TAG}\$" | head -1 \
+        | sed "s|/releases/tag/${LATEST_TAG}\$||")
+
+    return 0
+}
+
+# Version that will be running after the next reboot: the bundle installed in
+# the slot RAUC boots from.  This is the running version until something has
+# been staged into the inactive slot, after which it is the staged one -- so a
+# release installed but not yet rebooted into is not offered again.
+#
+# 'rauc status' needs --detailed, without it the slot_status object holding the
+# version is left out entirely.  Note that .booted is a bootname ("primary"),
+# only .boot_primary is a slot name ("rootfs.0") that keys into .slots.
+update_pending_version() {
+    rauc status --detailed --output-format=json 2>/dev/null \
+        | jq -r '(.slots | add) as $s
+                 | $s[.boot_primary].slot_status.bundle.version // empty'
+}
+
+# Should the latest release be applied?  Requires update_probe() to have run.
+# Returns 0 if an update is available.
+update_available() {
+    pending=$(update_pending_version)
+    # A slot never written by RAUC has no recorded version; fall back to the
+    # running one rather than skipping the upgrade.
+    [ -n "$pending" ] || pending=$VERSION
+
+    newer "$LATEST_TAG" "$pending"
+}
+
+# Print the release page URL of the latest release, for operator-facing logs.
+update_release_url() {
+    [ -n "$RELEASE_BASE" ] || return 0
+    printf '%s/releases/tag/%s' "$RELEASE_BASE" "$LATEST_TAG"
+}
+
+# Print the download URL of this platform's RAUC bundle.
+update_bundle_url() {
+    [ -n "$RELEASE_BASE" ] || return 0
+    printf '%s/releases/download/%s/%s-%s.pkg' \
+        "$RELEASE_BASE" "$LATEST_TAG" "$IMAGE_ID" "$LATEST_TAG"
+}

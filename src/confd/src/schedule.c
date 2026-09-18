@@ -15,25 +15,36 @@
 #define CRONTAB_FILE  CRONTAB_DIR "/admin"
 #define CRONTAB_NEXT  CRONTAB_DIR "/admin.next"
 
-/* Features register a consumer to run a command on a schedule. */
-static const struct cron_consumer **consumers;
-static size_t consumer_count;
+/*
+ * Every feature that can run on a schedule.  A feature owns a container with
+ * a schedule-ref leaf; this is what the reference means, i.e. the command to
+ * run on each occurrence.  Add a row here to put a new feature on a schedule.
+ */
+static const struct cron_consumer consumers[] = {
+	{
+		.path	      = "/ietf-system:system/infix-system:software/check-update",
+		.sched_leaf   = "schedule",
+		.enabled_leaf = "enabled",
+		.command      = "/usr/sbin/check-update",
+	}, {
+		.path	      = "/ietf-system:system/infix-system:software/unattended-update",
+		.sched_leaf   = "schedule",
+		.enabled_leaf = "enabled",
+		.command      = "/usr/sbin/unattended-update",
+	}, {
+		.path	      = "/ietf-system:system/infix-system:scheduled-reboot",
+		.sched_leaf   = "schedule",
+		.enabled_leaf = NULL,
+		.command      = "/usr/sbin/reboot",
+	},
+};
 
-int schedule_consumer_register(const struct cron_consumer *consumer)
+const struct cron_consumer *schedule_consumer(size_t i)
 {
-	const struct cron_consumer **vec;
+	if (i >= NELEMS(consumers))
+		return NULL;
 
-	if (!consumer || !consumer->path || !consumer->sched_leaf || !consumer->command)
-		return -1;
-
-	vec = realloc(consumers, (consumer_count + 1) * sizeof(*vec));
-	if (!vec) {
-		ERROR("schedule: out of memory registering %s", consumer->path);
-		return -1;
-	}
-	consumers = vec;
-	consumers[consumer_count++] = consumer;
-	return 0;
+	return &consumers[i];
 }
 
 /*
@@ -244,8 +255,8 @@ static int gen_schedules(struct lyd_node *config)
 	if (!config)
 		goto out;
 
-	for (i = 0; i < consumer_count; i++) {
-		const struct cron_consumer *c = consumers[i];
+	for (i = 0; i < NELEMS(consumers); i++) {
+		const struct cron_consumer *c = &consumers[i];
 		struct lyd_node *node;
 		const char *name;
 		char expr[128];
