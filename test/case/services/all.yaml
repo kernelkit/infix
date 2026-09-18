@@ -8,5 +8,8 @@
 - name: SSH
   suite: ssh/all.yaml
 
+- name: TFTP
+  suite: tftp/all.yaml
+
 - name: Web UI
   suite: webui/all.yaml
