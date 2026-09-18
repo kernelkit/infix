@@ -17,7 +17,7 @@ int files(const char *path, const char *stripext)
 
 	dir = opendir(path);
 	if (!dir) {
-		fprintf(stderr, ERRMSG "%s", strerror(errno));
+		fprintf(stderr, "%s: %s: %s\n", prognm, path, strerror(errno));
 		return -1;
 	}
 

@@ -43,6 +43,9 @@ All notable changes to the project are documented in this file.
   editor, show mesh peers on the WiFi and interface status pages, and add
   an editor section for access point roaming (802.11k/r/v, band steering,
   OKC).
+- The CLI `copy` and `remove` commands now also accept files in
+  `/var/lib`, `/var/tmp`, and `/tmp`.  Files written there are
+  world-readable.  The `.cfg` extension is only added for files in `/cfg`
 
 ### Fixes
 

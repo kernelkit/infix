@@ -7,10 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <termios.h>
 
 #include "util.h"
 
+#define CFG_DIR "/cfg/"
 
 static char rawgetch(void)
 {
@@ -93,76 +95,130 @@ const char *basenm(const char *path)
 	return path;
 }
 
-static int path_allowed(const char *path)
-{
-	const char *accepted[] = {
-		"/media/",
-		"/cfg/",
-		getenv("HOME"),
-		NULL
-	};
+/* Directories the CLI may access, mode and default extension of files there */
+struct location {
+	const char *prefix;
+	mode_t      mode;
+	const char *ext;
+};
 
-	for (int i = 0; accepted[i]; i++) {
-		if (!strncmp(path, accepted[i], strlen(accepted[i])))
-			return 1;
+static const struct location allowed[] = {
+	{ CFG_DIR,     0660, ".cfg" },
+	{ "/media/",   0664, ""     },
+	{ "/var/lib/", 0664, ""     },
+	{ "/var/log/", 0664, ""     },
+	{ "/log/",     0664, ""     },
+	{ "/var/tmp/", 0664, ""     },
+	{ "/tmp/",     0664, ""     },
+};
+
+/* Match a location, both the directory itself and anything below it */
+static bool has_prefix(const char *path, const char *prefix)
+{
+	size_t len;
+
+	if (!prefix)
+		return false;
+
+	len = strlen(prefix);
+	if (!strncmp(path, prefix, len))
+		return true;
+
+	/* Trailing slash in the table, the path may be without */
+	return len && prefix[len - 1] == '/' && !path[len - 1]
+		&& !strncmp(path, prefix, len - 1);
+}
+
+static const struct location *path_lookup(const char *path)
+{
+	static struct location home = { NULL, 0660, "" };
+
+	home.prefix = getenv("HOME");
+	if (has_prefix(path, home.prefix))
+		return &home;
+
+	for (size_t i = 0; i < NELEMS(allowed); i++) {
+		if (has_prefix(path, allowed[i].prefix))
+			return &allowed[i];
 	}
 
-	return 0;
+	return NULL;
+}
+
+mode_t path_mode(const char *path)
+{
+	const struct location *loc = path_lookup(path);
+
+	return loc ? loc->mode : 0;
 }
 
 char *cfg_adjust(const char *path, const char *template, bool sanitize)
 {
-	char *expanded = NULL, *resolved = NULL;
+	char *expanded = NULL, *resolved = NULL, *full;
+	const struct location *loc = NULL;
+	const char *prefix = "";
 	const char *basename;
-	int dlen;
-
-	dlen = dirlen(path);
-	basename = basenm(path) ? : basenm(template);
-	if (!basename)
-		goto err;
 
 	if (sanitize) {
 		if (strstr(path, "../"))
 			goto err;
 
-		if (path[0] == '/') {
-			if (!path_allowed(path))
-				goto err;
-		}
-
 		/* CLI users save to /cfg by default, unless abs. path */
-		if (asprintf(&expanded, "%s%.*s/%s%s",
-			     path[0] == '/' ? "" : "/cfg/",
-			     dlen, path,
-			     basename,
-			     strchr(basename, '.') ? "" : ".cfg") < 0)
+		if (path[0] != '/')
+			prefix = CFG_DIR;
+
+		loc = path_lookup(*prefix ? prefix : path);
+		if (!loc)
 			goto err;
-	} else {
-		/* Shell users expect copy to behave more like cp */
-		expanded = strdup(path);
 	}
 
+	if (asprintf(&expanded, "%s%s", prefix, path) < 0)
+		goto err;
 
 	if (sanitize) {
 		resolved = realpath(expanded, NULL);
-		if (!resolved) {
-			if (errno == ENOENT)
-				goto out;
-			else
+		if (resolved) {
+			/* Follow symlinks, the target must be allowed too */
+			if (!path_mode(resolved))
 				goto err;
-		}
 
-		/* File exists, make sure that the resolved symlink
-		 * still matches the whitelist.
-		 */
-		if (!path_allowed(resolved))
+			free(expanded);
+			expanded = resolved;
+			resolved = NULL;
+		} else if (errno != ENOENT) {
+			goto err;
+		}
+	}
+
+	/* Directory destination, copy into it like cp(1) */
+	if (template && fisdir(expanded)) {
+		size_t len = strlen(expanded);
+
+		basename = basenm(template);
+		if (!basename)
+			goto err;
+
+		/* The path may already end in a slash, do not double it */
+		while (len > 1 && expanded[len - 1] == '/')
+			expanded[--len] = 0;
+
+		if (asprintf(&full, "%s/%s", expanded, basename) < 0)
 			goto err;
 
 		free(expanded);
-		expanded = resolved;
+		expanded = full;
 	}
 
-out:
+	/* Config files get an extension, if the name lacks one */
+	basename = basenm(expanded);
+	if (loc && *loc->ext && basename && !strchr(basename, '.')) {
+		if (asprintf(&full, "%s%s", expanded, loc->ext) < 0)
+			goto err;
+
+		free(expanded);
+		expanded = full;
+	}
+
 	return expanded;
 
 err:

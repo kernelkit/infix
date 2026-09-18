@@ -18,10 +18,11 @@
 
 #include "util.h"
 
-#define err(rc, fmt, args...)      { fprintf(stderr, ERRMSG fmt ":%s\n", ##args, strerror(errno)); exit(rc); }
-#define errx(rc, fmt, args...)     { fprintf(stderr, ERRMSG fmt "\n", ##args);                     exit(rc); }
-#define warnx(fmt, args...)          fprintf(stderr, ERRMSG fmt "\n", ##args)
-#define warn(fmt, args...)           fprintf(stderr, ERRMSG fmt ":%s\n", ##args, strerror(errno))
+/* Like err(3), the message already says what went wrong, lead with who */
+#define err(rc, fmt, args...)      { fprintf(stderr, "%s: " fmt ": %s\n", prognm, ##args, strerror(errno)); exit(rc); }
+#define errx(rc, fmt, args...)     { fprintf(stderr, "%s: " fmt "\n", prognm, ##args);                      exit(rc); }
+#define warnx(fmt, args...)          fprintf(stderr, "%s: " fmt "\n", prognm, ##args)
+#define warn(fmt, args...)           fprintf(stderr, "%s: " fmt ": %s\n", prognm, ##args, strerror(errno))
 #define dbg(fmt, args...) if (debug) fprintf(stderr, DBGMSG fmt "\n", ##args)
 
 struct infix_ds {
@@ -70,8 +71,8 @@ static const char *getuser(void)
  * return 1, otherwise 0.
  *
  * E.g., writing to /cfg/foo, where /cfg is owned by root:wheel,
- * should result in the file being owned by $LOGNAME:wheel with
- * 0660 perms for other users in same group.
+ * should result in the file being owned by $LOGNAME:wheel, with
+ * group access for other users in same group.
  */
 static int in_group(const char *user, const char *fn, gid_t *gid)
 {
@@ -128,6 +129,7 @@ static int in_group(const char *user, const char *fn, gid_t *gid)
 static void set_owner(const char *fn, const char *user)
 {
 	gid_t gid = 9999;
+	mode_t mode;
 
 	if (!fn)
 		return;	/* not an error, e.g., running-config is not a file */
@@ -146,8 +148,9 @@ static void set_owner(const char *fn, const char *user)
 	 * umask alone can't: the datastore export goes through a 0600 mkstemp
 	 * temp and cp(1) propagates that mode to the destination.
 	 */
-	if (chmod(fn, 0660) && errno != EPERM)
-		warn("failed setting mode 0660 on %s", fn);
+	mode = path_mode(fn) ?: 0660;
+	if (chmod(fn, mode) && errno != EPERM)
+		warn("failed setting mode 0%o on %s", mode, fn);
 }
 
 static const char *infix_ds(const char *text, const struct infix_ds **ds)
@@ -695,7 +698,13 @@ static int resolve_src(const char **src, const struct infix_ds **ds, char **path
 	}
 
 	if (!*path) {
-		warn("no such file %s", *src);
+		warnx("%s: no such file, or not an allowed path", *src);
+		return 1;
+	}
+
+	/* Let cp(1) report only what it alone can find out */
+	if (access(*path, R_OK)) {
+		warn("%s", *path);
 		return 1;
 	}
 
@@ -703,7 +712,7 @@ static int resolve_src(const char **src, const struct infix_ds **ds, char **path
 	return 0;
 }
 
-static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path)
+static int resolve_dst(const char *src, const char **dst, const struct infix_ds **ds, char **path)
 {
 	if (is_stdout(*dst) || is_uri(*dst))
 		return 0;
@@ -721,11 +730,11 @@ static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path
 
 		*path = strdup((*ds)->path);
 	} else {
-		*path = cfg_adjust(*dst, NULL, sanitize);
+		*path = cfg_adjust(*dst, src, sanitize);
 	}
 
 	if (!*path) {
-		warn("no such file: %s", *dst);
+		warnx("%s: no such file, or not an allowed path", *dst);
 		return 1;
 	}
 
@@ -784,7 +793,7 @@ static int copy(const char *src, const char *dst)
 		dst = dst_uri;
 	}
 
-	err = resolve_dst(&dst, &dstds, &dstpath);
+	err = resolve_dst(src, &dst, &dstds, &dstpath);
 	if (err)
 		goto err;
 
