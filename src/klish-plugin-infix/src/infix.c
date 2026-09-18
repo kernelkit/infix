@@ -173,27 +173,68 @@ static int shellf(const char *fmt, ...)
 	return rc;
 }
 
+/*
+ * Complete an absolute path, the CLI has no shell to do it for us.
+ * Run as the logged-in user, like copy does, so the listing follows
+ * that user's home and permissions rather than klishd's.
+ */
+static int complete_path(kcontext_t *ctx, const char *word)
+{
+	char *argv[] = { "doas", "-u", NULL, "files", "-c", NULL, NULL };
+
+	argv[2] = (char *)cd_home(ctx);
+	argv[5] = (char *)word;
+
+	return run(argv);
+}
+
+/* Paths are completed from the file system, everything else by name */
+static int is_path(kcontext_t *ctx, const char **word)
+{
+	*word = kcontext_candidate_value(ctx);
+
+	return *word && (*word)[0] == '/';
+}
+
+/* Files in dir, by bare name, as the CLI has always offered them */
+static int list_files(kcontext_t *ctx, const char *dir)
+{
+	char *argv[] = { "files", NULL, NULL };
+
+	cd_home(ctx);
+	argv[1] = (char *)dir;
+
+	return run(argv);
+}
+
 int infix_datastore(kcontext_t *ctx)
 {
-	char *argv[] = { "files", "/cfg", NULL };
-	const char *ds;
+	const char *word, *ds;
+
+	if (is_path(ctx, &word))
+		return complete_path(ctx, word);
 
 	ds = kcontext_script(ctx);
-	if (!ds)
-		goto done;
-
-	if (!strcmp(ds, "src")) {
+	if (ds && !strcmp(ds, "src")) {
 		puts("factory-config");
 		puts("running-config");
 		puts("startup-config");
 	}
-	if (!strcmp(ds, "dst")) {
+	if (ds && !strcmp(ds, "dst")) {
 		puts("running-config");
 		puts("startup-config");
 	}
 
-done:
-	return run(argv);
+	puts("ftp://");
+	puts("http://");
+	puts("https://");
+	puts("scp://");
+	puts("sftp://");
+	puts("tftp://");
+
+	complete_path(ctx, "/");
+
+	return list_files(ctx, "/cfg");
 }
 
 int infix_erase(kcontext_t *ctx)
@@ -219,10 +260,31 @@ int infix_erase(kcontext_t *ctx)
 	return run_as_user(user, argv);
 }
 
+/* Complete a file system path, and offer the roots when nothing typed */
+int infix_path(kcontext_t *ctx)
+{
+	const char *word, *dir;
+
+	if (is_path(ctx, &word))
+		return complete_path(ctx, word);
+
+	/* Nothing typed yet, show where a path can start */
+	complete_path(ctx, "/");
+
+	dir = kcontext_script(ctx);
+	if (!dir)
+		return 0;
+
+	return list_files(ctx, dir);
+}
+
 int infix_files(kcontext_t *ctx)
 {
-	const char *path;
+	const char *path, *word;
 	char *argv[3];
+
+	if (is_path(ctx, &word))
+		return complete_path(ctx, word);
 
 	cd_home(ctx);
 	path = kcontext_script(ctx);
@@ -744,6 +806,7 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("datastore", infix_datastore));
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
+	kplugin_add_syms(plugin, ksym_new("path", infix_path));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
 	kplugin_add_syms(plugin, ksym_new("users", infix_users));
 	kplugin_add_syms(plugin, ksym_new("groups", infix_groups));
