@@ -274,6 +274,12 @@
   </ACTION>
 </COMMAND>
 
+<COMMAND name="rename" help="Rename a file, e.g. rename startup-config backup">
+  <PARAM name="from" ptype="/FILES" help="File to rename"/>
+  <PARAM name="to" ptype="/FILES" help="New name, or a directory to move it to"/>
+  <ACTION sym="rename@infix" in="tty" out="tty" interrupt="true"/>
+</COMMAND>
+
 <COMMAND name="remove" help="Remove a configuration file">
   <PARAM name="file" ptype="/FILES" help="Configuration file"/>
   <ACTION sym="erase@infix" in="tty" out="tty" interrupt="true"/>

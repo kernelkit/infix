@@ -257,8 +257,10 @@ char *cfg_adjust(const char *path, const char *template, bool sanitize)
 		}
 	}
 
-	/* Directory destination, copy into it like cp(1) */
-	if (template && fisdir(expanded)) {
+	/* Directory destination, copy into it like cp(1).  A trailing
+	 * slash says directory even when it is not there yet.
+	 */
+	if (template && (fisdir(expanded) || expanded[strlen(expanded) - 1] == '/')) {
 		size_t len = strlen(expanded);
 
 		basename = basenm(template);

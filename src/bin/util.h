@@ -15,6 +15,7 @@ int         yorn       (const char *fmt, ...);
 int         files      (const char *path, const char *stripext);
 
 const char *basenm     (const char *fn);
+int         dirlen     (const char *path);
 int         has_ext    (const char *fn, const char *ext);
 mode_t      path_mode  (const char *path);
 bool        path_traversable(const char *path);
