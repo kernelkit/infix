@@ -2,8 +2,8 @@ config BR2_PACKAGE_SUPPORT
 	bool "support"
 	help
 	  The support tool collects logs, configuration and system state
-	  into an archive for troubleshooting.  It is called from the CLI,
-	  the WebUI and the infix-system:support-collect RPC.
+	  into an archive for troubleshooting.  It is called from the CLI
+	  and the infix-system:support-collect RPC, which the WebUI uses.
 
 	  https://github.com/kernelkit/infix
 
