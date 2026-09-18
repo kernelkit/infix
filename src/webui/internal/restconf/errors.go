@@ -101,7 +101,7 @@ func parseError(resp *http.Response) error {
 
 	var parts []string
 	for _, e := range errs {
-		msg := e.Message
+		msg := unwrap(e.Message)
 		if msg == "" {
 			msg = e.Tag
 		}
@@ -114,4 +114,24 @@ func parseError(resp *http.Response) error {
 	re.Tag = errs[0].Tag
 	re.Message = strings.Join(parts, "; ")
 	return re
+}
+
+// unwrap strips rousette's framing of a sysrepo error, which quotes the
+// same message twice:
+//
+//	Internal server error due to sysrepo exception: Couldn't send RPC:
+//	SR_ERR_OPERATION_FAILED <msg> (SR_ERR_OPERATION_FAILED) NETCONF:
+//	application: operation-failed: <msg>
+//
+// Only the message after the NETCONF type and tag is of any use to a user.
+func unwrap(msg string) string {
+	i := strings.LastIndex(msg, "NETCONF: ")
+	if i < 0 {
+		return msg
+	}
+	parts := strings.SplitN(msg[i+len("NETCONF: "):], ": ", 3)
+	if len(parts) < 3 {
+		return msg
+	}
+	return parts[2]
 }

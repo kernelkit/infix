@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -208,52 +209,65 @@ func (h *SystemHandler) Backup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SupportBundle runs the on-device `support collect` tool and streams the
-// resulting archive back as a download.  The WebUI runs as root, so the
-// collection is complete (dmesg, ethtool, etc.).  An optional password
-// encrypts the archive via the tool's GPG support and is fed on stdin so
-// it never lands in the process list.
+// SupportBundle collects a support archive with the support-collect RPC
+// and streams it back as a download.  The RPC runs with the logged-in
+// user's credentials, so NACM decides who gets it.  An optional password
+// has the archive GPG encrypted on the device.
 //
-// Collection emits nothing on stdout until it finishes (~50 s), then the
-// whole archive at once.  We buffer it and only commit response headers
-// once the tool exits successfully, so a mid-collection failure becomes a
-// clean 500 rather than a truncated download.  --work-dir /tmp keeps the
-// transient files in tmpfs; the tool cleans up after itself.
+// The RPC returns nothing until the collection is done, up to a minute,
+// so the response headers are committed only once the archive is in
+// hand and a failure becomes a clean error rather than a truncated
+// download.
 // POST /maintenance/support-bundle
 func (h *SystemHandler) SupportBundle(w http.ResponseWriter, r *http.Request) {
-	// Collection blocks ~50 s with no output, but the server's 15 s
-	// WriteTimeout would close the connection long before then (nginx
-	// then logs a 502 "upstream prematurely closed connection").  Push
-	// the write deadline out for this long-running download.
+	// The server's 15 s WriteTimeout would close the connection long
+	// before the RPC returns (nginx then logs a 502 "upstream prematurely
+	// closed connection").  Push the write deadline out.
 	if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(4 * time.Minute)); err != nil {
 		log.Printf("support bundle: extend write deadline: %v", err)
 	}
 
 	password := r.FormValue("password")
-	encrypt := password != ""
-
-	args := []string{"--work-dir", "/tmp", "collect"}
 	ext, ctype := "tar.gz", "application/gzip"
-	if encrypt {
-		args = append(args, "-p")
+	var input any
+	if password != "" {
+		input = map[string]any{"infix-system:input": map[string]string{"password": password}}
 		ext, ctype = "tar.gz.gpg", "application/pgp-encrypted"
+	}
+
+	var reply struct {
+		Output struct {
+			Size     uint32 `json:"size"`
+			Data     []byte `json:"data"`
+			Filename string `json:"filename"`
+		} `json:"infix-system:output"`
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "/usr/sbin/support", args...)
-	if encrypt {
-		cmd.Stdin = strings.NewReader(password + "\n")
-	}
-	out, err := cmd.Output()
-	if err != nil {
-		stderr := ""
-		if ee, ok := err.(*exec.ExitError); ok {
-			stderr = strings.TrimSpace(string(ee.Stderr))
+	if err := h.RC.CallRPC(ctx, "/operations/infix-system:support-collect", input, &reply); err != nil {
+		log.Printf("support bundle: %v", err)
+		msg, status := "Failed to collect support bundle", http.StatusInternalServerError
+		var re *restconf.Error
+		if errors.As(err, &re) {
+			if re.Message != "" {
+				msg += ": " + re.Message
+			}
+			if re.StatusCode == http.StatusForbidden {
+				status = re.StatusCode
+			}
 		}
-		log.Printf("support bundle: %v: %s", err, stderr)
-		http.Error(w, "Failed to collect support bundle", http.StatusInternalServerError)
+		http.Error(w, msg, status)
+		return
+	}
+
+	out := reply.Output
+	if len(out.Data) == 0 {
+		log.Printf("support bundle: %d bytes, too large to return inline, left in %s", out.Size, out.Filename)
+		http.Error(w, fmt.Sprintf("Support bundle is %d MB, too large to download here. "+
+			"It is on the device as %s, fetch it with scp.", out.Size>>20, out.Filename),
+			http.StatusInternalServerError)
 		return
 	}
 
@@ -265,8 +279,8 @@ func (h *SystemHandler) SupportBundle(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", ctype)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", fname))
-	w.Header().Set("Content-Length", fmt.Sprint(len(out)))
-	w.Write(out) //nolint:errcheck
+	w.Header().Set("Content-Length", fmt.Sprint(len(out.Data)))
+	w.Write(out.Data) //nolint:errcheck
 }
 
 // RestoreConfig accepts a multipart-uploaded JSON config file and applies it.

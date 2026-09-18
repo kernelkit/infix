@@ -19,6 +19,9 @@ All notable changes to the project are documented in this file.
 - `support collect` now redacts private keys, password hashes and other
   secrets from the configuration files in the archive, use `--no-redact`
   to keep them.  The environment dump is no longer collected
+- WebUI: the support bundle is collected with the `infix-system:support-collect`
+  RPC as the logged-in user, so NACM decides who may download it, rather
+  than by running the tool as root
 
 ### Added
 
