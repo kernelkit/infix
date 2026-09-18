@@ -328,6 +328,10 @@ class Flow:
         self.rate, self.seconds, self.size = rate_bps, seconds, size
         self.result = None
 
+    def throughput(self):
+        """Payload bit rate that arrived, over the flow's duration"""
+        return 8.0 * self.result["packets"] * self.size / self.seconds
+
     def share(self, total):
         return 100.0 * self.result["packets"] / total if total else 0.0
 
