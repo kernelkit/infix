@@ -521,6 +521,10 @@ echo "Public:  $pub"
     </ACTION>
   </COMMAND>
 
+  <COMMAND name="tftp" help="Show TFTP server status and files">
+    <ACTION sym="script">show tftp</ACTION>
+  </COMMAND>
+
   <COMMAND name="software" help="Show software info">
     <SWITCH name="optional" min="0" max="1">
       <COMMAND name="name" help="Show detailed info about a partition">

@@ -69,6 +69,18 @@ def dhcp(args: List[str]) -> None:
     cli_pretty(data, "show-dhcp-server")
 
 
+def tftp(args: List[str]) -> None:
+    data = get_json("/infix-services:tftp")
+    if not data:
+        print("TFTP server not enabled.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+    cli_pretty(data, "show-tftp")
+
+
 def hardware(args: List[str]) -> None:
     data = get_json("/ietf-hardware:hardware")
     if not data:
@@ -759,7 +771,8 @@ def execute_command(command: str, args: List[str]):
         'services': services,
         'software': software,
         'stp': stp,
-        'system': system
+        'system': system,
+        'tftp': tftp
     }
 
     if command in command_mapping:
