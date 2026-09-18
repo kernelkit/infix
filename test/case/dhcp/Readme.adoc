@@ -14,6 +14,7 @@ Tests verifying DHCPv4/DHCPv6 client and server functionality:
  - Basic DHCPv4 server operation and lease assignment
  - DHCPv4 server with host-specific IP reservations
  - DHCPv4 server with multiple subnet configurations
+ - DHCPv4 server network boot parameters, per subnet and per host
 
 include::client_basic/Readme.adoc[]
 
@@ -56,3 +57,7 @@ include::server_host/Readme.adoc[]
 <<<
 
 include::server_subnets/Readme.adoc[]
+
+<<<
+
+include::server_boot/Readme.adoc[]

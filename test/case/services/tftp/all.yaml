@@ -1,0 +1,3 @@
+---
+- name: TFTP Server
+  case: tftp_basic/test.py
