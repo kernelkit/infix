@@ -25,6 +25,7 @@
 
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
 #define LLDP_CONFIG_NEXT LLDP_CONFIG"+"
+#define DNSMASQ_TFTP_CONF "/etc/dnsmasq.d/tftp.conf"
 
 enum mdns_cmd { MDNS_ADD, MDNS_DELETE, MDNS_UPDATE };
 
@@ -70,6 +71,7 @@ static const int have_webui = 0;
 #define WEB_RESTCONF_XPATH  WEB_XPATH"/restconf"
 #define WEB_NETBROWSE_XPATH WEB_XPATH"/netbrowse"
 #define WEB_CONSOLE_XPATH   WEB_XPATH"/console"
+#define TFTP_XPATH          "/infix-services:tftp"
 typedef enum {
     FOREACH_SVC(GENERATE_ENUM)
 } svc;
@@ -769,6 +771,44 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 	return put(cfg);
 }
 
+static int tftp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+{
+	struct lyd_node *tftp, *iface;
+	const char *sep = "=", *mode;
+	FILE *fp;
+
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, TFTP_XPATH))
+		return SR_ERR_OK;
+
+	tftp = lydx_get_xpathf(config, TFTP_XPATH);
+	if (!lydx_is_enabled(tftp, "enabled")) {
+		if (!remove(DNSMASQ_TFTP_CONF))
+			finit_reload("dnsmasq");
+		return SR_ERR_OK;
+	}
+
+	fp = fopen(DNSMASQ_TFTP_CONF, "w");
+	if (!fp) {
+		ERRNO("failed creating %s", DNSMASQ_TFTP_CONF);
+		return SR_ERR_SYS;
+	}
+
+	fputs("enable-tftp", fp);
+	LYX_LIST_FOR_EACH(lyd_child(tftp), iface, "interface") {
+		fprintf(fp, "%s%s", sep, lyd_get_value(iface));
+		sep = ",";
+	}
+	fprintf(fp, "\ntftp-root=%s\ntftp-no-fail\n", lydx_get_cattr(tftp, "root"));
+
+	mode = lydx_get_cattr(tftp, "client-directory");
+	if (mode)
+		fprintf(fp, "tftp-unique-root=%s\n", mode);
+	fclose(fp);
+	finit_reload("dnsmasq");
+
+	return SR_ERR_OK;
+}
+
 int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	int rc;
@@ -792,6 +832,9 @@ int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	if (rc)
 		return rc;
 	rc = netbrowse_change(session, config, diff, event, confd);
+	if (rc)
+		return rc;
+	rc = tftp_change(session, config, diff, event, confd);
 	if (rc)
 		return rc;
 	return SR_ERR_OK;
