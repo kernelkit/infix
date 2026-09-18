@@ -62,6 +62,17 @@ static const char *host_tag(const char *subnet, const char *addr)
 	return tag;
 }
 
+static const char *tag_prefix(const char *tag)
+{
+	static char prefix[160];
+
+	if (!tag)
+		return "";
+
+	snprintf(prefix, sizeof(prefix), "tag:%s,", tag);
+	return prefix;
+}
+
 static int configure_options(FILE *fp, struct lyd_node *cfg, const char *tag)
 {
 	struct lyd_node *option;
@@ -94,16 +105,12 @@ static int configure_options(FILE *fp, struct lyd_node *cfg, const char *tag)
 		}
 
 		if (val) {
-			fprintf(fp, "dhcp-option=%s%s%s%d,%s\n",
-				tag ? "tag:" : "", tag ?: "",
-				tag ? "," : "", num, val);
+			fprintf(fp, "dhcp-option=%s%d,%s\n", tag_prefix(tag), num, val);
 		} else if ((suboption = lydx_get_descendant(option, "option", "static-route", NULL))) {
 			struct lyd_node *net;
 
 			LYX_LIST_FOR_EACH(suboption, net, "static-route") {
-				fprintf(fp, "dhcp-option=%s%s%s%d,%s,%s\n",
-					tag ? "tag:" : "",
-					tag ?: "", tag ? "," : "", num,
+				fprintf(fp, "dhcp-option=%s%d,%s,%s\n", tag_prefix(tag), num,
 					lydx_get_cattr(net, "destination"),
 					lydx_get_cattr(net, "next-hop"));
 			}
@@ -114,6 +121,25 @@ static int configure_options(FILE *fp, struct lyd_node *cfg, const char *tag)
 	}
 
 	return 0;
+}
+
+static void configure_boot(FILE *fp, struct lyd_node *cfg, const char *tag)
+{
+	struct lyd_node *boot = lydx_get_child(cfg, "boot");
+	const char *addr, *name;
+
+	if (!boot)
+		return;
+
+	addr = lydx_get_cattr(boot, "server-address");
+	name = lydx_get_cattr(boot, "server-name");
+	if (!addr || !strcmp(addr, "auto"))
+		addr = NULL;
+
+	fprintf(fp, "dhcp-boot=%s%s", tag_prefix(tag), lydx_get_cattr(boot, "file"));
+	if (name || addr)
+		fprintf(fp, ",%s%s%s", name ?: "", addr ? "," : "", addr ?: "");
+	fputc('\n', fp);
 }
 
 static const char *host_match(struct lyd_node *match, const char **id)
@@ -169,6 +195,7 @@ static int configure_host(FILE *fp, struct lyd_node *host, const char *subnet)
 	fprintf(fp, "\n# Host specific options\n");
 	if (configure_options(fp, host, tag))
 		return -1;
+	configure_boot(fp, host, tag);
 
 	name = lydx_get_cattr(host, "hostname");
 
@@ -209,6 +236,8 @@ static void add(const char *subnet, struct lyd_node *cfg)
 	rc = configure_options(fp, cfg, tag);
 	if (rc)
 		goto err;
+	/* Before hosts: dnsmasq prepends dhcp-boot entries, first tag match wins */
+	configure_boot(fp, cfg, tag);
 
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "host") {
 		if ((rc = configure_host(fp, node, tag)))
@@ -298,7 +327,7 @@ static void del(const char *subnet, struct lyd_node *cfg)
 int dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *global, *cifs, *difs, *cif, *dif;
-	int enabled = 0, added = 0, deleted = 0;
+	int enabled = 0;
 	sr_error_t err = 0;
 
 	switch (event) {
@@ -324,7 +353,7 @@ int dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 		const char *subnet = lydx_get_cattr(dif, "subnet");
 
 		if (lydx_get_op(dif) == LYDX_OP_DELETE) {
-			del(subnet, dif), deleted++;
+			del(subnet, dif);
 			continue;
 		}
 
@@ -335,9 +364,9 @@ int dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 				continue;
 
 			if (!enabled || !lydx_is_enabled(cif, "enabled"))
-				del(subnet, cif), deleted++;
+				del(subnet, cif);
 			else
-				add(subnet, cif), added++;
+				add(subnet, cif);
 			break;
 		}
 	}
@@ -360,6 +389,7 @@ int dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 		}
 
 		err = configure_options(fp, global, NULL);
+		configure_boot(fp, global, NULL);
 		fclose(fp);
 		if (err)
 			goto err_done;
@@ -375,10 +405,8 @@ int dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 		}
 	}
 
+	finit_reload("dnsmasq");
 err_done:
-	if (added || deleted)
-		finit_reload("dnsmasq");
-
 	return err;
 }
 

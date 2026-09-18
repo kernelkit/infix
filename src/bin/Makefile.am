@@ -1,12 +1,14 @@
 DISTCLEANFILES   = *~ *.d
 ACLOCAL_AMFLAGS  = -I m4
 
-bin_PROGRAMS     = copy erase files
+bin_PROGRAMS     = copy erase files rename
 sbin_SCRIPTS     = support
 
 # Bash completion
 bashcompdir      = $(datadir)/bash-completion/completions
-dist_bashcomp_DATA = copy.bash
+dist_bashcomp_DATA = bash_completion.d/copy bash_completion.d/erase \
+                     bash_completion.d/rename bash_completion.d/rpc \
+                     bash_completion.d/show
 
 copy_SOURCES     = copy.c util.c util.h
 copy_CPPFLAGS    = -D_DEFAULT_SOURCE -D_GNU_SOURCE
@@ -19,6 +21,12 @@ erase_CPPFLAGS   = -D_DEFAULT_SOURCE -D_GNU_SOURCE
 erase_CFLAGS     = -W -Wall -Wextra
 erase_CFLAGS    += $(libite_CFLAGS) $(sysrepo_CFLAGS)
 erase_LDADD      = $(libite_LIBS)   $(sysrepo_LIBS)
+
+rename_SOURCES   = rename.c util.c util.h
+rename_CPPFLAGS  = -D_DEFAULT_SOURCE -D_GNU_SOURCE
+rename_CFLAGS    = -W -Wall -Wextra
+rename_CFLAGS   += $(libite_CFLAGS) $(sysrepo_CFLAGS)
+rename_LDADD     = $(libite_LIBS)   $(sysrepo_LIBS)
 
 files_SOURCES    = files.c util.c util.h
 files_CPPFLAGS   = -D_DEFAULT_SOURCE -D_GNU_SOURCE

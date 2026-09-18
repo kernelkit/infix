@@ -31,6 +31,10 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2026-09-18 {
+    description "Add TFTP server.";
+    reference "internal";
+  }
   revision 2026-06-17 {
     description "Add web-ui feature, advertised when the web management
                  interface (webui) is built into the image.";
@@ -322,6 +326,69 @@ module infix-services {
       leaf enabled {
         description "Enable or disable RESTCONF server.";
         type boolean;
+      }
+    }
+  }
+
+  container tftp {
+    description "Read-only TFTP server for network boot and provisioning.";
+
+    leaf enabled {
+      description "Enable or disable the TFTP server.";
+      type boolean;
+      default false;
+    }
+
+    leaf root {
+      description "Directory to serve files from, below /var/lib/tftpboot or
+                   /media.  Requests for files outside it are refused, and
+                   only world-readable files are served.";
+      type string {
+        pattern '(/var/lib/tftpboot|/media/[^/.][^/]*)(/[^/.][^/]*)*';
+      }
+      default "/var/lib/tftpboot";
+    }
+
+    leaf-list interface {
+      description "Serve TFTP on these interfaces only, default all.";
+      type if:interface-ref;
+    }
+
+    leaf client-directory {
+      description "Look for files in a subdirectory of the root named after
+                   the client before falling back to the root itself.  Used
+                   for per-device files, e.g., configuration.";
+      type enumeration {
+        enum ip {
+          description "Client IP address, e.g., 192.168.2.10";
+        }
+        enum mac {
+          description "Client MAC address, lower case with dashes,
+                       e.g., 00-11-22-33-44-55";
+        }
+      }
+    }
+
+    container files {
+      description "Files served, i.e., world-readable files below the root.";
+      config false;
+
+      list file {
+        key name;
+
+        leaf name {
+          description "File name, relative to the TFTP root.";
+          type string;
+        }
+
+        leaf size {
+          type uint64;
+          units "bytes";
+        }
+
+        leaf modified {
+          type yang:date-and-time;
+        }
       }
     }
   }

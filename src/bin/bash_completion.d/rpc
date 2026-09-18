@@ -1,0 +1,71 @@
+# bash completion for rpc command
+# SPDX-License-Identifier: ISC
+
+# The RPCs a system accepts follow its YANG models, so read them from
+# the models themselves rather than keeping a list here.  Only top-level
+# RPCs are listed, actions are tied to a node in the data tree and need
+# the path to it, which cannot be had from the model alone.
+#
+# The prefix is the module name from the file, not the file name, a
+# submodule's RPCs belong to the module it is part of.  Reading from
+# /dev/null keeps awk off the terminal when no model is installed.
+_rpc_xpaths()
+{
+    if [ -z "${_rpc_xpath_cache}" ]; then
+	_rpc_xpath_cache=$(awk '
+		FNR == 1		{ mod = "" }
+		!mod && $1 == "module"	{ mod = $2; sub(/[{;].*/, "", mod) }
+		$1 == "belongs-to"	{ mod = $2; sub(/[{;].*/, "", mod) }
+		$1 == "rpc" && NF <= 3	{
+			rpc = $2
+			sub(/[{;].*/, "", rpc)
+			if (mod && rpc)
+				print "/" mod ":" rpc
+		}' /usr/share/yang/modules/*/*.yang 2>/dev/null </dev/null | sort -u)
+    fi
+
+    printf '%s\n' "${_rpc_xpath_cache}"
+}
+
+_rpc_completion()
+{
+    local cur prev words cword i arg_count
+
+    # An XPath holds a colon, which bash otherwise breaks words on
+    _get_comp_words_by_ref -n : cur prev words cword
+    COMPREPLY=()
+
+    # Timeout takes a value we cannot complete, also when bundled, -dt
+    [[ ${prev} == -*t ]] && return 0
+
+    if [[ ${cur} == -* ]]; then
+	COMPREPLY=( $(compgen -W "-d -h -t -v" -- "${cur}") )
+	return 0
+    fi
+
+    arg_count=0
+    for ((i=1; i < cword; i++)); do
+	case "${words[i]}" in
+	    -*t)
+		# Flag with a value, skip it too
+		((i++))
+		;;
+	    -*)
+		;;
+	    *)
+		((++arg_count))
+		;;
+	esac
+    done
+
+    # Only the XPath can be completed, the key and value pairs that
+    # follow it are specific to each RPC.
+    [ "${arg_count}" -eq 0 ] || return 0
+
+    COMPREPLY=( $(compgen -W "$(_rpc_xpaths)" -- "${cur}") )
+    __ltrim_colon_completions "${cur}"
+
+    return 0
+}
+
+complete -F _rpc_completion rpc

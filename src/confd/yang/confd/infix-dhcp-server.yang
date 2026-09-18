@@ -20,6 +20,12 @@ module infix-dhcp-server {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 server";
 
+  revision 2026-09-18 {
+    description "Add network boot parameters (BOOTP siaddr/file, option 66/67)
+                 at global, subnet, and host scope.";
+    reference   "internal";
+  }
+
   revision 2025-10-28 {
     description "Make pool a presence container and add pool validation.
                  Also, require each subnet to have either a pool or
@@ -49,6 +55,18 @@ module infix-dhcp-server {
     default "3600";
   }
 
+  typedef ipv4-address-or-auto {
+    description "IPv4 address, or 'auto' to use the address of the DHCP server.";
+    type union {
+      type inet:ipv4-address;
+      type enumeration {
+        enum auto {
+          description "Use IP address of the DHCP server.";
+        }
+      }
+    }
+  }
+
   grouping dhcp-option-group {
     description "Generic list structure for DHCP options.";
 
@@ -66,14 +84,7 @@ module infix-dhcp-server {
            when "id = 'router' or id = 'dns-server' or id = 'log-server' or id = 'ntp-server' or id = 'netmask' or id = 'broadcast'";
            leaf address {
              description "IP address, or 'auto'.";
-             type union {
-               type inet:ipv4-address;
-               type enumeration {
-                 enum auto {
-                   description "Use IP address of the DHCP server.";
-                 }
-               }
-             }
+             type ipv4-address-or-auto;
            }
         }
 
@@ -122,6 +133,44 @@ module infix-dhcp-server {
     }
   }
 
+  grouping dhcp-boot-group {
+    description "Grouping for network boot parameters.";
+
+    container boot {
+      presence "Enable network boot parameters at this scope.";
+      description "Boot file and TFTP server handed to clients, sent both in
+                   the BOOTP header fields (file, siaddr, sname) and as DHCP
+                   options 66 and 67 to clients that request them.
+
+                   The most specific scope wins: host, then subnet, then
+                   global.";
+
+      must "not(../option[id = 'tftp-server' or id = 'bootfile' or id = 66 or id = 67])" {
+        error-message "Options 66 and 67 are set by boot, remove them from the option list.";
+      }
+
+      leaf file {
+        description "Boot file name, relative to the TFTP server root.";
+        type string {
+          length "1..127";
+          pattern '[^\p{Cc},]+';
+        }
+        mandatory true;
+      }
+
+      leaf server-address {
+        description "IP address of the TFTP server, or 'auto'.";
+        type ipv4-address-or-auto;
+        default auto;
+      }
+
+      leaf server-name {
+        description "Optional TFTP server name, DHCP option 66.";
+        type inet:domain-name;
+      }
+    }
+  }
+
   container dhcp-server {
     description "DHCPv4 server configuration.";
 
@@ -136,6 +185,8 @@ module infix-dhcp-server {
         description "Global DHCP options used as defaults for pools and static host leases.";
       }
     }
+
+    uses dhcp-boot-group;
 
     list subnet {
       description "Subnet specific settings, including static host entries.";
@@ -173,6 +224,8 @@ module infix-dhcp-server {
           description "List of DHCP options specific to this subnet.";
         }
       }
+
+      uses dhcp-boot-group;
 
       container pool {
         presence "Enable dynamic DHCP address pool for this subnet.";
@@ -283,6 +336,8 @@ module infix-dhcp-server {
                          By default, global and subnet options are inherited.";
           }
         }
+
+        uses dhcp-boot-group;
       }
     }
 

@@ -2,12 +2,8 @@
 
 dir()
 {
-    path=$1
-
-    if [ -z "$COLUMS" ]; then
-	TTY=$(resize)
-	eval "$TTY"
-    fi
+    path=${1%/}
+    [ -n "$path" ] || path=/
 
     printf "\033[7m%-*s\033[0m\n" "$COLUMNS" "$path directory"
     if [ -d "$path" ]; then
@@ -18,14 +14,35 @@ dir()
     echo
 }
 
-if [ -d "$1" ]; then
+# Directories copy(1) can read and write, and the user is likely to
+# browse.  The TFTP root follows the server when it is enabled.
+locations()
+{
+    if [ "$USER" = "root" ]; then
+	echo "$HOME"
+    else
+	echo "/home/$USER"
+    fi
+    echo "/cfg"
+    sed -n 's/^tftp-root=//p' /etc/dnsmasq.d/tftp.conf 2>/dev/null || true
+    echo "/var/lib/tftpboot"
+    echo "/media"
+    echo "/log"
+}
+
+# resize(1) talks to the terminal, so it has to run before any pipeline
+# that would hand it something else on stdin
+if [ -z "$COLUMNS" ]; then
+    TTY=$(resize)
+    eval "$TTY"
+fi
+: "${COLUMNS:=80}"
+
+if [ -n "$1" ]; then
     dir "$1"
 else
-    if [ "$USER" = "root" ]; then
-	dir "$HOME"
-    else
-	dir "/home/$USER"
-    fi
-    dir "/cfg"
-    dir "/log"
+    # The configured TFTP root may well be the default one
+    for path in $(locations | awk '!seen[$0]++'); do
+	[ -d "$path" ] && dir "$path"
+    done
 fi

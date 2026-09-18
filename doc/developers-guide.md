@@ -523,6 +523,14 @@ $ git submodule update --init
 > in the GUI for your fork for this purpose.  A cronjob on your server
 > of choice can do this for you with the [GitHub CLI tool][7].
 
+CI on a pull request is controlled with two labels.  With neither, the
+minimal images are built and the default tests run.
+
+ - `ci:main` builds the full images and runs the complete test suite
+ - `ci:skip` builds nothing, for changes that cannot affect the image,
+   e.g. a ChangeLog fixup after another branch landed.  Adding it to an
+   open pull request also stops a build already running
+
 [^1]: Organizations should make sure to lock the `main` (or `master`)
     branch of their clones to ensure members do not accidentally merge
     changes there.  Keeping these branches in sync with upstream Infix

@@ -10,3 +10,6 @@
 
 - name: DHCP Server Multiple Subnets
   case: server_subnets/test.py
+
+- name: DHCP Server Network Boot
+  case: server_boot/test.py

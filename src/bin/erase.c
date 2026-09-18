@@ -20,16 +20,22 @@ static int do_erase(const char *name)
 
 	path = cfg_adjust(name, NULL, sanitize);
 	if (!path) {
-		fprintf(stderr, ERRMSG "file not found.\n");
+		fprintf(stderr, "%s: %s: no such file, or not an allowed path\n",
+			prognm, name);
 		rc = 1;
 		goto out;
 	}
+
+	if (!strcmp(path, STARTUP_CONFIG))
+		fprintf(stderr, "Note: without it the system boots factory defaults"
+			" on next start.\n      To keep this configuration, rename"
+			" it instead.\n");
 
 	if (!yorn("Remove %s, are you sure?", path))
 		goto out;
 
 	if (remove(path)) {
-		fprintf(stderr, ERRMSG "failed removing %s: %s\n", path, strerror(errno));
+		fprintf(stderr, "%s: failed removing %s: %s\n", prognm, path, strerror(errno));
 		rc = 11;
 	}
 
