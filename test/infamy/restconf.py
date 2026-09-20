@@ -32,8 +32,13 @@ def xpath_to_uri(xpath, extra=None):
     uri_path = xpath
     if matches:
         for key, value in matches:
+            # A key value is one path segment, a slash in it has to be
+            # escaped, e.g. the prefix in subnet[subnet='10.0.0.0/24'],
+            # RFC 8040 sec. 3.5.3
+            value_uri = value.replace('/', '%2F')
+
             # replace [key=value] with =value
-            uri_path = re.sub(rf'\[{re.escape(key)}=["\']{re.escape(value)}["\']\]', f'={value}', uri_path)
+            uri_path = re.sub(rf'\[{re.escape(key)}=["\']{re.escape(value)}["\']\]', f'={value_uri}', uri_path)
 
     # Append extra if provided
     if extra is not None:
