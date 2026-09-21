@@ -1698,6 +1698,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#collecting-over-netconf-or-restconf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collecting over NETCONF or RESTCONF
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#encrypted-collection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1713,6 +1724,17 @@
     <span class="md-ellipsis">
       
         What is Collected
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secrets-in-the-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets in the Configuration
       
     </span>
   </a>
@@ -2357,6 +2379,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#collecting-over-netconf-or-restconf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collecting over NETCONF or RESTCONF
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#encrypted-collection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2372,6 +2405,17 @@
     <span class="md-ellipsis">
       
         What is Collected
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secrets-in-the-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets in the Configuration
       
     </span>
   </a>
@@ -2453,60 +2497,110 @@ This command gathers configuration files, logs, network state, and other
 system information into a single compressed archive.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The <code>support collect</code> command should be run with <code>sudo</code> to collect
-complete system information (kernel logs, hardware details, etc.).
-Use the <code>--unprivileged</code> option to run as a regular user in degraded
-data collection mode.</p>
+<p><code>support collect</code> needs root for kernel logs, hardware details and the
+full configuration, so run it with <code>sudo</code>. Without root it refuses;
+<code>--unprivileged</code> lets it run anyway and collect what your user may
+read, the rest is noted as missing in the archive.</p>
 </div>
 <h2 id="collecting-support-data">Collecting Support Data<a class="headerlink" href="#collecting-support-data" title="Permanent link">¶</a></h2>
-<p>To collect support data and save it to a file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@host:~$<span class="w"> </span>sudo<span class="w"> </span>support<span class="w"> </span>collect<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz
+<p>On the device, collect to a file with <code>-o</code>. Progress goes to stderr and
+the path of the archive is the only thing printed on stdout:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@host:~$<span class="w"> </span>sudo<span class="w"> </span>support<span class="w"> </span>collect<span class="w"> </span>-o<span class="w"> </span>/var/lib/support
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Starting<span class="w"> </span>support<span class="w"> </span>data<span class="w"> </span>collection<span class="w"> </span>from<span class="w"> </span>host...
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Collecting<span class="w"> </span>to:<span class="w"> </span>/var/lib/support
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>This<span class="w"> </span>may<span class="w"> </span>take<span class="w"> </span>up<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>minute.<span class="w"> </span>Please<span class="w"> </span>wait...
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>Tailing<span class="w"> </span>/var/log/messages<span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="m">30</span><span class="w"> </span>seconds<span class="w"> </span><span class="o">(</span>please<span class="w"> </span><span class="nb">wait</span><span class="o">)</span>...
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>Log<span class="w"> </span>tail<span class="w"> </span>complete.
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>Collection<span class="w"> </span>complete.<span class="w"> </span>Creating<span class="w"> </span>archive...
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>admin@host:~$<span class="w"> </span>ls<span class="w"> </span>-l<span class="w"> </span>support-data.tar.gz
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>-rw-rw-r--<span class="w"> </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w"> </span><span class="m">508362</span><span class="w"> </span>nov<span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="m">13</span>:05<span class="w"> </span>support-data.tar.gz
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>/var/lib/support/support-host-2026-09-11T13:05:42+02:00.tar.gz
 </code></pre></div>
-<p>The command can also be run remotely via SSH from your workstation:</p>
+<p>Given a directory, the file gets the canonical name shown above. Given a
+file name, that name is used. Either way the file is created with mode
+0600. Secrets are redacted from the configuration, see below, but the
+archive still holds every log on the device. Fetch it with <code>scp</code> and
+remove it, or leave that to <code>support clean</code>.</p>
+<p>Without <code>-o</code> the archive goes to stdout, which is what you want when
+running the command from your workstation over SSH:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$<span class="w"> </span>ssh<span class="w"> </span>admin@host<span class="w"> </span><span class="s1">'sudo support collect'</span><span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>...
 </code></pre></div>
-<p>The collection process may take up to a minute depending on system load
-and the amount of logging data. Progress messages are shown during the
-collection process.</p>
+<p>On the device itself, prefer <code>-o</code>. A session that drops mid-way then
+leaves the archive behind rather than taking the only copy with it.</p>
+<p>The collection may take up to a minute depending on system load and the
+amount of logging data.</p>
+<p>Each command is run with a timeout, so a wedged driver or daemon cannot
+stall the collection; the archive then holds a note in place of that
+command's output. The logs are held in the collection and again in the
+archive beside it, so collection measures them first and refuses when
+the partition cannot hold both, rather than fill it. If the collection
+itself fails, the log is kept next to the working directory, for
+instance:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/var/lib/support/support-host-2026-09-11T13:05:42+02:00.log
+</code></pre></div>
+<p>It shows what was collected and what failed. Use <code>support clean</code> to
+remove old collection directories and logs.</p>
+<h2 id="collecting-over-netconf-or-restconf">Collecting over NETCONF or RESTCONF<a class="headerlink" href="#collecting-over-netconf-or-restconf" title="Permanent link">¶</a></h2>
+<p>The <code>infix-system:support-collect</code> RPC runs the same collection and
+returns the archive base64 encoded:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$<span class="w"> </span>curl<span class="w"> </span>-ku<span class="w"> </span>admin:admin<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">       </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/yang-data+json"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">       </span>https://host/restconf/operations/infix-system:support-collect<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'."infix-system:output".data'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz
+</code></pre></div>
+<p>Give a <code>password</code> in the input to get the archive encrypted, see
+<a href="#encrypted-collection">Encrypted Collection</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$<span class="w"> </span>curl<span class="w"> </span>-ku<span class="w"> </span>admin:admin<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">       </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/yang-data+json"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">       </span>-d<span class="w"> </span><span class="s1">'{"infix-system:input":{"password":"mypassword"}}'</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">       </span>https://host/restconf/operations/infix-system:support-collect<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'."infix-system:output".data'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz.gpg
+</code></pre></div>
+<p>Things to know:</p>
+<ul>
+<li>The RPC is denied by default, the caller's group needs a NACM rule
+  that permits it.</li>
+<li>An archive above 16 MiB is not returned inline.  The reply then holds
+  <code>size</code> and <code>filename</code> only, and the file is left on the device for
+  you to fetch with <code>scp</code>.</li>
+<li>The RPC has 60 seconds to finish.  On a device with many ports or a
+  lot of logging the collection may take longer, the call then fails
+  with a timeout and nothing is kept.  Collect over SSH instead, see
+  <a href="#collecting-support-data">Collecting Support Data</a>.</li>
+<li>Over NETCONF the archive is a single XML text node.  Clients built on
+  libxml2, lxml and ncclient among them, refuse text nodes over 10 MB
+  unless opened with <code>huge_tree=True</code>.  RESTCONF has no such limit.</li>
+</ul>
 <h2 id="encrypted-collection">Encrypted Collection<a class="headerlink" href="#encrypted-collection" title="Permanent link">¶</a></h2>
 <p>For secure transmission of support data, the archive can be encrypted
-with GPG using a password:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@host:~$<span class="w"> </span>sudo<span class="w"> </span>support<span class="w"> </span>collect<span class="w"> </span>-p<span class="w"> </span>mypassword<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz.gpg
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Starting<span class="w"> </span>support<span class="w"> </span>data<span class="w"> </span>collection<span class="w"> </span>from<span class="w"> </span>host...
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Collecting<span class="w"> </span>to:<span class="w"> </span>/var/lib/support
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>This<span class="w"> </span>may<span class="w"> </span>take<span class="w"> </span>up<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>minute.<span class="w"> </span>Please<span class="w"> </span>wait...
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>...
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>Collection<span class="w"> </span>complete.<span class="w"> </span>Creating<span class="w"> </span>archive...
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>Encrypting<span class="w"> </span>with<span class="w"> </span>GPG...
+with GPG using a password. This needs gpg on the device, which the
+<code>BR2_PACKAGE_SUPPORT_ENCRYPT</code> build option adds.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@host:~$<span class="w"> </span>sudo<span class="w"> </span>support<span class="w"> </span>collect<span class="w"> </span>-p<span class="w"> </span>mypassword<span class="w"> </span>-o<span class="w"> </span>/var/lib/support
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Starting<span class="w"> </span>support<span class="w"> </span>data<span class="w"> </span>collection<span class="w"> </span>from<span class="w"> </span>host...
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Collecting<span class="w"> </span>to:<span class="w"> </span>/var/lib/support
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>This<span class="w"> </span>may<span class="w"> </span>take<span class="w"> </span>up<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>minute.<span class="w"> </span>Please<span class="w"> </span>wait...
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>...
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>Collection<span class="w"> </span>complete.<span class="w"> </span>Creating<span class="w"> </span>archive...
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>Encrypting<span class="w"> </span>with<span class="w"> </span>GPG...
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>WARNING:<span class="w"> </span>Remember<span class="w"> </span>to<span class="w"> </span>share<span class="w"> </span>the<span class="w"> </span>encryption<span class="w"> </span>password<span class="w"> </span>out-of-band!
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">         </span>Do<span class="w"> </span>not<span class="w"> </span>send<span class="w"> </span>it<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>same<span class="w"> </span>email<span class="w"> </span>as<span class="w"> </span>the<span class="w"> </span>encrypted<span class="w"> </span>file.
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>/var/lib/support/support-host-2026-09-11T13:05:42+02:00.tar.gz.gpg
 </code></pre></div>
-<p>The <code>support collect</code> command even supports omitting <code>mypassword</code> and
-will then prompt interactively for the password.  This works over SSH too,
-but the local ssh client may then echo the password.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>To hide the encryption password for an SSH session, the script supports
-reading from stdin:
-<code>echo "$MYSECRET" | ssh user@device 'sudo support collect -p' &gt;
-file.tar.gz.gpg</code></p>
-</div>
+<p>Given a directory, <code>-o</code> appends <code>.gpg</code> to the canonical name. The
+password may be left out, the command then prompts for it. That works
+over SSH too, but the local ssh client may echo what you type, so pipe
+it on stdin instead:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"</span><span class="nv">$MYSECRET</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>admin@host<span class="w"> </span><span class="s1">'sudo support collect -p'</span><span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz.gpg
+</code></pre></div>
 <p>After transferring the resulting file to your workstation, decrypt it
 with the password:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$<span class="w"> </span>gpg<span class="w"> </span>-d<span class="w"> </span>support-data.tar.gz.gpg<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>$<span class="w"> </span>tar<span class="w"> </span>xzf<span class="w"> </span>support-data.tar.gz
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>$<span class="w"> </span>gpg<span class="w"> </span>-d<span class="w"> </span>support-data.tar.gz.gpg<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>$<span class="w"> </span>tar<span class="w"> </span>xzf<span class="w"> </span>support-data.tar.gz
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>...
 </code></pre></div>
 <p>or</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$<span class="w"> </span>gpg<span class="w"> </span>-d<span class="w"> </span>support-data.tar.gz.gpg<span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>xz
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$<span class="w"> </span>gpg<span class="w"> </span>-d<span class="w"> </span>support-data.tar.gz.gpg<span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>xz
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>...
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
@@ -2518,7 +2612,7 @@ plain-text email for example.</p>
 <p>The support archive includes:</p>
 <ul>
 <li>System identification (hostname, uptime, kernel version)</li>
-<li>Running and operational configuration (sysrepo datastores)</li>
+<li>Running, operational and startup configuration, with secrets redacted</li>
 <li>System logs (<code>/var/log</code> directory and live tail of messages log)</li>
 <li>Network configuration and state (interfaces, routes, neighbors, bridges)</li>
 <li>FRRouting information (OSPF, BFD status)</li>
@@ -2526,6 +2620,17 @@ plain-text email for example.</p>
 <li>System resource usage (CPU, memory, disk, processes)</li>
 <li>Hardware information (PCI, USB devices, network interfaces)</li>
 </ul>
+<h2 id="secrets-in-the-configuration">Secrets in the Configuration<a class="headerlink" href="#secrets-in-the-configuration" title="Permanent link">¶</a></h2>
+<p>The configuration holds private keys, password hashes and other secrets
+that help no one troubleshoot, so <code>support collect</code> exports it with
+<code>copy -r</code>, which drops every node the YANG models tag
+<code>nacm:default-deny-all</code>, and the user passwords. The rest is left
+intact.</p>
+<p>Pass <code>--no-redact</code> to keep them, for instance when the archive is for
+your own use and stays on your workstation. The RPC always redacts.</p>
+<p>The archive still contains every log on the device, which may hold
+usernames, addresses and other details of your network. Treat it as
+confidential and encrypt it before it leaves your control.</p>
 
 
 
