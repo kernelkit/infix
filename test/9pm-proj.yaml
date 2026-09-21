@@ -2,3 +2,6 @@
   PROJECT-NAME: "Infix"
   PROJECT-ROOT: "../../"
   PROJECT-TOPDOC: "../case/"
+  AGENT-HINTS: |
+    Read test/infix-test-skill.md first, it explains how the tests work
+    and where to look.
