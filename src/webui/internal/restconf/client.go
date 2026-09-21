@@ -156,6 +156,51 @@ func (c *Client) PostJSON(ctx context.Context, path string, body any) error {
 	return c.writeJSON(ctx, http.MethodPost, path, body)
 }
 
+// CallRPC invokes a RESTCONF operation and decodes its output into output,
+// nil for an operation without one.  input, when not nil, is sent as the
+// operation's input container.  Only the context's deadline bounds the
+// call, not the client's timeout for plain requests; support-collect runs
+// for up to a minute.
+func (c *Client) CallRPC(ctx context.Context, path string, input, output any) error {
+	if err := checkPath(path); err != nil {
+		return err
+	}
+	var body io.Reader
+	if input != nil {
+		var buf bytes.Buffer
+		if err := json.NewEncoder(&buf).Encode(input); err != nil {
+			return fmt.Errorf("encoding request body: %w", err)
+		}
+		body = &buf
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, body)
+	if err != nil {
+		return err
+	}
+	// Required by rousette on every POST, body or not
+	req.Header.Set("Content-Type", "application/yang-data+json")
+	req.Header.Set("Accept", "application/yang-data+json")
+	creds := CredentialsFromContext(ctx)
+	req.SetBasicAuth(creds.Username, creds.Password)
+
+	hc := *c.httpClient
+	hc.Timeout = 0
+	resp, err := hc.Do(req)
+	if err != nil {
+		return fmt.Errorf("restconf request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return parseError(resp)
+	}
+	if output == nil || resp.StatusCode == http.StatusNoContent {
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(output)
+}
+
 // Put replaces a RESTCONF config resource with the given value.
 func (c *Client) Put(ctx context.Context, path string, body any) error {
 	return c.writeJSON(ctx, http.MethodPut, path, body)

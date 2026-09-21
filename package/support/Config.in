@@ -1,0 +1,22 @@
+config BR2_PACKAGE_SUPPORT
+	bool "support"
+	help
+	  The support tool collects logs, configuration and system state
+	  into an archive for troubleshooting.  It is called from the CLI
+	  and the infix-system:support-collect RPC, which the WebUI uses.
+
+	  https://github.com/kernelkit/infix
+
+if BR2_PACKAGE_SUPPORT
+
+config BR2_PACKAGE_SUPPORT_ENCRYPT
+	bool "Encrypted archives"
+	depends on BR2_PACKAGE_GNUPG2_DEPENDS
+	depends on !BR2_PACKAGE_GNUPG
+	select BR2_PACKAGE_GNUPG2
+	help
+	  Allow a support archive to be encrypted with a password, using
+	  GnuPG, before it leaves the device.  Adds gpg and its libraries
+	  to the image.
+
+endif

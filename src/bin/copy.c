@@ -47,6 +47,7 @@ static int force;
 static int timeout;
 static int dry_run;
 static int sanitize;
+static int redact;
 
 /*
  * Current system user, same as sysrepo user.  We use getuid() here
@@ -387,6 +388,64 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 	return sess;
 }
 
+/* Models tag their secrets nacm:default-deny-all, the user password in
+ * ietf-system being the one that predates the convention */
+static bool is_secret(const struct lysc_node *snode)
+{
+	LY_ARRAY_COUNT_TYPE u;
+
+	LY_ARRAY_FOR(snode->exts, u) {
+		const struct lysc_ext *def = snode->exts[u].def;
+
+		if (!strcmp(def->name, "default-deny-all") &&
+		    !strcmp(def->module->name, "ietf-netconf-acm"))
+			return true;
+	}
+
+	if (!strcmp(snode->name, "password") && snode->parent &&
+	    !strcmp(snode->parent->name, "user") &&
+	    !strcmp(snode->module->name, "ietf-system"))
+		return true;
+
+	return false;
+}
+
+/* Drops secret nodes, subtree included, like NACM does for a user
+ * without read access.  Freeing a first sibling moves *first. */
+static size_t redact_tree(struct lyd_node **first)
+{
+	struct lyd_node *node, *next;
+	size_t num = 0;
+
+	LY_LIST_FOR_SAFE(*first, next, node) {
+		if (!node->schema)
+			continue;
+
+		if (is_secret(node->schema)) {
+			if (debug) {
+				char *path = lyd_path(node, LYD_PATH_STD, NULL, 0);
+
+				dbg("redacting %s", path);
+				free(path);
+			}
+
+			if (node == *first)
+				*first = next;
+			lyd_free_tree(node);
+			num++;
+			continue;
+		}
+
+		if (node->schema->nodetype & (LYS_CONTAINER | LYS_LIST)) {
+			struct lyd_node *child = lyd_child(node);
+
+			num += redact_tree(&child);
+		}
+	}
+
+	return num;
+}
+
 static int sysrepo_export(const struct infix_ds *ds, const char *path)
 {
 	sr_session_ctx_t *sess;
@@ -406,6 +465,14 @@ static int sysrepo_export(const struct infix_ds *ds, const char *path)
 
 	if (!data)
 		return 0;
+
+	if (redact) {
+		size_t num = redact_tree(&data->tree);
+
+		if (num)
+			fprintf(stderr, "redacted %zu secret node%s from %s\n",
+				num, num == 1 ? "" : "s", ds->name);
+	}
 
 	err = lyd_print_path(path, data->tree, LYD_JSON, LYD_PRINT_SIBLINGS);
 	sr_release_data(data);
@@ -820,6 +887,8 @@ static int usage(int rc)
 	       "  -f                 Force yes when copying to a file that exists already\n"
 	       "  -h                 This help text\n"
 	       "  -n                 Dry-run, validate configuration without applying\n"
+	       "  -r                 Redact secrets when exporting a datastore: drop nodes\n"
+	       "                     tagged nacm:default-deny-all and user passwords\n"
 	       "  -s                 Sanitize paths for CLI use (restrict path traversal)\n"
 	       "  -t SEC             Timeout for the operation, or default %d sec\n"
 	       "  -u USER            Username for remote commands, like scp\n"
@@ -957,7 +1026,7 @@ static int copy_main(int argc, char *argv[])
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "dfhnst:u:vx:")) != EOF) {
+	while ((c = getopt(argc, argv, "dfhnrst:u:vx:")) != EOF) {
 		switch(c) {
 		case 'd':
 			debug = 1;
@@ -969,6 +1038,9 @@ static int copy_main(int argc, char *argv[])
 			return usage(0);
 		case 'n':
 			dry_run = 1;
+			break;
+		case 'r':
+			redact = 1;
 			break;
 		case 's':
 			sanitize = 1;
