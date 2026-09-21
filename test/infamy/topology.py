@@ -135,6 +135,18 @@ class Topology:
 
         return _qstrip(password) if password is not None else "admin"
 
+    def get_shutdown_time(self, node):
+        """Seconds a node typically needs to go down after a reboot request.
+
+        Optional per-node attribute, an indication rather than the truth,
+        waited for before checking if the node is gone.
+        """
+        n = self.dotg.get_node(node)
+        b = n[0] if n else {}
+        secs = b.get("shutdown_time")
+
+        return float(_qstrip(secs)) if secs is not None else 0.0
+
     def get_expected_boot(self, node):
         n = self.dotg.get_node(node)
         b = n[0] if n else {}

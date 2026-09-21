@@ -79,7 +79,17 @@ def to_binary(text):
 
 
 def wait_boot(target, env):
+    """Wait for target to go down and come back up after a reboot.
+
+    The topology may set shutdown_time on the node, the time it takes
+    for the node to go down, to wait before checking if it is gone.
+    """
     print(f"{target} is shutting down ...")
+    node = env.ltop.xlate(target.name) if env.ltop else target.name
+    shutdown_time = env.ptop.get_shutdown_time(node)
+    if shutdown_time:
+        time.sleep(shutdown_time)
+
     until(lambda: not target.reachable(), attempts=100)
 
     print(f"{target} is booting up ...")
@@ -96,7 +106,8 @@ def wait_boot(target, env):
     print(f"{target} is responding to IPv6 ping ...")
 
     pwd = target.location.password
-    until(lambda: is_reachable(neigh, env, pwd), attempts=300)
+    until(lambda: target.reachable() and is_reachable(neigh, env, pwd),
+          attempts=300)
 
     return True
 
