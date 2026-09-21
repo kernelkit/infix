@@ -64,6 +64,9 @@
       },
       {
         "admin-status": "up",
+        "higher-layer-if": [
+          "e2.30"
+        ],
         "ieee802-ethernet-interface:ethernet": {
           "auto-negotiation": {
             "enable": false
@@ -94,6 +97,10 @@
       },
       {
         "admin-status": "up",
+        "higher-layer-if": [
+          "br-Q",
+          "e3.10"
+        ],
         "ieee802-ethernet-interface:ethernet": {
           "auto-negotiation": {
             "enable": false
@@ -276,6 +283,9 @@
       },
       {
         "admin-status": "up",
+        "higher-layer-if": [
+          "br-X"
+        ],
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -305,6 +315,9 @@
           "lower-layer-if": "e2",
           "tag-type": "ieee802-dot1q-types:c-vlan"
         },
+        "lower-layer-if": [
+          "e2"
+        ],
         "name": "e2.30",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:02",
@@ -328,6 +341,9 @@
             "multicast-filter": []
           }
         },
+        "lower-layer-if": [
+          "e2.30"
+        ],
         "name": "br-X",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
@@ -335,6 +351,9 @@
       },
       {
         "admin-status": "up",
+        "higher-layer-if": [
+          "br-Q"
+        ],
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -373,6 +392,9 @@
       },
       {
         "admin-status": "up",
+        "higher-layer-if": [
+          "veth0a.20"
+        ],
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -394,6 +416,9 @@
       },
       {
         "admin-status": "up",
+        "higher-layer-if": [
+          "br-D"
+        ],
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -423,6 +448,9 @@
           "lower-layer-if": "veth0a",
           "tag-type": "ieee802-dot1q-types:c-vlan"
         },
+        "lower-layer-if": [
+          "veth0a"
+        ],
         "name": "veth0a.20",
         "oper-status": "up",
         "phys-address": "6e:d0:98:c4:e7:ef",
@@ -473,6 +501,9 @@
             "multicast-filter": []
           }
         },
+        "lower-layer-if": [
+          "veth0a.20"
+        ],
         "name": "br-D",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
@@ -483,6 +514,9 @@
       },
       {
         "admin-status": "up",
+        "higher-layer-if": [
+          "br-Q.40"
+        ],
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -547,6 +581,10 @@
             ]
           }
         },
+        "lower-layer-if": [
+          "e3",
+          "veth0b"
+        ],
         "name": "br-Q",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
@@ -569,6 +607,9 @@
           "lower-layer-if": "br-Q",
           "tag-type": "ieee802-dot1q-types:c-vlan"
         },
+        "lower-layer-if": [
+          "br-Q"
+        ],
         "name": "br-Q.40",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
@@ -588,6 +629,9 @@
           "lower-layer-if": "e3",
           "tag-type": "ieee802-dot1q-types:c-vlan"
         },
+        "lower-layer-if": [
+          "e3"
+        ],
         "name": "e3.10",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",

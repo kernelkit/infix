@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <jansson.h>
 #include <net/if.h>
 #include <libite/lite.h>
@@ -75,4 +76,13 @@ int ip_link_check_group(const char *ifname, const char *group)
 	json_decref(j_root);
 
 	return 0;
+}
+
+/* YANG date-and-time, always in UTC */
+void format_timestamp(time_t when, char *buf, size_t sz)
+{
+	struct tm tm;
+
+	gmtime_r(&when, &tm);
+	strftime(buf, sz, "%Y-%m-%dT%H:%M:%S+00:00", &tm);
 }
