@@ -5,6 +5,8 @@
 ################################################################################
 
 IMAGE_README_DIR := $(pkgdir)
+IMAGE_README_NAME := image-readme
+IMAGE_README_TYPE := rootfs
 
 image-readme: $(BINARIES_DIR)/README.md
 
