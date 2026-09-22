@@ -1,0 +1,45 @@
+=== MIB Coverage
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/snmp/coverage]
+
+==== Description
+
+Walk every MIB the agent is documented to serve and verify each one
+answers with at least one object.  The set of MIBs the agent serves is
+decided by a hand written module list in the defconfigs, so trimming it,
+or a net-snmp release renaming a module, silently shrinks what is served
+while everything else still passes.
+
+Values are deliberately not compared.  Counters, uptime and load move on
+their own, and which rows exist depends on the interfaces, mounts and
+processes of the device under test, so a recorded walk could only ever
+be a source of false failures.  A subtree that answers at all is the
+property worth guarding.
+
+On top of that, check the relations that must hold whatever the device
+looks like: every interface in the operational datastore is reachable
+over SNMP under its own if-index, every ifTable row has the matching
+ifXTable row, and ifNumber agrees with both.
+
+LLDP-MIB is checked separately because it arrives by a different route,
+lldpd registering it with the master agent over AgentX, and is the only
+thing here that exercises that path.
+
+==== Topology
+
+image::topology.svg[MIB Coverage topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Set IPv4 address 10.0.0.10/24 on target:data
+. Enable SNMP agent with a read-only community
+. Verify the host has the net-snmp client tools
+. Wait for the agent to answer
+. Verify every documented MIB answers
+. Verify LLDP-MIB is served over AgentX
+. Verify every interface in operational is in ifXTable
+. Verify every ifTable row has an ifXTable row
+. Verify ifNumber agrees with the ifTable row count
+
+
