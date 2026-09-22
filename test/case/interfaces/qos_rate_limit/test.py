@@ -42,6 +42,7 @@ with infamy.Test() as test:
         _, td1 = env.ltop.xlate("target", "data2")
         _, hd0 = env.ltop.xlate("host", "data1")
         _, hd1 = env.ltop.xlate("host", "data2")
+        port = infamy.capability.Port(target, td1, tgtssh)
 
     with test.step("Bridge the two ports, trust DSCP on ingress, rate limit the egress port"):
         target.put_config_dicts({"ietf-interfaces": {
@@ -69,12 +70,9 @@ with infamy.Test() as test:
             }
         }})
         until(lambda: (qos.root_qdisc(tgtssh, td1) or {}).get("kind") == "tbf")
-        qos.show_shaper(tgtssh, td1)
+        qos.show_shaper(port)
 
-        uevent = tgtssh.runsh(f"cat /sys/class/net/{td1}/uevent").stdout
-        if "DEVTYPE=dsa" in uevent.split() and "rate-limit" not in qos.offload(target, td1):
-            print("switch fabric forwards past a rate limit its driver does not offload, skipping")
-            test.skip()
+        port.require_offload(test, "rate-limit")
 
     with infamy.IsolatedMacVlan(hd0) as ns0, \
          infamy.IsolatedMacVlan(hd1) as ns1:

@@ -30,15 +30,6 @@ TABLE_8_5 = {
 }
 
 
-def capabilities(target, port):
-    data = target.get_data(f"/ietf-interfaces:interfaces/interface[name='{port}']"
-                           "/infix-interfaces:qos/capabilities")
-    for iface in data["interfaces"]["interface"]:
-        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
-        return qos.get("capabilities", {})
-    return {}
-
-
 def running_qos(target, port):
     running = target.get_config_dict("/ietf-interfaces:interfaces")
     for iface in running["interfaces"]["interface"]:
@@ -71,7 +62,7 @@ with infamy.Test() as test:
         assert running_qos(target, port) is None, f"{port} has qos configuration"
 
     with test.step("Verify the class count is the queue count, or eight for one queue"):
-        caps = capabilities(target, port)
+        caps = infamy.capability.Port(target, port, tgtssh).caps
         queues = tx_queues(tgtssh, port)
         expected = min(queues, 8) if queues > 1 else 8
         print(f"{port}: {queues} tx queues, capabilities {caps}")
