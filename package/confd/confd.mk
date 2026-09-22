@@ -50,6 +50,11 @@ CONFD_CONF_OPTS += --enable-webui
 else
 CONFD_CONF_OPTS += --disable-webui
 endif
+ifeq ($(BR2_PACKAGE_NETSNMP),y)
+CONFD_CONF_OPTS += --enable-snmp
+else
+CONFD_CONF_OPTS += --disable-snmp
+endif
 define CONFD_INSTALL_EXTRA
 	for fn in confd.conf crond.conf rcd.conf resolvconf.conf; do \
 		cp $(CONFD_PKGDIR)/$$fn  $(FINIT_D)/available/; \
@@ -114,6 +119,12 @@ define CONFD_INSTALL_YANG_MODULES_WEBUI
 	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/web.inc
 endef
 endif
+ifeq ($(BR2_PACKAGE_NETSNMP),y)
+define CONFD_INSTALL_YANG_MODULES_SNMP
+	$(COMMON_SYSREPO_ENV) \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/snmp.inc
+endef
+endif
 
 # PER_PACKAGE_DIR
 # Since the last package in the dependency chain that runs sysrepoctl is confd, we need to
@@ -145,6 +156,7 @@ CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_CONTAINERS
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_WIFI
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_GPS
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_WEBUI
+CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_SNMP
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_IN_ROMFS
 CONFD_TARGET_FINALIZE_HOOKS += CONFD_CLEANUP
 

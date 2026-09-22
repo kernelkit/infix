@@ -287,4 +287,11 @@ int ntp_candidate_init(struct confd *confd);
 /* ptp.c */
 int ptp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
+/* snmp.c */
+#ifdef HAVE_SNMP
+int snmp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+#else
+static inline int snmp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd) { return 0; }
+#endif
+
 #endif	/* CONFD_CORE_H_ */

@@ -1,0 +1,68 @@
+module infix-snmp {
+  yang-version 1.1;
+  namespace "urn:infix:snmp:ns:yang:1.0";
+  prefix infix-snmp;
+
+  import ietf-snmp {
+    prefix snmp;
+    reference "RFC 7407: A YANG Data Model for SNMP Configuration";
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix deviations to ietf-snmp.
+
+                The agent is read-only and serves one view: a community
+                reads the whole MIB tree or it is not configured at all.
+                SNMP SET is a second, and weaker, authorization path
+                beside NACM, and we do not want one.
+
+                SNMPv3 (USM) and notifications are modeled by RFC 7407 but
+                not yet served by the agent, so they are removed here too.
+                Removing the deviation is all that is needed to bring them
+                back once the agent supports them.
+
+                Transports other than UDP, proxying, and notification
+                filters are gated by ietf-snmp features and are simply not
+                enabled, so they need no deviation.";
+
+  revision 2026-09-22 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  deviation "/snmp:snmp/snmp:vacm" {
+    deviate not-supported;
+    description "Access control is not view-based here.  Every configured
+                 community may read the whole MIB tree, and nothing may
+                 write, so there is no view, group or context to choose
+                 and VACM would be four lists of ceremony to say the one
+                 thing the agent already does.  Restrict who may ask
+                 with /snmp/community/target-tag instead.";
+  }
+
+  deviation "/snmp:snmp/snmp:engine/snmp:version/snmp:v3" {
+    deviate not-supported;
+    description "SNMPv3 USM is not supported yet.";
+  }
+
+  deviation "/snmp:snmp/snmp:usm" {
+    deviate not-supported;
+    description "SNMPv3 USM is not supported yet.";
+  }
+
+  deviation "/snmp:snmp/snmp:target-params/snmp:params/snmp:usm" {
+    deviate not-supported;
+    description "SNMPv3 USM is not supported yet.";
+  }
+
+  deviation "/snmp:snmp/snmp:notify" {
+    deviate not-supported;
+    description "Notifications (traps and informs) are not supported yet.";
+  }
+
+  deviation "/snmp:snmp/snmp:engine/snmp:enable-authen-traps" {
+    deviate not-supported;
+    description "Notifications (traps and informs) are not supported yet.";
+  }
+}
