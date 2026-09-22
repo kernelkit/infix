@@ -100,7 +100,7 @@ class Test:
             if type(e) == TestPass:
                 self._ok(msg)
             elif type(e) == TestSkip:
-                self._ok(directive="skip")
+                self._ok(directive=f"skip {e}".strip())
             elif type(e) == TestFail:
                 self._not_ok(msg)
             else:
@@ -128,8 +128,9 @@ class Test:
     def succeed(self):
         raise TestPass()
 
-    def skip(self):
-        raise TestSkip()
+    def skip(self, reason=""):
+        """End the test as skipped, stating why in the report"""
+        raise TestSkip(reason)
 
     def fail(self, message=None):
         if message:
