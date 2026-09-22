@@ -26,15 +26,6 @@ import infamy
 from infamy.util import until
 
 
-def capabilities(target, port):
-    data = target.get_data(f"/ietf-interfaces:interfaces/interface[name='{port}']"
-                           "/infix-interfaces:qos/capabilities")
-    for iface in data["interfaces"]["interface"]:
-        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
-        return qos.get("capabilities", {})
-    return {}
-
-
 def dscp_num(name):
     """dcb prints DSCP by name when it knows one: CS1, AF21, EF ..."""
     if name.startswith("CS"):
@@ -92,7 +83,8 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
         _, port = env.ltop.xlate("target", "data")
-        dcb = bool(capabilities(target, port).get("supported-trust-order"))
+        cap = infamy.capability.Port(target, port, tgtssh)
+        dcb = bool(cap.trust_orders)
         print(f"{port}: DCB {'supported' if dcb else 'not supported'}")
 
     with test.step("Configure trust dscp-pcp, default priority 2, presets, and remarking"):
@@ -142,8 +134,7 @@ with infamy.Test() as test:
                 assert want in dscp, f"missing {want} in prio-dscp {sorted(dscp)}"
 
         with test.step("Verify classification and remarking are reported as offloaded"):
-            until(lambda: {"classification", "remarking"} <=
-                  set(capabilities(target, port).get("offload", [])))
+            until(lambda: {"classification", "remarking"} <= set(cap.offload))
     else:
         with test.step("Verify tc flower rules: DSCP block before PCP block, then default"):
             until(lambda: len(flower_rules(tgtssh, port)) > 0)
@@ -178,7 +169,7 @@ with infamy.Test() as test:
             assert len(pedits) == 32, f"{len(pedits)} pedit rules"
 
         with test.step("Verify classification is not reported as offloaded"):
-            assert "classification" not in capabilities(target, port).get("offload", [])
+            assert not cap.offloads("classification")
 
     with test.step("Remove qos configuration and verify the defaults are back"):
         target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{port}']"

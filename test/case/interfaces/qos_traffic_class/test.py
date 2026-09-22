@@ -47,14 +47,6 @@ def qos_xpath(port, path=""):
     return f"/ietf-interfaces:interfaces/interface[name='{port}']/infix-interfaces:qos{path}"
 
 
-def capabilities(target, port):
-    data = target.get_data(qos_xpath(port, "/capabilities"))
-    for iface in data["interfaces"]["interface"]:
-        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
-        return qos.get("capabilities", {})
-    return {}
-
-
 def root_qdisc(ssh, port):
     """Return the root qdisc of port as a dict, or None"""
     out = ssh.runsh(f"tc -j qdisc show dev {port}").stdout
@@ -83,10 +75,11 @@ with infamy.Test() as test:
         tgtssh = env.attach("target", "mgmt", "ssh")
         _, port = env.ltop.xlate("target", "data")
 
-        num_tc = capabilities(target, port).get("max-traffic-classes", 8)
+        cap = infamy.capability.Port(target, port, tgtssh)
+        num_tc = cap.traffic_classes
         print(f"{port}: {num_tc} traffic classes")
         assert num_tc and 2 <= num_tc <= 8, f"max-traffic-classes {num_tc}"
-        offloaded = "transmission-selection" in capabilities(target, port).get("offload", [])
+        offloaded = cap.offloads("transmission-selection")
 
     with test.step("Configure a custom map, the two lowest classes sharing 67:33"):
         # Table 8-5 with the two lowest classes swapped, so the map is
@@ -121,8 +114,7 @@ with infamy.Test() as test:
 
     with test.step("Verify the offload capability matches the qdisc"):
         taken = root_qdisc(tgtssh, port).get("offloaded", False)
-        until(lambda: ("transmission-selection" in capabilities(target, port).get("offload", []))
-              == taken)
+        until(lambda: cap.offloads("transmission-selection") == taken)
 
     with test.step("Switch to the ieee-sr preset and verify SR classes on top"):
         target.delete_xpath(qos_xpath(port, "/egress"))
@@ -167,6 +159,6 @@ with infamy.Test() as test:
     with test.step("Remove qos configuration and verify the default table is back"):
         target.delete_xpath(qos_xpath(port))
         until(lambda: qdisc_matches(root_qdisc(tgtssh, port), num_tc, TABLE_8_5[num_tc], num_tc, []))
-        assert ("transmission-selection" in capabilities(target, port).get("offload", [])) == offloaded
+        assert cap.offloads("transmission-selection") == offloaded
 
     test.succeed()
