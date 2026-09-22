@@ -12,4 +12,9 @@
 export LESS="-P %f (press h for help or q to quit)"
 export LANG=en_US.UTF-8
 
+# CLI users need not have a shell, but less offers '!' for shell commands,
+# '|' to pipe, 'v' for an editor and 's' to save to a file.
+export LESSSECURE=1
+unset LESSOPEN LESSCLOSE VISUAL EDITOR
+
 less -rIKd -FX "$@"
