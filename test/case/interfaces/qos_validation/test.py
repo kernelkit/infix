@@ -22,15 +22,6 @@ ETS = "ieee802-dot1q-types:enhanced-transmission-selection"
 CBS = "ieee802-dot1q-types:credit-based-shaper"
 
 
-def num_classes(target, port):
-    data = target.get_data(f"/ietf-interfaces:interfaces/interface[name='{port}']"
-                           "/infix-interfaces:qos/capabilities")
-    for iface in data["interfaces"]["interface"]:
-        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
-        return qos.get("capabilities", {}).get("max-traffic-classes", 8)
-    return None
-
-
 def egress_config(port, egress):
     return {"ietf-interfaces": {
         "interfaces": {
@@ -61,7 +52,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         _, port = env.ltop.xlate("target", "data")
-        num_tc = num_classes(target, port)
+        num_tc = infamy.capability.Port(target, port).traffic_classes
         print(f"{port}: {num_tc} traffic classes")
         assert num_tc and num_tc >= 2, f"max-traffic-classes {num_tc}"
         top = num_tc - 1

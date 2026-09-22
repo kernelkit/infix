@@ -47,14 +47,10 @@ with infamy.Test() as test:
         _, hd0 = env.ltop.xlate("host", "data1")
         _, hd1 = env.ltop.xlate("host", "data2")
 
-        num_tc = qos.num_classes(target, td1)
-        print(f"{td1}: {num_tc} traffic classes, EF at priority {HIGH}, CS1 at priority {LOW}")
-
-        uevent = tgtssh.runsh(f"cat /sys/class/net/{td1}/uevent").stdout
-        dsa = "DEVTYPE=dsa" in uevent.split()
-        if dsa and "transmission-selection" not in qos.offload(target, td1):
-            print("switch fabric forwards past a scheduler its driver does not offload, skipping")
-            test.skip()
+        port = infamy.capability.Port(target, td1, tgtssh)
+        print(f"{td1}: {port.traffic_classes} traffic classes, "
+              f"EF at priority {HIGH}, CS1 at priority {LOW}")
+        port.require_offload(test, "transmission-selection")
 
     with test.step("Bridge the two ports, classify by DSCP on ingress, control traffic on top"):
         target.put_config_dicts({"ietf-interfaces": {
@@ -80,7 +76,7 @@ with infamy.Test() as test:
         }})
 
     with test.step("Slow the egress port so its queues can fill"):
-        drain = qos.slow_port(target, tgtssh, td1, until)
+        drain = qos.slow_port(port, until)
         if not drain:
             print(f"{td1} can neither negotiate down nor be rate limited, skipping")
             test.skip()
@@ -109,7 +105,7 @@ with infamy.Test() as test:
             }})
             until(lambda: qos.dscp_prio(tgtssh, td0, 46) == ef_prio and
                   qos.dscp_prio(tgtssh, td0, 8) == cs1_prio)
-            qos.show_offload(target, tgtssh, td1, dsa)
+            qos.show_offload(port)
             ns0.must_reach("192.168.20.2")
 
         def measure(high_rate, low_rate=0.8):
