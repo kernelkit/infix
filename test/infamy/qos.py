@@ -44,23 +44,6 @@ def xpath(port, path=""):
     return f"/ietf-interfaces:interfaces/interface[name='{port}']/infix-interfaces:qos{path}"
 
 
-def capabilities(target, port):
-    """The port's qos/capabilities container from the operational datastore"""
-    data = target.get_data(xpath(port, "/capabilities"))
-    for iface in data["interfaces"]["interface"]:
-        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
-        return qos.get("capabilities", {})
-    return {}
-
-
-def num_classes(target, port):
-    return capabilities(target, port).get("max-traffic-classes", 8)
-
-
-def offload(target, port):
-    return capabilities(target, port).get("offload", [])
-
-
 def dscp_map(**prio):
     """A custom DSCP map: dscp_map(**{"0": 7, "46": 5}) marks DSCP 0 as
     priority 7 and DSCP 46 as priority 5.  Unlisted codepoints fall to
@@ -212,7 +195,7 @@ def supported_pmd_types(target, port):
     return []
 
 
-def slow_port(target, ssh, port, until):
+def slow_port(port, until):
     """Make the port the bottleneck, return the rate it drains in bit/s
 
     A port with a PHY that can do 100BASE-TX is negotiated down to it,
@@ -221,11 +204,13 @@ def slow_port(target, ssh, port, until):
     puts its queues under load.  Returns 0 when neither is possible.
     """
     pmd = "ieee802-ethernet-phy-type:pmd-type-100BASE-TX"
-    if pmd in supported_pmd_types(target, port):
-        target.put_config_dicts({"ietf-interfaces": {
+    pmds = supported_pmd_types(port.target, port.name)
+
+    if pmd in pmds:
+        port.target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
-                    "name": port,
+                    "name": port.name,
                     "ethernet": {"auto-negotiation": {
                         "infix-ethernet-interface:advertised-pmd-types": [pmd]}}
                 }]
@@ -233,25 +218,26 @@ def slow_port(target, ssh, port, until):
         }})
 
         def linked():
-            out = ssh.runsh(f"ip -j link show {port}").stdout
+            out = port.ssh.runsh(f"ip -j link show {port.name}").stdout
             link = json.loads(out or "[]")
-            return link and "LOWER_UP" in link[0].get("flags", []) and scheduler(ssh, port)
+            return (link and "LOWER_UP" in link[0].get("flags", [])
+                    and scheduler(port.ssh, port.name))
 
         until(linked, attempts=60)
-        print(ssh.runsh(f"ethtool {port} | grep -i speed").stdout.strip())
+        print(port.ssh.runsh(f"ethtool {port.name} | grep -i speed").stdout.strip())
         return 100_000_000
 
-    if not supported_pmd_types(target, port):
-        target.put_config_dicts({"ietf-interfaces": {
+    if not pmds:
+        port.target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
                 "interface": [{
-                    "name": port,
+                    "name": port.name,
                     "infix-interfaces:qos": {"egress": {"rate-limit": {"rate": 10_000_000}}}
                 }]
             }
         }})
-        until(lambda: (root_qdisc(ssh, port) or {}).get("kind") == "tbf")
-        show_shaper(ssh, port)
+        until(lambda: (root_qdisc(port.ssh, port.name) or {}).get("kind") == "tbf")
+        show_shaper(port)
         return 10_000_000
 
     return 0
@@ -298,26 +284,31 @@ def dscp_prio(ssh, port, dscp):
     return None
 
 
-def show_offload(target, ssh, port, dsa):
-    """Log what the fabric took after a scheduler change: the offload list
-    and the switch driver's recent messages.  On a switch port the
-    scheduler must be offloaded, or the measurement is meaningless"""
-    if dsa:
-        until(lambda: "transmission-selection" in offload(target, port))
-    print(f"{port} offload: {offload(target, port)}")
-    log = ssh.runsh("sudo dmesg | grep -i 'mv88e6xxx\\|dsa' | tail -5").stdout.strip()
+def show_offload(port, stage="transmission-selection"):
+    """Log what the fabric took after a change: the offload list and the
+    driver's recent complaints.  A fabric port must still run @stage in
+    hardware, or the measurement that follows means nothing
+    """
+    if port.switched:
+        until(lambda: port.offloads(stage))
+    print(f"{port.name} offload: {port.offload}")
+
+    if not port.driver:
+        return
+
+    log = port.ssh.runsh(f"sudo dmesg | grep -i '{port.driver}' | tail -5").stdout.strip()
     if log:
         print(log)
 
 
-def show_shaper(ssh, port):
+def show_shaper(port):
     """Log what the rate limit became: the root qdisc with its offloaded
-    flag, and on a switch port the port registers, where a shaper the
+    flag, and on a fabric port the port registers, where a shaper the
     driver took shows up as the egress rate control words"""
-    print(json.dumps(root_qdisc(ssh, port)))
-    print(ssh.runsh(f"ethtool {port} | grep -i speed").stdout.strip())
-    if "DEVTYPE=dsa" in ssh.runsh(f"cat /sys/class/net/{port}/uevent").stdout.split():
-        regs = ssh.runsh(f"sudo ethtool -d {port}").stdout.strip()
+    print(json.dumps(root_qdisc(port.ssh, port.name)))
+    print(port.ssh.runsh(f"ethtool {port.name} | grep -i speed").stdout.strip())
+    if port.switched:
+        regs = port.ssh.runsh(f"sudo ethtool -d {port.name}").stdout.strip()
         print("\n".join(regs.splitlines()[:16]))
 
 

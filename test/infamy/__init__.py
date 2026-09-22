@@ -1,5 +1,6 @@
 import os
 
+from . import capability
 from .container import Container
 from .env import Env
 from .env import ArgumentParser

@@ -33,15 +33,6 @@ DSCP_CASES = ((46, 5), (0, 0), (26, 3), (4, 1))
 PCP_CASES = ((3, 6), (0, 4), (7, 2))
 
 
-def capabilities(target, port):
-    data = target.get_data(f"/ietf-interfaces:interfaces/interface[name='{port}']"
-                           "/infix-interfaces:qos/capabilities")
-    for iface in data["interfaces"]["interface"]:
-        qos = iface.get("qos") or iface.get("infix-interfaces:qos") or {}
-        return qos.get("capabilities", {})
-    return {}
-
-
 def qos_config(target, td0, td1, ingress, remark):
     target.put_config_dicts({"ietf-interfaces": {
         "interfaces": {
@@ -72,13 +63,13 @@ with infamy.Test() as test:
         _, hd0 = env.ltop.xlate("host", "data1")
         _, hd1 = env.ltop.xlate("host", "data2")
 
-        dcb = bool(capabilities(target, td0).get("supported-trust-order"))
-        uevent = tgtssh.runsh(f"cat /sys/class/net/{td0}/uevent").stdout
-        dsa = "DEVTYPE=dsa" in uevent.split()
-        print(f"{td0}: DCB {'supported' if dcb else 'not supported'}, DSA port: {dsa}")
-        if dsa and not dcb:
-            print("switch forwards in hardware without DCB support, skipping")
-            test.skip()
+        ingress = infamy.capability.Port(target, td0, tgtssh)
+        egress = infamy.capability.Port(target, td1, tgtssh)
+        dcb = bool(ingress.trust_orders)
+        print(f"{td0}: DCB {'supported' if dcb else 'not supported'}, "
+              f"switch port: {ingress.switched}")
+        if ingress.switched and not dcb:
+            test.skip(f"{td0} forwards in hardware and its driver has no DCB tables")
 
     with test.step("Configure a VLAN bridge, VLAN 10 tagged and VLAN 20 untagged on ingress"):
         target.put_config_dicts({"ietf-interfaces": {
@@ -145,9 +136,9 @@ with infamy.Test() as test:
 
         if dcb:
             with test.step("Verify classification and remarking are offloaded"):
-                until(lambda: "classification" in capabilities(target, td0).get("offload", []))
-                until(lambda: "remarking" in capabilities(target, td1).get("offload", []))
-        remark_hw = "remarking" in capabilities(target, td1).get("offload", [])
+                until(lambda: ingress.offloads("classification"))
+                until(lambda: egress.offloads("remarking"))
+        remark_hw = egress.offloads("remarking")
 
         def expect(seen, ident, vid, pcp, dscp, what):
             """Check one captured echo request, PCP only where the driver remarks it"""

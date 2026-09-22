@@ -35,7 +35,7 @@ with infamy.Test() as test:
         _, hd0 = env.ltop.xlate("host", "data1")
         _, hd1 = env.ltop.xlate("host", "data2")
 
-        num_tc = qos.num_classes(target, td0)
+        num_tc = infamy.capability.Port(target, td0).traffic_classes
         print(f"{td1}: {num_tc} traffic classes")
         tables = {
             "ieee": ({"preset": "ieee"}, qos.TABLE_8_5[num_tc]),
