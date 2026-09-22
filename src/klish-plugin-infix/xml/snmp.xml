@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KLISH
+  xmlns="https://klish.libcode.org/klish3"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://src.libcode.org/pkun/klish/src/master/klish.xsd">
+
+<VIEW name="main">
+
+<COMMAND name="show" help="Show system status and configuration files" mode="switch">
+
+  <COMMAND name="snmp" help="Show SNMP agent configuration">
+    <ACTION sym="script">show snmp</ACTION>
+  </COMMAND>
+
+</COMMAND>
+
+</VIEW>
+</KLISH>

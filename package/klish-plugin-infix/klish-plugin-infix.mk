@@ -23,6 +23,12 @@ else
 KLISH_PLUGIN_INFIX_CONF_OPTS += --disable-containers
 endif
 
+ifeq ($(BR2_PACKAGE_NETSNMP),y)
+KLISH_PLUGIN_INFIX_CONF_OPTS += --enable-snmp
+else
+KLISH_PLUGIN_INFIX_CONF_OPTS += --disable-snmp
+endif
+
 ifeq ($(BR2_PACKAGE_KLISH_PLUGIN_INFIX_SHELL),y)
 KLISH_PLUGIN_INFIX_CONF_OPTS += --enable-shell
 else
