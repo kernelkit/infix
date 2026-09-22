@@ -390,6 +390,31 @@ to clients, it is up to the clients to request the domain name *option*.
 > the hostname, are restarted when the hostname is changed.
 
 
+## Contact and Location
+
+Two free-form settings record who looks after the device and where it
+is.  Neither changes how the system behaves, they exist so that whoever
+finds the device, or finds it in an inventory, can tell.
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>edit system</b>
+admin@example:/config/system/> <b>set contact "Ops &lt;ops@example.com&gt;"</b>
+admin@example:/config/system/> <b>set location "Substation 12, cabinet B"</b>
+admin@example:/config/system/> <b>leave</b>
+</code></pre>
+
+They come into their own once something reads them off the device
+instead of out of a spreadsheet.  A monitoring system polling [SNMP][]
+reads them as `sysContact` and `sysLocation`, so an alarm can say which
+cabinet to walk to and who to call, without anyone maintaining that
+mapping by hand.  They are equally available over NETCONF and RESTCONF
+under `/system/contact` and `/system/location`.
+
+Location is worth a convention agreed up front, since its value is in
+being consistent across every device: site, room, rack, unit, in that
+order, is a good starting point.
+
+
 ## Changing Login Banner
 
 The `motd-banner` setting is an Infix augment and an example of a
@@ -618,3 +643,5 @@ entry is disabled or removed.
 [3]: https://www.rfc-editor.org/rfc/rfc8341
 [4]: https://chrony-project.org/doc/4.6.1/chronyc.html
 [5]: https://linux.die.net/man/1/mkpasswd
+
+[SNMP]: snmp.md

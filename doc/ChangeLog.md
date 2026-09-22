@@ -48,6 +48,15 @@ All notable changes to the project are documented in this file.
   each one, e.g., a VLAN interface and its parent, issue #514
 - Add `last-change` to interface operational status: the time the
   interface entered its current operational state, issue #514
+- Add an SNMP agent for read-only monitoring from existing management
+  systems.  Configured with `ietf-snmp` (RFC 7407): enable
+  `/snmp/engine` and add a `/snmp/community`, the rest has working
+  defaults.  Serves SNMPv2-MIB, IF-MIB, HOST-RESOURCES-MIB and
+  UCD-SNMP-MIB, plus LLDP-MIB when LLDP is enabled.  Every port is an
+  interface, so switch ports appear in `ifTable` under the same index
+  as `/interfaces/interface[name='eth0']/if-index`.  SNMP SET, SNMPv3,
+  notifications and view-based access control are not supported.
+  Disabled by default, see [SNMP][snmp]
 
 ### Fixes
 
@@ -68,6 +77,7 @@ All notable changes to the project are documented in this file.
   when the interface was created
 
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
+[snmp]: https://www.kernelkit.org/infix/latest/snmp/
 
 
 [v26.08.0][] - 2026-09-01
