@@ -269,9 +269,7 @@
   <SWITCH name="optional" min="0">
     <PARAM name="path" ptype="/PATH" help="Directory contents to list"/>
   </SWITCH>
-  <ACTION sym="script" in="tty" out="tty" interrupt="true">
-    dir "$KLISH_PARAM_path"
-  </ACTION>
+  <ACTION sym="dir@infix" in="tty" out="tty" interrupt="true"/>
 </COMMAND>
 
 <COMMAND name="rename" help="Rename a file, e.g. rename startup-config backup">

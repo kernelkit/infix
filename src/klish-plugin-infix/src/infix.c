@@ -325,6 +325,27 @@ int infix_files(kcontext_t *ctx)
 	return run(argv);
 }
 
+/* List a directory, or the interesting locations when given no path */
+int infix_dir(kcontext_t *ctx)
+{
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *user;
+	kparg_t *parg;
+	char *argv[3];
+	int i = 0;
+
+	parg = kpargv_find(pargv, "path");
+	user = cd_home(ctx);
+
+	argv[i++] = "dir";
+	if (parg)
+		argv[i++] = (char *)kparg_value(parg);
+	argv[i] = NULL;
+
+	/* Run as the logged-in user, not root (klishd) */
+	return run_as_user(user, argv);
+}
+
 int infix_ifaces(kcontext_t *ctx)
 {
 	(void)ctx;
@@ -829,6 +850,7 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("boot_targets", infix_boot_targets));
 	kplugin_add_syms(plugin, ksym_new("copy", infix_copy));
 	kplugin_add_syms(plugin, ksym_new("datastore", infix_datastore));
+	kplugin_add_syms(plugin, ksym_new("dir", infix_dir));
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
 	kplugin_add_syms(plugin, ksym_new("path", infix_path));

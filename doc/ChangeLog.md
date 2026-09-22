@@ -22,6 +22,8 @@ All notable changes to the project are documented in this file.
 - WebUI: the support bundle is collected with the `infix-system:support-collect`
   RPC as the logged-in user, so NACM decides who may download it, rather
   than by running the tool as root
+- The CLI `dir` command lists directories as the logged-in user, so it
+  shows only what that user may read
 
 ### Added
 
