@@ -33,6 +33,7 @@ RUN apk add --no-cache \
     linux-headers \
     make \
     ncurses-dev \
+    net-snmp-tools \
     nmap \
     openssh-client \
     openssl \

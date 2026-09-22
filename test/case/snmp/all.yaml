@@ -1,0 +1,3 @@
+---
+- name: Basic
+  case: basic/test.py
