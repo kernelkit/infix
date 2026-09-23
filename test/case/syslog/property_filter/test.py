@@ -94,7 +94,7 @@ with infamy.Test() as test:
 
     with test.step("Send test messages"):
         for tag, msg in TEST_MESSAGES:
-            tgtssh.runsh(f"logger -t {tag} -p daemon.info '{msg}'")
+            target.log(msg, severity="info", app_name=tag)
         until(lambda: "Application startup" in tgtssh.runsh("cat /var/log/baseline 2>/dev/null").stdout, attempts=10)
 
     with test.step("Verify myapp log contains only myapp messages"):

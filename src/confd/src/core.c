@@ -961,6 +961,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (rc)
 		goto err;
 
+	rc = syslog_rpc_init(&confd);
+	if (rc)
+		goto err;
+
 	/* Candidate infer configurations */
 	rc = interfaces_cand_init(&confd);
 	if (rc)

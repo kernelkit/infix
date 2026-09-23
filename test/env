@@ -280,9 +280,9 @@ export PYTHONPATH="$testdir"
 INFAMY_ARGS="$INFAMY_ARGS -y $envdir/yangdir"
 start_topology "$qenethdir" "$files"
 [ "$topology" ] && INFAMY_ARGS="$INFAMY_ARGS $topology"
-export INFAMY_ARGS
 if [ -n "$INFAMY_EXTRA_ARGS" ]; then
-	exec "$@" -o="$INFAMY_EXTRA_ARGS"
+	INFAMY_ARGS="$INFAMY_ARGS $INFAMY_EXTRA_ARGS"
 fi
+export INFAMY_ARGS
 
 exec "$@"

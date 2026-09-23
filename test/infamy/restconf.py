@@ -416,8 +416,24 @@ class Device(Transport):
             raise last_error
 
     def call_dict(self, model, call):
+        """Call RPC, Python dictionary version: {"rpc-name": {input leaves}}"""
         coverage.track_dict(model, call)
-        pass # Need implementation
+        if len(call) != 1:
+            raise ValueError("call_dict() expects a single RPC: {name: input}")
+
+        (name, data), = call.items()
+        url = f"{self.rpc_url}/{model}:{name}"
+        body = {f"{model}:input": data} if data else None
+        response = requests_workaround_post(
+            url,
+            json=body,
+            headers=self.headers,
+            auth=self.auth,
+            verify=False
+        )
+        response.raise_for_status()
+
+        return response.content
 
     def call_rpc(self, rpc):
         """Actually send a POST to RESTCONF server"""

@@ -117,3 +117,27 @@ class Transport(ABC):
 
     def startup_override(self):
         self.call_action("/infix-test:test/override-startup")
+
+    def log(self, message, severity=None, app_name=None, msgid=None, sd=None):
+        """Log a message on the target, using the infix-syslog:log RPC.
+
+        Messages are logged with the user facility, severity defaults to
+        notice, and app-name to the calling user.  `sd` is RFC 5424
+        structured data, given as a dict of dicts, where each SD-ID takes
+        the private form name@enterprise-number:
+        {"test@61046": {"name": "value", ...}}.
+        """
+        rpc = {"message": message}
+        if severity:
+            rpc["severity"] = severity
+        if app_name:
+            rpc["app-name"] = app_name
+        if msgid:
+            rpc["msgid"] = msgid
+        if sd:
+            rpc["structured-data"] = [{
+                "id": sdid,
+                "param": [{"name": name, "value": value} for name, value in params.items()]
+            } for sdid, params in sd.items()]
+
+        return self.call_dict("infix-syslog", {"log": rpc})

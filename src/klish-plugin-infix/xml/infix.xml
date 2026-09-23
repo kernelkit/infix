@@ -234,6 +234,47 @@
   </ACTION>
 </COMMAND>
 
+<COMMAND name="log" help="Log a message to the system log, e.g., log severity warning Kilroy was here">
+  <SWITCH name="optional" min="0" max="2">
+    <COMMAND name="severity" help="Message severity, default: notice">
+      <PARAM name="severity" ptype="/STRING" help="Severity level">
+        <COMPL>
+          <ACTION sym="printl">emergency</ACTION>
+          <ACTION sym="printl">alert</ACTION>
+          <ACTION sym="printl">critical</ACTION>
+          <ACTION sym="printl">error</ACTION>
+          <ACTION sym="printl">warning</ACTION>
+          <ACTION sym="printl">notice</ACTION>
+          <ACTION sym="printl">info</ACTION>
+          <ACTION sym="printl">debug</ACTION>
+        </COMPL>
+      </PARAM>
+    </COMMAND>
+    <COMMAND name="msgid" help="Message identifier, e.g., test-start">
+      <PARAM name="msgid" ptype="/STRING" help="RFC 5424 MSGID, printable ASCII except '%', max 32 chars"/>
+    </COMMAND>
+  </SWITCH>
+  <PARAM name="message" ptype="/STRING" max="100" help="Message text, remaining words on the line"/>
+  <ACTION sym="script">
+    set -- /infix-syslog:log
+    if [ -n "$KLISH_PARAM_severity" ]; then
+        set -- "$@" severity "$KLISH_PARAM_severity"
+    fi
+    if [ -n "$KLISH_PARAM_msgid" ]; then
+        set -- "$@" msgid "$KLISH_PARAM_msgid"
+    fi
+    msg=""
+    i=0
+    while :; do
+        eval "word=\${KLISH_PARAM_message_$i}"
+        [ -n "$word" ] || break
+        msg="${msg:+$msg }$word"
+        i=$((i + 1))
+    done
+    doas -u "$KLISH_USER" rpc "$@" message "$msg"
+  </ACTION>
+</COMMAND>
+
 <COMMAND name="poweroff" help="Poweroff system (system policy may yield reboot)">
   <ACTION sym="srp_rpc@sysrepo" ptype="STRING">/ietf-system:system-shutdown</ACTION>
 </COMMAND>
