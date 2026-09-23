@@ -1,6 +1,8 @@
 define inner-ix-image
 
 $(2)_DIR := $$(pkgdir)
+$(2)_NAME := $(1)
+$(2)_TYPE := rootfs
 
 $(1): $$($(2)_DEPENDENCIES)
 	@$$(call IXMSG,"$$(if $$($(2)_MESSAGE),$$($(2)_MESSAGE),Creating $(1))")

@@ -5,6 +5,9 @@
 ################################################################################
 
 QEMU_SCRIPTS_DIR := $(pkgdir)
+QEMU_SCRIPTS_NAME := qemu-scripts
+QEMU_SCRIPTS_TYPE := rootfs
+
 qemu-kconfig = \
 	CONFIG_="CONFIG_" \
 	BR2_CONFIG="$(BINARIES_DIR)/qemu/.config" \
