@@ -138,6 +138,70 @@ admin@example:/config/syslog/…/file:foobar/> <b>leave</b>
 admin@example:/>
 </code></pre>
 
+## Logging Messages
+
+Scripts and test systems can add their own messages to the system log,
+e.g., to mark the start and end of a test run.  Messages are handed to
+the local syslog daemon as if generated on the device: they are time
+stamped on arrival and follow the same filtering and forwarding rules
+as any other message.  So where a message ends up, a log file, a remote
+server, or both, is decided by the syslog configuration, not the
+caller.
+
+Messages are logged with the `user` facility.  The facilities reserved
+for system services, e.g., `auth`, cannot be selected, so a logged
+message never lands among the records those services write.  The
+remaining header fields, the tag included, are set by the caller and are
+not verified, so the operation is limited to administrators by default,
+see [NACM](nacm.md).  The complete message, header included, must fit in
+2048 bytes.
+
+From the CLI, the admin-exec `log` command takes the message text, with
+optional `severity` and `msgid` keywords before it:
+
+<pre class="cli"><code>admin@example:/> <b>log Kilroy was here</b>
+admin@example:/> <b>log severity warning msgid test-start Test 42 starting</b>
+admin@example:/> <b>show log tail 2</b>
+Sep 15 15:29:01 example admin: Kilroy was here
+Sep 15 15:29:07 example admin: Test 42 starting
+</code></pre>
+
+Over NETCONF and RESTCONF the same operation is available as the
+`infix-syslog:log` RPC, which also exposes RFC 5424 structured data:
+
+```bash
+~$ curl -k -u admin:admin -X POST \
+     -H "Content-Type: application/yang-data+json" \
+     https://example.local/restconf/operations/infix-syslog:log \
+     -d '{"infix-syslog:input": {
+            "message": "Test 42 starting",
+            "severity": "warning",
+            "app-name": "infamy",
+            "msgid": "test-start",
+            "structured-data": [{
+              "id": "test@61046",
+              "param": [{"name": "name", "value": "syslog/rpc_log"}]
+            }]
+          }}'
+```
+
+| **Field**         | **Default**  | **Description**                                              |
+|-------------------|--------------|--------------------------------------------------------------|
+| `message`         | *mandatory*  | Free-form message text, up to 1024 characters                |
+| `severity`        | `notice`     | Same levels as in the facility filters, `emergency`..`debug` |
+| `app-name`        | calling user | RFC 5424 APP-NAME, shown as the tag in log files.  Defaults to the user the management protocol reports, and to `-` when it reports none, as over RESTCONF |
+| `msgid`           | none         | RFC 5424 MSGID, e.g., `test-start`, printable ASCII except `%` |
+| `structured-data` | none         | RFC 5424 SD elements, each an `id` with `name`/`value` params, no control characters in values.  The `id` takes the private form `name@enterprise-number`, the short form is reserved for identifiers registered with IANA |
+
+In an [RFC5424][] formatted log file the message above is logged as:
+
+```
+2026-09-15T15:29:07.123456+02:00 example infamy - test-start [test@61046 name="syslog/rpc_log"] Test 42 starting
+```
+
+The `msgid` property filter, see [Property-Based Filtering](#property-based-filtering),
+can be used to route such messages to a dedicated log file.
+
 ## Log to Remote Server
 
 Logging to a remote syslog server is the recommended way of supervising

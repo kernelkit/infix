@@ -246,6 +246,7 @@ The following are protected by YANG annotations and require explicit permits:
 - `ietf-factory-default:factory-reset` ([RFC 8808][4])
 - `infix-system-software:install-bundle`
 - `infix-system-software:set-boot-order`
+- `infix-syslog:log`
 
 **Data Containers:**
 

@@ -6,6 +6,8 @@
 
 #include "core.h"
 
+#include <syslog/syslog.h>	/* sysklogd syslogp_r() API */
+
 #define XPATH_BASE_       "/ietf-syslog:syslog"
 #define XPATH_FILE_       XPATH_BASE_"/actions/file"
 #define XPATH_LOG_FILE    XPATH_BASE_"/actions/file/log-file"
@@ -477,4 +479,189 @@ int syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 		return rc;
 
 	return SR_ERR_OK;
+}
+
+/*
+ * RPC: /infix-syslog:log
+ */
+
+static int log_severity(const char *name)
+{
+	static const char *map[] = {
+		"emergency", "alert", "critical", "error",
+		"warning", "notice", "info", "debug",
+	};
+
+	if (!name)
+		return LOG_NOTICE;
+
+	for (size_t i = 0; i < NELEMS(map); i++) {
+		if (!strcmp(map[i], name))
+			return (int)i;
+	}
+
+	return LOG_NOTICE;
+}
+
+/*
+ * The event session runs as confd, so its own user says nothing about the
+ * caller.  Only the originator crosses over: netopeer2 pushes [nc-sid,
+ * username], the CLI and the rpc tool set their originator name to the
+ * user.  RESTCONF sets neither, then the tag is left at NILVALUE rather
+ * than naming root, or confd, which libsyslog would fall back to.
+ */
+static const char *log_user(sr_session_ctx_t *session)
+{
+	const char *orig = sr_session_get_orig_name(session);
+	const void *data;
+	uint32_t size;
+
+	if (orig && !strcmp(orig, "netopeer2")) {
+		if (!sr_session_get_orig_data(session, 1, &size, &data) && size > 1)
+			return data;
+	} else if (orig && orig[0])
+		return orig;
+
+	return "-";
+}
+
+/* RFC 5424 PARAM-VALUE: escape '"', '\\', and ']', syslogd does not sanitize SD */
+static char *sd_escape(char *ptr, const char *value)
+{
+	for (; *value; value++) {
+		if (*value == '"' || *value == '\\' || *value == ']')
+			*ptr++ = '\\';
+		if ((unsigned char)*value < 0x20 || *value == 0x7f)
+			*ptr++ = ' ';
+		else
+			*ptr++ = *value;
+	}
+
+	return ptr;
+}
+
+/* libsyslog splices MSGID into its printf format, see sysklogd vsyslogp_r() */
+static char *msgid_escape(const char *msgid, char *buf)
+{
+	char *ptr = buf;
+
+	for (; *msgid; msgid++) {
+		if (*msgid == '%')
+			*ptr++ = '%';
+		*ptr++ = *msgid;
+	}
+	*ptr = 0;
+
+	return buf;
+}
+
+/*
+ * Bytes on the wire, libsyslog formats the whole packet in a 2048 byte
+ * buffer and syslogd drops a message with truncated structured data.
+ * RFC 5424 sec. 6: <PRI>1 TIMESTAMP HOSTNAME APP-NAME PROCID MSGID SD MSG
+ */
+#define SYSLOG_MAX_LEN 2048
+
+static size_t log_len(const char *tag, const char *msgid, const char *sd, const char *msg)
+{
+	char host[256] = "-";
+
+	gethostname(host, sizeof(host));
+	host[sizeof(host) - 1] = 0;
+
+	return 5 + 2 + 33 + strlen(host) + 1 + strlen(tag) + 1 + 11
+		+ strlen(msgid ? msgid : "-") + 1 + strlen(sd ? sd : "-") + 1 + strlen(msg) + 1;
+}
+
+/* Render structured-data list as [id name="value" ...][id2 ...] */
+static char *sd_build(const struct lyd_node *input)
+{
+	struct lyd_node *elem, *param;
+	char *sd, *ptr;
+	size_t len = 1;
+
+	LYX_LIST_FOR_EACH(lyd_child(input), elem, "structured-data") {
+		len += strlen(lydx_get_cattr(elem, "id")) + 2;
+		LYX_LIST_FOR_EACH(lyd_child(elem), param, "param") {
+			len += strlen(lydx_get_cattr(param, "name")) + 4;
+			len += strlen(lydx_get_cattr(param, "value")) * 2;
+		}
+	}
+
+	if (len == 1)
+		return NULL;
+
+	sd = ptr = malloc(len);
+	if (!sd)
+		return NULL;
+
+	LYX_LIST_FOR_EACH(lyd_child(input), elem, "structured-data") {
+		ptr += sprintf(ptr, "[%s", lydx_get_cattr(elem, "id"));
+		LYX_LIST_FOR_EACH(lyd_child(elem), param, "param") {
+			ptr += sprintf(ptr, " %s=\"", lydx_get_cattr(param, "name"));
+			ptr  = sd_escape(ptr, lydx_get_cattr(param, "value"));
+			*ptr++ = '"';
+		}
+		*ptr++ = ']';
+	}
+	*ptr = 0;
+
+	return sd;
+}
+
+static int rpc_log(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+		   const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+		   struct lyd_node *output, void *priv)
+{
+	struct syslog_data log = SYSLOG_DATA_INIT;
+	struct lyd_node *in = (struct lyd_node *)input;
+	const char *msg, *tag, *msgid;
+	char *sd, *id = NULL;
+	size_t len;
+	int pri;
+
+	msgid = lydx_get_cattr(in, "msgid");
+	char idbuf[msgid ? strlen(msgid) * 2 + 1 : 1];
+
+	msg = lydx_get_cattr(in, "message");
+	if (!msg)
+		return SR_ERR_INVAL_ARG;
+
+	pri = LOG_USER | log_severity(lydx_get_cattr(in, "severity"));
+	tag = lydx_get_cattr(in, "app-name");
+	if (!tag)
+		tag = log_user(session);
+	if (msgid)
+		id = msgid_escape(msgid, idbuf);
+
+	sd = sd_build(in);
+	len = log_len(tag, msgid, sd, msg);
+	if (len > SYSLOG_MAX_LEN) {
+		sr_session_set_error_message(session, "Log message too long, %zu bytes with header, max %d",
+					     len, SYSLOG_MAX_LEN);
+		free(sd);
+		return SR_ERR_INVAL_ARG;
+	}
+
+	log.log_tag = tag;
+	if (sd)
+		syslogp_r(pri, &log, id, "%s", "%s", sd, msg);
+	else
+		syslogp_r(pri, &log, id, NULL, "%s", msg);
+	closelog_r(&log);
+	free(sd);
+
+	return SR_ERR_OK;
+}
+
+int syslog_rpc_init(struct confd *confd)
+{
+	int rc;
+
+	REGISTER_RPC_TREE(confd->session, "/infix-syslog:log", rpc_log, NULL, &confd->sub);
+
+	return SR_ERR_OK;
+fail:
+	ERROR("init failed: %s", sr_strerror(rc));
+	return rc;
 }

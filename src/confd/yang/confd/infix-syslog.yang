@@ -11,10 +11,19 @@ module infix-syslog {
   import ietf-syslog {
     prefix syslog;
   }
+  import ietf-netconf-acm {
+    prefix nacm;
+    reference "RFC 8341: Network Configuration Access Control Model";
+  }
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-syslog, draft 32.";
+
+  revision 2026-09-15 {
+    description "Add log RPC for injecting messages in the system log.";
+    reference "internal";
+  }
 
   revision 2025-11-17 {
     description "Add hostname-filter support.";
@@ -75,6 +84,19 @@ module infix-syslog {
   identity rfc5424 {
     base format-type;
     description "Latest format, better time granularity, structured data, etc.";
+  }
+
+  /*
+   * Typedefs
+   */
+
+  typedef sd-name {
+    type string {
+      length "1..32";
+      pattern '[!#-<>-\\^-~]+';
+    }
+    description "RFC 5424 SD-NAME: printable US-ASCII, except '=', ']', and '\"'.";
+    reference "RFC 5424: The Syslog Protocol, Section 6.3.2";
   }
 
   /*
@@ -284,5 +306,95 @@ module infix-syslog {
   deviation "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination/syslog:facility-override" {
     description "Not yet supported by underlying daemon.";
     deviate not-supported;
+  }
+
+  /*
+   * RPCs
+   */
+
+  rpc log {
+    nacm:default-deny-all;
+    description "Log a message via the local system logger.
+
+                 The message is handed to the system log daemon like any
+                 locally generated message, i.e., it is time stamped on
+                 arrival and subject to the same filtering and forwarding
+                 rules as configured in /syslog.
+
+                 Messages are logged with the user facility, the facilities
+                 reserved for system services cannot be selected.  Remaining
+                 header fields are supplied by the caller and are not verified,
+                 hence the default deny.  The complete message, header
+                 included, must fit in 2048 bytes or it is rejected.";
+    reference "RFC 5424: The Syslog Protocol";
+
+    input {
+      leaf message {
+        type string {
+          length "1..1024";
+        }
+        mandatory true;
+        description "Free-form message text.";
+      }
+
+      leaf severity {
+        type syslog:syslog-severity;
+        default notice;
+        description "Message severity.";
+      }
+
+      leaf app-name {
+        type string {
+          length "1..48";
+          pattern '[!-~]+';
+        }
+        description "Originating application name, or tag, RFC 5424 APP-NAME.
+                     Default: user name reported by the calling client.";
+      }
+
+      leaf msgid {
+        type string {
+          length "1..32";
+          pattern '[!-$&-~]+';
+        }
+        description "Message type identifier, RFC 5424 MSGID, e.g., 'test-start'.";
+      }
+
+      list structured-data {
+        key "id";
+        description "RFC 5424 structured data, rendered as [id name=\"value\" ...].";
+
+        leaf id {
+          type sd-name {
+            pattern '[^@]+@[0-9]+';
+          }
+          description "SD-ID, in the private form name@enterprise-number, e.g.,
+                       test@61046.  The short form is reserved for identifiers
+                       registered with IANA, like origin and timeQuality, which
+                       carry a meaning collectors rely on.";
+          reference "RFC 5424: The Syslog Protocol, Section 7";
+        }
+
+        list param {
+          key "name";
+          description "SD-PARAM, name and value pair.";
+
+          leaf name {
+            type sd-name;
+            description "Parameter name.";
+          }
+
+          leaf value {
+            type string {
+              length "1..255";
+              pattern '[^\p{Cc}]+';
+            }
+            mandatory true;
+            description "Parameter value, no control characters.  Any '\"', '\\',
+                         and ']' are escaped on output.";
+          }
+        }
+      }
+    }
   }
 }
