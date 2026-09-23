@@ -1196,6 +1196,8 @@
       
         
       
+        
+      
     
     
     
@@ -1335,6 +1337,34 @@
     
   
     PTP (IEEE 1588/802.1AS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../snmp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SNMP
   
 
     
@@ -1612,6 +1642,17 @@
     <span class="md-ellipsis">
       
         Changing Hostname
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contact-and-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contact and Location
       
     </span>
   </a>
@@ -2607,6 +2648,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#contact-and-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contact and Location
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#changing-login-banner" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3224,6 +3276,26 @@ to clients, it is up to the clients to request the domain name <em>option</em>.<
 <p>Critical services like syslog, mDNS, LLDP, and similar that advertise
 the hostname, are restarted when the hostname is changed.</p>
 </div>
+<h2 id="contact-and-location">Contact and Location<a class="headerlink" href="#contact-and-location" title="Permanent link">¶</a></h2>
+<p>Two free-form settings record who looks after the device and where it
+is.  Neither changes how the system behaves, they exist so that whoever
+finds the device, or finds it in an inventory, can tell.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit system</b>
+admin@example:/config/system/&gt; <b>set contact "Ops &lt;ops@example.com&gt;"</b>
+admin@example:/config/system/&gt; <b>set location "Substation 12, cabinet B"</b>
+admin@example:/config/system/&gt; <b>leave</b>
+</code></pre>
+
+<p>They come into their own once something reads them off the device
+instead of out of a spreadsheet.  A monitoring system polling <a href="../snmp/">SNMP</a>
+reads them as <code>sysContact</code> and <code>sysLocation</code>, so an alarm can say which
+cabinet to walk to and who to call, without anyone maintaining that
+mapping by hand.  They are equally available over NETCONF and RESTCONF
+under <code>/system/contact</code> and <code>/system/location</code>.</p>
+<p>Location is worth a convention agreed up front, since its value is in
+being consistent across every device: site, room, rack, unit, in that
+order, is a good starting point.</p>
 <h2 id="changing-login-banner">Changing Login Banner<a class="headerlink" href="#changing-login-banner" title="Permanent link">¶</a></h2>
 <p>The <code>motd-banner</code> setting is an Infix augment and an example of a
 <code>binary</code> type setting that is changed interactively with the built-in

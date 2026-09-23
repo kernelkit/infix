@@ -7,31 +7,31 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/cli/keybindings/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/snmp/">
       
       
-        <link rel="prev" href="../configure/">
+        <link rel="prev" href="../ptp/">
       
       
-        <link rel="next" href="../netcalc/">
+        <link rel="next" href="../boot/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Keybindings - User's Guide</title>
+        <title>SNMP - User's Guide</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -44,15 +44,15 @@
       
     
     
-      <link rel="stylesheet" href="../../extra.css">
+      <link rel="stylesheet" href="../extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
     
     
-  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
             html.glightbox-open { overflow: initial; height: 100%; }
             .gslide-title { margin-top: 0px; user-select: text; }
             .gslide-desc { color: #666; user-select: text; }
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cli-keybindings" class="md-skip">
+        <a href="#snmp" class="md-skip">
           Skip to content
         </a>
       
@@ -104,7 +104,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="https://www.kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
-  <img src="../../logo-plain.png" alt="logo">
+  <img src="../logo-plain.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Keybindings
+              SNMP
             
           </span>
         </div>
@@ -244,7 +244,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="https://www.kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
-  <img src="../../logo-plain.png" alt="logo">
+  <img src="../logo-plain.png" alt="logo">
 
     </a>
     User's Guide
@@ -271,7 +271,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -295,10 +295,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -322,11 +320,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked="">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
@@ -347,7 +345,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -365,7 +363,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../introduction/" class="md-nav__link">
+      <a href="../cli/introduction/" class="md-nav__link">
         
   
   
@@ -393,7 +391,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configure/" class="md-nav__link">
+      <a href="../cli/configure/" class="md-nav__link">
         
   
   
@@ -418,37 +416,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Keybindings
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../cli/keybindings/" class="md-nav__link">
         
   
   
@@ -464,48 +435,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
-      
-        <li class="md-nav__item">
-  <a href="#what-is-meta" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What is Meta
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -518,7 +447,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../netcalc/" class="md-nav__link">
+      <a href="../cli/netcalc/" class="md-nav__link">
         
   
   
@@ -546,7 +475,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tcpdump/" class="md-nav__link">
+      <a href="../cli/tcpdump/" class="md-nav__link">
         
   
   
@@ -574,7 +503,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quick/" class="md-nav__link">
+      <a href="../cli/quick/" class="md-nav__link">
         
   
   
@@ -602,7 +531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../text-editor.md" class="md-nav__link">
+      <a href="../cli/text-editor.md" class="md-nav__link">
         
   
   
@@ -630,7 +559,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../upgrade/" class="md-nav__link">
+      <a href="../cli/upgrade/" class="md-nav__link">
         
   
   
@@ -665,7 +594,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../container/" class="md-nav__link">
+      <a href="../container/" class="md-nav__link">
         
   
   
@@ -769,7 +698,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../networking/" class="md-nav__link">
+      <a href="../networking/" class="md-nav__link">
         
   
   
@@ -797,7 +726,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../iface/" class="md-nav__link">
+      <a href="../iface/" class="md-nav__link">
         
   
   
@@ -825,7 +754,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../bridging/" class="md-nav__link">
+      <a href="../bridging/" class="md-nav__link">
         
   
   
@@ -853,7 +782,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../lag/" class="md-nav__link">
+      <a href="../lag/" class="md-nav__link">
         
   
   
@@ -881,7 +810,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ethernet/" class="md-nav__link">
+      <a href="../ethernet/" class="md-nav__link">
         
   
   
@@ -909,7 +838,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vlan/" class="md-nav__link">
+      <a href="../vlan/" class="md-nav__link">
         
   
   
@@ -937,7 +866,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ip/" class="md-nav__link">
+      <a href="../ip/" class="md-nav__link">
         
   
   
@@ -965,7 +894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../routing/" class="md-nav__link">
+      <a href="../routing/" class="md-nav__link">
         
   
   
@@ -993,7 +922,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../firewall/" class="md-nav__link">
+      <a href="../firewall/" class="md-nav__link">
         
   
   
@@ -1021,7 +950,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../qos/" class="md-nav__link">
+      <a href="../qos/" class="md-nav__link">
         
   
   
@@ -1049,7 +978,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../eth-counters/" class="md-nav__link">
+      <a href="../eth-counters/" class="md-nav__link">
         
   
   
@@ -1077,7 +1006,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tunnels/" class="md-nav__link">
+      <a href="../tunnels/" class="md-nav__link">
         
   
   
@@ -1158,7 +1087,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vpn/" class="md-nav__link">
+      <a href="../vpn/" class="md-nav__link">
         
   
   
@@ -1186,7 +1115,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vpn-wireguard/" class="md-nav__link">
+      <a href="../vpn-wireguard/" class="md-nav__link">
         
   
   
@@ -1222,7 +1151,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../wifi/" class="md-nav__link">
+      <a href="../wifi/" class="md-nav__link">
         
   
   
@@ -1254,8 +1183,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1273,11 +1204,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked="">
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -1298,7 +1229,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1316,7 +1247,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../discovery/" class="md-nav__link">
+      <a href="../discovery/" class="md-nav__link">
         
   
   
@@ -1344,7 +1275,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../dhcp/" class="md-nav__link">
+      <a href="../dhcp/" class="md-nav__link">
         
   
   
@@ -1372,7 +1303,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ntp/" class="md-nav__link">
+      <a href="../ntp/" class="md-nav__link">
         
   
   
@@ -1400,7 +1331,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ptp/" class="md-nav__link">
+      <a href="../ptp/" class="md-nav__link">
         
   
   
@@ -1425,10 +1356,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../snmp/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SNMP
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1444,6 +1402,109 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#what-is-served" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is served
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#restricting-by-source-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restricting by source address
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firewall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Firewall
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#community-strings-are-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Community strings are secrets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-yet-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet supported
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1530,7 +1591,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../boot/" class="md-nav__link">
+      <a href="../boot/" class="md-nav__link">
         
   
   
@@ -1558,7 +1619,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../system/" class="md-nav__link">
+      <a href="../system/" class="md-nav__link">
         
   
   
@@ -1586,7 +1647,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../nacm/" class="md-nav__link">
+      <a href="../nacm/" class="md-nav__link">
         
   
   
@@ -1614,7 +1675,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../hardware/" class="md-nav__link">
+      <a href="../hardware/" class="md-nav__link">
         
   
   
@@ -1642,7 +1703,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../management/" class="md-nav__link">
+      <a href="../management/" class="md-nav__link">
         
   
   
@@ -1670,7 +1731,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../keystore/" class="md-nav__link">
+      <a href="../keystore/" class="md-nav__link">
         
   
   
@@ -1698,7 +1759,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../syslog/" class="md-nav__link">
+      <a href="../syslog/" class="md-nav__link">
         
   
   
@@ -1726,7 +1787,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../support/" class="md-nav__link">
+      <a href="../support/" class="md-nav__link">
         
   
   
@@ -1754,7 +1815,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../upgrade/" class="md-nav__link">
+      <a href="../upgrade/" class="md-nav__link">
         
   
   
@@ -1848,7 +1909,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting/" class="md-nav__link">
+      <a href="../scripting/" class="md-nav__link">
         
   
   
@@ -1876,7 +1937,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting-sysrepocfg/" class="md-nav__link">
+      <a href="../scripting-sysrepocfg/" class="md-nav__link">
         
   
   
@@ -1904,7 +1965,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting-netconf/" class="md-nav__link">
+      <a href="../scripting-netconf/" class="md-nav__link">
         
   
   
@@ -1932,7 +1993,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting-restconf/" class="md-nav__link">
+      <a href="../scripting-restconf/" class="md-nav__link">
         
   
   
@@ -1960,7 +2021,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scripting-prod/" class="md-nav__link">
+      <a href="../scripting-prod/" class="md-nav__link">
         
   
   
@@ -2060,7 +2121,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../branding/" class="md-nav__link">
+      <a href="../branding/" class="md-nav__link">
         
   
   
@@ -2088,7 +2149,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developers-guide/" class="md-nav__link">
+      <a href="../developers-guide/" class="md-nav__link">
         
   
   
@@ -2116,7 +2177,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../override-package/" class="md-nav__link">
+      <a href="../override-package/" class="md-nav__link">
         
   
   
@@ -2144,7 +2205,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../netboot/" class="md-nav__link">
+      <a href="../netboot/" class="md-nav__link">
         
   
   
@@ -2172,7 +2233,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../testing/" class="md-nav__link">
+      <a href="../testing/" class="md-nav__link">
         
   
   
@@ -2200,7 +2261,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../test-arch/" class="md-nav__link">
+      <a href="../test-arch/" class="md-nav__link">
         
   
   
@@ -2228,7 +2289,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../virtual/" class="md-nav__link">
+      <a href="../virtual/" class="md-nav__link">
         
   
   
@@ -2256,7 +2317,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vpd/" class="md-nav__link">
+      <a href="../vpd/" class="md-nav__link">
         
   
   
@@ -2291,7 +2352,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../releases/" class="md-nav__link">
+      <a href="../releases/" class="md-nav__link">
         
   
   
@@ -2318,7 +2379,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../license/" class="md-nav__link">
+      <a href="../license/" class="md-nav__link">
         
   
   
@@ -2365,10 +2426,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#what-is-meta" class="md-nav__link">
+  <a href="#what-is-served" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is Meta
+        What is served
       
     </span>
   </a>
@@ -2376,10 +2437,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Usage
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#restricting-by-source-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restricting by source address
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firewall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Firewall
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#community-strings-are-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Community strings are secrets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-yet-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet supported
       
     </span>
   </a>
@@ -2411,7 +2533,7 @@
   
   
     <li class="md-path__item">
-      <a href="../.." class="md-path__link">
+      <a href=".." class="md-path__link">
         
   <span class="md-ellipsis">
     Introduction
@@ -2429,10 +2551,10 @@
     
     
       <li class="md-path__item">
-        <a href="../introduction/" class="md-path__link">
+        <a href="../discovery/" class="md-path__link">
           
   <span class="md-ellipsis">
-    CLI
+    Services
   </span>
 
         </a>
@@ -2454,170 +2576,172 @@
   
 
 
-<h1 id="cli-keybindings">CLI Keybindings<a class="headerlink" href="#cli-keybindings" title="Permanent link">¶</a></h1>
-<p>Writing CLI commands by hand is very tedious.  To make things easier the
-CLI has several keybindings, most significant first:</p>
+<h1 id="snmp">SNMP<a class="headerlink" href="#snmp" title="Permanent link">¶</a></h1>
+<p>An SNMP agent is available for monitoring the system from an existing network
+management system.  It is read-only: the agent answers GET and GETNEXT, and
+there is no way to configure write access.  Changing configuration is done
+over NETCONF, RESTCONF or the CLI, where NACM controls who may do what.</p>
+<p>The agent is disabled by default and has no community configured, so enabling
+it is a deliberate act.</p>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>SNMPv1 and v2c carry the community string in clear text on the wire, and
+anyone who can read it can read everything the community's view allows.
+Restrict access by source address, and prefer a management VLAN or firewall
+zone that is not reachable from the outside.  Another alternative is to set
+up a <a href="../vpn-wireguard/">WireGuard</a> tunnel for management until SNMPv3
+support is added.</p>
+</div>
+<h2 id="what-is-served">What is served<a class="headerlink" href="#what-is-served" title="Permanent link">¶</a></h2>
 <table>
 <thead>
 <tr>
-<th><strong>Key</strong></th>
-<th><strong>Cmd/Key</strong></th>
-<th><strong>Description</strong></th>
+<th>MIB</th>
+<th>Contents</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>TAB</td>
-<td></td>
-<td>Complete current command, see below for example</td>
+<td>SNMPv2-MIB</td>
+<td><code>sysDescr</code>, <code>sysObjectID</code>, <code>sysUpTime</code>, <code>sysName</code>, <code>sysContact</code>, <code>sysLocation</code></td>
 </tr>
 <tr>
-<td>?</td>
-<td></td>
-<td>Show available commands, or arguments, with help</td>
+<td>IF-MIB</td>
+<td><code>ifTable</code> and <code>ifXTable</code> for every interface</td>
 </tr>
 <tr>
-<td>Ctrl-c</td>
-<td></td>
-<td>Cancel everything on current line</td>
+<td>HOST-RESOURCES-MIB</td>
+<td>storage, processors, running software</td>
 </tr>
 <tr>
-<td>Ctrl-d</td>
-<td><code>abort</code>/<code>exit</code></td>
-<td>Delete character, or abort/exit on empty line</td>
+<td>UCD-SNMP-MIB</td>
+<td>load average, memory, disk usage</td>
 </tr>
 <tr>
-<td>Ctrl-z</td>
-<td><code>leave</code></td>
-<td>Leave and activate changes in configure context</td>
-</tr>
-<tr>
-<td>Ctrl-f</td>
-<td>Right arrow</td>
-<td>Move cursor forward one character</td>
-</tr>
-<tr>
-<td>Ctrl-b</td>
-<td>Left arrow</td>
-<td>Move cursor back one character</td>
-</tr>
-<tr>
-<td>Meta-f</td>
-<td>Ctrl-Right</td>
-<td>Move cursor forward one word</td>
-</tr>
-<tr>
-<td>Meta-b</td>
-<td>Ctrl-Left</td>
-<td>Move cursor back one word</td>
-</tr>
-<tr>
-<td>Ctrl-e</td>
-<td>End</td>
-<td>Move cursor to end of line</td>
-</tr>
-<tr>
-<td>Ctrl-a</td>
-<td>Home</td>
-<td>Move cursor to beginning of line</td>
-</tr>
-<tr>
-<td>Ctrl-@</td>
-<td>Ctrl-Space</td>
-<td>Mark current position for region operations</td>
-</tr>
-<tr>
-<td>Meta w</td>
-<td></td>
-<td>Copy region to kill buffer without deleting</td>
-</tr>
-<tr>
-<td>Ctrl-k</td>
-<td></td>
-<td>Kill (cut) text from cursor to end of line</td>
-</tr>
-<tr>
-<td>Ctrl-u</td>
-<td></td>
-<td>Delete (cut) entire line</td>
-</tr>
-<tr>
-<td>Ctrl-y</td>
-<td></td>
-<td>Yank (paste) from kill buffer to cursor</td>
-</tr>
-<tr>
-<td>Meta-.</td>
-<td></td>
-<td>Yank (paste) last argument from previous line</td>
-</tr>
-<tr>
-<td>Ctrl-w</td>
-<td></td>
-<td>Kill region if mark set, else kill word backward</td>
-</tr>
-<tr>
-<td></td>
-<td>Meta-Backspace</td>
-<td>Delete (cut) word to the left</td>
-</tr>
-<tr>
-<td></td>
-<td>Meta-Delete</td>
-<td>Delete (cut) word to the right</td>
-</tr>
-<tr>
-<td>Ctrl-l</td>
-<td></td>
-<td>Clear screen and refresh current line</td>
-</tr>
-<tr>
-<td>Ctrl-p</td>
-<td>Up arrow</td>
-<td>History, previous command</td>
-</tr>
-<tr>
-<td>Ctrl-n</td>
-<td>Down arrow</td>
-<td>History, next command</td>
-</tr>
-<tr>
-<td>Ctrl-q</td>
-<td>Ctrl-v</td>
-<td>Insert next character literally</td>
-</tr>
-<tr>
-<td>Ctrl-r</td>
-<td></td>
-<td>History, reversed interactive search (i-search)</td>
-</tr>
-<tr>
-<td>Ctrl-t</td>
-<td></td>
-<td>Transpose/Swap characters before and at cursor</td>
-</tr>
-<tr>
-<td>Meta-#</td>
-<td>Alt-Shift-3</td>
-<td>Prepend # to current line and submit to history</td>
+<td>LLDP-MIB</td>
+<td>neighbors, when LLDP is enabled</td>
 </tr>
 </tbody>
 </table>
-<h2 id="what-is-meta">What is Meta<a class="headerlink" href="#what-is-meta" title="Permanent link">¶</a></h2>
-<p>The Meta key is called Alt on most modern keyboards.  If you have
-neither, first tap the Esc key instead of holding down Alt/Meta.</p>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">¶</a></h2>
-<p>Complete a word.  Start by typing a few characters, then tap the TAB key
-on your keyboard:</p>
-<div class="highlight"><pre><span></span><code>conf&lt;TAB&gt; --&gt; configure
-</code></pre></div>
-<p>See possible arguments, with brief help text, to a command:</p>
-<div class="highlight"><pre><span></span><code>show ?
-bridge          Show bridge (ports/fdb/mdb/vlans)
-datetime        Show current date and time, default RFC2822 format
-...
-</code></pre></div>
-<p>Type the command, then tap the <code>?</code> key.</p>
+<p>Every port is an interface, including ports offloaded to a switch fabric, so
+they all appear in the <code>ifTable</code>.  The <code>ifIndex</code> an NMS sees is the same as
+the <code>if-index</code> reported under <code>/interfaces/interface[name='eth0']/if-index</code>,
+which makes it easy to correlate SNMP data with the operational datastore.</p>
+<p>We recommend using <code>ifName</code> from <code>ifXTable</code> as the stable key for a port, not
+<code>ifIndex</code>.  Interface indices are assigned by the kernel and may shift when
+configuration creates or removes VLANs, bridges and other virtual interfaces.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The counters are the ones the interface itself reports, the same values
+<code>show interface</code> shows.  On a port whose traffic is forwarded by the switch
+fabric, how much of that traffic the counters account for depends on the
+switch and its driver.</p>
+</div>
+<p><code>sysContact</code> and <code>sysLocation</code> come from <code>/system/contact</code> and
+<code>/system/location</code>, and <code>sysName</code> follows <code>/system/hostname</code>.  See
+<a href="../system/#contact-and-location">Contact and Location</a> for what to put in them.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">¶</a></h2>
+<p>The data model is <a href="https://www.rfc-editor.org/rfc/rfc7407">RFC 7407</a>, <code>ietf-snmp</code>.  Two things are needed: the
+engine enabled, and a community to answer for.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>set snmp engine enabled</b>
+admin@example:/config/&gt; <b>set snmp community monitor security-name public</b>
+admin@example:/config/&gt; <b>leave</b>
+</code></pre>
+
+<p>That is the whole thing.  <code>monitor</code> is just a name for the list entry; the
+community string on the wire is <code>public</code>, taken from the security name because
+no separate <code>text-name</code> was given.  Set <code>text-name</code> when the two should
+differ:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>set snmp community monitor text-name s3cret</b>
+</code></pre>
+
+<pre class="cli"><code>admin@example:/&gt; <b>show snmp</b>
+Enabled         : yes
+Versions        : v1, v2c (default)
+Listen          : 0.0.0.0:161, [::]:161 (default)
+
+COMMUNITY  SECURITY NAME  SOURCE
+public     public         any
+</code></pre>
+
+<p>Leaving <code>version</code> or <code>listen</code> unset means the agent serves every version it
+supports, on every address, port 161.  Narrow them when you want something
+tighter:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>set snmp engine version v2c</b>
+admin@example:/config/&gt; <b>edit snmp engine listen mgmt udp</b>
+admin@example:/config/snmp/engine/listen/mgmt/udp/&gt; <b>set ip 192.168.1.10</b>
+admin@example:/config/snmp/engine/listen/mgmt/udp/&gt; <b>leave</b>
+</code></pre>
+
+<p>Every community reads the whole MIB tree, and nothing can write.  There is no
+view or group to configure.  Limit <em>who</em> may ask instead, with a source
+restriction.</p>
+<h3 id="restricting-by-source-address">Restricting by source address<a class="headerlink" href="#restricting-by-source-address" title="Permanent link">¶</a></h3>
+<p>A community with no restriction answers anyone who knows the string.  To limit
+it, define a target holding the permitted prefix, tag it, and point the
+community at that tag:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit snmp target nms</b>
+admin@example:/config/snmp/target/nms/&gt; <b>set udp ip 192.168.1.0</b>
+admin@example:/config/snmp/target/nms/&gt; <b>set udp prefix-length 24</b>
+admin@example:/config/snmp/target/nms/&gt; <b>set tag nms</b>
+admin@example:/config/snmp/target/nms/&gt; <b>set target-params nms</b>
+admin@example:/config/snmp/target/nms/&gt; <b>end</b>
+admin@example:/config/&gt; <b>set snmp community monitor target-tag nms</b>
+admin@example:/config/&gt; <b>leave</b>
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>If no target carries the tag, the community is dropped rather than left
+answering any source.  Check <code>show snmp</code> after setting it: the community
+disappears from the table if the tag matched nothing.</p>
+</div>
+<h3 id="firewall">Firewall<a class="headerlink" href="#firewall" title="Permanent link">¶</a></h3>
+<p>The agent listens on UDP port 161.  Permit the <code>snmp</code> service in the zone
+facing the management network:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit firewall zone mgmt</b>
+admin@example:/config/firewall/zone/mgmt/&gt; <b>set service snmp</b>
+admin@example:/config/firewall/zone/mgmt/&gt; <b>leave</b>
+</code></pre>
+
+<h2 id="reading-the-data">Reading the data<a class="headerlink" href="#reading-the-data" title="Permanent link">¶</a></h2>
+<p>From a management host:</p>
+<pre class="cli"><code>linux-pc:# <b>snmpwalk -v2c -c public 192.168.1.10 IF-MIB::ifXTable</b>
+IF-MIB::ifName.1 = STRING: lo
+IF-MIB::ifName.2 = STRING: eth0
+IF-MIB::ifName.3 = STRING: eth1
+IF-MIB::ifHCInOctets.2 = Counter64: 20748536
+IF-MIB::ifHCOutOctets.2 = Counter64: 1332378
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Poll over SNMPv2c, not v1.  SNMPv1 has no <code>Counter64</code>, so the whole of
+<code>ifXTable</code> is unreadable over v1 and only the 32-bit counters in <code>ifTable</code>
+remain.  Those wrap in well under an hour on a busy gigabit port, which is
+not enough for useful throughput graphs.  Set <code>snmp engine version v2c</code> to
+refuse v1 outright.</p>
+</div>
+<p>The device itself carries no MIB text files, so the <code>snmpwalk</code> and <code>snmpget</code>
+on it work with numeric OIDs only.  That is enough for a quick check from the
+console:</p>
+<pre class="cli"><code>admin@example:~$ <b>snmpwalk -v2c -c public 127.0.0.1 .1.3.6.1.2.1.31.1.1.1.1</b>
+.1.3.6.1.2.1.31.1.1.1.1.1 = STRING: lo
+.1.3.6.1.2.1.31.1.1.1.1.2 = STRING: eth0
+</code></pre>
+
+<h2 id="community-strings-are-secrets">Community strings are secrets<a class="headerlink" href="#community-strings-are-secrets" title="Permanent link">¶</a></h2>
+<p><code>ietf-snmp</code> marks the community name and the security name
+<code>nacm:default-deny-all</code>, which sysrepo honours, so they are unreadable by
+default.  An operator or guest sees that a community exists but not what it is
+called.</p>
+<h2 id="not-yet-supported">Not yet supported<a class="headerlink" href="#not-yet-supported" title="Permanent link">¶</a></h2>
+<p>SNMPv3 (USM), notifications (traps and informs), view-based access control,
+the BRIDGE-MIB and the ENTITY-MIB are not implemented.</p>
 
 
 
@@ -2668,10 +2792,10 @@ datetime        Show current date and time, default RFC2822 format
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   
