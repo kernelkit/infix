@@ -663,11 +663,19 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	if ((rc = services_change(session, config, diff, event, confd)))
 		goto free_diff;
 
+	/* ietf-snmp */
+	if ((rc = snmp_change(session, config, diff, event, confd)))
+		goto free_diff;
+
 	/* ietf-syslog*/
 	if ((rc = syslog_change(session, config, diff, event, confd)))
 		goto free_diff;
 
-	/* ietf-system */
+	/* NOTE!
+	 * ietf-system, keep last: /system/advanced/defaults replaces whole
+	 * files under /etc/default, so it has to run after every handler
+	 * that writes one of its own.
+	 */
 	if ((rc = system_change(session, config, diff, event, confd)))
 		goto free_diff;
 
@@ -871,6 +879,13 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		ERROR("Failed to subscribe to ieee1588-ptp-tt");
 		goto err;
 	}
+#ifdef HAVE_SNMP
+	rc = subscribe_model("ietf-snmp", &confd, 0);
+	if (rc) {
+		ERROR("Failed to subscribe to ietf-snmp");
+		goto err;
+	}
+#endif
 
 	rc = system_rpc_init(&confd);
 	if (rc)

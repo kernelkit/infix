@@ -72,6 +72,10 @@ if CONTAINERS
 confd_plugin_la_SOURCES += containers.c cni.c cni.h
 endif
 
+if SNMP
+confd_plugin_la_SOURCES += snmp.c
+endif
+
 rauc_installer_sources = 			\
 	rauc-installer.c rauc-installer.h
 

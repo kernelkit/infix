@@ -544,6 +544,19 @@ def mdns(args: List[str]) -> None:
     cli_pretty(data, "show-mdns")
 
 
+def snmp(args: List[str]) -> None:
+    data = get_json("/ietf-snmp:snmp", "running")
+    if not data:
+        print("SNMP not configured.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    cli_pretty(data, "show-snmp")
+
+
 def system(args: List[str]) -> None:
     """Get system state from sysrepo"""
     data = get_json("/ietf-system:system-state")
@@ -757,6 +770,7 @@ def execute_command(command: str, args: List[str]):
         'rip': rip,
         'routes': routes,
         'services': services,
+        'snmp': snmp,
         'software': software,
         'stp': stp,
         'system': system

@@ -3946,6 +3946,84 @@ def _mdns_svc_name(stype):
     return stype.lstrip("_").split("._")[0]
 
 
+def _snmp_source(snmp, tag):
+    """Where a community is answered from, as the agent sees it.
+
+    An unset tag means any source.  A tag no target carries is the
+    operator asking for a restriction that does not exist, and the agent
+    drops the community rather than widen it, so say so here too.
+    """
+    if tag is None:
+        return "any"
+
+    out = []
+    for target in snmp.get("target", []):
+        if tag not in target.get("tag", []):
+            continue
+        udp = target.get("udp", {})
+        addr = udp.get("ip")
+        if not addr:
+            continue
+        plen = udp.get("prefix-length")
+        out.append(f"{addr}/{plen}" if plen is not None else addr)
+
+    return ", ".join(out) if out else f"none, no target tagged {tag}"
+
+
+def show_snmp(json):
+    snmp = json.get("ietf-snmp:snmp", {})
+    if not snmp:
+        print("SNMP not configured.")
+        return
+
+    engine = snmp.get("engine", {})
+
+    enabled = engine.get("enabled")
+    print(f"{'Enabled':<16}: {'yes' if enabled else 'no'}")
+
+    # Neither leaf has a YANG default; unset means the agent serves
+    # every version it supports, and listens on every address.
+    versions = [v for v in ("v1", "v2c") if v in engine.get("version", {})]
+    print(f"{'Versions':<16}: {', '.join(versions or ['v1', 'v2c'])}"
+          f"{'' if versions else ' (default)'}")
+
+    listen = []
+    for entry in engine.get("listen", []):
+        udp = entry.get("udp", {})
+        addr = udp.get("ip")
+        if not addr:
+            continue
+        port = udp.get("port", 161)
+        listen.append(f"[{addr}]:{port}" if ":" in addr else f"{addr}:{port}")
+    print(f"{'Listen':<16}: {', '.join(listen or ['0.0.0.0:161', '[::]:161'])}"
+          f"{'' if listen else ' (default)'}")
+
+    if engine.get("engine-id"):
+        print(f"{'Engine ID':<16}: {engine['engine-id']}")
+
+    communities = snmp.get("community", [])
+    if not communities:
+        print("\nNo communities, the agent answers nothing.")
+        return
+
+    print()
+    table = SimpleTable([
+        Column("COMMUNITY", flexible=True),
+        Column("SECURITY NAME"),
+        Column("SOURCE"),
+    ])
+    for entry in communities:
+        secname = entry.get("security-name", "")
+        # An unset name means the agent uses the security name as
+        # the community, see RFC 7407.  A binary name has octets
+        # that do not survive being printed.
+        name = entry.get("text-name")
+        if name is None:
+            name = "<binary>" if entry.get("binary-name") else secname
+        table.row(name, secname, _snmp_source(snmp, entry.get("target-tag")))
+    table.print()
+
+
 def show_mdns(json):
     mdns = json.get("infix-services:mdns", {})
     if not mdns:
@@ -6110,6 +6188,8 @@ def main():
 
     subparsers.add_parser('show-mdns', help='Show mDNS configuration and neighbors')
 
+    subparsers.add_parser('show-snmp', help='Show SNMP agent configuration')
+
     subparsers.add_parser('show-firewall', help='Show firewall overview')
     subparsers.add_parser('show-firewall-matrix', help='Show firewall matrix')
     subparsers.add_parser('show-firewall-zone', help='Show firewall zones') \
@@ -6187,6 +6267,8 @@ def main():
         show_lldp(json_data)
     elif args.command == "show-mdns":
         show_mdns(json_data)
+    elif args.command == "show-snmp":
+        show_snmp(json_data)
     elif args.command == "show-firewall":
         show_firewall(json_data)
     elif args.command == "show-firewall-matrix":

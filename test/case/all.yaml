@@ -45,6 +45,9 @@
 - name: "Services"
   suite: services/all.yaml
 
+- name: "SNMP"
+  suite: snmp/all.yaml
+
 - name: "Use Case Tests"
   suite: use_case/all.yaml
 

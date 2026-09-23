@@ -1,0 +1,6 @@
+---
+- name: Basic
+  case: basic/test.py
+
+- name: MIB Coverage
+  case: coverage/test.py

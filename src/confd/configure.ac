@@ -64,6 +64,10 @@ AC_ARG_ENABLE(webui,
         AS_HELP_STRING([--enable-webui], [Enable support for web management interface]),,[
 	enable_webui=no])
 
+AC_ARG_ENABLE(snmp,
+        AS_HELP_STRING([--enable-snmp], [Enable support for the SNMP agent]),,[
+	enable_snmp=no])
+
 AC_ARG_WITH(login-shell,
         AS_HELP_STRING([--with-login-shell=shell], [Login shell for new users, default: /bin/false]),
 	[login_shell=$withval], [login_shell=yes])
@@ -89,6 +93,9 @@ AS_IF([test "x$enable_netbrowse" = "xyes"], [
 
 AS_IF([test "x$enable_webui" = "xyes"], [
         AC_DEFINE(HAVE_WEBUI, 1, [Built with web management interface support])])
+
+AS_IF([test "x$enable_snmp" = "xyes"], [
+        AC_DEFINE(HAVE_SNMP, 1, [Built with SNMP agent support])])
 
 AS_IF([test "x$with_login_shell" != "xno"], [
 	AS_IF([test "x$login_shell" = "xyes"], [login_shell=/bin/false])
@@ -123,6 +130,7 @@ AC_SUBST([EV_LIBS])
 
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
+AM_CONDITIONAL(SNMP,         [test "x$enable_snmp" != "xno"])
 
 # Plugin installation path for sysrepo-plugind
 PKG_CHECK_VAR([srpdplugindir], [sysrepo], [SRPD_PLUGINS_PATH])
@@ -173,6 +181,7 @@ Optional features:
   Container support ....: $enable_containers
   Wi-Fi support ........: $enable_wifi
   GPS support ..........: $enable_gps
+  SNMP support .........: $enable_snmp
   Login shell ..........: $login_shell
   Default crypt algo ...: $crypt
 
