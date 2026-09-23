@@ -200,7 +200,7 @@ log()
     else
 	fn="/var/log/syslog"
     fi
-    less +G $fn
+    pager +G $fn
 }
 
 rmon()
