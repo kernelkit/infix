@@ -16,3 +16,6 @@
 
 - name: Syslog Property Filtering
   case: property_filter/test.py
+
+- name: Syslog Log RPC
+  case: rpc_log/test.py
