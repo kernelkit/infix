@@ -3890,6 +3890,40 @@ def show_dhcp_server(json, stats):
         server.print()
 
 
+def show_tftp(json):
+    data = json.get("infix-services:tftp", {})
+    if not data.get("enabled"):
+        print("TFTP server not enabled.")
+        return
+
+    def modified(ydate):
+        date = Date.from_yang(ydate)
+        return date.strftime("%Y-%m-%d %H:%M") if date else ""
+
+    def size(num):
+        num = int(num or 0)
+        return format_memory_bytes(num) if num else "0"
+
+    print(f"{'Root directory':<17}: {data.get('root', '')}")
+    print(f"{'Interfaces':<17}: {', '.join(data.get('interface', [])) or 'all'}")
+    print(f"{'Client directory':<17}: {data.get('client-directory', 'none')}")
+    print()
+
+    files = data.get("files", {}).get("file", [])
+    if not files:
+        print("No files.")
+        return
+
+    table = SimpleTable([
+        Column('NAME', flexible=True),
+        Column('SIZE', 'right', formatter=size),
+        Column('MODIFIED', formatter=modified)
+    ])
+    for entry in files:
+        table.row(entry.get("name"), entry.get("size"), entry.get("modified"))
+    table.print()
+
+
 def show_lldp(json):
     if not json.get("ieee802-dot1ab-lldp:lldp"):
         print("Error: No LLDP data available.")
@@ -6175,6 +6209,7 @@ def main():
     subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
               .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
 
+    subparsers.add_parser('show-tftp', help='Show TFTP server')
     subparsers.add_parser('show-container', help='Show containers table')
     subparsers.add_parser('show-container-detail', help='Show container details') \
               .add_argument('name', help='Container name')
@@ -6255,6 +6290,8 @@ def main():
         show_bridge_stp(json_data)
     elif args.command == "show-dhcp-server":
         show_dhcp_server(json_data, args.stats)
+    elif args.command == "show-tftp":
+        show_tftp(json_data)
     elif args.command == "show-container":
         show_container(json_data)
     elif args.command == "show-container-detail":

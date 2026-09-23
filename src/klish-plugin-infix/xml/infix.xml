@@ -103,7 +103,14 @@
 
 <PTYPE name="FILES">
   <COMPL>
-    <ACTION sym="files@infix">/cfg</ACTION>
+    <ACTION sym="path@infix">/cfg</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="PATH">
+  <COMPL>
+    <ACTION sym="path@infix"/>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
@@ -260,11 +267,15 @@
 
 <COMMAND name="dir" help="List available files">
   <SWITCH name="optional" min="0">
-    <PARAM name="path" ptype="/STRING" help="Directory contents to list"/>
+    <PARAM name="path" ptype="/PATH" help="Directory contents to list"/>
   </SWITCH>
-  <ACTION sym="script" in="tty" out="tty" interrupt="true">
-    dir $KLISH_PARAM_path
-  </ACTION>
+  <ACTION sym="dir@infix" in="tty" out="tty" interrupt="true"/>
+</COMMAND>
+
+<COMMAND name="rename" help="Rename a file, e.g. rename startup-config backup">
+  <PARAM name="from" ptype="/FILES" help="File to rename"/>
+  <PARAM name="to" ptype="/FILES" help="New name, or a directory to move it to"/>
+  <ACTION sym="rename@infix" in="tty" out="tty" interrupt="true"/>
 </COMMAND>
 
 <COMMAND name="remove" help="Remove a configuration file">
@@ -506,6 +517,10 @@ echo "Public:  $pub"
     <ACTION sym="script">
       show services
     </ACTION>
+  </COMMAND>
+
+  <COMMAND name="tftp" help="Show TFTP server status and files">
+    <ACTION sym="script">show tftp</ACTION>
   </COMMAND>
 
   <COMMAND name="software" help="Show software info">

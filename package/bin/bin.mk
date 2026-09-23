@@ -41,10 +41,4 @@ define BIN_BUILD_PYTHON
 endef
 BIN_POST_INSTALL_TARGET_HOOKS += BIN_BUILD_PYTHON
 
-define BIN_INSTALL_BASH_COMPLETION
-	install -D $(@D)/bash_completion.d/show \
-		$(TARGET_DIR)/etc/bash_completion.d/show
-endef
-BIN_POST_INSTALL_TARGET_HOOKS += BIN_INSTALL_BASH_COMPLETION
-
 $(eval $(autotools-package))

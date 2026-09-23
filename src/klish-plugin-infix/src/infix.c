@@ -103,6 +103,10 @@ static int run_as_user(const char *user, char *const argv[])
 		return -1;
 
 	if (!pid) {
+		setenv("USER", user, 1);
+		setenv("LOGNAME", user, 1);
+		setenv("HOME", pw->pw_dir, 1);
+
 		if (initgroups(user, pw->pw_gid) || setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
 			fprintf(stderr, "Aborting, failed dropping privileges to "
 				"(UID:%d GID:%d): %s\n",
@@ -169,33 +173,74 @@ static int shellf(const char *fmt, ...)
 	return rc;
 }
 
+/*
+ * Complete an absolute path, the CLI has no shell to do it for us.
+ * Run as the logged-in user, like copy does, so the listing follows
+ * that user's home and permissions rather than klishd's.
+ */
+static int complete_path(kcontext_t *ctx, const char *word)
+{
+	char *argv[] = { "doas", "-u", NULL, "files", "-c", NULL, NULL };
+
+	argv[2] = (char *)cd_home(ctx);
+	argv[5] = (char *)word;
+
+	return run(argv);
+}
+
+/* Paths are completed from the file system, everything else by name */
+static int is_path(kcontext_t *ctx, const char **word)
+{
+	*word = kcontext_candidate_value(ctx);
+
+	return *word && (*word)[0] == '/';
+}
+
+/* Files in dir, by bare name, as the CLI has always offered them */
+static int list_files(kcontext_t *ctx, const char *dir)
+{
+	char *argv[] = { "files", NULL, NULL };
+
+	cd_home(ctx);
+	argv[1] = (char *)dir;
+
+	return run(argv);
+}
+
 int infix_datastore(kcontext_t *ctx)
 {
-	char *argv[] = { "files", "/cfg", NULL };
-	const char *ds;
+	const char *word, *ds;
+
+	if (is_path(ctx, &word))
+		return complete_path(ctx, word);
 
 	ds = kcontext_script(ctx);
-	if (!ds)
-		goto done;
-
-	if (!strcmp(ds, "src")) {
+	if (ds && !strcmp(ds, "src")) {
 		puts("factory-config");
 		puts("running-config");
 		puts("startup-config");
 	}
-	if (!strcmp(ds, "dst")) {
+	if (ds && !strcmp(ds, "dst")) {
 		puts("running-config");
 		puts("startup-config");
 	}
 
-done:
-	return run(argv);
+	puts("ftp://");
+	puts("http://");
+	puts("https://");
+	puts("scp://");
+	puts("sftp://");
+	puts("tftp://");
+
+	complete_path(ctx, "/");
+
+	return list_files(ctx, "/cfg");
 }
 
 int infix_erase(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
-	const char *path;
+	const char *path, *user;
 	char *argv[4];
 
 	path = kparg_value(kpargv_find(pargv, "file"));
@@ -204,20 +249,67 @@ int infix_erase(kcontext_t *ctx)
 		return -1;
 	}
 
-	cd_home(ctx);
+	user = cd_home(ctx);
 
 	argv[0] = "erase";
 	argv[1] = "-s";
 	argv[2] = (char *)path;
 	argv[3] = NULL;
 
+	/* Run as the logged-in user, not root (klishd) */
+	return run_as_user(user, argv);
+}
+
+/* Complete a file system path, and offer the roots when nothing typed */
+int infix_path(kcontext_t *ctx)
+{
+	const char *word, *dir;
+
+	if (is_path(ctx, &word))
+		return complete_path(ctx, word);
+
+	/* Nothing typed yet, show where a path can start */
+	complete_path(ctx, "/");
+
+	dir = kcontext_script(ctx);
+	if (!dir)
+		return 0;
+
+	return list_files(ctx, dir);
+}
+
+int infix_rename(kcontext_t *ctx)
+{
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *from, *to;
+	char *argv[8];
+	int i = 0;
+
+	from = kparg_value(kpargv_find(pargv, "from"));
+	to = kparg_value(kpargv_find(pargv, "to"));
+	if (!from || !to)
+		return -1;
+
+	/* Run as the logged-in user, not root (klishd) */
+	argv[i++] = "doas";
+	argv[i++] = "-u";
+	argv[i++] = (char *)cd_home(ctx);
+	argv[i++] = "rename";
+	argv[i++] = "-s";
+	argv[i++] = (char *)from;
+	argv[i++] = (char *)to;
+	argv[i] = NULL;
+
 	return run(argv);
 }
 
 int infix_files(kcontext_t *ctx)
 {
-	const char *path;
+	const char *path, *word;
 	char *argv[3];
+
+	if (is_path(ctx, &word))
+		return complete_path(ctx, word);
 
 	cd_home(ctx);
 	path = kcontext_script(ctx);
@@ -231,6 +323,27 @@ int infix_files(kcontext_t *ctx)
 	argv[2] = NULL;
 
 	return run(argv);
+}
+
+/* List a directory, or the interesting locations when given no path */
+int infix_dir(kcontext_t *ctx)
+{
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *user;
+	kparg_t *parg;
+	char *argv[3];
+	int i = 0;
+
+	parg = kpargv_find(pargv, "path");
+	user = cd_home(ctx);
+
+	argv[i++] = "dir";
+	if (parg)
+		argv[i++] = (char *)kparg_value(parg);
+	argv[i] = NULL;
+
+	/* Run as the logged-in user, not root (klishd) */
+	return run_as_user(user, argv);
 }
 
 int infix_ifaces(kcontext_t *ctx)
@@ -737,8 +850,11 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("boot_targets", infix_boot_targets));
 	kplugin_add_syms(plugin, ksym_new("copy", infix_copy));
 	kplugin_add_syms(plugin, ksym_new("datastore", infix_datastore));
+	kplugin_add_syms(plugin, ksym_new("dir", infix_dir));
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
+	kplugin_add_syms(plugin, ksym_new("path", infix_path));
+	kplugin_add_syms(plugin, ksym_new("rename", infix_rename));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
 	kplugin_add_syms(plugin, ksym_new("users", infix_users));
 	kplugin_add_syms(plugin, ksym_new("groups", infix_groups));

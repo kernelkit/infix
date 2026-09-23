@@ -22,9 +22,13 @@ All notable changes to the project are documented in this file.
 - WebUI: the support bundle is collected with the `infix-system:support-collect`
   RPC as the logged-in user, so NACM decides who may download it, rather
   than by running the tool as root
+- The CLI `dir` command lists directories as the logged-in user, so it
+  shows only what that user may read
 
 ### Added
 
+- The CLI accepts an unambiguous prefix of a command name, e.g. `sh int`
+  for `show interface`
 - Add `/system/advanced` for low-level system customization, issue #463:
   - `rc.d`: user scripts stored in the configuration, run once at boot
     after the startup configuration has been applied, in the order listed
@@ -43,6 +47,14 @@ All notable changes to the project are documented in this file.
   statistics` replaces `dhcp-server clear-statistics`.  `set datetime` now
   also accepts free-form input, e.g., `14:05`, and echoes the ISO-8601
   value it sets
+- The CLI `remove` command now offers the startup configuration, and
+  warns that removing it leaves the system booting factory defaults
+- Add CLI `rename` command, for renaming or moving a file without
+  copying it, e.g. `rename startup-config backup` to keep a
+  configuration before starting over.  Directories in the destination
+  are created as needed
+- The CLI completes file system paths with Tab, for `copy`, `rename`,
+  `remove`, and `dir`, limited to the directories those commands accept
 - The CLI `configure` command takes an optional path to start in a
   sub-context directly, e.g., `configure system authentication`
 - `/bin/sh` is now provided by Busybox ash instead of Bash, speeding up
@@ -67,6 +79,16 @@ All notable changes to the project are documented in this file.
   as `/interfaces/interface[name='eth0']/if-index`.  SNMP SET, SNMPv3,
   notifications and view-based access control are not supported.
   Disabled by default, see [SNMP][snmp]
+- Add TFTP server for network boot and device provisioning, issue #1542.
+  Read-only, serving `/var/lib/tftpboot` or a directory on USB media, with
+  optional per-client subdirectories.  `show tftp` lists the files served,
+  see [TFTP Server](tftp.md)
+- Add network boot parameters to DHCP server: `boot file`, `server-address`,
+  and `server-name` at global, subnet, or host scope, sent in the BOOTP header
+  fields and as options 66/67
+- The CLI `copy` and `remove` commands now also accept files in `/var/lib`,
+  `/var/tmp`, and `/tmp`.  Files written there are world-readable.
+  The `.cfg`extension is only added for files in `/cfg`
 
 ### Fixes
 

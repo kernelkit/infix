@@ -140,6 +140,44 @@ admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> <b>leave</b>
 </code></pre>
 
 
+## Network Boot
+
+Devices that boot over the network, or fall back to it when their own
+firmware is damaged, learn the name of the boot file and the address of
+the TFTP server from the DHCP server.  These are set with `boot`, which
+can be given globally, per subnet, or per static host.  The most
+specific scope wins.
+
+<pre class="cli"><code>admin@example:/config/dhcp-server/> <b>edit subnet 192.168.2.0/24</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> <b>set boot file fallback.itb</b>
+admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> <b>leave</b>
+</code></pre>
+
+By default the server address handed out is the system's own address
+on the interface facing the client, matching the built-in
+[TFTP server](tftp.md).  Set `boot server-address` to point clients at
+another server instead.
+
+The boot file and server address are sent both in the BOOTP header
+fields, which BOOTP clients, bootloaders like U-Boot, and PXE ROMs read,
+and as DHCP options 66 and 67 to clients that request them.  The two
+options cannot be set in the `option` list when `boot` is used.
+
+> [!CAUTION]
+> Boot files are handed out over TFTP, which has no authentication.
+> Anything below the server root can be read by any client, see
+> [TFTP Server](tftp.md).
+
+To hand a single device a different image, e.g., during a staged
+rollout, set `boot` on its static host entry:
+
+<pre class="cli"><code>admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> <b>edit host 192.168.2.10</b>
+admin@example:/config/dhcp-server/…/192.168.2.10/> <b>set match mac-address 00:11:22:33:44:55</b>
+admin@example:/config/dhcp-server/…/192.168.2.10/> <b>set boot file staging.itb</b>
+admin@example:/config/dhcp-server/…/192.168.2.10/> <b>leave</b>
+</code></pre>
+
+
 ## Monitoring
 
 View active leases and server statistics:

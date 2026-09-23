@@ -108,6 +108,9 @@ def main():
     elif model == 'infix-dhcp-server':
         from . import infix_dhcp_server
         yang_data = infix_dhcp_server.operational()
+    elif model == 'infix-services':
+        from . import infix_services
+        yang_data = infix_services.operational()
     elif model == 'ietf-system':
         from . import ietf_system
         yang_data = ietf_system.operational()

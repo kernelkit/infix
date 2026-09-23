@@ -9,18 +9,26 @@ on:
       - ci-work
   workflow_dispatch:
 
+# A label event that neither starts nor stops a run is skipped by
+# check-trigger, keep those in a group of their own so they cannot cancel
+# a run in progress.  Adding 'ci:skip' does share the group, on purpose,
+# to stop a build that is no longer wanted.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}${{ (github.event.action == 'labeled' && github.event.label.name != 'ci:main' && github.event.label.name != 'ci:skip') && '-label' || '' }}
   cancel-in-progress: true
 
 jobs:
   # Gate all builds through this check to prevent wasted runs.  Only run on
   # 'labeled' events when the label is actually 'ci:main'.  Concurrency control
-  # above handles canceling the 'opened' event when 'labeled' arrives quickly
+  # above handles canceling the 'opened' event when 'ci:main' arrives quickly
   # after (e.g., when creating a PR with ci:main already attached). See #1154.
+  #
+  # A PR labeled 'ci:skip' builds nothing, for changes that cannot affect
+  # the image, e.g. a ChangeLog fixup after someone else's branch landed.
   check-trigger:
     if: |
       startsWith(github.repository, 'kernelkit/') &&
+      !contains(github.event.pull_request.labels.*.name, 'ci:skip') &&
       (github.event_name != 'pull_request' ||
        github.event.action != 'labeled' ||
        github.event.label.name == 'ci:main')

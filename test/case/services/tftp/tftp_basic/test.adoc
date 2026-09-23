@@ -1,0 +1,24 @@
+=== TFTP Server
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/tftp/tftp_basic]
+
+==== Description
+
+Verify that the TFTP server serves files uploaded to its root directory
+with the copy command, and that the operational datastore lists them.
+Files that are not world-readable must neither be served nor listed.
+
+==== Topology
+
+image::topology.svg[TFTP Server topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure target:data with 10.0.0.10/24 and enable TFTP server
+. Upload a file to the TFTP root with copy, and place a private file beside it
+. Verify operational datastore lists only the uploaded file
+. Verify the uploaded file is served over TFTP
+. Verify the private file is refused
+
+

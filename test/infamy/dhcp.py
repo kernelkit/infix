@@ -72,6 +72,35 @@ option lease 864000
             self.process = None
 
 
+class Client:
+    """One-shot DHCPv4 client (udhcpc), exposes the BOOTP header fields"""
+    SCRIPT = '#!/bin/sh\n[ "$1" = bound ] && echo "$siaddr $boot_file"\n'
+
+    def __init__(self, netns, iface="iface"):
+        self.netns = netns
+        self.iface = iface
+        with tf.NamedTemporaryFile("w", suffix=".sh", delete=False) as fp:
+            fp.write(self.SCRIPT)
+            self.script = fp.name
+        os.chmod(self.script, 0o755)
+
+    def __del__(self):
+        try:
+            os.unlink(self.script)
+        except OSError:
+            pass
+
+    def lease(self):
+        """Request a lease, return (siaddr, boot_file) or None on failure"""
+        res = self.netns.run(["udhcpc", "-i", self.iface, "-f", "-q", "-n",
+                              "-t", "3", "-T", "1", "-s", self.script],
+                             capture_output=True, text=True)
+        if res.returncode:
+            return None
+
+        return tuple(res.stdout.split())
+
+
 class Server6Dnsmasq:
     """DHCPv6 server using dnsmasq"""
 
