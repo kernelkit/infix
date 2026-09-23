@@ -11,14 +11,14 @@ import infamy
 from infamy.util import parallel, until
 
 TEST_MESSAGES = [
-    ("daemon.emerg",   "Emergency: system is unusable"),
-    ("daemon.alert",   "Alert: immediate action required"),
-    ("daemon.crit",    "Critical: critical condition"),
-    ("daemon.err",     "Error: error condition"),
-    ("daemon.warning", "Warning: warning condition"),
-    ("daemon.notice",  "Notice: normal but significant"),
-    ("daemon.info",    "Info: informational message"),
-    ("daemon.debug",   "Debug: debug-level message"),
+    ("emergency", "Emergency: system is unusable"),
+    ("alert",     "Alert: immediate action required"),
+    ("critical",  "Critical: critical condition"),
+    ("error",     "Error: error condition"),
+    ("warning",   "Warning: warning condition"),
+    ("notice",    "Notice: normal but significant"),
+    ("info",      "Info: informational message"),
+    ("debug",     "Debug: debug-level message"),
 ]
 
 with infamy.Test() as test:
@@ -40,7 +40,7 @@ with infamy.Test() as test:
                                 "name": "file:exact-errors",
                                 "facility-filter": {
                                     "facility-list": [{
-                                        "facility": "daemon",
+                                        "facility": "user",
                                         "severity": "error",
                                         "advanced-compare": {
                                             "compare": "equals"
@@ -51,7 +51,7 @@ with infamy.Test() as test:
                                 "name": "file:no-debug",
                                 "facility-filter": {
                                     "facility-list": [{
-                                        "facility": "daemon",
+                                        "facility": "user",
                                         "severity": "debug",
                                         "advanced-compare": {
                                             "action": "block"
@@ -62,7 +62,7 @@ with infamy.Test() as test:
                                 "name": "file:baseline",
                                 "facility-filter": {
                                     "facility-list": [{
-                                        "facility": "daemon",
+                                        "facility": "user",
                                         "severity": "info"
                                     }]
                                 }
@@ -76,8 +76,8 @@ with infamy.Test() as test:
         until(lambda: tgtssh.runsh("test -f /var/log/exact-errors").returncode == 0, attempts=10)
 
     with test.step("Send test messages at all severity levels"):
-        for priority, message in TEST_MESSAGES:
-            tgtssh.runsh(f"logger -t advtest -p {priority} '{message}'")
+        for severity, message in TEST_MESSAGES:
+            target.log(message, severity=severity, app_name="advtest")
         until(lambda: "Error: error condition" in tgtssh.runsh("cat /var/log/exact-errors 2>/dev/null").stdout, attempts=10)
 
     with test.step("Verify exact-errors log contains only error messages"):

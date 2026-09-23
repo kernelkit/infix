@@ -66,7 +66,7 @@ with infamy.Test() as test:
 
     with test.step("Send test messages with various patterns"):
         for message in TEST_MESSAGES:
-            tgtssh.runsh(f"logger -t test -p daemon.info '{message}'")
+            target.log(message, severity="info", app_name="test")
         time.sleep(2)
 
     with test.step("Verify errors log contains ERROR and CRITICAL messages"):
