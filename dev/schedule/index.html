@@ -7,13 +7,13 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/virtual/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/schedule/">
       
       
-        <link rel="prev" href="../test-arch/">
+        <link rel="prev" href="../management/">
       
       
-        <link rel="next" href="../vpd/">
+        <link rel="next" href="../support/">
       
       
         
@@ -24,7 +24,7 @@
     
     
       
-        <title>Virtual Environments - User's Guide</title>
+        <title>Scheduling - User's Guide</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#virtual-environments" class="md-skip">
+        <a href="#scheduling" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Virtual Environments
+              Scheduling
             
           </span>
         </div>
@@ -1419,8 +1419,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1448,11 +1450,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked="">
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -1473,7 +1475,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1656,10 +1658,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../schedule/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scheduling
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1675,6 +1704,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#creating-a-schedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a Schedule
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recurrence-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recurrence Rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-a-schedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using a Schedule
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1981,10 +2085,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -2008,11 +2110,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked="">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8">
         
           
           <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
@@ -2033,7 +2135,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2216,37 +2318,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Virtual Environments
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../virtual/" class="md-nav__link">
         
   
   
@@ -2262,48 +2337,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
-      
-        <li class="md-nav__item">
-  <a href="#qemu" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        QEMU
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gns3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GNS3
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2425,10 +2458,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#qemu" class="md-nav__link">
+  <a href="#creating-a-schedule" class="md-nav__link">
     <span class="md-ellipsis">
       
-        QEMU
+        Creating a Schedule
       
     </span>
   </a>
@@ -2436,10 +2469,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#gns3" class="md-nav__link">
+  <a href="#recurrence-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GNS3
+        Recurrence Rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-a-schedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using a Schedule
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying
       
     </span>
   </a>
@@ -2489,10 +2555,10 @@
     
     
       <li class="md-path__item">
-        <a href="../branding/" class="md-path__link">
+        <a href="../nacm/" class="md-path__link">
           
   <span class="md-ellipsis">
-    Developer's Corner
+    System
   </span>
 
         </a>
@@ -2514,57 +2580,170 @@
   
 
 
-<h1 id="virtual-environments">Virtual Environments<a class="headerlink" href="#virtual-environments" title="Permanent link">¶</a></h1>
-<p>Infix primarily targets real hardware, deployment to the cloud is not a
-priority at the moment.  However, for development and testing purposes
-there is an <code>x86_64</code> build that runs in <a href="https://www.qemu.org/">Qemu</a>.</p>
-<p>These images also work with the Graphical Network Simulator (<a href="https://gns3.com/">GNS3</a>),
-which is a very user-friendly tool for playing around with simple to
-complex network setups, verifying interoperability between vendors, etc.</p>
-<h2 id="qemu">QEMU<a class="headerlink" href="#qemu" title="Permanent link">¶</a></h2>
+<h1 id="scheduling">Scheduling<a class="headerlink" href="#scheduling" title="Permanent link">¶</a></h1>
+<p>Some system functions run periodically instead of on demand.  One such
+type of recurrence is scheduled activities, like checking for new software
+updates or rebooting in a nightly maintenance window.</p>
+<p>The recurrence itself lives in one place: a <em>named schedule</em>, which any
+number of features can point at.  A schedule has no action of its own, it
+only says <em>when</em> something should happen, and the feature referencing it
+decides <em>what</em> happens.  Two features can share the same schedule.</p>
+<p>YANG support is defined in <a href="https://github.com/kernelkit/infix/blob/main/src/confd/yang/confd/infix-schedule.yang">infix-schedule</a>, which augments
+<code>ietf-system</code> with a <code>schedules</code> container and builds on the iCalendar
+recurrence grouping from <a href="https://www.rfc-editor.org/rfc/rfc9922">ietf-schedule</a> (RFC 9922).</p>
+<h2 id="creating-a-schedule">Creating a Schedule<a class="headerlink" href="#creating-a-schedule" title="Permanent link">¶</a></h2>
+<p>Every schedule has a name, which is how features refer to it, and a
+recurrence rule, which decides when it fires.  The example below fires
+every night at 03:30.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit system schedule nightly</b>
+admin@example:/config/system/schedule/nightly/&gt; <b>set description "Nightly maintenance window"</b>
+admin@example:/config/system/schedule/nightly/&gt; <b>set recurrence frequency daily</b>
+admin@example:/config/system/schedule/nightly/&gt; <b>set recurrence byhour 3</b>
+admin@example:/config/system/schedule/nightly/&gt; <b>set recurrence byminute 30</b>
+admin@example:/config/system/schedule/nightly/&gt; <b>leave</b>
+</code></pre>
+
+<p><strong>Schedule parameters:</strong></p>
+<ul>
+<li><code>name</code>: Unique identifier, 1-64 characters, starting with a letter or
+  digit and otherwise limited to letters, digits, <code>_</code>, <code>.</code> and <code>-</code>.  The
+  name is used verbatim by features referencing it</li>
+<li><code>enabled</code>: Turn the schedule on or off (default: <code>true</code>).  When off,
+  everything that uses it stops running, but the schedule is kept</li>
+<li><code>description</code>: Optional human-readable note on the schedule's purpose</li>
+<li><code>recurrence</code>: The recurrence rule.  A schedule without one is rejected
+  at commit time</li>
+</ul>
+<h2 id="recurrence-rules">Recurrence Rules<a class="headerlink" href="#recurrence-rules" title="Permanent link">¶</a></h2>
+<p>The recurrence rule decides when a schedule fires.  It is evaluated in the
+system's local time.</p>
+<p><code>frequency</code> is mandatory and selects the base period:</p>
+<table>
+<thead>
+<tr>
+<th>Frequency</th>
+<th>Fires</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minutely</code></td>
+<td>Every minute</td>
+</tr>
+<tr>
+<td><code>hourly</code></td>
+<td>Every hour, on the hour</td>
+</tr>
+<tr>
+<td><code>daily</code></td>
+<td>Every day at midnight</td>
+</tr>
+<tr>
+<td><code>weekly</code></td>
+<td>Every week</td>
+</tr>
+<tr>
+<td><code>monthly</code></td>
+<td>The 1st of every month at midnight</td>
+</tr>
+<tr>
+<td><code>yearly</code></td>
+<td>January 1st at midnight</td>
+</tr>
+</tbody>
+</table>
+<p><code>interval</code> (default <code>1</code>) stretches the base period: <code>frequency hourly</code>
+with <code>interval 6</code> fires every six hours.</p>
+<p>The remaining fields refine that period by pinning one field to specific
+values:</p>
+<ul>
+<li><code>byminute</code>: Minutes within the hour, 0-59</li>
+<li><code>byhour</code>: Hours of the day, 0-23</li>
+<li><code>byday</code>: Days of the week, by <code>weekday</code> name (<code>monday</code> … <code>sunday</code>)</li>
+<li><code>bymonthday</code>: Days of the month, 1-31</li>
+<li><code>byyearmonth</code>: Months of the year, 1-12</li>
+</ul>
+<p>Each accepts a list, so <code>byhour 8</code> plus <code>byhour 20</code> fires twice a day.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>Installation for Debian/Ubuntu based systems can be done by "simply":
-<kbd>sudo apt install virt-manager</kbd> -- dependencies ensure the relevant
-Qemu packages are pulled in as well.  This trick, installing
-<a href="https://virt-manager.org/">virt-manager</a>, helps set up Qemu networking on your system.</p>
+<p>Set <code>frequency</code> to the coarsest period you want, then refine it with the
+<code>by*</code> fields.  A weekly window on Sunday mornings is <code>frequency weekly</code>
+with <code>byday sunday</code> and <code>byhour 4</code>.  Writing the same window as
+<code>frequency daily</code> would fire every morning.</p>
 </div>
-<p>A virtualized Infix x86_64 instance can be launched from a Linux system, with
-<a href="https://www.qemu.org/">Qemu</a> installed, by issuing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$ ./qemu/run.sh
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>...
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">¶</a></h2>
+<p>Each schedule is translated into a five-field cron expression, and the
+YANG model is pruned to the subset cron can express.  Everything below is
+rejected at commit time, so a schedule never fires on the wrong days:</p>
+<ul>
+<li><strong><code>secondly</code> frequency.</strong>  Cron has no seconds field; the finest
+  supported resolution is <code>minutely</code></li>
+<li><strong>Combining <code>bymonthday</code> and <code>byday</code>.</strong>  Cron fires on the <em>union</em> of
+  day-of-month and day-of-week, where RFC 5545 specifies their
+  intersection, so the combination is refused</li>
+<li><strong>Negative values.</strong>  "The last Monday of the month" (<code>byday</code> with a
+  direction) and "the last day of the month" (<code>bymonthday -1</code>) have no
+  cron equivalent</li>
+<li><strong>Start and end bounds.</strong>  There is no start anchor, no <code>until</code> date and
+  no occurrence count.  A schedule recurs until it is disabled</li>
+<li><strong>Per-schedule time zones</strong>, day-of-year, week-of-year and set-position</li>
+</ul>
+<p><code>frequency yearly</code> with an <code>interval</code> above 1 ("every other year") is also
+not expressible; the interval is ignored in that case.</p>
+<h2 id="using-a-schedule">Using a Schedule<a class="headerlink" href="#using-a-schedule" title="Permanent link">¶</a></h2>
+<p>A schedule does nothing on its own, it takes effect when a feature
+references it through a leaf of type <code>schedule-ref</code>.  The reference is
+validated, so a schedule cannot be deleted while something still uses it,
+and a typo shows up at commit time instead of at the next occurrence.</p>
+<p>These features consume schedules today:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Configuration path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reboot on a schedule</td>
+<td><code>system scheduled-reboot</code></td>
+</tr>
+<tr>
+<td>Update checks</td>
+<td><code>system software check-update</code></td>
+</tr>
+<tr>
+<td><a href="../upgrade/#unattended-updates">Unattended updates</a></td>
+<td><code>system software unattended-update</code></td>
+</tr>
+</tbody>
+</table>
+<p>The example below reboots the system on the <code>nightly</code> schedule created
+above.  Note that <code>scheduled-reboot</code> has no <code>enabled</code> leaf.  It is active
+as soon as it references a schedule; remove the reference or disable the
+schedule to stop it.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>set system scheduled-reboot schedule nightly</b>
+admin@example:/config/&gt; <b>leave</b>
+</code></pre>
+
+<h2 id="verifying">Verifying<a class="headerlink" href="#verifying" title="Permanent link">¶</a></h2>
+<p>To confirm a schedule took effect, look at the generated crontab from the
+shell.  Active schedules become cron jobs owned by the <code>admin</code> user, and
+the cron daemon runs only while at least one job is active:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:~$<span class="w"> </span>crontab<span class="w"> </span>-l
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># Managed by infix-schedule</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="m">30</span><span class="w"> </span><span class="m">3</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w">  </span>/usr/sbin/reboot
 </code></pre></div>
-<p>from an unpacked <a href="https://github.com/kernelkit/infix/releases">release tarball</a>.  From a built source tree of Infix
-the same functionality is bundled as:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$ make run
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>...
-</code></pre></div>
-<p>To change settings, e.g. networking, RAM, or number of interfaces, use
-<kbd>make run-menuconfig</kbd> from a built source tree.  The same
-functionality is available from a release tarball as the optional <code>-c</code>
-argument: <kbd>./qemu/run.sh -c</kbd> brings up a menuconfig dialog, select
-<code>Exit</code> and save the changes, then start Qemu as usual.</p>
+<p>An empty crontab means nothing is scheduled.  Check that the consuming
+feature is enabled, that it names the schedule correctly, and that the
+schedule itself is enabled.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The <code>-c</code> option requires the <code>kconfig-frontends</code> package, on
-Debian/Ubuntu systems: <kbd>sudo apt install kconfig-frontends</kbd></p>
+<p>The crontab is generated and must not be edited by hand.  It is
+rewritten from the configuration on every change.</p>
 </div>
-<p>The Infix test suite is built around Qemu and <a href="https://github.com/wkz/qeneth">Qeneth</a>, see:</p>
-<ul>
-<li><a href="../testing/">Regression Testing with Infamy</a></li>
-<li><a href="https://github.com/kernelkit/infix/blob/main/test/docker/README.md">Infamy Docker Image</a></li>
-</ul>
-<h2 id="gns3">GNS3<a class="headerlink" href="#gns3" title="Permanent link">¶</a></h2>
-<p>The Infix appliance is available directly from the <a href="https://gns3.com/marketplace/appliances/infix">GNS3 Marketplace</a> --
-release tarballs no longer include a <code>.gns3a</code> file.  To <a href="https://docs.gns3.com/docs/using-gns3/beginners/install-from-marketplace/">install it</a>,
-open GNS3 and go to <strong>File → New Template</strong>, select <em>Install an appliance from
-the GNS3 server</em>, and search for Infix.  When asked for a disk image, click
-<strong>Download</strong> to fetch it directly, or point GNS3 to a <code>.qcow2</code> file downloaded
-from the <a href="https://github.com/kernelkit/infix/releases">releases page</a>.</p>
-<p>Infix is in the "Router" category, it comes with 10 interfaces available by
-default for use as switch ports or routing.</p>
-<p>For a complete walk-through, from installing GNS3 to building and verifying
-your first topology, see the blog post <a href="https://www.kernelkit.org/posts/infix-in-gns3/">Infix in GNS3</a>.</p>
 
 
 
