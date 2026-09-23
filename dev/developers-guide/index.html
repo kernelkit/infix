@@ -531,7 +531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/text-editor.md" class="md-nav__link">
+      <a href="../cli/edit/" class="md-nav__link">
         
   
   
@@ -1198,6 +1198,8 @@
       
         
       
+        
+      
     
     
     
@@ -1365,6 +1367,34 @@
     
   
     SNMP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tftp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TFTP Server
   
 
     
@@ -3386,6 +3416,14 @@ to synchronize your forks as well.  GitHub have a <code>Sync fork</code> button
 in the GUI for your fork for this purpose.  A cronjob on your server
 of choice can do this for you with the <a href="https://cli.github.com/">GitHub CLI tool</a>.</p>
 </div>
+<p>CI on a pull request is controlled with two labels.  With neither, the
+minimal images are built and the default tests run.</p>
+<ul>
+<li><code>ci:main</code> builds the full images and runs the complete test suite</li>
+<li><code>ci:skip</code> builds nothing, for changes that cannot affect the image,
+   e.g. a ChangeLog fixup after another branch landed.  Adding it to an
+   open pull request also stops a build already running</li>
+</ul>
 <div class="footnote">
 <hr>
 <ol>

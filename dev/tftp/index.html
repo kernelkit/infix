@@ -7,13 +7,13 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/dhcp/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/tftp/">
       
       
-        <link rel="prev" href="../discovery/">
+        <link rel="prev" href="../snmp/">
       
       
-        <link rel="next" href="../ntp/">
+        <link rel="next" href="../boot/">
       
       
         
@@ -24,7 +24,7 @@
     
     
       
-        <title>DHCP Server - User's Guide</title>
+        <title>TFTP Server - User's Guide</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#dhcp-server" class="md-skip">
+        <a href="#tftp-server" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              DHCP Server
+              TFTP Server
             
           </span>
         </div>
@@ -1274,37 +1274,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DHCP Server
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../dhcp/" class="md-nav__link">
         
   
   
@@ -1320,92 +1293,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
-      
-        <li class="md-nav__item">
-  <a href="#basic-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#static-host-assignment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Static Host Assignment
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#custom-dhcp-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Custom DHCP Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multiple-subnets" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multiple Subnets
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#network-boot" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Network Boot
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#monitoring" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Monitoring
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1499,10 +1386,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../tftp/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TFTP Server
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1518,6 +1432,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#basic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uploading-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uploading Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-client-directories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Client Directories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network-boot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network Boot
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2450,10 +2439,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#static-host-assignment" class="md-nav__link">
+  <a href="#uploading-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Static Host Assignment
+        Uploading Files
       
     </span>
   </a>
@@ -2461,21 +2450,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#custom-dhcp-options" class="md-nav__link">
+  <a href="#per-client-directories" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Custom DHCP Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multiple-subnets" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multiple Subnets
+        Per-Client Directories
       
     </span>
   </a>
@@ -2572,189 +2550,93 @@
   
 
 
-<h1 id="dhcp-server">DHCP Server<a class="headerlink" href="#dhcp-server" title="Permanent link">¶</a></h1>
-<p>The DHCPv4 server provides automatic IP address assignment and network
-configuration for clients.  It supports address pools, static host
-assignments, and customizable DHCP options.  It also serves as a DNS
-proxy for local subnets and can even forward queries to upstream DNS
-servers<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>When using the CLI, the system automatically enables essential options
-like DNS servers and default gateway based on the system's network
-configuration.  These options can be disabled, changed or overridden,
-at any level: global, subnet, or per-host.</p>
-</div>
-<h2 id="basic-configuration">Basic Configuration<a class="headerlink" href="#basic-configuration" title="Permanent link">¶</a></h2>
-<p>The following example configures a DHCP server for subnet 192.168.2.0/24
-with an address pool:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit dhcp-server subnet 192.168.2.0/24</b>
-admin@example:/config/dhcp-server/…/192.168.2.0/24/&gt; <b>set pool start-address 192.168.2.100 end-address 192.168.2.200</b>
-admin@example:/config/dhcp-server/…/192.168.2.0/24/&gt; <b>leave</b>
-</code></pre>
-
-<p>When setting up the server from the CLI, the system automatically adds a
-few default DHCP options that will be sent to clients: both DNS server
-and default gateway will use the system address on the matching
-interface.</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show running-config</b>
-  "infix-dhcp-server:dhcp-server": {
-    "subnet": [
-      {
-        "subnet": "192.168.2.0/24",
-        "option": [
-          {
-            "id": "dns-server",
-            "address": "auto"
-          },
-          {
-            "id": "router",
-            "address": "auto"
-          }
-        ],
-        "pool": {
-          "start-address": "192.168.2.100",
-          "end-address": "192.168.2.200"
-        }
-      }
-    ]
-  }
-</code></pre>
-
+<h1 id="tftp-server">TFTP Server<a class="headerlink" href="#tftp-server" title="Permanent link">¶</a></h1>
+<p>The TFTP server hands out files to devices on the local network, for
+example a fallback boot image for devices whose own firmware partition
+has failed, or configuration files for IP phones and similar equipment.
+It is read-only, so clients cannot upload files.</p>
+<p>Files are served from a root directory, by default <code>/var/lib/tftpboot</code>.
+This directory is persistent on all supported boards and writable by
+admin users, so files can be placed there from the CLI or a shell.  A
+directory on USB media, e.g., <code>/media/usb/tftp</code>, can be used instead.</p>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
-<p>Remember to set up an interface in this subnet, avoid using addresses
-in the DHCP pool, or reserved for static hosts.  In Class C networks
-the router usually has address <code>.1</code>.  Depending on the use-case, you
-may also want to set up routing.</p>
+<p>Only world-readable files are served.  Files copied with the CLI
+<code>copy</code> command are made world-readable automatically, files copied
+from a shell must be given mode <code>0644</code> or similar.</p>
 </div>
-<h2 id="static-host-assignment">Static Host Assignment<a class="headerlink" href="#static-host-assignment" title="Permanent link">¶</a></h2>
-<p>To reserve specific IP addresses for clients based on their MAC address,
-hostname, or client ID:</p>
-<pre class="cli"><code>admin@example:/config/dhcp-server/…/192.168.2.0/24/&gt; <b>edit host 192.168.2.10</b>
-admin@example:/config/dhcp-server/…/192.168.2.10/&gt; <b>set match mac-address 00:11:22:33:44:55</b>
-admin@example:/config/dhcp-server/…/192.168.2.10/&gt; <b>set hostname printer</b>
-admin@example:/config/dhcp-server/…/192.168.2.10/&gt; <b>leave</b>
-</code></pre>
-
-<p>Match hosts using a client identifier instead of MAC address:</p>
-<pre class="cli"><code>admin@example:/config/dhcp-server/…/192.168.1.0/24/&gt; <b>edit host 192.168.1.50</b>
-admin@example:/config/dhcp-server/…/192.168.1.50/&gt; <b>edit match</b>
-admin@example:/config/dhcp-server/…/match/&gt; <b>set client-id hex c0:ff:ee</b>
-admin@example:/config/dhcp-server/…/match/&gt; <b>leave</b>
-admin@example:/config/dhcp-server/…/192.168.1.50/&gt; <b>set lease-time infinite</b>
-admin@example:/config/dhcp-server/…/192.168.1.50/&gt; <b>leave</b>
-</code></pre>
-
-<p>The <code>hex</code> prefix here ensures matching of client ID is done using the
-hexadecimal octets <code>c0:ff:ee</code>, three bytes.  Without the prefix the
-ASCII string "c0:ff:ee", eight bytes, is used.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The DHCP server is fully RFC conformant, in the case of option 61 this
-means that using the <code>hex</code> prefix will require the client to set the
-<code>htype</code> field of the option to <code>00</code>.  See RFC 2132 for details.</p>
-</div>
-<h2 id="custom-dhcp-options">Custom DHCP Options<a class="headerlink" href="#custom-dhcp-options" title="Permanent link">¶</a></h2>
-<p>Configure additional DHCP options globally, per subnet, or per host:</p>
-<pre class="cli"><code>admin@example:/config/dhcp-server/&gt; <b>edit subnet 192.168.2.0/24</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; <b>edit option dns-server</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/dns-server/&gt; <b>set address 8.8.8.8</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/dns-server/&gt; <b>leave</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; <b>edit option ntp-server</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/ntp-server/&gt; <b>set address 192.168.2.1</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/option/ntp-server/&gt; <b>leave</b>
-</code></pre>
-
-<p>When configuring, e.g., <code>dns-server</code>, or <code>router</code> options with the value
-<code>auto</code>, the system uses the IP address from the interface matching the
-subnet.  For example:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show interface</b>
-<span class="header">INTERFACE       PROTOCOL      STATE       DATA                                    </span>
-eth0            ethernet      UP          02:00:00:00:00:00
-                ipv4                   192.168.1.1/24 (static)
-eth1            ethernet      UP          02:00:00:00:00:01
-                ipv4                   192.168.2.1/24 (static)
-
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/&gt; <b>edit option dns-server</b>
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/&gt; <b>set address auto</b>
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/&gt; <b>leave</b>
-</code></pre>
-
-<p>In this case, clients in subnet 192.168.1.0/24 will receive 192.168.1.1
-as their DNS server address.</p>
-<h2 id="multiple-subnets">Multiple Subnets<a class="headerlink" href="#multiple-subnets" title="Permanent link">¶</a></h2>
-<p>Configure DHCP for multiple networks:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit dhcp-server</b>
-admin@example:/config/dhcp-server/&gt; <b>edit subnet 192.168.1.0/24</b>
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/&gt; <b>set pool start-address 192.168.1.100 end-address 192.168.1.200</b>
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/&gt; <b>leave</b>
-admin@example:/config/dhcp-server/&gt; <b>edit subnet 192.168.2.0/24</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; <b>set pool start-address 192.168.2.100 end-address 192.168.2.200</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; <b>leave</b>
-</code></pre>
-
-<h2 id="network-boot">Network Boot<a class="headerlink" href="#network-boot" title="Permanent link">¶</a></h2>
-<p>Devices that boot over the network, or fall back to it when their own
-firmware is damaged, learn the name of the boot file and the address of
-the TFTP server from the DHCP server.  These are set with <code>boot</code>, which
-can be given globally, per subnet, or per static host.  The most
-specific scope wins.</p>
-<pre class="cli"><code>admin@example:/config/dhcp-server/&gt; <b>edit subnet 192.168.2.0/24</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; <b>set boot file fallback.itb</b>
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; <b>leave</b>
-</code></pre>
-
-<p>By default the server address handed out is the system's own address
-on the interface facing the client, matching the built-in
-<a href="../tftp/">TFTP server</a>.  Set <code>boot server-address</code> to point clients at
-another server instead.</p>
-<p>The boot file and server address are sent both in the BOOTP header
-fields, which BOOTP clients, bootloaders like U-Boot, and PXE ROMs read,
-and as DHCP options 66 and 67 to clients that request them.  The two
-options cannot be set in the <code>option</code> list when <code>boot</code> is used.</p>
 <div class="admonition warning">
 <p class="admonition-title">Caution</p>
-<p>Boot files are handed out over TFTP, which has no authentication.
-Anything below the server root can be read by any client, see
-<a href="../tftp/">TFTP Server</a>.</p>
+<p>TFTP has no authentication.  Every file below the root can be read by
+any client that reaches the server, so never keep a saved system
+configuration there -- it carries password hashes, keys, and other
+secrets.  Limit the server to the interfaces facing the clients.</p>
 </div>
-<p>To hand a single device a different image, e.g., during a staged
-rollout, set <code>boot</code> on its static host entry:</p>
-<pre class="cli"><code>admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; <b>edit host 192.168.2.10</b>
-admin@example:/config/dhcp-server/…/192.168.2.10/&gt; <b>set match mac-address 00:11:22:33:44:55</b>
-admin@example:/config/dhcp-server/…/192.168.2.10/&gt; <b>set boot file staging.itb</b>
-admin@example:/config/dhcp-server/…/192.168.2.10/&gt; <b>leave</b>
+<h2 id="basic-configuration">Basic Configuration<a class="headerlink" href="#basic-configuration" title="Permanent link">¶</a></h2>
+<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>set tftp enabled true</b>
+admin@example:/config/&gt; <b>leave</b>
 </code></pre>
 
+<p>The server listens on all interfaces by default.  To restrict it to a
+subset, list the interfaces to serve on:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit tftp</b>
+admin@example:/config/tftp/&gt; <b>set interface eth1</b>
+admin@example:/config/tftp/&gt; <b>set interface eth2</b>
+admin@example:/config/tftp/&gt; <b>leave</b>
+</code></pre>
+
+<p>When the firewall is enabled, the <code>tftp</code> service must also be allowed
+in the zone facing the clients, see <a href="../firewall/">Firewall</a>.</p>
+<h2 id="uploading-files">Uploading Files<a class="headerlink" href="#uploading-files" title="Permanent link">¶</a></h2>
+<p>Files can be fetched to the TFTP root with the <code>copy</code> command from any
+of the supported remote sources, or copied from USB media.  A directory
+destination keeps the source file name:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>copy tftp://192.168.1.1/fallback.itb /var/lib/tftpboot/</b>
+admin@example:/&gt; <b>copy /media/usb/phones.cfg /var/lib/tftpboot/</b>
+admin@example:/&gt; <b>dir /var/lib/tftpboot</b>
+/var/lib/tftpboot directory
+fallback.itb   phones.cfg
+</code></pre>
+
+<p>Files are removed with the <code>remove</code> command, which asks for
+confirmation:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>remove /var/lib/tftpboot/phones.cfg</b>
+Remove /var/lib/tftpboot/phones.cfg, are you sure? (y/N)? y
+</code></pre>
+
+<h2 id="per-client-directories">Per-Client Directories<a class="headerlink" href="#per-client-directories" title="Permanent link">¶</a></h2>
+<p>Some devices, IP phones in particular, expect a configuration file with
+a fixed name that differs per device.  With <code>client-directory</code> set, the
+server first looks for the requested file in a subdirectory of the root
+named after the client, and falls back to the root itself if there is
+none:</p>
+<pre class="cli"><code>admin@example:/config/tftp/&gt; <b>set client-directory mac</b>
+</code></pre>
+
+<p>With this setting a request for <code>config.xml</code> from the device with MAC
+address <code>00:11:22:33:44:55</code> is answered with
+<code>/var/lib/tftpboot/00-11-22-33-44-55/config.xml</code> if that file exists,
+otherwise with <code>/var/lib/tftpboot/config.xml</code>.  Use <code>ip</code> instead of
+<code>mac</code> to name the directories after the client IP address.</p>
+<h2 id="network-boot">Network Boot<a class="headerlink" href="#network-boot" title="Permanent link">¶</a></h2>
+<p>Devices that boot over the network learn the boot file name and TFTP
+server address from the DHCP server.  See <a href="../dhcp/#network-boot">Network Boot</a>
+in the DHCP server documentation for how to hand these out.</p>
 <h2 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">¶</a></h2>
-<p>View active leases and server statistics:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>show dhcp-server</b>
-<span class="header">IP ADDRESS       MAC                HOSTNAME            CLIENT ID             EXPIRES</span>
-192.168.2.22     00:a0:85:00:02:05                      00:c0:ff:ee           3591s
-192.168.1.11     00:a0:85:00:04:06  foo                 01:00:a0:85:00:04:06  3591s
+<pre class="cli"><code>admin@example:/&gt; <b>show tftp</b>
+Root directory   : /var/lib/tftpboot
+Interfaces       : all
+Client directory : none
 
-admin@example:/&gt; <b>show dhcp-server statistics</b>
-DHCP offers sent                : 6
-DHCP ACK messages sent          : 5
-DHCP NAK messages sent          : 0
-DHCP decline messages received  : 0
-DHCP discover messages received : 6
-DHCP request messages received  : 5
-DHCP release messages received  : 6
-DHCP inform messages received   : 6
+<span class="header">NAME          SIZE  MODIFIED        </span>
+fallback.itb  7.0M  2026-09-18 05:18
+phones.cfg    812B  2026-09-17 12:00
 </code></pre>
 
-<div class="footnote">
-<hr>
-<ol>
-<li id="fn:1">
-<p>This requires the system DNS resolver to be configured.&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
-</li>
-</ol>
-</div>
+<p>The file list is the operational view of the root directory and shows
+only files the server can actually hand out.  A file missing from the
+list is either not world-readable or outside the configured root.</p>
 
 
 
