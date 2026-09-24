@@ -1,0 +1,104 @@
+From e3d6bfe1046b82a3cfaa01937a48e760e6bccbf6 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 20 Sep 2026 12:22:43 +0200
+Subject: [PATCH 72/73] arm64: dts: microchip: tactical-1000: adapt to 6.18
+
+Novarq develop against 7.3, which has three things 6.18 does not: a QSPI
+controller node, a tmon that also provides the fan PWM, and hence a SoC
+fan for the thermal zone to drive.
+
+Drop the flash node, leave tmon with only its pinctrl the way the
+EV23X71A does, and point the cooling maps at the case fan instead.  That
+one is a plain gpio-fan and works here, but it has only two states, so
+the graduated trips collapse into one.  The critical trip stays.
+
+Revert when the base kernel moves to 7.3 or later.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../dts/microchip/lan9696-tactical-1000.dts   | 43 +------------------
+ 1 file changed, 1 insertion(+), 42 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/microchip/lan9696-tactical-1000.dts b/arch/arm64/boot/dts/microchip/lan9696-tactical-1000.dts
+index e7e4654af98f..bd6953fc9d4a 100644
+--- a/arch/arm64/boot/dts/microchip/lan9696-tactical-1000.dts
++++ b/arch/arm64/boot/dts/microchip/lan9696-tactical-1000.dts
+@@ -5,7 +5,6 @@
+ #include <dt-bindings/gpio/gpio.h>
+ #include <dt-bindings/input/input.h>
+ #include <dt-bindings/leds/common.h>
+-#include <dt-bindings/pwm/pwm.h>
+ #include "lan9691.dtsi"
+ 
+ / {
+@@ -233,17 +232,7 @@ fan_low_trip: fan-low-trip {
+ 					type = "active";
+ 				};
+ 
+-				fan_mid_trip: fan-mid-trip {
+-					temperature = <70000>;
+-					hysteresis = <5000>;
+-					type = "active";
+-				};
+ 
+-				fan_high_trip: fan-high-trip {
+-					temperature = <80000>;
+-					hysteresis = <5000>;
+-					type = "active";
+-				};
+ 
+ 				critical_trip: critical-trip {
+ 					temperature = <105000>;
+@@ -255,17 +244,7 @@ critical_trip: critical-trip {
+ 			cooling-maps {
+ 				map0 {
+ 					trip = <&fan_low_trip>;
+-					cooling-device = <&soc_fan 1 1>;
+-				};
+-
+-				map1 {
+-					trip = <&fan_mid_trip>;
+-					cooling-device = <&soc_fan 2 2>;
+-				};
+-
+-				map2 {
+-					trip = <&fan_high_trip>;
+-					cooling-device = <&soc_fan 3 3>;
++					cooling-device = <&case_fan 1 1>;
+ 				};
+ 			};
+ 		};
+@@ -570,20 +549,6 @@ phy27: phy@27 {
+ 	};
+ };
+ 
+-&qspi0 {
+-	status = "okay";
+-
+-	flash@0 {
+-		compatible = "jedec,spi-nor";
+-		reg = <0>;
+-		spi-max-frequency = <104000000>;
+-		#address-cells = <1>;
+-		#size-cells = <1>;
+-		spi-tx-bus-width = <1>;
+-		spi-rx-bus-width = <4>;
+-		m25p,fast-read;
+-	};
+-};
+ 
+ &sdmmc0 {
+ 	pinctrl-0 = <&emmc_sd_pins>;
+@@ -894,12 +859,6 @@ port29: port@29 {
+ &tmon {
+ 	pinctrl-0 = <&fan_pins>;
+ 	pinctrl-names = "default";
+-
+-	soc_fan: fan {
+-		pwms = <&tmon 40000 PWM_POLARITY_INVERTED>;
+-		cooling-levels = <0 128 192 255>;
+-		#cooling-cells = <2>;
+-	};
+ };
+ 
+ &usart0 {
