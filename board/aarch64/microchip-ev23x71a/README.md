@@ -52,9 +52,8 @@ up DDR and loads BL31 and U-Boot as BL33.
 > [!NOTE]
 > The vendor U-Boot has neither `blkmap`, SquashFS support nor `sysboot`, so
 > it cannot map a signed `rootfs.itb` and read `/boot/syslinux/*.conf` out of
-> it, which is how Infix boots.  It is possible to [Netboot](#netboot) from
-> it, though we recommend going for the adapted [Bootloader](#bootloader) to
-> be able to boot properly from eMMC.
+> it, which is how Infix boots.  [Netboot](#netboot) works from it, but
+> booting properly from eMMC needs the adapted [Bootloader](#bootloader).
 
 ## Boot Mode Strapping
 
@@ -148,8 +147,8 @@ see [`ERRATA.md`][5] in the Microchip Trusted Firmware tree.
 
 ## Installing
 
-The bootloader and the Linux image are separate builds, combined into one eMMC
-image using the `mkimage.sh` script:
+The bootloader and the Linux image are separate builds, combined into one
+eMMC image with `mkimage.sh`:
 
 ```bash
 make laguna_boot_defconfig O=x-boot-laguna && make O=x-boot-laguna
@@ -210,8 +209,8 @@ environment, so it is only there when booting the NOR image.
 
 ## Netboot
 
-Once the Infix U-Boot is in place, netbooting needs no script at all: hand out
-a `rootfs.itb` as the DHCP boot file and `ixprepdhcp` fetches, validates, and
+With the Infix U-Boot in place netbooting needs no script: hand out a
+`rootfs.itb` as the DHCP boot file and `ixprepdhcp` fetches, validates, and
 boots it, see the [netboot HowTo][1].
 
 The recipe below is for boards still running the vendor U-Boot, before our FIP
@@ -284,10 +283,18 @@ build, flash, and boot cycle.
 ## Switch Core
 
 The board reports part `0x969b` revision 0, a LAN9696RED (lan969x-60-RED).
-The driver reads `GCB_CHIP_ID` at probe but never prints it, so read it out:
+The driver reads `GCB_CHIP_ID` at probe but never prints it, so read it out.
+
+From Linux:
 
 ```
-devmem 0xe2010000 32
+$ devmem 0xe2010000 32
+```
+
+or from U-Boot:
+
+```
+m => md.l 0xe2010000 1
 ```
 
 Bits 27:12 hold the part, 31:28 the revision.  Which part it is decides what
@@ -320,11 +327,14 @@ without either.
 | `0x0556` | SparX-5-160i | Industrial  | yes           |
 | `0x0558` | SparX-5-200i | Industrial  | yes           |
 
+`0x9697` is a LAN9696TSN, the [Novarq Tactical
+1000](../novarq-tactical-1000/README.md).
+
 The register is the same on SparX-5, only the address differs, since
 `TARGET_GCB` sits elsewhere in that family's register map:
 
 ```
-devmem 0x611010000 32
+$ devmem 0x611010000 32
 ```
 
 The RED in the part number is hardware HSR/PRP RedBox support.
@@ -332,9 +342,8 @@ The RED in the part number is hardware HSR/PRP RedBox support.
 ## Interfaces
 
 The sparx5 driver leaves naming to the kernel, which hands out `eth0` and up
-in probe order, this makes it off-by-one from the numbering in the official
-documentation.  The product specific `90-ev23x71a-rename-ifaces.rules` renames
-them to the usual interface names:
+in probe order, one off from the numbering in the official documentation.  The
+product specific `90-ev23x71a-rename-ifaces.rules` renames them:
 
 | **Device tree**    | **Interface**  | **Port**            |
 |--------------------|----------------|---------------------|
@@ -342,10 +351,8 @@ them to the usual interface names:
 | `port@24..port@27` | `e25` .. `e28` | 10G SFP+            |
 | `port@29`          | `e29`          | 1G RGMII management |
 
-Attaching 29 PHYs takes the driver a good half second each, far longer than
-the ten seconds `hw-wait` waits for slow devices by default.  The product
-therefore raises it in `/etc/default/hw-wait`, so that services which expect
-the ports to exist do not start ahead of them.
+Attaching 29 PHYs takes about half a second each, far longer than `hw-wait`'s
+ten second default, so the product raises it in `/etc/default/hw-wait`.
 
 ## LEDs
 
@@ -385,7 +392,7 @@ state there:
 Reading `is2_0` after a `tc filter add` shows what the classifier actually
 programmed, which is the quickest way to separate an unsupported match from a
 broken one.  The per port files show which key sets each lookup is configured
-for, which is what decides whether a rule can match on a given port at all.
+for, which decides whether a rule can match on that port at all.
 
 Every port netdev links to its device tree node, so they can be mapped back to
 switch ports whatever order they probed in:
