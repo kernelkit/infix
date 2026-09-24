@@ -67,6 +67,89 @@ has been applied, 5 Hz for a fail-safe boot or a panic.  The green SFP LEDs
 have the netdev trigger, bound to `e25` through `e28`.  The yellow ones are
 unused.
 
+## Netboot
+
+The stock bootloader supports netbooting but not SquashFS, so this board
+builds `boot.itb`: kernel, rootfs, and every device tree in the
+build, one configuration each.  `#boot` is this board.  For the DHCP and
+TFTP server, see the [netboot HowTo](../../../doc/netboot.md).
+
+```
+setenv autoload no
+dhcp
+setenv serverip <your-tftp-server>
+
+setenv fdt_high 0xffffffffffffffff
+setenv initrd_high 0xffffffffffffffff
+
+tftp 0x70000000 boot.itb
+fdt addr 0x70000000
+fdt get value rdsz /images/rootfs data-size
+setexpr rdkb ${rdsz} / 0x400
+setenv bootargs "console=ttyAT0,115200 root=/dev/ram0 ro brd.rd_size=0x${rdkb} rauc.slot=net loglevel=4 usbcore.authorized_default=2"
+
+bootm 0x70000000#boot
+```
+
+`brd.rd_size` is the SquashFS size in KiB.  `fdt_high` and `initrd_high`
+need all 64 bits set, the shipped environment has a 32-bit `fdt_high`.
+
+### Unattended
+
+The `boot.scr` script runs the same steps.  With the TFTP server on another
+host than the DHCP server, name it in `bootcmd`:
+
+```
+setenv boot_net 'setenv autoload no; dhcp; setenv serverip <your-tftp-server>; setenv bootfile boot.scr; tftp ${loadaddr} ${bootfile}; source ${loadaddr}'
+setenv bootcmd 'run boot_net'
+saveenv
+```
+
+With the DHCP server also serving TFTP, `serverip` and `bootfile` come with
+the lease and `dhcp` fetches the script by itself:
+
+```
+setenv bootcmd 'dhcp; source ${loadaddr}'
+saveenv
+```
+
+Here with dnsmasq:
+
+```
+enable-tftp
+tftp-root=/srv/ftp
+dhcp-boot=boot.scr
+```
+
+The image name is `${bootfile}` with `.scr` replaced by `.itb`.  If the fetch
+fails the board resets after five seconds.
+
+### Separate Artifacts
+
+For trying a kernel or device tree without rebuilding the image:
+
+```
+setenv autoload no
+dhcp
+setenv serverip <your-tftp-server>
+
+tftp 0x60000000 Image
+tftp 0x6f000000 lan9696-tactical-1000.dtb
+tftp 0x78000000 rootfs.itb
+
+setenv fdt_high 0xffffffffffffffff
+setenv initrd_high 0xffffffffffffffff
+setexpr rdkb ${filesize} / 0x400
+setenv bootargs "console=ttyAT0,115200 root=/dev/ram0 ro brd.rd_size=0x${rdkb} rauc.slot=net loglevel=4 usbcore.authorized_default=2"
+booti 0x60000000 0x78000000#verity 0x6f000000
+```
+
+- fetch `rootfs.itb` last, `${filesize}` is the last transfer
+- name the `verity` configuration, `MULTI_DTB_FIT` ignores `default`
+- pass `rootfs.itb`, not the bare SquashFS, there is no `SUPPORT_RAW_INITRD`
+
+DRAM starts at `0x60000000`.
+
 [0]: https://novarq.com/pages/tactical-1000
 [1]: https://github.com/microchip-ung/arm-trusted-firmware/releases/latest
 [2]: https://github.com/novarq/linux
