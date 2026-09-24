@@ -19,6 +19,13 @@ endef
 FRR_POST_BUILD_HOOKS += FRR_POST_BUILD_HOOK
 
 #
+# The SNMP agent is read-only, see doc/snmp.md.  Drop SET support from
+# the build rather than leave it to the generated VACM configuration to
+# withhold, so a mistake there cannot become a writable agent.
+#
+NETSNMP_CONF_OPTS += --enable-read-only
+
+#
 # External pre-built toolchains do not carry their own license.
 #
 # The Bootlin toolchains used by Infix are built from Buildroot and

@@ -31,6 +31,36 @@ module infix-snmp {
     reference "internal";
   }
 
+  /*
+   * The agent is configured by generating snmpd.conf, which is line
+   * oriented, so a line break in any of these would start a directive
+   * of the operator's choosing.  Derive from the original types so the
+   * lengths RFC 7407 gives them still apply.
+   */
+  deviation "/snmp:snmp/snmp:community/snmp:index" {
+    deviate replace {
+      type snmp:identifier {
+        pattern '[^\n\r]*';
+      }
+    }
+  }
+
+  deviation "/snmp:snmp/snmp:community/snmp:security-name" {
+    deviate replace {
+      type snmp:security-name {
+        pattern '[^\n\r]*';
+      }
+    }
+  }
+
+  deviation "/snmp:snmp/snmp:community/snmp:name/snmp:text-name/snmp:text-name" {
+    deviate replace {
+      type string {
+        pattern '[^\n\r]*';
+      }
+    }
+  }
+
   deviation "/snmp:snmp/snmp:vacm" {
     deviate not-supported;
     description "Access control is not view-based here.  Every configured
