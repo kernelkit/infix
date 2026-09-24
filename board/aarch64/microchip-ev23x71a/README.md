@@ -118,12 +118,6 @@ build needs mbed TLS to parse X.509 in BL1 and BL2.  That comes from the
 `mbedtls-atf` package, pinned to the 2.28 series ATF 2.8 builds against, since
 Buildroot's `mbedtls` tracks 3.x.
 
-This defconfig builds the `mchp_lan969x_defconfig` plus local fragments, which
-add `blkmap`, SquashFS, `sysboot`, and the signed image validation the Infix
-boot flow needs, and pin the control device tree to this board.  The board
-environment, `lan969x-env.dtsi`, sets the load addresses and names the kernel
-device tree to pick out of the SquashFS.
-
 Two build variables are not obvious.  `KEY_ALG=ecdsa`, because the LAN969x
 crypto driver is built around the Silex ECDSA engine and will not compile
 against an mbed TLS configured for RSA only.  And `GENERATE_COT=1`, because
