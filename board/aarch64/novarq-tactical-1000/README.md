@@ -1,0 +1,74 @@
+# Novarq Tactical-1000
+
+<a href="https://novarq.com/pages/tactical-1000">
+<img src="novarq-board-details.webp" alt="The board" align="right" width=370>
+</a>
+
+A 28-port switch built on the Microchip LAN969x (Laguna) family, a cut down
+version of the EV23X71A (EVB) reference design.  See [Tactical-1000][0].
+
+| **Property** | **Value**                                |
+|--------------|------------------------------------------|
+| SoC          | LAN9696TSN, ARM Cortex-A53 single-core   |
+| Memory       | 2 GiB DDR4 @ 2400 MHz, ECC disabled      |
+| Storage      | eMMC on SDMMC0, QSPI NOR                 |
+| Switch       | 24 x GbE copper, 4 x SFP+, 1 x RGMII NPI |
+| Console      | `ttyAT0`, 115200 8N1                     |
+
+The chip reports `0x9697` in `GCB_CHIP_ID`, a LAN9696TSN.  The [EV23X71A][3]
+is a `0x969b`, a LAN9696RED.
+
+## Boot Mode
+
+Unlike the EVB, which has a DIP switch for VCORE[3:0], this board is strapped
+to 0000 (eMMC boot) with jumper resistors.  The footprint for a DIP switch is
+there, next to the SoC, so the only way back from a FIP that does not load is
+with a soldering iron and a good set of eyes.  See the [EVB][4] for details
+how to activate the TF-A monitor on Flexcom0, then you can launch the
+[`fwu-lan969x_a0-release.html`][1] tool.
+
+## Device Tree
+
+Cherry-picked from [Novarq's kernel tree][2].  One commit adapts it to
+6.18 and is to be reverted on the next LTS kernel, it drops:
+
+- the `&qspi0` flash node
+- the `tmon` fan PWM
+- the cooling maps for that fan, the `gpio-fan` gets one trip
+
+## Interfaces
+
+The copper ports run **backwards within each QSGMII quad**: `port@0` is `lan4`,
+`port@3` is `lan1`, `port@4` is `lan8`, and so on in fours.  The SFP and
+management ports are in order.
+
+| **Device tree**        | **Interface**                                 | **Port**            |
+|------------------------|-----------------------------------------------|---------------------|
+| `port@0` .. `port@23`  | `e4`,`e3`,`e2`,`e1`, `e8`,`e7`,`e6`,`e5`, ... | 1G copper, QSGMII   |
+| `port@24` .. `port@27` | `e25` .. `e28`                                | 10G SFP+            |
+| `port@29`              | `e29`                                         | 1G RGMII management |
+
+`90-tactical-1000-rename-ifaces.rules` matches on `OF_FULLNAME`, so `e1` is
+the port marked 1 on the front panel.
+
+## LEDs
+
+One software controlled status LED, and a green and yellow pair per SFP cage,
+driven over SGPIO:
+
+```
+green:status                     front panel status
+green:lan-0 .. green:lan-3       SFP1 .. SFP4, green
+yellow:lan-0 .. yellow:lan-3     SFP1 .. SFP4, yellow
+```
+
+`green:status` blinks at 1 Hz while booting, steady once `startup-config`
+has been applied, 5 Hz for a fail-safe boot or a panic.  The green SFP LEDs
+have the netdev trigger, bound to `e25` through `e28`.  The yellow ones are
+unused.
+
+[0]: https://novarq.com/pages/tactical-1000
+[1]: https://github.com/microchip-ung/arm-trusted-firmware/releases/latest
+[2]: https://github.com/novarq/linux
+[3]: ../microchip-ev23x71a/README.md
+[4]: https://github.com/kernelkit/infix/tree/main/board/aarch64/microchip-ev23x71a#boot-mode-strapping

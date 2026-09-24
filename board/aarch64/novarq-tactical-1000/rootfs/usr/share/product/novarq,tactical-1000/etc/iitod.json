@@ -1,0 +1,65 @@
+{
+    "input": {
+	"path": {
+	    "locate":    { "path": "/run/led/locate" },
+
+	    "startup":   { "path": "/run/finit/cond/usr/startup-config-ok" },
+	    "fail-safe": { "path": "/run/finit/cond/usr/failure-config-ok" },
+	    "panic":     { "path": "/run/finit/cond/usr/failure-config-error" }
+	}
+    },
+
+    "output": {
+	"led": {
+	    "green:status": {
+		"rules": [
+		    { "if": "locate",    "then": "@blink-1hz" },
+		    { "if": "panic",     "then": "@blink-5hz" },
+		    { "if": "fail-safe", "then": "@blink-5hz" },
+		    { "if": "startup",   "then": "@on" },
+		    { "if": "true",      "then": "@blink-1hz" }
+		]
+	    },
+
+	    "green:lan-0": {
+		"rules": [
+		    { "if": "true", "then": { "trigger": "netdev", "device_name": "e25", "link": 1, "rx": 1, "tx": 1 } }
+		]
+	    },
+	    "green:lan-1": {
+		"rules": [
+		    { "if": "true", "then": { "trigger": "netdev", "device_name": "e26", "link": 1, "rx": 1, "tx": 1 } }
+		]
+	    },
+	    "green:lan-2": {
+		"rules": [
+		    { "if": "true", "then": { "trigger": "netdev", "device_name": "e27", "link": 1, "rx": 1, "tx": 1 } }
+		]
+	    },
+	    "green:lan-3": {
+		"rules": [
+		    { "if": "true", "then": { "trigger": "netdev", "device_name": "e28", "link": 1, "rx": 1, "tx": 1 } }
+		]
+	    }
+	}
+    },
+
+    "aliases": {
+	"on": {
+	    "brightness": true
+	},
+	"off": {
+	    "brightness": false
+	},
+	"blink-1hz": {
+	    "trigger": "timer",
+	    "delay_on": 500,
+	    "delay_off": 500
+	},
+	"blink-5hz": {
+	    "trigger": "timer",
+	    "delay_on": 100,
+	    "delay_off": 100
+	}
+    }
+}
