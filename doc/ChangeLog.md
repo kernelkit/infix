@@ -100,6 +100,9 @@ All notable changes to the project are documented in this file.
   release feed on a schedule and install a newer release to the inactive
   partition on its own, then either reboot to activate it or leave it staged for
   the next reboot
+- Add Novarq Tactical 1000 (Laguna) support: LAN9696 switch with 24 GbE
+  copper ports, four SFP+ cages, and a management port.  Infix bootloader
+  in eMMC, the OS netboots; no eMMC image of the OS yet
 
 ### Fixes
 

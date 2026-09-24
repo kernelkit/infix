@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Infix OS device tree for Novarq Tactical 1000 (Laguna)
+ */
+
+#include <arm64/microchip/lan9696-tactical-1000.dts>
+#include "infix.dtsi"

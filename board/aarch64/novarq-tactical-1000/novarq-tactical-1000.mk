@@ -1,0 +1,47 @@
+# Novarq Tactical 1000 (Laguna) kernel configuration fixups
+define NOVARQ_TACTICAL_1000_LINUX_CONFIG_FIXUPS
+	# LAN969x SoC
+	$(call KCONFIG_ENABLE_OPT,CONFIG_ARCH_LAN969X)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_COMMON_CLK_LAN966X)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_PINCTRL_OCELOT)
+
+	# Serial console (FLEXCOM), ttyAT naming to match the bootloader
+	$(call KCONFIG_ENABLE_OPT,CONFIG_MFD_ATMEL_FLEXCOM)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_SERIAL_ATMEL)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_SERIAL_ATMEL_CONSOLE)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_SERIAL_ATMEL_TTYAT)
+
+	# Switch core, SerDes, and MDIO
+	$(call KCONFIG_ENABLE_OPT,CONFIG_SPARX5_SWITCH)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_LAN969X_SWITCH)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_PHY_SPARX5_SERDES)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_MDIO_MSCC_MIIM)
+	$(call KCONFIG_SET_OPT,CONFIG_MICROSEMI_PHY,m)
+
+	# eMMC
+	$(call KCONFIG_ENABLE_OPT,CONFIG_MMC_SDHCI_PLTFM)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_MMC_SDHCI_OF_AT91)
+
+	# I2C and DMA.  The SFP cages, RTC, and temperature sensor all sit
+	# behind a GPIO controlled mux on i2c3.
+	$(call KCONFIG_ENABLE_OPT,CONFIG_I2C_AT91)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_I2C_MUX_GPIO)
+	$(call KCONFIG_ENABLE_OPT,CONFIG_AT_XDMAC)
+
+	# Watchdog and entropy
+	$(call KCONFIG_ENABLE_OPT,CONFIG_DW_WATCHDOG)
+	$(call KCONFIG_SET_OPT,CONFIG_HW_RANDOM_ATMEL,m)
+
+	# Front panel reset button
+	$(call KCONFIG_ENABLE_OPT,CONFIG_KEYBOARD_GPIO)
+
+	# RTC, temperature sensor, and case fan, none of which the EV23X71A
+	# has.  The hwmon drivers are modules, as on the other boards that
+	# add a fan or sensor driver.
+	$(call KCONFIG_ENABLE_OPT,CONFIG_RTC_DRV_DS1307)
+	$(call KCONFIG_SET_OPT,CONFIG_SENSORS_LM75,m)
+	$(call KCONFIG_SET_OPT,CONFIG_SENSORS_GPIO_FAN,m)
+endef
+
+$(eval $(ix-board))
+$(eval $(generic-package))
