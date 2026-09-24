@@ -216,6 +216,9 @@ get_bootloader_name()
                 echo "sama7g54_ek_sd_boot"
             fi
             ;;
+        novarq-tactical-1000)
+            echo "tactical_boot"
+            ;;
         *)
             err "Unknown bootloader for board: $board"
             return 1

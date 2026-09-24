@@ -62,6 +62,31 @@ The monitor is on the same USB console and takes a FIP from
 [`fwu-lan969x_a0-release.html`][1], so a FIP that hangs is recoverable.
 Full table and persistent defaults in Novarq's [boot modes][6] document.
 
+## Bootloader
+
+Currently board-specific:
+
+```bash
+make tactical_boot_defconfig O=x-boot-tactical && make O=x-boot-tactical
+```
+
+Install to `fip` and leave the vendor FIP in `fip.bak`.  BL1 falls back to
+it if `fip` fails to load, but not if `fip` loads and hangs; for that, see
+[Boot Mode](#boot-mode).
+
+`/usr/libexec/infix/prod/provision-tactical` lays out the eMMC for Infix,
+asking before each step.  Netboot with `init=/bin/sh` appended to `bootargs`
+and run it from there, nothing from the eMMC may be mounted.
+
+The vendor U-Boot saves its environment at `0x10100000` and `0x10300000`,
+the second of which is past the 2 MiB `Env` partition; the script grows
+`Env` to 4 MiB.
+
+```bash
+scp x-boot-tactical/images/fip.bin admin@board:/tmp
+ssh admin@board 'sudo dd if=/tmp/fip.bin of=/dev/mmcblk0p1 conv=fsync'
+```
+
 ## Device Tree
 
 Cherry-picked from [Novarq's kernel tree][2].  One commit adapts it to
