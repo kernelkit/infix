@@ -1,0 +1,29 @@
+=== RIPv2 Passive Interface
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/rip_passive_interface]
+
+==== Description
+
+Verifies RIPv2 passive interface functionality.  A passive interface means
+that RIP will include the interface's network in routing updates but will not
+send or receive RIP updates on that interface.
+
+R1 has two RIPv2-enabled interfaces:
+- data: Passive interface (network advertised but no updates sent/received)
+- link: Active interface (RIP updates exchanged with R2)
+
+R2 should learn about R1's data network from R1 via the link interface, even
+though the data interface is passive.
+
+==== Topology
+
+image::topology.svg[RIPv2 Passive Interface topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUTs
+. Configure targets
+. Wait for RIPv2 to exchange routes
+. Verify connectivity to passive interface network
+
+

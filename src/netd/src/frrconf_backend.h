@@ -7,6 +7,7 @@
 
 int  frrconf_backend_init(void);
 void frrconf_backend_cleanup(void);
-int  frrconf_backend_apply(struct route_head *routes, struct rip_config *rip);
+int  frrconf_backend_apply(struct route_head *routes, struct rip_config *rip,
+			   struct rip_config *ripng);
 
 #endif /* NETD_FRRCONF_BACKEND_H_ */
