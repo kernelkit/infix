@@ -1,0 +1,50 @@
+/*
+ * Laguna board environment, applied on top of the common Infix one and
+ * shared by every LAN969x board.  U-Boot drives the same console, eMMC,
+ * I2C, and GPIO on all of them, so one control device tree serves; only
+ * the Linux device tree differs, and that is picked at boot, see ixboard.
+ *
+ * DRAM starts at 0x60000000 on all of them too, and the addresses mirror
+ * the layout used on other Infix boards: the kernel is staged 64 MiB in,
+ * clear of where booti relocates it to at the start of DRAM.
+ */
+/ {
+	config {
+		/*
+		 * Name the partition holding the environment, rather than
+		 * inheriting the offset from lan969x.dtsi, which points
+		 * into the middle of the Infix layout.
+		 */
+		u-boot,mmc-env-partition = "Env";
+	};
+};
+
+&env {
+	bootcmd = "run ixboard; run ixboot";
+	boot_targets = "mmc0";
+
+	/*
+	 * Which board this is.  The EV23X71A is the default, so a Laguna
+	 * board this knows nothing about boots as one, which is what it
+	 * did before.  The Tactical 1000 is told apart by its part number,
+	 * bits 27:12 of GCB_CHIP_ID: 0x9697 against the eval board's
+	 * 0x969b.  That is the SoC variant rather than the board, and the
+	 * best there is until Novarq give us a real board ID.
+	 */
+	board   = "microchip,ev23x71a";
+	fdtfile = "microchip/lan9696-ev23x71a.dtb";
+	ixboard = "if setexpr.l cid *0xe2010000 && setexpr cid ${cid} / 0x1000 && setexpr cid ${cid} % 0x10000 && test ${cid} = 9697; then setenv board novarq,tactical-1000; setenv fdtfile microchip/lan9696-tactical-1000.dtb; fi";
+
+	loadaddr          = "0x63000000";
+	fdt_addr_r        = "0x63f00000";
+	kernel_addr_r     = "0x64000000";
+	fdtoverlay_addr_r = "0x67f00000";
+	scriptaddr        = "0x68000000";
+	ramdisk_addr_r    = "0x6a000000";
+
+	/* Development boards and test rigs, keep developer mode enabled. */
+	ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+
+	/* No button command built, whether or not the board has one. */
+	ixbtn-factory = "echo Unavailable";
+};
