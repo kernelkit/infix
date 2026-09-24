@@ -29,6 +29,25 @@
 /* Default when /snmp/engine/listen names no port. */
 #define SNMP_PORT "161"
 
+/*
+ * infix-snmp restricts the leaves we own so a line break cannot reach
+ * here, but /system/contact and /system/location belong to ietf-system
+ * and are free text.  Drop anything that would not sit on one line of
+ * snmpd.conf rather than let it add a directive.
+ */
+static int safe(const char *str)
+{
+	if (!str)
+		return 0;
+
+	for (; *str; str++) {
+		if (!isprint((unsigned char)*str))
+			return 0;
+	}
+
+	return 1;
+}
+
 static int is_v6(const char *addr)
 {
 	return strchr(addr, ':') != NULL;
@@ -157,11 +176,13 @@ static const char *community_name(struct lyd_node *community)
 	const char *name = lydx_get_cattr(community, "text-name");
 
 	if (name)
-		return name;
+		return safe(name) ? name : NULL;
 	if (lydx_get_cattr(community, "binary-name"))
 		return NULL;
 
-	return lydx_get_cattr(community, "security-name");
+	name = lydx_get_cattr(community, "security-name");
+
+	return safe(name) ? name : NULL;
 }
 
 /*
@@ -174,7 +195,7 @@ static const char *community_secname(struct lyd_node *snmp, struct lyd_node *com
 	const char *secname = lydx_get_cattr(community, "security-name");
 	const char *tag;
 
-	if (!secname || !community_name(community))
+	if (!safe(secname) || !community_name(community))
 		return NULL;
 
 	tag = lydx_get_cattr(community, "target-tag");
@@ -193,7 +214,7 @@ static void communities(FILE *fp, struct lyd_node *snmp)
 		const char *secname, *name, *tag;
 
 		secname = lydx_get_cattr(community, "security-name");
-		if (!secname)
+		if (!safe(secname))
 			continue;
 
 		name = community_name(community);
@@ -305,10 +326,10 @@ static int generate(struct lyd_node *config, struct lyd_node *snmp)
 	system = lydx_get_xpathf(config, XPATH_SYSTEM_);
 	if (system) {
 		str = lydx_get_cattr(system, "contact");
-		if (str)
+		if (str && safe(str))
 			fprintf(fp, "syscontact %s\n", str);
 		str = lydx_get_cattr(system, "location");
-		if (str)
+		if (str && safe(str))
 			fprintf(fp, "syslocation %s\n", str);
 	}
 
