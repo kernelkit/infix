@@ -27,6 +27,30 @@ with a soldering iron and a good set of eyes.  See the [EVB][4] for details
 how to activate the TF-A monitor on Flexcom0, then you can launch the
 [`fwu-lan969x_a0-release.html`][1] tool.
 
+## Bootloader
+
+Currently board-specific:
+
+```bash
+make tactical_boot_defconfig O=x-boot-tactical && make O=x-boot-tactical
+```
+
+Install to `fip` and leave the vendor FIP in `fip.bak`.  BL1 falls back to
+it if `fip` fails to load, but not if `fip` loads and hangs.
+
+`/usr/libexec/infix/prod/provision-tactical` lays out the eMMC for Infix,
+asking before each step.  Netboot with `init=/bin/sh` appended to `bootargs`
+and run it from there, nothing from the eMMC may be mounted.
+
+The vendor U-Boot saves its environment at `0x10100000` and `0x10300000`,
+the second of which is past the 2 MiB `Env` partition; the script grows
+`Env` to 4 MiB.
+
+```bash
+scp x-boot-tactical/images/fip.bin admin@board:/tmp
+ssh admin@board 'sudo dd if=/tmp/fip.bin of=/dev/mmcblk0p1 conv=fsync'
+```
+
 ## Device Tree
 
 Cherry-picked from [Novarq's kernel tree][2].  One commit adapts it to
