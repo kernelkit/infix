@@ -20,6 +20,12 @@ module infix-syslog {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-syslog, draft 32.";
 
+  revision 2026-09-24 {
+    description "Constrain the character set of the property-filter value
+                 and the select pattern-match.";
+    reference "internal";
+  }
+
   revision 2026-09-15 {
     description "Add log RPC for injecting messages in the system log.";
     reference "internal";
@@ -251,7 +257,9 @@ module infix-syslog {
       }
 
       leaf value {
-        type string;
+        type string {
+          pattern '[a-zA-Z0-9 _.:+*?|^$()\[\]{}/@=,-]+';
+        }
         mandatory true;
         description "The value to compare against.";
       }
@@ -306,6 +314,26 @@ module infix-syslog {
   deviation "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination/syslog:facility-override" {
     description "Not yet supported by underlying daemon.";
     deviate not-supported;
+  }
+
+  deviation "/syslog:syslog/syslog:actions/syslog:file/syslog:log-file/syslog:pattern-match" {
+    description "Restrict the character set, POSIX regular expression
+                 syntax remains available.";
+    deviate replace {
+      type string {
+        pattern '[a-zA-Z0-9 _.:+*?|^$()\[\]{}/@=,-]+';
+      }
+    }
+  }
+
+  deviation "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination/syslog:pattern-match" {
+    description "Restrict the character set, POSIX regular expression
+                 syntax remains available.";
+    deviate replace {
+      type string {
+        pattern '[a-zA-Z0-9 _.:+*?|^$()\[\]{}/@=,-]+';
+      }
+    }
   }
 
   /*
