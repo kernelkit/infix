@@ -103,6 +103,7 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Restrict the allowed characters in a container `command` override
 - Restrict the allowed characters in a hardware component `name`
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
 - WebUI: "Save" in the interface editor and "OK" in Add Interface
