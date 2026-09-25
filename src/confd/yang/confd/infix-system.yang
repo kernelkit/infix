@@ -383,6 +383,7 @@ module infix-system {
   augment "/sys:system" {
     description "Advanced, low-level system customization.";
     container advanced {
+      nacm:default-deny-write;
       description "Advanced system customization, for debugging and development.
 
                    Settings in this container reach below the abstractions of the
