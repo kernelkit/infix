@@ -48,6 +48,13 @@ submodule infix-if-wifi {
      - Security: WPA2/WPA3 with keystore integration
      - Operational state: Connection status, RSSI, client lists";
 
+  revision 2026-09-24 {
+    description
+      "Constrain mesh-id to the SSID character set and nas-identifier
+       to letters, digits, '.', '_' and '-'.";
+    reference "internal";
+  }
+
   revision 2026-07-01 {
     description
       "Add station 'bssid' operational leaf: the BSSID the station is
@@ -527,6 +534,7 @@ submodule infix-if-wifi {
                     }
                     type string {
                       length "1..253";
+                      pattern '[a-zA-Z0-9._-]+';
                     }
                   }
                   default auto;
@@ -697,6 +705,9 @@ submodule infix-if-wifi {
             leaf mesh-id {
               type string {
                 length "1..32";
+                pattern '[^\x00-\x1f\x22\x5c\x7f]*' {
+                  error-message "Mesh ID must not contain control characters, double quotes, or backslashes.";
+                }
               }
               mandatory true;
               description
