@@ -1,0 +1,34 @@
+From 29ef7cb6c8c537065a39ef545778d190b9d8162d Mon Sep 17 00:00:00 2001
+From: Robert Marko <robert.marko@sartura.hr>
+Date: Mon, 2 Mar 2026 12:20:13 +0100
+Subject: [PATCH 73/73] dt-bindings: arm: AT91: document EV23X71A board
+
+Microchip EV23X71A board is an LAN9696 based evaluation board.
+
+Signed-off-by: Robert Marko <robert.marko@sartura.hr>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Reviewed-by: Claudiu Beznea <claudiu.beznea@tuxon.dev>
+Link: https://lore.kernel.org/r/20260302112153.464422-6-robert.marko@sartura.hr
+Signed-off-by: Claudiu Beznea <claudiu.beznea@tuxon.dev>
+(cherry picked from commit 864d5e8436906fd2875cc2c5ada549d805457ca7)
+---
+ Documentation/devicetree/bindings/arm/atmel-at91.yaml | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/atmel-at91.yaml b/Documentation/devicetree/bindings/arm/atmel-at91.yaml
+index 49666e92c04a..b7c37a1cece0 100644
+--- a/Documentation/devicetree/bindings/arm/atmel-at91.yaml
++++ b/Documentation/devicetree/bindings/arm/atmel-at91.yaml
+@@ -241,6 +241,12 @@ properties:
+           - const: microchip,lan9668
+           - const: microchip,lan966
+ 
++      - description: Microchip LAN9696 EV23X71A Evaluation Board
++        items:
++          - const: microchip,ev23x71a
++          - const: microchip,lan9696
++          - const: microchip,lan9691
++
+       - description: Novarq Tactical 1000
+         items:
+           - const: novarq,tactical-1000
