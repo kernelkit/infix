@@ -106,6 +106,7 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Apply syslog configuration changes at runtime, not only after reboot
 - Restrict the allowed characters in keystore key and certificate names
 - Restrict the allowed characters in syslog property-filter value and pattern-match
 - Restrict the allowed characters in DHCP server static-host match values
