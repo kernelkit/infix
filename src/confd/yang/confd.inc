@@ -53,7 +53,7 @@ MODULES=(
 	"infix-crypto-types@2026-02-14.yang"
 	"ietf-keystore -e symmetric-keys"
 	"infix-ntp@2026-06-11.yang"
-	"infix-keystore@2025-12-17.yang"
+	"infix-keystore@2026-09-24.yang"
 	"ieee1588-ptp-tt@2023-08-14.yang -e timestamp-correction"
 	"ieee802-dot1as-gptp@2025-12-10.yang"
 	"infix-ptp@2026-04-07.yang"

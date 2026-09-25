@@ -106,6 +106,7 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Restrict the allowed characters in keystore key and certificate names
 - Restrict the allowed characters in syslog property-filter value and pattern-match
 - Restrict the allowed characters in DHCP server static-host match values
 - Restrict the allowed characters in a hardware component `name`
