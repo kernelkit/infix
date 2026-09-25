@@ -69,6 +69,10 @@ AC_ARG_ENABLE(snmp,
         AS_HELP_STRING([--enable-snmp], [Enable support for the SNMP agent]),,[
 	enable_snmp=no])
 
+AC_ARG_ENABLE(netconf-subsystem,
+        AS_HELP_STRING([--enable-netconf-subsystem], [NETCONF is an OpenSSH subsystem, not netopeer2 with libssh]),,[
+	enable_netconf_subsystem=no])
+
 AC_ARG_WITH(login-shell,
         AS_HELP_STRING([--with-login-shell=shell], [Login shell for new users, default: /bin/false]),
 	[login_shell=$withval], [login_shell=yes])
@@ -97,6 +101,9 @@ AS_IF([test "x$enable_webui" = "xyes"], [
 
 AS_IF([test "x$enable_snmp" = "xyes"], [
         AC_DEFINE(HAVE_SNMP, 1, [Built with SNMP agent support])])
+
+AS_IF([test "x$enable_netconf_subsystem" = "xyes"], [
+        AC_DEFINE(HAVE_NETCONF_SUBSYSTEM, 1, [NETCONF is served by OpenSSH, not netopeer2 with libssh])])
 
 AS_IF([test "x$with_login_shell" != "xno"], [
 	AS_IF([test "x$login_shell" = "xyes"], [login_shell=/bin/false])
@@ -133,6 +140,7 @@ AC_SUBST([EV_LIBS])
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
 AM_CONDITIONAL(SNMP,         [test "x$enable_snmp" != "xno"])
+AM_CONDITIONAL(NETCONF_SUBSYSTEM, [test "x$enable_netconf_subsystem" != "xno"])
 
 # Plugin installation path for sysrepo-plugind
 PKG_CHECK_VAR([srpdplugindir], [sysrepo], [SRPD_PLUGINS_PATH])

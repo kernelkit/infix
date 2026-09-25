@@ -55,8 +55,13 @@ CONFD_CONF_OPTS += --enable-snmp
 else
 CONFD_CONF_OPTS += --disable-snmp
 endif
+ifeq ($(BR2_PACKAGE_LIBNETCONF2_SSH_SUBSYSTEM),y)
+CONFD_CONF_OPTS += --enable-netconf-subsystem
+else
+CONFD_CONF_OPTS += --disable-netconf-subsystem
+endif
 define CONFD_INSTALL_EXTRA
-	for fn in confd.conf crond.conf rcd.conf resolvconf.conf; do \
+	for fn in confd.conf crond.conf netconf.conf rcd.conf resolvconf.conf; do \
 		cp $(CONFD_PKGDIR)/$$fn  $(FINIT_D)/available/; \
 	done
 	for fn in confd.conf rcd.conf resolvconf.conf; do \
@@ -66,6 +71,24 @@ define CONFD_INSTALL_EXTRA
 	mkdir -p $(TARGET_DIR)/etc/avahi/services
 	cp $(CONFD_PKGDIR)/netconf.service $(TARGET_DIR)/etc/avahi/services/
 endef
+
+# NETCONF as an OpenSSH subsystem: sshd runs the libnetconf2 helper, which
+# connects to the UNIX socket netopeer2-server listens on.
+ifeq ($(BR2_PACKAGE_LIBNETCONF2_SSH_SUBSYSTEM),y)
+define CONFD_INSTALL_NETCONF_SUBSYSTEM
+	$(SED) 's|-v 1 \\|-v 1 -U /run/netconf.sock \\|' $(FINIT_D)/available/netconf.conf
+	mkdir -p $(TARGET_DIR)/etc/ssh/sshd_config.d
+	cp $(CONFD_PKGDIR)/sshd-netconf.conf $(TARGET_DIR)/etc/ssh/sshd_config.d/netconf.conf
+endef
+else
+define CONFD_INSTALL_NETCONF_SERVER
+	cp $(CONFD_PKGDIR)/netopeer2.pam $(TARGET_DIR)/etc/pam.d/netopeer2.conf
+endef
+define CONFD_INSTALL_YANG_MODULES_NETCONF_SERVER
+	$(COMMON_SYSREPO_ENV) \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/netconf-server.inc
+endef
+endif
 
 NETOPEER2_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/netopeer2/
 SYSREPO_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/sysrepo/
@@ -151,7 +174,10 @@ endef
 CONFD_PRE_BUILD_HOOKS += CONFD_EMPTY_SYSREPO
 CONFD_PRE_BUILD_HOOKS += CONFD_CLEANUP
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_EXTRA
+CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_NETCONF_SUBSYSTEM
+CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_NETCONF_SERVER
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES
+CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_NETCONF_SERVER
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_CONTAINERS
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_WIFI
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_GPS

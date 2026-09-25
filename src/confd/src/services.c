@@ -49,6 +49,12 @@ static const int have_webui = 1;
 #else
 static const int have_webui = 0;
 #endif
+/* NETCONF is an sshd subsystem, or netopeer2-server has its own SSH transport */
+#ifdef HAVE_NETCONF_SUBSYSTEM
+static const int netconf_subsystem = 1;
+#else
+static const int netconf_subsystem = 0;
+#endif
 
 #define FOREACH_SVC(SVC)			\
         SVC(none)				\
@@ -64,8 +70,12 @@ static const int have_webui = 0;
 #define SSHD_CONFIG_BASE    SSH_BASE "/sshd_config.d"
 #define SSHD_CONFIG_LISTEN  SSHD_CONFIG_BASE "/listen.conf"
 #define SSHD_CONFIG_HOSTKEY SSHD_CONFIG_BASE "/host-keys.conf"
+#define SSHD_CONFIG_NETCONF SSHD_CONFIG_BASE "/zz-netconf.conf"
+#define NETCONF_SUBSYSTEM   "/usr/libexec/libnetconf2/netconf-subsystem"
+#define NETCONF_PORT        830
 #define LLDP_XPATH          "/ieee802-dot1ab-lldp:lldp"
 #define SSH_XPATH           "/infix-services:ssh"
+#define SSH_NETCONF_XPATH   SSH_XPATH "/netconf"
 #define MDNS_XPATH          "/infix-services:mdns"
 #define WEB_XPATH           "/infix-services:web"
 #define WEB_RESTCONF_XPATH  WEB_XPATH"/restconf"
@@ -615,22 +625,29 @@ static int ssh_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 {
 	struct lyd_node *ssh = NULL, *listen, *host_key;
 	sr_error_t rc = SR_ERR_OK;
+	int ssh_ena, nc_ena, sshd_ena, keys = 0, addrs = 0;
 	FILE *fp;
 
 	if (diff && !lydx_get_xpathf(diff, SSH_XPATH))
 		return SR_ERR_OK;
 
+	ssh = lydx_get_xpathf(config, SSH_XPATH);
+	ssh_ena = lydx_is_enabled(ssh, "enabled");
+	nc_ena = lydx_is_enabled(lydx_get_child(ssh, "netconf"), "enabled");
+
+	/* As a subsystem NETCONF keeps sshd running on port 830 without SSH logins */
+	sshd_ena = ssh_ena || (netconf_subsystem && nc_ena);
+
 	switch (event) {
 	case SR_EV_DONE:
-		{
-			struct lyd_node *ssh = lydx_get_xpathf(config, SSH_XPATH);
-			int ssh_ena = lydx_is_enabled(ssh, "enabled");
-
-			if (lydx_get_xpathf(diff, SSH_XPATH "/enabled"))
-				ssh_ena ? finit_enable("sshd") : finit_disable("sshd");
-			else if (ssh_ena)
-				finit_reload("sshd");
+		if (sshd_ena) {
+			finit_enable("sshd");
+			finit_reload("sshd");
+		} else {
+			finit_disable("sshd");
 		}
+		if (lydx_get_xpathf(diff, SSH_NETCONF_XPATH "/enabled"))
+			svc_enable(nc_ena, netconf, NULL);
 		return SR_ERR_OK;
 	case SR_EV_ENABLED:
 	case SR_EV_CHANGE:
@@ -641,9 +658,7 @@ static int ssh_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 		return SR_ERR_OK;
 	}
 
-	ssh = lydx_get_xpathf(config, SSH_XPATH);
-
-	if (!lydx_is_enabled(ssh, "enabled")) {
+	if (!sshd_ena) {
 		goto out;
 	}
 
@@ -653,12 +668,16 @@ static int ssh_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 		goto out;
 	}
 
-	LY_LIST_FOR(lydx_get_child(ssh, "hostkey"), host_key) {
+	LYX_LIST_FOR_EACH(lyd_child(ssh), host_key, "hostkey") {
 		const char *keyname = lyd_get_value(host_key);
 		if (!keyname)
 			continue;
 		fprintf(fp, "HostKey %s/hostkeys/%s\n", SSH_BASE, keyname);
+		keys++;
 	}
+	/* hostkey is only mandatory with SSH logins enabled, NETCONF still needs one */
+	if (!keys)
+		fprintf(fp, "HostKey %s/hostkeys/genkey\n", SSH_BASE);
 
 	fclose(fp);
 
@@ -668,16 +687,54 @@ static int ssh_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 		goto out;
 	}
 
-	LY_LIST_FOR(lydx_get_child(ssh, "listen"), listen) {
+	LYX_LIST_FOR_EACH(lyd_child(ssh), listen, "listen") {
 		const char *address, *port;
-		int ipv6;
+		struct ly_set *same;
+		int ipv6, first;
 
 		address = lydx_get_cattr(listen, "address");
 		ipv6 = !!strchr(address, ':');
 		port = lydx_get_cattr(listen, "port");
 
-		fprintf(fp, "ListenAddress %s%s%s:%s\n", ipv6 ? "[" : "", address, ipv6 ? "]" : "", port);
+		if (ssh_ena)
+			fprintf(fp, "ListenAddress %s%s%s:%s\n", ipv6 ? "[" : "", address, ipv6 ? "]" : "", port);
+		if (!netconf_subsystem || !nc_ena)
+			continue;
+
+		/* NETCONF on port 830 on the same addresses, once per address */
+		same = lydx_find_xpathf(ssh, "listen[address='%s']", address);
+		first = same && same->dnodes[0] == listen;
+		ly_set_free(same, NULL);
+		if (first) {
+			fprintf(fp, "ListenAddress %s%s%s:%d\n", ipv6 ? "[" : "", address, ipv6 ? "]" : "", NETCONF_PORT);
+			addrs++;
+		}
 	}
+	/* Without listen entries sshd would fall back to port 22 on all addresses */
+	if (netconf_subsystem && nc_ena && !addrs)
+		fprintf(fp, "ListenAddress 0.0.0.0:%d\nListenAddress [::]:%d\n", NETCONF_PORT, NETCONF_PORT);
+	fclose(fp);
+
+	/*
+	 * Port 830 is NETCONF only.  A Match block swallows every later
+	 * Include, so this file must sort last in sshd_config.d/.
+	 */
+	if (!netconf_subsystem || !nc_ena) {
+		erase(SSHD_CONFIG_NETCONF);
+		goto out;
+	}
+
+	fp = fopen(SSHD_CONFIG_NETCONF, "w");
+	if (!fp) {
+		rc = SR_ERR_INTERNAL;
+		goto out;
+	}
+
+	fprintf(fp, "Match LocalPort %d\n"
+		"\tForceCommand %s\n"
+		"\tPermitTTY no\n"
+		"\tAllowTcpForwarding no\n"
+		"\tX11Forwarding no\n", NETCONF_PORT, NETCONF_SUBSYSTEM);
 	fclose(fp);
 
 out:
