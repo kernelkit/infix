@@ -1,0 +1,40 @@
+From 2f558a50ec713f78175c43c4af05452f88af413e Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 25 Sep 2026 08:24:40 +0200
+Subject: [PATCH 3/6] session_server: declare the UNIX socket path API without
+ SSH/TLS
+Organization: Wires
+
+With ENABLE_SSH_TLS=OFF these functions are built but their prototypes
+are not, since they sit inside the NC_ENABLED_SSH_TLS block, so a
+server using a UNIX socket endpoint fails to compile.
+
+---
+ src/session_server.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/session_server.h b/src/session_server.h
+index 18f925f..1fddf98 100644
+--- a/src/session_server.h
++++ b/src/session_server.h
+@@ -447,6 +447,8 @@ NC_MSG_TYPE nc_session_accept_ssh_channel(struct nc_session *orig_session, struc
+  */
+ NC_MSG_TYPE nc_ps_accept_ssh_channel(struct nc_pollsession *ps, struct nc_session **session);
+ 
++#endif /* NC_ENABLED_SSH_TLS */
++
+ /**
+  * @brief Set the UNIX socket path for a given endpoint name.
+  *
+@@ -490,6 +492,8 @@ int nc_server_get_unix_socket_dir(char **dir);
+ 
+ /** @} Server Session */
+ 
++#ifdef NC_ENABLED_SSH_TLS
++
+ /**
+  * @defgroup server_ssh Server SSH
+  * @ingroup server
+-- 
+2.43.0
+

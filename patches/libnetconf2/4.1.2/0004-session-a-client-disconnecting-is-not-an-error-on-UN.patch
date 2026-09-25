@@ -1,0 +1,74 @@
+From 81c3b34c9b6059988bbf2688a7db6704fabc59c4 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 25 Sep 2026 08:24:50 +0200
+Subject: [PATCH 4/6] session: a client disconnecting is not an error on UNIX
+ and FD
+Organization: Wires
+
+A client closing its end of the socket is how these sessions normally
+end, yet every one of them was logged as an error.
+
+A plain NC_PSPOLL_SESSION_TERM result also fell through the switch in
+nc_ps_poll_session(), so the session was left busy and the reason for
+its termination was never logged.
+
+---
+ src/io.c             |  4 ++--
+ src/session_server.c | 10 ++++++++--
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/src/io.c b/src/io.c
+index 9d55a0f..80fada3 100644
+--- a/src/io.c
++++ b/src/io.c
+@@ -104,7 +104,7 @@ nc_read(struct nc_session *session, char *buf, uint32_t count, uint32_t inact_ti
+                     return -1;
+                 }
+             } else if (r == 0) {
+-                ERR(session, "Communication file descriptor (%d) unexpectedly closed.", fd);
++                VRB(session, "Communication file descriptor (%d) closed by the other side.", fd);
+                 session->status = NC_STATUS_INVALID;
+                 session->term_reason = NC_SESSION_TERM_DROPPED;
+                 return -1;
+@@ -447,7 +447,7 @@ nc_read_poll(struct nc_session *session, int io_timeout)
+         /* Some poll() implementations may return POLLHUP|POLLIN when the other
+          * side has closed but there is data left to read in the buffer. */
+         if ((fds.revents & POLLHUP) && !(fds.revents & POLLIN)) {
+-            ERR(session, "Communication channel unexpectedly closed.");
++            VRB(session, "Communication channel closed by the other side.");
+             session->status = NC_STATUS_INVALID;
+             session->term_reason = NC_SESSION_TERM_DROPPED;
+             return -1;
+diff --git a/src/session_server.c b/src/session_server.c
+index 710d66c..e010955 100644
+--- a/src/session_server.c
++++ b/src/session_server.c
+@@ -2173,10 +2173,11 @@ nc_ps_poll_session_io(struct nc_session *session, int io_timeout, time_t now_mon
+             ret = NC_PSPOLL_ERROR;
+         } else if (r > 0) {
+             if (pfd.revents & (POLLHUP | POLLNVAL)) {
+-                sprintf(msg, "Communication socket unexpectedly closed");
++                /* the peer closing the socket is how a session normally ends */
++                sprintf(msg, "Communication socket closed by the other side");
+                 session->status = NC_STATUS_INVALID;
+                 session->term_reason = NC_SESSION_TERM_DROPPED;
+-                ret = NC_PSPOLL_SESSION_TERM | NC_PSPOLL_SESSION_ERROR;
++                ret = NC_PSPOLL_SESSION_TERM;
+             } else if (pfd.revents & POLLERR) {
+                 sprintf(msg, "Communication socket error");
+                 session->status = NC_STATUS_INVALID;
+@@ -2236,6 +2237,11 @@ nc_ps_poll_sess(struct nc_ps_session *ps_session, time_t now_mono)
+                 ERR(ps_session->session, "%s.", msg);
+                 ps_session->state = NC_PS_STATE_INVALID;
+                 break;
++            case NC_PSPOLL_SESSION_TERM:
++                /* the peer went away, expected end of a session */
++                VRB(ps_session->session, "%s.", msg);
++                ps_session->state = NC_PS_STATE_INVALID;
++                break;
+             case NC_PSPOLL_ERROR:
+                 ERR(ps_session->session, "%s.", msg);
+                 ps_session->state = NC_PS_STATE_NONE;
+-- 
+2.43.0
+

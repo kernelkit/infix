@@ -1,0 +1,153 @@
+From 542c9765de84e53246f604d807fcde8ee2afcd0c Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 25 Sep 2026 08:25:10 +0200
+Subject: [PATCH 5/6] server: allow a UNIX endpoint without ietf-netconf-server
+Organization: Wires
+
+A server that leaves SSH to the system SSH daemon needs just one UNIX
+socket endpoint.  Endpoints can only be created from ietf-netconf-server
+data though, so such a server still had to load that module, and the
+SSH and TLS modules it depends on, only to describe a single socket.
+
+---
+ src/server_config.c  | 10 +++++++
+ src/session_server.c | 67 ++++++++++++++++++++++++++++++++++++++++++++
+ src/session_server.h | 16 +++++++++++
+ 3 files changed, 93 insertions(+)
+
+diff --git a/src/server_config.c b/src/server_config.c
+index 54c470c..b0dd99c 100644
+--- a/src/server_config.c
++++ b/src/server_config.c
+@@ -4068,6 +4068,11 @@ nc_server_config_netconf_server(const struct lyd_node *tree, int is_diff, struct
+     struct lyd_node *subtree;
+     enum nc_operation initial_op;
+ 
++    /* not loaded by a server that only listens on a UNIX socket */
++    if (!ly_ctx_get_module_implemented(LYD_CTX(tree), "ietf-netconf-server")) {
++        return 0;
++    }
++
+     prev_lo = ly_log_options(0);
+ 
+     /* try to find the netconf-server subtree */
+@@ -5106,6 +5111,11 @@ nc_server_config_libnetconf2_netconf_server(const struct lyd_node *tree, int is_
+     struct lyd_node *subtree;
+     enum nc_operation initial_op;
+ 
++    /* not loaded by a server that only listens on a UNIX socket */
++    if (!ly_ctx_get_module_implemented(LYD_CTX(tree), "libnetconf2-netconf-server")) {
++        return 0;
++    }
++
+     prev_lo = ly_log_options(0);
+ 
+     /* try to find the ln2-netconf-server subtree */
+diff --git a/src/session_server.c b/src/session_server.c
+index e010955..8a7ad4a 100644
+--- a/src/session_server.c
++++ b/src/session_server.c
+@@ -4492,6 +4492,73 @@ cleanup:
+     return rc;
+ }
+ 
++API int
++nc_server_add_unix_endpt(const char *endpoint_name, const char *socket_path, mode_t mode)
++{
++    int rc = 0, r;
++    LY_ARRAY_COUNT_TYPE i;
++    struct nc_endpt *endpt = NULL;
++    struct nc_bind *bind = NULL;
++
++    NC_CHECK_ARG_RET(NULL, endpoint_name, socket_path, 1);
++
++    /* a hidden-path endpoint, its socket path is kept outside the configuration */
++    if (nc_server_set_unix_socket_path(endpoint_name, socket_path)) {
++        return 1;
++    }
++
++    /* CONFIG WRITE LOCK */
++    pthread_rwlock_wrlock(&server_opts.config_lock);
++
++    LY_ARRAY_FOR(server_opts.config.endpts, i) {
++        if (!strcmp(server_opts.config.endpts[i].name, endpoint_name)) {
++            ERR(NULL, "Endpoint \"%s\" already exists.", endpoint_name);
++            rc = 1;
++            goto cleanup;
++        }
++    }
++
++    LY_ARRAY_NEW_GOTO(NULL, server_opts.config.endpts, endpt, rc, cleanup);
++    if ((r = pthread_mutex_init(&endpt->bind_lock, NULL))) {
++        ERR(NULL, "Mutex init failed (%s).", strerror(r));
++        LY_ARRAY_DECREMENT_FREE(server_opts.config.endpts);
++        rc = 1;
++        goto cleanup;
++    }
++
++    endpt->name = strdup(endpoint_name);
++    NC_CHECK_ERRMEM_GOTO(!endpt->name, rc = 1, error);
++
++    endpt->ti = NC_TI_UNIX;
++    endpt->opts.unix = calloc(1, sizeof *endpt->opts.unix);
++    NC_CHECK_ERRMEM_GOTO(!endpt->opts.unix, rc = 1, error);
++    endpt->opts.unix->path_type = NC_UNIX_SOCKET_PATH_HIDDEN;
++    endpt->opts.unix->mode = mode;
++    endpt->opts.unix->uid = (uid_t)-1;
++    endpt->opts.unix->gid = (gid_t)-1;
++
++    LY_ARRAY_NEW_GOTO(NULL, endpt->binds, bind, rc, error);
++    bind->sock = -1;
++
++    if (nc_server_bind_and_listen(endpt, bind)) {
++        rc = 1;
++        goto error;
++    }
++    goto cleanup;
++
++error:
++    free(endpt->name);
++    free(endpt->opts.unix);
++    LY_ARRAY_FREE(endpt->binds);
++    pthread_mutex_destroy(&endpt->bind_lock);
++    LY_ARRAY_DECREMENT_FREE(server_opts.config.endpts);
++
++cleanup:
++    /* CONFIG WRITE UNLOCK */
++    pthread_rwlock_unlock(&server_opts.config_lock);
++    return rc;
++}
++
+ API int
+ nc_server_get_unix_socket_path(const char *endpoint_name, char **socket_path)
+ {
+diff --git a/src/session_server.h b/src/session_server.h
+index 1fddf98..719de2b 100644
+--- a/src/session_server.h
++++ b/src/session_server.h
+@@ -461,6 +461,22 @@ NC_MSG_TYPE nc_ps_accept_ssh_channel(struct nc_pollsession *ps, struct nc_sessio
+  */
+ int nc_server_set_unix_socket_path(const char *endpoint_name, const char *socket_path);
+ 
++/**
++ * @brief Create a UNIX socket listen endpoint without any YANG configuration.
++ *
++ * For servers that run behind an SSH daemon and do not implement
++ * ietf-netconf-server.  The endpoint starts listening immediately and
++ * behaves like a "hidden-path" UNIX endpoint: clients are authenticated by
++ * their socket peer credentials and there are no user mappings, so the
++ * NETCONF username must be the system username.
++ *
++ * @param[in] endpoint_name Name of the new endpoint, must be unique.
++ * @param[in] socket_path Absolute UNIX socket path to listen on.
++ * @param[in] mode Socket file permissions, (mode_t)-1 to leave them to umask.
++ * @return 0 on success, 1 on error.
++ */
++int nc_server_add_unix_endpt(const char *endpoint_name, const char *socket_path, mode_t mode);
++
+ /**
+  * @brief Get the UNIX socket path for a given endpoint name.
+  *
+-- 
+2.43.0
+
