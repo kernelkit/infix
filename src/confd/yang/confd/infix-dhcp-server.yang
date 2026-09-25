@@ -20,6 +20,12 @@ module infix-dhcp-server {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 server";
 
+  revision 2026-09-24 {
+    description "Constrain static-host match hostname and client-id string:
+                 no control characters or commas, at most 255 bytes.";
+    reference   "internal";
+  }
+
   revision 2026-09-18 {
     description "Add network boot parameters (BOOTP siaddr/file, option 66/67)
                  at global, subnet, and host scope.";
@@ -283,7 +289,13 @@ module infix-dhcp-server {
             case hostname {
               leaf hostname {
                 description "Match on client hostname, DHCP option 12.";
-                type string;
+                reference "RFC 2132, sec. 3.14: Host Name Option.  The
+                           option length field is one octet, so the value
+                           is at most 255 bytes.";
+                type string {
+                  length "1..255";
+                  pattern '[^\p{Cc},]+';
+                }
               }
             }
 
@@ -298,7 +310,14 @@ module infix-dhcp-server {
                       description "String value for text-based client-id.
 
                                    Example: xyzzy";
-                      type string;
+                      reference "RFC 2132, sec. 9.14: Client-identifier
+                                 (option 61).  The option length field is
+                                 one octet, so the value is at most 255
+                                 bytes.";
+                      type string {
+                        length "1..255";
+                        pattern '[^\p{Cc},]+';
+                      }
                     }
                   }
                   case hex {
