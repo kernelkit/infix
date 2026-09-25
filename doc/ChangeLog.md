@@ -103,6 +103,7 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Reject control characters and double quotes in syslog property-filter value and pattern-match
 - Reject control characters and commas in DHCP server static-host match values
 - Restrict the allowed characters in a container `command` override
 - Restrict the allowed characters in a hardware component `name`
