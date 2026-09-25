@@ -27,7 +27,7 @@ MODULES=(
 	"infix-syslog@2026-09-15.yang"
 	"iana-hardware@2018-03-13.yang"
 	"ietf-hardware@2018-03-13.yang -e hardware-state -e hardware-sensor"
-	"infix-hardware@2026-07-02.yang"
+	"infix-hardware@2026-09-24.yang"
 	"ieee802-dot1q-types@2022-10-29.yang"
 	"infix-ip@2026-04-28.yang"
 	"infix-if-type@2026-01-07.yang"

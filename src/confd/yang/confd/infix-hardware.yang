@@ -21,6 +21,11 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-09-24 {
+    description "Constrain the character set of hardware component names.";
+    reference "internal";
+  }
+
   revision 2026-07-02 {
     description "Widen wifi max-interfaces ap/station to uint16, virtual
                  radios (mac80211_hwsim) report combinations up to 2048.";
@@ -161,6 +166,16 @@ module infix-hardware {
     if-feature gps;
     base iahw:hardware-class;
     description "GPS/GNSS receiver for time synchronization";
+  }
+
+  deviation "/iehw:hardware/iehw:component/iehw:name" {
+    deviate replace {
+      type string {
+        pattern '[a-zA-Z0-9_][a-zA-Z0-9_.:+@-]*';
+      }
+    }
+    description "Component names are plain identifiers, including
+                 device-tree unit addresses such as 'sfp@9'.";
   }
 
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:admin-state" {
