@@ -106,6 +106,7 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Constrain Wi-Fi mesh-id and NAS identifier, and validate access-point and mesh passphrases as strictly as station
 - Apply syslog configuration changes at runtime, not only after reboot
 - Restrict the allowed characters in keystore key and certificate names
 - Restrict the allowed characters in syslog property-filter value and pattern-match
