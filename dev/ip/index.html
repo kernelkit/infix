@@ -3275,6 +3275,39 @@ lo              ethernet      UP          00:00:00:00:00:00
 admin@example:/&gt;
 </code></pre>
 
+<p>The address and prefix length can also be given in CIDR notation, e.g.,
+<code>set address 10.0.1.1/24</code>.  This works for IPv6 addresses as well, and
+with the <code>edit</code> and <code>delete</code> commands.</p>
+<p>An IPv4 address set without a prefix length gets the default length of
+its address class:</p>
+<table>
+<thead>
+<tr>
+<th><strong>Class</strong></th>
+<th><strong>First octet</strong></th>
+<th><strong>Prefix length</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>0-127</td>
+<td>8</td>
+</tr>
+<tr>
+<td>B</td>
+<td>128-191</td>
+<td>16</td>
+</tr>
+<tr>
+<td>C</td>
+<td>192-223</td>
+<td>24</td>
+</tr>
+</tbody>
+</table>
+<p>Multicast and reserved addresses (class D and E) have no default and
+need an explicit prefix length.</p>
 <h3 id="static-ipv6-address">Static IPv6 address<a class="headerlink" href="#static-ipv6-address" title="Permanent link">¶</a></h3>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-static.svg" data-desc-position="bottom"><img alt="Setting static IPv6" src="../img/ip-address-example-ipv6-static.svg"></a></p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
