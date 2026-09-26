@@ -8,6 +8,7 @@ import syslog
 import socket
 import shutil
 import select
+import re
 import json
 import enum
 import time
@@ -27,11 +28,14 @@ reload_event = threading.Event()
 # 77-mm-modem-gps.rules have set ID_MM_PORT_IGNORE on that port — gpsd
 # then reads NMEA directly from /dev/gpsN.  For unrecognised vendors,
 # prepare_location() falls back to ModemManager's high-level options
-# (which keeps MM in charge of the NMEA port).  Keys match the
-# manufacturer string ModemManager reports verbatim.
+# (which keeps MM in charge of the NMEA port).  Keys are matched as
+# substrings of the manufacturer string ModemManager reports.  The
+# query, when known, avoids an error from a modem that is already in
+# the requested state, e.g. Quectel CME ERROR 504 on AT+QGPS=1.
 GPS_AT_COMMANDS = {
-    "Quectel":         ("AT+QGPS=1", "AT+QGPS=0"),
-    "Sierra Wireless": ("AT+CGPS=1", "AT+CGPS=0"),
+    #                   query        enable       disable
+    "Quectel":         ("AT+QGPS?", "AT+QGPS=1", "AT+QGPS=0"),
+    "Sierra Wireless": (None,       "AT+CGPS=1", "AT+CGPS=0"),
 }
 
 # ModemManager --location-{enable,disable}-* flag suffixes per source.
@@ -1368,16 +1372,30 @@ class ModemThread(threading.Thread):
             self._modes_failed_sig = None
         return ok
 
-    def _gps_at_command(self, enable):
-        """Vendor-specific AT command to toggle GPS NMEA, or None.
+    def _gps_at_commands(self):
+        """Vendor-specific (query, enable, disable) AT commands, or None.
 
-        Match by substring so 'Quectel' picks up 'Quectel Incorporated' too —
+        Match by substring so 'Quectel' picks up 'Quectel Incorporated' too,
         ModemManager normalises differently across firmware revisions.
         """
         for vendor, cmds in GPS_AT_COMMANDS.items():
             if vendor in self.manf:
-                return cmds[0] if enable else cmds[1]
+                return cmds
         return None
+
+    def _gps_at_toggle(self, cmds, enable):
+        """Set GPS on/off with the vendor AT commands, skip if already set."""
+        query, on, off = cmds
+        if query:
+            output = self._mmcli("--command=%s" % query)
+            match = re.search(r":\s*(\d)", output if isinstance(output, str) else "")
+            if match and (match.group(1) != "0") == enable:
+                return True
+        at = on if enable else off
+        if not self._mmcli("--command=%s" % at):
+            self.err("Unable to send AT command '%s'" % at)
+            return False
+        return True
 
     def _location_capabilities(self):
         """YANG source names this modem actually supports.
@@ -1407,6 +1425,7 @@ class ModemThread(threading.Thread):
         self.info("Preparing location")
 
         rmrf(self.locdir)
+        self.location["state"] = None
         if not self.location["enabled"]:
             return True
 
@@ -1416,15 +1435,13 @@ class ModemThread(threading.Thread):
         # The AT path doesn't consult MM's --location-status, since
         # marking the NMEA port ID_MM_PORT_IGNORE removes 'gps' from MM's
         # capability list even though the hardware is still there.
-        at = self._gps_at_command("gps" in sources)
-        if at is not None:
-            if not self._mmcli("--command=%s" % at):
-                self.err("Unable to send AT command '%s'" % at)
-                self.location["state"] = "failed"
-                return False
-            gps_flags = ()
-        else:
-            gps_flags = ("gps-nmea", "gps-raw")
+        ok = True
+        flag_map = dict(LOCATION_MM_FLAGS)
+        cmds = self._gps_at_commands()
+        if cmds is None:
+            flag_map["gps"] = ("gps-nmea", "gps-raw")
+        elif not self._gps_at_toggle(cmds, "gps" in sources):
+            ok = False
 
         # Capability filter for the remaining (MM-managed) sources so
         # CDMA on an LTE-only modem doesn't fail the whole batched call.
@@ -1434,11 +1451,8 @@ class ModemThread(threading.Thread):
             self.location["state"] = "failed"
             return False
 
-        flag_map = {**LOCATION_MM_FLAGS, "gps": gps_flags}
         args = []
         for source, flags in flag_map.items():
-            if source == "gps" and at is not None:
-                continue   # AT command already handled GPS
             if source not in caps:
                 if source in sources:
                     self.err("Modem does not support location source"
@@ -1455,9 +1469,10 @@ class ModemThread(threading.Thread):
 
         if args and not self._mmcli(*args):
             self.err("Unable to configure location sources")
+            ok = False
+        if not ok:
             self.location["state"] = "failed"
-            return False
-        return True
+        return ok
 
     def prepare(self):
         if not self.detected:
@@ -1475,9 +1490,8 @@ class ModemThread(threading.Thread):
         if not self.prepare_bearers():
             self.err("Unable to prepare bearers")
             return False
-        if not self.prepare_location():
-            self.err("Unable to prepare location")
-            return False
+        # Optional, must not block the data connection, see check_location()
+        self.prepare_location()
 
         self.info("Waiting for network")
         return True
@@ -1623,6 +1637,8 @@ class ModemThread(threading.Thread):
 
     def check_location(self):
         if not self.location["enabled"]:
+            return
+        if self.location["state"] == "failed" and not self.prepare_location():
             return
 
         output = self._mmclij("--location-get")
