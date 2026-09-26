@@ -10,6 +10,7 @@ env:
   CONTACT_EMAIL: troglobit@gmail.com
   LIBYANG_VERSION: 4.2.2
   SYSREPO_VERSION: 4.2.10
+  SYSKLOGD_VERSION: 2.7.2
 
 jobs:
   coverity:
@@ -77,6 +78,10 @@ jobs:
 
           git clone https://github.com/troglobit/libite.git
           (cd libite && ./autogen.sh && ./configure && make && sudo make install)
+
+          git clone -b v${SYSKLOGD_VERSION} --depth 1 https://github.com/troglobit/sysklogd.git
+          (cd sysklogd && ./autogen.sh && ./configure --without-logger --without-systemd \
+                       && make && sudo make install)
           make dep
 
       - name: Build applications for Coverity
