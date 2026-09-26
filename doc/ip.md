@@ -300,6 +300,22 @@ lo              ethernet      UP          00:00:00:00:00:00
 admin@example:/>
 </code></pre>
 
+The address and prefix length can also be given in CIDR notation, e.g.,
+`set address 10.0.1.1/24`.  This works for IPv6 addresses as well, and
+with the `edit` and `delete` commands.
+
+An IPv4 address set without a prefix length gets the default length of
+its address class:
+
+| **Class** | **First octet** | **Prefix length** |
+|-----------|-----------------|-------------------|
+| A         | 0-127           | 8                 |
+| B         | 128-191         | 16                |
+| C         | 192-223         | 24                |
+
+Multicast and reserved addresses (class D and E) have no default and
+need an explicit prefix length.
+
 ### Static IPv6 address
 
 ![Setting static IPv6](img/ip-address-example-ipv6-static.svg)
