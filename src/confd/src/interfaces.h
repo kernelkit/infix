@@ -108,6 +108,7 @@ int interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces);
 int interfaces_validate_keys(sr_session_ctx_t *session, struct lyd_node *config);
 
 /* ip.c */
+int ifchange_cand_infer_ipv4_prefix(sr_session_ctx_t *session, const sr_val_t *val);
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 			     struct lyd_node *dif, FILE *ip);
 int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
