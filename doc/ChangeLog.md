@@ -29,6 +29,9 @@ All notable changes to the project are documented in this file.
 
 - The CLI accepts an unambiguous prefix of a command name, e.g. `sh int`
   for `show interface`
+- The CLI accepts IP addresses in CIDR notation, e.g. `set ipv4 address
+  192.168.1.1/24`.  An IPv4 address set without a prefix length gets the
+  classful default: /8, /16, or /24
 - Add a `log` RPC to `infix-syslog`, and a matching admin-exec `log`
   command in the CLI, for injecting messages in the system log over
   NETCONF/RESTCONF, issue #1639.  Severity, app-name, msgid, and RFC 5424

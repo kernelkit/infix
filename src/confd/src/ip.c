@@ -12,6 +12,44 @@
 
 #include "interfaces.h"
 
+/* Classful default for IPv4 addresses set without a prefix length */
+int ifchange_cand_infer_ipv4_prefix(sr_session_ctx_t *session, const sr_val_t *val)
+{
+	sr_val_t inferred = { .type = SR_UINT8_T };
+	sr_error_t err = SR_ERR_OK;
+	struct in_addr ina;
+	uint32_t addr;
+	char *xpath;
+	size_t cnt;
+
+	if (!strstr(val->xpath, ":ipv4/address[") || fnmatch("*]/ip", val->xpath, 0))
+		return SR_ERR_OK;
+	if (inet_pton(AF_INET, val->data.string_val, &ina) != 1)
+		return SR_ERR_OK;
+
+	addr = ntohl(ina.s_addr);
+	if (IN_CLASSA(addr))
+		inferred.data.uint8_val = 8;
+	else if (IN_CLASSB(addr))
+		inferred.data.uint8_val = 16;
+	else if (IN_CLASSC(addr))
+		inferred.data.uint8_val = 24;
+	else
+		return SR_ERR_OK;	/* class D/E, no default */
+
+	xpath = strdup(val->xpath);
+	if (!xpath)
+		return SR_ERR_SYS;
+	*strrchr(xpath, '/') = 0;
+
+	err = srx_nitems(session, &cnt, "%s/prefix-length", xpath);
+	if (!err && !cnt)
+		err = srx_set_item(session, &inferred, 0, "%s/prefix-length", xpath);
+
+	free(xpath);
+	return err;
+}
+
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 			     struct lyd_node *dif, FILE *ip)
 {
