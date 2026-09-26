@@ -1,10 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 # Prompt for a single-line value, prefilled with the current one.
 #
 #    askline LABEL FILE
 #
 # FILE holds the current value on entry and the new value on exit.
-# shellcheck disable=SC3045
 
 LABEL=$1
 FILE=$2
