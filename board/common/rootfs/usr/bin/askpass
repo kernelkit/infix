@@ -20,18 +20,18 @@ if [ "$1" = "-b" ]; then
 fi
 OUTPUT=$1
 
-read -r -s -p "$LABEL: " secret
+read -r -s -p "$LABEL: " secret || exit 1
 >&2 echo
-read -r -s -p "Retype $LABEL: " secret_again
+read -r -s -p "Retype $LABEL: " secret_again || exit 1
 >&2 echo
 
 if [ "$secret" != "$secret_again" ]; then
-    echo "${LABEL}s do not match, try again."
+    >&2 echo "${LABEL}s do not match, try again."
     exit 1
 fi
 
 if [ -z "$secret" ]; then
-    echo "Empty $LABEL, try again."
+    >&2 echo "Empty $LABEL, try again."
     exit 1
 fi
 
