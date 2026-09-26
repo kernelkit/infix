@@ -36,10 +36,16 @@ module infix-interfaces {
   include infix-if-wifi;
   include infix-if-wireguard;
   include infix-if-ptp;
+  include infix-if-modem;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2026-09-26 {
+    description "Include infix-if-modem submodule for cellular wwan interfaces.";
+    reference "internal";
+  }
 
   revision 2026-06-11 {
     description "Fix WireGuard key-format must expressions, see

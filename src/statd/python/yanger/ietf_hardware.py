@@ -966,6 +966,12 @@ def unique_names(components):
     return components
 
 
+def modem_components():
+    from . import infix_modem
+    data = infix_modem.operational()
+    return data.get("ietf-hardware:hardware", {}).get("component", [])
+
+
 def operational():
     systemjson = HOST.read_json("/run/system.json", {})
     # Thermal zones first: the kernel mirrors each one as an hwmon
@@ -983,7 +989,8 @@ def operational():
                 cpu_component(sensors) +
                 sensors +
                 wifi_radio_components() +
-                gps_receiver_components()
+                gps_receiver_components() +
+                modem_components()
             ),
         },
     }

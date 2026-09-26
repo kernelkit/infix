@@ -417,7 +417,7 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
 	case IFT_MODEM:
-		return modem_gen(NULL, cif, net);
+		return modem_add_iface(cif, net);
 	case IFT_WIFI:
 		return wifi_validate_secret(session, cif)
 			? : wifi_add_iface(cif, net);
@@ -591,7 +591,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 		veth_gen_del(dif, ip);
 		break;
 	case IFT_MODEM:
-		modem_gen_del(dif, net);
+		modem_del_iface(dif, net);
 		break;
 	case IFT_WIFI:
 		wifi_del_iface(dif, net);
@@ -637,8 +637,7 @@ static int veth_gen_host(struct dagger *net, struct lyd_node *dif, struct lyd_no
 
 static sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname, const char *iftype)
 {
-	if (!strcmp(iftype, "infix-if-type:ethernet") ||
-	    !strcmp(iftype, "infix-if-type:modem")) {
+	if (!strcmp(iftype, "infix-if-type:ethernet")) {
 		FILE *wait;
 
 		wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");

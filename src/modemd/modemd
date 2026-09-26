@@ -14,6 +14,7 @@ import enum
 import time
 import os
 import sys
+import ipaddress
 
 rundir = "/run/modemd"
 smsdir = "/var/sms"
@@ -63,8 +64,10 @@ def opener(path, flags):
 
 
 def rmf(path):
-    if os.path.exists(path):
+    try:
         os.unlink(path)
+    except FileNotFoundError:
+        pass
 
 
 def rmrf(path):
@@ -87,12 +90,12 @@ def mkdir(path):
 
 
 def fread(path):
-    if os.path.exists(path):
+    try:
         with open(path, "r") as fd:
-            output = str(fd.read())
-            if output:
-                return output.strip()
-    return None
+            output = fd.read()
+            return output.strip() if output else None
+    except OSError:
+        return None
 
 
 def freadj(path):
@@ -205,6 +208,92 @@ def list_sms(modem):
                                 "payload": output["sms"]})
 
     return smslist
+
+
+def load_config():
+    hw = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-hardware"])
+    ifaces = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-interfaces"])
+
+    ks = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "ietf-keystore"])
+    keys = {}
+    if ks:
+        for key in ks.get("ietf-keystore:keystore", {}) \
+                      .get("symmetric-keys", {}) \
+                      .get("symmetric-key", []):
+            keys[key["name"]] = key.get("cleartext-symmetric-key", "")
+
+    # Cellular modems appear seconds after boot; use physical detection as the
+    # authoritative list rather than sysrepo which may not have them yet.
+    sysj = freadj("/run/system.json") or {}
+    physical = sysj.get("modem", [])
+    if not physical:
+        mj = freadj("/run/modems.json") or {}
+        for i, m in enumerate(mj.get("modems", [])):
+            physical.append({"index": i, "name": "modem%d" % i,
+                              "devpath": m.get("devpath", "")})
+
+    hw_comps, sims = {}, {}
+    for comp in (hw or {}).get("ietf-hardware:hardware", {}).get("component", []):
+        cls = comp.get("class", "")
+        if cls == "infix-hardware:modem":
+            hw_comps[comp["name"]] = comp
+        elif cls == "infix-hardware:sim":
+            sims[comp["name"]] = comp.get("infix-hardware:sim", {})
+
+    modems = {}
+    for phys in physical:
+        name = phys.get("name", "modem%d" % phys.get("index", 0))
+        index = phys.get("index", 0)
+
+        comp = hw_comps.get(name, {})
+        admin = comp.get("state", {}).get("admin-state", "unlocked")
+        if admin == "locked":
+            continue
+
+        ih = comp.get("infix-hardware:modem", {})
+        modems[name] = {
+            "index": index,
+            "preferred-mode": ih.get("preferred-mode"),
+            "allowed-mode": ih.get("allowed-mode", []),
+            "band": ih.get("band", []),
+            "location": ih.get("location"),
+            "bearer": [],
+        }
+
+    for iface in (ifaces or {}).get("ietf-interfaces:interfaces", {}).get("interface", []):
+        if iface.get("type", "") != "infix-if-type:modem":
+            continue
+        wwan = iface.get("infix-interfaces:wwan", {})
+        modem_ref = wwan.get("modem")
+        if not modem_ref or modem_ref not in modems:
+            continue
+
+        sim_ref = wwan.get("sim")
+        if sim_ref and sim_ref in sims and "pin" not in modems[modem_ref]:
+            sim = sims[sim_ref]
+            modems[modem_ref].update({
+                "pin": sim.get("pin"),
+                "puk": sim.get("puk"),
+                "carrier": sim.get("carrier", "default"),
+            })
+
+        bearer_cfg = wwan.get("bearer", {})
+        auth = bearer_cfg.get("authentication")
+        bearer = {
+            "index": len(modems[modem_ref]["bearer"]),
+            "name": iface["name"],
+            "apn": bearer_cfg.get("apn", ""),
+            "ip-type": bearer_cfg.get("ip-type", "ipv4v6"),
+            "roaming": bearer_cfg.get("roaming", False),
+            "route-preference": bearer_cfg.get("route-preference", 200),
+        }
+        if auth:
+            bearer["username"] = auth.get("username", "")
+            bearer["password"] = keys.get(auth.get("password", ""), "")
+
+        modems[modem_ref]["bearer"].append(bearer)
+
+    return list(modems.values())
 
 
 class RpcThread(threading.Thread):
@@ -340,6 +429,10 @@ class SimThread(threading.Thread):
                 th.interrupt = True
 
     def run(self):
+        if not os.path.exists("/dev/simctrl"):
+            dbg("No /dev/simctrl, SIM slot monitoring not available on this platform")
+            self.exited = True
+            return
         fd = os.open("/dev/simctrl", os.O_RDONLY)
         while not self.stopped():
             res, *_ = select.select([fd], [], [], 10.0)
@@ -428,8 +521,6 @@ class ModemThread(threading.Thread):
             self.err("No bearers configured")
             return False
 
-        default = None
-        count = 0
         for bearer in sorted(bearers, key=lambda b: b["index"]):
             bearer["pid"] = "--"
 
@@ -438,19 +529,7 @@ class ModemThread(threading.Thread):
                 self.err("No APN configured")
                 return False
 
-            apntype = bearer.get("apn-type")
-            if apntype == "initial":
-                if not self.bearers["initial"]:
-                    self.bearers["initial"] = bearer
-            elif apntype == "default" and not default:
-                default = bearer
-                count += 1
-            else:
-                self.bearers["list"].append(bearer)
-                count += 1
-
-        if default:
-            self.bearers["list"].insert(0, default)
+            self.bearers["list"].append(bearer)
 
         # at least one bearer is mandatory
         if len(self.bearers["list"]) == 0:
@@ -475,9 +554,7 @@ class ModemThread(threading.Thread):
         loc = self.cfg.get("location")
         if loc and loc.get("enabled"):
             enabled = True
-            v = loc.get("source")
-            if v:
-                sources = [s.get("source") for s in v]
+            sources = loc.get("source", [])
 
         self.location = {
             "enabled": enabled,
@@ -538,10 +615,12 @@ class ModemThread(threading.Thread):
 
     def notif(self, msg):
         data = {
-          "infix-modem:modems": {
-            "modem": [{
-              "index": self.index,
-              "status-update": {"desc": msg}
+          "ietf-hardware:hardware": {
+            "component": [{
+              "name": "modem%d" % self.index,
+              "infix-hardware:modem": {
+                "status-update": {"desc": msg}
+              }
             }]
           }
         }
@@ -612,10 +691,6 @@ class ModemThread(threading.Thread):
         return True
 
     def resolvconf(self, iface, action):
-        enabled = iface["bearer"].get("dns-enabled", False)
-        if enabled is False:
-            return True
-
         self.info("About to %s nameservers on %s" % (action, iface["name"]))
 
         output = runcmd(["resolvconf", "-i"], check=False)
@@ -643,18 +718,38 @@ class ModemThread(threading.Thread):
 
         return True
 
-    def ipgwroute(self, iface, action):
-        output = runcmdj(["ip", "-j", "route",
-                          "show", "dev", iface["name"]])
-        for rt in output:
-            if "scope" in rt and rt["scope"] == "link":
-                if action == "add":
-                    return True
-                else:
-                    runcmd(["ip", "route",
-                            "del", rt["dst"], "dev", iface["name"]])
+    def _derive_gateway(self, ifname):
+        """Derive the peer gateway from the link-scope subnet route on ifname.
+
+        Point-to-point bearers (MBIM/QMI) often report gateway as '--' even
+        though the kernel installs a link-scope subnet route (e.g. /30).  The
+        peer — and therefore the nexthop for the default route — is the only
+        other host in that subnet.
+        """
+        output = runcmdj(["ip", "-j", "route", "show",
+                          "dev", ifname, "scope", "link"])
+        for rt in (output or []):
+            dst = rt.get("dst", "")
+            src = rt.get("prefsrc", "")
+            if not dst or not src or "/" not in dst:
+                continue
+            try:
+                net = ipaddress.ip_network(dst, strict=False)
+                our = ipaddress.ip_address(src)
+                peers = [str(h) for h in net.hosts() if h != our]
+                if peers:
+                    return peers[0]
+            except ValueError:
+                pass
+        return None
+
+    def ipdefroute(self, iface, action):
+        self.info("About to %s default route on %s" % (action, iface["name"]))
+
+        conf = "/etc/net.d/%s.conf" % iface["name"]
 
         if action != "add":
+            rmf(conf)
             return True
 
         if iface["ipv4"]["gateway"] != "--":
@@ -662,52 +757,39 @@ class ModemThread(threading.Thread):
         elif iface["ipv6"]["gateway"] != "--":
             gw = iface["ipv6"]["gateway"]
         else:
-            self.err("No gateway address found")
-            return False
-
-        cmd = ["ip", "route", "add", gw, "dev", iface["name"]]
-        if not runcmd(cmd):
-            self.err("Unable to add gateway route")
-            return False
-
-        return True
-
-    def ipdefroute(self, iface, action):
-        self.info("About to %s default route on %s" % (action, iface["name"]))
-
-        output = runcmdj(["ip", "-j", "route", "show", "default"])
-        if output:
-            for route in output:
-                if not runcmd(["ip", "route", "del", "default",
-                               "dev", route["dev"]]):
-                    self.err("Can't delete default route on %s" % route["dev"])
-
-        if not self.ipgwroute(iface, action):
-            return False
-
-        if action != "add":
-            return True
-
-        cmd = ["ip", "route", "add", "default", "dev", iface["name"]]
-        if iface["ipv4"]["gateway"] != "--":
-            cmd += ["via", iface["ipv4"]["gateway"]]
-        elif iface["ipv6"]["gateway"] != "--":
-            cmd += ["via", iface["ipv6"]["gateway"]]
-
-        if not runcmd(cmd):
-            self.err("Unable to add default route on %s" % iface["name"])
-            time.sleep(30)
-            return False
-        else:
-            return True
-
-    def ifupdown(self, iface, action):
-        enabled = iface["bearer"].get("firewall-enabled", False)
-        if enabled is True:
-            self.info("Setting %s firewall on %s" % (action, self.iface))
-            if not runcmd(["/etc/firewall/default", action, self.iface]):
+            # Gateway not reported by modem (common for point-to-point bearers).
+            # Derive it from the link-scope subnet route on the interface: the
+            # peer is the only other host in the subnet.
+            gw = self._derive_gateway(iface["name"])
+            if not gw:
+                self.err("No gateway address found")
                 return False
 
+        metric = iface["bearer"].get("route-preference", 200)
+
+        # Write route to /etc/net.d/ for netd/staticd/zebra to install.
+        # This keeps the route visible to FRR for redistribution and allows
+        # metric-based failover behind wired/WiFi routes (which use lower
+        # metric values from udhcpc, typically 5).
+        content = "# Generated by modemd -- do not edit\n\n"
+        content += "route {\n"
+        if ":" in gw:
+            content += '    prefix = "::/0"\n'
+        else:
+            content += '    prefix = "0.0.0.0/0"\n'
+        content += '    nexthop = "%s"\n' % gw
+        content += '    distance = %d\n' % metric
+        content += '    tag = 100\n'
+        content += '}\n'
+
+        if fread(conf) == content.strip():
+            return True
+        next_conf = conf + "+"
+        fwrite(next_conf, content)
+        os.rename(next_conf, conf)
+        return True
+
+    def ifupdown(self, iface, action):
         path = "/var/ifupdown/%s" % self.iface
         if os.path.isfile(path) or os.access(path, os.X_OK):
             self.info("Running %s %s" % (path, action))
@@ -721,12 +803,10 @@ class ModemThread(threading.Thread):
         self.ipdefroute(iface, "delete")
         self.ifupdown(iface, "down")
 
-        output = runcmdj(["ip", "-j", "addr", "show", iface["name"]])
-        for entry in output:
-            for addr in entry["addr_info"]:
-                runcmd(["ip", "addr", "del",
-                        addr["local"] + "/" + str(addr["prefixlen"]),
-                        "dev", iface["name"]])
+        # Flush only wwan-protocol-tagged addresses; leaves any static or
+        # dhcp-protocol addresses intact in case the interface is shared.
+        runcmd(["ip", "addr", "flush", "dev", iface["name"],
+                "proto", "wwan"], check=False)
 
         self.iplink(iface["name"], "down")
 
@@ -748,16 +828,21 @@ class ModemThread(threading.Thread):
             self.err("No addresses yet")
             return False
 
+        # Flush any stale wwan-protocol addresses before adding new ones.
+        # The 'proto wwan' tag (rt_addrprotos entry 7) allows precise cleanup
+        # on disconnect without touching addresses added by other means.
+        runcmd(["ip", "addr", "flush", "dev", iface["name"],
+                "proto", "wwan"], check=False)
+
         for addr in addrs:
             self.info("Setting address %s on %s" % (addr, iface["name"]))
-            if not runcmd(["ip", "addr", "change",
-                           addr, "dev", iface["name"]]):
+            if not runcmd(["ip", "addr", "replace", addr,
+                           "dev", iface["name"], "proto", "wwan"]):
                 self.err("Unable to set address for %s" % iface["name"])
                 return False
 
-        if iface["bearer"].get("default-route"):
-            if not self.ipdefroute(iface, "add"):
-                return False
+        if not self.ipdefroute(iface, "add"):
+            return False
 
         if not self.ifupdown(iface, "up"):
             return False
@@ -926,9 +1011,6 @@ class ModemThread(threading.Thread):
             "profile-id=%s" % bearer["pid"],
             "profile-name=profile%s" % bearer["pid"]
         ]
-        v = bearer.get("apn-type")
-        if v:
-            args.append("apn-type=%s" % v)
         v = bearer.get("apn")
         if v:
             args.append("apn=%s" % v)
@@ -963,7 +1045,7 @@ class ModemThread(threading.Thread):
             if v:
                 args.append("password=%s" % v)
 
-        v = bearer.get("allow-roaming")
+        v = bearer.get("roaming")
         if v:
             args.append("allow-roaming=true")
         else:
@@ -1076,8 +1158,7 @@ class ModemThread(threading.Thread):
     def prepare_bands(self):
         self.info("Preparing bands")
 
-        v = self.cfg.get("band", [])
-        bands = [k.get("band", "any") for k in v]
+        bands = self.cfg.get("band", [])
         if len(bands) == 0 or "any" in bands:
             return True
 
@@ -1094,9 +1175,7 @@ class ModemThread(threading.Thread):
         if not pref or pref == "any":
             pref = "none"
 
-        allow = []
-        v = self.cfg.get("allowed-mode", [])
-        allow = [k.get("mode", "any") for k in v]
+        allow = self.cfg.get("allowed-mode", [])
         if "any" in allow:
             allow = []
 
@@ -1588,17 +1667,14 @@ if __name__ == "__main__":
             print(e)
         fatal("SIM thread caught an exception")
 
-    config = runcmdj(["sysrepocfg", "-f", "json", "-X", "-m", "infix-modem"])
-    if not config or "infix-modem:modems" not in config:
-        fatal("Unable to read config")
+    modems = load_config()
+    if not modems:
+        fatal("No modems configured or enabled")
 
     if not runcmd(['/usr/libexec/modemd/sim-setup']):
         fatal("Unable to setup SIMs")
 
-    for cfg in config["infix-modem:modems"]["modem"]:
-        if not cfg["enabled"] or cfg["index"] < 0:
-            continue
-
+    for cfg in modems:
         th = None
         try:
             th = ModemThread(cfg)

@@ -27,11 +27,17 @@ def send(index, number, text):
         index = 0
 
     rpc = {
-      "infix-modem:send-sms": {
-        "index": str(index),
-        "phone-number": number,
-        "message-text": text
-      }
+        "ietf-hardware:hardware": {
+            "component": [{
+                "name": "modem%d" % index,
+                "infix-hardware:modem": {
+                    "send-sms": {
+                        "phone-number": number,
+                        "message-text": text
+                    }
+                }
+            }]
+        }
     }
     print("Sending SMS to modem%d" % index)
 

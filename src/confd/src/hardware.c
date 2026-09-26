@@ -174,6 +174,16 @@ static int hardware_cand_infer_class(json_t *root, sr_session_ctx_t *session, co
 		err = srx_set_item(session, &inferred, 0, "%s/class", xpath);
 	}
 
+	if (!fnmatch("modem+([0-9])", name, FNM_EXTMATCH)) {
+		inferred.data.string_val = "infix-hardware:modem";
+		err = srx_set_item(session, &inferred, 0, "%s/class", xpath);
+	}
+
+	if (!fnmatch("sim+([0-9])", name, FNM_EXTMATCH)) {
+		inferred.data.string_val = "infix-hardware:sim";
+		err = srx_set_item(session, &inferred, 0, "%s/class", xpath);
+	}
+
 out_free_name:
 	free(name);
 out_free_xpath:
@@ -1231,9 +1241,50 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			}
 			state = lydx_get_child(cif, "state");
 			admin_state = lydx_get_cattr(state, "admin-state");
-			if (usb_authorize(confd->root, name, !strcmp(admin_state, "unlocked"))) {
+			if (usb_authorize(confd->root, name,
+					  admin_state && !strcmp(admin_state, "unlocked"))) {
 				rc = SR_ERR_INTERNAL;
 				goto err;
+			}
+		} else if (!strcmp(class, "infix-hardware:modem")) {
+			/*
+			 * Modem hardware component: drive modemd enable/disable based on
+			 * admin-state.  modemd in turn drives ModemManager.
+			 *
+			 * On DELETE or admin-state=locked: stop and disable both modemd and
+			 * modem-manager.  On admin-state=unlocked: enable and (re)start both.
+			 *
+			 * Why modemd controls ModemManager (not hardware.c directly): modemd
+			 * handles the full bearer lifecycle (connect, disconnect, retry) and
+			 * polls operational state for statd.  Stopping it cleanly disconnects
+			 * the bearer before taking ModemManager down.
+			 */
+			if (event != SR_EV_DONE)
+				continue;
+
+			if (op == LYDX_OP_DELETE) {
+				NOTE("Modem %s removed, disabling modemd", name);
+				systemf("initctl -bfqn stop modemd");
+				finit_disable("modemd");
+				systemf("initctl -bfqn stop modem-manager");
+				finit_disable("modem-manager");
+				continue;
+			}
+
+			state = lydx_get_child(cif, "state");
+			admin_state = lydx_get_cattr(state, "admin-state");
+			if (admin_state && !strcmp(admin_state, "unlocked")) {
+				NOTE("Modem %s enabled, starting modemd", name);
+				finit_enable("modem-manager");
+				finit_enable("modemd");
+				systemf("initctl -bfqn restart modem-manager");
+				systemf("initctl -bfqn restart modemd");
+			} else {
+				NOTE("Modem %s locked, disabling modemd", name);
+				systemf("initctl -bfqn stop modemd");
+				finit_disable("modemd");
+				systemf("initctl -bfqn stop modem-manager");
+				finit_disable("modem-manager");
 			}
 		} else if (!strcmp(class, "infix-hardware:wifi")) {
 			struct lyd_node *interfaces_config, *interfaces_diff;
