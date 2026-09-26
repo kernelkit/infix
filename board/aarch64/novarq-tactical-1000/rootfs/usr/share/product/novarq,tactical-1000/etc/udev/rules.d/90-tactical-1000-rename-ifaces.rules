@@ -1,0 +1,58 @@
+# Rename LAN969x switch ports by device tree node path.
+#
+# The sparx5 driver leaves naming to the kernel, which hands out eth0
+# and up in probe order.  Match on OF_FULLNAME instead, which the port
+# netdevs carry now that their of_node is populated, and give them the
+# names on the front panel.
+#
+# The copper ports run backwards within each QSGMII quad, so port@0 is
+# lan4 and port@3 is lan1.  Numbering them by probe order, the way the
+# EV23X71A rule does, would reverse every group of four without saying
+# so.  The SFP and management ports are in order.
+#
+# udev has no trailing comments, a '#' mid-line is a parse error, so the
+# device tree label for each rule goes on the line above it.
+
+
+# port@0..port@3: lan4, lan3, lan2, lan1
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@0", NAME="e4"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@1", NAME="e3"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@2", NAME="e2"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@3", NAME="e1"
+
+# port@4..port@7: lan8, lan7, lan6, lan5
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@4", NAME="e8"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@5", NAME="e7"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@6", NAME="e6"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@7", NAME="e5"
+
+# port@8..port@11: lan12, lan11, lan10, lan9
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@8", NAME="e12"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@9", NAME="e11"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@10", NAME="e10"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@11", NAME="e9"
+
+# port@12..port@15: lan16, lan15, lan14, lan13
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@12", NAME="e16"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@13", NAME="e15"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@14", NAME="e14"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@15", NAME="e13"
+
+# port@16..port@19: lan20, lan19, lan18, lan17
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@16", NAME="e20"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@17", NAME="e19"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@18", NAME="e18"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@19", NAME="e17"
+
+# port@20..port@23: lan24, lan23, lan22, lan21
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@20", NAME="e24"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@21", NAME="e23"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@22", NAME="e22"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@23", NAME="e21"
+
+# SFP cages and the management port, in order
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@24", NAME="e25"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@25", NAME="e26"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@26", NAME="e27"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@27", NAME="e28"
+ACTION=="add", SUBSYSTEM=="net", ENV{OF_FULLNAME}=="*/switch@e00c0000/ethernet-ports/port@29", NAME="e29"

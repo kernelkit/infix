@@ -204,7 +204,14 @@ resize_partition()
 {
     label="$1"
 
-    print_start "Resizing /var partition on sdcard, please wait ..."
+    print_start "Resizing /var partition to fill the disk, please wait ..."
+
+    # The markers below are what stops this from running again after
+    # the reboot, so without somewhere to put them, do nothing.
+    if ! mountpoint -q /mnt/aux; then
+	resize_err "aux not mounted, cannot record resize state"
+	return 1
+    fi
 
     devname=$(find_partition_by_label "$label")
     [ -z "$devname" ] && resize_err "Label \"$label\" not found"
@@ -240,10 +247,13 @@ resize_partition()
     partprobe "$disk" 2>/dev/null
 
     # Mark stage 1 complete, stage 2 will happen after reboot
-    echo "1" > /mnt/aux/resized.pending
+    if ! echo "1" > /mnt/aux/resized.pending; then
+	resize_err "cannot write resize marker to aux"
+	return 1
+    fi
     sync
 
-    print_end 0 "Resizing /var partition on sdcard, done. Rebooting ..."
+    print_end 0 "Resizing /var partition, done. Rebooting ..."
     logger $opt -p user.notice -t "$nm" "Partition expanded, rebooting to resize filesystem"
 
     reboot -f

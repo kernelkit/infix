@@ -143,9 +143,9 @@ compromised service or container can't rewrite the OS underneath it.
 
 <a href="https://bitsign.se">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://bitsign.se/assets/badges/bitsign-badge-dark-mode.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://bitsign.se/assets/badges/bitsign-badge-light-mode.png">
-    <img alt="bitSign - Code Signing" src="https://bitsign.se/assets/badges/bitsign-badge-light-mode.png" align="right" width=150 padding=10>
+    <source media="(prefers-color-scheme: dark)" srcset="doc/img/bitsign-badge-dark-mode.png">
+    <source media="(prefers-color-scheme: light)" srcset="doc/img/bitsign-badge-light-mode.png">
+    <img alt="bitSign - Code Signing" src="doc/img/bitsign-badge-light-mode.png" align="right" width=150 padding=10>
   </picture>
 </a>
 

@@ -1,0 +1,3 @@
+# The LAN969x switch core attaches 29 PHYs, one at a time, taking a good
+# half second each, so the default ten seconds is not enough.
+HW_WAIT_TIMEOUT=60

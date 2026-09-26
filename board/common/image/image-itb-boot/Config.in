@@ -1,0 +1,57 @@
+menuconfig IX_IMAGE_ITB_BOOT
+	bool "boot.itb"
+	depends on IX_IMAGE_ITB_ROOTFS
+	select BR2_PACKAGE_HOST_UBOOT_TOOLS
+	help
+	  Create a FIT holding the kernel, the root filesystem, and every
+	  device tree in the build, with one configuration per device
+	  tree, so that a single U-Boot 'bootm <addr>#<board>' boots the
+	  system on any board the build supports.
+
+	  Infix normally netboots from rootfs.itb alone: the bootloader
+	  maps the SquashFS inside it and runs sysboot, which reads the
+	  kernel and device tree from /boot.  That require BLKMAP, SquashFS,
+	  and sysboot, which vendor bootloaders rarely have enabled.  This
+	  image a way around that.
+
+	  Unsigned, unlike rootfs.itb: a bootloader that needs this image
+	  cannot check a signature anyway, and the verified path stays
+	  rootfs.itb by way of sysboot.
+
+config IX_IMAGE_ITB_BOOT_DTB
+	string "default device tree"
+	depends on IX_IMAGE_ITB_BOOT
+	default "microchip/lan9696-tactical-1000.dtb" if BR2_PACKAGE_NOVARQ_TACTICAL_1000
+	help
+	  The device tree behind the 'boot' configuration, which is the
+	  one the boot script uses, as a path below /boot.  Every other
+	  device tree in the build gets a configuration named after it.
+
+config IX_IMAGE_ITB_BOOT_STRIP_KERNEL
+	bool "leave the kernel out of the rootfs"
+	depends on IX_IMAGE_ITB_BOOT
+	default y
+	help
+	  The root filesystem carries a copy of the kernel in /boot for
+	  the bootloaders that read it from there.  This image already
+	  has the kernel, so drop that copy, about 13 MiB compressed.
+	  Costs an unsquash and resquash of the rootfs on every build,
+	  and means the booted rootfs is not byte for byte the one in
+	  rootfs.itb.
+
+config IX_IMAGE_ITB_BOOT_ADDR
+	string "image load address"
+	depends on IX_IMAGE_ITB_BOOT
+	default "0x70000000" if BR2_PACKAGE_NOVARQ_TACTICAL_1000
+	help
+	  Where the boot script fetches the image to.  The only address
+	  anywhere in this: the image itself carries none, so the same
+	  image boots any board in the build, and this is what has to
+	  suit the board the script is for.
+
+config IX_IMAGE_ITB_BOOT_CONSOLE
+	string "console"
+	depends on IX_IMAGE_ITB_BOOT
+	default "ttyAT0,115200" if BR2_PACKAGE_NOVARQ_TACTICAL_1000
+	help
+	  Console for the kernel command line in the boot script.

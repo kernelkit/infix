@@ -59,9 +59,8 @@
 static void set_finit_cond(const char *cond)
 {
 	char path[128];
+
 	snprintf(path, sizeof(path), "/run/finit/cond/usr/%s", cond);
-
-
 	if (symlink("/run/finit/cond/reconf", path) && errno != EEXIST)
 		WARN("Failed to set finit condition %s: %m", path);
 }
@@ -624,8 +623,11 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 	}
 
 	/* Export running → startup file */
-	if (export_running(sess, startup_path, timeout_ms))
+	if (export_running(sess, startup_path, timeout_ms)) {
 		WARN("Failed to export running to %s", startup_path);
+		set_finit_cond("startup-config-error");
+	} else
+		set_finit_cond("startup-config-ok");
 
 	return 0;
 }

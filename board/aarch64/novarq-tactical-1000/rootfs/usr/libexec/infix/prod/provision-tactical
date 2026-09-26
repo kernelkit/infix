@@ -1,0 +1,125 @@
+#!/bin/sh
+# Carve Infix partitions out of the stock Tactical 1000 eMMC.
+#
+# STOPGAP.  Board specific, and only until this board runs a bootloader
+# of ours.  When it does, prod/provision does the whole disk and this
+# goes away.
+#
+# The board ships a GPT that describes 723 MiB of a 14.6 GiB eMMC, with
+# the vendor OS in 'kernel' and 'rootfs' and no room for A/B slots, so
+# the upgrade tests have nowhere to run.  Extend the GPT to the whole
+# device, drop the vendor pair, and lay down the Infix set after 'Env'.
+#
+# What it will not do is touch fip, fip.bak, or Env.  BL1 lives in mask
+# ROM and finds the FIP by GPT partition name, and this board has no
+# strapping to reach NOR or the TF-A monitor, so a FIP it cannot find is
+# a board nobody can recover.  Every step that writes asks first.
+
+set -e
+
+disk=${1:-/dev/mmcblk0}
+backup=${2:-/tmp/gpt-backup.bin}
+
+die()
+{
+	echo "$@" >&2
+	exit 1
+}
+
+ask()
+{
+	printf "%s [y/N] " "$1"
+	read -r yn
+	case "$yn" in
+		[Yy]*) return 0 ;;
+		*)     return 1 ;;
+	esac
+}
+
+# Meant to run from init=/bin/sh, where none of these are mounted yet.
+[ -e /proc/self ]   || mount -t proc  proc /proc
+[ -d /sys/firmware ] || mount -t sysfs sys  /sys
+[ -w /tmp ]         || mount -t tmpfs tmp  /tmp
+
+# Refuse anywhere but the board this was written for, and only while the
+# disk still looks like the one described above.
+compat=$(tr '\0' '\n' </sys/firmware/devicetree/base/compatible 2>/dev/null | head -1)
+[ "$compat" = "novarq,tactical-1000" ] || die "Not a Novarq Tactical 1000, refusing"
+[ -b "$disk" ] || die "$disk is not a block device"
+
+# With cfg or var mounted from here the kernel keeps the old table, and
+# mkfs on the renumbered nodes would hit the wrong sectors.
+grep -q "^$disk" /proc/mounts && die "$disk is in use, boot with init=/bin/sh and run this again"
+
+. /etc/partition-uuid
+
+for n in 1:fip 2:fip.bak 3:Env; do
+	num=${n%:*}
+	want=${n#*:}
+	have=$(sgdisk -i"$num" "$disk" | sed -n 's/^Partition name: .\(.*\).$/\1/p')
+	[ "$have" = "$want" ] || die "partition $num is '$have', expected '$want', refusing"
+done
+
+echo "Disk $disk, current layout:"
+sgdisk -p "$disk" | sed -n '/^Number/,$p'
+echo
+
+sgdisk --backup="$backup" "$disk" >/dev/null
+echo "GPT saved to $backup.  Copy it off the board, this is a tmpfs."
+echo
+
+ask "Extend the GPT to the whole $(sgdisk -p "$disk" | sed -n 's/^Disk .*, \(.*\)$/\1/p') device?" &&
+	sgdisk -e "$disk" >/dev/null
+
+# 4 and 5 hold the vendor OS; 4 to 8 are ours when run a second time.
+for n in 4 5 6 7 8; do
+	name=$(sgdisk -i"$n" "$disk" | sed -n 's/^Partition name: .\(.*\).$/\1/p')
+	[ -n "$name" ] || continue
+	ask "Delete partition $n '$name'?" &&
+		sgdisk -d"$n" "$disk" >/dev/null
+done
+
+# The vendor U-Boot keeps its environment at 0x10100000 and, the
+# redundant copy, at 0x10300000: the end of a 2 MiB Env.  Every other
+# saveenv lands on the partition after it.  Grow Env to cover both.
+env_start=$(sgdisk -i3 "$disk" | sed -n 's/^First sector: \([0-9]*\).*/\1/p')
+env_end=$(sgdisk -i3 "$disk" | sed -n 's/^Last sector: \([0-9]*\).*/\1/p')
+if [ $((env_end - env_start + 1)) -lt 8192 ]; then
+	ask "Grow partition 3 'Env' to 4 MiB, for both copies of the vendor U-Boot environment?" &&
+		sgdisk -d3 -n3:"$env_start":+4M -t3:8300 -c3:Env "$disk" >/dev/null
+fi
+
+# Sized as prod/fdisk does, from what the disk actually holds.
+total=$(( $(sgdisk -p "$disk" | sed -n 's/^Disk .*: \([0-9]*\) sectors.*/\1/p') / 2048 ))
+if   [ "$total" -ge 4096 ]; then imgsize=1024M; cfgsize=512M
+elif [ "$total" -ge 2048 ]; then imgsize=512M;  cfgsize=256M
+elif [ "$total" -ge 1024 ]; then imgsize=256M;  cfgsize=64M
+else die "$disk is only ${total}M, at least 1024M is required"
+fi
+
+if ask "Create aux, primary ${imgsize}, secondary ${imgsize}, cfg ${cfgsize}, and var?"; then
+	sgdisk -a 2048 \
+	       -n4::+8M       -t4:8301 -c4:aux       -u4:"${AUX_UUID}"       \
+	       -n5::+"$imgsize" -t5:8300 -c5:primary   -u5:"${PRIMARY_UUID}"   \
+	       -n6::+"$imgsize" -t6:8300 -c6:secondary -u6:"${SECONDARY_UUID}" \
+	       -n7::+"$cfgsize" -t7:8302 -c7:cfg                              \
+	       -n8::            -t8:8310 -c8:var                              \
+	       "$disk" >/dev/null
+	partprobe "$disk" || true
+
+	# Infix mounts by filesystem label, and mnt resizes var to the
+	# end of the disk on first boot unless aux says it is done.  The
+	# partition already reaches the end, so say so, or the resize
+	# rewrites the table and reboots on every boot.
+	mkfs.ext4 -qF -L aux -m 0 -i 4096 -O ^metadata_csum,^metadata_csum_seed,uninit_bg "${disk}p4"
+	mkfs.ext4 -qF -L cfg -m 0 -i 4096 -O uninit_bg "${disk}p7"
+	mkfs.ext4 -qF -L var -m 0 -i 4096 -O uninit_bg "${disk}p8"
+	mnt=$(mktemp -d)
+	mount -t ext4 "${disk}p4" "$mnt"
+	echo 1 >"$mnt"/resized
+	umount "$mnt"
+	rmdir "$mnt"
+fi
+
+echo
+sgdisk -p "$disk" | sed -n '/^Number/,$p'
