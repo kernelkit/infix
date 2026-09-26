@@ -1,0 +1,44 @@
+=== QoS Bridge Classification and Remarking
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_bridge_classify]
+
+==== Description
+
+Bridge two ports and send frames straight through the switch, so that on
+a switch chip the traffic never passes the CPU and only the hardware
+tables can classify and remark it.  The DSCP and PCP on the wire at the
+egress port reveal the priority the ingress port assigned:
+
+ - trust dscp: untagged IP frames on VLAN 20, DSCP 46 (EF) to priority 5,
+   DSCP 4 unknown to the preset to the default priority 1
+ - trust pcp with a custom map: tagged frames on VLAN 10, PCP 3 to
+   priority 6, PCP 0 to priority 4, PCP 7 unmapped to the default
+   priority 2
+ - remark off: DSCP leaves as it came in, and so does the PCP unless the
+   switch fabric encodes it from the priority, which its rewrite table
+   then still shows
+
+With remarking on, the egress port writes the class selector of the
+priority as DSCP and, where the driver offloads remarking, the priority
+as PCP; PCP remarking has no software path, so on other ports only the
+DSCP is checked.  The test is skipped on a switch whose driver cannot
+offload classification, since frames the fabric forwards never see the
+kernel's rules.
+
+==== Topology
+
+image::topology.svg[QoS Bridge Classification and Remarking topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure a VLAN bridge, VLAN 10 tagged and VLAN 20 untagged on ingress
+. Set up host namespaces, VLAN 10 tagged on both, VLAN 20 untagged on the sender
+. Verify classification and remarking are offloaded
+. Send untagged IP frames with trust dscp, verify PCP and DSCP from priority
+. Switch to trust pcp with a custom map and default priority 2
+. Send tagged frames, verify PCP and DSCP from the mapped priority
+. Turn remarking off
+. Send tagged frames with DSCP 46, verify PCP and DSCP are untouched
+
+

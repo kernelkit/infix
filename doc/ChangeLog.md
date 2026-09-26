@@ -24,6 +24,22 @@ All notable changes to the project are documented in this file.
   than by running the tool as root
 - The CLI `dir` command lists directories as the logged-in user, so it
   shows only what that user may read
+- Add per-interface Quality of Service configuration: which header field
+  a port trusts (PCP, DSCP, or both in order), the default priority, PCP
+  and DSCP to priority maps with standard presets, an egress traffic
+  class table with strict-priority or weighted transmission selection per
+  class, and PCP and DSCP remarking on transmit.  The defaults are on out
+  of the box on every port: trust PCP, one traffic class per
+  transmit queue mapped per IEEE 802.1Q-2022 Table 8-5, replacing the
+  fixed boot-time queue setup, see [QoS][]
+- Add a per-port egress rate limiting in new [QoS][] sub-system
+- Transmission selection is rendered with the `ets` scheduler on every
+  port, so drivers that offload it take the class algorithms and weights
+  into the switch fabric, not only the priority to class map
+- Marvell LinkStreet 88E6390 and 88E6393X switch ports offload QoS
+  classification, trust order, remarking, transmission selection and the
+  egress rate limit to the switch, so they apply to hardware forwarded
+  traffic as well
 
 ### Added
 
@@ -89,7 +105,7 @@ All notable changes to the project are documented in this file.
 - Add TFTP server for network boot and device provisioning, issue #1542.
   Read-only, serving `/var/lib/tftpboot` or a directory on USB media, with
   optional per-client subdirectories.  `show tftp` lists the files served,
-  see [TFTP Server](tftp.md)
+  see the [TFTP Server][tftp] section in the User Guide
 - Add network boot parameters to DHCP server: `boot file`, `server-address`,
   and `server-name` at global, subnet, or host scope, sent in the BOOTP header
   fields and as options 66/67
@@ -119,9 +135,10 @@ All notable changes to the project are documented in this file.
   and mesh point from the interface editor. The mode used to be fixed
   when the interface was created
 
+[QoS]:    https://www.kernelkit.org/infix/latest/qos/
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
-[snmp]: https://www.kernelkit.org/infix/latest/snmp/
-
+[snmp]:   https://www.kernelkit.org/infix/latest/snmp/
+[tftp]:   https://www.kernelkit.org/infix/latest/tftp/
 
 [v26.08.0][] - 2026-09-01
 -------------------------

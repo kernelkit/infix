@@ -1,0 +1,35 @@
+=== QoS Queue Assignment
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_queue_assignment]
+
+==== Description
+
+Verify that a frame is queued in the traffic class its priority maps to,
+for the ieee preset, the ieee-sr preset and a custom table.  The
+existing tests check the tables as rendered tc arguments; this one
+checks the queue a frame actually reached.
+
+Frames enter tagged on a VLAN interface whose ingress-qos takes the
+priority straight from the PCP, so classification contributes nothing
+and the traffic class table on the egress port is all that is under
+test.  A hundred datagrams are sent at each priority, routed through the
+DUT to the listener, and the per-class counters of the egress scheduler
+are read before and after: the class the table names must grow by at
+least that many, and no other class by anywhere near it.  The DUT's own
+chatter, mDNS and neighbour discovery at priority 0 and control frames
+at priority 7, is a handful of frames and stays well below the burst.
+No load, no congestion.
+
+==== Topology
+
+image::topology.svg[QoS Queue Assignment topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure a routed path, tagged ingress with priority from PCP, egress under test
+. Set up the talker on VLAN 10 and the listener, resolve neighbours
+. Apply the {name} traffic class table on the egress port
+. Send {COUNT} frames at each priority, verify the class each reached
+
+

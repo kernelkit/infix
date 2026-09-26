@@ -1,0 +1,275 @@
+From 9b32e247b40420d6ef21765c6338844809c00342 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 17 Sep 2026 17:09:02 +0200
+Subject: [PATCH 78/79] net: dsa: mv88e6xxx: Offload the tbf qdisc
+Organization: Wires
+
+A tbf qdisc on a switch port shapes only what the CPU sends; frames
+switched between ports never pass the qdisc.  The chip has an egress
+rate limiter per port that does the same job for both.
+
+Take a root tbf and program its rate into the port's Egress Rate
+Control, counting Layer 2 bytes as the qdisc does.  The limiter steps
+in fixed increments per decade of rates, 64 kbit/s below 1 Mbit/s up
+to 100 Mbit/s below 10 Gbit/s, so the rate is rounded to the nearest
+step.  A burst size has no hardware equivalent and is ignored.  A
+child qdisc is accepted and left to bring its own offload.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 52 ++++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/chip.h |  7 +++++
+ drivers/net/dsa/mv88e6xxx/port.c | 54 ++++++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/port.h |  9 ++++++
+ 4 files changed, 122 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 673f8b7523a08..aab76fadf7530 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -32,6 +32,7 @@
+ #include <linux/gpio/consumer.h>
+ #include <linux/phylink.h>
+ #include <net/dsa.h>
++#include <net/pkt_cls.h>
+ #include <net/pkt_sched.h>
+ 
+ #include "chip.h"
+@@ -4861,6 +4862,7 @@ static const struct mv88e6xxx_ops mv88e6190_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -4932,6 +4934,7 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5003,6 +5006,7 @@ static const struct mv88e6xxx_ops mv88e6191_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5178,6 +5182,7 @@ static const struct mv88e6xxx_ops mv88e6290_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5577,6 +5582,7 @@ static const struct mv88e6xxx_ops mv88e6390_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5652,6 +5658,7 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -5726,6 +5733,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+ 	.port_get_pcp_prio = mv88e6390_port_get_pcp_prio,
+ 	.port_set_pcp_prio = mv88e6390_port_set_pcp_prio,
+ 	.port_sync_qpri = mv88e6390_port_sync_qpri,
++	.port_set_egress_rate = mv88e6390_port_set_egress_rate,
+ 	.port_get_pcp_rewr = mv88e6390_port_get_pcp_rewr,
+ 	.port_set_pcp_rewr = mv88e6390_port_set_pcp_rewr,
+ 	.port_get_dscp_rewr = mv88e6390_port_get_dscp_rewr,
+@@ -7685,7 +7693,49 @@ static int mv88e6xxx_qos_port_mqprio(struct mv88e6xxx_chip *chip, int port,
+ 	netdev_reset_tc(dev);
+ 	mv88e6xxx_port_set_qpri(chip, port, NULL);
+ 	return err;
++}
++
++static int mv88e6xxx_qos_port_tbf(struct mv88e6xxx_chip *chip, int port,
++				  struct tc_tbf_qopt_offload *qopt)
++{
++	struct mv88e6xxx_port *mp = &chip->ports[port];
++	u64 bps;
++	int err;
++
++	if (!chip->info->ops->port_set_egress_rate)
++		return -EOPNOTSUPP;
++
++	if (qopt->parent != TC_H_ROOT)
++		return -EOPNOTSUPP;
++
++	switch (qopt->command) {
++	case TC_TBF_REPLACE:
++		bps = qopt->replace_params.rate.rate_bytes_ps * 8;
++
++		mv88e6xxx_reg_lock(chip);
++		err = chip->info->ops->port_set_egress_rate(chip, port, bps);
++		mv88e6xxx_reg_unlock(chip);
++		if (err)
++			return err;
+ 
++		mp->tbf_handle = qopt->handle;
++		return 0;
++	case TC_TBF_DESTROY:
++		mp->tbf_handle = 0;
++
++		mv88e6xxx_reg_lock(chip);
++		err = chip->info->ops->port_set_egress_rate(chip, port, 0);
++		mv88e6xxx_reg_unlock(chip);
++		return err;
++	case TC_TBF_STATS:
++	case TC_TBF_GRAFT:
++		/* The child brings its own offload, and stats stay in
++		 * software; either is what marks the tbf offloaded
++		 */
++		return mp->tbf_handle ? 0 : -EOPNOTSUPP;
++	default:
++		return -EOPNOTSUPP;
++	}
+ }
+ 
+ static int mv88e6xxx_qos_query_caps(struct tc_query_caps_base *base)
+@@ -7711,6 +7761,8 @@ static int mv88e6xxx_port_setup_tc(struct dsa_switch *ds, int port,
+ 		return mv88e6xxx_qos_query_caps(type_data);
+ 	case TC_SETUP_QDISC_MQPRIO:
+ 		return mv88e6xxx_qos_port_mqprio(chip, port, type_data);
++	case TC_SETUP_QDISC_TBF:
++		return mv88e6xxx_qos_port_tbf(chip, port, type_data);
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index f0736aeebbb8a..b443317008875 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -312,6 +312,9 @@ struct mv88e6xxx_port {
+ 	 */
+ 	bool qmap;
+ 	u8 qpri[8];
++
++	/* Offloaded tbf qdisc at the root, 0 when none */
++	u32 tbf_handle;
+ };
+ 
+ enum mv88e6xxx_region_id {
+@@ -605,6 +608,10 @@ struct mv88e6xxx_ops {
+ 				 u8 pcp, u8 dei, int prio);
+ 	int (*port_sync_qpri)(struct mv88e6xxx_chip *chip, int port);
+ 
++	/* Egress shaper in bits per second, 0 turns it off */
++	int (*port_set_egress_rate)(struct mv88e6xxx_chip *chip, int port,
++				    u64 bps);
++
+ 	/* Egress remarking from the frame priority, a negative code
+ 	 * point disables it for that priority.
+ 	 */
+diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
+index 255f6229a13af..47834060cabf7 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.c
++++ b/drivers/net/dsa/mv88e6xxx/port.c
+@@ -1480,6 +1480,60 @@ int mv88e6097_port_egress_rate_limiting(struct mv88e6xxx_chip *chip, int port)
+ 				    0x0001);
+ }
+ 
++/* Shape the port to a Layer 2 bit rate, or turn the shaper off with 0.
++ * The rate is a decrement value stepping a counter at one of four fixed
++ * intervals, each covering a decade of rates, so it is rounded to the
++ * nearest step of that decade.
++ */
++int mv88e6390_port_set_egress_rate(struct mv88e6xxx_chip *chip, int port,
++				   u64 bps)
++{
++	u32 step, rate;
++	u16 dec;
++	int err;
++
++	if (!bps) {
++		err = mv88e6xxx_port_write(chip, port,
++					   MV88E6XXX_PORT_EGRESS_RATE_CTL2, 0);
++		if (err)
++			return err;
++
++		return mv88e6097_port_egress_rate_limiting(chip, port);
++	}
++
++	if (bps < 64000) {
++		return -ERANGE;
++	} else if (bps < 1000000) {
++		step = 64000;
++		rate = 0x1e84;
++	} else if (bps < 100000000) {
++		step = 1000000;
++		rate = 0x01f4;
++	} else if (bps < 1000000000) {
++		step = 10000000;
++		rate = 0x0032;
++	} else if (bps <= 10000000000ULL) {
++		step = 100000000;
++		rate = 0x0005;
++	} else {
++		return -ERANGE;
++	}
++
++	dec = DIV_ROUND_CLOSEST_ULL(bps, step);
++	if (!dec || dec > MV88E6390_PORT_EGRESS_RATE_CTL1_DEC_MASK)
++		return -ERANGE;
++
++	err = mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_EGRESS_RATE_CTL1,
++				   dec);
++	if (err)
++		return err;
++
++	return mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_EGRESS_RATE_CTL2,
++				    FIELD_PREP(MV88E6390_PORT_EGRESS_RATE_CTL2_COUNT_MASK,
++					       MV88E6390_PORT_EGRESS_RATE_CTL2_COUNT_LAYER2) |
++				    rate);
++}
++
+ /* Offset 0x0B: Port Association Vector */
+ 
+ int mv88e6xxx_port_set_assoc_vector(struct mv88e6xxx_chip *chip, int port,
+diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
+index 273dacfe24396..49674351b5329 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.h
++++ b/drivers/net/dsa/mv88e6xxx/port.h
+@@ -240,9 +240,16 @@
+ 
+ /* Offset 0x09: Egress Rate Control */
+ #define MV88E6XXX_PORT_EGRESS_RATE_CTL1		0x09
++#define MV88E6390_PORT_EGRESS_RATE_CTL1_DEC_MASK	0x007f
+ 
+ /* Offset 0x0A: Egress Rate Control 2 */
+ #define MV88E6XXX_PORT_EGRESS_RATE_CTL2		0x0a
++#define MV88E6390_PORT_EGRESS_RATE_CTL2_COUNT_MASK	0xc000
++#define MV88E6390_PORT_EGRESS_RATE_CTL2_COUNT_FRAMES	0x0
++#define MV88E6390_PORT_EGRESS_RATE_CTL2_COUNT_LAYER1	0x1
++#define MV88E6390_PORT_EGRESS_RATE_CTL2_COUNT_LAYER2	0x2
++#define MV88E6390_PORT_EGRESS_RATE_CTL2_COUNT_LAYER3	0x3
++#define MV88E6390_PORT_EGRESS_RATE_CTL2_RATE_MASK	0x3fff
+ 
+ /* Offset 0x0B: Port Association Vector */
+ #define MV88E6XXX_PORT_ASSOC_VECTOR			0x0b
+@@ -591,6 +598,8 @@ int mv88e6390_port_get_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ int mv88e6390_port_set_pcp_prio(struct mv88e6xxx_chip *chip, int port,
+ 				u8 pcp, u8 dei, int prio);
+ int mv88e6390_port_sync_qpri(struct mv88e6xxx_chip *chip, int port);
++int mv88e6390_port_set_egress_rate(struct mv88e6xxx_chip *chip, int port,
++				   u64 bps);
+ int mv88e6390_port_get_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
+ 				u8 prio, u8 *pcp);
+ int mv88e6390_port_set_pcp_rewr(struct mv88e6xxx_chip *chip, int port,
+-- 
+2.43.0
+

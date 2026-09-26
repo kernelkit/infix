@@ -1,0 +1,46 @@
+=== QoS Weighted Sharing
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/qos_weighted_sharing]
+
+==== Description
+
+Two talkers, one marked EF and one marked CS1, bridged through the DUT
+and out one egress port that cannot carry both.  The port is negotiated
+down to 100 Mbit/s where its PHY allows, or rate limited to 10 Mbit/s
+where it has no PHY.  The ingress port classifies EF to priority 3 and
+CS1 to priority 2, classes 3 and 2 in the default table, both running
+enhanced transmission selection; the two classes below hold five
+percent each and carry nothing, since strict classes must sit above the
+weighted ones.  Each talker offers 80 percent of what the port drains,
+so both classes always have a backlog and the scheduler decides the
+split.
+
+Two measurements:
+
+ - equal weights, 45 and 45 percent, must give an even split.  This is
+   the baseline, and fails on its own if the shares are applied to the
+   wrong bands
+ - 2:1, configured as 60 and 30 percent, must move the split to match
+
+Each flow's share of the delivered datagrams must land within five
+points of its configured share of the two, and both flows must lose more
+than a tenth of their frames in both measurements; a port that was never
+full proves nothing.  The test's own iperf3 control traffic, DSCP 0, is
+classified to priority 7.  Skipped on a switch fabric whose scheduler is
+not offloaded, where forwarded frames never meet the configured
+algorithm.
+
+==== Topology
+
+image::topology.svg[QoS Weighted Sharing topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Bridge the two ports, classify by DSCP on ingress, EF and CS1 in two weighted classes
+. Slow the egress port so its queues can fill
+. Set up the talker and listener namespaces
+. Equal weights, both flows at 80 percent, expect an even split
+. Weights 2:1, both flows at 80 percent, expect a 67:33 split
+
+

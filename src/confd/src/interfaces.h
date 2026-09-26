@@ -167,6 +167,10 @@ int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
 /* if-vxlan.c */
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
+/* if-qos.c */
+int netdag_gen_qos(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *cif,
+		   struct lyd_node *dif);
+
 /* infix-if-wireguard */
 int wireguard_validate_peers(sr_session_ctx_t *session, struct lyd_node *cif);
 int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip,  struct dagger *net);

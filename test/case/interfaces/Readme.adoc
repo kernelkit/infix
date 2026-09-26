@@ -11,7 +11,7 @@ Tests verifying interface configuration and management:
  - Linux bridge creation, STP, and VLAN handling
  - Link aggregation (LAG) setup and failover behavior
  - IGMP multicast group management and forwarding
- - QoS traffic classification and priority handling
+ - QoS traffic classification, traffic classes, and transmission selection
  - Interface enable/disable state management
  - Virtual Ethernet (VETH) pair lifecycle management
  - GRE tunneling configuration and data plane operation
@@ -102,6 +102,26 @@ include::static_multicast_filters/Readme.adoc[]
 <<<
 
 include::vlan_qos/Readme.adoc[]
+
+<<<
+
+include::qos_traffic_class/Readme.adoc[]
+
+<<<
+
+include::qos_validation/Readme.adoc[]
+
+<<<
+
+include::qos_ingress_classify/Readme.adoc[]
+
+<<<
+
+include::qos_classify_dscp/Readme.adoc[]
+
+<<<
+
+include::qos_factory_default/Readme.adoc[]
 
 <<<
 
