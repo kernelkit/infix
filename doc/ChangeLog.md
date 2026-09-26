@@ -103,6 +103,13 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 
+- Constrain Wi-Fi mesh-id and NAS identifier, and validate access-point and mesh passphrases as strictly as station
+- Apply syslog configuration changes at runtime, not only after reboot
+- Restrict the allowed characters in keystore key and certificate names
+- Reject control characters and double quotes in syslog property-filter value and pattern-match
+- Reject control characters and commas in DHCP server static-host match values
+- Restrict the allowed characters in a container `command` override
+- Restrict the allowed characters in a hardware component `name`
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
 - WebUI: "Save" in the interface editor and "OK" in Add Interface
   did nothing for Wi-Fi and WireGuard interfaces. The inline "+ New"
