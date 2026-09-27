@@ -1,0 +1,47 @@
+From f6b394e0a237c23839577a27272549283dac985b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 27 Sep 2026 18:40:44 +0200
+Subject: [PATCH] service: keep a pending reload across a second conf reload
+Organization: Wires
+
+A service whose condition goes into flux during a reload is paused
+with its reload still pending.  If another reload was requested in
+the meantime, re-parsing its unchanged .conf file cleared the pending
+mark, so the service was resumed without ever being reloaded.  Seen
+with sshd <pid/syslogd> on Infix, where a configuration change that
+touched both landed as two reloads in a row and sshd kept its old
+listen addresses.
+
+The mark is only ever cleared once the change has been applied, so a
+mark that is still set when the file is parsed again means exactly
+that: not applied yet.  Leave it alone.
+
+---
+ src/service.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/src/service.c b/src/service.c
+index d31ec3e7..95cd932f 100644
+--- a/src/service.c
++++ b/src/service.c
+@@ -2337,11 +2337,14 @@ int service_register(int type, char *cfg, struct rlimit rlimit[], char *file)
+ 	if (cgroup)
+ 		parse_cgroup(svc, cgroup);
+ 
+-	/* New, recently modified or unchanged ... used on reload. */
++	/*
++	 * New or modified since the last reload.  The mark is cleared when
++	 * the change has been applied, on start or reload, so one that is
++	 * still set here is a change that has not been applied yet, e.g.
++	 * the service is paused waiting for a condition.  Leave it.
++	 */
+ 	if ((file && conf_changed(file)) || conf_changed(svc_getenv(svc)) || svc->args_dirty)
+ 		svc_mark_dirty(svc);
+-	else
+-		svc_mark_clean(svc);
+ 
+ 	svc_enable(svc);
+ 
+-- 
+2.43.0
+
