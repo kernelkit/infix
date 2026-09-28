@@ -416,7 +416,7 @@ static int config_version(const char *path, char *buf, size_t len)
 /*
  * Migrate a config file of an older version to a temporary file, leaving
  * the original untouched until the user saves running-config, issue #1637.
- * Returns the file to load, or NULL on error.
+ * A newer file is loaded as-is.  Returns the file to load, NULL on error.
  */
 static const char *maybe_migrate(const char *path, const char *ver)
 {
@@ -426,6 +426,17 @@ static const char *maybe_migrate(const char *path, const char *ver)
 
 	if (!strcmp(ver, CONFD_VERSION))
 		return path;
+
+	/*
+	 * After a downgrade the file is often usable, a newer version only
+	 * means new settings may be in it.  Try it, the strict parse rejects
+	 * any we don't know, instead of reverting to failure-config.
+	 */
+	if (strverscmp(ver, CONFD_VERSION) > 0) {
+		WARN("%s config version %s is newer than confd %s, trying as-is.",
+		     path, ver, CONFD_VERSION);
+		return path;
+	}
 
 	NOTE("%s config version %s vs confd %s, migrating ...", path, ver, CONFD_VERSION);
 
@@ -630,7 +641,7 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 		if (r != SR_ERR_OK)
 			WARN("Failed to sync startup datastore: %s", sr_strerror(r));
 
-		if (load_path != config_path) {
+		if (strcmp(ver, CONFD_VERSION)) {
 			char msg[160];
 
 			/* Differ from running, or a save is an empty diff and never hits disk */
@@ -639,7 +650,7 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 			     sr_apply_changes(sess, timeout_ms)))
 				WARN("Failed setting startup datastore version %s", ver);
 
-			snprintf(msg, sizeof(msg), "NOTE: %s migrated from version %s to %s, not saved.\n"
+			snprintf(msg, sizeof(msg), "NOTE: %s version %s loaded as version %s, not saved.\n"
 				 "      Use 'copy running-config startup-config' to save.",
 				 basenm(config_path), ver, CONFD_VERSION);
 			banner_append(msg);
