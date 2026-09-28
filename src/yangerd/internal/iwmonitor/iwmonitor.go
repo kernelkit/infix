@@ -41,12 +41,17 @@ type IWMonitor struct {
 
 	mu       sync.Mutex
 	attached map[string]context.CancelFunc
+
+	// meshState reads iftype, mesh forwarding and peers from the
+	// kernel; overridable in tests.
+	meshState func(ifname string) meshState
 }
 
 func New(log *slog.Logger) *IWMonitor {
 	return &IWMonitor{
-		log:      log,
-		attached: make(map[string]context.CancelFunc),
+		log:       log,
+		attached:  make(map[string]context.CancelFunc),
+		meshState: kernelMeshState,
 	}
 }
 
@@ -257,6 +262,8 @@ func (m *IWMonitor) handleAttachEvent(ctx context.Context, ifname string, ev wpa
 		m.refreshInterface(ctx, ifname)
 	case ev.Name == "CTRL-EVENT-CONNECTED":
 		m.refreshInterface(ctx, ifname)
+	case meshEvent(ev):
+		m.refreshInterface(ctx, ifname)
 	case ev.Name == "CTRL-EVENT-DISCONNECTED":
 		m.publishWifi(ifname, nil)
 	case ev.Name == "CTRL-EVENT-SCAN-RESULTS":
@@ -293,21 +300,30 @@ func (m *IWMonitor) buildWifiData(ctx context.Context, iface string) map[string]
 		}
 	}
 
-	mode := m.detectMode(si, status)
+	ms := m.meshState(iface)
 	result := make(map[string]any)
 
-	if mode == "ap" {
+	switch detectMode(si, status, ms.iftype) {
+	case "ap":
 		result["access-point"] = m.buildAPData(ctx, iface, si, status)
-	} else {
+	case "mesh":
+		result["mesh-point"] = m.buildMeshData(iface, si, status, ms)
+	default:
 		result["station"] = m.buildStationData(ctx, iface, si, status)
 	}
 
 	return result
 }
 
-func (m *IWMonitor) detectMode(si wpactrl.SocketInfo, status map[string]string) string {
+// detectMode picks the operational container.  The kernel iftype is
+// authoritative, a mesh interface is one before wpa_supplicant has
+// joined anything and STATUS says so only afterwards (mode=mesh).
+func detectMode(si wpactrl.SocketInfo, status map[string]string, iftype string) string {
 	if si.Daemon == "hostapd" {
 		return "ap"
+	}
+	if iftype == "mesh_point" || status["mode"] == "mesh" {
+		return "mesh"
 	}
 	return "station"
 }
