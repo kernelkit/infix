@@ -18,11 +18,6 @@ static int factory_reset(sr_session_ctx_t *session, uint32_t sub_id, const char 
 
 int factory_default_rpc_init(struct confd *confd)
 {
-	int rc;
-
-	REGISTER_RPC(confd->session, "/ietf-factory-default:factory-reset", factory_reset, NULL, &confd->fsub);
-	return SR_ERR_OK;
-fail:
-	ERROR("failed: %s", sr_strerror(rc));
-	return rc;
+	return register_rpc(confd->session, "/ietf-factory-default:factory-reset",
+			    factory_reset, NULL, &confd->fsub);
 }

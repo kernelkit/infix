@@ -35,10 +35,6 @@ static int rpc(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 
 int factory_rpc_init(struct confd *confd)
 {
-	int rc;
-	REGISTER_RPC(confd->session, "/infix-factory-default:factory-default", rpc, NULL, &confd->fsub);
-	return SR_ERR_OK;
-fail:
-	ERROR("failed: %s", sr_strerror(rc));
-	return rc;
+	return register_rpc(confd->session, "/infix-factory-default:factory-default",
+			    rpc, NULL, &confd->fsub);
 }
