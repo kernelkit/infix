@@ -111,6 +111,8 @@ All notable changes to the project are documented in this file.
 - Apply syslog configuration changes at runtime, not only after reboot
 - Restrict the allowed characters in keystore key and certificate names
 - Restrict the allowed characters in syslog property-filter value and pattern-match
+- Fix #1657: restrict the allowed characters in DHCP client option values,
+  which are written into the DHCP client service file
 - Restrict the allowed characters in DHCP server static-host match values
 - Restrict the allowed characters in a hardware component `name`
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
