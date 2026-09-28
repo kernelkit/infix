@@ -87,6 +87,23 @@ scp x-boot-tactical/images/fip.bin admin@board:/tmp
 ssh admin@board 'sudo dd if=/tmp/fip.bin of=/dev/mmcblk0p1 conv=fsync'
 ```
 
+## Installing
+
+The bootloader and the Linux image are separate builds, combined into one
+eMMC image with `mkimage.sh`:
+
+```bash
+make tactical_boot_defconfig O=x-boot-tactical && make O=x-boot-tactical
+make aarch64_defconfig && make
+utils/mkimage.sh -b x-boot-tactical -r output -t emmc novarq-tactical-1000
+```
+
+The image carries the Infix FIP in both `fip` and `fip.bak`.  Netboot the
+board and stream the image to the eMMC, see [Installing to Onboard
+Storage][7].  A unit still on the vendor U-Boot netboots as described in
+[Netboot with a Vendor U-Boot][8].  The first boot grows `var` to fill the
+eMMC and reboots once by itself.
+
 ## Device Tree
 
 Cherry-picked from [Novarq's kernel tree][2].  One commit adapts it to
@@ -133,3 +150,5 @@ unused.
 [3]: ../microchip-ev23x71a/README.md
 [5]: https://github.com/novarq/mcp2200py
 [6]: https://github.com/novarq/tactical-1000/blob/main/docs/boot-modes.md
+[7]: ../../../doc/netboot.md#installing-to-onboard-storage
+[8]: ../../../doc/netboot.md#netboot-with-a-vendor-u-boot
