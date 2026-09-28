@@ -9,9 +9,10 @@ sections for [Bridging](bridging.md), [Link Aggregation](lag.md),
 ## Interface Name
 
 The interface name is limited to 1-15 characters due to Linux kernel
-constraints.  Physical interfaces use their system-assigned names (e.g.,
-`eth0`, `eth1`), while user-created interfaces can be named freely within
-this limit.
+constraints, and may only contain letters, digits and the characters
+`_ . : + -`, not starting with `.` or `-`.  Physical interfaces use their
+system-assigned names (e.g., `eth0`, `eth1`), while user-created
+interfaces can be named freely within these limits.
 
 > [!TIP]
 > Naming conventions like `br0`, `lag0`, `vlan10`, or `eth0.20` allow
