@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -37,7 +38,9 @@ const cpuComponent = "cpu"
 // their parent component, see doc/hardware.md.
 var socTempSourceRe = regexp.MustCompile(`^(cpu\d*|soc\d*|core\d*|coretemp|k10temp|s5-temp|ap|cp\d+)(-.*)?$`)
 
-// HardwareCollector gathers ietf-hardware operational data.
+// HardwareCollector gathers ietf-hardware operational data.  The
+// inventory, radios and GPS receivers are polled; sensors are read when
+// someone asks, see Live.
 type HardwareCollector struct {
 	cmd      CommandRunner
 	fs       FileReader
@@ -45,6 +48,13 @@ type HardwareCollector struct {
 
 	enableWifi bool
 	enableGPS  bool
+
+	// Snapshot of the last poll, without sensors.
+	mu        sync.Mutex
+	inventory []interface{}
+	radios    []interface{}
+	gps       []interface{}
+	wifiInfo  map[string]map[string]interface{}
 }
 
 // NewHardwareCollector creates a HardwareCollector with the given dependencies.
@@ -69,8 +79,89 @@ func (c *HardwareCollector) Interval() time.Duration { return c.interval }
 func (c *HardwareCollector) Collect(ctx context.Context, t *tree.Tree) error {
 	systemjson := c.readSystemJSON()
 
-	// Thermal zones first: the kernel mirrors each one as an hwmon
-	// device, which carries nothing the zone does not.
+	inventory := make([]interface{}, 0)
+	inventory = append(inventory, c.motherboard_component(systemjson)...)
+	inventory = append(inventory, c.vpd_components(systemjson)...)
+	inventory = append(inventory, c.usb_port_components(systemjson)...)
+
+	var radios, gps []interface{}
+	wifiInfo := map[string]map[string]interface{}{}
+	if c.enableWifi {
+		radios, wifiInfo = c.wifi_radio_components(ctx)
+	}
+	if c.enableGPS {
+		gps = c.gps_receiver_components(ctx)
+	}
+
+	c.mu.Lock()
+	c.inventory = inventory
+	c.radios = radios
+	c.gps = gps
+	c.wifiInfo = wifiInfo
+	c.mu.Unlock()
+
+	if data := c.assemble(ctx); data != nil {
+		t.Set("ietf-hardware:hardware", data)
+	}
+
+	return nil
+}
+
+// Live is the tree provider for the hardware key: the component list
+// with the sensors read now, so a GET reports current readings rather
+// than the last poll's.
+func (c *HardwareCollector) Live() json.RawMessage {
+	return c.assemble(context.Background())
+}
+
+func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
+	c.mu.Lock()
+	inventory := cloneComponents(c.inventory)
+	radios := cloneComponents(c.radios)
+	gps := cloneComponents(c.gps)
+	wifiInfo := c.wifiInfo
+	c.mu.Unlock()
+
+	sensors := c.sensor_components(ctx, wifiInfo)
+
+	components := make([]interface{}, 0, len(inventory)+len(sensors)+len(radios)+len(gps)+1)
+	components = append(components, inventory...)
+	components = append(components, cpu_component(sensors)...)
+	components = append(components, sensors...)
+	components = append(components, radios...)
+	components = append(components, gps...)
+
+	data, err := json.Marshal(map[string]interface{}{
+		"component": unique_names(components),
+	})
+	if err != nil {
+		return nil
+	}
+	return data
+}
+
+// cloneComponents copies the component maps, unique_names may rename
+// one and the snapshot must stay as polled.
+func cloneComponents(components []interface{}) []interface{} {
+	out := make([]interface{}, 0, len(components))
+	for _, raw := range components {
+		if component, ok := raw.(map[string]interface{}); ok {
+			clone := make(map[string]interface{}, len(component))
+			for k, v := range component {
+				clone[k] = v
+			}
+			out = append(out, clone)
+			continue
+		}
+		out = append(out, raw)
+	}
+	return out
+}
+
+// sensor_components reads every sensor.  Thermal zones first: the
+// kernel mirrors each one as an hwmon device, which carries nothing the
+// zone does not.
+func (c *HardwareCollector) sensor_components(ctx context.Context, wifiInfo map[string]map[string]interface{}) []interface{} {
 	sensors := c.thermal_sensor_components(ctx)
 	mirrored := make(map[string]bool, len(sensors))
 	for _, raw := range sensors {
@@ -79,30 +170,7 @@ func (c *HardwareCollector) Collect(ctx context.Context, t *tree.Tree) error {
 		}
 	}
 	sensors = append(sensors, c.hwmon_sensor_components(ctx, mirrored)...)
-
-	components := make([]interface{}, 0)
-	components = append(components, c.motherboard_component(systemjson)...)
-	components = append(components, c.vpd_components(systemjson)...)
-	components = append(components, c.usb_port_components(systemjson)...)
-	components = append(components, cpu_component(sensors)...)
-	components = append(components, sensors...)
-
-	if c.enableWifi {
-		components = append(components, c.wifi_radio_components(ctx)...)
-	}
-	if c.enableGPS {
-		components = append(components, c.gps_receiver_components(ctx)...)
-	}
-
-	hardware := map[string]interface{}{
-		"component": unique_names(components),
-	}
-
-	if data, err := json.Marshal(hardware); err == nil {
-		t.Set("ietf-hardware:hardware", data)
-	}
-
-	return nil
+	return adopt_wifi_sensors(sensors, wifiInfo)
 }
 
 func (c *HardwareCollector) readSystemJSON() map[string]interface{} {
@@ -727,13 +795,7 @@ func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context, mirrore
 		}
 	}
 
-	wifiInfo := make(map[string]map[string]interface{})
-	if client, err := nl80211.Dial(); err == nil {
-		wifiInfo = c.get_wifi_phy_info(ctx, client)
-		_ = client.Close()
-	}
-
-	return adopt_wifi_sensors(components, wifiInfo)
+	return components
 }
 
 // adopt_wifi_sensors gives a radio its name back.  A WiFi PHY's hwmon
@@ -946,15 +1008,18 @@ func channelFromFrequency(freq int) (int, bool) {
 	}
 }
 
-func (c *HardwareCollector) wifi_radio_components(ctx context.Context) []interface{} {
+// wifi_radio_components lists the radios, and returns the PHY info they
+// were built from so the sensors can be matched to them.
+func (c *HardwareCollector) wifi_radio_components(ctx context.Context) ([]interface{}, map[string]map[string]interface{}) {
 	components := make([]interface{}, 0)
+	wifiInfo := map[string]map[string]interface{}{}
 	client, err := nl80211.Dial()
 	if err != nil {
-		return components
+		return components, wifiInfo
 	}
 	defer client.Close()
 
-	wifiInfo := c.get_wifi_phy_info(ctx, client)
+	wifiInfo = c.get_wifi_phy_info(ctx, client)
 
 	for phyName, phyData := range wifiInfo {
 		component := map[string]interface{}{
@@ -1027,7 +1092,7 @@ func (c *HardwareCollector) wifi_radio_components(ctx context.Context) []interfa
 		components = append(components, component)
 	}
 
-	return components
+	return components, wifiInfo
 }
 
 func gpsd_poll(ctx context.Context) map[string]interface{} {

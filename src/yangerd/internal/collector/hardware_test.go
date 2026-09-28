@@ -555,3 +555,54 @@ func TestHardwareBandNameOptional(t *testing.T) {
 	}
 }
 
+// Sensor readings come from the GET, not the last poll: with Live
+// registered as provider, a changed sysfs value shows without Collect.
+func TestHardwareLiveReadsSensorsOnGet(t *testing.T) {
+	runner := &testutil.MockRunner{Results: map[string][]byte{
+		"ls /sys/class/hwmon":        []byte("hwmon0\n"),
+		"ls /sys/class/hwmon/hwmon0": []byte("name\ntemp1_input\n"),
+		"ls /sys/class/thermal":      []byte(""),
+	}, Errors: map[string]error{}}
+	fs := &testutil.MockFileReader{Files: map[string][]byte{
+		"/run/system.json":                    []byte(`{"vendor": "ACME", "product-name": "Box"}`),
+		"/sys/class/hwmon/hwmon0/name":        []byte("s5_temp\n"),
+		"/sys/class/hwmon/hwmon0/temp1_input": []byte("40000\n"),
+	}, Globs: map[string][]string{}}
+
+	tr := tree.New()
+	c := newHardwareCollector(runner, fs)
+	tr.RegisterProvider("ietf-hardware:hardware", c.Live)
+	if err := c.Collect(context.Background(), tr); err != nil {
+		t.Fatalf("Collect failed: %v", err)
+	}
+
+	reading := func() interface{} {
+		var out map[string]interface{}
+		if err := json.Unmarshal(tr.Get("ietf-hardware:hardware"), &out); err != nil {
+			t.Fatalf("unmarshal hardware: %v", err)
+		}
+		sensor := getComponentByName(out["component"].([]interface{}), "s5-temp")
+		if sensor == nil {
+			t.Fatalf("s5-temp missing: %v", out)
+		}
+		return sensor["sensor-data"].(map[string]interface{})["value"]
+	}
+
+	if v := reading(); v != float64(40000) {
+		t.Fatalf("initial reading = %v, want 40000", v)
+	}
+
+	fs.Files["/sys/class/hwmon/hwmon0/temp1_input"] = []byte("61000\n")
+	if v := reading(); v != float64(61000) {
+		t.Fatalf("reading after sysfs change = %v, want 61000 without a new poll", v)
+	}
+
+	mainboard := func() map[string]interface{} {
+		var out map[string]interface{}
+		json.Unmarshal(tr.Get("ietf-hardware:hardware"), &out)
+		return getComponentByName(out["component"].([]interface{}), "mainboard")
+	}
+	if mainboard() == nil {
+		t.Fatal("polled inventory must be kept in the live view")
+	}
+}

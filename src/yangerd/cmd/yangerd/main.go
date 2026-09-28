@@ -82,11 +82,13 @@ func main() {
 	var wg sync.WaitGroup
 	cmd := collector.ExecRunner{}
 	fs := collector.OSFileReader{}
+	hardware := collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, cfg.EnableWifi, cfg.EnableGPS)
+	t.RegisterProvider("ietf-hardware:hardware", hardware.Live)
 	collectors := []collector.Collector{
 		collector.NewSystemCollector(cmd, fs, cfg.PollSystem),
 		collector.NewRoutingCollector(cmd, cfg.PollRouting),
 		collector.NewNTPCollector(cmd, cfg.PollNTP),
-		collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, cfg.EnableWifi, cfg.EnableGPS),
+		hardware,
 	}
 	pokeCh := make(chan struct{}, len(collectors))
 	collector.RunAll(ctx, &wg, t, collectors, pokeCh)
