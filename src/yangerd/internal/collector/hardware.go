@@ -13,15 +13,29 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/nl80211"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
-var hwSensorTypeRe = regexp.MustCompile(`.*_(phy|sfp|fan|temp|sensor|psu|cpu|gpu|memory|disk)\d*$`)
-var hwSensorSuffixExtractRe = regexp.MustCompile(`.*_((?:phy|sfp|fan|temp|sensor|psu|cpu|gpu|memory|disk)\d*)$`)
+// Per-port devices: mt7915_phy0 -> phy0, marvell_alaska_phy7 -> phy7
+var hwPortDeviceRe = regexp.MustCompile(`.*_((?:phy|sfp)\d*)$`)
 var hwTrailingNumUnderscoreRe = regexp.MustCompile(`_(\d+)$`)
 var hwPhyNumRe = regexp.MustCompile(`(\d+)$`)
+
+const cpuComponent = "cpu"
+
+// hwmon device names and thermal zone types that report an SoC die
+// temperature, after normalization: a plain cpu/soc/core, Intel and AMD
+// (coretemp, k10temp), Microchip SparX-5 and LAN969x (s5-temp), or a
+// Marvell CN913x application (ap) or communication (cp<N>) processor
+// cluster.
+//
+// Recognizing vendor names cannot be avoided, but this is the only place
+// it happens.  Northbound, the sensors are found through the class of
+// their parent component, see doc/hardware.md.
+var socTempSourceRe = regexp.MustCompile(`^(cpu\d*|soc\d*|core\d*|coretemp|k10temp|s5-temp|ap|cp\d+)(-.*)?$`)
 
 // HardwareCollector gathers ietf-hardware operational data.
 type HardwareCollector struct {
@@ -55,12 +69,23 @@ func (c *HardwareCollector) Interval() time.Duration { return c.interval }
 func (c *HardwareCollector) Collect(ctx context.Context, t *tree.Tree) error {
 	systemjson := c.readSystemJSON()
 
+	// Thermal zones first: the kernel mirrors each one as an hwmon
+	// device, which carries nothing the zone does not.
+	sensors := c.thermal_sensor_components(ctx)
+	mirrored := make(map[string]bool, len(sensors))
+	for _, raw := range sensors {
+		if name, ok := raw.(map[string]interface{})["name"].(string); ok {
+			mirrored[name] = true
+		}
+	}
+	sensors = append(sensors, c.hwmon_sensor_components(ctx, mirrored)...)
+
 	components := make([]interface{}, 0)
 	components = append(components, c.motherboard_component(systemjson)...)
 	components = append(components, c.vpd_components(systemjson)...)
 	components = append(components, c.usb_port_components(systemjson)...)
-	components = append(components, c.hwmon_sensor_components(ctx)...)
-	components = append(components, c.thermal_sensor_components(ctx)...)
+	components = append(components, cpu_component(sensors)...)
+	components = append(components, sensors...)
 
 	if c.enableWifi {
 		components = append(components, c.wifi_radio_components(ctx)...)
@@ -70,7 +95,7 @@ func (c *HardwareCollector) Collect(ctx context.Context, t *tree.Tree) error {
 	}
 
 	hardware := map[string]interface{}{
-		"component": components,
+		"component": unique_names(components),
 	}
 
 	if data, err := json.Marshal(hardware); err == nil {
@@ -167,8 +192,11 @@ func (c *HardwareCollector) vpd_components(systemjson map[string]interface{}) []
 			"infix-hardware:vpd-data": map[string]interface{}{},
 		}
 
+		// Board authors name these in the device tree, as "cpu", "power",
+		// "product", short words that collide with everything else sharing
+		// the component namespace.  Say what they are.
 		if board, ok := vpdItem["board"].(string); ok && board != "" {
-			component["name"] = board
+			component["name"] = "vpd-" + board
 		}
 
 		dataRaw, ok := vpdItem["data"].(map[string]interface{})
@@ -261,16 +289,84 @@ func (c *HardwareCollector) usb_port_components(systemjson map[string]interface{
 	return components
 }
 
+// normalize_sensor_name makes a list key out of a device name:
+// sfp_2 -> sfp2, mt7915_phy0 -> phy0, cpu_thermal -> cpu-thermal.  A
+// thermal zone and the hwmon device the kernel mirrors it as differ only
+// in their separators, so the two spellings of one sensor come out
+// identical, which is how the mirror is spotted.
 func normalize_sensor_name(name string) string {
-	name = strings.TrimSuffix(name, "-thermal")
-	name = strings.TrimSuffix(name, "_thermal")
-
-	if m := hwSensorSuffixExtractRe.FindStringSubmatch(name); len(m) > 1 {
+	if m := hwPortDeviceRe.FindStringSubmatch(name); len(m) > 1 {
 		name = m[1]
 	}
 
 	name = hwTrailingNumUnderscoreRe.ReplaceAllString(name, "$1")
-	return name
+	return strings.ReplaceAll(name, "_", "-")
+}
+
+// cpu_component is the SoC that die temperature sensors belong to.  Only
+// created when something references it, boards without a die sensor have
+// nothing to say about their SoC.
+func cpu_component(sensors []interface{}) []interface{} {
+	for _, raw := range sensors {
+		if sensor, ok := raw.(map[string]interface{}); ok && sensor["parent"] == cpuComponent {
+			return []interface{}{map[string]interface{}{
+				"name":   cpuComponent,
+				"class":  "iana-hardware:cpu",
+				"parent": "mainboard",
+				"state": map[string]interface{}{
+					"admin-state": "unknown",
+					"oper-state":  "enabled",
+				},
+			}}
+		}
+	}
+	return nil
+}
+
+// unique_names renames duplicate component names "<name>-1", "<name>-2"
+// and so on.  Components are keyed by name, so a duplicate fails every
+// client parsing the tree.  Producers avoid collisions by construction,
+// this is the net under them.  A renamed component keeps any children
+// pointing at the original name, so it is a last resort, not a mechanism
+// to rely on.
+func unique_names(components []interface{}) []interface{} {
+	taken := make(map[string]bool, len(components))
+
+	for _, raw := range components {
+		component, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _ := component["name"].(string)
+		if !taken[name] {
+			taken[name] = true
+			continue
+		}
+
+		unique := name
+		for seq := 1; taken[unique]; seq++ {
+			unique = fmt.Sprintf("%s-%d", name, seq)
+		}
+		log.Printf("collector hardware: duplicate component %q, renaming one of them %q", name, unique)
+		component["name"] = unique
+		taken[unique] = true
+	}
+
+	return components
+}
+
+// titleCase capitalizes the first letter of every word, like Python's
+// str.title(): "volts-DC" -> "Volts-Dc".
+func titleCase(s string) string {
+	out := []rune(strings.ToLower(s))
+	start := true
+	for i, r := range out {
+		if start && unicode.IsLetter(r) {
+			out[i] = unicode.ToUpper(r)
+		}
+		start = !unicode.IsLetter(r)
+	}
+	return string(out)
 }
 
 func humanizeSensorLabel(label string) string {
@@ -414,9 +510,12 @@ func (c *HardwareCollector) get_wifi_phy_info(ctx context.Context, client *nl802
 	return phyInfo
 }
 
-func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context) []interface{} {
+// hwmon_sensor_components lists the hwmon sensors.  Devices named in
+// mirrored are skipped, see the thermal zones.
+func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context, mirrored map[string]bool) []interface{} {
 	components := make([]interface{}, 0)
 	deviceSensors := make(map[string][]map[string]interface{})
+	order := make([]string, 0) // devices in discovery order, like the kernel lists them
 
 	hwmonEntries, err := c.listDir(ctx, "/sys/class/hwmon")
 	if err != nil {
@@ -433,6 +532,11 @@ func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context) []inter
 		if !ok || deviceName == "" {
 			continue
 		}
+		// With THERMAL_HWMON the kernel mirrors every thermal zone as an
+		// hwmon device, named after the zone with the separators changed.
+		if mirrored[normalize_sensor_name(deviceName)] {
+			continue
+		}
 		if devName, ok := c.readSensorString(hwmonPath + "/device/name"); ok && devName != "" {
 			deviceName = devName
 		}
@@ -440,6 +544,10 @@ func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context) []inter
 		baseName := normalize_sensor_name(deviceName)
 		if baseName == "" {
 			continue
+		}
+		if _, seen := deviceSensors[baseName]; !seen {
+			deviceSensors[baseName] = nil
+			order = append(order, baseName)
 		}
 
 		entries, err := c.listDir(ctx, hwmonPath)
@@ -591,19 +699,30 @@ func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context) []inter
 		}
 	}
 
-	for baseName, sensors := range deviceSensors {
-		if len(sensors) > 1 {
+	for _, baseName := range order {
+		sensors := deviceSensors[baseName]
+		if len(sensors) == 0 {
+			continue
+		}
+		parent := ""
+		switch {
+		case socTempSourceRe.MatchString(baseName):
+			// SoC die sensors belong to the CPU, whatever the vendor
+			// called the hwmon device
+			parent = cpuComponent
+		case len(sensors) > 1:
+			// Multi-sensor devices, like SFP modules, head their own
+			parent = baseName
 			components = append(components, map[string]interface{}{
 				"name":  baseName,
 				"class": "iana-hardware:module",
 			})
-			for _, sensor := range sensors {
-				sensor["parent"] = baseName
-				components = append(components, sensor)
-			}
-			continue
 		}
+
 		for _, sensor := range sensors {
+			if parent != "" {
+				sensor["parent"] = parent
+			}
 			components = append(components, sensor)
 		}
 	}
@@ -613,25 +732,51 @@ func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context) []inter
 		wifiInfo = c.get_wifi_phy_info(ctx, client)
 		_ = client.Close()
 	}
-	for _, componentRaw := range components {
-		component, ok := componentRaw.(map[string]interface{})
+
+	return adopt_wifi_sensors(components, wifiInfo)
+}
+
+// adopt_wifi_sensors gives a radio its name back.  A WiFi PHY's hwmon
+// device is named after the radio, so whatever hwmon_sensor_components
+// built for it took the radio's name before wifi_radio_components gets
+// there, and unique_names would rename the radio instead, breaking the
+// wifi/radio leafref that interfaces are bound by.  Its sensors hang off
+// it, the way the die sensors hang off the CPU, and the module head a
+// multi-sensor device would get is dropped: the radio component already
+// is one.
+func adopt_wifi_sensors(components []interface{}, wifiInfo map[string]map[string]interface{}) []interface{} {
+	out := make([]interface{}, 0, len(components))
+	for _, raw := range components {
+		component, ok := raw.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		name, ok := component["name"].(string)
-		if !ok {
+		name, _ := component["name"].(string)
+		if _, radio := wifiInfo[name]; !radio {
+			out = append(out, component)
 			continue
 		}
-		if strings.HasPrefix(name, "radio") {
-			if phy, ok := wifiInfo[name]; ok {
-				if desc, ok := phy["description"].(string); ok && desc != "" {
-					component["description"] = desc
-				}
-			}
+
+		if component["class"] == "iana-hardware:module" {
+			continue // the radio heads its own sensors
 		}
+
+		kind := "sensor"
+		if sd, ok := component["sensor-data"].(map[string]interface{}); ok {
+			kind = strDefault(sd["value-type"], kind)
+		}
+		if kind == "celsius" {
+			component["name"] = name + "-temp"
+			component["description"] = "Temperature"
+		} else {
+			component["name"] = name + "-" + kind
+			component["description"] = titleCase(kind)
+		}
+		component["parent"] = name
+		out = append(out, component)
 	}
 
-	return components
+	return out
 }
 
 func (c *HardwareCollector) thermal_sensor_components(ctx context.Context) []interface{} {
@@ -656,7 +801,11 @@ func (c *HardwareCollector) thermal_sensor_components(ctx context.Context) []int
 			continue
 		}
 
-		components = append(components, sensorComponent(normalize_sensor_name(zoneType), temp, "celsius", "milli", ""))
+		component := sensorComponent(normalize_sensor_name(zoneType), temp, "celsius", "milli", "")
+		if socTempSourceRe.MatchString(component["name"].(string)) {
+			component["parent"] = cpuComponent
+		}
+		components = append(components, component)
 	}
 
 	return components
@@ -725,7 +874,9 @@ func convert_iw_phy_info_for_yanger(phyInfo map[string]interface{}) map[string]i
 		}
 		bandData := map[string]interface{}{
 			"band": strconv.Itoa(toInt(band["band"])),
-			"name": strDefault(band["name"], "Unknown"),
+		}
+		if name := strDefault(band["name"], ""); name != "" {
+			bandData["name"] = name
 		}
 		if v, ok := band["ht_capable"].(bool); ok && v {
 			bandData["ht-capable"] = true

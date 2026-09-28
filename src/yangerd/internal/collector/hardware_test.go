@@ -122,9 +122,9 @@ func TestHardwareVPD(t *testing.T) {
 	}, Globs: map[string][]string{}}
 
 	components := collectHardware(t, newHardwareCollector(runner, fs))
-	vpd := getComponentByName(components, "board0")
+	vpd := getComponentByName(components, "vpd-board0")
 	if vpd == nil {
-		t.Fatal("vpd component board0 not found")
+		t.Fatal("vpd component vpd-board0 not found")
 	}
 	if vpd["class"] != "infix-hardware:vpd" {
 		t.Fatalf("vpd class mismatch: %v", vpd["class"])
@@ -190,13 +190,19 @@ func TestHardwareHwmonTemp(t *testing.T) {
 	if !containsComponentWithClass(components, "iana-hardware:sensor") {
 		t.Fatalf("expected at least one sensor component: %v", components)
 	}
-	sensor := getComponentByName(components, "cpu-temp")
+	sensor := getComponentByName(components, "cpu-thermal-cpu-temp")
 	if sensor == nil {
-		t.Fatalf("expected temp sensor cpu-temp, got: %v", components)
+		t.Fatalf("expected temp sensor cpu-thermal-cpu-temp, got: %v", components)
 	}
 	sd := sensor["sensor-data"].(map[string]interface{})
 	if toInt(sd["value"]) != 42000 || sd["value-type"] != "celsius" || sd["value-scale"] != "milli" {
 		t.Fatalf("temp sensor-data mismatch: %v", sd)
+	}
+	if sensor["parent"] != "cpu" {
+		t.Fatalf("die sensor must hang off the cpu, got parent %v", sensor["parent"])
+	}
+	if cpu := getComponentByName(components, "cpu"); cpu == nil || cpu["class"] != "iana-hardware:cpu" || cpu["parent"] != "mainboard" {
+		t.Fatalf("expected cpu component under mainboard, got %v", cpu)
 	}
 }
 
@@ -219,6 +225,12 @@ func TestHardwareHwmonFan(t *testing.T) {
 	sd := sensor["sensor-data"].(map[string]interface{})
 	if toInt(sd["value"]) != 3200 || sd["value-type"] != "rpm" || sd["value-scale"] != "units" {
 		t.Fatalf("fan sensor-data mismatch: %v", sd)
+	}
+	if _, ok := sensor["parent"]; ok {
+		t.Fatalf("a lone fan has no parent, got %v", sensor["parent"])
+	}
+	if getComponentByName(components, "cpu") != nil {
+		t.Fatal("no die sensor, so no cpu component")
 	}
 }
 
@@ -309,13 +321,16 @@ func TestHardwareThermalZone(t *testing.T) {
 	}, Globs: map[string][]string{}}
 
 	components := collectHardware(t, newHardwareCollector(runner, fs))
-	sensor := getComponentByName(components, "cpu")
+	sensor := getComponentByName(components, "cpu-thermal")
 	if sensor == nil {
-		t.Fatalf("expected thermal sensor cpu, got %v", components)
+		t.Fatalf("expected thermal sensor cpu-thermal, got %v", components)
 	}
 	sd := sensor["sensor-data"].(map[string]interface{})
 	if toInt(sd["value"]) != 39000 || sd["value-type"] != "celsius" {
 		t.Fatalf("thermal sensor mismatch: %v", sd)
+	}
+	if sensor["parent"] != "cpu" {
+		t.Fatalf("thermal die sensor must hang off the cpu, got %v", sensor["parent"])
 	}
 }
 
@@ -327,8 +342,9 @@ func TestHardwareNormalizeSensorName(t *testing.T) {
 		{in: "sfp_2", want: "sfp2"},
 		{in: "mt7915_phy0", want: "phy0"},
 		{in: "marvell_alaska_tomte_phy7", want: "phy7"},
-		{in: "cpu_thermal", want: "cpu"},
-		{in: "gpu-thermal", want: "gpu"},
+		{in: "cpu_thermal", want: "cpu-thermal"},
+		{in: "gpu-thermal", want: "gpu-thermal"},
+		{in: "s5_temp", want: "s5-temp"},
 		{in: "pwmfan", want: "pwmfan"},
 	}
 
@@ -396,3 +412,146 @@ func TestHardwareGPSDeviceNotFound(t *testing.T) {
 		}
 	}
 }
+
+// The synthetic case from test/case/statd/sensors: an SoC die
+// temperature from hwmon (s5_temp) and one from a thermal zone
+// (cpu-thermal) both land under the cpu component, the fan does not, the
+// hwmon mirror of the zone is skipped, and the VPD board named "cpu"
+// does not collide with the cpu component.
+func TestHardwareSyntheticSensors(t *testing.T) {
+	runner := &testutil.MockRunner{Results: map[string][]byte{
+		"ls /sys/class/hwmon":        []byte("hwmon0\nhwmon1\nhwmon2\n"),
+		"ls /sys/class/hwmon/hwmon0": []byte("name\ntemp1_input\n"),
+		"ls /sys/class/hwmon/hwmon1": []byte("name\nfan1_input\n"),
+		"ls /sys/class/hwmon/hwmon2": []byte("name\ntemp1_input\n"),
+		"ls /sys/class/thermal":      []byte("thermal_zone0\ncooling_device0\n"),
+	}, Errors: map[string]error{}}
+	fs := &testutil.MockFileReader{Files: map[string][]byte{
+		"/run/system.json": []byte(`{
+			"vendor": "Microchip",
+			"product-name": "EV23X71A",
+			"mac-address": "00:a0:85:00:03:00",
+			"vpd": {
+				"cpu": {
+					"board": "cpu",
+					"available": true,
+					"trusted": true,
+					"data": {
+						"product-name": "CPU board",
+						"serial-number": "0123456789"
+					}
+				}
+			}
+		}`),
+		"/sys/class/hwmon/hwmon0/name":          []byte("s5_temp\n"),
+		"/sys/class/hwmon/hwmon0/temp1_input":   []byte("59500\n"),
+		"/sys/class/hwmon/hwmon1/name":          []byte("pwmfan\n"),
+		"/sys/class/hwmon/hwmon1/fan1_input":    []byte("3200\n"),
+		"/sys/class/hwmon/hwmon2/name":          []byte("cpu_thermal\n"),
+		"/sys/class/hwmon/hwmon2/temp1_input":   []byte("48000\n"),
+		"/sys/class/thermal/thermal_zone0/type": []byte("cpu-thermal\n"),
+		"/sys/class/thermal/thermal_zone0/temp": []byte("48000\n"),
+	}, Globs: map[string][]string{}}
+
+	components := collectHardware(t, newHardwareCollector(runner, fs))
+
+	var names []string
+	for _, raw := range components {
+		names = append(names, raw.(map[string]interface{})["name"].(string))
+	}
+	want := []string{"mainboard", "vpd-cpu", "cpu", "cpu-thermal", "s5-temp", "pwmfan"}
+	if fmt.Sprint(names) != fmt.Sprint(want) {
+		t.Fatalf("component order: want %v, got %v", want, names)
+	}
+
+	if vpd := getComponentByName(components, "vpd-cpu"); vpd["class"] != "infix-hardware:vpd" || vpd["model-name"] != "CPU board" {
+		t.Fatalf("vpd-cpu mismatch: %v", vpd)
+	}
+	cpu := getComponentByName(components, "cpu")
+	if cpu["class"] != "iana-hardware:cpu" || cpu["parent"] != "mainboard" {
+		t.Fatalf("cpu mismatch: %v", cpu)
+	}
+	if st := cpu["state"].(map[string]interface{}); st["admin-state"] != "unknown" || st["oper-state"] != "enabled" {
+		t.Fatalf("cpu state mismatch: %v", st)
+	}
+	for name, value := range map[string]int{"cpu-thermal": 48000, "s5-temp": 59500} {
+		sensor := getComponentByName(components, name)
+		sd := sensor["sensor-data"].(map[string]interface{})
+		if sensor["parent"] != "cpu" || toInt(sd["value"]) != value || sd["value-type"] != "celsius" {
+			t.Fatalf("%s mismatch: %v", name, sensor)
+		}
+	}
+	fan := getComponentByName(components, "pwmfan")
+	if _, ok := fan["parent"]; ok {
+		t.Fatalf("fan must not be under the cpu: %v", fan)
+	}
+	if sd := fan["sensor-data"].(map[string]interface{}); toInt(sd["value"]) != 3200 || sd["value-type"] != "rpm" {
+		t.Fatalf("fan mismatch: %v", fan)
+	}
+}
+
+// A hwmon device named after a WiFi radio must not steal the radio's
+// component name: its sensors hang off the radio, and the module head a
+// multi-sensor device would get is dropped.
+func TestHardwareAdoptWifiSensors(t *testing.T) {
+	components := []interface{}{
+		map[string]interface{}{"name": "radio0", "class": "iana-hardware:module"},
+		sensorComponent("radio0", 41000, "celsius", "milli", ""),
+		sensorComponent("radio0-VCC", 3300, "volts-DC", "milli", "VCC"),
+		sensorComponent("pwmfan", 3200, "rpm", "units", ""),
+	}
+	components[1].(map[string]interface{})["parent"] = "radio0"
+	components[2].(map[string]interface{})["parent"] = "radio0"
+	wifiInfo := map[string]map[string]interface{}{"radio0": {}}
+
+	got := adopt_wifi_sensors(components, wifiInfo)
+	if len(got) != 3 {
+		t.Fatalf("module head must be dropped, got %v", got)
+	}
+	temp := getComponentByName(got, "radio0-temp")
+	if temp == nil || temp["parent"] != "radio0" || temp["description"] != "Temperature" {
+		t.Fatalf("radio temp sensor mismatch: %v", temp)
+	}
+	if getComponentByName(got, "radio0") != nil {
+		t.Fatal("no sensor may keep the radio's name")
+	}
+	if getComponentByName(got, "pwmfan") == nil {
+		t.Fatal("unrelated sensors must pass through")
+	}
+}
+
+func TestHardwareUniqueNames(t *testing.T) {
+	components := []interface{}{
+		map[string]interface{}{"name": "cpu"},
+		map[string]interface{}{"name": "cpu"},
+		map[string]interface{}{"name": "cpu-1"},
+		map[string]interface{}{"name": "cpu"},
+	}
+
+	var names []string
+	for _, raw := range unique_names(components) {
+		names = append(names, raw.(map[string]interface{})["name"].(string))
+	}
+	want := []string{"cpu", "cpu-1", "cpu-1-1", "cpu-2"}
+	if fmt.Sprint(names) != fmt.Sprint(want) {
+		t.Fatalf("want %v, got %v", want, names)
+	}
+}
+
+// A band whose name is unknown carries no name leaf rather than "Unknown".
+func TestHardwareBandNameOptional(t *testing.T) {
+	out := convert_iw_phy_info_for_yanger(map[string]interface{}{
+		"bands": []interface{}{
+			map[string]interface{}{"band": 1, "name": "2.4 GHz"},
+			map[string]interface{}{"band": 2},
+		},
+	})
+	bands := out["bands"].([]interface{})
+	if bands[0].(map[string]interface{})["name"] != "2.4 GHz" {
+		t.Fatalf("known band name lost: %v", bands[0])
+	}
+	if _, ok := bands[1].(map[string]interface{})["name"]; ok {
+		t.Fatalf("unknown band must have no name: %v", bands[1])
+	}
+}
+
