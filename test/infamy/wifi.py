@@ -91,7 +91,16 @@ def ap_stations(target, ifname="wifi0"):
     return {sta.get("mac-address", "").lower() for sta in stations}
 
 
+def mesh_point(target, ifname="wifi0"):
+    """Operational mesh-point container of ifname, empty if not a mesh point."""
+    return _wifi(target.get_iface(ifname)).get("mesh-point") or {}
+
+
 def mesh_peers(target, ifname="wifi0"):
     """Peers of the mesh point on ifname."""
-    mp = _wifi(target.get_iface(ifname)).get("mesh-point") or {}
-    return (mp.get("peers") or {}).get("peer") or []
+    return (mesh_point(target, ifname).get("peers") or {}).get("peer") or []
+
+
+def mesh_peer_macs(target, ifname="wifi0"):
+    """MACs of the mesh peers on ifname, lowercase."""
+    return {peer.get("mac-address", "").lower() for peer in mesh_peers(target, ifname)}

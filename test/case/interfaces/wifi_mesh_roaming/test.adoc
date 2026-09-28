@@ -20,7 +20,8 @@ so the mesh is a transparent layer-2 backhaul.  A fourth node is the client.
 
 The test checks the claims the whitepaper makes:
 
-  1. the three nodes form a mesh (each sees its two peers);
+  1. the three nodes form a mesh (each lists the other two as peers, and
+     reports the mesh id and forwarding it runs with);
   2. the client associates to the "campus" SSID;
   3. traffic reaches the client across the mesh backhaul (host behind gw1
      pings the client, which is attached to some gw's AP);
@@ -51,7 +52,8 @@ image::topology.svg[WiFi Mesh backhaul with roaming Access Points topology, alig
 . Set up topology and attach to gw1, gw2, gw3 and the client
 . Configure gw1, gw2, gw3 as mesh nodes with a roaming AP
 . Configure the client as a station for the 'campus' SSID
-. Verify the three nodes form the mesh backhaul
+. Verify each node lists the other two nodes as mesh peers
+. Verify each node reports mesh-id 'backhaul' with forwarding enabled
 . Verify the client associates to the 'campus' SSID
 . Verify the client is connected to one of the campus APs
 . Verify the client is reachable across the mesh

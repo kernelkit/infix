@@ -18,7 +18,8 @@ so the mesh is a transparent layer-2 backhaul.  A fourth node is the client.
 
 The test checks the claims the whitepaper makes:
 
-  1. the three nodes form a mesh (each sees its two peers);
+  1. the three nodes form a mesh (each lists the other two as peers, and
+     reports the mesh id and forwarding it runs with);
   2. the client associates to the "campus" SSID;
   3. traffic reaches the client across the mesh backhaul (host behind gw1
      pings the client, which is attached to some gw's AP);
@@ -149,10 +150,19 @@ with infamy.Test() as test:
             ]}},
         })
 
-    with test.step("Verify the three nodes form the mesh backhaul"):
-        for name, dut, _, _ in gws:
-            until(lambda dut=dut: len(wifi.mesh_peers(dut)) >= 2,
+    with test.step("Verify each node lists the other two nodes as mesh peers"):
+        mesh_macs = {mesh_mac.lower() for _, mesh_mac, _ in GWS}
+        for name, dut, mesh_mac, _ in gws:
+            until(lambda dut=dut, mesh_mac=mesh_mac:
+                  wifi.mesh_peer_macs(dut) == mesh_macs - {mesh_mac.lower()},
                   attempts=60, interval=2)
+
+    with test.step("Verify each node reports mesh-id 'backhaul' with forwarding enabled"):
+        for name, dut, _, _ in gws:
+            mp = wifi.mesh_point(dut)
+            if mp.get("mesh-id") != MESH_ID or mp.get("forwarding") is not True:
+                print(f"{name}: {mp}")
+                test.fail()
 
     with test.step("Verify the client associates to the 'campus' SSID"):
         until(lambda: wifi.associated(client, SSID), attempts=60, interval=2)
