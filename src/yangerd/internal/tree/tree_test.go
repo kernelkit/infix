@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestSetGet(t *testing.T) {
@@ -321,5 +322,63 @@ func TestConcurrentMerge(t *testing.T) {
 	got := tr.Get("shared")
 	if got == nil {
 		t.Fatal("expected non-nil after concurrent merges")
+	}
+}
+
+// A provider that reads the tree must not deadlock GetMulti against a
+// writer waiting for the tree lock.
+func TestGetMultiProviderReadsTreeWhileWriterWaits(t *testing.T) {
+	tr := New()
+	tr.Set("a", json.RawMessage(`{"x":1}`))
+	tr.Set("b", json.RawMessage(`{"y":2}`))
+
+	inProvider := make(chan struct{})
+	release := make(chan struct{})
+	tr.RegisterProvider("a", func() json.RawMessage {
+		close(inProvider)
+		<-release
+		return tr.GetCached("b")
+	})
+
+	done := make(chan []json.RawMessage)
+	go func() { done <- tr.GetMulti([]string{"a", "b"}) }()
+
+	<-inProvider
+	deleted := make(chan struct{})
+	go func() {
+		tr.Delete("b") // a writer queued behind the read
+		close(deleted)
+	}()
+	time.Sleep(20 * time.Millisecond)
+	close(release)
+
+	select {
+	case res := <-done:
+		if len(res) != 2 {
+			t.Fatalf("got %d results, want 2", len(res))
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("GetMulti deadlocked against a waiting writer")
+	}
+	<-deleted
+}
+
+// Two first writers on an absent key must both land.
+func TestConcurrentFirstMerge(t *testing.T) {
+	for i := 0; i < 200; i++ {
+		tr := New()
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() { defer wg.Done(); tr.Merge("k", json.RawMessage(`{"a":1}`)) }()
+		go func() { defer wg.Done(); tr.Merge("k", json.RawMessage(`{"b":2}`)) }()
+		wg.Wait()
+
+		var out map[string]int
+		if err := json.Unmarshal(tr.Get("k"), &out); err != nil {
+			t.Fatal(err)
+		}
+		if out["a"] != 1 || out["b"] != 2 {
+			t.Fatalf("lost a first merge: %v", out)
+		}
 	}
 }

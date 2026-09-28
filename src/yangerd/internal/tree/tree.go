@@ -51,22 +51,28 @@ func (t *Tree) RegisterProvider(key string, fn OnDemandFunc) {
 	t.mu.Unlock()
 }
 
+// entry returns the model entry for key, creating it if absent.
+func (t *Tree) entry(key string) *modelEntry {
+	t.mu.RLock()
+	entry, ok := t.models[key]
+	t.mu.RUnlock()
+	if ok {
+		return entry
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if entry, ok = t.models[key]; !ok {
+		entry = &modelEntry{}
+		t.models[key] = entry
+	}
+	return entry
+}
+
 // Set replaces the entire subtree at the given YANG module key.
 // Only the target module's write lock is held; other modules remain
 // readable and writable.
 func (t *Tree) Set(key string, v json.RawMessage) {
-	t.mu.RLock()
-	entry, ok := t.models[key]
-	t.mu.RUnlock()
-	if !ok {
-		t.mu.Lock()
-		entry, ok = t.models[key]
-		if !ok {
-			entry = &modelEntry{}
-			t.models[key] = entry
-		}
-		t.mu.Unlock()
-	}
+	entry := t.entry(key)
 	entry.mu.Lock()
 	entry.data = v
 	entry.updated = time.Now()
@@ -95,24 +101,32 @@ func (t *Tree) Get(key string) json.RawMessage {
 }
 
 // GetMulti returns the raw JSON for multiple module keys.
-// Each module's read lock is acquired and released individually —
+// Each module's read lock is acquired and released individually --
 // the result is eventually consistent, not a snapshot.
-// Providers are applied per-key, same as Get.
+// Providers are applied per-key, same as Get, and run without any
+// tree lock held: a provider may read the tree itself.
 func (t *Tree) GetMulti(keys []string) []json.RawMessage {
-	result := make([]json.RawMessage, 0, len(keys))
+	type pick struct {
+		entry    *modelEntry
+		provider OnDemandFunc
+	}
+	picks := make([]pick, 0, len(keys))
 	t.mu.RLock()
-	defer t.mu.RUnlock()
 	for _, key := range keys {
-		entry, ok := t.models[key]
-		if !ok {
-			continue
+		if entry, ok := t.models[key]; ok {
+			picks = append(picks, pick{entry, t.providers[key]})
 		}
-		entry.mu.RLock()
-		data := entry.data
-		entry.mu.RUnlock()
+	}
+	t.mu.RUnlock()
 
-		if provider, has := t.providers[key]; has {
-			data = ShallowMerge(data, provider())
+	result := make([]json.RawMessage, 0, len(picks))
+	for _, p := range picks {
+		p.entry.mu.RLock()
+		data := p.entry.data
+		p.entry.mu.RUnlock()
+
+		if p.provider != nil {
+			data = ShallowMerge(data, p.provider())
 		}
 		result = append(result, data)
 	}
@@ -143,18 +157,9 @@ type ModelInfo struct {
 // not mentioned in partial are preserved.
 //
 // Both the existing data and partial must be JSON objects (maps).
-// If either is not a valid JSON object, Merge falls back to Set.
+// If either is not a valid JSON object, partial replaces the value.
 func (t *Tree) Merge(key string, partial json.RawMessage) {
-	t.mu.RLock()
-	entry, ok := t.models[key]
-	t.mu.RUnlock()
-
-	if !ok {
-		// No existing entry — just set.
-		t.Set(key, partial)
-		return
-	}
-
+	entry := t.entry(key)
 	entry.mu.Lock()
 	defer entry.mu.Unlock()
 
