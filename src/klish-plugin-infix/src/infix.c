@@ -666,7 +666,8 @@ static void ensure_known_hosts(const struct passwd *pw)
 	if (fd < 0)
 		return; /* Already exists, or unrecoverable error */
 
-	fchown(fd, pw->pw_uid, pw->pw_gid);
+	if (fchown(fd, pw->pw_uid, pw->pw_gid))
+		unlink(path);
 	close(fd);
 }
 
