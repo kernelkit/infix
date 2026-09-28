@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/bridgebatch"
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
 	"github.com/kernelkit/infix/src/yangerd/internal/config"
@@ -79,7 +80,20 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	slogLog := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slogLevel(cfg.LogLevel)}))
+
 	var wg sync.WaitGroup
+	// spawn runs a monitor until ctx ends; an exit before that is a bug
+	// worth a log line, the monitor itself owns its restarts.
+	spawn := func(name string, run func(context.Context) error) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := run(ctx); err != nil && ctx.Err() == nil {
+				slogLog.Error(name+" exited", "err", err)
+			}
+		}()
+	}
 	cmd := collector.ExecRunner{}
 	fs := collector.OSFileReader{}
 	hardware := collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, cfg.EnableWifi, cfg.EnableGPS)
@@ -125,8 +139,6 @@ func main() {
 		t.Merge("ietf-system:system-state", data)
 	}
 
-	slogLog := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slogLevel(cfg.LogLevel)}))
-
 	linkBatch, err := ipbatch.New(ctx, slogLog, ipbatch.WithStats(), ipbatch.WithDetails())
 	if err != nil {
 		log.Fatalf("start link batch: %v", err)
@@ -159,69 +171,19 @@ func main() {
 	} else {
 		ethMon.SetOnUpdate(nlmon.SetEthernetData)
 		nlmon.SetEthRefresh(ethMon.RefreshInterface)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := ethMon.Run(ctx); err != nil && ctx.Err() == nil {
-				slogLog.Error("ethmonitor exited", "err", err)
-			}
-		}()
+		spawn("ethmonitor", ethMon.Run)
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		ticker := time.NewTicker(10 * time.Second)
-		defer ticker.Stop()
-		<-nlmon.WaitReady()
-		for {
-			links := nlmon.Links()
-			for ifname, data := range wgquery.Query(links) {
-				nlmon.SetWireguardData(ifname, data)
-			}
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-			}
+	spawn("wireguard", poll(nlmon.WaitReady(), 10*time.Second, func() {
+		links := nlmon.Links()
+		for ifname, data := range wgquery.Query(links) {
+			nlmon.SetWireguardData(ifname, data)
 		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		ticker := time.NewTicker(cfg.PollSTP)
-		defer ticker.Stop()
-		<-nlmon.WaitReady()
-		for {
-			nlmon.RefreshSTP()
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-			}
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			if err := nlmon.Run(ctx); err != nil {
-				if ctx.Err() != nil {
-					return
-				}
-				slogLog.Error("nlmonitor exited, restarting in 1s", "err", err)
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(time.Second):
-				}
-			} else {
-				return
-			}
-		}
-	}()
+	}))
+	spawn("stp", poll(nlmon.WaitReady(), cfg.PollSTP, nlmon.RefreshSTP))
+	spawn("nlmonitor", func(ctx context.Context) error {
+		return backoff.Retry(ctx, slogLog, "nlmonitor", nlmon.Run)
+	})
 
 	if cfg.EnableWifi {
 		iwmon := iwmonitor.New(slogLog)
@@ -232,73 +194,31 @@ func main() {
 			default:
 			}
 		})
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := iwmon.Run(ctx); err != nil && ctx.Err() == nil {
-				slogLog.Error("iwmonitor exited", "err", err)
-			}
-		}()
+		spawn("iwmonitor", iwmon.Run)
 	}
 
 	if cfg.EnableLLDP {
 		lldpmon := lldpmonitor.New(t, slogLog)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := lldpmon.Run(ctx); err != nil && ctx.Err() == nil {
-				slogLog.Error("lldpmonitor exited", "err", err)
-			}
-		}()
+		spawn("lldpmonitor", lldpmon.Run)
 	}
 
 	if cfg.EnableContainers {
 		ctrmon := containermonitor.New(t, cmd, fs, slogLog)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := ctrmon.Run(ctx); err != nil && ctx.Err() == nil {
-				slogLog.Error("containermonitor exited", "err", err)
-			}
-		}()
+		spawn("containermonitor", ctrmon.Run)
 	}
 
 	tftpmon := tftpmonitor.New(t, slogLog)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := tftpmon.Run(ctx); err != nil && ctx.Err() == nil {
-			slogLog.Error("tftpmonitor exited", "err", err)
-		}
-	}()
+	spawn("tftpmonitor", tftpmon.Run)
 
 	ptpmon := ptpmonitor.New(t, slogLog)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := ptpmon.Run(ctx); err != nil && ctx.Err() == nil {
-			slogLog.Error("ptpmonitor exited", "err", err)
-		}
-	}()
+	spawn("ptpmonitor", ptpmon.Run)
 
 	zapi := zapiwatcher.New(t, frrvty.New(""), slogLog)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := zapi.Run(ctx); err != nil && ctx.Err() == nil {
-			slogLog.Error("zapiwatcher exited", "err", err)
-		}
-	}()
+	spawn("zapiwatcher", zapi.Run)
 
 	if cfg.EnableDHCP || cfg.EnableFirewall {
 		dbusMon := dbusmonitor.New(t, slogLog)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := dbusMon.Run(ctx); err != nil && ctx.Err() == nil {
-				slogLog.Error("dbusmonitor exited", "err", err)
-			}
-		}()
+		spawn("dbusmonitor", dbusMon.Run)
 	}
 
 	fsw, err := fswatcher.New(t, slogLog)
@@ -387,13 +307,7 @@ func main() {
 	// Container operational data is handled by containermonitor (a
 	// `podman events` stream), not the fswatcher.
 	fsw.InitialRead()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := fsw.Run(ctx); err != nil && ctx.Err() == nil {
-			slogLog.Error("fswatcher exited", "err", err)
-		}
-	}()
+	spawn("fswatcher", fsw.Run)
 
 	go func() {
 		<-nlmon.WaitReady()
@@ -422,6 +336,28 @@ func main() {
 	}
 
 	wg.Wait()
+}
+
+// poll runs fn once ready is closed and then every interval until the
+// context ends.
+func poll(ready <-chan struct{}, every time.Duration, fn func()) func(context.Context) error {
+	return func(ctx context.Context) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ready:
+		}
+		ticker := time.NewTicker(every)
+		defer ticker.Stop()
+		for {
+			fn()
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-ticker.C:
+			}
+		}
+	}
 }
 
 func slogLevel(s string) slog.Level {
