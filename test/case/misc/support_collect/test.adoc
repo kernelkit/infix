@@ -1,6 +1,6 @@
 === Support Data Collection
 
-ifdef::topdoc[:imagesdir: {topdoc}../../misc/support_collect]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/support_collect]
 
 ==== Description
 
