@@ -80,7 +80,7 @@ static int add(const char *name, struct lyd_node *cif)
 	FILE *fp, *ap;
 
 	snprintf(script, sizeof(script), "%s.sh", name);
-	fp = fopenf("w", "%s/%s", _PATH_CONT, script);
+	fp = fopenfp(0700, NULL, "%s/%s", _PATH_CONT, script);
 	if (!fp) {
 		ERRNO("Failed creating container script %s/%s", _PATH_CONT, script);
 		return SR_ERR_SYS;
@@ -319,7 +319,6 @@ static int add(const char *name, struct lyd_node *cif)
 		fprintf(fp, " %s", string);
 
 	fprintf(fp, "\n");
-	fchmod(fileno(fp), 0700);
 	fclose(fp);
 
 	if (lydx_is_enabled(cif, "enabled")) {
