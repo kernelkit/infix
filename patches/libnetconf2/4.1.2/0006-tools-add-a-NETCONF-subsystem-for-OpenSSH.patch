@@ -1,0 +1,298 @@
+From b35331368cd28b041b2609df67fe387e7cac14ac Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 25 Sep 2026 08:25:11 +0200
+Subject: [PATCH 6/6] tools: add a NETCONF subsystem for OpenSSH
+Organization: Wires
+
+Lets a server built without SSH and TLS support still offer NETCONF
+over SSH, with the system SSH daemon handling authentication, keys and
+ciphers the same way it does for every other SSH user on the system.
+
+The helper is off by default since it is only useful with a server
+built with ENABLE_SSH_TLS=OFF.
+
+---
+ CMakeLists.txt            |   7 ++
+ README.md                 |  44 +++++++++++
+ tools/CMakeLists.txt      |  12 +++
+ tools/netconf-subsystem.c | 158 ++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 221 insertions(+)
+ create mode 100644 tools/CMakeLists.txt
+ create mode 100644 tools/netconf-subsystem.c
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3f6d845..d6315d4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -91,10 +91,12 @@ endif()
+ option(ENABLE_EXAMPLES "Build examples" ON)
+ option(ENABLE_COVERAGE "Build code coverage report from tests" OFF)
+ option(ENABLE_SSH_TLS "Enable NETCONF over SSH and TLS support (via libssh and OpenSSL)" ON)
++option(ENABLE_SUBSYSTEM "Build netconf-subsystem, a NETCONF subsystem for OpenSSH" OFF)
+ option(ENABLE_DNSSEC "Enable support for SSHFP retrieval using DNSSEC for SSH (requires OpenSSL and libval)" OFF)
+ option(ENABLE_PAM "Detect and use PAM" ON)
+ option(ENABLE_COMMON_TARGETS "Define common custom target names such as 'doc' or 'uninstall', may cause conflicts when using add_subdirectory() to build this project" ON)
+ option(BUILD_SHARED_LIBS "By default, shared libs are enabled. Turn off for a static build." ON)
++set(NC_SUBSYSTEM_SOCKET "/run/netconf.sock" CACHE STRING "Default UNIX socket path netconf-subsystem connects to")
+ set(READ_INACTIVE_TIMEOUT 20 CACHE STRING "Maximum number of seconds waiting for new data once some data have arrived")
+ set(READ_ACTIVE_TIMEOUT 300 CACHE STRING "Maximum number of seconds for receiving a full message")
+ set(MAX_PSPOLL_THREAD_COUNT 6 CACHE STRING "Maximum number of threads that could simultaneously access a ps_poll structure")
+@@ -366,6 +368,11 @@ if(ENABLE_EXAMPLES)
+     endif()
+ endif()
+ 
++# sshd subsystem helper
++if(ENABLE_SUBSYSTEM)
++    add_subdirectory(tools)
++endif()
++
+ # tests
+ if(ENABLE_TESTS)
+     enable_testing()
+diff --git a/README.md b/README.md
+index ab05cc1..2fba254 100644
+--- a/README.md
++++ b/README.md
+@@ -17,6 +17,8 @@ NETCONF 1.0 ([RFC 4741](https://tools.ietf.org/html/rfc4741)) as well as NETCONF
+ 
+ * NETCONF over SSH ([RFC 4742](https://tools.ietf.org/html/rfc4742), [RFC 6242](https://tools.ietf.org/html/rfc6242)),
+   using [libssh](https://www.libssh.org/).
++  * Optionally as a *subsystem* of [OpenSSH](https://www.openssh.com/), without libssh, see
++    [NETCONF as an OpenSSH subsystem](#netconf-as-an-openssh-subsystem).
+ * NETCONF over TLS ([RFC 7589](https://tools.ietf.org/html/rfc7589)), using [OpenSSL](https://www.openssl.org/).
+   * DNSSEC SSH Key Fingerprints ([RFC 4255](https://tools.ietf.org/html/rfc4255))
+ * NETCONF over pre-established transport sessions (using this mechanism the communication can be tunneled through
+@@ -127,6 +129,48 @@ specifying no option since it specifies the default settings.
+ $ cmake -DENABLE_SSH_TLS=ON ..
+ ```
+ 
++### NETCONF as an OpenSSH subsystem
++
++A **libnetconf2** server can also be run as a *subsystem* of OpenSSH, in the
++same way as `sftp-server`.  The SSH daemon authenticates the user and starts
++`netconf-subsystem`, a small helper that bridges the session to a UNIX socket
++the server listens on.  The username comes from the socket peer credentials,
++so NACM and session monitoring work as usual, while users, keys and ciphers
++are managed in the OpenSSH daemon configuration.
++
++This mode has its limitations.  The library must be built without its own
++transports, `ENABLE_SSH_TLS=OFF`, which means no NETCONF over TLS (RFC 7589),
++no Call Home (RFC 8071), and no `ietf-netconf-server.yang` configuration:
++listen addresses, ports, and host keys are all OpenSSH settings.  In return
++the library depends on nothing but **libyang**.
++
++The helper is not built by default, enable it and, optionally, change the
++socket it connects to:
++
++```
++$ cmake -DENABLE_SSH_TLS=OFF -DENABLE_SUBSYSTEM=ON -DNC_SUBSYSTEM_SOCKET=/run/netconf.sock ..
++```
++
++On the OpenSSH side, declare the subsystem in `sshd_config`:
++
++```
++Subsystem netconf /usr/libexec/libnetconf2/netconf-subsystem
++```
++
++Clients then connect with `ssh -s host netconf`.  To also serve the standard
++NETCONF port, 830 (RFC 4742), let OpenSSH listen there too and dedicate the
++port to NETCONF, so that no login shell is reachable through it:
++
++```
++Port 22
++Port 830
++Match LocalPort 830
++	ForceCommand /usr/libexec/libnetconf2/netconf-subsystem
++	PermitTTY no
++	AllowTcpForwarding no
++	X11Forwarding no
++```
++
+ ### DNSSEC SSHFP Retrieval
+ 
+ In SSH connections, if the remote NETCONF server supports it and it is
+diff --git a/tools/CMakeLists.txt b/tools/CMakeLists.txt
+new file mode 100644
+index 0000000..d8c010e
+--- /dev/null
++++ b/tools/CMakeLists.txt
+@@ -0,0 +1,12 @@
++if(NOT LIBNETCONF2_VERSION)
++    message(FATAL_ERROR "Please use the root CMakeLists file instead.")
++endif()
++
++# use the generated public headers
++include_directories(BEFORE "${PROJECT_BINARY_DIR}/include")
++
++add_executable(netconf-subsystem netconf-subsystem.c)
++target_link_libraries(netconf-subsystem netconf2)
++target_compile_definitions(netconf-subsystem PRIVATE NC_SUBSYSTEM_SOCKET="${NC_SUBSYSTEM_SOCKET}")
++
++install(TARGETS netconf-subsystem DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/libnetconf2)
+diff --git a/tools/netconf-subsystem.c b/tools/netconf-subsystem.c
+new file mode 100644
+index 0000000..28e5516
+--- /dev/null
++++ b/tools/netconf-subsystem.c
+@@ -0,0 +1,158 @@
++/**
++ * @file netconf-subsystem.c
++ * @author Joachim Wiberg <troglobit@gmail.com>
++ * @brief NETCONF subsystem for sshd, bridges stdio to a UNIX socket endpoint
++ *
++ * Lets an SSH daemon own the SSH transport for a libnetconf2 server that
++ * listens on a UNIX socket, see nc_server_add_unix_endpt():
++ *
++ *     Subsystem netconf /usr/libexec/libnetconf2/netconf-subsystem
++ *
++ * sshd has already authenticated the user and runs us as that user.  The
++ * server learns who we are from the socket peer credentials, so this is a
++ * plain byte pump that neither frames nor parses NETCONF.
++ *
++ * @copyright
++ * Copyright (c) 2026 Joachim Wiberg
++ *
++ * This source code is licensed under BSD 3-Clause License (the "License").
++ * You may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     https://opensource.org/licenses/BSD-3-Clause
++ */
++#define _GNU_SOURCE
++
++#include <errno.h>
++#include <fcntl.h>
++#include <poll.h>
++#include <signal.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/socket.h>
++#include <unistd.h>
++
++#include "nc_client.h"
++
++#ifndef NC_SUBSYSTEM_SOCKET
++# define NC_SUBSYSTEM_SOCKET "/run/netconf.sock"
++#endif
++
++static int
++write_all(int fd, const char *buf, size_t len)
++{
++    ssize_t n;
++
++    while (len) {
++        n = write(fd, buf, len);
++        if (n < 0) {
++            if (errno == EINTR) {
++                continue;
++            }
++            return -1;
++        }
++        buf += n;
++        len -= n;
++    }
++
++    return 0;
++}
++
++/**
++ * @brief Move whatever is readable on @p from to @p to.
++ *
++ * @return 1 while the direction is alive, 0 on EOF or error.
++ */
++static int
++forward(int from, int to)
++{
++    char buf[65536];
++    ssize_t n;
++
++    n = read(from, buf, sizeof buf);
++    if ((n < 0) && (errno == EINTR)) {
++        return 1;
++    }
++    if (n <= 0) {
++        return 0;
++    }
++
++    return !write_all(to, buf, n);
++}
++
++static void
++usage(FILE *fp, const char *prog)
++{
++    fprintf(fp, "Usage: %s [-h] [-s PATH]\n"
++            "\n"
++            "  -h       This help text\n"
++            "  -s PATH  UNIX socket of the NETCONF server, default %s\n",
++            prog, NC_SUBSYSTEM_SOCKET);
++}
++
++int
++main(int argc, char *argv[])
++{
++    const char *path = NC_SUBSYSTEM_SOCKET;
++    struct pollfd pfd[2];
++    int c, sock, flags;
++
++    while ((c = getopt(argc, argv, "hs:")) != -1) {
++        switch (c) {
++        case 'h':
++            usage(stdout, argv[0]);
++            return 0;
++        case 's':
++            path = optarg;
++            break;
++        default:
++            usage(stderr, argv[0]);
++            return 1;
++        }
++    }
++
++    /* a vanished peer is reported by write() instead */
++    signal(SIGPIPE, SIG_IGN);
++
++    /* connect and announce our own username, libnetconf2 logs any failure */
++    sock = nc_proxy_unix_connect(path, NULL);
++    if (sock < 0) {
++        return 1;
++    }
++
++    /* the proxy leaves the socket non-blocking, we want plain blocking writes */
++    flags = fcntl(sock, F_GETFL);
++    if ((flags < 0) || (fcntl(sock, F_SETFL, flags & ~O_NONBLOCK) < 0)) {
++        fprintf(stderr, "%s: fcntl failed (%s)\n", argv[0], strerror(errno));
++        return 1;
++    }
++
++    pfd[0].fd = STDIN_FILENO;
++    pfd[0].events = POLLIN;
++    pfd[1].fd = sock;
++    pfd[1].events = POLLIN;
++
++    while (1) {
++        if (poll(pfd, 2, -1) < 0) {
++            if (errno == EINTR) {
++                continue;
++            }
++            break;
++        }
++
++        /* client to server, on EOF tell the server we are done but keep draining its replies */
++        if (pfd[0].revents && !forward(STDIN_FILENO, sock)) {
++            shutdown(sock, SHUT_WR);
++            pfd[0].fd = -1;
++        }
++
++        /* server to client, EOF here ends the session */
++        if (pfd[1].revents && !forward(sock, STDOUT_FILENO)) {
++            break;
++        }
++    }
++
++    nc_proxy_unix_close(sock);
++    return 0;
++}
+-- 
+2.43.0
+

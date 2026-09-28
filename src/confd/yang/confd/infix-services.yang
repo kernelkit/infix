@@ -31,6 +31,11 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2026-09-24 {
+    description "Add netconf container to ssh, NETCONF is now an SSH subsystem
+                 served by the SSH daemon on port 830.";
+    reference "internal";
+  }
   revision 2026-09-18 {
     description "Add TFTP server.";
     reference "internal";
@@ -277,6 +282,23 @@ module infix-services {
       }
       must "port and address" {
         error-message "Both address and port must be configured";
+      }
+    }
+
+    container netconf {
+      description "NETCONF over SSH, RFC 6242, on port 830.
+
+         In the default build the SSH daemon serves it, on the same
+         addresses as the listen entries above and as the 'netconf'
+         subsystem on all other SSH ports.  It keeps the SSH daemon
+         running on port 830 also when SSH logins are disabled.  Builds
+         where netopeer2-server has its own SSH transport configure the
+         endpoint in ietf-netconf-server.";
+
+      leaf enabled {
+        description "Enable or disable the NETCONF server.";
+        type boolean;
+        default true;
       }
     }
   }

@@ -24,11 +24,8 @@ All notable changes to the project are documented in this file.
   than by running the tool as root
 - The CLI `dir` command lists directories as the logged-in user, so it
   shows only what that user may read
-
-### Added
-
-- The CLI accepts an unambiguous prefix of a command name, e.g. `sh int`
-  for `show interface`
+- The CLI now accepts an unambiguous prefix of a command name, e.g.,
+  `sh int` for `show interface`
 - The CLI accepts IP addresses in CIDR notation, e.g. `set ipv4 address
   192.168.1.1/24`.  An IPv4 address set without a prefix length gets the
   classful default: /8, /16, or /24
@@ -106,6 +103,12 @@ All notable changes to the project are documented in this file.
 - Add Novarq Tactical 1000 (Laguna) support: LAN9696 switch with 24 GbE
   copper ports, four SFP+ cages, and a management port.  Infix bootloader
   in eMMC, the OS netboots; no eMMC image of the OS yet
+- NETCONF is now served by the OpenSSH daemon, as an SSH subsystem on port
+  830.  This means the `ietf-netconf-server.yang` model is gone and NETCONF
+  service is now enabled with `ssh/netconf/enabled`, independently of SSH
+  logins.  Existing configurations are migrated.  NETCONF call-home, NETCONF
+  over TLS, and the on-device `netopeer2-cli` tool require the built-in SSH
+  server of netopeer2 and are therefore no longer available in default builds
 
 ### Fixes
 

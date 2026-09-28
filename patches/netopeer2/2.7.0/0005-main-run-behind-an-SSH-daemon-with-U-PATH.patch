@@ -1,0 +1,228 @@
+From ef69628385101f3778c670f5936a2bbad8bdef7c Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 25 Sep 2026 08:25:11 +0200
+Subject: [PATCH] main: run behind an SSH daemon with -U PATH
+Organization: Wires
+
+libnetconf2 can now serve NETCONF over a UNIX socket that an SSH daemon
+feeds through its netconf-subsystem helper, with no libssh at all.  Let
+the server take part: a bare path to -U creates that endpoint, and the
+ietf-netconf-server module becomes optional, since nothing else needs
+it in that setup.
+
+UNIX sessions now show up in ietf-netconf-monitoring as netconf-ssh,
+which is what they are, so kill-session keeps working.  Their host is
+the socket path, which is no inet:host, so source-host is left out.
+
+---
+ src/common.c             | 36 +++++++++++++++++++---------------
+ src/common.h             |  1 +
+ src/main.c               | 42 +++++++++++++++++++++++++++++++---------
+ src/netconf_monitoring.c | 14 +++++++++++++-
+ 4 files changed, 67 insertions(+), 26 deletions(-)
+
+diff --git a/src/common.c b/src/common.c
+index 1956e3e..c3cda82 100644
+--- a/src/common.c
++++ b/src/common.c
+@@ -1141,14 +1141,16 @@ np_op_parse_config(struct lyd_node_any *node, uint32_t parse_options, struct lyd
+     }
+ 
+     if (*config) {
+-        /* get the list of ignored modules, skip NACM */
+-        r = sr_get_data(np2srv.sr_sess, "/libnetconf2-netconf-server:ln2-netconf-server/ignored-hello-module", 0,
+-                np2srv.sr_timeout, 0, &sr_ln2_nc_server);
+-        if (r == SR_ERR_NOT_FOUND) {
+-            WRN("Failed to get ignored <hello> modules.");
+-        } else if (r) {
+-            reply = np_reply_err_sr(np2srv.sr_sess, "get");
+-            goto cleanup;
++        /* get the list of ignored modules, skip NACM; the module is optional when only -U PATH is used */
++        if (ly_ctx_get_module_implemented(ly_ctx, "libnetconf2-netconf-server")) {
++            r = sr_get_data(np2srv.sr_sess, "/libnetconf2-netconf-server:ln2-netconf-server/ignored-hello-module", 0,
++                    np2srv.sr_timeout, 0, &sr_ln2_nc_server);
++            if (r == SR_ERR_NOT_FOUND) {
++                WRN("Failed to get ignored <hello> modules.");
++            } else if (r) {
++                reply = np_reply_err_sr(np2srv.sr_sess, "get");
++                goto cleanup;
++            }
+         }
+ 
+         if (sr_ln2_nc_server) {
+@@ -1282,14 +1284,16 @@ np_op_filter_data_get(sr_session_ctx_t *session, uint32_t max_depth, uint32_t ge
+     }
+ 
+     if (sr_data) {
+-        /* get the list of ignored modules, skip NACM */
+-        r = sr_get_data(np2srv.sr_sess, "/libnetconf2-netconf-server:ln2-netconf-server/ignored-hello-module", 0,
+-                np2srv.sr_timeout, 0, &sr_ln2_nc_server);
+-        if (r == SR_ERR_NOT_FOUND) {
+-            WRN("Failed to get ignored <hello> modules.");
+-        } else if (r) {
+-            reply = np_reply_err_sr(np2srv.sr_sess, "get");
+-            goto cleanup;
++        /* get the list of ignored modules, skip NACM; the module is optional when only -U PATH is used */
++        if (ly_ctx_get_module_implemented(LYD_CTX(sr_data->tree), "libnetconf2-netconf-server")) {
++            r = sr_get_data(np2srv.sr_sess, "/libnetconf2-netconf-server:ln2-netconf-server/ignored-hello-module", 0,
++                    np2srv.sr_timeout, 0, &sr_ln2_nc_server);
++            if (r == SR_ERR_NOT_FOUND) {
++                WRN("Failed to get ignored <hello> modules.");
++            } else if (r) {
++                reply = np_reply_err_sr(np2srv.sr_sess, "get");
++                goto cleanup;
++            }
+         }
+         if (sr_ln2_nc_server) {
+             LY_LIST_FOR(lyd_child(sr_ln2_nc_server->tree), ignored_mod) {
+diff --git a/src/common.h b/src/common.h
+index d9f12c5..e7f79f9 100644
+--- a/src/common.h
++++ b/src/common.h
+@@ -72,6 +72,7 @@ struct np2srv {
+ 
+     const char *server_dir;         /**< path to server files (just confirmed commit for the moment) */
+     char *url_protocols;           /**< list of supported URL protocols */
++    const char *unix_socket;        /**< UNIX socket to listen on without any ietf-netconf-server config (-U PATH) */
+ 
+     struct nc_pollsession *nc_ps;   /**< libnetconf2 pollsession structure */
+     pthread_t workers[NP2SRV_THREAD_COUNT]; /**< worker threads handling sessions */
+diff --git a/src/main.c b/src/main.c
+index 7492b43..ae5a3ef 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -498,11 +498,16 @@ np2srv_check_schemas(sr_session_ctx_t *sr_sess)
+     mod_name = "ietf-yang-library";
+     NP2_CHECK_MODULE(mod_name);
+ 
+-    /* .. ietf-netconf-server */
++    /* .. ietf-netconf-server, not needed when only listening on a UNIX socket (-U PATH) */
+     mod_name = "ietf-netconf-server";
+-    NP2_CHECK_MODULE(mod_name);
+-    NP2_CHECK_FEATURE("ssh-listen");
+-    NP2_CHECK_FEATURE("ssh-call-home");
++    mod = ly_ctx_get_module_implemented(ly_ctx, mod_name);
++    if (mod) {
++        NP2_CHECK_FEATURE("ssh-listen");
++        NP2_CHECK_FEATURE("ssh-call-home");
++    } else if (!np2srv.unix_socket) {
++        ERR("Module \"%s\" not implemented in sysrepo.", mod_name);
++        return -1;
++    }
+ 
+     sr_session_release_context(sr_sess);
+     return 0;
+@@ -836,6 +841,12 @@ server_init(void)
+         goto error;
+     }
+ 
++    /* the socket is world-writable, NACM is the access control */
++    if (np2srv.unix_socket && nc_server_add_unix_endpt("unix", np2srv.unix_socket, 0666)) {
++        ERR("Listening on UNIX socket \"%s\" failed.", np2srv.unix_socket);
++        goto error;
++    }
++
+     /* prepare poll session structure for libnetconf2 */
+     np2srv.nc_ps = nc_ps_new();
+ 
+@@ -1255,8 +1266,15 @@ server_data_subscribe(void)
+     /* create keys and certs subscriptions before server configuration, which may already reference them */
+     SR_CONFIG_SUBSCR("ietf-keystore", NULL, np2srv_libnetconf2_config_cb);
+     SR_CONFIG_SUBSCR("ietf-truststore", NULL, np2srv_libnetconf2_config_cb);
+-    SR_CONFIG_SUBSCR("ietf-netconf-server", NULL, np2srv_libnetconf2_config_cb);
+-    SR_CONFIG_SUBSCR("libnetconf2-netconf-server", NULL, np2srv_libnetconf2_config_cb);
++
++    /* ietf-netconf-server is optional when only listening on a UNIX socket (-U PATH) */
++    ly_ctx = sr_acquire_context(np2srv.sr_conn);
++    mod = ly_ctx_get_module_implemented(ly_ctx, "ietf-netconf-server");
++    sr_release_context(np2srv.sr_conn);
++    if (mod) {
++        SR_CONFIG_SUBSCR("ietf-netconf-server", NULL, np2srv_libnetconf2_config_cb);
++        SR_CONFIG_SUBSCR("libnetconf2-netconf-server", NULL, np2srv_libnetconf2_config_cb);
++    }
+ 
+     /*
+      * ietf-netconf-acm
+@@ -1406,6 +1424,8 @@ print_usage(char *progname)
+     fprintf(stdout, "            supporting some extensions such as schema-mount, in which case the ietf-yang-schema-mount\n");
+     fprintf(stdout, "            operational data are expected to be in the file.\n");
+     fprintf(stdout, " -U ENDPT:PATH Set UNIX socket path for a specific endpoint.\n");
++    fprintf(stdout, " -U PATH    Listen on a UNIX socket without any ietf-netconf-server configuration,\n");
++    fprintf(stdout, "            e.g. behind an sshd \"Subsystem netconf\" running netconf-subsystem.\n");
+     fprintf(stdout, " -v LEVEL   Verbose output level:\n");
+     fprintf(stdout, "                0 - errors\n");
+     fprintf(stdout, "                1 - errors and warnings\n");
+@@ -1532,11 +1552,15 @@ main(int argc, char *argv[])
+             np2srv.ext_data_path = optarg;
+             break;
+         case 'U':
+-            /* parse endpoint_name:unix_socket_path */
++            /* a bare path is an endpoint of its own, created after nc_server_init() */
+             ptr = strchr(optarg, ':');
+             if (!ptr) {
+-                ERR("Invalid format for -U parameter \"%s\". Expected format: <endpoint_name>:<unix_socket_path>", optarg);
+-                return EXIT_FAILURE;
++                if (optarg[0] != '/') {
++                    ERR("Invalid -U parameter \"%s\". Expected an absolute path or <endpoint_name>:<unix_socket_path>", optarg);
++                    return EXIT_FAILURE;
++                }
++                np2srv.unix_socket = optarg;
++                break;
+             }
+ 
+             /* terminate the endpoint name string */
+diff --git a/src/netconf_monitoring.c b/src/netconf_monitoring.c
+index 61b3769..b5f364e 100644
+--- a/src/netconf_monitoring.c
++++ b/src/netconf_monitoring.c
+@@ -71,6 +71,8 @@ ncm_is_monitored(struct nc_session *session)
+     case NC_TI_TLS:
+         return 1;
+ #endif
++    case NC_TI_UNIX:
++        return 1;
+     default:
+         break;
+     }
+@@ -275,6 +277,7 @@ np2srv_ncm_oper_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), const cha
+     struct ly_ctx *ly_ctx;
+     char **cpblts;
+     char *time_str, buf[11];
++    const char *host;
+     uint32_t i;
+     LY_ARRAY_COUNT_TYPE u;
+     struct timespec ts;
+@@ -344,6 +347,7 @@ np2srv_ncm_oper_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), const cha
+             sprintf(buf, "%" PRIu32, nc_session_get_id(stats.sessions[i]));
+             lyd_new_list(cont, NULL, "session", 0, &list, buf);
+ 
++            host = nc_session_get_host(stats.sessions[i]);
+             switch (nc_session_get_ti(stats.sessions[i])) {
+ #ifdef NC_ENABLED_SSH_TLS
+             case NC_TI_SSH:
+@@ -353,13 +357,21 @@ np2srv_ncm_oper_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), const cha
+                 lyd_new_term(list, NULL, "transport", "netconf-tls", 0, NULL);
+                 break;
+ #endif
++            case NC_TI_UNIX:
++                /* UNIX sessions come from an SSH daemon running netconf-subsystem,
++                 * their host is the socket path, not a valid inet:host */
++                lyd_new_term(list, NULL, "transport", "netconf-ssh", 0, NULL);
++                host = NULL;
++                break;
+             default: /* NC_TI_FD, NC_TI_NONE */
+                 ERR("ietf-netconf-monitoring unsupported session transport type.");
+                 pthread_mutex_unlock(&stats.lock);
+                 goto error;
+             }
+             lyd_new_term(list, NULL, "username", nc_session_get_username(stats.sessions[i]), 0, NULL);
+-            lyd_new_term(list, NULL, "source-host", nc_session_get_host(stats.sessions[i]), 0, NULL);
++            if (host) {
++                lyd_new_term(list, NULL, "source-host", host, 0, NULL);
++            }
+             ts = nc_session_get_start_time(stats.sessions[i]);
+             ly_time_ts2str(&ts, &time_str);
+             lyd_new_term(list, NULL, "login-time", time_str, 0, NULL);
+-- 
+2.43.0
+

@@ -1,3 +1,10 @@
 #!/bin/sh
+# sshd runs subsystems through the login shell, `$SHELL -c CMD`, so let
+# the NETCONF bridge through.  Everything else gets the CLI, users with
+# this shell must not be able to run arbitrary commands.
+if [ "$1" = "-c" ] && [ "$2" = "/usr/libexec/libnetconf2/netconf-subsystem" ]; then
+	exec "$2"
+fi
+
 # Source settings, aliases, and probe terminal size, then hand over to klish
 exec env CLISH=yes bash -ilc /usr/bin/klish
