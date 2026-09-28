@@ -2729,6 +2729,11 @@ admin@example:/config/ssh/listen/ipv4/&gt; <b>set port 12345</b>
 admin@example:/config/ssh/listen/ipv4/&gt;
 </code></pre>
 
+<p>NETCONF is served by the same SSH daemon, as the <code>netconf</code> subsystem on
+port 830, which can also be reached on the regular SSH port(s) with
+<code>ssh -s example.local netconf</code>.  It is possible to also build the system
+to have the <code>netopeer2-server</code> listen on port 830 itself, with any TLS
+or call-home settings configured in <code>ietf-netconf-server.yang</code>.</p>
 <p>The default SSH hostkey is generated on first boot and is used in both
 SSH and NETCONF (SSH transport). Custom keys can be added to the
 configuration in <code>ietf-keystore</code>. The only supported hostkey type is
