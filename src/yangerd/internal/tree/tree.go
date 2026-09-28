@@ -91,7 +91,7 @@ func (t *Tree) Get(key string) json.RawMessage {
 	if provider == nil {
 		return data
 	}
-	return shallowMerge(data, provider())
+	return ShallowMerge(data, provider())
 }
 
 // GetMulti returns the raw JSON for multiple module keys.
@@ -112,7 +112,7 @@ func (t *Tree) GetMulti(keys []string) []json.RawMessage {
 		entry.mu.RUnlock()
 
 		if provider, has := t.providers[key]; has {
-			data = shallowMerge(data, provider())
+			data = ShallowMerge(data, provider())
 		}
 		result = append(result, data)
 	}
@@ -195,10 +195,10 @@ func (t *Tree) Delete(key string) {
 	t.mu.Unlock()
 }
 
-// shallowMerge overlays the top-level fields of overlay onto base and
+// ShallowMerge overlays the top-level fields of overlay onto base and
 // returns a new JSON blob.  Neither input is modified.  If either
 // is not a valid JSON object the overlay wins outright.
-func shallowMerge(base, overlay json.RawMessage) json.RawMessage {
+func ShallowMerge(base, overlay json.RawMessage) json.RawMessage {
 	if len(overlay) == 0 {
 		return base
 	}
