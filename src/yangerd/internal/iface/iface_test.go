@@ -3,6 +3,7 @@ package iface
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -10,6 +11,7 @@ type mockFileChecker struct {
 	exists  map[string]bool
 	files   map[string]string
 	readErr map[string]error
+	dirs    map[string][]string
 }
 
 func (m *mockFileChecker) Exists(path string) bool {
@@ -30,6 +32,13 @@ func (m *mockFileChecker) ReadFile(path string) (string, error) {
 		return v, nil
 	}
 	return "", errors.New("not found")
+}
+
+func (m *mockFileChecker) ListDir(path string) []string {
+	if m == nil {
+		return nil
+	}
+	return m.dirs[path]
 }
 
 func mustRaw(t *testing.T, v any) json.RawMessage {
@@ -917,4 +926,47 @@ func TestDedupByIfindex(t *testing.T) {
 			t.Fatalf("expected 2 interfaces (zero ifindex not deduped), got %d", len(ifaces))
 		}
 	})
+}
+
+// Layers come from sysfs upper_/lower_ links, sorted, and never name an
+// interface that operational hides.
+func TestLayers(t *testing.T) {
+	links := mustRaw(t, []map[string]any{
+		{"ifname": "br0", "ifindex": 3, "link_type": "ether", "flags": []string{"UP"}, "operstate": "UP", "linkinfo": map[string]any{"info_kind": "bridge"}},
+		{"ifname": "eth0", "ifindex": 2, "link_type": "ether", "flags": []string{"UP"}, "operstate": "UP", "master": "br0"},
+		{"ifname": "eth0.10", "ifindex": 4, "link_type": "ether", "flags": []string{"UP"}, "operstate": "UP", "link": "eth0", "linkinfo": map[string]any{"info_kind": "vlan"}},
+		{"ifname": "dsa0", "ifindex": 5, "link_type": "ether", "group": "internal", "flags": []string{"UP"}, "operstate": "UP"},
+	})
+	fc := &mockFileChecker{dirs: map[string][]string{
+		"/sys/class/net/br0":     {"lower_eth0", "brif", "lower_dsa0"},
+		"/sys/class/net/eth0":    {"upper_eth0.10", "upper_br0", "statistics"},
+		"/sys/class/net/eth0.10": {"lower_eth0"},
+	}}
+
+	ifaces := mustInterfaces(t, Transform(links, nil, nil, nil, fc))
+
+	want := map[string][2][]string{
+		"br0":     {nil, {"eth0"}},
+		"eth0":    {{"br0", "eth0.10"}, nil},
+		"eth0.10": {nil, {"eth0"}},
+	}
+	for name, exp := range want {
+		entry := mustIfaceByName(t, ifaces, name)
+		got := [2][]string{toStrings(entry["higher-layer-if"]), toStrings(entry["lower-layer-if"])}
+		if !reflect.DeepEqual(got, exp) {
+			t.Errorf("%s layers = %v, want %v", name, got, exp)
+		}
+	}
+}
+
+func toStrings(v any) []string {
+	arr, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(arr))
+	for _, e := range arr {
+		out = append(out, e.(string))
+	}
+	return out
 }

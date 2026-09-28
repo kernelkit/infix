@@ -51,6 +51,18 @@ func (osFileChecker) ReadFile(path string) (string, error) {
 	return string(b), nil
 }
 
+func (osFileChecker) ListDir(path string) []string {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil
+	}
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	return names
+}
+
 func main() {
 	cfg := config.Load()
 	log.SetFlags(0)

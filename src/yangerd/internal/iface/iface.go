@@ -5,6 +5,7 @@ package iface
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -13,6 +14,8 @@ import (
 type FileChecker interface {
 	Exists(path string) bool
 	ReadFile(path string) (string, error)
+	// ListDir returns the entry names of a directory, nil if unreadable.
+	ListDir(path string) []string
 }
 
 // Transform converts raw `ip -json` link/address/statistics arrays into
@@ -56,6 +59,11 @@ func Transform(linkData, addrData, statsData, neighData json.RawMessage, fc File
 		neighByName[dev] = append(neighByName[dev], n)
 	}
 
+	linkByName := make(map[string]map[string]any, len(links))
+	for _, link := range links {
+		linkByName[getString(link, "ifname")] = link
+	}
+
 	interfaces := make([]map[string]any, 0, len(links))
 	for _, iplink := range links {
 		if skipInterface(iplink) {
@@ -76,6 +84,14 @@ func Transform(linkData, addrData, statsData, neighData json.RawMessage, fc File
 
 		iface := interfaceCommon(iplink, ipaddr, neighByName[ifname], fc)
 		yangType := getString(iface, "type")
+
+		higher, lower := layers(ifname, linkByName, fc)
+		if len(higher) > 0 {
+			iface["higher-layer-if"] = higher
+		}
+		if len(lower) > 0 {
+			iface["lower-layer-if"] = lower
+		}
 
 		switch yangType {
 		case "infix-if-type:vlan":
@@ -159,6 +175,39 @@ func skipInterface(iplink map[string]any) bool {
 	default:
 		return false
 	}
+}
+
+// layers returns the directly adjacent interfaces, from the kernel's
+// sysfs upper_/lower_ links.  Neighbors not shown in operational are
+// not referenced either.
+func layers(ifname string, links map[string]map[string]any, fc FileChecker) ([]string, []string) {
+	var higher, lower []string
+
+	if fc == nil {
+		return nil, nil
+	}
+
+	visible := func(name string) bool {
+		link, ok := links[name]
+		return ok && !skipInterface(link)
+	}
+
+	for _, entry := range fc.ListDir("/sys/class/net/" + ifname) {
+		switch {
+		case strings.HasPrefix(entry, "upper_"):
+			if name := strings.TrimPrefix(entry, "upper_"); visible(name) {
+				higher = append(higher, name)
+			}
+		case strings.HasPrefix(entry, "lower_"):
+			if name := strings.TrimPrefix(entry, "lower_"); visible(name) {
+				lower = append(lower, name)
+			}
+		}
+	}
+
+	sort.Strings(higher)
+	sort.Strings(lower)
+	return higher, lower
 }
 
 // dedup removes duplicate link entries that share the same ifindex.
