@@ -2,13 +2,13 @@
 #include "config.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 #include "util.h"
 
@@ -43,13 +43,12 @@ static int mkparent(const char *path)
 static int do_rename(const char *from, const char *to)
 {
 	char *src = NULL, *dst = NULL;
+	int rc = 1, err;
 	mode_t mode;
-	int rc = 1;
 
 	src = cfg_adjust(from, NULL, sanitize);
-	if (!src || access(src, F_OK)) {
-		fprintf(stderr, "%s: %s: no such file, or not an allowed path\n",
-			prognm, from);
+	if (!src) {
+		fprintf(stderr, "%s: %s: not an allowed path\n", prognm, from);
 		goto out;
 	}
 
@@ -59,17 +58,23 @@ static int do_rename(const char *from, const char *to)
 		goto out;
 	}
 
-	if (!force && !access(dst, F_OK) && !yorn("Overwrite existing file %s", dst))
-		goto out;
-
 	if (mkparent(dst)) {
 		fprintf(stderr, "%s: failed creating directory for %s: %s\n",
 			prognm, dst, strerror(errno));
 		goto out;
 	}
 
-	if (rename(src, dst)) {
-		if (errno == EXDEV)
+	err = renameat2(AT_FDCWD, src, AT_FDCWD, dst, force ? 0 : RENAME_NOREPLACE);
+	if (err && errno == EEXIST) {
+		if (!yorn("Overwrite existing file %s", dst))
+			goto out;
+		err = rename(src, dst);
+	}
+
+	if (err) {
+		if (errno == ENOENT)
+			fprintf(stderr, "%s: %s: no such file\n", prognm, from);
+		else if (errno == EXDEV)
 			fprintf(stderr, "%s: %s and %s are on different file systems,"
 				" use copy and remove\n", prognm, src, dst);
 		else
