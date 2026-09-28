@@ -1,0 +1,7 @@
+config BR2_PACKAGE_NOVARQ_TACTICAL_1000
+	bool "Novarq Tactical 1000 (Laguna)"
+	depends on BR2_aarch64
+	help
+	  Support for the Novarq Tactical 1000, based on the LAN969x
+	  (Laguna) family of TSN capable switches.  24 GbE copper ports,
+	  4 SFP+ ports, and a separate management port.

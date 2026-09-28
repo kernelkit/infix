@@ -30,6 +30,7 @@ jobs:
           - rpi64_boot
           - sama7g54_ek_emmc_boot
           - sama7g54_ek_sd_boot
+          - tactical_boot
     env:
       MAKEFLAGS: -j5
     steps:
