@@ -191,6 +191,19 @@ int finit_disablef(const char *fmt, ...)
 }
 
 
+/*
+ * After a migration the startup datastore has the old version of the file
+ * until saved, so stamp every write after bootstrap, issue #1637.
+ */
+static int startup_version(sr_session_ctx_t *session, uint32_t sub_id, const char *model,
+			   const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	if (event != SR_EV_UPDATE || systemf("runlevel >/dev/null 2>&1"))
+		return SR_ERR_OK;
+
+	return meta_set_version(session);
+}
+
 static int startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *model,
 			const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -919,6 +932,12 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = subscribe_model("infix-meta", &confd, SR_SUBSCR_UPDATE);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-meta");
+		goto err;
+	}
+	rc = sr_module_change_subscribe(confd.startup, "infix-meta", "//.", startup_version, NULL,
+					CB_PRIO_PRIMARY, SR_SUBSCR_UPDATE | SR_SUBSCR_NO_THREAD, &confd.sub);
+	if (rc) {
+		ERROR("Failed to subscribe to infix-meta in startup");
 		goto err;
 	}
 	rc = subscribe_model("ieee1588-ptp-tt", &confd, 0);
