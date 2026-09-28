@@ -365,6 +365,9 @@ func (m *IWMonitor) buildStationData(ctx context.Context, iface string, si wpact
 	if ssid != "" {
 		sta["ssid"] = ssid
 	}
+	if bssid := status["bssid"]; bssid != "" && bssid != "00:00:00:00:00:00" {
+		sta["bssid"] = bssid
+	}
 
 	if si.Daemon == "wpa_supplicant" {
 		conn, err := wpactrl.Dial(si.Path)
