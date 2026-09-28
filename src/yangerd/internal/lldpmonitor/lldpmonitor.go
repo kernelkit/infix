@@ -371,6 +371,7 @@ func transformNeighbors(data []byte) json.RawMessage {
 	}
 
 	portMap := make(map[string]*portEntry)
+	seen := make(map[string]map[[2]int]bool) // per port: {time-mark, rid}
 	var order []string
 
 	for _, iface := range collectIfaces(data) {
@@ -392,8 +393,21 @@ func transformNeighbors(data []byte) json.RawMessage {
 			rid, _ = strconv.Atoi(v)
 		}
 
+		// lldpd's rid is per remote chassis, so one chassis heard on
+		// two of its ports collides when the ages match too.  Nudge
+		// time-mark to keep the list keys unique, rid stays true to
+		// lldpcli output.
+		timeMark := parseAge(iface.Age)
+		for seen[iface.Name][[2]int{timeMark, rid}] {
+			timeMark++
+		}
+		if seen[iface.Name] == nil {
+			seen[iface.Name] = make(map[[2]int]bool)
+		}
+		seen[iface.Name][[2]int{timeMark, rid}] = true
+
 		port.RemoteSystems = append(port.RemoteSystems, remoteEntry{
-			TimeMark:         parseAge(iface.Age),
+			TimeMark:         timeMark,
 			RemoteIndex:      rid,
 			ChassisIDSubtype: chassisIDSubtype(iface.Chassis.ID.Type),
 			ChassisID:        iface.Chassis.ID.Value,

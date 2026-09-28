@@ -290,3 +290,48 @@ func TestSubtypeMappings(t *testing.T) {
 		})
 	}
 }
+
+// One chassis on two of its ports shares rid, and the same age would
+// make the (time-mark, remote-index) key collide.
+func TestTransformNeighborsUniqueKeys(t *testing.T) {
+	const twoPorts = `{
+  "lldp": [{
+    "interface": [
+      {
+        "name": "eth0", "rid": "7", "age": "0 day, 00:05:30",
+        "chassis": [{"id": [{"type": "mac", "value": "aa:bb:cc:dd:ee:ff"}]}],
+        "port": [{"id": [{"type": "ifname", "value": "swp1"}]}]
+      },
+      {
+        "name": "eth0", "rid": "7", "age": "0 day, 00:05:30",
+        "chassis": [{"id": [{"type": "mac", "value": "aa:bb:cc:dd:ee:ff"}]}],
+        "port": [{"id": [{"type": "ifname", "value": "swp2"}]}]
+      },
+      {
+        "name": "eth1", "rid": "7", "age": "0 day, 00:05:30",
+        "chassis": [{"id": [{"type": "mac", "value": "aa:bb:cc:dd:ee:ff"}]}],
+        "port": [{"id": [{"type": "ifname", "value": "swp3"}]}]
+      }
+    ]
+  }]
+}`
+	out := decode(t, transformNeighbors([]byte(twoPorts)))
+
+	byIf := make(map[string]port)
+	for _, p := range out.Port {
+		byIf[p.Name] = p
+	}
+	eth0 := byIf["eth0"].RemoteSystems
+	if len(eth0) != 2 {
+		t.Fatalf("eth0 neighbor count = %d, want 2", len(eth0))
+	}
+	if eth0[0].TimeMark != 330 || eth0[1].TimeMark != 331 {
+		t.Errorf("eth0 time-marks = %d/%d, want 330/331", eth0[0].TimeMark, eth0[1].TimeMark)
+	}
+	if eth0[0].RemoteIndex != 7 || eth0[1].RemoteIndex != 7 {
+		t.Errorf("rid must stay 7, got %d/%d", eth0[0].RemoteIndex, eth0[1].RemoteIndex)
+	}
+	if eth1 := byIf["eth1"].RemoteSystems; len(eth1) != 1 || eth1[0].TimeMark != 330 {
+		t.Errorf("eth1 must not be nudged: %#v", eth1)
+	}
+}
