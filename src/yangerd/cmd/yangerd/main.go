@@ -29,6 +29,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/ptpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/monitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/sysreaders"
+	"github.com/kernelkit/infix/src/yangerd/internal/tftpmonitor"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 	"github.com/kernelkit/infix/src/yangerd/internal/wgquery"
 	"github.com/kernelkit/infix/src/yangerd/internal/zapiwatcher"
@@ -247,6 +248,15 @@ func main() {
 			}
 		}()
 	}
+
+	tftpmon := tftpmonitor.New(t, slogLog)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := tftpmon.Run(ctx); err != nil && ctx.Err() == nil {
+			slogLog.Error("tftpmonitor exited", "err", err)
+		}
+	}()
 
 	ptpmon := ptpmonitor.New(t, slogLog)
 	wg.Add(1)
