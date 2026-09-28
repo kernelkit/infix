@@ -2250,6 +2250,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#netboot-with-a-vendor-u-boot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Netboot with a Vendor U-Boot
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Netboot with a Vendor U-Boot">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unattended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unattended
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#separate-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Separate Artifacts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#u-boot-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2524,6 +2563,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#netboot-with-a-vendor-u-boot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Netboot with a Vendor U-Boot
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Netboot with a Vendor U-Boot">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unattended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unattended
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#separate-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Separate Artifacts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#u-boot-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2734,13 +2812,78 @@ table and complains:</p>
 landed on.  The first boot of the installed system moves the backup
 header with <code>sgdisk -e</code>, grows the last partition to fill the medium, and
 resizes the filesystem, in two stages with a reboot in between.</p>
+<h2 id="netboot-with-a-vendor-u-boot">Netboot with a Vendor U-Boot<a class="headerlink" href="#netboot-with-a-vendor-u-boot" title="Permanent link">¶</a></h2>
+<p>The <a href="https://github.com/kernelkit/infix/blob/main/board/aarch64/novarq-tactical-1000/README.md">Novarq Tactical 1000</a> ships with a vendor U-Boot that
+netboots but has neither <code>blkmap</code>, SquashFS support, nor <code>sysboot</code>, so it
+cannot boot a <code>rootfs.itb</code>.  Until the Infix bootloader is installed,
+<code>IX_IMAGE_ITB_BOOT</code> builds <code>boot.itb</code> for it: kernel, rootfs, and every
+device tree in the build, one configuration each.  <code>#boot</code> is the board
+the build was configured for.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>setenv autoload no
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>dhcp
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>setenv serverip &lt;your-tftp-server&gt;
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>setenv fdt_high 0xffffffffffffffff
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>setenv initrd_high 0xffffffffffffffff
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>tftp 0x70000000 boot.itb
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>fdt addr 0x70000000
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>fdt get value rdsz /images/rootfs data-size
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>setexpr rdkb ${rdsz} / 0x400
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>setenv bootargs "console=ttyAT0,115200 root=/dev/ram0 ro brd.rd_size=0x${rdkb} rauc.slot=net loglevel=4 usbcore.authorized_default=2"
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>bootm 0x70000000#boot
+</code></pre></div>
+<p><code>brd.rd_size</code> is the SquashFS size in KiB.  <code>fdt_high</code> and <code>initrd_high</code>
+need all 64 bits set, the shipped environment has a 32-bit <code>fdt_high</code>.</p>
+<h3 id="unattended">Unattended<a class="headerlink" href="#unattended" title="Permanent link">¶</a></h3>
+<p>The <code>boot.scr</code> script runs the same steps.  With the TFTP server on another
+host than the DHCP server, name it in <code>bootcmd</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>setenv boot_net 'setenv autoload no; dhcp; setenv serverip &lt;your-tftp-server&gt;; setenv bootfile boot.scr; tftp ${loadaddr} ${bootfile}; source ${loadaddr}'
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>setenv bootcmd 'run boot_net'
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>saveenv
+</code></pre></div>
+<p>With the DHCP server also serving TFTP, <code>serverip</code> and <code>bootfile</code> come with
+the lease and <code>dhcp</code> fetches the script by itself:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>setenv bootcmd 'dhcp; source ${loadaddr}'
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>saveenv
+</code></pre></div>
+<p>Here with dnsmasq:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>enable-tftp
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>tftp-root=/srv/ftp
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>dhcp-boot=boot.scr
+</code></pre></div>
+<p>The image name is <code>${bootfile}</code> with <code>.scr</code> replaced by <code>.itb</code>.  If the fetch
+fails the board resets after five seconds.</p>
+<h3 id="separate-artifacts">Separate Artifacts<a class="headerlink" href="#separate-artifacts" title="Permanent link">¶</a></h3>
+<p>For trying a kernel or device tree without rebuilding the image:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>setenv autoload no
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>dhcp
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>setenv serverip &lt;your-tftp-server&gt;
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>tftp 0x60000000 Image
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>tftp 0x6f000000 lan9696-tactical-1000.dtb
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>tftp 0x78000000 rootfs.itb
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>setenv fdt_high 0xffffffffffffffff
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>setenv initrd_high 0xffffffffffffffff
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>setexpr rdkb ${filesize} / 0x400
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>setenv bootargs "console=ttyAT0,115200 root=/dev/ram0 ro brd.rd_size=0x${rdkb} rauc.slot=net loglevel=4 usbcore.authorized_default=2"
+<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>booti 0x60000000 0x78000000#verity 0x6f000000
+</code></pre></div>
+<ul>
+<li>fetch <code>rootfs.itb</code> last, <code>${filesize}</code> is the last transfer</li>
+<li>name the <code>verity</code> configuration, <code>MULTI_DTB_FIT</code> ignores <code>default</code></li>
+<li>pass <code>rootfs.itb</code>, not the bare SquashFS, there is no <code>SUPPORT_RAW_INITRD</code></li>
+</ul>
+<p>DRAM starts at <code>0x60000000</code>.</p>
 <h2 id="u-boot-commands">U-Boot Commands<a class="headerlink" href="#u-boot-commands" title="Permanent link">¶</a></h2>
 <p>U-Boot is a maze of environment variables, some with values, some wrap
 commands, and most are undocumented.  We will use a prefix for our
 variables to ensure we do not overwrite anything you may want to use
 later.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="o">==</span>&gt;<span class="w"> </span>setenv<span class="w"> </span>ixboot<span class="w"> </span><span class="s1">'dhcp &amp;&amp; source \${fileaddr}'</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="o">==</span>&gt;<span class="w"> </span>saveenv
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="o">==</span>&gt;<span class="w"> </span>setenv<span class="w"> </span>ixboot<span class="w"> </span><span class="s1">'dhcp &amp;&amp; source \${fileaddr}'</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="o">==</span>&gt;<span class="w"> </span>saveenv
 </code></pre></div>
 <div class="footnote">
 <hr>
