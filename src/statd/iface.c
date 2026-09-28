@@ -99,14 +99,15 @@ static void iface_parse(struct iface_ctx *ctx, struct nlmsghdr *nlh, int dump)
 	struct ifinfomsg *ifi = NLMSG_DATA(nlh);
 	int len = nlh->nlmsg_len - NLMSG_LENGTH(sizeof(*ifi));
 	uint8_t operstate = IF_OPER_UNKNOWN;
-	const char *name = NULL;
+	char name[IFNAMSIZ] = "";
 	struct rtattr *rta;
 	struct iface *l;
 
 	for (rta = IFLA_RTA(ifi); RTA_OK(rta, len); rta = RTA_NEXT(rta, len)) {
 		switch (rta->rta_type & NLA_TYPE_MASK) {
 		case IFLA_IFNAME:
-			name = RTA_DATA(rta);
+			snprintf(name, sizeof(name), "%.*s", (int)RTA_PAYLOAD(rta),
+				 (char *)RTA_DATA(rta));
 			break;
 		case IFLA_OPERSTATE:
 			operstate = *(uint8_t *)RTA_DATA(rta);
@@ -114,7 +115,7 @@ static void iface_parse(struct iface_ctx *ctx, struct nlmsghdr *nlh, int dump)
 		}
 	}
 
-	if (!name)
+	if (!name[0])
 		return;
 
 	if (nlh->nlmsg_type == RTM_DELLINK) {
