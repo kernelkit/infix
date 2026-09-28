@@ -137,6 +137,10 @@ typedef enum {
 	if ((rc = register_rpc_tree(s, x, c, a, u)))		\
 		goto fail
 
+#define REGISTER_NOTIF(s,m,x,c,a,u)				\
+	if ((rc = register_notif(s, m, x, c, a, u)))		\
+		goto fail
+
 struct confd {
 	sr_session_ctx_t       *session; /* running datastore */
 	sr_session_ctx_t       *startup; /* startup datastore */
@@ -202,6 +206,17 @@ static inline int register_rpc_tree(sr_session_ctx_t *session, const char *xpath
 	int rc = sr_rpc_subscribe_tree(session, xpath, cb, arg, 0, SR_SUBSCR_NO_THREAD, sub);
 	if (rc)
 		ERROR("failed subscribing to %s rpc: %s", xpath, sr_strerror(rc));
+	return rc;
+}
+
+static inline int register_notif(sr_session_ctx_t *session, const char *module, const char *xpath,
+	sr_event_notif_cb cb, void *arg, sr_subscription_ctx_t **sub)
+{
+	int rc = sr_notif_subscribe(session, module, xpath,
+				    NULL, NULL, /* forever */
+				    cb, arg, SR_SUBSCR_NO_THREAD, sub);
+	if (rc)
+		ERROR("failed subscribing to %s notification: %s", xpath, sr_strerror(rc));
 	return rc;
 }
 
@@ -309,5 +324,8 @@ int snmp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_n
 #else
 static inline int snmp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd) { return 0; }
 #endif
+
+/* modem.c */
+int modem_init(struct confd *confd);
 
 #endif	/* CONFD_CORE_H_ */

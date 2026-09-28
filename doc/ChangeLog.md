@@ -103,6 +103,10 @@ All notable changes to the project are documented in this file.
   release feed on a schedule and install a newer release to the inactive
   partition on its own, then either reboot to activate it or leave it staged for
   the next reboot
+- Add cellular modem (WWAN) support for USB-attached MBIM/QMI modems,
+  including USB dongles, mPCIe cards, and M.2 Key-B modules.  Multiple
+  APNs per modem, SIM PIN configuration, and NMEA routing from modem to
+  GPS subsystem.  See the [Modem User's Guide][modem] for details
 
 ### Fixes
 
@@ -124,6 +128,7 @@ All notable changes to the project are documented in this file.
 
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 [snmp]: https://www.kernelkit.org/infix/latest/snmp/
+[modem]: https://www.kernelkit.org/infix/latest/modem/
 
 
 [v26.08.0][] - 2026-09-01

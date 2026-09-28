@@ -11,6 +11,11 @@ if jq -e '.["wifi-radios"]' /run/system.json > /dev/null 2>&1; then
 else
     wifi_radios=""
 fi
+if jq -e '.["modem"]' /run/system.json > /dev/null 2>&1; then
+    modem_names=$(jq -r '.["modem"][].name' /run/system.json)
+else
+    modem_names=""
+fi
 
 
 gen_port()
@@ -61,6 +66,33 @@ gen_radio()
 EOF
 }
 
+gen_modem()
+{
+    modem="$1"
+
+    # Anchor the component to the probed USB port so the system can
+    # bind this component name to the physical device deterministically.
+    uri=$(jq -r --arg m "$modem" \
+	  '.["modem"][] | select(.name == $m) | .uri // empty' \
+	  /run/system.json 2>/dev/null)
+
+    uri_line=""
+    if [ -n "$uri" ]; then
+	uri_line="
+    \"uri\": [ \"$uri\" ],"
+    fi
+
+    cat <<EOF
+{
+    "name": "$modem",
+    "class": "infix-hardware:modem",$uri_line
+    "state": {
+	"admin-state": "unlocked"
+    }
+}
+EOF
+}
+
 first=1
 cat <<EOF
 {
@@ -80,6 +112,13 @@ for radio in $wifi_radios; do
     fi
     first=0;
     gen_radio $radio
+done
+for modem in $modem_names; do
+    if [ $first -eq 0 ]; then
+	echo -n ','
+    fi
+    first=0;
+    gen_modem "$modem"
 done
 cat <<EOF
 ]}

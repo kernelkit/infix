@@ -82,6 +82,8 @@ def tftp(args: List[str]) -> None:
 
 
 def hardware(args: List[str]) -> None:
+    ref = args[0] if args else None
+
     data = get_json("/ietf-hardware:hardware")
     if not data:
         print("No hardware data retrieved.")
@@ -90,7 +92,35 @@ def hardware(args: List[str]) -> None:
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
-    cli_pretty(data, "show-hardware")
+
+    if ref:
+        cli_pretty(data, "show-hardware-detail", ref)
+    else:
+        cli_pretty(data, "show-hardware")
+
+
+def modem(args: List[str]) -> None:
+    ref = args[0] if args else None
+
+    data = get_json("/ietf-hardware:hardware")
+    if not data:
+        print("No modem data available.")
+        return
+
+    # Merge bearer-state from wwan interfaces (lives under ietf-interfaces).
+    # Quiet on miss — a system without wwan interfaces still shows modems.
+    iface_data = get_json("/ietf-interfaces:interfaces", quiet=True)
+    if iface_data:
+        data.update(iface_data)
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    if ref:
+        cli_pretty(data, "show-modem-detail", ref)
+    else:
+        cli_pretty(data, "show-modem")
 
 
 def ntp(args: List[str]) -> None:
@@ -775,6 +805,7 @@ def execute_command(command: str, args: List[str]):
         'keystore': keystore,
         'lldp': lldp,
         'mdns': mdns,
+        'modem': modem,
         'nacm': nacm,
         'ntp': ntp,
         'ospf': ospf,

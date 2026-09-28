@@ -1,0 +1,44 @@
+From 3d9719aa8b78ab4dc6a1a9767f8050bfda320d36 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sat, 26 Sep 2026 11:13:00 +0200
+Subject: [PATCH 2/2] port-probe: trust the ID_MM_PORT_TYPE_MBIM udev tag
+Organization: Wires
+
+When a udev rule explicitly sets ID_MM_PORT_TYPE_MBIM=1 on a port,
+treat it as definitive and skip the active MBIM probe.  This mirrors
+how ID_MM_PORT_TYPE_GPS is handled.  Ports that are only guessed to be
+MBIM, from their driver or wwan port type, are still probed.
+
+The active MBIM probe opens the WDM device and sends an MBIM OPEN
+message.  Some modems, e.g., Dell DW5811e (Sierra Wireless EM7455 in
+USB composition 8), keep sending QMI/QMUX framed notifications on the
+MBIM control channel before ever answering MBIM OPEN, so the probe
+times out after ~50 s.  mm_port_probe_list_has_mbim_port() then
+returns FALSE, the Dell plugin creates a non-MBIM modem object, and
+the usbmisc port ends up as "unhandled port type".
+
+A udev rule that sets the tag already matches on vendor, product and
+interface, so the active probe adds no information for such a port.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/mm-port-probe.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/mm-port-probe.c b/src/mm-port-probe.c
+index 85f30e60..d3be5ed4 100644
+--- a/src/mm-port-probe.c
++++ b/src/mm-port-probe.c
+@@ -1529,6 +1529,9 @@ mm_port_probe_run (MMPortProbe                *self,
+     /* If this is a port flagged as being a MBIM port, don't do any other probing */
+     if (self->priv->maybe_mbim) {
+         mm_obj_dbg (self, "no AT/QCDM/QMI probing in possible MBIM port");
++        /* An explicit udev tag is definitive, skip the MBIM probe too */
++        if (mm_kernel_device_get_property_as_boolean (self->priv->port, ID_MM_PORT_TYPE_MBIM))
++            mm_port_probe_set_result_mbim (self, TRUE);
+         mm_port_probe_set_result_at   (self, FALSE);
+         mm_port_probe_set_result_qcdm (self, FALSE);
+         mm_port_probe_set_result_qmi  (self, FALSE);
+-- 
+2.43.0
+

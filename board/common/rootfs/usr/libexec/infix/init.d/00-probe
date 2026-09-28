@@ -620,6 +620,70 @@ def probe_ptp_capabilities(out):
         out.setdefault("interfaces", {}).update(ifaces)
 
 
+def _usb_device_from_sysfs(dev_path):
+    """Deepest ancestor that is a USB device directory (has idVendor),
+    i.e. the port-level node like .../3-1.2/3-1.2.1 — not the bus root.
+    Port-level paths keep two modems on the same bus apart and match
+    the /sys/bus/usb/devices/<port> shortcut users can inspect."""
+    p = dev_path
+    while p not in ("/", "/sys"):
+        if os.path.isfile(os.path.join(p, "idVendor")):
+            return p
+        p = os.path.dirname(p)
+    return None
+
+
+def probe_modems(out):
+    """One entry per physical modem; devpath is the USB device (port)
+    directory, deduplicating the cdc-wdm and ttyUSB ports it exposes.
+    The uri is the copy-paste form users put in the hardware component
+    configuration to anchor a component to this port."""
+    seen = set()
+    modems = []
+    idx = 0
+
+    def add_modem(dev_path):
+        nonlocal idx
+        usb_dev = _usb_device_from_sysfs(dev_path)
+        if usb_dev is None or usb_dev in seen:
+            return
+        seen.add(usb_dev)
+        try:
+            vid = open(os.path.join(usb_dev, "idVendor")).read().strip()
+            pid = open(os.path.join(usb_dev, "idProduct")).read().strip()
+        except OSError:
+            vid, pid = "", ""
+        port = os.path.basename(usb_dev)
+        modems.append({
+            "index": idx,
+            "name": "modem%d" % idx,
+            "devpath": usb_dev,
+            "uri": "usb:///sys/bus/usb/devices/%s" % port,
+            "vid": vid,
+            "pid": pid,
+        })
+        idx += 1
+
+    for cls_dir, prefix in (("/sys/class/usbmisc", "cdc-wdm"),
+                             ("/sys/class/tty", "ttyUSB")):
+        try:
+            entries = os.listdir(cls_dir)
+        except OSError:
+            continue
+        for entry in entries:
+            if not entry.startswith(prefix):
+                continue
+            try:
+                dev_path = os.path.realpath(
+                    os.path.join(cls_dir, entry, "device"))
+                add_modem(dev_path)
+            except OSError:
+                pass
+
+    if modems:
+        out["modem"] = modems
+
+
 def main():
     out = {
         "vendor": None,
@@ -647,6 +711,7 @@ def main():
 
     probe_wifi_radios(out)
     probe_ptp_capabilities(out)
+    probe_modems(out)
 
     if not out["factory-password-hash"]:
         sys.stdout.write("\n\n\033[31mCRITICAL BOOTSTRAP ERROR\n" +

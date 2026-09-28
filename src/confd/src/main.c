@@ -724,6 +724,7 @@ int main(int argc, char **argv)
 
 	if (getenv("DEBUG")) {
 		log_opts |= LOG_PERROR;
+		log_level = LOG_DEBUG;
 		debug = 1;
 	}
 	openlog("confd", log_opts, LOG_DAEMON);

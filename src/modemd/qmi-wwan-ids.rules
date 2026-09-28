@@ -1,0 +1,7 @@
+# Bind USB modem devices whose IDs are not yet upstream in qmi_wwan.
+# Required until the IDs are accepted into the kernel driver.
+ACTION!="add", GOTO="qmi_wwan_ids_end"
+SUBSYSTEM!="usb", GOTO="qmi_wwan_ids_end"
+ENV{DEVTYPE}!="usb_device", GOTO="qmi_wwan_ids_end"
+
+LABEL="qmi_wwan_ids_end"

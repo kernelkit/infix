@@ -31,12 +31,6 @@ check()
 
     echo "1..$total"
     for defconfig in "$@"; do
-	# Skip UNIX backup files
-	case "$defconfig" in
-	    *~|*.bak|'#'*'#'|.#*)
-		continue
-		;;
-	esac
 	base=$(basename "$defconfig")
 	if whitelist "$base"; then
 		echo "ok $num - $base is exempted # skip"
@@ -50,6 +44,9 @@ check()
 }
 
 # shellcheck disable=SC2046
-check $(find "$CONFIGS" -maxdepth 1 -type f | LC_ALL=C sort) || exit 1
+check $(find "$CONFIGS" -maxdepth 1 -type f \
+	     ! -name '*~' ! -name '*.bak' \
+	     ! -name '#*#' ! -name '.#*' \
+	     | LC_ALL=C sort) || exit 1
 
 exit 0

@@ -1,0 +1,41 @@
+From 98c48c5867b3d52542988876f7e81f10d343b50b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sat, 26 Sep 2026 11:30:04 +0200
+Subject: [PATCH] qmi-firmware-update: don't match sysfs path in download mode
+Organization: Wires
+
+After a reset into download mode the modem may re-enumerate under
+another root hub or host controller, e.g. usb4 -> usb3.  It then no
+longer matches the sysfs path recorded before the reset, so
+qmi-firmware-update never finds it.
+
+Skip the sysfs path check when looking for a device in download mode.
+With more than one modem in download mode at the same time, the first
+one found is used.
+
+Originally from the modem support donated by Avvero Pty Ltd.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/qmi-firmware-update/qfu-helpers-udev.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/qmi-firmware-update/qfu-helpers-udev.c b/src/qmi-firmware-update/qfu-helpers-udev.c
+index bda91061..cd25e0bc 100644
+--- a/src/qmi-firmware-update/qfu-helpers-udev.c
++++ b/src/qmi-firmware-update/qfu-helpers-udev.c
+@@ -364,7 +364,10 @@ device_matches (GUdevDevice          *device,
+     if (!device_sysfs_path)
+         goto out;
+ 
+-    if (g_strcmp0 (device_sysfs_path, sysfs_path) != 0)
++    /* In download mode the device may re-enumerate on another root hub,
++     * e.g. usb4 -> usb3, so its sysfs path no longer matches */
++    if (mode != QFU_HELPERS_DEVICE_MODE_DOWNLOAD &&
++        g_strcmp0 (device_sysfs_path, sysfs_path) != 0)
+         goto out;
+ 
+     if (device_mode != mode)
+-- 
+2.43.0
+
