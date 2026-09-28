@@ -32,3 +32,6 @@
 
 - name: Host Command Execution from Container
   case: host_commands/test.py
+
+- name: Container NETCONF Port Forwarding
+  case: netconf_port_forward/test.py
