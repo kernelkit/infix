@@ -4,6 +4,7 @@ package backoff
 
 import (
 	"context"
+	"log/slog"
 	"math"
 	"time"
 )
@@ -47,5 +48,33 @@ func Sleep(ctx context.Context, d time.Duration) error {
 		return ctx.Err()
 	case <-time.After(d):
 		return nil
+	}
+}
+
+// Retry runs fn until ctx is cancelled, restarting it with exponential
+// backoff each time it returns.  A run that lasted longer than the
+// maximum delay counts as healthy and resets the delay, so a source
+// that flaps after hours of service is retried quickly, while one that
+// dies at once backs off to Max.  This is the restart loop every
+// reactive monitor needs; name labels the log line.
+func Retry(ctx context.Context, log *slog.Logger, name string, fn func(ctx context.Context) error) error {
+	bo := Default()
+	delay := bo.Initial
+
+	for {
+		started := time.Now()
+		err := fn(ctx)
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if time.Since(started) > bo.Max {
+			delay = bo.Initial
+		}
+
+		log.Warn(name+": exited, restarting", "err", err, "delay", delay)
+		if err := Sleep(ctx, delay); err != nil {
+			return err
+		}
+		delay = bo.Next(delay)
 	}
 }
