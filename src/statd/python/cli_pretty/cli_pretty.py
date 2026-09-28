@@ -665,9 +665,7 @@ class Date(datetime):
         if not ydate:
             return None
 
-        date, tz = ydate.split("+")
-        tz = tz.replace(":", "")
-        return cls.strptime(f"{date}+{tz}", "%Y-%m-%dT%H:%M:%S%z")
+        return cls.fromisoformat(ydate)
 
 class Route:
     def __init__(self, data, ip):
