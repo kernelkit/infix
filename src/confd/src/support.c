@@ -71,9 +71,10 @@ static void strip_lf(unsigned char *str)
 /* Same mode as the tool gives it, our umask is stricter */
 static const char *workdir(void)
 {
-	if (!mkdir(SUPPORT_DIR, 0755))
-		chmod(SUPPORT_DIR, 0755);
-	else if (errno != EEXIST)
+	if (!mkdir(SUPPORT_DIR, 0755)) {
+		if (chmod(SUPPORT_DIR, 0755))
+			WARN("Cannot set mode of %s: %s", SUPPORT_DIR, strerror(errno));
+	} else if (errno != EEXIST)
 		return SUPPORT_TMP;
 
 	if (access(SUPPORT_DIR, W_OK))
@@ -375,10 +376,6 @@ static int rpc_collect(sr_session_ctx_t *session, uint32_t sub_id, const char *p
 
 int support_rpc_init(struct confd *confd)
 {
-	int rc = 0;
-
-	REGISTER_RPC(confd->session, "/infix-system:support-collect",
-		     rpc_collect, NULL, &confd->sub);
-fail:
-	return rc;
+	return register_rpc(confd->session, "/infix-system:support-collect",
+			    rpc_collect, NULL, &confd->sub);
 }
