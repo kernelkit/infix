@@ -20,22 +20,17 @@
 #include "iface.h"
 #include "shared.h"
 
-static time_t monotonic(void)
+static int64_t clock_ns(clockid_t id)
 {
 	struct timespec ts;
 
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	return ts.tv_sec;
+	clock_gettime(id, &ts);
+	return (int64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
 }
 
-/* CLOCK_REALTIME - CLOCK_MONOTONIC in whole seconds, floored */
-static time_t clock_offset(void)
+static int64_t monotonic(void)
 {
-	struct timespec rt, mono;
-
-	clock_gettime(CLOCK_REALTIME, &rt);
-	clock_gettime(CLOCK_MONOTONIC, &mono);
-	return rt.tv_sec - mono.tv_sec - (rt.tv_nsec < mono.tv_nsec);
+	return clock_ns(CLOCK_MONOTONIC);
 }
 
 static struct iface *iface_find(struct iface_ctx *ctx, const char *name)
@@ -274,13 +269,17 @@ void iface_ctx_exit(struct iface_ctx *ctx)
 /* Add last-change to every interface in tree whose state changed since start */
 void iface_annotate(struct iface_ctx *ctx, struct lyd_node *tree)
 {
+	/*
+	 * Shift the monotonic stamp onto the wall clock at full resolution
+	 * and truncate once, or two events in the same second can come out
+	 * in the wrong order.
+	 */
+	int64_t offset = clock_ns(CLOCK_REALTIME) - monotonic();
 	struct lyd_node *iface;
-	time_t off;
 
 	if (!tree)
 		return;
 
-	off = clock_offset();
 	LY_LIST_FOR(lyd_child(tree), iface) {
 		struct iface *l;
 		char buf[32];
@@ -289,7 +288,7 @@ void iface_annotate(struct iface_ctx *ctx, struct lyd_node *tree)
 		if (!l || !l->changed)
 			continue;
 
-		format_timestamp(l->changed + off, buf, sizeof(buf));
+		format_timestamp((l->changed + offset) / 1000000000, buf, sizeof(buf));
 		if (lyd_new_term(iface, NULL, "last-change", buf, 0, NULL))
 			WARN("Failed adding last-change to interface %s", l->name);
 	}

@@ -20,7 +20,7 @@ struct iface {
 	char     name[IFNAMSIZ];
 	int      ifindex;
 	uint8_t  operstate;	/* IF_OPER_* */
-	time_t   changed;	/* CLOCK_MONOTONIC, 0: state predates statd */
+	int64_t  changed;	/* CLOCK_MONOTONIC ns, 0: state predates statd */
 	TAILQ_ENTRY(iface) entries;
 };
 
