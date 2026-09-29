@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -387,7 +388,7 @@ func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) bool {
 
 func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) bool {
 	if isBridgeFDB(update) {
-		bridgeName, ok := bridgeNameFromNeigh(update)
+		bridgeName, _, ok := bridgeNameFromNeigh(update)
 		if !ok {
 			m.log.Warn("fdb update: bridge name not found", "link-index", update.LinkIndex)
 			return false
@@ -448,7 +449,9 @@ func (m *NLMonitor) removeInterface(index int) bool {
 	name := nameByIndex(m.links, index)
 	m.links = replaceRows(m.links, "ifindex", index, nil)
 	m.addrs = replaceRows(m.addrs, "ifindex", index, nil)
-	if name != "" {
+	// Link and address events arrive on separate channels, so the delete
+	// of an old interface can be handled after a new one took its name.
+	if name != "" && !nameInUse(m.links, name) {
 		m.forgetName(name)
 	}
 	m.log.Debug("removeInterface", "index", index, "ifname", name)
@@ -496,7 +499,9 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 	old := nameByIndex(m.links, index)
 	if old != "" && old != name {
 		m.log.Info("interface renamed", "from", old, "to", name)
-		m.forgetName(old)
+		if !nameInUse(replaceRows(m.links, "ifindex", index, nil), old) {
+			m.forgetName(old)
+		}
 	}
 	m.updateOperStatus(name, linkRaw)
 	m.links = replaceRows(m.links, "ifindex", index, linkRaw)
@@ -864,25 +869,34 @@ func isBridgeFDB(update netlink.NeighUpdate) bool {
 	return false
 }
 
-func bridgeNameFromNeigh(update netlink.NeighUpdate) (string, bool) {
+func bridgeNameFromNeigh(update netlink.NeighUpdate) (string, int, bool) {
 	if update.MasterIndex > 0 {
 		name, err := ifNameByIndex(update.MasterIndex)
 		if err == nil {
-			return name, true
+			return name, update.MasterIndex, true
 		}
 	}
 
 	if update.LinkIndex <= 0 {
-		return "", false
+		return "", 0, false
 	}
 	link, err := netlink.LinkByIndex(update.LinkIndex)
 	if err == nil && link != nil && link.Attrs() != nil && link.Attrs().MasterIndex > 0 {
 		name, err := ifNameByIndex(link.Attrs().MasterIndex)
 		if err == nil {
-			return name, true
+			return name, link.Attrs().MasterIndex, true
 		}
 	}
-	return "", false
+	return "", 0, false
+}
+
+// devRef names a device by index for a batch command.  iproute2 caches
+// name-to-index lookups for the life of the process, so once a name is
+// reused by a new interface, "dev wifi0" keeps resolving to the deleted
+// one.  "if<N>" bypasses that cache.  "link show" is the exception: it
+// sends the name to the kernel and does not accept this form.
+func devRef(index int) string {
+	return "if" + strconv.Itoa(index)
 }
 
 // validateAddrData checks whether a JSON response from "addr show" contains
@@ -1012,6 +1026,16 @@ func replaceRows(bulk json.RawMessage, key string, match any, replacement json.R
 }
 
 // nameByIndex returns the staged ifname for index, "" if none.
+// nameInUse tells whether any staged link row carries name.
+func nameInUse(links json.RawMessage, name string) bool {
+	for _, row := range decodeRows(links) {
+		if rowString(row, "ifname") == name {
+			return true
+		}
+	}
+	return false
+}
+
 func nameByIndex(links json.RawMessage, index int) string {
 	want := jsonKey(index)
 	for _, row := range decodeRows(links) {

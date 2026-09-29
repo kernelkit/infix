@@ -32,13 +32,16 @@ func Transform(linkData, addrData, neighData json.RawMessage, fc FileChecker) js
 	addrs := decodeObjects(addrData)
 	neighs := decodeObjects(neighData)
 
-	addrByName := make(map[string]map[string]any, len(addrs))
+	// By ifindex, not name: a name can be reused by a new interface
+	// while rows of the old one are still on their way out.
+	addrByIndex := make(map[int]map[string]any, len(addrs))
+	addrByName := make(map[string]map[string]any)
 	for _, addr := range addrs {
-		ifname := getString(addr, "ifname")
-		if ifname == "" {
-			continue
+		if idx := getIntOrZero(addr, "ifindex"); idx != 0 {
+			addrByIndex[idx] = addr
+		} else if ifname := getString(addr, "ifname"); ifname != "" {
+			addrByName[ifname] = addr
 		}
-		addrByName[ifname] = addr
 	}
 
 	neighByName := make(map[string][]map[string]any)
@@ -62,7 +65,10 @@ func Transform(linkData, addrData, neighData json.RawMessage, fc FileChecker) js
 		}
 
 		ifname := getString(iplink, "ifname")
-		ipaddr, ok := addrByName[ifname]
+		ipaddr, ok := addrByIndex[getIntOrZero(iplink, "ifindex")]
+		if !ok {
+			ipaddr, ok = addrByName[ifname]
+		}
 		if !ok {
 			ipaddr = map[string]any{}
 		}

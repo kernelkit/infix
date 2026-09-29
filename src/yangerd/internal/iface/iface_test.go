@@ -940,3 +940,21 @@ func TestIsEthernet(t *testing.T) {
 		}
 	}
 }
+
+// Addresses belong to the interface with the same ifindex, not to any
+// interface that happens to share the name.
+func TestTransformAddressesByIndex(t *testing.T) {
+	links := mustRaw(t, []map[string]any{
+		{"ifname": "wifi0", "ifindex": 16, "link_type": "ether", "flags": []string{"UP"}, "operstate": "UP"},
+	})
+	addrs := mustRaw(t, []map[string]any{
+		{"ifname": "wifi0", "ifindex": 16, "addr_info": []map[string]any{
+			{"family": "inet", "local": "192.168.20.101", "prefixlen": 24, "protocol": "dhcp"}}},
+		{"ifname": "wifi0", "ifindex": 14, "addr_info": []map[string]any{}},
+	})
+
+	wifi0 := mustIfaceByName(t, mustInterfaces(t, Transform(links, addrs, nil, &mockFileChecker{})), "wifi0")
+	if _, ok := wifi0["ietf-ip:ipv4"]; !ok {
+		t.Fatalf("address of ifindex 16 lost to the stale ifindex 14 row: %v", wifi0)
+	}
+}

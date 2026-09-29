@@ -317,3 +317,25 @@ func TestEthernetNames(t *testing.T) {
 		t.Fatalf("ethernetNames = %v, want %v", got, want)
 	}
 }
+
+// A delete of the old wifi0 handled after the new wifi0 took the name
+// must not drop the new interface's name-keyed state.
+func TestLateDeleteKeepsReusedName(t *testing.T) {
+	m := New(nil, nil, nil, nil, tree.New(), nil, slog.Default())
+	m.links = json.RawMessage(`[{"ifindex":14,"ifname":"wifi0"},{"ifindex":16,"ifname":"wifi0"}]`)
+	m.wifi["wifi0"] = json.RawMessage(`{"station":{"ssid":"campus"}}`)
+
+	m.removeInterface(14)
+
+	if m.wifi["wifi0"] == nil {
+		t.Fatal("late delete of the old wifi0 dropped the new one's wifi data")
+	}
+	if got := nameByIndex(m.links, 16); got != "wifi0" {
+		t.Fatalf("new wifi0 row lost, links %s", m.links)
+	}
+
+	m.removeInterface(16)
+	if m.wifi["wifi0"] != nil {
+		t.Fatal("deleting the last wifi0 kept its wifi data")
+	}
+}
