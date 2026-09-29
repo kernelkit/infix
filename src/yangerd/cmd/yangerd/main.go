@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -301,7 +302,12 @@ func main() {
 	go func() {
 		<-nlmon.WaitReady()
 		ready.Store(true)
+		// finit's notify:pid marks the service ready when this appears
+		if err := os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0644); err != nil {
+			slogLog.Warn("write pidfile", "path", pidFile, "err", err)
+		}
 	}()
+	defer os.Remove(pidFile)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
@@ -360,7 +366,10 @@ func slogLevel(s string) slog.Level {
 	}
 }
 
-const routingTreeKey = "ietf-routing:routing"
+const (
+	routingTreeKey = "ietf-routing:routing"
+	pidFile        = "/run/yangerd.pid"
+)
 
 func makeBootOrderReader(t *tree.Tree, cmd collector.CommandRunner) func(string) (json.RawMessage, error) {
 	return func(_ string) (json.RawMessage, error) {
