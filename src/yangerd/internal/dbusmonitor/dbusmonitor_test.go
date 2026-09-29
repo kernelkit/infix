@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -818,5 +820,23 @@ func TestTrackedEntries(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestReadLeases(t *testing.T) {
+	dir := t.TempDir()
+	full := filepath.Join(dir, "full")
+	torn := filepath.Join(dir, "torn")
+	os.WriteFile(full, []byte("1711900000 aa:bb:cc:dd:ee:ff 10.0.0.5 host *\n"), 0644)
+	os.WriteFile(torn, []byte("1711900000 aa:bb:cc:dd:ee:ff 10.0.0.5 ho"), 0644)
+
+	if data, err := readLeases(full); err != nil || data == "" {
+		t.Fatalf("complete file: data %q, err %v", data, err)
+	}
+	if _, err := readLeases(torn); err == nil {
+		t.Fatal("a file without its final newline must be reported as torn")
+	}
+	if data, err := readLeases(filepath.Join(dir, "missing")); err != nil || data != "" {
+		t.Fatalf("missing file must mean no leases: data %q, err %v", data, err)
 	}
 }

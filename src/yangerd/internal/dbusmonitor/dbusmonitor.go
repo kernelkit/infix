@@ -5,7 +5,9 @@ package dbusmonitor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/netip"
 	"os"
@@ -53,6 +55,10 @@ const (
 	// nftTimeout bounds one nft set listing on the GET path; nft waits
 	// for the nftables lock while firewalld reloads.
 	nftTimeout = 3 * time.Second
+
+	// leaseRetry is how long to wait before reading the lease file again
+	// after catching dnsmasq in the middle of rewriting it.
+	leaseRetry = 200 * time.Millisecond
 )
 
 // DBusMonitor subscribes to dnsmasq and firewalld D-Bus signals and
@@ -279,12 +285,28 @@ func (m *DBusMonitor) refreshSoftware() {
 }
 
 func (m *DBusMonitor) refreshDHCP(conn *dbus.Conn) error {
-	data, err := os.ReadFile(dnsmasqLeaseFile)
+	return m.loadDHCP(conn, true)
+}
+
+// loadDHCP publishes the leases and server statistics.  A failed or
+// torn read keeps the previous leases rather than publishing an empty
+// list, and is retried once after leaseRetry.
+func (m *DBusMonitor) loadDHCP(conn *dbus.Conn, retry bool) error {
+	data, err := readLeases(dnsmasqLeaseFile)
 	if err != nil {
-		m.log.Warn("dbus monitor: read dnsmasq leases failed", "file", dnsmasqLeaseFile, "err", err)
+		if retry {
+			time.AfterFunc(leaseRetry, func() {
+				if c := m.getConn(); c != nil {
+					if err := m.loadDHCP(c, false); err != nil {
+						m.log.Warn("dbus monitor: dhcp refresh retry failed", "err", err)
+					}
+				}
+			})
+		}
+		return err
 	}
 
-	leases := parseDnsmasqLeases(string(data))
+	leases := parseDnsmasqLeases(data)
 	stats := defaultDHCPStats()
 
 	obj := conn.Object(dnsmasqBusName, dbus.ObjectPath(dnsmasqPath))
@@ -297,6 +319,24 @@ func (m *DBusMonitor) refreshDHCP(conn *dbus.Conn) error {
 
 	m.tree.Set(dhcpTreeKey, buildDHCPTree(leases, stats))
 	return nil
+}
+
+// readLeases reads the dnsmasq lease file.  A missing file means no
+// leases.  dnsmasq rewrites the file in place, truncate then print, so
+// a read can land mid-rewrite; every line ends in a newline, so a
+// missing final one gives the torn read away.
+func readLeases(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", path, err)
+	}
+	if len(data) > 0 && data[len(data)-1] != '\n' {
+		return "", fmt.Errorf("read %s: partial, dnsmasq is rewriting it", path)
+	}
+	return string(data), nil
 }
 
 func (m *DBusMonitor) refreshFirewall(conn *dbus.Conn) error {
