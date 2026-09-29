@@ -36,6 +36,7 @@ type FSWatcher struct {
 	tree        *tree.Tree
 	handlers    map[string]WatchHandler
 	dirHandlers map[string]WatchHandler // directory path → handler
+	pending     map[string]bool         // removed files waiting to reappear
 	debounce    map[string]*time.Timer
 	mu          sync.Mutex
 	log         *slog.Logger
@@ -52,6 +53,7 @@ func New(t *tree.Tree, log *slog.Logger) (*FSWatcher, error) {
 		tree:        t,
 		handlers:    make(map[string]WatchHandler),
 		dirHandlers: make(map[string]WatchHandler),
+		pending:     make(map[string]bool),
 		debounce:    make(map[string]*time.Timer),
 		log:         log,
 	}, nil
@@ -66,19 +68,58 @@ func (fw *FSWatcher) Watch(path string, handler WatchHandler) error {
 	return fw.watcher.Add(path)
 }
 
-// WatchGlob expands a glob pattern and registers a handler for each
-// matching path.  Returns the number of paths matched.
-func (fw *FSWatcher) WatchGlob(pattern string, handler WatchHandler) (int, error) {
+// SyncGlob makes the watched paths matching pattern equal to what the
+// pattern expands to now: new matches are watched with handler and read
+// once, vanished ones dropped.  inotify reports nothing when a /proc/sys
+// directory appears or goes away with its interface, so the caller runs
+// this on link add/del.
+func (fw *FSWatcher) SyncGlob(pattern string, handler WatchHandler) (added, removed int, err error) {
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		return 0, fmt.Errorf("glob %s: %w", pattern, err)
+		return 0, 0, fmt.Errorf("glob %s: %w", pattern, err)
 	}
+	want := make(map[string]bool, len(matches))
 	for _, path := range matches {
-		if err := fw.Watch(path, handler); err != nil {
-			fw.log.Warn("fswatcher: watch failed, skipping", "path", path, "err", err)
+		want[path] = true
+	}
+
+	fw.mu.Lock()
+	var gone, fresh []string
+	for path := range fw.handlers {
+		if ok, _ := filepath.Match(pattern, path); ok && !want[path] {
+			gone = append(gone, path)
 		}
 	}
-	return len(matches), nil
+	for path := range want {
+		if _, ok := fw.handlers[path]; !ok {
+			fresh = append(fresh, path)
+		}
+	}
+	for _, path := range gone {
+		fw.dropLocked(path)
+	}
+	fw.mu.Unlock()
+
+	for _, path := range fresh {
+		if err := fw.Watch(path, handler); err != nil {
+			fw.log.Warn("fswatcher: watch failed, skipping", "path", path, "err", err)
+			continue
+		}
+		fw.fireHandler(path, handler)
+		added++
+	}
+	return added, len(gone), nil
+}
+
+// dropLocked forgets a file handler.  fw.mu must be held.
+func (fw *FSWatcher) dropLocked(path string) {
+	delete(fw.handlers, path)
+	delete(fw.pending, path)
+	if timer, ok := fw.debounce[path]; ok {
+		timer.Stop()
+		delete(fw.debounce, path)
+	}
+	_ = fw.watcher.Remove(path)
 }
 
 // WatchSymlink registers a handler for a symlink by watching its parent
@@ -170,6 +211,11 @@ func (fw *FSWatcher) Close() {
 func (fw *FSWatcher) handleEvent(path string) {
 	fw.mu.Lock()
 	handler, ok := fw.handlers[path]
+	if ok && fw.pending[path] {
+		if err := fw.watcher.Add(path); err == nil {
+			delete(fw.pending, path)
+		}
+	}
 	handlerPath := path
 	if !ok {
 		dir := filepath.Dir(path)
@@ -220,16 +266,21 @@ func (fw *FSWatcher) handleRemove(path string) {
 		fw.log.Debug("fswatcher: removed", "path", path, "key", handler.TreeKey)
 	}
 
-	if err := fw.watcher.Add(path); err != nil {
-		fw.mu.Lock()
-		delete(fw.handlers, path)
-		if timer, exists := fw.debounce[path]; exists {
-			timer.Stop()
-			delete(fw.debounce, path)
-		}
-		fw.mu.Unlock()
-		fw.log.Debug("fswatcher: file gone, handler removed", "path", path)
+	if err := fw.watcher.Add(path); err == nil {
+		return
 	}
+
+	// Gone for now: watch the directory to catch it being recreated,
+	// or give up when the directory went away too.
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
+	if err := fw.watcher.Add(filepath.Dir(path)); err != nil {
+		fw.dropLocked(path)
+		fw.log.Debug("fswatcher: file and directory gone, handler removed", "path", path)
+		return
+	}
+	fw.pending[path] = true
+	fw.log.Debug("fswatcher: file gone, waiting for it to reappear", "path", path)
 }
 
 func (fw *FSWatcher) fireHandler(path string, handler WatchHandler) {

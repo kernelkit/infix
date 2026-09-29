@@ -123,11 +123,11 @@ func TestInitialReadError(t *testing.T) {
 	}
 }
 
-func TestWatchGlob(t *testing.T) {
-	fw, _ := newTestFSWatcher(t)
+func TestSyncGlob(t *testing.T) {
+	fw, tr := newTestFSWatcher(t)
 
 	tmp := t.TempDir()
-	for _, name := range []string{"x1.conf", "x2.conf", "x3.conf"} {
+	for _, name := range []string{"x1.conf", "x2.conf"} {
 		os.WriteFile(filepath.Join(tmp, name), []byte("data"), 0644)
 	}
 	os.WriteFile(filepath.Join(tmp, "y.txt"), []byte("data"), 0644)
@@ -136,21 +136,69 @@ func TestWatchGlob(t *testing.T) {
 		TreeKey:  "glob/test",
 		ReadFunc: func(p string) (json.RawMessage, error) { return json.RawMessage(`"g"`), nil },
 	}
+	pattern := filepath.Join(tmp, "x*.conf")
 
-	n, err := fw.WatchGlob(filepath.Join(tmp, "x*.conf"), handler)
-	if err != nil {
-		t.Fatalf("WatchGlob: %v", err)
+	if added, removed, err := fw.SyncGlob(pattern, handler); err != nil || added != 2 || removed != 0 {
+		t.Fatalf("first sync = +%d -%d %v, want +2 -0", added, removed, err)
 	}
-	if n != 3 {
-		t.Errorf("WatchGlob matched %d, want 3", n)
+	if got := tr.Get("glob/test"); string(got) != `"g"` {
+		t.Fatalf("new matches must be read at once, got %s", got)
+	}
+
+	os.Remove(filepath.Join(tmp, "x1.conf"))
+	os.WriteFile(filepath.Join(tmp, "x3.conf"), []byte("data"), 0644)
+	if added, removed, err := fw.SyncGlob(pattern, handler); err != nil || added != 1 || removed != 1 {
+		t.Fatalf("second sync = +%d -%d %v, want +1 -1", added, removed, err)
 	}
 
 	fw.mu.Lock()
+	_, has1 := fw.handlers[filepath.Join(tmp, "x1.conf")]
+	_, has3 := fw.handlers[filepath.Join(tmp, "x3.conf")]
 	count := len(fw.handlers)
 	fw.mu.Unlock()
-	if count != 3 {
-		t.Errorf("handlers count = %d, want 3", count)
+	if has1 || !has3 || count != 2 {
+		t.Errorf("handlers after sync: x1=%v x3=%v count=%d", has1, has3, count)
 	}
+}
+
+// A file removed and later recreated is picked up again.
+func TestRunFileReappears(t *testing.T) {
+	fw, tr := newTestFSWatcher(t)
+
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "hostname")
+	os.WriteFile(path, []byte("one"), 0644)
+
+	fw.Watch(path, WatchHandler{
+		TreeKey: "host",
+		ReadFunc: func(p string) (json.RawMessage, error) {
+			b, err := os.ReadFile(p)
+			if err != nil {
+				return nil, err
+			}
+			return json.RawMessage(fmt.Sprintf("%q", b)), nil
+		},
+	})
+	fw.InitialRead()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go fw.Run(ctx)
+
+	os.Remove(path)
+	deadline := time.Now().Add(2 * time.Second)
+	for tr.Get("host") != nil && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	os.WriteFile(path, []byte("two"), 0644)
+	for time.Now().Before(deadline.Add(2 * time.Second)) {
+		if string(tr.Get("host")) == `"two"` {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("recreated file not picked up, have %s", tr.Get("host"))
 }
 
 func TestRunWriteEvent(t *testing.T) {
@@ -376,10 +424,10 @@ func TestHandleRemoveMergeHandler(t *testing.T) {
 	}
 
 	fw.mu.Lock()
-	_, handlerExists := fw.handlers[path]
+	pending := fw.pending[path]
 	fw.mu.Unlock()
-	if handlerExists {
-		t.Error("handler should be cleaned up after permanent removal")
+	if !pending {
+		t.Error("handler should wait for the file to reappear")
 	}
 }
 
@@ -411,10 +459,19 @@ func TestHandleRemovePlainHandler(t *testing.T) {
 	}
 
 	fw.mu.Lock()
+	pending := fw.pending[path]
+	fw.mu.Unlock()
+	if !pending {
+		t.Error("handler should wait for the file to reappear")
+	}
+
+	os.RemoveAll(tmp)
+	fw.handleRemove(path)
+	fw.mu.Lock()
 	_, handlerExists := fw.handlers[path]
 	fw.mu.Unlock()
 	if handlerExists {
-		t.Error("handler should be cleaned up after permanent removal")
+		t.Error("handler should be cleaned up once its directory is gone too")
 	}
 }
 
