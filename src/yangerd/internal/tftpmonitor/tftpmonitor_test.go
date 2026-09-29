@@ -249,3 +249,58 @@ func TestRootCreatedLater(t *testing.T) {
 	cancel()
 	<-done
 }
+
+// A directory removed and recreated within one debounce window must
+// still be watched afterwards.
+func TestRecreatedDirStaysWatched(t *testing.T) {
+	m, tr, conf := newTestMonitor(t)
+	root := filepath.Join(t.TempDir(), "tftpboot")
+	put(t, filepath.Join(root, "fw", "old"), "x", 0644)
+	enable(t, conf, root)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = m.Run(ctx)
+	}()
+
+	waitFor(t, tr, []string{"fw/old"})
+
+	if err := os.RemoveAll(filepath.Join(root, "fw")); err != nil {
+		t.Fatal(err)
+	}
+	put(t, filepath.Join(root, "fw", "new"), "y", 0644)
+	waitFor(t, tr, []string{"fw/new"})
+
+	put(t, filepath.Join(root, "fw", "later"), "z", 0644)
+	waitFor(t, tr, []string{"fw/later", "fw/new"})
+
+	cancel()
+	<-done
+}
+
+// With neither the root nor its parent present, the nearest existing
+// ancestor is watched so the whole path can appear later.
+func TestRootWithMissingParent(t *testing.T) {
+	m, tr, conf := newTestMonitor(t)
+	root := filepath.Join(t.TempDir(), "media", "usb")
+	enable(t, conf, root)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = m.Run(ctx)
+	}()
+
+	waitFor(t, tr, []string{})
+
+	put(t, filepath.Join(root, "late"), "x", 0644)
+	waitFor(t, tr, []string{"late"})
+
+	cancel()
+	<-done
+}

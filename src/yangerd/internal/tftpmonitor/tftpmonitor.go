@@ -89,7 +89,6 @@ func (m *TFTPMonitor) Run(ctx context.Context) error {
 
 	timer := time.NewTimer(time.Hour)
 	timer.Stop()
-	pending := false
 
 	for {
 		select {
@@ -103,14 +102,9 @@ func (m *TFTPMonitor) Run(ctx context.Context) error {
 			if filepath.Dir(ev.Name) == confDir && ev.Name != m.conf {
 				continue // another dnsmasq snippet
 			}
-			if pending {
-				timer.Stop()
-			}
 			timer.Reset(debounceDelay)
-			pending = true
 
 		case <-timer.C:
-			pending = false
 			m.reconcile()
 
 		case err, ok := <-w.Errors:
@@ -190,10 +184,10 @@ func (m *TFTPMonitor) syncWatches(dirs []string) {
 		delete(m.watched, dir)
 	}
 
+	// Add even what is already watched: the kernel drops the watch of a
+	// deleted directory, so one removed and recreated between two scans
+	// needs it again, and Add on a live watch is a no-op.
 	for dir := range want {
-		if m.watched[dir] {
-			continue
-		}
 		if m.watcher != nil {
 			if err := m.watcher.Add(dir); err != nil {
 				m.log.Warn("tftp monitor: watch failed", "dir", dir, "err", err)
@@ -216,17 +210,21 @@ type fileEntry struct {
 // name, and the directories that must be watched to notice a change.
 //
 // A missing root is a legitimate state: the server is enabled and dnsmasq
-// runs with tftp-no-fail, so the list is empty and the parent directory
-// is watched to catch the root being created.
+// runs with tftp-no-fail, so the list is empty and the nearest existing
+// ancestor is watched to catch the root, or a directory on the way to
+// it, being created.
 func scan(root string, log *slog.Logger) ([]fileEntry, []string) {
 	files := []fileEntry{}
 
 	if fi, err := os.Stat(root); err != nil || !fi.IsDir() {
-		parent := filepath.Dir(root)
-		if fi, err := os.Stat(parent); err == nil && fi.IsDir() {
-			return files, []string{parent}
+		for dir := filepath.Dir(root); ; dir = filepath.Dir(dir) {
+			if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
+				return files, []string{dir}
+			}
+			if dir == filepath.Dir(dir) {
+				return files, nil
+			}
 		}
-		return files, nil
 	}
 
 	var dirs []string
