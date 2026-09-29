@@ -112,22 +112,7 @@ func main() {
 		if installerOverlay == nil {
 			return live
 		}
-		var base map[string]json.RawMessage
-		if json.Unmarshal(live, &base) != nil {
-			return live
-		}
-		var overlay map[string]json.RawMessage
-		if json.Unmarshal(installerOverlay, &overlay) != nil {
-			return live
-		}
-		for k, v := range overlay {
-			base[k] = v
-		}
-		merged, err := json.Marshal(base)
-		if err != nil {
-			return live
-		}
-		return merged
+		return tree.ShallowMerge(live, installerOverlay)
 	})
 
 	if data := collector.BootPlatform(fs); data != nil {
@@ -363,7 +348,7 @@ func makeBootOrderReader(t *tree.Tree, cmd collector.CommandRunner) func(string)
 	return func(_ string) (json.RawMessage, error) {
 		bootOrder := collector.ReadBootOrder(context.TODO(), cmd)
 
-		raw := t.Get("ietf-system:system-state")
+		raw := t.GetCached("ietf-system:system-state")
 		var state map[string]interface{}
 		if raw != nil {
 			json.Unmarshal(raw, &state)
