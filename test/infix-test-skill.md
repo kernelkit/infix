@@ -15,3 +15,26 @@ Info about the Infix regression tests.
   and `provides` attributes, and prints the mapping in the log. A test is
   skipped when no mapping fits.
 - Logs: `test/.log/<log id>/output/`. Full guide: `doc/testing.md`.
+
+## Debugging a local QEMU run
+
+- `make test-sh` keeps the DUTs and the `infamy0` container running after
+  a failure, `make test` tears them down. The DUTs are QEMU guests with
+  384 MB RAM, one host tap per port (`d2a` is port a of dut2, and so on).
+- The log maps the test's logical names to DUTs (`R1: dut2`) and prints
+  the mgmt address it connected to, e.g. `fe80::2a0:85ff:fe00:201%d2a`.
+- Run commands on a DUT over SSH from inside the container, admin/admin:
+
+      podman exec infamy0 sshpass -p admin ssh -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null admin@fe80::2a0:85ff:fe00:201%d2a \
+          'vtysh -c "show ip ospf neighbor"'
+
+  `admin` can `sudo -n` and is in `frrvty`, so `vtysh`, `/var/log/messages`,
+  `dmesg`, `initctl status` and `sysrepocfg -X -d operational -x <xpath>`
+  are all reachable this way. `test/console dut2` attaches to the serial
+  console instead. The system is Finit and sysklogd, there is no journal.
+- Run a subset: list the tests in a yaml under `test/case/` with `case:`
+  paths relative to that directory, then
+  `make test TESTS=$PWD/test/case/subset.yaml`. Repeat an entry under
+  different names to loop a flaky test. `INFAMY_ARGS=--transport=netconf`
+  (or `restconf`) forces the transport, otherwise it is picked per run.
