@@ -80,9 +80,6 @@ func printResponse(resp *ipc.Response) {
 	}
 	if resp.Status == "error" {
 		fmt.Fprintf(os.Stderr, "error %d: %s\n", resp.Code, resp.Message)
-		if resp.Code == 404 {
-			os.Exit(2)
-		}
 		os.Exit(1)
 	}
 

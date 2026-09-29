@@ -49,8 +49,13 @@ static int yangerd_connect(void)
 	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 
 	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		DEBUG("yangerd: connect(%s): %s", path, strerror(errno));
+		int err = errno;
+
+		DEBUG("yangerd: connect(%s): %s", path, strerror(err));
 		close(fd);
+		/* Not started yet, or restarting */
+		if (err == ENOENT || err == ECONNREFUSED)
+			return -2;
 		return -1;
 	}
 
@@ -139,19 +144,11 @@ out:
 	return rc;
 }
 
-static int yangerd_recv_response(int fd, char **buf, size_t *len)
+static int yangerd_recv_frame(int fd, char **buf, size_t *len)
 {
 	unsigned char hdr[5];
 	uint32_t payload_len;
-	json_error_t jerr;
-	json_t *resp;
-	json_t *status;
-	json_t *data;
 	char *body;
-	char *data_str;
-
-	*buf = NULL;
-	*len = 0;
 
 	if (yangerd_read_all(fd, hdr, sizeof(hdr)) < 0)
 		return -1;
@@ -182,14 +179,42 @@ static int yangerd_recv_response(int fd, char **buf, size_t *len)
 	}
 	body[payload_len] = '\0';
 
-	resp = json_loads(body, 0, &jerr);
-	free(body);
+	*buf = body;
+	*len = payload_len;
+
+	return 0;
+}
+
+/*
+ * The response header is a small JSON object, the data, if any,
+ * follows raw in a frame of its own and goes to the caller untouched.
+ */
+static int yangerd_recv_response(int fd, char **buf, size_t *len)
+{
+	json_t *resp, *status, *raw;
+	json_error_t jerr;
+	size_t hdr_len;
+	char *hdr;
+	int rc;
+
+	*buf = NULL;
+	*len = 0;
+
+	if (yangerd_recv_frame(fd, &hdr, &hdr_len))
+		return -1;
+
+	resp = json_loadb(hdr, hdr_len, 0, &jerr);
+	free(hdr);
 	if (!resp) {
 		ERROR("yangerd: invalid response JSON: %s", jerr.text);
 		return -1;
 	}
 
 	status = json_object_get(resp, "status");
+	if (json_is_string(status) && !strcmp(json_string_value(status), "starting")) {
+		json_decref(resp);
+		return 1;
+	}
 	if (!json_is_string(status) || strcmp(json_string_value(status), "ok")) {
 		json_t *msg = json_object_get(resp, "message");
 
@@ -199,21 +224,17 @@ static int yangerd_recv_response(int fd, char **buf, size_t *len)
 		return -1;
 	}
 
-	data = json_object_get(resp, "data");
-	if (!data || json_is_null(data)) {
-		json_decref(resp);
-		*buf = strdup("{}");
-		*len = 2;
-		return 0;
-	}
-
-	data_str = json_dumps(data, JSON_COMPACT);
+	raw = json_object_get(resp, "raw");
+	rc = json_is_true(raw);
 	json_decref(resp);
-	if (!data_str)
-		return -1;
 
-	*buf = data_str;
-	*len = strlen(data_str);
+	if (rc)
+		return yangerd_recv_frame(fd, buf, len);
+
+	*buf = strdup("{}");
+	if (!*buf)
+		return -1;
+	*len = 2;
 
 	return 0;
 }
@@ -227,6 +248,8 @@ int yangerd_query(const char *path, char **buf, size_t *len)
 	*len = 0;
 
 	fd = yangerd_connect();
+	if (fd == -2)
+		return 1;
 	if (fd < 0)
 		return -1;
 

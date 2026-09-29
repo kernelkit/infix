@@ -6,6 +6,10 @@
 //	+--------+--------+--------+--------+--------+--- ... ---+
 //	| ver(1) | length (uint32 big-endian, bytes)  | JSON body |
 //	+--------+--------+--------+--------+--------+--- ... ---+
+//
+// A response carrying data sets "raw" and sends the data as a second
+// frame, so a client can hand it to a parser without decoding the
+// envelope around it.
 package ipc
 
 import (
@@ -17,7 +21,7 @@ import (
 
 const (
 	// Version is the current protocol version.
-	Version byte = 1
+	Version byte = 2
 
 	// MaxPayload is the maximum JSON body size (4 MiB).
 	MaxPayload = 4 << 20
@@ -27,9 +31,8 @@ const (
 
 // Request is the IPC request from a client.
 type Request struct {
-	Method string            `json:"method"`
-	Path   string            `json:"path,omitempty"`
-	Filter map[string]string `json:"filter,omitempty"`
+	Method string `json:"method"`
+	Path   string `json:"path,omitempty"`
 }
 
 // Response is the IPC response to a client.
@@ -38,12 +41,14 @@ type Response struct {
 	Code    int    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
 
-	// Used by "get" responses.
-	Data json.RawMessage `json:"data,omitempty"`
+	// Raw is set on the wire when Data follows in its own frame.
+	Raw bool `json:"raw,omitempty"`
+
+	// Used by "get" responses, sent as the second frame.
+	Data json.RawMessage `json:"-"`
 
 	// Used by "health" responses.
-	Subsystems map[string]json.RawMessage `json:"subsystems,omitempty"`
-	Models     map[string]json.RawMessage `json:"models,omitempty"`
+	Models map[string]json.RawMessage `json:"models,omitempty"`
 }
 
 // WriteFrame writes a versioned, length-prefixed frame to w.
@@ -80,13 +85,22 @@ func ReadFrame(r io.Reader) ([]byte, error) {
 	return buf, nil
 }
 
-// WriteResponse marshals a Response and writes it as a framed message.
+// WriteResponse writes a Response frame, followed by a data frame when
+// the response carries data.
 func WriteResponse(w io.Writer, resp *Response) error {
-	data, err := json.Marshal(resp)
+	hdr := *resp
+	hdr.Raw = resp.Data != nil
+	data, err := json.Marshal(&hdr)
 	if err != nil {
 		return err
 	}
-	return WriteFrame(w, data)
+	if err := WriteFrame(w, data); err != nil {
+		return err
+	}
+	if !hdr.Raw {
+		return nil
+	}
+	return WriteFrame(w, resp.Data)
 }
 
 // ReadRequest reads and unmarshals a framed Request.
@@ -111,6 +125,11 @@ func ReadResponse(r io.Reader) (*Response, error) {
 	var resp Response
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, fmt.Errorf("invalid response JSON: %w", err)
+	}
+	if resp.Raw {
+		if resp.Data, err = ReadFrame(r); err != nil {
+			return nil, fmt.Errorf("read data frame: %w", err)
+		}
 	}
 	return &resp, nil
 }

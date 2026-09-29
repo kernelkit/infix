@@ -20,6 +20,13 @@ type Server struct {
 	listener net.Listener
 	ready    *atomic.Bool
 	wg       sync.WaitGroup
+
+	// timeout bounds a whole request/response exchange, the C
+	// client in statd uses the same.
+	timeout time.Duration
+
+	mu    sync.Mutex
+	conns map[net.Conn]struct{}
 }
 
 // NewServer creates a Server that serves data from the given Tree.
@@ -27,11 +34,13 @@ type Server struct {
 func NewServer(t *tree.Tree, ready *atomic.Bool) *Server {
 	return &Server{
 		tree:  t,
-		ready: ready,
+		ready:   ready,
+		timeout: 5 * time.Second,
+		conns:   make(map[net.Conn]struct{}),
 	}
 }
 
-// Listen creates and binds a Unix domain socket at path.
+// Listen creates and binds a Unix domain socket at path, root only.
 // A stale socket file is removed before binding.
 func (s *Server) Listen(path string) error {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
@@ -55,6 +64,11 @@ func (s *Server) Serve(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		s.listener.Close()
+		s.mu.Lock()
+		for conn := range s.conns {
+			conn.Close()
+		}
+		s.mu.Unlock()
 	}()
 
 	for {
@@ -69,24 +83,24 @@ func (s *Server) Serve(ctx context.Context) error {
 				return err
 			}
 		}
+		s.mu.Lock()
+		s.conns[conn] = struct{}{}
+		s.mu.Unlock()
+
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
 			s.handleConn(conn)
+			s.mu.Lock()
+			delete(s.conns, conn)
+			s.mu.Unlock()
 		}()
 	}
 }
 
-// Addr returns the listener address, or empty string if not listening.
-func (s *Server) Addr() string {
-	if s.listener == nil {
-		return ""
-	}
-	return s.listener.Addr().String()
-}
-
 func (s *Server) handleConn(conn net.Conn) {
 	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(s.timeout))
 
 	req, err := ReadRequest(conn)
 	if err != nil {
