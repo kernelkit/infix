@@ -45,7 +45,7 @@ type RoutingCollector struct {
 
 // NewRoutingCollector creates a RoutingCollector querying FRR over vty.
 // The runner is no longer used; it stays until the caller drops it.
-func NewRoutingCollector(_ CommandRunner, interval time.Duration) *RoutingCollector {
+func NewRoutingCollector(interval time.Duration) *RoutingCollector {
 	return &RoutingCollector{vty: FRRVty, interval: interval}
 }
 

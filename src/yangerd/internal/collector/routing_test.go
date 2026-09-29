@@ -176,7 +176,7 @@ func (f fakeVty) query(_ context.Context, daemon, command string) ([]byte, error
 }
 
 func newRoutingCollector(vty fakeVty) *RoutingCollector {
-	c := NewRoutingCollector(nil, 10*time.Second)
+	c := NewRoutingCollector(10*time.Second)
 	c.vty = vty.query
 	return c
 }

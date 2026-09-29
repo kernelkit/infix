@@ -99,7 +99,7 @@ func main() {
 	t.RegisterProvider("ietf-hardware:hardware", hardware.Live)
 	collectors := []collector.Collector{
 		collector.NewSystemCollector(cmd, fs, cfg.PollSystem),
-		collector.NewRoutingCollector(cmd, cfg.PollRouting),
+		collector.NewRoutingCollector(cfg.PollRouting),
 		collector.NewNTPCollector(cmd, cfg.PollNTP),
 		hardware,
 	}
