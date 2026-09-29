@@ -190,6 +190,11 @@ the next boot starts from a clean state and goes straight to *Fail
 Secure Mode*.  The mark is cleared on that boot, so a reboot after it
 tries `startup-config` again.
 
+The same happens if loading `startup-config` hangs, e.g., a service that
+never responds.  The system watchdog then resets the unit, by default
+after 70 seconds, and the next boot goes straight to *Fail Secure
+Mode*.
+
 > [!TIP]
 > Please see the [Branding & Releases](branding.md) document for how to
 > provide per-product `failure-config`, or `factory-config` to suit your

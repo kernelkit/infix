@@ -35,6 +35,7 @@
 #include <srx/common.h>
 #include <sysrepo.h>
 #include <sysrepo/version.h>
+#include <wdog/wdog.h>
 
 /* Maximum number of sysrepo event pipe file descriptors across all plugins */
 #define MAX_EVENT_FDS 64
@@ -191,11 +192,15 @@ static void pump_sigterm(int sig)
 	pump_running = 0;
 }
 
-static void event_pump(struct plugin *plugins, int plugin_count)
+/* With a deadline, a hung callback resets us to fail-secure, issue #1637 */
+static void event_pump(struct plugin *plugins, int plugin_count, uint32_t deadline_ms)
 {
 	sr_subscription_ctx_t *subs[MAX_EVENT_FDS];
 	struct pollfd fds[MAX_EVENT_FDS];
+	time_t now, last = 0;
+	unsigned int ack;
 	int nfds = 0;
+	int id = -1;
 
 	for (int i = 0; i < plugin_count; i++) {
 		struct plugin *p = &plugins[i];
@@ -214,13 +219,29 @@ static void event_pump(struct plugin *plugins, int plugin_count)
 
 	signal(SIGTERM, pump_sigterm);
 
+	if (deadline_ms) {
+		id = wdog_subscribe("confd-bootstrap", deadline_ms, &ack);
+		if (id < 0)
+			WARN("Not supervised by watchdogd: %s", strerror(-id));
+	}
+
 	while (pump_running) {
 		if (poll(fds, nfds, 100) > 0) {
 			for (int i = 0; i < nfds; i++)
 				if (fds[i].revents & POLLIN)
 					sr_subscription_process_events(subs[i], NULL, NULL);
 		}
+
+		/* Each kick is a round trip to watchdogd, once a second is enough */
+		now = time(NULL);
+		if (id >= 0 && now != last) {
+			last = now;
+			wdog_kick2(id, &ack);
+		}
 	}
+
+	if (id >= 0)
+		wdog_unsubscribe(id, ack);
 
 	_exit(0);
 }
@@ -721,7 +742,7 @@ int main(int argc, char **argv)
 	uint32_t timeout_s = 60;
 	int plugin_count = 0;
 	int fatal_fail = 0;
-	uint32_t timeout_ms;
+	uint32_t timeout_ms, deadline_ms;
 	int status;
 
 	struct option options[] = {
@@ -914,13 +935,15 @@ int main(int argc, char **argv)
 		/* Phase 9: Fork event pump process for bootstrap.
 		 * With SR_SUBSCR_NO_THREAD, sr_replace_config() blocks waiting
 		 * for callbacks.  The pump process processes those events. */
+		/* Past the sysrepo timeout, not on a fail-secure boot (reset loop) */
+		deadline_ms = fexist(FAILED_PATH) ? 0 : timeout_ms + 10000;
 		pump_pid = fork();
 		if (pump_pid < 0) {
 			ERRNO("Failed to fork event pump");
 			goto cleanup;
 		}
 		if (pump_pid == 0)
-			event_pump(plugins, plugin_count);
+			event_pump(plugins, plugin_count, deadline_ms);
 
 		/* Phase 10: Load startup config -- plugins are now subscribed, so
 		 * sr_replace_config() will trigger their change callbacks.

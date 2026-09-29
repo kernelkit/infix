@@ -127,6 +127,7 @@ PKG_CHECK_MODULES([libyang], [libyang >= 4.2.2])
 PKG_CHECK_MODULES([libsrx],  [libsrx >= 1.0.0])
 PKG_CHECK_MODULES([libsyslog], [libsyslog >= 2.7.0])
 PKG_CHECK_MODULES([libcrypto], [libcrypto])
+PKG_CHECK_MODULES([libwdog], [libwdog >= 4.0])
 
 AC_CHECK_HEADER([ev.h],
     [saved_LIBS="$LIBS"

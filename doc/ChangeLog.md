@@ -131,7 +131,9 @@ All notable changes to the project are documented in this file.
   the WebUI software page shows when the other partition has a
   different version
 - A startup-config that fails to load now resets the unit, and the next
-  boot goes straight to failure-config from a clean state, issue #1637
+  boot goes straight to failure-config from a clean state, issue #1637.
+  The same applies if loading startup-config hangs, the system watchdog
+  then resets the unit
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
 - WebUI: "Save" in the interface editor and "OK" in Add Interface
   did nothing for Wi-Fi and WireGuard interfaces. The inline "+ New"

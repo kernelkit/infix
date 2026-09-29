@@ -1,0 +1,16 @@
+#!/bin/sh
+# Called by watchdogd when a supervised process misses its deadline:
+#
+#    $0 supervisor CODE PID LABEL
+#
+# A hung confd bootstrap goes to fail-secure on next boot, issue #1637.
+# Exit non-zero so watchdogd saves the reset reason and resets.  A lost
+# kick reply is not a hang, exit 0 and watchdogd drops the supervision.
+
+if [ "$4" = "confd-bootstrap" ]; then
+    [ "$2" = 5 ] || exit 0	# WDOG_FAILED_TO_MEET_DEADLINE
+    touch /mnt/aux/startup-config.failed
+    sync
+fi
+
+exit 1
