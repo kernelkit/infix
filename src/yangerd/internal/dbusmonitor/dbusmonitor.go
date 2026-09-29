@@ -929,27 +929,33 @@ func parseServicePorts(settings map[string]any) []map[string]any {
 		}
 
 		port := map[string]any{"proto": proto}
-		if strings.Contains(portSpec, "-") {
-			parts := strings.SplitN(portSpec, "-", 2)
-			lower, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
-			upper, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
-			if err1 != nil || err2 != nil {
-				continue
-			}
-			port["lower"] = lower
-			port["upper"] = upper
-		} else {
-			lower, err := strconv.Atoi(strings.TrimSpace(portSpec))
-			if err != nil {
-				continue
-			}
-			port["lower"] = lower
+		if !setPortRange(port, portSpec) {
+			continue
 		}
 
 		out = append(out, port)
 	}
 
 	return out
+}
+
+// setPortRange sets lower, and upper for a range, from a firewalld port
+// spec, "80" or "8000-8080".  It reports whether the spec was valid.
+func setPortRange(dst map[string]any, spec string) bool {
+	lo, hi, isRange := strings.Cut(spec, "-")
+	lower, err := strconv.Atoi(strings.TrimSpace(lo))
+	if err != nil {
+		return false
+	}
+	if isRange {
+		upper, err := strconv.Atoi(strings.TrimSpace(hi))
+		if err != nil {
+			return false
+		}
+		dst["upper"] = upper
+	}
+	dst["lower"] = lower
+	return true
 }
 
 func parsePolicyCustomFilters(rules []string) []map[string]any {
@@ -1024,21 +1030,8 @@ func getForwardPorts(settings map[string]any) []map[string]any {
 		}
 
 		entry := map[string]any{"proto": proto}
-		if strings.Contains(portStr, "-") {
-			parts := strings.SplitN(portStr, "-", 2)
-			lower, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
-			upper, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
-			if err1 != nil || err2 != nil {
-				continue
-			}
-			entry["lower"] = lower
-			entry["upper"] = upper
-		} else {
-			lower, err := strconv.Atoi(strings.TrimSpace(portStr))
-			if err != nil {
-				continue
-			}
-			entry["lower"] = lower
+		if !setPortRange(entry, portStr) {
+			continue
 		}
 
 		to := map[string]any{"addr": toAddr}
