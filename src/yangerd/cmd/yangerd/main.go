@@ -170,10 +170,7 @@ func main() {
 	spawn("ethmonitor", ethMon.Run)
 
 	spawn("wireguard", poll(nlmon.WaitReady(), 10*time.Second, func() {
-		links := nlmon.Links()
-		for ifname, data := range wgquery.Query(links) {
-			nlmon.SetWireguardData(ifname, data)
-		}
+		nlmon.SetWireguardAll(wgquery.Query(nlmon.Links()))
 	}))
 	spawn("stp", poll(nlmon.WaitReady(), cfg.PollSTP, nlmon.RefreshSTP))
 	spawn("nlmonitor", func(ctx context.Context) error {

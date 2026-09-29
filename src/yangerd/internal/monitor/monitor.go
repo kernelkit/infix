@@ -31,6 +31,9 @@ const treeKey = "ietf-interfaces:interfaces"
 // staging data is transformed via iface.Transform() and augmented
 // with ethernet/wifi/bridge data before being stored as a single
 // complete YANG document.
+//
+// Staged link and address rows are keyed by ifindex, which survives a
+// rename; everything keyed by name is dropped when the name changes.
 type NLMonitor struct {
 	linkBatch  *ipbatch.Batch
 	addrBatch  *ipbatch.Batch
@@ -46,10 +49,8 @@ type NLMonitor struct {
 	initDone     chan struct{}
 	initDoneOnce sync.Once
 
-	// redumpCh is written by the errorCallback goroutine to ask the
-	// event loop goroutine to run initialDump.  Buffer of 1 so signals
-	// are coalesced — if a re-dump is already pending there is no point
-	// queuing another one.
+	// redumpCh asks the event loop to run initialDump, e.g. after a
+	// batch subprocess died.  Buffer of 1 so requests coalesce.
 	redumpCh chan struct{}
 
 	// staging holds raw ip-json data used as input to iface.Transform().
@@ -63,6 +64,7 @@ type NLMonitor struct {
 	ethernet  map[string]json.RawMessage // ifname → ethtool JSON
 	wifi      map[string]json.RawMessage // ifname → wifi JSON
 	wireguard map[string]json.RawMessage // ifname → WireGuard peer-status JSON
+	lastWG    string
 
 	lastOperStatus map[string]string
 
@@ -72,10 +74,14 @@ type NLMonitor struct {
 	lastSTP string
 }
 
+// coalesceDelay is how long the event loop collects further netlink
+// events before rebuilding the document once for all of them.
+const coalesceDelay = 20 * time.Millisecond
+
 // New creates a netlink monitor backed by ip/bridge batch query workers.
 // linkBatch should include -s -d flags; addrBatch should include -d only
 // (no -s, which causes multi-line output for link commands).
-func New(linkBatch, addrBatch, neighBatch *ipbatch.Batch, brBatch *ipbatch.Batch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
+func New(linkBatch, addrBatch, neighBatch, brBatch *ipbatch.Batch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
 	return &NLMonitor{
 		linkBatch:      linkBatch,
 		addrBatch:      addrBatch,
@@ -96,7 +102,7 @@ func New(linkBatch, addrBatch, neighBatch *ipbatch.Batch, brBatch *ipbatch.Batch
 }
 
 // SetEthRefresh sets an optional callback used to refresh ethtool data
-// when interface link events are received.
+// when an ethernet interface sees a link event.
 func (m *NLMonitor) SetEthRefresh(fn func(string)) {
 	m.ethRefresh = fn
 }
@@ -124,13 +130,26 @@ func (m *NLMonitor) SetWifiData(ifname string, data json.RawMessage) {
 	m.rebuild()
 }
 
-// SetWireguardData updates the staged WireGuard peer-status data for an
-// interface and triggers a full rebuild of the YANG document.
-func (m *NLMonitor) SetWireguardData(ifname string, data json.RawMessage) {
+// SetWireguardAll replaces the WireGuard peer-status data of every
+// interface, so a tunnel that lost its last peer loses its status too.
+// The document is rebuilt only when something changed.
+func (m *NLMonitor) SetWireguardAll(data map[string]json.RawMessage) {
+	var b strings.Builder
+	writeSortedRaw(&b, "w", data)
+	fp := b.String()
+
 	m.mu.Lock()
-	m.wireguard[ifname] = data
+	changed := fp != m.lastWG
+	m.lastWG = fp
+	m.wireguard = copyStringMap(data)
+	if m.wireguard == nil {
+		m.wireguard = make(map[string]json.RawMessage)
+	}
 	m.mu.Unlock()
-	m.rebuild()
+
+	if changed {
+		m.rebuild()
+	}
 }
 
 // Links returns a copy of the current staged links data.
@@ -141,8 +160,11 @@ func (m *NLMonitor) Links() json.RawMessage {
 	return cp
 }
 
-// Run starts the netlink monitor loop and returns on context cancellation,
-// channel closure, or subscription errors.
+// Run starts the netlink monitor loop and returns on context
+// cancellation, channel closure, or subscription errors.  The netlink
+// library ends a subscription on any receive error, ENOBUFS included,
+// so every error means resubscribe and re-dump: return and let the
+// caller restart us.
 func (m *NLMonitor) Run(ctx context.Context) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -154,19 +176,11 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 		if err == nil {
 			return
 		}
-		if errors.Is(err, syscall.ENOBUFS) {
-			// Kernel dropped events due to socket buffer overflow.
-			// Signal the event loop goroutine to do a full re-dump so
-			// that the snapshot is taken in the same goroutine as event
-			// processing — avoiding a race with concurrent refreshInterface
-			// calls that could otherwise be overwritten by the re-dump.
-			select {
-			case m.redumpCh <- struct{}{}:
-			default: // re-dump already pending
-			}
-			return
+		if strings.Contains(err.Error(), syscall.ENOBUFS.Error()) {
+			m.log.Warn("netlink events dropped, resubscribing", "err", err)
+		} else {
+			m.log.Error("netlink subscription error", "err", err)
 		}
-		m.log.Error("netlink subscription error", "err", err)
 		cancel()
 	}
 
@@ -205,7 +219,9 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 	}
 	m.initDoneOnce.Do(func() { close(m.initDone) })
 
+	var flush <-chan time.Time
 	for {
+		changed := false
 		select {
 		case <-runCtx.Done():
 			if ctx.Err() != nil {
@@ -216,22 +232,25 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 			if !ok {
 				return fmt.Errorf("link update channel closed")
 			}
-			m.handleLinkUpdate(lu)
+			changed = m.handleLinkUpdate(lu)
 		case au, ok := <-addrCh:
 			if !ok {
 				return fmt.Errorf("addr update channel closed")
 			}
-			m.handleAddrUpdate(au)
+			changed = m.handleAddrUpdate(au)
 		case nu, ok := <-neighCh:
 			if !ok {
 				return fmt.Errorf("neigh update channel closed")
 			}
-			m.handleNeighUpdate(nu)
+			changed = m.handleNeighUpdate(nu)
 		case _, ok := <-mdbCh:
 			if !ok {
 				return fmt.Errorf("bridge mdb update channel closed")
 			}
-			m.handleMDBUpdate()
+			changed = m.handleMDBUpdate()
+		case <-flush:
+			flush = nil
+			m.rebuild()
 		case <-m.redumpCh:
 			m.log.Warn("re-dumping all interfaces")
 			if err := m.initialDump(); err != nil {
@@ -239,23 +258,26 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 				time.AfterFunc(5*time.Second, m.requestRedump)
 			}
 		}
+		if changed && flush == nil {
+			flush = time.After(coalesceDelay)
+		}
 	}
 }
 
 func (m *NLMonitor) initialDump() error {
-	linkRaw, err := m.queryLink("link show")
+	linkRaw, err := m.query(m.linkBatch, "link show")
 	if err != nil {
 		return err
 	}
-	addrRaw, err := m.queryAddr("addr show")
+	addrRaw, err := m.query(m.addrBatch, "addr show")
 	if err != nil {
 		return err
 	}
-	neighRaw, err := m.queryNeigh("neigh show")
+	neighRaw, err := m.query(m.neighBatch, "neigh show")
 	if err != nil {
 		neighRaw = json.RawMessage(`[]`)
 	}
-	mdbRaw, err := m.queryBridge("mdb show")
+	mdbRaw, err := m.query(m.brBatch, "mdb show")
 	if err != nil {
 		mdbRaw = json.RawMessage(`[]`)
 	}
@@ -267,12 +289,12 @@ func (m *NLMonitor) initialDump() error {
 	m.links = linkRaw
 	m.addrs = addrRaw
 	m.neighs = neighRaw
-	for _, bridgeName := range mdbBridgeNames(mdbRaw) {
-		m.mdb[bridgeName] = filterByMDBBridge(mdbRaw, bridgeName)
-	}
-	for _, name := range interfaceNames(linkRaw) {
-		if st, ok := extractOperStatus(filterByIfName(linkRaw, name)); ok {
-			m.lastOperStatus[name] = st
+	m.mdb = mdbByBridge(mdbRaw)
+	for _, row := range decodeRows(linkRaw) {
+		if name := rowString(row, "ifname"); name != "" {
+			if st := rowString(row, "operstate"); st != "" {
+				m.lastOperStatus[name] = st
+			}
 		}
 	}
 	m.mu.Unlock()
@@ -281,124 +303,122 @@ func (m *NLMonitor) initialDump() error {
 	return nil
 }
 
-func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) {
+func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) bool {
+	index := int(update.Index)
+	if update.Header.Type == syscall.RTM_DELLINK {
+		return m.removeInterface(index)
+	}
+
 	name, ok := linkNameFromUpdate(update)
 	if !ok || name == "" {
-		m.log.Warn("link update without interface name", "index", int(update.Index))
-		return
+		m.log.Warn("link update without interface name", "index", index)
+		return false
 	}
-
-	if update.Header.Type == syscall.RTM_DELLINK {
-		m.removeInterface(name)
-		return
-	}
-
-	m.refreshInterface(name)
-	if m.ethRefresh != nil {
-		m.ethRefresh(name)
-	}
+	return m.refreshInterface(index, name)
 }
 
-func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) {
+func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) bool {
 	ifname, err := ifNameByIndex(update.LinkIndex)
 	if err != nil {
-		m.log.Warn("addr update: resolve interface", "index", update.LinkIndex, "err", err)
-		return
+		m.log.Debug("addr update: interface gone", "index", update.LinkIndex, "err", err)
+		return false
 	}
 
-	m.log.Debug("handleAddrUpdate", "ifname", ifname)
-	raw, err := m.queryAddr("addr show dev " + ifname)
+	raw, err := m.query(m.addrBatch, "addr show dev "+ifname)
 	if err != nil {
-		if errors.Is(err, ipbatch.ErrBatchDead) {
-			m.requestRedump()
-		}
-		m.log.Error("handleAddrUpdate queryAddr failed", "ifname", ifname, "err", err)
-		return
+		return false
 	}
-
 	if !m.validateAddrData("handleAddrUpdate/"+ifname, raw) {
 		m.log.Error("handleAddrUpdate: REFUSING to store invalid addr data", "ifname", ifname)
-		return
+		return false
 	}
 
 	m.mu.Lock()
-	m.addrs = replaceByIfName(m.addrs, ifname, raw)
+	m.addrs = replaceRows(m.addrs, "ifindex", update.LinkIndex, raw)
 	m.mu.Unlock()
-
-	m.rebuild()
+	return true
 }
 
-func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) {
+func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) bool {
 	if isBridgeFDB(update) {
 		bridgeName, ok := bridgeNameFromNeigh(update)
 		if !ok {
 			m.log.Warn("fdb update: bridge name not found", "link-index", update.LinkIndex)
-			return
+			return false
 		}
 
-		raw, err := m.queryBridge("fdb show br " + bridgeName)
+		raw, err := m.query(m.brBatch, "fdb show br "+bridgeName)
 		if err != nil {
-			if errors.Is(err, ipbatch.ErrBatchDead) {
-				m.requestRedump()
-			}
-			return
+			return false
 		}
 
 		m.mu.Lock()
 		m.fdb[bridgeName] = raw
 		m.mu.Unlock()
-
-		m.rebuild()
-		return
+		return true
 	}
 
-	raw, err := m.queryNeigh("neigh show")
+	ifname, err := ifNameByIndex(update.LinkIndex)
 	if err != nil {
-		if errors.Is(err, ipbatch.ErrBatchDead) {
-			m.requestRedump()
+		raw, err := m.query(m.neighBatch, "neigh show")
+		if err != nil {
+			return false
 		}
-		return
+		m.mu.Lock()
+		m.neighs = raw
+		m.mu.Unlock()
+		return true
 	}
 
-	m.mu.Lock()
-	m.neighs = raw
-	m.mu.Unlock()
-
-	m.rebuild()
-}
-
-func (m *NLMonitor) handleMDBUpdate() {
-	raw, err := m.queryBridge("mdb show")
+	raw, err := m.query(m.neighBatch, "neigh show dev "+ifname)
 	if err != nil {
-		return
+		return false
 	}
+	rows := withField(raw, "dev", ifname)
 
 	m.mu.Lock()
-	for _, bridgeName := range mdbBridgeNames(raw) {
-		m.mdb[bridgeName] = filterByMDBBridge(raw, bridgeName)
-	}
+	m.neighs = replaceRows(m.neighs, "dev", ifname, rows)
 	m.mu.Unlock()
-
-	m.rebuild()
+	return true
 }
 
-// removeInterface purges all staged data for the named interface and
-// triggers a rebuild.  Used for RTM_DELLINK events where querying the
-// device via ip-batch would produce no output and hang the batch process.
-func (m *NLMonitor) removeInterface(name string) {
+func (m *NLMonitor) handleMDBUpdate() bool {
+	raw, err := m.query(m.brBatch, "mdb show")
+	if err != nil {
+		return false
+	}
+
 	m.mu.Lock()
-	m.links = replaceByIfName(m.links, name, json.RawMessage(`[]`))
-	m.addrs = replaceByIfName(m.addrs, name, json.RawMessage(`[]`))
+	m.mdb = mdbByBridge(raw)
+	m.mu.Unlock()
+	return true
+}
+
+// removeInterface purges all staged data for the interface at index.
+func (m *NLMonitor) removeInterface(index int) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	name := nameByIndex(m.links, index)
+	m.links = replaceRows(m.links, "ifindex", index, nil)
+	m.addrs = replaceRows(m.addrs, "ifindex", index, nil)
+	if name != "" {
+		m.forgetName(name)
+	}
+	m.log.Debug("removeInterface", "index", index, "ifname", name)
+	return true
+}
+
+// forgetName drops everything staged under an interface name.  Caller
+// holds m.mu.
+func (m *NLMonitor) forgetName(name string) {
+	m.neighs = replaceRows(m.neighs, "dev", name, nil)
 	delete(m.fdb, name)
 	delete(m.mdb, name)
 	delete(m.ethernet, name)
 	delete(m.wifi, name)
 	delete(m.wireguard, name)
 	delete(m.lastOperStatus, name)
-	m.mu.Unlock()
-
-	m.log.Debug("removeInterface", "ifname", name)
-	m.rebuild()
 }
 
 func (m *NLMonitor) requestRedump() {
@@ -408,16 +428,16 @@ func (m *NLMonitor) requestRedump() {
 	}
 }
 
-func (m *NLMonitor) refreshInterface(name string) {
-	linkRaw, err := m.queryLink("link show dev " + name)
+func (m *NLMonitor) refreshInterface(index int, name string) bool {
+	linkRaw, err := m.query(m.linkBatch, "link show dev "+name)
+	if errors.Is(err, ipbatch.ErrCommandFailed) {
+		return m.removeInterface(index) // gone before we asked
+	}
 	if err != nil {
-		if errors.Is(err, ipbatch.ErrBatchDead) {
-			m.requestRedump()
-		}
-		return
+		return false
 	}
 
-	addrRaw, err := m.queryAddr("addr show dev " + name)
+	addrRaw, err := m.query(m.addrBatch, "addr show dev "+name)
 	if err != nil {
 		addrRaw = nil
 	}
@@ -427,14 +447,21 @@ func (m *NLMonitor) refreshInterface(name string) {
 	}
 
 	m.mu.Lock()
+	if old := nameByIndex(m.links, index); old != "" && old != name {
+		m.log.Info("interface renamed", "from", old, "to", name)
+		m.forgetName(old)
+	}
 	m.updateOperStatus(name, linkRaw)
-	m.links = replaceByIfName(m.links, name, linkRaw)
+	m.links = replaceRows(m.links, "ifindex", index, linkRaw)
 	if addrRaw != nil {
-		m.addrs = replaceByIfName(m.addrs, name, addrRaw)
+		m.addrs = replaceRows(m.addrs, "ifindex", index, addrRaw)
 	}
 	m.mu.Unlock()
 
-	m.rebuild()
+	if m.ethRefresh != nil && iface.IsEthernet(linkRaw, m.fc) {
+		m.ethRefresh(name)
+	}
+	return true
 }
 
 // rebuild runs iface.Transform on all staged data, merges augments
@@ -464,15 +491,13 @@ func (m *NLMonitor) rebuild() {
 // RefreshSTP re-queries mstpd and rebuilds only when STP data changed.
 // mstpd's control socket is request/response with no event channel, and
 // the bridge-level root-id settles via BPDU exchange without any netlink
-// event, so STP state must be polled to stay current.  No bridges or an
-// unchanged result costs one cheap mstpd query and no document re-marshal.
+// event, so STP state must be polled to stay current.  An empty result
+// is a result too: mstpd going away must drop the stale STP data, and
+// its return must bring it back.
 func (m *NLMonitor) RefreshSTP() {
 	links := m.Links()
 	resolver := stpquery.NewLinksIfIndexResolver(links)
 	brSTP, ptSTP := stpquery.Query(links, resolver)
-	if len(brSTP) == 0 && len(ptSTP) == 0 {
-		return
-	}
 
 	fp := stpFingerprint(brSTP, ptSTP)
 	m.stpMu.Lock()
@@ -696,56 +721,22 @@ func (m *NLMonitor) updateOperStatus(ifname string, raw json.RawMessage) {
 	}
 }
 
-func (m *NLMonitor) queryLink(command string) (json.RawMessage, error) {
-	raw, err := m.linkBatch.Query(command)
-	if err != nil {
-		if errors.Is(err, ipbatch.ErrBatchDead) {
-			m.log.Warn("link batch dead", "command", command, "err", err)
-			return nil, err
-		}
-		m.log.Error("link batch query failed", "command", command, "err", err)
-		return nil, err
+// query runs one command on a batch worker.  A dead worker asks for a
+// re-dump once it is back; a rejected command is left to the caller.
+func (m *NLMonitor) query(b *ipbatch.Batch, command string) (json.RawMessage, error) {
+	raw, err := b.Query(command)
+	switch {
+	case err == nil:
+		return raw, nil
+	case errors.Is(err, ipbatch.ErrCommandFailed):
+		m.log.Debug("batch command failed", "command", command)
+	case errors.Is(err, ipbatch.ErrBatchDead):
+		m.log.Warn("batch dead", "command", command)
+		m.requestRedump()
+	default:
+		m.log.Error("batch query failed", "command", command, "err", err)
 	}
-	return raw, nil
-}
-
-func (m *NLMonitor) queryAddr(command string) (json.RawMessage, error) {
-	raw, err := m.addrBatch.Query(command)
-	if err != nil {
-		if errors.Is(err, ipbatch.ErrBatchDead) {
-			m.log.Warn("addr batch dead", "command", command, "err", err)
-			return nil, err
-		}
-		m.log.Error("addr batch query failed", "command", command, "err", err)
-		return nil, err
-	}
-	return raw, nil
-}
-
-func (m *NLMonitor) queryNeigh(command string) (json.RawMessage, error) {
-	raw, err := m.neighBatch.Query(command)
-	if err != nil {
-		if errors.Is(err, ipbatch.ErrBatchDead) {
-			m.log.Warn("neigh batch dead", "command", command, "err", err)
-			return nil, err
-		}
-		m.log.Error("neigh batch query failed", "command", command, "err", err)
-		return nil, err
-	}
-	return raw, nil
-}
-
-func (m *NLMonitor) queryBridge(command string) (json.RawMessage, error) {
-	raw, err := m.brBatch.Query(command)
-	if err != nil {
-		if errors.Is(err, ipbatch.ErrBatchDead) {
-			m.log.Warn("bridge batch dead", "command", command, "err", err)
-			return nil, err
-		}
-		m.log.Error("bridge batch query failed", "command", command, "err", err)
-		return nil, err
-	}
-	return raw, nil
+	return nil, err
 }
 
 func (m *NLMonitor) subscribeBridgeMDB(ctx context.Context, ch chan<- struct{}, errorCallback func(error)) error {
@@ -754,17 +745,18 @@ func (m *NLMonitor) subscribeBridgeMDB(ctx context.Context, ch chan<- struct{}, 
 		return err
 	}
 
+	// Receive blocks until a message arrives; closing the socket on
+	// cancel is what ends it.  Close once, the fd number may be reused.
+	var once sync.Once
+	closeSock := func() { once.Do(sock.Close) }
+	stop := context.AfterFunc(ctx, closeSock)
+
 	go func() {
 		defer close(ch)
-		defer sock.Close()
+		defer stop()
+		defer closeSock()
 
 		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
 			msgs, _, err := sock.Receive()
 			if err != nil {
 				if ctx.Err() != nil {
@@ -907,150 +899,97 @@ func extractOperStatus(raw json.RawMessage) (string, bool) {
 	return state, true
 }
 
-func interfaceNames(raw json.RawMessage) []string {
+// decodeRows splits an ip/bridge -json array into raw rows.
+func decodeRows(raw json.RawMessage) []map[string]json.RawMessage {
 	var rows []map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &rows); err != nil {
+	if json.Unmarshal(raw, &rows) != nil {
 		return nil
 	}
-
-	names := make([]string, 0, len(rows))
-	seen := make(map[string]struct{}, len(rows))
-	for _, row := range rows {
-		ifnRaw, ok := row["ifname"]
-		if !ok {
-			continue
-		}
-		var ifname string
-		if err := json.Unmarshal(ifnRaw, &ifname); err != nil || ifname == "" {
-			continue
-		}
-		if _, ok := seen[ifname]; ok {
-			continue
-		}
-		seen[ifname] = struct{}{}
-		names = append(names, ifname)
-	}
-	return names
+	return rows
 }
 
-func filterByIfName(raw json.RawMessage, ifname string) json.RawMessage {
-	var rows []map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &rows); err != nil {
-		return json.RawMessage(`[]`)
+func rowString(row map[string]json.RawMessage, key string) string {
+	var s string
+	if json.Unmarshal(row[key], &s) != nil {
+		return ""
 	}
-
-	filtered := make([]map[string]json.RawMessage, 0, 1)
-	for _, row := range rows {
-		ifnRaw, ok := row["ifname"]
-		if !ok {
-			continue
-		}
-		var name string
-		if err := json.Unmarshal(ifnRaw, &name); err != nil {
-			continue
-		}
-		if name == ifname {
-			filtered = append(filtered, row)
-		}
-	}
-
-	out, err := json.Marshal(filtered)
-	if err != nil {
-		return json.RawMessage(`[]`)
-	}
-	return json.RawMessage(out)
+	return s
 }
 
-// replaceByIfName replaces all entries for ifname in the bulk array
-// with entries from perIface, and returns the updated full array.
-func replaceByIfName(bulk json.RawMessage, ifname string, perIface json.RawMessage) json.RawMessage {
-	var bulkRows []json.RawMessage
-	if err := json.Unmarshal(bulk, &bulkRows); err != nil {
-		return perIface
+// rowMatches compares a row field against a Go value by its JSON form,
+// so an ifindex matches as a number and a dev name as a string.
+func rowMatches(row map[string]json.RawMessage, key, want string) bool {
+	v, ok := row[key]
+	return ok && string(v) == want
+}
+
+func jsonKey(v any) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}
+
+// replaceRows drops every row of bulk whose key equals match, appends
+// the rows of replacement (nil to only drop), and returns the result.
+func replaceRows(bulk json.RawMessage, key string, match any, replacement json.RawMessage) json.RawMessage {
+	want := jsonKey(match)
+	var kept []json.RawMessage
+	if json.Unmarshal(bulk, &kept) != nil {
+		kept = nil
 	}
 
-	kept := make([]json.RawMessage, 0, len(bulkRows))
-	for _, row := range bulkRows {
-		var obj map[string]json.RawMessage
-		if err := json.Unmarshal(row, &obj); err != nil {
-			kept = append(kept, row)
+	out := kept[:0]
+	for _, raw := range kept {
+		var row map[string]json.RawMessage
+		if json.Unmarshal(raw, &row) == nil && rowMatches(row, key, want) {
 			continue
 		}
-		ifnRaw, ok := obj["ifname"]
-		if !ok {
-			kept = append(kept, row)
-			continue
-		}
-		var name string
-		if err := json.Unmarshal(ifnRaw, &name); err != nil || name != ifname {
-			kept = append(kept, row)
-		}
+		out = append(out, raw)
 	}
 
-	var newRows []json.RawMessage
-	if err := json.Unmarshal(perIface, &newRows); err == nil {
-		kept = append(kept, newRows...)
+	var add []json.RawMessage
+	if json.Unmarshal(replacement, &add) == nil {
+		out = append(out, add...)
+	}
+	if out == nil {
+		out = []json.RawMessage{}
 	}
 
-	out, err := json.Marshal(kept)
+	merged, err := json.Marshal(out)
 	if err != nil {
 		return bulk
 	}
-	return json.RawMessage(out)
+	return merged
 }
 
-func bridgeNames(raw json.RawMessage) []string {
-	var rows []map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &rows); err != nil {
-		return nil
+// nameByIndex returns the staged ifname for index, "" if none.
+func nameByIndex(links json.RawMessage, index int) string {
+	want := jsonKey(index)
+	for _, row := range decodeRows(links) {
+		if rowMatches(row, "ifindex", want) {
+			return rowString(row, "ifname")
+		}
 	}
-
-	names := make([]string, 0, len(rows))
-	seen := make(map[string]struct{}, len(rows))
-	for _, row := range rows {
-		brRaw, ok := row["br"]
-		if !ok {
-			continue
-		}
-		var name string
-		if err := json.Unmarshal(brRaw, &name); err != nil || name == "" {
-			continue
-		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-		seen[name] = struct{}{}
-		names = append(names, name)
-	}
-	return names
+	return ""
 }
 
-func filterByBridge(raw json.RawMessage, bridgeName string) json.RawMessage {
-	var rows []map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &rows); err != nil {
-		return json.RawMessage(`[]`)
-	}
-
-	filtered := make([]map[string]json.RawMessage, 0, 1)
+// withField sets key to value on every row of raw that lacks it.
+// `ip neigh show dev X` leaves out the dev it was asked about.
+func withField(raw json.RawMessage, key, value string) json.RawMessage {
+	rows := decodeRows(raw)
+	v := json.RawMessage(jsonKey(value))
 	for _, row := range rows {
-		brRaw, ok := row["br"]
-		if !ok {
-			continue
-		}
-		var br string
-		if err := json.Unmarshal(brRaw, &br); err != nil {
-			continue
-		}
-		if br == bridgeName {
-			filtered = append(filtered, row)
+		if _, ok := row[key]; !ok {
+			row[key] = v
 		}
 	}
-
-	out, err := json.Marshal(filtered)
+	if rows == nil {
+		rows = []map[string]json.RawMessage{}
+	}
+	out, err := json.Marshal(rows)
 	if err != nil {
-		return json.RawMessage(`[]`)
+		return raw
 	}
-	return json.RawMessage(out)
+	return out
 }
 
 // parseMDBEntries extracts the flat list of MDB entries from the
@@ -1076,40 +1015,22 @@ func parseMDBEntries(raw json.RawMessage) []map[string]any {
 	return all
 }
 
-func mdbBridgeNames(raw json.RawMessage) []string {
-	entries := parseMDBEntries(raw)
-	seen := make(map[string]struct{}, len(entries))
-	var names []string
-	for _, e := range entries {
-		name, _ := e["dev"].(string)
-		if name == "" {
-			continue
-		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-		seen[name] = struct{}{}
-		names = append(names, name)
-	}
-	return names
-}
-
-func filterByMDBBridge(raw json.RawMessage, bridgeName string) json.RawMessage {
-	entries := parseMDBEntries(raw)
-	var filtered []map[string]any
-	for _, e := range entries {
-		if dev, _ := e["dev"].(string); dev == bridgeName {
-			filtered = append(filtered, e)
+// mdbByBridge splits `bridge mdb show` into per-bridge entry lists.  A
+// bridge without entries is simply absent, which clears its filters.
+func mdbByBridge(raw json.RawMessage) map[string]json.RawMessage {
+	groups := make(map[string][]map[string]any)
+	for _, e := range parseMDBEntries(raw) {
+		if dev, _ := e["dev"].(string); dev != "" {
+			groups[dev] = append(groups[dev], e)
 		}
 	}
-	if len(filtered) == 0 {
-		return json.RawMessage(`[]`)
+	out := make(map[string]json.RawMessage, len(groups))
+	for dev, entries := range groups {
+		if b, err := json.Marshal(entries); err == nil {
+			out[dev] = b
+		}
 	}
-	out, err := json.Marshal(filtered)
-	if err != nil {
-		return json.RawMessage(`[]`)
-	}
-	return json.RawMessage(out)
+	return out
 }
 
 func transformMDB(raw json.RawMessage) map[string]any {

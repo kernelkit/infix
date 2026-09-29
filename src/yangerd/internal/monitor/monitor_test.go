@@ -2,6 +2,8 @@ package monitor
 
 import (
 	"encoding/json"
+	"github.com/kernelkit/infix/src/yangerd/internal/tree"
+	"log/slog"
 	"reflect"
 	"syscall"
 	"testing"
@@ -58,169 +60,6 @@ func TestExtractOperStatus(t *testing.T) {
 	}
 }
 
-func TestInterfaceNames(t *testing.T) {
-	tests := []struct {
-		name string
-		raw  json.RawMessage
-		want []string
-	}{
-		{
-			name: "deduplicate and keep order",
-			raw: json.RawMessage(`[
-				{"ifname":"eth0"},
-				{"ifname":"eth1"},
-				{"ifname":"eth0"},
-				{"x":"y"}
-			]`),
-			want: []string{"eth0", "eth1"},
-		},
-		{
-			name: "empty array",
-			raw:  json.RawMessage(`[]`),
-			want: []string{},
-		},
-		{
-			name: "objects without ifname skipped",
-			raw:  json.RawMessage(`[{"name":"eth0"},{"foo":"bar"}]`),
-			want: []string{},
-		},
-		{
-			name: "invalid json",
-			raw:  json.RawMessage(`{`),
-			want: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := interfaceNames(tt.raw)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("interfaceNames() = %#v, want %#v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestFilterByIfName(t *testing.T) {
-	tests := []struct {
-		name      string
-		raw       json.RawMessage
-		ifname    string
-		wantCount int
-		wantEmpty bool
-	}{
-		{
-			name: "filters correctly",
-			raw: json.RawMessage(`[
-				{"ifname":"eth0","x":1},
-				{"ifname":"eth1","x":2},
-				{"ifname":"eth0","x":3}
-			]`),
-			ifname:    "eth0",
-			wantCount: 2,
-		},
-		{
-			name:      "no matches returns empty array",
-			raw:       json.RawMessage(`[{"ifname":"eth1"}]`),
-			ifname:    "eth0",
-			wantCount: 0,
-			wantEmpty: true,
-		},
-		{
-			name:      "invalid json",
-			raw:       json.RawMessage(`{`),
-			ifname:    "eth0",
-			wantCount: 0,
-			wantEmpty: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := filterByIfName(tt.raw, tt.ifname)
-
-			var rows []map[string]json.RawMessage
-			if err := json.Unmarshal(got, &rows); err != nil {
-				t.Fatalf("unmarshal filtered rows: %v", err)
-			}
-			if len(rows) != tt.wantCount {
-				t.Fatalf("row count = %d, want %d", len(rows), tt.wantCount)
-			}
-			if tt.wantEmpty && string(got) != "[]" {
-				t.Fatalf("expected [] got %s", string(got))
-			}
-		})
-	}
-}
-
-func TestBridgeNames(t *testing.T) {
-	raw := json.RawMessage(`[
-		{"br":"br0"},
-		{"br":"br1"},
-		{"br":"br0"},
-		{"ifname":"eth0"}
-	]`)
-
-	got := bridgeNames(raw)
-	want := []string{"br0", "br1"}
-
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("bridgeNames() = %#v, want %#v", got, want)
-	}
-}
-
-func TestFilterByBridge(t *testing.T) {
-	tests := []struct {
-		name      string
-		raw       json.RawMessage
-		bridge    string
-		wantCount int
-		wantEmpty bool
-	}{
-		{
-			name: "filters correctly",
-			raw: json.RawMessage(`[
-				{"br":"br0","grp":"239.1.1.1"},
-				{"br":"br1","grp":"239.1.1.2"},
-				{"br":"br0","grp":"239.1.1.3"}
-			]`),
-			bridge:    "br0",
-			wantCount: 2,
-		},
-		{
-			name:      "no matches returns empty array",
-			raw:       json.RawMessage(`[{"br":"br1"}]`),
-			bridge:    "br0",
-			wantCount: 0,
-			wantEmpty: true,
-		},
-		{
-			name:      "invalid json",
-			raw:       json.RawMessage(`{`),
-			bridge:    "br0",
-			wantCount: 0,
-			wantEmpty: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := filterByBridge(tt.raw, tt.bridge)
-
-			var rows []map[string]json.RawMessage
-			if err := json.Unmarshal(got, &rows); err != nil {
-				t.Fatalf("unmarshal filtered rows: %v", err)
-			}
-			if len(rows) != tt.wantCount {
-				t.Fatalf("row count = %d, want %d", len(rows), tt.wantCount)
-			}
-			if tt.wantEmpty && string(got) != "[]" {
-				t.Fatalf("expected [] got %s", string(got))
-			}
-		})
-	}
-}
-
 func TestIsBridgeFDB(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -256,82 +95,6 @@ func TestIsBridgeFDB(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestReplaceByIfName(t *testing.T) {
-	tests := []struct {
-		name     string
-		bulk     json.RawMessage
-		ifname   string
-		perIface json.RawMessage
-		want     int
-	}{
-		{
-			name:     "replace existing",
-			bulk:     json.RawMessage(`[{"ifname":"eth0","x":1},{"ifname":"eth1","x":2}]`),
-			ifname:   "eth0",
-			perIface: json.RawMessage(`[{"ifname":"eth0","x":99}]`),
-			want:     2,
-		},
-		{
-			name:     "add new",
-			bulk:     json.RawMessage(`[{"ifname":"eth0","x":1}]`),
-			ifname:   "eth1",
-			perIface: json.RawMessage(`[{"ifname":"eth1","x":2}]`),
-			want:     2,
-		},
-		{
-			name:     "empty bulk",
-			bulk:     json.RawMessage(`[]`),
-			ifname:   "eth0",
-			perIface: json.RawMessage(`[{"ifname":"eth0","x":1}]`),
-			want:     1,
-		},
-		{
-			name:     "invalid bulk",
-			bulk:     json.RawMessage(`{`),
-			ifname:   "eth0",
-			perIface: json.RawMessage(`[{"ifname":"eth0","x":1}]`),
-			want:     1,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := replaceByIfName(tt.bulk, tt.ifname, tt.perIface)
-			var rows []json.RawMessage
-			if err := json.Unmarshal(got, &rows); err != nil {
-				t.Fatalf("unmarshal: %v", err)
-			}
-			if len(rows) != tt.want {
-				t.Fatalf("row count = %d, want %d (raw: %s)", len(rows), tt.want, string(got))
-			}
-		})
-	}
-}
-
-func TestReplaceByIfNamePreservesUpdatedData(t *testing.T) {
-	bulk := json.RawMessage(`[{"ifname":"eth0","x":1},{"ifname":"eth1","x":2}]`)
-	updated := replaceByIfName(bulk, "eth0", json.RawMessage(`[{"ifname":"eth0","x":99}]`))
-
-	var rows []map[string]json.RawMessage
-	if err := json.Unmarshal(updated, &rows); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-
-	for _, row := range rows {
-		var name string
-		json.Unmarshal(row["ifname"], &name)
-		if name == "eth0" {
-			var x int
-			json.Unmarshal(row["x"], &x)
-			if x != 99 {
-				t.Fatalf("eth0.x = %d, want 99", x)
-			}
-			return
-		}
-	}
-	t.Fatal("eth0 not found in result")
 }
 
 func TestMergeAugments(t *testing.T) {
@@ -427,14 +190,6 @@ func TestTransformMDBEmpty(t *testing.T) {
 	}
 }
 
-func TestMDBBridgeNames(t *testing.T) {
-	raw := json.RawMessage(`[{"mdb":[{"dev":"br0","port":"e3","grp":"224.1.1.1","state":"temp"}],"router":{}},{"mdb":[{"dev":"br1","port":"e5","grp":"ff02::1","state":"temp"}],"router":{}}]`)
-	names := mdbBridgeNames(raw)
-	if len(names) != 2 || names[0] != "br0" || names[1] != "br1" {
-		t.Fatalf("unexpected names: %v", names)
-	}
-}
-
 func TestSTPFingerprintDeterministic(t *testing.T) {
 	br1 := map[string]json.RawMessage{
 		"br0": json.RawMessage(`{"root-id":"1.000.00:a0:85:00:01:00"}`),
@@ -454,5 +209,86 @@ func TestSTPFingerprintDeterministic(t *testing.T) {
 	br2["br0"] = json.RawMessage(`{"root-id":"8.000.00:a0:85:00:01:00"}`)
 	if stpFingerprint(br1, pt1) == stpFingerprint(br2, pt2) {
 		t.Fatal("fingerprint must change when STP data changes")
+	}
+}
+
+func names(t *testing.T, raw json.RawMessage) []string {
+	t.Helper()
+	var out []string
+	for _, row := range decodeRows(raw) {
+		out = append(out, rowString(row, "ifname"))
+	}
+	return out
+}
+
+// Rows are keyed by ifindex: a rename replaces the old row instead of
+// leaving it behind, and a later delete leaves nothing.
+func TestReplaceRowsByIfindexRenameThenDelete(t *testing.T) {
+	links := json.RawMessage(`[{"ifindex":1,"ifname":"lo"},{"ifindex":5,"ifname":"foo"}]`)
+
+	if got := nameByIndex(links, 5); got != "foo" {
+		t.Fatalf("nameByIndex = %q, want foo", got)
+	}
+
+	links = replaceRows(links, "ifindex", 5, json.RawMessage(`[{"ifindex":5,"ifname":"bar"}]`))
+	if got := names(t, links); !reflect.DeepEqual(got, []string{"lo", "bar"}) {
+		t.Fatalf("after rename = %v, want [lo bar]", got)
+	}
+
+	links = replaceRows(links, "ifindex", 5, nil)
+	if got := names(t, links); !reflect.DeepEqual(got, []string{"lo"}) {
+		t.Fatalf("after delete = %v, want [lo]", got)
+	}
+
+	if got := string(replaceRows(links, "ifindex", 1, nil)); got != "[]" {
+		t.Fatalf("empty result = %s, want []", got)
+	}
+}
+
+func TestReplaceRowsByDev(t *testing.T) {
+	neighs := json.RawMessage(`[{"dst":"10.0.0.1","dev":"eth0"},{"dst":"10.0.0.2","dev":"eth1"}]`)
+	fresh := withField(json.RawMessage(`[{"dst":"10.0.0.9"}]`), "dev", "eth0")
+	got := replaceRows(neighs, "dev", "eth0", fresh)
+
+	var rows []map[string]string
+	if err := json.Unmarshal(got, &rows); err != nil {
+		t.Fatal(err)
+	}
+	want := []map[string]string{{"dst": "10.0.0.2", "dev": "eth1"}, {"dst": "10.0.0.9", "dev": "eth0"}}
+	if !reflect.DeepEqual(rows, want) {
+		t.Fatalf("got %v, want %v", rows, want)
+	}
+}
+
+// A bridge whose last group left has no entry, so its filters go away.
+func TestMDBByBridge(t *testing.T) {
+	raw := json.RawMessage(`[{"mdb":[{"dev":"br0","port":"e1","grp":"239.1.1.1","state":"temp"},` +
+		`{"dev":"br1","port":"e2","grp":"239.2.2.2","state":"permanent"}],"router":{}}]`)
+	got := mdbByBridge(raw)
+	if len(got) != 2 || got["br0"] == nil || got["br1"] == nil {
+		t.Fatalf("got %v", got)
+	}
+	if got := mdbByBridge(json.RawMessage(`[{"mdb":[],"router":{}}]`)); len(got) != 0 {
+		t.Fatalf("empty dump gave %v", got)
+	}
+}
+
+func TestSetWireguardAllClearsAndSkipsUnchanged(t *testing.T) {
+	m := New(nil, nil, nil, nil, tree.New(), nil, slog.Default())
+	peer := map[string]json.RawMessage{"wg0": json.RawMessage(`{"peer-status":{}}`)}
+
+	m.SetWireguardAll(peer)
+	if m.wireguard["wg0"] == nil {
+		t.Fatal("wg0 not staged")
+	}
+	before, _ := m.tree.Info(treeKey)
+	m.SetWireguardAll(peer)
+	if after, _ := m.tree.Info(treeKey); !after.LastUpdated.Equal(before.LastUpdated) {
+		t.Fatal("unchanged WireGuard data rebuilt the document")
+	}
+
+	m.SetWireguardAll(nil)
+	if len(m.wireguard) != 0 {
+		t.Fatalf("wireguard staging not cleared: %v", m.wireguard)
 	}
 }
