@@ -52,14 +52,16 @@ Available commands can be seen by pressing `?` at the prompt:
 ```
 admin@host:/>
   clear          Clear runtime state, e.g., statistics
-  configure      Create new candidate-config based on running-config
+  clear          Clear runtime state, e.g., statistics
+  configure      Create new candidate-config based on running-config, optionally jump to a node
   copy           Copy file or configuration, e.g., copy running-config startup-config
-  dir            List available configuration files
+  dir            List available files
   edit           Edit system state interactively, e.g., current date/time
   exit           Exit from CLI (log out)
   factory-reset  Restore the system to factory default state
   follow         Monitor a log file, use Ctrl-C to abort
   help           Help system (try also the '?' key)
+  log            Log a message to the system log, e.g., log severity warning Kilroy was here
   logout         Alias to exit
   netcalc        IP subnet calculator, with subnetting
   password       Password tools
@@ -67,6 +69,7 @@ admin@host:/>
   poweroff       Poweroff system (system policy may yield reboot)
   reboot         Reboot system
   remove         Remove a configuration file
+  rename         Rename a file, e.g. rename startup-config backup
   set            Set operations, e.g., current date/time
   show           Show system status and configuration files
   tcpdump        Capture network traffic
