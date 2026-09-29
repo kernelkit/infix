@@ -44,14 +44,16 @@ func (OSFileReader) Glob(pattern string) ([]string, error) {
 }
 
 // DBusInstaller reads RAUC installation status from D-Bus properties.
+// It runs on every system-state GET, so it uses the process-wide shared
+// bus connection, which godbus re-establishes if it drops, instead of
+// paying a connect and auth handshake per query.
 type DBusInstaller struct{}
 
 func (DBusInstaller) GetInstallStatus() (string, string, int, string, error) {
-	conn, err := dbus.ConnectSystemBus()
+	conn, err := dbus.SystemBus()
 	if err != nil {
 		return "", "", 0, "", err
 	}
-	defer conn.Close()
 
 	obj := conn.Object("de.pengutronix.rauc", "/")
 
