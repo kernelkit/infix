@@ -25,6 +25,10 @@ const (
 	// protocol converges; without debouncing we would re-read the table
 	// dozens of times in a few milliseconds.
 	debounceDelay = 200 * time.Millisecond
+
+	// queryTimeout bounds one vty table read, so a wedged zebra cannot
+	// stall the refresh worker for good.
+	queryTimeout = 5 * time.Second
 )
 
 // subscribeTypes are the route types we ask zebra to redistribute.  We do
@@ -62,6 +66,7 @@ type ZAPIWatcher struct {
 	querier RouteQuerier
 	log     *slog.Logger
 	refresh chan struct{}
+	socket  string // zserv API socket; overridable in tests
 }
 
 func New(t *tree.Tree, querier RouteQuerier, log *slog.Logger) *ZAPIWatcher {
@@ -73,6 +78,7 @@ func New(t *tree.Tree, querier RouteQuerier, log *slog.Logger) *ZAPIWatcher {
 		querier: querier,
 		log:     log,
 		refresh: make(chan struct{}, 1),
+		socket:  zapiSocketPath,
 	}
 }
 
@@ -81,44 +87,34 @@ func (w *ZAPIWatcher) Run(ctx context.Context) error {
 	// lifetime of the watcher, independent of the ZAPI connection.
 	go w.refreshLoop(ctx)
 
-	bo := backoff.Default()
-	delay := bo.Initial
+	return backoff.Retry(ctx, w.log, "zapi watcher", w.session)
+}
 
-	for {
-		conn, err := w.connect(ctx)
-		if err != nil {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-
-			w.log.Warn("zapi watcher: connect failed", "err", err, "delay", delay)
-			if err := backoff.Sleep(ctx, delay); err != nil {
-				return err
-			}
-			delay = bo.Next(delay)
-			continue
-		}
-
-		delay = bo.Initial
-		w.log.Info("zapi watcher: connected", "socket", zapiSocketPath)
-
-		// Read the current table now that we are subscribed, so we have
-		// data even if no further events arrive.
-		w.triggerRefresh()
-
-		err = w.processMessages(ctx, conn)
-		_ = conn.Close()
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		w.log.Warn("zapi watcher: disconnected", "err", err)
+// session runs one ZAPI connection until zebra closes it or ctx ends.
+func (w *ZAPIWatcher) session(ctx context.Context) error {
+	conn, err := w.connect(ctx)
+	if err != nil {
+		return err
 	}
+	defer conn.Close()
+
+	// ReadMessage blocks with no deadline; closing the socket is what
+	// unblocks it on shutdown.
+	stop := context.AfterFunc(ctx, func() { conn.Close() })
+	defer stop()
+
+	w.log.Info("zapi watcher: connected", "socket", w.socket)
+
+	// Read the current table now that we are subscribed, so we have
+	// data even if no further events arrive.
+	w.triggerRefresh()
+
+	return w.processMessages(ctx, conn)
 }
 
 func (w *ZAPIWatcher) connect(ctx context.Context) (net.Conn, error) {
 	d := net.Dialer{}
-	conn, err := d.DialContext(ctx, "unix", zapiSocketPath)
+	conn, err := d.DialContext(ctx, "unix", w.socket)
 	if err != nil {
 		return nil, fmt.Errorf("dial zserv: %w", err)
 	}
@@ -255,6 +251,9 @@ func (w *ZAPIWatcher) collectRoutes(ctx context.Context, family string) ([]json.
 	if family == "ipv6" {
 		command = "show ipv6 route json"
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
 
 	out, err := w.querier.Query(ctx, command)
 	if err != nil {

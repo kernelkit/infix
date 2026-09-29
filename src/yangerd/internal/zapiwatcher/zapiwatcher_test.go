@@ -3,6 +3,10 @@ package zapiwatcher
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"log/slog"
+	"net"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -266,4 +270,66 @@ func TestWriteRibsBothFamilies(t *testing.T) {
 	if len(ribs) != 2 {
 		t.Fatalf("expected 2 ribs, got %d", len(ribs))
 	}
+}
+
+// A connected but idle zserv must not keep Run from returning on
+// shutdown: the read blocks until the socket is closed.
+func TestRunReturnsOnCancelWhileIdle(t *testing.T) {
+	sock := filepath.Join(t.TempDir(), "zserv.api")
+	ln, err := net.Listen("unix", sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	accepted := make(chan struct{})
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		close(accepted)
+		io.Copy(io.Discard, conn)
+		conn.Close()
+	}()
+
+	w := New(tree.New(), fakeQuerier{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	w.socket = sock
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- w.Run(ctx) }()
+
+	select {
+	case <-accepted:
+	case <-time.After(5 * time.Second):
+		t.Fatal("watcher never connected")
+	}
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run did not return after cancel while the socket was idle")
+	}
+}
+
+// A vty read must carry a deadline, so a wedged zebra cannot stall the
+// refresh worker for good.
+func TestCollectRoutesHasDeadline(t *testing.T) {
+	var deadline bool
+	w := New(tree.New(), deadlineQuerier{&deadline}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if _, err := w.collectRoutes(context.Background(), "ipv4"); err != nil {
+		t.Fatal(err)
+	}
+	if !deadline {
+		t.Fatal("vty query ran without a deadline")
+	}
+}
+
+type deadlineQuerier struct{ seen *bool }
+
+func (q deadlineQuerier) Query(ctx context.Context, _ string) ([]byte, error) {
+	_, *q.seen = ctx.Deadline()
+	return []byte("{}"), nil
 }
