@@ -585,13 +585,13 @@ def parse_phy_caps(phy_name):
 
 def parse_mesh_param(ifname):
     """
-    Parse 'iw dev <name> get mesh_param' output for mesh point mode
+    Parse 'iw dev <name> mesh_param dump' output for mesh point mode
     Returns: {param: value}, values as int where they are numeric
 
     Lines are 'mesh_fwding = 1' or 'mesh_retry_timeout = 100 milliseconds',
     the unit is dropped.
     """
-    output = run_iw('dev', ifname, 'get', 'mesh_param')
+    output = run_iw('dev', ifname, 'mesh_param', 'dump')
     if not output:
         return {}
 
