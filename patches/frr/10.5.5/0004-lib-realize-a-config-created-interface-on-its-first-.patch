@@ -1,0 +1,62 @@
+From 13d16871ee1da466d42ab2bb72de3516de2ebb5d Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 29 Sep 2026 20:46:52 +0200
+Subject: [PATCH 4/4] lib: realize a config-created interface on its first
+ state update
+Organization: Wires
+
+A daemon that names an interface in its config, e.g. ospfd with an
+"interface e7" stanza, creates it as a placeholder before connecting
+to zebra.  Zebra sends INTERFACE_UP/DOWN and ADDRESS_ADD to every
+client as they happen, also to one that has not yet received the
+interface dump it asked for.  zebra_interface_state_read() finds the
+placeholder by name and gives it the ifindex, but only
+zebra_interface_add_read() calls if_new_via_zapi(), so the if_real
+hook does not run.  An ADDRESS_ADD then finds the interface by index
+and the daemon acts on an interface it was never told is real.
+
+For ospfd this leaves the ospf_interface with network type 0, "Null"
+in show ip ospf interface: the type is filled in by the if_real hook
+and only copied to the ospf_interface when it is created.  Its
+router-LSA then lacks the link, so no routes are learned across it
+although the adjacency reaches Full.  Seen when a link flap coincides
+with an ospfd restart, FRRouting/frr#4178.
+
+A state update carries the same data as an add, so treat the first one
+for a placeholder as the add.  A delete for a placeholder then reads as
+add and delete, which is what the dump would have given.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ lib/zclient.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/lib/zclient.c b/lib/zclient.c
+index 48fb42872a..9a444dc041 100644
+--- a/lib/zclient.c
++++ b/lib/zclient.c
+@@ -2851,6 +2851,7 @@ struct interface *zebra_interface_state_read(struct stream *s, vrf_id_t vrf_id)
+ {
+ 	struct interface *ifp;
+ 	char ifname_tmp[IFNAMSIZ + 1] = {};
++	bool unreal;
+ 
+ 	/* Read interface name. */
+ 	STREAM_GET(ifname_tmp, s, IFNAMSIZ);
+@@ -2864,8 +2865,13 @@ struct interface *zebra_interface_state_read(struct stream *s, vrf_id_t vrf_id)
+ 		return NULL;
+ 	}
+ 
++	unreal = ifp->ifindex == IFINDEX_INTERNAL;
+ 	zebra_interface_if_set_value(s, ifp);
+ 
++	/* Created from config ahead of INTERFACE_ADD, see FRRouting/frr#4178 */
++	if (unreal && ifp->ifindex != IFINDEX_INTERNAL)
++		if_new_via_zapi(ifp);
++
+ 	return ifp;
+ stream_failure:
+ 	return NULL;
+-- 
+2.43.0
+
