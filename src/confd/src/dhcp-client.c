@@ -101,7 +101,7 @@ static void add(const char *ifname, struct lyd_node *cfg)
 	char *cid = NULL, *options = NULL;
 	int ena = 0;
 	const char *vendor_class;
-	char vendor[128] = { 0 };
+	char vendor[272] = { 0 };
 	char do_arp[20] = { 0 };
 	bool arping;
 	FILE *fp;

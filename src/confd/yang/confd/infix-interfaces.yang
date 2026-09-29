@@ -41,6 +41,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2026-09-28 {
+    description "Constrain the character set of interface names.";
+    reference "internal";
+  }
+
   revision 2026-06-11 {
     description "Fix WireGuard key-format must expressions, see
                  infix-if-wireguard@2026-06-11.";
@@ -227,8 +232,11 @@ module infix-interfaces {
     deviate replace {
       type string {
         length "1..15";
+        pattern '[a-zA-Z0-9_][a-zA-Z0-9_.:+-]*';
       }
     }
+    description "Interface names are plain identifiers, at most 15
+                 characters (Linux IFNAMSIZ).";
   }
 
   deviation "/if:interfaces/if:interface/if:description" {

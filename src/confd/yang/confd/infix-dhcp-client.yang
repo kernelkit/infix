@@ -16,6 +16,11 @@ module infix-dhcp-client {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 client";
 
+  revision 2026-09-28 {
+    description "Constrain the character set and length of option values.";
+    reference   "internal";
+  }
+
   revision 2025-11-09 {
     description   "Fix namespace to use infix instead of ietf.";
     reference     "internal";
@@ -128,7 +133,12 @@ module infix-dhcp-client {
                            which the server can use for static host matching.
                            For the 'hostname' option the 'auto' keyword can be
                            used to send the hostname part from IETF system.";
-              type string;
+              reference "RFC 2132, sec. 2: the option length field is one
+                         octet, so a value is at most 255 bytes.";
+              type string {
+                length "1..255";
+                pattern '[a-zA-Z0-9 _.:/@=,+-]+';
+              }
               must "../id != 'hostname' or re-match(., '[a-zA-Z0-9\\-_]{1,64}')";
             }
           }

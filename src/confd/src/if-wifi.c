@@ -18,27 +18,28 @@
 #define WPA_SUPPLICANT_CONF      "/etc/wpa_supplicant-%s.conf"
 
 
-int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif)
+/*
+ * Validate one wifi security block's referenced keystore secret.  The
+ * decoded passphrase is written verbatim into wpa_supplicant/hostapd
+ * config, so it must be 8-63 printable characters (no newline, which
+ * would inject an unrelated directive).  Applies to station, access
+ * point and mesh alike.
+ */
+static int validate_wifi_secret(sr_session_ctx_t *session, const char *ifname,
+				struct lyd_node *cif, struct lyd_node *security)
 {
-	struct lyd_node *wifi, *station, *security, *secret_node;
-	const char *ifname, *secret_name, *security_mode, *b64;
+	const char *secret_name, *security_mode, *b64;
+	struct lyd_node *secret_node;
 	unsigned char *decoded;
 	size_t len;
 
-	ifname = lydx_get_cattr(cif, "name");
-	wifi = lydx_get_child(cif, "wifi");
-	if (!wifi)
+	if (!security)
 		return SR_ERR_OK;
 
-	station = lydx_get_child(wifi, "station");
-	if (!station)
-		return SR_ERR_OK;
-
-	security = lydx_get_child(station, "security");
 	security_mode = lydx_get_cattr(security, "mode");
 	secret_name = lydx_get_cattr(security, "secret");
 
-	if (!secret_name || !strcmp(security_mode, "disabled"))
+	if (!secret_name || (security_mode && !strcmp(security_mode, "disabled")))
 		return SR_ERR_OK;
 
 	secret_node = lydx_get_xpathf(cif,
@@ -74,6 +75,35 @@ int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif)
 	}
 
 	free(decoded);
+	return SR_ERR_OK;
+}
+
+int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif)
+{
+	static const char *const modes[] = {
+		"station", "access-point", "mesh-point"
+	};
+	const char *ifname;
+	struct lyd_node *wifi;
+
+	ifname = lydx_get_cattr(cif, "name");
+	wifi = lydx_get_child(cif, "wifi");
+	if (!wifi)
+		return SR_ERR_OK;
+
+	for (size_t i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {
+		struct lyd_node *node = lydx_get_child(wifi, modes[i]);
+		int rc;
+
+		if (!node)
+			continue;
+
+		rc = validate_wifi_secret(session, ifname, cif,
+					  lydx_get_child(node, "security"));
+		if (rc)
+			return rc;
+	}
+
 	return SR_ERR_OK;
 }
 
