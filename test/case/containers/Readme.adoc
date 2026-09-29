@@ -12,6 +12,7 @@ Tests verifying link:https://opencontainers.org/[OCI container] support:
  - Container upgrades with persistent volume data
  - Container upgrade using RPC with cleanup of old image
  - Firewall container running in host network mode with full privileges
+ - NETCONF port 830 forwarded to a container, which connects back to NETCONF on the host
 
 include::basic/Readme.adoc[]
 
@@ -50,3 +51,7 @@ include::firewall_basic/Readme.adoc[]
 <<<
 
 include::host_commands/Readme.adoc[]
+
+<<<
+
+include::netconf_port_forward/Readme.adoc[]
