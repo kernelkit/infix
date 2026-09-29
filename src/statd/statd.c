@@ -151,6 +151,10 @@ static int ly_add_yangerd_data(const struct ly_ctx *ctx, struct lyd_node **paren
 	}
 
 	DEBUG("yangerd: got %zu bytes JSON for %s", len, key);
+	if (!json || !len) {
+		free(json);
+		return SR_ERR_OK;	/* feature not active, no data */
+	}
 
 	if (lyd_parse_data_mem(ctx, json, LYD_JSON, LYD_PARSE_ONLY, 0, &tree)) {
 		ERROR("Failed parsing yangerd data for %s: %s", key, ly_errmsg(ctx));
@@ -158,6 +162,8 @@ static int ly_add_yangerd_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		return SR_ERR_INTERNAL;
 	}
 	free(json);
+	if (!tree)
+		return SR_ERR_OK;	/* "{}", nothing to add */
 
 	if (!*parent) {
 		*parent = tree;
