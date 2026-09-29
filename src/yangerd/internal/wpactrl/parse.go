@@ -78,55 +78,6 @@ func ParseStationResp(resp string) map[string]string {
 	return m
 }
 
-// ParseAllStations parses hostapd ALL_STA response containing multiple
-// stations.  Each station block starts with a MAC address line (xx:xx:xx:xx:xx:xx)
-// followed by key=value lines.
-func ParseAllStations(resp string) []map[string]string {
-	var stations []map[string]string
-	var current map[string]string
-
-	for _, line := range strings.Split(resp, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		if isMACAddress(line) {
-			if current != nil {
-				stations = append(stations, current)
-			}
-			current = map[string]string{"addr": line}
-			continue
-		}
-		if current != nil {
-			if idx := strings.IndexByte(line, '='); idx > 0 {
-				current[line[:idx]] = line[idx+1:]
-			}
-		}
-	}
-	if current != nil {
-		stations = append(stations, current)
-	}
-	return stations
-}
-
-func isMACAddress(s string) bool {
-	if len(s) != 17 {
-		return false
-	}
-	for i, c := range s {
-		if i%3 == 2 {
-			if c != ':' {
-				return false
-			}
-		} else {
-			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 // FrequencyToChannel converts a WiFi frequency in MHz to a channel number.
 func FrequencyToChannel(freq int) int {
 	switch {

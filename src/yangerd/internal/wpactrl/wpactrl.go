@@ -6,18 +6,19 @@
 // wpa_supplicant listens at /var/run/wpa_supplicant/<ifname>
 // hostapd      listens at /var/run/hostapd/<ifname>
 //
-// The client binds its own temporary socket, sends a command string,
-// and reads back the text response.
+// The client binds its own socket, sends a command string, and reads
+// back the text response.
 package wpactrl
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/kernelkit/infix/src/yangerd/internal/unixgram"
 )
 
 const (
@@ -33,6 +34,17 @@ var WPADirs = []string{"/run/wpa_supplicant", "/var/run/wpa_supplicant"}
 var HostapdDirs = []string{"/run/hostapd", "/var/run/hostapd"}
 
 var clientSeq atomic.Uint64
+
+// localDir holds our client sockets, cleaned before first use so ones
+// left by a killed yangerd do not pile up.
+var localDir = "/run/yangerd/wpactrl"
+
+// dial binds a fresh client socket and connects it to serverPath.
+func dial(kind, serverPath string) (*unixgram.Conn, error) {
+	unixgram.CleanDir(localDir)
+	local := fmt.Sprintf("%s/%s%d", localDir, kind, clientSeq.Add(1))
+	return unixgram.Dial(local, serverPath, 0)
+}
 
 // SocketInfo describes a discovered control socket.
 type SocketInfo struct {
@@ -82,8 +94,7 @@ func scanDir(dir, daemon string, out map[string]SocketInfo) {
 
 // Conn is a connection to a wpa_supplicant or hostapd control socket.
 type Conn struct {
-	conn    *net.UnixConn
-	local   string // path to our client socket (for cleanup)
+	conn    *unixgram.Conn
 	timeout time.Duration
 }
 
@@ -96,34 +107,16 @@ func Dial(serverPath string) (*Conn, error) {
 
 // DialTimeout connects with a custom timeout.
 func DialTimeout(serverPath string, timeout time.Duration) (*Conn, error) {
-	// Create a unique client socket path in /tmp.
-	seq := clientSeq.Add(1)
-	localPath := fmt.Sprintf("/tmp/wpactrl_%d_%d", os.Getpid(), seq)
-
-	// Clean up stale socket file if it exists.
-	os.Remove(localPath)
-
-	laddr := &net.UnixAddr{Name: localPath, Net: "unixgram"}
-	raddr := &net.UnixAddr{Name: serverPath, Net: "unixgram"}
-
-	conn, err := net.DialUnix("unixgram", laddr, raddr)
+	conn, err := dial("c", serverPath)
 	if err != nil {
-		os.Remove(localPath)
-		return nil, fmt.Errorf("dial %s: %w", serverPath, err)
+		return nil, err
 	}
-
-	return &Conn{
-		conn:    conn,
-		local:   localPath,
-		timeout: timeout,
-	}, nil
+	return &Conn{conn: conn, timeout: timeout}, nil
 }
 
 // Close closes the connection and removes the client socket file.
 func (c *Conn) Close() error {
-	err := c.conn.Close()
-	os.Remove(c.local)
-	return err
+	return c.conn.Close()
 }
 
 // Command sends a command string and returns the response.
@@ -142,12 +135,6 @@ func (c *Conn) Command(cmd string) (string, error) {
 	}
 
 	return string(buf[:n]), nil
-}
-
-// Ping sends a PING command and returns true if the response is PONG.
-func (c *Conn) Ping() bool {
-	resp, err := c.Command("PING")
-	return err == nil && len(resp) >= 4 && resp[:4] == "PONG"
 }
 
 // Status sends the STATUS command and returns the parsed key=value pairs.

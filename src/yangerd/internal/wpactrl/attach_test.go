@@ -3,7 +3,6 @@ package wpactrl
 import (
 	"context"
 	"net"
-	"os"
 	"testing"
 	"time"
 )
@@ -112,7 +111,7 @@ func TestAttachAndReceiveEvents(t *testing.T) {
 		t.Errorf("events[1].Name = %q, want CTRL-EVENT-SIGNAL-CHANGE", events[1].Name)
 	}
 
-	os.Remove(ac.local)
+	ac.conn.Close()
 }
 
 func TestAttachContextCancel(t *testing.T) {

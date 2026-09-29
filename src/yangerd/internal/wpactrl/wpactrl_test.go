@@ -2,7 +2,7 @@ package wpactrl
 
 import (
 	"net"
-	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -101,57 +101,6 @@ func TestParseStationRespEmpty(t *testing.T) {
 	}
 }
 
-func TestParseAllStations(t *testing.T) {
-	resp := "c8:69:cd:69:35:da\n" +
-		"flags=[AUTH][ASSOC][AUTHORIZED]\n" +
-		"rx_bytes=4825331939\n" +
-		"tx_bytes=216392802676\n" +
-		"signal=-57\n" +
-		"connected_time=1846085\n" +
-		"d8:3a:dd:72:8e:b1\n" +
-		"flags=[AUTH][ASSOC][AUTHORIZED]\n" +
-		"rx_bytes=237629088\n" +
-		"tx_bytes=190760338\n" +
-		"signal=-78\n" +
-		"connected_time=3435639\n"
-
-	stas := ParseAllStations(resp)
-	if len(stas) != 2 {
-		t.Fatalf("got %d stations, want 2", len(stas))
-	}
-	if stas[0]["addr"] != "c8:69:cd:69:35:da" {
-		t.Errorf("sta[0] addr = %q", stas[0]["addr"])
-	}
-	if stas[0]["signal"] != "-57" {
-		t.Errorf("sta[0] signal = %q", stas[0]["signal"])
-	}
-	if stas[1]["addr"] != "d8:3a:dd:72:8e:b1" {
-		t.Errorf("sta[1] addr = %q", stas[1]["addr"])
-	}
-	if stas[1]["rx_bytes"] != "237629088" {
-		t.Errorf("sta[1] rx_bytes = %q", stas[1]["rx_bytes"])
-	}
-}
-
-func TestParseAllStationsEmpty(t *testing.T) {
-	stas := ParseAllStations("")
-	if len(stas) != 0 {
-		t.Errorf("expected empty, got %d", len(stas))
-	}
-}
-
-func TestIsMACAddress(t *testing.T) {
-	if !isMACAddress("c8:69:cd:69:35:da") {
-		t.Error("valid MAC rejected")
-	}
-	if isMACAddress("not-a-mac") {
-		t.Error("invalid string accepted")
-	}
-	if isMACAddress("signal=-57") {
-		t.Error("key=value accepted as MAC")
-	}
-}
-
 func TestFrequencyToChannel(t *testing.T) {
 	tests := []struct {
 		freq int
@@ -225,8 +174,8 @@ func TestDialAndCommand(t *testing.T) {
 	}
 	defer conn.Close()
 
-	if !conn.Ping() {
-		t.Error("Ping failed")
+	if resp, err := conn.Command("PING"); err != nil || !strings.HasPrefix(resp, "PONG") {
+		t.Errorf("PING = %q, %v", resp, err)
 	}
 
 	status, err := conn.Status()
@@ -238,5 +187,5 @@ func TestDialAndCommand(t *testing.T) {
 	}
 
 	<-clientDone
-	os.Remove(conn.local)
+	conn.Close()
 }

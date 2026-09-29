@@ -3,10 +3,10 @@ package wpactrl
 import (
 	"context"
 	"fmt"
-	"net"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/kernelkit/infix/src/yangerd/internal/unixgram"
 )
 
 const attachBufSize = 4096
@@ -29,8 +29,7 @@ type EventHandler func(Event)
 // etc.  The connection reads these in a loop and dispatches them to a
 // handler.
 type AttachConn struct {
-	conn    *net.UnixConn
-	local   string
+	conn    *unixgram.Conn
 	handler EventHandler
 }
 
@@ -38,23 +37,14 @@ type AttachConn struct {
 // ATTACH command.  On success, the daemon will send unsolicited events
 // to this connection.  Call Run to start reading them.
 func Attach(serverPath string) (*AttachConn, error) {
-	seq := clientSeq.Add(1)
-	localPath := fmt.Sprintf("/tmp/wpactrl_attach_%d_%d", os.Getpid(), seq)
-	os.Remove(localPath)
-
-	laddr := &net.UnixAddr{Name: localPath, Net: "unixgram"}
-	raddr := &net.UnixAddr{Name: serverPath, Net: "unixgram"}
-
-	conn, err := net.DialUnix("unixgram", laddr, raddr)
+	conn, err := dial("a", serverPath)
 	if err != nil {
-		os.Remove(localPath)
-		return nil, fmt.Errorf("dial %s: %w", serverPath, err)
+		return nil, err
 	}
 
 	conn.SetDeadline(time.Now().Add(DefaultTimeout))
 	if _, err := conn.Write([]byte("ATTACH")); err != nil {
 		conn.Close()
-		os.Remove(localPath)
 		return nil, fmt.Errorf("send ATTACH: %w", err)
 	}
 
@@ -62,18 +52,16 @@ func Attach(serverPath string) (*AttachConn, error) {
 	n, err := conn.Read(buf)
 	if err != nil {
 		conn.Close()
-		os.Remove(localPath)
 		return nil, fmt.Errorf("read ATTACH response: %w", err)
 	}
 	resp := strings.TrimSpace(string(buf[:n]))
 	if resp != "OK" {
 		conn.Close()
-		os.Remove(localPath)
 		return nil, fmt.Errorf("ATTACH rejected: %q", resp)
 	}
 
 	conn.SetDeadline(time.Time{})
-	return &AttachConn{conn: conn, local: localPath}, nil
+	return &AttachConn{conn: conn}, nil
 }
 
 // SetHandler sets the callback for received events.
@@ -117,9 +105,7 @@ func (a *AttachConn) Run(ctx context.Context) error {
 func (a *AttachConn) Close() error {
 	a.conn.SetDeadline(time.Now().Add(DefaultTimeout))
 	a.conn.Write([]byte("DETACH"))
-	err := a.conn.Close()
-	os.Remove(a.local)
-	return err
+	return a.conn.Close()
 }
 
 // ParseEvent parses a single unsolicited event line.  Format:
