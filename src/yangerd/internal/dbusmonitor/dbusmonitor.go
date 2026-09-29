@@ -49,6 +49,10 @@ const (
 	// softwareTimeout bounds the rauc status and bootloader env reads
 	// run after an install completes.
 	softwareTimeout = 30 * time.Second
+
+	// nftTimeout bounds one nft set listing on the GET path; nft waits
+	// for the nftables lock while firewalld reloads.
+	nftTimeout = 3 * time.Second
 )
 
 // DBusMonitor subscribes to dnsmasq and firewalld D-Bus signals and
@@ -591,17 +595,11 @@ func (m *DBusMonitor) getAddressSet(obj dbus.BusObject, name string) map[string]
 		aset["entry"] = static
 	}
 
-	current := []map[string]any{}
-	for _, elem := range nftSetElems(name) {
-		entry, expires := nftElemParse(elem)
-		cur := map[string]any{
-			"entry":   entry,
-			"dynamic": timeout > 0 || shadow[entry],
-		}
-		if expires >= 0 {
-			cur["expires"] = expires
-		}
-		current = append(current, cur)
+	var current []map[string]any
+	if timeout > 0 {
+		current = kernelEntries(name)
+	} else {
+		current = trackedEntries(tracked, shadow)
 	}
 	if len(current) > 0 {
 		aset["current"] = current
@@ -625,12 +623,48 @@ func readShadowEntries(name string) map[string]bool {
 	return shadow
 }
 
+// trackedEntries is the current contents of a set without a timeout:
+// firewalld tracks every member, the runtime-added ones included, so
+// the kernel need not be asked.
+func trackedEntries(tracked []string, shadow map[string]bool) []map[string]any {
+	current := make([]map[string]any, 0, len(tracked))
+	for _, e := range tracked {
+		e = normalizeEntry(e)
+		current = append(current, map[string]any{
+			"entry":   e,
+			"dynamic": shadow[e],
+		})
+	}
+	return current
+}
+
+// kernelEntries is the current contents of a timeout set.  firewalld
+// does not track those members, so the kernel is the only source, and
+// the only one knowing the expiry.  Every member of a timeout set is
+// dynamic by definition.
+func kernelEntries(name string) []map[string]any {
+	current := []map[string]any{}
+	for _, elem := range nftSetElems(name) {
+		entry, expires := nftElemParse(elem)
+		cur := map[string]any{
+			"entry":   entry,
+			"dynamic": true,
+		}
+		if expires >= 0 {
+			cur["expires"] = expires
+		}
+		current = append(current, cur)
+	}
+	return current
+}
+
 // nftSetElems returns the live contents of firewalld's nftables set.
-// The kernel is the only source that sees entries in timeout sets, and
-// the only one tracking per-entry expiry.  The firewalld table is
-// owner-protected, but reading is fine.
+// The firewalld table is owner-protected, but reading is fine.
 func nftSetElems(name string) []any {
-	out, err := exec.Command("nft", "-j", "list", "set", "inet", "firewalld", name).Output()
+	ctx, cancel := context.WithTimeout(context.Background(), nftTimeout)
+	defer cancel()
+
+	out, err := exec.CommandContext(ctx, "nft", "-j", "list", "set", "inet", "firewalld", name).Output()
 	if err != nil {
 		return nil
 	}

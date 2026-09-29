@@ -805,3 +805,18 @@ func TestRaucCompletedRefreshesSoftware(t *testing.T) {
 		t.Fatal("platform dropped by the software refresh")
 	}
 }
+
+// Sets without a timeout are served from firewalld's own list, with
+// the shadow file telling runtime-added members apart.
+func TestTrackedEntries(t *testing.T) {
+	got := trackedEntries([]string{"10.0.0.1", "192.168.1.0/24", "10.0.0.9/32"},
+		map[string]bool{"10.0.0.9": true})
+	want := []map[string]any{
+		{"entry": "10.0.0.1", "dynamic": false},
+		{"entry": "192.168.1.0/24", "dynamic": false},
+		{"entry": "10.0.0.9", "dynamic": true},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
