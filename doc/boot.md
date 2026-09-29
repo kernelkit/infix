@@ -182,9 +182,13 @@ in the second case will cause the device to fail on the next boot.
 #### Broken startup-config
 
 If loading `startup-config` fails for some reason, e.g., invalid JSON
-syntax, failed validation against the system's YANG model, or a bug in
-the system's `confd` service, the *Fail Secure Mode* is triggered and
-`failure-config` is loaded (unless VPD Failure, see above).
+syntax, a failed migration or validation against the system's YANG
+model, or a bug in the system's `confd` service, the *Fail Secure Mode*
+is triggered and `failure-config` is loaded (unless VPD Failure, see
+above).  The system then marks the boot as failed and resets, so that
+the next boot starts from a clean state and goes straight to *Fail
+Secure Mode*.  The mark is cleared on that boot, so a reboot after it
+tries `startup-config` again.
 
 > [!TIP]
 > Please see the [Branding & Releases](branding.md) document for how to
