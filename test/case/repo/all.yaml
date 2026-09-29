@@ -1,3 +1,5 @@
 ---
 - case: defconfig.sh
   name: "validate defconfigs"
+- case: config-version.sh
+  name: "validate config versions"
