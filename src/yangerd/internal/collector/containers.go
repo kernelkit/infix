@@ -51,29 +51,11 @@ func CollectContainers(cmd CommandRunner, fs FileReader) json.RawMessage {
 }
 
 func (c *containerCollector) podmanPS(ctx context.Context) []map[string]interface{} {
-	out, err := c.cmd.Run(ctx, "podman", "ps", "-a", "--format=json")
-	if err != nil {
-		log.Printf("collector containers: ps: %v", err)
-		return nil
-	}
-
 	var list []map[string]interface{}
-	if err := json.Unmarshal(out, &list); err == nil {
-		return list
-	}
-
-	var generic []interface{}
-	if err := json.Unmarshal(out, &generic); err != nil {
-		log.Printf("collector containers: ps parse: %v", err)
+	if err := runJSON(ctx, c.cmd, &list, "podman", "ps", "-a", "--format=json"); err != nil {
+		log.Printf("collector containers: %v", err)
 		return nil
 	}
-
-	for _, item := range generic {
-		if m, ok := item.(map[string]interface{}); ok {
-			list = append(list, m)
-		}
-	}
-
 	return list
 }
 

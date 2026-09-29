@@ -2,6 +2,8 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,6 +25,18 @@ type FileReader interface {
 // InstallerStatus queries RAUC installation progress.
 type InstallerStatus interface {
 	GetInstallStatus() (operation string, lastError string, percentage int, message string, err error)
+}
+
+// runJSON runs a command and decodes its JSON output into dst.
+func runJSON(ctx context.Context, cmd CommandRunner, dst interface{}, name string, args ...string) error {
+	out, err := cmd.Run(ctx, name, args...)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	if err := json.Unmarshal(out, dst); err != nil {
+		return fmt.Errorf("%s: parse output: %w", name, err)
+	}
+	return nil
 }
 
 // ExecRunner is the production CommandRunner using os/exec.

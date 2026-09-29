@@ -44,23 +44,22 @@ func (c *SystemCollector) Interval() time.Duration { return c.interval }
 func (c *SystemCollector) Collect(ctx context.Context, t *tree.Tree) error {
 	state := make(map[string]interface{})
 
-	c.addServices(ctx, state)
-
-	if data, err := json.Marshal(state); err == nil {
-		t.Merge("ietf-system:system-state", data)
+	if err := c.addServices(ctx, state); err != nil {
+		return err
 	}
+
+	data, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+	t.Merge("ietf-system:system-state", data)
 	return nil
 }
 
-func (c *SystemCollector) addServices(ctx context.Context, state map[string]interface{}) {
-	out, err := c.cmd.Run(ctx, "initctl", "-j")
-	if err != nil {
-		return
-	}
-
+func (c *SystemCollector) addServices(ctx context.Context, state map[string]interface{}) error {
 	var initData []map[string]interface{}
-	if json.Unmarshal(out, &initData) != nil {
-		return
+	if err := runJSON(ctx, c.cmd, &initData, "initctl", "-j"); err != nil {
+		return err
 	}
 
 	var services []interface{}
@@ -90,6 +89,7 @@ func (c *SystemCollector) addServices(ctx context.Context, state map[string]inte
 	state["infix-system:services"] = map[string]interface{}{
 		"service": services,
 	}
+	return nil
 }
 
 func yangDateTime(t time.Time) string {

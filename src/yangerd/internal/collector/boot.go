@@ -33,20 +33,17 @@ func BootPlatform(fs FileReader) json.RawMessage {
 func BootSoftware(ctx context.Context, cmd CommandRunner) json.RawMessage {
 	software := make(map[string]interface{})
 
-	raucOut, err := cmd.Run(ctx, "rauc", "status", "--detailed", "--output-format=json")
-	if err == nil {
-		var raucData map[string]interface{}
-		if json.Unmarshal(raucOut, &raucData) == nil {
-			if v, ok := raucData["compatible"]; ok {
-				software["compatible"] = v
+	var raucData map[string]interface{}
+	if err := runJSON(ctx, cmd, &raucData, "rauc", "status", "--detailed", "--output-format=json"); err != nil {
+		log.Printf("boot: %v", err)
+	} else {
+		for _, key := range []string{"compatible", "variant", "booted"} {
+			if v, ok := raucData[key]; ok {
+				software[key] = v
 			}
-			if v, ok := raucData["variant"]; ok {
-				software["variant"] = v
-			}
-			if v, ok := raucData["booted"]; ok {
-				software["booted"] = v
-			}
-			bootSoftwareSlots(software, raucData)
+		}
+		if slots := softwareSlots(raucData); slots != nil {
+			software["slot"] = slots
 		}
 	}
 
@@ -87,84 +84,68 @@ func ReadBootOrder(ctx context.Context, cmd CommandRunner) []string {
 	return nil
 }
 
-func bootSoftwareSlots(software map[string]interface{}, raucData map[string]interface{}) {
-	slotsRaw, ok := raucData["slots"]
+// softwareSlots lists the RAUC slots, nil when rauc reported none.
+func softwareSlots(raucData map[string]interface{}) []interface{} {
+	slotsArr, ok := raucData["slots"].([]interface{})
 	if !ok {
-		return
-	}
-	slotsArr, ok := slotsRaw.([]interface{})
-	if !ok {
-		return
+		return nil
 	}
 
-	var slots []interface{}
+	slots := []interface{}{}
 	for _, slotItem := range slotsArr {
 		slotMap, ok := slotItem.(map[string]interface{})
 		if !ok {
 			continue
 		}
 		for name, valRaw := range slotMap {
-			val, ok := valRaw.(map[string]interface{})
-			if !ok {
-				continue
+			if val, ok := valRaw.(map[string]interface{}); ok {
+				slots = append(slots, softwareSlot(name, val))
 			}
-			s := map[string]interface{}{
-				"name":     name,
-				"bootname": val["bootname"],
-				"class":    val["class"],
-				"state":    val["state"],
-			}
-
-			slotStatus, _ := val["slot_status"].(map[string]interface{})
-			if slotStatus == nil {
-				slots = append(slots, s)
-				continue
-			}
-
-			bundle := make(map[string]interface{})
-			if b, ok := slotStatus["bundle"].(map[string]interface{}); ok {
-				if v := b["compatible"]; v != nil {
-					bundle["compatible"] = v
-				}
-				if v := b["version"]; v != nil {
-					bundle["version"] = v
-				}
-			}
-			s["bundle"] = bundle
-
-			if ck, ok := slotStatus["checksum"].(map[string]interface{}); ok {
-				if v := ck["size"]; v != nil {
-					s["size"] = strconv.FormatInt(int64(toInt(v)), 10)
-				}
-				if v := ck["sha256"]; v != nil {
-					s["sha256"] = v
-				}
-			}
-
-			installed := make(map[string]interface{})
-			if inst, ok := slotStatus["installed"].(map[string]interface{}); ok {
-				if v := inst["timestamp"]; v != nil {
-					installed["datetime"] = v
-				}
-				if v := inst["count"]; v != nil {
-					installed["count"] = toInt(v)
-				}
-			}
-			s["installed"] = installed
-
-			activated := make(map[string]interface{})
-			if act, ok := slotStatus["activated"].(map[string]interface{}); ok {
-				if v := act["timestamp"]; v != nil {
-					activated["datetime"] = v
-				}
-				if v := act["count"]; v != nil {
-					activated["count"] = toInt(v)
-				}
-			}
-			s["activated"] = activated
-
-			slots = append(slots, s)
 		}
 	}
-	software["slot"] = slots
+	return slots
+}
+
+func softwareSlot(name string, val map[string]interface{}) map[string]interface{} {
+	s := map[string]interface{}{
+		"name":     name,
+		"bootname": val["bootname"],
+		"class":    val["class"],
+		"state":    val["state"],
+	}
+
+	slotStatus, _ := val["slot_status"].(map[string]interface{})
+	if slotStatus == nil {
+		return s
+	}
+
+	bundle := make(map[string]interface{})
+	if b, ok := slotStatus["bundle"].(map[string]interface{}); ok {
+		setIfPresent(bundle, "compatible", b, "compatible")
+		setIfPresent(bundle, "version", b, "version")
+	}
+	s["bundle"] = bundle
+
+	if ck, ok := slotStatus["checksum"].(map[string]interface{}); ok {
+		if v := ck["size"]; v != nil {
+			s["size"] = strconv.FormatInt(int64(toInt(v)), 10)
+		}
+		setIfPresent(s, "sha256", ck, "sha256")
+	}
+
+	s["installed"] = slotEvent(slotStatus["installed"])
+	s["activated"] = slotEvent(slotStatus["activated"])
+
+	return s
+}
+
+// slotEvent maps a RAUC {timestamp, count} record, as for the last
+// install or activation of a slot.
+func slotEvent(raw interface{}) map[string]interface{} {
+	event := make(map[string]interface{})
+	if rec, ok := raw.(map[string]interface{}); ok {
+		setIfPresent(event, "datetime", rec, "timestamp")
+		setIfPresentInt(event, "count", rec, "count")
+	}
+	return event
 }

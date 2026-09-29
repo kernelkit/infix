@@ -118,7 +118,7 @@ func TestSystemCollectorServices(t *testing.T) {
 	}
 }
 
-func TestSystemCollectorCommandFailureGraceful(t *testing.T) {
+func TestSystemCollectorInitctlFailure(t *testing.T) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{},
 		Errors: map[string]error{
@@ -133,13 +133,13 @@ func TestSystemCollectorCommandFailureGraceful(t *testing.T) {
 
 	c := NewSystemCollector(runner, fs, 60*time.Second)
 	tr := tree.New()
-	err := c.Collect(context.Background(), tr)
-	if err != nil {
-		t.Fatalf("Collect should not return error on partial failures: %v", err)
-	}
+	tr.Set("ietf-system:system-state", json.RawMessage(`{"infix-system:services":{"service":[{"name":"sshd"}]}}`))
 
-	if tr.Get("ietf-system:system-state") == nil {
-		t.Fatal("ietf-system:system-state should be set even with command failures")
+	if err := c.Collect(context.Background(), tr); err == nil {
+		t.Fatal("an initctl failure must be reported, it is all this collector does")
+	}
+	if got := string(tr.Get("ietf-system:system-state")); got != `{"infix-system:services":{"service":[{"name":"sshd"}]}}` {
+		t.Fatalf("a failed poll must leave the last services in place, got %s", got)
 	}
 }
 
