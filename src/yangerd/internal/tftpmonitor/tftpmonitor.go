@@ -5,7 +5,8 @@
 // the root is.  The root and every directory below it are then watched
 // with inotify, and the file list is rebuilt whenever something changes:
 // a file is uploaded, removed, renamed or has its mode changed, a
-// directory appears or disappears, or the root itself moves.
+// directory appears or disappears, the root itself moves, or something
+// is mounted, like a USB stick holding the root.
 //
 // Only world-readable regular files are listed, following symlinks the
 // way dnsmasq does when it opens them.
@@ -51,6 +52,10 @@ type TFTPMonitor struct {
 	// tests.
 	conf string
 
+	// mountinfo is the mount table polled for changes; overridable in
+	// tests.
+	mountinfo string
+
 	watcher *fsnotify.Watcher
 	root    string          // current TFTP root, "" when disabled
 	watched map[string]bool // directories currently watched below root
@@ -62,10 +67,11 @@ func New(t *tree.Tree, log *slog.Logger) *TFTPMonitor {
 		log = slog.Default()
 	}
 	return &TFTPMonitor{
-		tree:    t,
-		log:     log,
-		conf:    confPath,
-		watched: make(map[string]bool),
+		tree:      t,
+		log:       log,
+		conf:      confPath,
+		mountinfo: "/proc/self/mountinfo",
+		watched:   make(map[string]bool),
 	}
 }
 
@@ -85,6 +91,21 @@ func (m *TFTPMonitor) Run(ctx context.Context) error {
 		return fmt.Errorf("watch %s: %w", confDir, err)
 	}
 
+	// A root on removable media is a mount point, and mounting it
+	// produces no inotify event.
+	mounted := make(chan struct{}, 1)
+	go func() {
+		err := watchMounts(ctx, m.mountinfo, func() {
+			select {
+			case mounted <- struct{}{}:
+			default:
+			}
+		})
+		if err != nil && ctx.Err() == nil {
+			m.log.Warn("tftp monitor: mount table not watched", "err", err)
+		}
+	}()
+
 	m.reconcile()
 
 	timer := time.NewTimer(time.Hour)
@@ -102,6 +123,9 @@ func (m *TFTPMonitor) Run(ctx context.Context) error {
 			if filepath.Dir(ev.Name) == confDir && ev.Name != m.conf {
 				continue // another dnsmasq snippet
 			}
+			timer.Reset(debounceDelay)
+
+		case <-mounted:
 			timer.Reset(debounceDelay)
 
 		case <-timer.C:
