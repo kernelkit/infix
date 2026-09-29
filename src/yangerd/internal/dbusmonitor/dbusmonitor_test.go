@@ -1,10 +1,15 @@
 package dbusmonitor
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/godbus/dbus/v5"
+	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 func TestParseDnsmasqLeases(t *testing.T) {
@@ -769,5 +774,34 @@ func TestParseNftSetElems(t *testing.T) {
 	}
 	if elems := parseNftSetElems([]byte(`garbage`)); elems != nil {
 		t.Fatalf("expected nil for invalid JSON, got %#v", elems)
+	}
+}
+
+// An install replaces the whole software object, so the new bundle on
+// the inactive slot shows up without a reboot, and other system-state
+// subtrees are left alone.
+func TestRaucCompletedRefreshesSoftware(t *testing.T) {
+	tr := tree.New()
+	tr.Set(systemStateKey, json.RawMessage(`{"platform":{"os-name":"Infix"},"infix-system:software":{"slot":[{"name":"rootfs.1","bundle":{"version":"v1"}}]}}`))
+
+	m := New(tr, slog.Default())
+	m.software = func(context.Context) json.RawMessage {
+		return json.RawMessage(`{"infix-system:software":{"slot":[{"name":"rootfs.1","bundle":{"version":"v2"}}]}}`)
+	}
+
+	sig := &dbus.Signal{Name: raucInstallerInterface + ".Completed", Body: []any{int32(0)}}
+	if err := m.handleSignal(nil, sig); err != nil {
+		t.Fatal(err)
+	}
+
+	var state map[string]json.RawMessage
+	if err := json.Unmarshal(tr.GetCached(systemStateKey), &state); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(state["infix-system:software"]); got != `{"slot":[{"name":"rootfs.1","bundle":{"version":"v2"}}]}` {
+		t.Fatalf("software not replaced: %s", got)
+	}
+	if _, ok := state["platform"]; !ok {
+		t.Fatal("platform dropped by the software refresh")
 	}
 }

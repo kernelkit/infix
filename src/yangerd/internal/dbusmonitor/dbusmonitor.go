@@ -18,6 +18,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
+	"github.com/kernelkit/infix/src/yangerd/internal/collector"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
@@ -33,6 +34,8 @@ const (
 	dbusInterface = "org.freedesktop.DBus"
 	dbusPath      = "/org/freedesktop/DBus"
 
+	raucInstallerInterface = "de.pengutronix.rauc.Installer"
+
 	dnsmasqLeaseFile = "/var/lib/misc/dnsmasq.leases"
 
 	// Written by confd's address-set add/remove actions: one file per
@@ -41,6 +44,11 @@ const (
 
 	dhcpTreeKey     = "infix-dhcp-server:dhcp-server"
 	firewallTreeKey = "infix-firewall:firewall"
+	systemStateKey  = "ietf-system:system-state"
+
+	// softwareTimeout bounds the rauc status and bootloader env reads
+	// run after an install completes.
+	softwareTimeout = 30 * time.Second
 )
 
 // DBusMonitor subscribes to dnsmasq and firewalld D-Bus signals and
@@ -51,6 +59,10 @@ type DBusMonitor struct {
 
 	mu   sync.Mutex
 	conn *dbus.Conn // current bus connection, nil while disconnected
+
+	// software reads the infix-system:software object; overridable in
+	// tests.
+	software func(ctx context.Context) json.RawMessage
 }
 
 // New creates a DBusMonitor.  Address-set contents are served through
@@ -59,7 +71,13 @@ type DBusMonitor struct {
 // actions, per-entry timeouts expiring in the kernel), so they must be
 // read fresh on every query.
 func New(t *tree.Tree, log *slog.Logger) *DBusMonitor {
-	m := &DBusMonitor{tree: t, log: log}
+	m := &DBusMonitor{
+		tree: t,
+		log:  log,
+		software: func(ctx context.Context) json.RawMessage {
+			return collector.BootSoftware(ctx, collector.ExecRunner{})
+		},
+	}
 	t.RegisterProvider(firewallTreeKey, m.addressSetOverlay)
 	return m
 }
@@ -138,6 +156,13 @@ func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
 	}
 
 	if err := conn.AddMatchSignal(
+		dbus.WithMatchInterface(raucInstallerInterface),
+		dbus.WithMatchMember("Completed"),
+	); err != nil {
+		return fmt.Errorf("add rauc Completed match: %w", err)
+	}
+
+	if err := conn.AddMatchSignal(
 		dbus.WithMatchInterface(dbusInterface),
 		dbus.WithMatchMember("NameOwnerChanged"),
 		dbus.WithMatchArg(0, dnsmasqBusName),
@@ -189,6 +214,10 @@ func (m *DBusMonitor) handleSignal(conn *dbus.Conn, sig *dbus.Signal) error {
 		}
 		return m.refreshDHCP(conn)
 
+	case raucInstallerInterface + ".Completed":
+		m.refreshSoftware()
+		return nil
+
 	case firewalldInterface + ".Reloaded":
 		if sig.Path != "" && string(sig.Path) != firewalldPath {
 			return nil
@@ -231,6 +260,18 @@ func (m *DBusMonitor) handleSignal(conn *dbus.Conn, sig *dbus.Signal) error {
 	}
 
 	return nil
+}
+
+// refreshSoftware re-reads the slots after an install, successful or
+// not: the inactive slot's bundle, checksum and install count change,
+// and nothing else reports it until the next boot.
+func (m *DBusMonitor) refreshSoftware() {
+	ctx, cancel := context.WithTimeout(context.Background(), softwareTimeout)
+	defer cancel()
+
+	if data := m.software(ctx); data != nil {
+		m.tree.Merge(systemStateKey, data)
+	}
 }
 
 func (m *DBusMonitor) refreshDHCP(conn *dbus.Conn) error {
