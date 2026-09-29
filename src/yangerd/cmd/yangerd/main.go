@@ -103,8 +103,7 @@ func main() {
 		collector.NewNTPCollector(cmd, cfg.PollNTP),
 		hardware,
 	}
-	pokeCh := make(chan struct{}, len(collectors))
-	collector.RunAll(ctx, &wg, t, collectors, pokeCh)
+	pokes := collector.RunAll(ctx, &wg, t, collectors)
 
 	inst := collector.DBusInstaller{}
 	t.RegisterProvider("ietf-system:system-state", func() json.RawMessage {
@@ -180,12 +179,7 @@ func main() {
 	if cfg.EnableWifi {
 		iwmon := iwmonitor.New(slogLog)
 		iwmon.SetOnUpdate(nlmon.SetWifiData)
-		iwmon.SetOnPhyChange(func() {
-			select {
-			case pokeCh <- struct{}{}:
-			default:
-			}
-		})
+		iwmon.SetOnPhyChange(func() { pokes.Poke(hardware.Name()) })
 		spawn("iwmonitor", iwmon.Run)
 	}
 
@@ -313,9 +307,7 @@ func main() {
 		for sig := range sigCh {
 			if sig == syscall.SIGHUP {
 				log.Printf("SIGHUP: triggering immediate re-poll")
-				for range len(collectors) {
-					pokeCh <- struct{}{}
-				}
+				pokes.PokeAll()
 				continue
 			}
 			cancel()
