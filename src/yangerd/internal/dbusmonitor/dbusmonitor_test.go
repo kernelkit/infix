@@ -483,35 +483,6 @@ func TestAsBool(t *testing.T) {
 	}
 }
 
-func TestToUint64(t *testing.T) {
-	tests := []struct {
-		name string
-		in   any
-		want uint64
-	}{
-		{name: "uint8", in: uint8(8), want: 8},
-		{name: "uint16", in: uint16(16), want: 16},
-		{name: "uint32", in: uint32(32), want: 32},
-		{name: "uint64", in: uint64(64), want: 64},
-		{name: "uint", in: uint(7), want: 7},
-		{name: "int positive", in: 42, want: 42},
-		{name: "int negative", in: -1, want: 0},
-		{name: "int64 negative", in: int64(-9), want: 0},
-		{name: "float64", in: float64(99.9), want: 99},
-		{name: "float64 negative", in: float64(-0.1), want: 0},
-		{name: "string number", in: "42", want: 42},
-		{name: "string invalid", in: "nope", want: 0},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := toUint64(tc.in); got != tc.want {
-				t.Fatalf("toUint64(%#v) = %d, want %d", tc.in, got, tc.want)
-			}
-		})
-	}
-}
-
 func TestParseHelpers(t *testing.T) {
 	t.Run("parseQuotedName", func(t *testing.T) {
 		tests := []struct {

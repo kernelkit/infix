@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
+	"github.com/kernelkit/infix/src/yangerd/internal/numconv"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 	"github.com/kernelkit/infix/src/yangerd/internal/zapi"
 )
@@ -322,7 +323,7 @@ func transformRoute(family, prefixKey string, route map[string]any, now time.Tim
 	if !strings.Contains(dst, "/") {
 		plen := hostLen
 		if v, ok := route["prefixLen"]; ok {
-			plen = strconv.Itoa(toInt(v))
+			plen = strconv.Itoa(numconv.IntOrZero(v))
 		}
 		dst = dst + "/" + plen
 	}
@@ -332,16 +333,16 @@ func transformRoute(family, prefixKey string, route map[string]any, now time.Tim
 	node := map[string]any{
 		dpKey:              dst,
 		"source-protocol":  protocolName(frr),
-		"route-preference": toInt(route["distance"]),
+		"route-preference": numconv.IntOrZero(route["distance"]),
 		"last-updated":     now.Add(-parseUptime(stringField(route, "uptime"))).Format(time.RFC3339),
 	}
 
 	// Metric is modelled only for OSPF and RIP routes.
 	switch {
 	case strings.Contains(frr, "ospf"):
-		node["ietf-ospf:metric"] = toInt(route["metric"])
+		node["ietf-ospf:metric"] = numconv.IntOrZero(route["metric"])
 	case strings.Contains(frr, "rip"):
-		node["ietf-rip:metric"] = toInt(route["metric"])
+		node["ietf-rip:metric"] = numconv.IntOrZero(route["metric"])
 	}
 
 	// "selected" is FRR's own best-path decision -- the '>' in
@@ -417,24 +418,6 @@ func stringField(m map[string]any, key string) string {
 func boolField(m map[string]any, key string) bool {
 	b, _ := m[key].(bool)
 	return b
-}
-
-func toInt(v any) int {
-	switch n := v.(type) {
-	case float64:
-		return int(n)
-	case int:
-		return n
-	case int64:
-		return int(n)
-	case json.Number:
-		i, _ := n.Int64()
-		return int(i)
-	case string:
-		i, _ := strconv.Atoi(n)
-		return i
-	}
-	return 0
 }
 
 // FRR uptime string formats (frrtime), ported from yanger's

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/numconv"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
@@ -119,7 +120,7 @@ func TestActiveFollowsSelectedNotDistance(t *testing.T) {
 	}
 
 	for _, r := range routes {
-		pref := toInt(r["route-preference"])
+		pref := numconv.IntOrZero(r["route-preference"])
 		_, active := r["active"]
 		switch pref {
 		case 120:
@@ -194,10 +195,10 @@ func TestTransformRouteFields(t *testing.T) {
 	if parsed["source-protocol"] != "ietf-ospf:ospfv2" {
 		t.Errorf("source-protocol = %v", parsed["source-protocol"])
 	}
-	if toInt(parsed["route-preference"]) != 110 {
+	if numconv.IntOrZero(parsed["route-preference"]) != 110 {
 		t.Errorf("route-preference = %v", parsed["route-preference"])
 	}
-	if toInt(parsed["ietf-ospf:metric"]) != 20 {
+	if numconv.IntOrZero(parsed["ietf-ospf:metric"]) != 20 {
 		t.Errorf("ietf-ospf:metric = %v", parsed["ietf-ospf:metric"])
 	}
 	if _, ok := parsed["active"]; !ok {

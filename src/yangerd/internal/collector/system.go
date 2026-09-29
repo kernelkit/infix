@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/numconv"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
@@ -96,20 +97,7 @@ func yangDateTime(t time.Time) string {
 }
 
 func toInt(v interface{}) int {
-	switch n := v.(type) {
-	case float64:
-		return int(n)
-	case int:
-		return n
-	case json.Number:
-		i, _ := n.Int64()
-		return int(i)
-	case string:
-		i, _ := strconv.Atoi(n)
-		return i
-	default:
-		return 0
-	}
+	return numconv.IntOrZero(v)
 }
 
 func zeroIfNil(v interface{}) interface{} {

@@ -21,6 +21,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
+	"github.com/kernelkit/infix/src/yangerd/internal/numconv"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
@@ -738,10 +739,7 @@ func nftElemParse(elem any) (string, int) {
 }
 
 func getNum(v any) int {
-	switch n := v.(type) {
-	case float64:
-		return int(n)
-	case int:
+	if n, ok := numconv.Int(v); ok {
 		return n
 	}
 	return -1
@@ -889,14 +887,14 @@ func decodeDHCPMetrics(v any) map[string]any {
 	}
 
 	return map[string]any{
-		"out-offers":   toUint64(metrics["dhcp_offer"]),
-		"out-acks":     toUint64(metrics["dhcp_ack"]),
-		"out-naks":     toUint64(metrics["dhcp_nak"]),
-		"in-declines":  toUint64(metrics["dhcp_decline"]),
-		"in-discovers": toUint64(metrics["dhcp_discover"]),
-		"in-requests":  toUint64(metrics["dhcp_request"]),
-		"in-releases":  toUint64(metrics["dhcp_release"]),
-		"in-informs":   toUint64(metrics["dhcp_inform"]),
+		"out-offers":   numconv.Uint64(metrics["dhcp_offer"]),
+		"out-acks":     numconv.Uint64(metrics["dhcp_ack"]),
+		"out-naks":     numconv.Uint64(metrics["dhcp_nak"]),
+		"in-declines":  numconv.Uint64(metrics["dhcp_decline"]),
+		"in-discovers": numconv.Uint64(metrics["dhcp_discover"]),
+		"in-requests":  numconv.Uint64(metrics["dhcp_request"]),
+		"in-releases":  numconv.Uint64(metrics["dhcp_release"]),
+		"in-informs":   numconv.Uint64(metrics["dhcp_inform"]),
 	}
 }
 
@@ -1127,40 +1125,8 @@ func getString(m map[string]any, key string) string {
 }
 
 func getInt(m map[string]any, key string, def int) int {
-	v, ok := m[key]
-	if !ok {
-		return def
-	}
-	switch n := v.(type) {
-	case int:
+	if n, ok := numconv.Int(m[key]); ok {
 		return n
-	case int8:
-		return int(n)
-	case int16:
-		return int(n)
-	case int32:
-		return int(n)
-	case int64:
-		return int(n)
-	case uint:
-		return int(n)
-	case uint8:
-		return int(n)
-	case uint16:
-		return int(n)
-	case uint32:
-		return int(n)
-	case uint64:
-		return int(n)
-	case float32:
-		return int(n)
-	case float64:
-		return int(n)
-	case string:
-		i, err := strconv.Atoi(strings.TrimSpace(n))
-		if err == nil {
-			return i
-		}
 	}
 	return def
 }
@@ -1321,60 +1287,4 @@ func asBool(v any) bool {
 	default:
 		return false
 	}
-}
-
-func toUint64(v any) uint64 {
-	switch x := v.(type) {
-	case uint8:
-		return uint64(x)
-	case uint16:
-		return uint64(x)
-	case uint32:
-		return uint64(x)
-	case uint64:
-		return x
-	case uint:
-		return uint64(x)
-	case int8:
-		if x < 0 {
-			return 0
-		}
-		return uint64(x)
-	case int16:
-		if x < 0 {
-			return 0
-		}
-		return uint64(x)
-	case int32:
-		if x < 0 {
-			return 0
-		}
-		return uint64(x)
-	case int64:
-		if x < 0 {
-			return 0
-		}
-		return uint64(x)
-	case int:
-		if x < 0 {
-			return 0
-		}
-		return uint64(x)
-	case float32:
-		if x < 0 {
-			return 0
-		}
-		return uint64(x)
-	case float64:
-		if x < 0 {
-			return 0
-		}
-		return uint64(x)
-	case string:
-		u, err := strconv.ParseUint(strings.TrimSpace(x), 10, 64)
-		if err == nil {
-			return u
-		}
-	}
-	return 0
 }
