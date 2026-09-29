@@ -41,6 +41,7 @@ type NLMonitor struct {
 	brBatch    *ipbatch.Batch
 	tree       *tree.Tree
 	ethRefresh func(string)
+	linkSet    func()
 	log        *slog.Logger
 	fc         iface.FileChecker
 
@@ -105,6 +106,18 @@ func New(linkBatch, addrBatch, neighBatch, brBatch *ipbatch.Batch, t *tree.Tree,
 // when an ethernet interface sees a link event.
 func (m *NLMonitor) SetEthRefresh(fn func(string)) {
 	m.ethRefresh = fn
+}
+
+// SetLinkSetChange sets an optional callback run when an interface
+// appears, goes away or is renamed.
+func (m *NLMonitor) SetLinkSetChange(fn func()) {
+	m.linkSet = fn
+}
+
+func (m *NLMonitor) linkSetChanged() {
+	if m.linkSet != nil {
+		m.linkSet()
+	}
 }
 
 // WaitReady returns a channel that is closed after initialDump completes.
@@ -338,6 +351,7 @@ func ethernetNames(linkRaw json.RawMessage, fc iface.FileChecker) []string {
 func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) bool {
 	index := int(update.Index)
 	if update.Header.Type == syscall.RTM_DELLINK {
+		defer m.linkSetChanged()
 		return m.removeInterface(index)
 	}
 
@@ -479,7 +493,8 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 	}
 
 	m.mu.Lock()
-	if old := nameByIndex(m.links, index); old != "" && old != name {
+	old := nameByIndex(m.links, index)
+	if old != "" && old != name {
 		m.log.Info("interface renamed", "from", old, "to", name)
 		m.forgetName(old)
 	}
@@ -490,6 +505,9 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 	}
 	m.mu.Unlock()
 
+	if old != name {
+		m.linkSetChanged()
+	}
 	if m.ethRefresh != nil && iface.IsEthernet(linkRaw, m.fc) {
 		m.ethRefresh(name)
 	}

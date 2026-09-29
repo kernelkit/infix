@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -148,6 +147,16 @@ func main() {
 
 	nlmon := monitor.New(linkBatch, addrBatch, neighBatch, brBatch, t, osFileChecker{}, slogLog)
 
+	// inotify says nothing when a /proc/sys/net/*/conf/<if> directory
+	// comes or goes, so follow the interface set from netlink instead.
+	linkSetCh := make(chan struct{}, 1)
+	nlmon.SetLinkSetChange(func() {
+		select {
+		case linkSetCh <- struct{}{}:
+		default:
+		}
+	})
+
 	ethMon := ethmonitor.New(slogLog, cmd)
 	ethMon.SetOnUpdate(nlmon.SetEthernetData)
 	nlmon.SetEthRefresh(ethMon.RefreshInterface)
@@ -202,23 +211,32 @@ func main() {
 		"/proc/sys/net/ipv4/conf/*/forwarding",
 		"/proc/sys/net/ipv6/conf/*/forwarding",
 	}
-	for _, pattern := range forwardingPaths {
-		matches, globErr := filepath.Glob(pattern)
-		if globErr != nil {
-			slogLog.Warn("fswatcher glob failed", "pattern", pattern, "err", globErr)
-			continue
-		}
-		for _, path := range matches {
-			if err := fsw.Watch(path, fswatcher.WatchHandler{
-				TreeKey:  routingTreeKey,
-				ReadFunc: fwdAgg.HandleForwardingChange,
-				Debounce: 100 * time.Millisecond,
-				UseMerge: true,
-			}); err != nil {
-				slogLog.Warn("fswatcher watch failed", "path", path, "err", err)
+	forwarding := fswatcher.WatchHandler{
+		TreeKey:  routingTreeKey,
+		ReadFunc: fwdAgg.HandleForwardingChange,
+		Debounce: 100 * time.Millisecond,
+		UseMerge: true,
+	}
+	syncForwarding := func() {
+		for _, pattern := range forwardingPaths {
+			if _, _, err := fsw.SyncGlob(pattern, forwarding); err != nil {
+				slogLog.Warn("fswatcher glob failed", "pattern", pattern, "err", err)
 			}
 		}
 	}
+	syncForwarding()
+
+	spawn("forwarding-sync", func(ctx context.Context) error {
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-linkSetCh:
+				syncForwarding()
+			}
+		}
+	})
+
 	if err := fsw.Watch("/etc/hostname", fswatcher.WatchHandler{
 		TreeKey:  "ietf-system:system",
 		ReadFunc: sysreaders.ReadHostname,
