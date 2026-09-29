@@ -355,13 +355,13 @@ Create a keystore entry for your WiFi password (8-63 characters):
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key my-wifi-key</b>
 admin@example:/config/keystore/…/my-wifi-key/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/my-wifi-key/> <b>change cleartext-symmetric-key</b>
+admin@example:/config/keystore/…/my-wifi-key/> <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 admin@example:/config/keystore/…/my-wifi-key/> <b>leave</b>
 </code></pre>
 
-The `change` command prompts for the passphrase interactively and
+The `edit` command prompts for the passphrase interactively and
 handles the base64 encoding required by the keystore automatically.
 
 ### Step 2: Connect to Network
