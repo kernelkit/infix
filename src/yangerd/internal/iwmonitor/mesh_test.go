@@ -1,6 +1,7 @@
 package iwmonitor
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"testing"
@@ -145,5 +146,49 @@ func TestMeshEventsRefresh(t *testing.T) {
 	ev, _ := wpactrl.ParseEvent("<3>CTRL-EVENT-SCAN-RESULTS ")
 	if meshEvent(ev) {
 		t.Errorf("%q is not a mesh event", ev.Name)
+	}
+}
+
+// hostapd serves access points only, so the kernel is not asked.
+func TestKernelStateSkipsHostapd(t *testing.T) {
+	calls := 0
+	m := New(slog.Default())
+	m.meshState = func(string) meshState {
+		calls++
+		return meshState{iftype: "mesh_point"}
+	}
+
+	if ms := m.kernelState(wpactrl.SocketInfo{Daemon: "hostapd"})("wifi0"); ms.iftype != "" || calls != 0 {
+		t.Fatalf("hostapd: iftype %q, %d kernel queries", ms.iftype, calls)
+	}
+	if ms := m.kernelState(wpactrl.SocketInfo{Daemon: "wpa_supplicant"})("wifi0"); ms.iftype != "mesh_point" || calls != 1 {
+		t.Fatalf("wpa_supplicant: iftype %q, %d kernel queries", ms.iftype, calls)
+	}
+}
+
+// Leaving the mesh keeps the mesh-point container, a station that
+// disconnects loses its container.
+func TestDisconnectedMeshStaysMeshPoint(t *testing.T) {
+	fwd := true
+	for _, tc := range []struct {
+		iftype string
+		want   string
+	}{
+		{"mesh_point", `{"mesh-point":{"forwarding":true}}`},
+		{"station", `{}`},
+	} {
+		m := New(slog.Default())
+		m.meshState = func(string) meshState {
+			return meshState{iftype: tc.iftype, forwarding: &fwd}
+		}
+		var got string
+		m.SetOnUpdate(func(_ string, raw json.RawMessage) { got = string(raw) })
+
+		ev, _ := wpactrl.ParseEvent("<3>CTRL-EVENT-DISCONNECTED bssid=02:00:00:00:00:02 reason=3")
+		m.handleAttachEvent(context.Background(), "wifi-test-none", ev)
+
+		if got != tc.want {
+			t.Errorf("%s: published %s, want %s", tc.iftype, got, tc.want)
+		}
 	}
 }

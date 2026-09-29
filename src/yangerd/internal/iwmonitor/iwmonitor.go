@@ -265,7 +265,13 @@ func (m *IWMonitor) handleAttachEvent(ctx context.Context, ifname string, ev wpa
 	case meshEvent(ev):
 		m.refreshInterface(ctx, ifname)
 	case ev.Name == "CTRL-EVENT-DISCONNECTED":
-		m.publishWifi(ifname, nil)
+		// A mesh point stays one after leaving the mesh, it only loses
+		// its mesh id and peers.
+		if m.meshState(ifname).iftype == "mesh_point" {
+			m.refreshInterface(ctx, ifname)
+		} else {
+			m.publishWifi(ifname, nil)
+		}
 	case ev.Name == "CTRL-EVENT-SCAN-RESULTS":
 		m.refreshInterface(ctx, ifname)
 	case ev.Name == "CTRL-EVENT-SIGNAL-CHANGE":
@@ -300,7 +306,7 @@ func (m *IWMonitor) buildWifiData(ctx context.Context, iface string) map[string]
 		}
 	}
 
-	ms := m.meshState(iface)
+	ms := m.kernelState(si)(iface)
 	result := make(map[string]any)
 
 	switch detectMode(si, status, ms.iftype) {
@@ -313,6 +319,15 @@ func (m *IWMonitor) buildWifiData(ctx context.Context, iface string) map[string]
 	}
 
 	return result
+}
+
+// kernelState is how to read the kernel side of an interface.  hostapd
+// only serves access points, so asking nl80211 there is wasted work.
+func (m *IWMonitor) kernelState(si wpactrl.SocketInfo) func(string) meshState {
+	if si.Daemon == "hostapd" {
+		return func(string) meshState { return meshState{} }
+	}
+	return m.meshState
 }
 
 // detectMode picks the operational container.  The kernel iftype is
