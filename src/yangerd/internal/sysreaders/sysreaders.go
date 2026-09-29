@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -159,56 +161,97 @@ func ReadUsers(_ string) (json.RawMessage, error) {
 	})
 }
 
-func ReadDNSResolver(_ string) (json.RawMessage, error) {
-	servers := make([]interface{}, 0)
-	var search []string
-	options := make(map[string]interface{})
-	seen := make(map[string]bool)
+const (
+	resolvHead     = "/etc/resolv.conf.head"
+	resolvIfaceDir = "/run/resolvconf/interfaces"
+)
 
-	for _, path := range []string{"/etc/resolv.conf.head", "/var/lib/misc/resolv.conf"} {
-		data, err := os.ReadFile(path)
+// ReadDNSResolver reports the configured resolvers: the static ones
+// from resolv.conf.head, and the ones DHCP clients handed to resolvconf,
+// one file per interface, with the interface each came from.
+func ReadDNSResolver(_ string) (json.RawMessage, error) {
+	return readDNSResolver(resolvHead, resolvIfaceDir)
+}
+
+func readDNSResolver(head, ifaceDir string) (json.RawMessage, error) {
+	r := resolver{servers: []interface{}{}, options: map[string]interface{}{}, seen: map[string]bool{}}
+
+	if data, err := os.ReadFile(head); err == nil {
+		r.parse(string(data), "static", "")
+	}
+
+	files, _ := filepath.Glob(filepath.Join(ifaceDir, "*"))
+	sort.Strings(files)
+	for _, file := range files {
+		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
-		ParseResolvConf(string(data), &servers, &search, options, seen)
+		r.parse(string(data), "dhcp", resolvconfIface(file))
 	}
 
-	dns := make(map[string]interface{})
-	dns["server"] = servers
-	if len(search) > 0 {
-		dns["search"] = search
+	dns := map[string]interface{}{"server": r.servers}
+	if len(r.search) > 0 {
+		dns["search"] = r.search
 	}
-	if len(options) > 0 {
-		dns["options"] = options
+	if len(r.options) > 0 {
+		dns["options"] = r.options
 	}
 
 	return json.Marshal(map[string]interface{}{"infix-system:dns-resolver": dns})
 }
 
-func ParseResolvConf(data string, servers *[]interface{}, search *[]string, options map[string]interface{}, seen map[string]bool) {
+// resolvconfIface names the interface of a resolvconf file, written by
+// the DHCP client scripts as <ifname>.conf or <ifname>-ipv6.conf.
+func resolvconfIface(file string) string {
+	name := strings.TrimSuffix(filepath.Base(file), ".conf")
+	return strings.TrimSuffix(name, "-ipv6")
+}
+
+type resolver struct {
+	servers []interface{}
+	search  []string
+	options map[string]interface{}
+	seen    map[string]bool
+}
+
+// parse reads resolv.conf syntax.  The DHCP scripts tag each line with
+// "# <ifname>", which names the interface when present.
+func (r *resolver) parse(data, origin, iface string) {
 	for _, line := range strings.Split(data, "\n") {
-		line = strings.TrimSpace(line)
-		switch {
-		case strings.HasPrefix(line, "nameserver"):
-			ip := strings.TrimSpace(strings.TrimPrefix(line, "nameserver"))
-			if ip != "" && ip != "127.0.0.1" && ip != "::1" && !seen[ip] {
-				seen[ip] = true
-				*servers = append(*servers, map[string]interface{}{
-					"address": ip,
-				})
+		line, comment, _ := strings.Cut(line, "#")
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+
+		switch fields[0] {
+		case "nameserver":
+			addr, err := netip.ParseAddr(fields[1])
+			if err != nil || r.seen[addr.String()] {
+				continue
 			}
-		case strings.HasPrefix(line, "search"):
-			*search = append(*search, strings.Fields(line)[1:]...)
-		case strings.HasPrefix(line, "options"):
-			for _, opt := range strings.Fields(line)[1:] {
-				if strings.HasPrefix(opt, "timeout:") {
-					if v, err := strconv.Atoi(strings.TrimPrefix(opt, "timeout:")); err == nil {
-						options["timeout"] = v
-					}
-				} else if strings.HasPrefix(opt, "attempts:") {
-					if v, err := strconv.Atoi(strings.TrimPrefix(opt, "attempts:")); err == nil {
-						options["attempts"] = v
-					}
+			r.seen[addr.String()] = true
+			server := map[string]interface{}{
+				"address": addr.String(),
+				"origin":  origin,
+			}
+			if name := strings.TrimSpace(comment); name != "" && origin == "dhcp" {
+				server["interface"] = name
+			} else if iface != "" {
+				server["interface"] = iface
+			}
+			r.servers = append(r.servers, server)
+		case "search":
+			r.search = append(r.search, fields[1:]...)
+		case "options":
+			for _, opt := range fields[1:] {
+				key, val, ok := strings.Cut(opt, ":")
+				if !ok || (key != "timeout" && key != "attempts") {
+					continue
+				}
+				if v, err := strconv.Atoi(val); err == nil {
+					r.options[key] = v
 				}
 			}
 		}
