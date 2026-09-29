@@ -184,7 +184,9 @@ func liveLoadAvg(fs FileReader) map[string]interface{} {
 }
 
 func liveFilesystems() []interface{} {
-	mounts := []string{"/", "/var", "/cfg"}
+	// /run and /tmp are RAM-backed tmpfs, the scarcest writable storage
+	// on small boards.
+	mounts := []string{"/", "/var", "/cfg", "/run", "/tmp"}
 	var filesystems []interface{}
 
 	for _, mount := range mounts {
