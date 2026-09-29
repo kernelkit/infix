@@ -5,7 +5,8 @@
 // commands (e.g. "show ip route json") against zebra without forking
 // vtysh.  The command is written NUL-terminated; the daemon streams the
 // command output followed by a four-byte trailer of three NUL bytes and a
-// one-byte CLI return code (\0\0\0<ret>).
+// one-byte CLI return code (\0\0\0<ret>).  Each query enters the
+// enable node first, as vtysh does.
 package frrvty
 
 import (
@@ -50,7 +51,18 @@ func (c *Client) Query(ctx context.Context, command string) ([]byte, error) {
 		_ = conn.SetDeadline(deadline)
 	}
 
-	// vtysh writes the command including its trailing NUL terminator.
+	// A fresh vty starts in the view node, but some daemons, bfdd for
+	// one, install their show commands in the enable node only.  vtysh
+	// sends "enable" first for the same reason.
+	if _, err := send(conn, "enable"); err != nil {
+		return nil, err
+	}
+	return send(conn, command)
+}
+
+// send writes one NUL-terminated command and reads its reply up to the
+// \0\0\0<ret> trailer, which it strips.
+func send(conn net.Conn, command string) ([]byte, error) {
 	if _, err := conn.Write(append([]byte(command), 0)); err != nil {
 		return nil, fmt.Errorf("write %q: %w", command, err)
 	}
@@ -61,9 +73,8 @@ func (c *Client) Query(ctx context.Context, command string) ([]byte, error) {
 		n, rerr := conn.Read(tmp)
 		if n > 0 {
 			buf.Write(tmp[:n])
-			// The response ends with \0\0\0<ret>.  The payload is
-			// text/JSON and never contains NUL, so testing the last
-			// four accumulated bytes is unambiguous.
+			// The payload is text/JSON and never contains NUL, so
+			// testing the last four accumulated bytes is unambiguous.
 			if b := buf.Bytes(); len(b) >= 4 &&
 				b[len(b)-4] == 0 && b[len(b)-3] == 0 && b[len(b)-2] == 0 {
 				payload := b[:len(b)-4]

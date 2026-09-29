@@ -1,6 +1,7 @@
 package frrvty
 
 import (
+	"bytes"
 	"context"
 	"net"
 	"path/filepath"
@@ -9,13 +10,21 @@ import (
 	"time"
 )
 
-// fakeZebra serves a single vty connection: it reads the NUL-terminated
-// command, then writes the configured reply followed by the \0\0\0<ret>
-// trailer.
+// fakeZebra serves a single vty connection like an FRR daemon whose show
+// commands live in the view node: "enable" and the command both work.
 func fakeZebra(t *testing.T, reply string, ret byte) string {
+	return fakeDaemon(t, reply, ret, false)
+}
+
+// fakeDaemon serves a single vty connection.  It answers each
+// NUL-terminated command with a \0\0\0<ret> trailer: "enable" with an
+// empty reply, anything else with the configured reply.  With
+// enableOnly it behaves like bfdd, whose show commands exist only in
+// the enable node, and rejects a command sent before "enable".
+func fakeDaemon(t *testing.T, reply string, ret byte, enableOnly bool) string {
 	t.Helper()
 
-	sock := filepath.Join(t.TempDir(), "zebra.vty")
+	sock := filepath.Join(t.TempDir(), "daemon.vty")
 	ln, err := net.Listen("unix", sock)
 	if err != nil {
 		t.Fatalf("listen: %v", err)
@@ -31,20 +40,38 @@ func fakeZebra(t *testing.T, reply string, ret byte) string {
 		}
 		defer conn.Close()
 
-		// Read the NUL-terminated command.
+		enabled := false
+		var pending []byte
 		buf := make([]byte, 256)
 		for {
 			n, err := conn.Read(buf)
-			if n > 0 && buf[n-1] == 0 {
-				break
+			pending = append(pending, buf[:n]...)
+			for {
+				i := bytes.IndexByte(pending, 0)
+				if i < 0 {
+					break
+				}
+				cmd := string(pending[:i])
+				pending = pending[i+1:]
+
+				var out []byte
+				switch {
+				case cmd == "enable":
+					enabled = true
+					out = []byte{0, 0, 0, 0}
+				case enableOnly && !enabled:
+					out = append([]byte("% Unknown command: "+cmd+"\n"), 0, 0, 0, 2)
+				default:
+					out = append([]byte(reply), 0, 0, 0, ret)
+				}
+				if _, werr := conn.Write(out); werr != nil {
+					return
+				}
 			}
 			if err != nil {
 				return
 			}
 		}
-
-		out := append([]byte(reply), 0, 0, 0, ret)
-		_, _ = conn.Write(out)
 	}()
 
 	t.Cleanup(func() {
@@ -52,6 +79,20 @@ func fakeZebra(t *testing.T, reply string, ret byte) string {
 		wg.Wait()
 	})
 	return sock
+}
+
+// bfdd installs "show bfd peers" in the enable node only, so the query
+// must enter it first or the daemon answers "Unknown command".
+func TestQueryEntersEnableNode(t *testing.T) {
+	sock := fakeDaemon(t, `[{"peer":"192.168.100.2","status":"up"}]`, 0, true)
+
+	out, err := New(sock).Query(context.Background(), "show bfd peers json")
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if got := string(out); got != `[{"peer":"192.168.100.2","status":"up"}]` {
+		t.Fatalf("output = %q", got)
+	}
 }
 
 func TestQueryStripsTrailer(t *testing.T) {
