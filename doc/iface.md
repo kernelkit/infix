@@ -187,6 +187,46 @@ connected routes (or add `lo0` as an OSPF interface):
 <pre class="cli"><code>admin@example:/config/routing/…/ospf/> <b>set redistribute connected</b>
 </code></pre>
 
+## Operational Status
+
+The operational status of an interface also tells when it entered its
+current state, and how it is stacked with other interfaces.  Here a
+VLAN interface on top of a bridge port:
+
+<pre class="cli"><code>admin@example:/> <b>show interfaces name vlan10</b>
+name               : vlan10
+type               : vlan
+index              : 14
+mtu                : 1500
+operational status : up
+last change        : 3 hours ago
+ip forwarding      : disabled
+lower-layer-if     : br0
+…
+admin@example:/> <b>show interfaces name br0</b>
+name               : br0
+type               : bridge
+index              : 13
+mtu                : 1500
+operational status : up
+last change        : 3 hours ago
+ip forwarding      : disabled
+lower-layer-if     : eth0
+                     eth1
+higher-layer-if    : vlan10
+…
+</code></pre>
+
+- `last change`: the time the interface entered its current operational
+  state, `last-change` in `ietf-interfaces`.  Useful for telling a link
+  that flapped a minute ago from one that has been up since boot
+- `lower-layer-if`: the interfaces directly beneath this one, e.g., the
+  ports of a bridge, or the parent of a VLAN interface
+- `higher-layer-if`: the interfaces stacked directly on top of this one
+
+The same leaves are available over NETCONF and RESTCONF, in
+`/interfaces/interface[name='br0']/` of the operational datastore.
+
 
 [^1]: A YANG deviation was previously used to make it possible to set
     `phys-address`, but this has been replaced with the more flexible
