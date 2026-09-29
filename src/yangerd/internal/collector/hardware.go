@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -479,12 +480,17 @@ func sensorComponent(name string, value int, valueType, valueScale, label string
 	return component
 }
 
-func (c *HardwareCollector) listDir(ctx context.Context, dir string) ([]string, error) {
-	out, err := c.cmd.Run(ctx, "ls", dir)
+// listDir names the entries of dir, sorted as the filesystem lists them.
+func (c *HardwareCollector) listDir(dir string) ([]string, error) {
+	matches, err := c.fs.Glob(dir + "/*")
 	if err != nil {
 		return nil, err
 	}
-	return splitLines(string(out)), nil
+	names := make([]string, 0, len(matches))
+	for _, match := range matches {
+		names = append(names, filepath.Base(match))
+	}
+	return names, nil
 }
 
 func (c *HardwareCollector) readSensorString(path string) (string, bool) {
@@ -585,7 +591,7 @@ func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context, mirrore
 	deviceSensors := make(map[string][]map[string]interface{})
 	order := make([]string, 0) // devices in discovery order, like the kernel lists them
 
-	hwmonEntries, err := c.listDir(ctx, "/sys/class/hwmon")
+	hwmonEntries, err := c.listDir("/sys/class/hwmon")
 	if err != nil {
 		return components
 	}
@@ -618,7 +624,7 @@ func (c *HardwareCollector) hwmon_sensor_components(ctx context.Context, mirrore
 			order = append(order, baseName)
 		}
 
-		entries, err := c.listDir(ctx, hwmonPath)
+		entries, err := c.listDir(hwmonPath)
 		if err != nil {
 			continue
 		}
@@ -844,7 +850,7 @@ func adopt_wifi_sensors(components []interface{}, wifiInfo map[string]map[string
 func (c *HardwareCollector) thermal_sensor_components(ctx context.Context) []interface{} {
 	components := make([]interface{}, 0)
 
-	entries, err := c.listDir(ctx, "/sys/class/thermal")
+	entries, err := c.listDir("/sys/class/thermal")
 	if err != nil {
 		return components
 	}
@@ -1152,11 +1158,8 @@ func (c *HardwareCollector) gps_receiver_components(ctx context.Context) []inter
 	components := make([]interface{}, 0)
 	gpsDevices := make(map[string]map[string]string)
 
-	for i := 0; i < 4; i++ {
-		devPath := fmt.Sprintf("/dev/gps%d", i)
-		if _, err := c.cmd.Run(ctx, "ls", devPath); err != nil {
-			continue
-		}
+	devPaths, _ := c.fs.Glob("/dev/gps[0-3]")
+	for _, devPath := range devPaths {
 		actual, err := c.cmd.Run(ctx, "readlink", "-f", devPath)
 		if err != nil {
 			continue
@@ -1166,7 +1169,7 @@ func (c *HardwareCollector) gps_receiver_components(ctx context.Context) []inter
 			continue
 		}
 		gpsDevices[actualPath] = map[string]string{
-			"name":    fmt.Sprintf("gps%d", i),
+			"name":    filepath.Base(devPath),
 			"symlink": devPath,
 		}
 	}
@@ -1303,12 +1306,8 @@ func (c *HardwareCollector) gps_receiver_components(ctx context.Context) []inter
 		gpsData["satellites-visible"] = satVis
 		gpsData["satellites-used"] = satUsed
 
-		ppsPath := fmt.Sprintf("/dev/pps%s", strings.TrimPrefix(name, "gps"))
-		if _, err := c.cmd.Run(ctx, "ls", ppsPath); err == nil {
-			gpsData["pps-available"] = true
-		} else {
-			gpsData["pps-available"] = false
-		}
+		pps, _ := c.fs.Glob(fmt.Sprintf("/dev/pps%s", strings.TrimPrefix(name, "gps")))
+		gpsData["pps-available"] = len(pps) > 0
 
 		component["infix-hardware:gps-receiver"] = gpsData
 		components = append(components, component)

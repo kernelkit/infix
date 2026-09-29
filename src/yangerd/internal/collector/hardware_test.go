@@ -175,16 +175,16 @@ func TestHardwareUSBPorts(t *testing.T) {
 }
 
 func TestHardwareHwmonTemp(t *testing.T) {
-	runner := &testutil.MockRunner{Results: map[string][]byte{
-		"ls /sys/class/hwmon":        []byte("hwmon0\n"),
-		"ls /sys/class/hwmon/hwmon0": []byte("name\ntemp1_input\ntemp1_label\n"),
-	}, Errors: map[string]error{}}
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
 	fs := &testutil.MockFileReader{Files: map[string][]byte{
 		"/run/system.json":                    []byte(`{}`),
 		"/sys/class/hwmon/hwmon0/name":        []byte("cpu_thermal\n"),
 		"/sys/class/hwmon/hwmon0/temp1_input": []byte("42000\n"),
 		"/sys/class/hwmon/hwmon0/temp1_label": []byte("cpu_temp\n"),
-	}, Globs: map[string][]string{}}
+	}, Globs: map[string][]string{
+		"/sys/class/hwmon/*":        {"/sys/class/hwmon/hwmon0"},
+		"/sys/class/hwmon/hwmon0/*": {"/sys/class/hwmon/hwmon0/name", "/sys/class/hwmon/hwmon0/temp1_input", "/sys/class/hwmon/hwmon0/temp1_label"},
+	}}
 
 	components := collectHardware(t, newHardwareCollector(runner, fs))
 	if !containsComponentWithClass(components, "iana-hardware:sensor") {
@@ -207,15 +207,15 @@ func TestHardwareHwmonTemp(t *testing.T) {
 }
 
 func TestHardwareHwmonFan(t *testing.T) {
-	runner := &testutil.MockRunner{Results: map[string][]byte{
-		"ls /sys/class/hwmon":        []byte("hwmon1\n"),
-		"ls /sys/class/hwmon/hwmon1": []byte("name\nfan1_input\n"),
-	}, Errors: map[string]error{}}
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
 	fs := &testutil.MockFileReader{Files: map[string][]byte{
 		"/run/system.json":                   []byte(`{}`),
 		"/sys/class/hwmon/hwmon1/name":       []byte("pwmfan\n"),
 		"/sys/class/hwmon/hwmon1/fan1_input": []byte("3200\n"),
-	}, Globs: map[string][]string{}}
+	}, Globs: map[string][]string{
+		"/sys/class/hwmon/*":        {"/sys/class/hwmon/hwmon1"},
+		"/sys/class/hwmon/hwmon1/*": {"/sys/class/hwmon/hwmon1/name", "/sys/class/hwmon/hwmon1/fan1_input"},
+	}}
 
 	components := collectHardware(t, newHardwareCollector(runner, fs))
 	sensor := getComponentByName(components, "pwmfan")
@@ -235,16 +235,16 @@ func TestHardwareHwmonFan(t *testing.T) {
 }
 
 func TestHardwareHwmonVoltage(t *testing.T) {
-	runner := &testutil.MockRunner{Results: map[string][]byte{
-		"ls /sys/class/hwmon":        []byte("hwmon2\n"),
-		"ls /sys/class/hwmon/hwmon2": []byte("name\nin1_input\nin1_label\n"),
-	}, Errors: map[string]error{}}
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
 	fs := &testutil.MockFileReader{Files: map[string][]byte{
 		"/run/system.json":                  []byte(`{}`),
 		"/sys/class/hwmon/hwmon2/name":      []byte("ina3221\n"),
 		"/sys/class/hwmon/hwmon2/in1_input": []byte("12000\n"),
 		"/sys/class/hwmon/hwmon2/in1_label": []byte("VCC\n"),
-	}, Globs: map[string][]string{}}
+	}, Globs: map[string][]string{
+		"/sys/class/hwmon/*":        {"/sys/class/hwmon/hwmon2"},
+		"/sys/class/hwmon/hwmon2/*": {"/sys/class/hwmon/hwmon2/name", "/sys/class/hwmon/hwmon2/in1_input", "/sys/class/hwmon/hwmon2/in1_label"},
+	}}
 
 	components := collectHardware(t, newHardwareCollector(runner, fs))
 	sensor := getComponentByName(components, "ina3221-VCC")
@@ -261,10 +261,7 @@ func TestHardwareHwmonVoltage(t *testing.T) {
 }
 
 func TestHardwareHwmonMultiSensor(t *testing.T) {
-	runner := &testutil.MockRunner{Results: map[string][]byte{
-		"ls /sys/class/hwmon":        []byte("hwmon3\n"),
-		"ls /sys/class/hwmon/hwmon3": []byte("name\ntemp1_input\ntemp1_label\nfan1_input\nfan1_label\ncurr1_input\npower1_input\n"),
-	}, Errors: map[string]error{}}
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
 	fs := &testutil.MockFileReader{Files: map[string][]byte{
 		"/run/system.json":                     []byte(`{}`),
 		"/sys/class/hwmon/hwmon3/name":         []byte("sfp_2\n"),
@@ -274,7 +271,10 @@ func TestHardwareHwmonMultiSensor(t *testing.T) {
 		"/sys/class/hwmon/hwmon3/fan1_label":   []byte("fan1\n"),
 		"/sys/class/hwmon/hwmon3/curr1_input":  []byte("1500\n"),
 		"/sys/class/hwmon/hwmon3/power1_input": []byte("2500000\n"),
-	}, Globs: map[string][]string{}}
+	}, Globs: map[string][]string{
+		"/sys/class/hwmon/*":        {"/sys/class/hwmon/hwmon3"},
+		"/sys/class/hwmon/hwmon3/*": {"/sys/class/hwmon/hwmon3/name", "/sys/class/hwmon/hwmon3/temp1_input", "/sys/class/hwmon/hwmon3/temp1_label", "/sys/class/hwmon/hwmon3/fan1_input", "/sys/class/hwmon/hwmon3/fan1_label", "/sys/class/hwmon/hwmon3/curr1_input", "/sys/class/hwmon/hwmon3/power1_input"},
+	}}
 
 	components := collectHardware(t, newHardwareCollector(runner, fs))
 	parent := getComponentByName(components, "sfp2")
@@ -311,14 +311,14 @@ func TestHardwareHwmonMultiSensor(t *testing.T) {
 }
 
 func TestHardwareThermalZone(t *testing.T) {
-	runner := &testutil.MockRunner{Results: map[string][]byte{
-		"ls /sys/class/thermal": []byte("thermal_zone0\n"),
-	}, Errors: map[string]error{}}
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
 	fs := &testutil.MockFileReader{Files: map[string][]byte{
 		"/run/system.json":                      []byte(`{}`),
 		"/sys/class/thermal/thermal_zone0/type": []byte("cpu-thermal\n"),
 		"/sys/class/thermal/thermal_zone0/temp": []byte("39000\n"),
-	}, Globs: map[string][]string{}}
+	}, Globs: map[string][]string{
+		"/sys/class/thermal/*": {"/sys/class/thermal/thermal_zone0"},
+	}}
 
 	components := collectHardware(t, newHardwareCollector(runner, fs))
 	sensor := getComponentByName(components, "cpu-thermal")
@@ -391,12 +391,7 @@ func TestHardwareGPSDeviceNotFound(t *testing.T) {
 	// Bug 5: When /dev/gps* doesn't exist, readlink -f still succeeds
 	// (returns canonical form of non-existent path). Verify the existence
 	// check prevents phantom GPS components.
-	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{
-		"ls /dev/gps0": fmt.Errorf("No such file or directory"),
-		"ls /dev/gps1": fmt.Errorf("No such file or directory"),
-		"ls /dev/gps2": fmt.Errorf("No such file or directory"),
-		"ls /dev/gps3": fmt.Errorf("No such file or directory"),
-	}}
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
 	fs := &testutil.MockFileReader{Files: map[string][]byte{
 		"/run/system.json": []byte(`{}`),
 	}, Globs: map[string][]string{}}
@@ -419,13 +414,7 @@ func TestHardwareGPSDeviceNotFound(t *testing.T) {
 // hwmon mirror of the zone is skipped, and the VPD board named "cpu"
 // does not collide with the cpu component.
 func TestHardwareSyntheticSensors(t *testing.T) {
-	runner := &testutil.MockRunner{Results: map[string][]byte{
-		"ls /sys/class/hwmon":        []byte("hwmon0\nhwmon1\nhwmon2\n"),
-		"ls /sys/class/hwmon/hwmon0": []byte("name\ntemp1_input\n"),
-		"ls /sys/class/hwmon/hwmon1": []byte("name\nfan1_input\n"),
-		"ls /sys/class/hwmon/hwmon2": []byte("name\ntemp1_input\n"),
-		"ls /sys/class/thermal":      []byte("thermal_zone0\ncooling_device0\n"),
-	}, Errors: map[string]error{}}
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
 	fs := &testutil.MockFileReader{Files: map[string][]byte{
 		"/run/system.json": []byte(`{
 			"vendor": "Microchip",
@@ -451,7 +440,13 @@ func TestHardwareSyntheticSensors(t *testing.T) {
 		"/sys/class/hwmon/hwmon2/temp1_input":   []byte("48000\n"),
 		"/sys/class/thermal/thermal_zone0/type": []byte("cpu-thermal\n"),
 		"/sys/class/thermal/thermal_zone0/temp": []byte("48000\n"),
-	}, Globs: map[string][]string{}}
+	}, Globs: map[string][]string{
+		"/sys/class/hwmon/*":        {"/sys/class/hwmon/hwmon0", "/sys/class/hwmon/hwmon1", "/sys/class/hwmon/hwmon2"},
+		"/sys/class/hwmon/hwmon0/*": {"/sys/class/hwmon/hwmon0/name", "/sys/class/hwmon/hwmon0/temp1_input"},
+		"/sys/class/hwmon/hwmon1/*": {"/sys/class/hwmon/hwmon1/name", "/sys/class/hwmon/hwmon1/fan1_input"},
+		"/sys/class/hwmon/hwmon2/*": {"/sys/class/hwmon/hwmon2/name", "/sys/class/hwmon/hwmon2/temp1_input"},
+		"/sys/class/thermal/*":      {"/sys/class/thermal/thermal_zone0", "/sys/class/thermal/cooling_device0"},
+	}}
 
 	components := collectHardware(t, newHardwareCollector(runner, fs))
 
@@ -558,16 +553,16 @@ func TestHardwareBandNameOptional(t *testing.T) {
 // Sensor readings come from the GET, not the last poll: with Live
 // registered as provider, a changed sysfs value shows without Collect.
 func TestHardwareLiveReadsSensorsOnGet(t *testing.T) {
-	runner := &testutil.MockRunner{Results: map[string][]byte{
-		"ls /sys/class/hwmon":        []byte("hwmon0\n"),
-		"ls /sys/class/hwmon/hwmon0": []byte("name\ntemp1_input\n"),
-		"ls /sys/class/thermal":      []byte(""),
-	}, Errors: map[string]error{}}
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
 	fs := &testutil.MockFileReader{Files: map[string][]byte{
 		"/run/system.json":                    []byte(`{"vendor": "ACME", "product-name": "Box"}`),
 		"/sys/class/hwmon/hwmon0/name":        []byte("s5_temp\n"),
 		"/sys/class/hwmon/hwmon0/temp1_input": []byte("40000\n"),
-	}, Globs: map[string][]string{}}
+	}, Globs: map[string][]string{
+		"/sys/class/hwmon/*":        {"/sys/class/hwmon/hwmon0"},
+		"/sys/class/hwmon/hwmon0/*": {"/sys/class/hwmon/hwmon0/name", "/sys/class/hwmon/hwmon0/temp1_input"},
+		"/sys/class/thermal/*":      {},
+	}}
 
 	tr := tree.New()
 	c := newHardwareCollector(runner, fs)
