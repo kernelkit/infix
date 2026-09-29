@@ -257,39 +257,6 @@ Both are regenerated on factory reset when their keys are empty.
   },
 ```
 
-#### IETF NETCONF Server
-
-```json
-  "ietf-netconf-server:netconf-server": {
-    "listen": {
-      "endpoints": {
-        "endpoint": [
-          {
-            "name": "default-ssh",
-            "ssh": {
-              "tcp-server-parameters": {
-                "local-address": "::"
-              },
-              "ssh-server-parameters": {
-                "server-identity": {
-                  "host-key": [
-                    {
-                      "name": "default-key",
-                      "public-key": {
-                        "central-keystore-reference": "genkey"
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        ]
-      }
-    }
-  },
-```
-
 #### Infix Services
 
 ```json
@@ -298,6 +265,7 @@ Both are regenerated on factory reset when their keys are empty.
     "hostkey": [
       "genkey"
     ],
+    "netconf": { "enabled": true },
     "listen": [
       {
         "name": "ipv4",
