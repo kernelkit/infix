@@ -104,7 +104,7 @@ func TestTransformEmptyInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ifaces := mustInterfaces(t, Transform(tt.linkData, tt.addrData, tt.stats, nil, nil))
+			ifaces := mustInterfaces(t, Transform(tt.linkData, tt.addrData, nil, nil))
 			if len(ifaces) != 0 {
 				t.Fatalf("expected empty interface list, got %d", len(ifaces))
 			}
@@ -123,7 +123,7 @@ func TestTransformSingleLoopback(t *testing.T) {
 		"statistics": map[string]any{},
 	}}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 	if len(ifaces) != 1 {
 		t.Fatalf("expected 1 interface, got %d", len(ifaces))
 	}
@@ -161,7 +161,7 @@ func TestTransformSingleEthernetWithIPv4IPv6(t *testing.T) {
 
 	fc := &mockFileChecker{files: map[string]string{"/proc/sys/net/ipv6/conf/eth0/mtu": "1400\n"}}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), mustRaw(t, addr), nil, nil, fc))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), mustRaw(t, addr), nil, fc))
 	eth0 := mustIfaceByName(t, ifaces, "eth0")
 
 	if eth0["type"] != "infix-if-type:ethernet" {
@@ -202,17 +202,13 @@ func TestTransformStatisticsCountersAsStrings(t *testing.T) {
 		"flags":     []any{"UP"},
 		"link_type": "ether",
 		"operstate": "UP",
-	}}
-
-	stats := []map[string]any{{
-		"ifname": "eth1",
 		"stats64": map[string]any{
 			"rx": map[string]any{"bytes": uint64(1234567890)},
 			"tx": map[string]any{"bytes": uint64(9876543210)},
 		},
 	}}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, mustRaw(t, stats), nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 	eth1 := mustIfaceByName(t, ifaces, "eth1")
 	st, ok := eth1["statistics"].(map[string]any)
 	if !ok {
@@ -241,7 +237,7 @@ func TestTransformVLANAugment(t *testing.T) {
 		},
 	}}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 	vlan := mustIfaceByName(t, ifaces, "eth0.100")
 
 	if vlan["type"] != "infix-if-type:vlan" {
@@ -267,7 +263,7 @@ func TestTransformVethAugment(t *testing.T) {
 		"linkinfo":  map[string]any{"info_kind": "veth"},
 	}}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 	veth := mustIfaceByName(t, ifaces, "veth0")
 	v, ok := veth["infix-interfaces:veth"].(map[string]any)
 	if !ok || v["peer"] != "veth1" {
@@ -300,7 +296,7 @@ func TestTransformGREAndVXLANAugments(t *testing.T) {
 		},
 	}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 
 	gre := mustIfaceByName(t, ifaces, "gre1")
 	if gre["type"] != "infix-if-type:gre" {
@@ -364,7 +360,7 @@ func TestTransformLAGAugmentModes(t *testing.T) {
 		},
 	}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 
 	bond0 := mustIfaceByName(t, ifaces, "bond0")
 	b0 := bond0["infix-interfaces:lag"].(map[string]any)
@@ -407,7 +403,7 @@ func TestTransformBridgePortLowerLayer(t *testing.T) {
 		},
 	}}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 	eth2 := mustIfaceByName(t, ifaces, "eth2")
 	lower := eth2["infix-interfaces:bridge-port"].(map[string]any)
 	if lower["bridge"] != "br0" {
@@ -439,7 +435,7 @@ func TestTransformLagPortLowerLayer(t *testing.T) {
 		},
 	}}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 	eth3 := mustIfaceByName(t, ifaces, "eth3")
 	lower := eth3["infix-interfaces:lag-port"].(map[string]any)
 	if lower["lag"] != "bond0" || lower["state"] != "active" || lower["link-failures"] != float64(5) {
@@ -459,7 +455,7 @@ func TestTransformFilteredInterfaces(t *testing.T) {
 		{"ifname": "eth9", "ifindex": 99, "flags": []any{"UP"}, "link_type": "ether", "operstate": "UP"},
 	}
 
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil))
 	if len(ifaces) != 1 {
 		t.Fatalf("expected only one surviving interface, got %d", len(ifaces))
 	}
@@ -478,7 +474,7 @@ func TestTransformWiFiType(t *testing.T) {
 	}}
 
 	fc := &mockFileChecker{exists: map[string]bool{"/sys/class/net/wlan0/wireless/": true}}
-	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, fc))
+	ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, fc))
 	wlan0 := mustIfaceByName(t, ifaces, "wlan0")
 	if wlan0["type"] != "infix-if-type:wifi" {
 		t.Fatalf("wlan0 type = %v", wlan0["type"])
@@ -808,7 +804,7 @@ func TestNeighbors(t *testing.T) {
 			{"dst": "2001:db8::1", "dev": "eth0", "lladdr": "aa:bb:cc:dd:ee:01", "state": []any{"STALE"}},
 		}
 
-		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, mustRaw(t, neighs), nil))
+		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, mustRaw(t, neighs), nil))
 		eth0 := mustIfaceByName(t, ifaces, "eth0")
 
 		ipv4, ok := eth0["ietf-ip:ipv4"].(map[string]any)
@@ -838,7 +834,7 @@ func TestNeighbors(t *testing.T) {
 			{"dst": "2001:db8::1", "dev": "eth0", "lladdr": "aa:bb:cc:dd:ee:01", "state": []any{"STALE"}, "router": true},
 		}
 
-		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, mustRaw(t, neighs), nil))
+		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, mustRaw(t, neighs), nil))
 		eth0 := mustIfaceByName(t, ifaces, "eth0")
 
 		ipv6, ok := eth0["ietf-ip:ipv6"].(map[string]any)
@@ -867,63 +863,11 @@ func TestNeighbors(t *testing.T) {
 			{"dst": "192.168.1.1", "dev": "eth0", "state": []any{"INCOMPLETE"}},
 		}
 
-		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, mustRaw(t, neighs), nil))
+		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, mustRaw(t, neighs), nil))
 		eth0 := mustIfaceByName(t, ifaces, "eth0")
 
 		if _, ok := eth0["ietf-ip:ipv4"]; ok {
 			t.Fatalf("should not have ipv4 with no valid neighbors: %#v", eth0)
-		}
-	})
-}
-
-func TestDedupByIfindex(t *testing.T) {
-	t.Run("keeps UP over DOWN for same ifindex", func(t *testing.T) {
-		link := []map[string]any{
-			{"ifindex": 2, "ifname": "eth0", "flags": []any{}, "link_type": "ether", "operstate": "DOWN", "address": "02:00:00:00:00:01"},
-			{"ifindex": 2, "ifname": "e1", "flags": []any{"UP"}, "link_type": "ether", "operstate": "UP", "address": "02:00:00:00:00:01"},
-		}
-		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
-		if len(ifaces) != 1 {
-			t.Fatalf("expected 1 interface after dedup, got %d", len(ifaces))
-		}
-		if ifaces[0]["name"] != "e1" {
-			t.Fatalf("expected e1 to survive dedup, got %v", ifaces[0]["name"])
-		}
-	})
-
-	t.Run("keeps first when both DOWN", func(t *testing.T) {
-		link := []map[string]any{
-			{"ifindex": 3, "ifname": "a0", "flags": []any{}, "link_type": "ether", "operstate": "DOWN"},
-			{"ifindex": 3, "ifname": "a1", "flags": []any{}, "link_type": "ether", "operstate": "DOWN"},
-		}
-		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
-		if len(ifaces) != 1 {
-			t.Fatalf("expected 1 interface after dedup, got %d", len(ifaces))
-		}
-		if ifaces[0]["name"] != "a0" {
-			t.Fatalf("expected a0 to survive dedup, got %v", ifaces[0]["name"])
-		}
-	})
-
-	t.Run("different ifindex not deduped", func(t *testing.T) {
-		link := []map[string]any{
-			{"ifindex": 1, "ifname": "lo", "flags": []any{"LOOPBACK", "UP"}, "link_type": "loopback", "operstate": "UNKNOWN"},
-			{"ifindex": 2, "ifname": "e1", "flags": []any{"UP"}, "link_type": "ether", "operstate": "UP"},
-		}
-		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
-		if len(ifaces) != 2 {
-			t.Fatalf("expected 2 interfaces, got %d", len(ifaces))
-		}
-	})
-
-	t.Run("zero ifindex entries kept as-is", func(t *testing.T) {
-		link := []map[string]any{
-			{"ifname": "x0", "flags": []any{"UP"}, "link_type": "ether", "operstate": "UP"},
-			{"ifname": "x1", "flags": []any{"UP"}, "link_type": "ether", "operstate": "UP"},
-		}
-		ifaces := mustInterfaces(t, Transform(mustRaw(t, link), nil, nil, nil, nil))
-		if len(ifaces) != 2 {
-			t.Fatalf("expected 2 interfaces (zero ifindex not deduped), got %d", len(ifaces))
 		}
 	})
 }
@@ -943,7 +887,7 @@ func TestLayers(t *testing.T) {
 		"/sys/class/net/eth0.10": {"lower_eth0"},
 	}}
 
-	ifaces := mustInterfaces(t, Transform(links, nil, nil, nil, fc))
+	ifaces := mustInterfaces(t, Transform(links, nil, nil, fc))
 
 	want := map[string][2][]string{
 		"br0":     {nil, {"eth0"}},
@@ -969,4 +913,30 @@ func toStrings(v any) []string {
 		out = append(out, e.(string))
 	}
 	return out
+}
+
+// Counters above 2^53 must come out exact.
+func TestTransformCounterPrecision(t *testing.T) {
+	link := json.RawMessage(`[{"ifindex":2,"ifname":"eth0","flags":["UP"],"link_type":"ether","operstate":"UP",` +
+		`"stats64":{"rx":{"bytes":18446744073709551615},"tx":{"bytes":9007199254740993}}}]`)
+	eth0 := mustIfaceByName(t, mustInterfaces(t, Transform(link, nil, nil, nil)), "eth0")
+	st := eth0["statistics"].(map[string]any)
+	if st["in-octets"] != "18446744073709551615" || st["out-octets"] != "9007199254740993" {
+		t.Fatalf("counters lost precision: %v / %v", st["in-octets"], st["out-octets"])
+	}
+}
+
+func TestIsEthernet(t *testing.T) {
+	for raw, want := range map[string]bool{
+		`[{"ifname":"eth0","link_type":"ether"}]`:                                  true,
+		`[{"ifname":"e1","link_type":"ether","linkinfo":{"info_kind":"dsa"}}]`:     true,
+		`[{"ifname":"br0","link_type":"ether","linkinfo":{"info_kind":"bridge"}}]`: false,
+		`[{"ifname":"veth0","link_type":"ether","linkinfo":{"info_kind":"veth"}}]`: false,
+		`[{"ifname":"lo","link_type":"loopback"}]`:                                 false,
+		`[]`: false,
+	} {
+		if got := IsEthernet(json.RawMessage(raw), nil); got != want {
+			t.Errorf("IsEthernet(%s) = %v, want %v", raw, got, want)
+		}
+	}
 }

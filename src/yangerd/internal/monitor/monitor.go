@@ -446,7 +446,7 @@ func (m *NLMonitor) rebuild() {
 	linksCopy := append(json.RawMessage{}, m.links...)
 	addrsCopy := append(json.RawMessage{}, m.addrs...)
 	neighsCopy := append(json.RawMessage{}, m.neighs...)
-	doc := iface.Transform(linksCopy, addrsCopy, linksCopy, neighsCopy, m.fc)
+	doc := iface.Transform(linksCopy, addrsCopy, neighsCopy, m.fc)
 	eth := copyStringMap(m.ethernet)
 	wfi := copyStringMap(m.wifi)
 	fdb := copyStringMap(m.fdb)

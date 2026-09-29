@@ -3,6 +3,7 @@
 package iface
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -26,10 +27,9 @@ type FileChecker interface {
 // neighData is the output of `ip -json neigh show` — an array of objects
 // with keys: dst, dev, lladdr, state (array of strings like "REACHABLE",
 // "STALE", "PERMANENT", etc.).  May be nil if unavailable.
-func Transform(linkData, addrData, statsData, neighData json.RawMessage, fc FileChecker) json.RawMessage {
-	links := dedup(decodeObjects(linkData))
+func Transform(linkData, addrData, neighData json.RawMessage, fc FileChecker) json.RawMessage {
+	links := decodeObjects(linkData)
 	addrs := decodeObjects(addrData)
-	stats := decodeObjects(statsData)
 	neighs := decodeObjects(neighData)
 
 	addrByName := make(map[string]map[string]any, len(addrs))
@@ -39,15 +39,6 @@ func Transform(linkData, addrData, statsData, neighData json.RawMessage, fc File
 			continue
 		}
 		addrByName[ifname] = addr
-	}
-
-	statsByName := make(map[string]map[string]any, len(stats))
-	for _, st := range stats {
-		ifname := getString(st, "ifname")
-		if ifname == "" {
-			continue
-		}
-		statsByName[ifname] = st
 	}
 
 	neighByName := make(map[string][]map[string]any)
@@ -74,12 +65,6 @@ func Transform(linkData, addrData, statsData, neighData json.RawMessage, fc File
 		ipaddr, ok := addrByName[ifname]
 		if !ok {
 			ipaddr = map[string]any{}
-		}
-
-		if st, ok := statsByName[ifname]; ok {
-			if stat64, ok := st["stats64"]; ok {
-				iplink["stats64"] = stat64
-			}
 		}
 
 		iface := interfaceCommon(iplink, ipaddr, neighByName[ifname], fc)
@@ -147,8 +132,12 @@ func decodeObjects(raw json.RawMessage) []map[string]any {
 		return nil
 	}
 
+	// Numbers stay json.Number: counter64 values above 2^53 must not
+	// pass through a float64.
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
 	var entries []any
-	if err := json.Unmarshal(raw, &entries); err != nil {
+	if err := dec.Decode(&entries); err != nil {
 		return nil
 	}
 
@@ -210,31 +199,6 @@ func layers(ifname string, links map[string]map[string]any, fc FileChecker) ([]s
 	return higher, lower
 }
 
-// dedup removes duplicate link entries that share the same ifindex.
-// When an interface is renamed (e.g. eth0 → e1), ip -json may report
-// both the old and new names with the same ifindex.  We keep the entry
-// whose operstate is "UP", or the last one seen if neither is up.
-func dedup(links []map[string]any) []map[string]any {
-	seen := make(map[int]int, len(links))
-	out := make([]map[string]any, 0, len(links))
-	for _, link := range links {
-		idx := getIntOrZero(link, "ifindex")
-		if idx == 0 {
-			out = append(out, link)
-			continue
-		}
-		if prev, ok := seen[idx]; ok {
-			if getString(link, "operstate") == "UP" && getString(out[prev], "operstate") != "UP" {
-				out[prev] = link
-			}
-		} else {
-			seen[idx] = len(out)
-			out = append(out, link)
-		}
-	}
-	return out
-}
-
 func interfaceCommon(iplink, ipaddr map[string]any, neighEntries []map[string]any, fc FileChecker) map[string]any {
 	flags := getStrings(iplink, "flags")
 
@@ -269,6 +233,13 @@ func interfaceCommon(iplink, ipaddr map[string]any, neighEntries []map[string]an
 	}
 
 	return iface
+}
+
+// IsEthernet reports whether an `ip -json link` row is reported as an
+// ethernet interface, the only type that carries ethtool data.
+func IsEthernet(row json.RawMessage, fc FileChecker) bool {
+	rows := decodeObjects(row)
+	return len(rows) > 0 && iplink2yangType(rows[0], fc) == "infix-if-type:ethernet"
 }
 
 func iplink2yangType(iplink map[string]any, fc FileChecker) string {
