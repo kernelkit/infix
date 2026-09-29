@@ -245,6 +245,11 @@ func (b *Batch) Refresh() error {
 	return err
 }
 
+// Alive tells whether the subprocess is running and answering.
+func (b *Batch) Alive() bool {
+	return b.alive.Load()
+}
+
 // Close terminates the subprocess and cancels the restart loop.
 func (b *Batch) Close() {
 	b.cancel()

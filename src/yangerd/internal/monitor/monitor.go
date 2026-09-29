@@ -80,6 +80,14 @@ type NLMonitor struct {
 // events before rebuilding the document once for all of them.
 const coalesceDelay = 20 * time.Millisecond
 
+const (
+	// redumpSettle lets a burst of failures and the batch restart that
+	// caused them settle before one re-dump, redumpRetry follows a
+	// failed one.
+	redumpSettle = 200 * time.Millisecond
+	redumpRetry  = 2 * time.Second
+)
+
 // New creates a netlink monitor backed by ip/bridge batch query workers.
 // linkBatch should include -s -d flags; addrBatch should include -d only
 // (no -s, which causes multi-line output for link commands).
@@ -233,7 +241,7 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 	}
 	m.initDoneOnce.Do(func() { close(m.initDone) })
 
-	var flush <-chan time.Time
+	var flush, redump <-chan time.Time
 	for {
 		changed := false
 		select {
@@ -266,10 +274,21 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 			flush = nil
 			m.rebuild()
 		case <-m.redumpCh:
+			// Every event that hits a dead batch asks for this, so
+			// requests while one is pending are the same request.
+			if redump == nil {
+				redump = time.After(redumpSettle)
+			}
+		case <-redump:
+			redump = nil
+			if !m.batchesAlive() {
+				redump = time.After(redumpSettle)
+				break
+			}
 			m.log.Warn("re-dumping all interfaces")
 			if err := m.initialDump(); err != nil {
-				m.log.Error("re-dump failed, will retry in 5s", "err", err)
-				time.AfterFunc(5*time.Second, m.requestRedump)
+				m.log.Error("re-dump failed, will retry", "err", err, "in", redumpRetry)
+				redump = time.After(redumpRetry)
 			}
 		}
 		if changed && flush == nil {
@@ -468,6 +487,17 @@ func (m *NLMonitor) forgetName(name string) {
 	delete(m.wifi, name)
 	delete(m.wireguard, name)
 	delete(m.lastOperStatus, name)
+}
+
+// batchesAlive tells whether every batch subprocess is up, so a re-dump
+// can succeed.
+func (m *NLMonitor) batchesAlive() bool {
+	for _, b := range []*ipbatch.Batch{m.linkBatch, m.addrBatch, m.neighBatch, m.brBatch} {
+		if b != nil && !b.Alive() {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *NLMonitor) requestRedump() {
