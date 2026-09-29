@@ -72,23 +72,7 @@ func New(t *tree.Tree, cmd collector.CommandRunner, fs collector.FileReader, log
 // restarting the events subprocess with backoff if it exits.
 func (m *ContainerMonitor) Run(ctx context.Context) error {
 	go m.refreshLoop(ctx)
-
-	bo := backoff.Default()
-	delay := bo.Initial
-
-	for {
-		err := m.runOnce(ctx)
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		m.log.Warn("container monitor: subprocess exited, restarting",
-			"err", err, "delay", delay)
-		if err := backoff.Sleep(ctx, delay); err != nil {
-			return err
-		}
-		delay = bo.Next(delay)
-	}
+	return backoff.Retry(ctx, m.log, "container monitor", m.runOnce)
 }
 
 func (m *ContainerMonitor) runOnce(ctx context.Context) error {
