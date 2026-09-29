@@ -351,9 +351,9 @@ func TestHardwareNormalizeSensorName(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.in, func(t *testing.T) {
-			got := normalize_sensor_name(tt.in)
+			got := normalizeSensorName(tt.in)
 			if got != tt.want {
-				t.Errorf("normalize_sensor_name(%q): expected %q, got %q", tt.in, tt.want, got)
+				t.Errorf("normalizeSensorName(%q): expected %q, got %q", tt.in, tt.want, got)
 			}
 		})
 	}
@@ -499,7 +499,7 @@ func TestHardwareAdoptWifiSensors(t *testing.T) {
 	components[2].(map[string]interface{})["parent"] = "radio0"
 	wifiInfo := map[string]map[string]interface{}{"radio0": {}}
 
-	got := adopt_wifi_sensors(components, wifiInfo)
+	got := adoptWifiSensors(components, wifiInfo)
 	if len(got) != 3 {
 		t.Fatalf("module head must be dropped, got %v", got)
 	}
@@ -525,7 +525,7 @@ func TestHardwareUniqueNames(t *testing.T) {
 
 	c := newHardwareCollector(&testutil.MockRunner{}, &testutil.MockFileReader{})
 	var names []string
-	for _, raw := range c.unique_names(components) {
+	for _, raw := range c.uniqueNames(components) {
 		names = append(names, raw.(map[string]interface{})["name"].(string))
 	}
 	want := []string{"cpu", "cpu-1", "cpu-1-1", "cpu-2"}
@@ -539,7 +539,7 @@ func TestHardwareUniqueNames(t *testing.T) {
 
 // A band whose name is unknown carries no name leaf rather than "Unknown".
 func TestHardwareBandNameOptional(t *testing.T) {
-	out := convert_iw_phy_info_for_yanger(map[string]interface{}{
+	out := convertPhyInfo(map[string]interface{}{
 		"bands": []interface{}{
 			map[string]interface{}{"band": 1, "name": "2.4 GHz"},
 			map[string]interface{}{"band": 2},
