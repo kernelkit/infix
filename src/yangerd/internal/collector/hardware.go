@@ -32,12 +32,13 @@ const cpuComponent = "cpu"
 // temperature, after normalization: a plain cpu/soc/core, Intel and AMD
 // (coretemp, k10temp), Microchip SparX-5 and LAN969x (s5-temp), or a
 // Marvell CN913x application (ap) or communication (cp<N>) processor
-// cluster.
+// cluster, optionally as the "-thermal" zone the DT names it.  Anything
+// else after the dash (cpu-fan, soc-vdd) is a different device.
 //
 // Recognizing vendor names cannot be avoided, but this is the only place
 // it happens.  Northbound, the sensors are found through the class of
 // their parent component, see doc/hardware.md.
-var socTempSourceRe = regexp.MustCompile(`^(cpu\d*|soc\d*|core\d*|coretemp|k10temp|s5-temp|ap|cp\d+)(-.*)?$`)
+var socTempSourceRe = regexp.MustCompile(`^(cpu\d*|soc\d*|core\d*|coretemp|k10temp|s5-temp|ap|cp\d+)(-thermal(-.*)?)?$`)
 
 // HardwareCollector gathers ietf-hardware operational data.  The
 // inventory, radios and GPS receivers are polled; sensors are read when
@@ -56,6 +57,7 @@ type HardwareCollector struct {
 	radios    []interface{}
 	gps       []interface{}
 	wifiInfo  map[string]map[string]interface{}
+	reported  map[string]bool // duplicate names already warned about
 }
 
 // NewHardwareCollector creates a HardwareCollector with the given dependencies.
@@ -66,6 +68,7 @@ func NewHardwareCollector(cmd CommandRunner, fs FileReader, interval time.Durati
 		interval:   interval,
 		enableWifi: enableWifi,
 		enableGPS:  enableGPS,
+		reported:   make(map[string]bool),
 	}
 }
 
@@ -133,7 +136,7 @@ func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
 	components = append(components, gps...)
 
 	data, err := json.Marshal(map[string]interface{}{
-		"component": unique_names(components),
+		"component": c.unique_names(components),
 	})
 	if err != nil {
 		return nil
@@ -397,8 +400,8 @@ func cpu_component(sensors []interface{}) []interface{} {
 // client parsing the tree.  Producers avoid collisions by construction,
 // this is the net under them.  A renamed component keeps any children
 // pointing at the original name, so it is a last resort, not a mechanism
-// to rely on.
-func unique_names(components []interface{}) []interface{} {
+// to rely on.  Each name is warned about once, this runs on every GET.
+func (c *HardwareCollector) unique_names(components []interface{}) []interface{} {
 	taken := make(map[string]bool, len(components))
 
 	for _, raw := range components {
@@ -416,7 +419,13 @@ func unique_names(components []interface{}) []interface{} {
 		for seq := 1; taken[unique]; seq++ {
 			unique = fmt.Sprintf("%s-%d", name, seq)
 		}
-		log.Printf("collector hardware: duplicate component %q, renaming one of them %q", name, unique)
+		c.mu.Lock()
+		reported := c.reported[name]
+		c.reported[name] = true
+		c.mu.Unlock()
+		if !reported {
+			log.Printf("collector hardware: duplicate component %q, renaming one of them %q", name, unique)
+		}
 		component["name"] = unique
 		taken[unique] = true
 	}

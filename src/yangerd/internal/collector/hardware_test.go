@@ -523,13 +523,17 @@ func TestHardwareUniqueNames(t *testing.T) {
 		map[string]interface{}{"name": "cpu"},
 	}
 
+	c := newHardwareCollector(&testutil.MockRunner{}, &testutil.MockFileReader{})
 	var names []string
-	for _, raw := range unique_names(components) {
+	for _, raw := range c.unique_names(components) {
 		names = append(names, raw.(map[string]interface{})["name"].(string))
 	}
 	want := []string{"cpu", "cpu-1", "cpu-1-1", "cpu-2"}
 	if fmt.Sprint(names) != fmt.Sprint(want) {
 		t.Fatalf("want %v, got %v", want, names)
+	}
+	if !c.reported["cpu"] || !c.reported["cpu-1"] || len(c.reported) != 2 {
+		t.Fatalf("duplicates remembered, got %v", c.reported)
 	}
 }
 
@@ -599,5 +603,22 @@ func TestHardwareLiveReadsSensorsOnGet(t *testing.T) {
 	}
 	if mainboard() == nil {
 		t.Fatal("polled inventory must be kept in the live view")
+	}
+}
+
+// Only die sensors, and the "-thermal" zones the DT names them, belong
+// to the CPU; a fan or a rail that merely starts with cpu/soc does not.
+func TestSocTempSource(t *testing.T) {
+	yes := []string{"cpu", "cpu0", "soc", "core1", "coretemp", "k10temp", "s5-temp", "ap", "cp0", "cpu-thermal", "soc-thermal-1"}
+	no := []string{"cpu-fan", "soc-vdd", "ap-power", "cpufreq", "pwmfan", "sfp2"}
+	for _, name := range yes {
+		if !socTempSourceRe.MatchString(name) {
+			t.Errorf("%q must be a die sensor", name)
+		}
+	}
+	for _, name := range no {
+		if socTempSourceRe.MatchString(name) {
+			t.Errorf("%q must not be a die sensor", name)
+		}
 	}
 }
