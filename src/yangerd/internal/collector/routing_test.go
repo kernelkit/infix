@@ -3,69 +3,78 @@ package collector
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/kernelkit/infix/src/yangerd/internal/testutil"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
-// Canned FRR JSON matching real /usr/libexec/statd/ospf-status output.
-const testOSPFStatus = `{
+// Canned ospfd JSON: the areas, interfaces and neighbors views that
+// ospfStatus merges.
+const testOSPFGlobal = `{
   "routerId": "10.0.0.1",
   "areas": {
-    "0.0.0.0": {
-      "area-type": "ietf-ospf:normal-area",
-      "interfaces": [
-        {
-          "name": "e0",
-          "state": "DR",
-          "ospfEnabled": true,
-          "networkType": "BROADCAST",
-          "cost": 10,
-          "priority": 1,
-          "timerDeadSecs": 40,
-          "timerRetransmitSecs": 5,
-          "transmitDelaySecs": 1,
-          "timerMsecs": 10000,
-          "timerHelloInMsecs": 7000,
-          "timerWaitSecs": 40,
-          "drId": "10.0.0.1",
-          "drAddress": "192.168.1.1",
-          "bdrId": "10.0.0.2",
-          "bdrAddress": "192.168.1.2",
-          "neighbors": [
-            {
-              "neighborIp": "10.0.0.2",
-              "ifaceAddress": "192.168.1.2",
-              "nbrPriority": 1,
-              "nbrState": "Full/DR",
-              "role": "Backup",
-              "lastPrgrsvChangeMsec": 120000,
-              "routerDeadIntervalTimerDueMsec": 35000,
-              "routerDesignatedId": "10.0.0.1",
-              "routerDesignatedBackupId": "10.0.0.2",
-              "ifaceName": "e0",
-              "localIfaceAddress": "192.168.1.1"
-            }
-          ]
-        },
-        {
-          "name": "lo",
-          "state": "Loopback",
-          "ospfEnabled": true,
-          "networkType": "POINTOPOINT",
-          "cost": 0,
-          "priority": 0,
-          "timerPassiveIface": true,
-          "timerDeadSecs": 0,
-          "timerRetransmitSecs": 0,
-          "transmitDelaySecs": 0,
-          "timerMsecs": 10000,
-          "neighbors": []
-        }
-      ]
+    "0.0.0.0": {}
+  }
+}`
+
+const testOSPFInterfaces = `{
+  "interfaces": {
+    "e0": {
+      "area": "0.0.0.0",
+      "state": "DR",
+      "ospfEnabled": true,
+      "networkType": "BROADCAST",
+      "cost": 10,
+      "priority": 1,
+      "timerDeadSecs": 40,
+      "timerRetransmitSecs": 5,
+      "transmitDelaySecs": 1,
+      "timerMsecs": 10000,
+      "timerHelloInMsecs": 7000,
+      "timerWaitSecs": 40,
+      "drId": "10.0.0.1",
+      "drAddress": "192.168.1.1",
+      "bdrId": "10.0.0.2",
+      "bdrAddress": "192.168.1.2"
+    },
+    "lo": {
+      "area": "0.0.0.0",
+      "state": "Loopback",
+      "ospfEnabled": true,
+      "networkType": "POINTOPOINT",
+      "cost": 0,
+      "priority": 0,
+      "timerPassiveIface": true,
+      "timerDeadSecs": 0,
+      "timerRetransmitSecs": 0,
+      "transmitDelaySecs": 0,
+      "timerMsecs": 10000
+    },
+    "e9": {
+      "ospfEnabled": false
     }
+  }
+}`
+
+const testOSPFNeighbors = `{
+  "neighbors": {
+    "10.0.0.2": [
+      {
+        "areaId": "0.0.0.0",
+        "ifaceAddress": "192.168.1.2",
+        "nbrPriority": 1,
+        "nbrState": "Full/DR",
+        "role": "Backup",
+        "lastPrgrsvChangeMsec": 120000,
+        "routerDeadIntervalTimerDueMsec": 35000,
+        "routerDesignatedId": "10.0.0.1",
+        "routerDesignatedBackupId": "10.0.0.2",
+        "ifaceName": "e0",
+        "localIfaceAddress": "192.168.1.1"
+      }
+    ]
   }
 }`
 
@@ -155,13 +164,26 @@ const testBFDPeers = `[
   }
 ]`
 
-func newRoutingCollector(runner *testutil.MockRunner) *RoutingCollector {
-	return NewRoutingCollector(runner, 10*time.Second)
+// fakeVty answers show commands from canned output keyed by
+// "daemon command"; any other daemon is not running.
+type fakeVty map[string]string
+
+func (f fakeVty) query(_ context.Context, daemon, command string) ([]byte, error) {
+	if out, ok := f[daemon+" "+command]; ok {
+		return []byte(out), nil
+	}
+	return nil, fmt.Errorf("dial %s.vty: no such file or directory", daemon)
 }
 
-func routingCollect(t *testing.T, runner *testutil.MockRunner) map[string]interface{} {
+func newRoutingCollector(vty fakeVty) *RoutingCollector {
+	c := NewRoutingCollector(nil, 10*time.Second)
+	c.vty = vty.query
+	return c
+}
+
+func routingCollect(t *testing.T, vty fakeVty) map[string]interface{} {
 	t.Helper()
-	c := newRoutingCollector(runner)
+	c := newRoutingCollector(vty)
 	tr := tree.New()
 	if err := c.Collect(context.Background(), tr); err != nil {
 		t.Fatalf("Collect failed: %v", err)
@@ -177,17 +199,21 @@ func routingCollect(t *testing.T, runner *testutil.MockRunner) map[string]interf
 	return out
 }
 
-func fullRunner() *testutil.MockRunner {
-	return &testutil.MockRunner{
-		Results: map[string][]byte{
-			"/usr/libexec/statd/ospf-status":   []byte(testOSPFStatus),
-			"vtysh -c show ip ospf route json": []byte(testOSPFRoutes),
-			"vtysh -c show ip rip status":      []byte(testRIPStatus),
-			"vtysh -c show ip route rip json":  []byte(testRIPRoutes),
-			"vtysh -c show bfd peers json":     []byte(testBFDPeers),
-		},
-		Errors: map[string]error{},
+func ospfOnly() fakeVty {
+	return fakeVty{
+		"ospfd show ip ospf json":                 testOSPFGlobal,
+		"ospfd show ip ospf interface json":       testOSPFInterfaces,
+		"ospfd show ip ospf neighbor detail json": testOSPFNeighbors,
+		"ospfd show ip ospf route json":           testOSPFRoutes,
 	}
+}
+
+func fullRunner() fakeVty {
+	v := ospfOnly()
+	v["ripd show ip rip status"] = testRIPStatus
+	v["zebra show ip route rip json"] = testRIPRoutes
+	v["bfdd show bfd peers json"] = testBFDPeers
+	return v
 }
 
 func TestRoutingCollectorNameAndInterval(t *testing.T) {
@@ -580,13 +606,7 @@ func TestBFDSessions(t *testing.T) {
 // --- Graceful degradation tests ---
 
 func TestRoutingCollectorOSPFOnly(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"/usr/libexec/statd/ospf-status":   []byte(testOSPFStatus),
-			"vtysh -c show ip ospf route json": []byte(testOSPFRoutes),
-		},
-		Errors: map[string]error{},
-	}
+	runner := ospfOnly()
 
 	out := routingCollect(t, runner)
 	cpp := out["control-plane-protocols"].(map[string]interface{})
@@ -601,12 +621,7 @@ func TestRoutingCollectorOSPFOnly(t *testing.T) {
 }
 
 func TestRoutingCollectorAllFail(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{},
-		Errors:  map[string]error{},
-	}
-
-	out := routingCollect(t, runner)
+	out := routingCollect(t, fakeVty{})
 	protocols := out["control-plane-protocols"].(map[string]interface{})["control-plane-protocol"].([]interface{})
 	if len(protocols) != 0 {
 		t.Fatalf("expected an empty protocol list when nothing runs, got %v", protocols)
@@ -620,8 +635,7 @@ func TestRoutingCollectorProtocolsDisappear(t *testing.T) {
 	if err := newRoutingCollector(fullRunner()).Collect(context.Background(), tr); err != nil {
 		t.Fatalf("Collect failed: %v", err)
 	}
-	empty := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
-	if err := newRoutingCollector(empty).Collect(context.Background(), tr); err != nil {
+	if err := newRoutingCollector(fakeVty{}).Collect(context.Background(), tr); err != nil {
 		t.Fatalf("Collect failed: %v", err)
 	}
 
@@ -707,13 +721,10 @@ func TestOSPFNetworkType(t *testing.T) {
 
 func TestBFDMultihopFiltered(t *testing.T) {
 	// Ensure multihop peers don't appear in output
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"vtysh -c show bfd peers json": []byte(`[
-				{"multihop": true, "peer": "10.0.0.99", "interface": "e1", "id": 5, "status": "up"}
-			]`),
-		},
-		Errors: map[string]error{},
+	runner := fakeVty{
+		"bfdd show bfd peers json": `[
+			{"multihop": true, "peer": "10.0.0.99", "interface": "e1", "id": 5, "status": "up"}
+		]`,
 	}
 
 	c := newRoutingCollector(runner)
@@ -761,5 +772,36 @@ func TestRIPStatusBothVersions(t *testing.T) {
 		if got["name"] != w[0] || got["send-version"] != w[1] || got["recv-version"] != w[2] {
 			t.Errorf("row %d = %v, want %v", i, got, w)
 		}
+	}
+}
+
+// ospfd appends " [Stub]" or " [NSSA]" to the area of interfaces and
+// neighbors; the merge strips it and records the area type, and
+// interfaces without OSPF are left out.
+func TestOSPFStatusStubArea(t *testing.T) {
+	var ospf, ifaces, nbrs map[string]interface{}
+	json.Unmarshal([]byte(`{"areas":{"0.0.0.1":{}}}`), &ospf)
+	json.Unmarshal([]byte(`{"interfaces":{
+		"e1":{"ospfEnabled":true,"area":"0.0.0.1 [Stub]"},
+		"e2":{"ospfEnabled":false,"area":"0.0.0.1 [Stub]"}}}`), &ifaces)
+	json.Unmarshal([]byte(`{"neighbors":{
+		"10.0.0.7":[{"ifaceName":"e1","areaId":"0.0.0.1 [Stub]"}],
+		"10.0.0.8":[{"ifaceName":"e2","areaId":"0.0.0.1 [Stub]"}]}}`), &nbrs)
+
+	area := ospfStatus(ospf, ifaces, nbrs)["areas"].(map[string]interface{})["0.0.0.1"].(map[string]interface{})
+	if area["area-type"] != "stub-area" {
+		t.Fatalf("area-type = %v, want stub-area", area["area-type"])
+	}
+	list := area["interfaces"].([]interface{})
+	if len(list) != 1 {
+		t.Fatalf("expected only the OSPF-enabled interface, got %v", list)
+	}
+	iface := list[0].(map[string]interface{})
+	if iface["name"] != "e1" || iface["area"] != "0.0.0.1" {
+		t.Fatalf("interface = %v", iface)
+	}
+	peers := iface["neighbors"].([]interface{})
+	if len(peers) != 1 || peers[0].(map[string]interface{})["neighborIp"] != "10.0.0.7" {
+		t.Fatalf("neighbors = %v", peers)
 	}
 }

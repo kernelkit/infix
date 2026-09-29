@@ -3,26 +3,50 @@ package collector
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/frrvty"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
+
+const (
+	frrRunDir = "/var/run/frr"
+
+	// vtyTimeout bounds one show command, so a wedged daemon cannot
+	// stall the poll.
+	vtyTimeout = 5 * time.Second
+)
+
+// VtyQuery runs a show command against one FRR daemon, named as its vty
+// socket is ("ospfd", "ripd", "bfdd", "zebra"), and returns the output.
+type VtyQuery func(ctx context.Context, daemon, command string) ([]byte, error)
+
+// FRRVty is the production VtyQuery.  A daemon that is not running has
+// no socket, so the dial fails and the protocol is skipped.
+func FRRVty(ctx context.Context, daemon, command string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, vtyTimeout)
+	defer cancel()
+	return frrvty.New(filepath.Join(frrRunDir, daemon+".vty")).Query(ctx, command)
+}
 
 // RoutingCollector gathers ietf-routing operational data by merging
 // OSPF, RIP, and BFD control-plane protocols into a single tree key.
 // Each protocol contributes entries to the control-plane-protocol list
 // under ietf-routing:routing.
 type RoutingCollector struct {
-	cmd      CommandRunner
+	vty      VtyQuery
 	interval time.Duration
 }
 
-// NewRoutingCollector creates a RoutingCollector with the given dependencies.
-func NewRoutingCollector(cmd CommandRunner, interval time.Duration) *RoutingCollector {
-	return &RoutingCollector{cmd: cmd, interval: interval}
+// NewRoutingCollector creates a RoutingCollector querying FRR over vty.
+// The runner is no longer used; it stays until the caller drops it.
+func NewRoutingCollector(_ CommandRunner, interval time.Duration) *RoutingCollector {
+	return &RoutingCollector{vty: FRRVty, interval: interval}
 }
 
 // Name implements Collector.
@@ -30,6 +54,15 @@ func (c *RoutingCollector) Name() string { return "routing" }
 
 // Interval implements Collector.
 func (c *RoutingCollector) Interval() time.Duration { return c.interval }
+
+// vtyJSON runs a show command and decodes its JSON output into dst.
+func (c *RoutingCollector) vtyJSON(ctx context.Context, daemon, command string, dst interface{}) error {
+	out, err := c.vty(ctx, daemon, command)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(out, dst)
+}
 
 // Collect implements Collector.  It produces one tree key:
 // "ietf-routing:routing" containing merged OSPF, RIP, and BFD data.
@@ -107,25 +140,116 @@ func ospfNetworkType(nt string, p2mpNonBroadcast bool) string {
 	}
 }
 
-func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
-	out, err := c.cmd.Run(ctx, "/usr/libexec/statd/ospf-status")
-	if err != nil {
-		return nil
+// ospfAreaSuffix is what ospfd appends to the area of a stub or NSSA
+// area, e.g. "0.0.0.1 [Stub]".
+var ospfAreaSuffix = map[string]string{
+	" [Stub]": "stub-area",
+	" [NSSA]": "nssa-area",
+}
+
+// ospfArea splits ospfd's area string into the bare area id and its
+// area-type.
+func ospfArea(area string) (string, string) {
+	for suffix, areaType := range ospfAreaSuffix {
+		if id, ok := strings.CutSuffix(area, suffix); ok {
+			return id, areaType
+		}
+	}
+	return area, "normal-area"
+}
+
+// ospfStatus merges ospfd's three views, areas, interfaces and
+// neighbors, into areas holding their interfaces and each interface its
+// neighbors, the way the ietf-ospf model nests them.  It is a port of
+// the ospf-status helper yanger used.
+func ospfStatus(ospf, ifaces, neighbors map[string]interface{}) map[string]interface{} {
+	areas, _ := ospf["areas"].(map[string]interface{})
+	ifaceMap, _ := ifaces["interfaces"].(map[string]interface{})
+	nbrMap, _ := neighbors["neighbors"].(map[string]interface{})
+
+	names := make([]string, 0, len(ifaceMap))
+	for name := range ifaceMap {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		iface, ok := ifaceMap[name].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		enabled, _ := iface["ospfEnabled"].(bool)
+		areaStr, _ := iface["area"].(string)
+		if !enabled || areaStr == "" {
+			continue
+		}
+
+		areaID, areaType := ospfArea(areaStr)
+		area, ok := areas[areaID].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		area["area-type"] = areaType
+
+		iface["name"] = name
+		iface["area"] = areaID
+		iface["neighbors"] = ospfIfaceNeighbors(nbrMap, name, areaID)
+
+		list, _ := area["interfaces"].([]interface{})
+		area["interfaces"] = append(list, iface)
 	}
 
-	var data map[string]interface{}
-	if json.Unmarshal(out, &data) != nil || len(data) == 0 {
+	return ospf
+}
+
+// ospfIfaceNeighbors picks the neighbors seen on one interface in one
+// area, tagging each with the neighbor's router id.
+func ospfIfaceNeighbors(nbrMap map[string]interface{}, ifname, areaID string) []interface{} {
+	ids := make([]string, 0, len(nbrMap))
+	for id := range nbrMap {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	out := []interface{}{}
+	for _, id := range ids {
+		list, _ := nbrMap[id].([]interface{})
+		for _, raw := range list {
+			nbr, ok := raw.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			nbrArea, _ := nbr["areaId"].(string)
+			nbrArea, _ = ospfArea(nbrArea)
+			if nbr["ifaceName"] != ifname || nbrArea != areaID {
+				continue
+			}
+			nbr["areaId"] = nbrArea
+			nbr["neighborIp"] = id
+			out = append(out, nbr)
+		}
+	}
+	return out
+}
+
+func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
+	var ospfData, ifaces, neighbors map[string]interface{}
+	if c.vtyJSON(ctx, "ospfd", "show ip ospf json", &ospfData) != nil ||
+		c.vtyJSON(ctx, "ospfd", "show ip ospf interface json", &ifaces) != nil ||
+		c.vtyJSON(ctx, "ospfd", "show ip ospf neighbor detail json", &neighbors) != nil {
 		return nil
 	}
+	if len(ospfData) == 0 {
+		return nil
+	}
+	data := ospfStatus(ospfData, ifaces, neighbors)
 
 	ospf := map[string]interface{}{
-		"ietf-ospf:areas": map[string]interface{}{},
+		"ietf-ospf:address-family": "ipv4",
 	}
-
 	if rid, ok := data["routerId"]; ok {
 		ospf["ietf-ospf:router-id"] = rid
 	}
-	ospf["ietf-ospf:address-family"] = "ipv4"
 
 	areas := make([]interface{}, 0)
 	areasRaw, _ := data["areas"].(map[string]interface{})
@@ -136,8 +260,7 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 		}
 
 		area := map[string]interface{}{
-			"ietf-ospf:area-id":    areaID,
-			"ietf-ospf:interfaces": map[string]interface{}{},
+			"ietf-ospf:area-id": areaID,
 		}
 		if at, ok := values["area-type"]; ok && at != nil {
 			area["ietf-ospf:area-type"] = at
@@ -146,131 +269,9 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 		interfaces := make([]interface{}, 0)
 		ifacesRaw, _ := values["interfaces"].([]interface{})
 		for _, ifaceRaw := range ifacesRaw {
-			iface, ok := ifaceRaw.(map[string]interface{})
-			if !ok {
-				continue
+			if iface, ok := ifaceRaw.(map[string]interface{}); ok {
+				interfaces = append(interfaces, ospfInterface(iface))
 			}
-
-			intf := map[string]interface{}{
-				"name":                iface["name"],
-				"ietf-ospf:neighbors": map[string]interface{}{},
-			}
-
-			setIfPresent(intf, "dr-router-id", iface, "drId")
-			setIfPresent(intf, "dr-ip-addr", iface, "drAddress")
-			setIfPresent(intf, "bdr-router-id", iface, "bdrId")
-			setIfPresent(intf, "bdr-ip-addr", iface, "bdrAddress")
-
-			if v, ok := iface["timerPassiveIface"]; ok && v != nil {
-				intf["passive"] = true
-			} else {
-				intf["passive"] = false
-			}
-
-			if v, ok := iface["ospfEnabled"]; ok {
-				intf["enabled"] = v
-			}
-
-			if nt, ok := iface["networkType"].(string); ok {
-				p2mpNB, _ := iface["p2mpNonBroadcast"].(bool)
-				if it := ospfNetworkType(nt, p2mpNB); it != "" {
-					intf["interface-type"] = it
-				}
-			}
-
-			if s, ok := iface["state"].(string); ok {
-				if mapped, ok := ospfIfaceStateMap[s]; ok {
-					intf["state"] = mapped
-				} else {
-					intf["state"] = "unknown"
-				}
-			}
-
-			setIfPresentInt(intf, "priority", iface, "priority")
-			setIfPresentInt(intf, "cost", iface, "cost")
-			setIfPresentInt(intf, "dead-interval", iface, "timerDeadSecs")
-			setIfPresentInt(intf, "retransmit-interval", iface, "timerRetransmitSecs")
-			setIfPresentInt(intf, "transmit-delay", iface, "transmitDelaySecs")
-
-			// Hello interval: milliseconds to seconds
-			if v := iface["timerMsecs"]; v != nil {
-				helloSec := toInt(v) / 1000
-				if helloSec >= 1 {
-					intf["hello-interval"] = helloSec
-				}
-			}
-
-			// Hello timer: remaining time in ms to seconds
-			if v := iface["timerHelloInMsecs"]; v != nil {
-				helloTimerSec := toInt(v) / 1000
-				if helloTimerSec >= 1 {
-					intf["hello-timer"] = helloTimerSec
-				}
-			}
-
-			// Wait timer
-			if v := iface["timerWaitSecs"]; v != nil {
-				waitSec := toInt(v)
-				if waitSec >= 1 {
-					intf["wait-timer"] = waitSec
-				}
-			}
-
-			neighbors := make([]interface{}, 0)
-			neighsRaw, _ := iface["neighbors"].([]interface{})
-			for _, neighRaw := range neighsRaw {
-				neigh, ok := neighRaw.(map[string]interface{})
-				if !ok {
-					continue
-				}
-
-				neighbor := map[string]interface{}{
-					"neighbor-router-id": neigh["neighborIp"],
-					"address":            neigh["ifaceAddress"],
-				}
-
-				setIfPresentInt(neighbor, "priority", neigh, "nbrPriority")
-
-				// Uptime: ms to seconds (infix augmentation)
-				if v := neigh["lastPrgrsvChangeMsec"]; v != nil {
-					neighbor["infix-routing:uptime"] = toInt(v) / 1000
-				}
-
-				// Dead timer: ms to seconds
-				if v := neigh["routerDeadIntervalTimerDueMsec"]; v != nil {
-					deadSec := toInt(v) / 1000
-					if deadSec >= 1 {
-						neighbor["dead-timer"] = deadSec
-					}
-				}
-
-				if s, ok := neigh["nbrState"].(string); ok {
-					neighbor["state"] = frrToIETFNeighborState(s)
-				}
-
-				if role, ok := neigh["role"].(string); ok && role != "" {
-					neighbor["infix-routing:role"] = frrToIETFNeighborRole(role)
-				}
-
-				// Interface name (infix augmentation)
-				ifName, _ := neigh["ifaceName"].(string)
-				localAddr, _ := neigh["localIfaceAddress"].(string)
-				if ifName != "" && localAddr != "" {
-					neighbor["infix-routing:interface-name"] = ifName + ":" + localAddr
-				} else if ifName != "" {
-					neighbor["infix-routing:interface-name"] = ifName
-				}
-
-				setIfPresent(neighbor, "dr-router-id", neigh, "routerDesignatedId")
-				setIfPresent(neighbor, "bdr-router-id", neigh, "routerDesignatedBackupId")
-
-				neighbors = append(neighbors, neighbor)
-			}
-
-			intf["ietf-ospf:neighbors"] = map[string]interface{}{
-				"ietf-ospf:neighbor": neighbors,
-			}
-			interfaces = append(interfaces, intf)
 		}
 
 		area["ietf-ospf:interfaces"] = map[string]interface{}{
@@ -279,8 +280,11 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 		areas = append(areas, area)
 	}
 
-	// Add routes
-	c.addOSPFRoutes(ctx, ospf)
+	if routes := c.ospfRoutes(ctx); len(routes) > 0 {
+		ospf["ietf-ospf:local-rib"] = map[string]interface{}{
+			"ietf-ospf:route": routes,
+		}
+	}
 
 	ospf["ietf-ospf:areas"] = map[string]interface{}{
 		"ietf-ospf:area": areas,
@@ -293,15 +297,113 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 	}
 }
 
-func (c *RoutingCollector) addOSPFRoutes(ctx context.Context, ospf map[string]interface{}) {
-	out, err := c.cmd.Run(ctx, "vtysh", "-c", "show ip ospf route json")
-	if err != nil {
+// secondsAtLeast1 converts a millisecond FRR timer to whole seconds,
+// dropping values that round to zero.
+func secondsAtLeast1(dst map[string]interface{}, key string, msec interface{}) {
+	if msec == nil {
 		return
 	}
+	if sec := toInt(msec) / 1000; sec >= 1 {
+		dst[key] = sec
+	}
+}
 
+func ospfInterface(iface map[string]interface{}) map[string]interface{} {
+	intf := map[string]interface{}{
+		"name": iface["name"],
+	}
+
+	setIfPresent(intf, "dr-router-id", iface, "drId")
+	setIfPresent(intf, "dr-ip-addr", iface, "drAddress")
+	setIfPresent(intf, "bdr-router-id", iface, "bdrId")
+	setIfPresent(intf, "bdr-ip-addr", iface, "bdrAddress")
+
+	passive, ok := iface["timerPassiveIface"]
+	intf["passive"] = ok && passive != nil
+
+	if v, ok := iface["ospfEnabled"]; ok {
+		intf["enabled"] = v
+	}
+
+	if nt, ok := iface["networkType"].(string); ok {
+		p2mpNB, _ := iface["p2mpNonBroadcast"].(bool)
+		if it := ospfNetworkType(nt, p2mpNB); it != "" {
+			intf["interface-type"] = it
+		}
+	}
+
+	if s, ok := iface["state"].(string); ok {
+		if mapped, ok := ospfIfaceStateMap[s]; ok {
+			intf["state"] = mapped
+		} else {
+			intf["state"] = "unknown"
+		}
+	}
+
+	setIfPresentInt(intf, "priority", iface, "priority")
+	setIfPresentInt(intf, "cost", iface, "cost")
+	setIfPresentInt(intf, "dead-interval", iface, "timerDeadSecs")
+	setIfPresentInt(intf, "retransmit-interval", iface, "timerRetransmitSecs")
+	setIfPresentInt(intf, "transmit-delay", iface, "transmitDelaySecs")
+
+	secondsAtLeast1(intf, "hello-interval", iface["timerMsecs"])
+	secondsAtLeast1(intf, "hello-timer", iface["timerHelloInMsecs"])
+	if v := iface["timerWaitSecs"]; v != nil && toInt(v) >= 1 {
+		intf["wait-timer"] = toInt(v)
+	}
+
+	neighbors := make([]interface{}, 0)
+	neighsRaw, _ := iface["neighbors"].([]interface{})
+	for _, neighRaw := range neighsRaw {
+		if neigh, ok := neighRaw.(map[string]interface{}); ok {
+			neighbors = append(neighbors, ospfNeighbor(neigh))
+		}
+	}
+	intf["ietf-ospf:neighbors"] = map[string]interface{}{
+		"ietf-ospf:neighbor": neighbors,
+	}
+
+	return intf
+}
+
+func ospfNeighbor(neigh map[string]interface{}) map[string]interface{} {
+	neighbor := map[string]interface{}{
+		"neighbor-router-id": neigh["neighborIp"],
+		"address":            neigh["ifaceAddress"],
+	}
+
+	setIfPresentInt(neighbor, "priority", neigh, "nbrPriority")
+
+	if v := neigh["lastPrgrsvChangeMsec"]; v != nil {
+		neighbor["infix-routing:uptime"] = toInt(v) / 1000
+	}
+	secondsAtLeast1(neighbor, "dead-timer", neigh["routerDeadIntervalTimerDueMsec"])
+
+	if s, ok := neigh["nbrState"].(string); ok {
+		neighbor["state"] = frrToIETFNeighborState(s)
+	}
+	if role, ok := neigh["role"].(string); ok && role != "" {
+		neighbor["infix-routing:role"] = frrToIETFNeighborRole(role)
+	}
+
+	ifName, _ := neigh["ifaceName"].(string)
+	localAddr, _ := neigh["localIfaceAddress"].(string)
+	if ifName != "" && localAddr != "" {
+		neighbor["infix-routing:interface-name"] = ifName + ":" + localAddr
+	} else if ifName != "" {
+		neighbor["infix-routing:interface-name"] = ifName
+	}
+
+	setIfPresent(neighbor, "dr-router-id", neigh, "routerDesignatedId")
+	setIfPresent(neighbor, "bdr-router-id", neigh, "routerDesignatedBackupId")
+
+	return neighbor
+}
+
+func (c *RoutingCollector) ospfRoutes(ctx context.Context) []interface{} {
 	var data map[string]interface{}
-	if json.Unmarshal(out, &data) != nil {
-		return
+	if c.vtyJSON(ctx, "ospfd", "show ip ospf route json", &data) != nil {
+		return nil
 	}
 
 	var routes []interface{}
@@ -309,74 +411,67 @@ func (c *RoutingCollector) addOSPFRoutes(ctx context.Context, ospf map[string]in
 		if !strings.Contains(prefix, "/") {
 			continue
 		}
+		if info, ok := infoRaw.(map[string]interface{}); ok {
+			routes = append(routes, ospfRoute(prefix, info))
+		}
+	}
+	return routes
+}
 
-		info, ok := infoRaw.(map[string]interface{})
+func ospfRoute(prefix string, info map[string]interface{}) map[string]interface{} {
+	route := map[string]interface{}{
+		"prefix": prefix,
+	}
+
+	if rt, ok := info["routeType"].(string); ok {
+		parts := strings.Fields(rt)
+		if len(parts) > 1 {
+			switch parts[1] {
+			case "E1":
+				route["route-type"] = "external-1"
+			case "E2":
+				route["route-type"] = "external-2"
+			case "IA":
+				route["route-type"] = "inter-area"
+			}
+		} else if len(parts) > 0 && parts[0] == "N" {
+			route["route-type"] = "intra-area"
+		}
+	}
+
+	if v := info["area"]; v != nil {
+		route["infix-routing:area-id"] = v
+	}
+	if v := info["cost"]; v != nil {
+		route["metric"] = v
+	} else if v := info["metric"]; v != nil {
+		route["metric"] = v
+	}
+	if v := info["tag"]; v != nil {
+		route["route-tag"] = v
+	}
+
+	nexthops := make([]interface{}, 0)
+	hopsRaw, _ := info["nexthops"].([]interface{})
+	for _, hopRaw := range hopsRaw {
+		hop, ok := hopRaw.(map[string]interface{})
 		if !ok {
 			continue
 		}
-
-		route := map[string]interface{}{
-			"prefix": prefix,
+		nh := make(map[string]interface{})
+		ip, _ := hop["ip"].(string)
+		if ip != "" && ip != " " {
+			nh["next-hop"] = ip
+		} else if da, ok := hop["directlyAttachedTo"].(string); ok {
+			nh["outgoing-interface"] = da
 		}
-
-		if rt, ok := info["routeType"].(string); ok {
-			parts := strings.Fields(rt)
-			if len(parts) > 1 {
-				switch parts[1] {
-				case "E1":
-					route["route-type"] = "external-1"
-				case "E2":
-					route["route-type"] = "external-2"
-				case "IA":
-					route["route-type"] = "inter-area"
-				}
-			} else if len(parts) > 0 && parts[0] == "N" {
-				route["route-type"] = "intra-area"
-			}
-		}
-
-		if v := info["area"]; v != nil {
-			route["infix-routing:area-id"] = v
-		}
-
-		if v := info["cost"]; v != nil {
-			route["metric"] = v
-		} else if v := info["metric"]; v != nil {
-			route["metric"] = v
-		}
-
-		if v := info["tag"]; v != nil {
-			route["route-tag"] = v
-		}
-
-		nexthops := make([]interface{}, 0)
-		hopsRaw, _ := info["nexthops"].([]interface{})
-		for _, hopRaw := range hopsRaw {
-			hop, ok := hopRaw.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			nh := make(map[string]interface{})
-			ip, _ := hop["ip"].(string)
-			if ip != "" && ip != " " {
-				nh["next-hop"] = ip
-			} else if da, ok := hop["directlyAttachedTo"].(string); ok {
-				nh["outgoing-interface"] = da
-			}
-			nexthops = append(nexthops, nh)
-		}
-
-		route["next-hops"] = map[string]interface{}{
-			"next-hop": nexthops,
-		}
-		routes = append(routes, route)
+		nexthops = append(nexthops, nh)
+	}
+	route["next-hops"] = map[string]interface{}{
+		"next-hop": nexthops,
 	}
 
-	if len(routes) > 0 {
-		ospf["ietf-ospf:local-rib"] = map[string]interface{}{
-			"ietf-ospf:route": routes,
-		}
-	}
+	return route
 }
 
 // --- RIP ---
@@ -401,146 +496,48 @@ var ripVersion = map[string]string{
 }
 
 func (c *RoutingCollector) collectRIP(ctx context.Context) interface{} {
-	statusOut, err := c.cmd.Run(ctx, "vtysh", "-c", "show ip rip status")
-	if err != nil {
-		return nil
-	}
-	statusText := string(statusOut)
-	if statusText == "" {
+	statusOut, err := c.vty(ctx, "ripd", "show ip rip status")
+	if err != nil || len(statusOut) == 0 {
 		return nil
 	}
 
-	status := parseRIPStatus(statusText)
+	status := parseRIPStatus(string(statusOut))
 	if len(status) == 0 {
 		return nil
 	}
 
 	rip := make(map[string]interface{})
-
-	if v, ok := status["distance"]; ok {
-		rip["distance"] = v
-	}
-	if v, ok := status["default-metric"]; ok {
-		rip["default-metric"] = v
-	}
+	setIfPresent(rip, "distance", status, "distance")
+	setIfPresent(rip, "default-metric", status, "default-metric")
 
 	timers := make(map[string]interface{})
-	if v, ok := status["update-interval"]; ok {
-		timers["update-interval"] = v
-	}
-	if v, ok := status["invalid-interval"]; ok {
-		timers["invalid-interval"] = v
-	}
-	if v, ok := status["flush-interval"]; ok {
-		timers["flush-interval"] = v
+	for _, key := range []string{"update-interval", "invalid-interval", "flush-interval"} {
+		setIfPresent(timers, key, status, key)
 	}
 	if len(timers) > 0 {
 		rip["timers"] = timers
 	}
 
-	if ifaces, ok := status["interfaces"].([]interface{}); ok && len(ifaces) > 0 {
-		var ifaceList []interface{}
-		for _, ifRaw := range ifaces {
-			ifData, ok := ifRaw.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			entry := map[string]interface{}{
-				"interface":   ifData["name"],
-				"oper-status": "up",
-			}
-			if sv, ok := ifData["send-version"].(string); ok {
-				entry["send-version"] = sv
-			}
-			if rv, ok := ifData["recv-version"].(string); ok {
-				entry["receive-version"] = rv
-			}
-			ifaceList = append(ifaceList, entry)
-		}
-		if len(ifaceList) > 0 {
-			rip["interfaces"] = map[string]interface{}{
-				"interface": ifaceList,
-			}
+	if ifaces := ripInterfaces(status); len(ifaces) > 0 {
+		rip["interfaces"] = map[string]interface{}{
+			"interface": ifaces,
 		}
 	}
 
-	routeOut, err := c.cmd.Run(ctx, "vtysh", "-c", "show ip route rip json")
-	if err == nil {
-		var routeData map[string]interface{}
-		if json.Unmarshal(routeOut, &routeData) == nil {
-			var routes []interface{}
-			for prefix, entriesRaw := range routeData {
-				if !strings.Contains(prefix, "/") {
-					continue
-				}
-				entries, ok := entriesRaw.([]interface{})
-				if !ok || len(entries) == 0 {
-					continue
-				}
-				entry, ok := entries[0].(map[string]interface{})
-				if !ok {
-					continue
-				}
-
-				route := map[string]interface{}{
-					"ipv4-prefix": prefix,
-					"route-type":  "rip",
-				}
-				if m, ok := entry["metric"]; ok {
-					route["metric"] = toInt(m)
-				}
-
-				nexthops, _ := entry["nexthops"].([]interface{})
-				if len(nexthops) > 0 {
-					firstHop, _ := nexthops[0].(map[string]interface{})
-					if ip, ok := firstHop["ip"].(string); ok && ip != "" {
-						route["next-hop"] = ip
-					}
-					if ifName, ok := firstHop["interfaceName"].(string); ok && ifName != "" {
-						route["interface"] = ifName
-					}
-				}
-				routes = append(routes, route)
-			}
-
-			if len(routes) > 0 {
-				if _, ok := rip["ipv4"]; !ok {
-					rip["ipv4"] = make(map[string]interface{})
-				}
-				rip["ipv4"].(map[string]interface{})["routes"] = map[string]interface{}{
-					"route": routes,
-				}
-				rip["num-of-routes"] = len(routes)
-			}
+	ipv4 := make(map[string]interface{})
+	if routes := c.ripRoutes(ctx); len(routes) > 0 {
+		ipv4["routes"] = map[string]interface{}{
+			"route": routes,
+		}
+		rip["num-of-routes"] = len(routes)
+	}
+	if neighbors := ripNeighbors(status); len(neighbors) > 0 {
+		ipv4["neighbors"] = map[string]interface{}{
+			"neighbor": neighbors,
 		}
 	}
-
-	if neighs, ok := status["neighbors"].([]interface{}); ok && len(neighs) > 0 {
-		var neighborList []interface{}
-		for _, nRaw := range neighs {
-			nd, ok := nRaw.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			entry := map[string]interface{}{
-				"ipv4-address": nd["address"],
-			}
-			if v, ok := nd["bad-packets"].(int); ok {
-				entry["bad-packets-rcvd"] = v
-			}
-			if v, ok := nd["bad-routes"].(int); ok {
-				entry["bad-routes-rcvd"] = v
-			}
-			neighborList = append(neighborList, entry)
-		}
-		if len(neighborList) > 0 {
-			if _, ok := rip["ipv4"]; !ok {
-				rip["ipv4"] = make(map[string]interface{})
-			}
-			rip["ipv4"].(map[string]interface{})["neighbors"] = map[string]interface{}{
-				"neighbor": neighborList,
-			}
-		}
+	if len(ipv4) > 0 {
+		rip["ipv4"] = ipv4
 	}
 
 	return map[string]interface{}{
@@ -548,6 +545,86 @@ func (c *RoutingCollector) collectRIP(ctx context.Context) interface{} {
 		"name":         "default",
 		"ietf-rip:rip": rip,
 	}
+}
+
+func ripInterfaces(status map[string]interface{}) []interface{} {
+	var out []interface{}
+	ifaces, _ := status["interfaces"].([]interface{})
+	for _, ifRaw := range ifaces {
+		ifData, ok := ifRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		entry := map[string]interface{}{
+			"interface":   ifData["name"],
+			"oper-status": "up",
+		}
+		setIfPresent(entry, "send-version", ifData, "send-version")
+		setIfPresent(entry, "receive-version", ifData, "recv-version")
+		out = append(out, entry)
+	}
+	return out
+}
+
+func ripNeighbors(status map[string]interface{}) []interface{} {
+	var out []interface{}
+	neighs, _ := status["neighbors"].([]interface{})
+	for _, nRaw := range neighs {
+		nd, ok := nRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		entry := map[string]interface{}{
+			"ipv4-address": nd["address"],
+		}
+		setIfPresent(entry, "bad-packets-rcvd", nd, "bad-packets")
+		setIfPresent(entry, "bad-routes-rcvd", nd, "bad-routes")
+		out = append(out, entry)
+	}
+	return out
+}
+
+func (c *RoutingCollector) ripRoutes(ctx context.Context) []interface{} {
+	var routeData map[string]interface{}
+	if c.vtyJSON(ctx, "zebra", "show ip route rip json", &routeData) != nil {
+		return nil
+	}
+
+	var routes []interface{}
+	for prefix, entriesRaw := range routeData {
+		if !strings.Contains(prefix, "/") {
+			continue
+		}
+		entries, _ := entriesRaw.([]interface{})
+		if len(entries) == 0 {
+			continue
+		}
+		entry, ok := entries[0].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		route := map[string]interface{}{
+			"ipv4-prefix": prefix,
+			"route-type":  "rip",
+		}
+		if m, ok := entry["metric"]; ok {
+			route["metric"] = toInt(m)
+		}
+
+		nexthops, _ := entry["nexthops"].([]interface{})
+		if len(nexthops) > 0 {
+			firstHop, _ := nexthops[0].(map[string]interface{})
+			if ip, ok := firstHop["ip"].(string); ok && ip != "" {
+				route["next-hop"] = ip
+			}
+			if ifName, ok := firstHop["interfaceName"].(string); ok && ifName != "" {
+				route["interface"] = ifName
+			}
+		}
+		routes = append(routes, route)
+	}
+	return routes
 }
 
 // parseRIPStatus parses the text output of 'show ip rip status'.
@@ -672,13 +749,8 @@ var bfdStateMap = map[string]string{
 }
 
 func (c *RoutingCollector) collectBFD(ctx context.Context) interface{} {
-	out, err := c.cmd.Run(ctx, "vtysh", "-c", "show bfd peers json")
-	if err != nil {
-		return nil
-	}
-
 	var data []interface{}
-	if json.Unmarshal(out, &data) != nil || len(data) == 0 {
+	if c.vtyJSON(ctx, "bfdd", "show bfd peers json", &data) != nil || len(data) == 0 {
 		return nil
 	}
 
