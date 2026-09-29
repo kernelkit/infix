@@ -2721,9 +2721,10 @@ sections for <a href="../bridging/">Bridging</a>, <a href="../lag/">Link Aggrega
 <a href="../ethernet/">Ethernet</a>, <a href="../ip/">IP Addressing</a>, and <a href="../routing/">Routing</a>.</p>
 <h2 id="interface-name">Interface Name<a class="headerlink" href="#interface-name" title="Permanent link">¶</a></h2>
 <p>The interface name is limited to 1-15 characters due to Linux kernel
-constraints.  Physical interfaces use their system-assigned names (e.g.,
-<code>eth0</code>, <code>eth1</code>), while user-created interfaces can be named freely within
-this limit.</p>
+constraints, and may only contain letters, digits and the characters
+<code>_ . : + -</code>, not starting with <code>.</code> or <code>-</code>.  Physical interfaces use their
+system-assigned names (e.g., <code>eth0</code>, <code>eth1</code>), while user-created
+interfaces can be named freely within these limits.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>Naming conventions like <code>br0</code>, <code>lag0</code>, <code>vlan10</code>, or <code>eth0.20</code> allow
