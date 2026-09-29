@@ -148,6 +148,9 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 	case unix.NL80211_CMD_NEW_INTERFACE:
 		if ifname != "" {
 			m.log.Info("nl80211: new interface", "iface", ifname)
+			// A new interface gets a new daemon, drop any loop still
+			// waiting on the previous one's socket.
+			m.stopAttach(ifname)
 			m.startAttach(ctx, ifname)
 			m.refreshInterface(ctx, ifname)
 		}
@@ -165,21 +168,33 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 	}
 }
 
+// extractIfname takes the name from the message itself when it carries
+// one: interface events do, and on DEL_INTERFACE the index no longer
+// resolves, the interface is already gone.
 func (m *IWMonitor) extractIfname(data []byte) string {
 	ad, err := netlink.NewAttributeDecoder(data)
 	if err != nil {
 		return ""
 	}
+	index := -1
 	for ad.Next() {
-		if ad.Type() == unix.NL80211_ATTR_IFINDEX {
-			iface, err := net.InterfaceByIndex(int(ad.Uint32()))
-			if err != nil {
-				return ""
+		switch ad.Type() {
+		case unix.NL80211_ATTR_IFNAME:
+			if name := strings.TrimRight(ad.String(), "\x00"); name != "" {
+				return name
 			}
-			return iface.Name
+		case unix.NL80211_ATTR_IFINDEX:
+			index = int(ad.Uint32())
 		}
 	}
-	return ""
+	if index < 0 {
+		return ""
+	}
+	iface, err := net.InterfaceByIndex(index)
+	if err != nil {
+		return ""
+	}
+	return iface.Name
 }
 
 func (m *IWMonitor) startAttach(ctx context.Context, ifname string) {

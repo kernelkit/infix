@@ -3,6 +3,8 @@ package iwmonitor
 import (
 	"context"
 	"encoding/json"
+	"github.com/mdlayher/netlink"
+	"golang.org/x/sys/unix"
 	"log/slog"
 	"testing"
 
@@ -190,5 +192,22 @@ func TestDisconnectedMeshStaysMeshPoint(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("%s: published %s, want %s", tc.iftype, got, tc.want)
 		}
+	}
+}
+
+// DEL_INTERFACE arrives after the interface is gone, so its index no
+// longer resolves; the name must come from the message.
+func TestExtractIfnameFromDeletedInterface(t *testing.T) {
+	ae := netlink.NewAttributeEncoder()
+	ae.Uint32(unix.NL80211_ATTR_IFINDEX, 999999)
+	ae.String(unix.NL80211_ATTR_IFNAME, "wifi0")
+	data, err := ae.Encode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := New(slog.Default())
+	if got := m.extractIfname(data); got != "wifi0" {
+		t.Fatalf("extractIfname = %q, want wifi0", got)
 	}
 }
