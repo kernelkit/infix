@@ -371,7 +371,7 @@ func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) bool {
 		return false
 	}
 
-	raw, err := m.query(m.addrBatch, "addr show dev "+ifname)
+	raw, err := m.query(m.addrBatch, "addr show dev "+devRef(update.LinkIndex))
 	if err != nil {
 		return false
 	}
@@ -388,13 +388,13 @@ func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) bool {
 
 func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) bool {
 	if isBridgeFDB(update) {
-		bridgeName, _, ok := bridgeNameFromNeigh(update)
+		bridgeName, bridgeIndex, ok := bridgeNameFromNeigh(update)
 		if !ok {
 			m.log.Warn("fdb update: bridge name not found", "link-index", update.LinkIndex)
 			return false
 		}
 
-		raw, err := m.query(m.brBatch, "fdb show br "+bridgeName)
+		raw, err := m.query(m.brBatch, "fdb show br "+devRef(bridgeIndex))
 		if err != nil {
 			return false
 		}
@@ -417,7 +417,7 @@ func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) bool {
 		return true
 	}
 
-	raw, err := m.query(m.neighBatch, "neigh show dev "+ifname)
+	raw, err := m.query(m.neighBatch, "neigh show dev "+devRef(update.LinkIndex))
 	if err != nil {
 		return false
 	}
@@ -486,7 +486,7 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 		return false
 	}
 
-	addrRaw, err := m.query(m.addrBatch, "addr show dev "+name)
+	addrRaw, err := m.query(m.addrBatch, "addr show dev "+devRef(index))
 	if err != nil {
 		addrRaw = nil
 	}
