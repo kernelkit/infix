@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kernelkit/infix/src/yangerd/internal/bridgebatch"
 	"github.com/kernelkit/infix/src/yangerd/internal/iface"
 	"github.com/kernelkit/infix/src/yangerd/internal/ipbatch"
 	"github.com/kernelkit/infix/src/yangerd/internal/stpquery"
@@ -33,10 +32,10 @@ const treeKey = "ietf-interfaces:interfaces"
 // with ethernet/wifi/bridge data before being stored as a single
 // complete YANG document.
 type NLMonitor struct {
-	linkBatch  *ipbatch.IPBatch
-	addrBatch  *ipbatch.IPBatch
-	neighBatch *ipbatch.IPBatch
-	brBatch    *bridgebatch.BridgeBatch
+	linkBatch  *ipbatch.Batch
+	addrBatch  *ipbatch.Batch
+	neighBatch *ipbatch.Batch
+	brBatch    *ipbatch.Batch
 	tree       *tree.Tree
 	ethRefresh func(string)
 	log        *slog.Logger
@@ -76,7 +75,7 @@ type NLMonitor struct {
 // New creates a netlink monitor backed by ip/bridge batch query workers.
 // linkBatch should include -s -d flags; addrBatch should include -d only
 // (no -s, which causes multi-line output for link commands).
-func New(linkBatch, addrBatch, neighBatch *ipbatch.IPBatch, brBatch *bridgebatch.BridgeBatch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
+func New(linkBatch, addrBatch, neighBatch *ipbatch.Batch, brBatch *ipbatch.Batch, t *tree.Tree, fc iface.FileChecker, log *slog.Logger) *NLMonitor {
 	return &NLMonitor{
 		linkBatch:      linkBatch,
 		addrBatch:      addrBatch,
@@ -339,7 +338,7 @@ func (m *NLMonitor) handleNeighUpdate(update netlink.NeighUpdate) {
 
 		raw, err := m.queryBridge("fdb show br " + bridgeName)
 		if err != nil {
-			if errors.Is(err, bridgebatch.ErrBatchDead) {
+			if errors.Is(err, ipbatch.ErrBatchDead) {
 				m.requestRedump()
 			}
 			return
@@ -739,7 +738,7 @@ func (m *NLMonitor) queryNeigh(command string) (json.RawMessage, error) {
 func (m *NLMonitor) queryBridge(command string) (json.RawMessage, error) {
 	raw, err := m.brBatch.Query(command)
 	if err != nil {
-		if errors.Is(err, bridgebatch.ErrBatchDead) {
+		if errors.Is(err, ipbatch.ErrBatchDead) {
 			m.log.Warn("bridge batch dead", "command", command, "err", err)
 			return nil, err
 		}

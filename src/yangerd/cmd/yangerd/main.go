@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
-	"github.com/kernelkit/infix/src/yangerd/internal/bridgebatch"
 	"github.com/kernelkit/infix/src/yangerd/internal/collector"
 	"github.com/kernelkit/infix/src/yangerd/internal/config"
 	"github.com/kernelkit/infix/src/yangerd/internal/containermonitor"
@@ -157,7 +156,7 @@ func main() {
 	}
 	defer neighBatch.Close()
 
-	brBatch, err := bridgebatch.New(ctx, slogLog)
+	brBatch, err := ipbatch.NewBridge(ctx, slogLog)
 	if err != nil {
 		log.Fatalf("start bridge batch: %v", err)
 	}

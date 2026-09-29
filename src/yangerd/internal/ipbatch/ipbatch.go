@@ -1,20 +1,17 @@
-// Package ipbatch manages a persistent `ip -json [-s] [-d] -force -batch -`
-// subprocess.  Commands sent via Query are serialized by a mutex and
-// paired with the single JSON-array line the subprocess writes to
-// stdout.  The caller chooses global flags via functional options:
-// WithStats adds -s (statistics) and WithDetails adds -d (details).
+// Package ipbatch manages a persistent `ip -json ... -force -batch -` or
+// `bridge -json -force -batch -` subprocess.  Commands sent via Query are
+// serialized by a mutex and paired with the single JSON-array line the
+// subprocess writes to stdout.
 //
-// IMPORTANT: When -s is present, `link show` commands produce multiple
-// lines of output — breaking the one-command-one-line protocol used by
-// Query.  Address queries must therefore use a separate IPBatch instance
-// that omits -s (use WithDetails only).
+// With -force a failing command (e.g. "link show dev <gone>") writes no
+// stdout line, only "Command failed -:<N>" on stderr, where N is its
+// line number in the batch.  Query counts the commands it sends and
+// treats that stderr line as the answer, so a vanished device costs one
+// round trip instead of a timeout and a subprocess restart.
 //
-// IMPORTANT: `ip -force -batch -` produces NO stdout for commands that
-// fail (e.g. "link show dev <nonexistent>").  Query uses a read timeout
-// to detect this and kills the subprocess so restartLoop can recover.
-//
-// On subprocess death the manager enters a dead state and attempts
-// automatic restart with exponential backoff.
+// When -s is present, `link show` commands produce multiple lines of
+// output, breaking the one-command-one-line protocol, so address queries
+// must use a separate instance without WithStats.
 package ipbatch
 
 import (
@@ -25,62 +22,83 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"math"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 )
 
 // ErrBatchDead is returned by Query when the subprocess is not running.
 // Callers should treat it as transient and retry on the next event.
-var ErrBatchDead = errors.New("ip batch process is dead")
+var ErrBatchDead = errors.New("batch process is dead")
 
-const (
-	canaryCommand = "link show lo"
+// ErrCommandFailed is returned by Query when the subprocess rejected the
+// command, typically because the device it names does not exist.
+var ErrCommandFailed = errors.New("batch command failed")
 
-	queryTimeout     = 5 * time.Second
-	reconnectInitial = 100 * time.Millisecond
-	reconnectMax     = 30 * time.Second
-	reconnectFactor  = 2.0
-)
+const queryTimeout = 5 * time.Second
 
-// Option configures an IPBatch instance.
-type Option func(*IPBatch)
+var failedRe = regexp.MustCompile(`^Command failed -:(\d+)$`)
+
+// Option configures an ip batch instance.
+type Option func(*[]string)
 
 // WithStats adds -s (statistics) to the ip command.
-func WithStats() Option { return func(b *IPBatch) { b.stats = true } }
+func WithStats() Option { return func(a *[]string) { *a = append(*a, "-s") } }
 
 // WithDetails adds -d (details) to the ip command.
-func WithDetails() Option { return func(b *IPBatch) { b.details = true } }
+func WithDetails() Option { return func(a *[]string) { *a = append(*a, "-d") } }
 
-// IPBatch wraps a persistent `ip -json -force -batch -` subprocess.
-type IPBatch struct {
-	cmd    *exec.Cmd
-	stdin  io.WriteCloser
-	lines  chan []byte
-	stderr io.ReadCloser
-	mu     sync.Mutex // serializes queries
-	alive  atomic.Bool
+// Batch wraps one persistent batch subprocess.
+type Batch struct {
+	argv   []string
+	canary string
 	log    *slog.Logger
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	stats   bool
-	details bool
+	mu     sync.Mutex // serializes queries, guards the fields below
+	cmd    *exec.Cmd
+	stdin  io.WriteCloser
+	lines  chan []byte
+	failed chan int
+	seq    int // commands written to the current subprocess
+
+	alive atomic.Bool
+	gen   atomic.Int64  // bumped per subprocess, so a stale reader cannot kill a new one
+	died  chan struct{} // kicked when the subprocess goes away
 }
 
-// New spawns the ip batch subprocess.  The returned IPBatch is ready
-// for Query calls.  A background goroutine drains stderr.
-func New(ctx context.Context, log *slog.Logger, opts ...Option) (*IPBatch, error) {
+// New starts `ip -json [opts] -force -batch -`.
+func New(ctx context.Context, log *slog.Logger, opts ...Option) (*Batch, error) {
+	args := []string{"-json"}
+	for _, o := range opts {
+		o(&args)
+	}
+	return Start(ctx, log, append([]string{"ip"}, append(args, "-force", "-batch", "-")...), "link show lo")
+}
+
+// NewBridge starts `bridge -json -force -batch -`.
+func NewBridge(ctx context.Context, log *slog.Logger) (*Batch, error) {
+	return Start(ctx, log, []string{"bridge", "-json", "-force", "-batch", "-"}, "vlan show dev lo")
+}
+
+// Start runs argv as a batch subprocess and keeps it running, restarting
+// it with backoff when it dies.  canary is a command that must succeed,
+// used to validate a restarted subprocess.
+func Start(ctx context.Context, log *slog.Logger, argv []string, canary string) (*Batch, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	b := &IPBatch{
+	b := &Batch{
+		argv:   argv,
+		canary: canary,
 		log:    log,
 		ctx:    ctx,
 		cancel: cancel,
-	}
-	for _, o := range opts {
-		o(b)
+		died:   make(chan struct{}, 1),
 	}
 	if err := b.start(); err != nil {
 		cancel()
@@ -90,17 +108,8 @@ func New(ctx context.Context, log *slog.Logger, opts ...Option) (*IPBatch, error
 	return b, nil
 }
 
-func (b *IPBatch) start() error {
-	args := []string{"-json"}
-	if b.stats {
-		args = append(args, "-s")
-	}
-	if b.details {
-		args = append(args, "-d")
-	}
-	args = append(args, "-force", "-batch", "-")
-
-	cmd := exec.CommandContext(b.ctx, "ip", args...)
+func (b *Batch) start() error {
+	cmd := exec.CommandContext(b.ctx, b.argv[0], b.argv[1:]...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("stdin pipe: %w", err)
@@ -114,74 +123,108 @@ func (b *IPBatch) start() error {
 		return fmt.Errorf("stderr pipe: %w", err)
 	}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start ip batch: %w", err)
+		return fmt.Errorf("start %s batch: %w", b.argv[0], err)
 	}
+
+	lines := make(chan []byte, 8)
+	failed := make(chan int, 8)
+	gen := b.gen.Add(1)
 	b.mu.Lock()
 	b.cmd = cmd
 	b.stdin = stdin
-	b.lines = make(chan []byte, 8)
-	b.stderr = stderr
+	b.lines = lines
+	b.failed = failed
+	b.seq = 0
 	b.alive.Store(true)
 	b.mu.Unlock()
-	go b.readLines(stdout)
-	go b.drainStderr()
+
+	go b.readLines(stdout, lines, gen)
+	go b.readStderr(stderr, failed)
 	return nil
 }
 
-func (b *IPBatch) readLines(r io.Reader) {
+func (b *Batch) readLines(r io.Reader, lines chan<- []byte, gen int64) {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 4*1024*1024), 4*1024*1024)
 	for scanner.Scan() {
-		line := make([]byte, len(scanner.Bytes()))
-		copy(line, scanner.Bytes())
-		b.lines <- line
+		lines <- append([]byte(nil), scanner.Bytes()...)
 	}
-	b.alive.Store(false)
+	close(lines)
+	if b.gen.Load() == gen {
+		b.markDead()
+	}
 }
 
-// Query sends a command to the ip batch process and returns the JSON
-// response.  Commands are newline-terminated (e.g. "link show dev eth0").
-// Each command produces exactly one line of JSON array output.  If the
-// subprocess produces no output (e.g. querying a non-existent device),
-// Query times out and kills the subprocess for recovery.
-func (b *IPBatch) Query(command string) (json.RawMessage, error) {
+func (b *Batch) readStderr(r io.Reader, failed chan<- int) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if m := failedRe.FindStringSubmatch(line); m != nil {
+			n, _ := strconv.Atoi(m[1])
+			failed <- n
+			continue
+		}
+		b.log.Debug(b.argv[0]+" batch stderr", "line", line)
+	}
+}
+
+func (b *Batch) markDead() {
+	b.alive.Store(false)
+	select {
+	case b.died <- struct{}{}:
+	default:
+	}
+}
+
+// Query sends a command to the batch process and returns its JSON
+// response, ErrCommandFailed if the subprocess rejected it, or
+// ErrBatchDead if the subprocess is gone.
+func (b *Batch) Query(command string) (json.RawMessage, error) {
 	if !b.alive.Load() {
 		return nil, ErrBatchDead
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
 	if !b.alive.Load() {
 		return nil, ErrBatchDead
 	}
 
 	if _, err := fmt.Fprintf(b.stdin, "%s\n", command); err != nil {
-		b.alive.Store(false)
+		b.markDead()
 		return nil, fmt.Errorf("write command: %w", err)
 	}
+	b.seq++
 
-	select {
-	case line, ok := <-b.lines:
-		if !ok {
-			b.alive.Store(false)
-			return nil, fmt.Errorf("ip batch process exited")
+	timeout := time.NewTimer(queryTimeout)
+	defer timeout.Stop()
+	for {
+		select {
+		case line, ok := <-b.lines:
+			if !ok {
+				return nil, ErrBatchDead
+			}
+			return json.RawMessage(line), nil
+		case n := <-b.failed:
+			if n != b.seq {
+				continue // a stale report for an earlier command
+			}
+			return nil, fmt.Errorf("%w: %s", ErrCommandFailed, command)
+		case <-timeout.C:
+			b.log.Warn(b.argv[0]+" batch query timeout, killing subprocess", "cmd", command)
+			b.markDead()
+			if b.cmd.Process != nil {
+				b.cmd.Process.Kill()
+			}
+			return nil, fmt.Errorf("timeout waiting for response to: %s", command)
 		}
-		b.log.Debug("ipbatch query", "cmd", command, "respLen", len(line))
-		return json.RawMessage(line), nil
-	case <-time.After(queryTimeout):
-		b.log.Warn("ip batch query timeout, killing subprocess", "cmd", command)
-		b.alive.Store(false)
-		if b.cmd != nil && b.cmd.Process != nil {
-			b.cmd.Process.Kill()
-		}
-		return nil, fmt.Errorf("timeout waiting for response to: %s", command)
 	}
 }
 
 // Close terminates the subprocess and cancels the restart loop.
-func (b *IPBatch) Close() {
+func (b *Batch) Close() {
 	b.cancel()
 	b.mu.Lock()
+	defer b.mu.Unlock()
 	if b.stdin != nil {
 		b.stdin.Close()
 	}
@@ -189,77 +232,45 @@ func (b *IPBatch) Close() {
 		b.cmd.Process.Kill()
 	}
 	b.alive.Store(false)
-	b.mu.Unlock()
 }
 
-// Status returns "running", "restarting", or "failed".
-func (b *IPBatch) Status() string {
-	if b.alive.Load() {
-		return "running"
-	}
-	return "restarting"
-}
-
-func (b *IPBatch) drainStderr() {
-	scanner := bufio.NewScanner(b.stderr)
-	for scanner.Scan() {
-		b.log.Warn("ip batch stderr", "line", scanner.Text())
-	}
-}
-
-// restartLoop runs in the background and respawns the subprocess when
-// it dies.  Uses exponential backoff: 100ms initial, 30s max, 2x factor.
-// After a successful restart, a canary query validates the new process.
-func (b *IPBatch) restartLoop() {
-	delay := reconnectInitial
+// restartLoop respawns the subprocess when it dies, with exponential
+// backoff, validating each new process with the canary command.
+func (b *Batch) restartLoop() {
+	bo := backoff.Default()
+	delay := bo.Initial
 	for {
 		select {
 		case <-b.ctx.Done():
 			return
-		default:
+		case <-b.died:
 		}
 
-		if b.alive.Load() {
-			select {
-			case <-b.ctx.Done():
+		for !b.alive.Load() {
+			b.log.Info(b.argv[0]+" batch: subprocess died, restarting", "delay", delay)
+			if backoff.Sleep(b.ctx, delay) != nil {
 				return
-			case <-time.After(200 * time.Millisecond):
+			}
+			delay = bo.Next(delay)
+
+			b.mu.Lock()
+			if b.cmd != nil && b.cmd.Process != nil {
+				b.cmd.Process.Kill()
+				b.cmd.Wait()
+			}
+			b.mu.Unlock()
+
+			if err := b.start(); err != nil {
+				b.log.Warn(b.argv[0]+" batch: restart failed", "err", err)
 				continue
 			}
+			if _, err := b.Query(b.canary); err != nil {
+				b.log.Warn(b.argv[0]+" batch: canary query failed", "err", err)
+				b.markDead()
+				continue
+			}
+			b.log.Info(b.argv[0] + " batch: restarted")
+			delay = bo.Initial
 		}
-
-		b.log.Info("ip batch: subprocess died, restarting", "delay", delay)
-		select {
-		case <-b.ctx.Done():
-			return
-		case <-time.After(delay):
-		}
-
-		b.mu.Lock()
-		if b.cmd != nil && b.cmd.Process != nil {
-			b.cmd.Process.Kill()
-			b.cmd.Wait()
-		}
-		b.mu.Unlock()
-
-		if err := b.start(); err != nil {
-			b.log.Warn("ip batch: restart failed", "err", err)
-			delay = time.Duration(math.Min(
-				float64(delay)*reconnectFactor,
-				float64(reconnectMax)))
-			continue
-		}
-
-		if _, err := b.Query(canaryCommand); err != nil {
-			b.log.Warn("ip batch: canary query failed", "err", err)
-			b.alive.Store(false)
-			delay = time.Duration(math.Min(
-				float64(delay)*reconnectFactor,
-				float64(reconnectMax)))
-			continue
-		}
-
-		b.log.Info("ip batch: restarted successfully")
-		delay = reconnectInitial
 	}
 }
