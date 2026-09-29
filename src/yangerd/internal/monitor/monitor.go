@@ -480,7 +480,17 @@ func (m *NLMonitor) requestRedump() {
 func (m *NLMonitor) refreshInterface(index int, name string) bool {
 	linkRaw, err := m.query(m.linkBatch, "link show dev "+name)
 	if errors.Is(err, ipbatch.ErrCommandFailed) {
-		return m.removeInterface(index) // gone before we asked
+		if _, gone := net.InterfaceByIndex(index); gone != nil {
+			return m.removeInterface(index) // gone before we asked
+		}
+		// Still there: ip resolved the name from its cache, to an
+		// interface that had it before.  See devRef.
+		m.log.Debug("link query failed for a live interface, refreshing ip", "ifname", name)
+		if rerr := m.linkBatch.Refresh(); rerr != nil {
+			m.log.Warn("refreshing ip batch failed", "err", rerr)
+			return false
+		}
+		linkRaw, err = m.query(m.linkBatch, "link show dev "+name)
 	}
 	if err != nil {
 		return false

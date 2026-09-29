@@ -220,6 +220,31 @@ func (b *Batch) Query(command string) (json.RawMessage, error) {
 	}
 }
 
+// Refresh replaces the subprocess with a fresh one and validates it with
+// the canary.  iproute2 caches name-to-index lookups for the life of the
+// process, so once a name is reused by a new interface only a new
+// process resolves it right.
+func (b *Batch) Refresh() error {
+	b.mu.Lock()
+	cmd, stdin := b.cmd, b.stdin
+	b.mu.Unlock()
+
+	if err := b.start(); err != nil {
+		b.markDead()
+		return err
+	}
+	if stdin != nil {
+		stdin.Close()
+	}
+	if cmd != nil && cmd.Process != nil {
+		cmd.Process.Kill()
+		go cmd.Wait()
+	}
+
+	_, err := b.Query(b.canary)
+	return err
+}
+
 // Close terminates the subprocess and cancels the restart loop.
 func (b *Batch) Close() {
 	b.cancel()

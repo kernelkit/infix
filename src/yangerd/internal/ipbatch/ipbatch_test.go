@@ -101,3 +101,34 @@ func TestQueryTimeout(t *testing.T) {
 		t.Fatal("process still marked alive after timeout")
 	}
 }
+
+// Refresh swaps in a new subprocess, which starts its line count over,
+// and the old one's exit must not mark the new one dead.
+func TestRefreshReplacesProcess(t *testing.T) {
+	b := startFake(t)
+	if _, err := b.Query("link show dev eth0"); err != nil {
+		t.Fatal(err)
+	}
+	b.mu.Lock()
+	oldPid := b.cmd.Process.Pid
+	b.mu.Unlock()
+
+	if err := b.Refresh(); err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+
+	b.mu.Lock()
+	newPid := b.cmd.Process.Pid
+	b.mu.Unlock()
+	if newPid == oldPid {
+		t.Fatal("Refresh kept the old process")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	if _, err := b.Query("fail dev gone0"); !errors.Is(err, ErrCommandFailed) {
+		t.Fatalf("line numbering out of step after Refresh: %v", err)
+	}
+	if got, err := b.Query("link show dev eth1"); err != nil || string(got) != `["link show dev eth1"]` {
+		t.Fatalf("Query after Refresh = %s, %v", got, err)
+	}
+}
