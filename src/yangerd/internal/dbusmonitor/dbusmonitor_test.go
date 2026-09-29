@@ -1,14 +1,10 @@
 package dbusmonitor
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 )
 
 func TestParseDnsmasqLeases(t *testing.T) {
@@ -568,40 +564,6 @@ func TestParseHelpers(t *testing.T) {
 	})
 }
 
-func TestSleepOrDone(t *testing.T) {
-	tests := []struct {
-		name      string
-		cancelNow bool
-		delay     time.Duration
-		wantErr   bool
-	}{
-		{name: "done context returns error", cancelNow: true, delay: time.Millisecond, wantErr: true},
-		{name: "sleep completes when context active", cancelNow: false, delay: time.Millisecond, wantErr: false},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			if tc.cancelNow {
-				cancel()
-			} else {
-				defer cancel()
-			}
-
-			err := backoff.Sleep(ctx, tc.delay)
-			if tc.wantErr {
-				if !errors.Is(err, context.Canceled) {
-					t.Fatalf("expected context.Canceled, got %v", err)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("expected nil error, got %v", err)
-			}
-		})
-	}
-}
-
 func TestDecodeActiveZones(t *testing.T) {
 	tests := []struct {
 		name string
@@ -664,29 +626,6 @@ func TestDecodeActiveZones(t *testing.T) {
 			got := decodeActiveZones(tc.in)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("decodeActiveZones() =\n  %v\nwant:\n  %v", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestNextDelay(t *testing.T) {
-	b := backoff.Default()
-	tests := []struct {
-		name string
-		in   time.Duration
-		want time.Duration
-	}{
-		{name: "doubles normal delay", in: b.Initial, want: b.Initial * 2},
-		{name: "caps at max", in: b.Max, want: b.Max},
-		{name: "near max also caps", in: b.Max - time.Second, want: b.Max},
-		{name: "zero becomes initial", in: 0, want: b.Initial},
-		{name: "negative becomes initial", in: -time.Second, want: b.Initial},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := b.Next(tc.in); got != tc.want {
-				t.Fatalf("Next(%v) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
 	}

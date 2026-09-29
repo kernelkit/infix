@@ -80,57 +80,32 @@ func (m *DBusMonitor) getConn() *dbus.Conn {
 // to relevant signals, loads initial DHCP/firewall data, and reconnects
 // with exponential backoff on failures until ctx is cancelled.
 func (m *DBusMonitor) Run(ctx context.Context) error {
-	bo := backoff.Default()
-	delay := bo.Initial
+	return backoff.Retry(ctx, m.log, "dbus monitor", m.session)
+}
 
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-
-		conn, err := dbus.ConnectSystemBus()
-		if err != nil {
-			m.log.Warn("dbus monitor: connect system bus failed", "err", err, "delay", delay)
-			if err := backoff.Sleep(ctx, delay); err != nil {
-				return err
-			}
-			delay = bo.Next(delay)
-			continue
-		}
-
-		if err := m.subscribe(conn); err != nil {
-			m.log.Warn("dbus monitor: subscribe failed", "err", err, "delay", delay)
-			_ = conn.Close()
-			if err := backoff.Sleep(ctx, delay); err != nil {
-				return err
-			}
-			delay = bo.Next(delay)
-			continue
-		}
-
-		delay = bo.Initial
-		m.setConn(conn)
-
-		if err := m.refreshDHCP(conn); err != nil {
-			m.log.Warn("dbus monitor: initial dhcp refresh failed", "err", err)
-		}
-		if err := m.refreshFirewall(conn); err != nil {
-			m.log.Warn("dbus monitor: initial firewall refresh failed", "err", err)
-		}
-
-		err = m.processSignals(ctx, conn)
-		m.setConn(nil)
-		_ = conn.Close()
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		m.log.Warn("dbus monitor: signal loop ended, reconnecting", "err", err, "delay", delay)
-		if err := backoff.Sleep(ctx, delay); err != nil {
-			return err
-		}
-		delay = bo.Next(delay)
+// session runs one system bus connection until it drops or ctx ends.
+func (m *DBusMonitor) session(ctx context.Context) error {
+	conn, err := dbus.ConnectSystemBus()
+	if err != nil {
+		return fmt.Errorf("connect system bus: %w", err)
 	}
+	defer conn.Close()
+
+	if err := m.subscribe(conn); err != nil {
+		return err
+	}
+
+	m.setConn(conn)
+	defer m.setConn(nil)
+
+	if err := m.refreshDHCP(conn); err != nil {
+		m.log.Warn("dbus monitor: initial dhcp refresh failed", "err", err)
+	}
+	if err := m.refreshFirewall(conn); err != nil {
+		m.log.Warn("dbus monitor: initial firewall refresh failed", "err", err)
+	}
+
+	return m.processSignals(ctx, conn)
 }
 
 func (m *DBusMonitor) subscribe(conn *dbus.Conn) error {
