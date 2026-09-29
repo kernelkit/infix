@@ -1,7 +1,15 @@
 package ethmonitor
 
 import (
+	"context"
+	"encoding/json"
+	"github.com/mdlayher/genetlink"
+	"github.com/mdlayher/netlink"
+	"log/slog"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestBuildEthernetContainerCopper1G(t *testing.T) {
@@ -134,5 +142,69 @@ func TestEthtoolModesToPMD(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("got[%d] = %q, want %q", i, got[i], want[i])
 		}
+	}
+}
+
+type recordingRunner struct {
+	mu    sync.Mutex
+	calls []string
+}
+
+func (r *recordingRunner) Run(_ context.Context, name string, args ...string) ([]byte, error) {
+	r.mu.Lock()
+	r.calls = append(r.calls, strings.Join(append([]string{name}, args...), " "))
+	r.mu.Unlock()
+	return []byte(`[{"speed":1000,"duplex":"Full","port":"Twisted Pair","auto-negotiation":true}]`), nil
+}
+
+// A link-modes notification must reach the ethtool refresh for the
+// interface named by the header ifindex, and land in the callback.
+func TestDispatchNotificationRefreshesInterface(t *testing.T) {
+	ae := netlink.NewAttributeEncoder()
+	ae.Nested(1, func(nae *netlink.AttributeEncoder) error {
+		nae.Uint32(nlaHeaderIfindex, 7)
+		return nil
+	})
+	data, err := ae.Encode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runner := &recordingRunner{}
+	m := New(slog.Default(), runner)
+	m.ifaceName = func(index int) (string, error) {
+		if index != 7 {
+			t.Fatalf("ifindex = %d, want 7", index)
+		}
+		return "eth3", nil
+	}
+	got := make(chan string, 1)
+	m.SetOnUpdate(func(ifname string, raw json.RawMessage) {
+		if !strings.Contains(string(raw), `"duplex":"full"`) {
+			t.Errorf("unexpected ethernet data: %s", raw)
+		}
+		got <- ifname
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go m.worker(ctx)
+
+	m.dispatch(genetlink.Message{Header: genetlink.Header{Command: ETHTOOL_MSG_LINKMODES_NTF}, Data: data})
+	m.dispatch(genetlink.Message{Header: genetlink.Header{Command: 28}, Data: data}) // not a link notification
+
+	select {
+	case ifname := <-got:
+		if ifname != "eth3" {
+			t.Fatalf("refreshed %q, want eth3", ifname)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("notification never reached the callback")
+	}
+	time.Sleep(50 * time.Millisecond)
+	runner.mu.Lock()
+	defer runner.mu.Unlock()
+	if len(runner.calls) != 1 || runner.calls[0] != "ethtool --json eth3" {
+		t.Fatalf("ethtool calls = %v", runner.calls)
 	}
 }

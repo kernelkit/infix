@@ -3,7 +3,9 @@
 //
 // Data is fetched by shelling out to `ethtool --json <ifname>` (matching
 // the Python yanger approach) while genetlink provides reactive change
-// notifications.
+// notifications.  The exec runs on a worker fed by a set of pending
+// interface names, so a burst of link events on many ports costs one
+// ethtool per port and never blocks the caller.
 package ethmonitor
 
 import (
@@ -13,14 +15,19 @@ import (
 	"log/slog"
 	"net"
 	"strings"
+	"sync"
 
+	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
+	"github.com/kernelkit/infix/src/yangerd/internal/collector"
 	"github.com/mdlayher/genetlink"
 	"github.com/mdlayher/netlink"
 )
 
+// Kernel-to-user ethtool message types, from
+// include/uapi/linux/ethtool_netlink_generated.h.
 const (
-	ETHTOOL_MSG_LINKINFO_NTF  = 28
-	ETHTOOL_MSG_LINKMODES_NTF = 29
+	ETHTOOL_MSG_LINKINFO_NTF  = 3
+	ETHTOOL_MSG_LINKMODES_NTF = 5
 
 	ethtoolFamilyName       = "ethtool"
 	ethtoolMonitorGroupName = "monitor"
@@ -30,37 +37,55 @@ const (
 	ethtoolSpeedUnknown = (1 << 32) - 1
 )
 
-// CommandRunner executes external commands and returns stdout.
-type CommandRunner interface {
-	Run(ctx context.Context, name string, args ...string) ([]byte, error)
-}
-
 // EthMonitor listens for ethtool genetlink monitor events and updates
 // interface ethernet operational state via a callback.
 type EthMonitor struct {
-	conn     *genetlink.Conn
-	family   genetlink.Family
-	groupID  uint32
-	cmd      CommandRunner
-	ctx      context.Context
+	cmd      collector.CommandRunner
 	log      *slog.Logger
 	onUpdate func(ifname string, data json.RawMessage)
+
+	// ifaceName resolves a kernel ifindex; overridable in tests.
+	ifaceName func(index int) (string, error)
+
+	mu      sync.Mutex
+	pending map[string]struct{}
+	kick    chan struct{}
 }
 
-// New creates an EthMonitor, resolves the ethtool genetlink family,
-// and joins its "monitor" multicast group.
-func New(log *slog.Logger, cmd CommandRunner) (*EthMonitor, error) {
+// New creates an EthMonitor.  The genetlink socket is opened by Run.
+func New(log *slog.Logger, cmd collector.CommandRunner) *EthMonitor {
+	return &EthMonitor{
+		cmd:       cmd,
+		log:       log,
+		ifaceName: ifNameByIndex,
+		pending:   make(map[string]struct{}),
+		kick:      make(chan struct{}, 1),
+	}
+}
+
+// SetOnUpdate sets the callback invoked when ethernet data changes.
+func (m *EthMonitor) SetOnUpdate(fn func(string, json.RawMessage)) {
+	m.onUpdate = fn
+}
+
+// Run serves refresh requests and the ethtool notification stream until
+// ctx is cancelled, reconnecting with backoff if the socket fails.
+func (m *EthMonitor) Run(ctx context.Context) error {
+	go m.worker(ctx)
+	return backoff.Retry(ctx, m.log, "ethmonitor", m.receive)
+}
+
+func (m *EthMonitor) receive(ctx context.Context) error {
 	conn, err := genetlink.Dial(nil)
 	if err != nil {
-		return nil, fmt.Errorf("dial genetlink: %w", err)
+		return fmt.Errorf("dial genetlink: %w", err)
 	}
+	defer conn.Close()
 
 	family, err := conn.GetFamily(ethtoolFamilyName)
 	if err != nil {
-		_ = conn.Close()
-		return nil, fmt.Errorf("resolve %q genetlink family: %w", ethtoolFamilyName, err)
+		return fmt.Errorf("resolve %q genetlink family: %w", ethtoolFamilyName, err)
 	}
-
 	var groupID uint32
 	for _, g := range family.Groups {
 		if g.Name == ethtoolMonitorGroupName {
@@ -69,70 +94,90 @@ func New(log *slog.Logger, cmd CommandRunner) (*EthMonitor, error) {
 		}
 	}
 	if groupID == 0 {
-		_ = conn.Close()
-		return nil, fmt.Errorf("multicast group %q not found in family %q", ethtoolMonitorGroupName, ethtoolFamilyName)
+		return fmt.Errorf("multicast group %q not found in family %q", ethtoolMonitorGroupName, ethtoolFamilyName)
 	}
-
 	if err := conn.JoinGroup(groupID); err != nil {
-		_ = conn.Close()
-		return nil, fmt.Errorf("join ethtool monitor group %d: %w", groupID, err)
+		return fmt.Errorf("join ethtool monitor group %d: %w", groupID, err)
 	}
 
-	return &EthMonitor{
-		conn:    conn,
-		family:  family,
-		groupID: groupID,
-		cmd:     cmd,
-		log:     log,
-	}, nil
-}
-
-// SetOnUpdate sets the callback invoked when ethernet data changes.
-func (m *EthMonitor) SetOnUpdate(fn func(string, json.RawMessage)) {
-	m.onUpdate = fn
-}
-
-// Run starts the ethtool genetlink receive loop and updates interface
-// ethernet settings when link info or link mode notifications are seen.
-func (m *EthMonitor) Run(ctx context.Context) error {
-	m.ctx = ctx
-	defer func() {
-		if err := m.conn.Close(); err != nil {
-			m.log.Warn("ethmonitor: close genetlink conn", "err", err)
-		}
-	}()
+	// Receive has no deadline; closing the socket is what ends it.
+	stop := context.AfterFunc(ctx, func() { conn.Close() })
+	defer stop()
 
 	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-
-		msgs, _, err := m.conn.Receive()
+		msgs, _, err := conn.Receive()
 		if err != nil {
-			if cerr := ctx.Err(); cerr != nil {
-				return cerr
+			if ctx.Err() != nil {
+				return ctx.Err()
 			}
 			return fmt.Errorf("receive ethtool genetlink message: %w", err)
 		}
-
 		for _, msg := range msgs {
-			switch msg.Header.Command {
-			case ETHTOOL_MSG_LINKINFO_NTF, ETHTOOL_MSG_LINKMODES_NTF:
-				ifname, err := extractIfname(msg.Data)
-				if err != nil {
-					m.log.Warn("ethmonitor: extract interface name", "err", err)
-					continue
-				}
-				m.refreshEthernetSettings(ifname)
-			}
+			m.dispatch(msg)
 		}
 	}
 }
 
-// RefreshInterface refreshes ethernet settings for ifname. It is intended
-// to be called by other subsystems (for example nlmonitor RTM_NEWLINK).
+// dispatch queues a refresh for the interface a link notification is
+// about.
+func (m *EthMonitor) dispatch(msg genetlink.Message) {
+	switch msg.Header.Command {
+	case ETHTOOL_MSG_LINKINFO_NTF, ETHTOOL_MSG_LINKMODES_NTF:
+	default:
+		return
+	}
+	index, err := headerIfindex(msg.Data)
+	if err != nil {
+		m.log.Warn("ethmonitor: decode notification", "err", err)
+		return
+	}
+	ifname, err := m.ifaceName(index)
+	if err != nil {
+		m.log.Debug("ethmonitor: notification for unknown ifindex", "index", index, "err", err)
+		return
+	}
+	m.RefreshInterface(ifname)
+}
+
+// RefreshInterface queues a refresh of the ethernet settings for ifname.
+// Called by the notification stream and by nlmonitor on link events;
+// repeated requests before the worker gets to them collapse into one.
 func (m *EthMonitor) RefreshInterface(ifname string) {
-	m.refreshEthernetSettings(ifname)
+	m.mu.Lock()
+	m.pending[ifname] = struct{}{}
+	m.mu.Unlock()
+
+	select {
+	case m.kick <- struct{}{}:
+	default:
+	}
+}
+
+func (m *EthMonitor) worker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-m.kick:
+		}
+		for {
+			ifname, ok := m.next()
+			if !ok {
+				break
+			}
+			m.refreshEthernetSettings(ctx, ifname)
+		}
+	}
+}
+
+func (m *EthMonitor) next() (string, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for ifname := range m.pending {
+		delete(m.pending, ifname)
+		return ifname, true
+	}
+	return "", false
 }
 
 // ethtoolJSON represents the relevant fields from `ethtool --json <ifname>`.
@@ -147,12 +192,7 @@ type ethtoolJSON struct {
 	AdvertisedLinkModes []string `json:"advertised-link-modes"`
 }
 
-func (m *EthMonitor) refreshEthernetSettings(ifname string) {
-	ctx := m.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
+func (m *EthMonitor) refreshEthernetSettings(ctx context.Context, ifname string) {
 	out, err := m.cmd.Run(ctx, "ethtool", "--json", ifname)
 	if err != nil {
 		m.log.Warn("ethmonitor: run ethtool", "ifname", ifname, "err", err)
@@ -238,10 +278,12 @@ func buildEthernetContainer(data ethtoolJSON) (map[string]any, int64) {
 	return eth, speedBPS
 }
 
-func extractIfname(data []byte) (string, error) {
+// headerIfindex returns the ifindex from the request header nest that
+// every ethtool notification carries.
+func headerIfindex(data []byte) (int, error) {
 	ad, err := netlink.NewAttributeDecoder(data)
 	if err != nil {
-		return "", fmt.Errorf("new decoder: %w", err)
+		return 0, fmt.Errorf("new decoder: %w", err)
 	}
 
 	for ad.Next() {
@@ -251,27 +293,28 @@ func extractIfname(data []byte) (string, error) {
 		}
 
 		for nested.Next() {
-			if nested.Type() != nlaHeaderIfindex {
-				continue
+			if nested.Type() == nlaHeaderIfindex {
+				return int(nested.Uint32()), nil
 			}
-
-			ifindex := int(nested.Uint32())
-			iface, err := net.InterfaceByIndex(ifindex)
-			if err != nil {
-				return "", fmt.Errorf("lookup interface index %d: %w", ifindex, err)
-			}
-			return iface.Name, nil
 		}
 		if err := nested.Err(); err != nil {
-			return "", fmt.Errorf("decode nested attrs: %w", err)
+			return 0, fmt.Errorf("decode nested attrs: %w", err)
 		}
 	}
 
 	if err := ad.Err(); err != nil {
-		return "", fmt.Errorf("decode attrs: %w", err)
+		return 0, fmt.Errorf("decode attrs: %w", err)
 	}
 
-	return "", fmt.Errorf("header ifindex attribute not found")
+	return 0, fmt.Errorf("header ifindex attribute not found")
+}
+
+func ifNameByIndex(index int) (string, error) {
+	iface, err := net.InterfaceByIndex(index)
+	if err != nil {
+		return "", err
+	}
+	return iface.Name, nil
 }
 
 // linkModeKey is the lookup key for phy-type/pmd-type mapping.

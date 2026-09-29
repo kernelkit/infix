@@ -165,14 +165,10 @@ func main() {
 
 	nlmon := monitor.New(linkBatch, addrBatch, neighBatch, brBatch, t, osFileChecker{}, slogLog)
 
-	ethMon, err := ethmonitor.New(slogLog, cmd)
-	if err != nil {
-		slogLog.Warn("ethmonitor unavailable, continuing without it", "err", err)
-	} else {
-		ethMon.SetOnUpdate(nlmon.SetEthernetData)
-		nlmon.SetEthRefresh(ethMon.RefreshInterface)
-		spawn("ethmonitor", ethMon.Run)
-	}
+	ethMon := ethmonitor.New(slogLog, cmd)
+	ethMon.SetOnUpdate(nlmon.SetEthernetData)
+	nlmon.SetEthRefresh(ethMon.RefreshInterface)
+	spawn("ethmonitor", ethMon.Run)
 
 	spawn("wireguard", poll(nlmon.WaitReady(), 10*time.Second, func() {
 		links := nlmon.Links()
