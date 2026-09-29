@@ -10,16 +10,14 @@
 package lldpmonitor
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os/exec"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
@@ -69,23 +67,7 @@ func queryNeighbors(ctx context.Context) ([]byte, error) {
 // Run starts the LLDP monitor.  It blocks until ctx is cancelled.
 func (m *LLDPMonitor) Run(ctx context.Context) error {
 	go m.refreshLoop(ctx)
-
-	bo := backoff.Default()
-	delay := bo.Initial
-
-	for {
-		err := m.runOnce(ctx)
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		m.log.Warn("lldp monitor: subprocess exited, restarting",
-			"err", err, "delay", delay)
-		if err := backoff.Sleep(ctx, delay); err != nil {
-			return err
-		}
-		delay = bo.Next(delay)
-	}
+	return backoff.Retry(ctx, m.log, "lldp monitor", m.runOnce)
 }
 
 func (m *LLDPMonitor) runOnce(ctx context.Context) error {
@@ -102,45 +84,24 @@ func (m *LLDPMonitor) runOnce(ctx context.Context) error {
 	// Pick up neighbors that existed before we attached.
 	m.triggerRefresh()
 
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(make([]byte, 0, 1*1024*1024), 1*1024*1024)
+	return m.readEvents(stdout)
+}
 
-	var buf bytes.Buffer
-	braceDepth := 0
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Blank-line framing: object separator.
-		if strings.TrimSpace(line) == "" && braceDepth == 0 {
-			if buf.Len() > 0 {
-				m.processEvent(buf.Bytes())
-				buf.Reset()
+// readEvents dispatches each JSON value lldpcli prints.  A decoder, not
+// line or brace counting, frames them: neighbor descriptions are free
+// text from the peer and may hold anything.
+func (m *LLDPMonitor) readEvents(r io.Reader) error {
+	dec := json.NewDecoder(r)
+	for {
+		var ev json.RawMessage
+		if err := dec.Decode(&ev); err != nil {
+			if err == io.EOF {
+				return fmt.Errorf("lldpcli watch process exited")
 			}
-			continue
+			return fmt.Errorf("read lldpcli: %w", err)
 		}
-
-		buf.WriteString(line)
-		buf.WriteByte('\n')
-
-		for _, ch := range line {
-			switch ch {
-			case '{':
-				braceDepth++
-			case '}':
-				braceDepth--
-			}
-		}
-
-		if braceDepth == 0 && buf.Len() > 0 {
-			m.processEvent(buf.Bytes())
-			buf.Reset()
-		}
+		m.processEvent(ev)
 	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("read lldpcli: %w", err)
-	}
-	return fmt.Errorf("lldpcli watch process exited")
 }
 
 // processEvent inspects a watch event and triggers a full table re-read.
