@@ -367,7 +367,7 @@ func (m *DBusMonitor) refreshFirewall(conn *dbus.Conn) error {
 
 	zones := m.getFirewallZones(obj)
 	policies := m.getFirewallPolicies(obj)
-	services := m.getFirewallServices(obj, referencedServices(zones, policies))
+	services := m.getFirewallServices(obj)
 
 	m.tree.Set(firewallTreeKey, buildFirewallTree(defaultZone, logDenied, lockdown, zones, policies, services))
 	return nil
@@ -482,26 +482,9 @@ func (m *DBusMonitor) getFirewallPolicies(obj dbus.BusObject) []map[string]any {
 	return policies
 }
 
-func referencedServices(zones, policies []map[string]any) map[string]bool {
-	refs := map[string]bool{}
-	for _, z := range zones {
-		if svcs, ok := z["service"].([]string); ok {
-			for _, s := range svcs {
-				refs[s] = true
-			}
-		}
-	}
-	for _, p := range policies {
-		if svcs, ok := p["service"].([]string); ok {
-			for _, s := range svcs {
-				refs[s] = true
-			}
-		}
-	}
-	return refs
-}
-
-func (m *DBusMonitor) getFirewallServices(obj dbus.BusObject, wanted map[string]bool) []map[string]any {
+// getFirewallServices lists every service firewalld knows, not only the
+// ones a zone uses: show firewall service looks any of them up.
+func (m *DBusMonitor) getFirewallServices(obj dbus.BusObject) []map[string]any {
 	var names []string
 	if call := obj.Call(firewalldInterface+".listServices", 0); call.Err != nil {
 		m.log.Warn("dbus monitor: firewalld listServices failed", "err", call.Err)
@@ -511,12 +494,8 @@ func (m *DBusMonitor) getFirewallServices(obj dbus.BusObject, wanted map[string]
 		return nil
 	}
 
-	services := make([]map[string]any, 0, len(wanted))
+	services := make([]map[string]any, 0, len(names))
 	for _, name := range names {
-		if !wanted[name] {
-			continue
-		}
-
 		settings := map[string]any{}
 		if call := obj.Call(firewalldInterface+".getServiceSettings2", 0, name); call.Err != nil {
 			m.log.Warn("dbus monitor: firewalld getServiceSettings2 failed", "service", name, "err", call.Err)
@@ -525,14 +504,9 @@ func (m *DBusMonitor) getFirewallServices(obj dbus.BusObject, wanted map[string]
 			settings = variantMap(call.Body[0])
 		}
 
-		ports := parseServicePorts(settings)
-		if len(ports) == 0 {
-			continue
-		}
-
-		service := map[string]any{
-			"name": name,
-			"port": ports,
+		service := map[string]any{"name": name}
+		if ports := parseServicePorts(settings); len(ports) > 0 {
+			service["port"] = ports
 		}
 		if desc := getString(settings, "description"); desc != "" {
 			service["description"] = desc
