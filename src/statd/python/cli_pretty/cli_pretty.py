@@ -2207,10 +2207,16 @@ def show_software(json, name):
                f"{'VERSION':<{PadSoftware.version}}"
                f"{'DATE':<{PadSoftware.date}}")
         print(Decore.invert(hdr))
-        for _s in reversed(slots):
-            slot = Software(_s)
-            if slot.is_rootfs():
-                slot.print()
+        rootfs = [s for s in map(Software, reversed(slots)) if s.is_rootfs()]
+        for slot in rootfs:
+            slot.print()
+
+        booted = next((s for s in rootfs if s.state == "booted"), None)
+        others = [s for s in rootfs if s.version != booted.version] if booted else []
+        for slot in others:
+            print()
+            print(Decore.yellow(f"Note: the {slot.name} partition has {slot.version or 'unknown'},"
+                                f" this is {booted.version}.  Use 'upgrade' to update it."))
 
 
 def show_services(json):

@@ -11,6 +11,10 @@
 <div class="alert alert-info">{{.Message}}</div>
 {{end}}
 
+{{range .OtherSlots}}
+<div class="alert alert-info">The {{.Name}} partition has {{if .Version}}{{.Version}}{{else}}an unknown version{{end}}, this is {{$.BootedVersion}}.  Install the same software again to update it.</div>
+{{end}}
+
 {{$sseURL := "/software/progress"}}{{if .AutoReboot}}{{$sseURL = "/software/progress?auto-reboot=1"}}{{end}}
 
 {{if .Installing}}
