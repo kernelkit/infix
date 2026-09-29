@@ -21,6 +21,7 @@ image::topology.svg[LACP Aggregate w/ Degraded Link topology, align=center, scal
 
 . Set up topology and attach to target DUTs
 . Set up link aggregate, lag0, between dut1 and dut2
+. Wait for LACP to synchronize both links
 . Initial connectivity check ...
 . Verify failure modes
 
