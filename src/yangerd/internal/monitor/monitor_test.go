@@ -339,3 +339,20 @@ func TestLateDeleteKeepsReusedName(t *testing.T) {
 		t.Fatal("deleting the last wifi0 kept its wifi data")
 	}
 }
+
+func TestLinkRowFor(t *testing.T) {
+	for _, tc := range []struct {
+		raw  string
+		want bool
+	}{
+		{`[{"ifindex":16,"ifname":"wifi0"}]`, true},
+		{`[{}]`, false},
+		{`[{"ifindex":14,"ifname":"wifi0"}]`, false},
+		{`[{"ifindex":16}]`, false},
+		{`[]`, false},
+	} {
+		if got := linkRowFor(json.RawMessage(tc.raw), 16); got != tc.want {
+			t.Errorf("linkRowFor(%s) = %v, want %v", tc.raw, got, tc.want)
+		}
+	}
+}

@@ -958,3 +958,16 @@ func TestTransformAddressesByIndex(t *testing.T) {
 		t.Fatalf("address of ifindex 16 lost to the stale ifindex 14 row: %v", wifi0)
 	}
 }
+
+// A row ip printed without name or index must not become an interface
+// with an empty key and if-index 0.
+func TestTransformSkipsNamelessRow(t *testing.T) {
+	links := mustRaw(t, []map[string]any{
+		{},
+		{"ifname": "e1", "ifindex": 2, "link_type": "ether", "flags": []string{"UP"}, "operstate": "UP"},
+	})
+	ifaces := mustInterfaces(t, Transform(links, nil, nil, &mockFileChecker{}))
+	if len(ifaces) != 1 || ifaces[0]["name"] != "e1" {
+		t.Fatalf("interfaces = %v, want only e1", ifaces)
+	}
+}

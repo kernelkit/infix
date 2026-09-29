@@ -60,6 +60,11 @@ func Transform(linkData, addrData, neighData json.RawMessage, fc FileChecker) js
 
 	interfaces := make([]map[string]any, 0, len(links))
 	for _, iplink := range links {
+		// A row without name or index is not an interface, whatever
+		// ip printed it for; the list key must not come out empty.
+		if getString(iplink, "ifname") == "" || getIntOrZero(iplink, "ifindex") == 0 {
+			continue
+		}
 		if skipInterface(iplink) {
 			continue
 		}

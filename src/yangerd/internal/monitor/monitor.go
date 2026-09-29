@@ -495,6 +495,13 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 	if err != nil {
 		return false
 	}
+	if !linkRowFor(linkRaw, index) {
+		// ip prints the object before it checks the message, so a
+		// link racing a delete or rename can come back as [{}].
+		m.log.Warn("link query returned no row for the interface, re-dumping", "ifname", name, "ifindex", index)
+		m.requestRedump()
+		return false
+	}
 
 	addrRaw, err := m.query(m.addrBatch, "addr show dev "+devRef(index))
 	if err != nil {
@@ -1036,6 +1043,14 @@ func replaceRows(bulk json.RawMessage, key string, match any, replacement json.R
 }
 
 // nameByIndex returns the staged ifname for index, "" if none.
+// linkRowFor tells whether raw is a link answer for index: one row with
+// that ifindex and a name.
+func linkRowFor(raw json.RawMessage, index int) bool {
+	rows := decodeRows(raw)
+	return len(rows) == 1 && rowMatches(rows[0], "ifindex", jsonKey(index)) &&
+		rowString(rows[0], "ifname") != ""
+}
+
 // nameInUse tells whether any staged link row carries name.
 func nameInUse(links json.RawMessage, name string) bool {
 	for _, row := range decodeRows(links) {
