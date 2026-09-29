@@ -54,17 +54,16 @@ func MergeInstaller(cached json.RawMessage, inst InstallerStatus) json.RawMessag
 		return nil
 	}
 
+	// On a decode error no overlay is better than one that replaces the
+	// software object with only the installer status, dropping the slots.
 	var base map[string]json.RawMessage
-	if len(cached) > 0 {
-		json.Unmarshal(cached, &base)
-	}
-	if base == nil {
-		base = make(map[string]json.RawMessage)
+	if len(cached) > 0 && json.Unmarshal(cached, &base) != nil {
+		return nil
 	}
 
 	sw := make(map[string]interface{})
-	if raw, ok := base["infix-system:software"]; ok {
-		json.Unmarshal(raw, &sw)
+	if raw, ok := base["infix-system:software"]; ok && json.Unmarshal(raw, &sw) != nil {
+		return nil
 	}
 	if sw == nil {
 		sw = make(map[string]interface{})
