@@ -10,82 +10,47 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 var sizeRe = regexp.MustCompile(`(?i)^\s*([0-9.]+)\s*([KMGT]?I?B)?\s*$`)
 
-// ContainerCollector gathers infix-containers operational data.
-type ContainerCollector struct {
-	cmd      CommandRunner
-	fs       FileReader
-	interval time.Duration
+// collectTimeout bounds one full collection: a podman stats stuck on a
+// container in a bad state must not wedge the container monitor.
+const collectTimeout = 60 * time.Second
+
+// containerCollector gathers infix-containers operational data.
+type containerCollector struct {
+	cmd CommandRunner
+	fs  FileReader
 }
 
-// NewContainerCollector creates a ContainerCollector with the given dependencies.
-func NewContainerCollector(cmd CommandRunner, fs FileReader, interval time.Duration) *ContainerCollector {
-	return &ContainerCollector{cmd: cmd, fs: fs, interval: interval}
-}
+// CollectContainers runs a full container collection and returns the
+// result as JSON suitable for tree.Set("infix-containers:containers"),
+// or nil when no container exists, so an enabled but idle container
+// feature does not surface as operational data.
+func CollectContainers(cmd CommandRunner, fs FileReader) json.RawMessage {
+	ctx, cancel := context.WithTimeout(context.Background(), collectTimeout)
+	defer cancel()
 
-// Name implements Collector.
-func (c *ContainerCollector) Name() string { return "containers" }
-
-// Interval implements Collector.
-func (c *ContainerCollector) Interval() time.Duration { return c.interval }
-
-// Collect implements Collector. It produces one tree key:
-// "infix-containers:containers".
-func (c *ContainerCollector) Collect(ctx context.Context, t *tree.Tree) error {
-	data := c.collectJSON(ctx)
-	if data == nil {
-		// No containers: remove the key rather than leaving a bare
-		// "containers" node, so clients see the feature as absent.
-		t.Delete("infix-containers:containers")
-		return nil
-	}
-	t.Set("infix-containers:containers", data)
-	return nil
-}
-
-// collectJSON returns the operational containers subtree, or nil when no
-// container exists.  Returning nil (not an empty {"container":[]}) lets the
-// caller drop the key entirely so an enabled-but-idle container feature does
-// not surface as operational data.
-func (c *ContainerCollector) collectJSON(ctx context.Context) json.RawMessage {
+	c := &containerCollector{cmd: cmd, fs: fs}
 	containers := []interface{}{}
-
-	psList := c.podmanPS(ctx)
-	for _, ps := range psList {
-		cont := c.container(ctx, ps)
-		if cont != nil {
+	for _, ps := range c.podmanPS(ctx) {
+		if cont := c.container(ctx, ps); cont != nil {
 			containers = append(containers, cont)
 		}
 	}
-
 	if len(containers) == 0 {
 		return nil
 	}
 
-	out := map[string]interface{}{
-		"container": containers,
-	}
-
-	data, err := json.Marshal(out)
+	data, err := json.Marshal(map[string]interface{}{"container": containers})
 	if err != nil {
 		return nil
 	}
 	return data
 }
 
-// CollectContainers runs a full container collection and returns the
-// result as JSON suitable for tree.Set("infix-containers:containers").
-func CollectContainers(cmd CommandRunner, fs FileReader) json.RawMessage {
-	c := &ContainerCollector{cmd: cmd, fs: fs}
-	return c.collectJSON(context.TODO())
-}
-
-func (c *ContainerCollector) podmanPS(ctx context.Context) []map[string]interface{} {
+func (c *containerCollector) podmanPS(ctx context.Context) []map[string]interface{} {
 	out, err := c.cmd.Run(ctx, "podman", "ps", "-a", "--format=json")
 	if err != nil {
 		log.Printf("collector containers: ps: %v", err)
@@ -112,7 +77,7 @@ func (c *ContainerCollector) podmanPS(ctx context.Context) []map[string]interfac
 	return list
 }
 
-func (c *ContainerCollector) podmanInspect(ctx context.Context, name string) map[string]interface{} {
+func (c *containerCollector) podmanInspect(ctx context.Context, name string) map[string]interface{} {
 	out, err := c.cmd.Run(ctx, "podman", "inspect", name)
 	if err != nil {
 		log.Printf("collector containers: inspect %s: %v", name, err)
@@ -142,7 +107,7 @@ func (c *ContainerCollector) podmanInspect(ctx context.Context, name string) map
 	return map[string]interface{}{}
 }
 
-func (c *ContainerCollector) resourceStats(ctx context.Context, name string) map[string]interface{} {
+func (c *containerCollector) resourceStats(ctx context.Context, name string) map[string]interface{} {
 	out, err := c.cmd.Run(ctx, "podman", "stats", "--no-stream", "--format", "json", "--no-reset", name)
 	if err != nil {
 		log.Printf("collector containers: stats %s: %v", name, err)
@@ -227,7 +192,7 @@ func (c *ContainerCollector) resourceStats(ctx context.Context, name string) map
 	return rusage
 }
 
-func (c *ContainerCollector) readCgroupLimits(inspect map[string]interface{}) map[string]interface{} {
+func (c *containerCollector) readCgroupLimits(inspect map[string]interface{}) map[string]interface{} {
 	stateRaw, ok := inspect["State"]
 	if !ok {
 		return nil
@@ -269,7 +234,7 @@ func (c *ContainerCollector) readCgroupLimits(inspect map[string]interface{}) ma
 	return result
 }
 
-func (c *ContainerCollector) network(ps map[string]interface{}, inspect map[string]interface{}) map[string]interface{} {
+func (c *containerCollector) network(ps map[string]interface{}, inspect map[string]interface{}) map[string]interface{} {
 	networkSettingsRaw, hasNetworkSettings := inspect["NetworkSettings"]
 	if hasNetworkSettings {
 		if networkSettings, ok := networkSettingsRaw.(map[string]interface{}); ok {
@@ -344,7 +309,7 @@ func (c *ContainerCollector) network(ps map[string]interface{}, inspect map[stri
 	return net
 }
 
-func (c *ContainerCollector) container(ctx context.Context, ps map[string]interface{}) map[string]interface{} {
+func (c *containerCollector) container(ctx context.Context, ps map[string]interface{}) map[string]interface{} {
 	names := asStringSlice(ps["Names"])
 	if len(names) == 0 {
 		return nil

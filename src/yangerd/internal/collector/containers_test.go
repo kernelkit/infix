@@ -1,28 +1,19 @@
 package collector
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/testutil"
-	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 func collectContainers(t *testing.T, runner *testutil.MockRunner, fs *testutil.MockFileReader) map[string]interface{} {
 	t.Helper()
 
-	c := NewContainerCollector(runner, fs, 30*time.Second)
-	tr := tree.New()
-	if err := c.Collect(context.Background(), tr); err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
-
-	raw := tr.Get("infix-containers:containers")
+	raw := CollectContainers(runner, fs)
 	if raw == nil {
-		t.Fatal("missing infix-containers:containers in tree")
+		t.Fatal("no container data collected")
 	}
 
 	out := make(map[string]interface{})
@@ -437,16 +428,10 @@ func TestContainerGracefulDegradation(t *testing.T) {
 
 	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
 
-	c := NewContainerCollector(runner, fs, 30*time.Second)
-	tr := tree.New()
-	if err := c.Collect(context.Background(), tr); err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
-
-	// With no containers the key must be absent, not a bare
+	// With no containers there must be no data, not a bare
 	// {"container":[]} node -- otherwise an enabled-but-idle container
 	// feature surfaces as operational data.
-	if raw := tr.Get("infix-containers:containers"); raw != nil {
-		t.Fatalf("expected no containers key when podman ps fails, got %s", raw)
+	if raw := CollectContainers(runner, fs); raw != nil {
+		t.Fatalf("expected no container data when podman ps fails, got %s", raw)
 	}
 }
