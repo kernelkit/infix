@@ -30,6 +30,7 @@ import (
 	ptp "github.com/facebook/time/ptp/protocol"
 	"github.com/kernelkit/infix/src/yangerd/internal/backoff"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
+	"github.com/kernelkit/infix/src/yangerd/internal/unixgram"
 )
 
 const (
@@ -91,10 +92,15 @@ func (m *PTPMonitor) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			m.mu.Lock()
+			insts := make([]*instance, 0, len(m.instances))
 			for _, inst := range m.instances {
 				inst.stop()
+				insts = append(insts, inst)
 			}
 			m.mu.Unlock()
+			for _, inst := range insts {
+				<-inst.done
+			}
 			return ctx.Err()
 		case <-tick.C:
 		}
@@ -133,8 +139,10 @@ func (m *PTPMonitor) scan(ctx context.Context) {
 			continue
 		}
 		inst := newInstance(idx, conf, m.log, m.publish)
+		ictx, cancel := context.WithCancel(ctx)
+		inst.cancel = cancel
 		m.instances[idx] = inst
-		go inst.run(ctx)
+		go inst.run(ictx)
 		changed = true
 	}
 
@@ -188,6 +196,7 @@ type instance struct {
 	log     *slog.Logger
 	publish func()
 	cancel  context.CancelFunc
+	done    chan struct{} // closed when run returns
 
 	mu    sync.Mutex
 	state *instanceState
@@ -213,9 +222,12 @@ func newInstance(idx uint16, conf string, log *slog.Logger, publish func()) *ins
 		sock:    fmt.Sprintf("%s/ptp4l-%d", sockDir, idx),
 		log:     log.With("ptp-instance", idx),
 		publish: publish,
+		done:    make(chan struct{}),
 	}
 }
 
+// stop ends the supervisor.  cancel is set under the monitor lock
+// before run starts, and only read under it.
 func (i *instance) stop() {
 	if i.cancel != nil {
 		i.cancel()
@@ -278,22 +290,11 @@ func (i *instance) snapshot() map[string]interface{} {
 // run supervises the connection: connect, fill, subscribe, consume
 // events, and reconnect with backoff when ptp4l goes away.
 func (i *instance) run(ctx context.Context) {
-	ctx, i.cancel = context.WithCancel(ctx)
-	defer i.cancel()
+	defer close(i.done)
 
-	bo := backoff.Default()
-	delay := bo.Initial
-
-	for {
-		if ctx.Err() != nil {
-			return
-		}
-
+	name := fmt.Sprintf("ptp instance %d", i.idx)
+	backoff.Retry(ctx, i.log, name, func(ctx context.Context) error {
 		err := i.session(ctx)
-		if ctx.Err() != nil {
-			return
-		}
-		i.log.Debug("ptp: session ended, reconnecting", "err", err, "delay", delay)
 
 		// Drop stale state so a dead ptp4l disappears from
 		// operational instead of lingering.
@@ -302,40 +303,29 @@ func (i *instance) run(ctx context.Context) {
 		i.mu.Unlock()
 		i.publish()
 
-		if err := backoff.Sleep(ctx, delay); err != nil {
-			return
-		}
-		delay = bo.Next(delay)
-	}
+		return err
+	})
 }
 
 // session runs one connected episode against ptp4l.
 func (i *instance) session(ctx context.Context) error {
-	local := &net.UnixAddr{
-		Name: fmt.Sprintf("%s/yangerd-ptp-%d.sock", sockDir, i.idx),
-		Net:  "unixgram",
-	}
-	remote := &net.UnixAddr{Name: i.sock, Net: "unixgram"}
-
-	os.Remove(local.Name) /* stale socket from a crashed run */
-	conn, err := net.DialUnix("unixgram", local, remote)
+	// ptp4l runs unprivileged and must be able to send replies here
+	local := fmt.Sprintf("%s/yangerd-ptp-%d.sock", sockDir, i.idx)
+	conn, err := unixgram.Dial(local, i.sock, 0666)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		conn.Close()
-		os.Remove(local.Name)
-	}()
-
-	// ptp4l runs unprivileged and must be able to send replies here
-	if err := os.Chmod(local.Name, 0666); err != nil {
-		return err
-	}
+	defer conn.Close()
 
 	// Terminate the blocking read loop on shutdown
+	done := make(chan struct{})
+	defer close(done)
 	go func() {
-		<-ctx.Done()
-		conn.SetReadDeadline(time.Now())
+		select {
+		case <-ctx.Done():
+			conn.SetReadDeadline(time.Now())
+		case <-done:
+		}
 	}()
 
 	// gPTP (802.1AS) instances only accept management messages
