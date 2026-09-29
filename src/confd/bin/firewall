@@ -124,16 +124,33 @@ ipset_call()
 # add/remove action handlers, so they survive the reload without being
 # baked into the XML (which would resurrect entries removed while the
 # reload was in flight).
+#
+# An entry firewalld rejects as invalid, e.g., one now overlapping a
+# static entry, is dropped from the shadow file, or it could never be
+# removed with the remove action again.
 addrset_resync()
 {
     for file in "$ADDRSET_DIR"/*; do
+	case "$file" in *.resync) continue ;; esac
 	[ -f "$file" ] || continue
 	name=$(basename "$file")
+	keep="$file.resync"
+	: > "$keep"
 
 	while IFS= read -r entry; do
 	    [ -n "$entry" ] || continue
-	    ipset_call addEntry "$name" "$entry"
+	    if ! ipset_call addEntry "$name" "$entry"; then
+		case "$output" in
+		    *INVALID_ENTRY*)
+			logger -t firewall -p daemon.warn "ipset $name: dropping rejected dynamic entry $entry"
+			continue
+			;;
+		esac
+	    fi
+	    printf '%s\n' "$entry" >> "$keep"
 	done < "$file"
+
+	mv "$keep" "$file"
     done
 }
 

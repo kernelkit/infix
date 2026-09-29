@@ -684,10 +684,17 @@ int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			return SR_ERR_OK;
 		}
 
-		/* Drop dynamic state of deleted address-sets */
+		/*
+		 * Drop dynamic state of deleted address-sets, and of sets
+		 * that got a timeout: their entries expire on their own and
+		 * must not be re-applied on reload.
+		 */
 		clist = lydx_get_descendant(diff, "firewall", "address-set", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "address-set") {
-			if (lydx_get_op(cnode) == LYDX_OP_DELETE)
+			struct lyd_node *timeout = lydx_get_child(cnode, "timeout");
+
+			if (lydx_get_op(cnode) == LYDX_OP_DELETE ||
+			    (timeout && lydx_get_op(timeout) != LYDX_OP_DELETE))
 				erasef(ADDRSET_RUNDIR "/%s", lydx_get_cattr(cnode, "name"));
 		}
 
