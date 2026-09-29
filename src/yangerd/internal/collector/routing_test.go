@@ -606,15 +606,32 @@ func TestRoutingCollectorAllFail(t *testing.T) {
 		Errors:  map[string]error{},
 	}
 
-	c := newRoutingCollector(runner)
-	tr := tree.New()
-	err := c.Collect(context.Background(), tr)
-	if err != nil {
-		t.Fatalf("Collect should not error when all protocols fail: %v", err)
+	out := routingCollect(t, runner)
+	protocols := out["control-plane-protocols"].(map[string]interface{})["control-plane-protocol"].([]interface{})
+	if len(protocols) != 0 {
+		t.Fatalf("expected an empty protocol list when nothing runs, got %v", protocols)
 	}
-	// No tree key should be set when there's nothing to report
-	if tr.Get("ietf-routing:routing") != nil {
-		t.Fatal("expected no ietf-routing:routing key when all protocols fail")
+}
+
+// A protocol that stops must disappear from the tree, not linger with
+// its last reported state.
+func TestRoutingCollectorProtocolsDisappear(t *testing.T) {
+	tr := tree.New()
+	if err := newRoutingCollector(fullRunner()).Collect(context.Background(), tr); err != nil {
+		t.Fatalf("Collect failed: %v", err)
+	}
+	empty := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
+	if err := newRoutingCollector(empty).Collect(context.Background(), tr); err != nil {
+		t.Fatalf("Collect failed: %v", err)
+	}
+
+	var out map[string]interface{}
+	if err := json.Unmarshal(tr.Get("ietf-routing:routing"), &out); err != nil {
+		t.Fatalf("unmarshal routing: %v", err)
+	}
+	protocols := out["control-plane-protocols"].(map[string]interface{})["control-plane-protocol"].([]interface{})
+	if len(protocols) != 0 {
+		t.Fatalf("stopped protocols still reported: %v", protocols)
 	}
 }
 

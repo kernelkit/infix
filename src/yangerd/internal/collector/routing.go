@@ -34,7 +34,7 @@ func (c *RoutingCollector) Interval() time.Duration { return c.interval }
 // Collect implements Collector.  It produces one tree key:
 // "ietf-routing:routing" containing merged OSPF, RIP, and BFD data.
 func (c *RoutingCollector) Collect(ctx context.Context, t *tree.Tree) error {
-	var protocols []interface{}
+	protocols := []interface{}{}
 
 	if p := c.collectOSPF(ctx); p != nil {
 		protocols = append(protocols, p)
@@ -46,10 +46,8 @@ func (c *RoutingCollector) Collect(ctx context.Context, t *tree.Tree) error {
 		protocols = append(protocols, p)
 	}
 
-	if len(protocols) == 0 {
-		return nil
-	}
-
+	// Always written, also when empty, so a protocol that stops running
+	// disappears instead of leaving its last state behind.
 	routing := map[string]interface{}{
 		"control-plane-protocols": map[string]interface{}{
 			"control-plane-protocol": protocols,
