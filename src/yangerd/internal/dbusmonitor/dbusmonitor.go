@@ -775,7 +775,7 @@ func splitSources(sources []string) (networks, ipsets []string) {
 }
 
 func (m *DBusMonitor) clearTreeKey(key string) {
-	m.tree.Set(key, json.RawMessage(`{}`))
+	m.tree.Delete(key)
 }
 
 func parseDnsmasqLeases(data string) []map[string]any {
