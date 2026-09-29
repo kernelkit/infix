@@ -69,6 +69,10 @@ type NLMonitor struct {
 	lastWG    string
 
 	lastOperStatus map[string]string
+	// lastChange stamps the operstate transitions seen since start.
+	// Kept as time.Time for the monotonic reading: the wall clock is
+	// derived at GET time, so a later NTP step corrects old stamps.
+	lastChange map[string]time.Time
 
 	// stpMu guards lastSTP, a fingerprint of the most recent mstpd STP
 	// query, letting the periodic poll rebuild only on actual change.
@@ -108,6 +112,7 @@ func New(linkBatch, addrBatch, neighBatch, brBatch *ipbatch.Batch, t *tree.Tree,
 		wifi:           make(map[string]json.RawMessage),
 		wireguard:      make(map[string]json.RawMessage),
 		lastOperStatus: make(map[string]string),
+		lastChange:     make(map[string]time.Time),
 	}
 }
 
@@ -326,6 +331,9 @@ func (m *NLMonitor) initialDump() error {
 	for _, row := range decodeRows(linkRaw) {
 		if name := rowString(row, "ifname"); name != "" {
 			if st := rowString(row, "operstate"); st != "" {
+				if prev, had := m.lastOperStatus[name]; had && prev != st {
+					m.lastChange[name] = time.Now()
+				}
 				m.lastOperStatus[name] = st
 			}
 		}
@@ -487,6 +495,7 @@ func (m *NLMonitor) forgetName(name string) {
 	delete(m.wifi, name)
 	delete(m.wireguard, name)
 	delete(m.lastOperStatus, name)
+	delete(m.lastChange, name)
 }
 
 // batchesAlive tells whether every batch subprocess is up, so a re-dump
@@ -818,9 +827,62 @@ func (m *NLMonitor) updateOperStatus(ifname string, raw json.RawMessage) {
 
 	prev, had := m.lastOperStatus[ifname]
 	m.lastOperStatus[ifname] = status
+	if !had || prev != status {
+		m.lastChange[ifname] = time.Now()
+	}
 	if had && prev != status {
 		m.log.Info("oper-status transition", "ifname", ifname, "from", prev, "to", status)
 	}
+}
+
+// LastChange is a tree provider adding last-change to every interface
+// whose operstate changed since start.  Interfaces up since before
+// yangerd started carry no stamp, their change predates us.
+func (m *NLMonitor) LastChange() json.RawMessage {
+	m.mu.Lock()
+	stamps := make(map[string]time.Time, len(m.lastChange))
+	for k, v := range m.lastChange {
+		stamps[k] = v
+	}
+	m.mu.Unlock()
+	if len(stamps) == 0 {
+		return nil
+	}
+
+	return stampLastChange(m.tree.GetCached(treeKey), stamps, time.Now())
+}
+
+func stampLastChange(doc json.RawMessage, stamps map[string]time.Time, now time.Time) json.RawMessage {
+	var root map[string]any
+	if err := json.Unmarshal(doc, &root); err != nil {
+		return nil
+	}
+	ifaceArr, ok := root["interface"].([]any)
+	if !ok {
+		return nil
+	}
+
+	for _, entry := range ifaceArr {
+		ifaceObj, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, _ := ifaceObj["name"].(string)
+		at, ok := stamps[name]
+		if !ok {
+			continue
+		}
+		// Elapsed time is monotonic, so the stamp follows the wall
+		// clock as it is now, not as it was when the link changed.
+		when := now.Add(-now.Sub(at))
+		ifaceObj["last-change"] = when.UTC().Format("2006-01-02T15:04:05+00:00")
+	}
+
+	out, err := json.Marshal(map[string]any{"interface": ifaceArr})
+	if err != nil {
+		return nil
+	}
+	return out
 }
 
 // query runs one command on a batch worker.  A dead worker asks for a

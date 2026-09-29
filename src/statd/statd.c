@@ -14,8 +14,6 @@
 
 #include <asm/types.h>
 #include <sys/socket.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
 
 #include <libite/lite.h>
 #include <jansson.h>
@@ -29,7 +27,6 @@
 
 #include "shared.h"
 #include "journal.h"
-#include "iface.h"
 #include "avahi.h"
 #include "yangerd.h"
 
@@ -66,7 +63,6 @@ struct statd {
 	struct ev_loop *ev_loop;
 	struct journal_ctx journal;      /* Periodic operational snapshots */
 	struct mdns_ctx mdns;            /* mDNS neighbor monitor */
-	struct iface_ctx iface;          /* Interface state change tracking */
 };
 
 /*
@@ -271,39 +267,6 @@ static const char *xpath_to_yangerd_path(const char *xpath, char *buf, size_t bu
 	return buf;
 }
 
-static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *,
-			 const char *path, const char *xpath, uint32_t,
-			 struct lyd_node **parent, void *priv)
-{
-	struct sub *sub = priv;
-	struct statd *statd = sub->statd;
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	int err;
-
-	DEBUG("Incoming interface query for xpath: %s", xpath);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error getting sysrepo connection");
-		return SR_ERR_INTERNAL;
-	}
-
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Failed acquiring sysrepo context");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = ly_add_yangerd_data(ctx, parent, path, "ietf-interfaces:interfaces");
-	if (!err && *parent)
-		iface_annotate(&statd->iface, *parent);
-
-	sr_release_context(con);
-
-	return err;
-}
-
 static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *,
 			 const char *path, const char *xpath, uint32_t,
 			 struct lyd_node **parent, void *priv)
@@ -438,7 +401,7 @@ static int subscribe_to_all(struct statd *statd)
 
 	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_TABLE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_iface_cb))
+	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	/*
 	 * Merged, not replaced: the BFD instance exists only in operational,
@@ -605,9 +568,6 @@ int main(int argc, char *argv[])
 	if (mdns_ctx_init(&statd.mdns, statd.ev_loop, statd.sr_conn))
 		INFO("mDNS neighbor monitoring not available");
 
-	if (iface_ctx_init(&statd.iface, statd.ev_loop))
-		WARN("Interface state change tracking not available");
-
 	/* Signal readiness to Finit */
 	pidfile(NULL);
 
@@ -617,7 +577,6 @@ int main(int argc, char *argv[])
 	/* We should never get here during normal operation */
 	INFO("Status daemon shutting down");
 
-	iface_ctx_exit(&statd.iface);
 	mdns_ctx_exit(&statd.mdns);
 	journal_stop(&statd.journal);
 

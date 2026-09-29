@@ -6,8 +6,10 @@ import (
 	"log/slog"
 	"os"
 	"reflect"
+	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/vishvananda/netlink"
 )
@@ -354,5 +356,62 @@ func TestLinkRowFor(t *testing.T) {
 		if got := linkRowFor(json.RawMessage(tc.raw), 16); got != tc.want {
 			t.Errorf("linkRowFor(%s) = %v, want %v", tc.raw, got, tc.want)
 		}
+	}
+}
+
+func TestLastChangeStampsTransitionsOnly(t *testing.T) {
+	m := New(nil, nil, nil, nil, tree.New(), nil, slog.Default())
+	m.tree.Set(treeKey, json.RawMessage(`{"interface":[{"name":"e1","oper-status":"up"},{"name":"e2","oper-status":"down"}]}`))
+
+	if got := m.LastChange(); got != nil {
+		t.Fatalf("no transitions yet, want nil overlay, got %s", got)
+	}
+
+	m.mu.Lock()
+	m.lastOperStatus["e1"] = "DOWN"
+	m.lastOperStatus["e2"] = "DOWN"
+	m.updateOperStatus("e1", json.RawMessage(`[{"ifname":"e1","operstate":"UP"}]`))
+	m.updateOperStatus("e2", json.RawMessage(`[{"ifname":"e2","operstate":"DOWN"}]`))
+	m.mu.Unlock()
+
+	var out struct {
+		Interface []map[string]any `json:"interface"`
+	}
+	if err := json.Unmarshal(m.LastChange(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Interface) != 2 {
+		t.Fatalf("overlay must carry the whole list, got %d entries", len(out.Interface))
+	}
+	if _, ok := out.Interface[0]["last-change"].(string); !ok {
+		t.Errorf("e1 changed state, want last-change, got %v", out.Interface[0])
+	}
+	if _, ok := out.Interface[1]["last-change"]; ok {
+		t.Errorf("e2 kept its state, want no last-change, got %v", out.Interface[1])
+	}
+
+	m.mu.Lock()
+	m.forgetName("e1")
+	m.mu.Unlock()
+	if got := m.LastChange(); got != nil {
+		t.Errorf("stamp must go with the interface, got %s", got)
+	}
+}
+
+func TestStampLastChange(t *testing.T) {
+	doc := json.RawMessage(`{"interface":[{"name":"e1"},{"name":"e2"}]}`)
+	changed := time.Now()
+	stamps := map[string]time.Time{"e1": changed}
+
+	out := stampLastChange(doc, stamps, changed.Add(time.Minute))
+	want := changed.UTC().Format("2006-01-02T15:04:05+00:00")
+	if !strings.Contains(string(out), `{"last-change":"`+want+`","name":"e1"}`) {
+		t.Errorf("want %s on e1 in %s", want, out)
+	}
+	if !strings.Contains(string(out), `{"name":"e2"}`) {
+		t.Errorf("e2 must be untouched in %s", out)
+	}
+	if got := stampLastChange(json.RawMessage(`garbage`), stamps, changed); got != nil {
+		t.Errorf("bad doc must yield no overlay, got %s", got)
 	}
 }

@@ -147,6 +147,7 @@ func main() {
 	defer brBatch.Close()
 
 	nlmon := monitor.New(linkBatch, addrBatch, neighBatch, brBatch, t, osFileChecker{}, slogLog)
+	t.RegisterProvider("ietf-interfaces:interfaces", nlmon.LastChange)
 
 	// inotify says nothing when a /proc/sys/net/*/conf/<if> directory
 	// comes or goes, so follow the interface set from netlink instead.
