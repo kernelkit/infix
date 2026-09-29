@@ -21,6 +21,28 @@ source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-readme/Config.in"
 
 endmenu
 
+
+menuconfig IX_KERNEL_SIGN
+	bool "Sign Linux Kernel"
+	default y if BR2_x86_64
+
+config IX_KERNEL_SIGN_KEY
+	string "signing key"
+	depends on IX_KERNEL_SIGN
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.key"
+	help
+	  Path to the private RSA key, in PKCS#8 format, used to sign
+	  the kernel image.
+
+config IX_KERNEL_SIGN_CERT
+	string "signing cert"
+	depends on IX_KERNEL_SIGN
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.crt"
+	help
+	  Path to the X509 certificate whose associated public key can
+	  validate the authenticity of the generated signature.
+
+
 config IX_QEMU_SCRIPTS
 	bool "QEMU scripts"
 	default y
