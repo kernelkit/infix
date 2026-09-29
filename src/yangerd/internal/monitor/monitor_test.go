@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 	"log/slog"
+	"os"
 	"reflect"
 	"syscall"
 	"testing"
@@ -290,5 +291,29 @@ func TestSetWireguardAllClearsAndSkipsUnchanged(t *testing.T) {
 	m.SetWireguardAll(nil)
 	if len(m.wireguard) != 0 {
 		t.Fatalf("wireguard staging not cleared: %v", m.wireguard)
+	}
+}
+
+type noFiles struct{}
+
+func (noFiles) Exists(string) bool              { return false }
+func (noFiles) ReadFile(string) (string, error) { return "", os.ErrNotExist }
+func (noFiles) ListDir(string) []string         { return nil }
+
+// The startup sweep asks ethtool for ethernet ports only, not for the
+// loopback, bridges or VLANs in the same dump.
+func TestEthernetNames(t *testing.T) {
+	dump := json.RawMessage(`[
+		{"ifindex": 1, "ifname": "lo", "link_type": "loopback"},
+		{"ifindex": 2, "ifname": "eth0", "link_type": "ether"},
+		{"ifindex": 3, "ifname": "br0", "link_type": "ether", "linkinfo": {"info_kind": "bridge"}},
+		{"ifindex": 4, "ifname": "eth0.10", "link_type": "ether", "linkinfo": {"info_kind": "vlan"}},
+		{"ifindex": 5, "ifname": "eth1", "link_type": "ether"}
+	]`)
+
+	got := ethernetNames(dump, noFiles{})
+	want := []string{"eth0", "eth1"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ethernetNames = %v, want %v", got, want)
 	}
 }

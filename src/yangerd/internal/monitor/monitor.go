@@ -300,7 +300,39 @@ func (m *NLMonitor) initialDump() error {
 	m.mu.Unlock()
 
 	m.rebuild()
+
+	// Ports that are up when yangerd starts send no link event, so ask
+	// for their ethtool data here or they stay without speed and duplex.
+	if m.ethRefresh != nil {
+		for _, name := range ethernetNames(linkRaw, m.fc) {
+			m.ethRefresh(name)
+		}
+	}
 	return nil
+}
+
+// ethernetNames lists the interfaces in an `ip -json link` dump that
+// carry ethtool data.
+func ethernetNames(linkRaw json.RawMessage, fc iface.FileChecker) []string {
+	var rows []json.RawMessage
+	if json.Unmarshal(linkRaw, &rows) != nil {
+		return nil
+	}
+
+	var names []string
+	for _, row := range rows {
+		one := append(append(json.RawMessage{'['}, row...), ']')
+		if !iface.IsEthernet(one, fc) {
+			continue
+		}
+		var link struct {
+			Name string `json:"ifname"`
+		}
+		if json.Unmarshal(row, &link) == nil && link.Name != "" {
+			names = append(names, link.Name)
+		}
+	}
+	return names
 }
 
 func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) bool {
