@@ -14,7 +14,6 @@ policies.
 > levels (admin, operator, guest), see the [Multiple Users][2] section
 > in the System Configuration guide.
 
-
 ## TL;DR - The Factory Defaults Work
 
 **You don't need to understand NACM to use the system securely.**
@@ -32,7 +31,6 @@ items" policy that provides:
 The three built-in user levels (admin, operator, guest) cover most use
 cases. Only read on if you need to create custom access control policies.
 
-
 ## Overview
 
 NACM provides three types of access control:
@@ -46,7 +44,6 @@ Access is controlled through:
 1. **Global defaults** - Default permissions for read/write/exec
 2. **YANG-level annotations** - Security markers in YANG modules (see below)
 3. **NACM rules** - Explicit permit/deny rules organized in rule-lists
-
 
 ## Rule Evaluation
 
@@ -239,11 +236,12 @@ The following are protected by YANG annotations and require explicit permits:
 
 **RPC Operations:**
 
+- `ietf-factory-default:factory-reset` ([RFC 8808][4])
+- `infix-factory-default:factory-default`
 - `ietf-system:system-restart` ([ietf-system][3])
 - `ietf-system:system-shutdown` ([ietf-system][3])
 - `ietf-system:set-current-datetime` ([ietf-system][3])
-- `infix-factory-default:factory-default`
-- `ietf-factory-default:factory-reset` ([RFC 8808][4])
+- `infix-system:support-collect`
 - `infix-system-software:install-bundle`
 - `infix-system-software:set-boot-order`
 - `infix-syslog:log`
@@ -251,6 +249,8 @@ The following are protected by YANG annotations and require explicit permits:
 **Data Containers:**
 
 - `/system/authentication` (`nacm:default-deny-write`, [ietf-system][3])
+- `/system/advanced` (`nacm:default-deny-write`, boot scripts and daemon
+  defaults run as root)
 - `/nacm` (`nacm:default-deny-all`, [RFC 8341][1])
 - Routing protocol key chains ([ietf-key-chain][5])
 - RADIUS shared secrets ([ietf-system][3])
