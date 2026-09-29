@@ -72,28 +72,105 @@ struct statd {
 	struct iface_ctx iface;          /* Interface state change tracking */
 };
 
-static int ly_add_yangerd_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			       const char *path)
+/*
+ * The name of the node a subscription provides, the last step of its
+ * path without prefix or predicates: "/ietf-routing:routing/ribs" -> "ribs"
+ */
+static const char *sub_node_name(const char *path, char *buf, size_t len)
 {
-	char *json = NULL;
-	size_t len = 0;
-	int err;
+	const char *p, *colon;
+	size_t n;
 
-	err = yangerd_query(path, &json, &len);
-	if (err) {
-		free(json);
-		ERROR("yangerd: query failed for %s", path);
-		return SR_ERR_SYS;
+	p = strrchr(path, '/');
+	p = p ? p + 1 : path;
+	colon = strchr(p, ':');
+	if (colon)
+		p = colon + 1;
+
+	n = strcspn(p, "[");
+	if (n >= len)
+		n = len - 1;
+	memcpy(buf, p, n);
+	buf[n] = 0;
+
+	return buf;
+}
+
+/*
+ * For a nested subscription sysrepo hands us the parent instance and
+ * expects the requested nodes appended to it.  yangerd answers with the
+ * whole module tree, so find the same parent in it and move over only
+ * the children this subscription provides.
+ */
+static int graft(struct lyd_node *parent, struct lyd_node *tree, const char *path)
+{
+	struct lyd_node *match, *node, *next;
+	char name[64];
+	char *xpath;
+	LY_ERR err;
+
+	xpath = lyd_path(parent, LYD_PATH_STD, NULL, 0);
+	if (!xpath)
+		return SR_ERR_NO_MEMORY;
+
+	err = lyd_find_path(tree, xpath, 0, &match);
+	free(xpath);
+	if (err == LY_ENOTFOUND || err == LY_EINCOMPLETE)
+		return SR_ERR_OK;
+	if (err)
+		return SR_ERR_INTERNAL;
+
+	sub_node_name(path, name, sizeof(name));
+	LY_LIST_FOR_SAFE(lyd_child(match), next, node) {
+		if (strcmp(node->schema->name, name))
+			continue;
+
+		lyd_unlink_tree(node);
+		if (lyd_insert_child(parent, node)) {
+			lyd_free_tree(node);
+			return SR_ERR_INTERNAL;
+		}
 	}
 
-	NOTE("yangerd: got %zu bytes JSON for %s", len, path);
+	return SR_ERR_OK;
+}
 
-	err = lyd_parse_data_mem(ctx, json, LYD_JSON, LYD_PARSE_ONLY, 0, parent);
-	if (err)
-		ERROR("Failed parsing yanger data (%d): %s", err, ly_errmsg(ctx));
+static int ly_add_yangerd_data(const struct ly_ctx *ctx, struct lyd_node **parent,
+			       const char *path, const char *key)
+{
+	struct lyd_node *tree = NULL;
+	char *json = NULL;
+	size_t len = 0;
+	int rc;
 
+	rc = yangerd_query(key, &json, &len);
+	if (rc > 0) {
+		WARN("yangerd: no data for %s yet, not ready", key);
+		return SR_ERR_OK;
+	}
+	if (rc) {
+		ERROR("yangerd: query failed for %s", key);
+		return SR_ERR_INTERNAL;
+	}
+
+	DEBUG("yangerd: got %zu bytes JSON for %s", len, key);
+
+	if (lyd_parse_data_mem(ctx, json, LYD_JSON, LYD_PARSE_ONLY, 0, &tree)) {
+		ERROR("Failed parsing yangerd data for %s: %s", key, ly_errmsg(ctx));
+		free(json);
+		return SR_ERR_INTERNAL;
+	}
 	free(json);
-	return err;
+
+	if (!*parent) {
+		*parent = tree;
+		return SR_ERR_OK;
+	}
+
+	rc = graft(*parent, tree, path);
+	lyd_free_all(tree);
+
+	return rc;
 }
 
 static const char *xpath_to_yangerd_path(const char *xpath, char *buf, size_t bufsz)
@@ -123,7 +200,7 @@ static const char *xpath_to_yangerd_path(const char *xpath, char *buf, size_t bu
 }
 
 static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *,
-			 const char *, const char *xpath, uint32_t,
+			 const char *path, const char *xpath, uint32_t,
 			 struct lyd_node **parent, void *priv)
 {
 	struct sub *sub = priv;
@@ -146,58 +223,25 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yangerd_data(ctx, parent, "ietf-interfaces:interfaces");
-	if (err)
-		ERROR("Error adding interface data (err %d)", err);
-	else
+	err = ly_add_yangerd_data(ctx, parent, path, "ietf-interfaces:interfaces");
+	if (!err && *parent)
 		iface_annotate(&statd->iface, *parent);
 
 	sr_release_context(con);
 
-	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
+	return err;
 }
 
 static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *,
-			 const char *, const char *xpath, uint32_t,
+			 const char *path, const char *xpath, uint32_t,
 			 struct lyd_node **parent, void *priv)
 {
 	struct sub *sub = priv;
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
-	sr_error_t err;
+	int err;
 
-	DEBUG("Incoming generic query for xpath: %s -> key %s", xpath, sub->key);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error getting sysrepo connection");
-		return SR_ERR_INTERNAL;
-	}
-
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Failed acquiring sysrepo context");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = ly_add_yangerd_data(ctx, parent, sub->key);
-	if (err)
-		ERROR("Error adding data for %s", sub->key);
-
-	sr_release_context(con);
-
-	return err;
-}
-
-static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
-		      const char *, const char *xpath, uint32_t,
-		      struct lyd_node **parent, __attribute__((unused)) void *priv)
-{
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	sr_error_t err;
-
-	DEBUG("Incoming ospf query for xpath: %s", xpath);
+	DEBUG("Incoming query for xpath: %s -> key %s", xpath, sub->key);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
@@ -211,72 +255,7 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yangerd_data(ctx, parent, "ietf-routing:routing");
-	if (err)
-		ERROR("Error adding OSPF data");
-
-	sr_release_context(con);
-
-	return err;
-}
-
-static int sr_rip_cb(sr_session_ctx_t *session, uint32_t, const char *,
-		     const char *, const char *xpath, uint32_t,
-		     struct lyd_node **parent, __attribute__((unused)) void *priv)
-{
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	sr_error_t err;
-
-	DEBUG("Incoming RIP query for xpath: %s", xpath);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error getting sysrepo connection");
-		return SR_ERR_INTERNAL;
-	}
-
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Failed acquiring sysrepo context");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = ly_add_yangerd_data(ctx, parent, "ietf-routing:routing");
-	if (err)
-		ERROR("Error adding RIP data");
-
-	sr_release_context(con);
-
-	return err;
-}
-
-static int sr_bfd_cb(sr_session_ctx_t *session, uint32_t, const char *,
-		     const char *, const char *xpath, uint32_t,
-		     struct lyd_node **parent, __attribute__((unused)) void *priv)
-{
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	sr_error_t err;
-
-	DEBUG("Incoming BFD query for xpath: %s", xpath);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error getting sysrepo connection");
-		return SR_ERR_INTERNAL;
-	}
-
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Failed acquiring sysrepo context");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = ly_add_yangerd_data(ctx, parent, "ietf-routing:routing");
-	if (err)
-		ERROR("Error adding BFD data");
-
+	err = ly_add_yangerd_data(ctx, parent, path, sub->key);
 	sr_release_context(con);
 
 	return err;
@@ -382,11 +361,11 @@ static int subscribe_to_all(struct statd *statd)
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_iface_cb))
 		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, sr_ospf_cb))
+	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, sr_generic_cb))
 		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_RIP, sr_rip_cb))
+	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_RIP, sr_generic_cb))
 		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_BFD, sr_bfd_cb))
+	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_BFD, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-hardware", XPATH_HARDWARE_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
