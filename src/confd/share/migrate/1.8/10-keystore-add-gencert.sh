@@ -26,14 +26,15 @@ read_pem() {
     grep -v -- '-----' "$1" | tr -d '\n'
 }
 
-if [ -f "$LEGACY_KEY" ] && [ -f "$LEGACY_CRT" ]; then
+# A static config is shared by all devices, it must not carry a key
+if [ -z "$STATIC_CONFIG" ] && [ -f "$LEGACY_KEY" ] && [ -f "$LEGACY_CRT" ]; then
     priv_key=$(read_pem "$LEGACY_KEY")
     cert_data=$(read_pem "$LEGACY_CRT")
 fi
 
 # Fallback: generate a fresh certificate if legacy files were missing
 # or unreadable, same as keystore.c does on first boot.
-if [ -z "$priv_key" ] || [ -z "$cert_data" ]; then
+if [ -z "$STATIC_CONFIG" ] && { [ -z "$priv_key" ] || [ -z "$cert_data" ]; }; then
     /usr/libexec/infix/mkcert
     if [ -f "$MKCERT_KEY" ] && [ -f "$MKCERT_CRT" ]; then
         priv_key=$(read_pem "$MKCERT_KEY")
@@ -86,4 +87,4 @@ end
 ' "$file" > "$temp" && mv "$temp" "$file"
 
 # Cert/key now live in the keystore, wipe the legacy on-disk copy
-rm -rf "$LEGACY_DIR"
+[ -n "$STATIC_CONFIG" ] || rm -rf "$LEGACY_DIR"

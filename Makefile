@@ -45,6 +45,9 @@ dev: | $(config)
 	@+$(call bmake,olddefconfig)
 	@+$(call bmake,all)
 
+migrate-configs:
+	@$(CURDIR)/utils/migrate-configs.sh $(subst :, ,$(BR2_EXTERNAL))
+
 %: | buildroot/Makefile
 	@+$(call bmake,$@)
 
@@ -63,4 +66,4 @@ test:
 buildroot/Makefile:
 	@git submodule update --init
 
-.PHONY: all check coverity dep test cyclonedx list-snippets dev
+.PHONY: all check coverity dep test cyclonedx list-snippets dev migrate-configs
