@@ -736,3 +736,30 @@ func TestBFDMultihopFiltered(t *testing.T) {
 		}
 	}
 }
+
+// ripd prints RIPv1+2 as "1 2" in a fixed-width column, and FRR's
+// default receive version is both.
+func TestRIPStatusBothVersions(t *testing.T) {
+	text := `  Default version control: send version 2, receive version 1 2
+    Interface        Send  Recv   Key-chain
+    e0               2     1 2
+    e1               1 2   1 2    mykeys
+    ethernet-long-01 1     2
+  Routing for Networks:
+`
+	ifaces := parseRIPStatus(text)["interfaces"].([]interface{})
+	want := [][3]string{
+		{"e0", "2", "1-2"},
+		{"e1", "1-2", "1-2"},
+		{"ethernet-long-01", "1", "2"},
+	}
+	if len(ifaces) != len(want) {
+		t.Fatalf("parsed %d interfaces, want %d: %v", len(ifaces), len(want), ifaces)
+	}
+	for i, w := range want {
+		got := ifaces[i].(map[string]interface{})
+		if got["name"] != w[0] || got["send-version"] != w[1] || got["recv-version"] != w[2] {
+			t.Errorf("row %d = %v, want %v", i, got, w)
+		}
+	}
+}

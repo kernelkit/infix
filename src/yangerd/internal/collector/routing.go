@@ -381,11 +381,24 @@ func (c *RoutingCollector) addOSPFRoutes(ctx context.Context, ospf map[string]in
 
 // --- RIP ---
 
-var ripStatusUpdateRe = regexp.MustCompile(`Sending updates every (\d+) seconds`)
-var ripStatusTimeoutRe = regexp.MustCompile(`Timeout after (\d+) seconds`)
-var ripStatusFlushRe = regexp.MustCompile(`garbage collect after (\d+) seconds`)
-var ripStatusMetricRe = regexp.MustCompile(`Default redistribution metric is (\d+)`)
-var ripStatusDistanceRe = regexp.MustCompile(`Distance: \(default is (\d+)\)`)
+// ripStatusScalars are the single-value lines of 'show ip rip status'.
+var ripStatusScalars = []struct {
+	re  *regexp.Regexp
+	key string
+}{
+	{regexp.MustCompile(`Sending updates every (\d+) seconds`), "update-interval"},
+	{regexp.MustCompile(`Timeout after (\d+) seconds`), "invalid-interval"},
+	{regexp.MustCompile(`garbage collect after (\d+) seconds`), "flush-interval"},
+	{regexp.MustCompile(`Default redistribution metric is (\d+)`), "default-metric"},
+	{regexp.MustCompile(`Distance: \(default is (\d+)\)`), "distance"},
+}
+
+// ripVersion maps FRR's ri_version_msg to the infix-routing enum.
+var ripVersion = map[string]string{
+	"1":   "1",
+	"2":   "2",
+	"1 2": "1-2",
+}
 
 func (c *RoutingCollector) collectRIP(ctx context.Context) interface{} {
 	statusOut, err := c.cmd.Run(ctx, "vtysh", "-c", "show ip rip status")
@@ -436,11 +449,11 @@ func (c *RoutingCollector) collectRIP(ctx context.Context) interface{} {
 				"interface":   ifData["name"],
 				"oper-status": "up",
 			}
-			if sv, ok := ifData["send-version"].(int); ok {
-				entry["send-version"] = strconv.Itoa(sv)
+			if sv, ok := ifData["send-version"].(string); ok {
+				entry["send-version"] = sv
 			}
-			if rv, ok := ifData["recv-version"].(int); ok {
-				entry["receive-version"] = strconv.Itoa(rv)
+			if rv, ok := ifData["recv-version"].(string); ok {
+				entry["receive-version"] = rv
 			}
 			ifaceList = append(ifaceList, entry)
 		}
@@ -541,94 +554,112 @@ func (c *RoutingCollector) collectRIP(ctx context.Context) interface{} {
 func parseRIPStatus(text string) map[string]interface{} {
 	status := make(map[string]interface{})
 
-	if m := ripStatusUpdateRe.FindStringSubmatch(text); m != nil {
-		v, _ := strconv.Atoi(m[1])
-		status["update-interval"] = v
-	}
-	if m := ripStatusTimeoutRe.FindStringSubmatch(text); m != nil {
-		v, _ := strconv.Atoi(m[1])
-		status["invalid-interval"] = v
-	}
-	if m := ripStatusFlushRe.FindStringSubmatch(text); m != nil {
-		v, _ := strconv.Atoi(m[1])
-		status["flush-interval"] = v
-	}
-	if m := ripStatusMetricRe.FindStringSubmatch(text); m != nil {
-		v, _ := strconv.Atoi(m[1])
-		status["default-metric"] = v
-	}
-	if m := ripStatusDistanceRe.FindStringSubmatch(text); m != nil {
-		v, _ := strconv.Atoi(m[1])
-		status["distance"] = v
+	for _, sc := range ripStatusScalars {
+		if m := sc.re.FindStringSubmatch(text); m != nil {
+			v, _ := strconv.Atoi(m[1])
+			status[sc.key] = v
+		}
 	}
 
-	// Parse interface table
 	lines := strings.Split(text, "\n")
-	var interfaces []interface{}
-	inIfaceSection := false
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.Contains(line, "Interface") && strings.Contains(line, "Send") && strings.Contains(line, "Recv") {
-			inIfaceSection = true
-			continue
-		}
-		if inIfaceSection && (strings.HasPrefix(line, "Routing for Networks:") || strings.HasPrefix(line, "Routing Information Sources:")) {
-			break
-		}
-		if inIfaceSection && line != "" {
-			parts := strings.Fields(line)
-			if len(parts) >= 3 && !strings.HasPrefix(line, "Interface") {
-				sendVer, err1 := strconv.Atoi(parts[1])
-				recvVer, err2 := strconv.Atoi(parts[2])
-				if err1 == nil && err2 == nil {
-					interfaces = append(interfaces, map[string]interface{}{
-						"name":         parts[0],
-						"send-version": sendVer,
-						"recv-version": recvVer,
-					})
-				}
-			}
-		}
-	}
-	if len(interfaces) > 0 {
+	if interfaces := parseRIPInterfaces(lines); len(interfaces) > 0 {
 		status["interfaces"] = interfaces
 	}
-
-	// Parse Routing Information Sources table (neighbors)
-	var neighbors []interface{}
-	inNeighborSection := false
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "Routing Information Sources:") {
-			inNeighborSection = true
-			continue
-		}
-		if inNeighborSection && strings.Contains(line, "Gateway") && strings.Contains(line, "BadPackets") {
-			continue
-		}
-		if inNeighborSection && (strings.HasPrefix(line, "Distance:") || (line == "" && len(neighbors) > 0)) {
-			break
-		}
-		if inNeighborSection && line != "" {
-			parts := strings.Fields(line)
-			if len(parts) >= 5 {
-				badPkts, err1 := strconv.Atoi(parts[1])
-				badRoutes, err2 := strconv.Atoi(parts[2])
-				if err1 == nil && err2 == nil {
-					neighbors = append(neighbors, map[string]interface{}{
-						"address":     parts[0],
-						"bad-packets": badPkts,
-						"bad-routes":  badRoutes,
-					})
-				}
-			}
-		}
-	}
-	if len(neighbors) > 0 {
+	if neighbors := parseRIPNeighbors(lines); len(neighbors) > 0 {
 		status["neighbors"] = neighbors
 	}
 
 	return status
+}
+
+// parseRIPInterfaces reads the interface table.  ripd prints it with
+// "%-17s%-3s   %-3s", and a version can be "1 2", so the columns are
+// taken by position rather than split on whitespace.
+func parseRIPInterfaces(lines []string) []interface{} {
+	var interfaces []interface{}
+	inTable := false
+
+	for _, raw := range lines {
+		line := strings.TrimSpace(raw)
+		if strings.HasPrefix(line, "Interface") && strings.Contains(line, "Send") && strings.Contains(line, "Recv") {
+			inTable = true
+			continue
+		}
+		if !inTable {
+			continue
+		}
+		if line == "" || strings.HasPrefix(line, "Routing for Networks:") || strings.HasPrefix(line, "Routing Information Sources:") {
+			break
+		}
+
+		row := strings.TrimLeft(raw, " ")
+		name := strings.Fields(row)[0]
+		col := len(name)
+		if col < 17 {
+			col = 17
+		}
+		send, ok1 := ripVersion[column(row, col, 3)]
+		recv, ok2 := ripVersion[column(row, col+6, 3)]
+		if !ok1 || !ok2 {
+			continue
+		}
+		interfaces = append(interfaces, map[string]interface{}{
+			"name":         name,
+			"send-version": send,
+			"recv-version": recv,
+		})
+	}
+
+	return interfaces
+}
+
+// parseRIPNeighbors reads the "Routing Information Sources" table.
+func parseRIPNeighbors(lines []string) []interface{} {
+	var neighbors []interface{}
+	inTable := false
+
+	for _, raw := range lines {
+		line := strings.TrimSpace(raw)
+		if strings.HasPrefix(line, "Routing Information Sources:") {
+			inTable = true
+			continue
+		}
+		if !inTable || strings.HasPrefix(line, "Gateway") {
+			continue
+		}
+		if strings.HasPrefix(line, "Distance:") || (line == "" && len(neighbors) > 0) {
+			break
+		}
+
+		parts := strings.Fields(line)
+		if len(parts) < 5 {
+			continue
+		}
+		badPkts, err1 := strconv.Atoi(parts[1])
+		badRoutes, err2 := strconv.Atoi(parts[2])
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		neighbors = append(neighbors, map[string]interface{}{
+			"address":     parts[0],
+			"bad-packets": badPkts,
+			"bad-routes":  badRoutes,
+		})
+	}
+
+	return neighbors
+}
+
+// column returns the trimmed text in [start, start+width) of s.
+func column(s string, start, width int) string {
+	if start >= len(s) {
+		return ""
+	}
+	end := start + width
+	if end > len(s) {
+		end = len(s)
+	}
+	return strings.TrimSpace(s[start:end])
 }
 
 // --- BFD ---
