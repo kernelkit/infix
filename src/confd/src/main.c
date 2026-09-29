@@ -52,6 +52,9 @@
 /* Migrated startup-config, loaded into running but never saved to /cfg */
 #define MIGRATED_PATH "/run/confd-migrated.cfg"
 
+/* Set when startup-config fails, next boot goes to fail-secure, issue #1637 */
+#define FAILED_PATH   "/mnt/aux/startup-config.failed"
+
 /*
  * Set a finit condition in the usr/ namespace, e.g.
  * "usr/startup-config-ok", used to signal IITO (and finit services) about
@@ -602,6 +605,14 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 	const char *config_path;
 	int r;
 
+	/* Cleared right away, or a failed fail-secure boot is a boot loop */
+	if (fexist(FAILED_PATH)) {
+		unlink(FAILED_PATH);
+		ERROR("Previous boot failed loading startup-config.");
+		handle_startup_failure(sess, failure_path, conn, timeout_ms);
+		return 1;
+	}
+
 	/* Test mode support */
 	if (fexist("/mnt/aux/test-mode")) {
 		if (fexist("/mnt/aux/test-override-startup")) {
@@ -680,6 +691,17 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 	return 0;
 fail:
 	handle_startup_failure(sess, failure_path, conn, timeout_ms);
+
+	/* Finit ignores a regular reboot in runlevel S, so force it */
+	if (touch(FAILED_PATH)) {
+		ERRNO("Failed creating %s", FAILED_PATH);
+	} else {
+		sync();
+		systemf("reboot -f");
+		ERROR("Failed rebooting, staying in fail-secure mode.");
+		unlink(FAILED_PATH);
+	}
+
 	return 1; /* fail-secure, keep running */
 }
 
