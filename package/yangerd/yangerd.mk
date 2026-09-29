@@ -28,7 +28,13 @@ define YANGERD_INSTALL_EXTRA
 		>> $(TARGET_DIR)/etc/default/yangerd
 	echo 'YANGERD_ENABLE_GPS=$(if $(BR2_PACKAGE_GPSD),true,false)' \
 		>> $(TARGET_DIR)/etc/default/yangerd
-	echo 'YANGERD_LOG_LEVEL=deug' >> $(TARGET_DIR)/etc/default/yangerd
+	echo 'YANGERD_ENABLE_LLDP=$(if $(BR2_PACKAGE_LLDPD),true,false)' \
+		>> $(TARGET_DIR)/etc/default/yangerd
+	echo 'YANGERD_ENABLE_FIREWALL=$(if $(BR2_PACKAGE_FIREWALLD),true,false)' \
+		>> $(TARGET_DIR)/etc/default/yangerd
+	echo 'YANGERD_ENABLE_DHCP=$(if $(BR2_PACKAGE_DNSMASQ),true,false)' \
+		>> $(TARGET_DIR)/etc/default/yangerd
+	echo 'YANGERD_LOG_LEVEL=info' >> $(TARGET_DIR)/etc/default/yangerd
 endef
 YANGERD_POST_INSTALL_TARGET_HOOKS += YANGERD_INSTALL_EXTRA
 
