@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -441,7 +442,7 @@ func Query(links json.RawMessage, resolver IfIndexResolver) (bridgeSTP, portSTP 
 			continue
 		}
 
-		stp := buildBridgeSTP(bs)
+		stp := buildBridgeSTP(br.name, bs)
 		if data, err := json.Marshal(stp); err == nil {
 			bridgeSTP[br.name] = data
 		}
@@ -465,7 +466,32 @@ func Query(links json.RawMessage, resolver IfIndexResolver) (bridgeSTP, portSTP 
 	return bridgeSTP, portSTP
 }
 
-func buildBridgeSTP(bs *CISTBridgeStatus) map[string]any {
+// tcSeen remembers when each bridge's last topology change happened.
+// mstpd reports whole seconds since the change, so now minus that jitters
+// by a second between polls; the time is only recomputed when the change
+// count moves, which keeps the document, and its fingerprint, stable.
+var tcSeen = struct {
+	sync.Mutex
+	m map[string]tcStamp
+}{m: make(map[string]tcStamp)}
+
+type tcStamp struct {
+	count uint32
+	at    time.Time
+}
+
+func tcTime(bridge string, count, since uint32) time.Time {
+	tcSeen.Lock()
+	defer tcSeen.Unlock()
+	if st, ok := tcSeen.m[bridge]; ok && st.count == count {
+		return st.at
+	}
+	at := time.Now().UTC().Add(-time.Duration(since) * time.Second).Truncate(time.Second)
+	tcSeen.m[bridge] = tcStamp{count, at}
+	return at
+}
+
+func buildBridgeSTP(name string, bs *CISTBridgeStatus) map[string]any {
 	cist := map[string]any{
 		"bridge-id": bridgeIDMap(bs.BridgeID),
 		"root-id":   bridgeIDMap(bs.DesignatedRoot),
@@ -489,7 +515,7 @@ func buildBridgeSTP(bs *CISTBridgeStatus) map[string]any {
 			tc["port"] = bs.TopologyChangePort
 		}
 		if bs.TimeSinceTopologyChange > 0 {
-			tc["time"] = time.Now().UTC().Add(-time.Duration(bs.TimeSinceTopologyChange) * time.Second).Format(time.RFC3339)
+			tc["time"] = tcTime(name, bs.TopologyChangeCount, bs.TimeSinceTopologyChange).Format(time.RFC3339)
 		}
 		cist["topology-change"] = tc
 	}
@@ -615,22 +641,4 @@ func NewLinksIfIndexResolver(links json.RawMessage) *LinksIfIndexResolver {
 func (r *LinksIfIndexResolver) IfIndex(name string) (int, bool) {
 	idx, ok := r.idx[name]
 	return idx, ok
-}
-
-// FindBridges is exported for testing.  It extracts bridge info from
-// ip-json link data.
-func FindBridges(links json.RawMessage) []struct {
-	Name  string
-	Ports []string
-} {
-	brs := findBridges(links)
-	out := make([]struct {
-		Name  string
-		Ports []string
-	}, len(brs))
-	for i, br := range brs {
-		out[i].Name = br.name
-		out[i].Ports = br.ports
-	}
-	return out
 }
