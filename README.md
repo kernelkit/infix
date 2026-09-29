@@ -95,7 +95,9 @@ typically provision a unique per-device password stored in EEPROM/VPD.
 - **NanoPi R2S** - compact dual-port router
 - **x86_64** - VMs and mini PCs, for development or production
 - **Marvell CN9130 CRB, EspressoBIN** - ARM64 development boards
+- **Novarq Tactical-1000** - ARM64 network appliance
 - **Microchip SparX-5i** - enterprise switching
+- **Microchip LAN969x EV23X71A** - TSN-capable switch evaluation board
 - **Microchip SAMA7G54-EK** - ARM Cortex-A7 evaluation kit
 - **NXP i.MX8MP EVK** - ARM64 SoC evaluation kit
 - **StarFive VisionFive2** - RISC-V board
@@ -105,7 +107,7 @@ built-in WiFi and Ethernet, and runs the same Infix you'd deploy in
 production — so what you learn on it carries straight over.
 
 > [!TIP]
-> 📖 **[Complete documentation][4]** • 💬 **[Join our Discord][discord-url]**
+> 📖 **[Infix User Guide][4]** • 💬 **[Join our Discord][discord-url]**
 
 ## Why Infix
 
