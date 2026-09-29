@@ -35,13 +35,10 @@
 
 #define XPATH_MAX PATH_MAX
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
-#define XPATH_ROUTING_BASE "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"
+#define XPATH_ROUTING_PROTOCOLS "/ietf-routing:routing/control-plane-protocols"
 #define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
 #define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
 #define XPATH_SYSTEM_BASE "/ietf-system"
-#define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
-#define XPATH_ROUTING_RIP XPATH_ROUTING_BASE "/rip"
-#define XPATH_ROUTING_BFD XPATH_ROUTING_BASE "/bfd"
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 #define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
 #define XPATH_TFTP_FILES "/infix-services:tftp/files"
@@ -287,9 +284,9 @@ static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
 	sr_subscription_process_events(sub->sr_sub, NULL, NULL);
 }
 
-static int subscribe(struct statd *statd, char *model, char *xpath,
-		     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
-		     const char *, uint32_t, struct lyd_node **parent, void *priv))
+static int subscribe_opts(struct statd *statd, char *model, char *xpath, uint32_t opts,
+			  int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
+			  const char *, uint32_t, struct lyd_node **parent, void *priv))
 {
 	struct sub *sub;
 	int sr_ev_pipe;
@@ -310,7 +307,7 @@ static int subscribe(struct statd *statd, char *model, char *xpath,
 
 	DEBUG("Subscribe to events for \"%s\" (key \"%s\")", xpath, sub->key);
 	err = sr_oper_get_subscribe(statd->sr_ses, model, xpath, cb, sub,
-				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
+				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY | opts,
 				    &sub->sr_sub);
 	if (err) {
 		ERROR("Failed subscribing to path \"%s\": %s", xpath, sr_strerror(err));
@@ -333,6 +330,13 @@ static int subscribe(struct statd *statd, char *model, char *xpath,
 	ev_io_start(statd->ev_loop, &sub->watcher);
 
 	return SR_ERR_OK;
+}
+
+static int subscribe(struct statd *statd, char *model, char *xpath,
+		     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
+		     const char *, uint32_t, struct lyd_node **parent, void *priv))
+{
+	return subscribe_opts(statd, model, xpath, 0, cb);
 }
 
 static void sub_delete(struct ev_loop *loop, struct sub_head *subs, struct sub *sub)
@@ -361,11 +365,12 @@ static int subscribe_to_all(struct statd *statd)
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_iface_cb))
 		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, sr_generic_cb))
-		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_RIP, sr_generic_cb))
-		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_BFD, sr_generic_cb))
+	/*
+	 * Merged, not replaced: the BFD instance exists only in operational,
+	 * and config-only instances like static routes must stay.  One call
+	 * per GET, not one per control-plane-protocol instance.
+	 */
+	if (subscribe_opts(statd, "ietf-routing", XPATH_ROUTING_PROTOCOLS, SR_SUBSCR_OPER_MERGE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-hardware", XPATH_HARDWARE_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
