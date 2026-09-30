@@ -321,9 +321,16 @@ func finalizeBands(m map[uint16]*bandInfo) []interface{} {
 		if len(bi.frequencies) == 0 && !bi.htCapable && !bi.vhtCapable && !bi.heCapable {
 			continue
 		}
+		// Infix supports 2.4, 5 and 6 GHz only.  Hardware may expose
+		// others, like S1G and 60 GHz on hwsim, that are neither
+		// configured nor reported.
+		name := detectBandName(bi.frequencies)
+		if name == "Unknown" {
+			continue
+		}
 		out = append(out, map[string]interface{}{
 			"band":        k,
-			"name":        detectBandName(bi.frequencies),
+			"name":        name,
 			"ht_capable":  bi.htCapable,
 			"vht_capable": bi.vhtCapable,
 			"he_capable":  bi.heCapable,
@@ -633,12 +640,18 @@ func readDriver(phyName string) string {
 }
 
 func readManufacturer(phyName string) string {
-	driver := readDriver(phyName)
+	return manufacturerFor(readDriver(phyName))
+}
+
+// manufacturerFor names the vendor behind a wireless driver.
+func manufacturerFor(driver string) string {
 	if driver == "" {
 		return "Unknown"
 	}
 	d := strings.ToLower(driver)
 	switch {
+	case strings.Contains(d, "hwsim"):
+		return "Virtual (hwsim)"
 	case strings.Contains(d, "mt") || strings.Contains(d, "mediatek"):
 		return "MediaTek Inc."
 	case strings.Contains(d, "rtw") || strings.Contains(d, "realtek"):
