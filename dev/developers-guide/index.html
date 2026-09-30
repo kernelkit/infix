@@ -3178,6 +3178,15 @@ that introduces the breaking change.  Each script receives the path to
 the startup configuration file as its first argument and must edit it
 in-place.  Scripts are run in lexicographic order, so prefix them with
 a number (e.g. <code>40-my-change.sh</code>).</p>
+<p>Static configuration files in the tree, e.g., the per-product
+<code>factory-config.cfg</code>, must follow suit.  Do not edit their version by
+hand, that skips the syntax changes.  Instead, run them through the
+same migration scripts and review the result with <code>git diff</code>:</p>
+<div class="highlight"><pre><span></span><code>make migrate-configs
+</code></pre></div>
+<p>This covers all <code>*-config.cfg</code> files in every br2-external tree listed
+in <code>BR2_EXTERNAL</code>.  A spin of Infix can therefore forward the target to
+the Infix <code>Makefile</code> to have its own static configurations migrated.</p>
 <p>See <code>src/confd/share/migrate/1.6/40-bridge-port-remove-ip.sh</code> for a
 worked example, and the <a href="../upgrade/#configuration-migration">Configuration Migration</a>
 section of the Upgrade documentation for the user-facing side of this
