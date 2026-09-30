@@ -121,9 +121,9 @@ symmetric keys in the keystore with `passphrase-key-format`.  The
 passphrase must be 8-63 printable ASCII characters.
 
 Since symmetric keys are stored as binary (base64-encoded), the CLI
-provides the `change` command to enter passphrases interactively:
+`edit` command prompts for the passphrase instead of taking it as an argument:
 
-<pre class="cli"><code>admin@example:/config/keystore/…/my-wifi-key/> <b>change cleartext-symmetric-key</b>
+<pre class="cli"><code>admin@example:/config/keystore/…/my-wifi-key/> <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 </code></pre>

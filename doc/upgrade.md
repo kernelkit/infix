@@ -427,6 +427,12 @@ numbering).  The startup configuration is migrated to `1.5`
 definitions and applied to `running-config`, while a backup of the
 original startup configuration is stored in directory `/cfg/backup/`.
 
+> [!IMPORTANT]
+> The migrated configuration is only applied to `running-config`, it is
+> not saved.  Migration is repeated on every boot until you save it:
+>
+>     admin@example:/> copy running-config startup-config
+
 <pre class="cli"><code>admin@example:/> <b>dir /cfg/backup/</b>
 /cfg/backup/ directory
 startup-config-1.4.cfg
@@ -709,7 +715,7 @@ Continued configuration is done as with any unit after factory reset.
 
 [1]: netboot.md
 [2]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/confd/infix-system-software.yang
-[3]: boot.md#system-boot
+[3]: boot.md#broken-startup-config
 [4]: management.md#console-port
 [5]: scripting.md#-backup-configuration-using-sysrepocfg-and-scp
 [6]: schedule.md

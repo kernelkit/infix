@@ -262,12 +262,9 @@ on interface *e0*.
 ## Change a Binary Setting
 
 A YANG `binary` type setting is Base64 encoded and requires a little bit
-more tricks.  We take the opportunity to showcase a shell script helper:
-`/usr/bin/text-editor`, which works just like the `edit` command in the
-CLI does for a `binary` setting, but this one takes an XPath argument to
-the leaf to edit.
-
-Stripped down, it looks something like this:
+more tricks.  The CLI `edit` command hides them: it decodes the value,
+opens it in the text editor, and encodes the result back.  From a shell
+the same steps look like this, with `xpath` pointing at the leaf:
 
 ```bash
 if tmp=$(sysrepocfg -G "$xpath"); then

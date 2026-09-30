@@ -3,163 +3,158 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v26.09.0][UNRELEASED]
+[v26.09.0][] - 2026-09-30
 -------------------------
+
+> [!IMPORTANT]
+> This release includes **breaking changes**.  Several configuration
+> strings are now limited to a safe character set, and a `startup-config`
+> with a value outside these limits fails validation on boot, leaving the
+> system in `failure-config`.  Read [Limitations][limits] before upgrading.
 
 ### Changes
 
 - Upgrade Linux kernel to 6.18.54 (LTS)
 - Upgrade Buildroot to 2025.02.18 (LTS)
 - Upgrade FRR to 10.5.5
-- Add per-server `minpoll` and `maxpoll` options to the NTP client
-  configuration, for tuning how often each server is polled
-- Document the release and maintenance policy: which versions receive
-  updates, what may go into a patch release, and the levels of long-term
-  maintenance available, see [Releases & Support][relsup]
-- `support collect` now redacts private keys, password hashes and other
-  secrets from the configuration files in the archive, use `--no-redact`
-  to keep them.  The environment dump is no longer collected
-- WebUI: the support bundle is collected with the `infix-system:support-collect`
-  RPC as the logged-in user, so NACM decides who may download it, rather
-  than by running the tool as root
-- The CLI `dir` command lists directories as the logged-in user, so it
-  shows only what that user may read
-- The CLI now accepts an unambiguous prefix of a command name, e.g.,
-  `sh int` for `show interface`
-- The CLI accepts IP addresses in CIDR notation, e.g. `set ipv4 address
-  192.168.1.1/24`.  An IPv4 address set without a prefix length gets the
-  classful default: /8, /16, or /24
-- Add a `log` RPC to `infix-syslog`, and a matching admin-exec `log`
-  command in the CLI, for injecting messages in the system log over
-  NETCONF/RESTCONF, issue #1639.  Severity, app-name, msgid, and RFC 5424
-  structured data can be set; messages are logged with the `user` facility
-  and are time stamped on arrival, then follow the configured syslog
-  filtering and forwarding rules, like any locally generated message.
-  The operation is restricted to administrators by default
-- Add `/system/advanced` for low-level system customization, issue #463:
+- Support bundle changes:
+  - The shell command `support collect` now redacts private keys, password
+    hashes and other secrets from configuration files in the archive by
+    default, use `--no-redact` to keep them.
+  - The environment dump is no longer collected
+  - A new `/infix-system:support-collect` RPC, for collecting support data
+    over NETCONF or RESTCONF.  The archive is returned base64 encoded, up to
+    16 MiB, larger ones are left on the device for out-of-band fetching.
+    Access is limited to users in the NACM `admin` group
+  - WebUI: the support bundle is collected with the new RPC, as the
+    logged-in user
+- Add support for unattended software upgrades, letting a unit track an RSS/Atom
+  release feed on a schedule and install a newer release to the inactive
+  partition on its own, then either reboot to activate it or leave it staged for
+  the next reboot, see [Unattended Updates][unattended]
+- Add Novarq Tactical-1000 support: LAN9696 (Laguna) switch with 24 GbE copper
+  ports, four SFP+ cages, and a management port, booting Infix from eMMC with
+  the usual A/B slots, see the [board README][tactical] for details
+- CLI changes:
+  - The `configure` command takes an optional path to start in a sub-context
+    directly, e.g., `configure system authentication`
+  - Partial commands can now be entered as long as they are unambiguous, e.g.,
+    `sh int` for `show interface`
+  - CIDR notation for IP addresses, e.g. `set ipv4 address 192.168.1.1/24`.
+    An address without prefix length gets a classful default: /8, /16, or /24
+  - The `dir` command lists directories as the logged-in user, so it shows
+    only what that user may read
+  - The `edit` command now also edits settings interactively: passwords
+    and keys are prompted for, `binary` settings open in the text editor, and
+    `string` settings are edited on a line prefilled with the current value
+  - The `text-editor` and `change` commands are removed, see `edit` above
+  - Add `edit` and `clear` verbs to admin-exec: `edit datetime` and
+    `edit boot-order` prompt with the current value, `clear dhcp-server
+    statistics` replaces `dhcp-server clear-statistics`.  `set datetime` now
+    also accepts free-form input, e.g., `14:05`, and echoes the ISO-8601
+    value it sets, see <https://xkcd.com/1179/> for details
+  - Add `log` command to admin-exec, for logging a message to the system
+    log, e.g., `log severity warning Kilroy was here`
+  - The `remove` command now offers the startup-config as a possible
+    alternative, and warns about the consequences (factory reset)
+  - Add `rename` command, for renaming or moving a file without copying it,
+    e.g. `rename startup-config backup`
+  - File system completion with Tab, for `copy`, `rename`, `remove`, and
+    `dir`, limited to the directories those commands accept
+  - The `copy` and `remove` commands now also accept files in `/var/lib`,
+    `/var/tmp`, and `/tmp`.  Files written there are world-readable, and
+    the `.cfg` extension is only added for files in `/cfg`
+- Add an `/infix-syslog:log` RPC, for injecting messages in the system log
+  over NETCONF/RESTCONF, issue #1639.  The operation is restricted to users in
+  the `admin` group by default
+- Add `/system/advanced` for low-level system customization, available in
+  the WebUI from the Configure > Advanced page, issue #463:
+
   - `rc.d`: user scripts stored in the configuration, run once at boot
     after the startup configuration has been applied, in the order listed
   - `default`: daemon environment files written to `/etc/default`, e.g.,
     extra `ptp4l` command line options
-- The CLI `edit` command now also edits settings interactively: passwords
-  and keys are prompted for, `binary` settings open in the text editor, and
-  `string` settings are edited on a line prefilled with the current value.
-  The `text-editor` and `change` commands are removed
-- Add `infix-system:support-collect` RPC, for collecting support data over
-  NETCONF or RESTCONF.  The archive is returned base64 encoded, up to 16 MiB,
-  larger ones are left on the device for out-of-band fetching.  Access is
-  denied by default, an NACM rule must permit it
-- Add CLI `edit` and `clear` verbs to admin-exec: `edit datetime` and
-  `edit boot-order` prompt with the current value, `clear dhcp-server
-  statistics` replaces `dhcp-server clear-statistics`.  `set datetime` now
-  also accepts free-form input, e.g., `14:05`, and echoes the ISO-8601
-  value it sets
-- The CLI `remove` command now offers the startup configuration, and
-  warns that removing it leaves the system booting factory defaults
-- Add CLI `rename` command, for renaming or moving a file without
-  copying it, e.g. `rename startup-config backup` to keep a
-  configuration before starting over.  Directories in the destination
-  are created as needed
-- The CLI completes file system paths with Tab, for `copy`, `rename`,
-  `remove`, and `dir`, limited to the directories those commands accept
-- The CLI `configure` command takes an optional path to start in a
-  sub-context directly, e.g., `configure system authentication`
+
+  Note: these settings are restricted to `admin` group users by default
 - `/bin/sh` is now provided by Busybox ash instead of Bash, speeding up
   boot and configuration changes, issue #961.  Same rationale as Debian's
   dash-as-/bin/sh.  Bash remains available for interactive use and for
   scripts using `#!/bin/bash`
-- WebUI: add 802.11s mesh point support to the WiFi interface wizard and
-  editor, show mesh peers on the WiFi and interface status pages, and add
-  an editor section for access point roaming (802.11k/r/v, band steering,
-  OKC).
-- Add `higher-layer-if` and `lower-layer-if` to interface operational
-  status, listing the interfaces stacked directly on top of or beneath
-  each one, e.g., a VLAN interface and its parent, issue #514
-- Add `last-change` to interface operational status: the time the
-  interface entered its current operational state, issue #514
-- Add an SNMP agent for read-only monitoring from existing management
-  systems.  Configured with `ietf-snmp` (RFC 7407): enable
-  `/snmp/engine` and add a `/snmp/community`, the rest has working
-  defaults.  Serves SNMPv2-MIB, IF-MIB, HOST-RESOURCES-MIB and
-  UCD-SNMP-MIB, plus LLDP-MIB when LLDP is enabled.  Every port is an
-  interface, so switch ports appear in `ifTable` under the same index
-  as `/interfaces/interface[name='eth0']/if-index`.  SNMP SET, SNMPv3,
-  notifications and view-based access control are not supported.
-  Disabled by default, see [SNMP][snmp]
-- Add TFTP server for network boot and device provisioning, issue #1542.
-  Read-only, serving `/var/lib/tftpboot` or a directory on USB media, with
-  optional per-client subdirectories.  `show tftp` lists the files served,
-  see [TFTP Server](tftp.md)
-- Add network boot parameters to DHCP server: `boot file`, `server-address`,
-  and `server-name` at global, subnet, or host scope, sent in the BOOTP header
-  fields and as options 66/67
-- The CLI `copy` and `remove` commands now also accept files in `/var/lib`,
-  `/var/tmp`, and `/tmp`.  Files written there are world-readable.
-  The `.cfg`extension is only added for files in `/cfg`
-- Add support for unattended software upgrades, letting a unit track an RSS/Atom
-  release feed on a schedule and install a newer release to the inactive
-  partition on its own, then either reboot to activate it or leave it staged for
-  the next reboot
-- Add Novarq Tactical 1000 (Laguna) support: LAN9696 switch with 24 GbE
-  copper ports, four SFP+ cages, and a management port.  Infix bootloader
-  in eMMC, the OS netboots; no eMMC image of the OS yet
-- NETCONF is now served by the OpenSSH daemon, as an SSH subsystem on port
-  830.  This means the `ietf-netconf-server.yang` model is gone and NETCONF
-  service is now enabled with `ssh/netconf/enabled`, independently of SSH
-  logins.  Existing configurations are migrated.  NETCONF call-home, NETCONF
-  over TLS, and the on-device `netopeer2-cli` tool require the built-in SSH
-  server of netopeer2 and are therefore no longer available in default builds
+- Add per-server `minpoll` and `maxpoll` options to the NTP client
+- Add an SNMP v1/v2c agent for read-only monitoring from existing management
+  systems.  Disabled by default, see [SNMP][snmp] for details
+- Add support for network boot and device provisioning, issue #1542:
+  - Add TFTP server, read-only, serving `/var/lib/tftpboot` or a directory
+    on USB media, with optional per-client subdirectories, see [TFTP][tftp]
+  - Add network boot parameters to the DHCP server: `boot file`,
+    `server-address`, and `server-name` at global, subnet, or host scope,
+    sent in the BOOTP header fields and as options 66/67
+- Document the release and maintenance policy: which versions receive
+  updates, what may go into a patch release, and the levels of long-term
+  maintenance available, see [Releases & Support][relsup]
+- WebUI changes:
+  - Add 802.11s WiFi mesh point support and access point roaming (802.11k/r/v,
+    band steering, OKC), both configuration (incl. wizard) and status
+  - Key Vitals on the Overview page are named by the component they measure
+- Interface operational status additions, issue #514:
+  - `higher-layer-if` and `lower-layer-if`, the interfaces stacked directly
+    on top of or beneath each one, e.g., a VLAN interface and its parent
+  - `last-change`, the time the interface entered its current state
+- Optional `boot.itb` image, a FIT with kernel, rootfs, and device trees
+  that a vendor U-Boot can start during board bring-up, see [Netboot
+  HowTo][netboot] for details
 - Add `make migrate-configs` to bring static configurations, e.g., the
   per-product `factory-config.cfg` in Infix and in spins, up to date with
   the current confd version
+- NETCONF management is now served by the OpenSSH daemon, meaning the standard
+  `ietf-netconf-server.yang` model is no longer used.  NETCONF is enabled with
+  `ssh netconf enabled`, existing configurations are migrated.  NETCONF
+  call-home, NETCONF over TLS, and the on-device `netopeer2-cli` tool require
+  the built-in SSH server of netopeer2 and are therefore no longer available
+  in default builds
 
 ### Fixes
 
-- Fix #1655: restrict the allowed characters in interface names
-- Constrain Wi-Fi mesh-id and NAS identifier, and validate access-point and mesh passphrases as strictly as station
-- Apply syslog configuration changes at runtime, not only after reboot
-- Restrict the allowed characters in keystore key and certificate names
-- Restrict the allowed characters in syslog property-filter value and pattern-match
-- Fix #1657: restrict the allowed characters in DHCP client option values,
-  which are written into the DHCP client service file
-- Restrict the allowed characters in DHCP server static-host match values
-- Restrict the allowed characters in a hardware component `name`
+- Restrict several configuration strings to a safe character set, issues
+  #1655 and #1657, see [Limitations][limits] for the affected settings
 - Fix #1637: a startup-config migrated on upgrade was saved to disk at
   boot, so the image on the other partition could no longer read it.
-  The migrated configuration is now only applied to running-config,
-  use `copy running-config startup-config` to save it.  A failed
-  migration reverts to failure-config.  After a downgrade, a newer
-  startup-config is loaded as-is, unless it uses settings the older
-  version does not know.  A note at login, in `show software`, and on
-  the WebUI software page shows when the other partition has a
-  different version
-- A startup-config that fails to load now resets the unit, and the next
-  boot goes straight to failure-config from a clean state, issue #1637.
-  The same applies if loading startup-config hangs, the system watchdog
-  then resets the unit
-- Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
-- WebUI: "Save" in the interface editor and "OK" in Add Interface
-  did nothing for Wi-Fi and WireGuard interfaces. The inline "+ New"
-  forms for keystore keys and radios kept their required fields active
-  while hidden, which silently blocked the form they sit in
-- Wi-Fi mesh point interfaces showed an empty `mesh-id` in operational
-  status (CLI and WebUI).
-- Wi-Fi radio hardware components were renamed `radio0-1`, `radio1-1`, in
-  operational status because the radio's temperature sensor took the
-  `radio0` name first, so `show hardware` and the WebUI could no longer
-  match interfaces to their radio. The sensor is now a child of the
-  radio component, named `radio0-temp`
-- WebUI: a WiFi interface can be switched between station, access point
-  and mesh point from the interface editor. The mode used to be fixed
-  when the interface was created
-- OSPF sometimes learned no routes over a link after a routing change
-  was applied while the link went down and up: the adjacency came up
-  but the interface was stuck at network type Null and left out of the
-  router's LSA. Seen about once in thirty runs on virtual machines
+  The migrated configuration now stays in running-config until saved,
+  see [Configuration Migration][migrate]
+- A startup-config that fails to load, or hangs, now resets the unit
+  and the next boot goes straight to failure-config, see
+  [Broken startup-config][brokencfg]
+- First boot after a factory reset:
+  - Fix status LED still blinking after the first boot
+  - Fix resize looping forever on a disk with a `var` partition but no
+    `aux` filesystem, the system now boots without `/var` instead
+- Give `/var` 120 MiB in the 512 MiB QEMU image, room for a support archive
+- Apply syslog configuration changes at runtime, not only after reboot
+- Fix removing an `enumeration` or `boolean` leaf in a RESTCONF YANG Patch
+- Fix OSPF sometimes learning no routes over a link that flapped while a
+  routing change was being applied
+- Wi-Fi fixes:
+  - Fix #1619: Raspberry Pi kernel panic when configuring Wi-Fi
+  - Mesh point interfaces showed an empty `mesh-id` in operational status
+  - Radio hardware components showed up as `radio0-1` in operational
+    status, the temperature sensor is now a child of the radio, `radio0-temp`
+- WebUI fixes:
+  - Saving a Wi-Fi or WireGuard interface did nothing, a hidden "+ New"
+    form blocked the submit
+  - The mode of a Wi-Fi interface, station, access point, or mesh point,
+    can now be changed after it has been created
+  - Reject malformed RESTCONF paths, link only `http` and `https` URLs
+    from mDNS records, and send `Cache-Control: no-store`
 
+[brokencfg]: https://www.kernelkit.org/infix/latest/boot/#broken-startup-config
+[limits]: https://www.kernelkit.org/infix/latest/limitations/
+[migrate]: https://www.kernelkit.org/infix/latest/upgrade/#configuration-migration
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 [snmp]: https://www.kernelkit.org/infix/latest/snmp/
-
+[tftp]: https://www.kernelkit.org/infix/latest/tftp/
+[tactical]: https://github.com/kernelkit/infix/blob/main/board/aarch64/novarq-tactical-1000/README.md
+[netboot]: https://www.kernelkit.org/infix/latest/netboot/
+[unattended]: https://www.kernelkit.org/infix/latest/upgrade/#unattended-updates
 
 [v26.08.0][] - 2026-09-01
 -------------------------
@@ -2430,7 +2425,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.08.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v26.09.0...HEAD
 [v26.09.0]:   https://github.com/kernelkit/infix/compare/v26.08.0...v26.09.0
 [v26.08.0]:   https://github.com/kernelkit/infix/compare/v26.06.0...v26.08.0
 [v26.06.0]:   https://github.com/kernelkit/infix/compare/v26.05.0...v26.06.0

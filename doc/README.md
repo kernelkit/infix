@@ -16,14 +16,17 @@ regression test system solely relies on NETCONF and RESTCONF.
    - [Introduction to the CLI](cli/introduction.md)
    - [Configuring using the CLI](cli/configure.md)
    - [Quick Overview](cli/quick.md)
+   - [Text Editor](cli/edit.md)
    - [Upgrading the Software](cli/upgrade.md)
  - **Infix User Guide**
-   - [Introduction](introduction.md)
+   - [Introduction](index.md)
    - [System Configuration](system.md)
+   - [Upgrading & Boot Order](upgrade.md)
    - [Network Configuration](networking.md)
    - [Wi-Fi](wifi.md)
    - [DHCP Server](dhcp.md)
    - [TFTP Server](tftp.md)
+   - [SNMP](snmp.md)
    - [Syslog Support](syslog.md)
  - **Infix In-Depth**
    - [Boot Procedure](boot.md)
@@ -35,6 +38,9 @@ regression test system solely relies on NETCONF and RESTCONF.
    - [Virtual Environments](virtual.md)
    - [Vital Product Data (VPD)](vpd.md)
    - [YANG to Ethtool Mapping](eth-counters.md)
+   - [Netboot HowTo](netboot.md)
+   - [Limitations](limitations.md)
+   - [Releases & Support](releases.md)
    - [Origin & Licensing](license.md)
  - **Developer Topics**
    - [Developer's Guide](developers-guide.md)
