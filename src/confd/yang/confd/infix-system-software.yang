@@ -160,7 +160,7 @@ submodule infix-system-software {
 
       container unattended-update {
         description
-          "Policy for automatic, unattended software upgrades.
+          "Policy for automatic, unattended software updates.
 
            When 'enabled' and 'schedule' references a schedule, the system
            checks the configured update-url for a newer release on each

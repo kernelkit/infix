@@ -28,10 +28,10 @@ All notable changes to the project are documented in this file.
     Access is limited to users in the NACM `admin` group
   - WebUI: the support bundle is collected with the new RPC, as the
     logged-in user
-- Add support for unattended software upgrades, letting a unit track an RSS/Atom
+- Add support for unattended software updates, letting a unit track an RSS/Atom
   release feed on a schedule and install a newer release to the inactive
   partition on its own, then either reboot to activate it or leave it staged for
-  the next reboot, see [Unattended Updates][unattended]
+  the next reboot, see [Unattended Software Updates][unattended]
 - Add Novarq Tactical-1000 support: LAN9696 (Laguna) switch with 24 GbE copper
   ports, four SFP+ cages, and a management port, booting Infix from eMMC with
   the usual A/B slots, see the [board README][tactical] for details
@@ -154,7 +154,7 @@ All notable changes to the project are documented in this file.
 [tftp]: https://www.kernelkit.org/infix/latest/tftp/
 [tactical]: https://github.com/kernelkit/infix/blob/main/board/aarch64/novarq-tactical-1000/README.md
 [netboot]: https://www.kernelkit.org/infix/latest/netboot/
-[unattended]: https://www.kernelkit.org/infix/latest/upgrade/#unattended-updates
+[unattended]: https://www.kernelkit.org/infix/latest/upgrade/#unattended-software-updates
 
 [v26.08.0][] - 2026-09-01
 -------------------------

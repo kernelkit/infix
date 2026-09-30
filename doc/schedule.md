@@ -109,11 +109,11 @@ and a typo shows up at commit time instead of at the next occurrence.
 
 These features consume schedules today:
 
-| Feature                    | Configuration path                  |
-|----------------------------|-------------------------------------|
-| Reboot on a schedule       | `system scheduled-reboot`           |
-| Update checks              | `system software check-update`      |
-| [Unattended updates][3]    | `system software unattended-update` |
+| Feature                          | Configuration path                  |
+|----------------------------------|-------------------------------------|
+| Reboot on a schedule             | `system scheduled-reboot`           |
+| Update checks                    | `system software check-update`      |
+| [Unattended software updates][3] | `system software unattended-update` |
 
 The example below reboots the system on the `nightly` schedule created
 above.  Note that `scheduled-reboot` has no `enabled` leaf.  It is active
@@ -148,4 +148,4 @@ schedule itself is enabled.
 
 [1]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/confd/infix-schedule.yang
 [2]: https://www.rfc-editor.org/rfc/rfc9922
-[3]: upgrade.md#unattended-updates
+[3]: upgrade.md#unattended-software-updates

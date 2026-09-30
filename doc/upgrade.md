@@ -198,7 +198,7 @@ now the preferred boot source.
 To upgrade the remaining partition (`primary`), run the `upgrade URL`
 command again, and (optionally) reboot.
 
-## Unattended Updates
+## Unattended Software Updates
 
 The upgrade above is operator-driven: you pick a bundle, run `upgrade`,
 and reboot.  This is a function the system can perform on its own, using
@@ -209,7 +209,7 @@ Two independent features share one update source:
 - **Update checks** (`check-update`) look for a newer release and log a
   notification, shown on the next login.  Nothing is downloaded or
   installed
-- **Unattended updates** (`unattended-update`) also download and install
+- **Unattended software updates** (`unattended-update`) also download and install
   the new release, exactly as a manual `upgrade` would
 
 ### Update Source
@@ -337,7 +337,7 @@ itself does not have to exist.
 > certificate validation fails and every occurrence is skipped.  Plain
 > HTTP avoids that on an isolated network.
 
-### Enabling Unattended Updates
+### Enabling Unattended Software Updates
 
 Unattended updates are off by default and need a [schedule][6] to trigger
 them.  The example below installs new releases during a nightly
