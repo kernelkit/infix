@@ -159,6 +159,20 @@ def get_current_carrier(index, manf, model):
         return "default"
 
 
+def _sim_lock_state(unlock_required):
+    mapping = {
+        "none":     "unlocked",
+        "sim-pin":  "pin-required",
+        "sim-pin2": "pin-required",
+        "sim-puk":  "puk-required",
+        "sim-puk2": "puk-required",
+    }
+    # Default to "unlocked": this function is only called when the SIM query
+    # succeeded, so the card is present.  "--" means the modem doesn't report
+    # lock state but the SIM is accessible.
+    return mapping.get(unlock_required, "unlocked")
+
+
 def device_devpath(devpath):
     path = devpath
     while path != "/sys":
@@ -171,24 +185,37 @@ def device_devpath(devpath):
 
 
 def modem_get_module(devpath):
-    if not os.path.exists("/run/modules.json"):
-        if os.path.exists("/run/modems.json"):
-            with open("/run/modems.json", "r") as fd:
-                data = json.load(fd)
-            for index, modem in enumerate(data.get("modems", [])):
-                if devpath in modem["devpath"]:
-                    return {"index": index, "slot": index, "paths": [modem["devpath"]], "type": "modem"}
+    # Prefer system.json (new canonical source written by 00-probe)
+    if os.path.exists("/run/system.json"):
+        with open("/run/system.json", "r") as fd:
+            data = json.load(fd)
+        for modem in data.get("modem", []):
+            if devpath in modem.get("devpath", ""):
+                idx = modem.get("index", 0)
+                return {"index": idx, "slot": idx,
+                        "paths": [modem["devpath"]], "type": "modem"}
+
+    # Fallback: Minex modules.json (hardware with slot/SIM multiplexer)
+    if os.path.exists("/run/modules.json"):
+        with open("/run/modules.json", "r") as fd:
+            data = json.load(fd)
+        for module in data.get("modules", []):
+            if module["type"] != "modem":
+                continue
+            for path in module.get("paths", []):
+                if path in devpath:
+                    return module
         return None
 
-    with open("/run/modules.json", "r") as fd:
-        data = json.load(fd)
+    # Fallback: legacy modems.json written by modem-udev
+    if os.path.exists("/run/modems.json"):
+        with open("/run/modems.json", "r") as fd:
+            data = json.load(fd)
+        for index, modem in enumerate(data.get("modems", [])):
+            if devpath in modem.get("devpath", ""):
+                return {"index": index, "slot": index,
+                        "paths": [modem["devpath"]], "type": "modem"}
 
-    for module in data["modules"]:
-        if module["type"] != "modem":
-            continue
-        for path in module["paths"]:
-            if path in devpath:
-                return module
     return None
 
 
@@ -228,18 +255,35 @@ def sysfs_interfaces(devpath):
 
 
 def print_modem(index):
-    with open("/run/modems.json", "r") as fd:
-        data = json.load(fd)
+    # Try system.json first (canonical source written by 00-probe)
+    if os.path.exists("/run/system.json"):
+        with open("/run/system.json", "r") as fd:
+            data = json.load(fd)
+        for modem in data.get("modem", []):
+            if modem.get("index") == index:
+                module = {"index": index, "slot": index,
+                          "paths": [modem["devpath"]], "type": "modem"}
+                modem["sim"] = modem_get_sim(module) or \
+                    {"index": 0, "name": "sim0", "slot": 0, "present": True}
+                if not modem.get("interfaces"):
+                    modem["interfaces"] = sysfs_interfaces(modem["devpath"])
+                print(json.dumps(modem))
+                sys.exit(0)
 
-    for modem in data["modems"]:
-        module = modem_get_module(modem["devpath"])
-        if module["index"] == index:
-            modem["slot"] = module["slot"]
-            modem["sim"] = modem_get_sim(module) or {"index": 0, "name": "sim0", "slot": 0, "present": True}
-            if not modem.get("interfaces"):
-                modem["interfaces"] = sysfs_interfaces(modem["devpath"])
-            print(json.dumps(modem))
-            sys.exit(0)
+    # Fallback: legacy modems.json written by modem-udev
+    if os.path.exists("/run/modems.json"):
+        with open("/run/modems.json", "r") as fd:
+            data = json.load(fd)
+        for modem in data.get("modems", []):
+            module = modem_get_module(modem["devpath"])
+            if module and module["index"] == index:
+                modem["slot"] = module["slot"]
+                modem["sim"] = modem_get_sim(module) or \
+                    {"index": 0, "name": "sim0", "slot": 0, "present": True}
+                if not modem.get("interfaces"):
+                    modem["interfaces"] = sysfs_interfaces(modem["devpath"])
+                print(json.dumps(modem))
+                sys.exit(0)
 
     print(json.dumps({}))
     sys.exit(0)
@@ -309,14 +353,23 @@ def print_all():
             "phone-number": gen.get("own-numbers", []),
         }
 
+        sig_q = gen.get("signal-quality") or {}
         modem["status"] = {
             "state": vstr(gen["state"]),
             "selected-carrier": get_current_carrier(index, manf, model),
-            "signal-quality": vnum(gen["signal-quality"]["value"])
+            "signal-quality": vnum(sig_q.get("value", "0")),
+            "signal-quality-recent": vbool(sig_q.get("recent", "no")),
+            "power-state": vstr(gen.get("power-state", "--")) or "unknown",
         }
 
+        locks = gpp.get("enabled-locks") or []
+        if isinstance(locks, list):
+            modem["status"]["enabled-locks"] = [
+                lk for lk in locks if lk and lk != "--" and lk != "none"
+            ]
+
         if gen["state"] == "failed":
-            reason = vstr(gen["state-failed-reason"])
+            reason = vstr(gen.get("state-failed-reason", "--"))
             if len(reason) > 0:
                 modem["status"]["state-failed-reason"] = reason
 
@@ -324,6 +377,17 @@ def print_all():
         if sim is not None:
             modem["status"]["sim-active"] = sim["index"]
             modem["status"]["sim-present"] = sim["present"]
+            sim_name = sim["name"]
+            sim_slot = sim["slot"]
+        else:
+            sim_name = "sim0"
+            slot_raw = gen.get("primary-sim-slot", 1)
+            sim_slot = int(slot_raw) if str(slot_raw).isdigit() else 1
+
+        # rssi / rsrp are int16 dBm in YANG; rsrq / sinr are decimal64 dB.
+        # mmcli reports them as floating-point strings; normalise here.
+        int_signals = {"rssi", "rsrp"}
+        dec_signals = {"rsrq", "sinr"}
 
         refresh = 0
         output = runcmdj(['mmcli', '-J', '-m', mpath, '--signal-get'])
@@ -336,13 +400,32 @@ def print_all():
             signals = ["rssi", "rsrp", "rsrq", "rscp", "snr", "sinr"]
             found = False
             for tech in output["modem"]["signal"].keys():
+                if tech == "refresh":
+                    continue
                 for sig in signals:
                     v = output["modem"]["signal"][tech].get(sig, "--")
-                    if v != "--":
-                        modem["status"]["signal-%s" % sig] = v
+                    if v == "--":
+                        continue
+                    try:
+                        if sig in int_signals:
+                            modem["status"]["signal-%s" % sig] = int(round(float(v)))
+                        elif sig in dec_signals:
+                            modem["status"]["signal-%s" % sig] = "%.1f" % float(v)
+                        else:
+                            modem["status"]["signal-%s" % sig] = v
                         found = True
+                    except (TypeError, ValueError):
+                        continue
                 if found:
                     break
+
+        access_techs = gen.get("access-technologies") or []
+        if isinstance(access_techs, str):
+            access_techs = [access_techs]
+        access_techs = [t for t in access_techs if t and t != "--"]
+        # mmcli reports the active access-technology set lowest-to-highest;
+        # pick the most advanced for the YANG single-valued enum.
+        network_type = access_techs[-1].lower() if access_techs else "unknown"
 
         modem["status"]["cellular"] = {
             "registration-state":
@@ -351,8 +434,10 @@ def print_all():
                       "unknown"),
             "operator-name": vstr(gpp["operator-name"]),
             "operator-id": vstr(gpp["operator-code"]),
-            "network-type": ",".join(vstr(gen["access-technologies"])).upper(),
-            "service-state": vstr(gpp["packet-service-state"])
+            "network-type": network_type,
+            "service-state":
+                venum(gpp.get("packet-service-state", "--"),
+                      ["attached", "detached"], "unknown"),
         }
 
         bearers = []
@@ -389,10 +474,40 @@ def print_all():
 
         modem["status"]["bearer"] = bearers
 
-        output = runcmdj(['mmcli', '-J', '-m', mpath, '-i', gen["sim"]])
+        sim_path = vstr(gen.get("sim", "--"))
+        output = None
+        if sim_path:
+            output = runcmdj(['mmcli', '-J', '-m', mpath, '-i', sim_path])
+
         if output:
-            modem["info"]["imsi"] = output["sim"]["properties"]["imsi"]
-            modem["info"]["iccid"] = output["sim"]["properties"]["iccid"]
+            sim_props = output["sim"]["properties"]
+            modem["info"]["imsi"] = vstr(sim_props.get("imsi", "--"))
+            modem["info"]["iccid"] = vstr(sim_props.get("iccid", "--"))
+            modem["sim-state"] = {
+                "name": sim_name,
+                "slot": sim_slot,
+                "state": _sim_lock_state(vstr(gen.get("unlock-required", "--"))),
+                "operator-name": vstr(sim_props.get("operator-name", "--")),
+            }
+        else:
+            # mmcli SIM query failed (or there's no SIM path at all).  Emit
+            # sim-state anyway so a 'simN' component appears in the YANG
+            # tree — Andrew's report: a missing SIM should be visible from
+            # 'show modem', not silent.  Derive the state from modem-level
+            # signals: an empty 'sim' path or 'sim-missing' failure reason
+            # both mean the slot is empty.  Otherwise we genuinely don't
+            # know (modem busy / SIM read error / etc.) — report 'unknown'.
+            if (not sim_path or
+                vstr(gen.get("state-failed-reason", "--")) == "sim-missing"):
+                sim_state_value = "not-inserted"
+            else:
+                sim_state_value = "unknown"
+            modem["sim-state"] = {
+                "name": sim_name,
+                "slot": sim_slot,
+                "state": sim_state_value,
+                "operator-name": "",
+            }
 
         output = runcmdj(['mmcli', '-J', '-m', mpath, '--location-get'])
         if output:

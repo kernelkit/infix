@@ -10,6 +10,7 @@ import re
 import os
 
 MODEMS = "/run/modems.json"
+SYSTEM = "/run/system.json"
 LOCK = "/var/lock/modems.lock"
 LOGFILE = "/run/modemd/modem-udev.log"
 debug = False
@@ -98,22 +99,42 @@ def write_modem_data(data):
     return True
 
 
-def get_vendor(devpath):
-    path = "%s/idVendor" % devpath
-    if os.path.exists(path):
-        with open(path, "r") as fd:
+def _sysfs_attr(devpath, name):
+    try:
+        with open("%s/%s" % (devpath, name), "r") as fd:
             return fd.readline().strip()
-    else:
+    except OSError:
         return None
 
 
-def get_product(devpath):
-    path = "%s/idProduct" % devpath
-    if os.path.exists(path):
-        with open(path, "r") as fd:
-            return fd.readline().strip()
+def update_system_json(modems_list):
+    data = {}
+    try:
+        with open(SYSTEM, "r") as fd:
+            data = json.load(fd)
+    except (IOError, json.JSONDecodeError):
+        pass
+
+    entries = []
+    for i, m in enumerate(modems_list):
+        entries.append({
+            "index": i,
+            "name": "modem%d" % i,
+            "devpath": m.get("devpath", ""),
+            "vid": m.get("vendor", ""),
+            "pid": m.get("product", ""),
+        })
+
+    if not entries:
+        data.pop("modem", None)
     else:
-        return None
+        data["modem"] = entries
+
+    tmp = SYSTEM + ".tmp"
+    with open(tmp, "w") as fd:
+        json.dump(data, fd, indent=2)
+    os.rename(tmp, SYSTEM)
+    info("Updated system.json with %d modem(s)" % len(entries))
 
 
 def update(d):
@@ -133,11 +154,11 @@ def update(d):
     if not modem:
         modem = {"devpath": devpath}
 
-    vendor = get_vendor(devpath)
+    vendor = _sysfs_attr(devpath, "idVendor")
     if vendor:
         modem["vendor"] = vendor
 
-    product = get_product(devpath)
+    product = _sysfs_attr(devpath, "idProduct")
     if product:
         modem["product"] = product
 
@@ -165,6 +186,7 @@ def update(d):
 
     data["modems"].append(modem)
     write_modem_data(data)
+    update_system_json(data["modems"])
 
     info("Updated modem %s" % devpath)
 
