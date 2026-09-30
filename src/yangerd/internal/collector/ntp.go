@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/facebook/time/ntp/chrony"
@@ -75,6 +76,10 @@ type NTPCollector struct {
 	cmd      CommandRunner
 	dial     func() (cmdmonClient, func() error, error)
 	interval time.Duration
+
+	// chronyd is asked from the poll and from GETs at once, and every
+	// dial binds the same client socket path.
+	mu sync.Mutex
 }
 
 // NewNTPCollector creates an NTPCollector with the given dependencies.
@@ -95,25 +100,13 @@ func (c *NTPCollector) Interval() time.Duration { return c.interval }
 //     list with address, mode, state, stratum and poll for each chrony
 //     source (Infix augmentation of ietf-system).
 func (c *NTPCollector) Collect(ctx context.Context, t *tree.Tree) error {
-	var srcs []ntpSource
+	ntp, srcs := c.query(true)
 
-	ntp := make(map[string]interface{})
-
-	client, closeConn, err := c.dial()
-	if err == nil {
-		defer closeConn()
-
-		srcs = getSources(client)
-		addAssociations(ntp, srcs)
-		addClockState(client, ntp)
-		addServerStats(client, ntp)
-
-		// Only probe the listening port when chronyd actually answered;
-		// otherwise a stale ss line would keep the tree key alive after
-		// chronyd stopped.
-		if len(ntp) > 0 {
-			c.addServerStatus(ctx, ntp)
-		}
+	// Only probe the listening port when chronyd actually answered;
+	// otherwise a stale ss line would keep the tree key alive after
+	// chronyd stopped.
+	if len(ntp) > 0 {
+		c.addServerStatus(ctx, ntp)
 	}
 
 	if len(ntp) > 0 {
@@ -128,12 +121,65 @@ func (c *NTPCollector) Collect(ctx context.Context, t *tree.Tree) error {
 		t.Delete("ietf-ntp:ntp")
 	}
 
-	// Always refresh the Infix NTP sources under system-state, even when
-	// empty.  Otherwise a source that disappears from chrony (e.g. a DHCP
-	// lease without option 42, or NTP turned off) lingers as stale
-	// operational data -- a phantom "selected" server chronyc no longer
-	// reports.  Merge only overwrites the keys it is given, so we must
-	// hand it an empty source list to clear a previously-populated one.
+	if data := sourcesOverlay(srcs); data != nil {
+		t.Merge("ietf-system:system-state", data)
+	}
+	return nil
+}
+
+// query asks chronyd for its sources and, with full, for the rest of
+// ietf-ntp:ntp.  An empty ntp means chronyd did not answer.
+func (c *NTPCollector) query(full bool) (map[string]interface{}, []ntpSource) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	ntp := make(map[string]interface{})
+	client, closeConn, err := c.dial()
+	if err != nil {
+		return ntp, nil
+	}
+	defer closeConn()
+
+	srcs := getSources(client)
+	if full {
+		addAssociations(ntp, srcs)
+		addClockState(client, ntp)
+		addServerStats(client, ntp)
+	}
+	return ntp, srcs
+}
+
+// Live is the tree provider for ietf-ntp:ntp.  Source selection and the
+// clock state move without any event from chronyd, and asking it is a
+// local socket round trip, so a GET reads them now.  The poll keeps the
+// key present while chronyd runs, and the listening port, which takes
+// a fork.
+func (c *NTPCollector) Live() json.RawMessage {
+	ntp, _ := c.query(true)
+	if len(ntp) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(ntp)
+	if err != nil {
+		return nil
+	}
+	return data
+}
+
+// LiveSources is the infix-system:ntp overlay for ietf-system:system-state,
+// read at GET time for the same reason as Live.
+func (c *NTPCollector) LiveSources() json.RawMessage {
+	_, srcs := c.query(false)
+	return sourcesOverlay(srcs)
+}
+
+// sourcesOverlay always carries a source list, empty when chronyd has
+// none.  Otherwise a source that disappears from chrony (e.g. a DHCP
+// lease without option 42, or NTP turned off) lingers as stale
+// operational data -- a phantom "selected" server chronyc no longer
+// reports.  Merge only overwrites the keys it is given, so it must be
+// handed an empty source list to clear a previously-populated one.
+func sourcesOverlay(srcs []ntpSource) json.RawMessage {
 	sources := addSources(srcs)
 	if sources == nil {
 		sources = map[string]interface{}{
@@ -142,13 +188,13 @@ func (c *NTPCollector) Collect(ctx context.Context, t *tree.Tree) error {
 			},
 		}
 	}
-	if data, err := json.Marshal(map[string]interface{}{
+	data, err := json.Marshal(map[string]interface{}{
 		"infix-system:ntp": sources,
-	}); err == nil {
-		t.Merge("ietf-system:system-state", data)
+	})
+	if err != nil {
+		return nil
 	}
-
-	return nil
+	return data
 }
 
 // getSources fetches source data and stats for every chrony source.
@@ -255,9 +301,12 @@ func addAssociations(ntp map[string]interface{}, srcs []ntpSource) {
 // sourceStateMap maps chrony source states to YANG infix-system
 // source-state enum values.
 var sourceStateMap = map[chrony.SourceStateType]string{
-	chrony.SourceStateSync:        "selected",
-	chrony.SourceStateCandidate:   "candidate",
-	chrony.SourceStateOutlier:     "outlier",
+	chrony.SourceStateSync: "selected",
+	// The library names these after chrony 3.  In chrony 4, 4 is
+	// "unselected" ('-') and 5 is "selectable" ('+'), the other way
+	// round from what the names say.
+	chrony.SourceStateType(5):     "candidate",
+	chrony.SourceStateType(4):     "outlier",
 	chrony.SourceStateUnreach:     "unusable",
 	chrony.SourceStateFalseTicker: "falseticker",
 	chrony.SourceStateJittery:     "unstable",

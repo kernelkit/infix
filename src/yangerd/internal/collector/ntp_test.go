@@ -100,9 +100,9 @@ func fullFakeChrony() *fakeChrony {
 		data: []*chrony.ReplySourceData{
 			sourceData(v4(10, 0, 0, 1), chrony.SourceModeClient, chrony.SourceStateSync,
 				2, 6, 0o377, 32, 0.000123, 0.000456),
-			sourceData(v4(10, 0, 0, 2), chrony.SourceModeClient, chrony.SourceStateCandidate,
+			sourceData(v4(10, 0, 0, 2), chrony.SourceModeClient, chronySelectable,
 				3, 7, 0o377, 64, -0.000789, 0.001234),
-			sourceData(v4(10, 0, 0, 3), chrony.SourceModePeer, chrony.SourceStateOutlier,
+			sourceData(v4(10, 0, 0, 3), chrony.SourceModePeer, chronyUnselected,
 				4, 6, 0o177, 128, 0.001500, 0.002000),
 			sourceData(nil, chrony.SourceModeRef, chrony.SourceStateSync,
 				1, 4, 0o377, 16, 0.000001, 0.000010),
@@ -647,5 +647,58 @@ func TestSplitLines(t *testing.T) {
 	}
 	if got[0] != "line1" || got[1] != "line2" || got[2] != "line3" {
 		t.Fatalf("unexpected lines: %v", got)
+	}
+}
+
+// chrony 4 state codes: 5 is shown as '+' (selectable), 4 as '-'
+// (unselected).  The library's names for them come from chrony 3.
+const (
+	chronyUnselected = chrony.SourceStateType(4)
+	chronySelectable = chrony.SourceStateType(5)
+)
+
+// A GET reads source selection from chronyd now: a source chrony selects
+// after the last poll shows as selected without another poll.
+func TestNTPLiveSourcesFollowChrony(t *testing.T) {
+	fake := fullFakeChrony()
+	c := newNTPCollector(ssRunner(), fake)
+	tr := tree.New()
+	tr.RegisterProvider("ietf-system:system-state", c.LiveSources)
+	if err := c.Collect(context.Background(), tr); err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+
+	stateOf := func(addr string) interface{} {
+		var state map[string]interface{}
+		if err := json.Unmarshal(tr.Get("ietf-system:system-state"), &state); err != nil {
+			t.Fatalf("unmarshal system-state: %v", err)
+		}
+		srcs := state["infix-system:ntp"].(map[string]interface{})["sources"].(map[string]interface{})["source"].([]interface{})
+		for _, raw := range srcs {
+			if s := raw.(map[string]interface{}); s["address"] == addr {
+				return s["state"]
+			}
+		}
+		return nil
+	}
+
+	if got := stateOf("10.0.0.2"); got != "candidate" {
+		t.Fatalf("10.0.0.2 = %v before, want candidate", got)
+	}
+	fake.data[0].State = chronySelectable
+	fake.data[1].State = chrony.SourceStateSync
+	if got := stateOf("10.0.0.2"); got != "selected" {
+		t.Fatalf("10.0.0.2 = %v after chrony selected it, want selected without a poll", got)
+	}
+}
+
+// With chronyd gone, Live adds nothing and LiveSources clears the list.
+func TestNTPLiveWithoutChrony(t *testing.T) {
+	c := newNTPCollector(ssRunner(), nil)
+	if got := c.Live(); got != nil {
+		t.Fatalf("Live = %s, want nil", got)
+	}
+	if got := string(c.LiveSources()); got != `{"infix-system:ntp":{"sources":{"source":[]}}}` {
+		t.Fatalf("LiveSources = %s, want an empty source list", got)
 	}
 }

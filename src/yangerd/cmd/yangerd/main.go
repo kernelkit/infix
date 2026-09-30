@@ -96,18 +96,20 @@ func main() {
 	cmd := collector.ExecRunner{}
 	fs := collector.OSFileReader{}
 	hardware := collector.NewHardwareCollector(cmd, fs, cfg.PollHardware, cfg.EnableWifi, cfg.EnableGPS)
+	ntp := collector.NewNTPCollector(cmd, cfg.PollNTP)
+	t.RegisterProvider("ietf-ntp:ntp", ntp.Live)
 	t.RegisterProvider("ietf-hardware:hardware", hardware.Live)
 	collectors := []collector.Collector{
 		collector.NewSystemCollector(cmd, fs, cfg.PollSystem),
 		collector.NewRoutingCollector(cfg.PollRouting),
-		collector.NewNTPCollector(cmd, cfg.PollNTP),
+		ntp,
 		hardware,
 	}
 	pokes := collector.RunAll(ctx, &wg, t, collectors)
 
 	inst := collector.DBusInstaller{}
 	t.RegisterProvider("ietf-system:system-state", func() json.RawMessage {
-		live := collector.LiveSystemState(fs)
+		live := tree.ShallowMerge(collector.LiveSystemState(fs), ntp.LiveSources())
 		installerOverlay := collector.MergeInstaller(t.GetCached("ietf-system:system-state"), inst)
 		if installerOverlay == nil {
 			return live
