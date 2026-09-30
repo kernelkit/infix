@@ -125,8 +125,9 @@ with infamy.Test() as test:
         # Steered: the client shows up on the 5GHz BSS (wifi1) and not on the
         # 2.4GHz BSS (wifi0) -- the 2.4GHz BSS suppressed its probe responses
         # once it had been seen on 5GHz.
-        until(lambda: CLIENT_MAC in wifi.ap_stations(ap, "wifi1"),
-              attempts=90, interval=2)
+        wifi.until_diagnosed(env, lambda: CLIENT_MAC in wifi.ap_stations(ap, "wifi1"),
+                             attempts=90, interval=2,
+                             ap="ap", ap_ifaces=("wifi0", "wifi1"), clients=("client",))
         assert CLIENT_MAC not in wifi.ap_stations(ap, "wifi0"), \
             "client associated on 2.4GHz; band steering did not steer it to 5GHz"
 

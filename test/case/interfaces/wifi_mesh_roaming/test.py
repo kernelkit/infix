@@ -170,7 +170,9 @@ with infamy.Test() as test:
                   attempts=30, interval=2)
 
     with test.step("Verify the client associates to the 'campus' SSID"):
-        until(lambda: wifi.associated(client, SSID), attempts=60, interval=2)
+        wifi.until_diagnosed(env, lambda: wifi.associated(client, SSID),
+                             attempts=60, interval=2, ap=("gw1", "gw2", "gw3"),
+                             ap_ifaces=("wifi1",), clients=("client",))
 
     # The client reports the BSSID it is on; with all three APs sharing the
     # SSID, that BSSID is what tells them apart.
@@ -195,8 +197,9 @@ with infamy.Test() as test:
                 "interface": [{"name": "wifi1", "enabled": False}]}}})
 
         with test.step("Verify the client roams to another node's AP"):
-            new_bssid = until(lambda: on_ap(client, aps, not_on=first_bssid),
-                              attempts=90, interval=2)
+            new_bssid = wifi.until_diagnosed(env, lambda: on_ap(client, aps, not_on=first_bssid),
+                                             attempts=90, interval=2, ap=("gw1", "gw2", "gw3"),
+                                             ap_ifaces=("wifi1",), clients=("client",))
             new_ap, _ = aps[new_bssid]
             print(f"client roamed from {first_ap} to {new_ap}")
 
