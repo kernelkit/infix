@@ -27,6 +27,7 @@ regression test system solely relies on NETCONF and RESTCONF.
    - [DHCP Server](dhcp.md)
    - [TFTP Server](tftp.md)
    - [SNMP](snmp.md)
+   - [Cellular Modem (WWAN)](modem.md)
    - [Syslog Support](syslog.md)
  - **Infix In-Depth**
    - [Boot Procedure](boot.md)

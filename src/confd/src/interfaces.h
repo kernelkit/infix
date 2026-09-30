@@ -181,9 +181,9 @@ int ppp_gen(sr_session_ctx_t *session, struct lyd_node *dif, struct lyd_node *ci
 int ppp_del(struct lyd_node *dif, struct dagger *net);
 int ppp_add_deps(struct lyd_node *cif);
 
-/* modem.c */
-int modem_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net);
-int modem_gen_del(struct lyd_node *dif, struct dagger *net);
+/* if-modem.c */
+int modem_add_iface(struct lyd_node *cif, struct dagger *net);
+int modem_del_iface(struct lyd_node *dif, struct dagger *net);
 
 /* infix-if-wireguard */
 int wireguard_validate_peers(sr_session_ctx_t *session, struct lyd_node *cif);

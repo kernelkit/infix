@@ -37,10 +37,16 @@ module infix-interfaces {
   include infix-if-wireguard;
   include infix-if-ppp;
   include infix-if-ptp;
+  include infix-if-modem;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2026-10-11 {
+    description "Include infix-if-modem submodule for cellular wwan interfaces.";
+    reference "internal";
+  }
 
   revision 2026-10-03 {
     description "Add PPPoE client interfaces.";

@@ -620,6 +620,73 @@ def probe_ptp_capabilities(out):
         out.setdefault("interfaces", {}).update(ifaces)
 
 
+def _usb_root_from_sysfs(dev_path):
+    p = dev_path
+    while p not in ("/", "/sys"):
+        parent = os.path.realpath(os.path.join(p, ".."))
+        basename = os.path.basename(parent)
+        if basename.startswith("usb") and basename[3:].isdigit():
+            return parent
+        p = parent
+    return None
+
+
+def _read_usb_vid_pid(dev_path):
+    p = dev_path
+    while p not in ("/", "/sys"):
+        try:
+            vid = open(os.path.join(p, "idVendor")).read().strip()
+            pid = open(os.path.join(p, "idProduct")).read().strip()
+            return vid, pid
+        except OSError:
+            pass
+        p = os.path.dirname(p)
+    return "", ""
+
+
+def probe_modems(out):
+    """devpath is the USB bus root; ModemManager matches by path prefix.
+    seen_roots deduplicates cdc-wdm and ttyUSB ports of the same physical modem."""
+    seen_roots = set()
+    modems = []
+    idx = 0
+
+    def add_modem(dev_path):
+        nonlocal idx
+        usb_root = _usb_root_from_sysfs(dev_path)
+        if usb_root is None or usb_root in seen_roots:
+            return
+        seen_roots.add(usb_root)
+        vid, pid = _read_usb_vid_pid(dev_path)
+        modems.append({
+            "index": idx,
+            "name": "modem%d" % idx,
+            "devpath": usb_root,
+            "vid": vid,
+            "pid": pid,
+        })
+        idx += 1
+
+    for cls_dir, prefix in (("/sys/class/usbmisc", "cdc-wdm"),
+                             ("/sys/class/tty", "ttyUSB")):
+        try:
+            entries = os.listdir(cls_dir)
+        except OSError:
+            continue
+        for entry in entries:
+            if not entry.startswith(prefix):
+                continue
+            try:
+                dev_path = os.path.realpath(
+                    os.path.join(cls_dir, entry, "device"))
+                add_modem(dev_path)
+            except OSError:
+                pass
+
+    if modems:
+        out["modem"] = modems
+
+
 def main():
     out = {
         "vendor": None,
@@ -647,6 +714,7 @@ def main():
 
     probe_wifi_radios(out)
     probe_ptp_capabilities(out)
+    probe_modems(out)
 
     if not out["factory-password-hash"]:
         sys.stdout.write("\n\n\033[31mCRITICAL BOOTSTRAP ERROR\n" +
