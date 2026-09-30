@@ -2856,9 +2856,13 @@ booted from one partition, an <code>upgrade</code> will apply to the other
 <div class="admonition warning">
 <p class="admonition-title">Caution</p>
 <p>During boot (step 5), the unit may <a href="#configuration-migration">migrate</a>
-the startup configuration for any syntax changes.  It is therefore
-important that you make sure to upgrade the other partition as well
-after reboot, of course after having verified your setup.</p>
+the startup configuration for any syntax changes.  The migrated
+configuration is only applied to <code>running-config</code>, and the file on
+disk is kept as-is until you save it.  Once saved, the old image on
+the other partition may not be able to read it, so upgrade the other
+partition as well after you have verified your setup.  Until then, a
+note at login, in <code>show software</code>, and on the WebUI software page
+shows that the other partition has a different version.</p>
 </div>
 <p>The CLI example below shows steps 2-5.</p>
 <p><em>Backup startup configuration:</em> It is recommended to backup the startup
@@ -3149,14 +3153,14 @@ build installs the latest release from the feed on the first occurrence.</p>
 <p>The example above illustrated an upgrade from Infix v25.01.0 to
 v25.03.1. Inbetween these versions, YANG configuration definitions
 changed slightly (more details given below).</p>
-<p>During boot, Infix inspects the <code>version</code> meta information within the
-startup configuration file to determine if configuration migration is
-needed. In this specific case, the configuration file has version
+<p>During boot, the system inspects the <code>version</code> meta information within
+the startup configuration file to determine if configuration migration
+is needed. In this specific case, the configuration file has version
 <code>1.4</code> while the booted software expects version <code>1.5</code> (the
 configuration version numbering differs from the Infix image version
 numbering).  The startup configuration is migrated to <code>1.5</code>
-definitions and stored, while a backup previous startup configuration
-is stored in directory <code>/cfg/backup/</code>.</p>
+definitions and applied to <code>running-config</code>, while a backup of the
+original startup configuration is stored in directory <code>/cfg/backup/</code>.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>dir /cfg/backup/</b>
 /cfg/backup/ directory
 startup-config-1.4.cfg
@@ -3164,8 +3168,23 @@ startup-config-1.4.cfg
 admin@example:/&gt;
 </code></pre>
 
-<p>The modifications made to the startup configuration can be viewed by
-comparing the files from the <em>shell</em>. An example is shown below.</p>
+<p>The file <code>/cfg/startup-config.cfg</code> itself is <em>not</em> changed.  If the new
+image fails, the unit can fall back to the old image on the other
+partition, and its startup configuration is intact.  The migration is
+repeated at every boot until the configuration is saved.  Until then, a
+note at login says the configuration is not saved, and the WebUI shows
+unsaved changes, since the <code>startup-config</code> datastore reports the old
+version.</p>
+<p>When you have verified the unit works as expected, save the migrated
+configuration:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>copy running-config startup-config</b>
+admin@example:/&gt;
+</code></pre>
+
+<p>If the migration fails, the unit reverts to its <a href="../boot/#system-boot">failure config</a>.</p>
+<p>After saving, the modifications made to the startup configuration can
+be viewed by comparing the files from the <em>shell</em>. An example is shown
+below.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>exit</b>
 admin@example:~$ <b>diff /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg</b>
 --- /cfg/backup/startup-config-1.4.cfg
@@ -3188,6 +3207,9 @@ admin@example:~$
 <strong>not</strong> guaranteed to work smoothly.  In particular, when the unit boots
 up with the downgraded version, it may fail to apply the <em>startup
 config</em>, and instead apply its <a href="../boot/#system-boot">failure config</a>.</p>
+<p>A startup configuration of a newer version than the downgraded software
+supports is loaded as-is.  It only fails if it uses settings the older
+version does not know.</p>
 <p>We consider two cases: downgrading with and without applying a backup
 startup configuration before rebooting.</p>
 <p>In both cases we start out with a unit running Infix v25.03.1, and

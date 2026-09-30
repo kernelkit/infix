@@ -3111,9 +3111,17 @@ detected from the outside.  This is planned for a later release.</p>
 </div>
 <h4 id="broken-startup-config">Broken startup-config<a class="headerlink" href="#broken-startup-config" title="Permanent link">¶</a></h4>
 <p>If loading <code>startup-config</code> fails for some reason, e.g., invalid JSON
-syntax, failed validation against the system's YANG model, or a bug in
-the system's <code>confd</code> service, the <em>Fail Secure Mode</em> is triggered and
-<code>failure-config</code> is loaded (unless VPD Failure, see above).</p>
+syntax, a failed migration or validation against the system's YANG
+model, or a bug in the system's <code>confd</code> service, the <em>Fail Secure Mode</em>
+is triggered and <code>failure-config</code> is loaded (unless VPD Failure, see
+above).  The system then marks the boot as failed and resets, so that
+the next boot starts from a clean state and goes straight to <em>Fail
+Secure Mode</em>.  The mark is cleared on that boot, so a reboot after it
+tries <code>startup-config</code> again.</p>
+<p>The same happens if loading <code>startup-config</code> hangs, e.g., a service that
+never responds.  The system watchdog then resets the unit, by default
+after 70 seconds, and the next boot goes straight to <em>Fail Secure
+Mode</em>.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>Please see the <a href="../branding/">Branding &amp; Releases</a> document for how to
