@@ -28,6 +28,8 @@ var hwPhyNumRe = regexp.MustCompile(`(\d+)$`)
 
 const cpuComponent = "cpu"
 
+const hardwareKey = "ietf-hardware:hardware"
+
 // hwmon device names and thermal zone types that report an SoC die
 // temperature, after normalization: a plain cpu/soc/core, Intel and AMD
 // (coretemp, k10temp), Microchip SparX-5 and LAN969x (s5-temp), or a
@@ -51,13 +53,14 @@ type HardwareCollector struct {
 	enableWifi bool
 	enableGPS  bool
 
-	// Snapshot of the last poll, without sensors.
-	mu        sync.Mutex
-	inventory []interface{}
-	radios    []interface{}
-	gps       []interface{}
-	wifiInfo  map[string]map[string]interface{}
-	reported  map[string]bool // duplicate names already warned about
+	mu       sync.Mutex
+	gps      []interface{}                     // last GPS poll
+	radios   []interface{}                     // radio capabilities, without survey
+	radioIf  map[string]string                 // radio name -> interface for its survey
+	wifiInfo map[string]map[string]interface{} // PHY info the radios were built from
+	reported map[string]bool                   // duplicate names already warned about
+
+	radioRefresh chan struct{}
 }
 
 // NewHardwareCollector creates a HardwareCollector with the given dependencies.
@@ -69,6 +72,8 @@ func NewHardwareCollector(cmd CommandRunner, fs FileReader, interval time.Durati
 		enableWifi: enableWifi,
 		enableGPS:  enableGPS,
 		reported:   make(map[string]bool),
+
+		radioRefresh: make(chan struct{}, 1),
 	}
 }
 
@@ -81,51 +86,76 @@ func (c *HardwareCollector) Interval() time.Duration { return c.interval }
 // Collect implements Collector. It produces one tree key:
 // "ietf-hardware:hardware".
 func (c *HardwareCollector) Collect(ctx context.Context, t *tree.Tree) error {
-	systemjson := c.readSystemJSON()
-
-	inventory := make([]interface{}, 0)
-	inventory = append(inventory, c.motherboardComponent(systemjson)...)
-	inventory = append(inventory, c.vpdComponents(systemjson)...)
-	inventory = append(inventory, c.usbPortComponents(systemjson)...)
-
-	var radios, gps []interface{}
-	wifiInfo := map[string]map[string]interface{}{}
-	if c.enableWifi {
-		radios, wifiInfo = c.wifiRadioComponents(ctx)
-	}
+	var gps []interface{}
 	if c.enableGPS {
 		gps = c.gpsReceiverComponents(ctx)
 	}
 
 	c.mu.Lock()
-	c.inventory = inventory
-	c.radios = radios
 	c.gps = gps
-	c.wifiInfo = wifiInfo
 	c.mu.Unlock()
 
-	if data := c.assemble(ctx); data != nil {
-		t.Set("ietf-hardware:hardware", data)
+	// Everything else is read by Live when asked, but the tree only
+	// calls a provider for a key that exists.
+	if t.GetCached(hardwareKey) == nil {
+		t.Set(hardwareKey, json.RawMessage(`{}`))
 	}
-
 	return nil
 }
 
-// Live is the tree provider for the hardware key: the component list
-// with the sensors read now, so a GET reports current readings rather
-// than the last poll's.
+// RequestRadioRefresh asks RunRadios to rebuild the radio capabilities.
+// Called from nl80211 events: a phy came or went, the regulatory domain
+// or the set of interfaces on a phy changed.
+func (c *HardwareCollector) RequestRadioRefresh() {
+	select {
+	case c.radioRefresh <- struct{}{}:
+	default:
+	}
+}
+
+// RunRadios keeps the radio capabilities, which only change on nl80211
+// events, built from the kernel.  It builds them once at start.
+func (c *HardwareCollector) RunRadios(ctx context.Context) error {
+	if !c.enableWifi {
+		<-ctx.Done()
+		return ctx.Err()
+	}
+	for {
+		radios, ifaces, wifiInfo := c.radioCapabilities(ctx)
+		c.mu.Lock()
+		c.radios, c.radioIf, c.wifiInfo = radios, ifaces, wifiInfo
+		c.mu.Unlock()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-c.radioRefresh:
+		}
+	}
+}
+
+// Live is the tree provider for the hardware key.  The inventory is a
+// cheap read of system.json and sysfs, sensors and radio surveys have
+// no events, so all of it is read when asked.
 func (c *HardwareCollector) Live() json.RawMessage {
 	return c.assemble(context.Background())
 }
 
 func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
+	systemjson := c.readSystemJSON()
+	inventory := make([]interface{}, 0)
+	inventory = append(inventory, c.motherboardComponent(systemjson)...)
+	inventory = append(inventory, c.vpdComponents(systemjson)...)
+	inventory = append(inventory, c.usbPortComponents(systemjson)...)
+
 	c.mu.Lock()
-	inventory := cloneComponents(c.inventory)
 	radios := cloneComponents(c.radios)
+	ifaces := c.radioIf
 	gps := cloneComponents(c.gps)
 	wifiInfo := c.wifiInfo
 	c.mu.Unlock()
 
+	c.addSurveys(ctx, radios, ifaces)
 	sensors := c.sensorComponents(ctx, wifiInfo)
 
 	components := make([]interface{}, 0, len(inventory)+len(sensors)+len(radios)+len(gps)+1)
@@ -142,6 +172,40 @@ func (c *HardwareCollector) assemble(ctx context.Context) json.RawMessage {
 		return nil
 	}
 	return data
+}
+
+// addSurveys adds each radio's channel survey, read now: the counters
+// move all the time and nl80211 sends no events for them.  radios are
+// clones, the wifi-radio container is copied before it is changed.
+func (c *HardwareCollector) addSurveys(ctx context.Context, radios []interface{}, ifaces map[string]string) {
+	if len(radios) == 0 {
+		return
+	}
+	client, err := nl80211.Dial()
+	if err != nil {
+		return
+	}
+	defer client.Close()
+
+	for _, raw := range radios {
+		component, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _ := component["name"].(string)
+		channels := c.surveyData(ctx, client, ifaces[name])
+		if len(channels) == 0 {
+			continue
+		}
+		radio := map[string]interface{}{}
+		if old, ok := component["infix-hardware:wifi-radio"].(map[string]interface{}); ok {
+			for k, v := range old {
+				radio[k] = v
+			}
+		}
+		radio["survey"] = map[string]interface{}{"channel": channels}
+		component["infix-hardware:wifi-radio"] = radio
+	}
 }
 
 // cloneComponents copies the component maps, uniqueNames may rename
@@ -1023,14 +1087,16 @@ func channelFromFrequency(freq int) (int, bool) {
 	}
 }
 
-// wifiRadioComponents lists the radios, and returns the PHY info they
-// were built from so the sensors can be matched to them.
-func (c *HardwareCollector) wifiRadioComponents(ctx context.Context) ([]interface{}, map[string]map[string]interface{}) {
+// radioCapabilities lists the radios without their survey, the
+// interface each survey is read from, and the PHY info they were built
+// from so the sensors can be matched to them.
+func (c *HardwareCollector) radioCapabilities(ctx context.Context) ([]interface{}, map[string]string, map[string]map[string]interface{}) {
 	components := make([]interface{}, 0)
+	ifaces := map[string]string{}
 	wifiInfo := map[string]map[string]interface{}{}
 	client, err := nl80211.Dial()
 	if err != nil {
-		return components, wifiInfo
+		return components, ifaces, wifiInfo
 	}
 	defer client.Close()
 
@@ -1093,12 +1159,7 @@ func (c *HardwareCollector) wifiRadioComponents(ctx context.Context) ([]interfac
 
 		wifiRadioData["num-virtual-interfaces"] = toInt(iwInfo["num_virtual_interfaces"])
 
-		iface := strDefault(phyData["iface"], "")
-		if channels := c.surveyData(ctx, client, iface); len(channels) > 0 {
-			wifiRadioData["survey"] = map[string]interface{}{
-				"channel": channels,
-			}
-		}
+		ifaces[phyName] = strDefault(phyData["iface"], "")
 
 		if len(wifiRadioData) > 0 {
 			component["infix-hardware:wifi-radio"] = wifiRadioData
@@ -1107,7 +1168,7 @@ func (c *HardwareCollector) wifiRadioComponents(ctx context.Context) ([]interfac
 		components = append(components, component)
 	}
 
-	return components, wifiInfo
+	return components, ifaces, wifiInfo
 }
 
 func gpsdPoll(ctx context.Context) map[string]interface{} {

@@ -35,9 +35,9 @@ type IWEvent struct {
 }
 
 type IWMonitor struct {
-	log         *slog.Logger
-	onUpdate    func(ifname string, data json.RawMessage)
-	onPhyChange func()
+	log           *slog.Logger
+	onUpdate      func(ifname string, data json.RawMessage)
+	onRadioChange func()
 
 	mu       sync.Mutex
 	attached map[string]context.CancelFunc
@@ -59,8 +59,17 @@ func (m *IWMonitor) SetOnUpdate(fn func(string, json.RawMessage)) {
 	m.onUpdate = fn
 }
 
-func (m *IWMonitor) SetOnPhyChange(fn func()) {
-	m.onPhyChange = fn
+// SetOnRadioChange sets a callback for changes to what a radio can do:
+// a phy came or went, the regulatory domain or its interfaces changed.
+func (m *IWMonitor) SetOnRadioChange(fn func()) {
+	m.onRadioChange = fn
+}
+
+// radioChanged tells the owner of the radio capabilities to rebuild them.
+func (m *IWMonitor) radioChanged() {
+	if m.onRadioChange != nil {
+		m.onRadioChange()
+	}
 }
 
 func (m *IWMonitor) Run(ctx context.Context) error {
@@ -145,6 +154,7 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 	case unix.NL80211_CMD_REG_CHANGE:
 		m.log.Debug("nl80211: reg_change")
 		m.refreshAllInterfaces(ctx)
+		m.radioChanged()
 	case unix.NL80211_CMD_NEW_INTERFACE:
 		if ifname != "" {
 			m.log.Info("nl80211: new interface", "iface", ifname)
@@ -154,17 +164,17 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 			m.startAttach(ctx, ifname)
 			m.refreshInterface(ctx, ifname)
 		}
+		m.radioChanged()
 	case unix.NL80211_CMD_DEL_INTERFACE:
 		if ifname != "" {
 			m.log.Info("nl80211: del interface", "iface", ifname)
 			m.stopAttach(ifname)
 			m.publishWifi(ifname, nil)
 		}
+		m.radioChanged()
 	case unix.NL80211_CMD_NEW_WIPHY, unix.NL80211_CMD_DEL_WIPHY:
 		m.log.Info("nl80211: phy change", "cmd", cmd)
-		if m.onPhyChange != nil {
-			m.onPhyChange()
-		}
+		m.radioChanged()
 	}
 }
 

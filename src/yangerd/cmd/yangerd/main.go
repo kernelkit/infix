@@ -175,9 +175,11 @@ func main() {
 	if cfg.EnableWifi {
 		iwmon := iwmonitor.New(slogLog)
 		iwmon.SetOnUpdate(nlmon.SetWifiData)
-		iwmon.SetOnPhyChange(func() { pokes.Poke(hardware.Name()) })
+		iwmon.SetOnRadioChange(hardware.RequestRadioRefresh)
 		spawn("iwmonitor", iwmon.Run)
 	}
+
+	spawn("radios", hardware.RunRadios)
 
 	if cfg.EnableLLDP {
 		lldpmon := lldpmonitor.New(t, slogLog)

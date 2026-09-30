@@ -15,6 +15,7 @@ func collectHardware(t *testing.T, c *HardwareCollector) []interface{} {
 	t.Helper()
 
 	tr := tree.New()
+	tr.RegisterProvider(hardwareKey, c.Live)
 	if err := c.Collect(context.Background(), tr); err != nil {
 		t.Fatalf("Collect failed: %v", err)
 	}
@@ -365,6 +366,7 @@ func TestHardwareGracefulDegradation(t *testing.T) {
 
 	tr := tree.New()
 	c := newHardwareCollector(runner, fs)
+	tr.RegisterProvider(hardwareKey, c.Live)
 	if err := c.Collect(context.Background(), tr); err != nil {
 		t.Fatalf("Collect should not fail when all probes fail: %v", err)
 	}
@@ -620,5 +622,71 @@ func TestSocTempSource(t *testing.T) {
 		if socTempSourceRe.MatchString(name) {
 			t.Errorf("%q must not be a die sensor", name)
 		}
+	}
+}
+
+// The poll no longer builds the inventory: a GET reads system.json when
+// asked, so a change shows without another poll.
+func TestHardwareInventoryReadOnGet(t *testing.T) {
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
+	fs := &testutil.MockFileReader{Files: map[string][]byte{
+		"/run/system.json": []byte(`{"vendor":"Acme","product-name":"Router-1"}`),
+	}, Globs: map[string][]string{}}
+
+	tr := tree.New()
+	c := newHardwareCollector(runner, fs)
+	tr.RegisterProvider(hardwareKey, c.Live)
+	if err := c.Collect(context.Background(), tr); err != nil {
+		t.Fatalf("Collect failed: %v", err)
+	}
+	if cached := string(tr.GetCached(hardwareKey)); cached != "{}" {
+		t.Fatalf("poll stored %s, want the {} placeholder", cached)
+	}
+
+	model := func() interface{} {
+		var out map[string]interface{}
+		if err := json.Unmarshal(tr.Get(hardwareKey), &out); err != nil {
+			t.Fatalf("unmarshal hardware: %v", err)
+		}
+		mb := getComponentByName(out["component"].([]interface{}), "mainboard")
+		if mb == nil {
+			t.Fatal("mainboard missing")
+		}
+		return mb["model-name"]
+	}
+
+	if got := model(); got != "Router-1" {
+		t.Fatalf("model-name = %v, want Router-1", got)
+	}
+	fs.Files["/run/system.json"] = []byte(`{"vendor":"Acme","product-name":"Router-2"}`)
+	if got := model(); got != "Router-2" {
+		t.Fatalf("model-name = %v, want Router-2 without a new poll", got)
+	}
+}
+
+// Without WiFi there are no radios to keep: RunRadios only waits for
+// shutdown.
+func TestHardwareRunRadiosIdleWithoutWifi(t *testing.T) {
+	runner := &testutil.MockRunner{Results: map[string][]byte{}, Errors: map[string]error{}}
+	fs := &testutil.MockFileReader{Files: map[string][]byte{}, Globs: map[string][]string{}}
+	c := newHardwareCollector(runner, fs)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- c.RunRadios(ctx) }()
+
+	c.RequestRadioRefresh()
+	c.RequestRadioRefresh()
+	select {
+	case err := <-done:
+		t.Fatalf("RunRadios returned early: %v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("RunRadios did not stop on cancel")
 	}
 }
