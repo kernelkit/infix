@@ -5,7 +5,7 @@
 #define META_XPATH  "/infix-meta:meta/version"
 
 
-static int set_version(sr_session_ctx_t *session)
+int meta_set_version(sr_session_ctx_t *session)
 {
 	int rc;
 
@@ -21,7 +21,7 @@ static int set_version(sr_session_ctx_t *session)
 int meta_change_cb(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	if (event == SR_EV_UPDATE)
-		return set_version(session);
+		return meta_set_version(session);
 
 	return SR_ERR_OK;
 }

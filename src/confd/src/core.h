@@ -271,6 +271,7 @@ int factory_rpc_init(struct confd *confd);
 int factory_default_rpc_init(struct confd *confd);
 
 /* meta.c */
+int meta_set_version(sr_session_ctx_t *session);
 int meta_change_cb(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* system-software.c */

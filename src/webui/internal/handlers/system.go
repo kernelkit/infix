@@ -520,6 +520,41 @@ type slotEntry struct {
 	Booted      bool
 }
 
+// bootedSlot returns the booted slot, or nil if unknown.
+func (d softwareData) bootedSlot() *slotEntry {
+	for i := range d.Slots {
+		if d.Slots[i].Booted {
+			return &d.Slots[i]
+		}
+	}
+	return nil
+}
+
+// BootedVersion returns the version of the booted slot, if known.
+func (d softwareData) BootedVersion() string {
+	if b := d.bootedSlot(); b != nil {
+		return b.Version
+	}
+	return ""
+}
+
+// OtherSlots returns the slots with a different version than the booted
+// one, i.e., those the user should also upgrade, issue #1637.
+func (d softwareData) OtherSlots() []slotEntry {
+	b := d.bootedSlot()
+	if b == nil {
+		return nil
+	}
+
+	var other []slotEntry
+	for _, s := range d.Slots {
+		if s.Version != b.Version {
+			other = append(other, s)
+		}
+	}
+	return other
+}
+
 type installerEntry struct {
 	Operation  string
 	Percentage int

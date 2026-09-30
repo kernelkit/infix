@@ -1,0 +1,14 @@
+#!/bin/sh
+# Remind the user to upgrade the other partition, issue #1637
+
+rauc status --detailed --output-format=json 2>/dev/null | jq -r '
+    [.slots | add | .[] | select(.class == "rootfs")] as $slots
+    | ($slots[] | select(.state == "booted") | .slot_status.bundle.version) as $booted
+    | $slots[] | select(.state != "booted")
+    | select(.slot_status.bundle.version != $booted)
+    | "\(.bootname) \(.slot_status.bundle.version // "unknown") \($booted)"' |
+while read -r name version booted; do
+    msg="NOTE: the $name partition has $version, this is $booted.  Use 'upgrade' to update it."
+    logger -t slot-check -p user.notice "$msg"
+    printf "\n%s\n" "$msg" | tee -a /etc/banner /etc/issue /etc/issue.net >/dev/null
+done

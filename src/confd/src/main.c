@@ -35,6 +35,7 @@
 #include <srx/common.h>
 #include <sysrepo.h>
 #include <sysrepo/version.h>
+#include <wdog/wdog.h>
 
 /* Maximum number of sysrepo event pipe file descriptors across all plugins */
 #define MAX_EVENT_FDS 64
@@ -48,6 +49,12 @@
  * consistent sysrepo state drive a lightweight re-attach.
  */
 #define SENTINEL_PATH "/run/confd.boot"
+
+/* Migrated startup-config, loaded into running but never saved to /cfg */
+#define MIGRATED_PATH "/run/confd-migrated.cfg"
+
+/* Set when startup-config fails, next boot goes to fail-secure, issue #1637 */
+#define FAILED_PATH   "/mnt/aux/startup-config.failed"
 
 /*
  * Set a finit condition in the usr/ namespace, e.g.
@@ -185,11 +192,15 @@ static void pump_sigterm(int sig)
 	pump_running = 0;
 }
 
-static void event_pump(struct plugin *plugins, int plugin_count)
+/* With a deadline, a hung callback resets us to fail-secure, issue #1637 */
+static void event_pump(struct plugin *plugins, int plugin_count, uint32_t deadline_ms)
 {
 	sr_subscription_ctx_t *subs[MAX_EVENT_FDS];
 	struct pollfd fds[MAX_EVENT_FDS];
+	time_t now, last = 0;
+	unsigned int ack;
 	int nfds = 0;
+	int id = -1;
 
 	for (int i = 0; i < plugin_count; i++) {
 		struct plugin *p = &plugins[i];
@@ -208,13 +219,29 @@ static void event_pump(struct plugin *plugins, int plugin_count)
 
 	signal(SIGTERM, pump_sigterm);
 
+	if (deadline_ms) {
+		id = wdog_subscribe("confd-bootstrap", deadline_ms, &ack);
+		if (id < 0)
+			WARN("Not supervised by watchdogd: %s", strerror(-id));
+	}
+
 	while (pump_running) {
 		if (poll(fds, nfds, 100) > 0) {
 			for (int i = 0; i < nfds; i++)
 				if (fds[i].revents & POLLIN)
 					sr_subscription_process_events(subs[i], NULL, NULL);
 		}
+
+		/* Each kick is a round trip to watchdogd, once a second is enough */
+		now = time(NULL);
+		if (id >= 0 && now != last) {
+			last = now;
+			wdog_kick2(id, &ack);
+		}
 	}
+
+	if (id >= 0)
+		wdog_unsubscribe(id, ack);
 
 	_exit(0);
 }
@@ -393,42 +420,63 @@ static void banner_append(const char *msg)
 }
 
 /*
- * Smart migration: only fork+exec the migrate script if the version
- * in the config file doesn't match the current confd version.
+ * Read the infix-meta version of a config file, "0.0" if unset.
  */
-static int maybe_migrate(const char *path)
+static int config_version(const char *path, char *buf, size_t len)
 {
-	const char *backup_dir = "/cfg/backup";
-	json_t *root, *meta, *ver;
-	const char *file_ver;
-	char backup[256];
-	int rc;
+	json_t *root, *ver;
 
 	root = json_load_file(path, 0, NULL);
 	if (!root)
 		return -1;
 
-	meta     = json_object_get(root, "infix-meta:meta");
-	ver      = meta ? json_object_get(meta, "version") : NULL;
-	file_ver = ver ? json_string_value(ver) : "0.0";
-
-	if (!strcmp(file_ver, CONFD_VERSION)) {
-		json_decref(root);
-		return 0;
-	}
+	ver = json_object_get(json_object_get(root, "infix-meta:meta"), "version");
+	strlcpy(buf, json_string_value(ver) ?: "0.0", len);
 	json_decref(root);
 
-	NOTE("%s config version %s vs confd %s, migrating ...", path, file_ver, CONFD_VERSION);
+	return 0;
+}
+
+/*
+ * Migrate a config file of an older version to a temporary file, leaving
+ * the original untouched until the user saves running-config, issue #1637.
+ * A newer file is loaded as-is.  Returns the file to load, NULL on error.
+ */
+static const char *maybe_migrate(const char *path, const char *ver)
+{
+	const char *backup_dir = "/cfg/backup";
+	char backup[256], newver[16];
+	int rc;
+
+	if (!strcmp(ver, CONFD_VERSION))
+		return path;
+
+	/*
+	 * After a downgrade the file is often usable, a newer version only
+	 * means new settings may be in it.  Try it, the strict parse rejects
+	 * any we don't know, instead of reverting to failure-config.
+	 */
+	if (strverscmp(ver, CONFD_VERSION) > 0) {
+		WARN("%s config version %s is newer than confd %s, trying as-is.",
+		     path, ver, CONFD_VERSION);
+		return path;
+	}
+
+	NOTE("%s config version %s vs confd %s, migrating ...", path, ver, CONFD_VERSION);
 
 	if (mkpath(backup_dir, 0770) || chown(backup_dir, 0, 10)) /* root:wheel */
 		WARN("Cannot create %s: %m", backup_dir);
 
 	snprintf(backup, sizeof(backup), "%s/%s", backup_dir, basenm(path));
-	rc = systemf("migrate -i -b \"%s\" \"%s\"", backup, path);
-	if (rc)
-		ERROR("Migration of %s failed (rc=%d)", path, rc);
+	rc = systemf("migrate -b \"%s\" \"%s\" >%s", backup, path, MIGRATED_PATH);
+	if (rc || config_version(MIGRATED_PATH, newver, sizeof(newver)) ||
+	    strcmp(newver, CONFD_VERSION)) {
+		ERROR("Migration of %s to version %s failed (rc=%d)", path, CONFD_VERSION, rc);
+		unlink(MIGRATED_PATH);
+		return NULL;
+	}
 
-	return rc;
+	return MIGRATED_PATH;
 }
 
 /*
@@ -578,6 +626,14 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 	const char *config_path;
 	int r;
 
+	/* Cleared right away, or a failed fail-secure boot is a boot loop */
+	if (fexist(FAILED_PATH)) {
+		unlink(FAILED_PATH);
+		ERROR("Previous boot failed loading startup-config.");
+		handle_startup_failure(sess, failure_path, conn, timeout_ms);
+		return 1;
+	}
+
 	/* Test mode support */
 	if (fexist("/mnt/aux/test-mode")) {
 		if (fexist("/mnt/aux/test-override-startup")) {
@@ -592,22 +648,46 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 	}
 
 	if (fexist(config_path)) {
-		/* Run migration if needed */
-		maybe_migrate(config_path);
+		const char *load_path;
+		char ver[16];
+
+		if (config_version(config_path, ver, sizeof(ver))) {
+			ERROR("Parsing %s failed", config_path);
+			goto fail;
+		}
+
+		load_path = maybe_migrate(config_path, ver);
+		if (!load_path)
+			goto fail;
 
 		/* Load startup (or test) config */
 		NOTE("Loading %s ...", config_path);
-		if (load_config(conn, sess, config_path, timeout_ms)) {
-			handle_startup_failure(sess, failure_path, conn, timeout_ms);
-			return 1; /* fail-secure, keep running */
-		}
+		r = load_config(conn, sess, load_path, timeout_ms);
+		unlink(MIGRATED_PATH);
+		if (r)
+			goto fail;
 
 		NOTE("Loaded %s successfully, syncing startup datastore.", config_path);
 		sr_session_switch_ds(sess, SR_DS_STARTUP);
 		r = sr_copy_config(sess, NULL, SR_DS_RUNNING, timeout_ms);
-		sr_session_switch_ds(sess, SR_DS_RUNNING);
 		if (r != SR_ERR_OK)
 			WARN("Failed to sync startup datastore: %s", sr_strerror(r));
+
+		if (strcmp(ver, CONFD_VERSION)) {
+			char msg[160];
+
+			/* Differ from running, or a save is an empty diff and never hits disk */
+			if (r == SR_ERR_OK &&
+			    (sr_set_item_str(sess, "/infix-meta:meta/version", ver, NULL, 0) ||
+			     sr_apply_changes(sess, timeout_ms)))
+				WARN("Failed setting startup datastore version %s", ver);
+
+			snprintf(msg, sizeof(msg), "NOTE: %s version %s loaded as version %s, not saved.\n"
+				 "      Use 'copy running-config startup-config' to save.",
+				 basenm(config_path), ver, CONFD_VERSION);
+			banner_append(msg);
+		}
+		sr_session_switch_ds(sess, SR_DS_RUNNING);
 
 		set_finit_cond("startup-config-ok");
 		return 0;
@@ -630,6 +710,20 @@ static int bootstrap_config(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 		set_finit_cond("startup-config-ok");
 
 	return 0;
+fail:
+	handle_startup_failure(sess, failure_path, conn, timeout_ms);
+
+	/* Finit ignores a regular reboot in runlevel S, so force it */
+	if (touch(FAILED_PATH)) {
+		ERRNO("Failed creating %s", FAILED_PATH);
+	} else {
+		sync();
+		systemf("reboot -f");
+		ERROR("Failed rebooting, staying in fail-secure mode.");
+		unlink(FAILED_PATH);
+	}
+
+	return 1; /* fail-secure, keep running */
 }
 
 int main(int argc, char **argv)
@@ -648,7 +742,7 @@ int main(int argc, char **argv)
 	uint32_t timeout_s = 60;
 	int plugin_count = 0;
 	int fatal_fail = 0;
-	uint32_t timeout_ms;
+	uint32_t timeout_ms, deadline_ms;
 	int status;
 
 	struct option options[] = {
@@ -841,13 +935,15 @@ int main(int argc, char **argv)
 		/* Phase 9: Fork event pump process for bootstrap.
 		 * With SR_SUBSCR_NO_THREAD, sr_replace_config() blocks waiting
 		 * for callbacks.  The pump process processes those events. */
+		/* Past the sysrepo timeout, not on a fail-secure boot (reset loop) */
+		deadline_ms = fexist(FAILED_PATH) ? 0 : timeout_ms + 10000;
 		pump_pid = fork();
 		if (pump_pid < 0) {
 			ERRNO("Failed to fork event pump");
 			goto cleanup;
 		}
 		if (pump_pid == 0)
-			event_pump(plugins, plugin_count);
+			event_pump(plugins, plugin_count, deadline_ms);
 
 		/* Phase 10: Load startup config -- plugins are now subscribed, so
 		 * sr_replace_config() will trigger their change callbacks.

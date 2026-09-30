@@ -121,6 +121,19 @@ All notable changes to the project are documented in this file.
   which are written into the DHCP client service file
 - Restrict the allowed characters in DHCP server static-host match values
 - Restrict the allowed characters in a hardware component `name`
+- Fix #1637: a startup-config migrated on upgrade was saved to disk at
+  boot, so the image on the other partition could no longer read it.
+  The migrated configuration is now only applied to running-config,
+  use `copy running-config startup-config` to save it.  A failed
+  migration reverts to failure-config.  After a downgrade, a newer
+  startup-config is loaded as-is, unless it uses settings the older
+  version does not know.  A note at login, in `show software`, and on
+  the WebUI software page shows when the other partition has a
+  different version
+- A startup-config that fails to load now resets the unit, and the next
+  boot goes straight to failure-config from a clean state, issue #1637.
+  The same applies if loading startup-config hangs, the system watchdog
+  then resets the unit
 - Fix #1619: Raspberry Pi kernel panic when configure Wi-Fi
 - WebUI: "Save" in the interface editor and "OK" in Add Interface
   did nothing for Wi-Fi and WireGuard interfaces. The inline "+ New"
