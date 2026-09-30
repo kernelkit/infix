@@ -16,26 +16,21 @@
 #define CRONTAB_NEXT  CRONTAB_DIR "/admin.next"
 
 /*
- * Every feature that can run on a schedule.  A feature owns a container with
- * a schedule-ref leaf; this is what the reference means, i.e. the command to
- * run on each occurrence.  Add a row here to put a new feature on a schedule.
+ * Every feature that can run on a schedule.  A feature owns a container that
+ * uses the infix-schedule scheduled-feature grouping; this is what the
+ * schedule reference means, i.e. the command to run on each occurrence.
+ * Add a row here to put a new feature on a schedule.
  */
 static const struct cron_consumer consumers[] = {
 	{
-		.path	      = "/ietf-system:system/infix-system:software/check-update",
-		.sched_leaf   = "schedule",
-		.enabled_leaf = "enabled",
-		.command      = "/usr/sbin/check-update",
+		.path	 = "/ietf-system:system/infix-system:software/check-update",
+		.command = "/usr/sbin/check-update",
 	}, {
-		.path	      = "/ietf-system:system/infix-system:software/unattended-update",
-		.sched_leaf   = "schedule",
-		.enabled_leaf = "enabled",
-		.command      = "/usr/sbin/unattended-update",
+		.path	 = "/ietf-system:system/infix-system:software/unattended-update",
+		.command = "/usr/sbin/unattended-update",
 	}, {
-		.path	      = "/ietf-system:system/infix-system:scheduled-reboot",
-		.sched_leaf   = "schedule",
-		.enabled_leaf = NULL,
-		.command      = "/usr/sbin/reboot",
+		.path	 = "/ietf-system:system/infix-system:scheduled-reboot",
+		.command = "/usr/sbin/reboot",
 	},
 };
 
@@ -265,10 +260,10 @@ static int gen_schedules(struct lyd_node *config)
 		if (!node)
 			continue;
 
-		if (c->enabled_leaf && !lydx_is_enabled(node, c->enabled_leaf))
+		if (!lydx_is_enabled(node, "enabled"))
 			continue;
 
-		name = lydx_get_cattr(node, c->sched_leaf);
+		name = lydx_get_cattr(node, "schedule");
 		if (!name)
 			continue;
 

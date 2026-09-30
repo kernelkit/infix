@@ -17,7 +17,9 @@ module infix-schedule {
   revision 2026-09-07 {
     description
       "Constrain schedule name to a bounded identifier so features can
-       reference it verbatim (e.g. in a resolved XPath).";
+       reference it verbatim (e.g. in a resolved XPath).
+       Add the scheduled-feature grouping: the enabled and schedule leaves
+       every feature that runs on a schedule uses.";
     reference "internal";
   }
   revision 2026-06-17 {
@@ -35,11 +37,29 @@ module infix-schedule {
       path "/sys:system/infix-schedule:schedules/infix-schedule:schedule"
          + "/infix-schedule:name";
     }
-    description
-      "References a named schedule by name.  A feature owns its trigger by
-       pointing a leaf of this type at a schedule; the reference is validated,
-       so a schedule cannot be deleted while something still uses it, and
-       several features may share a single recurrence.";
+    description "Reference to a named schedule.
+
+       The reference is validated, so a schedule cannot be deleted while
+       something still uses it.  Several features may share one schedule.";
+  }
+
+  grouping scheduled-feature {
+    description "Trigger for a feature that runs on a schedule.
+
+       The feature is active as soon as it references a schedule.  Setting
+       'enabled' to false pauses it, keeping the reference and the feature's
+       other settings.";
+
+    leaf enabled {
+      type boolean;
+      default true;
+      description "Pause the feature by setting this to false.";
+    }
+
+    leaf schedule {
+      type schedule-ref;
+      description "The schedule whose occurrences trigger the feature.";
+    }
   }
 
   /*
@@ -125,50 +145,43 @@ module infix-schedule {
   }
 
   augment "/sys:system" {
-    description
-      "Scheduling configuration under ietf-system.";
+    description "Scheduling configuration under ietf-system.";
     container schedules {
-      description
-        "Container for all configured schedules.";
+      description "Container for all configured schedules.";
       list schedule {
         key "name";
         description
-          "A named, reusable recurrence (time-spec).  Schedules carry no
-           action of their own; features trigger off a schedule by pointing
-           a schedule-ref leaf at its name.";
+          "A named, reusable recurrence (time-spec).
+
+           Schedules carry no action of their own; features trigger off
+           a schedule by pointing a schedule-ref leaf at its name.";
         leaf name {
           type string {
             length "1..64";
             pattern '[a-zA-Z0-9][a-zA-Z0-9_.-]*';
           }
-          description
-            "Unique name identifying this schedule.  Restricted to a bounded
-             identifier (letters, digits, '_', '.', '-') so features can use
-             it verbatim, e.g. in the XPath the scheduler builds to resolve a
-             schedule-ref.";
+          description "Unique name identifying this schedule.";
         }
         leaf enabled {
           type boolean;
-          default "true";
-          description
-            "Turn this schedule on or off.  When off, anything that uses
-             it stops running, but the schedule itself is kept.";
+          default true;
+          description "Pause the schedule by setting this to false.
+
+             When paused, anything that uses it stops running.";
         }
         leaf description {
           type string;
-          description
-            "Optional human-readable description of this schedule's purpose.";
+          description "Optional human-readable description.";
         }
         must "recurrence" {
           error-message "A recurrence rule is required for each schedule.";
         }
         container recurrence {
           if-feature "schedule:icalendar-recurrence";
-          description
-            "Recurrence rule controlling when the schedule fires.
+          description "Recurrence rule controlling when the schedule fires.
 
-             Uses the standard iCalendar recurrence grouping; nodes with no
-             five-field cron equivalent are removed via deviations in this
+             Uses the standard iCalendar recurrence grouping, nodes with no
+             five-field cron equivalent are removed by deviations in this
              module.";
           uses schedule:icalendar-recurrence {
             refine frequency {

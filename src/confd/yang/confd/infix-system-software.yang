@@ -30,7 +30,10 @@ submodule infix-system-software {
                  so check-update and unattended-update use one update source,
                  make it an RSS/Atom release feed, and make it mandatory,
                  supplied by factory-config.
-                 Add allow-prerelease.";
+                 Add allow-prerelease.
+                 Use the infix-schedule scheduled-feature grouping for
+                 check-update and unattended-update, enabled now defaults
+                 to true.";
     reference "Internal";
   }
   revision 2026-06-17 {
@@ -99,111 +102,66 @@ submodule infix-system-software {
   }
   augment "/sys:system" {
     container software {
-      presence
-        "Software management configured.  The container carries presence
-         because 'update-url' is mandatory, and an augment into another
-         module may not add a mandatory node unconditionally.";
-      description
-        "Software management configuration.";
+      /* An augment may not add a mandatory node (update-url) unconditionally. */
+      presence "Software management configured.";
+      description "Software management configuration.";
 
       leaf update-url {
         type string;
         mandatory true;
-        description
-          "RSS/Atom feed listing available releases, shared by check-update
-           and unattended-update.  The newest entry the feed offers decides
-           the latest version; each entry is expected to link to its release
-           page as '<base>/releases/tag/<tag>', from which the tag is read.
+        description "RSS/Atom feed of releases to follow.
 
-           The feed carries no asset list, so the per-platform bundle is
-           fetched by convention from
-           '<base>/releases/download/<tag>/<image-id>-<tag>.pkg', and
-           installed by streaming it straight from that URL.
+           The newest entry decides the latest version.  Each entry links to
+           its release page as '<base>/releases/tag/<tag>', and the bundle
+           for this platform is fetched from
+           '<base>/releases/download/<tag>/<image-id>-<tag>.pkg'.
 
-           Set from factory-config, which names the release channel the
-           product ships with.  Override for a fork or a customer-specific
-           channel.";
+           Set by the factory configuration, change it to follow a fork or
+           a feed of your own.";
       }
 
       leaf allow-prerelease {
         type boolean;
         default false;
-        description
-          "Consider pre-releases (release candidates, alpha and beta builds)
-           when determining the latest version.  Feeds commonly list them
-           alongside finished releases; by default they are ignored, so only
-           a final release is ever installed.";
+        description "Consider pre-releases when determining the latest version.
+
+           Release candidates, alpha and beta builds are listed alongside
+           finished releases in most feeds.  By default they are ignored, so
+           only a final release is ever installed.";
       }
 
       container check-update {
-        description
-          "Policy for automatic software update checks.
+        description "Automatic software update checks.
 
-           When 'enabled' and 'schedule' references a schedule, the system
-           checks the configured update-url for a newer release on each
-           occurrence and logs a notification if one is found.";
+           Each occurrence of the referenced schedule checks update-url for
+           a newer release and logs a notification if there is one.";
 
-        leaf enabled {
-          type boolean;
-          default false;
-          description
-            "Enable automatic update checks.";
-        }
-
-        leaf schedule {
-          type infix-schedule:schedule-ref;
-          description
-            "The schedule whose occurrences trigger an update check.
-             Without a referenced schedule no checks are performed.";
-        }
+        uses infix-schedule:scheduled-feature;
       }
 
       container unattended-update {
-        description
-          "Policy for automatic, unattended software updates.
+        description "Unattended software updates.
 
-           When 'enabled' and 'schedule' references a schedule, the system
-           checks the configured update-url for a newer release on each
-           occurrence and, if one is found, downloads and installs the
-           per-platform bundle to the inactive slot exactly as a manual
-           'upgrade' would: the boot-order is flipped to activate the new
-           image on the next reboot, and the previously running slot is
-           left intact as a fallback.
+           Each occurrence of the referenced schedule checks update-url for
+           a newer release and installs it to the inactive slot exactly as
+           a manual 'upgrade' would: the boot-order is flipped to activate
+           it on the next reboot, and the running slot is kept as fallback.
 
-           The 'reboot' leaf governs whether that reboot happens
-           automatically or is left to the operator.";
+           The 'reboot' leaf decides whether that reboot is automatic.";
 
-        leaf enabled {
-          type boolean;
-          default false;
-          description
-            "Enable automatic unattended upgrades.";
-        }
-
-        leaf schedule {
-          type infix-schedule:schedule-ref;
-          description
-            "The schedule whose occurrences trigger an unattended upgrade.
-             Without a referenced schedule no upgrades are performed.";
-        }
+        uses infix-schedule:scheduled-feature;
 
         leaf reboot {
           type enumeration {
             enum manual {
-              description
-                "Install and flip the boot-order, but do not reboot.  The
-                 new image activates the next time the operator reboots.";
+              description "Leave the reboot to the operator.";
             }
             enum immediate {
-              description
-                "Reboot automatically after a successful install to activate
-                 the new image at once.";
+              description "Reboot right after a successful install.";
             }
           }
           default manual;
-          description
-            "What to do once a bundle has been installed to the inactive
-             slot.";
+          description "What to do once a new release has been installed.";
         }
       }
     }

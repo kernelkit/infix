@@ -234,8 +234,6 @@ int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 /* schedule.c */
 struct cron_consumer {
 	const char *path;
-	const char *sched_leaf;
-	const char *enabled_leaf;
 	const char *command;
 };
 const struct cron_consumer *schedule_consumer(size_t i);

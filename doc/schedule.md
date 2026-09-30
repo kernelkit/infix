@@ -116,9 +116,9 @@ These features consume schedules today:
 | [Unattended software updates][3] | `system software unattended-update` |
 
 The example below reboots the system on the `nightly` schedule created
-above.  Note that `scheduled-reboot` has no `enabled` leaf.  It is active
-as soon as it references a schedule; remove the reference or disable the
-schedule to stop it.
+above.  A feature is active as soon as it references a schedule.  To
+pause it without losing its settings, set its `enabled` leaf to `false`;
+disabling the schedule itself stops every feature that references it.
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>set system scheduled-reboot schedule nightly</b>

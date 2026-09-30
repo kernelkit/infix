@@ -339,14 +339,14 @@ itself does not have to exist.
 
 ### Enabling Unattended Software Updates
 
-Unattended updates are off by default and need a [schedule][6] to trigger
-them.  The example below installs new releases during a nightly
-maintenance window, leaving the reboot to the operator.
+Unattended software updates need a [schedule][6] to trigger them, and are
+active as soon as one is referenced.  The example below installs new
+releases during a nightly maintenance window, leaving the reboot to the
+operator.
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>set system schedule nightly recurrence frequency daily</b>
 admin@example:/config/> <b>set system schedule nightly recurrence byhour 3</b>
-admin@example:/config/> <b>set system software unattended-update enabled true</b>
 admin@example:/config/> <b>set system software unattended-update schedule nightly</b>
 admin@example:/config/> <b>set system software unattended-update reboot manual</b>
 admin@example:/config/> <b>leave</b>
@@ -354,9 +354,10 @@ admin@example:/config/> <b>leave</b>
 
 **Parameters:**
 
-- `enabled`: Enable unattended updates (default: `false`).  Without a
-  referenced schedule no updates are performed either way
-- `schedule`: The [schedule][6] whose occurrences trigger an update
+- `schedule`: The [schedule][6] whose occurrences trigger an update.
+  Without one no updates are performed
+- `enabled`: Set to `false` to pause unattended updates, the schedule
+  reference and reboot policy are kept (default: `true`)
 - `reboot`: What to do after a successful install
     - `manual` (default): Install and flip the boot-order, but do not
       reboot.  The new image activates the next time the operator reboots
