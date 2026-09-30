@@ -2,6 +2,7 @@ package wpactrl
 
 import (
 	"context"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -151,5 +152,103 @@ func TestAttachContextCancel(t *testing.T) {
 	err = ac.Run(ctx)
 	if err != nil {
 		t.Errorf("expected nil on context cancel, got %v", err)
+	}
+}
+
+// fakeDaemon answers ATTACH, then PING with PONG while answer is true.
+func fakeDaemon(t *testing.T, answer bool) (string, *net.UnixConn) {
+	t.Helper()
+	path := t.TempDir() + "/hostapd_test"
+	server, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: path, Net: "unixgram"})
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	t.Cleanup(func() { server.Close() })
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, raddr, err := server.ReadFromUnix(buf)
+			if err != nil {
+				return
+			}
+			switch string(buf[:n]) {
+			case "ATTACH":
+				server.WriteToUnix([]byte("OK\n"), raddr)
+			case "PING":
+				if answer {
+					server.WriteToUnix([]byte("PONG\n"), raddr)
+				}
+			}
+		}
+	}()
+	return path, server
+}
+
+func shortKeepalive(t *testing.T) {
+	t.Helper()
+	oldQuiet, oldWait := pingQuiet, pongWait
+	pingQuiet, pongWait = 50*time.Millisecond, 50*time.Millisecond
+	t.Cleanup(func() { pingQuiet, pongWait = oldQuiet, oldWait })
+}
+
+func runAttach(t *testing.T, path string) (context.CancelFunc, <-chan error) {
+	t.Helper()
+	ac, err := Attach(path)
+	if err != nil {
+		t.Fatalf("attach: %v", err)
+	}
+	t.Cleanup(func() { ac.Close() })
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- ac.Run(ctx) }()
+	return cancel, done
+}
+
+func TestAttachKeepaliveAnswered(t *testing.T) {
+	shortKeepalive(t)
+	path, _ := fakeDaemon(t, true)
+	cancel, done := runAttach(t, path)
+
+	select {
+	case err := <-done:
+		t.Fatalf("Run gave up on a live daemon: %v", err)
+	case <-time.After(400 * time.Millisecond):
+	}
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("Run on cancel = %v, want nil", err)
+	}
+}
+
+func TestAttachKeepaliveSilentPeer(t *testing.T) {
+	shortKeepalive(t)
+	path, _ := fakeDaemon(t, false)
+	cancel, done := runAttach(t, path)
+	defer cancel()
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrPeerGone) {
+			t.Fatalf("Run = %v, want ErrPeerGone", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Run kept waiting on a daemon that never answers")
+	}
+}
+
+func TestAttachKeepalivePeerSocketGone(t *testing.T) {
+	shortKeepalive(t)
+	path, server := fakeDaemon(t, true)
+	cancel, done := runAttach(t, path)
+	defer cancel()
+
+	server.Close()
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrPeerGone) {
+			t.Fatalf("Run = %v, want ErrPeerGone", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Run kept waiting after the daemon's socket went away")
 	}
 }

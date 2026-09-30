@@ -2,7 +2,9 @@ package wpactrl
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -71,6 +73,18 @@ func (a *AttachConn) SetHandler(fn EventHandler) {
 
 // Run reads events until ctx is cancelled or the socket errors (daemon
 // died).  Returns nil on context cancellation, error on socket failure.
+// A datagram socket says nothing when its peer goes away, and hostapd or
+// wpa_supplicant being restarted under an attach is routine.  When the
+// socket has been quiet this long, PING it; no PONG in time means the
+// daemon we are attached to is gone.
+var (
+	pingQuiet = 10 * time.Second
+	pongWait  = 3 * time.Second
+)
+
+// ErrPeerGone is returned by Run when the daemon stopped answering.
+var ErrPeerGone = errors.New("control socket peer is gone")
+
 func (a *AttachConn) Run(ctx context.Context) error {
 	done := make(chan struct{})
 	go func() {
@@ -83,19 +97,36 @@ func (a *AttachConn) Run(ctx context.Context) error {
 	defer close(done)
 
 	buf := make([]byte, attachBufSize)
+	waiting := false
+	a.conn.SetReadDeadline(time.Now().Add(pingQuiet))
 	for {
 		n, err := a.conn.Read(buf)
-		if err != nil {
-			if ctx.Err() != nil {
-				return nil
-			}
-			return fmt.Errorf("read: %w", err)
+		if ctx.Err() != nil {
+			return nil
 		}
-		if a.handler == nil {
+		if err != nil {
+			var ne net.Error
+			if !errors.As(err, &ne) || !ne.Timeout() {
+				return fmt.Errorf("read: %w", err)
+			}
+			if waiting {
+				return ErrPeerGone
+			}
+			if _, err := a.conn.Write([]byte("PING")); err != nil {
+				return fmt.Errorf("%w: %v", ErrPeerGone, err)
+			}
+			waiting = true
+			a.conn.SetReadDeadline(time.Now().Add(pongWait))
 			continue
 		}
-		ev, ok := ParseEvent(string(buf[:n]))
-		if ok {
+
+		waiting = false
+		a.conn.SetReadDeadline(time.Now().Add(pingQuiet))
+		msg := string(buf[:n])
+		if strings.TrimSpace(msg) == "PONG" || a.handler == nil {
+			continue
+		}
+		if ev, ok := ParseEvent(msg); ok {
 			a.handler(ev)
 		}
 	}
