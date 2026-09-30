@@ -7,30 +7,10 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 > [!IMPORTANT]
-> This release includes **breaking changes**: for security reasons,
-> several configuration strings are now limited to a safe character
-> set.  A `startup-config` with a value outside these limits fails
-> validation on boot, and the system falls back to `failure-config`,
-> see [Broken startup-config][brokencfg].  Check the following before
-> upgrading:
->
-> - Interface names: letters, digits, `_`, `.`, `:`, `+`, and `-`, and
->   must start with a letter, digit, or `_`
-> - Hardware component names, and the names of keystore asymmetric keys
->   and their certificates: as for interface names, with `@` also allowed
-> - DHCP client option values: letters, digits, space, `_`, `.`, `:`,
->   `/`, `@`, `=`, `,`, `+`, and `-`, at most 255 bytes
-> - DHCP server static-host match strings: `hostname` allows letters,
->   digits, `_`, `.`, and `-`; `client-id` also allows `:` and `+`.  Both
->   at most 255 bytes
-> - Syslog `property-filter` value and the `pattern-match` of file and
->   remote actions: letters, digits, space, `_`, `.`, `:`, `/`, `@`, `=`,
->   `,`, `-`, and the regular expression characters `+ * ? | ^ $ ( ) [ ]
->   { }`
-> - Wi-Fi `mesh-id` may not contain control characters, double quotes,
->   or backslashes.  `nas-identifier` allows letters, digits, `_`, `.`,
->   `:`, `+`, and `-`.  Access point and mesh point passphrases must now
->   be 8-63 printable characters, the same rule as for station
+> This release includes **breaking changes**.  Several configuration
+> strings are now limited to a safe character set, and a `startup-config`
+> with a value outside these limits fails validation on boot, leaving the
+> system in `failure-config`.  Read [Limitations][limits] before upgrading.
 
 ### Changes
 
@@ -184,6 +164,7 @@ All notable changes to the project are documented in this file.
   router's LSA. Seen about once in thirty runs on virtual machines
 
 [brokencfg]: https://www.kernelkit.org/infix/latest/boot/#broken-startup-config
+[limits]: https://www.kernelkit.org/infix/latest/limitations/
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 [snmp]: https://www.kernelkit.org/infix/latest/snmp/
 

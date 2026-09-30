@@ -39,6 +39,7 @@ regression test system solely relies on NETCONF and RESTCONF.
    - [Vital Product Data (VPD)](vpd.md)
    - [YANG to Ethtool Mapping](eth-counters.md)
    - [Netboot HowTo](netboot.md)
+   - [Limitations](limitations.md)
    - [Releases & Support](releases.md)
    - [Origin & Licensing](license.md)
  - **Developer Topics**
