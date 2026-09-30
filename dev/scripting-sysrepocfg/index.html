@@ -2450,6 +2450,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../releases/" class="md-nav__link">
         
   
@@ -2931,11 +2958,9 @@ on interface <em>e0</em>.</p>
 </code></pre></div>
 <h2 id="change-a-binary-setting">Change a Binary Setting<a class="headerlink" href="#change-a-binary-setting" title="Permanent link">¶</a></h2>
 <p>A YANG <code>binary</code> type setting is Base64 encoded and requires a little bit
-more tricks.  We take the opportunity to showcase a shell script helper:
-<code>/usr/bin/text-editor</code>, which works just like the <code>edit</code> command in the
-CLI does for a <code>binary</code> setting, but this one takes an XPath argument to
-the leaf to edit.</p>
-<p>Stripped down, it looks something like this:</p>
+more tricks.  The CLI <code>edit</code> command hides them: it decodes the value,
+opens it in the text editor, and encodes the result back.  From a shell
+the same steps look like this, with <code>xpath</code> pointing at the leaf:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">if</span><span class="w"> </span><span class="nv">tmp</span><span class="o">=</span><span class="k">$(</span>sysrepocfg<span class="w"> </span>-G<span class="w"> </span><span class="s2">"</span><span class="nv">$xpath</span><span class="s2">"</span><span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nv">file</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>

@@ -2507,6 +2507,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../releases/" class="md-nav__link">
         
   
@@ -2965,8 +2992,8 @@ all systems that need to communicate.</p>
 symmetric keys in the keystore with <code>passphrase-key-format</code>.  The
 passphrase must be 8-63 printable ASCII characters.</p>
 <p>Since symmetric keys are stored as binary (base64-encoded), the CLI
-provides the <code>change</code> command to enter passphrases interactively:</p>
-<pre class="cli"><code>admin@example:/config/keystore/…/my-wifi-key/&gt; <b>change cleartext-symmetric-key</b>
+<code>edit</code> command prompts for the passphrase instead of taking it as an argument:</p>
+<pre class="cli"><code>admin@example:/config/keystore/…/my-wifi-key/&gt; <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 </code></pre>

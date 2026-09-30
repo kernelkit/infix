@@ -909,6 +909,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#operational-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational Status
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2451,6 +2462,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../releases/" class="md-nav__link">
         
   
@@ -2643,6 +2681,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational Status
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2873,6 +2922,44 @@ connected routes (or add <code>lo0</code> as an OSPF interface):</p>
 <pre class="cli"><code>admin@example:/config/routing/…/ospf/&gt; <b>set redistribute connected</b>
 </code></pre>
 
+<h2 id="operational-status">Operational Status<a class="headerlink" href="#operational-status" title="Permanent link">¶</a></h2>
+<p>The operational status of an interface also tells when it entered its
+current state, and how it is stacked with other interfaces.  Here a
+VLAN interface on top of a bridge port:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show interfaces name vlan10</b>
+name               : vlan10
+type               : vlan
+index              : 14
+mtu                : 1500
+operational status : up
+last change        : 3 hours ago
+ip forwarding      : disabled
+lower-layer-if     : br0
+…
+admin@example:/&gt; <b>show interfaces name br0</b>
+name               : br0
+type               : bridge
+index              : 13
+mtu                : 1500
+operational status : up
+last change        : 3 hours ago
+ip forwarding      : disabled
+lower-layer-if     : eth0
+                     eth1
+higher-layer-if    : vlan10
+…
+</code></pre>
+
+<ul>
+<li><code>last change</code>: the time the interface entered its current operational
+  state, <code>last-change</code> in <code>ietf-interfaces</code>.  Useful for telling a link
+  that flapped a minute ago from one that has been up since boot</li>
+<li><code>lower-layer-if</code>: the interfaces directly beneath this one, e.g., the
+  ports of a bridge, or the parent of a VLAN interface</li>
+<li><code>higher-layer-if</code>: the interfaces stacked directly on top of this one</li>
+</ul>
+<p>The same leaves are available over NETCONF and RESTCONF, in
+<code>/interfaces/interface[name='br0']/</code> of the operational datastore.</p>
 <div class="footnote">
 <hr>
 <ol>

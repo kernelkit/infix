@@ -2634,6 +2634,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../releases/" class="md-nav__link">
         
   
@@ -3278,11 +3305,12 @@ modify authentication settings.</p>
 <p>The following are protected by YANG annotations and require explicit permits:</p>
 <p><strong>RPC Operations:</strong></p>
 <ul>
+<li><code>ietf-factory-default:factory-reset</code> (<a href="https://www.rfc-editor.org/rfc/rfc8808">RFC 8808</a>)</li>
+<li><code>infix-factory-default:factory-default</code></li>
 <li><code>ietf-system:system-restart</code> (<a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a>)</li>
 <li><code>ietf-system:system-shutdown</code> (<a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a>)</li>
 <li><code>ietf-system:set-current-datetime</code> (<a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a>)</li>
-<li><code>infix-factory-default:factory-default</code></li>
-<li><code>ietf-factory-default:factory-reset</code> (<a href="https://www.rfc-editor.org/rfc/rfc8808">RFC 8808</a>)</li>
+<li><code>infix-system:support-collect</code></li>
 <li><code>infix-system-software:install-bundle</code></li>
 <li><code>infix-system-software:set-boot-order</code></li>
 <li><code>infix-syslog:log</code></li>
@@ -3290,6 +3318,8 @@ modify authentication settings.</p>
 <p><strong>Data Containers:</strong></p>
 <ul>
 <li><code>/system/authentication</code> (<code>nacm:default-deny-write</code>, <a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a>)</li>
+<li><code>/system/advanced</code> (<code>nacm:default-deny-write</code>, boot scripts and daemon
+  defaults run as root)</li>
 <li><code>/nacm</code> (<code>nacm:default-deny-all</code>, <a href="https://www.rfc-editor.org/rfc/rfc8341">RFC 8341</a>)</li>
 <li>Routing protocol key chains (<a href="https://www.rfc-editor.org/rfc/rfc8177">ietf-key-chain</a>)</li>
 <li>RADIUS shared secrets (<a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a>)</li>

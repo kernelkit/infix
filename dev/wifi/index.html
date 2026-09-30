@@ -2762,6 +2762,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../releases/" class="md-nav__link">
         
   
@@ -3688,13 +3715,13 @@ scan for available networks and identify the SSID you want to connect to.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit keystore symmetric-key my-wifi-key</b>
 admin@example:/config/keystore/…/my-wifi-key/&gt; <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/my-wifi-key/&gt; <b>change cleartext-symmetric-key</b>
+admin@example:/config/keystore/…/my-wifi-key/&gt; <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 admin@example:/config/keystore/…/my-wifi-key/&gt; <b>leave</b>
 </code></pre>
 
-<p>The <code>change</code> command prompts for the passphrase interactively and
+<p>The <code>edit</code> command prompts for the passphrase interactively and
 handles the base64 encoding required by the keystore automatically.</p>
 <h3 id="step-2-connect-to-network">Step 2: Connect to Network<a class="headerlink" href="#step-2-connect-to-network" title="Permanent link">¶</a></h3>
 <p>Configure station mode with the SSID and password to connect:</p>
