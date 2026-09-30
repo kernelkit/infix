@@ -74,6 +74,11 @@ type DBusMonitor struct {
 	// software reads the infix-system:software object; overridable in
 	// tests.
 	software func(ctx context.Context) json.RawMessage
+
+	// Last address-set overlay read in full, served while firewalld is
+	// too busy to answer, e.g. during a reload.
+	overlayMu   sync.Mutex
+	lastOverlay json.RawMessage
 }
 
 // New creates a DBusMonitor.  Address-set contents are served through
@@ -522,59 +527,82 @@ func (m *DBusMonitor) getFirewallServices(obj dbus.BusObject) []map[string]any {
 // addressSetOverlay is the on-demand tree provider for the firewall
 // subtree.  It returns a fresh {"address-set": [...]} overlay, or nil
 // when firewalld is unreachable or has no sets.
+// overlayBudget bounds what a GET waits for firewalld.  It is single
+// threaded and does not answer while it reloads, which on slow hardware
+// takes longer than statd waits for yangerd.
+const overlayBudget = 2 * time.Second
+
 func (m *DBusMonitor) addressSetOverlay() json.RawMessage {
 	conn := m.getConn()
 	if conn == nil {
 		return nil
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), overlayBudget)
+	defer cancel()
+
 	obj := conn.Object(firewalldBusName, dbus.ObjectPath(firewalldPath))
-	sets := m.getAddressSets(obj)
-	if len(sets) == 0 {
-		return nil
+	sets, ok := m.getAddressSets(ctx, obj)
+	if !ok {
+		m.overlayMu.Lock()
+		defer m.overlayMu.Unlock()
+		return m.lastOverlay
 	}
 
-	raw, err := json.Marshal(map[string]any{"address-set": sets})
-	if err != nil {
-		return nil
+	var raw json.RawMessage
+	if len(sets) > 0 {
+		var err error
+		if raw, err = json.Marshal(map[string]any{"address-set": sets}); err != nil {
+			return nil
+		}
 	}
+
+	m.overlayMu.Lock()
+	m.lastOverlay = raw
+	m.overlayMu.Unlock()
 	return raw
 }
 
-func (m *DBusMonitor) getAddressSets(obj dbus.BusObject) []map[string]any {
+// getAddressSets reads every address-set, ok is false when firewalld did
+// not answer in full.
+func (m *DBusMonitor) getAddressSets(ctx context.Context, obj dbus.BusObject) ([]map[string]any, bool) {
 	var names []string
-	if call := obj.Call(firewalldInterface+".ipset.getIPSets", 0); call.Err != nil {
+	if call := obj.CallWithContext(ctx, firewalldInterface+".ipset.getIPSets", 0); call.Err != nil {
 		m.log.Debug("dbus monitor: firewalld ipset.getIPSets failed", "err", call.Err)
-		return nil
+		return nil, false
 	} else if err := call.Store(&names); err != nil {
 		m.log.Warn("dbus monitor: firewalld ipset.getIPSets decode failed", "err", err)
-		return nil
+		return nil, false
 	}
 
 	sets := make([]map[string]any, 0, len(names))
 	for _, name := range names {
-		if aset := m.getAddressSet(obj, name); aset != nil {
+		aset, ok := m.getAddressSet(ctx, obj, name)
+		if !ok {
+			return nil, false
+		}
+		if aset != nil {
 			sets = append(sets, aset)
 		}
 	}
-	return sets
+	return sets, true
 }
 
-func (m *DBusMonitor) getAddressSet(obj dbus.BusObject, name string) map[string]any {
-	call := obj.Call(firewalldInterface+".ipset.getIPSetSettings", 0, name)
+func (m *DBusMonitor) getAddressSet(ctx context.Context, obj dbus.BusObject, name string) (map[string]any, bool) {
+	call := obj.CallWithContext(ctx, firewalldInterface+".ipset.getIPSetSettings", 0, name)
 	if call.Err != nil {
 		m.log.Warn("dbus monitor: firewalld ipset.getIPSetSettings failed", "ipset", name, "err", call.Err)
-		return nil
+		return nil, false
 	}
 	if len(call.Body) == 0 {
-		return nil
+		return nil, true
 	}
 
 	// (version, short, description, type, options, entries)
 	fields, ok := call.Body[0].([]any)
 	if !ok || len(fields) < 6 {
 		m.log.Warn("dbus monitor: firewalld ipset settings: unexpected shape", "ipset", name)
-		return nil
+		return nil, true
 	}
 
 	options := variantMap(fields[4])
@@ -612,7 +640,7 @@ func (m *DBusMonitor) getAddressSet(obj dbus.BusObject, name string) map[string]
 
 	var current []map[string]any
 	if timeout > 0 {
-		current = kernelEntries(name)
+		current = kernelEntries(ctx, name)
 	} else {
 		current = trackedEntries(tracked, shadow)
 	}
@@ -620,7 +648,7 @@ func (m *DBusMonitor) getAddressSet(obj dbus.BusObject, name string) map[string]
 		aset["current"] = current
 	}
 
-	return aset
+	return aset, true
 }
 
 func readShadowEntries(name string) map[string]bool {
@@ -657,9 +685,9 @@ func trackedEntries(tracked []string, shadow map[string]bool) []map[string]any {
 // does not track those members, so the kernel is the only source, and
 // the only one knowing the expiry.  Every member of a timeout set is
 // dynamic by definition.
-func kernelEntries(name string) []map[string]any {
+func kernelEntries(ctx context.Context, name string) []map[string]any {
 	current := []map[string]any{}
-	for _, elem := range nftSetElems(name) {
+	for _, elem := range nftSetElems(ctx, name) {
 		entry, expires := nftElemParse(elem)
 		cur := map[string]any{
 			"entry":   entry,
@@ -675,8 +703,8 @@ func kernelEntries(name string) []map[string]any {
 
 // nftSetElems returns the live contents of firewalld's nftables set.
 // The firewalld table is owner-protected, but reading is fine.
-func nftSetElems(name string) []any {
-	ctx, cancel := context.WithTimeout(context.Background(), nftTimeout)
+func nftSetElems(ctx context.Context, name string) []any {
+	ctx, cancel := context.WithTimeout(ctx, nftTimeout)
 	defer cancel()
 
 	out, err := exec.CommandContext(ctx, "nft", "-j", "list", "set", "inet", "firewalld", name).Output()
