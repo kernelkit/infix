@@ -15,7 +15,7 @@ from time import time
 import infamy
 import infamy.lag
 from infamy.netns import TPMR
-from infamy.util import parallel
+from infamy.util import parallel, until
 
 IPH = "192.168.2.1"
 IP1 = "192.168.2.41"
@@ -134,6 +134,10 @@ with infamy.Test() as test:
         with test.step("Set up link aggregate, lag0, between dut1 and dut2"):
             parallel(lambda: dut_init(dut1, IP1, IP2),
                      lambda: dut_init(dut2, IP2, IP1))
+
+        with test.step("Wait for LACP to synchronize both links"):
+            until(lambda: all(infamy.lag.lacp_synced(dut, dut["link1"], dut["link2"])
+                              for dut in (dut1, dut2)), attempts=60)
 
         with test.step("Initial connectivity check ..."):
             ns.must_reach(IP2, timeout=30)

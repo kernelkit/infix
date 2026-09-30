@@ -420,8 +420,8 @@ static int maybe_migrate(const char *path)
 
 	NOTE("%s config version %s vs confd %s, migrating ...", path, file_ver, CONFD_VERSION);
 
-	mkpath(backup_dir, 0770);
-	chown(backup_dir, 0, 10); /* root:wheel */
+	if (mkpath(backup_dir, 0770) || chown(backup_dir, 0, 10)) /* root:wheel */
+		WARN("Cannot create %s: %m", backup_dir);
 
 	snprintf(backup, sizeof(backup), "%s/%s", backup_dir, basenm(path));
 	rc = systemf("migrate -i -b \"%s\" \"%s\"", backup, path);

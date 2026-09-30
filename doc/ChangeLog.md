@@ -136,6 +136,10 @@ All notable changes to the project are documented in this file.
 - WebUI: a WiFi interface can be switched between station, access point
   and mesh point from the interface editor. The mode used to be fixed
   when the interface was created
+- OSPF sometimes learned no routes over a link after a routing change
+  was applied while the link went down and up: the adjacency came up
+  but the interface was stuck at network type Null and left out of the
+  router's LSA. Seen about once in thirty runs on virtual machines
 
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 [snmp]: https://www.kernelkit.org/infix/latest/snmp/

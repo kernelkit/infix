@@ -19,8 +19,8 @@ int ifchange_cand_infer_ipv4_prefix(sr_session_ctx_t *session, const sr_val_t *v
 	sr_error_t err = SR_ERR_OK;
 	struct in_addr ina;
 	uint32_t addr;
-	char *xpath;
 	size_t cnt;
+	int len;
 
 	if (!strstr(val->xpath, ":ipv4/address[") || fnmatch("*]/ip", val->xpath, 0))
 		return SR_ERR_OK;
@@ -37,16 +37,12 @@ int ifchange_cand_infer_ipv4_prefix(sr_session_ctx_t *session, const sr_val_t *v
 	else
 		return SR_ERR_OK;	/* class D/E, no default */
 
-	xpath = strdup(val->xpath);
-	if (!xpath)
-		return SR_ERR_SYS;
-	*strrchr(xpath, '/') = 0;
-
-	err = srx_nitems(session, &cnt, "%s/prefix-length", xpath);
+	/* Strip the /ip matched above to get the address list entry */
+	len = strlen(val->xpath) - strlen("/ip");
+	err = srx_nitems(session, &cnt, "%.*s/prefix-length", len, val->xpath);
 	if (!err && !cnt)
-		err = srx_set_item(session, &inferred, 0, "%s/prefix-length", xpath);
+		err = srx_set_item(session, &inferred, 0, "%.*s/prefix-length", len, val->xpath);
 
-	free(xpath);
 	return err;
 }
 

@@ -105,6 +105,8 @@ static int complete(const char *word)
 	strlcpy(dir, word, sizeof(dir));
 
 	slash = strrchr(dir, '/');
+	if (!slash)
+		return 0;
 	base = word + (slash - dir) + 1;
 	slash[1] = 0;
 
