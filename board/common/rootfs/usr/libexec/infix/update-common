@@ -1,6 +1,16 @@
 # Shared helpers for check-update and unattended-update.  Sourced, not run;
 # the caller sets TAG first.
 
+# Outcome of the last run, read by yanger for /system-state/software/update.
+STATE_FILE=/run/software-update.json
+
+# Apply a jq filter to the state file, extra args go to jq (--arg name value).
+# An empty or damaged file starts over from {}.
+update_state() {
+    filter=$1; shift
+    new=$(jq -n "$@" "(input? // {}) | $filter" "$STATE_FILE") && printf '%s\n' "$new" > "$STATE_FILE"
+}
+
 # Read the shared update-url (an RSS/Atom release feed) from running-config.
 # The leaf is mandatory and factory-config supplies it, so an empty result
 # means the software container is absent -- no update source is configured.
@@ -93,6 +103,25 @@ update_available() {
     [ -n "$pending" ] || pending=$VERSION
 
     newer "$LATEST_TAG" "$pending"
+}
+
+# Query the feed and record the outcome.  Same return values as
+# update_probe(); on success UPDATE_AVAILABLE tells if the latest release
+# should be applied.
+update_check() {
+    update_probe
+    rc=$?
+    case $rc in
+    0)
+        update_available && UPDATE_AVAILABLE=true || UPDATE_AVAILABLE=false
+        update_state '. + {"last-check": (now | todate), latest: $tag, "release-url": $url, available: $avail}' \
+            --arg tag "$LATEST_TAG" --arg url "$(update_release_url)" --argjson avail "$UPDATE_AVAILABLE"
+        ;;
+    2)
+        update_state '.["last-check"] = (now | todate) | del(.latest, .["release-url"], .available)'
+        ;;
+    esac
+    return $rc
 }
 
 # Print the release page URL of the latest release, for operator-facing logs.

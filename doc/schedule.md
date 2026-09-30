@@ -140,7 +140,8 @@ admin@example:~$ crontab -l
 
 An empty crontab means nothing is scheduled.  Check that the consuming
 feature is enabled, that it names the schedule correctly, and that the
-schedule itself is enabled.
+schedule itself is enabled.  For update checks and unattended updates,
+`show software` reports the trigger and the outcome of the last occurrence.
 
 > [!NOTE]
 > The crontab is generated and must not be edited by hand.  It is

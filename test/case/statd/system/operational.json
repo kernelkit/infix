@@ -458,6 +458,9 @@
           "state": "inactive"
         }
       ],
+      "update": {
+        "reboot-pending": false
+      },
       "variant": ""
     },
     "platform": {

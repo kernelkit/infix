@@ -226,8 +226,30 @@ def add_services(out):
 
     insert(out, "infix-system:services", "service", services)
 
+def software_update(data):
+    """Outcome of the last update check or unattended update, recorded by
+    the update scripts, plus whether an installed image awaits a reboot."""
+    keys = ("last-check", "latest", "available", "release-url",
+            "last-install", "installed")
+    state = HOST.read_json("/run/software-update.json", {})
+    update = {k: state[k] for k in keys if k in state}
+
+    if data:
+        slots = {n: s for entry in data.get("slots", []) for n, s in entry.items()}
+
+        def version(slot):
+            return slot.get("slot_status", {}).get("bundle", {}).get("version")
+
+        running = next((version(s) for s in slots.values()
+                        if s.get("bootname") == data.get("booted")), None)
+        pending = version(slots.get(data.get("boot_primary"), {}))
+        update["reboot-pending"] = bool(running and pending and running != pending)
+
+    return update
+
 def add_software(out):
     software = {}
+    data = None
     try:
         data = HOST.run_json(["rauc", "status", "--detailed", "--output-format=json"], {})
         software["compatible"] = data.get("compatible", "")
@@ -253,6 +275,10 @@ def add_software(out):
             progress["message"] = installer_status["progress"]["message"]
         installer["progress"] = progress
     software["installer"] = installer
+
+    update = software_update(data)
+    if update:
+        software["update"] = update
 
     insert(out, "infix-system:software", software)
 

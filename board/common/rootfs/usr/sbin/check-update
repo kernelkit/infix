@@ -7,7 +7,7 @@ TAG=os-update
 
 . /usr/libexec/infix/update-common
 
-update_probe
+update_check
 rc=$?
 if [ $rc -eq 1 ]; then
     exit 1
@@ -21,7 +21,7 @@ if [ $rc -eq 3 ]; then
     exit 0
 fi
 
-if update_available; then
+if [ "$UPDATE_AVAILABLE" = true ]; then
     RELEASE_URL=$(update_release_url)
     MSG="Software update available: ${LATEST_TAG}, running ${VERSION} (see ${RELEASE_URL})"
     logger -t "$TAG" "$MSG"

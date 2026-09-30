@@ -464,6 +464,19 @@ type swState struct {
 	BootOrder  []string         `json:"boot-order"`
 	Installer  swInstallerState `json:"installer"`
 	Slots      []swSlot         `json:"slot"`
+	Update     swUpdateState    `json:"update"`
+}
+
+// swUpdateState is the outcome of the last scheduled update check or
+// unattended update, /system-state/software/update.
+type swUpdateState struct {
+	LastCheck     string `json:"last-check"`
+	Latest        string `json:"latest"`
+	Available     bool   `json:"available"`
+	ReleaseURL    string `json:"release-url"`
+	LastInstall   string `json:"last-install"`
+	Installed     string `json:"installed"`
+	RebootPending bool   `json:"reboot-pending"`
 }
 
 type swInstallerState struct {
@@ -606,15 +619,11 @@ func (h *SystemHandler) Software(w http.ResponseWriter, r *http.Request) {
 				if name == "" {
 					name = s.Name
 				}
-				date := s.Installed.Datetime
-				if len(date) > 19 {
-					date = date[:19]
-				}
 				data.Slots = append(data.Slots, slotEntry{
 					Name:        name,
 					State:       s.State,
 					Version:     s.Bundle.Version,
-					InstallDate: date,
+					InstallDate: swTime(s.Installed.Datetime),
 					Booted:      s.BootName == sw.SystemState.Software.Booted,
 				})
 			}

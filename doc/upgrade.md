@@ -405,8 +405,26 @@ unattended-update: Installed v26.08.1; reboot to activate the new image
 | `Skipped: failed to query latest release …`  | Feed unreachable                 |
 | `Another update is already in progress …`    | Previous occurrence still running|
 
-`show software` reports installation state, slot contents and the boot
-order, both during and after the install.
+`show software` reports the configured triggers and the outcome of the
+last occurrence, next to the slot contents and boot order:
+
+<pre class="cli"><code>admin@example:/> <b>show software</b>
+Boot order : primary secondary net
+
+NAME       STATE     VERSION                DATE
+primary    booted    v26.08.1               2026-09-28T03:02:41Z
+secondary  inactive  v26.08.0               2026-08-30T03:02:12Z
+
+Software updates
+  Source       : https://github.com/kernelkit/infix/releases.atom
+  Check        : nightly (daily at 03:00)
+  Unattended   : nightly (daily at 03:00), reboot manual
+  Last check   : 2026-09-30T03:00:12Z, latest v26.08.1, up to date
+  Last install : 2026-09-28T03:02:41Z, installed v26.08.1, reboot pending
+</code></pre>
+
+The same data is available under `/system-state/software/update` in the
+operational datastore, and on the Software page of the WebUI.
 
 > [!TIP]
 > A system running a development build has no comparable version number

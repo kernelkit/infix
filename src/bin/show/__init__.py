@@ -245,6 +245,11 @@ def software(args: List[str]) -> None:
         print(json.dumps(data, indent=2))
         return
     if len(args) == 0 or not args[0]:  # Treat "" as no arg.
+        # Trigger settings for the software updates section.
+        for xpath in ("/ietf-system:system/infix-system:software",
+                      "/ietf-system:system/infix-schedule:schedules"):
+            cfg = get_json(xpath, "running-config", quiet=True)
+            data.setdefault("ietf-system:system", {}).update(cfg.get("ietf-system:system", {}))
         cli_pretty(data, "show-software")
     elif len(args) == 1:
         name = args[0]

@@ -33,7 +33,9 @@ submodule infix-system-software {
                  Add allow-prerelease.
                  Use the infix-schedule scheduled-feature grouping for
                  check-update and unattended-update, enabled now defaults
-                 to true.";
+                 to true.
+                 Add the update container to the operational data: outcome
+                 of the last update check or unattended update.";
     reference "Internal";
   }
   revision 2026-06-17 {
@@ -209,6 +211,51 @@ submodule infix-system-software {
         // notification state-changed {
         //   uses installer-state;
         // }
+      }
+
+      container update {
+        description "Outcome of the last update check or unattended update.";
+
+        leaf last-check {
+          type yang:date-and-time;
+          description "When the release feed was last queried.";
+        }
+
+        leaf latest {
+          type string;
+          description "Newest release the feed offered at the last check.
+
+             Pre-releases are left out unless allow-prerelease is set.  Absent
+             when the feed could not be read.";
+        }
+
+        leaf available {
+          type boolean;
+          description "True when latest is newer than the version that boots next.";
+        }
+
+        leaf release-url {
+          type string;
+          description "Release page of the latest release.";
+        }
+
+        leaf last-install {
+          type yang:date-and-time;
+          description "When an unattended update last installed a bundle.";
+        }
+
+        leaf installed {
+          type string;
+          description "Version installed by the last unattended update.";
+        }
+
+        leaf reboot-pending {
+          type boolean;
+          description "True when an installed update awaits a reboot.
+
+             The slot that boots next holds another version than the running
+             one.";
+        }
       }
 
       list slot {
