@@ -109,6 +109,9 @@ All notable changes to the project are documented in this file.
   logins.  Existing configurations are migrated.  NETCONF call-home, NETCONF
   over TLS, and the on-device `netopeer2-cli` tool require the built-in SSH
   server of netopeer2 and are therefore no longer available in default builds
+- Add `make migrate-configs` to bring static configurations, e.g., the
+  per-product `factory-config.cfg` in Infix and in spins, up to date with
+  the current confd version
 
 ### Fixes
 
