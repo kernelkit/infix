@@ -6,6 +6,32 @@ All notable changes to the project are documented in this file.
 [v26.09.0][UNRELEASED]
 -------------------------
 
+> [!IMPORTANT]
+> This release includes **breaking changes**: for security reasons,
+> several configuration strings are now limited to a safe character
+> set.  A `startup-config` with a value outside these limits fails
+> validation on boot, and the system falls back to `failure-config`,
+> see [Broken startup-config][brokencfg].  Check the following before
+> upgrading:
+>
+> - Interface names: letters, digits, `_`, `.`, `:`, `+`, and `-`, and
+>   must start with a letter, digit, or `_`
+> - Hardware component names, and the names of keystore asymmetric keys
+>   and their certificates: as for interface names, with `@` also allowed
+> - DHCP client option values: letters, digits, space, `_`, `.`, `:`,
+>   `/`, `@`, `=`, `,`, `+`, and `-`, at most 255 bytes
+> - DHCP server static-host match strings: `hostname` allows letters,
+>   digits, `_`, `.`, and `-`; `client-id` also allows `:` and `+`.  Both
+>   at most 255 bytes
+> - Syslog `property-filter` value and the `pattern-match` of file and
+>   remote actions: letters, digits, space, `_`, `.`, `:`, `/`, `@`, `=`,
+>   `,`, `-`, and the regular expression characters `+ * ? | ^ $ ( ) [ ]
+>   { }`
+> - Wi-Fi `mesh-id` may not contain control characters, double quotes,
+>   or backslashes.  `nas-identifier` allows letters, digits, `_`, `.`,
+>   `:`, `+`, and `-`.  Access point and mesh point passphrases must now
+>   be 8-63 printable characters, the same rule as for station
+
 ### Changes
 
 - Upgrade Linux kernel to 6.18.54 (LTS)
@@ -157,6 +183,7 @@ All notable changes to the project are documented in this file.
   but the interface was stuck at network type Null and left out of the
   router's LSA. Seen about once in thirty runs on virtual machines
 
+[brokencfg]: https://www.kernelkit.org/infix/latest/boot/#broken-startup-config
 [relsup]: https://github.com/kernelkit/infix/blob/main/doc/releases.md
 [snmp]: https://www.kernelkit.org/infix/latest/snmp/
 
