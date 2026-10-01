@@ -2215,8 +2215,8 @@ def show_software(json, name):
         others = [s for s in rootfs if s.version != booted.version] if booted else []
         for slot in others:
             print()
-            print(Decore.yellow(f"Note: the {slot.name} partition has {slot.version or 'unknown'},"
-                                f" this is {booted.version}.  Use 'upgrade' to update it."))
+            print(Decore.yellow(f"Note: the {slot.name} partition is out of date ({slot.version or 'unknown'})"))
+            print(Decore.yellow(f"      Use 'upgrade' to update it to {booted.version}."))
 
 
 def show_services(json):
