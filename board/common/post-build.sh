@@ -48,6 +48,11 @@ fi
 mkdir -p "$TARGET_DIR/etc/hostname.d"
 cp "$TARGET_DIR/etc/hostname" "$TARGET_DIR/etc/hostname.d/10-default"
 
+# Finit supervises the rauc service, so D-Bus must not start a second
+# instance when a client calls before it owns its name.
+rm -f "$TARGET_DIR/usr/share/dbus-1/system-services/de.pengutronix.rauc.service" \
+      "$TARGET_DIR/usr/libexec/rauc-service.sh"
+
 # This is a symlink to /usr/lib/os-release, so we remove this to keep
 # original Buildroot information.
 ixmsg "Creating /etc/os-release"
