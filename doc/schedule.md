@@ -1,52 +1,44 @@
 # Scheduling
 
-Some system functions run periodically instead of on demand.  One such
-type of recurrence is scheduled activities, like checking for new software
-updates or rebooting in a nightly maintenance window.
-
-The recurrence itself lives in one place: a *named schedule*, which any
-number of features can point at.  A schedule has no action of its own, it
-only says *when* something should happen, and the feature referencing it
-decides *what* happens.  Two features can share the same schedule.
-
-YANG support is defined in [infix-schedule][1], which augments
-`ietf-system` with a `schedules` container and builds on the iCalendar
-recurrence grouping from [ietf-schedule][2] (RFC 9922).
+Some things happen on a timer rather than on demand: checking for new
+software, installing it, or rebooting in a maintenance window.  The timer
+is a *named schedule*, which says when something happens.  Features point
+at a schedule by name and decide what happens, so one schedule can drive
+several features.
 
 
-## Creating a Schedule
+## Schedules
 
-Every schedule has a name, which is how features refer to it, and a
-recurrence rule, which decides when it fires.  The example below fires
-every night at 03:30.
+A schedule has a name and a recurrence rule.  A fresh unit has two, from
+the factory configuration.  Written as CLI commands, they look like this:
 
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit system schedule nightly</b>
-admin@example:/config/system/schedule/nightly/> <b>set description "Nightly maintenance window"</b>
-admin@example:/config/system/schedule/nightly/> <b>set recurrence frequency daily</b>
-admin@example:/config/system/schedule/nightly/> <b>set recurrence byhour 3</b>
-admin@example:/config/system/schedule/nightly/> <b>set recurrence byminute 30</b>
-admin@example:/config/system/schedule/nightly/> <b>leave</b>
+<pre class="cli"><code>admin@example:/> <b>configure system</b>
+admin@example:/config/system/> <b>edit schedule nightly</b>
+admin@example:/config/system/…/nightly/> <b>set description "Every night at 03:00"</b>
+admin@example:/config/system/…/nightly/> <b>set recurrence frequency daily</b>
+admin@example:/config/system/…/nightly/> <b>set recurrence byhour 3</b>
+admin@example:/config/system/…/nightly/> <b>end</b>
+admin@example:/config/system/> <b>edit schedule weekly</b>
+admin@example:/config/system/…/weekly/> <b>set description "Sunday nights at 03:00"</b>
+admin@example:/config/system/…/weekly/> <b>set recurrence frequency weekly</b>
+admin@example:/config/system/…/weekly/> <b>set recurrence byday sunday</b>
+admin@example:/config/system/…/weekly/> <b>set recurrence byhour 3</b>
+admin@example:/config/system/…/weekly/> <b>leave</b>
 </code></pre>
 
-**Schedule parameters:**
+The name is how features refer to the schedule.  It is 1 to 64
+characters, starts with a letter or digit, and otherwise uses letters,
+digits, `_`, `.` and `-`.  The description is a free-form note.  A
+schedule without a recurrence rule is refused at commit time.
 
-- `name`: Unique identifier, 1-64 characters, starting with a letter or
-  digit and otherwise limited to letters, digits, `_`, `.` and `-`.  The
-  name is used verbatim by features referencing it
-- `enabled`: Turn the schedule on or off (default: `true`).  When off,
-  everything that uses it stops running, but the schedule is kept
-- `description`: Optional human-readable note on the schedule's purpose
-- `recurrence`: The recurrence rule.  A schedule without one is rejected
-  at commit time
+To stop a schedule, and everything that uses it, set `enabled false`.
+The schedule stays in the configuration for when it is needed again.
 
 
 ## Recurrence Rules
 
-The recurrence rule decides when a schedule fires.  It is evaluated in the
-system's local time.
-
-`frequency` is mandatory and selects the base period:
+A recurrence rule is evaluated in the system's local time.  The
+mandatory `frequency` picks the base period:
 
 | Frequency  | Fires                              |
 |------------|------------------------------------|
@@ -57,57 +49,54 @@ system's local time.
 | `monthly`  | The 1st of every month at midnight |
 | `yearly`   | January 1st at midnight            |
 
-`interval` (default `1`) stretches the base period: `frequency hourly`
-with `interval 6` fires every six hours.
+`interval` stretches the period, so `frequency hourly` with `interval 6`
+fires every six hours.  The default is 1.
 
-The remaining fields refine that period by pinning one field to specific
-values:
+The `by*` fields pin one part of the period to given values:
 
-- `byminute`: Minutes within the hour, 0-59
-- `byhour`: Hours of the day, 0-23
-- `byday`: Days of the week, by `weekday` name (`monday` … `sunday`)
-- `bymonthday`: Days of the month, 1-31
-- `byyearmonth`: Months of the year, 1-12
+- `byminute`: minutes within the hour, 0-59
+- `byhour`: hours of the day, 0-23
+- `byday`: days of the week, by name (`monday` … `sunday`)
+- `bymonthday`: days of the month, 1-31
+- `byyearmonth`: months of the year, 1-12
 
-Each accepts a list, so `byhour 8` plus `byhour 20` fires twice a day.
+Each takes a list, so `byhour 8` and `byhour 20` together fire twice a
+day.  This is how the factory `nightly` schedule becomes 03:00 rather
+than midnight, and how `weekly` lands on Sunday.
 
-> [!TIP]
-> Set `frequency` to the coarsest period you want, then refine it with the
-> `by*` fields.  A weekly window on Sunday mornings is `frequency weekly`
-> with `byday sunday` and `byhour 4`.  Writing the same window as
-> `frequency daily` would fire every morning.
+Pick the coarsest frequency that fits, then narrow it.  A window every
+Sunday morning is `frequency weekly` with `byday sunday` and `byhour 4`.
+With `frequency daily` the same `byday` and `byhour` would fire every
+morning.
 
 
 ## Limitations
 
-Each schedule is translated into a five-field cron expression, and the
-YANG model is pruned to the subset cron can express.  Everything below is
-rejected at commit time, so a schedule never fires on the wrong days:
+A schedule is turned into a five-field cron expression, and the model is
+cut down to what cron can express.  The following are refused at commit
+time:
 
-- **`secondly` frequency.**  Cron has no seconds field; the finest
-  supported resolution is `minutely`
-- **Combining `bymonthday` and `byday`.**  Cron fires on the *union* of
-  day-of-month and day-of-week, where RFC 5545 specifies their
-  intersection, so the combination is refused
-- **Negative values.**  "The last Monday of the month" (`byday` with a
-  direction) and "the last day of the month" (`bymonthday -1`) have no
-  cron equivalent
-- **Start and end bounds.**  There is no start anchor, no `until` date and
-  no occurrence count.  A schedule recurs until it is disabled
-- **Per-schedule time zones**, day-of-year, week-of-year and set-position
+- `secondly` frequency, since cron has no seconds field.  The finest
+  resolution is `minutely`
+- `bymonthday` together with `byday`.  Cron fires on the union of the two
+  where RFC 5545 specifies their intersection
+- negative values, such as the last Monday of the month (`byday` with a
+  direction) or the last day of the month (`bymonthday -1`)
+- start and end bounds.  There is no start date, no `until` date and no
+  occurrence count, so a schedule recurs until it is disabled
+- per-schedule time zones, day of year, week of year and set position
 
-`frequency yearly` with an `interval` above 1 ("every other year") is also
-not expressible; the interval is ignored in that case.
+`frequency yearly` with an `interval` above 1, as in every other year,
+cannot be expressed either.  The interval is ignored in that case.
 
 
 ## Using a Schedule
 
-A schedule does nothing on its own, it takes effect when a feature
-references it through a leaf of type `schedule-ref`.  The reference is
-validated, so a schedule cannot be deleted while something still uses it,
-and a typo shows up at commit time instead of at the next occurrence.
+A feature uses a schedule through a leaf of type `schedule-ref`.  The
+reference is validated, so a schedule in use cannot be deleted, and a
+typo is caught at commit time rather than at the next occurrence.
 
-These features consume schedules today:
+These features run on a schedule:
 
 | Feature                          | Configuration path                  |
 |----------------------------------|-------------------------------------|
@@ -115,38 +104,37 @@ These features consume schedules today:
 | Update checks                    | `system software check-update`      |
 | [Unattended software updates][3] | `system software unattended-update` |
 
-The example below reboots the system on the `nightly` schedule created
-above.  A feature is active as soon as it references a schedule.  To
-pause it without losing its settings, set its `enabled` leaf to `false`;
-disabling the schedule itself stops every feature that references it.
+A feature is active as soon as it references a schedule.  This reboots
+the system every night at 03:00:
 
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>set system scheduled-reboot schedule nightly</b>
-admin@example:/config/> <b>leave</b>
+<pre class="cli"><code>admin@example:/> <b>configure system</b>
+admin@example:/config/system/> <b>set scheduled-reboot schedule nightly</b>
+admin@example:/config/system/> <b>leave</b>
 </code></pre>
+
+To pause one feature and keep its settings, set its `enabled` leaf to
+`false`.  Disabling the schedule itself stops every feature using it.
 
 
 ## Verifying
 
-To confirm a schedule took effect, look at the generated crontab from the
-shell.  Active schedules become cron jobs owned by the `admin` user, and
-the cron daemon runs only while at least one job is active:
+Active schedules become cron jobs owned by the `admin` user, and the cron
+daemon runs only while there is at least one.  The generated crontab is
+visible from the shell:
 
 ```sh
 admin@example:~$ crontab -l
 # Managed by infix-schedule
-30 3 * * *	/usr/sbin/reboot
+0 3 * * *	/usr/sbin/reboot
 ```
 
-An empty crontab means nothing is scheduled.  Check that the consuming
-feature is enabled, that it names the schedule correctly, and that the
-schedule itself is enabled.  For update checks and unattended updates,
-`show software` reports the trigger and the outcome of the last occurrence.
+An empty crontab means nothing is scheduled.  Check that the feature is
+enabled, that it names the schedule correctly, and that the schedule is
+enabled.  For update checks and unattended updates, `show software` shows
+the trigger and the outcome of the last occurrence.
 
 > [!NOTE]
-> The crontab is generated and must not be edited by hand.  It is
-> rewritten from the configuration on every change.
+> The crontab is generated from the configuration on every change.  Do
+> not edit it by hand.
 
-[1]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/confd/infix-schedule.yang
-[2]: https://www.rfc-editor.org/rfc/rfc9922
 [3]: upgrade.md#unattended-software-updates
