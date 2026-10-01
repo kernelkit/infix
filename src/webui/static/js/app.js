@@ -938,9 +938,9 @@
     if (activeTopGroup) {
       document.querySelectorAll('details.nav-group-top').forEach(function(d) {
         if (d === activeTopGroup) {
-          // Don't auto-open Configure: its toggle handler fires enterConfigure(),
-          // which must only happen on explicit user interaction, not on URL sync.
-          if (d.id !== 'nav-configure' && !d.open) d.open = true;
+          // Opening Configure fires enterConfigure() from its toggle handler,
+          // once per page lifecycle, which a link into a configure page needs.
+          if (!d.open) d.open = true;
         } else {
           if (d.open) d.open = false;
         }

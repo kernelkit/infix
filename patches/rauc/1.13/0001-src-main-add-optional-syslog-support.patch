@@ -1,35 +1,50 @@
-From c4e4ad9d69b3bc62ee53f8088d6a192d288c6645 Mon Sep 17 00:00:00 2001
+From 28341bdaaa99fc9af4df0f74626a33b7da82a3d7 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 23 Nov 2023 18:49:36 +0100
-Subject: [PATCH 2/2] src/main: add optional syslog support
-Organization: Addiva Elektronik
+Subject: [PATCH 1/2] src/main: add optional syslog support
+Organization: Wires
 
-Instead of having to redirect (colored) logs to stdout/stderr, this
-patch adds support for logging directly to syslog with approximate
-GLogLevel to syslog level mapping.
+This patch adds an optional syslog backend alternative to the default
+stdout/stderr logging.
 
-By default all LOG_NOTICE, g_message(), and higher log messages are
-logged to LOG_LOCAL0 facility.  This should of course be configurable
-but is not at this stage.
+The syslog backend is enabled with `--syslog` on the command line.  It
+logs directly to the local syslog daemon, via the POSIX syslog() API,
+using a default 'daemon' facility.  This facility can be changed if an
+optional argument is given, e.g., `--syslog=local0`.  Useful for basic
+message filtering to a dedicated log file.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
- src/main.c | 45 ++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 44 insertions(+), 1 deletion(-)
+ docs/reference.rst |  1 +
+ src/main.c         | 64 ++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 65 insertions(+)
 
-
-diff -urN rauc-1.13.orig/src/main.c rauc-1.13/src/main.c
---- rauc-1.13.orig/src/main.c	2025-03-04 14:55:59.671534612 +0100
-+++ rauc-1.13/src/main.c	2025-03-04 14:57:13.022772424 +0100
-@@ -10,6 +10,7 @@
+diff --git a/docs/reference.rst b/docs/reference.rst
+index 0e91a599..5504661c 100644
+--- a/docs/reference.rst
++++ b/docs/reference.rst
+@@ -1293,6 +1293,7 @@ Command Line Tool
+     --keyring=PEMFILE                   keyring file
+     --mount=PATH                        mount prefix
+     -d, --debug                         enable debug output
++    -s, --syslog=[facility]             enable syslog output, optional facility, default: daemon
+     --version                           display version
+     -h, --help                          display help and exit
+ 
+diff --git a/src/main.c b/src/main.c
+index b41e09ec..e54f626f 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -10,6 +10,8 @@
  #include <locale.h>
  #include <stdio.h>
  #include <string.h>
++#define SYSLOG_NAMES
 +#include <syslog.h>
  #include <sys/ioctl.h>
  #include <unistd.h>
  
-@@ -2460,6 +2461,38 @@
+@@ -2674,6 +2676,67 @@ static gboolean collect_config_values(const gchar *option_name, const gchar *val
  	return TRUE;
  }
  
@@ -52,52 +67,59 @@ diff -urN rauc-1.13.orig/src/main.c rauc-1.13/src/main.c
 +	if (level & G_LOG_LEVEL_DEBUG)
 +		return LOG_DEBUG;
 +
-+	/* Fallback to INFO for unknown levels */
-+	return LOG_INFO;
++	return LOG_INFO;       /* Fallback to INFO for unknown levels */
 +}
 +
 +static void syslog_handler(const gchar *domain, GLogLevelFlags level, const gchar *message, gpointer arg)
 +{
-+	/* unused */
-+	(void)domain;
-+	(void)arg;
++	int prio = log_level(level);
 +
-+	syslog(log_level(level), "%s", message);
++	if (g_strcmp0(domain, G_LOG_DOMAIN))
++		syslog(prio, "%s: %s", domain, message);
++	else
++		syslog(prio, "%s", message);
 +}
 +
- typedef enum  {
- 	UNKNOWN = 0,
- 	INSTALL,
-@@ -2676,7 +2709,7 @@
- 
++static gboolean syslog_option_cb(const gchar *option_name, const gchar *value,
++		gpointer data, GError **error)
++{
++	int facility = LOG_DAEMON;
++
++	if (value) {
++		gboolean found = FALSE;
++
++		for (const CODE *f = facilitynames; f->c_name != NULL; f++) {
++			if (g_ascii_strcasecmp(value, f->c_name) == 0) {
++				facility = f->c_val;
++				found = TRUE;
++				break;
++			}
++		}
++
++		if (!found) {
++			g_set_error(error, G_OPTION_ERROR, G_OPTION_ERROR_BAD_VALUE,
++					"Invalid syslog facility: %s", value);
++			return FALSE;
++		}
++	}
++
++	openlog(G_LOG_DOMAIN, LOG_PID | LOG_NOWAIT, facility);
++	g_log_set_default_handler(syslog_handler, NULL);
++
++	return TRUE;
++}
++
  static void cmdline_handler(int argc, char **argv)
  {
--	gboolean help = FALSE, debug = FALSE, version = FALSE;
-+	gboolean help = FALSE, debug = FALSE, use_syslog = FALSE, version = FALSE;
- 	g_autofree gchar *confpath = NULL, *keyring = NULL, *mount = NULL;
- 	char *cmdarg = NULL;
- 	g_autoptr(GOptionContext) context = NULL;
-@@ -2690,6 +2723,7 @@
+ 	gboolean help = FALSE, debug = FALSE, version = FALSE;
+@@ -2690,6 +2753,7 @@ static void cmdline_handler(int argc, char **argv)
  		{"intermediate", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_FILENAME_ARRAY, &intermediate, "intermediate CA file or PKCS#11 URL", "PEMFILE|PKCS11-URL"},
  		{"mount", '\0', 0, G_OPTION_ARG_FILENAME, &mount, "mount prefix", "PATH"},
  		{"debug", 'd', 0, G_OPTION_ARG_NONE, &debug, "enable debug output", NULL},
-+		{"syslog", 's', 0, G_OPTION_ARG_NONE, &use_syslog, "use syslog instead of stdout", NULL},
++		{"syslog", 's', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,  syslog_option_cb, "enable syslog output, optional facility, default: daemon", "[facility]"},
  		{"version", '\0', 0, G_OPTION_ARG_NONE, &version, "display version", NULL},
  		{"help", 'h', 0, G_OPTION_ARG_NONE, &help, "display help and exit", NULL},
  		{0}
-@@ -2816,6 +2850,15 @@
- 				);
- 	}
- 
-+	if (use_syslog) {
-+		GLogLevelFlags levels = G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION;
-+		const char *ident = "rauc";
-+
-+		/* XXX: facility should be configurable */
-+		openlog(ident, LOG_PID | LOG_NOWAIT, LOG_LOCAL0);
-+		g_log_set_handler(ident, levels, syslog_handler, NULL);
-+	}
-+
- 	/* get first parameter without dashes */
- 	for (gint i = 1; i <= argc; i++) {
- 		if (argv[i] && !g_str_has_prefix(argv[i], "-")) {
+-- 
+2.43.0
+

@@ -37,6 +37,35 @@
     </div>
   </div>
 
+  {{if .Update}}
+  <div class="info-card">
+    <div class="card-header">Software Updates
+      <a href="/configure/tree?path=/ietf-system:system/infix-system:software"
+         hx-get="/configure/tree?path=/ietf-system:system/infix-system:software"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        <tr><th>Source</th><td>{{if .Update.Source}}<a href="{{.Update.Source}}" title="{{.Update.Source}}" target="_blank" rel="noopener noreferrer">{{.Update.SourceShort}}</a>{{else}}not configured{{end}}</td></tr>
+        <tr><th>Check</th><td>{{.Update.Check}}</td></tr>
+        <tr><th>Unattended</th><td>{{.Update.Unattended}}</td></tr>
+        {{if .Update.LastCheck}}
+        <tr><th>Last check</th><td>{{.Update.LastCheck}}
+          {{if not .Update.Latest}}<span class="badge badge-neutral">feed unreachable</span>
+          {{else if .Update.Available}}<a href="{{.Update.ReleaseURL}}" target="_blank" rel="noopener noreferrer">{{.Update.Latest}}</a> <span class="badge badge-accept">available</span>
+          {{else}}latest {{.Update.Latest}}, up to date{{end}}</td></tr>
+        {{end}}
+        {{if .Update.LastInstall}}
+        <tr><th>Last install</th><td>{{.Update.LastInstall}}, {{.Update.Installed}}
+          {{if .Update.RebootPending}}<span class="badge badge-neutral">reboot pending</span>{{end}}</td></tr>
+        {{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+
   <div class="info-card">
     <div class="card-header">Runtime</div>
     <div class="card-body" style="padding:0">

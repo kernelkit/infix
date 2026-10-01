@@ -80,6 +80,9 @@
         "progress": {
           "percentage": 0
         }
+      },
+      "update": {
+        "reboot-pending": false
       }
     },
     "infix-system:ntp": {

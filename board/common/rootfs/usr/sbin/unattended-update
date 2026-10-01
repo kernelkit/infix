@@ -35,7 +35,7 @@ if ! flock -n 9; then
     exit 0
 fi
 
-update_probe
+update_check
 rc=$?
 if [ $rc -eq 1 ]; then
     exit 1
@@ -49,7 +49,7 @@ if [ $rc -eq 3 ]; then
     exit 0
 fi
 
-if ! update_available; then
+if [ "$UPDATE_AVAILABLE" != true ]; then
     logger -p daemon.debug -t "$TAG" "No update available (current: $VERSION, latest: $LATEST_TAG)"
     exit 0
 fi
@@ -66,6 +66,8 @@ if ! rauc install "$BUNDLE_URL"; then
     logger -t "$TAG" "ERROR: installation of ${LATEST_TAG} failed"
     exit 1
 fi
+update_state '. + {"last-install": (now | todate), installed: $tag, available: false}' \
+    --arg tag "$LATEST_TAG"
 
 POLICY=$(read_reboot_policy)
 if [ "$POLICY" = immediate ]; then

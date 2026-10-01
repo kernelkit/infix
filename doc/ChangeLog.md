@@ -28,10 +28,14 @@ All notable changes to the project are documented in this file.
     Access is limited to users in the NACM `admin` group
   - WebUI: the support bundle is collected with the new RPC, as the
     logged-in user
-- Add support for unattended software upgrades, letting a unit track an RSS/Atom
+- Add support for unattended software updates, letting a unit track an RSS/Atom
   release feed on a schedule and install a newer release to the inactive
   partition on its own, then either reboot to activate it or leave it staged for
-  the next reboot, see [Unattended Updates][unattended]
+  the next reboot, see [Unattended Software Updates][unattended]
+- The factory configuration now provides two schedules, `nightly` and `weekly`,
+  ready to be referenced by any scheduled feature
+- Features that run on a schedule are now active as soon as they reference
+  one, see [Scheduling][schedule] for details
 - Add Novarq Tactical-1000 support: LAN9696 (Laguna) switch with 24 GbE copper
   ports, four SFP+ cages, and a management port, booting Infix from eMMC with
   the usual A/B slots, see the [board README][tactical] for details
@@ -124,6 +128,9 @@ All notable changes to the project are documented in this file.
 - A startup-config that fails to load, or hangs, now resets the unit
   and the next boot goes straight to failure-config, see
   [Broken startup-config][brokencfg]
+- Fix Wi-Fi access point failing to start on radios without 802.11ax or
+  802.11ac, e.g. the BPi-R64, the hostapd modes now follow what the radio
+  supports
 - First boot after a factory reset:
   - Fix status LED still blinking after the first boot
   - Fix resize looping forever on a disk with a `var` partition but no
@@ -154,7 +161,8 @@ All notable changes to the project are documented in this file.
 [tftp]: https://www.kernelkit.org/infix/latest/tftp/
 [tactical]: https://github.com/kernelkit/infix/blob/main/board/aarch64/novarq-tactical-1000/README.md
 [netboot]: https://www.kernelkit.org/infix/latest/netboot/
-[unattended]: https://www.kernelkit.org/infix/latest/upgrade/#unattended-updates
+[unattended]: https://www.kernelkit.org/infix/latest/upgrade/#unattended-software-updates
+[schedule]: https://www.kernelkit.org/infix/latest/schedule/
 
 [v26.08.0][] - 2026-09-01
 -------------------------

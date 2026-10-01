@@ -2202,12 +2202,13 @@ def show_software(json, name):
         print(f"Boot order : {order}")
         print("")
 
+        rootfs = [s for s in map(Software, reversed(slots)) if s.is_rootfs()]
+        PadSoftware.version = max([PadSoftware.version] + [len(s.version) + 2 for s in rootfs])
         hdr = (f"{'NAME':<{PadSoftware.name}}"
                f"{'STATE':<{PadSoftware.state}}"
                f"{'VERSION':<{PadSoftware.version}}"
                f"{'DATE':<{PadSoftware.date}}")
         print(Decore.invert(hdr))
-        rootfs = [s for s in map(Software, reversed(slots)) if s.is_rootfs()]
         for slot in rootfs:
             slot.print()
 
@@ -2215,8 +2216,75 @@ def show_software(json, name):
         others = [s for s in rootfs if s.version != booted.version] if booted else []
         for slot in others:
             print()
-            print(Decore.yellow(f"Note: the {slot.name} partition has {slot.version or 'unknown'},"
-                                f" this is {booted.version}.  Use 'upgrade' to update it."))
+            print(Decore.yellow(f"Note: the {slot.name} partition is out of date ({slot.version or 'unknown'})"))
+            print(Decore.yellow(f"      Use 'upgrade' to update it to {booted.version}."))
+
+        show_software_update(json, software.get("update", {}))
+
+
+def describe_recurrence(rec):
+    """Short form of an ietf-schedule recurrence, e.g. 'sunday at 03:30'"""
+    units = {"minutely": "minute", "hourly": "hour", "daily": "day",
+             "weekly": "week", "monthly": "month", "yearly": "year"}
+    freq = rec.get('frequency', '').split(':')[-1]
+    interval = rec.get('interval', 1)
+    text = freq if interval == 1 else f"every {interval} {units.get(freq, freq)}s"
+
+    days = ",".join(d.get('weekday', '') for d in rec.get('byday', []))
+    if days:
+        text = days if interval == 1 else f"{text} on {days}"
+
+    hours = rec.get('byhour')
+    if hours:
+        minutes = rec.get('byminute', [0])
+        text += " at " + ",".join(f"{h:02}:{m:02}" for h in hours for m in minutes)
+
+    return text
+
+
+def show_software_update(json, state):
+    """Scheduled update checks and unattended updates: triggers from the
+    running configuration, outcome of the last run from operational data"""
+    cfg = get_json_data({}, json, 'ietf-system:system', 'infix-system:software')
+    schedules = get_json_data([], json, 'ietf-system:system',
+                              'infix-schedule:schedules', 'schedule')
+
+    def trigger(feature):
+        name = feature.get('schedule')
+        if not name:
+            return "not configured"
+        if not feature.get('enabled', True):
+            return f"{name}, paused"
+        sched = next((s for s in schedules if s.get('name') == name), {})
+        text = f"{name} ({describe_recurrence(sched.get('recurrence', {}))})"
+        if not sched.get('enabled', True):
+            text += ", schedule disabled"
+        return text
+
+    unattended = cfg.get('unattended-update', {})
+    print()
+    print("Software updates")
+    print(f"  Source       : {cfg.get('update-url', 'not configured')}")
+    print(f"  Check        : {trigger(cfg.get('check-update', {}))}")
+    text = trigger(unattended)
+    if unattended.get('schedule'):
+        text += f", reboot {unattended.get('reboot', 'manual')}"
+    print(f"  Unattended   : {text}")
+
+    if state.get('last-check'):
+        latest = state.get('latest')
+        if not latest:
+            result = "feed unreachable"
+        elif state.get('available'):
+            result = f"{latest} available"
+        else:
+            result = f"latest {latest}, up to date"
+        print(f"  Last check   : {state['last-check']}, {result}")
+    if state.get('last-install'):
+        result = f"installed {state.get('installed', 'unknown')}"
+        if state.get('reboot-pending'):
+            result += ", reboot pending"
+        print(f"  Last install : {state['last-install']}, {result}")
 
 
 def show_services(json):

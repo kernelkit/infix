@@ -40,7 +40,7 @@ func main() {
 
 	rc := restconf.NewClient(*restconfURL, *insecureTLS)
 
-	schemaCache := schema.NewCache(rc, *yangCacheDir)
+	schemaCache := schema.NewCache(rc, *yangCacheDir, osVersionID())
 	schemaCache.LoadFromCacheBackground() // fast, no HTTP — uses whatever is already on disk
 
 	tmplFS, err := fs.Sub(templateFS, "templates")
@@ -83,4 +83,18 @@ func envBool(key string) bool {
 	default:
 		return false
 	}
+}
+
+// osVersionID is VERSION_ID from /etc/os-release, empty when unavailable.
+func osVersionID() string {
+	data, err := os.ReadFile("/etc/os-release")
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if v, ok := strings.CutPrefix(line, "VERSION_ID="); ok {
+			return strings.Trim(v, "\"")
+		}
+	}
+	return ""
 }

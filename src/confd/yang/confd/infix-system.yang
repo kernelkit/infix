@@ -40,8 +40,9 @@ module infix-system {
 
   revision 2026-09-22 {
     description "Add unattended-update, a shared software/update-url naming an
-                 RSS/Atom release feed, and allow-prerelease (see the
-                 infix-system-software submodule).";
+                 RSS/Atom release feed, and allow-prerelease (see submodule).
+                 Use the infix-schedule scheduled-feature grouping for
+                 scheduled-reboot, adding enabled.";
     reference "internal";
   }
 
@@ -367,16 +368,11 @@ module infix-system {
     description "Scheduled reboot of the system.";
 
     container scheduled-reboot {
-      description
-        "Reboot the system on the occurrences of a referenced schedule.
-         Without a referenced schedule the system is never rebooted on a
-         schedule.";
+      description "Reboot the system on the occurrences of a referenced schedule.
 
-      leaf schedule {
-        type infix-schedule:schedule-ref;
-        description
-          "The schedule whose occurrences trigger a system reboot.";
-      }
+         Without a referenced schedule the system is never rebooted.";
+
+      uses infix-schedule:scheduled-feature;
     }
   }
 

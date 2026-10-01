@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
@@ -80,5 +81,111 @@ func TestDashboardIndex_HTMXPartial(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("want 200 got %d; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUpdateEntry(t *testing.T) {
+	off := false
+	cfg := swConfig{
+		UpdateURL:   "https://github.com/kernelkit/infix/releases.atom",
+		CheckUpdate: swScheduled{Schedule: "nightly"},
+		Unattended:  swUnattended{swScheduled: swScheduled{Schedule: "nightly", Enabled: &off}},
+	}
+	state := swUpdateState{
+		LastCheck: "2026-09-30T03:00:12Z", Latest: "v26.09.0", Available: true,
+		LastInstall: "2026-09-28T03:02:41Z", Installed: "v26.08.1", RebootPending: true,
+	}
+
+	var nightly scheduleEntry
+	nightly.Name = "nightly"
+	nightly.Recurrence.Frequency = "ietf-schedule:daily"
+	nightly.Recurrence.ByHour = []int{3}
+	schedules := []scheduleEntry{nightly}
+
+	e := newUpdateEntry(cfg, schedules, state)
+	if e.Check != "nightly (daily at 03:00)" {
+		t.Errorf("Check = %q", e.Check)
+	}
+	if e.Unattended != "nightly (paused), reboot manual" {
+		t.Errorf("Unattended = %q", e.Unattended)
+	}
+	if e.LastCheck != "2026-09-30 03:00:12" {
+		t.Errorf("LastCheck = %q", e.LastCheck)
+	}
+	if !e.Available || !e.RebootPending {
+		t.Errorf("flags lost: %+v", e)
+	}
+
+	e = newUpdateEntry(swConfig{}, nil, swUpdateState{})
+	if e.Source != "" || e.Check != "not configured" || e.Unattended != "not configured" {
+		t.Errorf("unconfigured entry = %+v", e)
+	}
+}
+
+func TestDescribeRecurrence(t *testing.T) {
+	var s scheduleEntry
+	s.Recurrence.Frequency = "ietf-schedule:weekly"
+	s.Recurrence.ByDay = append(s.Recurrence.ByDay, struct {
+		Weekday string `json:"weekday"`
+	}{"sunday"})
+	s.Recurrence.ByHour = []int{3}
+	if got := describeRecurrence(s); got != "sunday at 03:00" {
+		t.Errorf("weekly = %q", got)
+	}
+
+	s.Recurrence.Interval = 2
+	s.Recurrence.ByMinute = []int{15}
+	if got := describeRecurrence(s); got != "every 2 weeks on sunday at 03:15" {
+		t.Errorf("biweekly = %q", got)
+	}
+
+	var h scheduleEntry
+	h.Recurrence.Frequency = "ietf-schedule:hourly"
+	if got := describeRecurrence(h); got != "hourly" {
+		t.Errorf("hourly = %q", got)
+	}
+}
+
+func TestSystemConfigDecode(t *testing.T) {
+	body := `{"ietf-system:system": {
+	  "hostname": "example",
+	  "infix-system:software": {
+	    "update-url": "https://github.com/kernelkit/infix/releases.atom",
+	    "check-update": {"schedule": "nightly"},
+	    "unattended-update": {"schedule": "weekly", "reboot": "immediate"}
+	  },
+	  "infix-schedule:schedules": {"schedule": [
+	    {"name": "nightly", "recurrence": {"frequency": "ietf-schedule:daily", "byhour": [3]}},
+	    {"name": "weekly", "enabled": true, "recurrence": {"frequency": "ietf-schedule:weekly",
+	      "byday": [{"weekday": "sunday"}]}}
+	  ]}
+	}}`
+	var cfg systemConfigWrapper
+	if err := json.Unmarshal([]byte(body), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	e := newUpdateEntry(cfg.System.Software, cfg.System.Schedules.Schedule, swUpdateState{})
+	if e.Source != "https://github.com/kernelkit/infix/releases.atom" {
+		t.Errorf("Source = %q", e.Source)
+	}
+	if e.Check != "nightly (daily at 03:00)" {
+		t.Errorf("Check = %q", e.Check)
+	}
+	if e.Unattended != "weekly (sunday), reboot immediate" {
+		t.Errorf("Unattended = %q", e.Unattended)
+	}
+}
+
+func TestShortURL(t *testing.T) {
+	cases := map[string]string{
+		"https://github.com/kernelkit/infix/releases.atom": "releases.atom",
+		"http://releases.example.com/releases.atom":        "releases.atom",
+		"http://10.0.0.1/": "10.0.0.1",
+		"not a url":        "not a url",
+	}
+	for in, want := range cases {
+		if got := shortURL(in); got != want {
+			t.Errorf("shortURL(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

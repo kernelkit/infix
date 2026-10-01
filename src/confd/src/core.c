@@ -592,10 +592,10 @@ static confd_dependency_t dep_schedule_consumers(struct lyd_node **diff, struct 
 			continue;
 
 		/* A diff that only toggles 'enabled' keeps the ref in config. */
-		name = lydx_get_cattr(node, consumer->sched_leaf);
+		name = lydx_get_cattr(node, "schedule");
 		if (!name) {
 			node = lydx_get_xpathf(config, "%s", consumer->path);
-			name = node ? lydx_get_cattr(node, consumer->sched_leaf) : NULL;
+			name = node ? lydx_get_cattr(node, "schedule") : NULL;
 		}
 		if (!name)
 			continue;

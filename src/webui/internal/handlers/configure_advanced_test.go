@@ -69,7 +69,7 @@ func newAdvHandler(t *testing.T, rc restconf.Fetcher) *ConfigureAdvancedHandler 
 	return &ConfigureAdvancedHandler{
 		Template: minimalCfgAdvTmpl,
 		RC:       rc,
-		Schema:   schema.NewCache(rc, t.TempDir()),
+		Schema:   schema.NewCache(rc, t.TempDir(), ""),
 	}
 }
 

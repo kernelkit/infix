@@ -548,8 +548,9 @@ def parse_link(ifname):
 
 def parse_phy_caps(phy_name):
     """
-    Parse 'iw phy <name> info' for HT and VHT capability bitmasks.
-    Returns: {ht_cap: int, vht_cap: int}
+    Parse 'iw phy <name> info' for HT and VHT capability bitmasks,
+    and whether the PHY supports HE (802.11ax).
+    Returns: {ht_cap: int, vht_cap: int, he: bool}
 
     iw phy info output format:
         Capabilities: 0x1ef
@@ -562,10 +563,11 @@ def parse_phy_caps(phy_name):
     if not output:
         output = run_iw(actual_phy, 'info')
     if not output:
-        return {'ht_cap': 0, 'vht_cap': 0}
+        return {'ht_cap': 0, 'vht_cap': 0, 'he': False}
 
     ht_cap = 0
     vht_cap = 0
+    he = False
 
     for line in output.splitlines():
         stripped = line.strip()
@@ -580,7 +582,11 @@ def parse_phy_caps(phy_name):
         if vht_match:
             vht_cap = int(vht_match.group(1), 16)
 
-    return {'ht_cap': ht_cap, 'vht_cap': vht_cap}
+        # HE support: "HE Iftypes: AP, ..." under a band
+        if stripped.startswith('HE Iftypes:'):
+            he = True
+
+    return {'ht_cap': ht_cap, 'vht_cap': vht_cap, 'he': he}
 
 
 def parse_mesh_param(ifname):

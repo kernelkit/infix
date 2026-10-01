@@ -198,62 +198,125 @@ now the preferred boot source.
 To upgrade the remaining partition (`primary`), run the `upgrade URL`
 command again, and (optionally) reboot.
 
-## Unattended Updates
+## Unattended Software Updates
 
-The upgrade above is operator-driven: you pick a bundle, run `upgrade`,
-and reboot.  This is a function the system can perform on its own, using
-a [schedule][6].
+The system can check for new releases and install them on its own, on a
+[schedule][6].  Two features share one update source:
 
-Two independent features share one update source:
+- `check-update` logs a notice when a newer release is available, shown
+  at the next login and on the WebUI dashboard
+- `unattended-update` also installs it, exactly like a manual `upgrade`
 
-- **Update checks** (`check-update`) look for a newer release and log a
-  notification, shown on the next login.  Nothing is downloaded or
-  installed
-- **Unattended updates** (`unattended-update`) also download and install
-  the new release, exactly as a manual `upgrade` would
+### Enabling
+
+The factory configuration names the release feed to follow and provides
+two schedules: `nightly` at 03:00 and `weekly` on Sunday nights at 03:00.
+Point a feature at a schedule to enable it:
+
+<pre class="cli"><code>admin@example:/> <b>configure system</b>
+admin@example:/config/system/> <b>set software check-update schedule nightly</b>
+admin@example:/config/system/> <b>set software unattended-update schedule weekly</b>
+admin@example:/config/system/> <b>leave</b>
+</code></pre>
+
+An installed release is activated on the next reboot, which by default is
+left to the operator.  To reboot right after a successful install:
+
+<pre class="cli"><code>admin@example:/> <b>configure system</b>
+admin@example:/config/system/> <b>set software unattended-update reboot immediate</b>
+admin@example:/config/system/> <b>leave</b>
+</code></pre>
+
+Set `enabled false` on a feature to pause it without losing its settings.
+A configuration that predates the factory schedules, or needs another
+maintenance window, can [create its own][6].
+
+> [!CAUTION]
+> An unattended update does exactly what a manual `upgrade` does: the new
+> release goes to the inactive partition and the boot order is flipped,
+> leaving the running partition as fallback should the new one fail to
+> boot.  Nothing else verifies the new release, see the caution under
+> [Upgrading](#upgrading) about upgrading one partition at a time.
+
+### Status
+
+`show software` lists the triggers and the outcome of the last run:
+
+<pre class="cli"><code>admin@example:/> <b>show software</b>
+Boot order : primary secondary net
+
+NAME       STATE     VERSION                DATE
+primary    booted    v26.08.1               2026-09-28T03:02:41Z
+secondary  inactive  v26.08.0               2026-08-30T03:02:12Z
+
+Software updates
+  Source       : https://github.com/kernelkit/infix/releases.atom
+  Check        : nightly (daily at 03:00)
+  Unattended   : weekly (sunday at 03:00), reboot manual
+  Last check   : 2026-09-30T03:00:12Z, latest v26.08.1, up to date
+  Last install : 2026-09-28T03:02:41Z, installed v26.08.1, reboot pending
+</code></pre>
+
+The same data is available under `/system-state/software/update` in the
+operational datastore, and on the WebUI dashboard.  The log
+has the details:
+
+```sh
+admin@example:~$ grep unattended-update /var/log/messages
+unattended-update: Installing v26.08.1 from https://.../infix-aarch64-v26.08.1.pkg (running v26.05.0)
+unattended-update: Installed v26.08.1; reboot to activate the new image
+```
+
+| Message                                      | Meaning                          |
+|----------------------------------------------|----------------------------------|
+| `Installing <tag> from <url> (running <ver>)`| Install started                  |
+| `Installed <tag>; reboot to activate …`      | Success, `reboot manual`         |
+| `No update available (current: …, latest: …)`| Ran, nothing to do               |
+| `Skipped: failed to query latest release …`  | Feed unreachable                 |
+| `Another update is already in progress …`    | Previous occurrence still running|
+
+> [!TIP]
+> A development build has no comparable version number and always counts
+> as upgradable, so an unattended update on a dev build installs the
+> latest release from the feed on the first occurrence.
 
 ### Update Source
 
-Both features read the same `update-url`, which points at an RSS/Atom feed
-of releases.  The setting is mandatory, and the factory configuration names
-the release channel a unit ships with, so a device always has a source to
-check.  Point it somewhere else to follow a fork or a customer-specific
-channel:
+`update-url` names an RSS/Atom feed of releases.  The factory
+configuration points it at the project's releases on GitHub:
 
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>set system software update-url https://github.com/kernelkit/infix/releases.atom</b>
-admin@example:/config/> <b>set system software allow-prerelease false</b>
-admin@example:/config/> <b>leave</b>
+<pre class="cli"><code>admin@example:/> <b>configure system</b>
+admin@example:/config/system/> <b>set software update-url https://github.com/kernelkit/infix/releases.atom</b>
+admin@example:/config/system/> <b>leave</b>
 </code></pre>
 
-The newest entry the feed offers decides the latest version.  Each entry
-must link to its release page as `<base>/releases/tag/<tag>`, and that is
-where the version tag comes from.
+Change it to follow a fork, or a feed of your own, see
+[Hosting Your Own Feed](#hosting-your-own-feed).
 
-Feeds commonly list release candidates alongside finished releases.  By
-default those are ignored, so only a final release is ever installed; set
-`allow-prerelease` to `true` to consider them.
+The newest entry in the feed decides the latest version.  Release
+candidates and other pre-releases are skipped unless `allow-prerelease`
+is set to `true`.
 
-A feed carries no asset list, so the per-platform bundle is fetched by
-convention from:
+On each occurrence the feed is fetched, and a release newer than the one
+that boots next is installed by streaming its bundle straight from the
+server.  Nothing is staged on disk, so no free space is needed, but the
+server must support HTTP range requests.  Only one update runs at a time,
+an occurrence that fires while an install is still running is skipped.
+
+### Hosting Your Own Feed
+
+Any static web server will do.  Atom and RSS 2.0 both work, and each
+entry links to its release page as `<base>/releases/tag/<tag>`.  That URL
+gives both the version tag and the base URL, from which the bundle for
+each platform is fetched by convention:
 
 ```
 <base>/releases/download/<tag>/<image-id>-<tag>.pkg
 ```
 
 where `<image-id>` is the running system's `IMAGE_ID`, e.g.
-`infix-aarch64`.  RAUC streams the bundle straight from that URL.  Nothing
-is staged on disk first, so the update needs no free space for the image,
-but the server must support HTTP range requests.
-
-### Hosting Your Own Feed
-
-Any static web server will do.  The feed and the bundles are plain files,
-and the device fetches the feed, then the `.pkg` whose URL it derives from
-the feed.
-
-Atom and RSS 2.0 both work.  An Atom feed carries one `<entry>` per
-release, each with a `<link>` whose `href` ends in `/releases/tag/<tag>`:
+`infix-aarch64`.  An Atom feed has one `<entry>` per release, each with a
+`<link>` whose `href` is the release page:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -272,8 +335,8 @@ release, each with a `<link>` whose `href` ends in `/releases/tag/<tag>`:
 </feed>
 ```
 
-An RSS 2.0 feed carries the same URLs, as the text of an `<item>` element's
-`<link>` rather than an attribute:
+An RSS 2.0 feed carries the same URL as the text of each `<item>`
+element's `<link>`:
 
 ```xml
 <?xml version="1.0"?>
@@ -287,10 +350,9 @@ An RSS 2.0 feed carries the same URLs, as the text of an `<item>` element's
 </rss>
 ```
 
-Everything before `/releases/tag/` in that URL becomes the base URL, so
-the example above resolves bundles under
-`https://releases.example.com/infix/releases/download/<tag>/`.  Lay the
-files out to match, naming the feed whatever `update-url` points at:
+The example resolves bundles under
+`https://releases.example.com/infix/releases/download/<tag>/`, so lay the
+files out to match and name the feed whatever `update-url` points at:
 
 ```
 infix/
@@ -304,9 +366,9 @@ infix/
 
 Then point the device at the feed:
 
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>set system software update-url https://releases.example.com/infix/releases.atom</b>
-admin@example:/config/> <b>leave</b>
+<pre class="cli"><code>admin@example:/> <b>configure system</b>
+admin@example:/config/system/> <b>set software update-url https://releases.example.com/infix/releases.atom</b>
+admin@example:/config/system/> <b>leave</b>
 </code></pre>
 
 **Requirements:**
@@ -315,12 +377,10 @@ admin@example:/config/> <b>leave</b>
   of each entry's `link`.  When that finds nothing, the URLs are read from
   the text of each RSS item's `link` instead
 - **Newest entry first.**  Selection follows feed order, so the first
-  entry that passes the pre-release filter wins.  A feed listing releases
-  oldest-first offers the oldest release
+  entry that passes the pre-release filter wins
 - **The tag is the last path segment** of the release URL, and it goes
   verbatim into the bundle filename.  A tag containing `-rc`, `-alpha` or
-  `-beta` counts as a pre-release, which is skipped unless
-  `allow-prerelease` is `true`
+  `-beta` counts as a pre-release
 - **One bundle per platform**, named `<image-id>-<tag>.pkg`.  A device
   looks only for its own `IMAGE_ID`, so one feed can serve several
   platforms
@@ -328,89 +388,13 @@ admin@example:/config/> <b>leave</b>
   it whole, so a server that ignores `Range` fails the install.  BusyBox
   `httpd` and nginx both work; Python's `http.server` does not
 
-The `/releases/tag/<tag>` URL only provides the base for the download URL
-and a human-readable link in the update-check notification.  The page
-itself does not have to exist.
+The release page itself does not have to exist, its URL only provides the
+tag, the download base, and a link in the update notice.
 
 > [!TIP]
 > Serving the feed over HTTPS requires a correct clock on the device, or
 > certificate validation fails and every occurrence is skipped.  Plain
 > HTTP avoids that on an isolated network.
-
-### Enabling Unattended Updates
-
-Unattended updates are off by default and need a [schedule][6] to trigger
-them.  The example below installs new releases during a nightly
-maintenance window, leaving the reboot to the operator.
-
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>set system schedule nightly recurrence frequency daily</b>
-admin@example:/config/> <b>set system schedule nightly recurrence byhour 3</b>
-admin@example:/config/> <b>set system software unattended-update enabled true</b>
-admin@example:/config/> <b>set system software unattended-update schedule nightly</b>
-admin@example:/config/> <b>set system software unattended-update reboot manual</b>
-admin@example:/config/> <b>leave</b>
-</code></pre>
-
-**Parameters:**
-
-- `enabled`: Enable unattended updates (default: `false`).  Without a
-  referenced schedule no updates are performed either way
-- `schedule`: The [schedule][6] whose occurrences trigger an update
-- `reboot`: What to do after a successful install
-    - `manual` (default): Install and flip the boot-order, but do not
-      reboot.  The new image activates the next time the operator reboots
-    - `immediate`: Reboot automatically to activate the new image at once
-
-### What Happens on Each Occurrence
-
-1. The feed is queried for the latest release.  If it cannot be reached,
-   the occurrence is logged and skipped, and the job exits successfully
-2. If the latest release is not newer than the running version, nothing
-   happens
-3. Otherwise the platform bundle is installed to the *inactive* partition,
-   and the boot-order is flipped to activate it on the next boot.  The
-   partition currently running is left untouched as a fallback
-4. Depending on the `reboot` policy, the system either reboots or logs
-   that a reboot is needed
-
-A single-instance lock means occurrences never overlap: if an install is
-still running when the next one fires, the new occurrence is skipped.
-
-> [!CAUTION]
-> An unattended update does no additional checks beyond those of a manual
-> `upgrade`: the previously running image remains on the other partition,
-> and the bootloader falls back to it if the new image does not boot.
-> Nothing verifies the new image beyond that, so see the caution under
-> [Upgrading](#upgrading) about upgrading only one partition at a time.
-
-### Monitoring
-
-Operator-facing messages go to `/var/log/messages`, while skipped
-occurrences are logged at `daemon.info`/`daemon.debug` in
-`/var/log/syslog`:
-
-```sh
-admin@example:~$ grep unattended-update /var/log/messages
-unattended-update: Installing v26.08.1 from https://.../infix-aarch64-v26.08.1.pkg (running v26.05.0)
-unattended-update: Installed v26.08.1; reboot to activate the new image
-```
-
-| Message                                      | Meaning                          |
-|----------------------------------------------|----------------------------------|
-| `Installing <tag> from <url> (running <ver>)`| Install started                  |
-| `Installed <tag>; reboot to activate …`      | Success, `reboot manual`         |
-| `No update available (current: …, latest: …)`| Ran, nothing to do               |
-| `Skipped: failed to query latest release …`  | Feed unreachable                 |
-| `Another update is already in progress …`    | Previous occurrence still running|
-
-`show software` reports installation state, slot contents and the boot
-order, both during and after the install.
-
-> [!TIP]
-> A system running a development build has no comparable version number
-> and is always considered upgradable, so an unattended update on a dev
-> build installs the latest release from the feed on the first occurrence.
 
 ## Configuration Migration
 

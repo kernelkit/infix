@@ -11,8 +11,10 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -141,11 +143,114 @@ type clock struct {
 type software struct {
 	Booted string         `json:"booted"`
 	Slot   []softwareSlot `json:"slot"`
+	Update swUpdateState  `json:"update"`
 }
 
 type softwareSlot struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
+}
+
+// RESTCONF JSON structures for the parts of ietf-system:system the
+// dashboard shows.
+
+type systemConfigWrapper struct {
+	System systemConfig `json:"ietf-system:system"`
+}
+
+type systemConfig struct {
+	Hostname  string   `json:"hostname"`
+	Contact   string   `json:"contact"`
+	Location  string   `json:"location"`
+	Software  swConfig `json:"infix-system:software"`
+	Schedules struct {
+		Schedule []scheduleEntry `json:"schedule"`
+	} `json:"infix-schedule:schedules"`
+}
+
+type swConfig struct {
+	UpdateURL   string       `json:"update-url"`
+	CheckUpdate swScheduled  `json:"check-update"`
+	Unattended  swUnattended `json:"unattended-update"`
+}
+
+// swScheduled is the infix-schedule scheduled-feature grouping.  Enabled
+// defaults to true and is left out of the response unless set.
+type swScheduled struct {
+	Enabled  *bool  `json:"enabled"`
+	Schedule string `json:"schedule"`
+}
+
+type swUnattended struct {
+	swScheduled
+	Reboot string `json:"reboot"`
+}
+
+// RESTCONF JSON structures for the infix-schedule:schedules configuration.
+
+type scheduleEntry struct {
+	Name       string `json:"name"`
+	Enabled    *bool  `json:"enabled"`
+	Recurrence struct {
+		Frequency string `json:"frequency"`
+		Interval  int    `json:"interval"`
+		ByHour    []int  `json:"byhour"`
+		ByMinute  []int  `json:"byminute"`
+		ByDay     []struct {
+			Weekday string `json:"weekday"`
+		} `json:"byday"`
+	} `json:"recurrence"`
+}
+
+// describeRecurrence is the short form of an ietf-schedule recurrence,
+// e.g. "daily at 03:00" or "every 2 weeks on monday at 04:15".
+func describeRecurrence(s scheduleEntry) string {
+	units := map[string]string{"minutely": "minute", "hourly": "hour", "daily": "day",
+		"weekly": "week", "monthly": "month", "yearly": "year"}
+	rec := s.Recurrence
+	freq := rec.Frequency
+	if i := strings.LastIndex(freq, ":"); i >= 0 {
+		freq = freq[i+1:]
+	}
+	interval := rec.Interval
+	if interval == 0 {
+		interval = 1
+	}
+	text := freq
+	if interval > 1 {
+		unit := units[freq]
+		if unit == "" {
+			unit = freq
+		}
+		text = fmt.Sprintf("every %d %ss", interval, unit)
+	}
+
+	var days []string
+	for _, d := range rec.ByDay {
+		days = append(days, d.Weekday)
+	}
+	if len(days) > 0 {
+		if interval == 1 {
+			text = strings.Join(days, ",")
+		} else {
+			text += " on " + strings.Join(days, ",")
+		}
+	}
+
+	if len(rec.ByHour) > 0 {
+		minutes := rec.ByMinute
+		if len(minutes) == 0 {
+			minutes = []int{0}
+		}
+		var times []string
+		for _, h := range rec.ByHour {
+			for _, m := range minutes {
+				times = append(times, fmt.Sprintf("%02d:%02d", h, m))
+			}
+		}
+		text += " at " + strings.Join(times, ",")
+	}
+	return text
 }
 
 type resourceUsage struct {
@@ -261,7 +366,9 @@ type dashboardData struct {
 	UpdateAvailable bool
 	UpdateMessage   string // verbatim CLI/login-banner notice
 	UpdateURL       string // release URL extracted from the notice
-	Error           string
+	// Software Updates card.
+	Update *updateEntry
+	Error  string
 }
 
 // gatewayEntry is a default route's next-hop.
@@ -357,15 +464,9 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	// The RESTCONF client's own 10 s timeout still bounds each call.
 	ctx := context.WithoutCancel(r.Context())
 	var (
-		state   systemStateWrapper
-		hw      hardwareWrapper
-		sysConf struct {
-			System struct {
-				Hostname string `json:"hostname"`
-				Contact  string `json:"contact"`
-				Location string `json:"location"`
-			} `json:"ietf-system:system"`
-		}
+		state                    systemStateWrapper
+		hw                       hardwareWrapper
+		sysConf                  systemConfigWrapper
 		ifaces                   interfacesWrapper
 		routes                   ribWrapper
 		stateErr, hwErr, confErr error
@@ -383,7 +484,9 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}()
 	go func() {
 		defer wg.Done()
-		confErr = h.RC.Get(ctx, "/data/ietf-system:system", &sysConf)
+		// Running, not /data: statd serves operational data for the system
+		// container and that answer hides running config it does not emit.
+		confErr = h.RC.Get(ctx, "/ds/ietf-datastores:running/ietf-system:system", &sysConf)
 	}()
 	// Connectivity/Addresses cards are best-effort: a failure here logs but
 	// doesn't fault the whole dashboard, so the card simply renders empty.
@@ -517,6 +620,9 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		data.Hostname = sysConf.System.Hostname
 		data.Contact = sysConf.System.Contact
 		data.Location = sysConf.System.Location
+		u := newUpdateEntry(sysConf.System.Software, sysConf.System.Schedules.Schedule,
+			state.SystemState.Software.Update)
+		data.Update = &u
 	}
 
 	// Connectivity & Addresses cards (best-effort, independent of the above).
@@ -655,6 +761,81 @@ func validZone(s string) bool {
 }
 
 // softwareVersion returns the version string for the booted software slot.
+// updateEntry is the Software Updates card: triggers from the
+// configuration, outcome of the last run from the operational data.
+// Rendered even when nothing is configured, so the feature is visible.
+type updateEntry struct {
+	swUpdateState
+	Source      string
+	SourceShort string // file name of Source, for the card
+	Check       string // schedule name, "paused" or "not configured"
+	Unattended  string
+}
+
+// shortURL is the last path element of a URL, or its host when there is
+// none, so a feed URL fits on one line of the card.  The card links the
+// full URL and shows it on hover.
+func shortURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return raw
+	}
+	if base := path.Base(u.Path); base != "." && base != "/" {
+		return base
+	}
+	return u.Host
+}
+
+// scheduledText describes a scheduled feature's trigger, with the
+// recurrence of the schedule it references when that is known.
+func scheduledText(s swScheduled, schedules []scheduleEntry) string {
+	if s.Schedule == "" {
+		return "not configured"
+	}
+	if s.Enabled != nil && !*s.Enabled {
+		return s.Schedule + " (paused)"
+	}
+	for _, sched := range schedules {
+		if sched.Name != s.Schedule {
+			continue
+		}
+		text := s.Schedule + " (" + describeRecurrence(sched) + ")"
+		if sched.Enabled != nil && !*sched.Enabled {
+			text += ", schedule disabled"
+		}
+		return text
+	}
+	return s.Schedule
+}
+
+// swTime trims a yang:date-and-time to "YYYY-MM-DD HH:MM:SS".
+func swTime(t string) string {
+	if len(t) > 19 {
+		t = t[:19]
+	}
+	return strings.Replace(t, "T", " ", 1)
+}
+
+func newUpdateEntry(cfg swConfig, schedules []scheduleEntry, state swUpdateState) updateEntry {
+	unattended := scheduledText(cfg.Unattended.swScheduled, schedules)
+	if cfg.Unattended.Schedule != "" {
+		reboot := cfg.Unattended.Reboot
+		if reboot == "" {
+			reboot = "manual"
+		}
+		unattended += ", reboot " + reboot
+	}
+	state.LastCheck = swTime(state.LastCheck)
+	state.LastInstall = swTime(state.LastInstall)
+	return updateEntry{
+		swUpdateState: state,
+		Source:        cfg.UpdateURL,
+		SourceShort:   shortURL(cfg.UpdateURL),
+		Check:         scheduledText(cfg.CheckUpdate, schedules),
+		Unattended:    unattended,
+	}
+}
+
 func softwareVersion(sw software) string {
 	for _, slot := range sw.Slot {
 		if slot.Name == sw.Booted {
