@@ -1,6 +1,11 @@
 package handlers
 
-import "testing"
+import (
+	"bytes"
+	"io"
+	"os"
+	"testing"
+)
 
 func TestOtherSlots(t *testing.T) {
 	tests := []struct {
@@ -38,5 +43,38 @@ func TestOtherSlots(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type memPart struct{ *bytes.Reader }
+
+func (memPart) Close() error { return nil }
+
+func TestKeepUpload(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+
+	spilled, err := os.CreateTemp("", "multipart-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	spilled.WriteString("bundle")
+	spilled.Seek(0, io.SeekStart)
+	path, err := keepUpload(spilled)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(spilled.Name()); !os.IsNotExist(err) {
+		t.Errorf("spilled part still present, was copied rather than renamed")
+	}
+	if b, _ := os.ReadFile(path); string(b) != "bundle" {
+		t.Errorf("kept bundle = %q", b)
+	}
+
+	path, err = keepUpload(memPart{bytes.NewReader([]byte("small"))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "small" {
+		t.Errorf("kept small bundle = %q", b)
 	}
 }
