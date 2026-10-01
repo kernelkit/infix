@@ -2202,12 +2202,13 @@ def show_software(json, name):
         print(f"Boot order : {order}")
         print("")
 
+        rootfs = [s for s in map(Software, reversed(slots)) if s.is_rootfs()]
+        PadSoftware.version = max([PadSoftware.version] + [len(s.version) + 2 for s in rootfs])
         hdr = (f"{'NAME':<{PadSoftware.name}}"
                f"{'STATE':<{PadSoftware.state}}"
                f"{'VERSION':<{PadSoftware.version}}"
                f"{'DATE':<{PadSoftware.date}}")
         print(Decore.invert(hdr))
-        rootfs = [s for s in map(Software, reversed(slots)) if s.is_rootfs()]
         for slot in rootfs:
             slot.print()
 
