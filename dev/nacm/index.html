@@ -1553,10 +1553,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#tldr-the-factory-defaults-work" class="md-nav__link">
+  <a href="#the-factory-defaults-work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        TL;DR - The Factory Defaults Work
+        The Factory Defaults Work
       
     </span>
   </a>
@@ -2735,10 +2735,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#tldr-the-factory-defaults-work" class="md-nav__link">
+  <a href="#the-factory-defaults-work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        TL;DR - The Factory Defaults Work
+        The Factory Defaults Work
       
     </span>
   </a>
@@ -3108,55 +3108,45 @@
 
 
 <h1 id="network-access-control-model-nacm">Network Access Control Model (NACM)<a class="headerlink" href="#network-access-control-model-nacm" title="Permanent link">¶</a></h1>
-<p>NETCONF Access Control Model (<a href="https://www.rfc-editor.org/rfc/rfc8341">RFC 8341</a>) provides fine-grained access
-control for YANG data models. NACM controls who can read, write, and
-execute operations on specific parts of the configuration and operational
-state.</p>
-<p>This document provides technical details about how NACM works, how rules
-are evaluated, and best practices for creating custom access control
-policies.</p>
+<p>The NETCONF Access Control Model (<a href="https://www.rfc-editor.org/rfc/rfc8341">RFC 8341</a>) controls who can read,
+write, and execute operations on specific parts of the configuration and
+operational state.  This document describes how rules are evaluated and
+how to write access control policies of your own.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>For a practical introduction to user management and the built-in user
 levels (admin, operator, guest), see the <a href="../system/#multiple-users">Multiple Users</a> section
 in the System Configuration guide.</p>
 </div>
-<h2 id="tldr-the-factory-defaults-work">TL;DR - The Factory Defaults Work<a class="headerlink" href="#tldr-the-factory-defaults-work" title="Permanent link">¶</a></h2>
-<p><strong>You don't need to understand NACM to use the system securely.</strong></p>
-<p>The factory configuration implements a "permit by default, deny sensitive
-items" policy that provides:</p>
-<ul>
-<li><strong>Immediate usability</strong> - Operators can configure the entire system
-  without custom NACM rules</li>
-<li><strong>Automatic security</strong> - Passwords, cryptographic keys, and dangerous
-  operations are protected out-of-the-box</li>
-<li><strong>Future-proof design</strong> - New features work immediately without NACM
-  updates</li>
-</ul>
-<p>The three built-in user levels (admin, operator, guest) cover most use
-cases. Only read on if you need to create custom access control policies.</p>
+<h2 id="the-factory-defaults-work">The Factory Defaults Work<a class="headerlink" href="#the-factory-defaults-work" title="Permanent link">¶</a></h2>
+<p>You do not need to understand NACM to use the system securely.  The
+factory configuration permits everything by default and denies only the
+sensitive items: passwords, cryptographic keys, and operations such as
+factory reset and software upgrade.  Operators can configure the whole
+system without custom rules, and a new feature is configurable the day
+it lands, since nothing in the policy has to be updated for it.</p>
+<p>The three built-in user levels (admin, operator, guest) cover most
+needs.  Read on only if you need to write access control policies of
+your own.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">¶</a></h2>
-<p>NACM provides three types of access control:</p>
-<ul>
-<li><strong>Data node access</strong> - Control read/write access to configuration and state</li>
-<li><strong>Operation access</strong> - Control execution of RPCs (remote procedure calls)</li>
-<li><strong>Notification access</strong> - Control subscription to event notifications (not covered here)</li>
-</ul>
-<p>Access is controlled through:</p>
+<p>NACM controls three things: read and write access to data nodes,
+execution of RPCs (remote procedure calls), and subscription to event
+notifications.  Notifications are not covered here.</p>
+<p>Three mechanisms decide the outcome of an access check, and they are
+covered in turn below:</p>
 <ol>
-<li><strong>Global defaults</strong> - Default permissions for read/write/exec</li>
-<li><strong>YANG-level annotations</strong> - Security markers in YANG modules (see below)</li>
-<li><strong>NACM rules</strong> - Explicit permit/deny rules organized in rule-lists</li>
+<li>Global defaults for read, write, and exec</li>
+<li>Annotations in the YANG modules themselves</li>
+<li>Explicit permit and deny rules, organized in rule-lists</li>
 </ol>
 <h2 id="rule-evaluation">Rule Evaluation<a class="headerlink" href="#rule-evaluation" title="Permanent link">¶</a></h2>
-<p>NACM rules are evaluated in a specific order:</p>
-<ol>
-<li><strong>Rule-lists are processed sequentially</strong> in the order they appear in the configuration</li>
-<li><strong>Within each rule-list</strong>, rules are evaluated sequentially</li>
-<li><strong>First matching rule wins</strong> - no further rules are evaluated</li>
-<li><strong>If no rule matches</strong>, global defaults apply (read-default, write-default, exec-default)</li>
-<li><strong>YANG annotations override everything</strong> - <code>nacm:default-deny-all</code> in a YANG module requires an explicit permit rule regardless of global defaults</li>
-</ol>
+<p>Rule-lists are processed in the order they appear in the configuration,
+and within each rule-list the rules are tried in order.  The first
+matching rule wins and no further rules are evaluated.  If no rule
+matches, the global defaults apply.</p>
+<p>The one exception is a node annotated with <code>nacm:default-deny-all</code> or
+<code>nacm:default-deny-write</code> in its YANG module.  Such a node always
+requires an explicit permit rule, whatever the global defaults say.</p>
 <h3 id="example-rule-evaluation">Example Rule Evaluation<a class="headerlink" href="#example-rule-evaluation" title="Permanent link">¶</a></h3>
 <p>Given this configuration:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
@@ -3190,13 +3180,38 @@ cases. Only read on if you need to create custom access control policies.</p>
 <a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">  </span><span class="p">]</span>
 <a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="p">}</span>
 </code></pre></div>
-<p>When operator user "jacky" tries to:</p>
-<ul>
-<li><strong>Read password</strong>: Matches "deny-passwords" → <strong>DENIED</strong></li>
-<li><strong>Write interface config</strong>: No match, uses write-default → <strong>PERMITTED</strong> (write-default=permit)</li>
-<li><strong>Write hostname</strong>: No match, uses write-default → <strong>PERMITTED</strong> (write-default=permit)</li>
-<li><strong>Reboot system</strong>: Matches "permit-system-rpcs" → <strong>PERMITTED</strong> (overrides <code>nacm:default-deny-all</code>)</li>
-</ul>
+<p>The operator user "jacky" gets the following results:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Matching rule</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read a password</td>
+<td><code>deny-passwords</code></td>
+<td>Denied</td>
+</tr>
+<tr>
+<td>Write interface config</td>
+<td>none</td>
+<td>Permitted by <code>write-default</code></td>
+</tr>
+<tr>
+<td>Write hostname</td>
+<td>none</td>
+<td>Permitted by <code>write-default</code></td>
+</tr>
+<tr>
+<td>Reboot the system</td>
+<td><code>permit-system-rpcs</code></td>
+<td>Permitted, despite <code>nacm:default-deny-all</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="global-defaults">Global Defaults<a class="headerlink" href="#global-defaults" title="Permanent link">¶</a></h2>
 <p>NACM has three global defaults that apply when no rule matches:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
@@ -3205,29 +3220,21 @@ cases. Only read on if you need to create custom access control policies.</p>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">"exec-default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">}</span>
 </code></pre></div>
-<p><strong>Factory configuration defaults:</strong></p>
-<ul>
-<li><code>read-default: "permit"</code> - Users can read configuration and state by default</li>
-<li><code>write-default: "permit"</code> - Users can modify configuration by default</li>
-<li><code>exec-default: "permit"</code> - Users can execute RPCs by default</li>
-</ul>
-<p>This permit-by-default approach, combined with targeted denials for
-sensitive items (passwords, cryptographic keys), provides a balance
-between usability and security. It also makes the system "future proof" -
-when new YANG modules are added, operators can immediately configure them
-without updating NACM rules.</p>
+<p>These are also the factory settings: any user may read, modify, and
+execute anything that no rule or YANG annotation denies.  Combined with
+a few denials for sensitive items, this keeps the rule set small, and a
+new YANG module needs no NACM changes before operators can use it.</p>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
-<p>YANG modules with <code>nacm:default-deny-all</code> or <code>nacm:default-deny-write</code>
-annotations override these global defaults. You must create explicit
-permit rules for those operations.</p>
+<p>Nodes annotated with <code>nacm:default-deny-all</code> or <code>nacm:default-deny-write</code>
+in their YANG module ignore these defaults.  They need an explicit
+permit rule.</p>
 </div>
 <h2 id="module-name-vs-path">Module-Name vs Path<a class="headerlink" href="#module-name-vs-path" title="Permanent link">¶</a></h2>
-<p>NACM rules can match operations using either <code>module-name</code> or <code>path</code>.
-The following sub-sections provide detailed information and examples of
-both.</p>
+<p>A rule selects its target with either <code>module-name</code> or <code>path</code>.  The
+difference matters for augmented modules.</p>
 <h3 id="module-name-matching">Module-Name Matching<a class="headerlink" href="#module-name-matching" title="Permanent link">¶</a></h3>
-<p>Matches all nodes <strong>defined</strong> in a specific YANG module:</p>
+<p>Matches all nodes defined in one YANG module:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit-keystore"</span><span class="p">,</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"module-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ietf-keystore"</span><span class="p">,</span>
@@ -3235,17 +3242,14 @@ both.</p>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">}</span>
 </code></pre></div>
-<p>This permits all operations on data <strong>defined</strong> in ietf-keystore, but does
-NOT cover augments from other modules.</p>
-<p><strong>Example:</strong> The <code>/interfaces/interface/ipv4/address</code> path:</p>
-<ul>
-<li>Interface is defined in <code>ietf-interfaces</code></li>
-<li>IPv4 config is defined in <code>ietf-ip</code> (augments ietf-interfaces)</li>
-<li>A rule with <code>module-name: "ietf-interfaces"</code> does NOT cover ipv4/address</li>
-</ul>
+<p>This permits all operations on data defined in ietf-keystore, but not on
+nodes that other modules augment into it.  For example, the interface
+list is defined in ietf-interfaces, while its IPv4 settings come from
+ietf-ip, which augments it.  A rule naming ietf-interfaces therefore
+does not cover <code>/interfaces/interface/ipv4/address</code>.</p>
 <h3 id="path-matching">Path Matching<a class="headerlink" href="#path-matching" title="Permanent link">¶</a></h3>
-<p>Matches a specific data tree path and <strong>all nodes under it</strong>, including
-augments from other modules:</p>
+<p>Matches a subtree of the data tree, including nodes augmented into it
+from other modules:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit-network-config"</span><span class="p">,</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/ietf-interfaces:interfaces/interface"</span><span class="p">,</span>
@@ -3253,38 +3257,29 @@ augments from other modules:</p>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
 </code></pre></div>
-<p>This permits operations on <code>/interfaces/interface</code> <strong>and all child nodes</strong>,
-including augments like:</p>
-<ul>
-<li><code>/interfaces/interface/ipv4</code> (from ietf-ip)</li>
-<li><code>/interfaces/interface/ipv6</code> (from ietf-ip)</li>
-<li><code>/interfaces/interface/bridge-port</code> (from infix-interfaces)</li>
-</ul>
-<p><strong>Path syntax:</strong></p>
-<ul>
-<li>
-<p>When used <strong>with</strong> module-name: Path is module-relative (no prefix)</p>
+<p>This permits operations on <code>/interfaces/interface</code> and everything below
+it, including the <code>ipv4</code> and <code>ipv6</code> containers from ietf-ip and
+<code>bridge-port</code> from infix-interfaces.</p>
+<p>The path is written differently depending on whether the rule also has
+a <code>module-name</code>.  With one, the path is relative to that module and
+carries no prefix:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">"module-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ietf-system"</span><span class="p">,</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/system/authentication/user/password"</span>
 </code></pre></div>
-</li>
-<li>
-<p>When used <strong>without</strong> module-name: Path must include module prefix</p>
+<p>Without one, the path must start with the module prefix:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/ietf-system:system/authentication/user/password"</span>
 </code></pre></div>
-</li>
-</ul>
 <div class="admonition tip">
 <p class="admonition-title">Use path-based rules</p>
-<p>When you want to permit/deny access to a configuration subtree
-including all augments, e.g., all IP settings below
-<code>/ietf-interfaces:interfaces/</code>.  This is more flexible and requires
-less maintenance as new features are added.</p>
+<p>To permit or deny a configuration subtree including its augments, e.g.,
+all IP settings below <code>/ietf-interfaces:interfaces/</code>, use a path rule.
+It keeps working as new augments are added.</p>
 </div>
 <h2 id="yang-level-annotations">YANG-Level Annotations<a class="headerlink" href="#yang-level-annotations" title="Permanent link">¶</a></h2>
-<p>Many YANG modules include NACM annotations that provide baseline security:</p>
+<p>Many YANG modules mark their sensitive nodes with NACM annotations, so a
+baseline of protection exists before any rule is written.</p>
 <h3 id="nacmdefault-deny-all">nacm:default-deny-all<a class="headerlink" href="#nacmdefault-deny-all" title="Permanent link">¶</a></h3>
-<p>Requires an explicit permit rule, regardless of global defaults:</p>
+<p>Requires an explicit permit rule, whatever the global defaults say:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">rpc</span><span class="w"> </span><span class="nv">system-restart</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nn">nacm</span><span class="p">:</span><span class="nv">default-deny-all</span><span class="p">;</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="k">description</span><span class="w"> </span><span class="s2">"Restart the system"</span><span class="p">;</span>
@@ -3302,8 +3297,7 @@ execute system-restart.</p>
 <p>Even with <code>write-default: "permit"</code>, users need an explicit permit rule to
 modify authentication settings.</p>
 <h3 id="protected-operations">Protected Operations<a class="headerlink" href="#protected-operations" title="Permanent link">¶</a></h3>
-<p>The following are protected by YANG annotations and require explicit permits:</p>
-<p><strong>RPC Operations:</strong></p>
+<p>The following RPCs are annotated and need an explicit permit:</p>
 <ul>
 <li><code>ietf-factory-default:factory-reset</code> (<a href="https://www.rfc-editor.org/rfc/rfc8808">RFC 8808</a>)</li>
 <li><code>infix-factory-default:factory-default</code></li>
@@ -3315,7 +3309,7 @@ modify authentication settings.</p>
 <li><code>infix-system-software:set-boot-order</code></li>
 <li><code>infix-syslog:log</code></li>
 </ul>
-<p><strong>Data Containers:</strong></p>
+<p>So do these data containers:</p>
 <ul>
 <li><code>/system/authentication</code> (<code>nacm:default-deny-write</code>, <a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a>)</li>
 <li><code>/system/advanced</code> (<code>nacm:default-deny-write</code>, boot scripts and daemon
@@ -3325,8 +3319,8 @@ modify authentication settings.</p>
 <li>RADIUS shared secrets (<a href="https://www.rfc-editor.org/rfc/rfc7317">ietf-system</a>)</li>
 <li>TLS client/server credentials (<a href="https://datatracker.ietf.org/doc/html/draft-ietf-netconf-tls-client-server">ietf-tls-client</a>)</li>
 </ul>
-<p>This provides defense-in-depth - even if NACM rules are misconfigured, these
-critical operations remain protected.</p>
+<p>A mistake in the NACM rules therefore cannot open up these operations
+by accident.</p>
 <h2 id="access-operations">Access Operations<a class="headerlink" href="#access-operations" title="Permanent link">¶</a></h2>
 <p>NACM supports the following access operations:</p>
 <ul>
@@ -3337,12 +3331,8 @@ critical operations remain protected.</p>
 <li><code>exec</code> - Execute RPC operations</li>
 <li><code>*</code> - All operations (wildcard)</li>
 </ul>
-<p><strong>Common combinations:</strong></p>
-<ul>
-<li><code>"create update delete"</code> - All write operations</li>
-<li><code>"*"</code> - Everything (read, write, execute)</li>
-<li><code>"read"</code> - Read-only access</li>
-</ul>
+<p>A rule may list several, e.g., <code>"create update delete"</code> for all write
+operations.</p>
 <h2 id="rule-list-groups">Rule-List Groups<a class="headerlink" href="#rule-list-groups" title="Permanent link">¶</a></h2>
 <p>Each rule-list applies to one or more user groups:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
@@ -3351,17 +3341,13 @@ critical operations remain protected.</p>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">"rule"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">}</span>
 </code></pre></div>
-<p><strong>Special group names:</strong></p>
-<ul>
-<li><code>"*"</code> - Matches all users (including those not in any NACM group)</li>
-</ul>
-<p><strong>Evaluation:</strong>
-A user can be in multiple NACM groups. All rule-lists matching the user's
-groups are evaluated in order until a matching rule is found.</p>
+<p>The group <code>"*"</code> matches all users, including those not in any NACM
+group.  A user can be in several groups, in which case every rule-list
+for any of those groups is evaluated, in configuration order, until a
+rule matches.</p>
 <h2 id="example-factory-configuration">Example: Factory Configuration<a class="headerlink" href="#example-factory-configuration" title="Permanent link">¶</a></h2>
-<p>The factory configuration uses a "permit by default, deny sensitive items"
-approach. This design is "future proof" - when new YANG modules are added,
-operators can immediately configure them without updating NACM rules.</p>
+<p>The factory configuration permits by default and denies the sensitive
+items, with six rules in total:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">"ietf-netconf-acm:nacm"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">"enable-nacm"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
@@ -3447,16 +3433,14 @@ operators can immediately configure them without updating NACM rules.</p>
 <a id="__codelineno-9-83" name="__codelineno-9-83" href="#__codelineno-9-83"></a><span class="w">  </span><span class="p">}</span>
 <a id="__codelineno-9-84" name="__codelineno-9-84" href="#__codelineno-9-84"></a><span class="p">}</span>
 </code></pre></div>
-<p><strong>Key design decisions:</strong></p>
-<ol>
-<li><strong>Permit by default</strong> - <code>write-default: permit</code> allows operators to configure any module</li>
-<li><strong>Minimal operator rules</strong> - Only one rule to permit system RPCs (reboot, set time)</li>
-<li><strong>Future proof</strong> - New YANG modules automatically configurable by operators</li>
-<li><strong>Targeted denials</strong> - Only sensitive items (passwords, keys) are explicitly denied</li>
-<li><strong>Global denials</strong> - Password/keystore/truststore denied for everyone via group "*"</li>
-<li><strong>YANG annotations</strong> - Sensitive operations (factory-reset, software upgrades) still protected by <code>nacm:default-deny-all</code> in YANG modules</li>
-</ol>
-<p><strong>Effective permissions by group:</strong></p>
+<p>The admin rule-list comes first, so its <code>permit-all</code> rule wins before
+the global denials in the <code>"*"</code> rule-list are ever reached.  Operators
+need only one rule, the permit for the ietf-system RPCs, since the
+defaults already let them configure any module.  Passwords, keystore,
+and truststore are denied for everyone else through the <code>"*"</code> group.
+Factory reset and software upgrade are not mentioned at all, their YANG
+annotations keep them admin-only.</p>
+<p>The resulting permissions per group:</p>
 <table>
 <thead>
 <tr>
@@ -3493,7 +3477,7 @@ operators can immediately configure them without updating NACM rules.</p>
 </table>
 <h2 id="common-patterns">Common Patterns<a class="headerlink" href="#common-patterns" title="Permanent link">¶</a></h2>
 <h3 id="permit-by-default">Permit-by-Default<a class="headerlink" href="#permit-by-default" title="Permanent link">¶</a></h3>
-<p>The factory default approach - allow everything except sensitive items:</p>
+<p>The factory approach, allow everything except the sensitive items:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">"write-default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span><span class="p">,</span>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">"exec-default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permit"</span><span class="p">,</span>
@@ -3525,12 +3509,10 @@ operators can immediately configure them without updating NACM rules.</p>
 <a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a><span class="w">  </span><span class="p">]</span>
 <a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="p">}</span>
 </code></pre></div>
-<p>This approach is "future proof" - new YANG modules are automatically
-accessible without rule updates.  Admins bypass the global denials
-because their <code>permit-all</code> rule is evaluated first.</p>
+<p>New YANG modules are accessible without rule updates, and admins bypass
+the global denials because their <code>permit-all</code> rule is evaluated first.</p>
 <h3 id="deny-by-default">Deny-by-Default<a class="headerlink" href="#deny-by-default" title="Permanent link">¶</a></h3>
-<p>More restrictive approach - deny everything except what is explicitly
-allowed:</p>
+<p>Deny everything except what is explicitly allowed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span>
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">"write-default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deny"</span><span class="p">,</span>
 <a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">"exec-default"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deny"</span><span class="p">,</span>
@@ -3551,10 +3533,11 @@ allowed:</p>
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>This requires updating NACM rules whenever new features are added.</p>
+<p>The rules need updating whenever a new feature is added.</p>
 </div>
 <h3 id="global-restrictions">Global Restrictions<a class="headerlink" href="#global-restrictions" title="Permanent link">¶</a></h3>
-<p>Deny access to sensitive data for all users (except admins with permit-all):</p>
+<p>Deny sensitive data for all users, except admins whose <code>permit-all</code> rule
+is evaluated first:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">"rule-list"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="p">{</span>
@@ -3573,7 +3556,7 @@ allowed:</p>
 </code></pre></div>
 <h2 id="debugging-nacm">Debugging NACM<a class="headerlink" href="#debugging-nacm" title="Permanent link">¶</a></h2>
 <h3 id="viewing-effective-permissions">Viewing Effective Permissions<a class="headerlink" href="#viewing-effective-permissions" title="Permanent link">¶</a></h3>
-<p>Check what NACM groups a user belongs to:</p>
+<p><code>show nacm</code> lists the defaults, the groups, and which users are in them:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>show nacm</b>
 enabled              : yes
 default read access  : permit
@@ -3638,7 +3621,7 @@ applicable rules : 4
 <h3 id="testing-access">Testing Access<a class="headerlink" href="#testing-access" title="Permanent link">¶</a></h3>
 <p>The easiest way to test NACM permissions is to log in as the user and try
 the operation:</p>
-<pre class="cli"><code>$ ssh jacky@host
+<pre class="cli"><code>$ <b>ssh jacky@host</b>
 jacky@example:/&gt; <b>configure</b>
 jacky@example:/config/&gt; <b>edit system authentication user admin</b>
 jacky@example:/config/system/authentication/user/admin/&gt; <b>set authorized-key foo</b>
@@ -3656,46 +3639,25 @@ the statistics:</p>
 ...
 </code></pre>
 
-<p>Increasing counters indicate permission denials are occurring.</p>
+<p>Counters that keep increasing mean some user is being denied.</p>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">¶</a></h2>
-<ol>
-<li>
-<p><strong>Leverage permit-by-default</strong> - The factory configuration uses
-   <code>write-default: "permit"</code> with targeted denials. This is "future proof" -
-   new features work immediately without NACM updates.</p>
-</li>
-<li>
-<p><strong>Protect sensitive items globally</strong> - Use <code>group: ["*"]</code> rule-list to
-   deny access to passwords, cryptographic keys, and similar sensitive data.
-   Admin's permit-all rule (evaluated first) bypasses these denials.</p>
-</li>
-<li>
-<p><strong>Leverage YANG annotations</strong> - Many sensitive operations are already
-   protected by <code>nacm:default-deny-all</code> in YANG modules (factory-reset,
-   software upgrades, etc.). Only add explicit permit rules when needed.</p>
-</li>
-<li>
-<p><strong>Order matters</strong> - Rule-lists are evaluated in order. Place admin's
-   permit-all rule first so it bypasses global denials.</p>
-</li>
-<li>
-<p><strong>Use path-based denials</strong> - For protecting specific data (like password
-   hashes), use path rules. For protecting entire modules (like keystore),
-   use module-name rules.</p>
-</li>
-<li>
-<p><strong>Test thoroughly</strong> - Always test user permissions after changes. NACM
-   errors can be subtle (nodes may be silently omitted from read operations).</p>
-</li>
-<li>
-<p><strong>Keep it simple</strong> - The factory configuration uses only 6 rules for
-   three user levels. Fewer rules are easier to understand and maintain.</p>
-</li>
-<li>
-<p><strong>Document rules</strong> - Use the "comment" field to explain why specific
-   permissions are granted or denied.</p>
-</li>
-</ol>
+<p>Start from the factory configuration rather than from scratch.  Keep the
+permit defaults and add denials for what must be protected, rather than
+denying everything and permitting piece by piece.  The former needs no
+attention when new features arrive, the latter does.</p>
+<p>Put the admin rule-list first.  Rule-lists are evaluated in order, and
+the <code>permit-all</code> rule has to win before any global denial is reached.
+Then put the denials that apply to everyone else in a <code>"*"</code> rule-list,
+and leave the operations that YANG already annotates alone, they are
+protected without any rule.</p>
+<p>Pick the matcher for the target: a path rule for one piece of data,
+such as the password hashes, and a module-name rule for a whole module,
+such as the keystore.</p>
+<p>Test as the affected user after every change.  A denied read does not
+produce an error, the node is simply left out of the reply, so a rule
+mistake is easy to miss.  Fewer rules are easier to check this way; the
+factory configuration gets by with six for three user levels.  Give
+every rule a <code>comment</code> saying why it exists.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h2>
 <ul>
 <li><a href="https://www.rfc-editor.org/rfc/rfc8341">RFC 8341: Network Configuration Access Control Model (NACM)</a></li>
