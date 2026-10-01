@@ -32,6 +32,8 @@ All notable changes to the project are documented in this file.
   release feed on a schedule and install a newer release to the inactive
   partition on its own, then either reboot to activate it or leave it staged for
   the next reboot, see [Unattended Software Updates][unattended]
+- The factory configuration now provides two schedules, `nightly` and `weekly`,
+  ready to be referenced by any scheduled feature
 - Features that run on a schedule are now active as soon as they reference
   one, see [Scheduling][schedule] for details
 - Add Novarq Tactical-1000 support: LAN9696 (Laguna) switch with 24 GbE copper
