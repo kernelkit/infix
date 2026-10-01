@@ -1721,10 +1721,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#creating-a-schedule" class="md-nav__link">
+  <a href="#schedules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Creating a Schedule
+        Schedules
       
     </span>
   </a>
@@ -2485,10 +2485,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#creating-a-schedule" class="md-nav__link">
+  <a href="#schedules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Creating a Schedule
+        Schedules
       
     </span>
   </a>
@@ -2608,44 +2608,37 @@
 
 
 <h1 id="scheduling">Scheduling<a class="headerlink" href="#scheduling" title="Permanent link">¶</a></h1>
-<p>Some system functions run periodically instead of on demand.  One such
-type of recurrence is scheduled activities, like checking for new software
-updates or rebooting in a nightly maintenance window.</p>
-<p>The recurrence itself lives in one place: a <em>named schedule</em>, which any
-number of features can point at.  A schedule has no action of its own, it
-only says <em>when</em> something should happen, and the feature referencing it
-decides <em>what</em> happens.  Two features can share the same schedule.</p>
-<p>YANG support is defined in <a href="https://github.com/kernelkit/infix/blob/main/src/confd/yang/confd/infix-schedule.yang">infix-schedule</a>, which augments
-<code>ietf-system</code> with a <code>schedules</code> container and builds on the iCalendar
-recurrence grouping from <a href="https://www.rfc-editor.org/rfc/rfc9922">ietf-schedule</a> (RFC 9922).</p>
-<h2 id="creating-a-schedule">Creating a Schedule<a class="headerlink" href="#creating-a-schedule" title="Permanent link">¶</a></h2>
-<p>Every schedule has a name, which is how features refer to it, and a
-recurrence rule, which decides when it fires.  The example below fires
-every night at 03:30.</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit system schedule nightly</b>
-admin@example:/config/system/schedule/nightly/&gt; <b>set description "Nightly maintenance window"</b>
-admin@example:/config/system/schedule/nightly/&gt; <b>set recurrence frequency daily</b>
-admin@example:/config/system/schedule/nightly/&gt; <b>set recurrence byhour 3</b>
-admin@example:/config/system/schedule/nightly/&gt; <b>set recurrence byminute 30</b>
-admin@example:/config/system/schedule/nightly/&gt; <b>leave</b>
+<p>Some things happen on a timer rather than on demand: checking for new
+software, installing it, or rebooting in a maintenance window.  The timer
+is a <em>named schedule</em>, which says when something happens.  Features point
+at a schedule by name and decide what happens, so one schedule can drive
+several features.</p>
+<h2 id="schedules">Schedules<a class="headerlink" href="#schedules" title="Permanent link">¶</a></h2>
+<p>A schedule has a name and a recurrence rule.  A fresh unit has two, from
+the factory configuration.  Written as CLI commands, they look like this:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure system</b>
+admin@example:/config/system/&gt; <b>edit schedule nightly</b>
+admin@example:/config/system/…/nightly/&gt; <b>set description "Every night at 03:00"</b>
+admin@example:/config/system/…/nightly/&gt; <b>set recurrence frequency daily</b>
+admin@example:/config/system/…/nightly/&gt; <b>set recurrence byhour 3</b>
+admin@example:/config/system/…/nightly/&gt; <b>end</b>
+admin@example:/config/system/&gt; <b>edit schedule weekly</b>
+admin@example:/config/system/…/weekly/&gt; <b>set description "Sunday nights at 03:00"</b>
+admin@example:/config/system/…/weekly/&gt; <b>set recurrence frequency weekly</b>
+admin@example:/config/system/…/weekly/&gt; <b>set recurrence byday sunday</b>
+admin@example:/config/system/…/weekly/&gt; <b>set recurrence byhour 3</b>
+admin@example:/config/system/…/weekly/&gt; <b>leave</b>
 </code></pre>
 
-<p><strong>Schedule parameters:</strong></p>
-<ul>
-<li><code>name</code>: Unique identifier, 1-64 characters, starting with a letter or
-  digit and otherwise limited to letters, digits, <code>_</code>, <code>.</code> and <code>-</code>.  The
-  name is used verbatim by features referencing it</li>
-<li><code>enabled</code>: Turn the schedule on or off (default: <code>true</code>).  When off,
-  everything that uses it stops running, but the schedule is kept</li>
-<li><code>description</code>: Optional human-readable note on the schedule's purpose</li>
-<li><code>recurrence</code>: The recurrence rule.  A schedule without one is rejected
-  at commit time</li>
-</ul>
+<p>The name is how features refer to the schedule.  It is 1 to 64
+characters, starts with a letter or digit, and otherwise uses letters,
+digits, <code>_</code>, <code>.</code> and <code>-</code>.  The description is a free-form note.  A
+schedule without a recurrence rule is refused at commit time.</p>
+<p>To stop a schedule, and everything that uses it, set <code>enabled false</code>.
+The schedule stays in the configuration for when it is needed again.</p>
 <h2 id="recurrence-rules">Recurrence Rules<a class="headerlink" href="#recurrence-rules" title="Permanent link">¶</a></h2>
-<p>The recurrence rule decides when a schedule fires.  It is evaluated in the
-system's local time.</p>
-<p><code>frequency</code> is mandatory and selects the base period:</p>
+<p>A recurrence rule is evaluated in the system's local time.  The
+mandatory <code>frequency</code> picks the base period:</p>
 <table>
 <thead>
 <tr>
@@ -2680,50 +2673,45 @@ system's local time.</p>
 </tr>
 </tbody>
 </table>
-<p><code>interval</code> (default <code>1</code>) stretches the base period: <code>frequency hourly</code>
-with <code>interval 6</code> fires every six hours.</p>
-<p>The remaining fields refine that period by pinning one field to specific
-values:</p>
+<p><code>interval</code> stretches the period, so <code>frequency hourly</code> with <code>interval 6</code>
+fires every six hours.  The default is 1.</p>
+<p>The <code>by*</code> fields pin one part of the period to given values:</p>
 <ul>
-<li><code>byminute</code>: Minutes within the hour, 0-59</li>
-<li><code>byhour</code>: Hours of the day, 0-23</li>
-<li><code>byday</code>: Days of the week, by <code>weekday</code> name (<code>monday</code> … <code>sunday</code>)</li>
-<li><code>bymonthday</code>: Days of the month, 1-31</li>
-<li><code>byyearmonth</code>: Months of the year, 1-12</li>
+<li><code>byminute</code>: minutes within the hour, 0-59</li>
+<li><code>byhour</code>: hours of the day, 0-23</li>
+<li><code>byday</code>: days of the week, by name (<code>monday</code> … <code>sunday</code>)</li>
+<li><code>bymonthday</code>: days of the month, 1-31</li>
+<li><code>byyearmonth</code>: months of the year, 1-12</li>
 </ul>
-<p>Each accepts a list, so <code>byhour 8</code> plus <code>byhour 20</code> fires twice a day.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>Set <code>frequency</code> to the coarsest period you want, then refine it with the
-<code>by*</code> fields.  A weekly window on Sunday mornings is <code>frequency weekly</code>
-with <code>byday sunday</code> and <code>byhour 4</code>.  Writing the same window as
-<code>frequency daily</code> would fire every morning.</p>
-</div>
+<p>Each takes a list, so <code>byhour 8</code> and <code>byhour 20</code> together fire twice a
+day.  This is how the factory <code>nightly</code> schedule becomes 03:00 rather
+than midnight, and how <code>weekly</code> lands on Sunday.</p>
+<p>Pick the coarsest frequency that fits, then narrow it.  A window every
+Sunday morning is <code>frequency weekly</code> with <code>byday sunday</code> and <code>byhour 4</code>.
+With <code>frequency daily</code> the same <code>byday</code> and <code>byhour</code> would fire every
+morning.</p>
 <h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">¶</a></h2>
-<p>Each schedule is translated into a five-field cron expression, and the
-YANG model is pruned to the subset cron can express.  Everything below is
-rejected at commit time, so a schedule never fires on the wrong days:</p>
+<p>A schedule is turned into a five-field cron expression, and the model is
+cut down to what cron can express.  The following are refused at commit
+time:</p>
 <ul>
-<li><strong><code>secondly</code> frequency.</strong>  Cron has no seconds field; the finest
-  supported resolution is <code>minutely</code></li>
-<li><strong>Combining <code>bymonthday</code> and <code>byday</code>.</strong>  Cron fires on the <em>union</em> of
-  day-of-month and day-of-week, where RFC 5545 specifies their
-  intersection, so the combination is refused</li>
-<li><strong>Negative values.</strong>  "The last Monday of the month" (<code>byday</code> with a
-  direction) and "the last day of the month" (<code>bymonthday -1</code>) have no
-  cron equivalent</li>
-<li><strong>Start and end bounds.</strong>  There is no start anchor, no <code>until</code> date and
-  no occurrence count.  A schedule recurs until it is disabled</li>
-<li><strong>Per-schedule time zones</strong>, day-of-year, week-of-year and set-position</li>
+<li><code>secondly</code> frequency, since cron has no seconds field.  The finest
+  resolution is <code>minutely</code></li>
+<li><code>bymonthday</code> together with <code>byday</code>.  Cron fires on the union of the two
+  where RFC 5545 specifies their intersection</li>
+<li>negative values, such as the last Monday of the month (<code>byday</code> with a
+  direction) or the last day of the month (<code>bymonthday -1</code>)</li>
+<li>start and end bounds.  There is no start date, no <code>until</code> date and no
+  occurrence count, so a schedule recurs until it is disabled</li>
+<li>per-schedule time zones, day of year, week of year and set position</li>
 </ul>
-<p><code>frequency yearly</code> with an <code>interval</code> above 1 ("every other year") is also
-not expressible; the interval is ignored in that case.</p>
+<p><code>frequency yearly</code> with an <code>interval</code> above 1, as in every other year,
+cannot be expressed either.  The interval is ignored in that case.</p>
 <h2 id="using-a-schedule">Using a Schedule<a class="headerlink" href="#using-a-schedule" title="Permanent link">¶</a></h2>
-<p>A schedule does nothing on its own, it takes effect when a feature
-references it through a leaf of type <code>schedule-ref</code>.  The reference is
-validated, so a schedule cannot be deleted while something still uses it,
-and a typo shows up at commit time instead of at the next occurrence.</p>
-<p>These features consume schedules today:</p>
+<p>A feature uses a schedule through a leaf of type <code>schedule-ref</code>.  The
+reference is validated, so a schedule in use cannot be deleted, and a
+typo is caught at commit time rather than at the next occurrence.</p>
+<p>These features run on a schedule:</p>
 <table>
 <thead>
 <tr>
@@ -2741,35 +2729,36 @@ and a typo shows up at commit time instead of at the next occurrence.</p>
 <td><code>system software check-update</code></td>
 </tr>
 <tr>
-<td><a href="../upgrade/#unattended-updates">Unattended updates</a></td>
+<td><a href="../upgrade/#unattended-software-updates">Unattended software updates</a></td>
 <td><code>system software unattended-update</code></td>
 </tr>
 </tbody>
 </table>
-<p>The example below reboots the system on the <code>nightly</code> schedule created
-above.  Note that <code>scheduled-reboot</code> has no <code>enabled</code> leaf.  It is active
-as soon as it references a schedule; remove the reference or disable the
-schedule to stop it.</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>set system scheduled-reboot schedule nightly</b>
-admin@example:/config/&gt; <b>leave</b>
+<p>A feature is active as soon as it references a schedule.  This reboots
+the system every night at 03:00:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>configure system</b>
+admin@example:/config/system/&gt; <b>set scheduled-reboot schedule nightly</b>
+admin@example:/config/system/&gt; <b>leave</b>
 </code></pre>
 
+<p>To pause one feature and keep its settings, set its <code>enabled</code> leaf to
+<code>false</code>.  Disabling the schedule itself stops every feature using it.</p>
 <h2 id="verifying">Verifying<a class="headerlink" href="#verifying" title="Permanent link">¶</a></h2>
-<p>To confirm a schedule took effect, look at the generated crontab from the
-shell.  Active schedules become cron jobs owned by the <code>admin</code> user, and
-the cron daemon runs only while at least one job is active:</p>
+<p>Active schedules become cron jobs owned by the <code>admin</code> user, and the cron
+daemon runs only while there is at least one.  The generated crontab is
+visible from the shell:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:~$<span class="w"> </span>crontab<span class="w"> </span>-l
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># Managed by infix-schedule</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="m">30</span><span class="w"> </span><span class="m">3</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w">  </span>/usr/sbin/reboot
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="m">0</span><span class="w"> </span><span class="m">3</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w">   </span>/usr/sbin/reboot
 </code></pre></div>
-<p>An empty crontab means nothing is scheduled.  Check that the consuming
-feature is enabled, that it names the schedule correctly, and that the
-schedule itself is enabled.</p>
+<p>An empty crontab means nothing is scheduled.  Check that the feature is
+enabled, that it names the schedule correctly, and that the schedule is
+enabled.  For update checks and unattended updates, <code>show software</code> shows
+the trigger and the outcome of the last occurrence.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The crontab is generated and must not be edited by hand.  It is
-rewritten from the configuration on every change.</p>
+<p>The crontab is generated from the configuration on every change.  Do
+not edit it by hand.</p>
 </div>
 
 
