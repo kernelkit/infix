@@ -229,7 +229,7 @@ def add_services(out):
 def software_update(data):
     """Outcome of the last update check or unattended update, recorded by
     the update scripts, plus whether an installed image awaits a reboot."""
-    keys = ("last-check", "latest", "available", "release-url",
+    keys = ("last-check", "latest", "available", "release-url", "bundle-url",
             "last-install", "installed")
     state = HOST.read_json("/run/software-update.json", {})
     update = {k: state[k] for k in keys if k in state}

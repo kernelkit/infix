@@ -24,6 +24,11 @@ submodule infix-system-software {
   contact      "kernelkit@googlegroups.com";
   description  "Software status and upgrade.";
 
+  revision 2026-10-01 {
+    description "Add the check-update RPC, and bundle-url to the update
+                 operational data.";
+    reference "Internal";
+  }
   revision 2026-09-07 {
     description "Add unattended-update config, triggered from a referenced
                  schedule.  Lift update-url to the shared software container
@@ -239,6 +244,11 @@ submodule infix-system-software {
           description "Release page of the latest release.";
         }
 
+        leaf bundle-url {
+          type string;
+          description "Bundle for this platform, ready for install-bundle or 'upgrade'.";
+        }
+
         leaf last-install {
           type yang:date-and-time;
           description "When an unattended update last installed a bundle.";
@@ -358,6 +368,33 @@ submodule infix-system-software {
             count(boot-order[.='secondary']) <= 1 and
             count(boot-order[.='net']) <= 1" {
         error-message "Not possible to have duplicate targets in boot order.";
+      }
+    }
+  }
+
+  rpc check-update {
+    description "Check the release feed for a newer release now.
+
+       The same check as a check-update schedule occurrence: the outcome
+       is recorded in /system-state/software/update, and a notice is
+       shown at login when a newer release is available.  Fails when no
+       update-url is configured or the feed cannot be read.";
+    output {
+      leaf latest {
+        type string;
+        description "Newest release the feed offers.";
+      }
+      leaf available {
+        type boolean;
+        description "True when latest is newer than the version that boots next.";
+      }
+      leaf release-url {
+        type string;
+        description "Release page of the latest release.";
+      }
+      leaf bundle-url {
+        type string;
+        description "Bundle for this platform, ready for install-bundle or 'upgrade'.";
       }
     }
   }

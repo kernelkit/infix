@@ -114,11 +114,12 @@ update_check() {
     case $rc in
     0)
         update_available && UPDATE_AVAILABLE=true || UPDATE_AVAILABLE=false
-        update_state '. + {"last-check": (now | todate), latest: $tag, "release-url": $url, available: $avail}' \
-            --arg tag "$LATEST_TAG" --arg url "$(update_release_url)" --argjson avail "$UPDATE_AVAILABLE"
+        update_state '. + {"last-check": (now | todate), latest: $tag, "release-url": $url, "bundle-url": $bundle, available: $avail}' \
+            --arg tag "$LATEST_TAG" --arg url "$(update_release_url)" \
+            --arg bundle "$(update_bundle_url)" --argjson avail "$UPDATE_AVAILABLE"
         ;;
     2)
-        update_state '.["last-check"] = (now | todate) | del(.latest, .["release-url"], .available)'
+        update_state '.["last-check"] = (now | todate) | del(.latest, .["release-url"], .["bundle-url"], .available)'
         ;;
     esac
     return $rc
