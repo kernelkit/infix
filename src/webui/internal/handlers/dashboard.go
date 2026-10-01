@@ -937,7 +937,7 @@ func formatCurrentTime(s string) string {
 	if err != nil {
 		return ""
 	}
-	return t.UTC().Format("2006-01-02 15:04:05 +00:00")
+	return t.UTC().Format("2006-01-02 15:04:05 UTC")
 }
 
 // keyVital picks the dashboard's "Key Vitals" rows out of the hardware

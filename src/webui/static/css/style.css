@@ -3447,7 +3447,10 @@ details[open].yt-leaf-item .yt-leaf-name::before { transform: rotate(90deg); }
 tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) inset; }
 .rcd-content { min-height: 12rem; white-space: pre; overflow-wrap: normal; overflow-x: auto; }
 
-/* Software Updates card: actions along the bottom, like a dialog */
+/* Software Updates card: actions along the bottom, like a dialog, flush
+ * with the bottom edge when the grid row is taller than the card */
+#update-card { display: flex; flex-direction: column; }
+#update-card .card-body { flex: 1; }
 .card-actions {
   display: flex;
   justify-content: flex-end;
