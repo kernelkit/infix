@@ -634,9 +634,11 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   border-bottom: 1px solid var(--border);
 }
 
+/* Key column as narrow as its longest label, the value gets the rest */
 .info-table th {
   width: 1%;
   white-space: nowrap;
+  padding-right: 0.5rem;
   color: var(--fg-muted);
   font-weight: 500;
   text-align: left;
@@ -711,14 +713,6 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 .disk-table tbody tr:nth-child(even),
 .counters-table tbody tr:nth-child(even) {
   background-color: var(--zebra-stripe, rgba(0,0,0,0.025));
-}
-
-.info-table th {
-  text-align: left;
-  font-weight: 500;
-  color: var(--fg-muted);
-  width: 40%;
-  background: transparent;
 }
 
 .disk-table thead th, .counters-table thead th {
