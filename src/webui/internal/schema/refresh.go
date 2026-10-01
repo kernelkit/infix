@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"infix/webui/internal/restconf"
@@ -13,17 +15,40 @@ import (
 // Cache holds a lazily-loaded schema Manager and refreshes it at startup.
 // All methods are safe for concurrent use.
 type Cache struct {
-	mu       sync.RWMutex
-	manager  *Manager
-	syncing  bool // guarded by mu
-	dir      string
-	rc       restconf.Fetcher
+	mu      sync.RWMutex
+	manager *Manager
+	syncing bool // guarded by mu
+	dir     string
+	version string // image version the cached files belong to
+	rc      restconf.Fetcher
 }
 
-// NewCache creates a Cache.
+// NewCache creates a Cache for the YANG files of the given image version,
+// empty when unknown.
 // Call LoadFromCacheBackground at startup, then RefreshBackground after login.
-func NewCache(rc restconf.Fetcher, dir string) *Cache {
-	return &Cache{rc: rc, dir: dir}
+func NewCache(rc restconf.Fetcher, dir, version string) *Cache {
+	return &Cache{rc: rc, dir: dir, version: version}
+}
+
+// dropStale empties the cache when another image version wrote it.  The
+// YANG files ship with the image, and a module's revision does not always
+// change when its text does, so the version is the only reliable key.
+func (c *Cache) dropStale() error {
+	if c.version == "" {
+		return nil
+	}
+	stamp := filepath.Join(c.dir, ".version")
+	if b, err := os.ReadFile(stamp); err == nil && strings.TrimSpace(string(b)) == c.version {
+		return nil
+	}
+	if err := os.RemoveAll(c.dir); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(c.dir, 0750); err != nil {
+		return err
+	}
+	log.Printf("schema: cache in %s is for another image, dropped", c.dir)
+	return os.WriteFile(stamp, []byte(c.version+"\n"), 0640)
 }
 
 // LoadFromCache parses whatever .yang files are already in the cache
@@ -31,6 +56,9 @@ func NewCache(rc restconf.Fetcher, dir string) *Cache {
 // This is fast — suitable for server startup.  If the directory is empty
 // or has too few files to form a useful schema, the Manager is left nil.
 func (c *Cache) LoadFromCache() error {
+	if err := c.dropStale(); err != nil {
+		return fmt.Errorf("schema: cache version check: %w", err)
+	}
 	entries, err := os.ReadDir(c.dir)
 	if err != nil {
 		if os.IsNotExist(err) {

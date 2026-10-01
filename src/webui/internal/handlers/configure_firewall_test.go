@@ -49,7 +49,7 @@ func TestConfigureFirewallOverview_AddressSets(t *testing.T) {
 	h := &ConfigureFirewallHandler{
 		Template: minimalCfgFwTmpl,
 		RC:       mock,
-		Schema:   schema.NewCache(mock, t.TempDir()),
+		Schema:   schema.NewCache(mock, t.TempDir(), ""),
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/configure/firewall", nil)
@@ -122,7 +122,7 @@ func TestConfigureFirewallSaveZoneAllowsInterfacesWithAddressSets(t *testing.T) 
 	h := &ConfigureFirewallHandler{
 		Template: minimalCfgFwTmpl,
 		RC:       mock,
-		Schema:   schema.NewCache(mock, t.TempDir()),
+		Schema:   schema.NewCache(mock, t.TempDir(), ""),
 	}
 
 	form := url.Values{
@@ -192,7 +192,7 @@ func TestConfigureFirewallSaveZoneClearsAllServices(t *testing.T) {
 	h := &ConfigureFirewallHandler{
 		Template: minimalCfgFwTmpl,
 		RC:       mock,
-		Schema:   schema.NewCache(mock, t.TempDir()),
+		Schema:   schema.NewCache(mock, t.TempDir(), ""),
 	}
 
 	form := url.Values{
@@ -242,7 +242,7 @@ func TestConfigureFirewallResetZoneServicesOnlyDeletesServices(t *testing.T) {
 	h := &ConfigureFirewallHandler{
 		Template: minimalCfgFwTmpl,
 		RC:       mock,
-		Schema:   schema.NewCache(mock, t.TempDir()),
+		Schema:   schema.NewCache(mock, t.TempDir(), ""),
 	}
 
 	req := httptest.NewRequest(http.MethodDelete, "/configure/firewall/zones/public/services", nil)
