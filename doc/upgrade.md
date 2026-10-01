@@ -1,12 +1,13 @@
 # Upgrading & Boot Order
 
-For resilience purposes, Infix maintains two software images referred to
+For resilience purposes, the system has two software images referred to
 as the _primary_ and _secondary_ partition image.  In addition, some
 bootloaders support [netbooting][1].
 
 The _boot order_ defines which image is tried first, and is listed with
-the CLI `show software` command. It also shows Infix version installed
-per partition, and which image was used when booting (`STATE booted`).
+the CLI `show software` command.  It also shows the version installed
+per partition, and which image the system currently runs on.  This order
+is automatically changed when updates are installed.
 
 <pre class="cli"><code>admin@example:/> <b>show software</b>
 Boot order : primary secondary net
@@ -17,15 +18,11 @@ secondary  inactive  v25.01.0               2025-04-25T10:07:20+00:00
 admin@example:/>
 </code></pre>
 
-YANG support for upgrading Infix, inspecting and _modifying_ the
-boot-order, is defined in [infix-system-software][2].
-
-
 ## Changing Boot Order
 
-The boot order can be manually changed using the `set boot-order` command.
-This is useful for rolling back to a previous version or changing the
-preferred boot source.
+The boot order can be manually changed using the `set boot-order` command from
+the top-level admin-exec context in the CLI.  This is useful for rolling back
+to a previous version or changing the preferred boot source.
 
 The command accepts one to three boot targets as separate arguments, in the
 desired boot order. Valid boot targets are:
@@ -34,8 +31,7 @@ desired boot order. Valid boot targets are:
 - `secondary` - The secondary partition
 - `net` - Network boot (if supported by bootloader)
 
-The CLI provides tab-completion for boot targets, making it easy to enter
-valid values.
+The CLI provides tab-completion for boot targets, simplifying the process.
 
 Example: View current boot order and change it:
 
@@ -91,9 +87,9 @@ admin@example:/>
 
 ## Upgrading
 
-Upgrading Infix is done one partition at a time. If the system has
-booted from one partition, an `upgrade` will apply to the other
-(inactive) partition.
+Upgrading the system is done one partition at a time.  If the system has
+booted from one partition, an `upgrade` will apply to the other (inactive)
+partition.
 
 1. Download and unpack the release to install. Make the image *pkg*
    bundle available at some URL[^2]
@@ -245,7 +241,7 @@ maintenance window, can [create its own][6].
 <pre class="cli"><code>admin@example:/> <b>show software</b>
 Boot order : primary secondary net
 
-NAME       STATE     VERSION                DATE
+<span class="header">NAME       STATE     VERSION                DATE                </span>
 primary    booted    v26.08.1               2026-09-28T03:02:41Z
 secondary  inactive  v26.08.0               2026-08-30T03:02:12Z
 
@@ -305,18 +301,28 @@ an occurrence that fires while an install is still running is skipped.
 
 ### Hosting Your Own Feed
 
-Any static web server will do.  Atom and RSS 2.0 both work, and each
-entry links to its release page as `<base>/releases/tag/<tag>`.  That URL
-gives both the version tag and the base URL, from which the bundle for
-each platform is fetched by convention:
+Any static web server that honors HTTP range requests will do.  The
+bundle is streamed rather than downloaded, so a server that ignores
+`Range` fails the install.  BusyBox `httpd` and nginx both work,
+Python's `http.server` does not.
+
+The feed is Atom or RSS 2.0, newest release first.  Each entry links to
+its release page as `<base>/releases/tag/<tag>`, and that URL is all the
+device needs: the last path segment is the tag, the rest is the base
+from which the bundle is fetched by convention:
 
 ```
 <base>/releases/download/<tag>/<image-id>-<tag>.pkg
 ```
 
 where `<image-id>` is the running system's `IMAGE_ID`, e.g.
-`infix-aarch64`.  An Atom feed has one `<entry>` per release, each with a
-`<link>` whose `href` is the release page:
+`infix-aarch64`.  The tag goes verbatim into the filename, and a tag
+containing `-rc`, `-alpha` or `-beta` counts as a pre-release.  The
+release page itself does not have to exist, its URL only provides the
+tag, the download base, and a link in the update notice.
+
+An Atom feed has one `<entry>` per release, each with a `<link>` whose
+`href` is the release page:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -350,9 +356,15 @@ element's `<link>`:
 </rss>
 ```
 
+Atom is tried first.  When no entry has a `link` with an `href`, the
+URLs are read from the text of each RSS item's `link` instead.  Either
+way the first entry that passes the pre-release filter wins.
+
 The example resolves bundles under
 `https://releases.example.com/infix/releases/download/<tag>/`, so lay the
-files out to match and name the feed whatever `update-url` points at:
+files out to match and name the feed whatever `update-url` points at.
+A device looks only for its own `IMAGE_ID`, so one feed can serve
+several platforms, with one bundle each per release:
 
 ```
 infix/
@@ -371,26 +383,6 @@ admin@example:/config/system/> <b>set software update-url https://releases.examp
 admin@example:/config/system/> <b>leave</b>
 </code></pre>
 
-**Requirements:**
-
-- **Atom or RSS 2.0.**  Atom is tried first, reading the `href` attribute
-  of each entry's `link`.  When that finds nothing, the URLs are read from
-  the text of each RSS item's `link` instead
-- **Newest entry first.**  Selection follows feed order, so the first
-  entry that passes the pre-release filter wins
-- **The tag is the last path segment** of the release URL, and it goes
-  verbatim into the bundle filename.  A tag containing `-rc`, `-alpha` or
-  `-beta` counts as a pre-release
-- **One bundle per platform**, named `<image-id>-<tag>.pkg`.  A device
-  looks only for its own `IMAGE_ID`, so one feed can serve several
-  platforms
-- **HTTP range requests.**  RAUC streams the bundle instead of downloading
-  it whole, so a server that ignores `Range` fails the install.  BusyBox
-  `httpd` and nginx both work; Python's `http.server` does not
-
-The release page itself does not have to exist, its URL only provides the
-tag, the download base, and a link in the update notice.
-
 > [!TIP]
 > Serving the feed over HTTPS requires a correct clock on the device, or
 > certificate validation fails and every occurrence is skipped.  Plain
@@ -398,9 +390,9 @@ tag, the download base, and a link in the update notice.
 
 ## Configuration Migration
 
-The example above illustrated an upgrade from Infix v25.01.0 to
-v25.03.1. Inbetween these versions, YANG configuration definitions
-changed slightly (more details given below).
+The previous example shows a patch update from Infix v25.01.0 to v25.03.1.
+Between these versions, YANG configuration definitions changed slightly,
+more details given below.
 
 During boot, the system inspects the `version` meta information within
 the startup configuration file to determine if configuration migration
@@ -412,13 +404,14 @@ definitions and applied to `running-config`, while a backup of the
 original startup configuration is stored in directory `/cfg/backup/`.
 
 > [!IMPORTANT]
-> The migrated configuration is only applied to `running-config`, it is
-> not saved.  Migration is repeated on every boot until you save it:
+> The migrated configuration is only applied to `running-config`, the
+> non-volatile `startup-config` is not touched.  Migration is repeated
+> on every boot until you confirm the upgrade as successful and save it:
 >
->     admin@example:/> copy running-config startup-config
+> <pre class="cli"><code>admin@example:/> <b>copy running-config startup-config</b></code></pre>
 
 <pre class="cli"><code>admin@example:/> <b>dir /cfg/backup/</b>
-/cfg/backup/ directory
+<span class="header">/cfg/backup/ directory                </span>
 startup-config-1.4.cfg
 
 admin@example:/>
