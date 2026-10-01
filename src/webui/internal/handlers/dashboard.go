@@ -159,9 +159,6 @@ type systemConfigWrapper struct {
 }
 
 type systemConfig struct {
-	Hostname  string   `json:"hostname"`
-	Contact   string   `json:"contact"`
-	Location  string   `json:"location"`
 	Software  swConfig `json:"infix-system:software"`
 	Schedules struct {
 		Schedule []scheduleEntry `json:"schedule"`
@@ -464,19 +461,33 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	// The RESTCONF client's own 10 s timeout still bounds each call.
 	ctx := context.WithoutCancel(r.Context())
 	var (
-		state                    systemStateWrapper
-		hw                       hardwareWrapper
-		sysConf                  systemConfigWrapper
+		state   systemStateWrapper
+		hw      hardwareWrapper
+		sysConf systemConfigWrapper
+		ident   struct {
+			System struct {
+				Hostname string `json:"hostname"`
+				Contact  string `json:"contact"`
+				Location string `json:"location"`
+			} `json:"ietf-system:system"`
+		}
 		ifaces                   interfacesWrapper
 		routes                   ribWrapper
 		stateErr, hwErr, confErr error
 		wg                       sync.WaitGroup
 	)
 
-	wg.Add(5)
+	wg.Add(6)
 	go func() {
 		defer wg.Done()
 		stateErr = h.RC.Get(ctx, "/data/ietf-system:system-state", &state)
+	}()
+	// The operational view resolves hostname templates like "%m".
+	go func() {
+		defer wg.Done()
+		if err := h.RC.Get(ctx, "/data/ietf-system:system", &ident); err != nil {
+			log.Printf("restconf system identity: %v", err)
+		}
 	}()
 	go func() {
 		defer wg.Done()
@@ -484,8 +495,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}()
 	go func() {
 		defer wg.Done()
-		// Running, not /data: statd serves operational data for the system
-		// container and that answer hides running config it does not emit.
+		// Running, not /data, for the update card: the operational view
+		// hides config under the system container that statd does not emit.
 		confErr = h.RC.Get(ctx, "/ds/ietf-datastores:running/ietf-system:system", &sysConf)
 	}()
 	// Connectivity/Addresses cards are best-effort: a failure here logs but
@@ -614,12 +625,13 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 
 	disambiguateVitals(data.KeyVitals)
 
+	data.Hostname = ident.System.Hostname
+	data.Contact = ident.System.Contact
+	data.Location = ident.System.Location
+
 	if confErr != nil {
 		log.Printf("restconf system config: %v", confErr)
 	} else {
-		data.Hostname = sysConf.System.Hostname
-		data.Contact = sysConf.System.Contact
-		data.Location = sysConf.System.Location
 		u := newUpdateEntry(sysConf.System.Software, sysConf.System.Schedules.Schedule,
 			state.SystemState.Software.Update)
 		data.Update = &u
