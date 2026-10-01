@@ -3452,3 +3452,25 @@ details[open].yt-leaf-item .yt-leaf-name::before { transform: rotate(90deg); }
 .rcd-row.rcd-drop-before > td { box-shadow: 0 -2px 0 var(--primary) inset; }
 tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) inset; }
 .rcd-content { min-height: 12rem; white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+
+/* Software Updates card: actions along the bottom, like a dialog */
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.update-card-error { margin: 0.75rem 1.25rem; }
+
+/* Icon flags in the card, meaning on hover */
+.card-flag {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 0.35rem;
+  color: var(--slate-500);
+}
+.card-flag svg { width: 1em; height: 1em; }
+.card-flag .theme-check { opacity: 1; margin-left: 0; } /* hidden by the theme menu rule otherwise */
+.flag-ok   { color: #166534; }
+.flag-warn { color: #b45309; }

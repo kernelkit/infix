@@ -5,6 +5,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -364,8 +365,9 @@ type dashboardData struct {
 	UpdateMessage   string // verbatim CLI/login-banner notice
 	UpdateURL       string // release URL extracted from the notice
 	// Software Updates card.
-	Update *updateEntry
-	Error  string
+	Update      *updateEntry
+	UpdateError string // outcome of a Check now that failed
+	Error       string
 }
 
 // gatewayEntry is a default route's next-hop.
@@ -442,6 +444,49 @@ func readUpdateNotice() (msg, url string) {
 		url = strings.TrimRight(u, ").,;")
 	}
 	return msg, url
+}
+
+// CheckUpdate runs the check-update RPC as the logged-in user and
+// re-renders the Software Updates card with the result.
+// POST /dashboard/check-update
+func (h *DashboardHandler) CheckUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	var data dashboardData
+	if err := h.RC.CallRPC(ctx, "/operations/infix-system:check-update", nil, nil); err != nil {
+		log.Printf("check-update: %v", err)
+		data.UpdateError = "Update check failed"
+		var re *restconf.Error
+		if errors.As(err, &re) && re.Message != "" {
+			data.UpdateError = re.Message
+		}
+	}
+
+	var (
+		state   systemStateWrapper
+		sysConf systemConfigWrapper
+	)
+	if err := h.RC.Get(ctx, "/data/ietf-system:system-state/infix-system:software", &state); err != nil {
+		log.Printf("check-update: software state: %v", err)
+	}
+	if err := h.RC.Get(ctx, "/ds/ietf-datastores:running/ietf-system:system", &sysConf); err != nil {
+		log.Printf("check-update: system config: %v", err)
+	}
+	u := newUpdateEntry(sysConf.System.Software, sysConf.System.Schedules.Schedule,
+		state.SystemState.Software.Update)
+	data.Update = &u
+
+	// A release found now also belongs in the banner, which only a full
+	// page render draws.
+	if u.Available {
+		w.Header().Set("HX-Refresh", "true")
+	}
+
+	if err := h.Template.ExecuteTemplate(w, "update-card", data); err != nil {
+		log.Printf("template error: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 // DashboardHandler serves the main dashboard page.
@@ -782,6 +827,7 @@ type updateEntry struct {
 	SourceShort string // file name of Source, for the card
 	Check       string // schedule name, "paused" or "not configured"
 	Unattended  string
+	AutoReboot  bool // unattended-update reboots right after an install
 }
 
 // shortURL is the last path element of a URL, or its host when there is
@@ -829,23 +875,25 @@ func swTime(t string) string {
 }
 
 func newUpdateEntry(cfg swConfig, schedules []scheduleEntry, state swUpdateState) updateEntry {
-	unattended := scheduledText(cfg.Unattended.swScheduled, schedules)
-	if cfg.Unattended.Schedule != "" {
-		reboot := cfg.Unattended.Reboot
-		if reboot == "" {
-			reboot = "manual"
-		}
-		unattended += ", reboot " + reboot
-	}
-	state.LastCheck = swTime(state.LastCheck)
-	state.LastInstall = swTime(state.LastInstall)
+	state.LastCheck = cardTime(state.LastCheck)
+	state.LastInstall = cardTime(state.LastInstall)
 	return updateEntry{
 		swUpdateState: state,
 		Source:        cfg.UpdateURL,
 		SourceShort:   shortURL(cfg.UpdateURL),
 		Check:         scheduledText(cfg.CheckUpdate, schedules),
-		Unattended:    unattended,
+		Unattended:    scheduledText(cfg.Unattended.swScheduled, schedules),
+		AutoReboot:    cfg.Unattended.Schedule != "" && cfg.Unattended.Reboot == "immediate",
 	}
+}
+
+// cardTime trims a yang:date-and-time to the minute, "YYYY-MM-DD HH:MM".
+func cardTime(t string) string {
+	t = swTime(t)
+	if len(t) > 16 {
+		t = t[:16]
+	}
+	return t
 }
 
 func softwareVersion(sw software) string {

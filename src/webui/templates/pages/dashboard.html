@@ -17,8 +17,15 @@
       <p class="update-card-msg">{{.UpdateMessage}}</p>
       {{if .UpdateURL}}
       <a href="{{.UpdateURL}}" target="_blank" rel="noopener noreferrer"
-         class="btn btn-primary update-card-action">View release &rarr;</a>
+         class="btn btn-outline update-card-action">View release &rarr;</a>
       {{end}}
+      {{if .Update}}{{if and .Update.Available .Update.BundleURL}}
+      <a href="/software?url={{.Update.BundleURL}}"
+         hx-get="/software?url={{.Update.BundleURL}}"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-primary update-card-action">Install {{.Update.Latest}} &rarr;</a>
+      {{end}}{{end}}
     </div>
   </div>
   {{end}}
@@ -37,34 +44,7 @@
     </div>
   </div>
 
-  {{if .Update}}
-  <div class="info-card">
-    <div class="card-header">Software Updates
-      <a href="/configure/tree?path=/ietf-system:system/infix-system:software"
-         hx-get="/configure/tree?path=/ietf-system:system/infix-system:software"
-         hx-target="#content"
-         hx-push-url="true"
-         class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
-    </div>
-    <div class="card-body" style="padding:0">
-      <table class="info-table">
-        <tr><th>Source</th><td>{{if .Update.Source}}<a href="{{.Update.Source}}" title="{{.Update.Source}}" target="_blank" rel="noopener noreferrer">{{.Update.SourceShort}}</a>{{else}}not configured{{end}}</td></tr>
-        <tr><th>Check</th><td>{{.Update.Check}}</td></tr>
-        <tr><th>Unattended</th><td>{{.Update.Unattended}}</td></tr>
-        {{if .Update.LastCheck}}
-        <tr><th>Last check</th><td>{{.Update.LastCheck}}
-          {{if not .Update.Latest}}<span class="badge badge-neutral">feed unreachable</span>
-          {{else if .Update.Available}}<a href="{{.Update.ReleaseURL}}" target="_blank" rel="noopener noreferrer">{{.Update.Latest}}</a> <span class="badge badge-accept">available</span>
-          {{else}}latest {{.Update.Latest}}, up to date{{end}}</td></tr>
-        {{end}}
-        {{if .Update.LastInstall}}
-        <tr><th>Last install</th><td>{{.Update.LastInstall}}, {{.Update.Installed}}
-          {{if .Update.RebootPending}}<span class="badge badge-neutral">reboot pending</span>{{end}}</td></tr>
-        {{end}}
-      </table>
-    </div>
-  </div>
-  {{end}}
+  {{if .Update}}{{template "update-card" .}}{{end}}
 
   <div class="info-card">
     <div class="card-header">Runtime</div>
@@ -198,4 +178,43 @@
   </div>
   {{end}}
 </section>
+{{end}}
+
+{{define "update-card"}}
+<div class="info-card" id="update-card">
+  <div class="card-header">Software Updates
+    <a href="/configure/tree?path=/ietf-system:system/infix-system:software"
+       hx-get="/configure/tree?path=/ietf-system:system/infix-system:software"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="info-table">
+      <tr><th>Source</th><td>{{if .Update.Source}}<a href="{{.Update.Source}}" title="{{.Update.Source}}" target="_blank" rel="noopener noreferrer">{{.Update.SourceShort}}</a>{{else}}not configured{{end}}</td></tr>
+      <tr><th>Check</th><td>{{.Update.Check}}</td></tr>
+      <tr><th>Unattended</th><td>{{.Update.Unattended}}
+        {{if .Update.AutoReboot}}<span class="card-flag" title="Reboots right after an install">{{template "icon-reset"}}</span>{{end}}</td></tr>
+      {{if .Update.LastCheck}}
+      <tr><th>Last check</th><td>{{.Update.LastCheck}}
+        {{if not .Update.Latest}}<span class="card-flag flag-warn" title="The release feed could not be read">{{template "icon-triangle-alert"}}</span>
+        {{else if .Update.Available}}<a href="{{.Update.ReleaseURL}}" target="_blank" rel="noopener noreferrer" class="badge badge-accept" title="Newer release available">{{.Update.Latest}}</a>
+        {{else}}<span class="card-flag flag-ok" title="Up to date, the latest release is {{.Update.Latest}}">{{template "icon-check"}}</span>{{end}}</td></tr>
+      {{end}}
+      {{if .Update.LastInstall}}
+      <tr><th>Last install</th><td>{{.Update.LastInstall}}, {{.Update.Installed}}
+        {{if .Update.RebootPending}}<span class="card-flag flag-warn" title="Reboot to activate {{.Update.Installed}}">{{template "icon-reset"}}</span>{{end}}</td></tr>
+      {{end}}
+    </table>
+    {{if .UpdateError}}<div class="alert alert-error update-card-error">{{.UpdateError}}</div>{{end}}
+  </div>
+  <div class="card-actions">
+    <button type="button" class="btn btn-sm btn-primary"
+            hx-post="/dashboard/check-update"
+            hx-target="#update-card"
+            hx-swap="outerHTML"
+            hx-disabled-elt="this"
+            {{if not .Update.Source}}disabled title="Set an update source first"{{end}}>Check now</button>
+  </div>
+</div>
 {{end}}

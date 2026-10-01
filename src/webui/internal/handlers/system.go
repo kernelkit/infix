@@ -475,6 +475,7 @@ type swUpdateState struct {
 	Latest        string `json:"latest"`
 	Available     bool   `json:"available"`
 	ReleaseURL    string `json:"release-url"`
+	BundleURL     string `json:"bundle-url"`
 	LastInstall   string `json:"last-install"`
 	Installed     string `json:"installed"`
 	RebootPending bool   `json:"reboot-pending"`
@@ -522,6 +523,7 @@ type softwareData struct {
 	Installer    *installerEntry
 	Installing   bool // install was triggered this session; keep card visible during RAUC phase gaps
 	AutoReboot   bool
+	InstallURL   string // prefilled bundle URL, from the dashboard's Install link
 	Error        string
 	Message      string
 }
@@ -584,6 +586,7 @@ func (h *SystemHandler) Software(w http.ResponseWriter, r *http.Request) {
 	data := softwareData{
 		PageData:   newPageData(w, r, "software", "Software"),
 		Message:    r.URL.Query().Get("msg"),
+		InstallURL: r.URL.Query().Get("url"),
 		Installing: r.URL.Query().Get("installing") == "1",
 		AutoReboot: r.URL.Query().Get("auto-reboot") == "1",
 	}

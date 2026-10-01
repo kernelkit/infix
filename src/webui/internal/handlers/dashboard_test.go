@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"infix/webui/internal/restconf"
@@ -15,7 +16,8 @@ import (
 
 var minimalDashTmpl = template.Must(template.New("dashboard.html").Parse(
 	`{{define "dashboard.html"}}hostname={{.Hostname}} error={{.Error}}{{end}}` +
-		`{{define "content"}}{{.Hostname}}{{end}}`,
+		`{{define "content"}}{{.Hostname}}{{end}}` +
+		`{{define "update-card"}}check={{.Update.Check}} error={{.UpdateError}}{{end}}`,
 ))
 
 func TestDashboardIndex_ReturnsOK(t *testing.T) {
@@ -106,10 +108,10 @@ func TestUpdateEntry(t *testing.T) {
 	if e.Check != "nightly (daily at 03:00)" {
 		t.Errorf("Check = %q", e.Check)
 	}
-	if e.Unattended != "nightly (paused), reboot manual" {
-		t.Errorf("Unattended = %q", e.Unattended)
+	if e.Unattended != "nightly (paused)" || e.AutoReboot {
+		t.Errorf("Unattended = %q auto-reboot %v", e.Unattended, e.AutoReboot)
 	}
-	if e.LastCheck != "2026-09-30 03:00:12" {
+	if e.LastCheck != "2026-09-30 03:00" {
 		t.Errorf("LastCheck = %q", e.LastCheck)
 	}
 	if !e.Available || !e.RebootPending {
@@ -171,8 +173,8 @@ func TestSystemConfigDecode(t *testing.T) {
 	if e.Check != "nightly (daily at 03:00)" {
 		t.Errorf("Check = %q", e.Check)
 	}
-	if e.Unattended != "weekly (sunday), reboot immediate" {
-		t.Errorf("Unattended = %q", e.Unattended)
+	if e.Unattended != "weekly (sunday)" || !e.AutoReboot {
+		t.Errorf("Unattended = %q auto-reboot %v", e.Unattended, e.AutoReboot)
 	}
 }
 
@@ -187,5 +189,28 @@ func TestShortURL(t *testing.T) {
 		if got := shortURL(in); got != want {
 			t.Errorf("shortURL(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestCheckUpdate_RendersCardOnFailure(t *testing.T) {
+	rc := restconf.NewClient("http://127.0.0.1:19999/restconf", false)
+	h := &DashboardHandler{Template: minimalDashTmpl, RC: rc}
+
+	req := httptest.NewRequest(http.MethodPost, "/dashboard/check-update", nil)
+	ctx := restconf.ContextWithCredentials(req.Context(), restconf.Credentials{
+		Username: "testuser",
+		Password: "testpass",
+	})
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+	h.CheckUpdate(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "check=not configured") || !strings.Contains(body, "error=Update check failed") {
+		t.Errorf("body = %q", body)
 	}
 }
