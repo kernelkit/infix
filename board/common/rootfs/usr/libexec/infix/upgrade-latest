@@ -1,0 +1,72 @@
+#!/bin/sh
+# 'upgrade' without a bundle: check the release feed and offer to install
+# what it finds.  The check runs as the CLI user, so NACM has its say.
+#
+#   upgrade-latest [-f] [-r]    -f ignore compatibility, -r reboot without asking
+
+force=
+reboot=ask
+while [ $# -gt 0 ]; do
+    case $1 in
+        -f) force=--ignore-compatible ;;
+        -r) reboot=yes ;;
+    esac
+    shift
+done
+
+user=${KLISH_USER:-$(id -un)}
+printf 'Checking for updates ...'
+out=$(doas -u "$user" rpc /infix-system:check-update 2>&1)
+rc=$?
+printf '\r\033[K'
+if [ $rc -ne 0 ]; then
+    printf '%s\n' "$out"
+    exit 1
+fi
+
+# rpc prints one "xpath = value" line per output leaf
+val() {
+    printf '%s\n' "$out" | sed -n "s|^.*/$1 = ||p" | head -1
+}
+latest=$(val latest)
+available=$(val available)
+bundle=$(val bundle-url)
+page=$(val release-url)
+
+. /etc/os-release
+. /usr/libexec/infix/update-common
+if [ "$available" != true ]; then
+    pending=$(update_pending_version)
+    if [ -n "$latest" ] && [ "$latest" = "$pending" ] && [ "$pending" != "$VERSION" ]; then
+        echo "Release $latest is installed on the other partition, reboot to activate it."
+    elif [ "$latest" = "$VERSION" ]; then
+        echo "Up to date, $VERSION is the latest release."
+    else
+        echo "Up to date, this is $VERSION and the latest release is $latest."
+    fi
+    exit 0
+fi
+
+echo "Release $latest is available, this is $VERSION."
+[ -n "$page" ] && echo "Release notes: $page"
+printf 'Install %s now? [y/N] ' "$latest"
+read -r answer
+case $answer in
+    y|Y|yes) ;;
+    *) exit 0 ;;
+esac
+
+rauc install $force "$bundle" || exit 1
+
+if [ "$reboot" = ask ]; then
+    printf 'Reboot to activate %s? [y/N] ' "$latest"
+    read -r answer
+    case $answer in
+        y|Y|yes) reboot=yes ;;
+    esac
+fi
+if [ "$reboot" = yes ]; then
+    echo "Rebooting..."
+    sleep 2
+    reboot
+fi
