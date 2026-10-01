@@ -601,10 +601,11 @@ static const char *wifi_ht40_dir(int ch)
 }
 
 /*
- * Read HT/VHT capability bitmasks from hardware via iw.py.
+ * Read HT/VHT capability bitmasks and HE support from hardware via iw.py.
  * Returns 0 on success, -1 on failure.
  */
-static int wifi_read_phy_caps(const char *radio_name, unsigned int *ht_cap, unsigned int *vht_cap)
+static int wifi_read_phy_caps(const char *radio_name, unsigned int *ht_cap,
+			      unsigned int *vht_cap, bool *he)
 {
 	json_error_t jerr;
 	json_t *root, *jht, *jvht;
@@ -614,6 +615,7 @@ static int wifi_read_phy_caps(const char *radio_name, unsigned int *ht_cap, unsi
 
 	*ht_cap = 0;
 	*vht_cap = 0;
+	*he = false;
 
 	pp = popenf("r", "/usr/libexec/infix/iw.py caps %s", radio_name);
 	if (!pp)
@@ -624,7 +626,7 @@ static int wifi_read_phy_caps(const char *radio_name, unsigned int *ht_cap, unsi
 	buf[len] = '\0';
 
 	/*
-	 * Parse JSON output: {"ht_cap": NNN, "vht_cap": NNN}
+	 * Parse JSON output: {"ht_cap": NNN, "vht_cap": NNN, "he": bool}
 	 * Use jansson since hardware.c already includes it.
 	 */
 	root = json_loads(buf, 0, &jerr);
@@ -638,6 +640,7 @@ static int wifi_read_phy_caps(const char *radio_name, unsigned int *ht_cap, unsi
 		*ht_cap = (unsigned int)json_integer_value(jht);
 	if (json_is_integer(jvht))
 		*vht_cap = (unsigned int)json_integer_value(jvht);
+	*he = json_is_true(json_object_get(root, "he"));
 
 	json_decref(root);
 	return 0;
@@ -871,7 +874,7 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 	char ht_capab[512], vht_capab[512];
 	int chwidth = 0; /* 0=20/40, 1=80, 2=160 */
 	int ch = 0;
-	bool legacy_rates;
+	bool legacy_rates, he = false;
 
 	country = lydx_get_cattr(radio_node, "country-code");
 	band = lydx_get_cattr(radio_node, "band");
@@ -881,8 +884,9 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 	if (channel && strcmp(channel, "auto"))
 		ch = atoi(channel);
 
-	/* Read HT/VHT hardware capabilities from PHY */
-	wifi_read_phy_caps(radio_name, &ht_cap, &vht_cap);
+	/* Read HT/VHT/HE hardware capabilities from PHY, hostapd refuses
+	 * to start with a mode the driver does not support. */
+	wifi_read_phy_caps(radio_name, &ht_cap, &vht_cap, &he);
 
 	if (country)
 		fprintf(hostapd, "country_code=%s\n", country);
@@ -955,11 +959,14 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 
 		if (!strcmp(band, "2.4GHz")) {
 			fprintf(hostapd, "ieee80211n=1\n");
-			fprintf(hostapd, "ieee80211ax=1\n");
+			if (he)
+				fprintf(hostapd, "ieee80211ax=1\n");
 		} else if (!strcmp(band, "5GHz")) {
 			fprintf(hostapd, "ieee80211n=1\n");
-			fprintf(hostapd, "ieee80211ac=1\n");
-			fprintf(hostapd, "ieee80211ax=1\n");
+			if (vht_cap)
+				fprintf(hostapd, "ieee80211ac=1\n");
+			if (he)
+				fprintf(hostapd, "ieee80211ax=1\n");
 		} else if (!strcmp(band, "6GHz")) {
 			/* 6GHz is HE-only, no HT/VHT */
 			fprintf(hostapd, "ieee80211ax=1\n");
@@ -1003,8 +1010,10 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 				wifi_build_ht_capab(ht_capab, sizeof(ht_capab), ht_cap, NULL, 0);
 				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
 				if (strcmp(band, "2.4GHz")) {
-					fprintf(hostapd, "vht_oper_chwidth=0\n");
-					fprintf(hostapd, "he_oper_chwidth=0\n");
+					if (vht_cap)
+						fprintf(hostapd, "vht_oper_chwidth=0\n");
+					if (he)
+						fprintf(hostapd, "he_oper_chwidth=0\n");
 				}
 			} else if (!strcmp(width, "40MHz")) {
 				chwidth = 0;
@@ -1012,8 +1021,10 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 						    ch ? wifi_ht40_dir(ch) : "[HT40+]", 1);
 				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
 				if (strcmp(band, "2.4GHz")) {
-					fprintf(hostapd, "vht_oper_chwidth=0\n");
-					fprintf(hostapd, "he_oper_chwidth=0\n");
+					if (vht_cap)
+						fprintf(hostapd, "vht_oper_chwidth=0\n");
+					if (he)
+						fprintf(hostapd, "he_oper_chwidth=0\n");
 				}
 			} else if (!strcmp(width, "80MHz") && ch) {
 				int center = wifi_center_chan_80(ch);
@@ -1024,10 +1035,12 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
 				fprintf(hostapd, "vht_capab=%s\n", vht_capab);
 				fprintf(hostapd, "vht_oper_chwidth=1\n");
-				fprintf(hostapd, "he_oper_chwidth=1\n");
+				if (he)
+					fprintf(hostapd, "he_oper_chwidth=1\n");
 				if (center) {
 					fprintf(hostapd, "vht_oper_centr_freq_seg0_idx=%d\n", center);
-					fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
+					if (he)
+						fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
 				}
 			} else if (!strcmp(width, "160MHz") && ch) {
 				int center = wifi_center_chan_160(ch);
@@ -1038,16 +1051,20 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 				fprintf(hostapd, "ht_capab=%s\n", ht_capab);
 				fprintf(hostapd, "vht_capab=%s\n", vht_capab);
 				fprintf(hostapd, "vht_oper_chwidth=2\n");
-				fprintf(hostapd, "he_oper_chwidth=2\n");
+				if (he)
+					fprintf(hostapd, "he_oper_chwidth=2\n");
 				if (center) {
 					fprintf(hostapd, "vht_oper_centr_freq_seg0_idx=%d\n", center);
-					fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
+					if (he)
+						fprintf(hostapd, "he_oper_centr_freq_seg0_idx=%d\n", center);
 				}
 			}
 		}
 
-		fprintf(hostapd, "he_su_beamformer=1\n");
-		fprintf(hostapd, "he_su_beamformee=1\n");
+		if (he) {
+			fprintf(hostapd, "he_su_beamformer=1\n");
+			fprintf(hostapd, "he_su_beamformee=1\n");
+		}
 	}
 	fprintf(hostapd, "\n");
 }

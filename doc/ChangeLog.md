@@ -124,6 +124,9 @@ All notable changes to the project are documented in this file.
 - A startup-config that fails to load, or hangs, now resets the unit
   and the next boot goes straight to failure-config, see
   [Broken startup-config][brokencfg]
+- Fix Wi-Fi access point failing to start on radios without 802.11ax or
+  802.11ac, e.g. the BPi-R64, the hostapd modes now follow what the radio
+  supports
 - First boot after a factory reset:
   - Fix status LED still blinking after the first boot
   - Fix resize looping forever on a disk with a `var` partition but no
