@@ -85,7 +85,7 @@ jobs:
 
       - name: Extract ChangeLog entry ...
         run: |
-          cat doc/ChangeLog.md | ./utils/extract-changelog.sh > release.md
+          ./utils/extract-changelog.sh < doc/ChangeLog.md > release.md
           cat release.md
 
       - uses: ncipollo/release-action@v1
