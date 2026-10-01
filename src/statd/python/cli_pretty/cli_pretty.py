@@ -2222,16 +2222,16 @@ def show_software(json, name):
 
 
 def describe_recurrence(rec):
-    """Short form of an ietf-schedule recurrence, e.g. 'daily at 03:30'"""
+    """Short form of an ietf-schedule recurrence, e.g. 'sunday at 03:30'"""
     units = {"minutely": "minute", "hourly": "hour", "daily": "day",
              "weekly": "week", "monthly": "month", "yearly": "year"}
     freq = rec.get('frequency', '').split(':')[-1]
     interval = rec.get('interval', 1)
     text = freq if interval == 1 else f"every {interval} {units.get(freq, freq)}s"
 
-    days = ",".join(d.get('weekday', '')[:3] for d in rec.get('byday', []))
+    days = ",".join(d.get('weekday', '') for d in rec.get('byday', []))
     if days:
-        text += f" on {days}"
+        text = days if interval == 1 else f"{text} on {days}"
 
     hours = rec.get('byhour')
     if hours:
