@@ -25,6 +25,22 @@ FRR_POST_BUILD_HOOKS += FRR_POST_BUILD_HOOK
 #
 NETSNMP_CONF_OPTS += --enable-read-only
 
+# Some of these assumes the presence of systemd, so skip them.
+LVM2_CONF_OPTS += --disable-udev_rules
+
+#
+# The multipath-tools package, which we need for kpartx, installs udev
+# rules that assumes the presence of systemd. There is no option to
+# skip the install, but we can pick the destination. So place them in
+# the root and then remove them in the post-install hook.
+MULTIPATH_TOOLS_OPTS += udevrulesdir="/.mpath-trash"
+
+define MPATH_POST_INSTALL_CLEANUP
+	rm -rf $(TARGET_DIR)/.mpath-trash
+endef
+
+MULTIPATH_TOOLS_POST_INSTALL_TARGET_HOOKS += MPATH_POST_INSTALL_CLEANUP
+
 #
 # External pre-built toolchains do not carry their own license.
 #
