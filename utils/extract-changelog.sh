@@ -3,7 +3,7 @@
 # Extract the latest release entry from ChangeLog.md and unwrap lines
 # for GitHub's web view (lets the browser handle line wrapping).
 #
-# Usage: cat doc/ChangeLog.md | extract-changelog.sh > release.md
+# Usage: extract-changelog.sh < doc/ChangeLog.md > release.md
 #
 # Output goes to stdout.
 #
