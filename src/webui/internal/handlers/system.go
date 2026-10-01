@@ -11,6 +11,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
@@ -687,6 +688,17 @@ func (h *SystemHandler) SoftwareUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// nginx spools the whole upload before handing it over, and reading
+	// a bundle into the temp file takes longer than the server's 15 s
+	// read and write timeouts on a slow card.  Push both out.
+	rc := http.NewResponseController(w)
+	if err := rc.SetReadDeadline(time.Now().Add(10 * time.Minute)); err != nil {
+		log.Printf("software upload: extend read deadline: %v", err)
+	}
+	if err := rc.SetWriteDeadline(time.Now().Add(10 * time.Minute)); err != nil {
+		log.Printf("software upload: extend write deadline: %v", err)
+	}
+
 	// 1 MiB in-RAM threshold; larger parts spill to $TMPDIR (/var/tmp on
 	// the target, eMMC-backed) instead of the RAM-backed /tmp.
 	if err := r.ParseMultipartForm(1 << 20); err != nil {
@@ -706,22 +718,12 @@ func (h *SystemHandler) SoftwareUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	tmp, err := os.CreateTemp("", "webui-bundle-*.pkg")
+	tmpPath, err := keepUpload(file)
 	if err != nil {
-		log.Printf("software upload: create temp: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	tmpPath := tmp.Name()
-
-	if _, err := io.Copy(tmp, file); err != nil {
-		tmp.Close()
-		os.Remove(tmpPath)
-		log.Printf("software upload: write: %v", err)
+		log.Printf("software upload: keep bundle: %v", err)
 		http.Error(w, "failed to save bundle", http.StatusInternalServerError)
 		return
 	}
-	tmp.Close()
 
 	body := map[string]map[string]string{
 		"infix-system:input": {"url": tmpPath},
@@ -735,6 +737,37 @@ func (h *SystemHandler) SoftwareUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprint(w, target)
+}
+
+// keepUpload moves the uploaded part to a file of its own that outlives
+// the request.  A part larger than the in-RAM threshold already sits in a
+// temp file, which is renamed rather than copied, sparing the card a
+// second write of the whole bundle.  Smaller parts are written out.
+func keepUpload(file multipart.File) (string, error) {
+	tmp, err := os.CreateTemp("", "webui-bundle-*.pkg")
+	if err != nil {
+		return "", err
+	}
+	tmpPath := tmp.Name()
+	tmp.Close()
+
+	if spilled, ok := file.(*os.File); ok {
+		if err := os.Rename(spilled.Name(), tmpPath); err == nil {
+			return tmpPath, nil
+		}
+	}
+
+	tmp, err = os.OpenFile(tmpPath, os.O_WRONLY|os.O_TRUNC, 0600)
+	if err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+	defer tmp.Close()
+	if _, err := io.Copy(tmp, file); err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+	return tmpPath, nil
 }
 
 // runInstall fires the install-bundle RPC and then waits for RAUC to finish
