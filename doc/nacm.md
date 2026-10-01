@@ -1,59 +1,51 @@
 # Network Access Control Model (NACM)
 
-NETCONF Access Control Model ([RFC 8341][1]) provides fine-grained access
-control for YANG data models. NACM controls who can read, write, and
-execute operations on specific parts of the configuration and operational
-state.
-
-This document provides technical details about how NACM works, how rules
-are evaluated, and best practices for creating custom access control
-policies.
+The NETCONF Access Control Model ([RFC 8341][1]) controls who can read,
+write, and execute operations on specific parts of the configuration and
+operational state.  This document describes how rules are evaluated and
+how to write access control policies of your own.
 
 > [!TIP]
 > For a practical introduction to user management and the built-in user
 > levels (admin, operator, guest), see the [Multiple Users][2] section
 > in the System Configuration guide.
 
-## TL;DR - The Factory Defaults Work
+## The Factory Defaults Work
 
-**You don't need to understand NACM to use the system securely.**
+You do not need to understand NACM to use the system securely.  The
+factory configuration permits everything by default and denies only the
+sensitive items: passwords, cryptographic keys, and operations such as
+factory reset and software upgrade.  Operators can configure the whole
+system without custom rules, and a new feature is configurable the day
+it lands, since nothing in the policy has to be updated for it.
 
-The factory configuration implements a "permit by default, deny sensitive
-items" policy that provides:
-
-- **Immediate usability** - Operators can configure the entire system
-  without custom NACM rules
-- **Automatic security** - Passwords, cryptographic keys, and dangerous
-  operations are protected out-of-the-box
-- **Future-proof design** - New features work immediately without NACM
-  updates
-
-The three built-in user levels (admin, operator, guest) cover most use
-cases. Only read on if you need to create custom access control policies.
+The three built-in user levels (admin, operator, guest) cover most
+needs.  Read on only if you need to write access control policies of
+your own.
 
 ## Overview
 
-NACM provides three types of access control:
+NACM controls three things: read and write access to data nodes,
+execution of RPCs (remote procedure calls), and subscription to event
+notifications.  Notifications are not covered here.
 
-- **Data node access** - Control read/write access to configuration and state
-- **Operation access** - Control execution of RPCs (remote procedure calls)
-- **Notification access** - Control subscription to event notifications (not covered here)
+Three mechanisms decide the outcome of an access check, and they are
+covered in turn below:
 
-Access is controlled through:
-
-1. **Global defaults** - Default permissions for read/write/exec
-2. **YANG-level annotations** - Security markers in YANG modules (see below)
-3. **NACM rules** - Explicit permit/deny rules organized in rule-lists
+1. Global defaults for read, write, and exec
+2. Annotations in the YANG modules themselves
+3. Explicit permit and deny rules, organized in rule-lists
 
 ## Rule Evaluation
 
-NACM rules are evaluated in a specific order:
+Rule-lists are processed in the order they appear in the configuration,
+and within each rule-list the rules are tried in order.  The first
+matching rule wins and no further rules are evaluated.  If no rule
+matches, the global defaults apply.
 
-1. **Rule-lists are processed sequentially** in the order they appear in the configuration
-2. **Within each rule-list**, rules are evaluated sequentially
-3. **First matching rule wins** - no further rules are evaluated
-4. **If no rule matches**, global defaults apply (read-default, write-default, exec-default)
-5. **YANG annotations override everything** - `nacm:default-deny-all` in a YANG module requires an explicit permit rule regardless of global defaults
+The one exception is a node annotated with `nacm:default-deny-all` or
+`nacm:default-deny-write` in its YANG module.  Such a node always
+requires an explicit permit rule, whatever the global defaults say.
 
 ### Example Rule Evaluation
 
@@ -92,12 +84,14 @@ Given this configuration:
 }
 ```
 
-When operator user "jacky" tries to:
+The operator user "jacky" gets the following results:
 
-- **Read password**: Matches "deny-passwords" → **DENIED**
-- **Write interface config**: No match, uses write-default → **PERMITTED** (write-default=permit)
-- **Write hostname**: No match, uses write-default → **PERMITTED** (write-default=permit)
-- **Reboot system**: Matches "permit-system-rpcs" → **PERMITTED** (overrides `nacm:default-deny-all`)
+| Operation              | Matching rule        | Result                                        |
+|------------------------|----------------------|-----------------------------------------------|
+| Read a password        | `deny-passwords`     | Denied                                        |
+| Write interface config | none                 | Permitted by `write-default`                  |
+| Write hostname         | none                 | Permitted by `write-default`                  |
+| Reboot the system      | `permit-system-rpcs` | Permitted, despite `nacm:default-deny-all`    |
 
 ## Global Defaults
 
@@ -111,32 +105,24 @@ NACM has three global defaults that apply when no rule matches:
 }
 ```
 
-**Factory configuration defaults:**
-
-- `read-default: "permit"` - Users can read configuration and state by default
-- `write-default: "permit"` - Users can modify configuration by default
-- `exec-default: "permit"` - Users can execute RPCs by default
-
-This permit-by-default approach, combined with targeted denials for
-sensitive items (passwords, cryptographic keys), provides a balance
-between usability and security. It also makes the system "future proof" -
-when new YANG modules are added, operators can immediately configure them
-without updating NACM rules.
+These are also the factory settings: any user may read, modify, and
+execute anything that no rule or YANG annotation denies.  Combined with
+a few denials for sensitive items, this keeps the rule set small, and a
+new YANG module needs no NACM changes before operators can use it.
 
 > [!IMPORTANT]
-> YANG modules with `nacm:default-deny-all` or `nacm:default-deny-write`
-> annotations override these global defaults. You must create explicit
-> permit rules for those operations.
+> Nodes annotated with `nacm:default-deny-all` or `nacm:default-deny-write`
+> in their YANG module ignore these defaults.  They need an explicit
+> permit rule.
 
 ## Module-Name vs Path
 
-NACM rules can match operations using either `module-name` or `path`.
-The following sub-sections provide detailed information and examples of
-both.
+A rule selects its target with either `module-name` or `path`.  The
+difference matters for augmented modules.
 
 ### Module-Name Matching
 
-Matches all nodes **defined** in a specific YANG module:
+Matches all nodes defined in one YANG module:
 
 ```json
 {
@@ -147,19 +133,16 @@ Matches all nodes **defined** in a specific YANG module:
 }
 ```
 
-This permits all operations on data **defined** in ietf-keystore, but does
-NOT cover augments from other modules.
-
-**Example:** The `/interfaces/interface/ipv4/address` path:
-
-- Interface is defined in `ietf-interfaces`
-- IPv4 config is defined in `ietf-ip` (augments ietf-interfaces)
-- A rule with `module-name: "ietf-interfaces"` does NOT cover ipv4/address
+This permits all operations on data defined in ietf-keystore, but not on
+nodes that other modules augment into it.  For example, the interface
+list is defined in ietf-interfaces, while its IPv4 settings come from
+ietf-ip, which augments it.  A rule naming ietf-interfaces therefore
+does not cover `/interfaces/interface/ipv4/address`.
 
 ### Path Matching
 
-Matches a specific data tree path and **all nodes under it**, including
-augments from other modules:
+Matches a subtree of the data tree, including nodes augmented into it
+from other modules:
 
 ```json
 {
@@ -170,41 +153,38 @@ augments from other modules:
 }
 ```
 
-This permits operations on `/interfaces/interface` **and all child nodes**,
-including augments like:
+This permits operations on `/interfaces/interface` and everything below
+it, including the `ipv4` and `ipv6` containers from ietf-ip and
+`bridge-port` from infix-interfaces.
 
-- `/interfaces/interface/ipv4` (from ietf-ip)
-- `/interfaces/interface/ipv6` (from ietf-ip)
-- `/interfaces/interface/bridge-port` (from infix-interfaces)
+The path is written differently depending on whether the rule also has
+a `module-name`.  With one, the path is relative to that module and
+carries no prefix:
 
-**Path syntax:**
+```json
+"module-name": "ietf-system",
+"path": "/system/authentication/user/password"
+```
 
-- When used **with** module-name: Path is module-relative (no prefix)
+Without one, the path must start with the module prefix:
 
-      ```json
-      "module-name": "ietf-system",
-      "path": "/system/authentication/user/password"
-      ```
-
-- When used **without** module-name: Path must include module prefix
-
-      ```json
-      "path": "/ietf-system:system/authentication/user/password"
-      ```
+```json
+"path": "/ietf-system:system/authentication/user/password"
+```
 
 > [!TIP] Use path-based rules
-> When you want to permit/deny access to a configuration subtree
-> including all augments, e.g., all IP settings below
-> `/ietf-interfaces:interfaces/`.  This is more flexible and requires
-> less maintenance as new features are added.
+> To permit or deny a configuration subtree including its augments, e.g.,
+> all IP settings below `/ietf-interfaces:interfaces/`, use a path rule.
+> It keeps working as new augments are added.
 
 ## YANG-Level Annotations
 
-Many YANG modules include NACM annotations that provide baseline security:
+Many YANG modules mark their sensitive nodes with NACM annotations, so a
+baseline of protection exists before any rule is written.
 
 ### nacm:default-deny-all
 
-Requires an explicit permit rule, regardless of global defaults:
+Requires an explicit permit rule, whatever the global defaults say:
 
 ```yang
 rpc system-restart {
@@ -232,9 +212,7 @@ modify authentication settings.
 
 ### Protected Operations
 
-The following are protected by YANG annotations and require explicit permits:
-
-**RPC Operations:**
+The following RPCs are annotated and need an explicit permit:
 
 - `ietf-factory-default:factory-reset` ([RFC 8808][4])
 - `infix-factory-default:factory-default`
@@ -246,7 +224,7 @@ The following are protected by YANG annotations and require explicit permits:
 - `infix-system-software:set-boot-order`
 - `infix-syslog:log`
 
-**Data Containers:**
+So do these data containers:
 
 - `/system/authentication` (`nacm:default-deny-write`, [ietf-system][3])
 - `/system/advanced` (`nacm:default-deny-write`, boot scripts and daemon
@@ -256,8 +234,8 @@ The following are protected by YANG annotations and require explicit permits:
 - RADIUS shared secrets ([ietf-system][3])
 - TLS client/server credentials ([ietf-tls-client][6])
 
-This provides defense-in-depth - even if NACM rules are misconfigured, these
-critical operations remain protected.
+A mistake in the NACM rules therefore cannot open up these operations
+by accident.
 
 ## Access Operations
 
@@ -270,11 +248,8 @@ NACM supports the following access operations:
 - `exec` - Execute RPC operations
 - `*` - All operations (wildcard)
 
-**Common combinations:**
-
-- `"create update delete"` - All write operations
-- `"*"` - Everything (read, write, execute)
-- `"read"` - Read-only access
+A rule may list several, e.g., `"create update delete"` for all write
+operations.
 
 ## Rule-List Groups
 
@@ -288,19 +263,15 @@ Each rule-list applies to one or more user groups:
 }
 ```
 
-**Special group names:**
-
-- `"*"` - Matches all users (including those not in any NACM group)
-
-**Evaluation:**
-A user can be in multiple NACM groups. All rule-lists matching the user's
-groups are evaluated in order until a matching rule is found.
+The group `"*"` matches all users, including those not in any NACM
+group.  A user can be in several groups, in which case every rule-list
+for any of those groups is evaluated, in configuration order, until a
+rule matches.
 
 ## Example: Factory Configuration
 
-The factory configuration uses a "permit by default, deny sensitive items"
-approach. This design is "future proof" - when new YANG modules are added,
-operators can immediately configure them without updating NACM rules.
+The factory configuration permits by default and denies the sensitive
+items, with six rules in total:
 
 ```json
 {
@@ -389,16 +360,15 @@ operators can immediately configure them without updating NACM rules.
 }
 ```
 
-**Key design decisions:**
+The admin rule-list comes first, so its `permit-all` rule wins before
+the global denials in the `"*"` rule-list are ever reached.  Operators
+need only one rule, the permit for the ietf-system RPCs, since the
+defaults already let them configure any module.  Passwords, keystore,
+and truststore are denied for everyone else through the `"*"` group.
+Factory reset and software upgrade are not mentioned at all, their YANG
+annotations keep them admin-only.
 
-1. **Permit by default** - `write-default: permit` allows operators to configure any module
-2. **Minimal operator rules** - Only one rule to permit system RPCs (reboot, set time)
-3. **Future proof** - New YANG modules automatically configurable by operators
-4. **Targeted denials** - Only sensitive items (passwords, keys) are explicitly denied
-5. **Global denials** - Password/keystore/truststore denied for everyone via group "*"
-6. **YANG annotations** - Sensitive operations (factory-reset, software upgrades) still protected by `nacm:default-deny-all` in YANG modules
-
-**Effective permissions by group:**
+The resulting permissions per group:
 
 | Group    | Read | Write | Exec | Exceptions                                    |
 |----------|------|-------|------|-----------------------------------------------|
@@ -410,7 +380,7 @@ operators can immediately configure them without updating NACM rules.
 
 ### Permit-by-Default
 
-The factory default approach - allow everything except sensitive items:
+The factory approach, allow everything except the sensitive items:
 
 ```json
 {
@@ -445,14 +415,12 @@ The factory default approach - allow everything except sensitive items:
 }
 ```
 
-This approach is "future proof" - new YANG modules are automatically
-accessible without rule updates.  Admins bypass the global denials
-because their `permit-all` rule is evaluated first.
+New YANG modules are accessible without rule updates, and admins bypass
+the global denials because their `permit-all` rule is evaluated first.
 
 ### Deny-by-Default
 
-More restrictive approach - deny everything except what is explicitly
-allowed:
+Deny everything except what is explicitly allowed:
 
 ```json
 {
@@ -475,11 +443,12 @@ allowed:
 ```
 
 > [!NOTE]
-> This requires updating NACM rules whenever new features are added.
+> The rules need updating whenever a new feature is added.
 
 ### Global Restrictions
 
-Deny access to sensitive data for all users (except admins with permit-all):
+Deny sensitive data for all users, except admins whose `permit-all` rule
+is evaluated first:
 
 ```json
 {
@@ -504,7 +473,7 @@ Deny access to sensitive data for all users (except admins with permit-all):
 
 ### Viewing Effective Permissions
 
-Check what NACM groups a user belongs to:
+`show nacm` lists the defaults, the groups, and which users are in them:
 
 <pre class="cli"><code>admin@example:/> <b>show nacm</b>
 enabled              : yes
@@ -573,7 +542,7 @@ applicable rules : 4
 The easiest way to test NACM permissions is to log in as the user and try
 the operation:
 
-<pre class="cli"><code>$ ssh jacky@host
+<pre class="cli"><code>$ <b>ssh jacky@host</b>
 jacky@example:/> <b>configure</b>
 jacky@example:/config/> <b>edit system authentication user admin</b>
 jacky@example:/config/system/authentication/user/admin/> <b>set authorized-key foo</b>
@@ -593,37 +562,30 @@ the statistics:
 ...
 </code></pre>
 
-Increasing counters indicate permission denials are occurring.
+Counters that keep increasing mean some user is being denied.
 
 ## Best Practices
 
-1. **Leverage permit-by-default** - The factory configuration uses
-   `write-default: "permit"` with targeted denials. This is "future proof" -
-   new features work immediately without NACM updates.
+Start from the factory configuration rather than from scratch.  Keep the
+permit defaults and add denials for what must be protected, rather than
+denying everything and permitting piece by piece.  The former needs no
+attention when new features arrive, the latter does.
 
-2. **Protect sensitive items globally** - Use `group: ["*"]` rule-list to
-   deny access to passwords, cryptographic keys, and similar sensitive data.
-   Admin's permit-all rule (evaluated first) bypasses these denials.
+Put the admin rule-list first.  Rule-lists are evaluated in order, and
+the `permit-all` rule has to win before any global denial is reached.
+Then put the denials that apply to everyone else in a `"*"` rule-list,
+and leave the operations that YANG already annotates alone, they are
+protected without any rule.
 
-3. **Leverage YANG annotations** - Many sensitive operations are already
-   protected by `nacm:default-deny-all` in YANG modules (factory-reset,
-   software upgrades, etc.). Only add explicit permit rules when needed.
+Pick the matcher for the target: a path rule for one piece of data,
+such as the password hashes, and a module-name rule for a whole module,
+such as the keystore.
 
-4. **Order matters** - Rule-lists are evaluated in order. Place admin's
-   permit-all rule first so it bypasses global denials.
-
-5. **Use path-based denials** - For protecting specific data (like password
-   hashes), use path rules. For protecting entire modules (like keystore),
-   use module-name rules.
-
-6. **Test thoroughly** - Always test user permissions after changes. NACM
-   errors can be subtle (nodes may be silently omitted from read operations).
-
-7. **Keep it simple** - The factory configuration uses only 6 rules for
-   three user levels. Fewer rules are easier to understand and maintain.
-
-8. **Document rules** - Use the "comment" field to explain why specific
-   permissions are granted or denied.
+Test as the affected user after every change.  A denied read does not
+produce an error, the node is simply left out of the reply, so a rule
+mistake is easy to miss.  Fewer rules are easier to check this way; the
+factory configuration gets by with six for three user levels.  Give
+every rule a `comment` saying why it exists.
 
 ## References
 
