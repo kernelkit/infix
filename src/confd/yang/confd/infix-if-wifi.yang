@@ -43,10 +43,18 @@ submodule infix-if-wifi {
      interfaces provide network-layer configuration (SSID, security).
 
      Key features:
-     - Dual mode support: AP and Station
+     - Modes: Access Point, Station, 802.11s Mesh Point and 4-address
+       (WDS) link
      - Multi-SSID: Multiple APs on same radio
      - Security: WPA2/WPA3 with keystore integration
      - Operational state: Connection status, RSSI, client lists";
+
+  revision 2026-10-02 {
+    description
+      "Add 4-address (WDS) support: wds-link mode for access point side
+       ports, and the station leaves 'wds' and 'peer-bssid'.";
+    reference "internal";
+  }
 
   revision 2026-09-24 {
     description
@@ -132,18 +140,21 @@ submodule infix-if-wifi {
          The interface must reference a radio defined in infix-wifi-radio
          module, which provides the physical layer configuration.";
 
+      must "radio or wds-link" {
+        error-message "A WiFi interface must reference a radio";
+      }
+
       leaf radio {
         type leafref {
           path "/iehw:hardware/iehw:component/iehw:name";
         }
-        mandatory true;
         must "derived-from-or-self(/iehw:hardware/iehw:component[iehw:name=current()]/iehw:class, 'ih:wifi')" {
           error-message "Referenced hardware component must be a WiFi radio (class 'ih:wifi')";
         }
-        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)]) <= 1" {
+        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)][not(wifi/wds-link)]) <= 1" {
           error-message "Only one station or scan interface is allowed per radio";
         }
-        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(infix-if:custom-phys-address/*)]) <= 1" {
+        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(infix-if:custom-phys-address/*)][not(wifi/wds-link)]) <= 1" {
           error-message "Only one interface per radio can use the default MAC address. Configure custom-phys-address on additional interfaces.";
         }
 
@@ -152,7 +163,8 @@ submodule infix-if-wifi {
 
            References a hardware component with class 'ih:wifi'.
            The radio must exist and be configured before creating
-           virtual interfaces.
+           virtual interfaces.  Not set for a WDS link, which uses
+           the radio of its access point.
 
            Example: 'phy0' for the first WiFi radio.
 
@@ -171,9 +183,11 @@ submodule infix-if-wifi {
            - Station mode: Connect to an existing WiFi network
            - Access Point mode: Create a WiFi network for clients
            - Mesh Point mode: Create an 802.11s mesh link
+           - WDS link: Bridge port for one 4-address station on a local
+             access point
 
            Note: A radio can host either:
-           - Multiple AP interfaces (multi-SSID), OR
+           - Multiple AP interfaces (multi-SSID), with WDS links, OR
            - A single Station interface, OR
            - A single Mesh Point interface
 
@@ -192,6 +206,28 @@ submodule infix-if-wifi {
                Only one station interface is allowed per radio.
 
                Example use case: Connect to upstream WiFi network.";
+
+            leaf wds {
+              type boolean;
+              default false;
+              description
+                "4-address (WDS) mode.
+
+                 Lets the station forward frames for other devices, which
+                 is what allows it to be a bridge port.  Use it to bridge
+                 the station with wired ports or a local access point, as
+                 in a repeater.  The access point must accept 4-address
+                 stations, see the wds-link mode.";
+            }
+
+            leaf peer-bssid {
+              type yang:mac-address;
+              description
+                "Only associate to the access point with this BSSID.
+
+                 Without it the station picks any access point advertising
+                 the SSID.";
+            }
 
             leaf ssid {
               type string {
@@ -808,6 +844,92 @@ submodule infix-if-wifi {
                     "Last transmitted data rate to this peer in 100 kbps.";
                 }
               }
+            }
+          }
+        }
+
+        case wds-link {
+          container wds-link {
+            presence "Configure a 4-address WDS port of a local access point";
+
+            description
+              "Bridge port for one 4-address (WDS) station on an access
+               point of this device.
+
+               The access point binds the station with the given MAC
+               address to this interface.  Add the interface to the access
+               point's bridge and configure VLANs like for any other port;
+               one wds-link per repeater or remote bridge.  The port is up
+               while the station is associated.
+
+               The interface uses the access point's radio and MAC
+               address.";
+
+            must "not(../../custom-phys-address/*)" {
+              error-message "A wds-link uses the MAC address of its access point";
+            }
+
+            must "not(../radio)" {
+              error-message "A wds-link uses the radio of its access point, do not set radio";
+            }
+
+            leaf access-point {
+              type leafref {
+                path "/if:interfaces/if:interface/if:name";
+              }
+              mandatory true;
+              must "/if:interfaces/if:interface[if:name = current()]/wifi/access-point" {
+                error-message "wds-link must reference an access point interface on this device";
+              }
+              description
+                "Access point interface this port belongs to.";
+            }
+
+            leaf peer-address {
+              type yang:mac-address;
+              mandatory true;
+              must "count(/if:interfaces/if:interface[wifi/wds-link/access-point = current()/../access-point][wifi/wds-link/peer-address = current()]) = 1" {
+                error-message "Only one wds-link per station on an access point";
+              }
+              description
+                "MAC address of the 4-address station bound to this port.";
+            }
+
+            /* Operational state */
+
+            leaf connected {
+              config false;
+              type boolean;
+              description
+                "True while the station is associated and bound to this
+                 port.";
+            }
+
+            leaf signal-strength {
+              config false;
+              type int16;
+              units "dBm";
+              description
+                "Signal strength of the station in dBm.  Only present
+                 while connected.";
+            }
+
+            leaf rx-speed {
+              config false;
+              type uint32;
+              units "100 kbps";
+              description
+                "Last received data rate from the station in 100 kbps.
+                 Only present while connected.";
+            }
+
+            leaf tx-speed {
+              config false;
+              type uint32;
+              units "100 kbps";
+              description
+                "Last transmitted data rate to the station in 100 kbps.
+                 Only present while connected.";
             }
           }
         }
