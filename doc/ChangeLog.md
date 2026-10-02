@@ -9,6 +9,10 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.56 (LTS)
+- WiFi 4-address (WDS) links for wireless bridges and repeaters: a station
+  with `wds` enabled can be a bridge port, and an access point bridges
+  each remote station through a `wds-link` interface, see
+  [WDS Backhaul and Repeaters][wds]
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
@@ -61,6 +65,7 @@ All notable changes to the project are documented in this file.
   like a DHCPv4 route.  Before, the route preference setting was ignored
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
+[wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
 
 [v26.09.0][] - 2026-09-30
 -------------------------

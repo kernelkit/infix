@@ -1,7 +1,8 @@
 # Wi-Fi (Wireless LAN)
 
-Infix includes comprehensive Wi-Fi support for both client (Station) and
-Access Point modes. When a compatible Wi-Fi adapter is detected, the system
+Infix supports Wi-Fi as a client (Station), as an Access Point, as an
+802.11s mesh point, and as a 4-address (WDS) link for wireless bridges
+and repeaters.  When a compatible Wi-Fi adapter is detected, the system
 automatically creates a WiFi radio (PHY) in factory-config, that can
 host virtual interfaces.
 
@@ -16,7 +17,7 @@ Infix uses a two-layer WiFi architecture:
 
 2. **WiFi Interface (Network layer)**: Virtual interface on a radio
      - Configured via `infix-interfaces` module
-     - Can operate in Station (client) or Access Point mode
+     - Operates in Station (client), Access Point, Mesh Point or WDS link mode
      - Each interface references a parent radio
 
 ## Naming Conventions
@@ -44,7 +45,9 @@ Where `N` is a number (0, 1, 2, ...).
 
 - USB hotplug is not supported - adapters must be present at boot
 - Interface naming may be inconsistent with multiple USB Wi-Fi adapters
-- AP and Station modes cannot be mixed on the same radio
+- A station and access points on the same radio must share a channel: the
+  station follows its access point, so pin the radio to that channel on
+  both ends.  See [WDS Backhaul and Repeaters](#wds-backhaul-and-repeaters)
 
 ## Supported Wi-Fi Adapters
 
@@ -704,9 +707,8 @@ Repeat for all APs that should participate in the roaming group.
 
 IEEE 802.11s is a wireless mesh networking standard operating at Layer 2.
 Mesh nodes form peer links directly with each other and route traffic
-using HWMP (Hybrid Wireless Mesh Protocol), which is built into the
-Linux mac80211 subsystem.  There is no central controller; nodes
-discover peers and find paths on their own.
+using HWMP (Hybrid Wireless Mesh Protocol).  There is no central
+controller; nodes discover peers and find paths on their own.
 
 The standard defines two node roles:
 
@@ -718,11 +720,13 @@ The standard defines two node roles:
 In practice, a node bridging the mesh interface to a LAN acts as a mesh
 portal.
 
+For a backhaul with a single root, where multi-hop and self-healing are
+not needed, see [WDS Backhaul and Repeaters](#wds-backhaul-and-repeaters).
+That variant can use WiFi hardware offloading, mesh cannot.
+
 > [!NOTE]
-> Not all WiFi hardware supports 802.11s mesh.  The driver must implement
-> mesh point mode in mac80211.  Check your adapter's capabilities with
-> `iw phy <phy> info` and look for "mesh point" under "Supported interface
-> modes".
+> Not all WiFi hardware supports 802.11s mesh, see the adapter list
+> under [Supported Wi-Fi Adapters](#supported-wi-fi-adapters).
 
 ### 802.11s vs EasyMesh
 
@@ -733,10 +737,10 @@ portal.
 | **Single point of failure** | None                     | Controller                     |
 | **Multi-hop**               | True N-hop               | Limited (1-2 hops)             |
 | **Vendor lock-in**          | None                     | Common                         |
-| **Linux support**           | Kernel-native (mac80211) | Requires proprietary firmware  |
+| **Vendor software**         | None needed              | Required                       |
 
-Infix uses 802.11s because it runs entirely in the kernel with no
-proprietary components.
+Infix uses 802.11s because it is an open standard that works across
+vendors without proprietary components.
 
 ### Mesh configuration
 
@@ -807,6 +811,125 @@ AP interfaces for clients on another:
 With 802.11r/k/v roaming enabled on the APs (same SSID, same
 passphrase, same mobility domain), clients hand off between nodes while
 the mesh carries backhaul traffic.
+
+## WDS Backhaul and Repeaters
+
+A WiFi station normally carries only its own traffic and cannot be a
+bridge port.  In 4-address mode, also called WDS, it can forward traffic
+for the devices behind it.  That is what makes a device with a station
+and an access point a repeater, and a device with a station and wired
+ports a wireless bridge.
+
+Both ends take part.  The satellite enables `wds` on its station.  The
+root accepts the station on one of its access points and gives it a
+`wds-link` interface: a bridge port, one per satellite, created by
+configuration and tied to the satellite's MAC address.
+
+Compared to an [802.11s mesh](#80211s-mesh-point-mode), a WDS backhaul
+is a star with one root, without multi-hop or self-healing.  In return
+it is a plain access point and station link, which WiFi hardware
+offloading supports where mesh is not.
+
+### Root: access point with WDS ports
+
+On the root, two kinds of interface share the job.  The access point is
+the one the satellites connect to: it advertises the backhaul SSID and
+handles authentication, and there is one per radio.  Each `wds-link`
+is the port for one satellite: that is where its traffic appears and
+what you put in the bridge.  With two satellites on `radio1`:
+
+```
+radio1
+ ├── backhaul    access point, the SSID the satellites connect to
+ ├── wds-garage  port for the garage satellite, bridge port
+ └── wds-attic   port for the attic satellite, bridge port
+```
+
+A 4-address station forwards traffic for the devices behind it, so it
+cannot share the access point's interface with the ordinary clients.
+The `wds-link` is that separate port.  Any access point can take WDS
+stations, even one that serves clients, but give the backhaul its own
+SSID, advertised by the root only, so the satellites can land nowhere
+else.  For each satellite, add a `wds-link` interface naming the access
+point and the satellite's station MAC address, and make it a port of
+the bridge.  The interface uses the access point's radio and MAC
+address, so it takes neither a `radio` nor a `custom-phys-address`.
+
+<pre class="cli"><code>admin@root:/config/> <b>edit interface backhaul</b>
+admin@root:/config/interface/backhaul/> <b>set wifi radio radio1</b>
+admin@root:/config/interface/backhaul/> <b>set wifi access-point ssid my-backhaul</b>
+admin@root:/config/interface/backhaul/> <b>set wifi access-point security secret backhaul-key</b>
+admin@root:/config/interface/backhaul/> <b>end</b>
+admin@root:/config/> <b>edit interface wds-garage</b>
+admin@root:/config/interface/wds-garage/> <b>set type wifi</b>
+admin@root:/config/interface/wds-garage/> <b>set wifi wds-link access-point backhaul</b>
+admin@root:/config/interface/wds-garage/> <b>set wifi wds-link peer-address 02:13:37:13:37:12</b>
+admin@root:/config/interface/wds-garage/> <b>set bridge-port bridge br0</b>
+admin@root:/config/interface/wds-garage/> <b>leave</b>
+</code></pre>
+
+VLANs and other bridge port settings are configured on the `wds-link`
+interface like on any other port.  The port is down until the satellite
+connects, and goes down again when it leaves, or within about half a
+minute if the satellite disappears without notice:
+
+<pre class="cli"><code>admin@root:/> <b>show interface wds-garage</b>
+name               : wds-garage
+type               : wifi
+operational status : up
+higher-layer-if    : br0
+mode               : wds-link
+connected          : yes
+signal             : -48 dBm (good)
+</code></pre>
+
+### Satellite: 4-address station
+
+On the satellite, configure a station for the backhaul SSID with `wds`
+enabled and make it a bridge port, next to the wired ports and any local
+access points.  `peer-bssid` is optional and pins the station to the
+root's access point:
+
+<pre class="cli"><code>admin@garage:/config/> <b>edit interface uplink</b>
+admin@garage:/config/interface/uplink/> <b>set wifi radio radio1</b>
+admin@garage:/config/interface/uplink/> <b>set wifi station ssid my-backhaul</b>
+admin@garage:/config/interface/uplink/> <b>set wifi station wds true</b>
+admin@garage:/config/interface/uplink/> <b>set wifi station peer-bssid 02:13:37:13:37:01</b>
+admin@garage:/config/interface/uplink/> <b>set wifi station security secret backhaul-key</b>
+admin@garage:/config/interface/uplink/> <b>set bridge-port bridge br0</b>
+admin@garage:/config/interface/uplink/> <b>leave</b>
+</code></pre>
+
+A station without `wds` cannot be a bridge port, the configuration is
+rejected.
+
+The access point at the other end must accept 4-address stations.  A
+root with a `wds-link` for the satellite does, and so do most access
+points with a WDS or 4-address option.  One that does not still lets
+the station connect and authenticate, then drops all its traffic.
+Behind such an access point, use a plain station with an address of its
+own and route or masquerade the network behind it instead, see
+[Firewall](firewall.md).
+
+### Repeater
+
+A repeater is a satellite that also runs an access point for clients,
+bridged with the backhaul station.  The station and the access point
+can share a radio, but then all radios in the backhaul must use the same
+channel: the station follows the root's channel and the local access
+point has a fixed one.  A channel change on the root, for example from
+radar detection, leaves the satellites disconnected until they are
+reconfigured.
+
+Clients on a repeater keep their own MAC addresses, so DHCP reservations
+and per-port VLANs work as on a wired network.  With the same client
+SSID on the root and the repeaters, the [roaming
+features](#fast-roaming-between-access-points) apply as usual.  Keep the
+backhaul SSID separate from the client SSIDs, or a satellite may connect
+to another satellite instead of the root.
+
+A satellite with both a WDS backhaul and a cable to the same LAN forms a
+loop, as with any two bridge ports to the same network.
 
 ## Troubleshooting
 
