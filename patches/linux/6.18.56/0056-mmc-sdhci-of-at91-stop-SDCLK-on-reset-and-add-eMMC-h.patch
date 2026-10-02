@@ -1,7 +1,7 @@
 From 4a50546ae4abb37070703d1ce20149b65fdd1a51 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:37:48 +0200
-Subject: [PATCH 56/81] mmc: sdhci-of-at91: stop SDCLK on reset and add eMMC
+Subject: [PATCH 56/82] mmc: sdhci-of-at91: stop SDCLK on reset and add eMMC
  hardware reset
 
 The controller is reset, and its signaling mode changed, with SDCLK

@@ -1,7 +1,7 @@
 From 29b6583d7463dfddbfbb0e30a70de7707f5c86b0 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 10:38:42 +0200
-Subject: [PATCH 19/81] net: dsa: tag_dsa: Use tag priority as initial
+Subject: [PATCH 19/82] net: dsa: tag_dsa: Use tag priority as initial
  skb->priority
 
 Use the 3-bit priority field from the DSA tag as the initial packet
