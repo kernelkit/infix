@@ -1,0 +1,7 @@
+config BR2_PACKAGE_YANGERD
+	bool "yangerd"
+	depends on BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS
+	help
+	  Operational data daemon for YANG/NETCONF/RESTCONF.
+	  Replaces Python yanger scripts with a persistent Go daemon
+	  serving operational data over a Unix socket IPC protocol.

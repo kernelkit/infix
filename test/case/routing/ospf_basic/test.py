@@ -218,8 +218,10 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(R2, "192.168.33.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
 
     with test.step("Verify R2 OSPF neighbors with non-OSPF interface"):
-        # Regression test for #1169
-        assert route.ospf_has_neighbors(R2)
+        # Regression test for #1169.  Routes are reactive in operational
+        # while OSPF status is polled, so neighbors may show up to one
+        # poll interval after the routes.
+        until(lambda: route.ospf_has_neighbors(R2), attempts=30)
 
     with test.step("Test connectivity from PC:data to 192.168.200.1"):
         _, hport0 = env.ltop.xlate("PC", "data")
