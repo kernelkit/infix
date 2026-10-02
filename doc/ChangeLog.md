@@ -62,6 +62,17 @@ All notable changes to the project are documented in this file.
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 
+
+### Added
+
+- WiFi 4-address (WDS) links: a station with `wds` enabled can be a bridge
+  port, and an access point gets a `wds-link` interface per remote station
+  to bridge it.  Together they build wireless bridges and repeaters, see
+  [WDS Backhaul and Repeaters][wds].  The station leaf `peer-bssid` pins a
+  station to one access point
+
+[wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
+
 [v26.09.0][] - 2026-09-30
 -------------------------
 
