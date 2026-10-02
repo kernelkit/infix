@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: wifi&#45;wds&#45;repeater Pages: 1 -->
+<svg width="863pt" height="454pt"
+ viewBox="0.00 0.00 863.08 453.54" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 449.54)">
+<title>wifi&#45;wds&#45;repeater</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-449.54 859.08,-449.54 859.08,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-171.02 0,-263.02 108,-263.02 108,-171.02 0,-171.02"/>
+<text text-anchor="middle" x="25" y="-213.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-171.02 50,-263.02 "/>
+<text text-anchor="middle" x="79" y="-247.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="50,-240.02 108,-240.02 "/>
+<text text-anchor="middle" x="79" y="-224.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+<polyline fill="none" stroke="black" points="50,-217.02 108,-217.02 "/>
+<text text-anchor="middle" x="79" y="-201.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt3</text>
+<polyline fill="none" stroke="black" points="50,-194.02 108,-194.02 "/>
+<text text-anchor="middle" x="79" y="-178.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">lan</text>
+</g>
+<!-- root -->
+<g id="node2" class="node">
+<title>root</title>
+<polygon fill="none" stroke="black" points="383.04,-376.04 383.04,-445.04 499.04,-445.04 499.04,-376.04 383.04,-376.04"/>
+<text text-anchor="middle" x="416.04" y="-429.84" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="383.04,-422.04 449.04,-422.04 "/>
+<text text-anchor="middle" x="416.04" y="-406.84" font-family="DejaVu Sans Mono, Book" font-size="14.00">uplink</text>
+<polyline fill="none" stroke="black" points="383.04,-399.04 449.04,-399.04 "/>
+<text text-anchor="middle" x="416.04" y="-383.84" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="449.04,-376.04 449.04,-445.04 "/>
+<text text-anchor="middle" x="474.04" y="-406.84" font-family="DejaVu Sans Mono, Book" font-size="14.00">root</text>
+</g>
+<!-- host&#45;&#45;root -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;root:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-252.02C108,-252.02 383.04,-433.54 383.04,-433.54"/>
+</g>
+<!-- host&#45;&#45;root -->
+<g id="edge4" class="edge">
+<title>host:lan&#45;&#45;root:uplink</title>
+<path fill="none" stroke="black" stroke-width="2" d="M108,-182.02C108,-182.02 383.04,-410.54 383.04,-410.54"/>
+</g>
+<!-- repeater -->
+<g id="node3" class="node">
+<title>repeater</title>
+<polygon fill="none" stroke="black" points="568.06,-194.02 568.06,-240.02 701.06,-240.02 701.06,-194.02 568.06,-194.02"/>
+<text text-anchor="middle" x="593.06" y="-224.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="568.06,-217.02 618.06,-217.02 "/>
+<text text-anchor="middle" x="593.06" y="-201.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="618.06,-194.02 618.06,-240.02 "/>
+<text text-anchor="middle" x="659.56" y="-213.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">repeater</text>
+</g>
+<!-- host&#45;&#45;repeater -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;repeater:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-229.02C108,-229.02 567.56,-229.02 567.56,-229.02"/>
+</g>
+<!-- client -->
+<g id="node4" class="node">
+<title>client</title>
+<polygon fill="none" stroke="black" points="383.04,-0.5 383.04,-46.5 499.04,-46.5 499.04,-0.5 383.04,-0.5"/>
+<text text-anchor="middle" x="408.04" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="383.04,-23.5 433.04,-23.5 "/>
+<text text-anchor="middle" x="408.04" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="433.04,-0.5 433.04,-46.5 "/>
+<text text-anchor="middle" x="466.04" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">client</text>
+</g>
+<!-- host&#45;&#45;client -->
+<g id="edge3" class="edge">
+<title>host:mgmt3&#45;&#45;client:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-205.02C108,-205.02 383.04,-35.5 383.04,-35.5"/>
+</g>
+<!-- cell -->
+<g id="node5" class="node">
+<title>cell</title>
+<polygon fill="none" stroke="black" points="801.08,-199.02 801.08,-235.02 855.08,-235.02 855.08,-199.02 801.08,-199.02"/>
+<text text-anchor="middle" x="828.08" y="-213.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">cell</text>
+</g>
+<!-- root&#45;&#45;cell -->
+<g id="edge5" class="edge">
+<title>root:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M416.04,-375.54C416.04,-375.54 709.37,-262.69 801.04,-227.42"/>
+</g>
+<!-- repeater&#45;&#45;cell -->
+<g id="edge6" class="edge">
+<title>repeater:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M592.56,-194.02C592.56,-194.02 739.2,-208.34 801.06,-214.38"/>
+</g>
+<!-- client&#45;&#45;cell -->
+<g id="edge7" class="edge">
+<title>client:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M408.04,-0.5C408.04,-0.5 707.76,-155 800.84,-202.98"/>
+</g>
+</g>
+</svg>

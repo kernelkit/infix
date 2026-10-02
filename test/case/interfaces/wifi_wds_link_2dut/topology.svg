@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: wifi&#45;wds&#45;link&#45;2dut Pages: 1 -->
+<svg width="682pt" height="318pt"
+ viewBox="0.00 0.00 681.56 318.36" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 314.36)">
+<title>wifi&#45;wds&#45;link&#45;2dut</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-314.36 677.56,-314.36 677.56,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-132.18 0,-178.18 108,-178.18 108,-132.18 0,-132.18"/>
+<text text-anchor="middle" x="25" y="-151.48" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-132.18 50,-178.18 "/>
+<text text-anchor="middle" x="79" y="-162.98" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="50,-155.18 108,-155.18 "/>
+<text text-anchor="middle" x="79" y="-139.98" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- root -->
+<g id="node2" class="node">
+<title>root</title>
+<polygon fill="none" stroke="black" points="399.04,-263.86 399.04,-309.86 499.04,-309.86 499.04,-263.86 399.04,-263.86"/>
+<text text-anchor="middle" x="424.04" y="-294.66" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="399.04,-286.86 449.04,-286.86 "/>
+<text text-anchor="middle" x="424.04" y="-271.66" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="449.04,-263.86 449.04,-309.86 "/>
+<text text-anchor="middle" x="474.04" y="-283.16" font-family="DejaVu Sans Mono, Book" font-size="14.00">root</text>
+</g>
+<!-- host&#45;&#45;root -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;root:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-167.18C108,-167.18 399.04,-298.86 399.04,-298.86"/>
+</g>
+<!-- satellite -->
+<g id="node3" class="node">
+<title>satellite</title>
+<polygon fill="none" stroke="black" points="378.54,-0.5 378.54,-46.5 519.54,-46.5 519.54,-0.5 378.54,-0.5"/>
+<text text-anchor="middle" x="403.54" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="378.54,-23.5 428.54,-23.5 "/>
+<text text-anchor="middle" x="403.54" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">wifi</text>
+<polyline fill="none" stroke="black" points="428.54,-0.5 428.54,-46.5 "/>
+<text text-anchor="middle" x="474.04" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">satellite</text>
+</g>
+<!-- host&#45;&#45;satellite -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;satellite:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-143.18C108,-143.18 378.04,-35.5 378.04,-35.5"/>
+</g>
+<!-- cell -->
+<g id="node4" class="node">
+<title>cell</title>
+<polygon fill="none" stroke="black" points="619.56,-137.18 619.56,-173.18 673.56,-173.18 673.56,-137.18 619.56,-137.18"/>
+<text text-anchor="middle" x="646.56" y="-151.48" font-family="DejaVu Sans Mono, Book" font-size="14.00">cell</text>
+</g>
+<!-- root&#45;&#45;cell -->
+<g id="edge3" class="edge">
+<title>root:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M424.04,-263.86C424.04,-263.86 559.85,-197.53 619.27,-168.51"/>
+</g>
+<!-- satellite&#45;&#45;cell -->
+<g id="edge4" class="edge">
+<title>satellite:wifi&#45;&#45;cell</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" stroke-dasharray="5,2" d="M403.04,-0.5C403.04,-0.5 555.41,-97.28 619.1,-137.74"/>
+</g>
+</g>
+</svg>
