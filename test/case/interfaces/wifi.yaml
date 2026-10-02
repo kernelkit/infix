@@ -10,3 +10,9 @@
 
 - name: WiFi Band Steering across a dual-band Access Point
   case: wifi_band_steering/test.py
+
+- name: WiFi 4-address (WDS) link between two bridges
+  case: wifi_wds_link_2dut/test.py
+
+- name: WiFi repeater with two SSIDs in VLANs over a 4-address (WDS) backhaul
+  case: wifi_wds_repeater/test.py
