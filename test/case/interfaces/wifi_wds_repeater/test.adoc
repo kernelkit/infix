@@ -1,0 +1,54 @@
+=== WiFi repeater with two SSIDs in VLANs over a 4-address (WDS) backhaul
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/wifi_wds_repeater]
+
+==== Description
+
+Four DUTs.  The root runs the backhaul access point 'infix-backhaul' and
+a VLAN filtering bridge: the WDS port and the wired uplink carry VLAN 10
+and VLAN 20 tagged, and the root serves DHCP in each VLAN.  The repeater
+has a 4-address station on the backhaul, carrying both VLANs tagged, and
+two access points on the same radio as access ports: 'infix-home'
+untagged in VLAN 10 and 'infix-guest' untagged in VLAN 20.  Two plain
+stations join them, one per SSID.
+
+Each station must lease an address from the DHCP server of its own VLAN
+on the root.  That proves both that the 4-address backhaul carries the
+stations' own MAC addresses and that the VLAN tags survive the trip.
+The host behind the root reaches both stations on their VLANs.
+
+Taking the backhaul down and up again shows it is a transparent bridge
+port: the stations lose and regain reach without re-associating.
+
+Topology:
+....
+    host ==(lan, VLAN 10+20)== root (AP 'infix-backhaul')
+                                wds0 )))  ~ cell ~  ((( wifi0 repeater wifi1 (AP 'infix-home', VLAN 10)  ))) home
+                                                                      wifi2 (AP 'infix-guest', VLAN 20) ))) guest
+....
+
+==== Topology
+
+image::topology.svg[WiFi repeater with two SSIDs in VLANs over a 4-address (WDS) backhaul topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to the root, the repeater, home and guest
+. Configure the root with access point 'infix-backhaul', WDS port wds0 and the uplink tagged in VLAN 10 and 20, DHCP in each VLAN
+. Configure the repeater with a 4-address station tagged in VLAN 10 and 20, access point 'infix-home' untagged in VLAN 10 and 'infix-guest' untagged in VLAN 20
+. Configure home as a DHCP station for 'infix-home' and guest as a DHCP station for 'infix-guest'
+. Verify the repeater's wifi0 associates to 'infix-backhaul'
+. Verify wds0 on the root is up
+. Verify home is on the repeater's 'infix-home' access point, BSSID 02:00:00:00:0a:02
+. Verify guest is on the repeater's 'infix-guest' access point, BSSID 02:00:00:00:0b:02
+. Verify home leases 10.10.0.9 from the root's VLAN 10 DHCP server through the backhaul
+. Verify guest leases 10.20.0.9 from the root's VLAN 20 DHCP server through the backhaul
+. Verify the host reaches home at 10.10.0.9 on VLAN 10 through the repeater
+. Verify the host reaches guest at 10.20.0.9 on VLAN 20 through the repeater
+. Disable the repeater's backhaul station wifi0
+. Verify home at 10.10.0.9 and guest at 10.20.0.9 are no longer reachable from the host
+. Enable the repeater's backhaul station wifi0 again
+. Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 again
+. Verify home and guest are still on their access points
+
+

@@ -1,0 +1,59 @@
+graph "wifi-wds-repeater" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt2> mgmt2 | <mgmt3> mgmt3 | <mgmt4> mgmt4 | <lan> lan }",
+	    pos="0,0!",
+	    requires="controller",
+	];
+
+	root [
+	    label="{ <mgmt> mgmt | <uplink> uplink | <wifi> wifi } | root",
+	    pos="6,3!",
+	    requires="infix",
+	];
+
+	repeater [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | repeater",
+	    pos="9,0!",
+	    requires="infix",
+	];
+
+	home [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | home",
+	    pos="6,-3!",
+	    requires="infix",
+	];
+
+	guest [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | guest",
+	    pos="12,-3!",
+	    requires="infix",
+	];
+
+	// One cell: the repeater's backhaul station and its two access points
+	// share a radio, so all four nodes hear each other.  Each SSID is
+	// advertised by exactly one node, which decides who joins whom.
+	cell [
+	    label="cell",
+	    pos="12,0!",
+	    requires="wifi-radio",
+	];
+
+	host:mgmt1 -- root:mgmt     [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- repeater:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt3 -- home:mgmt     [requires="mgmt", color="lightgray"]
+	host:mgmt4 -- guest:mgmt    [requires="mgmt", color="lightgray"]
+
+	host:lan -- root:uplink [color="black"]
+
+	root:wifi -- cell     [requires="wifi2.4GHz", style="dashed"]
+	repeater:wifi -- cell [requires="wifi2.4GHz", style="dashed"]
+	home:wifi -- cell     [requires="wifi2.4GHz", style="dashed"]
+	guest:wifi -- cell    [requires="wifi2.4GHz", style="dashed"]
+}
