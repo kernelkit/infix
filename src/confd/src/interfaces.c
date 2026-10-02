@@ -457,12 +457,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_WIFI:
-		if (wifi_get_mode(cif) == wifi_station)
-			return wifi_validate_secret(session, cif)
-				? : wifi_gen_station(cif);
-		if (wifi_get_mode(cif) == wifi_mesh)
-			return wifi_gen_mesh(cif);
-		return 0;
+		return wifi_gen_settings(session, dif, cif, net);
 	case IFT_PPPOE:
 		return ppp_gen(session, dif, cif, net);
 	case IFT_DUMMY:

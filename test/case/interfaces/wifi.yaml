@@ -16,3 +16,6 @@
 
 - name: WiFi repeater with two SSIDs in VLANs over a 4-address (WDS) backhaul
   case: wifi_wds_repeater/test.py
+
+- name: WiFi station set up from a scan-only interface
+  case: wifi_station_from_scan/test.py
