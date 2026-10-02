@@ -28,6 +28,16 @@ def get_iw_stations(ifname):
     return []
 
 
+def get_iw_wds_ports(ifname):
+    """Get the WDS ports of an AP via iw.py"""
+    try:
+        data = HOST.run(('/usr/libexec/infix/iw.py', 'wds', ifname), default='[]')
+        return json.loads(data)
+    except Exception:
+        pass
+    return []
+
+
 def get_iw_mesh_param(ifname):
     """Get mesh parameters via iw.py (mesh point mode)"""
     try:
@@ -60,8 +70,11 @@ def wifi_ap(ifname):
     if info.get('ssid'):
         ap_data['ssid'] = info['ssid']
 
-    # Get connected stations
+    # Connected stations, including the 4-address ones the kernel lists
+    # under the AP's WDS ports rather than under the AP itself
     stations = get_iw_stations(ifname)
+    for port in get_iw_wds_ports(ifname):
+        stations += get_iw_stations(port)
     if stations:
         ap_data['stations'] = {'station': stations}
 
@@ -153,6 +166,25 @@ def wifi_station(ifname):
     return {'station': station_data} if station_data else {}
 
 
+def wifi_wds(ifname):
+    """Operational data for a wds-link port (AP_VLAN).
+
+    The station bound to the port is the only entry in its station dump,
+    so that is both the connected flag and the link quality.
+    """
+    stations = get_iw_stations(ifname)
+    if not stations:
+        return {'wds-link': {'connected': False}}
+
+    sta = stations[0]
+    data = {'connected': True}
+    for key in ('signal-strength', 'rx-speed', 'tx-speed'):
+        if sta.get(key) is not None:
+            data[key] = sta[key]
+
+    return {'wds-link': data}
+
+
 def wifi(ifname):
     """Main entry point - detect mode and return appropriate data"""
     info = get_iw_info(ifname)
@@ -165,6 +197,8 @@ def wifi(ifname):
 
     if mode == 'ap':
         result.update(wifi_ap(ifname))
+    elif mode == 'ap/vlan':
+        result.update(wifi_wds(ifname))
     elif mode == 'mesh point':
         result.update(wifi_mesh(ifname, info))
     else:
