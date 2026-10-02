@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Mattias Walström <mattias.walstrom@wires.se>
+Date: Thu, 1 Oct 2026 12:00:00 +0200
+Subject: [PATCH] net: ethernet: mtk_wed: map WO memory regions without
+ requesting them
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Since the conversion to of_reserved_mem_region_to_resource_byname(),
+the WO firmware regions are mapped with devm_ioremap_resource(), which
+also requests the region.  On MT7986 that request fails and WED never
+attaches:
+
+  platform 15010000.wed: error -EBUSY: can't request region for resource [mem 0x4fd00000-0x4fd3ffff]
+  platform 15010000.wed: failed to attach wed device
+
+The wo-data region is in addition shared by both WED instances, so a
+request-based mapping can never succeed for the second one.  Go back
+to a plain devm_ioremap(), as the code did before the conversion and
+as qcom_wcnss did for the same regression.
+
+Fixes: e27dba1951ce ("net: Use of_reserved_mem_region_to_resource{_byname}() for "memory-region"")
+Signed-off-by: Mattias Walström <mattias.walstrom@wires.se>
+---
+ drivers/net/ethernet/mediatek/mtk_wed_mcu.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mediatek/mtk_wed_mcu.c b/drivers/net/ethernet/mediatek/mtk_wed_mcu.c
+--- a/drivers/net/ethernet/mediatek/mtk_wed_mcu.c
++++ b/drivers/net/ethernet/mediatek/mtk_wed_mcu.c
+@@ -246,9 +246,9 @@ mtk_wed_get_memory_region(struct mtk_wed_hw *hw, const char *name,
+ 
+ 	region->phy_addr = res.start;
+ 	region->size = resource_size(&res);
+-	region->addr = devm_ioremap_resource(hw->dev, &res);
+-	if (IS_ERR(region->addr))
+-		return PTR_ERR(region->addr);
++	region->addr = devm_ioremap(hw->dev, region->phy_addr, region->size);
++	if (!region->addr)
++		return -ENOMEM;
+ 
+ 	return 0;
+ }
