@@ -166,7 +166,70 @@ int wifi_mode_changed(struct lyd_node *wifi)
 	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
 		return 1;
 
+	/* Scan-only <-> station, and the 4-address flag is set at creation */
+	node = lydx_get_child(wifi, "station");
+	if (node)
+		op = lydx_get_op(node);
+	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
+		return 1;
+	if (node && lydx_get_child(node, "wds"))
+		return 1;
+
 	return 0;
+}
+
+/*
+ * A changed wpa_supplicant config only takes effect when the daemon
+ * reloads it, so nudge the service whenever the wifi subtree changed.
+ */
+static int wifi_gen_reload(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	const char *svc;
+	FILE *fp;
+
+	if (!lydx_get_child(dif, "wifi"))
+		return SR_ERR_OK;
+
+	switch (wifi_get_mode(cif)) {
+	case wifi_station:
+		svc = "wifi";
+		break;
+	case wifi_mesh:
+		svc = "mesh";
+		break;
+	default:
+		return SR_ERR_OK;
+	}
+
+	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_DAEMON, "wifi-reload.sh");
+	if (!fp)
+		return SR_ERR_INTERNAL;
+
+	fprintf(fp, "initctl -bfq touch %s@%s\n", svc, ifname);
+	fclose(fp);
+
+	return SR_ERR_OK;
+}
+
+/* Settings of an existing station or mesh point changed */
+int wifi_gen_settings(sr_session_ctx_t *session, struct lyd_node *dif,
+		      struct lyd_node *cif, struct dagger *net)
+{
+	int rc;
+
+	switch (wifi_get_mode(cif)) {
+	case wifi_station:
+		rc = wifi_validate_secret(session, cif) ? : wifi_gen_station(cif);
+		break;
+	case wifi_mesh:
+		rc = wifi_gen_mesh(cif);
+		break;
+	default:
+		return SR_ERR_OK;
+	}
+
+	return rc ? : wifi_gen_reload(dif, cif, net);
 }
 
 /*
@@ -589,6 +652,10 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		wifi_gen_station(cif);
 		fprintf(iw, "initctl -bfq enable wifi@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch wifi@%s\n", ifname);
+		/* A running instance from before the netdev was recreated
+		 * only gets a SIGHUP from the touch and keeps stale driver
+		 * state, so make sure it starts over on the new netdev. */
+		fprintf(iw, "initctl -bnq restart wpa_supplicant:%s\n", ifname);
 		break;
 	}
 	case wifi_wds: {
@@ -608,6 +675,7 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		wifi_gen_mesh(cif);
 		fprintf(iw, "initctl -bfq enable mesh@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch mesh@%s\n", ifname);
+		fprintf(iw, "initctl -bnq restart wpa_supplicant:%s\n", ifname);
 		break;
 	default:
 		ERROR("WiFi mode %d unknown", mode);

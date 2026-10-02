@@ -59,6 +59,9 @@ All notable changes to the project are documented in this file.
 - Fix #1423: the default route from a DHCPv6 client, learned from router
   advertisements, is now a static route with the DHCPv6 route preference,
   like a DHCPv4 route.  Before, the route preference setting was ignored
+- Fix #1679: a WiFi station set up on an interface that was in scan-only
+  mode, as in the Raspberry Pi 4 factory configuration, did not connect
+  until the device was rebooted
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 
