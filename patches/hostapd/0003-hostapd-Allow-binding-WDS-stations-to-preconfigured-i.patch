@@ -1,0 +1,244 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <mattias.walstrom@wires.se>
+Date: Fri, 2 Oct 2026 10:00:00 +0200
+Subject: [PATCH 3/3] hostapd: Allow binding WDS stations to preconfigured
+ interfaces
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+A 4-address WDS station is bound to an AP_VLAN interface that hostapd
+creates on association, named <bss>.sta<aid>, and removes again on
+disassociation.  Nothing outside hostapd can configure such a port
+ahead of time, since neither its name nor its lifetime is known.
+
+Add a per-BSS option mapping a station MAC address to an interface
+name:
+
+  wds_sta_ifname=<MAC> <ifname>
+
+A matching station is bound to that interface instead.  The interface
+must already exist; hostapd brings it up and binds the station on
+association, and on disassociation only sets it down.  Its bridge
+membership is never touched, so an external network manager can
+create the port, enslave it and configure it like any other bridge
+port before the station ever shows up.
+
+Stations without a mapping keep the current behaviour.
+
+Signed-off-by: Mattias Walström <mattias.walstrom@wires.se>
+---
+diff -ruN a/hostapd/config_file.c b/hostapd/config_file.c
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -2368,6 +2368,48 @@
+ #endif /* CONFIG_TESTING_OPTIONS */
+ 
+ 
++/*
++ * wds_sta_ifname=<MAC> <ifname>
++ *
++ * Bind the 4-address WDS station with the given MAC address to an
++ * existing, externally managed interface instead of creating
++ * <bss>.sta<aid>.  The interface is left in place when the station
++ * disassociates, and its bridge membership is never touched.
++ */
++static int hostapd_config_parse_wds_sta_ifname(struct hostapd_bss_config *bss,
++					       char *pos, int line)
++{
++	struct hostapd_wds_sta_ifname *e;
++	char *ifname;
++
++	ifname = os_strchr(pos, ' ');
++	if (!ifname)
++		goto fail;
++	*ifname++ = '\0';
++	while (*ifname == ' ')
++		ifname++;
++	if (!*ifname || os_strlen(ifname) > IFNAMSIZ)
++		goto fail;
++
++	e = os_zalloc(sizeof(*e));
++	if (!e)
++		return 1;
++	if (hwaddr_aton(pos, e->addr)) {
++		os_free(e);
++		goto fail;
++	}
++	os_strlcpy(e->ifname, ifname, sizeof(e->ifname));
++	e->next = bss->wds_sta_ifname;
++	bss->wds_sta_ifname = e;
++
++	return 0;
++fail:
++	wpa_printf(MSG_ERROR, "Line %d: invalid wds_sta_ifname '%s'",
++		   line, pos);
++	return 1;
++}
++
++
+ static int hostapd_config_fill(struct hostapd_config *conf,
+ 			       struct hostapd_bss_config *bss,
+ 			       const char *buf, char *pos, int line)
+@@ -2383,6 +2425,9 @@
+ 		os_strlcpy(bss->vlan_bridge, pos, sizeof(bss->vlan_bridge));
+ 	} else if (os_strcmp(buf, "wds_bridge") == 0) {
+ 		os_strlcpy(bss->wds_bridge, pos, sizeof(bss->wds_bridge));
++	} else if (os_strcmp(buf, "wds_sta_ifname") == 0) {
++		if (hostapd_config_parse_wds_sta_ifname(bss, pos, line))
++			return 1;
+ 	} else if (os_strcmp(buf, "driver") == 0) {
+ 		int j;
+ 		const struct wpa_driver_ops *driver = NULL;
+diff -ruN a/src/ap/ap_config.c b/src/ap/ap_config.c
+--- a/src/ap/ap_config.c
++++ b/src/ap/ap_config.c
+@@ -890,6 +890,12 @@
+ 	os_free(conf->radius);
+ 	os_free(conf->radius_das_shared_secret);
+ 	hostapd_config_free_vlan(conf);
++	while (conf->wds_sta_ifname) {
++		struct hostapd_wds_sta_ifname *e = conf->wds_sta_ifname;
++
++		conf->wds_sta_ifname = e->next;
++		os_free(e);
++	}
+ 	os_free(conf->time_zone);
+ 	os_free(conf->supported_rates);
+ 	os_free(conf->basic_rates);
+diff -ruN a/src/ap/ap_config.h b/src/ap/ap_config.h
+--- a/src/ap/ap_config.h
++++ b/src/ap/ap_config.h
+@@ -281,6 +281,12 @@
+ /**
+  * struct hostapd_bss_config - Per-BSS configuration
+  */
++struct hostapd_wds_sta_ifname {
++	struct hostapd_wds_sta_ifname *next;
++	u8 addr[ETH_ALEN];
++	char ifname[IFNAMSIZ + 1];
++};
++
+ struct hostapd_bss_config {
+ 	char iface[IFNAMSIZ + 1];
+ 	char bridge[IFNAMSIZ + 1];
+@@ -357,6 +363,7 @@
+ 	struct mac_acl_entry *deny_mac;
+ 	int num_deny_mac;
+ 	int wds_sta;
++	struct hostapd_wds_sta_ifname *wds_sta_ifname;
+ 	int isolate;
+ 	int start_disabled;
+ 
+diff -ruN a/src/ap/ap_drv_ops.c b/src/ap/ap_drv_ops.c
+--- a/src/ap/ap_drv_ops.c
++++ b/src/ap/ap_drv_ops.c
+@@ -391,7 +391,9 @@
+ int hostapd_set_wds_sta(struct hostapd_data *hapd, char *ifname_wds,
+ 			const u8 *addr, int aid, int val)
+ {
++	struct hostapd_wds_sta_ifname *e;
+ 	const char *bridge = NULL;
++	char name[IFNAMSIZ + 1];
+ 
+ 	if (hapd->driver == NULL || hapd->driver->set_wds_sta == NULL)
+ 		return -1;
+@@ -399,6 +401,20 @@
+ 		bridge = hapd->conf->wds_bridge;
+ 	else if (hapd->conf->bridge[0])
+ 		bridge = hapd->conf->bridge;
++
++	if (!ifname_wds)
++		ifname_wds = name;
++	ifname_wds[0] = '\0';
++	for (e = hapd->conf->wds_sta_ifname; e; e = e->next) {
++		if (os_memcmp(e->addr, addr, ETH_ALEN) != 0)
++			continue;
++		/* Externally managed interface: hand the driver its name
++		 * and keep it out of any bridge handling. */
++		os_strlcpy(ifname_wds, e->ifname, IFNAMSIZ + 1);
++		bridge = NULL;
++		break;
++	}
++
+ 	return hapd->driver->set_wds_sta(hapd->drv_priv, addr, aid, val,
+ 					 bridge, ifname_wds);
+ }
+diff -ruN a/src/drivers/driver.h b/src/drivers/driver.h
+--- a/src/drivers/driver.h
++++ b/src/drivers/driver.h
+@@ -4518,7 +4518,11 @@
+ 	 * @bridge_ifname: Bridge interface to use for the WDS station or %NULL
+ 	 *	to indicate that bridge is not to be used
+ 	 * @ifname_wds: Buffer to return the interface name for the new WDS
+-	 *	station or %NULL to indicate name is not returned.
++	 *	station or %NULL to indicate name is not returned. If the
++	 *	buffer holds a name on entry, that existing interface is used
++	 *	as is: it is not created, not added to or removed from a
++	 *	bridge, and is only set down, not removed, when the station
++	 *	is unbound.
+ 	 * Returns: 0 on success, -1 on failure
+ 	 */
+ 	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val,
+diff -ruN a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -9317,22 +9317,35 @@
+ 	char name[IFNAMSIZ + 1];
+ 	union wpa_event_data event;
+ 	bool add_br = false;
++	bool external = false;
+ 	int ret;
+ 
+-	ret = os_snprintf(name, sizeof(name), "%s.sta%d", bss->ifname, aid);
+-	if (ret >= (int) sizeof(name))
+-		wpa_printf(MSG_WARNING,
+-			   "nl80211: WDS interface name was truncated");
+-	else if (ret < 0)
+-		return ret;
+-
+-	if (ifname_wds)
+-		os_strlcpy(ifname_wds, name, IFNAMSIZ + 1);
++	if (ifname_wds && ifname_wds[0]) {
++		os_strlcpy(name, ifname_wds, sizeof(name));
++		external = true;
++	} else {
++		ret = os_snprintf(name, sizeof(name), "%s.sta%d", bss->ifname,
++				  aid);
++		if (ret >= (int) sizeof(name))
++			wpa_printf(MSG_WARNING,
++				   "nl80211: WDS interface name was truncated");
++		else if (ret < 0)
++			return ret;
++
++		if (ifname_wds)
++			os_strlcpy(ifname_wds, name, IFNAMSIZ + 1);
++	}
+ 
+ 	wpa_printf(MSG_DEBUG, "nl80211: Set WDS STA addr=" MACSTR
+ 		   " aid=%d val=%d name=%s", MAC2STR(addr), aid, val, name);
+ 	if (val) {
+ 		if (!if_nametoindex(name)) {
++			if (external) {
++				wpa_printf(MSG_ERROR,
++					   "nl80211: WDS STA interface %s does not exist",
++					   name);
++				return -1;
++			}
+ 			if (nl80211_create_iface(drv, name,
+ 						 NL80211_IFTYPE_AP_VLAN,
+ 						 bss->addr, 1, NULL, NULL, 0) <
+@@ -9363,6 +9376,13 @@
+ 		return i802_set_sta_vlan(priv, addr, name, 0,
+ 					 NL80211_DRV_LINK_ID_NA);
+ 	} else {
++		if (external) {
++			i802_set_sta_vlan(priv, addr, bss->ifname, 0,
++					  NL80211_DRV_LINK_ID_NA);
++			linux_set_iface_flags(drv->global->ioctl_sock, name, 0);
++			return 0;
++		}
++
+ 		if (bridge_ifname &&
+ 		    linux_br_del_if(drv->global->ioctl_sock, bridge_ifname,
+ 				    name) < 0)
