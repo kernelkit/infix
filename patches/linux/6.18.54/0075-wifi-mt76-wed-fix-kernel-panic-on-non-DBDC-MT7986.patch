@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Zhi-Jun You <address withheld by list archive>
+Date: Wed, 15 Jul 2026 12:00:00 +0200
+Subject: [PATCH] wifi: mt76: wed: fix kernel panic on non-DBDC MT7986
+
+mt76_wed_init_rx_buf() hardcodes MT_RXQ_MAIN, but a non-DBDC MT7986
+uses MT_RXQ_BAND1 for its RX data queue, so MT_RXQ_MAIN has no page
+pool and attaching WED dereferences NULL:
+
+  Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000
+  pc : page_pool_alloc_frag_netmem+0x28/0x260
+  lr : page_pool_alloc_frag+0x18/0x50
+   mt76_wed_init_rx_buf+0x128/0x240 [mt76]
+   mtk_wed_start+0x804/0x1310
+   mt7915_dma_start+0x278/0x340 [mt7915e]
+
+Pick the queue from the WED version and the band index instead.
+
+Upstream: https://ratatoskr.run/linux-mediatek/2026/07/17264034/t
+Signed-off-by: Zhi-Jun You <address withheld by list archive>
+---
+ drivers/net/wireless/mediatek/mt76/wed.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/mediatek/mt76/wed.c b/drivers/net/wireless/mediatek/mt76/wed.c
+--- a/drivers/net/wireless/mediatek/mt76/wed.c
++++ b/drivers/net/wireless/mediatek/mt76/wed.c
+@@ -33,10 +33,15 @@ u32 mt76_wed_init_rx_buf(struct mtk_wed_device *wed, int size)
+ {
+ 	struct mtk_wed_bm_desc *desc = wed->rx_buf_ring.desc;
+ 	struct mt76_dev *dev = mt76_wed_to_dev(wed);
+-	struct mt76_queue *q = &dev->q_rx[MT_RXQ_MAIN];
+ 	struct mt76_txwi_cache *t = NULL;
++	struct mt76_queue *q;
+ 	int i;
+ 
++	if (wed->version == 2 && dev->phy.band_idx)
++		q = &dev->q_rx[MT_RXQ_BAND1];
++	else
++		q = &dev->q_rx[MT_RXQ_MAIN];
++
+ 	for (i = 0; i < size; i++) {
+ 		dma_addr_t addr;
+ 		u32 offset;
