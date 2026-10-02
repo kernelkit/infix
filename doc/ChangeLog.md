@@ -106,6 +106,8 @@ All notable changes to the project are documented in this file.
   to bridge it.  Together they build wireless bridges and repeaters, see
   [WDS Backhaul and Repeaters][wds].  The station leaf `peer-bssid` pins a
   station to one access point
+- MT7986 boards (Banana Pi BPI-R3, BPI-R3 Mini, Acer Connect Vero W6m):
+  WiFi hardware offloading is now active
 
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
 
