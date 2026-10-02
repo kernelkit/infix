@@ -361,6 +361,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	if (is_bss) {
 		fprintf(hostapd, "\n# BSS %s\n", ifname);
 		fprintf(hostapd, "bss=%s\n", ifname);
+		fprintf(hostapd, "ctrl_interface=/run/hostapd\n");
 	}
 
 	/* Check 802.11k/r/v configuration */
