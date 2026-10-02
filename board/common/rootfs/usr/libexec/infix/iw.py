@@ -486,6 +486,29 @@ def parse_dev():
     return result
 
 
+def parse_wds_ports(ifname):
+    """
+    List the WDS ports of an access point: the AP/VLAN interfaces on the
+    same PHY that carry its MAC address.
+    Returns: [ifname, ...]
+    """
+    info = parse_interface_info(ifname)
+    mac = info.get('mac')
+    ports = []
+
+    for phy, ifaces in parse_dev().items():
+        if ifname not in ifaces:
+            continue
+        for dev in ifaces:
+            if dev == ifname:
+                continue
+            devinfo = parse_interface_info(dev)
+            if devinfo.get('iftype') == 'AP/VLAN' and devinfo.get('mac') == mac:
+                ports.append(dev)
+
+    return ports
+
+
 def parse_link(ifname):
     """
     Parse 'iw dev <name> link' output for station mode
@@ -629,6 +652,7 @@ def main():
                 'station': 'Get connected stations in AP mode (requires interface)',
                 'link': 'Get link info in station mode (requires interface)',
                 'mesh': 'Get mesh parameters in mesh point mode (requires interface)',
+                'wds': 'List the WDS ports of an access point (requires interface)',
                 'caps': 'Get HT/VHT capability bitmasks (requires PHY/radio)'
             },
             'examples': [
@@ -677,6 +701,11 @@ def main():
                 data = {'error': 'mesh command requires interface argument'}
             else:
                 data = parse_mesh_param(sys.argv[2])
+        elif command == 'wds':
+            if len(sys.argv) < 3:
+                data = {'error': 'wds command requires interface argument'}
+            else:
+                data = parse_wds_ports(sys.argv[2])
         elif command == 'survey':
             if len(sys.argv) < 3:
                 data = {'error': 'survey command requires interface argument'}
