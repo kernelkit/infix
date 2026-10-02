@@ -1,8 +1,7 @@
 From 5b807e23d91f3d90697f74d484276e574670aa2c Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Thu, 26 May 2022 18:56:19 +0100
-Subject: [PATCH 36/80] drm: vc4: Reset DSI AFE on disable
-Organization: Wires
+Subject: [PATCH 36/81] drm: vc4: Reset DSI AFE on disable
 
 vc4_dsi_bridge_disable wasn't resetting things during shutdown,
 so add that in.
@@ -13,7 +12,7 @@ Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
  1 file changed, 20 insertions(+)
 
 diff --git a/drivers/gpu/drm/vc4/vc4_dsi.c b/drivers/gpu/drm/vc4/vc4_dsi.c
-index de963edefb76..9756821ebf27 100644
+index de963edefb760..9756821ebf27c 100644
 --- a/drivers/gpu/drm/vc4/vc4_dsi.c
 +++ b/drivers/gpu/drm/vc4/vc4_dsi.c
 @@ -360,6 +360,16 @@

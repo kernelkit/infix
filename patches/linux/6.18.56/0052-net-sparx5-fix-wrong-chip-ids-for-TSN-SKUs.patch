@@ -1,8 +1,7 @@
 From da55a0660bc7a764abd39b28d1b588d58cfafcf7 Mon Sep 17 00:00:00 2001
 From: Daniel Machon <daniel.machon@microchip.com>
 Date: Wed, 6 May 2026 09:25:38 +0200
-Subject: [PATCH 52/80] net: sparx5: fix wrong chip ids for TSN SKUs
-Organization: Wires
+Subject: [PATCH 52/81] net: sparx5: fix wrong chip ids for TSN SKUs
 
 The TSN SKUs in enum spx5_target_chiptype have incorrect IDs:
 
@@ -31,7 +30,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
-index a5675f13a11e..f7d86fc6aa12 100644
+index a5675f13a11e2..f7d86fc6aa125 100644
 --- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
 +++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
 @@ -31,11 +31,11 @@ enum spx5_target_chiptype {

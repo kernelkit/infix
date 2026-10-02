@@ -1,8 +1,7 @@
 From c6f8b6a050e69c951ce0ce56467b6e9fd9a638f1 Mon Sep 17 00:00:00 2001
 From: Steen Hegelund <steen.hegelund@microchip.com>
 Date: Wed, 21 Jan 2026 10:09:45 +0100
-Subject: [PATCH 80/80] misc: sparx5-symreg; symreg debugfs driver (DBB-1045)
-Organization: Wires
+Subject: [PATCH 80/81] misc: sparx5-symreg; symreg debugfs driver (DBB-1045)
 
 Expose the switch register space of Microchip Sparx5 family SoCs
 through /sys/kernel/debug/symreg/mem, for the symreg tool, which
@@ -23,7 +22,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 
 diff --git a/Documentation/devicetree/bindings/arm/microchip,sparx5-symreg.yaml b/Documentation/devicetree/bindings/arm/microchip,sparx5-symreg.yaml
 new file mode 100644
-index 000000000000..fe6f9e7fcc67
+index 0000000000000..fe6f9e7fcc67c
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/arm/microchip,sparx5-symreg.yaml
 @@ -0,0 +1,62 @@
@@ -90,7 +89,7 @@ index 000000000000..fe6f9e7fcc67
 +      status = "okay";
 +    };
 diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
-index b9c11f67315f..8e164b0fba97 100644
+index b9c11f67315f0..8e164b0fba975 100644
 --- a/drivers/misc/Kconfig
 +++ b/drivers/misc/Kconfig
 @@ -644,6 +644,12 @@ config MCHP_LAN966X_PCI
@@ -107,7 +106,7 @@ index b9c11f67315f..8e164b0fba97 100644
  source "drivers/misc/eeprom/Kconfig"
  source "drivers/misc/cb710/Kconfig"
 diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
-index b32a2597d246..9286bd91a995 100644
+index b32a2597d2467..9286bd91a9954 100644
 --- a/drivers/misc/Makefile
 +++ b/drivers/misc/Makefile
 @@ -75,3 +75,4 @@ obj-$(CONFIG_MCHP_LAN966X_PCI)	+= lan966x-pci.o
@@ -117,7 +116,7 @@ index b32a2597d246..9286bd91a995 100644
 +obj-$(CONFIG_SPARX5_SYMREG)	+= sparx5_symreg_debugfs.o
 diff --git a/drivers/misc/sparx5_symreg_debugfs.c b/drivers/misc/sparx5_symreg_debugfs.c
 new file mode 100644
-index 000000000000..17f7bcc6fd68
+index 0000000000000..17f7bcc6fd682
 --- /dev/null
 +++ b/drivers/misc/sparx5_symreg_debugfs.c
 @@ -0,0 +1,267 @@

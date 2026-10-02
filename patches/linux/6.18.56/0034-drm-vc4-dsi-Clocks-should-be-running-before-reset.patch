@@ -1,8 +1,7 @@
 From b145fb6117a42c835d69cee8d01b7679396541e6 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Wed, 8 Jun 2022 17:23:47 +0100
-Subject: [PATCH 34/80] drm: vc4: dsi: Clocks should be running before reset
-Organization: Wires
+Subject: [PATCH 34/81] drm: vc4: dsi: Clocks should be running before reset
 
 The initialisation sequence differs slightly from the documentation
 in that the clocks are meant to be running before resets and
@@ -14,7 +13,7 @@ Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
  1 file changed, 15 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/gpu/drm/vc4/vc4_dsi.c b/drivers/gpu/drm/vc4/vc4_dsi.c
-index 439d7a04127d..1eba498d276f 100644
+index 439d7a04127d8..1eba498d276f8 100644
 --- a/drivers/gpu/drm/vc4/vc4_dsi.c
 +++ b/drivers/gpu/drm/vc4/vc4_dsi.c
 @@ -926,6 +926,21 @@ static void vc4_dsi_bridge_pre_enable(struct drm_bridge *bridge,

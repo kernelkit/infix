@@ -1,8 +1,7 @@
 From d320f311c3e132191b319db4d7f7e3e3f5ed58df Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:15:56 +0200
-Subject: [PATCH 44/80] arm64: dts: mediatek: mt7988a: add USXGMII PCS nodes
-Organization: Wires
+Subject: [PATCH 44/81] arm64: dts: mediatek: mt7988a: add USXGMII PCS nodes
 
 Add device nodes for the two USXGMII subsystem blocks (usxgmiisys0 at
 0x10080000 and usxgmiisys1 at 0x10081000), each referencing its clock,
@@ -15,7 +14,7 @@ property, so the Ethernet driver can discover the PCS at probe time.
  1 file changed, 20 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/mediatek/mt7988a.dtsi b/arch/arm64/boot/dts/mediatek/mt7988a.dtsi
-index 366203a72d6d..5ae43390f6c2 100644
+index 366203a72d6d2..5ae43390f6c2c 100644
 --- a/arch/arm64/boot/dts/mediatek/mt7988a.dtsi
 +++ b/arch/arm64/boot/dts/mediatek/mt7988a.dtsi
 @@ -708,6 +708,24 @@ xfi_pll: clock-controller@11f40000 {
