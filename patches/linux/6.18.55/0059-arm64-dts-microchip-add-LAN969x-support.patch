@@ -1,7 +1,7 @@
 From 2783fbf634082295b24d8573ce91ea33017bb7b8 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 2 Mar 2026 12:20:12 +0100
-Subject: [PATCH 59/79] arm64: dts: microchip: add LAN969x support
+Subject: [PATCH 59/80] arm64: dts: microchip: add LAN969x support
 
 Add support for Microchip LAN969x switch SoC series by adding the SoC DTSI.
 

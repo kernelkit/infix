@@ -1,7 +1,7 @@
 From 10cc35ebdae09afe942ce3e054be910b608af6ca Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 20 Jan 2026 20:18:45 +0100
-Subject: [PATCH 31/79] wifi: brcmfmac: reduce log noise during AP to station
+Subject: [PATCH 31/80] wifi: brcmfmac: reduce log noise during AP to station
  transition
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
