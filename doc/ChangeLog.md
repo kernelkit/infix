@@ -16,6 +16,12 @@ All notable changes to the project are documented in this file.
 - Acer Connect Vero W6m: WiFi hardware offloading is now active, which
   lowers the CPU load of WiFi traffic
 
+### Fixes
+
+- Fix #1679: a WiFi station set up on an interface that was in scan-only
+  mode, as in the Raspberry Pi 4 factory configuration, did not connect
+  until the device was rebooted.  Changes to a station's or mesh point's
+  settings now take effect on commit
 
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
 

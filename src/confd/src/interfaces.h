@@ -141,6 +141,8 @@ int wifi_add_deps(struct lyd_node *cif);
 int wifi_add_iface(struct lyd_node *cif, struct dagger *net);
 int wifi_del_iface(struct lyd_node *dif, struct dagger *net);
 int wifi_mode_changed(struct lyd_node *wifi);
+int wifi_gen_settings(sr_session_ctx_t *session, struct lyd_node *dif,
+		      struct lyd_node *cif, struct dagger *net);
 int wifi_gen_station(struct lyd_node *cif);
 int wifi_gen_mesh(struct lyd_node *cif);
 wifi_mode_t wifi_get_mode(struct lyd_node *wifi);
