@@ -453,12 +453,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_WIFI:
-		if (wifi_get_mode(cif) == wifi_station)
-			return wifi_validate_secret(session, cif)
-				? : wifi_gen_station(cif);
-		if (wifi_get_mode(cif) == wifi_mesh)
-			return wifi_gen_mesh(cif);
-		return 0;
+		return wifi_gen_settings(session, dif, cif, net);
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
@@ -755,8 +750,10 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	attr = lydx_get_cattr(cif, "description");
 	fprintf(ip, "link set alias \"%s\" dev %s\n", attr ?: "", ifname);
 
-	/* Bring interface back up, if enabled */
-	if (lydx_is_enabled(cif, "enabled"))
+	/* Bring interface back up, if enabled.  A wds-link port cannot
+	 * come up before hostapd runs its AP, hostapd does it instead. */
+	if (lydx_is_enabled(cif, "enabled") &&
+	    !(iftype_from_iface(cif) == IFT_WIFI && wifi_get_mode(cif) == wifi_wds))
 		fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, cif, dif);
@@ -788,6 +785,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_VETH:
 		return veth_add_deps(cif);
 	case IFT_WIFI:
+		return wifi_add_deps(cif);
 	case IFT_DUMMY:
 	case IFT_ETH:
 	case IFT_GRE:

@@ -1457,6 +1457,16 @@ class Iface:
                 peers_data = mesh.get("peers", {})
                 peers = peers_data.get("peer", [])
                 data_str = f"{mode}, mesh-id: {mesh_id}, peers: {len(peers)}"
+            elif "wds-link" in self.wifi:
+                wds = self.wifi["wds-link"]
+                mode = "WDS"
+                signal = wds.get("signal-strength")
+                if wds.get("connected") and signal is not None:
+                    data_str = f"{mode}, connected, signal: {signal_to_status(signal)}"
+                elif wds.get("connected"):
+                    data_str = f"{mode}, connected"
+                else:
+                    data_str = f"{mode}, not connected"
             else:
                 station=self.wifi.get("station", {})
                 ssid = station.get("ssid", "------")
@@ -1764,6 +1774,19 @@ class Iface:
                 print(f"{'mesh-id':<{19}}: {mesh_id}")
                 print(f"{'connected peers':<{19}}: {len(peers)}")
                 self.pr_wifi_peers()
+            elif "wds-link" in self.wifi:
+                wds = self.wifi['wds-link']
+                signal = wds.get('signal-strength')
+                print(f"{'mode':<{19}}: wds-link")
+                print(f"{'connected':<{19}}: {'yes' if wds.get('connected') else 'no'}")
+                if signal is not None:
+                    print(f"{'signal':<{19}}: {signal} dBm ({signal_to_status(signal)})")
+                rx_speed = wds.get('rx-speed')
+                tx_speed = wds.get('tx-speed')
+                if rx_speed is not None:
+                    print(f"{'rx bitrate':<{19}}: {rx_speed / 10:.1f} Mbps")
+                if tx_speed is not None:
+                    print(f"{'tx bitrate':<{19}}: {tx_speed / 10:.1f} Mbps")
             else:
                 mode = "station"
                 station = self.wifi.get('station', {})

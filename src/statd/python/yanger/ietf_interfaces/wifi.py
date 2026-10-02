@@ -153,6 +153,25 @@ def wifi_station(ifname):
     return {'station': station_data} if station_data else {}
 
 
+def wifi_wds(ifname):
+    """Operational data for a wds-link port (AP_VLAN).
+
+    The station bound to the port is the only entry in its station dump,
+    so that is both the connected flag and the link quality.
+    """
+    stations = get_iw_stations(ifname)
+    if not stations:
+        return {'wds-link': {'connected': False}}
+
+    sta = stations[0]
+    data = {'connected': True}
+    for key in ('signal-strength', 'rx-speed', 'tx-speed'):
+        if sta.get(key) is not None:
+            data[key] = sta[key]
+
+    return {'wds-link': data}
+
+
 def wifi(ifname):
     """Main entry point - detect mode and return appropriate data"""
     info = get_iw_info(ifname)
@@ -165,6 +184,8 @@ def wifi(ifname):
 
     if mode == 'ap':
         result.update(wifi_ap(ifname))
+    elif mode == 'ap/vlan':
+        result.update(wifi_wds(ifname))
     elif mode == 'mesh point':
         result.update(wifi_mesh(ifname, info))
     else:

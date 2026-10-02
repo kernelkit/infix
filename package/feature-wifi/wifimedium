@@ -13,7 +13,9 @@ This daemon is that process.  On each DUT it:
   * registers on the "mac80211_hwsim" genl family and receives every frame the
     local radios transmit (HWSIM_CMD_FRAME),
   * acknowledges each transmit back to the kernel (HWSIM_CMD_TX_INFO_FRAME) so
-    mac80211's TX path completes, and
+    mac80211's TX path completes.  A unicast frame is only acknowledged if its
+    receiver has been heard on the medium recently, so a station that vanishes
+    stops acking like on real RF and the AP's inactivity probing works, and
   * relays the frame per radio: each radio (phy radioN) is paired by name with a
     carrier NIC (netdev radioN) that joins one multicast "cell" -- a QEMU socket
     multicast group shared by every DUT's radioN (see test/virt/quad and
@@ -181,9 +183,11 @@ class Netlink:
             attrs += put_attr(HWSIM_ATTR_FREQ, struct.pack("=I", freq))
         self._send(self.family_id, HWSIM_CMD_FRAME, attrs)
 
-    def tx_ack(self, transmitter, flags, tx_info, tx_info_flags, cookie):
+    def tx_ack(self, transmitter, flags, tx_info, tx_info_flags, cookie, ack=True):
+        if ack:
+            flags |= HWSIM_TX_STAT_ACK
         attrs = put_attr(HWSIM_ATTR_ADDR_TRANSMITTER, transmitter)
-        attrs += put_attr(HWSIM_ATTR_FLAGS, struct.pack("=I", flags | HWSIM_TX_STAT_ACK))
+        attrs += put_attr(HWSIM_ATTR_FLAGS, struct.pack("=I", flags))
         attrs += put_attr(HWSIM_ATTR_SIGNAL, struct.pack("=i", RX_SIGNAL))
         if tx_info:
             attrs += put_attr(HWSIM_ATTR_TX_INFO, tx_info)
@@ -250,6 +254,25 @@ def open_medium(ifname):
 # Wire format on the medium: 6-byte transmitter MAC, 4-byte LE freq, then the
 # raw 802.11 frame.
 WIRE = struct.Struct("=6sI")
+
+# Transmitter addresses heard on the medium and when.  mac80211 stations send
+# a keep-alive at least every 30 s when idle, so one not heard for twice that
+# is gone and frames to it go unacknowledged.
+ALIVE_TIMEOUT = 60.0
+seen = {}
+
+
+def heard(frame):
+    if len(frame) >= 16:
+        seen[frame[10:16]] = time.monotonic()
+
+
+def acked(frame):
+    """Would the receiver of this frame acknowledge it?"""
+    if len(frame) < 10 or frame[4] & 1:
+        return True          # multicast: no ack expected, keep hwsim's default
+    last = seen.get(frame[4:10])
+    return last is not None and time.monotonic() - last < ALIVE_TIMEOUT
 
 
 def wait_radios_renamed(timeout=20):
@@ -364,7 +387,7 @@ def main():
                         # Complete the kernel TX path regardless of delivery.
                         nl.tx_ack(tx, flags, a.get(HWSIM_ATTR_TX_INFO),
                                   a.get(HWSIM_ATTR_TX_INFO_FLAGS),
-                                  a.get(HWSIM_ATTR_COOKIE))
+                                  a.get(HWSIM_ATTR_COOKIE), acked(frame))
                         # Send only onto the transmitting radio's own carrier.
                         r = by_addr1.get(tx)
                         if r:
@@ -389,6 +412,7 @@ def main():
                 continue
             tx, freq = WIRE.unpack_from(pkt, 14)
             frame = pkt[14 + WIRE.size:]
+            heard(frame)
             # Inject into THIS radio only -- its carrier is its cell.
             nl.inject(r["addr1"], frame, freq)
             dbg(f"rx {r['name']} tx={tx.hex()} freq={freq} len={len(frame)}")
