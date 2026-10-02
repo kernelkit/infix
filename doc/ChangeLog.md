@@ -13,6 +13,8 @@ All notable changes to the project are documented in this file.
   with `wds` enabled can be a bridge port, and an access point bridges
   each remote station through a `wds-link` interface, see
   [WDS Backhaul and Repeaters][wds]
+- MT7986 boards (Banana Pi BPI-R3, BPI-R3 Mini, Acer Connect Vero W6m):
+  WiFi hardware offloading is now active
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
