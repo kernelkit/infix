@@ -638,6 +638,10 @@ int wifi_del_iface(struct lyd_node *dif, struct dagger *net)
 	fprintf(iw, "initctl -bfq disable mesh@%s\n", ifname);
 	fprintf(iw, "initctl -bfq disable wifi@%s\n", ifname);
 
+	/* hostapd adopts a re-added netdev of a name it still holds and
+	 * turns it back into an AP, so make it forget the name first.
+	 * hostapd_cli cannot talk to the global socket, wpa_cli can. */
+	fprintf(iw, "wpa_cli -g /run/hostapd.global raw \"REMOVE %s\" >/dev/null 2>&1\n", ifname);
 	fprintf(iw, "ip link set %s down\n", ifname);
 	fprintf(iw, "iw dev %s disconnect 2>/dev/null\n", ifname);
 	fprintf(iw, "iw dev %s del 2>/dev/null || ip link del %s 2>/dev/null || true\n", ifname, ifname);
