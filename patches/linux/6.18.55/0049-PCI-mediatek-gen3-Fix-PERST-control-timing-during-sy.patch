@@ -1,7 +1,7 @@
 From eb6bf2a9d6967617eea9b242603e0352f3856a00 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 22 Apr 2026 10:24:43 +0200
-Subject: [PATCH 49/78] PCI: mediatek-gen3: Fix PERST# control timing during
+Subject: [PATCH 49/79] PCI: mediatek-gen3: Fix PERST# control timing during
  system startup
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -30,7 +30,7 @@ PERST# control timing during system startup").
  1 file changed, 25 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/pci/controller/pcie-mediatek-gen3.c b/drivers/pci/controller/pcie-mediatek-gen3.c
-index e45c43ccc84c..af84bc63bcad 100644
+index e45c43ccc84c2..af84bc63bcad5 100644
 --- a/drivers/pci/controller/pcie-mediatek-gen3.c
 +++ b/drivers/pci/controller/pcie-mediatek-gen3.c
 @@ -479,16 +479,35 @@ static int mtk_pcie_startup_port(struct mtk_gen3_pcie *pcie)

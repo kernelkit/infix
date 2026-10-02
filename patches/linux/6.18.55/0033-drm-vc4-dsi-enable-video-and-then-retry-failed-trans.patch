@@ -1,7 +1,7 @@
 From fe79facb35cd0c40ad8ad042680666351196cb22 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Fri, 20 Sep 2024 12:05:18 +0100
-Subject: [PATCH 33/78] drm: vc4: dsi: enable video and then retry failed
+Subject: [PATCH 33/79] drm: vc4: dsi: enable video and then retry failed
  transfers
 
 The DSI block appears to be able to come up stuck in a condition where
@@ -18,7 +18,7 @@ Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
  1 file changed, 46 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/gpu/drm/vc4/vc4_dsi.c b/drivers/gpu/drm/vc4/vc4_dsi.c
-index 458e5d987964..439d7a04127d 100644
+index 458e5d9879645..439d7a04127d8 100644
 --- a/drivers/gpu/drm/vc4/vc4_dsi.c
 +++ b/drivers/gpu/drm/vc4/vc4_dsi.c
 @@ -286,6 +286,8 @@

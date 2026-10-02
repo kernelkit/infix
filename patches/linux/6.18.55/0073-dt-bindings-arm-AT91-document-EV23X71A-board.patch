@@ -1,7 +1,7 @@
 From b390f0eaf27fd05c7a1436f3941964758b7a4fb4 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 2 Mar 2026 12:20:13 +0100
-Subject: [PATCH 73/78] dt-bindings: arm: AT91: document EV23X71A board
+Subject: [PATCH 73/79] dt-bindings: arm: AT91: document EV23X71A board
 
 Microchip EV23X71A board is an LAN9696 based evaluation board.
 
@@ -16,7 +16,7 @@ Signed-off-by: Claudiu Beznea <claudiu.beznea@tuxon.dev>
  1 file changed, 6 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/arm/atmel-at91.yaml b/Documentation/devicetree/bindings/arm/atmel-at91.yaml
-index 49666e92c04a..b7c37a1cece0 100644
+index 49666e92c04a2..b7c37a1cece03 100644
 --- a/Documentation/devicetree/bindings/arm/atmel-at91.yaml
 +++ b/Documentation/devicetree/bindings/arm/atmel-at91.yaml
 @@ -241,6 +241,12 @@ properties:
