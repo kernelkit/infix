@@ -133,10 +133,12 @@ typedef enum wifi_mode_t {
 	wifi_station,
 	wifi_ap,
 	wifi_mesh,
+	wifi_wds,
 	wifi_unknown
 } wifi_mode_t;
 
 int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif);
+int wifi_add_deps(struct lyd_node *cif);
 int wifi_add_iface(struct lyd_node *cif, struct dagger *net);
 int wifi_del_iface(struct lyd_node *dif, struct dagger *net);
 int wifi_mode_changed(struct lyd_node *wifi);

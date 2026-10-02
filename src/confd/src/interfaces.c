@@ -665,8 +665,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	bool pppd_owned;	/* link state and MTU */
 	const char *attr;
 	int err = 0;
+	bool wds;
 	FILE *ip;
-
 
 	err = netdag_gen_iface_timeout(net, ifname, iftype);
 	if (err)
@@ -729,7 +729,14 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	}
 
 	pppd_owned = iftype_from_iface(cif) == IFT_PPPOE;
-	fprintf(ip, "link set dev %s%s", ifname, pppd_owned ? "" : " down");
+	/* A wds-link port is raised by hostapd when its station associates
+	 * and must not be bounced for a change of its settings, the
+	 * station would not notice and the port would stay down. */
+	wds = iftype_from_iface(cif) == IFT_WIFI && wifi_get_mode(cif) == wifi_wds;
+	if (pppd_owned || (wds && lydx_is_enabled(cif, "enabled")))
+		fprintf(ip, "link set dev %s", ifname);
+	else
+		fprintf(ip, "link set dev %s down", ifname);
 
 	/* Set generic link attributes */
 	err = err ? : netdag_gen_ipv4_autoconf(net, cif, dif);
@@ -769,8 +776,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	attr = lydx_get_cattr(cif, "description");
 	fprintf(ip, "link set alias \"%s\" dev %s\n", attr ?: "", ifname);
 
-	/* Bring interface back up, if enabled */
-	if (lydx_is_enabled(cif, "enabled") && !pppd_owned)
+	/* Bring interface back up, if enabled, unless pppd or hostapd owns it */
+	if (lydx_is_enabled(cif, "enabled") && !pppd_owned && !wds)
 		fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, cif, dif);
@@ -802,6 +809,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_VETH:
 		return veth_add_deps(cif);
 	case IFT_WIFI:
+		return wifi_add_deps(cif);
 	case IFT_DUMMY:
 	case IFT_ETH:
 	case IFT_GRE:
