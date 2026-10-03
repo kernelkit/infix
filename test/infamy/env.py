@@ -123,6 +123,10 @@ class Env(object):
 
         return util.is_reachable(ip, self, self.get_password(node))
 
+    def _dutlog(self, name, dev):
+        if tap.CURRENT:
+            tap.CURRENT.dutlog.begin(name, dev, dev.location)
+
     def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
         """Attach to node on port using protocol."""
 
@@ -164,13 +168,16 @@ class Env(object):
                                                            password),
                                  mapping=mapping,
                                  yangdir=self.args.yangdir)
+            self._dutlog(name, dev)
             if test_reset:
                 dev.test_reset()
                 util.until(lambda: self.is_reachable(node, cport), 30)
             return dev
 
         if protocol == "ssh":
-            return ssh.Device(name, ssh.Location(mgmtip, username, password))
+            dev = ssh.Device(name, ssh.Location(mgmtip, username, password))
+            self._dutlog(name, dev)
+            return dev
 
         if protocol == "restconf":
             dev = restconf.Device(name,
@@ -180,6 +187,7 @@ class Env(object):
                                                              password),
                                   mapping=mapping,
                                   yangdir=self.args.yangdir)
+            self._dutlog(name, dev)
             if test_reset:
                 dev.test_reset()
                 util.until(lambda: self.is_reachable(node, cport), 30)
