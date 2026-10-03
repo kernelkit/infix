@@ -1,10 +1,10 @@
-=== OSPF BFD
+=== OSPFv3 BFD
 
 ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/ospf_bfd]
 
 ==== Description
 
-Verify that a router running OSPF, with Bidirectional Forwarding
+Verify that a router running OSPFv3, with Bidirectional Forwarding
 Detection (BFD) enabled, will detect link faults even when the
 physical layer is still operational.
 
@@ -12,9 +12,13 @@ This can typically happen when one logical link, from OSPF's
 perspective, is made up of multiple physical links containing media
 converters without link fault forwarding.
 
+Note: OSPFv3 next-hops are IPv6 link-local addresses, so the active path is
+verified with traceroute rather than by matching a RIB next-hop, and its BFD
+peers are only known by their session count.
+
 ==== Topology
 
-image::topology.svg[OSPF BFD topology, align=center, scaledwidth=75%]
+image::topology.svg[OSPFv3 BFD topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 

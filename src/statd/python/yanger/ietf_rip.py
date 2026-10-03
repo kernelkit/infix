@@ -2,15 +2,18 @@ import re
 from .host import HOST
 
 
-def parse_rip_status():
-    """Parse 'show ip rip status' text output to extract operational state
+def parse_rip_status(cmd=('vtysh', '-c', 'show ip rip status')):
+    """Parse 'show ip rip status' / 'show ipv6 ripng status' text output
+
+    Both RIPv2 and RIPng share the same textual status layout in FRR, so
+    the same parser handles both; the caller selects the vtysh command.
 
     Returns dict with keys: update-interval, invalid-interval, flush-interval,
                            default-metric, distance, interfaces (list), neighbors (list)
     """
     try:
         # HOST.run expects tuple, returns text string directly
-        text = HOST.run(tuple(['vtysh', '-c', 'show ip rip status']), default="")
+        text = HOST.run(tuple(cmd), default="")
         if not text:
             return {}
     except Exception as e:
@@ -258,6 +261,169 @@ def add_rip(control_protocols):
     control_protocols["ietf-routing:control-plane-protocol"].append(control_protocol)
 
 
+def parse_ripng_neighbors():
+    """Parse the 'Routing Information Sources' section of
+    'show ipv6 ripng status'.
+
+    Unlike RIPv2 (one row per peer), FRR's ripngd prints each peer across
+    two lines: the IPv6 source address on the first line, then the counters
+    (bad-packets, bad-routes, distance) and last-update on the next:
+
+        fe80::5054:ff:fe12:3456
+                         0          0        120      00:00:12
+
+    Returns a list of {address, bad-packets, bad-routes} dicts.
+    """
+    text = HOST.run(tuple(['vtysh', '-c', 'show ipv6 ripng status']), default="")
+    if not text:
+        return []
+
+    neighbors = []
+    in_section = False
+    pending_addr = None
+    for raw in text.split('\n'):
+        line = raw.strip()
+
+        if line.startswith('Routing Information Sources:'):
+            in_section = True
+            continue
+        if not in_section:
+            continue
+        # Skip the column header
+        if 'Gateway' in line and 'BadPackets' in line:
+            continue
+        if not line:
+            # End of section once we have entries and no half-parsed peer
+            if neighbors and pending_addr is None:
+                break
+            continue
+
+        if pending_addr is None:
+            # Address line (contains ':'); strip any %zone suffix
+            if ':' in line:
+                pending_addr = line.split()[0].split('%')[0]
+            continue
+
+        # Counters line for the pending address: badpackets badroutes distance [uptime]
+        parts = line.split()
+        if len(parts) >= 3:
+            try:
+                neighbors.append({
+                    'address': pending_addr,
+                    'bad-packets': int(parts[0]),
+                    'bad-routes': int(parts[1]),
+                })
+            except ValueError:
+                pass
+        pending_addr = None
+
+    return neighbors
+
+
+def add_ripng(control_protocols):
+    """Populate RIPng (RIP for IPv6) operational data
+
+    Mirrors add_rip() but for the IPv6 address family: status is scraped
+    from 'show ipv6 ripng status' and learned routes from
+    'show ipv6 route ripng json'.
+    """
+    # Get operational status from text parsing
+    status = parse_rip_status(('vtysh', '-c', 'show ipv6 ripng status'))
+
+    # If we can't get status, ripngd is probably not running
+    if not status:
+        return
+
+    control_protocol = {}
+    control_protocol["type"] = "infix-routing:ripng"
+    control_protocol["name"] = "default"
+    control_protocol["ietf-rip:rip"] = {}
+
+    rip = control_protocol["ietf-rip:rip"]
+
+    # Add global operational state
+    if status.get('distance'):
+        rip['distance'] = status['distance']
+    if status.get('default-metric'):
+        rip['default-metric'] = status['default-metric']
+
+    # Add timers if available
+    if any(k in status for k in ['update-interval', 'invalid-interval', 'flush-interval']):
+        rip['timers'] = {}
+        if status.get('update-interval'):
+            rip['timers']['update-interval'] = status['update-interval']
+        if status.get('invalid-interval'):
+            rip['timers']['invalid-interval'] = status['invalid-interval']
+        if status.get('flush-interval'):
+            rip['timers']['flush-interval'] = status['flush-interval']
+
+    # Add interfaces if available.  RIPng has no protocol version, so unlike
+    # RIPv2 we do not report send-version/receive-version here.
+    if status.get('interfaces'):
+        rip['interfaces'] = {'interface': []}
+        for iface in status['interfaces']:
+            rip['interfaces']['interface'].append({
+                'interface': iface['name'],
+                'oper-status': 'up'
+            })
+
+    # Get RIPng-learned routes from the IPv6 routing table (JSON)
+    route_data = HOST.run_json(['vtysh', '-c', 'show ipv6 route ripng json'], default={})
+
+    routes = []
+    for prefix, entries in route_data.items():
+        if not entries or '/' not in prefix:
+            continue
+
+        entry = entries[0] if isinstance(entries, list) else entries
+
+        route = {
+            "ipv6-prefix": prefix,
+            "metric": entry.get("metric", 0),
+            "route-type": "rip"
+        }
+
+        nexthops = entry.get("nexthops", [])
+        if nexthops:
+            first_hop = nexthops[0]
+            if first_hop.get("ip"):
+                route["next-hop"] = first_hop["ip"]
+            if first_hop.get("interfaceName"):
+                route["interface"] = first_hop["interfaceName"]
+
+        routes.append(route)
+
+    # Add neighbors to operational data.  RIPng peers use a distinct two-line
+    # layout in 'show ipv6 ripng status', so it needs its own parser.
+    neighbors_list = []
+    for neighbor in parse_ripng_neighbors():
+        neighbors_list.append({
+            'ipv6-address': neighbor['address'],
+            'bad-packets-rcvd': neighbor['bad-packets'],
+            'bad-routes-rcvd': neighbor['bad-routes']
+        })
+
+    # Add routes and neighbors to operational data
+    if routes or neighbors_list:
+        if "ipv6" not in rip:
+            rip["ipv6"] = {}
+
+        if routes:
+            rip["ipv6"]["routes"] = {
+                "route": routes
+            }
+
+        if neighbors_list:
+            rip["ipv6"]["neighbors"] = {
+                "neighbor": neighbors_list
+            }
+
+    # Add the control-protocol
+    if "ietf-routing:control-plane-protocol" not in control_protocols:
+        control_protocols["ietf-routing:control-plane-protocol"] = []
+    control_protocols["ietf-routing:control-plane-protocol"].append(control_protocol)
+
+
 def operational():
     """Return RIP operational data in YANG format"""
     out = {
@@ -267,4 +433,5 @@ def operational():
     }
 
     add_rip(out['ietf-routing:routing']['control-plane-protocols'])
+    add_ripng(out['ietf-routing:routing']['control-plane-protocols'])
     return out

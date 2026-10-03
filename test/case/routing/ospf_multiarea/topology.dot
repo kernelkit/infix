@@ -1,4 +1,7 @@
 graph "ring-4-duts" {
+	labelloc="b";
+	label="IPv4 addresses shown, the IPv6 run uses the matching 2001:db8: prefixes";
+	fontname="DejaVu Serif, Book";
     layout="neato";
     overlap=false;
     esep="+20";
