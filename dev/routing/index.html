@@ -1100,6 +1100,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ospfv3-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPFv3 Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OSPFv3 Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#differences-from-ospfv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Differences from OSPFv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ospfv3-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPFv3 status
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rip-routing" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1138,6 +1177,45 @@
     <span class="md-ellipsis">
       
         Debug RIPv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ripng-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIPng Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RIPng Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#differences-from-ripv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Differences from RIPv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ripng-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIPng status
       
     </span>
   </a>
@@ -2829,6 +2907,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ospfv3-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPFv3 Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OSPFv3 Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#differences-from-ospfv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Differences from OSPFv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ospfv3-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSPFv3 status
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rip-routing" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2867,6 +2984,45 @@
     <span class="md-ellipsis">
       
         Debug RIPv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ripng-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIPng Routing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RIPng Routing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#differences-from-ripv2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Differences from RIPv2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ripng-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RIPng status
       
     </span>
   </a>
@@ -3031,11 +3187,11 @@
 </tr>
 <tr>
 <td style="text-align: left;">ietf-ospf</td>
-<td style="text-align: left;">OSPF routing</td>
+<td style="text-align: left;">OSPFv2 and OSPFv3 routing</td>
 </tr>
 <tr>
 <td style="text-align: left;">ietf-rip</td>
-<td style="text-align: left;">RIP routing</td>
+<td style="text-align: left;">RIPv2 and RIPng routing</td>
 </tr>
 <tr>
 <td style="text-align: left;">infix-routing</td>
@@ -3310,6 +3466,56 @@ admin@example:/config/&gt; <b>leave</b>
 admin@example:/&gt;
 </code></pre>
 
+<h2 id="ospfv3-routing">OSPFv3 Routing<a class="headerlink" href="#ospfv3-routing" title="Permanent link">¶</a></h2>
+<p>The system also supports OSPF for IPv6, i.e., OSPFv3.  It uses the same
+<code>ietf-ospf</code> model as OSPFv2, selected by the control plane protocol type
+<code>ospfv3</code>.  OSPFv3 has no IPv4 interface address to derive a router ID
+from, so an <code>explicit-router-id</code> must be set.</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv3 name default ospf</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set explicit-router-id 1.1.1.1</b>
+admin@example:/config/routing/…/ospf/&gt; <b>set area 0.0.0.0 interface e0 enabled</b>
+admin@example:/config/routing/…/ospf/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Remember to enable <a href="../ip/#ipv6-forwarding">IPv6 forwarding</a> for all the
+interfaces you want to route between.</p>
+</div>
+<p>Areas, interface settings (cost, timers, BFD, <code>point-to-point</code>),
+redistribution and default route advertisement work the same way as for
+<a href="#ospfv2-routing">OSPFv2</a>, with the differences listed below.</p>
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>Neighbors cannot be authenticated, in either OSPF version, so any host
+on an enabled link can inject or poison routes.</p>
+</div>
+<h3 id="differences-from-ospfv2">Differences from OSPFv2<a class="headerlink" href="#differences-from-ospfv2" title="Permanent link">¶</a></h3>
+<p>The following OSPFv3 settings differ from OSPFv2:</p>
+<ul>
+<li>OSPFv3 carries IPv6 routes only.  IPv4 over OSPFv3 (RFC 5838) is not
+  supported, hence there is no <code>address-family</code> setting.</li>
+<li><code>explicit-router-id</code> is required, there is no IPv4 interface address to
+  derive a router ID from.  Configurations without it are rejected.</li>
+<li>Interface types are <code>broadcast</code>, <code>point-to-point</code> and multicast
+  Point-to-Multipoint (<code>hybrid</code>).  Non-broadcast interfaces and static
+  neighbors are not supported.</li>
+<li>NSSA areas are regular NSSA, the <code>summary</code> flag applies to stub areas
+  only, where <code>summary false</code> gives a totally-stubby area.</li>
+<li>Per-area <code>default-cost</code> is not available.</li>
+</ul>
+<h3 id="ospfv3-status">OSPFv3 status<a class="headerlink" href="#ospfv3-status" title="Permanent link">¶</a></h3>
+<p>The CLI mirrors the OSPFv2 commands under <code>show ipv6 ospf</code>:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ipv6 ospf</b>
+admin@example:/&gt; <b>show ipv6 ospf neighbor</b>
+admin@example:/&gt; <b>show ipv6 ospf interface</b>
+admin@example:/&gt; <b>show ipv6 ospf route</b>
+</code></pre>
+
+<p>Debug logging is configured under the <code>ospfv3</code> protocol <code>debug</code> container,
+analogous to OSPFv2.  Available categories are <code>packet</code>, <code>ism</code>, <code>nsm</code> and
+<code>nssa</code>.</p>
 <h2 id="rip-routing">RIP Routing<a class="headerlink" href="#rip-routing" title="Permanent link">¶</a></h2>
 <p>The system supports RIP dynamic routing for IPv4, i.e., RIPv2.  To enable
 RIP and set active interfaces:</p>
@@ -3413,6 +3619,47 @@ admin@example:/config/&gt; <b>leave</b>
 admin@example:/&gt;
 </code></pre>
 
+<h2 id="ripng-routing">RIPng Routing<a class="headerlink" href="#ripng-routing" title="Permanent link">¶</a></h2>
+<p>RIPng is RIP for IPv6.  It uses the same <code>ietf-rip</code> model as RIPv2,
+selected by the control plane protocol type <code>ripng</code>:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ripng name default rip</b>
+admin@example:/config/routing/…/rip/&gt; <b>set interfaces interface e0</b>
+admin@example:/config/routing/…/rip/&gt; <b>set interfaces interface e1</b>
+admin@example:/config/routing/…/rip/&gt; <b>leave</b>
+admin@example:/&gt;
+</code></pre>
+
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Remember to enable <a href="../ip/#ipv6-forwarding">IPv6 forwarding</a> for all the
+interfaces you want to route between.</p>
+</div>
+<p>Passive interfaces, redistribution (<code>set redistribute connected</code> /
+<code>static</code>) and timers are configured the same way as for
+<a href="#rip-routing">RIPv2</a>, with the differences below.</p>
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>Messages cannot be authenticated, in either RIP version, so any host on
+an enabled link can inject or poison routes.</p>
+</div>
+<h3 id="differences-from-ripv2">Differences from RIPv2<a class="headerlink" href="#differences-from-ripv2" title="Permanent link">¶</a></h3>
+<p>RIPng runs on FRR's <code>ripngd</code>:</p>
+<ul>
+<li>RIPng has no protocol version, so the per-interface <code>send-version</code> and
+  <code>receive-version</code> settings do not apply.</li>
+<li>The global <code>distance</code> and unicast <code>neighbor</code> settings are not supported
+  (<code>ripngd</code> has no such commands).</li>
+<li><code>set redistribute ospf</code> redistributes OSPFv3, as there is no OSPFv2 in
+  an IPv6 domain.</li>
+</ul>
+<h3 id="ripng-status">RIPng status<a class="headerlink" href="#ripng-status" title="Permanent link">¶</a></h3>
+<p>RIPng-learned routes appear in the <a href="#ipv6-routing-table">IPv6 routing table</a>:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ipv6 route</b>
+</code></pre>
+
+<p>Debug logging is configured under the <code>ripng</code> protocol <code>debug</code> container,
+analogous to RIPv2.  Available categories are <code>events</code>, <code>packet</code> and
+<code>kernel</code>.</p>
 <h2 id="view-routing-table">View routing table<a class="headerlink" href="#view-routing-table" title="Permanent link">¶</a></h2>
 <p>The routing table can be inspected from the operational datastore, XPath
 <code>/routing/ribs</code>, using sysrepocfg, NETCONF/RESTCONF, or using the CLI.</p>
@@ -3491,7 +3738,11 @@ routing table.</p>
 </tr>
 <tr>
 <td>110</td>
-<td>OSPF</td>
+<td>OSPF (OSPFv2 and OSPFv3)</td>
+</tr>
+<tr>
+<td>120</td>
+<td>RIP (RIPv2 and RIPng)</td>
 </tr>
 <tr>
 <td>254</td>
@@ -3536,6 +3787,14 @@ to be installed in the FIB by Frr.</p>
 <tr>
 <td style="text-align: left;">ospfv2</td>
 <td style="text-align: left;">Routes learned from OSPFv2</td>
+</tr>
+<tr>
+<td style="text-align: left;">ospfv3</td>
+<td style="text-align: left;">Routes learned from OSPFv3</td>
+</tr>
+<tr>
+<td style="text-align: left;">rip</td>
+<td style="text-align: left;">Routes learned from RIPv2 or RIPng</td>
 </tr>
 </tbody>
 </table>
