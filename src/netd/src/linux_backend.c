@@ -289,7 +289,7 @@ static int kernel_read_routes(struct route_head *routes, int family)
 	struct sockaddr_nl sa = { .nl_family = AF_NETLINK };
 	struct nlmsghdr *nlh;
 	struct rtattr *rta;
-	struct msghdr msg;
+	struct msghdr msg = { 0 };
 	struct rtmsg *rtm;
 	struct iovec iov;
 	struct route *r;
