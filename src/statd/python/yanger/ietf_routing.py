@@ -166,27 +166,21 @@ def get_routing_interfaces():
     return routing_ifaces
 
 
-def operational():
-    out = {
-        "ietf-routing:routing": {
-            "interfaces": {
-                "interface": get_routing_interfaces()
-            },
-            "ribs":  {
-                "rib": [{
-                    "name": "ipv4",
-                    "address-family": "ipv4"
-                }, {
-                    "name": "ipv6",
-                    "address-family": "ipv6"
-                }]
-            }
-        }
-    }
+def operational(part=None):
+    """All of the routing tree, or only its "interfaces" or "ribs" part"""
+    routing = {}
+    out = {"ietf-routing:routing": routing}
 
-    ipv4routes = out['ietf-routing:routing']['ribs']['rib'][0]
-    ipv6routes = out['ietf-routing:routing']['ribs']['rib'][1]
-    add_protocol(ipv4routes, "ipv4")
-    add_protocol(ipv6routes, "ipv6")
+    if part in (None, "interfaces"):
+        routing["interfaces"] = {
+            "interface": get_routing_interfaces()
+        }
+
+    if part in (None, "ribs"):
+        ipv4routes = {"name": "ipv4", "address-family": "ipv4"}
+        ipv6routes = {"name": "ipv6", "address-family": "ipv6"}
+        add_protocol(ipv4routes, "ipv4")
+        add_protocol(ipv6routes, "ipv6")
+        routing["ribs"] = {"rib": [ipv4routes, ipv6routes]}
 
     return out
