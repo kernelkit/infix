@@ -323,6 +323,37 @@ $ make test-sh
 09:08:17 infamy0:test # ./9pm/9pm.py -o"--transport=restconf" case/system/hostname.py
 ```
 
+### Capturing DUT Syslog
+
+When a test fails, what the DUT logged during the test is often the
+quickest way to see why.  With syslog capture enabled, Infamy logs a
+marker in the syslog of each DUT when a test attaches to it, and
+another when the test exits.  The lines between the two are saved next
+to the test output, one file per test and DUT:
+
+```
+test/.log/last/output/0006-set-hostname.log
+test/.log/last/syslog/0006-set-hostname-target.log
+```
+
+Capture is disabled by default, since it adds an SSH call per DUT when
+each test exits.  Enable it for a test run with:
+
+```
+$ make TEST_SYSLOG_CAPTURE=y test
+```
+
+or, when running interactively:
+
+```
+$ make test-sh
+09:08:17 infamy0:test # ./9pm/9pm.py -o"--capture-syslog" case/system/hostname.py
+```
+
+Each marker carries the host's wall-clock time, which can be compared
+with the DUT's own timestamp on the same line to line up DUT log lines
+with the test output.
+
 ### Test specification
 
 The test specification is automaticly generated from the test cases,
