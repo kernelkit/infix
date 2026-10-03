@@ -4,6 +4,11 @@
 Enable a DHCPv6 client and verify it requests an IPv6 lease from a
 DHCPv6 server that is then set on the interface.
 
+The default route, learned from the router advertisement, must be a
+static route with the DHCPv6 route preference, the same as a route
+from a DHCPv4 server.  A changed route preference must reach the route,
+and the route must be removed with the client.
+
 """
 
 import infamy
@@ -73,11 +78,28 @@ with infamy.Test() as test:
             with test.step(f"Verify client lease for {CLIENT}"):
                 until(lambda: iface.address_exist(client, port, CLIENT, prefix_length=128), attempts=30)
 
-            with test.step("Verify client default route ::/0"):
-                until(lambda: route.ipv6_route_exist(client, "::/0"), attempts=20)
+            with test.step("Verify client default route ::/0 is static with preference 5"):
+                until(lambda: route.ipv6_route_exist(client, "::/0", proto="ietf-routing:static",
+                                                     pref=5, active_check=True), attempts=20)
 
             with test.step("Verify client domain name resolution"):
                 # DNS configuration may take a moment, especially on ARM hardware
                 until(check_dns_resolution, attempts=20)
+
+            with test.step("Set DHCPv6 route preference 20"):
+                config["interfaces"]["interface"][0]["ipv6"]["infix-dhcpv6-client:dhcp"]["route-preference"] = 20
+                client.put_config_dicts({"ietf-interfaces": config})
+
+            with test.step("Verify client default route ::/0 has preference 20"):
+                until(lambda: route.ipv6_route_exist(client, "::/0", proto="ietf-routing:static",
+                                                     pref=20, active_check=True), attempts=30)
+
+            with test.step("Remove DHCPv6 client"):
+                client.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{port}']"
+                                    "/ietf-ip:ipv6/infix-dhcpv6-client:dhcp")
+
+            with test.step("Verify client default route ::/0 is removed"):
+                until(lambda: not route.ipv6_route_exist(client, "::/0", proto="ietf-routing:static"),
+                      attempts=30)
 
     test.succeed()

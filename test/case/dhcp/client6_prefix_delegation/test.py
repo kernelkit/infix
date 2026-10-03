@@ -5,10 +5,14 @@ Verify DHCPv6 prefix delegation (IA_PD) where a client requests an IPv6
 prefix from a DHCPv6 server.  This is commonly used on WAN interfaces of
 routers to obtain a prefix for distribution to downstream networks.
 
+The client must install an unreachable route for the delegated prefix,
+as a static route, to prevent routing loops.
+
 """
 
 import infamy, infamy.dhcp
 import infamy.iface as iface
+import infamy.route as route
 from infamy.util import parallel, until
 import time
 
@@ -22,13 +26,16 @@ def checkrun(dut):
     return False
 
 
+def delegated_prefix(dut):
+    """Delegated prefix from the client's log, or None"""
+    rc = dut.runsh("tail -50 /log/syslog | grep -o 'received delegated prefix [^ ]*'")
+    words = rc.stdout.split()
+    return words[-1] if words else None
+
+
 def checklog(dut):
     """Check syslog for prefix delegation message"""
-    rc = dut.runsh("tail -50 /log/syslog | grep 'received delegated prefix'")
-    # print(f"DHCPv6 client logs:\n{rc.stdout}")
-    if rc.stdout.strip() != "":
-        return True
-    return False
+    return delegated_prefix(dut) is not None
 
 
 with infamy.Test() as test:
@@ -79,5 +86,10 @@ with infamy.Test() as test:
             with test.step("Verify prefix delegation in logs"):
                 # Prefix delegation may take longer on ARM hardware
                 until(lambda: checklog(tgtssh), attempts=30)
+
+            with test.step("Verify unreachable route for the delegated prefix"):
+                pd = delegated_prefix(tgtssh)
+                until(lambda: route.ipv6_route_exist(client, pd, proto="ietf-routing:static"),
+                      attempts=30)
 
     test.succeed()
