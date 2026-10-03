@@ -2,11 +2,11 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 
-<!-- Title: dhcp_ntp_dns_combination Pages: 1 -->
+<!-- Title: dhcp_ntp_dns Pages: 1 -->
 <svg width="426pt" height="202pt"
  viewBox="0.00 0.00 426.03 202.01" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 198.01)">
-<title>dhcp_ntp_dns_combination</title>
+<title>dhcp_ntp_dns</title>
 <polygon fill="white" stroke="transparent" points="-4,4 -4,-198.01 422.03,-198.01 422.03,4 -4,4"/>
 <!-- host -->
 <g id="node1" class="node">
