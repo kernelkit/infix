@@ -12,6 +12,12 @@ All notable changes to the project are documented in this file.
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
 
+### Fixes
+
+- Fix #1423: the default route from a DHCPv6 client, learned from router
+  advertisements, is now a static route with the DHCPv6 route preference,
+  like a DHCPv4 route.  Before, the route preference setting was ignored
+
 [v26.09.0][] - 2026-09-30
 -------------------------
 
