@@ -30,10 +30,33 @@ static bool same_prefix(const struct route *a, const struct route *b)
 	if (a->family != b->family || a->prefixlen != b->prefixlen)
 		return false;
 
+	if (a->srclen != b->srclen || memcmp(&a->src, &b->src, sizeof(a->src)))
+		return false;
+
 	if (a->family == AF_INET)
 		return memcmp(&a->prefix.ip4, &b->prefix.ip4, sizeof(a->prefix.ip4)) == 0;
 	else
 		return memcmp(&a->prefix.ip6, &b->prefix.ip6, sizeof(a->prefix.ip6)) == 0;
+}
+
+/* Source prefix of a dst-src route, "::/0" for any */
+static const char *src_prefix(const struct route *r, char *buf, size_t len)
+{
+	char addr[INET6_ADDRSTRLEN];
+
+	inet_ntop(AF_INET6, &r->src, addr, sizeof(addr));
+	snprintf(buf, len, "%s/%u", addr, r->srclen);
+
+	return buf;
+}
+
+/* frr-nexthop type for a gateway, with or without an interface */
+static const char *nh_type_addr(const struct route *r)
+{
+	if (r->family == AF_INET)
+		return r->ifname[0] ? "ip4-ifindex" : "ip4";
+
+	return r->ifname[0] ? "ip6-ifindex" : "ip6";
 }
 
 /*
@@ -44,6 +67,7 @@ static bool same_prefix(const struct route *a, const struct route *b)
 const char *build_staticd_json(struct route_head *routes)
 {
 	char prefix_str[INET6_ADDRSTRLEN + 4];
+	char src_str[INET6_ADDRSTRLEN + 4];
 	char addr_buf[INET6_ADDRSTRLEN];
 	json_t *control_plane_protocols;
 	json_t *control_plane_protocol;
@@ -86,7 +110,8 @@ const char *build_staticd_json(struct route_head *routes)
 
 		route_entry = json_object();
 		json_object_set_new(route_entry, "prefix", json_string(prefix_str));
-		json_object_set_new(route_entry, "src-prefix", json_string("::/0"));
+		json_object_set_new(route_entry, "src-prefix",
+				    json_string(src_prefix(r, src_str, sizeof(src_str))));
 		json_object_set_new(route_entry, "afi-safi", json_string(afi));
 
 		json_t *path_list = json_array();
@@ -110,10 +135,10 @@ const char *build_staticd_json(struct route_head *routes)
 				else
 					inet_ntop(AF_INET6, &curr->gateway.gw6, addr_buf, sizeof(addr_buf));
 
-				json_object_set_new(nexthop, "nh-type", json_string(curr->family == AF_INET ? "ip4" : "ip6"));
+				json_object_set_new(nexthop, "nh-type", json_string(nh_type_addr(curr)));
 				json_object_set_new(nexthop, "vrf", json_string("default"));
 				json_object_set_new(nexthop, "gateway", json_string(addr_buf));
-				json_object_set_new(nexthop, "interface", json_string(""));
+				json_object_set_new(nexthop, "interface", json_string(curr->ifname));
 				break;
 
 			case NH_IFNAME:
@@ -331,6 +356,7 @@ const char *build_rip_json(struct rip_config *rip_cfg)
 const char *build_routing_json(struct route_head *routes, struct rip_config *rip_cfg)
 {
 	char prefix_str[INET6_ADDRSTRLEN + 4];
+	char src_str[INET6_ADDRSTRLEN + 4];
 	char addr_buf[INET6_ADDRSTRLEN];
 	struct route *r, *curr;
 	json_t *root;
@@ -369,7 +395,8 @@ const char *build_routing_json(struct route_head *routes, struct rip_config *rip
 
 			json_t *route_entry = json_object();
 			json_object_set_new(route_entry, "prefix", json_string(prefix_str));
-			json_object_set_new(route_entry, "src-prefix", json_string("::/0"));
+			json_object_set_new(route_entry, "src-prefix",
+					    json_string(src_prefix(r, src_str, sizeof(src_str))));
 			json_object_set_new(route_entry, "afi-safi", json_string(afi));
 
 			json_t *path_list = json_array();
@@ -391,10 +418,10 @@ const char *build_routing_json(struct route_head *routes, struct rip_config *rip
 					else
 						inet_ntop(AF_INET6, &curr->gateway.gw6, addr_buf, sizeof(addr_buf));
 
-					json_object_set_new(nexthop, "nh-type", json_string(curr->family == AF_INET ? "ip4" : "ip6"));
+					json_object_set_new(nexthop, "nh-type", json_string(nh_type_addr(curr)));
 					json_object_set_new(nexthop, "vrf", json_string("default"));
 					json_object_set_new(nexthop, "gateway", json_string(addr_buf));
-					json_object_set_new(nexthop, "interface", json_string(""));
+					json_object_set_new(nexthop, "interface", json_string(curr->ifname));
 					break;
 
 				case NH_IFNAME:

@@ -117,6 +117,12 @@ static int netlink_route_op(const struct route *r, int cmd)
 	else
 		rta_add(nlh, sizeof(buf), RTA_DST, &r->prefix.ip6, sizeof(r->prefix.ip6));
 
+	/* Source prefix, dst-src routing */
+	if (r->srclen) {
+		rtm->rtm_src_len = r->srclen;
+		rta_add(nlh, sizeof(buf), RTA_SRC, &r->src, sizeof(r->src));
+	}
+
 	/* Nexthop */
 	switch (r->nh_type) {
 	case NH_ADDR:
@@ -133,13 +139,6 @@ static int netlink_route_op(const struct route *r, int cmd)
 		break;
 
 	case NH_IFNAME:
-		/* Output interface */
-		ifindex = if_nametoindex(r->ifname);
-		if (!ifindex) {
-			ERROR("netlink: interface %s not found", r->ifname);
-			return -1;
-		}
-		rta_add(nlh, sizeof(buf), RTA_OIF, &ifindex, sizeof(ifindex));
 		DEBUG("netlink: %s route dev %s",
 		      cmd == RTM_NEWROUTE ? "add" : "del", r->ifname);
 		break;
@@ -160,6 +159,16 @@ static int netlink_route_op(const struct route *r, int cmd)
 		DEBUG("netlink: %s blackhole route",
 		      cmd == RTM_NEWROUTE ? "add" : "del");
 		break;
+	}
+
+	/* Output interface, also needed for a link-local gateway */
+	if (r->nh_type != NH_BLACKHOLE && r->ifname[0]) {
+		ifindex = if_nametoindex(r->ifname);
+		if (!ifindex) {
+			ERROR("netlink: interface %s not found", r->ifname);
+			return -1;
+		}
+		rta_add(nlh, sizeof(buf), RTA_OIF, &ifindex, sizeof(ifindex));
 	}
 
 	/* Priority (metric/distance) - kernel expects 32-bit value */
@@ -241,6 +250,8 @@ static int route_exists(struct route_head *list, const struct route *needle)
 			continue;
 		if (r->prefixlen != needle->prefixlen)
 			continue;
+		if (r->srclen != needle->srclen || memcmp(&r->src, &needle->src, sizeof(r->src)))
+			continue;
 
 		/* Compare prefix */
 		if (r->family == AF_INET) {
@@ -265,6 +276,9 @@ static int route_exists(struct route_head *list, const struct route *needle)
 				if (memcmp(&r->gateway.gw6, &needle->gateway.gw6, sizeof(r->gateway.gw6)))
 					continue;
 			}
+			/* The kernel always reports the interface, config may not */
+			if (r->ifname[0] && needle->ifname[0] && strcmp(r->ifname, needle->ifname))
+				continue;
 			break;
 		case NH_IFNAME:
 			if (strcmp(r->ifname, needle->ifname))
@@ -294,7 +308,7 @@ static int kernel_read_routes(struct route_head *routes, int family)
 	struct iovec iov;
 	struct route *r;
 	char buf[8192];
-	int rta_len;
+	int rta_len, has_gw;
 	int ret;
 
 	msg.msg_name = &sa;
@@ -357,10 +371,12 @@ static int kernel_read_routes(struct route_head *routes, int family)
 
 			r->family = rtm->rtm_family;
 			r->prefixlen = rtm->rtm_dst_len;
+			r->srclen = rtm->rtm_src_len;
 
 			/* Parse attributes */
 			rta = RTM_RTA(rtm);
 			rta_len = RTM_PAYLOAD(nlh);
+			has_gw = 0;
 
 			for (; RTA_OK(rta, rta_len); rta = RTA_NEXT(rta, rta_len)) {
 				switch (rta->rta_type) {
@@ -371,8 +387,13 @@ static int kernel_read_routes(struct route_head *routes, int family)
 						memcpy(&r->prefix.ip6, RTA_DATA(rta), sizeof(r->prefix.ip6));
 					break;
 
+				case RTA_SRC:
+					if (r->family == AF_INET6)
+						memcpy(&r->src, RTA_DATA(rta), sizeof(r->src));
+					break;
+
 				case RTA_GATEWAY:
-					r->nh_type = NH_ADDR;
+					has_gw = 1;
 					if (r->family == AF_INET)
 						memcpy(&r->gateway.gw4, RTA_DATA(rta), sizeof(r->gateway.gw4));
 					else
@@ -380,7 +401,6 @@ static int kernel_read_routes(struct route_head *routes, int family)
 					break;
 
 				case RTA_OIF:
-					r->nh_type = NH_IFNAME;
 					if_indextoname(*(uint32_t *)RTA_DATA(rta), r->ifname);
 					break;
 
@@ -389,6 +409,9 @@ static int kernel_read_routes(struct route_head *routes, int family)
 					break;
 				}
 			}
+
+			/* A gateway route carries its interface as well */
+			r->nh_type = has_gw ? NH_ADDR : NH_IFNAME;
 
 			/* Detect blackhole routes */
 			if (rtm->rtm_type == RTN_BLACKHOLE || rtm->rtm_type == RTN_UNREACHABLE) {

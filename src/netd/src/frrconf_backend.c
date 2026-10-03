@@ -59,6 +59,10 @@ static void write_static_routes(FILE *fp, struct route_head *routes)
 		}
 
 		fprintf(fp, "%s route %s/%u ", cmd, prefix_str, r->prefixlen);
+		if (r->srclen) {
+			inet_ntop(AF_INET6, &r->src, gw_str, sizeof(gw_str));
+			fprintf(fp, "from %s/%u ", gw_str, r->srclen);
+		}
 
 		switch (r->nh_type) {
 		case NH_ADDR:
@@ -67,6 +71,8 @@ static void write_static_routes(FILE *fp, struct route_head *routes)
 			else
 				inet_ntop(AF_INET6, &r->gateway.gw6, gw_str, sizeof(gw_str));
 			fputs(gw_str, fp);
+			if (r->ifname[0])
+				fprintf(fp, " %s", r->ifname);
 			break;
 		case NH_IFNAME:
 			fputs(r->ifname, fp);
