@@ -231,8 +231,13 @@ log "state: $state"
 	flock 9
 	case "$state" in
 		started)
-			# Initial state - clean up any stale config
+			# Initial state - clean up any stale config.  Our
+			# routes go through netd with the configured route
+			# preference, so the kernel must not add its own
+			# default route from router advertisements as well.
 			rm -f "$NAME"
+			sysctl -w "net.ipv6.conf.$interface.accept_ra_defrtr=0" >/dev/null
+			ip -6 route flush dev "$interface" proto ra
 			teardown_interface
 			;;
 
