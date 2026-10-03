@@ -326,18 +326,18 @@ $ make test-sh
 ### Capturing DUT Syslog
 
 When a test fails, what the DUT logged during the test is often the
-quickest way to see why.  With syslog capture enabled, Infamy logs a
-marker in the syslog of each DUT when a test attaches to it, and
-another when the test exits.  The lines between the two are saved next
-to the test output, one file per test and DUT:
+quickest way to see why.  With syslog capture enabled, each DUT logs to
+a syslog server in the test container over its management interface.
+The server sorts messages per test and per DUT, next to the test output:
 
 ```
 test/.log/last/output/0006-set-hostname.log
-test/.log/last/syslog/0006-set-hostname-target.log
+test/.log/last/syslog/0006-set-hostname/target/syslog
+test/.log/last/syslog/0006-set-hostname/target/kern.log
 ```
 
-Capture is disabled by default, since it adds an SSH call per DUT when
-each test exits.  Enable it for a test run with:
+Capture is disabled by default, since it changes the syslog setup of
+each DUT and adds a few RPCs per test.  Enable it for a test run with:
 
 ```
 $ make TEST_SYSLOG_CAPTURE=y test
@@ -350,9 +350,11 @@ $ make test-sh
 09:08:17 infamy0:test # ./9pm/9pm.py -o"--capture-syslog" case/system/hostname.py
 ```
 
-Each marker carries the host's wall-clock time, which can be compared
-with the DUT's own timestamp on the same line to line up DUT log lines
-with the test output.
+The start and stop of each test are marked in the DUT's log, with
+msgid `test-start` and `test-stop`, and structured data `test@61046`
+holding the test name, node, and the host's wall-clock time.  Compare
+the host time with the timestamp of the same line to line up DUT log
+lines with the test output.
 
 ### Test specification
 

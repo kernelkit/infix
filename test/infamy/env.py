@@ -124,9 +124,9 @@ class Env(object):
 
         return util.is_reachable(ip, self, self.get_password(node))
 
-    def _dutlog(self, name, dev):
+    def _dutlog(self, name, dev, mgmtip, cport, dport):
         if tap.CURRENT and getattr(self.args, "capture_syslog", False):
-            tap.CURRENT.dutlog.begin(name, dev, dev.location)
+            tap.CURRENT.dutlog.begin(name, dev, mgmtip, cport, dport)
 
     def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
         """Attach to node on port using protocol."""
@@ -151,7 +151,7 @@ class Env(object):
             username = "admin"
 
         ctrl = self.ptop.get_ctrl()
-        cport, _ = self.ptop.get_mgmt_link(ctrl, node)
+        cport, dport = self.ptop.get_mgmt_link(ctrl, node)
 
         print("Waiting for DUTs to become reachable...")
         util.parallel(lambda: util.until(lambda: self.is_reachable(node, cport), 300))
@@ -169,16 +169,14 @@ class Env(object):
                                                            password),
                                  mapping=mapping,
                                  yangdir=self.args.yangdir)
-            self._dutlog(name, dev)
             if test_reset:
                 dev.test_reset()
                 util.until(lambda: self.is_reachable(node, cport), 30)
+            self._dutlog(name, dev, mgmtip, cport, dport)
             return dev
 
         if protocol == "ssh":
-            dev = ssh.Device(name, ssh.Location(mgmtip, username, password))
-            self._dutlog(name, dev)
-            return dev
+            return ssh.Device(name, ssh.Location(mgmtip, username, password))
 
         if protocol == "restconf":
             dev = restconf.Device(name,
@@ -188,10 +186,10 @@ class Env(object):
                                                              password),
                                   mapping=mapping,
                                   yangdir=self.args.yangdir)
-            self._dutlog(name, dev)
             if test_reset:
                 dev.test_reset()
                 util.until(lambda: self.is_reachable(node, cport), 30)
+            self._dutlog(name, dev, mgmtip, cport, dport)
             return dev
 
         raise Exception(f"Unsupported management procotol \"{protocol}\"")

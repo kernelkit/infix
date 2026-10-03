@@ -1,25 +1,70 @@
-"""Save each DUT's syslog for the duration of a test
+"""Collect each DUT's syslog in the test container during a test
 
 Off by default, enable with --capture-syslog or TEST_SYSLOG_CAPTURE=y.
-A marker with a per-run id is logged on each DUT when the test begins
-and ends, and the lines between them are saved to
-$NINEPM_LOG_PATH/syslog/<test>-<node>.log.  Best-effort, a failed
-capture never fails the test.
+Each DUT logs to a syslogd in the test container, which sorts messages
+by sender into $NINEPM_LOG_PATH/syslog/<test>/<node>/.  The start and
+stop of the test are marked in each DUT's log with the log RPC, using
+msgid test-start and test-stop.  Best-effort, a failed capture never
+fails the test.
 """
 import datetime
+import json
 import os
+import signal
 import subprocess
 import sys
+import time
 import uuid
 
-from . import ssh
+SYSLOGD = "/usr/local/sbin/syslogd"
+CONF = "/tmp/infamy-syslog.conf"
+PIDFILE = "/tmp/infamy-syslogd.pid"
+SOCKET = "/tmp/infamy-syslog.sock"
+SDID = "test@61046"
 
-LOGS = "/var/log/syslog.0 /var/log/syslog"
-TAG = "infamy"
+
+def _syslogd():
+    """Return pid of the syslogd collecting DUT logs, start it if needed"""
+    try:
+        with open(PIDFILE) as f:
+            pid = int(f.read())
+        os.kill(pid, 0)
+        return pid
+    except (OSError, ValueError):
+        pass
+
+    open(CONF, "w").close()
+    # -n: no DNS, so the source property is the sender's address
+    # -k: keep facility kern from the DUTs, -K: no local kernel log
+    subprocess.run([SYSLOGD, "-f", CONF, "-P", PIDFILE, "-p", SOCKET,
+                    "-n", "-k", "-K", "-m", "0"], check=True)
+    _wait(lambda: os.path.exists(PIDFILE))
+    with open(PIDFILE) as f:
+        return int(f.read())
 
 
-def _now():
-    return datetime.datetime.now().astimezone().isoformat(timespec="milliseconds")
+def _ll_addr(ifname):
+    """Return our IPv6 link-local address on ifname"""
+    out = subprocess.run(["ip", "-6", "-j", "addr", "show", "dev", ifname, "scope", "link"],
+                         stdout=subprocess.PIPE, check=True).stdout
+    return json.loads(out)[0]["addr_info"][0]["local"]
+
+
+def _wait(fn, timeout=5):
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        if fn():
+            return True
+        time.sleep(0.2)
+    return False
+
+
+def _logged(path, run, msgid):
+    try:
+        with open(path) as f:
+            return any(run in line and msgid in line for line in f)
+    except OSError:
+        return False
 
 
 class Capture:
@@ -27,64 +72,101 @@ class Capture:
         name = os.path.basename(os.path.dirname(os.path.realpath(sys.argv[0])))
         self.test = os.environ.get("NINEPM_TEST_NAME", name)
         self.run = uuid.uuid4().hex[:12]
+        self.dir = None
         self.duts = {}
 
-    def _marker(self, what):
-        return f"test-{what} {self.test} run={self.run} host-time={_now()}"
+    def _mark(self, node, dev, msgid):
+        now = datetime.datetime.now().astimezone().isoformat(timespec="milliseconds")
+        dev.log(f"{msgid} {self.test}", app_name="infamy", msgid=msgid,
+                sd={SDID: {"name": self.test, "node": node,
+                           "run": self.run, "host-time": now}})
 
-    def begin(self, node, dev, location):
-        """Log the begin marker on node, once, and remember how to reach it"""
-        if node in self.duts:
-            return
+    def _path(self, node):
+        return os.path.join(self.dir, node, "syslog")
 
-        self.duts[node] = ssh.Location(location.host, location.username,
-                                       location.password)
-        try:
-            if hasattr(dev, "log"):
-                dev.log(self._marker("begin"), app_name=TAG, msgid="test-begin")
-            else:
-                dev.runsh(f"logger -t {TAG} -p user.notice '{self._marker('begin')}'",
-                          timeout=10)
-        except Exception as e:
-            print(f"dutlog: failed logging begin marker on {node}: {e}")
+    def _reload(self, pid):
+        """Write rules for this test's DUTs, sorted on sender address"""
+        with open(CONF, "w") as f:
+            for node, (_, source) in self.duts.items():
+                path = os.path.dirname(self._path(node))
+                os.makedirs(path, exist_ok=True)
+                # A filter only covers the rule following it
+                for sel, name in (("*.*", "syslog"), ("kern.*", "kern.log")):
+                    f.write(f':source, isequal, "{source}"\n'
+                            f"{sel}\t-{path}/{name}\t;RFC5424\n")
+        os.kill(pid, signal.SIGHUP)
 
-    def end(self):
-        """Log the end marker on all DUTs and save what was logged in-between"""
-        for node, location in self.duts.items():
-            try:
-                self._fetch(node, location)
-            except Exception as e:
-                print(f"dutlog: failed capturing syslog from {node}: {e}")
+    def begin(self, node, dev, mgmtip, cport, dport):
+        """Make node log to us, and mark the start of the test in its log
 
-    def _fetch(self, node, location):
-        # One SSH round-trip: log the end marker over the same transport
-        # for every DUT, wait for syslogd to write it, then extract this
-        # run.  The rotated file is included in case the log rotated
-        # during the test.
-        run = f"run={self.run}"
-        script = f"""
-logger -t {TAG} -p user.notice '{self._marker("end")}'
-for i in $(seq 20); do
-    sudo grep -q 'test-end.*{run}' /var/log/syslog && break
-    sleep 0.1
-done
-sudo cat {LOGS} 2>/dev/null | awk '/test-begin.*{run}/ {{p=1}} p; /test-end.*{run}/ {{exit}}'
-"""
-        dev = ssh.Device(node, location, wait=False)
-        rc = dev.run("/bin/sh", text=True, input=script, stdout=subprocess.PIPE,
-                     stderr=subprocess.DEVNULL, loglevel="QUIET", timeout=30)
-        if rc.returncode != 0 or not rc.stdout:
-            print(f"dutlog: no syslog captured from {node} (rc {rc.returncode})")
+        Called on every attach, test_reset drops the remote action.
+        """
+        if not hasattr(dev, "log"):
             return
 
         logdir = os.environ.get("NINEPM_LOG_PATH")
         if not logdir:
-            print(f"dutlog: {node}: {len(rc.stdout.splitlines())} lines, "
-                  "set NINEPM_LOG_PATH to save them")
+            print("dutlog: NINEPM_LOG_PATH not set, not capturing syslog")
+            return
+        self.dir = os.path.join(logdir, "syslog", self.test)
+
+        try:
+            pid = _syslogd()
+            dev.patch_config("ietf-syslog", {
+                "syslog": {
+                    "actions": {
+                        "remote": {
+                            "destination": [{
+                                "name": "infamy",
+                                "udp": {
+                                    "address": f"{_ll_addr(cport)}%{dport}"
+                                },
+                                "facility-filter": {
+                                    "facility-list": [{
+                                        "facility": "all",
+                                        "severity": "all"
+                                    }]
+                                },
+                                "infix-syslog:log-format": "rfc5424"
+                            }]
+                        }
+                    }
+                }
+            })
+            known = node in self.duts
+            # The source property is the sender address, with scope
+            self.duts[node] = (dev, mgmtip)
+            if known:
+                return
+            self._reload(pid)
+
+            # The DUT applies the remote action asynchronously, retry
+            # the marker until it shows up
+            for _ in range(5):
+                self._mark(node, dev, "test-start")
+                if _wait(lambda: _logged(self._path(node), self.run, "test-start"), 1):
+                    break
+            else:
+                print(f"dutlog: {node}: no syslog received in {self._path(node)}")
+        except Exception as e:
+            print(f"dutlog: {node}: failed setting up syslog capture: {e}")
+
+    def end(self):
+        """Mark the stop of the test, and stop sorting logs to this test"""
+        if not self.duts:
             return
 
-        path = os.path.join(logdir, "syslog", f"{self.test}-{node}.log")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            f.write(rc.stdout)
-        print(f"dutlog: {node}: saved {len(rc.stdout.splitlines())} lines to {path}")
+        for node, (dev, _) in self.duts.items():
+            try:
+                self._mark(node, dev, "test-stop")
+                _wait(lambda: _logged(self._path(node), self.run, "test-stop"), 2)
+            except Exception as e:
+                print(f"dutlog: {node}: failed logging stop marker: {e}")
+
+        try:
+            self.duts = {}
+            self._reload(_syslogd())
+        except Exception as e:
+            print(f"dutlog: failed resetting syslog capture: {e}")
+
+        print(f"dutlog: syslog saved in {self.dir}")
