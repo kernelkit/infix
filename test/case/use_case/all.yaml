@@ -1,6 +1,6 @@
 ---
-- name: DHCP NTP DNS Combination
-  case: dhcp_ntp_dns_combination/test.py
+- name: DHCP NTP DNS
+  case: dhcp_ntp_dns/test.py
 
 - name: OSPF Container
   case: ospf_container/test.py
