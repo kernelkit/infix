@@ -11,12 +11,19 @@ All notable changes to the project are documented in this file.
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
+- Add PPPoE client, issue #1569.  A PPPoE session is an interface of type
+  `pppoe` on top of the interface facing the provider, with the password in
+  the keystore.  Its default route and DNS servers are used like those from
+  a DHCP server, and the TCP MSS of forwarded connections is clamped to the
+  session MTU, see [PPPoE Client][pppoe]
 
 ### Fixes
 
 - Fix #1423: the default route from a DHCPv6 client, learned from router
   advertisements, is now a static route with the DHCPv6 route preference,
   like a DHCPv4 route.  Before, the route preference setting was ignored
+
+[pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 
 [v26.09.0][] - 2026-09-30
 -------------------------

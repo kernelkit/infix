@@ -53,6 +53,7 @@ other traffic would be bridged as usual.
 | [eth](ethernet.md#physical-ethernet-interfaces) | ieee802-ethernet-interface | Physical Ethernet device/port |
 |                         | infix-ethernet-interface   |                                                     |
 | [veth](ethernet.md#veth-pairs) | infix-if-veth       | Virtual Ethernet pair, typically one end is in a container |
+| [pppoe](pppoe.md)       | infix-if-ppp               | PPPoE client session on an Ethernet or VLAN interface |
 | [*common*](iface.md)    | ietf-interfaces,           | Properties common to all interface types            |
 |                         | infix-interfaces           |                                                     |
 

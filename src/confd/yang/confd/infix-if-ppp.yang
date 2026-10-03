@@ -1,0 +1,147 @@
+submodule infix-if-ppp {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import iana-if-type {
+    prefix ianaift;
+  }
+  import ietf-keystore {
+    prefix ks;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description
+    "PPP interfaces, so far only PPPoE client sessions.
+
+     Settings common to all PPP links, authentication, default route,
+     and DNS, apply to every interface type derived from iana-if-type
+     ppp.  Settings for the PPPoE transport only apply to type pppoe.
+
+     The interface is down, without addresses, until a session comes up.
+     Its IPv4 address and peer DNS servers then come from the server,
+     IPv6 is negotiated when enabled on the interface, the DHCPv6 client
+     can then run on top.";
+
+  revision 2026-10-03 {
+    description "Initial revision, PPPoE client.";
+    reference "internal";
+  }
+
+  feature ppp {
+    description "PPP support is an optional build-time feature in Infix.";
+  }
+
+  typedef ppp-string {
+    type string {
+      length "1..64";
+      pattern '[^\x00-\x1f\x22\x5c\x7f]*';
+    }
+    description "Anything except control characters, '\"', and '\\'.";
+  }
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'ianaift:ppp')" {
+      description "Only shown for PPP interface types";
+    }
+    if-feature ppp;
+    description "Settings common to all PPP links.";
+
+    container ppp {
+      description "PPP link settings, common to all PPP transports.";
+
+      leaf username {
+        type ppp-string;
+        mandatory true;
+        description "User name to authenticate with, PAP or CHAP.";
+      }
+
+      leaf secret {
+        type ks:central-symmetric-key-ref;
+        mandatory true;
+        description
+          "Password to authenticate with.
+
+           References a symmetric key in the keystore, its cleartext
+           value is the password.  Control characters, '\"', and '\\'
+           are not allowed.";
+      }
+
+      leaf default-route {
+        type boolean;
+        default true;
+        description "Install a default route through the link.";
+      }
+
+      leaf route-preference {
+        type uint8 {
+          range "1..255";
+        }
+        default 5;
+        description
+          "Preference (administrative distance) of the default route, the
+           same default as for DHCP routes.  255 means the route is never
+           used.";
+      }
+
+      leaf peer-dns {
+        type boolean;
+        default true;
+        description "Use the DNS servers the peer provides.";
+      }
+    }
+  }
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:pppoe')" {
+      description "Only shown for if:type pppoe";
+    }
+    if-feature ppp;
+    description "PPPoE transport settings.";
+
+    container pppoe {
+      description "PPP over Ethernet (RFC 2516) client session.";
+
+      leaf lower-layer-if {
+        type if:interface-ref;
+        must "deref(.)/../if:name != current()/../../if:name" {
+          error-message "A PPPoE interface cannot run on top of itself.";
+        }
+        mandatory true;
+        description "Ethernet interface, or VLAN, to discover the server on.";
+      }
+
+      leaf service-name {
+        type ppp-string;
+        description "Only connect to a server offering this service.";
+      }
+
+      leaf ac-name {
+        type ppp-string;
+        description "Only connect to the access concentrator with this name.";
+      }
+
+      leaf mss-clamping {
+        type boolean;
+        default true;
+        description
+          "Clamp the TCP MSS of forwarded connections to the MTU of the
+           session.
+
+           PPPoE takes 8 bytes of every Ethernet frame, so the session
+           MTU is lower than that of the hosts behind the router.  Hosts
+           rely on path MTU discovery to adjust, which fails where ICMP
+           is blocked, and their TCP connections then stall on large
+           packets.  Clamping the MSS in the TCP handshake avoids that.";
+      }
+    }
+  }
+}
