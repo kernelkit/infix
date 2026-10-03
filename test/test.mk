@@ -18,6 +18,7 @@ xpaths_all_csv     := $(test-dir)/.log/xpaths_all.csv
 base := -b $(base-dir)
 
 TEST_MODE ?= qeneth
+TEST_SYSLOG_CAPTURE ?= n
 mode-qeneth := -q $(or $(QTOPOLOGY),$(test-dir)/virt/quad)
 mode-host   := -t $(or $(TOPOLOGY),/etc/infamy.dot)
 mode-run    := -t $(BINARIES_DIR)/qemu.dot
@@ -31,6 +32,10 @@ binaries         := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
 # Common transport override for minimal defconfigs
 ifneq ($(BR2_PACKAGE_ROUSETTE),y)
 export INFAMY_ARGS := --transport=netconf
+endif
+
+ifeq ($(TEST_SYSLOG_CAPTURE),y)
+export INFAMY_ARGS += --capture-syslog
 endif
 
 test:

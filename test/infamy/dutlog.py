@@ -1,18 +1,10 @@
-"""Capture each attached DUT's syslog for the duration of a test
+"""Save each DUT's syslog for the duration of a test
 
-A begin marker is logged on every DUT when the test attaches to it,
-and an end marker when the test exits.  The lines between the two are
-then fetched over SSH and saved next to the 9pm test output, in
-$NINEPM_LOG_PATH/syslog/<test>-<node>.log
-
-Both markers carry the host's wall-clock time, so the offset between
-the DUT and host clocks can be read from the captured file and DUT
-log lines lined up with the 9pm output log.  Marker matching is done
-on a per-run id, never on timestamps, so a DUT with a skewed clock or
-another timezone does not matter.
-
-Everything here is best-effort, a DUT that has rebooted or lost its
-management connectivity must never fail the test.
+Off by default, enable with --capture-syslog or TEST_SYSLOG_CAPTURE=y.
+A marker with a per-run id is logged on each DUT when the test begins
+and ends, and the lines between them are saved to
+$NINEPM_LOG_PATH/syslog/<test>-<node>.log.  Best-effort, a failed
+capture never fails the test.
 """
 import datetime
 import os

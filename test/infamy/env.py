@@ -39,6 +39,7 @@ class ArgumentParser():
         self.args.add_argument("-p", "--package", default=None)
         self.args.add_argument("-y", "--yangdir", default=None)
         self.args.add_argument("-t", "--transport", default=ArgumentParser.DefaultTransport())
+        self.args.add_argument("--capture-syslog", default=False, action="store_true")
         self.args.add_argument("ptop", nargs=1, metavar="topology")
         self.args.add_argument("-l", "--logical-topology", dest="ltop", default=top)
 
@@ -124,7 +125,7 @@ class Env(object):
         return util.is_reachable(ip, self, self.get_password(node))
 
     def _dutlog(self, name, dev):
-        if tap.CURRENT:
+        if tap.CURRENT and getattr(self.args, "capture_syslog", False):
             tap.CURRENT.dutlog.begin(name, dev, dev.location)
 
     def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
