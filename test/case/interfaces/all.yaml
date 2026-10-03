@@ -41,6 +41,9 @@
 - name: IPv4 link-local
   case: ipv4_autoconf/test.py
 
+- name: PPPoE Client
+  case: pppoe_client/test.py
+
 - name: Bridge Interface Tests
   suite: bridge.yaml
 
