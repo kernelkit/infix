@@ -323,6 +323,39 @@ $ make test-sh
 09:08:17 infamy0:test # ./9pm/9pm.py -o"--transport=restconf" case/system/hostname.py
 ```
 
+### Capturing DUT Syslog
+
+When a test fails, what the DUT logged during the test is often the
+quickest way to see why.  With syslog capture enabled, each DUT logs to
+a syslog server in the test container over its management interface.
+The server sorts messages per test and per DUT, next to the test output:
+
+```
+test/.log/last/output/0006-set-hostname.log
+test/.log/last/syslog/0006-set-hostname/target/syslog
+test/.log/last/syslog/0006-set-hostname/target/kern.log
+```
+
+Capture is disabled by default, since it changes the syslog setup of
+each DUT and adds a few RPCs per test.  Enable it for a test run with:
+
+```
+$ make TEST_SYSLOG_CAPTURE=y test
+```
+
+or, when running interactively:
+
+```
+$ make test-sh
+09:08:17 infamy0:test # ./9pm/9pm.py -o"--capture-syslog" case/system/hostname.py
+```
+
+The start and stop of each test are marked in the DUT's log, with
+msgid `test-start` and `test-stop`, and structured data `test@61046`
+holding the test name, node, and the host's wall-clock time.  Compare
+the host time with the timestamp of the same line to line up DUT log
+lines with the test output.
+
 ### Test specification
 
 The test specification is automaticly generated from the test cases,

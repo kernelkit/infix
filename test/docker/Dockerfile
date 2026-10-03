@@ -72,6 +72,14 @@ RUN cd /tmp/ && tar zxf netsniff-ng-$NETSNIFF_NG_VERSION.tar.gz
 RUN cd /tmp/netsniff-ng-$NETSNIFF_NG_VERSION && ./configure --disable-geoip && \
     make trafgen mausezahn && make trafgen_install mausezahn_install
 
+# sysklogd, same version as on the DUTs, collects their syslog during
+# tests.  Installed in /usr/local to not clash with BusyBox syslogd.
+ARG SYSKLOGD_VERSION="2.7.2"
+RUN wget https://github.com/troglobit/sysklogd/releases/download/v$SYSKLOGD_VERSION/sysklogd-$SYSKLOGD_VERSION.tar.gz -O /tmp/sysklogd-$SYSKLOGD_VERSION.tar.gz
+RUN cd /tmp/ && tar zxf sysklogd-$SYSKLOGD_VERSION.tar.gz
+RUN cd /tmp/sysklogd-$SYSKLOGD_VERSION && ./configure --prefix=/usr/local --without-logger && \
+    make && make install
+
 # Alpine's QEMU package does not bundle this for some reason, copied
 # from Ubuntu
 COPY docker/qemu-ifup /etc
