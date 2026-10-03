@@ -593,6 +593,11 @@ client, and IPv4 link-local (IPv4) routes, are injected into Frr to let
 it weigh all routes before installing them into the kernel routing table
 (sometimes referred to as FIB).
 
+Some builds have static routing only.  OSPF, RIP, and BFD are then not
+available, and the routing YANG model does not list its `ospf`, `rip`,
+and `bfd` features.  Route preference still selects between routes to
+the same destination, and a route with preference 255 is never used.
+
 Routes have different weights made up from a *distance* and a *metric*.
 The kernel routing table only talks about *metric*, which unfortunately
 is **not the same** -- this is one of the reasons why the term *route

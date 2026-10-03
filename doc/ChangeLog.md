@@ -11,6 +11,8 @@ All notable changes to the project are documented in this file.
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
+- Support building without Frr, which also drops bash.  The minimal
+  defconfigs are now built this way, with static routing only, issue #1670
 
 [v26.09.0][] - 2026-09-30
 -------------------------
