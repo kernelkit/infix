@@ -584,6 +584,7 @@ with infamy.Test() as test:
             test.skip()
         if not R3.has_model("infix-containers"):
             test.skip()
+        route.skip_unless_supported(test, "ospf", R1, R2, R3, ABR)
 
     with test.step("Configure DUTs"):
         _, R1ring1 = env.ltop.xlate("R1", "ring1")

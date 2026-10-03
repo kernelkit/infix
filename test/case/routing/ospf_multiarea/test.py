@@ -307,6 +307,7 @@ with infamy.Test() as test:
                                   lambda: env.attach("R2", "mgmt"),
                                   lambda: env.attach("R3", "mgmt"),
                                   lambda: env.attach("R4", "mgmt"))
+        route.skip_unless_supported(test, "ospf", R1, R2, R3, R4)
 
         _, R1ring1 = env.ltop.xlate("R1", "ring1")
         _, R1ring2 = env.ltop.xlate("R1", "ring2")

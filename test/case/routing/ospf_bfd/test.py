@@ -146,6 +146,8 @@ with infamy.Test() as test:
 
         R1, R2 = parallel(lambda: env.attach("R1", "mgmt"),
                           lambda: env.attach("R2", "mgmt"))
+        route.skip_unless_supported(test, "ospf", R1, R2)
+        route.skip_unless_supported(test, "bfd", R1, R2)
 
     with test.step("Setup TPMR between R1fast and R2fast"):
         breaker = TPMR(env.ltop.xlate("PC", "R1fast")[1],
