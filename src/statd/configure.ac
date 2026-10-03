@@ -17,6 +17,10 @@ AC_ARG_ENABLE(containers,
         AS_HELP_STRING([--enable-containers], [Enable support for containers]),,[
 	enable_containers=no])
 
+AC_ARG_ENABLE(frr,
+        AS_HELP_STRING([--enable-frr], [Enable dynamic routing (OSPF, RIP, BFD) status from FRR]),,[
+	enable_frr=no])
+
 AC_ARG_WITH([yanger-dir],
   [AS_HELP_STRING([--with-yanger-dir=DIR],
     [specify the path to yanger])],
@@ -29,6 +33,9 @@ AC_DEFINE_UNQUOTED([YANGER_DIR], ["$YANGER_DIR"], [Path to yanger])
 # C defines
 AS_IF([test "x$enable_containers" = "xyes"], [
         AC_DEFINE(CONTAINERS, 1, [Built with container support])])
+
+AS_IF([test "x$enable_frr" = "xyes"], [
+        AC_DEFINE(HAVE_FRR, 1, [Built with FRR dynamic routing support])])
 
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
