@@ -38,6 +38,72 @@ def uptime2datetime(uptime):
     return str(YangDate.from_delta(uptime_delta))
 
 
+# Default route and host prefix length per address family
+FAMILY = {
+    "ipv4": ("0.0.0.0/0", "32"),
+    "ipv6": ("::/0", "128"),
+}
+
+
+def kernel_routes(proto):
+    """Route table straight from the kernel, for builds without FRR
+
+    Every route here is in the FIB, so it is installed, and of the
+    routes to the same prefix the one with the lowest metric is the
+    active one.  netd installs static routes with the configured
+    route preference as metric.
+    """
+    family = '-4' if proto == "ipv4" else '-6'
+    data = HOST.run_json(['ip', '-j', family, 'route', 'show'], [])
+    default, host_prefix_length = FAMILY[proto]
+
+    pmap = {
+        'kernel': 'direct',
+        'static': 'static',
+    }
+
+    routes = []
+    best = {}
+    for route in data:
+        dst = route.get('dst', 'default')
+        if dst == 'default':
+            dst = default
+        elif '/' not in dst:
+            dst = f"{dst}/{host_prefix_length}"
+        metric = route.get('metric', 0)
+        best[dst] = min(metric, best.get(dst, metric))
+        routes.append((dst, metric, route))
+
+    out = []
+    for dst, metric, route in routes:
+        new = {}
+        new[f'ietf-{proto}-unicast-routing:destination-prefix'] = dst
+        new['source-protocol'] = pmap.get(route.get('protocol'), 'infix-routing:kernel')
+        new['route-preference'] = metric
+        if metric == best[dst]:
+            new['active'] = [None]
+
+        hops = route.get('nexthops', [route])
+        next_hops = []
+        for hop in hops:
+            next_hop = {'infix-routing:installed': [None]}
+            if hop.get('gateway'):
+                next_hop[f'ietf-{proto}-unicast-routing:address'] = hop['gateway']
+            elif hop.get('dev'):
+                next_hop['outgoing-interface'] = hop['dev']
+            next_hops.append(next_hop)
+
+        rtype = route.get('type', 'unicast')
+        if rtype in ("blackhole", "unreachable", "prohibit"):
+            new['next-hop'] = {'special-next-hop': "unreachable" if rtype == "prohibit" else rtype}
+        else:
+            new['next-hop'] = {'next-hop-list': {'next-hop': next_hops}}
+
+        out.append(new)
+
+    return out
+
+
 def add_protocol(routes, proto):
     """Populate routes from vtysh JSON output"""
 
@@ -57,13 +123,7 @@ def add_protocol(routes, proto):
 
     out = {}
     out["route"] = []
-
-    if proto == "ipv4":
-        default = "0.0.0.0/0"
-        host_prefix_length = "32"
-    else:
-        default = "::/0"
-        host_prefix_length = "128"
+    default, host_prefix_length = FAMILY[proto]
 
     for prefix, entries in data.items():
         for route in entries:
@@ -184,9 +244,11 @@ def operational():
         }
     }
 
-    ipv4routes = out['ietf-routing:routing']['ribs']['rib'][0]
-    ipv6routes = out['ietf-routing:routing']['ribs']['rib'][1]
-    add_protocol(ipv4routes, "ipv4")
-    add_protocol(ipv6routes, "ipv6")
+    frr = HOST.exists('/usr/bin/vtysh')
+    for rib in out['ietf-routing:routing']['ribs']['rib']:
+        if frr:
+            add_protocol(rib, rib['name'])
+        else:
+            insert(rib, 'routes', {"route": kernel_routes(rib['name'])})
 
     return out

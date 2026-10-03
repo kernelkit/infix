@@ -3,6 +3,18 @@ IETF Routing helper methods
 """
 
 
+def skip_unless_supported(test, feature, *targets):
+    """Skip the test unless every target advertises the routing feature
+
+    A build without FRR has only static routing, its infix-routing
+    module leaves the ospf, rip and bfd features off.
+    """
+    for target in targets:
+        if not target.has_feature("infix-routing", feature):
+            print(f"DUT does not advertise the '{feature}' routing feature -- skipping")
+            test.skip()
+
+
 def _get_routes(target, protocol):
     xpath = "/ietf-routing:routing/ribs"
     rib = target.get_data(xpath)["routing"]["ribs"]["rib"]

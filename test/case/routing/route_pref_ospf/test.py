@@ -169,6 +169,7 @@ with infamy.Test() as test:
 
         R1, R2 = parallel(lambda: env.attach("R1", "mgmt"),
                           lambda: env.attach("R2", "mgmt"))
+        route.skip_unless_supported(test, "ospf", R1, R2)
 
     with test.step("Set up TPMR between R1ospf and R2ospf"):
         ospf_breaker = TPMR(env.ltop.xlate("PC", "R1_ospf")[1], env.ltop.xlate("PC", "R2_ospf")[1]).start()

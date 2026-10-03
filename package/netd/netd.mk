@@ -34,8 +34,18 @@ else
 NETD_CONF_OPTS += --without-frr
 endif
 
+# With an FRR backend netd feeds staticd, so it must not start before it
+ifeq ($(BR2_PACKAGE_NETD_LINUX),y)
+NETD_CONDITION = <pid/confd>
+else
+NETD_CONDITION = <pid/confd,pid/staticd>
+endif
+
 define NETD_INSTALL_EXTRA
 	cp $(NETD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/netd.conf
+	cp $(NETD_PKGDIR)/netd.conf $(FINIT_D)/available/netd.conf
+	$(SED) 's|<pid/confd>|$(NETD_CONDITION)|' $(FINIT_D)/available/netd.conf
+	ln -sf ../available/netd.conf $(FINIT_D)/enabled/netd.conf
 endef
 
 NETD_TARGET_FINALIZE_HOOKS += NETD_INSTALL_EXTRA

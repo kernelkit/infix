@@ -54,10 +54,11 @@ struct sr_change {
 static char   *nm  = NULL;
 static char   *id  = NULL;
 
-/* TODO: add `#ifdef HAVE_FOO` around optional features. */
 static const char *admin_groups[] = {
 	"wheel",
+#ifdef HAVE_FRR
 	"frrvty",
+#endif
 	NULL
 };
 

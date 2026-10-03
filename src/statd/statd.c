@@ -46,9 +46,11 @@
 #define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
 #define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
 #define XPATH_SYSTEM_BASE "/ietf-system"
+#ifdef HAVE_FRR
 #define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
 #define XPATH_ROUTING_RIP XPATH_ROUTING_BASE "/rip"
 #define XPATH_ROUTING_BFD XPATH_ROUTING_BASE "/bfd"
+#endif
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 #define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
 #define XPATH_TFTP_FILES "/infix-services:tftp/files"
@@ -242,6 +244,7 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 	return err;
 }
 
+#ifdef HAVE_FRR
 static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		      const char *, const char *xpath, uint32_t,
 		      struct lyd_node **parent, __attribute__((unused)) void *priv)
@@ -349,6 +352,7 @@ static int sr_bfd_cb(sr_session_ctx_t *session, uint32_t, const char *,
 
 	return err;
 }
+#endif /* HAVE_FRR */
 
 
 static void sigint_cb(struct ev_loop *loop, struct ev_signal *, int)
@@ -440,12 +444,14 @@ static int subscribe_to_all(struct statd *statd)
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_iface_cb))
 		return SR_ERR_INTERNAL;
+#ifdef HAVE_FRR
 	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, sr_ospf_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_RIP, sr_rip_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_BFD, sr_bfd_cb))
 		return SR_ERR_INTERNAL;
+#endif
 	if (subscribe(statd, "ietf-hardware", XPATH_HARDWARE_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-system", XPATH_SYSTEM_BASE":system", sr_generic_cb))

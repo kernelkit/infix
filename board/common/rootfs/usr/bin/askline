@@ -1,15 +1,24 @@
-#!/bin/bash
+#!/bin/sh
 # Prompt for a single-line value, prefilled with the current one.
 #
 #    askline LABEL FILE
 #
 # FILE holds the current value on entry and the new value on exit.
+# Editing the value in place needs bash, on builds where bash is ash
+# the current value is shown as the default, and Enter keeps it.
 
 LABEL=$1
 FILE=$2
 
 current=$(cat "$FILE" 2>/dev/null)
-read -er -p "$LABEL> " -i "$current" value || exit 1
-
 umask 0177
+
+if [ -n "$(bash -c 'echo "$BASH_VERSION"' 2>/dev/null)" ]; then
+	exec bash -c 'read -er -p "$1> " -i "$2" value || exit 1
+		      printf "%s" "$value" > "$3"' askline "$LABEL" "$current" "$FILE"
+fi
+
+printf '%s [%s]> ' "$LABEL" "$current"
+read -r value || exit 1
+[ -n "$value" ] || value=$current
 printf '%s' "$value" > "$FILE"

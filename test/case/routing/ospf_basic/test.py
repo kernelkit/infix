@@ -202,6 +202,7 @@ with infamy.Test() as test:
         R1, R2, HOST = parallel(lambda: env.attach("R1", "mgmt"),
                                 lambda: env.attach("R2", "mgmt"),
                                 lambda: env.attach("HOST", "mgmt"))
+        route.skip_unless_supported(test, "ospf", R1, R2)
 
     with test.step("Configure targets"):
         _, R1data = env.ltop.xlate("R1", "data")
