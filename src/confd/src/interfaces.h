@@ -34,6 +34,7 @@
 	_map(IFT_VXLAN,  "infix-if-type:vxlan")		\
 	_map(IFT_WIFI,   "infix-if-type:wifi")		\
 	_map(IFT_WIREGUARD,"infix-if-type:wireguard")	\
+	_map(IFT_PPPOE,  "infix-if-type:pppoe")		\
 /*  */
 
 enum iftype {
@@ -167,6 +168,13 @@ int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
 
 /* if-vxlan.c */
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+
+/* if-ppp.c, PPP links, so far only PPPoE */
+int ppp_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif);
+int ppp_gen(sr_session_ctx_t *session, struct lyd_node *dif, struct lyd_node *cif,
+	    struct dagger *net);
+int ppp_del(struct lyd_node *dif, struct dagger *net);
+int ppp_add_deps(struct lyd_node *cif);
 
 /* infix-if-wireguard */
 int wireguard_validate_peers(sr_session_ctx_t *session, struct lyd_node *cif);

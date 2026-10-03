@@ -59,6 +59,9 @@ def iplink2yang_type(iplink):
             return "infix-if-type:loopback"
         case "gre"|"gre6":
             return "infix-if-type:gre"
+        case "ppp":
+            # PPPoE is the only PPP transport, the kernel cannot tell
+            return "infix-if-type:pppoe"
         case "ether":
             data = HOST.run(tuple(f"ls /sys/class/net/{ifname}/wireless/".split()), default="no")
             if data != "no":
