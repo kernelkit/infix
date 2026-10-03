@@ -57,7 +57,10 @@ struct route {
 		struct in6_addr gw6;
 	} gateway;               /* For NH_ADDR */
 
-	char ifname[IFNAMSIZ];   /* For NH_IFNAME */
+	char ifname[IFNAMSIZ];   /* For NH_IFNAME, or NH_ADDR on a link */
+
+	uint8_t  srclen;         /* IPv6 source prefix length, 0 for any */
+	struct in6_addr src;     /* IPv6 source prefix, dst-src routing */
 
 	TAILQ_ENTRY(route) entries;
 };

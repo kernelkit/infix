@@ -34,6 +34,7 @@ nav:
       - Link Aggregation: lag.md
       - Ethernet Interfaces: ethernet.md
       - VLAN Interfaces: vlan.md
+      - PPPoE Client: pppoe.md
       - IP Addressing: ip.md
       - Routing: routing.md
       - Firewall Configuration: firewall.md

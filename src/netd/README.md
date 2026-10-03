@@ -102,6 +102,10 @@ route {
   - IP address: `"192.168.1.1"` or `"fe80::1"`
   - Interface name: `"eth0"`
   - Blackhole: `"blackhole"`, `"reject"`, or `"Null0"`
+- `interface` (optional) - Interface for an IP address next hop, required
+  for a link-local gateway, e.g., `"fe80::1"` on `"eth0"`
+- `source` (optional) - IPv6 source prefix, the route then only applies
+  to traffic from that prefix (dst-src routing)
 - `distance` (optional, default: 1) - Administrative distance (1-255)
 - `tag` (optional, default: 0) - Route tag (0-4294967295), used for route filtering/redistribution
 

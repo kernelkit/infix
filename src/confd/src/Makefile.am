@@ -50,6 +50,7 @@ confd_plugin_la_SOURCES =			\
 	  if-vxlan.c				\
 	  if-wifi.c				\
           if-wireguard.c			\
+	  if-ppp.c				\
 	keystore.c				\
 	system.c				\
 	support.c				\

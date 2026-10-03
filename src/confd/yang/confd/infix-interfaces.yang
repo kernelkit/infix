@@ -35,11 +35,17 @@ module infix-interfaces {
   include infix-if-vxlan;
   include infix-if-wifi;
   include infix-if-wireguard;
+  include infix-if-ppp;
   include infix-if-ptp;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2026-10-03 {
+    description "Add PPPoE client interfaces.";
+    reference "internal";
+  }
 
   revision 2026-09-28 {
     description "Constrain the character set of interface names.";

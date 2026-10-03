@@ -1,0 +1,24 @@
+graph "1x3" {
+	layout="neato";
+	overlap="false";
+	esep="+100";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt> mgmt | <data> data | <lan> lan }",
+	    pos="0,20!",
+	    requires="controller",
+	];
+
+        client [
+	    label="{ <mgmt> mgmt | <data> data | <lan> lan } | client",
+	    pos="200,20!",
+	    requires="infix",
+	];
+
+	host:mgmt -- client:mgmt [requires="mgmt", color=lightgrey]
+	host:data -- client:data [color=black, taillabel="PPPoE server"]
+	host:lan  -- client:lan  [color=black, taillabel="192.168.1.2/24", headlabel="192.168.1.1/24"]
+}

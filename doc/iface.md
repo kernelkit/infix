@@ -41,6 +41,7 @@ Available types can be listed from the CLI:
   lag        IEEE link aggregate interface.
   loopback   Linux loopback interface.
   other      Other interface, i.e., unknown.
+  pppoe      PPP over Ethernet (PPPoE) client session.
   veth       Linux virtual Ethernet pair.
   vlan       Layer 2 Virtual LAN using 802.1Q.
   vxlan      Virtual eXtensible LAN tunnel interface.

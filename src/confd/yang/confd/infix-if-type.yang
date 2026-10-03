@@ -11,6 +11,11 @@ module infix-if-type {
   contact      "kernelkit@googlegroups.com";
   description  "Infix extensions to IANA interfaces types";
 
+  revision 2026-10-03 {
+    description "Add interface type pppoe.";
+    reference "internal";
+  }
+
   revision 2026-01-07 {
     description "Add interface type wifi and wireguard";
     reference "internal";
@@ -49,6 +54,10 @@ module infix-if-type {
 
   feature wifi {
     description "WiFi support is an optional build-time feature in Infix.";
+  }
+
+  feature ppp {
+    description "PPP support is an optional build-time feature in Infix.";
   }
 
   /*
@@ -120,6 +129,12 @@ module infix-if-type {
     base infix-interface-type;
     base ianaift:l2vlan;
     description "Layer 2 Virtual LAN using 802.1Q.";
+  }
+  identity pppoe {
+    if-feature ppp;
+    base infix-interface-type;
+    base ianaift:ppp;
+    description "PPP over Ethernet (PPPoE) client session.";
   }
   identity wifi {
     if-feature wifi;

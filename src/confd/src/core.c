@@ -325,6 +325,25 @@ static confd_dependency_t dep_symmetric_keys(struct lyd_node **diff, struct lyd_
 			}
 		}
 		ly_set_free(ifaces, NULL);
+
+		ifaces = lydx_find_xpathf(config,
+			"/ietf-interfaces:interfaces/interface[infix-interfaces:ppp/secret='%s']", key_name);
+		if (ifaces && ifaces->count > 0) {
+			for (i = 0; i < ifaces->count; i++) {
+				const char *ifname = lydx_get_cattr(ifaces->dnodes[i], "name");
+				char xpath[256];
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:ppp/secret", ifname);
+				result = add_dependencies(diff, xpath, key_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add ppp to diff for interface %s", ifname);
+					ly_set_free(ifaces, NULL);
+					return result;
+				}
+			}
+		}
+		ly_set_free(ifaces, NULL);
 	}
 
 	return result;

@@ -134,6 +134,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:vxlan";
 	else if (!fnmatch("wg+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:wireguard";
+	else if (!fnmatch("pppoe+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:pppoe";
 
 	free(ifname);
 
@@ -426,6 +428,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 			? : wireguard_gen(NULL, cif, ip, net);
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
+	case IFT_PPPOE:
+		return ppp_gen(session, dif, cif, net);
 	case IFT_LO:
 		return 0;
 
@@ -459,6 +463,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		if (wifi_get_mode(cif) == wifi_mesh)
 			return wifi_gen_mesh(cif);
 		return 0;
+	case IFT_PPPOE:
+		return ppp_gen(session, dif, cif, net);
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
@@ -504,6 +510,8 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 		return lydx_get_descendant(lyd_child(dif), "vxlan", NULL);
 	case IFT_WIREGUARD:
 		return lydx_get_descendant(lyd_child(dif), "wireguard", NULL);
+	case IFT_PPPOE:
+		return false;
 	case IFT_UNKNOWN:
 		ERR_IFACE(cif, -EINVAL, "unsupported interface type \"%s\"",
 			  lydx_get_cattr(cif, "type"));
@@ -601,6 +609,9 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_UNKNOWN:
 		link_gen_del(dif, ip);
 		break;
+	case IFT_PPPOE:
+		ppp_del(dif, net);
+		break;
 	}
 
 	fclose(ip);
@@ -651,6 +662,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	const char *ifname = lydx_get_cattr(dif, "name");
 	const char *iftype = lydx_get_cattr(dif, "type")?:lydx_get_cattr(cif, "type");
 	enum lydx_op op = lydx_get_op(dif);
+	bool pppd_owned;	/* link state and MTU */
 	const char *attr;
 	int err = 0;
 	FILE *ip;
@@ -716,7 +728,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 			goto err_close_ip;
 	}
 
-	fprintf(ip, "link set dev %s down", ifname);
+	pppd_owned = iftype_from_iface(cif) == IFT_PPPOE;
+	fprintf(ip, "link set dev %s%s", ifname, pppd_owned ? "" : " down");
 
 	/* Set generic link attributes */
 	err = err ? : netdag_gen_ipv4_autoconf(net, cif, dif);
@@ -742,7 +755,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	}
 
 	/* Set Addresses */
-	err = err ? : netdag_gen_link_mtu(ip, dif);
+	if (!pppd_owned)
+		err = err ? : netdag_gen_link_mtu(ip, dif);
 	err = err ? : netdag_gen_link_addr(ip, cif, dif);
 	err = err ? : netdag_gen_ip_addrs(net, ip, "ipv4", cif, dif);
 	err = err ? : netdag_gen_ip_addrs(net, ip, "ipv6", cif, dif);
@@ -756,7 +770,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	fprintf(ip, "link set alias \"%s\" dev %s\n", attr ?: "", ifname);
 
 	/* Bring interface back up, if enabled */
-	if (lydx_is_enabled(cif, "enabled"))
+	if (lydx_is_enabled(cif, "enabled") && !pppd_owned)
 		fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, cif, dif);
@@ -797,6 +811,8 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_WIREGUARD:
 	case IFT_UNKNOWN:
 		break;
+	case IFT_PPPOE:
+		return ppp_add_deps(cif);
 	}
 
 	return 0;
@@ -911,6 +927,9 @@ int interfaces_validate_keys(sr_session_ctx_t *session, struct lyd_node *config)
 			break;
 		case IFT_WIREGUARD:
 			rc = wireguard_validate_peers(session, iface);
+			break;
+		case IFT_PPPOE:
+			rc = ppp_validate_secret(session, iface);
 			break;
 		default:
 			rc = SR_ERR_OK;

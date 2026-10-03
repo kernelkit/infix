@@ -1,6 +1,6 @@
-=== DHCP NTP DNS Combination
+=== DHCP NTP DNS
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/use_case/dhcp_ntp_dns_combination]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/use_case/dhcp_ntp_dns]
 
 ==== Description
 
@@ -9,7 +9,7 @@ servers from a DHCP server.
 
 ==== Topology
 
-image::topology.svg[DHCP NTP DNS Combination topology, align=center, scaledwidth=75%]
+image::topology.svg[DHCP NTP DNS topology, align=center, scaledwidth=75%]
 
 ==== Sequence
 
