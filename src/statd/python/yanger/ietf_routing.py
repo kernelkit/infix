@@ -226,29 +226,25 @@ def get_routing_interfaces():
     return routing_ifaces
 
 
-def operational():
-    out = {
-        "ietf-routing:routing": {
-            "interfaces": {
-                "interface": get_routing_interfaces()
-            },
-            "ribs":  {
-                "rib": [{
-                    "name": "ipv4",
-                    "address-family": "ipv4"
-                }, {
-                    "name": "ipv6",
-                    "address-family": "ipv6"
-                }]
-            }
-        }
-    }
+def operational(part=None):
+    """All of the routing tree, or only its "interfaces" or "ribs" part"""
+    routing = {}
+    out = {"ietf-routing:routing": routing}
 
-    frr = HOST.exists('/usr/bin/vtysh')
-    for rib in out['ietf-routing:routing']['ribs']['rib']:
-        if frr:
-            add_protocol(rib, rib['name'])
-        else:
-            insert(rib, 'routes', {"route": kernel_routes(rib['name'])})
+    if part in (None, "interfaces"):
+        routing["interfaces"] = {
+            "interface": get_routing_interfaces()
+        }
+
+    if part in (None, "ribs"):
+        frr = HOST.exists('/usr/bin/vtysh')
+        ribs = [{"name": "ipv4", "address-family": "ipv4"},
+                {"name": "ipv6", "address-family": "ipv6"}]
+        for rib in ribs:
+            if frr:
+                add_protocol(rib, rib['name'])
+            else:
+                insert(rib, 'routes', {"route": kernel_routes(rib['name'])})
+        routing["ribs"] = {"rib": ribs}
 
     return out
