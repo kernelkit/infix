@@ -140,6 +140,15 @@ err:
 static void del_v6(const char *ifname)
 {
 	finit_deletef("dhcpv6-client-%s", ifname);
+
+	/*
+	 * odhcp6c runs its "stopped" hook in the background and exits,
+	 * so the hook does not survive the service being stopped.  Drop
+	 * the client's routes here, and let the kernel learn the default
+	 * route from router advertisements again.
+	 */
+	erasef("/etc/net.d/%s-dhcpv6.conf", ifname);
+	writesf("1", "w", "/proc/sys/net/ipv6/conf/%s/accept_ra_defrtr", ifname);
 }
 
 int dhcpv6_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
