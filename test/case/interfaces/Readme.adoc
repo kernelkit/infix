@@ -6,6 +6,7 @@ Tests verifying interface configuration and management:
  - VLAN interface configuration and connectivity
  - IPv4 and IPv6 address assignment and management
  - IPv4 address auto-configuration mechanisms  
+ - PPPoE client sessions, authentication, and default route
  - Interface aliases and physical address configuration
  - IPv4 and IPv6 forwarding between interfaces
  - Linux bridge creation, STP, and VLAN handling
@@ -30,6 +31,10 @@ include::ipv6_address/Readme.adoc[]
 <<<
 
 include::ipv4_autoconf/Readme.adoc[]
+
+<<<
+
+include::pppoe_client/Readme.adoc[]
 
 <<<
 
