@@ -84,6 +84,10 @@ endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_DROPBEAR
 endif
 
+SKELETON_INIT_FINIT_FRR_DAEMONS = \
+	babeld bfdd bgpd mgmtd eigrpd isisd ldpd ospfd ospf6d pathd \
+	ripd ripngd staticd vrrpd zebra
+
 ifeq ($(BR2_PACKAGE_FRR),y)
 ifeq ($(BR2_PACKAGE_NETD_FRR_CONF),y)
 define SKELETON_INIT_FINIT_SET_FRR
@@ -92,7 +96,7 @@ define SKELETON_INIT_FINIT_SET_FRR
 endef
 else
 define SKELETON_INIT_FINIT_SET_FRR
-	for svc in babeld bfdd bgpd mgmtd eigrpd isisd ldpd ospfd ospf6d pathd ripd ripngd staticd vrrpd zebra; do	\
+	for svc in $(SKELETON_INIT_FINIT_FRR_DAEMONS); do					\
 		cp $(SKELETON_INIT_FINIT_AVAILABLE)/frr/$$svc.conf $(FINIT_D)/available/$$svc.conf;		\
 	done
 	ln -sf ../available/zebra.conf $(FINIT_D)/enabled/zebra.conf
@@ -114,6 +118,14 @@ endef
 endif
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_FRR_MGMTD_GRPC
 
+else # !BR2_PACKAGE_FRR
+# The skeleton is copied wholesale, drop the FRR bits from a build without it
+define SKELETON_INIT_FINIT_UNSET_FRR
+	rm -rf $(TARGET_DIR)/etc/frr $(FINIT_D)/available/frr
+	rm -f $(addprefix $(TARGET_DIR)/etc/default/,$(SKELETON_INIT_FINIT_FRR_DAEMONS))
+	rm -f $(TARGET_DIR)/usr/lib/tmpfiles.d/frr.conf
+endef
+SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_UNSET_FRR
 endif # BR2_PACKAGE_FRR
 
 ifeq ($(BR2_PACKAGE_INADYN),y)
