@@ -215,6 +215,8 @@ int finit_enablef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_disablef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_deletef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_reloadf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
+const char *rpc_user(sr_session_ctx_t *session, const char **via);
 FILE *fopenp(const char *path, mode_t mode, const char *group);
 FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
