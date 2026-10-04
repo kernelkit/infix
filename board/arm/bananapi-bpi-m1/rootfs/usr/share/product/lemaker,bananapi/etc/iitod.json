@@ -1,0 +1,124 @@
+{
+    "input": {
+        "path": {
+            "locate": {
+                "path": "/run/led/locate"
+            },
+            "status-prime": {
+                "path": "/run/led/status-prime"
+            },
+            "status-ok": {
+                "path": "/run/led/status-ok"
+            },
+            "status-err": {
+                "path": "/run/led/status-err"
+            },
+            "status-crit": {
+                "path": "/run/led/status-crit"
+            },
+            "fault-prime": {
+                "path": "/run/led/fault-prime"
+            },
+            "fault-ok": {
+                "path": "/run/led/fault-ok"
+            },
+            "fault-err": {
+                "path": "/run/led/fault-err"
+            },
+            "fault-crit": {
+                "path": "/run/led/fault-crit"
+            },
+            "startup": {
+                "path": "/run/finit/cond/usr/startup-config-ok"
+            },
+            "fail-safe": {
+                "path": "/run/finit/cond/usr/failure-config-ok"
+            },
+            "panic": {
+                "path": "/run/finit/cond/usr/failure-config-error"
+            }
+        },
+        "udev": {
+            "power-a": {
+                "subsystem": "power_supply"
+            },
+            "power-b": {
+                "subsystem": "power_supply"
+            }
+        }
+    },
+    "output": {
+        "led-group": {
+            "port-link-act": {
+                "match": [
+                    "*:green:tp",
+                    "*:green:sfp",
+                    "*:green:port"
+                ],
+                "rules": [
+                    {
+                        "if": "true",
+                        "then": {
+                            "trigger": "netdev",
+                            "link": 1,
+                            "rx": 1,
+                            "tx": 1
+                        }
+                    }
+                ]
+            },
+            "port-alarm": {
+                "match": [
+                    "*:yellow:tp",
+                    "*:yellow:sfp",
+                    "*:yellow:port"
+                ],
+                "rules": []
+            }
+        },
+        "led": {
+            "bananapi:green:usr": {
+                "rules": [
+                    {
+                        "if": "locate",
+                        "then": "@blink-1hz"
+                    },
+                    {
+                        "if": "panic",
+                        "then": "@blink-5hz"
+                    },
+                    {
+                        "if": "fail-safe",
+                        "then": "@blink-5hz"
+                    },
+                    {
+                        "if": "startup",
+                        "then": "@on"
+                    },
+                    {
+                        "if": "true",
+                        "then": "@blink-1hz"
+                    }
+                ]
+            }
+        }
+    },
+    "aliases": {
+        "on": {
+            "brightness": true
+        },
+        "off": {
+            "brightness": false
+        },
+        "blink-1hz": {
+            "trigger": "timer",
+            "delay_on": 500,
+            "delay_off": 500
+        },
+        "blink-5hz": {
+            "trigger": "timer",
+            "delay_on": 100,
+            "delay_off": 100
+        }
+    }
+}

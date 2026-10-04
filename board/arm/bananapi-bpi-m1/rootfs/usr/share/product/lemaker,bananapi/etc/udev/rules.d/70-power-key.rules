@@ -1,0 +1,1 @@
+ACTION=="add", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="axp20x-pek", SYMLINK+="input/power-key"

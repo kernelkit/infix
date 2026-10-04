@@ -24,6 +24,8 @@ All notable changes to the project are documented in this file.
 - CLI: `check`, `commit`, and `leave` warn about bridge ports with a missing
   or mismatched PVID, which drops untagged frames or puts them in the wrong
   VLAN, issue #354
+- Add support for the Banana Pi BPI-M1 (Allwinner A20) to the 32-bit Arm
+  build, with a new `bpi_m1_boot_defconfig` for its U-Boot bootloader
 
 ### Fixes
 

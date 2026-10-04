@@ -1,0 +1,25 @@
+/ {
+	config {
+		environment {
+			vendor = "Banana Pi";
+			preboot = "led bananapi:green:usr on; run ixpreboot";
+			boot_targets = "mmc0";
+			ethprime = "eth0";
+
+			/* The sunxi board code resets fdtfile after the environment
+			 * is imported, without the vendor directory on 32-bit Arm */
+			ixvariant = "setenv fdtfile allwinner/sun7i-a20-bananapi.dtb";
+
+			/* 1 GiB DRAM at 0x40000000, the squashfs is loaded whole
+			 * at ramdisk_addr_r so keep that last with room above it */
+			fdt_addr_r = "0x42000000";
+			kernel_addr_r = "0x43000000";
+			scriptaddr = "0x48000000";
+			ramdisk_addr_r = "0x49000000";
+
+			/* No user button, this is a development platform */
+			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+			ixbtn-factory = "echo \"No button, use bootmenu\"";
+		};
+	};
+};
