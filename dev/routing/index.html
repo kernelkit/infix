@@ -3709,6 +3709,10 @@ for both static and dynamic routing.  Even routes injected from a DHCP
 client, and IPv4 link-local (IPv4) routes, are injected into Frr to let
 it weigh all routes before installing them into the kernel routing table
 (sometimes referred to as FIB).</p>
+<p>Some builds have static routing only.  OSPF, RIP, and BFD are then not
+available, and the routing YANG model does not list its <code>ospf</code>, <code>rip</code>,
+and <code>bfd</code> features.  Route preference still selects between routes to
+the same destination, and a route with preference 255 is never used.</p>
 <p>Routes have different weights made up from a <em>distance</em> and a <em>metric</em>.
 The kernel routing table only talks about <em>metric</em>, which unfortunately
 is <strong>not the same</strong> -- this is one of the reasons why the term <em>route
