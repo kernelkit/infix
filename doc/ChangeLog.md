@@ -38,6 +38,8 @@ All notable changes to the project are documented in this file.
   `vpd-*` component in the operational datastore
 - Fix FRR mgmtd crash loop on 32-bit Arm, caused by unaligned access to
   messages received from other daemons
+- Fix mdns-alias failing to publish on 32-bit Arm, every retry ended in
+  "Memory exhausted".  The 32-bit Arm builds now use 64-bit `time_t`
 - Fix missing hardware status when a sensor label has characters not
   allowed in a sensor name, e.g., "SoC temperature" on the Allwinner A20
 
