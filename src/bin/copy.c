@@ -311,6 +311,21 @@ static void sysrepo_print_error(sr_session_ctx_t *sess)
 	warnx("%s (%d)", msg, erri->err->err_code);
 }
 
+/*
+ * The NACM subscription has a listener thread that refers to the
+ * session and connection, so it must go first, before NACM itself.
+ */
+static void sysrepo_exit(sr_subscription_ctx_t *sub, sr_session_ctx_t *sess)
+{
+	sr_conn_ctx_t *conn = sr_session_get_connection(sess);
+
+	if (sub)
+		sr_unsubscribe(sub);
+	sr_nacm_destroy();
+	sr_session_stop(sess);
+	sr_disconnect(conn);
+}
+
 /* Connect to sysrepo and create NACM-aware session on running datastore */
 static int sysrepo_init(sr_conn_ctx_t **conn, sr_session_ctx_t **sess,
 				    sr_subscription_ctx_t **sub)
@@ -352,8 +367,12 @@ static int sysrepo_init(sr_conn_ctx_t **conn, sr_session_ctx_t **sess,
 	return SR_ERR_OK;
 fail:
 	sysrepo_print_error(*sess);
-	sr_session_stop(*sess);
-	sr_disconnect(*conn);
+	if (*sess)
+		sysrepo_exit(*sub, *sess);
+	else
+		sr_disconnect(*conn);
+	*sess = NULL;
+	*sub = NULL;
 
 	return err;
 }
@@ -369,9 +388,7 @@ static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
 		if (!sess)
 			return NULL;
 
-		conn = sr_session_get_connection(sess);
-		sr_session_stop(sess);
-		sr_disconnect(conn);
+		sysrepo_exit(sub, sess);
 		sess = NULL;
 		sub = NULL;
 		return NULL;
@@ -1037,12 +1054,7 @@ static int rpc_exec(const char *rpc_xpath, int argc, char *argv[])
 cleanup:
 	sr_free_values(input, icnt);
 	sr_free_values(output, ocnt);
-	if (sub)
-		sr_nacm_destroy();
-	if (sess)
-		sr_session_stop(sess);
-	if (conn)
-		sr_disconnect(conn);
+	sysrepo_exit(sub, sess);
 
 	return rc;
 }
