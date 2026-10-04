@@ -26,6 +26,14 @@ module infix-routing {
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing, ietf-ospf, and ietf-rip.";
 
+  revision 2026-09-28 {
+    description "Add ospf, rip, and bfd features, where ospf covers OSPFv2
+                 and OSPFv3, and rip covers RIPv2 and RIPng.  A build without
+                 FRR leaves them off, so only static routes can be configured
+                 and the device advertises exactly what it supports.";
+    reference "Issue #1670";
+  }
+
   revision 2026-07-22 {
     description "Add IPv6 dynamic routing support (RIPng and OSPFv3).
                  Introduce the ripng and ospfv3 routing-type identities,
@@ -142,6 +150,16 @@ module infix-routing {
     deviate not-supported;
   }
 
+  feature ospf {
+    description "OSPFv2 and OSPFv3 dynamic routing, provided by FRR.";
+  }
+  feature rip {
+    description "RIPv2 and RIPng dynamic routing, provided by FRR.";
+  }
+  feature bfd {
+    description "Bidirectional Forwarding Detection, provided by FRR.";
+  }
+
   identity kernel {
     base rt:routing-protocol;
     description
@@ -169,26 +187,31 @@ module infix-routing {
     description "Infix routing type";
   }
   identity ospfv2 {
+    if-feature "ospf";
     base ospf:ospfv2;
     base infix-routing-type;
     description "OSPFv2 (IPv4) routing protocol";
   }
   identity ospfv3 {
+    if-feature "ospf";
     base ospf:ospfv3;
     base infix-routing-type;
     description "OSPFv3 (IPv6) routing protocol";
   }
   identity ripv2 {
+    if-feature "rip";
     base rip:ripv2;
     base infix-routing-type;
     description "RIPv2 (IPv4) routing protocol";
   }
   identity ripng {
+    if-feature "rip";
     base rip:ripng;
     base infix-routing-type;
     description "RIPng (IPv6) routing protocol";
   }
   identity bfdv1 {
+    if-feature "bfd";
     base bfd-types:bfdv1;
     base infix-routing-type;
     description "BFD protocol version 1";

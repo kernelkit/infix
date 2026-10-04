@@ -27,6 +27,12 @@ else
 STATD_CONF_OPTS += --disable-containers
 endif
 
+ifeq ($(BR2_PACKAGE_FRR),y)
+STATD_CONF_OPTS += --enable-frr
+else
+STATD_CONF_OPTS += --disable-frr
+endif
+
 define STATD_BUILD_PYTHON
 	cd $(STATD_SITE)/python && \
 		$(PKG_PYTHON_PEP517_ENV) $(HOST_DIR)/bin/python3 $(PKG_PYTHON_PEP517_BUILD_CMD) -o $(@D)/python/dist

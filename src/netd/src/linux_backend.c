@@ -241,6 +241,8 @@ static int route_exists(struct route_head *list, const struct route *needle)
 			continue;
 		if (r->prefixlen != needle->prefixlen)
 			continue;
+		if (r->distance != needle->distance)
+			continue;
 
 		/* Compare prefix */
 		if (r->family == AF_INET) {
@@ -289,7 +291,7 @@ static int kernel_read_routes(struct route_head *routes, int family)
 	struct sockaddr_nl sa = { .nl_family = AF_NETLINK };
 	struct nlmsghdr *nlh;
 	struct rtattr *rta;
-	struct msghdr msg;
+	struct msghdr msg = { 0 };
 	struct rtmsg *rtm;
 	struct iovec iov;
 	struct route *r;
@@ -380,6 +382,9 @@ static int kernel_read_routes(struct route_head *routes, int family)
 					break;
 
 				case RTA_OIF:
+					/* Gateway routes carry the interface too */
+					if (r->nh_type == NH_ADDR)
+						break;
 					r->nh_type = NH_IFNAME;
 					if_indextoname(*(uint32_t *)RTA_DATA(rta), r->ifname);
 					break;
@@ -433,6 +438,9 @@ int linux_backend_apply(struct route_head *routes, struct rip_config *rip,
 
 	/* Add new routes from config (kernel_routes still has old state) */
 	TAILQ_FOREACH(r, routes, entries) {
+		/* Same as FRR: distance 255 means never install the route */
+		if (r->distance == 255)
+			continue;
 		if (!route_exists(&kernel_routes, r)) {
 			DEBUG("Adding new route");
 			if (netlink_route_add(r) == 0)

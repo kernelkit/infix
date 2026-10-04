@@ -16,6 +16,11 @@ from . import env, coverage
 # We know we have a self-signed certificate, silence warning about it
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
+# (connect, read) in seconds.  nginx gives up on rousette after 60 s
+# and replies 504, so only a lost request or reply reaches the read
+# timeout.  Without one, requests waits forever.
+TIMEOUT = (10, 90)
+
 @dataclass
 class Location:
     interface: str
@@ -58,7 +63,7 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0)
     prepared_request = session.prepare_request(request)
     prepared_request.url = re.sub(r'%25', '%', prepared_request.url)
     prepared_request.url = re.sub(r'%3a', ':', prepared_request.url, flags=re.IGNORECASE)
-    response = session.send(prepared_request, verify=verify)
+    response = session.send(prepared_request, verify=verify, timeout=TIMEOUT)
     try:
         # Raise exceptions for HTTP errors
         response.raise_for_status()

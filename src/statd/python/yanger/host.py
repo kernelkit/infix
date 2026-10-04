@@ -10,6 +10,10 @@ from . import common
 
 HOST = None
 
+# statd waits for yanger inside its sysrepo callbacks, so a command that
+# never returns blocks every operational read for as long as it hangs.
+RUN_TIMEOUT = 30
+
 
 class Host(abc.ABC):
     """Host system API"""
@@ -102,9 +106,10 @@ class Localhost(Host):
             result = subprocess.run(cmd, check=True, text=True,
                                     stdin=subprocess.DEVNULL,
                                     stdout=subprocess.PIPE,
-                                    stderr=subprocess.DEVNULL)
+                                    stderr=subprocess.DEVNULL,
+                                    timeout=RUN_TIMEOUT)
             return result.stdout
-        except subprocess.CalledProcessError as err:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
             if default is not None:
                 return default
 

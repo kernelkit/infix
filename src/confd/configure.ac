@@ -45,6 +45,10 @@ AC_ARG_ENABLE(containers,
         AS_HELP_STRING([--enable-containers], [Enable support for containers]),,[
 	enable_containers=no])
 
+AC_ARG_ENABLE(frr,
+        AS_HELP_STRING([--enable-frr], [Enable dynamic routing (OSPF, RIP, BFD) with FRR]),,[
+	enable_frr=no])
+
 AC_ARG_ENABLE(wifi,
         AS_HELP_STRING([--enable-wifi], [Enable support for Wi-Fi]),,[
 	enable_wifi=no])
@@ -83,6 +87,9 @@ AC_ARG_WITH(crypt,
 
 AS_IF([test "x$enable_containers" = "xyes"], [
         AC_DEFINE(CONTAINERS, 1, [Built with container support])])
+
+AS_IF([test "x$enable_frr" = "xyes"], [
+        AC_DEFINE(HAVE_FRR, 1, [Built with FRR dynamic routing support])])
 
 AS_IF([test "x$enable_wifi" = "xyes"], [
         AC_DEFINE(HAVE_WIFI, 1, [Built with Wi-Fi support])])
@@ -190,6 +197,7 @@ cat <<EOF
 
 Optional features:
   Container support ....: $enable_containers
+  FRR routing support ..: $enable_frr
   Wi-Fi support ........: $enable_wifi
   GPS support ..........: $enable_gps
   SNMP support .........: $enable_snmp

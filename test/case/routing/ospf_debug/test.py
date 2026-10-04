@@ -223,6 +223,7 @@ with infamy.Test() as test:
         R1, R1ssh, R2 = parallel(lambda: env.attach("R1", "mgmt"),
                                  lambda: env.attach("R1", "mgmt", "ssh"),
                                  lambda: env.attach("R2", "mgmt"))
+        route.skip_unless_supported(test, "ospf", R1, R2)
 
     with test.step("Clean up old log files from previous test runs"):
         R1ssh.runsh("sudo rm -f /var/log/ospf-debug")
