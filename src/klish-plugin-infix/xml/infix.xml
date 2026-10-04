@@ -275,6 +275,24 @@
   </ACTION>
 </COMMAND>
 
+<COMMAND name="locate" help="Blink LEDs to locate this chassis, default: 60 seconds">
+  <SWITCH name="optional" min="0" max="1">
+    <COMMAND name="duration" help="Blink for this many seconds">
+      <PARAM name="seconds" ptype="/UINT" help="Seconds, 1-86400"/>
+    </COMMAND>
+    <COMMAND name="stop" help="Stop blinking"/>
+  </SWITCH>
+  <ACTION sym="script">
+    set -- /infix-hardware:locate
+    if [ -n "$KLISH_PARAM_stop" ]; then
+        set -- "$@" enable false
+    elif [ -n "$KLISH_PARAM_seconds" ]; then
+        set -- "$@" duration "$KLISH_PARAM_seconds"
+    fi
+    doas -u "$KLISH_USER" rpc "$@"
+  </ACTION>
+</COMMAND>
+
 <COMMAND name="poweroff" help="Poweroff system (system policy may yield reboot)">
   <ACTION sym="srp_rpc@sysrepo" ptype="STRING">/ietf-system:system-shutdown</ACTION>
 </COMMAND>
@@ -1099,6 +1117,9 @@ echo "Public:  $pub"
   </COMMAND>
 
   <COMMAND name="no" help="Remove a setting or entry" mode="switch">
+    <COMMAND name="locate" help="Stop blinking LEDs, same as locate stop">
+      <ACTION sym="script">doas -u "$KLISH_USER" rpc /infix-hardware:locate enable false</ACTION>
+    </COMMAND>
     <COMMAND name="ssh" help="SSH client settings" mode="switch">
       <COMMAND name="known-hosts" help="Remove a host from the SSH known_hosts file">
         <PARAM name="host" ptype="/SSH_KNOWN_HOSTS" help="Hostname or IP to remove"/>

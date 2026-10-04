@@ -81,7 +81,7 @@
                 "rules": [
                     {
                         "if": "locate",
-                        "then": "@blink-1hz"
+                        "then": "@blink-10hz"
                     },
                     {
                         "if": "panic",
@@ -119,6 +119,11 @@
             "trigger": "timer",
             "delay_on": 100,
             "delay_off": 100
+        },
+        "blink-10hz": {
+            "trigger": "timer",
+            "delay_on": 50,
+            "delay_off": 50
         }
     }
 }

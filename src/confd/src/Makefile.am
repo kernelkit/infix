@@ -53,6 +53,7 @@ confd_plugin_la_SOURCES =			\
 	keystore.c				\
 	system.c				\
 	support.c				\
+	locate.c				\
 	schedule.c				\
 	ntp.c					\
 	ptp.c					\

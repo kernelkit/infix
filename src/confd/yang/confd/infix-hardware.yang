@@ -21,6 +21,11 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-10-04 {
+    description "Add locate RPC, blinks LEDs to identify the chassis.";
+    reference "internal";
+  }
+
   revision 2026-09-24 {
     description "Constrain the character set of hardware component names.";
     reference "internal";
@@ -744,6 +749,34 @@ module infix-hardware {
         description
           "Whether this GPS device provides a PPS (Pulse Per Second) signal.
            PPS provides microsecond-level timing accuracy.";
+      }
+    }
+  }
+
+  rpc locate {
+    description
+      "Blink the LEDs of the chassis to physically identify it, e.g., in
+       a rack.  Which LEDs blink, and how, is defined per board.  Locate
+       stops by itself after the given duration, or when called again
+       with enable set to false.
+
+       Fails on systems where LED control is disabled, the LEDs then keep
+       their hardware default behavior.";
+
+    input {
+      leaf enable {
+        type boolean;
+        default true;
+        description "Start, or stop, blinking the LEDs.";
+      }
+
+      leaf duration {
+        type uint32 {
+          range "1..86400";
+        }
+        units "seconds";
+        default 60;
+        description "Stop blinking by itself after this many seconds.";
       }
     }
   }

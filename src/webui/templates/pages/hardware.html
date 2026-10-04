@@ -12,7 +12,13 @@
   {{/* ── Board ─────────────────────────────────────────────────────────── */}}
   {{if .Board.Model}}
   <div class="info-card">
-    <div class="card-header">Board</div>
+    <div class="card-header">Board
+      <button class="btn btn-sm btn-outline card-header-action"
+              hx-post="/hardware/locate"
+              hx-target="#hw-locate-result"
+              hx-swap="innerHTML">Locate</button>
+    </div>
+    <div id="hw-locate-result"></div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
         <tr><th>Model</th><td>{{.Board.Model}}</td></tr>

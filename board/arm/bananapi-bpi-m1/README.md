@@ -74,7 +74,7 @@ LEDs and Buttons
 | U-Boot         | on              |
 | System loading | 1 Hz            |
 | System up      | on              |
-| Locate         | 1 Hz            |
+| Locate         | 10 Hz           |
 | Fail safe      | 5 Hz            |
 | Panic          | 5 Hz            |
 

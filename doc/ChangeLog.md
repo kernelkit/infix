@@ -29,6 +29,10 @@ All notable changes to the project are documented in this file.
   build, with a new `bpi_m1_boot_defconfig` for its U-Boot bootloader
 - New `iitoctl` tool, shows which rule drives each LED and why, and can
   start locate, the board's LEDs blink as configured: `iitoctl locate on`
+- New `infix-hardware:locate` RPC, blinks the board's locate LEDs to
+  identify the chassis, by default for 60 seconds.  Available from the
+  CLI, `locate`, and the Hardware page in the web interface.  Not allowed
+  for guest users
 
 ### Fixes
 
