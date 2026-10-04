@@ -1,0 +1,65 @@
+From 6088ca29476f8776426348ab413ddc4eccc6760b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 4 Oct 2026 15:15:28 +0200
+Subject: [PATCH] lib: mgmt_msg: hand handlers an aligned message
+Organization: Wires
+
+mgmt_msg_procbufs() passes handlers a pointer into the receive stream,
+where messages are packed back to back.  A message following one whose
+length is not a multiple of 8 starts unaligned, and the native message
+structs have 64-bit members.  On 32-bit Arm GCC may use a VFP store for
+those, e.g., `msg->refer_id = 0` in mgmt_fe_adapter_send_notify(), which
+the kernel cannot fix up, so mgmtd dies with SIGBUS:
+
+  Alignment trap: not handling instruction edc30b02 at [<00441bfc>]
+  Unhandled fault: alignment exception (0x801) at 0x023c3f8e
+
+Copy unaligned messages to an aligned buffer before calling the handler.
+
+---
+ lib/mgmt_msg.c | 27 +++++++++++++++++++++++----
+ 1 file changed, 23 insertions(+), 4 deletions(-)
+
+diff --git a/lib/mgmt_msg.c b/lib/mgmt_msg.c
+index 8f22b31231..c341872dc4 100644
+--- a/lib/mgmt_msg.c
++++ b/lib/mgmt_msg.c
+@@ -180,15 +180,34 @@ bool mgmt_msg_procbufs(struct mgmt_msg_state *ms,
+ 
+ 		for (; left > sizeof(struct mgmt_msg_hdr);
+ 		     left -= mhdr->len, data += mhdr->len) {
++			uint8_t *msg, *copy = NULL;
++			size_t msglen;
++
+ 			mhdr = (struct mgmt_msg_hdr *)data;
+ 
+ 			assert(MGMT_MSG_IS_MARKER(mhdr->marker));
++			assert(mhdr->len >= sizeof(struct mgmt_msg_hdr));
+ 			assert(left >= mhdr->len);
+ 
+-			handle_msg(MGMT_MSG_MARKER_VERSION(mhdr->marker),
+-				   (uint8_t *)(mhdr + 1),
+-				   mhdr->len - sizeof(struct mgmt_msg_hdr),
+-				   user);
++			msg = (uint8_t *)(mhdr + 1);
++			msglen = mhdr->len - sizeof(struct mgmt_msg_hdr);
++
++			/*
++			 * Messages are packed back to back, so one following a
++			 * message whose length is not a multiple of 8 starts
++			 * unaligned.  Handlers cast it to structs with 64-bit
++			 * members, which traps on 32-bit Arm when the compiler
++			 * uses VFP/NEON stores, so give them an aligned copy.
++			 */
++			if ((uintptr_t)msg % sizeof(uint64_t)) {
++				copy = XMALLOC(MTYPE_TMP, msglen);
++				memcpy(copy, msg, msglen);
++				msg = copy;
++			}
++
++			handle_msg(MGMT_MSG_MARKER_VERSION(mhdr->marker), msg,
++				   msglen, user);
++			XFREE(MTYPE_TMP, copy);
+ 			ms->nrxm++;
+ 			nproc++;
+ 		}

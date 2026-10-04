@@ -34,6 +34,8 @@ All notable changes to the project are documented in this file.
   capabilities, in the CLI, the WebUI, and the operational datastore
 - The manufacturer from a VPD was not shown as `mfg-name` of its
   `vpd-*` component in the operational datastore
+- Fix FRR mgmtd crash loop on 32-bit Arm, caused by unaligned access to
+  messages received from other daemons
 
 [v26.09.0][] - 2026-09-30
 -------------------------
