@@ -128,6 +128,7 @@ def normalize_sensor_name(name):
       cpu_thermal -> cpu-thermal
       s5_temp -> s5-temp
       pwmfan -> pwmfan
+      SoC temperature -> SoC-temperature
 
     Strategy:
       1. Drop the vendor/chipset prefix of a per-port device, where the
@@ -151,7 +152,11 @@ def normalize_sensor_name(name):
     # Remove underscores before trailing numbers (sfp_2 -> sfp2)
     name = re.sub(r'_(\d+)$', r'\1', name)
 
-    return name.replace("_", "-")
+    # Labels are free text, e.g. "SoC temperature", but a name must
+    # match the YANG pattern [a-zA-Z0-9_][a-zA-Z0-9_.:+@-]*
+    name = re.sub(r'[^a-zA-Z0-9.:+@]+', '-', name.replace("_", "-"))
+
+    return name.strip("-")
 
 
 CPU_COMPONENT = "cpu"

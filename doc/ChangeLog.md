@@ -38,6 +38,8 @@ All notable changes to the project are documented in this file.
   `vpd-*` component in the operational datastore
 - Fix FRR mgmtd crash loop on 32-bit Arm, caused by unaligned access to
   messages received from other daemons
+- Fix missing hardware status when a sensor label has characters not
+  allowed in a sensor name, e.g., "SoC temperature" on the Allwinner A20
 
 [v26.09.0][] - 2026-09-30
 -------------------------
