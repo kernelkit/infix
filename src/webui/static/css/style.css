@@ -663,19 +663,6 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
   color: var(--fg);
 }
 .disk-pct { font-size: 0.8rem; color: var(--fg-muted); }
-.disk-tag {
-  font-family: var(--font-body);
-  font-size: 0.65rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--fg-muted);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 0 0.3rem;
-  margin-left: 0.4rem;
-  vertical-align: middle;
-}
 .disk-stats {
   font-size: 0.78rem;
   color: var(--fg-muted);

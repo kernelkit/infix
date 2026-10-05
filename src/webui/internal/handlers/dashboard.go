@@ -527,7 +527,6 @@ type diskEntry struct {
 	Available string
 	Percent   int
 	Class     string // "" / "is-warn" / "is-crit"
-	ReadOnly  bool
 }
 
 // internetProbe is the address the Connectivity card pings for its Internet
@@ -744,20 +743,18 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 			if size > 0 {
 				pct = int(float64(used) / float64(size) * 100)
 			}
-			// Read-only signature: used == size, no slack at all.
-			// Squashfs/erofs rootfs reports this — pinning it at 100 %
-			// for the lifetime of the running image, with nothing the
-			// operator can do about it. Skip the crit/warn coloring so
-			// it doesn't read as an actionable alert.
-			readOnly := size > 0 && used == size && avail == 0
+			// A read-only filesystem, the squashfs rootfs, is always
+			// full with no slack, and nothing the operator can do about
+			// it, so it is not usage worth showing.
+			if size > 0 && used == size && avail == 0 {
+				continue
+			}
 			diskClass := ""
-			if !readOnly {
-				switch {
-				case pct >= 90:
-					diskClass = "is-crit"
-				case pct >= 70:
-					diskClass = "is-warn"
-				}
+			switch {
+			case pct >= 90:
+				diskClass = "is-crit"
+			case pct >= 70:
+				diskClass = "is-warn"
 			}
 			data.Disks = append(data.Disks, diskEntry{
 				Mount:     fs.MountPoint,
@@ -765,7 +762,6 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 				Available: humanKiB(avail),
 				Percent:   pct,
 				Class:     diskClass,
-				ReadOnly:  readOnly,
 			})
 		}
 	}
