@@ -1,7 +1,7 @@
 From 920227e8923cf970730a4bed22bd2aa55dc9387e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 21 Nov 2023 20:15:24 +0100
-Subject: [PATCH 02/73] net: phy: marvell10g: Fix power-up when strapped to
+Subject: [PATCH 02/78] net: phy: marvell10g: Fix power-up when strapped to
  start powered down
 
 On devices which are hardware strapped to start powered down (PDSTATE

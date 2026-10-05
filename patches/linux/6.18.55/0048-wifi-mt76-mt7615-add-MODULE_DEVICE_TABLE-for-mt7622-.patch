@@ -1,7 +1,7 @@
 From b6ad175129b948b44460af7ef7701e244e3a3b55 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 28 Apr 2026 15:30:01 +0200
-Subject: [PATCH 48/73] wifi: mt76: mt7615: add MODULE_DEVICE_TABLE for mt7622
+Subject: [PATCH 48/78] wifi: mt76: mt7615: add MODULE_DEVICE_TABLE for mt7622
  wmac
 
 Without MODULE_DEVICE_TABLE(of, ...) the OF compatible alias is never
