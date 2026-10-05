@@ -30,8 +30,8 @@ the new address with its client.
 Topology:
 ....
     host ==(lan, VLAN 10+20)== root (AP 'infix-backhaul')
-                                wds0 )))  ~ cell ~  ((( wifi0 repeater wifi1 (AP 'infix-home', VLAN 10)  ))) home
-                                                                      wifi2 (AP 'infix-guest', VLAN 20) ))) guest
+                                wds0 )))  ~ cell ~  ((( wifi0 repeater wifi1-home (AP 'infix-home', VLAN 10)  ))) home
+                                                                      wifi1-guest (AP 'infix-guest', VLAN 20) ))) guest
 ....
 """
 import infamy
@@ -101,8 +101,8 @@ def repeater_config():
         "ietf-interfaces": {"interfaces": {"interface": [
             {"name": "br0", "type": "infix-if-type:bridge", "enabled": True,
              "bridge": {"vlans": {"vlan": [
-                 {"vid": 10, "untagged": ["wifi1"], "tagged": ["wifi0"]},
-                 {"vid": 20, "untagged": ["wifi2"], "tagged": ["wifi0"]},
+                 {"vid": 10, "untagged": ["wifi1-home"], "tagged": ["wifi0"]},
+                 {"vid": 20, "untagged": ["wifi1-guest"], "tagged": ["wifi0"]},
              ]}}},
             wifi.iface("wifi0", {
                 "radio": "radio0",
@@ -112,14 +112,14 @@ def repeater_config():
                     "security": {"mode": "auto", "secret": "backhaul"},
                 },
             }, bridge="br0"),
-            wifi.iface("wifi1", {
+            wifi.iface("wifi1-home", {
                 "radio": "radio0",
                 "access-point": {
                     "ssid": HOME_SSID,
                     "security": {"mode": "wpa2-wpa3-personal", "secret": "home"},
                 },
             }, bridge="br0", pvid=10),
-            wifi.iface("wifi2", {
+            wifi.iface("wifi1-guest", {
                 "radio": "radio0",
                 "access-point": {
                     "ssid": GUEST_SSID,
@@ -178,8 +178,8 @@ with infamy.Test() as test:
 
     with test.step("Configure the repeater with a 4-address station tagged in VLAN 10 and 20, access point 'infix-home' untagged in VLAN 10 and 'infix-guest' untagged in VLAN 20"):
         repeater.put_config_dicts(repeater_config())
-        home_ap_mac = wifi.phys_address(repeater, "wifi1")
-        guest_ap_mac = wifi.phys_address(repeater, "wifi2")
+        home_ap_mac = wifi.phys_address(repeater, "wifi1-home")
+        guest_ap_mac = wifi.phys_address(repeater, "wifi1-guest")
 
     with test.step("Verify the repeater's wifi0, wifi1 and wifi2 got the first three addresses derived from its chassis MAC"):
         chassis = wifi.chassis_address(repeater)
@@ -278,15 +278,15 @@ with infamy.Test() as test:
 
         with test.step("Change the address of the repeater's 'infix-guest' access point to 02:00:00:00:0b:12"):
             repeater.put_config_dicts({"ietf-interfaces": {"interfaces": {"interface": [{
-                "name": "wifi2",
+                "name": "wifi1-guest",
                 "custom-phys-address": {"static": GUEST_AP_MAC_NEW},
             }]}}})
 
-        with test.step("Verify wifi2 on the repeater reports the new address and both access points are up"):
-            until(lambda: (iface.get_phys_address(repeater, "wifi2") or "").lower() == GUEST_AP_MAC_NEW,
+        with test.step("Verify wifi1-guest on the repeater reports the new address and both access points are up"):
+            until(lambda: (iface.get_phys_address(repeater, "wifi1-guest") or "").lower() == GUEST_AP_MAC_NEW,
                   attempts=30, interval=2)
-            until(lambda: iface.is_oper_up(repeater, "wifi2"), attempts=45, interval=2)
-            until(lambda: iface.is_oper_up(repeater, "wifi1"), attempts=30, interval=2)
+            until(lambda: iface.is_oper_up(repeater, "wifi1-guest"), attempts=45, interval=2)
+            until(lambda: iface.is_oper_up(repeater, "wifi1-home"), attempts=30, interval=2)
 
         with test.step("Verify guest associates to 'infix-guest' at the new address, BSSID 02:00:00:00:0b:12"):
             until(lambda: wifi.station_bssid(guest) == GUEST_AP_MAC_NEW, attempts=60, interval=2)

@@ -32,8 +32,8 @@ the new address with its client.
 Topology:
 ....
     host ==(lan, VLAN 10+20)== root (AP 'infix-backhaul')
-                                wds0 )))  ~ cell ~  ((( wifi0 repeater wifi1 (AP 'infix-home', VLAN 10)  ))) home
-                                                                      wifi2 (AP 'infix-guest', VLAN 20) ))) guest
+                                wds0 )))  ~ cell ~  ((( wifi0 repeater wifi1-home (AP 'infix-home', VLAN 10)  ))) home
+                                                                      wifi1-guest (AP 'infix-guest', VLAN 20) ))) guest
 ....
 
 ==== Topology
@@ -66,7 +66,7 @@ image::topology.svg[WiFi repeater with two SSIDs in VLANs over a 4-address (WDS)
 . Verify wifi2 on the repeater is back at the third derived address and guest followed it
 . Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 with the third access point removed
 . Change the address of the repeater's 'infix-guest' access point to 02:00:00:00:0b:12
-. Verify wifi2 on the repeater reports the new address and both access points are up
+. Verify wifi1-guest on the repeater reports the new address and both access points are up
 . Verify guest associates to 'infix-guest' at the new address, BSSID 02:00:00:00:0b:12
 . Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 after the address change
 . Verify home is still on its access point
