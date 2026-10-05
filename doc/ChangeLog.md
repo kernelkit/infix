@@ -21,6 +21,9 @@ All notable changes to the project are documented in this file.
   per port, and a Health card listing services that are not running, a
   pending reboot, and sensor readings.  Disk Usage no longer lists the
   read-only root filesystem
+- CLI: `check`, `commit`, and `leave` warn about bridge ports with a missing
+  or mismatched PVID, which drops untagged frames or puts them in the wrong
+  VLAN, issue #354
 
 ### Fixes
 

@@ -110,6 +110,14 @@ The rules behind the table:
 
 The same rules apply when the bridge is offloaded to a switch chip.
 
+The CLI commands `check`, `commit`, and `leave` warn about ports with a
+missing or mismatched PVID.  The configuration is applied anyway:
+
+<pre class="cli"><code>admin@example:/config/> <b>leave</b>
+Warning: eth0 is an untagged member of VLAN 10 on br0, but has no PVID.  Untagged frames received on eth0 are dropped.
+admin@example:/>
+</code></pre>
+
 
 ## Multicast Filtering and Snooping
 
