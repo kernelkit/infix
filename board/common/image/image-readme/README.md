@@ -103,11 +103,13 @@ Graphical Network Simulator 3 (GNS3)
 ------------------------------------
 
 GNS3 is a very powerful front-end to Qemu which takes care of creating
-virtual links between network devices running in Qemu.  This README is
-all you need to get going, alongisde it is the appliance file (.gns3a)
-that reference image files in this directory needed to load into GNS3.
+virtual links between network devices running in Qemu.  The appliance
+is available from the GNS3 Marketplace, search for Infix when adding a
+new template, and point it to the disk image in this directory.
 
-Necessary Ubuntu packages are available through the offical GNS3 PPA.
+ - https://gns3.com/marketplace/appliances/infix
+
+Necessary Ubuntu packages are available through the official GNS3 PPA.
 If you don't know what a PPA is, read up on that first:
 
  - https://launchpad.net/~gns3/+archive/ubuntu/ppa
