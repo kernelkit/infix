@@ -606,39 +606,6 @@ def thermal_sensor_components():
     return components
 
 
-def get_survey_data(ifname):
-    """Get channel survey data using iw.py script"""
-    channels = []
-
-    try:
-        survey_data = HOST.run_json(("/usr/libexec/infix/iw.py", "survey", ifname), default=[])
-
-        for entry in survey_data:
-            channel = {
-                "frequency": entry.get("frequency"),
-                "in-use": entry.get("in_use", False)
-            }
-
-            # Add optional fields if present
-            if "noise" in entry:
-                channel["noise"] = entry["noise"]
-            if "active_time" in entry:
-                channel["active-time"] = entry["active_time"]
-            if "busy_time" in entry:
-                channel["busy-time"] = entry["busy_time"]
-            if "receive_time" in entry:
-                channel["receive-time"] = entry["receive_time"]
-            if "transmit_time" in entry:
-                channel["transmit-time"] = entry["transmit_time"]
-
-            channels.append(channel)
-
-    except Exception:
-        pass
-
-    return channels
-
-
 def get_phy_info(phy_name):
     """Get complete PHY information using iw.py script"""
     try:
@@ -756,20 +723,6 @@ def wifi_radio_components():
         # Count virtual interfaces from iw info
         num_ifaces = iw_info.get('num_virtual_interfaces', 0)
         wifi_radio_data['num-virtual-interfaces'] = num_ifaces
-
-        # Get survey data if we have an interface
-        iface = phy_data.get("iface")
-        if iface:
-            try:
-                channels = get_survey_data(iface)
-
-                if channels:
-                    wifi_radio_data["survey"] = {
-                        "channel": channels
-                    }
-            except Exception:
-                # If survey fails, continue without survey data
-                pass
 
         # Add wifi-radio data to component
         if wifi_radio_data:

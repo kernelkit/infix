@@ -196,6 +196,14 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 	return rc;
 }
 
+/* Fail an RPC/action with MSG as the NETCONF error message */
+static inline int rpc_failed(sr_session_ctx_t *session, const char *msg)
+{
+	sr_session_set_netconf_error(session, "application", "operation-failed",
+				     NULL, NULL, msg, 0);
+	return SR_ERR_OPERATION_FAILED;
+}
+
 static inline int register_rpc_tree(sr_session_ctx_t *session, const char *xpath,
 	sr_rpc_tree_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
@@ -288,6 +296,7 @@ int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 
 /* hardware.c */
 int hardware_candidate_init(struct confd *confd);
+int hardware_rpc_init(struct confd *confd);
 int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* keystore.c */

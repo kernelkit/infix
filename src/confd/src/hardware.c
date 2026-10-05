@@ -1485,6 +1485,128 @@ err:
 
 	return rc;
 }
+
+/*
+ * Scan all channels on a radio and report how busy each one is, the
+ * channel-survey action in infix-hardware.yang.  The scan takes the
+ * radio off its operating channel for a few seconds, which is why this
+ * is an action and not operational data.  The helper does the scan and
+ * the parsing, see iw.py survey-scan.
+ */
+static int wifi_channel_survey(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+			       const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+			       struct lyd_node *output, void *priv)
+{
+	static const struct { const char *json, *yang; } times[] = {
+		{ "noise",         "noise"         },
+		{ "active_time",   "active-time"   },
+		{ "busy_time",     "busy-time"     },
+		{ "receive_time",  "receive-time"  },
+		{ "transmit_time", "transmit-time" },
+	};
+	struct lyd_node *component, *chan;
+	const char *radio, *passive;
+	json_error_t jerr;
+	json_t *root, *entry;
+	size_t index;
+	FILE *pp;
+
+	if (event != SR_EV_RPC)
+		return SR_ERR_OK;
+
+	component = lyd_parent(lyd_parent(input));
+	radio = component ? lydx_get_cattr(component, "name") : NULL;
+	if (!radio)
+		return rpc_failed(session, "Cannot tell which radio to survey");
+
+	passive = lydx_get_cattr((struct lyd_node *)input, "passive");
+	pp = popenf("r", "/usr/libexec/infix/iw.py survey-scan %s %s", radio,
+		    passive && !strcmp(passive, "true") ? "passive" : "");
+	if (!pp)
+		return rpc_failed(session, "Failed starting channel survey");
+
+	root = json_loadf(pp, 0, &jerr);
+	pclose(pp);
+	if (!root)
+		return rpc_failed(session, "Channel survey returned no data");
+
+	if (!json_is_array(root)) {
+		json_t *err = json_object_get(root, "error");
+		char msg[256];
+
+		snprintf(msg, sizeof(msg), "Channel survey failed: %s",
+			 json_is_string(err) ? json_string_value(err) : "unknown error");
+		json_decref(root);
+		return rpc_failed(session, msg);
+	}
+
+	json_array_foreach(root, index, entry) {
+		json_t *freq = json_object_get(entry, "frequency");
+		char val[32];
+
+		if (!json_is_integer(freq))
+			continue;
+
+		snprintf(val, sizeof(val), "%lld", json_integer_value(freq));
+		if (lyd_new_list(output, NULL, "channel", LYD_NEW_VAL_OUTPUT, &chan, val)) {
+			ERROR("channel-survey: failed adding channel %s", val);
+			continue;
+		}
+
+		lyd_new_term(chan, NULL, "in-use",
+			     json_is_true(json_object_get(entry, "in_use")) ? "true" : "false",
+			     0, NULL);
+
+		for (size_t i = 0; i < NELEMS(times); i++) {
+			json_t *v = json_object_get(entry, times[i].json);
+
+			if (!json_is_integer(v))
+				continue;
+
+			snprintf(val, sizeof(val), "%lld", json_integer_value(v));
+			lyd_new_term(chan, NULL, times[i].yang, val, 0, NULL);
+		}
+	}
+	json_decref(root);
+
+	return SR_ERR_OK;
+}
+
+/* The action only exists when the wifi feature is enabled, see wifi.inc */
+static bool wifi_feature_enabled(struct confd *confd)
+{
+	const struct lys_module *mod;
+	const struct ly_ctx *ctx;
+	bool enabled = false;
+
+	ctx = sr_acquire_context(confd->conn);
+	if (!ctx)
+		return false;
+
+	mod = ly_ctx_get_module_implemented(ctx, "infix-hardware");
+	if (mod)
+		enabled = lys_feature_value(mod, "wifi") == LY_SUCCESS;
+	sr_release_context(confd->conn);
+
+	return enabled;
+}
+
+int hardware_rpc_init(struct confd *confd)
+{
+	int rc = 0;
+
+	if (!wifi_feature_enabled(confd))
+		return SR_ERR_OK;
+
+	REGISTER_RPC_TREE(confd->session, XPATH_BASE_ "/component/infix-hardware:wifi-radio/channel-survey",
+			  wifi_channel_survey, NULL, &confd->sub);
+
+	return SR_ERR_OK;
+fail:
+	ERROR("Init hardware rpc failed: %s", sr_strerror(rc));
+	return rc;
+}
+
 int hardware_candidate_init(struct confd *confd)
 {
 	int rc = 0;

@@ -21,6 +21,12 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-10-05 {
+    description "Replace the WiFi radio survey container with the channel-survey
+                 action, survey data is collected on request only.";
+    reference "internal";
+  }
+
   revision 2026-10-04 {
     description "Add locate RPC, blinks LEDs to identify the chassis.";
     reference "internal";
@@ -533,98 +539,108 @@ module infix-hardware {
       }
 
       /*
-       * Channel survey data (operational state)
+       * Channel survey, on demand
        */
 
-      container survey {
-        config false;
+      action channel-survey {
         description
-          "WiFi channel survey data providing channel utilization
-           and interference information.
+          "Scan all channels the radio supports and report how busy each
+           one is.
 
-           This data is collected from the WiFi driver and provides
-           insights into channel occupancy, noise levels, and RF activity.";
+           The radio leaves its operating channel for the duration of
+           the scan, a few seconds, so traffic on the radio pauses.
+           Survey data is not collected in the background, this action
+           is the only way to get it.";
 
-        list channel {
-          key "frequency";
-          description
-            "Per-channel survey information.
-
-             Includes utilization metrics for all channels scanned by
-             the radio, not just the currently active channel.";
-
-          leaf frequency {
-            type uint32;
-            units "MHz";
-            description
-              "Channel center frequency in MHz.
-
-               Examples:
-               - 2412 MHz (2.4 GHz channel 1)
-               - 5180 MHz (5 GHz channel 36)
-               - 5955 MHz (6 GHz channel 1)";
-          }
-
-          leaf in-use {
+        input {
+          leaf passive {
             type boolean;
+            default false;
             description
-              "Whether this channel is currently in use by the radio.
-
-               Only one channel will have this set to true at a time.";
+              "Listen only, do not send probe requests.  A passive scan
+               dwells longer on each channel and gives a better busy-time
+               sample, at the cost of a longer pause in traffic.";
           }
+        }
 
-          leaf noise {
-            type int16;
-            units "dBm";
+        output {
+          list channel {
+            key "frequency";
             description
-              "Background noise level on this channel in dBm.
+              "Survey of one channel.  Channel utilization is
+               busy-time / active-time.";
 
-               Lower (more negative) values indicate cleaner RF environment.
+            leaf frequency {
+              type uint32;
+              units "MHz";
+              description
+                "Channel center frequency in MHz.
 
-               Typical values:
-               - -95 to -100 dBm: Very low noise (excellent)
-               - -85 to -95 dBm: Low noise (good)
-               - -75 to -85 dBm: Moderate noise
-               - -65 to -75 dBm: High noise (congested)";
-          }
+                 Examples:
+                 - 2412 MHz (2.4 GHz channel 1)
+                 - 5180 MHz (5 GHz channel 36)
+                 - 5955 MHz (6 GHz channel 1)";
+            }
 
-          leaf active-time {
-            type uint32;
-            units "milliseconds";
-            description
-              "Total time the radio was active on this channel.
+            leaf in-use {
+              type boolean;
+              description
+                "Whether this is the radio's operating channel.";
+            }
 
-               This is the survey measurement period for this channel.";
-          }
+            leaf noise {
+              type int16;
+              units "dBm";
+              description
+                "Background noise level on this channel in dBm.
 
-          leaf busy-time {
-            type uint32;
-            units "milliseconds";
-            description
-              "Time the channel was detected as busy.
+                 Lower (more negative) values indicate cleaner RF environment.
 
-               Includes time spent receiving frames, transmitting frames,
-               and time the channel was busy due to other sources.
+                 Typical values:
+                 - -95 to -100 dBm: Very low noise (excellent)
+                 - -85 to -95 dBm: Low noise (good)
+                 - -75 to -85 dBm: Moderate noise
+                 - -65 to -75 dBm: High noise (congested)";
+            }
 
-               Channel utilization = (busy-time / active-time) * 100%";
-          }
+            leaf active-time {
+              type uint32;
+              units "milliseconds";
+              description
+                "Total time the radio was active on this channel.
 
-          leaf receive-time {
-            type uint32;
-            units "milliseconds";
-            description
-              "Time spent receiving frames on this channel.
+                 This is the survey measurement period for this channel.";
+            }
 
-               Subset of busy-time spent on frame reception.";
-          }
+            leaf busy-time {
+              type uint32;
+              units "milliseconds";
+              description
+                "Time the channel was detected as busy.
 
-          leaf transmit-time {
-            type uint32;
-            units "milliseconds";
-            description
-              "Time spent transmitting frames on this channel.
+                 Includes time spent receiving frames, transmitting frames,
+                 and time the channel was busy due to other sources.
 
-               Subset of busy-time spent on frame transmission.";
+                 Channel utilization = (busy-time / active-time) * 100%";
+            }
+
+            leaf receive-time {
+              type uint32;
+              units "milliseconds";
+              description
+                "Time spent receiving frames on this channel.
+
+                 Subset of busy-time spent on frame reception.";
+            }
+
+            leaf transmit-time {
+              type uint32;
+              units "milliseconds";
+              description
+                "Time spent transmitting frames on this channel.
+
+                 Subset of busy-time spent on frame transmission.";
+            }
           }
         }
       }
