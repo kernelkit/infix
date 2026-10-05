@@ -38,6 +38,12 @@ All notable changes to the project are documented in this file.
   the keystore.  Its default route and DNS servers are used like those from
   a DHCP server, and the TCP MSS of forwarded connections is clamped to the
   session MTU, see [PPPoE Client][pppoe]
+- WiFi channel survey is now on request: `show hardware <radio> survey` in the
+  CLI, a Scan channels button per radio on the WebUI WiFi page, or the
+  `channel-survey` action on the radio.  The survey covers every channel the
+  radio supports, also while it is connected or serving clients.  The
+  always-on `survey` container under the radio is gone, it only ever held
+  the operating channel on a busy radio and slowed down every hardware query
 
 ### Fixes
 
