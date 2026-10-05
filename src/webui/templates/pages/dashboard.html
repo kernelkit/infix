@@ -44,6 +44,21 @@
     </div>
   </div>
 
+  {{if .Board.Model}}
+  <div class="info-card">
+    <div class="card-header">Board</div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
+        {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
+        {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
+        {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
+        {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td>{{.Board.BaseMAC}}</td></tr>{{end}}
+      </table>
+    </div>
+  </div>
+  {{end}}
+
   {{if .Update}}{{template "update-card" .}}{{end}}
 
   <div class="info-card">
@@ -120,41 +135,51 @@
           <td>{{range $i, $a := .Addrs}}{{if $i}}<br>{{end}}{{$a}}{{end}}</td>
         </tr>
         {{end}}
-
-  {{if .Board.Model}}
-  <div class="info-card">
-    <div class="card-header">Board</div>
-    <div class="card-body" style="padding:0">
-      <table class="info-table">
-        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
-        {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
-        {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
-        {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
-        {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td>{{.Board.BaseMAC}}</td></tr>{{end}}
       </table>
     </div>
   </div>
   {{end}}
 
-
-  {{if .KeyVitals}}
+  {{if .Ports}}
   <div class="info-card">
-    <div class="card-header">Key Vitals
-      <a href="/hardware"
-         hx-get="/hardware"
+    <div class="card-header">Ports
+      <a href="/interfaces"
+         hx-get="/interfaces"
          hx-target="#content"
          hx-push-url="true"
-         class="btn btn-sm btn-outline card-header-action">All sensors &rarr;</a>
+         class="btn btn-sm btn-outline card-header-action">All interfaces &rarr;</a>
+    </div>
+    <div class="port-grid">
+      {{range .Ports}}
+      <div class="port-chip" title="{{.Name}}: {{if .Up}}up{{if .Speed}}, {{.Speed}}{{end}}{{else}}down{{end}}{{if .Neighbor}}, {{.Neighbor}}{{end}}">
+        <span class="port-name"><span class="status-dot {{if .Up}}status-up{{else}}status-down{{end}}"></span>{{.Name}}</span>
+        <span class="port-info">{{if .Up}}{{.Speed}}{{if .Neighbor}}{{if .Speed}} &middot; {{end}}{{.Neighbor}}{{end}}{{else}}down{{end}}</span>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+
+  <div class="info-card">
+    <div class="card-header">Health
+      <a href="/services"
+         hx-get="/services"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">All services &rarr;</a>
     </div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
+        {{range .Health}}
+        <tr><td colspan="2"><span class="status-dot {{.Class}}"></span>{{if .Link}}<a href="{{.Link}}" hx-get="{{.Link}}" hx-target="#content" hx-push-url="true">{{.Text}}</a>{{else}}{{.Text}}{{end}}</td></tr>
+        {{end}}
         {{range .KeyVitals}}
-        <tr><th>{{.Name}}</th><td><span class="num">{{.Value}}</span></td></tr>
+        <tr><th><a href="/hardware" hx-get="/hardware" hx-target="#content" hx-push-url="true">{{.Name}}</a></th><td><span class="num">{{.Value}}</span></td></tr>
         {{end}}
       </table>
     </div>
   </div>
-  {{end}}
 
   {{if .Disks}}
   <div class="info-card">
@@ -171,11 +196,6 @@
       <div class="disk-stats">{{.Available}} free of {{.Size}}</div>
     </div>
     {{end}}
-  </div>
-  {{end}}
-
-      </table>
-    </div>
   </div>
   {{end}}
 </section>

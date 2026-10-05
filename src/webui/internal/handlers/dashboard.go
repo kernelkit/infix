@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -150,9 +151,115 @@ type software struct {
 type softwareSlot struct {
 	Name     string `json:"name"`
 	BootName string `json:"bootname"`
+	Class    string `json:"class"`
 	Bundle   struct {
 		Version string `json:"version"`
 	} `json:"bundle"`
+}
+
+// lldpWrapper is the part of the LLDP operational data the Ports card
+// shows: the first neighbour's name per local port.
+type lldpWrapper struct {
+	LLDP struct {
+		Port []struct {
+			Name              string `json:"name"`
+			RemoteSystemsData []struct {
+				SystemName string `json:"system-name"`
+			} `json:"remote-systems-data"`
+		} `json:"port"`
+	} `json:"ieee802-dot1ab-lldp:lldp"`
+}
+
+// neighbors maps each local port to the system name of its first LLDP
+// neighbour.
+func (l lldpWrapper) neighbors() map[string]string {
+	m := map[string]string{}
+	for _, p := range l.LLDP.Port {
+		for _, rs := range p.RemoteSystemsData {
+			if rs.SystemName != "" {
+				m[p.Name] = rs.SystemName
+				break
+			}
+		}
+	}
+	return m
+}
+
+// portEntry is one Ethernet port on the Ports card.
+type portEntry struct {
+	Name     string
+	Up       bool
+	Speed    string // link rate, e.g. "1G", empty when down or unknown
+	Neighbor string // LLDP system name, empty when none
+}
+
+// portSpeed formats a link rate in bit/s the way the port label reads.
+func portSpeed(bps int64) string {
+	switch {
+	case bps <= 0:
+		return ""
+	case bps%1e9 == 0:
+		return fmt.Sprintf("%dG", bps/1e9)
+	case bps >= 1e9:
+		return fmt.Sprintf("%.1fG", float64(bps)/1e9)
+	default:
+		return fmt.Sprintf("%dM", bps/1e6)
+	}
+}
+
+// ports picks the Ethernet ports out of the interface list, in natural
+// name order, with their link state and LLDP neighbour.
+func ports(iw interfacesWrapper, neighbors map[string]string) []portEntry {
+	var out []portEntry
+	for _, ifc := range iw.Interfaces.Interface {
+		if !strings.HasSuffix(ifc.Type, ":ethernet") && !strings.HasSuffix(ifc.Type, "ethernetCsmacd") {
+			continue
+		}
+		e := portEntry{Name: ifc.Name, Up: ifc.OperStatus == "up", Neighbor: neighbors[ifc.Name]}
+		if e.Up {
+			e.Speed = portSpeed(int64(ifc.Speed))
+		}
+		out = append(out, e)
+	}
+	sort.Slice(out, func(i, j int) bool { return naturalLess(out[i].Name, out[j].Name) })
+	return out
+}
+
+// healthItem is one line on the Health card.
+type healthItem struct {
+	Class string // status-dot class: status-up, status-warn, status-down
+	Text  string
+	Link  string // page with the details, empty for none
+}
+
+// healthItems lists what needs attention: services that are not running,
+// an installed release waiting for a reboot, and a partition left behind.
+// Nothing to report gives one reassuring line.
+func healthItems(services []serviceJSON, sw software) []healthItem {
+	var items []healthItem
+	for _, svc := range services {
+		if serviceStatusClass(svc.Status) == "svc-error" {
+			items = append(items, healthItem{"status-down", svc.Name + " " + svc.Status, "/services"})
+		}
+	}
+	if sw.Update.RebootPending {
+		text := "Reboot to activate the installed release"
+		if sw.Update.Installed != "" {
+			text = "Reboot to activate " + sw.Update.Installed
+		}
+		items = append(items, healthItem{"status-warn", text, "/system-control"})
+	} else if booted := softwareVersion(sw); booted != "" {
+		for _, s := range sw.Slot {
+			if s.Class == "rootfs" && s.BootName != sw.Booted && s.Bundle.Version != "" && s.Bundle.Version != booted {
+				items = append(items, healthItem{"status-warn",
+					s.BootName + " partition is out of date (" + s.Bundle.Version + ")", "/software"})
+			}
+		}
+	}
+	if len(items) == 0 {
+		items = append(items, healthItem{"status-up", "All services running", ""})
+	}
+	return items
 }
 
 // RESTCONF JSON structures for the parts of ietf-system:system the
@@ -363,6 +470,9 @@ type dashboardData struct {
 	NTPSync       string // "" / the selected NTP source address
 	// Addresses card.
 	Addresses []ifaceAddrEntry
+	// Ports and Health cards.
+	Ports  []portEntry
+	Health []healthItem
 	// Software-update banner — shown only when an update is available.
 	UpdateAvailable bool
 	UpdateMessage   string // verbatim CLI/login-banner notice
@@ -520,12 +630,14 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 			} `json:"ietf-system:system"`
 		}
 		ifaces                   interfacesWrapper
+		lldp                     lldpWrapper
+		services                 servicesWrapper
 		routes                   ribWrapper
 		stateErr, hwErr, confErr error
 		wg                       sync.WaitGroup
 	)
 
-	wg.Add(6)
+	wg.Add(8)
 	go func() {
 		defer wg.Done()
 		stateErr = h.RC.Get(ctx, "/data/ietf-system:system-state", &state)
@@ -535,6 +647,19 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		defer wg.Done()
 		if err := h.RC.Get(ctx, "/data/ietf-system:system", &ident); err != nil {
 			log.Printf("restconf system identity: %v", err)
+		}
+	}()
+	// Ports and Health cards are best-effort like Connectivity below.
+	go func() {
+		defer wg.Done()
+		if err := h.RC.Get(ctx, "/data/ieee802-dot1ab-lldp:lldp", &lldp); err != nil && !restconf.IsNotFound(err) {
+			log.Printf("restconf lldp: %v", err)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if err := h.RC.Get(ctx, "/data/ietf-system:system-state/infix-system:services", &services); err != nil {
+			log.Printf("restconf services: %v", err)
 		}
 	}()
 	go func() {
@@ -703,6 +828,8 @@ func (h *DashboardHandler) Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	data.Addresses = ifaceAddresses(ifaces)
+	data.Ports = ports(ifaces, lldp.neighbors())
+	data.Health = healthItems(services.SystemState.Services.Service, state.SystemState.Software)
 
 	// Software-update banner: surfaces the same notice as the CLI login
 	// banner (written by check-update to the notice file).

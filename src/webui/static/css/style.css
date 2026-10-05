@@ -955,6 +955,7 @@ details[open].nav-group-top > summary.nav-group-summary-top::before {
 
 .status-up { background: var(--success); }
 .status-down { background: var(--danger); }
+.status-warn { background: #d97706; }
 
 /* New Interface Status Indicators */
 .iface-status {
@@ -3471,3 +3472,32 @@ tbody.rcd-drop-before > tr:last-child > td { box-shadow: 0 2px 0 var(--primary) 
 .card-flag .theme-check { opacity: 1; margin-left: 0; } /* hidden by the theme menu rule otherwise */
 .flag-ok   { color: #166534; }
 .flag-warn { color: #b45309; }
+
+/* Ports card: one chip per Ethernet port */
+.port-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+}
+.port-chip {
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+}
+.port-name {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 500;
+}
+.port-info {
+  display: block;
+  color: var(--fg-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
