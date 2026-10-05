@@ -36,6 +36,7 @@ module infix-interfaces {
   include infix-if-wifi;
   include infix-if-wireguard;
   include infix-if-ptp;
+  include infix-if-qos;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
@@ -43,6 +44,13 @@ module infix-interfaces {
 
   revision 2026-09-28 {
     description "Constrain the character set of interface names.";
+    reference "internal";
+  }
+
+  revision 2026-09-07 {
+    description "Add per-interface QoS: ingress classification, traffic
+                 class table and transmission selection, see
+                 infix-if-qos@2026-09-07.";
     reference "internal";
   }
 

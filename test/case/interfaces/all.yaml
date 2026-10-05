@@ -50,6 +50,9 @@
 - name: Layer-2 Multicast Filtering Tests
   suite: igmp.yaml
 
+- name: Quality of Service Tests
+  suite: qos.yaml
+
 - name: Layer-2/3 Tunnel Tests
   suite: tunnels.yaml
 
