@@ -189,15 +189,8 @@ type wifiScanResultJSON struct {
 	Encryption     []string `json:"encryption"`
 }
 
-// WiFi radio survey RESTCONF structures (from ietf-hardware:hardware).
-
-type wifiRadioJSON struct {
-	Survey *wifiSurveyJSON `json:"survey"`
-}
-
-type wifiSurveyJSON struct {
-	Channel []surveyChanJSON `json:"channel"`
-}
+// WiFi channel survey, the output of the infix-hardware channel-survey
+// action on a radio.
 
 type surveyChanJSON struct {
 	Frequency    int      `json:"frequency"`

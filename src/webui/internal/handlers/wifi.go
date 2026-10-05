@@ -4,19 +4,18 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
+	"time"
 
 	"infix/webui/internal/restconf"
 )
 
-// wifiRadioHWJSON extends the hardware component wifi-radio container with
-// operational fields from infix-hardware YANG that are not in wifiRadioJSON.
-// wifiRadioJSON (defined in interfaces.go) only covers survey data; this
-// struct captures the full operational state returned by RESTCONF.
 // wifiMaxIfJSON maps the max-interfaces container from infix-hardware YANG.
 type wifiMaxIfJSON struct {
 	AP      int `json:"ap"`
@@ -33,7 +32,6 @@ type wifiRadioHWJSON struct {
 	Driver        string          `json:"driver"`
 	Bands         []wifiBandJSON  `json:"bands"`
 	MaxInterfaces *wifiMaxIfJSON  `json:"max-interfaces"`
-	Survey        *wifiSurveyJSON `json:"survey"`
 }
 
 type wifiBandJSON struct {
@@ -74,8 +72,8 @@ type WiFiRadio struct {
 	VHTCapable   bool
 	HECapable    bool
 	Bands        []WiFiBand
-	SurveySVG    template.HTML
 	Interfaces   []WiFiInterface
+	Survey       wifiSurveyData
 }
 
 type WiFiBand struct {
@@ -84,17 +82,6 @@ type WiFiBand struct {
 	HTCapable  bool
 	VHTCapable bool
 	HECapable  bool
-}
-
-// ChannelSurvey holds processed survey data for one channel.
-type ChannelSurvey struct {
-	Frequency  int
-	Channel    int
-	InUse      bool
-	Noise      int
-	ActiveTime int64
-	BusyTime   int64
-	UtilPct    int // BusyTime/ActiveTime * 100
 }
 
 // WiFiInterface is the template data for a virtual WiFi interface.
@@ -207,6 +194,51 @@ func (h *WiFiHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// wifiSurveyData is the template data for the channel survey fragment of
+// one radio: the chart after a scan, or why there is none.
+type wifiSurveyData struct {
+	Radio string
+	SVG   template.HTML
+	Error string
+}
+
+// Survey runs the channel-survey action on a radio and renders the result
+// as the survey fragment of the radio's card.  The scan takes the radio off
+// its channel for a few seconds, so it only runs on request.
+// POST /wifi/{name}/survey
+func (h *WiFiHandler) Survey(w http.ResponseWriter, r *http.Request) {
+	data := wifiSurveyData{Radio: r.PathValue("name")}
+
+	var reply struct {
+		Output struct {
+			Channel []surveyChanJSON `json:"channel"`
+		} `json:"infix-hardware:output"`
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	path := "/data/ietf-hardware:hardware/component=" + url.PathEscape(data.Radio) +
+		"/infix-hardware:wifi-radio/channel-survey"
+	if err := h.RC.CallRPC(ctx, path, nil, &reply); err != nil {
+		log.Printf("wifi: channel survey %s: %v", data.Radio, err)
+		data.Error = "Channel survey failed"
+		var re *restconf.Error
+		if errors.As(err, &re) && re.Message != "" {
+			data.Error = re.Message
+		}
+	} else if len(reply.Output.Channel) == 0 {
+		data.Error = "The radio reported no survey data"
+	} else {
+		data.SVG = renderSurveySVG(reply.Output.Channel)
+	}
+
+	if err := h.Template.ExecuteTemplate(w, "wifi-survey", data); err != nil {
+		log.Printf("wifi: template error: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
 // buildWiFiRadios assembles the WiFiRadio slice from hardware components
 // and interface data, matching interfaces to their radio by name.
 func buildWiFiRadios(components []hwComponentWiFiJSON, ifaces []ifaceJSON) []WiFiRadio {
@@ -226,6 +258,7 @@ func buildWiFiRadios(components []hwComponentWiFiJSON, ifaces []ifaceJSON) []WiF
 			Driver:       r.Driver,
 			Channel:      wifiChannelString(r.Channel),
 			Manufacturer: c.MfgName,
+			Survey:       wifiSurveyData{Radio: c.Name},
 		}
 
 		// Capability flags: check per-band capabilities; if any band supports
@@ -275,11 +308,6 @@ func buildWiFiRadios(components []hwComponentWiFiJSON, ifaces []ifaceJSON) []WiF
 		// Max AP count from max-interfaces container.
 		if r.MaxInterfaces != nil && r.MaxInterfaces.AP > 0 {
 			radio.MaxAP = fmt.Sprintf("%d", r.MaxInterfaces.AP)
-		}
-
-		// Generate channel survey SVG if survey data exists.
-		if r.Survey != nil && len(r.Survey.Channel) > 0 {
-			radio.SurveySVG = renderSurveySVG(r.Survey.Channel)
 		}
 
 		// Attach wifi interfaces that reference this radio.
