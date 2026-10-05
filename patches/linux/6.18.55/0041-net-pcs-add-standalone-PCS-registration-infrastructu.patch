@@ -1,7 +1,7 @@
 From 384c6992b3b1e67d6515d00f20ac03a4deb2d3e9 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 5 Apr 2026 11:33:00 +0200
-Subject: [PATCH 41/73] net/pcs: add standalone PCS registration infrastructure
+Subject: [PATCH 41/78] net/pcs: add standalone PCS registration infrastructure
 
 Add a simple registration mechanism that allows platform PCS drivers to
 register their phylink_pcs instances, and consumers (e.g. Ethernet MAC

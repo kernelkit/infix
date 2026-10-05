@@ -1,7 +1,7 @@
 From a49eecdbfa8d6daa61c5baa4d2ebf3d006358fcb Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:38:37 +0200
-Subject: [PATCH 62/73] arm64: dts: microchip: lan969x: add SDMMC nodes
+Subject: [PATCH 62/78] arm64: dts: microchip: lan969x: add SDMMC nodes
 
 The SoC has two SDMMC controllers, neither of which is described, so
 boards with eMMC have no way to enable it.  Add both, disabled by

@@ -1,7 +1,7 @@
 From 0c6d68f2957c4a73c66a2fbe6524cf54c11ad138 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 30 Jun 2026 16:05:17 +0200
-Subject: [PATCH 67/73] wifi: brcmfmac: support deletion and recreation of the
+Subject: [PATCH 67/78] wifi: brcmfmac: support deletion and recreation of the
  primary interface
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
