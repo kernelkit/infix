@@ -254,8 +254,26 @@ Software updates
 </code></pre>
 
 The same data is available under `/system-state/software/update` in the
-operational datastore, and on the WebUI dashboard.  The log
-has the details:
+operational datastore, and on the WebUI dashboard.
+
+To check right away, run `upgrade` without a bundle.  It reads the feed
+at `update-url` for the latest release and, when there is a newer one,
+offers to install it and to reboot:
+
+<pre class="cli"><code>admin@example:/> <b>upgrade</b>
+Release v26.09.0 is available, this is v26.08.1.
+Release notes: https://github.com/kernelkit/infix/releases/tag/v26.09.0
+Install v26.09.0 now? [y/N] <b>y</b>
+</code></pre>
+
+The Software Updates card on the WebUI dashboard has a Check now button
+for the same thing, and an Install link once a release is available.
+Both use the `check-update` RPC, which scripts can call over NETCONF or
+RESTCONF as well.  It returns the latest release and the bundle URL for
+this platform, and fails when no update source is configured or the
+feed cannot be read.
+
+The log has the details:
 
 ```sh
 admin@example:~$ grep unattended-update /var/log/messages

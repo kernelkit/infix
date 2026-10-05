@@ -277,6 +277,7 @@ func New(
 	// Authenticated routes.
 	mux.HandleFunc("GET /{$}", dash.Index)
 	mux.HandleFunc("GET /dashboard/reachability", dash.Reachability)
+	mux.HandleFunc("POST /dashboard/check-update", dash.CheckUpdate)
 	mux.HandleFunc("GET /interfaces", iface.Overview)
 	mux.HandleFunc("GET /interfaces/{name}", iface.Detail)
 	mux.HandleFunc("GET /interfaces/{name}/counters", iface.Counters)

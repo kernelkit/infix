@@ -17,8 +17,15 @@
       <p class="update-card-msg">{{.UpdateMessage}}</p>
       {{if .UpdateURL}}
       <a href="{{.UpdateURL}}" target="_blank" rel="noopener noreferrer"
-         class="btn btn-primary update-card-action">View release &rarr;</a>
+         class="btn btn-outline update-card-action">View release &rarr;</a>
       {{end}}
+      {{if .Update}}{{if and .Update.Available .Update.BundleURL}}
+      <a href="/software?url={{.Update.BundleURL}}"
+         hx-get="/software?url={{.Update.BundleURL}}"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-primary update-card-action">Install {{.Update.Latest}} &rarr;</a>
+      {{end}}{{end}}
     </div>
   </div>
   {{end}}
@@ -37,34 +44,22 @@
     </div>
   </div>
 
-  {{if .Update}}
+  {{if .Board.Model}}
   <div class="info-card">
-    <div class="card-header">Software Updates
-      <a href="/configure/tree?path=/ietf-system:system/infix-system:software"
-         hx-get="/configure/tree?path=/ietf-system:system/infix-system:software"
-         hx-target="#content"
-         hx-push-url="true"
-         class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
-    </div>
+    <div class="card-header">Board</div>
     <div class="card-body" style="padding:0">
       <table class="info-table">
-        <tr><th>Source</th><td>{{if .Update.Source}}<a href="{{.Update.Source}}" title="{{.Update.Source}}" target="_blank" rel="noopener noreferrer">{{.Update.SourceShort}}</a>{{else}}not configured{{end}}</td></tr>
-        <tr><th>Check</th><td>{{.Update.Check}}</td></tr>
-        <tr><th>Unattended</th><td>{{.Update.Unattended}}</td></tr>
-        {{if .Update.LastCheck}}
-        <tr><th>Last check</th><td>{{.Update.LastCheck}}
-          {{if not .Update.Latest}}<span class="badge badge-neutral">feed unreachable</span>
-          {{else if .Update.Available}}<a href="{{.Update.ReleaseURL}}" target="_blank" rel="noopener noreferrer">{{.Update.Latest}}</a> <span class="badge badge-accept">available</span>
-          {{else}}latest {{.Update.Latest}}, up to date{{end}}</td></tr>
-        {{end}}
-        {{if .Update.LastInstall}}
-        <tr><th>Last install</th><td>{{.Update.LastInstall}}, {{.Update.Installed}}
-          {{if .Update.RebootPending}}<span class="badge badge-neutral">reboot pending</span>{{end}}</td></tr>
-        {{end}}
+        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
+        {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
+        {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
+        {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
+        {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td>{{.Board.BaseMAC}}</td></tr>{{end}}
       </table>
     </div>
   </div>
   {{end}}
+
+  {{if .Update}}{{template "update-card" .}}{{end}}
 
   <div class="info-card">
     <div class="card-header">Runtime</div>
@@ -92,59 +87,6 @@
       </table>
     </div>
   </div>
-
-  {{if .Board.Model}}
-  <div class="info-card">
-    <div class="card-header">Board</div>
-    <div class="card-body" style="padding:0">
-      <table class="info-table">
-        <tr><th>Model</th><td>{{.Board.Model}}</td></tr>
-        {{if .Board.Manufacturer}}<tr><th>Manufacturer</th><td>{{.Board.Manufacturer}}</td></tr>{{end}}
-        {{if .Board.SerialNum}}<tr><th>Serial Number</th><td>{{.Board.SerialNum}}</td></tr>{{end}}
-        {{if .Board.HardwareRev}}<tr><th>Hardware Rev</th><td>{{.Board.HardwareRev}}</td></tr>{{end}}
-        {{if .Board.BaseMAC}}<tr><th>Base MAC</th><td>{{.Board.BaseMAC}}</td></tr>{{end}}
-      </table>
-    </div>
-  </div>
-  {{end}}
-
-
-  {{if .KeyVitals}}
-  <div class="info-card">
-    <div class="card-header">Key Vitals
-      <a href="/hardware"
-         hx-get="/hardware"
-         hx-target="#content"
-         hx-push-url="true"
-         class="btn btn-sm btn-outline card-header-action">All sensors &rarr;</a>
-    </div>
-    <div class="card-body" style="padding:0">
-      <table class="info-table">
-        {{range .KeyVitals}}
-        <tr><th>{{.Name}}</th><td><span class="num">{{.Value}}</span></td></tr>
-        {{end}}
-      </table>
-    </div>
-  </div>
-  {{end}}
-
-  {{if .Disks}}
-  <div class="info-card">
-    <div class="card-header">Disk Usage</div>
-    {{range .Disks}}
-    <div class="disk-item">
-      <div class="disk-item-header">
-        <span class="disk-mount">{{.Mount}}{{if .ReadOnly}} <span class="disk-tag">read-only</span>{{end}}</span>
-        <span class="num disk-pct">{{.Percent}}%</span>
-      </div>
-      <div class="health-bar-track">
-        <div class="health-bar-fill {{.Class}}" style="width:{{.Percent}}%"></div>
-      </div>
-      <div class="disk-stats">{{.Available}} free of {{.Size}}</div>
-    </div>
-    {{end}}
-  </div>
-  {{end}}
 
   <div class="info-card">
     <div class="card-header">Connectivity</div>
@@ -197,5 +139,103 @@
     </div>
   </div>
   {{end}}
+
+  {{if .Ports}}
+  <div class="info-card">
+    <div class="card-header">Ports
+      <a href="/interfaces"
+         hx-get="/interfaces"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">All interfaces &rarr;</a>
+    </div>
+    <div class="port-grid">
+      {{range .Ports}}
+      <div class="port-chip" title="{{.Name}}: {{if .Up}}up{{if .Speed}}, {{.Speed}}{{end}}{{else}}down{{end}}{{if .Neighbor}}, {{.Neighbor}}{{end}}">
+        <span class="port-name"><span class="status-dot {{if .Up}}status-up{{else}}status-down{{end}}"></span>{{.Name}}</span>
+        <span class="port-info">{{if .Up}}{{.Speed}}{{if .Neighbor}}{{if .Speed}} &middot; {{end}}{{.Neighbor}}{{end}}{{else}}down{{end}}</span>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+
+  <div class="info-card">
+    <div class="card-header">Health
+      <a href="/services"
+         hx-get="/services"
+         hx-target="#content"
+         hx-push-url="true"
+         class="btn btn-sm btn-outline card-header-action">All services &rarr;</a>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="info-table">
+        {{range .Health}}
+        <tr><td colspan="2"><span class="status-dot {{.Class}}"></span>{{if .Link}}<a href="{{.Link}}" hx-get="{{.Link}}" hx-target="#content" hx-push-url="true">{{.Text}}</a>{{else}}{{.Text}}{{end}}</td></tr>
+        {{end}}
+        {{range .KeyVitals}}
+        <tr><th><a href="/hardware" hx-get="/hardware" hx-target="#content" hx-push-url="true">{{.Name}}</a></th><td><span class="num">{{.Value}}</span></td></tr>
+        {{end}}
+      </table>
+    </div>
+  </div>
+
+  {{if .Disks}}
+  <div class="info-card">
+    <div class="card-header">Disk Usage</div>
+    {{range .Disks}}
+    <div class="disk-item">
+      <div class="disk-item-header">
+        <span class="disk-mount">{{.Mount}}</span>
+        <span class="num disk-pct">{{.Percent}}%</span>
+      </div>
+      <div class="health-bar-track">
+        <div class="health-bar-fill {{.Class}}" style="width:{{.Percent}}%"></div>
+      </div>
+      <div class="disk-stats">{{.Available}} free of {{.Size}}</div>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
 </section>
+{{end}}
+
+{{define "update-card"}}
+<div class="info-card" id="update-card">
+  <div class="card-header">Software Updates
+    <a href="/configure/tree?path=/ietf-system:system/infix-system:software"
+       hx-get="/configure/tree?path=/ietf-system:system/infix-system:software"
+       hx-target="#content"
+       hx-push-url="true"
+       class="btn btn-sm btn-outline card-header-action">Configure &rarr;</a>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="info-table">
+      <tr><th>Source</th><td>{{if .Update.Source}}<a href="{{.Update.Source}}" title="{{.Update.Source}}" target="_blank" rel="noopener noreferrer">{{.Update.SourceShort}}</a>{{else}}not configured{{end}}</td></tr>
+      <tr><th>Check</th><td>{{.Update.Check}}</td></tr>
+      <tr><th>Unattended</th><td>{{.Update.Unattended}}
+        {{if .Update.AutoReboot}}<span class="card-flag" title="Reboots right after an install">{{template "icon-reset"}}</span>{{end}}</td></tr>
+      {{if .Update.LastCheck}}
+      <tr><th>Last check</th><td>{{.Update.LastCheck}}
+        {{if not .Update.Latest}}<span class="card-flag flag-warn" title="The release feed could not be read">{{template "icon-triangle-alert"}}</span>
+        {{else if .Update.Available}}<a href="{{.Update.ReleaseURL}}" target="_blank" rel="noopener noreferrer" class="badge badge-accept" title="Newer release available">{{.Update.Latest}}</a>
+        {{else}}<span class="card-flag flag-ok" title="Up to date, the latest release is {{.Update.Latest}}">{{template "icon-check"}}</span>{{end}}</td></tr>
+      {{end}}
+      {{if .Update.LastInstall}}
+      <tr><th>Last install</th><td>{{.Update.LastInstall}}, {{.Update.Installed}}
+        {{if .Update.RebootPending}}<span class="card-flag flag-warn" title="Reboot to activate {{.Update.Installed}}">{{template "icon-reset"}}</span>{{end}}</td></tr>
+      {{end}}
+    </table>
+    {{if .UpdateError}}<div class="alert alert-error update-card-error">{{.UpdateError}}</div>{{end}}
+  </div>
+  <div class="card-actions">
+    <button type="button" class="btn btn-sm btn-primary"
+            hx-post="/dashboard/check-update"
+            hx-target="#update-card"
+            hx-swap="outerHTML"
+            hx-disabled-elt="this"
+            {{if not .Update.Source}}disabled title="Set an update source first"{{end}}>Check now</button>
+  </div>
+</div>
 {{end}}

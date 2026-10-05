@@ -1,11 +1,16 @@
 #!/bin/sh
 # Check for available software updates and notify on login if one exists.
-# Called by the scheduler.
+# Called by the scheduler, and by the check-update RPC with -s, which
+# makes a skipped check exit with its reason: 2 feed unreachable, 3 no
+# update-url.  The scheduler gets 0 for both.
 
 NOTIFY_FILE=/run/os-update
 TAG=os-update
 
 . /usr/libexec/infix/update-common
+
+strict=0
+[ "$1" = "-s" ] && strict=1
 
 update_check
 rc=$?
@@ -14,10 +19,12 @@ if [ $rc -eq 1 ]; then
 fi
 if [ $rc -eq 2 ]; then
     logger -p daemon.info -t "$TAG" "Update check skipped: failed to query latest release from ${UPDATE_URL}"
+    [ $strict -eq 1 ] && exit 2
     exit 0
 fi
 if [ $rc -eq 3 ]; then
     logger -p daemon.info -t "$TAG" "Update check skipped: no update-url configured"
+    [ $strict -eq 1 ] && exit 3
     exit 0
 fi
 

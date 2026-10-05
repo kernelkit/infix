@@ -69,7 +69,7 @@
         <input type="hidden" name="csrf" value="{{.CsrfToken}}">
         <div class="form-group">
           <label for="sw-url">Software Bundle URL (.pkg)</label>
-          <input type="url" id="sw-url" name="url"
+          <input type="url" id="sw-url" name="url" value="{{.InstallURL}}"
                  list="sw-url-history" autocomplete="off" required>
           <datalist id="sw-url-history"></datalist>
         </div>

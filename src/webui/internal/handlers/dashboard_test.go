@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"infix/webui/internal/restconf"
@@ -15,7 +16,8 @@ import (
 
 var minimalDashTmpl = template.Must(template.New("dashboard.html").Parse(
 	`{{define "dashboard.html"}}hostname={{.Hostname}} error={{.Error}}{{end}}` +
-		`{{define "content"}}{{.Hostname}}{{end}}`,
+		`{{define "content"}}{{.Hostname}}{{end}}` +
+		`{{define "update-card"}}check={{.Update.Check}} error={{.UpdateError}}{{end}}`,
 ))
 
 func TestDashboardIndex_ReturnsOK(t *testing.T) {
@@ -106,10 +108,10 @@ func TestUpdateEntry(t *testing.T) {
 	if e.Check != "nightly (daily at 03:00)" {
 		t.Errorf("Check = %q", e.Check)
 	}
-	if e.Unattended != "nightly (paused), reboot manual" {
-		t.Errorf("Unattended = %q", e.Unattended)
+	if e.Unattended != "nightly (paused)" || e.AutoReboot {
+		t.Errorf("Unattended = %q auto-reboot %v", e.Unattended, e.AutoReboot)
 	}
-	if e.LastCheck != "2026-09-30 03:00:12" {
+	if e.LastCheck != "2026-09-30 03:00" {
 		t.Errorf("LastCheck = %q", e.LastCheck)
 	}
 	if !e.Available || !e.RebootPending {
@@ -171,8 +173,8 @@ func TestSystemConfigDecode(t *testing.T) {
 	if e.Check != "nightly (daily at 03:00)" {
 		t.Errorf("Check = %q", e.Check)
 	}
-	if e.Unattended != "weekly (sunday), reboot immediate" {
-		t.Errorf("Unattended = %q", e.Unattended)
+	if e.Unattended != "weekly (sunday)" || !e.AutoReboot {
+		t.Errorf("Unattended = %q auto-reboot %v", e.Unattended, e.AutoReboot)
 	}
 }
 
@@ -187,5 +189,94 @@ func TestShortURL(t *testing.T) {
 		if got := shortURL(in); got != want {
 			t.Errorf("shortURL(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestCheckUpdate_RendersCardOnFailure(t *testing.T) {
+	rc := restconf.NewClient("http://127.0.0.1:19999/restconf", false)
+	h := &DashboardHandler{Template: minimalDashTmpl, RC: rc}
+
+	req := httptest.NewRequest(http.MethodPost, "/dashboard/check-update", nil)
+	ctx := restconf.ContextWithCredentials(req.Context(), restconf.Credentials{
+		Username: "testuser",
+		Password: "testpass",
+	})
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+	h.CheckUpdate(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "check=not configured") || !strings.Contains(body, "error=Update check failed") {
+		t.Errorf("body = %q", body)
+	}
+}
+
+func TestPorts(t *testing.T) {
+	var iw interfacesWrapper
+	for _, p := range []struct {
+		name, typ, oper string
+		speed           int64
+	}{
+		{"eth10", "iana-if-type:ethernetCsmacd", "up", 2500000000},
+		{"eth2", "iana-if-type:ethernetCsmacd", "down", 0},
+		{"br0", "iana-if-type:bridge", "up", 0},
+		{"eth1", "iana-if-type:ethernetCsmacd", "up", 1000000000},
+		{"lan1", "infix-if-type:ethernet", "lower-layer-down", 0},
+	} {
+		iw.Interfaces.Interface = append(iw.Interfaces.Interface, ifaceJSON{
+			Name: p.name, Type: p.typ, OperStatus: p.oper, Speed: yangInt64(p.speed),
+		})
+	}
+	got := ports(iw, map[string]string{"eth1": "core-sw"})
+	want := []portEntry{
+		{Name: "eth1", Up: true, Speed: "1G", Neighbor: "core-sw"},
+		{Name: "eth2"},
+		{Name: "eth10", Up: true, Speed: "2.5G"},
+		{Name: "lan1"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("ports = %+v", got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("port %d = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+	if s := portSpeed(100000000); s != "100M" {
+		t.Errorf("100M = %q", s)
+	}
+}
+
+func TestHealthItems(t *testing.T) {
+	var sw software
+	sw.Booted = "primary"
+	sw.Slot = []softwareSlot{{Name: "rootfs.0", BootName: "primary", Class: "rootfs"}, {Name: "rootfs.1", BootName: "secondary", Class: "rootfs"}}
+	sw.Slot[0].Bundle.Version = "v2"
+	sw.Slot[1].Bundle.Version = "v1"
+
+	items := healthItems([]serviceJSON{{Name: "hostapd", Status: "crashed"}, {Name: "sshd", Status: "running"}}, sw)
+	if len(items) != 2 || items[0].Text != "hostapd crashed" || items[1].Text != "secondary partition is out of date (v1)" {
+		t.Errorf("items = %+v", items)
+	}
+
+	sw.Update.RebootPending = true
+	sw.Update.Installed = "v3"
+	items = healthItems(nil, sw)
+	if len(items) != 1 || items[0].Text != "Reboot to activate v3" || items[0].Class != "status-warn" {
+		t.Errorf("reboot items = %+v", items)
+	}
+
+	sw.Update.RebootPending = false
+	sw.Slot[1].Bundle.Version = "v2"
+	items = healthItems(nil, sw)
+	if len(items) != 1 || items[0].Class != "status-up" {
+		t.Errorf("healthy items = %+v", items)
+	}
+	if softwareVersion(sw) != "v2" {
+		t.Errorf("softwareVersion = %q", softwareVersion(sw))
 	}
 }

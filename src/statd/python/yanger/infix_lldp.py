@@ -30,6 +30,18 @@ def operational():
         "local": "local"
     }
 
+    # lldpcli capability names, in the bit order of system-capabilities-map
+    capability_bits = {
+        "Other": "other",
+        "Repeater": "repeater",
+        "Bridge": "bridge",
+        "Wlan": "wlan-access-point",
+        "Router": "router",
+        "Telephone": "telephone",
+        "Docsis": "docsis-cable-device",
+        "Station": "station-only",
+    }
+
     LLDP_MULTICAST_MAC = "01:80:C2:00:00:0E"
 
     port_data = defaultdict(lambda: {"remote-systems-data": [], "dest-mac-address": LLDP_MULTICAST_MAC})
@@ -58,6 +70,7 @@ def operational():
 
             chassis = iface_data.get("chassis", {})
             chassis_id_type, chassis_id_value = extract_chassis_id(chassis, chassis_id_subtype_mapping)
+            system_name, chassis_info = chassis_system(chassis)
 
             port_info = iface_data.get("port", {})
             port_id_type = port_id_subtype_mapping.get(port_info.get("id", {}).get("type"), "unknown")
@@ -71,6 +84,18 @@ def operational():
                 "port-id-subtype": port_id_type,
                 "port-id": port_id_value
             }
+            if system_name:
+                remote_entry["system-name"] = system_name
+            if chassis_info.get("descr"):
+                remote_entry["system-description"] = chassis_info["descr"]
+            if port_info.get("descr"):
+                remote_entry["port-desc"] = port_info["descr"]
+
+            supported, enabled = capabilities(chassis_info.get("capability", []), capability_bits)
+            if supported:
+                remote_entry["system-capabilities-supported"] = supported
+            if enabled:
+                remote_entry["system-capabilities-enabled"] = enabled
 
             port_data[iface_name]["remote-systems-data"].append(remote_entry)
 
@@ -88,6 +113,30 @@ def operational():
     }
 
     return formatted_output
+
+def chassis_system(chassis_block):
+    """lldpcli keys the chassis block by system name when it knows one.
+    Returns the name, or "", and the block with the chassis details."""
+    if "id" in chassis_block:
+        return "", chassis_block
+
+    for name, value in chassis_block.items():
+        if isinstance(value, dict):
+            return name, value
+
+    return "", {}
+
+def capabilities(entries, bits):
+    """Supported and enabled capability bits, as the model's space
+    separated bit names in bit order."""
+    if isinstance(entries, dict):
+        entries = [entries]
+
+    supported = [bits[e["type"]] for e in entries if e.get("type") in bits]
+    enabled = [bits[e["type"]] for e in entries if e.get("type") in bits and e.get("enabled")]
+    order = list(bits.values())
+    return (" ".join(sorted(supported, key=order.index)),
+            " ".join(sorted(enabled, key=order.index)))
 
 def extract_chassis_id(chassis_block, subtype_mapping):
     if "id" in chassis_block:
