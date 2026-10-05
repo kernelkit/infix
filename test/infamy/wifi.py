@@ -74,6 +74,26 @@ def wds_link(name, ap, peer, bridge=None, pvid=None):
     return ifc
 
 
+def channel_survey(target, radio="radio0", passive=False):
+    """Run the channel-survey action on radio, return its channel list.
+
+    Each entry has at least a frequency, the operating channel has
+    in-use set.  Values are strings on NETCONF, compare with str().
+    """
+    xpath = f"/ietf-hardware:hardware/component[name='{radio}']" \
+            "/infix-hardware:wifi-radio/channel-survey"
+    output = target.call_action_output(xpath, {"passive": passive} if passive else None)
+    return output.get("channel", [])
+
+
+def in_use_frequency(channels):
+    """Frequency in MHz of the channel marked in-use, or None."""
+    for ch in channels:
+        if str(ch.get("in-use")).lower() == "true":
+            return int(ch["frequency"])
+    return None
+
+
 def skip_unless_supported(test, *targets):
     """Skip the test unless every target advertises the wifi feature."""
     for target in targets:
