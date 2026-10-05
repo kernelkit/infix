@@ -2996,8 +2996,23 @@ Software updates
 </code></pre>
 
 <p>The same data is available under <code>/system-state/software/update</code> in the
-operational datastore, and on the WebUI dashboard.  The log
-has the details:</p>
+operational datastore, and on the WebUI dashboard.</p>
+<p>To check right away, run <code>upgrade</code> without a bundle.  It reads the feed
+at <code>update-url</code> for the latest release and, when there is a newer one,
+offers to install it and to reboot:</p>
+<pre class="cli"><code>admin@example:/&gt; <b>upgrade</b>
+Release v26.09.0 is available, this is v26.08.1.
+Release notes: https://github.com/kernelkit/infix/releases/tag/v26.09.0
+Install v26.09.0 now? [y/N] <b>y</b>
+</code></pre>
+
+<p>The Software Updates card on the WebUI dashboard has a Check now button
+for the same thing, and an Install link once a release is available.
+Both use the <code>check-update</code> RPC, which scripts can call over NETCONF or
+RESTCONF as well.  It returns the latest release and the bundle URL for
+this platform, and fails when no update source is configured or the
+feed cannot be read.</p>
+<p>The log has the details:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:~$<span class="w"> </span>grep<span class="w"> </span>unattended-update<span class="w"> </span>/var/log/messages
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>unattended-update:<span class="w"> </span>Installing<span class="w"> </span>v26.08.1<span class="w"> </span>from<span class="w"> </span>https://.../infix-aarch64-v26.08.1.pkg<span class="w"> </span><span class="o">(</span>running<span class="w"> </span>v26.05.0<span class="o">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>unattended-update:<span class="w"> </span>Installed<span class="w"> </span>v26.08.1<span class="p">;</span><span class="w"> </span>reboot<span class="w"> </span>to<span class="w"> </span>activate<span class="w"> </span>the<span class="w"> </span>new<span class="w"> </span>image
