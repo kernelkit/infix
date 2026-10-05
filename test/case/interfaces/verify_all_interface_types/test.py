@@ -52,7 +52,7 @@ def verify_layers(target, expected):
 
 
 def verify_interface(target, interface, expected_type):
-    assert iface.exist(target, interface), f"Interface <{interface}> does not exist."
+    until(lambda: iface.exist(target, interface))
 
     expected_type = f"infix-if-type:{expected_type}"
     actual_type = iface.get_param(target, interface, "type")

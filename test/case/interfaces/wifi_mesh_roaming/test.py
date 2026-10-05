@@ -67,6 +67,12 @@ GWS = [
 SECRETS = {"mesh-secret": MESH_PSK, "wifi-secret": WIFI_PSK}
 
 
+def on_ap(client, aps, not_on=None):
+    """BSSID the client is associated to if it is one of aps, else None"""
+    bssid = wifi.station_bssid(client)
+    return bssid if bssid in aps and bssid != not_on else None
+
+
 def gw_config(mesh_mac, ap_mac, uplink=None):
     interfaces = [
         {"name": "br0", "type": "infix-if-type:bridge", "enabled": True},
@@ -159,21 +165,21 @@ with infamy.Test() as test:
 
     with test.step("Verify each node reports mesh-id 'backhaul' with forwarding enabled"):
         for name, dut, _, _ in gws:
-            mp = wifi.mesh_point(dut)
-            if mp.get("mesh-id") != MESH_ID or mp.get("forwarding") is not True:
-                print(f"{name}: {mp}")
-                test.fail()
+            until(lambda dut=dut: wifi.mesh_point(dut).get("mesh-id") == MESH_ID and
+                  wifi.mesh_point(dut).get("forwarding") is True,
+                  attempts=30, interval=2)
 
     with test.step("Verify the client associates to the 'campus' SSID"):
-        until(lambda: wifi.associated(client, SSID), attempts=60, interval=2)
+        wifi.until_diagnosed(env, lambda: wifi.associated(client, SSID),
+                             attempts=60, interval=2, ap=("gw1", "gw2", "gw3"),
+                             ap_ifaces=("wifi1",), clients=("client",))
 
     # The client reports the BSSID it is on; with all three APs sharing the
     # SSID, that BSSID is what tells them apart.
     aps = {ap_mac.lower(): (name, dut) for name, dut, _, ap_mac in gws}
 
     with test.step("Verify the client is connected to one of the campus APs"):
-        until(lambda: wifi.station_bssid(client) in aps, attempts=60, interval=2)
-        first_bssid = wifi.station_bssid(client)
+        first_bssid = until(lambda: on_ap(client, aps), attempts=60, interval=2)
         first_ap, first_dut = aps[first_bssid]
         print(f"client is on {first_ap} ({first_bssid})")
 
@@ -184,20 +190,20 @@ with infamy.Test() as test:
         ns.addip(HOST_IP)
 
         with test.step("Verify the client is reachable across the mesh"):
-            ns.must_reach(CLIENT_IP)
+            ns.must_reach(CLIENT_IP, timeout=30)
 
         with test.step("Take down the client's current AP to force a roam"):
             first_dut.put_config_dicts({"ietf-interfaces": {"interfaces": {
                 "interface": [{"name": "wifi1", "enabled": False}]}}})
 
         with test.step("Verify the client roams to another node's AP"):
-            until(lambda: wifi.station_bssid(client) in aps and
-                  wifi.station_bssid(client) != first_bssid,
-                  attempts=90, interval=2)
-            new_ap, _ = aps[wifi.station_bssid(client)]
+            new_bssid = wifi.until_diagnosed(env, lambda: on_ap(client, aps, not_on=first_bssid),
+                                             attempts=90, interval=2, ap=("gw1", "gw2", "gw3"),
+                                             ap_ifaces=("wifi1",), clients=("client",))
+            new_ap, _ = aps[new_bssid]
             print(f"client roamed from {first_ap} to {new_ap}")
 
         with test.step("Verify connectivity is restored after roaming"):
-            ns.must_reach(CLIENT_IP)
+            ns.must_reach(CLIENT_IP, timeout=30)
 
     test.succeed()

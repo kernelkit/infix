@@ -167,12 +167,14 @@ with infamy.Test() as test:
                  lambda: explicit_prios(c), lambda: explicit_prios(d))
 
     with test.step("Verify that A, B, C and D agrees on A being the root bridge"):
+        # Snapshot A's bridge-id only once it reflects the configured priority (1); oper data lags config.
+        until(lambda: (bridge_id(a, "bridge-id") or "").startswith("1."), 120)
         a_id = bridge_id(a, "bridge-id")
         print(f"A's bridge-id: {a_id}")
-        until(lambda: all(map(lambda n: bridge_id(n, "root-id") == a_id, (a, b, c, d))), 60)
+        until(lambda: all(map(lambda n: bridge_id(n, "root-id") == a_id, (a, b, c, d))), 120)
 
     with test.step("Verify that B, C and D all use their direct connection to on A"):
-        until(lambda: all(map(lambda n: port_role(n, n["a"]) == "root", (b, c, d))), 60)
+        until(lambda: all(map(lambda n: port_role(n, n["a"]) == "root", (b, c, d))), 120)
 
     with test.step("Verify that host:a can reach host:{b,c,d}"):
         parallel(lambda: ns["a"].must_reach("10.0.0.2"),

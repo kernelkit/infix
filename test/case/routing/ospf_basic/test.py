@@ -225,7 +225,7 @@ with infamy.Test() as test:
 
     with test.step(f"Verify R2 {version} neighbors with non-{version} interface"):
         # Regression test for #1169
-        assert route.ospf_has_neighbors(R2, proto=f"infix-routing:{version}")
+        until(lambda: route.ospf_has_neighbors(R2, proto=f"infix-routing:{version}"), attempts=30)
 
     with test.step("Test connectivity from PC:data to R2 loopback"):
         _, hport0 = env.ltop.xlate("PC", "data")

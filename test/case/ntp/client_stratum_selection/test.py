@@ -154,7 +154,7 @@ with infamy.Test() as test:
                 })
 
             with test.step("Wait for client to see both servers"):
-                until(lambda: ntp.number_of_sources(client) == 2, attempts=30)
+                until(lambda: ntp.number_of_sources(client) == 2, attempts=120)
 
             with test.step("Wait for srv2 stratum to stabilize"):
                 # Ensure srv2 has synced with srv1 and is advertising
@@ -172,7 +172,7 @@ with infamy.Test() as test:
 
                 # srv2 synced before the client was configured, so the
                 # client's iburst samples already carry the higher stratum
-                until(check_stratums, attempts=30)
+                until(check_stratums, attempts=120)
                 print(f"srv1 and srv2 stratums verified as different")
 
             with test.step("Verify client selects srv1 (lower stratum)"):

@@ -101,9 +101,9 @@ with infamy.Test() as test:
         with ntp_server.Server(ns1) as ntp1, \
              ntp_server.Server(ns2) as ntp2, \
              ntp_server.Server(ns3) as ntp3:
+            with test.step("Verify three sources exist in NTP client on 'target'"):
+                util.until(lambda: ntp.number_of_sources(target) == 3, attempts=200)
             with test.step("Verify one source is in 'selected' state on 'target'"):
                 util.until(lambda: ntp.any_source_selected(target), attempts=200)
-            with test.step("Verify three sources exist in NTP client on 'target'"):
-                assert ntp.number_of_sources(target) == 3
 
     test.succeed()
