@@ -13,6 +13,21 @@ All notable changes to the project are documented in this file.
   `ripng`/`ospfv3` type and the IPv6 address-family
 - Support building without Frr, which also drops bash.  The minimal
   defconfigs are now built this way, with static routing only, issue #1670
+- Check for a new software release on demand: `upgrade` without a bundle in
+  the CLI, the Check now button on the WebUI dashboard, or the `check-update`
+  RPC, see [Unattended Software Updates][unattended]
+- WebUI: the Overview page gains a Ports card, link state and LLDP neighbor
+  per port, and a Health card listing services that are not running, a
+  pending reboot, and sensor readings.  Disk Usage no longer lists the
+  read-only root filesystem
+
+### Fixes
+
+- WebUI: uploading a software bundle failed on slow storage
+- WebUI: the Overview page showed the hostname template, e.g. `rpi-%m`, and
+  never showed the boot partition
+- LLDP neighbors were listed without their system name, descriptions, and
+  capabilities, in the CLI, the WebUI, and the operational datastore
 
 [v26.09.0][] - 2026-09-30
 -------------------------
