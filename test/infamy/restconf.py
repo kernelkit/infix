@@ -142,9 +142,17 @@ class Device(Transport):
         self.auth = HTTPBasicAuth(location.username, location.password)
         self.modules = {}
 
-        self.lyctx = libyang.Context(yangdir)
+        self._lyctx = libyang.Context(yangdir)
+        self._ly_loaded = True
         self._ly_bootstrap(yangdir)
-        self._ly_init(yangdir)
+        self._ly_loaded = False
+
+    @property
+    def lyctx(self):
+        """Loads the device's modules on first use, a skipped test never pays for it"""
+        if not self._ly_loaded:
+            self._ly_load()
+        return self._lyctx
 
     def __str__(self):
         nm = f"{self.name}"
@@ -186,7 +194,8 @@ class Device(Transport):
 
         print("YANG models downloaded.")
 
-    def _ly_init(self, yangdir):
+    def _ly_load(self):
+        self._ly_loaded = True
         for ms in self.modules.values():
             if ms["conformance-type"] != "implement":
                 continue
