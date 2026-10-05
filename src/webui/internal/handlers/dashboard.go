@@ -148,8 +148,11 @@ type software struct {
 }
 
 type softwareSlot struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
+	Name     string `json:"name"`
+	BootName string `json:"bootname"`
+	Bundle   struct {
+		Version string `json:"version"`
+	} `json:"bundle"`
 }
 
 // RESTCONF JSON structures for the parts of ietf-system:system the
@@ -898,8 +901,8 @@ func cardTime(t string) string {
 
 func softwareVersion(sw software) string {
 	for _, slot := range sw.Slot {
-		if slot.Name == sw.Booted {
-			return slot.Version
+		if slot.BootName == sw.Booted {
+			return slot.Bundle.Version
 		}
 	}
 	return ""
