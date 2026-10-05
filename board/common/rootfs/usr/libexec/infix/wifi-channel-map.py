@@ -54,6 +54,17 @@ def get_channel_frequency(channel, band='2.4'):
     return None
 
 
+def freq_to_band(freq):
+    """Band name for a frequency in MHz, or None"""
+    if 2400 <= freq <= 2500:
+        return '2.4 GHz'
+    if 5000 <= freq <= 5900:
+        return '5 GHz'
+    if 5925 <= freq <= 7125:
+        return '6 GHz'
+    return None
+
+
 def get_busy_percentage(channel_data):
     """Calculate channel busy percentage"""
     active = channel_data.get('active-time', 0)
@@ -84,7 +95,7 @@ def draw_channel_graph_2_4ghz(survey_data):
     for ch_data in survey_data:
         freq = ch_data.get('frequency')
         ch_num = freq_to_channel(freq)
-        if ch_num and 1 <= ch_num <= 14:
+        if ch_num and freq_to_band(freq) == '2.4 GHz':
             busy_pct = get_busy_percentage(ch_data)
             channels[ch_num] = {
                 'freq': freq,
@@ -107,14 +118,27 @@ def draw_channel_graph_2_4ghz(survey_data):
     print(f"Non-overlapping channels: 1, 6, 11 (shown in {Colors.GREEN}green{Colors.RESET})")
     print()
 
-    # Draw frequency scale
-    print("Frequency (MHz):")
-    print("2400        2420        2440        2460        2480")
-    print("|-----------|-----------|-----------|-----------|")
+    # 80 columns span 2400-2500 MHz, so one column is 1.25 MHz and a
+    # 20 MHz channel is 16 columns wide, centred on its frequency.
+    width = 80
+    cols_per_mhz = width / 100
 
-    # Draw each channel as a bar showing its 20 MHz width
-    # Each channel occupies ~4 adjacent channels worth of space
-    for ch in range(1, 14):
+    def col(freq):
+        return int(round((freq - 2400) * cols_per_mhz))
+
+    ruler = [' '] * width
+    ticks = [' '] * width
+    for mhz in range(2400, 2500, 20):
+        label = str(mhz)
+        for i, c in enumerate(label):
+            if col(mhz) + i < width:
+                ruler[col(mhz) + i] = c
+        ticks[col(mhz)] = '|'
+    print("Frequency (MHz):")
+    print("     " + ''.join(ruler))
+    print("     " + ''.join(ticks).replace(' ', '-'))
+
+    for ch in range(1, 15):
         if ch not in channels:
             continue
 
@@ -123,7 +147,6 @@ def draw_channel_graph_2_4ghz(survey_data):
         is_in_use = data['in_use']
         noise = data['noise']
 
-        # Determine color based on status
         if is_in_use:
             color = Colors.BG_BLUE
             marker = '█'
@@ -133,49 +156,25 @@ def draw_channel_graph_2_4ghz(survey_data):
         elif busy_pct >= 25:
             color = Colors.YELLOW
             marker = '▒'
-        elif busy_pct > 0:
+        elif busy_pct >= 1:
             color = Colors.CYAN
             marker = '░'
         else:
             color = Colors.GRAY
             marker = '·'
 
-        # Non-overlapping channels get green color
         if ch in [1, 6, 11] and not is_in_use and busy_pct < 10:
             color = Colors.GREEN
 
-        # Calculate position (each channel is offset by 5 MHz = 1 position)
-        # Channel 1 is at 2412 MHz, base is 2400
-        offset = ((data['freq'] - 2400) // 5)
+        line = [' '] * width
+        for pos in range(col(data['freq'] - 10), col(data['freq'] + 10)):
+            if 0 <= pos < width:
+                line[pos] = marker
 
-        # Draw channel bar (20 MHz = 4 positions wide)
-        line = ' ' * 80
-        line_arr = list(line)
-
-        # Mark the channel span (20 MHz width)
-        for i in range(4):
-            pos = offset + i - 2  # Center the 20 MHz around channel
-            if 0 <= pos < len(line_arr):
-                line_arr[pos] = marker
-
-        # Add channel label
-        label_pos = offset
-        if 0 <= label_pos < len(line_arr) - 5:
-            # Clear space for label
-            for i in range(5):
-                if label_pos + i < len(line_arr):
-                    line_arr[label_pos + i] = ' '
-
-        line = ''.join(line_arr)
-
-        # Status indicators
-        status = ""
-        if is_in_use:
-            status = f" {Colors.BOLD}[IN USE]{Colors.RESET}"
-
+        status = f" {Colors.BOLD}[IN USE]{Colors.RESET}" if is_in_use else ""
         busy_color = get_utilization_color(busy_pct)
 
-        print(f"{color}Ch{ch:2d}{Colors.RESET} {color}{line}{Colors.RESET} "
+        print(f"{color}Ch{ch:2d}{Colors.RESET} {color}{''.join(line)}{Colors.RESET} "
               f"{busy_color}{busy_pct:5.1f}%{Colors.RESET} "
               f"{noise:4d}dBm{status}")
 
@@ -196,11 +195,16 @@ def draw_channel_list(survey_data):
     print(f"{'Ch':<4} {'Freq':<6} {'Noise':<8} {'Busy%':<8} {'Utilization Bar':<40}")
     print("-" * 80)
 
+    band = None
     for ch_data in sorted(survey_data, key=lambda x: x.get('frequency', 0)):
         freq = ch_data.get('frequency')
         ch_num = freq_to_channel(freq)
         if not ch_num:
             continue
+
+        if freq_to_band(freq) != band:
+            band = freq_to_band(freq)
+            print(f"{Colors.BOLD}{band}{Colors.RESET}")
 
         noise = ch_data.get('noise', -100)
         busy_pct = get_busy_percentage(ch_data)
@@ -237,7 +241,7 @@ def draw_overlap_pie(survey_data):
     for ch_data in survey_data:
         freq = ch_data.get('frequency')
         ch_num = freq_to_channel(freq)
-        if ch_num and 1 <= ch_num <= 13:
+        if ch_num and freq_to_band(freq) == '2.4 GHz':
             busy_pct = get_busy_percentage(ch_data)
             channels[ch_num] = {
                 'busy': busy_pct,
@@ -549,68 +553,98 @@ def generate_svg(survey_data, output_file=None):
 
 
 def draw_recommendations(survey_data, json_output=False):
-    """Analyze channels and provide recommendations"""
-    # Parse channel data
-    channels = {}
-    in_use_channel = None
+    """Analyze channels and provide recommendations, per band"""
+    bands = {}
+    current = None
 
     for ch_data in survey_data:
         freq = ch_data.get('frequency')
         ch_num = freq_to_channel(freq)
-        if ch_num:
-            busy_pct = get_busy_percentage(ch_data)
-            channels[ch_num] = {
-                'busy': busy_pct,
-                'noise': ch_data.get('noise', -100),
-                'in_use': ch_data.get('in-use', False)
-            }
-            if ch_data.get('in-use'):
-                in_use_channel = ch_num
+        band = freq_to_band(freq) if freq else None
+        if not ch_num or not band:
+            continue
 
-    # Find least congested non-overlapping channels
-    best_channels = []
-    for ch in [1, 6, 11]:
-        if ch in channels:
-            best_channels.append((ch, channels[ch]['busy']))
+        entry = {
+            'channel': ch_num,
+            'frequency': freq,
+            'busy': get_busy_percentage(ch_data),
+            'noise': ch_data.get('noise', -100),
+        }
+        bands.setdefault(band, []).append(entry)
+        if ch_data.get('in-use'):
+            current = dict(entry, band=band)
 
-    best_channels.sort(key=lambda x: x[1])
+    # Least busy channels per band.  On 2.4 GHz only the three channels
+    # that do not overlap are worth recommending.
+    best = {}
+    for band, entries in bands.items():
+        if band == '2.4 GHz':
+            entries = [e for e in entries if e['channel'] in (1, 6, 11)]
+        best[band] = sorted(entries, key=lambda e: e['busy'])[:3]
 
-    # JSON output
     if json_output:
         output = {
-            "recommended_channels": [
-                {"channel": ch, "busy_percent": round(busy, 1)}
-                for ch, busy in best_channels
-            ]
+            "recommended_channels": {
+                band: [{"channel": e['channel'], "busy_percent": round(e['busy'], 1)}
+                       for e in entries]
+                for band, entries in best.items()
+            }
         }
-        if in_use_channel:
-            output["current_channel"] = in_use_channel
-            output["current_busy_percent"] = round(channels.get(in_use_channel, {}).get('busy', 0), 1)
+        if current:
+            output["current_channel"] = current['channel']
+            output["current_band"] = current['band']
+            output["current_busy_percent"] = round(current['busy'], 1)
 
         print(json.dumps(output, indent=2))
         return
 
-    # Text output
     print(f"\n{Colors.BOLD}Channel Recommendations{Colors.RESET}")
     print("=" * 80)
 
-    if in_use_channel:
-        print(f"Current channel: {Colors.BOLD}{in_use_channel}{Colors.RESET}")
-        current_busy = channels.get(in_use_channel, {}).get('busy', 0)
-        if current_busy > 50:
-            print(f"  {Colors.RED}⚠{Colors.RESET}  High congestion detected ({current_busy:.1f}% busy)")
-        elif current_busy > 25:
-            print(f"  {Colors.YELLOW}⚠{Colors.RESET}  Moderate congestion ({current_busy:.1f}% busy)")
+    if current:
+        print(f"Current channel: {Colors.BOLD}{current['channel']}{Colors.RESET} ({current['band']})")
+        busy = current['busy']
+        if busy > 50:
+            print(f"  {Colors.RED}⚠{Colors.RESET}  High congestion detected ({busy:.1f}% busy)")
+        elif busy > 25:
+            print(f"  {Colors.YELLOW}⚠{Colors.RESET}  Moderate congestion ({busy:.1f}% busy)")
         else:
-            print(f"  {Colors.GREEN}✓{Colors.RESET}  Good channel utilization ({current_busy:.1f}% busy)")
+            print(f"  {Colors.GREEN}✓{Colors.RESET}  Good channel utilization ({busy:.1f}% busy)")
 
-    print(f"\nRecommended non-overlapping channels (2.4 GHz):")
-    for i, (ch, busy) in enumerate(best_channels[:3], 1):
-        color = get_utilization_color(busy)
-        marker = "★" if i == 1 else " "
-        print(f"  {marker} Channel {ch:2d}: {color}{busy:5.1f}% busy{Colors.RESET}")
+    for band in ('2.4 GHz', '5 GHz', '6 GHz'):
+        if band not in best:
+            continue
+        what = "non-overlapping channels" if band == '2.4 GHz' else "channels"
+        print(f"\nLeast busy {what} ({band}):")
+        for i, e in enumerate(best[band], 1):
+            color = get_utilization_color(e['busy'])
+            marker = "★" if i == 1 else " "
+            print(f"  {marker} Channel {e['channel']:3d}: {color}{e['busy']:5.1f}% busy{Colors.RESET}")
 
     print()
+
+
+def find_channels(data):
+    """
+    Collect every survey channel list in the input.
+
+    The channel-survey action output is wrapped in its path, with
+    'rpc -j' that is hardware/component/wifi-radio/channel-survey, with
+    RESTCONF it is 'infix-hardware:output'.  Dig for the lists rather
+    than assume one wrapping.
+    """
+    found = []
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == 'channel' and isinstance(value, list) and \
+               all(isinstance(ch, dict) and 'frequency' in ch for ch in value):
+                found.extend(value)
+            else:
+                found.extend(find_channels(value))
+    elif isinstance(data, list):
+        for item in data:
+            found.extend(find_channels(item))
+    return found
 
 
 def main():
@@ -619,8 +653,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  # Read from yanger output (show all sections)
-  yanger -x "ixll -A ssh host sudo" ietf-hardware | %(prog)s
+  # Read the channel-survey action output (show all sections)
+  rpc -j "/ietf-hardware:hardware/component[name='radio0']/infix-hardware:wifi-radio/channel-survey" | %(prog)s
 
   # Read from file
   %(prog)s survey_data.json
@@ -670,22 +704,10 @@ Examples:
     else:
         data = json.load(sys.stdin)
 
-    # Extract survey data from hardware components
-    survey_data = []
-    hardware = data.get('ietf-hardware:hardware', {})
-    components = hardware.get('component', [])
-
-    for component in components:
-        if component.get('class') == 'infix-hardware:wifi':
-            wifi_radio = component.get('infix-hardware:wifi-radio', {})
-            survey = wifi_radio.get('survey', {})
-            channels = survey.get('channel', [])
-            if channels:
-                survey_data.extend(channels)
-
+    survey_data = find_channels(data)
     if not survey_data:
         print("No WiFi survey data found in input", file=sys.stderr)
-        print("Expected format: yanger ietf-hardware output with wifi-radio survey data", file=sys.stderr)
+        print("Expected format: output of the infix-hardware channel-survey action", file=sys.stderr)
         sys.exit(1)
 
     # Generate SVG if requested (exclusive mode)
