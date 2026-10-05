@@ -308,6 +308,7 @@ func New(
 	mux.HandleFunc("POST /maintenance/system/datetime",        sys.SetDatetime)
 	mux.HandleFunc("GET /routing", routing.Overview)
 	mux.HandleFunc("GET /wifi", wifi.Overview)
+	mux.HandleFunc("POST /wifi/{name}/survey", wifi.Survey)
 	mux.HandleFunc("GET /hardware", hw.Overview)
 	mux.HandleFunc("POST /hardware/locate", hw.Locate)
 	mux.HandleFunc("GET /vpn", vpn.Overview)
