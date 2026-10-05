@@ -14,7 +14,7 @@ image::topology.svg[Basic NTP Client Test topology, align=center, scaledwidth=75
 
 . Set up topology and attach to target DUT
 . Configure NTP client on 'target'
-. Verify one source is in 'selected' state on 'target'
 . Verify three sources exist in NTP client on 'target'
+. Verify one source is in 'selected' state on 'target'
 
 

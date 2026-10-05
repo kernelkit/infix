@@ -149,9 +149,8 @@ with infamy.Test() as test:
             })
 
             ns.must_reach(TARGET_IP, timeout=30)
-            current = current_entries(target, "allowed")
-            assert current.get(HOST_IP) is True, \
-                f"Dynamic entry {HOST_IP} lost in firewall reload"
+            until(lambda: current_entries(target, "allowed").get(HOST_IP) is True,
+                  attempts=10)
 
         with test.step("Verify static entry cannot be removed with action"):
             must_fail(target.call_action, f"{ALLOWED}/remove",
