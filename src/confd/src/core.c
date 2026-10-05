@@ -805,6 +805,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			return SR_ERR_SYS;
 		}
 
+		/* Nudge yangerd to re-poll, best effort: it may not be installed */
+		if (systemf("initctl -bq reload yangerd"))
+			DEBUG("yangerd not reloaded, not running?");
+
 		AUDIT("The new configuration has been applied.");
 	}
 
