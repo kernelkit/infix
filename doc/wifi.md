@@ -328,6 +328,32 @@ station is associated to.  It appears only while connected.  When several
 access points share one SSID (a roaming network), the `bssid` is what
 tells them apart, and it changes as the station roams between them.
 
+### Channel Survey
+
+A channel survey shows how busy each channel is, which helps when picking a
+channel for an access point or when a link performs worse than its signal
+strength suggests.  The radio has to leave its operating channel to measure
+the others, so traffic on it pauses for a few seconds.  Because of that the
+survey only runs when asked for, it is not collected in the background.
+
+<pre class="cli"><code>admin@example:/> <b>show hardware radio0 survey</b>
+</code></pre>
+
+The output lists every channel the radio supports with its noise floor and
+utilization, marks the operating channel, and suggests the least busy
+channels per band.  A radio that has no interface yet can be surveyed too,
+which helps when picking a band and channel for it.  Add `passive` to listen longer on each channel without sending
+probe requests, which gives a steadier utilization reading at the cost of a
+longer pause.
+
+In the WebUI, each radio on the WiFi page has a **Scan channels** button that
+draws the same survey as a chart.
+
+Over NETCONF or RESTCONF the survey is the `channel-survey` action on the
+radio's hardware component.  Its output is a list of channels keyed by
+frequency, with the busy, receive and transmit time out of the total time
+the radio spent listening on each.
+
 ## Passphrase Requirements
 
 To ensure your connection is secure and compatible with all network
