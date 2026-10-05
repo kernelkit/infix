@@ -29,6 +29,8 @@ All notable changes to the project are documented in this file.
   never showed the boot partition
 - LLDP neighbors were listed without their system name, descriptions, and
   capabilities, in the CLI, the WebUI, and the operational datastore
+- The manufacturer from a VPD was not shown as `mfg-name` of its
+  `vpd-*` component in the operational datastore
 
 [v26.09.0][] - 2026-09-30
 -------------------------
