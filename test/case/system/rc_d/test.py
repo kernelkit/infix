@@ -10,6 +10,7 @@ script is disabled and must not run.  After saving to startup-config
 and rebooting, the file must list the two names in configured order.
 """
 import base64
+import subprocess
 
 import infamy
 from infamy.util import parallel, wait_boot
@@ -63,7 +64,8 @@ with infamy.Test() as test:
 
     with test.step("Verify scripts are extracted to /etc/rc.d in order"):
         tgtssh = env.attach("target", "mgmt", "ssh")
-        files = tgtssh.runsh("ls /etc/rc.d").stdout.split()
+        files = tgtssh.run_retry("ls /etc/rc.d", text=True,
+                                 stdout=subprocess.PIPE).stdout.split()
         assert files == ["01-first", "02-second"], f"unexpected /etc/rc.d contents: {files}"
 
     with test.step("Save to startup-config and reboot"):
@@ -77,10 +79,11 @@ with infamy.Test() as test:
                                   lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Verify enabled scripts ran once, in order"):
-        out = tgtssh.runsh(f"cat {ORDER}").stdout.split()
+        out = tgtssh.run_retry(f"cat {ORDER}", text=True,
+                               stdout=subprocess.PIPE).stdout.split()
         assert out == ["first", "second"], f"unexpected run order: {out}"
 
     with test.step("Verify disabled script did not run"):
-        assert tgtssh.runsh(f"test -e {NEVER}").returncode != 0, "disabled script was run"
+        assert tgtssh.run_retry(f"test -e {NEVER}").returncode == 1, "disabled script was run"
 
     test.succeed()

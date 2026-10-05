@@ -7,6 +7,7 @@ shadowing one shipped with the system is restored when the entry is
 disabled, and that a file is removed when the entry is deleted.
 """
 import base64
+import subprocess
 
 import infamy
 from infamy.util import parallel
@@ -20,7 +21,8 @@ def content(text):
 
 
 def cat(tgtssh, name):
-    return tgtssh.runsh(f"cat /etc/default/{name}").stdout
+    return tgtssh.run_retry(f"cat /etc/default/{name}", text=True,
+                            stdout=subprocess.PIPE).stdout
 
 
 with infamy.Test() as test:
@@ -80,6 +82,6 @@ with infamy.Test() as test:
         target.delete_xpath(f"/ietf-system:system/infix-system:advanced/defaults/default[name='{NEW}']")
 
     with test.step("Verify /etc/default/infamy-test is removed"):
-        assert tgtssh.runsh(f"test -e /etc/default/{NEW}").returncode != 0
+        assert tgtssh.run_retry(f"test -e /etc/default/{NEW}").returncode == 1
 
     test.succeed()
