@@ -33,84 +33,84 @@ with infamy.Test() as test:
                                             lambda: env.attach("client2", "mgmt"))
 
     with test.step("Configure DHCP client and server DUTs"):
+        server.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": server["link1"],
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.1.1",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }, {
+                            "name": server["link2"],
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "192.168.2.1",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        },
+                    ]
+                }
+            },
+            "infix-dhcp-server": {
+                "dhcp-server": {
+                    "option": [{
+                        "id": "router", "address": "auto"
+                    }],
+                    "subnet": [
+                        {
+                            "subnet": "192.168.1.0/24",
+                            "pool": {
+                                "start-address": POOL1,
+                                "end-address":   POOL1
+                            },
+                            "host": [{
+                                "address": ADDRESS1,
+                                "match": {
+                                    "client-id": {"hex": HOSTCID1}
+                                },
+                                "option": [
+                                    {
+                                        "id": "hostname",
+                                        "name": HOSTNM11
+                                    }, {
+                                        "id": "classless-static-route",
+                                        "static-route": [{
+                                            "destination": "0.0.0.0/0",
+                                            "next-hop": GW1
+                                        }]
+                                    }
+                                ]
+                            }]
+                        }, {
+                            "subnet": "192.168.2.0/24",
+                            "pool": {
+                                "start-address": POOL2,
+                                "end-address":   POOL2
+                            },
+                            "host": [{
+                                "address": ADDRESS2,
+                                "match": {
+                                    "client-id": {"str": HOSTCID2}
+                                },
+                                "option": [
+                                    {
+                                        "id": "hostname",
+                                        "name": HOSTNM22
+                                    }
+                                ],
+                                "lease-time": "infinite"
+                            }]
+                        },
+                    ]
+                }
+            }})
         parallel(
-            lambda: server.put_config_dicts({
-                "ietf-interfaces": {
-                    "interfaces": {
-                        "interface": [
-                            {
-                                "name": server["link1"],
-                                "ipv4": {
-                                    "address": [{
-                                        "ip": "192.168.1.1",
-                                        "prefix-length": 24
-                                    }]
-                                }
-                            }, {
-                                "name": server["link2"],
-                                "ipv4": {
-                                    "address": [{
-                                        "ip": "192.168.2.1",
-                                        "prefix-length": 24
-                                    }]
-                                }
-                            },
-                        ]
-                    }
-                },
-                "infix-dhcp-server": {
-                    "dhcp-server": {
-                        "option": [{
-                            "id": "router", "address": "auto"
-                        }],
-                        "subnet": [
-                            {
-                                "subnet": "192.168.1.0/24",
-                                "pool": {
-                                    "start-address": POOL1,
-                                    "end-address":   POOL1
-                                },
-                                "host": [{
-                                    "address": ADDRESS1,
-                                    "match": {
-                                        "client-id": {"hex": HOSTCID1}
-                                    },
-                                    "option": [
-                                        {
-                                            "id": "hostname",
-                                            "name": HOSTNM11
-                                        }, {
-                                            "id": "classless-static-route",
-                                            "static-route": [{
-                                                "destination": "0.0.0.0/0",
-                                                "next-hop": GW1
-                                            }]
-                                        }
-                                    ]
-                                }]
-                            }, {
-                                "subnet": "192.168.2.0/24",
-                                "pool": {
-                                    "start-address": POOL2,
-                                    "end-address":   POOL2
-                                },
-                                "host": [{
-                                    "address": ADDRESS2,
-                                    "match": {
-                                        "client-id": {"str": HOSTCID2}
-                                    },
-                                    "option": [
-                                        {
-                                            "id": "hostname",
-                                            "name": HOSTNM22
-                                        }
-                                    ],
-                                    "lease-time": "infinite"
-                                }]
-                            },
-                        ]
-                    }
-                }}),
             # We request hostname option just to ensure we don't get it.
             lambda: client1.put_config_dicts({
                 "ietf-system": {
