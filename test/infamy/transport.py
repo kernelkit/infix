@@ -75,6 +75,16 @@ class Transport(ABC):
         """
         pass
 
+    @abstractmethod
+    def call_action_output(self, xpath, input_data=None):
+        """Invoke a YANG action at `xpath`, returning its output.
+
+        The output is a nested dict of the action's output nodes, lists
+        as Python lists.  Leaf values are strings on NETCONF and typed
+        on RESTCONF, compare with str().
+        """
+        pass
+
     def __getitem__(self, key):
         if key in self.mapping:
             return self.mapping[key]

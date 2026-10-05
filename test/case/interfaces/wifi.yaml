@@ -19,3 +19,6 @@
 
 - name: WiFi station set up from a scan-only interface
   case: wifi_station_from_scan/test.py
+
+- name: WiFi channel survey on a connected radio
+  case: wifi_channel_survey/test.py
