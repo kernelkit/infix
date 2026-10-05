@@ -122,6 +122,13 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="WIFI_RADIOS">
+  <COMPL>
+    <ACTION sym="wifi_radios@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <PTYPE name="FIREWALL_ZONES">
   <COMPL>
     <ACTION sym="firewall_zones@infix"/>
@@ -684,9 +691,25 @@ echo "Public:  $pub"
     <ACTION sym="script">show mdns</ACTION>
   </COMMAND>
 
-  <COMMAND name="hardware" help="Show hardware information">
+  <COMMAND name="hardware" help="Show hardware information, or one component">
+    <PARAM name="component" ptype="/WIFI_RADIOS" help="Hardware component, e.g. radio0" min="0" max="1">
+      <SWITCH name="optional" min="0">
+        <COMMAND name="survey" help="Scan all channels on a WiFi radio and show how busy each one is">
+          <ACTION sym="script" in="tty" out="tty" interrupt="true">
+            show hardware "$KLISH_PARAM_component" survey |pager
+          </ACTION>
+          <SWITCH name="survey-optional" min="0">
+            <COMMAND name="passive" help="Listen only, longer dwell per channel, no probe requests">
+              <ACTION sym="script" in="tty" out="tty" interrupt="true">
+                show hardware "$KLISH_PARAM_component" survey passive |pager
+              </ACTION>
+            </COMMAND>
+          </SWITCH>
+        </COMMAND>
+      </SWITCH>
+    </PARAM>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      show hardware |pager
+      show hardware ${KLISH_PARAM_component:+"$KLISH_PARAM_component"} |pager
     </ACTION>
   </COMMAND>
 
