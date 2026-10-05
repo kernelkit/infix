@@ -15,6 +15,93 @@ each board making up a system, figure out if a system belongs to a
 particular production batch, etc.
 
 
+## Device Tree Bindings
+
+The system finds its VPDs through the `vpds` property of the
+`/chosen/infix` node in the device tree (DT), a list of phandles to EEPROMs with an ONIE TLV
+layout.  Each EEPROM is named with an `infix,board` property, and may
+be marked `infix,trusted`:
+
+```
+/ {
+	chosen {
+		infix {
+			vpds = <&vpd_cpu &vpd_product>;
+		};
+	};
+};
+
+&i2c0 {
+	vpd_product: eeprom@50 {
+		compatible = "atmel,24c02";
+		reg = <0x50>;
+
+		infix,board = "product";
+		infix,trusted;
+
+		nvmem-layout {
+			compatible = "onie,tlv-layout";
+
+			base_mac: mac-address {
+				#nvmem-cell-cells = <1>;
+			};
+		};
+	};
+};
+```
+
+Every VPD is listed in the _ietf-hardware_ model as a component named
+`vpd-<board>`, e.g., `vpd-product` for the example above.
+
+
+## Product VPD
+
+The VPD named `product` describes the device as a whole.  Its
+attributes are used for the following, falling back to other sources
+when an attribute is missing:
+
+| Key               | Used for                                    | Fallback                             |
+|-------------------|---------------------------------------------|--------------------------------------|
+| `"vendor"`        | `mfg-name` of the `mainboard` component     | Vendor of DT `compatible`            |
+| `"product-name"`  | `model-name` of the `mainboard` component   | DT `model` property                  |
+| `"part-number"`   | `hardware-rev` of the `mainboard` component | None                                 |
+| `"serial-number"` | `serial-num` of the `mainboard` component   | DT `serial-number` property          |
+| `"mac-address"`   | Base (chassis) MAC address, see below       | Lowest MAC address of all interfaces |
+
+The base MAC address is the `phys-address` of the `mainboard`
+component.  It is also what the `chassis` option of an interface's
+`custom-phys-address` refers to, see [Common Interface
+Settings](iface.md#chassis-mac), and the source of the `%m` format
+specifier in the hostname, which the factory configuration uses to
+give each device a unique name, e.g., `example-c0-ff-ee`.
+
+The kernel sets the MAC address of each Ethernet port from the
+`nvmem-cells` property of its device tree node, which can refer to the
+`mac-address` cell of the product VPD, plus an offset:
+
+```
+&eth0 {
+	nvmem-cells = <&base_mac 1>;
+	nvmem-cell-names = "mac-address";
+};
+```
+
+### Factory Password
+
+The factory default `admin` password hash, the `pwhash` [extension
+below](#infix-specific-extensions), is read from the first VPD marked
+`infix,trusted` that has one, which need not be the product VPD.  It takes precedence
+over a `factory-password-hash` property in the `/chosen/infix` node.
+Without either, the system reports a critical bootstrap error.
+
+### Virtual Machines
+
+When running in QEMU, the product VPD is read from the `opt/vpd`
+firmware configuration file, and is always trusted.  Without that file
+the password defaults to `admin`, and the base MAC address is the lowest
+port MAC address minus one.
+
+
 ## JSON Encoding
 
 To make EEPROM binary generation less cumbersome, Infix defines a JSON
