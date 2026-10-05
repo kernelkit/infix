@@ -64,9 +64,7 @@ with infamy.Test() as test:
         target.put_config_dicts({"ietf-interfaces": config})
 
     with test.step("Verify target:data has MAC address '02:01:00:c0:ff:ee'"):
-        mac = iface.get_phys_address(target, tport)
-        print(f"Current MAC: {mac}, should be: {STATIC}")
-        assert mac == STATIC
+        until(lambda: iface.get_phys_address(target, tport) == STATIC)
 
     with test.step("Reset target:data MAC address to default"):
         reset_mac(target, tport)
