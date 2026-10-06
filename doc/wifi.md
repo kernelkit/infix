@@ -95,14 +95,21 @@ Radios are automatically discovered and named `radio0`, `radio1`, etc.
 
 ### Country Code ⚠
 
-The radio defaults to "00" for World domain, but some systems may ship with a
-factory default country code (typically "DE" for the BPi-R3).
+The country code is one setting for all radios in the system, since the
+regulatory domain is one setting in the kernel.  It defaults to "00", the
+world domain: no 6 GHz, listen-only on 5 GHz, and no access point or mesh
+point can be configured.  Some systems ship with a factory default
+(typically "DE" for the BPi-R3).
+
+<pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set hardware wifi country-code DE</b>
+admin@example:/config/> <b>leave</b>
+</code></pre>
 
 > [!IMPORTANT] Legal notice!
-> The `country-code` setting is **legally required** and determines
-> which WiFi channels and power levels are permitted in your
-> location. Using an incorrect country code may violate local wireless
-> regulations.
+> The country code is **legally required** and determines which WiFi
+> channels and power levels are permitted in your location. Using an
+> incorrect country code may violate local wireless regulations.
 
 **Common country codes, see [ISO 3166-1 alpha-2][1] for the complete list**:
 
@@ -123,13 +130,13 @@ factory default country code (typically "DE" for the BPi-R3).
 
 ### Basic Radio Setup
 
-Configure the radio with channel, power, and regulatory domain.
+Configure the radio with band and channel.  The country code above covers
+all radios.
 
 **For Station (client) mode:**
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit hardware component radio0 wifi-radio</b>
-admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set country-code DE</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 </code></pre>
 
@@ -137,7 +144,6 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit hardware component radio0 wifi-radio</b>
-admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set country-code DE</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set band 5GHz</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set channel 36</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set channel-width 80MHz</b>
@@ -146,8 +152,6 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 
 **Key radio parameters:**
 
-- `country-code`: Two-letter [ISO 3166-1 alpha-2][1] code, determines allowed
-  channels and maximum power. Examples: US, DE, GB, SE, FR, JP.  
   **⚠ Must match your physical location for legal compliance! ⚠**
 - `band`: 2.4GHz, 5GHz, or 6GHz (required for AP mode). Automatically enables
   appropriate WiFi standards:
@@ -273,7 +277,6 @@ interface referencing it:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit hardware component radio0 wifi-radio</b>
-admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set country-code DE</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 </code></pre>
 
@@ -499,8 +502,8 @@ IoT devices, or segregating traffic into different VLANs.
 **Step 1: Configure the radio** (shared by all APs)
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set hardware wifi country-code DE</b>
 admin@example:/config/> <b>edit hardware component radio0 wifi-radio</b>
-admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set country-code DE</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set band 5GHz</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>set channel 36</b>
 admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
@@ -770,15 +773,15 @@ vendors without proprietary components.
 
 ### Mesh configuration
 
-A mesh point requires the radio to have `band`, `channel`, and a valid
-`country-code` configured. Mesh and AP modes cannot coexist on the same
-radio.
+A mesh point requires the radio to have `band` and `channel` configured,
+and the system a country code.  Mesh and AP modes cannot coexist on the
+same radio.
 
 **Step 1: Configure the radio**
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
+admin@example:/config/> <b>set hardware wifi country-code DE</b>
 admin@example:/config/> <b>edit hardware component radio1 wifi-radio</b>
-admin@example:/config/hardware/component/radio1/wifi-radio/> <b>set country-code DE</b>
 admin@example:/config/hardware/component/radio1/wifi-radio/> <b>set band 5GHz</b>
 admin@example:/config/hardware/component/radio1/wifi-radio/> <b>set channel 36</b>
 admin@example:/config/hardware/component/radio1/wifi-radio/> <b>leave</b>
@@ -968,8 +971,8 @@ If issues arise, try the following troubleshooting steps:
    the passphrase matches the network password
 3. **Review logs**: Check system logs with `show log` for Wi-Fi related
    errors
-4. **Regulatory compliance**: Ensure the country-code on the radio
-   matches your location
+4. **Regulatory compliance**: Ensure the WiFi country code matches your
+   location
 5. **Hardware detection**: Confirm the WiFi radio appears in `show
    hardware`
 

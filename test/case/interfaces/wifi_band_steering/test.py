@@ -83,10 +83,9 @@ with infamy.Test() as test:
         # dedicated band-steering cell (cell2) in test/virt/quad.
         parallel(
             lambda: ap.put_config_dicts({
-                "ietf-hardware": {"hardware": {"component": [
+                "ietf-hardware": wifi.hardware(
                     wifi.radio("radio2", band="2.4GHz", channel=1),
-                    wifi.radio("radio3", band="5GHz", channel=36),
-                ]}},
+                    wifi.radio("radio3", band="5GHz", channel=36)),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
                     {"name": "br0", "type": "infix-if-type:bridge", "enabled": True,
@@ -104,7 +103,7 @@ with infamy.Test() as test:
             # (cell2).  No band/channel pinned: the one radio scans both bands and
             # lets band steering decide where it lands.
             lambda: client.put_config_dicts({
-                "ietf-hardware": {"hardware": {"component": [wifi.radio("radio2")]}},
+                "ietf-hardware": wifi.hardware(wifi.radio("radio2")),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
                     wifi.iface("wifi0", CLIENT_MAC, {

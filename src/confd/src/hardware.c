@@ -900,9 +900,18 @@ static void wifi_build_vht_capab(char *out, size_t sz, unsigned int vht_cap, int
 	}
 }
 
+/* The box-wide WiFi country code, NULL when none is configured */
+static const char *wifi_country_code(struct lyd_node *config)
+{
+	struct lyd_node *wifi;
+
+	wifi = lydx_get_descendant(config, "hardware", "wifi", NULL);
+	return lydx_get_cattr(wifi, "country-code");
+}
+
 /* Helper: Write radio-specific configuration */
 static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
-				  struct lyd_node *radio_node)
+				  struct lyd_node *radio_node, struct lyd_node *config)
 {
 	const char *country, *channel, *band, *width;
 	unsigned int ht_cap = 0, vht_cap = 0;
@@ -911,7 +920,7 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 	int ch = 0;
 	bool legacy_rates, he = false;
 
-	country = lydx_get_cattr(radio_node, "country-code");
+	country = wifi_country_code(config);
 	band = lydx_get_cattr(radio_node, "band");
 	channel = lydx_get_cattr(radio_node, "channel");
 	width = lydx_get_cattr(radio_node, "channel-width");
@@ -1168,7 +1177,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "\n");
 
 	/* Radio-specific configuration */
-	wifi_gen_radio_config(hostapd, radio_name, radio_node);
+	wifi_gen_radio_config(hostapd, radio_name, radio_node, config);
 
 	/* Add BSS sections for secondary APs (multi-SSID) */
 	for (i = 1; i < ap_count; i++) {
@@ -1243,6 +1252,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		    sr_event_t event, struct confd *confd)
 {
 	struct lyd_node  *difs = NULL, *dif = NULL;
+	int country_changed = 0;
 	int rc = SR_ERR_OK;
 	int gps_changed = 0;
 	int wifi_changed = 0;
@@ -1250,7 +1260,22 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	if (!lydx_find_xpathf(diff, XPATH_BASE_))
 		return SR_ERR_OK;
 
-	difs = lydx_get_descendant(diff, "hardware", "component", NULL);
+	/*
+	 * The country code is one setting for every radio.  Apply the
+	 * regulatory domain here, not from hostapd, so a radio without an
+	 * interface is in the right domain too.  Every radio's hostapd
+	 * config carries the code, so visit them all when it changes.
+	 */
+	if (lydx_get_xpathf(diff, XPATH_BASE_ "/infix-hardware:wifi/country-code")) {
+		country_changed = 1;
+		if (event == SR_EV_DONE)
+			systemf("iw reg set %s", wifi_country_code(config) ?: "00");
+	}
+
+	if (country_changed)
+		difs = lydx_get_descendant(config, "hardware", "component", NULL);
+	else
+		difs = lydx_get_descendant(diff, "hardware", "component", NULL);
 
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
 		enum lydx_op op;
@@ -1267,6 +1292,9 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			continue;
 
 		class = lydx_get_cattr(cif, "class");
+		if (country_changed && strcmp(class, "infix-hardware:wifi") &&
+		    !lydx_get_xpathf(diff, XPATH_BASE_ "/component[name='%s']", name))
+			continue;
 
 		/* Handle USB components */
 		if (!strcmp(class, "infix-hardware:usb")) {

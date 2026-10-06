@@ -6,9 +6,9 @@ the operational state under /ietf-interfaces.  See doc/wifi.md.
 import base64
 
 
-def radio(name, country="SE", band=None, channel=None):
+def radio(name, band=None, channel=None):
     """ietf-hardware component for a WiFi radio."""
-    settings = {"country-code": country}
+    settings = {}
     if band:
         settings["band"] = band
     if channel is not None:
@@ -18,6 +18,14 @@ def radio(name, country="SE", band=None, channel=None):
         "class": "infix-hardware:wifi",
         "infix-hardware:wifi-radio": settings,
     }
+
+
+def hardware(*radios, country="SE"):
+    """ietf-hardware config: the radios plus the box-wide WiFi country code."""
+    return {"hardware": {
+        "infix-hardware:wifi": {"country-code": country},
+        "component": list(radios),
+    }}
 
 
 def keystore(secrets):

@@ -96,10 +96,9 @@ def gw_config(mesh_mac, ap_mac, uplink=None):
             "infix-interfaces:bridge-port": {"bridge": "br0"},
         })
     return {
-        "ietf-hardware": {"hardware": {"component": [
+        "ietf-hardware": wifi.hardware(
             wifi.radio("radio0", band="5GHz", channel=36),
-            wifi.radio("radio1", band="2.4GHz", channel=1),
-        ]}},
+            wifi.radio("radio1", band="2.4GHz", channel=1)),
         "ietf-keystore": wifi.keystore(SECRETS),
         "ietf-interfaces": {"interfaces": {"interface": interfaces}},
     }
@@ -136,8 +135,7 @@ with infamy.Test() as test:
         # associates to live in the same cell only when they share an index.
         # See doc/wifi.md and test/virt/quad.
         client.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [
-                wifi.radio("radio1", band="2.4GHz", channel=1)]}},
+            "ietf-hardware": wifi.hardware(wifi.radio("radio1", band="2.4GHz", channel=1)),
             "ietf-keystore": wifi.keystore(SECRETS),
             "ietf-interfaces": {"interfaces": {"interface": [
                 wifi.iface("wifi0", CLIENT_MAC, {

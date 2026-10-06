@@ -38,6 +38,13 @@ All notable changes to the project are documented in this file.
   the keystore.  Its default route and DNS servers are used like those from
   a DHCP server, and the TCP MSS of forwarded connections is clamped to the
   session MTU, see [PPPoE Client][pppoe]
+- The WiFi country code is now one setting for the whole system, `hardware
+  wifi country-code`, instead of one per radio.  It defaults to the world
+  domain and is applied as soon as it is set, so a radio without an
+  interface is in the right regulatory domain too.  Existing configurations
+  are migrated, the first radio's code wins, and a code the regulatory
+  database does not know, which never had any effect, becomes the world
+  domain
 - WiFi channel survey is now on request: `show hardware <radio> survey` in the
   CLI, a Scan channels button per radio on the WebUI WiFi page, or the
   `channel-survey` action on the radio.  The survey covers every channel the

@@ -237,8 +237,8 @@ int wifi_gen_settings(sr_session_ctx_t *session, struct lyd_node *dif,
  */
 int wifi_gen_station(struct lyd_node *cif)
 {
-	const char *ifname, *ssid, *secret_name, *security_mode, *radio;
-	struct lyd_node *security, *secret_node, *radio_node, *station, *wifi;
+	const char *ifname, *ssid, *secret_name, *security_mode;
+	struct lyd_node *security, *secret_node, *station, *wifi;
 	const char *bssid = NULL;
 	unsigned char *secret = NULL;
 	FILE *wpa_supplicant = NULL;
@@ -252,7 +252,6 @@ int wifi_gen_station(struct lyd_node *cif)
 	if (!wifi)
 		return SR_ERR_OK;
 
-	radio = lydx_get_cattr(wifi, "radio");
 	station = lydx_get_child(wifi, "station");
 	if (station) {
 		ssid = lydx_get_cattr(station, "ssid");
@@ -268,9 +267,8 @@ int wifi_gen_station(struct lyd_node *cif)
 		secret_name = NULL;
 	}
 
-	radio_node = lydx_get_xpathf(cif,
-		"/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio);
-	country = lydx_get_cattr(radio_node, "country-code");
+	country = lydx_get_cattr(lydx_get_xpathf(cif, "/ietf-hardware:hardware/infix-hardware:wifi"),
+				 "country-code");
 
 	if (secret_name && strcmp(security_mode, "disabled") != 0) {
 		const char *b64;
@@ -439,7 +437,8 @@ int wifi_gen_mesh(struct lyd_node *cif)
 
 	radio_node = lydx_get_xpathf(cif,
 		"/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio);
-	country = lydx_get_cattr(radio_node, "country-code");
+	country = lydx_get_cattr(lydx_get_xpathf(cif, "/ietf-hardware:hardware/infix-hardware:wifi"),
+				 "country-code");
 	band = lydx_get_cattr(radio_node, "band");
 	width = lydx_get_cattr(radio_node, "channel-width");
 	channel = atoi(lydx_get_cattr(radio_node, "channel") ? : "0");
