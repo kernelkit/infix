@@ -49,6 +49,13 @@ submodule infix-if-wifi {
      - Security: WPA2/WPA3 with keystore integration
      - Operational state: Connection status, RSSI, client lists";
 
+  revision 2026-10-06 {
+    description
+      "Access point and mesh point require the box-wide WiFi country code,
+       the per-radio country-code leaf is gone.";
+    reference "internal";
+  }
+
   revision 2026-10-02 {
     description
       "Add 4-address (WDS) support: wds-link mode for access point side
@@ -411,8 +418,8 @@ submodule infix-if-wifi {
               error-message "Parent radio must have 'channel' configured for Access Point mode";
             }
 
-            must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:country-code != '00'" {
-              error-message "Country code '00' (world regulatory domain) is not allowed for Access Point mode. Please configure a specific country code on the radio.";
+            must "/iehw:hardware/ih:wifi/ih:country-code != '00'" {
+              error-message "Set the WiFi country code (hardware wifi country-code) before configuring an access point, the world domain '00' is not allowed.";
             }
 
             leaf ssid {
@@ -718,8 +725,8 @@ submodule infix-if-wifi {
               error-message "Parent radio must have 'channel' configured for mesh mode";
             }
 
-            must "/iehw:hardware/iehw:component[iehw:name = current()/../radio]/ih:wifi-radio/ih:country-code != '00'" {
-              error-message "Country code '00' is not allowed for mesh mode.";
+            must "/iehw:hardware/ih:wifi/ih:country-code != '00'" {
+              error-message "Set the WiFi country code (hardware wifi country-code) before configuring a mesh point, the world domain '00' is not allowed.";
             }
 
             must "not(/if:interfaces/if:interface[wifi/access-point][wifi/radio = current()/../radio])" {

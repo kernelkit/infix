@@ -78,8 +78,7 @@ with infamy.Test() as test:
 
     with test.step("Configure the ap as an Access Point on radio0"):
         ap.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [
-                wifi.radio("radio0", band="2.4GHz", channel=1)]}},
+            "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
             "ietf-keystore": wifi.keystore({"wifi": PSK}),
             "ietf-interfaces": {"interfaces": {"interface": [
                 wifi.iface("wifi0", AP_MAC, {
@@ -99,7 +98,7 @@ with infamy.Test() as test:
     with test.step("Configure the stations on radio0"):
         def configure_station(mac, dut):
             dut.put_config_dicts({
-                "ietf-hardware": {"hardware": {"component": [wifi.radio("radio0")]}},
+                "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
                     wifi.iface("wifi0", mac, {

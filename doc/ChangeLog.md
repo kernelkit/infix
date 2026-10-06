@@ -42,6 +42,9 @@ All notable changes to the project are documented in this file.
   the keystore.  Its default route and DNS servers are used like those from
   a DHCP server, and the TCP MSS of forwarded connections is clamped to the
   session MTU, see [PPPoE Client][pppoe]
+- The WiFi country code is one setting for the whole system, `hardware
+  wifi country-code`, instead of one per radio, and applies as soon as it
+  is set.  Existing configurations are migrated
 - WiFi channel survey is on request: `show hardware <radio> survey`, the
   Scan channels button on the WebUI WiFi page, or the `channel-survey`
   action.  The always-on `survey` container under the radio is gone

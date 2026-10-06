@@ -40,8 +40,7 @@ LEASE = "192.168.20.100"
 
 def root_config():
     return {
-        "ietf-hardware": {"hardware": {"component": [
-            wifi.radio("radio0", band="2.4GHz", channel=1)]}},
+        "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
         "ietf-keystore": wifi.keystore({"wifi": PSK}),
         "ietf-interfaces": {"interfaces": {"interface": [
             {
@@ -77,7 +76,7 @@ def root_config():
 
 def satellite_config():
     return {
-        "ietf-hardware": {"hardware": {"component": [wifi.radio("radio0")]}},
+        "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
         "ietf-keystore": wifi.keystore({"wifi": PSK}),
         "ietf-interfaces": {"interfaces": {"interface": [
             {

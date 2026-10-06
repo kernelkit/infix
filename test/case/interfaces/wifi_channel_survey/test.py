@@ -34,8 +34,7 @@ with infamy.Test() as test:
     with test.step("Configure the ap as an Access Point on channel 1 and the station on radio0"):
         parallel(
             lambda: ap.put_config_dicts({
-                "ietf-hardware": {"hardware": {"component": [
-                    wifi.radio("radio0", band="2.4GHz", channel=1)]}},
+                "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
                     wifi.iface("wifi0", "02:00:00:00:00:01", {
@@ -48,7 +47,7 @@ with infamy.Test() as test:
                 ]}},
             }),
             lambda: station.put_config_dicts({
-                "ietf-hardware": {"hardware": {"component": [wifi.radio("radio0")]}},
+                "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
                     wifi.iface("wifi0", "02:00:00:00:00:02", {

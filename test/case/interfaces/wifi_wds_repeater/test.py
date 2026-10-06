@@ -54,8 +54,7 @@ SECRETS = {"backhaul": PSK, "home": PSK, "guest": PSK}
 
 def root_config(uplink):
     return {
-        "ietf-hardware": {"hardware": {"component": [
-            wifi.radio("radio0", band="2.4GHz", channel=1)]}},
+        "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
         "ietf-keystore": wifi.keystore(SECRETS),
         "ietf-interfaces": {"interfaces": {"interface": [
             {"name": "br0", "type": "infix-if-type:bridge", "enabled": True,
@@ -93,8 +92,7 @@ def root_config(uplink):
 
 def repeater_config():
     return {
-        "ietf-hardware": {"hardware": {"component": [
-            wifi.radio("radio0", band="2.4GHz", channel=1)]}},
+        "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
         "ietf-keystore": wifi.keystore(SECRETS),
         "ietf-interfaces": {"interfaces": {"interface": [
             {"name": "br0", "type": "infix-if-type:bridge", "enabled": True,
@@ -131,7 +129,7 @@ def repeater_config():
 
 def station_config(mac, ssid, secret):
     return {
-        "ietf-hardware": {"hardware": {"component": [wifi.radio("radio0")]}},
+        "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
         "ietf-keystore": wifi.keystore(SECRETS),
         "ietf-interfaces": {"interfaces": {"interface": [
             wifi.iface("wifi0", mac, {

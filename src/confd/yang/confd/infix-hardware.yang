@@ -21,6 +21,12 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2026-10-06 {
+    description "Move the WiFi country code from each radio to the box-wide
+                 hardware/wifi container, the regulatory domain is one setting.";
+    reference "internal";
+  }
+
   revision 2026-10-05 {
     description "Replace the WiFi radio survey container with the channel-survey
                  action, survey data is collected on request only.";
@@ -209,6 +215,34 @@ module infix-hardware {
   deviation "/iehw:hardware/iehw:component/iehw:asset-id" {
     deviate not-supported;
   }
+  augment "/iehw:hardware" {
+    description
+      "Settings shared by every WiFi radio in the system.";
+
+    container wifi {
+      if-feature wifi;
+      description
+        "WiFi settings that apply to all radios.";
+
+      leaf country-code {
+        type iwcc:country-code;
+        default "00";
+        description
+          "Two-letter ISO 3166-1 country code, the regulatory domain for
+           every WiFi radio in the system.  It decides which channels
+           and transmit power levels the radios may use.
+
+           The default '00' is the world domain: no 6 GHz, the 5 GHz
+           band listen-only, and no access point or mesh point can be
+           configured.
+
+           Examples: 'US', 'DE', 'JP'.
+
+           WARNING: Incorrect values may violate local laws and regulations.";
+      }
+    }
+  }
+
   augment "/iehw:hardware/iehw:component" {
     leaf phys-address {
       type yang:phys-address;
@@ -297,22 +331,6 @@ module infix-hardware {
          a WiFi radio (class 'ih:wifi'). WiFi radios are physical devices
          that can host multiple virtual WiFi interfaces (APs or Stations).";
 
-      leaf country-code {
-        type iwcc:country-code;
-        mandatory true;
-        description
-          "Two-letter ISO 3166-1 country code for regulatory compliance.
-
-           Sets the regulatory domain for this radio, determining:
-           - Allowed channels and frequencies
-           - Maximum transmit power
-           - DFS (Dynamic Frequency Selection) requirements
-
-           Examples: 'US', 'DE', 'JP'.
-
-           WARNING: Incorrect values may violate local laws and regulations.";
-      }
-
       leaf channel {
         type union {
           type uint16 {
@@ -333,7 +351,7 @@ module infix-hardware {
 
            Channel availability depends on:
            - Configured band (2.4/5/6 GHz)
-           - Regulatory domain (country-code)
+           - Regulatory domain (hardware wifi country-code)
            - Hardware capabilities
 
            Common channels:
@@ -450,7 +468,7 @@ module infix-hardware {
 
            Channels depend on:
            - Hardware capabilities
-           - Configured country-code
+           - The system's WiFi country code
            - Band selection
 
            This list reflects actual usable channels after applying

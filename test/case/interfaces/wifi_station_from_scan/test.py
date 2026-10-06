@@ -37,8 +37,7 @@ with infamy.Test() as test:
 
     with test.step("Configure the ap with access point 'infix-scan' and a DHCP server on 192.168.21.1"):
         ap.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [
-                wifi.radio("radio0", band="2.4GHz", channel=1)]}},
+            "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
             "ietf-keystore": wifi.keystore({"wifi": PSK}),
             "ietf-interfaces": {"interfaces": {"interface": [
                 wifi.iface("wifi0", "02:00:00:00:00:01", {
@@ -57,7 +56,7 @@ with infamy.Test() as test:
 
     with test.step("Configure wifi0 on the station with only radio0, scan-only mode"):
         station.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [wifi.radio("radio0")]}},
+            "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
             "ietf-interfaces": {"interfaces": {"interface": [
                 wifi.iface("wifi0", "02:00:00:00:00:02", {"radio": "radio0"},
                            ipv4={"infix-dhcp-client:dhcp": {}}),
