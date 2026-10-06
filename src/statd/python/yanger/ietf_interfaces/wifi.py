@@ -287,12 +287,15 @@ def extract_encryption(flags):
         'auth_type': 'Unknown'
     }
 
-    # Extract WPA protocols
-    if 'WPA3' in flags:
+    # wpa_supplicant labels every RSN network WPA2, so WPA3 is told
+    # apart by its key management: SAE only is WPA3, SAE next to PSK
+    # is a WPA2/WPA3 transition network.
+    rsn = 'WPA2-' in flags
+    if rsn and 'SAE' in flags:
         encryption_info['protocols'].append('WPA3')
-    if 'WPA2' in flags:
+    if rsn and ('PSK' in flags or 'EAP' in flags):
         encryption_info['protocols'].append('WPA2')
-    if 'WPA-' in flags and 'WPA2' not in flags and 'WPA3' not in flags:
+    if 'WPA-' in flags and not rsn:
         encryption_info['protocols'].append('WPA')
 
     # Extract key management methods

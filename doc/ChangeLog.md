@@ -73,6 +73,7 @@ All notable changes to the project are documented in this file.
   Raspberry Pi 4 factory configuration, did not connect until a reboot
 - A WiFi station never connected to a WPA3-only access point, which
   includes every access point on 6 GHz
+- WiFi scan results listed WPA3-only networks as WPA2-Personal
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
