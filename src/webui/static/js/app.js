@@ -1100,6 +1100,28 @@ function setBlockEnabled(el, on) {
     });
   });
 
+  // WiFi channel survey: click the chart to open a copy of it in the
+  // page's survey dialog, sized to the window.  Delegated so it survives
+  // the htmx swap that replaces the chart on every scan.  A click on the
+  // backdrop closes the dialog, like the close button.
+  document.addEventListener('click', function (e) {
+    var zoom = e.target.closest && e.target.closest('[data-survey-zoom]');
+    if (!zoom) return;
+    var dlg = document.getElementById('survey-dialog');
+    var svg = zoom.querySelector('svg');
+    if (!dlg || !dlg.showModal || !svg) return;
+    var body = document.getElementById('survey-dialog-body');
+    var radio = document.getElementById('survey-dialog-radio');
+    body.innerHTML = '';
+    body.appendChild(svg.cloneNode(true));
+    if (radio) radio.textContent = zoom.getAttribute('data-survey-zoom') || '';
+    dlg.showModal();
+  });
+  document.addEventListener('click', function (e) {
+    var dlg = e.target;
+    if (dlg && dlg.id === 'survey-dialog' && dlg.open) dlg.close();
+  });
+
   // Add Interface modal — open via data-show-modal, close via
   // data-close-modal. Mirrors the existing data-show/data-hide vocabulary
   // for action-on-target attributes. Native <dialog>.showModal() gives us

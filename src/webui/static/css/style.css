@@ -2205,6 +2205,37 @@ details[open] > .cfg-multi-summary {
   width: auto;
 }
 
+/* Click the chart to open it in an overlay sized to the window. */
+.survey-zoom {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.survey-zoom .survey-chart {
+  margin: 0 auto;
+}
+
+.survey-dialog {
+  min-width: 0;
+  width: min(96vw, 1400px);
+}
+
+.survey-dialog .iface-modal-body {
+  padding: 1rem;
+}
+
+.survey-dialog .survey-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 82vh;
+  margin: 0 auto;
+}
+
 .wifi-ssid {
   font-weight: 400;
   color: var(--fg-muted);
