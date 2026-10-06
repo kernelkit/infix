@@ -11,7 +11,8 @@
 #include <sys/types.h>
 
 #define RESETME    "/mnt/cfg/infix/.reset"
-#define touch(f)   mknod((f), S_IFREG|0644, 0)
+
+#define BOARDCHECK "/usr/libexec/infix/check-factory"
 
 int rawgetch(void)
 {
@@ -87,12 +88,39 @@ static int run(const char *cmd)
 	return rc;
 }
 
+static int mark(void)
+{
+	return run("mkdir -p $(dirname " RESETME ") && touch " RESETME);
+}
+
+static int check(int clear)
+{
+	struct stat st;
+
+	if (!stat(RESETME, &st) && ((st.st_mode & S_IFMT) == S_IFREG)) {
+		if (clear)
+			unlink(RESETME);
+
+		return 0;
+	}
+
+	if (!run("grep -q 'finit.cond=factory-reset' /proc/cmdline"))
+		return 0;
+
+	if (!stat(BOARDCHECK, &st) && (st.st_mode & S_IXUSR))
+		return run(BOARDCHECK);
+
+	return 1;
+}
+
 int main(int argc, char *argv[])
 {
 	struct option long_opts[] = {
-		{ "help",       0, NULL, 'h' },
-		{ "no-reboot",  0, NULL, 'r' },
-		{ "assume-yes", 0, NULL, 'y' },
+		{ "check",       0, NULL, 'c' },
+		{ "check-clear", 0, NULL, 'C' },
+		{ "help",        0, NULL, 'h' },
+		{ "no-reboot",   0, NULL, 'r' },
+		{ "assume-yes",  0, NULL, 'y' },
 		{ NULL, 0, NULL, 0 }
 	};
 	int reboot = 1;
@@ -100,8 +128,12 @@ int main(int argc, char *argv[])
 	char *tty;
 	int c;
 
-	while ((c = getopt_long(argc, argv, "h?ry", long_opts, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "cCh?ry", long_opts, NULL)) != EOF) {
 		switch (c) {
+		case 'c':
+			return check(0);
+		case 'C':
+			return check(1);
 		case 'h':
 		case '?':
 			return usage(0);
@@ -127,7 +159,7 @@ int main(int argc, char *argv[])
 		errx(1, "factory reset only allowed from console login!");
 
 	if (yes || yorn("Factory reset device (y/N)? ")) {
-		if (touch(RESETME) && errno != EEXIST)
+		if (mark())
 			err(1, "failed");
 
 		warnx("scheduled factory reset on next boot.");
