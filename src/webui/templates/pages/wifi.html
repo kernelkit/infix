@@ -157,12 +157,23 @@
   <p class="empty-message">No WiFi radios detected.</p>
 </section>
 {{end}}
+<dialog id="survey-dialog" class="iface-modal survey-dialog" aria-modal="true">
+  <header class="iface-modal-header">
+    <h3>Channel Survey <span class="diff-subtitle" id="survey-dialog-radio"></span></h3>
+    <button type="button" class="btn-close" aria-label="Close"
+            data-close-modal="survey-dialog">&times;</button>
+  </header>
+  <div class="iface-modal-body" id="survey-dialog-body"></div>
+</dialog>
 {{end}}
 
 {{define "wifi-survey"}}
 <div class="card-body wifi-survey-body">
   {{if .SVG}}
-  {{.SVG}}
+  <button type="button" class="survey-zoom" data-survey-zoom="{{.Radio}}"
+          title="Click to enlarge" aria-label="Enlarge channel survey chart">
+    {{.SVG}}
+  </button>
   {{else if .Error}}
   <div class="alert alert-error">{{.Error}}</div>
   {{else}}
