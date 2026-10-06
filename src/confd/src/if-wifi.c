@@ -304,8 +304,12 @@ int wifi_gen_station(struct lyd_node *cif)
 		if (!strcmp(security_mode, "disabled"))
 			asprintf(&security_str, "key_mgmt=NONE");
 		else if (secret)
+			/* ieee80211w=1: MFP capable.  WPA3-only APs, and every
+			 * AP on 6 GHz, require it and are skipped as candidates
+			 * without it; WPA2 APs without MFP still work. */
 			asprintf(&security_str,
 				 "key_mgmt=FT-SAE FT-PSK SAE WPA-PSK\n"
+				 "  ieee80211w=1\n"
 				 "  psk=\"%s\"", secret);
 
 		/* bgscan="" disables background scanning once associated: on a

@@ -62,7 +62,7 @@ def root_config():
                 "radio": "radio0",
                 "access-point": {
                     "ssid": SSID,
-                    "security": {"mode": "wpa2-wpa3-personal", "secret": "wifi"},
+                    "security": {"mode": "wpa3-personal", "secret": "wifi"},
                 },
             }),
             wifi.wds_link("wds0", "wifi0", SAT_MAC, bridge="br0", pvid=10),
