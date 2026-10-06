@@ -1411,8 +1411,7 @@ function setBlockEnabled(el, on) {
   });
 
   // Configure > Hardware "+ Add hardware" picker: sync the hidden class
-  // input from the selected option's data-class and reveal class-specific
-  // fields (currently WiFi country-code).
+  // input from the selected option's data-class.
   document.addEventListener('change', function (e) {
     var sel = e.target.closest && e.target.closest('#add-hw-picker');
     if (!sel) return;
@@ -1420,12 +1419,6 @@ function setBlockEnabled(el, on) {
     var cls = (opt && opt.getAttribute('data-class')) || '';
     var classInput = document.getElementById('add-hw-class');
     if (classInput) classInput.value = cls;
-    var wifi = document.getElementById('add-hw-wifi-fields');
-    // setBlockEnabled, not .hidden: the country select is inside this
-    // nested hidden span, so opening the row left it disabled.
-    if (wifi) setBlockEnabled(wifi, cls === 'wifi');
-    var country = document.getElementById('add-hw-wifi-country');
-    if (country) country.required = (cls === 'wifi');
   });
 })();
 

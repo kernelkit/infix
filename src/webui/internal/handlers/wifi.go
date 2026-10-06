@@ -24,7 +24,6 @@ type wifiMaxIfJSON struct {
 }
 
 type wifiRadioHWJSON struct {
-	CountryCode   string          `json:"country-code"` // ISO 3166-1, rw
 	Channel       interface{}     `json:"channel"`      // uint16 or "auto", rw
 	Band          string          `json:"band"`         // rw
 	Frequency     int             `json:"frequency"`    // MHz, operational

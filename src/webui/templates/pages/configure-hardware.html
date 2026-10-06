@@ -20,6 +20,27 @@
 {{end}}
 
 <section class="info-grid">
+  {{if .CountryOptions}}
+  <section class="info-card info-grid-span-2">
+    <div class="card-header">WiFi</div>
+    <form hx-post="/configure/hardware/wifi" hx-swap="none">
+      <table class="info-table">
+        <tr>
+          <th>Country code{{template "field-info" .DescCountry}}</th>
+          <td>
+            <select class="cfg-input cfg-input-sm" name="country-code" required>
+              {{range .CountryOptions}}<option value="{{.Value}}" {{if eq .Value $.CountryCode}}selected{{end}}>{{.Label}}</option>{{end}}
+            </select>
+          </td>
+          <td class="cfg-reset-col">
+            <button class="btn btn-primary btn-sm" type="submit">Save</button>
+            <span class="cfg-save-status"></span>
+          </td>
+        </tr>
+      </table>
+    </form>
+  </section>
+  {{end}}
   <section class="info-card info-grid-span-2">
     <div class="card-header">Hardware
       <a href="/hardware"
@@ -55,7 +76,7 @@
                 {{if $c.Unlocked}}<span class="status-dot status-up"></span>unlocked
                 {{else}}<span class="status-dot status-down"></span>locked{{end}}
               {{else if $c.IsWiFi}}
-                <span class="status-dot status-up"></span>{{$c.CountryCode}}{{if $c.Band}} &middot; {{$c.Band}}{{end}}
+                <span class="status-dot status-up"></span>{{if $c.Band}}{{$c.Band}}{{else}}configured{{end}}
               {{else if $c.IsGPS}}
                 <span class="status-dot status-up"></span>configured
               {{else}}<span class="text-muted">&mdash;</span>{{end}}
@@ -108,13 +129,6 @@
                   </optgroup>
                   {{end}}
                 </select>
-
-                <span id="add-hw-wifi-fields" hidden style="display:contents">
-                  <select class="cfg-input cfg-input-sm" name="country-code" id="add-hw-wifi-country">
-                    <option value="">— country —</option>
-                    {{range .CountryOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
-                  </select>
-                </span>
 
                 <button class="btn btn-primary btn-sm" type="submit">Add</button>
                 <button type="button" class="btn btn-sm" data-hide="add-hw-row">Cancel</button>
@@ -198,16 +212,6 @@
                 hx-swap="none"
                 hx-confirm="Reset description to its YANG default?">{{template "icon-reset"}}</button>
       </td>
-    </tr>
-    <tr>
-      <th>Country code{{template "field-info" .DescCountry}}</th>
-      <td>
-        <select class="cfg-input cfg-input-sm" name="country-code" required>
-          {{$selected := .CountryCode}}
-          {{range .CountryOptions}}<option value="{{.Value}}" {{if eq .Value $selected}}selected{{end}}>{{.Label}}</option>{{end}}
-        </select>
-      </td>
-      <td class="cfg-reset-col"></td>
     </tr>
     <tr>
       <th>Band{{template "field-info" .DescBand}}</th>
