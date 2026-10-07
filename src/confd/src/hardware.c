@@ -633,16 +633,14 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 
 		fprintf(hostapd, "mbo=1\n");
 
-		/* Required for no_probe_resp_if_seen_on below: without it
-		 * hostapd keeps no sta_track list, so the twin radio never
-		 * knows which clients it has seen.  Radio-level, emit once
-		 * in the main section, never per BSS. */
-		if (!is_bss)
-			fprintf(hostapd, "track_sta_max_num=100\n");
-
-		/* Active band steering: on a 2.4 GHz BSS, suppress probe
-		 * responses to clients recently seen on the same-SSID 5/6
-		 * GHz BSS, nudging dual-band clients to the higher band. */
+		/* Band steering on a 2.4 GHz BSS with a same-SSID twin on 5/6
+		 * GHz: a client the twin has seen lately gets no probe response
+		 * here, so it tends to join the twin instead.  The seen-on list
+		 * is kept per radio, see the radio section.  Clients already
+		 * connected are moved by wifi-steer.sh, which finds the pairs
+		 * by this directive.  Refusing authentication as well would
+		 * lock a client out when the twin cannot take it, e.g. during
+		 * its radar check, so that is deliberately not done. */
 		twin = wifi_find_higher_band_twin(config, band, ssid);
 		if (twin)
 			fprintf(hostapd, "no_probe_resp_if_seen_on=%s\n", twin);
@@ -1028,6 +1026,13 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 
 	/* Use short preamble for better throughput on modern clients */
 	fprintf(hostapd, "preamble=1\n");
+
+	/* Remember the clients this radio has seen, for band steering on
+	 * the other radios.  A dual-band client is refused on 2.4 GHz
+	 * while it is on this list, so keep the list short-lived: that is
+	 * the longest a client that cannot get in on 5 GHz has to wait. */
+	fprintf(hostapd, "track_sta_max_num=100\n");
+	fprintf(hostapd, "track_sta_max_age=60\n");
 
 	if (band) {
 		if (!strcmp(band, "2.4GHz")) {

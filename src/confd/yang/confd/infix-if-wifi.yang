@@ -608,6 +608,12 @@ submodule infix-if-wifi {
                      encouraging dual-band devices to prefer 5GHz
                      over 2.4GHz when signal quality permits.
 
+                     Acts on a 2.4GHz access point whose SSID is also
+                     served on 5 or 6GHz by this device: it defers
+                     dual-band clients to that access point, and moves
+                     the ones already connected.  On a 5 or 6GHz
+                     access point the setting has no effect.
+
                      MBO steers clients via 802.11v BSS Transition
                      Management, hence its placement under dot11v;
                      enabling dot11v enables band steering by default.

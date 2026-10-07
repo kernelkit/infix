@@ -687,11 +687,28 @@ the same SSID exists on another band and decide for itself when to move,
 while 802.11v BSS Transition Management lets the AP suggest a better
 target.
 
-On top of the client-cooperative hints, the AP applies active steering:
-on a 2.4 GHz access-point it suppresses probe responses to clients that
-were recently seen on the same SSID on the 5/6 GHz band, nudging
-dual-band clients onto the higher band.  MBO is **enabled by default**
-whenever `dot11v` is enabled:
+On top of these hints, the device steers dual-band clients to 5 or 6 GHz
+itself.  Each radio remembers the clients it has seen during the last
+minute.  A 2.4 GHz access point whose SSID also exists on a higher band
+of the same device treats a client that higher band has seen as
+dual-band and in range of it:
+
+- it does not answer the client's probe requests, so a client choosing
+  a network tends to pick the higher band,
+- a client that is connected on 2.4 GHz anyway, for example because it
+  joined while the higher band was down, is asked to move with an
+  802.11v request naming the higher band, as long as its 2.4 GHz signal
+  is good enough for the move to make sense and the higher band is up.
+  A client that shrugs off a couple of requests is left alone for an
+  hour.
+
+A client is never refused on 2.4 GHz, so one that cannot get in on the
+higher band still has a way in.  Clients that only support 2.4 GHz are
+never seen on the higher band and are not affected, and clients that
+ignore 802.11v requests stay where they are.  Band
+steering is **enabled by default** whenever `dot11v` is enabled.  The
+setting is read on the 2.4 GHz access point, the one that defers and
+moves clients; on a 5 or 6 GHz access point it has no effect:
 
 ```
 admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v

@@ -45,6 +45,9 @@ All notable changes to the project are documented in this file.
   are migrated, the first radio's code wins, and a code the regulatory
   database does not know, which never had any effect, becomes the world
   domain
+- WiFi band steering now also moves dual-band clients that are already
+  connected on 2.4 GHz to the 5 or 6 GHz access point of the same SSID,
+  with an 802.11v request
 - A WiFi access point asks its clients to move to another access point,
   with 802.11v, before it stops for a reboot, an upgrade, or a
   configuration change, so clients that support it roam without losing
