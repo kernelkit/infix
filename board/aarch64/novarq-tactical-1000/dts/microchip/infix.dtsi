@@ -13,3 +13,15 @@
 		};
 	};
 };
+
+/* Register access by name for the symreg tool, debugfs only */
+&axi {
+	symreg@e00c0000 {
+		compatible = "microchip,sparx5-symreg";
+		reg = <0xe00c0000 0x10000>,
+		      <0xe2000000 0x2000000>;
+		reg-names = "cpu", "dev";
+		microchip,symreg = <0xe00c0000 0x10000>,
+				   <0xe2000000 0x2000000>;
+	};
+};
