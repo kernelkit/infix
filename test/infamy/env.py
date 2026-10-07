@@ -39,6 +39,7 @@ class ArgumentParser():
         self.args.add_argument("-p", "--package", default=None)
         self.args.add_argument("-y", "--yangdir", default=None)
         self.args.add_argument("-t", "--transport", default=ArgumentParser.DefaultTransport())
+        self.args.add_argument("--capture-syslog", default=False, action="store_true")
         self.args.add_argument("ptop", nargs=1, metavar="topology")
         self.args.add_argument("-l", "--logical-topology", dest="ltop", default=top)
 
@@ -123,6 +124,10 @@ class Env(object):
 
         return util.is_reachable(ip, self, self.get_password(node))
 
+    def _dutlog(self, name, dev, mgmtip, cport, dport):
+        if tap.CURRENT and self.args.capture_syslog:
+            tap.CURRENT.dutlog.begin(name, dev, mgmtip, cport, dport)
+
     def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
         """Attach to node on port using protocol."""
 
@@ -146,7 +151,7 @@ class Env(object):
             username = "admin"
 
         ctrl = self.ptop.get_ctrl()
-        cport, _ = self.ptop.get_mgmt_link(ctrl, node)
+        cport, dport = self.ptop.get_mgmt_link(ctrl, node)
 
         print("Waiting for DUTs to become reachable...")
         util.parallel(lambda: util.until(lambda: self.is_reachable(node, cport), 300))
@@ -167,6 +172,7 @@ class Env(object):
             if test_reset:
                 dev.test_reset()
                 util.until(lambda: self.is_reachable(node, cport), 30)
+            self._dutlog(name, dev, mgmtip, cport, dport)
             return dev
 
         if protocol == "ssh":
@@ -183,6 +189,7 @@ class Env(object):
             if test_reset:
                 dev.test_reset()
                 util.until(lambda: self.is_reachable(node, cport), 30)
+            self._dutlog(name, dev, mgmtip, cport, dport)
             return dev
 
         raise Exception(f"Unsupported management procotol \"{protocol}\"")
