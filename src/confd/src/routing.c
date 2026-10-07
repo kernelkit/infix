@@ -315,7 +315,7 @@ int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp
 int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 {
 	struct lyd_node *areas, *default_route, *debug;
-	const char *router_id;
+	const char *router_id, *refbw;
 	int bfd_enabled = 0;
 	int num_areas = 0;
 	FILE *fp;
@@ -381,6 +381,9 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 		}
 	}
 
+	refbw = lydx_get_cattr(lydx_get_child(ospf, "auto-cost"), "reference-bandwidth");
+	if (refbw)
+		fprintf(fp, "  auto-cost reference-bandwidth %s\n", refbw);
 	if (router_id)
 		fprintf(fp, "  ospf router-id %s\n", router_id);
 	fclose(fp);
@@ -429,7 +432,7 @@ static int parse_ospf6_areas(struct lyd_node *areas, FILE *fp)
 int parse_ospf6(sr_session_ctx_t *session, struct lyd_node *ospf)
 {
 	struct lyd_node *areas, *default_route, *debug;
-	const char *router_id;
+	const char *router_id, *refbw;
 	int bfd_enabled = 0;
 	int num_areas = 0;
 	FILE *fp;
@@ -489,6 +492,9 @@ int parse_ospf6(sr_session_ctx_t *session, struct lyd_node *ospf)
 		}
 	}
 
+	refbw = lydx_get_cattr(lydx_get_child(ospf, "auto-cost"), "reference-bandwidth");
+	if (refbw)
+		fprintf(fp, "  auto-cost reference-bandwidth %s\n", refbw);
 	if (router_id)
 		fprintf(fp, "  ospf6 router-id %s\n", router_id);
 	fclose(fp);
