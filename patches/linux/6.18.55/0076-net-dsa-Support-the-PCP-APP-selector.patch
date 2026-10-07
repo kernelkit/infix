@@ -1,7 +1,7 @@
 From 32c1befbedb0f46361960a0d321c743711a87762 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:04:22 +0200
-Subject: [PATCH 76/78] net: dsa: Support the PCP APP selector
+Subject: [PATCH 76/79] net: dsa: Support the PCP APP selector
 
 Add port_add_pcp_prio, port_del_pcp_prio and port_get_pcp_prio switch
 ops and route the DCB_APP_SEL_PCP selector to them, mirroring the DSCP
@@ -27,7 +27,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  2 files changed, 206 insertions(+)
 
 diff --git a/include/net/dsa.h b/include/net/dsa.h
-index c31d4e910f07..f271376b7758 100644
+index c31d4e910f075..f271376b77582 100644
 --- a/include/net/dsa.h
 +++ b/include/net/dsa.h
 @@ -447,6 +447,10 @@ struct dsa_switch {
@@ -55,7 +55,7 @@ index c31d4e910f07..f271376b7758 100644
  	/*
  	 * Suspend and resume
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index 193e54b7d85e..85b06f3a4337 100644
+index 193e54b7d85ea..85b06f3a43370 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
 @@ -2342,6 +2342,172 @@ dsa_user_dcbnl_add_dscp_prio(struct net_device *dev, struct dcb_app *app)

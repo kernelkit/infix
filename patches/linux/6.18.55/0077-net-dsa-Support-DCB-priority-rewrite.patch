@@ -1,7 +1,7 @@
 From b45635ee810e5edadedbc000b737281b2c517695 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:10:32 +0200
-Subject: [PATCH 77/78] net: dsa: Support DCB priority rewrite
+Subject: [PATCH 77/79] net: dsa: Support DCB priority rewrite
 
 The DCB rewrite table maps a priority back to the PCP and DEI, or the
 DSCP, that frames are remarked with on egress.  DSA has no
@@ -26,7 +26,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  2 files changed, 279 insertions(+), 1 deletion(-)
 
 diff --git a/include/net/dsa.h b/include/net/dsa.h
-index f271376b7758..3a36904e57f8 100644
+index f271376b77582..3a36904e57f81 100644
 --- a/include/net/dsa.h
 +++ b/include/net/dsa.h
 @@ -451,6 +451,12 @@ struct dsa_switch {
@@ -60,7 +60,7 @@ index f271376b7758..3a36904e57f8 100644
  	/*
  	 * Suspend and resume
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index 85b06f3a4337..349bacfebb08 100644
+index 85b06f3a43370..349bacfebb086 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
 @@ -2665,6 +2665,266 @@ static int __maybe_unused dsa_user_dcbnl_ieee_delapp(struct net_device *dev,

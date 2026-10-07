@@ -1,7 +1,7 @@
 From 3d3f7ba164355546fc2188315622356b4f02f681 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 22 Sep 2026 13:51:07 +0200
-Subject: [PATCH 75/78] net: dsa: Generalise the global DCB APP mirroring
+Subject: [PATCH 75/79] net: dsa: Generalise the global DCB APP mirroring
  helper
 
 A switch with one classification table for all its ports programs it
@@ -19,7 +19,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 9 insertions(+), 7 deletions(-)
 
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index b881c177628c..193e54b7d85e 100644
+index b881c177628ce..193e54b7d85ea 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
 @@ -2243,11 +2243,13 @@ dsa_user_dcbnl_set_default_prio(struct net_device *dev, struct dcb_app *app)

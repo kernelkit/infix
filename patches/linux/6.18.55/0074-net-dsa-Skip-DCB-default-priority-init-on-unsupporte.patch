@@ -1,7 +1,7 @@
 From 8fc86e86edc2464d419084beb306cb95cf5946fc Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:04:21 +0200
-Subject: [PATCH 74/78] net: dsa: Skip DCB default priority init on unsupported
+Subject: [PATCH 74/79] net: dsa: Skip DCB default priority init on unsupported
  switches
 
 A driver serving several chip generations has one dsa_switch_ops for
@@ -17,7 +17,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 6 insertions(+), 5 deletions(-)
 
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index c0019d0c1172..b881c177628c 100644
+index c0019d0c1172d..b881c177628ce 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
 @@ -2511,12 +2511,13 @@ static int dsa_user_dcbnl_init(struct net_device *dev)

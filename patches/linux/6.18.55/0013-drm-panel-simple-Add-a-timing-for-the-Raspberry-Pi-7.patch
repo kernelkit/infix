@@ -1,7 +1,7 @@
 From 34593fc729c0656763733bf93719b8c8c9408f91 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 20 Aug 2025 21:38:24 +0200
-Subject: [PATCH 13/78] drm/panel-simple: Add a timing for the Raspberry Pi 7"
+Subject: [PATCH 13/79] drm/panel-simple: Add a timing for the Raspberry Pi 7"
  panel
 
 The Raspberry Pi 7" 800x480 panel uses a Toshiba TC358762 DSI
@@ -46,7 +46,7 @@ Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
  1 file changed, 30 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/panel/panel-simple.c b/drivers/gpu/drm/panel/panel-simple.c
-index 878a5dc7748f..d5da86abea70 100644
+index 878a5dc7748fb..d5da86abea700 100644
 --- a/drivers/gpu/drm/panel/panel-simple.c
 +++ b/drivers/gpu/drm/panel/panel-simple.c
 @@ -400,7 +400,8 @@ static int panel_simple_get_modes(struct drm_panel *panel,

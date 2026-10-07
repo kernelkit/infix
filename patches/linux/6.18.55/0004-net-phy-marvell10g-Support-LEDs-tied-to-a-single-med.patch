@@ -1,7 +1,7 @@
 From 7ad37cfa715d86cc20f29432f106cedd457e4f26 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
-Subject: [PATCH 04/78] net: phy: marvell10g: Support LEDs tied to a single
+Subject: [PATCH 04/79] net: phy: marvell10g: Support LEDs tied to a single
  media side
 
 In a combo-port setup, i.e. where both the copper and fiber interface
@@ -18,7 +18,7 @@ versa for the SFP cage.
  1 file changed, 22 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
-index 7ae4744f147b..5e48355ffcef 100644
+index 7ae4744f147bb..5e48355ffcef4 100644
 --- a/drivers/net/phy/marvell10g.c
 +++ b/drivers/net/phy/marvell10g.c
 @@ -192,6 +192,9 @@ struct mv3310_chip {

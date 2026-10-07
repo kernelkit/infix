@@ -1,7 +1,7 @@
 From 59c469b24ce0aee40cde6aa1ea986cf42dfc150c Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Mon, 19 Jan 2026 13:06:53 +0100
-Subject: [PATCH 29/78] wifi: brcmfmac: check connection state before querying
+Subject: [PATCH 29/79] wifi: brcmfmac: check connection state before querying
  station info
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -23,7 +23,7 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index 1fc9ecd86d5d..4189a127f4b3 100644
+index 1fc9ecd86d5d9..4189a127f4b37 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -3156,6 +3156,11 @@ brcmf_cfg80211_get_station(struct wiphy *wiphy, struct net_device *ndev,
