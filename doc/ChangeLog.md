@@ -76,6 +76,8 @@ All notable changes to the project are documented in this file.
 - A WiFi station never connected to a WPA3-only access point, which
   includes every access point on 6 GHz
 - WiFi scan results listed WPA3-only networks as WPA2-Personal
+- Changing the MAC address of a WiFi access point could leave the access
+  points on that radio down until the WiFi service was restarted
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters

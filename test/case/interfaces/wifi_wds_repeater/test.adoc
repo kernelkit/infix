@@ -20,6 +20,11 @@ The host behind the root reaches both stations on their VLANs.
 Taking the backhaul down and up again shows it is a transparent bridge
 port: the stations lose and regain reach without re-associating.
 
+Finally the guest access point gets a new MAC address, which recreates
+its netdev.  The home access point on the same radio must not be
+disturbed, and the guest access point has to come back at the new
+address with its client.
+
 Topology:
 ....
     host ==(lan, VLAN 10+20)== root (AP 'infix-backhaul')
@@ -49,6 +54,10 @@ image::topology.svg[WiFi repeater with two SSIDs in VLANs over a 4-address (WDS)
 . Verify home at 10.10.0.9 and guest at 10.20.0.9 are no longer reachable from the host
 . Enable the repeater's backhaul station wifi0 again
 . Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 again
-. Verify home and guest are still on their access points
+. Change the address of the repeater's 'infix-guest' access point to 02:00:00:00:0b:12
+. Verify wifi2 on the repeater reports the new address and both access points are up
+. Verify guest associates to 'infix-guest' at the new address, BSSID 02:00:00:00:0b:12
+. Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 after the address change
+. Verify home is still on its access point
 
 

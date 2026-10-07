@@ -249,7 +249,7 @@ static const char *wifi_find_higher_band_twin(struct lyd_node *config,
 		if (!wifi)
 			continue;
 		ap = lydx_get_child(wifi, "access-point");
-		if (!ap)
+		if (!ap || !lydx_is_enabled(cif, "enabled"))
 			continue;
 		ssid = lydx_get_cattr(ap, "ssid");
 		if (!ssid || strcmp(ssid, current_ssid))
@@ -316,6 +316,10 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 
 		ap = lydx_get_child(wifi, "access-point");
 		if (!ap)
+			continue;
+		/* hostapd brings every BSS it is given up, a disabled one
+		 * must not be in its config at all. */
+		if (!lydx_is_enabled(cif, "enabled"))
 			continue;
 		list = realloc(list, sizeof(char *) * (n + 1));
 
