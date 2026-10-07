@@ -52,7 +52,10 @@ submodule infix-if-wifi {
   revision 2026-10-06 {
     description
       "Access point and mesh point require the box-wide WiFi country code,
-       the per-radio country-code leaf is gone.";
+       the per-radio country-code leaf is gone.  802.11r gets an optional
+       key-holder-secret, a key of its own for the access points of a
+       mobility domain to hand each other a client's keys with, instead
+       of the WiFi password.";
     reference "internal";
   }
 
@@ -550,6 +553,20 @@ submodule infix-if-wifi {
 
                    Reduces handoff latency from ~1s to <50ms through
                    pre-authentication. Required for seamless roaming.";
+
+                leaf key-holder-secret {
+                  type ks:central-symmetric-key-ref;
+                  description
+                    "Secret the access points of the mobility domain use
+                     to hand each other a roaming client's keys.
+
+                     References a symmetric key in the keystore.  Set the
+                     same key on every device with an access point in the
+                     mobility domain.  Without it the WiFi password is
+                     used, which lets anyone who knows the password read
+                     the other clients' keys.  Give it a value of its own
+                     on networks where that matters.";
+                }
 
                 leaf mobility-domain {
                   type mobility-domain;

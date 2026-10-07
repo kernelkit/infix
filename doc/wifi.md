@@ -604,14 +604,38 @@ your requirements.
 Enable 802.11r for fast handoff (<50ms) between APs with the same SSID:
 
 ```
-admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r
+admin@example:/config/> edit interface wifi0
 admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r mobility-domain 4f57
+```
+
+The access points hand each other a roaming client's keys, protected
+with a secret they all share.  By default that is the WiFi password,
+which is fine for a home or small office network.  Anyone who knows the
+password can then also read the other clients' keys, so on a network
+shared with people you do not trust, give the access points a secret of
+their own, the key holder secret.  Create it in the keystore on every
+device, with the same value:
+
+```
+admin@example:/config/> edit keystore symmetric-keys symmetric-key roaming-key
+admin@example:/config/keystore/symmetric-keys/symmetric-key/roaming-key/> set key-format passphrase-key-format
+admin@example:/config/keystore/symmetric-keys/symmetric-key/roaming-key/> set cleartext-symmetric-key <a long random string>
+admin@example:/config/keystore/symmetric-keys/symmetric-key/roaming-key/> end
+admin@example:/config/> set interface wifi0 wifi access-point roaming dot11r key-holder-secret roaming-key
 ```
 
 **Requirements:**
 - All APs in roaming group must have **identical** SSID
 - All APs must have **identical** passphrase (same keystore secret)
+- All APs must have the **same key holder secret**, if one is set
 - All APs must use the **same mobility-domain** identifier
+- APs on different devices must be ports of bridges that are connected
+  to each other, over a cable, a mesh or a WDS backhaul.  The APs hand a
+  roaming client's keys to each other over that network, which WPA3
+  clients need for a fast transition.  On a bridge with VLAN filtering
+  the keys travel in the APs' VLAN, so each device needs a VLAN
+  interface on the bridge for that VLAN, the one carrying its IP address
+  there is enough
 
 **Mobility Domain Options:**
 - Explicit 4-character hex value (e.g., `4f57`) - default if not specified
@@ -838,8 +862,8 @@ AP interfaces for clients on another:
 ![802.11s mesh backhaul with roaming-enabled access points](img/wifi-mesh-roaming.svg)
 
 With 802.11r/k/v roaming enabled on the APs (same SSID, same
-passphrase, same mobility domain), clients hand off between nodes while
-the mesh carries backhaul traffic.
+passphrase, same mobility domain), clients hand
+off between nodes while the mesh carries backhaul traffic.
 
 ## WDS Backhaul and Repeaters
 

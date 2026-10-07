@@ -222,6 +222,75 @@ static const char *resolve_mobility_domain(const char *mobility_domain, const ch
 }
 
 /*
+ * Cleartext of a keystore symmetric key, NULL when unset.  Caller frees.
+ */
+static unsigned char *wifi_keystore_secret(struct lyd_node *config, const char *name)
+{
+	struct lyd_node *node;
+	const char *b64;
+
+	if (!name)
+		return NULL;
+
+	node = lydx_get_xpathf(config, "/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key", name);
+	if (!node)
+		return NULL;
+
+	b64 = lyd_get_value(node);
+	if (!b64)
+		return NULL;
+
+	return base64_decode((const unsigned char *)b64, strlen(b64), NULL);
+}
+
+/*
+ * Key for the 802.11r key holder exchange between access points, hex
+ * encoded SHA-256 over the mobility domain and the key holder secret.
+ * Every AP of the mobility domain derives the same key, so the wildcard
+ * R0KH/R1KH entries let any of them fetch a roaming client's PMK-R1 from
+ * the AP it came from, which is what fast transition needs for WPA3
+ * (SAE) clients: their PMK comes from the SAE handshake and cannot be
+ * regenerated locally the way a WPA2 PSK can.
+ *
+ * The secret is the dot11r key-holder-secret when one is set, else the
+ * WiFi password.  A holder of the key can fetch any client's keys and is
+ * pushed them, and the key tags the announcements wifi-neighbors.py
+ * sends on the APs' network, so with the password as the secret every
+ * client can read the others' keys and anyone on the network has an
+ * offline oracle for the password.  Hence the opt-in key of its own.
+ */
+static int wifi_ft_key(const char *mobility_domain, const unsigned char *secret, char *out, size_t len)
+{
+	unsigned char digest[EVP_MAX_MD_SIZE];
+	unsigned int dlen = 0;
+	EVP_MD_CTX *ctx;
+	size_t i;
+
+	if (len < 2 * 32 + 1)
+		return -1;
+
+	ctx = EVP_MD_CTX_new();
+	if (!ctx)
+		return -1;
+
+	if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1 ||
+	    EVP_DigestUpdate(ctx, "infix-ft:", 9) != 1 ||
+	    EVP_DigestUpdate(ctx, mobility_domain, strlen(mobility_domain)) != 1 ||
+	    EVP_DigestUpdate(ctx, ":", 1) != 1 ||
+	    EVP_DigestUpdate(ctx, secret, strlen((const char *)secret)) != 1 ||
+	    EVP_DigestFinal_ex(ctx, digest, &dlen) != 1 || dlen < 32) {
+		EVP_MD_CTX_free(ctx);
+		return -1;
+	}
+	EVP_MD_CTX_free(ctx);
+
+	for (i = 0; i < 32; i++)
+		snprintf(out + 2 * i, 3, "%02x", digest[i]);
+
+	return 0;
+}
+
+/*
  * Find an AP interface on a higher-band radio (5/6 GHz) advertising the
  * same SSID as the caller's 2.4 GHz BSS, for no_probe_resp_if_seen_on=.
  * hostapd suppresses a 2.4 GHz probe response only once it has actually
@@ -378,9 +447,9 @@ static void wifi_gen_wds_ports(FILE *hostapd, struct lyd_node *config, const cha
 /* Helper: Write SSID and security configuration (shared between primary and BSS) */
 static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss, const char *band)
 {
-	struct lyd_node *wifi, *ap, *security, *secret_node, *roaming;
+	struct lyd_node *wifi, *ap, *security, *roaming;
 	struct lyd_node *dot11k, *dot11r, *dot11v;
-	const char *ssid, *hidden, *security_mode, *secret_name;
+	const char *ssid, *hidden, *security_mode;
 	const char *mobility_domain, *mobility_domain_raw;
 	const char *nas_identifier_cfg;
 	bool enable_80211k, enable_80211r, enable_80211v, enable_mbo;
@@ -464,21 +533,8 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		security_mode = "open";
 
 	/* Get secret from keystore if needed */
-	if (strcmp(security_mode, "open") != 0) {
-		secret_name = lydx_get_cattr(security, "secret");
-		if (secret_name) {
-			const char *b64;
-
-			secret_node = lydx_get_xpathf(config,
-				"/keystore/symmetric-keys/symmetric-key[name='%s']/cleartext-symmetric-key",
-				secret_name);
-			if (secret_node) {
-				b64 = lyd_get_value(secret_node);
-				if (b64)
-					secret = base64_decode((const unsigned char *)b64, strlen(b64), NULL);
-			}
-		}
-	}
+	if (strcmp(security_mode, "open") != 0)
+		secret = wifi_keystore_secret(config, lydx_get_cattr(security, "secret"));
 
 	/* Resolve "auto" to concrete mode based on band */
 	if (!strcmp(security_mode, "auto"))
@@ -519,6 +575,11 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 
 	/* 802.11r: Fast BSS Transition */
 	if (enable_80211r) {
+		const char *bridge = lydx_get_cattr(lydx_get_child(cif, "bridge-port"), "bridge");
+		unsigned char *kh_secret;
+		const char *kh_name;
+		char ft_key[65];
+
 		fprintf(hostapd, "# Fast BSS Transition (802.11r)\n");
 		fprintf(hostapd, "mobility_domain=%s\n", mobility_domain);
 		/* Over-the-air FT: the client authenticates directly with the
@@ -527,6 +588,43 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		fprintf(hostapd, "ft_over_ds=0\n");
 		fprintf(hostapd, "ft_psk_generate_local=1\n");
 		fprintf(hostapd, "nas_identifier=%s\n", nas_identifier_cfg);
+		/* The key holders of all APs on the SSID reach each other over
+		 * the network the APs are bridged to, see wifi_ft_key().  On a
+		 * VLAN filtering bridge that is the APs' VLAN: use its VLAN
+		 * interface when there is one, the bridge device itself has
+		 * no say in which VLAN its frames end up in. */
+		kh_name = lydx_get_cattr(dot11r, "key-holder-secret");
+		if (!kh_name)
+			kh_name = lydx_get_cattr(security, "secret");
+		kh_secret = wifi_keystore_secret(config, kh_name);
+		if (!kh_secret)
+			ERROR("%s: 802.11r key holder secret not found in keystore, no key exchange", ifname);
+		if (kh_secret && !wifi_ft_key(mobility_domain, kh_secret, ft_key, sizeof(ft_key))) {
+			if (bridge) {
+				const char *pvid = lydx_get_cattr(lydx_get_child(cif, "bridge-port"), "pvid");
+				const char *ft_iface = bridge;
+
+				if (pvid) {
+					struct lyd_node *vif;
+
+					vif = lydx_get_xpathf(config, "/interfaces/interface[vlan/id='%s' and vlan/lower-layer-if='%s']/name",
+							      pvid, bridge);
+					if (vif)
+						ft_iface = lyd_get_value(vif);
+				}
+				fprintf(hostapd, "ft_iface=%s\n", ft_iface);
+			}
+			fprintf(hostapd, "r0kh=ff:ff:ff:ff:ff:ff * %s\n", ft_key);
+			fprintf(hostapd, "r1kh=00:00:00:00:00:00 00:00:00:00:00:00 %s\n", ft_key);
+			/* A client roaming away from a node that is going down
+			 * asks for a key that node can no longer hand out.
+			 * Give up on the fetch quickly and reject, the client
+			 * then logs in the normal way; waiting in silence makes
+			 * it blacklist the target instead. */
+			fprintf(hostapd, "rkh_pull_timeout=300\n");
+			fprintf(hostapd, "rkh_pull_retries=1\n");
+		}
+		free(kh_secret);
 	}
 
 	/* 802.11k: Radio Resource Management */

@@ -45,6 +45,9 @@ All notable changes to the project are documented in this file.
 - The WiFi country code is one setting for the whole system, `hardware
   wifi country-code`, instead of one per radio, and applies as soon as it
   is set.  Existing configurations are migrated
+- 802.11r access points can be given a `key-holder-secret`, a keystore
+  key of their own to protect the key exchange with instead of the WiFi
+  password, see [WiFi documentation](wifi.md#80211r---fast-bss-transition)
 - WiFi channel survey is on request: `show hardware <radio> survey`, the
   Scan channels button on the WebUI WiFi page, or the `channel-survey`
   action.  The always-on `survey` container under the radio is gone
@@ -76,6 +79,8 @@ All notable changes to the project are documented in this file.
 - A WiFi station never connected to a WPA3-only access point, which
   includes every access point on 6 GHz
 - WiFi scan results listed WPA3-only networks as WPA2-Personal
+- Fast roaming (802.11r) to an access point on another device failed for
+  WPA3 clients
 - Changing the MAC address of a WiFi access point could leave the access
   points on that radio down until the WiFi service was restarted
 
