@@ -10,6 +10,7 @@ Tests verifying standard routing protocols and configuration:
  - OSPF with BFD (Bidirectional Forwarding Detection)
  - OSPF default route advertisement and propagation
  - OSPF debug logging configuration and verification
+ - OSPF auto-cost reference bandwidth and interface cost
  - OSPF point-to-multipoint hybrid (broadcast) interface type
  - OSPF point-to-multipoint (non-broadcast) interface type with static neighbors
  - RIP basic neighbor discovery and route exchange
@@ -45,6 +46,10 @@ include::ospf_default_route_advertise/Readme.adoc[]
 <<<
 
 include::ospf_debug/Readme.adoc[]
+
+<<<
+
+include::ospf_auto_cost/Readme.adoc[]
 
 <<<
 

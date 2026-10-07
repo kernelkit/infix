@@ -132,6 +132,16 @@ def ospf_get_interface_passive(target, area_id, ifname, proto="infix-routing:osp
     return ospf_interface.get("passive", False)
 
 
+def ospf_get_interface_cost(target, area_id, ifname, proto="infix-routing:ospfv2"):
+    ospf_interface = _get_ospf_status_area_interface(target, area_id, ifname, proto)
+    return ospf_interface.get("cost")
+
+
+def ospf_get_reference_bandwidth(target, proto="infix-routing:ospfv2"):
+    ospf = _get_ospf_status(target, proto)
+    return ospf.get("auto-cost", {}).get("reference-bandwidth")
+
+
 def ospf_is_area_nssa(target, area_id, proto="infix-routing:ospfv2"):
     area = _get_ospf_status_area(target, area_id, proto)
     if area.get("area-type", "") == "ietf-ospf:nssa-area":
