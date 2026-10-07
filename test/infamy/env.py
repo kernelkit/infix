@@ -1,4 +1,5 @@
 import argparse
+import atexit
 import os
 import pydot
 import shlex
@@ -6,7 +7,7 @@ import sys
 import random
 import inspect
 
-from . import neigh, netconf, restconf, ssh, tap, topology, util
+from . import dutlog, neigh, netconf, restconf, ssh, tap, topology, util
 
 
 class NullEnv:
@@ -39,6 +40,7 @@ class ArgumentParser():
         self.args.add_argument("-p", "--package", default=None)
         self.args.add_argument("-y", "--yangdir", default=None)
         self.args.add_argument("-t", "--transport", default=ArgumentParser.DefaultTransport())
+        self.args.add_argument("--capture-syslog", default=False, action="store_true")
         self.args.add_argument("ptop", nargs=1, metavar="topology")
         self.args.add_argument("-l", "--logical-topology", dest="ltop", default=top)
 
@@ -79,6 +81,7 @@ class Env(object):
         pdot = pydot.graph_from_dot_file(self.args.ptop[0])[0]
         self.ptop = topology.Topology(pdot)
 
+        self.capture = None
         self.ltop = None
         if self.args.ltop != False:
             if self.args.ltop is None:
@@ -152,6 +155,17 @@ class Env(object):
 
         util.parallel(*[lambda n=n: reset_one(n) for n in sorted(strays)])
 
+    def _dutlog(self, name, dev, mgmtip, cport, dport):
+        if not self.args.capture_syslog:
+            return
+
+        if not self.capture:
+            self.capture = dutlog.Capture()
+            tap.Test.step_hooks.append(self.capture.step)
+            # Runs when the test exits, after Test.__exit__()
+            atexit.register(self.capture.end)
+        self.capture.begin(name, dev, mgmtip, cport, dport)
+
     def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
         """Attach to node on port using protocol."""
 
@@ -175,7 +189,7 @@ class Env(object):
             username = "admin"
 
         ctrl = self.ptop.get_ctrl()
-        cport, _ = self.ptop.get_mgmt_link(ctrl, node)
+        cport, dport = self.ptop.get_mgmt_link(ctrl, node)
 
         print("Waiting for DUTs to become reachable...")
         util.parallel(lambda: util.until(lambda: self.is_reachable(node, cport), 300))
@@ -196,6 +210,7 @@ class Env(object):
             if test_reset:
                 dev.test_reset()
                 util.until(lambda: self.is_reachable(node, cport), 30)
+            self._dutlog(name, dev, mgmtip, cport, dport)
             return dev
 
         if protocol == "ssh":
@@ -212,6 +227,7 @@ class Env(object):
             if test_reset:
                 dev.test_reset()
                 util.until(lambda: self.is_reachable(node, cport), 30)
+            self._dutlog(name, dev, mgmtip, cport, dport)
             return dev
 
         raise Exception(f"Unsupported management procotol \"{protocol}\"")
