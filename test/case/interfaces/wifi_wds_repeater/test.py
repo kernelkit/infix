@@ -18,6 +18,11 @@ The host behind the root reaches both stations on their VLANs.
 Taking the backhaul down and up again shows it is a transparent bridge
 port: the stations lose and regain reach without re-associating.
 
+Finally the guest access point gets a new MAC address, which recreates
+its netdev.  The home access point on the same radio must not be
+disturbed, and the guest access point has to come back at the new
+address with its client.
+
 Topology:
 ....
     host ==(lan, VLAN 10+20)== root (AP 'infix-backhaul')
@@ -39,6 +44,7 @@ ROOT_AP_MAC = "02:00:00:00:00:01"
 REPEATER_STA_MAC = "02:00:00:00:00:02"
 HOME_AP_MAC = "02:00:00:00:0a:02"
 GUEST_AP_MAC = "02:00:00:00:0b:02"
+GUEST_AP_MAC_NEW = "02:00:00:00:0b:12"
 HOME_MAC = "02:00:00:00:00:09"
 GUEST_MAC = "02:00:00:00:00:0a"
 
@@ -230,8 +236,27 @@ with infamy.Test() as test:
             until(lambda: reaches(ns, HOME_IP), attempts=30, interval=2)
             until(lambda: reaches(ns, GUEST_IP), attempts=30, interval=2)
 
-    with test.step("Verify home and guest are still on their access points"):
-        if wifi.station_bssid(home) != HOME_AP_MAC or wifi.station_bssid(guest) != GUEST_AP_MAC:
+        with test.step("Change the address of the repeater's 'infix-guest' access point to 02:00:00:00:0b:12"):
+            repeater.put_config_dicts({"ietf-interfaces": {"interfaces": {"interface": [{
+                "name": "wifi2",
+                "custom-phys-address": {"static": GUEST_AP_MAC_NEW},
+            }]}}})
+
+        with test.step("Verify wifi2 on the repeater reports the new address and both access points are up"):
+            until(lambda: (iface.get_phys_address(repeater, "wifi2") or "").lower() == GUEST_AP_MAC_NEW,
+                  attempts=30, interval=2)
+            until(lambda: iface.is_oper_up(repeater, "wifi2"), attempts=45, interval=2)
+            until(lambda: iface.is_oper_up(repeater, "wifi1"), attempts=30, interval=2)
+
+        with test.step("Verify guest associates to 'infix-guest' at the new address, BSSID 02:00:00:00:0b:12"):
+            until(lambda: wifi.station_bssid(guest) == GUEST_AP_MAC_NEW, attempts=60, interval=2)
+
+        with test.step("Verify the host reaches home at 10.10.0.9 and guest at 10.20.0.9 after the address change"):
+            until(lambda: reaches(ns, HOME_IP), attempts=30, interval=2)
+            until(lambda: reaches(ns, GUEST_IP), attempts=30, interval=2)
+
+    with test.step("Verify home is still on its access point"):
+        if wifi.station_bssid(home) != HOME_AP_MAC:
             test.fail()
 
     test.succeed()

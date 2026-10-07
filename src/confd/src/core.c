@@ -734,12 +734,14 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		}
 	}
 
-	/* ietf-hardware */
-	if ((rc = hardware_change(session, config, diff, event, confd)))
-		goto free_diff;
-
 	/* ietf-interfaces */
 	if ((rc = interfaces_change(session, config, diff, event, confd)))
+		goto free_diff;
+
+	/* ietf-hardware, after the interfaces: hostapd binds to WiFi
+	 * netdevs, so it must be (re)started only once the interface
+	 * pipeline has created or recreated them. */
+	if ((rc = hardware_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-dhcp-client*/
