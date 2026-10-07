@@ -114,9 +114,17 @@ if ask "Create aux, primary ${imgsize}, secondary ${imgsize}, cfg ${cfgsize}, an
 	mkfs.ext4 -qF -L aux -m 0 -i 4096 -O ^metadata_csum,^metadata_csum_seed,uninit_bg "${disk}p4"
 	mkfs.ext4 -qF -L cfg -m 0 -i 4096 -O uninit_bg "${disk}p7"
 	mkfs.ext4 -qF -L var -m 0 -i 4096 -O uninit_bg "${disk}p8"
+	#
+	# RAUC tracks slot boot state in uboot.env, seed it as prod/provision does.
 	mnt=$(mktemp -d)
 	mount -t ext4 "${disk}p4" "$mnt"
 	echo 1 >"$mnt"/resized
+	mkenvimage -s 0x4000 -o "$mnt"/uboot.env - <<EOF
+BOOT_ORDER=primary secondary net
+BOOT_primary_LEFT=1
+BOOT_secondary_LEFT=1
+BOOT_net_LEFT=1
+EOF
 	umount "$mnt"
 	rmdir "$mnt"
 fi
