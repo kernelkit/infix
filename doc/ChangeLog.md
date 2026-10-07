@@ -118,6 +118,9 @@ All notable changes to the project are documented in this file.
   with static entries and a configurable aging time.  `show bridge fdb`
   can list one VLAN, one port, or one address, and shows the age of each
   learned entry and whether it is offloaded to the switch, see [FDB][fdb]
+- LAN969x boards ship `symreg`, which reads and writes switch registers by
+  name and dumps the MAC, VLAN and VCAP tables, for debugging the switch
+  core, see `board/aarch64/microchip-lan969x/README.md`
 
 ### Fixes
 
