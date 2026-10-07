@@ -1,0 +1,176 @@
+From bde3b99dc6dcd9dbd998f63d358f07c0ec28e6fb Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 7 Oct 2026 17:30:17 +0200
+Subject: [PATCH 81/81] net: sparx5: fix multicast delivery to the CPU on
+ standalone ports
+
+A standalone port stops receiving a multicast group as soon as any
+other standalone port leaves it.  IPv6 neighbour discovery and mDNS
+are the usual victims, so the port looks dead to the LAN until it is
+taken down and up again, which re-joins its groups.
+
+Standalone ports all use pvid NULL_VID, and sparx5_mc_sync() delivers
+a group to the CPU with a MAC table entry keyed on that address and
+VID.  The entry is therefore shared by every standalone port that is
+a member of the group, but sparx5_mc_unsync() forgets it on behalf of
+a single port, and the flood PGIDs have no CPU copy to fall back on.
+
+Reference count the shared entries.  Learn on the first subscriber,
+forget on the last.
+
+The same applies to a unicast address learned by sparx5_port_add_addr()
+when two standalone ports share a MAC address, which is left as is.
+
+Fixes: d6fce5141929 ("net: sparx5: add switching support")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/sparx5_mactable.c        | 76 ++++++++++++++++++-
+ .../ethernet/microchip/sparx5/sparx5_main.c   |  1 +
+ .../ethernet/microchip/sparx5/sparx5_main.h   |  5 ++
+ 3 files changed, 79 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+index 2a594f0732319..57efab569805c 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+@@ -116,21 +116,79 @@ int sparx5_mact_learn(struct sparx5 *sparx5, int pgid,
+ 	return ret;
+ }
+ 
++/* Standalone ports share pvid, hence the CPU multicast MAC entry too */
++struct sparx5_mc_cpu_entry {
++	struct list_head list;
++	unsigned char addr[ETH_ALEN];
++	u16 vid;
++	int refcnt;
++};
++
++static struct sparx5_mc_cpu_entry *
++sparx5_mc_cpu_find(struct sparx5 *sparx5, const unsigned char *addr, u16 vid)
++{
++	struct sparx5_mc_cpu_entry *e;
++
++	list_for_each_entry(e, &sparx5->mc_cpu_entries, list)
++		if (e->vid == vid && ether_addr_equal(e->addr, addr))
++			return e;
++
++	return NULL;
++}
++
+ int sparx5_mc_unsync(struct net_device *dev, const unsigned char *addr)
+ {
+ 	struct sparx5_port *port = netdev_priv(dev);
+ 	struct sparx5 *sparx5 = port->sparx5;
++	struct sparx5_mc_cpu_entry *e;
++	int ret = 0;
++
++	spin_lock(&sparx5->mc_cpu_lock);
++	e = sparx5_mc_cpu_find(sparx5, addr, port->pvid);
++	if (e && --e->refcnt == 0) {
++		list_del(&e->list);
++		kfree(e);
++		ret = sparx5_mact_forget(sparx5, addr, port->pvid);
++	}
++	spin_unlock(&sparx5->mc_cpu_lock);
+ 
+-	return sparx5_mact_forget(sparx5, addr, port->pvid);
++	return ret;
+ }
+ 
+ int sparx5_mc_sync(struct net_device *dev, const unsigned char *addr)
+ {
+ 	struct sparx5_port *port = netdev_priv(dev);
+ 	struct sparx5 *sparx5 = port->sparx5;
++	struct sparx5_mc_cpu_entry *e;
++	int ret = 0;
++
++	spin_lock(&sparx5->mc_cpu_lock);
++	e = sparx5_mc_cpu_find(sparx5, addr, port->pvid);
++	if (!e) {
++		e = kmalloc(sizeof(*e), GFP_ATOMIC);
++		if (!e) {
++			ret = -ENOMEM;
++			goto out;
++		}
++
++		ret = sparx5_mact_learn(sparx5,
++					sparx5_get_pgid(sparx5, PGID_CPU),
++					addr, port->pvid);
++		if (ret) {
++			kfree(e);
++			goto out;
++		}
+ 
+-	return sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_CPU),
+-				 addr, port->pvid);
++		ether_addr_copy(e->addr, addr);
++		e->vid = port->pvid;
++		e->refcnt = 0;
++		list_add_tail(&e->list, &sparx5->mc_cpu_entries);
++	}
++	e->refcnt++;
++out:
++	spin_unlock(&sparx5->mc_cpu_lock);
++
++	return ret;
+ }
+ 
+ static int sparx5_mact_get(struct sparx5 *sparx5,
+@@ -492,6 +550,8 @@ void sparx5_set_ageing(struct sparx5 *sparx5, int msecs)
+ void sparx5_mact_init(struct sparx5 *sparx5)
+ {
+ 	spin_lock_init(&sparx5->lock);
++	spin_lock_init(&sparx5->mc_cpu_lock);
++	INIT_LIST_HEAD(&sparx5->mc_cpu_entries);
+ 
+ 	/*  Flush MAC table */
+ 	spx5_wr(LRN_COMMON_ACCESS_CTRL_CPU_ACCESS_CMD_SET(MAC_CMD_CLEAR_ALL) |
+@@ -503,3 +563,13 @@ void sparx5_mact_init(struct sparx5 *sparx5)
+ 
+ 	sparx5_set_ageing(sparx5, BR_DEFAULT_AGEING_TIME / HZ * 1000);
+ }
++
++void sparx5_mact_deinit(struct sparx5 *sparx5)
++{
++	struct sparx5_mc_cpu_entry *e, *tmp;
++
++	list_for_each_entry_safe(e, tmp, &sparx5->mc_cpu_entries, list) {
++		list_del(&e->list);
++		kfree(e);
++	}
++}
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
+index 582145713cfd1..c9a672c3aaf79 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
+@@ -1054,6 +1054,7 @@ static void mchp_sparx5_remove(struct platform_device *pdev)
+ 	/* Unregister netdevs */
+ 	sparx5_unregister_notifier_blocks(sparx5);
+ 	destroy_workqueue(sparx5->mact_queue);
++	sparx5_mact_deinit(sparx5);
+ }
+ 
+ static const struct sparx5_regs sparx5_regs = {
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index 09d7002279812..45aadf924747c 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -407,6 +407,10 @@ struct sparx5 {
+ 	struct list_head mdb_entries;
+ 	/* mdb list mutex */
+ 	struct mutex mdb_lock;
++	/* CPU multicast entries, shared by the standalone ports */
++	struct list_head mc_cpu_entries;
++	/* mc_cpu_entries lock */
++	spinlock_t mc_cpu_lock;
+ 	struct delayed_work mact_work;
+ 	struct workqueue_struct *mact_queue;
+ 	/* Board specifics */
+@@ -490,6 +494,7 @@ int sparx5_mc_sync(struct net_device *dev, const unsigned char *addr);
+ int sparx5_mc_unsync(struct net_device *dev, const unsigned char *addr);
+ void sparx5_set_ageing(struct sparx5 *sparx5, int msecs);
+ void sparx5_mact_init(struct sparx5 *sparx5);
++void sparx5_mact_deinit(struct sparx5 *sparx5);
+ 
+ /* sparx5_vlan.c */
+ void sparx5_pgid_update_mask(struct sparx5_port *port, int pgid, bool enable);

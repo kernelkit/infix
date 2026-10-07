@@ -1,7 +1,7 @@
 From 34593fc729c0656763733bf93719b8c8c9408f91 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 20 Aug 2025 21:38:24 +0200
-Subject: [PATCH 13/80] drm/panel-simple: Add a timing for the Raspberry Pi 7"
+Subject: [PATCH 13/81] drm/panel-simple: Add a timing for the Raspberry Pi 7"
  panel
 
 The Raspberry Pi 7" 800x480 panel uses a Toshiba TC358762 DSI
