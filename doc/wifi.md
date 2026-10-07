@@ -612,6 +612,13 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11r mob
 - All APs in roaming group must have **identical** SSID
 - All APs must have **identical** passphrase (same keystore secret)
 - All APs must use the **same mobility-domain** identifier
+- APs on different devices must be ports of bridges that are connected
+  to each other, over a cable, a mesh or a WDS backhaul.  The APs hand a
+  roaming client's keys to each other over that network, which WPA3
+  clients need for a fast transition.  On a bridge with VLAN filtering
+  the keys travel in the APs' VLAN, so each device needs a VLAN
+  interface on the bridge for that VLAN, the one carrying its IP address
+  there is enough
 
 **Mobility Domain Options:**
 - Explicit 4-character hex value (e.g., `4f57`) - default if not specified

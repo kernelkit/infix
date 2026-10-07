@@ -81,6 +81,8 @@ All notable changes to the project are documented in this file.
 - A WiFi station never connected to a WPA3-only access point, which
   includes every access point on 6 GHz
 - WiFi scan results listed WPA3-only networks as WPA2-Personal
+- Fast roaming (802.11r) between WiFi access points on different devices
+  failed for WPA3 clients, which fell back to a full reconnect
 - Changing the MAC address of a WiFi access point could leave it, and
   the other access points on the same radio, down until the WiFi service
   was restarted

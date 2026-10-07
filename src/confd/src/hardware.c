@@ -222,6 +222,46 @@ static const char *resolve_mobility_domain(const char *mobility_domain, const ch
 }
 
 /*
+ * Key for the 802.11r key holder exchange between access points, hex
+ * encoded SHA-256 over the mobility domain and the passphrase.  Every AP
+ * of the SSID derives the same key, so the wildcard R0KH/R1KH entries
+ * let any of them fetch a roaming client's PMK-R1 from the AP it came
+ * from, which is what fast transition needs for WPA3 (SAE) clients: their
+ * PMK comes from the SAE handshake and cannot be regenerated locally the
+ * way a WPA2 PSK can.
+ */
+static int wifi_ft_key(const char *mobility_domain, const unsigned char *secret, char *out, size_t len)
+{
+	unsigned char digest[EVP_MAX_MD_SIZE];
+	unsigned int dlen = 0;
+	EVP_MD_CTX *ctx;
+	size_t i;
+
+	if (len < 2 * 32 + 1)
+		return -1;
+
+	ctx = EVP_MD_CTX_new();
+	if (!ctx)
+		return -1;
+
+	if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1 ||
+	    EVP_DigestUpdate(ctx, "infix-ft:", 9) != 1 ||
+	    EVP_DigestUpdate(ctx, mobility_domain, strlen(mobility_domain)) != 1 ||
+	    EVP_DigestUpdate(ctx, ":", 1) != 1 ||
+	    EVP_DigestUpdate(ctx, secret, strlen((const char *)secret)) != 1 ||
+	    EVP_DigestFinal_ex(ctx, digest, &dlen) != 1 || dlen < 32) {
+		EVP_MD_CTX_free(ctx);
+		return -1;
+	}
+	EVP_MD_CTX_free(ctx);
+
+	for (i = 0; i < 32; i++)
+		snprintf(out + 2 * i, 3, "%02x", digest[i]);
+
+	return 0;
+}
+
+/*
  * Find an AP interface on a higher-band radio (5/6 GHz) advertising the
  * same SSID as the caller's 2.4 GHz BSS, for no_probe_resp_if_seen_on=.
  * hostapd suppresses a 2.4 GHz probe response only once it has actually
@@ -519,6 +559,9 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 
 	/* 802.11r: Fast BSS Transition */
 	if (enable_80211r) {
+		const char *bridge = lydx_get_cattr(lydx_get_child(cif, "bridge-port"), "bridge");
+		char ft_key[65];
+
 		fprintf(hostapd, "# Fast BSS Transition (802.11r)\n");
 		fprintf(hostapd, "mobility_domain=%s\n", mobility_domain);
 		/* Over-the-air FT: the client authenticates directly with the
@@ -527,6 +570,36 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		fprintf(hostapd, "ft_over_ds=0\n");
 		fprintf(hostapd, "ft_psk_generate_local=1\n");
 		fprintf(hostapd, "nas_identifier=%s\n", nas_identifier_cfg);
+		/* The key holders of all APs on the SSID reach each other over
+		 * the network the APs are bridged to, see wifi_ft_key().  On a
+		 * VLAN filtering bridge that is the APs' VLAN: use its VLAN
+		 * interface when there is one, the bridge device itself has
+		 * no say in which VLAN its frames end up in. */
+		if (secret && !wifi_ft_key(mobility_domain, secret, ft_key, sizeof(ft_key))) {
+			if (bridge) {
+				const char *pvid = lydx_get_cattr(lydx_get_child(cif, "bridge-port"), "pvid");
+				const char *ft_iface = bridge;
+
+				if (pvid) {
+					struct lyd_node *vif;
+
+					vif = lydx_get_xpathf(config, "/interfaces/interface[vlan/id='%s' and vlan/lower-layer-if='%s']/name",
+							      pvid, bridge);
+					if (vif)
+						ft_iface = lyd_get_value(vif);
+				}
+				fprintf(hostapd, "ft_iface=%s\n", ft_iface);
+			}
+			fprintf(hostapd, "r0kh=ff:ff:ff:ff:ff:ff * %s\n", ft_key);
+			fprintf(hostapd, "r1kh=00:00:00:00:00:00 00:00:00:00:00:00 %s\n", ft_key);
+			/* A client roaming away from a node that is going down
+			 * asks for a key that node can no longer hand out.
+			 * Give up on the fetch quickly and reject, the client
+			 * then logs in the normal way; waiting in silence makes
+			 * it blacklist the target instead. */
+			fprintf(hostapd, "rkh_pull_timeout=300\n");
+			fprintf(hostapd, "rkh_pull_retries=1\n");
+		}
 	}
 
 	/* 802.11k: Radio Resource Management */
