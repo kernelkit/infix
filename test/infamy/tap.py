@@ -35,6 +35,10 @@ import threading
 import traceback
 
 import infamy.netns
+from infamy.dutlog import Capture
+
+# The running test, lets Env.attach() register DUTs for syslog capture
+CURRENT = None
 
 class Test:
     def __init__(self, output=sys.stdout):
@@ -45,6 +49,10 @@ class Test:
 
         self.test_cleanup=[]
         self.steps = 0
+        self.dutlog = Capture()
+
+        global CURRENT
+        CURRENT = self
 
     def push_test_cleanup(self, fn):
         self.test_cleanup.append(fn)
@@ -66,6 +74,7 @@ class Test:
         self.out.flush()
 
         self.cleanup()
+        self.dutlog.end()
 
         if not e:
             self._not_ok("Missing explicit test result\n")
@@ -92,6 +101,7 @@ class Test:
 
     @contextlib.contextmanager
     def step(self, msg):
+        self.dutlog.step(self.steps + 1, msg)
         try:
             yield
             self._ok(msg)
