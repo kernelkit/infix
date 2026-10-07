@@ -45,6 +45,10 @@ All notable changes to the project are documented in this file.
   are migrated, the first radio's code wins, and a code the regulatory
   database does not know, which never had any effect, becomes the world
   domain
+- A WiFi access point asks its clients to move to another access point,
+  with 802.11v, before it stops for a reboot, an upgrade, or a
+  configuration change, so clients that support it roam without losing
+  their connection
 - WiFi channel survey is now on request: `show hardware <radio> survey` in the
   CLI, a Scan channels button per radio on the WebUI WiFi page, or the
   `channel-survey` action on the radio.  The survey covers every channel the

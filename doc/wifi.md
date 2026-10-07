@@ -672,6 +672,13 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11v
 
 Allows APs to suggest better APs to clients, improving roaming decisions.
 
+An access point about to stop, because the device reboots, is upgraded,
+or its WiFi configuration changes, also uses 802.11v to ask its clients
+to move first.  Clients that support it roam to another access point
+with the same SSID while the radio is still up, instead of noticing the
+loss afterwards and scanning for a new network.  Clients without
+802.11v are disconnected as before.
+
 #### Band Steering (MBO)
 
 Enabling `dot11v` also turns on MBO (Multi-Band Operation), advertised in

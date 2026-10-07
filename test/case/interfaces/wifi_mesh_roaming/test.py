@@ -110,13 +110,18 @@ with infamy.Test() as test:
         # Connect to all four nodes concurrently -- each attach probes the
         # node and downloads its YANG models, so doing them in parallel cuts
         # the setup time roughly four-fold.
-        gw1, gw2, gw3, client = parallel(
+        gw1, gw2, gw3, client, gw1sh, gw2sh, gw3sh, clientsh = parallel(
             lambda: env.attach("gw1", "mgmt"),
             lambda: env.attach("gw2", "mgmt"),
             lambda: env.attach("gw3", "mgmt"),
             lambda: env.attach("client", "mgmt"),
+            lambda: env.attach("gw1", "mgmt", "ssh"),
+            lambda: env.attach("gw2", "mgmt", "ssh"),
+            lambda: env.attach("gw3", "mgmt", "ssh"),
+            lambda: env.attach("client", "mgmt", "ssh"),
         )
         gw_duts = [gw1, gw2, gw3]
+        shells = {"gw1": gw1sh, "gw2": gw2sh, "gw3": gw3sh}
         gws = [(name, dut, mesh, ap) for (name, mesh, ap), dut in zip(GWS, gw_duts)]
 
         wifi.skip_unless_supported(test, client, *gw_duts)
@@ -197,5 +202,33 @@ with infamy.Test() as test:
 
         with test.step("Verify connectivity is restored after roaming"):
             ns.must_reach(CLIENT_IP)
+
+        # A node going down for a reboot or an upgrade asks its clients
+        # to move first, so a client with a strong signal roams instead
+        # of waiting for the beacons to stop.
+        second_bssid = wifi.station_bssid(client)
+        second_ap, _ = aps[second_bssid]
+
+        with test.step("Stop the WiFi service on the client's current node"):
+            shells[second_ap].runsh("initctl stop hostapd")
+
+        with test.step("Verify the client roams to the remaining node's AP"):
+            until(lambda: wifi.station_bssid(client) in aps and
+                  wifi.station_bssid(client) not in (first_bssid, second_bssid),
+                  attempts=30, interval=1)
+            third_ap, _ = aps[wifi.station_bssid(client)]
+            print(f"client roamed from {second_ap} to {third_ap}")
+
+        with test.step("Verify the client was asked to move and roamed without disconnecting"):
+            def log():
+                return clientsh.runsh("sed -n '/WNM: Disassociation Imminent/,$p' /var/log/syslog").stdout
+            until(lambda: "Disassociation Imminent" in log(), attempts=10, interval=1)
+            assert "CTRL-EVENT-DISCONNECTED" not in log(), log()
+
+        with test.step("Verify connectivity is restored after the handover"):
+            ns.must_reach(CLIENT_IP)
+
+        with test.step("Start the WiFi service again on the stopped node"):
+            shells[second_ap].runsh("initctl start hostapd")
 
     test.succeed()
