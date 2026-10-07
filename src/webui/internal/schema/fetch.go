@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"infix/webui/internal/restconf"
 )
@@ -71,7 +72,30 @@ func FetchModules(ctx context.Context, rc restconf.Fetcher, cacheDir string) ([]
 		}
 		downloaded = append(downloaded, m)
 	}
+	prune(cacheDir, modules)
 	return downloaded, nil
+}
+
+// prune removes cached YANG files the device no longer lists, such as an
+// earlier revision of a module, so that two revisions never load together.
+func prune(cacheDir string, modules []ModuleInfo) {
+	keep := make(map[string]bool, len(modules))
+	for _, m := range modules {
+		keep[m.filename()] = true
+	}
+	entries, err := os.ReadDir(cacheDir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".yang") || keep[name] {
+			continue
+		}
+		if err := os.Remove(filepath.Join(cacheDir, name)); err == nil {
+			log.Printf("schema: dropped %s, no longer on the device", name)
+		}
+	}
 }
 
 // listModules queries the device for the list of implemented YANG modules.
@@ -117,7 +141,27 @@ func downloadIfMissing(ctx context.Context, rc restconf.Fetcher, cacheDir string
 		return fmt.Errorf("GET /yang/%s: %w", m.filename(), err)
 	}
 
-	if err := os.WriteFile(dest, data, 0640); err != nil {
+	// Write through a temporary name so that a restart in the middle of
+	// the download never leaves a cut-short module behind.
+	tmp, err := os.CreateTemp(cacheDir, "."+m.Name+".*")
+	if err != nil {
+		return fmt.Errorf("write %s: %w", dest, err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return fmt.Errorf("write %s: %w", dest, err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("write %s: %w", dest, err)
+	}
+	if err := os.Chmod(tmp.Name(), 0640); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("write %s: %w", dest, err)
+	}
+	if err := os.Rename(tmp.Name(), dest); err != nil {
+		os.Remove(tmp.Name())
 		return fmt.Errorf("write %s: %w", dest, err)
 	}
 	log.Printf("schema: cached %s", m.filename())

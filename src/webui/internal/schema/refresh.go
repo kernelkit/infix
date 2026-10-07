@@ -41,13 +41,23 @@ func (c *Cache) dropStale() error {
 	if b, err := os.ReadFile(stamp); err == nil && strings.TrimSpace(string(b)) == c.version {
 		return nil
 	}
+	log.Printf("schema: cache in %s is for another image, dropped", c.dir)
+	return c.drop()
+}
+
+// drop empties the cache directory and stamps it for this image, so the
+// next Refresh downloads every module again.
+func (c *Cache) drop() error {
 	if err := os.RemoveAll(c.dir); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(c.dir, 0750); err != nil {
 		return err
 	}
-	log.Printf("schema: cache in %s is for another image, dropped", c.dir)
+	if c.version == "" {
+		return nil
+	}
+	stamp := filepath.Join(c.dir, ".version")
 	return os.WriteFile(stamp, []byte(c.version+"\n"), 0640)
 }
 
@@ -80,7 +90,12 @@ func (c *Cache) LoadFromCache() error {
 
 	mgr, err := Load(c.dir)
 	if err != nil {
-		return fmt.Errorf("schema: load from cache: %w", err)
+		// A broken file would fail every start, drop the lot and let
+		// the next Refresh fetch a fresh copy.
+		if derr := c.drop(); derr != nil {
+			return fmt.Errorf("schema: load from cache: %w (and dropping it: %v)", err, derr)
+		}
+		return fmt.Errorf("schema: load from cache: %w, cache dropped", err)
 	}
 	c.mu.Lock()
 	c.manager = mgr
@@ -122,7 +137,10 @@ func (c *Cache) Refresh(ctx context.Context) error {
 
 	mgr, err := Load(c.dir)
 	if err != nil {
-		return fmt.Errorf("schema refresh: load: %w", err)
+		if derr := c.drop(); derr != nil {
+			return fmt.Errorf("schema refresh: load: %w (and dropping the cache: %v)", err, derr)
+		}
+		return fmt.Errorf("schema refresh: load: %w, cache dropped", err)
 	}
 
 	c.mu.Lock()

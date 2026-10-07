@@ -57,6 +57,9 @@ All notable changes to the project are documented in this file.
 - WebUI: uploading a software bundle failed on slow storage
 - WebUI: the Overview page showed the hostname template, e.g. `rpi-%m`, and
   never showed the boot partition
+- WebUI: a YANG module file cut short in the schema cache, for example
+  by a restart during download, crashed the WebUI at every start until
+  the cache was removed by hand
 - LLDP neighbors were listed without their system name, descriptions, and
   capabilities, in the CLI, the WebUI, and the operational datastore
 - The manufacturer from a VPD was not shown as `mfg-name` of its
