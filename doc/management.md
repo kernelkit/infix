@@ -130,7 +130,7 @@ admin@example:/>
 
 The system provides a set of Web services:
 
-- a rudimentary Web server, currently limited to an information page
+- a Web management interface (WebUI) for configuration and monitoring
 - a RESTCONF server with equivalent management capabilities as NETCONF
 - a Web console service, where the shell/CLI can be accessed via
   HTTPS, similar to connecting via a console port or SSH
@@ -138,6 +138,11 @@ The system provides a set of Web services:
 There is also a *Netbrowse* Web service presenting information about
 the unit's neighbors, collected via mDNS (see
 [Discovery](discovery.md) for more details).
+
+All of them are enabled in the factory configuration.  The WebUI, Web
+console, and Netbrowse are optional parts of the image.  Minimal builds
+have only a static information page and RESTCONF.  On such an image,
+the settings for the missing services are accepted but have no effect.
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit web</b>
@@ -160,19 +165,20 @@ admin@example:/config/web/> <b>set enabled</b>
 admin@example:/config/web/>
 </code></pre>
 
-Enabling the Web service implies that a Web server is
-enabled. Currently this Web server provides generic Infix information,
-as well as a link to a Web console. The Web server uses HTTPS; any
-HTTP request is redirected to HTTPS.
+Enabling the Web service starts a Web server on port 443 (HTTPS), and
+any HTTP request on port 80 is redirected to HTTPS.  It serves the
+WebUI, where you log in with the same user accounts as for the CLI,
+SSH, and NETCONF.
 
 The _enabled_ setting for the Web service acts as a global
 enable/disable setting for the other Web services (Web console,
-RESTCONF and Netbrowse).
+RESTCONF and Netbrowse).  Disabling it stops all of them, regardless
+of their own settings.
 
 ### Enable/disable Web Console
 
 The Web console service provides a terminal service similar to Console
-or SSH. The Web console is secured via HTTPS on port 7861.
+or SSH. The Web console is secured via HTTPS on port 7681.
 
 The Web console has its own enable/disable setting, but will only be
 activated if the Web service is enabled. The example below shows how
@@ -185,18 +191,23 @@ admin@example:/config/web/console/>
 
 ### Enable/disable RESTCONF Service
 
-Alternatively, the system can be managed remotely using
-RESTCONF. Meaning you can `curl` it instead of using a dedicated
-NETCONF client.
+Alternatively, the system can be managed remotely using RESTCONF, at
+`https://<address>/restconf`.  Meaning you can `curl` it instead of
+using a dedicated NETCONF client, see [RESTCONF
+Scripting](scripting-restconf.md) for examples.
 
 The RESTCONF service has its own enable/disable setting, but will
-only be activated if the Web service is enabled. The example below
+only be activated if the Web service is enabled.  The example below
 shows how to disable the RESTCONF service.
 
 <pre class="cli"><code>admin@example:/config/web/> <b>edit restconf</b>
 admin@example:/config/web/restconf/> <b>no enabled</b>
 admin@example:/config/web/restconf/>
 </code></pre>
+
+> [!NOTE]
+> The WebUI uses RESTCONF internally, so disabling RESTCONF only blocks
+> requests from other hosts, and the WebUI keeps working.
 
 ### HTTPS Certificate
 

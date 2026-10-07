@@ -1145,6 +1145,7 @@ echo "Public:  $pub"
 </COMMAND>
 
 <COMMAND name="leave" help="Apply candidate to running-config and return to admin-exec">
+  <ACTION sym="pvid_check@infix" update_retcode="false"/>
   <ACTION sym="srp_commit@sysrepo"/>
   <ACTION sym="srp_top@sysrepo"/>
   <ACTION sym="nav" exec_on="success">replace main</ACTION>
@@ -1192,6 +1193,7 @@ echo "Public:  $pub"
 </COMMAND>
 
 <COMMAND name="commit" help="Commit current candidate to running-config">
+  <ACTION sym="pvid_check@infix" update_retcode="false"/>
   <ACTION sym="srp_commit@sysrepo"/>
 </COMMAND>
 
@@ -1202,6 +1204,7 @@ echo "Public:  $pub"
 <!-- Display -->
 
 <COMMAND name="check" help="Validate candidate">
+  <ACTION sym="pvid_check@infix" update_retcode="false"/>
   <ACTION sym="srp_verify@sysrepo"/>
 </COMMAND>
 

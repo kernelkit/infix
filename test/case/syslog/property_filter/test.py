@@ -6,6 +6,8 @@ message properties with different operators, case-insensitivity, and negation.
 
 """
 
+import uuid
+
 import infamy
 from infamy.util import parallel, until
 
@@ -19,6 +21,17 @@ TEST_MESSAGES = [
     ("test", "Warning: lowercase"),
 ]
 
+# Old messages survive in /var/log on hardware, count only this run's
+TOKEN = uuid.uuid4().hex[:8]
+
+
+def count_lines(ssh, logfile, text):
+    """Count lines in /var/log/logfile from this run containing text"""
+    rc = ssh.runsh(f"cat /var/log/{logfile} 2>/dev/null")
+    return sum(1 for line in rc.stdout.splitlines()
+               if TOKEN in line and text in line)
+
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
@@ -26,7 +39,9 @@ with infamy.Test() as test:
                                   lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Clean up old log files"):
-        tgtssh.runsh("sudo rm -f /var/log/myapp /var/log/not-error /var/log/case-test /var/log/baseline")
+        rc = tgtssh.run_retry("sudo rm -f /var/log/myapp /var/log/not-error /var/log/case-test /var/log/baseline")
+        if rc.returncode:
+            test.fail("Failed removing old log files")
 
     with test.step("Configure syslog with property filters"):
         target.put_config_dicts({
@@ -94,41 +109,36 @@ with infamy.Test() as test:
 
     with test.step("Send test messages"):
         for tag, msg in TEST_MESSAGES:
-            target.log(msg, severity="info", app_name=tag)
-        until(lambda: "Application startup" in tgtssh.runsh("cat /var/log/baseline 2>/dev/null").stdout, attempts=10)
+            target.log(f"{msg} {TOKEN}", severity="info", app_name=tag)
+        until(lambda: count_lines(tgtssh, "baseline", TEST_MESSAGES[-1][1]), attempts=10)
 
     with test.step("Verify myapp log contains only myapp messages"):
-        rc = tgtssh.runsh("grep -c 'myapp' /var/log/myapp 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
+        count = count_lines(tgtssh, "myapp", "myapp")
         if count != 2:
             test.fail(f"Expected 2 myapp messages in /var/log/myapp, got {count}")
 
-        rc = tgtssh.runsh("grep -c 'otherapp' /var/log/myapp 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
+        count = count_lines(tgtssh, "myapp", "otherapp")
         if count != 0:
             test.fail(f"Expected 0 otherapp messages in /var/log/myapp, got {count}")
 
     with test.step("Verify not-error log excludes ERROR messages"):
-        rc = tgtssh.runsh("grep -c 'test' /var/log/not-error 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
+        count = count_lines(tgtssh, "not-error", "test")
         if count != 3:
             test.fail(f"Expected 3 non-ERROR messages in /var/log/not-error, got {count}")
 
-        rc = tgtssh.runsh("grep -c 'ERROR' /var/log/not-error 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
+        count = count_lines(tgtssh, "not-error", "ERROR")
         if count != 0:
             test.fail(f"Expected 0 ERROR messages in /var/log/not-error, got {count}")
 
     with test.step("Verify case-test log matches case-insensitive 'warning'"):
-        rc = tgtssh.runsh("grep -c 'WARNING\\|Warning' /var/log/case-test 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
+        count = count_lines(tgtssh, "case-test", "WARNING") + \
+            count_lines(tgtssh, "case-test", "Warning")
         if count != 2:
             test.fail(f"Expected 2 warning messages in /var/log/case-test, got {count}")
 
     with test.step("Verify baseline log contains all messages"):
         for tag, msg in TEST_MESSAGES:
-            rc = tgtssh.runsh(f"grep -q '{msg}' /var/log/baseline 2>/dev/null")
-            if rc.returncode != 0:
+            if not count_lines(tgtssh, "baseline", msg):
                 test.fail(f"Expected message '{msg}' not found in /var/log/baseline")
 
     test.succeed()

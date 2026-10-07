@@ -837,6 +837,103 @@ int infix_ssh_remove_known_host(kcontext_t *ctx)
 	return run_as_user(cd_home(ctx), argv);
 }
 
+#define IF_XPATH "/ietf-interfaces:interfaces/interface"
+
+static int is_member(struct lyd_node *vlan, const char *mode, const char *port)
+{
+	char path[64];
+
+	snprintf(path, sizeof(path), "%s[.='%s']", mode, port);
+	return !lyd_find_path(vlan, path, 0, NULL);
+}
+
+static void pvid_check_port(struct lyd_node *tree, struct lyd_node *iface)
+{
+	int pvid = 0, uvid = 0, num = 0, member = 0;
+	char untagged[64] = "", xpath[128];
+	struct lyd_node *node, *vlans, *vlan;
+	const char *port, *br;
+
+	port = lyd_get_value(lyd_child(iface));
+	if (!lyd_find_path(iface, "infix-interfaces:bridge", 0, NULL))
+		br = port;
+	else if (!lyd_find_path(iface, "infix-interfaces:bridge-port/bridge", 0, &node))
+		br = lyd_get_value(node);
+	else
+		return;
+
+	snprintf(xpath, sizeof(xpath), IF_XPATH "[name='%s']/infix-interfaces:bridge/vlans", br);
+	if (lyd_find_path(tree, xpath, 0, &vlans))
+		return;
+
+	if (!lyd_find_path(iface, "infix-interfaces:bridge-port/pvid", 0, &node))
+		pvid = atoi(lyd_get_value(node));
+
+	LY_LIST_FOR(lyd_child(vlans), vlan) {
+		int vid, untag;
+
+		if (strcmp(vlan->schema->name, "vlan"))
+			continue;
+
+		untag = is_member(vlan, "untagged", port);
+		if (!untag && !is_member(vlan, "tagged", port))
+			continue;
+
+		vid = atoi(lyd_get_value(lyd_child(vlan)));
+		if (vid == pvid)
+			member = 1;
+		if (untag) {
+			size_t len = strlen(untagged);
+
+			snprintf(&untagged[len], sizeof(untagged) - len, "%s%d", len ? ", " : "", vid);
+			uvid = vid;
+			num++;
+		}
+	}
+
+	if (pvid && !member)
+		printf("Warning: %s has PVID %d, but is not a member of VLAN %d on %s.  "
+		       "The PVID is ignored.\n", port, pvid, pvid, br);
+	else if (!pvid && num)
+		printf("Warning: %s is an untagged member of VLAN%s %s on %s, but has no PVID.  "
+		       "Untagged frames received on %s are dropped.\n",
+		       port, num > 1 ? "s" : "", untagged, br, port);
+	/* Untagged in several VLANs is an asymmetric VLAN setup, by design */
+	else if (pvid && num == 1 && uvid != pvid)
+		printf("Warning: %s is an untagged member of VLAN %d on %s, but has PVID %d.\n",
+		       port, uvid, br, pvid);
+}
+
+/*
+ * Warn about bridge port PVIDs that drop untagged traffic or put it in
+ * another VLAN than the one it leaves untagged in, issue #354.
+ */
+int infix_pvid_check(kcontext_t *ctx)
+{
+	const char *xpath = IF_XPATH "/infix-interfaces:bridge/vlans | "
+			    IF_XPATH "/infix-interfaces:bridge-port";
+	sr_session_ctx_t *sess = NULL;
+	sr_conn_ctx_t *conn = NULL;
+	sr_data_t *data = NULL;
+	struct lyd_node *iface;
+
+	(void)ctx;
+
+	if (sr_connect(SR_CONN_DEFAULT, &conn))
+		return 0;
+	if (sr_session_start(conn, SR_DS_CANDIDATE, &sess) ||
+	    sr_get_data(sess, xpath, 0, 0, 0, &data) || !data)
+		goto done;
+
+	LY_LIST_FOR(lyd_child(data->tree), iface)
+		pvid_check_port(data->tree, iface);
+done:
+	sr_release_data(data);
+	sr_disconnect(conn);
+
+	return 0;
+}
+
 int kplugin_infix_fini(kcontext_t *ctx)
 {
 	(void)ctx;
@@ -867,6 +964,7 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("firewall_addrsets", infix_firewall_addrsets));
 	kplugin_add_syms(plugin, ksym_new("firewall_addrset_action", infix_firewall_addrset_action));
 	kplugin_add_syms(plugin, ksym_new("set_boot_order", infix_set_boot_order));
+	kplugin_add_syms(plugin, ksym_new("pvid_check", infix_pvid_check));
 	kplugin_add_syms(plugin, ksym_new("shell", infix_shell));
 	kplugin_add_syms(plugin, ksym_new("ssh_connect",           infix_ssh_connect));
 	kplugin_add_syms(plugin, ksym_new("ssh_known_hosts",       infix_ssh_known_hosts));

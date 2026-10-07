@@ -31,7 +31,7 @@ def vpd_component(vpd):
             mfgdate = datetime.datetime.strptime(vpd["data"]["manufacture-date"],
                                                  "%m/%d/%Y %H:%M:%S")
             component["mfg-date"] = mfgdate.strftime("%Y-%m-%dT%H:%M:%SZ")
-        if vpd["data"].get("manufacter"):
+        if vpd["data"].get("manufacturer"):
             component["mfg-name"] = vpd["data"]["manufacturer"]
         if vpd["data"].get("product-name"):
             component["model-name"] = vpd["data"]["product-name"]

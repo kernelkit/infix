@@ -24,7 +24,7 @@ Verify the result after a build by inspecting:
 
 - `output/images/*`: names, missing prefix, etc.
 - `output/target/etc/os-release`: this file is sourced by other build
-  scripts, e.g., `mkgns3a.sh`.  For reference, see [os-release(5)][]
+  scripts, e.g., `post-build.sh`.  For reference, see [os-release(5)][]
 
 > [!IMPORTANT]
 > To get a proper GIT revision (hash) from your OS spin, remember to set

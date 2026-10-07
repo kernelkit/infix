@@ -45,8 +45,8 @@ bridge should be used instead.
 By default bridges in Linux do not filter based on VLAN tags.  This can
 be enabled when creating a bridge by adding a port to a VLAN as a tagged
 or untagged member.  Use the port default VID (PVID) setting to control
-VLAN association for traffic ingressing a port untagged (default PVID:
-1).
+VLAN association for traffic ingressing a port untagged.  There is no
+default PVID, see [Ingress and Egress Rules](#ingress-and-egress-rules).
 
 <pre class="cli"><code>admin@example:/config/> <b>edit interface br0</b>
 admin@example:/config/interface/br0/> <b>up</b>
@@ -81,6 +81,42 @@ on this topic.
 > For the example above, if the bridge itself is an untagged member only
 > in VLAN 10, IP addresses can be set directly on the bridge without the
 > need for dedicated VLAN interfaces on top of the bridge.
+
+### Ingress and Egress Rules
+
+On a VLAN filtering bridge every frame belongs to a VLAN, decided when
+it enters a port.  Using `eth0` from the example above, with PVID 10
+and untagged member of VLAN 10:
+
+| Frame received on `eth0`  | Result                                         |
+|---------------------------|------------------------------------------------|
+| Untagged                  | Accepted, assigned to VLAN 10                  |
+| Priority tagged (VID 0)   | Accepted, assigned to VLAN 10, PCP is kept     |
+| Tagged with VID 10        | Accepted                                       |
+| Tagged with VID 20        | Dropped, `eth0` is not a member of VLAN 20     |
+
+The rules behind the table:
+
+- A tagged frame is accepted only if the port is a member of its VLAN.
+  Whether the membership is tagged or untagged only matters when frames
+  leave the port
+- Untagged and priority tagged frames are assigned to the port's PVID.
+  A port without a PVID drops them.  The PVID must be one of the port's
+  VLANs, otherwise it is ignored and a warning is logged
+- A frame is only forwarded to ports that are members of its VLAN.  It
+  leaves a tagged member with a VLAN tag, and an untagged member
+  without one, so the PCP of a priority tagged frame is lost on an
+  untagged port
+
+The same rules apply when the bridge is offloaded to a switch chip.
+
+The CLI commands `check`, `commit`, and `leave` warn about ports with a
+missing or mismatched PVID.  The configuration is applied anyway:
+
+<pre class="cli"><code>admin@example:/config/> <b>leave</b>
+Warning: eth0 is an untagged member of VLAN 10 on br0, but has no PVID.  Untagged frames received on eth0 are dropped.
+admin@example:/>
+</code></pre>
 
 
 ## Multicast Filtering and Snooping
