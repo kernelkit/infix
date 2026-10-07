@@ -1,7 +1,7 @@
 From 0f61d1e5c4910ed9cd79fb1b3ebccae2d69498d3 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 10 Nov 2025 13:42:53 +0100
-Subject: [PATCH 57/79] net: sparx5/lan969x: populate netdev of_node
+Subject: [PATCH 57/80] net: sparx5/lan969x: populate netdev of_node
 
 Populate of_node for the port netdevs, to make the individual ports
 of_nodes available in sysfs.

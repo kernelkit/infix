@@ -1,7 +1,7 @@
 From b1b26dd227ed5099626c1fcb0e843b81d3daae65 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
-Subject: [PATCH 27/79] net: dsa: mv88e6xxx: Only activate LAG offloading when
+Subject: [PATCH 27/80] net: dsa: mv88e6xxx: Only activate LAG offloading when
  bridged
 
 The current port isolation scheme for mv88e6xxx is detailed here:

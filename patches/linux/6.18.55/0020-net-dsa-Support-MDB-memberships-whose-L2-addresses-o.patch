@@ -1,7 +1,7 @@
 From 5fe097173ea1563a7f1e3b93fa0347699a94e19e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
-Subject: [PATCH 20/79] net: dsa: Support MDB memberships whose L2 addresses
+Subject: [PATCH 20/80] net: dsa: Support MDB memberships whose L2 addresses
  overlap
 
 Multiple IP multicast groups (32 for v4, 2^80 for v6) map to the same
