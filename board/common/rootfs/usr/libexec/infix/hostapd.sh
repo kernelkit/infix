@@ -1,5 +1,6 @@
 #!/bin/sh
-# Run hostapd and, when stopped, hand the clients over first.
+# Run hostapd, steer dual-band clients to 5 GHz while it runs, and hand
+# the clients over when stopped.
 #
 # A client with a good signal has no reason to roam, so when its access
 # point goes away it only notices once the beacons stop, and then has to
@@ -74,16 +75,49 @@ handover()
     fi
 }
 
+# Band steering pairs, a 2.4 GHz BSS and the 5/6 GHz twin it defers to,
+# from the no_probe_resp_if_seen_on directives in the radio configs.
+pairs()
+{
+    for conf in "$@"; do
+	case $conf in
+	    *.conf) ;;
+	    *) continue ;;
+	esac
+	awk -F= '/^(interface|bss)=/ { cur = $2 }
+		 /^no_probe_resp_if_seen_on=/ { print cur, $2 }' "$conf"
+    done
+}
+
+steer()
+{
+    pairs "$@" | while read -r bss twin; do
+	i=0
+	while [ ! -S /run/hostapd/$bss ] && [ $i -lt 50 ]; do
+	    sleep 0.2
+	    i=$((i + 1))
+	done
+	[ -S /run/hostapd/$bss ] || continue
+	/usr/libexec/infix/wifi-steer.sh "$bss" "$twin" &
+	echo $! >> /run/wifi-steer/pids
+    done
+}
+
 stop()
 {
+    [ -f /run/wifi-steer/pids ] && kill $(cat /run/wifi-steer/pids) 2>/dev/null
+    rm -rf /run/wifi-steer
     handover
     kill -TERM "$pid" 2>/dev/null
 }
 
+rm -rf /run/wifi-steer
+mkdir -p /run/wifi-steer
 CONFS=$*
 hostapd "$@" &
 pid=$!
 trap stop TERM INT
+steer "$@" &
 rc=0
 while kill -0 "$pid" 2>/dev/null; do
     wait "$pid"

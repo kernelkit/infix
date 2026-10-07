@@ -72,9 +72,10 @@ def ap_bss(name, radio_name, bssid):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to the ap and the client"):
         env = infamy.Env()
-        ap, client = parallel(
+        ap, client, clientsh = parallel(
             lambda: env.attach("ap", "mgmt"),
             lambda: env.attach("client", "mgmt"),
+            lambda: env.attach("client", "mgmt", "ssh"),
         )
         wifi.skip_unless_supported(test, ap, client)
 
@@ -134,5 +135,38 @@ with infamy.Test() as test:
         until(lambda: iface.address_exist(client, "wifi0", POOL_START) or
               iface.address_exist(client, "wifi0", POOL_END),
               attempts=60, interval=2)
+
+    # The 5GHz BSS goes away: the client falls back to 2.4GHz once the
+    # 5GHz radio has not seen it for a minute.  When the 5GHz BSS comes
+    # back, the client is connected on the wrong band.  A client that
+    # scans is seen on 5GHz again and gets asked to move there.  Real
+    # clients scan in the background on their own, this one is told to.
+    with test.step("Disable the 5GHz BSS"):
+        ap.put_config_dicts({"ietf-interfaces": {"interfaces": {
+            "interface": [{"name": "wifi1", "enabled": False}]}}})
+
+    with test.step("Verify the client falls back to the 2.4GHz BSS"):
+        until(lambda: CLIENT_MAC in wifi.ap_stations(ap, "wifi0"),
+              attempts=90, interval=2)
+
+    with test.step("Enable the 5GHz BSS again"):
+        ap.put_config_dicts({"ietf-interfaces": {"interfaces": {
+            "interface": [{"name": "wifi1", "enabled": True}]}}})
+        until(lambda: iface.is_oper_up(ap, "wifi1"), attempts=60, interval=2)
+
+    with test.step("Verify a scanning client is steered back to the 5GHz BSS"):
+        def steered():
+            if CLIENT_MAC in wifi.ap_stations(ap, "wifi1"):
+                return True
+            clientsh.runsh("sudo wpa_cli -i wifi0 scan >/dev/null")
+            return False
+        until(steered, attempts=20, interval=10)
+        assert CLIENT_MAC not in wifi.ap_stations(ap, "wifi0"), \
+            "client still associated on 2.4GHz"
+
+    with test.step("Verify the client still has its address after the move"):
+        until(lambda: iface.address_exist(client, "wifi0", POOL_START) or
+              iface.address_exist(client, "wifi0", POOL_END),
+              attempts=30, interval=2)
 
     test.succeed()

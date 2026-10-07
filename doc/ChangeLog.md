@@ -45,6 +45,8 @@ All notable changes to the project are documented in this file.
 - The WiFi country code is one setting for the whole system, `hardware
   wifi country-code`, instead of one per radio, and applies as soon as it
   is set.  Existing configurations are migrated
+- WiFi band steering also moves dual-band clients already connected on
+  2.4 GHz to the 5 or 6 GHz access point of the same SSID
 - WiFi clients are moved to another access point before theirs stops for
   a reboot, an upgrade or a configuration change, instead of losing the
   connection.  Access points on different devices now know of each other
