@@ -185,6 +185,9 @@ All notable changes to the project are documented in this file.
   layout is new, so existing x86_64 installations must be reinstalled
   from the new disk image, `infix-x86_64.disk` or `.qcow2`, they
   cannot be upgraded with a bundle
+- LAN969x boards ship `symreg`, which reads and writes switch registers by
+  name and dumps the MAC, VLAN and VCAP tables, for debugging the switch
+  core, see `board/aarch64/microchip-lan969x/README.md`
 
 ### Fixes
 
