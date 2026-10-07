@@ -1,6 +1,6 @@
 #!/bin/sh
-# Run hostapd, steer dual-band clients to 5 GHz while it runs, and hand
-# the clients over when stopped.
+# Run hostapd, learn the other nodes' access points, steer dual-band
+# clients to 5 GHz while it runs, and hand the clients over when stopped.
 #
 # A client with a good signal has no reason to roam, so when its access
 # point goes away it only notices once the beacons stop, and then has to
@@ -9,13 +9,12 @@
 # the radio is still up.  Clients without 802.11v are deauthenticated
 # by hostapd on exit, as before.
 
-# The request names no candidate, a node does not know the other nodes'
-# access points, so the client has to scan for one: a few seconds on a
-# real radio across three bands.  A client that roams never tells the old
-# access point either, hostapd drops it from its station list when the
-# timer runs out, so wait a little longer than that before giving up,
-# but stay well inside the ten seconds the service gets to stop before
-# it is killed.
+# A client given candidates roams in well under a second, one without
+# has to scan first, a few seconds on a real radio across three bands.
+# A client that roams never tells the old access point either, hostapd
+# drops it from its station list when the timer runs out, so wait a
+# little longer than that before giving up, but stay well inside the
+# ten seconds the service gets to stop before it is killed.
 TIMER=50	# beacon intervals (100 ms) until hostapd disassociates a client that stays
 WAIT=7		# seconds to wait for the clients to leave
 
@@ -43,6 +42,28 @@ stations()
     done
 }
 
+# Ask a station to leave, naming the other access points of the SSID
+# wifi-neighbors.py has heard of: a client does not look for a new
+# access point on a request without candidates.
+ask_to_move()
+{
+    bss=$1
+    sta=$2
+    cands=""
+    if [ -s /run/wifi-neighbors/$bss ]; then
+	for cand in $(grep -E '^[0-9a-f]{2}(:[0-9a-f]{2}){5}(,[0-9]+){4}$' /run/wifi-neighbors/$bss); do
+	    cands="$cands neighbor=$cand"
+	done
+    fi
+    if [ -n "$cands" ]; then
+	# shellcheck disable=SC2086
+	hostapd_cli -i "$bss" bss_tm_req "$sta" disassoc_imminent=1 disassoc_timer=$TIMER \
+		    pref=1 abridged=1 $cands >/dev/null 2>&1
+    else
+	hostapd_cli -i "$bss" disassoc_imminent "$sta" $TIMER >/dev/null 2>&1
+    fi
+}
+
 handover()
 {
     # Only clients that do 802.11v can be asked to move, and hostapd only
@@ -52,7 +73,7 @@ handover()
     num=0
     for bss in $(bsses); do
 	for sta in $(hostapd_cli -i "$bss" list_sta 2>/dev/null); do
-	    hostapd_cli -i "$bss" disassoc_imminent "$sta" $TIMER >/dev/null 2>&1
+	    ask_to_move "$bss" "$sta"
 	    num=$((num + 1))
 	done
     done
@@ -89,15 +110,31 @@ pairs()
     done
 }
 
-steer()
+# Wait for the control socket of a BSS, up to ten seconds
+wait_bss()
 {
+    i=0
+    while [ ! -S /run/hostapd/$1 ] && [ $i -lt 50 ]; do
+	sleep 0.2
+	i=$((i + 1))
+    done
+    [ -S /run/hostapd/$1 ]
+}
+
+helpers()
+{
+    # Exchange access point lists with the other nodes once hostapd is up
+    for conf in "$@"; do
+	case $conf in *.conf) ;; *) continue ;; esac
+	wait_bss "$(sed -n 's/^interface=//p' "$conf")" || continue
+	/usr/libexec/infix/wifi-neighbors.py "$@" &
+	echo $! >> /run/wifi-steer/pids
+	break
+    done
+
+    # Steer dual-band clients to the higher band, one loop per pair
     pairs "$@" | while read -r bss twin; do
-	i=0
-	while [ ! -S /run/hostapd/$bss ] && [ $i -lt 50 ]; do
-	    sleep 0.2
-	    i=$((i + 1))
-	done
-	[ -S /run/hostapd/$bss ] || continue
+	wait_bss "$bss" || continue
 	/usr/libexec/infix/wifi-steer.sh "$bss" "$twin" &
 	echo $! >> /run/wifi-steer/pids
     done
@@ -111,13 +148,14 @@ stop()
     kill -TERM "$pid" 2>/dev/null
 }
 
+CONFS=$*
 rm -rf /run/wifi-steer
 mkdir -p /run/wifi-steer
-CONFS=$*
+trap stop TERM INT
 hostapd "$@" &
 pid=$!
-trap stop TERM INT
-steer "$@" &
+helpers "$@" &
+echo $! >> /run/wifi-steer/pids
 rc=0
 while kill -0 "$pid" 2>/dev/null; do
     wait "$pid"
