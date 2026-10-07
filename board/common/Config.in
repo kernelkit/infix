@@ -4,6 +4,7 @@ menu "Images"
 comment "DDI Based"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-ddi/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-ddi-disk/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-ddi-rauc/Config.in"
 
 comment "ITB Based"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-rootfs/Config.in"
