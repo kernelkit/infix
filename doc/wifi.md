@@ -662,6 +662,16 @@ admin@example:/config/interface/wifi0/> set wifi access-point roaming dot11k
 Enables neighbor reports and beacon reports, allowing clients to discover
 nearby APs before roaming.
 
+
+Devices with access points on the same network tell each other about
+them, over that network, so every access point knows the other access
+points of its SSID on the other devices and lists them in its neighbor
+reports.  A client asking where else its network exists gets the real
+answer, and a client asked to move, see below, is told where to.  A
+device that comes up later is known to the others within a minute.
+The exchange is protected with the 802.11r key, so it needs fast
+roaming with a secret on the access points, see above.
+
 ### 802.11v - BSS Transition Management
 
 Enable 802.11v for network-assisted roaming:
@@ -674,10 +684,10 @@ Allows APs to suggest better APs to clients, improving roaming decisions.
 
 An access point about to stop, because the device reboots, is upgraded,
 or its WiFi configuration changes, also uses 802.11v to ask its clients
-to move first.  Clients that support it roam to another access point
-with the same SSID while the radio is still up, instead of noticing the
-loss afterwards and scanning for a new network.  Clients without
-802.11v are disconnected as before.
+to move first, naming the other access points of the SSID it knows of.
+Clients that support it roam to one of them while the radio is still
+up, instead of noticing the loss afterwards and scanning for a new
+network.  Clients without 802.11v are disconnected as before.
 
 #### Band Steering (MBO)
 

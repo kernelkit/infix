@@ -62,7 +62,7 @@ image::topology.svg[WiFi Mesh backhaul with roaming Access Points topology, alig
 . Verify connectivity is restored after roaming
 . Stop the WiFi service on the client's current node
 . Verify the client roams to the remaining node's AP
-. Verify the client was asked to move and roamed without disconnecting
+. Verify the client was asked to move, given candidates, and roamed without disconnecting
 . Verify connectivity is restored after the handover
 . Start the WiFi service again on the stopped node
 

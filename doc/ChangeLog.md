@@ -51,7 +51,9 @@ All notable changes to the project are documented in this file.
 - A WiFi access point asks its clients to move to another access point,
   with 802.11v, before it stops for a reboot, an upgrade, or a
   configuration change, so clients that support it roam without losing
-  their connection
+  their connection.  Devices tell each other about their access points,
+  over the network the access points are bridged to, and list the other
+  devices' access points in their 802.11k neighbor reports
 - WiFi channel survey is now on request: `show hardware <radio> survey` in the
   CLI, a Scan channels button per radio on the WebUI WiFi page, or the
   `channel-survey` action on the radio.  The survey covers every channel the

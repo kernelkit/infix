@@ -186,8 +186,16 @@ with infamy.Test() as test:
     with infamy.IsolatedMacVlan(hlan) as ns:
         ns.addip(HOST_IP)
 
+        # Give a ping a few tries, the radios have just come up.
+        def reaches(addr):
+            try:
+                ns.ping(addr)
+                return True
+            except Exception:
+                return False
+
         with test.step("Verify the client is reachable across the mesh"):
-            ns.must_reach(CLIENT_IP)
+            until(lambda: reaches(CLIENT_IP), attempts=10, interval=2)
 
         with test.step("Take down the client's current AP to force a roam"):
             first_dut.put_config_dicts({"ietf-interfaces": {"interfaces": {
@@ -201,7 +209,7 @@ with infamy.Test() as test:
             print(f"client roamed from {first_ap} to {new_ap}")
 
         with test.step("Verify connectivity is restored after roaming"):
-            ns.must_reach(CLIENT_IP)
+            until(lambda: reaches(CLIENT_IP), attempts=15, interval=2)
 
         # A node going down for a reboot or an upgrade asks its clients
         # to move first, so a client with a strong signal roams instead
@@ -219,14 +227,15 @@ with infamy.Test() as test:
             third_ap, _ = aps[wifi.station_bssid(client)]
             print(f"client roamed from {second_ap} to {third_ap}")
 
-        with test.step("Verify the client was asked to move and roamed without disconnecting"):
+        with test.step("Verify the client was asked to move, given candidates, and roamed without disconnecting"):
             def log():
                 return clientsh.runsh("sed -n '/WNM: Disassociation Imminent/,$p' /var/log/syslog").stdout
             until(lambda: "Disassociation Imminent" in log(), attempts=10, interval=1)
+            assert "Preferred List Available" in log(), log()
             assert "CTRL-EVENT-DISCONNECTED" not in log(), log()
 
         with test.step("Verify connectivity is restored after the handover"):
-            ns.must_reach(CLIENT_IP)
+            until(lambda: reaches(CLIENT_IP), attempts=15, interval=2)
 
         with test.step("Start the WiFi service again on the stopped node"):
             shells[second_ap].runsh("initctl start hostapd")
