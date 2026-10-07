@@ -14,6 +14,9 @@ All notable changes to the project are documented in this file.
   `ripng`/`ospfv3` type and the IPv6 address-family
 - Support building without Frr, which also drops bash.  The minimal
   defconfigs are now built this way, with static routing only, issue #1670
+- Configurable OSPF auto-cost reference bandwidth, for OSPFv2 and OSPFv3,
+  issue #1576.  The default, 100000 Mbit/s, is the value used before, so
+  link costs do not change on upgrade.  The CLI shows it in `show ip ospf`
 - Check for a new software release on demand: `upgrade` without a bundle in
   the CLI, the Check now button on the WebUI dashboard, or the `check-update`
   RPC, see [Unattended Software Updates][unattended]

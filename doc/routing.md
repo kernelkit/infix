@@ -215,11 +215,13 @@ admin@example:/>
 ### OSPF global settings
 
 In addition to *area* and *interface* specific settings, OSPF provides
-global settings for route redistribution and OSPF router identifier.
+global settings for route redistribution, OSPF router identifier, and
+the reference bandwidth used to calculate interface costs.
 
 <pre class="cli"><code>admin@example:/config/> <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
 admin@example:/config/routing/…/ospf/> <b>set ?</b>
   area                     List of OSPF areas.
+  auto-cost                Interface auto-cost configuration state.
   default-route-advertise  Distribute default route to network
   explicit-router-id       Defined in RFC 2328.  A 32-bit number
   redistribute             Redistribute protocols into OSPF
@@ -242,6 +244,24 @@ admin@example:/config/routing/…/ospf/> set
   router will distribute a default route even when it lacks a default
   route. The default route will be distributed as an *external type-2*
   (E2) route.
+- Reference bandwidth: Routers from different vendors only agree on
+  the shortest path if they use the same reference bandwidth.  The cost
+  of an interface without an explicit `cost` is the reference bandwidth
+  divided by the link speed, rounded, with 1 as the lowest cost.  The
+  default is 100000 Mbit/s, which gives a 1 Gbit/s link cost 100.  Use
+  `set auto-cost reference-bandwidth 10000` (Mbit/s) to change it.  A
+  link of unknown speed, e.g., a virtual link, counts as 10000 Mbit/s.
+  Auto-cost can not be disabled.
+
+`show ip ospf` shows the reference bandwidth in use, and `show ipv6
+ospf` does the same for OSPFv3.
+
+<pre class="cli"><code>admin@example:/> <b>show ip ospf</b>
+ OSPF Routing Process, Router ID: 192.168.10.1
+ Reference bandwidth: 100000 Mbit/s
+ Number of areas attached to this router: 1
+ ...
+</code></pre>
 
 
 ### Debug OSPFv2
