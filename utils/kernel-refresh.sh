@@ -7,12 +7,14 @@ usage()
 Synchronize patches/linux/\$TAG with changes from a kernel GIT tree.
 
 Usage:
-  $0 -k kernel-dir -o old-version [-t kernel-tag] [-p patch-dir] [-d defconfig-dir]
+  $0 -k kernel-dir [-o old-version] [-t kernel-tag] [-p patch-dir] [-d defconfig-dir]
 
 Options:
   -h                 This help text
   -k kernel-dir      Path to kernel tree
-  -o old-version     Version to be replaced by new kernel version
+  -o old-version     Version to be replaced by new kernel version.  Only
+                     when upgrading: removes patches/linux/\$old-version,
+                     bumps the defconfigs and refreshes linux.hash
   -t kernel-tag      Base tag from which to generate patches.
                      Default: "v" + \$BR2_LINUX_KERNEL_VERSION
   -p patch-dir       Path to kernel patches directory
@@ -91,6 +93,12 @@ DEFCONFIG_DIR=$(readlink -f $DEFCONFIG_DIR)
 git ls-files --error-unmatch $PATCH_DIR 1>/dev/null 2>&1 && git -C $PATCH_DIR rm -f *.patch
 git -C $KERNEL_DIR format-patch --no-signoff --no-encode-email-headers --no-cover-letter --no-signature -o $PATCH_DIR $KERNEL_TAG..HEAD
 git -C $PATCH_DIR add *.patch
+
+# Same version: patches refreshed, nothing more to do
+if [ -z "$OLD_VER" ] || [ "$OLD_VER" = "$NEW_VER" ]; then
+	exit 0
+fi
+
 if [ -d ${PATCHES_BASE}/${OLD_VER} ]; then
 	git rm -rf ${PATCHES_BASE}/${OLD_VER}
 fi
