@@ -5250,6 +5250,9 @@ def show_ospf(json_data):
 
     # OSPF Process header
     print(f" OSPF Routing Process, Router ID: {router_id}")
+    refbw = ospf.get('auto-cost', {}).get('reference-bandwidth')
+    if refbw is not None:
+        print(f" Reference bandwidth: {refbw} Mbit/s")
     print(f" Number of areas attached to this router: {len(areas)}")
     print()
 

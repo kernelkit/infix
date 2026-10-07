@@ -162,6 +162,27 @@ def add_routes(ospf, ipv6=False):
         insert(ospf, "ietf-ospf:local-rib", "ietf-ospf:route", routes)
 
 
+def add_auto_cost(ospf, daemon):
+    """Report the auto-cost reference bandwidth (Mbit/s) of an OSPF daemon.
+
+    Frr has no JSON for it, and its running-config only lists the value
+    when it differs from the default, 100000 Mbit/s in both ospfd and
+    ospf6d.  Auto-cost is always enabled in Frr."""
+    refbw = 100000
+
+    cmd = ("vtysh", "-c", f"show running-config {daemon}")
+    for line in HOST.run(cmd, default="").splitlines():
+        words = line.split()
+        if words[:2] == ["auto-cost", "reference-bandwidth"]:
+            refbw = int(words[2])
+            break
+
+    ospf["ietf-ospf:auto-cost"] = {
+        "enabled": True,
+        "reference-bandwidth": refbw,
+    }
+
+
 def add_areas(control_protocols):
     """Populate OSPF status"""
     cmd = ['/usr/libexec/statd/ospf-status']
@@ -308,6 +329,7 @@ def add_areas(control_protocols):
         area["ietf-ospf:interfaces"]["ietf-ospf:interface"] = interfaces
         areas.append(area)
 
+    add_auto_cost(control_protocol["ietf-ospf:ospf"], "ospfd")
     add_routes(control_protocol["ietf-ospf:ospf"])
     control_protocol["ietf-ospf:ospf"]["ietf-ospf:areas"]["ietf-ospf:area"] = areas
     insert(control_protocols, "control-plane-protocol", [control_protocol])
@@ -389,6 +411,7 @@ def add_areas6(control_protocols):
         area["ietf-ospf:interfaces"]["ietf-ospf:interface"] = interfaces
         areas.append(area)
 
+    add_auto_cost(control_protocol["ietf-ospf:ospf"], "ospf6d")
     add_routes(control_protocol["ietf-ospf:ospf"], ipv6=True)
     control_protocol["ietf-ospf:ospf"]["ietf-ospf:areas"]["ietf-ospf:area"] = areas
     insert(control_protocols, "control-plane-protocol", [control_protocol])
