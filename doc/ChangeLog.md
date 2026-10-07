@@ -45,6 +45,10 @@ All notable changes to the project are documented in this file.
 - The WiFi country code is one setting for the whole system, `hardware
   wifi country-code`, instead of one per radio, and applies as soon as it
   is set.  Existing configurations are migrated
+- WiFi clients are moved to another access point before theirs stops for
+  a reboot, an upgrade or a configuration change, instead of losing the
+  connection.  Access points on different devices now know of each other
+  and share a client's keys ahead of a roam
 - 802.11r access points can be given a `key-holder-secret`, a keystore
   key of their own to protect the key exchange with instead of the WiFi
   password, see [WiFi documentation](wifi.md#80211r---fast-bss-transition)
