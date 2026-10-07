@@ -323,6 +323,45 @@ $ make test-sh
 09:08:17 infamy0:test # ./9pm/9pm.py -o"--transport=restconf" case/system/hostname.py
 ```
 
+### Capturing DUT Syslog
+
+When a test fails, what the DUT logged during the test is often the
+quickest way to find out why.  With syslog capture enabled, each DUT
+logs to a syslog server in the test container over its management
+interface.  The server writes one directory per test and DUT, next to
+the test output:
+
+```
+test/.log/last/output/0006-set-hostname.log
+test/.log/last/syslog/0006-set-hostname/target/syslog
+test/.log/last/syslog/0006-set-hostname/target/kern.log
+test/.log/last/syslog/0006-set-hostname/target/messages
+```
+
+After the run, `make test` packs these in `test/.log/last/logs.tar.gz`,
+which CI uploads as the `dut-syslog` artifact.
+
+Capture is off by default, because it changes the syslog setup of each
+DUT and adds a few RPCs per test.  Enable it for a test run with:
+
+```
+$ make TEST_SYSLOG_CAPTURE=y test
+```
+
+or, when running interactively:
+
+```
+$ make test-sh
+09:08:17 infamy0:test # ./9pm/9pm.py -o"--capture-syslog" case/system/hostname.py
+```
+
+Infamy marks the start and stop of each test, and the start of each
+step, in the DUT's log.  The markers have msgid `test-start`,
+`test-stop`, or `step`, and structured data `test@61046` with the test
+name, node, step number, and the host's wall-clock time.  To line up
+DUT log lines with the test output, compare the host time in a marker
+with the timestamp on the same line.
+
 ### Test specification
 
 The test specification is automaticly generated from the test cases,
