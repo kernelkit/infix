@@ -113,6 +113,10 @@
             },
             "ietf-ospf:router-id": "10.1.1.1",
             "ietf-ospf:address-family": "ipv4",
+            "ietf-ospf:auto-cost": {
+              "enabled": true,
+              "reference-bandwidth": 100000
+            },
             "ietf-ospf:local-rib": {
               "ietf-ospf:route": [
                 {

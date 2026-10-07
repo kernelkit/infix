@@ -790,6 +790,10 @@
                 }
               ]
             },
+            "ietf-ospf:auto-cost": {
+              "enabled": true,
+              "reference-bandwidth": 100000
+            },
             "ietf-ospf:local-rib": {
               "ietf-ospf:route": [
                 {
