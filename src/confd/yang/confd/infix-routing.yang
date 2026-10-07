@@ -26,12 +26,19 @@ module infix-routing {
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing, ietf-ospf, and ietf-rip.";
 
+  revision 2026-10-07 {
+    description "Add OSPF auto-cost reference-bandwidth, for OSPFv2 and
+                 OSPFv3.  The default 100000 Mbit/s matches the value
+                 previously used, and auto-cost can not be disabled.";
+    reference "internal";
+  }
+
   revision 2026-09-28 {
     description "Add ospf, rip, and bfd features, where ospf covers OSPFv2
                  and OSPFv3, and rip covers RIPv2 and RIPng.  A build without
                  FRR leaves them off, so only static routes can be configured
                  and the device advertises exactly what it supports.";
-    reference "Issue #1670";
+    reference "internal";
   }
 
   revision 2026-07-22 {
@@ -67,19 +74,19 @@ module infix-routing {
                  Allows displaying which area a route was learned from,
                  how long neighbors have been up, their DR/BDR role, and
                  the interface with local address.";
-    reference "Issue #1190";
+    reference "internal";
   }
 
   revision 2025-11-11 {
     description "Add BFD IP single-hop support (RFC 9127).
                  Deviate session-statistics (not implemented yet).";
-    reference "RFC 9127, Issue #1190";
+    reference "RFC 9127";
   }
   revision 2025-11-10 {
     description "Add must constraint to prevent backbone area as stub/NSSA.
                  Enable OSPF operational data for CLI: un-deviate priority,
                  hello-timer, wait-timer, route metric and route-tag fields.";
-    reference "RFC 2328, RFC 3101, Issue #1190";
+    reference "RFC 2328, RFC 3101";
   }
   revision 2024-11-27 {
     description "Deviate address-family in OSPF";
@@ -423,8 +430,21 @@ module infix-routing {
     }
   }
 
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:auto-cost" {
-    deviate not-supported;
+  /* The reference bandwidth must be the same on all routers in the OSPF
+     domain.  Frr always derives the interface cost from it, unless a cost
+     is set on the interface, so auto-cost can not be disabled. */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:auto-cost/ospf:enabled" {
+    deviate add {
+      default "true";
+      must ". = 'true'" {
+        error-message "Disabling OSPF auto-cost is not supported.";
+      }
+    }
+  }
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:auto-cost/ospf:reference-bandwidth" {
+    deviate add {
+      default "100000";
+    }
   }
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:database" {
     deviate not-supported;
