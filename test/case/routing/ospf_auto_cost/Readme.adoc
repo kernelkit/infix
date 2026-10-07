@@ -1,0 +1,6 @@
+include::ospfv2.adoc[]
+
+<<<
+
+include::ospfv3.adoc[]
+
