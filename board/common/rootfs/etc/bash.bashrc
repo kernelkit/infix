@@ -33,21 +33,7 @@ bind "set show-all-if-ambiguous on"
 
 export LANG=C.UTF-8
 
-log()
-{
-    local fn="/var/log/syslog"
-    [ -n "$1" ] && fn="/var/log/$1"
-    less +G -r "$fn"
-}
-
-follow ()
-{
-    local fn="/var/log/syslog"
-    [ -n "$1" ] && fn="/var/log/$1"
-
-    tail -F -n +1 "$fn"
-}
-
+# log and follow are defined in /etc/profile.d/log.sh
 _logfile_completions()
 {
     local cur=${COMP_WORDS[COMP_CWORD]}
