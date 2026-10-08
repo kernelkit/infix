@@ -13,6 +13,7 @@ CONFD_REDISTRIBUTE = NO
 CONFD_DEPENDENCIES = host-sysrepo sysrepo rousette netopeer2 jansson libite sysrepo libsrx libglib2 libev sysklogd watchdogd
 CONFD_AUTORECONF = YES
 CONFD_CONF_OPTS += --disable-silent-rules --with-crypt=$(BR2_PACKAGE_CONFD_DEFAULT_CRYPT)
+CONFD_CONF_OPTS += --with-marker-dir=$(if $(IX_IMAGE_DDI),/boot/efi,/mnt/aux)
 CONFD_SYSREPO_SHM_PREFIX = sr_buildroot$(subst /,_,$(CONFIG_DIR))_confd
 
 define CONFD_CONF_ENV

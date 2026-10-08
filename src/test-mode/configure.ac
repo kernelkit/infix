@@ -14,6 +14,11 @@ LT_INIT
 
 PKG_PROG_PKG_CONFIG
 
+AC_ARG_WITH([marker-dir],
+	[AS_HELP_STRING([--with-marker-dir=DIR], [Directory holding test-mode marker files @<:@/mnt/aux@:>@])],
+	[markerdir="$withval"], [markerdir=/mnt/aux])
+AC_DEFINE_UNQUOTED([MARKER_DIR], ["$markerdir"], [Directory holding test-mode marker files])
+
 PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
 PKG_CHECK_MODULES([libite],  [libite >= 2.5.0])
 
@@ -53,6 +58,7 @@ cat <<EOF
   Exec prefix...........: $eprefix
   Sysconfdir............: `eval echo $sysconfdir`
   Localstatedir.........: `eval echo $localstatedir`
+  Marker directory......: $markerdir
   Default fstab.........: `eval echo $fstab`
   System environment....: ${sysconfig_path:-${sysconfig}}
   C Compiler............: $CC $CFLAGS $CPPFLAGS $LDFLAGS $LIBS

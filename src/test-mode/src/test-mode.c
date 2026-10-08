@@ -66,7 +66,7 @@ static int test_override(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		      sr_val_t **output, size_t *output_cnt,
 		      void *priv)
 {
-	touch("/mnt/aux/test-override-startup");
+	touch(MARKER_DIR "/test-override-startup");
 
 	return 0;
 }
@@ -75,7 +75,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 {
 	int rc = SR_ERR_SYS;
 
-	if (!fexist("/mnt/aux/test-mode"))
+	if (!fexist(MARKER_DIR "/test-mode"))
 		return SR_ERR_OK;
         rc = sr_rpc_subscribe(session, "/infix-test:test/reset", test_reset, NULL, 0, SR_SUBSCR_DEFAULT, &sub);
         if (rc) {

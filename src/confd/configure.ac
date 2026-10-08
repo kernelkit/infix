@@ -7,6 +7,7 @@ AM_SILENT_RULES(yes)
 AC_CONFIG_FILES([
 	Makefile
 	bin/Makefile
+	bin/gen-config
 	bin/gen-version
 	share/Makefile
 	share/factory.d/Makefile
@@ -84,6 +85,12 @@ AC_ARG_WITH(login-shell,
 AC_ARG_WITH(crypt,
         AS_HELP_STRING([--with-crypt=crypt], [Default crypt for $0$cleartext, default: yescrypt]),
 	[crypt=$withval], [crypt="yescrypt"])
+
+AC_ARG_WITH([marker-dir],
+	[AS_HELP_STRING([--with-marker-dir=DIR], [Directory holding test-mode marker files @<:@/mnt/aux@:>@])],
+	[markerdir="$withval"], [markerdir=/mnt/aux])
+AC_DEFINE_UNQUOTED([MARKER_DIR], ["$markerdir"], [Directory holding test-mode marker files])
+AC_SUBST([MARKER_DIR], [$markerdir])
 
 AS_IF([test "x$enable_containers" = "xyes"], [
         AC_DEFINE(CONTAINERS, 1, [Built with container support])])
@@ -203,6 +210,7 @@ Optional features:
   SNMP support .........: $enable_snmp
   Login shell ..........: $login_shell
   Default crypt algo ...: $crypt
+  Marker directory .....: $markerdir
 
 ------------- Compiler version --------------
 $($CC --version || true)
