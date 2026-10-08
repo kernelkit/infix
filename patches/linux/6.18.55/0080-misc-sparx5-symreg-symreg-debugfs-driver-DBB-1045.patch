@@ -1,7 +1,7 @@
 From d9a9addcf353ca7b5d7a04acd8ab5f50b690c471 Mon Sep 17 00:00:00 2001
 From: Steen Hegelund <steen.hegelund@microchip.com>
 Date: Wed, 21 Jan 2026 10:09:45 +0100
-Subject: [PATCH 80/81] misc: sparx5-symreg; symreg debugfs driver (DBB-1045)
+Subject: [PATCH 80/84] misc: sparx5-symreg; symreg debugfs driver (DBB-1045)
 
 Expose the switch register space of Microchip Sparx5 family SoCs
 through /sys/kernel/debug/symreg/mem, for the symreg tool, which

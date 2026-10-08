@@ -1,7 +1,7 @@
 From 508ff078d94e3083fcf905ff59fcb477a3dbe507 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 26 Nov 2024 19:45:59 +0100
-Subject: [PATCH 25/81] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
+Subject: [PATCH 25/84] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
  VLANs
 
 Before this change, in a setup like the following, packets assigned to

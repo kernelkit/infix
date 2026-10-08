@@ -1,7 +1,7 @@
 From ded124119dbb2ad94c870b56449f12798043e63f Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Tue, 30 Sep 2025 13:37:49 +0200
-Subject: [PATCH 70/81] arm64: dts: microchip: add Novarq Tactical 1000
+Subject: [PATCH 70/84] arm64: dts: microchip: add Novarq Tactical 1000
 
 Novarq Tactical 1000 is a LAN9696 based switch featuring 24x1G and 4x10G
 SFP ports.

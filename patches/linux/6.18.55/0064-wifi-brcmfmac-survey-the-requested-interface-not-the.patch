@@ -1,7 +1,7 @@
 From 10d713882efe78b7be0dbda7e469ce7dd1830933 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 30 Jun 2026 15:42:48 +0200
-Subject: [PATCH 64/81] wifi: brcmfmac: survey the requested interface, not the
+Subject: [PATCH 64/84] wifi: brcmfmac: survey the requested interface, not the
  primary
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

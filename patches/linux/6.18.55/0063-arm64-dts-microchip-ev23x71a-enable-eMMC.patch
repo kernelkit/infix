@@ -1,7 +1,7 @@
 From 8dd67f639beee3bbe5c8992d0314b40ad46bb726 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:38:37 +0200
-Subject: [PATCH 63/81] arm64: dts: microchip: ev23x71a: enable eMMC
+Subject: [PATCH 63/84] arm64: dts: microchip: ev23x71a: enable eMMC
 
 The board has an 8-bit eMMC on SDMMC0, and defines the emmc_sd pinctrl
 group for it, but nothing enables the controller.

@@ -1,7 +1,7 @@
 From c473017acbed8a778f07f9f1ce55028e85a9ad62 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
-Subject: [PATCH 03/81] net: phy: marvell10g: Add LED support for 88X3310
+Subject: [PATCH 03/84] net: phy: marvell10g: Add LED support for 88X3310
 
 Pickup the LEDs from the state in which the hardware reset or
 bootloader left them, but also support further configuration via
