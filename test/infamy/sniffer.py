@@ -1,46 +1,14 @@
 """Sniff for network packets using tcpdump/tshark"""
-import os
 import signal
-import subprocess
-import tempfile
-import time
-import infamy.util as util
+from .netns import Pcap
 
-class Sniffer:
-    """Helper class for tcpdump"""
+class Sniffer(Pcap):
+    """Capture on the namespace's "iface", read back with tcpdump"""
+    stop_signal = signal.SIGINT
+    stop_delay = 0
+
     def __init__(self, netns, expr):
-        self.pcap = tempfile.NamedTemporaryFile(suffix=".pcap", delete=False)
-        self.expr = expr
-        self.netns = netns
-        self.proc = None
-
-    def __del__(self):
-        self.pcap.close()
-        os.unlink(self.pcap.name)
-
-    def __enter__(self):
-        cmd = f"tshark -lni iface -w {self.pcap.name} {self.expr}"
-        arg = cmd.split(" ")
-        self.proc = self.netns.popen(arg,
-                                     stdin=subprocess.DEVNULL,
-                                     stdout=subprocess.DEVNULL,
-                                     stderr=subprocess.PIPE,
-                                     text=True)
-
-        util.until(lambda: " -- Capture started." in self.proc.stderr.readline())
-
-    def __exit__(self, _, __, ___):
-        if not self.proc:
-            return False
-
-        self.proc.send_signal(signal.SIGINT)
-        time.sleep(1)
-        if not self.proc.poll():
-            try:
-                self.proc.kill()
-            except OSError:
-                pass
-        self.proc.wait()
+        super().__init__(netns, "iface", expr)
 
     def output(self):
         """Return PCAP output"""
