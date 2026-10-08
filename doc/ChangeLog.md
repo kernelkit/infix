@@ -79,7 +79,10 @@ All notable changes to the project are documented in this file.
   again
 - PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
   kept dropping to the faulty state because the transmit timestamp arrived
-  later than the 10 ms the PTP daemon waited for it
+  later than the 10 ms the PTP daemon waited for it, or never at all
+- PTP now time stamps with the clock of the switch core when the kernel
+  would have picked a PHY's, so all ports of a switch share one clock, which
+  boundary and transparent clocks and TSN schedules depend on
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 

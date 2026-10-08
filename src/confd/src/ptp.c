@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <dirent.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <jansson.h>
 
@@ -105,6 +106,52 @@ static bool iface_has_hw_timestamp(json_t *root, const char *ifname)
 static uint16_t instance(struct lyd_node *inst)
 {
 	return (uint16_t)atoi(lydx_get_cattr(inst, "instance-index"));
+}
+
+/*
+ * Time stamp with the PTP hardware clock of the interface's own device
+ * rather than a PHY's.  The kernel prefers a PHY that can time stamp,
+ * which on a switch scatters the ports over one clock per PHY, while the
+ * switch clock covers every port and drives the TSN schedules.  The
+ * selection survives link down and up, so once per instance is enough.
+ */
+static void select_device_phc(const char *ifname)
+{
+	char path[PATH_MAX], dev[PATH_MAX], phc[PATH_MAX];
+	struct dirent *ent;
+	int found = -1;
+	DIR *dir;
+
+	snprintf(path, sizeof(path), "/sys/class/net/%s/device", ifname);
+	if (!realpath(path, dev))
+		return;
+
+	dir = opendir("/sys/class/ptp");
+	if (!dir)
+		return;
+
+	while ((ent = readdir(dir))) {
+		int idx;
+
+		if (sscanf(ent->d_name, "ptp%d", &idx) != 1)
+			continue;
+
+		snprintf(path, sizeof(path), "/sys/class/ptp/%s/device", ent->d_name);
+		if (!realpath(path, phc) || strcmp(phc, dev))
+			continue;
+
+		/* A device with several clocks reports the lowest as its PHC */
+		if (found < 0 || idx < found)
+			found = idx;
+	}
+	closedir(dir);
+
+	if (found < 0)
+		return;
+
+	if (systemf("ethtool --set-hwtimestamp-cfg %s index %d qualifier precise"
+		    " >/dev/null 2>&1", ifname, found))
+		WARN("Failed selecting /dev/ptp%d for time stamping on %s", found, ifname);
 }
 
 /*
@@ -264,6 +311,9 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 
 		if (!lydx_is_enabled(port_ds, "port-enable"))
 			continue;
+
+		if (!strcmp(ts, "hardware"))
+			select_device_phc(iface);
 
 		fprintf(fp, "[%s]\n", iface);
 
