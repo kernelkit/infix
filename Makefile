@@ -11,6 +11,10 @@ override O := $(if $(filter /%,$O),$O,$(CURDIR)/$O)
 
 config      := $(O)/.config
 bmake        = $(MAKE) -C buildroot O=$(O) $1
+
+# Goals depend on each other, e.g. 'make foo_defconfig apply-mirror',
+# so run them in order.  Like Buildroot, -j still applies to each goal.
+.NOTPARALLEL:
 SNIPPETS_DIR := $(CURDIR)/configs/snippets
 MERGE_CONFIG := $(CURDIR)/buildroot/support/kconfig/merge_config.sh
 
