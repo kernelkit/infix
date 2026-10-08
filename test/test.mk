@@ -24,8 +24,7 @@ mode-run    := -t $(BINARIES_DIR)/qemu.dot
 mode        := $(mode-$(TEST_MODE))
 
 pkg-$(ARCH)      := -p $(O)/images/$(INFIX_ARTIFACT).pkg
-binaries-$(ARCH) := $(INFIX_ARTIFACT).qcow2
-binaries-x86_64  += OVMF.fd
+binaries-$(ARCH) := $(INFIX_ARTIFACT).disk
 binaries         := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
 
 # Common transport override for minimal defconfigs
