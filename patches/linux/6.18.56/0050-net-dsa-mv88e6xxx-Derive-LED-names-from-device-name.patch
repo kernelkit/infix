@@ -1,7 +1,7 @@
 From 024fb8fd29a48bb85f355b5a4a558c8ab6875b3c Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 12 Aug 2026 10:08:53 +0200
-Subject: [PATCH 50/82] net: dsa: mv88e6xxx: Derive LED names from device name
+Subject: [PATCH 50/86] net: dsa: mv88e6xxx: Derive LED names from device name
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
