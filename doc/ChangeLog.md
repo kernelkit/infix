@@ -27,6 +27,8 @@ All notable changes to the project are documented in this file.
   VLAN, issue #354
 - Add support for the Banana Pi BPI-M1 (Allwinner A20) to the 32-bit Arm
   build, with a new `bpi_m1_boot_defconfig` for its U-Boot bootloader
+- New `iitoctl` tool, shows which rule drives each LED and why, and can
+  start locate, the board's LEDs blink as configured: `iitoctl locate on`
 
 ### Fixes
 
@@ -41,6 +43,8 @@ All notable changes to the project are documented in this file.
   messages received from other daemons
 - Fix mdns-alias failing to publish on 32-bit Arm, every retry ended in
   "Memory exhausted".  The 32-bit Arm builds now use 64-bit `time_t`
+- Fix the LED daemon, iitod, crashing on 32-bit Arm, which left all LEDs
+  off after boot
 - Fix missing hardware status when a sensor label has characters not
   allowed in a sensor name, e.g., "SoC temperature" on the Allwinner A20
 
