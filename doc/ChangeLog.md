@@ -13,7 +13,8 @@ All notable changes to the project are documented in this file.
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
 - Support building without Frr, which also drops bash.  The minimal
-  defconfigs are now built this way, with static routing only, issue #1670
+  defconfigs, and the 32-bit Arm build, are now built this way, with
+  static routing only, issue #1670
 - Check for a new software release on demand: `upgrade` without a bundle in
   the CLI, the Check now button on the WebUI dashboard, or the `check-update`
   RPC, see [Unattended Software Updates][unattended]
@@ -24,6 +25,14 @@ All notable changes to the project are documented in this file.
 - CLI: `check`, `commit`, and `leave` warn about bridge ports with a missing
   or mismatched PVID, which drops untagged frames or puts them in the wrong
   VLAN, issue #354
+- Add support for the Banana Pi BPI-M1 (Allwinner A20) to the 32-bit Arm
+  build, with a new `bpi_m1_boot_defconfig` for its U-Boot bootloader
+- New `iitoctl` tool, shows which rule drives each LED and why, and can
+  start locate, the board's LEDs blink as configured: `iitoctl locate on`
+- New `infix-hardware:locate` RPC, blinks the board's locate LEDs to
+  identify the chassis, by default for 60 seconds.  Available from the
+  CLI, `locate`, and the Hardware page in the web interface.  Not allowed
+  for guest users
 
 ### Fixes
 
@@ -34,6 +43,14 @@ All notable changes to the project are documented in this file.
   capabilities, in the CLI, the WebUI, and the operational datastore
 - The manufacturer from a VPD was not shown as `mfg-name` of its
   `vpd-*` component in the operational datastore
+- Fix FRR mgmtd crash loop on 32-bit Arm, caused by unaligned access to
+  messages received from other daemons
+- Fix mdns-alias failing to publish on 32-bit Arm, every retry ended in
+  "Memory exhausted".  The 32-bit Arm builds now use 64-bit `time_t`
+- Fix the LED daemon, iitod, crashing on 32-bit Arm, which left all LEDs
+  off after boot
+- Fix missing hardware status when a sensor label has characters not
+  allowed in a sensor name, e.g., "SoC temperature" on the Allwinner A20
 
 [v26.09.0][] - 2026-09-30
 -------------------------

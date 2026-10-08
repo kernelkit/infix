@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Infix OS device tree for Banana Pi BPI-M1
+ */
+
+#include <arm/allwinner/sun7i-a20-bananapi.dts>
+#include "infix.dtsi"
+
+/* Only used by arch/arm topology to compare cores, silences boot errors */
+&cpu0 {
+	clock-frequency = <960000000>;
+};
+
+&cpu1 {
+	clock-frequency = <960000000>;
+};
+
+/* Keep the LED lit by U-Boot until iitod takes over */
+&{/leds/led} {
+	default-state = "keep";
+};

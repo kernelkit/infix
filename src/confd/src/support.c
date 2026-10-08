@@ -171,24 +171,6 @@ static void cleanup(const char *dir)
 		WARN("Cannot remove %s: %s", dir, strerror(errno));
 }
 
-/* The event session runs as confd itself, the caller is only known
- * from the originator data: netopeer2 pushes the NETCONF session id
- * and then the username, rousette pushes nothing */
-static const char *rpc_user(sr_session_ctx_t *session, const char **via)
-{
-	const char *orig = sr_session_get_orig_name(session);
-	const void *data;
-	uint32_t size;
-
-	*via = orig && orig[0] ? orig : "local session";
-
-	if (orig && !strcmp(orig, "netopeer2") &&
-	    !sr_session_get_orig_data(session, 1, &size, &data) && size)
-		return data;
-
-	return NULL;
-}
-
 static int add_str(sr_val_t **output, size_t *cnt, const char *path,
 		   const char *leaf, sr_val_type_t type, const char *val)
 {

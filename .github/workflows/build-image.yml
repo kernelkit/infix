@@ -10,6 +10,7 @@ on:
         options:
           - raspberrypi-rpi2
           - raspberrypi-rpi64
+          - bananapi-bpi-m1
           - bananapi-bpi-r3
           - bananapi-bpi-r4
           - bananapi-bpi-r64
@@ -68,6 +69,11 @@ jobs:
               arch=aarch64
               targets="sdcard"
               bootloader_sdcard=rpi64-boot
+              ;;
+            bananapi-bpi-m1)
+              arch=arm
+              targets="sdcard"
+              bootloader_sdcard=bpi-m1-boot
               ;;
             bananapi-bpi-r3)
               arch=aarch64

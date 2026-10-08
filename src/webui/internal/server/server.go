@@ -309,6 +309,7 @@ func New(
 	mux.HandleFunc("GET /routing", routing.Overview)
 	mux.HandleFunc("GET /wifi", wifi.Overview)
 	mux.HandleFunc("GET /hardware", hw.Overview)
+	mux.HandleFunc("POST /hardware/locate", hw.Locate)
 	mux.HandleFunc("GET /vpn", vpn.Overview)
 	mux.HandleFunc("GET /dhcp", dhcp.Overview)
 	mux.HandleFunc("GET /ntp", ntp.Overview)

@@ -13,3 +13,4 @@ cpu:
   S5 Temp                     [32m59.5 °C[39m               ok        
 
 pwmfan                        3200 RPM              ok        
+Soc Temperature               [32m41.2 °C[39m               ok        

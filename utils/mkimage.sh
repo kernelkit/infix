@@ -185,6 +185,9 @@ get_bootloader_name()
 	acer-connect-vero-w6m)
             echo "bpi_r3_emmc_boot"
             ;; 
+        bananapi-bpi-m1)
+            echo "bpi_m1_boot"
+            ;;
         bananapi-bpi-r3)
             if [ "$target" = "emmc" ]; then
                 echo "bpi_r3_emmc_boot"

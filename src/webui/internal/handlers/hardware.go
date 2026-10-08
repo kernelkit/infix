@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -94,6 +95,19 @@ type otherCompEntry struct {
 type HardwareHandler struct {
 	Template *template.Template
 	RC       *restconf.Client
+}
+
+// Locate blinks LEDs to identify the chassis, for the duration
+// given by the YANG default of the infix-hardware:locate RPC.
+func (h *HardwareHandler) Locate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	if err := h.RC.Post(r.Context(), "/operations/infix-hardware:locate"); err != nil {
+		log.Printf("locate: %v", err)
+		fmt.Fprintf(w, `<span class="sc-fd-err">Failed: %s</span>`,
+			template.HTMLEscapeString(err.Error()))
+		return
+	}
+	fmt.Fprint(w, `<span class="sc-fd-ok">&#10003; Locating, LEDs are blinking</span>`)
 }
 
 func (h *HardwareHandler) Overview(w http.ResponseWriter, r *http.Request) {

@@ -61,6 +61,24 @@ FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...)
 	return fp;
 }
 
+/* The event session runs as confd itself, the caller is only known
+ * from the originator data: netopeer2 pushes the NETCONF session id
+ * and then the username, rousette pushes nothing */
+const char *rpc_user(sr_session_ctx_t *session, const char **via)
+{
+	const char *orig = sr_session_get_orig_name(session);
+	const void *data;
+	uint32_t size;
+
+	*via = orig && orig[0] ? orig : "local session";
+
+	if (orig && !strcmp(orig, "netopeer2") &&
+	    !sr_session_get_orig_data(session, 1, &size, &data) && size)
+		return data;
+
+	return NULL;
+}
+
 /*
  * Touch a Finit service .conf file to schedule a synchronized reload.
  * Equivalent to 'initctl touch <svc>' but without the fork+exec overhead.
@@ -982,6 +1000,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	rc = support_rpc_init(&confd);
+	if (rc)
+		goto err;
+
+	rc = locate_rpc_init(&confd);
 	if (rc)
 		goto err;
 

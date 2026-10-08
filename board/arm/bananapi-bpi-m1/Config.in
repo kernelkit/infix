@@ -1,0 +1,9 @@
+config BR2_PACKAGE_BANANAPI_BPI_M1
+	bool "Banana Pi BPI-M1"
+	depends on BR2_arm
+	select SDCARD_AUX
+	select BR2_PACKAGE_INPUT_EVENT_DAEMON
+	help
+	  Support for the Banana Pi BPI-M1 single-board computer, the
+	  first Banana Pi, with an Allwinner A20 dual-core Cortex-A7,
+	  1 GiB DDR3, Gigabit Ethernet, SATA and an SD card slot.

@@ -68,6 +68,19 @@
           "value-timestamp": "2026-01-02T20:43:23+00:00",
           "oper-status": "ok"
         }
+      },
+      {
+        "name": "sun4i-ts-SoC-temperature",
+        "class": "iana-hardware:sensor",
+        "sensor-data": {
+          "value": 41200,
+          "value-type": "celsius",
+          "value-scale": "milli",
+          "value-precision": 0,
+          "value-timestamp": "2026-01-02T20:43:23+00:00",
+          "oper-status": "ok"
+        },
+        "description": "Soc Temperature"
       }
     ]
   }

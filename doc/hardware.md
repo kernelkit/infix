@@ -31,6 +31,34 @@ Which hwmon device or thermal zone belongs to which component is decided
 when the data is collected, and is the only place platform specific names
 are recognized.
 
+## Locate
+
+To find a chassis, e.g., in a rack, its LEDs can be set to blink.  Which
+LEDs blink, and how, depends on the device.  Locate stops by itself after
+60 seconds, unless another duration is given, or when stopped.
+
+<pre class="cli"><code>admin@example:/> <b>locate</b>
+admin@example:/> <b>locate duration 300</b>
+admin@example:/> <b>locate stop</b>
+admin@example:/> <b>no locate</b>
+</code></pre>
+
+The CLI commands call the `infix-hardware:locate` RPC, which takes
+`enable` and `duration`, in seconds.  Over RESTCONF:
+
+```sh
+curl -su admin:admin -X POST -H "Content-Type: application/yang-data+json" \
+     -d '{"infix-hardware:input": {"duration": 300}}' \
+     https://example/restconf/operations/infix-hardware:locate
+```
+
+The web interface has a *Locate* button on the Hardware page.
+
+Users in the `admin` and `operator` NACM groups may call locate, guest
+users may not.  On systems where LED control is disabled, the LEDs keep
+their hardware default behavior and the RPC fails with *LED control is
+not available on this device*.
+
 ## GPS/GNSS Receivers
 
 Infix supports GPS/GNSS receivers for hardware status monitoring and NTP

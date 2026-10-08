@@ -215,6 +215,8 @@ int finit_enablef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_disablef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_deletef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_reloadf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
+const char *rpc_user(sr_session_ctx_t *session, const char **via);
 FILE *fopenp(const char *path, mode_t mode, const char *group);
 FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
@@ -277,6 +279,9 @@ int system_sw_rpc_init(struct confd *confd);
 
 /* support.c */
 int support_rpc_init(struct confd *confd);
+
+/* locate.c */
+int locate_rpc_init(struct confd *confd);
 
 /* services.c */
 int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
