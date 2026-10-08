@@ -1,0 +1,11 @@
+---
+- settings:
+    test-spec: <case>.adoc
+
+- name: OSPFv2 Auto-Cost Reference Bandwidth
+  case: ospfv2.py
+  opts: ["--version", "OSPFv2"]
+
+- name: OSPFv3 Auto-Cost Reference Bandwidth
+  case: ospfv3.py
+  opts: ["--version", "OSPFv3"]

@@ -29,6 +29,9 @@
 - name: OSPF Debug Logging
   case: ospf_debug/test.py
 
+- name: OSPF Auto-Cost Reference Bandwidth
+  suite: ospf_auto_cost/test.yaml
+
 - name: OSPF Point-to-Multipoint Hybrid
   suite: ospf_point_to_multipoint_hybrid/test.yaml
 
