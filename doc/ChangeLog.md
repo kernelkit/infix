@@ -116,6 +116,9 @@ All notable changes to the project are documented in this file.
   kept dropping out of the test rig
 - LAN969x: kernel BUG "scheduling while atomic" when a multicast address was
   added to or removed from a port outside any bridge
+- PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
+  kept dropping to the faulty state because the transmit timestamp arrived
+  later than the 10 ms the PTP daemon waited for it
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
