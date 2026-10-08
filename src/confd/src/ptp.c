@@ -181,6 +181,10 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 	ts = instance_time_stamping(idx, inst, root);
 	fprintf(fp, "time_stamping      %s\n", ts);
 
+	/* PHY timestamps arrive over MDIO, later than ptp4l's 10 ms default */
+	if (!strcmp(ts, "hardware"))
+		fprintf(fp, "tx_timestamp_timeout 100\n");
+
 	/* Profile — sets transportSpecific and all protocol-mandatory options */
 	dot1as = emit_profile_globals(fp, profile, !strcmp(ts, "hardware"));
 
