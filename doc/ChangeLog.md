@@ -38,6 +38,9 @@ All notable changes to the project are documented in this file.
   the keystore.  Its default route and DNS servers are used like those from
   a DHCP server, and the TCP MSS of forwarded connections is clamped to the
   session MTU, see [PPPoE Client][pppoe]
+- LAN969x boards ship `symreg`, which reads and writes switch registers by
+  name and dumps the MAC, VLAN and VCAP tables, for debugging the switch
+  core, see `board/aarch64/microchip-lan969x/README.md`
 
 ### Fixes
 
@@ -59,6 +62,13 @@ All notable changes to the project are documented in this file.
 - Fix #1423: the default route from a DHCPv6 client, learned from router
   advertisements, is now a static route with the DHCPv6 route preference,
   like a DHCPv4 route.  Before, the route preference setting was ignored
+- LAN969x: a port outside any bridge stopped receiving multicast, including
+  IPv6 neighbour discovery and mDNS, when another port outside a bridge went
+  down or joined a bridge.  The port looked dead on the LAN until it was
+  taken down and up again, which is how the Tactical 1000 management port
+  kept dropping out of the test rig
+- LAN969x: kernel BUG "scheduling while atomic" when a multicast address was
+  added to or removed from a port outside any bridge
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 
