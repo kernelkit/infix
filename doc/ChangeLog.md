@@ -298,6 +298,9 @@ All notable changes to the project are documented in this file.
   timestamp that arrived late used up one of 512 slots for good
 - LAN969x: traffic between 10 Gbps ports was limited to about 940 Mbps
   on the TSN and RED variants of the switch
+- PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
+  kept dropping to the faulty state because the transmit timestamp arrived
+  later than the 10 ms the PTP daemon waited for it
 - PTP never worked on the copper ports of the Tactical 1000, whose LAN8804
   PHYs are a LAN8814 variant without a 1588 unit.  The kernel took them for
   full LAN8814s and waited for PHY timestamps that never came; it now
