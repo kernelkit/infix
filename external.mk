@@ -8,6 +8,11 @@ local.mk:
 	@$(call IXMSG,"Installing local override for certain packages")
 	@(cd $O && ln -s $(BR2_EXTERNAL_INFIX_PATH)/local.mk .)
 
+# TEMPORARY
+# Until the lvm series gets into a released version and we can create
+# a proper release from kernelkit/barebox, we build from a GIT tag.
+BAREBOX_HASH_FILES += $(BR2_EXTERNAL_INFIX_PATH)/patches/barebox/git.hash
+
 #
 # Buildroot package extensions
 #
