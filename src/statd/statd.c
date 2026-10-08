@@ -14,43 +14,28 @@
 
 #include <asm/types.h>
 #include <sys/socket.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
 
 #include <libite/lite.h>
 #include <jansson.h>
 #include <ctype.h>
 #include <linux/if.h>
 #include <sys/queue.h>
-#include <sys/mman.h>
 
 #include <srx/common.h>
 #include <srx/helpers.h>
 #include <srx/lyx.h>
-#include <srx/systemv.h>
 
 #include "shared.h"
 #include "journal.h"
-#include "iface.h"
 #include "avahi.h"
+#include "yangerd.h"
 
-/* New kernel feature, not in sys/mman.h yet */
-#ifndef MFD_NOEXEC_SEAL
-#define MFD_NOEXEC_SEAL 0x0008U
-#endif
-
-#define YANGER_BINPATH YANGER_DIR"/yanger"
 #define XPATH_MAX PATH_MAX
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
-#define XPATH_ROUTING_BASE "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"
+#define XPATH_ROUTING_PROTOCOLS "/ietf-routing:routing/control-plane-protocols"
 #define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
 #define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
 #define XPATH_SYSTEM_BASE "/ietf-system"
-#ifdef HAVE_FRR
-#define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
-#define XPATH_ROUTING_RIP XPATH_ROUTING_BASE "/rip"
-#define XPATH_ROUTING_BFD XPATH_ROUTING_BASE "/bfd"
-#endif
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 #define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
 #define XPATH_TFTP_FILES "/infix-services:tftp/files"
@@ -64,6 +49,8 @@ TAILQ_HEAD(sub_head, sub);
 struct sub {
 	struct ev_io watcher;
 	sr_subscription_ctx_t *sr_sub;
+	char key[XPATH_MAX];	/* yangerd key, derived from the subscription xpath */
+	struct statd *statd;	/* owning daemon context */
 
 	TAILQ_ENTRY(sub)
 	entries;
@@ -76,152 +63,220 @@ struct statd {
 	struct ev_loop *ev_loop;
 	struct journal_ctx journal;      /* Periodic operational snapshots */
 	struct mdns_ctx mdns;            /* mDNS neighbor monitor */
-	struct iface_ctx iface;          /* Interface state change tracking */
 };
 
-static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			      char *yanger_args[])
+/*
+ * The name of the node a subscription provides, the last step of its
+ * path without prefix or predicates: "/ietf-routing:routing/ribs" -> "ribs"
+ */
+static const char *sub_node_name(const char *path, char *buf, size_t len)
 {
-	FILE *stream;
-	int err;
-	int fd;
+	const char *p, *colon;
+	size_t n;
 
-	fd = memfd_create("yanger_tmpfile", MFD_CLOEXEC | MFD_NOEXEC_SEAL);
-	if (fd == -1) {
-		ERROR("Error, unable to create memfd");
-		return SR_ERR_SYS;
+	p = strrchr(path, '/');
+	p = p ? p + 1 : path;
+	colon = strchr(p, ':');
+	if (colon)
+		p = colon + 1;
+
+	n = strcspn(p, "[");
+	if (n >= len)
+		n = len - 1;
+	memcpy(buf, p, n);
+	buf[n] = 0;
+
+	return buf;
+}
+
+/*
+ * For a nested subscription sysrepo hands us the parent instance and
+ * expects the requested nodes appended to it.  yangerd answers with the
+ * whole module tree, so find the same parent in it and move over only
+ * the children this subscription provides.
+ */
+static int graft(struct lyd_node *parent, struct lyd_node *tree, const char *path)
+{
+	struct lyd_node *match, *node, *next;
+	char name[64];
+	char *xpath;
+	LY_ERR err;
+
+	xpath = lyd_path(parent, LYD_PATH_STD, NULL, 0);
+	if (!xpath)
+		return SR_ERR_NO_MEMORY;
+
+	err = lyd_find_path(tree, xpath, 0, &match);
+	if (err == LY_ENOTFOUND || err == LY_EINCOMPLETE) {
+		free(xpath);
+		return SR_ERR_OK;
 	}
-
-	/* Wrap the file descriptor in a FILE stream for fwrite */
-	stream = fdopen(fd, "w+");
-	if (stream == NULL) {
-		ERROR("Error, unable to fdopen memfd");
-		close(fd);
-		return SR_ERR_SYS;
-	}
-
-	err = fsystemv(yanger_args, NULL, stream, NULL);
 	if (err) {
-		ERROR("Error calling yanger %s%s%s, exit code %d", yanger_args[1],
-		      yanger_args[3] ? " " : "", yanger_args[3] ?: "", err);
-		fclose(stream);
-		return SR_ERR_SYS;
-	}
-
-	fflush(stream);
-
-	if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
-		ERROR("Error, unable reset stream (seek)");
-		fclose(stream);
-		return SR_ERR_SYS;
-	}
-
-	err = lyd_parse_data_fd(ctx, fd, LYD_JSON, LYD_PARSE_ONLY, 0, parent);
-	if (err)
-		ERROR("Failed parsing yanger data (%d): %s", err, ly_errmsg(ctx));
-
-	fclose(stream);
-	/* Note: fclose() already closes the underlying fd from fdopen() */
-
-	return err;
-}
-
-static char *xpath_extract(const char *xpath, const char *key)
-{
-	char *res = NULL;
-	const char *ptr;
-	const char *end;
-
-	/* (also checks if key exist) */
-	ptr = strstr(xpath, key);
-	if (!ptr)
-		return NULL;
-
-	ptr += strlen(key);
-
-	end = strchr(ptr, '\'');
-	if (!end) {
-		ERROR("Cannot find end quote for %s (sanity check)", key);
-		return NULL;
-	}
-
-	if ((end - ptr) >= XPATH_MAX) {
-		ERROR("Value for %s is too long (sanity check)", key);
-		return NULL;
-	}
-
-	res = calloc((end - ptr) + 1, sizeof(char));
-	if (!res)
-		return NULL;
-
-	strncpy(res, ptr, end - ptr);
-	res[end - ptr] = '\0';
-
-	return res;
-}
-
-static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
-			 const char *, const char *xpath, uint32_t,
-			 struct lyd_node **parent, void *priv)
-{
-	char *yanger_args[5] = {
-		YANGER_BINPATH,
-		(char *)model,
-		NULL,
-		NULL,
-		NULL
-	};
-	struct statd *statd = priv;
-	char *ifname = NULL;
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	int err;
-
-	DEBUG("Incoming interface query for xpath: %s", xpath);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error getting sysrepo connection");
+		ERROR("yangerd: cannot find %s in its answer: %s", xpath, ly_last_logmsg());
+		free(xpath);
 		return SR_ERR_INTERNAL;
 	}
+	free(xpath);
 
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Failed acquiring sysrepo context");
-		return SR_ERR_INTERNAL;
+	sub_node_name(path, name, sizeof(name));
+	LY_LIST_FOR_SAFE(lyd_child(match), next, node) {
+		if (strcmp(node->schema->name, name))
+			continue;
+
+		lyd_unlink_tree(node);
+		if (lyd_insert_child(parent, node)) {
+			ERROR("yangerd: cannot add %s for %s: %s", name, path, ly_last_logmsg());
+			lyd_free_tree(node);
+			return SR_ERR_INTERNAL;
+		}
 	}
-
-	ifname = xpath_extract(xpath, "[name='");
-	if (ifname) {
-		yanger_args[2] = "-p";
-		yanger_args[3] = ifname;
-	}
-	err = ly_add_yanger_data(ctx, parent, yanger_args);
-	if (err)
-		ERROR("Failed adding yanger data for %s", ifname ?: model);
-	else
-		iface_annotate(&statd->iface, *parent);
-
-	free(ifname);
-	sr_release_context(con);
 
 	return SR_ERR_OK;
 }
 
-static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
-			 const char *, const char *xpath, uint32_t,
-			 struct lyd_node **parent, __attribute__((unused)) void *priv)
+/*
+ * One bad value must not cost every GET of the module.  When yangerd's
+ * answer does not parse, try each entry of every list under the top
+ * container on its own, drop the ones libyang rejects, loudly, and parse
+ * the rest.  Only runs on the error path.
+ */
+static int parse_salvage(const struct ly_ctx *ctx, const char *json, const char *key,
+			 struct lyd_node **tree)
 {
-	char *yanger_args[5] = {
-		YANGER_BINPATH,
-		(char *)model,
-		NULL
-	};
+	json_t *root, *top, *list, *good, *one, *entry, *name;
+	const char *lname;
+	size_t i, dropped = 0;
+	char *text;
+	int rc = -1;
+
+	root = json_loads(json, 0, NULL);
+	top = json_object_get(root, key);
+	if (!json_is_object(top))
+		goto out;
+
+	json_object_foreach(top, lname, list) {
+		if (!json_is_array(list))
+			continue;
+
+		good = json_array();
+		json_array_foreach(list, i, entry) {
+			struct lyd_node *probe = NULL;
+			LY_ERR err;
+
+			one = json_pack("{s:{s:[O]}}", key, lname, entry);
+			text = json_dumps(one, JSON_COMPACT);
+			json_decref(one);
+			err = text ? lyd_parse_data_mem(ctx, text, LYD_JSON, LYD_PARSE_ONLY, 0, &probe) : LY_EMEM;
+			free(text);
+			lyd_free_all(probe);
+			if (!err) {
+				json_array_append(good, entry);
+				continue;
+			}
+
+			name = json_object_get(entry, "name");
+			ERROR("yangerd: dropping %s %s[%s]: %s", key, lname,
+			      json_is_string(name) ? json_string_value(name) : "?", ly_last_logmsg());
+			dropped++;
+		}
+		json_object_set_new(top, lname, good);
+	}
+
+	if (!dropped)
+		goto out;
+
+	text = json_dumps(root, JSON_COMPACT);
+	if (text && !lyd_parse_data_mem(ctx, text, LYD_JSON, LYD_PARSE_ONLY, 0, tree))
+		rc = 0;
+	free(text);
+out:
+	json_decref(root);
+	return rc;
+}
+
+static int ly_add_yangerd_data(const struct ly_ctx *ctx, struct lyd_node **parent,
+			       const char *path, const char *key)
+{
+	struct lyd_node *tree = NULL;
+	char *json = NULL;
+	size_t len = 0;
+	int rc;
+
+	rc = yangerd_query(key, &json, &len);
+	if (rc > 0) {
+		WARN("yangerd: no data for %s yet, not ready", key);
+		return SR_ERR_OK;
+	}
+	if (rc) {
+		ERROR("yangerd: query failed for %s", key);
+		return SR_ERR_INTERNAL;
+	}
+
+	DEBUG("yangerd: got %zu bytes JSON for %s", len, key);
+	if (!json || !len) {
+		free(json);
+		return SR_ERR_OK;	/* feature not active, no data */
+	}
+
+	if (lyd_parse_data_mem(ctx, json, LYD_JSON, LYD_PARSE_ONLY, 0, &tree)) {
+		ERROR("Failed parsing yangerd data for %s: %s", key, ly_errmsg(ctx));
+		tree = NULL;
+		if (parse_salvage(ctx, json, key, &tree)) {
+			free(json);
+			return SR_ERR_INTERNAL;
+		}
+	}
+	free(json);
+	if (!tree)
+		return SR_ERR_OK;	/* "{}", nothing to add */
+
+	if (!*parent) {
+		*parent = tree;
+		return SR_ERR_OK;
+	}
+
+	rc = graft(*parent, tree, path);
+	lyd_free_all(tree);
+
+	return rc;
+}
+
+static const char *xpath_to_yangerd_path(const char *xpath, char *buf, size_t bufsz)
+{
+	const char *start, *slash;
+	size_t len;
+
+	if (!xpath || !*xpath || !strcmp(xpath, "*") || !strcmp(xpath, "/*")) {
+		buf[0] = '\0';
+		return buf;
+	}
+
+	start = xpath;
+	if (*start == '/')
+		start++;
+
+	slash = strchr(start, '/');
+	len = slash ? (size_t)(slash - start) : strlen(start);
+
+	if (len >= bufsz)
+		len = bufsz - 1;
+
+	memcpy(buf, start, len);
+	buf[len] = '\0';
+
+	return buf;
+}
+
+static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *,
+			 const char *path, const char *xpath, uint32_t,
+			 struct lyd_node **parent, void *priv)
+{
+	struct sub *sub = priv;
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
-	sr_error_t err;
+	int err;
 
-	DEBUG("Incoming generic query for xpath: %s", xpath);
+	DEBUG("Incoming query for xpath: %s -> key %s", xpath, sub->key);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
@@ -235,124 +290,11 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yanger_data(ctx, parent, yanger_args);
-	if (err)
-		ERROR("Failed adding yanger data for %s", yanger_args[1]);
-
+	err = ly_add_yangerd_data(ctx, parent, path, sub->key);
 	sr_release_context(con);
 
 	return err;
 }
-
-#ifdef HAVE_FRR
-static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
-		      const char *, const char *xpath, uint32_t,
-		      struct lyd_node **parent, __attribute__((unused)) void *priv)
-{
-	char *yanger_args[5] = {
-		YANGER_BINPATH,
-		"ietf-ospf",
-		NULL
-	};
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	sr_error_t err;
-
-	DEBUG("Incoming ospf query for xpath: %s", xpath);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error getting sysrepo connection");
-		return SR_ERR_INTERNAL;
-	}
-
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Failed acquiring sysrepo context");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = ly_add_yanger_data(ctx, parent, yanger_args);
-	if (err)
-		ERROR("Failed adding yanger data for %s", yanger_args[1]);
-
-	sr_release_context(con);
-
-	return err;
-}
-
-static int sr_rip_cb(sr_session_ctx_t *session, uint32_t, const char *,
-		     const char *, const char *xpath, uint32_t,
-		     struct lyd_node **parent, __attribute__((unused)) void *priv)
-{
-	char *yanger_args[5] = {
-		YANGER_BINPATH,
-		"ietf-rip",
-		NULL
-	};
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	sr_error_t err;
-
-	DEBUG("Incoming RIP query for xpath: %s", xpath);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error getting sysrepo connection");
-		return SR_ERR_INTERNAL;
-	}
-
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Failed acquiring sysrepo context");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = ly_add_yanger_data(ctx, parent, yanger_args);
-	if (err)
-		ERROR("Failed adding yanger data for %s", yanger_args[1]);
-
-	sr_release_context(con);
-
-	return err;
-}
-
-static int sr_bfd_cb(sr_session_ctx_t *session, uint32_t, const char *,
-		     const char *, const char *xpath, uint32_t,
-		     struct lyd_node **parent, __attribute__((unused)) void *priv)
-{
-	char *yanger_args[5] = {
-		YANGER_BINPATH,
-		"ietf-bfd-ip-sh",
-		NULL
-	};
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	sr_error_t err;
-
-	DEBUG("Incoming BFD query for xpath: %s", xpath);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error getting sysrepo connection");
-		return SR_ERR_INTERNAL;
-	}
-
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Failed acquiring sysrepo context");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = ly_add_yanger_data(ctx, parent, yanger_args);
-	if (err)
-		ERROR("Failed adding yanger data for %s", yanger_args[1]);
-
-	sr_release_context(con);
-
-	return err;
-}
-#endif /* HAVE_FRR */
 
 
 static void sigint_cb(struct ev_loop *loop, struct ev_signal *, int)
@@ -380,9 +322,9 @@ static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
 	sr_subscription_process_events(sub->sr_sub, NULL, NULL);
 }
 
-static int subscribe(struct statd *statd, char *model, char *xpath,
-		     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
-		     const char *, uint32_t, struct lyd_node **parent, void *priv))
+static int subscribe_opts(struct statd *statd, char *model, char *xpath, uint32_t opts,
+			  int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
+			  const char *, uint32_t, struct lyd_node **parent, void *priv))
 {
 	struct sub *sub;
 	int sr_ev_pipe;
@@ -390,10 +332,20 @@ static int subscribe(struct statd *statd, char *model, char *xpath,
 
 	sub = malloc(sizeof(struct sub));
 	memset(sub, 0, sizeof(struct sub));
+	sub->statd = statd;
 
-	DEBUG("Subscribe to events for \"%s\"", xpath);
-	err = sr_oper_get_subscribe(statd->sr_ses, model, xpath, cb, statd,
-				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
+	/*
+	 * Derive the yangerd key from the (static) subscription xpath here,
+	 * once.  The generic callback must NOT derive it from the runtime
+	 * request xpath sysrepo hands it -- that is unreliable and yields a
+	 * bare "system-state" for /ietf-system:system-state, which yangerd
+	 * (keyed "ietf-system:system-state") cannot match.
+	 */
+	xpath_to_yangerd_path(xpath, sub->key, sizeof(sub->key));
+
+	DEBUG("Subscribe to events for \"%s\" (key \"%s\")", xpath, sub->key);
+	err = sr_oper_get_subscribe(statd->sr_ses, model, xpath, cb, sub,
+				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY | opts,
 				    &sub->sr_sub);
 	if (err) {
 		ERROR("Failed subscribing to path \"%s\": %s", xpath, sr_strerror(err));
@@ -416,6 +368,13 @@ static int subscribe(struct statd *statd, char *model, char *xpath,
 	ev_io_start(statd->ev_loop, &sub->watcher);
 
 	return SR_ERR_OK;
+}
+
+static int subscribe(struct statd *statd, char *model, char *xpath,
+		     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
+		     const char *, uint32_t, struct lyd_node **parent, void *priv))
+{
+	return subscribe_opts(statd, model, xpath, 0, cb);
 }
 
 static void sub_delete(struct ev_loop *loop, struct sub_head *subs, struct sub *sub)
@@ -442,14 +401,15 @@ static int subscribe_to_all(struct statd *statd)
 
 	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_TABLE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_iface_cb))
+	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 #ifdef HAVE_FRR
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, sr_ospf_cb))
-		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_RIP, sr_rip_cb))
-		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_BFD, sr_bfd_cb))
+	/*
+	 * Merged, not replaced: the BFD instance exists only in operational,
+	 * and config-only instances like static routes must stay.  One call
+	 * per GET, not one per control-plane-protocol instance.
+	 */
+	if (subscribe_opts(statd, "ietf-routing", XPATH_ROUTING_PROTOCOLS, SR_SUBSCR_OPER_MERGE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 #endif
 	if (subscribe(statd, "ietf-hardware", XPATH_HARDWARE_BASE, sr_generic_cb))
@@ -610,9 +570,6 @@ int main(int argc, char *argv[])
 	if (mdns_ctx_init(&statd.mdns, statd.ev_loop, statd.sr_conn))
 		INFO("mDNS neighbor monitoring not available");
 
-	if (iface_ctx_init(&statd.iface, statd.ev_loop))
-		WARN("Interface state change tracking not available");
-
 	/* Signal readiness to Finit */
 	pidfile(NULL);
 
@@ -622,7 +579,6 @@ int main(int argc, char *argv[])
 	/* We should never get here during normal operation */
 	INFO("Status daemon shutting down");
 
-	iface_ctx_exit(&statd.iface);
 	mdns_ctx_exit(&statd.mdns);
 	journal_stop(&statd.journal);
 

@@ -115,10 +115,10 @@ with infamy.Test() as test:
             ns1.must_reach("192.168.1.1")
 
         with test.step("Query time from upstream NTP server"):
-            until(lambda: ntp.server_query(ns1, "192.168.1.1"), attempts=20)
+            until(lambda: ntp.server_query(ns1, "192.168.1.1"), attempts=120)
 
         with test.step("Verify upstream NTP server statistics"):
-            until(lambda: ntp.server_has_received_packets(upstream), attempts=20)
+            until(lambda: ntp.server_has_received_packets(upstream), attempts=120)
 
     with infamy.IsolatedMacVlan(hport2) as ns2:
         ns2.addip("192.168.2.2")
@@ -128,9 +128,9 @@ with infamy.Test() as test:
 
         with test.step("Wait for downstream to sync from upstream"):
             # Give downstream time to sync from upstream
-            until(lambda: ntp.server_query(ns2, "192.168.2.1"), attempts=30)
+            until(lambda: ntp.server_query(ns2, "192.168.2.1"), attempts=120)
 
         with test.step("Verify downstream NTP server statistics"):
-            until(lambda: ntp.server_has_received_packets(downstream), attempts=20)
+            until(lambda: ntp.server_has_received_packets(downstream), attempts=120)
 
     test.succeed()

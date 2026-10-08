@@ -12,7 +12,7 @@ with three scenarios:
 """
 import re
 import infamy
-from infamy.util import parallel
+from infamy.util import parallel, until
 
 
 def mdns_scan():
@@ -57,9 +57,17 @@ def check(expected, allow=None, deny=None):
 
     dut.put_config_dicts({"infix-services": mdns_config})
 
-    actual = mdns_scan()
-    if actual != tuple(expected):
-        raise AssertionError(f"Expected {expected}, got {actual}")
+    # The mDNS daemon is restarted/reloaded asynchronously when the
+    # allow/deny config changes, so retry the scan until the observed
+    # per-interface result matches the expectation.  until() re-raises the
+    # last AssertionError on timeout, preserving the expected/got detail.
+    def scan_matches():
+        actual = mdns_scan()
+        if actual != tuple(expected):
+            raise AssertionError(f"Expected {expected}, got {actual}")
+        return True
+
+    until(scan_matches, attempts=20)
 
 
 with infamy.Test() as test:

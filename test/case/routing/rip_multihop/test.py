@@ -191,6 +191,8 @@ with infamy.Test() as test:
 
     with test.step(f"Verify R2 has two {version} neighbors"):
         print("Checking R2 has two RIP neighbors...")
+        # Neighbors appear over time, so poll until both are present
+        until(lambda: len(rip_neighbors(R2, param)) == 2, attempts=40)
         neighbors = rip_neighbors(R2, param)
         assert len(neighbors) == 2, f"Expected 2 neighbors, found {len(neighbors)}"
 

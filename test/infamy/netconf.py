@@ -119,17 +119,22 @@ class Device(Transport):
         self.location = location
         self.mapping = mapping
         self.location = location
-        self.ly = libyang.Context(yangdir)
+        self._ly = libyang.Context(yangdir)
+        self._ly_loaded = True
         self._ncc_init(location)
         # self.ncc._fetch_connection_ip()
         # self.ncc._debug()
 
         self.modules = {}
         self._ly_bootstrap(yangdir)
-
-        del self.ly
-        self.ly = libyang.Context(yangdir)
         self._ly_init(yangdir)
+
+    @property
+    def ly(self):
+        """Loads the device's modules on first use, a skipped test never pays for it"""
+        if not self._ly_loaded:
+            self._ly_load()
+        return self._ly
 
     def __str__(self):
         nm = f"{self.name}"
@@ -174,7 +179,7 @@ class Device(Transport):
         print("YANG models downloaded.")
 
     def _ly_init(self, yangdir):
-        self.ly = libyang.Context(yangdir)
+        self._ly = libyang.Context(yangdir)
 
         lib = self.ly.load_module("ietf-yang-library")
         ns = libyang.util.c2str(lib.cdata.ns)
@@ -188,7 +193,10 @@ class Device(Transport):
                                   xml, parse_only=True).print_dict()
 
         self.modules = {m["name"]: m for m in data["modules-state"]["module"]}
+        self._ly_loaded = False
 
+    def _ly_load(self):
+        self._ly_loaded = True
         for ms in self.modules.values():
             if ms["conformance-type"] != "implement":
                 continue
@@ -430,6 +438,8 @@ class Device(Transport):
         actions that take no parameters.
         """
         coverage.track_xpath(xpath)
+        if not input_data and (xml := self._plain_action_xml(xpath)):
+            return self.ncc.dispatch(xml)
         action={}
         pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
         match = re.search(pattern, xpath)
@@ -440,6 +450,19 @@ class Device(Transport):
         lyd = mod.parse_data_dict(action, rpc=True)
         xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" + lyd.print_mem("xml", with_siblings=True, pretty=False) + "</action>"
         return self.ncc.dispatch(xml)
+
+    def _plain_action_xml(self, xpath):
+        """Action without input within one module, e.g. /infix-test:test/reset,
+        built without libyang so the context need not be loaded"""
+        match = re.fullmatch(r"/([\w.-]+):([\w.-]+)((?:/[\w.-]+)+)", xpath)
+        ns = match and self.modules.get(match[1], {}).get("namespace")
+        if not ns:
+            return None
+        names = match[3].split("/")[1:]
+        inner = "".join(f"<{n}>" for n in names[:-1]) + f"<{names[-1]}/>" + \
+                "".join(f"</{n}>" for n in reversed(names[:-1]))
+        return (f'<action xmlns="urn:ietf:params:xml:ns:yang:1">'
+                f'<{match[2]} xmlns="{ns}">{inner}</{match[2]}></action>')
 
     def get_schemas_list(self):
         schemas = []

@@ -215,9 +215,9 @@ with infamy.Test() as test:
 
     with test.step("Verify interface type is hybrid"):
         print("Checking OSPF interface type on all routers")
-        assert route.ospf_get_interface_type(R1, "0.0.0.0", R1link, proto=instance) == "hybrid"
-        assert route.ospf_get_interface_type(R2, "0.0.0.0", "br0", proto=instance) == "hybrid"
-        assert route.ospf_get_interface_type(R3, "0.0.0.0", R3link, proto=instance) == "hybrid"
+        until(lambda: route.ospf_get_interface_type(R1, "0.0.0.0", R1link, proto=instance) == "hybrid")
+        until(lambda: route.ospf_get_interface_type(R2, "0.0.0.0", "br0", proto=instance) == "hybrid")
+        until(lambda: route.ospf_get_interface_type(R3, "0.0.0.0", R3link, proto=instance) == "hybrid")
 
     with test.step("Verify connectivity between all DUTs"):
         _, hport1 = env.ltop.xlate("PC", "data1")

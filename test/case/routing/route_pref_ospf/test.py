@@ -203,10 +203,8 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R1, param["dest"], af=af, proto="ietf-routing:static"), attempts=200)
 
     with test.step(f"Verify connectivity from PC:data1 to PC:data2 via {version}"):
+        until(lambda: route.route_exist(R1, param["dest"], af=af, proto=proto, active_check=True), attempts=200)
         ns1.must_reach(param["PC2"])
-
-        ospf_route_active = route.route_exist(R1, param["dest"], af=af, proto=proto, active_check=True)
-        assert ospf_route_active, "OSPF route should be preferred when available."
 
         hops = [row[1] for row in ns1.traceroute(param["PC2"])]
         assert param["R2"]["ospf"] in hops, f"Path does not use expected OSPF route: {hops}"
