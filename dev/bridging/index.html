@@ -835,6 +835,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="VLAN Filtering Bridge">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ingress-and-egress-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingress and Egress Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2521,6 +2538,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="VLAN Filtering Bridge">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ingress-and-egress-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingress and Egress Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2680,8 +2714,8 @@ bridge should be used instead.</p>
 <p>By default bridges in Linux do not filter based on VLAN tags.  This can
 be enabled when creating a bridge by adding a port to a VLAN as a tagged
 or untagged member.  Use the port default VID (PVID) setting to control
-VLAN association for traffic ingressing a port untagged (default PVID:
-1).</p>
+VLAN association for traffic ingressing a port untagged.  There is no
+default PVID, see <a href="#ingress-and-egress-rules">Ingress and Egress Rules</a>.</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit interface br0</b>
 admin@example:/config/interface/br0/&gt; <b>up</b>
 admin@example:/config/&gt; <b>set interface eth0 bridge-port bridge br0</b>
@@ -2713,6 +2747,57 @@ For the example above, if the bridge itself is an untagged member only
 in VLAN 10, IP addresses can be set directly on the bridge without the
 need for dedicated VLAN interfaces on top of the bridge.</p>
 </div>
+<h3 id="ingress-and-egress-rules">Ingress and Egress Rules<a class="headerlink" href="#ingress-and-egress-rules" title="Permanent link">¶</a></h3>
+<p>On a VLAN filtering bridge every frame belongs to a VLAN, decided when
+it enters a port.  Using <code>eth0</code> from the example above, with PVID 10
+and untagged member of VLAN 10:</p>
+<table>
+<thead>
+<tr>
+<th>Frame received on <code>eth0</code></th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Untagged</td>
+<td>Accepted, assigned to VLAN 10</td>
+</tr>
+<tr>
+<td>Priority tagged (VID 0)</td>
+<td>Accepted, assigned to VLAN 10, PCP is kept</td>
+</tr>
+<tr>
+<td>Tagged with VID 10</td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>Tagged with VID 20</td>
+<td>Dropped, <code>eth0</code> is not a member of VLAN 20</td>
+</tr>
+</tbody>
+</table>
+<p>The rules behind the table:</p>
+<ul>
+<li>A tagged frame is accepted only if the port is a member of its VLAN.
+  Whether the membership is tagged or untagged only matters when frames
+  leave the port</li>
+<li>Untagged and priority tagged frames are assigned to the port's PVID.
+  A port without a PVID drops them.  The PVID must be one of the port's
+  VLANs, otherwise it is ignored and a warning is logged</li>
+<li>A frame is only forwarded to ports that are members of its VLAN.  It
+  leaves a tagged member with a VLAN tag, and an untagged member
+  without one, so the PCP of a priority tagged frame is lost on an
+  untagged port</li>
+</ul>
+<p>The same rules apply when the bridge is offloaded to a switch chip.</p>
+<p>The CLI commands <code>check</code>, <code>commit</code>, and <code>leave</code> warn about ports with a
+missing or mismatched PVID.  The configuration is applied anyway:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>leave</b>
+Warning: eth0 is an untagged member of VLAN 10 on br0, but has no PVID.  Untagged frames received on eth0 are dropped.
+admin@example:/&gt;
+</code></pre>
+
 <h2 id="multicast-filtering-and-snooping">Multicast Filtering and Snooping<a class="headerlink" href="#multicast-filtering-and-snooping" title="Permanent link">¶</a></h2>
 <p>Multicast filtering in the bridge is handled by the bridge itself.  It
 can filter both IP multicast and MAC multicast.  For IP multicast it

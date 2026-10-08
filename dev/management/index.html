@@ -2834,7 +2834,7 @@ admin@example:/&gt;
 <h2 id="web-web-console-and-restconf">Web, Web-console and RESTCONF<a class="headerlink" href="#web-web-console-and-restconf" title="Permanent link">¶</a></h2>
 <p>The system provides a set of Web services:</p>
 <ul>
-<li>a rudimentary Web server, currently limited to an information page</li>
+<li>a Web management interface (WebUI) for configuration and monitoring</li>
 <li>a RESTCONF server with equivalent management capabilities as NETCONF</li>
 <li>a Web console service, where the shell/CLI can be accessed via
   HTTPS, similar to connecting via a console port or SSH</li>
@@ -2842,6 +2842,10 @@ admin@example:/&gt;
 <p>There is also a <em>Netbrowse</em> Web service presenting information about
 the unit's neighbors, collected via mDNS (see
 <a href="../discovery/">Discovery</a> for more details).</p>
+<p>All of them are enabled in the factory configuration.  The WebUI, Web
+console, and Netbrowse are optional parts of the image.  Minimal builds
+have only a static information page and RESTCONF.  On such an image,
+the settings for the missing services are accepted but have no effect.</p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
 admin@example:/config/&gt; <b>edit web</b>
 admin@example:/config/web/&gt; <b>help</b>
@@ -2861,16 +2865,17 @@ admin@example:/config/web/&gt; <b>set enabled</b>
 admin@example:/config/web/&gt;
 </code></pre>
 
-<p>Enabling the Web service implies that a Web server is
-enabled. Currently this Web server provides generic Infix information,
-as well as a link to a Web console. The Web server uses HTTPS; any
-HTTP request is redirected to HTTPS.</p>
+<p>Enabling the Web service starts a Web server on port 443 (HTTPS), and
+any HTTP request on port 80 is redirected to HTTPS.  It serves the
+WebUI, where you log in with the same user accounts as for the CLI,
+SSH, and NETCONF.</p>
 <p>The <em>enabled</em> setting for the Web service acts as a global
 enable/disable setting for the other Web services (Web console,
-RESTCONF and Netbrowse).</p>
+RESTCONF and Netbrowse).  Disabling it stops all of them, regardless
+of their own settings.</p>
 <h3 id="enabledisable-web-console">Enable/disable Web Console<a class="headerlink" href="#enabledisable-web-console" title="Permanent link">¶</a></h3>
 <p>The Web console service provides a terminal service similar to Console
-or SSH. The Web console is secured via HTTPS on port 7861.</p>
+or SSH. The Web console is secured via HTTPS on port 7681.</p>
 <p>The Web console has its own enable/disable setting, but will only be
 activated if the Web service is enabled. The example below shows how
 to disable the Web console.</p>
@@ -2880,17 +2885,23 @@ admin@example:/config/web/console/&gt;
 </code></pre>
 
 <h3 id="enabledisable-restconf-service">Enable/disable RESTCONF Service<a class="headerlink" href="#enabledisable-restconf-service" title="Permanent link">¶</a></h3>
-<p>Alternatively, the system can be managed remotely using
-RESTCONF. Meaning you can <code>curl</code> it instead of using a dedicated
-NETCONF client.</p>
+<p>Alternatively, the system can be managed remotely using RESTCONF, at
+<code>https://&lt;address&gt;/restconf</code>.  Meaning you can <code>curl</code> it instead of
+using a dedicated NETCONF client, see <a href="../scripting-restconf/">RESTCONF
+Scripting</a> for examples.</p>
 <p>The RESTCONF service has its own enable/disable setting, but will
-only be activated if the Web service is enabled. The example below
+only be activated if the Web service is enabled.  The example below
 shows how to disable the RESTCONF service.</p>
 <pre class="cli"><code>admin@example:/config/web/&gt; <b>edit restconf</b>
 admin@example:/config/web/restconf/&gt; <b>no enabled</b>
 admin@example:/config/web/restconf/&gt;
 </code></pre>
 
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The WebUI uses RESTCONF internally, so disabling RESTCONF only blocks
+requests from other hosts, and the WebUI keeps working.</p>
+</div>
 <h3 id="https-certificate">HTTPS Certificate<a class="headerlink" href="#https-certificate" title="Permanent link">¶</a></h3>
 <p>The Web server uses a TLS certificate from the central
 <a href="../keystore/">keystore</a>.  By default it uses <code>gencert</code>, a self-signed
