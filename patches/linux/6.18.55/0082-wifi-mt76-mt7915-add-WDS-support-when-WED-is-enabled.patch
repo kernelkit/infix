@@ -1,0 +1,431 @@
+From dd9214a3a26dc3854852cdf4ae84706174dc1a36 Mon Sep 17 00:00:00 2001
+From: Felix Fietkau <nbd@nbd.name>
+Date: Mon, 20 Oct 2025 15:59:12 +0200
+Subject: [PATCH 82/84] wifi: mt76: mt7915: add WDS support when WED is enabled
+
+The current WED only supports 256 wcid, whereas mt7986 can support up to
+512 entries, so firmware provides a rule to get sta_info by DA when wcid
+is set to 0x3ff by txd. Also, WED provides a register to overwrite txd
+wcid, that is, wcid[9:8] can be overwritten by 0x3 and wcid[7:0] is set
+to 0xff by host driver.
+
+However, firmware is unable to get sta_info from DA as DA != RA for
+4addr cases, so firmware and wifi host driver both use wcid (256 - 271)
+and (768 ~ 783) for sync up to get correct sta_info.
+
+Currently WDS+WED config is completely broken on MT7986/7981 devices if
+without this patch.
+
+Signed-off-by: Bo Jiao <bo.jiao@mediatek.com>
+Signed-off-by: Sujuan Chen <sujuan.chen@mediatek.com>
+Signed-off-by: Shengyu Qu <wiagn233@outlook.com>
+Signed-off-by: Felix Fietkau <nbd@nbd.name>
+---
+ drivers/net/wireless/mediatek/mt76/mt76.h     |  3 +
+ .../wireless/mediatek/mt76/mt7915/debugfs.c   |  2 +-
+ .../net/wireless/mediatek/mt76/mt7915/mac.c   |  2 +-
+ .../net/wireless/mediatek/mt76/mt7915/main.c  | 56 +++++++++++++++++--
+ .../net/wireless/mediatek/mt76/mt7915/mcu.c   | 55 +++++++++++-------
+ .../net/wireless/mediatek/mt76/mt7915/mcu.h   |  1 +
+ .../wireless/mediatek/mt76/mt7915/mt7915.h    | 16 +++++-
+ drivers/net/wireless/mediatek/mt76/util.c     | 13 ++++-
+ drivers/net/wireless/mediatek/mt76/util.h     |  7 ++-
+ 9 files changed, 122 insertions(+), 33 deletions(-)
+
+diff --git a/drivers/net/wireless/mediatek/mt76/mt76.h b/drivers/net/wireless/mediatek/mt76/mt76.h
+index 2a186b47659b6..9cb7e2da472fc 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt76.h
++++ b/drivers/net/wireless/mediatek/mt76/mt76.h
+@@ -29,6 +29,9 @@
+ 
+ #define MT76_TOKEN_FREE_THR	64
+ 
++#define MT76_WED_WDS_MIN	256
++#define MT76_WED_WDS_MAX	272
++
+ #define MT_QFLAG_WED_RING	GENMASK(1, 0)
+ #define MT_QFLAG_WED_TYPE	GENMASK(4, 2)
+ #define MT_QFLAG_WED		BIT(5)
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7915/debugfs.c b/drivers/net/wireless/mediatek/mt76/mt7915/debugfs.c
+index b287b7d9394e2..ec2287459587e 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7915/debugfs.c
++++ b/drivers/net/wireless/mediatek/mt76/mt7915/debugfs.c
+@@ -1385,7 +1385,7 @@ static ssize_t mt7915_sta_fixed_rate_set(struct file *file,
+ 
+ out:
+ 	vif = container_of((void *)msta->vif, struct ieee80211_vif, drv_priv);
+-	ret = mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, &phy, field);
++	ret = mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, &msta->wcid, &phy, field);
+ 	if (ret)
+ 		return -EFAULT;
+ 
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7915/mac.c b/drivers/net/wireless/mediatek/mt76/mt7915/mac.c
+index dda4e7d179536..b431467c0eeee 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7915/mac.c
++++ b/drivers/net/wireless/mediatek/mt76/mt7915/mac.c
+@@ -1972,7 +1972,7 @@ void mt7915_mac_sta_rc_work(struct work_struct *work)
+ 		if (changed & (IEEE80211_RC_SUPP_RATES_CHANGED |
+ 			       IEEE80211_RC_NSS_CHANGED |
+ 			       IEEE80211_RC_BW_CHANGED))
+-			mt7915_mcu_add_rate_ctrl(dev, vif, sta, true);
++			mt7915_mcu_add_rate_ctrl(dev, vif, sta, &msta->wcid, true);
+ 
+ 		if (changed & IEEE80211_RC_SMPS_CHANGED)
+ 			mt7915_mcu_add_smps(dev, vif, sta);
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7915/main.c b/drivers/net/wireless/mediatek/mt76/mt7915/main.c
+index 9d546eb8022ac..eb2dc410bba25 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7915/main.c
++++ b/drivers/net/wireless/mediatek/mt76/mt7915/main.c
+@@ -758,7 +758,14 @@ int mt7915_mac_sta_add(struct mt76_dev *mdev, struct ieee80211_vif *vif,
+ 	bool ext_phy = mvif->phy != &dev->phy;
+ 	int idx;
+ 
+-	idx = mt76_wcid_alloc(dev->mt76.wcid_mask, MT7915_WTBL_STA);
++	if (mtk_wed_device_active(&dev->mt76.mmio.wed) &&
++	    !is_mt7915(&dev->mt76) &&
++	    test_bit(MT_WCID_FLAG_4ADDR, &msta->wcid.flags))
++		idx = __mt76_wcid_alloc(mdev->wcid_mask, MT76_WED_WDS_MIN,
++					MT76_WED_WDS_MAX);
++	else
++		idx = mt76_wcid_alloc(mdev->wcid_mask, MT7915_WTBL_STA);
++
+ 	if (idx < 0)
+ 		return -ENOSPC;
+ 
+@@ -847,7 +854,7 @@ int mt7915_mac_sta_event(struct mt76_dev *mdev, struct ieee80211_vif *vif,
+ 		addr = mt7915_mac_wtbl_lmac_addr(dev, msta->wcid.idx, 30);
+ 		mt76_rmw_field(dev, addr, GENMASK(7, 0), 0xa0);
+ 
+-		ret = mt7915_mcu_add_rate_ctrl(dev, vif, sta, false);
++		ret = mt7915_mcu_add_rate_ctrl(dev, vif, sta, &msta->wcid, false);
+ 		if (ret)
+ 			return ret;
+ 
+@@ -1278,6 +1285,40 @@ mt7915_set_bitrate_mask(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+ 	return 0;
+ }
+ 
++static void mt7915_sta_wed_set_4addr(struct mt7915_dev *dev, struct ieee80211_vif *vif,
++				     struct ieee80211_sta *sta)
++{
++	struct mt7915_sta *msta = (struct mt7915_sta *)sta->drv_priv;
++	int min = MT76_WED_WDS_MIN, max = MT76_WED_WDS_MAX;
++	int idx, prev_idx = msta->wcid.idx;
++	struct mt76_wcid wcid = msta->wcid;
++	int state;
++
++	if (!is_mt7915(&dev->mt76))
++	       return;
++
++	if (msta->wcid.idx >= min && msta->wcid.idx < max)
++		return;
++
++	idx = __mt76_wcid_alloc(dev->mt76.wcid_mask, min, max);
++	if (idx < 0)
++		return;
++
++	wcid.idx = idx;
++	state = msta->wcid.sta ? CONN_STATE_PORT_SECURE : CONN_STATE_DISCONNECT;
++	__mt7915_mcu_add_sta(dev, vif, sta, &wcid, state, true);
++	mt7915_mcu_add_rate_ctrl(dev, vif, sta, &wcid, false);
++	rcu_assign_pointer(dev->mt76.wcid[idx], &msta->wcid);
++	msta->wcid.idx = idx;
++
++	synchronize_rcu();
++
++	rcu_assign_pointer(dev->mt76.wcid[prev_idx], NULL);
++	mt76_wcid_mask_clear(dev->mt76.wcid_mask, prev_idx);
++	wcid.idx = prev_idx;
++	__mt7915_mcu_add_sta(dev, vif, sta, &wcid, CONN_STATE_DISCONNECT, false);
++}
++
+ static void mt7915_sta_set_4addr(struct ieee80211_hw *hw,
+ 				 struct ieee80211_vif *vif,
+ 				 struct ieee80211_sta *sta,
+@@ -1291,6 +1332,9 @@ static void mt7915_sta_set_4addr(struct ieee80211_hw *hw,
+ 	else
+ 		clear_bit(MT_WCID_FLAG_4ADDR, &msta->wcid.flags);
+ 
++	if (mtk_wed_device_active(&dev->mt76.mmio.wed) && enabled)
++		mt7915_sta_wed_set_4addr(dev, vif, sta);
++
+ 	if (!msta->wcid.sta)
+ 		return;
+ 
+@@ -1740,15 +1784,19 @@ mt7915_net_fill_forward_path(struct ieee80211_hw *hw,
+ 	if (!mtk_wed_device_active(wed))
+ 		return -ENODEV;
+ 
+-	if (msta->wcid.idx > 0xff)
++	if (msta->wcid.idx > MT7915_WTBL_STA)
+ 		return -EIO;
+ 
+ 	path->type = DEV_PATH_MTK_WDMA;
+ 	path->dev = ctx->dev;
+ 	path->mtk_wdma.wdma_idx = wed->wdma_idx;
+ 	path->mtk_wdma.bss = mvif->mt76.idx;
+-	path->mtk_wdma.wcid = is_mt7915(&dev->mt76) ? msta->wcid.idx : 0x3ff;
+ 	path->mtk_wdma.queue = phy->mt76->band_idx;
++	if (test_bit(MT_WCID_FLAG_4ADDR, &msta->wcid.flags) ||
++	    is_mt7915(&dev->mt76))
++		path->mtk_wdma.wcid = msta->wcid.idx;
++	else
++		path->mtk_wdma.wcid = 0x3ff;
+ 
+ 	ctx->dev = NULL;
+ 
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7915/mcu.c b/drivers/net/wireless/mediatek/mt76/mt7915/mcu.c
+index 29b3f0cda1ce7..1ecce494bb09c 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7915/mcu.c
++++ b/drivers/net/wireless/mediatek/mt76/mt7915/mcu.c
+@@ -1367,6 +1367,7 @@ mt7915_mcu_get_mmps_mode(enum ieee80211_smps_mode smps)
+ int mt7915_mcu_set_fixed_rate_ctrl(struct mt7915_dev *dev,
+ 				   struct ieee80211_vif *vif,
+ 				   struct ieee80211_sta *sta,
++				   struct mt76_wcid *wcid,
+ 				   void *data, u32 field)
+ {
+ 	struct mt7915_vif *mvif = (struct mt7915_vif *)vif->drv_priv;
+@@ -1438,7 +1439,7 @@ int mt7915_mcu_add_smps(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+ 	if (ret)
+ 		return ret;
+ 
+-	return mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, NULL,
++	return mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, &msta->wcid, NULL,
+ 					      RATE_PARAM_MMPS_UPDATE);
+ }
+ 
+@@ -1447,17 +1448,19 @@ mt7915_mcu_set_spe_idx(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+ 		       struct ieee80211_sta *sta)
+ {
+ 	struct mt7915_vif *mvif = (struct mt7915_vif *)vif->drv_priv;
++	struct mt7915_sta *msta = (struct mt7915_sta *)sta->drv_priv;
+ 	struct mt76_phy *mphy = mvif->phy->mt76;
+ 	u8 spe_idx = mt76_connac_spe_idx(mphy->antenna_mask);
+ 
+-	return mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, &spe_idx,
+-					      RATE_PARAM_SPE_UPDATE);
++	return mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, &msta->wcid,
++					      &spe_idx, RATE_PARAM_SPE_UPDATE);
+ }
+ 
+ static int
+ mt7915_mcu_add_rate_ctrl_fixed(struct mt7915_dev *dev,
+ 			       struct ieee80211_vif *vif,
+-			       struct ieee80211_sta *sta)
++			       struct ieee80211_sta *sta,
++			       struct mt76_wcid *wcid)
+ {
+ 	struct mt7915_vif *mvif = (struct mt7915_vif *)vif->drv_priv;
+ 	struct cfg80211_chan_def *chandef = &mvif->phy->mt76->chandef;
+@@ -1505,7 +1508,7 @@ mt7915_mcu_add_rate_ctrl_fixed(struct mt7915_dev *dev,
+ 
+ 	/* fixed single rate */
+ 	if (nrates == 1) {
+-		ret = mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, &phy,
++		ret = mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, wcid, &phy,
+ 						     RATE_PARAM_FIXED_MCS);
+ 		if (ret)
+ 			return ret;
+@@ -1527,7 +1530,7 @@ mt7915_mcu_add_rate_ctrl_fixed(struct mt7915_dev *dev,
+ 		else
+ 			mt76_rmw_field(dev, addr, GENMASK(15, 12), phy.sgi);
+ 
+-		ret = mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, &phy,
++		ret = mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, wcid, &phy,
+ 						     RATE_PARAM_FIXED_GI);
+ 		if (ret)
+ 			return ret;
+@@ -1535,7 +1538,7 @@ mt7915_mcu_add_rate_ctrl_fixed(struct mt7915_dev *dev,
+ 
+ 	/* fixed HE_LTF */
+ 	if (mask->control[band].he_ltf != GENMASK(7, 0)) {
+-		ret = mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, &phy,
++		ret = mt7915_mcu_set_fixed_rate_ctrl(dev, vif, sta, wcid, &phy,
+ 						     RATE_PARAM_FIXED_HE_LTF);
+ 		if (ret)
+ 			return ret;
+@@ -1648,15 +1651,14 @@ mt7915_mcu_sta_rate_ctrl_tlv(struct sk_buff *skb, struct mt7915_dev *dev,
+ }
+ 
+ int mt7915_mcu_add_rate_ctrl(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+-			     struct ieee80211_sta *sta, bool changed)
++			     struct ieee80211_sta *sta, struct mt76_wcid *wcid,
++			     bool changed)
+ {
+ 	struct mt7915_vif *mvif = (struct mt7915_vif *)vif->drv_priv;
+-	struct mt7915_sta *msta = (struct mt7915_sta *)sta->drv_priv;
+ 	struct sk_buff *skb;
+ 	int ret;
+ 
+-	skb = mt76_connac_mcu_alloc_sta_req(&dev->mt76, &mvif->mt76,
+-					    &msta->wcid);
++	skb = mt76_connac_mcu_alloc_sta_req(&dev->mt76, &mvif->mt76, wcid);
+ 	if (IS_ERR(skb))
+ 		return PTR_ERR(skb);
+ 
+@@ -1681,7 +1683,7 @@ int mt7915_mcu_add_rate_ctrl(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+ 	 * and updates as peer fixed rate parameters, which overrides
+ 	 * sta_rec_ra and firmware rate control algorithm.
+ 	 */
+-	return mt7915_mcu_add_rate_ctrl_fixed(dev, vif, sta);
++	return mt7915_mcu_add_rate_ctrl_fixed(dev, vif, sta, wcid);
+ }
+ 
+ static int
+@@ -1712,8 +1714,9 @@ mt7915_mcu_add_group(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+ 				 sizeof(req), true);
+ }
+ 
+-int mt7915_mcu_add_sta(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+-		       struct ieee80211_sta *sta, int conn_state, bool newly)
++int __mt7915_mcu_add_sta(struct mt7915_dev *dev, struct ieee80211_vif *vif,
++			 struct ieee80211_sta *sta, struct mt76_wcid *wcid,
++			 int conn_state, bool newly)
+ {
+ 	struct mt7915_vif *mvif = (struct mt7915_vif *)vif->drv_priv;
+ 	struct ieee80211_link_sta *link_sta;
+@@ -1724,8 +1727,10 @@ int mt7915_mcu_add_sta(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+ 	msta = sta ? (struct mt7915_sta *)sta->drv_priv : &mvif->sta;
+ 	link_sta = sta ? &sta->deflink : NULL;
+ 
+-	skb = mt76_connac_mcu_alloc_sta_req(&dev->mt76, &mvif->mt76,
+-					    &msta->wcid);
++	if (!wcid)
++		wcid = &msta->wcid;
++
++	skb = mt76_connac_mcu_alloc_sta_req(&dev->mt76, &mvif->mt76, wcid);
+ 	if (IS_ERR(skb))
+ 		return PTR_ERR(skb);
+ 
+@@ -2423,10 +2428,20 @@ int mt7915_mcu_init_firmware(struct mt7915_dev *dev)
+ 
+ 	mt76_connac_mcu_del_wtbl_all(&dev->mt76);
+ 
+-	if ((mtk_wed_device_active(&dev->mt76.mmio.wed) &&
+-	     is_mt7915(&dev->mt76)) ||
+-	    !mtk_wed_get_rx_capa(&dev->mt76.mmio.wed))
+-		mt7915_mcu_wa_cmd(dev, MCU_WA_PARAM_CMD(CAPABILITY), 0, 0, 0);
++#if IS_ENABLED(CONFIG_NET_MEDIATEK_SOC_WED)
++	if (mtk_wed_device_active(&dev->mt76.mmio.wed)) {
++		if (is_mt7915(&dev->mt76) ||
++		    !mtk_wed_get_rx_capa(&dev->mt76.mmio.wed))
++			ret = mt7915_mcu_wa_cmd(dev, MCU_WA_PARAM_CMD(CAPABILITY),
++			                        0, 0, 0);
++		else
++			ret = mt7915_mcu_wa_cmd(dev, MCU_WA_PARAM_CMD(SET),
++						MCU_WA_PARAM_WED_VERSION,
++						dev->mt76.mmio.wed.rev_id, 0);
++		if (ret)
++			return ret;
++	}
++#endif
+ 
+ 	ret = mt7915_mcu_set_mwds(dev, 1);
+ 	if (ret)
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7915/mcu.h b/drivers/net/wireless/mediatek/mt76/mt7915/mcu.h
+index 4c25abb0297de..6ffa5ea5bc0d6 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7915/mcu.h
++++ b/drivers/net/wireless/mediatek/mt76/mt7915/mcu.h
+@@ -278,6 +278,7 @@ enum {
+ 	MCU_WA_PARAM_PDMA_RX = 0x04,
+ 	MCU_WA_PARAM_CPU_UTIL = 0x0b,
+ 	MCU_WA_PARAM_RED = 0x0e,
++	MCU_WA_PARAM_WED_VERSION = 0x32,
+ 	MCU_WA_PARAM_RED_SETTING = 0x40,
+ };
+ 
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7915/mt7915.h b/drivers/net/wireless/mediatek/mt76/mt7915/mt7915.h
+index 27857347f05f4..cc56ef27308c0 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7915/mt7915.h
++++ b/drivers/net/wireless/mediatek/mt76/mt7915/mt7915.h
+@@ -475,8 +475,16 @@ int mt7915_mcu_add_dev_info(struct mt7915_phy *phy,
+ 			    struct ieee80211_vif *vif, bool enable);
+ int mt7915_mcu_add_bss_info(struct mt7915_phy *phy,
+ 			    struct ieee80211_vif *vif, int enable);
+-int mt7915_mcu_add_sta(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+-		       struct ieee80211_sta *sta, int conn_state, bool newly);
++int __mt7915_mcu_add_sta(struct mt7915_dev *dev, struct ieee80211_vif *vif,
++			 struct ieee80211_sta *sta, struct mt76_wcid *wcid,
++			 int conn_state, bool newly);
++static inline int
++mt7915_mcu_add_sta(struct mt7915_dev *dev, struct ieee80211_vif *vif,
++		   struct ieee80211_sta *sta, int conn_state, bool newly)
++{
++	return __mt7915_mcu_add_sta(dev, vif, sta, NULL, conn_state, newly);
++}
++
+ int mt7915_mcu_add_tx_ba(struct mt7915_dev *dev,
+ 			 struct ieee80211_ampdu_params *params,
+ 			 bool add);
+@@ -494,7 +502,8 @@ int mt7915_mcu_set_protection(struct mt7915_phy *phy, struct ieee80211_vif *vif,
+ int mt7915_mcu_add_obss_spr(struct mt7915_phy *phy, struct ieee80211_vif *vif,
+ 			    struct ieee80211_he_obss_pd *he_obss_pd);
+ int mt7915_mcu_add_rate_ctrl(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+-			     struct ieee80211_sta *sta, bool changed);
++			     struct ieee80211_sta *sta, struct mt76_wcid *wcid,
++			     bool changed);
+ int mt7915_mcu_add_smps(struct mt7915_dev *dev, struct ieee80211_vif *vif,
+ 			struct ieee80211_sta *sta);
+ int mt7915_set_channel(struct mt76_phy *mphy);
+@@ -504,6 +513,7 @@ int mt7915_mcu_update_edca(struct mt7915_dev *dev, void *req);
+ int mt7915_mcu_set_fixed_rate_ctrl(struct mt7915_dev *dev,
+ 				   struct ieee80211_vif *vif,
+ 				   struct ieee80211_sta *sta,
++				   struct mt76_wcid *wcid,
+ 				   void *data, u32 field);
+ int mt7915_mcu_set_eeprom(struct mt7915_dev *dev);
+ int mt7915_mcu_get_eeprom(struct mt7915_dev *dev, u32 offset, u8 *read_buf);
+diff --git a/drivers/net/wireless/mediatek/mt76/util.c b/drivers/net/wireless/mediatek/mt76/util.c
+index 97249ebb4bc8f..6ac7cfdd8786f 100644
+--- a/drivers/net/wireless/mediatek/mt76/util.c
++++ b/drivers/net/wireless/mediatek/mt76/util.c
+@@ -42,12 +42,19 @@ bool ____mt76_poll_msec(struct mt76_dev *dev, u32 offset, u32 mask, u32 val,
+ }
+ EXPORT_SYMBOL_GPL(____mt76_poll_msec);
+ 
+-int mt76_wcid_alloc(u32 *mask, int size)
++int __mt76_wcid_alloc(u32 *mask, int min, int size)
+ {
++	u32 min_mask = ~0;
+ 	int i, idx = 0, cur;
+ 
++	mask += min / 32;
++	min %= 32;
++	if (min > 0)
++		min_mask = ~((1 << min) - 1);
++
+ 	for (i = 0; i < DIV_ROUND_UP(size, 32); i++) {
+-		idx = ffs(~mask[i]);
++		idx = ffs(~mask[i] & min_mask);
++		min_mask = ~0;
+ 		if (!idx)
+ 			continue;
+ 
+@@ -62,7 +69,7 @@ int mt76_wcid_alloc(u32 *mask, int size)
+ 
+ 	return -1;
+ }
+-EXPORT_SYMBOL_GPL(mt76_wcid_alloc);
++EXPORT_SYMBOL_GPL(__mt76_wcid_alloc);
+ 
+ int mt76_get_min_avg_rssi(struct mt76_dev *dev, u8 phy_idx)
+ {
+diff --git a/drivers/net/wireless/mediatek/mt76/util.h b/drivers/net/wireless/mediatek/mt76/util.h
+index 260965dde94cf..68432fce2f56a 100644
+--- a/drivers/net/wireless/mediatek/mt76/util.h
++++ b/drivers/net/wireless/mediatek/mt76/util.h
+@@ -27,7 +27,12 @@ enum {
+ #define MT76_INCR(_var, _size) \
+ 	(_var = (((_var) + 1) % (_size)))
+ 
+-int mt76_wcid_alloc(u32 *mask, int size);
++int __mt76_wcid_alloc(u32 *mask, int min, int size);
++
++static inline int mt76_wcid_alloc(u32 *mask, int size)
++{
++       return __mt76_wcid_alloc(mask, 0, size);
++}
+ 
+ static inline void
+ mt76_wcid_mask_set(u32 *mask, int idx)

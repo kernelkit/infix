@@ -1,7 +1,7 @@
 From 30f7485ae40aaad3d66606c49c196c28d65983ae Mon Sep 17 00:00:00 2001
 From: Daniel Machon <daniel.machon@microchip.com>
 Date: Wed, 6 May 2026 09:25:38 +0200
-Subject: [PATCH 52/80] net: sparx5: fix wrong chip ids for TSN SKUs
+Subject: [PATCH 52/84] net: sparx5: fix wrong chip ids for TSN SKUs
 
 The TSN SKUs in enum spx5_target_chiptype have incorrect IDs:
 

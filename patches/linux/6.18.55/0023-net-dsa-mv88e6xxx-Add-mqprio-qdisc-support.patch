@@ -1,7 +1,7 @@
 From b12a958ebe126f89d0bcd2057733a270de63e883 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 11:04:22 +0200
-Subject: [PATCH 23/80] net: dsa: mv88e6xxx: Add mqprio qdisc support
+Subject: [PATCH 23/84] net: dsa: mv88e6xxx: Add mqprio qdisc support
 
 Add support for attaching mqprio qdisc's to mv88e6xxx ports and use
 the packet's traffic class as the outgoing priority when no PCP bits

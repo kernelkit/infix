@@ -1,7 +1,7 @@
 From b45635ee810e5edadedbc000b737281b2c517695 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:10:32 +0200
-Subject: [PATCH 77/80] net: dsa: Support DCB priority rewrite
+Subject: [PATCH 77/84] net: dsa: Support DCB priority rewrite
 
 The DCB rewrite table maps a priority back to the PCP and DEI, or the
 DSCP, that frames are remarked with on egress.  DSA has no

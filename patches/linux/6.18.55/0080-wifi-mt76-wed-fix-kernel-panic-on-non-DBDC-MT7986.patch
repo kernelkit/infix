@@ -1,7 +1,7 @@
 From a18588e61131b3562a778c02afd8f193c172d727 Mon Sep 17 00:00:00 2001
 From: Zhi-Jun You <hujy652@gmail.com>
 Date: Wed, 15 Jul 2026 23:21:12 +0800
-Subject: [PATCH 80/80] wifi: mt76: wed: fix kernel panic on non-DBDC MT7986
+Subject: [PATCH 80/84] wifi: mt76: wed: fix kernel panic on non-DBDC MT7986
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
