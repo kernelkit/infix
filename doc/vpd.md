@@ -72,7 +72,10 @@ echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"Ban
 ```
 
 A VPD read this way is never trusted, so it can only provide identity,
-never the factory password.
+never the factory password.  On the Banana Pi BPI-R3 family the base
+MAC address it provides is also handed out to the ports at boot: every
+wired port without a hardware address gets base + 1, base + 2, and so
+on, in interface name order.
 
 The image for the Banana Pi BPI-R3 family already carries an empty
 `factory` partition for this purpose.
