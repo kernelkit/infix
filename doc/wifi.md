@@ -626,8 +626,10 @@ admin@example:/config/> set interface wifi0 wifi access-point roaming dot11r key
 - All APs must use the **same mobility-domain** identifier
 - APs on different devices must be ports of bridges that are connected
   to each other, over a cable, a mesh or a WDS backhaul.  The APs hand a
-  roaming client's keys to each other over that network, which WPA3
-  clients need for a fast transition.  On a bridge with VLAN filtering
+  client's keys to each other over that network as soon as it connects,
+  which WPA3 clients need for a fast transition, so a client can keep
+  roaming after the AP it first connected to has gone down.  On a bridge
+  with VLAN filtering
   the keys travel in the APs' VLAN, so each device needs a VLAN
   interface on the bridge for that VLAN, the one carrying its IP address
   there is enough

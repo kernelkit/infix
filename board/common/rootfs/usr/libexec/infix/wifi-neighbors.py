@@ -25,11 +25,20 @@ once per sender and dropped, so a mixed set of nodes shows up in the
 log instead of as a silent lack of neighbors.  Bump VERSION when the
 frame format changes.
 
-What is heard is kept for 90 seconds and handed to hostapd as 802.11k
-neighbors of every access point with the same SSID, for its neighbor
-reports and for the transition requests sent by hostapd.sh and
+What is heard is kept for a few periods and handed to hostapd as
+802.11k neighbors of every access point with the same SSID, for its
+neighbor reports and for the transition requests sent by hostapd.sh and
 wifi-steer.sh, which read the candidate list of a BSS from
 /run/wifi-neighbors/<bss>, one bss_tm_req neighbor= argument per line.
+
+The same access points are also the 802.11r key holders a client can
+roam to.  They go into the BSS's key holder file, rxkh_file in the
+hostapd config, and hostapd is told to reload it, so that it pushes the
+key of every client to them right away rather than having them fetch it
+at the roam, from a node that may be gone by then.
+
+A node that hears a new neighbor announces itself at once, so two nodes
+know each other within a second of the backhaul coming up.
 """
 import hmac
 import hashlib
@@ -46,8 +55,8 @@ ETHERTYPE = 0x88B5                      # IEEE 802 local experimental 1
 GROUP = bytes.fromhex('034b4b000001')   # locally administered group address
 MAGIC = b'infix-wifi'
 VERSION = 2
-PERIOD = 30
-EXPIRE = 95
+PERIOD = 10
+EXPIRE = 35
 MAX_NEIGHBORS = 64
 DIR = '/run/wifi-neighbors'
 MAC = re.compile(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$')
@@ -67,8 +76,21 @@ def hostapd_cli(bss, *args):
         return ''
 
 
+def rxkh_key(path):
+    """The 802.11r key from a key holder file, None without one."""
+    try:
+        for line in open(path).read().splitlines():
+            # r0kh=<mac> <nas id> <key>, the key is what every node
+            # derives from the mobility domain and the secret
+            if line.startswith('r0kh='):
+                return line.split()[-1].encode()
+    except OSError:
+        pass
+    return None
+
+
 def parse_configs(paths):
-    """{bss: (ft_iface, key)} for every BSS, both None without 802.11r."""
+    """{bss: (ft_iface, key, rxkh)} for every BSS, all None without 802.11r."""
     bsses = {}
     for path in paths:
         if not path.endswith('.conf'):
@@ -81,13 +103,12 @@ def parse_configs(paths):
         for line in lines:
             if line.startswith(('interface=', 'bss=')):
                 cur = line.split('=', 1)[1].strip()
-                bsses.setdefault(cur, [None, None])
+                bsses.setdefault(cur, [None, None, None])
             elif line.startswith('ft_iface=') and cur:
                 bsses[cur][0] = line.split('=', 1)[1].strip()
-            elif line.startswith('r0kh=') and cur:
-                # r0kh=<mac> <nas id> <key>, the key is what every node derives
-                # from the mobility domain and the secret
-                bsses[cur][1] = line.split()[-1].encode()
+            elif line.startswith('rxkh_file=') and cur:
+                bsses[cur][2] = line.split('=', 1)[1].strip()
+                bsses[cur][1] = rxkh_key(bsses[cur][2])
     return {bss: tuple(v) for bss, v in bsses.items()}
 
 
@@ -136,7 +157,7 @@ def tag(key, bssid, freq, phy, ssid):
 def own_bsses(bsses):
     """{bss: (bssid, freq, phy, ssid)} from hostapd, for the keyed BSSes up."""
     out = {}
-    for bss, (_, key) in bsses.items():
+    for bss, (_, key, _) in bsses.items():
         if not key:
             continue
         cfg = hostapd_cli(bss, 'get_config')
@@ -215,8 +236,23 @@ def nr_hex(bssid, freq, phy):
             + bytes([opclass(freq), channel(freq), phy]).hex())
 
 
-def publish(own, neighbors, published):
-    """Write the candidate files and sync hostapd's neighbor database."""
+def write_rxkh(path, key, bssids):
+    """Rewrite a key holder file: the wildcards, then one R1KH per neighbor.
+
+    The R1KH-ID of an access point is its BSSID, and so is the address
+    its key holder is reached at over the backhaul.
+    """
+    key = key.decode()
+    with open(f'{path}.tmp', 'w') as f:
+        f.write(f'r0kh=ff:ff:ff:ff:ff:ff * {key}\n')
+        f.write(f'r1kh=00:00:00:00:00:00 00:00:00:00:00:00 {key}\n')
+        for bssid in sorted(bssids):
+            f.write(f'r1kh={bssid} {bssid} {key}\n')
+    os.replace(f'{path}.tmp', path)
+
+
+def publish(own, neighbors, published, bsses):
+    """Write the candidate and key holder files, sync hostapd's lists."""
     for bss, (mybssid, _, _, myssid) in own.items():
         mine = {n[0]: n for n in neighbors.values()
                 if n[3] == myssid and n[0] != mybssid}
@@ -233,14 +269,20 @@ def publish(own, neighbors, published):
                 continue
             hostapd_cli(bss, 'set_neighbor', bssid, f'ssid="{ssid}"',
                         f'nr={nr_hex(bssid, freq, phy)}')
+        _, key, rxkh = bsses[bss]
+        if rxkh and key and set(published.get(bss, {})) != set(mine):
+            write_rxkh(rxkh, key, mine)
+            hostapd_cli(bss, 'reload_rxkhs')
         published[bss] = mine
         log(f"{bss}: {len(mine)} neighbor(s) for '{myssid}'")
 
 
 def main():
+    # The key holder files carry the 802.11r key, keep them root-only
+    os.umask(0o077)
     os.makedirs(DIR, exist_ok=True)
     bsses = parse_configs(sys.argv[1:])
-    ifaces = sorted({ifc for ifc, key in bsses.values() if ifc and key})
+    ifaces = sorted({ifc for ifc, key, _ in bsses.values() if ifc and key})
     if not ifaces:
         return
     host = socket.gethostname()
@@ -262,6 +304,7 @@ def main():
     neighbors = {}      # bssid -> (bssid, freq, phy, ssid, last seen)
     published = {}
     next_send = 0.0
+    last_send = 0.0
     own = {}
     keys = {}           # ssid -> 802.11r key, for the SSIDs we serve
     other = set()       # nodes heard announcing another version
@@ -277,6 +320,7 @@ def main():
                 except OSError:
                     pass
             next_send = now + PERIOD
+            last_send = now
 
         ready, _, _ = select.select(list(socks), [], [], max(0.1, next_send - now))
         for s in ready:
@@ -290,6 +334,9 @@ def main():
                     continue
                 if bssid not in neighbors and len(neighbors) >= MAX_NEIGHBORS:
                     continue
+                # Answer a newcomer right away, at most once a second
+                if bssid not in neighbors and stamp - last_send > 1:
+                    next_send = stamp
                 neighbors[bssid] = (bssid, freq, phy, ssid, stamp)
 
         cutoff = time.monotonic() - EXPIRE
@@ -297,7 +344,7 @@ def main():
             del neighbors[bssid]
         if own:
             try:
-                publish(own, {b: n[:4] for b, n in neighbors.items()}, published)
+                publish(own, {b: n[:4] for b, n in neighbors.items()}, published, bsses)
             except OSError as err:
                 log(f'wifi-neighbors: {err}')
 

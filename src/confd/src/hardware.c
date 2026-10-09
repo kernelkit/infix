@@ -20,6 +20,8 @@
 #define XPATH_BASE_              "/ietf-hardware:hardware"
 #define HOSTAPD_CONF             "/etc/hostapd-%s.conf"
 #define HOSTAPD_CONF_NEXT        HOSTAPD_CONF"+"
+#define WIFI_RXKH_DIR            "/run/wifi-neighbors"
+#define WIFI_RXKH_FILE           WIFI_RXKH_DIR "/%s.rxkh"
 #define HOSTAPD_SERVICE          "/etc/finit.d/available/hostapd.conf"
 #define GPSD_CONF                "/etc/finit.d/available/gpsd.conf"
 #define GPSD_CONF_NEXT           GPSD_CONF"+"
@@ -413,6 +415,28 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 }
 
 /* Emit the 4-address WDS ports (wds-link interfaces) of an AP */
+/*
+ * The 802.11r key holder list of a BSS, read by hostapd at start and on
+ * RELOAD_RXKHS.  wifi-neighbors.py rewrites it with the other nodes'
+ * access points as R1KHs, keeping these wildcard entries.
+ */
+static int wifi_write_rxkh(const char *ifname, const char *ft_key)
+{
+	FILE *fp;
+
+	if (fmkpath(0755, WIFI_RXKH_DIR))
+		return -1;
+
+	fp = fopenf("w", WIFI_RXKH_FILE, ifname);
+	if (!fp)
+		return -1;
+
+	fprintf(fp, "r0kh=ff:ff:ff:ff:ff:ff * %s\n", ft_key);
+	fprintf(fp, "r1kh=00:00:00:00:00:00 00:00:00:00:00:00 %s\n", ft_key);
+
+	return fclose(fp);
+}
+
 static void wifi_gen_wds_ports(FILE *hostapd, struct lyd_node *config, const char *ap_ifname)
 {
 	struct lyd_node *cifs, *cif;
@@ -614,8 +638,16 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 				}
 				fprintf(hostapd, "ft_iface=%s\n", ft_iface);
 			}
-			fprintf(hostapd, "r0kh=ff:ff:ff:ff:ff:ff * %s\n", ft_key);
-			fprintf(hostapd, "r1kh=00:00:00:00:00:00 00:00:00:00:00:00 %s\n", ft_key);
+			/* The key holders live in a file so that wifi-neighbors.py
+			 * can add the other nodes' access points as it hears of
+			 * them and have hostapd reload the list.  Start with the
+			 * wildcards, which accept any node holding the key. */
+			if (!wifi_write_rxkh(ifname, ft_key))
+				fprintf(hostapd, "rxkh_file=" WIFI_RXKH_FILE "\n", ifname);
+			/* Hand every R1KH the PMK-R1 as soon as a client
+			 * authenticates: a roam must not depend on this node,
+			 * the R0KH, still being up to pull the key from. */
+			fprintf(hostapd, "pmk_r1_push=1\n");
 			/* A client roaming away from a node that is going down
 			 * asks for a key that node can no longer hand out.
 			 * Give up on the fetch quickly and reject, the client
