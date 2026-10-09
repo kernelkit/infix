@@ -11,9 +11,26 @@ behavior in automated tests. Supports:
 import subprocess
 import time
 from typing import Tuple, List
+from .netns import NetnsService
 from .sniffer import Sniffer
 from .portscanner import PortScanner
 from .util import until
+
+
+class DnatTarget(NetnsService):
+    """One-shot nc server that answers DNAT-TEST-OK on port"""
+    popen_kwargs = dict(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def __init__(self, netns, port):
+        super().__init__(netns)
+        self.port = port
+
+    def argv(self):
+        return ["nc", "-l", "-p", str(self.port), "-e", "/bin/echo", "DNAT-TEST-OK"]
+
+    def ready(self):
+        # Probing the port would use up the only connection nc accepts
+        time.sleep(1)
 
 
 class Firewall:
@@ -203,21 +220,10 @@ class Firewall:
             Tuple of (dnat_working: bool, details: str)
         """
         try:
-            # Use netcat to simulate a simple service on target port
-            cmd = f"nc -l -p {target_port} -e /bin/echo 'DNAT-TEST-OK'"
-            pid = self.dstns.popen(cmd.split(), stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-            time.sleep(1)  # Give server time to start
-
             # Test connection from source to gateway:forward_port
             cmd = f"nc -w {timeout} {gateway_ip} {forward_port}"
-            result = self.srcns.runsh(cmd)
-
-            try:
-                pid.terminate()
-                pid.wait(timeout=1)
-            except:
-                pid.kill()
+            with DnatTarget(self.dstns, target_port):
+                result = self.srcns.runsh(cmd)
 
             # Check if we got the expected response
             if "DNAT-TEST-OK" in result.stdout:

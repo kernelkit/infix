@@ -2,17 +2,17 @@
 import os
 import tempfile as tf
 import subprocess
+from .netns import NetnsService
 
 
-class Server:
+class Server(NetnsService):
     config_file = '/tmp/udhcpd.conf'
     leases_file = '/tmp/udhcpd.leases'
 
     def __init__(self, netns, start='192.168.0.100', end='192.168.0.110',
                  netmask='255.255.255.0', ip=None, router=None, prefix=None,
                  hostname=None, iface="iface"):
-        self.process = None
-        self.netns = netns
+        super().__init__(netns)
         self.iface = iface
         self._create_files(start, end, netmask, ip, router, prefix, hostname)
 
@@ -25,12 +25,6 @@ class Server:
                 os.unlink(self.leases_file)
         except:
             pass
-
-    def __enter__(self):
-        self.start()
-
-    def __exit__(self, _, __, ___):
-        self.stop()
 
     def _create_files(self, start, end, netmask, ip, router, prefix, hostname):
         f = open(self.leases_file, "w")
@@ -56,20 +50,8 @@ option lease 864000
             if hostname:
                 f.write(f"option hostname {hostname}\n")
 
-    def get_pid(self):
-        return self.process.pid
-
-    def start(self):
-        if not os.path.exists(self.config_file):
-            raise Exception("Config file does not exist. Please create it first.")
-        cmd = f"udhcpd -f {self.config_file}"
-        self.process = self.netns.popen(cmd.split(" "))
-
-    def stop(self):
-        if self.process:
-            self.process.terminate()
-            self.process.wait()
-            self.process = None
+    def argv(self):
+        return ["udhcpd", "-f", self.config_file]
 
 
 class Client:
@@ -101,8 +83,10 @@ class Client:
         return tuple(res.stdout.split())
 
 
-class Server6Dnsmasq:
+class Server6Dnsmasq(NetnsService):
     """DHCPv6 server using dnsmasq"""
+    # Drop the DEVNULL redirect to debug
+    popen_kwargs = dict(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def __init__(self, netns, start=None, end=None, dns=None, domain=None,
                  iface="iface", address=None):
@@ -116,8 +100,7 @@ class Server6Dnsmasq:
             domain: DNS search domain
             iface:  Interface to listen on
         """
-        self.process = None
-        self.netns = netns
+        super().__init__(netns)
         self.iface = iface
         self.config_file = tf.NamedTemporaryFile(mode='w', prefix='dnsmasq6_',
                                                  suffix='.conf', delete=False)
@@ -142,13 +125,6 @@ class Server6Dnsmasq:
                 os.unlink(self.hosts_path)
         except:
             pass
-
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, _, __, ___):
-        self.stop()
 
     def _create_config(self, start, end, dns, domain, address):
         """Create dnsmasq configuration for DHCPv6"""
@@ -191,26 +167,12 @@ class Server6Dnsmasq:
             self.config_file.write("log-debug\n")
             self.config_file.write("log-dhcp\n")
 
-    def start(self):
-        """Start the DHCPv6 server"""
-        if not os.path.exists(self.config_path):
-            raise Exception("Config file does not exist")
+    def argv(self):
+        return ["dnsmasq", f"--conf-file={self.config_path}", "--no-daemon"]
 
-        # Drop DEVNULL redirec to debug
-        cmd = f"dnsmasq --conf-file={self.config_path} --no-daemon"
-        self.process = self.netns.popen(cmd.split(" "),
-                                        stdout=subprocess.DEVNULL,
-                                        stderr=subprocess.DEVNULL)
-
-    def stop(self):
-        """Stop the DHCPv6 server"""
-        if self.process:
-            self.process.terminate()
-            self.process.wait()
-            self.process = None
-
-class Server6Dhcpd:
+class Server6Dhcpd(NetnsService):
     """DHCPv6 server using ISC dhcpd with prefix delegation support"""
+    popen_kwargs = dict(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def __init__(self, netns, start=None, end=None, prefix=None, prefix_len=64,
                  dns=None, domain=None, iface="iface", address=None, subnet="2001:db8::/48"):
@@ -228,8 +190,7 @@ class Server6Dhcpd:
             address:    Server address on the interface (for subnet config)
             subnet:     Subnet declaration (e.g., "2001:db8::/48")
         """
-        self.process = None
-        self.netns = netns
+        super().__init__(netns)
         self.iface = iface
         self.subnet = subnet
 
@@ -259,13 +220,6 @@ class Server6Dhcpd:
                 os.unlink(self.pid_path)
         except:
             pass
-
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, _, __, ___):
-        self.stop()
 
     def _create_config(self, start, end, prefix, prefix_len, dns, domain):
         """Create ISC dhcpd configuration for DHCPv6 with prefix delegation"""
@@ -331,11 +285,7 @@ class Server6Dhcpd:
 
             self.config_file.write("}\n")
 
-    def start(self):
-        """Start the DHCPv6 server"""
-        if not os.path.exists(self.config_path):
-            raise Exception("Config file does not exist")
-
+    def argv(self):
         # Debug: show config and interface status
         # self.netns.popen(f"cat {self.config_path}".split(" "))
         # self.netns.popen("ifconfig")
@@ -347,7 +297,7 @@ class Server6Dhcpd:
         # -cf: Config file
         # -lf: Lease file
         # -pf: PID file
-        cmd = [
+        return [
             "dhcpd",
             "-6",           # IPv6 mode
             "-f",           # Foreground
@@ -357,18 +307,3 @@ class Server6Dhcpd:
             "-pf", self.pid_path,
             self.iface      # Interface to listen on
         ]
-
-        self.process = self.netns.popen(cmd,
-                                        stdout=subprocess.DEVNULL,
-                                        stderr=subprocess.DEVNULL)
-
-    def stop(self):
-        """Stop the DHCPv6 server"""
-        if self.process:
-            self.process.terminate()
-            try:
-                self.process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
-            self.process = None
