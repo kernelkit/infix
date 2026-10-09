@@ -14,6 +14,9 @@ All notable changes to the project are documented in this file.
   see [VPD documentation](vpd.md#factory-partition)
 - Banana Pi BPI-R3: ports get stable addresses derived from the chassis
   MAC instead of random ones at every boot
+- WiFi interfaces get a unique address derived from the chassis MAC, so
+  several APs on one radio, or two devices of the same model, no longer
+  need `custom-phys-address`
 - WiFi 4-address (WDS) links for wireless bridges and repeaters: a station
   with `wds` enabled can be a bridge port, and an access point bridges
   each remote station through a `wds-link` interface, see

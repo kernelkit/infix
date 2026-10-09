@@ -76,6 +76,8 @@ never the factory password.  On the Banana Pi BPI-R3 family the base
 MAC address it provides is also handed out to the ports at boot: every
 wired port without a hardware address gets base + 1, base + 2, and so
 on, in interface name order.
+WiFi interfaces derive their addresses from the base MAC as described
+in [WiFi](wifi.md#multi-ssid-configuration).
 
 The image for the Banana Pi BPI-R3 family already carries an empty
 `factory` partition for this purpose.

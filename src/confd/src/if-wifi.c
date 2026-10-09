@@ -8,6 +8,8 @@
  */
 
 #include <ctype.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
@@ -583,12 +585,57 @@ int wifi_add_deps(struct lyd_node *cif)
 	return 0;
 }
 
+/*
+ * Default address for a VIF without custom-phys-address.  Every VIF
+ * on a radio would otherwise inherit the radio's own address, and on
+ * boards without a per-unit EEPROM that address is the vendor default,
+ * shared by every unit of the model.  Derive from the chassis MAC
+ * instead, encoded in the first octet so it never meets the port
+ * addresses, which are chassis + N: set the locally administered bit
+ * and add the interface number plus one in bits 2-7, e.g. wifi0 on
+ * chassis 00:53:00:c0:ff:ee becomes 06:53:00:c0:ff:ee and wifi1
+ * 0a:53:00:c0:ff:ee.  Names without a number use a hash of the name.
+ */
+static int wifi_default_addr(const char *ifname, char *buf, size_t len)
+{
+	const char *chassis = get_chassis_addr();
+	unsigned int n = 0;
+	uint8_t mac[6];
+	const char *p;
+
+	if (!chassis)
+		return -1;
+
+	if (sscanf(chassis, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+		   &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) != 6)
+		return -1;
+
+	for (p = ifname; *p && !isdigit((unsigned char)*p); p++)
+		;
+	if (*p) {
+		n = strtoul(p, NULL, 10);
+	} else {
+		for (p = ifname; *p; p++)
+			n = n * 33 + (unsigned char)*p;
+	}
+	n = (n + 1) & 0x3f;
+
+	/* Locally administered, unicast whatever the chassis says */
+	mac[0] = 0x02 | (n << 2);
+
+	snprintf(buf, len, " addr %02x:%02x:%02x:%02x:%02x:%02x",
+		 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	return 0;
+}
+
 int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 {
 	const char *ifname, *radio;
 	struct lyd_node *wifi;
 	wifi_mode_t mode;
 	int probe_timeout;
+	char addr[32] = "";
+	char custom[18];
 	FILE *iw;
 	int rc = SR_ERR_OK;
 
@@ -646,12 +693,16 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 	fprintf(iw, "    exit 0\n");
 	fprintf(iw, "fi\n\n");
 
+	/* A WDS link is created with its AP's address, see below */
+	if (mode != wifi_wds && interface_get_phys_addr(cif, custom))
+		wifi_default_addr(ifname, addr, sizeof(addr));
+
 	switch(mode) {
 	case wifi_station: {
 		struct lyd_node *station = lydx_get_child(wifi, "station");
 
-		fprintf(iw, "iw phy %s interface add %s type managed%s\n", radio, ifname,
-			station && lydx_is_enabled(station, "wds") ? " 4addr on" : "");
+		fprintf(iw, "iw phy %s interface add %s type managed%s%s\n", radio, ifname,
+			station && lydx_is_enabled(station, "wds") ? " 4addr on" : "", addr);
 		wifi_gen_station(cif);
 		fprintf(iw, "initctl -bfq enable wifi@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch wifi@%s\n", ifname);
@@ -671,10 +722,10 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		break;
 	}
 	case wifi_ap:
-		fprintf(iw, "iw phy %s interface add %s type __ap\n", radio, ifname);
+		fprintf(iw, "iw phy %s interface add %s type __ap%s\n", radio, ifname, addr);
 		break;
 	case wifi_mesh:
-		fprintf(iw, "iw phy %s interface add %s type mesh\n", radio, ifname);
+		fprintf(iw, "iw phy %s interface add %s type mesh%s\n", radio, ifname, addr);
 		wifi_gen_mesh(cif);
 		fprintf(iw, "initctl -bfq enable mesh@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch mesh@%s\n", ifname);

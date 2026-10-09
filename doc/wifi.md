@@ -546,7 +546,6 @@ admin@example:/config/interface/wifi1/> <b>set wifi radio radio0</b>
 admin@example:/config/interface/wifi1/> <b>set wifi access-point ssid GuestNetwork</b>
 admin@example:/config/interface/wifi1/> <b>set wifi access-point security mode wpa2-wpa3-personal</b>
 admin@example:/config/interface/wifi1/> <b>set wifi access-point security secret guest-secret</b>
-admin@example:/config/interface/wifi1/> <b>set custom-phys-address static 00:0c:43:26:60:01</b>
 
 # IoT AP - IoT devices (WPA2 for older device compatibility)
 admin@example:/config/> <b>edit interface wifi2</b>
@@ -554,23 +553,19 @@ admin@example:/config/interface/wifi2/> <b>set wifi radio radio0</b>
 admin@example:/config/interface/wifi2/> <b>set wifi access-point ssid IoT-Devices</b>
 admin@example:/config/interface/wifi2/> <b>set wifi access-point security mode wpa2-personal</b>
 admin@example:/config/interface/wifi2/> <b>set wifi access-point security secret iot-secret</b>
-admin@example:/config/interface/wifi2/> <b>set custom-phys-address static 00:0c:43:26:60:02</b>
 admin@example:/config/interface/wifi2/> <b>leave</b>
 </code></pre>
 
-> [!IMPORTANT]
-> **MAC Address Requirement for Multi-SSID:**
-> When creating multiple AP interfaces on the same radio, you **must** configure
-> a unique MAC address for each secondary interface (wifi1, wifi2, etc.) using
-> `set custom-phys-address static <MAC>`. All interfaces on the same radio inherit
-> the radio's hardware MAC address by default, which causes network conflicts. Only
-> the primary interface (alphabetically first, e.g., wifi0) should use the default
-> hardware MAC address.
->
-> Choose MAC addresses from the same locally-administered range:
-> - Primary (wifi0): Uses hardware MAC (e.g., `00:0c:43:26:60:00`)
-> - Secondary (wifi1): `00:0c:43:26:60:01` (increment last octet)
-> - Tertiary (wifi2): `00:0c:43:26:60:02` (increment last octet)
+> [!NOTE]
+> Each WiFi interface gets its own MAC address, derived from the chassis
+> MAC by changing only the first octet: the locally administered bit is
+> set and the interface number plus one is stored in the upper bits.  On
+> a device with chassis MAC `00:53:00:c0:ff:ee`, `wifi0` becomes
+> `06:53:00:c0:ff:ee` and `wifi1` becomes `0a:53:00:c0:ff:ee`.  Several
+> APs on one radio therefore never share an address, and two devices of
+> the same model never collide.  To use a specific address instead, set
+> `custom-phys-address` on the interface, see [Common Interface
+> Settings](iface.md#custom-mac-address).
 
 **Result:** Three SSIDs broadcasting simultaneously on radio0:
 
