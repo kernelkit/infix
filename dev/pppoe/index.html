@@ -7,13 +7,13 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/syslog/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/pppoe/">
       
       
-        <link rel="prev" href="../support/">
+        <link rel="prev" href="../vlan/">
       
       
-        <link rel="next" href="../upgrade/">
+        <link rel="next" href="../ip/">
       
       
         
@@ -24,7 +24,7 @@
     
     
       
-        <title>Syslog Support - User's Guide</title>
+        <title>PPPoE Client - User's Guide</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#syslog-support" class="md-skip">
+        <a href="#pppoe-client" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Syslog Support
+              PPPoE Client
             
           </span>
         </div>
@@ -618,8 +618,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -657,11 +659,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked="">
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
@@ -682,7 +684,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -865,10 +867,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../pppoe/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PPPoE Client
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -884,6 +913,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-route-and-dns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Route and DNS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tcp-mss-clamping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TCP MSS Clamping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IPv6
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#forwarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Forwarding
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1449,10 +1553,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1480,11 +1582,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked="">
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -1505,7 +1607,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1744,37 +1846,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Syslog Support
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../syslog/" class="md-nav__link">
         
   
   
@@ -1790,164 +1865,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
-      
-        <li class="md-nav__item">
-  <a href="#log-to-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Log to File
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#log-rotation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Log Rotation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#log-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Log Format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#logging-messages" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Logging Messages
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#log-to-remote-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Log to Remote Server
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#acting-as-a-log-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Acting as a Log Server
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#advanced-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Filtering
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Advanced Filtering">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pattern-matching" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern Matching
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#advanced-severity-comparison" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Severity Comparison
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#hostname-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hostname Filtering
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#property-based-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Property-Based Filtering
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#facilities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Facilities
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2598,10 +2515,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
       
         <li class="md-nav__item">
-  <a href="#log-to-file" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Log to File
+        Configuration
       
     </span>
   </a>
@@ -2609,10 +2526,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#log-rotation" class="md-nav__link">
+  <a href="#default-route-and-dns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Log Rotation
+        Default Route and DNS
       
     </span>
   </a>
@@ -2620,10 +2537,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#log-format" class="md-nav__link">
+  <a href="#tcp-mss-clamping" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Log Format
+        TCP MSS Clamping
       
     </span>
   </a>
@@ -2631,10 +2548,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#logging-messages" class="md-nav__link">
+  <a href="#ipv6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Logging Messages
+        IPv6
       
     </span>
   </a>
@@ -2642,96 +2559,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#log-to-remote-server" class="md-nav__link">
+  <a href="#forwarding" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Log to Remote Server
+        Forwarding
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#acting-as-a-log-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Acting as a Log Server
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#advanced-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Filtering
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Advanced Filtering">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pattern-matching" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern Matching
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#advanced-severity-comparison" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Severity Comparison
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#hostname-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hostname Filtering
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#property-based-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Property-Based Filtering
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#facilities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Facilities
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2778,10 +2612,10 @@
     
     
       <li class="md-path__item">
-        <a href="../nacm/" class="md-path__link">
+        <a href="../networking/" class="md-path__link">
           
   <span class="md-ellipsis">
-    System
+    Networking
   </span>
 
         </a>
@@ -2803,468 +2637,85 @@
   
 
 
-<h1 id="syslog-support">Syslog Support<a class="headerlink" href="#syslog-support" title="Permanent link">¶</a></h1>
-<p>The system comes with native logging to internal storage, <code>/var/log/</code>,
-or <code>/log</code> for a shortcut.  Depending on the device, this may be a RAM
-disk, meaning logs are not retained across reboots.  This document
-details how to log to external media or remote syslog servers.</p>
-<p>It is also possible to set up the device to act as a syslog server (log
-sink), this is covered briefly at the very end of this document.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The default logging setup in the system cannot be modified, only the
-log file rotation.  Please see the <code>dir</code> admin-exec command for a
-listing of existing log files.</p>
-</div>
-<h2 id="log-to-file">Log to File<a class="headerlink" href="#log-to-file" title="Permanent link">¶</a></h2>
-<p>Logging to a local file is useful when combined with an external media.
-E.g., a USB stick with a log partition (named/labeled: "log").  Below is
-an example.</p>
-<p>For a list of available log facilities, see the table in a later section.</p>
+<h1 id="pppoe-client">PPPoE Client<a class="headerlink" href="#pppoe-client" title="Permanent link">¶</a></h1>
+<p>Many Internet service providers connect their customers with PPP over
+Ethernet (PPPoE, RFC 2516).  The device then logs in with a user name
+and password, and gets its IPv4 address and DNS servers from the
+provider's server.</p>
+<p>A PPPoE client session is an interface of type <code>pppoe</code>, stacked on top
+of the Ethernet interface, or VLAN, that connects to the provider.  The
+interface exists as soon as it is configured, but is down until the
+device has logged in, and goes down again when the session ends.  The
+client keeps trying to log in until it succeeds, and logs in again when
+a session is lost.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">¶</a></h2>
+<p>The password is stored in the <a href="../keystore/">keystore</a>, as a symmetric
+key with <code>passphrase-key-format</code>:</p>
 <pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit syslog actions log-file file:/media/log/mylog</b>
-admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>set facility-list</b>
-      all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
-   local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
-     news      ntp   syslog     user     uucp
-admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>set facility-list all severity</b>
-     alert       all  critical     debug emergency     error      info      none    notice   warning
-admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>set facility-list all severity critical</b>
-admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>set facility-list mail severity warning</b>
-admin@example:/config/syslog/…/file:/media/log/mylog/&gt; <b>leave</b>
-admin@example:/&gt;
+admin@example:/config/&gt; <b>edit keystore symmetric-key isp</b>
+admin@example:/config/keystore/…/isp/&gt; <b>set key-format passphrase-key-format</b>
+admin@example:/config/keystore/…/isp/&gt; <b>edit cleartext-symmetric-key</b>
+Passphrase: ********
+Retype passphrase: ********
+admin@example:/config/keystore/…/isp/&gt; <b>end</b>
 </code></pre>
 
-<div class="admonition tip">
-<p class="admonition-title">Important</p>
-<p>The <code>log-file</code> syntax requires the leading prefix <code>file:</code>.  If the
-path is not absolute, e.g., <code>file:mylog</code>, the file is saved to the
-system default path, i.e., <code>/log/mylog</code>.  In this case, verify that
-the filename is not already in use.</p>
-</div>
-<h2 id="log-rotation">Log Rotation<a class="headerlink" href="#log-rotation" title="Permanent link">¶</a></h2>
-<p>By default log files are allowed to grow to a size of 1 MiB after which
-they are "rotated".  The whole reason for this is to not fill up the
-disk with outdated logs.  A rotated file is saved in stages and older
-ones are also compressed (using <code>gzip</code>).  Use the <code>show log</code> command in
-admin-exec context to start the log file viewer:</p>
-<pre class="cli"><code>admin@example:/config/syslog/&gt; <b>do show log</b>
-log  log.0  log.1.gz  log.2.gz  log.3.gz  log.4.gz  log.5.gz
-admin@example:/config/syslog/&gt; <b>do show log log.1.gz</b>
+<p>Then create the PPPoE interface on top of the interface facing the
+provider, here <code>eth0</code>.  The settings common to all PPP links, the user
+name and password, are in <code>ppp</code>, and the PPPoE specific ones in <code>pppoe</code>:</p>
+<pre class="cli"><code>admin@example:/config/&gt; <b>edit interface pppoe0</b>
+admin@example:/config/interface/pppoe0/&gt; <b>set pppoe lower-layer-if eth0</b>
+admin@example:/config/interface/pppoe0/&gt; <b>set ppp username user@isp.example</b>
+admin@example:/config/interface/pppoe0/&gt; <b>set ppp secret isp</b>
+admin@example:/config/interface/pppoe0/&gt; <b>show</b>
+type pppoe;
+ppp {
+  username user@isp.example;
+  secret isp;
+}
+pppoe {
+  lower-layer-if eth0;
+}
+admin@example:/config/interface/pppoe0/&gt; <b>leave</b>
 </code></pre>
 
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>Use the Tab key on your keyboard list available log files.  The <code>do</code>
-prefix is also very useful in configure context to access commands
-from admin-exec context.</p>
+<p>If you name your PPPoE interface <code>pppoeN</code>, where <code>N</code> is a number, the
+CLI infers the interface type automatically.  Any other name, e.g.,
+<code>wan</code>, works too, with an explicit <code>set type pppoe</code>.</p>
 </div>
-<p>By default 10 compressed older files are saved.  Here the oldest is
-<code>log.5.gz</code> and the most recently rotated one is <code>log.0</code>.</p>
-<p>Log file rotation can be configured both globally and per log file.
-Here we show the global settings, the set up is the same for per log
-file, which if unset inherit the global settings:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit syslog file-rotation</b>
-admin@example:/config/syslog/file-rotation/&gt; <b>show</b>
-admin@example:/config/syslog/file-rotation/&gt;
-</code></pre>
-
-<p>The defaults are not shown.  We can inspect them by asking the YANG
-model for the help texts:</p>
-<pre class="cli"><code>admin@example:/config/syslog/file-rotation/&gt; <b>help</b>
-   max-file-size    number-of-files
-admin@example:/config/syslog/file-rotation/&gt; <b>help max-file-size</b>
-<b>NAME</b>
-        max-file-size kilobytes
-
-<b>DESCRIPTION</b>
-        Maximum log file size (kiB), before rotation.
-
-<b>DEFAULT</b>
-        1024
-admin@example:/config/syslog/file-rotation/&gt; <b>help number-of-files</b>
-<b>NAME</b>
-        number-of-files [0..4294967295]
-
-<b>DESCRIPTION</b>
-        Maximum number of log files retained.
-
-<b>DEFAULT</b>
-        10
-</code></pre>
-
-<p>To change the defaults to something smaller, 512 kiB and 20 (remember
-everything after .0 is compressed, and text compresses well):</p>
-<pre class="cli"><code>admin@example:/config/syslog/file-rotation/&gt; <b>set max-file-size 512</b>
-admin@example:/config/syslog/file-rotation/&gt; <b>set number-of-files 20</b>
-admin@example:/config/syslog/file-rotation/&gt; <b>show</b>
-number-of-files 20;
-max-file-size 512;
-admin@example:/config/syslog/file-rotation/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<h2 id="log-format">Log Format<a class="headerlink" href="#log-format" title="Permanent link">¶</a></h2>
-<p>There are three major syslog log formats, the default is <a href="https://datatracker.ietf.org/doc/html/rfc3164">RFC3164</a> for
-log files and BSD for remote logging.  Depending on time synchronization
-and remote log server capabilities, or policies, the <a href="https://datatracker.ietf.org/doc/html/rfc5424">RFC5424</a> format
-is often preferred since it not only has better time resolution but also
-supports structured logging:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>BSD     : myproc[8710]: Kilroy was here.
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
-</code></pre></div>
-<p>The BSD format is only applicable to remote logging.  It remains the
-default for compatibility reasons, and is recommended since the device
-may not have proper time, making it better for the remote log server to
-perform time stamping at the time of arrival.</p>
-<p>Configuring the log format is the same for log files and remotes:</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:foobar</b>
-admin@example:/config/syslog/…/file:foobar/&gt; <b>set log-format</b>
-                  bsd               rfc3164              rfc5424
-admin@example:/config/syslog/…/file:foobar/&gt; <b>set log-format rfc5424</b>
-admin@example:/config/syslog/…/file:foobar/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<h2 id="logging-messages">Logging Messages<a class="headerlink" href="#logging-messages" title="Permanent link">¶</a></h2>
-<p>Scripts and test systems can add their own messages to the system log,
-e.g., to mark the start and end of a test run.  Messages are handed to
-the local syslog daemon as if generated on the device: they are time
-stamped on arrival and follow the same filtering and forwarding rules
-as any other message.  So where a message ends up, a log file, a remote
-server, or both, is decided by the syslog configuration, not the
-caller.</p>
-<p>Messages are logged with the <code>user</code> facility.  The facilities reserved
-for system services, e.g., <code>auth</code>, cannot be selected, so a logged
-message never lands among the records those services write.  The
-remaining header fields, the tag included, are set by the caller and are
-not verified, so the operation is limited to administrators by default,
-see <a href="../nacm/">NACM</a>.  The complete message, header included, must fit in
-2048 bytes.</p>
-<p>From the CLI, the admin-exec <code>log</code> command takes the message text, with
-optional <code>severity</code> and <code>msgid</code> keywords before it:</p>
-<pre class="cli"><code>admin@example:/&gt; <b>log Kilroy was here</b>
-admin@example:/&gt; <b>log severity warning msgid test-start Test 42 starting</b>
-admin@example:/&gt; <b>show log tail 2</b>
-Sep 15 15:29:01 example admin: Kilroy was here
-Sep 15 15:29:07 example admin: Test 42 starting
-</code></pre>
-
-<p>Over NETCONF and RESTCONF the same operation is available as the
-<code>infix-syslog:log</code> RPC, which also exposes RFC 5424 structured data:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~$<span class="w"> </span>curl<span class="w"> </span>-k<span class="w"> </span>-u<span class="w"> </span>admin:admin<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/yang-data+json"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">     </span>https://example.local/restconf/operations/infix-syslog:log<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">     </span>-d<span class="w"> </span><span class="s1">'{"infix-syslog:input": {</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s1">            "message": "Test 42 starting",</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="s1">            "severity": "warning",</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="s1">            "app-name": "infamy",</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="s1">            "msgid": "test-start",</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="s1">            "structured-data": [{</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="s1">              "id": "test@61046",</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="s1">              "param": [{"name": "name", "value": "syslog/rpc_log"}]</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="s1">            }]</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="s1">          }}'</span>
-</code></pre></div>
-<table>
-<thead>
-<tr>
-<th><strong>Field</strong></th>
-<th><strong>Default</strong></th>
-<th><strong>Description</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>message</code></td>
-<td><em>mandatory</em></td>
-<td>Free-form message text, up to 1024 characters</td>
-</tr>
-<tr>
-<td><code>severity</code></td>
-<td><code>notice</code></td>
-<td>Same levels as in the facility filters, <code>emergency</code>..<code>debug</code></td>
-</tr>
-<tr>
-<td><code>app-name</code></td>
-<td>calling user</td>
-<td>RFC 5424 APP-NAME, shown as the tag in log files.  Defaults to the user the management protocol reports, and to <code>-</code> when it reports none, as over RESTCONF</td>
-</tr>
-<tr>
-<td><code>msgid</code></td>
-<td>none</td>
-<td>RFC 5424 MSGID, e.g., <code>test-start</code>, printable ASCII except <code>%</code></td>
-</tr>
-<tr>
-<td><code>structured-data</code></td>
-<td>none</td>
-<td>RFC 5424 SD elements, each an <code>id</code> with <code>name</code>/<code>value</code> params, no control characters in values.  The <code>id</code> takes the private form <code>name@enterprise-number</code>, the short form is reserved for identifiers registered with IANA</td>
-</tr>
-</tbody>
-</table>
-<p>In an <a href="https://datatracker.ietf.org/doc/html/rfc5424">RFC5424</a> formatted log file the message above is logged as:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>2026-09-15T15:29:07.123456+02:00 example infamy - test-start [test@61046 name="syslog/rpc_log"] Test 42 starting
-</code></pre></div>
-<p>The <code>msgid</code> property filter, see <a href="#property-based-filtering">Property-Based Filtering</a>,
-can be used to route such messages to a dedicated log file.</p>
-<h2 id="log-to-remote-server">Log to Remote Server<a class="headerlink" href="#log-to-remote-server" title="Permanent link">¶</a></h2>
-<p>Logging to a remote syslog server is the recommended way of supervising
-the system.  This way all login attempts (console, SSH, or web) and any
-configuration changes can be traced, even in cases of a remote attacker
-tries to cover their traces by deleting logs.</p>
-<p>The recommended setup involves using a fixed IP address, default BSD log
-format, and the default Internet port (514).  This is the most reliable,
-because your device may not have DNS set up or even available, and some
-remote syslog servers do not support receiving time stamped log messages
--- this is of course entirely dependent on how the remote server is set
-up, as well as local policy.</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog</b>
-       actions file-rotation        server
-admin@example:/config/&gt; <b>edit syslog actions destination moon</b>
-admin@example:/config/syslog/…/moon/&gt; <b>set</b>
- facility-list    log-format           udp
-admin@example:/config/syslog/…/moon/&gt; <b>set udp</b>
- address    port
-admin@example:/config/syslog/…/moon/&gt; <b>set udp address 192.168.0.12</b>
-admin@example:/config/syslog/…/moon/&gt; <b>set facility-list container severity all</b>
-admin@example:/config/syslog/…/moon/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>The alternatives shown below each prompt in the example above can be
-found by tapping the Tab key.</p>
-</div>
-<h2 id="acting-as-a-log-server">Acting as a Log Server<a class="headerlink" href="#acting-as-a-log-server" title="Permanent link">¶</a></h2>
-<p>The syslog server can act as a log sink for other devices on a LAN.  For
-this to work you need a static IP address, here we use 10.0.0.1/24.</p>
-<pre class="cli"><code>admin@example:/&gt; <b>configure</b>
-admin@example:/config/&gt; <b>edit syslog server</b>
-admin@example:/config/syslog/server/&gt; <b>set enabled true</b>
-admin@example:/config/syslog/server/&gt; <b>set listen udp 514 address 10.0.0.1</b>
-admin@example:/config/syslog/server/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<p>See the above <a href="#log-to-file">Log to File</a> section on how to set up
-filtering of received logs to local files.  Advanced filtering based
-on hostname and message properties is also available, see the next
-section for details.</p>
-<h2 id="advanced-filtering">Advanced Filtering<a class="headerlink" href="#advanced-filtering" title="Permanent link">¶</a></h2>
-<p>The syslog subsystem supports several advanced filtering options that
-allow fine-grained control over which messages are logged.  These can
-be combined with facility and severity filters to create sophisticated
-logging rules.</p>
-<h3 id="pattern-matching">Pattern Matching<a class="headerlink" href="#pattern-matching" title="Permanent link">¶</a></h3>
-<p>Messages can be filtered using regular expressions (POSIX extended regex)
-on the message content.  This is useful when you want to log only messages
-containing specific keywords or patterns:</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:errors</b>
-admin@example:/config/syslog/…/file:errors/&gt; <b>set pattern-match "ERROR|CRITICAL|FATAL"</b>
-admin@example:/config/syslog/…/file:errors/&gt; <b>set facility-list all severity info</b>
-admin@example:/config/syslog/…/file:errors/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<p>This will log all messages containing ERROR, CRITICAL, or FATAL.</p>
-<h3 id="advanced-severity-comparison">Advanced Severity Comparison<a class="headerlink" href="#advanced-severity-comparison" title="Permanent link">¶</a></h3>
-<p>By default, severity filtering uses "equals-or-higher" comparison,
-meaning a severity of <code>error</code> will match error, critical, alert, and
-emergency messages.  You can change this behavior:</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:daemon-errors</b>
-admin@example:/config/syslog/…/file:daemon-errors/&gt; <b>set facility-list daemon</b>
-admin@example:/config/syslog/…/daemon/&gt; <b>set severity error</b>
-admin@example:/config/syslog/…/daemon/&gt; <b>set advanced-compare compare equals</b>
-admin@example:/config/syslog/…/daemon/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<p>This will log only <code>error</code> severity messages, not higher severities.</p>
-<p>You can also block specific severities:</p>
-<pre class="cli"><code>admin@example:/config/syslog/…/daemon/&gt; <b>set advanced-compare action block</b>
-</code></pre>
-
-<p>This will exclude <code>error</code> messages from the log.</p>
-<h3 id="hostname-filtering">Hostname Filtering<a class="headerlink" href="#hostname-filtering" title="Permanent link">¶</a></h3>
-<p>When acting as a log server, you can filter messages by hostname.  This
-is useful for directing logs from different devices to separate files:</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:router1</b>
-admin@example:/config/syslog/…/file:router1/&gt; <b>set hostname-filter router1</b>
-admin@example:/config/syslog/…/file:router1/&gt; <b>set facility-list all severity info</b>
-admin@example:/config/syslog/…/file:router1/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<p>Multiple hostnames can be added to the filter list.</p>
-<h3 id="property-based-filtering">Property-Based Filtering<a class="headerlink" href="#property-based-filtering" title="Permanent link">¶</a></h3>
-<p>For more advanced filtering, you can match on specific message properties
-using various comparison operators:</p>
-<pre class="cli"><code>admin@example:/config/&gt; <b>edit syslog actions log-file file:myapp</b>
-admin@example:/config/syslog/…/file:myapp/&gt; <b>edit property-filter</b>
-admin@example:/config/syslog/…/property-filter/&gt; <b>set property programname</b>
-admin@example:/config/syslog/…/property-filter/&gt; <b>set operator isequal</b>
-admin@example:/config/syslog/…/property-filter/&gt; <b>set value myapp</b>
-admin@example:/config/syslog/…/property-filter/&gt; <b>leave</b>
-admin@example:/&gt;
-</code></pre>
-
-<p>Available properties:
-- <code>msg</code>: Message body
-- <code>msgid</code>: RFC5424 message identifier
-- <code>programname</code>: Program/tag name
-- <code>hostname</code>: Source hostname
-- <code>source</code>: Alias for hostname
-- <code>data</code>: RFC5424 structured data</p>
-<p>Available operators:
-- <code>contains</code>: Substring match
-- <code>isequal</code>: Exact equality
-- <code>startswith</code>: Prefix match
-- <code>regex</code>: Basic regular expression
-- <code>ereregex</code>: Extended regular expression (POSIX ERE)</p>
-<p>The comparison can be made case-insensitive:</p>
-<pre class="cli"><code>admin@example:/config/syslog/…/property-filter/&gt; <b>set case-insensitive true</b>
-</code></pre>
-
-<p>Or negated to exclude matching messages:</p>
-<pre class="cli"><code>admin@example:/config/syslog/…/property-filter/&gt; <b>set negate true</b>
-</code></pre>
-
-<h3 id="facilities">Facilities<a class="headerlink" href="#facilities" title="Permanent link">¶</a></h3>
-<table>
-<thead>
-<tr>
-<th><strong>Code</strong></th>
-<th><strong>Facility</strong></th>
-<th><strong>Description</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>kern</td>
-<td>Kernel log messages</td>
-</tr>
-<tr>
-<td>1</td>
-<td>user</td>
-<td>User-level messages</td>
-</tr>
-<tr>
-<td>2</td>
-<td>mail</td>
-<td>Mail system</td>
-</tr>
-<tr>
-<td>3</td>
-<td>daemon</td>
-<td>General system daemons</td>
-</tr>
-<tr>
-<td>4</td>
-<td>auth</td>
-<td>Security/authorization messages</td>
-</tr>
-<tr>
-<td>5</td>
-<td>syslog</td>
-<td>Messages generated by syslogd</td>
-</tr>
-<tr>
-<td>6</td>
-<td>lpr</td>
-<td>Line printer subsystem</td>
-</tr>
-<tr>
-<td>7</td>
-<td>news</td>
-<td>Network news subsystem</td>
-</tr>
-<tr>
-<td>8</td>
-<td>uucp</td>
-<td>UNIX-to-UNIX copy</td>
-</tr>
-<tr>
-<td>9</td>
-<td>cron</td>
-<td>Clock/cron daemon (BSD, Linux)</td>
-</tr>
-<tr>
-<td>10</td>
-<td>authpriv</td>
-<td>Security/authorization messages (private)</td>
-</tr>
-<tr>
-<td>11</td>
-<td>ftp</td>
-<td>FTP daemon</td>
-</tr>
-<tr>
-<td>12</td>
-<td>ntp</td>
-<td>NTP subsystem</td>
-</tr>
-<tr>
-<td>13</td>
-<td>audit</td>
-<td>Log audit (security)</td>
-</tr>
-<tr>
-<td>14</td>
-<td>console</td>
-<td>Log alert</td>
-</tr>
-<tr>
-<td>15</td>
-<td>cron2</td>
-<td>Clock/cron daemon (Solaris)</td>
-</tr>
-<tr>
-<td>16</td>
-<td>rauc*</td>
-<td>local0, reserved for RAUC</td>
-</tr>
-<tr>
-<td>17</td>
-<td>container*</td>
-<td>local1, reserved for containers</td>
-</tr>
-<tr>
-<td>18</td>
-<td>local2</td>
-<td>Currently unused</td>
-</tr>
-<tr>
-<td>19</td>
-<td>local3</td>
-<td>Currently unused</td>
-</tr>
-<tr>
-<td>20</td>
-<td>local4</td>
-<td>Currently unused</td>
-</tr>
-<tr>
-<td>21</td>
-<td>local5</td>
-<td>Currently unused</td>
-</tr>
-<tr>
-<td>22</td>
-<td>reserved*</td>
-<td>local6, reserved for industrial Ethernet</td>
-</tr>
-<tr>
-<td>23</td>
-<td>web*</td>
-<td>local7, reserved for nginx web server</td>
-</tr>
-</tbody>
-</table>
-<p>Facilities marked <code>*</code> are local augments to the model.</p>
+<p>The password may not contain control characters, <code>"</code>, or <code>\</code>.</p>
+<p>Some providers run several services, or several servers, on the same
+network.  Set <code>service-name</code> or <code>ac-name</code> to only connect to a given
+service, or a given access concentrator.</p>
+<h2 id="default-route-and-dns">Default Route and DNS<a class="headerlink" href="#default-route-and-dns" title="Permanent link">¶</a></h2>
+<p>By default the session installs a default route, with route preference
+5, the same as a route learned from a DHCP server.  Change it with <code>ppp
+route-preference</code>, or turn the route off with <code>ppp default-route false</code>,
+e.g., when the PPPoE session is a backup for another uplink.</p>
+<p>The DNS servers from the provider are used by default.  Set <code>ppp
+peer-dns false</code> to use only the DNS servers configured on the device.</p>
+<h2 id="tcp-mss-clamping">TCP MSS Clamping<a class="headerlink" href="#tcp-mss-clamping" title="Permanent link">¶</a></h2>
+<p>PPPoE takes 8 bytes of every Ethernet frame, so the session MTU is 1492
+bytes, lower than the 1500 bytes of the hosts on the local network.
+Hosts rely on path MTU discovery to adjust, which fails where ICMP is
+blocked on the way, and their TCP connections then stall on large
+packets.</p>
+<p>To avoid that, the device clamps the maximum segment size (MSS) in the
+handshake of every TCP connection it forwards through the session, to
+fit the session MTU.  This does not depend on the firewall being
+enabled.  Set <code>pppoe mss-clamping false</code> to turn it off.</p>
+<h2 id="ipv6">IPv6<a class="headerlink" href="#ipv6" title="Permanent link">¶</a></h2>
+<p>When IPv6 is enabled on the PPP interface the session also negotiates
+IPv6, which gives the interface a link-local address.  Global addresses
+and delegated prefixes come from the provider's router advertisements
+and DHCPv6 server, enable the <a href="../ip/">DHCPv6 client</a> on the PPP
+interface to use them.</p>
+<h2 id="forwarding">Forwarding<a class="headerlink" href="#forwarding" title="Permanent link">¶</a></h2>
+<p>To route traffic between the local network and the provider, enable
+IPv4 (and IPv6) forwarding on the PPPoE interface and on the local
+interfaces, see <a href="../ip/">IP Addressing</a>.</p>
 
 
 
