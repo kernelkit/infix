@@ -2,6 +2,7 @@
 
 import re
 import subprocess
+import sys
 import json
 from typing import List
 import os
@@ -82,15 +83,61 @@ def tftp(args: List[str]) -> None:
 
 
 def hardware(args: List[str]) -> None:
+    """show hardware [<component> [survey [passive]]]"""
+    if len(args) >= 2 and args[1] == "survey":
+        channel_survey(args[0], "passive" in args[2:])
+        return
+
     data = get_json("/ietf-hardware:hardware")
     if not data:
         print("No hardware data retrieved.")
         return
 
+    if args:
+        hw = data.get("ietf-hardware:hardware", {})
+        hw["component"] = [c for c in hw.get("component", []) if c.get("name") == args[0]]
+        if not hw["component"]:
+            print(f"No hardware component named {args[0]}.")
+            return
+
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
     cli_pretty(data, "show-hardware")
+
+
+def channel_survey(radio: str, passive: bool) -> None:
+    """Run the channel-survey action on a WiFi radio and render the channel map"""
+    xpath = f"/ietf-hardware:hardware/component[name='{radio}']/infix-hardware:wifi-radio/channel-survey"
+    cmd = ["rpc", "-j", xpath]
+    if passive:
+        cmd += ["passive", "true"]
+
+    # Progress goes to stderr, past the pager, which would otherwise
+    # print the chart twice when it arrives piecemeal after the scan
+    print(f"Scanning channels on {radio}, this takes a few seconds ...",
+          file=sys.stderr, flush=True)
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        if "does not exist" in result.stderr:
+            print(f"No WiFi radio named {radio}.")
+            return
+        # The rpc tool prints the device's reason, then its own verdict
+        for line in result.stderr.splitlines():
+            if line.startswith("rpc: ") and "RPC execution failed" not in line:
+                print(re.sub(r" \(\d+\)$", "", line[len("rpc: "):]))
+                return
+        print(result.stderr.strip() or "Channel survey failed")
+        return
+
+    if RAW_OUTPUT:
+        print(result.stdout)
+        return
+
+    chart = subprocess.run(["/usr/libexec/infix/wifi-channel-map.py"],
+                           input=result.stdout, capture_output=True, text=True)
+    sys.stdout.write(chart.stdout or chart.stderr)
+    sys.stdout.flush()
 
 
 def ntp(args: List[str]) -> None:

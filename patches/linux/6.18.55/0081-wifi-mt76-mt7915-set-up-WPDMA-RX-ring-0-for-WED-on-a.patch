@@ -1,0 +1,44 @@
+From bdd10e66dc3ed278f607ee818a8cd807e23775ed Mon Sep 17 00:00:00 2001
+From: Mattias Walström <lazzer@gmail.com>
+Date: Wed, 7 Oct 2026 22:20:00 +0200
+Subject: [PATCH 81/84] wifi: mt76: mt7915: set up WPDMA RX ring 0 for WED on a
+ band1-only device
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+On a single-band MT7986 wmac bound to band 1, next to a PCIe card for
+the other bands, the band0 RX data queue is never allocated, so the
+WED is attached with WPDMA RX ring 0 unconfigured while it drives ring
+0 and 1 alike.  On a BPI-R3 that ends in a stall of ring 1 after some
+thousand frames: no descriptor armed, the WED's index two ahead of the
+WPDMA's, the MAC counting RX FIFO full, and clients associating without
+any data getting through.  Allocate the band0 queue when WED does RX,
+so the WED finds a valid, idle ring 0.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ drivers/net/wireless/mediatek/mt76/mt7915/dma.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/wireless/mediatek/mt76/mt7915/dma.c b/drivers/net/wireless/mediatek/mt76/mt7915/dma.c
+index 009ef713f4379..851931ae55530 100644
+--- a/drivers/net/wireless/mediatek/mt76/mt7915/dma.c
++++ b/drivers/net/wireless/mediatek/mt76/mt7915/dma.c
+@@ -506,8 +506,14 @@ int mt7915_dma_init(struct mt7915_dev *dev, struct mt7915_phy *phy2)
+ 	if (ret)
+ 		return ret;
+ 
+-	/* rx data queue for band0 */
+-	if (!dev->phy.mt76->band_idx) {
++	/* rx data queue for band0.  Also on a device whose only phy is
++	 * band1 when WED does RX: the WED drives WPDMA RX ring 0 and 1
++	 * alike, and with ring 0 never set up it stalls on ring 1 after
++	 * a while, the ring sits with no descriptor armed and the MAC
++	 * counts RX FIFO full.  Give it an empty but valid ring 0. */
++	if (!dev->phy.mt76->band_idx ||
++	    (mtk_wed_device_active(&mdev->mmio.wed) &&
++	     mtk_wed_get_rx_capa(&mdev->mmio.wed))) {
+ 		if (mtk_wed_device_active(&mdev->mmio.wed) &&
+ 		    mtk_wed_get_rx_capa(&mdev->mmio.wed)) {
+ 			mdev->q_rx[MT_RXQ_MAIN].flags =

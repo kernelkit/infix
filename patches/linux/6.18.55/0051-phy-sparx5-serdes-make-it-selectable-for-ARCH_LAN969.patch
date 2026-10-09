@@ -1,7 +1,7 @@
 From 4706c45681cda924ab8eaf9015be7a911c15c183 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Fri, 31 Oct 2025 13:18:12 +0100
-Subject: [PATCH 51/78] phy: sparx5-serdes: make it selectable for ARCH_LAN969X
+Subject: [PATCH 51/84] phy: sparx5-serdes: make it selectable for ARCH_LAN969X
 
 LAN969x uses the SparX-5 SERDES driver, so make it selectable for
 ARCH_LAN969X.
@@ -18,7 +18,7 @@ Signed-off-by: Vinod Koul <vkoul@kernel.org>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/phy/microchip/Kconfig b/drivers/phy/microchip/Kconfig
-index 2f0045e874ac..2e6d1224711e 100644
+index 2f0045e874ac8..2e6d1224711e3 100644
 --- a/drivers/phy/microchip/Kconfig
 +++ b/drivers/phy/microchip/Kconfig
 @@ -6,7 +6,7 @@

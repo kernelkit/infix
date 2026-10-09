@@ -1,7 +1,7 @@
 From fadc315c8a6f0305edb24d3fbba80aa2e712d2a1 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 22:41:04 +0200
-Subject: [PATCH 18/78] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
+Subject: [PATCH 18/84] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
  ports on 6393X
 
 For packets with a DA in the IEEE reserved L2 group range, originating
@@ -33,7 +33,7 @@ forwarded like any other.
  1 file changed, 25 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
-index 66b1b7277281..df19dfa5cc3d 100644
+index 66b1b72772810..df19dfa5cc3d8 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.c
 +++ b/drivers/net/dsa/mv88e6xxx/port.c
 @@ -1434,6 +1434,23 @@ static int mv88e6393x_port_policy_write_all(struct mv88e6xxx_chip *chip,

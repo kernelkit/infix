@@ -7,12 +7,18 @@ Usage:
     iw.py dev                   - List all interfaces grouped by PHY
     iw.py info <device>         - Get PHY or interface information
     iw.py survey <interface>    - Get channel survey data
+    iw.py survey-scan <radio> [passive]
+                                - Scan all channels, then get survey data
 """
 
+import os
 import sys
 import json
 import subprocess
 import re
+import secrets
+import select
+import time
 def decode_iw_ssid(ssid):
     """Decode iw escaped SSID (\\xHH) to UTF-8, stripping non-printable chars."""
     try:
@@ -20,6 +26,9 @@ def decode_iw_ssid(ssid):
     except (UnicodeDecodeError, UnicodeEncodeError):
         return ssid
     return ''.join(c for c in ssid if c.isprintable())
+
+
+SCAN_BUDGET = 40  # seconds for one channel survey, scan included
 
 
 def run_iw(*args):
@@ -486,6 +495,192 @@ def parse_dev():
     return result
 
 
+def parse_dev_types():
+    """
+    Parse 'iw dev' output
+    Returns: dict mapping PHY numbers to list of (interface, type) tuples
+    """
+    output = run_iw('dev')
+    if not output:
+        return {}
+
+    result = {}
+    current_phy = None
+    current_if = None
+
+    for line in output.splitlines():
+        stripped = line.strip()
+        if line.startswith('phy#'):
+            current_phy = line.replace('phy#', '').strip()
+            result.setdefault(current_phy, [])
+            current_if = None
+        elif current_phy and stripped.startswith('Interface '):
+            current_if = stripped.split(None, 1)[1]
+            result[current_phy].append([current_if, None])
+        elif current_if and stripped.startswith('type '):
+            result[current_phy][-1][1] = stripped.split(None, 1)[1]
+
+    return {phy: [tuple(e) for e in entries] for phy, entries in result.items()}
+
+
+def wait_scan_done(events, ifname, deadline):
+    """
+    Read 'iw event' output until the scan on ifname finishes or aborts.
+    Returns 'finished', 'aborted' or None at the deadline.
+
+    The pipe is read unbuffered: a second line that arrives in the same
+    read would otherwise sit in a buffer that select() knows nothing of.
+    """
+    fd = events.stdout.fileno()
+    buf = getattr(events, 'leftover', b'')
+    while True:
+        while b'\n' in buf:
+            line, buf = buf.split(b'\n', 1)
+            events.leftover = buf
+            line = line.decode(errors='replace')
+            if not line.startswith(f'{ifname} '):
+                continue
+            if 'scan finished' in line:
+                return 'finished'
+            if 'scan aborted' in line:
+                return 'aborted'
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+        ready, _, _ = select.select([fd], [], [], remaining)
+        if not ready:
+            return None
+        chunk = os.read(fd, 4096)
+        if not chunk:
+            return None
+        buf += chunk
+
+
+def survey_scan(radio, passive=False):
+    """
+    Scan every channel on the radio, then dump the survey.
+
+    Returns the parse_survey() list, or {'error': ...}.  The scan runs
+    on one interface of the radio, preferring a station or mesh point
+    over an access point since those can scan without extra flags.
+
+    The scan is triggered and then waited for over 'iw event', the
+    combined 'iw scan' spins on the netlink socket for minutes on some
+    kernels.  A trigger fails with EBUSY while wpa_supplicant runs its
+    own scan, so wait for that one to finish and try again.
+    """
+    try:
+        with open(f'/sys/class/ieee80211/{radio}/index') as f:
+            phy = f.read().strip()
+    except OSError:
+        return {'error': f'no such radio: {radio}'}
+
+    ifaces = parse_dev_types().get(phy, [])
+    order = ['managed', 'mesh point', 'AP']
+    ifaces = sorted((i for i in ifaces if i[1] != 'AP/VLAN'),
+                    key=lambda i: order.index(i[1]) if i[1] in order else len(order))
+
+    # A radio nobody has configured yet has no interface to scan with,
+    # which is exactly when a survey helps pick a band and channel.
+    # Borrow one for the duration of the scan, under a name no one
+    # would configure.
+    tmp = None
+    if not ifaces:
+        tmp = 'survey-' + secrets.token_hex(3)
+        try:
+            subprocess.run(['iw', 'phy', radio, 'interface', 'add', tmp, 'type', 'managed'],
+                           capture_output=True, text=True, timeout=5, check=True)
+            subprocess.run(['ip', 'link', 'set', tmp, 'up'],
+                           capture_output=True, text=True, timeout=5, check=True)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            subprocess.run(['iw', 'dev', tmp, 'del'], capture_output=True)
+            err = getattr(e, 'stderr', '') or ''
+            return {'error': f'no interface on {radio} to scan with: {err.strip() or e}'}
+        ifaces = [(tmp, 'managed')]
+
+    try:
+        return survey_scan_on(ifaces[0], passive)
+    finally:
+        if tmp:
+            subprocess.run(['iw', 'dev', tmp, 'del'], capture_output=True)
+
+
+def survey_scan_on(iface, passive):
+    """Scan on one (ifname, iftype), then dump the survey, see survey_scan()."""
+    ifname, iftype = iface
+    args = ['iw', 'dev', ifname, 'scan', 'trigger']
+    if iftype == 'AP':
+        args.append('ap-force')
+    if passive:
+        args.append('passive')
+
+    # The action runs on the configuration daemon's thread, which has a
+    # minute per request, so the whole scan gets well under that.
+    deadline = time.monotonic() + SCAN_BUDGET
+    events = subprocess.Popen(['iw', 'event'], stdout=subprocess.PIPE,
+                              stderr=subprocess.DEVNULL)
+    try:
+        err = 'scan failed'
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return {'error': f'scan on {ifname} timed out'}
+            result = subprocess.run(args, capture_output=True, text=True,
+                                    timeout=min(10, remaining))
+            if result.returncode == 0:
+                break
+            err = result.stderr.strip() or err
+            if '(-16)' not in err:
+                return {'error': f'scan on {ifname} failed: {err}'}
+            # Another scan is running, wait for it to end and try again
+            if wait_scan_done(events, ifname, deadline) is None:
+                return {'error': f'scan on {ifname} failed: {err}'}
+
+        state = wait_scan_done(events, ifname, deadline)
+        if state is None:
+            return {'error': f'scan on {ifname} timed out'}
+        if state == 'aborted':
+            return {'error': f'scan on {ifname} was aborted'}
+    except subprocess.TimeoutExpired:
+        return {'error': f'scan on {ifname} timed out'}
+    finally:
+        events.kill()
+        events.wait()
+
+    channels = parse_survey(ifname)
+    if not any(ch['in_use'] for ch in channels):
+        # Not every driver flags the operating channel, mac80211_hwsim
+        # does not, take it from the interface instead.
+        freq = parse_interface_info(ifname).get('frequency')
+        for ch in channels:
+            ch['in_use'] = ch['frequency'] == freq
+
+    return channels
+
+
+def parse_wds_ports(ifname):
+    """
+    List the WDS ports of an access point: the AP/VLAN interfaces on the
+    same PHY that carry its MAC address.
+    Returns: [ifname, ...]
+    """
+    info = parse_interface_info(ifname)
+    mac = info.get('mac')
+    ports = []
+
+    for phy, ifaces in parse_dev().items():
+        if ifname not in ifaces:
+            continue
+        for dev in ifaces:
+            if dev == ifname:
+                continue
+            devinfo = parse_interface_info(dev)
+            if devinfo.get('iftype') == 'AP/VLAN' and devinfo.get('mac') == mac:
+                ports.append(dev)
+
+    return ports
+
+
 def parse_link(ifname):
     """
     Parse 'iw dev <name> link' output for station mode
@@ -626,9 +821,11 @@ def main():
                 'dev': 'List all interfaces grouped by PHY',
                 'info': 'Get PHY or interface information (requires device)',
                 'survey': 'Get channel survey data (requires interface)',
+                'survey-scan': 'Scan all channels, then get survey data (requires radio)',
                 'station': 'Get connected stations in AP mode (requires interface)',
                 'link': 'Get link info in station mode (requires interface)',
                 'mesh': 'Get mesh parameters in mesh point mode (requires interface)',
+                'wds': 'List the WDS ports of an access point (requires interface)',
                 'caps': 'Get HT/VHT capability bitmasks (requires PHY/radio)'
             },
             'examples': [
@@ -640,6 +837,7 @@ def main():
                 'iw.py link wlan0',
                 'iw.py mesh wifi0',
                 'iw.py survey wlan0',
+                'iw.py survey-scan radio0 passive',
                 'iw.py caps radio0'
             ]
         }, indent=2))
@@ -677,11 +875,21 @@ def main():
                 data = {'error': 'mesh command requires interface argument'}
             else:
                 data = parse_mesh_param(sys.argv[2])
+        elif command == 'wds':
+            if len(sys.argv) < 3:
+                data = {'error': 'wds command requires interface argument'}
+            else:
+                data = parse_wds_ports(sys.argv[2])
         elif command == 'survey':
             if len(sys.argv) < 3:
                 data = {'error': 'survey command requires interface argument'}
             else:
                 data = parse_survey(sys.argv[2])
+        elif command == 'survey-scan':
+            if len(sys.argv) < 3:
+                data = {'error': 'survey-scan command requires radio argument'}
+            else:
+                data = survey_scan(sys.argv[2], 'passive' in sys.argv[3:])
         elif command == 'caps':
             if len(sys.argv) < 3:
                 data = {'error': 'caps command requires PHY/radio argument'}
@@ -691,6 +899,8 @@ def main():
             data = {'error': f'Unknown command: {command}'}
 
         print(json.dumps(data, indent=2, ensure_ascii=False))
+        if command == 'survey-scan' and isinstance(data, dict) and 'error' in data:
+            sys.exit(1)
 
     except Exception as e:
         print(json.dumps({'error': str(e)}))

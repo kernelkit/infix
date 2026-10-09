@@ -1,7 +1,7 @@
 From a55cfe74da903a95ff10f6f3659f6e4d26eb5a13 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:37:48 +0200
-Subject: [PATCH 56/78] mmc: sdhci-of-at91: stop SDCLK on reset and add eMMC
+Subject: [PATCH 56/84] mmc: sdhci-of-at91: stop SDCLK on reset and add eMMC
  hardware reset
 
 The controller is reset, and its signaling mode changed, with SDCLK
@@ -20,7 +20,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 50 insertions(+)
 
 diff --git a/drivers/mmc/host/sdhci-of-at91.c b/drivers/mmc/host/sdhci-of-at91.c
-index 5dcb88cba0d9..6a9e4a7fa705 100644
+index 5dcb88cba0d9c..6a9e4a7fa705f 100644
 --- a/drivers/mmc/host/sdhci-of-at91.c
 +++ b/drivers/mmc/host/sdhci-of-at91.c
 @@ -25,6 +25,7 @@

@@ -96,10 +96,9 @@ def gw_config(mesh_mac, ap_mac, uplink=None):
             "infix-interfaces:bridge-port": {"bridge": "br0"},
         })
     return {
-        "ietf-hardware": {"hardware": {"component": [
+        "ietf-hardware": wifi.hardware(
             wifi.radio("radio0", band="5GHz", channel=36),
-            wifi.radio("radio1", band="2.4GHz", channel=1),
-        ]}},
+            wifi.radio("radio1", band="2.4GHz", channel=1)),
         "ietf-keystore": wifi.keystore(SECRETS),
         "ietf-interfaces": {"interfaces": {"interface": interfaces}},
     }
@@ -111,13 +110,18 @@ with infamy.Test() as test:
         # Connect to all four nodes concurrently -- each attach probes the
         # node and downloads its YANG models, so doing them in parallel cuts
         # the setup time roughly four-fold.
-        gw1, gw2, gw3, client = parallel(
+        gw1, gw2, gw3, client, gw1sh, gw2sh, gw3sh, clientsh = parallel(
             lambda: env.attach("gw1", "mgmt"),
             lambda: env.attach("gw2", "mgmt"),
             lambda: env.attach("gw3", "mgmt"),
             lambda: env.attach("client", "mgmt"),
+            lambda: env.attach("gw1", "mgmt", "ssh"),
+            lambda: env.attach("gw2", "mgmt", "ssh"),
+            lambda: env.attach("gw3", "mgmt", "ssh"),
+            lambda: env.attach("client", "mgmt", "ssh"),
         )
         gw_duts = [gw1, gw2, gw3]
+        shells = {"gw1": gw1sh, "gw2": gw2sh, "gw3": gw3sh}
         gws = [(name, dut, mesh, ap) for (name, mesh, ap), dut in zip(GWS, gw_duts)]
 
         wifi.skip_unless_supported(test, client, *gw_duts)
@@ -136,8 +140,7 @@ with infamy.Test() as test:
         # associates to live in the same cell only when they share an index.
         # See doc/wifi.md and test/virt/quad.
         client.put_config_dicts({
-            "ietf-hardware": {"hardware": {"component": [
-                wifi.radio("radio1", band="2.4GHz", channel=1)]}},
+            "ietf-hardware": wifi.hardware(wifi.radio("radio1", band="2.4GHz", channel=1)),
             "ietf-keystore": wifi.keystore(SECRETS),
             "ietf-interfaces": {"interfaces": {"interface": [
                 wifi.iface("wifi0", CLIENT_MAC, {
@@ -183,8 +186,16 @@ with infamy.Test() as test:
     with infamy.IsolatedMacVlan(hlan) as ns:
         ns.addip(HOST_IP)
 
+        # Give a ping a few tries, the radios have just come up.
+        def reaches(addr):
+            try:
+                ns.ping(addr)
+                return True
+            except Exception:
+                return False
+
         with test.step("Verify the client is reachable across the mesh"):
-            ns.must_reach(CLIENT_IP)
+            until(lambda: reaches(CLIENT_IP), attempts=10, interval=2)
 
         with test.step("Take down the client's current AP to force a roam"):
             first_dut.put_config_dicts({"ietf-interfaces": {"interfaces": {
@@ -198,6 +209,35 @@ with infamy.Test() as test:
             print(f"client roamed from {first_ap} to {new_ap}")
 
         with test.step("Verify connectivity is restored after roaming"):
-            ns.must_reach(CLIENT_IP)
+            until(lambda: reaches(CLIENT_IP), attempts=15, interval=2)
+
+        # A node going down for a reboot or an upgrade asks its clients
+        # to move first, so a client with a strong signal roams instead
+        # of waiting for the beacons to stop.
+        second_bssid = wifi.station_bssid(client)
+        second_ap, _ = aps[second_bssid]
+
+        with test.step("Stop the WiFi service on the client's current node"):
+            shells[second_ap].runsh("initctl stop hostapd")
+
+        with test.step("Verify the client roams to the remaining node's AP"):
+            until(lambda: wifi.station_bssid(client) in aps and
+                  wifi.station_bssid(client) not in (first_bssid, second_bssid),
+                  attempts=30, interval=1)
+            third_ap, _ = aps[wifi.station_bssid(client)]
+            print(f"client roamed from {second_ap} to {third_ap}")
+
+        with test.step("Verify the client was asked to move, given candidates, and roamed without disconnecting"):
+            def log():
+                return clientsh.runsh("sed -n '/WNM: Disassociation Imminent/,$p' /var/log/syslog").stdout
+            until(lambda: "Disassociation Imminent" in log(), attempts=10, interval=1)
+            assert "Preferred List Available" in log(), log()
+            assert "CTRL-EVENT-DISCONNECTED" not in log(), log()
+
+        with test.step("Verify connectivity is restored after the handover"):
+            until(lambda: reaches(CLIENT_IP), attempts=15, interval=2)
+
+        with test.step("Start the WiFi service again on the stopped node"):
+            shells[second_ap].runsh("initctl start hostapd")
 
     test.succeed()

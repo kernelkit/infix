@@ -31,6 +31,9 @@ import (
 const hwRoot = "/ietf-hardware:hardware"
 const hwCandPath = candidatePath + hwRoot
 
+// hwWiFiCountryPath is the schema path of the box-wide WiFi country code.
+const hwWiFiCountryPath = hwRoot + "/infix-hardware:wifi/country-code"
+
 // hwCompCfgRow is one configured component in the main table. Per-class
 // fields are populated only for the matching Class. IsUSB/IsWiFi/IsGPS
 // spare the template from dispatching on stringly-typed Class slugs.
@@ -47,18 +50,15 @@ type hwCompCfgRow struct {
 	Unlocked bool // admin-state == "unlocked"
 
 	// WiFi-specific.
-	CountryCode string
-	Channel     string
-	Band        string
+	Channel string
+	Band    string
 
 	// Schema descriptions carried per-row so the fold-out forms are
 	// self-contained — Go templates can't pass extra arguments through
 	// {{template}}.
-	CountryOptions  []schema.IdentityOption
 	BandOptions     []schema.IdentityOption
 	DescDescription string
 	DescAdminState  string
-	DescCountry     string
 	DescBand        string
 	DescChannel     string
 }
@@ -79,7 +79,10 @@ type cfgHardwarePageData struct {
 	AvailableUSB   []hwAvailable
 	AvailableWiFi  []hwAvailable
 	AvailableGPS   []hwAvailable
+	// Box-wide WiFi country code, one setting for every radio.
+	CountryCode    string
 	CountryOptions []schema.IdentityOption
+	DescCountry    string
 	BandOptions    []schema.IdentityOption
 	Desc           map[string]string
 	Error          string
@@ -112,13 +115,13 @@ func (h *ConfigureHardwareHandler) Overview(w http.ResponseWriter, r *http.Reque
 		compPath := "/ietf-hardware:hardware/component"
 		radioPath := compPath + "/infix-hardware:wifi-radio"
 		data.Desc = map[string]string{
-			"description":  schema.DescriptionOf(mgr, compPath+"/description"),
-			"admin-state":  schema.DescriptionOf(mgr, compPath+"/state/admin-state"),
-			"country-code": schema.DescriptionOf(mgr, radioPath+"/country-code"),
-			"channel":      schema.DescriptionOf(mgr, radioPath+"/channel"),
-			"band":         schema.DescriptionOf(mgr, radioPath+"/band"),
+			"description": schema.DescriptionOf(mgr, compPath+"/description"),
+			"admin-state": schema.DescriptionOf(mgr, compPath+"/state/admin-state"),
+			"channel":     schema.DescriptionOf(mgr, radioPath+"/channel"),
+			"band":        schema.DescriptionOf(mgr, radioPath+"/band"),
 		}
-		data.CountryOptions = schema.OptionsFor(mgr, radioPath+"/country-code")
+		data.DescCountry = schema.DescriptionOf(mgr, hwWiFiCountryPath)
+		data.CountryOptions = schema.OptionsFor(mgr, hwWiFiCountryPath)
 		data.BandOptions = schema.OptionsFor(mgr, radioPath+"/band")
 	}
 
@@ -146,6 +149,7 @@ func (h *ConfigureHardwareHandler) Overview(w http.ResponseWriter, r *http.Reque
 		log.Printf("configure hardware: operational fetch: %v", operErr)
 	}
 
+	data.CountryCode = cfgWrap.wifiCountryCode()
 	configured := make(map[string]bool, len(cfgWrap.Hardware.Component))
 	for _, c := range cfgWrap.Hardware.Component {
 		configured[c.Name] = true
@@ -209,13 +213,10 @@ func (h *ConfigureHardwareHandler) buildRow(c hwComponentJSON, class string, dat
 		row.Unlocked = c.State != nil && c.State.AdminState == adminStateUnlocked
 	case classWiFi:
 		row.IsWiFi = true
-		row.CountryOptions = data.CountryOptions
 		row.BandOptions = data.BandOptions
-		row.DescCountry = data.Desc["country-code"]
 		row.DescBand = data.Desc["band"]
 		row.DescChannel = data.Desc["channel"]
 		if c.WiFiRadio != nil {
-			row.CountryCode = c.WiFiRadio.CountryCode
 			row.Band = c.WiFiRadio.Band
 			row.Channel = wifiChannelString(c.WiFiRadio.Channel)
 		}
@@ -341,6 +342,35 @@ func (h *ConfigureHardwareHandler) CreateHardware(w http.ResponseWriter, r *http
 	renderSavedRedirect(w, name+" added", "/configure/hardware")
 }
 
+// SaveWiFiCountry writes or clears the box-wide WiFi country code.
+// POST /configure/hardware/wifi
+func (h *ConfigureHardwareHandler) SaveWiFiCountry(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	if err := h.putWiFiCountry(r.Context(), r.FormValue("country-code")); err != nil {
+		log.Printf("configure hardware wifi country: %v", err)
+		renderSaveError(w, err)
+		return
+	}
+	renderSaved(w, "WiFi country code saved")
+}
+
+// putWiFiCountry sets the box-wide country code, or removes it when
+// country is empty so the radios fall back to the world domain default.
+func (h *ConfigureHardwareHandler) putWiFiCountry(ctx context.Context, country string) error {
+	country = strings.TrimSpace(country)
+	path := hwCandPath + "/infix-hardware:wifi/country-code"
+	if country == "" {
+		if err := h.RC.Delete(ctx, path); err != nil && !restconf.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}
+	return h.RC.Put(ctx, path, map[string]any{"infix-hardware:country-code": country})
+}
+
 func (h *ConfigureHardwareHandler) putAdminState(ctx context.Context, name, state string) error {
 	return h.RC.Put(ctx, hwComponentPath(name)+"/state/admin-state",
 		map[string]any{"ietf-hardware:admin-state": state})
@@ -351,15 +381,12 @@ func (h *ConfigureHardwareHandler) putWiFiRadio(ctx context.Context, name string
 		map[string]any{"infix-hardware:wifi-radio": radio})
 }
 
-// parseWiFiRadio builds the wifi-radio body from form fields. Country
-// code is mandatory; band and channel are optional and only included
-// when non-empty so we don't clobber YANG defaults with empty strings.
+// parseWiFiRadio builds the wifi-radio body from form fields. Band and
+// channel are optional and only included when non-empty so we don't
+// clobber YANG defaults with empty strings; the result may be empty,
+// which still creates the presence container.
 func parseWiFiRadio(r *http.Request) (map[string]any, error) {
-	country := strings.TrimSpace(r.FormValue("country-code"))
-	if country == "" {
-		return nil, fmt.Errorf("country code is required")
-	}
-	radio := map[string]any{"country-code": country}
+	radio := map[string]any{}
 	if band := strings.TrimSpace(r.FormValue("band")); band != "" {
 		radio["band"] = band
 	}

@@ -23,7 +23,16 @@ type Manager struct {
 // Load parses all .yang files in yangDir and returns a Manager.
 // Errors from Process() that are non-fatal (e.g. unresolved augments for
 // modules that were not downloaded) are logged but do not abort loading.
-func Load(yangDir string) (*Manager, error) {
+func Load(yangDir string) (mgr *Manager, err error) {
+	// goyang dereferences nil on some malformed input, for example a
+	// module file cut short, instead of returning an error.  The cache is
+	// rebuilt from the device on failure, so turn that into an error.
+	defer func() {
+		if r := recover(); r != nil {
+			mgr, err = nil, fmt.Errorf("schema: parse %s: %v", yangDir, r)
+		}
+	}()
+
 	ms := yang.NewModules()
 	ms.Path = []string{yangDir}
 

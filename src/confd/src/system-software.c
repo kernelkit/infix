@@ -93,13 +93,6 @@ static int infix_system_sw_set_boot_order(sr_session_ctx_t *session, uint32_t su
 	return SR_ERR_OK;
 }
 
-static int rpc_failed(sr_session_ctx_t *session, const char *msg)
-{
-	sr_session_set_netconf_error(session, "application", "operation-failed",
-				     NULL, NULL, msg, 0);
-	return SR_ERR_OPERATION_FAILED;
-}
-
 /* Append output leaf PATH/LEAF from the state file, skipped when absent. */
 static int add_output(sr_val_t **output, size_t *cnt, const char *path,
 		      const char *leaf, json_t *val)

@@ -506,6 +506,17 @@ static confd_dependency_t dep_wifi_interfaces(struct lyd_node **diff, struct lyd
 
 		radio_node = lydx_get_xpathf(config,
 			"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio", ifname);
+		if (!radio_node) {
+			/* A WDS link has no radio of its own, follow its access point */
+			struct lyd_node *ap = lydx_get_xpathf(config,
+				"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/wds-link/access-point",
+				ifname);
+
+			if (ap)
+				radio_node = lydx_get_xpathf(config,
+					"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
+					lyd_get_value(ap));
+		}
 		if (!radio_node)
 			continue;
 
@@ -723,12 +734,14 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		}
 	}
 
-	/* ietf-hardware */
-	if ((rc = hardware_change(session, config, diff, event, confd)))
-		goto free_diff;
-
 	/* ietf-interfaces */
 	if ((rc = interfaces_change(session, config, diff, event, confd)))
+		goto free_diff;
+
+	/* ietf-hardware, after the interfaces: hostapd binds to WiFi
+	 * netdevs, so it must be (re)started only once the interface
+	 * pipeline has created or recreated them. */
+	if ((rc = hardware_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-dhcp-client*/
@@ -1015,6 +1028,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	rc = system_sw_rpc_init(&confd);
+	if (rc)
+		goto err;
+
+	rc = hardware_rpc_init(&confd);
 	if (rc)
 		goto err;
 

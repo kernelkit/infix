@@ -353,6 +353,13 @@ int infix_ifaces(kcontext_t *ctx)
 	return 0;
 }
 
+int infix_wifi_radios(kcontext_t *ctx)
+{
+	(void)ctx;
+	system("ls /sys/class/ieee80211/ 2>/dev/null");
+	return 0;
+}
+
 /* Note: uses shellf() for pipes, but all arguments are hardcoded by callers */
 static int firewall_dbus_completion(const char *interface, const char *method, const char *parser)
 {
@@ -954,6 +961,7 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("path", infix_path));
 	kplugin_add_syms(plugin, ksym_new("rename", infix_rename));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
+	kplugin_add_syms(plugin, ksym_new("wifi_radios", infix_wifi_radios));
 	kplugin_add_syms(plugin, ksym_new("users", infix_users));
 	kplugin_add_syms(plugin, ksym_new("groups", infix_groups));
 	kplugin_add_syms(plugin, ksym_new("sym_keys", infix_sym_keys));

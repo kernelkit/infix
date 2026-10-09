@@ -1,7 +1,7 @@
 From 54ba118cc31f35998a57a2b12809037fc675ad61 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:15:43 +0200
-Subject: [PATCH 43/78] net: ethernet: mediatek: add USXGMII support for MT7988
+Subject: [PATCH 43/84] net: ethernet: mediatek: add USXGMII support for MT7988
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -33,7 +33,7 @@ Daniel Golle <daniel@makrotopia.org>.
  3 files changed, 139 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_path.c b/drivers/net/ethernet/mediatek/mtk_eth_path.c
-index b4c01e2878f6..57380776032a 100644
+index b4c01e2878f6f..57380776032a7 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_path.c
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_path.c
 @@ -37,6 +37,12 @@ static const char *mtk_eth_path_name(u64 path)
@@ -126,7 +126,7 @@ index b4c01e2878f6..57380776032a 100644
 +}
 +
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
-index 3f43e487d887..37ff40b09815 100644
+index 3f43e487d8875..37ff40b098157 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
 @@ -22,6 +22,7 @@
@@ -211,7 +211,7 @@ index 3f43e487d887..37ff40b09815 100644
  		mac_ops = &rt5350_phylink_ops;
  
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.h b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
-index 88a9b3b23bea..340ecb824f59 100644
+index 88a9b3b23bea5..340ecb824f59a 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.h
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
 @@ -567,6 +567,7 @@

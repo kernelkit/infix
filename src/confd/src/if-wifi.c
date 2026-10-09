@@ -109,7 +109,7 @@ int wifi_validate_secret(sr_session_ctx_t *session, struct lyd_node *cif)
 
 wifi_mode_t wifi_get_mode(struct lyd_node *iface)
 {
-	struct lyd_node *ap, *mesh, *wifi;
+	struct lyd_node *ap, *mesh, *wds, *wifi;
 
 	wifi = lydx_get_child(iface, "wifi");
 	if (!wifi)
@@ -125,6 +125,12 @@ wifi_mode_t wifi_get_mode(struct lyd_node *iface)
 	if (mesh) {
 		if (lydx_get_op(mesh) != LYDX_OP_DELETE)
 			return wifi_mesh;
+	}
+
+	wds = lydx_get_child(wifi, "wds-link");
+	if (wds) {
+		if (lydx_get_op(wds) != LYDX_OP_DELETE)
+			return wifi_wds;
 	}
 
 	/*
@@ -154,7 +160,76 @@ int wifi_mode_changed(struct lyd_node *wifi)
 	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
 		return 1;
 
+	node = lydx_get_child(wifi, "wds-link");
+	if (node)
+		op = lydx_get_op(node);
+	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
+		return 1;
+
+	/* Scan-only <-> station, and the 4-address flag is set at creation */
+	node = lydx_get_child(wifi, "station");
+	if (node)
+		op = lydx_get_op(node);
+	if (node && (op == LYDX_OP_CREATE || op == LYDX_OP_DELETE))
+		return 1;
+	if (node && lydx_get_child(node, "wds"))
+		return 1;
+
 	return 0;
+}
+
+/*
+ * A changed wpa_supplicant config only takes effect when the daemon
+ * reloads it, so nudge the service whenever the wifi subtree changed.
+ */
+static int wifi_gen_reload(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	const char *svc;
+	FILE *fp;
+
+	if (!lydx_get_child(dif, "wifi"))
+		return SR_ERR_OK;
+
+	switch (wifi_get_mode(cif)) {
+	case wifi_station:
+		svc = "wifi";
+		break;
+	case wifi_mesh:
+		svc = "mesh";
+		break;
+	default:
+		return SR_ERR_OK;
+	}
+
+	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_DAEMON, "wifi-reload.sh");
+	if (!fp)
+		return SR_ERR_INTERNAL;
+
+	fprintf(fp, "initctl -bfq touch %s@%s\n", svc, ifname);
+	fclose(fp);
+
+	return SR_ERR_OK;
+}
+
+/* Settings of an existing station or mesh point changed */
+int wifi_gen_settings(sr_session_ctx_t *session, struct lyd_node *dif,
+		      struct lyd_node *cif, struct dagger *net)
+{
+	int rc;
+
+	switch (wifi_get_mode(cif)) {
+	case wifi_station:
+		rc = wifi_validate_secret(session, cif) ? : wifi_gen_station(cif);
+		break;
+	case wifi_mesh:
+		rc = wifi_gen_mesh(cif);
+		break;
+	default:
+		return SR_ERR_OK;
+	}
+
+	return rc ? : wifi_gen_reload(dif, cif, net);
 }
 
 /*
@@ -162,8 +237,9 @@ int wifi_mode_changed(struct lyd_node *wifi)
  */
 int wifi_gen_station(struct lyd_node *cif)
 {
-	const char *ifname, *ssid, *secret_name, *security_mode, *radio;
-	struct lyd_node *security, *secret_node, *radio_node, *station, *wifi;
+	const char *ifname, *ssid, *secret_name, *security_mode;
+	struct lyd_node *security, *secret_node, *station, *wifi;
+	const char *bssid = NULL;
 	unsigned char *secret = NULL;
 	FILE *wpa_supplicant = NULL;
 	char *security_str = NULL;
@@ -176,10 +252,10 @@ int wifi_gen_station(struct lyd_node *cif)
 	if (!wifi)
 		return SR_ERR_OK;
 
-	radio = lydx_get_cattr(wifi, "radio");
 	station = lydx_get_child(wifi, "station");
 	if (station) {
 		ssid = lydx_get_cattr(station, "ssid");
+		bssid = lydx_get_cattr(station, "peer-bssid");
 		security = lydx_get_child(station, "security");
 		security_mode = lydx_get_cattr(security, "mode");
 		secret_name = lydx_get_cattr(security, "secret");
@@ -191,9 +267,8 @@ int wifi_gen_station(struct lyd_node *cif)
 		secret_name = NULL;
 	}
 
-	radio_node = lydx_get_xpathf(cif,
-		"/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio);
-	country = lydx_get_cattr(radio_node, "country-code");
+	country = lydx_get_cattr(lydx_get_xpathf(cif, "/ietf-hardware:hardware/infix-hardware:wifi"),
+				 "country-code");
 
 	if (secret_name && strcmp(security_mode, "disabled") != 0) {
 		const char *b64;
@@ -229,8 +304,12 @@ int wifi_gen_station(struct lyd_node *cif)
 		if (!strcmp(security_mode, "disabled"))
 			asprintf(&security_str, "key_mgmt=NONE");
 		else if (secret)
+			/* ieee80211w=1: MFP capable.  WPA3-only APs, and every
+			 * AP on 6 GHz, require it and are skipped as candidates
+			 * without it; WPA2 APs without MFP still work. */
 			asprintf(&security_str,
 				 "key_mgmt=FT-SAE FT-PSK SAE WPA-PSK\n"
+				 "  ieee80211w=1\n"
 				 "  psk=\"%s\"", secret);
 
 		/* bgscan="" disables background scanning once associated: on a
@@ -239,9 +318,13 @@ int wifi_gen_station(struct lyd_node *cif)
 		fprintf(wpa_supplicant,
 			"network={\n"
 			"  bgscan=\"\"\n"
-			"  ssid=\"%s\"\n"
+			"  scan_ssid=1\n"
+			"  ssid=\"%s\"\n", ssid);
+		if (bssid)
+			fprintf(wpa_supplicant, "  bssid=%s\n", bssid);
+		fprintf(wpa_supplicant,
 			"  %s\n"
-			"}\n", ssid, security_str);
+			"}\n", security_str);
 		free(security_str);
 	} else {
 		/* Scan-only mode - no station container configured */
@@ -358,7 +441,8 @@ int wifi_gen_mesh(struct lyd_node *cif)
 
 	radio_node = lydx_get_xpathf(cif,
 		"/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio);
-	country = lydx_get_cattr(radio_node, "country-code");
+	country = lydx_get_cattr(lydx_get_xpathf(cif, "/ietf-hardware:hardware/infix-hardware:wifi"),
+				 "country-code");
 	band = lydx_get_cattr(radio_node, "band");
 	width = lydx_get_cattr(radio_node, "channel-width");
 	channel = atoi(lydx_get_cattr(radio_node, "channel") ? : "0");
@@ -481,6 +565,24 @@ static int wifi_get_probe_timeout(sr_session_ctx_t *session, const char *radio)
 /*
  * Add WiFi virtual interface using iw
  */
+int wifi_add_deps(struct lyd_node *cif)
+{
+	struct lyd_node *wds;
+	const char *ap;
+	int err;
+
+	wds = lydx_get_descendant(lyd_child(cif), "wifi", "wds-link", NULL);
+	if (!wds)
+		return 0;
+
+	ap = lydx_get_cattr(wds, "access-point");
+	err = dagger_add_dep(&confd.netdag, lydx_get_cattr(cif, "name"), ap);
+	if (err)
+		return ERR_IFACE(cif, err, "Unable to depend on \"%s\"", ap);
+
+	return 0;
+}
+
 int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 {
 	const char *ifname, *radio;
@@ -498,10 +600,14 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		return SR_ERR_INVAL_ARG;
 	}
 
-	radio = lydx_get_cattr(wifi, "radio");
-	if (!radio) {
-		ERROR("WiFi interface %s: missing radio reference", ifname);
-		return SR_ERR_INVAL_ARG;
+	mode = wifi_get_mode(cif);
+	if (mode == wifi_wds) {
+		/* A WDS link has no radio of its own, it is a port of its AP */
+		const char *ap = lydx_get_cattr(lydx_get_child(wifi, "wds-link"), "access-point");
+
+		radio = lydx_get_cattr(lydx_get_xpathf(cif, "../interface[name='%s']/wifi", ap), "radio");
+	} else {
+		radio = lydx_get_cattr(wifi, "radio");
 	}
 
 	iw = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PRE, "wifi-iface.sh");
@@ -510,12 +616,13 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		return SR_ERR_INTERNAL;
 	}
 
-	mode = wifi_get_mode(cif);
 	probe_timeout = wifi_get_probe_timeout(net->session, radio);
 
 	fprintf(iw, "# Generated by Infix confd - WiFi Interface Creation\n");
 	fprintf(iw, "# Create %s interface %s on radio %s\n",
-		mode == wifi_station ? "station" : (mode == wifi_mesh ? "mesh" : "access point"), ifname, radio);
+		mode == wifi_station ? "station" :
+		mode == wifi_mesh ? "mesh" :
+		mode == wifi_wds ? "wds-link" : "access point", ifname, radio);
 
 	/* Wait for PHY if probe-timeout is set (slow USB dongles) */
 	if (probe_timeout > 0) {
@@ -540,12 +647,29 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 	fprintf(iw, "fi\n\n");
 
 	switch(mode) {
-	case wifi_station:
-		fprintf(iw, "iw phy %s interface add %s type managed\n", radio, ifname);
+	case wifi_station: {
+		struct lyd_node *station = lydx_get_child(wifi, "station");
+
+		fprintf(iw, "iw phy %s interface add %s type managed%s\n", radio, ifname,
+			station && lydx_is_enabled(station, "wds") ? " 4addr on" : "");
 		wifi_gen_station(cif);
 		fprintf(iw, "initctl -bfq enable wifi@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch wifi@%s\n", ifname);
+		/* A running instance from before the netdev was recreated
+		 * only gets a SIGHUP from the touch and keeps stale driver
+		 * state, so make sure it starts over on the new netdev. */
+		fprintf(iw, "initctl -bnq restart wpa_supplicant:%s\n", ifname);
 		break;
+	}
+	case wifi_wds: {
+		const char *ap = lydx_get_cattr(lydx_get_child(wifi, "wds-link"), "access-point");
+
+		/* An AP_VLAN pairs with the AP of the same MAC address, and
+		 * hostapd brings it up when the station associates. */
+		fprintf(iw, "iw dev %s interface add %s type __ap_vlan"
+			" addr $(cat /sys/class/net/%s/address) 4addr on\n", ap, ifname, ap);
+		break;
+	}
 	case wifi_ap:
 		fprintf(iw, "iw phy %s interface add %s type __ap\n", radio, ifname);
 		break;
@@ -554,6 +678,7 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 		wifi_gen_mesh(cif);
 		fprintf(iw, "initctl -bfq enable mesh@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch mesh@%s\n", ifname);
+		fprintf(iw, "initctl -bnq restart wpa_supplicant:%s\n", ifname);
 		break;
 	default:
 		ERROR("WiFi mode %d unknown", mode);
@@ -587,6 +712,10 @@ int wifi_del_iface(struct lyd_node *dif, struct dagger *net)
 	fprintf(iw, "initctl -bfq disable mesh@%s\n", ifname);
 	fprintf(iw, "initctl -bfq disable wifi@%s\n", ifname);
 
+	/* hostapd adopts a re-added netdev of a name it still holds and
+	 * turns it back into an AP, so make it forget the name first.
+	 * hostapd_cli cannot talk to the global socket, wpa_cli can. */
+	fprintf(iw, "wpa_cli -g /run/hostapd.global raw \"REMOVE %s\" >/dev/null 2>&1\n", ifname);
 	fprintf(iw, "ip link set %s down\n", ifname);
 	fprintf(iw, "iw dev %s disconnect 2>/dev/null\n", ifname);
 	fprintf(iw, "iw dev %s del 2>/dev/null || ip link del %s 2>/dev/null || true\n", ifname, ifname);

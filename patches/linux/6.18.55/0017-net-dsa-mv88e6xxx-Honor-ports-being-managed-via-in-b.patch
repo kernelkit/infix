@@ -1,7 +1,7 @@
 From 32bf97b633ba31514b0b0756a1c0891bc67254ba Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 22 Apr 2024 23:18:01 +0200
-Subject: [PATCH 17/78] net: dsa: mv88e6xxx: Honor ports being managed via
+Subject: [PATCH 17/84] net: dsa: mv88e6xxx: Honor ports being managed via
  in-band-status
 
 Keep all link parameters in their unforced states when the port is
@@ -17,7 +17,7 @@ when in-band-status is being used.
  1 file changed, 6 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index e8980609b45d..0a535dc0a48c 100644
+index e8980609b45da..0a535dc0a48c1 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -965,6 +965,9 @@ static void mv88e6xxx_mac_link_down(struct phylink_config *config,

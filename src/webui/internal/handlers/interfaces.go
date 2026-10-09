@@ -96,6 +96,18 @@ type wifiJSON struct {
 	AccessPoint *wifiAPJSON      `json:"access-point"`
 	Station     *wifiStationJSON `json:"station"`
 	MeshPoint   *wifiMeshJSON    `json:"mesh-point"`
+	WDSLink     *wifiWDSJSON     `json:"wds-link"`
+}
+
+// wifiWDSJSON mirrors the wds-link container: a 4-address station bound
+// to this port of a local access point.
+type wifiWDSJSON struct {
+	AccessPoint    string `json:"access-point"`
+	PeerAddress    string `json:"peer-address"`
+	Connected      *bool  `json:"connected"`
+	SignalStrength *int   `json:"signal-strength"`
+	RxSpeed        int    `json:"rx-speed"`
+	TxSpeed        int    `json:"tx-speed"`
 }
 
 type wifiAPJSON struct {
@@ -177,15 +189,8 @@ type wifiScanResultJSON struct {
 	Encryption     []string `json:"encryption"`
 }
 
-// WiFi radio survey RESTCONF structures (from ietf-hardware:hardware).
-
-type wifiRadioJSON struct {
-	Survey *wifiSurveyJSON `json:"survey"`
-}
-
-type wifiSurveyJSON struct {
-	Channel []surveyChanJSON `json:"channel"`
-}
+// WiFi channel survey, the output of the infix-hardware channel-survey
+// action on a radio.
 
 type surveyChanJSON struct {
 	Frequency    int      `json:"frequency"`
@@ -565,6 +570,12 @@ func makeIfaceEntry(iface ifaceJSON, fwdSet map[string]bool) ifaceEntry {
 		} else if mp := iface.WiFi.MeshPoint; mp != nil {
 			n := len(mp.Peers.Peer)
 			e.Detail = fmt.Sprintf("Mesh, mesh-id: %s, peers: %d", mp.MeshID, n)
+		} else if wds := iface.WiFi.WDSLink; wds != nil {
+			if wds.Connected != nil && *wds.Connected {
+				e.Detail = "WDS, connected"
+			} else {
+				e.Detail = "WDS, not connected"
+			}
 		}
 	}
 
@@ -770,6 +781,17 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 			d.WiFiStaTitle = "Mesh Peers"
 			for _, p := range mp.Peers.Peer {
 				d.WiFiStations = append(d.WiFiStations, buildWifiStaEntry(p))
+			}
+		} else if wds := iface.WiFi.WDSLink; wds != nil {
+			d.WiFiMode = "WDS Link"
+			if wds.SignalStrength != nil {
+				d.WiFiSignal = fmt.Sprintf("%d dBm", *wds.SignalStrength)
+			}
+			if wds.RxSpeed > 0 {
+				d.WiFiRxSpeed = fmt.Sprintf("%.1f Mbps", float64(wds.RxSpeed)/10)
+			}
+			if wds.TxSpeed > 0 {
+				d.WiFiTxSpeed = fmt.Sprintf("%.1f Mbps", float64(wds.TxSpeed)/10)
 			}
 		} else if st := iface.WiFi.Station; st != nil {
 			d.WiFiMode = "Station"

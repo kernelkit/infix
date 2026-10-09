@@ -38,12 +38,37 @@ All notable changes to the project are documented in this file.
   the keystore.  Its default route and DNS servers are used like those from
   a DHCP server, and the TCP MSS of forwarded connections is clamped to the
   session MTU, see [PPPoE Client][pppoe]
+- The WiFi country code is now one setting for the whole system, `hardware
+  wifi country-code`, instead of one per radio.  It defaults to the world
+  domain and is applied as soon as it is set, so a radio without an
+  interface is in the right regulatory domain too.  Existing configurations
+  are migrated, the first radio's code wins, and a code the regulatory
+  database does not know, which never had any effect, becomes the world
+  domain
+- WiFi band steering now also moves dual-band clients that are already
+  connected on 2.4 GHz to the 5 or 6 GHz access point of the same SSID,
+  with an 802.11v request
+- A WiFi access point asks its clients to move to another access point,
+  with 802.11v, before it stops for a reboot, an upgrade, or a
+  configuration change, so clients that support it roam without losing
+  their connection.  Devices tell each other about their access points,
+  over the network the access points are bridged to, and list the other
+  devices' access points in their 802.11k neighbor reports
+- WiFi channel survey is now on request: `show hardware <radio> survey` in the
+  CLI, a Scan channels button per radio on the WebUI WiFi page, or the
+  `channel-survey` action on the radio.  The survey covers every channel the
+  radio supports, also while it is connected or serving clients.  The
+  always-on `survey` container under the radio is gone, it only ever held
+  the operating channel on a busy radio and slowed down every hardware query
 
 ### Fixes
 
 - WebUI: uploading a software bundle failed on slow storage
 - WebUI: the Overview page showed the hostname template, e.g. `rpi-%m`, and
   never showed the boot partition
+- WebUI: a YANG module file cut short in the schema cache, for example
+  by a restart during download, crashed the WebUI at every start until
+  the cache was removed by hand
 - LLDP neighbors were listed without their system name, descriptions, and
   capabilities, in the CLI, the WebUI, and the operational datastore
 - The manufacturer from a VPD was not shown as `mfg-name` of its
@@ -59,8 +84,32 @@ All notable changes to the project are documented in this file.
 - Fix #1423: the default route from a DHCPv6 client, learned from router
   advertisements, is now a static route with the DHCPv6 route preference,
   like a DHCPv4 route.  Before, the route preference setting was ignored
+- Fix #1679: a WiFi station set up on an interface that was in scan-only
+  mode, as in the Raspberry Pi 4 factory configuration, did not connect
+  until the device was rebooted
+- A WiFi station never connected to a WPA3-only access point, which
+  includes every access point on 6 GHz
+- WiFi scan results listed WPA3-only networks as WPA2-Personal
+- Fast roaming (802.11r) between WiFi access points on different devices
+  failed for WPA3 clients, which fell back to a full reconnect
+- Changing the MAC address of a WiFi access point could leave it, and
+  the other access points on the same radio, down until the WiFi service
+  was restarted
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
+
+
+### Added
+
+- WiFi 4-address (WDS) links: a station with `wds` enabled can be a bridge
+  port, and an access point gets a `wds-link` interface per remote station
+  to bridge it.  Together they build wireless bridges and repeaters, see
+  [WDS Backhaul and Repeaters][wds].  The station leaf `peer-bssid` pins a
+  station to one access point
+- MT7986 boards (Banana Pi BPI-R3, BPI-R3 Mini, Acer Connect Vero W6m):
+  WiFi hardware offloading is now active
+
+[wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
 
 [v26.09.0][] - 2026-09-30
 -------------------------

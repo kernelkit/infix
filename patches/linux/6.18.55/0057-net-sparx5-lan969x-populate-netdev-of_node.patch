@@ -1,7 +1,7 @@
 From 0f61d1e5c4910ed9cd79fb1b3ebccae2d69498d3 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 10 Nov 2025 13:42:53 +0100
-Subject: [PATCH 57/78] net: sparx5/lan969x: populate netdev of_node
+Subject: [PATCH 57/84] net: sparx5/lan969x: populate netdev of_node
 
 Populate of_node for the port netdevs, to make the individual ports
 of_nodes available in sysfs.
@@ -15,7 +15,7 @@ Signed-off-by: Jakub Kicinski <kuba@kernel.org>
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
-index 40b1bfc600a7..582145713cfd 100644
+index 40b1bfc600a79..582145713cfd1 100644
 --- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
 +++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
 @@ -395,6 +395,8 @@ static int sparx5_create_port(struct sparx5 *sparx5,

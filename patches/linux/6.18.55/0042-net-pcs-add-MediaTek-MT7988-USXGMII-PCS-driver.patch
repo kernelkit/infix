@@ -1,7 +1,7 @@
 From 93142130e7b12203fb7b8c421bc5c4f3a6c065e7 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:14:23 +0200
-Subject: [PATCH 42/78] net/pcs: add MediaTek MT7988 USXGMII PCS driver
+Subject: [PATCH 42/84] net/pcs: add MediaTek MT7988 USXGMII PCS driver
 
 Add a PCS driver for the USXGMII subsystem found in the MediaTek MT7988
 SoC (usxgmiisys0 at 0x10080000, usxgmiisys1 at 0x10081000). The hardware
@@ -27,7 +27,7 @@ Daniel Golle <daniel@makrotopia.org>.
  create mode 100644 drivers/net/pcs/pcs-mtk-usxgmii.c
 
 diff --git a/drivers/net/pcs/Kconfig b/drivers/net/pcs/Kconfig
-index f6b4de7f972c..563c12d6aa9c 100644
+index f6b4de7f972cc..563c12d6aa9cf 100644
 --- a/drivers/net/pcs/Kconfig
 +++ b/drivers/net/pcs/Kconfig
 @@ -29,6 +29,16 @@ config PCS_MTK_LYNXI
@@ -48,7 +48,7 @@ index f6b4de7f972c..563c12d6aa9c 100644
  	tristate "Renesas RZ/N1, RZ/N2H, RZ/T2H MII converter"
  	depends on OF
 diff --git a/drivers/net/pcs/Makefile b/drivers/net/pcs/Makefile
-index 0cb0057f2b8e..b876cb2157b1 100644
+index 0cb0057f2b8e6..b876cb2157b15 100644
 --- a/drivers/net/pcs/Makefile
 +++ b/drivers/net/pcs/Makefile
 @@ -8,4 +8,5 @@ obj-$(CONFIG_PCS_STANDALONE)	+= pcs-standalone.o
@@ -59,7 +59,7 @@ index 0cb0057f2b8e..b876cb2157b1 100644
  obj-$(CONFIG_PCS_RZN1_MIIC)	+= pcs-rzn1-miic.o
 diff --git a/drivers/net/pcs/pcs-mtk-usxgmii.c b/drivers/net/pcs/pcs-mtk-usxgmii.c
 new file mode 100644
-index 000000000000..f0e7d418db38
+index 0000000000000..f0e7d418db388
 --- /dev/null
 +++ b/drivers/net/pcs/pcs-mtk-usxgmii.c
 @@ -0,0 +1,394 @@

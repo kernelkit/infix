@@ -222,6 +222,46 @@ static const char *resolve_mobility_domain(const char *mobility_domain, const ch
 }
 
 /*
+ * Key for the 802.11r key holder exchange between access points, hex
+ * encoded SHA-256 over the mobility domain and the passphrase.  Every AP
+ * of the SSID derives the same key, so the wildcard R0KH/R1KH entries
+ * let any of them fetch a roaming client's PMK-R1 from the AP it came
+ * from, which is what fast transition needs for WPA3 (SAE) clients: their
+ * PMK comes from the SAE handshake and cannot be regenerated locally the
+ * way a WPA2 PSK can.
+ */
+static int wifi_ft_key(const char *mobility_domain, const unsigned char *secret, char *out, size_t len)
+{
+	unsigned char digest[EVP_MAX_MD_SIZE];
+	unsigned int dlen = 0;
+	EVP_MD_CTX *ctx;
+	size_t i;
+
+	if (len < 2 * 32 + 1)
+		return -1;
+
+	ctx = EVP_MD_CTX_new();
+	if (!ctx)
+		return -1;
+
+	if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1 ||
+	    EVP_DigestUpdate(ctx, "infix-ft:", 9) != 1 ||
+	    EVP_DigestUpdate(ctx, mobility_domain, strlen(mobility_domain)) != 1 ||
+	    EVP_DigestUpdate(ctx, ":", 1) != 1 ||
+	    EVP_DigestUpdate(ctx, secret, strlen((const char *)secret)) != 1 ||
+	    EVP_DigestFinal_ex(ctx, digest, &dlen) != 1 || dlen < 32) {
+		EVP_MD_CTX_free(ctx);
+		return -1;
+	}
+	EVP_MD_CTX_free(ctx);
+
+	for (i = 0; i < 32; i++)
+		snprintf(out + 2 * i, 3, "%02x", digest[i]);
+
+	return 0;
+}
+
+/*
  * Find an AP interface on a higher-band radio (5/6 GHz) advertising the
  * same SSID as the caller's 2.4 GHz BSS, for no_probe_resp_if_seen_on=.
  * hostapd suppresses a 2.4 GHz probe response only once it has actually
@@ -249,7 +289,7 @@ static const char *wifi_find_higher_band_twin(struct lyd_node *config,
 		if (!wifi)
 			continue;
 		ap = lydx_get_child(wifi, "access-point");
-		if (!ap)
+		if (!ap || !lydx_is_enabled(cif, "enabled"))
 			continue;
 		ssid = lydx_get_cattr(ap, "ssid");
 		if (!ssid || strcmp(ssid, current_ssid))
@@ -317,6 +357,10 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 		ap = lydx_get_child(wifi, "access-point");
 		if (!ap)
 			continue;
+		/* hostapd brings every BSS it is given up, a disabled one
+		 * must not be in its config at all. */
+		if (!lydx_is_enabled(cif, "enabled"))
+			continue;
 		list = realloc(list, sizeof(char *) * (n + 1));
 
 		ifname = lydx_get_cattr(cif, "name");
@@ -337,6 +381,38 @@ static int wifi_find_radio_aps(struct lyd_node *cifs, const char *radio_name,
 	*ap_list = list;
 	*count = n;
 	return 0;
+}
+
+/* Emit the 4-address WDS ports (wds-link interfaces) of an AP */
+static void wifi_gen_wds_ports(FILE *hostapd, struct lyd_node *config, const char *ap_ifname)
+{
+	struct lyd_node *cifs, *cif;
+	bool first = true;
+
+	cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		struct lyd_node *wds;
+		const char *ap;
+
+		wds = lydx_get_descendant(lyd_child(cif), "wifi", "wds-link", NULL);
+		if (!wds)
+			continue;
+
+		ap = lydx_get_cattr(wds, "access-point");
+		if (!ap || strcmp(ap, ap_ifname))
+			continue;
+
+		if (first) {
+			fprintf(hostapd, "# 4-address WDS ports\n");
+			fprintf(hostapd, "wds_sta=1\n");
+			/* A deauth from a vanishing peer is easily lost, and the
+			 * default 300 s leaves a dead backhaul port up that long. */
+			fprintf(hostapd, "ap_max_inactivity=30\n");
+			first = false;
+		}
+		fprintf(hostapd, "wds_sta_ifname=%s %s\n",
+			lydx_get_cattr(wds, "peer-address"), lydx_get_cattr(cif, "name"));
+	}
 }
 
 /* Helper: Write SSID and security configuration (shared between primary and BSS) */
@@ -361,6 +437,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 	if (is_bss) {
 		fprintf(hostapd, "\n# BSS %s\n", ifname);
 		fprintf(hostapd, "bss=%s\n", ifname);
+		fprintf(hostapd, "ctrl_interface=/run/hostapd\n");
 	}
 
 	/* Check 802.11k/r/v configuration */
@@ -482,6 +559,9 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 
 	/* 802.11r: Fast BSS Transition */
 	if (enable_80211r) {
+		const char *bridge = lydx_get_cattr(lydx_get_child(cif, "bridge-port"), "bridge");
+		char ft_key[65];
+
 		fprintf(hostapd, "# Fast BSS Transition (802.11r)\n");
 		fprintf(hostapd, "mobility_domain=%s\n", mobility_domain);
 		/* Over-the-air FT: the client authenticates directly with the
@@ -490,6 +570,36 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		fprintf(hostapd, "ft_over_ds=0\n");
 		fprintf(hostapd, "ft_psk_generate_local=1\n");
 		fprintf(hostapd, "nas_identifier=%s\n", nas_identifier_cfg);
+		/* The key holders of all APs on the SSID reach each other over
+		 * the network the APs are bridged to, see wifi_ft_key().  On a
+		 * VLAN filtering bridge that is the APs' VLAN: use its VLAN
+		 * interface when there is one, the bridge device itself has
+		 * no say in which VLAN its frames end up in. */
+		if (secret && !wifi_ft_key(mobility_domain, secret, ft_key, sizeof(ft_key))) {
+			if (bridge) {
+				const char *pvid = lydx_get_cattr(lydx_get_child(cif, "bridge-port"), "pvid");
+				const char *ft_iface = bridge;
+
+				if (pvid) {
+					struct lyd_node *vif;
+
+					vif = lydx_get_xpathf(config, "/interfaces/interface[vlan/id='%s' and vlan/lower-layer-if='%s']/name",
+							      pvid, bridge);
+					if (vif)
+						ft_iface = lyd_get_value(vif);
+				}
+				fprintf(hostapd, "ft_iface=%s\n", ft_iface);
+			}
+			fprintf(hostapd, "r0kh=ff:ff:ff:ff:ff:ff * %s\n", ft_key);
+			fprintf(hostapd, "r1kh=00:00:00:00:00:00 00:00:00:00:00:00 %s\n", ft_key);
+			/* A client roaming away from a node that is going down
+			 * asks for a key that node can no longer hand out.
+			 * Give up on the fetch quickly and reject, the client
+			 * then logs in the normal way; waiting in silence makes
+			 * it blacklist the target instead. */
+			fprintf(hostapd, "rkh_pull_timeout=300\n");
+			fprintf(hostapd, "rkh_pull_retries=1\n");
+		}
 	}
 
 	/* 802.11k: Radio Resource Management */
@@ -504,6 +614,8 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		fprintf(hostapd, "# BSS Transition Management (802.11v)\n");
 		fprintf(hostapd, "bss_transition=1\n");
 	}
+
+	wifi_gen_wds_ports(hostapd, config, ifname);
 
 	/* OKC: Opportunistic Key Caching */
 	if (roaming) {
@@ -521,16 +633,14 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 
 		fprintf(hostapd, "mbo=1\n");
 
-		/* Required for no_probe_resp_if_seen_on below: without it
-		 * hostapd keeps no sta_track list, so the twin radio never
-		 * knows which clients it has seen.  Radio-level, emit once
-		 * in the main section, never per BSS. */
-		if (!is_bss)
-			fprintf(hostapd, "track_sta_max_num=100\n");
-
-		/* Active band steering: on a 2.4 GHz BSS, suppress probe
-		 * responses to clients recently seen on the same-SSID 5/6
-		 * GHz BSS, nudging dual-band clients to the higher band. */
+		/* Band steering on a 2.4 GHz BSS with a same-SSID twin on 5/6
+		 * GHz: a client the twin has seen lately gets no probe response
+		 * here, so it tends to join the twin instead.  The seen-on list
+		 * is kept per radio, see the radio section.  Clients already
+		 * connected are moved by wifi-steer.sh, which finds the pairs
+		 * by this directive.  Refusing authentication as well would
+		 * lock a client out when the twin cannot take it, e.g. during
+		 * its radar check, so that is deliberately not done. */
 		twin = wifi_find_higher_band_twin(config, band, ssid);
 		if (twin)
 			fprintf(hostapd, "no_probe_resp_if_seen_on=%s\n", twin);
@@ -865,9 +975,18 @@ static void wifi_build_vht_capab(char *out, size_t sz, unsigned int vht_cap, int
 	}
 }
 
+/* The box-wide WiFi country code, NULL when none is configured */
+static const char *wifi_country_code(struct lyd_node *config)
+{
+	struct lyd_node *wifi;
+
+	wifi = lydx_get_descendant(config, "hardware", "wifi", NULL);
+	return lydx_get_cattr(wifi, "country-code");
+}
+
 /* Helper: Write radio-specific configuration */
 static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
-				  struct lyd_node *radio_node)
+				  struct lyd_node *radio_node, struct lyd_node *config)
 {
 	const char *country, *channel, *band, *width;
 	unsigned int ht_cap = 0, vht_cap = 0;
@@ -876,7 +995,7 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 	int ch = 0;
 	bool legacy_rates, he = false;
 
-	country = lydx_get_cattr(radio_node, "country-code");
+	country = wifi_country_code(config);
 	band = lydx_get_cattr(radio_node, "band");
 	channel = lydx_get_cattr(radio_node, "channel");
 	width = lydx_get_cattr(radio_node, "channel-width");
@@ -907,6 +1026,13 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 
 	/* Use short preamble for better throughput on modern clients */
 	fprintf(hostapd, "preamble=1\n");
+
+	/* Remember the clients this radio has seen, for band steering on
+	 * the other radios.  A dual-band client is refused on 2.4 GHz
+	 * while it is on this list, so keep the list short-lived: that is
+	 * the longest a client that cannot get in on 5 GHz has to wait. */
+	fprintf(hostapd, "track_sta_max_num=100\n");
+	fprintf(hostapd, "track_sta_max_age=60\n");
 
 	if (band) {
 		if (!strcmp(band, "2.4GHz")) {
@@ -1133,7 +1259,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "\n");
 
 	/* Radio-specific configuration */
-	wifi_gen_radio_config(hostapd, radio_name, radio_node);
+	wifi_gen_radio_config(hostapd, radio_name, radio_node, config);
 
 	/* Add BSS sections for secondary APs (multi-SSID) */
 	for (i = 1; i < ap_count; i++) {
@@ -1208,6 +1334,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		    sr_event_t event, struct confd *confd)
 {
 	struct lyd_node  *difs = NULL, *dif = NULL;
+	int country_changed = 0;
 	int rc = SR_ERR_OK;
 	int gps_changed = 0;
 	int wifi_changed = 0;
@@ -1215,7 +1342,22 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	if (!lydx_find_xpathf(diff, XPATH_BASE_))
 		return SR_ERR_OK;
 
-	difs = lydx_get_descendant(diff, "hardware", "component", NULL);
+	/*
+	 * The country code is one setting for every radio.  Apply the
+	 * regulatory domain here, not from hostapd, so a radio without an
+	 * interface is in the right domain too.  Every radio's hostapd
+	 * config carries the code, so visit them all when it changes.
+	 */
+	if (lydx_get_xpathf(diff, XPATH_BASE_ "/infix-hardware:wifi/country-code")) {
+		country_changed = 1;
+		if (event == SR_EV_DONE)
+			systemf("iw reg set %s", wifi_country_code(config) ?: "00");
+	}
+
+	if (country_changed)
+		difs = lydx_get_descendant(config, "hardware", "component", NULL);
+	else
+		difs = lydx_get_descendant(diff, "hardware", "component", NULL);
 
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
 		enum lydx_op op;
@@ -1232,6 +1374,9 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			continue;
 
 		class = lydx_get_cattr(cif, "class");
+		if (country_changed && strcmp(class, "infix-hardware:wifi") &&
+		    !lydx_get_xpathf(diff, XPATH_BASE_ "/component[name='%s']", name))
+			continue;
 
 		/* Handle USB components */
 		if (!strcmp(class, "infix-hardware:usb")) {
@@ -1253,13 +1398,14 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 				goto err;
 			}
 		} else if (!strcmp(class, "infix-hardware:wifi")) {
-			struct lyd_node *interfaces_config, *interfaces_diff;
 			struct lyd_node **wifi_iface_list = NULL;
-			struct lyd_node *ap;
+			struct lyd_node *interfaces_config;
 			struct lyd_node *cwifi_radio;
 			int wifi_iface_count = 0;
 			char src[40], dst[40];
+			char **ap_list = NULL;
 			int ap_interfaces = 0;
+			int i;
 
 			switch (event) {
 			case SR_EV_ABORT:
@@ -1267,27 +1413,25 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			case SR_EV_CHANGE:
 				break;
 			case SR_EV_DONE:
-				interfaces_diff = lydx_get_descendant(diff, "interfaces", "interface", NULL);
+				/* The changed interface need not be an AP, a
+				 * wds-link or station on the radio also lands
+				 * here, so judge by the APs left in config. */
+				interfaces_config = lydx_get_descendant(config, "interfaces", "interface", NULL);
+				wifi_find_radio_aps(interfaces_config, name, &ap_list, &ap_interfaces);
+				for (i = 0; i < ap_interfaces; i++)
+					free(ap_list[i]);
+				free(ap_list);
 
-				wifi_find_interfaces_on_radio(interfaces_diff, name,
-							      &wifi_iface_list, &wifi_iface_count);
-				if (wifi_iface_count > 0) {
-					ap = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "access-point", NULL);
-					if (ap && lydx_get_op(ap) != LYDX_OP_DELETE) {
-						snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
-						snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
+				if (ap_interfaces) {
+					snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
+					snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
 
-						if (fexistf(HOSTAPD_CONF_NEXT, name)) {
-							(void)rename(src, dst);
-							ap_interfaces++;
-						}
-					}
-				}
-				if (!ap_interfaces) {
+					if (fexistf(HOSTAPD_CONF_NEXT, name))
+						(void)rename(src, dst);
+				} else {
 					erasef(HOSTAPD_CONF, name);
 					erasef(HOSTAPD_CONF_NEXT, name);
 				}
-				free(wifi_iface_list);
 				/* All radios share one hostapd process; the service is
 				 * (re)generated after the component loop below. */
 				wifi_changed = 1;
@@ -1431,8 +1575,11 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 				rc = SR_ERR_INTERNAL;
 			} else {
 				fprintf(fp, "# Generated by confd, do not edit.\n");
-				fprintf(fp, "service <!> name:hostapd \\\n");
-				fprintf(fp, "\t[2345] hostapd -P /run/hostapd.pid");
+				/* The wrapper hands the clients over to another
+				 * access point before hostapd stops, give it time. */
+				fprintf(fp, "service <!> name:hostapd kill:10 \\\n");
+				fprintf(fp, "\t[2345] /usr/libexec/infix/hostapd.sh"
+					" -g /run/hostapd.global -P /run/hostapd.pid");
 				for (i = 0; i < gl.gl_pathc; i++)
 					fprintf(fp, " %s", gl.gl_pathv[i]);
 				fprintf(fp, " \\\n\t-- Wi-Fi Access Points\n");
@@ -1451,6 +1598,128 @@ err:
 
 	return rc;
 }
+
+/*
+ * Scan all channels on a radio and report how busy each one is, the
+ * channel-survey action in infix-hardware.yang.  The scan takes the
+ * radio off its operating channel for a few seconds, which is why this
+ * is an action and not operational data.  The helper does the scan and
+ * the parsing, see iw.py survey-scan.
+ */
+static int wifi_channel_survey(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+			       const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+			       struct lyd_node *output, void *priv)
+{
+	static const struct { const char *json, *yang; } times[] = {
+		{ "noise",         "noise"         },
+		{ "active_time",   "active-time"   },
+		{ "busy_time",     "busy-time"     },
+		{ "receive_time",  "receive-time"  },
+		{ "transmit_time", "transmit-time" },
+	};
+	struct lyd_node *component, *chan;
+	const char *radio, *passive;
+	json_error_t jerr;
+	json_t *root, *entry;
+	size_t index;
+	FILE *pp;
+
+	if (event != SR_EV_RPC)
+		return SR_ERR_OK;
+
+	component = lyd_parent(lyd_parent(input));
+	radio = component ? lydx_get_cattr(component, "name") : NULL;
+	if (!radio)
+		return rpc_failed(session, "Cannot tell which radio to survey");
+
+	passive = lydx_get_cattr((struct lyd_node *)input, "passive");
+	pp = popenf("r", "/usr/libexec/infix/iw.py survey-scan %s %s", radio,
+		    passive && !strcmp(passive, "true") ? "passive" : "");
+	if (!pp)
+		return rpc_failed(session, "Failed starting channel survey");
+
+	root = json_loadf(pp, 0, &jerr);
+	pclose(pp);
+	if (!root)
+		return rpc_failed(session, "Channel survey returned no data");
+
+	if (!json_is_array(root)) {
+		json_t *err = json_object_get(root, "error");
+		char msg[256];
+
+		snprintf(msg, sizeof(msg), "Channel survey failed: %s",
+			 json_is_string(err) ? json_string_value(err) : "unknown error");
+		json_decref(root);
+		return rpc_failed(session, msg);
+	}
+
+	json_array_foreach(root, index, entry) {
+		json_t *freq = json_object_get(entry, "frequency");
+		char val[32];
+
+		if (!json_is_integer(freq))
+			continue;
+
+		snprintf(val, sizeof(val), "%lld", json_integer_value(freq));
+		if (lyd_new_list(output, NULL, "channel", LYD_NEW_VAL_OUTPUT, &chan, val)) {
+			ERROR("channel-survey: failed adding channel %s", val);
+			continue;
+		}
+
+		lyd_new_term(chan, NULL, "in-use",
+			     json_is_true(json_object_get(entry, "in_use")) ? "true" : "false",
+			     0, NULL);
+
+		for (size_t i = 0; i < NELEMS(times); i++) {
+			json_t *v = json_object_get(entry, times[i].json);
+
+			if (!json_is_integer(v))
+				continue;
+
+			snprintf(val, sizeof(val), "%lld", json_integer_value(v));
+			lyd_new_term(chan, NULL, times[i].yang, val, 0, NULL);
+		}
+	}
+	json_decref(root);
+
+	return SR_ERR_OK;
+}
+
+/* The action only exists when the wifi feature is enabled, see wifi.inc */
+static bool wifi_feature_enabled(struct confd *confd)
+{
+	const struct lys_module *mod;
+	const struct ly_ctx *ctx;
+	bool enabled = false;
+
+	ctx = sr_acquire_context(confd->conn);
+	if (!ctx)
+		return false;
+
+	mod = ly_ctx_get_module_implemented(ctx, "infix-hardware");
+	if (mod)
+		enabled = lys_feature_value(mod, "wifi") == LY_SUCCESS;
+	sr_release_context(confd->conn);
+
+	return enabled;
+}
+
+int hardware_rpc_init(struct confd *confd)
+{
+	int rc = 0;
+
+	if (!wifi_feature_enabled(confd))
+		return SR_ERR_OK;
+
+	REGISTER_RPC_TREE(confd->session, XPATH_BASE_ "/component/infix-hardware:wifi-radio/channel-survey",
+			  wifi_channel_survey, NULL, &confd->sub);
+
+	return SR_ERR_OK;
+fail:
+	ERROR("Init hardware rpc failed: %s", sr_strerror(rc));
+	return rc;
+}
+
 int hardware_candidate_init(struct confd *confd)
 {
 	int rc = 0;

@@ -437,8 +437,8 @@
                             <tr>
                               <th>Country code</th>
                               <td>
-                                <select class="cfg-input cfg-input-sm" name="country-code" required>
-                                  <option value="" disabled selected>— country —</option>
+                                <select class="cfg-input cfg-input-sm" name="country-code">
+                                  <option value="" selected>— keep current (all radios) —</option>
                                   {{range $.WizardCountryOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
                                 </select>
                               </td>
@@ -1544,10 +1544,10 @@
                     </td>
                   </tr>
                   <tr>
-                    <th>Country code{{template "field-info" "ISO 3166-1 country code — required. Regulators tie the radio's channel/power allowance to this; '00' (world) cannot be used in Access Point mode."}}</th>
+                    <th>Country code{{template "field-info" "ISO 3166-1 country code, one setting shared by every radio in the system. Regulators tie the channel/power allowance to this; '00' (world) cannot be used in Access Point mode."}}</th>
                     <td>
-                      <select class="cfg-input cfg-input-sm" name="country-code" id="add-wifi-radio-country" required>
-                        <option value="" disabled selected>— country —</option>
+                      <select class="cfg-input cfg-input-sm" name="country-code" id="add-wifi-radio-country">
+                        <option value="" selected>— keep current (all radios) —</option>
                         {{range .WizardCountryOptions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
                       </select>
                     </td>

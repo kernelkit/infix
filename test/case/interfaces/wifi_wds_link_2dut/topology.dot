@@ -1,0 +1,40 @@
+graph "wifi-wds-link-2dut" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt2> mgmt2 }",
+	    pos="0,0!",
+	    requires="controller",
+	];
+
+	root [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | root",
+	    pos="6,2!",
+	    requires="infix",
+	];
+
+	satellite [
+	    label="{ <mgmt> mgmt | <wifi> wifi } | satellite",
+	    pos="6,-2!",
+	    requires="infix",
+	];
+
+	// The wireless cell the root and the satellite share, see
+	// wifi_ap_station_2dut for how it maps onto RF and onto hwsim.
+	cell [
+	    label="cell",
+	    pos="9,0!",
+	    requires="wifi-radio",
+	];
+
+	host:mgmt1 -- root:mgmt      [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- satellite:mgmt [requires="mgmt", color="lightgray"]
+
+	root:wifi -- cell      [requires="wifi2.4GHz", style="dashed"]
+	satellite:wifi -- cell [requires="wifi2.4GHz", style="dashed"]
+}

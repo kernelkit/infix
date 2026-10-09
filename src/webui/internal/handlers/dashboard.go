@@ -410,8 +410,24 @@ const (
 
 type hardwareWrapper struct {
 	Hardware struct {
+		WiFi      *hwWiFiJSON       `json:"infix-hardware:wifi"`
 		Component []hwComponentJSON `json:"component"`
 	} `json:"ietf-hardware:hardware"`
+}
+
+// hwWiFiJSON is the box-wide WiFi container, one country code for every
+// radio.
+type hwWiFiJSON struct {
+	CountryCode string `json:"country-code"`
+}
+
+// wifiCountryCode returns the box-wide WiFi country code, "00" (the
+// world domain, the YANG default) when none is configured.
+func (w hardwareWrapper) wifiCountryCode() string {
+	if w.Hardware.WiFi == nil || w.Hardware.WiFi.CountryCode == "" {
+		return "00"
+	}
+	return w.Hardware.WiFi.CountryCode
 }
 
 type hwComponentJSON struct {

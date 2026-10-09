@@ -1,0 +1,79 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <mattias.walstrom@wires.se>
+Date: Tue, 7 Oct 2026 15:00:00 +0200
+Subject: [PATCH 4/4] hostapd: Add ft_iface for the 802.11r key holder exchange
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The R0KH/R1KH exchange is sent on the bridge the BSS is a port of, or
+on the BSS interface itself.  On a VLAN filtering bridge a frame sent
+from the bridge device belongs to the bridge's own untagged VLAN, if it
+has one, which need not be the VLAN of the access points.  Nor can the
+bridge option name another interface: hostapd then moves the BSS into
+that bridge.
+
+Add a per-BSS option for the interface to use for the exchange, for
+example the VLAN interface of the access points' VLAN:
+
+  ft_iface=<ifname>
+
+Signed-off-by: Mattias Walström <mattias.walstrom@wires.se>
+---
+ hostapd/config_file.c    | 2 ++
+ hostapd/hostapd.conf     | 5 +++++
+ src/ap/ap_config.h       | 1 +
+ src/ap/wpa_auth_glue.c   | 3 ++-
+ 4 files changed, 10 insertions(+), 1 deletion(-)
+
+diff -ruN a/hostapd/config_file.c b/hostapd/config_file.c
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -2419,6 +2419,8 @@
+ 			   sizeof(conf->bss[0]->iface));
+ 	} else if (os_strcmp(buf, "bridge") == 0) {
+ 		os_strlcpy(bss->bridge, pos, sizeof(bss->bridge));
++	} else if (os_strcmp(buf, "ft_iface") == 0) {
++		os_strlcpy(bss->ft_iface, pos, sizeof(bss->ft_iface));
+ 	} else if (os_strcmp(buf, "bridge_hairpin") == 0) {
+ 		bss->bridge_hairpin = atoi(pos);
+ 	} else if (os_strcmp(buf, "vlan_bridge") == 0) {
+diff -ruN a/hostapd/hostapd.conf b/hostapd/hostapd.conf
+--- a/hostapd/hostapd.conf
++++ b/hostapd/hostapd.conf
+@@ -19,6 +19,11 @@
+ # has been started to change the interface mode). If needed, the bridge
+ # interface is also created.
+ #bridge=br0
++
++# Interface to send and receive the 802.11r R0KH/R1KH exchange on. Defaults
++# to the bridge, or to the BSS interface when no bridge is configured. Use
++# it to name the VLAN interface of the access points on a VLAN aware bridge.
++#ft_iface=br0.1
+ 
+ # Driver interface type (wired/none/nl80211/bsd);
+ # default: nl80211). nl80211 is used with all Linux mac80211 drivers.
+diff -ruN a/src/ap/ap_config.h b/src/ap/ap_config.h
+--- a/src/ap/ap_config.h
++++ b/src/ap/ap_config.h
+@@ -290,6 +290,7 @@
+ struct hostapd_bss_config {
+ 	char iface[IFNAMSIZ + 1];
+ 	char bridge[IFNAMSIZ + 1];
++	char ft_iface[IFNAMSIZ + 1];
+ 	char vlan_bridge[IFNAMSIZ + 1];
+ 	char wds_bridge[IFNAMSIZ + 1];
+ 	int bridge_hairpin; /* hairpin_mode on bridge members */
+diff -ruN a/src/ap/wpa_auth_glue.c b/src/ap/wpa_auth_glue.c
+--- a/src/ap/wpa_auth_glue.c
++++ b/src/ap/wpa_auth_glue.c
+@@ -1918,7 +1918,8 @@
+ 	    wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt)) {
+ 		const char *ft_iface;
+ 
+-		ft_iface = hapd->conf->bridge[0] ? hapd->conf->bridge :
++		ft_iface = hapd->conf->ft_iface[0] ? hapd->conf->ft_iface :
++			   hapd->conf->bridge[0] ? hapd->conf->bridge :
+ 			   hapd->conf->iface;
+ 		hapd->l2 = l2_packet_init(ft_iface, NULL, ETH_P_RRB,
+ 					  hostapd_rrb_receive, hapd, 1);
