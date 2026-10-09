@@ -1,0 +1,98 @@
+From 9c9fcc5fbf9134bde2efc028f6c8d2921dbdce1f Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 8 Oct 2026 13:48:05 +0200
+Subject: [PATCH 82/85] net: sparx5: fix broadcast to the CPU on bridge ports
+ without a PVID
+
+Ports of a bridge created with vlan_default_pvid 0 never deliver
+broadcast to the CPU.  ARP requests from the ports go unanswered and
+the bridge IP address is unreachable, while unicast and forwarding
+between the ports work:
+
+  ip link add br0 address $mac type bridge vlan_default_pvid 0
+  ip link set eth0 master br0
+  ip addr add 10.0.0.1/24 dev br0
+
+The driver classifies bridged ports without a PVID to VID 1, to keep
+them apart from the standalone ports on VID 0.  Broadcast on a VID
+only reaches the CPU through a MAC table entry pointing to PGID_BCAST,
+which the driver learns when the bridge adds the VLAN and forgets when
+the bridge removes it.  A new bridge starts with VLAN 1, so the entry
+for VID 1 is learned, and setting vlan_default_pvid 0 removes VLAN 1
+again, which forgets the entry the PVID-less ports depend on.
+
+Learn the VID 1 broadcast entry at probe, like the VID 0 entry for
+standalone ports, and keep it when VLAN 1 is removed from the bridge.
+
+Fixes: d6fce5141929 ("net: sparx5: add switching support")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_main.c  |  4 ++++
+ drivers/net/ethernet/microchip/sparx5/sparx5_main.h  |  1 +
+ .../net/ethernet/microchip/sparx5/sparx5_switchdev.c | 12 +++++++-----
+ 3 files changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
+index c9a672c3aaf79..90164a54365d2 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
+@@ -741,6 +741,10 @@ static int sparx5_start(struct sparx5 *sparx5)
+ 	sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_CPU), broadcast,
+ 			  NULL_VID);
+ 
++	/* Flood BC of bridged ports without a PVID, to the ports and CPU */
++	sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_BCAST), broadcast,
++			  UNAWARE_VID);
++
+ 	/* Enable queue limitation watermarks */
+ 	sparx5_qlim_set(sparx5);
+ 
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index 45aadf924747c..54103e8b091f7 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -103,6 +103,7 @@ enum sparx5_feature {
+ 
+ #define IFH_LEN                9 /* 36 bytes */
+ #define NULL_VID               0
++#define UNAWARE_VID            1 /* Bridged ports without a PVID */
+ #define SPX5_MACT_PULL_DELAY   (2 * HZ)
+ #define SPX5_STATS_CHECK_DELAY (1 * HZ)
+ #define SPX5_PRIOS             8     /* Number of priority queues */
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+index 391ce604e6611..1c81efd7fbbaa 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+@@ -155,8 +155,8 @@ static int sparx5_port_attr_set(struct net_device *dev, const void *ctx,
+ 		/* Used PVID 1 when default_pvid is 0, to avoid
+ 		 * collision with non-bridged ports.
+ 		 */
+-		if (port->pvid == 0)
+-			port->pvid = 1;
++		if (port->pvid == NULL_VID)
++			port->pvid = UNAWARE_VID;
+ 		port->vlan_aware = attr->u.vlan_filtering;
+ 		sparx5_vlan_port_apply(port->sparx5, port);
+ 		break;
+@@ -346,8 +346,8 @@ static void sparx5_switchdev_bridge_fdb_event_work(struct work_struct *work)
+ 	/* Used PVID 1 when default_pvid is 0, to avoid
+ 	 * collision with non-bridged ports.
+ 	 */
+-	if (fdb_info->vid == 0)
+-		vid = 1;
++	if (fdb_info->vid == NULL_VID)
++		vid = UNAWARE_VID;
+ 	else
+ 		vid = fdb_info->vid;
+ 
+@@ -679,7 +679,9 @@ static int sparx5_handle_port_vlan_del(struct net_device *dev,
+ 			container_of(nb, struct sparx5,
+ 				     switchdev_blocking_nb);
+ 
+-		sparx5_mact_forget(sparx5, dev->broadcast, vid);
++		/* Kept for the bridged ports without a PVID */
++		if (vid != UNAWARE_VID)
++			sparx5_mact_forget(sparx5, dev->broadcast, vid);
+ 		return 0;
+ 	}
+ 

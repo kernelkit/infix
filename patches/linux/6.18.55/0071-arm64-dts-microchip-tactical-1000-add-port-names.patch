@@ -1,7 +1,7 @@
 From aa86655cabeb7c303f3acbc59a36754d1b5383c5 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Tue, 30 Jun 2026 11:23:47 +0200
-Subject: [PATCH 71/78] arm64: dts: microchip: tactical-1000: add port names
+Subject: [PATCH 71/85] arm64: dts: microchip: tactical-1000: add port names
 
 Now that driver supports parsing the "label" property, populate port names
 as they are physically wired up.
@@ -13,7 +13,7 @@ Signed-off-by: Robert Marko <robert.marko@sartura.hr>
  1 file changed, 29 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/microchip/lan9696-tactical-1000.dts b/arch/arm64/boot/dts/microchip/lan9696-tactical-1000.dts
-index e9fa26e05804..e7e4654af98f 100644
+index e9fa26e058047..e7e4654af98fc 100644
 --- a/arch/arm64/boot/dts/microchip/lan9696-tactical-1000.dts
 +++ b/arch/arm64/boot/dts/microchip/lan9696-tactical-1000.dts
 @@ -626,6 +626,7 @@ port0: port@0 {

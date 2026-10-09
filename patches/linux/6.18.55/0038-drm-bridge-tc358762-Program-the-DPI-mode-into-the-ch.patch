@@ -1,7 +1,7 @@
 From 3eb94e911cb22e62435f70b33b515e93a5697e5d Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Tue, 9 Jan 2024 17:37:00 +0000
-Subject: [PATCH 38/78] drm/bridge: tc358762: Program the DPI mode into the
+Subject: [PATCH 38/85] drm/bridge: tc358762: Program the DPI mode into the
  chip
 
 The autodetection of resolution/timing by the TC358762 can lead
@@ -16,7 +16,7 @@ Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
  1 file changed, 15 insertions(+)
 
 diff --git a/drivers/gpu/drm/bridge/tc358762.c b/drivers/gpu/drm/bridge/tc358762.c
-index 98df3e667d4a..73b169026e63 100644
+index 98df3e667d4aa..73b169026e63b 100644
 --- a/drivers/gpu/drm/bridge/tc358762.c
 +++ b/drivers/gpu/drm/bridge/tc358762.c
 @@ -53,6 +53,12 @@

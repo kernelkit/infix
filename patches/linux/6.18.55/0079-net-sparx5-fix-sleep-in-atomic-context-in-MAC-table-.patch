@@ -1,0 +1,174 @@
+From c267da8727c743e80ba14f3f859501e45b27e568 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 7 Oct 2026 11:42:12 +0200
+Subject: [PATCH 79/85] net: sparx5: fix sleep in atomic context in MAC table
+ access
+
+Adding or removing a multicast address on an unbridged switch port
+triggers:
+
+  BUG: scheduling while atomic: kworker/u4:5/594/0x00000202
+  Workqueue: ipv6_addrconf addrconf_dad_work
+  Call trace:
+   __mutex_lock.constprop.0+0x510/0xc50
+   mutex_lock+0x50/0x70
+   sparx5_mact_learn+0x80/0x110
+   sparx5_mc_sync+0x48/0x70
+   __hw_addr_sync_dev+0xcc/0x180
+   sparx5_set_rx_mode+0x54/0x70
+   __dev_set_rx_mode+0x4c/0xb0
+   dev_mc_add+0x94/0xc0
+   igmp6_group_added+0x10c/0x130
+   __ipv6_dev_mc_inc+0x218/0x3f0
+   ipv6_dev_mc_inc+0x1c/0x30
+   addrconf_dad_work+0xb4/0x570
+
+The core calls .ndo_set_rx_mode with netif_addr_lock_bh held.
+sparx5_mc_sync() and sparx5_mc_unsync() reach sparx5_mact_learn() and
+sparx5_mact_forget() from there, which take sparx5->lock, a mutex, and
+then sleep in readx_poll_timeout() waiting for the MAC table command.
+
+Upstream fixed this in commit b62793a7baee ("net: sparx5: fix sleep
+in atomic context in MAC table access") by moving the driver to the
+new .ndo_set_rx_mode_async callback.  That API is not in 6.18 and
+depends on a series of core changes, so it cannot be backported on
+its own.
+
+Do what lan966x does instead, see commit 77bdaf39f3c8 ("net: lan966x:
+Fix sleep in atomic context when updating MAC table"): make
+sparx5->lock a spinlock and poll for completion with
+readx_poll_timeout_atomic().  Nothing under the lock sleeps, and the
+MAC table command completes in microseconds.
+
+Fixes: d6fce5141929 ("net: sparx5: add switching support")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/sparx5_mactable.c        | 24 +++++++++----------
+ .../ethernet/microchip/sparx5/sparx5_main.h   |  2 +-
+ 2 files changed, 13 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+index f5584244612cd..2a594f0732319 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+@@ -50,7 +50,7 @@ static int sparx5_mact_wait_for_completion(struct sparx5 *sparx5)
+ {
+ 	u32 val;
+ 
+-	return readx_poll_timeout(sparx5_mact_get_status,
++	return readx_poll_timeout_atomic(sparx5_mact_get_status,
+ 		sparx5, val,
+ 		LRN_COMMON_ACCESS_CTRL_MAC_TABLE_ACCESS_SHOT_GET(val) == 0,
+ 		TABLE_UPDATE_SLEEP_US, TABLE_UPDATE_TIMEOUT_US);
+@@ -92,7 +92,7 @@ int sparx5_mact_learn(struct sparx5 *sparx5, int pgid,
+ 		addr = pgid - consts->n_ports;
+ 	}
+ 
+-	mutex_lock(&sparx5->lock);
++	spin_lock(&sparx5->lock);
+ 
+ 	sparx5_mact_select(sparx5, mac, vid);
+ 
+@@ -111,7 +111,7 @@ int sparx5_mact_learn(struct sparx5 *sparx5, int pgid,
+ 
+ 	ret = sparx5_mact_wait_for_completion(sparx5);
+ 
+-	mutex_unlock(&sparx5->lock);
++	spin_unlock(&sparx5->lock);
+ 
+ 	return ret;
+ }
+@@ -164,7 +164,7 @@ bool sparx5_mact_getnext(struct sparx5 *sparx5,
+ 	u32 cfg2;
+ 	int ret;
+ 
+-	mutex_lock(&sparx5->lock);
++	spin_lock(&sparx5->lock);
+ 
+ 	sparx5_mact_select(sparx5, mac, *vid);
+ 
+@@ -183,7 +183,7 @@ bool sparx5_mact_getnext(struct sparx5 *sparx5,
+ 			*pcfg2 = cfg2;
+ 	}
+ 
+-	mutex_unlock(&sparx5->lock);
++	spin_unlock(&sparx5->lock);
+ 
+ 	return ret == 0;
+ }
+@@ -194,7 +194,7 @@ int sparx5_mact_find(struct sparx5 *sparx5,
+ 	int ret;
+ 	u32 cfg2;
+ 
+-	mutex_lock(&sparx5->lock);
++	spin_lock(&sparx5->lock);
+ 
+ 	sparx5_mact_select(sparx5, mac, vid);
+ 
+@@ -212,7 +212,7 @@ int sparx5_mact_find(struct sparx5 *sparx5,
+ 			ret = -ENOENT;
+ 	}
+ 
+-	mutex_unlock(&sparx5->lock);
++	spin_unlock(&sparx5->lock);
+ 
+ 	return ret;
+ }
+@@ -222,7 +222,7 @@ int sparx5_mact_forget(struct sparx5 *sparx5,
+ {
+ 	int ret;
+ 
+-	mutex_lock(&sparx5->lock);
++	spin_lock(&sparx5->lock);
+ 
+ 	sparx5_mact_select(sparx5, mac, vid);
+ 
+@@ -233,7 +233,7 @@ int sparx5_mact_forget(struct sparx5 *sparx5,
+ 
+ 	ret = sparx5_mact_wait_for_completion(sparx5);
+ 
+-	mutex_unlock(&sparx5->lock);
++	spin_unlock(&sparx5->lock);
+ 
+ 	return ret;
+ }
+@@ -440,7 +440,7 @@ void sparx5_mact_pull_work(struct work_struct *work)
+ 	vid = 0;
+ 	memset(mac, 0, sizeof(mac));
+ 	do {
+-		mutex_lock(&sparx5->lock);
++		spin_lock(&sparx5->lock);
+ 		sparx5_mact_select(sparx5, mac, vid);
+ 		spx5_wr(LRN_SCAN_NEXT_CFG_SCAN_NEXT_UNTIL_FOUND_ENA_SET(1),
+ 			sparx5, LRN_SCAN_NEXT_CFG);
+@@ -451,7 +451,7 @@ void sparx5_mact_pull_work(struct work_struct *work)
+ 		ret = sparx5_mact_wait_for_completion(sparx5);
+ 		if (ret == 0)
+ 			ret = sparx5_mact_get(sparx5, mac, &vid, &cfg2);
+-		mutex_unlock(&sparx5->lock);
++		spin_unlock(&sparx5->lock);
+ 		if (ret == 0)
+ 			sparx5_mact_handle_entry(sparx5, mac, vid, cfg2);
+ 	} while (ret == 0);
+@@ -491,7 +491,7 @@ void sparx5_set_ageing(struct sparx5 *sparx5, int msecs)
+ 
+ void sparx5_mact_init(struct sparx5 *sparx5)
+ {
+-	mutex_init(&sparx5->lock);
++	spin_lock_init(&sparx5->lock);
+ 
+ 	/*  Flush MAC table */
+ 	spx5_wr(LRN_COMMON_ACCESS_CTRL_CPU_ACCESS_CMD_SET(MAC_CMD_CLEAR_ALL) |
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index 2f1b50ba8ad34..09d7002279812 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -373,7 +373,7 @@ struct sparx5 {
+ 	u32 features;
+ 	void __iomem *regs[NUM_TARGETS];
+ 	int port_count;
+-	struct mutex lock; /* MAC reg lock */
++	spinlock_t lock; /* MAC reg lock */
+ 	/* port structures are in net device */
+ 	struct sparx5_port *ports[SPX5_PORTS];
+ 	enum sparx5_core_clockfreq coreclock;

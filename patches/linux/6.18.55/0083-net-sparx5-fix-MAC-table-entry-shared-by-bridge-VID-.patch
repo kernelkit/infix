@@ -1,0 +1,156 @@
+From c0c446e79374a598604094798360c82f1e1649e7 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 8 Oct 2026 13:55:02 +0200
+Subject: [PATCH 83/85] net: sparx5: fix MAC table entry shared by bridge VID 0
+ and VID 1
+
+The MAC address of a bridge created with vlan_default_pvid 0 is
+missing from the MAC table, so unicast to the bridge IP address is
+flooded to the ports instead of reaching the CPU:
+
+  ip link add br0 address $mac type bridge vlan_default_pvid 0
+
+The bridge notifies its own address as a local FDB entry on VID 0 and
+on every VLAN of the bridge, VLAN 1 included until vlan_default_pvid
+0 removes it.  The driver maps VID 0 to UNAWARE_VID, so both entries
+are learned as the same MAC table entry, and the delete of the VLAN 1
+entry forgets it while the VID 0 entry is still in use.  Removing
+VLAN 1 from a bridge with the default PVID loses the entry the same
+way.
+
+Track the bridge VIDs using a locked MAC table entry and forget it
+only when the last one is deleted.
+
+Fixes: d6fce5141929 ("net: sparx5: add switching support")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/sparx5_mactable.c        | 35 +++++++++++++++++--
+ .../microchip/sparx5/sparx5_switchdev.c       | 15 ++------
+ 2 files changed, 36 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+index 57efab569805c..53e95aaad5e6a 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+@@ -39,8 +39,25 @@ struct sparx5_mact_entry {
+ #define MAC_ENT_LOCK	BIT(2)
+ 	u16 vid;
+ 	u16 port;
++	u8 refs; /* Bridge VIDs using a locked entry */
++#define MAC_ENT_REF_VID		BIT(0) /* The entry's own VID */
++#define MAC_ENT_REF_UNAWARE	BIT(1) /* Bridge VID 0, see UNAWARE_VID */
+ };
+ 
++/* Bridge VID 0 is mapped to UNAWARE_VID, to keep clear of the standalone
++ * ports on NULL_VID, so it shares the MAC table entry with that VID.
++ */
++static u16 sparx5_mact_bridge_vid(u16 vid, u8 *ref)
++{
++	if (vid == NULL_VID) {
++		*ref = MAC_ENT_REF_UNAWARE;
++		return UNAWARE_VID;
++	}
++
++	*ref = MAC_ENT_REF_VID;
++	return vid;
++}
++
+ static int sparx5_mact_get_status(struct sparx5 *sparx5)
+ {
+ 	return spx5_rd(sparx5, LRN_COMMON_ACCESS_CTRL);
+@@ -354,6 +371,13 @@ int sparx5_add_mact_entry(struct sparx5 *sparx5,
+ 	struct sparx5_mact_entry *mact_entry;
+ 	int ret;
+ 	u32 cfg2;
++	u8 ref;
++
++	vid = sparx5_mact_bridge_vid(vid, &ref);
++
++	mact_entry = find_mact_entry(sparx5, addr, vid, portno);
++	if (mact_entry && mact_entry->flags & MAC_ENT_LOCK)
++		mact_entry->refs |= ref;
+ 
+ 	ret = sparx5_mact_find(sparx5, addr, vid, &cfg2);
+ 	if (!ret)
+@@ -365,7 +389,6 @@ int sparx5_add_mact_entry(struct sparx5 *sparx5,
+ 	 * mact thread to start the frame will reach CPU and the CPU will
+ 	 * add the entry but without the extern_learn flag.
+ 	 */
+-	mact_entry = find_mact_entry(sparx5, addr, vid, portno);
+ 	if (mact_entry)
+ 		goto update_hw;
+ 
+@@ -386,6 +409,7 @@ int sparx5_add_mact_entry(struct sparx5 *sparx5,
+ 	/* New entry? */
+ 	if (mact_entry->flags == 0) {
+ 		mact_entry->flags |= MAC_ENT_LOCK; /* Don't age this */
++		mact_entry->refs = ref;
+ 		sparx5_fdb_call_notifiers(SWITCHDEV_FDB_ADD_TO_BRIDGE, addr, vid,
+ 					  dev, true);
+ 	}
+@@ -398,6 +422,9 @@ int sparx5_del_mact_entry(struct sparx5 *sparx5,
+ 			  u16 vid)
+ {
+ 	struct sparx5_mact_entry *mact_entry, *tmp;
++	u8 ref;
++
++	vid = sparx5_mact_bridge_vid(vid, &ref);
+ 
+ 	/* Delete the entry in SW MAC table not to get the notification when
+ 	 * SW is pulling again
+@@ -405,8 +432,12 @@ int sparx5_del_mact_entry(struct sparx5 *sparx5,
+ 	mutex_lock(&sparx5->mact_lock);
+ 	list_for_each_entry_safe(mact_entry, tmp, &sparx5->mact_entries,
+ 				 list) {
+-		if ((vid == 0 || mact_entry->vid == vid) &&
++		if (mact_entry->vid == vid &&
+ 		    ether_addr_equal(addr, mact_entry->mac)) {
++			mact_entry->refs &= ~ref;
++			if (mact_entry->refs)
++				continue;
++
+ 			sparx5_mact_forget(sparx5, addr, mact_entry->vid);
+ 
+ 			list_del(&mact_entry->list);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+index 1c81efd7fbbaa..973d3b0f26e74 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+@@ -329,7 +329,6 @@ static void sparx5_switchdev_bridge_fdb_event_work(struct work_struct *work)
+ 	struct sparx5_port *port;
+ 	struct sparx5 *sparx5;
+ 	bool host_addr;
+-	u16 vid;
+ 
+ 	rtnl_lock();
+ 	if (!sparx5_netdevice_check(dev)) {
+@@ -343,26 +342,18 @@ static void sparx5_switchdev_bridge_fdb_event_work(struct work_struct *work)
+ 
+ 	fdb_info = &switchdev_work->fdb_info;
+ 
+-	/* Used PVID 1 when default_pvid is 0, to avoid
+-	 * collision with non-bridged ports.
+-	 */
+-	if (fdb_info->vid == NULL_VID)
+-		vid = UNAWARE_VID;
+-	else
+-		vid = fdb_info->vid;
+-
+ 	switch (switchdev_work->event) {
+ 	case SWITCHDEV_FDB_ADD_TO_DEVICE:
+ 		if (host_addr)
+ 			sparx5_add_mact_entry(sparx5, dev,
+ 					      sparx5_get_pgid(sparx5, PGID_CPU),
+-					      fdb_info->addr, vid);
++					      fdb_info->addr, fdb_info->vid);
+ 		else
+ 			sparx5_add_mact_entry(sparx5, port->ndev, port->portno,
+-					      fdb_info->addr, vid);
++					      fdb_info->addr, fdb_info->vid);
+ 		break;
+ 	case SWITCHDEV_FDB_DEL_TO_DEVICE:
+-		sparx5_del_mact_entry(sparx5, fdb_info->addr, vid);
++		sparx5_del_mact_entry(sparx5, fdb_info->addr, fdb_info->vid);
+ 		break;
+ 	}
+ 

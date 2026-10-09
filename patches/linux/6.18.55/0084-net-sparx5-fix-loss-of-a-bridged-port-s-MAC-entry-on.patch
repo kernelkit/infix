@@ -1,0 +1,73 @@
+From 4e84ebd8221db517ac49f3b70b4caff94179ca55 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 8 Oct 2026 13:55:20 +0200
+Subject: [PATCH 84/85] net: sparx5: fix loss of a bridged port's MAC entry on
+ link down
+
+Taking a bridged port down forgets its MAC address on the bridge VID,
+and changing the address forgets the old one the same way.  When the
+bridge uses the address of that port, as it does by default with its
+first port, the bridge IP address is unreachable until the port comes
+up again:
+
+  ip link set eth0 down   # bridge MAC entry gone
+  ip link set eth0 up     # back again
+
+The driver learns the port address to the CPU on NETDEV_PRE_UP and
+forgets it on NETDEV_DOWN and on address change, at the port's current
+PVID.  For a standalone port that is its own VID, but once bridged the
+port shares the VID with the bridge, whose local FDB entries the driver
+already tracks.  The bridge keeps them when a port goes down and moves
+them when its address changes, so the driver must not touch them.
+
+Leave the MAC table alone on up, down and address change of a bridged
+port.
+
+Fixes: d6fce5141929 ("net: sparx5: add switching support")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../net/ethernet/microchip/sparx5/sparx5_netdev.c | 15 +++++++++------
+ .../ethernet/microchip/sparx5/sparx5_switchdev.c  |  4 ++++
+ 2 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+index 1d34af78166a3..e12b997a4aec8 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+@@ -193,12 +193,15 @@ static int sparx5_set_mac_address(struct net_device *dev, void *p)
+ 	if (!is_valid_ether_addr(addr->sa_data))
+ 		return -EADDRNOTAVAIL;
+ 
+-	/* Remove current */
+-	sparx5_mact_forget(sparx5, dev->dev_addr,  port->pvid);
+-
+-	/* Add new */
+-	sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_CPU),
+-			  addr->sa_data, port->pvid);
++	/* The bridge keeps the entries of its ports */
++	if (!test_bit(port->portno, sparx5->bridge_mask)) {
++		/* Remove current */
++		sparx5_mact_forget(sparx5, dev->dev_addr,  port->pvid);
++
++		/* Add new */
++		sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_CPU),
++				  addr->sa_data, port->pvid);
++	}
+ 
+ 	/* Record the address */
+ 	eth_hw_addr_set(dev, addr->sa_data);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+index 973d3b0f26e74..a9726944fafd3 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+@@ -276,6 +276,10 @@ static int sparx5_port_add_addr(struct net_device *dev, bool up)
+ 	struct sparx5 *sparx5 = port->sparx5;
+ 	u16 vid = port->pvid;
+ 
++	/* The bridge keeps the entries of its ports */
++	if (test_bit(port->portno, sparx5->bridge_mask))
++		return 0;
++
+ 	if (up)
+ 		sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_CPU),
+ 				  port->ndev->dev_addr, vid);

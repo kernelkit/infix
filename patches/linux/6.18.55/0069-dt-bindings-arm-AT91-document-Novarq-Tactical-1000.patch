@@ -1,7 +1,7 @@
 From 87bb123eb9add21c4ed4bce67313dcc37b367079 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Fri, 9 Jan 2026 13:27:00 +0100
-Subject: [PATCH 69/78] dt-bindings: arm: AT91: document Novarq Tactical 1000
+Subject: [PATCH 69/85] dt-bindings: arm: AT91: document Novarq Tactical 1000
 
 Novarq Tactical 1000 is a Microchip LAN9696 based 24x1G + 4x10G SFP switch.
 
@@ -12,7 +12,7 @@ Signed-off-by: Robert Marko <robert.marko@sartura.hr>
  1 file changed, 6 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/arm/atmel-at91.yaml b/Documentation/devicetree/bindings/arm/atmel-at91.yaml
-index 3a34b7a2e8d4..49666e92c04a 100644
+index 3a34b7a2e8d4e..49666e92c04a2 100644
 --- a/Documentation/devicetree/bindings/arm/atmel-at91.yaml
 +++ b/Documentation/devicetree/bindings/arm/atmel-at91.yaml
 @@ -241,6 +241,12 @@ properties:

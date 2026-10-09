@@ -38,6 +38,9 @@ All notable changes to the project are documented in this file.
   the keystore.  Its default route and DNS servers are used like those from
   a DHCP server, and the TCP MSS of forwarded connections is clamped to the
   session MTU, see [PPPoE Client][pppoe]
+- LAN969x boards ship `symreg`, which reads and writes switch registers by
+  name and dumps the MAC, VLAN and VCAP tables, for debugging the switch
+  core, see `board/aarch64/microchip-lan969x/README.md`
 
 ### Fixes
 
@@ -59,6 +62,31 @@ All notable changes to the project are documented in this file.
 - Fix #1423: the default route from a DHCPv6 client, learned from router
   advertisements, is now a static route with the DHCPv6 route preference,
   like a DHCPv4 route.  Before, the route preference setting was ignored
+- LAN969x: a port outside any bridge stopped receiving multicast, including
+  IPv6 neighbour discovery and mDNS, when another port outside a bridge went
+  down or joined a bridge.  The port looked dead on the LAN until it was
+  taken down and up again, which is how the Tactical 1000 management port
+  kept dropping out of the test rig
+- LAN969x: kernel BUG "scheduling while atomic" when a multicast address was
+  added to or removed from a port outside any bridge
+- LAN969x: the IP address of a bridge was unreachable from its ports, while
+  forwarding between the ports worked.  Broadcast from a bridge port never
+  reached the CPU, so ARP went unanswered, and the bridge's own MAC address
+  was missing from the switch MAC table, so unicast to the bridge was
+  flooded to the ports instead of delivered
+- LAN969x: disabling the first port of a bridge, whose MAC address the
+  bridge uses, cut the bridge IP address off until the port was enabled
+  again
+- LAN969x: taking down one port of a link aggregate stopped unicast to the
+  aggregate on the remaining ports, and removing the aggregate cut off the
+  port whose address it had used until that port was disabled and enabled
+  again
+- PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
+  kept dropping to the faulty state because the transmit timestamp arrived
+  later than the 10 ms the PTP daemon waited for it, or never at all
+- PTP now time stamps with the clock of the switch core when the kernel
+  would have picked a PHY's, so all ports of a switch share one clock, which
+  boundary and transparent clocks and TSN schedules depend on
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 

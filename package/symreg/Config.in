@@ -1,0 +1,10 @@
+config BR2_PACKAGE_SYMREG
+	bool "symreg - Microchip switch registers by name"
+	depends on BR2_aarch64
+	help
+	  Read and write Microchip LAN969x switch registers by symbolic
+	  name, and dump the MAC, VLAN, VCAP and stream tables, through
+	  the symreg debugfs driver.  Debug aid, root only.  Selected by
+	  the Laguna boards, see board/aarch64/microchip-lan969x/README.md
+
+	  https://github.com/microchip-ung/symreg-tool
