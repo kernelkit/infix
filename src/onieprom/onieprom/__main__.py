@@ -4,6 +4,8 @@ def main():
     import os
     import sys
 
+    from onieprom import into_tlv, from_tlv
+
     parser = argparse.ArgumentParser(prog='onieprom')
 
     parser.add_argument("infile", nargs="?", default=sys.stdin, type=argparse.FileType("rb", 0))
@@ -30,9 +32,15 @@ def main():
             sys.exit(1)
 
     if args.encode:
-        args.outfile.buffer.write(into_tlv(json.load(args.infile)))
+        out = getattr(args.outfile, "buffer", args.outfile)
+        out.write(into_tlv(json.load(args.infile)))
     else:
-        args.outfile.write(json.dumps(from_tlv(args.infile)))
+        out = args.outfile
+        data = json.dumps(from_tlv(args.infile))
+        if hasattr(out, "buffer"):
+            out.write(data)
+        else:
+            out.write(data.encode())
 
 if __name__ == "__main__":
     main()
