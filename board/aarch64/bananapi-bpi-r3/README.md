@@ -212,6 +212,36 @@ sync
 2. Set boot switches to eMMC mode (see image above)
 3. Power on
 
+## Giving the Board a Permanent MAC Address
+
+The BPI-R3 family has no EEPROM with a factory-programmed MAC address.
+Out of the box every Ethernet port therefore gets a random address on
+each boot, and the hostname, which is derived from the base address,
+changes with it.  Worse, both WiFi radios carry the same MediaTek
+default address on every board, so two boards cannot even connect to
+each other over WiFi: a client refuses to authenticate to an access
+point that has its own address.
+
+The eMMC image carries an empty `factory` partition for this purpose.
+Write a product record to it once, from the Infix shell, and the board
+keeps that identity across reboots and upgrades:
+
+```
+echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"Bananapi","product-name":"BPI-R3"}' \
+  | onieprom -e | dd of=/dev/disk/by-partlabel/factory
+```
+
+Give each board its own base address and serial number, then reboot.
+The base address becomes the hostname suffix, the wired ports get base
++ 1, base + 2, and so on in name order, and the WiFi interfaces get
+addresses derived from the base.  With the record above the board is
+named `bpi-ba-01-00`, `lan1` is `02:00:00:ba:01:02` and `wifi0` is
+`06:00:00:ba:01:00`.
+
+A locally administered address like `02:xx:xx:xx:xx:xx` is fine for a
+lab.  For boards that will share a network with other equipment, use a
+range you own.  See [Vital Product Data](../../../doc/vpd.md#factory-partition)
+for the record format and what else it can carry.
 
 ## Troubleshooting
 

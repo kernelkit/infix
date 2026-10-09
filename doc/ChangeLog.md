@@ -9,6 +9,9 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.56 (LTS)
+- Boards without a VPD EEPROM can be given a fixed identity, base MAC
+  included, by writing an ONIE TLV to a disk partition labelled `factory`,
+  see [VPD documentation](vpd.md#factory-partition)
 - WiFi 4-address (WDS) links for wireless bridges and repeaters: a station
   with `wds` enabled can be a bridge port, and an access point bridges
   each remote station through a `wds-link` interface, see
