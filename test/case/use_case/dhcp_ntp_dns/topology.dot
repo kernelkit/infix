@@ -1,4 +1,4 @@
-graph "dhcp_ntp_dns_combination" {
+graph "dhcp_ntp_dns" {
 	layout="neato";
 	overlap="false";
 	esep="+40";

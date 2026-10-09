@@ -31,7 +31,7 @@ managed via CLI, NETCONF, or RESTCONF.
 
 | **Symmetric Key Format**        | **Use Case**                          |
 |-----------------------------|-----------------------------------|
-| `passphrase-key-format`     | Human-readable passphrases (WiFi) |
+| `passphrase-key-format`     | Human-readable passphrases (WiFi, PPPoE) |
 | `octet-string-key-format`   | Raw symmetric keys (WireGuard)    |
 
 ## Asymmetric Keys

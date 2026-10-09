@@ -1,0 +1,10 @@
+#!/bin/sh
+# The session is gone, so are its route and DNS servers.
+#    ip-down IFNAME TTY SPEED LOCAL REMOTE IPPARAM
+
+rm -f "/etc/net.d/$1-ppp.conf"
+if [ -f "/run/resolvconf/interfaces/$1.conf" ]; then
+	rm -f "/run/resolvconf/interfaces/$1.conf"
+	resolvconf -u
+fi
+exit 0

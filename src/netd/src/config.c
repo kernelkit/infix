@@ -11,7 +11,7 @@
  */
 static int parse_route_section(cfg_t *cfg_route, struct route_head *head)
 {
-	const char *prefix_str, *nexthop_str;
+	const char *prefix_str, *nexthop_str, *ifname, *source;
 	char prefix_copy[128];
 	struct in6_addr a6;
 	struct in_addr a4;
@@ -21,6 +21,8 @@ static int parse_route_section(cfg_t *cfg_route, struct route_head *head)
 
 	prefix_str = cfg_getstr(cfg_route, "prefix");
 	nexthop_str = cfg_getstr(cfg_route, "nexthop");
+	ifname = cfg_getstr(cfg_route, "interface");
+	source = cfg_getstr(cfg_route, "source");
 	distance = cfg_getint(cfg_route, "distance");
 
 	if (!prefix_str || !nexthop_str) {
@@ -87,6 +89,28 @@ static int parse_route_section(cfg_t *cfg_route, struct route_head *head)
 		/* Treat as interface name */
 		r->nh_type = NH_IFNAME;
 		snprintf(r->ifname, sizeof(r->ifname), "%s", nexthop_str);
+	}
+
+	/* A link-local gateway is only reachable on a given interface */
+	if (r->nh_type == NH_ADDR && ifname)
+		snprintf(r->ifname, sizeof(r->ifname), "%s", ifname);
+
+	/* Source-specific (dst-src) route, IPv6 only */
+	if (source) {
+		snprintf(prefix_copy, sizeof(prefix_copy), "%s", source);
+		slash = strchr(prefix_copy, '/');
+		if (r->family != AF_INET6 || !slash) {
+			ERROR("Invalid route source: %s", source);
+			free(r);
+			return -1;
+		}
+		*slash = '\0';
+		r->srclen = (uint8_t)atoi(slash + 1);
+		if (inet_pton(AF_INET6, prefix_copy, &r->src) != 1) {
+			ERROR("Invalid route source: %s", source);
+			free(r);
+			return -1;
+		}
 	}
 
 	TAILQ_INSERT_TAIL(head, r, entries);
@@ -291,6 +315,8 @@ static int config_parse_file(const char *path, struct route_head *routes,
 	cfg_opt_t route_opts[] = {
 		CFG_STR("prefix", NULL, CFGF_NONE),
 		CFG_STR("nexthop", NULL, CFGF_NONE),
+		CFG_STR("interface", NULL, CFGF_NONE),
+		CFG_STR("source", NULL, CFGF_NONE),
 		CFG_INT("distance", 1, CFGF_NONE),
 		CFG_INT("tag", 0, CFGF_NONE),
 		CFG_END()

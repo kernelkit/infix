@@ -92,7 +92,7 @@ def main():
         yang_data = ietf_interfaces.operational(param)
     elif model == 'ietf-routing':
         from . import ietf_routing
-        yang_data = ietf_routing.operational()
+        yang_data = ietf_routing.operational(param)
     elif model == 'ietf-ospf':
         from . import ietf_ospf
         yang_data = ietf_ospf.operational()

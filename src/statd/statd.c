@@ -44,6 +44,7 @@
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
 #define XPATH_ROUTING_BASE "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"
 #define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
+#define XPATH_ROUTING_IFACES "/ietf-routing:routing/interfaces"
 #define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
 #define XPATH_SYSTEM_BASE "/ietf-system"
 #ifdef HAVE_FRR
@@ -238,6 +239,49 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
 		ERROR("Failed adding yanger data for %s", yanger_args[1]);
+
+	sr_release_context(con);
+
+	return err;
+}
+
+/*
+ * The routing tree has a subscription per part, a request is only sent
+ * to the ones it overlaps.  yanger produces the part subscribed to, so
+ * a request for all of it does not get any part twice.
+ */
+static int sr_routing_cb(sr_session_ctx_t *session, uint32_t, const char *model,
+			 const char *path, const char *xpath, uint32_t,
+			 struct lyd_node **parent, __attribute__((unused)) void *priv)
+{
+	char *yanger_args[5] = {
+		YANGER_BINPATH,
+		(char *)model,
+		"-p",
+		strrchr(path, '/') + 1,
+		NULL
+	};
+	const struct ly_ctx *ctx;
+	sr_conn_ctx_t *con;
+	sr_error_t err;
+
+	DEBUG("Incoming routing query for xpath: %s", xpath);
+
+	con = sr_session_get_connection(session);
+	if (!con) {
+		ERROR("Error getting sysrepo connection");
+		return SR_ERR_INTERNAL;
+	}
+
+	ctx = sr_acquire_context(con);
+	if (!ctx) {
+		ERROR("Failed acquiring sysrepo context");
+		return SR_ERR_INTERNAL;
+	}
+
+	err = ly_add_yanger_data(ctx, parent, yanger_args);
+	if (err)
+		ERROR("Failed adding yanger data for %s %s", model, yanger_args[3]);
 
 	sr_release_context(con);
 
@@ -440,7 +484,9 @@ static int subscribe_to_all(struct statd *statd)
 {
 	DEBUG("Attempting to subscribe to all");
 
-	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_TABLE, sr_generic_cb))
+	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_TABLE, sr_routing_cb))
+		return SR_ERR_INTERNAL;
+	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_IFACES, sr_routing_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_iface_cb))
 		return SR_ERR_INTERNAL;

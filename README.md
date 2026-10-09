@@ -1,6 +1,6 @@
 [![License Badge][]][License] [![Release Badge][]][Release] [![GitHub Status][]][GitHub] [![Discord][discord-badge]][discord-url]
 
-<img align="right" src="doc/logo.png" alt="Infix — Immutable.Friendly.Secure" width=380 padding=10>
+<img align="right" src="doc/logo.png" alt="Jacky, a penguin living in an RJ45 jack, next to the Infix logo: Immutable. Friendly. Secure." width=380 padding=10>
 
 Infix turns an ARM or x86 device into a managed network appliance.  The
 same OS runs on a $35 Raspberry Pi and on enterprise switching hardware,
