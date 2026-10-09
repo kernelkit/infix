@@ -1,7 +1,7 @@
 From 54ba118cc31f35998a57a2b12809037fc675ad61 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:15:43 +0200
-Subject: [PATCH 43/84] net: ethernet: mediatek: add USXGMII support for MT7988
+Subject: [PATCH 43/85] net: ethernet: mediatek: add USXGMII support for MT7988
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

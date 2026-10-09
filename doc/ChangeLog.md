@@ -77,6 +77,10 @@ All notable changes to the project are documented in this file.
 - LAN969x: disabling the first port of a bridge, whose MAC address the
   bridge uses, cut the bridge IP address off until the port was enabled
   again
+- LAN969x: taking down one port of a link aggregate stopped unicast to the
+  aggregate on the remaining ports, and removing the aggregate cut off the
+  port whose address it had used until that port was disabled and enabled
+  again
 - PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
   kept dropping to the faulty state because the transmit timestamp arrived
   later than the 10 ms the PTP daemon waited for it, or never at all

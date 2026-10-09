@@ -1,7 +1,7 @@
 From b390f0eaf27fd05c7a1436f3941964758b7a4fb4 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 2 Mar 2026 12:20:13 +0100
-Subject: [PATCH 73/84] dt-bindings: arm: AT91: document EV23X71A board
+Subject: [PATCH 73/85] dt-bindings: arm: AT91: document EV23X71A board
 
 Microchip EV23X71A board is an LAN9696 based evaluation board.
 

@@ -1,7 +1,7 @@
 From 98a492d3fa5e2472984335bfec5353b293677983 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 17 Feb 2026 21:59:59 +0100
-Subject: [PATCH 32/84] net: phy: air_en8811h: add OF device table for
+Subject: [PATCH 32/85] net: phy: air_en8811h: add OF device table for
  auto-loading
 
 mdio_uevent() only emits an OF-style MODALIAS via

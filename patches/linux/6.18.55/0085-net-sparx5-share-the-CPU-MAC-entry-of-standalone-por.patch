@@ -1,0 +1,274 @@
+From 6f9fc144c6b554f93092071f81b3f4ff7c35f998 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 9 Oct 2026 10:12:29 +0200
+Subject: [PATCH 85/85] net: sparx5: share the CPU MAC entry of standalone
+ ports with one address
+
+Taking one port of a LACP aggregate down stops unicast to the aggregate
+on the remaining ports, and deleting the aggregate leaves the port whose
+address the bond used unreachable until it is taken down and up again:
+
+  ip link add lag0 type bond mode 802.3ad
+  ip link set e6 master lag0      # bond and both ports now use e6's MAC
+  ip link set e8 master lag0
+  ip link set e6 down             # unicast to the bond MAC stops on e8
+  ip link del lag0                # e6 keeps its MAC, loses its CPU entry
+
+The bond sets the address of its first port on every port.  A standalone
+port learns its address to the CPU on NETDEV_PRE_UP and forgets it on
+NETDEV_DOWN and on address change, and with ports sharing an address
+the forget of one port removes the entry the others still use.  The
+multicast entries of standalone ports had the same problem, fixed in
+commit "net: sparx5: fix multicast delivery to the CPU on standalone
+ports" by sharing them through a reference-counted list.
+
+Keep the port addresses in that list as well.  A standalone port holds
+a reference on its address while up, drops it on down, on bridge join
+and on address change, and takes it back on bridge leave; the entry is
+forgotten with the last reference.
+
+Fixes: d6fce5141929 ("net: sparx5: add switching support")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ .../microchip/sparx5/sparx5_mactable.c        | 70 +++++++++++--------
+ .../ethernet/microchip/sparx5/sparx5_main.h   | 12 ++--
+ .../ethernet/microchip/sparx5/sparx5_netdev.c |  9 ++-
+ .../microchip/sparx5/sparx5_switchdev.c       | 12 ++--
+ 4 files changed, 60 insertions(+), 43 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+index 53e95aaad5e6a..61ac0ad7dc056 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
+@@ -133,54 +133,54 @@ int sparx5_mact_learn(struct sparx5 *sparx5, int pgid,
+ 	return ret;
+ }
+ 
+-/* Standalone ports share pvid, hence the CPU multicast MAC entry too */
+-struct sparx5_mc_cpu_entry {
++/* Standalone ports share pvid, hence their CPU MAC entries too */
++struct sparx5_cpu_entry {
+ 	struct list_head list;
+ 	unsigned char addr[ETH_ALEN];
+ 	u16 vid;
+ 	int refcnt;
+ };
+ 
+-static struct sparx5_mc_cpu_entry *
+-sparx5_mc_cpu_find(struct sparx5 *sparx5, const unsigned char *addr, u16 vid)
++static struct sparx5_cpu_entry *
++sparx5_cpu_entry_find(struct sparx5 *sparx5, const unsigned char *addr, u16 vid)
+ {
+-	struct sparx5_mc_cpu_entry *e;
++	struct sparx5_cpu_entry *e;
+ 
+-	list_for_each_entry(e, &sparx5->mc_cpu_entries, list)
++	list_for_each_entry(e, &sparx5->cpu_entries, list)
+ 		if (e->vid == vid && ether_addr_equal(e->addr, addr))
+ 			return e;
+ 
+ 	return NULL;
+ }
+ 
+-int sparx5_mc_unsync(struct net_device *dev, const unsigned char *addr)
++/* Forget the CPU entry of addr on vid when its last user is gone */
++int sparx5_cpu_entry_put(struct sparx5 *sparx5, const unsigned char *addr,
++			 u16 vid)
+ {
+-	struct sparx5_port *port = netdev_priv(dev);
+-	struct sparx5 *sparx5 = port->sparx5;
+-	struct sparx5_mc_cpu_entry *e;
++	struct sparx5_cpu_entry *e;
+ 	int ret = 0;
+ 
+-	spin_lock(&sparx5->mc_cpu_lock);
+-	e = sparx5_mc_cpu_find(sparx5, addr, port->pvid);
++	spin_lock(&sparx5->cpu_lock);
++	e = sparx5_cpu_entry_find(sparx5, addr, vid);
+ 	if (e && --e->refcnt == 0) {
+ 		list_del(&e->list);
+ 		kfree(e);
+-		ret = sparx5_mact_forget(sparx5, addr, port->pvid);
++		ret = sparx5_mact_forget(sparx5, addr, vid);
+ 	}
+-	spin_unlock(&sparx5->mc_cpu_lock);
++	spin_unlock(&sparx5->cpu_lock);
+ 
+ 	return ret;
+ }
+ 
+-int sparx5_mc_sync(struct net_device *dev, const unsigned char *addr)
++/* Learn addr on vid to the CPU for its first user */
++int sparx5_cpu_entry_get(struct sparx5 *sparx5, const unsigned char *addr,
++			 u16 vid)
+ {
+-	struct sparx5_port *port = netdev_priv(dev);
+-	struct sparx5 *sparx5 = port->sparx5;
+-	struct sparx5_mc_cpu_entry *e;
++	struct sparx5_cpu_entry *e;
+ 	int ret = 0;
+ 
+-	spin_lock(&sparx5->mc_cpu_lock);
+-	e = sparx5_mc_cpu_find(sparx5, addr, port->pvid);
++	spin_lock(&sparx5->cpu_lock);
++	e = sparx5_cpu_entry_find(sparx5, addr, vid);
+ 	if (!e) {
+ 		e = kmalloc(sizeof(*e), GFP_ATOMIC);
+ 		if (!e) {
+@@ -190,24 +190,38 @@ int sparx5_mc_sync(struct net_device *dev, const unsigned char *addr)
+ 
+ 		ret = sparx5_mact_learn(sparx5,
+ 					sparx5_get_pgid(sparx5, PGID_CPU),
+-					addr, port->pvid);
++					addr, vid);
+ 		if (ret) {
+ 			kfree(e);
+ 			goto out;
+ 		}
+ 
+ 		ether_addr_copy(e->addr, addr);
+-		e->vid = port->pvid;
++		e->vid = vid;
+ 		e->refcnt = 0;
+-		list_add_tail(&e->list, &sparx5->mc_cpu_entries);
++		list_add_tail(&e->list, &sparx5->cpu_entries);
+ 	}
+ 	e->refcnt++;
+ out:
+-	spin_unlock(&sparx5->mc_cpu_lock);
++	spin_unlock(&sparx5->cpu_lock);
+ 
+ 	return ret;
+ }
+ 
++int sparx5_mc_unsync(struct net_device *dev, const unsigned char *addr)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++
++	return sparx5_cpu_entry_put(port->sparx5, addr, port->pvid);
++}
++
++int sparx5_mc_sync(struct net_device *dev, const unsigned char *addr)
++{
++	struct sparx5_port *port = netdev_priv(dev);
++
++	return sparx5_cpu_entry_get(port->sparx5, addr, port->pvid);
++}
++
+ static int sparx5_mact_get(struct sparx5 *sparx5,
+ 			   unsigned char mac[ETH_ALEN],
+ 			   u16 *vid, u32 *pcfg2)
+@@ -581,8 +595,8 @@ void sparx5_set_ageing(struct sparx5 *sparx5, int msecs)
+ void sparx5_mact_init(struct sparx5 *sparx5)
+ {
+ 	spin_lock_init(&sparx5->lock);
+-	spin_lock_init(&sparx5->mc_cpu_lock);
+-	INIT_LIST_HEAD(&sparx5->mc_cpu_entries);
++	spin_lock_init(&sparx5->cpu_lock);
++	INIT_LIST_HEAD(&sparx5->cpu_entries);
+ 
+ 	/*  Flush MAC table */
+ 	spx5_wr(LRN_COMMON_ACCESS_CTRL_CPU_ACCESS_CMD_SET(MAC_CMD_CLEAR_ALL) |
+@@ -597,9 +611,9 @@ void sparx5_mact_init(struct sparx5 *sparx5)
+ 
+ void sparx5_mact_deinit(struct sparx5 *sparx5)
+ {
+-	struct sparx5_mc_cpu_entry *e, *tmp;
++	struct sparx5_cpu_entry *e, *tmp;
+ 
+-	list_for_each_entry_safe(e, tmp, &sparx5->mc_cpu_entries, list) {
++	list_for_each_entry_safe(e, tmp, &sparx5->cpu_entries, list) {
+ 		list_del(&e->list);
+ 		kfree(e);
+ 	}
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+index 54103e8b091f7..a0e1a768e692a 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
+@@ -408,10 +408,10 @@ struct sparx5 {
+ 	struct list_head mdb_entries;
+ 	/* mdb list mutex */
+ 	struct mutex mdb_lock;
+-	/* CPU multicast entries, shared by the standalone ports */
+-	struct list_head mc_cpu_entries;
+-	/* mc_cpu_entries lock */
+-	spinlock_t mc_cpu_lock;
++	/* CPU entries, shared by the standalone ports */
++	struct list_head cpu_entries;
++	/* cpu_entries lock */
++	spinlock_t cpu_lock;
+ 	struct delayed_work mact_work;
+ 	struct workqueue_struct *mact_queue;
+ 	/* Board specifics */
+@@ -491,6 +491,10 @@ int sparx5_add_mact_entry(struct sparx5 *sparx5,
+ int sparx5_del_mact_entry(struct sparx5 *sparx5,
+ 			  const unsigned char *addr,
+ 			  u16 vid);
++int sparx5_cpu_entry_get(struct sparx5 *sparx5, const unsigned char *addr,
++			 u16 vid);
++int sparx5_cpu_entry_put(struct sparx5 *sparx5, const unsigned char *addr,
++			 u16 vid);
+ int sparx5_mc_sync(struct net_device *dev, const unsigned char *addr);
+ int sparx5_mc_unsync(struct net_device *dev, const unsigned char *addr);
+ void sparx5_set_ageing(struct sparx5 *sparx5, int msecs);
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+index e12b997a4aec8..b6dbbf1e994c2 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_netdev.c
+@@ -193,14 +193,13 @@ static int sparx5_set_mac_address(struct net_device *dev, void *p)
+ 	if (!is_valid_ether_addr(addr->sa_data))
+ 		return -EADDRNOTAVAIL;
+ 
+-	/* The bridge keeps the entries of its ports */
+-	if (!test_bit(port->portno, sparx5->bridge_mask)) {
++	/* The bridge keeps the entries of its ports, a port that is down has none */
++	if (!test_bit(port->portno, sparx5->bridge_mask) && netif_running(dev)) {
+ 		/* Remove current */
+-		sparx5_mact_forget(sparx5, dev->dev_addr,  port->pvid);
++		sparx5_cpu_entry_put(sparx5, dev->dev_addr, port->pvid);
+ 
+ 		/* Add new */
+-		sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_CPU),
+-				  addr->sa_data, port->pvid);
++		sparx5_cpu_entry_get(sparx5, addr->sa_data, port->pvid);
+ 	}
+ 
+ 	/* Record the address */
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+index a9726944fafd3..15cbc5ba28428 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_switchdev.c
+@@ -199,7 +199,8 @@ static int sparx5_port_bridge_join(struct sparx5_port *port,
+ 		goto err_switchdev_offload;
+ 
+ 	/* Remove standalone port entry */
+-	sparx5_mact_forget(sparx5, ndev->dev_addr, 0);
++	if (netif_running(ndev))
++		sparx5_cpu_entry_put(sparx5, ndev->dev_addr, NULL_VID);
+ 
+ 	/* Port enters in bridge mode therefore don't need to copy to CPU
+ 	 * frames for multicast in case the bridge is not requesting them
+@@ -236,8 +237,8 @@ static void sparx5_port_bridge_leave(struct sparx5_port *port,
+ 	port->vid = NULL_VID;
+ 
+ 	/* Forward frames to CPU */
+-	sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_CPU),
+-			  port->ndev->dev_addr, 0);
++	if (netif_running(port->ndev))
++		sparx5_cpu_entry_get(sparx5, port->ndev->dev_addr, NULL_VID);
+ 
+ 	/* Port enters in host more therefore restore mc list */
+ 	__dev_mc_sync(port->ndev, sparx5_mc_sync, sparx5_mc_unsync);
+@@ -281,10 +282,9 @@ static int sparx5_port_add_addr(struct net_device *dev, bool up)
+ 		return 0;
+ 
+ 	if (up)
+-		sparx5_mact_learn(sparx5, sparx5_get_pgid(sparx5, PGID_CPU),
+-				  port->ndev->dev_addr, vid);
++		sparx5_cpu_entry_get(sparx5, port->ndev->dev_addr, vid);
+ 	else
+-		sparx5_mact_forget(sparx5, port->ndev->dev_addr, vid);
++		sparx5_cpu_entry_put(sparx5, port->ndev->dev_addr, vid);
+ 
+ 	return 0;
+ }

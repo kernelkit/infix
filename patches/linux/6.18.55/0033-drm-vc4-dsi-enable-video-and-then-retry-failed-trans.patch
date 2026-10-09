@@ -1,7 +1,7 @@
 From fe79facb35cd0c40ad8ad042680666351196cb22 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Fri, 20 Sep 2024 12:05:18 +0100
-Subject: [PATCH 33/84] drm: vc4: dsi: enable video and then retry failed
+Subject: [PATCH 33/85] drm: vc4: dsi: enable video and then retry failed
  transfers
 
 The DSI block appears to be able to come up stuck in a condition where

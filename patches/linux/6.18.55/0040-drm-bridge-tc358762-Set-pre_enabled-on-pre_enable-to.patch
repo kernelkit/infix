@@ -1,7 +1,7 @@
 From 0a1c5fc25afd628b5547348a4a65b1764f53f287 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Sat, 4 Apr 2026 18:04:19 +0200
-Subject: [PATCH 40/84] drm/bridge: tc358762: Set pre_enabled on pre_enable to
+Subject: [PATCH 40/85] drm/bridge: tc358762: Set pre_enabled on pre_enable to
  prevent regulator imbalance
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
