@@ -121,7 +121,7 @@ gen_factory_cfg
 log "Starting up, calling gen_failure_cfg()"
 gen_failure_cfg
 
-if [ -f "/mnt/aux/test-mode" ]; then
+if [ -f "@MARKER_DIR@/test-mode" ]; then
     gen_test_cfg
 fi
 

@@ -1,54 +1,64 @@
 #!/bin/sh
 
-# This script injects a "test-mode" file into a copy of the main disk image. 
-# It begins by parsing the partition table of the disk image to identify the
-# 'aux' partition, which is then extracted. An empty 'test-mode' file is 
-# injected into the extracted partition, and the modified partition is written
-# back to the output image. The output image can subsequently be used as a 
-# backing image for Copy-on-Write (QCOW) images utilized by Qeneth.
+# This script injects a "test-mode" file into a copy of the main disk
+# image.  It begins by parsing the partition table of the disk image
+# to identify either the 'aux' or 'esp' partition, which is then
+# extracted. An empty 'test-mode' file is injected into the extracted
+# partition, and the modified partition is written back to the output
+# image. The output image can subsequently be used as a backing image
+# for Copy-on-Write (QCOW) images utilized by Qeneth.
 
 set -e
 
-while getopts "b:o:" opt; do
-  case $opt in
-    b) base_img="$OPTARG" ;;  # Base image (Original image)
-    o) output_img="$OPTARG" ;;  # Output image (Backing image for QCoW images)
-    *) echo "Usage: $0 -b <BASE-IMAGE> -o <OUTPUT-IMAGE>" ; exit 1 ;;
-  esac
-done
+die()
+{
+    echo "ERROR: $*" >&2
+    exit 1
+}
 
-if [ -z "$base_img" ] || [ -z "$output_img" ]; then
-  echo "Both -b (base image) and -o (output image) parameters are required."
-  exit 1
-fi
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT INT TERM
 
-rm -f "$output_img"
-if ! cp "$base_img" "$output_img"; then
-  echo "Error: Failed to copy $base_img to $output_img"
-  exit 1
-fi
 
-if ! part_table=$(fdisk -l "$output_img" 2>/dev/null); then
-  echo "Error: Failed to read partition table from $output_img"
-  exit 1
-fi
+baseimg="$1"
+testimg="$2"
 
-aux_line=$(echo "$part_table" | grep 'aux')
-if [ -z "$aux_line" ]; then
-  echo "Error: 'aux' partition not found in $output_img"
-  exit 1
-fi
+basegpt="$workdir"/basegpt.json
+sfdisk -J "$baseimg" >"$basegpt"
 
-start=$(echo "$aux_line" | awk '{print $2}')
-end=$(echo "$aux_line" | awk '{print $3}')
-count=$(($end - $start + 1))
-block_size=$(echo "$part_table" | grep "Logical sector size" | awk '{print $4}')
+lbsize=$(jq -r .partitiontable.sectorsize $basegpt)
 
-dd if="$output_img" of="tmpaux" skip="$start" count="$count" bs="$block_size" status=none
+jq -r '.partitiontable.partitions[]
+		| select(.name == "aux" or .name == "esp")
+		| "\(.name) \(.start) \(.size)"' $basegpt | {
+    read part start size
 
-touch tmp-empty-file
-e2cp tmp-empty-file tmpaux:/test-mode
-rm tmp-empty-file
+    [ "$part" ] || die "Disk must contain either aux or esp partition"
 
-dd of="$output_img" if="tmpaux" seek="$start" count="$count" bs="$block_size" status=none conv=notrunc
-rm tmpaux
+
+    dd status=none \
+       if="$baseimg" \
+       bs=$lbsize skip=$start count=$size \
+       of="$workdir"/markerpart \
+	|| die "Unable to extract marker partition"
+
+    touch "$workdir"/empty
+
+    case "$part" in
+	aux)
+	    e2cp "$workdir"/empty "$workdir"/markerpart:/test-mode \
+		 || die "Unable to inject test-mode in aux"
+	    ;;
+	esp)
+	    mcopy -i "$workdir"/markerpart "$workdir"/empty ::/test-mode \
+		|| die "Unable to inject test-mode in esp"
+	    ;;
+    esac
+
+    cp -f "$baseimg" "$testimg" || die "Unable to create $testimg"
+    dd status=none conv=notrunc \
+       if="$workdir"/markerpart \
+       bs=$lbsize seek=$start count=$size \
+       of="$testimg" \
+       || die "Unable to inject markerpartition in $testimg"
+}

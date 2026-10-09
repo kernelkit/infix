@@ -22,25 +22,6 @@ err=0
 mmc=""
 opt="-k"
 
-# External button or bootloader changed kernel command line
-check_factory()
-{
-    if [ -f /mnt/cfg/infix/.reset ]; then
-	return 0;
-    fi
-
-    if grep -q 'finit.cond=factory-reset' /proc/cmdline; then
-	return 0;
-    fi
-
-    # Add to your br2-external to extend factory-reset check
-    if [ ! -x /usr/libexec/infix/check-factory ]; then
-	return 1;
-    fi
-
-    /usr/libexec/infix/check-factory
-}
-
 factory_reset()
 {
     find /sys/class/leds/ -type l -exec sh -c 'echo 100 > $0/brightness' {} \;
@@ -393,7 +374,7 @@ if ! mount_rw cfg >/dev/null 2>&1; then
     vlibsrc=
 fi
 
-if check_factory; then
+if factory --check-clear; then
     factory_reset
 fi
 

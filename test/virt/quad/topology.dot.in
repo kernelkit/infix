@@ -24,7 +24,7 @@ graph "quad" {
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut1 | { <e5> e5 | <e6> e6 | <e7> e7 | <e8> e8 } | { <radio0> radio0 | <radio1> radio1 | <radio2> radio2 | <radio3> radio3 }",
 	    pos="10,30!",
 	    provides="infix watchdog gps",
-	    expected_boot="primary",
+	    expected_boot="internal-primary",
 	    qn_console=9001,
 	    qn_mem="384M",
 	    qn_usb="dut1.usb",
@@ -40,7 +40,7 @@ graph "quad" {
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut2 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8 } | { <radio0> radio0 | <radio1> radio1 | <radio2> radio2 }",
 	    pos="0,20!",
 	    provides="infix watchdog",
-	    expected_boot="primary",
+	    expected_boot="internal-primary",
 	    qn_console=9002,
 	    qn_mem="384M",
 	    qn_usb="dut2.usb"
@@ -49,7 +49,7 @@ graph "quad" {
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut3 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8 } | { <radio0> radio0 | <radio1> radio1 }",
 	    pos="0,10!",
 	    provides="infix watchdog",
-	    expected_boot="primary",
+	    expected_boot="internal-primary",
 	    qn_console=9003,
 	    qn_mem="384M",
 	    qn_usb="dut3.usb"
@@ -59,7 +59,7 @@ graph "quad" {
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut4 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8 } | { <radio0> radio0 | <radio1> radio1 }",
 	    pos="10,0!",
 	    provides="infix watchdog",
-	    expected_boot="primary",
+	    expected_boot="internal-primary",
 	    qn_console=9004,
 	    qn_mem="384M",
 	    qn_usb="dut4.usb"

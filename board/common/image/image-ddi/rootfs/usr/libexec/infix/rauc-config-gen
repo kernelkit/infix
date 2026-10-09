@@ -1,0 +1,87 @@
+#!/bin/sh
+
+. /etc/os-release
+
+{
+    cat <<EOF
+[system]
+compatible=${IMAGE_ID}
+bootloader=barebox
+data-directory=/var/lib/rauc
+mountprefix=/var/lib/rauc/mnt
+bundle-formats=-plain
+max-bundle-download-size=1073741824
+
+[keyring]
+directory=/etc/rauc/keys
+
+[log.event-log]
+filename=/var/log/upgrade-json.log
+format=json-pretty
+max-size=1M
+max-files=5
+EOF
+
+    [ -b /dev/internal/primary ] && cat <<EOF
+
+[slot.rootfs.0]
+device=/dev/internal/primary
+bootname=internal-primary
+EOF
+    [ -b /dev/internal/secondary ] && cat <<EOF
+
+[slot.rootfs.1]
+device=/dev/internal/secondary
+bootname=internal-secondary
+EOF
+
+    cat <<EOF
+
+[slot.net.0]
+device=/dev/mapper/root
+bootname=net
+EOF
+} >/etc/rauc/system.conf
+
+mkdir -p /var/lib/rauc
+
+[ -f /var/lib/rauc/central.raucs ] && exit
+
+unixepoch=$(date -d1970-01-01 -u +%FT%TZ)
+
+{
+    cat <<EOF
+0 /dev/internal/primary   /dev/mapper/internal-primary-part1
+1 /dev/internal/secondary /dev/mapper/internal-secondary-part1
+EOF
+} | while read idx ddi squash; do
+    [ -b $ddi ] && [ -b $squash ] || continue
+
+    # This is informational only, we extract it from unverified
+    # squashes - so we parse out the info with awk rather than
+    # sourcing it.
+    compat=$(unsquashfs -cat $squash /etc/os-release \
+		 | awk -F\" '/^IMAGE_ID=/ { print($2); }')
+    [ "$compat" ] || continue
+
+    version=$(unsquashfs -cat $squash /etc/os-release \
+		 | awk -F\" '/^BUILD_ID=/ { print($2); }')
+    [ "$version" ] || continue
+
+    sha=$(sha256sum $ddi | cut -d" " -f1)
+    size=$(stat -c %s $ddi)
+
+    cat <<EOF
+[slot.rootfs.${idx}]
+bundle.compatible=${compat}
+bundle.version=${version}
+status=ok
+sha256=${sha}
+size=${size}
+installed.timestamp=$unixepoch
+installed.count=1
+activated.timestamp=$unixepoch
+activated.count=1
+EOF
+done >/var/lib/rauc/central.raucs
+
