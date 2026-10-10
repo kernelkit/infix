@@ -1,4 +1,18 @@
 / {
+	/*
+	 * U-Boot writes its ethaddr, which it generates at random on
+	 * every boot, into the node behind the ethernet0 alias.  The
+	 * kernel then reports that port, and every switch port that
+	 * inherits from it, as having a permanent hardware address.
+	 * Drop the aliases so the ports come up with a random address
+	 * instead, which init.d/22-macaddr replaces with a chassis-
+	 * derived one when a product VPD is present.
+	 */
+	aliases {
+		/delete-property/ ethernet0;
+		/delete-property/ ethernet1;
+	};
+
 	chosen {
 		infix {
 			/* Default admin user password: 'admin' */
