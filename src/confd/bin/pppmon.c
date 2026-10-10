@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <net/if.h>
 #include <linux/if_link.h>
 #include <linux/netlink.h>
 #include <linux/ppp-ioctl.h>
@@ -181,6 +182,12 @@ int main(int argc, char *argv[])
 
 	ifname = argv[optind];
 	openlog("pppmon", LOG_PID | LOG_PERROR, LOG_DAEMON);
+
+	/* Same limit as the kernel, also bounds the netlink request */
+	if (strlen(ifname) >= IFNAMSIZ) {
+		syslog(LOG_ERR, "interface name too long, max %d chars", IFNAMSIZ - 1);
+		return 1;
+	}
 
 	fd = open("/dev/ppp", O_RDWR);
 	if (fd < 0) {
