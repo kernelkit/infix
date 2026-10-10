@@ -156,22 +156,25 @@ static int ppp_gen_settings(struct lyd_node *cif)
 	return 0;
 }
 
-/* Replace file with file+ if they differ, returns 1 if it did */
+/* Replace file with file+ if they differ: 1 if replaced, 0 if not, -1 on error */
 static int ppp_update(const char *fmt, const char *ifname)
 {
 	char path[256], next[260];
-	int changed;
 
 	snprintf(path, sizeof(path), fmt, ifname);
 	snprintf(next, sizeof(next), "%s+", path);
 
-	changed = systemf("cmp -s %s %s", path, next) != 0;
-	if (changed)
-		rename(next, path);
-	else
-		remove(next);
+	if (!systemf("cmp -s %s %s", path, next)) {
+		(void)remove(next);
+		return 0;
+	}
 
-	return changed;
+	if (rename(next, path)) {
+		ERRNO("%s: failed replacing %s", ifname, path);
+		return -1;
+	}
+
+	return 1;
 }
 
 /*
@@ -224,8 +227,11 @@ int ppp_gen(sr_session_ctx_t *session, struct lyd_node *dif, struct lyd_node *ci
 		return err;
 
 	/* Finit restarts pppd on its own when the env file changes */
-	ppp_update(PPP_SETTINGS, ifname);
+	if (ppp_update(PPP_SETTINGS, ifname) < 0)
+		return -EIO;
 	restart = ppp_update(PPP_PEERS, ifname);
+	if (restart < 0)
+		return -EIO;
 
 	if (lydx_is_enabled(cif, "enabled")) {
 		finit_enablef("pppd@%s", ifname);
