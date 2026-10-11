@@ -1,0 +1,39 @@
+=== Cellular Modem Basic Configuration
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/modem/basic]
+
+==== Description
+
+Verify that a cellular modem can be configured without any modem
+hardware present: a modem and a SIM hardware component, and a wwan
+interface with a data bearer referencing them.
+
+With no modem attached, the wwan interface is created as a placeholder
+once the modem's probe-timeout has expired, so that IP configuration
+on top of it can proceed.  The placeholder is removed again when the
+interface is removed from the configuration.
+
+The test also verifies that a wwan interface cannot reference a hardware
+component of the wrong class, e.g., a SIM card in place of a modem, by
+sending the same interface twice: first with the SIM as its modem, which
+must be rejected, then with the modem, which must be accepted.
+
+This test does not exercise a modem, only the configuration model and
+how it is applied.
+
+==== Topology
+
+image::topology.svg[Cellular Modem Basic Configuration topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure modem and SIM hardware components
+. Configure wwan0 with a data bearer on modem0 and sim0
+. Verify wwan0 exists as a modem interface
+. Verify a wwan interface cannot use a SIM as modem
+. Verify the same wwan interface is accepted on modem0
+. Remove wwan0 and wwan1, verify the interfaces are gone
+. Remove modem and SIM hardware components
+
+

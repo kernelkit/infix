@@ -1,0 +1,8 @@
+:testgroup:
+== Cellular Modem
+
+Tests verifying cellular modem (WWAN) configuration:
+
+ - Modem and SIM hardware components, wwan interface and data bearer
+
+include::basic/Readme.adoc[]
