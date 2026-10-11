@@ -1,0 +1,31 @@
+From f5f7599f8af9db56b09f26d22b20ee75defe1717 Mon Sep 17 00:00:00 2001
+From: Robert Marko <robert.marko@sartura.hr>
+Date: Fri, 9 Jan 2026 13:27:00 +0100
+Subject: [PATCH 69/80] dt-bindings: arm: AT91: document Novarq Tactical 1000
+Organization: Wires
+
+Novarq Tactical 1000 is a Microchip LAN9696 based 24x1G + 4x10G SFP switch.
+
+Signed-off-by: Robert Marko <robert.marko@sartura.hr>
+(cherry picked from commit 69b6f0b134664fcf39d7b94bbb4a689ef0af2c5d)
+---
+ Documentation/devicetree/bindings/arm/atmel-at91.yaml | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/atmel-at91.yaml b/Documentation/devicetree/bindings/arm/atmel-at91.yaml
+index 3a34b7a2e8d4..49666e92c04a 100644
+--- a/Documentation/devicetree/bindings/arm/atmel-at91.yaml
++++ b/Documentation/devicetree/bindings/arm/atmel-at91.yaml
+@@ -241,6 +241,12 @@ properties:
+           - const: microchip,lan9668
+           - const: microchip,lan966
+ 
++      - description: Novarq Tactical 1000
++        items:
++          - const: novarq,tactical-1000
++          - const: microchip,lan9696
++          - const: microchip,lan9691
++
+       - description: Kontron KSwitch D10 MMT series
+         items:
+           - enum:
