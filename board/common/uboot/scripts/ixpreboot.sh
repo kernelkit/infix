@@ -34,7 +34,7 @@ for tgt in "${boot_targets}"; do
 
 	if load ${devtype} ${devnum}:${auxpart} ${loadaddr} /uboot.env; then
 	    env import -c ${loadaddr} ${filesize} BOOT_ORDER DEBUG ethact BOARD_VARIANT
-	    run ixvariant
+	    test -n "${ixvariant}" && run ixvariant
 	fi
 
 	if test -n "${DEBUG}"; then
