@@ -1,0 +1,21 @@
+/ {
+	config {
+		environment {
+			boot_targets = "mmc1";
+			fdtfile = "spacemit/k1-bananapi-f3.dtb";
+
+			/* The K1 board code sets no load addresses.  DRAM
+			 * starts at 0, keep it all in the first GiB with
+			 * the squashfs, loaded whole, last */
+			kernel_addr_r = "0x10000000";
+			fdt_addr_r = "0x14000000";
+			scriptaddr = "0x14100000";
+			pxefile_addr_r = "0x14200000";
+			ramdisk_addr_r = "0x20000000";
+
+			/* This is a development platform, hard code developer mode */
+			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+			ixbtn-factory = "echo \"No button available, use bootmenu\"";
+		};
+	};
+};

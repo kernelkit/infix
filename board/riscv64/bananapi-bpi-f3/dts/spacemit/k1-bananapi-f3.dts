@@ -1,0 +1,19 @@
+#include <riscv/spacemit/k1-bananapi-f3.dts>
+#include "infix.dtsi"
+
+/*
+ * UHS needs the pinctrl driver to switch the SD pads' IO power domain
+ * to 1.8V, which 6.18 does not do.  Stay at 3.3V signalling until a
+ * kernel that does.
+ */
+&sdhci0 {
+	no-1-8-v;
+};
+
+/*
+ * The 6.18 PDMA driver hangs the boot in probe on this board, and no
+ * peripheral uses DMA yet.
+ */
+&pdma {
+	status = "disabled";
+};

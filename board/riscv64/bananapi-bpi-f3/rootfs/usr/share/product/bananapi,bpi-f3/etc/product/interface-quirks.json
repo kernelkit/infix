@@ -1,0 +1,6 @@
+{
+    "@ethtool:driver=k1_emac": {
+	"comment": "The PHY is only attached while the interface is up",
+	"phy-detached-when-down": true
+    }
+}

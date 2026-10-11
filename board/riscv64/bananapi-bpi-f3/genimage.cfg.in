@@ -1,0 +1,92 @@
+image cfg.ext4 {
+	empty = true
+	temporary = true
+	size = 16M
+
+	ext4 {
+		label = "cfg"
+		use-mke2fs = true
+		features = "uninit_bg"
+		extraargs = "-m 0 -i 4096"
+	}
+}
+
+# The /var partition will be expanded automatically at first boot
+# to use the full size of the SD-card or eMMC media.
+image var.ext4 {
+	empty = true
+	temporary = true
+	size = 128M
+
+	ext4 {
+		label = "var"
+		use-mke2fs = true
+		features = "uninit_bg"
+		extraargs = "-m 0 -i 4096"
+	}
+}
+
+image #IX_ID##VERSION#-bpi-f3-sdcard.img {
+	hdimage {
+		partition-table-type = "gpt"
+	}
+
+	partition bootinfo {
+		in-partition-table = false
+		offset = 0
+		image = "bootinfo_sd.bin"
+	}
+
+	partition fsbl {
+		offset = 128K
+		size = 256K
+		image = "FSBL.bin"
+	}
+
+	# Read by the vendor FSBL, left empty for its built-in defaults
+	partition env {
+		offset = 384K
+		size = 64K
+	}
+
+	partition opensbi {
+		offset = 1M
+		size = 1M
+		image = "fw_dynamic.itb"
+	}
+
+	partition uboot {
+		offset = 2M
+		size = 2M
+		image = "u-boot.itb"
+	}
+
+	partition aux {
+		partition-uuid = D4EF35A0-0652-45A1-B3DE-D63339C82035
+		image = "aux.ext4"
+	}
+
+	partition primary {
+		partition-type-uuid = linux
+		bootable = true
+		size = 250M
+		image = "rootfs.squashfs"
+	}
+
+	partition secondary {
+		partition-type-uuid = linux
+		bootable = true
+		size = 250M
+		image = "rootfs.squashfs"
+	}
+
+	partition cfg {
+		partition-uuid = 7aa497f0-73b5-47e5-b2ab-8752d8a48105
+		image = "cfg.ext4"
+	}
+
+	partition var {
+		partition-uuid = 8046A06A-E45A-4A14-A6AD-6684704A393F
+		image = "var.ext4"
+	}
+}
