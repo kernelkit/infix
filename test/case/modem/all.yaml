@@ -1,0 +1,3 @@
+---
+- name: Cellular Modem Basic Configuration
+  case: basic/test.py
