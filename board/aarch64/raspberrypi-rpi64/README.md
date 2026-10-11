@@ -118,19 +118,19 @@ Then configure the WiFi interface using the keystore reference:
 
 ```
 admin@infix:/> configure
+admin@infix:/config/> set hardware wifi country-code US
 admin@infix:/config/> edit interface wifi0
 admin@infix:/config/interface/wifi0/> set ipv4 dhcp-client
-admin@infix:/config/interface/wifi0/> set wifi ssid YourNetworkName
-admin@infix:/config/interface/wifi0/> set wifi secret mywifi
-admin@infix:/config/interface/wifi0/> set wifi country-code US
+admin@infix:/config/interface/wifi0/> set wifi station ssid YourNetworkName
+admin@infix:/config/interface/wifi0/> set wifi station security secret mywifi
 admin@infix:/config/interface/wifi0/> leave
 ```
 
 > [!NOTE]
 > The WiFi password (8-63 characters) is stored securely in the keystore as
 > `mywifi` (or any name you choose), which is then referenced in the WiFi
-> configuration. The country-code must match your location for regulatory
-> compliance (e.g., US, SE, DE, JP).
+> configuration. The country code is one setting for all radios and must
+> match your location for regulatory compliance (e.g., US, SE, DE, JP).
 
 ### Touch Screen Support
 

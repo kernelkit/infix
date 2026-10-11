@@ -29,6 +29,12 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2026-10-02 {
+    description
+      "Allow WDS link interfaces and 4-address stations as bridge ports.";
+    reference "internal";
+  }
+
   revision 2026-04-29 {
     description "Add operational state for multicast router ports per bridge.";
     reference "internal";
@@ -939,8 +945,8 @@ submodule infix-if-bridge {
         must "not(../ip:ipv4/ip:address or ../ip:ipv6/ip:address)" {
           error-message "Bridge ports cannot have IP addresses configured.";
         }
-        must "not(derived-from-or-self(../if:type, 'infix-ift:wifi')) or ../infix-if:wifi/infix-if:access-point or ../infix-if:wifi/infix-if:mesh-point" {
-          error-message "WiFi interfaces can only be bridge ports when configured as Access Points or Mesh Points.";
+        must "not(derived-from-or-self(../if:type, 'infix-ift:wifi')) or ../infix-if:wifi/infix-if:access-point or ../infix-if:wifi/infix-if:mesh-point or ../infix-if:wifi/infix-if:wds-link or ../infix-if:wifi/infix-if:station/infix-if:wds = 'true'" {
+          error-message "WiFi interfaces can only be bridge ports as access point, mesh point, WDS link, or station with wds enabled.";
         }
         description "Bridge association and port specific settings.";
         uses bridge-port-common;

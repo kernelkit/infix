@@ -12,3 +12,4 @@ AGENTS.md
 /test/.log
 /local.mk
 /test/spec/Readme.adoc
+__pycache__/

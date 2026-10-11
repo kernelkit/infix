@@ -12,9 +12,9 @@ This can typically happen when one logical link, from OSPF's
 perspective, is made up of multiple physical links containing media
 converters without link fault forwarding.
 
-Note: OSPFv3 next-hops are IPv6 link-local addresses, so the active path is
-verified with traceroute rather than by matching a RIB next-hop, and its BFD
-peers are only known by their session count.
+Note: OSPFv3 next-hops and BFD peers are IPv6 link-local addresses, unknown in
+advance, so both versions verify the active path with traceroute rather than by
+matching a RIB next-hop, and count BFD sessions rather than name their peers.
 
 ==== Topology
 

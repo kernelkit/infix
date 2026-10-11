@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <mattias.walstrom@wires.se>
+Date: Sat, 11 Oct 2026 10:00:00 +0200
+Subject: [PATCH 6/6] hostapd: Cancel the key holder timers before RELOAD_RXKHS
+ frees them
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+A key holder learned through a wildcard R0KH or R1KH entry is freed by
+a timer, and every entry may hold sequence number state with a timer of
+its own.  RELOAD_RXKHS freed the lists without cancelling either, so a
+delete timer later fired on whatever entry had been allocated at the
+old address and removed it, and the sequence state leaked.
+
+Tear the timers and sequence state down first, the way wpa_deinit does.
+
+Signed-off-by: Mattias Walström <mattias.walstrom@wires.se>
+---
+diff -ruN a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
+--- a/hostapd/ctrl_iface.c
++++ b/hostapd/ctrl_iface.c
+@@ -1518,6 +1518,12 @@
+ 	struct hostapd_bss_config *conf = hapd->conf;
+ 	int err;
+ 
++	/* Key holders learned through the wildcard entries carry a delete
++	 * timer, and every entry may hold sequence number state.  Drop
++	 * both before the lists are freed under them, or the timer fires
++	 * on whatever entry has since taken the address. */
++	if (hapd->wpa_auth)
++		wpa_ft_deinit(hapd->wpa_auth);
+ 	hostapd_config_clear_rxkhs(conf);
+ 
+ 	err = hostapd_config_read_rxkh_file(conf, conf->rxkh_file);

@@ -13,7 +13,7 @@
                        fdt_addr_r = "0x43f00000";
                        kernel_addr_r = "0x44000000";
                        scriptaddr = "0x48000000";
-                       ramdisk_addr_r = "0x4A000000";
+                       ramdisk_addr_r = "0x50000000";
 
 		en8811h_fw_part = "0#en8811h_fw";
 		en8811h_fw_dm_dir = "EthMD32.dm.bin";

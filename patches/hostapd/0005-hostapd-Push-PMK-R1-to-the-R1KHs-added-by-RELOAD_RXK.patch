@@ -1,0 +1,79 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <mattias.walstrom@wires.se>
+Date: Thu, 9 Oct 2026 18:30:00 +0200
+Subject: [PATCH 5/5] hostapd: Push PMK-R1 to the R1KHs added by RELOAD_RXKHS
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+With pmk_r1_push the R0KH hands a PMK-R1 to every configured R1KH when
+a station authenticates, and never again.  An R1KH configured later,
+through RELOAD_RXKHS, gets nothing for the stations already here, so a
+roam to it still has to pull from this R0KH, which fails once this
+access point has gone down.
+
+Push the keys of every station to the R1KHs again after a reload.  An
+R1KH that already has a key just replaces it.
+
+Signed-off-by: Mattias Walström <mattias.walstrom@wires.se>
+---
+ hostapd/ctrl_iface.c |  5 +++++
+ src/ap/wpa_auth.h    |  1 +
+ src/ap/wpa_auth_ft.c | 21 +++++++++++++++++++++
+ 3 files changed, 27 insertions(+)
+
+diff -ruN a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
+--- a/hostapd/ctrl_iface.c
++++ b/hostapd/ctrl_iface.c
+@@ -1527,6 +1527,11 @@
+ 		return -1;
+ 	}
+ 
++	/* R1KHs added now have not seen the keys of the stations already
++	 * authenticated here, hand them over so a roam to them does not
++	 * depend on this R0KH still being around. */
++	wpa_ft_push_pmk_r1_all(hapd->wpa_auth);
++
+ 	return 0;
+ }
+ 
+diff -ruN a/src/ap/wpa_auth_ft.c b/src/ap/wpa_auth_ft.c
+--- a/src/ap/wpa_auth_ft.c
++++ b/src/ap/wpa_auth_ft.c
+@@ -4976,4 +4976,25 @@
+ 	}
+ }
+ 
++
++/*
++ * Push the PMK-R1 of every station this R0KH holds a PMK-R0 for, to
++ * all configured R1KHs.  For use when the R1KH list has changed: the
++ * push at authentication only reached the R1KHs known at the time.
++ */
++void wpa_ft_push_pmk_r1_all(struct wpa_authenticator *wpa_auth)
++{
++	struct wpa_ft_pmk_cache *cache;
++	struct wpa_ft_pmk_r0_sa *r0;
++
++	if (!wpa_auth || !wpa_auth->conf.pmk_r1_push || !wpa_auth->ft_pmk_cache)
++		return;
++
++	cache = wpa_auth->ft_pmk_cache;
++	dl_list_for_each(r0, &cache->pmk_r0, struct wpa_ft_pmk_r0_sa, list) {
++		r0->pmk_r1_pushed = 0;
++		wpa_ft_push_pmk_r1(wpa_auth, r0->spa);
++	}
++}
++
+ #endif /* CONFIG_IEEE80211R_AP */
+diff -ruN a/src/ap/wpa_auth.h b/src/ap/wpa_auth.h
+--- a/src/ap/wpa_auth.h
++++ b/src/ap/wpa_auth.h
+@@ -594,6 +594,7 @@
+ 		       const u8 *dst_addr, u8 oui_suffix, const u8 *data,
+ 		       size_t data_len);
+ void wpa_ft_push_pmk_r1(struct wpa_authenticator *wpa_auth, const u8 *addr);
++void wpa_ft_push_pmk_r1_all(struct wpa_authenticator *wpa_auth);
+ void wpa_ft_deinit(struct wpa_authenticator *wpa_auth);
+ void wpa_ft_sta_deinit(struct wpa_state_machine *sm);
+ int wpa_ft_fetch_pmk_r1(struct wpa_authenticator *wpa_auth,

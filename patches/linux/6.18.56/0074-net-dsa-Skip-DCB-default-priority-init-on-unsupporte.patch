@@ -1,9 +1,8 @@
 From 45fd43a305c595ea24b0de5cf090affeffc4029f Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:04:21 +0200
-Subject: [PATCH 74/80] net: dsa: Skip DCB default priority init on unsupported
+Subject: [PATCH 74/86] net: dsa: Skip DCB default priority init on unsupported
  switches
-Organization: Wires
 
 A driver serving several chip generations has one dsa_switch_ops for
 all of them, so port_get_default_prio is set even for chips that have
@@ -18,7 +17,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 6 insertions(+), 5 deletions(-)
 
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index c0019d0c1172..b881c177628c 100644
+index c0019d0c1172d..b881c177628ce 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
 @@ -2511,12 +2511,13 @@ static int dsa_user_dcbnl_init(struct net_device *dev)

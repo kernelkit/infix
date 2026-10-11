@@ -1,11 +1,10 @@
 From fa401f49e78eeefa6ef1752733c87b1d67655125 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 7 Apr 2026 07:34:52 +0200
-Subject: [PATCH 46/80] net: phy: sfp: add OEM SFP-10G-T-I quirk
+Subject: [PATCH 46/86] net: phy: sfp: add OEM SFP-10G-T-I quirk
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 The industrial-temperature variant of the OEM SFP-10G-T copper module
 reports vendor PN "SFP-10G-T-I".  Unlike the base "SFP-10G-T" which is a
@@ -27,7 +26,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 11 insertions(+)
 
 diff --git a/drivers/net/phy/sfp.c b/drivers/net/phy/sfp.c
-index af43530ffb2c..15a4b67ece2c 100644
+index af43530ffb2c3..15a4b67ece2cb 100644
 --- a/drivers/net/phy/sfp.c
 +++ b/drivers/net/phy/sfp.c
 @@ -451,6 +451,16 @@ static void sfp_fixup_rollball_cc(struct sfp *sfp)

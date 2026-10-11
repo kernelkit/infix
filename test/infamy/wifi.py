@@ -6,9 +6,9 @@ the operational state under /ietf-interfaces.  See doc/wifi.md.
 import base64
 
 
-def radio(name, country="SE", band=None, channel=None):
+def radio(name, band=None, channel=None):
     """ietf-hardware component for a WiFi radio."""
-    settings = {"country-code": country}
+    settings = {}
     if band:
         settings["band"] = band
     if channel is not None:
@@ -18,6 +18,14 @@ def radio(name, country="SE", band=None, channel=None):
         "class": "infix-hardware:wifi",
         "infix-hardware:wifi-radio": settings,
     }
+
+
+def hardware(*radios, country="SE"):
+    """ietf-hardware config: the radios plus the box-wide WiFi country code."""
+    return {"hardware": {
+        "infix-hardware:wifi": {"country-code": country},
+        "component": list(radios),
+    }}
 
 
 def keystore(secrets):
@@ -31,7 +39,7 @@ def keystore(secrets):
     ]}}}
 
 
-def iface(name, mac, wifi, ipv4=None, bridge=None):
+def iface(name, mac, wifi, ipv4=None, bridge=None, pvid=None):
     """ietf-interfaces entry for a WiFi VIF.
 
     wifi is the infix-interfaces:wifi container: the radio plus one of
@@ -48,7 +56,50 @@ def iface(name, mac, wifi, ipv4=None, bridge=None):
         ifc["ietf-ip:ipv4"] = ipv4
     if bridge:
         ifc["infix-interfaces:bridge-port"] = {"bridge": bridge}
+        if pvid is not None:
+            ifc["infix-interfaces:bridge-port"]["pvid"] = pvid
     return ifc
+
+
+def wds_link(name, ap, peer, bridge=None, pvid=None):
+    """ietf-interfaces entry for a wds-link port of access point ap.
+
+    The port inherits the AP's radio and MAC address, so unlike iface() it
+    takes neither a radio nor a custom-phys-address.
+    """
+    ifc = {
+        "name": name,
+        "type": "infix-if-type:wifi",
+        "enabled": True,
+        "infix-interfaces:wifi": {
+            "wds-link": {"access-point": ap, "peer-address": peer},
+        },
+    }
+    if bridge:
+        ifc["infix-interfaces:bridge-port"] = {"bridge": bridge}
+        if pvid is not None:
+            ifc["infix-interfaces:bridge-port"]["pvid"] = pvid
+    return ifc
+
+
+def channel_survey(target, radio="radio0", passive=False):
+    """Run the channel-survey action on radio, return its channel list.
+
+    Each entry has at least a frequency, the operating channel has
+    in-use set.  Values are strings on NETCONF, compare with str().
+    """
+    xpath = f"/ietf-hardware:hardware/component[name='{radio}']" \
+            "/infix-hardware:wifi-radio/channel-survey"
+    output = target.call_action_output(xpath, {"passive": passive} if passive else None)
+    return output.get("channel", [])
+
+
+def in_use_frequency(channels):
+    """Frequency in MHz of the channel marked in-use, or None."""
+    for ch in channels:
+        if str(ch.get("in-use")).lower() == "true":
+            return int(ch["frequency"])
+    return None
 
 
 def skip_unless_supported(test, *targets):
@@ -82,6 +133,21 @@ def associated(target, ssid, ifname="wifi0"):
 def station_bssid(target, ifname="wifi0"):
     """BSSID the station on ifname is associated to, lowercase."""
     return (station(target, ifname).get("bssid") or "").lower()
+
+
+def wds_connected(target, ifname):
+    """True once the station of the wds-link port ifname is bound to it."""
+    return _wifi(target.get_iface(ifname)).get("wds-link", {}).get("connected") is True
+
+
+def bridge_vlan_members(target, bridge, vid, tagging="untagged"):
+    """Ports listed as tagged/untagged members of vid on bridge, from operational."""
+    ifc = target.get_iface(bridge) or {}
+    br = ifc.get("bridge") or ifc.get("infix-interfaces:bridge") or {}
+    for vlan in (br.get("vlans") or {}).get("vlan") or []:
+        if vlan.get("vid") == vid:
+            return set(vlan.get(tagging) or [])
+    return set()
 
 
 def ap_stations(target, ifname="wifi0"):

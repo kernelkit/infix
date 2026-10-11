@@ -45,5 +45,10 @@ image::topology.svg[WiFi Band Steering across a dual-band Access Point topology,
 . Verify the client associates to the 'campus' SSID
 . Verify band steering put the client on the 5GHz BSS
 . Verify the client leases an address over 5GHz
+. Disable the 5GHz BSS
+. Verify the client falls back to the 2.4GHz BSS
+. Enable the 5GHz BSS again
+. Verify a scanning client is steered back to the 5GHz BSS
+. Verify the client still has its address after the move
 
 

@@ -53,7 +53,6 @@ gen_radio()
     "name": "$radio",
     "class": "infix-hardware:wifi",
     "infix-hardware:wifi-radio": {
-        "country-code": "00",
         "band": "$band",
         "channel": "auto"
     }

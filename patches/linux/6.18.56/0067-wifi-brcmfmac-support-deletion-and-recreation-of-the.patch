@@ -1,12 +1,11 @@
 From 102750f26d8cbf5d58936b4c9c6da801433c4314 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 30 Jun 2026 16:05:17 +0200
-Subject: [PATCH 67/80] wifi: brcmfmac: support deletion and recreation of the
+Subject: [PATCH 67/86] wifi: brcmfmac: support deletion and recreation of the
  primary interface
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Wires
 
 The Broadcom FullMAC firmware never deletes the primary interface
 (bsscfgidx 0); it always exists. brcmfmac therefore rejected any attempt
@@ -67,7 +66,7 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  2 files changed, 174 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
-index fd8c39254d46..c17930471845 100644
+index fd8c39254d466..c179304718455 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
 @@ -124,6 +124,9 @@ struct cca_msrmnt_query {
@@ -283,7 +282,7 @@ index fd8c39254d46..c17930471845 100644
  	case NL80211_IFTYPE_ADHOC:
  	case NL80211_IFTYPE_AP_VLAN:
 diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
-index 5b550e5a4e77..b1b85da83371 100644
+index 5b550e5a4e77e..b1b85da83371f 100644
 --- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
 +++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/p2p.c
 @@ -1156,6 +1156,8 @@ static s32 brcmf_p2p_af_searching_channel(struct brcmf_p2p_info *p2p)

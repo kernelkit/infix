@@ -441,6 +441,35 @@ class Device(Transport):
         xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" + lyd.print_mem("xml", with_siblings=True, pretty=False) + "</action>"
         return self.ncc.dispatch(xml)
 
+    def call_action_output(self, xpath, input_data=None):
+        """Call NETCONF action, returning the output as a nested dict"""
+        reply = self.call_action(xpath, input_data)
+        xml = reply.xml
+        if isinstance(xml, str):
+            xml = xml.encode()
+
+        def to_dict(elem):
+            if not len(elem):
+                return (elem.text or "").strip()
+            out = {}
+            for child in elem:
+                name = lxml.etree.QName(child).localname
+                value = to_dict(child)
+                if name in out:
+                    if not isinstance(out[name], list):
+                        out[name] = [out[name]]
+                    out[name].append(value)
+                else:
+                    out[name] = value
+            return out
+
+        output = to_dict(fromstring(xml))
+        # Lists with one entry come back as a dict, lift them to a list
+        for key, value in output.items():
+            if isinstance(value, dict) and key not in ("ok",):
+                output[key] = [value]
+        return output
+
     def get_schemas_list(self):
         schemas = []
         data = self.get_dict("/netconf-state")

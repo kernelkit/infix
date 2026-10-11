@@ -1,9 +1,8 @@
 From 308c9dbab764bef06cceb03e412b491ea57234b5 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 7 Oct 2026 11:42:12 +0200
-Subject: [PATCH 79/80] net: sparx5: fix sleep in atomic context in MAC table
+Subject: [PATCH 79/86] net: sparx5: fix sleep in atomic context in MAC table
  access
-Organization: Wires
 
 Adding or removing a multicast address on an unbridged switch port
 triggers:
@@ -49,7 +48,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  2 files changed, 13 insertions(+), 13 deletions(-)
 
 diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
-index 2bf9c5f64151..30acb2127797 100644
+index 2bf9c5f64151c..30acb21277974 100644
 --- a/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
 +++ b/drivers/net/ethernet/microchip/sparx5/sparx5_mactable.c
 @@ -50,7 +50,7 @@ static int sparx5_mact_wait_for_completion(struct sparx5 *sparx5)
@@ -161,7 +160,7 @@ index 2bf9c5f64151..30acb2127797 100644
  	/*  Flush MAC table */
  	spx5_wr(LRN_COMMON_ACCESS_CTRL_CPU_ACCESS_CMD_SET(MAC_CMD_CLEAR_ALL) |
 diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
-index f7d86fc6aa12..317c4ca0d29b 100644
+index f7d86fc6aa125..317c4ca0d29b2 100644
 --- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
 +++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.h
 @@ -373,7 +373,7 @@ struct sparx5 {

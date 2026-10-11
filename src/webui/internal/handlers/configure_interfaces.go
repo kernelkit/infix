@@ -296,7 +296,8 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"wifi-forwarding":    descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/forwarding", "Layer-2 mesh forwarding. Leave on to let this node relay traffic for other mesh points and to bridge the mesh interface into a LAN (mesh portal). Off means only locally destined traffic is received."),
 			"wifi-mesh-secret":   descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/security/secret", "Pre-shared key reference for the WPA3-SAE mesh. All mesh points in the same mesh must share the same key."),
 			"wifi-dot11k":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11k", "802.11k Radio Resource Management: neighbor and beacon reports let clients discover nearby APs before roaming."),
-			"wifi-dot11r":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r", "802.11r Fast BSS Transition: pre-authentication cuts handoff time to under 50 ms. Requires WPA2/WPA3 security, plus identical SSID, passphrase and mobility domain on all APs in the group."),
+			"wifi-dot11r":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r", "802.11r Fast BSS Transition: pre-authentication cuts handoff time to under 50 ms. Requires WPA2/WPA3 security, plus identical SSID, passphrase, key holder secret and mobility domain on all APs in the group."),
+			"wifi-dot11r-key":    descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/key-holder-secret", "Keystore key the access points of the mobility domain hand each other a roaming client's keys with, the same on every device. Without it the WiFi password is used, which lets anyone who knows the password read the other clients' keys."),
 			"wifi-dot11r-md":     descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/mobility-domain", "802.11r mobility domain: four hex digits shared by every AP clients roam between, or 'hash' to derive it from the SSID (OpenWrt-compatible)."),
 			"wifi-dot11r-nas":    descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/nas-identifier", "NAS-Identifier for 802.11r key lookup, unique per AP. 'auto' derives <interface>-<hostname>.<mobility-domain>."),
 			"wifi-dot11v":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11v", "802.11v BSS Transition Management: lets the AP suggest a better AP to clients (network-assisted roaming)."),
@@ -351,7 +352,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 		// by the inline "+ New radio" form in the WiFi fieldset and by
 		// the WiFi interface row's mirrored radio editor.
 		const radioSchemaPath = "/ietf-hardware:hardware/component/infix-hardware:wifi-radio"
-		data.WizardCountryOptions = schema.OptionsFor(mgr, radioSchemaPath+"/country-code")
+		data.WizardCountryOptions = schema.OptionsFor(mgr, hwWiFiCountryPath)
 		data.WizardBandOptions = schema.OptionsFor(mgr, radioSchemaPath+"/band")
 		data.CountryOptions = data.WizardCountryOptions
 		data.BandOptions = data.WizardBandOptions
@@ -481,7 +482,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 	// Configured WiFi radios live in candidate (so the picker reflects
 	// uncommitted edits the user is in the middle of). Available radios
 	// = detected (operational class=wifi) - those already in candidate.
-	data.WizardWifiRadios = buildWifiRadioOptions(hwCand.Hardware.Component)
+	data.WizardWifiRadios = buildWifiRadioOptions(hwCand.Hardware.Component, hwCand.wifiCountryCode())
 	configuredRadioNames := make(map[string]bool, len(data.WizardWifiRadios))
 	for _, r := range data.WizardWifiRadios {
 		configuredRadioNames[r.Name] = true
@@ -507,7 +508,7 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 	}
 	// Populate the mirrored radio editor for WiFi interface rows from
 	// the already-fetched candidate hardware tree (no extra fetch).
-	radios := indexWifiRadios(hwCand.Hardware.Component)
+	radios := indexWifiRadios(hwCand.Hardware.Component, hwCand.wifiCountryCode())
 	for i := range data.Interfaces {
 		row := &data.Interfaces[i]
 		if !row.IsWifi || row.WiFi == nil || row.WiFi.Radio == "" {
@@ -1074,11 +1075,7 @@ func (h *ConfigureInterfacesHandler) WizardCreateRadio(w http.ResponseWriter, r 
 		renderSaveError(w, fmt.Errorf("radio name is required"))
 		return
 	}
-	if country == "" {
-		renderSaveError(w, fmt.Errorf("country code is required"))
-		return
-	}
-	radio := map[string]any{"country-code": country}
+	radio := map[string]any{}
 	if band != "" {
 		radio["band"] = band
 	}
@@ -1100,6 +1097,16 @@ func (h *ConfigureInterfacesHandler) WizardCreateRadio(w http.ResponseWriter, r 
 		"class":                     "infix-hardware:wifi",
 		"infix-hardware:wifi-radio": radio,
 	}
+	// The country code is one setting for every radio; the form offers
+	// it here so a first radio can be set up in one go.
+	if country != "" {
+		cc := map[string]any{"infix-hardware:country-code": country}
+		if err := h.RC.Put(r.Context(), candidatePath+hwWiFiCountryPath, cc); err != nil {
+			log.Printf("wizard create radio %q: country: %v", name, err)
+			renderSaveError(w, err)
+			return
+		}
+	}
 	body := map[string]any{"ietf-hardware:component": []map[string]any{comp}}
 	path := candidatePath + "/ietf-hardware:hardware/component=" + url.PathEscape(name)
 	if err := h.RC.Put(r.Context(), path, body); err != nil {
@@ -1115,7 +1122,7 @@ func (h *ConfigureInterfacesHandler) renderRadioPicker(w http.ResponseWriter, r 
 	if err := h.RC.Get(r.Context(), candidatePath+"/ietf-hardware:hardware", &hwCand); err != nil {
 		log.Printf("wizard radio refresh: %v", err)
 	}
-	radios := buildWifiRadioOptions(hwCand.Hardware.Component)
+	radios := buildWifiRadioOptions(hwCand.Hardware.Component, hwCand.wifiCountryCode())
 	if !containsRadioName(radios, selected) {
 		// Race / fetch failure — surface the new radio anyway.
 		radios = append([]wifiRadioOption{{Name: selected, Label: selected}}, radios...)
@@ -1804,25 +1811,29 @@ func (h *ConfigureInterfacesHandler) SaveWifi(w http.ResponseWriter, r *http.Req
 	// Both halves go in one patch, so a rejected save leaves the
 	// candidate untouched.
 	p := restconf.NewYangPatch(candidatePath)
-	// Radio half, only when the form actually carried a country (the
-	// wifi-radio container's mandatory leaf). Without it parseWiFiRadio
-	// would reject a form whose user only touched the WiFi side and left
-	// the radio fields untouched-empty.
+	// Hardware half: the radio's band and channel when the form carried
+	// them, and the box-wide country code when it was picked.  A form
+	// whose user only touched the WiFi side leaves hardware alone.
+	hw := map[string]any{}
 	if strings.TrimSpace(r.FormValue("country-code")) != "" {
+		hw["infix-hardware:wifi"] = map[string]any{
+			"country-code": strings.TrimSpace(r.FormValue("country-code")),
+		}
+	}
+	if strings.TrimSpace(r.FormValue("band")) != "" || strings.TrimSpace(r.FormValue("channel")) != "" {
 		rc, err := parseWiFiRadio(r)
 		if err != nil {
 			renderSaveError(w, err)
 			return
 		}
-		p.Merge(hwRoot, map[string]any{
-			"ietf-hardware:hardware": map[string]any{
-				"component": []map[string]any{{
-					"name":                      radio,
-					"class":                     "infix-hardware:wifi",
-					"infix-hardware:wifi-radio": rc,
-				}},
-			},
-		})
+		hw["component"] = []map[string]any{{
+			"name":                      radio,
+			"class":                     "infix-hardware:wifi",
+			"infix-hardware:wifi-radio": rc,
+		}}
+	}
+	if len(hw) > 0 {
+		p.Merge(hwRoot, map[string]any{"ietf-hardware:hardware": hw})
 	}
 	wifi := map[string]any{"radio": radio, mode: leaf}
 	p.Replace(ifaceTarget(name)+"/infix-interfaces:wifi", map[string]any{"infix-interfaces:wifi": wifi})
@@ -1871,6 +1882,9 @@ func wifiRoamingFromForm(r *http.Request) (map[string]any, error) {
 	}
 	if r.FormValue("dot11r") == "on" {
 		dot11r := map[string]any{}
+		if key := strings.TrimSpace(r.FormValue("key-holder-secret")); key != "" {
+			dot11r["key-holder-secret"] = key
+		}
 		md := strings.ToLower(strings.TrimSpace(r.FormValue("mobility-domain")))
 		if md != "" {
 			if md != "hash" && !isHex4(md) {
@@ -1977,9 +1991,9 @@ func ifaceTarget(name string) string {
 
 // indexWifiRadios picks WiFi radio components out of the hardware
 // candidate tree and returns the minimal subset the WiFi interface
-// editor mirrors (name, country, band, channel). Components without
-// a wifi-radio container are skipped.
-func indexWifiRadios(comps []hwComponentJSON) map[string]*ifaceRadioMirror {
+// editor mirrors (name, band, channel, plus the box-wide country).
+// Components without a wifi-radio container are skipped.
+func indexWifiRadios(comps []hwComponentJSON, country string) map[string]*ifaceRadioMirror {
 	out := make(map[string]*ifaceRadioMirror, len(comps))
 	for _, c := range comps {
 		if c.WiFiRadio == nil {
@@ -1987,7 +2001,7 @@ func indexWifiRadios(comps []hwComponentJSON) map[string]*ifaceRadioMirror {
 		}
 		m := &ifaceRadioMirror{
 			Name:        c.Name,
-			CountryCode: c.WiFiRadio.CountryCode,
+			CountryCode: country,
 			Band:        c.WiFiRadio.Band,
 		}
 		if ch, ok := c.WiFiRadio.Channel.(float64); ok && ch > 0 {
@@ -2658,9 +2672,10 @@ type wifiRadioOption struct {
 // configured WiFi radios (class=wifi with a wifi-radio container present
 // in running config) and returns picker entries with a label that hints
 // at band/channel/country. APReady reflects the YANG must-clauses on
-// access-point — band, channel, and country-code all set, with country
-// != "00" (world regulatory domain is rejected for AP mode).
-func buildWifiRadioOptions(comps []hwComponentJSON) []wifiRadioOption {
+// access-point — band and channel set on the radio and the box-wide
+// country code set to something other than "00" (the world regulatory
+// domain is rejected for AP mode).
+func buildWifiRadioOptions(comps []hwComponentJSON, country string) []wifiRadioOption {
 	var out []wifiRadioOption
 	for _, c := range comps {
 		if shortClass(c.Class) != classWiFi || c.WiFiRadio == nil {
@@ -2669,7 +2684,7 @@ func buildWifiRadioOptions(comps []hwComponentJSON) []wifiRadioOption {
 		ch := wifiChannelString(c.WiFiRadio.Channel)
 		opt := wifiRadioOption{
 			Name:    c.Name,
-			Country: c.WiFiRadio.CountryCode,
+			Country: country,
 			Band:    c.WiFiRadio.Band,
 			Channel: ch,
 		}

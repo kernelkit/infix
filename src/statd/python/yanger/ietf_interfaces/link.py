@@ -114,6 +114,13 @@ def iplink2yang_operstate(iplink):
         "LOWERLAYERDOWN":      "lower-layer-down",
         "NOTPRESENT":          "not-present"
     }
+    if iplink["operstate"] == "UNKNOWN":
+        # Interfaces without carrier handling (AP_VLAN, tunnels) stay
+        # in UNKNOWN; the link flags tell the real state.
+        flags = iplink.get("flags", [])
+        if "UP" not in flags:
+            return "down"
+        return "up" if "LOWER_UP" in flags else "lower-layer-down"
     return xlate.get(iplink["operstate"], "unknown")
 
 

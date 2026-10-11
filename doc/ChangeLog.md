@@ -9,6 +9,20 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.56 (LTS)
+- Boards without a VPD EEPROM can be given a fixed identity, base MAC
+  included, by writing an ONIE TLV to a disk partition labelled `factory`,
+  see [VPD documentation](vpd.md#factory-partition)
+- Banana Pi BPI-R3: ports get stable addresses derived from the chassis
+  MAC instead of random ones at every boot
+- WiFi interfaces get a unique address derived from the chassis MAC, so
+  several APs on one radio, or two devices of the same model, no longer
+  need `custom-phys-address`
+- WiFi 4-address (WDS) links for wireless bridges and repeaters: a station
+  with `wds` enabled can be a bridge port, and an access point bridges
+  each remote station through a `wds-link` interface, see
+  [WDS Backhaul and Repeaters][wds]
+- MT7986 boards (Banana Pi BPI-R3, BPI-R3 Mini, Acer Connect Vero W6m):
+  WiFi hardware offloading is now active
 - Add IPv6 dynamic routing: RIPng and OSPFv3.  Both reuse the existing
   ietf-rip and ietf-ospf models, selected per control-plane-protocol by the
   `ripng`/`ospfv3` type and the IPv6 address-family
@@ -38,12 +52,29 @@ All notable changes to the project are documented in this file.
   the keystore.  Its default route and DNS servers are used like those from
   a DHCP server, and the TCP MSS of forwarded connections is clamped to the
   session MTU, see [PPPoE Client][pppoe]
+- The WiFi country code is one setting for the whole system, `hardware
+  wifi country-code`, instead of one per radio, and applies as soon as it
+  is set.  Existing configurations are migrated
+- WiFi band steering also moves dual-band clients already connected on
+  2.4 GHz to the 5 or 6 GHz access point of the same SSID
+- WiFi clients are moved to another access point before theirs stops for
+  a reboot, an upgrade or a configuration change, instead of losing the
+  connection.  Access points on different devices now know of each other
+  and share a client's keys ahead of a roam
+- 802.11r access points can be given a `key-holder-secret`, a keystore
+  key of their own to protect the key exchange with instead of the WiFi
+  password, see [WiFi documentation](wifi.md#80211r---fast-bss-transition)
+- WiFi channel survey is on request: `show hardware <radio> survey`, the
+  Scan channels button on the WebUI WiFi page, or the `channel-survey`
+  action.  The always-on `survey` container under the radio is gone
 
 ### Fixes
 
 - WebUI: uploading a software bundle failed on slow storage
 - WebUI: the Overview page showed the hostname template, e.g. `rpi-%m`, and
   never showed the boot partition
+- WebUI: a damaged schema cache, e.g. after a restart during download,
+  crashed the WebUI at every start
 - LLDP neighbors were listed without their system name, descriptions, and
   capabilities, in the CLI, the WebUI, and the operational datastore
 - The manufacturer from a VPD was not shown as `mfg-name` of its
@@ -59,8 +90,18 @@ All notable changes to the project are documented in this file.
 - Fix #1423: the default route from a DHCPv6 client, learned from router
   advertisements, is now a static route with the DHCPv6 route preference,
   like a DHCPv4 route.  Before, the route preference setting was ignored
+- Fix #1679: a WiFi station added to a scan-only interface, as in the
+  Raspberry Pi 4 factory configuration, did not connect until a reboot
+- A WiFi station never connected to a WPA3-only access point, which
+  includes every access point on 6 GHz
+- WiFi scan results listed WPA3-only networks as WPA2-Personal
+- Fast roaming (802.11r) to an access point on another device failed for
+  WPA3 clients
+- Changing the MAC address of a WiFi access point could leave the access
+  points on that radio down until the WiFi service was restarted
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
+[wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
 
 [v26.09.0][] - 2026-09-30
 -------------------------

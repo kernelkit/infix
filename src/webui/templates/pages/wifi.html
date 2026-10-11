@@ -49,14 +49,12 @@
     </div>
   </section>
 
-  {{if .SurveySVG}}
   <section class="info-card">
     <div class="card-header">Channel Survey</div>
-    <div class="card-body wifi-survey-body">
-      {{.SurveySVG}}
+    <div id="wifi-survey-{{.Name}}">
+      {{template "wifi-survey" .Survey}}
     </div>
   </section>
-  {{end}}
 </div>
 
 {{range .Interfaces}}
@@ -159,4 +157,35 @@
   <p class="empty-message">No WiFi radios detected.</p>
 </section>
 {{end}}
+<dialog id="survey-dialog" class="iface-modal survey-dialog" aria-modal="true">
+  <header class="iface-modal-header">
+    <h3>Channel Survey <span class="diff-subtitle" id="survey-dialog-radio"></span></h3>
+    <button type="button" class="btn-close" aria-label="Close"
+            data-close-modal="survey-dialog">&times;</button>
+  </header>
+  <div class="iface-modal-body" id="survey-dialog-body"></div>
+</dialog>
+{{end}}
+
+{{define "wifi-survey"}}
+<div class="card-body wifi-survey-body">
+  {{if .SVG}}
+  <button type="button" class="survey-zoom" data-survey-zoom="{{.Radio}}"
+          title="Click to enlarge" aria-label="Enlarge channel survey chart">
+    {{.SVG}}
+  </button>
+  {{else if .Error}}
+  <div class="alert alert-error">{{.Error}}</div>
+  {{else}}
+  <p class="survey-hint">Scans every channel the radio supports and shows how busy each one is.
+    The radio leaves its channel for a few seconds, so traffic pauses during the scan.</p>
+  {{end}}
+</div>
+<div class="card-actions">
+  <button type="button" class="btn btn-sm btn-primary"
+          hx-post="/wifi/{{.Radio}}/survey"
+          hx-target="#wifi-survey-{{.Radio}}"
+          hx-swap="innerHTML"
+          hx-disabled-elt="this">{{if .SVG}}Scan again{{else}}Scan channels{{end}}</button>
+</div>
 {{end}}

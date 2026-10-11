@@ -47,6 +47,7 @@ static char *xpath = "/*";
 static int debug;
 static int force;
 static int timeout;
+static int json_out;
 static int dry_run;
 static int sanitize;
 static int redact;
@@ -952,6 +953,7 @@ static int usage_rpc(int rc)
 	       "Options:\n"
 	       "  -d                 Enable debug mode, verbose output on stderr\n"
 	       "  -h                 This help text\n"
+	       "  -j                 Print RPC output as JSON\n"
 	       "  -t SEC             Timeout for the operation, or default %d sec\n"
 	       "  -v                 Show version\n"
 	       "\n"
@@ -985,6 +987,77 @@ static bool is_leaflist(sr_conn_ctx_t *conn, const char *rpc_xpath, const char *
 	return rc;
 }
 
+/*
+ * Tree variant of rpc_exec(), prints the output as JSON.  Used by show
+ * for actions with list output, which sr_print_val() cannot render.
+ */
+static int rpc_exec_json(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
+			 const char *rpc_xpath, int argc, char *argv[])
+{
+	struct lyd_node *tree = NULL, *op = NULL;
+	const struct ly_ctx *ctx;
+	sr_data_t *output = NULL;
+	char *str = NULL;
+	int rc = 1, err = 0, i;
+
+	ctx = sr_acquire_context(conn);
+	if (!ctx) {
+		warnx("failed acquiring libyang context");
+		return 1;
+	}
+
+	if (lyd_new_path(NULL, ctx, rpc_xpath, NULL, 0, &tree) ||
+	    lyd_find_path(tree, rpc_xpath, 0, &op)) {
+		warnx("invalid RPC xpath %s", rpc_xpath);
+		goto cleanup;
+	}
+
+	for (i = 0; i < argc - 1; i += 2) {
+		const char *key = argv[i];
+		char *val, *token, *saveptr;
+
+		val = strdup(argv[i + 1]);
+		if (!val) {
+			warnx("Memory allocation failed");
+			goto cleanup;
+		}
+
+		if (strchr(val, ',') && is_leaflist(conn, rpc_xpath, key)) {
+			for (token = strtok_r(val, ",", &saveptr); token;
+			     token = strtok_r(NULL, ",", &saveptr))
+				err = lyd_new_path(op, NULL, key, token, 0, NULL);
+		} else
+			err = lyd_new_path(op, NULL, key, val, 0, NULL);
+		free(val);
+
+		if (err) {
+			warnx("invalid RPC argument %s = %s", key, argv[i + 1]);
+			goto cleanup;
+		}
+	}
+
+	dbg("Sending RPC %s (timeout: %d ms)", rpc_xpath, timeout * 1000);
+	err = sr_rpc_send_tree(sess, tree, timeout * 1000, &output);
+	if (err != SR_ERR_OK) {
+		sysrepo_print_error(sess);
+		warnx("RPC execution failed: %s", sr_strerror(err));
+		goto cleanup;
+	}
+
+	if (output && output->tree &&
+	    !lyd_print_mem(&str, output->tree, LYD_JSON, LYD_PRINT_SIBLINGS))
+		puts(str);
+	free(str);
+	rc = 0;
+
+cleanup:
+	sr_release_data(output);
+	lyd_free_all(tree);
+	sr_release_context(conn);
+
+	return rc;
+}
+
 /* Execute RPC from CLI arguments: xpath and key-value pairs */
 static int rpc_exec(const char *rpc_xpath, int argc, char *argv[])
 {
@@ -1001,6 +1074,11 @@ static int rpc_exec(const char *rpc_xpath, int argc, char *argv[])
 	err = sysrepo_init(&conn, &sess, &sub);
 	if (err != SR_ERR_OK)
 		return 1;
+
+	if (json_out) {
+		rc = rpc_exec_json(conn, sess, rpc_xpath, argc, argv);
+		goto cleanup;
+	}
 
 	for (i = 0; i < argc - 1; i += 2) {
 		const char *key = argv[i];
@@ -1125,13 +1203,16 @@ static int rpc_main(int argc, char *argv[])
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "dht:v")) != EOF) {
+	while ((c = getopt(argc, argv, "dhjt:v")) != EOF) {
 		switch(c) {
 		case 'd':
 			debug = 1;
 			break;
 		case 'h':
 			return usage_rpc(0);
+		case 'j':
+			json_out = 1;
+			break;
 		case 't':
 			timeout = atoi(optarg);
 			break;

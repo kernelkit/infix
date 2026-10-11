@@ -542,6 +542,18 @@ class Device(Transport):
 
         return response.content
 
+    def call_action_output(self, xpath, input_data=None):
+        """Call RESTCONF action, returning the output as a nested dict"""
+        content = self.call_action(xpath, input_data)
+        if not content:
+            return {}
+
+        data = json.loads(content)
+        for key, value in data.items():
+            if key.endswith(":output"):
+                return value
+        return data
+
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
         coverage.track_xpath(xpath)
