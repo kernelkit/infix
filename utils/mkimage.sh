@@ -222,6 +222,9 @@ get_bootloader_name()
         novarq-tactical-1000)
             echo "tactical_boot"
             ;;
+        starfive-visionfive2)
+            echo "visionfive2_boot"
+            ;;
         *)
             err "Unknown bootloader for board: $board"
             return 1

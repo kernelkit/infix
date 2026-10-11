@@ -11,15 +11,17 @@ How to Build
 ------------
 
 ```
-$ make visionfive2_defconfig
+$ make O=x-boot visionfive2_boot_defconfig
+$ make O=x-boot
+$ make riscv64_defconfig
 $ make
+$ ./utils/mkimage.sh -b x-boot -r output starfive-visionfive2
 ```
 
-Once the build has finished you will have `output/images/sdcard.img`
-which you can flash to an SD card.
+The image is `x-boot/images/infix-visionfive2-sdcard.img`:
 
 ```
-$ sudo dd if=output/images/sdcard.img of=/dev/mmcblk0 bs=1M status=progress oflag=direct
+$ sudo dd if=x-boot/images/infix-visionfive2-sdcard.img of=/dev/mmcblk0 bs=1M status=progress oflag=direct
 ```
 
 > **WARNING:** ensure `/dev/mmcblk0` really is the correct device for
