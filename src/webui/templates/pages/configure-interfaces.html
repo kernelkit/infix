@@ -616,14 +616,14 @@
                        form validation. */}}
                   {{$rm := ""}}{{if $ap}}{{$rm = $ap.Roaming}}{{end}}
                   {{$hasK := false}}{{$hasR := false}}{{$hasV := false}}{{$okc := true}}{{$bs := true}}
-                  {{$md := "4f57"}}{{$nas := "auto"}}
+                  {{$md := "4f57"}}{{$nas := "auto"}}{{$khs := ""}}
                   {{if $rm}}
                     {{if $rm.Dot11k}}{{$hasK = true}}{{end}}
-                    {{if $rm.Dot11r}}{{$hasR = true}}{{if $rm.Dot11r.MobilityDomain}}{{$md = $rm.Dot11r.MobilityDomain}}{{end}}{{if $rm.Dot11r.NASIdentifier}}{{$nas = $rm.Dot11r.NASIdentifier}}{{end}}{{end}}
+                    {{if $rm.Dot11r}}{{$hasR = true}}{{$khs = $rm.Dot11r.KeyHolderSecret}}{{if $rm.Dot11r.MobilityDomain}}{{$md = $rm.Dot11r.MobilityDomain}}{{end}}{{if $rm.Dot11r.NASIdentifier}}{{$nas = $rm.Dot11r.NASIdentifier}}{{end}}{{end}}
                     {{if $rm.Dot11v}}{{$hasV = true}}{{if $rm.Dot11v.BandSteering}}{{$bs = deref $rm.Dot11v.BandSteering}}{{end}}{{end}}
                     {{if $rm.OKC}}{{$okc = deref $rm.OKC}}{{end}}
                   {{end}}
-                  {{$dot11rRows := printf "wifi-row-%s-dot11r-md wifi-row-%s-dot11r-nas" $ifname $ifname}}
+                  {{$dot11rRows := printf "wifi-row-%s-dot11r-key wifi-row-%s-dot11r-md wifi-row-%s-dot11r-nas" $ifname $ifname $ifname}}
                   {{$dot11vRows := printf "wifi-row-%s-dot11v-bs" $ifname}}
                   <details class="cfg-fold" data-wifi-modes="access-point"
                            {{if ne .WifiMode "access-point"}}hidden{{end}}
@@ -640,6 +640,16 @@
                           <th>802.11r{{template "field-info" (index $d "wifi-dot11r")}}</th>
                           <td><label><input type="checkbox" name="dot11r" data-fold-target="{{$dot11rRows}}" {{if $hasR}}checked{{end}}>
                               Fast BSS Transition</label></td>
+                        </tr>
+                        <tr id="wifi-row-{{$ifname}}-dot11r-key" {{if not $hasR}}hidden{{end}}>
+                          <th>Key holder secret{{template "field-info" (index $d "wifi-dot11r-key")}}</th>
+                          <td>
+                            <select class="cfg-input cfg-input-sm" name="key-holder-secret"
+                                    {{if not $hasR}}disabled{{end}}>
+                              <option value=""{{if not $khs}} selected{{end}}>WiFi password (default)</option>
+                              {{range $.WizardSymKeys}}<option value="{{.Name}}"{{if eq .Name $khs}} selected{{end}}>{{.Name}}</option>{{end}}
+                            </select>
+                          </td>
                         </tr>
                         <tr id="wifi-row-{{$ifname}}-dot11r-md" {{if not $hasR}}hidden{{end}}>
                           <th>Mobility domain{{template "field-info" (index $d "wifi-dot11r-md")}}</th>

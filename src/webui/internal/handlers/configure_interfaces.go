@@ -296,7 +296,8 @@ func (h *ConfigureInterfacesHandler) Overview(w http.ResponseWriter, r *http.Req
 			"wifi-forwarding":    descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/forwarding", "Layer-2 mesh forwarding. Leave on to let this node relay traffic for other mesh points and to bridge the mesh interface into a LAN (mesh portal). Off means only locally destined traffic is received."),
 			"wifi-mesh-secret":   descOr(mgr, ifPath+"/infix-interfaces:wifi/mesh-point/security/secret", "Pre-shared key reference for the WPA3-SAE mesh. All mesh points in the same mesh must share the same key."),
 			"wifi-dot11k":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11k", "802.11k Radio Resource Management: neighbor and beacon reports let clients discover nearby APs before roaming."),
-			"wifi-dot11r":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r", "802.11r Fast BSS Transition: pre-authentication cuts handoff time to under 50 ms. Requires WPA2/WPA3 security, plus identical SSID, passphrase and mobility domain on all APs in the group."),
+			"wifi-dot11r":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r", "802.11r Fast BSS Transition: pre-authentication cuts handoff time to under 50 ms. Requires WPA2/WPA3 security, plus identical SSID, passphrase, key holder secret and mobility domain on all APs in the group."),
+			"wifi-dot11r-key":    descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/key-holder-secret", "Keystore key the access points of the mobility domain hand each other a roaming client's keys with, the same on every device. Without it the WiFi password is used, which lets anyone who knows the password read the other clients' keys."),
 			"wifi-dot11r-md":     descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/mobility-domain", "802.11r mobility domain: four hex digits shared by every AP clients roam between, or 'hash' to derive it from the SSID (OpenWrt-compatible)."),
 			"wifi-dot11r-nas":    descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11r/nas-identifier", "NAS-Identifier for 802.11r key lookup, unique per AP. 'auto' derives <interface>-<hostname>.<mobility-domain>."),
 			"wifi-dot11v":        descOr(mgr, ifPath+"/infix-interfaces:wifi/access-point/roaming/dot11v", "802.11v BSS Transition Management: lets the AP suggest a better AP to clients (network-assisted roaming)."),
@@ -1881,6 +1882,9 @@ func wifiRoamingFromForm(r *http.Request) (map[string]any, error) {
 	}
 	if r.FormValue("dot11r") == "on" {
 		dot11r := map[string]any{}
+		if key := strings.TrimSpace(r.FormValue("key-holder-secret")); key != "" {
+			dot11r["key-holder-secret"] = key
+		}
 		md := strings.ToLower(strings.TrimSpace(r.FormValue("mobility-domain")))
 		if md != "" {
 			if md != "hash" && !isHex4(md) {

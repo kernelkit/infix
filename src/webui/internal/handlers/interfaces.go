@@ -131,8 +131,9 @@ type wifiRoamingJSON struct {
 }
 
 type wifiDot11rJSON struct {
-	MobilityDomain string `json:"mobility-domain"`
-	NASIdentifier  string `json:"nas-identifier"`
+	KeyHolderSecret string `json:"key-holder-secret"`
+	MobilityDomain  string `json:"mobility-domain"`
+	NASIdentifier   string `json:"nas-identifier"`
 }
 
 type wifiDot11vJSON struct {

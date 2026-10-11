@@ -40,7 +40,7 @@ const wifiCfgFixture = `{"ietf-interfaces:interfaces":{"interface":[
    "security":{"secret":"mesh-psk"}}}},
 {"name":"wifi1-ap","type":"infix-if-type:wifi",
  "infix-interfaces:wifi":{"radio":"phy1","access-point":{"ssid":"office","security":{"mode":"wpa3-personal","secret":"psk"},
-   "roaming":{"dot11k":{},"dot11r":{"mobility-domain":"hash"},"dot11v":{"band-steering":false},"okc":false}}}},
+   "roaming":{"dot11k":{},"dot11r":{"key-holder-secret":"ft-key","mobility-domain":"hash"},"dot11v":{"band-steering":false},"okc":false}}}},
 {"name":"wifi2","type":"infix-if-type:wifi",
  "infix-interfaces:wifi":{"radio":"phy2","station":{"ssid":"upstream","security":{"secret":"psk"}}}},
 {"name":"wifi3-mesh","type":"infix-if-type:wifi",
@@ -149,14 +149,14 @@ func roamingForm(t *testing.T, v url.Values) *http.Request {
 
 func TestWiFiRoamingFromForm(t *testing.T) {
 	roaming, err := wifiRoamingFromForm(roamingForm(t, url.Values{
-		"dot11k": {"on"}, "dot11r": {"on"}, "mobility-domain": {"AB12"}, "nas-identifier": {"auto"},
+		"dot11k": {"on"}, "dot11r": {"on"}, "key-holder-secret": {"ft-key"}, "mobility-domain": {"AB12"}, "nas-identifier": {"auto"},
 		"dot11v": {"on"}, "band-steering": {"on"}, "okc": {"on"},
 	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	r := roaming["dot11r"].(map[string]any)
-	if r["mobility-domain"] != "ab12" || r["nas-identifier"] != "auto" {
+	if r["key-holder-secret"] != "ft-key" || r["mobility-domain"] != "ab12" || r["nas-identifier"] != "auto" {
 		t.Errorf("dot11r = %v", r)
 	}
 	// okc and band-steering are on: both at their YANG default, so absent.
@@ -172,7 +172,7 @@ func TestWiFiRoamingFromForm(t *testing.T) {
 
 	// Unticked presence containers and blank sub-fields are simply absent;
 	// SaveWifi PUTs the whole container so that is enough to clear them.
-	roaming, err = wifiRoamingFromForm(roamingForm(t, url.Values{"dot11r": {"on"}, "mobility-domain": {"hash"}}))
+	roaming, err = wifiRoamingFromForm(roamingForm(t, url.Values{"dot11r": {"on"}, "key-holder-secret": {"ft-key"}, "mobility-domain": {"hash"}}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,8 +205,15 @@ func TestWiFiRoamingFromForm(t *testing.T) {
 		t.Error("blank nas-identifier should be absent")
 	}
 
-	if _, err := wifiRoamingFromForm(roamingForm(t, url.Values{"dot11r": {"on"}, "mobility-domain": {"xyz"}})); err == nil {
+	if _, err := wifiRoamingFromForm(roamingForm(t, url.Values{"dot11r": {"on"}, "key-holder-secret": {"ft-key"}, "mobility-domain": {"xyz"}})); err == nil {
 		t.Error("expected error for bad mobility domain")
+	}
+	roaming, err = wifiRoamingFromForm(roamingForm(t, url.Values{"dot11r": {"on"}, "mobility-domain": {"hash"}}))
+	if err != nil {
+		t.Fatalf("dot11r without key holder secret: %v", err)
+	}
+	if _, ok := roaming["dot11r"].(map[string]any)["key-holder-secret"]; ok {
+		t.Error("key holder secret should be absent when not chosen")
 	}
 }
 
@@ -329,7 +336,7 @@ func TestConfigureInterfacesRendersMeshAndRoamingEditors(t *testing.T) {
 	for _, want := range []string{
 		`value="mesh-point" checked`, `name="mesh-id"`, `value="backhaul"`,
 		`name="forwarding"`, `Roaming (802.11k/r/v)`,
-		`name="dot11k" checked`, `name="mobility-domain"`, `value="hash"`, `data-fold-target="wifi-row-wifi1-ap-dot11r-md wifi-row-wifi1-ap-dot11r-nas"`,
+		`name="dot11k" checked`, `name="mobility-domain"`, `value="hash"`, `name="key-holder-secret"`, `data-fold-target="wifi-row-wifi1-ap-dot11r-key wifi-row-wifi1-ap-dot11r-md wifi-row-wifi1-ap-dot11r-nas"`,
 		`add-iface-wifi-mode-mesh`, `add-iface-wifi-meshid-row`,
 		`<span class="iface-tag">roaming</span>`,
 	} {
