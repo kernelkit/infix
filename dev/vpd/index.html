@@ -2348,6 +2348,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#factory-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Factory Partition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#product-vpd" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2571,6 +2582,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#factory-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Factory Partition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#product-vpd" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2773,6 +2795,27 @@ be marked <code>infix,trusted</code>:</p>
 </code></pre></div>
 <p>Every VPD is listed in the <em>ietf-hardware</em> model as a component named
 <code>vpd-&lt;board&gt;</code>, e.g., <code>vpd-product</code> for the example above.</p>
+<h2 id="factory-partition">Factory Partition<a class="headerlink" href="#factory-partition" title="Permanent link">¶</a></h2>
+<p>Boards without a VPD EEPROM, such as single board computers, boot with
+a random MAC address on every port and the vendor's default address on
+every WiFi radio.  Two such boards of the same model cannot even talk
+to each other over WiFi, since both radios claim the same address.</p>
+<p>Such a board can be given an identity by writing an ONIE TLV to the
+start of a disk partition labelled <code>factory</code>.  The system reads it
+when the device tree provides no product VPD.  The <code>onieprom</code> tool
+encodes the JSON form described <a href="#json-encoding">below</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"Bananapi","product-name":"BPI-R3"}' \
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  | onieprom -e | dd of=/dev/disk/by-partlabel/factory
+</code></pre></div>
+<p>A VPD read this way is never trusted, so it can only provide identity,
+never the factory password.  On the Banana Pi BPI-R3 family the base
+MAC address it provides is also handed out to the ports at boot: every
+wired port without a hardware address gets base + 1, base + 2, and so
+on, in interface name order.
+WiFi interfaces derive their addresses from the base MAC as described
+in <a href="../wifi/#multi-ssid-configuration">WiFi</a>.</p>
+<p>The image for the Banana Pi BPI-R3 family already carries an empty
+<code>factory</code> partition for this purpose.</p>
 <h2 id="product-vpd">Product VPD<a class="headerlink" href="#product-vpd" title="Permanent link">¶</a></h2>
 <p>The VPD named <code>product</code> describes the device as a whole.  Its
 attributes are used for the following, falling back to other sources
@@ -2822,10 +2865,10 @@ give each device a unique name, e.g., <code>example-c0-ff-ee</code>.</p>
 <p>The kernel sets the MAC address of each Ethernet port from the
 <code>nvmem-cells</code> property of its device tree node, which can refer to the
 <code>mac-address</code> cell of the product VPD, plus an offset:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&amp;eth0 {
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    nvmem-cells = &lt;&amp;base_mac 1&gt;;
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    nvmem-cell-names = "mac-address";
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>};
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>&amp;eth0 {
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    nvmem-cells = &lt;&amp;base_mac 1&gt;;
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    nvmem-cell-names = "mac-address";
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>};
 </code></pre></div>
 <h3 id="factory-password">Factory Password<a class="headerlink" href="#factory-password" title="Permanent link">¶</a></h3>
 <p>The factory default <code>admin</code> password hash, the <code>pwhash</code> <a href="#infix-specific-extensions">extension
@@ -2956,11 +2999,11 @@ the Linux kernel <a href="https://elixir.bootlin.com/linux/latest/source/drivers
 <p>The JSON encoding of a TLV is a single JSON object with an
 arbitrary subset of the attributes from the list above.</p>
 <p><strong>Example:</strong>
-</p><div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nt">"product-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wacky Widget"</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">"serial-number"</span><span class="p">:</span><span class="w"> </span><span class="s2">"#1"</span><span class="p">,</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">"manufacture-date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"02/13/2024 11:29:52"</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">}</span>
+</p><div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nt">"product-name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wacky Widget"</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">"serial-number"</span><span class="p">:</span><span class="w"> </span><span class="s2">"#1"</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">"manufacture-date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"02/13/2024 11:29:52"</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
 </code></pre></div><p></p>
 <h3 id="vendor-extensions">Vendor Extensions<a class="headerlink" href="#vendor-extensions" title="Permanent link">¶</a></h3>
 <p>As the specification explicitly mentions the option of supplying
@@ -2990,12 +3033,12 @@ the IANA enterprise number. Restricting extension data to UTF-8
 encoded strings is a decision imposed by Infix; the ONIE specification
 allows for arbitrary binary data.</p>
 <p><strong>Example</strong>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="err">...</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">"vendor-extension"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="p">[</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span><span class="w"> </span><span class="s2">"my extension data"</span><span class="w"> </span><span class="p">]</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="p">]</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="err">...</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">"vendor-extension"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="p">[</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span><span class="w"> </span><span class="s2">"my extension data"</span><span class="w"> </span><span class="p">]</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="infix-specific-extensions">Infix Specific Extensions<a class="headerlink" href="#infix-specific-extensions" title="Permanent link">¶</a></h3>
 <p><a href="https://github.com/kernelkit">Kernelkit</a>'s IANA enterprise number is <code>61046</code>, under which any
@@ -3024,44 +3067,44 @@ arbitrary subset of the following attributes:</p>
 <p>Since the extension is itself stored in a JSON document, it has to be
 appropriately quoted.</p>
 <p><strong>Example</strong>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="err">...</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">"vendor-extension"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="p">[</span><span class="w"> </span><span class="mi">61046</span><span class="p">,</span><span class="w"> </span><span class="s2">"{\"pwhash\":\"$6$9rufAxdqCrxrwfQR$G0l9cTVlu/vOhxgo/uMKfRDOmZRd5XWF3vKr5da6qYoxuTJBS/Pl9K.5lrabWoWFFc.71yFMaSlZz0O8FtAtl.\"}"</span><span class="w"> </span><span class="p">]</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">]</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="err">...</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">"vendor-extension"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="p">[</span><span class="w"> </span><span class="mi">61046</span><span class="p">,</span><span class="w"> </span><span class="s2">"{\"pwhash\":\"$6$9rufAxdqCrxrwfQR$G0l9cTVlu/vOhxgo/uMKfRDOmZRd5XWF3vKr5da6qYoxuTJBS/Pl9K.5lrabWoWFFc.71yFMaSlZz0O8FtAtl.\"}"</span><span class="w"> </span><span class="p">]</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p">]</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="creating-and-parsing-onie-eeprom-binaries">Creating and Parsing ONIE EEPROM Binaries<a class="headerlink" href="#creating-and-parsing-onie-eeprom-binaries" title="Permanent link">¶</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>usage: onieprom [-h] [-e] [-d] [infile] [outfile]
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>positional arguments:
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  infile
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  outfile
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>options:
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>  -h, --help    show this help message and exit
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>  -e, --encode  Encode JSON input to binary output
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>  -d, --decode  Decode binary input to JSON output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>usage: onieprom [-h] [-e] [-d] [infile] [outfile]
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>positional arguments:
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  infile
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  outfile
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>options:
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  -h, --help    show this help message and exit
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  -e, --encode  Encode JSON input to binary output
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>  -d, --decode  Decode binary input to JSON output
 </code></pre></div>
 <p>To convert a compatible JSON document (using the first example above)
 to its binary equivalent, we ask <a href="https://github.com/kernelkit/infix/blob/main/board/common/rootfs/usr/bin/onieprom">onieprom</a> to <em>encode</em> it for us:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>~$<span class="w"> </span>onieprom<span class="w"> </span>-e<span class="w"> </span>example.json<span class="w"> </span>&gt;example.bin
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>~$<span class="w"> </span>hexdump<span class="w"> </span>-C<span class="w"> </span>example.bin
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="m">00000000</span><span class="w">  </span><span class="m">54</span><span class="w"> </span>6c<span class="w"> </span><span class="m">76</span><span class="w"> </span><span class="m">49</span><span class="w"> </span>6e<span class="w"> </span><span class="m">66</span><span class="w"> </span>6f<span class="w"> </span><span class="m">00</span><span class="w">  </span><span class="m">01</span><span class="w"> </span><span class="m">00</span><span class="w"> </span>2d<span class="w"> </span><span class="m">25</span><span class="w"> </span><span class="m">13</span><span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="m">32</span><span class="w"> </span>2f<span class="w">  </span><span class="p">|</span>TlvInfo...-%.02/<span class="p">|</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="m">00000010</span><span class="w">  </span><span class="m">31</span><span class="w"> </span><span class="m">33</span><span class="w"> </span>2f<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="m">34</span><span class="w"> </span><span class="m">20</span><span class="w">  </span><span class="m">31</span><span class="w"> </span><span class="m">31</span><span class="w"> </span>3a<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="m">39</span><span class="w"> </span>3a<span class="w"> </span><span class="m">35</span><span class="w"> </span><span class="m">32</span><span class="w">  </span><span class="p">|</span><span class="m">13</span>/2024<span class="w"> </span><span class="m">11</span>:29:52<span class="p">|</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="m">00000020</span><span class="w">  </span><span class="m">21</span><span class="w"> </span>0c<span class="w"> </span><span class="m">57</span><span class="w"> </span><span class="m">61</span><span class="w"> </span><span class="m">63</span><span class="w"> </span>6b<span class="w"> </span><span class="m">79</span><span class="w"> </span><span class="m">20</span><span class="w">  </span><span class="m">57</span><span class="w"> </span><span class="m">69</span><span class="w"> </span><span class="m">64</span><span class="w"> </span><span class="m">67</span><span class="w"> </span><span class="m">65</span><span class="w"> </span><span class="m">74</span><span class="w"> </span><span class="m">23</span><span class="w"> </span><span class="m">02</span><span class="w">  </span><span class="p">|</span>!.Wacky<span class="w"> </span>Widget#.<span class="p">|</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="m">00000030</span><span class="w">  </span><span class="m">23</span><span class="w"> </span><span class="m">31</span><span class="w"> </span>fe<span class="w"> </span><span class="m">04</span><span class="w"> </span>dd<span class="w"> </span><span class="m">69</span><span class="w"> </span><span class="m">88</span><span class="w"> </span><span class="m">97</span><span class="w">                           </span><span class="p">|</span><span class="c1">#1...i..|</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="m">00000038</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>~$<span class="w"> </span>onieprom<span class="w"> </span>-e<span class="w"> </span>example.json<span class="w"> </span>&gt;example.bin
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>~$<span class="w"> </span>hexdump<span class="w"> </span>-C<span class="w"> </span>example.bin
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="m">00000000</span><span class="w">  </span><span class="m">54</span><span class="w"> </span>6c<span class="w"> </span><span class="m">76</span><span class="w"> </span><span class="m">49</span><span class="w"> </span>6e<span class="w"> </span><span class="m">66</span><span class="w"> </span>6f<span class="w"> </span><span class="m">00</span><span class="w">  </span><span class="m">01</span><span class="w"> </span><span class="m">00</span><span class="w"> </span>2d<span class="w"> </span><span class="m">25</span><span class="w"> </span><span class="m">13</span><span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="m">32</span><span class="w"> </span>2f<span class="w">  </span><span class="p">|</span>TlvInfo...-%.02/<span class="p">|</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="m">00000010</span><span class="w">  </span><span class="m">31</span><span class="w"> </span><span class="m">33</span><span class="w"> </span>2f<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="m">34</span><span class="w"> </span><span class="m">20</span><span class="w">  </span><span class="m">31</span><span class="w"> </span><span class="m">31</span><span class="w"> </span>3a<span class="w"> </span><span class="m">32</span><span class="w"> </span><span class="m">39</span><span class="w"> </span>3a<span class="w"> </span><span class="m">35</span><span class="w"> </span><span class="m">32</span><span class="w">  </span><span class="p">|</span><span class="m">13</span>/2024<span class="w"> </span><span class="m">11</span>:29:52<span class="p">|</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="m">00000020</span><span class="w">  </span><span class="m">21</span><span class="w"> </span>0c<span class="w"> </span><span class="m">57</span><span class="w"> </span><span class="m">61</span><span class="w"> </span><span class="m">63</span><span class="w"> </span>6b<span class="w"> </span><span class="m">79</span><span class="w"> </span><span class="m">20</span><span class="w">  </span><span class="m">57</span><span class="w"> </span><span class="m">69</span><span class="w"> </span><span class="m">64</span><span class="w"> </span><span class="m">67</span><span class="w"> </span><span class="m">65</span><span class="w"> </span><span class="m">74</span><span class="w"> </span><span class="m">23</span><span class="w"> </span><span class="m">02</span><span class="w">  </span><span class="p">|</span>!.Wacky<span class="w"> </span>Widget#.<span class="p">|</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="m">00000030</span><span class="w">  </span><span class="m">23</span><span class="w"> </span><span class="m">31</span><span class="w"> </span>fe<span class="w"> </span><span class="m">04</span><span class="w"> </span>dd<span class="w"> </span><span class="m">69</span><span class="w"> </span><span class="m">88</span><span class="w"> </span><span class="m">97</span><span class="w">                           </span><span class="p">|</span><span class="c1">#1...i..|</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="m">00000038</span>
 </code></pre></div>
 <p>We can also run the process in reverse, to inspect the contents of a
 binary in its equivalent JSON representation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>~$<span class="w"> </span>onieprom<span class="w"> </span>-d<span class="w"> </span>example.bin<span class="w"> </span>&gt;example-again.json
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>~$<span class="w"> </span>jq<span class="w"> </span>.<span class="w"> </span>example-again.json
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="o">{</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="s2">"manufacture-date"</span>:<span class="w"> </span><span class="s2">"02/13/2024 11:29:52"</span>,
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="s2">"product-name"</span>:<span class="w"> </span><span class="s2">"Wacky Widget"</span>,
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="s2">"serial-number"</span>:<span class="w"> </span><span class="s2">"#1"</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="o">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>~$<span class="w"> </span>onieprom<span class="w"> </span>-d<span class="w"> </span>example.bin<span class="w"> </span>&gt;example-again.json
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>~$<span class="w"> </span>jq<span class="w"> </span>.<span class="w"> </span>example-again.json
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="o">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="s2">"manufacture-date"</span>:<span class="w"> </span><span class="s2">"02/13/2024 11:29:52"</span>,
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="s2">"product-name"</span>:<span class="w"> </span><span class="s2">"Wacky Widget"</span>,
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="s2">"serial-number"</span>:<span class="w"> </span><span class="s2">"#1"</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="o">}</span>
 </code></pre></div>
 
 
