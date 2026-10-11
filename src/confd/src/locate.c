@@ -44,8 +44,11 @@ static json_t *iitod_call(json_t *req, const char **err)
 	}
 
 	/* Do not let a stuck iitod block confd, this also bounds connect() */
-	setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-	setsockopt(sd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+	if (setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) ||
+	    setsockopt(sd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv))) {
+		*err = "failed setting socket timeout";
+		goto done;
+	}
 
 	if (connect(sd, (struct sockaddr *)&sun, sizeof(sun))) {
 		if (errno == ENOENT)
