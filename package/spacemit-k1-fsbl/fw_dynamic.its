@@ -1,0 +1,31 @@
+/dts-v1/;
+
+/ {
+	description = "Configuration to load OpenSBI before U-Boot";
+	#address-cells = <2>;
+	fit,fdt-list = "of-list";
+
+	images {
+		opensbi {
+			description = "OpenSBI fw_dynamic Firmware";
+			type = "firmware";
+			os = "opensbi";
+			arch = "riscv";
+			compression = "none";
+			load = <0x0 0x0>;
+			entry = <0x0 0x0>;
+			data = /incbin/("./fw_dynamic.bin");
+			hash-1 {
+				algo = "crc32";
+			};
+		};
+	};
+	configurations {
+		default = "config_1";
+
+		config_1 {
+			description = "opensbi FIT config";
+			firmware = "opensbi";
+		};
+	};
+};

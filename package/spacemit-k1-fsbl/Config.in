@@ -1,0 +1,13 @@
+config BR2_PACKAGE_SPACEMIT_K1_FSBL
+	bool "spacemit-k1-fsbl"
+	depends on BR2_RISCV_64
+	depends on BR2_TARGET_OPENSBI
+	help
+	  First stage bootloader for the SpacemiT K1, the vendor U-Boot
+	  SPL with DDR init, signed for the BootROM.  Also wraps the
+	  OpenSBI fw_dynamic.bin in the FIT image the FSBL loads from
+	  the opensbi partition.
+
+	  Installs FSBL.bin, bootinfo_sd.bin and fw_dynamic.itb.
+
+	  https://gitee.com/spacemit-buildroot/uboot-2022.10
