@@ -255,7 +255,9 @@ factory config might create.  It also enables two extra RPCs used by
 Infamy:
 
 - `infix-test:test/reset` — reload the `test-config` into the running
-  datastore (called by `env.attach()` at the start of each test)
+  datastore (called by `env.attach()` for the devices a test uses, and
+  for any other device on the same wireless cells when the test maps
+  its topology, so nothing left by an earlier test shares the air)
 - `infix-test:test/override-startup` — boot from the startup datastore
   once, instead of the `test-config` (used by tests that verify
   save-and-reboot behaviour)

@@ -90,13 +90,15 @@ class Env(object):
                 top_path = self.args.ltop
 
             ldot = pydot.graph_from_dot_file(top_path)[0]
-            self.ltop = topology.Topology(ldot)
-            if not self.ltop.map_to(self.ptop,
-                                    nodes_compatible=nodes_compatible,
-                                    edge_mappings=edge_mappings):
+            ltop = topology.Topology(ldot)
+            if not ltop.map_to(self.ptop,
+                               nodes_compatible=nodes_compatible,
+                               edge_mappings=edge_mappings):
                 raise tap.TestSkip()
 
-            print(repr(self.ltop))
+            print(repr(ltop))
+            self.reset_cell_neighbours(ltop)
+            self.ltop = ltop
 
         global ENV
         ENV = self
@@ -122,6 +124,33 @@ class Env(object):
             return False
 
         return util.is_reachable(ip, self, self.get_password(node))
+
+    def reset_cell_neighbours(self, ltop):
+        """Reset the DUTs this test leaves out but shares a wireless cell with.
+
+        attach() resets the nodes a test uses.  Another DUT on one of
+        its cells is on the same air, and whatever the previous test
+        left running there, an access point say, is in this test's way.
+        Called before the mapping is stored, so attach() takes the
+        physical names.  A DUT without test mode is left as it is.
+        """
+        used = {m[None] for m in ltop.mapping.values()}
+        cells = [n for n in used
+                 if topology.compatible(self.ptop.g.nodes[n], {"requires": {"wifi-radio"}})]
+        strays = {n for cell in cells for n in self.ptop.g.neighbors(cell)}
+        strays &= set(self.ptop.get_infixen())
+        strays -= used
+
+        def reset_one(node):
+            dev = self.attach(node, test_reset=False)
+            if not dev.has_feature("infix-test", "test-mode-enable"):
+                print(f"{node}: not in test mode, left as is")
+                return
+            dev.test_reset()
+            cport, _ = self.ptop.get_mgmt_link(self.ptop.get_ctrl(), node)
+            util.until(lambda: self.is_reachable(node, cport), 30)
+
+        util.parallel(*[lambda n=n: reset_one(n) for n in sorted(strays)])
 
     def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
         """Attach to node on port using protocol."""
