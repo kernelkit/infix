@@ -52,32 +52,22 @@ WIFI_PSK = "infixinfix"
 
 CLIENT_IP = "10.0.0.9"
 HOST_IP = "10.0.0.1"
-CLIENT_MAC = "02:00:00:00:00:09"
-
-# Unique MACs: hwsim defaults every radioN to the same address across guests,
-# so the mesh peers and the AP BSSIDs would collide without these.  The AP MAC
-# is the BSSID the client reports when associated to that node.
-GWS = [
-    # name, mesh radio0 MAC, AP radio1 MAC (BSSID)
-    ("gw1", "02:00:00:00:00:01", "02:00:00:00:0a:01"),
-    ("gw2", "02:00:00:00:00:02", "02:00:00:00:0a:02"),
-    ("gw3", "02:00:00:00:00:03", "02:00:00:00:0a:03"),
-]
+GWS = ["gw1", "gw2", "gw3"]
 
 SECRETS = {"mesh-secret": MESH_PSK, "wifi-secret": WIFI_PSK}
 
 
-def gw_config(mesh_mac, ap_mac, uplink=None):
+def gw_config(uplink=None):
     interfaces = [
         {"name": "br0", "type": "infix-if-type:bridge", "enabled": True},
-        wifi.iface("wifi0", mesh_mac, {
+        wifi.iface("wifi0", {
             "radio": "radio0",
             "mesh-point": {
                 "mesh-id": MESH_ID,
                 "security": {"secret": "mesh-secret"},
             },
         }, bridge="br0"),
-        wifi.iface("wifi1", ap_mac, {
+        wifi.iface("wifi1", {
             "radio": "radio1",
             "access-point": {
                 "ssid": SSID,
@@ -122,16 +112,15 @@ with infamy.Test() as test:
         )
         gw_duts = [gw1, gw2, gw3]
         shells = {"gw1": gw1sh, "gw2": gw2sh, "gw3": gw3sh}
-        gws = [(name, dut, mesh, ap) for (name, mesh, ap), dut in zip(GWS, gw_duts)]
+        gws = list(zip(GWS, gw_duts))
 
         wifi.skip_unless_supported(test, client, *gw_duts)
 
     with test.step("Configure gw1, gw2, gw3 as mesh nodes with a roaming AP"):
         _, gw1_uplink = env.ltop.xlate("gw1", "uplink")
-        parallel(*[lambda name=name, dut=dut, mesh_mac=mesh_mac, ap_mac=ap_mac:
-                   dut.put_config_dicts(gw_config(mesh_mac, ap_mac,
-                                                  uplink=gw1_uplink if name == "gw1" else None))
-                   for name, dut, mesh_mac, ap_mac in gws])
+        parallel(*[lambda name=name, dut=dut:
+                   dut.put_config_dicts(gw_config(uplink=gw1_uplink if name == "gw1" else None))
+                   for name, dut in gws])
 
     with test.step("Configure the client as a station for the 'campus' SSID"):
         # The client joins the gw APs, which run on radio1 (2.4GHz).  In the
@@ -143,7 +132,7 @@ with infamy.Test() as test:
             "ietf-hardware": wifi.hardware(wifi.radio("radio1", band="2.4GHz", channel=1)),
             "ietf-keystore": wifi.keystore(SECRETS),
             "ietf-interfaces": {"interfaces": {"interface": [
-                wifi.iface("wifi0", CLIENT_MAC, {
+                wifi.iface("wifi0", {
                     "radio": "radio1",
                     "station": {
                         "ssid": SSID,
@@ -154,14 +143,14 @@ with infamy.Test() as test:
         })
 
     with test.step("Verify each node lists the other two nodes as mesh peers"):
-        mesh_macs = {mesh_mac.lower() for _, mesh_mac, _ in GWS}
-        for name, dut, mesh_mac, _ in gws:
-            until(lambda dut=dut, mesh_mac=mesh_mac:
-                  wifi.mesh_peer_macs(dut) == mesh_macs - {mesh_mac.lower()},
+        mesh_macs = {name: wifi.phys_address(dut, "wifi0") for name, dut in gws}
+        for name, dut in gws:
+            until(lambda dut=dut, mesh_mac=mesh_macs[name]:
+                  wifi.mesh_peer_macs(dut) == set(mesh_macs.values()) - {mesh_mac},
                   attempts=60, interval=2)
 
     with test.step("Verify each node reports mesh-id 'backhaul' with forwarding enabled"):
-        for name, dut, _, _ in gws:
+        for name, dut in gws:
             mp = wifi.mesh_point(dut)
             if mp.get("mesh-id") != MESH_ID or mp.get("forwarding") is not True:
                 print(f"{name}: {mp}")
@@ -172,7 +161,7 @@ with infamy.Test() as test:
 
     # The client reports the BSSID it is on; with all three APs sharing the
     # SSID, that BSSID is what tells them apart.
-    aps = {ap_mac.lower(): (name, dut) for name, dut, _, ap_mac in gws}
+    aps = {wifi.phys_address(dut, "wifi1"): (name, dut) for name, dut in gws}
 
     def on_campus_ap(*not_on):
         bssid = wifi.station_bssid(client)

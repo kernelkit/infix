@@ -40,13 +40,7 @@ HOME_SSID = "infix-home"
 GUEST_SSID = "infix-guest"
 PSK = "infixinfix"
 
-ROOT_AP_MAC = "02:00:00:00:00:01"
-REPEATER_STA_MAC = "02:00:00:00:00:02"
-HOME_AP_MAC = "02:00:00:00:0a:02"
-GUEST_AP_MAC = "02:00:00:00:0b:02"
 GUEST_AP_MAC_NEW = "02:00:00:00:0b:12"
-HOME_MAC = "02:00:00:00:00:09"
-GUEST_MAC = "02:00:00:00:00:0a"
 
 HOME_HOST_IP = "10.10.0.1"
 HOME_ROOT_IP = "10.10.0.2"
@@ -58,7 +52,7 @@ GUEST_IP = "10.20.0.9"
 SECRETS = {"backhaul": PSK, "home": PSK, "guest": PSK}
 
 
-def root_config(uplink):
+def root_config(uplink, repeater_mac, home_mac, guest_mac):
     return {
         "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
         "ietf-keystore": wifi.keystore(SECRETS),
@@ -76,22 +70,22 @@ def root_config(uplink):
              "ipv4": {"address": [{"ip": GUEST_ROOT_IP, "prefix-length": 24}]}},
             {"name": uplink, "enabled": True,
              "infix-interfaces:bridge-port": {"bridge": "br0"}},
-            wifi.iface("wifi0", ROOT_AP_MAC, {
+            wifi.iface("wifi0", {
                 "radio": "radio0",
                 "access-point": {
                     "ssid": BACKHAUL_SSID,
                     "security": {"mode": "wpa2-wpa3-personal", "secret": "backhaul"},
                 },
             }),
-            wifi.wds_link("wds0", "wifi0", REPEATER_STA_MAC, bridge="br0"),
+            wifi.wds_link("wds0", "wifi0", repeater_mac, bridge="br0"),
         ]}},
         "infix-dhcp-server": {"dhcp-server": {"subnet": [
             {"subnet": "10.10.0.0/24",
              "pool": {"start-address": "10.10.0.100", "end-address": "10.10.0.100"},
-             "host": [{"address": HOME_IP, "match": {"mac-address": HOME_MAC}}]},
+             "host": [{"address": HOME_IP, "match": {"mac-address": home_mac}}]},
             {"subnet": "10.20.0.0/24",
              "pool": {"start-address": "10.20.0.100", "end-address": "10.20.0.100"},
-             "host": [{"address": GUEST_IP, "match": {"mac-address": GUEST_MAC}}]},
+             "host": [{"address": GUEST_IP, "match": {"mac-address": guest_mac}}]},
         ]}},
     }
 
@@ -106,23 +100,22 @@ def repeater_config():
                  {"vid": 10, "untagged": ["wifi1"], "tagged": ["wifi0"]},
                  {"vid": 20, "untagged": ["wifi2"], "tagged": ["wifi0"]},
              ]}}},
-            wifi.iface("wifi0", REPEATER_STA_MAC, {
+            wifi.iface("wifi0", {
                 "radio": "radio0",
                 "station": {
                     "ssid": BACKHAUL_SSID,
                     "wds": True,
-                    "peer-bssid": ROOT_AP_MAC,
                     "security": {"mode": "auto", "secret": "backhaul"},
                 },
             }, bridge="br0"),
-            wifi.iface("wifi1", HOME_AP_MAC, {
+            wifi.iface("wifi1", {
                 "radio": "radio0",
                 "access-point": {
                     "ssid": HOME_SSID,
                     "security": {"mode": "wpa2-wpa3-personal", "secret": "home"},
                 },
             }, bridge="br0", pvid=10),
-            wifi.iface("wifi2", GUEST_AP_MAC, {
+            wifi.iface("wifi2", {
                 "radio": "radio0",
                 "access-point": {
                     "ssid": GUEST_SSID,
@@ -133,12 +126,12 @@ def repeater_config():
     }
 
 
-def station_config(mac, ssid, secret):
+def station_config(ssid, secret):
     return {
         "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
         "ietf-keystore": wifi.keystore(SECRETS),
         "ietf-interfaces": {"interfaces": {"interface": [
-            wifi.iface("wifi0", mac, {
+            wifi.iface("wifi0", {
                 "radio": "radio0",
                 "station": {
                     "ssid": ssid,
@@ -173,18 +166,22 @@ with infamy.Test() as test:
         )
         wifi.skip_unless_supported(test, root, repeater, home, guest)
 
-    with test.step("Configure the root with access point 'infix-backhaul', WDS port wds0 and the uplink tagged in VLAN 10 and 20, DHCP in each VLAN"):
-        _, uplink = env.ltop.xlate("root", "uplink")
-        root.put_config_dicts(root_config(uplink))
+    with test.step("Configure home as a DHCP station for 'infix-home' and guest as a DHCP station for 'infix-guest'"):
+        parallel(
+            lambda: home.put_config_dicts(station_config(HOME_SSID, "home")),
+            lambda: guest.put_config_dicts(station_config(GUEST_SSID, "guest")),
+        )
 
     with test.step("Configure the repeater with a 4-address station tagged in VLAN 10 and 20, access point 'infix-home' untagged in VLAN 10 and 'infix-guest' untagged in VLAN 20"):
         repeater.put_config_dicts(repeater_config())
+        home_ap_mac = wifi.phys_address(repeater, "wifi1")
+        guest_ap_mac = wifi.phys_address(repeater, "wifi2")
 
-    with test.step("Configure home as a DHCP station for 'infix-home' and guest as a DHCP station for 'infix-guest'"):
-        parallel(
-            lambda: home.put_config_dicts(station_config(HOME_MAC, HOME_SSID, "home")),
-            lambda: guest.put_config_dicts(station_config(GUEST_MAC, GUEST_SSID, "guest")),
-        )
+    with test.step("Configure the root with access point 'infix-backhaul', WDS port wds0 for the repeater's station and the uplink tagged in VLAN 10 and 20, DHCP in each VLAN with fixed addresses for home and guest"):
+        _, uplink = env.ltop.xlate("root", "uplink")
+        root.put_config_dicts(root_config(uplink, wifi.phys_address(repeater, "wifi0"),
+                                          wifi.phys_address(home, "wifi0"),
+                                          wifi.phys_address(guest, "wifi0")))
 
     with test.step("Verify the repeater's wifi0 associates to 'infix-backhaul'"):
         until(lambda: wifi.associated(repeater, BACKHAUL_SSID), attempts=60, interval=2)
@@ -192,11 +189,11 @@ with infamy.Test() as test:
     with test.step("Verify wds0 on the root is up"):
         until(lambda: iface.is_oper_up(root, "wds0"), attempts=30, interval=2)
 
-    with test.step("Verify home is on the repeater's 'infix-home' access point, BSSID 02:00:00:00:0a:02"):
-        until(lambda: wifi.station_bssid(home) == HOME_AP_MAC, attempts=60, interval=2)
+    with test.step("Verify home is on the repeater's 'infix-home' access point"):
+        until(lambda: wifi.station_bssid(home) == home_ap_mac, attempts=60, interval=2)
 
-    with test.step("Verify guest is on the repeater's 'infix-guest' access point, BSSID 02:00:00:00:0b:02"):
-        until(lambda: wifi.station_bssid(guest) == GUEST_AP_MAC, attempts=60, interval=2)
+    with test.step("Verify guest is on the repeater's 'infix-guest' access point"):
+        until(lambda: wifi.station_bssid(guest) == guest_ap_mac, attempts=60, interval=2)
 
     with test.step("Verify home leases 10.10.0.9 from the root's VLAN 10 DHCP server through the backhaul"):
         until(lambda: iface.address_exist(home, "wifi0", HOME_IP), attempts=60, interval=2)
@@ -256,7 +253,7 @@ with infamy.Test() as test:
             until(lambda: reaches(ns, GUEST_IP), attempts=30, interval=2)
 
     with test.step("Verify home is still on its access point"):
-        if wifi.station_bssid(home) != HOME_AP_MAC:
+        if wifi.station_bssid(home) != home_ap_mac:
             test.fail()
 
     test.succeed()

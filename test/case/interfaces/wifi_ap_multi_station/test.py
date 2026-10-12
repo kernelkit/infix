@@ -36,14 +36,7 @@ from infamy.util import until, parallel
 SSID = "infix-test"
 PSK = "infixinfix"          # 8-63 printable ASCII, see doc/wifi.md
 
-# hwsim defaults every radio0 to 02:00:00:00:00:00, so the AP and all the
-# stations would otherwise share one MAC -- give each DUT a unique address.
-STATIONS = [
-    ("station1", "02:00:00:00:00:02"),
-    ("station2", "02:00:00:00:00:03"),
-    ("station3", "02:00:00:00:00:04"),
-]
-AP_MAC = "02:00:00:00:00:01"
+STATIONS = ["station1", "station2", "station3"]
 
 # The ap runs a DHCP server on wifi0; every station leases an address from
 # the pool.  A completed lease is real bidirectional IP traffic over the
@@ -69,10 +62,9 @@ with infamy.Test() as test:
         # Connect to the AP and all stations concurrently to cut setup time.
         ap, *station_duts = parallel(
             lambda: env.attach("ap", "mgmt"),
-            *((lambda n=name: env.attach(n, "mgmt")) for name, _ in STATIONS),
+            *((lambda n=name: env.attach(n, "mgmt")) for name in STATIONS),
         )
-        stations = [(name, mac, dut)
-                    for (name, mac), dut in zip(STATIONS, station_duts)]
+        stations = list(zip(STATIONS, station_duts))
 
         wifi.skip_unless_supported(test, ap, *station_duts)
 
@@ -81,7 +73,7 @@ with infamy.Test() as test:
             "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
             "ietf-keystore": wifi.keystore({"wifi": PSK}),
             "ietf-interfaces": {"interfaces": {"interface": [
-                wifi.iface("wifi0", AP_MAC, {
+                wifi.iface("wifi0", {
                     "radio": "radio0",
                     "access-point": {
                         "ssid": SSID,
@@ -96,12 +88,12 @@ with infamy.Test() as test:
         })
 
     with test.step("Configure the stations on radio0"):
-        def configure_station(mac, dut):
+        def configure_station(dut):
             dut.put_config_dicts({
                 "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
-                    wifi.iface("wifi0", mac, {
+                    wifi.iface("wifi0", {
                         "radio": "radio0",
                         "station": {
                             "ssid": SSID,
@@ -111,21 +103,20 @@ with infamy.Test() as test:
                 ]}},
             })
 
-        parallel(*[lambda mac=mac, dut=dut: configure_station(mac, dut)
-                   for _name, mac, dut in stations])
+        parallel(*[lambda dut=dut: configure_station(dut) for _name, dut in stations])
 
-    for name, _mac, dut in stations:
+    for name, dut in stations:
         with test.step("Verify the station associates to the ap over the wifi link"):
             print(f"Verifying {name}")
             until(lambda dut=dut: wifi.associated(dut, SSID),
                   attempts=60, interval=2)
 
-    for name, _mac, dut in stations:
+    for name, dut in stations:
         with test.step("Verify the station's wifi0 operational status is up"):
             print(f"Verifying {name}")
             until(lambda dut=dut: iface.is_oper_up(dut, "wifi0"), attempts=30)
 
-    for name, _mac, dut in stations:
+    for name, dut in stations:
         with test.step("Verify the station leases an address from the ap over wifi"):
             print(f"Verifying {name}")
             until(lambda dut=dut: leased(dut), attempts=60, interval=2)
