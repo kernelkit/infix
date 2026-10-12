@@ -55,7 +55,8 @@ submodule infix-if-wifi {
        the per-radio country-code leaf is gone.  802.11r gets an optional
        key-holder-secret, a key of its own for the access points of a
        mobility domain to hand each other a client's keys with, instead
-       of the WiFi password.";
+       of the WiFi password.  Interfaces without a custom-phys-address
+       are no longer limited to one per radio.";
     reference "internal";
   }
 
@@ -163,9 +164,6 @@ submodule infix-if-wifi {
         }
         must "count(/if:interfaces/if:interface[wifi/radio = current()][not(wifi/access-point)][not(wifi/wds-link)]) <= 1" {
           error-message "Only one station or scan interface is allowed per radio";
-        }
-        must "count(/if:interfaces/if:interface[wifi/radio = current()][not(infix-if:custom-phys-address/*)][not(wifi/wds-link)]) <= 1" {
-          error-message "Only one interface per radio can use the default MAC address. Configure custom-phys-address on additional interfaces.";
         }
 
         description
