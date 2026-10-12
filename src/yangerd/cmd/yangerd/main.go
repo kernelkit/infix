@@ -227,6 +227,7 @@ func main() {
 	forwardingPaths := []string{
 		"/proc/sys/net/ipv4/conf/*/forwarding",
 		"/proc/sys/net/ipv6/conf/*/forwarding",
+		"/proc/sys/net/ipv6/conf/*/force_forwarding",
 	}
 	forwarding := fswatcher.WatchHandler{
 		TreeKey:  routingTreeKey,
