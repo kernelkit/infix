@@ -231,6 +231,22 @@ def runcmdj(cmd):
         return data
 
 
+def stopproc(proc):
+    """Stop a child process, kill it if it does not stop in time."""
+    if not proc:
+        return
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
+# After the helpers above, which they use
+from . import dhcp  # noqa: E402
+from . import ppp   # noqa: E402
+
+
 def list_sms(modem):
     smslist = []
 
@@ -619,10 +635,11 @@ class ModemThread(threading.Thread):
         self.path = None
         self.interfaces = []
         self.ifaces = []
+        self.dhcp = {}
+        self.ppp = {}
         self.status = {}
         self.state = None
         self.trigger = None
-        self.iface = None
         self.sim = None
         self.failtime = None
         self.detected = False
@@ -922,7 +939,7 @@ class ModemThread(threading.Thread):
         return True
 
     def ifupdown(self, iface, action):
-        path = "/var/ifupdown/%s" % self.iface
+        path = "/var/ifupdown/%s" % iface["name"]
         if os.path.isfile(path) or os.access(path, os.X_OK):
             self.info("Running %s %s" % (path, action))
             if not runcmd([path, action]):
@@ -1501,6 +1518,46 @@ class ModemThread(threading.Thread):
                 return False
         return True
 
+    def dhcp_lease(self, iface):
+        """Start the DHCP client on the bearer's interface and fill in
+        IPv4 from the lease.  False until there is a lease."""
+        name = iface["name"]
+        if name not in self.dhcp:
+            self.info("Starting DHCP client on %s" % name)
+            self.dhcp[name] = dhcp.start(name)
+        lease = dhcp.lease(name)
+        if not lease:
+            return False
+        iface["ipv4"] = {**iface["ipv4"], **lease}
+        return True
+
+    def ppp_up(self, iface):
+        """For a bearer with IP method ppp, run pppd on the tty ModemManager
+        dialed on.  The link takes the name of the configured interface,
+        replacing confd's placeholder.  True once the link is up."""
+        name = iface["bearer"]["name"]
+        if name not in self.ppp:
+            if ppp.is_placeholder(name):
+                runcmd(["ip", "link", "del", "dev", name], check=False)
+            self.info("Starting PPP on %s as %s" % (iface["name"], name))
+            self.ppp[name] = ppp.start(iface["name"], name, iface["bearer"])
+        return ppp.is_up(name)
+
+    def dhcp_renew(self):
+        """Apply a DHCP lease that changed while the bearer is up."""
+        for iface in list(self.ifaces):
+            if iface["ipv4"].get("method") != "dhcp":
+                continue
+            lease = dhcp.lease(iface["name"])
+            ipv4 = {**iface["ipv4"], **(lease or {})}
+            if ipv4 == iface["ipv4"]:
+                continue
+            self.info("DHCP lease changed on %s" % iface["name"])
+            self.ifaces.remove(iface)
+            iface = dict(iface, ipv4=ipv4)
+            if not self.linkup(iface):
+                self.linkdown(iface)
+
     def pullup(self):
         count = 0
         for bearer in self.get_bearers():
@@ -1516,6 +1573,13 @@ class ModemThread(threading.Thread):
             if iface["name"] == "--":
                 continue
             if iface["connected"] != "yes":
+                continue
+            method = iface["ipv4"].get("method")
+            if method == "ppp":
+                if self.ppp_up(iface):
+                    count += 1
+                continue
+            if method == "dhcp" and not self.dhcp_lease(iface):
                 continue
             if iface["ipv4"]["address"] == "--":
                 if iface["ipv6"]["address"] == "--":
@@ -1545,6 +1609,11 @@ class ModemThread(threading.Thread):
                             "--bearer=%s" % bearer["dbus-path"])
         for iface in self.ifaces:
             self.linkdown(iface)
+        # DHCP clients and pppd, also those still waiting for an address
+        for name in list(self.dhcp):
+            dhcp.stop(self.dhcp.pop(name), name)
+        for name in list(self.ppp):
+            ppp.stop(self.ppp.pop(name), name)
 
         self.set_state(State.DOWN)
 
@@ -1617,6 +1686,11 @@ class ModemThread(threading.Thread):
             self.timeout = 10
             if self.status.get("state", "") != "connected":
                 self.pulldown()
+            elif any(p.poll() is not None for p in self.ppp.values()):
+                self.err("PPP link lost")
+                self.pulldown()
+            else:
+                self.dhcp_renew()
 
 
     def check_trigger(self):
@@ -1778,7 +1852,7 @@ class ModemThread(threading.Thread):
             self.timer2 = time.time()
 
     def lookup(self):
-        if self.iface and self.sim:
+        if self.sim:
             return True
 
         if self.port:
@@ -1790,13 +1864,6 @@ class ModemThread(threading.Thread):
         if not info:
             self.err("No modem info")
             return False
-
-        ifaces = info.get("interfaces", [])
-        if len(info.get("interfaces", [])) == 0:
-            self.err("No modem interface")
-            return False
-        else:
-            self.iface = ifaces[0]
 
         self.sim = info.get("sim", None)
         if not self.sim:

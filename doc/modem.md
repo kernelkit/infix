@@ -1,7 +1,7 @@
 # Cellular Modem (WWAN)
 
 Cellular modems are supported when they expose a QMI or MBIM control
-interface over USB.  Form factor does not matter:
+interface, or only AT commands, over USB.  Form factor does not matter:
 USB dongles, mPCIe cards, and M.2 Key-B modules all work as long as
 the modem chipset uses USB on the connector (the typical case for
 4G/LTE modems).  See *Supported Modems* below for the exceptions.
@@ -91,6 +91,15 @@ recognised:
   Quectel EM06/EM12)
 - **QMI**: Qualcomm MSM Interface (e.g. Sierra Wireless EM7xxx,
   Quectel EM/RMxxx)
+
+Modems with only an AT command port, e.g. a USB serial port handled by
+the `cdc_acm` driver (`ttyACM0`), are supported too.  They have no
+network interface of their own, so the data connection runs as PPP
+over the AT port, and the wwan interface is the PPP link.
+
+> [!NOTE]
+> AT-only modems have only been tested with the virtual modem of the
+> test system, not with modem hardware.
 
 Most 4G/LTE modules (USB dongles, mPCIe cards, M.2 Key-B) use USB on
 the connector even when the slot also carries PCIe lanes.  To the
