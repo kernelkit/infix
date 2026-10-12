@@ -218,7 +218,7 @@ func interfaceCommon(iplink, ipaddr map[string]any, neighEntries []map[string]an
 		"name":         getString(iplink, "ifname"),
 		"if-index":     getIntOrZero(iplink, "ifindex"),
 		"admin-status": boolToStatus(contains(flags, "UP"), "up", "down"),
-		"oper-status":  iplink2yangOperstate(getString(iplink, "operstate")),
+		"oper-status":  iplink2yangOperstate(getString(iplink, "operstate"), flags),
 	}
 
 	if _, ok := iplink["ifalias"]; ok {
@@ -310,8 +310,19 @@ func iplink2yangLower(iplink map[string]any) string {
 	}
 }
 
-func iplink2yangOperstate(oper string) string {
+// iplink2yangOperstate maps the kernel operstate.  Interfaces without
+// carrier handling (AP_VLAN, tunnels) stay in UNKNOWN, there the link
+// flags tell the real state.
+func iplink2yangOperstate(oper string, flags []string) string {
 	switch oper {
+	case "UNKNOWN":
+		if !contains(flags, "UP") {
+			return "down"
+		}
+		if contains(flags, "LOWER_UP") {
+			return "up"
+		}
+		return "lower-layer-down"
 	case "DOWN":
 		return "down"
 	case "UP":

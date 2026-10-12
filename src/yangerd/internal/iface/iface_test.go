@@ -116,7 +116,7 @@ func TestTransformSingleLoopback(t *testing.T) {
 	link := []map[string]any{{
 		"ifindex":    1,
 		"ifname":     "lo",
-		"flags":      []any{"LOOPBACK", "UP"},
+		"flags":      []any{"LOOPBACK", "UP", "LOWER_UP"},
 		"link_type":  "loopback",
 		"operstate":  "UNKNOWN",
 		"address":    "00:00:00:00:00:00",
@@ -135,7 +135,7 @@ func TestTransformSingleLoopback(t *testing.T) {
 	if lo["type"] != "infix-if-type:loopback" {
 		t.Fatalf("type = %v", lo["type"])
 	}
-	if lo["admin-status"] != "up" || lo["oper-status"] != "unknown" {
+	if lo["admin-status"] != "up" || lo["oper-status"] != "up" {
 		t.Fatalf("admin/oper mismatch: %v/%v", lo["admin-status"], lo["oper-status"])
 	}
 }
@@ -518,21 +518,26 @@ func TestIplink2yangTypeMappings(t *testing.T) {
 
 func TestIplink2yangOperstateMappings(t *testing.T) {
 	tests := []struct {
-		in   string
-		want string
+		in    string
+		flags []string
+		want  string
 	}{
-		{"DOWN", "down"},
-		{"UP", "up"},
-		{"DORMANT", "dormant"},
-		{"TESTING", "testing"},
-		{"LOWERLAYERDOWN", "lower-layer-down"},
-		{"NOTPRESENT", "not-present"},
-		{"WHATEVER", "unknown"},
+		{"DOWN", nil, "down"},
+		{"UP", nil, "up"},
+		{"DORMANT", nil, "dormant"},
+		{"TESTING", nil, "testing"},
+		{"LOWERLAYERDOWN", nil, "lower-layer-down"},
+		{"NOTPRESENT", nil, "not-present"},
+		{"WHATEVER", nil, "unknown"},
+		{"UNKNOWN", nil, "down"},
+		{"UNKNOWN", []string{"BROADCAST", "MULTICAST"}, "down"},
+		{"UNKNOWN", []string{"BROADCAST", "MULTICAST", "UP"}, "lower-layer-down"},
+		{"UNKNOWN", []string{"BROADCAST", "MULTICAST", "UP", "LOWER_UP"}, "up"},
 	}
 
 	for _, tt := range tests {
-		if got := iplink2yangOperstate(tt.in); got != tt.want {
-			t.Fatalf("iplink2yangOperstate(%q) = %q, want %q", tt.in, got, tt.want)
+		if got := iplink2yangOperstate(tt.in, tt.flags); got != tt.want {
+			t.Fatalf("iplink2yangOperstate(%q, %v) = %q, want %q", tt.in, tt.flags, got, tt.want)
 		}
 	}
 }
