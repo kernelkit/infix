@@ -452,6 +452,9 @@ def generic_usb_ports(out):
         device_path = os.path.join(usb_base, entry)
         if not os.path.exists(os.path.join(device_path, "authorized")):
             continue
+        # The virtual modem's bus (00-modemsim) is not a port
+        if "/dummy_hcd." in os.path.realpath(device_path):
+            continue
         num = entry.replace("usb", "")
         ports.append({"num": num, "path": device_path})
 

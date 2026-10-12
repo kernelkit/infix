@@ -1,0 +1,69 @@
+#!/bin/sh
+# Create a virtual USB modem for testing: a configfs gadget with one ACM
+# function on dummy_hcd, which loops it back to the host side of the
+# same kernel.  The host side is a cdc_acm /dev/ttyACMn, probed by
+# ModemManager like any AT modem, the gadget side is /dev/ttyGS0, served
+# by the modemsim AT emulator.  pppd for the network side of a data call
+# runs in the modemsim netns.
+#
+# Runs before 00-probe, so the system probe records the modem.  Only for
+# nodes the topology gives a modem: qeneth writes 1 to the opt/modem
+# fw_cfg, 0 or no file means no modem.  On success it sets the
+# <usr/modemsim> condition for the emulator service.  Installed only with
+# BR2_PACKAGE_FEATURE_MODEM_VIRTUAL.
+
+fwcfg=/sys/firmware/qemu_fw_cfg/by_name/opt/modem/raw
+gadget=/sys/kernel/config/usb_gadget/modemsim
+
+[ "$(cat "$fwcfg" 2>/dev/null)" -gt 0 ] 2>/dev/null || exit 0
+
+log()
+{
+	logger -p user.err -t 00-modemsim "$*"
+}
+
+modprobe dummy_hcd || exit 0
+mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
+
+mkdir -p $gadget
+echo 0x1d6b > $gadget/idVendor		# Linux Foundation
+echo 0x0104 > $gadget/idProduct		# Multifunction Composite Gadget
+mkdir -p $gadget/strings/0x409
+echo "Virtual"       > $gadget/strings/0x409/manufacturer
+echo "modemsim"      > $gadget/strings/0x409/product
+echo "000000000001"  > $gadget/strings/0x409/serialnumber
+
+mkdir -p $gadget/functions/acm.at $gadget/configs/c.1
+ln -sf $gadget/functions/acm.at $gadget/configs/c.1/
+
+for udc in /sys/class/udc/dummy_udc*; do break; done
+if [ ! -e "$udc" ]; then
+	log "no dummy UDC, cannot create virtual modem"
+	exit 1
+fi
+
+# USB devices need authorizing, see usbcore.authorized_default.  This
+# bus is not listed as a port by 00-probe, so confd never touches it.
+for bus in /sys/devices/platform/dummy_hcd.*/usb*; do
+	echo 1 > "$bus/authorized_default"
+done
+
+basename "$udc" > $gadget/UDC
+
+ip netns add modemsim 2>/dev/null
+
+# The host side enumerates asynchronously, wait (bounded ~10s) for it
+i=0
+while [ $i -lt 100 ]; do
+	for tty in /sys/devices/platform/dummy_hcd.*/usb*/*/*/tty/ttyACM*; do
+		if [ -e "$tty" ]; then
+			initctl -bq cond set modemsim
+			exit 0
+		fi
+	done
+	i=$((i + 1))
+	sleep 0.1
+done
+
+log "timed out waiting for the virtual modem's ttyACM"
+exit 1
