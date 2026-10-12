@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""AT command emulator for the virtual modem, see 00-modemsim.
+
+Just enough of 3GPP TS 27.007 for ModemManager's generic plugin to probe,
+enable, register and dial.  Table driven: each entry is a regex on the
+command (without the AT prefix) and a handler returning response lines.
+Unknown commands answer ERROR and are logged.
+
+On dial the emulator answers CONNECT and hands the tty to pppd, which
+plays the network side from the modemsim netns.  When the PPP session
+ends, the emulator takes the tty back and answers AT commands again.
+"""
+import os
+import re
+import subprocess
+import sys
+import syslog
+import termios
+import time
+import tty
+
+TTY = "/dev/ttyGS0"
+NETNS = "modemsim"
+
+MANUFACTURER = "Infix"
+MODEL = "Virtual Modem"
+REVISION = "modemsim 1.0"
+IMEI = "356938035643809"
+IMSI = "240990000000001"
+ICCID = "89460990000000000017"
+OPERATOR = "Infix"
+MCCMNC = "24099"
+
+
+class Modem:
+    def __init__(self):
+        self.echo = True
+        self.cmee = 0
+        self.cfun = 1
+        self.creg = {"CREG": 0, "CGREG": 0, "CEREG": 0}
+        self.contexts = {}           # cid -> (pdp_type, apn)
+        self.active = set()          # active cids
+        self.dialed = False
+
+    # Each handler gets the regex match and returns the response lines,
+    # without the final result code.
+
+    def ident(self, m):
+        return [{"MI": MANUFACTURER, "MM": MODEL, "MR": REVISION,
+                 "SN": IMEI}[m.group(1).upper()]]
+
+    def ati(self, m):
+        return [MANUFACTURER, MODEL, "Revision: " + REVISION]
+
+    def gcap(self, m):
+        return ["+GCAP: +CGSM"]
+
+    def cpin(self, m):
+        return ["+CPIN: READY"]
+
+    def cimi(self, m):
+        return [IMSI]
+
+    def ccid(self, m):
+        return ["+CCID: " + ICCID]
+
+    def crsm_iccid(self, m):
+        # EF_ICCID is BCD with swapped nibbles, 90 00 is success
+        swapped = "".join(ICCID[i + 1] + ICCID[i] for i in range(0, 20, 2))
+        return ['+CRSM: 144,0,"%s"' % swapped]
+
+    def cfun_get(self, m):
+        return ["+CFUN: %d" % self.cfun]
+
+    def cfun_set(self, m):
+        self.cfun = int(m.group(1))
+        return []
+
+    def cmee_set(self, m):
+        self.cmee = int(m.group(1))
+        return []
+
+    def reg_set(self, m):
+        self.creg[m.group(1)] = int(m.group(2))
+        return []
+
+    def reg_get(self, m):
+        name = m.group(1)
+        mode = self.creg[name]
+        stat = 1 if self.cfun == 1 else 0      # home / not registered
+        if mode == 2 and stat == 1:
+            act = 7 if name == "CEREG" else 2
+            return ['+%s: %d,%d,"0001","00000A1B",%d' % (name, mode, stat, act)]
+        return ["+%s: %d,%d" % (name, mode, stat)]
+
+    def cops_get(self, m):
+        if self.cfun != 1:
+            return ["+COPS: 0"]
+        return ['+COPS: 0,0,"%s",7' % OPERATOR]
+
+    def cops_test(self, m):
+        return ['+COPS: (2,"%s","%s","%s",7),,(0-4),(0-2)'
+                % (OPERATOR, OPERATOR, MCCMNC)]
+
+    def csq(self, m):
+        return ["+CSQ: 20,99"]                # about -73 dBm
+
+    def cgdcont_test(self, m):
+        return ['+CGDCONT: (1-4),"IP",,,(0-2),(0-4)',
+                '+CGDCONT: (1-4),"IPV6",,,(0-2),(0-4)',
+                '+CGDCONT: (1-4),"IPV4V6",,,(0-2),(0-4)']
+
+    def cgdcont_get(self, m):
+        return ['+CGDCONT: %d,"%s","%s","0.0.0.0",0,0' % (cid, t, apn)
+                for cid, (t, apn) in sorted(self.contexts.items())]
+
+    def cgdcont_set(self, m):
+        self.contexts[int(m.group(1))] = (m.group(2), m.group(3))
+        return []
+
+    def cgact_get(self, m):
+        return ["+CGACT: %d,%d" % (cid, cid in self.active)
+                for cid in sorted(self.contexts)]
+
+    def cgact_set(self, m):
+        cid = int(m.group(2))
+        (self.active.add if m.group(1) == "1" else self.active.discard)(cid)
+        return []
+
+    def dial(self, m):
+        self.active.add(int(m.group(1) or 1))
+        self.dialed = True
+        return []
+
+    def ok(self, m):
+        return []
+
+    def set_echo(self, m):
+        self.echo = m.group(1) == "1"
+        return []
+
+    TABLE = [(re.compile(pattern, re.IGNORECASE), name) for pattern, name in [
+        (r"$",                            "ok"),         # bare AT
+        (r"E([01])$",                     "set_echo"),
+        (r"(?:V1|Q0|&F|Z|&C1|&D2|H0?|X\d|\+CTZU=\d|\+IFC=.*|\+CSCS=.*|\+CMGF=.*|\+CNMI=.*"
+         r"|\+CGEREP=.*|\+CMER=.*|\+CLIP=.*|\+CCWA=.*|\+CPMS=.*)$", "ok"),
+        (r"\+C?G(MI|MM|MR|SN)$",           "ident"),
+        (r"I$",                           "ati"),
+        (r"\+GCAP$",                      "gcap"),
+        (r"\+CPIN\?$",                    "cpin"),
+        (r"\+CIMI$",                      "cimi"),
+        (r"\+CCID$",                      "ccid"),
+        (r"\+CRSM=176,12258,0,0,10$",     "crsm_iccid"),
+        (r"\+CFUN\?$",                    "cfun_get"),
+        (r"\+CFUN=(\d)(?:,\d)?$",         "cfun_set"),
+        (r"\+CMEE=(\d)$",                 "cmee_set"),
+        (r"\+(CREG|CGREG|CEREG)=(\d)$",   "reg_set"),
+        (r"\+(CREG|CGREG|CEREG)\?$",      "reg_get"),
+        (r"\+COPS\?$",                    "cops_get"),
+        (r"\+COPS=\?$",                   "cops_test"),
+        (r"\+COPS=.*$",                   "ok"),
+        (r"\+CSQ$",                       "csq"),
+        (r"\+CGDCONT=\?$",                "cgdcont_test"),
+        (r"\+CGDCONT\?$",                 "cgdcont_get"),
+        (r'\+CGDCONT=(\d+),"([^"]*)","([^"]*)".*$', "cgdcont_set"),
+        (r"\+CGACT\?$",                   "cgact_get"),
+        (r"\+CGACT=([01]),(\d+)$",        "cgact_set"),
+        (r"D\*99(?:\*\*\*(\d+))?#$",      "dial"),
+    ]]
+
+    def handle(self, line):
+        if line[:2].upper() != "AT":
+            return []
+        cmd = line[2:]
+        for pattern, name in self.TABLE:
+            m = pattern.match(cmd)
+            if m:
+                resp = getattr(self, name)(m)
+                return ["CONNECT"] if self.dialed else resp + ["OK"]
+        syslog.syslog(syslog.LOG_NOTICE, "unhandled: AT%s" % cmd)
+        return ["+CME ERROR: 4" if self.cmee else "ERROR"]
+
+
+def pppd(path):
+    """pppd for the network side of a call on path."""
+    return ["ip", "netns", "exec", NETNS, "pppd", path, "nodetach",
+            "noauth", "local", "nocrtscts", "noipv6", "10.66.0.1:10.66.0.2",
+            "ms-dns", "10.66.0.1", "lcp-echo-interval", "10",
+            "lcp-echo-failure", "3"]
+
+
+def serve(path, modem):
+    """Answer AT commands on path until a dial, True, or a hangup, False."""
+    fd = os.open(path, os.O_RDWR | os.O_NOCTTY)
+    tty.setraw(fd)
+    termios.tcflush(fd, termios.TCIOFLUSH)
+
+    buf = b""
+    try:
+        while not modem.dialed:
+            data = os.read(fd, 256)
+            if not data:
+                return False
+            if modem.echo:
+                os.write(fd, data)
+            buf += data
+            while b"\r" in buf and not modem.dialed:
+                raw, buf = buf.split(b"\r", 1)
+                line = raw.strip(b"\n").decode(errors="replace").strip()
+                if not line:
+                    continue
+                for resp in modem.handle(line):
+                    os.write(fd, b"\r\n" + resp.encode() + b"\r\n")
+    finally:
+        os.close(fd)
+    return True
+
+
+def main():
+    syslog.openlog("modemsim", syslog.LOG_PID, syslog.LOG_DAEMON)
+    path = sys.argv[1] if len(sys.argv) > 1 else TTY
+
+    modem = Modem()
+    while True:
+        if not serve(path, modem):
+            time.sleep(1)       # host side closed the port, reopen
+            continue
+        syslog.syslog(syslog.LOG_NOTICE, "dialed, starting PPP")
+        subprocess.run(pppd(path), check=False)
+        syslog.syslog(syslog.LOG_NOTICE, "PPP session ended")
+        modem.dialed = False
+        modem.active.clear()
+
+
+if __name__ == "__main__":
+    main()

@@ -23,3 +23,16 @@ config BR2_PACKAGE_FEATURE_MODEM_QUALCOMM
 	  Adds kernel support for Qualcomm-based cellular modems that use
 	  the MHI bus and QRTR IPC router (e.g. Sierra Wireless EM7xxx,
 	  Quectel EM/RMxxx, Telit LN9xx).
+
+config BR2_PACKAGE_FEATURE_MODEM_VIRTUAL
+	bool "Virtual modem (dummy_hcd + AT emulator)"
+	depends on BR2_PACKAGE_FEATURE_MODEM
+	help
+	  A virtual USB modem for the QEMU test target, to exercise the
+	  modem support without modem hardware.  A USB gadget with one ACM
+	  function on dummy_hcd shows up as an AT modem on ttyACM, served by
+	  an AT command emulator; data calls run as PPP to a pppd in its own
+	  network namespace.  Created at boot only on nodes the topology
+	  gives a modem, see the opt/modem fw_cfg.
+
+	  Leave disabled on real hardware; it only provides a simulated modem.
