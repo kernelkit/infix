@@ -1,0 +1,31 @@
+From db4f2fc81021169bac74f1b3730bb075befe3f08 Mon Sep 17 00:00:00 2001
+From: Garfield Watkins <garfield.watkins@gmail.com>
+Date: Wed, 14 Feb 2024 18:36:20 +0200
+Subject: [PATCH 3/3] plugin: include MM_PLUGIN_ALLOWED_SINGLE_AT in port
+ probing
+Organization: Wires
+
+Fixes https://gitlab.freedesktop.org/mobile-broadband/ModemManager/-/issues/822
+
+(cherry picked from commit 4d360e3b2220ad73e693842e0f6e5b654b85138d)
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/mm-plugin.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/mm-plugin.c b/src/mm-plugin.c
+index 19cb5d72..1e721e54 100644
+--- a/src/mm-plugin.c
++++ b/src/mm-plugin.c
+@@ -816,7 +816,7 @@ mm_plugin_supports_port (MMPlugin            *self,
+ 
+     /* Build mask of flags based on plugin */
+     plugin_expected_flags = MM_PORT_PROBE_NONE;
+-    if (self->priv->at)
++    if (self->priv->at || self->priv->single_at)
+         plugin_expected_flags |= MM_PORT_PROBE_AT;
+     if (self->priv->qcdm || self->priv->qcdm_required)
+         plugin_expected_flags |= MM_PORT_PROBE_QCDM;
+-- 
+2.43.0
+
