@@ -24,11 +24,12 @@ graph "dual" {
         dut1 [
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut1 | { <e4> e4 | <e5> e5 | <e6> e6 }",
 	    pos="10,18!",
-	    provides="infix watchdog",
+	    provides="infix watchdog modem",
 	    expected_boot="primary",
 	    qn_console=9001,
 	    qn_mem="384M",
-	    qn_usb="dut1.usb"
+	    qn_usb="dut1.usb",
+	    qn_modem="1"
 	];
         dut2 [
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6 }",

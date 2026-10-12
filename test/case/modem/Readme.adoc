@@ -4,5 +4,8 @@
 Tests verifying cellular modem (WWAN) configuration:
 
  - Modem and SIM hardware components, wwan interface and data bearer
+ - Data connection over a virtual AT modem, from detection to an IP link
 
 include::basic/Readme.adoc[]
+
+include::connect/Readme.adoc[]
