@@ -231,6 +231,9 @@ All notable changes to the project are documented in this file.
   PHYs are a LAN8814 variant without a 1588 unit.  The kernel took them for
   full LAN8814s and waited for PHY timestamps that never came; it now
   recognizes the variant and times stamps in the switch core instead
+- PTP: the IEEE 802.1AS link delay threshold, above which a port never
+  leaves the listening state, defaults to 10 us with hardware time stamping
+  instead of 800 ns, and can be set per port with `mean-link-delay-thresh`
 - LAN969x: the LAN8814 and LAN8804 copper PHYs, on the Tactical 1000 and
   EV23X71A, ran with power-on defaults where Microchip's silicon errata
   require other settings on every port: center-tap power management, the

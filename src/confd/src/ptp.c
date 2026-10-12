@@ -37,10 +37,9 @@ static const char *instance_type_to_clock_type(const char *type)
  *
  * ieee802-dot1as sets the full gPTP option set as required by the standard:
  *   transportSpecific, network_transport, delay_mechanism, multicast MACs,
- *   gmCapable, follow_up_info, assume_two_step, path_trace_enabled,
- *   and the tighter neighborPropDelayThresh.
+ *   gmCapable, follow_up_info, assume_two_step, path_trace_enabled.
  */
-static bool emit_profile_globals(FILE *fp, const char *profile, bool hw_ts)
+static bool emit_profile_globals(FILE *fp, const char *profile)
 {
 	bool dot1as = profile && !strcmp(profile, "ieee802-dot1as");
 
@@ -54,20 +53,33 @@ static bool emit_profile_globals(FILE *fp, const char *profile, bool hw_ts)
 		fprintf(fp, "follow_up_info          1\n");
 		fprintf(fp, "assume_two_step         1\n");
 		fprintf(fp, "path_trace_enabled      1\n");
-		/*
-		 * 802.1AS P2P gate: if meanLinkDelay exceeds this threshold the
-		 * port stays asCapable=false and never leaves LISTENING.  800 ns
-		 * is the 802.1AS default and is appropriate only for hardware
-		 * timestamping — software timestamps (QEMU, tap interfaces) can
-		 * easily produce peer delays in the microsecond range, which
-		 * would keep both ports stuck in LISTENING indefinitely.
-		 */
-		if (hw_ts)
-			fprintf(fp, "neighborPropDelayThresh 800\n");
 	} else {
 		fprintf(fp, "transportSpecific       0\n");
 	}
 	return dot1as;
+}
+
+/*
+ * 802.1AS gate: a port whose measured link delay exceeds the threshold
+ * never becomes asCapable and stays in LISTENING.  A switch core time
+ * stamps behind the PHY, so the delay it sees includes the PHY latency,
+ * 1.5 us on a LAN8814 at 1 Gbit/s and more at 100 Mbit/s, which the
+ * 800 ns of the automotive profile leaves no room for.  Software time
+ * stamps are slower still, they get ptp4l's own default of 20 ms.
+ */
+#define PTP_LINK_DELAY_THRESH_NS 10000
+
+static void emit_link_delay_thresh(FILE *fp, struct lyd_node *port_ds, bool hw_ts)
+{
+	const char *v = lydx_get_cattr(port_ds, "mean-link-delay-thresh");
+	long long ns = PTP_LINK_DELAY_THRESH_NS;
+
+	if (v)
+		ns = (strtoll(v, NULL, 10) + 32768) / 65536; /* ns * 2^16 */
+	else if (!hw_ts)
+		return;
+
+	fprintf(fp, "neighborPropDelayThresh %lld\n", ns);
 }
 
 /*
@@ -186,7 +198,7 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 		fprintf(fp, "tx_timestamp_timeout 100\n");
 
 	/* Profile — sets transportSpecific and all protocol-mandatory options */
-	dot1as = emit_profile_globals(fp, profile, !strcmp(ts, "hardware"));
+	dot1as = emit_profile_globals(fp, profile);
 
 	/* domainNumber */
 	v = lydx_get_cattr(default_ds, "domain-number");
@@ -306,6 +318,9 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 		v = lydx_get_cattr(port_ds, "delay-asymmetry");
 		if (v && strcmp(v, "0"))
 			fprintf(fp, "delayAsymmetry         %s\n", v);
+
+		if (dot1as)
+			emit_link_delay_thresh(fp, port_ds, !strcmp(ts, "hardware"));
 
 		if (lydx_is_enabled(port_ds, "time-transmitter-only"))
 			fprintf(fp, "masterOnly             1\n");
