@@ -142,27 +142,49 @@ func parseBitrate(s string) uint32 {
 	return uint32(val)
 }
 
+// extractEncryption names the security of a scan result from its
+// wpa_supplicant flags, e.g. "[WPA2-PSK+SAE-CCMP][ESS]".  wpa_supplicant
+// labels every RSN network WPA2, so WPA3 is told apart by its key
+// management: SAE only is WPA3, SAE next to PSK is a WPA2/WPA3
+// transition network.
 func extractEncryption(flags string) []string {
 	flags = strings.ToUpper(flags)
-	var result []string
-	if strings.Contains(flags, "WPA3") || strings.Contains(flags, "SAE") {
-		result = append(result, "WPA3-Personal")
-	}
-	if strings.Contains(flags, "WPA2") {
-		if strings.Contains(flags, "EAP") {
-			result = append(result, "WPA2-Enterprise")
-		} else {
-			result = append(result, "WPA2-Personal")
-		}
-	}
 	if strings.Contains(flags, "WEP") {
 		return []string{"WEP"}
 	}
-	if len(result) == 0 && strings.Contains(flags, "ESS") {
-		return []string{"Open"}
+
+	rsn := strings.Contains(flags, "WPA2-")
+	var protocols []string
+	if rsn && strings.Contains(flags, "SAE") {
+		protocols = append(protocols, "WPA3")
 	}
-	if len(result) == 0 {
+	if rsn && (strings.Contains(flags, "PSK") || strings.Contains(flags, "EAP")) {
+		protocols = append(protocols, "WPA2")
+	}
+	if strings.Contains(flags, "WPA-") && !rsn {
+		protocols = append(protocols, "WPA")
+	}
+
+	if len(protocols) == 0 {
+		if strings.Contains(flags, "ESS") {
+			return []string{"Open"}
+		}
 		return []string{"Unknown"}
+	}
+
+	suffix := ""
+	switch {
+	case strings.Contains(flags, "EAP"):
+		suffix = "-Enterprise"
+	case strings.Contains(flags, "PSK"), strings.Contains(flags, "SAE"):
+		suffix = "-Personal"
+	case strings.Contains(flags, "OWE"):
+		suffix = "-Enhanced-Open"
+	}
+
+	result := make([]string, 0, len(protocols))
+	for _, p := range protocols {
+		result = append(result, p+suffix)
 	}
 	return result
 }

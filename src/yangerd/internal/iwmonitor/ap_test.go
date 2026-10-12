@@ -124,3 +124,34 @@ func TestParseBitrate(t *testing.T) {
 		}
 	}
 }
+
+// wpa_supplicant flags every RSN network WPA2, the key management
+// tells a WPA3-only network from a WPA2/WPA3 transition network.
+func TestExtractEncryption(t *testing.T) {
+	tests := []struct {
+		flags string
+		want  []string
+	}{
+		{"[WPA2-SAE-CCMP][ESS]", []string{"WPA3-Personal"}},
+		{"[WPA2-PSK+SAE-CCMP][ESS]", []string{"WPA3-Personal", "WPA2-Personal"}},
+		{"[WPA2-PSK-CCMP][ESS]", []string{"WPA2-Personal"}},
+		{"[WPA2-EAP-CCMP][ESS]", []string{"WPA2-Enterprise"}},
+		{"[WPA-PSK-TKIP][ESS]", []string{"WPA-Personal"}},
+		{"[WEP][ESS]", []string{"WEP"}},
+		{"[ESS]", []string{"Open"}},
+		{"", []string{"Unknown"}},
+	}
+	for _, tt := range tests {
+		got := extractEncryption(tt.flags)
+		if len(got) != len(tt.want) {
+			t.Errorf("extractEncryption(%q) = %v, want %v", tt.flags, got, tt.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != tt.want[i] {
+				t.Errorf("extractEncryption(%q) = %v, want %v", tt.flags, got, tt.want)
+				break
+			}
+		}
+	}
+}
