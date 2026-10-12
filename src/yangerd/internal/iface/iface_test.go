@@ -492,6 +492,7 @@ func TestIplink2yangTypeMappings(t *testing.T) {
 		{name: "loopback", iplink: map[string]any{"ifname": "lo", "link_type": "loopback"}, want: "infix-if-type:loopback"},
 		{name: "gre", iplink: map[string]any{"ifname": "gre0", "link_type": "gre"}, want: "infix-if-type:gre"},
 		{name: "gre6", iplink: map[string]any{"ifname": "gre6", "link_type": "gre6"}, want: "infix-if-type:gre"},
+		{name: "pppoe via ppp", iplink: map[string]any{"ifname": "wan", "link_type": "ppp"}, want: "infix-if-type:pppoe"},
 		{name: "wifi via ether", iplink: map[string]any{"ifname": "wlan0", "link_type": "ether"}, want: "infix-if-type:wifi"},
 		{name: "bond", iplink: map[string]any{"ifname": "bond0", "link_type": "none", "linkinfo": map[string]any{"info_kind": "bond"}}, want: "infix-if-type:lag"},
 		{name: "bridge", iplink: map[string]any{"ifname": "br0", "link_type": "none", "linkinfo": map[string]any{"info_kind": "bridge"}}, want: "infix-if-type:bridge"},

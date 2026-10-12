@@ -261,6 +261,9 @@ func iplink2yangType(iplink map[string]any, fc FileChecker) string {
 		return "infix-if-type:loopback"
 	case "gre", "gre6":
 		return "infix-if-type:gre"
+	case "ppp":
+		// PPPoE is the only PPP transport, the kernel cannot tell
+		return "infix-if-type:pppoe"
 	case "ether":
 		if fc != nil {
 			if fc.Exists(fmt.Sprintf("/sys/class/net/%s/wireless/", ifname)) {
