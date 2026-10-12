@@ -104,6 +104,23 @@ Storage][7].  A unit still on the vendor U-Boot netboots as described in
 [Netboot with a Vendor U-Boot][8].  The first boot grows `var` to fill the
 eMMC and reboots once by itself.
 
+## Identity
+
+The board has no MAC address in OTP, so without help every boot gets a
+random base MAC and random port addresses, which also change the
+link-local addresses the test rig finds the unit by.  `provision-tactical`
+offers to write a base MAC and a serial number to `vpd.bin` on the `aux`
+partition, which the system reads as its product VPD.  On a unit already
+provisioned, write it by hand and reboot:
+
+```bash
+echo '{"mac-address":"02:00:00:7a:c7:00","serial-number":"tact1","vendor":"Novarq","product-name":"Tactical-1000"}' \
+  | onieprom -e | sudo tee /mnt/aux/vpd.bin >/dev/null
+```
+
+The base MAC becomes the chassis address, `e1` gets base + 1, `e2` base + 2,
+and so on, `mgmt` after the last `e` port.  See [VPD][9] for the format.
+
 ## Device Tree
 
 Cherry-picked from [Novarq's kernel tree][2].  One commit adapts it to
@@ -152,3 +169,4 @@ unused.
 [6]: https://github.com/novarq/tactical-1000/blob/main/docs/boot-modes.md
 [7]: ../../../doc/netboot.md#installing-to-onboard-storage
 [8]: ../../../doc/netboot.md#netboot-with-a-vendor-u-boot
+[9]: ../../../doc/vpd.md#vpd-file-on-the-aux-partition

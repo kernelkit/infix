@@ -125,6 +125,13 @@ BOOT_primary_LEFT=1
 BOOT_secondary_LEFT=1
 BOOT_net_LEFT=1
 EOF
+	# No MAC address in OTP, the probe takes the identity from this file
+	if ask "Give the unit an identity in vpd.bin on aux, a base MAC address and a serial number?"; then
+		printf "Base MAC address: "; read -r mac
+		printf "Serial number: "; read -r serial
+		printf '{"mac-address":"%s","serial-number":"%s","vendor":"Novarq","product-name":"Tactical-1000"}' \
+			"$mac" "$serial" | onieprom -e >"$mnt"/vpd.bin
+	fi
 	umount "$mnt"
 	rmdir "$mnt"
 fi
