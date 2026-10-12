@@ -9,6 +9,9 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.56 (LTS)
+- The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,
+  R64, NanoPi R2S and Vero W6M now has IPv6 enabled, so the router has a
+  link-local address on the LAN side like its ports already had
 - Boards without a VPD EEPROM can be given a fixed identity, base MAC
   included, by writing an ONIE TLV to a disk partition labelled `factory`,
   see [VPD documentation](vpd.md#factory-partition)
