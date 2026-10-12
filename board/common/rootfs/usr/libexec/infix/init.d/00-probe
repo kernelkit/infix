@@ -633,6 +633,22 @@ def _usb_device_from_sysfs(dev_path):
     return None
 
 
+def _acm_is_modem(dev_path):
+    """A cdc_acm port is a modem only if its interface speaks AT commands,
+    class 2/2 protocol 1-6, same rule as ModemManager.  Keeps GPS
+    receivers and serial consoles on cdc_acm out of the modem list."""
+    def attr(name):
+        with open(os.path.join(dev_path, name)) as f:
+            return int(f.read(), 16)
+
+    try:
+        cls, sub = attr("bInterfaceClass"), attr("bInterfaceSubClass")
+        proto = attr("bInterfaceProtocol")
+    except (OSError, ValueError):
+        return False
+    return cls == 2 and sub == 2 and 1 <= proto <= 6
+
+
 def probe_modems(out):
     """One entry per physical modem; devpath is the USB device (port)
     directory, deduplicating the cdc-wdm and ttyUSB ports it exposes.
@@ -664,18 +680,20 @@ def probe_modems(out):
         })
         idx += 1
 
-    for cls_dir, prefix in (("/sys/class/usbmisc", "cdc-wdm"),
-                             ("/sys/class/tty", "ttyUSB")):
+    for cls_dir, prefixes in (("/sys/class/usbmisc", ("cdc-wdm",)),
+                              ("/sys/class/tty", ("ttyUSB", "ttyACM"))):
         try:
             entries = os.listdir(cls_dir)
         except OSError:
             continue
         for entry in entries:
-            if not entry.startswith(prefix):
+            if not entry.startswith(prefixes):
                 continue
             try:
                 dev_path = os.path.realpath(
                     os.path.join(cls_dir, entry, "device"))
+                if entry.startswith("ttyACM") and not _acm_is_modem(dev_path):
+                    continue
                 add_modem(dev_path)
             except OSError:
                 pass
