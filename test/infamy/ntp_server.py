@@ -1,37 +1,24 @@
 """Start NTP server in the background"""
 import subprocess
-import time
+from .netns import NetnsService
 
 
-class Server:
+class Server(NetnsService):
     """BusyBox ntpd serving the local clock (-l), never touching it (-w)."""
+    popen_kwargs = dict(stderr=subprocess.DEVNULL)
 
     def __init__(self, netns, iface="iface"):
+        super().__init__(netns)
         self.iface = iface
-        self.process = None
-        self.netns = netns
 
-    def __enter__(self):
-        self.start()
-        return self
+    def argv(self):
+        return ["ntpd", "-w", "-n", "-l", "-I", self.iface]
 
-    def __exit__(self, _, __, ___):
-        self.stop()
-
-    def start(self):
-        cmd = ["ntpd", "-w", "-n", "-l", "-I", self.iface]
-        self.process = self.netns.popen(cmd, stderr=subprocess.DEVNULL)
-
-        # ntpd exits immediately on bad options or a missing interface;
+    def ready(self):
+        # ntpd exits immediately on bad options or a missing interface,
         # fail loudly instead of serving nothing
-        time.sleep(1)
-        if self.process.poll() is not None:
-            code = self.process.returncode
-            self.stop()
-            raise RuntimeError(f"ntpd failed to start (exit {code})")
-
-    def stop(self):
-        if self.process:
-            self.process.terminate()
-            self.process.wait()
-            self.process = None
+        try:
+            code = self.proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            return
+        raise RuntimeError(f"ntpd failed to start (exit {code})")

@@ -3,6 +3,7 @@ import json
 import multiprocessing
 import os
 import random
+import signal
 import subprocess
 import tempfile
 import time
@@ -345,60 +346,103 @@ class IsolatedMacVlan(IsolatedMacVlans):
         ifname = ifname if ifname else self._ifname
         return super().pcap(expr=expr, ifname=ifname)
 
-class Pcap:
-    def __init__(self, netns, ifname, expr):
-        self.netns, self.ifname, self.expr = netns, ifname, expr
-        self.pcap = tempfile.NamedTemporaryFile(suffix=".pcap", delete=False)
+class NetnsService:
+    """A long-running process inside a network namespace
+
+    Base class for test helpers that run a daemon or a packet capture
+    in the background, e.g., a DHCP server or tshark.  start() raises,
+    and leaves no process behind, if ready() fails.  stop() sends
+    stop_signal and falls back to SIGKILL after five seconds.  Calling
+    stop() when nothing runs does nothing.
+
+    Use it as a context manager or call start() and stop() directly.
+    Subclasses implement argv() and may override ready(), stop_signal
+    and popen_kwargs, the extra arguments to Popen.
+    """
+    stop_signal = signal.SIGTERM
+    popen_kwargs = {}
+
+    def __init__(self, netns):
+        self.netns = netns
         self.proc = None
+
+    def __enter__(self):
+        return self.start()
+
+    def __exit__(self, _, __, ___):
+        self.stop()
+
+    def argv(self):
+        """Command line to run in the namespace"""
+        raise NotImplementedError
+
+    def ready(self):
+        """Block until the process is ready to serve, raise if it fails"""
+
+    def running(self):
+        return self.proc is not None and self.proc.poll() is None
+
+    def start(self):
+        assert self.proc is None, f"{type(self).__name__} already running"
+
+        self.proc = self.netns.popen(self.argv(), **self.popen_kwargs)
+        try:
+            self.ready()
+        except BaseException:
+            self.stop()
+            raise
+
+        return self
+
+    def stop(self):
+        """Stop the process, return (stdout, stderr) of any pipes"""
+        if not self.proc:
+            return None, None
+
+        proc, self.proc = self.proc, None
+        if proc.poll() is None:
+            proc.send_signal(self.stop_signal)
+
+        try:
+            return proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            return proc.communicate()
+
+
+class Pcap(NetnsService):
+    popen_kwargs = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                        stderr=subprocess.PIPE, text=True)
+    # In the common case, stop() is called right after the last packet
+    # of whatever is being tested was sent, so give it time to arrive.
+    stop_delay = 3
+
+    def __init__(self, netns, ifname, expr):
+        super().__init__(netns)
+        self.ifname, self.expr = ifname, expr
+        self.pcap = tempfile.NamedTemporaryFile(suffix=".pcap", delete=False)
 
     def __del__(self):
         self.pcap.close()
         os.unlink(self.pcap.name)
 
-    def __enter__(self):
-        self.start()
-        return self
+    def argv(self):
+        return f"tshark -ln -i {self.ifname} -w {self.pcap.name} {self.expr}".split()
 
-    def __exit__(self, _, __, ___):
-        self.stop()
-
-    def start(self):
-        assert self.proc == None, "Can't start an already running Pcap"
-
-        argv = f"tshark -ln -i {self.ifname} -w {self.pcap.name} {self.expr}".split()
-        self.proc = self.netns.popen(argv,
-                                     stdin=subprocess.DEVNULL,
-                                     stdout=subprocess.DEVNULL,
-                                     stderr=subprocess.PIPE,
-                                     text=True)
-
+    def ready(self):
         while " -- Capture started." not in self.proc.stderr.readline():
-            pass
+            if self.proc.poll() is not None:
+                raise RuntimeError(f"tshark exited ({self.proc.returncode})")
 
         print("Capture running")
 
-    def stop(self, sleep=3):
-        assert self.proc, "Can't stop an already stopped Pcap"
+    def stop(self):
+        if self.running():
+            time.sleep(self.stop_delay)
 
-        if sleep:
-            # In the common case, stop() will be called right after
-            # the final packet of whatever we're testing has just been
-            # sent. Therefore, allow for some time to pass before
-            # terminating the capture.
-            time.sleep(sleep)
-
-        self.proc.terminate()
-        try:
-            _, stderr = self.proc.communicate(5)
+        _, stderr = super().stop()
+        if stderr:
             print(stderr)
-            return
-        except subprocess.TimeoutExpired:
-            try:
-                self.proc.kill()
-            except OSError:
-                pass
-
-        self.proc.wait()
 
     def tcpdump(self, args=""):
         tcpdump = subprocess.run((f"tcpdump -r {self.pcap.name} -n " + args).split(),
