@@ -701,8 +701,9 @@ int wifi_add_iface(struct lyd_node *cif, struct dagger *net)
 	case wifi_station: {
 		struct lyd_node *station = lydx_get_child(wifi, "station");
 
+		/* iw takes addr before 4addr, whatever its usage text says */
 		fprintf(iw, "iw phy %s interface add %s type managed%s%s\n", radio, ifname,
-			station && lydx_is_enabled(station, "wds") ? " 4addr on" : "", addr);
+			addr, station && lydx_is_enabled(station, "wds") ? " 4addr on" : "");
 		wifi_gen_station(cif);
 		fprintf(iw, "initctl -bfq enable wifi@%s\n", ifname);
 		fprintf(iw, "initctl -bfq touch wifi@%s\n", ifname);

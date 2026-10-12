@@ -5,6 +5,9 @@ the operational state under /ietf-interfaces.  See doc/wifi.md.
 """
 import base64
 
+import infamy.iface as _iface
+from infamy.util import until
+
 
 def radio(name, band=None, channel=None):
     """ietf-hardware component for a WiFi radio."""
@@ -39,17 +42,18 @@ def keystore(secrets):
     ]}}}
 
 
-def iface(name, mac, wifi, ipv4=None, bridge=None, pvid=None):
+def iface(name, wifi, ipv4=None, bridge=None, pvid=None):
     """ietf-interfaces entry for a WiFi VIF.
 
     wifi is the infix-interfaces:wifi container: the radio plus one of
-    access-point, station or mesh-point.
+    access-point, station or mesh-point.  The address is left to the
+    box, which gives every VIF one of its own; read it back with
+    phys_address().
     """
     ifc = {
         "name": name,
         "type": "infix-if-type:wifi",
         "enabled": True,
-        "infix-interfaces:custom-phys-address": {"static": mac},
         "infix-interfaces:wifi": wifi,
     }
     if ipv4:
@@ -65,7 +69,7 @@ def wds_link(name, ap, peer, bridge=None, pvid=None):
     """ietf-interfaces entry for a wds-link port of access point ap.
 
     The port inherits the AP's radio and MAC address, so unlike iface() it
-    takes neither a radio nor a custom-phys-address.
+    takes no radio.
     """
     ifc = {
         "name": name,
@@ -112,6 +116,12 @@ def skip_unless_supported(test, *targets):
 
 def _wifi(ifc):
     return (ifc or {}).get("infix-interfaces:wifi") or (ifc or {}).get("wifi") or {}
+
+
+def phys_address(target, ifname="wifi0"):
+    """MAC address of ifname from operational data, lowercase, once it exists."""
+    return until(lambda: _iface.get_phys_address(target, ifname),
+                 attempts=30, interval=1).lower()
 
 
 def station(target, ifname="wifi0"):

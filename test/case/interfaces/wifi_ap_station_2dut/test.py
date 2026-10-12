@@ -56,10 +56,7 @@ with infamy.Test() as test:
                 "ietf-hardware": wifi.hardware(wifi.radio("radio0", band="2.4GHz", channel=1)),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
-                    # hwsim defaults every radio0 to 02:00:00:00:00:00, so the AP
-                    # and the station would otherwise share a MAC -- give each a
-                    # unique address.
-                    wifi.iface("wifi0", "02:00:00:00:00:01", {
+                    wifi.iface("wifi0", {
                         "radio": "radio0",
                         "access-point": {
                             "ssid": SSID,
@@ -76,7 +73,7 @@ with infamy.Test() as test:
                 "ietf-hardware": wifi.hardware(wifi.radio("radio0")),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
-                    wifi.iface("wifi0", "02:00:00:00:00:02", {
+                    wifi.iface("wifi0", {
                         "radio": "radio0",
                         "station": {
                             "ssid": SSID,

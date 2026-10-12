@@ -30,12 +30,12 @@ image::topology.svg[WiFi 4-address (WDS) link between two bridges topology, alig
 ==== Sequence
 
 . Set up topology and attach to the root and the satellite
-. Configure the root with access point 'infix-wds' and WDS port wds0 untagged in VLAN 10 on br0
-. Verify wds0 on the root exists, is down and is an untagged member of VLAN 10
 . Configure the satellite with a 4-address station for 'infix-wds' in br0, br0 as DHCP client
+. Configure the root with access point 'infix-wds' and WDS port wds0 for the satellite's station, untagged in VLAN 10 on br0
+. Verify wds0 on the root exists and is an untagged member of VLAN 10
 . Verify the satellite's wifi0 associates to 'infix-wds'
 . Verify wds0 on the root comes up and reports the station connected
-. Verify access point wifi0 on the root lists the satellite 02:00:00:00:00:02 as a station
+. Verify access point wifi0 on the root lists the satellite's station
 . Verify the satellite leases 192.168.20.100 on br0 over the WDS link
 . Set a description on wds0 on the root
 . Verify wds0 on the root stays up with the station connected

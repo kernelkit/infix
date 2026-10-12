@@ -48,16 +48,9 @@ AP_IP = "192.168.30.1"
 POOL_START = "192.168.30.100"
 POOL_END = "192.168.30.101"
 
-# hwsim defaults every radioN to the same address across guests, so the AP
-# BSSIDs and the client's radio would collide without explicit addresses.
-AP_BSSID_24 = "02:00:00:00:0a:01"
-AP_BSSID_5 = "02:00:00:00:0b:01"
-CLIENT_MAC = "02:00:00:00:00:0c"
-
-
-def ap_bss(name, radio_name, bssid):
+def ap_bss(name, radio_name):
     """A band-steering AP BSS on the given radio, bridged into br0."""
-    return wifi.iface(name, bssid, {
+    return wifi.iface(name, {
         "radio": radio_name,
         "access-point": {
             "ssid": SSID,
@@ -92,8 +85,8 @@ with infamy.Test() as test:
                     {"name": "br0", "type": "infix-if-type:bridge", "enabled": True,
                      "ietf-ip:ipv4": {"address": [
                          {"ip": AP_IP, "prefix-length": 24}]}},
-                    ap_bss("wifi0", "radio2", AP_BSSID_24),
-                    ap_bss("wifi1", "radio3", AP_BSSID_5),
+                    ap_bss("wifi0", "radio2"),
+                    ap_bss("wifi1", "radio3"),
                 ]}},
                 "infix-dhcp-server": {"dhcp-server": {"subnet": [{
                     "subnet": SUBNET,
@@ -107,7 +100,7 @@ with infamy.Test() as test:
                 "ietf-hardware": wifi.hardware(wifi.radio("radio2")),
                 "ietf-keystore": wifi.keystore({"wifi": PSK}),
                 "ietf-interfaces": {"interfaces": {"interface": [
-                    wifi.iface("wifi0", CLIENT_MAC, {
+                    wifi.iface("wifi0", {
                         "radio": "radio2",
                         "station": {
                             "ssid": SSID,
@@ -120,14 +113,15 @@ with infamy.Test() as test:
 
     with test.step("Verify the client associates to the 'campus' SSID"):
         until(lambda: wifi.associated(client, SSID), attempts=60, interval=2)
+        client_mac = wifi.phys_address(client, "wifi0")
 
     with test.step("Verify band steering put the client on the 5GHz BSS"):
         # Steered: the client shows up on the 5GHz BSS (wifi1) and not on the
         # 2.4GHz BSS (wifi0) -- the 2.4GHz BSS suppressed its probe responses
         # once it had been seen on 5GHz.
-        until(lambda: CLIENT_MAC in wifi.ap_stations(ap, "wifi1"),
+        until(lambda: client_mac in wifi.ap_stations(ap, "wifi1"),
               attempts=90, interval=2)
-        assert CLIENT_MAC not in wifi.ap_stations(ap, "wifi0"), \
+        assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client associated on 2.4GHz; band steering did not steer it to 5GHz"
 
     with test.step("Verify the client leases an address over 5GHz"):
@@ -146,7 +140,7 @@ with infamy.Test() as test:
             "interface": [{"name": "wifi1", "enabled": False}]}}})
 
     with test.step("Verify the client falls back to the 2.4GHz BSS"):
-        until(lambda: CLIENT_MAC in wifi.ap_stations(ap, "wifi0"),
+        until(lambda: client_mac in wifi.ap_stations(ap, "wifi0"),
               attempts=90, interval=2)
 
     with test.step("Enable the 5GHz BSS again"):
@@ -156,12 +150,12 @@ with infamy.Test() as test:
 
     with test.step("Verify a scanning client is steered back to the 5GHz BSS"):
         def steered():
-            if CLIENT_MAC in wifi.ap_stations(ap, "wifi1"):
+            if client_mac in wifi.ap_stations(ap, "wifi1"):
                 return True
             clientsh.runsh("sudo wpa_cli -i wifi0 scan >/dev/null")
             return False
         until(steered, attempts=20, interval=10)
-        assert CLIENT_MAC not in wifi.ap_stations(ap, "wifi0"), \
+        assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client still associated on 2.4GHz"
 
     with test.step("Verify the client still has its address after the move"):

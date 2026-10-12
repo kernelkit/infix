@@ -39,13 +39,13 @@ image::topology.svg[WiFi repeater with two SSIDs in VLANs over a 4-address (WDS)
 ==== Sequence
 
 . Set up topology and attach to the root, the repeater, home and guest
-. Configure the root with access point 'infix-backhaul', WDS port wds0 and the uplink tagged in VLAN 10 and 20, DHCP in each VLAN
-. Configure the repeater with a 4-address station tagged in VLAN 10 and 20, access point 'infix-home' untagged in VLAN 10 and 'infix-guest' untagged in VLAN 20
 . Configure home as a DHCP station for 'infix-home' and guest as a DHCP station for 'infix-guest'
+. Configure the repeater with a 4-address station tagged in VLAN 10 and 20, access point 'infix-home' untagged in VLAN 10 and 'infix-guest' untagged in VLAN 20
+. Configure the root with access point 'infix-backhaul', WDS port wds0 for the repeater's station and the uplink tagged in VLAN 10 and 20, DHCP in each VLAN with fixed addresses for home and guest
 . Verify the repeater's wifi0 associates to 'infix-backhaul'
 . Verify wds0 on the root is up
-. Verify home is on the repeater's 'infix-home' access point, BSSID 02:00:00:00:0a:02
-. Verify guest is on the repeater's 'infix-guest' access point, BSSID 02:00:00:00:0b:02
+. Verify home is on the repeater's 'infix-home' access point
+. Verify guest is on the repeater's 'infix-guest' access point
 . Verify home leases 10.10.0.9 from the root's VLAN 10 DHCP server through the backhaul
 . Verify guest leases 10.20.0.9 from the root's VLAN 20 DHCP server through the backhaul
 . Verify the host reaches home at 10.10.0.9 on VLAN 10 through the repeater
