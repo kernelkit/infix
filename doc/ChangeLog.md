@@ -119,6 +119,9 @@ All notable changes to the project are documented in this file.
 - PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
   kept dropping to the faulty state because the transmit timestamp arrived
   later than the 10 ms the PTP daemon waited for it
+- PTP: the IEEE 802.1AS link delay threshold, above which a port never
+  leaves the listening state, defaults to 10 us with hardware time stamping
+  instead of 800 ns, and can be set per port with `mean-link-delay-thresh`
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
