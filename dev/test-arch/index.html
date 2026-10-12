@@ -3042,7 +3042,9 @@ factory config might create.  It also enables two extra RPCs used by
 Infamy:</p>
 <ul>
 <li><code>infix-test:test/reset</code> — reload the <code>test-config</code> into the running
-  datastore (called by <code>env.attach()</code> at the start of each test)</li>
+  datastore (called by <code>env.attach()</code> for the devices a test uses, and
+  for any other device on the same wireless cells when the test maps
+  its topology, so nothing left by an earlier test shares the air)</li>
 <li><code>infix-test:test/override-startup</code> — boot from the startup datastore
   once, instead of the <code>test-config</code> (used by tests that verify
   save-and-reboot behaviour)</li>
