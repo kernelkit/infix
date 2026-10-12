@@ -363,7 +363,7 @@ func TestLastChangeStampsTransitionsOnly(t *testing.T) {
 	m := New(nil, nil, nil, nil, tree.New(), nil, slog.Default())
 	m.tree.Set(treeKey, json.RawMessage(`{"interface":[{"name":"e1","oper-status":"up"},{"name":"e2","oper-status":"down"}]}`))
 
-	if got := m.LastChange(); got != nil {
+	if got := m.OnDemand(); got != nil {
 		t.Fatalf("no transitions yet, want nil overlay, got %s", got)
 	}
 
@@ -377,7 +377,7 @@ func TestLastChangeStampsTransitionsOnly(t *testing.T) {
 	var out struct {
 		Interface []map[string]any `json:"interface"`
 	}
-	if err := json.Unmarshal(m.LastChange(), &out); err != nil {
+	if err := json.Unmarshal(m.OnDemand(), &out); err != nil {
 		t.Fatal(err)
 	}
 	if len(out.Interface) != 2 {
@@ -393,17 +393,17 @@ func TestLastChangeStampsTransitionsOnly(t *testing.T) {
 	m.mu.Lock()
 	m.forgetName("e1")
 	m.mu.Unlock()
-	if got := m.LastChange(); got != nil {
+	if got := m.OnDemand(); got != nil {
 		t.Errorf("stamp must go with the interface, got %s", got)
 	}
 }
 
-func TestStampLastChange(t *testing.T) {
+func TestOverlayStampsLastChange(t *testing.T) {
 	doc := json.RawMessage(`{"interface":[{"name":"e1"},{"name":"e2"}]}`)
 	changed := time.Now()
 	stamps := map[string]time.Time{"e1": changed}
 
-	out := stampLastChange(doc, stamps, changed.Add(time.Minute))
+	out := overlay(doc, stamps, changed.Add(time.Minute), nil)
 	want := changed.UTC().Format("2006-01-02T15:04:05+00:00")
 	if !strings.Contains(string(out), `{"last-change":"`+want+`","name":"e1"}`) {
 		t.Errorf("want %s on e1 in %s", want, out)
@@ -411,7 +411,49 @@ func TestStampLastChange(t *testing.T) {
 	if !strings.Contains(string(out), `{"name":"e2"}`) {
 		t.Errorf("e2 must be untouched in %s", out)
 	}
-	if got := stampLastChange(json.RawMessage(`garbage`), stamps, changed); got != nil {
+	if got := overlay(json.RawMessage(`garbage`), stamps, changed, nil); got != nil {
 		t.Errorf("bad doc must yield no overlay, got %s", got)
+	}
+}
+
+// sysfsFiles is a FileChecker serving ifalias files from a map.
+type sysfsFiles map[string]string
+
+func (f sysfsFiles) Exists(path string) bool { _, ok := f[path]; return ok }
+func (f sysfsFiles) ListDir(string) []string { return nil }
+func (f sysfsFiles) ReadFile(path string) (string, error) {
+	if v, ok := f[path]; ok {
+		return v, nil
+	}
+	return "", os.ErrNotExist
+}
+
+// A description set while the interface is down never reaches the link
+// row, the provider must take it from sysfs on every read.
+func TestOnDemandRefreshesDescriptionFromSysfs(t *testing.T) {
+	fc := sysfsFiles{
+		"/sys/class/net/wan/ifalias": "Uplink\n",
+		"/sys/class/net/e2/ifalias":  "\n",
+	}
+	m := New(nil, nil, nil, nil, tree.New(), fc, slog.Default())
+	m.tree.Set(treeKey, json.RawMessage(`{"interface":[`+
+		`{"name":"wan"},`+
+		`{"name":"e2","description":"stale"},`+
+		`{"name":"eth0","description":"kept"}]}`))
+
+	var out struct {
+		Interface []map[string]any `json:"interface"`
+	}
+	if err := json.Unmarshal(m.OnDemand(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.Interface[0]["description"]; got != "Uplink" {
+		t.Errorf("wan: want description from sysfs, got %v", got)
+	}
+	if got, ok := out.Interface[1]["description"]; ok {
+		t.Errorf("e2: alias cleared in sysfs, want no description, got %v", got)
+	}
+	if got := out.Interface[2]["description"]; got != "kept" {
+		t.Errorf("eth0: unreadable in sysfs, want link row value kept, got %v", got)
 	}
 }

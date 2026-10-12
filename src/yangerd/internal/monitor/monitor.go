@@ -835,24 +835,27 @@ func (m *NLMonitor) updateOperStatus(ifname string, raw json.RawMessage) {
 	}
 }
 
-// LastChange is a tree provider adding last-change to every interface
-// whose operstate changed since start.  Interfaces up since before
-// yangerd started carry no stamp, their change predates us.
-func (m *NLMonitor) LastChange() json.RawMessage {
+// OnDemand is the tree provider for the interface list.  It stamps
+// last-change on every interface whose operstate changed since start,
+// interfaces up since before yangerd started carry no stamp, and it
+// re-reads each description from sysfs.  The kernel sends no link event
+// for an alias set on an interface that is down, so the staged link row
+// may hold a stale description, while the sysfs file is always current.
+func (m *NLMonitor) OnDemand() json.RawMessage {
 	m.mu.Lock()
 	stamps := make(map[string]time.Time, len(m.lastChange))
 	for k, v := range m.lastChange {
 		stamps[k] = v
 	}
 	m.mu.Unlock()
-	if len(stamps) == 0 {
+	if len(stamps) == 0 && m.fc == nil {
 		return nil
 	}
 
-	return stampLastChange(m.tree.GetCached(treeKey), stamps, time.Now())
+	return overlay(m.tree.GetCached(treeKey), stamps, time.Now(), m.fc)
 }
 
-func stampLastChange(doc json.RawMessage, stamps map[string]time.Time, now time.Time) json.RawMessage {
+func overlay(doc json.RawMessage, stamps map[string]time.Time, now time.Time, fc iface.FileChecker) json.RawMessage {
 	var root map[string]any
 	if err := json.Unmarshal(doc, &root); err != nil {
 		return nil
@@ -868,14 +871,14 @@ func stampLastChange(doc json.RawMessage, stamps map[string]time.Time, now time.
 			continue
 		}
 		name, _ := ifaceObj["name"].(string)
-		at, ok := stamps[name]
-		if !ok {
-			continue
+		if at, ok := stamps[name]; ok {
+			// Elapsed time is monotonic, so the stamp follows the
+			// wall clock as it is now, not as it was when the link
+			// changed.
+			when := now.Add(-now.Sub(at))
+			ifaceObj["last-change"] = when.UTC().Format("2006-01-02T15:04:05+00:00")
 		}
-		// Elapsed time is monotonic, so the stamp follows the wall
-		// clock as it is now, not as it was when the link changed.
-		when := now.Add(-now.Sub(at))
-		ifaceObj["last-change"] = when.UTC().Format("2006-01-02T15:04:05+00:00")
+		refreshDescription(ifaceObj, name, fc)
 	}
 
 	out, err := json.Marshal(map[string]any{"interface": ifaceArr})
@@ -883,6 +886,24 @@ func stampLastChange(doc json.RawMessage, stamps map[string]time.Time, now time.
 		return nil
 	}
 	return out
+}
+
+// refreshDescription replaces the description with the current ifalias
+// from sysfs.  An interface it cannot read, gone or in another netns,
+// keeps what the link row said.
+func refreshDescription(ifaceObj map[string]any, name string, fc iface.FileChecker) {
+	if fc == nil || name == "" {
+		return
+	}
+	alias, err := fc.ReadFile("/sys/class/net/" + name + "/ifalias")
+	if err != nil {
+		return
+	}
+	if alias = strings.TrimRight(alias, "\n"); alias == "" {
+		delete(ifaceObj, "description")
+	} else {
+		ifaceObj["description"] = alias
+	}
 }
 
 // query runs one command on a batch worker.  A dead worker asks for a

@@ -221,6 +221,7 @@ func interfaceCommon(iplink, ipaddr map[string]any, neighEntries []map[string]an
 		"oper-status":  iplink2yangOperstate(getString(iplink, "operstate"), flags),
 	}
 
+	// Only the value as of the last link event, see NLMonitor.OnDemand
 	if _, ok := iplink["ifalias"]; ok {
 		iface["description"] = getString(iplink, "ifalias")
 	}

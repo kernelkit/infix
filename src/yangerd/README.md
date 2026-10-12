@@ -87,6 +87,7 @@ ships, 1.26 at the time of writing.  Dependencies are vendored
 | | STP port and bridge state | poll 5 s | mstpd |
 | | WireGuard peers | poll 10 s | `wg` netlink |
 | | `last-change` | on demand | oper-state transitions seen since start |
+| | `description` | on demand | sysfs `ifalias`, the link row is only current for interfaces that are up |
 | `ietf-routing:routing` | `ribs` | event | zebra ZAPI redistribution, or rtnetlink route events without FRR |
 | | `control-plane-protocols` | poll 10 s | ospfd, ripd, bfdd vty sockets |
 | | forwarding per interface | event | inotify on `/proc/sys/net/*/conf/*/forwarding` |
@@ -227,6 +228,12 @@ A disabled feature's monitor is not started at all.
   resolves, so take the name from the message.
 - **FRR daemons differ.**  bfdd installs its show commands in the enable
   node only, so the vty client sends `enable` first, as vtysh does.
+- **No link event for an alias on a down interface.**  The kernel only
+  notifies an alias change through `netif_state_change()`, which is a
+  no-op unless the interface is up.  A description set on a PPPoE
+  interface before pppd raises it, or on a disabled port, never reaches
+  the staged link row.  The interfaces provider re-reads
+  `/sys/class/net/<if>/ifalias` on every GET instead.
 - **Operational lags the commit.**  Data follows events, so a test that
   reads back a value right after a commit has to poll with `until()`.
 
