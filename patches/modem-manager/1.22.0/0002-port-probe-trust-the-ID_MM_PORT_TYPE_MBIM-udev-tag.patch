@@ -1,7 +1,7 @@
 From 3d9719aa8b78ab4dc6a1a9767f8050bfda320d36 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sat, 26 Sep 2026 11:13:00 +0200
-Subject: [PATCH 2/2] port-probe: trust the ID_MM_PORT_TYPE_MBIM udev tag
+Subject: [PATCH 2/3] port-probe: trust the ID_MM_PORT_TYPE_MBIM udev tag
 Organization: Wires
 
 When a udev rule explicitly sets ID_MM_PORT_TYPE_MBIM=1 on a port,
