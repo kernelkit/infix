@@ -11,9 +11,10 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/wpactrl"
 )
 
-// meshState is what the kernel knows about a mesh interface, read on
-// every refresh.  The default implementation asks nl80211, tests
-// substitute their own.
+// meshState is what the kernel knows about a mesh interface, or a
+// wds-link port (AP_VLAN), read on every refresh: for a mesh point its
+// peers, for a wds-link port the one station bound to it.  The default
+// implementation asks nl80211, tests substitute their own.
 type meshState struct {
 	iftype     string
 	forwarding *bool
@@ -36,16 +37,49 @@ func kernelMeshState(ifname string) meshState {
 	if iftype, err := client.InterfaceType(iface.Index); err == nil {
 		ms.iftype = iftype
 	}
-	if ms.iftype != "mesh_point" {
+	switch ms.iftype {
+	case "mesh_point":
+		if fwd, err := client.MeshForwarding(iface.Index); err == nil {
+			ms.forwarding = &fwd
+		}
+	case "AP_VLAN":
+	default:
 		return ms
-	}
-	if fwd, err := client.MeshForwarding(iface.Index); err == nil {
-		ms.forwarding = &fwd
 	}
 	if peers, err := client.Stations(iface.Index); err == nil {
 		ms.peers = peers
 	}
 	return ms
+}
+
+// kernelWDSPorts lists the wds-link ports, the AP_VLAN interfaces.
+// They have no control socket of their own, so they are found by
+// asking the kernel rather than by their daemon.
+func kernelWDSPorts() []string {
+	client, err := nl80211.Dial()
+	if err != nil {
+		return nil
+	}
+	defer client.Close()
+
+	phys, err := client.PhyInterfaces()
+	if err != nil {
+		return nil
+	}
+
+	var ports []string
+	for _, ifaces := range phys {
+		for _, ifname := range ifaces {
+			iface, err := net.InterfaceByName(ifname)
+			if err != nil {
+				continue
+			}
+			if iftype, err := client.InterfaceType(iface.Index); err == nil && iftype == "AP_VLAN" {
+				ports = append(ports, ifname)
+			}
+		}
+	}
+	return ports
 }
 
 // meshEvent tells whether a wpa_supplicant event changes mesh state:

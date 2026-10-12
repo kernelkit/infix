@@ -45,6 +45,9 @@ type IWMonitor struct {
 	// meshState reads iftype, mesh forwarding and peers from the
 	// kernel; overridable in tests.
 	meshState func(ifname string) meshState
+	// wdsPorts lists the wds-link ports (AP_VLAN interfaces);
+	// overridable in tests.
+	wdsPorts func() []string
 }
 
 func New(log *slog.Logger) *IWMonitor {
@@ -52,6 +55,7 @@ func New(log *slog.Logger) *IWMonitor {
 		log:       log,
 		attached:  make(map[string]context.CancelFunc),
 		meshState: kernelMeshState,
+		wdsPorts:  kernelWDSPorts,
 	}
 }
 
@@ -159,9 +163,13 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 		if ifname != "" {
 			m.log.Info("nl80211: new interface", "iface", ifname)
 			// A new interface gets a new daemon, drop any loop still
-			// waiting on the previous one's socket.
+			// waiting on the previous one's socket.  A wds-link port
+			// is served by its access point's hostapd, it never gets
+			// a socket of its own.
 			m.stopAttach(ifname)
-			m.startAttach(ctx, ifname)
+			if !m.isWDSPort(ifname) {
+				m.startAttach(ctx, ifname)
+			}
 			m.refreshInterface(ctx, ifname)
 		}
 		m.radioChanged()
@@ -285,6 +293,7 @@ func (m *IWMonitor) handleAttachEvent(ctx context.Context, ifname string, ev wpa
 	switch {
 	case ev.Name == "AP-STA-CONNECTED" || ev.Name == "AP-STA-DISCONNECTED":
 		m.refreshInterface(ctx, ifname)
+		m.refreshWDSPorts(ctx)
 	case ev.Name == "CTRL-EVENT-CONNECTED":
 		m.refreshInterface(ctx, ifname)
 	case meshEvent(ev):
@@ -337,6 +346,8 @@ func (m *IWMonitor) buildWifiData(ctx context.Context, iface string) map[string]
 	switch detectMode(si, status, ms.iftype) {
 	case "ap":
 		result["access-point"] = m.buildAPData(ctx, iface, si, status)
+	case "wds":
+		result["wds-link"] = buildWDSData(ms)
 	case "mesh":
 		result["mesh-point"] = m.buildMeshData(iface, si, status, ms)
 	default:
@@ -357,10 +368,14 @@ func (m *IWMonitor) kernelState(si wpactrl.SocketInfo) func(string) meshState {
 
 // detectMode picks the operational container.  The kernel iftype is
 // authoritative, a mesh interface is one before wpa_supplicant has
-// joined anything and STATUS says so only afterwards (mode=mesh).
+// joined anything and STATUS says so only afterwards (mode=mesh).  A
+// wds-link port (AP_VLAN) has no daemon at all.
 func detectMode(si wpactrl.SocketInfo, status map[string]string, iftype string) string {
 	if si.Daemon == "hostapd" {
 		return "ap"
+	}
+	if iftype == "AP_VLAN" {
+		return "wds"
 	}
 	if iftype == "mesh_point" || status["mode"] == "mesh" {
 		return "mesh"
@@ -512,6 +527,7 @@ func (m *IWMonitor) refreshAllInterfaces(ctx context.Context) {
 		m.startAttach(ctx, ifname)
 		m.refreshInterface(ctx, ifname)
 	}
+	m.refreshWDSPorts(ctx)
 }
 
 func nextDelay(current time.Duration) time.Duration {

@@ -29,6 +29,7 @@ func TestDetectMode(t *testing.T) {
 		{"mesh joined", sup, map[string]string{"mode": "mesh"}, "mesh_point", "mesh"},
 		{"mesh not yet joined", sup, map[string]string{"wpa_state": "SCANNING"}, "mesh_point", "mesh"},
 		{"mesh, kernel unreadable", sup, map[string]string{"mode": "mesh"}, "", "mesh"},
+		{"wds-link port, no daemon", wpactrl.SocketInfo{}, nil, "AP_VLAN", "wds"},
 	}
 	for _, tt := range tests {
 		if got := detectMode(tt.si, tt.status, tt.iftype); got != tt.want {
