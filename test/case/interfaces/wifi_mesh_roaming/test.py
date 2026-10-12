@@ -174,9 +174,12 @@ with infamy.Test() as test:
     # SSID, that BSSID is what tells them apart.
     aps = {ap_mac.lower(): (name, dut) for name, dut, _, ap_mac in gws}
 
+    def on_campus_ap(*not_on):
+        bssid = wifi.station_bssid(client)
+        return bssid if bssid in aps and bssid not in not_on else None
+
     with test.step("Verify the client is connected to one of the campus APs"):
-        until(lambda: wifi.station_bssid(client) in aps, attempts=60, interval=2)
-        first_bssid = wifi.station_bssid(client)
+        first_bssid = until(on_campus_ap, attempts=60, interval=2)
         first_ap, first_dut = aps[first_bssid]
         print(f"client is on {first_ap} ({first_bssid})")
 
@@ -202,10 +205,8 @@ with infamy.Test() as test:
                 "interface": [{"name": "wifi1", "enabled": False}]}}})
 
         with test.step("Verify the client roams to another node's AP"):
-            until(lambda: wifi.station_bssid(client) in aps and
-                  wifi.station_bssid(client) != first_bssid,
-                  attempts=90, interval=2)
-            new_ap, _ = aps[wifi.station_bssid(client)]
+            new_bssid = until(lambda: on_campus_ap(first_bssid), attempts=90, interval=2)
+            new_ap, _ = aps[new_bssid]
             print(f"client roamed from {first_ap} to {new_ap}")
 
         with test.step("Verify connectivity is restored after roaming"):
@@ -222,10 +223,9 @@ with infamy.Test() as test:
             shells[second_ap].runsh("initctl stop hostapd")
 
         with test.step("Verify the client roams to the remaining node's AP"):
-            until(lambda: wifi.station_bssid(client) in aps and
-                  wifi.station_bssid(client) not in (first_bssid, second_bssid),
-                  attempts=30, interval=1)
-            third_ap, _ = aps[wifi.station_bssid(client)]
+            third_bssid = until(lambda: on_campus_ap(first_bssid, second_bssid),
+                                attempts=30, interval=1)
+            third_ap, _ = aps[third_bssid]
             print(f"client roamed from {second_ap} to {third_ap}")
 
         with test.step("Verify the client was asked to move, given candidates, and roamed without disconnecting"):
