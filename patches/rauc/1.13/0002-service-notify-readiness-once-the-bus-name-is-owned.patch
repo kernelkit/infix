@@ -1,7 +1,7 @@
 From 4ae5297fed47fd7b499e656a6e0af37683632975 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 1 Oct 2026 11:20:00 +0200
-Subject: [PATCH 2/2] service: notify readiness once the bus name is owned
+Subject: [PATCH 2/3] service: notify readiness once the bus name is owned
 Organization: Wires
 
 A supervisor only sees the process start, not when the service can take
@@ -12,6 +12,7 @@ Send READY=1 on NOTIFY_SOCKET, the sd_notify(3) protocol, when the name
 has been acquired, so a supervisor can hold back clients.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  src/service.c | 35 +++++++++++++++++++++++++++++++++++
  1 file changed, 35 insertions(+)
