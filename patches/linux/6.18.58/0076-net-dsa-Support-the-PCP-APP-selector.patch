@@ -1,7 +1,7 @@
 From 997ff0b534a06a9bf0b2274dd1475b707bbf057b Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:04:22 +0200
-Subject: [PATCH 076/107] net: dsa: Support the PCP APP selector
+Subject: [PATCH 076/108] net: dsa: Support the PCP APP selector
 
 Add port_add_pcp_prio, port_del_pcp_prio and port_get_pcp_prio switch
 ops and route the DCB_APP_SEL_PCP selector to them, mirroring the DSCP
