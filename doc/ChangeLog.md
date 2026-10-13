@@ -146,6 +146,13 @@ All notable changes to the project are documented in this file.
   direction dead, the link up at 1000 Mbps but nothing it sent reaching the
   other end.  The PHYs now resynchronize their QSGMII link to the switch
   after it is set up, the way Microchip's PHY API does
+- LAN969x: the LAN8814 and LAN8804 copper PHYs advertised Energy Efficient
+  Ethernet, which the switch cannot use, and could enter its low power
+  state by mistake after a cable was unplugged.  EEE is now off on these
+  ports
+- LAN969x: a copper link could stay down for good when autonegotiation on
+  the LAN8814 or LAN8804 PHY got stuck.  It is now restarted after three
+  seconds with a link partner present but no link
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
