@@ -1,5 +1,6 @@
-if BR2_riscv
+if BR2_RISCV_64
 
-# No boards yet in tree, visionfive2 is not integrated
+source "$BR2_EXTERNAL_INFIX_PATH/board/riscv64/bananapi-bpi-f3/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/riscv64/starfive-visionfive2/Config.in"
 
 endif

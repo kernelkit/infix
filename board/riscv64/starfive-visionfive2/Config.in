@@ -1,0 +1,6 @@
+config BR2_PACKAGE_STARFIVE_VISIONFIVE2
+	bool "StarFive VisionFive2"
+	depends on BR2_RISCV_64
+	select SDCARD_AUX
+	help
+	  Support for the StarFive VisionFive2, based on the JH7110 SoC.

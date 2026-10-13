@@ -185,6 +185,9 @@ get_bootloader_name()
 	acer-connect-vero-w6m)
             echo "bpi_r3_emmc_boot"
             ;; 
+        bananapi-bpi-f3)
+            echo "bpi_f3_boot"
+            ;;
         bananapi-bpi-m1)
             echo "bpi_m1_boot"
             ;;
@@ -221,6 +224,9 @@ get_bootloader_name()
             ;;
         novarq-tactical-1000)
             echo "tactical_boot"
+            ;;
+        starfive-visionfive2)
+            echo "visionfive2_boot"
             ;;
         *)
             err "Unknown bootloader for board: $board"

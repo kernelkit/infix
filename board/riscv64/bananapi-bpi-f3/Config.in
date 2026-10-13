@@ -1,0 +1,6 @@
+config BR2_PACKAGE_BANANAPI_BPI_F3
+	bool "Banana Pi BPI-F3"
+	depends on BR2_RISCV_64
+	select SDCARD_AUX
+	help
+	  Support for the Banana Pi BPI-F3, based on the SpacemiT K1 SoC.
