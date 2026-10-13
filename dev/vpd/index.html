@@ -2348,10 +2348,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#factory-partition" class="md-nav__link">
+  <a href="#vpd-file-on-the-aux-partition" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Factory Partition
+        VPD File on the Aux Partition
       
     </span>
   </a>
@@ -2582,10 +2582,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#factory-partition" class="md-nav__link">
+  <a href="#vpd-file-on-the-aux-partition" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Factory Partition
+        VPD File on the Aux Partition
       
     </span>
   </a>
@@ -2795,27 +2795,27 @@ be marked <code>infix,trusted</code>:</p>
 </code></pre></div>
 <p>Every VPD is listed in the <em>ietf-hardware</em> model as a component named
 <code>vpd-&lt;board&gt;</code>, e.g., <code>vpd-product</code> for the example above.</p>
-<h2 id="factory-partition">Factory Partition<a class="headerlink" href="#factory-partition" title="Permanent link">¶</a></h2>
+<h2 id="vpd-file-on-the-aux-partition">VPD File on the Aux Partition<a class="headerlink" href="#vpd-file-on-the-aux-partition" title="Permanent link">¶</a></h2>
 <p>Boards without a VPD EEPROM, such as single board computers, boot with
 a random MAC address on every port and the vendor's default address on
 every WiFi radio.  Two such boards of the same model cannot even talk
 to each other over WiFi, since both radios claim the same address.</p>
-<p>Such a board can be given an identity by writing an ONIE TLV to the
-start of a disk partition labelled <code>factory</code>.  The system reads it
-when the device tree provides no product VPD.  The <code>onieprom</code> tool
-encodes the JSON form described <a href="#json-encoding">below</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"Bananapi","product-name":"BPI-R3"}' \
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  | onieprom -e | dd of=/dev/disk/by-partlabel/factory
+<p>Such a board can be given an identity by storing an ONIE TLV as
+<code>/mnt/aux/vpd.bin</code>.  The boot loader hands the file to the system,
+which reads it like any other VPD.  The <code>onieprom</code> tool encodes the
+JSON form described <a href="#json-encoding">below</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"SinoVoip Co., Ltd.","product-name":"BPI-R3"}' \
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  | onieprom -e &gt; /mnt/aux/vpd.bin
 </code></pre></div>
-<p>A VPD read this way is never trusted, so it can only provide identity,
-never the factory password.  On the Banana Pi BPI-R3 family the base
-MAC address it provides is also handed out to the ports at boot: every
-wired port without a hardware address gets base + 1, base + 2, and so
-on, in interface name order.
-WiFi interfaces derive their addresses from the base MAC as described
-in <a href="../wifi/#multi-ssid-configuration">WiFi</a>.</p>
-<p>The image for the Banana Pi BPI-R3 family already carries an empty
-<code>factory</code> partition for this purpose.</p>
+<p>The file survives upgrades, and removing it returns the board to
+random addresses on the next boot.  A VPD read this way is never
+trusted, so it can only provide identity, never the factory password.
+The ports get their addresses from its base MAC address, each with a
+fixed offset given by the device tree, and WiFi interfaces derive
+theirs from the base MAC as described in
+<a href="../wifi/#multi-ssid-configuration">WiFi</a>.</p>
+<p>This is currently supported on the Banana Pi BPI-R3 family and the
+Acer Connect Vero W6m.</p>
 <h2 id="product-vpd">Product VPD<a class="headerlink" href="#product-vpd" title="Permanent link">¶</a></h2>
 <p>The VPD named <code>product</code> describes the device as a whole.  Its
 attributes are used for the following, falling back to other sources

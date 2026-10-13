@@ -4240,8 +4240,7 @@ controller; nodes discover peers and find paths on their own.</p>
 <p>In practice, a node bridging the mesh interface to a LAN acts as a mesh
 portal.</p>
 <p>For a backhaul with a single root, where multi-hop and self-healing are
-not needed, see <a href="#wds-backhaul-and-repeaters">WDS Backhaul and Repeaters</a>.
-That variant can use WiFi hardware offloading, mesh cannot.</p>
+not needed, see <a href="#wds-backhaul-and-repeaters">WDS Backhaul and Repeaters</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Not all WiFi hardware supports 802.11s mesh, see the adapter list
@@ -4361,8 +4360,7 @@ root accepts the station on one of its access points and gives it a
 configuration and tied to the satellite's MAC address.</p>
 <p>Compared to an <a href="#80211s-mesh-point-mode">802.11s mesh</a>, a WDS backhaul
 is a star with one root, without multi-hop or self-healing.  In return
-it is a plain access point and station link, which WiFi hardware
-offloading supports where mesh is not.</p>
+it is a plain access point and station link.</p>
 <h3 id="root-access-point-with-wds-ports">Root: access point with WDS ports<a class="headerlink" href="#root-access-point-with-wds-ports" title="Permanent link">¶</a></h3>
 <p>On the root, two kinds of interface share the job.  The access point is
 the one the satellites connect to: it advertises the backhaul SSID and
