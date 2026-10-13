@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: ospf_auto_cost Pages: 1 -->
+<svg width="614pt" height="175pt"
+ viewBox="0.00 0.00 613.71 175.01" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 171.01)">
+<title>ospf_auto_cost</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-171.01 609.71,-171.01 609.71,4 -4,4"/>
+<text text-anchor="middle" x="302.86" y="-7.8" font-family="DejaVu Serif, Book" font-size="14.00">IPv4 addresses shown, the IPv6 run uses the matching 2001:db8: prefixes</text>
+<!-- PC -->
+<g id="node1" class="node">
+<title>PC</title>
+<polygon fill="none" stroke="black" points="0,-23.5 0,-69.5 91,-69.5 91,-23.5 0,-23.5"/>
+<text text-anchor="middle" x="16.5" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">PC</text>
+<polyline fill="none" stroke="black" points="33,-23.5 33,-69.5 "/>
+<text text-anchor="middle" x="62" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="33,-46.5 91,-46.5 "/>
+<text text-anchor="middle" x="62" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- R1 -->
+<g id="node2" class="node">
+<title>R1</title>
+<polygon fill="none" stroke="black" points="390.71,-120.51 390.71,-166.51 605.71,-166.51 605.71,-120.51 390.71,-120.51"/>
+<text text-anchor="middle" x="415.71" y="-151.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="390.71,-143.51 440.71,-143.51 "/>
+<text text-anchor="middle" x="415.71" y="-128.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="440.71,-120.51 440.71,-166.51 "/>
+<text text-anchor="middle" x="523.21" y="-147.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">R1 </text>
+<text text-anchor="middle" x="523.21" y="-132.31" font-family="DejaVu Sans Mono, Book" font-size="14.00"> router&#45;id 1.1.1.1</text>
+</g>
+<!-- PC&#45;&#45;R1 -->
+<g id="edge1" class="edge">
+<title>PC:mgmt1&#45;&#45;R1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M91.5,-58.5C91.5,-58.5 390.21,-155.51 390.21,-155.51"/>
+</g>
+<!-- R2 -->
+<g id="node3" class="node">
+<title>R2</title>
+<polygon fill="none" stroke="black" points="390.71,-23.5 390.71,-69.5 605.71,-69.5 605.71,-23.5 390.71,-23.5"/>
+<text text-anchor="middle" x="415.71" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="390.71,-46.5 440.71,-46.5 "/>
+<text text-anchor="middle" x="415.71" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="440.71,-23.5 440.71,-69.5 "/>
+<text text-anchor="middle" x="523.21" y="-50.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">R2 </text>
+<text text-anchor="middle" x="523.21" y="-35.3" font-family="DejaVu Sans Mono, Book" font-size="14.00"> router&#45;id 2.2.2.2</text>
+</g>
+<!-- PC&#45;&#45;R2 -->
+<g id="edge2" class="edge">
+<title>PC:mgmt2&#45;&#45;R2:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M91.5,-34.5C91.5,-34.5 390.21,-34.5 390.21,-34.5"/>
+</g>
+<!-- R1&#45;&#45;R2 -->
+<g id="edge3" class="edge">
+<title>R1:link&#45;&#45;R2:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M415.21,-120.51C415.21,-120.51 415.21,-69.5 415.21,-69.5"/>
+<text text-anchor="middle" x="419.44" y="-74.86" font-family="DejaVu Serif, Book" font-size="14.00">192.168.50.2/24</text>
+<text text-anchor="middle" x="410.99" y="-107.75" font-family="DejaVu Serif, Book" font-size="14.00">192.168.50.1/24</text>
+</g>
+</g>
+</svg>
