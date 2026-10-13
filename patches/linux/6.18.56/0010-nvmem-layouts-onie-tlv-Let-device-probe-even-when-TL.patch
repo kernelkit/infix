@@ -1,7 +1,7 @@
 From 17f03931f23a3ed1dbe6f77a7e48bfdc11f17140 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 24 Nov 2023 23:29:55 +0100
-Subject: [PATCH 010/101] nvmem: layouts: onie-tlv: Let device probe even when
+Subject: [PATCH 010/102] nvmem: layouts: onie-tlv: Let device probe even when
  TLV is invalid
 
 Before this change, probing an NVMEM device, expected to contain a

@@ -1,7 +1,7 @@
 From ca34ebe2b40b53b52a5ea6fb00b7bb36eeeabb5f Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
-Subject: [PATCH 001/101] net: phy: marvell10g: Support firmware loading on
+Subject: [PATCH 001/102] net: phy: marvell10g: Support firmware loading on
  88X3310
 
 When probing, if a device is waiting for firmware to be loaded into

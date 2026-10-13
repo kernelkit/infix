@@ -1,7 +1,7 @@
 From b10c04d81bb96ab0b09484ee2a2373482b56f26d Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 2 Mar 2026 12:20:14 +0100
-Subject: [PATCH 060/101] arm64: dts: microchip: add EV23X71A board
+Subject: [PATCH 060/102] arm64: dts: microchip: add EV23X71A board
 
 Microchip EV23X71A is an LAN9696 based evaluation board.
 
