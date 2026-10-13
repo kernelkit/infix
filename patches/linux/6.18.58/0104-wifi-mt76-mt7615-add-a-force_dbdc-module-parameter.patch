@@ -1,7 +1,7 @@
 From 175d4d3f3aa9a486ce1c6a91b6002e9e6c62fad2 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 18 Oct 2026 13:47:49 +0200
-Subject: [PATCH 104/118] wifi: mt76: mt7615: add a force_dbdc module parameter
+Subject: [PATCH 104/121] wifi: mt76: mt7615: add a force_dbdc module parameter
 
 An MT7615D card with an unprogrammed EEPROM selects no band, so the
 driver registers one radio that runs on either 2.4 or 5 GHz instead of

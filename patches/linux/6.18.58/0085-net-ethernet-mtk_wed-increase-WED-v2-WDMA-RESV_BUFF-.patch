@@ -1,7 +1,7 @@
 From 8b39af584bece9ef6612071a74463a4fb3f51c46 Mon Sep 17 00:00:00 2001
 From: Shiji Yang <yangshiji66@outlook.com>
 Date: Wed, 19 Aug 2026 21:07:07 +0800
-Subject: [PATCH 085/118] net: ethernet: mtk_wed: increase WED v2 WDMA
+Subject: [PATCH 085/121] net: ethernet: mtk_wed: increase WED v2 WDMA
  RESV_BUFF to 0x80
 
 Change WDMA RESV_BUFF from 0x40 to 0x80 to avoid CDM TX FIFO overflow.

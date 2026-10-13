@@ -1,7 +1,7 @@
 From 2ca4d277645105d263e432cf23be325f239810bd Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 30 Jun 2026 15:43:14 +0200
-Subject: [PATCH 065/118] wifi: brcmfmac: honor caller's rtnl lock when
+Subject: [PATCH 065/121] wifi: brcmfmac: honor caller's rtnl lock when
  stopping primary interface
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

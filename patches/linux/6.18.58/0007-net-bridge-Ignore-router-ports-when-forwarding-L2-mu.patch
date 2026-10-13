@@ -1,7 +1,7 @@
 From b270c7d6cbc2f48a4b2766050f209c9003077fc8 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 06:44:41 +0100
-Subject: [PATCH 007/118] net: bridge: Ignore router ports when forwarding L2
+Subject: [PATCH 007/121] net: bridge: Ignore router ports when forwarding L2
  multicast
 
 Multicast router ports are either statically configured or learned from

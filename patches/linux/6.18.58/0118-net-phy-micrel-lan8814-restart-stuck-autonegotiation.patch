@@ -1,7 +1,7 @@
 From 00c8bbf201edd9d07e3b3fe7825f93a4fd27079e Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 16:27:50 +0200
-Subject: [PATCH 118/118] net: phy: micrel: lan8814: restart stuck
+Subject: [PATCH 118/121] net: phy: micrel: lan8814: restart stuck
  autonegotiation
 
 The LAN8814 autonegotiation state machine can get stuck decoding valid
