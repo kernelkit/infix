@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net"
 	"sort"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/unix"
 )
 
 // treeKey is the single YANG module key where the complete
@@ -68,6 +70,16 @@ type NLMonitor struct {
 	wireguard map[string]json.RawMessage // ifname → WireGuard peer-status JSON
 	lastWG    string
 
+	// vlans is `bridge vlan show` by interface, vlanGlobals the
+	// per-bridge `bridge vlan global show`.  Both are replaced whole
+	// by refreshBridgeVLANs and never mutated in place.
+	vlans       map[string][]iface.VLANEntry
+	vlanGlobals map[string][]iface.VLANGlobal
+
+	// vlanEvents tells whether the RTNLGRP_BRVLAN subscription is up;
+	// without it the VLAN table follows bridge link events only.
+	vlanEvents bool
+
 	lastOperStatus map[string]string
 	// lastChange stamps the operstate transitions seen since start.
 	// Kept as time.Time for the monotonic reading: the wall clock is
@@ -90,6 +102,12 @@ const (
 	// failed one.
 	redumpSettle = 200 * time.Millisecond
 	redumpRetry  = 2 * time.Second
+)
+
+// NETLINK_ROUTE multicast groups without a netlink library binding.
+const (
+	rtnlgrpMDB    = 26 // RTNLGRP_MDB, bridge multicast database
+	rtnlgrpBRVLAN = 35 // RTNLGRP_BRVLAN, bridge VLAN table (kernel 5.6+)
 )
 
 // New creates a netlink monitor backed by ip/bridge batch query workers.
@@ -237,8 +255,17 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 	}); err != nil {
 		return fmt.Errorf("subscribe neigh updates: %w", err)
 	}
-	if err := m.subscribeBridgeMDB(runCtx, mdbCh, errorCallback); err != nil {
+	if err := m.subscribeRtnlGroup(runCtx, rtnlgrpMDB, mdbCh, errorCallback); err != nil {
 		return fmt.Errorf("subscribe bridge mdb updates: %w", err)
+	}
+	// A nil channel is never ready, so the select below simply skips
+	// it when the kernel has no bridge VLAN group.
+	vlanCh := make(chan struct{}, 32)
+	m.vlanEvents = true
+	if err := m.subscribeRtnlGroup(runCtx, rtnlgrpBRVLAN, vlanCh, errorCallback); err != nil {
+		m.log.Warn("bridge vlan events unavailable, following link events only", "err", err)
+		m.vlanEvents = false
+		vlanCh = nil
 	}
 
 	if err := m.initialDump(); err != nil {
@@ -275,6 +302,11 @@ func (m *NLMonitor) Run(ctx context.Context) error {
 				return fmt.Errorf("bridge mdb update channel closed")
 			}
 			changed = m.handleMDBUpdate()
+		case _, ok := <-vlanCh:
+			if !ok {
+				return fmt.Errorf("bridge vlan update channel closed")
+			}
+			changed = m.refreshBridgeVLANs()
 		case <-flush:
 			flush = nil
 			m.rebuild()
@@ -340,6 +372,7 @@ func (m *NLMonitor) initialDump() error {
 	}
 	m.mu.Unlock()
 
+	m.refreshBridgeVLANs()
 	m.rebuild()
 
 	// Ports that are up when yangerd starts send no link event, so ask
@@ -378,9 +411,18 @@ func ethernetNames(linkRaw json.RawMessage, fc iface.FileChecker) []string {
 
 func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) bool {
 	index := int(update.Index)
+	m.mu.Lock()
+	old := nameByIndex(m.links, index)
+	wasBridge := bridgeRelated(m.links, index)
+	m.mu.Unlock()
+
 	if update.Header.Type == syscall.RTM_DELLINK {
 		defer m.linkSetChanged()
-		return m.removeInterface(index)
+		changed := m.removeInterface(index)
+		if wasBridge {
+			m.refreshBridgeVLANs()
+		}
+		return changed
 	}
 
 	name, ok := linkNameFromUpdate(update)
@@ -388,7 +430,75 @@ func (m *NLMonitor) handleLinkUpdate(update netlink.LinkUpdate) bool {
 		m.log.Warn("link update without interface name", "index", index)
 		return false
 	}
-	return m.refreshInterface(index, name)
+	changed := m.refreshInterface(index, name)
+	if !changed {
+		return false
+	}
+
+	// The VLAN table has its own events; without them every change of
+	// a bridge or port may have moved VLANs, with them only a new or
+	// gone interface is worth the extra queries, as insurance.
+	m.mu.Lock()
+	isBridge := bridgeRelated(m.links, index)
+	m.mu.Unlock()
+	if (isBridge || wasBridge) && (!m.vlanEvents || old == "") {
+		m.refreshBridgeVLANs()
+	}
+	return true
+}
+
+// refreshBridgeVLANs re-reads the VLAN table of every interface and the
+// global VLAN options of every VLAN filtering bridge.  Reports whether
+// the document needs a rebuild.
+func (m *NLMonitor) refreshBridgeVLANs() bool {
+	raw, err := m.query(m.brBatch, "vlan show")
+	if err != nil {
+		if !errors.Is(err, ipbatch.ErrCommandFailed) {
+			return false
+		}
+		raw = nil
+	}
+	table := iface.ParseVLANTable(raw)
+
+	m.mu.Lock()
+	bridges := iface.Bridges(m.links)
+	m.mu.Unlock()
+
+	globals := make(map[string][]iface.VLANGlobal)
+	for name, br := range bridges {
+		if !br.VLANFiltering || br.Index == 0 {
+			continue
+		}
+		raw, err := m.query(m.brBatch, "vlan global show dev "+devRef(br.Index))
+		if err != nil {
+			continue
+		}
+		globals[name] = iface.ParseVLANGlobals(raw)
+	}
+
+	m.mu.Lock()
+	m.vlans = table
+	m.vlanGlobals = globals
+	m.mu.Unlock()
+	return true
+}
+
+// bridgeRelated tells whether the staged link row of index is a bridge
+// or a bridge port.
+func bridgeRelated(links json.RawMessage, index int) bool {
+	want := jsonKey(index)
+	for _, row := range decodeRows(links) {
+		if !rowMatches(row, "ifindex", want) {
+			continue
+		}
+		var li struct {
+			Kind  string `json:"info_kind"`
+			Slave string `json:"info_slave_kind"`
+		}
+		json.Unmarshal(row["linkinfo"], &li)
+		return li.Kind == "bridge" || li.Slave == "bridge"
+	}
+	return false
 }
 
 func (m *NLMonitor) handleAddrUpdate(update netlink.AddrUpdate) bool {
@@ -491,6 +601,8 @@ func (m *NLMonitor) forgetName(name string) {
 	m.neighs = replaceRows(m.neighs, "dev", name, nil)
 	delete(m.fdb, name)
 	delete(m.mdb, name)
+	delete(m.vlans, name)
+	delete(m.vlanGlobals, name)
 	delete(m.ethernet, name)
 	delete(m.wifi, name)
 	delete(m.wireguard, name)
@@ -576,7 +688,8 @@ func (m *NLMonitor) refreshInterface(index int, name string) bool {
 }
 
 // rebuild runs iface.Transform on all staged data, merges augments
-// (ethernet, wifi, bridge fdb/mdb), and stores the result.
+// (ethernet, wifi, bridge fdb/mdb/vlans, STP, WireGuard), and stores
+// the result.
 // Caller must NOT hold m.mu.
 func (m *NLMonitor) rebuild() {
 	m.mu.Lock()
@@ -584,18 +697,22 @@ func (m *NLMonitor) rebuild() {
 	addrsCopy := append(json.RawMessage{}, m.addrs...)
 	neighsCopy := append(json.RawMessage{}, m.neighs...)
 	doc := iface.Transform(linksCopy, addrsCopy, neighsCopy, m.fc)
-	eth := copyStringMap(m.ethernet)
-	wfi := copyStringMap(m.wifi)
-	fdb := copyStringMap(m.fdb)
-	mdb := copyStringMap(m.mdb)
-	wg := copyStringMap(m.wireguard)
+	aug := augments{
+		ethernet:    copyStringMap(m.ethernet),
+		wifi:        copyStringMap(m.wifi),
+		fdb:         copyStringMap(m.fdb),
+		mdb:         copyStringMap(m.mdb),
+		wireguard:   copyStringMap(m.wireguard),
+		vlans:       maps.Clone(m.vlans),
+		vlanGlobals: maps.Clone(m.vlanGlobals),
+	}
 	m.mu.Unlock()
 
-	var brSTP, ptSTP map[string]json.RawMessage
+	aug.bridges = iface.Bridges(linksCopy)
 	resolver := stpquery.NewLinksIfIndexResolver(linksCopy)
-	brSTP, ptSTP = stpquery.Query(linksCopy, resolver)
+	aug.bridgeSTP, aug.portSTP = stpquery.Query(linksCopy, resolver)
 
-	doc = mergeAugments(doc, eth, wfi, fdb, mdb, brSTP, ptSTP, wg)
+	doc = mergeAugments(doc, aug)
 	m.tree.Set(treeKey, doc)
 }
 
@@ -644,11 +761,38 @@ func writeSortedRaw(b *strings.Builder, prefix string, m map[string]json.RawMess
 	}
 }
 
+// augments is everything merged into the document iface.Transform
+// produced, keyed by interface name unless noted.
+type augments struct {
+	ethernet, wifi, fdb, mdb, bridgeSTP, portSTP, wireguard map[string]json.RawMessage
+
+	bridges     map[string]iface.BridgeInfo   // by bridge name, from the link dump
+	vlans       map[string][]iface.VLANEntry  // `bridge vlan show`, by interface
+	vlanGlobals map[string][]iface.VLANGlobal // `bridge vlan global show`, by bridge
+}
+
+func (a *augments) empty() bool {
+	return len(a.ethernet) == 0 && len(a.wifi) == 0 && len(a.fdb) == 0 && len(a.mdb) == 0 &&
+		len(a.bridgeSTP) == 0 && len(a.portSTP) == 0 && len(a.wireguard) == 0 && len(a.bridges) == 0
+}
+
 // mergeAugments adds ethernet, wifi, and bridge data into the
 // complete ietf-interfaces document produced by iface.Transform().
-func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, portSTP, wireguard map[string]json.RawMessage) json.RawMessage {
-	if len(ethernet) == 0 && len(wifi) == 0 && len(fdb) == 0 && len(mdb) == 0 && len(bridgeSTP) == 0 && len(portSTP) == 0 && len(wireguard) == 0 {
+func mergeAugments(doc json.RawMessage, a augments) json.RawMessage {
+	if a.empty() {
 		return doc
+	}
+
+	// Ports of VLAN filtering bridges, the only ones whose PVID means
+	// anything.
+	vlanPorts := make(map[string]bool)
+	for _, br := range a.bridges {
+		if !br.VLANFiltering {
+			continue
+		}
+		for _, port := range br.Ports {
+			vlanPorts[port] = true
+		}
 	}
 
 	var root map[string]any
@@ -675,7 +819,7 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, por
 			continue
 		}
 
-		if ethData, ok := ethernet[name]; ok {
+		if ethData, ok := a.ethernet[name]; ok {
 			var wrapper map[string]json.RawMessage
 			if err := json.Unmarshal(ethData, &wrapper); err == nil {
 				if ethRaw, ok := wrapper["ethernet"]; ok {
@@ -693,14 +837,14 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, por
 			}
 		}
 
-		if wifiData, ok := wifi[name]; ok {
+		if wifiData, ok := a.wifi[name]; ok {
 			var wifiObj any
 			if err := json.Unmarshal(wifiData, &wifiObj); err == nil {
 				ifaceObj["infix-interfaces:wifi"] = wifiObj
 			}
 		}
 
-		if fdbData, ok := fdb[name]; ok {
+		if fdbData, ok := a.fdb[name]; ok {
 			bridgeObj := ensureBridgeAugment(ifaceObj)
 			var fdbObj any
 			if err := json.Unmarshal(fdbData, &fdbObj); err == nil {
@@ -708,14 +852,39 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, por
 			}
 		}
 
-		if mdbData, ok := mdb[name]; ok {
+		// The bridge type is a YANG choice: a VLAN filtering bridge
+		// carries its multicast state per VLAN, any other at the
+		// bridge level.  An MDB for a name the link dump does not
+		// call a bridge (the dump lagging a new bridge) is kept at
+		// the bridge level, as before.
+		mdbData, hasMDB := a.mdb[name]
+		br, isBridge := a.bridges[name]
+		switch {
+		case isBridge && br.VLANFiltering:
+			bridgeObj := ensureBridgeAugment(ifaceObj)
+			bridgeObj["vlans"] = iface.BridgeVLANs(br, a.vlans, a.vlanGlobals[name], func(vid int) map[string]any {
+				return transformMDBVID(mdbData, vid)
+			})
+		case isBridge:
+			bridgeObj := ensureBridgeAugment(ifaceObj)
+			bridgeObj["multicast"] = map[string]any{"snooping": br.Snooping}
+			if mf := transformMDB(mdbData); mf != nil {
+				bridgeObj["multicast-filters"] = mf
+			}
+		case hasMDB:
 			bridgeObj := ensureBridgeAugment(ifaceObj)
 			if mf := transformMDB(mdbData); mf != nil {
 				bridgeObj["multicast-filters"] = mf
 			}
 		}
 
-		if stpData, ok := bridgeSTP[name]; ok {
+		if vlanPorts[name] {
+			if vid, ok := iface.PVID(a.vlans[name]); ok {
+				ensureBridgePortAugment(ifaceObj)["pvid"] = vid
+			}
+		}
+
+		if stpData, ok := a.bridgeSTP[name]; ok {
 			bridgeObj := ensureBridgeAugment(ifaceObj)
 			var stpObj any
 			if err := json.Unmarshal(stpData, &stpObj); err == nil {
@@ -723,7 +892,7 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, por
 			}
 		}
 
-		if stpData, ok := portSTP[name]; ok {
+		if stpData, ok := a.portSTP[name]; ok {
 			bpObj := ensureBridgePortAugment(ifaceObj)
 			var stpObj any
 			if err := json.Unmarshal(stpData, &stpObj); err == nil {
@@ -731,7 +900,7 @@ func mergeAugments(doc json.RawMessage, ethernet, wifi, fdb, mdb, bridgeSTP, por
 			}
 		}
 
-		if wgData, ok := wireguard[name]; ok {
+		if wgData, ok := a.wireguard[name]; ok {
 			var wgObj any
 			if err := json.Unmarshal(wgData, &wgObj); err == nil {
 				ifaceObj["infix-interfaces:wireguard"] = wgObj
@@ -924,10 +1093,18 @@ func (m *NLMonitor) query(b *ipbatch.Batch, command string) (json.RawMessage, er
 	return nil, err
 }
 
-func (m *NLMonitor) subscribeBridgeMDB(ctx context.Context, ch chan<- struct{}, errorCallback func(error)) error {
-	sock, err := nl.Subscribe(syscall.NETLINK_ROUTE, 26)
+// subscribeRtnlGroup delivers a tick on ch for every message the kernel
+// multicasts on a NETLINK_ROUTE group.  Membership is added through
+// setsockopt rather than the bind mask nl.Subscribe builds, which has
+// room for groups 1-32 only; RTNLGRP_BRVLAN is 35.
+func (m *NLMonitor) subscribeRtnlGroup(ctx context.Context, group int, ch chan<- struct{}, errorCallback func(error)) error {
+	sock, err := nl.Subscribe(syscall.NETLINK_ROUTE)
 	if err != nil {
 		return err
+	}
+	if err := unix.SetsockoptInt(sock.GetFd(), unix.SOL_NETLINK, unix.NETLINK_ADD_MEMBERSHIP, group); err != nil {
+		sock.Close()
+		return fmt.Errorf("join group %d: %w", group, err)
 	}
 
 	// Receive blocks until a message arrives; closing the socket on
@@ -1246,6 +1423,12 @@ func mdbByBridge(raw json.RawMessage) map[string]json.RawMessage {
 }
 
 func transformMDB(raw json.RawMessage) map[string]any {
+	return transformMDBVID(raw, -1)
+}
+
+// transformMDBVID builds the multicast-filters container from the MDB
+// entries of one VLAN; a negative vid takes every entry.
+func transformMDBVID(raw json.RawMessage, vid int) map[string]any {
 	var entries []map[string]any
 	if err := json.Unmarshal(raw, &entries); err != nil || len(entries) == 0 {
 		return nil
@@ -1264,6 +1447,9 @@ func transformMDB(raw json.RawMessage) map[string]any {
 		port, _ := e["port"].(string)
 		state, _ := e["state"].(string)
 		if grp == "" || port == "" {
+			continue
+		}
+		if vid >= 0 && entryVID(e) != vid {
 			continue
 		}
 
@@ -1289,6 +1475,19 @@ func transformMDB(raw json.RawMessage) map[string]any {
 	}
 
 	return map[string]any{"multicast-filter": filters}
+}
+
+// entryVID is the VLAN of an MDB entry, 0 when it has none.
+func entryVID(e map[string]any) int {
+	switch v := e["vid"].(type) {
+	case float64:
+		return int(v)
+	case json.Number:
+		n, _ := v.Int64()
+		return int(n)
+	default:
+		return 0
+	}
 }
 
 func mdbStateToYANG(state string) string {

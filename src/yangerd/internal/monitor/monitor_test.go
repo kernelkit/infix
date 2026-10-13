@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"encoding/json"
+	"github.com/kernelkit/infix/src/yangerd/internal/iface"
 	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 	"log/slog"
 	"os"
@@ -110,7 +111,7 @@ func TestMergeAugments(t *testing.T) {
 		"br0": json.RawMessage(`[{"mac":"00:11:22:33:44:55"}]`),
 	}
 
-	got := mergeAugments(doc, eth, nil, fdb, nil, nil, nil, nil)
+	got := mergeAugments(doc, augments{ethernet: eth, fdb: fdb})
 
 	var root map[string]any
 	if err := json.Unmarshal(got, &root); err != nil {
@@ -136,7 +137,7 @@ func TestMergeAugments(t *testing.T) {
 
 func TestMergeAugmentsNoOp(t *testing.T) {
 	doc := json.RawMessage(`{"interface":[{"name":"lo"}]}`)
-	got := mergeAugments(doc, nil, nil, nil, nil, nil, nil, nil)
+	got := mergeAugments(doc, augments{})
 	if string(got) != string(doc) {
 		t.Fatalf("expected no-op, got %s", string(got))
 	}
@@ -145,7 +146,7 @@ func TestMergeAugmentsNoOp(t *testing.T) {
 func TestMergeAugmentsInvalidDoc(t *testing.T) {
 	doc := json.RawMessage(`{invalid`)
 	eth := map[string]json.RawMessage{"eth0": json.RawMessage(`{}`)}
-	got := mergeAugments(doc, eth, nil, nil, nil, nil, nil, nil)
+	got := mergeAugments(doc, augments{ethernet: eth})
 	if string(got) != string(doc) {
 		t.Fatalf("expected passthrough on invalid doc, got %s", string(got))
 	}
@@ -455,5 +456,118 @@ func TestOnDemandRefreshesDescriptionFromSysfs(t *testing.T) {
 	}
 	if got := out.Interface[2]["description"]; got != "kept" {
 		t.Errorf("eth0: unreadable in sysfs, want link row value kept, got %v", got)
+	}
+}
+
+const vlanBridgeLinks = `[
+ {"ifindex":5,"ifname":"br0","operstate":"UP","linkinfo":{"info_kind":"bridge","info_data":{"vlan_filtering":1,"vlan_protocol":"802.1Q","mcast_snooping":1}}},
+ {"ifindex":6,"ifname":"br1","operstate":"UP","linkinfo":{"info_kind":"bridge","info_data":{"vlan_filtering":0,"vlan_protocol":"802.1Q","mcast_snooping":0}}},
+ {"ifindex":2,"ifname":"e1","operstate":"UP","master":"br0","linkinfo":{"info_slave_kind":"bridge","info_slave_data":{"state":"forwarding","fastleave":false,"multicast_router":1,"bcast_flood":true,"flood":true,"mcast_flood":true}}},
+ {"ifindex":3,"ifname":"e2","operstate":"UP","master":"br0","linkinfo":{"info_slave_kind":"bridge","info_slave_data":{"state":"forwarding","fastleave":false,"multicast_router":1,"bcast_flood":true,"flood":true,"mcast_flood":true}}},
+ {"ifindex":4,"ifname":"e9","operstate":"UP","master":"br1","linkinfo":{"info_slave_kind":"bridge","info_slave_data":{"state":"forwarding","fastleave":false,"multicast_router":1,"bcast_flood":true,"flood":true,"mcast_flood":true}}}
+]`
+
+func vlanAugments(t *testing.T) augments {
+	t.Helper()
+	return augments{
+		bridges: iface.Bridges(json.RawMessage(vlanBridgeLinks)),
+		vlans: iface.ParseVLANTable(json.RawMessage(`[
+		 {"ifname":"br0","vlans":[{"vlan":1,"flags":["PVID","Egress Untagged"]},{"vlan":10}]},
+		 {"ifname":"e1","vlans":[{"vlan":1,"flags":["PVID","Egress Untagged"]},{"vlan":10}]},
+		 {"ifname":"e2","vlans":[{"vlan":10,"flags":["PVID"]}]},
+		 {"ifname":"br1","vlans":[{"vlan":1,"flags":["PVID","Egress Untagged"]}]},
+		 {"ifname":"e9","vlans":[{"vlan":1,"flags":["PVID","Egress Untagged"]}]}]`)),
+		vlanGlobals: map[string][]iface.VLANGlobal{
+			"br0": iface.ParseVLANGlobals(json.RawMessage(`[{"ifname":"br0","vlans":[{"vlan":1,"mcast_snooping":1},{"vlan":10,"mcast_snooping":1}]}]`)),
+		},
+		mdb: map[string]json.RawMessage{
+			"br0": json.RawMessage(`[{"dev":"br0","port":"e1","grp":"224.1.1.1","vid":10,"state":"temp"},{"dev":"br0","port":"e2","grp":"224.1.1.1","vid":10,"state":"temp"},{"dev":"br0","port":"e1","grp":"ff02::6a","vid":1,"state":"temp"}]`),
+			"br1": json.RawMessage(`[{"dev":"br1","port":"e9","grp":"224.2.2.2","state":"permanent"}]`),
+		},
+	}
+}
+
+// A VLAN filtering bridge gets its VLANs with members and per-VLAN
+// filters, and nothing at the bridge level (the YANG choice); its ports
+// get their PVID.  A plain bridge keeps the bridge level multicast
+// state and filters, and its ports no PVID.
+func TestMergeAugmentsBridgeVLANs(t *testing.T) {
+	doc := iface.Transform(json.RawMessage(vlanBridgeLinks), nil, nil, noFiles{})
+	got := mergeAugments(doc, vlanAugments(t))
+
+	var root struct {
+		Interface []map[string]json.RawMessage `json:"interface"`
+	}
+	if err := json.Unmarshal(got, &root); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	byName := make(map[string]map[string]json.RawMessage)
+	for _, entry := range root.Interface {
+		var name string
+		json.Unmarshal(entry["name"], &name)
+		byName[name] = entry
+	}
+
+	var br0 map[string]json.RawMessage
+	if err := json.Unmarshal(byName["br0"]["infix-interfaces:bridge"], &br0); err != nil {
+		t.Fatalf("br0 bridge augment: %v", err)
+	}
+	for _, key := range []string{"multicast", "multicast-filters"} {
+		if _, ok := br0[key]; ok {
+			t.Fatalf("VLAN filtering bridge must not carry bridge level %s: %s", key, br0[key])
+		}
+	}
+	want := `{"proto":"ieee802-dot1q-types:c-vlan","vlan":[` +
+		`{"multicast":{"snooping":true},"multicast-filters":{"multicast-filter":[{"group":"ff02::6a","ports":[{"port":"e1","state":"temporary"}]}]},"untagged":["br0","e1"],"vid":1},` +
+		`{"multicast":{"snooping":true},"multicast-filters":{"multicast-filter":[{"group":"224.1.1.1","ports":[{"port":"e1","state":"temporary"},{"port":"e2","state":"temporary"}]}]},"tagged":["br0","e1","e2"],"vid":10}]}`
+	if string(br0["vlans"]) != want {
+		t.Fatalf("br0 vlans =\n%s\nwant\n%s", br0["vlans"], want)
+	}
+
+	var br1 map[string]json.RawMessage
+	if err := json.Unmarshal(byName["br1"]["infix-interfaces:bridge"], &br1); err != nil {
+		t.Fatalf("br1 bridge augment: %v", err)
+	}
+	if _, ok := br1["vlans"]; ok {
+		t.Fatal("plain bridge must not carry vlans")
+	}
+	if string(br1["multicast"]) != `{"snooping":false}` {
+		t.Fatalf("br1 multicast = %s", br1["multicast"])
+	}
+	if !strings.Contains(string(br1["multicast-filters"]), `"224.2.2.2"`) {
+		t.Fatalf("br1 multicast-filters = %s", br1["multicast-filters"])
+	}
+
+	bridgePort := func(name string) map[string]json.RawMessage {
+		var port map[string]json.RawMessage
+		if err := json.Unmarshal(byName[name]["infix-interfaces:bridge-port"], &port); err != nil {
+			t.Fatalf("%s bridge-port: %v", name, err)
+		}
+		return port
+	}
+	if port := bridgePort("e2"); string(port["pvid"]) != "10" || string(port["bridge"]) != `"br0"` {
+		t.Fatalf("e2 bridge-port = %s, want pvid 10 with the kernel fields kept", byName["e2"]["infix-interfaces:bridge-port"])
+	}
+	if port := bridgePort("e1"); string(port["pvid"]) != "1" {
+		t.Fatalf("e1 pvid = %s, want 1", port["pvid"])
+	}
+	if _, ok := bridgePort("e9")["pvid"]; ok {
+		t.Fatal("port of a plain bridge must not get a pvid")
+	}
+}
+
+func TestTransformMDBVID(t *testing.T) {
+	raw := json.RawMessage(`[{"dev":"br0","port":"e1","grp":"224.1.1.1","vid":10,"state":"temp"},{"dev":"br0","port":"e2","grp":"ff02::6a","vid":20,"state":"temp"},{"dev":"br0","port":"e3","grp":"224.3.3.3","state":"permanent"}]`)
+
+	got := transformMDBVID(raw, 10)
+	filters := got["multicast-filter"].([]map[string]any)
+	if len(filters) != 1 || filters[0]["group"] != "224.1.1.1" {
+		t.Fatalf("vid 10 filters = %v", filters)
+	}
+	if transformMDBVID(raw, 30) != nil {
+		t.Fatal("no entry for vid 30, want nil")
+	}
+	if all := transformMDB(raw)["multicast-filter"].([]map[string]any); len(all) != 3 {
+		t.Fatalf("unfiltered got %d groups, want 3", len(all))
 	}
 }
