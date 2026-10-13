@@ -1,7 +1,7 @@
 From 4ec2b06599ec4883c49c6d5d86741782df24a6cc Mon Sep 17 00:00:00 2001
 From: Aurelien Jarno <aurelien@aurel32.net>
 Date: Mon, 3 Nov 2025 00:01:59 +0100
-Subject: [PATCH 099/108] driver: reset: spacemit-p1: add driver for
+Subject: [PATCH 099/111] driver: reset: spacemit-p1: add driver for
  poweroff/reboot
 
 This driver implements poweroff/reboot support for the SpacemiT P1 PMIC

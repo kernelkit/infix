@@ -1,7 +1,7 @@
 From 73edaf0f1b4019155edc0e62dc1f8ffbf5e54c54 Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Mon, 2 Mar 2026 12:20:11 +0100
-Subject: [PATCH 058/108] arm64: dts: microchip: add LAN969x clock header file
+Subject: [PATCH 058/111] arm64: dts: microchip: add LAN969x clock header file
 
 LAN969x uses hardware clock indexes, so document theses in a header to make
 them humanly readable.
