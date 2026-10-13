@@ -252,3 +252,38 @@ func TestAttachKeepalivePeerSocketGone(t *testing.T) {
 		t.Fatal("Run kept waiting after the daemon's socket went away")
 	}
 }
+
+// hostapd announces a shutdown before closing its socket; Run must end
+// on it instead of waiting for the keepalive to time out.
+func TestAttachTerminatingEndsRun(t *testing.T) {
+	path := t.TempDir() + "/hostapd_test"
+	server, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: path, Net: "unixgram"})
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	t.Cleanup(func() { server.Close() })
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, raddr, err := server.ReadFromUnix(buf)
+			if err != nil {
+				return
+			}
+			if string(buf[:n]) == "ATTACH" {
+				server.WriteToUnix([]byte("OK\n"), raddr)
+				server.WriteToUnix([]byte("<3>CTRL-EVENT-TERMINATING"), raddr)
+			}
+		}
+	}()
+	cancel, done := runAttach(t, path)
+	defer cancel()
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrPeerGone) {
+			t.Fatalf("Run = %v, want ErrPeerGone", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Run kept waiting after the daemon said it was terminating")
+	}
+}

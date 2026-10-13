@@ -276,7 +276,7 @@ func (m *IWMonitor) attachLoop(ctx context.Context, ifname string) {
 
 		delay = reconnectInitial
 		m.log.Info("attached to control socket", "iface", ifname, "daemon", si.Daemon)
-		m.refreshInterface(ctx, ifname)
+		m.onAttach(ctx, ifname)
 
 		ac.SetHandler(func(ev wpactrl.Event) {
 			m.handleAttachEvent(ctx, ifname, ev)
@@ -290,8 +290,24 @@ func (m *IWMonitor) attachLoop(ctx context.Context, ifname string) {
 		}
 
 		m.log.Warn("control socket lost", "iface", ifname, "err", err)
-		m.clearInterface(ifname)
+		m.onDetach(ctx, ifname)
 	}
+}
+
+// onAttach re-reads an interface we just attached to, and the wds-link
+// ports with it: a restarted hostapd binds its stations again before
+// we are back on its control socket, so their AP-STA-CONNECTED never
+// reaches us.
+func (m *IWMonitor) onAttach(ctx context.Context, ifname string) {
+	m.refreshInterface(ctx, ifname)
+	m.refreshWDSPorts(ctx)
+}
+
+// onDetach publishes an interface whose daemon is gone as having no
+// wifi state; its wds-link ports follow the kernel and are re-read.
+func (m *IWMonitor) onDetach(ctx context.Context, ifname string) {
+	m.clearInterface(ifname)
+	m.refreshWDSPorts(ctx)
 }
 
 func (m *IWMonitor) handleAttachEvent(ctx context.Context, ifname string, ev wpactrl.Event) {
@@ -316,7 +332,8 @@ func (m *IWMonitor) handleAttachEvent(ctx context.Context, ifname string, ev wpa
 	case ev.Name == "CTRL-EVENT-SIGNAL-CHANGE":
 		m.handleSignalChange(ifname, ev.Data)
 	case ev.Name == "CTRL-EVENT-TERMINATING":
-		// Daemon is shutting down; the read loop will get an error next
+		// The daemon is shutting down; Run returns next and the
+		// attach loop follows it through the restart.
 	}
 }
 

@@ -79,3 +79,30 @@ func TestAPStationEventsRefreshWDSPorts(t *testing.T) {
 		}
 	}
 }
+
+// A restarted hostapd binds its stations again before we are back on
+// its control socket, so attaching and detaching re-read the ports.
+func TestAttachDetachRefreshWDSPorts(t *testing.T) {
+	m := New(slog.Default())
+	m.meshState = func(ifname string) meshState {
+		if ifname == "wds0" {
+			return meshState{iftype: "AP_VLAN", peers: []nl80211.Station{{MAC: "02:00:00:00:00:02"}}}
+		}
+		return meshState{}
+	}
+	m.wdsPorts = func() []string { return []string{"wds0"} }
+
+	published := map[string]string{}
+	m.SetOnUpdate(func(ifname string, raw json.RawMessage) { published[ifname] = string(raw) })
+
+	m.onAttach(context.Background(), "wifi-test-none")
+	if want := `{"wds-link":{"connected":true}}`; published["wds0"] != want {
+		t.Errorf("attached: wds0 published %q, want %s", published["wds0"], want)
+	}
+
+	delete(published, "wds0")
+	m.onDetach(context.Background(), "wifi-test-none")
+	if want := `{"wds-link":{"connected":true}}`; published["wds0"] != want {
+		t.Errorf("detached: wds0 published %q, want %s", published["wds0"], want)
+	}
+}

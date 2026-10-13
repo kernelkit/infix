@@ -123,11 +123,21 @@ func (a *AttachConn) Run(ctx context.Context) error {
 		waiting = false
 		a.conn.SetReadDeadline(time.Now().Add(pingQuiet))
 		msg := string(buf[:n])
-		if strings.TrimSpace(msg) == "PONG" || a.handler == nil {
+		if strings.TrimSpace(msg) == "PONG" {
 			continue
 		}
-		if ev, ok := ParseEvent(msg); ok {
+		ev, ok := ParseEvent(msg)
+		if !ok {
+			continue
+		}
+		if a.handler != nil {
 			a.handler(ev)
+		}
+		// The daemon says it is going away; waiting for the keepalive
+		// to notice would miss everything its replacement does in the
+		// meantime.
+		if ev.Name == "CTRL-EVENT-TERMINATING" {
+			return fmt.Errorf("%w: daemon terminating", ErrPeerGone)
 		}
 	}
 }
