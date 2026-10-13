@@ -1,7 +1,7 @@
 From cac6b74294ffda4f256e520bc9d3d0e6849ab9a7 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:35:44 +0200
-Subject: [PATCH 055/110] mmc: sdhci-of-at91: add LAN969x support
+Subject: [PATCH 055/111] mmc: sdhci-of-at91: add LAN969x support
 
 The LAN969x SDMMC controller is an Atmel SDMMC IP block, but the driver
 has no compatible for it, so the eMMC on LAN969x boards never probes.

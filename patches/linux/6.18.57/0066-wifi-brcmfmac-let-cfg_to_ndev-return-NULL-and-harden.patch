@@ -1,7 +1,7 @@
 From 158bd44aa0b69481a405d90e238d95bdd017b989 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 30 Jun 2026 15:46:25 +0200
-Subject: [PATCH 066/110] wifi: brcmfmac: let cfg_to_ndev() return NULL and
+Subject: [PATCH 066/111] wifi: brcmfmac: let cfg_to_ndev() return NULL and
  harden its callers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
