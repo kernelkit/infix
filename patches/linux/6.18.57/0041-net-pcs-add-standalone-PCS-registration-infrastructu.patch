@@ -1,7 +1,7 @@
 From bfdeabb27eb5e9b40eaa9605ee5d49d4a44be648 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 5 Apr 2026 11:33:00 +0200
-Subject: [PATCH 041/106] net/pcs: add standalone PCS registration
+Subject: [PATCH 041/107] net/pcs: add standalone PCS registration
  infrastructure
 
 Add a simple registration mechanism that allows platform PCS drivers to
