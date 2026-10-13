@@ -153,6 +153,11 @@ All notable changes to the project are documented in this file.
 - LAN969x: a copper link could stay down for good when autonegotiation on
   the LAN8814 or LAN8804 PHY got stuck.  It is now restarted after three
   seconds with a link partner present but no link
+- LAN969x: a copper port forced to 100 Mbps could fail to link up with the
+  LAN8814 or LAN8804 PHY.  The PHY is now reset every three seconds while
+  a link partner is present but no link comes up
+- LAN969x: the LAN8814 and LAN8804 PHYs now get Microchip's settings for
+  10BASE-T transmit and for 10/100 Mbps half duplex
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters

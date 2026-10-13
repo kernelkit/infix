@@ -1,0 +1,99 @@
+From 9d29b26d5f08851e9135406ac0fc0869df84a4ce Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 13 Oct 2026 16:40:31 +0200
+Subject: [PATCH 115/116] net: phy: micrel: lan8814: half-duplex FIFO
+ workaround
+
+The LAN8814 may incur late collisions on half-duplex links (errata
+module 11).  The errata lists the issue as fixed in revision C1 silicon,
+but Microchip's PHY API applies a workaround on every revision: lower
+the rate adaptation FIFO thresholds when a 10 or 100 Mbps link comes up
+in half duplex, and reset the FIFOs, which restores the defaults, when
+the link goes down.
+
+Do the same from link_change_notify, on link transitions only.
+---
+ drivers/net/phy/micrel.c | 49 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 47 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/phy/micrel.c b/drivers/net/phy/micrel.c
+index 49feee9479d0..969d4590978d 100644
+--- a/drivers/net/phy/micrel.c
++++ b/drivers/net/phy/micrel.c
+@@ -462,6 +462,7 @@ struct kszphy_priv {
+ 	struct phy_device *phydev;
+ 	struct delayed_work aneg_work;
+ 	unsigned int aneg_checks;
++	bool link_up;
+ 	u64 stats[ARRAY_SIZE(kszphy_hw_stats)];
+ 	struct kszphy_phy_stats phy_stats;
+ };
+@@ -4672,7 +4673,7 @@ static void lan8814_aneg_work(struct work_struct *work)
+ 	mutex_unlock(&phydev->lock);
+ }
+ 
+-static void lan8814_link_change_notify(struct phy_device *phydev)
++static void lan8814_aneg_arm(struct phy_device *phydev)
+ {
+ 	struct kszphy_priv *priv = phydev->priv;
+ 
+@@ -4683,6 +4684,50 @@ static void lan8814_link_change_notify(struct phy_device *phydev)
+ 		lan8814_aneg_queue(priv, 1);
+ }
+ 
++#define LAN8814_RX_RA_FIFO_THRESHOLDS_1		0x20
++#define LAN8814_RX_RA_FIFO_THRESHOLDS_2		0x21
++#define LAN8814_RX_RA_FIFO_THRESHOLDS_3		0x22
++#define LAN8814_TX_RA_FIFO_THRESHOLDS_1		0x26
++#define LAN8814_TX_RA_FIFO_THRESHOLDS_2		0x27
++#define LAN8814_TX_RA_FIFO_THRESHOLDS_3		0x28
++#define LAN8814_TX_RA_FIFO_RESET		0x2c
++#define LAN8814_RX_RA_FIFO_RESET		0x2d
++
++/* Errata module 11: late collisions in half duplex.  Microchip's PHY API
++ * lowers the rate adaptation FIFO thresholds on 10/100 half-duplex links,
++ * and resets the FIFOs to their defaults when the link goes down.
++ */
++static const struct lanphy_reg_data half_duplex_errata[] = {
++	{ LAN8814_PAGE_PORT_REGS, LAN8814_RX_RA_FIFO_THRESHOLDS_1, 0x200 },
++	{ LAN8814_PAGE_PORT_REGS, LAN8814_RX_RA_FIFO_THRESHOLDS_2, 0x404 },
++	{ LAN8814_PAGE_PORT_REGS, LAN8814_RX_RA_FIFO_THRESHOLDS_3, 0x608 },
++	{ LAN8814_PAGE_PORT_REGS, LAN8814_TX_RA_FIFO_THRESHOLDS_1, 0x200 },
++	{ LAN8814_PAGE_PORT_REGS, LAN8814_TX_RA_FIFO_THRESHOLDS_2, 0x404 },
++	{ LAN8814_PAGE_PORT_REGS, LAN8814_TX_RA_FIFO_THRESHOLDS_3, 0x608 },
++};
++
++static const struct lanphy_reg_data ra_fifo_reset[] = {
++	{ LAN8814_PAGE_PORT_REGS, LAN8814_TX_RA_FIFO_RESET, 1 },
++	{ LAN8814_PAGE_PORT_REGS, LAN8814_RX_RA_FIFO_RESET, 1 },
++};
++
++static void lan8814_link_change_notify(struct phy_device *phydev)
++{
++	struct kszphy_priv *priv = phydev->priv;
++
++	if (phydev->link != priv->link_up) {
++		priv->link_up = phydev->link;
++		if (!phydev->link)
++			lanphy_write_reg_data(phydev, ra_fifo_reset,
++					      ARRAY_SIZE(ra_fifo_reset));
++		else if (phydev->duplex == DUPLEX_HALF)
++			lanphy_write_reg_data(phydev, half_duplex_errata,
++					      ARRAY_SIZE(half_duplex_errata));
++	}
++
++	lan8814_aneg_arm(phydev);
++}
++
+ /* Microchip's PHY API resets the package QSGMII once the MAC has configured
+  * its end, and renegotiates each port once after its first 1000BASE-T link,
+  * to avoid CRC errors.  Under phylink the MAC side is set up before
+@@ -4702,7 +4747,7 @@ static int lan8814_config_aneg(struct phy_device *phydev)
+ 			return err;
+ 	}
+ 
+-	lan8814_link_change_notify(phydev);
++	lan8814_aneg_arm(phydev);
+ 
+ 	return genphy_config_aneg(phydev);
+ }
