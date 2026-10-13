@@ -150,6 +150,22 @@ def ospf_has_neighbors(target, proto="infix-routing:ospfv2"):
     return False
 
 
+def _get_rip_status(target, proto="infix-routing:ripv2"):
+    xpath = "/ietf-routing:routing/control-plane-protocols"
+    protos = target.get_data(xpath)["routing"]["control-plane-protocols"]
+    for p in protos.get("control-plane-protocol", {}):
+        if p["type"] == proto:
+            return p.get("rip") or p.get("ietf-rip:rip", {})
+
+    return {}
+
+
+def rip_has_neighbors(target, proto="infix-routing:ripv2"):
+    rip = _get_rip_status(target, proto)
+    af = "ipv6" if proto == "infix-routing:ripng" else "ipv4"
+    return bool(rip.get(af, {}).get("neighbors", {}).get("neighbor"))
+
+
 def _get_bfd_sessions(target):
     xpath = "/ietf-routing:routing/control-plane-protocols"
     protos = target.get_data(xpath)["routing"]["control-plane-protocols"]

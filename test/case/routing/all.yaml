@@ -46,3 +46,6 @@
 
 - name: RIP Multi-hop
   suite: rip_multihop/test.yaml
+
+- name: Dual Stack Routing
+  suite: dual_stack/test.yaml
