@@ -13,10 +13,10 @@ All notable changes to the project are documented in this file.
   R64, NanoPi R2S and Vero W6M now has IPv6 enabled, so the router has a
   link-local address on the LAN side like its ports already had
 - Boards without a VPD EEPROM can be given a fixed identity, base MAC
-  included, by writing an ONIE TLV to a disk partition labelled `factory`,
-  see [VPD documentation](vpd.md#factory-partition)
-- Banana Pi BPI-R3: ports get stable addresses derived from the chassis
-  MAC instead of random ones at every boot
+  included, by storing an ONIE TLV as `/mnt/aux/vpd.bin`, see
+  [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
+- Banana Pi BPI-R3: ports get permanent addresses derived from the
+  chassis MAC instead of random ones at every boot
 - WiFi interfaces get a unique address derived from the chassis MAC, so
   several APs on one radio, or two devices of the same model, no longer
   need `custom-phys-address`

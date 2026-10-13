@@ -54,33 +54,32 @@ Every VPD is listed in the _ietf-hardware_ model as a component named
 `vpd-<board>`, e.g., `vpd-product` for the example above.
 
 
-## Factory Partition
+## VPD File on the Aux Partition
 
 Boards without a VPD EEPROM, such as single board computers, boot with
 a random MAC address on every port and the vendor's default address on
 every WiFi radio.  Two such boards of the same model cannot even talk
 to each other over WiFi, since both radios claim the same address.
 
-Such a board can be given an identity by writing an ONIE TLV to the
-start of a disk partition labelled `factory`.  The system reads it
-when the device tree provides no product VPD.  The `onieprom` tool
-encodes the JSON form described [below](#json-encoding):
+Such a board can be given an identity by storing an ONIE TLV as
+`/mnt/aux/vpd.bin`.  The boot loader hands the file to the system,
+which reads it like any other VPD.  The `onieprom` tool encodes the
+JSON form described [below](#json-encoding):
 
 ```
-echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"Bananapi","product-name":"BPI-R3"}' \
-  | onieprom -e | dd of=/dev/disk/by-partlabel/factory
+echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"SinoVoip Co., Ltd.","product-name":"BPI-R3"}' \
+  | onieprom -e > /mnt/aux/vpd.bin
 ```
 
-A VPD read this way is never trusted, so it can only provide identity,
-never the factory password.  On the Banana Pi BPI-R3 family the base
-MAC address it provides is also handed out to the ports at boot: every
-wired port without a hardware address gets base + 1, base + 2, and so
-on, in interface name order.
-WiFi interfaces derive their addresses from the base MAC as described
-in [WiFi](wifi.md#multi-ssid-configuration).
+The file survives upgrades, and removing it returns the board to
+random addresses on the next boot.  A VPD read this way is never
+trusted, so it can only provide identity, never the factory password.
+The ports get their addresses from its base MAC address, each with a
+fixed offset given by the device tree, and WiFi interfaces derive
+theirs from the base MAC as described in
+[WiFi](wifi.md#multi-ssid-configuration).
 
-The image for the Banana Pi BPI-R3 family already carries an empty
-`factory` partition for this purpose.
+This is currently supported on the Banana Pi BPI-R3 family.
 
 ## Product VPD
 
