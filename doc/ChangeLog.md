@@ -131,6 +131,10 @@ All notable changes to the project are documented in this file.
 - PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
   kept dropping to the faulty state because the transmit timestamp arrived
   later than the 10 ms the PTP daemon waited for it
+- PTP never worked on the copper ports of the Tactical 1000, whose LAN8804
+  PHYs are a LAN8814 variant without a 1588 unit.  The kernel took them for
+  full LAN8814s and waited for PHY timestamps that never came; it now
+  recognizes the variant and times stamps in the switch core instead
 - PTP: the IEEE 802.1AS link delay threshold, above which a port never
   leaves the listening state, defaults to 10 us with hardware time stamping
   instead of 800 ns, and can be set per port with `mean-link-delay-thresh`

@@ -1,7 +1,7 @@
 From d8ac79ff39f12f88c497bcb6c9644877b8a63642 Mon Sep 17 00:00:00 2001
 From: Hendrik Hamerlinck <hendrik.hamerlinck@hammernet.be>
 Date: Wed, 17 Sep 2025 08:59:07 +0200
-Subject: [PATCH 087/107] riscv: dts: spacemit: add UART pinctrl combinations
+Subject: [PATCH 087/108] riscv: dts: spacemit: add UART pinctrl combinations
 
 Add UART pinctrl configurations based on the SoC datasheet and the
 downstream Bianbu Linux tree. The drive strength values were taken from

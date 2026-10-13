@@ -1,7 +1,7 @@
 From 036272e6796ba961028a1a99a8eeebc40403cbeb Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 6 Apr 2026 14:16:11 +0200
-Subject: [PATCH 045/107] arm64: dts: mediatek: bananapi-bpi-r4: enable SFP+
+Subject: [PATCH 045/108] arm64: dts: mediatek: bananapi-bpi-r4: enable SFP+
  ports and WPS button
 
 Enable the SFP+ cages wired to gmac1 and gmac2.  The USXGMII PCS nodes
