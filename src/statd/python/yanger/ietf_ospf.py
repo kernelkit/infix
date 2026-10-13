@@ -310,7 +310,7 @@ def add_areas(control_protocols):
 
     add_routes(control_protocol["ietf-ospf:ospf"])
     control_protocol["ietf-ospf:ospf"]["ietf-ospf:areas"]["ietf-ospf:area"] = areas
-    insert(control_protocols, "control-plane-protocol", [control_protocol])
+    control_protocols.setdefault("control-plane-protocol", []).append(control_protocol)
 
 
 def add_areas6(control_protocols):
@@ -391,7 +391,7 @@ def add_areas6(control_protocols):
 
     add_routes(control_protocol["ietf-ospf:ospf"], ipv6=True)
     control_protocol["ietf-ospf:ospf"]["ietf-ospf:areas"]["ietf-ospf:area"] = areas
-    insert(control_protocols, "control-plane-protocol", [control_protocol])
+    control_protocols.setdefault("control-plane-protocol", []).append(control_protocol)
 
 
 def operational():
