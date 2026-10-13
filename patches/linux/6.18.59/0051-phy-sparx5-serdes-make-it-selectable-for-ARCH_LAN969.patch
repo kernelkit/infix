@@ -1,7 +1,7 @@
 From 3b8c1832fb91d76e6efa8a41ce67525ddc33486d Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Fri, 31 Oct 2025 13:18:12 +0100
-Subject: [PATCH 051/116] phy: sparx5-serdes: make it selectable for
+Subject: [PATCH 051/117] phy: sparx5-serdes: make it selectable for
  ARCH_LAN969X
 
 LAN969x uses the SparX-5 SERDES driver, so make it selectable for
