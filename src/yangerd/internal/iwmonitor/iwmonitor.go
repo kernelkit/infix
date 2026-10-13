@@ -41,6 +41,10 @@ type IWMonitor struct {
 
 	mu       sync.Mutex
 	attached map[string]context.CancelFunc
+	// ifLocks serializes refresh and clear per interface: the attach
+	// goroutine and the nl80211 loop both publish, and a disconnect
+	// must not be overwritten by a refresh that started before it.
+	ifLocks map[string]*sync.Mutex
 
 	// meshState reads iftype, mesh forwarding and peers from the
 	// kernel; overridable in tests.
@@ -54,6 +58,7 @@ func New(log *slog.Logger) *IWMonitor {
 	return &IWMonitor{
 		log:       log,
 		attached:  make(map[string]context.CancelFunc),
+		ifLocks:   make(map[string]*sync.Mutex),
 		meshState: kernelMeshState,
 		wdsPorts:  kernelWDSPorts,
 	}
@@ -153,7 +158,7 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 	case unix.NL80211_CMD_DISCONNECT:
 		if ifname != "" {
 			m.log.Debug("nl80211: disconnect", "iface", ifname)
-			m.publishWifi(ifname, nil)
+			m.clearInterface(ifname)
 		}
 	case unix.NL80211_CMD_REG_CHANGE:
 		m.log.Debug("nl80211: reg_change")
@@ -177,7 +182,7 @@ func (m *IWMonitor) handleNL80211(ctx context.Context, msg genetlink.Message, fa
 		if ifname != "" {
 			m.log.Info("nl80211: del interface", "iface", ifname)
 			m.stopAttach(ifname)
-			m.publishWifi(ifname, nil)
+			m.clearInterface(ifname)
 		}
 		m.radioChanged()
 	case unix.NL80211_CMD_NEW_WIPHY, unix.NL80211_CMD_DEL_WIPHY:
@@ -285,7 +290,7 @@ func (m *IWMonitor) attachLoop(ctx context.Context, ifname string) {
 		}
 
 		m.log.Warn("control socket lost", "iface", ifname, "err", err)
-		m.publishWifi(ifname, nil)
+		m.clearInterface(ifname)
 	}
 }
 
@@ -304,7 +309,7 @@ func (m *IWMonitor) handleAttachEvent(ctx context.Context, ifname string, ev wpa
 		if m.meshState(ifname).iftype == "mesh_point" {
 			m.refreshInterface(ctx, ifname)
 		} else {
-			m.publishWifi(ifname, nil)
+			m.clearInterface(ifname)
 		}
 	case ev.Name == "CTRL-EVENT-SCAN-RESULTS":
 		m.refreshInterface(ctx, ifname)
@@ -322,9 +327,36 @@ func (m *IWMonitor) handleSignalChange(ifname string, data string) {
 	_ = data
 }
 
+// ifLock returns the per-interface lock, creating it on first use.
+func (m *IWMonitor) ifLock(iface string) *sync.Mutex {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	l, ok := m.ifLocks[iface]
+	if !ok {
+		l = &sync.Mutex{}
+		m.ifLocks[iface] = l
+	}
+	return l
+}
+
+// refreshInterface re-reads and publishes one interface.  It holds the
+// interface lock from read to publish so the published state is never
+// older than one published before it.
 func (m *IWMonitor) refreshInterface(ctx context.Context, iface string) {
+	l := m.ifLock(iface)
+	l.Lock()
+	defer l.Unlock()
 	wifi := m.buildWifiData(ctx, iface)
 	m.publishWifi(iface, wifi)
+}
+
+// clearInterface publishes an interface as having no wifi state, under
+// the same lock as refreshInterface.
+func (m *IWMonitor) clearInterface(iface string) {
+	l := m.ifLock(iface)
+	l.Lock()
+	defer l.Unlock()
+	m.publishWifi(iface, nil)
 }
 
 func (m *IWMonitor) buildWifiData(ctx context.Context, iface string) map[string]any {
