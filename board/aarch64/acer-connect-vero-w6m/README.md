@@ -49,6 +49,23 @@ U-Boot from the first partition after fip.
   installing.  Interrupt autoboot and run `printenv` to note down:
   `2gMAC`, `5gMAC`, `6gMAC`, `LANMAC`, and `WANMAC`.
 
+## Giving the Unit a Permanent MAC Address
+
+Infix does not read the stock U-Boot environment, so the unit boots
+with random Ethernet addresses until it is given a product record.
+Store one as `/mnt/aux/vpd.bin`, from the Infix shell, using the
+`WANMAC` noted down above as the base address:
+
+```
+echo '{"mac-address":"<WANMAC>","serial-number":"<serial>","vendor":"Acer","product-name":"Connect Vero W6m"}' \
+  | onieprom -e > /mnt/aux/vpd.bin
+```
+
+After a reboot the ports get fixed offsets from the base address and
+the WiFi interfaces derive theirs from it.  See
+[Vital Product Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition)
+for the record format.
+
 ## Required Files
 
 Prepare these files on a host reachable from the Vero:

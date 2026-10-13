@@ -15,8 +15,9 @@ All notable changes to the project are documented in this file.
 - Boards without a VPD EEPROM can be given a fixed identity, base MAC
   included, by storing an ONIE TLV as `/mnt/aux/vpd.bin`, see
   [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
-- Banana Pi BPI-R3: ports get permanent addresses derived from the
-  chassis MAC instead of random ones at every boot
+- Banana Pi BPI-R3 and Acer Connect Vero W6m: ports get permanent
+  addresses derived from the chassis MAC instead of random ones at
+  every boot
 - WiFi interfaces get a unique address derived from the chassis MAC, so
   several APs on one radio, or two devices of the same model, no longer
   need `custom-phys-address`
