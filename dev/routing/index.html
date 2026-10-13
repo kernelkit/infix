@@ -3414,10 +3414,12 @@ via multicast.</p>
 </div>
 <h3 id="ospf-global-settings">OSPF global settings<a class="headerlink" href="#ospf-global-settings" title="Permanent link">¶</a></h3>
 <p>In addition to <em>area</em> and <em>interface</em> specific settings, OSPF provides
-global settings for route redistribution and OSPF router identifier.</p>
+global settings for route redistribution, OSPF router identifier, and
+the reference bandwidth used to calculate interface costs.</p>
 <pre class="cli"><code>admin@example:/config/&gt; <b>edit routing control-plane-protocol ospfv2 name default ospf</b>
 admin@example:/config/routing/…/ospf/&gt; <b>set ?</b>
   area                     List of OSPF areas.
+  auto-cost                Interface auto-cost configuration state.
   default-route-advertise  Distribute default route to network
   explicit-router-id       Defined in RFC 2328.  A 32-bit number
   redistribute             Redistribute protocols into OSPF
@@ -3441,7 +3443,23 @@ admin@example:/config/routing/…/ospf/&gt; set
   router will distribute a default route even when it lacks a default
   route. The default route will be distributed as an <em>external type-2</em>
   (E2) route.</li>
+<li>(auto-cost) Reference bandwidth: Routers from different vendors only agree on
+  the shortest path if they use the same reference bandwidth.  The cost
+  of an interface without an explicit <code>cost</code> is the reference bandwidth
+  divided by the link speed, rounded, with 1 as the lowest cost.  The
+  default is 100000 Mbit/s, which gives a 1 Gbit/s link cost 100.  Use
+  <code>set auto-cost reference-bandwidth 10000</code> (Mbit/s) to change it. 
+  Auto-cost can not be disabled, but a cost set manually per interface takes precedence.</li>
 </ul>
+<p><code>show ip ospf</code> shows the reference bandwidth in use, and <code>show ipv6
+ospf</code> does the same for OSPFv3.</p>
+<pre class="cli"><code>admin@example:/&gt; <b>show ip ospf</b>
+ OSPF Routing Process, Router ID: 192.168.10.1
+ Reference bandwidth: 100000 Mbit/s
+ Number of areas attached to this router: 1
+ ...
+</code></pre>
+
 <h3 id="debug-ospfv2">Debug OSPFv2<a class="headerlink" href="#debug-ospfv2" title="Permanent link">¶</a></h3>
 <p>Using NETCONF and the YANG model <em>ietf-routing</em> it is possible to read
 the OSPF routing table, neighbors and more, that may be useful for
