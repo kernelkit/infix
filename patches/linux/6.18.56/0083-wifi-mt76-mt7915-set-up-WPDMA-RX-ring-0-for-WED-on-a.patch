@@ -1,8 +1,8 @@
 From 9b5a788cc9a12f1b23ad0e84dfaa78008a399b49 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 7 Oct 2026 22:20:00 +0200
-Subject: [PATCH 83/86] wifi: mt76: mt7915: set up WPDMA RX ring 0 for WED on a
- band1-only device
+Subject: [PATCH 083/101] wifi: mt76: mt7915: set up WPDMA RX ring 0 for WED on
+ a band1-only device
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

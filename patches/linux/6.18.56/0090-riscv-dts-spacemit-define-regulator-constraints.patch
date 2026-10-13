@@ -1,7 +1,7 @@
 From cacb7418c46d57155175e52b436805fed4aa20bb Mon Sep 17 00:00:00 2001
 From: Alex Elder <elder@riscstar.com>
 Date: Mon, 25 Aug 2025 12:20:56 -0500
-Subject: [PATCH 090/100] riscv: dts: spacemit: define regulator constraints
+Subject: [PATCH 090/101] riscv: dts: spacemit: define regulator constraints
 
 Define basic constraints for the regulators in the SpacemiT P1 PMIC,
 as implemented in the Banana Pi BPI-F3.
@@ -15,7 +15,7 @@ Signed-off-by: Yixun Lan <dlan@gentoo.org>
  1 file changed, 104 insertions(+)
 
 diff --git a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
-index db73207d9c27..371ce71a4985 100644
+index db73207d9c276..371ce71a49855 100644
 --- a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
 +++ b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
 @@ -120,6 +120,110 @@ pmic@41 {

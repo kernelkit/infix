@@ -1,7 +1,7 @@
 From e0e6e024e5e5866ff61b68bf9790fd24e542d7e2 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Mon, 5 Oct 2026 14:37:56 +0200
-Subject: [PATCH 81/86] net: ethernet: mtk_wed: map WO memory regions without
+Subject: [PATCH 081/101] net: ethernet: mtk_wed: map WO memory regions without
  requesting them
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

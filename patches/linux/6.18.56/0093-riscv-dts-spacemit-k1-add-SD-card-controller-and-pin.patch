@@ -1,7 +1,7 @@
 From fb3def3a2d5dc721fe67dbc409f7a447217e8b43 Mon Sep 17 00:00:00 2001
 From: Iker Pedrosa <ikerpedrosam@gmail.com>
 Date: Fri, 15 May 2026 12:48:59 +0200
-Subject: [PATCH 093/100] riscv: dts: spacemit: k1: add SD card controller and
+Subject: [PATCH 093/101] riscv: dts: spacemit: k1: add SD card controller and
  pinctrl support
 
 Add SD card controller infrastructure for SpacemiT K1 SoC with complete
@@ -30,7 +30,7 @@ Signed-off-by: Yixun Lan <dlan@kernel.org>
  2 files changed, 53 insertions(+)
 
 diff --git a/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi b/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
-index 7c87811b3ecd..ce76b1243d29 100644
+index 7c87811b3ecd5..ce76b1243d295 100644
 --- a/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
 +++ b/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
 @@ -525,4 +525,44 @@ pwm14-1-pins {
@@ -79,7 +79,7 @@ index 7c87811b3ecd..ce76b1243d29 100644
 +	};
  };
 diff --git a/arch/riscv/boot/dts/spacemit/k1.dtsi b/arch/riscv/boot/dts/spacemit/k1.dtsi
-index 9c13e4dc9f3c..2adc11153b3b 100644
+index 9c13e4dc9f3c4..2adc11153b3b2 100644
 --- a/arch/riscv/boot/dts/spacemit/k1.dtsi
 +++ b/arch/riscv/boot/dts/spacemit/k1.dtsi
 @@ -870,6 +870,19 @@ storage-bus {

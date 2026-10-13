@@ -1,7 +1,7 @@
 From c43dadfab8e147e016d5d3cd72ee91c23971e2cb Mon Sep 17 00:00:00 2001
 From: Guodong Xu <guodong@riscstar.com>
 Date: Fri, 6 Feb 2026 10:32:04 +0800
-Subject: [PATCH 092/100] riscv: dts: spacemit: Update PMIC supply properties
+Subject: [PATCH 092/101] riscv: dts: spacemit: Update PMIC supply properties
  for BPI-F3 and Jupiter
 
 Use per-regulator supply names in pmic "spacemit,p1" node to specify
@@ -18,7 +18,7 @@ Signed-off-by: Yixun Lan <dlan@kernel.org>
  1 file changed, 10 insertions(+), 2 deletions(-)
 
 diff --git a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
-index 371ce71a4985..a1ba3f212690 100644
+index 371ce71a49855..a1ba3f2126905 100644
 --- a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
 +++ b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
 @@ -120,7 +120,15 @@ pmic@41 {

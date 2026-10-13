@@ -1,7 +1,7 @@
 From 068107e84a2ca23f5a3b5f21406dcf42e4ebed8a Mon Sep 17 00:00:00 2001
 From: Alex Elder <elder@riscstar.com>
 Date: Mon, 25 Aug 2025 12:20:54 -0500
-Subject: [PATCH 088/100] riscv: dts: spacemit: enable the i2c8 adapter
+Subject: [PATCH 088/101] riscv: dts: spacemit: enable the i2c8 adapter
 
 Define properties for the I2C adapter that provides access to the
 SpacemiT P1 PMIC.  Enable this adapter on the Banana Pi BPI-F3.
@@ -17,7 +17,7 @@ Signed-off-by: Yixun Lan <dlan@gentoo.org>
  3 files changed, 32 insertions(+)
 
 diff --git a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
-index b2c40bae6094..a3644606d8b6 100644
+index b2c40bae60945..a3644606d8b60 100644
 --- a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
 +++ b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
 @@ -92,6 +92,18 @@ &pdma {
@@ -40,7 +40,7 @@ index b2c40bae6094..a3644606d8b6 100644
  	pinctrl-names = "default";
  	pinctrl-0 = <&uart0_2_cfg>;
 diff --git a/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi b/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
-index 09a4f1dca4f1..7c87811b3ecd 100644
+index 09a4f1dca4f1a..7c87811b3ecd5 100644
 --- a/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
 +++ b/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
 @@ -75,6 +75,13 @@ gmac1-clk-ref-pins {
@@ -58,7 +58,7 @@ index 09a4f1dca4f1..7c87811b3ecd 100644
  	uart0_0_cfg: uart0-0-cfg {
  		uart0-0-pins {
 diff --git a/arch/riscv/boot/dts/spacemit/k1.dtsi b/arch/riscv/boot/dts/spacemit/k1.dtsi
-index 6cdcd80a7c83..3de35077731c 100644
+index 6cdcd80a7c83b..3de35077731c7 100644
 --- a/arch/riscv/boot/dts/spacemit/k1.dtsi
 +++ b/arch/riscv/boot/dts/spacemit/k1.dtsi
 @@ -459,6 +459,19 @@ pwm7: pwm@d401bc00 {
