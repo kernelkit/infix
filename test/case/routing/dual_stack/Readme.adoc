@@ -1,0 +1,6 @@
+include::ospf.adoc[]
+
+<<<
+
+include::rip.adoc[]
+

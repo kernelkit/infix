@@ -1,0 +1,11 @@
+---
+- settings:
+    test-spec: <case>.adoc
+
+- name: OSPF Dual Stack
+  case: ospf.py
+  opts: ["--proto", "OSPF"]
+
+- name: RIP Dual Stack
+  case: rip.py
+  opts: ["--proto", "RIP"]
