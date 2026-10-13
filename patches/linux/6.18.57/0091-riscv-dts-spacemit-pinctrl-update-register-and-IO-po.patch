@@ -1,7 +1,7 @@
 From bbff952346fd57b379625607a0c60108200153b4 Mon Sep 17 00:00:00 2001
 From: Troy Mitchell <troy.mitchell@linux.spacemit.com>
 Date: Thu, 8 Jan 2026 14:42:40 +0800
-Subject: [PATCH 091/102] riscv: dts: spacemit: pinctrl: update register and IO
+Subject: [PATCH 091/103] riscv: dts: spacemit: pinctrl: update register and IO
  power
 
 Change the size of the reg register to 0x1000 to match the hardware.

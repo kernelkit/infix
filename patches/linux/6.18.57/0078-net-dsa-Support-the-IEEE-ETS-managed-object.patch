@@ -1,7 +1,7 @@
 From 65c40a578d8d76adbcc7d7bb2b98ad43c5fd7171 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 22 Sep 2026 13:53:23 +0200
-Subject: [PATCH 078/102] net: dsa: Support the IEEE ETS managed object
+Subject: [PATCH 078/103] net: dsa: Support the IEEE ETS managed object
 
 A switch port's transmission selection is configured today through the
 ets queuing discipline, which numbers its bands the other way round
