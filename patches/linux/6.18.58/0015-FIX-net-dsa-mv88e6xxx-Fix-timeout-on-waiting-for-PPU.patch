@@ -1,7 +1,7 @@
 From c60eadd47f8bdb698ffdb62bd86f44997563d349 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
-Subject: [PATCH 015/111] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
+Subject: [PATCH 015/112] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
  PPU on 6393X
 
 In a multi-chip setup, delays of up to 750ms are observed before the

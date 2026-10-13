@@ -1,7 +1,7 @@
 From 44e7461795a836309dc73e00aee67002611cdb02 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
-Subject: [PATCH 005/111] net: phy: Do not resume PHY when attaching
+Subject: [PATCH 005/112] net: phy: Do not resume PHY when attaching
 
 The PHY should not start negotiating with its link-partner until
 explicitly instructed to do so.
