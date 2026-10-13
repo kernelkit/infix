@@ -1,7 +1,7 @@
 From ff1faf2c8428666e455149dd18e1888c40197a32 Mon Sep 17 00:00:00 2001
 From: Horatiu Vultur <horatiu.vultur@microchip.com>
 Date: Tue, 21 Oct 2025 09:07:26 +0200
-Subject: [PATCH 114/119] net: phy: micrel: Add support for non PTP SKUs for
+Subject: [PATCH 114/122] net: phy: micrel: Add support for non PTP SKUs for
  lan8814
 
 The lan8814 has 4 different SKUs and for 2 of these SKUs the PTP is
