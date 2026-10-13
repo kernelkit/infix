@@ -1,7 +1,7 @@
 From 67a62752bdb5e1e45982289b2eda1f5df4ca6f47 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
-Subject: [PATCH 04/86] net: phy: marvell10g: Support LEDs tied to a single
+Subject: [PATCH 004/102] net: phy: marvell10g: Support LEDs tied to a single
  media side
 
 In a combo-port setup, i.e. where both the copper and fiber interface

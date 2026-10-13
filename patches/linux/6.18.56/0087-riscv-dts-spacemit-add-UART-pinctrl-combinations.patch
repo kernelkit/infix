@@ -1,7 +1,7 @@
 From 48c77340af8c65ca397f9566482107efcaf6e438 Mon Sep 17 00:00:00 2001
 From: Hendrik Hamerlinck <hendrik.hamerlinck@hammernet.be>
 Date: Wed, 17 Sep 2025 08:59:07 +0200
-Subject: [PATCH 087/100] riscv: dts: spacemit: add UART pinctrl combinations
+Subject: [PATCH 087/102] riscv: dts: spacemit: add UART pinctrl combinations
 
 Add UART pinctrl configurations based on the SoC datasheet and the
 downstream Bianbu Linux tree. The drive strength values were taken from
@@ -20,7 +20,7 @@ Signed-off-by: Yixun Lan <dlan@gentoo.org>
  1 file changed, 428 insertions(+), 2 deletions(-)
 
 diff --git a/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi b/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
-index 48c4b4131164..09a4f1dca4f1 100644
+index 48c4b41311646..09a4f1dca4f1a 100644
 --- a/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
 +++ b/arch/riscv/boot/dts/spacemit/k1-pinctrl.dtsi
 @@ -75,11 +75,437 @@ gmac1-clk-ref-pins {

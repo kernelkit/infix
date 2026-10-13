@@ -806,7 +806,6 @@ portal.
 
 For a backhaul with a single root, where multi-hop and self-healing are
 not needed, see [WDS Backhaul and Repeaters](#wds-backhaul-and-repeaters).
-That variant can use WiFi hardware offloading, mesh cannot.
 
 > [!NOTE]
 > Not all WiFi hardware supports 802.11s mesh, see the adapter list
@@ -911,8 +910,7 @@ configuration and tied to the satellite's MAC address.
 
 Compared to an [802.11s mesh](#80211s-mesh-point-mode), a WDS backhaul
 is a star with one root, without multi-hop or self-healing.  In return
-it is a plain access point and station link, which WiFi hardware
-offloading supports where mesh is not.
+it is a plain access point and station link.
 
 ### Root: access point with WDS ports
 

@@ -480,45 +480,10 @@ def probe_dmisystem(out):
     return 0
 
 
-FACTORY_PART = "/dev/disk/by-partlabel/factory"
-
-
-def factory_partition_vpd():
-    """Product VPD from an ONIE TLV at the start of the factory partition.
-
-    Boards without a VPD EEPROM, e.g. SBCs, can be given an identity by
-    writing a TLV to a partition labelled "factory".  Anyone with write
-    access to the disk can change it, so it is never trusted.
-    """
-    if not os.path.exists(FACTORY_PART):
-        return None
-
-    try:
-        with open(FACTORY_PART, "rb", 0) as f:
-            data = onieprom.from_tlv(f)
-    except Exception:  # pylint: disable=broad-except
-        return None
-
-    if not data:
-        return None
-
-    return {
-        "board": "product",
-        "available": True,
-        "trusted": False,
-        "data": data,
-    }
-
-
 def probe_dtsystem(out):
     """Probe DTS based system, expects a VPD in ONIE PROM format."""
     dtsys = DTSystem()
     vpds = dtsys.infix_vpds()
-
-    if not any(vpd["board"] == "product" and vpd["available"] for vpd in vpds):
-        vpd = factory_partition_vpd()
-        if vpd:
-            vpds.append(vpd)
 
     model = dtsys.base.str("model")
     if model:

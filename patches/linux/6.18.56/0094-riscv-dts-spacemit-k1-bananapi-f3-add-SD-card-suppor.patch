@@ -1,7 +1,7 @@
 From a0b9436be9e9d76155b95a1142d3b1f5dbbf13de Mon Sep 17 00:00:00 2001
 From: Iker Pedrosa <ikerpedrosam@gmail.com>
 Date: Fri, 15 May 2026 12:49:01 +0200
-Subject: [PATCH 094/100] riscv: dts: spacemit: k1-bananapi-f3: add SD card
+Subject: [PATCH 094/102] riscv: dts: spacemit: k1-bananapi-f3: add SD card
  support with UHS modes
 
 Add complete SD card controller support with UHS high-speed modes.
@@ -33,7 +33,7 @@ Signed-off-by: Yixun Lan <dlan@kernel.org>
  1 file changed, 23 insertions(+), 2 deletions(-)
 
 diff --git a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
-index a1ba3f212690..a9588f3a3dbe 100644
+index a1ba3f2126905..a9588f3a3dbe8 100644
 --- a/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
 +++ b/arch/riscv/boot/dts/spacemit/k1-bananapi-f3.dts
 @@ -14,6 +14,9 @@ aliases {

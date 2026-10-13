@@ -3,6 +3,7 @@
 /dts-v1/;
 #include "mt7986a-acer-connect-vero-w6m-common.dtsi"
 #include "mt7986a-acer-connect-vero-w6m-pcie-eeprom.dtsi"
+#include "mt7986a-acer-connect-vero-w6m-vpd.dtsi"
 
 / {
 	model = "Acer Connect Vero W6m";

@@ -222,25 +222,26 @@ default address on every board, so two boards cannot even connect to
 each other over WiFi: a client refuses to authenticate to an access
 point that has its own address.
 
-The eMMC image carries an empty `factory` partition for this purpose.
-Write a product record to it once, from the Infix shell, and the board
-keeps that identity across reboots and upgrades:
+Store a product record as `/mnt/aux/vpd.bin`, from the Infix shell,
+and the board keeps that identity across reboots and upgrades:
 
 ```
-echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"Bananapi","product-name":"BPI-R3"}' \
-  | onieprom -e | dd of=/dev/disk/by-partlabel/factory
+echo '{"mac-address":"02:00:00:ba:01:00","serial-number":"banana1","vendor":"SinoVoip Co., Ltd.","product-name":"BPI-R3"}' \
+  | onieprom -e > /mnt/aux/vpd.bin
 ```
 
 Give each board its own base address and serial number, then reboot.
-The base address becomes the hostname suffix, the wired ports get base
-+ 1, base + 2, and so on in name order, and the WiFi interfaces get
-addresses derived from the base.  With the record above the board is
-named `bpi-ba-01-00`, `lan1` is `02:00:00:ba:01:02` and `wifi0` is
-`06:00:00:ba:01:00`.
+The base address becomes the hostname suffix, each wired port gets a
+fixed offset from the base, and the WiFi interfaces get addresses
+derived from it.  With the record above the board is named
+`bpi-ba-01-00`, `lan1` is `02:00:00:ba:01:02`, `wan` is
+`02:00:00:ba:01:08` and `wifi0` is `06:00:00:ba:01:00`.  A port goes
+back to this address when a custom MAC address is removed from it.
 
 A locally administered address like `02:xx:xx:xx:xx:xx` is fine for a
 lab.  For boards that will share a network with other equipment, use a
-range you own.  See [Vital Product Data](../../../doc/vpd.md#factory-partition)
+range you own.  Remove the file to return to random addresses.  See
+[Vital Product Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition)
 for the record format and what else it can carry.
 
 ## Troubleshooting

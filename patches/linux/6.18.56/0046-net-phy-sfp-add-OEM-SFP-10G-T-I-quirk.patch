@@ -1,7 +1,7 @@
 From fa401f49e78eeefa6ef1752733c87b1d67655125 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 7 Apr 2026 07:34:52 +0200
-Subject: [PATCH 46/86] net: phy: sfp: add OEM SFP-10G-T-I quirk
+Subject: [PATCH 046/102] net: phy: sfp: add OEM SFP-10G-T-I quirk
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

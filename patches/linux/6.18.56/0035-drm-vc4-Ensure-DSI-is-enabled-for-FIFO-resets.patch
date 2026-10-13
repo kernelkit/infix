@@ -1,7 +1,7 @@
 From 394a21d586f7f13a5cb822ed95ef986dfb17ca87 Mon Sep 17 00:00:00 2001
 From: Dave Stevenson <dave.stevenson@raspberrypi.com>
 Date: Fri, 5 Apr 2024 17:51:55 +0100
-Subject: [PATCH 35/86] drm/vc4: Ensure DSI is enabled for FIFO resets
+Subject: [PATCH 035/102] drm/vc4: Ensure DSI is enabled for FIFO resets
 
 The block must be enabled for the FIFO resets to be actioned,
 so ensure this is the case.

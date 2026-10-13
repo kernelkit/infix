@@ -10,3 +10,12 @@
 	compatible = "ethernet-phy-id03a2.a411";
 };
 
+/* Port addresses: VPD base MAC + 1 (lan) and + 2 (wan) */
+&gmac0 {
+	nvmem-cells = <&base_mac 1>;
+	nvmem-cell-names = "mac-address";
+};
+&gmac1 {
+	nvmem-cells = <&base_mac 2>;
+	nvmem-cell-names = "mac-address";
+};
