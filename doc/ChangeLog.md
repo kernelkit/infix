@@ -255,6 +255,13 @@ All notable changes to the project are documented in this file.
   interfaces.  Without it, LAN clients could not reach the Internet
 - WebUI: RIP and OSPF could not be set up in the advanced configuration
   editor.  Adding an area or setting a router ID was refused
+- LAN969x: a port outside any bridge stopped receiving multicast, including
+  IPv6 neighbour discovery and mDNS, when another port outside a bridge went
+  down or joined a bridge.  The port looked dead on the LAN until it was
+  taken down and up again, which is how the Tactical 1000 management port
+  kept dropping out of the test rig
+- LAN969x: kernel BUG "scheduling while atomic" when a multicast address was
+  added to or removed from a port outside any bridge
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
