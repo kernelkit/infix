@@ -1,0 +1,44 @@
+/* Port addresses: VPD base MAC + 1 .. + 8 */
+&gmac0 {
+	nvmem-cells = <&base_mac 1>;
+	nvmem-cell-names = "mac-address";
+};
+
+&gmac1 {
+	nvmem-cells = <&base_mac 6>;
+	nvmem-cell-names = "mac-address";
+};
+
+&switch {
+	ports {
+		port@0 {
+			nvmem-cells = <&base_mac 8>;
+			nvmem-cell-names = "mac-address";
+		};
+
+		port@1 {
+			nvmem-cells = <&base_mac 2>;
+			nvmem-cell-names = "mac-address";
+		};
+
+		port@2 {
+			nvmem-cells = <&base_mac 3>;
+			nvmem-cell-names = "mac-address";
+		};
+
+		port@3 {
+			nvmem-cells = <&base_mac 4>;
+			nvmem-cell-names = "mac-address";
+		};
+
+		port@4 {
+			nvmem-cells = <&base_mac 5>;
+			nvmem-cell-names = "mac-address";
+		};
+
+		port@5 {
+			nvmem-cells = <&base_mac 7>;
+			nvmem-cell-names = "mac-address";
+		};
+	};
+};

@@ -4,9 +4,9 @@
 	 * every boot, into the node behind the ethernet0 alias.  The
 	 * kernel then reports that port, and every switch port that
 	 * inherits from it, as having a permanent hardware address.
-	 * Drop the aliases so the ports come up with a random address
-	 * instead, which init.d/22-macaddr replaces with a chassis-
-	 * derived one when a product VPD is present.
+	 * Drop the aliases so the ports get their address from the
+	 * product VPD instead, see mt7986a-bananapi-bpi-r3-vpd.dtsi,
+	 * or a random one on a board without a VPD.
 	 */
 	aliases {
 		/delete-property/ ethernet0;
@@ -17,11 +17,14 @@
 		infix {
 			/* Default admin user password: 'admin' */
 			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			vpds = <&vpd>;
 			usb-ports = <&ssusb>;
 			usb-port-names = "USB";
 		};
 	};
 };
+#include "mt7986a-bananapi-bpi-r3-vpd.dtsi"
+
 /*
 From 236317dd4e55512933dcdaec3d0b4a0824f5e5bd Mon Sep 17 00:00:00 2001
 From: Shiji Yang <yangshiji66@outlook.com>
