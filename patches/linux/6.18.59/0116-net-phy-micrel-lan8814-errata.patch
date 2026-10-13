@@ -1,0 +1,80 @@
+From 6ef5ea146eab4a361c8abe45f0a61a5ece5c01cf Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 13 Oct 2026 15:34:03 +0200
+Subject: [PATCH 116/116] net: phy: micrel: lan8814 errata
+
+The LAN8814 runs with the power-on defaults for several registers that
+the silicon errata [1] and Microchip's PHY API require to be changed on
+every port: the power management modes for PHY-side shorted center taps
+(module 4), the 1000BASE-T EEE TX wake timer (module 9), and the PLL
+trim.  The driver applies the first two to the LAN8842 only, and the PLL
+trim to neither.
+
+Apply them from config_init, after the soft reset that clears them,
+using the same tables as the LAN8842.  The values match what the LAN8814
+support in Microchip's PHY API writes after reset.
+
+[1] https://ww1.microchip.com/downloads/aemDocuments/documents/UNG/ProductDocuments/Errata/LAN8814-Errata-DS80001002.pdf
+
+Fixes: 7467d716583e ("net: phy: micrel: Add config_init for LAN8814")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/phy/micrel.c | 38 +++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 37 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/phy/micrel.c b/drivers/net/phy/micrel.c
+index 494e1c0ed610..6aa27b651e81 100644
+--- a/drivers/net/phy/micrel.c
++++ b/drivers/net/phy/micrel.c
+@@ -4537,6 +4537,42 @@ static int lanphy_write_reg_data(struct phy_device *phydev,
+ 	return ret;
+ }
+ 
++#define LAN8814_PAGE_ANALOG_CTRL			29
++#define LAN8814_ANALOG_CONTROL_1			0x01
++#define LAN8814_ANALOG_CONTROL_1_PLL_TRIM_MASK		GENMASK(6, 5)
++#define LAN8814_ANALOG_CONTROL_1_PLL_TRIM		FIELD_PREP_CONST(GENMASK(6, 5), 2)
++#define LAN8814_ANALOG_CONTROL_10			0x0d
++#define LAN8814_ANALOG_CONTROL_10_PLL_DIV_MASK		GENMASK(1, 0)
++#define LAN8814_ANALOG_CONTROL_10_PLL_DIV		1
++
++static int lan8814_erratas(struct phy_device *phydev)
++{
++	int ret;
++
++	ret = lanphy_write_reg_data(phydev, short_center_tap_errata,
++				    ARRAY_SIZE(short_center_tap_errata));
++	if (ret)
++		return ret;
++
++	ret = lanphy_write_reg_data(phydev, waketx_timer_errata,
++				    ARRAY_SIZE(waketx_timer_errata));
++	if (ret)
++		return ret;
++
++	ret = lanphy_modify_page_reg(phydev, LAN8814_PAGE_ANALOG_CTRL,
++				     LAN8814_ANALOG_CONTROL_1,
++				     LAN8814_ANALOG_CONTROL_1_PLL_TRIM_MASK,
++				     LAN8814_ANALOG_CONTROL_1_PLL_TRIM);
++	if (ret < 0)
++		return ret;
++
++	ret = lanphy_modify_page_reg(phydev, LAN8814_PAGE_ANALOG_CTRL,
++				     LAN8814_ANALOG_CONTROL_10,
++				     LAN8814_ANALOG_CONTROL_10_PLL_DIV_MASK,
++				     LAN8814_ANALOG_CONTROL_10_PLL_DIV);
++	return ret < 0 ? ret : 0;
++}
++
+ static int lan8814_config_init(struct phy_device *phydev)
+ {
+ 	struct kszphy_priv *lan8814 = phydev->priv;
+@@ -4562,7 +4598,7 @@ static int lan8814_config_init(struct phy_device *phydev)
+ 	if (lan8814->led_mode >= 0)
+ 		lan8814_setup_led(phydev, lan8814->led_mode);
+ 
+-	return 0;
++	return lan8814_erratas(phydev);
+ }
+ 
+ /* It is expected that there will not be any 'lan8814_take_coma_mode'

@@ -1,7 +1,7 @@
 From 3a4eb22eab16fbbe69fd5975c5bac14968f37af1 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sat, 24 Oct 2026 20:25:58 +0200
-Subject: [PATCH 108/114] usb: probe EHCI, OHCI platform controllers
+Subject: [PATCH 108/116] usb: probe EHCI, OHCI platform controllers
  synchronously
 
 On SoCs with more than one EHCI/OHCI pair, e.g. RK3568, asynchronous
