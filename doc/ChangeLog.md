@@ -116,6 +116,14 @@ All notable changes to the project are documented in this file.
   kept dropping out of the test rig
 - LAN969x: kernel BUG "scheduling while atomic" when a multicast address was
   added to or removed from a port outside any bridge
+- LAN969x: the IP address of a bridge was unreachable from its ports, while
+  forwarding between the ports worked.  Broadcast from a bridge port never
+  reached the CPU, so ARP went unanswered, and the bridge's own MAC address
+  was missing from the switch MAC table, so unicast to the bridge was
+  flooded to the ports instead of delivered
+- LAN969x: disabling the first port of a bridge, whose MAC address the
+  bridge uses, cut the bridge IP address off until the port was enabled
+  again
 - PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
   kept dropping to the faulty state because the transmit timestamp arrived
   later than the 10 ms the PTP daemon waited for it
