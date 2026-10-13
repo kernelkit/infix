@@ -37,6 +37,13 @@ for tgt in "${boot_targets}"; do
 	    test -n "${ixvariant}" && run ixvariant
 	fi
 
+	if test -n "${vpd_addr_r}"; then
+	    mw.b ${vpd_addr_r} 0 0x10
+	    if test -e ${devtype} ${devnum}:${auxpart} /vpd.bin; then
+		load ${devtype} ${devnum}:${auxpart} ${vpd_addr_r} /vpd.bin
+	    fi
+	fi
+
 	if test -n "${DEBUG}"; then
 	    setenv bootargs_log "debug"
 	else
