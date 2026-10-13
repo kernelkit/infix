@@ -210,6 +210,11 @@ All notable changes to the project are documented in this file.
   EV23X71A, ran with power-on defaults where Microchip's silicon errata
   require other settings on every port: center-tap power management, the
   EEE wake timer, and the PLL trim
+- LAN969x: a copper port on the Tactical 1000 could come up with one
+  direction dead, the link up at 1000 Mbps but nothing it sent reaching the
+  other end, most often after the port had been reconfigured.  The PHYs
+  now resynchronize their QSGMII link to the switch after every PHY reset,
+  the way Microchip's PHY API does
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
