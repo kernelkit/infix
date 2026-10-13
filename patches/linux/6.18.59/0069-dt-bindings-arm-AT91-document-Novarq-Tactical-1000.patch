@@ -1,7 +1,7 @@
 From 65134a6569b04f281c70d4be63ca7800c2a93ecc Mon Sep 17 00:00:00 2001
 From: Robert Marko <robert.marko@sartura.hr>
 Date: Fri, 9 Jan 2026 13:27:00 +0100
-Subject: [PATCH 069/112] dt-bindings: arm: AT91: document Novarq Tactical 1000
+Subject: [PATCH 069/113] dt-bindings: arm: AT91: document Novarq Tactical 1000
 
 Novarq Tactical 1000 is a Microchip LAN9696 based 24x1G + 4x10G SFP switch.
 

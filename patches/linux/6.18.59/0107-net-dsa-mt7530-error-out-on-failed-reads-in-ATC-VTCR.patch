@@ -1,7 +1,7 @@
 From 6d7b1f8462b02c98bdc6665e2b01732e0a799ff4 Mon Sep 17 00:00:00 2001
 From: Daniel Golle <daniel@makrotopia.org>
 Date: Tue, 28 Jul 2026 05:52:21 +0100
-Subject: [PATCH 107/112] net: dsa: mt7530: error out on failed reads in
+Subject: [PATCH 107/113] net: dsa: mt7530: error out on failed reads in
  ATC/VTCR command polling
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

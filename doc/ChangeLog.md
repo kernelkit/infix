@@ -270,6 +270,10 @@ All notable changes to the project are documented in this file.
 - LAN969x: disabling the first port of a bridge, whose MAC address the
   bridge uses, cut the bridge IP address off until the port was enabled
   again
+- LAN969x: taking down one port of a link aggregate stopped unicast to the
+  aggregate on the remaining ports, and removing the aggregate cut off the
+  port whose address it had used until that port was disabled and enabled
+  again
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters

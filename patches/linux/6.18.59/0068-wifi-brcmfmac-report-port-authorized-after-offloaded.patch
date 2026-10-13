@@ -1,7 +1,7 @@
 From 3a229524607e5de259bba2dca0f00707c8fb5b2f Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Thu, 10 Sep 2026 08:29:47 +0200
-Subject: [PATCH 068/112] wifi: brcmfmac: report port authorized after
+Subject: [PATCH 068/113] wifi: brcmfmac: report port authorized after
  offloaded PSK/SAE handshake
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
