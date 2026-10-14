@@ -1,0 +1,37 @@
+From 9d7f16cea36dc9a0888b67201819f7767e8faf50 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 14 Oct 2026 11:01:01 +0200
+Subject: [PATCH 122/122] net: sparx5: take a port's MAC address from the
+ device tree
+
+Every port gets the switch base address plus its port number plus one,
+so a board cannot give its ports addresses in front panel order, or take
+them from per-port nvmem cells, the way other switch and Ethernet drivers
+allow.
+
+Use the address in the port's device tree node when there is one, and
+mark it permanent.  Ports without one keep the base address plus port.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_main.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
+index 787dcdc996cd..af63b982b6f5 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_main.c
+@@ -342,6 +342,13 @@ static int sparx5_create_port(struct sparx5 *sparx5,
+ 	INIT_LIST_HEAD(&spx5_port->tc_templates);
+ 	sparx5->ports[config->portno] = spx5_port;
+ 
++	/* An address given for the port overrides the base address + port */
++	err = of_get_ethdev_address(config->node, ndev);
++	if (err == -EPROBE_DEFER)
++		return err;
++	if (!err)
++		ndev->addr_assign_type = NET_ADDR_PERM;
++
+ 	err = sparx5_port_init(sparx5, spx5_port, &config->conf);
+ 	if (err) {
+ 		dev_err(sparx5->dev, "port init failed\n");

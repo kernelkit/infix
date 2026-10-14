@@ -1,7 +1,7 @@
 From cc84f3335bcee490598cddaf356f29820f39aae9 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 19 Aug 2026 11:35:29 +0200
-Subject: [PATCH 054/121] dt-bindings: mmc: atmel,sama5d2-sdhci: add
+Subject: [PATCH 054/122] dt-bindings: mmc: atmel,sama5d2-sdhci: add
  microchip,lan969x-sdhci
 
 The LAN969x SDMMC controller has its own base clock divider and, unlike

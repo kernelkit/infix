@@ -1,7 +1,7 @@
 From a47329abef09e1cc183a18bbcba6788b51a2e061 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 16 Jan 2025 12:35:12 +0100
-Subject: [PATCH 026/121] net: dsa: mv88e6xxx: collapse disabled state into
+Subject: [PATCH 026/122] net: dsa: mv88e6xxx: collapse disabled state into
  blocking
 
 This patch changes the behavior of switchcore ports wrt. the port state.
