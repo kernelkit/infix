@@ -384,6 +384,35 @@ func TestOSPFNeighbors(t *testing.T) {
 	}
 }
 
+func TestOSPFAutoCostDefault(t *testing.T) {
+	runner := ospfOnly()
+	runner["ospfd show running-config"] = "!\nrouter ospf\n ospf router-id 10.1.1.1\nexit\n!\n"
+	out := routingCollect(t, runner)
+	ospf := getProtocol(t, out, "infix-routing:ospfv2")["ietf-ospf:ospf"].(map[string]interface{})
+	ac := ospf["ietf-ospf:auto-cost"].(map[string]interface{})
+	if ac["enabled"] != true || ac["reference-bandwidth"] != float64(100000) {
+		t.Fatalf("expected default auto-cost, got %v", ac)
+	}
+
+	out = routingCollect(t, ospfOnly())
+	ospf = getProtocol(t, out, "infix-routing:ospfv2")["ietf-ospf:ospf"].(map[string]interface{})
+	ac = ospf["ietf-ospf:auto-cost"].(map[string]interface{})
+	if ac["reference-bandwidth"] != float64(100000) {
+		t.Fatalf("expected default auto-cost without running-config, got %v", ac)
+	}
+}
+
+func TestOSPFAutoCostConfigured(t *testing.T) {
+	runner := ipv6Runner()
+	runner["ospf6d show running-config"] = "!\nrouter ospf6\n ospf6 router-id 10.1.1.1\n auto-cost reference-bandwidth 10000\nexit\n!\n"
+	out := routingCollect(t, runner)
+	ospf := getProtocol(t, out, "infix-routing:ospfv3")["ietf-ospf:ospf"].(map[string]interface{})
+	ac := ospf["ietf-ospf:auto-cost"].(map[string]interface{})
+	if ac["enabled"] != true || ac["reference-bandwidth"] != float64(10000) {
+		t.Fatalf("expected reference bandwidth 10000, got %v", ac)
+	}
+}
+
 func TestOSPFRoutes(t *testing.T) {
 	out := routingCollect(t, fullRunner())
 	ospfProto := getOSPFProtocol(t, out)

@@ -293,6 +293,7 @@ func (c *RoutingCollector) collectOSPF(ctx context.Context) interface{} {
 		areas = append(areas, area)
 	}
 
+	ospf["ietf-ospf:auto-cost"] = c.ospfAutoCost(ctx, "ospfd")
 	if routes := c.ospfRoutes(ctx); len(routes) > 0 {
 		ospf["ietf-ospf:local-rib"] = map[string]interface{}{
 			"ietf-ospf:route": routes,
@@ -411,6 +412,34 @@ func ospfNeighbor(neigh map[string]interface{}) map[string]interface{} {
 	setIfPresent(neighbor, "bdr-router-id", neigh, "routerDesignatedBackupId")
 
 	return neighbor
+}
+
+// ospfAutoCostDefault is the reference bandwidth in Mbit/s that both
+// ospfd and ospf6d use unless configured otherwise.
+const ospfAutoCostDefault = 100000
+
+// ospfAutoCost reports the auto-cost reference bandwidth of an OSPF
+// daemon.  FRR has no JSON for it, and the running-config only lists
+// the value when it differs from the default.  Auto-cost is always
+// enabled in FRR.
+func (c *RoutingCollector) ospfAutoCost(ctx context.Context, daemon string) map[string]interface{} {
+	refbw := ospfAutoCostDefault
+
+	out, _ := c.vty(ctx, daemon, "show running-config")
+	for _, line := range strings.Split(string(out), "\n") {
+		words := strings.Fields(line)
+		if len(words) == 3 && words[0] == "auto-cost" && words[1] == "reference-bandwidth" {
+			if v, err := strconv.Atoi(words[2]); err == nil {
+				refbw = v
+			}
+			break
+		}
+	}
+
+	return map[string]interface{}{
+		"enabled":             true,
+		"reference-bandwidth": refbw,
+	}
 }
 
 func (c *RoutingCollector) ospfRoutes(ctx context.Context) []interface{} {
@@ -573,6 +602,7 @@ func (c *RoutingCollector) collectOSPF6(ctx context.Context) interface{} {
 	if rid, ok := top["routerId"]; ok {
 		ospf["ietf-ospf:router-id"] = rid
 	}
+	ospf["ietf-ospf:auto-cost"] = c.ospfAutoCost(ctx, "ospf6d")
 	if routes := c.ospf6Routes(ctx); len(routes) > 0 {
 		ospf["ietf-ospf:local-rib"] = map[string]interface{}{
 			"ietf-ospf:route": routes,
