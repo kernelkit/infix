@@ -9,6 +9,8 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.18.56 (LTS)
+- Switch boards advertise one of their port addresses as the LLDP chassis
+  ID.  Previously it could be an address no port on the device carried
 - The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,
   R64, NanoPi R2S and Vero W6M now has IPv6 enabled, so the router has a
   link-local address on the LAN side like its ports already had
