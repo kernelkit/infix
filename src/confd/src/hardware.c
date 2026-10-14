@@ -1095,6 +1095,9 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 	if (country)
 		fprintf(hostapd, "country_code=%s\n", country);
 
+	/* Keep our address on a second BSS, not the primary's plus one */
+	fprintf(hostapd, "use_driver_iface_addr=1\n");
+
 	/*
 	 * 802.11d broadcasts country info in beacons, required for clients
 	 * to know which channels/power levels are legal in this region.
