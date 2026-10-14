@@ -266,6 +266,8 @@ def add_software(out):
     installer_status = HOST.run_json(["rauc-installation-status"], {})
     if installer_status.get("operation", {}):
         installer["operation"] = installer_status["operation"]
+    if installer_status.get("last-error"):
+        installer["last-error"] = installer_status["last-error"]
     if "progress" in installer_status:
         progress = {}
 

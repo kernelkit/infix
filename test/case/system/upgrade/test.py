@@ -112,9 +112,10 @@ with infamy.Test() as test:
                 installer = oper["system-state"]["software"]["installer"]
                 if installer["operation"] == "idle":
                     print(installer)
-                    if "last-error" in installer:
-                        print("Install failed:", installer["last-error"])
-                        test.fail()
+                    error = installer.get("last-error")
+                    message = installer.get("progress", {}).get("message", "")
+                    if error or "failed" in message.lower():
+                        test.fail(f"Install failed: {error or message}")
 
                     break
                 time.sleep(1)

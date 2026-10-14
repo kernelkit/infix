@@ -5,5 +5,8 @@
 - name: IGMP VLAN
   case: igmp_vlan/test.py
 
+- name: IGMP Basic 3 DUTs
+  case: igmp_basic_3duts/test.py
+
 - name: Static Multicast Filters
   case: static_multicast_filters/test.py

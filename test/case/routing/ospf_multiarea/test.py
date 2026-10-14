@@ -330,12 +330,19 @@ with infamy.Test() as test:
                  lambda: config_target3(R3, R3ring2, R3cross, R3data, param),
                  lambda: config_target4(R4, R4ring1, R4cross, R4data, param))
 
-    with test.step("Wait for all neighbors to peer"):
-        print("Waiting for neighbors to peer")
+    with test.step("Wait for R1 to reach full adjacency with R2 (router-id 1.1.1.1) on R1:ring1 in area 0.0.0.0"):
         until(lambda: route.ospf_get_neighbor(R1, "0.0.0.0", R1ring1, "1.1.1.1", proto=instance), attempts=200)
+
+    with test.step("Wait for R1 to reach full adjacency with R3 (router-id 10.0.0.3) on R1:cross in area 0.0.0.1"):
         until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", R1cross, "10.0.0.3", proto=instance), attempts=200)
+
+    with test.step("Wait for R2 to reach full adjacency with R3 (router-id 10.0.0.3) on R2:ring1 in area 0.0.0.1"):
         until(lambda: route.ospf_get_neighbor(R2, "0.0.0.1", R2ring1, "10.0.0.3", proto=instance), attempts=200)
+
+    with test.step("Wait for R2 to reach full adjacency with R1 (router-id 10.0.0.1) on R2:ring2 in area 0.0.0.0"):
         until(lambda: route.ospf_get_neighbor(R2, "0.0.0.0", R2ring2, "10.0.0.1", proto=instance), attempts=200)
+
+    with test.step("Wait for R2 to reach full adjacency with R4 (router-id 10.0.0.4) on R2:cross in area 0.0.0.2"):
         until(lambda: route.ospf_get_neighbor(R2, "0.0.0.2", R2cross, "10.0.0.4", proto=instance), attempts=200)
 
     with test.step(f"Wait for routes from {version} on all routers"):
