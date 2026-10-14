@@ -1,7 +1,7 @@
 From 926ecc9e39b32d17650b5236beda41bfa2b638d8 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 15:42:34 +0200
-Subject: [PATCH 111/117] net: phy: micrel: lan8814: resync QSGMII after MAC
+Subject: [PATCH 111/118] net: phy: micrel: lan8814: resync QSGMII after MAC
  setup
 
 On a LAN969x switch with LAN8804 quad PHYs, a copper port at times comes

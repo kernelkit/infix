@@ -1,7 +1,7 @@
 From 5447eb3bc24cf126338f622064b72ee7a90965cb Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 16:27:48 +0200
-Subject: [PATCH 112/117] net: phy: micrel: lan8814: disable EEE
+Subject: [PATCH 112/118] net: phy: micrel: lan8814: disable EEE
 
 The LAN8814 can enter 100BASE-TX EEE low power idle spuriously after the
 cable is unplugged (errata module 24).  The PHY advertises EEE out of
