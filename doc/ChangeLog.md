@@ -201,6 +201,8 @@ All notable changes to the project are documented in this file.
 - LAN969x: a bridge without VLANs forwarded nothing between its ports
 - LAN969x: a VLAN interface on a port in a VLAN filtering bridge never
   received anything, unless the bridge had the same VLAN on the port
+- LAN969x: traffic from a VLAN interface on a bridge, sent out a port that
+  carries all its VLANs tagged, left with an extra VLAN 0 tag
 - LAN969x: taking down one port of a link aggregate stopped unicast to the
   aggregate on the remaining ports, and removing the aggregate cut off the
   port whose address it had used until that port was disabled and enabled

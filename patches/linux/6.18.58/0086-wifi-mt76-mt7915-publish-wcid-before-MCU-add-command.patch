@@ -1,7 +1,7 @@
 From 19bac98a1358b276e1c3905ebd1b026b0a5ab508 Mon Sep 17 00:00:00 2001
 From: Ryan Leung <untilscour@protonmail.com>
 Date: Fri, 21 Aug 2026 09:00:01 +0000
-Subject: [PATCH 086/124] wifi: mt76: mt7915: publish wcid before MCU add
+Subject: [PATCH 086/125] wifi: mt76: mt7915: publish wcid before MCU add
  commands
 
 mt7915_add_interface() enables the BSS/STA in firmware via

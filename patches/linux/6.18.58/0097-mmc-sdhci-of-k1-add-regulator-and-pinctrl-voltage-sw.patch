@@ -1,7 +1,7 @@
 From c4a622794b7268906714b20965c0394986872afa Mon Sep 17 00:00:00 2001
 From: Iker Pedrosa <ikerpedrosam@gmail.com>
 Date: Mon, 11 May 2026 10:53:58 +0200
-Subject: [PATCH 097/124] mmc: sdhci-of-k1: add regulator and pinctrl voltage
+Subject: [PATCH 097/125] mmc: sdhci-of-k1: add regulator and pinctrl voltage
  switching support
 
 Add voltage switching infrastructure for UHS-I modes by integrating both
