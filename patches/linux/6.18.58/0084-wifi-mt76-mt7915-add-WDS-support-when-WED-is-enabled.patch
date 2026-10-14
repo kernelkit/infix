@@ -1,7 +1,7 @@
 From 138490a521adc5aa75efb8fba61c039ebc75b110 Mon Sep 17 00:00:00 2001
 From: Felix Fietkau <nbd@nbd.name>
 Date: Mon, 20 Oct 2025 15:59:12 +0200
-Subject: [PATCH 084/123] wifi: mt76: mt7915: add WDS support when WED is
+Subject: [PATCH 084/124] wifi: mt76: mt7915: add WDS support when WED is
  enabled
 
 The current WED only supports 256 wcid, whereas mt7986 can support up to

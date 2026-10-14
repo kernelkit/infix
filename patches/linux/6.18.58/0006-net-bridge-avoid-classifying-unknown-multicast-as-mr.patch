@@ -1,7 +1,7 @@
 From 3d04dd8e59a54e41b34ac25782aec0505f2f1e77 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
-Subject: [PATCH 006/123] net: bridge: avoid classifying unknown multicast as
+Subject: [PATCH 006/124] net: bridge: avoid classifying unknown multicast as
  mrouters_only
 
 Unknown multicast, MAC/IPv4/IPv6, should always be flooded according to

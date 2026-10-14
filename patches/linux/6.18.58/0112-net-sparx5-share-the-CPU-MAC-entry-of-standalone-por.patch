@@ -1,7 +1,7 @@
 From a0f5cc1cf5535800752d4d27b49077f0c14c143a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 9 Oct 2026 10:12:29 +0200
-Subject: [PATCH 112/123] net: sparx5: share the CPU MAC entry of standalone
+Subject: [PATCH 112/124] net: sparx5: share the CPU MAC entry of standalone
  ports with one address
 
 Taking one port of a LACP aggregate down stops unicast to the aggregate
