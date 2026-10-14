@@ -5,3 +5,4 @@
 
 #include <arm64/microchip/lan9696-ev23x71a.dts>
 #include "infix.dtsi"
+#include "lan9696-ev23x71a-vpd.dtsi"

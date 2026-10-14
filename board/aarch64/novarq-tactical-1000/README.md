@@ -110,8 +110,10 @@ The board has no MAC address in OTP, so without help every boot gets a
 random base MAC and random port addresses, which also change the
 link-local addresses the test rig finds the unit by.  `provision-tactical`
 offers to write a base MAC and a serial number to `vpd.bin` on the `aux`
-partition, which the system reads as its product VPD.  On a unit already
-provisioned, write it by hand and reboot:
+partition, which the bootloader hands to the system as its product VPD.
+The vendor U-Boot does not, it takes the Infix one, see
+[Bootloader](#bootloader).  On a unit already provisioned, write it by
+hand and reboot:
 
 ```bash
 echo '{"mac-address":"02:00:00:7a:c7:00","serial-number":"tact1","vendor":"Novarq","product-name":"Tactical-1000"}' \
@@ -119,7 +121,8 @@ echo '{"mac-address":"02:00:00:7a:c7:00","serial-number":"tact1","vendor":"Novar
 ```
 
 The base MAC becomes the chassis address, `e1` gets base + 1, `e2` base + 2,
-and so on, `mgmt` after the last `e` port.  See [VPD][9] for the format.
+and so on, `mgmt` base + 29, as permanent port addresses.  See [VPD][9]
+for the format.
 
 ## Device Tree
 

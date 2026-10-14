@@ -36,6 +36,7 @@
 	ixboard = "if setexpr.l cid *0xe2010000 && setexpr cid ${cid} / 0x1000 && setexpr cid ${cid} % 0x10000 && test ${cid} = 9697; then setenv board novarq,tactical-1000; setenv fdtfile microchip/lan9696-tactical-1000.dtb; fi";
 
 	loadaddr          = "0x63000000";
+	vpd_addr_r        = "0x63e00000";
 	fdt_addr_r        = "0x63f00000";
 	kernel_addr_r     = "0x64000000";
 	fdtoverlay_addr_r = "0x67f00000";

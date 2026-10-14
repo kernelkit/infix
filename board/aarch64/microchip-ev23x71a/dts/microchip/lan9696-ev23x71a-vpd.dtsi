@@ -1,0 +1,44 @@
+/*
+ * Product VPD, an ONIE TLV that the boot loader copies from the aux
+ * partition into reserved memory.  The region is zeroed when there is
+ * no VPD, which leaves the layout without cells.  Ports reference the
+ * base MAC address with an index, <&base_mac N>, and get base + N as
+ * their permanent address.
+ */
+/ {
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		vpd: vpd@63e00000 {
+			compatible = "nvmem-rmem";
+			reg = <0x63e00000 0x10000>;
+			no-map;
+			infix,board = "product";
+
+			nvmem-layout {
+				compatible = "onie,tlv-layout";
+
+				base_mac: mac-address {
+					#nvmem-cell-cells = <1>;
+				};
+			};
+		};
+	};
+};
+
+&switch {
+	nvmem-cells = <&base_mac 0>;
+	nvmem-cell-names = "mac-address";
+};
+
+/* The driver gives port@N base + N + 1, e1 .. e28.  e29 is base + 29. */
+&switch {
+	ethernet-ports {
+		port@29 {
+			nvmem-cells = <&base_mac 29>;
+			nvmem-cell-names = "mac-address";
+		};
+	};
+};
