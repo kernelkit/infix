@@ -8,10 +8,9 @@ Verify system upgrade functionality.
 # There is a bug somewhere in the restconf-code (infamy or rousette)
 import os
 import time
-import netifaces
 import infamy
 import infamy.file_server as srv
-from infamy.util import wait_boot, until
+from infamy.util import wait_boot
 
 SRVPORT = 8008
 

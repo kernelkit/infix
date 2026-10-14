@@ -13,9 +13,7 @@ image::lan-wan.svg[align=center, scaledwidth=50%]
 - Demonstrates IPv6 policy-based forwarding between zones
 """
 
-import time
 import infamy
-from infamy.util import until
 
 
 with infamy.Test() as test:

@@ -11,10 +11,8 @@ as a static route, to prevent routing loops.
 """
 
 import infamy, infamy.dhcp
-import infamy.iface as iface
 import infamy.route as route
 from infamy.util import parallel, until
-import time
 
 
 def checkrun(dut):
