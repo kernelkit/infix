@@ -1,0 +1,64 @@
+From a95ceaed805a6383dfeb60c468f6a08f70e806d1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Wed, 14 Oct 2026 09:10:29 +0200
+Subject: [PATCH] bridge: vlan: reset show state between batch commands
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The dev and vid filters of a vlan show, and the port the JSON printer
+is in the middle of, are statics that a one-shot command never has to
+clean up.  In batch mode they leak into the next command: a plain
+'vlan show' after 'vlan global show dev br0' only lists br0, and a
+'vlan global show' after another one hits the json_writer depth
+assertion, since the first entry closes a port object that was never
+opened in this command.
+
+    bridge: json_writer.c:130: jsonw_end: Assertion `self->depth > 0' failed.
+
+Clear the filters when a show starts and the current port when it is
+closed.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ bridge/vlan.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/bridge/vlan.c b/bridge/vlan.c
+index ea4aff9..19f2a9f 100644
+--- a/bridge/vlan.c
++++ b/bridge/vlan.c
+@@ -594,6 +594,7 @@ static void close_vlan_port(void)
+ {
+ 	close_json_array(PRINT_JSON, NULL);
+ 	close_json_object();
++	vlan_rtm_cur_ifidx = -1;
+ }
+ 
+ static void print_vlan_tunnel_info(struct rtattr *tb, int ifindex)
+@@ -1132,6 +1133,12 @@ static int vlan_show(int argc, char **argv, int subject)
+ 	char *filter_dev = NULL;
+ 	int ret = 0;
+ 
++	/* In batch mode the filters of the previous command must not
++	 * carry over to this one.
++	 */
++	filter_index = 0;
++	filter_vlan = 0;
++
+ 	while (argc > 0) {
+ 		if (strcmp(*argv, "dev") == 0) {
+ 			NEXT_ARG();
+@@ -1250,6 +1257,9 @@ static int vlan_global_show(int argc, char **argv)
+ 	int ret = 0, subject = VLAN_SHOW_VLAN;
+ 	char *filter_dev = NULL;
+ 
++	filter_index = 0;
++	filter_vlan = 0;
++
+ 	while (argc > 0) {
+ 		if (strcmp(*argv, "dev") == 0) {
+ 			NEXT_ARG();
+-- 
+2.43.0
+
