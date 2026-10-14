@@ -152,7 +152,20 @@ class Env(object):
 
         util.parallel(*[lambda n=n: reset_one(n) for n in sorted(strays)])
 
-    def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
+    def reattach(self, target, test_reset=True):
+        """Attach to target again, at the address it was first found on.
+
+        A fresh probe answers with the first DUT on the segment, which
+        after a reboot into e.g. a factory config bridging all ports
+        need not be this one.
+        """
+        protocol = "netconf" if isinstance(target, netconf.Device) else "restconf"
+        return self.attach(target.name, protocol=protocol, test_reset=test_reset,
+                           username=target.location.username,
+                           password=target.location.password,
+                           mgmtip=target.location.host)
+
+    def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None, mgmtip=None):
         """Attach to node on port using protocol."""
 
         name = node
@@ -177,13 +190,19 @@ class Env(object):
         ctrl = self.ptop.get_ctrl()
         cport, _ = self.ptop.get_mgmt_link(ctrl, node)
 
-        print("Waiting for DUTs to become reachable...")
-        util.parallel(lambda: util.until(lambda: self.is_reachable(node, cport), 300))
+        if mgmtip:
+            print(f"Waiting for {node} at {mgmtip} to become reachable...")
+            reachable = lambda: util.is_reachable(mgmtip, self, password)
+            util.until(reachable, 300)
+        else:
+            reachable = lambda: self.is_reachable(node, cport)
+            print("Waiting for DUTs to become reachable...")
+            util.parallel(lambda: util.until(reachable, 300))
 
-        print(f"Probing {node} on port {cport} for IPv6LL mgmt address ...")
-        mgmtip = neigh.ll6ping(cport)
-        if not mgmtip:
-            raise Exception(f"Failed, cannot find mgmt IP for {node}")
+            print(f"Probing {node} on port {cport} for IPv6LL mgmt address ...")
+            mgmtip = neigh.ll6ping(cport)
+            if not mgmtip:
+                raise Exception(f"Failed, cannot find mgmt IP for {node}")
 
         if protocol == "netconf":
             dev = netconf.Device(name,
@@ -195,7 +214,7 @@ class Env(object):
                                  yangdir=self.args.yangdir)
             if test_reset:
                 dev.test_reset()
-                util.until(lambda: self.is_reachable(node, cport), 30)
+                util.until(reachable, 30)
             return dev
 
         if protocol == "ssh":
@@ -211,7 +230,7 @@ class Env(object):
                                   yangdir=self.args.yangdir)
             if test_reset:
                 dev.test_reset()
-                util.until(lambda: self.is_reachable(node, cport), 30)
+                util.until(reachable, 30)
             return dev
 
         raise Exception(f"Unsupported management procotol \"{protocol}\"")

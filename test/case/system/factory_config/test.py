@@ -18,10 +18,10 @@ def factory_hostname(target):
     factory = target.get_factory("/ietf-system:system/hostname")
     return factory.print_dict().get("system", {}).get("hostname")
 
-def cleanup(env):
+def cleanup(env, target):
     """Restore the rig to the clean per-test baseline for the next test."""
     print("Restoring device to clean test baseline")
-    target = env.attach("target", "mgmt", "netconf")
+    target = env.reattach(target)
     target.reboot()
     if not wait_boot(target, env):
         test.fail("Device did not come back while restoring baseline")
@@ -47,10 +47,10 @@ with infamy.Test() as test:
         target.reboot()
         if not wait_boot(target, env):
             test.fail("Device did not boot from factory config")
-        test.push_test_cleanup(lambda: cleanup(env))
+        test.push_test_cleanup(lambda: cleanup(env, target))
 
     with test.step("Verify device is usable and not in failure-config"):
-        target = env.attach("target", "mgmt", test_reset=False)
+        target = env.reattach(target, test_reset=False)
 
         # A failed bootstrap reverts to failure-config, which has a
         # different hostname; matching the factory hostname proves we

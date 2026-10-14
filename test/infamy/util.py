@@ -2,7 +2,6 @@
 import base64
 import time
 import threading
-import infamy.neigh
 from infamy import netconf
 from infamy import restconf
 import urllib.request
@@ -95,16 +94,9 @@ def wait_boot(target, env):
     print(f"{target} is booting up ...")
     until(lambda: target.reachable(), attempts=300)
 
-    iface = target.get_mgmt_iface()
-    if not iface:
-        return False
-
-    neigh = infamy.neigh.ll6ping(iface)
-    if not neigh:
-        return False
-
     print(f"{target} is responding to IPv6 ping ...")
 
+    neigh = target.location.host
     pwd = target.location.password
     until(lambda: target.reachable() and is_reachable(neigh, env, pwd),
           attempts=300)
