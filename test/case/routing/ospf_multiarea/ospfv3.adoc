@@ -62,7 +62,11 @@ image::topology.svg[OSPFv3 with Multiple Areas topology, align=center, scaledwid
 
 . Set up topology and attach to target DUTs
 . Configure targets
-. Wait for all neighbors to peer
+. Wait for R1 to reach full adjacency with R2 (router-id 1.1.1.1) on R1:ring1 in area 0.0.0.0
+. Wait for R1 to reach full adjacency with R3 (router-id 10.0.0.3) on R1:cross in area 0.0.0.1
+. Wait for R2 to reach full adjacency with R3 (router-id 10.0.0.3) on R2:ring1 in area 0.0.0.1
+. Wait for R2 to reach full adjacency with R1 (router-id 10.0.0.1) on R2:ring2 in area 0.0.0.0
+. Wait for R2 to reach full adjacency with R4 (router-id 10.0.0.4) on R2:cross in area 0.0.0.2
 . Wait for routes from OSPFv3 on all routers
 . Verify Area 0.0.0.1 on R3 is NSSA area
 . Verify R1:ring2 is of type point-to-point
