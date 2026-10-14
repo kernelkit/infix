@@ -1,7 +1,7 @@
 From 6ef5ea146eab4a361c8abe45f0a61a5ece5c01cf Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 15:34:03 +0200
-Subject: [PATCH 116/123] net: phy: micrel: lan8814 errata
+Subject: [PATCH 116/124] net: phy: micrel: lan8814 errata
 
 The LAN8814 runs with the power-on defaults for several registers that
 the silicon errata [1] and Microchip's PHY API require to be changed on
