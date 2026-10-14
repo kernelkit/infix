@@ -22,7 +22,7 @@ with infamy.Test() as test:
     with infamy.IsolatedMacVlan(host) as netns:
         netns.addip("10.0.0.1")
         with infamy.dhcp.Server(netns, ip=ADDRESS):
-            _, port = env.ltop.xlate("client", "data")
+            port = client["data"]
             config = {
                 "interfaces": {
                     "interface": [{

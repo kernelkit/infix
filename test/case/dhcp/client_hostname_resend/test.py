@@ -42,7 +42,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         client, clissh = parallel(lambda: env.attach("client", "mgmt"),
                                   lambda: env.attach("client", "mgmt", "ssh"))
-        _, port = env.ltop.xlate("client", "mgmt")
+        port = client["mgmt"]
 
     with test.step(f"Configure initial hostname '{HOSTNM_A}'"):
         client.put_config_dicts({"ietf-system": {

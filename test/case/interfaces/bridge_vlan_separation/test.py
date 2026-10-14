@@ -34,12 +34,12 @@ with infamy.Test() as test:
                               lambda: env.attach("dut2", "mgmt"))
 
     with test.step("Configure DUTs"):
-        _, tport10 = env.ltop.xlate("dut1", "data1")
-        _, tport11 = env.ltop.xlate("dut1", "data2")
-        _, tport12 = env.ltop.xlate("dut1", "link")
-        _, tport20 = env.ltop.xlate("dut2", "data1")
-        _, tport21 = env.ltop.xlate("dut2", "data2")
-        _, tport22 = env.ltop.xlate("dut2", "link")
+        tport10 = dut1["data1"]
+        tport11 = dut1["data2"]
+        tport12 = dut1["link"]
+        tport20 = dut2["data1"]
+        tport21 = dut2["data2"]
+        tport22 = dut2["link"]
 
         parallel(
             lambda: dut1.put_config_dicts({"ietf-interfaces": {

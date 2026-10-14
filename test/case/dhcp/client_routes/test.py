@@ -57,7 +57,7 @@ with infamy.Test() as test:
         }})
 
     with test.step("Enabling DHCP client, allow option 3 and 121"):
-        _, port = env.ltop.xlate("client", "data")
+        port = client["data"]
 
         client.put_config_dicts({"ietf-interfaces": {
             "interfaces": {

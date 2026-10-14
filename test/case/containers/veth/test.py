@@ -35,7 +35,7 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Create 'web-br0-veth' container from bundled OCI image"):
-        _, ifname = env.ltop.xlate("target", "data")
+        ifname = target["data"]
         target.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {

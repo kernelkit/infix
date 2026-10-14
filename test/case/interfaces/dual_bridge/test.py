@@ -19,7 +19,7 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Configure two bridges linked and a veth pair"):
-        _, tport = env.ltop.xlate("target", "data")
+        tport = target["data"]
 
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {

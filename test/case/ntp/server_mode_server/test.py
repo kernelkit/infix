@@ -27,12 +27,12 @@ with infamy.Test() as test:
                                         lambda: env.attach("downstream", "mgmt"))
 
         # Get interface names for each device
-        _, upstream_data1 = env.ltop.xlate("upstream", "data1")
-        _, upstream_conn = env.ltop.xlate("upstream", "conn")
+        upstream_data1 = upstream["data1"]
+        upstream_conn = upstream["conn"]
         _, hport1 = env.ltop.xlate("host", "data1")
 
-        _, downstream_data2 = env.ltop.xlate("downstream", "data2")
-        _, downstream_conn = env.ltop.xlate("downstream", "conn")
+        downstream_data2 = downstream["data2"]
+        downstream_conn = downstream["conn"]
         _, hport2 = env.ltop.xlate("host", "data2")
 
     with test.step("Configure upstream NTP server with local reference clock and downstream NTP server syncing from upstream"):

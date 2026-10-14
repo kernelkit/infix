@@ -33,8 +33,8 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Configure a bridge with dual physical port"):
-        _, tport1 = env.ltop.xlate("target", "data1")
-        _, tport2 = env.ltop.xlate("target", "data2")
+        tport1 = target["data1"]
+        tport2 = target["data2"]
 
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {

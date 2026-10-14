@@ -50,7 +50,7 @@ with infamy.Test() as test:
         client, tgtssh = parallel(lambda: env.attach("client", "mgmt"),
                                   lambda: env.attach("client", "mgmt", "ssh"))
         _, host = env.ltop.xlate("host", "data")
-        _, port = env.ltop.xlate("client", "data")
+        port = client["data"]
 
     with infamy.IsolatedMacVlan(host) as netns:
         netns.addip(SERVER, prefix_length=64, proto="ipv6")

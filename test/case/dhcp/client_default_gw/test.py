@@ -24,7 +24,7 @@ with infamy.Test() as test:
             netns.addip("192.168.0.1")
 
         with infamy.dhcp.Server(netns, router=ROUTER):
-            _, port = env.ltop.xlate("client", "data")
+            port = client["data"]
             config = {
                 "interfaces": {
                     "interface": [{

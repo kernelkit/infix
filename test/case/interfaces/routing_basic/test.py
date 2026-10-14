@@ -53,8 +53,8 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, tport0 = env.ltop.xlate("target", "data1")
-        _, tport1 = env.ltop.xlate("target", "data2")
+        tport0 = target["data1"]
+        tport1 = target["data2"]
 
         _, hport0 = env.ltop.xlate("host", "data1")
         _, hport1 = env.ltop.xlate("host", "data2")

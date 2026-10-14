@@ -77,9 +77,9 @@ with infamy.Test() as test:
             test.skip()
 
         _, host = env.ltop.xlate("host", "data")
-        _, port = env.ltop.xlate("client", "data")
+        port = client["data"]
         _, hostlan = env.ltop.xlate("host", "lan")
-        _, lan = env.ltop.xlate("client", "lan")
+        lan = client["lan"]
 
     with test.step("Configure PPPoE client on wan, on top of the data port"):
         client.put_config_dicts({

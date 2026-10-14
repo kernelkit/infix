@@ -155,14 +155,14 @@ with infamy.Test() as test:
 
     with test.step("Configure R1 and R2"):
         r1links = {
-            "data": env.ltop.xlate("R1", "h1")[1],
-            "fast": env.ltop.xlate("R1", "fast")[1],
-            "slow": env.ltop.xlate("R1", "slow")[1],
+            "data": R1["h1"],
+            "fast": R1["fast"],
+            "slow": R1["slow"],
         }
         r2links = {
-            "data": env.ltop.xlate("R2", "h2")[1],
-            "fast": env.ltop.xlate("R2", "fast")[1],
-            "slow": env.ltop.xlate("R2", "slow")[1],
+            "data": R2["h2"],
+            "fast": R2["fast"],
+            "slow": R2["slow"],
         }
 
         parallel(lambda: config(R1, "R1", r1links, param),

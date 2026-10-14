@@ -156,12 +156,12 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "rip", R1, R2, R3)
 
     with test.step("Configure routers"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2west = env.ltop.xlate("R2", "west")
-        _, R2east = env.ltop.xlate("R2", "east")
-        _, R3link = env.ltop.xlate("R3", "link")
-        _, R3data = env.ltop.xlate("R3", "data")
+        R1data = R1["data"]
+        R1link = R1["link"]
+        R2west = R2["west"]
+        R2east = R2["east"]
+        R3link = R3["link"]
+        R3data = R3["data"]
 
         parallel(lambda: config_router(R1, "R1", [(R1data, param["R1data"]),
                                                   (R1link, param["R1link"])], [R1link], param),

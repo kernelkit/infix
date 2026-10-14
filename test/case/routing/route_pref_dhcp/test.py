@@ -117,11 +117,11 @@ with infamy.Test() as test:
                           lambda: env.attach("R2", "mgmt"))
 
     with test.step("Configure targets. Assign higher priority to the dhcp route"):
-        _, R1data1 = env.ltop.xlate("R1", "data1")
-        _, R1data2 = env.ltop.xlate("R1", "data2")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2data = env.ltop.xlate("R2", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
+        R1data1 = R1["data1"]
+        R1data2 = R1["data2"]
+        R1link = R1["link"]
+        R2data = R2["data"]
+        R2link = R2["link"]
 
         parallel(lambda: config_target1(R1, R1data1, R1data2, R1link), 
                  lambda: config_target2(R2, R2data, R2link))

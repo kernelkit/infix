@@ -175,12 +175,12 @@ with infamy.Test() as test:
         ospf_breaker = TPMR(env.ltop.xlate("PC", "R1_ospf")[1], env.ltop.xlate("PC", "R2_ospf")[1]).start()
 
     with test.step("Configure targets"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R1ospf = env.ltop.xlate("R1", "ospf")
-        _, R2data = env.ltop.xlate("R2", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R2ospf = env.ltop.xlate("R2", "ospf")
+        R1data = R1["data"]
+        R1link = R1["link"]
+        R1ospf = R1["ospf"]
+        R2data = R2["data"]
+        R2link = R2["link"]
+        R2ospf = R2["ospf"]
 
         parallel(lambda: config_target1(R1, R1data, R1link, R1ospf, param),
                  lambda: config_target2(R2, R2data, R2link, R2ospf, param))

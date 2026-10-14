@@ -84,8 +84,8 @@ with infamy.Test() as test:
         gm, receiver = parallel(lambda: env.attach("gm",       "mgmt"),
                                 lambda: env.attach("receiver", "mgmt"))
 
-        _, gm_iface       = env.ltop.xlate("gm",       "data")
-        _, receiver_iface = env.ltop.xlate("receiver", "data")
+        gm_iface       = gm["data"]
+        receiver_iface = receiver["data"]
         threshold_ns = env.args.threshold_ns or ptp.default_threshold(env, "receiver")
 
     with test.step(f"Configure grandmaster (OC, {profile}, priority1=1) and time receiver ({profile}, priority1=128, client-only)"):

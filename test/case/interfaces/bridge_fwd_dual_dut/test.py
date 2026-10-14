@@ -36,11 +36,11 @@ with infamy.Test() as test:
                               lambda: env.attach("dut2", "mgmt"))
 
     with test.step("Configure a bridge with triple physical port"):
-        _, tport11 = env.ltop.xlate("dut1", "data1")
-        _, tport1_link = env.ltop.xlate("dut1", "link")
-        _, tport21 = env.ltop.xlate("dut2", "data1")
-        _, tport22 = env.ltop.xlate("dut2", "data2")
-        _, tport2_link = env.ltop.xlate("dut2", "link")
+        tport11 = dut1["data1"]
+        tport1_link = dut1["link"]
+        tport21 = dut2["data1"]
+        tport22 = dut2["data2"]
+        tport2_link = dut2["link"]
 
         parallel(
             lambda: dut1.put_config_dicts({"ietf-interfaces": {

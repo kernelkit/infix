@@ -50,7 +50,7 @@ with infamy.Test() as test:
         serverssh.runsh("sudo rm -f /var/log/router1 /var/log/router2 /var/log/all-hosts")
 
     with test.step("Configure server as syslog sink with hostname filtering"):
-        _, server_link = env.ltop.xlate("server", "link")
+        server_link = server["link"]
 
         server.put_config_dicts({
             "ietf-interfaces": {
@@ -123,7 +123,7 @@ with infamy.Test() as test:
         until(lambda: "10.0.0.1:514" in serverssh.runsh("ss -ulnp 2>/dev/null | grep :514 || true").stdout, attempts=20)
 
     with test.step("Configure client to forward logs to server"):
-        _, client_link = env.ltop.xlate("client", "link")
+        client_link = client["link"]
 
         client.put_config_dicts({
             "ietf-interfaces": {

@@ -117,7 +117,7 @@ with infamy.Test() as test:
         wifi.skip_unless_supported(test, client, *gw_duts)
 
     with test.step("Configure gw1, gw2, gw3 as mesh nodes with a roaming AP"):
-        _, gw1_uplink = env.ltop.xlate("gw1", "uplink")
+        gw1_uplink = gw1["uplink"]
         parallel(*[lambda name=name, dut=dut:
                    dut.put_config_dicts(gw_config(uplink=gw1_uplink if name == "gw1" else None))
                    for name, dut in gws])

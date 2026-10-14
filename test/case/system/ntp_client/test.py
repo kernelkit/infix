@@ -81,9 +81,9 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Configure NTP client on 'target'"):
-        _, data1 = env.ltop.xlate("target", "data1")
-        _, data2 = env.ltop.xlate("target", "data2")
-        _, data3 = env.ltop.xlate("target", "data3")
+        data1 = target["data1"]
+        data2 = target["data2"]
+        data3 = target["data3"]
 
         config_target(target, data1, data2, data3)
 

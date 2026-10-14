@@ -25,7 +25,7 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Create httpd container from bundled OCI image"):
-        _, ifname = env.ltop.xlate("target", "data")
+        ifname = target["data"]
 
         target.put_config_dicts({
             "ietf-interfaces": {

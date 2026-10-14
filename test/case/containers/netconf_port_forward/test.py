@@ -49,8 +49,8 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, mgmt = env.ltop.xlate("target", "mgmt")
-        _, ext0 = env.ltop.xlate("target", "ext0")
+        mgmt = target["mgmt"]
+        ext0 = target["ext0"]
         _, hport = env.ltop.xlate("host", "data")
 
         if not target.has_model("infix-containers"):

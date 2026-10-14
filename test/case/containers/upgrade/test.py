@@ -31,7 +31,7 @@ with infamy.Test() as test:
             test.skip()
 
         _, hport = env.ltop.xlate("host", "data")
-        _, tport = env.ltop.xlate("target", "data")
+        tport = target["data"]
 
     with test.step("Detect target architecture"):
         # Query operational datastore for machine architecture

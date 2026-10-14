@@ -587,12 +587,12 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "ospf", R1, R2, R3, ABR)
 
     with test.step("Configure DUTs"):
-        _, R1ring1 = env.ltop.xlate("R1", "ring1")
-        _, R1ring2 = env.ltop.xlate("R1", "ring2")
-        _, R2ring1 = env.ltop.xlate("R2", "ring1")
-        _, R2ring2 = env.ltop.xlate("R2", "ring2")
-        _, R3ring1 = env.ltop.xlate("R3", "ring1")
-        _, R3ring2 = env.ltop.xlate("R3", "ring2")
+        R1ring1 = R1["ring1"]
+        R1ring2 = R1["ring2"]
+        R2ring1 = R2["ring1"]
+        R2ring2 = R2["ring2"]
+        R3ring1 = R3["ring1"]
+        R3ring2 = R3["ring2"]
 
         _, hostR1ring1 = env.ltop.xlate("host", "R1ring1")
         _, hostR1ring2 = env.ltop.xlate("host", "R1ring2")
@@ -602,16 +602,14 @@ with infamy.Test() as test:
         _, hostR3ring1 = env.ltop.xlate("host", "R3ring1")
         _, hostR3ring2 = env.ltop.xlate("host", "R3ring2")
 
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R3link = env.ltop.xlate("R3", "link")
+        R1link = R1["link"]
+        R2link = R2["link"]
+        R3link = R3["link"]
 
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R3data = env.ltop.xlate("R3", "data")
-        _, ABRdata = env.ltop.xlate("ABR", "data")
-        _, ABRlink1 = env.ltop.xlate("ABR", "link1")
-        _, ABRlink2 = env.ltop.xlate("ABR", "link2")
-        _, ABRlink3 = env.ltop.xlate("ABR", "link3")
+        ABRdata = ABR["data"]
+        ABRlink1 = ABR["link1"]
+        ABRlink2 = ABR["link2"]
+        ABRlink3 = ABR["link3"]
 
         util.parallel(lambda: config_generic(R1, 1, R1ring1, R1ring2, R1link),
                       lambda: config_generic(R2, 2, R2ring1, R2ring2, R2link),

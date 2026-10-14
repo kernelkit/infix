@@ -26,12 +26,12 @@ with infamy.Test() as test:
         env = infamy.Env()
         dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
                               lambda: env.attach("dut2", "mgmt"))
-        _, d1send = env.ltop.xlate("dut1", "data1")
-        _, d1receiver = env.ltop.xlate("dut1", "data2")
-        _, d1trunk = env.ltop.xlate("dut1", "link")
-        _, d2receive = env.ltop.xlate("dut2", "data1")
-        _, d2sender = env.ltop.xlate("dut2", "data2")
-        _, d2trunk = env.ltop.xlate("dut2", "link")
+        d1send = dut1["data1"]
+        d1receiver = dut1["data2"]
+        d1trunk = dut1["link"]
+        d2receive = dut2["data1"]
+        d2sender = dut2["data2"]
+        d2trunk = dut2["link"]
 
         _, hsendd1 = env.ltop.xlate("host", "data11")
         _, hreceived1 = env.ltop.xlate("host", "data12")

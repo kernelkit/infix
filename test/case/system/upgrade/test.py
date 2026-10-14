@@ -70,7 +70,7 @@ with infamy.Test() as test:
         print(f"Initial bootorder: {repr(old_bootorder)}")
 
         _, hport = env.ltop.xlate("host", "data")
-        _, tport = env.ltop.xlate("target", "data")
+        tport = target["data"]
         test.push_test_cleanup(lambda: cleanup(env, old_bootorder))
 
     netns = infamy.IsolatedMacVlan(hport).start()

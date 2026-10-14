@@ -21,8 +21,8 @@ with infamy.Test() as test:
         server, client = parallel(lambda: env.attach("server", "mgmt"),
                                   lambda: env.attach("client", "mgmt"))
 
-        _, server_data = env.ltop.xlate("server", "data")
-        _, client_data = env.ltop.xlate("client", "data")
+        server_data = server["data"]
+        client_data = client["data"]
 
     with test.step("Configure NTP server using ietf-ntp model and NTP client using ietf-system:ntp model"):
         parallel(

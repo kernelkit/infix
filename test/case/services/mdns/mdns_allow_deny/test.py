@@ -67,9 +67,9 @@ with infamy.Test() as test:
         env = infamy.Env()
         dut, ssh = parallel(lambda: env.attach("dut", "mgmt"),
                             lambda: env.attach("dut", "mgmt", "ssh"))
-        _, p1 = env.ltop.xlate("dut", "p1")
-        _, p2 = env.ltop.xlate("dut", "p2")
-        _, p3 = env.ltop.xlate("dut", "p3")
+        p1 = dut["p1"]
+        p2 = dut["p2"]
+        p3 = dut["p3"]
         _, eth1 = env.ltop.xlate("host", "eth1")
         _, eth2 = env.ltop.xlate("host", "eth2")
         _, eth3 = env.ltop.xlate("host", "eth3")

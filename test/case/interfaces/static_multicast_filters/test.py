@@ -60,9 +60,9 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, msend = env.ltop.xlate("target", "data1")
-        _, mreceive = env.ltop.xlate("target", "data2")
-        _, nojoin = env.ltop.xlate("target", "data3")
+        msend = target["data1"]
+        mreceive = target["data2"]
+        nojoin = target["data3"]
 
     ipv4_multicast_group = "224.1.1.1"
     mac_multicast_group = "01:00:00:01:02:03"

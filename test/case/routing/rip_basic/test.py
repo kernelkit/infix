@@ -167,10 +167,10 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "rip", R1, R2)
 
     with test.step("Configure targets"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2data = env.ltop.xlate("R2", "data")
+        R1data = R1["data"]
+        R2link = R2["link"]
+        R1link = R1["link"]
+        R2data = R2["data"]
 
         parallel(lambda: config_target1(R1, R1data, R1link, param),
                  lambda: config_target2(R2, R2link, R2data, param))

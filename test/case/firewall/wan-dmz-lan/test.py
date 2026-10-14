@@ -21,10 +21,10 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to gateway"):
         env = infamy.Env()
         gateway = env.attach("gateway", "mgmt")
-        _, wan_if = env.ltop.xlate("gateway", "wan")
-        _, dmz_if = env.ltop.xlate("gateway", "dmz")
-        _, lan_if = env.ltop.xlate("gateway", "lan")
-        _, mgmt_if = env.ltop.xlate("gateway", "mgmt")
+        wan_if = gateway["wan"]
+        dmz_if = gateway["dmz"]
+        lan_if = gateway["lan"]
+        mgmt_if = gateway["mgmt"]
         _, host_wan = env.ltop.xlate("host", "wan")
         _, host_dmz = env.ltop.xlate("host", "dmz")
         _, host_lan = env.ltop.xlate("host", "lan")

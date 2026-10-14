@@ -36,7 +36,7 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Configure data interface with static IPv4"):
-        _, ifname = env.ltop.xlate("target", "data")
+        ifname = target["data"]
         target.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {

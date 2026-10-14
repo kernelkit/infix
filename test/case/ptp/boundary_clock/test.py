@@ -139,10 +139,10 @@ with infamy.Test() as test:
                                     lambda: env.attach("bc",       "mgmt"),
                                     lambda: env.attach("receiver", "mgmt"))
 
-        _, gm_iface    = env.ltop.xlate("gm",       "data")
-        _, bc_uplink   = env.ltop.xlate("bc",       "uplink")
-        _, bc_dnlink   = env.ltop.xlate("bc",       "dnlink")
-        _, recv_iface  = env.ltop.xlate("receiver", "data")
+        gm_iface    = gm["data"]
+        bc_uplink   = bc["uplink"]
+        bc_dnlink   = bc["dnlink"]
+        recv_iface  = receiver["data"]
         threshold_ns = env.args.threshold_ns or ptp.default_threshold(env, "receiver", hops=2)
 
     with test.step(f"Configure grandmaster (OC, {profile}, priority1=1) and boundary clock (BC, {profile}, priority1=64, two ports)"):
