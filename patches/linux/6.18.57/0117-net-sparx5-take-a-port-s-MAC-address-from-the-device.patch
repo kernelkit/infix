@@ -1,7 +1,7 @@
 From 3d645e63ff982d7c323b20c6d054ef3cec3bcd53 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 14 Oct 2026 11:01:01 +0200
-Subject: [PATCH 117/118] net: sparx5: take a port's MAC address from the
+Subject: [PATCH 117/119] net: sparx5: take a port's MAC address from the
  device tree
 
 Every port gets the switch base address plus its port number plus one,

@@ -1,7 +1,7 @@
 From 57ed0e3c9767f4b57a0643d207f062a7fb776190 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 29 May 2024 13:20:41 +0200
-Subject: [PATCH 024/118] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
+Subject: [PATCH 024/119] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
  are available
 
 Switch the priority sourcing precdence to prefer VLAN PCP over IP

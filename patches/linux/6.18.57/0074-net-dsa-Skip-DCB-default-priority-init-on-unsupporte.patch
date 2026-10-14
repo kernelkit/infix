@@ -1,7 +1,7 @@
 From 46334fce5a274b6640c1801b144e721f9a89970d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 9 Sep 2026 17:04:21 +0200
-Subject: [PATCH 074/118] net: dsa: Skip DCB default priority init on
+Subject: [PATCH 074/119] net: dsa: Skip DCB default priority init on
  unsupported switches
 
 A driver serving several chip generations has one dsa_switch_ops for
