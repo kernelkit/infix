@@ -28,11 +28,13 @@ Not yet done:
 - TSN queueing.  PSFP and time aware shaping need `NET_SCH_TAPRIO`,
   `NET_ACT_GATE`, `NET_SCH_ETS`, and `NET_SCH_CBS`, all currently off
 - HSR/PRP offload, see above
-- MAC addresses.  With no environment in flash the board falls back to
-  `lan969x_otp_get_mac()`, which derives 30 addresses for this board
-  from OTP, but the OTP address block is blank on our sample, so
-  interfaces come up random.  Provisioning it is a one way operation,
-  `boot-monitor.rb --otp-data <offset>:<hexstring>` in monitor mode
+- MAC addresses from OTP.  With no environment in flash the board falls
+  back to `lan969x_otp_get_mac()`, which derives 30 addresses for this
+  board from OTP, but the OTP address block is blank on our sample.
+  Provisioning it is a one way operation, `boot-monitor.rb --otp-data
+  <offset>:<hexstring>` in monitor mode.  Until then, give the board a
+  base MAC in `/mnt/aux/vpd.bin`, see [VPD](../../../doc/vpd.md#vpd-file-on-the-aux-partition),
+  or its interfaces come up random
 
 ## Boot Chain
 

@@ -80,7 +80,8 @@ theirs from the base MAC as described in
 [Wi-Fi](wifi.md#multi-ssid-configuration).
 
 This is currently supported on the Banana Pi BPI-R3 family, the Banana
-Pi BPI-R4 family, and the Acer Connect Vero W6m.
+Pi BPI-R4 family, the Acer Connect Vero W6m, and the LAN969x boards: the
+Tactical 1000 and the EV23X71A.
 
 ## Product VPD
 
