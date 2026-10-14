@@ -106,8 +106,8 @@ const (
 
 // NETLINK_ROUTE multicast groups without a netlink library binding.
 const (
-	rtnlgrpMDB    = 26 // RTNLGRP_MDB, bridge multicast database
-	rtnlgrpBRVLAN = 35 // RTNLGRP_BRVLAN, bridge VLAN table (kernel 5.6+)
+	rtnlgrpMDB    = unix.RTNLGRP_MDB    // bridge multicast database
+	rtnlgrpBRVLAN = unix.RTNLGRP_BRVLAN // bridge VLAN table (kernel 5.6+)
 )
 
 // New creates a netlink monitor backed by ip/bridge batch query workers.
@@ -464,6 +464,11 @@ func (m *NLMonitor) refreshBridgeVLANs() bool {
 	bridges := iface.Bridges(m.links)
 	m.mu.Unlock()
 
+	// A bridge whose query fails keeps the globals it had, the batch
+	// may have died between two queries and a re-dump follows.
+	m.mu.Lock()
+	previous := m.vlanGlobals
+	m.mu.Unlock()
 	globals := make(map[string][]iface.VLANGlobal)
 	for name, br := range bridges {
 		if !br.VLANFiltering || br.Index == 0 {
@@ -471,6 +476,9 @@ func (m *NLMonitor) refreshBridgeVLANs() bool {
 		}
 		raw, err := m.query(m.brBatch, "vlan global show dev "+devRef(br.Index))
 		if err != nil {
+			if old, ok := previous[name]; ok {
+				globals[name] = old
+			}
 			continue
 		}
 		globals[name] = iface.ParseVLANGlobals(raw)
@@ -1096,7 +1104,7 @@ func (m *NLMonitor) query(b *ipbatch.Batch, command string) (json.RawMessage, er
 // subscribeRtnlGroup delivers a tick on ch for every message the kernel
 // multicasts on a NETLINK_ROUTE group.  Membership is added through
 // setsockopt rather than the bind mask nl.Subscribe builds, which has
-// room for groups 1-32 only; RTNLGRP_BRVLAN is 35.
+// room for groups 1-32 only; RTNLGRP_BRVLAN is 33.
 func (m *NLMonitor) subscribeRtnlGroup(ctx context.Context, group int, ch chan<- struct{}, errorCallback func(error)) error {
 	sock, err := nl.Subscribe(syscall.NETLINK_ROUTE)
 	if err != nil {
