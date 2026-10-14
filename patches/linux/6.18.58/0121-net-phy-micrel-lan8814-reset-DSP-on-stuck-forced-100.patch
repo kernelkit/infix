@@ -1,7 +1,7 @@
 From c660f8bc9f7e68e5ef3c2132ce2095641f81e8a2 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 16:42:51 +0200
-Subject: [PATCH 121/122] net: phy: micrel: lan8814: reset DSP on stuck forced
+Subject: [PATCH 121/123] net: phy: micrel: lan8814: reset DSP on stuck forced
  100BASE-TX
 
 With the speed forced to 100 Mbps, the LAN8814 DSP can fail to train on

@@ -1,7 +1,7 @@
 From 922da15eb23980f0ec1cd07979829e306c4acdcf Mon Sep 17 00:00:00 2001
 From: Yixun Lan <dlan@gentoo.org>
 Date: Tue, 23 Dec 2025 10:24:50 +0800
-Subject: [PATCH 095/122] mmc: sdhci-of-k1: add reset support
+Subject: [PATCH 095/123] mmc: sdhci-of-k1: add reset support
 
 The SDHCI controller of SpacemiT K1 SoC requires two resets, add
 support to explicitly request the reset line and deassert during
