@@ -1,7 +1,7 @@
 From dec106afe81cfac5b35b34f7063bb32027bef93d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 18 Oct 2026 11:31:40 +0200
-Subject: [PATCH 103/125] clk: mediatek: mt7988: keep the PCIe port clocks
+Subject: [PATCH 103/126] clk: mediatek: mt7988: keep the PCIe port clocks
  enabled
 
 The PCIe links on the Banana Pi BPI-R4 never come up when the PCIe

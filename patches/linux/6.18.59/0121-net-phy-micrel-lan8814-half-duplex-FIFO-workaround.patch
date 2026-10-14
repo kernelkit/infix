@@ -1,7 +1,7 @@
 From 8c2d3c2c145a2fdb293586131cf9e06022e2b12c Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 16:40:31 +0200
-Subject: [PATCH 121/125] net: phy: micrel: lan8814: half-duplex FIFO
+Subject: [PATCH 121/126] net: phy: micrel: lan8814: half-duplex FIFO
  workaround
 
 The LAN8814 may incur late collisions on half-duplex links (errata

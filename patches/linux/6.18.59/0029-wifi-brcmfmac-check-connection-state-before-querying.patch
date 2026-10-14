@@ -1,7 +1,7 @@
 From 83244a35d2ef03f6b3243720931928d5ac7510c9 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Mon, 19 Jan 2026 13:06:53 +0100
-Subject: [PATCH 029/125] wifi: brcmfmac: check connection state before
+Subject: [PATCH 029/126] wifi: brcmfmac: check connection state before
  querying station info
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
