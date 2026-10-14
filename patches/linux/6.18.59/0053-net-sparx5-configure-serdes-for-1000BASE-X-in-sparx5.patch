@@ -1,7 +1,7 @@
 From 981a6430a736f7f8870ca55b046a228a1154f58c Mon Sep 17 00:00:00 2001
 From: Daniel Machon <daniel.machon@microchip.com>
 Date: Wed, 6 May 2026 09:25:39 +0200
-Subject: [PATCH 053/122] net: sparx5: configure serdes for 1000BASE-X in
+Subject: [PATCH 053/123] net: sparx5: configure serdes for 1000BASE-X in
  sparx5_port_init()
 
 sparx5_port_init() only invokes sparx5_serdes_set() and the associated
