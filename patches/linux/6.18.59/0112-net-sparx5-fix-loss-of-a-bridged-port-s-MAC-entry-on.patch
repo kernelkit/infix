@@ -1,7 +1,7 @@
 From 48b329b7bf41d1b5a5b0cb18f2eb6eb2ab8f2c88 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 8 Oct 2026 13:55:20 +0200
-Subject: [PATCH 112/124] net: sparx5: fix loss of a bridged port's MAC entry
+Subject: [PATCH 112/125] net: sparx5: fix loss of a bridged port's MAC entry
  on link down
 
 Taking a bridged port down forgets its MAC address on the bridge VID,

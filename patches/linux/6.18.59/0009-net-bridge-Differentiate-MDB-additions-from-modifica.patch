@@ -1,7 +1,7 @@
 From 424fd59deb93c52955dee66ebf58c3e6da005506 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
-Subject: [PATCH 009/124] net: bridge: Differentiate MDB additions from
+Subject: [PATCH 009/125] net: bridge: Differentiate MDB additions from
  modifications
 
 Before this change, the reception of an IGMPv3 report (and analogously

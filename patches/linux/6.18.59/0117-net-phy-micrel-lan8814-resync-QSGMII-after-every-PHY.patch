@@ -1,7 +1,7 @@
 From e8246ddbc316480892389ae2c16fc904fe93eda4 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 15:42:34 +0200
-Subject: [PATCH 117/124] net: phy: micrel: lan8814: resync QSGMII after every
+Subject: [PATCH 117/125] net: phy: micrel: lan8814: resync QSGMII after every
  PHY reset
 
 On a LAN969x switch with LAN8804 quad PHYs, a copper port can come up

@@ -1,7 +1,7 @@
 From f1da50df705207472f023869c70f1ed12b504bb8 Mon Sep 17 00:00:00 2001
 From: Alex Elder <elder@riscstar.com>
 Date: Mon, 25 Aug 2025 12:20:54 -0500
-Subject: [PATCH 088/124] riscv: dts: spacemit: enable the i2c8 adapter
+Subject: [PATCH 088/125] riscv: dts: spacemit: enable the i2c8 adapter
 
 Define properties for the I2C adapter that provides access to the
 SpacemiT P1 PMIC.  Enable this adapter on the Banana Pi BPI-F3.
