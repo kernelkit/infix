@@ -1,7 +1,7 @@
 From 12cf129fd63364ce6aa8d1b865505493a7e4dcd2 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 20 Sep 2026 12:22:43 +0200
-Subject: [PATCH 072/116] arm64: dts: microchip: tactical-1000: adapt to 6.18
+Subject: [PATCH 072/117] arm64: dts: microchip: tactical-1000: adapt to 6.18
 
 Novarq develop against 7.3, which has three things 6.18 does not: a QSPI
 controller node, a tmon that also provides the fan PWM, and hence a SoC
