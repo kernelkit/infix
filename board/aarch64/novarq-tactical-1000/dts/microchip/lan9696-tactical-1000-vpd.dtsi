@@ -1,0 +1,181 @@
+/*
+ * Product VPD, an ONIE TLV that the boot loader copies from the aux
+ * partition into reserved memory.  The region is zeroed when there is
+ * no VPD, which leaves the layout without cells.  Ports reference the
+ * base MAC address with an index, <&base_mac N>, and get base + N as
+ * their permanent address.
+ */
+/ {
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		vpd: vpd@63e00000 {
+			compatible = "nvmem-rmem";
+			reg = <0x63e00000 0x10000>;
+			no-map;
+			infix,board = "product";
+
+			nvmem-layout {
+				compatible = "onie,tlv-layout";
+
+				base_mac: mac-address {
+					#nvmem-cell-cells = <1>;
+				};
+			};
+		};
+	};
+};
+
+&switch {
+	nvmem-cells = <&base_mac 0>;
+	nvmem-cell-names = "mac-address";
+};
+
+/* Port addresses in front panel order: e1 is base + 1, mgmt base + 29 */
+
+&port0 {
+	nvmem-cells = <&base_mac 4>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port1 {
+	nvmem-cells = <&base_mac 3>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port2 {
+	nvmem-cells = <&base_mac 2>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port3 {
+	nvmem-cells = <&base_mac 1>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port4 {
+	nvmem-cells = <&base_mac 8>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port5 {
+	nvmem-cells = <&base_mac 7>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port6 {
+	nvmem-cells = <&base_mac 6>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port7 {
+	nvmem-cells = <&base_mac 5>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port8 {
+	nvmem-cells = <&base_mac 12>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port9 {
+	nvmem-cells = <&base_mac 11>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port10 {
+	nvmem-cells = <&base_mac 10>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port11 {
+	nvmem-cells = <&base_mac 9>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port12 {
+	nvmem-cells = <&base_mac 16>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port13 {
+	nvmem-cells = <&base_mac 15>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port14 {
+	nvmem-cells = <&base_mac 14>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port15 {
+	nvmem-cells = <&base_mac 13>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port16 {
+	nvmem-cells = <&base_mac 20>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port17 {
+	nvmem-cells = <&base_mac 19>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port18 {
+	nvmem-cells = <&base_mac 18>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port19 {
+	nvmem-cells = <&base_mac 17>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port20 {
+	nvmem-cells = <&base_mac 24>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port21 {
+	nvmem-cells = <&base_mac 23>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port22 {
+	nvmem-cells = <&base_mac 22>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port23 {
+	nvmem-cells = <&base_mac 21>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port24 {
+	nvmem-cells = <&base_mac 25>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port25 {
+	nvmem-cells = <&base_mac 26>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port26 {
+	nvmem-cells = <&base_mac 27>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port27 {
+	nvmem-cells = <&base_mac 28>;
+	nvmem-cell-names = "mac-address";
+};
+
+&port29 {
+	nvmem-cells = <&base_mac 29>;
+	nvmem-cell-names = "mac-address";
+};
