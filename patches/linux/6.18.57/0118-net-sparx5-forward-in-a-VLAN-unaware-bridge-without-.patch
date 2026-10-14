@@ -1,7 +1,7 @@
 From 44084ca96c9a6d2cd053bbd808fe738c9aecb911 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 14 Oct 2026 14:46:53 +0200
-Subject: [PATCH 118/119] net: sparx5: forward in a VLAN-unaware bridge without
+Subject: [PATCH 118/120] net: sparx5: forward in a VLAN-unaware bridge without
  VLAN 1
 
 A VLAN-unaware bridge created with vlan_default_pvid 0 forwards nothing
