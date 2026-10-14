@@ -167,10 +167,10 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "rip", R1, R2)
 
     with test.step("Configure targets"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2data = env.ltop.xlate("R2", "data")
+        R1data = R1["data"]
+        R2link = R2["link"]
+        R1link = R1["link"]
+        R2data = R2["data"]
 
         parallel(lambda: config_target1(R1, R1data, R1link, param),
                  lambda: config_target2(R2, R2link, R2data, param))
@@ -187,14 +187,14 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R1, param["R2net"], af=af, proto="ietf-rip:rip"), attempts=40)
 
     with test.step(f"Test connectivity from PC:data1 to R2 loopback via {version}"):
-        _, hport0 = env.ltop.xlate("PC", "data1")
+        hport0 = env["PC"]["data1"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC1"], prefix_length=param["len"], proto=af)
             ns0.addroute(f"{param['R2lo']}/{plen}", param["R1data"], proto=af)
             ns0.must_reach(param["R2lo"])
 
     with test.step(f"Test connectivity from PC:data2 to R1 loopback via {version}"):
-        _, hport1 = env.ltop.xlate("PC", "data2")
+        hport1 = env["PC"]["data2"]
         with infamy.IsolatedMacVlan(hport1) as ns1:
             ns1.addip(param["PC2"], prefix_length=param["len"], proto=af)
             ns1.addroute(f"{param['R1lo']}/{plen}", param["R2data"], proto=af)

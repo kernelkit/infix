@@ -34,12 +34,12 @@ with infamy.Test() as test:
                               lambda: env.attach("dut2", "mgmt"))
 
     with test.step("Configure DUTs"):
-        _, tport10 = env.ltop.xlate("dut1", "data1")
-        _, tport11 = env.ltop.xlate("dut1", "data2")
-        _, tport12 = env.ltop.xlate("dut1", "link")
-        _, tport20 = env.ltop.xlate("dut2", "data1")
-        _, tport21 = env.ltop.xlate("dut2", "data2")
-        _, tport22 = env.ltop.xlate("dut2", "link")
+        tport10 = dut1["data1"]
+        tport11 = dut1["data2"]
+        tport12 = dut1["link"]
+        tport20 = dut2["data1"]
+        tport21 = dut2["data2"]
+        tport22 = dut2["link"]
 
         parallel(
             lambda: dut1.put_config_dicts({"ietf-interfaces": {
@@ -145,10 +145,10 @@ with infamy.Test() as test:
         )
 
 
-    _, hport10 = env.ltop.xlate("host", "data10")
-    _, hport11 = env.ltop.xlate("host", "data11")
-    _, hport20 = env.ltop.xlate("host", "data20")
-    _, hport21 = env.ltop.xlate("host", "data21")
+    hport10 = env["host"]["data10"]
+    hport11 = env["host"]["data11"]
+    hport20 = env["host"]["data20"]
+    hport21 = env["host"]["data21"]
 
     with infamy.IsolatedMacVlan(hport10) as ns10, \
          infamy.IsolatedMacVlan(hport11) as ns11, \

@@ -300,12 +300,12 @@ with infamy.Test() as test:
 
 
     with test.step("Configure targets"):
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R2link1 = env.ltop.xlate("R2", "link1")
-        _, R2link2 = env.ltop.xlate("R2", "link2")
-        _, R3link = env.ltop.xlate("R3", "link")
-        _, R3data = env.ltop.xlate("R3", "data")
+        R1link = R1["link"]
+        R1data = R1["data"]
+        R2link1 = R2["link1"]
+        R2link2 = R2["link2"]
+        R3link = R3["link"]
+        R3data = R3["data"]
 
         parallel(lambda: config_target1(R1, R1link, R1data),
                  lambda: config_target2(R2, R2link1, R2link2),
@@ -327,8 +327,8 @@ with infamy.Test() as test:
         assert route.ospf_get_interface_type(R3, "0.0.0.0", R3link) == "point-to-multipoint"
 
     with test.step("Verify connectivity between all DUTs"):
-        _, hport1 = env.ltop.xlate("PC", "data1")
-        _, hport2 = env.ltop.xlate("PC", "data2")
+        hport1 = env["PC"]["data1"]
+        hport2 = env["PC"]["data2"]
         with infamy.IsolatedMacVlan(hport1) as ns1, \
              infamy.IsolatedMacVlan(hport2) as ns2:
             ns1.addip("10.0.10.2")

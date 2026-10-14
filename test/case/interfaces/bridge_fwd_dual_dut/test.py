@@ -36,11 +36,11 @@ with infamy.Test() as test:
                               lambda: env.attach("dut2", "mgmt"))
 
     with test.step("Configure a bridge with triple physical port"):
-        _, tport11 = env.ltop.xlate("dut1", "data1")
-        _, tport1_link = env.ltop.xlate("dut1", "link")
-        _, tport21 = env.ltop.xlate("dut2", "data1")
-        _, tport22 = env.ltop.xlate("dut2", "data2")
-        _, tport2_link = env.ltop.xlate("dut2", "link")
+        tport11 = dut1["data1"]
+        tport1_link = dut1["link"]
+        tport21 = dut2["data1"]
+        tport22 = dut2["data2"]
+        tport2_link = dut2["link"]
 
         parallel(
             lambda: dut1.put_config_dicts({"ietf-interfaces": {
@@ -129,9 +129,9 @@ with infamy.Test() as test:
 
     with test.step("Verify ping 10.0.0.3 and 10.0.0.4 from host:data11"):
 
-        _, hport11 = env.ltop.xlate("host", "data11")
-        _, hport21 = env.ltop.xlate("host", "data21")
-        _, hport22 = env.ltop.xlate("host", "data22")
+        hport11 = env["host"]["data11"]
+        hport21 = env["host"]["data21"]
+        hport22 = env["host"]["data22"]
 
         with infamy.IsolatedMacVlan(hport11) as ns11, \
              infamy.IsolatedMacVlan(hport21) as ns21, \

@@ -14,10 +14,10 @@ with infamy.Test() as test:
       with test.step("Set up topology and attach to target DUT"):
             env = infamy.Env()
             target = env.attach("target", "mgmt")
-            _, tport = env.ltop.xlate("target", "data")
+            tport = target["data"]
 
       with test.step("Set up VLAN interface on host:data with IP 10.0.0.1"):
-            _, hport = env.ltop.xlate("host", "data")
+            hport = env["host"]["data"]
             datanet = infamy.IsolatedMacVlan(hport).start()
             datanet.runsh("""
                   set -ex
@@ -58,14 +58,14 @@ with infamy.Test() as test:
             until(lambda: iface.get_param(target, tport, "oper-status") == "up")
 
       with test.step("Verify that host:data can reach 10.0.0.2"):
-            _, hport = env.ltop.xlate("host", "data")
+            hport = env["host"]["data"]
             datanet.must_reach("10.0.0.2")
 
       with test.step("Remove VLAN interface from target:data"):
             target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{tport}.10']")
 
       with test.step("Verify that host:data can no longer reach 10.0.0.2"):
-            _, hport = env.ltop.xlate("host", "data")
+            hport = env["host"]["data"]
             datanet.must_not_reach("10.0.0.2")
 
       test.succeed()

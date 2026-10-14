@@ -172,22 +172,22 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "ospf", R1, R2)
 
     with test.step("Set up TPMR between R1ospf and R2ospf"):
-        ospf_breaker = TPMR(env.ltop.xlate("PC", "R1_ospf")[1], env.ltop.xlate("PC", "R2_ospf")[1]).start()
+        ospf_breaker = TPMR(env["PC"]["R1_ospf"], env["PC"]["R2_ospf"]).start()
 
     with test.step("Configure targets"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R1ospf = env.ltop.xlate("R1", "ospf")
-        _, R2data = env.ltop.xlate("R2", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R2ospf = env.ltop.xlate("R2", "ospf")
+        R1data = R1["data"]
+        R1link = R1["link"]
+        R1ospf = R1["ospf"]
+        R2data = R2["data"]
+        R2link = R2["link"]
+        R2ospf = R2["ospf"]
 
         parallel(lambda: config_target1(R1, R1data, R1link, R1ospf, param),
                  lambda: config_target2(R2, R2data, R2link, R2ospf, param))
 
     with test.step("Set up persistent MacVlan namespaces"):
-        _, hport_data1 = env.ltop.xlate("PC", "data1")
-        _, hport_data2 = env.ltop.xlate("PC", "data2")
+        hport_data1 = env["PC"]["data1"]
+        hport_data2 = env["PC"]["data2"]
 
         ns1 = infamy.IsolatedMacVlan(hport_data1).start()
         ns1.addip(param["PC1"], prefix_length=param["len"], proto=af)

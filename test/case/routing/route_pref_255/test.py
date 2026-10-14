@@ -99,10 +99,10 @@ with infamy.Test() as test:
                           lambda: env.attach("R2", "mgmt"))
 
     with test.step("Configure targets with active static route"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2data = env.ltop.xlate("R2", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
+        R1data = R1["data"]
+        R1link = R1["link"]
+        R2data = R2["data"]
+        R2link = R2["link"]
 
         parallel(lambda: config_target1_initial(R1, R1data, R1link), lambda: config_target2(R2, R2data, R2link))
 

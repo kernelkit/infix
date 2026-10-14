@@ -52,9 +52,9 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, data_if = env.ltop.xlate("target", "data")
-        _, mgmt_if = env.ltop.xlate("target", "mgmt")
-        _, host_data = env.ltop.xlate("host", "data")
+        data_if = target["data"]
+        mgmt_if = target["mgmt"]
+        host_data = env["host"]["data"]
         TARGET_IP = "192.168.1.1"
         HOST_IP = "192.168.1.42"
         STATIC_IP = "192.168.1.40"

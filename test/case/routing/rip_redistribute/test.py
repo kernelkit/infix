@@ -222,10 +222,10 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "ospf", R1, R3)
 
     with test.step("Configure routers"):
-        _, R1rip = env.ltop.xlate("R1", "rip")
-        _, R1ospf = env.ltop.xlate("R1", "ospf")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R3link = env.ltop.xlate("R3", "link")
+        R1rip = R1["rip"]
+        R1ospf = R1["ospf"]
+        R2link = R2["link"]
+        R3link = R3["link"]
 
         parallel(lambda: config_r1_gateway(R1, R1rip, R1ospf, param),
                  lambda: config_r2_rip(R2, R2link, param),

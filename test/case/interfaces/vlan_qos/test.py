@@ -57,11 +57,11 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, td0 = env.ltop.xlate("target", "data0")
-        _, td1 = env.ltop.xlate("target", "data1")
+        td0 = target["data0"]
+        td1 = target["data1"]
 
-        _, hd0 = env.ltop.xlate("host", "data0")
-        _, hd1 = env.ltop.xlate("host", "data1")
+        hd0 = env["host"]["data0"]
+        hd1 = env["host"]["data1"]
 
     with test.step("Apply initial config without priority mapping"):
         target.put_config_dicts({"ietf-interfaces": {

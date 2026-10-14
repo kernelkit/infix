@@ -13,7 +13,7 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, hport = env.ltop.xlate("host", "data")
+        hport = env["host"]["data"]
 
     with test.step("Set IPv4 address 10.0.0.10/24 on target:data and disable mDNS"):
         target.put_config_dicts({

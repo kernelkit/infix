@@ -76,10 +76,10 @@ with infamy.Test() as test:
             print("DUT does not advertise the 'ppp' feature -- skipping")
             test.skip()
 
-        _, host = env.ltop.xlate("host", "data")
-        _, port = env.ltop.xlate("client", "data")
-        _, hostlan = env.ltop.xlate("host", "lan")
-        _, lan = env.ltop.xlate("client", "lan")
+        host = env["host"]["data"]
+        port = client["data"]
+        hostlan = env["host"]["lan"]
+        lan = client["lan"]
 
     with test.step("Configure PPPoE client on wan, on top of the data port"):
         client.put_config_dicts({

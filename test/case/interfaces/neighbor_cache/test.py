@@ -21,7 +21,7 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, tport = env.ltop.xlate("target", "data")
+        tport = target["data"]
 
     with test.step("Configure static IPv4 ARP and IPv6 neighbor entries on target:data"):
         target.put_config_dicts({"ietf-interfaces": {

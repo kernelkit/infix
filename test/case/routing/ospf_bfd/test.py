@@ -150,27 +150,27 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "bfd", R1, R2)
 
     with test.step("Setup TPMR between R1fast and R2fast"):
-        breaker = TPMR(env.ltop.xlate("PC", "R1fast")[1],
-                       env.ltop.xlate("PC", "R2fast")[1]).start()
+        breaker = TPMR(env["PC"]["R1fast"],
+                       env["PC"]["R2fast"]).start()
 
     with test.step("Configure R1 and R2"):
         r1links = {
-            "data": env.ltop.xlate("R1", "h1")[1],
-            "fast": env.ltop.xlate("R1", "fast")[1],
-            "slow": env.ltop.xlate("R1", "slow")[1],
+            "data": R1["h1"],
+            "fast": R1["fast"],
+            "slow": R1["slow"],
         }
         r2links = {
-            "data": env.ltop.xlate("R2", "h2")[1],
-            "fast": env.ltop.xlate("R2", "fast")[1],
-            "slow": env.ltop.xlate("R2", "slow")[1],
+            "data": R2["h2"],
+            "fast": R2["fast"],
+            "slow": R2["slow"],
         }
 
         parallel(lambda: config(R1, "R1", r1links, param),
                  lambda: config(R2, "R2", r2links, param))
 
     with test.step("Setup IP addresses and default routes on h1 and h2"):
-        _, h1 = env.ltop.xlate("PC", "h1")
-        _, h2 = env.ltop.xlate("PC", "h2")
+        h1 = env["PC"]["h1"]
+        h2 = env["PC"]["h2"]
 
         h1net = infamy.IsolatedMacVlan(h1).start()
         h1net.addip(param["h1"], prefix_length=param["len"]["data"], proto=af)

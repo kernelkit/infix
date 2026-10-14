@@ -30,13 +30,13 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, hport = env.ltop.xlate("host", "data")
+        hport = env["host"]["data"]
 
         if not target.has_model("infix-containers"):
             test.skip()
 
     with test.step("Configure data interface with static IPv4"):
-        _, ifname = env.ltop.xlate("target", "data")
+        ifname = target["data"]
         target.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {

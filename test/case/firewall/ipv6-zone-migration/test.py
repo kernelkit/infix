@@ -19,11 +19,11 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, data1_if = env.ltop.xlate("target", "data1")
-        _, data2_if = env.ltop.xlate("target", "data2")
-        _, mgmt_if = env.ltop.xlate("target", "mgmt")
-        _, host_data1 = env.ltop.xlate("host", "data1")
-        _, host_data2 = env.ltop.xlate("host", "data2")
+        data1_if = target["data1"]
+        data2_if = target["data2"]
+        mgmt_if = target["mgmt"]
+        host_data1 = env["host"]["data1"]
+        host_data2 = env["host"]["data2"]
 
         # IPv4 addressing
         DATA1_NET_V4 = "10.1.1.0/24"

@@ -18,7 +18,7 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, interface_name = env.ltop.xlate("target", "mgmt")
+        interface_name = target["mgmt"]
 
     with test.step("Configure IPv4 address 10.10.10.20/24 on target:mgmt"):
         print(f"Initial IPv4 address for target:mgmt {iface.get_ipv4_address(target, interface_name)}")

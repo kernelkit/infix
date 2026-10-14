@@ -21,8 +21,8 @@ with infamy.Test() as test:
                                                         lambda: env.attach("server", "mgmt", "ssh"))
 
     with test.step("Configure client DUT as syslog client with server DUT as remote, and configure server DUT as syslog server"):
-        _, client_link = env.ltop.xlate("client", "link")
-        _, server_link = env.ltop.xlate("server", "link")
+        client_link = client["link"]
+        server_link = server["link"]
 
         parallel(
             lambda: client.put_config_dicts({

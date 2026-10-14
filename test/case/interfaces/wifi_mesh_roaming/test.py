@@ -117,7 +117,7 @@ with infamy.Test() as test:
         wifi.skip_unless_supported(test, client, *gw_duts)
 
     with test.step("Configure gw1, gw2, gw3 as mesh nodes with a roaming AP"):
-        _, gw1_uplink = env.ltop.xlate("gw1", "uplink")
+        gw1_uplink = gw1["uplink"]
         parallel(*[lambda name=name, dut=dut:
                    dut.put_config_dicts(gw_config(uplink=gw1_uplink if name == "gw1" else None))
                    for name, dut in gws])
@@ -174,7 +174,7 @@ with infamy.Test() as test:
 
     # The host sits on the wired LAN behind gw1; reaching the client proves
     # the frames cross the mesh backhaul (the client may be on any gw's AP).
-    _, hlan = env.ltop.xlate("host", "lan")
+    hlan = env["host"]["lan"]
     with infamy.IsolatedMacVlan(hlan) as ns:
         ns.addip(HOST_IP)
 

@@ -63,8 +63,8 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, hdata1 = env.ltop.xlate("host", "data1")
-        _, hdata2 = env.ltop.xlate("host", "data2")
+        hdata1 = env["host"]["data1"]
+        hdata2 = env["host"]["data2"]
 
     with test.step("Configure interfaces and disable LLDP daemon"):
         target.put_config_dicts({

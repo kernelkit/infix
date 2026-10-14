@@ -262,8 +262,8 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, hdata = env.ltop.xlate("host", "data")
-        _, tdata = env.ltop.xlate("target", "data")
+        hdata = env["host"]["data"]
+        tdata = target["data"]
         test.push_test_cleanup(lambda: cleanup(target, hdata, tdata))
 
     with test.step("Enable target interface"):

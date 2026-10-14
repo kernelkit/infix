@@ -35,10 +35,10 @@ with infamy.Test() as test:
         tgt = env.attach("target", "mgmt")
 
     with test.step("Configure bridge and VLAN interfaces on target"):
-        _, hdata1 = env.ltop.xlate(  "host", "data1")
-        _, hdata2 = env.ltop.xlate(  "host", "data2")
-        _, ddata1 = env.ltop.xlate("target", "data1")
-        _, ddata2 = env.ltop.xlate("target", "data2")
+        hdata1 = env["host"]["data1"]
+        hdata2 = env["host"]["data2"]
+        ddata1 = tgt["data1"]
+        ddata2 = tgt["data2"]
 
         tgt.put_config_dicts({
             "ietf-interfaces": {

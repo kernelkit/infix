@@ -82,8 +82,8 @@ with infamy.Test() as test:
         peer1, peer2 = parallel(lambda: env.attach("peer1", "mgmt"),
                                 lambda: env.attach("peer2", "mgmt"))
 
-        _, if1 = env.ltop.xlate("peer1", "data")
-        _, if2 = env.ltop.xlate("peer2", "data")
+        if1 = peer1["data"]
+        if2 = peer2["data"]
 
         duts = [
             (peer1, if1, "peer1", "192.168.3.1", "192.168.3.2"),
