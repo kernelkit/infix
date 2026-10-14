@@ -102,6 +102,10 @@ include::igmp_vlan/Readme.adoc[]
 
 <<<
 
+include::igmp_basic_3duts/Readme.adoc[]
+
+<<<
+
 include::static_multicast_filters/Readme.adoc[]
 
 <<<

@@ -1,0 +1,43 @@
+graph "igmp-basic-3duts" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <data1> data1 | <mgmt2> mgmt2 | <data2> data2 | <mgmt3> mgmt3 | <data3> data3 }",
+	    pos="0,10!",
+	    requires="controller",
+	];
+
+	dut1 [
+	    label="{ <mgmt> mgmt | <data> data | <link> link } | dut1 \n\n(br0)\n10.0.0.1/24",
+	    pos="12,20!",
+	    requires="infix",
+	];
+
+	dut2 [
+	    label="{ <west> west | <mgmt> mgmt | <data> data | <east> east } | dut2 \n\n(br0)",
+	    pos="12,10!",
+	    requires="infix",
+	];
+
+	dut3 [
+	    label="{ <link> link | <mgmt> mgmt | <data> data } | dut3 \n\n(br0)",
+	    pos="12,0!",
+	    requires="infix",
+	];
+
+	host:mgmt1 -- dut1:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- dut2:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt3 -- dut3:mgmt [requires="mgmt", color="lightgray"]
+
+	host:data1 -- dut1:data [color=black, fontcolor=black, taillabel="10.0.0.2/24"]
+	host:data2 -- dut2:data [color=black, fontcolor=black, taillabel="10.0.0.3/24"]
+	host:data3 -- dut3:data [color=black, fontcolor=black, taillabel="10.0.0.4/24"]
+
+	dut1:link -- dut2:west [color=black]
+	dut2:east -- dut3:link [color=black]
+}
