@@ -12,9 +12,7 @@ image::lan-wan.svg[align=center, scaledwidth=50%]
 - Test host's WAN interface acts as an Internet server/destination
 """
 
-import time
 import infamy
-from infamy.util import until
 
 
 with infamy.Test() as test:

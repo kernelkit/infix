@@ -12,9 +12,7 @@ image::wan-dmz-lan.svg[align=center, scaledwidth=50%]
 - Test host's LAN interface acts as internal LAN client
 """
 
-import time
 import infamy
-from infamy.util import until
 
 
 with infamy.Test() as test:

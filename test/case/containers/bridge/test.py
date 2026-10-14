@@ -9,9 +9,8 @@ mounts, i.e., custom index.html from running-config.
 This also verifies port forwarding from container internal port to a
 port accessed from the host.
 """
-import base64
 import infamy
-from   infamy.util import until, to_binary, curl
+from   infamy.util import until, curl
 
 with infamy.Test() as test:
     NAME  = "web-docker0"
