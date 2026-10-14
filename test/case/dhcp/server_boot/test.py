@@ -80,7 +80,7 @@ with infamy.Test() as test:
             until(lambda: client.lease() == (SERVER, SUBNET_FILE))
 
         with test.step("Verify static host gets its own boot file"):
-            ns.run(["ip", "link", "set", "iface", "address", HOST_MAC])
+            until(lambda: ns.run(["ip", "link", "set", "iface", "address", HOST_MAC], check=True))
             until(lambda: client.lease() == (SERVER, HOST_FILE))
 
         with test.step("Remove subnet and host boot, verify client falls back to global boot file and server"):
