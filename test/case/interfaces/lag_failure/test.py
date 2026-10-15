@@ -27,10 +27,10 @@ class LinkBreaker:
 
     def __init__(self, sys, netns):
         self.net = netns
-        self.lb1 = TPMR(sys.ltop.xlate("host", "lb1a")[1],
-                        sys.ltop.xlate("host", "lb1b")[1]).start()
-        self.lb2 = TPMR(sys.ltop.xlate("host", "lb2a")[1],
-                        sys.ltop.xlate("host", "lb2b")[1]).start()
+        self.lb1 = TPMR(sys["host"]["lb1a"],
+                        sys["host"]["lb1b"]).start()
+        self.lb2 = TPMR(sys["host"]["lb2a"],
+                        sys["host"]["lb2b"]).start()
 
     def forward(self, lb1, lb2):
         """Set link breakers in forwarding or blocking state."""
@@ -125,7 +125,7 @@ with infamy.Test() as test:
         dut1, dut2 = parallel(lambda: env.attach("dut1"),
                               lambda: env.attach("dut2"))
 
-    _, mon = env.ltop.xlate("host", "mon")
+    mon = env["host"]["mon"]
     with infamy.IsolatedMacVlan(mon) as ns:
         lb = LinkBreaker(env, ns)
         ns.addip(IPH)

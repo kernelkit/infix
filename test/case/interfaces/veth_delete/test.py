@@ -20,8 +20,8 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-        _, data1 = env.ltop.xlate("target", "data1")
-        _, data2 = env.ltop.xlate("target", "data2")
+        data1 = target["data1"]
+        data2 = target["data2"]
 
         veth0a = "veth0a"
         veth0b = "veth0b"

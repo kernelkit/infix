@@ -28,7 +28,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target, tgtssh = parallel(lambda: env.attach("target", "mgmt"),
                                   lambda: env.attach("target", "mgmt", "ssh"))
-        _, hport = env.ltop.xlate("host", "data")
+        hport = env["host"]["data"]
         test.push_test_cleanup(lambda: tgtssh.runsh(f"sudo rm -f {ROOT}/{PUBLIC} {ROOT}/{PRIVATE}"))
 
     with test.step("Configure target:data with 10.0.0.10/24 and enable TFTP server"):

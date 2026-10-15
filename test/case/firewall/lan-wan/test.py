@@ -21,11 +21,11 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to gateway"):
         env = infamy.Env()
         gateway = env.attach("gateway", "mgmt")
-        _, lan_if = env.ltop.xlate("gateway", "lan")
-        _, wan_if = env.ltop.xlate("gateway", "wan")
-        _, mgmt_if = env.ltop.xlate("gateway", "mgmt")
-        _, host_lan = env.ltop.xlate("host", "lan")  # Host LAN-side interface
-        _, host_wan = env.ltop.xlate("host", "wan")  # Host WAN-side interface
+        lan_if = gateway["lan"]
+        wan_if = gateway["wan"]
+        mgmt_if = gateway["mgmt"]
+        host_lan = env["host"]["lan"]  # Host LAN-side interface
+        host_wan = env["host"]["wan"]  # Host WAN-side interface
 
         LAN_NET = "192.168.1.0/24"
         LAN_ROUTER_IP = "192.168.1.1"     # Router's LAN interface

@@ -117,22 +117,22 @@ with infamy.Test() as test:
                           lambda: env.attach("R2", "mgmt"))
 
     with test.step("Configure targets. Assign higher priority to the dhcp route"):
-        _, R1data1 = env.ltop.xlate("R1", "data1")
-        _, R1data2 = env.ltop.xlate("R1", "data2")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2data = env.ltop.xlate("R2", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
+        R1data1 = R1["data1"]
+        R1data2 = R1["data2"]
+        R1link = R1["link"]
+        R2data = R2["data"]
+        R2link = R2["link"]
 
         parallel(lambda: config_target1(R1, R1data1, R1data2, R1link), 
                  lambda: config_target2(R2, R2data, R2link))
 
-        _, hport_data12 = env.ltop.xlate("PC", "data12")
+        hport_data12 = env["PC"]["data12"]
         ns0 = infamy.IsolatedMacVlan(hport_data12).start()
         ns0.addip("192.168.30.3", prefix_length=24)
         ns0.addroute("default", "192.168.30.1")
 
-        _, hport_data11 = env.ltop.xlate("PC", "data11")
-        _, hport_data2 = env.ltop.xlate("PC", "data2")
+        hport_data11 = env["PC"]["data11"]
+        hport_data2 = env["PC"]["data2"]
         ifmap={ hport_data11: "a", hport_data2: "b" }
         ns1 = IsolatedMacVlans(ifmap, False).start()
 

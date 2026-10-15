@@ -153,8 +153,8 @@ with infamy.Test() as test:
                           lambda: env.attach("R2", "mgmt"))
         route.skip_unless_supported(test, proto, R1, R2)
 
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2link = env.ltop.xlate("R2", "link")
+        R1link = R1["link"]
+        R2link = R2["link"]
 
     with test.step(f"Configure {proto} for IPv4 and IPv6 on R1 and R2"):
         parallel(lambda: config_target(R1, "R1", R1link, proto),

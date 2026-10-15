@@ -25,7 +25,7 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Create httpd container from bundled OCI image"):
-        _, ifname = env.ltop.xlate("target", "data")
+        ifname = target["data"]
 
         target.put_config_dicts({
             "ietf-interfaces": {
@@ -62,7 +62,7 @@ with infamy.Test() as test:
         c = infamy.Container(target)
         until(lambda: c.running(NAME), attempts=60)
 
-    _, hport = env.ltop.xlate("host", "data")
+    hport = env["host"]["data"]
 
     with infamy.IsolatedMacVlan(hport) as ns:
         ns.addip(OURIP)

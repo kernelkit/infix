@@ -178,7 +178,7 @@ with infamy.Test() as test:
         guest_ap_mac = wifi.phys_address(repeater, "wifi2")
 
     with test.step("Configure the root with access point 'infix-backhaul', WDS port wds0 for the repeater's station and the uplink tagged in VLAN 10 and 20, DHCP in each VLAN with fixed addresses for home and guest"):
-        _, uplink = env.ltop.xlate("root", "uplink")
+        uplink = root["uplink"]
         root.put_config_dicts(root_config(uplink, wifi.phys_address(repeater, "wifi0"),
                                           wifi.phys_address(home, "wifi0"),
                                           wifi.phys_address(guest, "wifi0")))
@@ -201,7 +201,7 @@ with infamy.Test() as test:
     with test.step("Verify guest leases 10.20.0.9 from the root's VLAN 20 DHCP server through the backhaul"):
         until(lambda: iface.address_exist(guest, "wifi0", GUEST_IP), attempts=60, interval=2)
 
-    _, hlan = env.ltop.xlate("host", "lan")
+    hlan = env["host"]["lan"]
     with infamy.IsolatedMacVlan(hlan) as ns:
         ns.runsh(f"""
             set -ex

@@ -103,6 +103,10 @@ class Env(object):
         global ENV
         ENV = self
 
+    def __getitem__(self, node):
+        """Port mapping of a logical node, e.g. env["host"]["data"]."""
+        return self.ltop.mapping[node]
+
     def attr(self, name, default=None):
         val = self.ptop.get_attr("ix_" + name)
         if val is None:

@@ -229,8 +229,8 @@ with infamy.Test() as test:
         R1ssh.runsh("sudo rm -f /var/log/ospf-debug")
 
     with test.step("Configure R1 and R2 without debug enabled"):
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2link = env.ltop.xlate("R2", "link")
+        R1link = R1["link"]
+        R2link = R2["link"]
 
         parallel(lambda: config_target1(R1, R1link, enable_debug=False),
                  lambda: config_target2(R2, R2link))

@@ -10,8 +10,13 @@ how interfaces differ between devices:
 
   1. The operational interfaces are exactly the configured ones: none
      missing, and none present that were never configured.
-  2. Features the test-config leaves disabled (NTP, containers, routing
-     protocols) emit no operational data.
+  2. Each interface carries exactly the configured addresses, apart
+     from link-local and autoconfigured IPv6 ones.
+  3. The routing tables hold only connected routes for the configured
+     addresses and kernel routes, nothing static and nothing learned.
+  4. Features the test-config leaves disabled (NTP, containers, routing
+     protocols, firewall, PTP) emit no operational data, and the DHCP
+     server holds no leases.
 
 Both checks use specific-path GETs, which behave the same on NETCONF and
 RESTCONF.  A full-datastore GET is not portable: RESTCONF does not serve
@@ -25,6 +30,8 @@ physical topology provides.
 
 . Attach to all DUTs in the topology
 . Verify operational interfaces match the test-config
+. Verify operational addresses on each interface match the test-config
+. Verify the routing tables hold only kernel and connected routes for configured addresses
 . Verify unconfigured feature subtrees are absent
 
 

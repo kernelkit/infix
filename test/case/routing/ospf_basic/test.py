@@ -205,11 +205,11 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "ospf", R1, R2)
 
     with test.step("Configure targets"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2data = env.ltop.xlate("R2", "data")
-        _, HOSTlink = env.ltop.xlate("HOST", "link")
+        R1data = R1["data"]
+        R2link = R2["link"]
+        R1link = R1["link"]
+        R2data = R2["data"]
+        HOSTlink = HOST["link"]
 
         parallel(lambda: config_target1(R1, R1data, R1link, param),
                  lambda: config_target2(R2, R2link, R2data, param),
@@ -228,7 +228,7 @@ with infamy.Test() as test:
         assert route.ospf_has_neighbors(R2, proto=f"infix-routing:{version}")
 
     with test.step("Test connectivity from PC:data to R2 loopback"):
-        _, hport0 = env.ltop.xlate("PC", "data")
+        hport0 = env["PC"]["data"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(f"{param['R2lo']}/{plen}", param["R1data"], proto=af)

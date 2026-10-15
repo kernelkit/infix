@@ -14,7 +14,7 @@ with infamy.Test() as test:
         DESC = "Kilroy was here"
 
     with test.step("Set up interface target:data with description"):
-        _, tport = env.ltop.xlate("target", "data")
+        tport = target["data"]
 
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {

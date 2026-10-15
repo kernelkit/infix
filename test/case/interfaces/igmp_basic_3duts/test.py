@@ -68,17 +68,17 @@ with infamy.Test() as test:
         dut1, dut2, dut3 = parallel(lambda: env.attach("dut1", "mgmt"),
                                     lambda: env.attach("dut2", "mgmt"),
                                     lambda: env.attach("dut3", "mgmt"))
-        _, d1data = env.ltop.xlate("dut1", "data")
-        _, d1link = env.ltop.xlate("dut1", "link")
-        _, d2data = env.ltop.xlate("dut2", "data")
-        _, d2west = env.ltop.xlate("dut2", "west")
-        _, d2east = env.ltop.xlate("dut2", "east")
-        _, d3data = env.ltop.xlate("dut3", "data")
-        _, d3link = env.ltop.xlate("dut3", "link")
+        d1data = dut1["data"]
+        d1link = dut1["link"]
+        d2data = dut2["data"]
+        d2west = dut2["west"]
+        d2east = dut2["east"]
+        d3data = dut3["data"]
+        d3link = dut3["link"]
 
-        _, hsend = env.ltop.xlate("host", "data1")
-        _, hnojoin = env.ltop.xlate("host", "data2")
-        _, hreceive = env.ltop.xlate("host", "data3")
+        hsend = env["host"]["data1"]
+        hnojoin = env["host"]["data2"]
+        hreceive = env["host"]["data3"]
 
     with test.step("Configure bridges with IGMP snooping on all DUTs, querier on dut1 with 10.0.0.1/24"):
         parallel(lambda: dut1.put_config_dicts(bridge([d1data, d1link], "10.0.0.1")),

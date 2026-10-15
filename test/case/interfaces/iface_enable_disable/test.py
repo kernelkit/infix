@@ -77,11 +77,11 @@ with infamy.Test() as test:
         target1, target2 = parallel(lambda: env.attach("target1", "mgmt"),
                                     lambda: env.attach("target2", "mgmt"))
 
-        _, data1 = env.ltop.xlate("target1", "data")
-        _, link1 = env.ltop.xlate("target1", "link")
+        data1 = target1["data"]
+        link1 = target1["link"]
 
-        _, iface_under_test = env.ltop.xlate("target2", "link")
-        _, host_send_iface = env.ltop.xlate("host", "data")
+        iface_under_test = target2["link"]
+        host_send_iface = env["host"]["data"]
         _bridge = "br_0"
 
         target_address = "10.10.10.2"

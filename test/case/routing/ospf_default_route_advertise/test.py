@@ -253,10 +253,10 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "ospf", R1, R2)
 
     with test.step("Configure targets"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R2data = env.ltop.xlate("R2", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R1link = env.ltop.xlate("R1", "link")
+        R1data = R1["data"]
+        R2data = R2["data"]
+        R2link = R2["link"]
+        R1link = R1["link"]
 
         parallel(lambda: config_target1(R1, R1data, R1link, param),
                  lambda: config_target2(R2, R2data, R2link, param))
@@ -279,7 +279,7 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R1, param["R2net"], af=af, proto=proto, active_check=True), attempts=200)
 
     with test.step("Verify connectivity from PC:data2 to R1's dummy interface"):
-        _, hport0 = env.ltop.xlate("PC", "data2")
+        hport0 = env["PC"]["data2"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(param["default"], param["R2data"], proto=af)
@@ -294,7 +294,7 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R2, param["default"], af=af, proto=proto) == False, attempts=200)
 
     with test.step("Verify no connectivity from PC:data2 to R1's dummy interface"):
-        _, hport0 = env.ltop.xlate("PC", "data2")
+        hport0 = env["PC"]["data2"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(param["default"], param["R2data"], proto=af)
@@ -317,7 +317,7 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R2, param["default"], af=af, proto=proto, active_check=True), attempts=200)
 
     with test.step("Verify connectivity from PC:data2 to R1's dummy interface"):
-        _, hport0 = env.ltop.xlate("PC", "data2")
+        hport0 = env["PC"]["data2"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(param["default"], param["R2data"], proto=af)

@@ -30,8 +30,8 @@ with infamy.Test() as test:
         if not target.has_model("infix-containers"):
             test.skip()
 
-        _, hport = env.ltop.xlate("host", "data")
-        _, tport = env.ltop.xlate("target", "data")
+        hport = env["host"]["data"]
+        tport = target["data"]
 
     with test.step("Detect target architecture"):
         # Query operational datastore for machine architecture

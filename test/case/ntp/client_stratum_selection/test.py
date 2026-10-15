@@ -45,10 +45,10 @@ with infamy.Test() as test:
         srv2, client = parallel(lambda: env.attach("srv2", "mgmt"),
                                 lambda: env.attach("client", "mgmt"))
 
-        _, swp1 = env.ltop.xlate("srv2", "swp1")
-        _, swp2 = env.ltop.xlate("srv2", "swp2")
-        _, eth0 = env.ltop.xlate("client", "eth0")
-        _, srv1 = env.ltop.xlate("host", "srv1")
+        swp1 = srv2["swp1"]
+        swp2 = srv2["swp2"]
+        eth0 = client["eth0"]
+        srv1 = env["host"]["srv1"]
 
     with infamy.IsolatedMacVlan(srv1) as ns_srv1:
         ns_srv1.addip(ips["srv1"])

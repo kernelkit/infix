@@ -48,7 +48,7 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Configure interface target:data with IPv4 ZeroConf IP"):
-        _, tport = env.ltop.xlate("target", "data")
+        tport = target["data"]
 
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
@@ -68,7 +68,7 @@ with infamy.Test() as test:
         until(lambda: has_linklocal(target, tport), attempts=30)
 
     with test.step("Configure target:data with a specific IPv4 ZeroConf IP"):
-        _, tport = env.ltop.xlate("target", "data")
+        tport = target["data"]
 
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {

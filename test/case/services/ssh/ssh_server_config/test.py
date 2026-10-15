@@ -24,8 +24,8 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-        _, data1 = env.ltop.xlate("target", "data1")
-        _, data2 = env.ltop.xlate("target", "data2")
+        data1 = target["data1"]
+        data2 = target["data2"]
 
     with test.step("Configure SSH server"):
         SSH_PORT_1 = 777
@@ -105,8 +105,8 @@ with infamy.Test() as test:
         until(lambda: netutil.tcp_port_is_open(target.get_mgmt_ip(), 22))
 
     with test.step("Verify SSH public keys"):
-        _, hport1 = env.ltop.xlate("host", "data1")
-        _, hport2 = env.ltop.xlate("host", "data2")
+        hport1 = env["host"]["data1"]
+        hport2 = env["host"]["data2"]
 
         with infamy.IsolatedMacVlan(hport1) as ns77:
             ns77.addip("77.77.77.70", prefix_length=24)

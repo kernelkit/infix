@@ -26,17 +26,17 @@ with infamy.Test() as test:
         env = infamy.Env()
         dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
                               lambda: env.attach("dut2", "mgmt"))
-        _, d1send = env.ltop.xlate("dut1", "data1")
-        _, d1receiver = env.ltop.xlate("dut1", "data2")
-        _, d1trunk = env.ltop.xlate("dut1", "link")
-        _, d2receive = env.ltop.xlate("dut2", "data1")
-        _, d2sender = env.ltop.xlate("dut2", "data2")
-        _, d2trunk = env.ltop.xlate("dut2", "link")
+        d1send = dut1["data1"]
+        d1receiver = dut1["data2"]
+        d1trunk = dut1["link"]
+        d2receive = dut2["data1"]
+        d2sender = dut2["data2"]
+        d2trunk = dut2["link"]
 
-        _, hsendd1 = env.ltop.xlate("host", "data11")
-        _, hreceived1 = env.ltop.xlate("host", "data12")
-        _, hreceived2 = env.ltop.xlate("host", "data21")
-        _, hsendd2 = env.ltop.xlate("host", "data22")
+        hsendd1 = env["host"]["data11"]
+        hreceived1 = env["host"]["data12"]
+        hreceived2 = env["host"]["data21"]
+        hsendd2 = env["host"]["data22"]
 
 
     with test.step("Configure device"):

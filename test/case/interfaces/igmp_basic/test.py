@@ -41,9 +41,9 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, msend = env.ltop.xlate("target", "data1")
-        _, mreceive = env.ltop.xlate("target", "data2")
-        _, nojoin = env.ltop.xlate("target", "data3")
+        msend = target["data1"]
+        mreceive = target["data2"]
+        nojoin = target["data3"]
 
     with test.step("Configure device"):
         target.put_config_dicts({"ietf-interfaces":
@@ -97,9 +97,9 @@ with infamy.Test() as test:
                             }
                         }})
 
-    _, hsend = env.ltop.xlate("host", "data1")
-    _, hreceive = env.ltop.xlate("host", "data2")
-    _, hnojoin = env.ltop.xlate("host", "data3")
+    hsend = env["host"]["data1"]
+    hreceive = env["host"]["data2"]
+    hnojoin = env["host"]["data3"]
     with infamy.IsolatedMacVlan(hsend) as send_ns, \
          infamy.IsolatedMacVlan(hreceive) as receive_ns, \
          infamy.IsolatedMacVlan(hnojoin) as nojoin_ns:

@@ -85,8 +85,8 @@ with infamy.Test() as test:
         alpha, beta = parallel(lambda: env.attach("alpha", "mgmt"),
                                lambda: env.attach("beta",  "mgmt"))
 
-        _, if_alpha = env.ltop.xlate("alpha", "data")
-        _, if_beta  = env.ltop.xlate("beta",  "data")
+        if_alpha = alpha["data"]
+        if_beta = beta["data"]
 
     with test.step(f"Configure both DUTs ({profile}); alpha has lower priority1"):
         parallel(

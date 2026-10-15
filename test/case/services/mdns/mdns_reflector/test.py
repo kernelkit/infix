@@ -56,12 +56,12 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         dut = env.attach("dut", "mgmt")
-        _, ddata1 = env.ltop.xlate("dut", "data1")
-        _, ddata2 = env.ltop.xlate("dut", "data2")
-        _, ddata3 = env.ltop.xlate("dut", "data3")
-        _, hdata1 = env.ltop.xlate("host", "data1")
-        _, hdata2 = env.ltop.xlate("host", "data2")
-        _, hdata3 = env.ltop.xlate("host", "data3")
+        ddata1 = dut["data1"]
+        ddata2 = dut["data2"]
+        ddata3 = dut["data3"]
+        hdata1 = env["host"]["data1"]
+        hdata2 = env["host"]["data2"]
+        hdata3 = env["host"]["data3"]
 
     with test.step("Configure device interfaces and enable mDNS"):
         dut.put_config_dicts(

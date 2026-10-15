@@ -17,12 +17,12 @@ with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env()
         client = env.attach("client", "mgmt")
-        _, host = env.ltop.xlate("host", "data")
+        host = env["host"]["data"]
 
     with infamy.IsolatedMacVlan(host) as netns:
         netns.addip("10.0.0.1")
         with infamy.dhcp.Server(netns, ip=ADDRESS):
-            _, port = env.ltop.xlate("client", "data")
+            port = client["data"]
             config = {
                 "interfaces": {
                     "interface": [{

@@ -15,7 +15,7 @@ with infamy.Test() as test:
                                   lambda: env.attach("target", "mgmt", "ssh"))
 
     with test.step("Setting up bridge with IPv6 SLAAC for global prefix on target:data"):
-        _, tport = env.ltop.xlate("target", "data")
+        tport = target["data"]
 
         target.put_config_dicts({"ietf-interfaces": {
             "interfaces": {

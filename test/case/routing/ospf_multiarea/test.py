@@ -309,20 +309,20 @@ with infamy.Test() as test:
                                   lambda: env.attach("R4", "mgmt"))
         route.skip_unless_supported(test, "ospf", R1, R2, R3, R4)
 
-        _, R1ring1 = env.ltop.xlate("R1", "ring1")
-        _, R1ring2 = env.ltop.xlate("R1", "ring2")
-        _, R2ring1 = env.ltop.xlate("R2", "ring1")
-        _, R2ring2 = env.ltop.xlate("R2", "ring2")
-        _, R3ring2 = env.ltop.xlate("R3", "ring2")
-        _, R4ring1 = env.ltop.xlate("R4", "ring1")
+        R1ring1 = R1["ring1"]
+        R1ring2 = R1["ring2"]
+        R2ring1 = R2["ring1"]
+        R2ring2 = R2["ring2"]
+        R3ring2 = R3["ring2"]
+        R4ring1 = R4["ring1"]
 
-        _, R3data = env.ltop.xlate("R3", "data")
-        _, R4data = env.ltop.xlate("R4", "data")
+        R3data = R3["data"]
+        R4data = R4["data"]
 
-        _, R1cross = env.ltop.xlate("R1", "cross")
-        _, R2cross = env.ltop.xlate("R2", "cross")
-        _, R3cross = env.ltop.xlate("R3", "cross")
-        _, R4cross = env.ltop.xlate("R4", "cross")
+        R1cross = R1["cross"]
+        R2cross = R2["cross"]
+        R3cross = R3["cross"]
+        R4cross = R4["cross"]
 
     with test.step("Configure targets"):
         parallel(lambda: config_target1(R1, R1ring1, R1ring2, R1cross, param),
@@ -388,14 +388,14 @@ with infamy.Test() as test:
                      *[(lambda net=net: until(lambda: route.route_exist(R3, net, af=af, proto=proto), attempts=200))
                        for net in param["R2"]["stubnets"]])
 
-    _, hport0 = env.ltop.xlate("PC", "data3")
+    hport0 = env["PC"]["data3"]
     with infamy.IsolatedMacVlan(hport0) as ns0:
         with test.step("Testing connectivity through NSSA area, from PC:data3 to R1's stub network"):
             ns0.addip(param["PC3"], prefix_length=param["netlen"], proto=af)
             ns0.addroute(param["default"], param["R3"]["data"], proto=af)
             ns0.must_reach(param["R1"]["stub"])
 
-    _, hport0 = env.ltop.xlate("PC", "data4")
+    hport0 = env["PC"]["data4"]
     with infamy.IsolatedMacVlan(hport0) as ns0:
         ns0.addip(param["PC4"], prefix_length=param["netlen"], proto=af)
         ns0.addroute(param["default"], param["R4"]["data"], proto=af)

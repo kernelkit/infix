@@ -68,8 +68,8 @@ with infamy.Test() as test:
         env  = infamy.Env()
         target = env.attach("target", "mgmt")
 
-        _, eth_Q = env.ltop.xlate("target", "ethQ")
-        _, eth_X = env.ltop.xlate("target", "ethX")
+        eth_Q = target["ethQ"]
+        eth_X = target["ethX"]
 
         eth_Q_10 = f"{eth_Q}.10"
         eth_X_30 = f"{eth_X}.30"

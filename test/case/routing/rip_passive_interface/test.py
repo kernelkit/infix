@@ -140,9 +140,9 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "rip", R1, R2)
 
     with test.step("Configure targets"):
-        _, R1data = env.ltop.xlate("R1", "data")
-        _, R2link = env.ltop.xlate("R2", "link")
-        _, R1link = env.ltop.xlate("R1", "link")
+        R1data = R1["data"]
+        R2link = R2["link"]
+        R1link = R1["link"]
 
         parallel(lambda: config_target1(R1, R1data, R1link, param),
                  lambda: config_target2(R2, R2link, param))
@@ -155,7 +155,7 @@ with infamy.Test() as test:
 
     with test.step("Verify connectivity to passive interface network"):
         # Test that we can reach the passive interface from PC
-        _, hport0 = env.ltop.xlate("PC", "data")
+        hport0 = env["PC"]["data"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             # No need for route since we're on the same network

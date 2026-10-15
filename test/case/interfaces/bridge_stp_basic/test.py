@@ -144,7 +144,7 @@ with infamy.Test() as test:
         a, b, c, d = parallel(lambda: env.attach("A"), lambda: env.attach("B"),
                               lambda: env.attach("C"), lambda: env.attach("D"))
 
-        host = { p: env.ltop.xlate("host", p)[1] for p in ("a", "b", "c", "d") }
+        host = {p: env["host"][p] for p in ("a", "b", "c", "d")}
 
     with test.step("Configure a bridge with spanning tree eneabled on dut a, b, c, and d"):
         parallel(lambda: addbr(a), lambda: addbr(b), lambda: addbr(c), lambda: addbr(d))

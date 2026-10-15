@@ -159,8 +159,8 @@ with infamy.Test() as test:
                           lambda: env.attach("R2", "mgmt"))
         route.skip_unless_supported(test, "ospf", R1, R2)
 
-        _, R1link = env.ltop.xlate("R1", "link")
-        _, R2link = env.ltop.xlate("R2", "link")
+        R1link = R1["link"]
+        R2link = R2["link"]
 
     def set_both(refbw):
         parallel(lambda: set_reference_bandwidth(R1, refbw, proto),
