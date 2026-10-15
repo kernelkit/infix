@@ -1,7 +1,7 @@
 From 664ed53f4cf53592f4e2b119ad3c08672e37c5b4 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 22 Sep 2026 13:51:07 +0200
-Subject: [PATCH 075/127] net: dsa: Generalise the global DCB APP mirroring
+Subject: [PATCH 075/128] net: dsa: Generalise the global DCB APP mirroring
  helper
 
 A switch with one classification table for all its ports programs it
