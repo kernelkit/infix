@@ -1,7 +1,7 @@
 From ef2e12ec6f3d4f6624400499cc31f206ff734b4c Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 7 Oct 2026 11:42:12 +0200
-Subject: [PATCH 079/125] net: sparx5: fix sleep in atomic context in MAC table
+Subject: [PATCH 079/126] net: sparx5: fix sleep in atomic context in MAC table
  access
 
 Adding or removing a multicast address on an unbridged switch port

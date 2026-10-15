@@ -1,7 +1,7 @@
 From 404d5df8fe5ffa3468835bb93b611da8485a10d6 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Tue, 20 Jan 2026 20:12:10 +0100
-Subject: [PATCH 030/125] wifi: brcmfmac: suppress log spam for
+Subject: [PATCH 030/126] wifi: brcmfmac: suppress log spam for
  regulatory-restricted channels
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
