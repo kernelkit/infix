@@ -132,6 +132,9 @@ All notable changes to the project are documented in this file.
 - LAN969x: bridging a VLAN interface on top of a port applied the bridge
   port settings, STP state, flooding and VLAN filtering, to the port
   itself and logged "Controlling non-bridged port"
+- LAN969x: STP did not converge and LACP failed over aggregates in a
+  bridge.  The switch flooded BPDUs and LACPDUs to the other bridge ports
+  instead of handing them to the CPU
 - LAN969x: taking down one port of a link aggregate stopped unicast to the
   aggregate on the remaining ports, and removing the aggregate cut off the
   port whose address it had used until that port was disabled and enabled

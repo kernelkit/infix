@@ -1,7 +1,7 @@
 From f87ec2c2160ccc55df80dc9823f25537722b33d7 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 7 Oct 2026 17:30:17 +0200
-Subject: [PATCH 103/121] net: sparx5: fix multicast delivery to the CPU on
+Subject: [PATCH 103/122] net: sparx5: fix multicast delivery to the CPU on
  standalone ports
 
 A standalone port stops receiving a multicast group as soon as any

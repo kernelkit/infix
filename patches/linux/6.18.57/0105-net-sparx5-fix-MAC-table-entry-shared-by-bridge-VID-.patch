@@ -1,7 +1,7 @@
 From 937e5609cb130abef11448491bca4b4cb8b122eb Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 8 Oct 2026 13:55:02 +0200
-Subject: [PATCH 105/121] net: sparx5: fix MAC table entry shared by bridge VID
+Subject: [PATCH 105/122] net: sparx5: fix MAC table entry shared by bridge VID
  0 and VID 1
 
 The MAC address of a bridge created with vlan_default_pvid 0 is

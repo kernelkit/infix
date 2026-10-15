@@ -1,0 +1,53 @@
+From fb3222ebde2f210942d8b81f468ce22bdbfe7668 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 15 Oct 2026 11:19:46 +0200
+Subject: [PATCH 122/122] net: sparx5: send reserved link-local multicast to
+ the CPU
+
+STP does not converge on a ring of LAN969x switches, and LACP fails
+over aggregated links.  BPDUs and LACPDUs on a bridged port are flooded
+to the other ports by the switch, so a bridge sees BPDUs relayed from
+bridges that are not its neighbours.
+
+ANA_CL_CAPTURE_BPDU_CFG only discards pause frames and leaves every
+other address in 01-80-C2-00-00-0X to normal forwarding.  A bridge never
+forwards these, they are for the link they arrived on.
+
+Redirect them all to the CPU, and keep discarding pause frames.  The
+bridge still forwards the ones its group_fwd_mask asks for, in software.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_port.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+index 62c49893de3c..bfdbfed1c929 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_port.c
+@@ -23,7 +23,12 @@ enum port_error {
+ 	SPX5_PERR_IFTYPE,
+ };
+ 
+-#define PAUSE_DISCARD        0xC
++/* ANA_CL_CAPTURE_BPDU_CFG, two bits per address 01-80-C2-00-00-0X:
++ * redirect them all to the CPU, a bridge never forwards them, but
++ * discard pause frames, 01-80-C2-00-00-01.
++ */
++#define BPDU_REDIR_ALL       0x55555555
++#define BPDU_PAUSE_DISCARD   0xC
+ #define ETH_MAXLEN           (ETH_DATA_LEN + ETH_HLEN + ETH_FCS_LEN)
+ 
+ static void decode_sgmii_word(u16 lp_abil, struct sparx5_port_status *status)
+@@ -1098,8 +1103,9 @@ int sparx5_port_init(struct sparx5 *sparx5,
+ 		sparx5,
+ 		QSYS_ATOP(port->portno));
+ 
+-	/* Discard pause frame 01-80-C2-00-00-01 */
+-	spx5_wr(PAUSE_DISCARD, sparx5, ANA_CL_CAPTURE_BPDU_CFG(port->portno));
++	/* Reserved link-local multicast to the CPU, pause frames dropped */
++	spx5_wr(BPDU_REDIR_ALL | BPDU_PAUSE_DISCARD, sparx5,
++		ANA_CL_CAPTURE_BPDU_CFG(port->portno));
+ 
+ 	/* Discard SMAC multicast */
+ 	spx5_rmw(ANA_CL_FILTER_CTRL_FILTER_SMAC_MC_DIS_SET(0),
