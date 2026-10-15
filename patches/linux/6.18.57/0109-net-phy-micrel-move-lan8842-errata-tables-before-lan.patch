@@ -1,7 +1,7 @@
 From 454b4e1828bf4acc4cc7d8b2a87478a84b02d05d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 15:34:01 +0200
-Subject: [PATCH 109/120] net: phy: micrel: move lan8842 errata tables before
+Subject: [PATCH 109/121] net: phy: micrel: move lan8842 errata tables before
  lan8814
 
 The LAN8814 has the same short center tap and EEE wake timer errata as
