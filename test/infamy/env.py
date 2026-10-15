@@ -100,7 +100,8 @@ class Env(object):
             print(repr(ltop))
             self.reset_cell_neighbours(ltop)
             self.ltop = ltop
-            self.host = ltop.mapping[ltop.get_ctrl()]
+            ctrl = self.ptop.get_ctrl()
+            self.host = next((m for m in ltop.mapping.values() if m[None] == ctrl), None)
 
         global ENV
         ENV = self
