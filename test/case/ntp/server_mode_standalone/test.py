@@ -18,7 +18,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         data1 = target["data1"]
-        _, hport1 = env.ltop.xlate("host", "data1")
+        hport1 = env.host["data1"]
 
     with test.step("Configure interface and NTP server"):
 

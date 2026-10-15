@@ -48,7 +48,7 @@ with infamy.Test() as test:
         swp1 = srv2["swp1"]
         swp2 = srv2["swp2"]
         eth0 = client["eth0"]
-        _, srv1 = env.ltop.xlate("host", "srv1")
+        srv1 = env.host["srv1"]
 
     with infamy.IsolatedMacVlan(srv1) as ns_srv1:
         ns_srv1.addip(ips["srv1"])

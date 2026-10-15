@@ -30,7 +30,7 @@ with infamy.Test() as test:
         if not target.has_model("infix-containers"):
             test.skip()
 
-        _, hport = env.ltop.xlate("host", "data")
+        hport = env.host["data"]
         tport = target["data"]
 
     with test.step("Detect target architecture"):

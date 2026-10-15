@@ -145,10 +145,10 @@ with infamy.Test() as test:
         )
 
 
-    _, hport10 = env.ltop.xlate("host", "data10")
-    _, hport11 = env.ltop.xlate("host", "data11")
-    _, hport20 = env.ltop.xlate("host", "data20")
-    _, hport21 = env.ltop.xlate("host", "data21")
+    hport10 = env.host["data10"]
+    hport11 = env.host["data11"]
+    hport20 = env.host["data20"]
+    hport21 = env.host["data21"]
 
     with infamy.IsolatedMacVlan(hport10) as ns10, \
          infamy.IsolatedMacVlan(hport11) as ns11, \

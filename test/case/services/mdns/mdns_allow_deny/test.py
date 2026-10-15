@@ -70,9 +70,9 @@ with infamy.Test() as test:
         p1 = dut["p1"]
         p2 = dut["p2"]
         p3 = dut["p3"]
-        _, eth1 = env.ltop.xlate("host", "eth1")
-        _, eth2 = env.ltop.xlate("host", "eth2")
-        _, eth3 = env.ltop.xlate("host", "eth3")
+        eth1 = env.host["eth1"]
+        eth2 = env.host["eth2"]
+        eth3 = env.host["eth3"]
 
     with test.step("Configure device"):
         dut.put_config_dicts(

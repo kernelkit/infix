@@ -68,7 +68,7 @@ with infamy.Test() as test:
         old_bootorder=get_boot_order(target)
         print(f"Initial bootorder: {repr(old_bootorder)}")
 
-        _, hport = env.ltop.xlate("host", "data")
+        hport = env.host["data"]
         tport = target["data"]
         test.push_test_cleanup(lambda: cleanup(env, old_bootorder))
 

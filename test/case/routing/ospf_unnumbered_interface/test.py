@@ -178,7 +178,7 @@ with infamy.Test() as test:
         assert(route.ospf_get_interface_type(R1, "0.0.0.0", R1link) == "point-to-point")
         assert(route.ospf_get_interface_type(R2, "0.0.0.0", R2link) == "point-to-point")
 
-        _, hport0 = env.ltop.xlate("PC", "data")
+        hport0 = env.host["data"]
     with infamy.IsolatedMacVlan(hport0) as ns0:
         ns0.addip("192.168.10.2")
         ns0.addroute("192.168.200.1/32", "192.168.10.1")

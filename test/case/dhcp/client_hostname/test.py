@@ -25,7 +25,7 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         client = env.attach("client", "mgmt")
-        _, host = env.ltop.xlate("host", "mgmt")
+        host = env.host["mgmt"]
         port = client["mgmt"]
 
     with test.step("Configure static system hostname"):

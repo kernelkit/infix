@@ -172,7 +172,7 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "ospf", R1, R2)
 
     with test.step("Set up TPMR between R1ospf and R2ospf"):
-        ospf_breaker = TPMR(env.ltop.xlate("PC", "R1_ospf")[1], env.ltop.xlate("PC", "R2_ospf")[1]).start()
+        ospf_breaker = TPMR(env.host["R1_ospf"], env.host["R2_ospf"]).start()
 
     with test.step("Configure targets"):
         R1data = R1["data"]
@@ -186,8 +186,8 @@ with infamy.Test() as test:
                  lambda: config_target2(R2, R2data, R2link, R2ospf, param))
 
     with test.step("Set up persistent MacVlan namespaces"):
-        _, hport_data1 = env.ltop.xlate("PC", "data1")
-        _, hport_data2 = env.ltop.xlate("PC", "data2")
+        hport_data1 = env.host["data1"]
+        hport_data2 = env.host["data2"]
 
         ns1 = infamy.IsolatedMacVlan(hport_data1).start()
         ns1.addip(param["PC1"], prefix_length=param["len"], proto=af)

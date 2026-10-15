@@ -139,7 +139,7 @@ with infamy.Test() as test:
         dut1, dut2 = parallel(lambda: env.attach("dut1", "mgmt"),
                               lambda: env.attach("dut2", "mgmt"))
 
-    _, mon = env.ltop.xlate("host", "mon")
+    mon = env.host["mon"]
     with infamy.IsolatedMacVlan(mon) as ns:
         dm = {
             '1': ("dut1", dut1),

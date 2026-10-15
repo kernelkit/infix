@@ -244,7 +244,7 @@ with infamy.Test() as test:
             }
         }))
 
-    _, hport = env.ltop.xlate("host", "data")
+    hport = env.host["data"]
     with test.step("Verify IPv4 connectivity with ping 10.0.0.2 from host:data"):
         with infamy.IsolatedMacVlan(hport) as ns0:
             ns0.addip("192.168.10.2")

@@ -115,7 +115,7 @@ with infamy.Test() as test:
             }),
         )
 
-    _, hport = env.ltop.xlate("host", "data")
+    hport = env.host["data"]
     with test.step(f"Test connectivity host:data to right:{tunnel}0 at 192.168.10.2"):
         with infamy.IsolatedMacVlan(hport) as ns0:
             ns0.addip("192.168.10.1")

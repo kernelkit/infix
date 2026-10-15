@@ -155,7 +155,7 @@ with infamy.Test() as test:
 
     with test.step("Verify connectivity to passive interface network"):
         # Test that we can reach the passive interface from PC
-        _, hport0 = env.ltop.xlate("PC", "data")
+        hport0 = env.host["data"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             # No need for route since we're on the same network

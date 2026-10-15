@@ -126,13 +126,13 @@ with infamy.Test() as test:
         parallel(lambda: config_target1(R1, R1data1, R1data2, R1link), 
                  lambda: config_target2(R2, R2data, R2link))
 
-        _, hport_data12 = env.ltop.xlate("PC", "data12")
+        hport_data12 = env.host["data12"]
         ns0 = infamy.IsolatedMacVlan(hport_data12).start()
         ns0.addip("192.168.30.3", prefix_length=24)
         ns0.addroute("default", "192.168.30.1")
 
-        _, hport_data11 = env.ltop.xlate("PC", "data11")
-        _, hport_data2 = env.ltop.xlate("PC", "data2")
+        hport_data11 = env.host["data11"]
+        hport_data2 = env.host["data2"]
         ifmap={ hport_data11: "a", hport_data2: "b" }
         ns1 = IsolatedMacVlans(ifmap, False).start()
 

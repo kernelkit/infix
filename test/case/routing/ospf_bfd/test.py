@@ -150,8 +150,8 @@ with infamy.Test() as test:
         route.skip_unless_supported(test, "bfd", R1, R2)
 
     with test.step("Setup TPMR between R1fast and R2fast"):
-        breaker = TPMR(env.ltop.xlate("PC", "R1fast")[1],
-                       env.ltop.xlate("PC", "R2fast")[1]).start()
+        breaker = TPMR(env.host["R1fast"],
+                       env.host["R2fast"]).start()
 
     with test.step("Configure R1 and R2"):
         r1links = {
@@ -169,8 +169,8 @@ with infamy.Test() as test:
                  lambda: config(R2, "R2", r2links, param))
 
     with test.step("Setup IP addresses and default routes on h1 and h2"):
-        _, h1 = env.ltop.xlate("PC", "h1")
-        _, h2 = env.ltop.xlate("PC", "h2")
+        h1 = env.host["h1"]
+        h2 = env.host["h2"]
 
         h1net = infamy.IsolatedMacVlan(h1).start()
         h1net.addip(param["h1"], prefix_length=param["len"]["data"], proto=af)

@@ -468,8 +468,8 @@ with infamy.Test() as test:
                                                  lambda: env.attach("client1", "mgmt"),
                                                  lambda: env.attach("client2", "mgmt"))
 
-    _, hclient1 = env.ltop.xlate("host", "data1")
-    _, hserver  = env.ltop.xlate("host", "data2")
+    hclient1 = env.host["data1"]
+    hserver  = env.host["data2"]
 
     with test.step("Configure server, client1 and client2"):
         configure_server(server)

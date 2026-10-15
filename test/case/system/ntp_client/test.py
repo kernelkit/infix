@@ -87,9 +87,9 @@ with infamy.Test() as test:
 
         config_target(target, data1, data2, data3)
 
-    _, hport1 = env.ltop.xlate("host", "data1")
-    _, hport2 = env.ltop.xlate("host", "data2")
-    _, hport3 = env.ltop.xlate("host", "data3")
+    hport1 = env.host["data1"]
+    hport2 = env.host["data2"]
+    hport3 = env.host["data3"]
 
     with infamy.IsolatedMacVlan(hport1) as ns1, \
          infamy.IsolatedMacVlan(hport2) as ns2, \

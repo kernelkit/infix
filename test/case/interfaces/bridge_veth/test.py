@@ -73,7 +73,7 @@ with infamy.Test() as test:
         }})
 
     with test.step("Verify ping from host:data to 10.0.0.2"):
-        _, hport = env.ltop.xlate("host", "data")
+        hport = env.host["data"]
 
         with infamy.IsolatedMacVlan(hport) as ns:
             ns.addip("10.0.0.1")

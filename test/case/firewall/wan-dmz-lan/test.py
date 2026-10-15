@@ -23,9 +23,9 @@ with infamy.Test() as test:
         dmz_if = gateway["dmz"]
         lan_if = gateway["lan"]
         mgmt_if = gateway["mgmt"]
-        _, host_wan = env.ltop.xlate("host", "wan")
-        _, host_dmz = env.ltop.xlate("host", "dmz")
-        _, host_lan = env.ltop.xlate("host", "lan")
+        host_wan = env.host["wan"]
+        host_dmz = env.host["dmz"]
+        host_lan = env.host["lan"]
 
         WAN_NET = "203.0.113.0/24"        # RFC 5737 test network
         WAN_ROUTER_IP = "203.0.113.1"     # Gateway WAN interface

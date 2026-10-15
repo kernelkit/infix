@@ -279,7 +279,7 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R1, param["R2net"], af=af, proto=proto, active_check=True), attempts=200)
 
     with test.step("Verify connectivity from PC:data2 to R1's dummy interface"):
-        _, hport0 = env.ltop.xlate("PC", "data2")
+        hport0 = env.host["data2"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(param["default"], param["R2data"], proto=af)
@@ -294,7 +294,7 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R2, param["default"], af=af, proto=proto) == False, attempts=200)
 
     with test.step("Verify no connectivity from PC:data2 to R1's dummy interface"):
-        _, hport0 = env.ltop.xlate("PC", "data2")
+        hport0 = env.host["data2"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(param["default"], param["R2data"], proto=af)
@@ -317,7 +317,7 @@ with infamy.Test() as test:
         until(lambda: route.route_exist(R2, param["default"], af=af, proto=proto, active_check=True), attempts=200)
 
     with test.step("Verify connectivity from PC:data2 to R1's dummy interface"):
-        _, hport0 = env.ltop.xlate("PC", "data2")
+        hport0 = env.host["data2"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(param["default"], param["R2data"], proto=af)

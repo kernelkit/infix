@@ -381,14 +381,14 @@ with infamy.Test() as test:
                      *[(lambda net=net: until(lambda: route.route_exist(R3, net, af=af, proto=proto), attempts=200))
                        for net in param["R2"]["stubnets"]])
 
-    _, hport0 = env.ltop.xlate("PC", "data3")
+    hport0 = env.host["data3"]
     with infamy.IsolatedMacVlan(hport0) as ns0:
         with test.step("Testing connectivity through NSSA area, from PC:data3 to R1's stub network"):
             ns0.addip(param["PC3"], prefix_length=param["netlen"], proto=af)
             ns0.addroute(param["default"], param["R3"]["data"], proto=af)
             ns0.must_reach(param["R1"]["stub"])
 
-    _, hport0 = env.ltop.xlate("PC", "data4")
+    hport0 = env.host["data4"]
     with infamy.IsolatedMacVlan(hport0) as ns0:
         ns0.addip(param["PC4"], prefix_length=param["netlen"], proto=af)
         ns0.addroute(param["default"], param["R4"]["data"], proto=af)

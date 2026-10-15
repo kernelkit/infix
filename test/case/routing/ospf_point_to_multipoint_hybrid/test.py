@@ -220,8 +220,8 @@ with infamy.Test() as test:
         assert route.ospf_get_interface_type(R3, "0.0.0.0", R3link, proto=instance) == "hybrid"
 
     with test.step("Verify connectivity between all DUTs"):
-        _, hport1 = env.ltop.xlate("PC", "data1")
-        _, hport2 = env.ltop.xlate("PC", "data2")
+        hport1 = env.host["data1"]
+        hport2 = env.host["data2"]
         with infamy.IsolatedMacVlan(hport1) as ns1, \
              infamy.IsolatedMacVlan(hport2) as ns2:
             ns1.addip(param["PC1"], prefix_length=param["len"], proto=af)

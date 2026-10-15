@@ -233,7 +233,7 @@ with infamy.Test() as test:
         )
 
     with test.step("Send ping from PC:west to PC:east with low TTL"):
-        _, pc_east = env.ltop.xlate("PC", "east")
+        pc_east = env.host["east"]
 
         with infamy.IsolatedMacVlan(pc_east) as east_ns:
             east_ns.addip(PC_EAST_HOST)
@@ -241,7 +241,7 @@ with infamy.Test() as test:
 
             pcap = east_ns.pcap("icmp")
             with pcap:
-                _, pc_west = env.ltop.xlate("PC", "west")
+                pc_west = env.host["west"]
                 with infamy.IsolatedMacVlan(pc_west) as west_ns:
                     west_ns.addip(PC_WEST_HOST)
                     west_ns.addroute("default", PC_WEST_R1)

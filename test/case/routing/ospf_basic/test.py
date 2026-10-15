@@ -228,7 +228,7 @@ with infamy.Test() as test:
         assert route.ospf_has_neighbors(R2, proto=f"infix-routing:{version}")
 
     with test.step("Test connectivity from PC:data to R2 loopback"):
-        _, hport0 = env.ltop.xlate("PC", "data")
+        hport0 = env.host["data"]
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(f"{param['R2lo']}/{plen}", param["R1data"], proto=af)

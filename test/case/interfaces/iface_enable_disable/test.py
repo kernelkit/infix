@@ -81,7 +81,7 @@ with infamy.Test() as test:
         link1 = target1["link"]
 
         iface_under_test = target2["link"]
-        _, host_send_iface = env.ltop.xlate("host", "data")
+        host_send_iface = env.host["data"]
         _bridge = "br_0"
 
         target_address = "10.10.10.2"

@@ -594,13 +594,13 @@ with infamy.Test() as test:
         R3ring1 = R3["ring1"]
         R3ring2 = R3["ring2"]
 
-        _, hostR1ring1 = env.ltop.xlate("host", "R1ring1")
-        _, hostR1ring2 = env.ltop.xlate("host", "R1ring2")
+        hostR1ring1 = env.host["R1ring1"]
+        hostR1ring2 = env.host["R1ring2"]
 
-        _, hostR2ring1 = env.ltop.xlate("host", "R2ring1")
-        _, hostR2ring2 = env.ltop.xlate("host", "R2ring2")
-        _, hostR3ring1 = env.ltop.xlate("host", "R3ring1")
-        _, hostR3ring2 = env.ltop.xlate("host", "R3ring2")
+        hostR2ring1 = env.host["R2ring1"]
+        hostR2ring2 = env.host["R2ring2"]
+        hostR3ring1 = env.host["R3ring1"]
+        hostR3ring2 = env.host["R3ring2"]
 
         R1link = R1["link"]
         R2link = R2["link"]
@@ -625,7 +625,7 @@ with infamy.Test() as test:
                       lambda: create_vlan_bridge(sw3))
         # breakpoint()
 
-        _, hport0 = env.ltop.xlate("host", "data4")
+        hport0 = env.host["data4"]
 
         with test.step("Wait for all routers to peer"):
             util.until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", f"{R1ring1}.8", "10.1.2.1"), attempts=200)

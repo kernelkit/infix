@@ -51,7 +51,7 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
         mgmt = target["mgmt"]
         ext0 = target["ext0"]
-        _, hport = env.ltop.xlate("host", "data")
+        hport = env.host["data"]
 
         if not target.has_model("infix-containers"):
             test.skip()

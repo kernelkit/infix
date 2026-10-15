@@ -62,7 +62,7 @@ with infamy.Test() as test:
         c = infamy.Container(target)
         until(lambda: c.running(NAME), attempts=60)
 
-    _, hport = env.ltop.xlate("host", "data")
+    hport = env.host["data"]
 
     with infamy.IsolatedMacVlan(hport) as ns:
         ns.addip(OURIP)

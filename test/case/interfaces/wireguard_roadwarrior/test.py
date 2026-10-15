@@ -322,9 +322,9 @@ with infamy.Test() as test:
                                                          lambda: env.attach("client1", "mgmt"),
                                                          lambda: env.attach("client2", "mgmt"))
 
-    _, hport_server = env.ltop.xlate("host", "data")
-    _, hport_client1 = env.ltop.xlate("host", "data1")
-    _, hport_client2 = env.ltop.xlate("host", "data2")
+    hport_server = env.host["data"]
+    hport_client1 = env.host["data1"]
+    hport_client2 = env.host["data2"]
 
     with test.step("Configure DUTs"):
         util.parallel(

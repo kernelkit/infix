@@ -33,10 +33,10 @@ with infamy.Test() as test:
         d2sender = dut2["data2"]
         d2trunk = dut2["link"]
 
-        _, hsendd1 = env.ltop.xlate("host", "data11")
-        _, hreceived1 = env.ltop.xlate("host", "data12")
-        _, hreceived2 = env.ltop.xlate("host", "data21")
-        _, hsendd2 = env.ltop.xlate("host", "data22")
+        hsendd1 = env.host["data11"]
+        hreceived1 = env.host["data12"]
+        hreceived2 = env.host["data21"]
+        hsendd2 = env.host["data22"]
 
 
     with test.step("Configure device"):

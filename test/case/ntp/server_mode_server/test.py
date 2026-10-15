@@ -29,11 +29,11 @@ with infamy.Test() as test:
         # Get interface names for each device
         upstream_data1 = upstream["data1"]
         upstream_conn = upstream["conn"]
-        _, hport1 = env.ltop.xlate("host", "data1")
+        hport1 = env.host["data1"]
 
         downstream_data2 = downstream["data2"]
         downstream_conn = downstream["conn"]
-        _, hport2 = env.ltop.xlate("host", "data2")
+        hport2 = env.host["data2"]
 
     with test.step("Configure upstream NTP server with local reference clock and downstream NTP server syncing from upstream"):
         parallel(

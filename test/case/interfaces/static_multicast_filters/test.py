@@ -116,9 +116,9 @@ with infamy.Test() as test:
                             }
                     }})
 
-    _, hsend = env.ltop.xlate("host", "data1")
-    _, hreceive = env.ltop.xlate("host", "data2")
-    _, hnojoin = env.ltop.xlate("host", "data3")
+    hsend = env.host["data1"]
+    hreceive = env.host["data2"]
+    hnojoin = env.host["data3"]
     with infamy.IsolatedMacVlan(hsend) as send_ns, \
          infamy.IsolatedMacVlan(hreceive) as receive_ns, \
          infamy.IsolatedMacVlan(hnojoin) as nojoin_ns:

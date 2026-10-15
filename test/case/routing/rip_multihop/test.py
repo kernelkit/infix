@@ -200,14 +200,14 @@ with infamy.Test() as test:
         print(f"R2 has correct neighbors: {neighbors}")
 
     with test.step("Test end-to-end connectivity PC:data1 to R3 loopback"):
-        _, hport1 = env.ltop.xlate("PC", "data1")
+        hport1 = env.host["data1"]
         with infamy.IsolatedMacVlan(hport1) as ns1:
             ns1.addip(param["PC1"], prefix_length=param["len"], proto=af)
             ns1.addroute(lo("R3"), param["R1data"], proto=af)
             ns1.must_reach(param["R3lo"])
 
     with test.step("Test end-to-end connectivity PC:data2 to R1 loopback"):
-        _, hport2 = env.ltop.xlate("PC", "data2")
+        hport2 = env.host["data2"]
         with infamy.IsolatedMacVlan(hport2) as ns2:
             ns2.addip(param["PC2"], prefix_length=param["len"], proto=af)
             ns2.addroute(lo("R1"), param["R3data"], proto=af)

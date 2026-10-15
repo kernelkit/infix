@@ -20,8 +20,8 @@ with infamy.Test() as test:
         data1_if = target["data1"]
         data2_if = target["data2"]
         mgmt_if = target["mgmt"]
-        _, host_data1 = env.ltop.xlate("host", "data1")
-        _, host_data2 = env.ltop.xlate("host", "data2")
+        host_data1 = env.host["data1"]
+        host_data2 = env.host["data2"]
 
         # IPv4 addressing
         DATA1_NET_V4 = "10.1.1.0/24"

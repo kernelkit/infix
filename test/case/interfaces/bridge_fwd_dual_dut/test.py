@@ -129,9 +129,9 @@ with infamy.Test() as test:
 
     with test.step("Verify ping 10.0.0.3 and 10.0.0.4 from host:data11"):
 
-        _, hport11 = env.ltop.xlate("host", "data11")
-        _, hport21 = env.ltop.xlate("host", "data21")
-        _, hport22 = env.ltop.xlate("host", "data22")
+        hport11 = env.host["data11"]
+        hport21 = env.host["data21"]
+        hport22 = env.host["data22"]
 
         with infamy.IsolatedMacVlan(hport11) as ns11, \
              infamy.IsolatedMacVlan(hport21) as ns21, \

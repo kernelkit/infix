@@ -30,7 +30,7 @@ with infamy.Test() as test:
     with test.step("Setting up canary route, 20.0.0.0/24 via 192.168.0.2"):
         env = infamy.Env()
         client = env.attach("client", "mgmt")
-        _, host = env.ltop.xlate("host", "data")
+        host = env.host["data"]
 
         # Install canary route to smoke out any regressions in
         # how the DHCP client installs routes in the kernel FIB

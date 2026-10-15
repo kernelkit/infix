@@ -54,7 +54,7 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
         data_if = target["data"]
         mgmt_if = target["mgmt"]
-        _, host_data = env.ltop.xlate("host", "data")
+        host_data = env.host["data"]
         TARGET_IP = "192.168.1.1"
         HOST_IP = "192.168.1.42"
         STATIC_IP = "192.168.1.40"

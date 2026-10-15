@@ -201,7 +201,7 @@ with infamy.Test() as test:
     with test.step("Verify guest leases 10.20.0.9 from the root's VLAN 20 DHCP server through the backhaul"):
         until(lambda: iface.address_exist(guest, "wifi0", GUEST_IP), attempts=60, interval=2)
 
-    _, hlan = env.ltop.xlate("host", "lan")
+    hlan = env.host["lan"]
     with infamy.IsolatedMacVlan(hlan) as ns:
         ns.runsh(f"""
             set -ex

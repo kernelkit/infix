@@ -174,7 +174,7 @@ with infamy.Test() as test:
 
     # The host sits on the wired LAN behind gw1; reaching the client proves
     # the frames cross the mesh backhaul (the client may be on any gw's AP).
-    _, hlan = env.ltop.xlate("host", "lan")
+    hlan = env.host["lan"]
     with infamy.IsolatedMacVlan(hlan) as ns:
         ns.addip(HOST_IP)
 
