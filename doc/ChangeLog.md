@@ -275,6 +275,9 @@ All notable changes to the project are documented in this file.
   received anything, unless the bridge had the same VLAN on the port
 - LAN969x: traffic from a VLAN interface on a bridge, sent out a port that
   carries all its VLANs tagged, left with an extra VLAN 0 tag
+- LAN969x: bridging a VLAN interface on top of a port applied the bridge
+  port settings, STP state, flooding and VLAN filtering, to the port
+  itself and logged "Controlling non-bridged port"
 - LAN969x: taking down one port of a link aggregate stopped unicast to the
   aggregate on the remaining ports, and removing the aggregate cut off the
   port whose address it had used until that port was disabled and enabled
