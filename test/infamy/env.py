@@ -80,6 +80,7 @@ class Env(object):
         self.ptop = topology.Topology(pdot)
 
         self.ltop = None
+        self.host = None
         if self.args.ltop != False:
             if self.args.ltop is None:
                 stack = inspect.stack()
@@ -99,6 +100,7 @@ class Env(object):
             print(repr(ltop))
             self.reset_cell_neighbours(ltop)
             self.ltop = ltop
+            self.host = ltop.mapping[ltop.get_ctrl()]
 
         global ENV
         ENV = self
