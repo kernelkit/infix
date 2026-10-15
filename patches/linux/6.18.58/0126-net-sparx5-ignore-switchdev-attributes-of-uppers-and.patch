@@ -1,7 +1,7 @@
 From 1871a824705ab9459aacb7b70a90eced10da49c3 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 15 Oct 2026 11:15:52 +0200
-Subject: [PATCH 126/126] net: sparx5: ignore switchdev attributes of uppers
+Subject: [PATCH 126/127] net: sparx5: ignore switchdev attributes of uppers
  and other bridges
 
 Bridging a VLAN interface on top of a standalone port fills the log with
