@@ -89,15 +89,39 @@ host.
    ```
    setenv serverip <TFTP_SERVER_IP>
    setenv ipaddr <VERO_IP>
-   setenv bootmenu_default 7
+   setenv bootmenu_default <N>
    tftpboot 0x46000000 u-boot.bin
    go 0x46000000
    ```
 
    `serverip` must point to your TFTP server and `ipaddr` must be a free
-   address for the Vero on the same subnet.  `bootmenu_default 7`
-   bypasses secure boot verification.  The Infix U-Boot will
-   automatically netboot the Infix system.
+   address for the Vero on the same subnet.  `bootmenu_default <N>`
+   makes *U-Boot console* the default boot menu entry, which bypasses
+   secure boot verification.  The Infix U-Boot will automatically
+   netboot the Infix system.
+
+   The right value for `<N>` depends on the stock U-Boot version, it is
+   usually 7 or 9.  Type `bootmenu` at the prompt to list the entries,
+   then count down from the top, starting at 0, until you reach
+   *U-Boot console*.  Do not use the number shown in the menu.  In
+   this example the console is the tenth entry, so `<N>` is 9:
+
+   ```
+     *** U-Boot Boot Menu ***
+
+         1. Startup system (Default)
+         2. Upgrade firmware
+         3. Upgrade ATF BL2
+         4. Upgrade ATF FIP
+         5. Upgrade U-boot only
+         6. Upgrade partition table
+         7. Upgrade single image
+         8. Load image
+         9. Start Web failsafe
+         0. U-Boot console
+   ```
+
+   Press Esc or Ctrl-C to leave the menu and get back to the prompt.
 
 2. **From running Infix**, stream the image directly to eMMC:
 
@@ -134,14 +158,15 @@ host.
    interrupt stock U-Boot again:
 
    ```
-   setenv bootmenu_default 7
+   setenv bootmenu_default <N>
    setenv bootcmd 'mmc read 0x46000000 0x4400 0x10000; go 0x46000000'
    saveenv
    reset
    ```
 
    The `bootcmd` reads the Infix U-Boot (at sector 0x4400/17408)
-   into RAM and jumps to it.  After `reset`, Infix boots from eMMC.
+   into RAM and jumps to it.  Use the same `<N>` as in step 1.  After
+   `reset`, Infix boots from eMMC.
 
 [vero-openwrt]: https://openwrt.org/toh/acer/predator_vero_w6m
 [1]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-vero-w-emmc.img
