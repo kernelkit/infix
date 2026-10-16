@@ -176,10 +176,14 @@ def _time_source_identity(raw):
 # delay-mechanism and port-state mapping
 # ---------------------------------------------------------------------------
 
+# pmc prints the numeric enum delay_mechanism; auto (0) runs E2E until a
+# peer delay request switches the port to P2P
 _DELAY_MECH_MAP = {
-    "E2E":  "e2e",
-    "P2P":  "p2p",
-    "AUTO": "no-mechanism",
+    "0":   "e2e",
+    "1":   "e2e",
+    "2":   "p2p",
+    "3":   "common-p2p",
+    "254": "no-mechanism",
 }
 
 _PORT_STATE_MAP = {
@@ -423,8 +427,8 @@ def _build_port_ds(d):
             pass
 
     v = d.get("delayMechanism")
-    if v:
-        ds["delay-mechanism"] = _DELAY_MECH_MAP.get(v, "e2e")
+    if v in _DELAY_MECH_MAP:
+        ds["delay-mechanism"] = _DELAY_MECH_MAP[v]
 
     v = d.get("logMinPdelayReqInterval")
     if v:
