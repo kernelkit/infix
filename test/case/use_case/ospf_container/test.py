@@ -606,8 +606,6 @@ with infamy.Test() as test:
         R2link = R2["link"]
         R3link = R3["link"]
 
-        R1data = R1["data"]
-        R3data = R3["data"]
         ABRdata = ABR["data"]
         ABRlink1 = ABR["link1"]
         ABRlink2 = ABR["link2"]

@@ -10,9 +10,7 @@ active connections.
 - Custom service ports (8080/tcp) should be available for testing
 """
 
-import time
 import infamy
-from infamy.util import until
 
 
 with infamy.Test() as test:

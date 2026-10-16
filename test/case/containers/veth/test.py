@@ -16,7 +16,6 @@ regular bridge, a VETH pair connects the container to the bridge.
 ....
 
 """
-import base64
 import infamy
 from   infamy.util import until, curl
 

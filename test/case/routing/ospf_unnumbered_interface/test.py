@@ -11,7 +11,6 @@ configuration and passive to function
 """
 
 import infamy
-import time
 
 import infamy.route as route
 from infamy.util import until, parallel

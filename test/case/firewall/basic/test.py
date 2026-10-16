@@ -11,7 +11,6 @@ image::basic.svg[align=center, scaledwidth=50%]
 - Check that unused interfaces are automatically assigned to default zone
 """
 
-import time
 import infamy
 from infamy.util import until
 
