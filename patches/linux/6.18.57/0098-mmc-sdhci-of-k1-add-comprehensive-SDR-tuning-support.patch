@@ -1,7 +1,7 @@
 From 658bc011b09c32a0731b9a11edfa542b955c025d Mon Sep 17 00:00:00 2001
 From: Iker Pedrosa <ikerpedrosam@gmail.com>
 Date: Mon, 11 May 2026 10:53:59 +0200
-Subject: [PATCH 098/122] mmc: sdhci-of-k1: add comprehensive SDR tuning
+Subject: [PATCH 098/123] mmc: sdhci-of-k1: add comprehensive SDR tuning
  support
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
