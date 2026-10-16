@@ -1,7 +1,7 @@
 From 9b67bb47e74eae50a5f2569dcd313da902fc173a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Oct 2026 11:00:08 +0200
-Subject: [PATCH 128/129] net: sparx5: copy link-local IP multicast to the CPU
+Subject: [PATCH 128/130] net: sparx5: copy link-local IP multicast to the CPU
 
 OSPF neighbours never come up over a bridge of LAN969x ports.  Hellos
 to 224.0.0.5 and ff02::5 are flooded to the other bridge ports, but no
