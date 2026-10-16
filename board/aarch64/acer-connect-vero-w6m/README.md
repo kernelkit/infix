@@ -53,18 +53,56 @@ U-Boot from the first partition after fip.
 
 Infix does not read the stock U-Boot environment, so the unit boots
 with random Ethernet addresses until it is given a product record.
-Store one as `/mnt/aux/vpd.bin`, from the Infix shell, using the
-`WANMAC` noted down above as the base address:
 
-```
-echo '{"mac-address":"<WANMAC>","serial-number":"<serial>","vendor":"Acer","product-name":"Connect Vero W6m"}' \
-  | onieprom -e > /mnt/aux/vpd.bin
-```
+Acer allocates one address per interface (`LANMAC`, `WANMAC`, `2gMAC`,
+`5gMAC` and `6gMAC`), and they are not a consecutive range.  Infix
+derives every address from a single base, so using one of the Acer
+addresses as the base would hand out addresses Acer never assigned to
+this unit.  Instead, give the product record a private (locally
+administered) base address, then set the real Acer addresses on the
+interfaces themselves.
 
-After a reboot the ports get fixed offsets from the base address and
-the WiFi interfaces derive theirs from it.  See
-[Vital Product Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition)
-for the record format.
+1. **Create the product record** from the Infix shell, with a random
+   private base address:
+
+   ```
+   set -- $(od -An -N4 -tx1 /dev/urandom)
+   echo "{\"mac-address\":\"02:$1:$2:$3:$4:00\",\"serial-number\":\"<serial>\",\"vendor\":\"Acer\",\"product-name\":\"Connect Vero W6m\"}" \
+     | onieprom -e > /mnt/aux/vpd.bin
+   ```
+
+   The leading `02` marks the address as locally administered, so it
+   can never clash with a vendor-assigned one.  See [Vital Product
+   Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition) for the
+   record format.
+
+2. **Set the Acer addresses** with `custom-phys-address`, using the
+   values noted down from the stock U-Boot environment:
+
+   | Interface  | Address  |
+   |------------|----------|
+   | `br0`      | `LANMAC` |
+   | `internet` | `WANMAC` |
+   | `wifi0-ap` | `2gMAC`  |
+   | `wifi1-ap` | `6gMAC`  |
+   | `wifi2-ap` | `5gMAC`  |
+
+   ```
+   admin@vero:/> configure
+   admin@vero:/config/> set interface br0 custom-phys-address static <LANMAC>
+   admin@vero:/config/> set interface internet custom-phys-address static <WANMAC>
+   admin@vero:/config/> set interface wifi0-ap custom-phys-address static <2gMAC>
+   admin@vero:/config/> set interface wifi1-ap custom-phys-address static <6gMAC>
+   admin@vero:/config/> set interface wifi2-ap custom-phys-address static <5gMAC>
+   admin@vero:/config/> leave
+   admin@vero:/> copy running-config startup-config
+   ```
+
+   Interfaces without a `custom-phys-address`, such as `lan1`-`lan3`,
+   keep addresses derived from the private base.  See [Custom MAC
+   Address](../../../doc/iface.md#custom-mac-address) for details.
+
+Reboot after step 1 so the new base address takes effect.
 
 ## Required Files
 
