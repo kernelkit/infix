@@ -71,6 +71,12 @@ All notable changes to the project are documented in this file.
 - WiFi channel survey is on request: `show hardware <radio> survey`, the
   Scan channels button on the WebUI WiFi page, or the `channel-survey`
   action.  The always-on `survey` container under the radio is gone
+- WiFi network scan is on request too: `show hardware <radio> scan`, the
+  Scan networks button on the WebUI WiFi page, or the `scan` action on
+  the radio, which works before any WiFi interface exists.  A WiFi
+  interface with only a radio no longer scans in the background, and the
+  `scan-results` list under a station is gone, see
+  [WiFi documentation](wifi.md#discovering-available-networks)
 - Configurable OSPF auto-cost reference bandwidth, for OSPFv2 and OSPFv3,
   issue #1576.  The default, 100000 Mbit/s, is the value used before, so
   link costs do not change on upgrade.  The CLI shows it in `show ip ospf`

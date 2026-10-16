@@ -264,72 +264,28 @@ performance through features like OFDMA, BSS Coloring, and beamforming.
 
 ## Discovering Available Networks
 
-Before connecting to a WiFi network, you need to discover which networks
-are available. Infix automatically scans for networks when a WiFi interface
-is created with a radio reference.
+Before connecting to a WiFi network you need to know which networks are in
+range.  A scan lists them, with signal strength and security, and works on
+any radio, whether or not it has an interface yet.  The radio leaves its
+channel for a few seconds during the scan, so traffic on it pauses.
 
-### Enable Background Scanning
-
-To enable scanning without connecting, configure the radio and create a WiFi
-interface referencing it:
-
-**Step 1: Configure the radio**
-
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit hardware component radio0 wifi-radio</b>
-admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
+<pre class="cli"><code>admin@example:/> <b>show hardware radio0 scan</b>
+SSID                  BSSID              SECURITY       SIGNAL   CHANNEL
+MyNetwork             b4:fb:e4:17:b6:a7  WPA2-Personal  -45 dBm        6
+GuestWiFi             c8:3a:35:12:34:56  WPA2-Personal  -62 dBm       11
+CoffeeShop            00:1a:2b:3c:4d:5e  Open           -78 dBm        1
 </code></pre>
 
-**Step 2: Create WiFi interface with radio reference only**
+A hidden network shows up without a name.  Several entries with the same
+SSID are the access points of one roaming network, the BSSID tells them
+apart.
 
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit interface wifi0</b>
-admin@example:/config/interface/wifi0/> <b>set wifi radio radio0</b>
-admin@example:/config/interface/wifi0/> <b>leave</b>
-</code></pre>
+In the WebUI, each radio on the WiFi page has a **Scan networks** button
+that lists the same networks.
 
-The system will now start scanning in the background. The interface will
-operate in scan-only mode until you configure a specific mode (station or
-access-point).
-
-### View Available Networks
-
-Use `show interface` to see discovered networks and their signal strength:
-
-<pre class="cli"><code>admin@example:/> <b>show interface wifi0</b>
-name               : wifi0
-type               : wifi
-index              : 3
-mtu                : 1500
-operational status : up
-ip forwarding      : enabled
-physical address   : f0:09:0d:36:5f:86
-ipv4 addresses     : 192.168.1.100/24 (dhcp)
-ipv6 addresses     :
-in-octets          : 148388
-out-octets         : 24555
-mode               : station
-ssid               : MyNetwork
-bssid              : b4:fb:e4:17:b6:a7
-signal             : -45 dBm (good)
-rx bitrate         : 72.2 Mbps
-tx bitrate         : 86.6 Mbps
-──────────────────────────────────────────────────────────────────────
-<span class="title">Available Networks</span>
-<span class="header">SSID                 BSSID              SECURITY       SIGNAL  CHANNEL</span>
-MyNetwork            b4:fb:e4:17:b6:a7  WPA2-Personal  good          6
-GuestWiFi            c8:3a:35:12:34:56  WPA2-Personal  fair         11
-CoffeeShop           00:1a:2b:3c:4d:5e  Open           bad           1
-</code></pre>
-
-In the CLI, signal strength is reported as: excellent, good, fair or bad.
-For precise signal strength values in dBm, use NETCONF or RESTCONF to access
-the `signal-strength` leaf in the operational datastore.
-
-When connected, `bssid` shows the MAC address of the access point the
-station is associated to.  It appears only while connected.  When several
-access points share one SSID (a roaming network), the `bssid` is what
-tells them apart, and it changes as the station roams between them.
+Over NETCONF or RESTCONF the scan is the `scan` action on the radio's
+hardware component.  Its output is a list of networks keyed by BSSID, with
+the SSID, frequency, channel, signal strength and security of each.
 
 ### Channel Survey
 
@@ -377,8 +333,8 @@ hardware, your passphrase must meet the following criteria:
 ## Station Mode (Client)
 
 Station mode connects to an existing Wi-Fi network. Before configuring station
-mode, follow the "Discovering Available Networks (Scanning)" section above to
-scan for available networks and identify the SSID you want to connect to.
+mode, follow the "Discovering Available Networks" section above to scan for
+available networks and identify the SSID you want to connect to.
 
 ### Step 1: Configure Password
 
@@ -422,7 +378,7 @@ signal             : -52 dBm (good)
 
 **Station configuration parameters:**
 
-- `radio`: Reference to the WiFi radio (mandatory) - already set during scanning
+- `radio`: Reference to the WiFi radio (mandatory)
 - `station ssid`: Network name to connect to (mandatory)
 - `station security mode`:
       - `auto`: default, WPA2/WPA3 auto-negotiation
@@ -1018,8 +974,8 @@ loop, as with any two bridge ports to the same network.
 Use `show interface wifi0` to verify signal strength and connection status.
 If issues arise, try the following troubleshooting steps:
 
-1. **Verify signal strength**: Check that the target network shows
-   "good" or "excellent" signal in scan results
+1. **Verify signal strength**: Check the target network's signal with
+   `show hardware radio0 scan`, -65 dBm or better is good
 2. **Check credentials**: Use `show keystore symmetric <name>` to verify
    the passphrase matches the network password
 3. **Review logs**: Check system logs with `show log` for Wi-Fi related
