@@ -17,6 +17,7 @@ import types
 import netconf_client.connect
 import netconf_client.ncclient
 import netconf_client.session
+import paramiko
 from infamy.transport import Transport,infer_put_dict
 from netconf_client.error import RpcError
 from . import env, netutil, coverage
@@ -137,12 +138,11 @@ class Device(Transport):
             nm += f"({env.ENV.ltop.xlate(self.name)})"
         return nm + " [NETCONF]"
 
-    def _ncc_init(self, location):
+    def _ncc_connect(self, location):
         ai = socket.getaddrinfo(location.host, location.port,
                                 0, 0, socket.SOL_TCP)
         sock = socket.socket(ai[0][0], ai[0][1], 0)
         sock.settimeout(60)
-        print(f"Connecting to mgmt IP {location.host}:{location.port} ...")
         try:
             sock.connect(ai[0][4])
         except InterruptedError as err:
@@ -153,9 +153,36 @@ class Device(Transport):
             raise err
         sock.settimeout(None)
 
-        session = netconf_client.connect.connect_ssh(sock=sock,
-                                                     username=location.username,
-                                                     password=location.password)
+        try:
+            return netconf_client.connect.connect_ssh(sock=sock,
+                                                      username=location.username,
+                                                      password=location.password)
+        except BaseException:
+            sock.close()
+            raise
+
+    def _ncc_init(self, location, tries=10):
+        """Open the NETCONF session, retrying while the server settles
+
+        The server accepts the TCP connection as soon as it listens,
+        but drops the SSH session without a hello while it is loading
+        or replacing its host key, which happens right after boot and
+        after every test reset.  The ssh transport retries the same
+        window as exit code 255.
+        """
+        print(f"Connecting to mgmt IP {location.host}:{location.port} ...")
+        for attempt in range(1, tries + 1):
+            try:
+                session = self._ncc_connect(location)
+                break
+            except (StopIteration, EOFError, ConnectionError,
+                    paramiko.SSHException) as err:
+                if attempt == tries:
+                    raise
+                print(f"NETCONF session setup failed ({type(err).__name__}), "
+                      f"attempt {attempt}/{tries}")
+                time.sleep(1)
+
         self.ncc = Manager(session)
 
     def _ly_bootstrap(self, yangdir):
