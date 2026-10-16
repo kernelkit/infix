@@ -36,6 +36,22 @@ import traceback
 
 import infamy.netns
 
+_failure_hooks = []
+
+
+def on_failure(fn):
+    """Call fn() if the test fails, before cleanup, e.g. to log DUT state."""
+    _failure_hooks.append(fn)
+
+
+def _run_failure_hooks():
+    for fn in _failure_hooks:
+        try:
+            fn()
+        except Exception as e:
+            print(f"Failure hook {fn.__qualname__} failed: {e}")
+
+
 class Test:
     def __init__(self, output=sys.stdout):
         self.out = output
@@ -65,6 +81,8 @@ class Test:
         self.out.write(f"# Exiting ({now})\n")
         self.out.flush()
 
+        if t not in (TestPass, TestSkip):
+            _run_failure_hooks()
         self.cleanup()
 
         if not e:

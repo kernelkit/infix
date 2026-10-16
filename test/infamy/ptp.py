@@ -4,18 +4,36 @@ Query PTP operational data from the ieee1588-ptp-tt YANG model.
 All functions are None-safe and intended for use with until():
 
     until(lambda: ptp.is_time_receiver(target), attempts=60)
+
+Port state changes are logged as they are seen, and if the test fails the
+PTP state of every DUT queried here is dumped to the test log.
 """
+
+from infamy import ssh, tap
+
+_targets = {}
+_states = {}
+
+
+def _instances(target):
+    _targets[target.name] = target
+    data = target.get_data("/ieee1588-ptp-tt:ptp") or {}
+    return (data.get("ptp", {})
+                .get("instances", {})
+                .get("instance", []))
 
 
 def _get_instance(target, idx=0):
-    data = target.get_data("/ieee1588-ptp-tt:ptp") or {}
-    instances = (data.get("ptp", {})
-                     .get("instances", {})
-                     .get("instance", []))
-    for inst in instances:
-        if inst.get("instance-index") == idx:
-            return inst
-    return None
+    return next((inst for inst in _instances(target)
+                 if inst.get("instance-index") == idx), None)
+
+
+def _scaled_ns(value):
+    """Scaled nanoseconds (int64 x 2^16, as a string) to nanoseconds."""
+    try:
+        return int(value) // 65536
+    except (TypeError, ValueError):
+        return None
 
 
 def port_state(target, port_idx=1, inst_idx=0):
@@ -25,7 +43,13 @@ def port_state(target, port_idx=1, inst_idx=0):
         return None
     for port in inst.get("ports", {}).get("port", []):
         if port.get("port-index") == port_idx:
-            return port.get("port-ds", {}).get("port-state")
+            state = port.get("port-ds", {}).get("port-state")
+            key = (target.name, inst_idx, port_idx)
+            if _states.get(key) != state:
+                print(f"{target.name}: port {port_idx} "
+                      f"({port.get('underlying-interface', '?')}) {state}")
+                _states[key] = state
+            return state
     return None
 
 
@@ -47,11 +71,8 @@ def offset_ns(target, inst_idx=0):
     inst = _get_instance(target, inst_idx)
     if not inst:
         return None
-    raw = inst.get("current-ds", {}).get("offset-from-time-transmitter")
-    try:
-        return int(raw) // 65536
-    except (TypeError, ValueError):
-        return None
+    return _scaled_ns(inst.get("current-ds", {})
+                         .get("offset-from-time-transmitter"))
 
 
 def steps_removed(target, inst_idx=0):
@@ -108,15 +129,9 @@ def port_state_dbg(target, port_idx=1, inst_idx=0):
         until(lambda: is_time_transmitter(gm) or not print(port_state_dbg(gm)),
               attempts=60)
     """
-    data = target.get_data("/ieee1588-ptp-tt:ptp") or {}
-    if not data:
-        return f"{target.name}: no PTP operational data (ptp4l not running?)"
-
-    instances = (data.get("ptp", {})
-                     .get("instances", {})
-                     .get("instance", []))
+    instances = _instances(target)
     if not instances:
-        return f"{target.name}: PTP data present but no instances"
+        return f"{target.name}: no PTP instances (ptp4l not running?)"
 
     parts = []
     for inst in instances:
@@ -127,6 +142,114 @@ def port_state_dbg(target, port_idx=1, inst_idx=0):
             parts.append(f"inst={idx} port={pidx} state={state}")
 
     return f"{target.name}: " + (", ".join(parts) if parts else "no ports")
+
+
+def _ns(value):
+    ns = _scaled_ns(value)
+    return "?" if ns is None else ns
+
+
+# Two samples, 2 s apart, of every ptp4l port's message counters and of the
+# switch and kernel counters of the PTP ports.  Prints the non-zero ones
+# with their change between the samples.
+_COUNTERS_SH = """
+snap() {
+    for c in $(sudo -n sh -c 'ls /etc/linuxptp/ptp4l-*.conf' 2>/dev/null); do
+        i=${c##*/}
+        sudo -n pmc -u -b 0 -f "$c" "GET PORT_STATS_NP" 2>/dev/null |
+            awk -v i="${i%.conf}" '/portIdentity/ {p = $2}
+                                  $1 ~ /^[rt]x_/ {print i, p, $1, $2}'
+    done
+    for n in @IFACES@; do
+        ethtool -S "$n" 2>/dev/null |
+            awk -v n="$n" 'NR > 1 {sub(":", "", $1); print n, "switch", $1, $2}'
+        for s in rx_packets rx_dropped rx_errors tx_packets tx_dropped tx_errors; do
+            echo "$n kernel $s $(cat /sys/class/net/$n/statistics/$s 2>/dev/null)"
+        done
+    done
+}
+a=$(mktemp); b=$(mktemp)
+snap > "$a"; sleep 2; snap > "$b"
+awk 'NR == FNR {v[$1 " " $2 " " $3] = $4; next}
+     $4 > 0 {printf "%s %s %s=%s(+%d)\\n", $1, $2, $3, $4, $4 - v[$1 " " $2 " " $3]}' "$a" "$b"
+rm -f "$a" "$b"
+"""
+
+
+def _counters(target, ifaces):
+    """Print ptp4l, switch and kernel counters of target's PTP ports, over SSH."""
+    loc = target.location
+    dut = ssh.Device(target.name,
+                     ssh.Location(loc.host, loc.username, loc.password),
+                     wait=False)
+    script = _COUNTERS_SH.replace("@IFACES@", " ".join(sorted(ifaces)))
+    res = dut.runsh(script, timeout=30)
+    if res.returncode:
+        print(f"{target.name}:   cannot read counters: {res.stdout.strip()}")
+        return
+    lines = {}
+    for line in res.stdout.splitlines():
+        fields = line.split(" ", 2)
+        if len(fields) == 3:
+            lines.setdefault(" ".join(fields[:2]), []).append(fields[2])
+    for key, cnts in lines.items():
+        print(f"{target.name}:   {key}: {' '.join(cnts)}")
+
+
+def dump(target):
+    """Print the PTP state of target: clocks, ports, and message counters.
+
+    The gPTP counters tell apart a port that receives nothing, one whose
+    peer delay requests go unanswered, and one that ignores what it gets.
+    The switch and kernel counters tell whether frames left or reached
+    the port at all.
+    """
+    instances = _instances(target)
+    if not instances:
+        print(f"{target.name}: no PTP instances (ptp4l not running?)")
+        return
+
+    ifaces = set()
+    for inst in instances:
+        dds = inst.get("default-ds", {})
+        cds = inst.get("current-ds", {})
+        pds = inst.get("parent-ds", {})
+        print(f"{target.name}: instance {inst.get('instance-index')} "
+              f"{dds.get('instance-type', '?')} "
+              f"clock {dds.get('clock-identity', '?')} "
+              f"gm {pds.get('grandmaster-identity', '?')} "
+              f"steps-removed {cds.get('steps-removed', '?')} "
+              f"offset {_ns(cds.get('offset-from-time-transmitter'))} ns "
+              f"mean-delay {_ns(cds.get('mean-delay'))} ns")
+        for port in inst.get("ports", {}).get("port", []):
+            ds = port.get("port-ds", {})
+            if port.get("underlying-interface"):
+                ifaces.add(port["underlying-interface"])
+            print(f"{target.name}:   port {port.get('port-index')} "
+                  f"({port.get('underlying-interface', '?')}) "
+                  f"{ds.get('port-state', '?')} "
+                  f"link-delay {_ns(ds.get('mean-link-delay'))} ns "
+                  f"{ds.get('delay-mechanism', '?')}")
+            stats = port.get("ieee802-dot1as-gptp:port-statistics-ds")
+            if stats:
+                cnt = " ".join(f"{k.removesuffix('-count')}={v}"
+                               for k, v in stats.items())
+                print(f"{target.name}:     {cnt}")
+
+    print(f"{target.name}: counters, change over 2 s in parentheses:")
+    _counters(target, ifaces)
+
+
+def dump_all():
+    """Print the PTP state of every DUT the helpers have queried."""
+    if not _targets:
+        return
+    print("PTP state of the DUTs at failure:")
+    for target in list(_targets.values()):
+        try:
+            dump(target)
+        except Exception as e:
+            print(f"{target.name}: cannot read PTP state: {e}")
 
 
 def default_threshold(env, logical_node, hops=1):
@@ -148,3 +271,6 @@ def default_threshold(env, logical_node, hops=1):
         for _, _, data in g.edges(phys, data=True)
     )
     return 1_000 * hops if has_hwts else 100_000
+
+
+tap.on_failure(dump_all)
