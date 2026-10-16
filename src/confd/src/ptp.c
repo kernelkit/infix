@@ -216,8 +216,8 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 	 * boundary_clock_jbod silences ptp4l's startup PHC-mismatch check and
 	 * lets each port use its own PHC.  It is a no-op when all ports share
 	 * the same PHC (single-chip board or software timestamping).
-	 * On multi-chip hardware, phc2sys -a disciplines the secondary PHCs;
-	 * see needs_phc2sys() / activate_phc2sys().
+	 * On multi-chip hardware, phc2sys -a disciplines the secondary PHCs
+	 * of a BC; see needs_phc2sys() / activate_phc2sys().
 	 */
 	if (tc || bc)
 		fprintf(fp, "boundary_clock_jbod 1\n");
@@ -334,11 +334,10 @@ static int write_instance_conf(struct lyd_node *inst, json_t *root)
 
 /*
  * True when a PTP instance needs a phc2sys companion to keep all its
- * PHC devices in sync.  Required for BC and TC instances on hardware
- * with multiple switch chips, where each chip has its own /dev/ptpN.
- * On single-chip hardware the function is a no-op: phc2sys -a finds
- * no second PHC and exits immediately.  OC has one port → one PHC,
- * so no sync is ever needed.
+ * PHC devices in sync.  Required for BC instances on hardware with
+ * multiple switch chips, where each chip has its own /dev/ptpN.  OC
+ * has one port, so one PHC.  TC is left out because ptp4l does not
+ * answer management requests in TC mode, so phc2sys -a never attaches.
  */
 static bool needs_phc2sys(struct lyd_node *inst, json_t *root)
 {
@@ -347,7 +346,7 @@ static bool needs_phc2sys(struct lyd_node *inst, json_t *root)
 
 	if (!type)
 		return false;
-	if (strcmp(type, "bc") && strcmp(type, "p2p-tc") && strcmp(type, "e2e-tc"))
+	if (strcmp(type, "bc"))
 		return false;
 
 	return !strcmp(instance_time_stamping(instance(inst), inst, root), "hardware");
@@ -356,8 +355,8 @@ static bool needs_phc2sys(struct lyd_node *inst, json_t *root)
 /*
  * Enable the phc2sys@ companion service for a multi-port HW instance.
  * phc2sys -a subscribes to ptp4l's UDS, discovers the active slave
- * port via BMCA, and disciplines all other PHCs to match it.
- * No config file is needed — the UDS path is passed on the command line.
+ * port via BMCA, and disciplines all other PHCs to match it.  It reads
+ * the instance's ptp4l config for the UDS path, domain and transport.
  */
 static void activate_phc2sys(uint16_t idx)
 {

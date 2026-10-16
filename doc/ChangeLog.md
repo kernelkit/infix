@@ -308,6 +308,12 @@ All notable changes to the project are documented in this file.
 - PTP: the IEEE 802.1AS link delay threshold, above which a port never
   leaves the listening state, defaults to 10 us with hardware time stamping
   instead of 800 ns, and can be set per port with `mean-link-delay-thresh`
+- PTP: transparent clocks, and boundary clocks with the IEEE 802.1AS
+  profile or a domain other than 0, logged "Waiting for ptp4l..." every
+  second.  The helper that keeps the clocks of a multi-chip switch in step
+  never reached the PTP daemon.  It now uses the domain and profile of its
+  instance, and is no longer started for transparent clocks, which do not
+  answer it
 - LAN969x: the LAN8814 and LAN8804 copper PHYs, on the Tactical 1000 and
   EV23X71A, ran with power-on defaults where Microchip's silicon errata
   require other settings on every port: center-tap power management, the
