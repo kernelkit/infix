@@ -73,6 +73,7 @@ type WiFiRadio struct {
 	Bands        []WiFiBand
 	Interfaces   []WiFiInterface
 	Survey       wifiSurveyData
+	Scan         wifiScanData
 }
 
 type WiFiBand struct {
@@ -100,7 +101,6 @@ type WiFiInterface struct {
 	SignalCSS   string
 	RxSpeed     string
 	TxSpeed     string
-	ScanResults []WiFiScan
 	// Mesh mode
 	Forwarding string
 }
@@ -117,7 +117,7 @@ type WiFiClient struct {
 	TxSpeed   string
 }
 
-// WiFiScan is the template data for a scan result entry.
+// WiFiScan is the template data for one network heard in a scan.
 type WiFiScan struct {
 	SSID       string
 	BSSID      string
@@ -238,6 +238,53 @@ func (h *WiFiHandler) Survey(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// wifiScanData is the template data for the network scan fragment of one
+// radio: the networks heard after a scan, or why there are none.
+type wifiScanData struct {
+	Radio    string
+	Networks []WiFiScan
+	Scanned  bool
+	Error    string
+}
+
+// Scan runs the scan action on a radio and renders the networks heard as
+// the scan fragment of the radio's card.  The scan takes the radio off its
+// channel for a few seconds, so it only runs on request.
+// POST /wifi/{name}/scan
+func (h *WiFiHandler) Scan(w http.ResponseWriter, r *http.Request) {
+	data := wifiScanData{Radio: r.PathValue("name")}
+
+	var reply struct {
+		Output struct {
+			Network []wifiNetworkJSON `json:"network"`
+		} `json:"infix-hardware:output"`
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	path := "/data/ietf-hardware:hardware/component=" + url.PathEscape(data.Radio) +
+		"/infix-hardware:wifi-radio/scan"
+	if err := h.RC.CallRPC(ctx, path, nil, &reply); err != nil {
+		log.Printf("wifi: scan %s: %v", data.Radio, err)
+		data.Error = "Scan failed"
+		var re *restconf.Error
+		if errors.As(err, &re) && re.Message != "" {
+			data.Error = re.Message
+		}
+	} else {
+		data.Scanned = true
+		for _, n := range reply.Output.Network {
+			data.Networks = append(data.Networks, buildWiFiScan(n))
+		}
+	}
+
+	if err := h.Template.ExecuteTemplate(w, "wifi-scan", data); err != nil {
+		log.Printf("wifi: template error: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
 // buildWiFiRadios assembles the WiFiRadio slice from hardware components
 // and interface data, matching interfaces to their radio by name.
 func buildWiFiRadios(components []hwComponentWiFiJSON, ifaces []ifaceJSON) []WiFiRadio {
@@ -258,6 +305,7 @@ func buildWiFiRadios(components []hwComponentWiFiJSON, ifaces []ifaceJSON) []WiF
 			Channel:      wifiChannelString(r.Channel),
 			Manufacturer: c.MfgName,
 			Survey:       wifiSurveyData{Radio: c.Name},
+			Scan:         wifiScanData{Radio: c.Name},
 		}
 
 		// Capability flags: check per-band capabilities; if any band supports
@@ -363,9 +411,6 @@ func buildWiFiInterfaces(radioName string, ifaces []ifaceJSON) []WiFiInterface {
 			if st.TxSpeed > 0 {
 				wi.TxSpeed = fmt.Sprintf("%.1f Mbps", float64(st.TxSpeed)/10)
 			}
-			for _, sr := range st.ScanResults {
-				wi.ScanResults = append(wi.ScanResults, buildWiFiScan(sr))
-			}
 		}
 
 		result = append(result, wi)
@@ -392,8 +437,8 @@ func buildWiFiClient(s wifiStaJSON) WiFiClient {
 	return c
 }
 
-// buildWiFiScan converts a wifiScanResultJSON to a WiFiScan template entry.
-func buildWiFiScan(sr wifiScanResultJSON) WiFiScan {
+// buildWiFiScan converts a network from the scan action to a WiFiScan entry.
+func buildWiFiScan(sr wifiNetworkJSON) WiFiScan {
 	enc := "Open"
 	if len(sr.Encryption) > 0 {
 		parts := make([]string, 0, len(sr.Encryption))
