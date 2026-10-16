@@ -1315,29 +1315,6 @@ class Iface:
     def pr_proto_loopack(self, pipe=''):
         print(self._pr_proto_common("loopback", pipe))
 
-    def pr_wifi_ssids(self):
-        width = 70
-        Decore.title("Available Networks", width)
-        ssid_table = SimpleTable([
-            Column('SSID', flexible=True),
-            Column('BSSID'),
-            Column('SECURITY'),
-            Column('SIGNAL'),
-            Column('CHANNEL', 'right')
-        ], min_width=width)
-
-        station = self.wifi.get("station", {})
-        results = station.get("scan-results", {})
-        for result in results:
-            ssid = result.get('ssid', 'Hidden')
-            bssid = result.get("bssid", "unknown")
-            encstr = ", ".join(result.get("encryption", ["Unknown"]))
-            status = signal_to_status(result.get("signal-strength", -100))
-            channel = result.get("channel", "?")
-
-            ssid_table.row(ssid, bssid, encstr, status, channel)
-        ssid_table.print()
-
     def pr_wifi_stations(self):
         """Display connected stations for AP mode"""
         if not self.wifi:
@@ -1806,8 +1783,6 @@ class Iface:
                     print(f"{'rx bitrate':<{19}}: {rx_speed / 10:.1f} Mbps")
                 if tx_speed is not None:
                     print(f"{'tx bitrate':<{19}}: {tx_speed / 10:.1f} Mbps")
-                if "scan-results" in station:
-                    self.pr_wifi_ssids()
 
         if self.gre:
             print(f"{'local address':<{19}}: {self.gre['local']}")

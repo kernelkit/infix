@@ -118,36 +118,6 @@
 </section>
 {{end}}
 
-{{if .ScanResults}}
-<section class="info-card">
-  <div class="card-header">Scan Results</div>
-  <div class="data-table-wrap">
-    <table class="data-table">
-    <thead>
-      <tr>
-        <th>SSID</th>
-        <th>BSSID</th>
-        <th>Signal</th>
-        <th>Channel</th>
-        <th>Security</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{range .ScanResults}}
-      <tr>
-        <td>{{if .SSID}}{{.SSID}}{{else}}<em>Hidden</em>{{end}}</td>
-        <td>{{.BSSID}}</td>
-        <td>{{if .Signal}}<span class="{{.SignalCSS}}">{{.Signal}}</span>{{end}}</td>
-        <td>{{.Channel}}</td>
-        <td>{{.Encryption}}</td>
-      </tr>
-      {{end}}
-    </tbody>
-  </table>
-  </div>
-</section>
-{{end}}
-
 {{if .WGPeers}}
 <section class="info-card">
   <div class="card-header">WireGuard Peers</div>

@@ -179,14 +179,17 @@ type wifiStationJSON struct {
 	SignalStrength *int                 `json:"signal-strength"`
 	RxSpeed        yangInt64            `json:"rx-speed"`
 	TxSpeed        yangInt64            `json:"tx-speed"`
-	ScanResults    []wifiScanResultJSON `json:"scan-results"`
 }
 
-type wifiScanResultJSON struct {
-	SSID           string   `json:"ssid"`
+// WiFi network scan, the output of the infix-hardware scan action on a
+// radio: one entry per access point heard.
+
+type wifiNetworkJSON struct {
 	BSSID          string   `json:"bssid"`
-	SignalStrength *int     `json:"signal-strength"`
+	SSID           string   `json:"ssid"`
+	Frequency      int      `json:"frequency"`
 	Channel        int      `json:"channel"`
+	SignalStrength *int     `json:"signal-strength"`
 	Encryption     []string `json:"encryption"`
 }
 
@@ -631,7 +634,6 @@ type ifaceDetailData struct {
 	EthFrameStats    []kvEntry
 	WGPeers          []wgPeerEntry
 	WiFiStations     []wifiStaEntry
-	ScanResults      []wifiScanEntry
 	Desc             map[string]string
 }
 
@@ -676,15 +678,6 @@ type wifiStaEntry struct {
 	TxBytes   string
 	RxSpeed   string
 	TxSpeed   string
-}
-
-type wifiScanEntry struct {
-	SSID       string
-	BSSID      string
-	Signal     string
-	SignalCSS  string
-	Channel    string
-	Encryption string
 }
 
 // fetchInterface retrieves a single interface by name from RESTCONF.
@@ -806,9 +799,6 @@ func buildDetailData(r *http.Request, iface *ifaceJSON) ifaceDetailData {
 			}
 			if st.TxSpeed > 0 {
 				d.WiFiTxSpeed = fmt.Sprintf("%.1f Mbps", float64(st.TxSpeed)/10)
-			}
-			for _, sr := range st.ScanResults {
-				d.ScanResults = append(d.ScanResults, buildWifiScanEntry(sr))
 			}
 		}
 	}
@@ -1014,24 +1004,6 @@ func buildWifiStaEntry(s wifiStaJSON) wifiStaEntry {
 	if s.SignalStrength != nil {
 		e.Signal = fmt.Sprintf("%d dBm", *s.SignalStrength)
 		e.SignalCSS = wifiSignalCSS(*s.SignalStrength)
-	}
-	return e
-}
-
-func buildWifiScanEntry(sr wifiScanResultJSON) wifiScanEntry {
-	e := wifiScanEntry{
-		SSID:    sr.SSID,
-		BSSID:   sr.BSSID,
-		Channel: fmt.Sprintf("%d", sr.Channel),
-	}
-	if len(sr.Encryption) > 0 {
-		e.Encryption = strings.Join(sr.Encryption, ", ")
-	} else {
-		e.Encryption = "Open"
-	}
-	if sr.SignalStrength != nil {
-		e.Signal = fmt.Sprintf("%d dBm", *sr.SignalStrength)
-		e.SignalCSS = wifiSignalCSS(*sr.SignalStrength)
 	}
 	return e
 }
