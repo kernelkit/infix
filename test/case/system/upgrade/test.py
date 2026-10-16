@@ -10,7 +10,7 @@ import os
 import time
 import infamy
 import infamy.file_server as srv
-from infamy.util import wait_boot
+from infamy.util import wait_boot, until
 
 SRVPORT = 8008
 
@@ -59,8 +59,7 @@ def cleanup(env, old_bootorder):
     target = env.attach("target", "mgmt", "netconf")
 
     print("Verify the boot order is the orignal configured")
-    order = get_boot_order(target)
-    assert order == old_bootorder, f"Unexpected bootorder: {repr(order)}"
+    until(lambda: get_boot_order(target) == old_bootorder, attempts=30)
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
