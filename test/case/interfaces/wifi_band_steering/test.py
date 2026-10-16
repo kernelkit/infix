@@ -23,7 +23,9 @@ still answered and works normally.  See doc/wifi.md.
 The test asserts the client associates to "campus", that band steering lands
 it on the 5GHz BSS (not the 2.4GHz one), and that it leases an address -- a
 completed association plus DHCP lease is real bidirectional traffic over the
-(relayed) radio link.
+(relayed) radio link.  A client that got in on 2.4GHz before the 5GHz BSS was
+up is asked to move once it scans and the 5GHz BSS has seen it; real clients
+scan in the background on their own, this one is told to.
 
 Topology:
 ....
@@ -47,6 +49,14 @@ SUBNET = "192.168.30.0/24"
 AP_IP = "192.168.30.1"
 POOL_START = "192.168.30.100"
 POOL_END = "192.168.30.101"
+
+def steered(ap, clientsh, client_mac):
+    """True once the client is on the 5GHz BSS, else tell it to scan."""
+    if client_mac in wifi.ap_stations(ap, "wifi1"):
+        return True
+    clientsh.runsh("sudo wpa_cli -i wifi0 scan >/dev/null")
+    return False
+
 
 def ap_bss(name, radio_name):
     """A band-steering AP BSS on the given radio, bridged into br0."""
@@ -118,9 +128,8 @@ with infamy.Test() as test:
     with test.step("Verify band steering put the client on the 5GHz BSS"):
         # Steered: the client shows up on the 5GHz BSS (wifi1) and not on the
         # 2.4GHz BSS (wifi0) -- the 2.4GHz BSS suppressed its probe responses
-        # once it had been seen on 5GHz.
-        until(lambda: client_mac in wifi.ap_stations(ap, "wifi1"),
-              attempts=90, interval=2)
+        # once it had been seen on 5GHz, or asked the client to move there.
+        until(lambda: steered(ap, clientsh, client_mac), attempts=20, interval=10)
         assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client associated on 2.4GHz; band steering did not steer it to 5GHz"
 
@@ -149,12 +158,7 @@ with infamy.Test() as test:
         until(lambda: iface.is_oper_up(ap, "wifi1"), attempts=60, interval=2)
 
     with test.step("Verify a scanning client is steered back to the 5GHz BSS"):
-        def steered():
-            if client_mac in wifi.ap_stations(ap, "wifi1"):
-                return True
-            clientsh.runsh("sudo wpa_cli -i wifi0 scan >/dev/null")
-            return False
-        until(steered, attempts=20, interval=10)
+        until(lambda: steered(ap, clientsh, client_mac), attempts=20, interval=10)
         assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client still associated on 2.4GHz"
 
