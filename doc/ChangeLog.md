@@ -242,6 +242,8 @@ All notable changes to the project are documented in this file.
   answer it
 - PTP: the operational delay mechanism of every port read `e2e`, also for
   ports using peer delay, e.g. with the IEEE 802.1AS profile
+- PTP: the operational data never showed the observed clock phase change
+  rate of the parent clock
 - LAN969x: the LAN8814 and LAN8804 copper PHYs, on the Tactical 1000 and
   EV23X71A, ran with power-on defaults where Microchip's silicon errata
   require other settings on every port: center-tap power management, the
