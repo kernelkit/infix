@@ -1,0 +1,94 @@
+From 13ebec3f62a9ee69c3211f68a0d71ad6678b3402 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 3 Mar 2026 10:02:34 +0000
+Subject: [PATCH 2/2] image-hd: Support GROWFS flag on GPT partitions
+Organization: Wires
+
+This is an indication to the operating system that the contained
+filesystem should be expanded to fill the entire partition. For more
+information:
+
+https://uapi-group.org/specifications/specs/discoverable_partitions_specification/#partition-attribute-flags
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ README.rst | 2 ++
+ genimage.c | 2 ++
+ genimage.h | 1 +
+ image-hd.c | 2 ++
+ 4 files changed, 7 insertions(+)
+
+diff --git a/README.rst b/README.rst
+index a4c1a23..39f7566 100644
+--- a/README.rst
++++ b/README.rst
+@@ -142,6 +142,7 @@ Partition options:
+ 			For hd images this can be used for the last partition. If set
+ 			the partition will fill the remaining space of the image.
+ :bootable:		Boolean specifying whether to set the bootable flag.
++:growfs:		Boolean specifying whether to set the growfs flag (only with GPT).
+ :hidden:		Boolean specifying whether to set the hidden flag (only with GPT).
+ :no-automount:		Boolean specifying whether to set the no-automount flag (only with GPT).
+ :read-only:		Boolean specifying whether to set the read-only flag (only with GPT).
+@@ -509,6 +510,7 @@ genimage configuration GPT FLAG
+ ====================== ==============================
+ read-only              GPT_PE_FLAG_READ_ONLY (Bit 60)
+ bootable               GPT_PE_FLAG_BOOTABLE (Bit 2)
++growfs                 GPT_PE_FLAG_GROWFS (Bit 59)
+ hidden                 GPT_PE_FLAG_HIDDEN (Bit 62)
+ no-automount           GPT_PE_FLAG_NO_AUTO (Bit 63)
+ ====================== ==============================
+diff --git a/genimage.c b/genimage.c
+index 770a8c4..f804843 100644
+--- a/genimage.c
++++ b/genimage.c
+@@ -102,6 +102,7 @@ static cfg_opt_t partition_opts[] = {
+ 	CFG_INT("partition-type", 0, CFGF_NONE),
+ 	CFG_BOOL("bootable", cfg_false, CFGF_NONE),
+ 	CFG_BOOL("forced-primary", cfg_false, CFGF_NONE),
++	CFG_BOOL("growfs", cfg_false, CFGF_NONE),
+ 	CFG_BOOL("read-only", cfg_false, CFGF_NONE),
+ 	CFG_BOOL("hidden", cfg_false, CFGF_NONE),
+ 	CFG_BOOL("no-automount", cfg_false, CFGF_NONE),
+@@ -405,6 +406,7 @@ static int parse_partitions(struct image *image, cfg_t *imagesec)
+ 		part->partition_type = cfg_getint(partsec, "partition-type");
+ 		part->bootable = cfg_getbool(partsec, "bootable");
+ 		part->forced_primary = cfg_getbool(partsec, "forced-primary");
++		part->growfs = cfg_getbool(partsec, "growfs");
+ 		part->read_only = cfg_getbool(partsec, "read-only");
+ 		part->hidden = cfg_getbool(partsec, "hidden");
+ 		part->no_automount = cfg_getbool(partsec, "no-automount");
+diff --git a/genimage.h b/genimage.h
+index 2587bc6..912239e 100644
+--- a/genimage.h
++++ b/genimage.h
+@@ -46,6 +46,7 @@ struct partition {
+ 	cfg_bool_t bootable;
+ 	cfg_bool_t logical;
+ 	cfg_bool_t forced_primary;
++	cfg_bool_t growfs;
+ 	cfg_bool_t read_only;
+ 	cfg_bool_t hidden;
+ 	cfg_bool_t no_automount;
+diff --git a/image-hd.c b/image-hd.c
+index 3ecdb98..4513322 100644
+--- a/image-hd.c
++++ b/image-hd.c
+@@ -106,6 +106,7 @@ ct_assert(sizeof(struct gpt_partition_entry) == 128);
+ #define GPT_REVISION_1_0 0x00010000
+ 
+ #define GPT_PE_FLAG_BOOTABLE  (1ULL << 2)
++#define GPT_PE_FLAG_GROWFS    (1ULL << 59)
+ #define GPT_PE_FLAG_READ_ONLY (1ULL << 60)
+ #define GPT_PE_FLAG_HIDDEN    (1ULL << 62)
+ #define GPT_PE_FLAG_NO_AUTO   (1ULL << 63)
+@@ -522,6 +523,7 @@ static int hdimage_insert_gpt(struct image *image, struct list_head *partitions)
+ 		table[i].last_lba = htole64((partition_end(part)) / 512 - 1);
+ 		table[i].flags =
+ 			(part->bootable ? GPT_PE_FLAG_BOOTABLE : 0) |
++			(part->growfs ? GPT_PE_FLAG_GROWFS : 0) |
+ 			(part->read_only ? GPT_PE_FLAG_READ_ONLY : 0) |
+ 			(part->hidden ? GPT_PE_FLAG_HIDDEN : 0) |
+ 			(part->no_automount ? GPT_PE_FLAG_NO_AUTO : 0);
+-- 
+2.43.0
+

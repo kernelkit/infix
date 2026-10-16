@@ -1,0 +1,343 @@
+#!/bin/sh
+
+set -e
+
+capath=/etc/rauc/keys
+
+usage()
+{
+    local _ddi="$(basename $0)"
+
+    cat <<EOF
+usage: $_ddi [<options>] <image> <command> [<args>]
+
+Discoverable Disk Image manipulation
+
+  Options:
+
+    -A <arch>
+      Override the system architecture.
+
+    -C <path>
+      Source trusted signing keys from the supplied directory.
+      Default: $capath
+
+    -h
+      Show this message and exit.
+
+  Commands:
+
+    inspect <property>
+
+      uuid
+        Print GPT disk identifier
+
+    part <partition> <command> [<args]
+      Where <partition> is one of:
+        root       The first root partition
+
+        open [<options>] <name>
+
+          Create a device mapping for the specified partition, called
+          <name>.
+
+          Options:
+
+          -v
+            Use the associated dm-verity hash tree, whose root hash is
+            available in the associated signature partition.
+
+          -V <root-hash>
+            Use the associated dm-verity hash tree, along with an
+            externally validated root hash.
+
+        verify [<options>]
+
+          Verify that the specified partition exists and, optionally,
+          is accompanied by a trusted dm-verity hash tree.
+
+          Options:
+
+          -v
+            Require the presence of an associated dm-verity hash tree,
+            whose root hash is available in the associated signature
+            partition.
+
+          -V <root-hash>
+            Require the presence of an associated dm-verity hash tree
+            whose root hash matches the provided one.
+
+  Examples:
+
+    Map and mount the verity protected SquashFS root partition from an
+    image:
+      $_ddi infix-x86_64.raw part root open -v infix
+      mount -t squashfs /dev/mapper/infix /opt
+
+EOF
+}
+
+X86_64_CODE_ROOT=0x8304
+X86_64_CODE_ROOT_VERITY=0x830c
+X86_64_CODE_ROOT_VERITY_SIG=0x8370
+
+die()
+{
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+ok()
+{
+    echo "$*" >&2
+}
+
+setup_arch()
+{
+    case "$1" in
+	x86_64)
+	    CODE_ROOT=$X86_64_CODE_ROOT
+	    CODE_ROOT_VERITY=$X86_64_CODE_ROOT_VERITY
+	    CODE_ROOT_VERITY_SIG=$X86_64_CODE_ROOT_VERITY_SIG
+	    ;;
+	*)
+	    die "Unsupported architecture"
+    esac
+}
+
+setup_work()
+{
+    local _umask
+
+    _umask=$(umask)
+    umask 077
+    workdir=$(mktemp -d)
+    umask $_umask
+
+    trap 'rm -rf "$workdir"' EXIT INT TERM
+}
+
+ddi_to_block()
+{
+    local _kind _lo
+
+    _kind=$(stat -Lc %F "$1")
+    case "$_kind" in
+	"block special file")
+	    echo "$1"
+	    return
+	    ;;
+	"regular file")
+	    _lo=$(losetup -f || die "Found no free loop device for $1")
+	    losetup -P "$_lo" "$1" || die "Failed to setup loop device of $1"
+	    echo "$_lo"
+	    return
+	    ;;
+    esac
+
+    die "$1 is a $_kind, only regular and block devices are supported"
+}
+
+ddi_get_part_info()
+{
+    local _code _item
+
+    case "$2" in
+	root) _code="$CODE_ROOT";;
+	root-verity) _code="$CODE_ROOT_VERITY";;
+	root-verity-sig) _code="$CODE_ROOT_VERITY_SIG";;
+	*) die "Unknown partition type \"$1\"" ;;
+    esac
+    _code=$(printf "%04X" "$_code")
+    _item=${3:-exists}
+
+    sgdisk "$1" -p | awk -v code="$_code" -v item="$_item" '
+    	   /^[ ]*[0-9]+/ {
+	       if ($6 != code)
+	       	  next;
+
+	       if (item == "exists") exit(0);
+	       if (item == "index") { print($1); exit(0); }
+
+	       exit(1);
+	   }
+    '
+}
+
+ddi_get_part_dev()
+{
+    local _dev _index _lvuuid _subsys
+
+    _index=$(ddi_get_part_info "$1" "$2" index \
+		 || die "No $2 partition found on $1")
+
+    _subsys=$(dmsetup info -c --noheadings -o subsystem "$1" 2>/dev/null || true)
+    if [ "$_subsys" = "LVM" ]; then
+	_lvuuid=$(dmsetup info -c --noheadings -o uuid "$1")
+	_dev=/dev/mapper/$(dmsetup info -c --noheadings -o name -u "part${_index}-$_lvuuid")
+    else
+	_dev=$(basename "$1")
+	_dev=$(find /sys/block/"$_dev"/ -mindepth 1 -maxdepth 1 -type d  \
+		    -name "${_dev}$_index" -o -name "${_dev}p$_index")
+	_dev=/dev/$(basename "$_dev")
+    fi
+
+    [ -b "$_dev" ] || die "Failed to locate $2 partition in $1"
+
+    echo "$_dev"
+}
+
+ddi_get_root_hash()
+{
+    local _subj
+
+    command -v openssl >/dev/null || die "Missing dependency: openssl"
+    command -v jq >/dev/null || die "Missing dependency: jq"
+
+    jq -r .rootHash "$1" | tr -d '\n' >"$workdir"/hash \
+	|| die "Invalid signature: rootHash is missing"
+
+    jq -r .signature "$1" | base64 -d >"$workdir"/sig \
+	|| die "Invalid signature: signature data is missing"
+
+    openssl cms -verify -verify_retcode -CApath "$capath" \
+	    -content  "$workdir"/hash \
+	    -in       "$workdir"/sig  -inform DER \
+	    -certsout "$workdir"/certs >/dev/null 2>&1 \
+	|| die "Signature verification failed"
+
+    _subj=$(openssl x509 -noout -subject <"$workdir"/certs | sed -e 's/^subject=//')
+    ok "Trusting root hash signature from $_subj"
+
+    cat "$workdir"/hash
+}
+
+ddipart_get_verity()
+{
+    local _hash
+
+    while getopts "vV:" opt; do
+	case "$opt" in
+	    V)
+		vkind="${kind}-verity"
+		vhash="$OPTARG"
+		;;
+	    v)
+		vkind="${kind}-verity"
+		;;
+	esac
+    done
+
+    [ "$vkind" ] || return
+
+    vpart=$(ddi_get_part_dev "$img" "$vkind")
+
+    [ "$vhash" ] && return
+
+    vskind="${vkind}-sig"
+    vspart=$(ddi_get_part_dev "$img" "$vskind")
+    vhash=$(ddi_get_root_hash "$vspart")
+}
+
+ddipart_open()
+{
+    [ "$vpart" ] || die "$kind partition is already accessible at $part"
+
+    shift $((OPTIND - 1))
+
+    veritysetup open "$part" "$1" "$vpart" "$vhash"
+}
+
+ddipart_verify()
+{
+    [ "$vpart" ] || return
+
+    veritysetup verify "$part" "$vpart" "$vhash"
+    ok "Image in $img has $kind partition with valid dm-verity hash tree"
+}
+
+ddipart()
+{
+    local _cmd
+
+    kind="$1"
+    shift
+
+    ddi_get_part_info "$img" "$kind" \
+	|| die "No $kind partition found on $img"
+
+    _cmd="$1"
+    shift
+
+    case "$_cmd" in
+	open|verify)
+	    img=$(ddi_to_block $img)
+	    part=$(ddi_get_part_dev "$img" "$kind")
+	    ddipart_get_verity "$@"
+
+	    ddipart_$_cmd "$@"
+	    ;;
+	*)
+	    die "Unknown partition command \"$_cmd\""
+	    ;;
+    esac
+}
+
+ddiinspect()
+{
+    case "$1" in
+	uuid)
+	    sgdisk "$img" -p | awk '
+    	    	BEGIN { err = 1; } END { exit(err); }
+		/^Creating new GPT/ { exit; }
+
+		/^Disk identifier \(GUID\): / {
+	       	    print($4); err = 0; exit;
+	   	}'
+	    ;;
+	*)
+	    die "Unknown property: $1"
+	    ;;
+    esac
+}
+
+_arch=$(uname -m)
+
+while getopts "A:C:h" opt; do
+    case ${opt} in
+	A)
+	    _arch="$OPTARG"
+	    ;;
+	C)
+	    capath="$OPTARG"
+	    ;;
+	h)
+	    usage && exit 0
+	    ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [ $# -lt 2 ]; then
+    usage && exit 1
+fi
+
+img="$1"
+cmd="$2"
+shift 2
+
+setup_arch "$_arch"
+setup_work
+
+case "$cmd" in
+    inspect)
+	ddiinspect "$@"
+	;;
+    part)
+	ddipart "$@"
+	;;
+    *)
+	echo "Unknown command \"$cmd\"" >2
+	exit 1
+	;;
+esac

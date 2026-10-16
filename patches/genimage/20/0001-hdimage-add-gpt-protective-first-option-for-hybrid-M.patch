@@ -1,7 +1,7 @@
-From 7f50533b9e57f5e7d1e4dd47c3f43e2d6a9c8b1a Mon Sep 17 00:00:00 2001
+From 557bb6ebede417249e3df2a8fb7340a5cae0684e Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 8 Mar 2026 04:33:56 +0100
-Subject: [PATCH] hdimage: add gpt-protective-first option for hybrid MBR
+Subject: [PATCH 1/2] hdimage: add gpt-protective-first option for hybrid MBR
 Organization: Wires
 
 In a hybrid MBR the conventional layout (used by gdisk and others) is:
@@ -31,16 +31,17 @@ The default (false) preserves the existing genimage behaviour so that
 platforms like Raspberry Pi continue to work without any changes.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  README.rst | 10 ++++++++++
- image-hd.c | 27 ++++++++++++++++++++++-----
- 2 files changed, 32 insertions(+), 5 deletions(-)
+ image-hd.c | 27 +++++++++++++++++++++++++--
+ 2 files changed, 35 insertions(+), 2 deletions(-)
 
 diff --git a/README.rst b/README.rst
-index 9a95f75..f45fb93 100644
+index 770bca8..a4c1a23 100644
 --- a/README.rst
 +++ b/README.rst
-@@ -480,6 +480,16 @@ Options:
+@@ -481,6 +481,16 @@ Options:
  			placed at 512 bytes (sector 1).  Defaults to 1024 bytes (sector 2).
  :gpt-no-backup:         Boolean. If true, then the backup partition table at the end of
                          the image is not written.
@@ -58,7 +59,7 @@ index 9a95f75..f45fb93 100644
  			random value.
  :fill:			If this is set to true, then the image file will be filled
 diff --git a/image-hd.c b/image-hd.c
-index 274c6ac..610d9d1 100644
+index 97e75a3..3ecdb98 100644
 --- a/image-hd.c
 +++ b/image-hd.c
 @@ -46,6 +46,7 @@ struct hdimage {
@@ -72,7 +73,7 @@ index 274c6ac..610d9d1 100644
 @@ -152,6 +153,26 @@ static int hdimage_insert_mbr(struct image *image, struct list_head *partitions)
  	memset(&mbr, 0, sizeof(mbr));
  	memcpy(&mbr.disk_signature, &hd->disksig, sizeof(hd->disksig));
-
+ 
 +	/*
 +	 * For hybrid MBR, optionally write the GPT protective entry (0xEE) at
 +	 * slot 0 first when gpt-protective-first = true.  This matches the
@@ -95,32 +96,32 @@ index 274c6ac..610d9d1 100644
 +
  	list_for_each_entry(part, partitions, list) {
  		struct mbr_partition_entry *entry;
-
+ 
 @@ -176,13 +197,13 @@ static int hdimage_insert_mbr(struct image *image, struct list_head *partitions)
  		i++;
  	}
-
+ 
 -	if (hd->table_type == TYPE_HYBRID) {
 +	/* For hybrid MBR without gpt-protective-first, append 0xEE after data partitions. */
 +	if (hd->table_type == TYPE_HYBRID && !hd->gpt_protective_first) {
  		struct mbr_partition_entry *entry;
-
+ 
  		entry = &mbr.part_entry[i];
-
+ 
  		entry->boot = 0x00;
 -
  		entry->partition_type = 0xee;
  		entry->relative_sectors = 1;
  		entry->total_sectors = hd->gpt_location / 512 + GPT_SECTORS - 2;
-@@ -978,6 +999,7 @@ static int hdimage_setup(struct image *image, cfg_t *cfg)
+@@ -979,6 +1000,7 @@ static int hdimage_setup(struct image *image, cfg_t *cfg)
  	table_type = cfg_getstr(cfg, "partition-table-type");
  	hd->gpt_location = cfg_getint_suffix(cfg, "gpt-location");
  	hd->gpt_no_backup = cfg_getbool(cfg, "gpt-no-backup");
 +	hd->gpt_protective_first = cfg_getbool(cfg, "gpt-protective-first");
  	hd->fill = cfg_getbool(cfg, "fill");
-
+ 
  	if (is_block_device(imageoutfile(image))) {
-@@ -1227,6 +1249,7 @@ static cfg_opt_t hdimage_opts[] = {
+@@ -1229,6 +1251,7 @@ static cfg_opt_t hdimage_opts[] = {
  	CFG_BOOL("gpt", cfg_false, CFGF_NODEFAULT),
  	CFG_STR("gpt-location", NULL, CFGF_NONE),
  	CFG_BOOL("gpt-no-backup", cfg_false, CFGF_NONE),
@@ -128,6 +129,6 @@ index 274c6ac..610d9d1 100644
  	CFG_BOOL("fill", cfg_false, CFGF_NONE),
  	CFG_END()
  };
---
+-- 
 2.43.0
 
