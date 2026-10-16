@@ -281,6 +281,9 @@ All notable changes to the project are documented in this file.
 - LAN969x: STP did not converge and LACP failed over aggregates in a
   bridge.  The switch flooded BPDUs and LACPDUs to the other bridge ports
   instead of handing them to the CPU
+- LAN969x: a link aggregate in a bridge did not forward, the switch now
+  offloads link aggregates.  Based on the LAG support by Daniel Machon in
+  Microchip's BSP
 - LAN969x: taking down one port of a link aggregate stopped unicast to the
   aggregate on the remaining ports, and removing the aggregate cut off the
   port whose address it had used until that port was disabled and enabled

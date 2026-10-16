@@ -1,7 +1,7 @@
 From b34507a4471478a21c083e91024a4b47abbc3d37 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 14 Oct 2026 15:18:34 +0200
-Subject: [PATCH 125/130] net: sparx5: terminate VLAN uppers of bridged ports
+Subject: [PATCH 125/131] net: sparx5: terminate VLAN uppers of bridged ports
 
 A VLAN interface on top of a port in a VLAN-aware bridge never receives
 anything, unless the bridge also has that VLAN on the port:
