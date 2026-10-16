@@ -50,11 +50,11 @@ AP_IP = "192.168.30.1"
 POOL_START = "192.168.30.100"
 POOL_END = "192.168.30.101"
 
-def steered(ap, clientsh, client_mac):
+def steered(ap, client, client_mac):
     """True once the client is on the 5GHz BSS, else tell it to scan."""
     if client_mac in wifi.ap_stations(ap, "wifi1"):
         return True
-    clientsh.runsh("sudo wpa_cli -i wifi0 scan >/dev/null")
+    wifi.scan(client, "radio2")
     return False
 
 
@@ -75,10 +75,9 @@ def ap_bss(name, radio_name):
 with infamy.Test() as test:
     with test.step("Set up topology and attach to the ap and the client"):
         env = infamy.Env()
-        ap, client, clientsh = parallel(
+        ap, client = parallel(
             lambda: env.attach("ap", "mgmt"),
             lambda: env.attach("client", "mgmt"),
-            lambda: env.attach("client", "mgmt", "ssh"),
         )
         wifi.skip_unless_supported(test, ap, client)
 
@@ -129,7 +128,7 @@ with infamy.Test() as test:
         # Steered: the client shows up on the 5GHz BSS (wifi1) and not on the
         # 2.4GHz BSS (wifi0) -- the 2.4GHz BSS suppressed its probe responses
         # once it had been seen on 5GHz, or asked the client to move there.
-        until(lambda: steered(ap, clientsh, client_mac), attempts=20, interval=10)
+        until(lambda: steered(ap, client, client_mac), attempts=20, interval=10)
         assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client associated on 2.4GHz; band steering did not steer it to 5GHz"
 
@@ -158,7 +157,7 @@ with infamy.Test() as test:
         until(lambda: iface.is_oper_up(ap, "wifi1"), attempts=60, interval=2)
 
     with test.step("Verify a scanning client is steered back to the 5GHz BSS"):
-        until(lambda: steered(ap, clientsh, client_mac), attempts=20, interval=10)
+        until(lambda: steered(ap, client, client_mac), attempts=20, interval=10)
         assert client_mac not in wifi.ap_stations(ap, "wifi0"), \
             "client still associated on 2.4GHz"
 
