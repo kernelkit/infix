@@ -11,7 +11,6 @@ import (
 type Config struct {
 	Socket           string
 	LogLevel         string
-	PollSystem       time.Duration
 	PollRouting      time.Duration
 	PollNTP          time.Duration
 	PollHardware     time.Duration
@@ -30,7 +29,6 @@ func Load() *Config {
 	return &Config{
 		Socket:           envStr("YANGERD_SOCKET", "/run/yangerd.sock"),
 		LogLevel:         envStr("YANGERD_LOG_LEVEL", "info"),
-		PollSystem:       envDur("YANGERD_POLL_INTERVAL_SYSTEM", 60*time.Second),
 		PollRouting:      envDur("YANGERD_POLL_INTERVAL_ROUTING", 10*time.Second),
 		PollNTP:          envDur("YANGERD_POLL_INTERVAL_NTP", 60*time.Second),
 		PollHardware:     envDur("YANGERD_POLL_INTERVAL_HARDWARE", 10*time.Second),

@@ -101,7 +101,6 @@ func main() {
 	t.RegisterProvider("ietf-ntp:ntp", ntp.Live)
 	t.RegisterProvider("ietf-hardware:hardware", hardware.Live)
 	collectors := []collector.Collector{
-		collector.NewSystemCollector(cmd, fs, cfg.PollSystem),
 		ntp,
 		hardware,
 	}
@@ -111,8 +110,10 @@ func main() {
 	pokes := collector.RunAll(ctx, &wg, t, collectors)
 
 	inst := collector.DBusInstaller{}
+	services := collector.NewServices(cmd)
 	t.RegisterProvider("ietf-system:system-state", func() json.RawMessage {
 		live := tree.ShallowMerge(collector.LiveSystemState(fs), ntp.LiveSources())
+		live = tree.ShallowMerge(live, services.Live())
 		installerOverlay := collector.MergeInstaller(t.GetCached("ietf-system:system-state"), inst)
 		if installerOverlay == nil {
 			return live

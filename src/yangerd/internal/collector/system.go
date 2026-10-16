@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/numconv"
-	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 var platformKeyMap = map[string]string{
@@ -17,49 +17,44 @@ var platformKeyMap = map[string]string{
 	"ARCHITECTURE": "machine",
 }
 
-// SystemCollector gathers ietf-system operational data.
-type SystemCollector struct {
-	cmd      CommandRunner
-	fs       FileReader
-	interval time.Duration
+// servicesTimeout bounds one initctl call on the request path.
+const servicesTimeout = 5 * time.Second
+
+// Services reads the service list from finit when asked.  Finit has no
+// event for a service changing state yet, so a GET asks it rather than
+// a timer; initctl is a cheap local query.  The last good answer stands
+// in while initctl cannot answer, e.g. during a reload, so a GET at the
+// wrong moment does not lose the whole list.
+type Services struct {
+	cmd  CommandRunner
+	mu   sync.Mutex
+	last json.RawMessage
 }
 
-// NewSystemCollector creates a SystemCollector with the given dependencies.
-func NewSystemCollector(cmd CommandRunner, fs FileReader, interval time.Duration) *SystemCollector {
-	return &SystemCollector{cmd: cmd, fs: fs, interval: interval}
+// NewServices creates a Services provider reading through cmd.
+func NewServices(cmd CommandRunner) *Services {
+	return &Services{cmd: cmd}
 }
 
-// Name implements Collector.
-func (c *SystemCollector) Name() string { return "system" }
+// Live is the infix-system:services overlay for ietf-system:system-state.
+func (s *Services) Live() json.RawMessage {
+	ctx, cancel := context.WithTimeout(context.Background(), servicesTimeout)
+	defer cancel()
 
-// Interval implements Collector.
-func (c *SystemCollector) Interval() time.Duration { return c.interval }
-
-// Collect implements Collector.  It merges service data into
-// "ietf-system:system-state".  DNS is handled reactively by
-// fswatcher on /var/lib/misc/resolv.conf.  Other system-state
-// subtrees (platform, software, users, hostname, timezone, clock,
-// memory, load, filesystems) are populated by boot-once, reactive,
-// or on-demand providers.
-func (c *SystemCollector) Collect(ctx context.Context, t *tree.Tree) error {
-	state := make(map[string]interface{})
-
-	if err := c.addServices(ctx, state); err != nil {
-		return err
-	}
-
-	data, err := json.Marshal(state)
+	data, err := servicesOverlay(ctx, s.cmd)
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if err != nil {
-		return err
+		return s.last
 	}
-	t.Merge("ietf-system:system-state", data)
-	return nil
+	s.last = data
+	return data
 }
 
-func (c *SystemCollector) addServices(ctx context.Context, state map[string]interface{}) error {
+func servicesOverlay(ctx context.Context, cmd CommandRunner) (json.RawMessage, error) {
 	var initData []map[string]interface{}
-	if err := runJSON(ctx, c.cmd, &initData, "initctl", "-j"); err != nil {
-		return err
+	if err := runJSON(ctx, cmd, &initData, "initctl", "-j"); err != nil {
+		return nil, err
 	}
 
 	var services []interface{}
@@ -86,10 +81,11 @@ func (c *SystemCollector) addServices(ctx context.Context, state map[string]inte
 		services = append(services, svc)
 	}
 
-	state["infix-system:services"] = map[string]interface{}{
-		"service": services,
-	}
-	return nil
+	return json.Marshal(map[string]interface{}{
+		"infix-system:services": map[string]interface{}{
+			"service": services,
+		},
+	})
 }
 
 func yangDateTime(t time.Time) string {

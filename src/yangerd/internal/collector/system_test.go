@@ -1,14 +1,11 @@
 package collector
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/kernelkit/infix/src/yangerd/internal/testutil"
-	"github.com/kernelkit/infix/src/yangerd/internal/tree"
 )
 
 const (
@@ -34,71 +31,39 @@ const (
 ]`
 )
 
-func newTestCollector() (*SystemCollector, *testutil.MockRunner, *testutil.MockFileReader) {
+func newTestServices(initctl string) (*Services, *testutil.MockRunner) {
 	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"initctl -j": []byte(testInitctlJSON),
-		},
-		Errors: map[string]error{},
+		Results: map[string][]byte{"initctl -j": []byte(initctl)},
+		Errors:  map[string]error{},
 	}
-
-	fs := &testutil.MockFileReader{
-		Files: map[string][]byte{},
-		Globs: map[string][]string{},
-	}
-
-	c := NewSystemCollector(runner, fs, 60*time.Second)
-	return c, runner, fs
+	return NewServices(runner), runner
 }
 
-func collectToState(t *testing.T, c *SystemCollector) map[string]interface{} {
+func serviceList(t *testing.T, raw json.RawMessage) []interface{} {
 	t.Helper()
-	tr := tree.New()
-	if err := c.Collect(context.Background(), tr); err != nil {
-		t.Fatalf("Collect failed: %v", err)
+	if raw == nil {
+		t.Fatal("no services overlay")
 	}
-
-	stateRaw := tr.Get("ietf-system:system-state")
-	if stateRaw == nil {
-		t.Fatal("missing ietf-system:system-state in tree")
-	}
-
 	state := make(map[string]interface{})
-	if err := json.Unmarshal(stateRaw, &state); err != nil {
-		t.Fatalf("unmarshal system-state: %v", err)
+	if err := json.Unmarshal(raw, &state); err != nil {
+		t.Fatalf("unmarshal overlay: %v", err)
 	}
-	return state
-}
-
-func TestSystemCollectorName(t *testing.T) {
-	c, _, _ := newTestCollector()
-	if c.Name() != "system" {
-		t.Fatalf("expected name 'system', got %q", c.Name())
-	}
-}
-
-func TestSystemCollectorInterval(t *testing.T) {
-	c, _, _ := newTestCollector()
-	if c.Interval() != 60*time.Second {
-		t.Fatalf("expected interval 60s, got %v", c.Interval())
-	}
-}
-
-func TestSystemCollectorServices(t *testing.T) {
-	c, _, _ := newTestCollector()
-	state := collectToState(t, c)
-
 	svcs, ok := state["infix-system:services"].(map[string]interface{})
 	if !ok {
-		t.Fatal("missing infix-system:services in system-state")
+		t.Fatalf("missing infix-system:services in %s", raw)
+	}
+	list, _ := svcs["service"].([]interface{})
+	return list
+}
+
+func TestServicesLive(t *testing.T) {
+	s, _ := newTestServices(testInitctlJSON)
+	list := serviceList(t, s.Live())
+	if len(list) != 2 {
+		t.Fatalf("expected 2 services, got %v", list)
 	}
 
-	serviceList, ok := svcs["service"].([]interface{})
-	if !ok || len(serviceList) != 2 {
-		t.Fatalf("expected 2 services, got %v", svcs["service"])
-	}
-
-	svc0 := serviceList[0].(map[string]interface{})
+	svc0 := list[0].(map[string]interface{})
 	if svc0["name"] != "sshd" {
 		t.Fatalf("service[0] name: expected sshd, got %v", svc0["name"])
 	}
@@ -118,68 +83,48 @@ func TestSystemCollectorServices(t *testing.T) {
 	}
 }
 
-func TestSystemCollectorInitctlFailure(t *testing.T) {
+func TestServicesOverlayHasOnlyServices(t *testing.T) {
+	s, _ := newTestServices(testInitctlJSON)
+	state := make(map[string]interface{})
+	if err := json.Unmarshal(s.Live(), &state); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(state) != 1 {
+		t.Fatalf("the overlay must not clobber other system-state keys, got %v", state)
+	}
+}
+
+func TestServicesInitctlFailureKeepsLast(t *testing.T) {
+	s, runner := newTestServices(testInitctlJSON)
+	first := s.Live()
+	if len(serviceList(t, first)) != 2 {
+		t.Fatalf("expected 2 services first, got %s", first)
+	}
+
+	runner.Errors["initctl -j"] = fmt.Errorf("not available")
+	if got := s.Live(); string(got) != string(first) {
+		t.Fatalf("a failed read must serve the last good list, got %s", got)
+	}
+}
+
+func TestServicesInitctlFailureWithoutLast(t *testing.T) {
 	runner := &testutil.MockRunner{
 		Results: map[string][]byte{},
-		Errors: map[string]error{
-			"initctl -j": fmt.Errorf("not available"),
-		},
+		Errors:  map[string]error{"initctl -j": fmt.Errorf("not available")},
 	}
-
-	fs := &testutil.MockFileReader{
-		Files: map[string][]byte{},
-		Globs: map[string][]string{},
-	}
-
-	c := NewSystemCollector(runner, fs, 60*time.Second)
-	tr := tree.New()
-	tr.Set("ietf-system:system-state", json.RawMessage(`{"infix-system:services":{"service":[{"name":"sshd"}]}}`))
-
-	if err := c.Collect(context.Background(), tr); err == nil {
-		t.Fatal("an initctl failure must be reported, it is all this collector does")
-	}
-	if got := string(tr.Get("ietf-system:system-state")); got != `{"infix-system:services":{"service":[{"name":"sshd"}]}}` {
-		t.Fatalf("a failed poll must leave the last services in place, got %s", got)
+	if got := NewServices(runner).Live(); got != nil {
+		t.Fatalf("nothing read yet and initctl failing must give no overlay, got %s", got)
 	}
 }
 
-func TestSystemCollectorTreeKeys(t *testing.T) {
-	c, _, _ := newTestCollector()
-	tr := tree.New()
-	c.Collect(context.Background(), tr)
-
-	keys := tr.Keys()
-	if len(keys) != 1 {
-		t.Fatalf("expected exactly 1 tree key, got %d: %v", len(keys), keys)
-	}
-	if keys[0] != "ietf-system:system-state" {
-		t.Fatalf("expected tree key 'ietf-system:system-state', got %q", keys[0])
-	}
-}
-
-func TestSystemCollectorServicesNilFields(t *testing.T) {
-	runner := &testutil.MockRunner{
-		Results: map[string][]byte{
-			"initctl -j": []byte(`[{"identity":"minimal","pid":999,"status":"running","description":"Minimal service"}]`),
-		},
-		Errors: map[string]error{},
+func TestServicesNilFields(t *testing.T) {
+	s, _ := newTestServices(`[{"identity":"minimal","pid":999,"status":"running","description":"Minimal service"}]`)
+	list := serviceList(t, s.Live())
+	if len(list) != 1 {
+		t.Fatalf("expected 1 service, got %d", len(list))
 	}
 
-	fs := &testutil.MockFileReader{
-		Files: map[string][]byte{},
-		Globs: map[string][]string{},
-	}
-
-	c := NewSystemCollector(runner, fs, 60*time.Second)
-	state := collectToState(t, c)
-
-	svcs := state["infix-system:services"].(map[string]interface{})
-	serviceList := svcs["service"].([]interface{})
-	if len(serviceList) != 1 {
-		t.Fatalf("expected 1 service, got %d", len(serviceList))
-	}
-
-	svc := serviceList[0].(map[string]interface{})
+	svc := list[0].(map[string]interface{})
 	stats := svc["statistics"].(map[string]interface{})
 
 	if stats["memory-usage"] != "0" {

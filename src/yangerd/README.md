@@ -31,16 +31,17 @@ wpa_supplicant and hostapd attach events, ptp4l subscriptions, inotify
 and `podman events` all push.  Between events a monitor does nothing, and a GET returns
 what the last event left without forking anything.
 
-**Poll only what has no events.**  FRR's OSPF, RIP and BFD state, the
-service list and gpsd don't announce changes, so they are polled.  The intervals are in the table below and can be
-changed through the environment.
+**Poll only what has no events.**  FRR's OSPF, RIP and BFD state and
+gpsd don't announce changes, so they are polled.  The intervals are in
+the table below and can be changed through the environment.
 
 **On demand when a value changes all the time, or costs nothing to
 read.**  Sensor readings, radio channel surveys, NTP source selection,
 uptime, memory and load are computed at GET time by a tree provider, and
 so is the hardware inventory, which is a read of `/run/system.json` and
 sysfs.  chronyd is asked over its local command socket, so a GET sees a
-source the moment chrony selects it.
+source the moment chrony selects it.  The service list is read from
+finit the same way until finit announces state changes itself.
 Polling a temperature every ten seconds that nobody reads is wasted
 work.  Providers run on the request path, so they must be cheap.
 
@@ -92,7 +93,7 @@ ships, 1.26 at the time of writing.  Dependencies are vendored
 | | `control-plane-protocols` | poll 10 s | ospfd, ripd, bfdd vty sockets |
 | | forwarding per interface | event | inotify on `/proc/sys/net/*/conf/*/forwarding` |
 | `ietf-system:system` | hostname, timezone, users, SSH keys | event | inotify |
-| `ietf-system:system-state` | services | poll 60 s | `initctl -j` |
+| `ietf-system:system-state` | services | on demand | `initctl -j`, last answer while finit is busy |
 | | software slots, boot order | event | RAUC D-Bus signal, bootloader env files |
 | | platform | once | at start |
 | | clock, memory, load, filesystems, installer | on demand | procfs, statfs, RAUC D-Bus |
@@ -171,7 +172,6 @@ Buildroot selection.
 |---|---|
 | `YANGERD_SOCKET` | `/run/yangerd.sock` |
 | `YANGERD_LOG_LEVEL` | `info` |
-| `YANGERD_POLL_INTERVAL_SYSTEM` | `60s` |
 | `YANGERD_POLL_INTERVAL_ROUTING` | `10s` |
 | `YANGERD_POLL_INTERVAL_NTP` | `60s`, presence and port only |
 | `YANGERD_POLL_INTERVAL_HARDWARE` | `10s`, GPS only |
