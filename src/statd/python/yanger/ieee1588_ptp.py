@@ -304,7 +304,10 @@ def _build_parent_ds(d):
     v = d.get("observedParentClockPhaseChangeRate")
     if v:
         try:
-            ds["observed-parent-clock-phase-change-rate"] = int(v)
+            rate = int(v, 16)
+            if rate & 0x80000000:
+                rate -= 1 << 32
+            ds["observed-parent-clock-phase-change-rate"] = rate
         except ValueError:
             pass
 
