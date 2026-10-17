@@ -9,7 +9,7 @@ Port state changes are logged as they are seen, and if the test fails the
 PTP state of every DUT queried here is dumped to the test log.
 """
 
-from infamy import tap
+from infamy import ssh, tap
 
 _targets = {}
 _states = {}
@@ -149,17 +149,67 @@ def _ns(value):
     return "?" if ns is None else ns
 
 
+# Two samples, 2 s apart, of every ptp4l port's message counters and of the
+# switch and kernel counters of the PTP ports.  Prints the non-zero ones
+# with their change between the samples.
+_COUNTERS_SH = """
+snap() {
+    for c in $(sudo -n sh -c 'ls /etc/linuxptp/ptp4l-*.conf' 2>/dev/null); do
+        i=${c##*/}
+        sudo -n pmc -u -b 0 -f "$c" "GET PORT_STATS_NP" 2>/dev/null |
+            awk -v i="${i%.conf}" '/portIdentity/ {p = $2}
+                                  $1 ~ /^[rt]x_/ {print i, p, $1, $2}'
+    done
+    for n in @IFACES@; do
+        ethtool -S "$n" 2>/dev/null |
+            awk -v n="$n" 'NR > 1 {sub(":", "", $1); print n, "switch", $1, $2}'
+        for s in rx_packets rx_dropped rx_errors tx_packets tx_dropped tx_errors; do
+            echo "$n kernel $s $(cat /sys/class/net/$n/statistics/$s 2>/dev/null)"
+        done
+    done
+}
+a=$(mktemp); b=$(mktemp)
+snap > "$a"; sleep 2; snap > "$b"
+awk 'NR == FNR {v[$1 " " $2 " " $3] = $4; next}
+     $4 > 0 {printf "%s %s %s=%s(+%d)\\n", $1, $2, $3, $4, $4 - v[$1 " " $2 " " $3]}' "$a" "$b"
+rm -f "$a" "$b"
+"""
+
+
+def _counters(target, ifaces):
+    """Print ptp4l, switch and kernel counters of target's PTP ports, over SSH."""
+    loc = target.location
+    dut = ssh.Device(target.name,
+                     ssh.Location(loc.host, loc.username, loc.password),
+                     wait=False)
+    script = _COUNTERS_SH.replace("@IFACES@", " ".join(sorted(ifaces)))
+    res = dut.runsh(script, timeout=30)
+    if res.returncode:
+        print(f"{target.name}:   cannot read counters: {res.stdout.strip()}")
+        return
+    lines = {}
+    for line in res.stdout.splitlines():
+        fields = line.split(" ", 2)
+        if len(fields) == 3:
+            lines.setdefault(" ".join(fields[:2]), []).append(fields[2])
+    for key, cnts in lines.items():
+        print(f"{target.name}:   {key}: {' '.join(cnts)}")
+
+
 def dump(target):
     """Print the PTP state of target: clocks, ports, and message counters.
 
     The gPTP counters tell apart a port that receives nothing, one whose
     peer delay requests go unanswered, and one that ignores what it gets.
+    The switch and kernel counters tell whether frames left or reached
+    the port at all.
     """
     instances = _instances(target)
     if not instances:
         print(f"{target.name}: no PTP instances (ptp4l not running?)")
         return
 
+    ifaces = set()
     for inst in instances:
         dds = inst.get("default-ds", {})
         cds = inst.get("current-ds", {})
@@ -173,6 +223,8 @@ def dump(target):
               f"mean-delay {_ns(cds.get('mean-delay'))} ns")
         for port in inst.get("ports", {}).get("port", []):
             ds = port.get("port-ds", {})
+            if port.get("underlying-interface"):
+                ifaces.add(port["underlying-interface"])
             print(f"{target.name}:   port {port.get('port-index')} "
                   f"({port.get('underlying-interface', '?')}) "
                   f"{ds.get('port-state', '?')} "
@@ -183,6 +235,9 @@ def dump(target):
                 cnt = " ".join(f"{k.removesuffix('-count')}={v}"
                                for k, v in stats.items())
                 print(f"{target.name}:     {cnt}")
+
+    print(f"{target.name}: counters, change over 2 s in parentheses:")
+    _counters(target, ifaces)
 
 
 def dump_all():
