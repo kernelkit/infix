@@ -482,8 +482,23 @@ static void wifi_gen_wds_ports(FILE *hostapd, struct lyd_node *config, const cha
 	}
 }
 
+/* At boot gethostname() is still the default, the hostname is set later */
+static void wifi_nas_hostname(struct confd *confd, struct lyd_node *config, char *hostname, size_t len)
+{
+	struct lyd_node *node;
+
+	node = lydx_get_xpathf(config, "/ietf-system:system/hostname");
+	if (node && !hostnamefmt(confd, lyd_get_value(node), hostname, len, NULL, 0) && hostname[0])
+		return;
+
+	if (gethostname(hostname, len) != 0)
+		strlcpy(hostname, "localhost", len);
+	hostname[len - 1] = '\0';
+}
+
 /* Helper: Write SSID and security configuration (shared between primary and BSS) */
-static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss, const char *band)
+static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd_node *config, bool is_bss,
+				 const char *band, struct confd *confd)
 {
 	struct lyd_node *wifi, *ap, *security, *roaming;
 	struct lyd_node *dot11k, *dot11r, *dot11v;
@@ -538,9 +553,7 @@ static void wifi_gen_ssid_config(FILE *hostapd, struct lyd_node *cif, struct lyd
 		mobility_domain = resolve_mobility_domain(mobility_domain_raw, ssid);
 		nas_identifier_cfg = lydx_get_cattr(dot11r, "nas-identifier");
 		if (!nas_identifier_cfg || !strcmp(nas_identifier_cfg, "auto")) {
-			if (gethostname(hostname, sizeof(hostname)) != 0)
-				snprintf(hostname, sizeof(hostname), "localhost");
-			hostname[sizeof(hostname) - 1] = '\0';
+			wifi_nas_hostname(confd, config, hostname, sizeof(hostname));
 			snprintf(nas_identifier_default, sizeof(nas_identifier_default),
 				 "%s-%s.%s", ifname, hostname, mobility_domain);
 			nas_identifier_cfg = nas_identifier_default;
@@ -1268,7 +1281,8 @@ static void wifi_gen_radio_config(FILE *hostapd, const char *radio_name,
 
 /* Generate hostapd config for all APs on a radio (multi-SSID support) */
 static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
-				  struct lyd_node *radio_node, struct lyd_node *config)
+				  struct lyd_node *radio_node, struct lyd_node *config,
+				  struct confd *confd)
 {
 	struct lyd_node *primary_cif, *cif;
 	const char *primary_ifname;
@@ -1326,7 +1340,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	fprintf(hostapd, "ctrl_interface=/run/hostapd\n\n");
 
 	/* Primary AP SSID and security configuration */
-	wifi_gen_ssid_config(hostapd, primary_cif, config, false, lydx_get_cattr(radio_node, "band"));
+	wifi_gen_ssid_config(hostapd, primary_cif, config, false, lydx_get_cattr(radio_node, "band"), confd);
 	fprintf(hostapd, "\n");
 
 	/* Radio-specific configuration */
@@ -1351,7 +1365,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 		}
 
 		DEBUG("Adding BSS section for secondary AP %s", ap_list[i]);
-		wifi_gen_ssid_config(hostapd, bss_cif, config, true, lydx_get_cattr(radio_node, "band"));
+		wifi_gen_ssid_config(hostapd, bss_cif, config, true, lydx_get_cattr(radio_node, "band"), confd);
 	}
 
 	fclose(hostapd);
@@ -1766,7 +1780,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			if (wifi_iface_list) {
 				if (wifi_iface_count) {
 					/* Generate AP config (hostapd) for all APs on this radio */
-					rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config);
+					rc = wifi_gen_aps_on_radio(name, interfaces_config, cwifi_radio, config, confd);
 					if (rc != SR_ERR_OK)
 						ERROR("Failed to generate AP config for radio %s", name);
 				}
