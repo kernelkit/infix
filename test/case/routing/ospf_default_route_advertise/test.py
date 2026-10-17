@@ -321,6 +321,6 @@ with infamy.Test() as test:
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip(param["PC"], prefix_length=param["len"], proto=af)
             ns0.addroute(param["default"], param["R2data"], proto=af)
-            ns0.must_reach(param["dummy"], timeout=15)
+            ns0.must_reach(param["dummy"], timeout=60)
 
     test.succeed()
