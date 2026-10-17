@@ -77,7 +77,8 @@ All notable changes to the project are documented in this file.
 - Add cellular modem (WWAN) support for USB-attached MBIM/QMI modems,
   including USB dongles, mPCIe cards, and M.2 Key-B modules.  Multiple
   APNs per modem, SIM PIN configuration, and NMEA routing from modem to
-  GPS subsystem.  See the [Modem User's Guide][modem] for details
+  GPS subsystem.  Not part of the default builds, enable it with the
+  `modem` configuration snippet, see the [Modem User's Guide][modem]
 
 ### Fixes
 
