@@ -142,6 +142,8 @@ All notable changes to the project are documented in this file.
   aggregate on the remaining ports, and removing the aggregate cut off the
   port whose address it had used until that port was disabled and enabled
   again
+- LAN969x: PTP could stop on every port until reboot.  Each transmit
+  timestamp that arrived late used up one of 512 slots for good
 - PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
   kept dropping to the faulty state because the transmit timestamp arrived
   later than the 10 ms the PTP daemon waited for it

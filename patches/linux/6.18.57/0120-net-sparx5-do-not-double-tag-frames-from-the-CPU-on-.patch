@@ -1,7 +1,7 @@
 From 536f0c9842cd63e5bf2697e176be4aff39a73ca6 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 14 Oct 2026 15:21:35 +0200
-Subject: [PATCH 120/123] net: sparx5: do not double tag frames from the CPU on
+Subject: [PATCH 120/124] net: sparx5: do not double tag frames from the CPU on
  trunk ports
 
 A frame the CPU sends out a VLAN-aware bridge port without an untagged

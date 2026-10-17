@@ -1,7 +1,7 @@
 From fb3222ebde2f210942d8b81f468ce22bdbfe7668 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 15 Oct 2026 11:19:46 +0200
-Subject: [PATCH 122/123] net: sparx5: send reserved link-local multicast to
+Subject: [PATCH 122/124] net: sparx5: send reserved link-local multicast to
  the CPU
 
 STP does not converge on a ring of LAN969x switches, and LACP fails
