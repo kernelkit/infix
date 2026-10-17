@@ -41,13 +41,15 @@ list-snippets:
 	@echo "Available snippets (use 'make apply-<name>'):"
 	@ls $(SNIPPETS_DIR)/*.conf 2>/dev/null | sed 's|.*/||; s|\.conf$$||; s|^|  |'
 
-dev: | $(config)
+dev: dev-config
+	@+$(call bmake,all)
+
+dev-config: | $(config)
 	@for s in $(SNIPPETS_DIR)/*.conf; do \
 		KCONFIG_CONFIG=$(config) $(MERGE_CONFIG) -m $(config) $$s; \
 		echo "Applied snippet: $$s"; \
 	done
 	@+$(call bmake,olddefconfig)
-	@+$(call bmake,all)
 
 migrate-configs:
 	@$(CURDIR)/utils/migrate-configs.sh $(subst :, ,$(BR2_EXTERNAL))
@@ -70,4 +72,4 @@ test:
 buildroot/Makefile:
 	@git submodule update --init
 
-.PHONY: all check coverity dep test cyclonedx list-snippets dev migrate-configs
+.PHONY: all check coverity dep test cyclonedx list-snippets dev dev-config migrate-configs

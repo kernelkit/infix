@@ -48,6 +48,11 @@ on:
         type: string
         default: ''
         description: 'Release version (e.g. v26.04.0), sets INFIX_RELEASE so make test finds versioned artifacts'
+      config:
+        required: false
+        type: string
+        default: ''
+        description: 'Extra make goals after the defconfig, e.g. dev-config or apply-modem'
     secrets:
       CHECKOUT_TOKEN:
         required: false
@@ -96,12 +101,12 @@ jobs:
 
       - name: Configure ${{ env.TARGET }}
         run: |
-          make ${{ env.TARGET }}_defconfig
+          make ${{ env.TARGET }}_defconfig ${{ inputs.config }}
 
+      # Same name as the build.yml upload, only the image tarball is needed
       - uses: actions/download-artifact@v8
         with:
-          pattern: "artifact-*"
-          merge-multiple: true
+          name: artifact-${{ (inputs.name || 'infix') == 'infix' && env.TARGET || format('{0}-{1}', inputs.name, env.TARGET) }}
 
       - name: Restore ${{ env.TARGET }} output/
         run: |
@@ -141,7 +146,7 @@ jobs:
       - name: Upload Test Report as Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: test-report
+          name: ${{ inputs.name && inputs.name != 'infix' && format('test-report-{0}', inputs.name) || 'test-report' }}
           path: output/images/test-report.pdf
 
       - name: Generate XPath Coverage Report for ${{ env.TARGET }}
@@ -153,5 +158,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: xpath-coverage-report
+          name: ${{ inputs.name && inputs.name != 'infix' && format('xpath-coverage-report-{0}', inputs.name) || 'xpath-coverage-report' }}
           path: output/images/xpath-coverage-report.pdf

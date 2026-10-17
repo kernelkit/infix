@@ -1,5 +1,10 @@
 # Weekly release build to catch flaky tests and verify clean builds.
 # Runs without caches (ccache) to ensure reproducibility. See issue #1003.
+#
+# After the release build is tested and published, a build with all
+# configuration snippets applied, like 'make dev', covers the opt-in
+# features that are not in the defconfigs.  It waits for the release
+# build and its tests, the two must not run at the same time.
 name: Weekly Build
 
 on:
@@ -14,6 +19,14 @@ jobs:
     with:
       version: "latest"
       use_cache: false
+
+  test:
+    needs: build
+    uses: ./.github/workflows/test.yml
+    with:
+      name: "infix"
+      target: "x86_64"
+      release: "latest"
 
   publish:
     name: Publish Weekly Build
@@ -55,3 +68,29 @@ jobs:
 
           Built from commit: \`${{ github.sha }}\`
           EOF
+
+  build-dev-x86_64:
+    needs: [test, publish]
+    if: ${{ !cancelled() && github.repository == 'kernelkit/infix' }}
+    uses: ./.github/workflows/build.yml
+    with:
+      name: "infix-dev"
+      target: "x86_64"
+      config: "dev-config"
+
+  build-dev-aarch64:
+    needs: [test, publish]
+    if: ${{ !cancelled() && github.repository == 'kernelkit/infix' }}
+    uses: ./.github/workflows/build.yml
+    with:
+      name: "infix-dev"
+      target: "aarch64"
+      config: "dev-config"
+
+  test-dev:
+    needs: build-dev-x86_64
+    uses: ./.github/workflows/test.yml
+    with:
+      name: "infix-dev"
+      target: "x86_64"
+      config: "dev-config"
