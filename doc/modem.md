@@ -13,6 +13,18 @@ Setup involves three configuration items:
 - A `wwan0` network interface that references both and carries the
   bearer (APN) configuration
 
+> [!NOTE]
+> Modem support is not part of the default builds.  Enable it with the
+> `modem` configuration snippet when building, e.g., for 64-bit Arm:
+>
+> ```
+> make aarch64_defconfig apply-modem
+> make
+> ```
+>
+> Use the defconfig for your architecture, e.g., `riscv64_defconfig` or
+> `x86_64_defconfig`, the snippet works with any of them.
+
 ## Architecture
 
 Infix uses a three-layer architecture for cellular modem support:
