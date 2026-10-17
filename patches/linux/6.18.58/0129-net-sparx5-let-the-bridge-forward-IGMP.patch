@@ -1,7 +1,7 @@
 From abfb10085393c2d7910c355850b549f0202cabfc Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 18 Oct 2026 14:14:05 +0200
-Subject: [PATCH 129/130] net: sparx5: let the bridge forward IGMP
+Subject: [PATCH 129/131] net: sparx5: let the bridge forward IGMP
 
 IGMP never crosses a sparx5 bridge.  With three bridges in a chain, the
 middle one never learns a group joined behind the last one, and none of

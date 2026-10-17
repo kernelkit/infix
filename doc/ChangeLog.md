@@ -222,6 +222,8 @@ All notable changes to the project are documented in this file.
 - LAN969x: IGMP did not pass through a bridge.  With IGMP snooping across
   several switches, a group joined behind one switch never reached the
   querier behind another, so the multicast never got there either
+- LAN969x: PTP could stop on every port until reboot.  Each transmit
+  timestamp that arrived late used up one of 512 slots for good
 - PTP never worked on the copper ports of the Tactical 1000, whose LAN8804
   PHYs are a LAN8814 variant without a 1588 unit.  The kernel took them for
   full LAN8814s and waited for PHY timestamps that never came; it now

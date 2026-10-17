@@ -1,7 +1,7 @@
 From 083930626c47dbe3bb2af3c3679bc5878e03a3b9 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 13 Oct 2026 16:39:53 +0200
-Subject: [PATCH 119/130] net: phy: micrel: lan8814: 10BASE-T transmitter
+Subject: [PATCH 119/131] net: phy: micrel: lan8814: 10BASE-T transmitter
  errata
 
 The default 10BASE-T transmitter settings of the LAN8814 may fail the

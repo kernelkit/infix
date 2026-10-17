@@ -1,7 +1,7 @@
 From eb6345dfbc54cd2f1b73d335a1ee9c852b9513bb Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 16 Oct 2026 10:14:44 +0200
-Subject: [PATCH 130/130] net: sparx5: add LAG offload
+Subject: [PATCH 130/131] net: sparx5: add LAG offload
 
 A bond in a bridge does not forward on LAN969x.  The driver does not
 offload link aggregation, so the bond is a software port in an

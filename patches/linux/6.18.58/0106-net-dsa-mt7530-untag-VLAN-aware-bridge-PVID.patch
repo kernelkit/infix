@@ -1,7 +1,7 @@
 From ea4828b13bc42867524d80ddf3759eceb343f46c Mon Sep 17 00:00:00 2001
 From: Edward Parker <edward@topnotchit.com>
 Date: Thu, 14 May 2026 15:05:12 +0100
-Subject: [PATCH 106/130] net: dsa: mt7530: untag VLAN-aware bridge PVID
+Subject: [PATCH 106/131] net: dsa: mt7530: untag VLAN-aware bridge PVID
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
