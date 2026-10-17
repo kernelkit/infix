@@ -1,0 +1,54 @@
+From 08922b04ae1c22f28116c2a498f1129a943d6e5a Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 13 Oct 2026 16:39:53 +0200
+Subject: [PATCH 114/125] net: phy: micrel: lan8814: 10BASE-T transmitter
+ errata
+
+The default 10BASE-T transmitter settings of the LAN8814 may fail the
+IEEE Clause 14 MAU compliance tests (errata module 13).  The errata
+calls for an initialization script on every port.
+
+Apply the two analog settings Microchip's PHY API writes after reset.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/phy/micrel.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/net/phy/micrel.c b/drivers/net/phy/micrel.c
+index 9421f0fe2fe4..49feee9479d0 100644
+--- a/drivers/net/phy/micrel.c
++++ b/drivers/net/phy/micrel.c
+@@ -4430,6 +4430,8 @@ static void lan8814_setup_led(struct phy_device *phydev, int val)
+ #define LAN8814_POWER_MGMT_MODE_12_100BT_EEE_MDIX_TX	0x1c
+ #define LAN8814_POWER_MGMT_MODE_13_100BT_EEE_MDIX_RX	0x1d
+ #define LAN8814_POWER_MGMT_MODE_14_100BTX_EEE_TX_RX	0x1e
++#define LAN8814_ANALOG_CONTROL_4			0x04
++#define LAN8814_AFED_CONTROL				0x09
+ 
+ #define LAN8814_POWER_MGMT_DLLPD_D			BIT(0)
+ #define LAN8814_POWER_MGMT_ADCPD_D			BIT(1)
+@@ -4552,6 +4554,12 @@ static int lanphy_write_reg_data(struct phy_device *phydev,
+ #define LAN8814_ANALOG_CONTROL_10_PLL_DIV_MASK		GENMASK(1, 0)
+ #define LAN8814_ANALOG_CONTROL_10_PLL_DIV		1
+ 
++/* Errata module 13: 10BASE-T transmitter settings, from Microchip's PHY API */
++static const struct lanphy_reg_data mau_errata[] = {
++	{ LAN8814_PAGE_POWER_REGS, LAN8814_ANALOG_CONTROL_4, 0x81e0 },
++	{ LAN8814_PAGE_POWER_REGS, LAN8814_AFED_CONTROL, 0xe214 },
++};
++
+ static int lan8814_erratas(struct phy_device *phydev)
+ {
+ 	int ret;
+@@ -4566,6 +4574,10 @@ static int lan8814_erratas(struct phy_device *phydev)
+ 	if (ret)
+ 		return ret;
+ 
++	ret = lanphy_write_reg_data(phydev, mau_errata, ARRAY_SIZE(mau_errata));
++	if (ret)
++		return ret;
++
+ 	ret = lanphy_modify_page_reg(phydev, LAN8814_PAGE_ANALOG_CTRL,
+ 				     LAN8814_ANALOG_CONTROL_1,
+ 				     LAN8814_ANALOG_CONTROL_1_PLL_TRIM_MASK,

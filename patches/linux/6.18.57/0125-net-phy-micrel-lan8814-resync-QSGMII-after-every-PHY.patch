@@ -1,0 +1,96 @@
+From 562a7f7e11b31543b7d5f89373cc6d86d95ac46b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sat, 17 Oct 2026 18:51:08 +0200
+Subject: [PATCH 125/125] net: phy: micrel: lan8814: resync QSGMII after every
+ PHY reset
+
+A LAN8804 copper port can come up with its transmit direction dead
+after the PHY has been reattached: the switch MAC counts the frames out,
+the link partner receives none, and the link stays up at 1000 Mbps.  A
+link flap does not recover it, a QSGMII soft reset of the PHY package
+does.  Taking the interface down and up twice, a few seconds apart, on
+both ends of a link triggers it in about one cycle out of five.
+
+The QSGMII resync added to config_aneg runs once per package and boot,
+but phylib soft-resets the PHY on every attach.  Microchip's PHY API
+resets the package QSGMII and restarts aneg after every PHY reset.
+
+Mark the port in config_init, which runs after each PHY reset, and do
+the QSGMII soft reset and an aneg restart in the following config_aneg.
+With that, the same test passes 20 cycles out of 20.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/phy/micrel.c | 26 ++++++++++++++++----------
+ 1 file changed, 16 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/phy/micrel.c b/drivers/net/phy/micrel.c
+index af358c30cd75..b0df8aee081b 100644
+--- a/drivers/net/phy/micrel.c
++++ b/drivers/net/phy/micrel.c
+@@ -405,9 +405,6 @@ struct lan8814_shared_priv {
+ 
+ 	/* Lock for ptp_clock */
+ 	struct mutex shared_lock;
+-
+-	unsigned long flags;
+-#define LAN8814_SHARED_F_QSGMII_RESYNCED	0
+ };
+ 
+ struct lan8814_ptp_rx_ts {
+@@ -459,6 +456,7 @@ struct kszphy_priv {
+ 	bool clk_enable;
+ 	bool is_ptp_available;
+ 	bool aneg_restarted;
++	bool qsgmii_resync;
+ 	struct phy_device *phydev;
+ 	struct delayed_work link_work;
+ 	unsigned int link_checks;
+@@ -4618,6 +4616,8 @@ static int lan8814_config_init(struct phy_device *phydev)
+ 	if (lan8814->led_mode >= 0)
+ 		lan8814_setup_led(phydev, lan8814->led_mode);
+ 
++	lan8814->qsgmii_resync = true;
++
+ 	return lan8814_erratas(phydev);
+ }
+ 
+@@ -4767,17 +4767,19 @@ static void lan8814_link_change_notify(struct phy_device *phydev)
+ 	lan8814_link_watch(phydev);
+ }
+ 
+-/* Microchip's PHY API resets the package QSGMII once the MAC has configured
+- * its end, and renegotiates each port once after its first 1000BASE-T link,
+- * to avoid CRC errors.  Under phylink the MAC side is set up before
+- * config_aneg runs.
++/* Microchip's PHY API resets the package QSGMII and restarts aneg after
++ * every PHY reset, once the MAC has configured its end, and renegotiates
++ * each port once after its first 1000BASE-T link, to avoid CRC errors.
++ * Under phylink the MAC side is set up before config_aneg runs.
+  */
+ static int lan8814_config_aneg(struct phy_device *phydev)
+ {
+-	struct lan8814_shared_priv *shared = phy_package_get_priv(phydev);
++	struct kszphy_priv *priv = phydev->priv;
++	bool resync = priv->qsgmii_resync;
+ 	int err;
+ 
+-	if (!test_and_set_bit(LAN8814_SHARED_F_QSGMII_RESYNCED, &shared->flags)) {
++	if (resync) {
++		priv->qsgmii_resync = false;
+ 		err = lanphy_modify_page_reg(phydev, LAN8814_PAGE_COMMON_REGS,
+ 					     LAN8814_QSGMII_SOFT_RESET,
+ 					     LAN8814_QSGMII_SOFT_RESET_BIT,
+@@ -4788,7 +4790,11 @@ static int lan8814_config_aneg(struct phy_device *phydev)
+ 
+ 	lan8814_link_watch(phydev);
+ 
+-	return genphy_config_aneg(phydev);
++	err = genphy_config_aneg(phydev);
++	if (err || !resync || phydev->autoneg != AUTONEG_ENABLE)
++		return err;
++
++	return genphy_restart_aneg(phydev);
+ }
+ 
+ static int lan8814_read_status(struct phy_device *phydev)

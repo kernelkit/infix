@@ -1,0 +1,56 @@
+From e52f0d5220e93869e4e458bc64247a6a01326b92 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sat, 17 Oct 2026 09:14:50 +0200
+Subject: [PATCH 124/125] net: sparx5: fix leak of in-flight PTP timestamp
+ requests
+
+A two-step PTP frame increments ptp_skbs when it is queued for a TX
+timestamp, and the timestamp interrupt decrements it when it matches the
+frame.  sparx5_ptp_txtstamp_old_release() frees requests older than
+SPARX5_PTP_TIMEOUT without decrementing ptp_skbs, so every timestamp
+that takes longer than 10 ms leaks one slot.  After SPARX5_MAX_PTP_ID
+leaks, sparx5_ptp_txtstamp_request() returns -EBUSY for every two-step
+frame on the switch until the driver is reloaded.
+
+Decrement ptp_skbs for each released request.  Take ptp_ts_id_lock
+after dropping the queue lock, since sparx5_ptp_txtstamp_release() takes
+the two in the opposite order.
+
+Fixes: 70dfe25cd866 ("net: sparx5: Update extraction/injection for timestamping")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/net/ethernet/microchip/sparx5/sparx5_ptp.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/net/ethernet/microchip/sparx5/sparx5_ptp.c b/drivers/net/ethernet/microchip/sparx5/sparx5_ptp.c
+index 2826e48af103..7290a77b1e38 100644
+--- a/drivers/net/ethernet/microchip/sparx5/sparx5_ptp.c
++++ b/drivers/net/ethernet/microchip/sparx5/sparx5_ptp.c
+@@ -206,8 +206,10 @@ static void sparx5_ptp_classify(struct sparx5_port *port, struct sk_buff *skb,
+ 
+ static void sparx5_ptp_txtstamp_old_release(struct sparx5_port *port)
+ {
++	struct sparx5 *sparx5 = port->sparx5;
+ 	struct sk_buff *skb, *skb_tmp;
+ 	unsigned long flags;
++	int released = 0;
+ 
+ 	spin_lock_irqsave(&port->tx_skbs.lock, flags);
+ 	skb_queue_walk_safe(&port->tx_skbs, skb, skb_tmp) {
+@@ -217,8 +219,16 @@ static void sparx5_ptp_txtstamp_old_release(struct sparx5_port *port)
+ 
+ 		__skb_unlink(skb, &port->tx_skbs);
+ 		dev_kfree_skb_any(skb);
++		released++;
+ 	}
+ 	spin_unlock_irqrestore(&port->tx_skbs.lock, flags);
++
++	if (!released)
++		return;
++
++	spin_lock_irqsave(&sparx5->ptp_ts_id_lock, flags);
++	sparx5->ptp_skbs -= released;
++	spin_unlock_irqrestore(&sparx5->ptp_ts_id_lock, flags);
+ }
+ 
+ int sparx5_ptp_txtstamp_request(struct sparx5_port *port,

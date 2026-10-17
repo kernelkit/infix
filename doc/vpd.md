@@ -79,8 +79,9 @@ fixed offset given by the device tree, and WiFi interfaces derive
 theirs from the base MAC as described in
 [WiFi](wifi.md#multi-ssid-configuration).
 
-This is currently supported on the Banana Pi BPI-R3 family and the
-Acer Connect Vero W6m.
+This is currently supported on the Banana Pi BPI-R3 family, the Acer
+Connect Vero W6m, and the LAN969x boards: the Tactical 1000 and the
+EV23X71A.
 
 ## Product VPD
 

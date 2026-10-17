@@ -17,9 +17,9 @@ All notable changes to the project are documented in this file.
 - Boards without a VPD EEPROM can be given a fixed identity, base MAC
   included, by storing an ONIE TLV as `/mnt/aux/vpd.bin`, see
   [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
-- Banana Pi BPI-R3 and Acer Connect Vero W6m: ports get permanent
-  addresses derived from the chassis MAC instead of random ones at
-  every boot
+- Banana Pi BPI-R3, Acer Connect Vero W6m, Tactical 1000 and EV23X71A:
+  ports get permanent addresses derived from the chassis MAC instead of
+  random ones at every boot
 - WiFi interfaces get a unique address derived from the chassis MAC, so
   several APs on one radio, or two devices of the same model, no longer
   need `custom-phys-address`
@@ -74,6 +74,9 @@ All notable changes to the project are documented in this file.
 - Configurable OSPF auto-cost reference bandwidth, for OSPFv2 and OSPFv3,
   issue #1576.  The default, 100000 Mbit/s, is the value used before, so
   link costs do not change on upgrade.  The CLI shows it in `show ip ospf`
+- LAN969x boards ship `symreg`, which reads and writes switch registers by
+  name and dumps the MAC, VLAN and VCAP tables, for debugging the switch
+  core, see `board/aarch64/microchip-lan969x/README.md`
 
 ### Fixes
 
@@ -106,6 +109,82 @@ All notable changes to the project are documented in this file.
   WPA3 clients
 - Changing the MAC address of a WiFi access point could leave the access
   points on that radio down until the WiFi service was restarted
+- LAN969x: a port outside any bridge stopped receiving multicast, including
+  IPv6 neighbour discovery and mDNS, when another port outside a bridge went
+  down or joined a bridge.  The port looked dead on the LAN until it was
+  taken down and up again, which is how the Tactical 1000 management port
+  kept dropping out of the test rig
+- LAN969x: kernel BUG "scheduling while atomic" when a multicast address was
+  added to or removed from a port outside any bridge
+- LAN969x: the IP address of a bridge was unreachable from its ports, while
+  forwarding between the ports worked.  Broadcast from a bridge port never
+  reached the CPU, so ARP went unanswered, and the bridge's own MAC address
+  was missing from the switch MAC table, so unicast to the bridge was
+  flooded to the ports instead of delivered
+- LAN969x: disabling the first port of a bridge, whose MAC address the
+  bridge uses, cut the bridge IP address off until the port was enabled
+  again
+- LAN969x: a bridge without VLANs forwarded nothing between its ports
+- LAN969x: a VLAN interface on a port in a VLAN filtering bridge never
+  received anything, unless the bridge had the same VLAN on the port
+- LAN969x: traffic from a VLAN interface on a bridge, sent out a port that
+  carries all its VLANs tagged, left with an extra VLAN 0 tag
+- LAN969x: bridging a VLAN interface on top of a port applied the bridge
+  port settings, STP state, flooding and VLAN filtering, to the port
+  itself and logged "Controlling non-bridged port"
+- LAN969x: STP did not converge and LACP failed over aggregates in a
+  bridge.  The switch flooded BPDUs and LACPDUs to the other bridge ports
+  instead of handing them to the CPU
+- LAN969x: a link aggregate in a bridge did not forward, the switch now
+  offloads link aggregates.  Based on the LAG support by Daniel Machon in
+  Microchip's BSP
+- LAN969x: taking down one port of a link aggregate stopped unicast to the
+  aggregate on the remaining ports, and removing the aggregate cut off the
+  port whose address it had used until that port was disabled and enabled
+  again
+- LAN969x: PTP could stop on every port until reboot.  Each transmit
+  timestamp that arrived late used up one of 512 slots for good
+- PTP ports with PHY timestamping, e.g. the copper ports on LAN969x boards,
+  kept dropping to the faulty state because the transmit timestamp arrived
+  later than the 10 ms the PTP daemon waited for it
+- PTP never worked on the copper ports of the Tactical 1000, whose LAN8804
+  PHYs are a LAN8814 variant without a 1588 unit.  The kernel took them for
+  full LAN8814s and waited for PHY timestamps that never came; it now
+  recognizes the variant and times stamps in the switch core instead
+- PTP: the IEEE 802.1AS link delay threshold, above which a port never
+  leaves the listening state, defaults to 10 us with hardware time stamping
+  instead of 800 ns, and can be set per port with `mean-link-delay-thresh`
+- PTP: transparent clocks, and boundary clocks with the IEEE 802.1AS
+  profile or a domain other than 0, logged "Waiting for ptp4l..." every
+  second.  The helper that keeps the clocks of a multi-chip switch in step
+  never reached the PTP daemon.  It now uses the domain and profile of its
+  instance, and is no longer started for transparent clocks, which do not
+  answer it
+- PTP: the operational delay mechanism of every port read `e2e`, also for
+  ports using peer delay, e.g. with the IEEE 802.1AS profile
+- PTP: the operational data never showed the observed clock phase change
+  rate of the parent clock
+- LAN969x: the LAN8814 and LAN8804 copper PHYs, on the Tactical 1000 and
+  EV23X71A, ran with power-on defaults where Microchip's silicon errata
+  require other settings on every port: center-tap power management, the
+  EEE wake timer, and the PLL trim
+- LAN969x: a copper port on the Tactical 1000 could come up with one
+  direction dead, the link up at 1000 Mbps but nothing it sent reaching the
+  other end, most often after the port had been reconfigured.  The PHYs
+  now resynchronize their QSGMII link to the switch after every PHY reset,
+  the way Microchip's PHY API does
+- LAN969x: the LAN8814 and LAN8804 copper PHYs advertised Energy Efficient
+  Ethernet, which the switch cannot use, and could enter its low power
+  state by mistake after a cable was unplugged.  EEE is now off on these
+  ports
+- LAN969x: a copper link could stay down for good when autonegotiation on
+  the LAN8814 or LAN8804 PHY got stuck.  It is now restarted after three
+  seconds with a link partner present but no link
+- LAN969x: a copper port forced to 100 Mbps could fail to link up with the
+  LAN8814 or LAN8804 PHY.  The PHY is now reset every three seconds while
+  a link partner is present but no link comes up
+- LAN969x: the LAN8814 and LAN8804 PHYs now get Microchip's settings for
+  10BASE-T transmit and for 10/100 Mbps half duplex
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
