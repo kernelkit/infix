@@ -120,6 +120,7 @@ Then configure the WiFi interface using the keystore reference:
 admin@infix:/> configure
 admin@infix:/config/> set hardware wifi country-code US
 admin@infix:/config/> edit interface wifi0
+admin@infix:/config/interface/wifi0/> set wifi radio radio0
 admin@infix:/config/interface/wifi0/> set ipv4 dhcp-client
 admin@infix:/config/interface/wifi0/> set wifi station ssid YourNetworkName
 admin@infix:/config/interface/wifi0/> set wifi station security secret mywifi
