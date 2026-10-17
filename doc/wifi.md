@@ -359,6 +359,7 @@ Configure station mode with the SSID and password to connect:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit interface wifi0</b>
+admin@example:/config/interface/wifi0/> <b>set wifi radio radio0</b>
 admin@example:/config/interface/wifi0/> <b>set wifi station ssid MyHomeNetwork</b>
 admin@example:/config/interface/wifi0/> <b>set wifi station security secret my-wifi-key</b>
 admin@example:/config/interface/wifi0/> <b>leave</b>
