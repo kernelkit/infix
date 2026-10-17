@@ -785,9 +785,11 @@ class ModemThread(threading.Thread):
             self.dbg("Sent notification: %s" % msg)
         rmf(note)
 
-    def get_bearers(self):
+    def get_bearers(self, refresh=True):
+        """Bearer details, refreshing modem status first unless the caller
+        just did."""
         bearers = []
-        if not self.update():
+        if refresh and not self.update():
             return bearers
         for path in self.status.get("bearers", []):
             output = self._mmclij("-b", path)
@@ -1560,7 +1562,7 @@ class ModemThread(threading.Thread):
 
     def pullup(self):
         count = 0
-        for bearer in self.get_bearers():
+        for bearer in self.get_bearers(refresh=False):
             iface = {
                 "name": bearer["status"]["interface"],
                 "connected": bearer["status"]["connected"],
