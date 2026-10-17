@@ -49,23 +49,6 @@ U-Boot from the first partition after fip.
   installing.  Interrupt autoboot and run `printenv` to note down:
   `2gMAC`, `5gMAC`, `6gMAC`, `LANMAC`, and `WANMAC`.
 
-## Giving the Unit a Permanent MAC Address
-
-Infix does not read the stock U-Boot environment, so the unit boots
-with random Ethernet addresses until it is given a product record.
-Store one as `/mnt/aux/vpd.bin`, from the Infix shell, using the
-`WANMAC` noted down above as the base address:
-
-```
-echo '{"mac-address":"<WANMAC>","serial-number":"<serial>","vendor":"Acer","product-name":"Connect Vero W6m"}' \
-  | onieprom -e > /mnt/aux/vpd.bin
-```
-
-After a reboot the ports get fixed offsets from the base address and
-the WiFi interfaces derive theirs from it.  See
-[Vital Product Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition)
-for the record format.
-
 ## Required Files
 
 Prepare these files on a host reachable from the Vero:
@@ -89,15 +72,39 @@ host.
    ```
    setenv serverip <TFTP_SERVER_IP>
    setenv ipaddr <VERO_IP>
-   setenv bootmenu_default 7
+   setenv bootmenu_default <N>
    tftpboot 0x46000000 u-boot.bin
    go 0x46000000
    ```
 
    `serverip` must point to your TFTP server and `ipaddr` must be a free
-   address for the Vero on the same subnet.  `bootmenu_default 7`
-   bypasses secure boot verification.  The Infix U-Boot will
-   automatically netboot the Infix system.
+   address for the Vero on the same subnet.  `bootmenu_default <N>`
+   makes *U-Boot console* the default boot menu entry, which bypasses
+   secure boot verification.  The Infix U-Boot will automatically
+   netboot the Infix system.
+
+   The right value for `<N>` depends on the stock U-Boot version, it is
+   usually 7 or 9.  Type `bootmenu` at the prompt to list the entries,
+   then count down from the top, starting at 0, until you reach
+   *U-Boot console*.  Do not use the number shown in the menu.  In
+   this example the console is the tenth entry, so `<N>` is 9:
+
+   ```
+     *** U-Boot Boot Menu ***
+
+         1. Startup system (Default)
+         2. Upgrade firmware
+         3. Upgrade ATF BL2
+         4. Upgrade ATF FIP
+         5. Upgrade U-boot only
+         6. Upgrade partition table
+         7. Upgrade single image
+         8. Load image
+         9. Start Web failsafe
+         0. U-Boot console
+   ```
+
+   Press Esc or Ctrl-C to leave the menu and get back to the prompt.
 
 2. **From running Infix**, stream the image directly to eMMC:
 
@@ -134,14 +141,70 @@ host.
    interrupt stock U-Boot again:
 
    ```
-   setenv bootmenu_default 7
+   setenv bootmenu_default <N>
    setenv bootcmd 'mmc read 0x46000000 0x4400 0x10000; go 0x46000000'
    saveenv
    reset
    ```
 
    The `bootcmd` reads the Infix U-Boot (at sector 0x4400/17408)
-   into RAM and jumps to it.  After `reset`, Infix boots from eMMC.
+   into RAM and jumps to it.  Use the same `<N>` as in step 1.  After
+   `reset`, Infix boots from eMMC.
+
+## Giving the Unit a Permanent MAC Address
+
+Infix does not read the stock U-Boot environment, so the unit boots
+with random Ethernet addresses until it is given a product record.
+
+Acer allocates one address per interface (`LANMAC`, `WANMAC`, `2gMAC`,
+`5gMAC` and `6gMAC`), and they are not a consecutive range.  Infix
+derives every address from a single base, so using one of the Acer
+addresses as the base would hand out addresses Acer never assigned to
+this unit.  Instead, give the product record a private (locally
+administered) base address, then set the real Acer addresses on the
+interfaces themselves.
+
+1. **Create the product record** from the Infix shell, with a random
+   private base address:
+
+   ```
+   set -- $(od -An -N4 -tx1 /dev/urandom)
+   echo "{\"mac-address\":\"02:$1:$2:$3:$4:00\",\"serial-number\":\"<serial>\",\"vendor\":\"Acer\",\"product-name\":\"Connect Vero W6m\"}" \
+     | onieprom -e > /mnt/aux/vpd.bin
+   ```
+
+   The leading `02` marks the address as locally administered, so it
+   can never clash with a vendor-assigned one.  See [Vital Product
+   Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition) for the
+   record format.
+
+2. **Set the Acer addresses** with `custom-phys-address`, using the
+   values noted down from the stock U-Boot environment:
+
+   | Interface  | Address  |
+   |------------|----------|
+   | `br0`      | `LANMAC` |
+   | `internet` | `WANMAC` |
+   | `wifi0-ap` | `2gMAC`  |
+   | `wifi1-ap` | `6gMAC`  |
+   | `wifi2-ap` | `5gMAC`  |
+
+   ```
+   admin@vero:/> configure
+   admin@vero:/config/> set interface br0 custom-phys-address static <LANMAC>
+   admin@vero:/config/> set interface internet custom-phys-address static <WANMAC>
+   admin@vero:/config/> set interface wifi0-ap custom-phys-address static <2gMAC>
+   admin@vero:/config/> set interface wifi1-ap custom-phys-address static <6gMAC>
+   admin@vero:/config/> set interface wifi2-ap custom-phys-address static <5gMAC>
+   admin@vero:/config/> leave
+   admin@vero:/> copy running-config startup-config
+   ```
+
+   Interfaces without a `custom-phys-address`, such as `lan1`-`lan3`,
+   keep addresses derived from the private base.  See [Custom MAC
+   Address](../../../doc/iface.md#custom-mac-address) for details.
+
+Reboot after step 1 so the new base address takes effect.
 
 [vero-openwrt]: https://openwrt.org/toh/acer/predator_vero_w6m
 [1]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-vero-w-emmc.img

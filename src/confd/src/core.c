@@ -532,6 +532,31 @@ static confd_dependency_t dep_wifi_interfaces(struct lyd_node **diff, struct lyd
 		}
 
 		DEBUG("Added radio %s to diff for WiFi interface %s", radio_name, ifname);
+
+		/* The band steering directive of a 2.4 GHz radio names the
+		 * same-SSID access point on another radio, so a change to
+		 * any access point regenerates every radio that has one. */
+		if (lydx_get_descendant(lyd_child(dif), "wifi", "access-point", NULL) ||
+		    (cif && lydx_get_descendant(lyd_child(cif), "wifi", "access-point", NULL))) {
+			struct ly_set *radios;
+			uint32_t i;
+
+			radios = lydx_find_xpathf(config,
+				"/ietf-interfaces:interfaces/interface/infix-interfaces:wifi[access-point]/radio");
+			for (i = 0; radios && i < radios->count; i++) {
+				const char *name = lyd_get_value(radios->dnodes[i]);
+
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", name);
+				result = add_dependencies(diff, xpath, name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add radio %s to diff for access point %s", name, ifname);
+					ly_set_free(radios, NULL);
+					return result;
+				}
+			}
+			ly_set_free(radios, NULL);
+		}
 	}
 
 	return result;

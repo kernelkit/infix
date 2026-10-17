@@ -264,72 +264,29 @@ performance through features like OFDMA, BSS Coloring, and beamforming.
 
 ## Discovering Available Networks
 
-Before connecting to a WiFi network, you need to discover which networks
-are available. Infix automatically scans for networks when a WiFi interface
-is created with a radio reference.
+Before connecting to a WiFi network you need to know which networks are in
+range.  A scan lists them, with signal strength and security, and works on
+any radio, whether or not it has an interface yet.  The radio leaves its
+channel for a few seconds during the scan, so traffic on it pauses.
 
-### Enable Background Scanning
-
-To enable scanning without connecting, configure the radio and create a WiFi
-interface referencing it:
-
-**Step 1: Configure the radio**
-
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit hardware component radio0 wifi-radio</b>
-admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
+<pre class="cli"><code>admin@example:/> <b>show hardware radio0 scan</b>
+SSID                  BSSID              SECURITY       SIGNAL   CHANNEL
+MyNetwork             b4:fb:e4:17:b6:a7  WPA2-Personal  -45 dBm        6
+MyNetwork-6G          b4:fb:e4:17:b6:a8  WPA3-Personal  -58 dBm       37
+GuestWiFi             c8:3a:35:12:34:56  WPA2-Personal  -62 dBm       11
+CoffeeShop            00:1a:2b:3c:4d:5e  Open           -78 dBm        1
 </code></pre>
 
-**Step 2: Create WiFi interface with radio reference only**
+A hidden network shows up without a name.  Several entries with the same
+SSID are the access points of one roaming network, the BSSID tells them
+apart.
 
-<pre class="cli"><code>admin@example:/> <b>configure</b>
-admin@example:/config/> <b>edit interface wifi0</b>
-admin@example:/config/interface/wifi0/> <b>set wifi radio radio0</b>
-admin@example:/config/interface/wifi0/> <b>leave</b>
-</code></pre>
+In the WebUI, each radio on the WiFi page has a **Scan networks** button
+that lists the same networks.
 
-The system will now start scanning in the background. The interface will
-operate in scan-only mode until you configure a specific mode (station or
-access-point).
-
-### View Available Networks
-
-Use `show interface` to see discovered networks and their signal strength:
-
-<pre class="cli"><code>admin@example:/> <b>show interface wifi0</b>
-name               : wifi0
-type               : wifi
-index              : 3
-mtu                : 1500
-operational status : up
-ip forwarding      : enabled
-physical address   : f0:09:0d:36:5f:86
-ipv4 addresses     : 192.168.1.100/24 (dhcp)
-ipv6 addresses     :
-in-octets          : 148388
-out-octets         : 24555
-mode               : station
-ssid               : MyNetwork
-bssid              : b4:fb:e4:17:b6:a7
-signal             : -45 dBm (good)
-rx bitrate         : 72.2 Mbps
-tx bitrate         : 86.6 Mbps
-──────────────────────────────────────────────────────────────────────
-<span class="title">Available Networks</span>
-<span class="header">SSID                 BSSID              SECURITY       SIGNAL  CHANNEL</span>
-MyNetwork            b4:fb:e4:17:b6:a7  WPA2-Personal  good          6
-GuestWiFi            c8:3a:35:12:34:56  WPA2-Personal  fair         11
-CoffeeShop           00:1a:2b:3c:4d:5e  Open           bad           1
-</code></pre>
-
-In the CLI, signal strength is reported as: excellent, good, fair or bad.
-For precise signal strength values in dBm, use NETCONF or RESTCONF to access
-the `signal-strength` leaf in the operational datastore.
-
-When connected, `bssid` shows the MAC address of the access point the
-station is associated to.  It appears only while connected.  When several
-access points share one SSID (a roaming network), the `bssid` is what
-tells them apart, and it changes as the station roams between them.
+Over NETCONF or RESTCONF the scan is the `scan` action on the radio's
+hardware component.  Its output is a list of networks keyed by BSSID, with
+the SSID, frequency, channel, signal strength and encryption of each.
 
 ### Channel Survey
 
@@ -377,8 +334,8 @@ hardware, your passphrase must meet the following criteria:
 ## Station Mode (Client)
 
 Station mode connects to an existing Wi-Fi network. Before configuring station
-mode, follow the "Discovering Available Networks (Scanning)" section above to
-scan for available networks and identify the SSID you want to connect to.
+mode, follow the "Discovering Available Networks" section above to scan for
+available networks and identify the SSID you want to connect to.
 
 ### Step 1: Configure Password
 
@@ -402,6 +359,7 @@ Configure station mode with the SSID and password to connect:
 
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit interface wifi0</b>
+admin@example:/config/interface/wifi0/> <b>set wifi radio radio0</b>
 admin@example:/config/interface/wifi0/> <b>set wifi station ssid MyHomeNetwork</b>
 admin@example:/config/interface/wifi0/> <b>set wifi station security secret my-wifi-key</b>
 admin@example:/config/interface/wifi0/> <b>leave</b>
@@ -422,7 +380,7 @@ signal             : -52 dBm (good)
 
 **Station configuration parameters:**
 
-- `radio`: Reference to the WiFi radio (mandatory) - already set during scanning
+- `radio`: Reference to the WiFi radio (mandatory)
 - `station ssid`: Network name to connect to (mandatory)
 - `station security mode`:
       - `auto`: default, WPA2/WPA3 auto-negotiation
@@ -433,6 +391,8 @@ signal             : -52 dBm (good)
 > [!NOTE]
 > The `auto` security mode automatically selects WPA3-SAE or WPA2-PSK based on
 > what the access point supports, prioritizing WPA3 for better security.
+> The station offers management frame protection on every connection, so
+> WPA3-only networks, and any network on 6 GHz, accept it.
 > Certificate-based authentication (802.1X/EAP) is not yet supported.
 
 ## Access Point Mode
@@ -451,7 +411,7 @@ create a keystore entry for your WiFi password and configure the AP interface:
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key my-wifi-secret</b>
 admin@example:/config/keystore/…/my-wifi-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/my-wifi-secret/> <b>change cleartext-symmetric-key</b>
+admin@example:/config/keystore/…/my-wifi-secret/> <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 admin@example:/config/keystore/…/my-wifi-secret/> <b>end</b>
@@ -514,17 +474,17 @@ admin@example:/config/hardware/component/radio0/wifi-radio/> <b>leave</b>
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key main-secret</b>
 admin@example:/config/keystore/…/main-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/main-secret/> <b>change cleartext-symmetric-key</b>
+admin@example:/config/keystore/…/main-secret/> <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 admin@example:/config/> <b>edit keystore symmetric-key guest-secret</b>
 admin@example:/config/keystore/…/guest-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/guest-secret/> <b>change cleartext-symmetric-key</b>
+admin@example:/config/keystore/…/guest-secret/> <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 admin@example:/config/> <b>edit keystore symmetric-key iot-secret</b>
 admin@example:/config/keystore/…/iot-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/iot-secret/> <b>change cleartext-symmetric-key</b>
+admin@example:/config/keystore/…/iot-secret/> <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 admin@example:/config/keystore/…/iot-secret/> <b>leave</b>
@@ -561,11 +521,12 @@ admin@example:/config/interface/wifi2/> <b>leave</b>
 > MAC by changing only the first octet: the locally administered bit is
 > set and the interface number plus one is stored in the upper bits.  On
 > a device with chassis MAC `00:53:00:c0:ff:ee`, `wifi0` becomes
-> `06:53:00:c0:ff:ee` and `wifi1` becomes `0a:53:00:c0:ff:ee`.  Several
-> APs on one radio therefore never share an address, and two devices of
-> the same model never collide.  To use a specific address instead, set
-> `custom-phys-address` on the interface, see [Common Interface
-> Settings](iface.md#custom-mac-address).
+> `06:53:00:c0:ff:ee` and `wifi1` becomes `0a:53:00:c0:ff:ee`.  An
+> interface whose name has no number, such as `backhaul`, gets its number
+> from a hash of the name.  Several APs on one radio therefore never
+> share an address, and two devices of the same model never collide.  To
+> use a specific address instead, set `custom-phys-address` on the
+> interface, see [Common Interface Settings](iface.md#custom-mac-address).
 
 **Result:** Three SSIDs broadcasting simultaneously on radio0:
 
@@ -581,12 +542,13 @@ All APs on the same radio share the same channel and physical layer settings
 - Hidden/visible SSID setting
 - Bridge membership
 
-You can verify the configuration with `show hardware component radio0` to see
+You can verify the configuration with `show hardware radio0` to see
 radio settings, and `show interface` to see all active AP interfaces.
 
-> [!IMPORTANT]
-> AP and Station modes cannot be mixed on the same radio. All virtual interfaces
-> on a radio must be the same mode (all APs or all Stations).
+> [!NOTE]
+> A radio hosts any number of access points but only one station, and
+> the station follows its access point's channel, see [Current
+> Limitations](#current-limitations).
 
 ## Fast Roaming Between Access Points
 
@@ -611,13 +573,14 @@ shared with people you do not trust, give the access points a secret of
 their own, the key holder secret.  Create it in the keystore on every
 device, with the same value:
 
-```
-admin@example:/config/> edit keystore symmetric-keys symmetric-key roaming-key
-admin@example:/config/keystore/symmetric-keys/symmetric-key/roaming-key/> set key-format passphrase-key-format
-admin@example:/config/keystore/symmetric-keys/symmetric-key/roaming-key/> set cleartext-symmetric-key <a long random string>
-admin@example:/config/keystore/symmetric-keys/symmetric-key/roaming-key/> end
-admin@example:/config/> set interface wifi0 wifi access-point roaming dot11r key-holder-secret roaming-key
-```
+<pre class="cli"><code>admin@example:/config/> <b>edit keystore symmetric-key roaming-key</b>
+admin@example:/config/keystore/…/roaming-key/> <b>set key-format passphrase-key-format</b>
+admin@example:/config/keystore/…/roaming-key/> <b>edit cleartext-symmetric-key</b>
+Passphrase: ************
+Retype passphrase: ************
+admin@example:/config/keystore/…/roaming-key/> <b>end</b>
+admin@example:/config/> <b>set interface wifi0 wifi access-point roaming dot11r key-holder-secret roaming-key</b>
+</code></pre>
 
 **Requirements:**
 - All APs in roaming group must have **identical** SSID
@@ -849,7 +812,7 @@ network must share the same passphrase:
 <pre class="cli"><code>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit keystore symmetric-key mesh-secret</b>
 admin@example:/config/keystore/…/mesh-secret/> <b>set key-format passphrase-key-format</b>
-admin@example:/config/keystore/…/mesh-secret/> <b>change cleartext-symmetric-key</b>
+admin@example:/config/keystore/…/mesh-secret/> <b>edit cleartext-symmetric-key</b>
 Passphrase: ************
 Retype passphrase: ************
 admin@example:/config/keystore/…/mesh-secret/> <b>end</b>
@@ -982,8 +945,9 @@ admin@garage:/config/interface/uplink/> <b>set bridge-port bridge br0</b>
 admin@garage:/config/interface/uplink/> <b>leave</b>
 </code></pre>
 
-A station without `wds` cannot be a bridge port, the configuration is
-rejected.
+A station without `wds` cannot be a bridge port.  The configuration is
+accepted, but the port is refused when it is applied and never comes
+up.
 
 The access point at the other end must accept 4-address stations.  A
 root with a `wds-link` for the satellite does, and so do most access
@@ -1018,8 +982,8 @@ loop, as with any two bridge ports to the same network.
 Use `show interface wifi0` to verify signal strength and connection status.
 If issues arise, try the following troubleshooting steps:
 
-1. **Verify signal strength**: Check that the target network shows
-   "good" or "excellent" signal in scan results
+1. **Verify signal strength**: Check the target network's signal with
+   `show hardware radio0 scan`, -65 dBm or better is good
 2. **Check credentials**: Use `show keystore symmetric <name>` to verify
    the passphrase matches the network password
 3. **Review logs**: Check system logs with `show log` for Wi-Fi related

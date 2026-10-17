@@ -83,9 +83,12 @@ def tftp(args: List[str]) -> None:
 
 
 def hardware(args: List[str]) -> None:
-    """show hardware [<component> [survey [passive]]]"""
+    """show hardware [<component> [survey [passive] | scan]]"""
     if len(args) >= 2 and args[1] == "survey":
         channel_survey(args[0], "passive" in args[2:])
+        return
+    if len(args) >= 2 and args[1] == "scan":
+        wifi_scan(args[0])
         return
 
     data = get_json("/ietf-hardware:hardware")
@@ -106,41 +109,101 @@ def hardware(args: List[str]) -> None:
     cli_pretty(data, "show-hardware")
 
 
-def channel_survey(radio: str, passive: bool) -> None:
-    """Run the channel-survey action on a WiFi radio and render the channel map"""
+def radio_action(radio: str, action: str, what: str, *args: str):
+    """Run an action on a WiFi radio, return its stdout or None after printing why"""
     # Same character set as the hardware component name in the model
     if not re.fullmatch(r"[a-zA-Z0-9_][a-zA-Z0-9_.:+@-]*", radio):
         print(f"No WiFi radio named {radio}.")
-        return
+        return None
 
-    xpath = f"/ietf-hardware:hardware/component[name='{radio}']/infix-hardware:wifi-radio/channel-survey"
-    cmd = ["rpc", "-j", xpath]
-    if passive:
-        cmd += ["passive", "true"]
+    xpath = f"/ietf-hardware:hardware/component[name='{radio}']/infix-hardware:wifi-radio/{action}"
+    cmd = ["rpc", "-j", xpath, *args]
 
     # Progress goes to stderr, past the pager, which would otherwise
-    # print the chart twice when it arrives piecemeal after the scan
+    # print the result twice when it arrives piecemeal after the scan
     print(f"Scanning channels on {radio}, this takes a few seconds ...",
           file=sys.stderr, flush=True)
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         if "does not exist" in result.stderr:
             print(f"No WiFi radio named {radio}.")
-            return
+            return None
         # The rpc tool prints the device's reason, then its own verdict
         for line in result.stderr.splitlines():
             if line.startswith("rpc: ") and "RPC execution failed" not in line:
                 print(re.sub(r" \(\d+\)$", "", line[len("rpc: "):]))
-                return
-        print(result.stderr.strip() or "Channel survey failed")
+                return None
+        print(result.stderr.strip() or f"{what} failed")
+        return None
+
+    return result.stdout
+
+
+def find_lists(data, name: str, key: str) -> list:
+    """Collect every list called name whose entries carry key, however the output is wrapped"""
+    found = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k == name and isinstance(v, list) and \
+               all(isinstance(e, dict) and key in e for e in v):
+                found.extend(v)
+            else:
+                found.extend(find_lists(v, name, key))
+    elif isinstance(data, list):
+        for item in data:
+            found.extend(find_lists(item, name, key))
+    return found
+
+
+def wifi_scan(radio: str) -> None:
+    """Run the scan action on a WiFi radio and list the networks heard"""
+    out = radio_action(radio, "scan", "Scan")
+    if out is None:
         return
 
     if RAW_OUTPUT:
-        print(result.stdout)
+        print(out)
+        return
+
+    try:
+        networks = find_lists(json.loads(out), "network", "bssid")
+    except json.JSONDecodeError:
+        print("Scan returned no data")
+        return
+
+    if not networks:
+        print(f"No networks heard on {radio}.")
+        return
+
+    rows = []
+    for net in networks:
+        signal = net.get("signal-strength")
+        rows.append((net.get("ssid", ""),
+                     net.get("bssid", ""),
+                     ", ".join(net.get("encryption", [])) or "Open",
+                     f"{signal} dBm" if signal is not None else "",
+                     str(net.get("channel", ""))))
+
+    width = max(20, min(32, max(len(r[0]) for r in rows)))
+    sec = max(8, max(len(r[2]) for r in rows))
+    print(f"{'SSID':<{width}}  {'BSSID':<17}  {'SECURITY':<{sec}}  {'SIGNAL':>8}  CHANNEL")
+    for ssid, bssid, security, signal, channel in rows:
+        print(f"{ssid:<{width}.{width}}  {bssid:<17}  {security:<{sec}}  {signal:>8}  {channel:>7}")
+
+
+def channel_survey(radio: str, passive: bool) -> None:
+    """Run the channel-survey action on a WiFi radio and render the channel map"""
+    out = radio_action(radio, "channel-survey", "Channel survey",
+                       *(["passive", "true"] if passive else []))
+    if out is None:
+        return
+
+    if RAW_OUTPUT:
+        print(out)
         return
 
     chart = subprocess.run(["/usr/libexec/infix/wifi-channel-map.py"],
-                           input=result.stdout, capture_output=True, text=True)
+                           input=out, capture_output=True, text=True)
     sys.stdout.write(chart.stdout or chart.stderr)
     sys.stdout.flush()
 

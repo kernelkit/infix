@@ -1742,7 +1742,97 @@ static int wifi_channel_survey(sr_session_ctx_t *session, uint32_t sub_id, const
 	return SR_ERR_OK;
 }
 
-/* The action only exists when the wifi feature is enabled, see wifi.inc */
+/*
+ * Scan for networks in range of a radio, the scan action in
+ * infix-hardware.yang.  Like the survey it takes the radio off its
+ * channel for a few seconds, so it only runs on request.  The helper
+ * does the scan and the parsing, see iw.py scan.
+ */
+static int wifi_scan(sr_session_ctx_t *session, uint32_t sub_id, const char *op_path,
+		     const struct lyd_node *input, sr_event_t event, uint32_t request_id,
+		     struct lyd_node *output, void *priv)
+{
+	static const struct { const char *json, *yang; } nums[] = {
+		{ "frequency", "frequency"       },
+		{ "channel",   "channel"         },
+		{ "signal",    "signal-strength" },
+	};
+	struct lyd_node *component, *net;
+	json_t *root, *entry;
+	const char *radio;
+	json_error_t jerr;
+	size_t index;
+	FILE *pp;
+
+	if (event != SR_EV_RPC)
+		return SR_ERR_OK;
+
+	component = lyd_parent(lyd_parent(input));
+	radio = component ? lydx_get_cattr(component, "name") : NULL;
+	if (!radio)
+		return rpc_failed(session, "Cannot tell which radio to scan");
+
+	pp = popenf("r", "/usr/libexec/infix/iw.py scan %s", radio);
+	if (!pp)
+		return rpc_failed(session, "Failed starting scan");
+
+	root = json_loadf(pp, 0, &jerr);
+	pclose(pp);
+	if (!root)
+		return rpc_failed(session, "Scan returned no data");
+
+	if (!json_is_array(root)) {
+		json_t *err = json_object_get(root, "error");
+		char msg[256];
+
+		snprintf(msg, sizeof(msg), "Scan failed: %s",
+			 json_is_string(err) ? json_string_value(err) : "unknown error");
+		json_decref(root);
+		return rpc_failed(session, msg);
+	}
+
+	json_array_foreach(root, index, entry) {
+		json_t *bssid = json_object_get(entry, "bssid");
+		json_t *val, *enc;
+		char buf[32];
+		size_t i;
+
+		if (!json_is_string(bssid))
+			continue;
+
+		if (lyd_new_list(output, NULL, "network", LYD_NEW_VAL_OUTPUT, &net,
+				 json_string_value(bssid))) {
+			ERROR("scan: failed adding network %s", json_string_value(bssid));
+			continue;
+		}
+
+		val = json_object_get(entry, "ssid");
+		if (json_is_string(val))
+			lyd_new_term(net, NULL, "ssid", json_string_value(val),
+				     LYD_NEW_VAL_OUTPUT, NULL);
+
+		for (i = 0; i < NELEMS(nums); i++) {
+			val = json_object_get(entry, nums[i].json);
+			if (!json_is_integer(val))
+				continue;
+
+			snprintf(buf, sizeof(buf), "%lld", json_integer_value(val));
+			lyd_new_term(net, NULL, nums[i].yang, buf, LYD_NEW_VAL_OUTPUT, NULL);
+		}
+
+		enc = json_object_get(entry, "encryption");
+		json_array_foreach(enc, i, val) {
+			if (json_is_string(val))
+				lyd_new_term(net, NULL, "encryption", json_string_value(val),
+					     LYD_NEW_VAL_OUTPUT, NULL);
+		}
+	}
+	json_decref(root);
+
+	return SR_ERR_OK;
+}
+
+/* The actions only exist when the wifi feature is enabled, see wifi.inc */
 static bool wifi_feature_enabled(struct confd *confd)
 {
 	const struct lys_module *mod;
@@ -1770,6 +1860,8 @@ int hardware_rpc_init(struct confd *confd)
 
 	REGISTER_RPC_TREE(confd->session, XPATH_BASE_ "/component/infix-hardware:wifi-radio/channel-survey",
 			  wifi_channel_survey, NULL, &confd->sub);
+	REGISTER_RPC_TREE(confd->session, XPATH_BASE_ "/component/infix-hardware:wifi-radio/scan",
+			  wifi_scan, NULL, &confd->sub);
 
 	return SR_ERR_OK;
 fail:

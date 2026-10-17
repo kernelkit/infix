@@ -17,6 +17,7 @@ import types
 import netconf_client.connect
 import netconf_client.ncclient
 import netconf_client.session
+import paramiko
 from infamy.transport import Transport,infer_put_dict
 from netconf_client.error import RpcError
 from . import env, netutil, coverage
@@ -119,17 +120,22 @@ class Device(Transport):
         self.location = location
         self.mapping = mapping
         self.location = location
-        self.ly = libyang.Context(yangdir)
+        self._ly = libyang.Context(yangdir)
+        self._ly_loaded = True
         self._ncc_init(location)
         # self.ncc._fetch_connection_ip()
         # self.ncc._debug()
 
         self.modules = {}
         self._ly_bootstrap(yangdir)
-
-        del self.ly
-        self.ly = libyang.Context(yangdir)
         self._ly_init(yangdir)
+
+    @property
+    def ly(self):
+        """Loads the device's modules on first use, a skipped test never pays for it"""
+        if not self._ly_loaded:
+            self._ly_load()
+        return self._ly
 
     def __str__(self):
         nm = f"{self.name}"
@@ -137,12 +143,11 @@ class Device(Transport):
             nm += f"({env.ENV.ltop.xlate(self.name)})"
         return nm + " [NETCONF]"
 
-    def _ncc_init(self, location):
+    def _ncc_connect(self, location):
         ai = socket.getaddrinfo(location.host, location.port,
                                 0, 0, socket.SOL_TCP)
         sock = socket.socket(ai[0][0], ai[0][1], 0)
         sock.settimeout(60)
-        print(f"Connecting to mgmt IP {location.host}:{location.port} ...")
         try:
             sock.connect(ai[0][4])
         except InterruptedError as err:
@@ -153,9 +158,36 @@ class Device(Transport):
             raise err
         sock.settimeout(None)
 
-        session = netconf_client.connect.connect_ssh(sock=sock,
-                                                     username=location.username,
-                                                     password=location.password)
+        try:
+            return netconf_client.connect.connect_ssh(sock=sock,
+                                                      username=location.username,
+                                                      password=location.password)
+        except BaseException:
+            sock.close()
+            raise
+
+    def _ncc_init(self, location, tries=10):
+        """Open the NETCONF session, retrying while the server settles
+
+        The server accepts the TCP connection as soon as it listens,
+        but drops the SSH session without a hello while it is loading
+        or replacing its host key, which happens right after boot and
+        after every test reset.  The ssh transport retries the same
+        window as exit code 255.
+        """
+        print(f"Connecting to mgmt IP {location.host}:{location.port} ...")
+        for attempt in range(1, tries + 1):
+            try:
+                session = self._ncc_connect(location)
+                break
+            except (StopIteration, EOFError, ConnectionError,
+                    paramiko.SSHException) as err:
+                if attempt == tries:
+                    raise
+                print(f"NETCONF session setup failed ({type(err).__name__}), "
+                      f"attempt {attempt}/{tries}")
+                time.sleep(1)
+
         self.ncc = Manager(session)
 
     def _ly_bootstrap(self, yangdir):
@@ -174,7 +206,7 @@ class Device(Transport):
         print("YANG models downloaded.")
 
     def _ly_init(self, yangdir):
-        self.ly = libyang.Context(yangdir)
+        self._ly = libyang.Context(yangdir)
 
         lib = self.ly.load_module("ietf-yang-library")
         ns = libyang.util.c2str(lib.cdata.ns)
@@ -188,7 +220,10 @@ class Device(Transport):
                                   xml, parse_only=True).print_dict()
 
         self.modules = {m["name"]: m for m in data["modules-state"]["module"]}
+        self._ly_loaded = False
 
+    def _ly_load(self):
+        self._ly_loaded = True
         for ms in self.modules.values():
             if ms["conformance-type"] != "implement":
                 continue
@@ -430,6 +465,8 @@ class Device(Transport):
         actions that take no parameters.
         """
         coverage.track_xpath(xpath)
+        if not input_data and (xml := self._plain_action_xml(xpath)):
+            return self.ncc.dispatch(xml)
         action={}
         pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
         match = re.search(pattern, xpath)
@@ -469,6 +506,19 @@ class Device(Transport):
             if isinstance(value, dict) and key not in ("ok",):
                 output[key] = [value]
         return output
+
+    def _plain_action_xml(self, xpath):
+        """Action without input within one module, e.g. /infix-test:test/reset,
+        built without libyang so the context need not be loaded"""
+        match = re.fullmatch(r"/([\w.-]+):([\w.-]+)((?:/[\w.-]+)+)", xpath)
+        ns = match and self.modules.get(match[1], {}).get("namespace")
+        if not ns:
+            return None
+        names = match[3].split("/")[1:]
+        inner = "".join(f"<{n}>" for n in names[:-1]) + f"<{names[-1]}/>" + \
+                "".join(f"</{n}>" for n in reversed(names[:-1]))
+        return (f'<action xmlns="urn:ietf:params:xml:ns:yang:1">'
+                f'<{match[2]} xmlns="{ns}">{inner}</{match[2]}></action>')
 
     def get_schemas_list(self):
         schemas = []

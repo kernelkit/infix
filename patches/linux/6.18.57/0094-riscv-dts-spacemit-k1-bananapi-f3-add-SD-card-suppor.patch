@@ -1,7 +1,7 @@
 From 18b19b95243b1e70d1ed6c2b36ad95950b9b7b8a Mon Sep 17 00:00:00 2001
 From: Iker Pedrosa <ikerpedrosam@gmail.com>
 Date: Fri, 15 May 2026 12:49:01 +0200
-Subject: [PATCH 094/102] riscv: dts: spacemit: k1-bananapi-f3: add SD card
+Subject: [PATCH 094/105] riscv: dts: spacemit: k1-bananapi-f3: add SD card
  support with UHS modes
 
 Add complete SD card controller support with UHS high-speed modes.

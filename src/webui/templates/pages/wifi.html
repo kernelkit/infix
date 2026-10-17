@@ -55,6 +55,13 @@
       {{template "wifi-survey" .Survey}}
     </div>
   </section>
+
+  <section class="info-card">
+    <div class="card-header">Networks</div>
+    <div id="wifi-scan-{{.Name}}">
+      {{template "wifi-scan" .Scan}}
+    </div>
+  </section>
 </div>
 
 {{range .Interfaces}}
@@ -121,33 +128,6 @@
   {{else if .ClientsEmpty}}
   <p class="empty-message">{{.ClientsEmpty}}</p>
   {{end}}
-
-  {{if and (eq .Mode "station") .ScanResults}}
-  <div class="data-table-wrap">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>SSID</th>
-          <th>BSSID</th>
-          <th>Signal</th>
-          <th>Channel</th>
-          <th>Security</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{range .ScanResults}}
-        <tr>
-          <td>{{if .SSID}}{{.SSID}}{{else}}<em>Hidden</em>{{end}}</td>
-          <td>{{.BSSID}}</td>
-          <td>{{if .Signal}}<span class="{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
-          <td>{{.Channel}}</td>
-          <td>{{.Encryption}}</td>
-        </tr>
-        {{end}}
-      </tbody>
-    </table>
-  </div>
-  {{end}}
 </section>
 {{end}}
 {{end}}
@@ -187,5 +167,50 @@
           hx-target="#wifi-survey-{{.Radio}}"
           hx-swap="innerHTML"
           hx-disabled-elt="this">{{if .SVG}}Scan again{{else}}Scan channels{{end}}</button>
+</div>
+{{end}}
+
+{{define "wifi-scan"}}
+{{if .Networks}}
+<div class="data-table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>SSID</th>
+        <th>BSSID</th>
+        <th>Signal</th>
+        <th>Channel</th>
+        <th>Security</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Networks}}
+      <tr>
+        <td>{{if .SSID}}{{.SSID}}{{else}}<em>Hidden</em>{{end}}</td>
+        <td>{{.BSSID}}</td>
+        <td>{{if .Signal}}<span class="{{.SignalCSS}}">{{.Signal}}</span>{{else}}&mdash;{{end}}</td>
+        <td>{{.Channel}}</td>
+        <td>{{.Encryption}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{else if .Error}}
+<div class="card-body"><div class="alert alert-error">{{.Error}}</div></div>
+{{else if .Scanned}}
+<p class="empty-message">No networks heard.</p>
+{{else}}
+<div class="card-body">
+  <p class="survey-hint">Lists the networks in range, with signal strength and security.
+    The radio leaves its channel for a few seconds, so traffic pauses during the scan.</p>
+</div>
+{{end}}
+<div class="card-actions">
+  <button type="button" class="btn btn-sm btn-primary"
+          hx-post="/wifi/{{.Radio}}/scan"
+          hx-target="#wifi-scan-{{.Radio}}"
+          hx-swap="innerHTML"
+          hx-disabled-elt="this">{{if .Scanned}}Scan again{{else}}Scan networks{{end}}</button>
 </div>
 {{end}}

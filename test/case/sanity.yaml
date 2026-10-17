@@ -13,8 +13,8 @@
   name: "Verify Software Version"
   infamy:
     specification: False
-- case: meta/prune-containers.py
-  name: "Removing old containers"
+- case: meta/prune-leftovers.py
+  name: "Removing leftovers from earlier runs"
   infamy:
     specification: False
 

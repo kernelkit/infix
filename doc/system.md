@@ -23,13 +23,13 @@ User management, including passwords, SSH keys, remote authentication is
 available in the system authentication configuration context.
 
 <pre class="cli"><code>admin@example:/config/> <b>edit system authentication user admin</b>
-admin@example:/config/system/…/user/admin/> <b>change password</b>
+admin@example:/config/system/…/user/admin/> <b>edit password</b>
 New password:
 Retype password:
 admin@example:/config/system/…/user/admin/> <b>leave</b>
 </code></pre>
 
-The `change password` command starts an interactive dialogue that asks
+The `edit password` command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
 the password with sha512crypt.
 
@@ -200,7 +200,7 @@ For detailed rules, use: show nacm group &lt;name&gt;
 Creating a new user starts with defining the user account in the system:
 
 <pre class="cli"><code>admin@example:/config/> <b>edit system authentication user jacky</b>
-admin@example:/config/system/…/user/jacky/> <b>change password</b>
+admin@example:/config/system/…/user/jacky/> <b>edit password</b>
 New password:
 Retype password:
 admin@example:/config/system/…/user/jacky/> <b>leave</b>

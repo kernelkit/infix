@@ -9,6 +9,7 @@ Usage:
     iw.py survey <interface>    - Get channel survey data
     iw.py survey-scan <radio> [passive]
                                 - Scan all channels, then get survey data
+    iw.py scan <radio>          - Scan all channels, list the networks heard
 """
 
 import os
@@ -556,57 +557,207 @@ def wait_scan_done(events, ifname, deadline):
         buf += chunk
 
 
+def scan_iface(radio):
+    """
+    Pick an interface of the radio to scan with, (ifname, iftype), and
+    the name of a temporary one to delete afterwards, or None.
+
+    A station or mesh point is preferred over an access point since
+    those can scan without extra flags.  A radio nobody has configured
+    yet has no interface to scan with, which is exactly when a scan or
+    survey helps pick a network, band and channel.  Borrow one for the
+    duration, under a name no one would configure.
+    """
+    try:
+        with open(f'/sys/class/ieee80211/{radio}/index') as f:
+            phy = f.read().strip()
+    except OSError:
+        raise RuntimeError(f'no such radio: {radio}')
+
+    ifaces = parse_dev_types().get(phy, [])
+    order = ['managed', 'mesh point', 'AP']
+    ifaces = sorted((i for i in ifaces if i[1] != 'AP/VLAN'),
+                    key=lambda i: order.index(i[1]) if i[1] in order else len(order))
+    if ifaces:
+        return ifaces[0], None
+
+    tmp = 'survey-' + secrets.token_hex(3)
+    try:
+        subprocess.run(['iw', 'phy', radio, 'interface', 'add', tmp, 'type', 'managed'],
+                       capture_output=True, text=True, timeout=5, check=True)
+        subprocess.run(['ip', 'link', 'set', tmp, 'up'],
+                       capture_output=True, text=True, timeout=5, check=True)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        subprocess.run(['iw', 'dev', tmp, 'del'], capture_output=True)
+        err = getattr(e, 'stderr', '') or ''
+        raise RuntimeError(f'no interface on {radio} to scan with: {err.strip() or e}')
+    return (tmp, 'managed'), tmp
+
+
 def survey_scan(radio, passive=False):
     """
     Scan every channel on the radio, then dump the survey.
 
-    Returns the parse_survey() list, or {'error': ...}.  The scan runs
-    on one interface of the radio, preferring a station or mesh point
-    over an access point since those can scan without extra flags.
+    Returns the parse_survey() list, or {'error': ...}.
+    """
+    try:
+        iface, tmp = scan_iface(radio)
+    except RuntimeError as e:
+        return {'error': str(e)}
+
+    try:
+        return survey_scan_on(iface, passive)
+    finally:
+        if tmp:
+            subprocess.run(['iw', 'dev', tmp, 'del'], capture_output=True)
+
+
+def network_scan(radio):
+    """
+    Scan every channel on the radio and list the networks heard.
+
+    Returns a list of networks, best signal first, or {'error': ...}.
+    """
+    try:
+        iface, tmp = scan_iface(radio)
+    except RuntimeError as e:
+        return {'error': str(e)}
+
+    try:
+        err = trigger_scan(iface, False)
+        if err:
+            return err
+        return parse_scan_dump(iface[0])
+    finally:
+        if tmp:
+            subprocess.run(['iw', 'dev', tmp, 'del'], capture_output=True)
+
+
+def frequency_to_channel(freq):
+    """Channel number of a center frequency in MHz, 0 if unknown"""
+    if 2412 <= freq <= 2484:
+        return 14 if freq == 2484 else (freq - 2412) // 5 + 1
+    if 5170 <= freq <= 5895:
+        return (freq - 5000) // 5
+    if 5955 <= freq <= 7115:
+        return (freq - 5950) // 5
+    return 0
+
+
+def scan_encryption(rsn, wpa, privacy):
+    """
+    Name the security of a scanned network from the authentication
+    suites of its RSN and WPA information elements, in the terms a
+    user knows: 'WPA2-Personal', 'WPA3-Personal', 'WPA2-Enterprise',
+    'WPA-Personal', 'Enhanced-Open', 'WEP' or 'Open'.
+    """
+    result = []
+
+    if rsn is not None:
+        if 'SAE' in rsn:
+            result.append('WPA3-Personal')
+        if 'PSK' in rsn:
+            result.append('WPA2-Personal')
+        if '802.1X' in rsn:
+            result.append('WPA2-Enterprise')
+        if 'OWE' in rsn:
+            result.append('Enhanced-Open')
+    if wpa is not None:
+        if 'PSK' in wpa:
+            result.append('WPA-Personal')
+        if '802.1X' in wpa:
+            result.append('WPA-Enterprise')
+
+    if result:
+        return result
+    if privacy:
+        return ['WEP']
+    return ['Open']
+
+
+def parse_scan_dump(ifname):
+    """
+    Parse 'iw dev <name> scan dump' into a list of networks, best
+    signal first.  Hidden networks have no ssid.
+    """
+    output = run_iw('dev', ifname, 'scan', 'dump')
+    if output is None:
+        return {'error': f'scan dump on {ifname} failed'}
+
+    networks = []
+    bss = None
+    ie = None
+
+    for line in output.splitlines():
+        stripped = line.strip()
+        if line.startswith('BSS '):
+            match = re.match(r'BSS ([0-9a-f:]{17})', line)
+            if not match:
+                bss = None
+                continue
+            bss = {'bssid': match.group(1), 'privacy': False, 'rsn': None, 'wpa': None}
+            networks.append(bss)
+            ie = None
+            continue
+        if bss is None:
+            continue
+
+        if stripped.startswith('freq:'):
+            try:
+                bss['frequency'] = int(float(stripped.split(':', 1)[1].strip()))
+            except ValueError:
+                pass
+        elif stripped.startswith('signal:'):
+            match = re.search(r'(-?[0-9.]+) dBm', stripped)
+            if match:
+                bss['signal'] = int(float(match.group(1)))
+        elif stripped.startswith('capability:'):
+            bss['privacy'] = ' Privacy' in stripped or stripped.startswith('capability: Privacy')
+        elif stripped.startswith('SSID:'):
+            ssid = decode_iw_ssid(stripped[5:].strip())
+            if ssid:
+                bss['ssid'] = ssid
+        elif stripped.startswith('RSN:'):
+            ie = 'rsn'
+            bss[ie] = ''
+        elif stripped.startswith('WPA:'):
+            ie = 'wpa'
+            bss[ie] = ''
+        elif ie is not None and stripped.startswith('* Authentication suites:'):
+            bss[ie] = stripped.split(':', 1)[1].strip()
+        elif not stripped.startswith('*'):
+            ie = None
+
+    result = []
+    for bss in networks:
+        if 'frequency' not in bss:
+            continue
+        net = {
+            'bssid': bss['bssid'],
+            'frequency': bss['frequency'],
+            'channel': frequency_to_channel(bss['frequency']),
+            'encryption': scan_encryption(bss['rsn'], bss['wpa'], bss['privacy']),
+        }
+        if 'ssid' in bss:
+            net['ssid'] = bss['ssid']
+        if 'signal' in bss:
+            net['signal'] = bss['signal']
+        result.append(net)
+
+    result.sort(key=lambda n: n.get('signal', -1000), reverse=True)
+    return result
+
+
+def trigger_scan(iface, passive):
+    """
+    Scan on one (ifname, iftype) and wait for it to finish.  Returns
+    None when done, else {'error': ...}.
 
     The scan is triggered and then waited for over 'iw event', the
     combined 'iw scan' spins on the netlink socket for minutes on some
     kernels.  A trigger fails with EBUSY while wpa_supplicant runs its
     own scan, so wait for that one to finish and try again.
     """
-    try:
-        with open(f'/sys/class/ieee80211/{radio}/index') as f:
-            phy = f.read().strip()
-    except OSError:
-        return {'error': f'no such radio: {radio}'}
-
-    ifaces = parse_dev_types().get(phy, [])
-    order = ['managed', 'mesh point', 'AP']
-    ifaces = sorted((i for i in ifaces if i[1] != 'AP/VLAN'),
-                    key=lambda i: order.index(i[1]) if i[1] in order else len(order))
-
-    # A radio nobody has configured yet has no interface to scan with,
-    # which is exactly when a survey helps pick a band and channel.
-    # Borrow one for the duration of the scan, under a name no one
-    # would configure.
-    tmp = None
-    if not ifaces:
-        tmp = 'survey-' + secrets.token_hex(3)
-        try:
-            subprocess.run(['iw', 'phy', radio, 'interface', 'add', tmp, 'type', 'managed'],
-                           capture_output=True, text=True, timeout=5, check=True)
-            subprocess.run(['ip', 'link', 'set', tmp, 'up'],
-                           capture_output=True, text=True, timeout=5, check=True)
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-            subprocess.run(['iw', 'dev', tmp, 'del'], capture_output=True)
-            err = getattr(e, 'stderr', '') or ''
-            return {'error': f'no interface on {radio} to scan with: {err.strip() or e}'}
-        ifaces = [(tmp, 'managed')]
-
-    try:
-        return survey_scan_on(ifaces[0], passive)
-    finally:
-        if tmp:
-            subprocess.run(['iw', 'dev', tmp, 'del'], capture_output=True)
-
-
-def survey_scan_on(iface, passive):
-    """Scan on one (ifname, iftype), then dump the survey, see survey_scan()."""
     ifname, iftype = iface
     args = ['iw', 'dev', ifname, 'scan', 'trigger']
     if iftype == 'AP':
@@ -646,6 +797,16 @@ def survey_scan_on(iface, passive):
     finally:
         events.kill()
         events.wait()
+
+    return None
+
+
+def survey_scan_on(iface, passive):
+    """Scan on one (ifname, iftype), then dump the survey, see survey_scan()."""
+    ifname = iface[0]
+    err = trigger_scan(iface, passive)
+    if err:
+        return err
 
     channels = parse_survey(ifname)
     if not any(ch['in_use'] for ch in channels):
@@ -822,6 +983,7 @@ def main():
                 'info': 'Get PHY or interface information (requires device)',
                 'survey': 'Get channel survey data (requires interface)',
                 'survey-scan': 'Scan all channels, then get survey data (requires radio)',
+                'scan': 'Scan all channels, list the networks heard (requires radio)',
                 'station': 'Get connected stations in AP mode (requires interface)',
                 'link': 'Get link info in station mode (requires interface)',
                 'mesh': 'Get mesh parameters in mesh point mode (requires interface)',
@@ -838,6 +1000,7 @@ def main():
                 'iw.py mesh wifi0',
                 'iw.py survey wlan0',
                 'iw.py survey-scan radio0 passive',
+                'iw.py scan radio0',
                 'iw.py caps radio0'
             ]
         }, indent=2))
@@ -890,6 +1053,11 @@ def main():
                 data = {'error': 'survey-scan command requires radio argument'}
             else:
                 data = survey_scan(sys.argv[2], 'passive' in sys.argv[3:])
+        elif command == 'scan':
+            if len(sys.argv) < 3:
+                data = {'error': 'Radio name required for scan command'}
+            else:
+                data = network_scan(sys.argv[2])
         elif command == 'caps':
             if len(sys.argv) < 3:
                 data = {'error': 'caps command requires PHY/radio argument'}
@@ -899,7 +1067,7 @@ def main():
             data = {'error': f'Unknown command: {command}'}
 
         print(json.dumps(data, indent=2, ensure_ascii=False))
-        if command == 'survey-scan' and isinstance(data, dict) and 'error' in data:
+        if command in ('survey-scan', 'scan') and isinstance(data, dict) and 'error' in data:
             sys.exit(1)
 
     except Exception as e:
