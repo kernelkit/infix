@@ -74,6 +74,11 @@ All notable changes to the project are documented in this file.
 - Configurable OSPF auto-cost reference bandwidth, for OSPFv2 and OSPFv3,
   issue #1576.  The default, 100000 Mbit/s, is the value used before, so
   link costs do not change on upgrade.  The CLI shows it in `show ip ospf`
+- Add cellular modem (WWAN) support for USB-attached MBIM/QMI modems,
+  including USB dongles, mPCIe cards, and M.2 Key-B modules.  Multiple
+  APNs per modem, SIM PIN configuration, and NMEA routing from modem to
+  GPS subsystem.  Not part of the default builds, enable it with the
+  `modem` configuration snippet, see the [Modem User's Guide][modem]
 
 ### Fixes
 
@@ -109,6 +114,7 @@ All notable changes to the project are documented in this file.
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
+[modem]: https://www.kernelkit.org/infix/latest/modem/
 
 [v26.09.0][] - 2026-09-30
 -------------------------

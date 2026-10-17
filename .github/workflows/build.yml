@@ -50,6 +50,11 @@ on:
         type: string
         default: ''
         description: 'Optional script to run after checkout (for spin customization)'
+      config:
+        required: false
+        type: string
+        default: ''
+        description: 'Extra make goals after the defconfig, e.g. dev-config or apply-modem'
     secrets:
       CHECKOUT_TOKEN:
         required: false
@@ -129,7 +134,7 @@ jobs:
 
       - name: Configure ${{ env.TARGET }}
         run: |
-          make ${{ env.TARGET }}_defconfig apply-mirror
+          make ${{ env.TARGET }}_defconfig apply-mirror ${{ inputs.config }}
 
       - name: Cleanup stale containers and ports
         run: |
@@ -184,4 +189,4 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           path: output/${{ steps.vars.outputs.tgz }}
-          name: artifact-${{ env.TARGET }}
+          name: artifact-${{ env.NAME == 'infix' && env.TARGET || format('{0}-{1}', env.NAME, env.TARGET) }}

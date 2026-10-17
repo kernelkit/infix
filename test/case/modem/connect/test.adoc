@@ -1,0 +1,32 @@
+=== Cellular Modem Data Connection
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/modem/connect]
+
+==== Description
+
+Verify a data connection over a modem, from detection to an IP link.  On
+the QEMU test target the modem is virtual: a USB modem looped back in the
+DUT's own kernel, answering AT commands like an AT-only cellular modem,
+with a PPP peer playing the network.
+
+The modem is anchored to the USB port it was detected on, then its SIM
+and a wwan interface with a data bearer are configured.  The modem must
+register on the network, and the wwan interface come up with the address
+and default route from the network.  Locking the modem must take the
+data connection down again.
+
+==== Topology
+
+image::topology.svg[Cellular Modem Data Connection topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Find the detected modem and its USB port
+. Configure modem0 anchored to its port, sim0 and wwan0
+. Verify modem0 registers on the network with sim0 unlocked
+. Verify wwan0 is up with the address from the network
+. Verify the default route via wwan0
+. Lock modem0 and verify the data connection goes down
+
+

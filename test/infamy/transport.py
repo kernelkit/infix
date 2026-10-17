@@ -93,6 +93,8 @@ class Transport(ABC):
     def get_iface(self, name):
         """Fetch target dict for iface and extract param from JSON"""
         content = self.get_data(infamy.iface.get_xpath(name))
+        if not content:
+            return None
         interfaces = content.get("interfaces", {}).get("interface", {})
 
         # KeyedList does not support `.get()`

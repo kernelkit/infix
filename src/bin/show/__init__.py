@@ -95,10 +95,15 @@ def hardware(args: List[str]) -> None:
 
     if args:
         hw = data.get("ietf-hardware:hardware", {})
-        hw["component"] = [c for c in hw.get("component", []) if c.get("name") == args[0]]
-        if not hw["component"]:
+        comps = [c for c in hw.get("component", []) if c.get("name") == args[0]]
+        if not comps:
             print(f"No hardware component named {args[0]}.")
             return
+        # A modem gets the detail view, with the URI to anchor it by
+        if not RAW_OUTPUT and comps[0].get("class") == "infix-hardware:modem":
+            cli_pretty(data, "show-hardware-detail", args[0])
+            return
+        hw["component"] = comps
 
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
@@ -143,6 +148,30 @@ def channel_survey(radio: str, passive: bool) -> None:
                            input=result.stdout, capture_output=True, text=True)
     sys.stdout.write(chart.stdout or chart.stderr)
     sys.stdout.flush()
+
+
+def modem(args: List[str]) -> None:
+    ref = args[0] if args else None
+
+    data = get_json("/ietf-hardware:hardware")
+    if not data:
+        print("No modem data available.")
+        return
+
+    # Merge bearer-state from wwan interfaces (lives under ietf-interfaces).
+    # Quiet on miss — a system without wwan interfaces still shows modems.
+    iface_data = get_json("/ietf-interfaces:interfaces", quiet=True)
+    if iface_data:
+        data.update(iface_data)
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    if ref:
+        cli_pretty(data, "show-modem-detail", ref)
+    else:
+        cli_pretty(data, "show-modem")
 
 
 def ntp(args: List[str]) -> None:
@@ -847,6 +876,7 @@ def execute_command(command: str, args: List[str]):
         'keystore': keystore,
         'lldp': lldp,
         'mdns': mdns,
+        'modem': modem,
         'nacm': nacm,
         'ntp': ntp,
         'ospf': ospf,

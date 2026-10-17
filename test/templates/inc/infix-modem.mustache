@@ -1,0 +1,3 @@
+# Virtual modem for this node, 1 or 0, from the qn_modem node attribute of
+# the physical topology.  Read at boot by 00-modemsim (fw_cfg opt/modem).
+echo "{{#qn_modem}}{{qn_modem}}{{/qn_modem}}{{^qn_modem}}0{{/qn_modem}}" > $imgdir/{{name}}.modem

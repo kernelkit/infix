@@ -51,6 +51,8 @@ confd_plugin_la_SOURCES =			\
 	  if-wifi.c				\
           if-wireguard.c			\
 	  if-ppp.c				\
+	  if-modem.c				\
+	  modem.c				\
 	keystore.c				\
 	system.c				\
 	support.c				\
