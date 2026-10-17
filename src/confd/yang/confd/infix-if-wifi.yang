@@ -56,7 +56,8 @@ submodule infix-if-wifi {
        key-holder-secret, a key of its own for the access points of a
        mobility domain to hand each other a client's keys with, instead
        of the WiFi password.  Interfaces without a custom-phys-address
-       are no longer limited to one per radio.";
+       are no longer limited to one per radio.  An open access point is
+       rejected on 6 GHz, as the error message always said.";
     reference "internal";
   }
 
@@ -453,7 +454,7 @@ submodule infix-if-wifi {
                   }
                 }
                 default auto;
-                must ". = 'auto' or . = 'open' or . = 'wpa3-personal' or "
+                must ". = 'auto' or . = 'wpa3-personal' or "
                    + "/iehw:hardware/iehw:component[iehw:name = current()/../../../radio]/ih:wifi-radio/ih:band != '6GHz'" {
                   error-message "6GHz band requires 'auto' or 'wpa3-personal' security mode.";
                 }
