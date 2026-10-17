@@ -133,13 +133,13 @@ User management, including passwords, is also a part of `ietf-system`.
 
 ```
 admin@host:/config/> edit system authentication user admin
-admin@host:/config/system/authentication/user/admin/> change password
+admin@host:/config/system/authentication/user/admin/> edit password
 New password:
 Retype password:
 admin@host:/config/system/authentication/user/admin/> leave
 ```
 
-The `change password` command starts an interactive dialogue that asks
+The `edit password` command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
 the password with sha512crypt.
 
