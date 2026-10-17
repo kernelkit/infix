@@ -1,7 +1,7 @@
 From e52f0d5220e93869e4e458bc64247a6a01326b92 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sat, 17 Oct 2026 09:14:50 +0200
-Subject: [PATCH 124/124] net: sparx5: fix leak of in-flight PTP timestamp
+Subject: [PATCH 124/125] net: sparx5: fix leak of in-flight PTP timestamp
  requests
 
 A two-step PTP frame increments ptp_skbs when it is queued for a TX

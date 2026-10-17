@@ -170,8 +170,9 @@ All notable changes to the project are documented in this file.
   EEE wake timer, and the PLL trim
 - LAN969x: a copper port on the Tactical 1000 could come up with one
   direction dead, the link up at 1000 Mbps but nothing it sent reaching the
-  other end.  The PHYs now resynchronize their QSGMII link to the switch
-  after it is set up, the way Microchip's PHY API does
+  other end, most often after the port had been reconfigured.  The PHYs
+  now resynchronize their QSGMII link to the switch after every PHY reset,
+  the way Microchip's PHY API does
 - LAN969x: the LAN8814 and LAN8804 copper PHYs advertised Energy Efficient
   Ethernet, which the switch cannot use, and could enter its low power
   state by mistake after a cable was unplugged.  EEE is now off on these

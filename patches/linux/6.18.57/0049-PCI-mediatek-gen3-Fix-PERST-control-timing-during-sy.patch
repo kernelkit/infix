@@ -1,7 +1,7 @@
 From ba2b448ecb61c6ddd3a4227bdc577d74e3a4cba1 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 22 Apr 2026 10:24:43 +0200
-Subject: [PATCH 049/124] PCI: mediatek-gen3: Fix PERST# control timing during
+Subject: [PATCH 049/125] PCI: mediatek-gen3: Fix PERST# control timing during
  system startup
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
