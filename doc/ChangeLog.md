@@ -84,6 +84,8 @@ All notable changes to the project are documented in this file.
 - Banana Pi BPI-R4: a WiFi card with an unprogrammed EEPROM, e.g., the
   BPI-MT7615, can be given an EEPROM image on the aux partition, see the
   board documentation
+- Banana Pi BPI-R4: ports get permanent addresses derived from the chassis
+  MAC of a `/mnt/aux/vpd.bin`, see [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
 
 ### Fixes
 

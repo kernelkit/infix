@@ -15,16 +15,86 @@
 &{/} {
 	aliases {
 		serial0 = "/soc/serial@11000000";
+		/*
+		 * U-Boot writes its random ethaddr into the nodes behind the
+		 * ethernet aliases, which would take precedence over the VPD
+		 * addresses below.  An overlay cannot delete properties in
+		 * U-Boot, so point the aliases at nothing instead.
+		 */
+		ethernet0 = "/no-ethaddr";
+		ethernet1 = "/no-ethaddr";
+		ethernet2 = "/no-ethaddr";
 	};
 
 	chosen {
 		infix {
 			/* Default admin user password: 'admin' */
 			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			vpds = <&vpd>;
 			usb-ports = <&ssusb1>;
 			usb-port-names = "USB";
 		};
 	};
+};
+
+/*
+ * Product VPD, an ONIE TLV that the boot loader copies from the aux
+ * partition into reserved memory.  The region is zeroed when there is
+ * no VPD, which leaves the layout without cells.  Ports reference the
+ * base MAC address with an index, <&base_mac N>, and get base + N as
+ * their permanent address.
+ */
+&{/reserved-memory} {
+	vpd: vpd@43e10000 {
+		compatible = "nvmem-rmem";
+		reg = <0 0x43e10000 0 0x10000>;
+		no-map;
+		infix,board = "product";
+
+		nvmem-layout {
+			compatible = "onie,tlv-layout";
+
+			base_mac: mac-address {
+				#nvmem-cell-cells = <1>;
+			};
+		};
+	};
+};
+
+/* Port addresses: VPD base MAC + 1 .. + 7 */
+&gmac0 {
+	nvmem-cells = <&base_mac 1>;
+	nvmem-cell-names = "mac-address";
+};
+
+&gsw_port0 {
+	nvmem-cells = <&base_mac 2>;
+	nvmem-cell-names = "mac-address";
+};
+
+&gsw_port1 {
+	nvmem-cells = <&base_mac 3>;
+	nvmem-cell-names = "mac-address";
+};
+
+&gsw_port2 {
+	nvmem-cells = <&base_mac 4>;
+	nvmem-cell-names = "mac-address";
+};
+
+&gsw_port3 {
+	nvmem-cells = <&base_mac 5>;
+	nvmem-cell-names = "mac-address";
+};
+
+&gmac1 {
+	nvmem-cells = <&base_mac 6>;
+	nvmem-cell-names = "mac-address";
+};
+
+&gmac2 {
+	nvmem-cells = <&base_mac 7>;
+	nvmem-cell-names = "mac-address";
 };
 
 /*

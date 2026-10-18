@@ -298,6 +298,43 @@ mmc partconf 0 1 1 0
 
 Your BPI-R4 should now boot Infix from internal eMMC storage.
 
+## Giving the Board a Permanent MAC Address
+
+The BPI-R4 has no EEPROM with a factory-programmed MAC address.  Out of
+the box every Ethernet port therefore gets a random address on each
+boot, and the hostname, which is derived from the base address, changes
+with it.
+
+Store a product record as `/mnt/aux/vpd.bin`, from the shell, and the
+board keeps that identity across reboots and upgrades.  This requires a
+boot loader from v26.10.0 or later:
+
+```
+echo '{"mac-address":"02:00:00:ba:04:00","serial-number":"banana4","vendor":"SinoVoip Co., Ltd.","product-name":"BPI-R4"}' \
+  | onieprom -e > /mnt/aux/vpd.bin
+```
+
+Give each board its own base address and serial number, then reboot.
+The base address becomes the hostname suffix, each wired port gets a
+fixed offset from the base, and the WiFi interfaces get addresses
+derived from it.  With the record above the board is named
+`bpi-ba-04-00`, `lan1` is `02:00:00:ba:04:03`, `sfp1` is
+`02:00:00:ba:04:07` and `wifi0` is `06:00:00:ba:04:00`.
+
+| Offset | BPI-R4           | BPI-R4-2g5 and BPI-R4P |
+|--------|------------------|------------------------|
+| +1     | CPU switch port  | CPU switch port        |
+| +2     | `wan`            | `lan0`                 |
+| +3..+5 | `lan1`..`lan3`   | `lan1`..`lan3`         |
+| +6     | `sfp2`           | `wan`                  |
+| +7     | `sfp1`           | `sfp1`                 |
+
+A locally administered address like `02:xx:xx:xx:xx:xx` is fine for a
+lab.  For boards that will share a network with other equipment, use a
+range you own.  Remove the file to return to random addresses.  See
+[Vital Product Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition)
+for the record format and what else it can carry.
+
 ## Troubleshooting
 
 ### Board won't boot
