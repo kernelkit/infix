@@ -216,6 +216,9 @@ All notable changes to the project are documented in this file.
 - LAN969x: OSPF neighbors never came up over a bridge.  Hellos and other
   link-local multicast, e.g. to 224.0.0.5 or ff02::5, passed between the
   bridge ports but never reached the bridge itself
+- LAN969x: IGMP did not pass through a bridge.  With IGMP snooping across
+  several switches, a group joined behind one switch never reached the
+  querier behind another, so the multicast never got there either
 - PTP never worked on the copper ports of the Tactical 1000, whose LAN8804
   PHYs are a LAN8814 variant without a 1588 unit.  The kernel took them for
   full LAN8814s and waited for PHY timestamps that never came; it now
