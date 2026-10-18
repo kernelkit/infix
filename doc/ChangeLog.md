@@ -45,6 +45,10 @@ All notable changes to the project are documented in this file.
   YANG modules `infix-ospf` and `infix-rip`, installed only on devices
   with dynamic routing.  The startup configuration is converted on
   upgrade; NETCONF and RESTCONF clients must use the new module names
+- Changing a setting of an interface that does not need it, e.g., an IP
+  address, its description, or a bridge port's STP priority or cost, no
+  longer takes the link down and up.  A copper link no longer drops for a
+  few seconds and STP no longer reconverges after such changes
 - Switch boards advertise one of their port addresses as the LLDP chassis
   ID.  Previously it could be an address no port on the device carried
 - The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,
