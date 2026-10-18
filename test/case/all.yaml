@@ -42,6 +42,9 @@
 - name: "Hardware"
   suite: hardware/all.yaml
 
+- name: "Cellular Modem"
+  suite: modem/all.yaml
+
 - name: "Services"
   suite: services/all.yaml
 

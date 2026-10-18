@@ -20,6 +20,12 @@ module infix-dhcp-server {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 server";
 
+  revision 2026-10-18 {
+    description "Allow any character except control characters in the
+                 static-host match client-id string.";
+    reference   "internal";
+  }
+
   revision 2026-09-24 {
     description "Constrain the character set and length of static-host
                  match hostname and client-id string.";
@@ -316,7 +322,7 @@ module infix-dhcp-server {
                                  bytes.";
                       type string {
                         length "1..255";
-                        pattern '[a-zA-Z0-9_.:+-]+';
+                        pattern '[^\p{Cc}]+';
                       }
                     }
                   }

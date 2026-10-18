@@ -6,17 +6,28 @@ and verifies whether the USB ports are correctly _locked_ (restricted from
 use) and _unlocked_ (available for use) when they should. It also verifies
 this behavior during reboot. This test does not involve the actual use of
 the USB port; it only ensures the configured state is consistent with the
-hardware state.
+hardware state.  Removing the configuration of a port locks it.
 
 If this pass you can be certain that the configuration of the USB
 port is handled correctly.
 
 """
 import infamy
-import copy
 import infamy.usb as usb
-import time
 from infamy.util import until, wait_boot
+
+
+def set_usb_state(target, ports, state):
+    target.put_config_dicts({"ietf-hardware": {"hardware": {"component": [
+        {"name": port, "class": "infix-hardware:usb",
+         "state": {"admin-state": state}} for port in ports
+    ]}}})
+
+
+def verify_usb_state(target, ports, state):
+    for port in ports:
+        until(lambda: usb.get_usb_state(target, port) == state)
+
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -28,84 +39,35 @@ with infamy.Test() as test:
             test.skip()
 
     with test.step("Unlock all USB ports"):
-        components = []
-        for port in available:
-            component = {
-                "name": port,
-                "class": "infix-hardware:usb",
-                "state": {
-                    "admin-state": "unlocked"
-                }
-            }
-            components.append(component)
-
-        target.put_config_dicts({
-            "ietf-hardware": {
-                "hardware": {
-                    "component": components
-                }
-            }
-        })
+        set_usb_state(target, available, "unlocked")
 
     with test.step("Verify that all USB ports are unlocked"):
-        for port in available:
-            until(lambda: usb.get_usb_state(target, port) == "unlocked")
+        verify_usb_state(target, available, "unlocked")
 
     with test.step("Lock all USB ports"):
-        components = []
-        for port in available:
-            component = {
-                "class": "infix-hardware:usb",
-                "name": port,
-                "state": {
-                    "admin-state": "locked"
-                }
-            }
-            components.append(component)
-
-        target.put_config_dicts({
-            "ietf-hardware": {
-                "hardware": {
-                    "component": components
-                }
-            }
-        })
+        set_usb_state(target, available, "locked")
 
     with test.step("Verify that all USB ports are locked"):
-        for port in available:
-            until(lambda: usb.get_usb_state(target, port) == "locked")
+        verify_usb_state(target, available, "locked")
+
+    with test.step("Unlock all USB ports again"):
+        set_usb_state(target, available, "unlocked")
+
+    with test.step("Verify that all USB ports are unlocked"):
+        verify_usb_state(target, available, "unlocked")
 
     with test.step("Remove all hardware configuration"):
         for port in available:
             target.delete_xpath(f"/ietf-hardware:hardware/component[name='{port}']")
 
     with test.step("Verify that all USB ports are locked"):
-        for port in available:
-            until(lambda: usb.get_usb_state(target, port) == "locked")
+        verify_usb_state(target, available, "locked")
 
     with test.step("Unlock USB ports"):
-        components = []
-        for port in available:
-            component = {
-                "name": port,
-                "class": "infix-hardware:usb",
-                "state": {
-                    "admin-state": "unlocked"
-                }
-            }
-            components.append(component)
-
-        target.put_config_dicts({
-            "ietf-hardware": {
-                "hardware": {
-                    "component": components
-                }
-            }
-        })
+        set_usb_state(target, available, "unlocked")
 
     with test.step("Verify that all USB ports are unlocked"):
-        for port in available:
-            until(lambda: usb.get_usb_state(target, port) == "unlocked")
+        verify_usb_state(target, available, "unlocked")
 
     with test.step("Save the configuration to startup configuration and reboot"):
         target.startup_override()
@@ -116,7 +78,6 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt", test_reset=False)
 
     with test.step("Verify USB port remain unlocked after reboot"):
-        for port in available:
-            until(lambda: usb.get_usb_state(target, port) == "unlocked")
+        verify_usb_state(target, available, "unlocked")
 
     test.succeed()

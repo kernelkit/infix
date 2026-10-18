@@ -16,6 +16,13 @@ module infix-dhcp-client {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 client";
 
+  revision 2026-10-18 {
+    description "Allow any character in option values except quotes,
+                 dollar, backslash, backtick, and control characters, e.g.,
+                 a board model with parentheses in vendor-class.";
+    reference   "internal";
+  }
+
   revision 2026-09-28 {
     description "Constrain the character set and length of option values.";
     reference   "internal";
@@ -137,7 +144,7 @@ module infix-dhcp-client {
                          octet, so a value is at most 255 bytes.";
               type string {
                 length "1..255";
-                pattern '[a-zA-Z0-9 _.:/@=,+-]+';
+                pattern '[^"' + "'" + '$\\`\p{Cc}]+';
               }
               must "../id != 'hostname' or re-match(., '[a-zA-Z0-9\\-_]{1,64}')";
             }

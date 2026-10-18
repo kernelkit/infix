@@ -18,6 +18,24 @@ struct confd confd;
  * only.  Use these for files read by a daemon running as another user,
  * or for the few files that must stay world readable.
  */
+/*
+ * Write str to fp in double quotes, with '"' and '\' escaped, for
+ * config files that unescape quoted values, e.g. syslog.conf, dnsmasq.
+ */
+int fputq(const char *str, FILE *fp)
+{
+	if (fputc('"', fp) == EOF)
+		return EOF;
+	for (; *str; str++) {
+		if ((*str == '"' || *str == '\\') && fputc('\\', fp) == EOF)
+			return EOF;
+		if (fputc(*str, fp) == EOF)
+			return EOF;
+	}
+
+	return fputc('"', fp) == EOF ? EOF : 0;
+}
+
 FILE *fopenp(const char *path, mode_t mode, const char *group)
 {
 	gid_t gid = 0;
@@ -734,14 +752,19 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		}
 	}
 
+	/* ietf-hardware, before the interfaces: netdevs behind a USB port
+	 * appear only once the port is unlocked, and a modem netdev gets
+	 * its name from the udev rules written here. */
+	if ((rc = hardware_change(session, config, diff, event, confd)))
+		goto free_diff;
+
 	/* ietf-interfaces */
 	if ((rc = interfaces_change(session, config, diff, event, confd)))
 		goto free_diff;
 
-	/* ietf-hardware, after the interfaces: hostapd binds to WiFi
-	 * netdevs, so it must be (re)started only once the interface
-	 * pipeline has created or recreated them. */
-	if ((rc = hardware_change(session, config, diff, event, confd)))
+	/* ietf-hardware WiFi, after the interfaces: hostapd binds to the
+	 * netdevs the interfaces have just created or recreated. */
+	if ((rc = hardware_wifi_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-dhcp-client*/
@@ -1067,7 +1090,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = ntp_candidate_init(&confd);
 	if (rc)
 		goto err;
-	/* YOUR_INIT GOES HERE */
+	rc = modem_init(&confd);
+	if (rc)
+		goto err;
 
 	return SR_ERR_OK;
 err:

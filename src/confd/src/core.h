@@ -137,6 +137,10 @@ typedef enum {
 	if ((rc = register_rpc_tree(s, x, c, a, u)))		\
 		goto fail
 
+#define REGISTER_NOTIF(s,m,x,c,a,u)				\
+	if ((rc = register_notif(s, m, x, c, a, u)))		\
+		goto fail
+
 struct confd {
 	sr_session_ctx_t       *session; /* running datastore */
 	sr_session_ctx_t       *startup; /* startup datastore */
@@ -213,6 +217,17 @@ static inline int register_rpc_tree(sr_session_ctx_t *session, const char *xpath
 	return rc;
 }
 
+static inline int register_notif(sr_session_ctx_t *session, const char *module, const char *xpath,
+	sr_event_notif_cb cb, void *arg, sr_subscription_ctx_t **sub)
+{
+	int rc = sr_notif_subscribe(session, module, xpath,
+				    NULL, NULL, /* forever */
+				    cb, arg, SR_SUBSCR_NO_THREAD, sub);
+	if (rc)
+		ERROR("failed subscribing to %s notification: %s", xpath, sr_strerror(rc));
+	return rc;
+}
+
 
 /* core.c */
 int finit_enable(const char *svc);
@@ -225,6 +240,7 @@ int finit_deletef(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int finit_reloadf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 const char *rpc_user(sr_session_ctx_t *session, const char **via);
+int fputq(const char *str, FILE *fp);
 FILE *fopenp(const char *path, mode_t mode, const char *group);
 FILE *fopenfp(mode_t mode, const char *group, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
@@ -298,6 +314,7 @@ int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 int hardware_candidate_init(struct confd *confd);
 int hardware_rpc_init(struct confd *confd);
 int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* keystore.c */
 int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
@@ -322,5 +339,8 @@ int snmp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_n
 #else
 static inline int snmp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd) { return 0; }
 #endif
+
+/* modem.c */
+int modem_init(struct confd *confd);
 
 #endif	/* CONFD_CORE_H_ */

@@ -74,9 +74,33 @@ All notable changes to the project are documented in this file.
 - Configurable OSPF auto-cost reference bandwidth, for OSPFv2 and OSPFv3,
   issue #1576.  The default, 100000 Mbit/s, is the value used before, so
   link costs do not change on upgrade.  The CLI shows it in `show ip ospf`
+- Add cellular modem (WWAN) support for USB-attached MBIM/QMI modems,
+  including USB dongles, mPCIe cards, and M.2 Key-B modules.  Multiple
+  APNs per modem, SIM PIN configuration, and NMEA routing from modem to
+  GPS subsystem.  Not part of the default builds, enable it with the
+  `modem` configuration snippet, see the [Modem User's Guide][modem]
+- An MT7615D WiFi card with an unprogrammed EEPROM can run both bands at
+  once with the `force_dbdc` option of the `mt7615_common` kernel module
+- Banana Pi BPI-R4: a WiFi card with an unprogrammed EEPROM, e.g., the
+  BPI-MT7615, can be given an EEPROM image on the aux partition, see the
+  board documentation
+- Banana Pi BPI-R4: ports get permanent addresses derived from the chassis
+  MAC of a `/mnt/aux/vpd.bin`, see [VPD documentation](vpd.md#vpd-file-on-the-aux-partition)
 
 ### Fixes
 
+- Fix `startup-config` failing validation on boards with parentheses in
+  their model name, e.g., Banana Pi BPI-R4.  The DHCP client copies the
+  model name to its `vendor-class` option, which v26.09.0 limited to a
+  small character set.  Option values may now contain any character
+  except control characters, quotes, `$`, `` ` ``, and `\`
+- Fix syslog `pattern-match` and `property-filter` values with characters
+  outside the small set allowed since v26.09.0, e.g., `\` in a regular
+  expression, failing validation.  Any character except control characters
+  is allowed, and `\` and `"` now reach syslogd as written
+- Fix DHCP server static-host `client-id` strings with characters outside
+  the small set allowed since v26.09.0, e.g., a space, failing validation.
+  Any character except control characters is allowed
 - WebUI: uploading a software bundle failed on slow storage
 - WebUI: the Overview page showed the hostname template, e.g. `rpi-%m`, and
   never showed the boot partition
@@ -106,9 +130,14 @@ All notable changes to the project are documented in this file.
   WPA3 clients
 - Changing the MAC address of a WiFi access point could leave the access
   points on that radio down until the WiFi service was restarted
+- Removing a USB port component from the configuration left the port
+  unlocked, now the port is locked
+- Banana Pi BPI-R4: no PCIe card was detected, e.g., an NVMe disk or a
+  WiFi card
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
+[modem]: https://www.kernelkit.org/infix/latest/modem/
 
 [v26.09.0][] - 2026-09-30
 -------------------------

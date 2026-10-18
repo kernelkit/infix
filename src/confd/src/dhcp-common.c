@@ -160,7 +160,7 @@ char *dhcp_compose_options(struct lyd_node *cfg, const char *ifname, char **opti
 			   struct lyd_node *id, const char *val, const char *hex,
 			   char *(*ip_cache_cb)(const char *, char *, size_t))
 {
-	char opt[300];
+	char opt[4 * 255 + 32];   /* 255 UTF-8 characters */
 
 	if (!dhcp_compose_option(cfg, ifname, id, val, hex, opt, sizeof(opt), ip_cache_cb))
 		return *options;

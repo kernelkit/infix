@@ -44,6 +44,13 @@ for tgt in "${boot_targets}"; do
 	    fi
 	fi
 
+	if test -n "${wifi_eeprom_addr_r}"; then
+	    mw.b ${wifi_eeprom_addr_r} 0 ${wifi_eeprom_size}
+	    if test -e ${devtype} ${devnum}:${auxpart} /wifi-eeprom.bin; then
+		load ${devtype} ${devnum}:${auxpart} ${wifi_eeprom_addr_r} /wifi-eeprom.bin
+	    fi
+	fi
+
 	if test -n "${DEBUG}"; then
 	    setenv bootargs_log "debug"
 	else

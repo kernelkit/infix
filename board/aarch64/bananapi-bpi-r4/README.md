@@ -87,6 +87,87 @@ Infix ships with the following factory defaults.
 > are bridged into the LAN as access points.  WiFi is not included with the board
 > and is not part of the factory default configuration.
 
+### WiFi Cards Without an EEPROM
+
+Some mPCIe WiFi cards, e.g., the BPI-MT7615, ship with an unprogrammed
+EEPROM.  The card then comes up with a random MAC address and, for an
+MT7615D, with one radio instead of one per band:
+
+```
+mt7615e 0001:01:00.0: Invalid MAC address, using random address 06:0e:56:91:b5:19
+```
+
+Such a card can be given an EEPROM image as `/mnt/aux/wifi-eeprom.bin`,
+which the boot loader hands to the WiFi driver.  This requires:
+
+- The card in mPCIe slot CN14, the slot next to SIM3
+- A boot loader from v26.10.0 or later
+- An image of at most 20 KiB
+
+For an MT7615 card, start from the EEPROM the driver uses today:
+
+```
+admin@bpi:~$ sudo cat /sys/kernel/debug/ieee80211/radio0/mt76/eeprom > wifi-eeprom.bin
+```
+
+On a PC, set a MAC address and, for an MT7615D, both bands with the
+`utils/mt7615-eeprom.sh` script from the source tree:
+
+```
+$ utils/mt7615-eeprom.sh -b dbdc -m 02:00:00:76:15:00 wifi-eeprom.bin
+chip-id : 0x7615
+mac     : 02:00:00:76:15:00
+band    : dbdc
+```
+
+Copy the image back to the board as `/mnt/aux/wifi-eeprom.bin` and
+reboot.  Removing the file returns the card to its own EEPROM at the
+next boot.  The image holds no more calibration data than the card
+has without it, so range and throughput can be lower than with a
+factory programmed EEPROM.
+
+On other boards, an MT7615D gets both radios with the `force_dbdc`
+option of the `mt7615_common` kernel module.
+
+## SIM Card Installation
+
+The BPI-R4 has three SIM holders, one per PCIe slot:
+
+| Slot     | PCIe socket | Typical use              |
+|----------|-------------|--------------------------|
+| **SIM1** | M.2 Key-B   | 4G/5G WWAN modem         |
+| **SIM2** | mPCIe #1    | Cellular or other modem  |
+| **SIM3** | mPCIe #2    | Cellular or other modem  |
+
+All three take **nano-SIM (4FF)** cards.
+
+> [!NOTE]
+> The official Banana Pi pages show an older board revision with a sliding
+> "sled" holder.  Newer boards ship with a fixed friction-fit holder instead:
+> there is no lid to lift and no spring eject.  The [closest matching photo on
+> bananapi.org][15] shows the current mechanism.
+
+### Inserting a SIM
+
+1. Orient the card with the gold contacts facing the PCB (printed
+   side up) and the cut corner pointing toward the M.2/mPCIe socket,
+   which on this board is also toward the outer edge.  The silkscreen
+   next to each holder shows the same outline.
+2. Push the SIM straight in until it is fully seated.  There is no
+   click and the holder is not spring-loaded, so press firmly until
+   the contacts engage and the rear edge of the card sits flush with
+   the holder.
+3. A SIM that still protrudes is not fully inserted; push again.
+
+### Removing a SIM
+
+The friction grip on these holders is tight.  Gently pry the card out
+with a fingernail or a thin plastic spudger.  Avoid metal tweezers
+near the contacts.  Removing the front panel of the metal case is
+absolutely necessary to access the SIM holder.
+
+For software configuration once the modem is recognised, see the
+[Cellular Modem User's Guide][16].
 
 ## Getting Started
 
@@ -217,6 +298,43 @@ mmc partconf 0 1 1 0
 
 Your BPI-R4 should now boot Infix from internal eMMC storage.
 
+## Giving the Board a Permanent MAC Address
+
+The BPI-R4 has no EEPROM with a factory-programmed MAC address.  Out of
+the box every Ethernet port therefore gets a random address on each
+boot, and the hostname, which is derived from the base address, changes
+with it.
+
+Store a product record as `/mnt/aux/vpd.bin`, from the shell, and the
+board keeps that identity across reboots and upgrades.  This requires a
+boot loader from v26.10.0 or later:
+
+```
+echo '{"mac-address":"02:00:00:ba:04:00","serial-number":"banana4","vendor":"SinoVoip Co., Ltd.","product-name":"BPI-R4"}' \
+  | onieprom -e > /mnt/aux/vpd.bin
+```
+
+Give each board its own base address and serial number, then reboot.
+The base address becomes the hostname suffix, each wired port gets a
+fixed offset from the base, and the WiFi interfaces get addresses
+derived from it.  With the record above the board is named
+`bpi-ba-04-00`, `lan1` is `02:00:00:ba:04:03`, `sfp1` is
+`02:00:00:ba:04:07` and `wifi0` is `06:00:00:ba:04:00`.
+
+| Offset | BPI-R4           | BPI-R4-2g5 and BPI-R4P |
+|--------|------------------|------------------------|
+| +1     | CPU switch port  | CPU switch port        |
+| +2     | `wan`            | `lan0`                 |
+| +3..+5 | `lan1`..`lan3`   | `lan1`..`lan3`         |
+| +6     | `sfp2`           | `wan`                  |
+| +7     | `sfp1`           | `sfp1`                 |
+
+A locally administered address like `02:xx:xx:xx:xx:xx` is fine for a
+lab.  For boards that will share a network with other equipment, use a
+range you own.  Remove the file to return to random addresses.  See
+[Vital Product Data](../../../doc/vpd.md#vpd-file-on-the-aux-partition)
+for the record format and what else it can carry.
+
 ## Troubleshooting
 
 ### Board won't boot
@@ -332,18 +450,21 @@ matching device tree:
 
 ```bash
 # Build bootloaders for SD and eMMC
-make x-bpi-r4-sd-boot
-make x-bpi-r4-emmc-boot
+make O=x-bpi-r4-sd-boot bpi_r4_sd_boot_defconfig && make O=x-bpi-r4-sd-boot
+make O=x-bpi-r4-emmc-boot bpi_r4_emmc_boot_defconfig && make O=x-bpi-r4-emmc-boot
 
 # Build main system
-make aarch64
+make O=x-aarch64 aarch64_defconfig && make O=x-aarch64
 
 # Create SD card image
-./utils/mkimage.sh -od bananapi-bpi-r4
+./utils/mkimage.sh -b x-bpi-r4-sd-boot -r x-aarch64 bananapi-bpi-r4
 
 # Create eMMC image
-./utils/mkimage.sh -odt emmc bananapi-bpi-r4
+./utils/mkimage.sh -b x-bpi-r4-emmc-boot -r x-aarch64 -t emmc bananapi-bpi-r4
 ```
+
+With `-d` instead of `-b`, `mkimage.sh` downloads the bootloader from
+the latest release.
 
 [0]: https://www.kernelkit.org/posts/flashing-sdcard/
 [1]: https://www.kernelkit.org/infix/latest/
@@ -358,3 +479,5 @@ make aarch64
 [12]: https://github.com/frank-w/u-boot/releases
 [13]: https://github.com/frank-w/u-boot/releases/download/CI-BUILD-2026-01-bpi-2026.01-2026-01-15_2013/bpi-r4_spim-nand_bl2.img
 [14]: https://github.com/frank-w/u-boot/releases/download/CI-BUILD-2026-01-bpi-2026.01-2026-01-15_2013/bpi-r4_spim-nand_fip.bin
+[15]: https://docs.banana-pi.org/bpi-r4/bpi-r4_4g5g_2.jpg
+[16]: https://www.kernelkit.org/infix/latest/modem/

@@ -143,7 +143,9 @@ static size_t selector(sr_session_ctx_t *session, struct action *act)
 			strlcat(op_prefix, operator, sizeof(op_prefix));
 
 			/* Property-based filter: :property, [!][icase_]operator, "value" */
-			fprintf(act->fp, ":%s, %s, \"%s\"\n", property, op_prefix, value);
+			fprintf(act->fp, ":%s, %s, ", property, op_prefix);
+			fputq(value, act->fp);
+			fputc('\n', act->fp);
 			has_pattern = true;
 		}
 
@@ -158,7 +160,9 @@ static size_t selector(sr_session_ctx_t *session, struct action *act)
 	pattern = srx_get_str(session, "%s/pattern-match", act->xpath);
 	if (pattern) {
 		/* Property-based filter: :msg, ereregex, "pattern" */
-		fprintf(act->fp, ":msg, ereregex, \"%s\"\n", pattern);
+		fputs(":msg, ereregex, ", act->fp);
+		fputq(pattern, act->fp);
+		fputc('\n', act->fp);
 		has_pattern = true;
 		free(pattern);
 	}
