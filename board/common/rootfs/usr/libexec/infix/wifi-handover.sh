@@ -51,9 +51,12 @@ ask_to_move()
 	done
     fi
     if [ -n "$cands" ]; then
+	# An MBO transition reason makes a client take a candidate rather
+	# than weigh it against this access point, which older clients do
+	# even with disassociation imminent
 	# shellcheck disable=SC2086
 	hostapd_cli -i "$bss" bss_tm_req "$sta" disassoc_imminent=1 disassoc_timer=$TIMER \
-		    pref=1 abridged=1 $cands >/dev/null 2>&1
+		    pref=1 abridged=1 mbo=0:0:1 $cands >/dev/null 2>&1
     else
 	hostapd_cli -i "$bss" disassoc_imminent "$sta" $TIMER >/dev/null 2>&1
     fi
