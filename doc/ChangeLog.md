@@ -82,6 +82,10 @@ All notable changes to the project are documented in this file.
   model name to its `vendor-class` option, which v26.09.0 limited to a
   small character set.  Option values may now contain any character
   except control characters, quotes, `$`, `` ` ``, and `\`
+- Fix syslog `pattern-match` and `property-filter` values with characters
+  outside the small set allowed since v26.09.0, e.g., `\` in a regular
+  expression, failing validation.  Any character except control characters
+  is allowed, and `\` and `"` now reach syslogd as written
 - WebUI: uploading a software bundle failed on slow storage
 - WebUI: the Overview page showed the hostname template, e.g. `rpi-%m`, and
   never showed the boot partition

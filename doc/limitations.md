@@ -20,7 +20,7 @@ settings below before upgrading from an older release.
 | DHCP client option `value`                | Anything except control characters, `"`, `'`, `$`, `` ` ``, and `\` | 1..255 |
 | DHCP server static-host `hostname`        | Letters, digits, `_`, `.`, `-`                          | 1..255 |
 | DHCP server static-host `client-id`       | Letters, digits, `_`, `.`, `:`, `+`, `-`                | 1..255 |
-| Syslog `property-filter` value            | Letters, digits, space, `_`, `.`, `:`, `/`, `@`, `=`, `,`, `-`, and `+ * ? \| ^ $ ( ) [ ] { }` | |
+| Syslog `property-filter` value            | Anything except control characters                      |        |
 | Syslog file and remote `pattern-match`    | As `property-filter` value                              |        |
 | Wi-Fi `mesh-id`                           | Anything except control characters, `"`, and `\`        |        |
 | Wi-Fi `nas-identifier`                    | Letters, digits, `_`, `.`, `:`, `+`, `-`                |        |

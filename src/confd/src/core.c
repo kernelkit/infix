@@ -18,6 +18,24 @@ struct confd confd;
  * only.  Use these for files read by a daemon running as another user,
  * or for the few files that must stay world readable.
  */
+/*
+ * Write str to fp in double quotes, with '"' and '\' escaped, for
+ * config files that unescape quoted values, e.g. syslog.conf, dnsmasq.
+ */
+int fputq(const char *str, FILE *fp)
+{
+	if (fputc('"', fp) == EOF)
+		return EOF;
+	for (; *str; str++) {
+		if ((*str == '"' || *str == '\\') && fputc('\\', fp) == EOF)
+			return EOF;
+		if (fputc(*str, fp) == EOF)
+			return EOF;
+	}
+
+	return fputc('"', fp) == EOF ? EOF : 0;
+}
+
 FILE *fopenp(const char *path, mode_t mode, const char *group)
 {
 	gid_t gid = 0;
