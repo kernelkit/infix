@@ -120,6 +120,8 @@ All notable changes to the project are documented in this file.
   points on that radio down until the WiFi service was restarted
 - Removing a USB port component from the configuration left the port
   unlocked, now the port is locked
+- Banana Pi BPI-R4: no PCIe card was detected, e.g., an NVMe disk or a
+  WiFi card
 
 [pppoe]: https://www.kernelkit.org/infix/latest/pppoe/
 [wds]: https://www.kernelkit.org/infix/latest/wifi/#wds-backhaul-and-repeaters
