@@ -1394,7 +1394,6 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	int country_changed = 0;
 	int rc = SR_ERR_OK;
 	int gps_changed = 0;
-	int wifi_changed = 0;
 
 	if (!lydx_find_xpathf(diff, XPATH_BASE_))
 		return SR_ERR_OK;
@@ -1459,40 +1458,12 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			struct lyd_node *interfaces_config;
 			struct lyd_node *cwifi_radio;
 			int wifi_iface_count = 0;
-			char src[40], dst[40];
-			char **ap_list = NULL;
-			int ap_interfaces = 0;
-			int i;
 
 			switch (event) {
 			case SR_EV_ABORT:
 				continue;
 			case SR_EV_CHANGE:
 				break;
-			case SR_EV_DONE:
-				/* The changed interface need not be an AP, a
-				 * wds-link or station on the radio also lands
-				 * here, so judge by the APs left in config. */
-				interfaces_config = lydx_get_descendant(config, "interfaces", "interface", NULL);
-				wifi_find_radio_aps(interfaces_config, name, &ap_list, &ap_interfaces);
-				for (i = 0; i < ap_interfaces; i++)
-					free(ap_list[i]);
-				free(ap_list);
-
-				if (ap_interfaces) {
-					snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
-					snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
-
-					if (fexistf(HOSTAPD_CONF_NEXT, name))
-						(void)rename(src, dst);
-				} else {
-					erasef(HOSTAPD_CONF, name);
-					erasef(HOSTAPD_CONF_NEXT, name);
-				}
-				/* All radios share one hostapd process; the service is
-				 * (re)generated after the component loop below. */
-				wifi_changed = 1;
-				continue;
 			default:
 				continue;
 
@@ -1588,6 +1559,57 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		}
 	}
 
+err:
+
+	return rc;
+}
+
+int hardware_wifi_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+			 sr_event_t event, struct confd *confd)
+{
+	struct lyd_node *difs, *dif, *cif;
+	int wifi_changed = 0;
+	int rc = SR_ERR_OK;
+
+	if (event != SR_EV_DONE || !lydx_find_xpathf(diff, XPATH_BASE_))
+		return SR_ERR_OK;
+
+	if (lydx_get_xpathf(diff, XPATH_BASE_ "/infix-hardware:wifi/country-code"))
+		difs = lydx_get_descendant(config, "hardware", "component", NULL);
+	else
+		difs = lydx_get_descendant(diff, "hardware", "component", NULL);
+
+	LYX_LIST_FOR_EACH(difs, dif, "component") {
+		const char *name = lydx_get_cattr(dif, "name");
+		char src[40], dst[40], **ap_list = NULL;
+		int ap_interfaces = 0, i;
+
+		cif = lydx_get_xpathf(config, "/hardware/component[name='%s']", name);
+		if (!cif || strcmp(lydx_get_cattr(cif, "class"), "infix-hardware:wifi"))
+			continue;
+
+		/* The changed interface need not be an AP, a wds-link or
+		 * station on the radio also lands here, so judge by the
+		 * APs left in config. */
+		wifi_find_radio_aps(lydx_get_descendant(config, "interfaces", "interface", NULL),
+				    name, &ap_list, &ap_interfaces);
+		for (i = 0; i < ap_interfaces; i++)
+			free(ap_list[i]);
+		free(ap_list);
+
+		if (ap_interfaces) {
+			snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
+			snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
+
+			if (fexistf(HOSTAPD_CONF_NEXT, name))
+				(void)rename(src, dst);
+		} else {
+			erasef(HOSTAPD_CONF, name);
+			erasef(HOSTAPD_CONF_NEXT, name);
+		}
+		wifi_changed = 1;
+	}
+
 	/*
 	 * All AP radios run in a single hostapd process so that
 	 * cross-radio directives (e.g. no_probe_resp_if_seen_on for band
@@ -1596,7 +1618,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 	 * /etc/hostapd-<radio>.conf and (re)start it.  A restart re-reads
 	 * all radio configs, so band edits and radio add/remove both apply.
 	 */
-	if (wifi_changed && event == SR_EV_DONE) {
+	if (wifi_changed) {
 		struct lyd_node *cifs;
 		glob_t gl = { 0 };
 		size_t i;
@@ -1651,7 +1673,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		}
 		globfree(&gl);
 	}
-err:
+
 
 	return rc;
 }
