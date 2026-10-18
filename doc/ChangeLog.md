@@ -295,6 +295,9 @@ All notable changes to the project are documented in this file.
 - LAN969x: OSPF neighbors never came up over a bridge.  Hellos and other
   link-local multicast, e.g. to 224.0.0.5 or ff02::5, passed between the
   bridge ports but never reached the bridge itself
+- Firewall: dynamic address-set entries were lost on every configuration
+  change on slow systems, where reloading the firewall takes longer than
+  25 seconds
 - LAN969x: IGMP did not pass through a bridge.  With IGMP snooping across
   several switches, a group joined behind one switch never reached the
   querier behind another, so the multicast never got there either

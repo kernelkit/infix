@@ -23,8 +23,9 @@ check_firewalld()
 
 call_reload()
 {
+    # A reload takes over half a minute on a slow single-core system
     output=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
-		   --method "$INTERFACE.reload" 2>&1)
+		   --timeout 300 --method "$INTERFACE.reload" 2>&1)
     ret=$?
 
     # Validate both return code and output
