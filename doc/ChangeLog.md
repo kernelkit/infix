@@ -17,6 +17,10 @@ All notable changes to the project are documented in this file.
 - The active IGMP and MLD querier of a bridge, or of a bridge VLAN, is
   available in the operational datastore: its address, version, query
   interval and timeout, and whether it is the system itself
+- Changing a setting of an interface that does not need it, e.g., an IP
+  address, its description, or a bridge port's STP priority or cost, no
+  longer takes the link down and up.  A copper link no longer drops for a
+  few seconds and STP no longer reconverges after such changes
 - Switch boards advertise one of their port addresses as the LLDP chassis
   ID.  Previously it could be an address no port on the device carried
 - The LAN bridge in the factory config of the Banana Pi R3, R3 mini, R4,

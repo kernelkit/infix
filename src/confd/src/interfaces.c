@@ -455,6 +455,9 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_BRIDGE:
 		return bridge_gen(dif, cif, ip, 0);
 	case IFT_LAG:
+		/* Some bond options cannot be set on a bond that is up */
+		if (!lydx_get_child(dif, "lag"))
+			return 0;
 		return lag_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
 		return vlan_gen(dif, cif, ip);
@@ -522,6 +525,51 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	}
 
 	return false;
+}
+
+/*
+ * Taking the link down renegotiates a copper link and restarts STP on a
+ * bridge port, so only do it for changes that need it: a new IPv6 address
+ * generation mode only applies on the next link up, the addresses SLAAC
+ * has created only go away with the link, and the radio settings cannot
+ * all change on a running interface.  A bond takes itself down when its
+ * own settings change.
+ */
+/* Setting enabled to what it already was, e.g., true, is no change */
+static bool enabled_changed(struct lyd_node *dif)
+{
+	struct lyd_node *node = lydx_get_child(dif, "enabled");
+	struct lydx_diff nd;
+
+	if (!node)
+		return false;
+
+	lydx_get_diff(node, &nd);
+	return strcmp(nd.old ?: "true", nd.new ?: "true");
+}
+
+static bool netdag_needs_bounce(struct lyd_node *dif, struct lyd_node *cif,
+				enum lydx_op op)
+{
+	struct lyd_node *ipv6;
+
+	if (op == LYDX_OP_CREATE ||
+	    enabled_changed(dif) ||
+	    lydx_get_child(dif, "custom-phys-address") ||
+	    lydx_get_descendant(lyd_child(dif), "bridge-port", "bridge", NULL) ||
+	    lydx_get_descendant(lyd_child(dif), "lag-port", NULL))
+		return true;
+
+	ipv6 = lydx_get_child(dif, "ipv6");
+	if (ipv6 && (lydx_get_op(ipv6) != LYDX_OP_NONE ||
+		     lydx_get_child(ipv6, "enabled") ||
+		     lydx_get_descendant(lyd_child(ipv6), "autoconf",
+					 "create-temporary-addresses", NULL) ||
+		     lydx_get_descendant(lyd_child(ipv6), "autoconf",
+					 "create-global-addresses", NULL)))
+		return true;
+
+	return iftype_from_iface(cif) == IFT_WIFI && lydx_get_child(dif, "wifi");
 }
 
 static int eth_gen_del(struct lyd_node *dif, FILE *ip)
@@ -738,7 +786,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	 * and must not be bounced for a change of its settings, the
 	 * station would not notice and the port would stay down. */
 	wds = iftype_from_iface(cif) == IFT_WIFI && wifi_get_mode(cif) == wifi_wds;
-	if (pppd_owned || (wds && lydx_is_enabled(cif, "enabled")))
+	if (pppd_owned || (wds && lydx_is_enabled(cif, "enabled")) ||
+	    !netdag_needs_bounce(dif, cif, op))
 		fprintf(ip, "link set dev %s", ifname);
 	else
 		fprintf(ip, "link set dev %s down", ifname);
